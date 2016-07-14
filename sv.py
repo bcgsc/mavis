@@ -63,10 +63,10 @@ class Interval:
         return self.start + (len(self) - 1)/2
     
     @classmethod
-    def weighted_mean(cls, *intervals):
+    def weighted_mean(cls, intervals):
         if len(intervals) == 0:
             raise AttributeError('input list cannot be empty')
-        first = intervals[0]
+        first = next(iter(intervals))
         centers = []
         weights = []
         
@@ -164,10 +164,10 @@ class Breakpoint:
         return self.pos.weight
     
     @classmethod
-    def weighted_mean(cls, *breakpoints):
+    def weighted_mean(cls, breakpoints):
         if len(breakpoints) == 0:
             raise AttributeError('cannot calculate the weighted mean of an empty list')
-        return Interval.weighted_mean(*[ b.pos for b in breakpoints ])
+        return Interval.weighted_mean([ b.pos for b in breakpoints ])
 
     def __init__(self, chr, interval_start, interval_end, orient, strand, **kwargs):
         self.orient = ORIENT.enforce( orient )
@@ -229,14 +229,18 @@ def is_complete(G, N):
     return True 
 
 
-def generate_redundant_maximal_kcliques(G, **kwargs):
+def redundant_maximal_kcliques(G, **kwargs):
     """
     for a give graph returns all cliques up to a size k
     any clique which is a proper subset of another clique is removed
     nodes can participate in multiple cliques
     """
-#print('generate_redundant_maximal_kcliques N(G) =', len(G.nodes()))
-    k = int( kwargs.pop('k', 10) )
+#print('redundant_maximal_kcliques N(G) =', len(G.nodes()))
+    k = int( kwargs.pop('k') )
+    if kwargs:
+        raise AttributeError('invalid paramter', kwargs)
+    if k < 1:
+        raise AttributeError('k must be greater than 0')
     if k >= 20:
         warnings.warn('k >= 20 is not recommended as the number of combinations increases exponentially')
     
@@ -248,19 +252,61 @@ def generate_redundant_maximal_kcliques(G, **kwargs):
             for putative_kclique in itertools.combinations(component, ktemp):
                 if is_complete(G, putative_kclique):
                     cliques.append(set(putative_kclique))
-#print('generate_redundant_maximal_kcliques initial cliques:', len(cliques))
+#print('redundant_maximal_kcliques initial cliques:', len(cliques))
     # remove subsets to ensure cliques are maximal (up to k)
     refined_cliques = []
     for i in range(0, len(cliques)):
         is_subset = False
         for j in range(i + 1, len(cliques)):
-            if cliques[i] <= cliques[j]:
+            if cliques[i].issubset(cliques[j]):
                 is_subset = True
                 break
         if not is_subset:
             refined_cliques.append(cliques[i])
-#print('generate_redundant_maximal_kcliques final =', len(refined_cliques) )
+#print('redundant_maximal_kcliques final =', len(refined_cliques) )
     return refined_cliques
+
+def paired_intervals_weighted_means(intervals):
+    int_a = Interval.weighted_mean( [ x[0] for x in intervals ] )
+    int_b = Interval.weighted_mean( [ x[1] for x in intervals ] )
+    return int_a, int_b
+
+def paired_interval_set_distance(intervals, other_intervals):
+    int_a, int_b = paired_intervals_weighted_means(intervals)
+    oint_a, oint_b = paired_intervals_weighted_means(other_intervals)
+    return abs(int_a - oint_a) + abs(int_b - oint_b)
+
+def redundant_ordered_hierarchical_clustering(clusters, **kwargs):
+    r = int(kwargs.pop('r'))
+    if kwargs:
+        raise AttributeError('invalid parameter', kwargs)
+    if r < 0:
+        raise AttributeError('r must be a positive integer')
+    # order the clusters by weighted mean
+    complete = []
+    queue = sorted(clusters, key=lambda x: paired_intervals_weighted_means(x) )
+
+    
+    while len(queue) > 0:
+        temp_queue = []
+        
+        for i in range(0, len(queue)):
+            curr = queue[i]
+            joined = False
+            
+            if i > 0:
+                dist = paired_interval_set_distance(curr, clusters[i - 1])
+                if dist <= r:
+                    joined = True
+            if i < len(queue) - 1:
+                dist = paired_interval_set_distance(curr, clusters[i + 1])
+                if dist <= r:
+                    temp_queue.append(curr.union(clusters[i + 1]))
+                    joined = True 
+            if not joined:
+                complete.append(curr)
+        queue = temp_queue
+    return complete
 
 def cluster_breakpoints(input_pairs, **kwargs):
     # 0. sort the breakpoints by start and then end
@@ -269,9 +315,10 @@ def cluster_breakpoints(input_pairs, **kwargs):
     # 2. set the initial clusters based on overlap
     # 3. iterate over the clusters 
     #   # stop when no clusters improve/change or we hit a maximum number of iterations
-    r = int( kwargs.pop('r', 10) )
-    k = int( kwargs.pop('k', 10) )
-    
+    r = int( kwargs.pop('r') )
+    k = int( kwargs.pop('k') )
+    if kwargs:
+        raise AttributeError('invalid parameter', kwargs)
     # classify the breakpoints.... by the possible pairs they could support (explicit only)
     classify = {}
 
@@ -311,8 +358,8 @@ def cluster_breakpoints(input_pairs, **kwargs):
     # nodes are the breakpoint pair keys
     # edges are the distance between matched breakpoints (less than 2k)
     events = 0
-    for k, group in sorted(classify.items()):
-        chr1, chr2, or1, or2, st1, st2 =  k
+    for key, group in sorted(classify.items()):
+        chr1, chr2, or1, or2, st1, st2 =  key
         #if chr1 == chr2:
         #    continue
         group = group.values()
@@ -323,20 +370,26 @@ def cluster_breakpoints(input_pairs, **kwargs):
         for curr, other in itertools.combinations(group, 2):
             dist = abs(curr[0] - other[0]) \
                     + abs(curr[1] - other[1])
-            if dist < 2 * r:
+            if dist <= 2 * r:
                 G.add_edge(curr, other)
         # get all the connected components
         # for all connected components find all cliques of a given size k
-        for clique in generate_redundant_maximal_kcliques(G):
+        complete_subgraphs = redundant_maximal_kcliques(G, k=k) # every node will be present
+        new_sets = redundant_ordered_hierarchical_clustering(complete_subgraphs, r=r)
+        if len(new_sets) != len(complete_subgraphs):
+            print('new_sets', len(new_sets), 'initial sets', len(complete_subgraphs))
+        # now using the complete subgraphs as our inputs, do ordered hierachical clustering 
+        for clique in new_sets:
             events += 1
             size = len(clique)
-            if size < 2:
+            if size < 3:
                 continue
-            start = int(round(Interval.weighted_mean(*[b[0] for b in clique]), 0))
-            end = int(round(Interval.weighted_mean(*[b[1] for b in clique]), 0))
-            WINDOW = 100
-            print('clique:', size, '{0}:{1}-{2} {3}:{4}-{5}'.format(
-                chr1, start - WINDOW, start + WINDOW, chr2, end - WINDOW, end + WINDOW))
+            start, end = paired_intervals_weighted_means(clique)
+            WINDOW = 0
+            print('clique:', size, '{0}:{1} {3}:{4}'.format(
+                chr1, int(start - WINDOW), start + WINDOW, chr2, int(end - WINDOW), end + WINDOW))
+            for member in clique:
+                print(int(member[0].center), int(member[1].center), 'x' + str(member[0].weight))
     print('found', events, 'events')
     
     # cluster until no splitting is performed
