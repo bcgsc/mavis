@@ -121,13 +121,13 @@ def load_reference(filepath):
         ref[g.chr].append(g)
     return ref
 
-ref = load_reference('temp')
-
-# '10:61665878' '10:43612031'
-pos = 61665878
-#pos = 43612031
-for gene in ref['10']:
-    for t in gene.transcripts:
-        if pos < t.genomic_start or pos > t.genomic_end:
-            continue
-        print('t', t, t.gene.aliases)
+#ref = load_reference('temp')
+#
+## '10:61665878' '10:43612031'
+#pos = 61665878
+##pos = 43612031
+#for gene in ref['10']:
+#    for t in gene.transcripts:
+#        if pos < t.genomic_start or pos > t.genomic_end:
+#            continue
+#        print('t', t, t.gene.aliases)
