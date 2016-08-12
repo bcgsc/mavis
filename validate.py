@@ -58,7 +58,7 @@ def compute_cigar(ref, seq):
             cigar_tuples.append((current_mode, 1))
     return cigar_tuples
 
-def sw_pairwise_alignment(ref, seq, **kwargs):
+def sw_pairwise_alignment(input_ref, input_seq, **kwargs):
     """
     aligns a short sequence to a relatively short reference sequence
     basic smith-waterman alignment for a pair of sequences (pairwise2 in biopython appears broken)
@@ -70,16 +70,24 @@ def sw_pairwise_alignment(ref, seq, **kwargs):
 
     deviates from the normal after computing the matrix, for all the best alignments recomputes their 
     scores ignoring consecutive gaps on either end (not penalized) but still penalizing interior gaps
+
+    >>> a = sw_pairwise_alignment('ATGGACTCGGTAAA', 'CGGTAA')
+    >>> a.reference_start
+    7
+    >>> a.query_sequence
+    'CGGTAA'
+    >>> a.cigar
+    [(7, 6)]
     """
-    size = len(ref) * len(seq) * 64 / 1000000000
+    size = (len(input_ref) + 1) * (len(input_seq) + 1) * 64 / 1000000000
     
     if size > 1 and size < 3:
         warnings.warn('warning the pairwise alignment matrix is large: {0} GB'.format(size))
     elif size > 1:
         raise UserWarning('warning the pairwise alignment matrix is too large: {0} GB'.format(size))
     
-    ref = '-' + ref.seq if hasattr(ref, 'seq') else ref
-    seq = '-' + seq.seq if hasattr(seq, 'seq') else seq
+    ref = '-' + (input_ref.seq if hasattr(input_ref, 'seq') else input_ref)
+    seq = '-' + (input_seq.seq if hasattr(input_seq, 'seq') else input_seq)
     
     arr = np.zeros(shape=(len(ref),len(seq)), dtype=np.int)
 
@@ -148,7 +156,7 @@ def sw_pairwise_alignment(ref, seq, **kwargs):
     for path in complete_paths:
         ref_path = ''
         seq_path = ''
-        path = path[::-1]
+        path.reverse()
         path.append((len(ref) - 1, len(seq) - 1)) # bottom corner
         r0 = 0
         c0 = 0
@@ -157,7 +165,9 @@ def sw_pairwise_alignment(ref, seq, **kwargs):
             right = c - c0
             if right == 0: # moving on ref and not seq
                 seq_path += '-'*down
-                ref_path += ref[r0+1:r+1]
+                temp = ref[r0+1:r+1]
+                assert(down==len(temp))
+                ref_path += temp
             elif down == 0:
                 ref_path += '-'*right
                 seq_path += seq[c0+1:c+1]
@@ -191,10 +201,6 @@ def sw_pairwise_alignment(ref, seq, **kwargs):
     a.query_sequence = sseq.strip(GAP)
     a.reference_start = start 
     a.cigar = compute_cigar(rseq, sseq)
-    print('sw_pairwise_alignment')
-    print('ref', rseq[start-10:start+10])
-    print('seq', sseq[start-10:start+10])
-    print(start, a.reference_start)
     return a
 
 class Evidence:
@@ -291,22 +297,21 @@ class Evidence:
         right = ''
         if breakpoint.orient == ORIENT.LEFT:
             left = read.query_sequence[read.query_alignment_start:read.query_alignment_end]
-            right = read.query_sequence[read.query_alignment_end - 1:] # end is exclusive in pysam
+            right = read.query_sequence[read.query_alignment_end:] # end is exclusive in pysam
             if len(left) < self.min_anchor_size or len(right) < self.min_anchor_size:
                 raise UserWarning('split read does not meet the minimum anchor criteria')
             # now grab the soft-clipped portion on the right and try to align it to the partner region
             s, t = self._window(opposite_breakpoint)
             s -= 1
             t -= 1
-            ref = HUMAN_REFERENCE_GENOME[opposite_breakpoint.chr][s:t+1]
-            ref = ref.seq
+            ref = HUMAN_REFERENCE_GENOME[opposite_breakpoint.chr]
+            ref = ref.seq[s:t+1]
             print((s, t, ref[:10]))
             a = sw_pairwise_alignment(ref, right)
             a.query_sequence = left + a.query_sequence
             #a.query_alignment_start = len(left)
             a.cigar = [(CIGAR.S, len(left))] + a.cigar
-            print(a.reference_start, s, s + a.reference_start )
-            a.reference_start = s + a.reference_start + 1 # TODO figure out why the hell this is off by one 
+            a.reference_start = s + a.reference_start # TODO figure out why the hell this is off by one 
             a.reference_id = self.convert_chr_to_index[opposite_breakpoint.chr]
             a.query_name = read.query_name + '--right'
             a.next_reference_start = read.next_reference_start
