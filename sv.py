@@ -12,6 +12,9 @@ import networkx as nx
 import warnings
 
 class Interval:
+    """
+    Intervals are inclusive
+    """
     def __init__(self, start, end = None, **kwargs):
         self.start = int( start )
         self.end = int( end ) if end is not None else self.start
@@ -257,6 +260,10 @@ class Interval:
         return Interval(low, high)
 
 class Breakpoint:
+    """
+    class for storing information about a SV breakpoint
+    coordinates are given as 1-indexed
+    """
     @property
     def key(self):
         return (self.chr, self.start, self.end, self.orient, self.strand, self.left_seq, self.right_seq)
@@ -325,7 +332,6 @@ class BreakpointPair:
         else:
             self.break1 = b1
             self.break2 = b2
-        #self.gtype = kwargs.pop('gtype', 'DNA')
         self.stranded = kwargs.pop('stranded', False)
         self.opposing_strands = kwargs.pop('opposing_strands', None)
         if self.break1.strand != STRAND.NS and self.break2.strand != STRAND.NS:
