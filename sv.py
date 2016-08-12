@@ -3,6 +3,7 @@ from __future__ import division
 from vocab import Vocab
 from constants import ORIENT
 from constants import STRAND
+from constants import SVTYPE
 
 import scipy.stats as stat
 import itertools
@@ -11,7 +12,6 @@ import networkx as nx
 import warnings
 
 class Interval:
-
     def __init__(self, start, end = None, **kwargs):
         self.start = int( start )
         self.end = int( end ) if end is not None else self.start
@@ -259,7 +259,7 @@ class Interval:
 class Breakpoint:
     @property
     def key(self):
-        return (self.chr, self.start, self.end, self.orient, self.strand)
+        return (self.chr, self.start, self.end, self.orient, self.strand, self.left_seq, self.right_seq)
 
     @property
     def start(self):
@@ -278,13 +278,23 @@ class Breakpoint:
         if len(breakpoints) == 0:
             raise AttributeError('cannot calculate the weighted mean of an empty list')
         return Interval.weighted_mean([ b.pos for b in breakpoints ])
+    
+    def softclipped_sequence(self):
+        if self.orient == ORIENT.NS:
+            raise UserWarning('invalid on non-specific orientations')
+        elif self.orient == ORIENT.LEFT:
+            return self.right_seq
+        else:
+            return self.left_seq
 
-    def __init__(self, chr, interval_start, interval_end, orient, strand, **kwargs):
-        self.orient = ORIENT.enforce( orient )
+    def __init__(self, chr, interval_start, interval_end, **kwargs):
+        self.orient = ORIENT.enforce( kwargs.pop('orient', ORIENT.NS) )
         self.chr = str(chr)
         self.pos = Interval(interval_start, interval_end)
-        self.strand = STRAND.enforce( strand )
+        self.strand = STRAND.enforce( kwargs.pop('strand', STRAND.NS) )
         self.label = kwargs.pop('label', None)
+        self.left_seq = kwargs.pop('left_seq', None)
+        self.right_seq = kwargs.pop('right_seq', None)
     
     def __repr__(self):
         temp = '{0}:{1}{2}{3}{4}'.format(
@@ -302,9 +312,8 @@ class Breakpoint:
     
     def __hash__(self):
         return hash((self.chr, self.pos, self.strand, self.orient, self.label))
-    
-class BreakpointPair:
-    
+ 
+class BreakpointPair:    
     @property
     def key(self):
         return self.break1.key, self.break2.key, self.opposing_strands, self.stranded
@@ -340,14 +349,14 @@ class BreakpointPair:
         """
         determines if two pairs are comparable i.e. if they could possibly support the same event
 
-        >>> a = Breakpoint(1, 50, 51, 'R', '+')
-        >>> b = Breakpoint(1, 10, 11, 'L', '-')
-        >>> c = Breakpoint('X', 50, 51, 'R', '+')
-        >>> d = Breakpoint(1, 10, 11, 'R', '-')
-        >>> e = Breakpoint(1, 10, 11, 'L', '+')
-        >>> f = Breakpoint(1, 50, 51, 'R', '-')
-        >>> g = Breakpoint(1, 50, 51, 'R', '?')
-        >>> h = Breakpoint(1, 10, 11, 'L', '?')
+        >>> a = Breakpoint(1, 50, 51, orient = 'R', strand = '+')
+        >>> b = Breakpoint(1, 10, 11, orient = 'L', strand = '-')
+        >>> c = Breakpoint('X', 50, 51, orient = 'R', strand = '+')
+        >>> d = Breakpoint(1, 10, 11, orient = 'R', strand = '-')
+        >>> e = Breakpoint(1, 10, 11, orient = 'L', strand = '+')
+        >>> f = Breakpoint(1, 50, 51, orient = 'R', strand = '-')
+        >>> g = Breakpoint(1, 50, 51, orient = 'R', strand = '?')
+        >>> h = Breakpoint(1, 10, 11, orient = 'L', strand = '?')
 
         # different chromosome
         >>> BreakpointPair(a, b, stranded = False).comparable(BreakpointPair(c, b, stranded = False))
@@ -411,7 +420,32 @@ class BreakpointPair:
                 return True
             else:
                 return False
+    
+    def naive_classification(self):
+        event_type = SVTYPE.NS
+        
+        if ORIENT.NS in [self.break1.orient, self.break2.orient]:
+            if self.break1.chr != self.break2.chr:
+                event_type = SVTYPE.TRANS
+        else:
+            if self.break1.orient == self.break2.orient:
+                if self.break1.chr != self.break2.chr:
+                    event_type = SVTYPE.ITRANS
+                else:
+                    event_type = SVTYPE.INV
+            elif self.break1.chr != self.break2.chr:
+                event_type = SVTYPE.TRANS
+            elif self.break1.orient == ORIENT.RIGHT:
+                event_type = SVTYPE.INS
+            else:
+                event_type = SVTYPE.DEL
+        return event_type
 
+class SVAnnotation:
+    def __init__(self, breakpoint_pair, t1, t2):
+        """
+        holds the association between a pair of transcripts and an event
+        """
 
 def is_complete(G, N):
     """
@@ -424,7 +458,6 @@ def is_complete(G, N):
         if not G.has_edge(node, other):
             return False
     return True 
-
 
 def redundant_maximal_kcliques(G, **kwargs):
     """
@@ -478,7 +511,6 @@ def redundant_maximal_kcliques(G, **kwargs):
                 cluster.remove(node)
 
     return refined_cliques
-
 
 def cluster_breakpoints(input_pairs, **kwargs):
     # 0. sort the breakpoints by start and then end
@@ -575,8 +607,8 @@ def cluster_breakpoints(input_pairs, **kwargs):
 
             start, end = Interval.paired_weighted_means(clique)
             cluster_breakpoint_pair = BreakpointPair(
-                    Breakpoint(chr1, start, start, or1, st1),
-                    Breakpoint(chr2, end, end, or2, st2)
+                    Breakpoint(chr1, start, start, orient = or1, strand = st1),
+                    Breakpoint(chr2, end, end, orient = or2, strand = st2)
                     )
             clusters[cluster_breakpoint_pair] = current_cluster_breakpoint_pairs
         for node, freq in participants.items():

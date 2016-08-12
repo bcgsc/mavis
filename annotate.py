@@ -121,6 +121,53 @@ def load_reference(filepath):
         ref[g.chr].append(g)
     return ref
 
+def annotations(ref, breakpoint_pairs):
+    """
+    @param ref \a required (type: \b Dict<str,List<Gene>>) the list of reference genes hashed by chromosomes
+    @param breakpoint_pairs \a required (type: \b List<BreakpointPair>) breakpoint pairs we wish to annotate as events
+    """
+    annotations = []
+
+    for bp in breakpoint_pairs:
+        putative_break1_transcripts = [None]
+        putative_break2_transcripts = [None]
+        
+        for gene in ref[bp.break1.chr]:
+            for t in gene.transcripts:
+                if bp.break1.end < t.genomic_start or bp.break1.start > t.genomic_end:
+                    continue # no overlap
+                putative_break1_transcripts.append(t)
+        for gene in ref[bp.break2.chr]:
+            for t in gene.transcripts:
+                if bp.break2.end < t.genomic_start or bp.break2.start > t.genomic_end:
+                    continue # no overlap
+                putative_break2_transcripts.append(t)
+        
+        temp = itertools.product(putative_break1_transcripts, putative_break2_transcripts)
+        combinations = []
+        
+        # assume that the transcript partners cannot be two different transcripts from the same gene
+        # if the transcripts have the same gene they must be the same transcript
+        for t1, t2 in temp:
+            if t1 is None or t2 is None:
+                combinations.append((t1, t2))
+                continue
+            elif t1.gene == t2.gene and t1 != t2:
+                continue
+            if bp.opposing_strands is not None \
+                    and bp.opposing_strands != (t1.gene.strand != t2.gene.strand): \
+                    # if the stand combination does not match then ignore
+                continue
+            if bp.stranded:
+                if bp.break1.strand != STRAND.NS:
+                    if t1.gene.strand != bp.break1.strand:
+                        continue
+                if bp.break2.strand != STRAND.NS:
+                    if t2.gene.strand != bp.break2.strand:
+                        continue
+            combinations.append((t1, t2))
+    
+        # now we have a list of putative combinations
 #ref = load_reference('temp')
 #
 ## '10:61665878' '10:43612031'
