@@ -335,25 +335,27 @@ def sw_pairwise_alignment(input_ref, input_seq, **kwargs):
         path_scores.append((alignment_score, ref_path, seq_path, path))
     
     if len(path_scores) == 0:
-        return None
+        return []
     # choose the best alignment by score and then rightmost, and then sorted alphanumerically
     best_score = max([p[0] for p in path_scores])
     
-    alignment = sorted([(ref, seq) for score, ref, seq, path in path_scores if score == best_score],
-            key=lambda x: (-1*len(x[1].rstrip(GAP)), x[1], x[0]))
-    rseq, sseq = alignment[0]
-    start = len(sseq) - len(sseq.lstrip(GAP)) # number of gaps, and 0-index
-    
-    a = pysam.AlignedSegment()
-    a.query_sequence = sseq.strip(GAP)
-    a.reference_start = start 
-    a.cigar = compute_cigar(rseq, sseq)
+    result = []
+    for score, ref, seq, path in path_scores:
+        if score != best_score:
+            continue
+        start = len(seq) - len(seq.lstrip(GAP)) # number of gaps, and 0-index
+        
+        a = pysam.AlignedSegment()
+        a.query_sequence = seq.strip(GAP)
+        a.reference_start = start 
+        a.cigar = compute_cigar(ref, seq)
+        result.append(a)
     t = (time.clock() - time_start)
     if t > 5:
         print('sw_pairwise_alignment:', t)
         print('# of paths investigated', len(path_scores))
         print('matrix size', (len(input_ref)+ 1) * (len(input_seq) + 1)/1000, 'K')
-    return a
+    return result
 
 class Evidence:
     @property
@@ -471,6 +473,10 @@ class Evidence:
         opposite_breakpoint_ref = HUMAN_REFERENCE_GENOME[opposite_breakpoint.chr].seq[w[0] - 1: w[1]]
         a = sw_pairwise_alignment(opposite_breakpoint_ref, clipped)
         
+        if len(a) != 1: # ignore multi-maps and poor alignments
+            a = None
+        else:
+            a = a[0]
         # now that we've aligned the soft-clipped portion we should check if we need to
         # adjust the original read. only applies to the second breakpoint reads
         shift = 0
@@ -531,7 +537,7 @@ class Evidence:
                     primary = primary[shift:]
                     read.reference_start += shift
                     a.query_sequence = clipped
-                    cigar = a.cigar[:]
+                    cigar = a.cigar[:] # can't update cigar by indexing, have to replace the whole list
                     if cigar[-1][0] == CIGAR.EQ:
                         cigar[-1] = (CIGAR.EQ, a.cigar[-1][1] + shift)
                     else:
@@ -540,19 +546,19 @@ class Evidence:
                     read_reference = HUMAN_REFERENCE_GENOME[self.convert_index_to_chr[read.reference_id]] \
                             .seq[read.reference_start - len(clipped):read.reference_start + len(primary)]
                     read.cigar = compute_cigar(read_reference, read.query_sequence, force_start = len(clipped))
-                else:
+                else: # LEFT ====>------ to -----=====>
                     clipped = primary[len(primary) + shift:] + clipped # append to the front
                     primary = primary[:len(primary) + shift]
                     a.reference_start += shift
                     a.query_sequence = clipped
-                    cigar = a.cigar[:]
+                    cigar = a.cigar[:] # can't update cigar by indexing, have to replace the whole list
                     if a.cigar[0][0] == CIGAR.EQ:
                         cigar[0] = (CIGAR.EQ, a.cigar[0][1] + abs(shift))
                     else:
                         cigar.insert(0, (CIGAR.EQ, abs(shift)))
-                    a.cigar = cigar # can't update cigar by indexing
+                    a.cigar = cigar 
                     read_reference = HUMAN_REFERENCE_GENOME[self.convert_index_to_chr[read.reference_id]] \
-                            .seq[read.reference_start - len(clipped):read.reference_start + len(primary)]
+                            .seq[read.reference_start:read.reference_start + len(primary) + len(clipped)]
                     read.cigar = compute_cigar(read_reference, read.query_sequence, force_end = len(primary))
                 read.query_name += '--shift+{0}'.format(shift)
         if len(primary) < self.min_anchor_size:
@@ -573,8 +579,6 @@ class Evidence:
             a.next_reference_id = read.next_reference_id
             a.flag = read.flag
             a.mapping_quality = 255 # can't compute a mapping quality when we are only computing one alignment, 255=NA
-        #print('read', read)
-        #print('a', a)
         # need to do this after shifting
         s, t = self._window(breakpoint)
         s -= 1 # correct for pysam using 0-based coordinates

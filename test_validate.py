@@ -19,16 +19,21 @@ class MockRead(pysam.AlignedSegment):
         self.query_sequence = kwargs.pop('query_sequence')
         self.cigar = kwargs.pop('cigar')
 
+def setUpModule():
+    validate.load_reference('chr11_chr22.fa')
+
 class TestEvidence(unittest.TestCase):
     def setUp(self):
         self.first_read = MockRead(
-            query_sequence = 'TTATTTAGTGTTCCAAATGTGTTGGTTCTGCCTAGTATACTGATTTAGAAATTCCACCACATGGAGGTTATTTGAGGCGATTGGTAGCTGGAAGGTATTTAAAAGAAACTTGTTTCACCAAATTC',
+            query_sequence = 'TTATTTAGTGTTCCAAATGTGTTGGTTCTGCCTAGTATACTGATTTAGAAATTCCACCACATGGAGGTTATTTGAGGCGATTGGTAG' \
+                    'CTGGAAGGTATTTAAAAGAAACTTGTTTCACCAAATTC',
             reference_id = 10,
             cigar = [(CIGAR.S, 6), (CIGAR.M, 119)],
             reference_start = 128664209
             )
         self.second_read = MockRead(
-            query_sequence = 'CTATAAACTATATGTTAGCCAGAGGGCTTTTTTTGTTGTTGTTATTTAGTGTTCCAAATGTGTTGGTTCTGCCTAGTATACTGATTTAGAAATTCCACCACATGGAGGTTATTTGAGGCGATTGG',
+            query_sequence = 'CTATAAACTATATGTTAGCCAGAGGGCTTTTTTTGTTGTTGTTATTTAGTGTTCCAAATGTGTTGGTTCTGCCTAGTATACTGATTT' \
+                    'AGAAATTCCACCACATGGAGGTTATTTGAGGCGATTGG',
             reference_id = 21,
             cigar = [(CIGAR.M, 49), (CIGAR.S, 76)],
             reference_start = 29684317,
@@ -40,10 +45,9 @@ class TestEvidence(unittest.TestCase):
                     Breakpoint('22', 29684365, 29684365, orient = ORIENT.LEFT),
                     stranded = False, opposing_strands = False
                 ), 
-                None, 
+                None, # don't need bamfile b/c mocking reads 
                 convert_chr_to_index={'11': 10, '22': 21}
                 )
-        validate.load_reference('chr11_chr22.fa')
 
     def test_init_conversion_dict(self):
         self.assertEqual(self.evidence.convert_chr_to_index['11'], 10)
@@ -57,28 +61,37 @@ class TestEvidence(unittest.TestCase):
         c = self.evidence.recompute_cigar(self.second_read)
         self.assertEqual(c, [(CIGAR.EQ, 49), (CIGAR.S, 76)])
 
-    def test_add_split_read_second_break(self):
+    def test_add_split_read_second_break_shifted(self):
         self.evidence.add_split_read(self.second_read, False)
         # since this read would have been shifted, make sure the positions are correct
         # at the first breakpoint (the novel read)
-        self.assertEqual(len(self.evidence.split_reads[self.evidence.break1]), 1)
+        self.assertEqual(1, len(self.evidence.split_reads[self.evidence.break1]))
         temp = list(self.evidence.split_reads[self.evidence.break1])[0]
-        self.assertEqual(temp.reference_start, 128664209)
-        self.assertEqual(temp.reference_id, 10)
-        self.assertEqual(temp.cigar, [(CIGAR.S, 47), (CIGAR.EQ, 78)])
+        self.assertEqual(128664209, temp.reference_start)
+        self.assertEqual(10, temp.reference_id)
+        self.assertEqual([(CIGAR.S, 47), (CIGAR.EQ, 78)], temp.cigar)
+        self.assertEqual(78, temp.reference_end - temp.reference_start)
         # at the second breakpoint (the copied/shifted input read)
-        self.assertEqual(len(self.evidence.split_reads[self.evidence.break2]), 1)
+        self.assertEqual(1, len(self.evidence.split_reads[self.evidence.break2]))
         temp = list(self.evidence.split_reads[self.evidence.break2])[0]
-        self.assertEqual(temp.reference_start, 29684319)
-        self.assertEqual(temp.reference_id, 21)
-        self.assertEqual(temp.cigar, [(CIGAR.S, 49), (CIGAR.EQ, 76)])
+        self.assertEqual(self.second_read.reference_start, temp.reference_start)
+        self.assertEqual(self.second_read.reference_end - 2, temp.reference_end)
+        self.assertEqual(21, temp.reference_id, 21)
+        self.assertEqual([(CIGAR.EQ, 47), (CIGAR.S, 78)], temp.cigar)
+        self.assertEqual(47, temp.reference_end - temp.reference_start)
 
-
-    
     def test_add_split_read_first_break(self):
         self.evidence.add_split_read(self.first_read)
+
+        # at the first breakpoint (the copied input read)
         self.assertEqual(len(self.evidence.split_reads[self.evidence.break1]), 1)
-        self.assertEqual(len(self.evidence.split_reads[self.evidence.break2]), 1)
+        temp = list(self.evidence.split_reads[self.evidence.break1])[0] 
+        self.assertEqual(self.first_read.reference_start, temp.reference_start)
+        self.assertEqual(self.first_read.reference_end, temp.reference_end)
+        self.assertEqual([(CIGAR.S, 6), (CIGAR.EQ, 119)], temp.cigar)
+        self.assertEqual(119, temp.reference_end - temp.reference_start)
+        # at the second breakpoint (the novel read) 
+        self.assertEqual(len(self.evidence.split_reads[self.evidence.break2]), 0) # multi-map alignment
 
 class TestValidate(unittest.TestCase):
     """
@@ -86,7 +99,7 @@ class TestValidate(unittest.TestCase):
     that are not associated with a class
     """
     def test_sw_pairwise_alignment(self):
-        a = validate.sw_pairwise_alignment('ATGGACTCGGTAAA', 'CGGTAA')
+        a = validate.sw_pairwise_alignment('ATGGACTCGGTAAA', 'CGGTAA')[0]
         self.assertEqual(a.reference_start, 7)
         self.assertEqual(a.cigar, [(CIGAR.EQ, 6)])
         self.assertEqual(a.query_sequence, 'CGGTAA')
@@ -100,60 +113,6 @@ class TestValidate(unittest.TestCase):
         self.assertEqual(('dce', '-c-'), t)
         t = validate._build_string_from_reverse_path(ref, seq, [(6, 3), (5,2), (4,2), (3, 1), (2, 0)])
         self.assertEqual(('mxabdce', '--ab-c-'), t)
-#f = '/projects/seqref/genomes/Homo_sapiens/TCGA_Special/GRCh37-lite.fa'
-#f = 'chr11_chr22.fa'
-#print('loading the human reference genome', f)
-#validate.load_reference(f)
-#print('finished loading:', f)
-#
-#bp = BreakpointPair(
-#            Breakpoint('11', 128664209, 128664209, orient = ORIENT.RIGHT),
-#            Breakpoint('22', 29684365, 29684365, orient = ORIENT.LEFT),
-#            stranded = False, opposing_strands = False)
-#
-#bf = '/projects/analysis/analysis14/P00159/merge_bwa/125nt/hg19a/P00159_5_lanes_dupsFlagged.bam'
-#
-#split_read = MockRead(
-#        query_sequence = 'TTATTTAGTGTTCCAAATGTGTTGGTTCTGCCTAGTATACTGATTTAGAAATTCCACCACATGGAGGTTATTTGAGGCGATTGGTAGCTGG' \
-#                'AAGGTATTTAAAAGAAACTTGTTTCACCAAATTC',
-#        reference_id = 10,
-#        cigar = [(CIGAR.S, 6), (CIGAR.M, 119)],
-#        reference_start = 128664209
-#        )
-#print(dir(split_read))
-#e = Evidence(bp, bf, convert_chr_to_index={'11': 10, '22': 21})
-#
-#print(e.convert_chr_to_index, e.convert_index_to_chr)
-#
-#print(split_read.cigar)
-#print(e.recompute_cigar(split_read))
-#e.add_split_read(split_read)
-#
-#split_read = MockRead(
-#        query_sequence = 'CTATAAACTATATGTTAGCCAGAGGGCTTTTTTTGTTGTTGTTATTTAGTGTTCCAAATGTGTTGGTTCTGCCTAGTATACTGATTTA' \
-#            'GAAATTCCACCACATGGAGGTTATTTGAGGCGATTGG',
-#        reference_id = 21,
-#        cigar = [(CIGAR.M, 49), (CIGAR.S, 76)],
-#        reference_start = 29684317,
-#        )
-#
-#e.add_split_read(split_read, False)
-#
-#exit()
-#
-##e.load_evidence()
-##e.resolve_breakpoint(e.break1)
-#for breakpoint in e.split_reads:
-#    print(breakpoint)
-#    for read in e.split_reads[breakpoint]:
-#        print('split read evidence')
-#        print(read)
-#        print(validate.str_cigar(read))
-#        print(read.cigar)
-#        ref = validate.HUMAN_REFERENCE_GENOME[breakpoint.chr].seq[read.reference_start:read.reference_end]
-#        print(ref)
-#        print(read.query_sequence[read.query_alignment_start:read.query_alignment_end])
-#        print()
 
 if __name__ == "__main__":
     unittest.main()
