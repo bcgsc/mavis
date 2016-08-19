@@ -4,8 +4,14 @@ import sv
 from sv import Breakpoint, BreakpointPair, Interval
 import svmerge
 from constants import ORIENT
+from validate import Evidence
+import validate
 
 TSV._verbose = True
+
+f = '/projects/seqref/genomes/Homo_sapiens/TCGA_Special/GRCh37-lite.fa'
+print('loading the reference file', f)
+validate.load_reference(f)
 
 header, rows = TSV.read_file(
         '/projects/POG/POG_data/POG098/wgs/GV2/POG098_POG098-OCT-1-unique-14-filters/POG098-OCT-1_genome_fusions_concat.tsv',
@@ -23,8 +29,8 @@ UNC = 10
 print('loaded', len(rows), 'rows')
 breakpoints = []
 for row in rows:
-    b1 = Breakpoint(row['chr1'], row['pos1'] - UNC, row['pos1'] + UNC, row['or1'], row['strand1'], label=row['id'])
-    b2 = Breakpoint(row['chr2'], row['pos2'] - UNC, row['pos2'] + UNC, row['or2'], row['strand2'], label=row['id'])
+    b1 = Breakpoint(row['chr1'], row['pos1'] - UNC, row['pos1'] + UNC, orient = row['or1'], strand = row['strand1'], label=row['id'])
+    b2 = Breakpoint(row['chr2'], row['pos2'] - UNC, row['pos2'] + UNC, orient = row['or2'], strand = row['strand2'], label=row['id'])
     breakpoints.append(BreakpointPair(b1, b2))
 print()
 clusters = sv.cluster_breakpoints(breakpoints, r=20, k=15)
@@ -40,12 +46,16 @@ print('initially found', len(clusters), 'clusters. with delly found', len(more_c
 high_supported_clusters = sum([1 for k, c in more_clusters.items() if len(c) > 1])
 print('found', high_supported_clusters, 'high_supported_clusters')
 print()
+
+bedfh = open('result.bed', 'w')
+
 with open('result.tsv', 'w') as fh:
     fh.write('type\tcentroid_breakpoint_pair\tunion\tintersection\tsupport\tstart_dist\t_end_dist\tcumu_dist\toriginal_pairs\n')
     last_pair = None
     for pair, support in sorted(more_clusters.items(), key=lambda x: x[0].key):
         if len(support) <= 0:
             continue
+        print(pair)
         d1 = -1
         d2 = -1
         if last_pair is not None \
@@ -75,8 +85,17 @@ with open('result.tsv', 'w') as fh:
         i1 = Interval.intersection([s.break1 for s in support])
         i2 = Interval.intersection([s.break2 for s in support])
         
+        # try adding breakpoint resolution
+        bf = '/projects/analysis/analysis14/P00159/merge_bwa/125nt/hg19a/P00159_5_lanes_dupsFlagged.bam'
+        e = Evidence(pair, bf)
+        e.load_evidence()
+        e.resolve_breakpoint(e.break1)
+        w = e._window(e.break1)
+        bedfh.write('{0}\t{1}\t{2}\t{3}'.format(e.break1.chr, w[0], w[1], str(e.breakpoint_pair)))
+        print()
         fh.write( '{type}\t{pair}\t{u1}==>{u2}\t{i1}==>{i2}'.format(
             type=event_type, pair=pair, u1=len(u1) , u2=len(u2), i1=len(i1 if i1 is not None else []), i2=len(i2 if i2 is not None else [])) 
                 +  '\t{3}\t{0}\t{1}\t{2}\t'.format(d1, d2, d1 + d2, len(support))
                 + ';'.join([str(k) for k in support]) + '\n')
         last_pair = pair
+bedfh.close()

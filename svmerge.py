@@ -38,15 +38,15 @@ def load_input_file(filename):
                 row['start_chromosome'], 
                 row['start_pos1'], 
                 row['start_pos2'], 
-                row['start_orientation'], 
-                row['start_strand'],
+                orient = row['start_orientation'], 
+                strand = row['start_strand'],
                 label = label)
         b2 = Breakpoint(
                 row['end_chromosome'], 
                 row['end_pos1'], 
                 row['end_pos2'], 
-                row['end_orientation'], 
-                row['end_strand'],
+                orient = row['end_orientation'], 
+                strand = row['end_strand'],
                 label = label)
         breakpoints.append(BreakpointPair(b1, b2))
     return breakpoints
