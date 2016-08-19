@@ -59,12 +59,21 @@ class TestEvidence(unittest.TestCase):
 
     def test_add_split_read_second_break(self):
         self.evidence.add_split_read(self.second_read, False)
+        # since this read would have been shifted, make sure the positions are correct
+        # at the first breakpoint (the novel read)
         self.assertEqual(len(self.evidence.split_reads[self.evidence.break1]), 1)
         temp = list(self.evidence.split_reads[self.evidence.break1])[0]
         self.assertEqual(temp.reference_start, 128664209)
         self.assertEqual(temp.reference_id, 10)
         self.assertEqual(temp.cigar, [(CIGAR.S, 47), (CIGAR.EQ, 78)])
+        # at the second breakpoint (the copied/shifted input read)
         self.assertEqual(len(self.evidence.split_reads[self.evidence.break2]), 1)
+        temp = list(self.evidence.split_reads[self.evidence.break2])[0]
+        self.assertEqual(temp.reference_start, 29684319)
+        self.assertEqual(temp.reference_id, 21)
+        self.assertEqual(temp.cigar, [(CIGAR.S, 49), (CIGAR.EQ, 76)])
+
+
     
     def test_add_split_read_first_break(self):
         self.evidence.add_split_read(self.first_read)
