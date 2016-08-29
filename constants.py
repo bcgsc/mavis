@@ -44,3 +44,7 @@ def _match_ambiguous_dna(x, y):
 
 DNA_ALPHABET = alphabet = Gapped(ambiguous_dna, '-')
 DNA_ALPHABET.match = lambda x, y: _match_ambiguous_dna(x, y)
+
+NA_MAPPING_QUALITY = 255
+SUFFIX_DELIM = '--'
+PHASE = Vocab(FIRST=0, SECOND=1, LAST=2, NA=-1)

@@ -1,5 +1,6 @@
 import TSV
 import svgwrite
+from sv import Interval
 
 class Bio:
     @property
@@ -36,22 +37,171 @@ class Transcript(Bio):
         self.exons = set()
         self.domains = set()
         
-        self.genomic_start = int(kwargs.pop('genomic_start'))
-        self.genomic_end = int(kwargs.pop('genomic_end'))
-        self.cds_start = int(kwargs.pop('cds_start'))
-        self.cds_end = int(kwargs.pop('cds_end'))
+        #self.genomic_start = int(kwargs.pop('genomic_start'))
+        #self.genomic_end = int(kwargs.pop('genomic_end'))
+        self.cds_start = int(kwargs.pop('cds_start')) # genomic position where coding begins
+        self.cds_end = int(kwargs.pop('cds_end')) # genomic position where coding ends
+
+        if self.cds_start > self.cds_end:
+            raise AttributeError('cds_end must be >= cds_start')
 
         for e in kwargs.pop('exons', []):
-            s, t = e
-            if s > t:
-                raise AttributeError('exon start/end tuples must have start <= end')
-            e = Exon(s, t, transcript = self)
+            self.exons.add(e)
+            e.transcript = self
+
         if self.gene is not None:
             self.gene.transcripts.add(self)
+        else:
+            self._strand = kwargs.pop('strand', STRAND.NS)
+
+        exons = sorted(self.exons, key=lambda x: (x.start, x.end))
+        for i, exon in enumerate(exons):
+            if i == 0:
+                continue
+            previous = exons[i - 1]
+            if Interval(exon.start, exon.end).overlap(Interval(previous.start, previous.end)):
+                raise AttributeError('exons cannot overlap within a transcript')
     
     @property
+    def get_exons(self):
+        return sorted(self.exons, key=lambda x: x.start)
+
+    @property
+    def genomic_length(self):
+        return self.genomic_end - self.genomic_start + 1
+    
+    @property
+    def genomic_start(self):
+        return min([e.start for e in self.exons])
+
+    @property
+    def genomic_end(self):
+        return max([e.end for e in self.exons])
+    
+    @property
+    def length(self):
+        return sum([e.length for e in self.exons])
+
+    @property
+    def strand(self):
+        if self.gene is not None:
+            return self.gene.strand
+        return self._strand
+
+    @property
     def key(self):
-        return (self.gene, self.name, self.genomic_start, self.genomic_end, self.cds_start, self.cds_end)
+        return (self.gene, self.name, self.genomic_start, self.genomic_end)
+    
+    def exon_number(self, exon):
+        for i, e in enumerate(self.get_exons()):
+            if e is exon:
+                return i
+        raise AttributeError('can only calculate phase on associated exons')
+
+    def start_phase(self, exon):
+        if exon not in self.exons:
+            raise AttributeError('can only calculate phase on associated exons')
+        
+        if self.strand == STRAND.POS:
+            if exon.start < self.cds_start or exon.start > self.cds_end:
+                return PHASE.NA
+            cds = 0
+            for e in sorted(self.exons, key=lambda x: x.start):
+                if e is exon:
+                    return (cds + 1) % 3
+                if self.cds_start <= e.start and self.cds_end >= e.end:
+                    # covers the entire exon
+                    cds += e.length
+                elif self.cds_start >= e.start and self.cds_end <= e.end:
+                    # cds is entirely within the current exon
+                    cds += self.cds_end - self.cds_start + 1
+                elif self.cds_start >= e.start and self.cds_start <= e.end:
+                    # covers the end of the exon
+                    cds += e.end - self.cds_start + 1
+                elif self.cds_end <= e.end and self.cds_end >= e.start:
+                    # covers the start of the exon
+                    cds += self.cds_end - e.start + 1
+        elif self.strand == STRAND.NEG:
+            cds = 0
+            for e in sorted(self.exons, key=lambda x: x.start, reverse=True):
+                if self.cds_start <= e.start and self.cds_end >= e.end:
+                    # covers the entire exon
+                    cds += e.length
+                elif self.cds_start >= e.start and self.cds_end <= e.end:
+                    # cds is entirely within the current exon
+                    cds += self.cds_end - self.cds_start + 1
+                elif self.cds_start >= e.start and self.cds_start <= e.end:
+                    # covers the end of the exon
+                    cds += e.end - self.cds_start + 1
+                elif self.cds_end <= e.end and self.cds_end >= e.start:
+                    # covers the start of the exon
+                    cds += self.cds_end - e.start + 1
+        else:
+            raise AttributeError('cannot calculate phase of exons when the strand of the transcript is not specified')
+        raise AttributeError('can only calculate phase on associated exons')
+
+    def trim(self, breakpoint):
+        if breakpoint.orient == ORIENT.NS:
+            raise AttributeError('cannot trim without specifying orientation of the breakpoint')
+        #if breakpoint.start != breakpoint.end:
+        #    raise AttributeError('cannot trim non-specific breakpoints')
+        t = Transcript(strand = self.gene.strand)
+        # recall that breakpoint orientation is given wrt to the forward strand of the genome
+        exon_num = 0
+        found_in_previous_intron = False
+        found_in_exon = False
+        exons = sorted(self.exons, key=lambda x: (x.start, x.end))
+        
+        while exon_num < len(self.exons):
+            current_exon = exons[exon_num]
+
+            if breakpoint.start >= current_exon.start \
+                    and breakpoint.end <= current_exon.end \
+                    and breakpoint.start == breakpoint.end:
+                # breakpoint range is fully contained in the current exon and specific
+                found_in_exon = True
+                break
+            elif Interval(breakpoint.start, breakpoint.end).overlap(Interval(current_exon.start, current_exon.end)):
+                # the breakpoint range overlaps the current exon but is non-specific
+                raise AttributeError('cannot trim a transcript with a non-specific exonic breakpoint')
+            elif exon_num == 0: # first exon
+                if breakpoint.end < current_exon.start:
+                    # before the first exon
+                    raise AttributeError('cannot trim a transcript where the breakpoint is outside the transcript')
+            else:
+                # check the previous exon
+                previous_exon = exons[exon_num - 1]
+                if breakpoint.start > previous_exon.end and breakpoint.end < current_exon.start:
+                    found_in_previous_intron = True
+                    break
+            exon_num += 1
+        if not found_in_exon and not found_in_previous_intron:
+            # after the last exon
+            raise AttributeError('cannot trim a transcript where the breakpoint is outside the transcript')
+        if breakpoint.orient == ORIENT.LEFT:
+            # =====------> OR  <====-------
+            exons = []
+            for e in exons[:exon_num]:
+                temp = Exon(e.start, e.end)
+                setattr(temp, 'transformed_from', e)
+                exons.append(temp)
+            if found_in_exon:
+                # create the final truncated exon
+                e = exons[exon_num]
+                temp = Exon(e.start, breakpoint.start, transcript=t)
+                setattr(temp, 'transformed_from', e)
+        else:
+            # -----======> OR <----=======
+            if found_in_exon:
+                # create the final truncated exon
+                e = exons[exon_num]
+                temp = Exon(breakpoint.start, e.end, transcript=t)
+                setattr(temp, 'transformed_from', e)
+            for e in exons[exon_num:]:
+                temp = Exon(e.start, e.end, transcript=t)
+                setattr(temp, 'transformed_from', e)
+        return t
+
 
 class Exon(Bio):
     def __init__(self, start, end, **kwargs):
@@ -59,12 +209,18 @@ class Exon(Bio):
         self.start = int(start)
         self.end = int(end)
         self.name = kwargs.pop('name', None)
+        if self.start > self.end:
+            raise AttributeError('exon start must be <= exon end')
         if self.transcript is not None:
             self.transcript.exons.add(self)
     
     @property
     def key(self):
         return (self.transcript, self.start, self.end, self.name)
+
+    @property
+    def length(self):
+        return self.end - self.start + 1
 
 class Domain(Bio):
     def __init__(self, name, regions, **kwargs):
@@ -96,7 +252,8 @@ def load_reference(filepath):
         else:
             genes[g.name] = g
         exons = [ x.split('-') for x in row['genomic_exon_ranges'].split(';')]
-        exons = [(int(s), int(t)) for s, t in exons]
+        exons = [Exon(int(s), int(t)) for s, t in exons]
+
         t = Transcript(
                 row['ensembl_transcript_id'], 
                 gene = g, 
@@ -168,13 +325,13 @@ def annotations(ref, breakpoint_pairs):
             combinations.append((t1, t2))
     
         # now we have a list of putative combinations
-#ref = load_reference('temp')
-#
-## '10:61665878' '10:43612031'
-#pos = 61665878
-##pos = 43612031
-#for gene in ref['10']:
-#    for t in gene.transcripts:
-#        if pos < t.genomic_start or pos > t.genomic_end:
-#            continue
-#        print('t', t, t.gene.aliases)
+ref = load_reference('/home/creisle/svn/ensembl_flatfiles/ensembl69_transcript_exons_and_domains_20160808.tsv')
+
+# '10:61665878' '10:43612031'
+pos = 61665878
+#pos = 43612031
+for gene in ref['10']:
+    for t in gene.transcripts:
+        if pos < t.genomic_start or pos > t.genomic_end:
+            continue
+        print('t', t, t.gene.aliases)

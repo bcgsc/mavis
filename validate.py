@@ -1,4 +1,5 @@
 import pysam
+import itertools
 from copy import copy
 import re
 from constants import *
@@ -45,6 +46,20 @@ def score_cigar(cigar_tuples):
             exact.append(l)
     return max(exact), max(fuzzy), total_events # longest exact, longest fuzzy, number of events
 
+def longest_homopolymer(sequence):
+    if len(sequence) == 0:
+        raise AttributeError('cannot compute longest_homopolymer on an empty sequence')
+    hp = [0]
+    last_char = sequence[0]
+
+    for char in sequence:
+        if char == last_char:
+            hp[-1] += 1
+        else:
+            hp.append(0)
+        last_char = char
+    return max(hp)
+
 def str_cigar(read):
     """
     >>> read = pysam.AlignedSegment()
@@ -59,13 +74,18 @@ def str_cigar(read):
     clipped_left = False
     max_str_len = 120
     primary_tuples = read.cigar
-    if read.cigar[0][0] == CIGAR.S: # soft clipped on the left side
+
+    typ, freq = read.cigar[0]
+    typ_end, freq_end = read.cigar[-1]
+
+    if (typ == CIGAR.S and typ_end != CIGAR.S) \
+        or (typ == CIGAR.S and freq > freq_end): # soft clipped on the left side
         freq = read.cigar[0][1]
         clipped = read.query_sequence[0:freq]
         primary_tuples = read.cigar[1:]
         clipped_left = True
         index += freq
-    elif read.cigar[-1][0] == CIGAR.S: # soft clipped at the end
+    elif typ_end == CIGAR.S: # soft clipped at the end
         freq = len(read.query_sequence) - read.cigar[-1][1]
         clipped = read.query_sequence[freq:]
         primary_tuples = read.cigar[:-1]
@@ -73,6 +93,8 @@ def str_cigar(read):
     for cigar, freq in primary_tuples:
         end = freq + index
         temp = read.query_sequence[index:end]
+        if cigar == CIGAR.S:
+            temp = temp.lower()
         index += freq
         s += temp
     
@@ -102,7 +124,7 @@ def compute_cigar(ref, seq, **kwargs):
     [(7, 25)]
     """
     if len(ref) != len(seq):
-        raise AssertionError('input strings must be of equal length', ref, seq)
+        raise AssertionError('input strings must be of equal length', ref, seq, len(ref), len(seq))
     assert(len(ref) > 0)
     
     force_start = kwargs.pop('force_start', None)
@@ -388,13 +410,16 @@ class Evidence:
         self.average_insert_size = kwargs.pop('average_insert_size', 450)
         self.stdev_insert_size = kwargs.pop('stdev_insert_size', 25)
         self.call_error = kwargs.pop('call_error', 10)
-        self.min_splits_reads_resolution = kwargs.pop('min_splits_reads_resolution', 2)
+        self.min_splits_reads_resolution = kwargs.pop('min_splits_reads_resolution', 3)
         self.convert_chr_to_index = kwargs.pop('convert_chr_to_index', {})
         self.bamfile = bamfile
         self.min_anchor_exact = kwargs.pop('min_anchor_exact', 6)
         self.min_anchor_fuzzy = kwargs.pop('min_anchor_fuzzy', 10) # allow a single event to interrupt the sequence
         self.max_anchor_events = kwargs.pop('max_anchor_events', 3)
         self.min_anchor_size = min(self.min_anchor_exact, self.min_anchor_fuzzy) # used when gathering evidence
+        self.min_anchor_variation = kwargs.pop('min_anchor_variation', 0.3)
+        self.min_mapping_quality = kwargs.pop('min_mapping_quality', 20)
+        self.filter_secondary_alignments = kwargs.pop('filter_secondary_alignments', True)
         self.convert_index_to_chr = {}
         self.update_chr_to_index(self.convert_chr_to_index)
 
@@ -473,13 +498,12 @@ class Evidence:
         opposite_breakpoint_ref = HUMAN_REFERENCE_GENOME[opposite_breakpoint.chr].seq[w[0] - 1: w[1]]
         a = sw_pairwise_alignment(opposite_breakpoint_ref, clipped)
         
-        if len(a) != 1: # ignore multi-maps and poor alignments
+        if len(a) != 1: # ignore multi-maps and poor alignments of clipped regions
             a = None
         else:
             a = a[0]
         # now that we've aligned the soft-clipped portion we should check if we need to
         # adjust the original read. only applies to the second breakpoint reads
-        shift = 0
         read = copy(read)
         # recalculate the read cigar string to ensure M is replaced with = or X
         read.cigar = self.recompute_cigar(read)
@@ -509,7 +533,7 @@ class Evidence:
             shift = 0
             # loop through and check if the next base should be shifted
             while shift + a.reference_end <= len(opposite_breakpoint_ref) \
-                    and shift + read.query_alignment_start < read.query_alignment_end \
+                    and shift + read.query_alignment_start < len(read.query_sequence) \
                     and shift + a.reference_start >= 0 \
                     and shift + read.query_alignment_end > read.query_alignment_start:
                 
@@ -523,9 +547,9 @@ class Evidence:
                 if not DNA_ALPHABET.match(opposite_breakpoint_ref[new_ref_pos], read.query_sequence[new_query_pos]): 
                     break # if they don't match we don't shift
                 
-                if shift + a.reference_end > len(opposite_breakpoint_ref) \
-                        or shift + read.query_alignment_start >= read.query_alignment_end \
-                        or shift + a.reference_start < 0 \
+                if shift + a.reference_end >= len(opposite_breakpoint_ref) \
+                        or shift + read.query_alignment_start >= len(read.query_sequence)  \
+                        or shift + a.reference_start <= 0 \
                         or shift + read.query_alignment_end <= read.query_alignment_start:
                             break # stop from over incrementing or over decrementing
                 shift += 1 if breakpoint.orient == ORIENT.RIGHT else -1
@@ -544,8 +568,19 @@ class Evidence:
                         cigar.append((CIGAR.EQ, shift))
                     a.cigar = cigar
                     read_reference = HUMAN_REFERENCE_GENOME[self.convert_index_to_chr[read.reference_id]] \
-                            .seq[read.reference_start - len(clipped):read.reference_start + len(primary)]
-                    read.cigar = compute_cigar(read_reference, read.query_sequence, force_start = len(clipped))
+                            .seq[read.reference_start - len(clipped):read.reference_end]
+                    #read.cigar = compute_cigar(read_reference, read.query_sequence, force_start = len(clipped))
+                    cigar = [(CIGAR.S, len(clipped))]
+                    count = 0
+                    for c, freq in read.cigar:
+                        left = len(clipped) - count
+                        if left > 0:
+                            if freq > left:
+                                cigar.append((c, freq - left))
+                            count += freq
+                        else:
+                            cigar.append((c, freq))
+                    read.cigar = cigar 
                 else: # LEFT ====>------ to -----=====>
                     clipped = primary[len(primary) + shift:] + clipped # append to the front
                     primary = primary[:len(primary) + shift]
@@ -559,9 +594,20 @@ class Evidence:
                     a.cigar = cigar 
                     read_reference = HUMAN_REFERENCE_GENOME[self.convert_index_to_chr[read.reference_id]] \
                             .seq[read.reference_start:read.reference_start + len(primary) + len(clipped)]
-                    read.cigar = compute_cigar(read_reference, read.query_sequence, force_end = len(primary))
-                read.query_name += '--shift+{0}'.format(shift)
-        if len(primary) < self.min_anchor_size:
+                    #read.cigar = compute_cigar(read_reference, read.query_sequence, force_end = len(primary))
+                    cigar = [(CIGAR.S, len(clipped))]
+                    count = 0
+                    for c, freq in read.cigar[::-1]:
+                        left = len(clipped) - count
+                        if left > 0:
+                            if freq > left:
+                                cigar.insert(0, (c, freq - left))
+                            count += freq
+                        else:
+                            cigar.insert(0, (c, freq))
+                    read.cigar = cigar
+                read.query_name += SUFFIX_DELIM + 'shift+{0}'.format(shift)
+        if len(primary) < self.min_anchor_size or len(clipped) < self.min_anchor_size:
             raise UserWarning('split read does not meet the minimum anchor criteria')
         # update the read values
         if a is not None:
@@ -574,11 +620,11 @@ class Evidence:
             w = self._window(opposite_breakpoint)
             a.reference_start = w[0] - 1 + a.reference_start  
             a.reference_id = self.convert_chr_to_index[opposite_breakpoint.chr]
-            a.query_name = read.query_name + '--clipped-realign'
+            a.query_name = read.query_name + SUFFIX_DELIM + 'clipped-realign'
             a.next_reference_start = read.next_reference_start
             a.next_reference_id = read.next_reference_id
             a.flag = read.flag
-            a.mapping_quality = 255 # can't compute a mapping quality when we are only computing one alignment, 255=NA
+            a.mapping_quality = NA_MAPPING_QUALITY # can't compute a mapping quality when we are only computing one alignment, 255=NA
         # need to do this after shifting
         s, t = self._window(breakpoint)
         s -= 1 # correct for pysam using 0-based coordinates
@@ -645,44 +691,104 @@ class Evidence:
                 raise NotImplementedError('unexpected CIGAR value {0} is not supported currently'.format(cigar_value))
         return temp
     
-    def resolve_breakpoint(self, first_breakpoint=True):
-        """
-        for one of the breakpoints, gather all split read evidence to better determine the  breakpoint position
-        returns a list of possible breakpoints along with the number of split reads supporting each of them
-        """
-        breakpoint = self.break1 if first_breakpoint else self.break2
+    def classify(self):
+        """ 
+        use the flanking reads and the split read evidence to determine the event type
+        event classification is preliminary and based on the single pair of breakpoints
         
-        if breakpoint not in self.split_reads:
-            raise AttributeError('invalid breakpoint. must be already associated with the evidence object through the '
-                'breakpoint_pair')
-        seqs = {}
+        decision tree
+        """
+        
+        reads = self.flanking_reads[self.break1].union(self.flanking_reads[self.break2])
 
+        classes = {}
+        for read in reads:
+            insert = None
+            s1 = STRAND.NEG if r1.is_reverse else STRAND.POS
+            s2 = STRAND.NEG if r2.is_reverse else STRAND.POS
+            if self.break1.chr == self.break2.chr:
+                if read.reference_start > read.next_reference_start:
+                    insert = read.reference_start - read.next_reference_start
+                else:
+                    insert = read.next_reference_start - read.reference_start
+                    s1, s2 = (s2, s1)
+
+                if insert < self.average_insert_size - self.stdev_insert_size * 2:
+                    insert = -1
+                elif insert > self.average_insert_size + self.stdev_insert_size * 2:
+                    insert = 1
+                else:
+                    insert = 0
+            classes[(s1, s2, insert)] = classes.get((s1, s2, insert), 0) + 1
+            
+        print(classes)
+        pass
+
+    def resolve_breakpoints(self):
+        """
+        use split read evidence to resolve bp-level calls for breakpoint pairs (where possible)
+        if a bp level call is not possible for one of the breakpoints then returns None
+        if no breakpoints can be resolved returns an empty list
+        """
+        pos1 = {}
+        pos2 = {}
         
-        for read in self.split_reads[breakpoint]:
-            left = ''
-            right = ''
-            pos = None
-            
-            if breakpoint.orient == ORIENT.LEFT:
-                left = read.query_sequence[read.query_alignment_start:read.query_alignment_end]
-                right = read.query_sequence[read.query_alignment_end:].lower() # end is exclusive in pysam
-                pos = read.reference_end - 1 + 1 # pysam read coordinates are 0-based and exclusive
-            elif breakpoint.orient == ORIENT.RIGHT:
-                left = read.query_sequence[:read.query_alignment_start].lower()
-                right = read.query_sequence[read.query_alignment_start:read.query_alignment_end]
-                pos = read.reference_start  + 1 # pysam read coordinates are 0-based
-            else:
-                raise AttributeError('input breakpoint cannot have an ambiguous orientation')
-            
-            exact, fuzzy, events = score_cigar(read.cigar)
-            if (exact < self.min_anchor_exact and fuzzy < self.min_anchor_fuzzy) \
-                    or events > self.max_anchor_events:
-                        continue
-            
-            if pos not in seqs:
-                seqs[pos] = []
-            seqs[pos].append((left, right, read))
+        for breakpoint, d in [(self.break1, pos1), (self.break2, pos2)]:
+            for read in self.split_reads[breakpoint]:
+                pos = breakpoint_pos(read, breakpoint.orient)
+                # check if the read meets the minimum quality requirements
+                exact, fuzzy, events = score_cigar(read.cigar)
+                if (exact < self.min_anchor_exact and fuzzy < self.min_anchor_fuzzy) \
+                        or events > self.max_anchor_events:
+                            continue
+                # check the variation in the aligned portion of the read
+                algn = read.query_sequence[read.query_alignment_start:read.query_alignment_end]
+                hp = longest_homopolymer(algn)
+                if 1 - hp / len(algn) < self.min_anchor_variation and hp > 3:
+                    print('read anchor not variable', algn)
+                    continue
+                
+                if pos not in d:
+                    d[pos] = []
+                d[pos].append(read)
+            putative_positions = list(d.keys())
+            for pos in putative_positions:
+                if len(d[pos]) < self.min_splits_reads_resolution:
+                    del d[pos]
+
+        linked_pairings = []
+
+        # now pair up the breakpoints with their putative partners
+        for first, second in itertools.product(pos1, pos2):
+            # can link a pair of breakpoints if the read prefix is in the evidence for both
+            # or if the mate id is in the other breakpoint
+            support = 0
+            prefixes = {}
+            for read in pos1[first]:
+                prefix = read.query_name
+                if SUFFIX_DELIM in read.query_name:
+                    prefix, temp = read.query_name.split(SUFFIX_DELIM, 1)
+                prefixes[prefix] = None
+            for read in pos2[second]:
+                prefix = read.query_name
+                if SUFFIX_DELIM in read.query_name:
+                    prefix, temp = read.query_name.split(SUFFIX_DELIM, 1)
+                if prefix in prefixes:
+                    support += 1
+            if support == 0:
+                continue
+            linked_pairings.append((first, second, support, len(pos1[first]), len(pos2[second])))
         
+        for pos in pos1:
+            if pos not in [ temp[0] for temp in linked_pairings ]:
+                linked_pairings.append((pos, None, 0, len(pos1[pos]), 0))
+        for pos in pos2:
+            if pos not in [ temp[1] for temp in linked_pairings ]:
+                linked_pairings.append((None, pos, 0, 0, len(pos2[pos])))
+        
+        return linked_pairings
+        
+        """
         resolved_breakpoints = []
         for pos in seqs:
             if len(seqs[pos]) < self.min_splits_reads_resolution:
@@ -713,7 +819,8 @@ class Evidence:
                     right_seq = rcons
                     ) 
             resolved_breakpoints.append((b, [x[2] for x in seqs[pos]]))
-        return resolved_breakpoints
+        return resolved_breakpoints"""
+        return linked_pairings
     
     def update_chr_to_index(self, d):
         temp = {}
@@ -727,6 +834,7 @@ class Evidence:
     def load_evidence(self):
         """
         open the associated bam file and read and store the evidence
+        does some preliminary read-quality filtering
         """
          
         bamfile = pysam.AlignmentFile(self.bamfile, 'rb')
@@ -741,7 +849,9 @@ class Evidence:
                 '{0}'.format(self.break1.chr), 
                 self._window(self.break1)[0],
                 self._window(self.break1)[1]):
-            if read.is_unmapped or read.mapping_quality == 0:
+            if read.is_unmapped \
+                    or read.mapping_quality < self.min_mapping_quality \
+                    or (read.is_secondary and self.filter_secondary_alignments):
                 continue
             try:
                 self.add_split_read(read)
@@ -755,7 +865,9 @@ class Evidence:
                 '{0}'.format(self.break2.chr), 
                 self._window(self.break2)[0],
                 self._window(self.break2)[1]):
-            if read.is_unmapped or read.mapping_quality == 0:
+            if read.is_unmapped \
+                    or read.mapping_quality < self.min_mapping_quality \
+                    or (read.is_secondary and self.filter_secondary_alignments):
                 continue
             try:
                 self.add_split_read(read, False)
@@ -774,20 +886,27 @@ def load_reference(filename):
     with open(filename, 'rU') as fh:
         HUMAN_REFERENCE_GENOME = SeqIO.to_dict(SeqIO.parse(fh, 'fasta'))
 
-def breakpoint_pos(read):
+def breakpoint_pos(read, orient=ORIENT.NS):
     typ, freq = read.cigar[0]
     end_typ, end_freq = read.cigar[-1]
+    ORIENT.enforce(orient)
 
-    if (typ == CIGAR.S and end_typ == CIGAR.S and freq > end_freq) \
-            or typ == CIGAR.S and end_typ != CIGAR.S:
-        pass
-        # soft clipped to the left
-        return read.reference_start
-    elif end_typ == CIGAR.S:
-        # soft clipped to the right
-        return read.reference_end - 1
-    else:
+    if typ != CIGAR.S and end_typ != CIGAR.S:
         raise AttributeError('cannot compute breakpoint for a read without soft-clipping')
+    
+    if orient == ORIENT.NS:
+        if (typ == CIGAR.S and end_typ == CIGAR.S and freq > end_freq) \
+            or typ == CIGAR.S and end_typ != CIGAR.S:
+            orient = ORIENT.RIGHT
+            # soft clipped to the left
+        else:
+            # soft clipped to the right
+            orient = ORIENT.LEFT
+
+    if orient == ORIENT.RIGHT:
+        return read.reference_start
+    else:
+        return read.reference_end - 1
 
 
 def main():
@@ -810,6 +929,10 @@ def main():
     bf = '/projects/analysis/analysis14/P00159/merge_bwa/125nt/hg19a/P00159_5_lanes_dupsFlagged.bam'
     e = Evidence(bp, bf)
     e.load_evidence()
+    for start, end, support in e.resolve_breakpoints():
+        print(start, end, support)
+    e.classify()
+    return
     for read in sorted(e.split_reads[e.break1], key=lambda x: breakpoint_pos(x) ):
         #print(read.query_name, read.cigar, read.reference_name,  read.reference_start, read.reference_end, read.reference_id)
         #print(score_cigar(read.cigar))

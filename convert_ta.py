@@ -35,7 +35,7 @@ for row in rows:
 print()
 clusters = sv.cluster_breakpoints(breakpoints, r=20, k=15)
 
-more_breakpoints = svmerge.load_input_file('delly_svmerge.tsv')
+more_breakpoints = svmerge.load_input_file('/projects/trans_scratch/validations/DELLY/POG/POG098/delly-0.6.1/P00157_P00159/delly_svmerge.tsv')
 
 print('loaded', len(breakpoints), 'breakpoints from TA and', len(more_breakpoints), 'from delly')
 
@@ -89,7 +89,21 @@ with open('result.tsv', 'w') as fh:
         bf = '/projects/analysis/analysis14/P00159/merge_bwa/125nt/hg19a/P00159_5_lanes_dupsFlagged.bam'
         e = Evidence(pair, bf)
         e.load_evidence()
-        e.resolve_breakpoint(e.break1)
+        for start, end, support, ss, es in e.resolve_breakpoints():
+            print('putative breakpoint: {0}:{1}-{2}:{3} #{4} {5} {6}'.format(pair.break1.chr, start, pair.break2.chr, end, support, ss , es))
+        e.classify()
+        continue
+        for bp, reads in e.resolve_breakpoint(True):
+            print(bp)
+            for read in reads:
+                print(validate.str_cigar(read), read.query_name, read.cigar)
+        print()
+
+        for bp, reads in e.resolve_breakpoint(False):
+            print(bp)
+            for read in reads:
+                print(validate.str_cigar(read), read.query_name, read.cigar)
+        print()
         w = e._window(e.break1)
         bedfh.write('{0}\t{1}\t{2}\t{3}'.format(e.break1.chr, w[0], w[1], str(e.breakpoint_pair)))
         print()

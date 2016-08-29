@@ -341,7 +341,12 @@ class BreakpointPair:
             elif self.opposing_strands != opposing:
                 raise AttributeError('conflict in input arguments, opposing_strands must agree with input breakpoints'
                     'when the strand has been specified')
-    
+        if self.break1.orient != ORIENT.NS and self.break2.orient != ORIENT.NS:
+            if self.opposing_strands is not None:
+                if (self.break1.orient == self.break2.orient and not self.opposing_strands) \
+                        or (self.break1.orient != self.break2.orient and self.opposing_strands):
+                    raise UserWarning('invalid breakpoint pair cannot form a valid combination', b1, b2, self.opposing_strands)
+
     def __repr__(self):
         return str(self)
     
@@ -426,32 +431,24 @@ class BreakpointPair:
                 return True
             else:
                 return False
-    
-    def naive_classification(self):
-        event_type = SVTYPE.NS
-        
-        if ORIENT.NS in [self.break1.orient, self.break2.orient]:
-            if self.break1.chr != self.break2.chr:
-                event_type = SVTYPE.TRANS
-        else:
-            if self.break1.orient == self.break2.orient:
-                if self.break1.chr != self.break2.chr:
-                    event_type = SVTYPE.ITRANS
-                else:
-                    event_type = SVTYPE.INV
-            elif self.break1.chr != self.break2.chr:
-                event_type = SVTYPE.TRANS
-            elif self.break1.orient == ORIENT.RIGHT:
-                event_type = SVTYPE.INS
-            else:
-                event_type = SVTYPE.DEL
-        return event_type
 
 class SVAnnotation:
-    def __init__(self, breakpoint_pair, t1, t2):
+    def __init__(self, breakpoint_pair, event_type, transcript1, transcript2, **kwargs):
         """
         holds the association between a pair of transcripts and an event
+        transcript1 and transcript2 can both be None or neither can be None
         """
+        self.breakpoint_pair = breakpoint_pair
+        self.event_type = SVTYPE.enforce(event_type)
+        self.transcript1 = transcript1
+        self.transcript2 = transcript2
+        self.HUMAN_REFERENCE_GENOME = kwargs.pop('HUMAN_REFERENCE_GENOME', None)
+    
+    def fusion_ref_sequence(self):
+        pass
+
+    def fusion_frame(self):
+        pass
 
 def is_complete(G, N):
     """
