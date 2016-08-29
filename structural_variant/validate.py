@@ -2,8 +2,8 @@ import pysam
 import itertools
 from copy import copy
 import re
-from constants import *
-from sv import Breakpoint, BreakpointPair
+from structural_variant.constants import *
+from structural_variant.breakpoint import Breakpoint, BreakpointPair
 from Bio.Seq import Seq
 from Bio.Alphabet import generic_dna
 from Bio.Alphabet.IUPAC import ambiguous_dna

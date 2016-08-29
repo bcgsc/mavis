@@ -1,6 +1,5 @@
 import TSV
-import svgwrite
-from sv import Interval
+from structural_variant.interval import Interval
 
 class Bio:
     @property
