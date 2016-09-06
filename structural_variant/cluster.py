@@ -1,9 +1,6 @@
 from __future__ import division
 
-from vocab import Vocab
-from structural_variant.constants import ORIENT
-from structural_variant.constants import STRAND
-from structural_variant.constants import SVTYPE
+from structural_variant.constants import *
 from structural_variant.interval import Interval
 
 import scipy.stats as stat

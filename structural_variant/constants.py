@@ -10,8 +10,14 @@ ORIENT = Vocab(LEFT='L', RIGHT='R', NS='?')
 
 STRAND = Vocab(POS='+', NEG='-', NS='?')
 
-SVTYPE = Vocab(DEL='deletion', TRANS='translocation', ITRANS='inverted translocation', 
-        INV='inversion', INS='insertion', DUP='duplication', COMPLEX='complex', NS='not specified')
+SVTYPE = Vocab(
+        DEL='deletion', 
+        TRANS='translocation', 
+        ITRANS='inverted translocation', 
+        INV='inversion', 
+        INS='insertion', 
+        DUP='duplication'
+        )
 
 """
 M 0 alignment match (can be a sequence match or mismatch)

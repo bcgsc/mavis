@@ -1,9 +1,6 @@
 from __future__ import division
 
-from vocab import Vocab
-from structural_variant.constants import ORIENT
-from structural_variant.constants import STRAND
-from structural_variant.constants import SVTYPE
+from structural_variant.constants import *
 from structural_variant.interval import Interval
 
 import scipy.stats as stat
@@ -47,7 +44,7 @@ class Breakpoint:
         else:
             return self.left_seq
 
-    def __init__(self, chr, interval_start, interval_end, **kwargs):
+    def __init__(self, chr, interval_start, interval_end=None, **kwargs):
         self.orient = ORIENT.enforce( kwargs.pop('orient', ORIENT.NS) )
         self.chr = str(chr)
         self.pos = Interval(interval_start, interval_end)
@@ -55,6 +52,9 @@ class Breakpoint:
         self.label = kwargs.pop('label', None)
         self.left_seq = kwargs.pop('left_seq', None)
         self.right_seq = kwargs.pop('right_seq', None)
+        self.classification = kwargs.pop('classification', None)
+        if self.classification is not None:
+            SVTYPE.enforce(self.classification)
     
     def __repr__(self):
         temp = '{0}:{1}{2}{3}{4}'.format(
@@ -71,7 +71,7 @@ class Breakpoint:
         return True
     
     def __hash__(self):
-        return hash((self.chr, self.pos, self.strand, self.orient, self.label))
+        return hash((self.chr, self.pos, self.strand, self.orient, self.label, self.classification))
  
 class BreakpointPair:    
     @property
@@ -87,6 +87,7 @@ class BreakpointPair:
             self.break2 = b2
         self.stranded = kwargs.pop('stranded', False)
         self.opposing_strands = kwargs.pop('opposing_strands', None)
+        self.untemplated_sequence = kwargs.pop('untemplated_sequence', None) # between break1 and break2 not in either
         if self.break1.strand != STRAND.NS and self.break2.strand != STRAND.NS:
             opposing = self.break1.strand != self.break2.strand
             if self.opposing_strands is None:
@@ -109,81 +110,84 @@ class BreakpointPair:
                 str(self.break2), 
                 ( '[OPP]' if self.opposing_strands else '[EQ]') if self.opposing_strands is not None else '')
 
-    def comparable(self, other):
+    def classify(self):
         """
-        determines if two pairs are comparable i.e. if they could possibly support the same event
-
-        >>> a = Breakpoint(1, 50, 51, orient = 'R', strand = '+')
-        >>> b = Breakpoint(1, 10, 11, orient = 'L', strand = '-')
-        >>> c = Breakpoint('X', 50, 51, orient = 'R', strand = '+')
-        >>> d = Breakpoint(1, 10, 11, orient = 'R', strand = '-')
-        >>> e = Breakpoint(1, 10, 11, orient = 'L', strand = '+')
-        >>> f = Breakpoint(1, 50, 51, orient = 'R', strand = '-')
-        >>> g = Breakpoint(1, 50, 51, orient = 'R', strand = '?')
-        >>> h = Breakpoint(1, 10, 11, orient = 'L', strand = '?')
-
-        # different chromosome
-        >>> BreakpointPair(a, b, stranded = False).comparable(BreakpointPair(c, b, stranded = False))
-        False
-
-        # same pair
-        >>> BreakpointPair(a, b, stranded = False).comparable(BreakpointPair(a, b, stranded = False))
-        True
-
-        # same pair and stranded
-        >>> BreakpointPair(a, b, stranded = True).comparable(BreakpointPair(a, b, stranded = True))
-        True
-
-        # different orientation
-        >>> BreakpointPair(a, b, stranded = False).comparable(BreakpointPair(a, d, stranded = False))
-        False
-
-        # different relative strand
-        >>> BreakpointPair(a, b, stranded = False).comparable(BreakpointPair(a, e, stranded = False))
-        False
-
-        # same relative strands, but opposite strands and stranded not specified
-        >>> BreakpointPair(a, b, stranded = False).comparable(BreakpointPair(f, e, stranded = False))
-        True
-
-        # same relative strands, but opposite strands and stranded specified
-        >>> BreakpointPair(a, b, stranded = True).comparable(BreakpointPair(f, e, stranded = True))
-        False
-
-        # adding not specified strands
-        >>> BreakpointPair(a, b, stranded = True).comparable(BreakpointPair(g, e, stranded = True))
-        False
-
-        # adding not specified strands
-        >>> BreakpointPair(a, b, stranded = True).comparable(BreakpointPair(f, h, stranded = True))
-        False
-
-        # adding not specified strands
-        >>> BreakpointPair(a, b, stranded = True).comparable(BreakpointPair(g, h, stranded = True))
-        True
+        uses the chr, orientations and strands to determine the
+        possible structural_variant types that this pair could support
         """
-        if self.break1.chr != other.break1.chr \
-                or self.break2.chr != other.break2.chr \
-                or (self.break1.orient != other.break1.orient 
-                        and ORIENT.NS not in [self.break1.orient, other.break1.orient]) \
-                or (self.break2.orient != other.break2.orient 
-                        and ORIENT.NS not in [self.break2.orient, other.break2.orient]):
-                    return False
-        elif self.stranded and other.stranded: # both of them cares about the strand
-            if (self.break1.strand == other.break1.strand 
-                    or STRAND.NS in [self.break1.strand, other.break1.strand]) \
-                    and (self.break2.strand == other.break2.strand or 
-                            STRAND.NS in [self.break2.strand, other.break2.strand]):
-                return True
+        if self.break1.chr == self.break2.chr: # intrachromosomal
+            if self.opposing_strands is None:
+                if self.break1.orient == ORIENT.LEFT:    
+                    if self.break2.orient == ORIENT.LEFT: # LL
+                        return [SVTYPE.INV]
+                    elif self.break2.orient == ORIENT.RIGHT: # LR
+                        return [SVTYPE.DEL, SVTYPE.INS]
+                    else: # L?
+                        return [SVTYPE.DEL, SVTYPE.INS, SVTYPE.INV]
+                elif self.break1.orient == ORIENT.RIGHT: 
+                    if self.break2.orient == ORIENT.LEFT: # RL
+                        return [SVTYPE.DUP]
+                    elif self.break2.orient.ORIENT.RIGHT: # RR
+                        return [SVTYPE.INV]
+                    else: # R?
+                        return [SVTYPE.DUP, SVTYPE.INV]
+                else:
+                    if self.break2.orient == ORIENT.LEFT: #?L
+                        return [SVTYPE.DUP, SVTYPE.INV]
+                    elif self.break2.orient.ORIENT.RIGHT: #?R
+                        return [SVTYPE.INV, SVTYPE.DEL, SVTYPE.INS]
+                    else: # ??
+                        return [SVTYPE.DUP, SVTYPE.INV, SVTYPE.DEL, SVTYPE.INS]
+            elif self.opposing_strands:
+                if (self.break1.orient == ORIENT.LEFT and self.break2.orient == ORIENT.RIGHT) \
+                        or (self.break1.orient == ORIENT.RIGHT and self.break2.orient == ORIENT.LEFT):
+                            raise InvalidRearrangement(self)
+                return [SVTYPE.INV]
             else:
-                return False
-        else:
-            if STRAND.NS in [self.break1.strand, self.break2.strand, other.break1.strand, other.break2.strand]:
-                return True
-            elif (self.break1.strand == self.break2.strand) == (other.break1.strand == other.break2.strand):
-                return True
+                if (self.break1.orient == ORIENT.LEFT and self.break2.orient == ORIENT.LEFT) \
+                        or (self.break1.orient == ORIENT.RIGHT and self.break2.orient == ORIENT.RIGHT):
+                            raise InvalidRearrangement(self)
+                elif self.break1.orient == ORIENT.LEFT or self.break2.orient == ORIENT.RIGHT:
+                    return [SVTYPE.DEL, SVTYPE.INS]
+                elif self.break1.orient == ORIENT.RIGHT or self.break2.orient == ORIENT.LEFT:
+                    return [SVTYPE.DUP]
+        else: # interchromosomal
+            if self.opposing_strands is None:
+                if self.break1.orient == ORIENT.LEFT:
+                    if self.break2.orient == ORIENT.LEFT:
+                        pass
+                    elif self.break2.orient == ORIENT.RIGHT:
+                        pass
+                    else:
+                        pass
+                elif self.break1.orient == ORIENT.RIGHT:
+                    if self.break2.orient == ORIENT.LEFT:
+                        pass
+                    elif self.break2.orient.ORIENT.RIGHT:
+                        pass
+                    else:
+                        pass
+                else:
+                    if self.break2.orient == ORIENT.LEFT:
+                        pass
+                    elif self.break2.orient.ORIENT.RIGHT:
+                        pass
+                    else:
+                        pass
+            elif self.opposing_strands:
+                if (self.break1.orient == ORIENT.LEFT and self.break2.orient == ORIENT.RIGHT) \
+                        or (self.break1.orient == ORIENT.RIGHT and self.break2.orient == ORIENT.LEFT):
+                            raise InvalidRearrangement(self)
+                return [SVTYPE.ITRANS]
             else:
-                return False
+                if (self.break1.orient == ORIENT.LEFT and self.break2.orient == ORIENT.LEFT) \
+                        or (self.break1.orient == ORIENT.RIGHT and self.break2.orient == ORIENT.RIGHT):
+                            raise InvalidRearrangement(self)
+
+                elif self.break1.orient == ORIENT.LEFT or self.break2.orient == ORIENT.RIGHT:
+                    pass
+                elif self.break1.orient == ORIENT.RIGHT or self.break2.orient == ORIENT.LEFT:
+                    pass
 
 class SVAnnotation:
     def __init__(self, breakpoint_pair, event_type, transcript1, transcript2, **kwargs):

@@ -3,6 +3,7 @@ import itertools
 from copy import copy
 import re
 from structural_variant.constants import *
+import structural_variant.annotate as ann
 from structural_variant.breakpoint import Breakpoint, BreakpointPair
 from Bio.Seq import Seq
 from Bio.Alphabet import generic_dna
@@ -185,18 +186,15 @@ def compute_cigar(ref, seq, **kwargs):
         raise AssertionError('cigar tuple must be same length as input string', temp, len(ref), ref, cigar_tuples)
     return cigar_tuples
 
-
-
-
-def _build_string_from_reverse_path(ref, seq, path):
+def build_string_from_reverse_path(ref, seq, path):
     """
     >>> ref = "-mxabdce"
     >>> seq = "-abc"
-    >>> _build_string_from_reverse_path(ref, seq, [(7, 3), (6, 3)])
+    >>> build_string_from_reverse_path(ref, seq, [(7, 3), (6, 3)])
     ('e', '-')
-    >>> _build_string_from_reverse_path(ref, seq, [(7, 3), (6, 3), (5,2), (4,2)])
+    >>> build_string_from_reverse_path(ref, seq, [(7, 3), (6, 3), (5,2), (4,2)])
     ('dce', '-c-')
-    >>> _build_string_from_reverse_path(ref, seq, [(6, 3), (5,2), (4,2), (3, 1), (2, 0)])
+    >>> build_string_from_reverse_path(ref, seq, [(6, 3), (5,2), (4,2), (3, 1), (2, 0)])
     ('mxabdce', '--ab-c-')
     """
     ref = str(ref)
@@ -314,7 +312,7 @@ def sw_pairwise_alignment(input_ref, input_seq, **kwargs):
         # check if we should continue with the current path based on the input
         if max_inner_events is not None and len(current_path) > max_inner_events + 1:
             # calculate the cigar string for the current path
-            temp = _build_string_from_reverse_path(ref, seq, current_path)
+            temp = build_string_from_reverse_path(ref, seq, current_path)
             c = compute_cigar(*temp)
             exact, fuzzy, events = score_cigar(c)
             if events > max_inner_events:
@@ -340,7 +338,7 @@ def sw_pairwise_alignment(input_ref, input_seq, **kwargs):
         ref_path = ''
         seq_path = ''
         #path.reverse()
-        ref_path, seq_path = _build_string_from_reverse_path(ref, seq, path)
+        ref_path, seq_path = build_string_from_reverse_path(ref, seq, path)
 
         alignment_score = 0
         for i in range(0, len(ref_path)):
@@ -495,7 +493,7 @@ class Evidence:
         
         # try mapping the soft-clipped portion to the other breakpoint
         w = self._window(opposite_breakpoint)
-        opposite_breakpoint_ref = HUMAN_REFERENCE_GENOME[opposite_breakpoint.chr].seq[w[0] - 1: w[1]]
+        opposite_breakpoint_ref = ann.HUMAN_REFERENCE_GENOME[opposite_breakpoint.chr].seq[w[0] - 1: w[1]]
         a = sw_pairwise_alignment(opposite_breakpoint_ref, clipped)
         
         if len(a) != 1: # ignore multi-maps and poor alignments of clipped regions
@@ -567,7 +565,7 @@ class Evidence:
                     else:
                         cigar.append((CIGAR.EQ, shift))
                     a.cigar = cigar
-                    read_reference = HUMAN_REFERENCE_GENOME[self.convert_index_to_chr[read.reference_id]] \
+                    read_reference = ann.HUMAN_REFERENCE_GENOME[self.convert_index_to_chr[read.reference_id]] \
                             .seq[read.reference_start - len(clipped):read.reference_end]
                     #read.cigar = compute_cigar(read_reference, read.query_sequence, force_start = len(clipped))
                     cigar = [(CIGAR.S, len(clipped))]
@@ -592,7 +590,7 @@ class Evidence:
                     else:
                         cigar.insert(0, (CIGAR.EQ, abs(shift)))
                     a.cigar = cigar 
-                    read_reference = HUMAN_REFERENCE_GENOME[self.convert_index_to_chr[read.reference_id]] \
+                    read_reference = ann.HUMAN_REFERENCE_GENOME[self.convert_index_to_chr[read.reference_id]] \
                             .seq[read.reference_start:read.reference_start + len(primary) + len(clipped)]
                     #read.cigar = compute_cigar(read_reference, read.query_sequence, force_end = len(primary))
                     cigar = [(CIGAR.S, len(clipped))]
@@ -658,7 +656,7 @@ class Evidence:
         """
         temp = []
         offset = 0
-        ref = HUMAN_REFERENCE_GENOME[self.convert_index_to_chr[read.reference_id]].seq
+        ref = ann.HUMAN_REFERENCE_GENOME[self.convert_index_to_chr[read.reference_id]].seq
         
         ref_pos = read.reference_start
         seq_pos = 0
@@ -691,38 +689,6 @@ class Evidence:
                 raise NotImplementedError('unexpected CIGAR value {0} is not supported currently'.format(cigar_value))
         return temp
     
-    def classify(self):
-        """ 
-        use the flanking reads and the split read evidence to determine the event type
-        event classification is preliminary and based on the single pair of breakpoints
-        
-        decision tree
-        """
-        
-        reads = self.flanking_reads[self.break1].union(self.flanking_reads[self.break2])
-
-        classes = {}
-        for read in reads:
-            insert = None
-            s1 = STRAND.NEG if r1.is_reverse else STRAND.POS
-            s2 = STRAND.NEG if r2.is_reverse else STRAND.POS
-            if self.break1.chr == self.break2.chr:
-                if read.reference_start > read.next_reference_start:
-                    insert = read.reference_start - read.next_reference_start
-                else:
-                    insert = read.next_reference_start - read.reference_start
-                    s1, s2 = (s2, s1)
-
-                if insert < self.average_insert_size - self.stdev_insert_size * 2:
-                    insert = -1
-                elif insert > self.average_insert_size + self.stdev_insert_size * 2:
-                    insert = 1
-                else:
-                    insert = 0
-            classes[(s1, s2, insert)] = classes.get((s1, s2, insert), 0) + 1
-            
-        print(classes)
-        pass
 
     def resolve_breakpoints(self):
         """
@@ -777,14 +743,14 @@ class Evidence:
                     support += 1
             if support == 0:
                 continue
-            linked_pairings.append((first, second, support, len(pos1[first]), len(pos2[second])))
+            linked_pairings.append((first, second, support, pos1[first], pos2[second]))
         
         for pos in pos1:
             if pos not in [ temp[0] for temp in linked_pairings ]:
-                linked_pairings.append((pos, None, 0, len(pos1[pos]), 0))
+                linked_pairings.append((pos, None, 0, pos1[pos], []))
         for pos in pos2:
             if pos not in [ temp[1] for temp in linked_pairings ]:
-                linked_pairings.append((None, pos, 0, 0, len(pos2[pos])))
+                linked_pairings.append((None, pos, 0, [], pos2[pos]))
         
         return linked_pairings
         
@@ -878,14 +844,6 @@ class Evidence:
             except UserWarning:
                 pass
 
-
-HUMAN_REFERENCE_GENOME = {}
-
-def load_reference(filename):
-    global HUMAN_REFERENCE_GENOME
-    with open(filename, 'rU') as fh:
-        HUMAN_REFERENCE_GENOME = SeqIO.to_dict(SeqIO.parse(fh, 'fasta'))
-
 def breakpoint_pos(read, orient=ORIENT.NS):
     typ, freq = read.cigar[0]
     end_typ, end_freq = read.cigar[-1]
@@ -908,42 +866,6 @@ def breakpoint_pos(read, orient=ORIENT.NS):
     else:
         return read.reference_end - 1
 
-
-def main():
-    # open up the reference sequence
-    global HUMAN_REFERENCE_GENOME
-    #f = '/projects/seqref/genomes/Homo_sapiens/TCGA_Special/GRCh37-lite.fa'
-    f = 'chr11_chr22.fa'
-    print('loading the human reference genome', f)
-    with open(f, 'rU') as fh:
-        HUMAN_REFERENCE_GENOME = SeqIO.to_dict(SeqIO.parse(fh, 'fasta'))
-        print(HUMAN_REFERENCE_GENOME.keys())
-    
-    print('finished loading:', f)
-    
-    bp = BreakpointPair(
-                Breakpoint('11', 128664209, 128664209, orient = ORIENT.RIGHT),
-                Breakpoint('22', 29684365, 29684365, orient = ORIENT.LEFT),
-                stranded = False, opposing_strands = False)
-    
-    bf = '/projects/analysis/analysis14/P00159/merge_bwa/125nt/hg19a/P00159_5_lanes_dupsFlagged.bam'
-    e = Evidence(bp, bf)
-    e.load_evidence()
-    for start, end, support in e.resolve_breakpoints():
-        print(start, end, support)
-    e.classify()
-    return
-    for read in sorted(e.split_reads[e.break1], key=lambda x: breakpoint_pos(x) ):
-        #print(read.query_name, read.cigar, read.reference_name,  read.reference_start, read.reference_end, read.reference_id)
-        #print(score_cigar(read.cigar))
-        print(str_cigar(read), read.query_name, breakpoint_pos(read))
-    print()
-    for read in sorted(e.split_reads[e.break2], key=lambda x: breakpoint_pos(x) ):
-        #print(read.query_name, read.cigar, read.reference_name,  read.reference_start, read.reference_end, read.reference_id)
-        #print(score_cigar(read.cigar))
-        print(str_cigar(read), read.query_name, breakpoint_pos(read))
-
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
-    main()

@@ -1,7 +1,7 @@
-from sv import BreakpointPair, Breakpoint
-from validate import Evidence
-import validate
-from constants import *
+from structural_variant.breakpoint import BreakpointPair, Breakpoint
+from structural_variant.validate import *
+from structural_variant.annotate import load_reference_genome
+from structural_variant.constants import *
 import pysam
 import unittest
 
@@ -20,7 +20,7 @@ class MockRead(pysam.AlignedSegment):
         self.cigar = kwargs.pop('cigar')
 
 def setUpModule():
-    validate.load_reference('chr11_chr22.fa')
+    load_reference_genome('chr11_chr22.fa')
 
 class TestEvidence(unittest.TestCase):
     def setUp(self):
@@ -99,19 +99,19 @@ class TestValidate(unittest.TestCase):
     that are not associated with a class
     """
     def test_sw_pairwise_alignment(self):
-        a = validate.sw_pairwise_alignment('ATGGACTCGGTAAA', 'CGGTAA')[0]
+        a = sw_pairwise_alignment('ATGGACTCGGTAAA', 'CGGTAA')[0]
         self.assertEqual(a.reference_start, 7)
         self.assertEqual(a.cigar, [(CIGAR.EQ, 6)])
         self.assertEqual(a.query_sequence, 'CGGTAA')
 
-    def test__build_string_from_reverse_path(self):
+    def test_build_string_from_reverse_path(self):
         ref = '-mxabdce'
         seq = '-abc'
-        t = validate._build_string_from_reverse_path(ref, seq, [(7, 3), (6, 3)])
+        t = build_string_from_reverse_path(ref, seq, [(7, 3), (6, 3)])
         self.assertEqual(('e', '-'), t)
-        t = validate._build_string_from_reverse_path(ref, seq, [(7, 3), (6, 3), (5,2), (4,2)])
+        t = build_string_from_reverse_path(ref, seq, [(7, 3), (6, 3), (5,2), (4,2)])
         self.assertEqual(('dce', '-c-'), t)
-        t = validate._build_string_from_reverse_path(ref, seq, [(6, 3), (5,2), (4,2), (3, 1), (2, 0)])
+        t = build_string_from_reverse_path(ref, seq, [(6, 3), (5,2), (4,2), (3, 1), (2, 0)])
         self.assertEqual(('mxabdce', '--ab-c-'), t)
 
 if __name__ == "__main__":
