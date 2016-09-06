@@ -22,7 +22,7 @@ class DiscontiuousMappingError(Exception):
         if sum([ 1 for arg in [self.between, self.after, self.before] if arg]) != 1:
             raise AttributeError('before, after, and between arguments '
                     'are both required and mutually exclusive')
-        self.msg = ' '.join([msg] + [p for p in pos])
+        self.msg = ' '.join([msg] + [str(p) for p in pos])
         if kwargs:
             raise AttributeError('unexpected keyword argument', kwargs)
 
@@ -48,7 +48,7 @@ class StrandSpecificityError(Exception):
 
 class InvalidRearrangement(Exception):
     def __init__(self, *pos):
-        self.msg = ' '.join(list(pos))
+        self.msg = ' '.join([ str(p) for p in pos])
 
     def __str__(self):
         name = self.__class__.__name__

@@ -1,17 +1,38 @@
 import TSV
-import sys
-import sv
-from sv import Breakpoint, BreakpointPair, Interval
-import svmerge
-from constants import ORIENT
-from validate import Evidence
-import validate
+from structural_variant.constants import ORIENT
+import argparse
+import os
+
+__version__ = '0.0.1'
+__prog__ = os.path.basename( os.path.realpath(__file__) )
 
 TSV._verbose = True
 
-f = '/projects/seqref/genomes/Homo_sapiens/TCGA_Special/GRCh37-lite.fa'
-print('loading the reference file', f)
-validate.load_reference(f)
+#f = '/projects/seqref/genomes/Homo_sapiens/TCGA_Special/GRCh37-lite.fa'
+#print('loading the reference file', f)
+#validate.load_reference(f)
+args = parser = argparse.ArgumentParser()
+parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + __version__,
+                        help='Outputs the version number')
+parser.add_argument('-f', '--overwrite', action='store_true', default=False,
+                        help='set flag to overwrite existing reviewed files')
+parser.add_argument('-o', '--output', help='path to the output file', required=True)
+parser.add_argument('-n', '--input', help='path to the input file to be converted', required=True)
+parser.add_argument('-p', '--protocol', choices=['genome', 'transcriptome'], required=True)
+
+# /projects/POG/POG_data/POG098/wgs/GV2/POG098_POG098-OCT-1-unique-14-filters/POG098-OCT-1_genome_fusions_concat.tsv
+
+args = parser.parse_args()
+
+if os.path.exists(args.output) and not args.overwrite:
+    print('error: output file {0} already exists. please use the --overwrite option'.format(args.out))
+    parser.print_help()
+    exit()
+if not os.path.exists(args.input):
+    print('error: input file {0} does not exist'.format(args.input))
+    parser.print_help()
+    exit()
+
 
 header, rows = TSV.read_file(
         '/projects/POG/POG_data/POG098/wgs/GV2/POG098_POG098-OCT-1-unique-14-filters/POG098-OCT-1_genome_fusions_concat.tsv',
@@ -25,6 +46,38 @@ header, rows = TSV.read_file(
         strict = False
         )
 
+output_header = [
+        'start_chromosome', 
+        'end_chromosome', 
+        'start_orientation', 
+        'end_orientation', 
+        'start_strand', 
+        'end_strand',
+        'protocol',
+        'tool_version'
+        ]
+
+with open(args.output, 'w') as fh:
+    fh.write('## {1} v{0}\n'.format(__version__, __prog__))
+    fh.write('## input: {0}\n'.format(args.input))
+    fh.write('## output: {0}\n'.format(args.output))
+    fh.write('## overwrite: {0}\n'.format(args.overwrite))
+    fh.write('#' + '\t'.join(output_header) + '\n')
+    for row in rows:
+        output_row = [
+                row['chr1'],
+                row['chr2'],
+                row['or1'],
+                row['or2'],
+                row['strand1'],
+                row['strand2'],
+                args.protocol,
+                '{1}_v{0}'.format(__version__, __prog__)
+                ]
+        fh.write('\t'.join(output_row) + '\n')
+
+exit()
+"""
 UNC = 10
 print('loaded', len(rows), 'rows')
 breakpoints = []
@@ -50,7 +103,7 @@ print()
 bedfh = open('result.bed', 'w')
 
 with open('result.tsv', 'w') as fh:
-    fh.write('type\tcentroid_breakpoint_pair\tunion\tintersection\tsupport\tstart_dist\t_end_dist\tcumu_dist\toriginal_pairs\n')
+    fh.write('centroid_breakpoint_pair\tunion\tintersection\tsupport\tstart_dist\t_end_dist\tcumu_dist\toriginal_pairs\n')
     last_pair = None
     for pair, support in sorted(more_clusters.items(), key=lambda x: x[0].key):
         if len(support) <= 0:
@@ -63,23 +116,6 @@ with open('result.tsv', 'w') as fh:
                 and last_pair.break2.chr == pair.break2.chr:
             d1 = abs(last_pair.break1.pos - pair.break1.pos)
             d2 = abs(last_pair.break2.pos - pair.break2.pos)
-        event_type = '?'
-
-        if ORIENT.NS in [pair.break1.orient, pair.break2.orient]:
-            if pair.break1.chr != pair.break2.chr:
-                event_type = 'translocation-?'
-        else:
-            if pair.break1.orient == pair.break2.orient:
-                if pair.break1.chr != pair.break2.chr:
-                    event_type = 'translocation-inversion'
-                else:
-                    event_type = 'inversion'
-            elif pair.break1.chr != pair.break2.chr:
-                event_type = 'translocation'
-            elif pair.break1.orient == ORIENT.RIGHT:
-                event_type = 'duplication'
-            else:
-                event_type = 'deletion'
         u1 = Interval.union([s.break1 for s in support])
         u2 = Interval.union([s.break2 for s in support])
         i1 = Interval.intersection([s.break1 for s in support])
@@ -113,3 +149,4 @@ with open('result.tsv', 'w') as fh:
                 + ';'.join([str(k) for k in support]) + '\n')
         last_pair = pair
 bedfh.close()
+"""

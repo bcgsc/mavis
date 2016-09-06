@@ -2,6 +2,7 @@ import re
 import TSV
 import structural_variant.annotate as ann
 from structural_variant.constants import *
+from structural_variant.align import *
 from structural_variant.breakpoint import Breakpoint, BreakpointPair
 from structural_variant.validate import Evidence
 from structural_variant.annotate import load_reference_genome, load_reference_genes 
@@ -89,11 +90,11 @@ bp = BreakpointPair(
             stranded = False, opposing_strands = False)
 
 bf = '/projects/analysis/analysis14/P00159/merge_bwa/125nt/hg19a/P00159_5_lanes_dupsFlagged.bam'
-e = Evidence(bp, bf)
+e = Evidence(bp, SVTYPE.TRANS, bf)
 e.load_evidence()
 for start, end, support, start_reads, end_reads in e.resolve_breakpoints():
     print(start, end, support, len(start_reads), len(end_reads))
-e.classify()
+
 for read in sorted(e.split_reads[e.break1], key=lambda x: breakpoint_pos(x) ):
     #print(read.query_name, read.cigar, read.reference_name,  read.reference_start, read.reference_end, read.reference_id)
     #print(score_cigar(read.cigar))

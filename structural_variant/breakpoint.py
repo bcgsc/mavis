@@ -1,12 +1,8 @@
 from __future__ import division
 
 from structural_variant.constants import *
+from structural_variant.error import *
 from structural_variant.interval import Interval
-
-import scipy.stats as stat
-import itertools
-import numpy as np
-import networkx as nx
 import warnings
 
 class Breakpoint:
@@ -16,7 +12,7 @@ class Breakpoint:
     """
     @property
     def key(self):
-        return (self.chr, self.start, self.end, self.orient, self.strand, self.left_seq, self.right_seq)
+        return (self.chr, self.start, self.end, self.orient, self.strand, self.label, self.left_seq, self.right_seq)
 
     @property
     def start(self):
@@ -52,9 +48,6 @@ class Breakpoint:
         self.label = kwargs.pop('label', None)
         self.left_seq = kwargs.pop('left_seq', None)
         self.right_seq = kwargs.pop('right_seq', None)
-        self.classification = kwargs.pop('classification', None)
-        if self.classification is not None:
-            SVTYPE.enforce(self.classification)
     
     def __repr__(self):
         temp = '{0}:{1}{2}{3}{4}'.format(
@@ -71,12 +64,12 @@ class Breakpoint:
         return True
     
     def __hash__(self):
-        return hash((self.chr, self.pos, self.strand, self.orient, self.label, self.classification))
+        return hash(self.key)
  
 class BreakpointPair:    
     @property
     def key(self):
-        return self.break1.key, self.break2.key, self.opposing_strands, self.stranded
+        return self.break1.key, self.break2.key, self.opposing_strands, self.stranded, self.untemplated_sequence
 
     def __init__(self, b1, b2, **kwargs):
         if b1.key > b2.key:
@@ -88,6 +81,8 @@ class BreakpointPair:
         self.stranded = kwargs.pop('stranded', False)
         self.opposing_strands = kwargs.pop('opposing_strands', None)
         self.untemplated_sequence = kwargs.pop('untemplated_sequence', None) # between break1 and break2 not in either
+        self.classification = kwargs.pop('classification', None)
+        
         if self.break1.strand != STRAND.NS and self.break2.strand != STRAND.NS:
             opposing = self.break1.strand != self.break2.strand
             if self.opposing_strands is None:
@@ -99,7 +94,7 @@ class BreakpointPair:
             if self.opposing_strands is not None:
                 if (self.break1.orient == self.break2.orient and not self.opposing_strands) \
                         or (self.break1.orient != self.break2.orient and self.opposing_strands):
-                    raise UserWarning('invalid breakpoint pair cannot form a valid combination', b1, b2, self.opposing_strands)
+                    raise InvalidRearrangement('invalid breakpoint pair cannot form a valid combination', b1, b2, self.opposing_strands)
 
     def __repr__(self):
         return str(self)
@@ -109,85 +104,68 @@ class BreakpointPair:
                 str(self.break1), 
                 str(self.break2), 
                 ( '[OPP]' if self.opposing_strands else '[EQ]') if self.opposing_strands is not None else '')
-
-    def classify(self):
+    
+    @classmethod
+    def classify(cls, pair):
         """
         uses the chr, orientations and strands to determine the
         possible structural_variant types that this pair could support
         """
-        if self.break1.chr == self.break2.chr: # intrachromosomal
-            if self.opposing_strands is None:
-                if self.break1.orient == ORIENT.LEFT:    
-                    if self.break2.orient == ORIENT.LEFT: # LL
+        if pair.break1.chr == pair.break2.chr: # intrachromosomal
+            if pair.opposing_strands is None:
+                if pair.break1.orient == ORIENT.LEFT:    
+                    if pair.break2.orient == ORIENT.LEFT: # LL
                         return [SVTYPE.INV]
-                    elif self.break2.orient == ORIENT.RIGHT: # LR
+                    elif pair.break2.orient == ORIENT.RIGHT: # LR
                         return [SVTYPE.DEL, SVTYPE.INS]
                     else: # L?
                         return [SVTYPE.DEL, SVTYPE.INS, SVTYPE.INV]
-                elif self.break1.orient == ORIENT.RIGHT: 
-                    if self.break2.orient == ORIENT.LEFT: # RL
+                elif pair.break1.orient == ORIENT.RIGHT: 
+                    if pair.break2.orient == ORIENT.LEFT: # RL
                         return [SVTYPE.DUP]
-                    elif self.break2.orient.ORIENT.RIGHT: # RR
+                    elif pair.break2.orient == ORIENT.RIGHT: # RR
                         return [SVTYPE.INV]
                     else: # R?
                         return [SVTYPE.DUP, SVTYPE.INV]
                 else:
-                    if self.break2.orient == ORIENT.LEFT: #?L
+                    if pair.break2.orient == ORIENT.LEFT: #?L
                         return [SVTYPE.DUP, SVTYPE.INV]
-                    elif self.break2.orient.ORIENT.RIGHT: #?R
+                    elif pair.break2.orient == ORIENT.RIGHT: #?R
                         return [SVTYPE.INV, SVTYPE.DEL, SVTYPE.INS]
                     else: # ??
                         return [SVTYPE.DUP, SVTYPE.INV, SVTYPE.DEL, SVTYPE.INS]
-            elif self.opposing_strands:
-                if (self.break1.orient == ORIENT.LEFT and self.break2.orient == ORIENT.RIGHT) \
-                        or (self.break1.orient == ORIENT.RIGHT and self.break2.orient == ORIENT.LEFT):
-                            raise InvalidRearrangement(self)
+            elif pair.opposing_strands:
+                if (pair.break1.orient == ORIENT.LEFT and pair.break2.orient == ORIENT.RIGHT) \
+                        or (pair.break1.orient == ORIENT.RIGHT and pair.break2.orient == ORIENT.LEFT):
+                            raise InvalidRearrangement(pair)
                 return [SVTYPE.INV]
             else:
-                if (self.break1.orient == ORIENT.LEFT and self.break2.orient == ORIENT.LEFT) \
-                        or (self.break1.orient == ORIENT.RIGHT and self.break2.orient == ORIENT.RIGHT):
-                            raise InvalidRearrangement(self)
-                elif self.break1.orient == ORIENT.LEFT or self.break2.orient == ORIENT.RIGHT:
+                if (pair.break1.orient == ORIENT.LEFT and pair.break2.orient == ORIENT.LEFT) \
+                        or (pair.break1.orient == ORIENT.RIGHT and pair.break2.orient == ORIENT.RIGHT):
+                            raise InvalidRearrangement(pair)
+                elif pair.break1.orient == ORIENT.LEFT or pair.break2.orient == ORIENT.RIGHT:
                     return [SVTYPE.DEL, SVTYPE.INS]
-                elif self.break1.orient == ORIENT.RIGHT or self.break2.orient == ORIENT.LEFT:
+                elif pair.break1.orient == ORIENT.RIGHT or pair.break2.orient == ORIENT.LEFT:
                     return [SVTYPE.DUP]
         else: # interchromosomal
-            if self.opposing_strands is None:
-                if self.break1.orient == ORIENT.LEFT:
-                    if self.break2.orient == ORIENT.LEFT:
-                        pass
-                    elif self.break2.orient == ORIENT.RIGHT:
-                        pass
-                    else:
-                        pass
-                elif self.break1.orient == ORIENT.RIGHT:
-                    if self.break2.orient == ORIENT.LEFT:
-                        pass
-                    elif self.break2.orient.ORIENT.RIGHT:
-                        pass
-                    else:
-                        pass
+            if pair.opposing_strands is None: # can't tell if they're opposite strands or not
+                if pair.break1.orient not in [ORIENT.LEFT, ORIENT.RIGHT] \
+                        or pair.break2.orient not in [ORIENT.LEFT, ORIENT.RIGHT]:
+                            return [SVTYPE.ITRANS, SVTYPE.TRANS]
+                elif pair.break1.orient == pair.break2.orient:
+                    return [SVTYPE.ITRANS]
                 else:
-                    if self.break2.orient == ORIENT.LEFT:
-                        pass
-                    elif self.break2.orient.ORIENT.RIGHT:
-                        pass
-                    else:
-                        pass
-            elif self.opposing_strands:
-                if (self.break1.orient == ORIENT.LEFT and self.break2.orient == ORIENT.RIGHT) \
-                        or (self.break1.orient == ORIENT.RIGHT and self.break2.orient == ORIENT.LEFT):
-                            raise InvalidRearrangement(self)
+                    return [SVTYPE.TRANS]
+            elif pair.opposing_strands:
+                if (pair.break1.orient == ORIENT.LEFT and pair.break2.orient == ORIENT.RIGHT) \
+                        or (pair.break1.orient == ORIENT.RIGHT and pair.break2.orient == ORIENT.LEFT):
+                            raise InvalidRearrangement(pair)
                 return [SVTYPE.ITRANS]
             else:
-                if (self.break1.orient == ORIENT.LEFT and self.break2.orient == ORIENT.LEFT) \
-                        or (self.break1.orient == ORIENT.RIGHT and self.break2.orient == ORIENT.RIGHT):
-                            raise InvalidRearrangement(self)
-
-                elif self.break1.orient == ORIENT.LEFT or self.break2.orient == ORIENT.RIGHT:
-                    pass
-                elif self.break1.orient == ORIENT.RIGHT or self.break2.orient == ORIENT.LEFT:
-                    pass
+                if (pair.break1.orient == ORIENT.LEFT and pair.break2.orient == ORIENT.LEFT) \
+                        or (pair.break1.orient == ORIENT.RIGHT and pair.break2.orient == ORIENT.RIGHT):
+                            raise InvalidRearrangement(pair)
+                return [SVTYPE.TRANS] 
 
 class SVAnnotation:
     def __init__(self, breakpoint_pair, event_type, transcript1, transcript2, **kwargs):
@@ -196,7 +174,8 @@ class SVAnnotation:
         transcript1 and transcript2 can both be None or neither can be None
         """
         self.breakpoint_pair = breakpoint_pair
-        self.event_type = SVTYPE.enforce(event_type)
+        self.sv_class = SVTYPE.enforce(event_type)
+
         self.transcript1 = transcript1
         self.transcript2 = transcript2
         self.HUMAN_REFERENCE_GENOME = kwargs.pop('HUMAN_REFERENCE_GENOME', None)
@@ -206,7 +185,7 @@ class SVAnnotation:
 
     def fusion_frame(self):
         pass
-
+    
 
 if __name__ == '__main__':
     import doctest

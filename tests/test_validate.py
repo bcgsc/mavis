@@ -2,6 +2,7 @@ from structural_variant.breakpoint import BreakpointPair, Breakpoint
 from structural_variant.validate import *
 from structural_variant.annotate import load_reference_genome
 from structural_variant.constants import *
+import structural_variant.align as align
 import pysam
 import unittest
 
@@ -45,6 +46,7 @@ class TestEvidence(unittest.TestCase):
                     Breakpoint('22', 29684365, 29684365, orient = ORIENT.LEFT),
                     stranded = False, opposing_strands = False
                 ), 
+                SVTYPE.TRANS,
                 None, # don't need bamfile b/c mocking reads 
                 convert_chr_to_index={'11': 10, '22': 21}
                 )
@@ -56,9 +58,9 @@ class TestEvidence(unittest.TestCase):
         self.assertEqual(self.evidence.convert_index_to_chr[21], '22')
 
     def test_recompute_cigar(self):
-        c = self.evidence.recompute_cigar(self.first_read)
+        c = align.recompute_cigar(self.evidence, self.first_read)
         self.assertEqual(c, [(CIGAR.S, 6), (CIGAR.EQ, 119)])
-        c = self.evidence.recompute_cigar(self.second_read)
+        c = align.recompute_cigar(self.evidence, self.second_read)
         self.assertEqual(c, [(CIGAR.EQ, 49), (CIGAR.S, 76)])
 
     def test_add_split_read_second_break_shifted(self):
@@ -93,26 +95,7 @@ class TestEvidence(unittest.TestCase):
         # at the second breakpoint (the novel read) 
         self.assertEqual(len(self.evidence.split_reads[self.evidence.break2]), 0) # multi-map alignment
 
-class TestValidate(unittest.TestCase):
-    """
-    test class for functions in the validate namespace 
-    that are not associated with a class
-    """
-    def test_sw_pairwise_alignment(self):
-        a = sw_pairwise_alignment('ATGGACTCGGTAAA', 'CGGTAA')[0]
-        self.assertEqual(a.reference_start, 7)
-        self.assertEqual(a.cigar, [(CIGAR.EQ, 6)])
-        self.assertEqual(a.query_sequence, 'CGGTAA')
 
-    def test_build_string_from_reverse_path(self):
-        ref = '-mxabdce'
-        seq = '-abc'
-        t = build_string_from_reverse_path(ref, seq, [(7, 3), (6, 3)])
-        self.assertEqual(('e', '-'), t)
-        t = build_string_from_reverse_path(ref, seq, [(7, 3), (6, 3), (5,2), (4,2)])
-        self.assertEqual(('dce', '-c-'), t)
-        t = build_string_from_reverse_path(ref, seq, [(6, 3), (5,2), (4,2), (3, 1), (2, 0)])
-        self.assertEqual(('mxabdce', '--ab-c-'), t)
 
 if __name__ == "__main__":
     unittest.main()
