@@ -2,6 +2,7 @@ from __future__ import division
 
 from structural_variant.constants import *
 from structural_variant.interval import Interval
+from structural_variant.breakpoint import BreakpointPair, Breakpoint
 
 import scipy.stats as stat
 import itertools
@@ -71,7 +72,15 @@ def redundant_maximal_kcliques(G, **kwargs):
         for score, cluster in distances:
             if score > lowest:
                 cluster.remove(node)
-
+    
+    for node in G.nodes():
+        found = False
+        for clique in refined_cliques:
+            if node in clique:
+                found = True
+                break
+        if not found:
+            raise AssertionError('error, lost a node somehow', node, refined_cliques)
     return refined_cliques
 
 def cluster_breakpoints(input_pairs, **kwargs):
@@ -147,6 +156,7 @@ def cluster_breakpoints(input_pairs, **kwargs):
         # get all the connected components
         # for all connected components find all cliques of a given size k
         complete_subgraphs = redundant_maximal_kcliques(G, k=k) # every node will be present
+        
         # before we group the subgraphs, should choose the best fit for each node in the subgraphs
         new_sets = Interval.redundant_ordered_hierarchical_clustering(complete_subgraphs, r=r)
         # now using the complete subgraphs as our inputs, do ordered hierarchical clustering
@@ -175,8 +185,7 @@ def cluster_breakpoints(input_pairs, **kwargs):
             clusters[cluster_breakpoint_pair] = current_cluster_breakpoint_pairs
         for node, freq in participants.items():
             if freq > 1:
-                print('node', node, 'participates in', freq, 'clusters')
-    print('found', events, 'events')
+                warnings.warn('node ' + node + ' participates in ' + str(freq) + ' clusters')
     
     # now for each cluster, merge clusters with the same location and equivalent strand information
     merged_clusters = {}

@@ -124,7 +124,7 @@ class Transcript(Bio):
                 return i
         raise AttributeError('can only calculate phase on associated exons')
 
-    def trim(self, breakpoint):
+    def trim(self, breakpoint): # TODO
         if breakpoint.orient == ORIENT.NS:
             raise AttributeError('cannot trim without specifying orientation of the breakpoint')
         # if breakpoint.start != breakpoint.end:
@@ -247,6 +247,32 @@ class Domain(Bio):
         return self.key == other.key
 
 def load_reference_genes(filepath):
+    """
+    given a file in the std input format (see below) reads and return a list of genes (and sub-objects)
+
+    Expected column headers:
+    - ensembl_transcript_id
+    - ensembl_gene_id
+    - strand
+        - [-1] gene is on the reverse strand
+        - else: gene is on the forward strand
+    - transcript_genomic_start
+    - transcript_genomic_end
+    - cdna_coding_start
+        - position where translation would start, given wrt the transcript start being 0
+    - cdna_coding_end
+        - position where translation would terminate (last base of last AA), given wrt the transcript start being 0
+    - AA_domain_ranges
+        - a semi-colon delimited list of domain names and their respective amino acid intervals
+        - general pattern
+            - <domain name>:<start>-<end>(,<start>-<end>)*(;<domain name>:<start>-<end>(,<start>-<end>)*)*
+    - genomic_exon_ranges
+        - list of genome start/end positions for exons. semi-colon delimited
+        - general pattern
+            - <start>-<end>(;<start>-<end>)*
+    - hugo_names
+        - semi-colon delimited list of hugo names mapped to the ensembl gene id
+    """
     header, rows = TSV.read_file(filepath)
     genes = {}
     for row in rows:
@@ -289,7 +315,7 @@ def load_reference_genes(filepath):
         ref[g.chr].append(g)
     return ref
 
-def annotations(ref, breakpoint_pairs):
+def annotations(ref, breakpoint_pairs): # TODO
     """
     @param ref \a required (type: \b Dict<str,List<Gene>>) the list of reference genes hashed by chromosomes
     @param breakpoint_pairs \a required (type: \b List<BreakpointPair>) breakpoint pairs we wish to annotate as events
@@ -336,7 +362,6 @@ def annotations(ref, breakpoint_pairs):
             combinations.append((t1, t2))
     
         # now we have a list of putative combinations
-
 
 def load_reference_genome(filename):
     global HUMAN_REFERENCE_GENOME

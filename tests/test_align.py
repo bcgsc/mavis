@@ -23,3 +23,7 @@ class TestAlign(unittest.TestCase):
         self.assertEqual(('dce', '-c-'), t)
         t = build_string_from_reverse_path(ref, seq, [(6, 3), (5,2), (4,2), (3, 1), (2, 0)])
         self.assertEqual(('mxabdce', '--ab-c-'), t)
+
+    def test_alphabet_matching(self):
+        self.assertTrue(DNA_ALPHABET.match('N', 'A'))
+        self.assertTrue(DNA_ALPHABET.match('A', 'N'))

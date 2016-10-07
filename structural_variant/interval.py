@@ -1,3 +1,5 @@
+import numpy as np
+
 from structural_variant.constants import *
 from structural_variant.error import *
 
@@ -332,27 +334,37 @@ class Interval:
         
         while len(queue) > 0:
             temp_queue = []
-            
             for i in range(0, len(queue)):
                 curr = queue[i]
                 joined = False
                 
-                if i > 0:
-                    dist = cls.paired_set_distance(curr, clusters[i - 1])
+                if i > 0: # try joining your previous neighbor
+                    dist = cls.paired_set_distance(curr, queue[i - 1])
                     if dist <= r:
+                        temp_queue.append(curr.union(queue[i - 1]))
                         joined = True
                 if i < len(queue) - 1:
-                    dist = cls.paired_set_distance(curr, clusters[i + 1])
+                    dist = cls.paired_set_distance(curr, queue[i + 1])
                     if dist <= r:
-                        temp_queue.append(curr.union(clusters[i + 1]))
+                        temp_queue.append(curr.union(queue[i + 1]))
                         joined = True 
                 if not joined:
                     complete.append(curr)
             queue = temp_queue
+        for c in clusters:
+            for n in c:
+                found = False
+                for cc in complete:
+                    for cn in cc:
+                        if n == cn:
+                            found = True
+                            break
+                if not found:
+                    raise AssertionError('error node is no longer assigned', clusters, complete, n)
         return complete
 
     @classmethod
-    def union(cls, intervals):
+    def union(cls, *intervals):
         """
         returns the union of the set of input intervals
         
