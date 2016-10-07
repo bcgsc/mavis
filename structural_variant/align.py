@@ -30,6 +30,56 @@ from structural_variant.interval import Interval
 
 class CigarTools:
     @classmethod
+    def recompute_cigar_mismatch(cls, read, ref):
+        """
+        for cigar tuples where M is used, recompute to replace with X/= for increased
+        utility and specificity
+    
+        CIGAR VALUES
+        M 0 alignment match (can be a sequence match or mismatch)
+        I 1 insertion to the reference
+        D 2 deletion from the reference
+        N 3 skipped region from the reference
+        S 4 soft clipping (clipped sequences present in SEQ)
+        H 5 hard clipping (clipped sequences NOT present in SEQ)
+        P 6 padding (silent deletion from padded reference)
+        = 7 sequence match
+        X 8 sequence mismatch
+    
+        """
+        temp = []
+        offset = 0
+        
+        ref_pos = read.reference_start
+        seq_pos = 0
+        
+        for cigar_value, freq in read.cigar:
+            if cigar_value in [CIGAR.S, CIGAR.I]:
+                temp.append((cigar_value, freq))
+                seq_pos += freq
+            elif cigar_value in [CIGAR.D, CIGAR.N]:
+                temp.append((cigar_value, freq))
+                ref_pos += freq
+            elif cigar_value in [CIGAR.M, CIGAR.X, CIGAR.EQ]:
+                for offset in range(0, freq):
+                    if DNA_ALPHABET.match(ref[ref_pos], read.query_sequence[seq_pos]):
+                        if len(temp) == 0 or temp[-1][0] != CIGAR.EQ:
+                            temp.append((CIGAR.EQ, 1))
+                        else:
+                            temp[-1] = (CIGAR.EQ, temp[-1][1] + 1)
+                    else:
+                        if len(temp) == 0 or temp[-1][0] != CIGAR.X:
+                            temp.append((CIGAR.X, 1))
+                        else:
+                            temp[-1] = (CIGAR.X, temp[-1][1] + 1)
+                    ref_pos += 1
+                    seq_pos += 1
+            else:
+                raise NotImplementedError('unexpected CIGAR value {0} is not supported currently'.format(cigar_value))
+        assert(sum([x[1] for x in temp]) == sum(x[1] for x in read.cigar))
+        return temp
+    
+    @classmethod
     def longest_fuzzy_match(cls, cigar, max_fuzzy_interupt=1):
         """
         computes the longest sequence of exact matches allowing for 'x' event interrupts
@@ -143,9 +193,7 @@ class CigarTools:
         preshift =  0
         # determine how far to scoop for the front softclipping
         head = None
-        while True:
-            if len(cigar) == 0:
-                break
+        while len(cigar) > 0:
             v, f = cigar[0]
             if v == CIGAR.EQ and f >= min_exact_to_stop_softclipping:
                 break
@@ -163,9 +211,7 @@ class CigarTools:
                 preshift += f
             del cigar[0]
         tail = None
-        while True:
-            if len(cigar) == 0:
-                break
+        while len(cigar) > 0:
             v, f = cigar[-1]
             if v == CIGAR.EQ and f >= min_exact_to_stop_softclipping:
                 break
@@ -199,7 +245,6 @@ class CigarTools:
         """
         force_softclipping = kwargs.pop('force_softclipping', True)
         min_exact_to_stop_softclipping = kwargs.pop('min_exact_to_stop_softclipping', 6)
-        start_pos = 0
 
         if len(ref) != len(alt):
             raise AttributeError('ref and alt must be the same length')
@@ -217,10 +262,6 @@ class CigarTools:
                 cigar.append((CIGAR.X, 1))
         cigar = cls.join(cigar)
         
-        if cigar[0][0] in [CIGAR.D, CIGAR.N]:
-            start_pos += cigar[0][1]
-            del cigar[0]
-        
         has_terminator = False
         for v, f in cigar:
             if v == CIGAR.EQ and f >= min_exact_to_stop_softclipping:
@@ -230,7 +271,12 @@ class CigarTools:
         if not force_softclipping or not has_terminator:
             if not has_terminator and force_softclipping:
                 warnings.warn('could not force softclipping. did not find a long enough match sequence to terminate clipping')
-            return cigar
+            return cigar, 0
+        
+        start_pos = 0
+        if cigar[0][0] in [CIGAR.D, CIGAR.N]:
+            start_pos += cigar[0][1]
+            del cigar[0]
         cigar, shift = cls.extend_softclipping(cigar, min_exact_to_stop_softclipping)
         return cigar, start_pos + shift
     
@@ -251,34 +297,6 @@ class CigarTools:
                 result += f
         return result
 
-def score_cigar(cigar_tuples):
-    """
-    for an input set of cigar tuples computes scoring minimums and returns a measure describing
-    the alignment
-    """
-    putative_consecutive_matches = [[0, False]]
-    total_events = 0
-
-    for cigar, freq in cigar_tuples:
-        if cigar == CIGAR.M:
-            raise AttributeError('input cigar cannot have ambiguous values \'M\' is not allowed')
-        if cigar != CIGAR.EQ and cigar != CIGAR.S and cigar != CIGAR.N:
-            total_events += 1
-        if cigar == CIGAR.EQ:
-           putative_consecutive_matches[-1][0] += freq
-        elif putative_consecutive_matches[-1][1]:
-            pass
-        else:
-            putative_consecutive_matches.append([0, False])
-    exact = [0]
-    fuzzy = [0]
-    for l, event in putative_consecutive_matches:
-        if event:
-            fuzzy.append(l)
-        else:
-            exact.append(l)
-    return max(exact), max(fuzzy), total_events # longest exact, longest fuzzy, number of events
-
 def longest_homopolymer(sequence):
     if len(sequence) == 0:
         raise AttributeError('cannot compute longest_homopolymer on an empty sequence')
@@ -292,249 +310,6 @@ def longest_homopolymer(sequence):
             hp.append(0)
         last_char = char
     return max(hp)
-
-def str_cigar(read):
-    """
-    >>> read = pysam.AlignedSegment()
-    >>> read.query_sequence = 'ATAGAACCCTATAAACTATATGTTAGCCAGAGGGCTTTTTTTGTTGTTGTTATTTAGTGTTCCAAATGTGTTGGTTCTGCCTAGTATACTGATTTAGAAATTCCACCACATGGAGGTTATTTGAG'
-    >>> read.cigar = [(7, 55), (4, 70)]
-    >>> str_cigar(read)
-    '-----------------------------------------------------------------ATAGAACCCTATAAACTATATGTTAGCCAGAGGGCTTTTTTTGTTGTTGTTATTTagtgttccaaatgtgttggttctgcctagtatactgatttagaaattccaccacatggaggttatttgag--------------------------------------------------'
-    """
-    index = 0
-    s = ''
-    clipped = ''
-    clipped_left = False
-    max_str_len = 120
-    primary_tuples = read.cigar
-
-    typ, freq = read.cigar[0]
-    typ_end, freq_end = read.cigar[-1]
-
-    if (typ == CIGAR.S and typ_end != CIGAR.S) \
-        or (typ == CIGAR.S and freq > freq_end): # soft clipped on the left side
-        freq = read.cigar[0][1]
-        clipped = read.query_sequence[0:freq]
-        primary_tuples = read.cigar[1:]
-        clipped_left = True
-        index += freq
-    elif typ_end == CIGAR.S: # soft clipped at the end
-        freq = len(read.query_sequence) - read.cigar[-1][1]
-        clipped = read.query_sequence[freq:]
-        primary_tuples = read.cigar[:-1]
-    
-    for cigar, freq in primary_tuples:
-        end = freq + index
-        temp = read.query_sequence[index:end]
-        if cigar == CIGAR.S:
-            temp = temp.lower()
-        index += freq
-        s += temp
-    
-    if clipped_left:
-        return clipped.rjust(max_str_len, '-').lower() + s.ljust(max_str_len, '-')
-    return s.rjust(max_str_len, '-') + clipped.ljust(max_str_len, '-').lower()
-
-def compute_cigar(ref, seq, **kwargs):
-    """
-    CIGAR VALUES
-    M 0 alignment match (can be a sequence match or mismatch)
-    I 1 insertion to the reference
-    D 2 deletion from the reference
-    N 3 skipped region from the reference
-    S 4 soft clipping (clipped sequences present in SEQ)
-    H 5 hard clipping (clipped sequences NOT present in SEQ)
-    P 6 padding (silent deletion from padded reference)
-    = 7 sequence match
-    X 8 sequence mismatch
-
-    ASSUMES if force_end or force_start are given that all bases outside are SOFT CLIPPED
-    # GTGAGTAAATTCAACATCGTTTTT
-    # AACTTAGAATTCAAC---------
-    >>> compute_cigar('GTGAGTAAATTCAACATCGTTTTT', 'AACTTAGAATTCAAC---------')
-    [(4, 7), (7, 8)]
-    >>> compute_cigar('TTTGCCATTGTTTGCTTTTGGAATCCAGGACACATCTTTAGGGCATGGCATTCCAGCTAACATCTTGGATGCCCCAGTGAAGATTTCAGTGCTTTTTTCCAATTTGTTTTTAGTATGCCTTGGCAAAAAAGAAAAGAGATACTAATTGATCAGAAAAAATGTTTTAGACTGCTAGCCCTGCTGTCTTTGGGGAAGTTGTATGCAGTGAGTAAATTCAACATCGTTTTTGGCCTCCCTATCAGTCATTAATGTAAAGTGGGGAGGCAGCTATTGCAGGCCACTATGATTTTGATAGTCAAGTAAAAGCTATGTTTTTTTGTTGCTGTTTGTTTATATCCATTAAGGGGAAAAATGGCCAGGCATGGTGGCTCACACCTGTAATCCCAGCACTTTGGGGGAGGCCAAGGCAGGAGGATCACTTGAGACCAGGAGTTTGAGACCACCCTGGGCAACATAGTGAGACCCTGTCTTTTTAAAGATAAATAAAGATTCTTTAAGAAAATAGAAAAGGAAAGGGGGAAAAATAATCCTCCTCACAGAATATTTGCAGTTCTTCTGTATGGAGAGAGGTAACCAAAACACATAATTATCTTCAGAATTTAGGATCATTGCTCTTTTTAAATTACATTCTATCCACGGGGATTTCTCAACAACTCAAAGGAGTAGTGTTGATTTATGGAGCTCAGCCCCTAGCAGTGTGCTAAAGCCCTAAGAAACCTGGCTCTGTTTTCATTTCTTGAGTTTAGCTCAAAAGAAGCTGCTTTTGGAGACATCTTAGGATATAGAACCCTATAAACTATATGTTAGCCAGAGGGCTTTTTTTGTTGTTGTTATTTAGAAGAGGTTTATTATAGGCTAACTATATAAGGTTATTTCAGCTGTGATGATCCAGCAGTTTTGTTGAACTTAAAAGAGCCTACCTATTAAGGATGCTTTATCGTGATGTAAAGAAGATGGTGCCTTGGTTAGTG', '-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------AGGGCTTTTTTTGTTGTTGTTATTT---------------------------------------------------------------------------------------------------------------------------------------')
-    [(7, 25)]
-    """
-    if len(ref) != len(seq):
-        raise AssertionError('input strings must be of equal length', ref, seq, len(ref), len(seq))
-    assert(len(ref) > 0)
-    
-    force_start = kwargs.pop('force_start', None)
-    force_end  = kwargs.pop('force_end', None)
-    
-    seq = Seq(str(seq), DNA_ALPHABET)
-    ref = Seq(str(ref), DNA_ALPHABET)
-    # ---XXXX gives you 3 as the start pos
-    start = len(seq) - len(seq.lstrip(seq.alphabet.gap_char)) # don't need to add one b/c 0-indexed
-    end = len(seq.rstrip(seq.alphabet.gap_char)) #----XXXX-- 10 - 2 = 8; exclusive 0-indexed range
-
-    if force_start is not None and (force_start < start or force_start >= end):
-        raise AttributeError('cannot force a start position unless it if >= to the aligned start position')
-    if force_end is not None and (force_end > end or force_end <= start): 
-        raise AttributeError('cannot force an end position past the length of the putative alignment')
-    
-    cigar_tuples = []
-    if force_start is not None and force_start != start:
-        cigar_tuples.append((CIGAR.S, force_start - start))
-        start = force_start
-
-    tail_sc = 0
-    if force_end is not None and force_end != end:
-        tail_sc = end - force_end
-        end = force_end
-
-    for i in range(start, end):
-        current_mode = CIGAR.X
-        if ref[i] == GAP and seq[i] == GAP:
-            continue
-        elif ref[i] == GAP:
-            current_mode = CIGAR.I
-        elif seq[i] == GAP:
-            current_mode = CIGAR.D
-        elif seq.alphabet.match(ref[i], seq[i]):
-            current_mode = CIGAR.EQ
-        
-        if len(cigar_tuples) > 0:
-            mode, freq = cigar_tuples[-1]
-            if mode == current_mode:
-                cigar_tuples[-1] = (current_mode, freq + 1)
-            else:
-                cigar_tuples.append((current_mode, 1))
-        else:
-            cigar_tuples.append((current_mode, 1))
-    if tail_sc != 0:
-        cigar_tuples.append((CIGAR.S, tail_sc))
-
-    if force_start is None:
-        # turn any X on the front into soft-clipping
-        if cigar_tuples[0][0] in [CIGAR.X, CIGAR.I]:
-            cigar_tuples[0] = (CIGAR.S, cigar_tuples[0][1])
-    if force_end is None:
-        if cigar_tuples[-1][0] in [CIGAR.X, CIGAR.I]:
-            cigar_tuples[-1] = (CIGAR.S, cigar_tuples[-1][1])
-    temp = sum([x[1] for x in cigar_tuples])
-    if temp != len(seq.strip(GAP)):
-        raise AssertionError('cigar tuple must be same length as input string', temp, len(ref), ref, cigar_tuples)
-
-    return cigar_tuples
-
-def pairwise_nsb_align(ref, seq):
-    """
-    test for the best alignment; non-space breaking (i.e. don't allow for indels)
-    """
-    best_score = 0 # store to improve speed and space (don't need to store all alignments)
-    results = []
-
-    for ref_start in range(0, len(ref)):
-        cigar = []
-        
-        if ref_start + len(seq) > len(ref):
-            break
-
-        r = ref[ref_start:ref_start + len(seq)]
-
-        cigar = compute_cigar(r, seq)
-
-        score = nsb_cigar_score(cigar)
-        
-        a = pysam.AlignedSegment()
-        a.query_sequence = seq
-        a.reference_start = ref_start 
-        a.cigar = cigar
-        
-        if score >= best_score:
-            best_score = score
-            results.append((a, score))
-    
-    filtered = [x for x, y in results if y == best_score ]
-    
-    return filtered
-
-def nsb_align_with_softclipping(ref, seq, **kwargs):
-    weight_of_score = kwargs.pop('weight_of_score', 0.5)
-
-    results = []
-
-    for ref_start in range(0, len(ref)):
-        cigar = []
-        
-        if ref_start + len(seq) > len(ref):
-            break
-
-        r = ref[ref_start:ref_start + len(seq)]
-
-        cigar = CigarTools.compute(r, seq)
-
-        score = CigarTools.score(cigar) * weight_of_score
-        score += CigarTools.longest_exact_match(cigar) / ( len(seq) * ( 1 - weight_of_score) )
-        
-        preshift = 0
-        for v, f in cigar:
-            if v not in [CIGAR.M, CIGAR.EQ, CIGAR.X, CIGAR.D]:
-                preshift += f
-            else:
-                break
-        a = pysam.AlignedSegment()
-        a.query_sequence = seq
-        a.reference_start = ref_start + preshift
-        a.cigar = cigar
-        
-        results.append((a, score))
-    
-    max_score = max([s for read, s in results])
-    
-    return [ read for read, s in results if s == max_score ] 
-
-def recompute_cigar(ev, read):
-    """
-    for cigar tuples where M is used, recompute to replace with X/= for increased
-    utility and specificity
-
-    CIGAR VALUES
-    M 0 alignment match (can be a sequence match or mismatch)
-    I 1 insertion to the reference
-    D 2 deletion from the reference
-    N 3 skipped region from the reference
-    S 4 soft clipping (clipped sequences present in SEQ)
-    H 5 hard clipping (clipped sequences NOT present in SEQ)
-    P 6 padding (silent deletion from padded reference)
-    = 7 sequence match
-    X 8 sequence mismatch
-
-    """
-    temp = []
-    offset = 0
-    ref = ann.HUMAN_REFERENCE_GENOME[ev.settings.convert_index_to_chr[read.reference_id]].seq
-    
-    ref_pos = read.reference_start
-    seq_pos = 0
-    
-    for cigar_value, freq in read.cigar:
-        if cigar_value in [CIGAR.S, CIGAR.I]:
-            temp.append((cigar_value, freq))
-            seq_pos += freq
-        elif cigar_value in [CIGAR.D, CIGAR.N]:
-            temp.append((cigar_value, freq))
-            ref_pos += freq
-        elif cigar_value in [CIGAR.M, CIGAR.X, CIGAR.EQ]:
-            for offset in range(0, freq):
-                if DNA_ALPHABET.match(ref[ref_pos], read.query_sequence[seq_pos]):
-                    if len(temp) == 0 or temp[-1][0] != CIGAR.EQ:
-                        temp.append((CIGAR.EQ, 1))
-                    else:
-                        temp[-1] = (CIGAR.EQ, temp[-1][1] + 1)
-                else:
-                    if len(temp) == 0 or temp[-1][0] != CIGAR.X:
-                        temp.append((CIGAR.X, 1))
-                    else:
-                        temp[-1] = (CIGAR.X, temp[-1][1] + 1)
-                ref_pos += 1
-                seq_pos += 1
-        else:
-            raise NotImplementedError('unexpected CIGAR value {0} is not supported currently'.format(cigar_value))
-    assert(sum([x[1] for x in temp]) == sum(x[1] for x in read.cigar))
-    return temp
 
 def breakpoint_pos(read, orient=ORIENT.NS):
     typ, freq = read.cigar[0]
@@ -760,7 +535,7 @@ class Blat:
                     cigar.append((CIGAR.I, qjump - 1))
                     cigar.append((CIGAR.D, rjump - 1))
             # add the current range of matches
-            temp = compute_cigar(row['tseqs'][i], row['qseqs'][i])
+            temp, offset = CigarTools.compute(row['tseqs'][i], row['qseqs'][i])
             if temp[0][0] == CIGAR.S:
                 temp[0] = (CIGAR.X, temp[0][1])
             if temp[-1][0] == CIGAR.S:
@@ -816,24 +591,20 @@ class DeBruijnGraph(nx.DiGraph):
         del self.edge_freq[(n1, n2)]
         nx.DiGraph.remove_edge(self, n1, n2)
 
-def percent_query_match(cigar):
-    score = 0
-    total = 0
-    for c, v in cigar:
-        if c == CIGAR.S:
-            continue
-        total += v
-        if c == CIGAR.EQ:
-            score += v
-    return score/total
-
-def nsb_overhang_align(ref, seq, **kwargs):
+def nsb_align(ref, seq, **kwargs):
+    """
+    given some reference string and a smaller sequence string computes the best non-space-breaking alignment
+    i.e. an alignment that does not allow for indels (straight-match)
+    """
     if len(ref) < 1 or len(seq) < 1:
         raise AttributeError('cannot overlap on an empty sequence')
-    min_overlap = min(kwargs.pop('min_overlap', len(seq)), len(seq))
+    
+    weight_of_score = kwargs.pop('weight_of_score', 0.5)
+    min_overlap_percent = kwargs.pop('min_overlap_percent', 100)
+    if min_overlap_percent <= 0 or min_overlap_percent > 100:
+        raise AttributeError('percent must be greater than 0 and up to 100', min_overlap_percent)
 
-    if len(seq) < min_overlap or len(ref) < min_overlap:
-        raise AttributeError('minimum overlap cannot be greater than the length of either of the input sequences')
+    min_overlap = int(round(min_overlap_percent * len(seq) / 100, 0))
     
     best_score = 0 # store to improve speed and space (don't need to store all alignments)
     results = []
@@ -844,35 +615,27 @@ def nsb_overhang_align(ref, seq, **kwargs):
         for i in range(0, len(seq)):
             r = ref_start + i
             if r < 0 or r >= len(ref):
-                if len(cigar) == 0 or cigar[-1][0] != CIGAR.X:
-                    cigar.append((CIGAR.X, 1))
-                else:
-                    cigar[-1] = (cigar[-1][0], cigar[-1][1] + 1)
+                cigar.append((CIGAR.S, 1))
                 continue
-            r = ref[r]
-            q = seq[i]
-            if DNA_ALPHABET.match(r, q):
-                if len(cigar) == 0 or cigar[-1][0] != CIGAR.EQ:
-                    cigar.append((CIGAR.EQ, 1))
-                else:
-                    cigar[-1] = (cigar[-1][0], cigar[-1][1] + 1)
+            if DNA_ALPHABET.match(ref[r], seq[i]):
+                cigar.append((CIGAR.EQ, 1))
             else:
-                if len(cigar) == 0 or cigar[-1][0] != CIGAR.X:
-                    cigar.append((CIGAR.X, 1))
-                else:
-                    cigar[-1] = (cigar[-1][0], cigar[-1][1] + 1)
+                cigar.append((CIGAR.X, 1))
         
+        cigar = CigarTools.join(cigar)
         # end mismatches we set as soft-clipped
         if cigar[0][0] == CIGAR.X:
             cigar[0] = (CIGAR.S, cigar[0][1])
         if cigar[-1][0] == CIGAR.X:
             cigar[-1] = (CIGAR.S, cigar[-1][1])
         
-        score = nsb_cigar_score(cigar)
+        qstart = 0 if cigar[0][0] != CIGAR.S else cigar[0][1]
+        
+        score = CigarTools.score(cigar) * weight_of_score + CigarTools.longest_exact_match(cigar) * (1 - weight_of_score)
         
         a = pysam.AlignedSegment()
         a.query_sequence = str(seq)
-        a.reference_start = ref_start 
+        a.reference_start = ref_start + qstart
         a.cigar = cigar
         
         if score >= best_score:
@@ -929,12 +692,12 @@ def assemble(sequences, **kwargs):
             r = kmer[1:]
             assembly.add_edge(l, r)
     
-    n = 'tmp_assembly_' + str(int(random.random()*1000000))+'.txt'
-    with open(n, 'w') as fh:
-        print('writing', n)
-        fh.write('source\ttarget\tlabel\n')
-        for src, tgt in assembly.edges():
-            fh.write('{0}\t{1}\t{2}\n'.format(src, tgt, assembly.edge_freq[(src, tgt)]))
+    #n = 'tmp_assembly_' + str(int(random.random()*1000000))+'.txt'
+    #with open(n, 'w') as fh:
+    #    print('writing', n)
+    #    fh.write('source\ttarget\tlabel\n')
+    #    for src, tgt in assembly.edges():
+    #        fh.write('{0}\t{1}\t{2}\n'.format(src, tgt, assembly.edge_freq[(src, tgt)]))
     # if we assume even coverage then we can assume the number of times an edge must be visited is approximated by its weight
     # however this is not necessarily a fair assumption when we are assembling selected reads and not an entire genome
     # so here it would be better to have an abstract way to represent cycles where possible
@@ -972,13 +735,6 @@ def assemble(sequences, **kwargs):
                 else:
                     break
     
-    n = 'tmp_assembly_' + str(int(random.random()*1000000))+'.txt'
-    with open(n, 'w') as fh:
-        print('writing', n)
-        fh.write('source\ttarget\tlabel\n')
-        for src, tgt in assembly.edges():
-            fh.write('{0}\t{1}\t{2}\n'.format(src, tgt, assembly.edge_freq[(src, tgt)]))
-    
     for component in digraph_connected_components(assembly):
         # since now we know it's a tree, the assemblies will all be ltd to simple paths
         sources = set()
@@ -1012,17 +768,15 @@ def assemble(sequences, **kwargs):
         for contig in results:
             if len(contig) < len(seq):
                 continue
-            a = nsb_overhang_align(contig, seq, min_overlap = min_read_mapping_overlap)
+            a = nsb_align(contig, seq, min_overlap_percent = min_read_mapping_overlap / len(seq))
             if len(a) != 1:
                 continue
             a = a[0]
-            score = percent_query_match(a.cigar)
-            if score < min_match_quality:
+            if CigarTools.match_percent(a.cigar) < min_match_quality:
                 continue
             maps_to[contig] = a
         for contig, read in maps_to.items():
             results[contig].add_mapped_read(read, len(maps_to.keys()))
-            #remapped_sequences[contig] += 1 / len(maps_to.keys())
 
     return results.values()
 
