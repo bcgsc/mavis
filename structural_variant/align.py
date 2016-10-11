@@ -125,11 +125,11 @@ class CigarTools:
         """
         scoring based on sw alignment properties with gap extension penalties
 
-        @param cigar [required] (type: List<(CIGAR,int)>) list of cigar tuple values
-        @param =MISMATCH [optional] (type: int; default: -1) mismatch penalty
-        @param =MATCH [optional] (type: int; default: 2) match penalty
-        @param =GAP [optional] (type: int; -4) initial gap penalty
-        @param =GAP_EXTEND [optional] (type: int; -1) gap extension penalty
+        @param cigar \a required (type: List<(CIGAR,int)>) list of cigar tuple values
+        @param =MISMATCH \a optional (type: int; default: -1) mismatch penalty
+        @param =MATCH \a optional (type: int; default: 2) match penalty
+        @param =GAP \a optional (type: int; -4) initial gap penalty
+        @param =GAP_EXTEND \a optional (type: int; -1) gap extension penalty
         
         @return (type: int) the score value
 
@@ -189,6 +189,19 @@ class CigarTools:
     
     @classmethod
     def extend_softclipping(cls, original_cigar, min_exact_to_stop_softclipping):
+        """
+        given some input cigar, extends softclipping if there are mismatches/insertions/deletions
+        close to the end of the aligned portion. The stopping point is defined by the
+        min_exact_to_stop_softclipping parameter. this function will throw an error if there is no
+        exact match aligned portion to signal stop
+
+        @param original_cigar \a required (type: \bList<(CIGAR,int)>) the input cigar
+        @param min_exact_to_stop_softclipping \a required (type: \bint) number of exact matches to terminate extension
+
+        @return 
+            (type: \b(List<(CIGAR,int)>, int) 
+            the new cigar string and a number representing the shift from the original start position
+        """
         cigar = original_cigar[:]
         preshift =  0
         # determine how far to scoop for the front softclipping
@@ -282,6 +295,9 @@ class CigarTools:
     
     @classmethod
     def convert_for_igv(cls, cigar):
+        """
+        igv does not support the extended CIGAR values for match v mismatch
+        """
         result = []
         for v, f in cigar:
             if v in [CIGAR.X, CIGAR.EQ]:
@@ -291,6 +307,10 @@ class CigarTools:
     
     @classmethod
     def alignment_matches(cls, cigar):
+        """
+        counts the number of aligned bases irrespective of match/mismatch
+        this is equivalent to counting all CIGAR.M
+        """
         result = 0
         for v, f in cigar:
             if v in [CIGAR.X, CIGAR.EQ, CIGAR.M]:
@@ -312,6 +332,14 @@ def longest_homopolymer(sequence):
     return max(hp)
 
 def breakpoint_pos(read, orient=ORIENT.NS):
+    """
+    assumes the breakpoint is the position following softclipping on the side with more
+    softclipping (unless and orientation has been specified)
+
+    @param read \a required (type: psyam.AlignedSegment)
+    @param orient \a optional (type: ORIENT) the orientation
+    @return (type: int) the position of the breakpoint in the input read
+    """
     typ, freq = read.cigar[0]
     end_typ, end_freq = read.cigar[-1]
     ORIENT.enforce(orient)
@@ -488,8 +516,8 @@ class Blat:
         """
         given a 'row' from reading a pslx file. converts the row to a BlatAlignedSegment object
 
-        @param row [required] (type: dict<str,*>) a row object from the 'read_pslx' method
-        @param =chr_to_index [required] (type: dict<chr,int>) a mapping of chromosome names to reference_id's for the pysam file
+        @param row \a required (type: dict<str,*>) a row object from the 'read_pslx' method
+        @param =chr_to_index \a required (type: dict<str,int>) a mapping of chromosome names to reference_id's for the pysam file
 
         """
         chr_to_index = kwargs.pop('chr_to_index')
