@@ -101,7 +101,7 @@ class Interval:
         >>> y.combine(z)
         Interval(-1-2)
         """
-        return Interval(min(self[0], other[0]), max(self[1], other[1]))
+        return Interval.union(self, other)
     
     def __eq__(self, other):
         if not hasattr(other, 'start') \
@@ -377,16 +377,7 @@ class Interval:
         """
         if len(intervals) < 1:
             raise AttributeError('cannot compute the union of an empty set of intervals')
-        curr = next(iter(intervals))
-        low = curr[0]
-        high = curr[1]
-        
-        for i in intervals:
-            if i[0] < low:
-                low = i[0]
-            if i[1] > high:
-                high = i[1]
-        return Interval(low, high)
+        return Interval(min([i[0] for i in intervals]), max([i[1] for i in intervals]))
 
     @classmethod
     def intersection(cls, intervals):

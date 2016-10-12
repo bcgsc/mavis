@@ -386,8 +386,13 @@ class BlatAlignedSegment(pysam.AlignedSegment):
         return self.blat['score']
     
     def query_coverage_interval(self):
-        query_ranges = [ (x, x + y - 1) for x, y in zip(self.blat['qstarts'], blat['block_sizes']) ]
-        return Interval.union(*query_ranges)
+        query_ranges = [ (x, x + y - 1) for x, y in zip(self.blat['qstarts'], self.blat['block_sizes']) ]
+        u = Interval.union(*query_ranges)
+        if not self.is_reverse:
+            return u
+        else:
+            l = len(self.blat['qseq_full']) - 1
+            return Interval(l - u[1], l - u[0])
 
 class Blat:
     @staticmethod
@@ -594,10 +599,11 @@ class Contig:
     def __hash__(self):
         return hash((self.seq, self.score))
 
-    def add_mapped_read(self, read, multimap=1):
-        if read in self.remapped_reads and self.remapped_reads[read] != 1 / multimap:
+    def add_mapped_read(self, read, initial_reads, multimap=1):
+        k = (read, tuple(list(initial_reads)))
+        if k in self.remapped_reads and self.remapped_reads[k] != 1 / multimap:
             raise AttributeError('cannot specify a read twice with a different value')
-        self.remapped_reads[read] = 1 / multimap
+        self.remapped_reads[k] = 1 / multimap
 
     def remap_score(self):
         return sum(self.remapped_reads.values())
@@ -703,6 +709,8 @@ def assemble(sequences, **kwargs):
 
     @return (type: List<Contig>) a list of putative contigs
     """
+    if len(sequences) == 0:
+        return []
     min_seq = min([len(s) for s in sequences])
     kmer_size = kwargs.pop('kmer_size', int(min_seq * 0.8) )
     min_edge_weight = kwargs.pop('min_edge_weight', 3)
@@ -804,7 +812,7 @@ def assemble(sequences, **kwargs):
                 continue
             maps_to[contig] = a
         for contig, read in maps_to.items():
-            results[contig].add_mapped_read(read, len(maps_to.keys()))
+            results[contig].add_mapped_read(read, sequences[seq], len(maps_to.keys()))
 
     return results.values()
 
@@ -814,13 +822,8 @@ def blat_contigs(sequences, **kwargs):
     """
     ref = kwargs.pop('ref', '/home/pubseq/genomes/Homo_sapiens/GRCh37/blat/hg19.2bit')
     chr_to_index = kwargs.pop('chr_to_index')
-    min_query_anchor = kwargs.pop('min_query_anchor', 10)
-    min_query_coverage = kwargs.pop('min_query_coverage', 0.25)
-    max_indel_size = kwargs.pop('max_indel_size', 50)
     min_percent_of_max_score = kwargs.pop('min_percent_of_max_score', 0.75)
-    align_from_end_of_contig = kwargs.pop('align_from_end_of_contig', 10)
     min_identity = kwargs.pop('min_identity', 95)
-    min_nonoverlap = kwargs.pop('min_nonoverlap', 10)
     blat_options = kwargs.pop('blat_options', 
             ["-stepSize=5", "-repMatch=2253", "-minScore=0", "-minIdentity={0}".format(min_identity)])
     is_protein = kwargs.pop('is_protein', False)
@@ -857,17 +860,22 @@ def blat_contigs(sequences, **kwargs):
     reads_by_query = {}
     for query_id, rows in rows_by_query.items():
         query_seq = query_id_mapping[query_id]
-        reads = []
+        filtered_rows = []
         max_score = max([r['score'] for r in rows])
-
-        acceptable_alignments = sum([1 for x in rows if x['score'] >= max_score * min_percent_of_max_score ])
-        for rank, row in enumerate(sorted(rows, key = lambda x: x['score'], reverse=True)):
-            if row['score'] < max_score * min_percent_of_max_score or row['percent_ident'] < min_identity:
-                continue
+        
+        # filter by alignment quality
+        for row in rows:
+            if row['score'] >= max_score * min_percent_of_max_score and row['percent_ident'] >= min_identity:
+                filtered_rows.append(row)
+        
+        filtered_rows.sort(key=lambda x: x['score'], reverse=True)
+        reads = []
+        # grab the top 'max_align_per_query' alignments
+        for rank, row in enumerate(filtered_rows):
             try:
                 read = Blat.pslx_row_to_pysam(row, chr_to_index = chr_to_index)
                 read.set_tag('bs', row['score'], value_type='i')
-                read.set_tag('ba', acceptable_alignments, value_type='i')
+                read.set_tag('ba', len(filtered_rows), value_type='i')
                 read.set_tag('bp', min_percent_of_max_score, value_type='f')
                 read.set_tag('br', rank, value_type='i')
                 read.set_tag('bi', row['percent_ident'], value_type='f')

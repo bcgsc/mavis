@@ -131,7 +131,7 @@ for row in rows:
                     'split reads:', [len(a) for a in e.split_reads.values()],
                         )
         print('try assembling split reads')
-        assembly_sequences = []
+        assembly_sequences = {}
         first = True
         for reads in e.split_reads.values():
             for r in reads:
@@ -140,7 +140,8 @@ for row in rows:
                     temp = Seq(s, DNA_ALPHABET)
                     temp = temp.reverse_complement()
                     s = str(temp)
-                assembly_sequences.append(s)
+                assembly_sequences[s] = assembly_sequences.get(s, set())
+                assembly_sequences[s].add(r)
             first = False
         contigs = assemble(assembly_sequences)
         filtered_contigs = []
@@ -158,17 +159,20 @@ for row in rows:
         split_read_contigs.update(set([c.seq for c in contigs]))
         chr_to_index.update(e.settings.convert_chr_to_index)
         evidence_reads.update(e.supporting_reads())
-        evidence_obj_list.append((e, contigs))
+        evidence_obj_list.append((e, contigs, assembly_sequences))
     else:
         raise NotImplementedError('currently only genome protocols are supported')
 
 results = blat_contigs(split_read_contigs, chr_to_index = chr_to_index)
 
+# go through the alignments for each blat result and compute a score
+# based on the mate-pairs of the reads the realigned to the contigs
+
 MIN_EXTEND_OVERLAP = 6 # on each end
 
 bedfile_regions = set()
 
-for e, contigs in evidence_obj_list:
+for e, contigs, assembly_sequences in evidence_obj_list:
     print('\nblatted', len(contigs), 'contigs for', e, e.breakpoint_pair, BreakpointPair.classify(e.breakpoint_pair))
     if e.breakpoint_pair.break1.chr == e.breakpoint_pair.break2.chr:
         bedfile_regions.add('{0}\t{1}\t{2}\t{3}'.format(
@@ -195,11 +199,55 @@ for e, contigs in evidence_obj_list:
     #   2. choose the pair of alignments that make up both breakpoints
     #   3. choose the best scoring alignment that lands in one of the windows
     # score low if it is not the best alignment
-    putative_pairings = {}
+    aligned_contigs = []
     for contig in contigs:
+        aligned_contigs.extend(results[contig.seq])
         print('\n>', contig.seq)
         for aln in sorted(results[contig.seq], key=lambda x: x.get_tag('br')):
             print('{0}:{1}'.format(aln.reference_id, aln.reference_start), aln.cigar, aln.get_tags())
+    
+    putative_alignments = []
+    putative_alignment_pairs = []
+    
+    if e.break1.chr == e.break2.chr:
+        for read in aligned_contigs:
+            # if it covers both breakpoints add to putative alignments
+            temp = Interval(read.reference_start, read.reference_end - 1)
+            if e.settings.convert_index_to_chr[read.reference_id] == e.break1.chr \
+                    and e.window1.overlap(temp) \
+                    and e.window2.overlap(temp):
+                putative_alignments.append(read)
+
+    for a1, a2 in itertools.combinations([x for x in aligned_contigs if x not in putative_alignments], 2):
+        # do they overlap both breakpoints
+        # do their mate pairs make sense
+        union = Interval.union(a1.query_coverage_interval(), a2.query_coverage_interval())
+        if len(union) - len(a1.query_coverage_interval()) < MIN_EXTEND_OVERLAP \
+                or len(union) - len(a2.query_coverage_interval()) < MIN_EXTEND_OVERLAP:
+                    continue
+        if e.settings.convert_index_to_chr[a1.reference_id] == e.break1.chr \
+                and e.window1.overlap((a1.reference_start, a1.reference_end - 1)) \
+                and e.settings.convert_index_to_chr[a2.reference_id] == e.break2.chr \
+                and e.window2.overlap((a2.reference_start, a2.reference_end - 1)):
+            putative_alignment_pairs.append((a1, a2))
+        elif e.settings.convert_index_to_chr[a2.reference_id] == e.break1.chr \
+                and e.window1.overlap((a2.reference_start, a2.reference_end - 1)) \
+                and e.settings.convert_index_to_chr[a1.reference_id] == e.break2.chr \
+                and e.window2.overlap((a1.reference_start, a1.reference_end - 1)):
+            putative_alignment_pairs.append((a2, a1))
+    
+    print('single alignments', len(putative_alignments))
+    for a in putative_alignments:
+        print(a)
+    print('paired alignments', len(putative_alignment_pairs))
+    for a1, a2 in sorted(putative_alignment_pairs, key=lambda x: x[0].blat_score() + x[1].blat_score()):
+        print('pair score', a1.blat_score() + a2.blat_score())
+        print(a1)
+        print(a2)
+    print()
+
+
+
 
 temp = args.input + '.bed'
 with  open(temp, 'w') as fh:

@@ -49,6 +49,7 @@ class EvidenceSettings:
         self.convert_index_to_chr = {}
         self.update_chr_to_index(self.convert_chr_to_index)
         self.consensus_req = kwargs.pop('consensus_req', 3)
+        
     
     def update_chr_to_index(self, d):
         temp = {}
@@ -60,6 +61,20 @@ class EvidenceSettings:
         self.convert_index_to_chr.update(temp)
 
 class Evidence:
+    @property
+    def window1(self):
+        if self._window1 is None:
+            return self._window(self.break1)
+        else:
+            return self._window1
+    
+    @property
+    def window2(self):
+        if self._window2 is None:
+            return self._window(self.break2)
+        else:
+            return self._window1
+    
     @property
     def break1(self):
         return self.breakpoint_pair.break1
@@ -81,7 +96,7 @@ class Evidence:
             end = breakpoint.end + self.settings.call_error + self.settings.read_length - 1
         elif breakpoint.orient == ORIENT.RIGHT:
             start = breakpoint.start - self.settings.call_error - self.settings.read_length - 1
-        return (start, end)
+        return Interval(start, end)
     
     def __init__(self, breakpoint_pair, **kwargs):
         """
@@ -117,6 +132,8 @@ class Evidence:
         # for each breakpoint stores the number of reads that were read from the associated
         # bamfile for the window surrounding the breakpoint
         self.read_counts = {}
+        self._window1 = None
+        self._window2 = None
     
     def supporting_reads(self):
         """
@@ -227,9 +244,9 @@ class Evidence:
                 raise UserWarning('read pair orientation does not match event type', rt, classifications)
         
         # check if this read falls in the first breakpoint window
-        w1 = self._window(self.break1)
+        w1 = self.window1
         w1 = (w1[0] - 1, w1[1] - 1) # correct for psyam using 0-based coordinates
-        w2 = self._window(self.break2)
+        w2 = self.window2
         w2 = (w2[0] - 1, w2[1] - 1) # correct for psyam using 0-based coordinates
         
         if read.reference_start >= w1[0] and read.reference_end <= w1[1] \
@@ -252,7 +269,9 @@ class Evidence:
         adds a split read if it passes the criteria filters and raises a warning if it does not
         """
         breakpoint = self.break1 if first_breakpoint else self.break2
+        window = self.window1 if first_breakpoint else self.window2
         opposite_breakpoint = self.break2 if first_breakpoint else self.break1
+        opposite_window = self.window2 if first_breakpoint else self.window1
         
         if read.cigar[0][0] != CIGAR.S and read.cigar[-1][0] != CIGAR.S:
             raise UserWarning('split read is not softclipped')
@@ -266,7 +285,7 @@ class Evidence:
         # read soft-clipping needs to be adjusted
         
         # need to do this after shifting? assume shifting amount is insignificant
-        s, t = self._window(breakpoint)
+        s, t = (window[0], window[1])
         s -= 1 # correct for pysam using 0-based coordinates
         t -= 1 # correct for pysam using 0-based coordinates
         
@@ -298,12 +317,15 @@ class Evidence:
         
         read = sys_copy(read)
         # recalculate the read cigar string to ensure M is replaced with = or X
-        c, prefix = CigarTools.extend_softclipping(
-                CigarTools.recompute_cigar_mismatch(
-                    read, 
-                    ann.HUMAN_REFERENCE_GENOME[self.settings.convert_index_to_chr[read.reference_id]].seq
-                    ), 
-                self.settings.min_anchor_size)
+        c = CigarTools.recompute_cigar_mismatch(
+                read, 
+                ann.HUMAN_REFERENCE_GENOME[self.settings.convert_index_to_chr[read.reference_id]].seq
+                )
+        prefix = 0
+        try:
+            c, prefix = CigarTools.extend_softclipping(c, self.settings.min_anchor_size)
+        except AttributeError:
+            pass
         read.cigar = c
         read.reference_start = read.reference_start + prefix
         # data quality filters
@@ -318,7 +340,7 @@ class Evidence:
             self.split_reads[breakpoint].add(read)
             
         # try mapping the soft-clipped portion to the other breakpoint
-        w = self._window(opposite_breakpoint)
+        w = (opposite_window[0], opposite_window[1])
         opposite_breakpoint_ref = ann.HUMAN_REFERENCE_GENOME[opposite_breakpoint.chr].seq[w[0] - 1: w[1]]
         
         putative_alignments = None
@@ -505,8 +527,8 @@ class Evidence:
         count = 0
         for read in bamfile.fetch(
                 '{0}'.format(self.break1.chr), 
-                self._window(self.break1)[0],
-                self._window(self.break1)[1]):
+                self.window1[0],
+                self.window1[1]):
             
             count += 1
             if count > self.settings.max_reads_limit:
@@ -530,8 +552,8 @@ class Evidence:
         count = 0
         for read in bamfile.fetch(
                 '{0}'.format(self.break2.chr), 
-                self._window(self.break2)[0],
-                self._window(self.break2)[1]):
+                self.window2[0],
+                self.window2[1]):
             
             count += 1
             if count > self.settings.max_reads_limit:
