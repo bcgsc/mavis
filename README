@@ -1,4 +1,15 @@
-# SV merged report
+# About
+
+pipeline to merge and validate input from different structural variant callers into a single report
+
+# Tests
+
+to run the tests
+
+    cd /path/to/project/dir
+    nosetests
+
+# SV merged report Design
 
 ## general process:
 
