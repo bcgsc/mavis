@@ -139,15 +139,6 @@ class CigarTools:
         """
         computes the longest sequence of exact matches allowing for 'x' event interrupts
 
-        >>> c = [(CIGAR.S, 10), (CIGAR.EQ, 1), (CIGAR.X, 4), (CIGAR.EQ, 10), (CIGAR.I, 3), (CIGAR.EQ, 5)]
-        >>> CigarTools.longest_fuzzy_match(c, 1)
-        15
-        >>> CigarTools.longest_fuzzy_match(c, 0)
-        10
-        >>> CigarTools.longest_fuzzy_match(c, 2)
-        16
-        >>> CigarTools.longest_fuzzy_match(c, 4)
-        16
         """
         temp = CigarTools.join(cigar)
         longest_fuzzy_match = 0
@@ -187,10 +178,6 @@ class CigarTools:
         @param =GAP_EXTEND \a optional (type: int; -1) gap extension penalty
 
         @return (type: int) the score value
-
-        >>> c = [(CIGAR.S, 10), (CIGAR.EQ, 1), (CIGAR.X, 4), (CIGAR.EQ, 10), (CIGAR.I, 3), (CIGAR.EQ, 5)]
-        >>> CigarTools.score(c)
-        22
         """
 
         MISMATCH = kwargs.pop('MISMATCH', -1)
@@ -214,11 +201,6 @@ class CigarTools:
 
     @classmethod
     def match_percent(cls, cigar):
-        """
-        >>> c = [(CIGAR.S, 10), (CIGAR.EQ, 1), (CIGAR.X, 4), (CIGAR.EQ, 10), (CIGAR.I, 3), (CIGAR.EQ, 5)]
-        >>> CigarTools.match_percent(c)
-        0.8
-        """
         matches = 0
         mismatches = 0
         for v, f in cigar:
@@ -306,11 +288,6 @@ class CigarTools:
         given a ref and alt sequence compute the cigar string representing the alt
 
         returns the cigar tuples along with the start position of the alt relative to the ref
-
-        >>> CigarTools.compute('GTGAGTAAATTCAACATCGTTTTT', 'AACTTAGAATTCAAC---------')
-        ([(4, 7), (7, 8)], 7)
-        >>> CigarTools.compute('GTGAGTAAATTCAACATCGTTTTT', '--CTTAGAATTCAAC---------')
-        ([(4, 5), (7, 8)], 7)
         """
         force_softclipping = kwargs.pop('force_softclipping', True)
         min_exact_to_stop_softclipping = kwargs.pop('min_exact_to_stop_softclipping', 6)

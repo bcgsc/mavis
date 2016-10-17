@@ -1,33 +1,42 @@
 from structural_variant.constants import *
 from structural_variant.align import *
-import pysam
 import unittest
 
 
 class TestAlign(unittest.TestCase):
     """
-    test class for functions in the validate namespace 
+    test class for functions in the validate namespace
     that are not associated with a class
     """
-
-    def test_sw_pairwise_alignment(self):
-        a = sw_pairwise_alignment('ATGGACTCGGTAAA', 'CGGTAA')[0]
-        self.assertEqual(a.reference_start, 7)
-        self.assertEqual(a.cigar, [(CIGAR.EQ, 6)])
-        self.assertEqual(a.query_sequence, 'CGGTAA')
-
-    def test_build_string_from_reverse_path(self):
-        ref = '-mxabdce'
-        seq = '-abc'
-        t = build_string_from_reverse_path(ref, seq, [(7, 3), (6, 3)])
-        self.assertEqual(('e', '-'), t)
-        t = build_string_from_reverse_path(
-            ref, seq, [(7, 3), (6, 3), (5, 2), (4, 2)])
-        self.assertEqual(('dce', '-c-'), t)
-        t = build_string_from_reverse_path(
-            ref, seq, [(6, 3), (5, 2), (4, 2), (3, 1), (2, 0)])
-        self.assertEqual(('mxabdce', '--ab-c-'), t)
 
     def test_alphabet_matching(self):
         self.assertTrue(DNA_ALPHABET.match('N', 'A'))
         self.assertTrue(DNA_ALPHABET.match('A', 'N'))
+
+
+class TestCigarTools(unittest.TestCase):
+
+    def test_longest_fuzzy_match(self):
+        c = [(CIGAR.S, 10), (CIGAR.EQ, 1), (CIGAR.X, 4), (CIGAR.EQ, 10), (CIGAR.I, 3), (CIGAR.EQ, 5)]
+        self.assertEqual(15, CigarTools.longest_fuzzy_match(c, 1))
+        self.assertEqual(10, CigarTools.longest_fuzzy_match(c, 0))
+        self.assertEqual(16, CigarTools.longest_fuzzy_match(c, 2))
+        self.assertEqual(16, CigarTools.longest_fuzzy_match(c, 4))
+
+    def test_score(self):
+        c = [(CIGAR.S, 10), (CIGAR.EQ, 1), (CIGAR.X, 4), (CIGAR.EQ, 10), (CIGAR.I, 3), (CIGAR.EQ, 5)]
+        self.assertEqual(22, CigarTools.score(c))
+
+    def test_match_percent(self):
+        c = [(CIGAR.S, 10), (CIGAR.EQ, 1), (CIGAR.X, 4), (CIGAR.EQ, 10), (CIGAR.I, 3), (CIGAR.EQ, 5)]
+        self.assertEqual(0.8, CigarTools.match_percent(c))
+
+    def test_compute(self):
+        self.assertEqual(
+            ([(4, 7), (7, 8)], 7),
+            CigarTools.compute('GTGAGTAAATTCAACATCGTTTTT', 'AACTTAGAATTCAAC---------')
+        )
+        self.assertEqual(
+            ([(4, 5), (7, 8)], 7),
+            CigarTools.compute('GTGAGTAAATTCAACATCGTTTTT', '--CTTAGAATTCAAC---------')
+        )

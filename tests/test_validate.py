@@ -2,7 +2,6 @@ from structural_variant.breakpoint import BreakpointPair, Breakpoint
 from structural_variant.validate import *
 from structural_variant.annotate import load_reference_genome
 from structural_variant.constants import *
-import structural_variant.align as align
 import pysam
 import unittest
 
@@ -27,7 +26,7 @@ class MockRead(pysam.AlignedSegment):
 
 def setUpModule():
     global HUMAN_REFERENCE_GENOME
-    HUMAN_REFERENCE_GENOME = load_reference_genome('chr11_chr22.fa')
+    #HUMAN_REFERENCE_GENOME = load_reference_genome('chr11_chr22.fa')
 
 
 class TestEvidence(unittest.TestCase):
