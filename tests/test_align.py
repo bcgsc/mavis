@@ -3,11 +3,13 @@ from structural_variant.align import *
 import pysam
 import unittest
 
+
 class TestAlign(unittest.TestCase):
     """
     test class for functions in the validate namespace 
     that are not associated with a class
     """
+
     def test_sw_pairwise_alignment(self):
         a = sw_pairwise_alignment('ATGGACTCGGTAAA', 'CGGTAA')[0]
         self.assertEqual(a.reference_start, 7)
@@ -19,9 +21,11 @@ class TestAlign(unittest.TestCase):
         seq = '-abc'
         t = build_string_from_reverse_path(ref, seq, [(7, 3), (6, 3)])
         self.assertEqual(('e', '-'), t)
-        t = build_string_from_reverse_path(ref, seq, [(7, 3), (6, 3), (5,2), (4,2)])
+        t = build_string_from_reverse_path(
+            ref, seq, [(7, 3), (6, 3), (5, 2), (4, 2)])
         self.assertEqual(('dce', '-c-'), t)
-        t = build_string_from_reverse_path(ref, seq, [(6, 3), (5,2), (4,2), (3, 1), (2, 0)])
+        t = build_string_from_reverse_path(
+            ref, seq, [(6, 3), (5, 2), (4, 2), (3, 1), (2, 0)])
         self.assertEqual(('mxabdce', '--ab-c-'), t)
 
     def test_alphabet_matching(self):

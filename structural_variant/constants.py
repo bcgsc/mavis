@@ -8,16 +8,18 @@ GAP = '-'
 
 ORIENT = Vocab(LEFT='L', RIGHT='R', NS='?')
 
+PROTOCOL = Vocab(GENOME='genome', TRANS='transcriptome')
+
 STRAND = Vocab(POS='+', NEG='-', NS='?')
 
 SVTYPE = Vocab(
-        DEL='deletion', 
-        TRANS='translocation', 
-        ITRANS='inverted translocation', 
-        INV='inversion', 
-        INS='insertion', 
-        DUP='duplication'
-        )
+    DEL='deletion',
+    TRANS='translocation',
+    ITRANS='inverted translocation',
+    INV='inversion',
+    INS='insertion',
+    DUP='duplication'
+)
 
 """
 M 0 alignment match (can be a sequence match or mismatch)
@@ -48,14 +50,15 @@ Bit Description
 2048 0x800 supplementary alignment
 """
 PYSAM_READ_FLAGS = Vocab(
-        REVERSE=16, 
-        MATE_REVERSE=32,
-        UNMAPPED=4,
-        MATE_UNMAPPED=8,
-        FIRST_IN_PAIR=64,
-        LAST_IN_PAIR=128
-        )
+    REVERSE=16,
+    MATE_REVERSE=32,
+    UNMAPPED=4,
+    MATE_UNMAPPED=8,
+    FIRST_IN_PAIR=64,
+    LAST_IN_PAIR=128
+)
 # read paired, read mapped in proper pair, mate reverse strand, first in pair
+
 
 def _match_ambiguous_dna(x, y):
     """

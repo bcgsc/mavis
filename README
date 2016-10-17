@@ -11,7 +11,7 @@
 6. calculate the evidence window (define region to parse reads from the bam) (TODO: calculating the transcriptome window)
 7. gather evidence: flanking, spanning, and split reads
 8. assemble split reads into contigs
-9. align split-read contigs to the genome (TODO: pairing 2 alignments for alignments that cannot be represented as a gapped alignment)
+9. align split-read contigs to the genome 
 
 ### TODO
 10. split breakpoint pairs (and evidence) by classification
@@ -51,4 +51,4 @@ to ensure breakpoints are called consistently and to aid in eliminating false po
 - revcomp the split reads from one of the breakpoints if opposing strands have been specified
 - assemble the contigs
 - align the contigs to the reference genome
-- (TODO) return a list of pairs of alignments (non-redundant, primarily for duplications and translocations) as well as single/gapped alignments
+- return a list of pairs of alignments (non-redundant, primarily for duplications and translocations) as well as single/gapped alignments
