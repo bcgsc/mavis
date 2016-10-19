@@ -33,17 +33,6 @@ class Interval:
             'index input accessor is out of bounds: 1 or 2 only', index)
 
     def overlaps(self, other):
-        """
-        >>> x, y, z = ( Interval(1, 4), Interval(-1, 0), Interval(0, 3) )
-        >>> x.overlap(y)
-        False
-        >>> x.overlap(z)
-        True
-        >>> y.overlap(x)
-        False
-        >>> y.overlap(z)
-        True
-        """
         if self - other == 0:
             return True
         return False
@@ -61,15 +50,6 @@ class Interval:
 
     @property
     def center(self):
-        """
-        >>> x, y, z = ( Interval(1, 5), Interval(-1, 0), Interval(1, 2) )
-        >>> x.center
-        3.0
-        >>> y.center
-        -0.5
-        >>> z.center
-        1.5
-        """
         return self[0] + (len(self) - 1) / 2
 
     @classmethod
@@ -96,13 +76,6 @@ class Interval:
     def combine(self, other):
         """
         adding two intervals returns the minimum interval that covers both input intervals
-        >>> x, y, z = ( Interval(1, 4), Interval(-1, 0), Interval(1, 2) )
-        >>> x.combine(y)
-        Interval(-1-4)
-        >>> x.combine(z)
-        Interval(1-4)
-        >>> y.combine(z)
-        Interval(-1-2)
         """
         return Interval.union(self, other)
 
@@ -140,16 +113,6 @@ class Interval:
 
     def __sub__(self, other):
         """returns the minimum distance between intervals
-
-        >>> x, y, z = ( Interval(1, 4), Interval(-1, 0), Interval(0, 3) )
-        >>> x - y
-        1
-        >>> y - x
-        -1
-        >>> x - z
-        0
-        >>> z - x
-        0
         """
         if self[1] < other[0]:
             return self[1] - other[0]
@@ -169,17 +132,6 @@ class Interval:
 
     @classmethod
     def position_in_range(cls, segments, pos):
-        """
-        >>> b = (12, 12)
-        >>> Interval.position_in_range([(1, 2), (3, 6), (7, 15)], b)
-        (2, False)
-        >>> Interval.position_in_range([(1, 2), (3, 6), (7, 10), (14, 16)], b)
-        (3, True)
-        >>> Interval.position_in_range([(1, 2), (3, 6), (7, 10)], b)
-        (3, False)
-        >>> Interval.position_in_range([(15, 16), (17, 19)], b)
-        (0, True)
-        """
         if len(segments) == 0:
             raise AttributeError('cannot compute on an empty list')
         num = 0
@@ -211,34 +163,17 @@ class Interval:
     @classmethod
     def convert_pos(cls, mapping, pos):
         """ convert any given position given a mapping of intervals to another range
-
-        @param mapping \a required (type: \b Dict<Interval, Interval>) a mapping of a set of continuous intervals
-        @param pos \a required (type: \b int) a position in the first coordinate system
-        @param front_to_end \a optional (type: \b boolean) start-start & end-end or start-end & end-start
-
-        @return (type: \b int) the position in the alternate coordinate system given the input mapping
-
-        @except AttributeError if the input position is outside the set of input segments
-        @except DiscontiuousMappingError if the input position cannot be converted to the output system
-
-        >>> mapping = {(1, 10): (101, 110), (21, 30): (201, 210), (41, 50): (301, 310)}
-        >>> Interval.convert_pos(mapping, 5)
-        105
-        >>> Interval.convert_pos(mapping, 15)
-        Traceback (most recent call last):
-        ...
-        structural_variant.error.DiscontiuousMappingError: DiscontiuousMappingError<between=(110, 201), outside mapped range>
-        >>> Interval.convert_pos(mapping, 0)
-        Traceback (most recent call last):
-        ...
-        structural_variant.error.DiscontiuousMappingError: DiscontiuousMappingError<before=101, outside mapped range>
-        >>> Interval.convert_pos(mapping, 80)
-        Traceback (most recent call last):
-        ...
-        structural_variant.error.DiscontiuousMappingError: DiscontiuousMappingError<after=310, outside mapped range>
-        >>> mapping = {(41, 50): (101, 110), (21, 30): (201, 210), (1, 10): (301, 310)}
-        >>> Interval.convert_pos(mapping, 5)
-        306
+        
+        Args:
+            mapping (Dict[Interval, Interval]): a mapping of a set of continuous intervals
+            pos (int): a position in the first coordinate system
+        
+        Returns:
+            int: the position in the alternate coordinate system given the input mapping
+        
+        Raises:
+            AttributeError: if the input position is outside the set of input segments
+            DiscontiuousMappingError: if the input position cannot be converted to the output system
         """
         if len(mapping.keys()) < 2:
             raise AttributeError(
@@ -294,9 +229,17 @@ class Interval:
             else:  # between two segments
                 prev = input_intervals[i - 1]
                 if not front_to_end:
-                    raise DiscontiuousMappingError('outside mapped range', between=(mapping[prev][1], mapping[curr][0]))
+                    raise DiscontiuousMappingError(
+                        'outside mapped range',
+                        before=mapping[prev][1],
+                        after=mapping[curr][0]
+                    )
                 else:
-                    raise DiscontiuousMappingError('outside mapped range', between=(mapping[curr][1], mapping[prev][0]))
+                    raise DiscontiuousMappingError(
+                        'outside mapped range',
+                        before=mapping[curr][1],
+                        after=mapping[prev][0]
+                    )
         else:
             # fell into a mapped region
             curr = input_intervals[i]
@@ -311,7 +254,7 @@ class Interval:
     def paired_set_distance(cls, intervals, other_intervals):
         """
         for two sets of interval pairs (as tuples) computes the weighted mean
-        of each interval set (a total of four) and then returns the 
+        of each interval set (a total of four) and then returns the
         distance between the sets of pairs as the cumulative distance
         of the weighted means of their pairs
         """
@@ -368,40 +311,23 @@ class Interval:
     def union(cls, *intervals):
         """
         returns the union of the set of input intervals
-
-        >>> l = [Interval(1, 10), Interval(5, 7), Interval(7)]
-        >>> Interval.union(l)
-        Interval(1-10)
-        >>> l.append(Interval(11))
-        >>> Interval.union(l)
-        Interval(1-11)
         """
         if len(intervals) < 1:
             raise AttributeError('cannot compute the union of an empty set of intervals')
         return Interval(min([i[0] for i in intervals]), max([i[1] for i in intervals]))
 
     @classmethod
-    def intersection(cls, intervals):
+    def intersection(cls, *intervals):
         """
         returns None if there is no intersection
-
-        >>> l = [Interval(1, 10), Interval(5, 7), Interval(7)]
-        >>> Interval.intersection(l)
-        Interval(7)
-        >>> l.append(Interval(11))
-        >>> Interval.intersection(l)
         """
         if len(intervals) < 1:
             raise AttributeError('cannot compute the intersection of an empty set of intervals')
         curr = next(iter(intervals))
-        low = curr[0]
-        high = curr[1]
-
-        for i in intervals:
-            if high < i[0] or i[1] < low:
-                return None
-            low = max(low, i[0])
-            high = min(high, i[1])
+        low = max([i[0] for i in intervals])
+        high = min([i[1] for i in intervals])
+        if low > high:
+            return None
         return Interval(low, high)
 
 if __name__ == '__main__':

@@ -17,15 +17,25 @@ class Bio:
         cls = self.__class__.__name__
         return cls + str(tuple([k for k in self.key if k is not None]))
 
+    def __init__(self, name=None, reference_object=None):
+        self.name = None
+        self.reference_object = None
+
 
 class Gene(Bio):
 
-    def __init__(self, **kwargs):
-        self.name = kwargs.pop('name', None)
+    def __init__(self, chr=None, name=None, strand=None, aliases=[]):
+        Bio.__init__(self, name=name, reference_object=chr)
         self.transcripts = set()
-        self.strand = kwargs.pop('strand')
-        self.chr = kwargs.pop('chr')
-        self.aliases = kwargs.pop('aliases', [])
+        self.strand = strand
+        self.aliases = aliases
+
+        if self.name is None or self.reference_object is None or self.strand is None:
+            raise AttributeError('properties: name, reference_object/chr, and strand are required')
+
+    @property
+    def chr(self):
+        return self.reference_object
 
     @property
     def key(self):
@@ -34,31 +44,38 @@ class Gene(Bio):
 
 class Transcript(Bio):
 
-    def __init__(self, **kwargs):
-        self.gene = kwargs.pop('gene', None)
-        self.name = kwargs.pop('name', None)
+    def __init__(self, gene=None, name=None, cds_start=None, cds_end=None, strand=STRAND.NS, exons=[]):
+        """ creates a new transcript object
+
+        Args:
+            gene (Gene, optional): the gene this transcript belongs to
+            name (str, optional): the name of the transcript or external db id. For example ENTS0001
+            cds_start (int): the position (wrt the first exon) where translation would begin
+            cds_end (int): the position (wrt the first exon) where translation would terminate
+            strand (STRAND, default=STRAND.NS): the strand the transcript occurs on
+
+        """
+        Bio.__init__(self, reference_object=gene, name=name)
 
         self.exons = set()
         self.domains = set()
+        self._strand = strand
 
-        # self.genomic_start = int(kwargs.pop('genomic_start'))
-        # self.genomic_end = int(kwargs.pop('genomic_end'))
-        # genomic position where coding begins
-        self.cds_start = int(kwargs.pop('cds_start'))
-        # genomic position where coding ends
-        self.cds_end = int(kwargs.pop('cds_end'))
+        try:
+            self.cds_start = int(cds_start)
+            self.cds_end = int(cds_end)
+        except ValueError:
+            raise AttributeError('cds_end and/or cds_start are required and must be integers')
 
         if self.cds_start > self.cds_end:
             raise AttributeError('cds_end must be >= cds_start')
 
-        for e in kwargs.pop('exons', []):
+        for e in exons:
             self.exons.add(e)
             e.transcript = self
 
         if self.gene is not None:
             self.gene.transcripts.add(self)
-        else:
-            self._strand = kwargs.pop('strand', STRAND.NS)
 
         exons = sorted(self.exons, key=lambda x: (x.start, x.end))
         for i, exon in enumerate(exons):
@@ -69,30 +86,30 @@ class Transcript(Bio):
                 raise AttributeError(
                     'exons cannot overlap within a transcript')
 
-    def get_exons(self):
-        return sorted(self.exons, key=lambda x: x.start)
-
     @property
-    def genomic_length(self):
-        return self.genomic_end - self.genomic_start + 1
-
-    @property
-    def genomic_start(self):
-        return min([e.start for e in self.exons])
-
-    @property
-    def genomic_end(self):
-        return max([e.end for e in self.exons])
-
-    @property
-    def length(self):
-        return sum([e.length for e in self.exons])
+    def gene(self):
+        return self.reference_object
 
     @property
     def strand(self):
         if self.gene is not None:
             return self.gene.strand
         return self._strand
+
+    def get_exons(self):
+        return sorted(self.exons, key=lambda x: x.start)
+
+    def genomic_length(self):
+        return self.genomic_end() - self.genomic_start() + 1
+
+    def genomic_start(self):
+        return min([e.start for e in self.exons])
+
+    def genomic_end(self):
+        return max([e.end for e in self.exons])
+
+    def length(self):
+        return sum([e.length() for e in self.exons])
 
     def _exon_genomic_to_cdna_mapping(self):
         mapping = {}
@@ -108,8 +125,8 @@ class Transcript(Bio):
 
         l = 0
         for e in exons:
-            mapping[(e.start, e.end)] = (l + 1, l + e.length)
-            l += e.length
+            mapping[(e.start, e.end)] = (l + 1, l + e.length())
+            l += e.length()
         return mapping
 
     def _exon_cdna_to_genomic_mapping(self):
@@ -203,15 +220,20 @@ class Transcript(Bio):
 
 class Exon(Bio):
 
-    def __init__(self, start, end, **kwargs):
-        self.transcript = kwargs.pop('transcript', None)
+    def __init__(self, start, end, transcript=None, name=None):
+        Bio.__init__(self, name=name, reference_object=transcript)
         self.start = int(start)
         self.end = int(end)
-        self.name = kwargs.pop('name', None)
+        self.name = name
         if self.start > self.end:
             raise AttributeError('exon start must be <= exon end')
         if self.transcript is not None:
             self.transcript.exons.add(self)
+
+    @property
+    def transcript(self):
+        """alias for the reference_object attribute"""
+        return self.reference_object
 
     def __getitem__(self, index):
         try:
@@ -234,16 +256,15 @@ class Exon(Bio):
     def key(self):
         return (self.transcript, self.start, self.end, self.name)
 
-    @property
     def length(self):
         return self.end - self.start + 1
 
 
 class Domain(Bio):
 
-    def __init__(self, name, regions, **kwargs):
+    def __init__(self, name, regions, transcript=None):
+        Bio.__init__(self, name=name, reference_object=transcript)
         self.name = name
-        self.transcript = kwargs.pop('transcript', None)
         self.regions = sorted(list(set(regions)))  # remove duplicates
         for i, region in enumerate(self.regions):
             if region[0] > region[1]:
@@ -255,6 +276,10 @@ class Domain(Bio):
                         'regions cannot overlap', previous_region, region)
         if self.transcript is not None:
             self.transcript.domains.add(self)
+
+    @property
+    def transcript(self):
+        return self.reference_object
 
     @property
     def key(self):
@@ -335,6 +360,24 @@ def load_reference_genes(filepath):
             ref[g.chr] = []
         ref[g.chr].append(g)
     return ref
+
+
+def overlapping_transcripts(ref_ann, breakpoint):
+    """
+    Args:
+        ref_ann (Dict[str,List[Gene]]): the reference list of genes split by chromosome
+        breakpoint (Breakpoint): the breakpoint in question
+    Returns:
+        List[Transcript]: a list of possible transcripts
+    """
+    putative_annotations = []
+    for gene in ref_ann[breakpoint.chr]:
+        for transcript in gene.transcripts:
+            if breakpoint.strand != STRAND.NS and transcript.strand != breakpoint.strand:
+                continue
+            if breakpoint.pos.overlaps((transcript.genomic_start(), transcript.genomic_end())):
+                putative_annotations.append(transcript)
+    return putative_annotations
 
 
 def annotations(ref, breakpoint_pairs):  # TODO

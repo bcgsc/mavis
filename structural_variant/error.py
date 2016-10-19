@@ -5,36 +5,17 @@ class DiscontiuousMappingError(Exception):
     coordinates between continuous and discontinuous intervals
     """
 
-    def __init__(self, msg, *pos, **kwargs):
-        self.between = kwargs.pop('between', False)
-        self.before = kwargs.pop('before', False)
-        self.after = kwargs.pop('after', False)
+    def __init__(self, *pos, before=None, after=None):
+        self.before = before
+        self.after = after
+        if self.before is None and self.after is None:
+            raise AttributeError('please specify before OR after OR both')
 
-        if self.between is not False:
-            self.pos = self.between
-            self.between = True
-        elif self.after is not False:
-            self.pos = self.after
-            self.after = True
-        elif self.before is not False:
-            self.pos = self.before
-            self.before = True
-
-        if sum([1 for arg in [self.between, self.after, self.before] if arg]) != 1:
-            raise AttributeError('before, after, and between arguments '
-                                 'are both required and mutually exclusive')
-        self.msg = ' '.join([msg] + [str(p) for p in pos])
-        if kwargs:
-            raise AttributeError('unexpected keyword argument', kwargs)
+        self.msg = ' '.join([str(x) for x in pos])
 
     def __str__(self):
         name = self.__class__.__name__
-        if self.between:
-            return '{0}<between={1}, {2}>'.format(name, self.pos, self.msg)
-        elif self.before:
-            return '{0}<before={1}, {2}>'.format(name, self.pos, self.msg)
-        elif self.after:
-            return '{0}<after={1}, {2}>'.format(name, self.pos, self.msg)
+        return '{0}<[{1},{2}], {3}>'.format(name, self.before, self.after, self.msg)
 
 
 class StrandSpecificityError(Exception):

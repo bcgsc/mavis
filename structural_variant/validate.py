@@ -105,10 +105,14 @@ class Evidence:
             protocol=PROTOCOL.GENOME,
             **kwargs):
         """
-        @param =average_insert_size \a optional (type: int; default: 450)
-        @param =min_anchor_size \a optional (type: int; default: 5)
-        @param =min_mapping_quality \a optional (type: int; default: 20)
-        @param =read_length \a optional (type: int; default: 125)
+        Args:
+            breakpoint_pair (BreakpointPair): the breakpoint pair to collect evidence for
+            bam_cache (BamCache): the bam cache (and assc file) to collect evidence from
+            human_reference_genome (SeqIO.iterator[SeqIO.SeqRecord]): the human reference genome read as fasta
+            labels (Dict, optional): a dictionary of labels to associate with the evidence object
+            classification (SVTYPE, optional): the event type
+            protocol (PROTOCOL, default=PROTOCOL.GENOME): genome or transcriptome
+            **kwargs: named arguments to be passed to EvidenceSettings
         """
         self.settings = EvidenceSettings(**kwargs)
         self.bam_cache = bam_cache
@@ -393,18 +397,20 @@ class Evidence:
                 opposite_breakpoint_ref, str(revcomp_sc_align))
 
             for a in revcomp_sc_align:
-                a.flag = read.flag ^ 16
+                a.flag = read.flag ^ PYSAM_READ_FLAGS.REVERSE  # EXOR
             putative_alignments = revcomp_sc_align
 
         scores = []
 
         for a in putative_alignments:
-            a.flag = a.flag ^ 64 ^ 128
-
+            # a.flag = a.flag ^ 64 ^ 128
+            a.flag = a.flag | PYSAM_READ_FLAGS.SECONDARY
             # add information from the original read
             a.reference_start = w[0] - 1 + a.reference_start
             a.reference_id = self.bam_cache.reference_id(opposite_breakpoint.chr)
-            a.query_name = read.query_name + SUFFIX_DELIM + 'clipped-realign'
+            # a.query_name = read.query_name + SUFFIX_DELIM + 'clipped-realign'
+            a.query_name = read.query_name
+            a.set_tag('cr', 1, value_type='i')
             a.next_reference_start = read.next_reference_start
             a.next_reference_id = read.next_reference_id
             a.mapping_quality = NA_MAPPING_QUALITY

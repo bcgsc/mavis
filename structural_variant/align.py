@@ -50,19 +50,19 @@ class BamCache:
                     self.add_read(read)
         return result
 
-    def get_mate(self, read, **kwargs):
-        primary_only = kwargs.pop('primary_only', True)
-        allow_file_access = kwargs.pop('allow_file_access', True)
-
+    def get_mate(self, read, primary_only=True, allow_file_access=True):
         # NOTE: will return all mate alignments that have been cached
         putative_mates = self.cache.get(read.query_name, set())
+        if SUFFIX_DELIM in read.query_name:
+            prefix, temp = read.query_name.split(SUFFIX_DELIM, 1)
+            putative_mates.update(self.cache.get(temp, set()))
         mates = []
         for mate in putative_mates:
-            if any(read.is_read1 == mate.is_read1,
+            if any([read.is_read1 == mate.is_read1,
                     read.is_read2 == mate.is_read2,
                     read.next_reference_start != mate.reference_start,
                     read.next_reference_id != mate.reference_id,
-                    primary_only and mate.is_secondary):
+                    primary_only and mate.is_secondary and mate.is_mapped]):
                 continue
             mates.append(mate)
         if len(mates) == 0:
@@ -71,11 +71,11 @@ class BamCache:
             else:
                 warnings.warn(
                     'looking for uncached mate of {0}. This requires file access and'.format(read.query_name) +
-                    'requests may be slow. This should also not be using in a loop iterating using the file pointer as'
-                    'it will change the file pointer position')
-                m = read.mate()
+                    ' requests may be slow. This should also not be using in a loop iterating using the file pointer ' +
+                    ' as it will change the file pointer position')
+                m = self.fh.mate(read)
                 self.add_read(m)
-                return m
+                return [m]
         return mates
 
     def close(self):
@@ -168,16 +168,17 @@ class CigarTools:
 
     @classmethod
     def score(cls, cigar, **kwargs):
-        """
-        scoring based on sw alignment properties with gap extension penalties
-
-        @param cigar \a required (type: List<(CIGAR,int)>) list of cigar tuple values
-        @param =MISMATCH \a optional (type: int; default: -1) mismatch penalty
-        @param =MATCH \a optional (type: int; default: 2) match penalty
-        @param =GAP \a optional (type: int; -4) initial gap penalty
-        @param =GAP_EXTEND \a optional (type: int; -1) gap extension penalty
-
-        @return (type: int) the score value
+        """scoring based on sw alignment properties with gap extension penalties
+        
+        Args:
+            cigar (List<(CIGAR,int)>): list of cigar tuple values
+            MISMATCH (int, default=-1): mismatch penalty
+            MATCH (int, default=2): match penalty
+            GAP (int, default=-4): initial gap penalty
+            GAP_EXTEND (int, default=-1): gap extension penalty
+        
+        Returns:
+            int: the score value
         """
 
         MISMATCH = kwargs.pop('MISMATCH', -1)
@@ -231,13 +232,13 @@ class CigarTools:
         close to the end of the aligned portion. The stopping point is defined by the
         min_exact_to_stop_softclipping parameter. this function will throw an error if there is no
         exact match aligned portion to signal stop
+        
+        Args:
+            original_cigar (List[CIGAR,int]): the input cigar
+            min_exact_to_stop_softclipping (int): number of exact matches to terminate extension
 
-        @param original_cigar \a required (type: \bList<(CIGAR,int)>) the input cigar
-        @param min_exact_to_stop_softclipping \a required (type: \bint) number of exact matches to terminate extension
-
-        @return
-            (type: \b(List<(CIGAR,int)>, int)
-            the new cigar string and a number representing the shift from the original start position
+        Returns:
+            (List[CIGAR,int], int): the new cigar string and a number representing the shift from the original start position
         """
         cigar = original_cigar[:]
         preshift = 0
@@ -377,10 +378,13 @@ def breakpoint_pos(read, orient=ORIENT.NS):
     """
     assumes the breakpoint is the position following softclipping on the side with more
     softclipping (unless and orientation has been specified)
+    
+    Args:
+        read (psyam.AlignedSegment): the read object
+        orient (ORIENT): the orientation
 
-    @param read \a required (type: psyam.AlignedSegment)
-    @param orient \a optional (type: ORIENT) the orientation
-    @return (type: int) the position of the breakpoint in the input read
+    Returns:
+        int: the position of the breakpoint in the input read
     """
     typ, freq = read.cigar[0]
     end_typ, end_freq = read.cigar[-1]
@@ -408,10 +412,12 @@ def kmers(s, size):
     """
     for a sequence, compute and return a list of all kmers of a specified size
 
-    @param s (type: str) the input sequence
-    @param size (type: int) the size of the kmers
-
-    @return (type: List<str>) the list of kmers
+    Args:
+        s (str): the input sequence
+        size (int): the size of the kmers
+    
+    Returns:
+        List[str]: the list of kmers
     """
     kmers = []
     for i in range(0, len(s)):
@@ -537,14 +543,16 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
     for a set of sequences creates a DeBruijnGraph
     simplifies trailing and leading paths where edges fall
     below a weight threshold and the return all possible unitigs/contigs
-
-    @param sequences (type: List<string>) a list of strings/sequences to assemble
-    @param =kmer_size (type: int) the size of the kmer to use
-    @param =min_edge_weight (type: int) applies to trimming (see desc)
-    @param =min_match_quality (type: float) percent match for re-aligned reads to contigs
-    @param =min_read_mapping_overlap (type: int) the minimum amount of overlap required when aligning reads to contigs
-
-    @return (type: List<Contig>) a list of putative contigs
+    
+    Args:
+        sequences (List[str]): a list of strings/sequences to assemble
+        kmer_size (int): the size of the kmer to use
+        min_edge_weight (int): applies to trimming (see desc)
+        min_match_quality (float): percent match for re-aligned reads to contigs
+        min_read_mapping_overlap (int): the minimum amount of overlap required when aligning reads to contigs
+    
+    Returns:
+        List[Contig]: a list of putative contigs
     """
     if len(sequences) == 0:
         return []

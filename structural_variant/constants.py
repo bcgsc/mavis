@@ -7,10 +7,27 @@ from Bio.Alphabet.IUPAC import ambiguous_dna
 GAP = '-'
 
 ORIENT = Vocab(LEFT='L', RIGHT='R', NS='?')
+"""Vocab: holds controlled vocabulary for allowed orientation values
+
+- LEFT: left wrt to the positive/forward strand
+- RIGHT: right wrt to the positive/forward strand
+- NS: orientation is not specified
+"""
 
 PROTOCOL = Vocab(GENOME='genome', TRANS='transcriptome')
+"""Vocab: holds controlled vocabulary for allowed protocol values
+
+- GENOME: genome
+- TRANS: transcriptome
+"""
 
 STRAND = Vocab(POS='+', NEG='-', NS='?')
+"""Vocab: holds controlled vocabulary for allowed strand values
+
+- POS: the positive/forward strand
+- NEG: the negative/reverse strand
+- NS: strand is not specified
+"""
 
 SVTYPE = Vocab(
     DEL='deletion',
@@ -20,43 +37,57 @@ SVTYPE = Vocab(
     INS='insertion',
     DUP='duplication'
 )
+"""Vocab: holds controlled vocabulary for acceptable structural variant classifications
 
+- DEL: deletion
+- TRANS: translocation
+- ITRANS: inverted translocation
+- INV: inversion
+- INS: insertion
+- DUP: duplication
 """
-M 0 alignment match (can be a sequence match or mismatch)
-I 1 insertion to the reference
-D 2 deletion from the reference
-N 3 skipped region from the reference
-S 4 soft clipping (clipped sequences present in SEQ)
-H 5 hard clipping (clipped sequences NOT present in SEQ)
-P 6 padding (silent deletion from padded reference)
-= 7 sequence match
-X 8 sequence mismatch
-"""
+
 CIGAR = Vocab(M=0, I=1, D=2, N=3, S=4, H=5, P=6, X=8, EQ=7)
+"""Vocab: Enum-like. For readable cigar values
 
+- M: alignment match (can be a sequence match or mismatch)
+- I: insertion to the reference
+- D: deletion from the reference
+- N: skipped region from the reference
+- S: soft clipping (clipped sequences present in SEQ)
+- H: hard clipping (clipped sequences NOT present in SEQ)
+- P: padding (silent deletion from padded reference)
+- EQ(=): sequence match
+- X: sequence mismatch
+
+note: descriptions are taken from the samfile documentation https://samtools.github.io/hts-specs/SAMv1.pdf
 """
-Bit Description
-1 0x1 template having multiple segments in sequencing
-2 0x2 each segment properly aligned according to the aligner
-4 0x4 segment unmapped
-8 0x8 next segment in the template unmapped
-16 0x10 SEQ being reverse complemented
-32 0x20 SEQ of the next segment in the template being reverse complemented
-64 0x40 the first segment in the template
-128 0x80 the last segment in the template
-256 0x100 secondary alignment
-512 0x200 not passing filters, such as platform/vendor quality controls
-1024 0x400 PCR or optical duplicate
-2048 0x800 supplementary alignment
-"""
+
+
 PYSAM_READ_FLAGS = Vocab(
     REVERSE=16,
     MATE_REVERSE=32,
     UNMAPPED=4,
     MATE_UNMAPPED=8,
     FIRST_IN_PAIR=64,
-    LAST_IN_PAIR=128
+    LAST_IN_PAIR=128,
+    SECONDARY=256,
+    MULTIMAP=1
 )
+"""Vocab: Enum-like. For readable PYSAM flag constants
+
+- MULTIMAP: template having multiple segments in sequencing
+- UNMAPPED: segment unmapped
+- MATE_UNMAPPED: next segment in the template unmapped
+- REVERSE: SEQ being reverse complemented
+- MATE_REVERSE: SEQ of the next segment in the template being reverse complemented
+- FIRST_IN_PAIR: the first segment in the template
+- LAST_IN_PAIR: the last segment in the template
+- SECONDARY: secondary alignment
+
+note: descriptions are taken from the samfile documentation https://samtools.github.io/hts-specs/SAMv1.pdf
+"""
+
 # read paired, read mapped in proper pair, mate reverse strand, first in pair
 
 

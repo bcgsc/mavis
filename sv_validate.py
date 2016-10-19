@@ -13,11 +13,29 @@ from structural_variant.blat import blat_contigs
 from structural_variant.interval import Interval
 import structural_variant.annotate as ann
 from difflib import SequenceMatcher
+from datetime import datetime
 
 __prog__ = os.path.basename(os.path.realpath(__file__))
 
 MAX_POOL_SIZE = 4
 HRG = '/home/pubseq/genomes/Homo_sapiens/TCGA_Special/GRCh37-lite.fa'
+
+
+class Profile:
+    """
+    this is only being used while building the application
+    to get a sense of how long the different steps are taking
+    """
+    steps = []
+
+    @classmethod
+    def mark_step(cls, name):
+        cls.steps.append((datetime.now(), name))
+
+    @classmethod
+    def print(cls):
+        for step, time in cls.steps:
+            print(step, time)
 
 
 def compare_strings(first, second):
@@ -133,7 +151,9 @@ def main():
     INPUT_BAM_CACHE = BamCache(args.bamfile)
     # load the reference genome
     print('loading the reference genome', args.reference_genome)
+    Profile.mark_step('start loading reference genome')
     HUMAN_REFERENCE_GENOME = ann.load_reference_genome(args.reference_genome)
+    Profile.mark_step('finished loading reference genome')
     print('loading complete')
 
     evidence_reads = set()
@@ -142,7 +162,7 @@ def main():
     chr_to_index = {}
 
     evidence = []
-
+    Profile.mark_step('load bam reads and assemble')
     for e in read_cluster_file(args.input, INPUT_BAM_CACHE, HUMAN_REFERENCE_GENOME):
         if e.protocol == PROTOCOL.GENOME:
             # gather evidence
@@ -159,7 +179,7 @@ def main():
                   )
             print('try assembling split reads')
             assembly_sequences = {}
-            for r in e.supporting_reads():
+            for r in itertools.chain.from_iterable(e.split_reads.values()):
                 s = r.query_sequence
                 temp = Seq(s, DNA_ALPHABET)
                 temp = str(temp.reverse_complement())
@@ -167,6 +187,14 @@ def main():
                 assembly_sequences[s].add(r)
                 assembly_sequences[temp] = assembly_sequences.get(temp, set())
                 assembly_sequences[temp].add(r)
+                for m in INPUT_BAM_CACHE.get_mate(r):
+                    s = m.query_sequence
+                    temp = Seq(s, DNA_ALPHABET)
+                    temp = str(temp.reverse_complement())
+                    assembly_sequences[s] = assembly_sequences.get(s, set())
+                    assembly_sequences[s].add(m)
+                    assembly_sequences[temp] = assembly_sequences.get(temp, set())
+                    assembly_sequences[temp].add(m)
 
             contigs = assemble(assembly_sequences)
             filtered_contigs = []
@@ -186,11 +214,12 @@ def main():
             evidence.append((e, contigs, assembly_sequences))
         else:
             raise NotImplementedError('currently only genome protocols are supported')
-
+    Profile.mark_step('start blat')
     blat_contig_alignments = blat_contigs(
         split_read_contigs,
         INPUT_BAM_CACHE
     )
+    Profile.mark_step('blat complete')
     print('blatted sequences')
     for seq in blat_contig_alignments:
         print('>', seq)
@@ -210,43 +239,39 @@ def main():
                   'split reads:', [len(a) for a in e.split_reads.values()],
                   )
         # TODO score low if it is not the best alignment
-
-        # gather a list of the contigs alignments that apply to this evidence object/breakpoint pair
-        current_aligned_contigs = []
-        for contig in contigs:
-            for aln in blat_contig_alignments[contig.seq]:
-                current_aligned_contigs.append(aln)
-
         putative_alignments = []
         putative_alignment_pairs = []
 
-        if e.break1.chr == e.break2.chr:
-            for read in current_aligned_contigs:
-                # if it covers both breakpoints add to putative alignments
-                temp = Interval(read.reference_start, read.reference_end - 1)
-                if INPUT_BAM_CACHE.chr(read) == e.break1.chr \
-                        and e.window1.overlaps(temp) \
-                        and e.window2.overlaps(temp):
-                    putative_alignments.append(read)
+        # gather a list of the contigs alignments that apply to this evidence object/breakpoint pair
+        for contig in contigs:
+            if e.break1.chr == e.break2.chr:
+                for read in blat_contig_alignments[contig.seq]:
+                    # if it covers both breakpoints add to putative alignments
+                    temp = Interval(read.reference_start, read.reference_end - 1)
+                    if INPUT_BAM_CACHE.chr(read) == e.break1.chr \
+                            and e.window1.overlaps(temp) \
+                            and e.window2.overlaps(temp):
+                        putative_alignments.append(read)
 
-        for a1, a2 in itertools.combinations([x for x in current_aligned_contigs if x not in putative_alignments], 2):
-            # do they overlap both breakpoints
-            # do their mate pairs make sense
-            union = Interval.union(a1.query_coverage_interval(),
-                                   a2.query_coverage_interval())
-            if len(union) - len(a1.query_coverage_interval()) < MIN_EXTEND_OVERLAP \
-                    or len(union) - len(a2.query_coverage_interval()) < MIN_EXTEND_OVERLAP:
-                continue
-            if INPUT_BAM_CACHE.chr(a1) == e.break1.chr \
-                    and e.window1.overlaps((a1.reference_start, a1.reference_end - 1)) \
-                    and INPUT_BAM_CACHE.chr(a2) == e.break2.chr \
-                    and e.window2.overlaps((a2.reference_start, a2.reference_end - 1)):
-                putative_alignment_pairs.append((a1, a2))
-            elif INPUT_BAM_CACHE.chr(a2) == e.break1.chr \
-                    and e.window1.overlaps((a2.reference_start, a2.reference_end - 1)) \
-                    and INPUT_BAM_CACHE.chr(a1) == e.break2.chr \
-                    and e.window2.overlaps((a1.reference_start, a1.reference_end - 1)):
-                putative_alignment_pairs.append((a2, a1))
+            for a1, a2 in itertools.combinations(
+                    [x for x in blat_contig_alignments[contig.seq] if x not in putative_alignments], 2):
+                # do they overlap both breakpoints
+                # do their mate pairs make sense
+                union = Interval.union(a1.query_coverage_interval(),
+                                       a2.query_coverage_interval())
+                if len(union) - len(a1.query_coverage_interval()) < MIN_EXTEND_OVERLAP \
+                        or len(union) - len(a2.query_coverage_interval()) < MIN_EXTEND_OVERLAP:
+                    continue
+                if INPUT_BAM_CACHE.chr(a1) == e.break1.chr \
+                        and e.window1.overlaps((a1.reference_start, a1.reference_end - 1)) \
+                        and INPUT_BAM_CACHE.chr(a2) == e.break2.chr \
+                        and e.window2.overlaps((a2.reference_start, a2.reference_end - 1)):
+                    putative_alignment_pairs.append((a1, a2))
+                elif INPUT_BAM_CACHE.chr(a2) == e.break1.chr \
+                        and e.window1.overlaps((a2.reference_start, a2.reference_end - 1)) \
+                        and INPUT_BAM_CACHE.chr(a1) == e.break2.chr \
+                        and e.window2.overlaps((a1.reference_start, a1.reference_end - 1)):
+                    putative_alignment_pairs.append((a2, a1))
 
         print('single alignments', len(putative_alignments))
         for a in putative_alignments:
@@ -268,16 +293,16 @@ def main():
             'protocol': e.protocol,
             'tools': e.labels['tools'],
             'contigs_assembled': len(contigs),
-            'contigs_aligned': len(current_aligned_contigs),
+            'contigs_aligned': len(blat_contig_alignments[contig.seq]),
             'contigs_accepted': len(putative_alignments) + len(putative_alignment_pairs)
         }
         if len(putative_alignments) + len(putative_alignment_pairs) > 0:  # contigs aligned
             print('METHOD: contigs')
             continue
         print('METHOD: resolve by softclipped reads')
-        if len(current_aligned_contigs) > 0:
-            print('had', len(current_aligned_contigs), 'aligned contigs but none survived pairing')
-            for c in sorted(current_aligned_contigs, key=lambda x: x.get_tag('br'))[0:5]:
+        if len(blat_contig_alignments[contig.seq]) > 0:
+            print('had', len(blat_contig_alignments[contig.seq]), 'aligned contigs but none survived pairing')
+            for c in sorted(blat_contig_alignments[contig.seq], key=lambda x: x.get_tag('br'))[0:5]:
                 print(repr(c))
                 print(c)
 
@@ -340,4 +365,9 @@ def main():
         'call_method'  # contig alignment, split-read consensus, flanking read interval, input
     ]
     print(header)
-main()
+
+try:
+    main()
+finally:
+    print()
+    Profile.print()

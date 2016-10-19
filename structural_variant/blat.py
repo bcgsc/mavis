@@ -158,10 +158,10 @@ class Blat:
     def pslx_row_to_pysam(row, bam_cache):
         """
         given a 'row' from reading a pslx file. converts the row to a BlatAlignedSegment object
-
-        @param row \a required (type: dict<str,*>) a row object from the 'read_pslx' method
-        @param =chr_to_index \a required (type: dict<str,int>)
-            a mapping of chromosome names to reference_id's for the pysam file
+        
+        Args:
+            row (dict[str,]): a row object from the 'read_pslx' method
+            bam_cache (BamCache): the bam file/cache to use as a template for creating reference_id from chr name
 
         """
         chrom = bam_cache.reference_id(row['tname'])
@@ -225,7 +225,7 @@ class Blat:
         read.cigar = cigar
         read.query_name = row['qname']
         if row['strand'] == STRAND.NEG:
-            read.flag = read.flag ^ PYSAM_READ_FLAGS.REVERSE
+            read.flag = read.flag | PYSAM_READ_FLAGS.REVERSE
         if read.query_sequence != row['qseq_full'] and read.query_sequence != reverse_complement(row['qseq_full']):
             raise AssertionError(
                 'read sequence should reproduce input sequence',
