@@ -25,12 +25,12 @@ class TestInterval(unittest.TestCase):
         left = Interval(-4, 1)
         middle = Interval(0, 10)
         right = Interval(5, 12)
-        self.assertFalse(left.overlaps(right))
-        self.assertFalse(right.overlaps(left))
-        self.assertTrue(left.overlaps(middle))
-        self.assertTrue(right.overlaps(middle))
-        self.assertTrue(middle.overlaps(left))
-        self.assertTrue(middle.overlaps(right))
+        self.assertFalse(Interval.overlaps(left, right))
+        self.assertFalse(Interval.overlaps(right, left))
+        self.assertTrue(Interval.overlaps(left, middle))
+        self.assertTrue(Interval.overlaps(right, middle))
+        self.assertTrue(Interval.overlaps(middle, left))
+        self.assertTrue(Interval.overlaps(middle, right))
 
     def test___len__(self):
         self.assertEqual(5, len(Interval(1, 5)))
@@ -96,3 +96,11 @@ class TestInterval(unittest.TestCase):
         self.assertEqual(0, z - x)
         self.assertEqual(0, y - z)
         self.assertEqual(0, z - y)
+
+    def test_min_nonoverlapping(self):
+        r = Interval.min_nonoverlapping(Interval(1, 2), Interval(4, 7), Interval(8, 9))
+        self.assertEqual(3, len(r))
+        r = Interval.min_nonoverlapping(Interval(1, 5), Interval(4, 7), Interval(8, 9))
+        self.assertEqual(2, len(r))
+        r = Interval.min_nonoverlapping(Interval(1, 5), Interval(4, 7), Interval(7, 9))
+        self.assertEqual(1, len(r))

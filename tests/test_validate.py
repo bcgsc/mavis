@@ -26,7 +26,7 @@ class MockRead(pysam.AlignedSegment):
 
 def setUpModule():
     global HUMAN_REFERENCE_GENOME
-    #HUMAN_REFERENCE_GENOME = load_reference_genome('chr11_chr22.fa')
+    #HUMAN_REFERENCE_GENOME = load_reference_genome('/home/pubseq/genomes/Homo_sapiens/TCGA_Special/GRCh37-lite.fa')
 
 
 class TestEvidence(unittest.TestCase):

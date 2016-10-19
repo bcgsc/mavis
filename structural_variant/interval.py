@@ -1,5 +1,6 @@
 import numpy as np
-
+import itertools
+import networkx as nx
 from structural_variant.constants import *
 from structural_variant.error import *
 
@@ -31,11 +32,15 @@ class Interval:
             return self.freq
         raise IndexError(
             'index input accessor is out of bounds: 1 or 2 only', index)
-
-    def overlaps(self, other):
-        if self - other == 0:
+    
+    @classmethod
+    def overlaps(cls, self, other):
+        if self[1] < other[0]:
+            return False
+        elif self[0] > other[1]:
+            return False
+        else:
             return True
-        return False
 
     def __len__(self):
         return self[1] - self[0] + 1
@@ -163,14 +168,14 @@ class Interval:
     @classmethod
     def convert_pos(cls, mapping, pos):
         """ convert any given position given a mapping of intervals to another range
-        
+
         Args:
             mapping (Dict[Interval, Interval]): a mapping of a set of continuous intervals
             pos (int): a position in the first coordinate system
-        
+
         Returns:
             int: the position in the alternate coordinate system given the input mapping
-        
+
         Raises:
             AttributeError: if the input position is outside the set of input segments
             DiscontiuousMappingError: if the input position cannot be converted to the output system
@@ -329,6 +334,29 @@ class Interval:
         if low > high:
             return None
         return Interval(low, high)
+
+    @classmethod
+    def min_nonoverlapping(cls, *intervals):
+        """
+        for a list of intervals, orders them and merges any overlap to return a list of non-overlapping intervals
+        O(n^2)
+        """
+        g = nx.Graph()
+        for i in intervals:
+            g.add_node(i)
+
+        for x, y in itertools.combinations(intervals, 2):
+            if Interval.overlaps(x, y):
+                g.add_edge(x, y)
+
+        merges = []
+        for c in nx.connected_components(g):
+            if len(c) == 1:
+                merges.append(c[0])
+            else:
+                merges.append(Interval.union(*c))
+        return merges
+
 
 if __name__ == '__main__':
     import doctest

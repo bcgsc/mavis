@@ -34,16 +34,25 @@ class Breakpoint:
                 'cannot calculate the weighted mean of an empty list')
         return Interval.weighted_mean([b.pos for b in breakpoints])
 
-    def __init__(self, chr, interval_start, interval_end=None, strand=STRAND.NS, orient=ORIENT.NS, label=None):
+    def __init__(self, chr, start, end=None, strand=STRAND.NS, orient=ORIENT.NS, label=None):
+        """
+        Args:
+            chr (str): the chromosome
+            start (int): the genomic position of the breakpoint
+            end (int, optional): if the breakpoint is uncertain (a range) then specify the end of the range here
+            strand (STRAND, default=STRAND.NS): the strand
+            orient (ORIENT, default=ORIENT.NS): the orientation (which side is retained at the break)
+            label (str): the label for the breakpoint
+        """
         self.orient = ORIENT.enforce(orient)
         self.chr = str(chr)
-        self.pos = Interval(interval_start, interval_end)
+        self.pos = Interval(start, end)
         self.strand = STRAND.enforce(strand)
         self.label = label
 
     def __repr__(self):
         temp = '{0}:{1}{2}{3}{4}'.format(
-            self.chr, self.start, '-' + str(self.end) if self.end != self.start else '', self.orient, self. strand)
+            self.chr, self.start, '-' + str(self.end) if self.end != self.start else '', self.orient, self.strand)
         if self.label is not None:
             temp += '#{0}'.format(self.label)
         return 'Breakpoint(' + temp + ')'
@@ -71,6 +80,17 @@ class BreakpointPair:
         return temp
 
     def __init__(self, b1, b2, stranded=False, opposing_strands=None, untemplated_sequence=None, flags=[], label=None):
+        """
+        Args:
+            b1 (Breakpoint): the first breakpoint
+            b2 (Breakpoint): the second breakpoint
+            stranded (bool, default=False): if not stranded then +/- is equivalent to -/+
+            opposing_strands (bool, optional): are the strands at the breakpoint opposite? i.e. +/- instead of +/+
+            untemplated_sequence (str, optional): sequence between the breakpoints that is not part of either breakpoint
+            flags (list, default=[]):
+            label (str):
+        """
+
         if b1.key > b2.key:
             self.break1 = b2
             self.break2 = b1
@@ -115,6 +135,11 @@ class BreakpointPair:
         """
         uses the chr, orientations and strands to determine the
         possible structural_variant types that this pair could support
+
+        Args:
+            pair (BreakpointPair): the pair to classify
+        Returns:
+            List[SVTYPE]: a list of possible SVTYPEs
         """
         if pair.break1.chr == pair.break2.chr:  # intrachromosomal
             if pair.opposing_strands:

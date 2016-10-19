@@ -81,9 +81,11 @@ class Blat:
         https://genome.ucsc.edu/FAQ/FAQblat.html#blat4
 
         below are lines from the perl code i've re-written in python
-        my $sizeMul = pslIsProtein($blockCount, $strand, $tStart, $tEnd, $tSize, $tStarts, $blockSizes);
-        sizmul = 1 for DNA
-        my $pslScore = $sizeMul * ($matches + ($repMatches >> 1) ) - $sizeMul * $misMatches - $qNumInsert - $tNumInsert)
+        
+        Perl:
+            my $sizeMul = pslIsProtein($blockCount, $strand, $tStart, $tEnd, $tSize, $tStarts, $blockSizes);
+            sizmul = 1 for DNA
+            my $pslScore = $sizeMul * ($matches + ($repMatches >> 1) ) - $sizeMul * $misMatches - $qNumInsert - $tNumInsert)
         """
 
         size_mul = 1 if not is_protein else 3
