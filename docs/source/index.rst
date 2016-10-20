@@ -11,6 +11,12 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   structural_variant
+   sv_merge
+   sv_validate
+   tests
+
+
 .. automodule:: structural_variant
     :members:
     :show-inheritance:

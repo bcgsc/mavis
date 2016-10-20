@@ -343,7 +343,7 @@ def main():
                     row_subset.append(cluster_rows[temp])
                     fh.write('\t'.join(row) + '\n')
                     temp += 1
-            bedfile = filename = os.path.abspath(os.path.join(
+            bedfile = os.path.abspath(os.path.join(
                 args.output, 'clustering/{0}/{0}-clusterset-{1}.bed'.format(lib, fileno)))
             with open(bedfile, 'w') as fh:
                 print('writing:', bedfile)

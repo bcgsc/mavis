@@ -1,5 +1,5 @@
 
-sphinx-apidoc -f -o source/ ./../structural_variant/
-sphinx-apidoc -f -o source/ ./../
+sphinx-apidoc -f -o source/ ./../structural_variant/ --separate
+sphinx-apidoc -f -o source/ ./../ --separate
 
 make html

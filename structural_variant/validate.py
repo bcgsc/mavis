@@ -32,7 +32,28 @@ class EvidenceSettings:
             consensus_req=3,
             sc_extension_stop=5,
             max_sc_preceeding_anchor=None):
-
+        """
+        Args:
+            read_length (int, default=125): length of individual reads
+            average_insert_size (int, default=450): expected average insert size for paired-end reads
+            stdev_insert_size (int, default=25): the standard deviation in the insert size
+            call_error (int, default=10): buffer for calculating the evidence window
+            min_splits_reads_resolution (int, default=3):
+                minimum number of reads required to call the same breakpoint for it to be a valid breakpoint
+            min_anchor_exact (int, default=6):
+                minimum number of consecutive exact matches to satisfy the anchor constraint
+            min_anchor_fuzzy (int, default=10):
+                minimum number of consecutive exact matches (allowing one mismatch/indel) to satisfy the anchor
+                constraint
+            min_mapping_quality (int, default=20):
+                mapping quality to filter on
+            max_reads_limit (int, default=100000):
+                maximum number of reads to loop over for a given event
+            filter_secondary_alignments (bool, default=True):
+                don't use secondary alignments when reading evidence from the bam file
+            sc_extension_stop (int, default=5):
+                when extending softclipped, stop given this number of exact consecutive matches
+        """
         self.read_length = read_length
         self.average_insert_size = average_insert_size
         self.stdev_insert_size = stdev_insert_size
@@ -58,17 +79,11 @@ class Evidence:
 
     @property
     def window1(self):
-        if self._window1 is None:
-            return self._window(self.break1)
-        else:
-            return self._window1
+        return self.windows[self.break1]
 
     @property
     def window2(self):
-        if self._window2 is None:
-            return self._window(self.break2)
-        else:
-            return self._window1
+        return self.windows[self.break2]
 
     @property
     def break1(self):
@@ -78,28 +93,48 @@ class Evidence:
     def break2(self):
         return self.breakpoint_pair.break2
 
-    def _window(self, breakpoint):
+    @classmethod
+    def generate_windows(cls, ev):
         """
         given some input breakpoint uses the current evidence settting to determine an
         appropriate window/range of where one should search for supporting reads
         """
-        temp = self.settings.read_length * 2 + self.settings.average_insert_size
-        start = breakpoint.start - temp - \
-            self.settings.call_error - self.settings.read_length - 1
-        end = breakpoint.end + temp + self.settings.call_error + \
-            self.settings.read_length - 1
+        if ev.protocol == PROTOCOL.TRANS:
+            raise NotImplementedError('TODO: implement transcriptome evidence window gathering based on annotations')
+        else:
+            breakpoint = ev.break1
+            temp = ev.settings.read_length * 2 + ev.settings.average_insert_size
+            start = breakpoint.start - temp - \
+                ev.settings.call_error - ev.settings.read_length - 1
+            end = breakpoint.end + temp + ev.settings.call_error + \
+                ev.settings.read_length - 1
 
-        if breakpoint.orient == ORIENT.LEFT:
-            end = breakpoint.end + self.settings.call_error + self.settings.read_length - 1
-        elif breakpoint.orient == ORIENT.RIGHT:
-            start = breakpoint.start - self.settings.call_error - self.settings.read_length - 1
-        return Interval(start, end)
+            if breakpoint.orient == ORIENT.LEFT:
+                end = breakpoint.end + ev.settings.call_error + ev.settings.read_length - 1
+            elif breakpoint.orient == ORIENT.RIGHT:
+                start = breakpoint.start - ev.settings.call_error - ev.settings.read_length - 1
+            w1 = Interval(start, end)
+
+            breakpoint = ev.break2
+            temp = ev.settings.read_length * 2 + ev.settings.average_insert_size
+            start = breakpoint.start - temp - \
+                ev.settings.call_error - ev.settings.read_length - 1
+            end = breakpoint.end + temp + ev.settings.call_error + \
+                ev.settings.read_length - 1
+
+            if breakpoint.orient == ORIENT.LEFT:
+                end = breakpoint.end + ev.settings.call_error + ev.settings.read_length - 1
+            elif breakpoint.orient == ORIENT.RIGHT:
+                start = breakpoint.start - ev.settings.call_error - ev.settings.read_length - 1
+            w2 = Interval(start, end)
+            return (w1, w2)
 
     def __init__(
             self,
             breakpoint_pair,
             bam_cache,
             human_reference_genome,
+            reference_annotations=None,
             labels={},
             classification=None,
             protocol=PROTOCOL.GENOME,
@@ -121,9 +156,13 @@ class Evidence:
         self.protocol = PROTOCOL.enforce(protocol)
 
         self.human_reference_genome = human_reference_genome
+        self.reference_annotations = reference_annotations
         if self.classification is not None and self.classification not in BreakpointPair.classify(breakpoint_pair):
             raise AttributeError('breakpoint pair improper classification',
                                  BreakpointPair.classify(breakpoint_pair), self.classification)
+
+        if not self.reference_annotations and self.protocol == PROTOCOL.TRANS:
+            raise AttributeError('must specify the reference annotations for transcriptome evidence objects')
 
         self.breakpoint_pair = breakpoint_pair
         # split reads are a read that covers at least one breakpoint
@@ -142,8 +181,11 @@ class Evidence:
         # for each breakpoint stores the number of reads that were read from the associated
         # bamfile for the window surrounding the breakpoint
         self.read_counts = {}
-        self._window1 = None
-        self._window2 = None
+        w1, w2 = Evidence.generate_windows(self)
+        self.windows = {
+            self.break1: w1,
+            self.break2: w2
+        }
         self.half_mapped = {
             self.break1: set(),
             self.break2: set()
