@@ -4,6 +4,7 @@ import warnings
 from structural_variant.constants import *
 from Bio.Seq import Seq
 import networkx as nx
+from datetime import datetime
 
 
 class BamCache:
@@ -13,14 +14,13 @@ class BamCache:
     """
     def __init__(self, bamfile):
         self.cache = {}
+        self.fetch_history = {}  # chr => Interval => set()
         self.fh = bamfile
         if not hasattr(bamfile, 'fetch'):
             self.fh = pysam.AlignmentFile(bamfile, 'rb')
 
     def add_read(self, read):
-        if read.query_name not in self.cache:
-            self.cache[read.query_name] = set()
-        self.cache[read.query_name].add(read)
+        self.cache.setdefault(read.query_name, set()).add(read)
 
     def reference_id(self, chrom):
         tid = self.fh.get_tid(chrom)
@@ -30,25 +30,41 @@ class BamCache:
 
     def chr(self, read):
         return self.fh.get_reference_name(read.reference_id)
+    
+    @classmethod
+    def _generate_fetch_bins(cls, start, stop, sample_bins, bin_gap_size):
+        bin_size = int(((stop - start + 1) - bin_gap_size * (sample_bins - 1)) / sample_bins)
+        
+        fetch_regions = [(start, start + bin_size)]  # exclusive ranges for fetch
+        for i in range(0, sample_bins - 1):
+            st = fetch_regions[-1][1] + bin_gap_size
+            end = st + bin_size
+            fetch_regions.append((st, end))
+        fetch_regions[-1] = fetch_regions[-1][0], stop
+        return fetch_regions
 
-    def fetch(self, chrom, start, stop, **kwargs):
+    def fetch(self, chrom, start, stop, read_limit=10000, cache=False, sample_bins=3, cache_if=lambda x: True, bin_gap_size=0):
         """
         wrapper around the fetch method, returns a list to avoid errors with changing the file pointer
         position from within the loop. Also caches reads if requested and can return a limited read number
         """
-        read_limit = kwargs.pop('read_limit', None)
-        cache = kwargs.pop('cache', False)
-        cache_if = kwargs.pop('cache_if', lambda x: True)
+        # try using the cache to avoid fetching regions more than once
         result = []
-        count = 0
-        for read in self.fh.fetch(chrom, start, stop):
-            if read_limit is not None and count >= read_limit:
-                break
-            result.append(read)
-            if cache:
-                if cache_if(read):
-                    self.add_read(read)
-        return result
+        bin_limit = int(read_limit / sample_bins) if read_limit else None
+        # split into multiple fetches based on the 'sample_bins'
+        for fstart, fend in self.__class__._generate_fetch_bins(start, stop, sample_bins, bin_gap_size):
+            count = 0
+            for read in self.fh.fetch(chrom, fstart, fend):
+                if bin_limit is not None and count >= bin_limit:
+                    warnings.warn(
+                        'hit read limit. Fetch will not cache all reads for this bin: {}-{}'.format(fstart, fend))
+                    break
+                result.append(read)
+                if cache:
+                    if cache_if(read):
+                        self.add_read(read)
+                count += 1
+        return set(result)
 
     def get_mate(self, read, primary_only=True, allow_file_access=True):
         # NOTE: will return all mate alignments that have been cached
@@ -437,11 +453,8 @@ class Contig:
     def __hash__(self):
         return hash((self.seq, self.score))
 
-    def add_mapped_read(self, read, initial_reads, multimap=1):
-        k = (read, tuple(list(initial_reads)))
-        if k in self.remapped_reads and self.remapped_reads[k] != 1 / multimap:
-            raise AttributeError('cannot specify a read twice with a different value')
-        self.remapped_reads[k] = 1 / multimap
+    def add_mapped_read(self, read, multimap=1):
+        self.remapped_reads[k] = min(self.remapped_reads.get(k, 1), 1 / multimap)
 
     def remap_score(self):
         return sum(self.remapped_reads.values())
@@ -464,7 +477,35 @@ class DeBruijnGraph(nx.DiGraph):
     def remove_edge(self, n1, n2):
         del self.edge_freq[(n1, n2)]
         nx.DiGraph.remove_edge(self, n1, n2)
-
+    
+    def trim_low_weight_tails(self, min_weight):
+        """
+        for any paths where all edges are lower than the minimum weight trim
+        """
+        for n in list(self.nodes()):
+            if not self.has_node(n):
+                continue
+            if self.in_degree(n) == 0 and self.out_degree(n) == 0:
+                self.remove_node(n)
+            elif self.in_degree(n) == 0:
+                # follow until the path forks or we run out of low weigh edges
+                curr = n
+                while self.out_degree(curr) == 1:
+                    curr, nextt = self.out_edges(curr)[0]
+                    if self.edge_freq[(curr, nextt)] < min_weight:
+                        self.remove_node(curr)
+                        curr = nextt
+                    else:
+                        break
+            elif self.out_degree(n) == 0:
+                curr = n
+                while self.in_degree(curr) == 1:
+                    prev, curr = self.in_edges(curr)[0]
+                    if self.edge_freq[(prev, curr)] < min_weight:
+                        self.remove_node(curr)
+                        curr = prev
+                    else:
+                        break
 
 def nsb_align(ref, seq, weight_of_score=0.5, min_overlap_percent=100):
     """
@@ -538,7 +579,7 @@ def digraph_connected_components(graph):
     return nx.connected_components(g)
 
 
-def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.95, min_read_mapping_overlap=None):
+def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.95, min_read_mapping_overlap=None, min_contig_length=None):
     """
     for a set of sequences creates a DeBruijnGraph
     simplifies trailing and leading paths where edges fall
@@ -556,11 +597,14 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
     """
     if len(sequences) == 0:
         return []
+    print(datetime.now(), 'assemble() start')
     min_seq = min([len(s) for s in sequences])
-    kmer_size = int(min_seq * 0.8) if kmer_size is None else kmer_size
+    kmer_size = min_seq - 1 if kmer_size is None else kmer_size
     min_read_mapping_overlap = kmer_size if min_read_mapping_overlap is None else min_read_mapping_overlap
+    min_contig_length = min_seq + 1 if min_contig_length is None else min_contig_length
 
     assembly = DeBruijnGraph()
+    input_seq_by_node = {}
 
     if kmer_size > min_seq:
         kmer_size = min_seq
@@ -571,8 +615,10 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
         for kmer in kmers(s, kmer_size):
             l = kmer[:-1]
             r = kmer[1:]
+            input_seq_by_node.setdefault(l, set()).add(s)
+            input_seq_by_node.setdefault(r, set()).add(s)
             assembly.add_edge(l, r)
-
+    print(datetime.now(), 'assemble() build complete')
     # n = 'tmp_assembly_' + str(int(random.random()*1000000))+'.txt'
     # with open(n, 'w') as fh:
     #    print('writing', n)
@@ -590,32 +636,12 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
         NotImplementedError('assembly not supported for cyclic graphs')
 
     # now just work with connected components
-    results = {}
     # trim all paths from sources or to sinks where the edge weight is low
-    for n in list(assembly.nodes()):
-        if not assembly.has_node(n):
-            continue
-        if assembly.in_degree(n) == 0 and assembly.out_degree(n) == 0:
-            assembly.remove_node(n)
-        elif assembly.in_degree(n) == 0:
-            # follow until the path forks or we run out of low weigh edges
-            curr = n
-            while assembly.out_degree(curr) == 1:
-                curr, nextt = assembly.out_edges(curr)[0]
-                if assembly.edge_freq[(curr, nextt)] < min_edge_weight:
-                    assembly.remove_node(curr)
-                    curr = nextt
-                else:
-                    break
-        elif assembly.out_degree(n) == 0:
-            curr = n
-            while assembly.in_degree(curr) == 1:
-                prev, curr = assembly.in_edges(curr)[0]
-                if assembly.edge_freq[(prev, curr)] < min_edge_weight:
-                    assembly.remove_node(curr)
-                    curr = prev
-                else:
-                    break
+    assembly.trim_low_weight_tails(min_edge_weight)
+
+    print(datetime.now(), 'assemble() clean complete')
+    path_scores = {}  # path_str => score_int
+    nodes_by_contig_seq = {}
 
     for component in digraph_connected_components(assembly):
         # since now we know it's a tree, the assemblies will all be ltd to
@@ -629,41 +655,48 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
                 sources.add(node)
             elif assembly.out_degree(node) == 0:
                 sinks.add(node)
-        if len(sources) * len(sinks) > 1:
+        if len(sources) * len(sinks) > 10:
             print('source/sink combinations:', len(sources) * len(sinks))
-
+        
         for source, sink in itertools.product(sources, sinks):
             for path in nx.all_simple_paths(assembly, source, sink):
                 s = path[0] + ''.join([p[-1] for p in path[1:]])
+                nodes_by_contig_seq.setdefault(s, set()).update(set(path))
                 score = 0
                 for i in range(0, len(path) - 1):
                     score += assembly.edge_freq[(path[i], path[i + 1])]
-                results[s] = max(results.get(s, 0), score)
-
-    for seq, score in list(results.items()):
-        results[seq] = Contig(seq, score)
-        if seq in sequences:
-            del results[seq]
+                path_scores[s] = max(path_scores.get(s, 0), score)
+    print(datetime.now(), 'assemble() sequence path collection complete')
+    
+    contigs = {}
+    for seq, score in list(path_scores.items()):
+        if seq not in sequences and len(seq) >= min_contig_length:
+            contigs[seq] = Contig(seq, score)
+    
+    contigs_by_input = {}
+    for contig_seq, nodes in nodes_by_contig_seq.items():
+        for input_seq_set in [input_seq for input_seq in [input_seq_by_node[n] for n in nodes]]:
+            contigs_by_input.setdefault(input_seq, set()).add(contig_seq)
 
     # remap the input reads
-    for seq in sequences:
+    for input_seq in sequences:
         maps_to = {}  # contig, score
-        for contig in results:
-            if len(contig) < len(seq):
-                continue
+        for contig_seq in contigs_by_input.get(input_seq, []):
+            contig = contigs[contig_seq]
             a = nsb_align(
-                contig, seq, min_overlap_percent=min_read_mapping_overlap / len(seq))
+                contig_seq,
+                seq,
+                min_overlap_percent=min_read_mapping_overlap / len(seq)
+            )
             if len(a) != 1:
                 continue
-            a = a[0]
             if CigarTools.match_percent(a.cigar) < min_match_quality:
                 continue
-            maps_to[contig] = a
+            maps_to[contig] = a[0]
         for contig, read in maps_to.items():
-            results[contig].add_mapped_read(
-                read, sequences[seq], len(maps_to.keys()))
-
-    return results.values()
+            contig.add_mapped_read(read, len(maps_to.keys()))
+    print(datetime.now(), 'assemble() read re-mapping complete')
+    return contigs.values()
 
 
 if __name__ == '__main__':

@@ -1,8 +1,10 @@
 import itertools
 from copy import copy as sys_copy
 from structural_variant.constants import *
+from structural_variant.error import *
 from structural_variant.align import CigarTools, nsb_align, breakpoint_pos
 from structural_variant.interval import Interval
+from structural_variant.annotate import overlapping_transcripts
 from structural_variant.breakpoint import BreakpointPair
 from Bio.Seq import Seq
 from functools import partial
@@ -18,16 +20,16 @@ class EvidenceSettings:
     def __init__(
             self,
             read_length=125,
-            average_insert_size=450,
-            stdev_insert_size=25,
+            median_insert_size=380,
+            mm_isize_error=60,
             call_error=10,
             min_splits_reads_resolution=3,
             min_anchor_exact=6,
             min_anchor_fuzzy=10,
             min_anchor_match=0.9,
             min_mapping_quality=20,
-            max_reads_limit=100000,
-            max_anchor_events=5,
+            fetch_reads_limit=3000,
+            fetch_reads_bins=3,
             filter_secondary_alignments=True,
             consensus_req=3,
             sc_extension_stop=5,
@@ -35,8 +37,8 @@ class EvidenceSettings:
         """
         Args:
             read_length (int, default=125): length of individual reads
-            average_insert_size (int, default=450): expected average insert size for paired-end reads
-            stdev_insert_size (int, default=25): the standard deviation in the insert size
+            median_insert_size (int, default=380): expected average insert size for paired-end reads
+            mm_isize_error (int, default=60): the expected deviation in the insert size
             call_error (int, default=10): buffer for calculating the evidence window
             min_splits_reads_resolution (int, default=3):
                 minimum number of reads required to call the same breakpoint for it to be a valid breakpoint
@@ -47,7 +49,7 @@ class EvidenceSettings:
                 constraint
             min_mapping_quality (int, default=20):
                 mapping quality to filter on
-            max_reads_limit (int, default=100000):
+            fetch_reads_limit (int, default=100000):
                 maximum number of reads to loop over for a given event
             filter_secondary_alignments (bool, default=True):
                 don't use secondary alignments when reading evidence from the bam file
@@ -55,8 +57,8 @@ class EvidenceSettings:
                 when extending softclipped, stop given this number of exact consecutive matches
         """
         self.read_length = read_length
-        self.average_insert_size = average_insert_size
-        self.stdev_insert_size = stdev_insert_size
+        self.median_insert_size = median_insert_size
+        self.mm_isize_error = mm_isize_error
         self.call_error = call_error
         self.min_splits_reads_resolution = min_splits_reads_resolution
         self.min_anchor_exact = min_anchor_exact
@@ -68,8 +70,8 @@ class EvidenceSettings:
             self.max_sc_preceeding_anchor = self.min_anchor_size
         else:
             self.max_sc_preceeding_anchor = max_sc_preceeding_anchor
-        self.max_reads_limit = max_reads_limit
-        self.max_anchor_events = max_anchor_events
+        self.fetch_reads_limit = fetch_reads_limit
+        self.fetch_reads_bins = fetch_reads_bins
         self.filter_secondary_alignments = filter_secondary_alignments
         self.consensus_req = consensus_req
         self.sc_extension_stop = sc_extension_stop
@@ -94,50 +96,104 @@ class Evidence:
         return self.breakpoint_pair.break2
 
     @classmethod
-    def generate_windows(cls, ev):
+    def generate_window(cls, breakpoint, read_length, median_insert_size, call_error, mm_isize_error):
         """
-        given some input breakpoint uses the current evidence settting to determine an
+        given some input breakpoint uses the current evidence setting to determine an
         appropriate window/range of where one should search for supporting reads
         """
-        if ev.protocol == PROTOCOL.TRANS:
-            raise NotImplementedError('TODO: implement transcriptome evidence window gathering based on annotations')
-        else:
-            breakpoint = ev.break1
-            temp = ev.settings.read_length * 2 + ev.settings.average_insert_size
-            start = breakpoint.start - temp - \
-                ev.settings.call_error - ev.settings.read_length - 1
-            end = breakpoint.end + temp + ev.settings.call_error + \
-                ev.settings.read_length - 1
+        fragment_size = read_length * 2 + median_insert_size + mm_isize_error * 2
+        start = breakpoint.start - fragment_size - call_error
+        end = breakpoint.end + fragment_size + call_error
 
-            if breakpoint.orient == ORIENT.LEFT:
-                end = breakpoint.end + ev.settings.call_error + ev.settings.read_length - 1
-            elif breakpoint.orient == ORIENT.RIGHT:
-                start = breakpoint.start - ev.settings.call_error - ev.settings.read_length - 1
-            w1 = Interval(start, end)
+        if breakpoint.orient == ORIENT.LEFT:
+            end = breakpoint.end + call_error + read_length
+        elif breakpoint.orient == ORIENT.RIGHT:
+            start = breakpoint.start - call_error - read_length
+        return Interval(start, end)
 
-            breakpoint = ev.break2
-            temp = ev.settings.read_length * 2 + ev.settings.average_insert_size
-            start = breakpoint.start - temp - \
-                ev.settings.call_error - ev.settings.read_length - 1
-            end = breakpoint.end + temp + ev.settings.call_error + \
-                ev.settings.read_length - 1
+    @classmethod
+    def generate_transcriptome_window(cls, breakpoint, annotations, read_length, median_insert_size, call_error, mm_isize_error):
+        """
+        given some input breakpoint uses the current evidence setting to determine an
+        appropriate window/range of where one should search for supporting reads
+        """
+        transcripts = overlapping_transcripts(annotations, breakpoint)
+        window = cls.generate_window(breakpoint, read_length, median_insert_size, call_error, mm_isize_error)
 
-            if breakpoint.orient == ORIENT.LEFT:
-                end = breakpoint.end + ev.settings.call_error + ev.settings.read_length - 1
-            elif breakpoint.orient == ORIENT.RIGHT:
-                start = breakpoint.start - ev.settings.call_error - ev.settings.read_length - 1
-            w2 = Interval(start, end)
-            return (w1, w2)
+        tgt_left = breakpoint.start - window.start + 1
+        tgt_right = window.end - breakpoint.end + 1
+        
+        if len(transcripts) == 0:  # case 1. no overlapping transcripts
+            return window
+
+        for t in transcripts:
+            current_length = 0
+            exons = t.get_exons()
+            current_interval = Interval(breakpoint.start, breakpoint.end)
+            
+            # first going left
+            epos, in_prev_intron = Interval.position_in_range(exons, (breakpoint.start, breakpoint.start))
+            if epos == 0 and in_prev_intron:
+                continue
+            elif in_prev_intron:
+                epos -= 1
+                current_length += breakpoint.start - exons[epos].end + 1
+                current_interval.start = exons[epos].end - 1
+                if current_length >= tgt_left:
+                    continue
+            while epos >= 0:
+                if current_length + len(exons[epos]) >= tgt_left:
+                    eshift = tgt_left - current_length
+                    current_interval.start = exons[epos].end - eshift
+                    current_length += eshift
+                    assert(current_length == tgt_left)
+                    break
+                else:
+                    current_length += len(exons[epos])
+                    current_length.start = exons[epos].start
+                    epos -= 1
+            if current_length < tgt_left:
+                assert(epos == -1)
+                eshift = tgt_left - current_length
+                current_interval.start = exons[0].start - eshift
+            
+            current_length = 0
+            # next going right
+            epos, in_prev_intron = Interval.position_in_range(exons, (breakpoint.end, breakpoint.end))
+            if epos == len(exons):  # after the last exon
+                continue
+            elif in_prev_intron:
+                current_length += exons[epos].start - breakpoint.end + 1
+                current_interval.end = exons[epos].start - 1
+                if current_length >= tgt_right:
+                    continue
+            while epos < len(exons):
+                if current_length + len(exons[epos]) >= tgt_right:
+                    eshift = tgt_right - current_length
+                    current_interval.end = exons[epos].start + eshift
+                    current_length += eshift
+                    assert(current_length == tgt_right)
+                    break
+                else:
+                    current_length += len(exons[epos])
+                    current_interval.end = exons[epos].end
+                    epos += 1
+            if current_length < tgt_right:
+                assert(epos == len(exons))
+                eshift = tgt_right - current_length
+                current_interval.end = exons[-1].end + eshift
+            window = window | current_interval
+        return window
 
     def __init__(
             self,
             breakpoint_pair,
             bam_cache,
             human_reference_genome,
-            reference_annotations=None,
             labels={},
             classification=None,
             protocol=PROTOCOL.GENOME,
+            annotations={},
             **kwargs):
         """
         Args:
@@ -154,17 +210,23 @@ class Evidence:
         self.labels = labels
         self.classification = classification
         self.protocol = PROTOCOL.enforce(protocol)
-
         self.human_reference_genome = human_reference_genome
-        self.reference_annotations = reference_annotations
+        self.annotations = annotations
+
         if self.classification is not None and self.classification not in BreakpointPair.classify(breakpoint_pair):
             raise AttributeError('breakpoint pair improper classification',
                                  BreakpointPair.classify(breakpoint_pair), self.classification)
 
-        if not self.reference_annotations and self.protocol == PROTOCOL.TRANS:
+        if not self.annotations and self.protocol == PROTOCOL.TRANS:
             raise AttributeError('must specify the reference annotations for transcriptome evidence objects')
 
         self.breakpoint_pair = breakpoint_pair
+
+        if self.break1.orient == ORIENT.NS or self.break2.orient == ORIENT.NS:
+            raise AttributeError(
+                'input breakpoint pair must specify strand and orientation. Cannot be \'not specified'
+                '\' for evidence gathering')
+
         # split reads are a read that covers at least one breakpoint
         # to avoid duplicating with spanning should try adding as spanning
         # first
@@ -181,11 +243,42 @@ class Evidence:
         # for each breakpoint stores the number of reads that were read from the associated
         # bamfile for the window surrounding the breakpoint
         self.read_counts = {}
-        w1, w2 = Evidence.generate_windows(self)
-        self.windows = {
-            self.break1: w1,
-            self.break2: w2
-        }
+        self.windows = {}
+
+        if self.protocol == PROTOCOL.GENOME:
+            self.windows[self.break1] = Evidence.generate_window(
+                self.break1,
+                read_length=self.settings.read_length,
+                median_insert_size=self.settings.median_insert_size,
+                call_error=self.settings.call_error,
+                mm_isize_error=self.settings.mm_isize_error
+            )
+            self.windows[self.break2] = Evidence.generate_window(
+                self.break2,
+                read_length=self.settings.read_length,
+                median_insert_size=self.settings.median_insert_size,
+                call_error=self.settings.call_error,
+                mm_isize_error=self.settings.mm_isize_error
+            )
+        elif self.protocol == PROTOCOL.TRANS:
+            self.windows[self.break1] = Evidence.generate_transcriptome_window(
+                self.break1,
+                self.annotations,
+                read_length=self.settings.read_length,
+                median_insert_size=self.settings.median_insert_size,
+                call_error=self.settings.call_error,
+                mm_isize_error=self.settings.mm_isize_error
+            )
+            self.windows[self.break2] = Evidence.generate_transcriptome_window(
+                self.break2,
+                self.annotations,
+                read_length=self.settings.read_length,
+                median_insert_size=self.settings.median_insert_size,
+                call_error=self.settings.call_error,
+                mm_isize_error=self.settings.mm_isize_error
+            )
+        else:
+            raise AttributeError('invalid protocol', self.protocol)
         self.half_mapped = {
             self.break1: set(),
             self.break2: set()
@@ -279,16 +372,16 @@ class Evidence:
         insert_size = abs(read.template_length)
 
         if classifications == sorted([SVTYPE.DEL, SVTYPE.INS]):
-            if insert_size <= self.settings.average_insert_size + self.settings.stdev_insert_size \
-                    and insert_size >= self.settings.average_insert_size - self.settings.stdev_insert_size:
+            if insert_size <= self.settings.median_insert_size + self.settings.mm_isize_error * 2 \
+                    and insert_size >= self.settings.median_insert_size - self.settings.mm_isize_error * 2:
                 raise UserWarning(
                     'insert size is not abnormal. does not support del/ins', insert_size)
         elif classifications == [SVTYPE.DEL]:
-            if insert_size <= self.settings.average_insert_size + self.settings.stdev_insert_size:
+            if insert_size <= self.settings.median_insert_size + self.settings.mm_isize_error * 2:
                 raise UserWarning(
                     'insert size is smaller than expected for a deletion type event', insert_size)
         elif classifications == [SVTYPE.INS]:
-            if insert_size >= self.settings.average_insert_size - self.settings.stdev_insert_size:
+            if insert_size >= self.settings.median_insert_size - self.settings.mm_isize_error * 2:
                 raise UserWarning(
                     'insert size is larger than expected for an insertion type event', insert_size)
 
@@ -318,14 +411,18 @@ class Evidence:
         if read.reference_start >= w1[0] and read.reference_end <= w1[1] \
                 and read.reference_id == self.bam_cache.reference_id(self.break1.chr) \
                 and read.next_reference_start >= w2[0] and read.next_reference_start <= w2[1] \
-                and read.next_reference_id == self.bam_cache.reference_id(self.break2.chr):
+                and read.next_reference_id == self.bam_cache.reference_id(self.break2.chr) \
+                and (not self.breakpoint_pair.stranded or not read.is_read1
+                        or read.is_reverse == (self.break1.strand == STRAND.NEG)):
             # current read falls in the first breakpoint window, mate in the
             # second
             self.flanking_reads.add(read)
         elif read.reference_start >= w2[0] and read.reference_end <= w2[1] \
                 and self.bam_cache.reference_id(self.break2.chr) == read.reference_id \
                 and read.next_reference_start >= w1[0] and read.next_reference_start <= w1[1] \
-                and self.bam_cache.reference_id(self.break1.chr) == read.next_reference_id:
+                and self.bam_cache.reference_id(self.break1.chr) == read.next_reference_id \
+                and (not self.breakpoint_pair.stranded or not read.is_read2
+                        or read.is_reverse != (self.break2.strand == STRAND.NEG)):
             # current read falls in the second breakpoint window, mate in the
             # first
             self.flanking_reads.add(read)
@@ -600,11 +697,15 @@ class Evidence:
 
         reads_with_unmapped_partners = set()
         count = 0
+        bin_gap_size = self.settings.read_length // 2
+
         for read in self.bam_cache.fetch(
                 '{0}'.format(self.break1.chr),
                 self.window1[0],
                 self.window1[1],
-                read_limit=self.settings.max_reads_limit,
+                read_limit=self.settings.fetch_reads_limit,
+                sample_bins=self.settings.fetch_reads_bins,
+                bin_gap_size=bin_gap_size,
                 cache=True,
                 cache_if=partial(
                     lambda filt_sec, r: not filt_sec or (filt_sec and not r.is_secondary),
@@ -629,14 +730,14 @@ class Evidence:
                     self.add_flanking_read(read)
                 except UserWarning:
                     pass
-        if count == self.settings.max_reads_limit:
-            warnings.warn('hit read limit')
         count = 0
         for read in self.bam_cache.fetch(
                 '{0}'.format(self.break2.chr),
                 self.window2[0],
                 self.window2[1],
-                read_limit=self.settings.max_reads_limit,
+                read_limit=self.settings.fetch_reads_limit,
+                sample_bins=self.settings.fetch_reads_bins,
+                bin_gap_size=bin_gap_size,
                 cache=True,
                 cache_if=partial(
                     lambda filt_sec, r: not filt_sec or (filt_sec and not r.is_secondary),
@@ -661,8 +762,6 @@ class Evidence:
                     self.add_flanking_read(read)
                 except UserWarning:
                     pass
-        if count == self.settings.max_reads_limit:
-            warnings.warn('hit read limit')
 
 
 if __name__ == '__main__':

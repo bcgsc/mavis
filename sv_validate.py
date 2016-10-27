@@ -8,16 +8,23 @@ from structural_variant.constants import *
 from structural_variant.align import *
 from structural_variant.error import *
 from structural_variant.breakpoint import Breakpoint, BreakpointPair
-from structural_variant.validate import Evidence
+from structural_variant.validate import Evidence, EvidenceSettings
 from structural_variant.blat import blat_contigs
 from structural_variant.interval import Interval
-import structural_variant.annotate as ann
+from structural_variant.annotate import load_masking_regions, load_reference_genome, load_reference_genes
 from difflib import SequenceMatcher
 from datetime import datetime
+import multiprocessing
 
 __prog__ = os.path.basename(os.path.realpath(__file__))
 
-MAX_POOL_SIZE = 4
+INPUT_BAM_CACHE = None
+REFERENCE_ANNOTATIONS = None
+HUMAN_REFERENCE_GENOME = None
+MASKED_REGIONS = None
+EVIDENCE_SETTINGS = EvidenceSettings()
+
+MAX_POOL_SIZE = 3
 HRG = '/home/pubseq/genomes/Homo_sapiens/TCGA_Special/GRCh37-lite.fa'
 
 
@@ -52,7 +59,7 @@ def mkdirp(dirname):
             raise
 
 
-def read_cluster_file(name, bamcache, HUMAN_REFERENCE_GENOME):
+def read_cluster_file(name, is_stranded):
     header, rows = TSV.read_file(
         name,
         retain=[
@@ -83,46 +90,101 @@ def read_cluster_file(name, bamcache, HUMAN_REFERENCE_GENOME):
     )
     evidence = []
     for row in rows:
-        bpp = BreakpointPair(
-            Breakpoint(
-                row['break1_chromosome'],
-                row['break1_position_start'],
-                row['break1_position_end'],
-                strand=row['break1_strand'],
-                orient=row['break1_orientation']
-            ),
-            Breakpoint(
-                row['break2_chromosome'],
-                row['break2_position_start'],
-                row['break2_position_end'],
-                strand=row['break2_strand'],
-                orient=row['break2_orientation']
-            ),
-            opposing_strands=row['opposing_strands']
-        )
-        e = Evidence(bpp, bamcache, HUMAN_REFERENCE_GENOME, labels=row, protocol=row['protocol'])
-        bpp.label = row['cluster_id']
-        evidence.append(e)
+        strands = [(row['break1_strand'], row['break2_strand'])]
+        if is_stranded:
+            strands = itertools.product(STRAND.expand(row['break1_strand']), STRAND.expand(row['break2_strand']))
+            strands = [(s1, s2) for s1, s2 in strands if row['opposing_strands'] == (s1 != s2)]
+        if len(strands) == 0:
+            raise UserWarning('error in reading input file. could not resolve strands', row)
+        
+        for s1, s2 in strands:
+            bpp = BreakpointPair(
+                Breakpoint(
+                    row['break1_chromosome'],
+                    row['break1_position_start'],
+                    row['break1_position_end'],
+                    strand=s1,
+                    orient=row['break1_orientation']
+                ),
+                Breakpoint(
+                    row['break2_chromosome'],
+                    row['break2_position_start'],
+                    row['break2_position_end'],
+                    strand=s2,
+                    orient=row['break2_orientation']
+                ),
+                opposing_strands=row['opposing_strands']
+            )
+            try:
+                e = Evidence(
+                    bpp,
+                    INPUT_BAM_CACHE,
+                    HUMAN_REFERENCE_GENOME,
+                    annotations=REFERENCE_ANNOTATIONS,
+                    labels=row,
+                    protocol=row['protocol']
+                )
+                bpp.label = row['cluster_id']
+                evidence.append(e)
+            except UserWarning as e:
+                warnings.warn('failed to read cluster {}'.format(repr(e)))
     return evidence
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + __version__,
-                        help='Outputs the version number')
-    parser.add_argument('-f', '--overwrite', action='store_true', default=False,
-                        help='set flag to overwrite existing reviewed files')
     parser.add_argument(
-        '-o', '--output', help='path to the output directory', required=True)
+        '-v', '--version', action='version', version='%(prog)s version ' + __version__,
+        help='Outputs the version number'
+    )
     parser.add_argument(
-        '-n', '--input', help='path to the input file', required=True)
-    parser.add_argument('--max_pools', '-p', default=MAX_POOL_SIZE, type=int,
-                        help='defines the maximum number of processes', dest='MAX_POOL_SIZE')
-    parser.add_argument('-b', '--bamfile',
-                        help='path to the input bam file', required=True)
-    parser.add_argument('-l', '--library', help='library id', required=True)
-    parser.add_argument('-r', '--reference_genome', default=HRG,
-                        help='path to the reference genome fasta file')
+        '-f', '--overwrite',
+        action='store_true', default=False,
+        help='set flag to overwrite existing reviewed files'
+    )
+    parser.add_argument(
+        '-o', '--output',
+        help='path to the output directory', required=True
+    )
+    parser.add_argument(
+        '-n', '--input',
+        help='path to the input file', required=True
+    )
+    parser.add_argument(
+        '--max_pools', default=MAX_POOL_SIZE, type=int,
+        help='defines the maximum number of processes', dest='MAX_POOL_SIZE'
+    )
+    parser.add_argument(
+        '-b', '--bamfile',
+        help='path to the input bam file', required=True
+    )
+    parser.add_argument(
+        '--stranded', default=False,
+        help='indicates that the input bam file is strand specific')
+    parser.add_argument(
+        '-l', '--library',
+        help='library id', required=True
+    )
+    parser.add_argument(
+        '-r', '--reference_genome',
+        default=HRG,
+        help='path to the reference genome fasta file'
+    )
+    parser.add_argument(
+        '-m', '--masking_file',
+        default='/home/creisle/svn/sv_compile/trunk/hg19_masked_regions.tsv',
+        help='path to the masking regions file'
+    )
+    parser.add_argument(
+        '-a', '--annotations',
+        default='/home/creisle/svn/ensembl_flatfiles/ensembl69_transcript_exons_and_domains_20160808.tsv',
+        help='path to the reference annotations of genes, transcript, exons, domains, etc.'
+    )
+    parser.add_argument(
+        '-p', '--protocol',
+        default=PROTOCOL.GENOME,
+        choices=[PROTOCOL.GENOME, PROTOCOL.TRANS]
+    )
     args = parser.parse_args()
     if args.MAX_POOL_SIZE < 1:
         print('\nerror: MAX_POOL_SIZE must be a positive integer')
@@ -131,7 +193,57 @@ def parse_arguments():
     return args
 
 
+def gather_evidence_from_bam(clusters):
+    evidence = []
+    
+    for i, e in enumerate(clusters):
+        if e.protocol == PROTOCOL.GENOME:
+            print(
+                datetime.now(),
+                '[{}/{}]'.format(i + 1, len(clusters)),
+                'gathering evidence for:',
+                e.breakpoint_pair,
+                BreakpointPair.classify(e.breakpoint_pair)
+            )
+            e.load_evidence()
+            print(
+                datetime.now(),
+                '[{}/{}]'.format(i + 1, len(clusters)),
+                'gathered evidence for:',
+                e.breakpoint_pair,
+                BreakpointPair.classify(e.breakpoint_pair),
+                'flanking reads:', len(e.flanking_reads),
+                'split reads:', [len(a) for a in e.split_reads.values()]
+            )
+            # gather reads for the putative assembly
+            assembly_sequences = {}
+            for r in itertools.chain.from_iterable(e.split_reads.values()):
+                s = r.query_sequence
+                temp = Seq(s, DNA_ALPHABET)
+                temp = str(temp.reverse_complement())
+                assembly_sequences[s] = assembly_sequences.get(s, set())
+                assembly_sequences[s].add(r)
+                assembly_sequences[temp] = assembly_sequences.get(temp, set())
+                assembly_sequences[temp].add(r)
+                # only collect the mates if they are unmapped
+                if r.mate_is_unmapped:
+                    for m in INPUT_BAM_CACHE.get_mate(r):
+                        s = m.query_sequence
+                        temp = Seq(s, DNA_ALPHABET)
+                        temp = str(temp.reverse_complement())
+                        assembly_sequences[s] = assembly_sequences.get(s, set())
+                        assembly_sequences[s].add(m)
+                        assembly_sequences[temp] = assembly_sequences.get(temp, set())
+                        assembly_sequences[temp].add(m)
+            # evidence_reads.update(e.supporting_reads())
+            evidence.append((e, assembly_sequences))
+        else:
+            raise NotImplementedError('currently only genome protocols are supported')
+    return evidence
+
+
 def main():
+    global INPUT_BAM_CACHE, REFERENCE_ANNOTATIONS, MASKED_REGIONS, HUMAN_REFERENCE_GENOME
     """
     - read the evidence
     - assemble contigs from the split reads
@@ -149,11 +261,22 @@ def main():
     MIN_CONTIG_READ_REMAP = 3
     MIN_BREAKPOINT_RESOLUTION = 3
     INPUT_BAM_CACHE = BamCache(args.bamfile)
+    print('loading the masking regions:', args.masking_file)
+    MASKED_REGIONS = load_masking_regions(args.masking_file)
+    for chr in MASKED_REGIONS:
+        for m in MASKED_REGIONS[chr]:
+            if m.name == 'nspan':
+                m.start -= EVIDENCE_SETTINGS.read_length
+                m.end += EVIDENCE_SETTINGS.read_length
+
     # load the reference genome
     print('loading the reference genome', args.reference_genome)
     Profile.mark_step('start loading reference genome')
-    HUMAN_REFERENCE_GENOME = ann.load_reference_genome(args.reference_genome)
-    Profile.mark_step('finished loading reference genome')
+    HUMAN_REFERENCE_GENOME = load_reference_genome(args.reference_genome)
+    if args.protocol == PROTOCOL.TRANS:
+        print('loading the reference annotations:', args.annotations)
+        REFERENCE_ANNOTATIONS = load_reference_genes(args.annotations)
+    Profile.mark_step('finished loading reference')
     print('loading complete')
 
     evidence_reads = set()
@@ -161,59 +284,56 @@ def main():
     split_read_contigs = set()
     chr_to_index = {}
 
-    evidence = []
-    Profile.mark_step('load bam reads and assemble')
-    for e in read_cluster_file(args.input, INPUT_BAM_CACHE, HUMAN_REFERENCE_GENOME):
-        if e.protocol == PROTOCOL.GENOME:
-            # gather evidence
-            # resolve the breakpoints
-            # classify the evidence resolved breakpoints
-            # annotate
-            # write ouputs
-            print('======================================================== loading evidence for',
-                  e.breakpoint_pair, BreakpointPair.classify(e.breakpoint_pair))
-            e.load_evidence()
-            print('\ninitial pair', e.breakpoint_pair, e.linking_evidence(), e.classification,
-                  'flanking reads:', len(e.flanking_reads),
-                  'split reads:', [len(a) for a in e.split_reads.values()],
-                  )
-            print('try assembling split reads')
-            assembly_sequences = {}
-            for r in itertools.chain.from_iterable(e.split_reads.values()):
-                s = r.query_sequence
-                temp = Seq(s, DNA_ALPHABET)
-                temp = str(temp.reverse_complement())
-                assembly_sequences[s] = assembly_sequences.get(s, set())
-                assembly_sequences[s].add(r)
-                assembly_sequences[temp] = assembly_sequences.get(temp, set())
-                assembly_sequences[temp].add(r)
-                for m in INPUT_BAM_CACHE.get_mate(r):
-                    s = m.query_sequence
-                    temp = Seq(s, DNA_ALPHABET)
-                    temp = str(temp.reverse_complement())
-                    assembly_sequences[s] = assembly_sequences.get(s, set())
-                    assembly_sequences[s].add(m)
-                    assembly_sequences[temp] = assembly_sequences.get(temp, set())
-                    assembly_sequences[temp].add(m)
-
-            contigs = assemble(assembly_sequences)
-            filtered_contigs = []
-            for contig in contigs:
-                if contig.remap_score() < MIN_CONTIG_READ_REMAP:
-                    continue
-                print('contig{', 'score =', contig.score,
-                      'adjusted-score =', round(contig.score / len(contig.seq), 2),
-                      'read-remap =', contig.remap_score(),
-                      'read-total =', len(contig.remapped_reads.keys()),
-                      'seq =', contig.seq,
-                      '}')
-                filtered_contigs.append(contig)
-            contigs = filtered_contigs if len(filtered_contigs) > 0 else contigs
-            split_read_contigs.update(set([c.seq for c in contigs]))
-            evidence_reads.update(e.supporting_reads())
-            evidence.append((e, contigs, assembly_sequences))
+    Profile.mark_step('load bam reads')
+    clusters = read_cluster_file(args.input, args.stranded)
+    filtered_clusters = []
+    for cluster in clusters:
+        overlaps_mask = None
+        for mask in MASKED_REGIONS[cluster.break1.chr]:
+            if Interval.overlaps(cluster.window1, mask):
+                overlaps_mask = mask
+                break
+        for mask in MASKED_REGIONS[cluster.break2.chr]:
+            if Interval.overlaps(cluster.window2, mask):
+                overlaps_mask = mask
+                break
+        if overlaps_mask is None:
+            filtered_clusters.append(cluster)
         else:
-            raise NotImplementedError('currently only genome protocols are supported')
+            print('dropping cluster overlapping mask', mask, cluster.breakpoint_pair)
+
+    evidence = gather_evidence_from_bam(filtered_clusters)
+    print('evidence gathering is complete')
+    Profile.mark_step('evidence gathering complete')
+    # ASSEMBLE the contigs (can parallelize here)
+    for ev, seq in evidence:
+        a = assemble(seq)
+    exit(1)
+    assemblies = None
+    with multiprocessing.Pool(MAX_POOL_SIZE) as p:
+        print('start assembly')
+        Profile.mark_step('start assembly')
+        seq = [y for x, y in evidence]
+        assemblies = p.map(assemble, seq)
+        Profile.mark_step('assembly complete')
+    assert(len(assemblies) == len(evidence))
+
+    for temp, contigs in zip(evidence, assemblies):
+        ev, assembly_sequences = temp
+        filtered_contigs = []
+        for contig in contigs:
+            if contig.remap_score() < MIN_CONTIG_READ_REMAP:
+                continue
+            print('contig{', 'score =', contig.score,
+                  'adjusted-score =', round(contig.score / len(contig.seq), 2),
+                  'read-remap =', contig.remap_score(),
+                  'read-total =', len(contig.remapped_reads.keys()),
+                  'seq =', contig.seq,
+                  '}')
+            filtered_contigs.append(contig)
+        contigs = filtered_contigs if len(filtered_contigs) > 0 else contigs
+        split_read_contigs.update(set([c.seq for c in contigs]))
+    # BLAT the contigs
     Profile.mark_step('start blat')
     blat_contig_alignments = blat_contigs(
         split_read_contigs,
@@ -371,3 +491,4 @@ try:
 finally:
     print()
     Profile.print()
+    print(datetime.now(), 'stopped at')

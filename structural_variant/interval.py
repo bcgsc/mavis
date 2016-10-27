@@ -9,6 +9,29 @@ class Interval:
     """
     Intervals are inclusive
     """
+    
+    def __sub__(self, other): # difference
+        if Interval.overlaps(self, other):
+            if other[0] <= self[0]:
+                if other[1] >= self[1]:
+                    return []
+                else:
+                    return [Interval(other[1] + 1, self[1])]
+            elif other[1] >= self[1]:
+                return [Interval(self[0], other[0] - 1)]
+            else:
+                return [Interval(self[0], other[0] - 1), Interval(other[1] + 1, self[1])]
+        else:
+            return [Interval(self[0], self[1])]
+
+    def __and__(self, other):  # intersection
+        return Intervals.intersection(self, other)
+
+    def __or__(self, other):  # union
+        return Interval.union(self, other)
+
+    def __xor__(self, other):
+        return (self - other) + (other - self)
 
     def __init__(self, start, end=None, freq=1):
         self.start = int(start)
@@ -44,6 +67,16 @@ class Interval:
 
     def __len__(self):
         return self[1] - self[0] + 1
+    
+    def __lt__(self, other):
+        if self[0] < other[0]:
+            return True
+        return False
+
+    def __gt__(self, other):
+        if self[1] > other[1]:
+            return True
+        return False
 
     def __repr__(self):
         temp = str(self[0])
@@ -57,66 +90,18 @@ class Interval:
     def center(self):
         return self[0] + (len(self) - 1) / 2
 
-    @classmethod
-    def weighted_mean(cls, intervals):
-        """
-        returns the weighted mean for a set of intervals
-        the weight is the inverse of the size of the interval
-        so that broader intervals are weighted less than
-        more specific/tighter intervals
-        """
-        if len(intervals) == 0:
-            raise AttributeError('input list cannot be empty')
-        first = next(iter(intervals))
-        centers = []
-        weights = []
-
-        for i in intervals:
-            for temp in range(0, i.freq):
-                centers.append(i.center)
-                weights.append(1 / len(i))
-
-        return np.average(centers, weights=weights)
-
-    def combine(self, other):
-        """
-        adding two intervals returns the minimum interval that covers both input intervals
-        """
-        return Interval.union(self, other)
-
     def __eq__(self, other):
-        if not hasattr(other, 'start') \
-                or not hasattr(other, 'end') \
-                or not hasattr(other, 'freq') \
-                or self[0] != other[0] \
-                or self[1] != other[1] \
-                or self[2] != other[2]:
+        if self[0] != other[0] or self[1] != other[1] or self[2] != other[2]:
             return False
         return True
-
-    def __lt__(self, other):
-        if self[0] < other[0]:
+    
+    def __contains__(self, other):
+        if other[0] >= self[0] and other[1] <= self[1]:
             return True
-        elif self[0] == other[0]:
-            if self[1] < other[1]:
-                return True
-            elif self[1] == other[1]:
-                if self.freq < other.freq:
-                    return True
         return False
 
-    def __gt__(self, other):
-        if self[0] > other[0]:
-            return True
-        elif self[0] == other[0]:
-            if self[1] > other[1]:
-                return True
-            elif self[1] == other[1]:
-                if self.freq > other.freq:
-                    return True
-        return False
-
-    def __sub__(self, other):
+    @classmethod
+    def dist(cls, self, other):
         """returns the minimum distance between intervals
         """
         if self[1] < other[0]:
@@ -128,12 +113,24 @@ class Interval:
 
     def __hash__(self):
         return hash((self[0], self[1], self.freq))
-
+    
     @classmethod
-    def paired_weighted_means(cls, intervals):
-        int_a = Interval.weighted_mean([x[0] for x in intervals])
-        int_b = Interval.weighted_mean([x[1] for x in intervals])
-        return int_a, int_b
+    def weighted_mean(cls, intervals):
+        centers = []
+        weights = []
+        lengths = []
+
+        for i in intervals:
+            if not isinstance(i, Interval):
+                i = Interval(i[0], i[1])
+            for temp in range(0, i.freq):
+                centers.append(i.center)
+                weights.append(1 / len(i))
+                lengths.append(len(i))
+
+        center = np.average(centers, weights=weights)
+        size = np.average(lengths, weights=weights) - 1
+        return Interval(round(center - size / 2, 0), round(center + size / 2, 0))
 
     @classmethod
     def position_in_range(cls, segments, pos):
@@ -254,63 +251,6 @@ class Interval:
             else:
                 shift = curr[1] - pos
                 return mapping[curr][0] + shift
-
-    @classmethod
-    def paired_set_distance(cls, intervals, other_intervals):
-        """
-        for two sets of interval pairs (as tuples) computes the weighted mean
-        of each interval set (a total of four) and then returns the
-        distance between the sets of pairs as the cumulative distance
-        of the weighted means of their pairs
-        """
-        int_a, int_b = cls.paired_weighted_means(intervals)
-        oint_a, oint_b = cls.paired_weighted_means(other_intervals)
-        return abs(int_a - oint_a) + abs(int_b - oint_b)
-
-    @classmethod
-    def redundant_ordered_hierarchical_clustering(cls, clusters, r=None):
-        """
-        for an input set of of clusters, do hierarchical clustering
-        redundant b/c we allow clusters to be grouped more than once
-        into either of their immediate neighbours
-        """
-        r = int(r)
-        if r < 0:
-            raise AttributeError('r must be a positive integer')
-        # order the clusters by weighted mean
-        complete = []
-        queue = sorted(clusters, key=lambda x: cls.paired_weighted_means(x))
-
-        while len(queue) > 0:
-            temp_queue = []
-            for i in range(0, len(queue)):
-                curr = queue[i]
-                joined = False
-
-                if i > 0:  # try joining your previous neighbor
-                    dist = cls.paired_set_distance(curr, queue[i - 1])
-                    if dist <= r:
-                        temp_queue.append(curr.union(queue[i - 1]))
-                        joined = True
-                if i < len(queue) - 1:
-                    dist = cls.paired_set_distance(curr, queue[i + 1])
-                    if dist <= r:
-                        temp_queue.append(curr.union(queue[i + 1]))
-                        joined = True
-                if not joined:
-                    complete.append(curr)
-            queue = temp_queue
-        for c in clusters:
-            for n in c:
-                found = False
-                for cc in complete:
-                    for cn in cc:
-                        if n == cn:
-                            found = True
-                            break
-                if not found:
-                    raise AssertionError('error node is no longer assigned', clusters, complete, n)
-        return complete
 
     @classmethod
     def union(cls, *intervals):

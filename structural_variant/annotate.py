@@ -3,6 +3,7 @@ from structural_variant.interval import Interval
 from structural_variant.constants import *
 from structural_variant.error import *
 from Bio import SeqIO
+import re
 
 TTRACK = 'transformed_from'
 
@@ -13,13 +14,15 @@ class Bio:
     def key(self):
         raise NotImplementedError('abstract method must be overidden')
 
-    def __repr__(self):
-        cls = self.__class__.__name__
-        return cls + str(tuple([k for k in self.key if k is not None]))
-
     def __init__(self, name=None, reference_object=None):
         self.name = name
         self.reference_object = reference_object
+
+
+class BioInterval(Bio, Interval):
+    def __init__(self, reference_object, start, end, name=None):
+        Bio.__init__(self, reference_object=reference_object, name=name)
+        Interval.__init__(self, start, end)
 
 
 class Gene(Bio):
@@ -227,7 +230,7 @@ class Transcript(Bio):
         return t
 
 
-class Exon(Bio):
+class Exon(BioInterval):
 
     def __init__(self, start, end, transcript=None, name=None):
         """
@@ -239,12 +242,7 @@ class Exon(Bio):
         Raises:
             AttributeError: if the exon start > the exon end
         """
-        Bio.__init__(self, name=name, reference_object=transcript)
-        self.start = int(start)
-        self.end = int(end)
-        self.name = name
-        if self.start > self.end:
-            raise AttributeError('exon start must be <= exon end')
+        BioInterval.__init__(self, name=name, reference_object=transcript, start=start, end=end)
         if self.transcript is not None:
             self.transcript.exons.add(self)
 
@@ -313,6 +311,22 @@ class Domain(Bio):
 
     def __eq__(self, other):
         return self.key == other.key
+
+
+def load_masking_regions(filepath):
+    """
+    """
+    header, rows = TSV.read_file(
+        filepath,
+        retain=['chr', 'start', 'end', 'name'],
+        cast = {'start': 'int', 'end': 'int'},
+        transform = {'chr': lambda x: re.sub('^chr', '', x) }
+    )
+    regions = {}
+    for row in rows:
+        r = BioInterval(reference_object=row['chr'], start=row['start'], end=row['end'], name=row['name'])
+        regions.setdefault(r.reference_object, []).append(r)
+    return regions
 
 
 def load_reference_genes(filepath):
@@ -411,7 +425,7 @@ def overlapping_transcripts(ref_ann, breakpoint):
             if breakpoint.strand != STRAND.NS and transcript.strand != breakpoint.strand:
                 continue
             if Interval.overlaps(
-                    breakpoint.pos,
+                    breakpoint,
                     (transcript.genomic_start(), transcript.genomic_end())):
                 putative_annotations.append(transcript)
     return putative_annotations

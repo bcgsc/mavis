@@ -34,7 +34,31 @@ class TestInterval(unittest.TestCase):
 
     def test___len__(self):
         self.assertEqual(5, len(Interval(1, 5)))
-
+    
+    def test___sub__(self):
+        # x in y
+        self.assertEqual([Interval(0, 4), Interval(7, 10)], Interval(0, 10) - Interval(5, 6))
+        # x overlaps the start of y
+        self.assertEqual([Interval(7, 10)], Interval(0, 10) - Interval(-1, 6))
+        # x overlaps the end of y
+        self.assertEqual([Interval(0, 4)], Interval(0, 10) - Interval(5, 11))
+        # x overlaps all of y
+        self.assertEqual([], Interval(0, 10) - Interval(-1, 11))
+        # x does not overlap y
+        self.assertEqual([Interval(0, 10)], Interval(0, 10) - Interval(11, 15))
+    
+    def test___xor__(self):
+        # x in y
+        self.assertEqual([], Interval(0, 10) ^ Interval(0, 10))
+        # x overlaps the start of y
+        self.assertEqual([Interval(7, 10), Interval(-1, -1)], Interval(0, 10) ^ Interval(-1, 6))
+        # x overlaps the end of y
+        self.assertEqual([Interval(0, 4), Interval(11, 11)], Interval(0, 10) ^ Interval(5, 11))
+        # x overlaps all of y
+        self.assertEqual([Interval(-1, -1), Interval(11, 11)], Interval(0, 10) ^ Interval(-1, 11))
+        # x does not overlap y
+        self.assertEqual([Interval(0, 10), Interval(11, 15)], Interval(0, 10) ^ Interval(11, 15))
+    
     def test_center(self):
         self.assertEqual(3, Interval(1, 5).center)
         self.assertEqual(3.5, Interval(2, 5).center)
@@ -81,21 +105,37 @@ class TestInterval(unittest.TestCase):
         m = l + [Interval(11)]
         self.assertEqual(Interval(1, 11), Interval.union(*m))
         n = Interval.union(*l)
+    
+    def test_weighted_mean(self):
+        m = Interval.weighted_mean([(1, 2), (1, 9), (2, 10)])
+        self.assertEqual(Interval(1, 4), m)
+        m = Interval.weighted_mean([(1, 1), (10, 10)])
+        self.assertEqual(Interval(6), m)
 
+    def test_weighted_mean_identical_even_length(self):
+        m = Interval.weighted_mean([(1, 2), (1, 2), (1, 2)])
+        self.assertEqual(Interval(1, 2), m)
+    
+    def test_weighted_mean_identical_odd_length(self):
+        m = Interval.weighted_mean([(1, 3), (1, 3), (1, 3)])
+        self.assertEqual(Interval(1, 3), m)
+    
     def test_intersection(self):
         l = [Interval(1, 10), Interval(5, 7), Interval(7)]
         self.assertEqual(Interval(7), Interval.intersection(*l))
         l.append(Interval(11))
         self.assertEqual(None, Interval.intersection(*l))
 
-    def test___sub__(self):
-        x, y, z = (Interval(1, 4), Interval(-1, 0), Interval(0, 3))
-        self.assertEqual(1, x - y)
-        self.assertEqual(-1, y - x)
-        self.assertEqual(0, x - z)
-        self.assertEqual(0, z - x)
-        self.assertEqual(0, y - z)
-        self.assertEqual(0, z - y)
+    def test_dist(self):
+        x = Interval(1, 4)
+        y = Interval(-1, 0)
+        z = Interval(0, 3)
+        self.assertEqual(1, Interval.dist(x, y))
+        self.assertEqual(-1, Interval.dist(y, x))
+        self.assertEqual(0, Interval.dist(x, z))
+        self.assertEqual(0, Interval.dist(z, x))
+        self.assertEqual(0, Interval.dist(y, z))
+        self.assertEqual(0, Interval.dist(z, y))
 
     def test_min_nonoverlapping(self):
         r = Interval.min_nonoverlapping(Interval(1, 2), Interval(4, 7), Interval(8, 9))

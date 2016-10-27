@@ -13,6 +13,7 @@ ORIENT = Vocab(LEFT='L', RIGHT='R', NS='?')
 - RIGHT: right wrt to the positive/forward strand
 - NS: orientation is not specified
 """
+setattr(ORIENT, 'expand', lambda x: [ORIENT.LEFT, ORIENT.RIGHT] if x == ORIENT.NS else [x])
 
 PROTOCOL = Vocab(GENOME='genome', TRANS='transcriptome')
 """Vocab: holds controlled vocabulary for allowed protocol values
@@ -28,6 +29,7 @@ STRAND = Vocab(POS='+', NEG='-', NS='?')
 - NEG: the negative/reverse strand
 - NS: strand is not specified
 """
+setattr(STRAND, 'expand', lambda x: [STRAND.POS, STRAND.NEG] if x == STRAND.NS else [x])
 
 SVTYPE = Vocab(
     DEL='deletion',

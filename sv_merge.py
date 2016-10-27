@@ -9,7 +9,7 @@ from structural_variant.constants import *
 from structural_variant.align import *
 from structural_variant.error import *
 from structural_variant.breakpoint import Breakpoint, BreakpointPair
-from structural_variant.cluster import cluster_breakpoints
+from structural_variant.cluster import cluster_breakpoint_pairs
 from structural_variant import __version__
 
 __prog__ = os.path.basename(os.path.realpath(__file__))
@@ -58,28 +58,40 @@ def load_input_file(filename):
                 row['libraries'].split(';'), row['protocol'].split(';'), row['tool_version'].split(';')):
             label = {'library': lib, 'protocol': prot,
                      'tool_version': tool, 'input_file': filename}
+            
+            opposing_strands = [None]
+            if 'opposing_strands' not in row or row['opposing_strands'] == '?':
+                if row['start_strand'] == STRAND.NS or row['end_strand'] == STRAND.NS:
+                    opposing_strands = [True, False]
+            elif row['opposing_strands'].lower() in ['y', 't', 'true', 'yes']:
+                opposing_strands = [True]
+            elif row['opposing_strands'].lower() in ['n', 'f', 'false', 'no']:
+                opposing_strands = [False]
             key = tuple([k[1] for k in sorted(label.items())])
-            b1 = Breakpoint(
-                row['start_chromosome'],
-                row['start_pos1'],
-                row['start_pos2'],
-                orient=row['start_orientation'],
-                strand=row['start_strand'])
-            b2 = Breakpoint(
-                row['end_chromosome'],
-                row['end_pos1'],
-                row['end_pos2'],
-                orient=row['end_orientation'],
-                strand=row['end_strand'])
-            try:
-                if key not in breakpoints:
-                    breakpoints[key] = set()
-                bpp = BreakpointPair(b1, b2, flags=[] if FLAGS.LQ not in row.get(
-                    'filters', '').split(';') else [FLAGS.LQ])
-                bpp.label = label
-                breakpoints[key].add(bpp)
-            except InvalidRearrangement as e:
-                warnings.warn(str(e))
+            
+            for opp in opposing_strands:
+                key = tuple([k[1] for k in sorted(label.items())])
+                b1 = Breakpoint(
+                    row['start_chromosome'],
+                    row['start_pos1'],
+                    row['start_pos2'],
+                    orient=row['start_orientation'],
+                    strand=row['start_strand'])
+                b2 = Breakpoint(
+                    row['end_chromosome'],
+                    row['end_pos1'],
+                    row['end_pos2'],
+                    orient=row['end_orientation'],
+                    strand=row['end_strand'])
+                try:
+                    if key not in breakpoints:
+                        breakpoints[key] = set()
+                    bpp = BreakpointPair(b1, b2, opposing_strands=opp, flags=[] if FLAGS.LQ not in row.get(
+                        'filters', '').split(';') else [FLAGS.LQ])
+                    bpp.label = label
+                    breakpoints[key].add(bpp)
+                except InvalidRearrangement as e:
+                    warnings.warn(str(e) + '; reading: {}'.format(filename))
     return breakpoints
 
 
@@ -163,8 +175,7 @@ def main():
     for key, bpp_set in pairs.items():
         filename, libname, protocol, tool = key
         if libname not in BAM_FILE_ARGS:
-            raise UserWarning('error: input file library specified does not have a corresponding bam file. '
-                              'must be specified', libname)
+            continue
         print('loaded', len(bpp_set), 'breakpoint pairs for', key)
         if (libname, protocol) not in bpp_by_library:
             bpp_by_library[(libname, protocol)] = []
@@ -196,7 +207,7 @@ def main():
             'input_file',
         ]
         fh.write('## {0} v{1} {2}\n'.format(
-            __prog__, __version__, datetime.datetime.now()))
+            __prog__, __version__, datetime.now()))
         fh.write(
             '## this file details the inputs and the cluster ids they were assigned to\n')
         fh.write('#' + '\t'.join(assignment_header) + '\n')
@@ -205,7 +216,7 @@ def main():
             print('for', key, 'there are', len(
                 bpp_list), 'input breakpoint pairs')
 
-            clusters = cluster_breakpoints(bpp_list, r=20, k=15)
+            clusters = cluster_breakpoint_pairs(bpp_list, r=20, k=15)
             initial_count = len(clusters)
 
             # filter out the low quality clusters

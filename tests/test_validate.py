@@ -1,6 +1,6 @@
-from structural_variant.breakpoint import BreakpointPair, Breakpoint
+from structural_variant.breakpoint import Breakpoint
 from structural_variant.validate import *
-from structural_variant.annotate import load_reference_genome
+from structural_variant.annotate import load_reference_genome, Gene, Transcript
 from structural_variant.constants import *
 import pysam
 import unittest
@@ -31,33 +31,86 @@ def setUpModule():
 
 class TestEvidence(unittest.TestCase):
 
-    def setUp(self):
-        self.first_read = MockRead(
-            query_sequence='TTATTTAGTGTTCCAAATGTGTTGGTTCTGCCTAGTATACTGATTTAGAAATTCCACCACATGGAGGTTATTTGAGGCGATTGGTAG'
-            'CTGGAAGGTATTTAAAAGAAACTTGTTTCACCAAATTC',
-            reference_id=10,
-            cigar=[(CIGAR.S, 6), (CIGAR.M, 119)],
-            reference_start=128664209
-        )
-        self.second_read = MockRead(
-            query_sequence='CTATAAACTATATGTTAGCCAGAGGGCTTTTTTTGTTGTTGTTATTTAGTGTTCCAAATGTGTTGGTTCTGCCTAGTATACTGATTT'
-            'AGAAATTCCACCACATGGAGGTTATTTGAGGCGATTGG',
-            reference_id=21,
-            cigar=[(CIGAR.M, 49), (CIGAR.S, 76)],
-            reference_start=29684317,
-        )
+    def test_generate_window_orient_ns(self):
+        b = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.NS)
+        w = Evidence.generate_window(b, read_length=100, median_insert_size=250, call_error=10, mm_isize_error=50)
+        self.assertEqual(440, w[0])
+        self.assertEqual(1560, w[1])
 
-        self.evidence = Evidence(
-            BreakpointPair(
-                Breakpoint('11', 128664209, 128664209, orient=ORIENT.RIGHT),
-                Breakpoint('22', 29684365, 29684365, orient=ORIENT.LEFT),
-                stranded=False, opposing_strands=False
-            ),
-            SVTYPE.TRANS,
-            None,  # don't need bamfile b/c mocking reads
-            convert_chr_to_index={'11': 10, '22': 21}
-        )
+    def test_generate_window_orient_left(self):
+        b = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.LEFT)
+        w = Evidence.generate_window(b, read_length=100, median_insert_size=250, call_error=10, mm_isize_error=50)
+        self.assertEqual(440, w[0])
+        self.assertEqual(1110, w[1])
+        self.assertEqual(671, len(w))
 
+    def test_generate_window_orient_right(self):
+        b = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.RIGHT)
+        w = Evidence.generate_window(b, read_length=100, median_insert_size=250, call_error=10, mm_isize_error=50)
+        self.assertEqual(890, w[0])
+        self.assertEqual(1560, w[1])
+
+    def test_generate_transcriptome_window_before_start(self):
+        b = Breakpoint(chr='1', start=100, orient=ORIENT.RIGHT)
+        gene = Gene(name='KRAS', strand='+', chr='1')
+        t1 = Transcript(gene=gene, cds_start=1, cds_end=100, exons=[(1000, 1100), (1400, 1500)])
+        ann = {'1': [gene]}
+        w1 = Evidence.generate_window(b, read_length=100, median_insert_size=250, call_error=10, mm_isize_error=50)
+        w2 = Evidence.generate_transcriptome_window(b, ann, read_length=100, median_insert_size=250, call_error=10, mm_isize_error=50)
+        self.assertEqual(w1, w2)
+
+    def test_generate_transcriptome_window_after_end(self):
+        b = Breakpoint(chr='1', start=1600, orient=ORIENT.RIGHT)
+        gene = Gene(name='KRAS', strand='+', chr='1')
+        t1 = Transcript(gene=gene, cds_start=1, cds_end=100, exons=[(1000, 1100), (1400, 1500)])
+        ann = {'1': [gene]}
+        w1 = Evidence.generate_window(b, read_length=100, median_insert_size=250, call_error=10, mm_isize_error=50)
+        w2 = Evidence.generate_transcriptome_window(b, ann, read_length=100, median_insert_size=250, call_error=10, mm_isize_error=50)
+        self.assertEqual(w1, w2)
+
+    def test_generate_transcriptome_window_exonic_long_exon(self):
+        b = Breakpoint(chr='1', start=1200, orient=ORIENT.RIGHT)
+        gene = Gene(name='KRAS', strand='+', chr='1')
+        t1 = Transcript(gene=gene, cds_start=1, cds_end=100, exons=[(1000, 2000), (2400, 2500)])
+        ann = {'1': [gene]}
+        w1 = Evidence.generate_window(b, read_length=100, median_insert_size=250, call_error=10, mm_isize_error=50)
+        w2 = Evidence.generate_transcriptome_window(b, ann, read_length=100, median_insert_size=250, call_error=10, mm_isize_error=50)
+        self.assertEqual(w1, w2)
+
+    def test_generate_transcriptome_window_intronic_long_exon(self):
+        b = Breakpoint(chr='1', start=900, orient=ORIENT.RIGHT)
+        gene = Gene(name='KRAS', strand='+', chr='1')
+        t1 = Transcript(gene=gene, cds_start=1, cds_end=100, exons=[(1000, 2000), (2400, 2500)])
+        ann = {'1': [gene]}
+        w1 = Evidence.generate_window(b, read_length=100, median_insert_size=250, call_error=10, mm_isize_error=50)
+        w2 = Evidence.generate_transcriptome_window(b, ann, read_length=100, median_insert_size=250, call_error=10, mm_isize_error=50)
+        self.assertEqual(w1, w2)
+
+    def test_generate_transcriptome_window_intronic_long_intron(self):
+        b = Breakpoint(chr='1', start=1200, orient=ORIENT.RIGHT)
+        gene = Gene(name='KRAS', strand='+', chr='1')
+        t1 = Transcript(gene=gene, cds_start=1, cds_end=100, exons=[(1000, 1100), (2400, 2500)])
+        ann = {'1': [gene]}
+        w1 = Evidence.generate_window(b, read_length=100, median_insert_size=250, call_error=10, mm_isize_error=50)
+        w2 = Evidence.generate_transcriptome_window(b, ann, read_length=100, median_insert_size=250, call_error=10, mm_isize_error=50)
+        self.assertEqual(w1, w2)
+
+    def test_generate_transcriptome_window_intronic_short_exon(self):
+        b = Breakpoint(chr='1', start=1150, orient=ORIENT.RIGHT)
+        gene = Gene(name='KRAS', strand='+', chr='1')
+        t1 = Transcript(gene=gene, cds_start=1, cds_end=100, exons=[(1000, 1100), (1200, 1300), (1400, 1500)])
+        ann = {'1': [gene]}
+        w = Evidence.generate_transcriptome_window(b, ann, read_length=100, median_insert_size=250, call_error=10, mm_isize_error=50)
+        self.assertEqual(Interval(1040, 1808), w)
+
+    def test_generate_transcriptome_window_multiple_transcripts(self):
+        b = Breakpoint(chr='1', start=1150, orient=ORIENT.RIGHT)
+        gene = Gene(name='KRAS', strand='+', chr='1')
+        Transcript(gene=gene, cds_start=1, cds_end=100, exons=[(1000, 1100), (1200, 1300), (1400, 1500)])
+        Transcript(gene=gene, cds_start=1, cds_end=100, exons=[(1000, 1100), (1200, 1300), (2100, 2200)])
+        ann = {'1': [gene]}
+        w = Evidence.generate_transcriptome_window(b, ann, read_length=100, median_insert_size=250, call_error=10, mm_isize_error=50)
+        self.assertEqual(Interval(1040, 2508), w)
 
 if __name__ == "__main__":
     unittest.main()

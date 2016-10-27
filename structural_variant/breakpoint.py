@@ -6,7 +6,7 @@ from structural_variant.error import *
 from structural_variant.interval import Interval
 
 
-class Breakpoint:
+class Breakpoint(Interval):
     """
     class for storing information about a SV breakpoint
     coordinates are given as 1-indexed
@@ -14,25 +14,6 @@ class Breakpoint:
     @property
     def key(self):
         return (self.chr, self.start, self.end, self.orient, self.strand)
-
-    @property
-    def start(self):
-        return self.pos.start
-
-    @property
-    def end(self):
-        return self.pos.end
-
-    @property
-    def freq(self):
-        return self.pos.freq
-
-    @classmethod
-    def weighted_mean(cls, breakpoints):
-        if len(breakpoints) == 0:
-            raise AttributeError(
-                'cannot calculate the weighted mean of an empty list')
-        return Interval.weighted_mean([b.pos for b in breakpoints])
 
     def __init__(self, chr, start, end=None, strand=STRAND.NS, orient=ORIENT.NS, label=None):
         """
@@ -44,9 +25,9 @@ class Breakpoint:
             orient (ORIENT, default=ORIENT.NS): the orientation (which side is retained at the break)
             label (str): the label for the breakpoint
         """
+        Interval.__init__(self, start, end)
         self.orient = ORIENT.enforce(orient)
         self.chr = str(chr)
-        self.pos = Interval(start, end)
         self.strand = STRAND.enforce(strand)
         self.label = label
 
@@ -67,7 +48,19 @@ class Breakpoint:
 
 
 class BreakpointPair:
-
+    
+    def __getitem__(self, index):
+        try:
+            index = int(index)
+        except ValueError:
+            raise IndexError('index input accessor must be an integer', index)
+        if index == 0:
+            return self.break1
+        elif index == 1:
+            return self.break2
+        raise IndexError(
+            'index input accessor is out of bounds: 1 or 2 only', index)
+    
     @property
     def key(self):
         return self.break1.key, self.break2.key, self.opposing_strands, self.stranded, self.untemplated_sequence
