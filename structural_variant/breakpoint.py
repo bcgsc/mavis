@@ -114,6 +114,9 @@ class BreakpointPair:
         if self.opposing_strands is None:
             raise AttributeError('must specify if opposing_strands')
 
+        # try classifying to make sure it's a valid combination
+        BreakpointPair.classify(self)
+
     def __repr__(self):
         return str(self)
 

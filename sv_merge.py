@@ -84,10 +84,14 @@ def load_input_file(filename):
                     orient=row['end_orientation'],
                     strand=row['end_strand'])
                 try:
+                    flags = [ l.upper() for l in row.get('filters', '').split(';')]
                     if key not in breakpoints:
                         breakpoints[key] = set()
-                    bpp = BreakpointPair(b1, b2, opposing_strands=opp, flags=[] if FLAGS.LQ not in row.get(
-                        'filters', '').split(';') else [FLAGS.LQ])
+                    bpp = BreakpointPair(
+                        b1,
+                        b2,
+                        opposing_strands=opp,
+                        flags=[] if FLAGS.LQ not in flags else [FLAGS.LQ])
                     bpp.label = label
                     breakpoints[key].add(bpp)
                 except InvalidRearrangement as e:
@@ -227,9 +231,12 @@ def main():
                 if len(clusters[cluster]) == 1:
                     if FLAGS.LQ in list(clusters[cluster])[0].flags:
                         del clusters[cluster]
+            freq = {}
+            for c, group in clusters.items():
+                freq[len(group)] = freq.get(len(group), 0) + 1
             print('after clustering there are', len(clusters),
                   'quality breakpoint pairs and', initial_count, 'total pairs')
-
+            print('cluster distribution', sorted(freq.items()))
             # track the inputs to their clusters
             for bpp in bpp_list:
                 temp = []
