@@ -14,8 +14,13 @@ from structural_variant.align import CigarTools
 
 
 class BlatAlignedSegment(pysam.AlignedSegment):
-
+    """
+    """
     def __init__(self, row):
+        """
+        Args:
+            row (Dict[str,]): a row dictionary from the Blat.read_pslx method
+        """
         pysam.AlignedSegment.__init__(self)
         self.blat = row
 
@@ -33,7 +38,8 @@ class BlatAlignedSegment(pysam.AlignedSegment):
 
 
 class Blat:
-
+    """
+    """
     @staticmethod
     def millibad(row, is_protein=False, is_mrna=True):
         """

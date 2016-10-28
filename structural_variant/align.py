@@ -78,11 +78,11 @@ class BamCache:
                     read.is_read2 == mate.is_read2,
                     read.next_reference_start != mate.reference_start,
                     read.next_reference_id != mate.reference_id,
-                    primary_only and mate.is_secondary and mate.is_mapped]):
+                    primary_only and mate.is_secondary]):
                 continue
             mates.append(mate)
         if len(mates) == 0:
-            if not allow_file_access:
+            if not allow_file_access or read.mate_is_unmapped:
                 raise KeyError('mate is not found in the cache')
             else:
                 warnings.warn(
@@ -99,24 +99,16 @@ class BamCache:
 
 
 class CigarTools:
-
+    """
+    holds methods related to processing cigar tuples. Cigar tuples are generally
+    an iterable list of tuples where the first element in each tuple is the
+    CIGAR value (i.e. 1 for an insertion), and the second value is the frequency
+    """
     @classmethod
     def recompute_cigar_mismatch(cls, read, ref):
         """
         for cigar tuples where M is used, recompute to replace with X/= for increased
         utility and specificity
-
-        CIGAR VALUES
-        M 0 alignment match (can be a sequence match or mismatch)
-        I 1 insertion to the reference
-        D 2 deletion from the reference
-        N 3 skipped region from the reference
-        S 4 soft clipping (clipped sequences present in SEQ)
-        H 5 hard clipping (clipped sequences NOT present in SEQ)
-        P 6 padding (silent deletion from padded reference)
-        = 7 sequence match
-        X 8 sequence mismatch
-
         """
         temp = []
         offset = 0
@@ -218,6 +210,9 @@ class CigarTools:
 
     @classmethod
     def match_percent(cls, cigar):
+        """
+        calculates the percent of aligned bases (matches or mismatches) that are matches
+        """
         matches = 0
         mismatches = 0
         for v, f in cigar:
@@ -232,6 +227,14 @@ class CigarTools:
 
     @classmethod
     def join(cls, *pos):
+        """
+        given a number of cigar lists, joins them and merges any consecutive tuples
+        with the same cigar value
+
+        Example:
+            >>> CigarTools.join([(1, 1), (4, 7)], [(4, 3), (2, 4)])
+            [(1, 1), (4, 10), (2, 4)]
+        """
         result = []
         for cigar in pos:
             for v, f in cigar:
@@ -349,6 +352,10 @@ class CigarTools:
     def convert_for_igv(cls, cigar):
         """
         igv does not support the extended CIGAR values for match v mismatch
+
+        Example:
+            >>> CigarTools.convert_for_igv([(7, 4), (8, 1), (7, 5)])
+            [(0, 10)]
         """
         result = []
         for v, f in cigar:
@@ -444,7 +451,8 @@ def kmers(s, size):
 
 
 class Contig:
-
+    """
+    """
     def __init__(self, sequence, score):
         self.seq = sequence
         self.remapped_reads = {}

@@ -7,10 +7,19 @@ from structural_variant.error import *
 
 class Interval:
     """
-    Intervals are inclusive
     """
     
     def __sub__(self, other): # difference
+        """the difference of two intervals
+
+        Example:
+            >>> Interval(1, 10) - Interval(5, 50)
+            [Interval(1, 4)]
+            >>> Interval(1, 2) - Interval(10, 11)
+            [Interval(1, 2)]
+            >>> Interval(1, 2) - Interval(-1, 10)
+            []
+        """
         if Interval.overlaps(self, other):
             if other[0] <= self[0]:
                 if other[1] >= self[1]:
@@ -25,15 +34,37 @@ class Interval:
             return [Interval(self[0], self[1])]
 
     def __and__(self, other):  # intersection
+        """the intersection of two intervals
+
+        Example:
+            >>> Interval(1, 10) & Interval(5, 50)
+            Interval(5, 10)
+            >>> Interval(1, 2) & Interval(10, 11)
+            None
+        """
         return Intervals.intersection(self, other)
 
     def __or__(self, other):  # union
+        """the union of two intervals
+
+        Example:
+            >>> Interval(1, 10) | Interval(5, 50)
+            Interval(1, 50)
+            >>> Interval(1, 2) | Interval(10, 11)
+            Interval(1, 11)
+        """
         return Interval.union(self, other)
 
     def __xor__(self, other):
         return (self - other) + (other - self)
 
     def __init__(self, start, end=None, freq=1):
+        """
+        Args:
+            start (int): the start of the interval (inclusive)
+            end (int, default=start): the end of the interval (inclusive)
+            freq (int, default=1): the frequency or weight of the interval
+        """
         self.start = int(start)
         self.end = int(end) if end is not None else self.start
         if self.start > self.end:
@@ -58,6 +89,17 @@ class Interval:
     
     @classmethod
     def overlaps(cls, self, other):
+        """
+        checks if two intervals have any portion of their given ranges in common
+
+        Example:
+            >>> Interval.overlaps(Interval(1, 4), Interval(5, 7))
+            False
+            >>> Interval.overlaps(Interval(1, 10), Interval(10, 11))
+            True
+            >>> Interval.overlaps((1, 10), (10, 11))
+            True
+        """
         if self[1] < other[0]:
             return False
         elif self[0] > other[1]:
@@ -66,6 +108,13 @@ class Interval:
             return True
 
     def __len__(self):
+        """
+        the length of the interval
+
+        Example:
+            >>> len(Interval(1, 11))
+            12
+        """
         return self[1] - self[0] + 1
     
     def __lt__(self, other):
@@ -88,6 +137,15 @@ class Interval:
 
     @property
     def center(self):
+        """
+        the middle of the interval
+
+        Example:
+            >>> Interval(1, 10).center
+            5.5
+            >>> Interval(1, 11).center
+            6
+        """
         return self[0] + (len(self) - 1) / 2
 
     def __eq__(self, other):
@@ -116,10 +174,27 @@ class Interval:
     
     @classmethod
     def weighted_mean(cls, intervals):
+        """
+        Args:
+            intervals (List[Interval]): a list of intervals
+
+        Returns:
+            Interval: the weighted mean interval of the input intervals
+
+        Raises:
+            AttributeError: if the input list is empty
+
+        Example:
+            >>> Interval.weighted_mean([(1, 2), (1, 9), (2, 10)])
+            Interval(1, 4)
+            >>> Interval.weighted_mean([(1, 1), (10, 10)])
+            Interval(6)
+        """
         centers = []
         weights = []
         lengths = []
-
+        if len(intervals) == 0:
+            raise AttributeError('cannot compute the weighted mean interval of an empty set of intervals')
         for i in intervals:
             if not isinstance(i, Interval):
                 i = Interval(i[0], i[1])

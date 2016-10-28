@@ -11,7 +11,15 @@ import warnings
 
 
 class IntervalPair:
+    """
+    """
     def __init__(self, start, end, id=None):
+        """
+        Args:
+            start (Interval): the first interval
+            end (Interval): the second interval
+            id (int, default=None): label for distinguishing between IntervalPairs 
+        """
         self.id = id
         self.start = start if isinstance(start, Interval) else Interval(start[0], start[1])
         self.end = end if isinstance(end, Interval) else Interval(end[0], end[1])
@@ -34,11 +42,27 @@ class IntervalPair:
 
     @classmethod
     def weighted_mean(cls, interval_pairs):
+        """
+        returns a new IntervalPair where the start interval is the weighted mean of the starts of all 
+        the input interval pairs, similar for the end
+        
+        Args:
+            interval_pairs (List[IntervalPair]): a list of interval pairs
+        Returns:
+            IntervalPair: the new IntervalPair
+        """
         start = Interval.weighted_mean([i.start for i in interval_pairs])
         end = Interval.weighted_mean([i.end for i in interval_pairs])
         return IntervalPair(start, end)
 
     def dist(self, other):
+        """
+        computes the distance between IntervalPairs by averaging the distance between
+        the first Interval centers of each and the second Interval centers of each
+
+        Returns:
+            int: the distance between interval pairs
+        """
         d = abs(self.start.center - other.start.center)
         d += abs(self.end.center - other.end.center)
         d /= 2
@@ -139,6 +163,17 @@ class IntervalPair:
 
     @classmethod
     def cluster(cls, pairs, r, k):
+        """
+        clusters a list of IntervalPair objects
+
+        Args:
+            pairs (List[IntervalPair]): list of IntervalPair objects
+            r (int): the distance for grouping clusters
+            k (int): the clique size to look for
+
+        Returns:
+            List[Set[IntervalPair]]: a list of sets of interval pairs representing their clusters/groupings
+        """
         # build the initial graph
         G = nx.Graph()
         for p in pairs:
@@ -157,6 +192,12 @@ def is_complete(G, N):
     """
     for a given input graph and a set of nodes N in G
     checks if N is a complete subgraph of G
+
+    Args:
+        G (nx.Graph): the input supergraph
+        N (List): a list of nodes in G
+    Returns:
+        boolean: True if N as a subgraph of G is complete False otherwise
     """
     for node, other in itertools.combinations(N, 2):
         if not G.has_node(node) or not G.has_node(other):

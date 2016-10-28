@@ -12,6 +12,8 @@ from structural_variant.validate import Evidence, EvidenceSettings
 from structural_variant.blat import blat_contigs
 from structural_variant.interval import Interval
 from structural_variant.annotate import load_masking_regions, load_reference_genome, load_reference_genes
+from tools import profile_bam
+import math
 from difflib import SequenceMatcher
 from datetime import datetime
 import multiprocessing
@@ -22,7 +24,7 @@ INPUT_BAM_CACHE = None
 REFERENCE_ANNOTATIONS = None
 HUMAN_REFERENCE_GENOME = None
 MASKED_REGIONS = None
-EVIDENCE_SETTINGS = EvidenceSettings()
+EVIDENCE_SETTINGS = EvidenceSettings(median_insert_size=385, mm_isize_error=95)
 
 MAX_POOL_SIZE = 3
 HRG = '/home/pubseq/genomes/Homo_sapiens/TCGA_Special/GRCh37-lite.fa'
@@ -76,7 +78,6 @@ def read_cluster_file(name, is_stranded):
             'break2_orientation',
             'break2_strand',
             'opposing_strands',
-            'protocol',
             'tools'
         ],
         cast={
@@ -237,6 +238,16 @@ def gather_evidence_from_bam(clusters):
                         assembly_sequences[temp].add(m)
             # evidence_reads.update(e.supporting_reads())
             evidence.append((e, assembly_sequences))
+            ihist = {}
+            for read in e.flanking_reads:
+                isize = abs(read.template_length)
+                ihist[isize] = ihist.get(isize, 0) + 1
+            if len(e.flanking_reads) > 1:
+                median = profile_bam.histogram_median(ihist)
+                stdev = math.sqrt(profile_bam.histogram_stderr(ihist, median))
+                avg = profile_bam.histogram_average(ihist)
+                stdev_avg = math.sqrt(profile_bam.histogram_stderr(ihist, avg))
+                print('isize stats: median={}, stdev={}; avg={}, stdev={}'.format(median, stdev, avg, stdev_avg))
         else:
             raise NotImplementedError('currently only genome protocols are supported')
     return evidence
@@ -486,9 +497,11 @@ def main():
     ]
     print(header)
 
-try:
-    main()
-finally:
-    print()
-    Profile.print()
-    print(datetime.now(), 'stopped at')
+if __name__ == '__main__':
+    try:
+        main()
+    finally:
+        print()
+        Profile.print()
+        print(datetime.now(), 'stopped at')
+

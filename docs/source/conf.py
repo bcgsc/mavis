@@ -29,6 +29,7 @@
 import sys
 import os
 import sphinx_rtd_theme
+from recommonmark.parser import CommonMarkParser
 
 d = os.path.abspath('../../')
 sys.path.insert(0, d)
@@ -36,6 +37,7 @@ sys.path.insert(0, d)
 print('added to path:', d)
 
 autoclass_content = 'both'
+autodoc_default_flags = ['show-inheritance', 'members']
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
@@ -47,20 +49,22 @@ extensions = [
     'sphinx.ext.napoleon'
 ]
 
-
 html_theme = "sphinx_rtd_theme"
 
 html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+print(html_theme_path)
 
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ['source/_templates']
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
-# source_suffix = ['.rst', '.md']
-source_suffix = '.rst'
+source_parsers = {
+    '.md': CommonMarkParser
+}
+source_suffix = ['.rst', '.md']
 
 # The encoding of source files.
 #
@@ -121,6 +125,4 @@ html_static_path = ['_static']
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'svmergedoc'
-
-
 

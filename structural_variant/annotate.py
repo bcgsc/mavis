@@ -9,24 +9,34 @@ TTRACK = 'transformed_from'
 
 
 class Bio:
-
+    """
+    base class for biological type annotation objects
+    """
     @property
     def key(self):
         raise NotImplementedError('abstract method must be overidden')
 
     def __init__(self, name=None, reference_object=None):
+        """
+        Args:
+            name (string): name of the biological object
+            reference_object: the object that is the 'parent' or reference for the current object/interval
+        """
         self.name = name
         self.reference_object = reference_object
 
 
 class BioInterval(Bio, Interval):
+    """
+    """
     def __init__(self, reference_object, start, end, name=None):
         Bio.__init__(self, reference_object=reference_object, name=name)
         Interval.__init__(self, start, end)
 
 
 class Gene(Bio):
-
+    """
+    """
     def __init__(self, chr=None, name=None, strand=None, aliases=[]):
         """
         Args:
@@ -46,6 +56,7 @@ class Gene(Bio):
 
     @property
     def chr(self):
+        """returns the name of the chromosome that this gene resides on"""
         return self.reference_object
 
     @property
@@ -54,7 +65,8 @@ class Gene(Bio):
 
 
 class Transcript(Bio):
-
+    """
+    """
     def __init__(self, cds_start, cds_end, gene=None, name=None, strand=None, exons=[]):
         """ creates a new transcript object
 
@@ -125,7 +137,7 @@ class Transcript(Bio):
         return max([e.end for e in self.exons])
 
     def length(self):
-        return sum([e.length() for e in self.exons])
+        return sum([len(e) for e in self.exons])
 
     def _exon_genomic_to_cdna_mapping(self):
         mapping = {}
@@ -140,8 +152,8 @@ class Transcript(Bio):
 
         l = 0
         for e in exons:
-            mapping[(e.start, e.end)] = (l + 1, l + e.length())
-            l += e.length()
+            mapping[(e.start, e.end)] = (l + 1, l + len(e))
+            l += len(e)
         return mapping
 
     def _exon_cdna_to_genomic_mapping(self):
@@ -231,7 +243,8 @@ class Transcript(Bio):
 
 
 class Exon(BioInterval):
-
+    """
+    """
     def __init__(self, start, end, transcript=None, name=None):
         """
         Args:
@@ -272,12 +285,10 @@ class Exon(BioInterval):
     def key(self):
         return (self.transcript, self.start, self.end, self.name)
 
-    def length(self):
-        return self.end - self.start + 1
-
 
 class Domain(Bio):
-
+    """
+    """
     def __init__(self, name, regions, transcript=None):
         """
         Args:
@@ -300,6 +311,9 @@ class Domain(Bio):
 
     @property
     def transcript(self):
+        """
+        the transcript this exon is associated with
+        """
         return self.reference_object
 
     @property
@@ -315,6 +329,26 @@ class Domain(Bio):
 
 def load_masking_regions(filepath):
     """
+    reads a file of regions. The expect input format for the file is tab-delimited and
+    
+    +---------------+---------------+-----------------------+
+    | column name   | value type    | description           |
+    +===============+===============+=======================+
+    | chr           | string        | the chromosome name   |
+    +---------------+---------------+-----------------------+
+    | start         | int           | the start position    |
+    +---------------+---------------+-----------------------+
+    | end           | int           | the end position      |
+    +---------------+---------------+-----------------------+
+    | name          | string        | label for the region  |
+    +---------------+---------------+-----------------------+
+
+    Args:
+        filepath (string): path to the input tab-delimited file
+    Returns:
+        Dict[str,List[BioInterval]]:
+            a dictionary keyed by chromosome name with values of lists of regions on the chromosome
+    
     """
     header, rows = TSV.read_file(
         filepath,
@@ -332,29 +366,32 @@ def load_masking_regions(filepath):
 def load_reference_genes(filepath):
     """
     given a file in the std input format (see below) reads and return a list of genes (and sub-objects)
+    
+    +-----------------------+---------------------------+-----------------------------------------------------------+
+    | column name           | example                   | description                                               |
+    +=======================+===========================+===========================================================+
+    | ensembl_transcript_id | ENST000001                |                                                           |
+    +-----------------------+---------------------------+-----------------------------------------------------------+
+    | ensembl_gene_id       | ENSG000001                |                                                           |
+    +-----------------------+---------------------------+-----------------------------------------------------------+
+    | strand                | -1                        | positive or negative 1                                    |
+    +-----------------------+---------------------------+-----------------------------------------------------------+
+    | cdna_coding_start     | 44                        | where translation begins relative to the start of the cdna|
+    +-----------------------+---------------------------+-----------------------------------------------------------+
+    | cdna_coding_end       | 150                       | where translation terminates                              |
+    +-----------------------+---------------------------+-----------------------------------------------------------+
+    | genomic_exon_ranges   | 100-201;334-412;779-830   | semi-colon demitited exon start/ends                      |
+    +-----------------------+---------------------------+-----------------------------------------------------------+
+    | AA_domain_ranges      | DBD:220-251,260-271       | semi-colon delimited list of domains                      |
+    +-----------------------+---------------------------+-----------------------------------------------------------+
+    | hugo_names            | KRAS                      | hugo gene name                                            |
+    +-----------------------+---------------------------+-----------------------------------------------------------+
 
-    Expected column headers:
-    - ensembl_transcript_id
-    - ensembl_gene_id
-    - strand
-        - [-1] gene is on the reverse strand
-        - else: gene is on the forward strand
-    - transcript_genomic_start
-    - transcript_genomic_end
-    - cdna_coding_start
-        - position where translation would start, given wrt the transcript start being 0
-    - cdna_coding_end
-        - position where translation would terminate (last base of last AA), given wrt the transcript start being 0
-    - AA_domain_ranges
-        - a semi-colon delimited list of domain names and their respective amino acid intervals
-        - general pattern
-            - <domain name>:<start>-<end>(,<start>-<end>)*(;<domain name>:<start>-<end>(,<start>-<end>)*)*
-    - genomic_exon_ranges
-        - list of genome start/end positions for exons. semi-colon delimited
-        - general pattern
-            - <start>-<end>(;<start>-<end>)*
-    - hugo_names
-        - semi-colon delimited list of hugo names mapped to the ensembl gene id
+    Args:
+        filepath (string): path to the input tab-delimited file
+    
+    Returns:
+        Dict[str,List[Gene]]: a dictionary keyed by chromosome name with values of list of genes on the chromosome 
     """
     header, rows = TSV.read_file(
         filepath,

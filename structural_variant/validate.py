@@ -1,3 +1,6 @@
+"""This module is primarily responsible for collecting read evidence from bams
+"""
+
 import itertools
 from copy import copy as sys_copy
 from structural_variant.constants import *
@@ -21,14 +24,14 @@ class EvidenceSettings:
             self,
             read_length=125,
             median_insert_size=380,
-            mm_isize_error=60,
+            mm_isize_error=100,
             call_error=10,
             min_splits_reads_resolution=3,
             min_anchor_exact=6,
             min_anchor_fuzzy=10,
             min_anchor_match=0.9,
             min_mapping_quality=20,
-            fetch_reads_limit=3000,
+            fetch_reads_limit=10000,
             fetch_reads_bins=3,
             filter_secondary_alignments=True,
             consensus_req=3,
@@ -38,7 +41,7 @@ class EvidenceSettings:
         Args:
             read_length (int, default=125): length of individual reads
             median_insert_size (int, default=380): expected average insert size for paired-end reads
-            mm_isize_error (int, default=60): the expected deviation in the insert size
+            mm_isize_error (int, default=100): the expected deviation in the insert size
             call_error (int, default=10): buffer for calculating the evidence window
             min_splits_reads_resolution (int, default=3):
                 minimum number of reads required to call the same breakpoint for it to be a valid breakpoint
@@ -78,7 +81,8 @@ class EvidenceSettings:
 
 
 class Evidence:
-
+    """ 
+    """
     @property
     def window1(self):
         return self.windows[self.break1]
@@ -100,6 +104,17 @@ class Evidence:
         """
         given some input breakpoint uses the current evidence setting to determine an
         appropriate window/range of where one should search for supporting reads
+
+        Args:
+            breakpoint (Breakpoint): the breakpoint we are generating the evidence window for
+            read_length (int): the read length
+            median_insert_size (int): the median insert size
+            call_error (int): 
+                adds a buffer to the calculations if confidence in the breakpoint calls is low can increase this
+            mm_isize_error:
+                the standard deviation away from the median for regular (non STV) read pairs
+        Returns:
+            Interval: the range where reads should be read from the bam looking for evidence for this event
         """
         fragment_size = read_length * 2 + median_insert_size + mm_isize_error * 2
         start = breakpoint.start - fragment_size - call_error
@@ -116,6 +131,18 @@ class Evidence:
         """
         given some input breakpoint uses the current evidence setting to determine an
         appropriate window/range of where one should search for supporting reads
+
+        Args:
+            breakpoint (Breakpoint): the breakpoint we are generating the evidence window for
+            annotations (Dict[str,List[Gene]]): the set of reference annotations: genes, transcripts, etc
+            read_length (int): the read length
+            median_insert_size (int): the median insert size
+            call_error (int): 
+                adds a buffer to the calculations if confidence in the breakpoint calls is low can increase this
+            mm_isize_error:
+                the standard deviation away from the median for regular (non STV) read pairs
+        Returns:
+            Interval: the range where reads should be read from the bam looking for evidence for this event
         """
         transcripts = overlapping_transcripts(annotations, breakpoint)
         window = cls.generate_window(breakpoint, read_length, median_insert_size, call_error, mm_isize_error)
@@ -336,10 +363,13 @@ class Evidence:
         # check if the read pair is in the expected orientation
         """
         assumptions based on illumina pairs: only 4 possible combinations
-        ++++> <---- is LR same-strand
-        ++++> ++++> is LL opposite
-        <---- <---- is RR opposite
-        <---- ++++> is RL same-strand
+        
+        ::
+            
+            ++++> <---- is LR same-strand
+            ++++> ++++> is LL opposite
+            <---- <---- is RR opposite
+            <---- ++++> is RL same-strand
         """
         reverse = False
         if read.reference_id == read.next_reference_id and read.reference_start > read.next_reference_start:
@@ -360,6 +390,11 @@ class Evidence:
         """
         checks if a given read meets the minimum quality criteria to be counted as evidence as stored as support for
         this event
+
+        Args:
+            read (pysam.AlignedSegment): the read to add
+        Raises:
+            UserWarning: the read does not support this event or does not pass quality filters
         """
         if read.is_unmapped or read.mate_is_unmapped:
             raise UserWarning('input read (and its mate) must be mapped')
@@ -433,6 +468,13 @@ class Evidence:
     def add_split_read(self, read, first_breakpoint):
         """
         adds a split read if it passes the criteria filters and raises a warning if it does not
+
+        Args:
+            read (pysam.AlignedSegment): the read to add
+            first_breakpoint (boolean): add to the first breakpoint (or second if false)
+        Raises:
+            UserWarning: the read does not support this breakpoint or does not pass quality filters
+            AttributeError: orientation wasn't specified for the breakpoint
         """
         breakpoint = self.break1 if first_breakpoint else self.break2
         window = self.window1 if first_breakpoint else self.window2

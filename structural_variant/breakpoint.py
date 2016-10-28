@@ -48,7 +48,8 @@ class Breakpoint(Interval):
 
 
 class BreakpointPair:
-    
+    """
+    """
     def __getitem__(self, index):
         try:
             index = int(index)
@@ -165,8 +166,9 @@ class BreakpointPair:
 
 
 class SVAnnotation:
-    # TODO
-
+    """
+    TODO
+    """
     def __init__(self, breakpoint_pair, event_type, transcript1, transcript2, **kwargs):
         """
         holds the association between a pair of transcripts and an event

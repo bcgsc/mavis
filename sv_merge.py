@@ -1,3 +1,48 @@
+"""
+
+this is the script used for merging a set of input structural variant calls
+into clusters
+
+Input File Expected Format
+--------------------------
+::
+
+    | column name       | expected value                    | description                                    |
+    |-------------------|-----------------------------------|------------------------------------------------|
+    | start_position    | <int>-<int>                       |                                                |
+    | start_strand      | <+,-,?>                           | the reference strand aligned to                |
+    | start_orientation | <L,R,?>                           |                                                |
+    | end_chromosome    | <1-22,X,Y,MT>                     |                                                |
+    | end_position      | <int>-<int>                       |                                                |
+    | end_strand        | <+,-,?>                           | the reference strand aligned to                |
+    | end_orientation   | <L,R,?>                           |                                                |
+    | protocol          | <genome or transcriptome>         |                                                |
+    | library           | library id                        |                                                |
+    | tool_version      | <tool name>_<tool version number> |                                                |
+    | opposing_strand   | <True,False,?>                    |                                                |
+
+Output File Format
+-----------------------------
+::
+
+    | column name       | expected value                    | description                                    |
+    |-------------------|-----------------------------------|------------------------------------------------|
+    | cluster_id        | int                               |                                                |
+    | cluster_size      | int > 1                           | the number of individual breakpoint pairs that |
+    |                   |                                   | participate in this cluster                    |
+    | start_position    | <int>-<int>                       |                                                |
+    | start_strand      | <+,-,?>                           | the reference strand aligned to                |
+    | start_orientation | <L,R,?>                           |                                                |
+    | end_chromosome    | <1-22,X,Y,MT>                     |                                                |
+    | end_position      | <int>-<int>                       |                                                |
+    | end_strand        | <+,-,?>                           | the reference strand aligned to                |
+    | end_orientation   | <L,R,?>                           |                                                |
+    | protocol          | <genome or transcriptome>         |                                                |
+    | library           | library id                        |                                                |
+    | tool_version      | <tool name>_<tool version number> |                                                |
+    | opposing_strand   | <True,False,?>                    |                                                |
+"""
+
 import re
 import TSV
 import os
@@ -15,7 +60,7 @@ from structural_variant import __version__
 __prog__ = os.path.basename(os.path.realpath(__file__))
 
 MAX_JOBS = 50
-MIN_EVENTS_PER_JOB = 10
+MIN_EVENTS_PER_JOB = 50
 
 TSV._verbose = False
 
@@ -403,4 +448,5 @@ def main():
     # merge the bam files
     qsub.close()
 
-main()
+if __name__ == '__main__':
+    main()

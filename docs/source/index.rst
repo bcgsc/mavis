@@ -3,23 +3,27 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to svmerge's documentation!
+SVMerge Documentation
 ===================================
 
-Contents:
-
 .. toctree::
-   :maxdepth: 2
-
+   :maxdepth: 3
+   
+   README.md
    structural_variant
    sv_merge
    sv_validate
    tests
+   tools
 
 
 .. automodule:: structural_variant
     :members:
+    :private-members:
     :show-inheritance:
+    :special-members:
+
+
 
 Indices and tables
 ==================

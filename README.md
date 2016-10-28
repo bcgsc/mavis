@@ -1,19 +1,52 @@
-# About
+# General
+
+## About
 
 pipeline to merge and validate input from different structural variant callers into a single report
 
-# Tests
+## Running Unit Tests
 
 to run the tests
 
     cd /path/to/project/dir
     nosetests --with-coverage --cover-package=structural_variant
 
-# SV merged report Design
+## Getting Started
 
-## general process:
+### Input file requirements
 
-### in-progress
+The requirements are described in [JIRA](https://www.bcgsc.ca/jira/browse/APA-618) and are listed below.
+These pertain to the input files from the various tools you want to merge
+
+
+    | column name       | expected value                    | description                     |
+    |-------------------|-----------------------------------|---------------------------------|
+    | start_position    | <int>-<int>                       |                                 |
+    | start_strand      | <+,-,?>                           | the reference strand aligned to |
+    | start_orientation | <L,R,?>                           |                                 |
+    | end_chromosome    | <1-22,X,Y,MT>                     |                                 |
+    | end_position      | <int>-<int>                       |                                 |
+    | end_strand        | <+,-,?>                           | the reference strand aligned to |
+    | end_orientation   | <L,R,?>                           |                                 |
+    | protocol          | <genome or transcriptome>         |                                 |
+    | library           | library id                        |                                 |
+    | tool_version      | <tool name>_<tool version number> |                                 |
+    | opposing_strand   | <True,False,?>                    |                                 |
+
+### Available Pre-formatting scripts
+
+- Trans-ABySS
+    - [convert_ta.py](https://svn.bcgsc.ca/svn/SVIA/sv_compile/tags/<version>/tools/convert_ta.py)
+- DELLY
+    - DUSTIN TO ADD
+- MANTA
+    - CALEB TO ADD
+
+## Design
+
+### general process:
+
+#### in-progress
 1. reformat input files
 2. group breakpoint pairs by library and protocol
 3. cluster breakpoint pairs
@@ -24,7 +57,7 @@ to run the tests
 8. assemble split reads into contigs
 9. align split-read contigs to the genome 
 
-### TODO
+#### TODO
 10. split breakpoint pairs (and evidence) by classification
 11. split breakpoint pairs (and evidence) by breakpoint calls (from split read contigs, or from flanking reads [approximate])
 12. filter by evidence amount
@@ -33,8 +66,9 @@ to run the tests
 15. gather further detailed documentation on resulting protein/transcript
 16. draw putative fusion structure
 
-## proposed output structure
+#### proposed output structure
 
+```
 .
 |-- clustering/
 |   `-- <library id>/
@@ -49,14 +83,15 @@ to run the tests
 |       `-- annotated breakpoint pairs
 `-- pairing/
     `-- cross library putative pairings
+```
 
-## split-read evidence
+### split-read evidence
 
-### purpose
+#### purpose
 
 to ensure breakpoints are called consistently and to aid in eliminating false positives
 
-### process
+#### process
 
 - gather split reads that fall in the respective evidence windows
 - revcomp the split reads from one of the breakpoints if opposing strands have been specified
