@@ -44,7 +44,8 @@ class Gene(Bio):
             name (str): the gene name/id i.e. ENSG0001
             strand (STRAND): the genomic strand '+' or '-'
             aliases (List[str]): a list of aliases. For example the hugo name could go here
-
+        Example:
+            >>> Gene('X', 'ENG0001', '+', ['KRAS'])
         """
         Bio.__init__(self, name=name, reference_object=chr)
         self.transcripts = set()
@@ -254,6 +255,8 @@ class Exon(BioInterval):
             transcript (Transcript, optional): the 'parent' transcript this exon belongs to
         Raises:
             AttributeError: if the exon start > the exon end
+        Example:
+            >>> Exon(15, 78)
         """
         BioInterval.__init__(self, name=name, reference_object=transcript, start=start, end=end)
         if self.transcript is not None:
@@ -297,6 +300,8 @@ class Domain(Bio):
             transcript (Transcript, optional): the 'parent' transcript this domain belongs to
         Raises:
             AttributeError: if the end of any region is less than the start
+        Example:
+            >>> Domain('DNA binding domain', [(1, 4), (10, 24)], transcript)
         """
         Bio.__init__(self, name=name, reference_object=transcript)
         self.name = name
@@ -330,7 +335,7 @@ class Domain(Bio):
 def load_masking_regions(filepath):
     """
     reads a file of regions. The expect input format for the file is tab-delimited and
-    
+
     +---------------+---------------+-----------------------+
     | column name   | value type    | description           |
     +===============+===============+=======================+
@@ -348,7 +353,7 @@ def load_masking_regions(filepath):
     Returns:
         Dict[str,List[BioInterval]]:
             a dictionary keyed by chromosome name with values of lists of regions on the chromosome
-    
+
     """
     header, rows = TSV.read_file(
         filepath,
@@ -366,7 +371,7 @@ def load_masking_regions(filepath):
 def load_reference_genes(filepath):
     """
     given a file in the std input format (see below) reads and return a list of genes (and sub-objects)
-    
+
     +-----------------------+---------------------------+-----------------------------------------------------------+
     | column name           | example                   | description                                               |
     +=======================+===========================+===========================================================+
@@ -389,9 +394,9 @@ def load_reference_genes(filepath):
 
     Args:
         filepath (string): path to the input tab-delimited file
-    
+
     Returns:
-        Dict[str,List[Gene]]: a dictionary keyed by chromosome name with values of list of genes on the chromosome 
+        Dict[str,List[Gene]]: a dictionary keyed by chromosome name with values of list of genes on the chromosome
     """
     header, rows = TSV.read_file(
         filepath,
@@ -471,8 +476,8 @@ def overlapping_transcripts(ref_ann, breakpoint):
 def annotations(ref, breakpoint_pairs):  # TODO
     """
     Args:
-        ref \a required (type: \b Dict<str,List<Gene>>) the list of reference genes hashed by chromosomes
-        breakpoint_pairs \a required (type: \b List<BreakpointPair>) breakpoint pairs we wish to annotate as events
+        ref (Dict[str,List[Gene]]): the list of reference genes hashed by chromosomes
+        breakpoint_pairs (List[BreakpointPair]): breakpoint pairs we wish to annotate as events
     """
     annotations = []
 

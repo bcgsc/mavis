@@ -13,6 +13,10 @@ class BamCache:
     the file if we've already read that section
     """
     def __init__(self, bamfile):
+        """
+        Args:
+            bamfile (str): path to the input bam file
+        """
         self.cache = {}
         self.fetch_history = {}  # chr => Interval => set()
         self.fh = bamfile
@@ -20,21 +24,44 @@ class BamCache:
             self.fh = pysam.AlignmentFile(bamfile, 'rb')
 
     def add_read(self, read):
+        """
+        Args:
+            read (pysam.AlignedSegment): the read to add to the cache
+        """
         self.cache.setdefault(read.query_name, set()).add(read)
 
     def reference_id(self, chrom):
+        """
+        Args:
+            chrom (str): the chromosome/reference name
+        Returns:
+            int: the reference id corrsponding to input chromosome name
+        """
         tid = self.fh.get_tid(chrom)
         if tid == -1:
             raise KeyError('invalid reference name not present in bam file')
         return tid
 
     def chr(self, read):
+        """
+        Args:
+            read (pysam.AlignedSegment): the read we want the chromosome name for
+        Returns:
+            str: the name of the chromosome
+        """
         return self.fh.get_reference_name(read.reference_id)
-    
+
     @classmethod
     def _generate_fetch_bins(cls, start, stop, sample_bins, bin_gap_size):
+        """
+        Args:
+            start (int): the start if the area to fetch reads from
+            stop (int): the end of the region
+            sample_bins (int): the number of bins to split the region into
+            bin_gap_size (int): the space to skip between bins
+        """
         bin_size = int(((stop - start + 1) - bin_gap_size * (sample_bins - 1)) / sample_bins)
-        
+
         fetch_regions = [(start, start + bin_size)]  # exclusive ranges for fetch
         for i in range(0, sample_bins - 1):
             st = fetch_regions[-1][1] + bin_gap_size
@@ -67,6 +94,14 @@ class BamCache:
         return set(result)
 
     def get_mate(self, read, primary_only=True, allow_file_access=True):
+        """
+        Args:
+            read (pysam.AlignedSegment): the read
+            primary_only (boolean, default=True): ignore secondary alignments
+            allow_file_access (boolean, default=True): determines if the bam can be accessed to try to find the mate
+        Returns:
+            List[pysam.AlignedSegment]: list of mates of the input read
+        """
         # NOTE: will return all mate alignments that have been cached
         putative_mates = self.cache.get(read.query_name, set())
         if SUFFIX_DELIM in read.query_name:
@@ -95,6 +130,9 @@ class BamCache:
         return mates
 
     def close(self):
+        """
+        close the bam file handle
+        """
         self.fh.close()
 
 
@@ -177,14 +215,14 @@ class CigarTools:
     @classmethod
     def score(cls, cigar, **kwargs):
         """scoring based on sw alignment properties with gap extension penalties
-        
+
         Args:
             cigar (List<(CIGAR,int)>): list of cigar tuple values
             MISMATCH (int, default=-1): mismatch penalty
             MATCH (int, default=2): match penalty
             GAP (int, default=-4): initial gap penalty
             GAP_EXTEND (int, default=-1): gap extension penalty
-        
+
         Returns:
             int: the score value
         """
@@ -251,7 +289,7 @@ class CigarTools:
         close to the end of the aligned portion. The stopping point is defined by the
         min_exact_to_stop_softclipping parameter. this function will throw an error if there is no
         exact match aligned portion to signal stop
-        
+
         Args:
             original_cigar (List[CIGAR,int]): the input cigar
             min_exact_to_stop_softclipping (int): number of exact matches to terminate extension
@@ -401,7 +439,7 @@ def breakpoint_pos(read, orient=ORIENT.NS):
     """
     assumes the breakpoint is the position following softclipping on the side with more
     softclipping (unless and orientation has been specified)
-    
+
     Args:
         read (psyam.AlignedSegment): the read object
         orient (ORIENT): the orientation
@@ -438,7 +476,7 @@ def kmers(s, size):
     Args:
         s (str): the input sequence
         size (int): the size of the kmers
-    
+
     Returns:
         List[str]: the list of kmers
     """
@@ -485,7 +523,7 @@ class DeBruijnGraph(nx.DiGraph):
     def remove_edge(self, n1, n2):
         del self.edge_freq[(n1, n2)]
         nx.DiGraph.remove_edge(self, n1, n2)
-    
+
     def trim_low_weight_tails(self, min_weight):
         """
         for any paths where all edges are lower than the minimum weight trim
@@ -592,14 +630,14 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
     for a set of sequences creates a DeBruijnGraph
     simplifies trailing and leading paths where edges fall
     below a weight threshold and the return all possible unitigs/contigs
-    
+
     Args:
         sequences (List[str]): a list of strings/sequences to assemble
         kmer_size (int): the size of the kmer to use
         min_edge_weight (int): applies to trimming (see desc)
         min_match_quality (float): percent match for re-aligned reads to contigs
         min_read_mapping_overlap (int): the minimum amount of overlap required when aligning reads to contigs
-    
+
     Returns:
         List[Contig]: a list of putative contigs
     """
@@ -665,7 +703,7 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
                 sinks.add(node)
         if len(sources) * len(sinks) > 10:
             print('source/sink combinations:', len(sources) * len(sinks))
-        
+
         for source, sink in itertools.product(sources, sinks):
             for path in nx.all_simple_paths(assembly, source, sink):
                 s = path[0] + ''.join([p[-1] for p in path[1:]])
@@ -675,12 +713,12 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
                     score += assembly.edge_freq[(path[i], path[i + 1])]
                 path_scores[s] = max(path_scores.get(s, 0), score)
     print(datetime.now(), 'assemble() sequence path collection complete')
-    
+
     contigs = {}
     for seq, score in list(path_scores.items()):
         if seq not in sequences and len(seq) >= min_contig_length:
             contigs[seq] = Contig(seq, score)
-    
+
     contigs_by_input = {}
     for contig_seq, nodes in nodes_by_contig_seq.items():
         for input_seq_set in [input_seq for input_seq in [input_seq_by_node[n] for n in nodes]]:

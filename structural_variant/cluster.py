@@ -18,7 +18,7 @@ class IntervalPair:
         Args:
             start (Interval): the first interval
             end (Interval): the second interval
-            id (int, default=None): label for distinguishing between IntervalPairs 
+            id (int, default=None): label for distinguishing between IntervalPairs
         """
         self.id = id
         self.start = start if isinstance(start, Interval) else Interval(start[0], start[1])
@@ -43,9 +43,9 @@ class IntervalPair:
     @classmethod
     def weighted_mean(cls, interval_pairs):
         """
-        returns a new IntervalPair where the start interval is the weighted mean of the starts of all 
+        returns a new IntervalPair where the start interval is the weighted mean of the starts of all
         the input interval pairs, similar for the end
-        
+
         Args:
             interval_pairs (List[IntervalPair]): a list of interval pairs
         Returns:
@@ -133,6 +133,14 @@ class IntervalPair:
 
     @classmethod
     def _redundant_ordered_hierarchical_clustering(cls, groups, r):
+        """
+        given a set of IntervalPair objects group sets that have less than
+        a given distance between weighted means of the different groups
+
+        Args:
+            groups (List[Set[IntervalPair]]): a list of sets of interval pairs
+            r (int): the distance to determine grouping 
+        """
         queue = sorted(groups, key=lambda x: IntervalPair.weighted_mean(x))
         complete_groups = []
 
@@ -248,7 +256,7 @@ def cluster_breakpoint_pairs(input_pairs, r, k):
     for ckey, group in node_sets.items():
         chr1, chr2, o1, o2, s1, s2, opposing_strands = ckey
         clusters = IntervalPair.cluster(group, r, k)
-        
+
         for node in group:
             particpation = sum([1 for c in clusters if node in c])
             if particpation > 1:
