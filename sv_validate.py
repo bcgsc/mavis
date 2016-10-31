@@ -46,11 +46,6 @@ class Profile:
         for step, time in cls.steps:
             print(step, time)
 
-
-def compare_strings(first, second):
-    return SequenceMatcher(None, first, second).ratio()
-
-
 def mkdirp(dirname):
     try:
         os.makedirs(dirname)
@@ -77,8 +72,7 @@ def read_cluster_file(name, is_stranded):
             'break2_position_end',
             'break2_orientation',
             'break2_strand',
-            'opposing_strands',
-            'tools'
+            'opposing_strands'
         ],
         cast={
             'cluster_size': 'int',
@@ -236,8 +230,8 @@ def gather_evidence_from_bam(clusters):
                         assembly_sequences[s].add(m)
                         assembly_sequences[temp] = assembly_sequences.get(temp, set())
                         assembly_sequences[temp].add(m)
-            # evidence_reads.update(e.supporting_reads())
-            evidence.append((e, assembly_sequences))
+            e.contigs = assemble(assembly_sequences)
+            evidence.append(e)
             ihist = {}
             for read in e.flanking_reads:
                 isize = abs(read.template_length)
@@ -251,6 +245,50 @@ def gather_evidence_from_bam(clusters):
         else:
             raise NotImplementedError('currently only genome protocols are supported')
     return evidence
+
+
+def blat(evidence):
+    sequences = set()
+    for e in evidence:
+        for c in e.contigs:
+            sequences.add(c.seq)
+
+    blat_contig_alignments = blat_contigs(sequences, INPUT_BAM_CACHE)
+
+    # gather a list of the contigs alignments that apply to this evidence object/breakpoint pair
+    for e in evidence:
+        for contig in e.contigs:
+            blat_sequences = blat_contig_alignments[contig.seq]
+            putative_alignments = []
+            
+            if e.break1.chr == e.break2.chr:
+                for read in blat_contig_alignments[contig.seq]:
+                    # if it covers both breakpoints add to putative alignments
+                    temp = Interval(read.reference_start, read.reference_end - 1)
+                    if INPUT_BAM_CACHE.chr(read) == e.break1.chr \
+                            and e.window1.overlaps(temp) \
+                            and e.window2.overlaps(temp):
+                        putative_alignments.append(read)
+
+            for a1, a2 in itertools.combinations(
+                    [x for x in blat_contig_alignments[contig.seq] if x not in putative_alignments], 2):
+                # do they overlap both breakpoints
+                # do their mate pairs make sense
+                union = Interval.union(a1.query_coverage_interval(),
+                                       a2.query_coverage_interval())
+                if len(union) - len(a1.query_coverage_interval()) < MIN_EXTEND_OVERLAP \
+                        or len(union) - len(a2.query_coverage_interval()) < MIN_EXTEND_OVERLAP:
+                    continue
+                if INPUT_BAM_CACHE.chr(a1) == e.break1.chr \
+                        and e.window1.overlaps((a1.reference_start, a1.reference_end - 1)) \
+                        and INPUT_BAM_CACHE.chr(a2) == e.break2.chr \
+                        and e.window2.overlaps((a2.reference_start, a2.reference_end - 1)):
+                    putative_alignment_pairs.append((a1, a2))
+                elif INPUT_BAM_CACHE.chr(a2) == e.break1.chr \
+                        and e.window1.overlaps((a2.reference_start, a2.reference_end - 1)) \
+                        and INPUT_BAM_CACHE.chr(a1) == e.break2.chr \
+                        and e.window2.overlaps((a1.reference_start, a1.reference_end - 1)):
+                    putative_alignment_pairs.append((a2, a1))
 
 
 def main():
@@ -317,18 +355,24 @@ def main():
     print('evidence gathering is complete')
     Profile.mark_step('evidence gathering complete')
     # ASSEMBLE the contigs (can parallelize here)
+    assemblies = []
     for ev, seq in evidence:
         a = assemble(seq)
+        for contig in a:
+            print('contig{', 'score =', contig.score,
+                  'adjusted-score =', round(contig.score / len(contig.seq), 2),
+                  'read-remap =', contig.remap_score(),
+                  'read-total =', len(contig.remapped_reads.keys()),
+                  'seq =', contig.seq,
+                  '}')
     exit(1)
     assemblies = None
     with multiprocessing.Pool(MAX_POOL_SIZE) as p:
-        print('start assembly')
-        Profile.mark_step('start assembly')
         seq = [y for x, y in evidence]
         assemblies = p.map(assemble, seq)
-        Profile.mark_step('assembly complete')
     assert(len(assemblies) == len(evidence))
-
+    Profile.mark_step('contig assembly complete')
+    
     for temp, contigs in zip(evidence, assemblies):
         ev, assembly_sequences = temp
         filtered_contigs = []

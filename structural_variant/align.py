@@ -70,7 +70,8 @@ class BamCache:
         fetch_regions[-1] = fetch_regions[-1][0], stop
         return fetch_regions
 
-    def fetch(self, chrom, start, stop, read_limit=10000, cache=False, sample_bins=3, cache_if=lambda x: True, bin_gap_size=0):
+    def fetch(self, chrom, start, stop, read_limit=10000, cache=False, sample_bins=3,
+              cache_if=lambda x: True, bin_gap_size=0):
         """
         wrapper around the fetch method, returns a list to avoid errors with changing the file pointer
         position from within the loop. Also caches reads if requested and can return a limited read number
@@ -495,6 +496,7 @@ class Contig:
         self.seq = sequence
         self.remapped_reads = {}
         self.score = score
+        self.alignment = None
 
     def __hash__(self):
         return hash((self.seq, self.score))
@@ -552,6 +554,7 @@ class DeBruijnGraph(nx.DiGraph):
                         curr = prev
                     else:
                         break
+
 
 def nsb_align(ref, seq, weight_of_score=0.5, min_overlap_percent=100):
     """
@@ -625,7 +628,8 @@ def digraph_connected_components(graph):
     return nx.connected_components(g)
 
 
-def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.95, min_read_mapping_overlap=None, min_contig_length=None):
+def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.95, min_read_mapping_overlap=None,
+             min_contig_length=None):
     """
     for a set of sequences creates a DeBruijnGraph
     simplifies trailing and leading paths where edges fall
@@ -664,19 +668,6 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
             input_seq_by_node.setdefault(l, set()).add(s)
             input_seq_by_node.setdefault(r, set()).add(s)
             assembly.add_edge(l, r)
-    print(datetime.now(), 'assemble() build complete')
-    # n = 'tmp_assembly_' + str(int(random.random()*1000000))+'.txt'
-    # with open(n, 'w') as fh:
-    #    print('writing', n)
-    #    fh.write('source\ttarget\tlabel\n')
-    #    for src, tgt in assembly.edges():
-    #        fh.write('{0}\t{1}\t{2}\n'.format(src, tgt, assembly.edge_freq[(src, tgt)]))
-    # if we assume even coverage then we can assume the number of times an edge must be
-    # visited is approximated by its weight
-    # however this is not necessarily a fair assumption when we are assembling selected reads and not an entire genome
-    # so here it would be better to have an abstract way to represent cycles where possible
-    # for example ATCGCGCGAATG would become AT{CG}x3AATG or from the graph AT{CG}x?AATG
-    # for now we don't care to assemble regions with repeats
 
     if not nx.is_directed_acyclic_graph(assembly):
         NotImplementedError('assembly not supported for cyclic graphs')
@@ -685,7 +676,6 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
     # trim all paths from sources or to sinks where the edge weight is low
     assembly.trim_low_weight_tails(min_edge_weight)
 
-    print(datetime.now(), 'assemble() clean complete')
     path_scores = {}  # path_str => score_int
     nodes_by_contig_seq = {}
 
@@ -702,7 +692,7 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
             elif assembly.out_degree(node) == 0:
                 sinks.add(node)
         if len(sources) * len(sinks) > 10:
-            print('source/sink combinations:', len(sources) * len(sinks))
+            warnings.warn('source/sink combinations: {}'.format(len(sources) * len(sinks)))
 
         for source, sink in itertools.product(sources, sinks):
             for path in nx.all_simple_paths(assembly, source, sink):
@@ -712,7 +702,6 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
                 for i in range(0, len(path) - 1):
                     score += assembly.edge_freq[(path[i], path[i + 1])]
                 path_scores[s] = max(path_scores.get(s, 0), score)
-    print(datetime.now(), 'assemble() sequence path collection complete')
 
     contigs = {}
     for seq, score in list(path_scores.items()):
@@ -741,7 +730,6 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
             maps_to[contig] = a[0]
         for contig, read in maps_to.items():
             contig.add_mapped_read(read, len(maps_to.keys()))
-    print(datetime.now(), 'assemble() read re-mapping complete')
     return contigs.values()
 
 

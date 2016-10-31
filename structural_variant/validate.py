@@ -10,7 +10,43 @@ from structural_variant.interval import Interval
 from structural_variant.annotate import overlapping_transcripts
 from structural_variant.breakpoint import BreakpointPair
 from Bio.Seq import Seq
+import tools.profile_bam as profile_bam
 from functools import partial
+
+CALL_METHOD = Vocab(CONTIG='contig', SPLIT='split reads', FLANK='flanking reads')
+
+
+class Event:
+    def __init__(
+            self,
+            evidence,
+            breakpoint_pair,
+            classification,
+            call_method,
+            contig=None,
+            contig_alignment=None,
+            flanking_reads=set()
+    ):
+        self.breakpoint_pair = breakpoint_pair
+        self.classification = classification
+        self.evidence = evidence
+        self.flanking_reads = flanking_reads
+        self.call_method = CALL_METHOD.enforce(call_method)
+        self.contig = contig
+        self.contig_alignment = contig_alignment
+
+    def flanking_read_stdev(self):
+        ihist = {}
+        for read in self.flanking_reads:
+            isize = abs(read.template_length)
+            ihist[isize] = ihist.get(isize, 0) + 1
+        
+        if len(self.flanking_reads) > 1:
+            median = profile_bam.histogram_median(ihist)
+            stdev = math.sqrt(profile_bam.histogram_stderr(ihist, median))
+            return stdev
+        else:
+            raise AttributeError('cannot calculate the stdev of less than 2')
 
 
 class EvidenceSettings:
@@ -81,7 +117,7 @@ class EvidenceSettings:
 
 
 class Evidence:
-    """ 
+    """
     """
     @property
     def window1(self):
@@ -109,7 +145,7 @@ class Evidence:
             breakpoint (Breakpoint): the breakpoint we are generating the evidence window for
             read_length (int): the read length
             median_insert_size (int): the median insert size
-            call_error (int): 
+            call_error (int):
                 adds a buffer to the calculations if confidence in the breakpoint calls is low can increase this
             mm_isize_error:
                 the standard deviation away from the median for regular (non STV) read pairs
@@ -127,7 +163,8 @@ class Evidence:
         return Interval(start, end)
 
     @classmethod
-    def generate_transcriptome_window(cls, breakpoint, annotations, read_length, median_insert_size, call_error, mm_isize_error):
+    def generate_transcriptome_window(cls, breakpoint, annotations, read_length, median_insert_size, call_error,
+                                      mm_isize_error):
         """
         given some input breakpoint uses the current evidence setting to determine an
         appropriate window/range of where one should search for supporting reads
@@ -137,7 +174,7 @@ class Evidence:
             annotations (Dict[str,List[Gene]]): the set of reference annotations: genes, transcripts, etc
             read_length (int): the read length
             median_insert_size (int): the median insert size
-            call_error (int): 
+            call_error (int):
                 adds a buffer to the calculations if confidence in the breakpoint calls is low can increase this
             mm_isize_error:
                 the standard deviation away from the median for regular (non STV) read pairs
@@ -149,7 +186,7 @@ class Evidence:
 
         tgt_left = breakpoint.start - window.start + 1
         tgt_right = window.end - breakpoint.end + 1
-        
+
         if len(transcripts) == 0:  # case 1. no overlapping transcripts
             return window
 
@@ -157,7 +194,7 @@ class Evidence:
             current_length = 0
             exons = t.get_exons()
             current_interval = Interval(breakpoint.start, breakpoint.end)
-            
+
             # first going left
             epos, in_prev_intron = Interval.position_in_range(exons, (breakpoint.start, breakpoint.start))
             if epos == 0 and in_prev_intron:
@@ -183,7 +220,7 @@ class Evidence:
                 assert(epos == -1)
                 eshift = tgt_left - current_length
                 current_interval.start = exons[0].start - eshift
-            
+
             current_length = 0
             # next going right
             epos, in_prev_intron = Interval.position_in_range(exons, (breakpoint.end, breakpoint.end))
@@ -271,6 +308,7 @@ class Evidence:
         # bamfile for the window surrounding the breakpoint
         self.read_counts = {}
         self.windows = {}
+        self.contigs = []
 
         if self.protocol == PROTOCOL.GENOME:
             self.windows[self.break1] = Evidence.generate_window(
@@ -363,9 +401,9 @@ class Evidence:
         # check if the read pair is in the expected orientation
         """
         assumptions based on illumina pairs: only 4 possible combinations
-        
+
         ::
-            
+
             ++++> <---- is LR same-strand
             ++++> ++++> is LL opposite
             <---- <---- is RR opposite
@@ -448,7 +486,7 @@ class Evidence:
                 and read.next_reference_start >= w2[0] and read.next_reference_start <= w2[1] \
                 and read.next_reference_id == self.bam_cache.reference_id(self.break2.chr) \
                 and (not self.breakpoint_pair.stranded or not read.is_read1
-                        or read.is_reverse == (self.break1.strand == STRAND.NEG)):
+                    or read.is_reverse == (self.break1.strand == STRAND.NEG)):
             # current read falls in the first breakpoint window, mate in the
             # second
             self.flanking_reads.add(read)
@@ -457,7 +495,7 @@ class Evidence:
                 and read.next_reference_start >= w1[0] and read.next_reference_start <= w1[1] \
                 and self.bam_cache.reference_id(self.break1.chr) == read.next_reference_id \
                 and (not self.breakpoint_pair.stranded or not read.is_read2
-                        or read.is_reverse != (self.break2.strand == STRAND.NEG)):
+                    or read.is_reverse != (self.break2.strand == STRAND.NEG)):
             # current read falls in the second breakpoint window, mate in the
             # first
             self.flanking_reads.add(read)
@@ -630,7 +668,108 @@ class Evidence:
             clipped = scores[0][2]
             self.split_reads[opposite_breakpoint].add(clipped)
 
-    def call_by_softclipping_resolution(self):
+    def call_events(self):
+        """
+        use the associated evidence and classifications and split the current evidence object
+        into more specific objects.
+        """
+        results = []
+        for cls in self.classifications:
+            # event type = cls
+            new_calls = []
+            # try calling by contigs
+            # try calling by split reads
+            # try calling by flanking reads
+
+    @classmethod
+    def _call_by_contigs(cls, ev, classification):
+        # resolve the overlap if multi-read alignment
+        events = []
+        for ctg in ev.contigs:
+            for read1, read2 in ctg.alignments:
+                if read2 is None:
+                    read_events = []
+                    for i, t in enumerate(read1.cigar):
+                        v, f = t
+                        if v not in [CIGAR.I, CIGAR.D, CIGAR.N]:
+                            continue
+                        if i > 0 and v == read.cigar[i - 1]:
+                            start, last, size = read_events[-1]
+                            read_events[-1] = (start, i, size + f)
+                        else:
+                            read_events.append((i, i, f))
+                    
+                    biggest = max(read_events, key=lambda x: x[2])
+
+                    first_breakpoint = read1.reference_start - 1
+                    second_breakpoint = first_breakpoint
+                    untemplated_seq = ''
+                    
+                    seq_pos = 0
+                    for i, t in enumerate(read1.cigar):
+                        v, f = t
+                        if v in [CIGAR.I, CIGAR.S]:
+                            seq_pos += f
+                            continue
+                        elif v == CIGAR.H:
+                            continue
+                        
+                        if i < biggest[0]:
+                            first_breakpoint += f
+                            second_breakpoint += f
+                        elif i >= biggest[0] and i <= biggest[1]:
+                            second_breakpoint += f
+                            if v == CIGAR.INS:
+                                untemplated_seq += read1.query_sequence[seq_pos:seq_pos + f]
+                        
+                        if v != CIGAR.D:
+                            seq_pos += f
+                    
+                    break1 = Breakpoint(
+                        read1.reference_name,
+                        first_breakpoint,
+                        orient=ORIENT.LEFT,
+                        strand=STRAND.NEG if read1.is_reverse else STRAND.POS
+                    )
+                    break2 = Breakpoint(
+                        read1.reference_name,
+                        second_breakpoint,
+                        orient=ORIENT.LEFT,
+                        strand=STRAND.NEG if read1.is_reverse else STRAND.POS
+                    )
+                    
+                    bpp = BreakpointPair(break1, break2, opposing_strands=False, untemplated_sequence=untemplated_seq)
+                    
+                    new_event = Event(
+                        e,
+                        bpp,
+                        classification,
+                        call_method = CALL_METHOD.CONTIG,
+                        contig=contig,
+                        contig_alignment=(read1, read2)
+                    )
+                    events.append(new_event)
+                    if classification not in [SVTYPE.INS, SVTYPE.DEL, SVTYPE.DUP]:
+                        raise NotImplementedError('unsupported classification type', classification)
+                else:
+                    # is there overlap on the query seq?
+                    if classification == SVTYPE.TRANS:
+                    elif classification == SVTYPE.ITRANS:
+                    elif classification == SVTYPE.INV:
+                    elif classification == SVTYPE.INS:
+                    elif classification == SVTYPE.DEL:
+                    elif classification == SVTYPE.DUP:
+                    else:
+                        raise NotImplementedError('unsupported classification type', classification)
+        # filter flanking reads from ev and add to each
+
+
+    @classmethod
+    def _call_by_flanking_reads(cls, ev, classification):
+        pass
+
+    @classmethod
+    def _call_by_split_reads(cls, ev, classification):
         """
         use split read evidence to resolve bp-level calls for breakpoint pairs (where possible)
         if a bp level call is not possible for one of the breakpoints then returns None

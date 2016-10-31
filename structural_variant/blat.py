@@ -27,6 +27,9 @@ class BlatAlignedSegment(pysam.AlignedSegment):
     def blat_score(self):  # convenience
         return self.blat['score']
 
+    def query_seq(self):
+        return self.blat['qseq_full']
+
     def query_coverage_interval(self):
         query_ranges = [(x, x + y - 1) for x, y in zip(self.blat['qstarts'], self.blat['block_sizes'])]
         u = Interval.union(*query_ranges)
@@ -35,6 +38,10 @@ class BlatAlignedSegment(pysam.AlignedSegment):
         else:
             l = len(self.blat['qseq_full']) - 1
             return Interval(l - u[1], l - u[0])
+
+    @property
+    def reference_name(self):
+        return self.blat['tname']
 
 
 class Blat:
@@ -87,7 +94,7 @@ class Blat:
         https://genome.ucsc.edu/FAQ/FAQblat.html#blat4
 
         below are lines from the perl code i've re-written in python
-        
+
         Perl:
             my $sizeMul = pslIsProtein($blockCount, $strand, $tStart, $tEnd, $tSize, $tStarts, $blockSizes);
             sizmul = 1 for DNA
@@ -166,7 +173,7 @@ class Blat:
     def pslx_row_to_pysam(row, bam_cache):
         """
         given a 'row' from reading a pslx file. converts the row to a BlatAlignedSegment object
-        
+
         Args:
             row (dict[str,]): a row object from the 'read_pslx' method
             bam_cache (BamCache): the bam file/cache to use as a template for creating reference_id from chr name
@@ -246,7 +253,7 @@ class Blat:
 
 
 def blat_contigs(
-        sequences,
+        evidence,
         bam_cache,
         ref='/home/pubseq/genomes/Homo_sapiens/GRCh37/blat/hg19.2bit',
         min_percent_of_max_score=0.8,
@@ -254,20 +261,31 @@ def blat_contigs(
         is_protein=False,
         **kwargs):
     """
-    given a set of contigs, call blat from the commandline and return the results
+    given a set of contigs, call blat from the commandline and adds the results to the contigs
+    associated with each Evidence object
+
+    Args:
+        evidence (List[Evidence]): the iterable container of of evidence object which has associated contigs
+        bam_cache (BamCache): the bam to use as a template in generating bam-like reads
+        ref (str): path to the reference genome 2bit file for blat
+        min_percent_of_max_score (float): filters all results with a score of a lower fraction of the best score
+        min_identity (float): minimum percent identity
+        is_protein (boolean): used in blat calculations
     """
     min_identity *= 100
     blat_options = kwargs.pop('blat_options',
                               ["-stepSize=5", "-repMatch=2253", "-minScore=0", "-minIdentity={0}".format(min_identity)])
-    
+
     tempfiles = []
     try:
         # write the input sequences to a fasta file
+
         fasta = tempfile.NamedTemporaryFile(mode='w', delete=False)
+        tempfiles.append(fasta)
         fasta_name = fasta.name
         query_id_mapping = {}
         count = 1
-        for seq in sequences:
+        for seq in [c.seq for c in e.contigs for e in evidence]:
             n = 'seq{0}'.format(count)
             query_id_mapping[n] = seq
             fasta.write('>' + n + '\n' + seq + '\n')
@@ -276,6 +294,7 @@ def blat_contigs(
 
         # call the blat subprocess
         psl = tempfile.NamedTemporaryFile(delete=False)
+        tempfiles.append(psl)
         # will raise subprocess.CalledProcessError if non-zero exit status
         # parameters from https://genome.ucsc.edu/FAQ/FAQblat.html#blat4
         print(["blat", ref, fasta_name, psl.name, '-out=pslx', '-noHead'] + blat_options)
@@ -320,8 +339,47 @@ def blat_contigs(
                     warnings.warn(
                         'warning: reference template name not recognized {0}'.format(e))
             reads_by_query[query_seq] = reads
-        return reads_by_query
+
+        # now for each evidence assign an alignment to each contig
+        for e in evidence:
+            for contig in e.contigs:
+                aln = reads_by_query.get(contig.seq, [])
+                putative_alignments = []
+
+                if e.break1.chr == e.break2.chr and not e.opposing_strands:
+                    for read in aln:
+                        # if it covers both breakpoints add to putative alignments
+                        temp = Interval(read.reference_start, read.reference_end - 1)
+                        if INPUT_BAM_CACHE.chr(read) == e.break1.chr \
+                                and e.window1.overlaps(temp) \
+                                and e.window2.overlaps(temp):
+                            # split the continuous alignment, assume ins/dup or indel
+                            putative_alignments.append((read, None))
+
+                for a1, a2 in itertools.combinations([x for x in aln if x not in putative_alignments], 2):
+                    # do they overlap both breakpoints
+                    if (a1.is_reverse != a2.is_reverse) != e.opposing_strands:
+                        continue
+
+                    union = Interval.union(a1.query_coverage_interval(),
+                                           a2.query_coverage_interval())
+                    if len(union) - len(a1.query_coverage_interval()) < MIN_EXTEND_OVERLAP \
+                            or len(union) - len(a2.query_coverage_interval()) < MIN_EXTEND_OVERLAP:
+                        continue
+
+                    if INPUT_BAM_CACHE.chr(a1) == e.break1.chr \
+                            and e.window1.overlaps((a1.reference_start, a1.reference_end - 1)) \
+                            and INPUT_BAM_CACHE.chr(a2) == e.break2.chr \
+                            and e.window2.overlaps((a2.reference_start, a2.reference_end - 1)):
+                        putative_alignment_pairs.append((a1, a2))
+                    elif INPUT_BAM_CACHE.chr(a2) == e.break1.chr \
+                            and e.window1.overlaps((a2.reference_start, a2.reference_end - 1)) \
+                            and INPUT_BAM_CACHE.chr(a1) == e.break2.chr \
+                            and e.window2.overlaps((a1.reference_start, a1.reference_end - 1)):
+                        putative_alignment_pairs.append((a2, a1))
+                contig.alignments = putative_alignments
     finally:
+        # clean up the temporary files
         for f in tempfiles:
             if os.path.exists(f):
                 try:
