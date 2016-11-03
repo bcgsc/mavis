@@ -230,13 +230,15 @@ def gather_evidence_from_bam(clusters):
                         assembly_sequences[s].add(m)
                         assembly_sequences[temp] = assembly_sequences.get(temp, set())
                         assembly_sequences[temp].add(m)
-            e.contigs = assemble(assembly_sequences)
+            e.contigs = assemble(assembly_sequences, min_edge_weight=3)
+            for c in e.contigs:
+                print('>', c.seq)
             evidence.append(e)
             ihist = {}
             for read in e.flanking_reads:
                 isize = abs(read.template_length)
                 ihist[isize] = ihist.get(isize, 0) + 1
-            if len(e.flanking_reads) > 1:
+            if len(e.flanking_reads) > 2:
                 median = profile_bam.histogram_median(ihist)
                 stdev = math.sqrt(profile_bam.histogram_stderr(ihist, median))
                 avg = profile_bam.histogram_average(ihist)
@@ -352,7 +354,28 @@ def main():
             print('dropping cluster overlapping mask', mask, cluster.breakpoint_pair)
 
     evidence = gather_evidence_from_bam(filtered_clusters)
+
+    blat_sequences = set()
+    for e in evidence:
+        for c in e.contigs:
+            blat_sequences.add(c.seq)
+    print('blatting')
+    for s in blat_sequences:
+        print(s)
+    blat_contig_alignments = blat_contigs(
+        evidence,
+        INPUT_BAM_CACHE,
+        reference_genome=HUMAN_REFERENCE_GENOME
+    )
     print('evidence gathering is complete')
+    for e in evidence:
+        print(e.breakpoint_pair)
+        for c in e.contigs:
+            print('>', c.seq)
+            for aln in c.alignments:
+                print(aln)
+    e.call_breakpoints()
+    exit(1)
     Profile.mark_step('evidence gathering complete')
     # ASSEMBLE the contigs (can parallelize here)
     assemblies = []

@@ -160,6 +160,14 @@ class Interval:
     @classmethod
     def dist(cls, self, other):
         """returns the minimum distance between intervals
+
+        Example:
+            >>> Interval.dist((1, 4), (5, 7))
+            -1
+            >>> Interval.dist((5, 7), (1, 4))
+            1
+            >>> Interval.dist((5, 8), (7, 9))
+            0
         """
         if self[1] < other[0]:
             return self[1] - other[0]

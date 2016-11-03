@@ -483,7 +483,7 @@ def kmers(s, size):
     """
     kmers = []
     for i in range(0, len(s)):
-        if i + size >= len(s):
+        if i + size > len(s):
             break
         kmers.append(s[i:i + size])
     return kmers
@@ -502,7 +502,7 @@ class Contig:
         return hash((self.seq, self.score))
 
     def add_mapped_read(self, read, multimap=1):
-        self.remapped_reads[k] = min(self.remapped_reads.get(k, 1), 1 / multimap)
+        self.remapped_reads[read] = min(self.remapped_reads.get(read, 1), 1 / multimap)
 
     def remap_score(self):
         return sum(self.remapped_reads.values())
@@ -518,8 +518,8 @@ class DeBruijnGraph(nx.DiGraph):
         nx.DiGraph.__init__(self, *pos, **kwargs)
         self.edge_freq = {}
 
-    def add_edge(self, n1, n2):
-        self.edge_freq[(n1, n2)] = self.edge_freq.get((n1, n2), 0) + 1
+    def add_edge(self, n1, n2, freq=1):
+        self.edge_freq[(n1, n2)] = self.edge_freq.get((n1, n2), 0) + freq
         nx.DiGraph.add_edge(self, n1, n2)
 
     def remove_edge(self, n1, n2):
@@ -533,27 +533,30 @@ class DeBruijnGraph(nx.DiGraph):
         for n in list(self.nodes()):
             if not self.has_node(n):
                 continue
-            if self.in_degree(n) == 0 and self.out_degree(n) == 0:
+            # follow until the path forks or we run out of low weigh edges
+            curr = n
+            while self.degree(curr) == 1:
+                if self.out_degree(curr) == 1:
+                    curr, other = self.out_edges(curr)[0]
+                    if self.edge_freq[(curr, other)] < min_weight:
+                        self.remove_node(curr)
+                        curr = other
+                    else:
+                        break
+                elif self.in_degree(curr) == 1:
+                    other, curr = self.in_edges(curr)[0]
+                    if self.edge_freq[(other, curr)] < min_weight:
+                        self.remove_node(curr)
+                        curr = other
+                    else:
+                        break
+                else:
+                    break
+        for n in list(self.nodes()):
+            if not self.has_node(n):
+                continue
+            if self.degree(n) == 0:
                 self.remove_node(n)
-            elif self.in_degree(n) == 0:
-                # follow until the path forks or we run out of low weigh edges
-                curr = n
-                while self.out_degree(curr) == 1:
-                    curr, nextt = self.out_edges(curr)[0]
-                    if self.edge_freq[(curr, nextt)] < min_weight:
-                        self.remove_node(curr)
-                        curr = nextt
-                    else:
-                        break
-            elif self.out_degree(n) == 0:
-                curr = n
-                while self.in_degree(curr) == 1:
-                    prev, curr = self.in_edges(curr)[0]
-                    if self.edge_freq[(prev, curr)] < min_weight:
-                        self.remove_node(curr)
-                        curr = prev
-                    else:
-                        break
 
 
 def nsb_align(ref, seq, weight_of_score=0.5, min_overlap_percent=100):
@@ -647,19 +650,23 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
     """
     if len(sequences) == 0:
         return []
-    print(datetime.now(), 'assemble() start')
+    print(datetime.now(), 'assemble() start', len(sequences), )
     min_seq = min([len(s) for s in sequences])
-    kmer_size = min_seq - 1 if kmer_size is None else kmer_size
-    min_read_mapping_overlap = kmer_size if min_read_mapping_overlap is None else min_read_mapping_overlap
-    min_contig_length = min_seq + 1 if min_contig_length is None else min_contig_length
-
-    assembly = DeBruijnGraph()
-    input_seq_by_node = {}
-
-    if kmer_size > min_seq:
+    if kmer_size is None:
+        temp = int(min_seq * 0.75)
+        if temp < 10:
+            kmer_size = min(min_seq, 10)
+        else:
+            kmer_size = temp
+    elif kmer_size > min_seq:
         kmer_size = min_seq
         warnings.warn(
             'cannot specify a kmer size larger than one of the input sequences. reset to {0}'.format(min_seq))
+    min_read_mapping_overlap = kmer_size if min_read_mapping_overlap is None else min_read_mapping_overlap
+    min_contig_length = min_seq + 1 if min_contig_length is None else min_contig_length
+    print(datetime.now(), 'assemble() start', len(sequences), 'kmer_size=', kmer_size)
+    assembly = DeBruijnGraph()
+    input_seq_by_node = {}
 
     for s in sequences:
         for kmer in kmers(s, kmer_size):
@@ -671,11 +678,14 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
 
     if not nx.is_directed_acyclic_graph(assembly):
         NotImplementedError('assembly not supported for cyclic graphs')
-
+    
+    print('assembly', len(assembly.nodes()), len(assembly.edges()), min_edge_weight)
+    for s, t in sorted(assembly.edges()):
+        f = assembly.edge_freq[(s, t)]
     # now just work with connected components
     # trim all paths from sources or to sinks where the edge weight is low
     assembly.trim_low_weight_tails(min_edge_weight)
-
+    print('assembly after trim', len(assembly.nodes()))
     path_scores = {}  # path_str => score_int
     nodes_by_contig_seq = {}
 
@@ -702,7 +712,7 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
                 for i in range(0, len(path) - 1):
                     score += assembly.edge_freq[(path[i], path[i + 1])]
                 path_scores[s] = max(path_scores.get(s, 0), score)
-
+    print('path_scores', len(path_scores.items()))
     contigs = {}
     for seq, score in list(path_scores.items()):
         if seq not in sequences and len(seq) >= min_contig_length:
@@ -710,8 +720,11 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
 
     contigs_by_input = {}
     for contig_seq, nodes in nodes_by_contig_seq.items():
-        for input_seq_set in [input_seq for input_seq in [input_seq_by_node[n] for n in nodes]]:
-            contigs_by_input.setdefault(input_seq, set()).add(contig_seq)
+        if contig_seq not in contigs:
+            continue
+        for n in nodes:
+            for input_seq in input_seq_by_node[n]:
+                contigs_by_input.setdefault(input_seq, set()).add(contig_seq)
 
     # remap the input reads
     for input_seq in sequences:
@@ -720,19 +733,14 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
             contig = contigs[contig_seq]
             a = nsb_align(
                 contig_seq,
-                seq,
-                min_overlap_percent=min_read_mapping_overlap / len(seq)
+                contig.seq,
+                min_overlap_percent=min_read_mapping_overlap / len(contig.seq)
             )
             if len(a) != 1:
                 continue
-            if CigarTools.match_percent(a.cigar) < min_match_quality:
+            if CigarTools.match_percent(a[0].cigar) < min_match_quality:
                 continue
             maps_to[contig] = a[0]
         for contig, read in maps_to.items():
             contig.add_mapped_read(read, len(maps_to.keys()))
-    return contigs.values()
-
-
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
+    return list(contigs.values())

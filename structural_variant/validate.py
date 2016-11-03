@@ -40,7 +40,7 @@ class Event:
         for read in self.flanking_reads:
             isize = abs(read.template_length)
             ihist[isize] = ihist.get(isize, 0) + 1
-        
+
         if len(self.flanking_reads) > 1:
             median = profile_bam.histogram_median(ihist)
             stdev = math.sqrt(profile_bam.histogram_stderr(ihist, median))
@@ -678,6 +678,7 @@ class Evidence:
             # event type = cls
             new_calls = []
             # try calling by contigs
+            Evidence._call_by_contigs(self, cls)
             # try calling by split reads
             # try calling by flanking reads
 
@@ -698,13 +699,13 @@ class Evidence:
                             read_events[-1] = (start, i, size + f)
                         else:
                             read_events.append((i, i, f))
-                    
+
                     biggest = max(read_events, key=lambda x: x[2])
 
                     first_breakpoint = read1.reference_start - 1
                     second_breakpoint = first_breakpoint
                     untemplated_seq = ''
-                    
+
                     seq_pos = 0
                     for i, t in enumerate(read1.cigar):
                         v, f = t
@@ -713,7 +714,7 @@ class Evidence:
                             continue
                         elif v == CIGAR.H:
                             continue
-                        
+
                         if i < biggest[0]:
                             first_breakpoint += f
                             second_breakpoint += f
@@ -721,10 +722,10 @@ class Evidence:
                             second_breakpoint += f
                             if v == CIGAR.INS:
                                 untemplated_seq += read1.query_sequence[seq_pos:seq_pos + f]
-                        
+
                         if v != CIGAR.D:
                             seq_pos += f
-                    
+
                     break1 = Breakpoint(
                         read1.reference_name,
                         first_breakpoint,
@@ -737,14 +738,14 @@ class Evidence:
                         orient=ORIENT.LEFT,
                         strand=STRAND.NEG if read1.is_reverse else STRAND.POS
                     )
-                    
+
                     bpp = BreakpointPair(break1, break2, opposing_strands=False, untemplated_sequence=untemplated_seq)
-                    
+                    print(classification, bpp)
                     new_event = Event(
                         e,
                         bpp,
                         classification,
-                        call_method = CALL_METHOD.CONTIG,
+                        call_method=CALL_METHOD.CONTIG,
                         contig=contig,
                         contig_alignment=(read1, read2)
                     )
@@ -752,8 +753,12 @@ class Evidence:
                     if classification not in [SVTYPE.INS, SVTYPE.DEL, SVTYPE.DUP]:
                         raise NotImplementedError('unsupported classification type', classification)
                 else:
-                    pass
-                    # is there overlap on the query seq?
+                    # is there overlap on the query seq? if so let it belong to the first breakpoint
+                    intersect = read1.query_coverage_interval() & read2.query_coverage_interval()
+                    if intersect is not None:
+                        # shift the breakpoint called by the 
+                        pass
+
                     #if classification == SVTYPE.TRANS:
                     #elif classification == SVTYPE.ITRANS:
                     #elif classification == SVTYPE.INV:
@@ -763,7 +768,6 @@ class Evidence:
                     #else:
                     #    raise NotImplementedError('unsupported classification type', classification)
         # filter flanking reads from ev and add to each
-
 
     @classmethod
     def _call_by_flanking_reads(cls, ev, classification):
@@ -944,7 +948,9 @@ class Evidence:
                     self.add_flanking_read(read)
                 except UserWarning:
                     pass
-
+    @property
+    def opposing_strands(self):
+        return self.breakpoint_pair.opposing_strands
 
 if __name__ == '__main__':
     import doctest

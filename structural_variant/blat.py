@@ -1,4 +1,5 @@
 import pysam
+import itertools
 import math
 import subprocess
 import warnings
@@ -24,6 +25,10 @@ class BlatAlignedSegment(pysam.AlignedSegment):
         pysam.AlignedSegment.__init__(self)
         self.blat = row
 
+    @property
+    def chr(self):
+        return self.blat['tname']
+
     def blat_score(self):  # convenience
         return self.blat['score']
 
@@ -42,6 +47,59 @@ class BlatAlignedSegment(pysam.AlignedSegment):
     @property
     def reference_name(self):
         return self.blat['tname']
+
+    @classmethod
+    def call_breakpoints(cls, read1, read2):
+        """
+        if the first read and the second read have overlapping range on their mutual query sequence
+        then the breakpoint is called as is on the first and shifted on the second
+        """
+        if read1.query_seq != read2.query_seq:
+            raise AttributeError('reads must be on the same query sequence')
+        if read1.reference_id > read2.reference_id:
+            read1, read2 = (read2, read1)
+        elif read1.reference_id == read2.reference_id and read1.reference_start > read2.reference_start:
+            read1, read2 = (read2, read1)
+
+        b1 = None
+        b2 = None
+
+        r1_qci = read1.query_coverage_interval()
+        r2_qci = read2.query_coverage_interval()
+
+        if read1.is_reverse:
+            # -------<==============
+            b1 = Breakpoint(read1.chr, read1.reference_start, strand=STRAND.NEG, orient=ORIENT.RIGHT)
+        else:
+            # ==========>-----------
+            b1 = Breakpoint(read1.chr, read1.reference_end - 1, strand=STRAND.POS, orient=ORIENT.LEFT)
+
+        overlap = 0
+        if Interval.overlaps(r1_qci, r2_qci):
+            # adjust the second read to remove the overlapping query region
+            overlap = len(r1_qci & r2_qci)
+
+        if read2.is_reverse:
+            # -------<qqqq==========
+            b2 = Breakpoint(read2.chr, read2.reference_start + overlap, strand=STRAND.NEG, orient=ORIENT.RIGHT)
+        else:
+            # ======qqqq>-----------
+            b2 = Breakpoint(read2.chr, read2.reference_end - 1 - overlap, strand=STRAND.POS, orient=ORIENT.LEFT)
+
+        # now check for untemplated sequence
+        untemplated_sequence = ''
+        d = Interval.dist(r1_qci, r2_qci)
+        if d > 0:  # query coverage for read1 is after query coverage for read2
+            untemplated_sequence = read1.query_seq[r2_qci[1] + 1:r1_qci[0]]
+        elif d < 0:  # query coverage for read2 is after query coverage for read1
+            untemplated_sequence = read1.query_seq[r1_qci[1] + 1:r2_qci[0]]
+        else:  # query coverage overlaps
+            pass
+
+        if read1.is_reverse and untemplated_sequence != '':
+            untemplated_sequence = reverse_complement(untemplated_sequence)
+
+        return BreakpointPair(b1, b2, untemplated_sequence=untemplated_sequence)
 
 
 class Blat:
@@ -95,7 +153,8 @@ class Blat:
 
         below are lines from the perl code i've re-written in python
 
-        Perl:
+        ::
+            
             my $sizeMul = pslIsProtein($blockCount, $strand, $tStart, $tEnd, $tSize, $tStarts, $blockSizes);
             sizmul = 1 for DNA
             my $pslScore = $sizeMul * ($matches + ($repMatches >> 1) ) - $sizeMul * $misMatches - $qNumInsert - $tNumInsert)
@@ -170,7 +229,7 @@ class Blat:
         return header, rows
 
     @staticmethod
-    def pslx_row_to_pysam(row, bam_cache):
+    def pslx_row_to_pysam(row, bam_cache, reference_genome=None):
         """
         given a 'row' from reading a pslx file. converts the row to a BlatAlignedSegment object
 
@@ -189,6 +248,41 @@ class Blat:
         # note: converting to inclusive range [] vs end-exclusive [)
         query_ranges = [(x, x + y - 1) for x, y in zip(row['qstarts'], row['block_sizes'])]
         ref_ranges = [(x, x + y - 1) for x, y in zip(row['tstarts'], row['block_sizes'])]
+        
+        if reference_genome:
+            temp_char_seq = reference_genome[row['tname']].seq
+
+            # adjust the ranges to extend based on greedy matching each block to the leftmost/lowest coord
+            new_query_ranges = []
+            new_ref_ranges = []
+
+            for qr, rr in zip(query_ranges, ref_ranges):
+                offset = 1
+                while qr[1] + offset < len(qseq) \
+                        and rr[1] + offset < len(temp_char_seq) \
+                        and qseq[qr[1] + offset] == temp_char_seq[rr[1] + offset]:
+                    offset += 1
+                offset -= 1
+                new_query_ranges.append((qr[0], qr[1] + offset))
+                new_ref_ranges.append((rr[0], rr[1] + offset))
+            
+            query_ranges = [new_query_ranges[0]]
+            ref_ranges = [new_ref_ranges[0]]
+            for i in range(1, len(new_query_ranges)):
+                if new_ref_ranges[i][0] <= new_ref_ranges[i - 1][1]:
+                    if new_ref_ranges[i][1] > new_ref_ranges[i - 1][1]:
+                        ref_ranges.append((new_ref_ranges[i - 1][1] + 1, new_ref_ranges[i][1]))
+                    else:
+                        pass
+                else:
+                    ref_ranges.append(new_ref_ranges[i])
+                if new_query_ranges[i][0] <= new_query_ranges[i - 1][1]:
+                    if new_query_ranges[i][1] > new_query_ranges[i - 1][1]:
+                        query_ranges.append((new_query_ranges[i - 1][1] + 1, new_query_ranges[i][1]))
+                    else:
+                        pass
+                else:
+                    query_ranges.append(new_query_ranges[i])
 
         cigar = []
         seq = ''
@@ -254,8 +348,9 @@ class Blat:
 
 def blat_contigs(
         evidence,
-        bam_cache,
-        ref='/home/pubseq/genomes/Homo_sapiens/GRCh37/blat/hg19.2bit',
+        INPUT_BAM_CACHE,
+        reference_genome,
+        ref_2bit='/home/pubseq/genomes/Homo_sapiens/GRCh37/blat/hg19.2bit',
         min_percent_of_max_score=0.8,
         min_identity=0.95,
         is_protein=False,
@@ -281,11 +376,15 @@ def blat_contigs(
         # write the input sequences to a fasta file
 
         fasta = tempfile.NamedTemporaryFile(mode='w', delete=False)
-        tempfiles.append(fasta)
+        tempfiles.append(fasta.name)
         fasta_name = fasta.name
         query_id_mapping = {}
         count = 1
-        for seq in [c.seq for c in e.contigs for e in evidence]:
+        sequences = set()
+        for e in evidence:
+            for c in e.contigs:
+                sequences.add(c.seq)
+        for seq in sequences:
             n = 'seq{0}'.format(count)
             query_id_mapping[n] = seq
             fasta.write('>' + n + '\n' + seq + '\n')
@@ -294,11 +393,11 @@ def blat_contigs(
 
         # call the blat subprocess
         psl = tempfile.NamedTemporaryFile(delete=False)
-        tempfiles.append(psl)
+        tempfiles.append(psl.name)
         # will raise subprocess.CalledProcessError if non-zero exit status
         # parameters from https://genome.ucsc.edu/FAQ/FAQblat.html#blat4
-        print(["blat", ref, fasta_name, psl.name, '-out=pslx', '-noHead'] + blat_options)
-        subprocess.check_output(["blat", ref, fasta_name, psl.name, '-out=pslx', '-noHead'] + blat_options)
+        print(["blat", ref_2bit, fasta_name, psl.name, '-out=pslx', '-noHead'] + blat_options)
+        subprocess.check_output(["blat", ref_2bit, fasta_name, psl.name, '-out=pslx', '-noHead'] + blat_options)
         psl.close()
 
         header, rows = Blat.read_pslx(psl.name, query_id_mapping, is_protein=is_protein)
@@ -328,13 +427,16 @@ def blat_contigs(
             reads = []
             for rank, row in enumerate(filtered_rows):
                 try:
-                    read = Blat.pslx_row_to_pysam(row, bam_cache)
+                    read = Blat.pslx_row_to_pysam(row, INPUT_BAM_CACHE, reference_genome)
                     read.set_tag('bs', row['score'], value_type='i')
                     read.set_tag('ba', len(filtered_rows), value_type='i')
                     read.set_tag('bp', min_percent_of_max_score, value_type='f')
                     read.set_tag('br', rank, value_type='i')
                     read.set_tag('bi', row['percent_ident'], value_type='f')
                     reads.append(read)
+                    print(row)
+                    print(read)
+                    print(read.cigar)
                 except KeyError as e:
                     warnings.warn(
                         'warning: reference template name not recognized {0}'.format(e))
@@ -351,12 +453,12 @@ def blat_contigs(
                         # if it covers both breakpoints add to putative alignments
                         temp = Interval(read.reference_start, read.reference_end - 1)
                         if INPUT_BAM_CACHE.chr(read) == e.break1.chr \
-                                and e.window1.overlaps(temp) \
-                                and e.window2.overlaps(temp):
+                                and Interval.overlaps(e.window1, temp) \
+                                and Interval.overlaps(e.window2, temp):
                             # split the continuous alignment, assume ins/dup or indel
                             putative_alignments.append((read, None))
 
-                for a1, a2 in itertools.combinations([x for x in aln if x not in putative_alignments], 2):
+                for a1, a2 in itertools.combinations([x for x in aln if (x, None) not in putative_alignments], 2):
                     # do they overlap both breakpoints
                     if (a1.is_reverse != a2.is_reverse) != e.opposing_strands:
                         continue
@@ -368,14 +470,14 @@ def blat_contigs(
                         continue
 
                     if INPUT_BAM_CACHE.chr(a1) == e.break1.chr \
-                            and e.window1.overlaps((a1.reference_start, a1.reference_end - 1)) \
+                            and Interval.overlaps(e.window1, (a1.reference_start, a1.reference_end - 1)) \
                             and INPUT_BAM_CACHE.chr(a2) == e.break2.chr \
-                            and e.window2.overlaps((a2.reference_start, a2.reference_end - 1)):
+                            and Interval.overlaps(e.window2, (a2.reference_start, a2.reference_end - 1)):
                         putative_alignment_pairs.append((a1, a2))
                     elif INPUT_BAM_CACHE.chr(a2) == e.break1.chr \
-                            and e.window1.overlaps((a2.reference_start, a2.reference_end - 1)) \
+                            and Interval.overlaps(e.window1, (a2.reference_start, a2.reference_end - 1)) \
                             and INPUT_BAM_CACHE.chr(a1) == e.break2.chr \
-                            and e.window2.overlaps((a1.reference_start, a1.reference_end - 1)):
+                            and Interval.overlaps(e.window2, (a1.reference_start, a1.reference_end - 1)):
                         putative_alignment_pairs.append((a2, a1))
                 contig.alignments = putative_alignments
     finally:
