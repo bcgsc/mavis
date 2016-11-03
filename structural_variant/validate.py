@@ -752,15 +752,16 @@ class Evidence:
                     if classification not in [SVTYPE.INS, SVTYPE.DEL, SVTYPE.DUP]:
                         raise NotImplementedError('unsupported classification type', classification)
                 else:
+                    pass
                     # is there overlap on the query seq?
-                    if classification == SVTYPE.TRANS:
-                    elif classification == SVTYPE.ITRANS:
-                    elif classification == SVTYPE.INV:
-                    elif classification == SVTYPE.INS:
-                    elif classification == SVTYPE.DEL:
-                    elif classification == SVTYPE.DUP:
-                    else:
-                        raise NotImplementedError('unsupported classification type', classification)
+                    #if classification == SVTYPE.TRANS:
+                    #elif classification == SVTYPE.ITRANS:
+                    #elif classification == SVTYPE.INV:
+                    #elif classification == SVTYPE.INS:
+                    #elif classification == SVTYPE.DEL:
+                    #elif classification == SVTYPE.DUP:
+                    #else:
+                    #    raise NotImplementedError('unsupported classification type', classification)
         # filter flanking reads from ev and add to each
 
 

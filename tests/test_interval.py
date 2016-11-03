@@ -20,6 +20,12 @@ class TestInterval(unittest.TestCase):
             temp[4]
         with self.assertRaises(IndexError):
             temp[-1]
+        with self.assertRaises(IndexError):
+            temp['1b']
+
+    def test___gt__(self):
+        self.assertTrue(Interval(10) > Interval(1))
+        self.assertFalse(Interval(1) > Interval(10))
 
     def test_overlaps(self):
         left = Interval(-4, 1)
@@ -34,7 +40,14 @@ class TestInterval(unittest.TestCase):
 
     def test___len__(self):
         self.assertEqual(5, len(Interval(1, 5)))
-    
+
+    def test___lt__(self):
+        self.assertTrue(Interval(1) < Interval(10))
+        self.assertFalse(Interval(10) < Interval(1))
+
+    def test___and__(self):
+        self.assertEqual(None, Interval(1, 1) & Interval(2))
+
     def test___sub__(self):
         # x in y
         self.assertEqual([Interval(0, 4), Interval(7, 10)], Interval(0, 10) - Interval(5, 6))
@@ -46,7 +59,7 @@ class TestInterval(unittest.TestCase):
         self.assertEqual([], Interval(0, 10) - Interval(-1, 11))
         # x does not overlap y
         self.assertEqual([Interval(0, 10)], Interval(0, 10) - Interval(11, 15))
-    
+
     def test___xor__(self):
         # x in y
         self.assertEqual([], Interval(0, 10) ^ Interval(0, 10))
@@ -58,7 +71,7 @@ class TestInterval(unittest.TestCase):
         self.assertEqual([Interval(-1, -1), Interval(11, 11)], Interval(0, 10) ^ Interval(-1, 11))
         # x does not overlap y
         self.assertEqual([Interval(0, 10), Interval(11, 15)], Interval(0, 10) ^ Interval(11, 15))
-    
+
     def test_center(self):
         self.assertEqual(3, Interval(1, 5).center)
         self.assertEqual(3.5, Interval(2, 5).center)
@@ -99,13 +112,30 @@ class TestInterval(unittest.TestCase):
         self.assertEqual(210, e.exception.before)
         self.assertEqual(301, e.exception.after)
 
+        # test input errors
+        with self.assertRaises(AttributeError):  # unequal length
+            Interval.convert_pos({(1, 10): (4, 5)}, 3)
+
+        with self.assertRaises(AttributeError):  # overlapping ranges
+            Interval.convert_pos({(1, 10): (11, 20), (5, 14): (21, 30)}, 6)
+
+        with self.assertRaises(AttributeError):  # range not increasing or decreasing
+            mapping = {(1, 2): (1, 2), (3, 4): (4, 5), (5, 6): (3, 3)}
+            Interval.convert_pos(mapping, 10)
+
+        with self.assertRaises(AttributeError):  # range not increasing or decreasing
+            mapping = {(1, 2): (4, 5), (3, 4): (1, 2), (5, 6): (3, 3)}
+            Interval.convert_pos(mapping, 10)
+
     def test_union(self):
         l = [Interval(1, 10), Interval(5, 7), Interval(7)]
         self.assertEqual(Interval(1, 10), Interval.union(*l))
         m = l + [Interval(11)]
         self.assertEqual(Interval(1, 11), Interval.union(*m))
-        n = Interval.union(*l)
-    
+
+        with self.assertRaises(AttributeError):
+            Interval.union()
+
     def test_weighted_mean(self):
         m = Interval.weighted_mean([(1, 2), (1, 9), (2, 10)])
         self.assertEqual(Interval(1, 4), m)
@@ -115,16 +145,19 @@ class TestInterval(unittest.TestCase):
     def test_weighted_mean_identical_even_length(self):
         m = Interval.weighted_mean([(1, 2), (1, 2), (1, 2)])
         self.assertEqual(Interval(1, 2), m)
-    
+
     def test_weighted_mean_identical_odd_length(self):
         m = Interval.weighted_mean([(1, 3), (1, 3), (1, 3)])
         self.assertEqual(Interval(1, 3), m)
-    
+
     def test_intersection(self):
         l = [Interval(1, 10), Interval(5, 7), Interval(7)]
         self.assertEqual(Interval(7), Interval.intersection(*l))
         l.append(Interval(11))
         self.assertEqual(None, Interval.intersection(*l))
+
+        with self.assertRaises(AttributeError):
+            Interval.intersection()
 
     def test_dist(self):
         x = Interval(1, 4)

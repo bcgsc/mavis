@@ -8,8 +8,22 @@ from structural_variant.error import *
 class Interval:
     """
     """
-    
-    def __sub__(self, other): # difference
+    def __init__(self, start, end=None, freq=1):
+        """
+        Args:
+            start (int): the start of the interval (inclusive)
+            end (int, default=start): the end of the interval (inclusive)
+            freq (int, default=1): the frequency or weight of the interval
+        """
+        self.start = int(start)
+        self.end = int(end) if end is not None else self.start
+        if self.start > self.end:
+            raise AttributeError('interval start > end is not allowed')
+        self.freq = int(freq)
+        if self.freq <= 0:
+            raise AttributeError('Interval frequency must be a natural number')
+
+    def __sub__(self, other):  # difference
         """the difference of two intervals
 
         Example:
@@ -42,7 +56,7 @@ class Interval:
             >>> Interval(1, 2) & Interval(10, 11)
             None
         """
-        return Intervals.intersection(self, other)
+        return Interval.intersection(self, other)
 
     def __or__(self, other):  # union
         """the union of two intervals
@@ -58,21 +72,6 @@ class Interval:
     def __xor__(self, other):
         return (self - other) + (other - self)
 
-    def __init__(self, start, end=None, freq=1):
-        """
-        Args:
-            start (int): the start of the interval (inclusive)
-            end (int, default=start): the end of the interval (inclusive)
-            freq (int, default=1): the frequency or weight of the interval
-        """
-        self.start = int(start)
-        self.end = int(end) if end is not None else self.start
-        if self.start > self.end:
-            raise AttributeError('interval start > end is not allowed')
-        self.freq = int(freq)
-        if self.freq <= 0:
-            raise AttributeError('Interval frequency must be a natural number')
-
     def __getitem__(self, index):
         try:
             index = int(index)
@@ -86,7 +85,7 @@ class Interval:
             return self.freq
         raise IndexError(
             'index input accessor is out of bounds: 1 or 2 only', index)
-    
+
     @classmethod
     def overlaps(cls, self, other):
         """
@@ -116,7 +115,7 @@ class Interval:
             12
         """
         return self[1] - self[0] + 1
-    
+
     def __lt__(self, other):
         if self[0] < other[0]:
             return True
@@ -152,7 +151,7 @@ class Interval:
         if self[0] != other[0] or self[1] != other[1] or self[2] != other[2]:
             return False
         return True
-    
+
     def __contains__(self, other):
         if other[0] >= self[0] and other[1] <= self[1]:
             return True
@@ -171,7 +170,7 @@ class Interval:
 
     def __hash__(self):
         return hash((self[0], self[1], self.freq))
-    
+
     @classmethod
     def weighted_mean(cls, intervals):
         """
@@ -251,6 +250,13 @@ class Interval:
         Raises:
             AttributeError: if the input position is outside the set of input segments
             DiscontiuousMappingError: if the input position cannot be converted to the output system
+
+        Example:
+            >>> mapping = {(1, 10): (101, 110), (11, 20): (555, 564)}
+            >>> Interval.convert_pos(mapping, 5)
+            5
+            >>> Interval.convert_pos(mapping, 15)
+            559
         """
         if len(mapping.keys()) < 2:
             raise AttributeError(
@@ -258,54 +264,54 @@ class Interval:
 
         # order the input intervals
         input_intervals = sorted(mapping.keys())
-
-        # input checking
-        for curr in input_intervals:
-            if curr[1] - curr[0] != mapping[curr][1] - mapping[curr][0]:
-                raise AttributeError(
-                    'input mappings must have segments of equal length')
-
-        front_to_end = None
-        for i, curr in enumerate(input_intervals):
-            if i == 0:
+        mapped_to_intervals = [mapping[i] for i in input_intervals]
+        forward_to_reverse = None
+        
+        # input check interval ranges are non-overlapping and increasing/decreasing
+        for i in range(0, len(input_intervals)):
+            if input_intervals[i][1] - input_intervals[i][0] != mapped_to_intervals[i][1] - mapped_to_intervals[i][0]:
+                raise AttributeError('input mappings must have segments of equal length')
+            if i < 1:
                 continue
-            curr = mapping[curr]
-            prev = mapping[input_intervals[i - 1]]
-            if front_to_end is None:
-                if prev[1] < curr[0]:
-                    front_to_end = False
-                elif curr[1] < prev[0]:
-                    front_to_end = True
-                else:
-                    raise AttributeError('mapping must be two non-overlapping sequences mapped one-to-one forward or '
-                                         'reversed', prev, curr)
-            elif not front_to_end:
-                if prev[1] >= curr[0]:
-                    raise AttributeError('mapping must be two non-overlapping sequences mapped one-to-one forward or '
-                                         'reversed prev[1] >= curr[0]', prev, curr)
-            else:
-                if curr[1] >= prev[0]:
-                    raise AttributeError('mapping must be two non-overlapping sequences mapped one-to-one forward or '
-                                         'reversed curr[1] >= prev[0]', prev, curr)
+            if Interval.overlaps(input_intervals[i - 1], input_intervals[i]):
+                raise AttributeError(
+                    'input intervals cannot be overlapping',
+                    input_intervals[i], input_intervals[i - 1]
+                )
+            if Interval.overlaps(mapped_to_intervals[i - 1], mapped_to_intervals[i]):
+                raise AttributeError(
+                    'mapped_to intervals cannot be overlapping',
+                    mapped_to_intervals[i], mapped_to_intervals[i - 1]
+                )
+            if mapped_to_intervals[i][0] > mapped_to_intervals[i - 1][1]:
+                if forward_to_reverse is None:
+                    forward_to_reverse = False
+                elif forward_to_reverse:
+                    raise AttributeError('direction of mapped intervals is not consistent')
+            elif mapped_to_intervals[i][1] < mapped_to_intervals[i - 1][0]:
+                if forward_to_reverse is None:
+                    forward_to_reverse = True
+                elif not forward_to_reverse:
+                    raise AttributeError('direction of mapped intervals is not consistent')
 
         i, previous_flag = Interval.position_in_range(
             input_intervals, (pos, pos))  # get the input position
         if i == len(input_intervals):
             curr = input_intervals[i - 1]
-            if not front_to_end:
+            if not forward_to_reverse:
                 raise DiscontiuousMappingError('outside mapped range', after=mapping[curr][1])
             else:
                 raise DiscontiuousMappingError('outside mapped range', before=mapping[curr][0])
         elif previous_flag:
             curr = input_intervals[i]
             if i == 0:
-                if not front_to_end:
+                if not forward_to_reverse:
                     raise DiscontiuousMappingError('outside mapped range', before=mapping[curr][0])
                 else:
                     raise DiscontiuousMappingError('outside mapped range', after=mapping[curr][1])
             else:  # between two segments
                 prev = input_intervals[i - 1]
-                if not front_to_end:
+                if not forward_to_reverse:
                     raise DiscontiuousMappingError(
                         'outside mapped range',
                         before=mapping[prev][1],
@@ -320,7 +326,7 @@ class Interval:
         else:
             # fell into a mapped region
             curr = input_intervals[i]
-            if not front_to_end:
+            if not forward_to_reverse:
                 shift = pos - curr[0]
                 return mapping[curr][0] + shift
             else:
@@ -343,7 +349,6 @@ class Interval:
         """
         if len(intervals) < 1:
             raise AttributeError('cannot compute the intersection of an empty set of intervals')
-        curr = next(iter(intervals))
         low = max([i[0] for i in intervals])
         high = min([i[1] for i in intervals])
         if low > high:
@@ -371,8 +376,3 @@ class Interval:
             else:
                 merges.append(Interval.union(*c))
         return merges
-
-
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
