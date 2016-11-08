@@ -8,26 +8,13 @@ from structural_variant.error import *
 from structural_variant.align import CigarTools, nsb_align, breakpoint_pos, assemble, reverse_complement
 from structural_variant.interval import Interval
 from structural_variant.annotate import overlapping_transcripts
-from structural_variant.breakpoint import BreakpointPair, Breakpoint
+from structural_variant.breakpoint import BreakpointPair
+from structural_variant.blat import BlatAlignedSegment
 import tools.profile_bam as profile_bam
 from functools import partial
 import math
 
 CALL_METHOD = Vocab(CONTIG='contig', SPLIT='split reads', FLANK='flanking reads', MIXED='split and flanking')
-
-
-#    def flanking_read_stdev(self):
-#        ihist = {}
-#        for read in self.flanking_reads:
-#            isize = abs(read.template_length)
-#            ihist[isize] = ihist.get(isize, 0) + 1
-#
-#        if len(self.flanking_reads) > 1:
-#            median = profile_bam.histogram_median(ihist)
-#            stdev = math.sqrt(profile_bam.histogram_stderr(ihist, median))
-#            return stdev
-#        else:
-#            raise AttributeError('cannot calculate the stdev of less than 2')
 
 
 class EventCall:
@@ -60,14 +47,13 @@ class EventCall:
         lower_limit = s.median_insert_size - s.stdev_count_abnormal * s.stdev_isize
 
         ihist = {}
-        for b in self.evidence.flanking_reads:
-            for read in self.evidence.flanking_reads[b]:
-                isize = abs(read.template_length)
-                if (self.classification == SVTYPE.INS and isize <= lower_limit) \
-                        or (self.classification == SVTYPE.DEL and isize >= upper_limit) \
-                        or self.classification not in [SVTYPE.DEL, SVTYPE.INS]:
-                    support.add(read)
-                    ihist[isize] = ihist.get(isize, 0) + 1
+        for read in itertools.chain.from_iterable(self.evidence.flanking_reads):
+            isize = abs(read.template_length)
+            if (self.classification == SVTYPE.INS and isize <= lower_limit) \
+                    or (self.classification == SVTYPE.DEL and isize >= upper_limit) \
+                    or self.classification not in [SVTYPE.DEL, SVTYPE.INS]:
+                support.add(read)
+                ihist[isize] = ihist.get(isize, 0) + 1
 
         stdev = None
         median = None
@@ -85,12 +71,12 @@ class EventCall:
         support1 = set()
         support2 = set()
 
-        for read in self.evidence.split_reads[self.evidence.break1]:
+        for read in self.evidence.split_reads[0]:
             bpos = breakpoint_pos(read, self.breakpoint_pair.break1.orient)
             if Interval.overlaps((bpos, bpos), self.breakpoint_pair.break1):
                 support1.add(read)
 
-        for read in self.evidence.split_reads[self.evidence.break2]:
+        for read in self.evidence.split_reads[1]:
             bpos = breakpoint_pos(read, self.breakpoint_pair.break2.orient)
             if Interval.overlaps((bpos, bpos), self.breakpoint_pair.break2):
                 support2.add(read)
@@ -183,11 +169,11 @@ class Evidence:
     """
     @property
     def window1(self):
-        return self.windows[self.break1]
+        return self.windows[0]
 
     @property
     def window2(self):
-        return self.windows[self.break2]
+        return self.windows[1]
 
     @property
     def break1(self):
@@ -357,27 +343,20 @@ class Evidence:
         # split reads are a read that covers at least one breakpoint
         # to avoid duplicating with spanning should try adding as spanning
         # first
-        self.split_reads = {
-            self.break1: set(),
-            self.break2: set()
-        }
+        self.split_reads = (set(), set())
         # flanking reads are read pairs that have a mate within a given breakpoint window and
         # their pair mapped to the opposite breakpoint window
-        self.flanking_reads = {
-            self.break1: set(),
-            self.break2: set()
-        }
+        self.flanking_reads = (set(), set())
 
         # spanning reads are reads spanning BOTH breakpoints
         self.spanning_reads = set()
         # for each breakpoint stores the number of reads that were read from the associated
         # bamfile for the window surrounding the breakpoint
         self.read_counts = {}
-        self.windows = {}
         self.contigs = []
 
         if self.protocol == PROTOCOL.GENOME:
-            self.windows[self.break1] = Evidence.generate_window(
+            w1 = Evidence.generate_window(
                 self.break1,
                 read_length=self.settings.read_length,
                 median_insert_size=self.settings.median_insert_size,
@@ -385,7 +364,7 @@ class Evidence:
                 stdev_isize=self.settings.stdev_isize,
                 stdev_count_abnormal=self.settings.stdev_count_abnormal
             )
-            self.windows[self.break2] = Evidence.generate_window(
+            w2 = Evidence.generate_window(
                 self.break2,
                 read_length=self.settings.read_length,
                 median_insert_size=self.settings.median_insert_size,
@@ -393,8 +372,9 @@ class Evidence:
                 stdev_isize=self.settings.stdev_isize,
                 stdev_count_abnormal=self.settings.stdev_count_abnormal
             )
+            self.windows = (w1, w2)
         elif self.protocol == PROTOCOL.TRANS:
-            self.windows[self.break1] = Evidence.generate_transcriptome_window(
+            w1 = Evidence.generate_transcriptome_window(
                 self.break1,
                 self.annotations,
                 read_length=self.settings.read_length,
@@ -403,7 +383,7 @@ class Evidence:
                 stdev_isize=self.settings.stdev_isize,
                 stdev_count_abnormal=self.settings.stdev_count_abnormal
             )
-            self.windows[self.break2] = Evidence.generate_transcriptome_window(
+            w2 = Evidence.generate_transcriptome_window(
                 self.break2,
                 self.annotations,
                 read_length=self.settings.read_length,
@@ -412,21 +392,19 @@ class Evidence:
                 stdev_isize=self.settings.stdev_isize,
                 stdev_count_abnormal=self.settings.stdev_count_abnormal
             )
+            self.windows = (w1, w2)
         else:
             raise AttributeError('invalid protocol', self.protocol)
-        self.half_mapped = {
-            self.break1: set(),
-            self.break2: set()
-        }
+        self.half_mapped = (set(), set())
 
     def supporting_reads(self):
         """
         convenience method to return all flanking, split and spanning reads associated with an evidence object
         """
         result = set()
-        for s in self.flanking_reads.values():
+        for s in itertools.chain.from_iterable(self.flanking_reads):
             result.update(s)
-        for s in self.split_reads.values():
+        for s in itertools.chain.from_iterable(self.split_reads):
             result.update(s)
         result.update(self.spanning_reads)
         return result
@@ -543,7 +521,7 @@ class Evidence:
                     or read.is_reverse == (self.break1.strand == STRAND.NEG)):
             # current read falls in the first breakpoint window, mate in the
             # second
-            self.flanking_reads[self.break1].add(read)
+            self.flanking_reads[0].add(read)
             added = True
         if read.reference_start >= w2[0] and read.reference_end <= w2[1] \
                 and self.bam_cache.reference_id(self.break2.chr) == read.reference_id \
@@ -553,7 +531,7 @@ class Evidence:
                     or read.is_reverse != (self.break2.strand == STRAND.NEG)):
             # current read falls in the second breakpoint window, mate in the
             # first
-            self.flanking_reads[self.break2].add(read)
+            self.flanking_reads[1].add(read)
             added = True
         if not added:
             raise UserWarning(
@@ -649,7 +627,7 @@ class Evidence:
                 and CigarTools.longest_fuzzy_match(read.cigar, 1) < self.settings.min_anchor_fuzzy:
             raise UserWarning('alignment of too poor quality')
         else:
-            self.split_reads[breakpoint].add(read)
+            self.split_reads[0 if first_breakpoint else 1].add(read)
 
         # try mapping the soft-clipped portion to the other breakpoint
         w = (opposite_window[0], opposite_window[1])
@@ -717,10 +695,10 @@ class Evidence:
         if len(scores) > 1:
             if scores[0][0] != scores[1][0] and scores[0][1] != scores[1][1]:  # not multimap
                 clipped = scores[0][2]
-                self.split_reads[opposite_breakpoint].add(clipped)
+                self.split_reads[1 if first_breakpoint else 0].add(clipped)
         elif len(scores) == 1:
             clipped = scores[0][2]
-            self.split_reads[opposite_breakpoint].add(clipped)
+            self.split_reads[1 if first_breakpoint else 0].add(clipped)
 
     def assemble_split_reads(self):
         """
@@ -729,7 +707,7 @@ class Evidence:
         """
         # gather reads for the putative assembly
         assembly_sequences = {}
-        for r in itertools.chain.from_iterable(self.split_reads.values()):
+        for r in itertools.chain.from_iterable(self.split_reads):
             s = r.query_sequence
             temp = reverse_complement(s)
             assembly_sequences[s] = assembly_sequences.get(s, set())
@@ -745,7 +723,7 @@ class Evidence:
                     assembly_sequences[s].add(m)
                     assembly_sequences[temp] = assembly_sequences.get(temp, set())
                     assembly_sequences[temp].add(m)
-        for r in itertools.chain.from_iterable(self.half_mapped.values()):
+        for r in itertools.chain.from_iterable(self.half_mapped):
             try:
                 for m in self.bam_cache.get_mate(r):
                     s = m.query_sequence
@@ -825,7 +803,7 @@ class Evidence:
 
         intrachromosomal = (ev.break1.chr == ev.break2.chr)
 
-        for read in ev.flanking_reads[ev.break1]:
+        for read in ev.flanking_reads[0]:
             s = read.reference_start
             if read.cigar[0][0] == CIGAR.S:
                 s -= read.cigar[0][1]
@@ -836,7 +814,7 @@ class Evidence:
             first_positions.add(t)
             second_positions.add(read.next_reference_start)
 
-        for read in ev.flanking_reads[ev.break2]:
+        for read in ev.flanking_reads[1]:
             s = read.reference_start
             if read.cigar[0][0] == CIGAR.S:
                 s -= read.cigar[0][1]
@@ -914,8 +892,8 @@ class Evidence:
         pos1 = {}
         pos2 = {}
 
-        for breakpoint, d in [(ev.break1, pos1), (ev.break2, pos2)]:
-            for read in ev.split_reads[breakpoint]:
+        for i, breakpoint, d in [(0, ev.break1, pos1), (1, ev.break2, pos2)]:
+            for read in ev.split_reads[i]:
                 try:
                     pos = breakpoint_pos(read, breakpoint.orient)
                     if pos not in d:
@@ -964,7 +942,7 @@ class Evidence:
 
         if len(linked_pairings) == 0:  # then call by mixed or flanking only
             assert(len(pos1.keys()) == 0 or len(pos2.keys() == 0))
-            fr = len(self.flanking_reads[self.break1]) + len(self.flanking_reads[self.break2])
+            fr = len(self.flanking_reads[0]) + len(self.flanking_reads[1])
             if fr > 0:
                 # if can call the first breakpoint by split
                 for pos in pos1:
@@ -1020,7 +998,7 @@ class Evidence:
                 except UserWarning:
                     pass
             if read.mate_is_unmapped:
-                self.half_mapped[self.break1].add(read)
+                self.half_mapped[0].add(read)
             else:
                 try:
                     self.add_flanking_read(read)
@@ -1052,7 +1030,7 @@ class Evidence:
                 except UserWarning:
                     pass
             if read.mate_is_unmapped:
-                self.half_mapped[self.break2].add(read)
+                self.half_mapped[1].add(read)
             else:
                 try:
                     self.add_flanking_read(read)

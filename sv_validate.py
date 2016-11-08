@@ -268,18 +268,17 @@ def gather_evidence_from_bam(clusters):
                 'gathered evidence for:',
                 e.breakpoint_pair,
                 BreakpointPair.classify(e.breakpoint_pair),
-                'flanking reads:', len(e.flanking_reads),
-                'split reads:', [len(a) for a in e.split_reads.values()]
+                'flanking reads:', [len(a) for a in e.flanking_reads],
+                'split reads:', [len(a) for a in e.split_reads]
             )
             e.assemble_split_reads()
             for c in e.contigs:
                 print('>', c.seq)
             evidence.append(e)
             ihist = {}
-            for b in e.flanking_reads:
-                for read in e.flanking_reads[b]:
-                    isize = abs(read.template_length)
-                    ihist[isize] = ihist.get(isize, 0) + 1
+            for read in itertools.chain.from_iterable(e.flanking_reads):
+                isize = abs(read.template_length)
+                ihist[isize] = ihist.get(isize, 0) + 1
             try:
                 median = profile_bam.histogram_median(ihist)
                 stdev = math.sqrt(profile_bam.histogram_stderr(ihist, median))

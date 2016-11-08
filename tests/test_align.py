@@ -3,6 +3,75 @@ from structural_variant.align import *
 import unittest
 
 
+class MockRead:
+    def __init__(self, query_name=None, reference_id=None, reference_start=None, reference_end=None, cigar=None):
+        self.query_name = query_name
+        self.reference_id = reference_id
+        self.reference_start = reference_start
+        self.reference_end = reference_end
+        self.cigar = cigar
+        if self.reference_end is None and cigar and reference_start:
+            self.reference_end = reference_start + sum([f for v, f in cigar if v not in [CIGAR.S, CIGAR.I]])
+
+
+class MockBamFileHandle:
+    def __init__(self, chrom_to_tid={}):
+        self.chrom_to_tid = chrom_to_tid
+
+    def fetch(self):
+        pass
+
+    def get_tid(self, chrom):
+        if chrom in self.chrom_to_tid:
+            return self.chrom_to_tid[chrom]
+        else:
+            return -1
+
+    def get_reference_name(self, input_tid):
+        for chrom, tid in self.chrom_to_tid.items():
+            if input_tid == tid:
+                return chrom
+        raise KeyError('invalid id')
+
+
+class TestBamCache(unittest.TestCase):
+
+    def test___init__(self):
+        fh = MockBamFileHandle()
+        b = BamCache(fh)
+        self.assertEqual(fh, b.fh)
+
+    def test_add_read(self):
+        fh = MockBamFileHandle()
+        b = BamCache(fh)
+        r = MockRead('name')
+        b.add_read(r)
+        self.assertEqual(1, len(b.cache.values()))
+        self.assertEqual(set([r]), b.cache['name'])
+
+    def test_reference_id(self):
+        fh = MockBamFileHandle({'1': 0})
+        b = BamCache(fh)
+        self.assertEqual(0, b.reference_id('1'))
+        with self.assertRaises(KeyError):
+            b.reference_id('2')
+
+    def test_chr(self):
+        fh = MockBamFileHandle({'1': 0})
+        b = BamCache(fh)
+        r = MockRead('name', 0)
+        self.assertEqual('1', b.chr(r))
+
+    def test__generate_fetch_bins_single(self):
+        self.assertEqual([(1, 100)], BamCache._generate_fetch_bins(1, 100, 1, 0))
+
+    def test__generate_fetch_bins_multi(self):
+        self.assertEqual([(1, 50), (51, 100)], BamCache._generate_fetch_bins(1, 100, 2, 0))
+
+    def test__generate_fetch_bins_multi_gapped(self):
+        self.assertEqual([(1, 45), (56, 100)], BamCache._generate_fetch_bins(1, 100, 2, 10))
+
+
 class TestAlign(unittest.TestCase):
     """
     test class for functions in the validate namespace
@@ -29,6 +98,28 @@ class TestAlign(unittest.TestCase):
     def test_assemble_empty_list(self):
         self.assertEqual([], assemble([]))
 
+    def test_reverse_complement(self):
+        self.assertEqual('ATCG', reverse_complement('CGAT'))
+
+    def test_breakpoint_pos(self):
+        # ==========+++++++++>
+        r = MockRead(reference_start=10, cigar=[(CIGAR.M, 10), (CIGAR.S, 10)])
+        self.assertEqual(19, breakpoint_pos(r))
+
+        with self.assertRaises(AttributeError):
+            breakpoint_pos(r, ORIENT.RIGHT)
+
+        self.assertEqual(19, breakpoint_pos(r, ORIENT.LEFT))
+
+        # ++++++++++=========>
+        r = MockRead(reference_start=10, cigar=[(CIGAR.S, 10), (CIGAR.M, 10)])
+        self.assertEqual(10, breakpoint_pos(r))
+
+        with self.assertRaises(AttributeError):
+            breakpoint_pos(r, ORIENT.LEFT)
+
+        self.assertEqual(10, breakpoint_pos(r, ORIENT.RIGHT))
+
 
 class TestDeBruijnGraph(unittest.TestCase):
 
@@ -42,7 +133,7 @@ class TestDeBruijnGraph(unittest.TestCase):
         G.add_edge(9, 8)
         G.trim_low_weight_tails(2)
         self.assertEqual([1, 2, 3, 4, 5, 6], sorted(G.nodes()))
-        
+
         G = DeBruijnGraph()
         for s, t in itertools.combinations([1, 2, 3, 4, 5, 6], 2):
             G.add_edge(s, t)
@@ -53,7 +144,7 @@ class TestDeBruijnGraph(unittest.TestCase):
         G.add_edge(9, 8)
         G.trim_low_weight_tails(2)
         self.assertEqual([1, 2, 3, 4, 5, 6, 7, 8], sorted(G.nodes()))
-        
+
         G = DeBruijnGraph()
         for s, t in itertools.combinations([1, 2, 3, 4, 5, 6], 2):
             G.add_edge(s, t)
@@ -100,3 +191,11 @@ class TestCigarTools(unittest.TestCase):
             ([(4, 5), (7, 8)], 7),
             CigarTools.compute('GTGAGTAAATTCAACATCGTTTTT', '--CTTAGAATTCAAC---------')
         )
+
+    def test_convert_for_igv(self):
+        c = [(CIGAR.M, 10), (CIGAR.EQ, 10), (CIGAR.X, 10)]
+        self.assertEqual([(CIGAR.M, 30)], CigarTools.convert_for_igv(c))
+
+    def test_alignment_matches(self):
+        c = [(CIGAR.M, 10), (CIGAR.EQ, 10), (CIGAR.X, 10)]
+        self.assertEqual(30, CigarTools.alignment_matches(c))

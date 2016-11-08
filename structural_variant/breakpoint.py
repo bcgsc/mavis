@@ -162,7 +162,3 @@ class BreakpointPair:
                         or (pair.break1.orient == ORIENT.RIGHT and pair.break2.orient == ORIENT.RIGHT):
                     raise InvalidRearrangement(pair)
                 return [SVTYPE.TRANS]
-
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()

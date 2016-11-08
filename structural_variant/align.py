@@ -18,7 +18,6 @@ class BamCache:
             bamfile (str): path to the input bam file
         """
         self.cache = {}
-        self.fetch_history = {}  # chr => Interval => set()
         self.fh = bamfile
         if not hasattr(bamfile, 'fetch'):
             self.fh = pysam.AlignmentFile(bamfile, 'rb')
@@ -62,9 +61,9 @@ class BamCache:
         """
         bin_size = int(((stop - start + 1) - bin_gap_size * (sample_bins - 1)) / sample_bins)
 
-        fetch_regions = [(start, start + bin_size)]  # exclusive ranges for fetch
+        fetch_regions = [(start, start + bin_size - 1)]  # exclusive ranges for fetch
         for i in range(0, sample_bins - 1):
-            st = fetch_regions[-1][1] + bin_gap_size
+            st = fetch_regions[-1][1] + bin_gap_size + 1
             end = st + bin_size
             fetch_regions.append((st, end))
         fetch_regions[-1] = fetch_regions[-1][0], stop
@@ -421,21 +420,6 @@ def reverse_complement(s):
     return str(temp.reverse_complement())
 
 
-def longest_homopolymer(sequence):
-    if len(sequence) == 0:
-        raise AttributeError('cannot compute longest_homopolymer on an empty sequence')
-    hp = [0]
-    last_char = sequence[0]
-
-    for char in sequence:
-        if char == last_char:
-            hp[-1] += 1
-        else:
-            hp.append(0)
-        last_char = char
-    return max(hp)
-
-
 def breakpoint_pos(read, orient=ORIENT.NS):
     """
     assumes the breakpoint is the position following softclipping on the side with more
@@ -465,8 +449,12 @@ def breakpoint_pos(read, orient=ORIENT.NS):
             orient = ORIENT.LEFT
 
     if orient == ORIENT.RIGHT:
+        if typ != CIGAR.S:
+            raise AttributeError('soft clipping doesn\'t support input orientation for a breakpoint')
         return read.reference_start
     else:
+        if end_typ != CIGAR.S:
+            raise AttributeError('soft clipping doesn\'t support input orientation for a breakpoint')
         return read.reference_end - 1
 
 

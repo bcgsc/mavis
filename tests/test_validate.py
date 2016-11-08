@@ -8,22 +8,6 @@ import unittest
 HUMAN_REFERENCE_GENOME = None
 
 
-class MockRead(pysam.AlignedSegment):
-    """
-    utility class to clean up code for generating a mock read
-    for testing validate functions
-    """
-
-    def __init__(self, **kwargs):
-        pysam.AlignedSegment.__init__(self)
-        self.reference_start = kwargs.pop('reference_start')
-        self.reference_id = kwargs.pop('reference_id')
-        self.query_name = kwargs.pop(
-            'query_name', 'read-{0}:{1}'.format(self.reference_id, self.reference_start))
-        self.query_sequence = kwargs.pop('query_sequence')
-        self.cigar = kwargs.pop('cigar')
-
-
 def setUpModule():
     global HUMAN_REFERENCE_GENOME
     # HUMAN_REFERENCE_GENOME = load_reference_genome('/home/pubseq/genomes/Homo_sapiens/TCGA_Special/GRCh37-lite.fa')
