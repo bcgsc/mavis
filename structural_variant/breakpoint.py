@@ -61,7 +61,7 @@ class BreakpointPair:
             return self.break2
         raise IndexError(
             'index input accessor is out of bounds: 1 or 2 only', index)
-    
+
     @property
     def key(self):
         return self.break1.key, self.break2.key, self.opposing_strands, self.stranded, self.untemplated_sequence
@@ -118,14 +118,13 @@ class BreakpointPair:
         # try classifying to make sure it's a valid combination
         BreakpointPair.classify(self)
 
-    def __repr__(self):
-        return str(self)
-
     def __str__(self):
-        return '{0}==>{1}{2}'.format(
+        return 'BPP<{0}==>{1}{2}{3}>'.format(
             str(self.break1),
             str(self.break2),
-            ('[OPP]' if self.opposing_strands else '[EQ]') if self.opposing_strands is not None else '')
+            ('; OPP' if self.opposing_strands else '; EQ') if self.opposing_strands is not None else '',
+            '; seq=\'{}\''.format(self.untemplated_sequence) if self.untemplated_sequence else ''
+        )
 
     @classmethod
     def classify(cls, pair):
@@ -163,31 +162,6 @@ class BreakpointPair:
                         or (pair.break1.orient == ORIENT.RIGHT and pair.break2.orient == ORIENT.RIGHT):
                     raise InvalidRearrangement(pair)
                 return [SVTYPE.TRANS]
-
-
-class SVAnnotation:
-    """
-    TODO
-    """
-    def __init__(self, breakpoint_pair, event_type, transcript1, transcript2, **kwargs):
-        """
-        holds the association between a pair of transcripts and an event
-        transcript1 and transcript2 can both be None or neither can be None
-        """
-        self.breakpoint_pair = breakpoint_pair
-        self.sv_class = SVTYPE.enforce(event_type)
-
-        self.transcript1 = transcript1
-        self.transcript2 = transcript2
-        self.HUMAN_REFERENCE_GENOME = kwargs.pop(
-            'HUMAN_REFERENCE_GENOME', None)
-
-    def fusion_ref_sequence(self):
-        pass
-
-    def fusion_frame(self):
-        pass
-
 
 if __name__ == '__main__':
     import doctest

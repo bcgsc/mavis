@@ -12,6 +12,7 @@ from Bio.Seq import Seq
 import tempfile
 from structural_variant.interval import Interval
 from structural_variant.align import CigarTools
+from structural_variant.breakpoint import Breakpoint, BreakpointPair
 
 
 class BlatAlignedSegment(pysam.AlignedSegment):
@@ -47,9 +48,70 @@ class BlatAlignedSegment(pysam.AlignedSegment):
     @property
     def reference_name(self):
         return self.blat['tname']
+    
+    @classmethod
+    def call_breakpoint_pair(cls, read1, read2=None):
+        if read2 is None:
+            return cls._call_from_single_read(read1)
+        return cls._call_from_two_reads(read1, read2)
 
     @classmethod
-    def call_breakpoints(cls, read1, read2):
+    def _call_from_single_read(cls, read):
+        read_events = []
+        for i, t in enumerate(read.cigar):
+            v, f = t
+            if v not in [CIGAR.I, CIGAR.D, CIGAR.N]:
+                continue
+            if i > 0 and v == read.cigar[i - 1]:
+                start, last, size = read_events[-1]
+                read_events[-1] = (start, i, size + f)
+            else:
+                read_events.append((i, i, f))
+
+        biggest = max(read_events, key=lambda x: x[2])
+
+        first_breakpoint = read.reference_start - 1
+        second_breakpoint = first_breakpoint
+        untemplated_seq = ''
+
+        seq_pos = 0
+        for i, t in enumerate(read.cigar):
+            v, f = t
+            if v in [CIGAR.I, CIGAR.S]:
+                seq_pos += f
+                continue
+            elif v == CIGAR.H:
+                continue
+
+            if i < biggest[0]:
+                first_breakpoint += f
+                second_breakpoint += f
+            elif i >= biggest[0] and i <= biggest[1]:
+                second_breakpoint += f
+                if v == CIGAR.I:
+                    untemplated_seq += read.query_sequence[seq_pos:seq_pos + f]
+            else:
+                break
+            if v != CIGAR.D:
+                seq_pos += f
+
+        break1 = Breakpoint(
+            read.reference_name,
+            first_breakpoint,
+            orient=ORIENT.LEFT,
+            strand=STRAND.NEG if read.is_reverse else STRAND.POS
+        )
+        break2 = Breakpoint(
+            read.reference_name,
+            second_breakpoint,
+            orient=ORIENT.RIGHT,
+            strand=STRAND.NEG if read.is_reverse else STRAND.POS
+        )
+
+        return BreakpointPair(break1, break2, opposing_strands=False, untemplated_sequence=untemplated_seq)
+
+    @classmethod
+    def _call_from_two_reads(cls, read1, read2):
         """
         if the first read and the second read have overlapping range on their mutual query sequence
         then the breakpoint is called as is on the first and shifted on the second
@@ -154,7 +216,7 @@ class Blat:
         below are lines from the perl code i've re-written in python
 
         ::
-            
+
             my $sizeMul = pslIsProtein($blockCount, $strand, $tStart, $tEnd, $tSize, $tStarts, $blockSizes);
             sizmul = 1 for DNA
             my $pslScore = $sizeMul * ($matches + ($repMatches >> 1) ) - $sizeMul * $misMatches - $qNumInsert - $tNumInsert)
@@ -192,21 +254,21 @@ class Blat:
             filename,
             header=pslx_header,
             cast={
-                'match': 'int',
-                'mismatch': 'int',
-                'repmatch': 'int',
-                'ncount': 'int',
-                'qgap_count': 'int',
-                'qgap_bases': 'int',
-                'tgap_count': 'int',
-                'tgap_bases': 'int',
-                'qsize': 'int',
-                'qstart': 'int',
-                'qend': 'int',
-                'tsize': 'int',
-                'tstart': 'int',
-                'tend': 'int',
-                'block_count': 'int'
+                'match': int,
+                'mismatch': int,
+                'repmatch': int,
+                'ncount': int,
+                'qgap_count': int,
+                'qgap_bases': int,
+                'tgap_count': int,
+                'tgap_bases': int,
+                'qsize': int,
+                'qstart': int,
+                'qend': int,
+                'tsize': int,
+                'tstart': int,
+                'tend': int,
+                'block_count': int
             },
             validate={
                 'strand': '^[\+-]$'
@@ -248,7 +310,7 @@ class Blat:
         # note: converting to inclusive range [] vs end-exclusive [)
         query_ranges = [(x, x + y - 1) for x, y in zip(row['qstarts'], row['block_sizes'])]
         ref_ranges = [(x, x + y - 1) for x, y in zip(row['tstarts'], row['block_sizes'])]
-        
+
         if reference_genome:
             temp_char_seq = reference_genome[row['tname']].seq
 
@@ -265,7 +327,7 @@ class Blat:
                 offset -= 1
                 new_query_ranges.append((qr[0], qr[1] + offset))
                 new_ref_ranges.append((rr[0], rr[1] + offset))
-            
+
             query_ranges = [new_query_ranges[0]]
             ref_ranges = [new_ref_ranges[0]]
             for i in range(1, len(new_query_ranges)):
@@ -354,6 +416,7 @@ def blat_contigs(
         min_percent_of_max_score=0.8,
         min_identity=0.95,
         is_protein=False,
+        MIN_EXTEND_OVERLAP=10,
         **kwargs):
     """
     given a set of contigs, call blat from the commandline and adds the results to the contigs
@@ -434,9 +497,6 @@ def blat_contigs(
                     read.set_tag('br', rank, value_type='i')
                     read.set_tag('bi', row['percent_ident'], value_type='f')
                     reads.append(read)
-                    print(row)
-                    print(read)
-                    print(read.cigar)
                 except KeyError as e:
                     warnings.warn(
                         'warning: reference template name not recognized {0}'.format(e))
@@ -460,6 +520,10 @@ def blat_contigs(
 
                 for a1, a2 in itertools.combinations([x for x in aln if (x, None) not in putative_alignments], 2):
                     # do they overlap both breakpoints
+                    if a1.reference_id > a2.reference_id or \
+                            (a1.reference_id == a2.reference_id and a1.reference_start > a2.reference_start):
+                        a1, a2 = (a2, a1)
+
                     if (a1.is_reverse != a2.is_reverse) != e.opposing_strands:
                         continue
 

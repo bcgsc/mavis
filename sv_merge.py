@@ -81,11 +81,11 @@ def load_input_file(filename):
             'protocol',
             'tool_version'],
         split={
-            'start_position': ('^(\d+)-(\d+)$', ['start_pos1', 'start_pos2']),
-            'end_position': ('^(\d+)-(\d+)$', ['end_pos1', 'end_pos2']),
+            'start_position': '^(?P<start_pos1>\d+)-(?P<start_pos2>\d+)$',
+            'end_position': '^(?P<end_pos1>\d+)-(?P<end_pos2>\d+)$',
         },
-        cast={'start_pos1': 'int', 'start_pos2': 'int',
-              'end_pos1': 'int', 'end_pos2': 'int'},
+        cast={'start_pos1': int, 'start_pos2': int,
+              'end_pos1': int, 'end_pos2': int},
         validate={
             'start_orientation': '^{0}$'.format('|'.join([re.escape(x) for x in ORIENT.values()])),
             'end_orientation': '^{0}$'.format('|'.join([re.escape(x) for x in ORIENT.values()])),

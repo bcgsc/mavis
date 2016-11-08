@@ -358,8 +358,8 @@ def load_masking_regions(filepath):
     header, rows = TSV.read_file(
         filepath,
         retain=['chr', 'start', 'end', 'name'],
-        cast = {'start': 'int', 'end': 'int'},
-        transform = {'chr': lambda x: re.sub('^chr', '', x) }
+        cast={'start': int, 'end': int},
+        transform={'chr': lambda x: re.sub('^chr', '', x)}
     )
     regions = {}
     for row in rows:

@@ -105,9 +105,9 @@ class BamCache:
         """
         # NOTE: will return all mate alignments that have been cached
         putative_mates = self.cache.get(read.query_name, set())
-        if SUFFIX_DELIM in read.query_name:
-            prefix, temp = read.query_name.split(SUFFIX_DELIM, 1)
-            putative_mates.update(self.cache.get(temp, set()))
+        # if SUFFIX_DELIM in read.query_name:
+        #     prefix, temp = read.query_name.split(SUFFIX_DELIM, 1)
+        #     putative_mates.update(self.cache.get(temp, set()))
         mates = []
         for mate in putative_mates:
             if any([read.is_read1 == mate.is_read1,
@@ -496,10 +496,10 @@ class Contig:
         self.seq = sequence
         self.remapped_reads = {}
         self.score = score
-        self.alignment = None
+        self.alignments = None
 
     def __hash__(self):
-        return hash((self.seq, self.score))
+        return hash(self.seq)
 
     def add_mapped_read(self, read, multimap=1):
         self.remapped_reads[read] = min(self.remapped_reads.get(read, 1), 1 / multimap)
@@ -666,14 +666,11 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
     min_contig_length = min_seq + 1 if min_contig_length is None else min_contig_length
     print(datetime.now(), 'assemble() start', len(sequences), 'kmer_size=', kmer_size)
     assembly = DeBruijnGraph()
-    input_seq_by_node = {}
 
     for s in sequences:
         for kmer in kmers(s, kmer_size):
             l = kmer[:-1]
             r = kmer[1:]
-            input_seq_by_node.setdefault(l, set()).add(s)
-            input_seq_by_node.setdefault(r, set()).add(s)
             assembly.add_edge(l, r)
 
     if not nx.is_directed_acyclic_graph(assembly):
@@ -687,7 +684,6 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
     assembly.trim_low_weight_tails(min_edge_weight)
     print('assembly after trim', len(assembly.nodes()))
     path_scores = {}  # path_str => score_int
-    nodes_by_contig_seq = {}
 
     for component in digraph_connected_components(assembly):
         # since now we know it's a tree, the assemblies will all be ltd to
@@ -707,33 +703,24 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
         for source, sink in itertools.product(sources, sinks):
             for path in nx.all_simple_paths(assembly, source, sink):
                 s = path[0] + ''.join([p[-1] for p in path[1:]])
-                nodes_by_contig_seq.setdefault(s, set()).update(set(path))
                 score = 0
                 for i in range(0, len(path) - 1):
                     score += assembly.edge_freq[(path[i], path[i + 1])]
                 path_scores[s] = max(path_scores.get(s, 0), score)
     print('path_scores', len(path_scores.items()))
+    # now map the contigs to the possible input sequences
     contigs = {}
     for seq, score in list(path_scores.items()):
         if seq not in sequences and len(seq) >= min_contig_length:
             contigs[seq] = Contig(seq, score)
 
-    contigs_by_input = {}
-    for contig_seq, nodes in nodes_by_contig_seq.items():
-        if contig_seq not in contigs:
-            continue
-        for n in nodes:
-            for input_seq in input_seq_by_node[n]:
-                contigs_by_input.setdefault(input_seq, set()).add(contig_seq)
-
     # remap the input reads
     for input_seq in sequences:
         maps_to = {}  # contig, score
-        for contig_seq in contigs_by_input.get(input_seq, []):
-            contig = contigs[contig_seq]
+        for contig in contigs.values():
             a = nsb_align(
-                contig_seq,
                 contig.seq,
+                input_seq,
                 min_overlap_percent=min_read_mapping_overlap / len(contig.seq)
             )
             if len(a) != 1:

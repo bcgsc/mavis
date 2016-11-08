@@ -1,4 +1,65 @@
 #!/projects/tumour_char/analysis_scripts/python/centos06/anaconda3_v2.3.0/bin/python
+"""
+output file format
+
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| column_name            | data_type   | example     | description                                                  |
++========================+=============+=============+==============================================================+
+| classification         | SVTYPE      | deletion    | the type of structural variant being called                  |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| cluster_id             | int         | 1           | the id for the cluster that this was derived from            |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| break1_chromosome      | string      | X           | the name of the chromosome                                   |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| break1_position_start  | int         | 1           | the start of the breakpoint interval                         |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| break1_position_end    | int         | 10          | the end of the breakpoint interval                           |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| break1_orientation     | char        | R           | orientation of the first breakpoint                          |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| break2_chromosome      | str         | 12          | the name of the chromosome                                   |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| break2_position_start  | int         | 2           | the start of the breakpoint interval                         |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| break2_position_end    | int         | 20          | the end of the breakpoint interval                           |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| break2_orientation     | char        | R           | orientation of the second breakpoint                         |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| opposing_strands       | boolean     | False       | if the strands are not the same at both breakpoints          |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| stranded               | boolean     | True        | if strand matters (if False assume pos/pos ~ neg/neg)        |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| contigs_assembled      | int         | 0           | number of contigs built from split reads                     |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| contig_alignments      | int         | 1           | number of alignments created from blatting contigs           |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| contig_sequence        | string      | ATGC...     | the full sequence of the contig                              |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| contig_remap_score     | float       | 21          | reads which remap to the contig (multimaps are fractional)   |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| contig_alignment_score | float       | 20          | the score which indicates how unique the alignment was       |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| contig_co_mutations    | string      | 12:g.123A>T | a semi-colon delimited list of small mutations called        |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| call_method            | CALL_METHOD | CONTIG      | the method used to call the breakpoints (CONTIG, FLANK, etc) |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| flanking_reads         | int         | 23          | number of flanking reads which support the call              |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| median_insert_size     | int         | 8200        | the median insert size as called by flanking reads           |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| stdev_insert_size      | float       | 7.7         | the standard deviation (wrt the median) in the insert sizes  |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| break1_split_reads     | int         | 0           | the number of split reads at the first breakpoint            |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| break2_split_reads     | int         | 45          | the number of split reads at the second breakpoint           |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| linking_split_reads    | int         | 3           | the number of split reads that support both breakpoints      |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+| untemplated_sequence   | string      | ATCGGT      | sequence between the two breakpoints                         |
++------------------------+-------------+-------------+--------------------------------------------------------------+
+
+
+"""
 import TSV
 import argparse
 import os
@@ -14,7 +75,6 @@ from structural_variant.interval import Interval
 from structural_variant.annotate import load_masking_regions, load_reference_genome, load_reference_genes
 from tools import profile_bam
 import math
-from difflib import SequenceMatcher
 from datetime import datetime
 import multiprocessing
 
@@ -24,7 +84,7 @@ INPUT_BAM_CACHE = None
 REFERENCE_ANNOTATIONS = None
 HUMAN_REFERENCE_GENOME = None
 MASKED_REGIONS = None
-EVIDENCE_SETTINGS = EvidenceSettings(median_insert_size=385, mm_isize_error=95)
+EVIDENCE_SETTINGS = EvidenceSettings(median_insert_size=385, stdev_isize=95)
 
 MAX_POOL_SIZE = 3
 HRG = '/home/pubseq/genomes/Homo_sapiens/TCGA_Special/GRCh37-lite.fa'
@@ -45,6 +105,7 @@ class Profile:
     def print(cls):
         for step, time in cls.steps:
             print(step, time)
+
 
 def mkdirp(dirname):
     try:
@@ -75,12 +136,12 @@ def read_cluster_file(name, is_stranded):
             'opposing_strands'
         ],
         cast={
-            'cluster_size': 'int',
-            'break1_position_start': 'int',
-            'break1_position_end': 'int',
-            'break2_position_start': 'int',
-            'break2_position_end': 'int',
-            'opposing_strands': 'bool'
+            'cluster_size': int,
+            'break1_position_start': int,
+            'break1_position_end': int,
+            'break2_position_start': int,
+            'break2_position_end': int,
+            'opposing_strands': TSV.bool
         }
     )
     evidence = []
@@ -210,87 +271,26 @@ def gather_evidence_from_bam(clusters):
                 'flanking reads:', len(e.flanking_reads),
                 'split reads:', [len(a) for a in e.split_reads.values()]
             )
-            # gather reads for the putative assembly
-            assembly_sequences = {}
-            for r in itertools.chain.from_iterable(e.split_reads.values()):
-                s = r.query_sequence
-                temp = Seq(s, DNA_ALPHABET)
-                temp = str(temp.reverse_complement())
-                assembly_sequences[s] = assembly_sequences.get(s, set())
-                assembly_sequences[s].add(r)
-                assembly_sequences[temp] = assembly_sequences.get(temp, set())
-                assembly_sequences[temp].add(r)
-                # only collect the mates if they are unmapped
-                if r.mate_is_unmapped:
-                    for m in INPUT_BAM_CACHE.get_mate(r):
-                        s = m.query_sequence
-                        temp = Seq(s, DNA_ALPHABET)
-                        temp = str(temp.reverse_complement())
-                        assembly_sequences[s] = assembly_sequences.get(s, set())
-                        assembly_sequences[s].add(m)
-                        assembly_sequences[temp] = assembly_sequences.get(temp, set())
-                        assembly_sequences[temp].add(m)
-            e.contigs = assemble(assembly_sequences, min_edge_weight=3)
+            e.assemble_split_reads()
             for c in e.contigs:
                 print('>', c.seq)
             evidence.append(e)
             ihist = {}
-            for read in e.flanking_reads:
-                isize = abs(read.template_length)
-                ihist[isize] = ihist.get(isize, 0) + 1
-            if len(e.flanking_reads) > 2:
+            for b in e.flanking_reads:
+                for read in e.flanking_reads[b]:
+                    isize = abs(read.template_length)
+                    ihist[isize] = ihist.get(isize, 0) + 1
+            try:
                 median = profile_bam.histogram_median(ihist)
                 stdev = math.sqrt(profile_bam.histogram_stderr(ihist, median))
                 avg = profile_bam.histogram_average(ihist)
                 stdev_avg = math.sqrt(profile_bam.histogram_stderr(ihist, avg))
                 print('isize stats: median={}, stdev={}; avg={}, stdev={}'.format(median, stdev, avg, stdev_avg))
+            except:
+                pass
         else:
             raise NotImplementedError('currently only genome protocols are supported')
     return evidence
-
-
-def blat(evidence):
-    sequences = set()
-    for e in evidence:
-        for c in e.contigs:
-            sequences.add(c.seq)
-
-    blat_contig_alignments = blat_contigs(sequences, INPUT_BAM_CACHE)
-
-    # gather a list of the contigs alignments that apply to this evidence object/breakpoint pair
-    for e in evidence:
-        for contig in e.contigs:
-            blat_sequences = blat_contig_alignments[contig.seq]
-            putative_alignments = []
-            
-            if e.break1.chr == e.break2.chr:
-                for read in blat_contig_alignments[contig.seq]:
-                    # if it covers both breakpoints add to putative alignments
-                    temp = Interval(read.reference_start, read.reference_end - 1)
-                    if INPUT_BAM_CACHE.chr(read) == e.break1.chr \
-                            and e.window1.overlaps(temp) \
-                            and e.window2.overlaps(temp):
-                        putative_alignments.append(read)
-
-            for a1, a2 in itertools.combinations(
-                    [x for x in blat_contig_alignments[contig.seq] if x not in putative_alignments], 2):
-                # do they overlap both breakpoints
-                # do their mate pairs make sense
-                union = Interval.union(a1.query_coverage_interval(),
-                                       a2.query_coverage_interval())
-                if len(union) - len(a1.query_coverage_interval()) < MIN_EXTEND_OVERLAP \
-                        or len(union) - len(a2.query_coverage_interval()) < MIN_EXTEND_OVERLAP:
-                    continue
-                if INPUT_BAM_CACHE.chr(a1) == e.break1.chr \
-                        and e.window1.overlaps((a1.reference_start, a1.reference_end - 1)) \
-                        and INPUT_BAM_CACHE.chr(a2) == e.break2.chr \
-                        and e.window2.overlaps((a2.reference_start, a2.reference_end - 1)):
-                    putative_alignment_pairs.append((a1, a2))
-                elif INPUT_BAM_CACHE.chr(a2) == e.break1.chr \
-                        and e.window1.overlaps((a2.reference_start, a2.reference_end - 1)) \
-                        and INPUT_BAM_CACHE.chr(a1) == e.break2.chr \
-                        and e.window2.overlaps((a1.reference_start, a1.reference_end - 1)):
-                    putative_alignment_pairs.append((a2, a1))
 
 
 def main():
@@ -374,7 +374,7 @@ def main():
             print('>', c.seq)
             for aln in c.alignments:
                 print(aln)
-    e.call_breakpoints()
+        e.call_events()
     exit(1)
     Profile.mark_step('evidence gathering complete')
     # ASSEMBLE the contigs (can parallelize here)

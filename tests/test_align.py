@@ -24,6 +24,7 @@ class TestAlign(unittest.TestCase):
         c = assemble(sequences, min_edge_weight=1)
         self.assertEqual(1, len(c))
         self.assertEqual('ABCDEFG', c[0].seq)
+        self.assertEqual(5, c[0].remap_score())
 
     def test_assemble_empty_list(self):
         self.assertEqual([], assemble([]))
