@@ -1,37 +1,7 @@
 from structural_variant.constants import *
 from structural_variant.align import *
 import unittest
-
-
-class MockRead:
-    def __init__(self, query_name=None, reference_id=None, reference_start=None, reference_end=None, cigar=None):
-        self.query_name = query_name
-        self.reference_id = reference_id
-        self.reference_start = reference_start
-        self.reference_end = reference_end
-        self.cigar = cigar
-        if self.reference_end is None and cigar and reference_start:
-            self.reference_end = reference_start + sum([f for v, f in cigar if v not in [CIGAR.S, CIGAR.I]])
-
-
-class MockBamFileHandle:
-    def __init__(self, chrom_to_tid={}):
-        self.chrom_to_tid = chrom_to_tid
-
-    def fetch(self):
-        pass
-
-    def get_tid(self, chrom):
-        if chrom in self.chrom_to_tid:
-            return self.chrom_to_tid[chrom]
-        else:
-            return -1
-
-    def get_reference_name(self, input_tid):
-        for chrom, tid in self.chrom_to_tid.items():
-            if input_tid == tid:
-                return chrom
-        raise KeyError('invalid id')
+from tests import MockRead, MockBamFileHandle
 
 
 class TestBamCache(unittest.TestCase):
@@ -97,9 +67,6 @@ class TestAlign(unittest.TestCase):
 
     def test_assemble_empty_list(self):
         self.assertEqual([], assemble([]))
-
-    def test_reverse_complement(self):
-        self.assertEqual('ATCG', reverse_complement('CGAT'))
 
     def test_breakpoint_pos(self):
         # ==========+++++++++>

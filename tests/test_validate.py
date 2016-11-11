@@ -1,8 +1,8 @@
 from structural_variant.breakpoint import Breakpoint
 from structural_variant.validate import *
 from structural_variant.annotate import load_reference_genome, Gene, Transcript
-from structural_variant.constants import *
-import pysam
+from structural_variant.constants import ORIENT, READ_PAIR_TYPE
+from tests import MockRead
 import unittest
 
 HUMAN_REFERENCE_GENOME = None
@@ -110,6 +110,72 @@ class TestEvidence(unittest.TestCase):
         w = Evidence.generate_transcriptome_window(
             b, ann, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
         self.assertEqual(Interval(1040, 2508), w)
+
+    def test_read_pair_type_LR(self):
+        r = MockRead(
+            reference_id=0,
+            next_reference_id=0,
+            reference_start=1,
+            next_reference_start=2,
+            is_reverse=False,
+            mate_is_reverse=True
+        )
+        self.assertEqual(READ_PAIR_TYPE.LR, Evidence.read_pair_type(r))
+    
+    def test_read_pair_type_LR_reverse(self):
+        r = MockRead(
+            reference_id=1,
+            next_reference_id=0,
+            reference_start=1,
+            next_reference_start=2,
+            is_reverse=True,
+            mate_is_reverse=False
+        )
+        self.assertEqual(READ_PAIR_TYPE.LR, Evidence.read_pair_type(r))
+    
+    def test_read_pair_type_LL(self):
+        r = MockRead(
+            reference_id=0,
+            next_reference_id=0,
+            reference_start=1,
+            next_reference_start=2,
+            is_reverse=False,
+            mate_is_reverse=False
+        )
+        self.assertEqual(READ_PAIR_TYPE.LL, Evidence.read_pair_type(r))
+    
+    def test_read_pair_type_RR(self):
+        r = MockRead(
+            reference_id=0,
+            next_reference_id=0,
+            reference_start=1,
+            next_reference_start=2,
+            is_reverse=True,
+            mate_is_reverse=True
+        )
+        self.assertEqual(READ_PAIR_TYPE.RR, Evidence.read_pair_type(r))
+
+    def test_read_pair_type_RL(self):
+        r = MockRead(
+            reference_id=0,
+            next_reference_id=0,
+            reference_start=1,
+            next_reference_start=2,
+            is_reverse=True,
+            mate_is_reverse=False
+        )
+        self.assertEqual(READ_PAIR_TYPE.RL, Evidence.read_pair_type(r))
+    
+    def test_read_pair_type_RL_reverse(self):
+        r = MockRead(
+            reference_id=1,
+            next_reference_id=0,
+            reference_start=1,
+            next_reference_start=2,
+            is_reverse=False,
+            mate_is_reverse=True
+        )
+        self.assertEqual(READ_PAIR_TYPE.RL, Evidence.read_pair_type(r))
 
 if __name__ == "__main__":
     unittest.main()

@@ -65,6 +65,12 @@ class BreakpointPair:
     @property
     def key(self):
         return self.break1.key, self.break2.key, self.opposing_strands, self.stranded, self.untemplated_sequence
+    
+    @property
+    def interchromosomal(self):
+        if self.break1.chr == self.break2.chr:
+            return False
+        return True
 
     def copy(self):
         temp = sys_copy(self)
@@ -119,11 +125,11 @@ class BreakpointPair:
         BreakpointPair.classify(self)
 
     def __str__(self):
-        return 'BPP<{0}==>{1}{2}{3}>'.format(
+        return 'BPP<{}==>{}; opposing={} seq={}>'.format(
             str(self.break1),
             str(self.break2),
-            ('; OPP' if self.opposing_strands else '; EQ') if self.opposing_strands is not None else '',
-            '; seq=\'{}\''.format(self.untemplated_sequence) if self.untemplated_sequence else ''
+            self.opposing_strands,
+            repr(self.untemplated_sequence)
         )
 
     @classmethod
@@ -162,3 +168,157 @@ class BreakpointPair:
                         or (pair.break1.orient == ORIENT.RIGHT and pair.break2.orient == ORIENT.RIGHT):
                     raise InvalidRearrangement(pair)
                 return [SVTYPE.TRANS]
+
+    @classmethod
+    def call_breakpoint_pair(cls, read1, read2=None):
+        if read2 is None:
+            return cls._call_from_single_contig(read1)
+        return cls._call_from_paired_contig(read1, read2)
+
+    @classmethod
+    def _call_from_single_contig(cls, read):
+        # first find the major unaligned event
+        read_events = []
+        for i, t in enumerate(read.cigar):
+            v, f = t
+            if v not in [CIGAR.I, CIGAR.D, CIGAR.N]:
+                continue
+            if i > 0 and read.cigar[i - 1][0] in [CIGAR.I, CIGAR.D, CIGAR.N]:
+                start, last, size = read_events[-1]
+                read_events[-1] = (start, i, size + f)
+            else:
+                read_events.append((i, i, f))
+
+        biggest = max(read_events, key=lambda x: x[2])
+
+        first_breakpoint = read.reference_start - 1
+        second_breakpoint = first_breakpoint
+        untemplated_seq = ''
+
+        seq_pos = 0
+        for i, t in enumerate(read.cigar):
+            v, f = t
+            if i < biggest[0]:
+                if v in [CIGAR.I, CIGAR.S]:
+                    seq_pos += f
+                elif v in [CIGAR.D, CIGAR.N]:
+                    first_breakpoint += f
+                    second_breakpoint += f
+                else:
+                    first_breakpoint += f
+                    second_breakpoint += f
+                    seq_pos += f
+            elif i >= biggest[0] and i <= biggest[1]:
+                if v in [CIGAR.I, CIGAR.S]:
+                    if v == CIGAR.I:
+                        untemplated_seq += read.query_sequence[seq_pos:seq_pos + f]
+                    seq_pos += f
+                elif v in [CIGAR.D, CIGAR.N]:
+                    second_breakpoint += f
+                else:
+                    second_breakpoint += f
+                    seq_pos += f
+            else:
+                break
+
+        break1 = Breakpoint(
+            read.reference_name,
+            first_breakpoint,
+            orient=ORIENT.LEFT,
+            strand=STRAND.NEG if read.is_reverse else STRAND.POS
+        )
+        break2 = Breakpoint(
+            read.reference_name,
+            second_breakpoint + 1,  # need to add to be past the event
+            orient=ORIENT.RIGHT,
+            strand=STRAND.NEG if read.is_reverse else STRAND.POS
+        )
+
+        return BreakpointPair(break1, break2, opposing_strands=False, untemplated_sequence=untemplated_seq)
+
+    @classmethod
+    def _call_from_paired_contig(cls, read1, read2):
+        """
+        if the first read and the second read have overlapping range on their mutual query sequence
+        then the breakpoint is called as is on the first and shifted on the second
+        """
+        
+        if read1.reference_id > read2.reference_id:
+            read1, read2 = (read2, read1)
+        elif read1.reference_id == read2.reference_id and read1.reference_start > read2.reference_start:
+            read1, read2 = (read2, read1)
+       
+        r1_qci = read1.query_coverage_interval()
+        r2_qci = read2.query_coverage_interval()
+        
+        if read1.is_reverse == read2.is_reverse:
+            assert(read1.query_sequence == read2.query_sequence)
+        else:
+            assert(read1.query_sequence == reverse_complement(read2.query_sequence))
+            l = len(read1.query_sequence) - 1
+            r2_qci = Interval(l - r2_qci.end, l - r2_qci.start)
+        print('qci1', r1_qci)
+        print('qci2', r2_qci)
+        
+        b1 = None
+        b2 = None
+
+        o1 = ORIENT.NS
+        o2 = ORIENT.NS
+        s1 = STRAND.NEG if read1.is_reverse else STRAND.POS
+        s2 = STRAND.NEG if read2.is_reverse else STRAND.POS
+
+        # <==============
+        if read1.cigar[0][0] == CIGAR.S and read1.cigar[-1][0] == CIGAR.S:
+            if read1.cigar[0][1] > read1.cigar[-1][1]:
+                o1 = ORIENT.RIGHT
+            elif read1.cigar[0][1] < read1.cigar[-1][1]:
+                o1 = ORIENT.LEFT
+        elif read1.cigar[0][0] == CIGAR.S:
+            o1 = ORIENT.RIGHT
+        elif read1.cigar[-1][0] == CIGAR.S:
+            o1 = ORIENT.LEFT
+
+        if read2.cigar[0][0] == CIGAR.S and read2.cigar[-1][0] == CIGAR.S:
+            if read2.cigar[0][1] > read2.cigar[-1][1]:
+                o2 = ORIENT.RIGHT
+            elif read2.cigar[0][1] < read2.cigar[-1][1]:
+                o2 = ORIENT.LEFT
+        elif read2.cigar[0][0] == CIGAR.S:
+            o2 = ORIENT.RIGHT
+        elif read2.cigar[-1][0] == CIGAR.S:
+            o2 = ORIENT.LEFT
+        
+        if o1 == ORIENT.NS or o2 == ORIENT.NS:
+            raise AssertionError(
+                'read does not have softclipping on either end and cannot therefore determine orientation', read1.cigar, read2.cigar)
+        
+        if o1 == ORIENT.LEFT:  # ========++++
+            b1 = Breakpoint(read1.reference_name, read1.reference_end - 1, strand=s1, orient=o1)
+        else:
+            b1 = Breakpoint(read1.reference_name, read1.reference_start, strand=s1, orient=o1)
+        
+        overlap = 0
+        if Interval.overlaps(r1_qci, r2_qci):
+            # adjust the second read to remove the overlapping query region
+            overlap = len(r1_qci & r2_qci)
+
+        if o2 == ORIENT.RIGHT:
+            b2 = Breakpoint(read2.reference_name, read2.reference_start + overlap, strand=s2, orient=o2)
+        else:
+            b2 = Breakpoint(read2.reference_name, read2.reference_end - 1 - overlap, strand=s2, orient=o2)
+
+        # now check for untemplated sequence
+        untemplated_sequence = ''
+        d = Interval.dist(r1_qci, r2_qci)
+        if d > 0:  # query coverage for read1 is after query coverage for read2
+            untemplated_sequence = read1.query_sequence[r2_qci[1] + 1:r1_qci[0]]
+        elif d < 0:  # query coverage for read2 is after query coverage for read1
+            untemplated_sequence = read1.query_sequence[r1_qci[1] + 1:r2_qci[0]]
+        else:  # query coverage overlaps
+            pass
+
+        if read1.is_reverse and untemplated_sequence != '':
+            untemplated_sequence = reverse_complement(untemplated_sequence)
+
+        return BreakpointPair(b1, b2, untemplated_sequence=untemplated_sequence)

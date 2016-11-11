@@ -2,7 +2,6 @@ import pysam
 import itertools
 import warnings
 from structural_variant.constants import *
-from Bio.Seq import Seq
 import networkx as nx
 from datetime import datetime
 
@@ -413,11 +412,6 @@ class CigarTools:
             if v in [CIGAR.X, CIGAR.EQ, CIGAR.M]:
                 result += f
         return result
-
-
-def reverse_complement(s):
-    temp = Seq(s, DNA_ALPHABET)
-    return str(temp.reverse_complement())
 
 
 def breakpoint_pos(read, orient=ORIENT.NS):

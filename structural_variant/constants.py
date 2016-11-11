@@ -3,6 +3,13 @@ from vocab import Vocab
 from Bio.Alphabet import Gapped
 from Bio.Data.IUPACData import ambiguous_dna_values
 from Bio.Alphabet.IUPAC import ambiguous_dna
+from Bio.Seq import Seq
+
+
+def reverse_complement(s):
+    temp = Seq(s, DNA_ALPHABET)
+    return str(temp.reverse_complement())
+
 
 GAP = '-'
 

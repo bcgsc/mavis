@@ -7,161 +7,40 @@ import re
 import os
 import TSV
 from structural_variant.constants import *
-from structural_variant.align import reverse_complement
+from structural_variant.align import CigarTools
 from Bio.Seq import Seq
 import tempfile
 from structural_variant.interval import Interval
-from structural_variant.align import CigarTools
-from structural_variant.breakpoint import Breakpoint, BreakpointPair
 
 
 class BlatAlignedSegment(pysam.AlignedSegment):
     """
     """
-    def __init__(self, row):
+    def __init__(self, reference_name=None, blat_score=None):
         """
         Args:
             row (Dict[str,]): a row dictionary from the Blat.read_pslx method
         """
         pysam.AlignedSegment.__init__(self)
-        self.blat = row
-
-    @property
-    def chr(self):
-        return self.blat['tname']
-
-    def blat_score(self):  # convenience
-        return self.blat['score']
-
-    def query_seq(self):
-        return self.blat['qseq_full']
+        if reference_name is None:
+            self._reference_name = pysam.AlignedSegment.reference_name(self)
+        else:
+            self._reference_name = reference_name
+        self.blat_score = blat_score
 
     def query_coverage_interval(self):
-        query_ranges = [(x, x + y - 1) for x, y in zip(self.blat['qstarts'], self.blat['block_sizes'])]
-        u = Interval.union(*query_ranges)
-        if not self.is_reverse:
-            return u
-        else:
-            l = len(self.blat['qseq_full']) - 1
-            return Interval(l - u[1], l - u[0])
+        seq = self.query_sequence
+        s = 0
+        t = len(seq) - 1
+        if self.cigar[0][0] == CIGAR.S:
+            s += self.cigar[0][1]
+        if self.cigar[-1][0] == CIGAR.S:
+            t -= self.cigar[-1][1]
+        return Interval(s, t)
 
     @property
     def reference_name(self):
-        return self.blat['tname']
-    
-    @classmethod
-    def call_breakpoint_pair(cls, read1, read2=None):
-        if read2 is None:
-            return cls._call_from_single_read(read1)
-        return cls._call_from_two_reads(read1, read2)
-
-    @classmethod
-    def _call_from_single_read(cls, read):
-        read_events = []
-        for i, t in enumerate(read.cigar):
-            v, f = t
-            if v not in [CIGAR.I, CIGAR.D, CIGAR.N]:
-                continue
-            if i > 0 and v == read.cigar[i - 1]:
-                start, last, size = read_events[-1]
-                read_events[-1] = (start, i, size + f)
-            else:
-                read_events.append((i, i, f))
-
-        biggest = max(read_events, key=lambda x: x[2])
-
-        first_breakpoint = read.reference_start - 1
-        second_breakpoint = first_breakpoint
-        untemplated_seq = ''
-
-        seq_pos = 0
-        for i, t in enumerate(read.cigar):
-            v, f = t
-            if v in [CIGAR.I, CIGAR.S]:
-                seq_pos += f
-                continue
-            elif v == CIGAR.H:
-                continue
-
-            if i < biggest[0]:
-                first_breakpoint += f
-                second_breakpoint += f
-            elif i >= biggest[0] and i <= biggest[1]:
-                second_breakpoint += f
-                if v == CIGAR.I:
-                    untemplated_seq += read.query_sequence[seq_pos:seq_pos + f]
-            else:
-                break
-            if v != CIGAR.D:
-                seq_pos += f
-
-        break1 = Breakpoint(
-            read.reference_name,
-            first_breakpoint,
-            orient=ORIENT.LEFT,
-            strand=STRAND.NEG if read.is_reverse else STRAND.POS
-        )
-        break2 = Breakpoint(
-            read.reference_name,
-            second_breakpoint,
-            orient=ORIENT.RIGHT,
-            strand=STRAND.NEG if read.is_reverse else STRAND.POS
-        )
-
-        return BreakpointPair(break1, break2, opposing_strands=False, untemplated_sequence=untemplated_seq)
-
-    @classmethod
-    def _call_from_two_reads(cls, read1, read2):
-        """
-        if the first read and the second read have overlapping range on their mutual query sequence
-        then the breakpoint is called as is on the first and shifted on the second
-        """
-        if read1.query_seq != read2.query_seq:
-            raise AttributeError('reads must be on the same query sequence')
-        if read1.reference_id > read2.reference_id:
-            read1, read2 = (read2, read1)
-        elif read1.reference_id == read2.reference_id and read1.reference_start > read2.reference_start:
-            read1, read2 = (read2, read1)
-
-        b1 = None
-        b2 = None
-
-        r1_qci = read1.query_coverage_interval()
-        r2_qci = read2.query_coverage_interval()
-
-        if read1.is_reverse:
-            # -------<==============
-            b1 = Breakpoint(read1.chr, read1.reference_start, strand=STRAND.NEG, orient=ORIENT.RIGHT)
-        else:
-            # ==========>-----------
-            b1 = Breakpoint(read1.chr, read1.reference_end - 1, strand=STRAND.POS, orient=ORIENT.LEFT)
-
-        overlap = 0
-        if Interval.overlaps(r1_qci, r2_qci):
-            # adjust the second read to remove the overlapping query region
-            overlap = len(r1_qci & r2_qci)
-
-        if read2.is_reverse:
-            # -------<qqqq==========
-            b2 = Breakpoint(read2.chr, read2.reference_start + overlap, strand=STRAND.NEG, orient=ORIENT.RIGHT)
-        else:
-            # ======qqqq>-----------
-            b2 = Breakpoint(read2.chr, read2.reference_end - 1 - overlap, strand=STRAND.POS, orient=ORIENT.LEFT)
-
-        # now check for untemplated sequence
-        untemplated_sequence = ''
-        d = Interval.dist(r1_qci, r2_qci)
-        if d > 0:  # query coverage for read1 is after query coverage for read2
-            untemplated_sequence = read1.query_seq[r2_qci[1] + 1:r1_qci[0]]
-        elif d < 0:  # query coverage for read2 is after query coverage for read1
-            untemplated_sequence = read1.query_seq[r1_qci[1] + 1:r2_qci[0]]
-        else:  # query coverage overlaps
-            pass
-
-        if read1.is_reverse and untemplated_sequence != '':
-            untemplated_sequence = reverse_complement(untemplated_sequence)
-
-        return BreakpointPair(b1, b2, untemplated_sequence=untemplated_sequence)
+        return self._reference_name
 
 
 class Blat:
@@ -219,7 +98,8 @@ class Blat:
 
             my $sizeMul = pslIsProtein($blockCount, $strand, $tStart, $tEnd, $tSize, $tStarts, $blockSizes);
             sizmul = 1 for DNA
-            my $pslScore = $sizeMul * ($matches + ($repMatches >> 1) ) - $sizeMul * $misMatches - $qNumInsert - $tNumInsert)
+            my $pslScore = $sizeMul * ($matches + ($repMatches >> 1) ) - $sizeMul * $misMatches - $qNumInsert - $tNumIns
+                ert)
         """
 
         size_mul = 1 if not is_protein else 3
@@ -389,7 +269,7 @@ class Blat:
             temp = qseq[query_ranges[-1][1] + 1:]
             seq += temp
             cigar.append((CIGAR.S, len(temp)))
-        read = BlatAlignedSegment(row)
+        read = BlatAlignedSegment(row['tname'], row['score'])
         read.query_sequence = seq
         read.reference_start = row['tstart']
         read.reference_id = chrom
@@ -477,14 +357,15 @@ def blat_contigs(
             reads_by_query[s] = []
         for query_id, rows in rows_by_query.items():
             query_seq = query_id_mapping[query_id]
-            filtered_rows = []
-            max_score = max([r['score'] for r in rows])
+            # filter on percent id
+            filtered_rows = [row for row in rows if round(row['percent_ident'], 0) >= min_identity]
 
-            # filter by alignment quality
-            for row in rows:
-                if row['score'] >= max_score * min_percent_of_max_score \
-                        and round(row['percent_ident'], 0) >= min_identity:
-                    filtered_rows.append(row)
+            # filter on score
+            scores = sorted([r['score'] for r in rows])
+            max_score = scores[-1]
+            second_score = scores[-2]
+            min_score = max_score * min_percent_of_max_score
+            filtered_rows = [row for row in filtered_rows if row['score'] >= min_score or row['score'] == second_score]
 
             filtered_rows.sort(key=lambda x: x['score'], reverse=True)
             reads = []
@@ -537,12 +418,12 @@ def blat_contigs(
                             and Interval.overlaps(e.window1, (a1.reference_start, a1.reference_end - 1)) \
                             and INPUT_BAM_CACHE.chr(a2) == e.break2.chr \
                             and Interval.overlaps(e.window2, (a2.reference_start, a2.reference_end - 1)):
-                        putative_alignment_pairs.append((a1, a2))
+                        putative_alignments.append((a1, a2))
                     elif INPUT_BAM_CACHE.chr(a2) == e.break1.chr \
                             and Interval.overlaps(e.window1, (a2.reference_start, a2.reference_end - 1)) \
                             and INPUT_BAM_CACHE.chr(a1) == e.break2.chr \
                             and Interval.overlaps(e.window2, (a1.reference_start, a1.reference_end - 1)):
-                        putative_alignment_pairs.append((a2, a1))
+                        putative_alignments.append((a2, a1))
                 contig.alignments = putative_alignments
     finally:
         # clean up the temporary files

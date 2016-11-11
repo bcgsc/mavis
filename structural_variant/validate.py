@@ -5,7 +5,7 @@ import itertools
 from copy import copy as sys_copy
 from structural_variant.constants import *
 from structural_variant.error import *
-from structural_variant.align import CigarTools, nsb_align, breakpoint_pos, assemble, reverse_complement
+from structural_variant.align import CigarTools, nsb_align, breakpoint_pos, assemble
 from structural_variant.interval import Interval
 from structural_variant.annotate import overlapping_transcripts
 from structural_variant.breakpoint import BreakpointPair
@@ -45,7 +45,7 @@ class EventCall:
         support = set()
         upper_limit = s.median_insert_size + s.stdev_count_abnormal * s.stdev_isize
         lower_limit = s.median_insert_size - s.stdev_count_abnormal * s.stdev_isize
-
+        
         ihist = {}
         for read in itertools.chain.from_iterable(self.evidence.flanking_reads):
             isize = abs(read.template_length)
@@ -442,7 +442,8 @@ class Evidence:
             <---- ++++> is RL same-strand
         """
         reverse = False
-        if read.reference_id == read.next_reference_id and read.reference_start > read.next_reference_start:
+        if read.reference_id > read.next_reference_id or \
+                (read.reference_id == read.next_reference_id and read.reference_start > read.next_reference_start):
             reverse = True
 
         if not read.is_reverse and read.mate_is_reverse:  # LR
@@ -768,14 +769,14 @@ class Evidence:
             for cls in clss:
                 # try calling by split reads
                 calls.extend(Evidence._call_by_supporting_reads(self, cls))
-
+        print('++++++++++++++++++++++++++++++++++++++evidence', self.breakpoint_pair, clss, 'has', len(calls), 'calls')
         for ec in calls:
-            print('event call', ec.breakpoint_pair, ec.classification, ec.call_method)
+            print('\n\nevent call', ec.breakpoint_pair, ec.classification, ec.call_method)
             if ec.contig:
                 print('contig', ec.contig.seq, ec.contig.remap_score(), ec.contig.score)
             print('flanking counts', ec.count_flanking_support())
             print('split read support', ec.count_split_read_support())
-        return ec
+        return calls
 
     @classmethod
     def _call_by_contigs(cls, ev, classification):
@@ -783,7 +784,9 @@ class Evidence:
         events = []
         for ctg in ev.contigs:
             for read1, read2 in ctg.alignments:
-                bpp = BlatAlignedSegment.call_breakpoint_pair(read1, read2)
+                bpp = BreakpointPair.call_breakpoint_pair(read1, read2)
+                if classification == SVTYPE.INS and bpp.untemplated_sequence == '':
+                    continue
                 new_event = EventCall(
                     ev,
                     classification,
@@ -942,7 +945,7 @@ class Evidence:
 
         if len(linked_pairings) == 0:  # then call by mixed or flanking only
             assert(len(pos1.keys()) == 0 or len(pos2.keys() == 0))
-            fr = len(self.flanking_reads[0]) + len(self.flanking_reads[1])
+            fr = len(ev.flanking_reads[0]) + len(ev.flanking_reads[1])
             if fr > 0:
                 # if can call the first breakpoint by split
                 for pos in pos1:
