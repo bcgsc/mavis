@@ -166,3 +166,9 @@ class TestCigarTools(unittest.TestCase):
     def test_alignment_matches(self):
         c = [(CIGAR.M, 10), (CIGAR.EQ, 10), (CIGAR.X, 10)]
         self.assertEqual(30, CigarTools.alignment_matches(c))
+
+    def test_join(self):
+        c = [(CIGAR.M, 10), (CIGAR.X, 10), (CIGAR.X, 10)]
+        self.assertEqual([(CIGAR.M, 10), (CIGAR.X, 20)], CigarTools.join(c))
+        k = [(CIGAR.X, 10), (CIGAR.M, 10), (CIGAR.X, 10)]
+        self.assertEqual([(CIGAR.M, 10), (CIGAR.X, 30), (CIGAR.M, 10), (CIGAR.X, 10)], CigarTools.join(c, k))

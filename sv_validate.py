@@ -1,4 +1,6 @@
 #!/projects/tumour_char/analysis_scripts/python/centos06/anaconda3_v2.3.0/bin/python
+
+import subprocess
 """
 output file format
 
@@ -152,7 +154,7 @@ def read_cluster_file(name, is_stranded):
             strands = [(s1, s2) for s1, s2 in strands if row['opposing_strands'] == (s1 != s2)]
         if len(strands) == 0:
             raise UserWarning('error in reading input file. could not resolve strands', row)
-        
+
         for s1, s2 in strands:
             bpp = BreakpointPair(
                 Breakpoint(
@@ -251,7 +253,7 @@ def parse_arguments():
 
 def gather_evidence_from_bam(clusters):
     evidence = []
-    
+
     for i, e in enumerate(clusters):
         if e.protocol == PROTOCOL.GENOME:
             print(
@@ -307,6 +309,7 @@ def main():
     EVIDENCE_BAM = os.path.join(args.output, FILENAME_PREFIX + '.evidence.bam')
     CONTIG_BAM = os.path.join(args.output, FILENAME_PREFIX + '.contigs.bam')
     EVIDENCE_BED = os.path.join(args.output, FILENAME_PREFIX + '.evidence.bed')
+    OUTPUT_FILE = os.path.join(args.output, FILENAME_PREFIX + '.validated.tsv')
     MIN_EXTEND_OVERLAP = 6  # on each end
     MIN_CONTIG_READ_REMAP = 3
     MIN_BREAKPOINT_RESOLUTION = 3
@@ -367,152 +370,14 @@ def main():
         reference_genome=HUMAN_REFERENCE_GENOME
     )
     print('evidence gathering is complete')
+    event_calls = []
     for e in evidence:
         print(e.breakpoint_pair)
         for c in e.contigs:
             print('>', c.seq)
             for aln in c.alignments:
                 print(aln)
-        e.call_events()
-    exit(1)
-    Profile.mark_step('evidence gathering complete')
-    # ASSEMBLE the contigs (can parallelize here)
-    assemblies = []
-    for ev, seq in evidence:
-        a = assemble(seq)
-        for contig in a:
-            print('contig{', 'score =', contig.score,
-                  'adjusted-score =', round(contig.score / len(contig.seq), 2),
-                  'read-remap =', contig.remap_score(),
-                  'read-total =', len(contig.remapped_reads.keys()),
-                  'seq =', contig.seq,
-                  '}')
-    exit(1)
-    assemblies = None
-    with multiprocessing.Pool(MAX_POOL_SIZE) as p:
-        seq = [y for x, y in evidence]
-        assemblies = p.map(assemble, seq)
-    assert(len(assemblies) == len(evidence))
-    Profile.mark_step('contig assembly complete')
-    
-    for temp, contigs in zip(evidence, assemblies):
-        ev, assembly_sequences = temp
-        filtered_contigs = []
-        for contig in contigs:
-            if contig.remap_score() < MIN_CONTIG_READ_REMAP:
-                continue
-            print('contig{', 'score =', contig.score,
-                  'adjusted-score =', round(contig.score / len(contig.seq), 2),
-                  'read-remap =', contig.remap_score(),
-                  'read-total =', len(contig.remapped_reads.keys()),
-                  'seq =', contig.seq,
-                  '}')
-            filtered_contigs.append(contig)
-        contigs = filtered_contigs if len(filtered_contigs) > 0 else contigs
-        split_read_contigs.update(set([c.seq for c in contigs]))
-    # BLAT the contigs
-    Profile.mark_step('start blat')
-    blat_contig_alignments = blat_contigs(
-        split_read_contigs,
-        INPUT_BAM_CACHE
-    )
-    Profile.mark_step('blat complete')
-    print('blatted sequences')
-    for seq in blat_contig_alignments:
-        print('>', seq)
-    print()
-    # go through the alignments for each blat result and compute a score
-    # based on the mate-pairs of the reads the realigned to the contigs
-
-    final_contigs = []
-    output_rows = []
-
-    for e, contigs, assembly_sequences in evidence:
-        print('\n===================== blatted', len(contigs), 'contigs for', e)
-        for c in contigs:
-            print('>', c.seq)
-        print('\ninitial pair', e.breakpoint_pair, e.linking_evidence(), e.classification,
-                  'flanking reads:', len(e.flanking_reads),
-                  'split reads:', [len(a) for a in e.split_reads.values()],
-                  )
-        # TODO score low if it is not the best alignment
-        putative_alignments = []
-        putative_alignment_pairs = []
-
-        # gather a list of the contigs alignments that apply to this evidence object/breakpoint pair
-        for contig in contigs:
-            if e.break1.chr == e.break2.chr:
-                for read in blat_contig_alignments[contig.seq]:
-                    # if it covers both breakpoints add to putative alignments
-                    temp = Interval(read.reference_start, read.reference_end - 1)
-                    if INPUT_BAM_CACHE.chr(read) == e.break1.chr \
-                            and e.window1.overlaps(temp) \
-                            and e.window2.overlaps(temp):
-                        putative_alignments.append(read)
-
-            for a1, a2 in itertools.combinations(
-                    [x for x in blat_contig_alignments[contig.seq] if x not in putative_alignments], 2):
-                # do they overlap both breakpoints
-                # do their mate pairs make sense
-                union = Interval.union(a1.query_coverage_interval(),
-                                       a2.query_coverage_interval())
-                if len(union) - len(a1.query_coverage_interval()) < MIN_EXTEND_OVERLAP \
-                        or len(union) - len(a2.query_coverage_interval()) < MIN_EXTEND_OVERLAP:
-                    continue
-                if INPUT_BAM_CACHE.chr(a1) == e.break1.chr \
-                        and e.window1.overlaps((a1.reference_start, a1.reference_end - 1)) \
-                        and INPUT_BAM_CACHE.chr(a2) == e.break2.chr \
-                        and e.window2.overlaps((a2.reference_start, a2.reference_end - 1)):
-                    putative_alignment_pairs.append((a1, a2))
-                elif INPUT_BAM_CACHE.chr(a2) == e.break1.chr \
-                        and e.window1.overlaps((a2.reference_start, a2.reference_end - 1)) \
-                        and INPUT_BAM_CACHE.chr(a1) == e.break2.chr \
-                        and e.window2.overlaps((a1.reference_start, a1.reference_end - 1)):
-                    putative_alignment_pairs.append((a2, a1))
-
-        print('single alignments', len(putative_alignments))
-        for a in putative_alignments:
-            print(a)
-        print('paired alignments', len(putative_alignment_pairs))
-        for a1, a2 in sorted(putative_alignment_pairs, key=lambda x: x[0].blat_score() + x[1].blat_score()):
-            print('pair score', a1.blat_score() + a2.blat_score())
-            print(a1)
-            print(a2)
-        print()
-        final_contigs.extend(putative_alignments)
-        final_contigs.extend([x for x, y in putative_alignment_pairs])
-        final_contigs.extend([y for x, y in putative_alignment_pairs])
-
-        row = {
-            'cluster_id': e.labels['cluster_id'],
-            'cluster_size': e.labels['cluster_size'],
-            'event_type': '?',
-            'protocol': e.protocol,
-            'tools': e.labels['tools'],
-            'contigs_assembled': len(contigs),
-            'contigs_aligned': len(blat_contig_alignments[contig.seq]),
-            'contigs_accepted': len(putative_alignments) + len(putative_alignment_pairs)
-        }
-        if len(putative_alignments) + len(putative_alignment_pairs) > 0:  # contigs aligned
-            print('METHOD: contigs')
-            continue
-        print('METHOD: resolve by softclipped reads')
-        if len(blat_contig_alignments[contig.seq]) > 0:
-            print('had', len(blat_contig_alignments[contig.seq]), 'aligned contigs but none survived pairing')
-            for c in sorted(blat_contig_alignments[contig.seq], key=lambda x: x.get_tag('br'))[0:5]:
-                print(repr(c))
-                print(c)
-
-        else:
-            print('no contigs assembled')
-        for temp in e.call_by_softclipping_resolution():
-            print(
-                temp, temp.breakpoint_pair, 'splitreads',
-                sum([len(x) for x in temp.split_reads.values()]),
-                'linking reads:',
-                temp.linking_evidence())
-        print(row)
-
+        event_calls.extend(e.call_events())
     # write the bam file for guiding the user in debugging why a particular cluster may not
     # pass validation
     # with open(EVIDENCE_BED, 'w') as fh:
@@ -520,25 +385,9 @@ def main():
     #     for s in bedfile_regions:
     #         fh.write(s + '\n')
 
-    with pysam.AlignmentFile(CONTIG_BAM, 'wb', template=INPUT_BAM_CACHE.fh) as fh:
-        print('writing:', CONTIG_BAM)
-        for read in final_contigs:
-            read.cigar = CigarTools.convert_for_igv(read.cigar)
-            fh.write(read)
-
-    # write the evidence
-    with pysam.AlignmentFile(EVIDENCE_BAM, 'wb', template=INPUT_BAM_CACHE.fh) as fh:
-        print('writing:', EVIDENCE_BAM)
-        for read in evidence_reads:
-            read.cigar = CigarTools.convert_for_igv(read.cigar)
-            fh.write(read)
-
-    INPUT_BAM_CACHE.close()
-
     # write the output validated clusters (split by type and contig)
     header = [
         'cluster_id',
-        'cluster_size',
         'break1_chromosome',
         'break1_position_start',
         'break1_position_end',
@@ -551,17 +400,113 @@ def main():
         'break2_strand',
         'event_type',
         'opposing_strands',
+        'stranded',
         'protocol',
         'tools',
-        'flanking_reads',
-        'spanning_reads',
-        'split_reads',
         'contigs_assembled',
-        'contig_sequence',
         'contigs_aligned',
-        'call_method'  # contig alignment, split-read consensus, flanking read interval, input
+        'contig_sequence',
+        'contig_remap_score',
+        'contig_alignment_score',
+        'call_method',
+        'flanking_reads',
+        'median_insert_size',
+        'stdev_insert_size',
+        'break1_split_reads',
+        'break2_split_reads',
+        'linking_split_reads',
+        'untemplated_sequence'
     ]
-    print(header)
+    with open(OUTPUT_FILE, 'w') as fh:
+        print(header)
+        fh.write('#' + '\t'.join(header) + '\n')
+        for ec in event_calls:
+            flank_count, flank_median, flank_stdev = ec.count_flanking_support()
+            b1_count, b2_count, link_count = ec.count_split_read_support()
+            row = {
+                'cluster_id': ec.evidence.labels['cluster_id'],
+                'break1_chromosome': ec.breakpoint_pair.break1.chr,
+                'break1_position_start': ec.breakpoint_pair.break1.start,
+                'break1_position_end': ec.breakpoint_pair.break1.end,
+                'break1_strand': '?',
+                'break1_orientation': ec.breakpoint_pair.break1.orient,
+                'break2_chromosome': ec.breakpoint_pair.break2.chr,
+                'break2_position_start': ec.breakpoint_pair.break2.start,
+                'break2_position_end': ec.breakpoint_pair.break2.end,
+                'break2_strand': '?',
+                'break2_orientation': ec.breakpoint_pair.break2.orient,
+                'event_type': ec.classification,
+                'opposing_strands': ec.breakpoint_pair.opposing_strands,
+                'stranded': ec.evidence.breakpoint_pair.stranded,
+                'protocol': ec.evidence.protocol,
+                'tools': ec.evidence.labels['tools'],
+                'contigs_assembled': len(ec.evidence.contigs),
+                'contigs_aligned': sum([len(c.alignments) for c in ec.evidence.contigs]),
+                'contig_sequence': '?',
+                'contig_remap_score': '?',
+                'contig_alignment_score': '?',
+                'call_method': ec.call_method,
+                'flanking_reads': flank_count,
+                'median_insert_size': flank_median,
+                'stdev_insert_size': flank_stdev,
+                'break1_split_reads': b1_count,
+                'break2_split_reads': b2_count,
+                'linking_split_reads': link_count,
+                'untemplated_sequence': '?'
+            }
+            if ec.contig:
+                row['contig_sequence'] = ec.contig.seq
+                row['contig_remap_score'] = ec.contig.remap_score()
+            if ec.alignment:
+                r1, r2 = ec.alignment
+                if r2 is None:
+                    row['contig_alignment_score'] = r1.get_tag('br')
+                else:
+                    row['contig_alignment_score'] = int(round((r1.get_tag('br') + r2.get_tag('br')) / 2, 0))
+            if ec.breakpoint_pair.untemplated_sequence is not None:
+                row['untemplated_sequence'] = ec.breakpoint_pair.untemplated_sequence
+            if ec.breakpoint_pair.stranded:
+                row['break1_strand'] = ec.breakpoint_pair.break1.strand
+                row['break2_strand'] = ec.breakpoint_pair.break2.strand
+            fh.write('\t'.join([str(row[col]) for col in header]) + '\n')
+
+    with pysam.AlignmentFile(CONTIG_BAM, 'wb', template=INPUT_BAM_CACHE.fh) as fh:
+        print('writing:', CONTIG_BAM)
+        for ev in evidence:
+            for c in ev.contigs:
+                for read1, read2 in c.alignments:
+                    read1.cigar = CigarTools.convert_for_igv(read1.cigar)
+                    fh.write(read1)
+                    if read2:
+                        read2.cigar = CigarTools.convert_for_igv(read2.cigar)
+                        fh.write(read2)
+    # now sort the contig bam
+    sort = re.sub('.bam$', '.sorted', CONTIG_BAM)
+    print('sorting the bam file', CONTIG_BAM)
+    subprocess.call(['samtools', 'sort', CONTIG_BAM, sort])
+    CONTIG_BAM = sort + '.bam'
+    print('indexing the sorted bam', CONTIG_BAM)
+    subprocess.call(['samtools', 'index', CONTIG_BAM])
+
+    # write the evidence
+    with pysam.AlignmentFile(EVIDENCE_BAM, 'wb', template=INPUT_BAM_CACHE.fh) as fh:
+        print('writing:', EVIDENCE_BAM)
+        reads = set()
+        for ev in evidence:
+            print(ev)
+            temp = ev.supporting_reads()
+            reads.update(temp)
+        for read in reads:
+            read.cigar = CigarTools.convert_for_igv(read.cigar)
+            fh.write(read)
+    sort = re.sub('.bam$', '.sorted', EVIDENCE_BAM)
+    print('sorting the bam file', EVIDENCE_BAM)
+    subprocess.call(['samtools', 'sort', EVIDENCE_BAM, sort])
+    EVIDENCE_BAM = sort + '.bam'
+    print('indexing the sorted bam', EVIDENCE_BAM)
+    subprocess.call(['samtools', 'index', EVIDENCE_BAM])
+
+    INPUT_BAM_CACHE.close()
 
 if __name__ == '__main__':
     try:

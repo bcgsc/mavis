@@ -65,7 +65,7 @@ class BreakpointPair:
     @property
     def key(self):
         return self.break1.key, self.break2.key, self.opposing_strands, self.stranded, self.untemplated_sequence
-    
+
     @property
     def interchromosomal(self):
         if self.break1.chr == self.break2.chr:
@@ -242,15 +242,15 @@ class BreakpointPair:
         if the first read and the second read have overlapping range on their mutual query sequence
         then the breakpoint is called as is on the first and shifted on the second
         """
-        
+
         if read1.reference_id > read2.reference_id:
             read1, read2 = (read2, read1)
         elif read1.reference_id == read2.reference_id and read1.reference_start > read2.reference_start:
             read1, read2 = (read2, read1)
-       
+
         r1_qci = read1.query_coverage_interval()
         r2_qci = read2.query_coverage_interval()
-        
+
         if read1.is_reverse == read2.is_reverse:
             assert(read1.query_sequence == read2.query_sequence)
         else:
@@ -259,7 +259,7 @@ class BreakpointPair:
             r2_qci = Interval(l - r2_qci.end, l - r2_qci.start)
         print('qci1', r1_qci)
         print('qci2', r2_qci)
-        
+
         b1 = None
         b2 = None
 
@@ -288,16 +288,17 @@ class BreakpointPair:
             o2 = ORIENT.RIGHT
         elif read2.cigar[-1][0] == CIGAR.S:
             o2 = ORIENT.LEFT
-        
+
         if o1 == ORIENT.NS or o2 == ORIENT.NS:
             raise AssertionError(
-                'read does not have softclipping on either end and cannot therefore determine orientation', read1.cigar, read2.cigar)
-        
+                'read does not have softclipping on either end and cannot therefore determine orientation',
+                read1.cigar, read2.cigar)
+
         if o1 == ORIENT.LEFT:  # ========++++
             b1 = Breakpoint(read1.reference_name, read1.reference_end - 1, strand=s1, orient=o1)
         else:
             b1 = Breakpoint(read1.reference_name, read1.reference_start, strand=s1, orient=o1)
-        
+
         overlap = 0
         if Interval.overlaps(r1_qci, r2_qci):
             # adjust the second read to remove the overlapping query region

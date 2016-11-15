@@ -9,7 +9,6 @@ from structural_variant.align import CigarTools, nsb_align, breakpoint_pos, asse
 from structural_variant.interval import Interval
 from structural_variant.annotate import overlapping_transcripts
 from structural_variant.breakpoint import BreakpointPair
-from structural_variant.blat import BlatAlignedSegment
 import tools.profile_bam as profile_bam
 from functools import partial
 import math
@@ -23,7 +22,7 @@ class EventCall:
     directly without a lot of copying. Instead we use call objects which are basically
     just a reference to the evidence object and decisions on class, exact breakpoints, etc
     """
-    def __init__(self, evidence, classification, breakpoint_pair, call_method, contig=None):
+    def __init__(self, evidence, classification, breakpoint_pair, call_method, contig=None, alignment=None):
         """
         Args:
             evidence (Evidence): the evidence object we are calling based on
@@ -37,6 +36,7 @@ class EventCall:
         self.breakpoint_pair = breakpoint_pair
         self.contig = contig
         self.call_method = CALL_METHOD.enforce(call_method)
+        self.alignment = None
         if contig is None and self.call_method == CALL_METHOD.CONTIG:
             raise AttributeError('if the call is by contig then the contig must be provided')
 
@@ -45,7 +45,7 @@ class EventCall:
         support = set()
         upper_limit = s.median_insert_size + s.stdev_count_abnormal * s.stdev_isize
         lower_limit = s.median_insert_size - s.stdev_count_abnormal * s.stdev_isize
-        
+
         ihist = {}
         for read in itertools.chain.from_iterable(self.evidence.flanking_reads):
             isize = abs(read.template_length)
@@ -182,6 +182,10 @@ class Evidence:
     @property
     def break2(self):
         return self.breakpoint_pair.break2
+
+    @property
+    def untemplated_sequence(self):
+        return self.breakpoint_pair.untemplated_sequence
 
     @classmethod
     def generate_window(cls, breakpoint, read_length, median_insert_size, call_error, stdev_isize, stdev_count_abnormal):
@@ -402,9 +406,9 @@ class Evidence:
         convenience method to return all flanking, split and spanning reads associated with an evidence object
         """
         result = set()
-        for s in itertools.chain.from_iterable(self.flanking_reads):
+        for s in self.flanking_reads:
             result.update(s)
-        for s in itertools.chain.from_iterable(self.split_reads):
+        for s in self.split_reads:
             result.update(s)
         result.update(self.spanning_reads)
         return result
@@ -603,21 +607,22 @@ class Evidence:
         elif len(primary) < self.settings.min_anchor_size or len(clipped) < self.settings.min_anchor_size:
             raise UserWarning(
                 'split read does not meet the minimum anchor criteria')
-
-        read = sys_copy(read)
-        # recalculate the read cigar string to ensure M is replaced with = or X
-        c = CigarTools.recompute_cigar_mismatch(
-            read,
-            self.human_reference_genome[self.bam_cache.chr(read)].seq
-        )
-        prefix = 0
-        try:
-            c, prefix = CigarTools.extend_softclipping(
-                c, self.settings.sc_extension_stop)
-        except AttributeError:
-            pass
-        read.cigar = c
-        read.reference_start = read.reference_start + prefix
+        
+        if not read.has_tag('ca') or read.get_tag('ca') != 1:
+            read.set_tag('ca', 1, value_type='i')
+            # recalculate the read cigar string to ensure M is replaced with = or X
+            c = CigarTools.recompute_cigar_mismatch(
+                read,
+                self.human_reference_genome[self.bam_cache.chr(read)].seq
+            )
+            prefix = 0
+            try:
+                c, prefix = CigarTools.extend_softclipping(
+                    c, self.settings.sc_extension_stop)
+            except AttributeError:
+                pass
+            read.cigar = c
+            read.reference_start = read.reference_start + prefix
         # data quality filters
 
         if CigarTools.alignment_matches(read.cigar) >= 10 \
@@ -657,6 +662,7 @@ class Evidence:
         for a in putative_alignments:
             # a.flag = a.flag ^ 64 ^ 128
             a.flag = a.flag | PYSAM_READ_FLAGS.SECONDARY
+            a.set_tag('ca', 1, value_type='i')
             # add information from the original read
             a.reference_start = w[0] - 1 + a.reference_start
             a.reference_id = self.bam_cache.reference_id(opposite_breakpoint.chr)
@@ -676,6 +682,12 @@ class Evidence:
                 # softclipping
                 pass
             s = CigarTools.score(a.cigar)
+            
+            if a.reference_id == a.next_reference_id:
+                if a.is_read1:
+                    a.template_length = (a.next_reference_start + self.settings.read_length) - a.reference_start
+                else:
+                    a.template_length = a.reference_start - (a.next_reference_start + self.settings.read_length)
 
             if CigarTools.alignment_matches(a.cigar) >= 10 \
                     and CigarTools.match_percent(a.cigar) < self.settings.min_anchor_match:
@@ -785,14 +797,17 @@ class Evidence:
         for ctg in ev.contigs:
             for read1, read2 in ctg.alignments:
                 bpp = BreakpointPair.call_breakpoint_pair(read1, read2)
-                if classification == SVTYPE.INS and bpp.untemplated_sequence == '':
+                if bpp.opposing_strands != ev.opposing_strands \
+                        or (classification == SVTYPE.INS and bpp.untemplated_sequence == '') \
+                        or classification not in BreakpointPair.classify(bpp):
                     continue
                 new_event = EventCall(
                     ev,
                     classification,
                     bpp,
                     CALL_METHOD.CONTIG,
-                    contig=ctg
+                    contig=ctg,
+                    alignment=(read1, read2)
                 )
                 events.append(new_event)
         return events
@@ -975,6 +990,15 @@ class Evidence:
         """
         count = 0
         bin_gap_size = self.settings.read_length // 2
+
+        max_dist = max(
+            len(Interval.union(self.break1, self.break2)),
+            len(self.untemplated_sequence if self.untemplated_sequence else '')
+        )
+
+        if max_dist < self.settings.stdev_isize * self.settings.stdev_count_abnormal:
+            raise NotImplementedError('evidence gathering for small structural variants is not supported')
+            # needs special consideration b/c won't have flanking reads and may have spanning reads
 
         for read in self.bam_cache.fetch(
                 '{0}'.format(self.break1.chr),

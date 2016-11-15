@@ -171,7 +171,7 @@ class Blat:
         return header, rows
 
     @staticmethod
-    def pslx_row_to_pysam(row, bam_cache, reference_genome=None):
+    def pslx_row_to_pysam(row, bam_cache, reference_genome):
         """
         given a 'row' from reading a pslx file. converts the row to a BlatAlignedSegment object
 
@@ -181,63 +181,62 @@ class Blat:
 
         """
         chrom = bam_cache.reference_id(row['tname'])
-        qseq = row['qseq_full']
+        query_sequence = row['qseq_full']
         if row['strand'] == STRAND.NEG:
-            temp = Seq(qseq, DNA_ALPHABET)
+            temp = Seq(query_sequence, DNA_ALPHABET)
             temp = temp.reverse_complement()
-            qseq = str(temp)
+            query_sequence = str(temp)
 
         # note: converting to inclusive range [] vs end-exclusive [)
+        reference_sequence = reference_genome[row['tname']].seq if reference_genome else None
         query_ranges = [(x, x + y - 1) for x, y in zip(row['qstarts'], row['block_sizes'])]
         ref_ranges = [(x, x + y - 1) for x, y in zip(row['tstarts'], row['block_sizes'])]
+        seq = ''
+        cigar = []
 
-        if reference_genome:
-            temp_char_seq = reference_genome[row['tname']].seq
-
-            # adjust the ranges to extend based on greedy matching each block to the leftmost/lowest coord
+        # try extending by consuming from the next aligned portion
+        if reference_sequence:
+            i = 0
             new_query_ranges = []
             new_ref_ranges = []
 
-            for qr, rr in zip(query_ranges, ref_ranges):
-                offset = 1
-                while qr[1] + offset < len(qseq) \
-                        and rr[1] + offset < len(temp_char_seq) \
-                        and qseq[qr[1] + offset] == temp_char_seq[rr[1] + offset]:
-                    offset += 1
-                offset -= 1
-                new_query_ranges.append((qr[0], qr[1] + offset))
-                new_ref_ranges.append((rr[0], rr[1] + offset))
-
-            query_ranges = [new_query_ranges[0]]
-            ref_ranges = [new_ref_ranges[0]]
-            for i in range(1, len(new_query_ranges)):
-                if new_ref_ranges[i][0] <= new_ref_ranges[i - 1][1]:
-                    if new_ref_ranges[i][1] > new_ref_ranges[i - 1][1]:
-                        ref_ranges.append((new_ref_ranges[i - 1][1] + 1, new_ref_ranges[i][1]))
+            while i < len(query_ranges):
+                qpos = query_ranges[i][1] + 1
+                rpos = ref_ranges[i][1] + 1
+                shift = 0
+                while qpos + shift < len(query_sequence) and rpos + shift < len(reference_sequence):
+                    if DNA_ALPHABET.match(query_sequence[qpos + shift], reference_sequence[rpos + shift]):
+                        shift += 1
                     else:
-                        pass
-                else:
-                    ref_ranges.append(new_ref_ranges[i])
-                if new_query_ranges[i][0] <= new_query_ranges[i - 1][1]:
-                    if new_query_ranges[i][1] > new_query_ranges[i - 1][1]:
-                        query_ranges.append((new_query_ranges[i - 1][1] + 1, new_query_ranges[i][1]))
+                        break
+
+                if shift == 0:
+                    new_query_ranges.append(query_ranges[i])
+                    new_ref_ranges.append(ref_ranges[i])
+                    i += 1
+                    continue
+
+                new_query_ranges.append((query_ranges[i][0], query_ranges[i][1] + shift))
+                new_ref_ranges.append((ref_ranges[i][0], ref_ranges[i][1] + shift))
+
+                n = i + 1
+                while shift > 0 and n < len(query_ranges):
+                    size = query_ranges[n][1] - query_ranges[n][0] + 1
+                    if size > shift:
+                        new_query_ranges.append((query_ranges[n][0] + shift, query_ranges[n][1]))
+                        new_ref_ranges.append((ref_ranges[n][0] + shift, ref_ranges[n][1]))
+                        shift = 0
                     else:
-                        pass
-                else:
-                    query_ranges.append(new_query_ranges[i])
-
-        cigar = []
-        seq = ''
-
-        # add initial soft-clipping
-        if query_ranges[0][0] > 0:  # first block starts after the query start
-            temp = qseq[0:query_ranges[0][0]]
-            seq += temp
-            cigar.append((CIGAR.S, len(temp)))
+                        shift -= size
+                    n += 1
+                i = n
+            query_ranges = new_query_ranges
+            ref_ranges = new_ref_ranges
         for i in range(0, len(query_ranges)):
             rcurr = ref_ranges[i]
             qcurr = query_ranges[i]
-            if i > 0:
+            size = qcurr[1] - qcurr[0] + 1
+            if i > 0:  # will be an ins/del depending on the distance from the last block
                 # append based on the prev range
                 rprev = ref_ranges[i - 1]
                 qprev = query_ranges[i - 1]
@@ -248,33 +247,42 @@ class Blat:
                     if qjump > 1:  # query range skipped. insertion to the reference sequence
                         cigar.append((CIGAR.I, qjump - 1))
                         # adds the inserted seq for the pysam read
-                        seq += qseq[qprev[1] + 1:qcurr[0]]
+                        seq += query_sequence[qprev[1] + 1:qcurr[0]]
                 elif qjump == 1:  # query is consecutive
                     if rjump > 1:  # reference range skipped. deletion of the reference sequence
                         cigar.append((CIGAR.D, rjump - 1))
                 else:  # indel
-                    seq += qseq[qprev[1] + 1:qcurr[0]]
+                    seq += query_sequence[qprev[1] + 1:qcurr[0]]
                     cigar.append((CIGAR.I, qjump - 1))
                     cigar.append((CIGAR.D, rjump - 1))
-            # add the current range of matches
-            temp, offset = CigarTools.compute(row['tseqs'][i], row['qseqs'][i])
-            if temp[0][0] == CIGAR.S:
-                temp[0] = (CIGAR.X, temp[0][1])
-            if temp[-1][0] == CIGAR.S:
-                temp[-1] = (CIGAR.X, temp[-1][1])
-            cigar = CigarTools.join(cigar, temp)
-            seq += qseq[qcurr[0]:qcurr[1] + 1]
+            # compute the match/mismatch for the current block
+            if not reference_sequence:
+                cigar.append((CIGAR.M, size))
+            else:
+                for r, q in zip(reference_sequence[rcurr[0]:rcurr[1] + 1], query_sequence[qcurr[0]:qcurr[1] + 1]):
+                    if DNA_ALPHABET.match(r, q):
+                        cigar.append((CIGAR.EQ, 1))
+                    else:
+                        cigar.append((CIGAR.X, 1))
+            seq += query_sequence[qcurr[0]:qcurr[1] + 1]
 
-        if query_ranges[-1][1] < len(qseq) - 1:
-            temp = qseq[query_ranges[-1][1] + 1:]
+        # add initial soft-clipping
+        if query_ranges[0][0] > 0:  # first block starts after the query start
+            temp = query_sequence[0:query_ranges[0][0]]
+            seq = temp + seq
+            cigar.insert(0, (CIGAR.S, len(temp)))
+        if query_ranges[-1][1] < len(query_sequence) - 1:
+            temp = query_sequence[query_ranges[-1][1] + 1:]
             seq += temp
             cigar.append((CIGAR.S, len(temp)))
         read = BlatAlignedSegment(row['tname'], row['score'])
         read.query_sequence = seq
-        read.reference_start = row['tstart']
+        read.reference_start = row['tstarts'][0]
         read.reference_id = chrom
-        read.cigar = cigar
+        read.cigar = CigarTools.join(cigar)
         read.query_name = row['qname']
+        read.mapping_quality = NA_MAPPING_QUALITY
+
         if row['strand'] == STRAND.NEG:
             read.flag = read.flag | PYSAM_READ_FLAGS.REVERSE
         if read.query_sequence != row['qseq_full'] and read.query_sequence != reverse_complement(row['qseq_full']):
