@@ -36,7 +36,7 @@ class EventCall:
         self.breakpoint_pair = breakpoint_pair
         self.contig = contig
         self.call_method = CALL_METHOD.enforce(call_method)
-        self.alignment = None
+        self.alignment = alignment
         if contig is None and self.call_method == CALL_METHOD.CONTIG:
             raise AttributeError('if the call is by contig then the contig must be provided')
 
@@ -133,7 +133,7 @@ class EvidenceSettings:
                 constraint
             min_mapping_quality (int, default=20):
                 mapping quality to filter on
-            fetch_reads_limit (int, default=100000):
+            fetch_reads_limit (int, default=10000):
                 maximum number of reads to loop over for a given event
             filter_secondary_alignments (bool, default=True):
                 don't use secondary alignments when reading evidence from the bam file
@@ -149,6 +149,8 @@ class EvidenceSettings:
         self.min_anchor_fuzzy = min_anchor_fuzzy
         self.min_anchor_size = min(self.min_anchor_exact, self.min_anchor_fuzzy)
         self.min_anchor_match = min_anchor_match
+        if self.min_anchor_match > 1 or self.min_anchor_match < 0:
+            raise AttributeError('min_anchor_match must be a number between 0 and 1')
         self.min_mapping_quality = min_mapping_quality
         if max_sc_preceeding_anchor is None:
             self.max_sc_preceeding_anchor = self.min_anchor_size

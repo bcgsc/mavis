@@ -1,6 +1,5 @@
 #!/projects/tumour_char/analysis_scripts/python/centos06/anaconda3_v2.3.0/bin/python
 
-import subprocess
 """
 output file format
 
@@ -62,6 +61,7 @@ output file format
 
 
 """
+import subprocess
 import TSV
 import argparse
 import os
@@ -78,7 +78,6 @@ from structural_variant.annotate import load_masking_regions, load_reference_gen
 from tools import profile_bam
 import math
 from datetime import datetime
-import multiprocessing
 
 __prog__ = os.path.basename(os.path.realpath(__file__))
 
@@ -361,9 +360,6 @@ def main():
     for e in evidence:
         for c in e.contigs:
             blat_sequences.add(c.seq)
-    print('blatting')
-    for s in blat_sequences:
-        print(s)
     blat_contig_alignments = blat_contigs(
         evidence,
         INPUT_BAM_CACHE,
@@ -418,7 +414,6 @@ def main():
         'untemplated_sequence'
     ]
     with open(OUTPUT_FILE, 'w') as fh:
-        print(header)
         fh.write('#' + '\t'.join(header) + '\n')
         for ec in event_calls:
             flank_count, flank_median, flank_stdev = ec.count_flanking_support()
@@ -480,13 +475,6 @@ def main():
                     if read2:
                         read2.cigar = CigarTools.convert_for_igv(read2.cigar)
                         fh.write(read2)
-    # now sort the contig bam
-    sort = re.sub('.bam$', '.sorted', CONTIG_BAM)
-    print('sorting the bam file', CONTIG_BAM)
-    subprocess.call(['samtools', 'sort', CONTIG_BAM, sort])
-    CONTIG_BAM = sort + '.bam'
-    print('indexing the sorted bam', CONTIG_BAM)
-    subprocess.call(['samtools', 'index', CONTIG_BAM])
 
     # write the evidence
     with pysam.AlignmentFile(EVIDENCE_BAM, 'wb', template=INPUT_BAM_CACHE.fh) as fh:
@@ -499,6 +487,15 @@ def main():
         for read in reads:
             read.cigar = CigarTools.convert_for_igv(read.cigar)
             fh.write(read)
+    # now sort the contig bam
+    sort = re.sub('.bam$', '.sorted', CONTIG_BAM)
+    print('sorting the bam file', CONTIG_BAM)
+    subprocess.call(['samtools', 'sort', CONTIG_BAM, sort])
+    CONTIG_BAM = sort + '.bam'
+    print('indexing the sorted bam', CONTIG_BAM)
+    subprocess.call(['samtools', 'index', CONTIG_BAM])
+
+    # then sort the evidence bam file
     sort = re.sub('.bam$', '.sorted', EVIDENCE_BAM)
     print('sorting the bam file', EVIDENCE_BAM)
     subprocess.call(['samtools', 'sort', EVIDENCE_BAM, sort])

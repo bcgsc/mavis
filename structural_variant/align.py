@@ -632,7 +632,6 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
     """
     if len(sequences) == 0:
         return []
-    print(datetime.now(), 'assemble() start', len(sequences), )
     min_seq = min([len(s) for s in sequences])
     if kmer_size is None:
         temp = int(min_seq * 0.75)
@@ -646,7 +645,6 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
             'cannot specify a kmer size larger than one of the input sequences. reset to {0}'.format(min_seq))
     min_read_mapping_overlap = kmer_size if min_read_mapping_overlap is None else min_read_mapping_overlap
     min_contig_length = min_seq + 1 if min_contig_length is None else min_contig_length
-    print(datetime.now(), 'assemble() start', len(sequences), 'kmer_size=', kmer_size)
     assembly = DeBruijnGraph()
 
     for s in sequences:
@@ -657,14 +655,12 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
 
     if not nx.is_directed_acyclic_graph(assembly):
         NotImplementedError('assembly not supported for cyclic graphs')
-    
-    print('assembly', len(assembly.nodes()), len(assembly.edges()), min_edge_weight)
+
     for s, t in sorted(assembly.edges()):
         f = assembly.edge_freq[(s, t)]
     # now just work with connected components
     # trim all paths from sources or to sinks where the edge weight is low
     assembly.trim_low_weight_tails(min_edge_weight)
-    print('assembly after trim', len(assembly.nodes()))
     path_scores = {}  # path_str => score_int
 
     for component in digraph_connected_components(assembly):
@@ -689,7 +685,6 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
                 for i in range(0, len(path) - 1):
                     score += assembly.edge_freq[(path[i], path[i + 1])]
                 path_scores[s] = max(path_scores.get(s, 0), score)
-    print('path_scores', len(path_scores.items()))
     # now map the contigs to the possible input sequences
     contigs = {}
     for seq, score in list(path_scores.items()):
