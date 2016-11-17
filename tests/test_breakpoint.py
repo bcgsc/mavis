@@ -3,6 +3,16 @@ from structural_variant.constants import *
 from structural_variant.breakpoint import *
 from structural_variant.error import *
 from tests import MockRead
+from tests import REFERENCE_GENOME as RG
+
+REFERENCE_GENOME = None
+
+
+def setUpModule():
+    global REFERENCE_GENOME
+    REFERENCE_GENOME = load_reference_genome(RG)
+    if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
+        raise AssertionError('fake genome file does not have the expected contents')
 
 
 class TestBreakpoint(unittest.TestCase):
@@ -465,3 +475,9 @@ class TestBreakpointPair(unittest.TestCase):
         self.assertEqual(111, bpp.break2.start)
         self.assertEqual('AAATTTCCCGGGAATT', bpp.break1.seq)
         self.assertEqual(reverse_complement('GGATCGATCGAT'), bpp.break2.seq)
+
+    def test_breakpoint_shared_sequence_LPRP(self):
+        b1 = Breakpoint('fake', 157, strand=STRAND.POS, orient=ORIENT.LEFT)
+        b2 = Breakpoint('fake', 1788, strand=STRAND.POS, orient=ORIENT.RIGHT)
+        bpp = BreakpointPair(b1, b2)
+        self.assertEqual(('CAATGC', ''), bpp.shared_sequence())
