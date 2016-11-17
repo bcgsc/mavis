@@ -401,8 +401,8 @@ class BreakpointPair:
                     seq = []
                     while (self.interchromosomal or p2 > self.break1.end - 1) \
                         and p1 >= 0 and p2 >= 0:
-                        b1 = b1_refseq[p1] if self.break1.strand == STRAND.POS else reverse_complement(b1_refseq[p1])
-                        b2 = b2_refseq[p2] if self.break1.strand == STRAND.POS else reverse_complement(b1_refseq[p2])
+                        b1 = b1_refseq[p1]
+                        b2 = b2_refseq[p2] if not self.opposing_strands else reverse_complement(b1_refseq[p2])
                         print(p1, b1, p2, b2)
                         if not DNA_ALPHABET.match(b1, b2):
                             break
@@ -418,8 +418,8 @@ class BreakpointPair:
                     seq = []
                     while (self.interchromosomal or p1 < self.break2.start - 1) \
                         and p1 < len(b1_refseq) and p2 < len(b2_refseq):
-                        b1 = b1_refseq[p1] if self.break1.strand == STRAND.POS else reverse_complement(b1_refseq[p1])
-                        b2 = b2_refseq[p2] if self.break1.strand == STRAND.POS else reverse_complement(b1_refseq[p2])
+                        b1 = b1_refseq[p1]
+                        b2 = b2_refseq[p2] if not self.opposing_strands else reverse_complement(b1_refseq[p2])
                         print(p1, b1, p2, b2)
                         if not DNA_ALPHABET.match(b1, b2):
                             break

@@ -2,6 +2,7 @@ import unittest
 from structural_variant.constants import *
 from structural_variant.breakpoint import *
 from structural_variant.error import *
+from structural_variant.annotate import load_reference_genome
 from tests import MockRead
 from tests import REFERENCE_GENOME as RG
 
@@ -480,4 +481,4 @@ class TestBreakpointPair(unittest.TestCase):
         b1 = Breakpoint('fake', 157, strand=STRAND.POS, orient=ORIENT.LEFT)
         b2 = Breakpoint('fake', 1788, strand=STRAND.POS, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2)
-        self.assertEqual(('CAATGC', ''), bpp.shared_sequence())
+        self.assertEqual(('CAATGC', ''), bpp.shared_sequence(REFERENCE_GENOME))
