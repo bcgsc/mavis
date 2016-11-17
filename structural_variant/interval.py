@@ -274,7 +274,7 @@ class Interval:
         input_intervals = sorted(mapping.keys())
         mapped_to_intervals = [mapping[i] for i in input_intervals]
         forward_to_reverse = None
-        
+
         # input check interval ranges are non-overlapping and increasing/decreasing
         for i in range(0, len(input_intervals)):
             if input_intervals[i][1] - input_intervals[i][0] != mapped_to_intervals[i][1] - mapped_to_intervals[i][0]:
@@ -369,18 +369,13 @@ class Interval:
         for a list of intervals, orders them and merges any overlap to return a list of non-overlapping intervals
         O(n^2)
         """
-        g = nx.Graph()
-        for i in intervals:
-            g.add_node(i)
-
-        for x, y in itertools.combinations(intervals, 2):
-            if Interval.overlaps(x, y):
-                g.add_edge(x, y)
-
-        merges = []
-        for c in nx.connected_components(g):
-            if len(c) == 1:
-                merges.append(c[0])
+        if len(intervals) == 0:
+            return []
+        intervals = sorted(intervals)
+        new_intervals = [intervals[0]]
+        for i in intervals[1:]:
+            if Interval.overlaps(new_intervals[-1], i):
+                new_intervals[-1] = new_intervals[-1] | i
             else:
-                merges.append(Interval.union(*c))
-        return merges
+                new_intervals.append(i)
+        return new_intervals

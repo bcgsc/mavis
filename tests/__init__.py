@@ -1,6 +1,11 @@
 from structural_variant.constants import CIGAR
 from structural_variant.blat import BlatAlignedSegment
+import os
 
+filedir = os.path.join(os.path.dirname(__file__), 'files')
+REFERENCE_GENOME = os.path.join(filedir, 'mock_reference_genome.fa')
+BLAT_INPUT = os.path.join(filedir, 'blat_input.fa')
+BLAT_OUTPUT = os.path.join(filedir, 'blat_output.pslx')
 
 class MockRead:
     def __init__(
@@ -40,7 +45,7 @@ class MockRead:
             self.query_alignment_sequence = query_sequence[s:t]
         if cigar and query_sequence:
             assert(len(query_sequence) == sum([f for v, f in cigar if v not in [CIGAR.H, CIGAR.N, CIGAR.D]]))
-    
+
     def query_coverage_interval(self):
         return BlatAlignedSegment.query_coverage_interval(self)
 

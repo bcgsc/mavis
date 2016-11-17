@@ -148,18 +148,16 @@ class Blat:
                 'tsize': int,
                 'tstart': int,
                 'tend': int,
-                'block_count': int
-            },
-            validate={
-                'strand': '^[\+-]$'
-            },
-            transform={
+                'block_count': int,
                 'tname': lambda x: re.sub('^chr', '', x),
                 'block_sizes': split_csv_trailing_ints,
                 'qstarts': split_csv_trailing_ints,
                 'tstarts': split_csv_trailing_ints,
                 'qseqs': split_csv_trailing_seq,
                 'tseqs': split_csv_trailing_seq
+            },
+            validate={
+                'strand': '^[\+-]$'
             }
         )
 

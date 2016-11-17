@@ -4,6 +4,9 @@ from structural_variant.annotate import load_reference_genome
 from structural_variant.constants import CIGAR
 import unittest
 from Bio import SeqIO
+import os
+from tests import REFERENCE_GENOME as RG
+from tests import BLAT_INPUT, BLAT_OUTPUT
 
 
 REFERENCE_GENOME = None
@@ -19,22 +22,20 @@ class MockBamCache:
 
 def setUpModule():
     global REFERENCE_GENOME
-    REFERENCE_GENOME = load_reference_genome('/home/creisle/svn/sv_compile/trunk/mock_reference_genome.fa')
+    REFERENCE_GENOME = load_reference_genome(RG)
     if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
         raise AssertionError('fake genome file does not have the expected contents')
 
 
 class TestBlat(unittest.TestCase):
     def setUp(self):
-        self.pslx_file = 'tests/blat_output.pslx'
-        self.fasta_file = 'tests/blat_input.fa'
         self.cache = MockBamCache(Y=23, fake=0)
 
     def test_read_pslx(self):
         mapping = {}
-        for record in SeqIO.parse(self.fasta_file, 'fasta'):
+        for record in SeqIO.parse(BLAT_INPUT, 'fasta'):
             mapping[record.id] = record.seq
-        header, rows = Blat.read_pslx(self.pslx_file, mapping)
+        header, rows = Blat.read_pslx(BLAT_OUTPUT, mapping)
         self.assertEqual(11067, len(rows))
         expect_pslx_header = [
             'match', 'mismatch', 'repmatch', 'ncount',
@@ -68,7 +69,7 @@ class TestBlat(unittest.TestCase):
         read = Blat.pslx_row_to_pysam(pslx_row, self.cache, None)
         self.assertEqual(23, read.reference_id)
         self.assertEqual(Interval(93, 112), read.query_coverage_interval())
-    
+
     def test_pslx_row_to_pysam_simple(self):
         pslx_row = {
             'tstarts': [950],
