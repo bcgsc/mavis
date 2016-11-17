@@ -86,6 +86,12 @@ class TestAlign(unittest.TestCase):
             breakpoint_pos(r, ORIENT.LEFT)
 
         self.assertEqual(10, breakpoint_pos(r, ORIENT.RIGHT))
+        
+        with self.assertRaises(AttributeError):
+            r = MockRead(reference_start=10, cigar=[(CIGAR.X, 10), (CIGAR.M, 10)])
+            breakpoint_pos(r, ORIENT.LEFT)
+
+
 
 
 class TestDeBruijnGraph(unittest.TestCase):
@@ -144,6 +150,11 @@ class TestCigarTools(unittest.TestCase):
     def test_score(self):
         c = [(CIGAR.S, 10), (CIGAR.EQ, 1), (CIGAR.X, 4), (CIGAR.EQ, 10), (CIGAR.I, 3), (CIGAR.EQ, 5)]
         self.assertEqual(22, CigarTools.score(c))
+
+    def test_score_error(self):
+        with self.assertRaises(AssertionError):
+            c = [(CIGAR.S, 10), (CIGAR.EQ, 1), (CIGAR.X, 4), (99, 10), (CIGAR.I, 3), (CIGAR.EQ, 5)]
+            CigarTools.score(c)
 
     def test_match_percent(self):
         c = [(CIGAR.S, 10), (CIGAR.EQ, 1), (CIGAR.X, 4), (CIGAR.EQ, 10), (CIGAR.I, 3), (CIGAR.EQ, 5)]

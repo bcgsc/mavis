@@ -5,6 +5,14 @@ import unittest
 
 class TestInterval(unittest.TestCase):
 
+    def test___init__error(self):
+        with self.assertRaises(AttributeError):
+            Interval(4, 3)
+
+    def test___contains__(self):
+        self.assertTrue(Interval(1, 2) in Interval(1, 7))
+        self.assertFalse(Interval(1, 7) in Interval(1, 2))
+
     def test_eq(self):
         self.assertEqual(Interval(1, 2), Interval(1, 2))
 

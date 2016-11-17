@@ -90,9 +90,12 @@ class EventCall:
         return len(support1), len(support2), links
 
     def breakpoint_shared_sequence(self):
+        b1_refseq = self.evidence.HUMAN_REFERENCE_GENOME[self.breakpoint_pair.break1.chr].seq
+        b2_refseq = self.evidence.HUMAN_REFERENCE_GENOME[self.breakpoint_pair.break2.chr].seq
+
         if self.breakpoint_pair.opposing_strands:
             raise NotImplementedError('currently not supported')
-        if len(self.breakpoint_pair.break1) > 1 or len(self.breakpoint_pair.break2) > 1:
+        if len(self.breakpoint_pair.break1) == 1 and len(self.breakpoint_pair.break2) == 1:
             # get the sequence right before the breakpoint
             # compare along the contig moving away from the first breakpoint
             if self.breakpoint_pair.break1.orient == ORIENT.LEFT:
@@ -100,7 +103,38 @@ class EventCall:
                     pass
                 else:
                     # <============|--------- vs <--------|=========
-                    pass
+                    p1 = self.breakpoint_pair.break1.start - 1
+                    p2 = self.breakpoint_pair.break2.start - 2
+                    seq = []
+                    while (self.breakpoint_pair.interchromosomal or p2 > self.breakpoint_pair.break1.end - 1) \
+                        and p1 >= 0 and p2 >= 0:
+                        b1 = b1_refseq[p1] if self.breakpoint_pair.break1.strand == STRAND.POS else reverse_complement(b1_refseq[p1])
+                        b2 = b2_refseq[p2] if self.breakpoint_pair.break1.strand == STRAND.POS else reverse_complement(b1_refseq[p2])
+                        print(p1, b1, p2, b2)
+                        if not DNA_ALPHABET.match(b1, b2):
+                            break
+                        else:
+                            seq.append(b1.upper())
+                        p1 -= 1
+                        p2 -= 1
+                    seq.reverse()
+                    first = ''.join(seq)
+                    # <============|--------->> vs <--------|=========>>
+                    p1 = self.breakpoint_pair.break1.end
+                    p2 = self.breakpoint_pair.break2.start - 1
+                    seq = []
+                    while (self.breakpoint_pair.interchromosomal or p1 < self.breakpoint_pair.break2.start - 1) \
+                        and p1 < len(b1_refseq) and p2 < len(b2_refseq):
+                        b1 = b1_refseq[p1] if self.breakpoint_pair.break1.strand == STRAND.POS else reverse_complement(b1_refseq[p1])
+                        b2 = b2_refseq[p2] if self.breakpoint_pair.break1.strand == STRAND.POS else reverse_complement(b1_refseq[p2])
+                        print(p1, b1, p2, b2)
+                        if not DNA_ALPHABET.match(b1, b2):
+                            break
+                        else:
+                            seq.append(b1.upper())
+                        p1 += 1
+                        p2 += 1
+                    return first, ''.join(seq)
             else:
                 if self.breakpoint_pair.break2.orient == ORIENT.LEFT:
                     # -------------|========> vs =========|-------->
@@ -630,7 +664,7 @@ class Evidence:
         elif len(primary) < self.settings.min_anchor_size or len(clipped) < self.settings.min_anchor_size:
             raise UserWarning(
                 'split read does not meet the minimum anchor criteria')
-        
+
         if not read.has_tag('ca') or read.get_tag('ca') != 1:
             read.set_tag('ca', 1, value_type='i')
             # recalculate the read cigar string to ensure M is replaced with = or X
@@ -705,7 +739,7 @@ class Evidence:
                 # softclipping
                 pass
             s = CigarTools.score(a.cigar)
-            
+
             if a.reference_id == a.next_reference_id:
                 if a.is_read1:
                     a.template_length = (a.next_reference_start + self.settings.read_length) - a.reference_start

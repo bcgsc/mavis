@@ -4,13 +4,16 @@ from structural_variant.annotate import load_reference_genome, Gene, Transcript
 from structural_variant.constants import ORIENT, READ_PAIR_TYPE
 from tests import MockRead
 import unittest
+from tests import REFERENCE_GENOME as RG
 
-HUMAN_REFERENCE_GENOME = None
+REFERENCE_GENOME = None
 
 
 def setUpModule():
-    global HUMAN_REFERENCE_GENOME
-    # HUMAN_REFERENCE_GENOME = load_reference_genome('/home/pubseq/genomes/Homo_sapiens/TCGA_Special/GRCh37-lite.fa')
+    global REFERENCE_GENOME
+    REFERENCE_GENOME = load_reference_genome(RG)
+    if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
+        raise AssertionError('fake genome file does not have the expected contents')
 
 
 class TestEvidence(unittest.TestCase):
@@ -121,7 +124,7 @@ class TestEvidence(unittest.TestCase):
             mate_is_reverse=True
         )
         self.assertEqual(READ_PAIR_TYPE.LR, Evidence.read_pair_type(r))
-    
+
     def test_read_pair_type_LR_reverse(self):
         r = MockRead(
             reference_id=1,
@@ -132,7 +135,7 @@ class TestEvidence(unittest.TestCase):
             mate_is_reverse=False
         )
         self.assertEqual(READ_PAIR_TYPE.LR, Evidence.read_pair_type(r))
-    
+
     def test_read_pair_type_LL(self):
         r = MockRead(
             reference_id=0,
@@ -143,7 +146,7 @@ class TestEvidence(unittest.TestCase):
             mate_is_reverse=False
         )
         self.assertEqual(READ_PAIR_TYPE.LL, Evidence.read_pair_type(r))
-    
+
     def test_read_pair_type_RR(self):
         r = MockRead(
             reference_id=0,
@@ -165,7 +168,7 @@ class TestEvidence(unittest.TestCase):
             mate_is_reverse=False
         )
         self.assertEqual(READ_PAIR_TYPE.RL, Evidence.read_pair_type(r))
-    
+
     def test_read_pair_type_RL_reverse(self):
         r = MockRead(
             reference_id=1,
@@ -176,6 +179,21 @@ class TestEvidence(unittest.TestCase):
             mate_is_reverse=True
         )
         self.assertEqual(READ_PAIR_TYPE.RL, Evidence.read_pair_type(r))
+
+class MockEvidence:
+    def __init__(self, ref=None):
+        self.HUMAN_REFERENCE_GENOME = ref
+
+class TestEventCall(unittest.TestCase):
+    pass #'CAATGC'
+    def test_breakpoint_shared_sequence_LPRP(self):
+        b1 = Breakpoint('fake', 157, strand=STRAND.POS, orient=ORIENT.LEFT)
+        b2 = Breakpoint('fake', 1788, strand=STRAND.POS, orient=ORIENT.RIGHT)
+        bpp = BreakpointPair(b1, b2)
+        ec = EventCall(MockEvidence(REFERENCE_GENOME), None, bpp, CALL_METHOD.SPLIT)
+        self.assertEqual(('CAATGC', ''), ec.breakpoint_shared_sequence())
+
+
 
 if __name__ == "__main__":
     unittest.main()
