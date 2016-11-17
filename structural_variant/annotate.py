@@ -177,70 +177,18 @@ class Transcript(Bio):
                 return i
         raise AttributeError('can only calculate phase on associated exons')
 
-    def trim(self, breakpoint):  # TODO
-        if breakpoint.orient == ORIENT.NS:
-            raise AttributeError('cannot trim without specifying orientation of the breakpoint')
-        # if breakpoint.start != breakpoint.end:
-        #    raise AttributeError('cannot trim non-specific breakpoints')
-        # t = Transcript(strand = self.gene.strand)
-        setattr(t, TTRACK, self)
-        # recall that breakpoint orientation is given wrt to the forward strand
-        # of the genome
-        exon_num = 0
-        found_in_previous_intron = False
-        found_in_exon = False
-        exons = sorted(self.exons, key=lambda x: (x.start, x.end))
 
-        exon_num, found_in_previous_intron = Transcript.position_in_range(
-            [(e.start, e.end) for e in exons], breakpoint)
-
-        if not found_in_previous_intron and breakpoint.start != breakpoint.end:
-            raise AttributeError('cannot trim a transcript with a non-specific exonic breakpoint')
-        if exon_num == 0 or exon_num == len(exons):
-            raise UserWarning('cannot trim a  transcript if the breakpoint is outside the exons')
-        print(exon_num, found_in_previous_intron)
-        new_exons = []
-        if breakpoint.orient == ORIENT.LEFT:
-            # =====------> OR  <====-------
-            for e in exons[:exon_num]:
-                temp = Exon(e.start, e.end)
-                setattr(temp, TTRACK, e)
-                new_exons.append(temp)
-            if found_in_exon:
-                # create the final truncated exon
-                e = exons[exon_num]
-                temp = Exon(e.start, breakpoint.start)
-                setattr(temp, TTRACK, e)
-                new_exons.append(temp)
-        else:
-            # -----======> OR <----=======
-            if found_in_exon:
-                # create the first truncated exon
-                e = exons[exon_num]
-                temp = Exon(breakpoint.start, e.end, transcript=t)
-                setattr(temp, TTRACK, e)
-                new_exons.append(temp)
-            for e in exons[exon_num:]:
-                temp = Exon(e.start, e.end, transcript=t)
-                setattr(temp, TTRACK, e)
-                new_exons.append(temp)
-        print(new_exons)
-
-        # translation starts after the last exon
-        if self.cds_start > new_exons[-1].end:
-            pass
-        # translation ends before the first exon
-        elif self.cds_end < new_exons[0]:
-            pass
-        # now pull out all the domains
-        new_domains = []
-        for domain in self.domains:
-            # figure out where the breakpoint lands in the set of ranges
-            # find the breakpoint position in AA
-            domain_num, in_previous = position_in_range(domain.regions, b)
-            for start, end in domain.regions:
-                pass
-        return t
+class FusionTranscript:
+    """
+    a fusion of two transcripts created by the associated breakpoint_pair
+    """
+    def __init__(self, bpp, sv_type, transcript1, transcript2):
+        self.sv_type = SVTYPE.enforce(sv_type)
+        self.breakpoint_pair = bpp
+        if sv_type not in BreakpointPair.classify(bpp):
+            raise AttributeError('classification is not consistent', sv_type, BreakpointPair.classify(bpp))
+        self.transcript1 = transcript1
+        self.transcript2 = transcript2
 
 
 class Exon(BioInterval):

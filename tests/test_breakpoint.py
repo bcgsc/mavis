@@ -25,6 +25,16 @@ class TestBreakpointPair(unittest.TestCase):
         with self.assertRaises(IndexError):
             bpp[2]
 
+    def test_interchromosomal(self):
+        bp1 = Breakpoint(1, 1, 2, STRAND.NS, ORIENT.LEFT)
+        bp2 = Breakpoint(2, 1, 2, STRAND.NS, ORIENT.LEFT)
+        bpp = BreakpointPair(bp1, bp2, opposing_strands=True)
+        self.assertTrue(bpp.interchromosomal)
+        bp1 = Breakpoint(1, 1, 2, STRAND.NS, ORIENT.LEFT)
+        bp2 = Breakpoint(1, 7, 8, STRAND.NS, ORIENT.LEFT)
+        bpp = BreakpointPair(bp1, bp2, opposing_strands=True)
+        self.assertFalse(bpp.interchromosomal)
+
     def test_classify_invalid_rearrangement_error_intrachromosomal(self):
         with self.assertRaises(InvalidRearrangement):
             b = BreakpointPair(
@@ -238,7 +248,10 @@ class TestBreakpointPair(unittest.TestCase):
             reference_name='1',
             reference_start=1,
             cigar=[(CIGAR.M, 10), (CIGAR.I, 3), (CIGAR.M, 10), (CIGAR.D, 7), (CIGAR.M, 10)],
-            query_sequence='ACTGAATCGTGGGTAGCTGCTAG'
+            query_sequence='ACTGAATCGT'
+                           'GGGTAGCTGC'
+                           'TAGGGGCCTG'
+                           'CTC'
         )
         bpp = BreakpointPair.call_breakpoint_pair(r)
         self.assertEqual(False, bpp.opposing_strands)
@@ -247,13 +260,17 @@ class TestBreakpointPair(unittest.TestCase):
         self.assertEqual(28, bpp.break2.start)
         self.assertEqual(28, bpp.break2.end)
         self.assertEqual('', bpp.untemplated_sequence)
+        self.assertEqual('ACTGAATCGTGGGTAGCTGCTAG', bpp.break1.seq)
+        self.assertEqual('GGGCCTGCTC', bpp.break2.seq)
 
         r = MockRead(
             reference_id=0,
             reference_name='1',
             reference_start=1,
             cigar=[(CIGAR.M, 10), (CIGAR.D, 3), (CIGAR.M, 10), (CIGAR.D, 7), (CIGAR.M, 10)],
-            query_sequence='ACTGAATCGTGGGTAGCTGCTAG'
+            query_sequence='ACTGAATCGT'
+                           'GGGTAGCTGC'
+                           'TAGGGGCCTG'
         )
         bpp = BreakpointPair.call_breakpoint_pair(r)
         self.assertEqual(False, bpp.opposing_strands)
@@ -268,7 +285,9 @@ class TestBreakpointPair(unittest.TestCase):
             reference_name='1',
             reference_start=1,
             cigar=[(CIGAR.M, 10), (CIGAR.D, 7), (CIGAR.M, 10), (CIGAR.D, 3), (CIGAR.M, 10)],
-            query_sequence='ACTGAATCGTGGGTAGCTGCTAG'
+            query_sequence='ACTGAATCGT'
+                           'GGGTAGCTGC'
+                           'TAGGGGCCTG'
         )
         bpp = BreakpointPair.call_breakpoint_pair(r)
         self.assertEqual(False, bpp.opposing_strands)
@@ -309,6 +328,8 @@ class TestBreakpointPair(unittest.TestCase):
         self.assertEqual('GGGAATTCCGGA', bpp.untemplated_sequence)
         self.assertEqual(9, bpp.break1.start)
         self.assertEqual(100, bpp.break2.start)
+        self.assertEqual('AAATTTCCC', bpp.break1.seq)
+        self.assertEqual('TCGATCGAT', bpp.break2.seq)
 
     def test_call_breakpoint_pair_two_del(self):
         # seq AAATTTCCCGGGAATTCCGGATCGATCGAT
@@ -372,6 +393,8 @@ class TestBreakpointPair(unittest.TestCase):
         self.assertEqual('', bpp.untemplated_sequence)
         self.assertEqual(21, bpp.break1.start)
         self.assertEqual(103, bpp.break2.start)
+        self.assertEqual('AAATTTCCCGGGAATTCCGGA', bpp.break1.seq)
+        self.assertEqual('TCGATCGAT', bpp.break2.seq)
 
     def test_call_breakpoint_pair_two_inversion_overlap(self):
         # seq AAATTTCCCGGGAATTCCGGATCGATCGAT
@@ -405,6 +428,8 @@ class TestBreakpointPair(unittest.TestCase):
         self.assertEqual('', bpp.untemplated_sequence)
         self.assertEqual(21, bpp.break1.start)
         self.assertEqual(108, bpp.break2.start)
+        self.assertEqual('AAATTTCCCGGGAATTCCGGA', bpp.break1.seq)
+        self.assertEqual(reverse_complement('TCGATCGAT'), bpp.break2.seq)
 
     def test_call_breakpoint_pair_two_inversion_gap(self):
         # seq AAATTTCCCGGGAATTCCGGATCGATCGAT
@@ -438,3 +463,5 @@ class TestBreakpointPair(unittest.TestCase):
         self.assertEqual('CC', bpp.untemplated_sequence)
         self.assertEqual(16, bpp.break1.start)
         self.assertEqual(111, bpp.break2.start)
+        self.assertEqual('AAATTTCCCGGGAATT', bpp.break1.seq)
+        self.assertEqual(reverse_complement('GGATCGATCGAT'), bpp.break2.seq)

@@ -437,9 +437,9 @@ def main():
                 'tools': ec.evidence.labels['tools'],
                 'contigs_assembled': len(ec.evidence.contigs),
                 'contigs_aligned': sum([len(c.alignments) for c in ec.evidence.contigs]),
-                'contig_sequence': '?',
-                'contig_remap_score': '?',
-                'contig_alignment_score': '?',
+                'contig_sequence': None,
+                'contig_remap_score': None,
+                'contig_alignment_score': None,
                 'call_method': ec.call_method,
                 'flanking_reads': flank_count,
                 'median_insert_size': flank_median,
@@ -447,7 +447,7 @@ def main():
                 'break1_split_reads': b1_count,
                 'break2_split_reads': b2_count,
                 'linking_split_reads': link_count,
-                'untemplated_sequence': '?'
+                'untemplated_sequence': None
             }
             if ec.contig:
                 row['contig_sequence'] = ec.contig.seq

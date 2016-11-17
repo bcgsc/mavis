@@ -71,7 +71,7 @@ def load_input_file(filename):
     """
     header, rows = TSV.read_file(
         filename,
-        retain=[
+        require=[
             'start_chromosome',
             'end_chromosome',
             'start_orientation',
@@ -129,7 +129,7 @@ def load_input_file(filename):
                     orient=row['end_orientation'],
                     strand=row['end_strand'])
                 try:
-                    flags = [ l.upper() for l in row.get('filters', '').split(';')]
+                    flags = [l.upper() for l in row.get('filters', '').split(';')]
                     if key not in breakpoints:
                         breakpoints[key] = set()
                     bpp = BreakpointPair(
@@ -289,48 +289,23 @@ def main():
                     if bpp in cset:
                         temp.append(c.label)
                 row = {
-                    'cluster_ids': ';'.join(sorted([str(k) for k in temp])),
-                    'break1_chromosome': bpp.break1.chr,
-                    'break1_position_start': bpp.break1.start,
-                    'break1_position_end': bpp.break1.end,
-                    'break1_orientation': bpp.break1.orient,
-                    'break1_strand': bpp.break1.strand,
-                    'break2_chromosome': bpp.break2.chr,
-                    'break2_position_start': bpp.break2.start,
-                    'break2_position_end': bpp.break2.end,
-                    'break2_orientation': bpp.break2.orient,
-                    'break2_strand': bpp.break2.strand
+                    'cluster_ids': ';'.join(sorted([str(k) for k in temp]))
                 }
-                for tag, value in bpp.label.items():
-                    if tag in row:
-                        warnings.warn(
-                            'label tag {0}={1} is dropped b/c conflicts with header'.format(tag. value))
-                    else:
-                        row[tag] = value
+                row.update(BreakpointPair.flatten(bpp))
                 fh.write('\t'.join(str(row[k])
                                    for k in assignment_header) + '\n')
 
             for c in clusters:
                 tools = ';'.join(
                     sorted(list(set([k.label['tool_version'] for k in clusters[c]]))))
-                row = {
+                row = BreakpointPair.flatten(c)
+                row.update({
                     'cluster_id': c.label,
                     'cluster_size': len(clusters[c]),
-                    'break1_chromosome': c.break1.chr,
-                    'break1_position_start': c.break1.start,
-                    'break1_position_end': c.break1.end,
-                    'break1_orientation': c.break1.orient,
-                    'break1_strand': c.break1.strand,
-                    'break2_chromosome': c.break2.chr,
-                    'break2_position_start': c.break2.start,
-                    'break2_position_end': c.break2.end,
-                    'break2_orientation': c.break2.orient,
-                    'break2_strand': c.break2.strand,
-                    'opposing_strands': c.opposing_strands,
                     'protocol': protocol,
                     'library': libname,
                     'tools': tools
-                }
+                })
                 cluster_rows_by_lib[libname].append(row)
                 # add the reciprocal for translocations and inversions
                 if len(set([SVTYPE.INV, SVTYPE.ITRANS, SVTYPE.TRANS]) & set(BreakpointPair.classify(c))) > 0:

@@ -15,7 +15,8 @@ class MockRead:
         next_reference_start=None,
         next_reference_id=None,
         reference_name=None,
-        query_sequence=None
+        query_sequence=None,
+        query_alignment_sequence=None
     ):
         self.query_name = query_name
         self.reference_id = reference_id
@@ -30,6 +31,15 @@ class MockRead:
         self.next_reference_id = next_reference_id
         self.reference_name = reference_name
         self.query_sequence = query_sequence
+        self.query_alignment_sequence = query_alignment_sequence
+        if query_alignment_sequence is None and cigar and query_sequence:
+            s = 0 if cigar[0][0] != CIGAR.S else cigar[0][1]
+            t = len(query_sequence)
+            if cigar[-1][0] == CIGAR.S:
+                t -= cigar[-1][1]
+            self.query_alignment_sequence = query_sequence[s:t]
+        if cigar and query_sequence:
+            assert(len(query_sequence) == sum([f for v, f in cigar if v not in [CIGAR.H, CIGAR.N, CIGAR.D]]))
     
     def query_coverage_interval(self):
         return BlatAlignedSegment.query_coverage_interval(self)

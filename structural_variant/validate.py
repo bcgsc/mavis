@@ -89,6 +89,27 @@ class EventCall:
 
         return len(support1), len(support2), links
 
+    def breakpoint_shared_sequence(self):
+        if self.breakpoint_pair.opposing_strands:
+            raise NotImplementedError('currently not supported')
+        if len(self.breakpoint_pair.break1) > 1 or len(self.breakpoint_pair.break2) > 1:
+            # get the sequence right before the breakpoint
+            # compare along the contig moving away from the first breakpoint
+            if self.breakpoint_pair.break1.orient == ORIENT.LEFT:
+                if self.breakpoint_pair.break2.orient == ORIENT.LEFT:
+                    pass
+                else:
+                    # <============|--------- vs <--------|=========
+                    pass
+            else:
+                if self.breakpoint_pair.break2.orient == ORIENT.LEFT:
+                    # -------------|========> vs =========|-------->
+                    pass
+                else:
+                    pass
+        else:
+            raise AttributeError('cannot call shared sequence for non-specific breakpoints')
+
 
 class EvidenceSettings:
     """
