@@ -41,6 +41,15 @@ class EventCall:
             raise AttributeError('if the call is by contig then the contig must be provided')
 
     def count_flanking_support(self):
+        """
+        counts the flanking read-pair support for the event called
+
+        Returns:
+            tuple[int, int, int]:
+            * (*int*) - the number of flanking read pairs
+            * (*int*) - the median insert size
+            * (*int*) - the standard deviation (from the median) of the insert size
+        """
         s = self.evidence.settings
         support = set()
         upper_limit = s.median_insert_size + s.stdev_count_abnormal * s.stdev_isize
@@ -68,6 +77,17 @@ class EventCall:
         return len(support), median, stdev
 
     def count_split_read_support(self):
+        """
+        counts the split read support for the event called. split reads are only considered to
+        be supporting the current call if they exactly match the breakpoint pair associated
+        with this call
+
+        Returns:
+            tuple[int, int, int]:
+            * (*int*) - the number of split reads supporting the first breakpoint
+            * (*int*) - the number of split reads supporting the second breakpoint
+            * (*int*) - the number of split reads supporting the pairing of these breakpoints
+        """
         support1 = set()
         support2 = set()
 
@@ -167,22 +187,28 @@ class EvidenceSettings:
 
 
 class Evidence:
-    """
-    """
     @property
     def window1(self):
+        """(:class:`~structural_variant.interval.Interval`): the window where evidence will be gathered for the first
+        breakpoint
+        """
         return self.windows[0]
 
     @property
     def window2(self):
+        """(:class:`~structural_variant.interval.Interval`): the window where evidence will be gathered for the second
+        breakpoint
+        """
         return self.windows[1]
 
     @property
     def break1(self):
+        """(:class:`~structural_variant.breakpoint.Breakpoint`): the first breakpoint"""
         return self.breakpoint_pair.break1
 
     @property
     def break2(self):
+        """(:class:`~structural_variant.breakpoint.Breakpoint`): the second breakpoint"""
         return self.breakpoint_pair.break2
 
     @property
@@ -670,7 +696,7 @@ class Evidence:
             a.reference_id = self.bam_cache.reference_id(opposite_breakpoint.chr)
             # a.query_name = read.query_name + SUFFIX_DELIM + 'clipped-realign'
             a.query_name = read.query_name
-            a.set_tag('cr', 1, value_type='i')
+            a.set_tag(PYSAM_READ_FLAGS.CUSTOM_REALIGN, 1, value_type='i')
             a.next_reference_start = read.next_reference_start
             a.next_reference_id = read.next_reference_id
             a.mapping_quality = NA_MAPPING_QUALITY
@@ -720,51 +746,49 @@ class Evidence:
         uses the split reads and the partners of the half mapped reads to create a contig
         representing the sequence across the breakpoints
         """
+        strand_specific = self.breakpoint_pair.stranded
         # gather reads for the putative assembly
         assembly_sequences = {}
         for r in itertools.chain.from_iterable(self.split_reads):
             s = r.query_sequence
-            temp = reverse_complement(s)
-            assembly_sequences[s] = assembly_sequences.get(s, set())
-            assembly_sequences[s].add(r)
-            assembly_sequences[temp] = assembly_sequences.get(temp, set())
-            assembly_sequences[temp].add(r)
+            if not strand_specific or (r.is_read1 and not r.get_tag(PYSAM_READ_FLAGS.CUSTOM_REALIGN)):
+                assembly_sequences[s] = assembly_sequences.get(s, set())
+                assembly_sequences[s].add(r)
+            if not strand_specific or (r.is_read2 and not r.get_tag(PYSAM_READ_FLAGS.CUSTOM_REALIGN)):
+                temp = reverse_complement(s)
+                assembly_sequences[temp] = assembly_sequences.get(temp, set())
+                assembly_sequences[temp].add(r)
             # only collect the mates if they are unmapped
             if r.mate_is_unmapped:
                 for m in self.bam_cache.get_mate(r):
                     s = m.query_sequence
-                    temp = reverse_complement(s)
-                    assembly_sequences[s] = assembly_sequences.get(s, set())
-                    assembly_sequences[s].add(m)
-                    assembly_sequences[temp] = assembly_sequences.get(temp, set())
-                    assembly_sequences[temp].add(m)
+                    if not strand_specific or (m.is_read1 and not r.get_tag(PYSAM_READ_FLAGS.CUSTOM_REALIGN)):
+                        assembly_sequences[s] = assembly_sequences.get(s, set())
+                        assembly_sequences[s].add(m)
+                    if not strand_specific or (m.is_read2 and not r.get_tag(PYSAM_READ_FLAGS.CUSTOM_REALIGN)):
+                        temp = reverse_complement(s)
+                        assembly_sequences[temp] = assembly_sequences.get(temp, set())
+                        assembly_sequences[temp].add(m)
         for r in itertools.chain.from_iterable(self.half_mapped):
             try:
                 for m in self.bam_cache.get_mate(r):
                     s = m.query_sequence
-                    temp = reverse_complement(s)
-                    assembly_sequences[s] = assembly_sequences.get(s, set())
-                    assembly_sequences[s].add(m)
-                    assembly_sequences[temp] = assembly_sequences.get(temp, set())
-                    assembly_sequences[temp].add(m)
+                    if not strand_specific or (m.is_read1 and not r.get_tag(PYSAM_READ_FLAGS.CUSTOM_REALIGN)):
+                        assembly_sequences[s] = assembly_sequences.get(s, set())
+                        assembly_sequences[s].add(m)
+                    if not strand_specific or (m.is_read2 and not r.get_tag(PYSAM_READ_FLAGS.CUSTOM_REALIGN)):
+                        temp = reverse_complement(s)
+                        assembly_sequences[temp] = assembly_sequences.get(temp, set())
+                        assembly_sequences[temp].add(m)
             except KeyError:
                 pass
         contigs = assemble(assembly_sequences, min_edge_weight=self.settings.assembly_min_edge_weight)
-        filtered_contigs = {}
+        filtered_contigs = []
         for c in sorted(contigs, key=lambda x: x.seq):  # sort so that the function is deterministic
             if c.remap_score() < self.settings.assembly_min_remap:
                 continue
-            if c.seq not in filtered_contigs:
-                temp = reverse_complement(c.seq)
-                filtered_contigs[c.seq] = c
-                filtered_contigs[temp] = c
-            else:
-                curr = filtered_contigs[c.seq]
-                if curr.remap_score() < c.remap_score():
-                    temp = reverse_complement(c.seq)
-                    filtered_contigs[c.seq] = c
-                    filtered_contigs[temp] = c
-        self.contigs = set(list(filtered_contigs.values()))
+            filtered_contigs.append(c)
+        self.contigs = filtered_contigs
 
     def call_events(self):
         """

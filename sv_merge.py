@@ -73,27 +73,35 @@ def load_input_file(filename):
         filename,
         require=[
             'start_chromosome',
-            'end_chromosome',
-            'start_orientation',
-            'end_orientation',
-            'start_strand',
-            'end_strand',
-            'protocol',
-            'tool_version'],
+            'end_chromosome'
+        ],
         split={
             'start_position': '^(?P<start_pos1>\d+)-(?P<start_pos2>\d+)$',
             'end_position': '^(?P<end_pos1>\d+)-(?P<end_pos2>\d+)$',
         },
-        cast={'start_pos1': int, 'start_pos2': int,
-              'end_pos1': int, 'end_pos2': int},
+        cast={
+            'start_pos1': int,
+            'start_pos2': int,
+            'end_pos1': int,
+            'end_pos2': int,
+            'stranded': TSV.bool
+        },
+        _in={
+            'start_strand': STRAND,
+            'end_strand': STRAND,
+            'start_orientation': ORIENT,
+            'end_orientation': ORIENT,
+            'protocol': PROTOCOL
+        },
         validate={
-            'start_orientation': '^{0}$'.format('|'.join([re.escape(x) for x in ORIENT.values()])),
-            'end_orientation': '^{0}$'.format('|'.join([re.escape(x) for x in ORIENT.values()])),
-            'start_strand': '^{0}$'.format('|'.join([re.escape(x) for x in STRAND.values()])),
-            'end_strand': '^{0}$'.format('|'.join([re.escape(x) for x in STRAND.values()])),
             'tool_version': '^.+_v\d+\.\d+\.\d+$',
-            'protocol': '^(genome|transcriptome)$',
             'libraries': '^[\w-]+(;[\w-]+)*$'
+        },
+        add={
+            'opposing_strands': '?',
+            'start_strand': STRAND.NS,
+            'end_strand': STRAND.NS,
+            'stranded': False
         }
     )
     breakpoints = {}
@@ -105,7 +113,7 @@ def load_input_file(filename):
                      'tool_version': tool, 'input_file': filename}
             
             opposing_strands = [None]
-            if 'opposing_strands' not in row or row['opposing_strands'] == '?':
+            if row['opposing_strands'] == '?':
                 if row['start_strand'] == STRAND.NS or row['end_strand'] == STRAND.NS:
                     opposing_strands = [True, False]
             elif row['opposing_strands'].lower() in ['y', 't', 'true', 'yes']:
@@ -135,8 +143,11 @@ def load_input_file(filename):
                     bpp = BreakpointPair(
                         b1,
                         b2,
-                        opposing_strands=opp,
-                        flags=[] if FLAGS.LQ not in flags else [FLAGS.LQ])
+                        opposing_strands=opp
+                    )
+                    if not row['stranded']:
+                        bpp.break1.strand = STRAND.NS
+                        bpp.break2.strand = STRAND.NS
                     bpp.label = label
                     breakpoints[key].add(bpp)
                 except InvalidRearrangement as e:
@@ -171,6 +182,10 @@ def main():
                         help='defines the maximum number of jobs that can be created for the validation step')
     parser.add_argument('--min-events-per-job', '-e', default=MIN_EVENTS_PER_JOB, type=int,
                         help='defines the minimum number of clusters to validate per job', dest='MIN_EVENTS_PER_JOB')
+    parser.add_argument('-r', help='radius to use in clustering', default=50, type=int)
+    parser.add_argument(
+        '-k', help='parameter used for computing cliques, smaller is faster, above 20 will be slow',
+        default=15, type=int)
     args = parser.parse_args()
 
     if args.MIN_EVENTS_PER_JOB < 1:
@@ -265,13 +280,13 @@ def main():
             print('for', key, 'there are', len(
                 bpp_list), 'input breakpoint pairs')
 
-            clusters = cluster_breakpoint_pairs(bpp_list, r=20, k=15)
+            clusters = cluster_breakpoint_pairs(bpp_list, r=args.r, k=args.k)
             initial_count = len(clusters)
 
             # filter out the low quality clusters
             temp = list(clusters.keys())
             for cluster in temp:  # set the ids of the clusters
-                cluster.label = cluster_id
+                cluster.label['cluster_id'] = cluster_id
                 cluster_id += 1
                 if len(clusters[cluster]) == 1:
                     if FLAGS.LQ in list(clusters[cluster])[0].flags:
@@ -287,7 +302,7 @@ def main():
                 temp = []
                 for c, cset in clusters.items():
                     if bpp in cset:
-                        temp.append(c.label)
+                        temp.append(c.label['cluster_id'])
                 row = {
                     'cluster_ids': ';'.join(sorted([str(k) for k in temp]))
                 }
@@ -300,7 +315,7 @@ def main():
                     sorted(list(set([k.label['tool_version'] for k in clusters[c]]))))
                 row = BreakpointPair.flatten(c)
                 row.update({
-                    'cluster_id': c.label,
+                    'cluster_id': c.label['cluster_id'],
                     'cluster_size': len(clusters[c]),
                     'protocol': protocol,
                     'library': libname,

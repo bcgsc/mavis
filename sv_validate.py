@@ -121,7 +121,7 @@ def mkdirp(dirname):
 def read_cluster_file(name, is_stranded):
     header, rows = TSV.read_file(
         name,
-        retain=[
+        require=[
             'cluster_id',
             'cluster_size',
             'break1_chromosome',
@@ -262,7 +262,10 @@ def gather_evidence_from_bam(clusters):
                 e.breakpoint_pair,
                 BreakpointPair.classify(e.breakpoint_pair)
             )
-            e.load_evidence()
+            try:
+                e.load_evidence()
+            except NotImplementedError:
+                continue
             print(
                 datetime.now(),
                 '[{}/{}]'.format(i + 1, len(clusters)),

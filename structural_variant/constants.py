@@ -81,8 +81,10 @@ PYSAM_READ_FLAGS = Vocab(
     FIRST_IN_PAIR=64,
     LAST_IN_PAIR=128,
     SECONDARY=256,
-    MULTIMAP=1
+    MULTIMAP=1,
+    CUSTOM_REALIGN='cr'
 )
+
 """Vocab: Enum-like. For readable PYSAM flag constants
 
 - MULTIMAP: template having multiple segments in sequencing

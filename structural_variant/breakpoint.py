@@ -205,6 +205,7 @@ class BreakpointPair:
     @classmethod
     def _call_from_single_contig(cls, read):
         # first find the major unaligned event
+        # TODO allow this to call multiple events from a single contig
         read_events = []
         for i, t in enumerate(read.cigar):
             v, f = t

@@ -117,6 +117,7 @@ class Transcript(Bio):
 
     @property
     def gene(self):
+        """(:class:`~structural_variant.annotate.Gene`): the gene this transcript belongs to"""
         return self.reference_object
 
     @property
@@ -212,7 +213,7 @@ class Exon(BioInterval):
 
     @property
     def transcript(self):
-        """alias for the reference_object attribute"""
+        """(:class:`~structural_variant.annotate.Transcript`): the transcript this exon belongs to"""
         return self.reference_object
 
     def __getitem__(self, index):
@@ -264,9 +265,7 @@ class Domain(Bio):
 
     @property
     def transcript(self):
-        """
-        the transcript this exon is associated with
-        """
+        """(:class:`~structural_variant.annotate.Transcript`): the transcript this domain belongs to"""
         return self.reference_object
 
     @property
@@ -305,9 +304,8 @@ def load_masking_regions(filepath):
     """
     header, rows = TSV.read_file(
         filepath,
-        retain=['chr', 'start', 'end', 'name'],
-        cast={'start': int, 'end': int},
-        transform={'chr': lambda x: re.sub('^chr', '', x)}
+        require=['chr', 'start', 'end', 'name'],
+        cast={'start': int, 'end': int, 'chr': lambda x: re.sub('^chr', '', x)}
     )
     regions = {}
     for row in rows:
