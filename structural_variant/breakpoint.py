@@ -382,29 +382,42 @@ class BreakpointPair:
             untemplated_sequence = reverse_complement(untemplated_sequence)
 
         return BreakpointPair(b1, b2, untemplated_sequence=untemplated_sequence)
-    
+
     def shared_sequence(self, HUMAN_REFERENCE_GENOME):
         b1_refseq = HUMAN_REFERENCE_GENOME[self.break1.chr].seq
         b2_refseq = HUMAN_REFERENCE_GENOME[self.break2.chr].seq
 
         if self.opposing_strands:
             raise NotImplementedError('currently not supported')
-        if len(self.break1) == 1 and len(self.break2) == 1:
+        if len(self.break1) > 1 and len(self.break2) > 1:
+            raise AttributeError('cannot call shared sequence for non-specific breakpoints')
+
+        # find for the first breakpoint
+        p1 = self.break1.start - 1
+        p2 = self.break2.start - 1
+        shift1 = -1 if self.break1.orient == ORIENT.LEFT else 1
+        shift2 = -1 if self.break2.orient == ORIENT.RIGHT else 1
+        p2 += shift2
+
+        while all([
+            p1 >= 0,
+            p1 < len(b1_refseq),
+            p2 >= 0,
+            p2 < len(b2_refseq),
+            self.interchromosomal or p2 > self.break1.start - 1
+        ]):
             # get the sequence right before the breakpoint
             # compare along the contig moving away from the first breakpoint
             if self.break1.orient == ORIENT.LEFT:
-                if self.break2.orient == ORIENT.LEFT:
-                    pass
-                else:
-                    # <============|--------- vs <--------|=========
+                if self.break2.orient == ORIENT.LEFT:  # LL
+                    # <============|--------- vs ----------|==========>
                     p1 = self.break1.start - 1
                     p2 = self.break2.start - 2
                     seq = []
                     while (self.interchromosomal or p2 > self.break1.end - 1) \
                         and p1 >= 0 and p2 >= 0:
-                        b1 = b1_refseq[p1]
-                        b2 = b2_refseq[p2] if not self.opposing_strands else reverse_complement(b1_refseq[p2])
-                        print(p1, b1, p2, b2)
+                        b1 = b1_refseq[p1] if not self.break1.strand == STRAND.POS else reverse_complement(b1_refseq[p1])
+                        b2 = b2_refseq[p2] if not self.break2.strand == STRAND.POS else reverse_complement(b2_refseq[p2])
                         if not DNA_ALPHABET.match(b1, b2):
                             break
                         else:
@@ -421,7 +434,38 @@ class BreakpointPair:
                         and p1 < len(b1_refseq) and p2 < len(b2_refseq):
                         b1 = b1_refseq[p1]
                         b2 = b2_refseq[p2] if not self.opposing_strands else reverse_complement(b1_refseq[p2])
-                        print(p1, b1, p2, b2)
+                        if not DNA_ALPHABET.match(b1, b2):
+                            break
+                        else:
+                            seq.append(b1.upper())
+                        p1 += 1
+                        p2 += 1
+                    return first, ''.join(seq)
+                else:  # LR
+                    # <============|--------- vs <--------|=========
+                    p1 = self.break1.start - 1
+                    p2 = self.break2.start - 2
+                    seq = []
+                    while (self.interchromosomal or p2 > self.break1.end - 1) \
+                        and p1 >= 0 and p2 >= 0:
+                        b1 = b1_refseq[p1]
+                        b2 = b2_refseq[p2] if not self.opposing_strands else reverse_complement(b1_refseq[p2])
+                        if not DNA_ALPHABET.match(b1, b2):
+                            break
+                        else:
+                            seq.append(b1.upper())
+                        p1 -= 1
+                        p2 -= 1
+                    seq.reverse()
+                    first = ''.join(seq)
+                    # <============|--------->> vs <--------|=========>>
+                    p1 = self.break1.end
+                    p2 = self.break2.start - 1
+                    seq = []
+                    while (self.interchromosomal or p1 < self.break2.start - 1) \
+                        and p1 < len(b1_refseq) and p2 < len(b2_refseq):
+                        b1 = b1_refseq[p1]
+                        b2 = b2_refseq[p2] if not self.opposing_strands else reverse_complement(b1_refseq[p2])
                         if not DNA_ALPHABET.match(b1, b2):
                             break
                         else:
@@ -430,13 +474,11 @@ class BreakpointPair:
                         p2 += 1
                     return first, ''.join(seq)
             else:
-                if self.break2.orient == ORIENT.LEFT:
+                if self.break2.orient == ORIENT.LEFT:  # RL
                     # -------------|========> vs =========|-------->
                     pass
-                else:
+                else:  # RR
                     pass
-        else:
-            raise AttributeError('cannot call shared sequence for non-specific breakpoints')
 
 
 def soft_null_cast(value):

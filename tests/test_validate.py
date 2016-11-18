@@ -184,16 +184,6 @@ class MockEvidence:
     def __init__(self, ref=None):
         self.HUMAN_REFERENCE_GENOME = ref
 
-class TestEventCall(unittest.TestCase):
-    pass #'CAATGC'
-    def test_breakpoint_shared_sequence_LPRP(self):
-        b1 = Breakpoint('fake', 157, strand=STRAND.POS, orient=ORIENT.LEFT)
-        b2 = Breakpoint('fake', 1788, strand=STRAND.POS, orient=ORIENT.RIGHT)
-        bpp = BreakpointPair(b1, b2)
-        ec = EventCall(MockEvidence(REFERENCE_GENOME), None, bpp, CALL_METHOD.SPLIT)
-        self.assertEqual(('CAATGC', ''), ec.breakpoint_shared_sequence())
-
-
 
 if __name__ == "__main__":
     unittest.main()

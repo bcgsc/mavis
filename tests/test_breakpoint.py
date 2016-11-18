@@ -372,12 +372,12 @@ class TestBreakpointPair(unittest.TestCase):
         self.assertEqual('', bpp.untemplated_sequence)
         self.assertEqual(21, bpp.break1.start)
         self.assertEqual(100, bpp.break2.start)
-    
+
     def test_call_breakpoint_pair_two_del_overlap(self):
         # seq AAATTTCCCGGGAATTCCGGATCGATCGAT
         # r1  AAATTTCCCGGGAATTCCGGAtcgatcgat
         # r2  aaatttcccgggaattccGGATCGATCGAT
-        
+
         seq = 'AAATTTCCCGGGAATTCCGGATCGATCGAT'  # 30
         r1 = MockRead(
             reference_id=0,
@@ -482,3 +482,8 @@ class TestBreakpointPair(unittest.TestCase):
         b2 = Breakpoint('fake', 1788, strand=STRAND.POS, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2)
         self.assertEqual(('CAATGC', ''), bpp.shared_sequence(REFERENCE_GENOME))
+
+        b1 = Breakpoint('fake', 589, strand=STRAND.POS, orient=ORIENT.LEFT)
+        b2 = Breakpoint('fake', 704, strand=STRAND.POS, orient=ORIENT.RIGHT)
+        bpp = BreakpointPair(b1, b2)
+        self.assertEqual(('TTAA', 'ATAGC'), bpp.shared_sequence(REFERENCE_GENOME))
