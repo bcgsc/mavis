@@ -985,7 +985,7 @@ class Evidence:
             linked_pairings.append(EventCall(ev, classification, bpp, CALL_METHOD.SPLIT))
 
         if len(linked_pairings) == 0:  # then call by mixed or flanking only
-            assert(len(pos1.keys()) == 0 or len(pos2.keys() == 0))
+            assert(len(pos1.keys()) == 0 or len(pos2.keys()) == 0)
             fr = len(ev.flanking_reads[0]) + len(ev.flanking_reads[1])
             if fr > 0:
                 # if can call the first breakpoint by split
