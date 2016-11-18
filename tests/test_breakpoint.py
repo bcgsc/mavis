@@ -481,9 +481,63 @@ class TestBreakpointPair(unittest.TestCase):
         b1 = Breakpoint('fake', 157, strand=STRAND.POS, orient=ORIENT.LEFT)
         b2 = Breakpoint('fake', 1788, strand=STRAND.POS, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2)
-        self.assertEqual(('CAATGC', ''), bpp.shared_sequence(REFERENCE_GENOME))
+        self.assertEqual(('CAATGC', ''), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
 
         b1 = Breakpoint('fake', 589, strand=STRAND.POS, orient=ORIENT.LEFT)
         b2 = Breakpoint('fake', 704, strand=STRAND.POS, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2)
-        self.assertEqual(('TTAA', 'ATAGC'), bpp.shared_sequence(REFERENCE_GENOME))
+        self.assertEqual(('TTAA', 'ATAGC'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
+
+    def test_breakpoint_shared_sequence_LPLN(self):
+        # CCC|AAA ------------ TTT|GGG
+        # CCC                      CCC
+        #     TTT              TTT
+        b1 = Breakpoint('fake', 1459, strand=STRAND.POS, orient=ORIENT.LEFT)
+        b2 = Breakpoint('fake', 2914, strand=STRAND.NEG, orient=ORIENT.LEFT)
+        bpp = BreakpointPair(b1, b2)
+        self.assertEqual(('CCC', 'TTT'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
+
+    def test_breakpoint_shared_sequence_LNLP(self):
+        # CCC|AAA ------------ TTT|GGG
+        # CCC                      CCC
+        #     TTT              TTT
+        b1 = Breakpoint('fake', 1459, strand=STRAND.NEG, orient=ORIENT.LEFT)
+        b2 = Breakpoint('fake', 2914, strand=STRAND.POS, orient=ORIENT.LEFT)
+        bpp = BreakpointPair(b1, b2)
+        self.assertEqual(('CCC', 'TTT'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
+
+    def test_breakpoint_shared_sequence_RPRN(self):
+        # CCC|AAA ------------ TTT|GGG
+        # GGG                      GGG
+        #     AAA              AAA
+        b1 = Breakpoint('fake', 1460, strand=STRAND.POS, orient=ORIENT.RIGHT)
+        b2 = Breakpoint('fake', 2915, strand=STRAND.NEG, orient=ORIENT.RIGHT)
+        bpp = BreakpointPair(b1, b2)
+        self.assertEqual(('AAA', 'GGG'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
+
+    def test_breakpoint_shared_sequence_RNRP(self):
+        # CCC|AAA ------------ TTT|GGG
+        # GGG                      GGG
+        #     AAA              AAA
+        b1 = Breakpoint('fake', 1460, strand=STRAND.NEG, orient=ORIENT.RIGHT)
+        b2 = Breakpoint('fake', 2915, strand=STRAND.POS, orient=ORIENT.RIGHT)
+        bpp = BreakpointPair(b1, b2)
+        self.assertEqual(('AAA', 'GGG'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
+
+    def test_breakpoint_shared_sequence_close_del(self):
+        # ....TT|TT....
+        b1 = Breakpoint('fake', 1001, strand=STRAND.POS, orient=ORIENT.LEFT)
+        b2 = Breakpoint('fake', 1002, strand=STRAND.POS, orient=ORIENT.RIGHT)
+        bpp = BreakpointPair(b1, b2)
+        self.assertEqual(('', ''), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
+
+    def test_breakpoint_shared_sequence_close_dup(self):
+        # ....GATACATTTCTTCTTGAAAA...
+        # -------------<=============
+        # ===============>-----------
+        # -------------CT-CT--------- first break homology
+        # ------------T--T----------- second break homology
+        b1 = Breakpoint('fake', 745, strand=STRAND.POS, orient=ORIENT.RIGHT)
+        b2 = Breakpoint('fake', 747, strand=STRAND.POS, orient=ORIENT.LEFT)
+        bpp = BreakpointPair(b1, b2)
+        self.assertEqual(('CT', 'TT'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))

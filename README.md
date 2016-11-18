@@ -9,7 +9,7 @@ pipeline to merge and validate input from different structural variant callers i
 to run the tests
 
     cd /path/to/project/dir
-    nosetests --with-coverage --cover-package=structural_variant
+    nosetests --with-coverage --cover-html --cover-html-dir=coverage --cover-package=structural_variant 
 
 ## Getting Started
 
