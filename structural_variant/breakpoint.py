@@ -4,6 +4,7 @@ from copy import copy as sys_copy
 from structural_variant.constants import *
 from structural_variant.error import *
 from structural_variant.interval import Interval
+import TSV
 
 
 class Breakpoint(Interval):
@@ -69,6 +70,7 @@ class BreakpointPair:
 
     @property
     def interchromosomal(self):
+        """(boolean): True if the breakpoints are on different chromosomes, False otherwise"""
         if self.break1.chr == self.break2.chr:
             return False
         return True
@@ -391,18 +393,23 @@ class BreakpointPair:
         will never return any homologous sequence
 
         ::
-            
+
+            small duplication event CTT => CTTCTT
+
             GATACATTTCTTCTTGAAAA reference
             ---------<========== first breakpoint
             ===========>-------- second breakpoint
             ---------CT-CT------ first break homology
             -------TT-TT-------- second break homology
+
+        Raises:
+            AttributeError: for non specific breakpoints
         """
 
         b1_refseq = HUMAN_REFERENCE_GENOME[self.break1.chr].seq
         b2_refseq = HUMAN_REFERENCE_GENOME[self.break2.chr].seq
 
-        if len(self.break1) > 1 and len(self.break2) > 1:
+        if len(self.break1) > 1 or len(self.break2) > 1:
             raise AttributeError('cannot call shared sequence for non-specific breakpoints')
 
         # find for the first breakpoint

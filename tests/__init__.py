@@ -54,8 +54,8 @@ class MockBamFileHandle:
     def __init__(self, chrom_to_tid={}):
         self.chrom_to_tid = chrom_to_tid
 
-    def fetch(self):
-        pass
+    def fetch(self, *pos):
+        return []
 
     def get_tid(self, chrom):
         if chrom in self.chrom_to_tid:

@@ -83,5 +83,5 @@ def main():
             for r in repeats:
                 fh.write('{}\t{}\t{}\t{}\n'.format(r.chr, r.start, r.end, r.seq))
 
-
-main()
+if __name__ == '__main__':
+    main()

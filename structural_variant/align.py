@@ -3,7 +3,6 @@ import itertools
 import warnings
 from structural_variant.constants import *
 import networkx as nx
-from datetime import datetime
 
 
 class BamCache:
@@ -33,7 +32,7 @@ class BamCache:
         Args:
             chrom (str): the chromosome/reference name
         Returns:
-            int: the reference id corrsponding to input chromosome name
+            int: the reference id corresponding to input chromosome name
         """
         tid = self.fh.get_tid(chrom)
         if tid == -1:
@@ -257,8 +256,10 @@ class CigarTools:
                 matches += f
             elif v == CIGAR.X:
                 mismatches += f
+            elif v == CIGAR.M:
+                raise AttributeError('cannot calculate match percent with non-specific alignments', cigar)
         if matches + mismatches == 0:
-            return 0
+            raise AttributeError('input cigar string does not have any aligned sections (X or =)', cigar)
         else:
             return matches / (matches + mismatches)
 
@@ -282,7 +283,7 @@ class CigarTools:
         return result
 
     @classmethod
-    def extend_softclipping(cls, original_cigar, min_exact_to_stop_softclipping):
+    def extend_softclipping(cls, cigar, min_exact_to_stop_softclipping):
         """
         given some input cigar, extends softclipping if there are mismatches/insertions/deletions
         close to the end of the aligned portion. The stopping point is defined by the
@@ -294,60 +295,75 @@ class CigarTools:
             min_exact_to_stop_softclipping (int): number of exact matches to terminate extension
 
         Returns:
-            (List[CIGAR,int], int): the new cigar string and a number representing the shift from the original start position
+            (List[CIGAR,int], int): the new cigar string and a number representing the shift from the original
+                start position
         """
-        cigar = original_cigar[:]
-        preshift = 0
+        ref_start_shift = 0
         # determine how far to scoop for the front softclipping
-        head = None
-        while len(cigar) > 0:
-            v, f = cigar[0]
-            if v == CIGAR.EQ and f >= min_exact_to_stop_softclipping:
-                break
-            elif v in [CIGAR.D, CIGAR.N]:
-                preshift -= f
-                del cigar[0]
-                continue
-            elif head is None:
-                head = (CIGAR.S, f)
-            else:
-                head = (CIGAR.S, head[1] + f)
-            if v == CIGAR.S:
-                pass
-            else:
-                preshift += f
-            del cigar[0]
-        tail = None
-        while len(cigar) > 0:
-            v, f = cigar[-1]
-            if v == CIGAR.EQ and f >= min_exact_to_stop_softclipping:
-                break
-            elif v in [CIGAR.D, CIGAR.N]:
-                pass
-            elif tail is None:
-                tail = (CIGAR.S, f)
-            else:
-                tail = (CIGAR.S, tail[1] + f)
-            del cigar[-1]
-        if len(cigar) == 0:
-            raise AttributeError(
-                'input does not have a long enough match sequence')
-        if head is not None:
-            cigar.insert(0, head)
-        if tail is not None:
-            cigar.append(tail)
+        new_cigar = []
+        temp = [(v, f) for v, f in cigar if (v in [CIGAR.EQ, CIGAR.M] and f >= min_exact_to_stop_softclipping)]
+        if len(temp) == 0:
+            raise AttributeError('cannot compute on this cigar as there is no stop point')
 
-        return cigar, preshift
+        match_satisfied = False
+        for v, f in cigar:
+            if v in [CIGAR.M, CIGAR.EQ] and f >= min_exact_to_stop_softclipping:
+                match_satisfied = True
+            if match_satisfied and (len(new_cigar) == 0 or new_cigar[-1][0] != CIGAR.S):
+                new_cigar.append((v, f))
+            elif match_satisfied:  # first after SC
+                if v in [CIGAR.D, CIGAR.X, CIGAR.N]:
+                    ref_start_shift += f
+                    new_cigar.append((CIGAR.S, f))
+                elif v == CIGAR.I:
+                    new_cigar.append((CIGAR.S, f))
+                else:
+                    new_cigar.append((v, f))
+            else:
+                if v in [CIGAR.D, CIGAR.N]:
+                    ref_start_shift += f
+                    pass
+                elif v in [CIGAR.I, CIGAR.S]:
+                    new_cigar.append((CIGAR.S, f))
+                else:
+                    new_cigar.append((CIGAR.S, f))
+                    ref_start_shift += f
+        cigar = new_cigar[::-1]
+
+        new_cigar = []
+
+        match_satisfied = False
+        for v, f in cigar:
+            if v in [CIGAR.M, CIGAR.EQ] and f >= min_exact_to_stop_softclipping:
+                match_satisfied = True
+            if match_satisfied and (len(new_cigar) == 0 or new_cigar[-1][0] != CIGAR.S):
+                new_cigar.append((v, f))
+            elif match_satisfied:  # first after SC
+                if v in [CIGAR.D, CIGAR.X, CIGAR.N]:
+                    new_cigar.append((CIGAR.S, f))
+                elif v == CIGAR.I:
+                    new_cigar.append((CIGAR.S, f))
+                else:
+                    new_cigar.append((v, f))
+            else:
+                if v in [CIGAR.D, CIGAR.N]:
+                    pass
+                elif v in [CIGAR.I, CIGAR.S]:
+                    new_cigar.append((CIGAR.S, f))
+                else:
+                    new_cigar.append((CIGAR.S, f))
+        new_cigar.reverse()
+        return new_cigar, ref_start_shift
 
     @classmethod
-    def compute(cls, ref, alt, **kwargs):
+    def compute(cls, ref, alt, force_softclipping=True, min_exact_to_stop_softclipping=6):
         """
         given a ref and alt sequence compute the cigar string representing the alt
 
         returns the cigar tuples along with the start position of the alt relative to the ref
         """
-        force_softclipping = kwargs.pop('force_softclipping', True)
-        min_exact_to_stop_softclipping = kwargs.pop('min_exact_to_stop_softclipping', 6)
+        if not force_softclipping:
+            min_exact_to_stop_softclipping = 1
 
         if len(ref) != len(alt):
             raise AttributeError('ref and alt must be the same length')
@@ -365,25 +381,11 @@ class CigarTools:
                 cigar.append((CIGAR.X, 1))
         cigar = cls.join(cigar)
 
-        has_terminator = False
-        for v, f in cigar:
-            if v == CIGAR.EQ and f >= min_exact_to_stop_softclipping:
-                has_terminator = True
-                break
-
-        if not force_softclipping or not has_terminator:
-            if not has_terminator and force_softclipping:
-                warnings.warn(
-                    'could not force softclipping. did not find a long enough match sequence to terminate clipping')
+        try:
+            c, rs = CigarTools.extend_softclipping(cigar, min_exact_to_stop_softclipping)
+            return c, rs
+        except AttributeError:
             return cigar, 0
-
-        start_pos = 0
-        if cigar[0][0] in [CIGAR.D, CIGAR.N]:
-            start_pos += cigar[0][1]
-            del cigar[0]
-        cigar, shift = cls.extend_softclipping(
-            cigar, min_exact_to_stop_softclipping)
-        return cigar, start_pos + shift
 
     @classmethod
     def convert_for_igv(cls, cigar):

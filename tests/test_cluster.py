@@ -1,5 +1,4 @@
 from structural_variant.interval import Interval
-import warnings
 import networkx as nx
 import itertools
 from structural_variant.cluster import IntervalPair
@@ -15,14 +14,14 @@ class TestIntervalPair(unittest.TestCase):
     
     def test_weighted_mean(self):
         pairs = [IntervalPair((1, 2), (1, 10)), IntervalPair((1, 10), (2, 11)), IntervalPair((2, 11), (1, 2))]
-        m = IntervalPair.weighted_mean(pairs)
+        m = IntervalPair.weighted_mean(*pairs)
         self.assertEqual(IntervalPair(
-            Interval.weighted_mean([p.start for p in pairs]), Interval.weighted_mean([p.end for p in pairs])), m)
+            Interval.weighted_mean(*[p.start for p in pairs]), Interval.weighted_mean(*[p.end for p in pairs])), m)
         
         pairs = [IntervalPair((1, 2), (1, 10)), IntervalPair((1, 10), (1, 10)), IntervalPair((2, 11), (1, 10))]
-        m = IntervalPair.weighted_mean(pairs)
+        m = IntervalPair.weighted_mean(*pairs)
         self.assertEqual(IntervalPair(
-            Interval.weighted_mean([p.start for p in pairs]), Interval.weighted_mean([p.end for p in pairs])), m)
+            Interval.weighted_mean(*[p.start for p in pairs]), Interval.weighted_mean(*[p.end for p in pairs])), m)
 
     def test_dist(self):
         x = IntervalPair((1, 1), (10, 11))

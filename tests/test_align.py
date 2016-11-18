@@ -1,7 +1,19 @@
 from structural_variant.constants import *
 from structural_variant.align import *
+from structural_variant.annotate import load_reference_genome
 import unittest
 from tests import MockRead, MockBamFileHandle
+from tests import REFERENCE_GENOME as RG
+
+
+REFERENCE_GENOME = None
+
+
+def setUpModule():
+    global REFERENCE_GENOME
+    REFERENCE_GENOME = load_reference_genome(RG)
+    if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
+        raise AssertionError('fake genome file does not have the expected contents')
 
 
 class TestBamCache(unittest.TestCase):
@@ -86,12 +98,10 @@ class TestAlign(unittest.TestCase):
             breakpoint_pos(r, ORIENT.LEFT)
 
         self.assertEqual(10, breakpoint_pos(r, ORIENT.RIGHT))
-        
+
         with self.assertRaises(AttributeError):
             r = MockRead(reference_start=10, cigar=[(CIGAR.X, 10), (CIGAR.M, 10)])
             breakpoint_pos(r, ORIENT.LEFT)
-
-
 
 
 class TestDeBruijnGraph(unittest.TestCase):
@@ -140,6 +150,75 @@ class TestDeBruijnGraph(unittest.TestCase):
 
 class TestCigarTools(unittest.TestCase):
 
+    def test_recompute_cigar_mismatch(self):
+        r = MockRead(
+            reference_start=1456,
+            query_sequence='CCCAAACAAC'
+                           'TATAAATTTT'
+                           'GTAATACCTA'
+                           'GAACAATATA'
+                           'AATAT',
+            cigar=[(CIGAR.M, 45)]
+        )
+        self.assertEqual([(CIGAR.EQ, 45)], CigarTools.recompute_cigar_mismatch(r, REFERENCE_GENOME['fake']))
+        
+        r = MockRead(
+            reference_start=1456,
+            query_sequence='TATA'
+                           'CCCAAACAAC'
+                           'TATAAATTTT'
+                           'GTAATACCTA'
+                           'GAACAATATA'
+                           'AATAT',
+            cigar=[(CIGAR.S, 4), (CIGAR.M, 10), (CIGAR.D, 10), (CIGAR.I, 10), (CIGAR.M, 25)]
+        )
+        self.assertEqual(
+            [(CIGAR.S, 4), (CIGAR.EQ, 10), (CIGAR.D, 10), (CIGAR.I, 10), (CIGAR.EQ, 25)],
+            CigarTools.recompute_cigar_mismatch(r, REFERENCE_GENOME['fake'])
+        )
+        r = MockRead(
+            reference_start=1452,
+            query_sequence='CAGC'
+                           'CCCAAACAAC'
+                           'TATAAATTTT'
+                           'GTAATACCTA'
+                           'GAACAATATA'
+                           'AATAT',
+            cigar=[(CIGAR.X, 4), (CIGAR.M, 10), (CIGAR.D, 10), (CIGAR.I, 10), (CIGAR.M, 25)]
+        )
+        self.assertEqual(
+            [(CIGAR.X, 4), (CIGAR.EQ, 10), (CIGAR.D, 10), (CIGAR.I, 10), (CIGAR.EQ, 25)],
+            CigarTools.recompute_cigar_mismatch(r, REFERENCE_GENOME['fake'])
+        )
+        r = MockRead(
+            reference_start=1452,
+            query_sequence='CAGC'
+                           'CCCAAACAAC'
+                           'TATAAATTTT'
+                           'GTAATACCTA'
+                           'GAACAATATA'
+                           'AATAT',
+            cigar=[(CIGAR.M, 14), (CIGAR.D, 10), (CIGAR.I, 10), (CIGAR.M, 25)]
+        )
+        self.assertEqual(
+            [(CIGAR.X, 4), (CIGAR.EQ, 10), (CIGAR.D, 10), (CIGAR.I, 10), (CIGAR.EQ, 25)],
+            CigarTools.recompute_cigar_mismatch(r, REFERENCE_GENOME['fake'])
+        )
+
+    def test_recompute_cigar_mismatch_invalid_cigar_value(self):
+        r = MockRead(
+            reference_start=1452,
+            query_sequence='CAGC'
+                           'CCCAAACAAC'
+                           'TATAAATTTT'
+                           'GTAATACCTA'
+                           'GAACAATATA'
+                           'AATAT',
+            cigar=[(50, 14), (CIGAR.D, 10), (CIGAR.I, 10), (CIGAR.M, 25)]
+        )
+        with self.assertRaises(NotImplementedError):
+            CigarTools.recompute_cigar_mismatch(r, REFERENCE_GENOME['fake'])
+
     def test_longest_fuzzy_match(self):
         c = [(CIGAR.S, 10), (CIGAR.EQ, 1), (CIGAR.X, 4), (CIGAR.EQ, 10), (CIGAR.I, 3), (CIGAR.EQ, 5)]
         self.assertEqual(15, CigarTools.longest_fuzzy_match(c, 1))
@@ -159,20 +238,64 @@ class TestCigarTools(unittest.TestCase):
     def test_match_percent(self):
         c = [(CIGAR.S, 10), (CIGAR.EQ, 1), (CIGAR.X, 4), (CIGAR.EQ, 10), (CIGAR.I, 3), (CIGAR.EQ, 5)]
         self.assertEqual(0.8, CigarTools.match_percent(c))
+        with self.assertRaises(AttributeError):
+            CigarTools.match_percent([(CIGAR.M, 100)])
+        with self.assertRaises(AttributeError):
+            CigarTools.match_percent([(CIGAR.S, 100)])
 
     def test_compute(self):
+        # GTGAGTAAATTCAACATCGTTTTT
+        # aacttagAATTCAAC---------
         self.assertEqual(
-            ([(4, 7), (7, 8)], 7),
+            ([(CIGAR.S, 7), (CIGAR.EQ, 8)], 7),
             CigarTools.compute('GTGAGTAAATTCAACATCGTTTTT', 'AACTTAGAATTCAAC---------')
         )
         self.assertEqual(
-            ([(4, 5), (7, 8)], 7),
+            ([(CIGAR.S, 5), (CIGAR.EQ, 8)], 7),
             CigarTools.compute('GTGAGTAAATTCAACATCGTTTTT', '--CTTAGAATTCAAC---------')
+        )
+        self.assertEqual(
+            ([(CIGAR.S, 5), (CIGAR.EQ, 8)], 7),
+            CigarTools.compute('GTGAGTAAATTCAACATCGTTTTT', '--CTTAGAATTCAAC---------', False)
+        )
+
+        self.assertEqual(
+            ([(CIGAR.S, 5), (CIGAR.EQ, 5), (CIGAR.I, 2), (CIGAR.EQ, 1)], 7),
+            CigarTools.compute('GTGAGTAAATTC--CATCGTTTTT', '--CTTAGAATTCAAC---------', False)
+        )
+
+        with self.assertRaises(AttributeError):
+            CigarTools.compute('CCTG', 'CCG')
+        
+        self.assertEqual(
+            ([(CIGAR.EQ, 2), (CIGAR.X, 2)], 0),
+            CigarTools.compute('CCTG', 'CCGT', min_exact_to_stop_softclipping=10)
+        )
+        
+        self.assertEqual(
+            ([(CIGAR.S, 5), (CIGAR.EQ, 8)], 5),
+            CigarTools.compute('--GAGTAAATTCAACATCGTTTTT', '--CTTAGAATTCAAC---------', False)
         )
 
     def test_convert_for_igv(self):
         c = [(CIGAR.M, 10), (CIGAR.EQ, 10), (CIGAR.X, 10)]
         self.assertEqual([(CIGAR.M, 30)], CigarTools.convert_for_igv(c))
+    
+    def test_extend_softclipping(self):
+        self.assertEqual(
+            ([(CIGAR.S, 10), (CIGAR.M, 10)], 0),
+            CigarTools.extend_softclipping([(CIGAR.S, 10), (CIGAR.M, 10)], 1)
+        )
+    
+    def test_extend_softclipping_deletions(self):
+        self.assertEqual(
+            ([(CIGAR.S, 10), (CIGAR.M, 10)], 1),
+            CigarTools.extend_softclipping([(CIGAR.I, 10), (CIGAR.D, 1), (CIGAR.M, 10)], 1)
+        )
+
+    def test_extend_softclipping_mismatch(self):
+        with self.assertRaises(AttributeError):
+            CigarTools.extend_softclipping([(CIGAR.X, 10), (CIGAR.M, 20), (CIGAR.X, 10)], 30)
 
     def test_alignment_matches(self):
         c = [(CIGAR.M, 10), (CIGAR.EQ, 10), (CIGAR.X, 10)]

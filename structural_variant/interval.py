@@ -180,10 +180,10 @@ class Interval:
         return hash((self[0], self[1], self.freq))
 
     @classmethod
-    def weighted_mean(cls, intervals):
+    def weighted_mean(cls, *intervals):
         """
         Args:
-            intervals (List[Interval]): a list of intervals
+            intervals (Interval): a list of intervals
 
         Returns:
             Interval: the weighted mean interval of the input intervals
@@ -192,9 +192,9 @@ class Interval:
             AttributeError: if the input list is empty
 
         Example:
-            >>> Interval.weighted_mean([(1, 2), (1, 9), (2, 10)])
+            >>> Interval.weighted_mean((1, 2), (1, 9), (2, 10))
             Interval(1, 4)
-            >>> Interval.weighted_mean([(1, 1), (10, 10)])
+            >>> Interval.weighted_mean((1, 1), (10, 10))
             Interval(6)
         """
         centers = []

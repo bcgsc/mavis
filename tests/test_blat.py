@@ -2,22 +2,14 @@ from structural_variant.blat import Blat
 from structural_variant.interval import Interval
 from structural_variant.annotate import load_reference_genome
 from structural_variant.constants import CIGAR
+from structural_variant.align import BamCache
 import unittest
 from Bio import SeqIO
-import os
 from tests import REFERENCE_GENOME as RG
-from tests import BLAT_INPUT, BLAT_OUTPUT
+from tests import BLAT_INPUT, BLAT_OUTPUT, MockBamFileHandle
 
 
 REFERENCE_GENOME = None
-
-
-class MockBamCache:
-    def __init__(self, **kwargs):
-        self.chr_to_referenceid = kwargs
-
-    def reference_id(self, chrom):
-        return self.chr_to_referenceid[chrom]
 
 
 def setUpModule():
@@ -29,7 +21,7 @@ def setUpModule():
 
 class TestBlat(unittest.TestCase):
     def setUp(self):
-        self.cache = MockBamCache(Y=23, fake=0)
+        self.cache = BamCache(MockBamFileHandle({'Y': 23, 'fake': 0}))
 
     def test_read_pslx(self):
         mapping = {}

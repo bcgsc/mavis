@@ -21,9 +21,43 @@ class TestBreakpoint(unittest.TestCase):
     def test___eq__(self):
         self.assertNotEqual(Breakpoint('1', 1), None)
         self.assertEqual(Breakpoint('1', 1), Breakpoint('1', 1))
+    
+    def test_inherited_interval_methods(self):
+        b = Breakpoint('1', 1, 10)
+        self.assertEqual(1, b[0])
+        self.assertEqual(10, b[1])
+        self.assertEqual(10, len(b))
+
+    def test_soft_null_cast(self):
+        self.assertTrue(soft_null_cast('none') is None)
+        self.assertTrue(soft_null_cast('null') is None)
+        self.assertTrue(soft_null_cast('NUll') is None)
+        self.assertEqual(soft_null_cast('notnull'), 'notnull')
 
 
 class TestBreakpointPair(unittest.TestCase):
+    
+    def test___init__swap_break_order(self):
+        b1 = Breakpoint('1', 1)
+        b2 = Breakpoint('1', 50)
+        bpp = BreakpointPair(b1, b2, opposing_strands=True)
+        self.assertEqual(bpp.break1, b1)
+        self.assertEqual(bpp.break2, b2)
+        bpp = BreakpointPair(b2, b1, opposing_strands=True)
+        self.assertEqual(bpp.break1, b1)
+        self.assertEqual(bpp.break2, b2)
+
+    def test___init__opstrand_conflict(self):
+        with self.assertRaises(AttributeError):
+            BreakpointPair(
+                Breakpoint('1', 1, strand=STRAND.POS),
+                Breakpoint('1', 2, strand=STRAND.POS),
+                opposing_strands=True
+            )
+
+    def test___init__opstrand_not_specified(self):
+        with self.assertRaises(AttributeError):
+            BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 2))
 
     def test___get_item__(self):
         bp1 = Breakpoint(1, 1, 2, STRAND.NS, ORIENT.LEFT)
@@ -46,51 +80,57 @@ class TestBreakpointPair(unittest.TestCase):
         bpp = BreakpointPair(bp1, bp2, opposing_strands=True)
         self.assertFalse(bpp.interchromosomal)
 
-    def test_classify_invalid_rearrangement_error_intrachromosomal(self):
+    def test___init__invalid_intra_RPRP(self):
         with self.assertRaises(InvalidRearrangement):
             b = BreakpointPair(
                 Breakpoint(1, 1, 2, strand=STRAND.POS, orient=ORIENT.RIGHT),
                 Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.RIGHT)
             )
-
+    
+    def test___init__invalid_intra_RNRN(self):
         with self.assertRaises(InvalidRearrangement):
             b = BreakpointPair(
                 Breakpoint(1, 1, 2, strand=STRAND.NEG, orient=ORIENT.RIGHT),
                 Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.RIGHT)
             )
-
+    
+    def test___init__invalid_intra_RPLN(self):
         with self.assertRaises(InvalidRearrangement):
             b = BreakpointPair(
                 Breakpoint(1, 1, 2, strand=STRAND.POS, orient=ORIENT.RIGHT),
                 Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.LEFT)
             )
-
+    
+    def test___init__invalid_intra_LPRN(self):
         with self.assertRaises(InvalidRearrangement):
             b = BreakpointPair(
                 Breakpoint(1, 1, 2, strand=STRAND.POS, orient=ORIENT.LEFT),
                 Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.RIGHT)
             )
-
+    
+    def test___init__invalid_intra_RNLP(self):
         with self.assertRaises(InvalidRearrangement):
             b = BreakpointPair(
                 Breakpoint(1, 1, 2, strand=STRAND.NEG, orient=ORIENT.RIGHT),
                 Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.LEFT)
             )
 
+    def test___init__invalid_intra_LNRP(self):
         with self.assertRaises(InvalidRearrangement):
             b = BreakpointPair(
                 Breakpoint(1, 1, 2, strand=STRAND.NEG, orient=ORIENT.LEFT),
                 Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.RIGHT)
             )
 
-    def test_classify_invalid_rearrangement_error_interchromosomal(self):
+    def test___init__invalid_inter_RL_opp(self):
         with self.assertRaises(InvalidRearrangement):
             b = BreakpointPair(
                 Breakpoint(1, 1, 2, STRAND.NS, ORIENT.RIGHT),
                 Breakpoint(2, 1, 2, STRAND.NS, ORIENT.LEFT),
                 opposing_strands=True
             )
-
+    
+    def test___init__invalid_inter_LR_opp(self):
         with self.assertRaises(InvalidRearrangement):
             b = BreakpointPair(
                 Breakpoint(1, 1, 2, STRAND.NS, ORIENT.LEFT),
@@ -477,7 +517,7 @@ class TestBreakpointPair(unittest.TestCase):
         self.assertEqual('AAATTTCCCGGGAATT', bpp.break1.seq)
         self.assertEqual(reverse_complement('GGATCGATCGAT'), bpp.break2.seq)
 
-    def test_breakpoint_shared_sequence_LPRP(self):
+    def test_breakpoint_sequence_homology_LPRP(self):
         b1 = Breakpoint('fake', 157, strand=STRAND.POS, orient=ORIENT.LEFT)
         b2 = Breakpoint('fake', 1788, strand=STRAND.POS, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2)
@@ -488,7 +528,7 @@ class TestBreakpointPair(unittest.TestCase):
         bpp = BreakpointPair(b1, b2)
         self.assertEqual(('TTAA', 'ATAGC'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
 
-    def test_breakpoint_shared_sequence_LPLN(self):
+    def test_breakpoint_sequence_homology_LPLN(self):
         # CCC|AAA ------------ TTT|GGG
         # CCC                      CCC
         #     TTT              TTT
@@ -497,7 +537,7 @@ class TestBreakpointPair(unittest.TestCase):
         bpp = BreakpointPair(b1, b2)
         self.assertEqual(('CCC', 'TTT'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
 
-    def test_breakpoint_shared_sequence_LNLP(self):
+    def test_breakpoint_sequence_homology_LNLP(self):
         # CCC|AAA ------------ TTT|GGG
         # CCC                      CCC
         #     TTT              TTT
@@ -506,7 +546,7 @@ class TestBreakpointPair(unittest.TestCase):
         bpp = BreakpointPair(b1, b2)
         self.assertEqual(('CCC', 'TTT'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
 
-    def test_breakpoint_shared_sequence_RPRN(self):
+    def test_breakpoint_sequence_homology_RPRN(self):
         # CCC|AAA ------------ TTT|GGG
         # GGG                      GGG
         #     AAA              AAA
@@ -515,7 +555,7 @@ class TestBreakpointPair(unittest.TestCase):
         bpp = BreakpointPair(b1, b2)
         self.assertEqual(('AAA', 'GGG'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
 
-    def test_breakpoint_shared_sequence_RNRP(self):
+    def test_breakpoint_sequence_homology_RNRP(self):
         # CCC|AAA ------------ TTT|GGG
         # GGG                      GGG
         #     AAA              AAA
@@ -524,14 +564,14 @@ class TestBreakpointPair(unittest.TestCase):
         bpp = BreakpointPair(b1, b2)
         self.assertEqual(('AAA', 'GGG'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
 
-    def test_breakpoint_shared_sequence_close_del(self):
+    def test_breakpoint_sequence_homology_close_del(self):
         # ....TT|TT....
         b1 = Breakpoint('fake', 1001, strand=STRAND.POS, orient=ORIENT.LEFT)
         b2 = Breakpoint('fake', 1002, strand=STRAND.POS, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2)
         self.assertEqual(('', ''), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
 
-    def test_breakpoint_shared_sequence_close_dup(self):
+    def test_breakpoint_sequence_homology_close_dup(self):
         # ....GATACATTTCTTCTTGAAAA...
         # -------------<=============
         # ===============>-----------
@@ -541,3 +581,10 @@ class TestBreakpointPair(unittest.TestCase):
         b2 = Breakpoint('fake', 747, strand=STRAND.POS, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2)
         self.assertEqual(('CT', 'TT'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
+
+    def test_breakpoint_sequence_homology_non_specific_error(self):
+        b1 = Breakpoint('fake', 740, 745, strand=STRAND.POS, orient=ORIENT.RIGHT)
+        b2 = Breakpoint('fake', 747, strand=STRAND.POS, orient=ORIENT.LEFT)
+        bpp = BreakpointPair(b1, b2)
+        with self.assertRaises(AttributeError):
+            bpp.breakpoint_sequence_homology(REFERENCE_GENOME)

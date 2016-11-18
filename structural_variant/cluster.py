@@ -41,18 +41,18 @@ class IntervalPair:
         return hash((self.start, self.end, self.id))
 
     @classmethod
-    def weighted_mean(cls, interval_pairs):
+    def weighted_mean(cls, *interval_pairs):
         """
         returns a new IntervalPair where the start interval is the weighted mean of the starts of all
         the input interval pairs, similar for the end
 
         Args:
-            interval_pairs (List[IntervalPair]): a list of interval pairs
+            interval_pairs (IntervalPair): interval pairs
         Returns:
             IntervalPair: the new IntervalPair
         """
-        start = Interval.weighted_mean([i.start for i in interval_pairs])
-        end = Interval.weighted_mean([i.end for i in interval_pairs])
+        start = Interval.weighted_mean(*[i.start for i in interval_pairs])
+        end = Interval.weighted_mean(*[i.end for i in interval_pairs])
         return IntervalPair(start, end)
 
     def dist(self, other):
@@ -141,7 +141,7 @@ class IntervalPair:
             groups (List[Set[IntervalPair]]): a list of sets of interval pairs
             r (int): the distance to determine grouping 
         """
-        queue = sorted(groups, key=lambda x: IntervalPair.weighted_mean(x))
+        queue = sorted(groups, key=lambda x: IntervalPair.weighted_mean(*x))
         complete_groups = []
 
         while len(queue) > 0:
@@ -149,24 +149,24 @@ class IntervalPair:
             for i in range(0, len(queue)):
                 merged = False
                 curr = queue[i]
-                curri = IntervalPair.weighted_mean(curr)
+                curri = IntervalPair.weighted_mean(*curr)
                 if i > 0:
                     prev = queue[i - 1]
-                    if IntervalPair.weighted_mean(prev).dist(curri) <= r:
+                    if IntervalPair.weighted_mean(*prev).dist(curri) <= r:
                         d = curr | prev
                         if d not in temp_queue:
                             temp_queue.append(d)
                         merged = True
                 if i < len(queue) - 1:
                     nexxt = queue[i + 1]
-                    if IntervalPair.weighted_mean(nexxt).dist(curri) <= r:
+                    if IntervalPair.weighted_mean(*nexxt).dist(curri) <= r:
                         d = curr | nexxt
                         if d not in temp_queue:
                             temp_queue.append(d)
                         merged = True
                 if not merged:
                     complete_groups.append(curr)
-            queue = sorted(temp_queue, key=lambda x: IntervalPair.weighted_mean(x))
+            queue = sorted(temp_queue, key=lambda x: IntervalPair.weighted_mean(*x))
         return complete_groups
 
     @classmethod
@@ -264,7 +264,7 @@ def cluster_breakpoint_pairs(input_pairs, r, k):
             elif particpation == 0:
                 raise AssertionError('error: dropped input pair did not complete clustering', node)
         for c in clusters:
-            ip = IntervalPair.weighted_mean(c)
+            ip = IntervalPair.weighted_mean(*c)
             b1 = Breakpoint(chr1, ip.start[0], ip.start[1], strand=s1, orient=o1)
             b2 = Breakpoint(chr2, ip.end[0], ip.end[1], strand=s2, orient=o2)
             bpp = BreakpointPair(b1, b2, opposing_strands=opposing_strands)

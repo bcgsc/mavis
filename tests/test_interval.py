@@ -8,6 +8,8 @@ class TestInterval(unittest.TestCase):
     def test___init__error(self):
         with self.assertRaises(AttributeError):
             Interval(4, 3)
+        with self.assertRaises(AttributeError):
+            Interval(3, 4, 0)
 
     def test___contains__(self):
         self.assertTrue(Interval(1, 2) in Interval(1, 7))
@@ -91,6 +93,9 @@ class TestInterval(unittest.TestCase):
         self.assertEqual((3, False), Interval.position_in_range([(1, 2), (3, 6), (7, 10)], pos))
         self.assertEqual((0, True), Interval.position_in_range([(15, 16), (17, 19)], pos))
 
+        with self.assertRaises(AttributeError):
+            Interval.position_in_range([], 1)
+
     def test_convert_pos(self):
         mapping = {(1, 10): (101, 110), (21, 30): (201, 210), (41, 50): (301, 310)}
 
@@ -145,17 +150,21 @@ class TestInterval(unittest.TestCase):
             Interval.union()
 
     def test_weighted_mean(self):
-        m = Interval.weighted_mean([(1, 2), (1, 9), (2, 10)])
+        m = Interval.weighted_mean((1, 2), (1, 9), (2, 10))
         self.assertEqual(Interval(1, 4), m)
-        m = Interval.weighted_mean([(1, 1), (10, 10)])
+        m = Interval.weighted_mean((1, 1), (10, 10))
         self.assertEqual(Interval(6), m)
 
+    def test_weighted_mean_empty_list_error(self):
+        with self.assertRaises(AttributeError):
+            Interval.weighted_mean()
+
     def test_weighted_mean_identical_even_length(self):
-        m = Interval.weighted_mean([(1, 2), (1, 2), (1, 2)])
+        m = Interval.weighted_mean((1, 2), (1, 2), (1, 2))
         self.assertEqual(Interval(1, 2), m)
 
     def test_weighted_mean_identical_odd_length(self):
-        m = Interval.weighted_mean([(1, 3), (1, 3), (1, 3)])
+        m = Interval.weighted_mean((1, 3), (1, 3), (1, 3))
         self.assertEqual(Interval(1, 3), m)
 
     def test_intersection(self):
