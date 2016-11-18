@@ -14,9 +14,6 @@ ALLSPHINXOPTS   = -d $(BUILDDIR)/doctrees $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) sou
 # the i18n builder cannot share the environment and doctrees with the others
 I18NSPHINXOPTS  = $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) source
 
-export PATH := /projects/tumour_char/analysis_scripts/python/centos06/anaconda3_v2.3.0/bin:$(PATH)
-export PYTHONPATH := /projects/tumour_char/analysis_scripts/python/centos06/anaconda3_v2.3.0/lib:$(PATH)
-
 .PHONY: help
 help:
 	@echo "Please use \`make <target>' where <target> is one of"

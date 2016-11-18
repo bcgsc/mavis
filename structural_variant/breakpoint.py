@@ -384,6 +384,21 @@ class BreakpointPair:
         return BreakpointPair(b1, b2, untemplated_sequence=untemplated_sequence)
 
     def breakpoint_sequence_homology(self, HUMAN_REFERENCE_GENOME):
+        """
+        for a given set of breakpoints matches the sequence opposite the partner breakpoint
+        this sequence comparison is done with reference to a reference genome and does not
+        use novel or untemplated sequence in the comparison. For this reason, insertions
+        will never return any homologous sequence
+
+        ::
+            
+            GATACATTTCTTCTTGAAAA reference
+            ---------<========== first breakpoint
+            ===========>-------- second breakpoint
+            ---------CT-CT------ first break homology
+            -------TT-TT-------- second break homology
+        """
+
         b1_refseq = HUMAN_REFERENCE_GENOME[self.break1.chr].seq
         b2_refseq = HUMAN_REFERENCE_GENOME[self.break2.chr].seq
 
