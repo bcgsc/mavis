@@ -43,13 +43,12 @@ Output File Format
     | opposing_strand   | <True,False,?>                    |                                                |
 """
 
-import re
 import TSV
 import os
 import errno
 import argparse
 import warnings
-import datetime
+from datetime import datetime
 from structural_variant.constants import *
 from structural_variant.align import *
 from structural_variant.error import *

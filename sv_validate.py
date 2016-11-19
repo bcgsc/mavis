@@ -414,13 +414,21 @@ def main():
         'break1_split_reads',
         'break2_split_reads',
         'linking_split_reads',
-        'untemplated_sequence'
+        'untemplated_sequence',
+        'break1_homologous_sequence',
+        'break2_homologous_sequence'
     ]
     with open(OUTPUT_FILE, 'w') as fh:
         fh.write('#' + '\t'.join(header) + '\n')
         for ec in event_calls:
             flank_count, flank_median, flank_stdev = ec.count_flanking_support()
             b1_count, b2_count, link_count = ec.count_split_read_support()
+            b1_homseq = None
+            b2_homseq = None
+            try:
+                b1_homseq, b2_homseq = ec.breakpoint_pair.breakpoint_sequence_homology(HUMAN_REFERENCE_GENOME)
+            except AttributeError:
+                pass
             row = {
                 'cluster_id': ec.evidence.labels['cluster_id'],
                 'break1_chromosome': ec.breakpoint_pair.break1.chr,
@@ -450,7 +458,9 @@ def main():
                 'break1_split_reads': b1_count,
                 'break2_split_reads': b2_count,
                 'linking_split_reads': link_count,
-                'untemplated_sequence': None
+                'untemplated_sequence': None,
+                'break1_homologous_sequence': b1_homseq,
+                'break2_homologous_sequence': b2_homseq
             }
             if ec.contig:
                 row['contig_sequence'] = ec.contig.seq
