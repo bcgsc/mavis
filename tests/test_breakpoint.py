@@ -21,7 +21,7 @@ class TestBreakpoint(unittest.TestCase):
     def test___eq__(self):
         self.assertNotEqual(Breakpoint('1', 1), None)
         self.assertEqual(Breakpoint('1', 1), Breakpoint('1', 1))
-    
+
     def test_inherited_interval_methods(self):
         b = Breakpoint('1', 1, 10)
         self.assertEqual(1, b[0])
@@ -36,7 +36,7 @@ class TestBreakpoint(unittest.TestCase):
 
 
 class TestBreakpointPair(unittest.TestCase):
-    
+
     def test___init__swap_break_order(self):
         b1 = Breakpoint('1', 1)
         b2 = Breakpoint('1', 50)
@@ -86,28 +86,28 @@ class TestBreakpointPair(unittest.TestCase):
                 Breakpoint(1, 1, 2, strand=STRAND.POS, orient=ORIENT.RIGHT),
                 Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.RIGHT)
             )
-    
+
     def test___init__invalid_intra_RNRN(self):
         with self.assertRaises(InvalidRearrangement):
             b = BreakpointPair(
                 Breakpoint(1, 1, 2, strand=STRAND.NEG, orient=ORIENT.RIGHT),
                 Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.RIGHT)
             )
-    
+
     def test___init__invalid_intra_RPLN(self):
         with self.assertRaises(InvalidRearrangement):
             b = BreakpointPair(
                 Breakpoint(1, 1, 2, strand=STRAND.POS, orient=ORIENT.RIGHT),
                 Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.LEFT)
             )
-    
+
     def test___init__invalid_intra_LPRN(self):
         with self.assertRaises(InvalidRearrangement):
             b = BreakpointPair(
                 Breakpoint(1, 1, 2, strand=STRAND.POS, orient=ORIENT.LEFT),
                 Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.RIGHT)
             )
-    
+
     def test___init__invalid_intra_RNLP(self):
         with self.assertRaises(InvalidRearrangement):
             b = BreakpointPair(
@@ -129,7 +129,7 @@ class TestBreakpointPair(unittest.TestCase):
                 Breakpoint(2, 1, 2, STRAND.NS, ORIENT.LEFT),
                 opposing_strands=True
             )
-    
+
     def test___init__invalid_inter_LR_opp(self):
         with self.assertRaises(InvalidRearrangement):
             b = BreakpointPair(

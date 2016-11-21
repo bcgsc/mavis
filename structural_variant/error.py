@@ -1,7 +1,8 @@
 
+
 class DiscontiuousMappingError(Exception):
-    """ 
-    class to describe errors associated with translating 
+    """
+    class to describe errors associated with translating
     coordinates between continuous and discontinuous intervals
     """
 

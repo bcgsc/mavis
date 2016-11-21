@@ -13,6 +13,7 @@ import tools.profile_bam as profile_bam
 from functools import partial
 import math
 
+
 CALL_METHOD = Vocab(CONTIG='contig', SPLIT='split reads', FLANK='flanking reads', MIXED='split and flanking')
 
 

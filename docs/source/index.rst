@@ -9,11 +9,10 @@ SVMerge Documentation
 .. toctree::
    :maxdepth: 3
 
-   README.md
+   README
    structural_variant
-   sv_merge
-   sv_validate
    tools
+   glossary
 
 
 .. automodule:: structural_variant

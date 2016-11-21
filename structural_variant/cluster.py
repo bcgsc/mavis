@@ -139,7 +139,7 @@ class IntervalPair:
 
         Args:
             groups (List[Set[IntervalPair]]): a list of sets of interval pairs
-            r (int): the distance to determine grouping 
+            r (int): the distance to determine grouping
         """
         queue = sorted(groups, key=lambda x: IntervalPair.weighted_mean(*x))
         complete_groups = []

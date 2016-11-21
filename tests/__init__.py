@@ -2,6 +2,7 @@ from structural_variant.constants import CIGAR
 from structural_variant.blat import BlatAlignedSegment
 import os
 
+
 filedir = os.path.join(os.path.dirname(__file__), 'files')
 REFERENCE_GENOME = os.path.join(filedir, 'mock_reference_genome.fa')
 BLAT_INPUT = os.path.join(filedir, 'blat_input.fa')

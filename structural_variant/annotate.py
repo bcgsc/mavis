@@ -5,8 +5,6 @@ from structural_variant.error import *
 from Bio import SeqIO
 import re
 
-TTRACK = 'transformed_from'
-
 
 class Bio:
     """

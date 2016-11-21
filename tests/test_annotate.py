@@ -3,6 +3,7 @@ from structural_variant.annotate import *
 from structural_variant.constants import STRAND
 from structural_variant.breakpoint import Breakpoint
 
+
 REFERENCE_ANNOTATIONS = None
 
 

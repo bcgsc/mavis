@@ -161,7 +161,7 @@ class TestCigarTools(unittest.TestCase):
             cigar=[(CIGAR.M, 45)]
         )
         self.assertEqual([(CIGAR.EQ, 45)], CigarTools.recompute_cigar_mismatch(r, REFERENCE_GENOME['fake']))
-        
+
         r = MockRead(
             reference_start=1456,
             query_sequence='TATA'
@@ -266,12 +266,12 @@ class TestCigarTools(unittest.TestCase):
 
         with self.assertRaises(AttributeError):
             CigarTools.compute('CCTG', 'CCG')
-        
+
         self.assertEqual(
             ([(CIGAR.EQ, 2), (CIGAR.X, 2)], 0),
             CigarTools.compute('CCTG', 'CCGT', min_exact_to_stop_softclipping=10)
         )
-        
+
         self.assertEqual(
             ([(CIGAR.S, 5), (CIGAR.EQ, 8)], 5),
             CigarTools.compute('--GAGTAAATTCAACATCGTTTTT', '--CTTAGAATTCAAC---------', False)
@@ -280,13 +280,13 @@ class TestCigarTools(unittest.TestCase):
     def test_convert_for_igv(self):
         c = [(CIGAR.M, 10), (CIGAR.EQ, 10), (CIGAR.X, 10)]
         self.assertEqual([(CIGAR.M, 30)], CigarTools.convert_for_igv(c))
-    
+
     def test_extend_softclipping(self):
         self.assertEqual(
             ([(CIGAR.S, 10), (CIGAR.M, 10)], 0),
             CigarTools.extend_softclipping([(CIGAR.S, 10), (CIGAR.M, 10)], 1)
         )
-    
+
     def test_extend_softclipping_deletions(self):
         self.assertEqual(
             ([(CIGAR.S, 10), (CIGAR.M, 10)], 1),
