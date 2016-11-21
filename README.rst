@@ -109,7 +109,7 @@ One of the most confusing parts about working with :term:`contig` and paired-end
 Gathering evidence from the bam file
 ......................................
 
-we make two base assumptions in calculating the evidence window
+we make two base assumptions with regards to paired-end read data
 
 1. the distribution of insert sizes approximately follows a normal distribution
 2. the most common insert size is the unmutated 'normal' fragment
@@ -121,36 +121,35 @@ Given that we expect mutations and therefore abnormal insert sizes we use a modi
 .. math::
 
     l = |Y| \\
-    m =
-    \Biggl \lbrace
-    {
-    \frac{l}{2},\text{ if }
-       {
-         l \text{ is even}
-        }
-    \atop
-    \frac{l - 1}{2} - 1, \text{ if } l \text{ is odd }
-    }\\
+    y_m = \text{median value of Y}\\
 
-    X = \left\{ x_i \mid x_i = (x_i - x_m)^2 \mid x_i \leq x_{i+1}\right\} \\
+    X = \left\{ x_i \mid x_i = (y_i - y_m)^2 \mid x_i \leq x_{i+1}\right\} \\
 
     s = \sqrt{\sum_{i=0}^{||l \cdot f||}{x_i}}
 
-this gives us a measure of where we expect our normal read pairs insert sizes to fall. The :func:`~structural_variant.validate.Evidence.generate_window` function uses the above concepts. The user will define the :py:attr:`~structural_variant.validate.EvidenceSettings.median_insert_size` the :py:attr:`~structural_variant.validate.EvidenceSettings.tdev_isize`, and the :py:attr:`~structural_variant.validate.EvidenceSettings.stdev_count_abnormal` parameters defined in the :class:`~structural_variant.validate.EvidenceSettings` class.
+Using the above equation we can generate a modified version of the standard deviation (s above) as shown in the figure below (stdev). This gives us an idea of when to judge an insert size as abnormal and where we expect our normal read pairs insert sizes to fall.
 
-If the library has a transcriptome protocol this becomes a bit more complicated and we must take into account the possible annotations when calculating the evidence window. see :func:`~structural_variant.validate.Evidence.generate_transcriptome_window` for more
+.. figure::  _static/svmerge_insert_size_distrb.svg
+    
+    Distribution of insert sizes (absolute values) or proper read pairs. In the above image the standard deviation (stdev) was calculated with resepect to the median (383) using the fraction (f=0.99). Outlier insert sizes are shown in red.
 
-.. image:: _static/svmerge_insert_size_distrb.svg
+We use this in two ways
 
-We use the abnormal insert-size read-pairs as flanking evidence. For example, if the event in question were a deletion we might expect to see larger insert-sizes
+1. to find flanking evidence supporting deletions and insertions
+2. to estimate the window size for where we will need to read from the bam when looking for evidence for a given event
+   
+The :py:func:`~structural_variant.validate.Evidence.generate_window` function uses the above concepts. The user will define the :py:attr:`~structural_variant.validate.EvidenceSettings.median_insert_size` the :py:attr:`~structural_variant.validate.EvidenceSettings.tdev_isize`, and the :py:attr:`~structural_variant.validate.EvidenceSettings.stdev_count_abnormal` parameters defined in the :class:`~structural_variant.validate.EvidenceSettings` class.
 
+If the library has a transcriptome protocol this becomes a bit more complicated and we must take into account the possible annotations when calculating the evidence window. see :py:func:`~structural_variant.validate.Evidence.generate_transcriptome_window` for more
 
 Classifying Events
 .....................
 
 the following decision tree is used in classifying events based on their breakpoints. Only valid combinations have been shown
 
-.. image:: _static/svmerge_classification_tree.svg
+.. figure:: _static/svmerge_classification_tree.svg
+
+    Classification Decision Tree. The above  diagram details the decsion logic for classifying events based on the orientation, strand and chromosomes or their respective breakpoints
 
 
 Assembling Contigs
@@ -159,3 +158,12 @@ Assembling Contigs
 During validation, for each breakpoint pair, we attempt to assemble a :term:`contig` to represent the sequence across the breakpoints. This is assembled from the :term:`split reads` and mates of :term:`half-mapped` reads that have been collected. The assembly uses a :term:`DeBruijn graph`.
 
 Breakpoints can be called by multiple different :py:attr:`~structural_variant.validate.CALL_METHOD`.
+
+Splicing Model
+.....................
+
+After the events have been called and an annotation has been attached, we often want to predict information about the putative fusion protein, which may be a product. In some cases, when a fusion transcript disrupts a splice-site, it is not clear what the processed fusion transcript may be. SVMerge will calculate all possibilities according to the following model.
+
+.. figure:: _static/svmerge_splicing_model.svg
+    
+    Putative splicing scenarios. (A) a five-prime and the next three-prime splice sites are lost. (B) A five-prime splice site is lost. This brings about two splicing possibilities. Either the exon is skipped or the exon and proximal intron are retained. (C) A three-prime splice site is lost. (D) A three-prime splice site, and the next five-prime splice sites are lost.

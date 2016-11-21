@@ -99,10 +99,6 @@ if __name__ == '__main__':
             help='path to the bam file you want to profile'
         )
         parser.add_argument(
-            '-o', '--output',
-            help='path to the output directory', required=True
-        )
-        parser.add_argument(
             '--chromosomes', '-c', nargs='*', default=None,
             help='pick chromosomes to use as samples for profiling the bam')
 
@@ -166,3 +162,27 @@ if __name__ == '__main__':
     e = histogram_distrib_stderr(hist, m, 0.99)
     print('median distrib[0.99] error', e)
     print('median distrib[0.99] stdev', math.sqrt(e))
+
+    # now make a chart?
+    try:
+        import matplotlib.pyplot as plt
+
+        simple_hist = {}
+        for ins, freq in hist.items():
+            ins = round(ins, -1)
+            simple_hist[ins] = simple_hist.get(ins, 0) + freq
+        hist = simple_hist
+        fig, ax = plt.subplots()
+        x = sorted(list(hist.keys()))
+        y = [hist[v] for v in x]
+        ax.bar(x, y, 1, color='b', align='center')
+        ax.set_xlabel('abs insert size')
+        ax.set_ylabel('frequency')
+        e = math.sqrt(e)
+        ax.set_xticks([0, m - 2 * e, m - e, m, m + e, m + 2 * e, max(x)])
+        ax.set_title('histogram of absolute insert sizes')
+        plt.grid(True)
+        plt.savefig('insert_sizes_histogram.svg')
+        print('wrote figure: insert_sizes_histogram.svg')
+    except ImportError:
+        print('cannot import matplotlib, will not generate figure')
