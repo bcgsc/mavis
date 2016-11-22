@@ -6,6 +6,7 @@ import multiprocessing
 import pysam
 import math
 
+
 __prog__ = os.path.basename(os.path.realpath(__file__))
 MAX_POOL_SIZE = 5
 MIN_MAPPING_QUALITY = 20
@@ -37,18 +38,22 @@ def histogram_median(hist):
 
 
 def histogram_stderr(hist, median):
-    err = []
-    for v, f in hist.items():
+    return histogram_distrib_stderr(hist, median, 1)
+
+def histogram_distrib_stderr_correct_zero_bias(hist, median, fraction):
+    arr = []
+    for v, f in sorted(hist.items()):
+        if v > 2 * median:
+            break
         for i in range(0, f):
-            err.append(abs(v - median))
-    err.sort()
-    if len(err) % 2 == 0:
-        m = len(err) // 2
-        n = len(err) // 2 + 1
-        return (err[m] + err[n]) / 2
-    else:
-        m = len(err) // 2 + 1
-        return err[m]
+            arr.append(v)
+    # m = subset[len(subset) // 2] if len(subset) % 2 == 0 else subset[(len(subset) - 1) // 2 + 1]
+    err = 0
+    total = 0
+    for v in arr:
+        err += math.pow(median - v, 2)
+        total += 1
+    return err / total
 
 
 def histogram_distrib_stderr(hist, median, fraction):
@@ -114,25 +119,6 @@ if __name__ == '__main__':
                 continue
             i = abs(read.template_length)
             hist[i] = hist.get(i, 0) + 1
-        a = histogram_average(hist)
-        print(chr, 'average', a)
-        s = histogram_stderr(hist, a)
-        print(chr, 'stderr', s)
-        ae = histogram_abserr(hist, a)
-        print(chr, 'abserr', ae)
-        print(chr, 'stdev', math.sqrt(s))
-        m = histogram_median(hist)
-        print(chr, 'median', m)
-        print(chr, 'median error', histogram_stderr(hist, m))
-        e = histogram_distrib_stderr(hist, m, 0.75)
-        print(chr, 'median distrib[0.75] error', e)
-        print(chr, 'median distrib[0.75] stdev', math.sqrt(e))
-        e = histogram_distrib_stderr(hist, m, 0.9)
-        print(chr, 'median distrib[0.9] error', e)
-        print(chr, 'median distrib[0.9] stdev', math.sqrt(e))
-        e = histogram_distrib_stderr(hist, m, 0.99)
-        print(chr, 'median distrib[0.99] error', e)
-        print(chr, 'median distrib[0.99] stdev', math.sqrt(e))
         return chr, hist
     insert_size_by_chr = {}
     args = parse_arguments()
@@ -147,42 +133,62 @@ if __name__ == '__main__':
     print('average', a)
     s = histogram_stderr(hist, a)
     print('stderr', s)
-    ae = histogram_abserr(hist, a)
-    print('abserr', ae)
     print('stdev', math.sqrt(s))
     m = histogram_median(hist)
     print('median', m)
-    print('median error', histogram_stderr(hist, m))
-    e = histogram_distrib_stderr(hist, m, 0.75)
-    print('median distrib[0.75] error', e)
-    print('median distrib[0.75] stdev', math.sqrt(e))
-    e = histogram_distrib_stderr(hist, m, 0.9)
-    print('median distrib[0.9] error', e)
-    print('median distrib[0.9] stdev', math.sqrt(e))
-    e = histogram_distrib_stderr(hist, m, 0.99)
-    print('median distrib[0.99] error', e)
-    print('median distrib[0.99] stdev', math.sqrt(e))
+    e100 = histogram_stderr(hist, m)
+    print('median stderr', e100)
+    print('median stdev', math.sqrt(e100))
+    e80 = histogram_distrib_stderr(hist, m, 0.8)
+    print('median distrib[0.8] stderr', e80)
+    print('median distrib[0.8] stdev', math.sqrt(e80))
+    e90 = histogram_distrib_stderr(hist, m, 0.9)
+    print('median distrib[0.9] stderr', e90)
+    print('median distrib[0.9] stdev', math.sqrt(e90))
+    e95 = histogram_distrib_stderr(hist, m, 0.95)
+    print('median distrib[0.95] stderr', e95)
+    print('median distrib[0.95] stdev', math.sqrt(e95))
+    e = histogram_distrib_stderr_correct_zero_bias(hist, m, 0.95)
+    print('median zero corrected[0.95] stderr', e)
+    print('median zero corrected[0.95] stdev', math.sqrt(e))
 
     # now make a chart?
     try:
         import matplotlib.pyplot as plt
+        import matplotlib.mlab as mlab
+        import numpy
 
-        simple_hist = {}
+        simple_hist = []
         for ins, freq in hist.items():
-            ins = round(ins, -1)
-            simple_hist[ins] = simple_hist.get(ins, 0) + freq
+            for f in range(0, freq):
+                simple_hist.append(ins)
         hist = simple_hist
         fig, ax = plt.subplots()
-        x = sorted(list(hist.keys()))
-        y = [hist[v] for v in x]
-        ax.bar(x, y, 1, color='b', align='center')
+
+        x = numpy.array(sorted(hist))
+        # try:
+        #     from scipy.stats.mstats import normaltest
+        #     k2, p = normaltest(x)
+        #     print('normal test p-value', p)
+        #     # take the inner fraction only
+
+        # except ImportError:
+        #     print('error: no scipy support. cannot test normal fit')
+        binwidth = 10
+        ax.hist(x, normed=True, bins=range(min(hist), max(hist) + binwidth, binwidth), color='b')
         ax.set_xlabel('abs insert size')
         ax.set_ylabel('frequency')
-        e = math.sqrt(e)
-        ax.set_xticks([0, m - 2 * e, m - e, m, m + e, m + 2 * e, max(x)])
+        ax.set_xticks([0, m, max(x)])
         ax.set_title('histogram of absolute insert sizes')
         plt.grid(True)
-        plt.savefig('insert_sizes_histogram.svg')
-        print('wrote figure: insert_sizes_histogram.svg')
+        x = numpy.linspace(min(hist), max(hist), 100)
+        ax.plot(x, mlab.normpdf(x, a, math.sqrt(s)), color='r', linewidth=2)
+        ax.plot(x, mlab.normpdf(x, m, math.sqrt(e100)), color='g', linewidth=2)
+        ax.plot(x, mlab.normpdf(x, m, math.sqrt(e95)), color='g', linewidth=2)
+        ax.plot(x, mlab.normpdf(x, m, math.sqrt(e90)), color='g', linewidth=2)
+        ax.plot(x, mlab.normpdf(x, m, math.sqrt(e80)), color='g', linewidth=2)
+        ax.plot(x, mlab.normpdf(x, m, math.sqrt(e)), color='y', linewidth=2)
+        plt.savefig('insert_sizes_histogram_chr22.svg')
+        print('wrote figure: insert_sizes_histogram_chr22.svg')
     except ImportError:
         print('cannot import matplotlib, will not generate figure')
