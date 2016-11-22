@@ -214,6 +214,7 @@ class Evidence:
 
     @property
     def untemplated_sequence(self):
+        """(str) the sequence that falls between the two breakpoints and does not map to the refernece template"""
         return self.breakpoint_pair.untemplated_sequence
 
     @classmethod
@@ -1094,7 +1095,3 @@ class Evidence:
     @property
     def opposing_strands(self):
         return self.breakpoint_pair.opposing_strands
-
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()

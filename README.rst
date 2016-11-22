@@ -34,7 +34,7 @@ to run the tests
 Input Files
 ....................
 
-The requirements are described in [JIRA](https://www.bcgsc.ca/jira/browse/APA-618) and are listed below.
+The requirements are described in `JIRA <https://www.bcgsc.ca/jira/browse/APA-618>`_ and are listed below.
 These pertain to the input files from the various tools you want to merge
 
 ::
@@ -58,7 +58,7 @@ Available Pre-formatting scripts
 .................................
 
 - Trans-ABySS
-    - [convert_ta.py](https://svn.bcgsc.ca/svn/SVIA/sv_compile/tags/<version>/tools/convert_ta.py)
+    - `convert_ta.py <https://svn.bcgsc.ca/svn/SVIA/sv_compile/tags/0.0.1/tools/convert_ta.py>`_
 - DELLY
     - DUSTIN TO ADD
 - MANTA
@@ -129,15 +129,23 @@ Given that we expect mutations and therefore abnormal insert sizes we use a modi
 
 Using the above equation we can generate a modified version of the standard deviation (s above) as shown in the figure below (stdev). This gives us an idea of when to judge an insert size as abnormal and where we expect our normal read pairs insert sizes to fall.
 
+.. figure:: _static/svmerge_insert_size_distrb_fractions.svg
+
+    Distribution of insert sizes (absolute values) of proper read pairs, and different normal distribution fits using the above equation. The different coloured curves are computed with different parameters. black: the standard calculation using all data points and the mean as centre; dark green: median as centre and a fraction of f=0.80; light green: median as centre, f=0.90; light blue: median and f=0.95; dark blue: median and f=1.00.
+
+As we can see from the distribution above the median approximates the distribution centre better than the mean, likely because it is more resistant to outliers.
+
 .. figure::  _static/svmerge_insert_size_distrb.svg
-    
-    Distribution of insert sizes (absolute values) or proper read pairs. In the above image the standard deviation (stdev) was calculated with resepect to the median (383) using the fraction (f=0.99). Outlier insert sizes are shown in red.
+
+    Distribution of insert sizes (absolute values) of proper read pairs. In the above image the standard deviation (stdev) was calculated with respect to the median (383) using the fraction (f=0.99).
+
+
 
 We use this in two ways
 
 1. to find flanking evidence supporting deletions and insertions
 2. to estimate the window size for where we will need to read from the bam when looking for evidence for a given event
-   
+
 The :py:func:`~structural_variant.validate.Evidence.generate_window` function uses the above concepts. The user will define the :py:attr:`~structural_variant.validate.EvidenceSettings.median_insert_size` the :py:attr:`~structural_variant.validate.EvidenceSettings.tdev_isize`, and the :py:attr:`~structural_variant.validate.EvidenceSettings.stdev_count_abnormal` parameters defined in the :class:`~structural_variant.validate.EvidenceSettings` class.
 
 If the library has a transcriptome protocol this becomes a bit more complicated and we must take into account the possible annotations when calculating the evidence window. see :py:func:`~structural_variant.validate.Evidence.generate_transcriptome_window` for more
@@ -165,5 +173,19 @@ Splicing Model
 After the events have been called and an annotation has been attached, we often want to predict information about the putative fusion protein, which may be a product. In some cases, when a fusion transcript disrupts a splice-site, it is not clear what the processed fusion transcript may be. SVMerge will calculate all possibilities according to the following model.
 
 .. figure:: _static/svmerge_splicing_model.svg
-    
+
     Putative splicing scenarios. (A) a five-prime and the next three-prime splice sites are lost. (B) A five-prime splice site is lost. This brings about two splicing possibilities. Either the exon is skipped or the exon and proximal intron are retained. (C) A three-prime splice site is lost. (D) A three-prime splice site, and the next five-prime splice sites are lost.
+
+
+Breakpoint sequence homology
+..............................
+
+
+Annotation Types
+....................
+
+Structural variant (SV) events may result in
+
+1. fusion of two genes resulting in a fusion gene
+2. genes being entirely deleted
+3. portions of a gene being deletion, exons being skipped, etc from an intra-gene SV

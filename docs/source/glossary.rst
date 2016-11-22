@@ -13,6 +13,9 @@ Glossary
     orientation
         always specified with respect to the positive/forward strand on the reference. Defined in the code by the enum-like object :py:attr:`~structural_variant.constants.ORIENT`
 
+    untemplated sequence
+        a sequence that does not align to the reference template. Within SVMerge this generally refers to the sequence that is between two breakpoints
+
 
 Read Terms
 ------------
