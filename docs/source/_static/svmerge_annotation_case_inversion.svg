@@ -1,0 +1,494 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="1665.55" height="1494" id="svg18625" version="1.1" inkscape:version="0.47 r22583" sodipodi:docname="svmerge_annotation_case_inversion.svg">
+  <defs id="defs18627">
+    <marker inkscape:stockid="Arrow2Mend" orient="auto" refY="0" refX="0" id="Arrow2Mend" style="overflow:visible">
+      <path id="path21031" style="font-size:12px;fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round" d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 C 6.97309,-1.6296469 6.9831476,1.6157441 8.7185878,4.0337352 z" transform="scale(-0.6,-0.6)" />
+    </marker>
+    <marker inkscape:stockid="Arrow1Mend" orient="auto" refY="0" refX="0" id="Arrow1Mend" style="overflow:visible">
+      <path id="path21013" d="M 0,0 5,-5 -12.5,0 5,5 0,0 z" style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt;marker-start:none" transform="matrix(-0.4,0,0,-0.4,-4,0)" />
+    </marker>
+    <marker inkscape:stockid="Arrow1Lend" orient="auto" refY="0" refX="0" id="Arrow1Lend" style="overflow:visible">
+      <path id="path21007" d="M 0,0 5,-5 -12.5,0 5,5 0,0 z" style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt;marker-start:none" transform="matrix(-0.8,0,0,-0.8,-10,0)" />
+    </marker>
+    <inkscape:perspective sodipodi:type="inkscape:persp3d" inkscape:vp_x="0 : 526.18109 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_z="744.09448 : 526.18109 : 1" inkscape:persp3d-origin="372.04724 : 350.78739 : 1" id="perspective18633" />
+    <inkscape:perspective id="perspective19165" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective19193" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective19223" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective19249" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective19274" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective19326" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective19348" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective19373" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective19395" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective19417" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective19443" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective19537" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective19565" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective19590" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective19703" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective19728" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective19753" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective19889" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective20072" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective20220" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective20362" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective20504" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective20646" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective22242" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective22271" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective22271-1" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective22309" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective22331" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective22357" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective22428" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective22450" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective25537" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective25574" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective25611" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective25648" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective25648-5" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective25648-6" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective26233" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective26255" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective26277" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective27664" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <marker inkscape:stockid="Arrow2Mend" orient="auto" refY="0" refX="0" id="Arrow2Mend-2" style="overflow:visible">
+      <path id="path21031-4" style="font-size:12px;fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round" d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 C 6.97309,-1.6296469 6.9831476,1.6157441 8.7185878,4.0337352 z" transform="scale(-0.6,-0.6)" />
+    </marker>
+    <marker inkscape:stockid="Arrow2Mend" orient="auto" refY="0" refX="0" id="marker27670" style="overflow:visible">
+      <path id="path27672" style="font-size:12px;fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round" d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 C 6.97309,-1.6296469 6.9831476,1.6157441 8.7185878,4.0337352 z" transform="scale(-0.6,-0.6)" />
+    </marker>
+    <marker inkscape:stockid="Arrow2Mend" orient="auto" refY="0" refX="0" id="marker27674" style="overflow:visible">
+      <path id="path27676" style="font-size:12px;fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round" d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 C 6.97309,-1.6296469 6.9831476,1.6157441 8.7185878,4.0337352 z" transform="scale(-0.6,-0.6)" />
+    </marker>
+  </defs>
+  <sodipodi:namedview id="base" pagecolor="#ffffff" bordercolor="#666666" borderopacity="1.0" inkscape:pageopacity="0.0" inkscape:pageshadow="2" inkscape:zoom="0.24748737" inkscape:cx="863.04954" inkscape:cy="348.46025" inkscape:document-units="px" inkscape:current-layer="layer1" showgrid="false" showborder="true" inkscape:window-width="1920" inkscape:window-height="1000" inkscape:window-x="1280" inkscape:window-y="24" inkscape:window-maximized="1" inkscape:showpageshadow="false" />
+  <metadata id="metadata18630">
+    <rdf:RDF>
+      <cc:Work rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g inkscape:label="Layer 1" inkscape:groupmode="layer" id="layer1" transform="translate(234.2942,225.14833)">
+    <rect style="opacity:0.95999995;fill:#8f722b;fill-opacity:0.28037385;stroke:none" id="rect22299-9-0" width="125.23131" height="135.71428" x="889.51428" y="328.76599" />
+    <rect style="opacity:0.95999995;fill:#8f722b;fill-opacity:0.28037385;stroke:none" id="rect22299" width="290.89633" height="135.71428" x="894.06" y="-170.18835" />
+    <rect style="opacity:0.95999995;fill:#8f722b;fill-opacity:0.28037385;stroke:none" id="rect22299-9" width="289.88617" height="135.71428" x="895.82141" y="68.111076" />
+    <g transform="translate(-25.448071,-384.75465)" id="g19871-6">
+      <rect y="517.85461" x="123.83978" height="86.592354" width="54.178265" id="rect19291-6-5-5-3" style="opacity:0.95999995;fill:#6f8457;fill-opacity:0.28037385;stroke:none" />
+      <text id="text19691-5-4" y="581.26562" x="138.72578" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:16px" y="581.26562" x="138.72578" id="tspan19693-9-5" sodipodi:role="line">L-</tspan></text>
+    </g>
+    <g transform="translate(924.27297,-125.06818)" id="g19871-6-6">
+      <rect y="517.85461" x="123.83978" height="86.592354" width="54.178265" id="rect19291-6-5-5-3-0" style="opacity:0.95999995;fill:#6f8457;fill-opacity:0.28037385;stroke:none" />
+      <text id="text19691-5-4-00" y="581.26562" x="138.72578" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:16px" y="581.26562" x="138.72578" id="tspan19693-9-5-6" sodipodi:role="line">L-</tspan></text>
+    </g>
+    <g transform="translate(1007.4158,-381.35389)" id="g19871-6-0">
+      <rect y="517.85461" x="123.83978" height="86.592354" width="54.178265" id="rect19291-6-5-5-3-1" style="opacity:0.95999995;fill:#6f8457;fill-opacity:0.28037385;stroke:none" />
+      <text id="text19691-5-4-7" y="581.26562" x="138.72578" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:16px" y="581.26562" x="138.72578" id="tspan19693-9-5-1" sodipodi:role="line">L-</tspan></text>
+    </g>
+    <g transform="translate(1028.5586,-617.35389)" id="g19871-6-5">
+      <rect y="517.85461" x="123.83978" height="86.592354" width="54.178265" id="rect19291-6-5-5-3-2" style="opacity:0.95999995;fill:#6f8457;fill-opacity:0.28037385;stroke:none" />
+      <text id="text19691-5-4-0" y="581.26562" x="138.72578" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:16px" y="581.26562" x="138.72578" id="tspan19693-9-5-4" sodipodi:role="line">L-</tspan></text>
+    </g>
+    <g transform="translate(17.980501,-464.75465)" id="g19876-9">
+      <rect y="517.85461" x="-210.08876" height="86.592354" width="54.178265" id="rect19291-6-1-6" style="opacity:0.95999995;fill:#6f8457;fill-opacity:0.28037385;stroke:none" />
+      <text id="text19691-1" y="545.26562" x="-194.09338" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:16px" y="545.26562" x="-194.09338" id="tspan19693-3" sodipodi:role="line">L+</tspan></text>
+    </g>
+    <rect style="opacity:0.95999995;fill:none;stroke:#000000;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:1, 3;stroke-dashoffset:0" id="rect19291-0-5" width="50.606834" height="165.87807" x="-137.68951" y="52.780701" />
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="-133.18687" y="39.755249" id="text19314-08-7"><tspan sodipodi:role="line" id="tspan19316-0-8" x="-133.18687" y="39.755249" style="font-size:12px">break1</tspan></text>
+    <rect style="opacity:0.95999995;fill:none;stroke:#000000;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:1, 3;stroke-dashoffset:0" id="rect19291-9-4-6" width="127.94429" height="164.66873" x="153.24799" y="53.385384" />
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="178.60909" y="39.755249" id="text19314-0-8-0"><tspan sodipodi:role="line" id="tspan19316-3-8-0" x="178.60909" y="39.755249" style="font-size:12px">break2</tspan></text>
+    <path style="fill:#8f722b;stroke:#8f722b;stroke-width:3.00034475;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" d="M -212.79403,120.56748 447.75507,120.56748" id="path19213-4-0" />
+    <path style="fill:#8f722b;stroke:#8f722b;stroke-width:3.00262547;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" d="M -212.79129,151.88222 448.76248,151.88222" id="path19213-5-3-0" />
+    <g id="g20008-5" transform="translate(17.980501,-464.75465)">
+      <g transform="translate(-7.0710685,290.57408)" style="fill:#414384" id="g19153-0-5">
+        <rect style="opacity:0.95999995;fill:#414384;fill-opacity:1;stroke:none" id="rect18637-06-3" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#414384;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-4-7" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-25-0" y="590.41827" x="-163.75943" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="590.41827" x="-163.75943" id="tspan19239-5-6" sodipodi:role="line">GENE-X</tspan></text>
+    </g>
+    <g id="g20022-7" transform="translate(17.980501,-464.75465)">
+      <g style="fill:#358096" id="g19153-4-9-2-3" transform="matrix(-0.99999965,8.315181e-4,-8.315181e-4,-0.99999965,-149.15001,911.50013)">
+        <rect style="opacity:0.95999995;fill:#358096;fill-opacity:1;stroke:none" id="rect18637-0-1-9-3" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#358096;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-6-9-5-5" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-2-5-3-6" y="621.73303" x="-41.53828" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="621.73303" x="-41.53828" id="tspan19239-6-6-6-8" sodipodi:role="line">GENE-Y</tspan></text>
+    </g>
+    <path style="fill:none;stroke:#000000;stroke-width:5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Mend)" d="M 456.3859,141.04235 650.33519,-103.41456" id="path20999" />
+    <path style="fill:none;stroke:#000000;stroke-width:5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Mend)" d="M 452.34529,141.04235 654.3758,139.02205" id="path21829" />
+    <path style="fill:none;stroke:#000000;stroke-width:5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Mend)" d="M 454.26228,143.04057 654.6315,395.7833" id="path22019" />
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="673.31079" y="-89.959106" id="text22230-6"><tspan sodipodi:role="line" id="tspan22232-5" x="673.31079" y="-89.959106" style="font-size:48px;font-weight:bold;font-family:Sans;-inkscape-font-specification:Sans Bold">A.</tspan></text>
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="654.57886" y="541.22498" id="text22259"><tspan sodipodi:role="line" id="tspan22261" x="654.57886" y="541.22498" /></text>
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="675.02173" y="156.70819" id="text22230-6-2"><tspan sodipodi:role="line" id="tspan22232-5-5" x="675.02173" y="156.70819" style="font-size:48px;font-weight:bold;font-family:Sans;-inkscape-font-specification:Sans Bold">B.</tspan></text>
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="671.67017" y="412.08679" id="text22230-6-1"><tspan sodipodi:role="line" id="tspan22232-5-54" x="671.67017" y="412.08679" style="font-size:48px;font-weight:bold;font-family:Sans;-inkscape-font-specification:Sans Bold">C.</tspan></text>
+    <g id="g20022-7-3" transform="translate(185.01683,-464.7547)">
+      <g style="fill:#667ac1" id="g19153-4-9-2-3-16" transform="matrix(-0.99999965,8.315181e-4,-8.315181e-4,-0.99999965,-149.15001,911.50013)">
+        <rect style="opacity:0.95999995;fill:#667ac1;fill-opacity:1;stroke:none" id="rect18637-0-1-9-3-7" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#667ac1;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-6-9-5-5-9" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-2-5-3-6-8" y="621.73303" x="-41.53828" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="621.73303" x="-41.53828" id="tspan19239-6-6-6-8-3" sodipodi:role="line">GENE-Z</tspan></text>
+    </g>
+    <g id="g20022-7-3-1" transform="translate(330.73112,-464.7547)">
+      <g style="fill:#378d66" id="g19153-4-9-2-3-16-8" transform="matrix(-0.99999965,8.315181e-4,-8.315181e-4,-0.99999965,-149.15001,911.50013)">
+        <rect style="opacity:0.95999995;fill:#378d66;fill-opacity:1;stroke:none" id="rect18637-0-1-9-3-7-6" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#378d66;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-6-9-5-5-9-0" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-2-5-3-6-8-5" y="621.73303" x="-41.53828" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="621.73303" x="-41.53828" id="tspan19239-6-6-6-8-3-2" sodipodi:role="line">GENE-W</tspan></text>
+    </g>
+    <g id="g20008-5-4" transform="translate(312.14227,-464.75465)">
+      <g transform="translate(-7.0710685,290.57408)" style="fill:#374f23" id="g19153-0-5-4">
+        <rect style="opacity:0.95999995;fill:#374f23;fill-opacity:1;stroke:none" id="rect18637-06-3-0" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#374f23;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-4-7-2" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-25-0-0" y="590.41827" x="-163.75943" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="590.41827" x="-163.75943" id="tspan19239-5-6-74" sodipodi:role="line">GENE-V</tspan></text>
+    </g>
+    <g transform="translate(971.98722,-697.35389)" id="g19876-9-2">
+      <rect y="517.85461" x="-210.08876" height="86.592354" width="54.178265" id="rect19291-6-1-6-7" style="opacity:0.95999995;fill:#6f8457;fill-opacity:0.28037385;stroke:none" />
+      <text id="text19691-1-7" y="545.26562" x="-194.09338" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:16px" y="545.26562" x="-194.09338" id="tspan19693-3-2" sodipodi:role="line">L+</tspan></text>
+    </g>
+    <rect style="opacity:0.95999995;fill:none;stroke:#000000;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:1, 3;stroke-dashoffset:0" id="rect19291-0-5-8" width="50.606834" height="165.87807" x="816.3172" y="-179.81854" />
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="820.81982" y="-192.84399" id="text19314-08-7-4"><tspan sodipodi:role="line" id="tspan19316-0-8-2" x="820.81982" y="-192.84399" style="font-size:12px">break1</tspan></text>
+    <rect style="opacity:0.95999995;fill:none;stroke:#000000;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:1, 3;stroke-dashoffset:0" id="rect19291-9-4-6-1" width="28.471802" height="165.19624" x="1206.991" y="-179.4776" />
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="1132.6157" y="-192.84399" id="text19314-0-8-0-2"><tspan sodipodi:role="line" id="tspan19316-3-8-0-6" x="1132.6157" y="-192.84399" style="font-size:12px">break2</tspan></text>
+    <path style="fill:#8f722b;stroke:#8f722b;stroke-width:3.00034475;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" d="M 741.21269,-112.03176 1401.7618,-112.03176" id="path19213-4-0-3" />
+    <path style="fill:#8f722b;stroke:#8f722b;stroke-width:3.00262547;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" d="M 741.21543,-80.71702 1402.7692,-80.71702" id="path19213-5-3-0-6" />
+    <g id="g20008-5-7" transform="translate(971.98722,-697.35389)">
+      <g transform="translate(-7.0710685,290.57408)" style="fill:#414384" id="g19153-0-5-6">
+        <rect style="opacity:0.95999995;fill:#414384;fill-opacity:1;stroke:none" id="rect18637-06-3-1" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#414384;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-4-7-56" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-25-0-00" y="590.41827" x="-163.75943" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="590.41827" x="-163.75943" id="tspan19239-5-6-2" sodipodi:role="line">GENE-X</tspan></text>
+    </g>
+    <g id="g20022-7-7" transform="translate(971.98722,-697.35389)">
+      <g style="fill:#358096" id="g19153-4-9-2-3-15" transform="matrix(-0.99999965,8.315181e-4,-8.315181e-4,-0.99999965,-149.15001,911.50013)">
+        <rect style="opacity:0.95999995;fill:#358096;fill-opacity:1;stroke:none" id="rect18637-0-1-9-3-10" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#358096;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-6-9-5-5-1" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-2-5-3-6-2" y="621.73303" x="-41.53828" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="621.73303" x="-41.53828" id="tspan19239-6-6-6-8-4" sodipodi:role="line">GENE-Y</tspan></text>
+    </g>
+    <g id="g20022-7-3-0" transform="translate(1139.0235,-697.35394)">
+      <g style="fill:#667ac1" id="g19153-4-9-2-3-16-9" transform="matrix(-0.99999965,8.315181e-4,-8.315181e-4,-0.99999965,-149.15001,911.50013)">
+        <rect style="opacity:0.95999995;fill:#667ac1;fill-opacity:1;stroke:none" id="rect18637-0-1-9-3-7-8" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#667ac1;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-6-9-5-5-9-6" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-2-5-3-6-8-3" y="621.73303" x="-41.53828" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="621.73303" x="-41.53828" id="tspan19239-6-6-6-8-3-9" sodipodi:role="line">GENE-Z</tspan></text>
+    </g>
+    <g id="g20022-7-3-1-2" transform="translate(1284.7378,-697.35394)">
+      <g style="fill:#378d66" id="g19153-4-9-2-3-16-8-2" transform="matrix(-0.99999965,8.315181e-4,-8.315181e-4,-0.99999965,-149.15001,911.50013)">
+        <rect style="opacity:0.95999995;fill:#378d66;fill-opacity:1;stroke:none" id="rect18637-0-1-9-3-7-6-5" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#378d66;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-6-9-5-5-9-0-4" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-2-5-3-6-8-5-5" y="621.73303" x="-41.53828" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="621.73303" x="-41.53828" id="tspan19239-6-6-6-8-3-2-7" sodipodi:role="line">GENE-W</tspan></text>
+    </g>
+    <g id="g20008-5-4-2" transform="translate(1266.149,-697.35389)">
+      <g transform="translate(-7.0710685,290.57408)" style="fill:#374f23" id="g19153-0-5-4-1">
+        <rect style="opacity:0.95999995;fill:#374f23;fill-opacity:1;stroke:none" id="rect18637-06-3-0-6" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#374f23;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-4-7-2-1" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-25-0-0-7" y="590.41827" x="-163.75943" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="590.41827" x="-163.75943" id="tspan19239-5-6-74-9" sodipodi:role="line">GENE-V</tspan></text>
+    </g>
+    <g transform="translate(972.84436,-461.35389)" id="g19876-9-0">
+      <rect y="517.85461" x="-210.08876" height="86.592354" width="54.178265" id="rect19291-6-1-6-2" style="opacity:0.95999995;fill:#6f8457;fill-opacity:0.28037385;stroke:none" />
+      <text id="text19691-1-1" y="545.26562" x="-194.09338" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:16px" y="545.26562" x="-194.09338" id="tspan19693-3-0" sodipodi:role="line">L+</tspan></text>
+    </g>
+    <rect style="opacity:0.95999995;fill:none;stroke:#000000;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:1, 3;stroke-dashoffset:0" id="rect19291-0-5-7" width="50.606834" height="165.87807" x="817.17438" y="56.181519" />
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="821.677" y="43.156067" id="text19314-08-7-7"><tspan sodipodi:role="line" id="tspan19316-0-8-5" x="821.677" y="43.156067" style="font-size:12px">break1</tspan></text>
+    <rect style="opacity:0.95999995;fill:none;stroke:#000000;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:1, 3;stroke-dashoffset:0" id="rect19291-9-4-6-3" width="23.45948" height="165.23979" x="1184.5978" y="56.500671" />
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="1133.473" y="43.156067" id="text19314-0-8-0-0"><tspan sodipodi:role="line" id="tspan19316-3-8-0-4" x="1133.473" y="43.156067" style="font-size:12px">break2</tspan></text>
+    <path style="fill:#8f722b;stroke:#8f722b;stroke-width:3.00034475;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" d="M 742.06983,123.96824 1402.6189,123.96824" id="path19213-4-0-2" />
+    <path style="fill:#8f722b;stroke:#8f722b;stroke-width:3.00262547;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" d="M 742.07257,155.28298 1403.6263,155.28298" id="path19213-5-3-0-2" />
+    <g id="g20008-5-3" transform="translate(972.84436,-461.35389)">
+      <g transform="translate(-7.0710685,290.57408)" style="fill:#414384" id="g19153-0-5-7">
+        <rect style="opacity:0.95999995;fill:#414384;fill-opacity:1;stroke:none" id="rect18637-06-3-9" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#414384;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-4-7-1" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-25-0-6" y="590.41827" x="-163.75943" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="590.41827" x="-163.75943" id="tspan19239-5-6-1" sodipodi:role="line">GENE-X</tspan></text>
+    </g>
+    <g id="g20022-7-6" transform="translate(972.84436,-461.35389)">
+      <g style="fill:#358096" id="g19153-4-9-2-3-9" transform="matrix(-0.99999965,8.315181e-4,-8.315181e-4,-0.99999965,-149.15001,911.50013)">
+        <rect style="opacity:0.95999995;fill:#358096;fill-opacity:1;stroke:none" id="rect18637-0-1-9-3-6" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#358096;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-6-9-5-5-16" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-2-5-3-6-6" y="621.73303" x="-41.53828" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="621.73303" x="-41.53828" id="tspan19239-6-6-6-8-2" sodipodi:role="line">GENE-Y</tspan></text>
+    </g>
+    <g id="g20022-7-3-2" transform="translate(1139.8807,-461.35394)">
+      <g style="fill:#667ac1" id="g19153-4-9-2-3-16-1" transform="matrix(-0.99999965,8.315181e-4,-8.315181e-4,-0.99999965,-149.15001,911.50013)">
+        <rect style="opacity:0.95999995;fill:#667ac1;fill-opacity:1;stroke:none" id="rect18637-0-1-9-3-7-3" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#667ac1;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-6-9-5-5-9-63" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-2-5-3-6-8-58" y="621.73303" x="-41.53828" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="621.73303" x="-41.53828" id="tspan19239-6-6-6-8-3-6" sodipodi:role="line">GENE-Z</tspan></text>
+    </g>
+    <g id="g20022-7-3-1-5" transform="translate(1285.595,-461.35394)">
+      <g style="fill:#378d66" id="g19153-4-9-2-3-16-8-23" transform="matrix(-0.99999965,8.315181e-4,-8.315181e-4,-0.99999965,-149.15001,911.50013)">
+        <rect style="opacity:0.95999995;fill:#378d66;fill-opacity:1;stroke:none" id="rect18637-0-1-9-3-7-6-2" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#378d66;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-6-9-5-5-9-0-9" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-2-5-3-6-8-5-9" y="621.73303" x="-41.53828" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="621.73303" x="-41.53828" id="tspan19239-6-6-6-8-3-2-2" sodipodi:role="line">GENE-W</tspan></text>
+    </g>
+    <g id="g20008-5-4-3" transform="translate(1267.0061,-461.35389)">
+      <g transform="translate(-7.0710685,290.57408)" style="fill:#374f23" id="g19153-0-5-4-16">
+        <rect style="opacity:0.95999995;fill:#374f23;fill-opacity:1;stroke:none" id="rect18637-06-3-0-8" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#374f23;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-4-7-2-18" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-25-0-0-9" y="590.41827" x="-163.75943" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="590.41827" x="-163.75943" id="tspan19239-5-6-74-99" sodipodi:role="line">GENE-V</tspan></text>
+    </g>
+    <g transform="translate(967.70147,-205.06818)" id="g19876-9-7">
+      <rect y="517.85461" x="-210.08876" height="86.592354" width="54.178265" id="rect19291-6-1-6-6" style="opacity:0.95999995;fill:#6f8457;fill-opacity:0.28037385;stroke:none" />
+      <text id="text19691-1-11" y="545.26562" x="-194.09338" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:16px" y="545.26562" x="-194.09338" id="tspan19693-3-1" sodipodi:role="line">L+</tspan></text>
+    </g>
+    <rect style="opacity:0.95999995;fill:none;stroke:#000000;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:1, 3;stroke-dashoffset:0" id="rect19291-0-5-2" width="50.606834" height="165.87807" x="812.03149" y="312.46722" />
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="816.53418" y="299.44177" id="text19314-08-7-74"><tspan sodipodi:role="line" id="tspan19316-0-8-57" x="816.53418" y="299.44177" style="font-size:12px">break1</tspan></text>
+    <rect style="opacity:0.95999995;fill:none;stroke:#000000;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:1, 3;stroke-dashoffset:0" id="rect19291-9-4-6-6" width="74.641853" height="164.90439" x="1102.8512" y="312.9541" />
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="1128.3301" y="299.44177" id="text19314-0-8-0-4"><tspan sodipodi:role="line" id="tspan19316-3-8-0-64" x="1128.3301" y="299.44177" style="font-size:12px">break2</tspan></text>
+    <path style="fill:#8f722b;stroke:#8f722b;stroke-width:3.00034475;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" d="M 736.92697,380.2539 1397.4761,380.2539" id="path19213-4-0-5" />
+    <path style="fill:#8f722b;stroke:#8f722b;stroke-width:3.00262547;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" d="M 736.92971,411.5687 1398.4835,411.5687" id="path19213-5-3-0-3" />
+    <g id="g20008-5-71" transform="translate(967.70147,-205.06818)">
+      <g transform="translate(-7.0710685,290.57408)" style="fill:#414384" id="g19153-0-5-61">
+        <rect style="opacity:0.95999995;fill:#414384;fill-opacity:1;stroke:none" id="rect18637-06-3-3" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#414384;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-4-7-0" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-25-0-2" y="590.41827" x="-163.75943" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="590.41827" x="-163.75943" id="tspan19239-5-6-10" sodipodi:role="line">GENE-X</tspan></text>
+    </g>
+    <g id="g20022-7-1" transform="translate(967.70147,-205.06818)">
+      <g style="fill:#358096" id="g19153-4-9-2-3-0" transform="matrix(-0.99999965,8.315181e-4,-8.315181e-4,-0.99999965,-149.15001,911.50013)">
+        <rect style="opacity:0.95999995;fill:#358096;fill-opacity:1;stroke:none" id="rect18637-0-1-9-3-8" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#358096;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-6-9-5-5-2" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-2-5-3-6-1" y="621.73303" x="-41.53828" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="621.73303" x="-41.53828" id="tspan19239-6-6-6-8-9" sodipodi:role="line">GENE-Y</tspan></text>
+    </g>
+    <g id="g20022-7-3-02" transform="translate(1134.7379,-205.06823)">
+      <g style="fill:#667ac1" id="g19153-4-9-2-3-16-0" transform="matrix(-0.99999965,8.315181e-4,-8.315181e-4,-0.99999965,-149.15001,911.50013)">
+        <rect style="opacity:0.95999995;fill:#667ac1;fill-opacity:1;stroke:none" id="rect18637-0-1-9-3-7-1" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#667ac1;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-6-9-5-5-9-04" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-2-5-3-6-8-0" y="621.73303" x="-41.53828" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="621.73303" x="-41.53828" id="tspan19239-6-6-6-8-3-4" sodipodi:role="line">GENE-Z</tspan></text>
+    </g>
+    <g id="g20022-7-3-1-1" transform="translate(1280.4522,-205.06823)">
+      <g style="fill:#378d66" id="g19153-4-9-2-3-16-8-7" transform="matrix(-0.99999965,8.315181e-4,-8.315181e-4,-0.99999965,-149.15001,911.50013)">
+        <rect style="opacity:0.95999995;fill:#378d66;fill-opacity:1;stroke:none" id="rect18637-0-1-9-3-7-6-0" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#378d66;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-6-9-5-5-9-0-5" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-2-5-3-6-8-5-3" y="621.73303" x="-41.53828" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="621.73303" x="-41.53828" id="tspan19239-6-6-6-8-3-2-6" sodipodi:role="line">GENE-W</tspan></text>
+    </g>
+    <g id="g20008-5-4-1" transform="translate(1261.8633,-205.06818)">
+      <g transform="translate(-7.0710685,290.57408)" style="fill:#374f23" id="g19153-0-5-4-6">
+        <rect style="opacity:0.95999995;fill:#374f23;fill-opacity:1;stroke:none" id="rect18637-06-3-0-64" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#374f23;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-4-7-2-2" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-25-0-0-79" y="590.41827" x="-163.75943" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="590.41827" x="-163.75943" id="tspan19239-5-6-74-4" sodipodi:role="line">GENE-V</tspan></text>
+    </g>
+    <rect style="opacity:0.95999995;fill:#8f722b;fill-opacity:0.28037385;stroke:none" id="rect22299-9-0-0" width="125.23131" height="135.71428" x="887.5177" y="1087.1946" />
+    <rect style="opacity:0.95999995;fill:#8f722b;fill-opacity:0.28037385;stroke:none" id="rect22299-2" width="290.89633" height="135.71428" x="892.06348" y="588.24017" />
+    <rect style="opacity:0.95999995;fill:#8f722b;fill-opacity:0.28037385;stroke:none" id="rect22299-9-1" width="289.88617" height="135.71428" x="893.82483" y="826.53967" />
+    <g transform="translate(154.55531,373.6739)" id="g19871-6-8">
+      <rect y="517.85461" x="123.83978" height="86.592354" width="54.178265" id="rect19291-6-5-5-3-3" style="opacity:0.95999995;fill:#6f8457;fill-opacity:0.28037385;stroke:none" />
+      <text id="text19691-5-4-1" y="581.26562" x="138.72578" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:16px" y="581.26562" x="138.72578" id="tspan19693-9-5-3" sodipodi:role="line">R-</tspan></text>
+    </g>
+    <g transform="translate(1052.2764,633.3604)" id="g19871-6-6-7">
+      <rect y="517.85461" x="123.83978" height="86.592354" width="54.178265" id="rect19291-6-5-5-3-0-4" style="opacity:0.95999995;fill:#6f8457;fill-opacity:0.28037385;stroke:none" />
+      <text id="text19691-5-4-00-1" y="581.26562" x="138.72578" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:16px" y="581.26562" x="138.72578" id="tspan19693-9-5-6-5" sodipodi:role="line">R-</tspan></text>
+    </g>
+    <g transform="translate(1081.4192,377.0747)" id="g19871-6-0-1">
+      <rect y="517.85461" x="123.83978" height="86.592354" width="54.178265" id="rect19291-6-5-5-3-1-7" style="opacity:0.95999995;fill:#6f8457;fill-opacity:0.28037385;stroke:none" />
+      <text id="text19691-5-4-7-5" y="581.26562" x="138.72578" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:16px" y="581.26562" x="138.72578" id="tspan19693-9-5-1-4" sodipodi:role="line">R-</tspan></text>
+    </g>
+    <g transform="translate(1108.562,141.07468)" id="g19871-6-5-2">
+      <rect y="517.85461" x="123.83978" height="86.592354" width="54.178265" id="rect19291-6-5-5-3-2-5" style="opacity:0.95999995;fill:#6f8457;fill-opacity:0.28037385;stroke:none" />
+      <text id="text19691-5-4-0-9" y="581.26562" x="138.72578" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:16px" y="581.26562" x="138.72578" id="tspan19693-9-5-4-4" sodipodi:role="line">R-</tspan></text>
+    </g>
+    <rect style="opacity:0.95999995;fill:#8f722b;fill-opacity:0.28037385;stroke:none" id="rect22299-6-1" width="217.14287" height="48.571423" x="-194.14795" y="1020.5659" />
+    <g transform="translate(119.98388,293.6739)" id="g19876-9-01">
+      <rect y="517.85461" x="-210.08876" height="86.592354" width="54.178265" id="rect19291-6-1-6-22" style="opacity:0.95999995;fill:#6f8457;fill-opacity:0.28037385;stroke:none" />
+      <text id="text19691-1-3" y="545.26562" x="-194.09338" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:16px" y="545.26562" x="-194.09338" id="tspan19693-3-7" sodipodi:role="line">R+</tspan></text>
+    </g>
+    <rect style="opacity:0.95999995;fill:none;stroke:#000000;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:1, 3;stroke-dashoffset:0" id="rect19291-0-5-26" width="50.606834" height="165.87807" x="-139.68614" y="811.20941" />
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="-135.1835" y="798.18372" id="text19314-08-7-1"><tspan sodipodi:role="line" id="tspan19316-0-8-6" x="-135.1835" y="798.18372" style="font-size:12px">break1</tspan></text>
+    <rect style="opacity:0.95999995;fill:none;stroke:#000000;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:1, 3;stroke-dashoffset:0" id="rect19291-9-4-6-03" width="127.94429" height="164.66873" x="151.25136" y="811.81403" />
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="176.61247" y="798.18372" id="text19314-0-8-0-8"><tspan sodipodi:role="line" id="tspan19316-3-8-0-2" x="176.61247" y="798.18372" style="font-size:12px">break2</tspan></text>
+    <path style="fill:#8f722b;stroke:#8f722b;stroke-width:3.00034475;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" d="M -214.79065,878.9961 445.75845,878.9961" id="path19213-4-0-1" />
+    <path style="fill:#8f722b;stroke:#8f722b;stroke-width:3.00262547;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" d="M -214.78791,910.3108 446.76586,910.3108" id="path19213-5-3-0-4" />
+    <g id="g20008-5-5" transform="translate(15.983881,293.6739)">
+      <g transform="translate(-7.0710685,290.57408)" style="fill:#414384" id="g19153-0-5-619">
+        <rect style="opacity:0.95999995;fill:#414384;fill-opacity:1;stroke:none" id="rect18637-06-3-7" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#414384;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-4-7-7" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-25-0-26" y="590.41827" x="-163.75943" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="590.41827" x="-163.75943" id="tspan19239-5-6-4" sodipodi:role="line">GENE-X</tspan></text>
+    </g>
+    <g id="g20022-7-68" transform="translate(15.983881,293.6739)">
+      <g style="fill:#358096" id="g19153-4-9-2-3-98" transform="matrix(-0.99999965,8.315181e-4,-8.315181e-4,-0.99999965,-149.15001,911.50013)">
+        <rect style="opacity:0.95999995;fill:#358096;fill-opacity:1;stroke:none" id="rect18637-0-1-9-3-4" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#358096;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-6-9-5-5-3" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-2-5-3-6-85" y="621.73303" x="-41.53828" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="621.73303" x="-41.53828" id="tspan19239-6-6-6-8-7" sodipodi:role="line">GENE-Y</tspan></text>
+    </g>
+    <rect style="opacity:0.95999995;fill:none;stroke:#000000;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:1, 3;stroke-dashoffset:0" id="rect19291-9-4-6-0-2" width="212.49142" height="49.215862" x="-192.53654" y="1080.2438" />
+    <text id="text22345-8" y="1108.714" x="-146.84698" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px" y="1108.714" x="-146.84698" id="tspan22347-4" sodipodi:role="line">breakpoint range</tspan></text>
+    <text id="text22345-1-6" y="1047.9996" x="-158.1776" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px" y="1047.9996" x="-158.1776" id="tspan22347-7-4" sodipodi:role="line">encompassed genes</tspan></text>
+    <path style="fill:none;stroke:#000000;stroke-width:5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Mend)" d="M 454.38928,899.4709 648.33857,655.014" id="path20999-7" />
+    <path style="fill:none;stroke:#000000;stroke-width:5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Mend)" d="M 450.34867,899.4709 652.37918,897.4506" id="path21829-2" />
+    <path style="fill:none;stroke:#000000;stroke-width:5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Mend)" d="M 452.26566,901.4692 652.63488,1154.2119" id="path22019-7" />
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="671.31421" y="668.46948" id="text22230-6-0"><tspan sodipodi:role="line" id="tspan22232-5-2" x="671.31421" y="668.46948" style="font-size:48px;font-weight:bold;font-family:Sans;-inkscape-font-specification:Sans Bold">D.</tspan></text>
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="673.02515" y="915.13678" id="text22230-6-2-1"><tspan sodipodi:role="line" id="tspan22232-5-5-3" x="673.02515" y="915.13678" style="font-size:48px;font-weight:bold;font-family:Sans;-inkscape-font-specification:Sans Bold">E.</tspan></text>
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="669.67358" y="1170.5154" id="text22230-6-1-6"><tspan sodipodi:role="line" id="tspan22232-5-54-6" x="669.67358" y="1170.5154" style="font-size:48px;font-weight:bold;font-family:Sans;-inkscape-font-specification:Sans Bold">F.</tspan></text>
+    <g id="g20022-7-3-9" transform="translate(183.02021,293.6739)">
+      <g style="fill:#667ac1" id="g19153-4-9-2-3-16-07" transform="matrix(-0.99999965,8.315181e-4,-8.315181e-4,-0.99999965,-149.15001,911.50013)">
+        <rect style="opacity:0.95999995;fill:#667ac1;fill-opacity:1;stroke:none" id="rect18637-0-1-9-3-7-7" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#667ac1;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-6-9-5-5-9-9" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-2-5-3-6-8-1" y="621.73303" x="-41.53828" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="621.73303" x="-41.53828" id="tspan19239-6-6-6-8-3-5" sodipodi:role="line">GENE-Z</tspan></text>
+    </g>
+    <g id="g20022-7-3-1-3" transform="translate(328.7345,293.6739)">
+      <g style="fill:#378d66" id="g19153-4-9-2-3-16-8-76" transform="matrix(-0.99999965,8.315181e-4,-8.315181e-4,-0.99999965,-149.15001,911.50013)">
+        <rect style="opacity:0.95999995;fill:#378d66;fill-opacity:1;stroke:none" id="rect18637-0-1-9-3-7-6-3" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#378d66;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-6-9-5-5-9-0-7" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-2-5-3-6-8-5-0" y="621.73303" x="-41.53828" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="621.73303" x="-41.53828" id="tspan19239-6-6-6-8-3-2-67" sodipodi:role="line">GENE-W</tspan></text>
+    </g>
+    <g id="g20008-5-4-6" transform="translate(310.14565,293.6739)">
+      <g transform="translate(-7.0710685,290.57408)" style="fill:#374f23" id="g19153-0-5-4-3">
+        <rect style="opacity:0.95999995;fill:#374f23;fill-opacity:1;stroke:none" id="rect18637-06-3-0-9" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#374f23;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-4-7-2-6" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-25-0-0-0" y="590.41827" x="-163.75943" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="590.41827" x="-163.75943" id="tspan19239-5-6-74-5" sodipodi:role="line">GENE-V</tspan></text>
+    </g>
+    <g transform="translate(1073.9906,61.07468)" id="g19876-9-2-3">
+      <rect y="517.85461" x="-210.08876" height="86.592354" width="54.178265" id="rect19291-6-1-6-7-7" style="opacity:0.95999995;fill:#6f8457;fill-opacity:0.28037385;stroke:none" />
+      <text id="text19691-1-7-9" y="545.26562" x="-194.09338" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:16px" y="545.26562" x="-194.09338" id="tspan19693-3-2-2" sodipodi:role="line">R+</tspan></text>
+    </g>
+    <rect style="opacity:0.95999995;fill:none;stroke:#000000;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:1, 3;stroke-dashoffset:0" id="rect19291-0-5-8-0" width="50.606834" height="165.87807" x="814.32068" y="578.60999" />
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="818.82324" y="565.58459" id="text19314-08-7-4-2"><tspan sodipodi:role="line" id="tspan19316-0-8-2-3" x="818.82324" y="565.58459" style="font-size:12px">break1</tspan></text>
+    <rect style="opacity:0.95999995;fill:none;stroke:#000000;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:1, 3;stroke-dashoffset:0" id="rect19291-9-4-6-1-3" width="28.471802" height="165.19624" x="1204.9944" y="578.95093" />
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="1130.6191" y="565.58459" id="text19314-0-8-0-2-0"><tspan sodipodi:role="line" id="tspan19316-3-8-0-6-1" x="1130.6191" y="565.58459" style="font-size:12px">break2</tspan></text>
+    <path style="fill:#8f722b;stroke:#8f722b;stroke-width:3.00034475;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" d="M 739.21607,646.3968 1399.7652,646.3968" id="path19213-4-0-3-3" />
+    <path style="fill:#8f722b;stroke:#8f722b;stroke-width:3.00262547;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" d="M 739.21881,677.7116 1400.7726,677.7116" id="path19213-5-3-0-6-0" />
+    <g id="g20008-5-7-0" transform="translate(969.99057,61.07468)">
+      <g transform="translate(-7.0710685,290.57408)" style="fill:#414384" id="g19153-0-5-6-2">
+        <rect style="opacity:0.95999995;fill:#414384;fill-opacity:1;stroke:none" id="rect18637-06-3-1-9" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#414384;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-4-7-56-1" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-25-0-00-9" y="590.41827" x="-163.75943" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="590.41827" x="-163.75943" id="tspan19239-5-6-2-3" sodipodi:role="line">GENE-X</tspan></text>
+    </g>
+    <g id="g20022-7-7-8" transform="translate(969.99057,61.07468)">
+      <g style="fill:#358096" id="g19153-4-9-2-3-15-5" transform="matrix(-0.99999965,8.315181e-4,-8.315181e-4,-0.99999965,-149.15001,911.50013)">
+        <rect style="opacity:0.95999995;fill:#358096;fill-opacity:1;stroke:none" id="rect18637-0-1-9-3-10-6" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#358096;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-6-9-5-5-1-8" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-2-5-3-6-2-6" y="621.73303" x="-41.53828" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="621.73303" x="-41.53828" id="tspan19239-6-6-6-8-4-4" sodipodi:role="line">GENE-Y</tspan></text>
+    </g>
+    <g id="g20022-7-3-0-5" transform="translate(1137.0269,61.07463)">
+      <g style="fill:#667ac1" id="g19153-4-9-2-3-16-9-4" transform="matrix(-0.99999965,8.315181e-4,-8.315181e-4,-0.99999965,-149.15001,911.50013)">
+        <rect style="opacity:0.95999995;fill:#667ac1;fill-opacity:1;stroke:none" id="rect18637-0-1-9-3-7-8-9" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#667ac1;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-6-9-5-5-9-6-5" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-2-5-3-6-8-3-2" y="621.73303" x="-41.53828" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="621.73303" x="-41.53828" id="tspan19239-6-6-6-8-3-9-1" sodipodi:role="line">GENE-Z</tspan></text>
+    </g>
+    <g id="g20022-7-3-1-2-2" transform="translate(1282.7412,61.07463)">
+      <g style="fill:#378d66" id="g19153-4-9-2-3-16-8-2-5" transform="matrix(-0.99999965,8.315181e-4,-8.315181e-4,-0.99999965,-149.15001,911.50013)">
+        <rect style="opacity:0.95999995;fill:#378d66;fill-opacity:1;stroke:none" id="rect18637-0-1-9-3-7-6-5-1" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#378d66;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-6-9-5-5-9-0-4-2" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-2-5-3-6-8-5-5-7" y="621.73303" x="-41.53828" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="621.73303" x="-41.53828" id="tspan19239-6-6-6-8-3-2-7-1" sodipodi:role="line">GENE-W</tspan></text>
+    </g>
+    <g id="g20008-5-4-2-6" transform="translate(1264.1524,61.07468)">
+      <g transform="translate(-7.0710685,290.57408)" style="fill:#374f23" id="g19153-0-5-4-1-2">
+        <rect style="opacity:0.95999995;fill:#374f23;fill-opacity:1;stroke:none" id="rect18637-06-3-0-6-4" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#374f23;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-4-7-2-1-6" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-25-0-0-7-5" y="590.41827" x="-163.75943" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="590.41827" x="-163.75943" id="tspan19239-5-6-74-9-9" sodipodi:role="line">GENE-V</tspan></text>
+    </g>
+    <g transform="translate(1074.8478,297.0747)" id="g19876-9-0-7">
+      <rect y="517.85461" x="-210.08876" height="86.592354" width="54.178265" id="rect19291-6-1-6-2-5" style="opacity:0.95999995;fill:#6f8457;fill-opacity:0.28037385;stroke:none" />
+      <text id="text19691-1-1-3" y="545.26562" x="-194.09338" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:16px" y="545.26562" x="-194.09338" id="tspan19693-3-0-8" sodipodi:role="line">R+</tspan></text>
+    </g>
+    <rect style="opacity:0.95999995;fill:none;stroke:#000000;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:1, 3;stroke-dashoffset:0" id="rect19291-0-5-7-6" width="50.606834" height="165.87807" x="815.17786" y="814.61011" />
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="819.68042" y="801.58472" id="text19314-08-7-7-3"><tspan sodipodi:role="line" id="tspan19316-0-8-5-1" x="819.68042" y="801.58472" style="font-size:12px">break1</tspan></text>
+    <rect style="opacity:0.95999995;fill:none;stroke:#000000;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:1, 3;stroke-dashoffset:0" id="rect19291-9-4-6-3-7" width="23.45948" height="165.23979" x="1182.6012" y="814.92932" />
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="1131.4764" y="801.58472" id="text19314-0-8-0-0-0"><tspan sodipodi:role="line" id="tspan19316-3-8-0-4-9" x="1131.4764" y="801.58472" style="font-size:12px">break2</tspan></text>
+    <path style="fill:#8f722b;stroke:#8f722b;stroke-width:3.00034475;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" d="M 740.07321,882.3968 1400.6223,882.3968" id="path19213-4-0-2-5" />
+    <path style="fill:#8f722b;stroke:#8f722b;stroke-width:3.00262547;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" d="M 740.07595,913.7116 1401.6297,913.7116" id="path19213-5-3-0-2-8" />
+    <g id="g20008-5-3-5" transform="translate(970.84777,297.0747)">
+      <g transform="translate(-7.0710685,290.57408)" style="fill:#414384" id="g19153-0-5-7-2">
+        <rect style="opacity:0.95999995;fill:#414384;fill-opacity:1;stroke:none" id="rect18637-06-3-9-4" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#414384;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-4-7-1-5" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-25-0-6-9" y="590.41827" x="-163.75943" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="590.41827" x="-163.75943" id="tspan19239-5-6-1-7" sodipodi:role="line">GENE-X</tspan></text>
+    </g>
+    <g id="g20022-7-6-6" transform="translate(970.84777,297.0747)">
+      <g style="fill:#358096" id="g19153-4-9-2-3-9-2" transform="matrix(-0.99999965,8.315181e-4,-8.315181e-4,-0.99999965,-149.15001,911.50013)">
+        <rect style="opacity:0.95999995;fill:#358096;fill-opacity:1;stroke:none" id="rect18637-0-1-9-3-6-2" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#358096;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-6-9-5-5-16-7" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-2-5-3-6-6-6" y="621.73303" x="-41.53828" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="621.73303" x="-41.53828" id="tspan19239-6-6-6-8-2-2" sodipodi:role="line">GENE-Y</tspan></text>
+    </g>
+    <g id="g20022-7-3-2-0" transform="translate(1137.8841,297.0746)">
+      <g style="fill:#667ac1" id="g19153-4-9-2-3-16-1-2" transform="matrix(-0.99999965,8.315181e-4,-8.315181e-4,-0.99999965,-149.15001,911.50013)">
+        <rect style="opacity:0.95999995;fill:#667ac1;fill-opacity:1;stroke:none" id="rect18637-0-1-9-3-7-3-6" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#667ac1;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-6-9-5-5-9-63-7" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-2-5-3-6-8-58-0" y="621.73303" x="-41.53828" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="621.73303" x="-41.53828" id="tspan19239-6-6-6-8-3-6-2" sodipodi:role="line">GENE-Z</tspan></text>
+    </g>
+    <g id="g20022-7-3-1-5-6" transform="translate(1283.5984,297.0746)">
+      <g style="fill:#378d66" id="g19153-4-9-2-3-16-8-23-9" transform="matrix(-0.99999965,8.315181e-4,-8.315181e-4,-0.99999965,-149.15001,911.50013)">
+        <rect style="opacity:0.95999995;fill:#378d66;fill-opacity:1;stroke:none" id="rect18637-0-1-9-3-7-6-2-7" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#378d66;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-6-9-5-5-9-0-9-2" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-2-5-3-6-8-5-9-8" y="621.73303" x="-41.53828" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="621.73303" x="-41.53828" id="tspan19239-6-6-6-8-3-2-2-6" sodipodi:role="line">GENE-W</tspan></text>
+    </g>
+    <g id="g20008-5-4-3-7" transform="translate(1265.0095,297.0747)">
+      <g transform="translate(-7.0710685,290.57408)" style="fill:#374f23" id="g19153-0-5-4-16-9">
+        <rect style="opacity:0.95999995;fill:#374f23;fill-opacity:1;stroke:none" id="rect18637-06-3-0-8-3" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#374f23;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-4-7-2-18-9" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-25-0-0-9-9" y="590.41827" x="-163.75943" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="590.41827" x="-163.75943" id="tspan19239-5-6-74-99-0" sodipodi:role="line">GENE-V</tspan></text>
+    </g>
+    <g transform="translate(1069.7049,553.3604)" id="g19876-9-7-8">
+      <rect y="517.85461" x="-210.08876" height="86.592354" width="54.178265" id="rect19291-6-1-6-6-4" style="opacity:0.95999995;fill:#6f8457;fill-opacity:0.28037385;stroke:none" />
+      <text id="text19691-1-11-2" y="545.26562" x="-194.09338" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:16px" y="545.26562" x="-194.09338" id="tspan19693-3-1-2" sodipodi:role="line">R+</tspan></text>
+    </g>
+    <rect style="opacity:0.95999995;fill:none;stroke:#000000;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:1, 3;stroke-dashoffset:0" id="rect19291-0-5-2-1" width="50.606834" height="165.87807" x="810.03491" y="1070.8958" />
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="814.5376" y="1057.8704" id="text19314-08-7-74-2"><tspan sodipodi:role="line" id="tspan19316-0-8-57-9" x="814.5376" y="1057.8704" style="font-size:12px">break1</tspan></text>
+    <rect style="opacity:0.95999995;fill:none;stroke:#000000;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:1, 3;stroke-dashoffset:0" id="rect19291-9-4-6-6-0" width="74.641853" height="164.90439" x="1100.8546" y="1071.3827" />
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="1126.3335" y="1057.8704" id="text19314-0-8-0-4-6"><tspan sodipodi:role="line" id="tspan19316-3-8-0-64-4" x="1126.3335" y="1057.8704" style="font-size:12px">break2</tspan></text>
+    <path style="fill:#8f722b;stroke:#8f722b;stroke-width:3.00034475;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" d="M 734.93035,1138.6825 1395.4795,1138.6825" id="path19213-4-0-5-9" />
+    <path style="fill:#8f722b;stroke:#8f722b;stroke-width:3.00262547;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" d="M 734.93309,1169.9973 1396.4869,1169.9973" id="path19213-5-3-0-3-2" />
+    <g id="g20008-5-71-8" transform="translate(965.70487,553.3604)">
+      <g transform="translate(-7.0710685,290.57408)" style="fill:#414384" id="g19153-0-5-61-0">
+        <rect style="opacity:0.95999995;fill:#414384;fill-opacity:1;stroke:none" id="rect18637-06-3-3-6" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#414384;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-4-7-0-4" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-25-0-2-7" y="590.41827" x="-163.75943" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="590.41827" x="-163.75943" id="tspan19239-5-6-10-8" sodipodi:role="line">GENE-X</tspan></text>
+    </g>
+    <g id="g20022-7-1-8" transform="translate(965.70487,553.3604)">
+      <g style="fill:#358096" id="g19153-4-9-2-3-0-5" transform="matrix(-0.99999965,8.315181e-4,-8.315181e-4,-0.99999965,-149.15001,911.50013)">
+        <rect style="opacity:0.95999995;fill:#358096;fill-opacity:1;stroke:none" id="rect18637-0-1-9-3-8-8" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#358096;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-6-9-5-5-2-8" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-2-5-3-6-1-7" y="621.73303" x="-41.53828" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="621.73303" x="-41.53828" id="tspan19239-6-6-6-8-9-6" sodipodi:role="line">GENE-Y</tspan></text>
+    </g>
+    <g id="g20022-7-3-02-4" transform="translate(1132.7413,553.3603)">
+      <g style="fill:#667ac1" id="g19153-4-9-2-3-16-0-6" transform="matrix(-0.99999965,8.315181e-4,-8.315181e-4,-0.99999965,-149.15001,911.50013)">
+        <rect style="opacity:0.95999995;fill:#667ac1;fill-opacity:1;stroke:none" id="rect18637-0-1-9-3-7-1-7" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#667ac1;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-6-9-5-5-9-04-7" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-2-5-3-6-8-0-6" y="621.73303" x="-41.53828" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="621.73303" x="-41.53828" id="tspan19239-6-6-6-8-3-4-6" sodipodi:role="line">GENE-Z</tspan></text>
+    </g>
+    <g id="g20022-7-3-1-1-7" transform="translate(1278.4556,553.3603)">
+      <g style="fill:#378d66" id="g19153-4-9-2-3-16-8-7-4" transform="matrix(-0.99999965,8.315181e-4,-8.315181e-4,-0.99999965,-149.15001,911.50013)">
+        <rect style="opacity:0.95999995;fill:#378d66;fill-opacity:1;stroke:none" id="rect18637-0-1-9-3-7-6-0-3" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#378d66;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-6-9-5-5-9-0-5-1" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-2-5-3-6-8-5-3-8" y="621.73303" x="-41.53828" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="621.73303" x="-41.53828" id="tspan19239-6-6-6-8-3-2-6-6" sodipodi:role="line">GENE-W</tspan></text>
+    </g>
+    <g id="g20008-5-4-1-3" transform="translate(1259.8667,553.3604)">
+      <g transform="translate(-7.0710685,290.57408)" style="fill:#374f23" id="g19153-0-5-4-6-0">
+        <rect style="opacity:0.95999995;fill:#374f23;fill-opacity:1;stroke:none" id="rect18637-06-3-0-64-6" width="109.56532" height="22.187132" x="-193.40378" y="283.65448" />
+        <path style="fill:#374f23;fill-opacity:1;stroke:none" d="M -83.694448,283.90646 -83.760477,305.67951 -71.041306,295.18746 -83.694448,283.90646 z" id="path18641-4-7-2-2-9" sodipodi:nodetypes="cccc" />
+      </g>
+      <text id="text19237-25-0-0-79-6" y="590.41827" x="-163.75943" style="font-size:40px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:14px;fill:#ffffff;stroke:none" y="590.41827" x="-163.75943" id="tspan19239-5-6-74-4-6" sodipodi:role="line">GENE-V</tspan></text>
+    </g>
+  </g>
+</svg>

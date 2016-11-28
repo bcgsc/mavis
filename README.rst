@@ -6,6 +6,14 @@ About
 
 pipeline to merge and validate input from different structural variant callers into a single report
 
+TODO
+....................
+
+1. Output clustering mapping file
+2. Output failed clusters to separate file
+3. Annotation step
+4. Pairing events between libraries
+
 Getting started
 --------------------
 
@@ -104,7 +112,8 @@ A breakpoint is defined by the reference template (i.e. chromosome), position (o
 
 One of the most confusing parts about working with :term:`contig` and paired-end reads is relating them to the breakpoint so that you can determine which types will support an event. For convenience We have shown the expected :term:`strand` and :term:`orientation` of both :term:`contig` and read-pair supporting evidence side-by-side for the major event types
 
-.. image:: _static/svmerge_read_pairs_vs_contigs_evidence.svg
+.. figure:: _static/svmerge_read_pairs_vs_contigs_evidence.svg
+    :width: 100%
 
 Gathering evidence from the bam file
 ......................................
@@ -130,12 +139,14 @@ Given that we expect mutations and therefore abnormal insert sizes we use a modi
 Using the above equation we can generate a modified version of the standard deviation (s above) as shown in the figure below (stdev). This gives us an idea of when to judge an insert size as abnormal and where we expect our normal read pairs insert sizes to fall.
 
 .. figure:: _static/svmerge_insert_size_distrb_fractions.svg
+    :width: 100%
 
     Distribution of insert sizes (absolute values) of proper read pairs, and different normal distribution fits using the above equation. The different coloured curves are computed with different parameters. black: the standard calculation using all data points and the mean as centre; dark green: median as centre and a fraction of f=0.80; light green: median as centre, f=0.90; light blue: median and f=0.95; dark blue: median and f=1.00.
 
 As we can see from the distribution above the median approximates the distribution centre better than the mean, likely because it is more resistant to outliers.
 
 .. figure::  _static/svmerge_insert_size_distrb.svg
+    :width: 100%
 
     Distribution of insert sizes (absolute values) of proper read pairs. In the above image the standard deviation (stdev) was calculated with respect to the median (383) using the fraction (f=0.99).
 
@@ -156,6 +167,7 @@ Classifying Events
 the following decision tree is used in classifying events based on their breakpoints. Only valid combinations have been shown
 
 .. figure:: _static/svmerge_classification_tree.svg
+    :width: 100%
 
     Classification Decision Tree. The above  diagram details the decsion logic for classifying events based on the orientation, strand and chromosomes or their respective breakpoints
 
@@ -173,6 +185,7 @@ Splicing Model
 After the events have been called and an annotation has been attached, we often want to predict information about the putative fusion protein, which may be a product. In some cases, when a fusion transcript disrupts a splice-site, it is not clear what the processed fusion transcript may be. SVMerge will calculate all possibilities according to the following model.
 
 .. figure:: _static/svmerge_splicing_model.svg
+    :width: 100%
 
     Putative splicing scenarios. (A) a five-prime and the next three-prime splice sites are lost. (B) A five-prime splice site is lost. This brings about two splicing possibilities. Either the exon is skipped or the exon and proximal intron are retained. (C) A three-prime splice site is lost. (D) A three-prime splice site, and the next five-prime splice sites are lost.
 
@@ -181,11 +194,41 @@ Breakpoint sequence homology
 ..............................
 
 
-Annotation Types
+Annotation
 ....................
 
 Structural variant (SV) events may result in
 
 1. fusion of two genes resulting in a fusion gene
-2. genes being entirely deleted
+2. genes being encompassed between breakpoints (i.e. deletion, duplication)
 3. portions of a gene being deletion, exons being skipped, etc from an intra-gene SV
+4. intergenic events: nearest gene
+
+
+Assumptions made in Annotating
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+1. If both breakpoints are in the same gene, they must also be in the same transcript
+2. If the breakpoint intervals overlap we do not annotate encompassed genes
+3. encompassed and 'nearest' genes are reported without respect to strand
+
+
+Annotation Cases
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+.. figure:: _static/svmerge_annotation_case_indel.svg
+    :width: 100%
+
+    Intrachromosomal indel with non-specific breakpoints. The original breakpoint call is shown on the right and the different annotation possibilities are shown on the left. (A) Assume breakpoint2 falls in Gene W, then the encompassed genes are: Y and Z; (B). Assume breakpoint2 falls in the intergenic region between Gene Z and Gene W, then the encompassed genes are: Y and Z. (C) Assume breakpoint2 falls in Gene Z, the the encompassed gene is Y and the nearest gene to the second breakpoint (and not encompassed) is W.
+
+
+.. figure:: _static/svmerge_annotation_case_dup.svg
+    :width: 100%
+
+    Intrachromosomal duplication with non-specific breakpoints. The original breakpoint call is shown on the right and the different annotation possibilities are shown on the left. (A) Assume breakpoint2 falls in Gene W, then the encompassed genes are: Y and Z; (B). Assume breakpoint2 falls in the intergenic region between Gene Z and Gene W, then the encompassed genes are: Y and Z. (C) Assume breakpoint2 falls in Gene Z, the the encompassed gene is Y and the nearest gene to the second breakpoint (and not encompassed) is W.
+
+
+.. figure:: _static/svmerge_annotation_case_inversion.svg
+    :width: 100%
+
+

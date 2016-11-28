@@ -68,6 +68,8 @@ templates_path = ['source/_templates']
 source_parsers = {
     '.md': CommonMarkParser
 }
+numfig = True
+numfig_format = {'figure': 'Figure %s.'}
 source_suffix = ['.rst', '.md']
 
 # The encoding of source files.

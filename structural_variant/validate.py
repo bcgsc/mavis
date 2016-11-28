@@ -337,7 +337,7 @@ class Evidence:
             breakpoint_pair,
             bam_cache,
             human_reference_genome,
-            labels={},
+            data={},
             classification=None,
             protocol=PROTOCOL.GENOME,
             annotations={},
@@ -347,14 +347,14 @@ class Evidence:
             breakpoint_pair (BreakpointPair): the breakpoint pair to collect evidence for
             bam_cache (BamCache): the bam cache (and assc file) to collect evidence from
             human_reference_genome (SeqIO.iterator[SeqIO.SeqRecord]): the human reference genome read as fasta
-            labels (Dict, optional): a dictionary of labels to associate with the evidence object
+            data (Dict, optional): a dictionary of data to associate with the evidence object
             classification (SVTYPE, optional): the event type
             protocol (PROTOCOL, default=PROTOCOL.GENOME): genome or transcriptome
             **kwargs: named arguments to be passed to EvidenceSettings
         """
         self.settings = EvidenceSettings(**kwargs)
         self.bam_cache = bam_cache
-        self.labels = labels
+        self.data = data
         self.classification = classification
         self.protocol = PROTOCOL.enforce(protocol)
         self.human_reference_genome = human_reference_genome

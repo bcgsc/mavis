@@ -32,10 +32,10 @@ class BioInterval(Bio, Interval):
         Interval.__init__(self, start, end)
 
 
-class Gene(Bio):
+class Gene(BioInterval):
     """
     """
-    def __init__(self, chr=None, name=None, strand=None, aliases=[]):
+    def __init__(self, chr, start, end, name=None, strand=None, aliases=[]):
         """
         Args:
             chr (str): the chromosome
@@ -45,7 +45,7 @@ class Gene(Bio):
         Example:
             >>> Gene('X', 'ENG0001', '+', ['KRAS'])
         """
-        Bio.__init__(self, name=name, reference_object=chr)
+        BioInterval.__init__(self, name=name, reference_object=chr, start=start, end=end)
         self.transcripts = set()
         self.strand = strand
         self.aliases = aliases
@@ -60,13 +60,13 @@ class Gene(Bio):
 
     @property
     def key(self):
-        return (self.name, self.strand, self.chr)
+        return (self.name, self.strand, self.chr, self.start, self.end)
 
 
-class Transcript(Bio):
+class Transcript(BioInterval):
     """
     """
-    def __init__(self, cds_start, cds_end, gene=None, name=None, strand=None, exons=[]):
+    def __init__(self, genomic_start, genomic_end, cds_start, cds_end, gene=None, name=None, strand=None, exons=[]):
         """ creates a new transcript object
 
         Args:
@@ -77,7 +77,7 @@ class Transcript(Bio):
             strand (STRAND, optional): the strand the transcript occurs on
 
         """
-        Bio.__init__(self, reference_object=gene, name=name)
+        BioInterval.__init__(self, reference_object=gene, name=name, start=genomic_start, end=genomic_end)
 
         self.exons = set()
         self.domains = set()
@@ -131,10 +131,10 @@ class Transcript(Bio):
         return self.genomic_end() - self.genomic_start() + 1
 
     def genomic_start(self):
-        return min([e.start for e in self.exons])
+        return self.start
 
     def genomic_end(self):
-        return max([e.end for e in self.exons])
+        return self.end
 
     def length(self):
         return sum([len(e) for e in self.exons])
@@ -168,26 +168,13 @@ class Transcript(Bio):
 
     @property
     def key(self):
-        return (self.gene, self.name, self.cds_start, self.cds_end)
+        return (self.gene, self.name, self.start, self.end, self.cds_start, self.cds_end)
 
     def exon_number(self, exon):
         for i, e in enumerate(self.get_exons()):
             if e is exon:
                 return i
         raise AttributeError('can only calculate phase on associated exons')
-
-
-class FusionTranscript:
-    """
-    a fusion of two transcripts created by the associated breakpoint_pair
-    """
-    def __init__(self, bpp, sv_type, transcript1, transcript2):
-        self.sv_type = SVTYPE.enforce(sv_type)
-        self.breakpoint_pair = bpp
-        if sv_type not in BreakpointPair.classify(bpp):
-            raise AttributeError('classification is not consistent', sv_type, BreakpointPair.classify(bpp))
-        self.transcript1 = transcript1
-        self.transcript2 = transcript2
 
 
 class Exon(BioInterval):
@@ -356,7 +343,9 @@ def load_reference_genes(filepath):
             'cdna_coding_start',
             'cdna_coding_end',
             'AA_domain_ranges'
-        ]
+        ],
+        cast={
+        }
     )
     genes = {}
     for row in rows:
@@ -364,8 +353,14 @@ def load_reference_genes(filepath):
             row['strand'] = '-'
         else:
             row['strand'] = '+'
-        g = Gene(name=row['ensembl_gene_id'], strand=row['strand'], chr=row['chr'],
-                 aliases=row['hugo_names'].split(';'))
+        g = Gene(
+            row['chr'],
+            row['gene_start'],
+            row['gene_end'],
+            name=row['ensembl_gene_id'],
+            strand=row['strand'],
+            aliases=row['hugo_names'].split(';')
+        )
         if g.name in genes:
             g = genes[g.name]
         else:
@@ -376,6 +371,8 @@ def load_reference_genes(filepath):
         t = Transcript(
             name=row['ensembl_transcript_id'],
             gene=g,
+            start=row['transcript_genomic_start'],
+            end=row['transcript_genomic_end'],
             exons=exons,
             cds_start=row['cdna_coding_start'],
             cds_end=row['cdna_coding_end']
@@ -415,58 +412,6 @@ def overlapping_transcripts(ref_ann, breakpoint):
                     (transcript.genomic_start(), transcript.genomic_end())):
                 putative_annotations.append(transcript)
     return putative_annotations
-
-
-def annotations(ref, breakpoint_pairs):  # TODO
-    """
-    Args:
-        ref (Dict[str,List[Gene]]): the list of reference genes hashed by chromosomes
-        breakpoint_pairs (List[BreakpointPair]): breakpoint pairs we wish to annotate as events
-    """
-    annotations = []
-
-    for bp in breakpoint_pairs:
-        putative_break1_transcripts = [None]
-        putative_break2_transcripts = [None]
-
-        for gene in ref[bp.break1.chr]:
-            for t in gene.transcripts:
-                if bp.break1.end < t.genomic_start or bp.break1.start > t.genomic_end:
-                    continue  # no overlap
-                putative_break1_transcripts.append(t)
-        for gene in ref[bp.break2.chr]:
-            for t in gene.transcripts:
-                if bp.break2.end < t.genomic_start or bp.break2.start > t.genomic_end:
-                    continue  # no overlap
-                putative_break2_transcripts.append(t)
-
-        temp = itertools.product(
-            putative_break1_transcripts, putative_break2_transcripts)
-        combinations = []
-
-        # assume that the transcript partners cannot be two different transcripts from the same gene
-        # if the transcripts have the same gene they must be the same
-        # transcript
-        for t1, t2 in temp:
-            if t1 is None or t2 is None:
-                combinations.append((t1, t2))
-                continue
-            elif t1.gene == t2.gene and t1 != t2:
-                continue
-            if bp.opposing_strands is not None \
-                    and bp.opposing_strands != (t1.gene.strand != t2.gene.strand): \
-                    # if the stand combination does not match then ignore
-                continue
-            if bp.stranded:
-                if bp.break1.strand != STRAND.NS:
-                    if t1.gene.strand != bp.break1.strand:
-                        continue
-                if bp.break2.strand != STRAND.NS:
-                    if t2.gene.strand != bp.break2.strand:
-                        continue
-            combinations.append((t1, t2))
-
-        # now we have a list of putative combinations
 
 
 def load_reference_genome(filename):

@@ -142,12 +142,12 @@ def load_input_file(filename):
                     bpp = BreakpointPair(
                         b1,
                         b2,
-                        opposing_strands=opp
+                        opposing_strands=opp,
+                        data=label
                     )
                     if not row['stranded']:
                         bpp.break1.strand = STRAND.NS
                         bpp.break2.strand = STRAND.NS
-                    bpp.label = label
                     breakpoints[key].add(bpp)
                 except InvalidRearrangement as e:
                     warnings.warn(str(e) + '; reading: {}'.format(filename))
@@ -285,7 +285,7 @@ def main():
             # filter out the low quality clusters
             temp = list(clusters.keys())
             for cluster in temp:  # set the ids of the clusters
-                cluster.label['cluster_id'] = cluster_id
+                cluster.data['cluster_id'] = cluster_id
                 cluster_id += 1
                 if len(clusters[cluster]) == 1:
                     if FLAGS.LQ in list(clusters[cluster])[0].flags:
@@ -301,7 +301,7 @@ def main():
                 temp = []
                 for c, cset in clusters.items():
                     if bpp in cset:
-                        temp.append(c.label['cluster_id'])
+                        temp.append(c.data['cluster_id'])
                 row = {
                     'cluster_ids': ';'.join(sorted([str(k) for k in temp]))
                 }
@@ -311,10 +311,10 @@ def main():
 
             for c in clusters:
                 tools = ';'.join(
-                    sorted(list(set([k.label['tool_version'] for k in clusters[c]]))))
+                    sorted(list(set([k.data['tool_version'] for k in clusters[c]]))))
                 row = BreakpointPair.flatten(c)
                 row.update({
-                    'cluster_id': c.label['cluster_id'],
+                    'cluster_id': c.data['cluster_id'],
                     'cluster_size': len(clusters[c]),
                     'protocol': protocol,
                     'library': libname,

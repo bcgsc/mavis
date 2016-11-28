@@ -178,10 +178,9 @@ def read_cluster_file(name, is_stranded):
                     INPUT_BAM_CACHE,
                     HUMAN_REFERENCE_GENOME,
                     annotations=REFERENCE_ANNOTATIONS,
-                    labels=row,
+                    data=row,
                     protocol=row['protocol']
                 )
-                bpp.label = row['cluster_id']
                 evidence.append(e)
             except UserWarning as e:
                 warnings.warn('failed to read cluster {}'.format(repr(e)))
@@ -430,7 +429,7 @@ def main():
             except AttributeError:
                 pass
             row = {
-                'cluster_id': ec.evidence.labels['cluster_id'],
+                'cluster_id': ec.evidence.data['cluster_id'],
                 'break1_chromosome': ec.breakpoint_pair.break1.chr,
                 'break1_position_start': ec.breakpoint_pair.break1.start,
                 'break1_position_end': ec.breakpoint_pair.break1.end,
@@ -445,7 +444,7 @@ def main():
                 'opposing_strands': ec.breakpoint_pair.opposing_strands,
                 'stranded': ec.evidence.breakpoint_pair.stranded,
                 'protocol': ec.evidence.protocol,
-                'tools': ec.evidence.labels['tools'],
+                'tools': ec.evidence.data['tools'],
                 'contigs_assembled': len(ec.evidence.contigs),
                 'contigs_aligned': sum([len(c.alignments) for c in ec.evidence.contigs]),
                 'contig_sequence': None,
