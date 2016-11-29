@@ -5,7 +5,7 @@ from structural_variant.constants import CIGAR
 from structural_variant.align import BamCache
 import unittest
 from Bio import SeqIO
-from tests import REFERENCE_GENOME as RG
+from tests import REFERENCE_GENOME_FILE
 from tests import BLAT_INPUT, BLAT_OUTPUT, MockBamFileHandle
 
 
@@ -14,7 +14,7 @@ REFERENCE_GENOME = None
 
 def setUpModule():
     global REFERENCE_GENOME
-    REFERENCE_GENOME = load_reference_genome(RG)
+    REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
     if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
         raise AssertionError('fake genome file does not have the expected contents')
 

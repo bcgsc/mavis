@@ -3,7 +3,7 @@ from structural_variant.align import *
 from structural_variant.annotate import load_reference_genome
 import unittest
 from tests import MockRead, MockBamFileHandle
-from tests import REFERENCE_GENOME as RG
+from tests import REFERENCE_GENOME_FILE
 
 
 REFERENCE_GENOME = None
@@ -11,7 +11,7 @@ REFERENCE_GENOME = None
 
 def setUpModule():
     global REFERENCE_GENOME
-    REFERENCE_GENOME = load_reference_genome(RG)
+    REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
     if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
         raise AssertionError('fake genome file does not have the expected contents')
 

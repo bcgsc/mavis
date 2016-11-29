@@ -4,7 +4,8 @@ import os
 
 
 filedir = os.path.join(os.path.dirname(__file__), 'files')
-REFERENCE_GENOME = os.path.join(filedir, 'mock_reference_genome.fa')
+REFERENCE_GENOME_FILE = os.path.join(filedir, 'mock_reference_genome.fa')
+REFERENCE_ANNOTATIONS_FILE = os.path.join(filedir, 'mock_reference_annotations.tsv')
 BLAT_INPUT = os.path.join(filedir, 'blat_input.fa')
 BLAT_OUTPUT = os.path.join(filedir, 'blat_output.pslx')
 

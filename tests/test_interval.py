@@ -2,8 +2,6 @@ from structural_variant.interval import Interval
 from structural_variant.error import DiscontiuousMappingError
 import unittest
 
-__author__ = 'creisle@bcgsc.ca'
-
 class TestInterval(unittest.TestCase):
 
     def test___init__error(self):

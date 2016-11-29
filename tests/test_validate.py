@@ -4,14 +4,14 @@ from structural_variant.annotate import load_reference_genome, Gene, Transcript
 from structural_variant.constants import ORIENT, READ_PAIR_TYPE
 from tests import MockRead
 import unittest
-from tests import REFERENCE_GENOME as RG
+from tests import REFERENCE_GENOME_FILE
 
 REFERENCE_GENOME = None
 
 
 def setUpModule():
     global REFERENCE_GENOME
-    REFERENCE_GENOME = load_reference_genome(RG)
+    REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
     if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
         raise AssertionError('fake genome file does not have the expected contents')
 
@@ -42,7 +42,7 @@ class TestEvidence(unittest.TestCase):
 
     def test_generate_transcriptome_window_before_start(self):
         b = Breakpoint(chr='1', start=100, orient=ORIENT.RIGHT)
-        gene = Gene(name='KRAS', strand='+', chr='1')
+        gene = Gene('1', 1, 9999, name='KRAS', strand='+')
         t1 = Transcript(gene=gene, cds_start=1, cds_end=100, exons=[(1000, 1100), (1400, 1500)])
         ann = {'1': [gene]}
         w1 = Evidence.generate_window(
@@ -53,7 +53,7 @@ class TestEvidence(unittest.TestCase):
 
     def test_generate_transcriptome_window_after_end(self):
         b = Breakpoint(chr='1', start=1600, orient=ORIENT.RIGHT)
-        gene = Gene(name='KRAS', strand='+', chr='1')
+        gene = Gene('1', 1, 9999, name='KRAS', strand='+')
         t1 = Transcript(gene=gene, cds_start=1, cds_end=100, exons=[(1000, 1100), (1400, 1500)])
         ann = {'1': [gene]}
         w1 = Evidence.generate_window(
@@ -64,7 +64,7 @@ class TestEvidence(unittest.TestCase):
 
     def test_generate_transcriptome_window_exonic_long_exon(self):
         b = Breakpoint(chr='1', start=1200, orient=ORIENT.RIGHT)
-        gene = Gene(name='KRAS', strand='+', chr='1')
+        gene = Gene('1', 1, 9999, name='KRAS', strand='+')
         t1 = Transcript(gene=gene, cds_start=1, cds_end=100, exons=[(1000, 2000), (2400, 2500)])
         ann = {'1': [gene]}
         w1 = Evidence.generate_window(
@@ -75,7 +75,7 @@ class TestEvidence(unittest.TestCase):
 
     def test_generate_transcriptome_window_intronic_long_exon(self):
         b = Breakpoint(chr='1', start=900, orient=ORIENT.RIGHT)
-        gene = Gene(name='KRAS', strand='+', chr='1')
+        gene = Gene('1', 1, 9999, name='KRAS', strand='+')
         t1 = Transcript(gene=gene, cds_start=1, cds_end=100, exons=[(1000, 2000), (2400, 2500)])
         ann = {'1': [gene]}
         w1 = Evidence.generate_window(
@@ -86,7 +86,7 @@ class TestEvidence(unittest.TestCase):
 
     def test_generate_transcriptome_window_intronic_long_intron(self):
         b = Breakpoint(chr='1', start=1200, orient=ORIENT.RIGHT)
-        gene = Gene(name='KRAS', strand='+', chr='1')
+        gene = Gene('1', 1, 9999, name='KRAS', strand='+')
         t1 = Transcript(gene=gene, cds_start=1, cds_end=100, exons=[(1000, 1100), (2400, 2500)])
         ann = {'1': [gene]}
         w1 = Evidence.generate_window(
@@ -97,7 +97,7 @@ class TestEvidence(unittest.TestCase):
 
     def test_generate_transcriptome_window_intronic_short_exon(self):
         b = Breakpoint(chr='1', start=1150, orient=ORIENT.RIGHT)
-        gene = Gene(name='KRAS', strand='+', chr='1')
+        gene = Gene('1', 1, 9999, name='KRAS', strand='+')
         t1 = Transcript(gene=gene, cds_start=1, cds_end=100, exons=[(1000, 1100), (1200, 1300), (1400, 1500)])
         ann = {'1': [gene]}
         w = Evidence.generate_transcriptome_window(
@@ -106,7 +106,7 @@ class TestEvidence(unittest.TestCase):
 
     def test_generate_transcriptome_window_multiple_transcripts(self):
         b = Breakpoint(chr='1', start=1150, orient=ORIENT.RIGHT)
-        gene = Gene(name='KRAS', strand='+', chr='1')
+        gene = Gene('1', 1, 9999, name='KRAS', strand='+')
         Transcript(gene=gene, cds_start=1, cds_end=100, exons=[(1000, 1100), (1200, 1300), (1400, 1500)])
         Transcript(gene=gene, cds_start=1, cds_end=100, exons=[(1000, 1100), (1200, 1300), (2100, 2200)])
         ann = {'1': [gene]}

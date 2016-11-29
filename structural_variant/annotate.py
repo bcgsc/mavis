@@ -4,6 +4,7 @@ from structural_variant.constants import *
 from structural_variant.error import *
 from Bio import SeqIO
 import re
+import warnings
 
 
 class Bio:
@@ -66,7 +67,7 @@ class Gene(BioInterval):
 class Transcript(BioInterval):
     """
     """
-    def __init__(self, genomic_start, genomic_end, cds_start, cds_end, gene=None, name=None, strand=None, exons=[]):
+    def __init__(self, cds_start=None, cds_end=None, genomic_start=None, genomic_end=None, gene=None, name=None, strand=None, exons=[], domains=[]):
         """ creates a new transcript object
 
         Args:
@@ -77,6 +78,11 @@ class Transcript(BioInterval):
             strand (STRAND, optional): the strand the transcript occurs on
 
         """
+        if genomic_start is None and len(exons) > 0:
+            genomic_start = min([e[0] for e in exons])
+        if genomic_end is None and len(exons) > 0:
+            genomic_end = max([e[1] for e in exons])
+
         BioInterval.__init__(self, reference_object=gene, name=name, start=genomic_start, end=genomic_end)
 
         self.exons = set()
@@ -87,13 +93,13 @@ class Transcript(BioInterval):
             raise AttributeError('strand does not match reference object')
 
         try:
-            self.cds_start = int(cds_start)
-            self.cds_end = int(cds_end)
+            self.cds_start = int(cds_start) if cds_start is not None else None
+            self.cds_end = int(cds_end) if cds_end is not None else None
+            if cds_start is not None and cds_end is not None:
+                if self.cds_start > self.cds_end:
+                    raise AttributeError('cds_end must be >= cds_start')
         except ValueError:
             raise AttributeError('cds_end and/or cds_start must be integers')
-
-        if self.cds_start > self.cds_end:
-            raise AttributeError('cds_end must be >= cds_start')
 
         for e in exons:
             if isinstance(e, Exon):
@@ -113,6 +119,10 @@ class Transcript(BioInterval):
             if Interval.overlaps((previous.start, previous.end), (exon.start, exon.end)):
                 raise AttributeError('exons cannot overlap within a transcript')
 
+        for d in domains:
+            d.reference_object = self
+            self.domains.add(d)
+
     @property
     def gene(self):
         """(:class:`~structural_variant.annotate.Gene`): the gene this transcript belongs to"""
@@ -130,14 +140,13 @@ class Transcript(BioInterval):
     def genomic_length(self):
         return self.genomic_end() - self.genomic_start() + 1
 
+    @property
     def genomic_start(self):
         return self.start
 
+    @property
     def genomic_end(self):
         return self.end
-
-    def length(self):
-        return sum([len(e) for e in self.exons])
 
     def _exon_genomic_to_cdna_mapping(self):
         mapping = {}
@@ -329,25 +338,55 @@ def load_reference_genes(filepath):
     Returns:
         Dict[str,List[Gene]]: a dictionary keyed by chromosome name with values of list of genes on the chromosome
     """
+    def parse_exon_list(row):
+        exons = []
+        for temp in row.split(';'):
+            try:
+                s, t = temp.split('-')
+                exons.append(Exon(int(s), int(t)))
+            except:
+                print('exon error:', temp, row)
+        return exons
+
+    def parse_domain_list(row):
+        domains = []
+        for d in row.split(';'):
+            try:
+                name, temp = d.rsplit(':')
+                temp = temp.split(',')
+                temp = [x.split('-') for x in temp]
+                temp = [(int(x), int(y)) for x, y in temp]
+                d = Domain(name, temp)
+            except:
+                print('error in d:', d, row)
+        return domains
+
     header, rows = TSV.read_file(
         filepath,
         require=[
             'ensembl_gene_id',
             'strand',
-            'hugo_names',
             'chr',
-            'genomic_exon_ranges',
             'ensembl_transcript_id',
             'transcript_genomic_start',
             'transcript_genomic_end',
-            'cdna_coding_start',
-            'cdna_coding_end',
-            'AA_domain_ranges'
+            'gene_start',
+            'gene_end'
         ],
+        add={
+            'cdna_coding_start': '',
+            'cdna_coding_end': '',
+            'AA_domain_ranges': '',
+            'genomic_exon_ranges': '',
+            'hugo_names': ''
+        },
         cast={
+            'genomic_exon_ranges': parse_exon_list,
+            'AA_domain_ranges': parse_domain_list
         }
     )
     genes = {}
+    return
     for row in rows:
         if row['strand'] == '-1':
             row['strand'] = '-'
@@ -365,26 +404,17 @@ def load_reference_genes(filepath):
             g = genes[g.name]
         else:
             genes[g.name] = g
-        exons = [x.split('-') for x in row['genomic_exon_ranges'].split(';')]
-        exons = [Exon(int(s), int(t)) for s, t in exons]
 
         t = Transcript(
             name=row['ensembl_transcript_id'],
             gene=g,
             start=row['transcript_genomic_start'],
             end=row['transcript_genomic_end'],
-            exons=exons,
+            exons=row['genomic_exon_ranges'],
+            domains=row['AA_domain_ranges'],
             cds_start=row['cdna_coding_start'],
             cds_end=row['cdna_coding_end']
         )
-        if row['AA_domain_ranges']:
-            domains = []
-            for d in row['AA_domain_ranges'].split(';'):
-                name, temp = d.rsplit(':')
-                temp = temp.split(',')
-                temp = [x.split('-') for x in temp]
-                temp = [(int(x), int(y)) for x, y in temp]
-                d = Domain(name, temp, transcript=t)
 
     ref = {}
     for g in genes.values():
@@ -405,11 +435,9 @@ def overlapping_transcripts(ref_ann, breakpoint):
     putative_annotations = []
     for gene in ref_ann[breakpoint.chr]:
         for transcript in gene.transcripts:
-            if breakpoint.strand != STRAND.NS and transcript.strand != breakpoint.strand:
+            if breakpoint.strand != STRAND.NS and transcript.strand != STRAND.NS and transcript.strand != breakpoint.strand:
                 continue
-            if Interval.overlaps(
-                    breakpoint,
-                    (transcript.genomic_start(), transcript.genomic_end())):
+            if Interval.overlaps(breakpoint, transcript):
                 putative_annotations.append(transcript)
     return putative_annotations
 
