@@ -216,19 +216,11 @@ Assumptions made in Annotating
 Annotation Cases
 ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-.. figure:: _static/svmerge_annotation_case_indel.svg
+create a set of non-overlapping intervals on each strand for the transcripts of all genes overlapping the breakpoints. Only in the case of breakpoint overlapping a region not covered by any transcript (on that strand) will we annotate a possible intergenic annotation for that breakpoint.
+
+.. figure:: _static/svmerge_annotation_breakpoint_cases.svg
     :width: 100%
 
-    Intrachromosomal indel with non-specific breakpoints. The original breakpoint call is shown on the right and the different annotation possibilities are shown on the left. (A) Assume breakpoint2 falls in Gene W, then the encompassed genes are: Y and Z; (B). Assume breakpoint2 falls in the intergenic region between Gene Z and Gene W, then the encompassed genes are: Y and Z. (C) Assume breakpoint2 falls in Gene Z, the the encompassed gene is Y and the nearest gene to the second breakpoint (and not encompassed) is W.
-
-
-.. figure:: _static/svmerge_annotation_case_dup.svg
-    :width: 100%
-
-    Intrachromosomal duplication with non-specific breakpoints. The original breakpoint call is shown on the right and the different annotation possibilities are shown on the left. (A) Assume breakpoint2 falls in Gene W, then the encompassed genes are: Y and Z; (B). Assume breakpoint2 falls in the intergenic region between Gene Z and Gene W, then the encompassed genes are: Y and Z. (C) Assume breakpoint2 falls in Gene Z, the the encompassed gene is Y and the nearest gene to the second breakpoint (and not encompassed) is W.
-
-
-.. figure:: _static/svmerge_annotation_case_inversion.svg
-    :width: 100%
+    The breakpoint possibilities will be first annotated at the gen
 
 

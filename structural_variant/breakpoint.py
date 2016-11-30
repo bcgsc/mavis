@@ -117,6 +117,8 @@ class BreakpointPair:
 
         if self.opposing_strands is None:
             raise AttributeError('must specify if opposing_strands')
+        if self.stranded and STRAND.NS in [self.break1.strand, self.break2.strand]:
+            raise AttributeError('if stranded is specified, breakpoint strands cannot be \'not specified\'')
 
         # try classifying to make sure it's a valid combination
         BreakpointPair.classify(self)

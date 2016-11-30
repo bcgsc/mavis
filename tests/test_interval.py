@@ -185,6 +185,7 @@ class TestInterval(unittest.TestCase):
         self.assertEqual(0, Interval.dist(z, x))
         self.assertEqual(0, Interval.dist(y, z))
         self.assertEqual(0, Interval.dist(z, y))
+        self.assertEqual(-6, Interval.dist((1, 4), (10, 12)))
 
     def test_min_nonoverlapping(self):
         r = Interval.min_nonoverlapping(Interval(1, 2), Interval(4, 7), Interval(8, 9))
@@ -192,4 +193,7 @@ class TestInterval(unittest.TestCase):
         r = Interval.min_nonoverlapping(Interval(1, 5), Interval(4, 7), Interval(8, 9))
         self.assertEqual(2, len(r))
         r = Interval.min_nonoverlapping(Interval(1, 5), Interval(4, 7), Interval(7, 9))
-        self.assertEqual(1, len(r))
+        self.assertEqual([Interval(1, 9)], r)
+        r = Interval.min_nonoverlapping((1, 2), (2, 4))
+        self.assertEqual([Interval(1, 4)], r)
+        self.assertEqual([], Interval.min_nonoverlapping())

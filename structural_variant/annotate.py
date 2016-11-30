@@ -1,10 +1,104 @@
 import TSV
 from structural_variant.interval import Interval
 from structural_variant.constants import *
+import itertools
 from structural_variant.error import *
+from structural_variant.breakpoint import BreakpointPair
 from Bio import SeqIO
 import re
-import warnings
+
+
+class Annotation:
+    """
+    a fusion of two transcripts created by the associated breakpoint_pair
+    will also hold the other annotations for overlapping and encompassed and nearest genes
+    """
+    def __init__(self, bpp, transcript1=None, transcript2=None, data={}):
+        self.breakpoint_pair = bpp.copy()
+        if transcript1 is not None:
+            temp = bpp.break1 & transcript1
+            self.breakpoint_pair.break1.start = temp[0]
+            self.breakpoint_pair.break1.end = temp[1]
+        if transcript2 is not None:
+            temp = bpp.break2 & transcript2
+            self.breakpoint_pair.break2.start = temp[0]
+            self.breakpoint_pair.break2.end = temp[1]
+        self.transcript1 = transcript1
+        self.transcript2 = transcript2
+        self.data = {}
+        self.data.update(data)
+
+        self.encompassed_genes = set()
+        self.nearest_gene_break1 = set()
+        self.nearest_gene_break2 = set()
+        self.genes_at_break1 = set()
+        self.genes_at_break2 = set()
+
+    def add_gene(self, gene):
+        if gene.chr not in [self.breakpoint_pair.break1.chr, self.breakpoint_pair.break2.chr]:
+            raise AttributeError('cannot add gene not on the same chromosome as either breakpoint')
+
+        if not self.breakpoint_pair.interchromosomal:
+            try:
+                encompassment = Interval(self.breakpoint_pair.break1.end + 1, self.breakpoint_pair.break2.start - 1)
+                if gene in encompassment:
+                    self.encompassed_genes.add(gene)
+            except AttributeError:
+                pass
+        if Interval.overlaps(gene, self.breakpoint_pair.break1) and gene.chr == self.breakpoint_pair.break1.chr \
+                and gene != self.transcript1.reference_object:
+            self.genes_at_break1.add(gene)
+        if Interval.overlaps(gene, self.breakpoint_pair.break2) and gene.chr == self.breakpoint_pair.break2.chr \
+                and gene != self.transcript2.reference_object:
+            self.genes_at_break2.add(gene)
+
+        if gene in self.genes_at_break1 or gene in self.genes_at_break2 or gene in self.encompassed_genes \
+                or gene == self.transcript1.reference_object or gene == self.transcript2.reference_object:
+            return
+
+        d1 = Interval.dist(gene, self.breakpoint_pair.break1)
+        d2 = Interval.dist(gene, self.breakpoint_pair.break2)
+
+        if self.breakpoint_pair.interchromosomal:
+            if gene.chr == self.breakpoint_pair.break1.chr:
+                self.nearest_gene_break1.add((gene, d1))
+            elif gene.chr == self.breakpoint_pair.break2.chr:
+                self.nearest_gene_break2.add((gene, d2))
+        else:
+            if d1 < 0:
+                self.nearest_gene_break1.add((gene, d1))
+            if d2 > 0:
+                self.nearest_gene_break2.add((gene, d2))
+
+        temp = set()
+
+        tmin = [d for g, d in self.nearest_gene_break1 if d < 0]
+        tmax = [d for g, d in self.nearest_gene_break1 if d > 0]
+        tmin = 0 if len(tmin) == 0 else max(tmin)
+        tmax = 0 if len(tmax) == 0 else min(tmax)
+
+        for gene, dist in self.nearest_gene_break1:
+            if tmin != 0 and dist == tmin:
+                temp.add((gene, dist))
+            elif tmax != 0 and dist == tmax:
+                temp.add((gene, dist))
+
+        self.nearest_gene_break1 = temp
+
+        temp = set()
+
+        tmin = [d for g, d in self.nearest_gene_break2 if d < 0]
+        tmax = [d for g, d in self.nearest_gene_break2 if d > 0]
+        tmin = 0 if len(tmin) == 0 else max(tmin)
+        tmax = 0 if len(tmax) == 0 else min(tmax)
+
+        for gene, dist in self.nearest_gene_break2:
+            if tmin != 0 and dist == tmin:
+                temp.add((gene, dist))
+            elif tmax != 0 and dist == tmax:
+                temp.add((gene, dist))
+
+        self.nearest_gene_break2 = temp
 
 
 class Bio:
@@ -33,6 +127,12 @@ class BioInterval(Bio, Interval):
         Interval.__init__(self, start, end)
 
 
+class IntergenicRegion(BioInterval):
+    def __init__(self, chr, start, end, strand):
+        BioInterval.__init__(self, chr, start, end)
+        self.strand = strand
+
+
 class Gene(BioInterval):
     """
     """
@@ -48,10 +148,10 @@ class Gene(BioInterval):
         """
         BioInterval.__init__(self, name=name, reference_object=chr, start=start, end=end)
         self.transcripts = set()
-        self.strand = strand
+        self.strand = STRAND.enforce(strand)
         self.aliases = aliases
 
-        if self.name is None or self.reference_object is None or self.strand is None:
+        if self.name is None or self.reference_object is None or self.strand == STRAND.NS:
             raise AttributeError('properties: name, reference_object/chr, and strand are required')
 
     @property
@@ -67,7 +167,18 @@ class Gene(BioInterval):
 class Transcript(BioInterval):
     """
     """
-    def __init__(self, cds_start=None, cds_end=None, genomic_start=None, genomic_end=None, gene=None, name=None, strand=None, exons=[], domains=[]):
+    def __init__(
+        self,
+        cds_start=None,
+        cds_end=None,
+        genomic_start=None,
+        genomic_end=None,
+        gene=None,
+        name=None,
+        strand=None,
+        exons=[],
+        domains=[]
+    ):
         """ creates a new transcript object
 
         Args:
@@ -361,37 +472,50 @@ def load_reference_genes(filepath):
                 print('error in d:', d, row)
         return domains
 
+    def nullable_int(row):
+        try:
+            row = int(row)
+        except ValueError:
+            row = TSV.null(row)
+        return row
+
+    def parse_strand(row):
+        if row in ['-1', '-']:
+            return STRAND.NEG
+        elif row in ['1', '+', '+1']:
+            return STRAND.POS
+        raise ValueError('cast to strand failed')
+
     header, rows = TSV.read_file(
         filepath,
         require=[
             'ensembl_gene_id',
-            'strand',
             'chr',
-            'ensembl_transcript_id',
-            'transcript_genomic_start',
-            'transcript_genomic_end',
-            'gene_start',
-            'gene_end'
+            'ensembl_transcript_id'
         ],
         add={
             'cdna_coding_start': '',
             'cdna_coding_end': '',
             'AA_domain_ranges': '',
             'genomic_exon_ranges': '',
-            'hugo_names': ''
+            'hugo_names': '',
+            'transcript_genomic_start': '',
+            'transcript_genomic_end': ''
         },
         cast={
             'genomic_exon_ranges': parse_exon_list,
-            'AA_domain_ranges': parse_domain_list
+            'AA_domain_ranges': parse_domain_list,
+            'cdna_coding_end': nullable_int,
+            'cdna_coding_start': nullable_int,
+            'transcript_genomic_end': nullable_int,
+            'transcript_genomic_start': nullable_int,
+            'strand': parse_strand,
+            'gene_start': int,
+            'gene_end': int
         }
     )
     genes = {}
-    return
     for row in rows:
-        if row['strand'] == '-1':
-            row['strand'] = '-'
-        else:
-            row['strand'] = '+'
         g = Gene(
             row['chr'],
             row['gene_start'],
@@ -408,8 +532,8 @@ def load_reference_genes(filepath):
         t = Transcript(
             name=row['ensembl_transcript_id'],
             gene=g,
-            start=row['transcript_genomic_start'],
-            end=row['transcript_genomic_end'],
+            genomic_start=row['transcript_genomic_start'],
+            genomic_end=row['transcript_genomic_end'],
             exons=row['genomic_exon_ranges'],
             domains=row['AA_domain_ranges'],
             cds_start=row['cdna_coding_start'],
@@ -435,11 +559,129 @@ def overlapping_transcripts(ref_ann, breakpoint):
     putative_annotations = []
     for gene in ref_ann[breakpoint.chr]:
         for transcript in gene.transcripts:
-            if breakpoint.strand != STRAND.NS and transcript.strand != STRAND.NS and transcript.strand != breakpoint.strand:
+            if breakpoint.strand != STRAND.NS and transcript.strand != STRAND.NS \
+                    and transcript.strand != breakpoint.strand:
                 continue
             if Interval.overlaps(breakpoint, transcript):
                 putative_annotations.append(transcript)
     return putative_annotations
+
+
+def gather_breakpoint_annotations(ref_ann, breakpoint):
+
+    pos_overlapping_transcripts = []
+    neg_overlapping_transcripts = []
+    for gene in ref_ann[breakpoint.chr]:
+        for t in gene.transcripts:
+            if Interval.overlaps(t, breakpoint):
+                if STRAND.compare(t.strand, STRAND.POS):
+                    pos_overlapping_transcripts.append(t)
+                if STRAND.compare(t.strand, STRAND.NEG):
+                    neg_overlapping_transcripts.append(t)
+
+    pos_intervals = Interval.min_nonoverlapping(*pos_overlapping_transcripts)
+    neg_intervals = Interval.min_nonoverlapping(*neg_overlapping_transcripts)
+    
+    temp = []
+    # before the first?
+    if len(pos_intervals) > 0:
+        first = pos_intervals[0]
+        last = pos_intervals[-1]
+        if breakpoint < first:
+            temp.append(IntergenicRegion(breakpoint.chr, breakpoint[0], first[0] - 1, STRAND.POS))
+        if breakpoint[1] > last[1]:
+            temp.append(IntergenicRegion(breakpoint.chr, last[1] + 1, breakpoint[1], STRAND.POS))
+
+        for i, curr in enumerate(pos_intervals):
+            if i > 0:
+                prev = pos_intervals[i - 1]
+                try:
+                    temp.append(IntergenicRegion(breakpoint.chr, prev[1] + 1, curr[0] - 1, STRAND.POS))
+                except AttributeError:
+                    pass
+    else:
+        temp.append(IntergenicRegion(breakpoint.chr, breakpoint.start, breakpoint.end, STRAND.POS))
+    pos_overlapping_transcripts.extend(temp)
+
+    temp = []
+    # before the first?
+    if len(neg_intervals) > 0:
+        first = neg_intervals[0]
+        last = neg_intervals[-1]
+        if breakpoint < first:
+            temp.append(IntergenicRegion(breakpoint.chr, breakpoint[0], first[0] - 1, STRAND.NEG))
+        if breakpoint[1] > last[1]:
+            temp.append(IntergenicRegion(breakpoint.chr, last[1] + 1, breakpoint[1], STRAND.NEG))
+
+        for i, curr in enumerate(neg_intervals):
+            if i > 0:
+                prev = neg_intervals[i - 1]
+                try:
+                    temp.append(IntergenicRegion(breakpoint.chr, prev[1] + 1, curr[0] - 1, STRAND.NEG))
+                except AttributeError:
+                    pass
+    else:
+        temp.append(IntergenicRegion(breakpoint.chr, breakpoint.start, breakpoint.end, STRAND.NEG))
+    neg_overlapping_transcripts.extend(temp)
+
+    return sorted(pos_overlapping_transcripts), sorted(neg_overlapping_transcripts)
+
+
+def gather_annotations(ref, bp):  # TODO
+    """
+    Args:
+        ref (Dict[str,List[Gene]]): the list of reference genes hashed by chromosomes
+        breakpoint_pairs (List[BreakpointPair]): breakpoint pairs we wish to annotate as events
+
+    each annotation is defined by the annotations selected at the breakpoints
+    the other annotations are given relative to this
+    the annotation at the breakpoint can be a transcript or an intergenic region
+
+    """
+    annotations = []
+
+    break1_pos, break1_neg = gather_breakpoint_annotations(ref, bp.break1)
+    break2_pos, break2_neg = gather_breakpoint_annotations(ref, bp.break2)
+    
+    combinations = []
+
+    if bp.stranded:
+        if bp.break1.strand == STRAND.POS:
+            if bp.break1.strand == STRAND.POS:
+                combinations.extend(itertools.product(break1_pos, break2_pos))
+            else:
+                combinations.extend(itertools.product(break1_pos, break2_neg))
+        else:
+            if bp.break1.strand == STRAND.POS:
+                combinations.extend(itertools.product(break1_neg, break2_pos))
+            else:
+                combinations.extend(itertools.product(break1_neg, break2_neg))
+    else:
+        if bp.opposing_strands:
+            combinations.extend(itertools.product(break1_pos, break2_neg))
+            combinations.extend(itertools.product(break1_neg, break2_pos))
+        else:
+            combinations.extend(itertools.product(break1_pos, break2_pos))
+            combinations.extend(itertools.product(break1_neg, break2_neg))
+
+    for a1, a2 in combinations:
+        b1_itvl = bp.break1 & a1
+        b2_itvl = bp.break2 & a2
+        bpp = BreakpointPair.copy(bp)
+        bpp.break1.start = b1_itvl[0]
+        bpp.break1.end = b1_itvl[1]
+        bpp.break2.start = b2_itvl[0]
+        bpp.break2.end = b2_itvl[1]
+
+        a = Annotation(bpp, a1, a2)
+
+        for gene in ref[bp.break1.chr]:
+            a.add_gene(gene)
+        if bp.interchromosomal:
+            for gene in ref[bp.break2.chr]:
+                a.add_gene(gene)
+        annotations.append(a)
+    return annotations
 
 
 def load_reference_genome(filename):

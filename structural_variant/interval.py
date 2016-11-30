@@ -127,12 +127,11 @@ class Interval:
         return False
 
     def __repr__(self):
-        temp = str(self[0])
-        if self[1] != self[0]:
-            temp += '-' + str(self[1])
+        cls = self.__class__.__name__
         if self.freq != 1:
-            temp += 'x' + str(self.freq)
-        return self.__class__.__name__ + '(' + temp + ')'
+            return '{}({}, {}, freq={})'.format(cls, self.start, self.end, self.freq)
+        else:
+            return '{}({}, {})'.format(cls, self.start, self.end)
 
     @property
     def center(self):
@@ -367,15 +366,19 @@ class Interval:
     def min_nonoverlapping(cls, *intervals):
         """
         for a list of intervals, orders them and merges any overlap to return a list of non-overlapping intervals
-        O(n^2)
+        O(nlogn)
+
+        Example:
+            >>> Interval.min_nonoverlapping((1, 10), (7, 8), (6, 14), (17, 20))
+            [Interval(1, 14), Interval(17, 20)]
         """
         if len(intervals) == 0:
             return []
-        intervals = sorted(intervals)
-        new_intervals = [intervals[0]]
+        intervals = sorted(list(intervals))
+        new_intervals = [Interval(intervals[0][0], intervals[0][1])]
         for i in intervals[1:]:
             if Interval.overlaps(new_intervals[-1], i):
                 new_intervals[-1] = new_intervals[-1] | i
             else:
-                new_intervals.append(i)
+                new_intervals.append(Interval(i[0], i[1]))
         return new_intervals

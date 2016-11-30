@@ -21,6 +21,7 @@ ORIENT = Vocab(LEFT='L', RIGHT='R', NS='?')
 - NS: orientation is not specified
 """
 setattr(ORIENT, 'expand', lambda x: [ORIENT.LEFT, ORIENT.RIGHT] if x == ORIENT.NS else [x])
+setattr(ORIENT, 'compare', lambda x, y: True if ORIENT.NS in [x, y] else (x == y))
 
 PROTOCOL = Vocab(GENOME='genome', TRANS='transcriptome')
 """Vocab: holds controlled vocabulary for allowed protocol values
@@ -37,6 +38,7 @@ STRAND = Vocab(POS='+', NEG='-', NS='?')
 - NS: strand is not specified
 """
 setattr(STRAND, 'expand', lambda x: [STRAND.POS, STRAND.NEG] if x == STRAND.NS else [x])
+setattr(STRAND, 'compare', lambda x, y: True if STRAND.NS in [x, y] else (x == y))
 
 SVTYPE = Vocab(
     DEL='deletion',
