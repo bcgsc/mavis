@@ -869,102 +869,91 @@ class Evidence:
             raise AttributeError('don\'t need to call by flanking reads')
         elif first_breakpoint is None and second_breakpoint is None:
             call_method = CALL_METHOD.FLANK
+        
+        cover1 = None if len(first_positions) == 0 else Interval(min(first_positions), max(first_positions))
+        cover2 = None if len(second_positions) == 0 else Interval(min(second_positions), max(second_positions))
+        
+        if cover1 and cover2 and Interval.overlaps(cover1, cover2):
+            raise UserWarning(
+                'cannot resolve by flanking reads, flanking read coverage overlaps at the breakpoint',
+                cover1, cover2)
+        elif cover1 is None and cover2 is None:
+            raise UserWarning('unable to call by flanking reads, insufficient flanking reads available')
+        
+        print('cover1', cover1, 'cover2', cover2)
+        print('max_insert', max_insert)
 
         if first_breakpoint is None:
-            if len(first_positions) == 0:
-                raise UserWarning('no flanking reads available')
-            coveri = Interval(min(first_positions), max(first_positions))
-            shift = 0 if len(coveri) <= ev.settings.read_length else len(coveri) - ev.settings.read_length
+            if cover1 is None:
+                raise UserWarning('no flanking reads available to call this breakpoint')
+            shift = 0 if len(cover1) <= ev.settings.read_length else len(cover1) - ev.settings.read_length
 
             if ev.break1.orient == ORIENT.LEFT:
-                if len(second_positions) == 0 or ev.breakpoint_pair.interchromosomal:
+                if cover2 is None or ev.breakpoint_pair.interchromosomal:
                     first_breakpoint = Breakpoint(
                         ev.break1.chr,
-                        coveri.end,
-                        coveri.start + max_insert - shift,
+                        cover1.end + 1,
+                        cover1.end + 1 + max_insert - shift,
                         orient=ev.break1.orient,
                         strand=ev.break1.strand
                     )
-                elif min(second_positions) - 1 < coveri.end:
+                elif cover2.start - 1 < cover1.end + 1:
                     raise AssertionError(
                         'flanking coverage interval for the second breakpoint is ahead of the first')
                 else:
                     first_breakpoint = Breakpoint(
                         ev.break1.chr,
-                        coveri.end,
-                        min(coveri.start + max_insert - shift, min(second_positions) - 1),
+                        cover1.end + 1,
+                        min([cover1.end + 1 + max_insert - shift, cover2.start - 1]),
                         orient=ev.break1.orient,
                         strand=ev.break1.strand
                     )
             elif ev.break1.orient == ORIENT.RIGHT:
-                if len(second_positions) == 0 or ev.breakpoint_pair.interchromosomal:
-                    first_breakpoint = Breakpoint(
-                        ev.break1.chr,
-                        s - max_insert + shift,
-                        t,
-                        orient=ev.break1.orient,
-                        strand=ev.break1.strand
-                    )
-                elif max(second_positions) + 1 > coveri.end:
-                    raise AssertionError(
-                        'flanking coverage interval for the second breakpoint is ahead of the first')
-                else:
-                    first_breakpoint = Breakpoint(
-                        ev.break1.chr,
-                        max(coveri.start - max_insert + shift, max(second_positions) + 1),
-                        coveri.end,
-                        orient=ev.break1.orient,
-                        strand=ev.break1.strand
-                    )
+                first_breakpoint = Breakpoint(
+                    ev.break1.chr,
+                    max([cover1.start - 1 - max_insert + shift, 0]),
+                    max([cover1.start - 1, 0]),
+                    orient=ev.break1.orient,
+                    strand=ev.break1.strand
+                )
             else:
                 raise AttributeError('cannot call by flanking if orientation was not given')
-
+        print('first_breakpoint', first_breakpoint)
         if second_breakpoint is None:
-            if len(second_positions) == 0:
+            if cover2 is None:
                 raise UserWarning('no flanking reads available')
-            coveri = Interval(min(second_positions), max(second_positions))
-            shift = 0 if len(coveri) <= ev.settings.read_length else len(coveri) - ev.settings.read_length
+            shift = 0 if len(cover2) <= ev.settings.read_length else len(cover2) - ev.settings.read_length
 
-            if ev.break1.orient == ORIENT.LEFT:
-                if len(first_positions) == 0 or ev.breakpoint_pair.interchromosomal:
+            if ev.break2.orient == ORIENT.LEFT:
+                second_breakpoint = Breakpoint(
+                    ev.break1.chr,
+                    cover2.end + 1,
+                    cover2.end + 1 + max_insert - shift,
+                    orient=ev.break1.orient,
+                    strand=ev.break1.strand
+                )
+            elif ev.break2.orient == ORIENT.RIGHT:
+                if cover1 is None or ev.breakpoint_pair.interchromosomal:
                     second_breakpoint = Breakpoint(
                         ev.break1.chr,
-                        coveri.end,
-                        coveri.start + max_insert - shift,
+                        max([cover2.start - 1 - max_insert + shift, 0]),
+                        max([cover2.start - 1, 0]),
                         orient=ev.break1.orient,
                         strand=ev.break1.strand
                     )
-                elif max(first_positions) + 1 > coveri.start + max_insert - shift:
+                elif cover1.end + 1 > cover2.start - 1:
                     raise AssertionError(
                         'flanking coverage interval for the second breakpoint is ahead of the first')
                 else:
                     second_breakpoint = Breakpoint(
                         ev.break1.chr,
-                        coveri.end,
-                        coveri.start + max_insert - shift,
+                        max([cover2.start - 1 - max_insert + shift, cover1.end + 1]),
+                        cover2.start - 1,
                         orient=ev.break1.orient,
                         strand=ev.break1.strand
                     )
-            elif ev.break1.orient == ORIENT.RIGHT:
-                if len(first_positions) == 0 or ev.breakpoint_pair.interchromosomal:
-                    second_breakpoint = Breakpoint(
-                        ev.break1.chr,
-                        coveri.start - max_insert + shift,
-                        coveri.end,
-                        orient=ev.break1.orient,
-                        strand=ev.break1.strand
-                    )
-                elif max(first_positions) + 1 > coveri.start + max_insert - shift:
-                    raise AssertionError(
-                        'flanking coverage interval for the second breakpoint is ahead of the first')
             else:
                 raise AttributeError('cannot call by flanking if orientation was not given')
-
-        if not ev.breakpoint_pair.interchromosomal:
-                if bp.end <= first_breakpoint.end:
-                    raise UserWarning('invalid position, interval for first breakpoint must be before the second')
-                elif bp.start <= first_breakpoint.end:
-                    bp.start = first_breakpoint.end + 1
 
         bpp = ev.breakpoint_pair.copy()
         bpp.break1 = first_breakpoint

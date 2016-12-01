@@ -18,19 +18,75 @@ def setUpModule():
 
 class TestEvidence(unittest.TestCase):
 
-    def test__call_by_flanking_reads(self):
+    def test__call_by_flanking_reads_intra(self):
         ev = Evidence(
             BreakpointPair(
                 Breakpoint('fake', 100, orient=ORIENT.LEFT),
                 Breakpoint('fake', 500, orient=ORIENT.RIGHT),
                 opposing_strands=False
             ),
-            None, None
+            None, None,
+            read_length=40,
+            stdev_isize=25,
+            median_insert_size=100,
+            stdev_count_abnormal=2
         )
         ev.flanking_reads[0].add(MockRead(reference_start=20, reference_end=60, next_reference_start=600))
         ev.flanking_reads[0].add(MockRead(reference_start=40, reference_end=80, next_reference_start=650))
-        bpp = Evidence._call_by_flanking_reads(ev, SVTYPE.DEL)
+        event = Evidence._call_by_flanking_reads(ev, SVTYPE.DEL)
+        self.assertEqual(81, event.breakpoint_pair.break1.start)
+        self.assertEqual(210, event.breakpoint_pair.break1.end)
+        self.assertEqual(460, event.breakpoint_pair.break2.start)
+        self.assertEqual(599, event.breakpoint_pair.break2.end)
+    
+    def test__call_by_flanking_reads_intra_tighten_on_overlap(self):
+        # this test is for ensuring that if a theoretical window calculated for the
+        # first breakpoint overlaps the actual coverage for the second breakpoint (or the reverse)
+        # that we adjust the theoretical window accordingly
+        ev = Evidence(
+            BreakpointPair(
+                Breakpoint('fake', 100, orient=ORIENT.LEFT),
+                Breakpoint('fake', 200, orient=ORIENT.RIGHT),
+                opposing_strands=False
+            ),
+            None, None,
+            read_length=40,
+            stdev_isize=25,
+            median_insert_size=100,
+            stdev_count_abnormal=2
+        )
+        ev.flanking_reads[0].add(MockRead(reference_start=20, reference_end=60, next_reference_start=150))
+        ev.flanking_reads[0].add(MockRead(reference_start=40, reference_end=80, next_reference_start=200))
+        event = Evidence._call_by_flanking_reads(ev, SVTYPE.DEL)
+        self.assertEqual(81, event.breakpoint_pair.break1.start)
+        self.assertEqual(149, event.breakpoint_pair.break1.end)
+        self.assertEqual(81, event.breakpoint_pair.break2.start)
+        self.assertEqual(149, event.breakpoint_pair.break2.end)
+    
+    def test__call_by_flanking_reads_close_to_zero(self):
+        # this test is for ensuring that if a theoretical window calculated for the
+        # first breakpoint overlaps the actual coverage for the second breakpoint (or the reverse)
+        # that we adjust the theoretical window accordingly
+        ev = Evidence(
+            BreakpointPair(
+                Breakpoint('fake', 100, orient=ORIENT.RIGHT),
+                Breakpoint('fake', 500, orient=ORIENT.RIGHT),
+                opposing_strands=True
+            ),
+            None, None,
+            read_length=40,
+            stdev_isize=25,
+            median_insert_size=100,
+            stdev_count_abnormal=2
+        )
+        ev.flanking_reads[0].add(MockRead(reference_start=20, reference_end=60, next_reference_start=150))
+        ev.flanking_reads[0].add(MockRead(reference_start=40, reference_end=80, next_reference_start=200))
+        event = Evidence._call_by_flanking_reads(ev, SVTYPE.DEL)
 
+        self.assertEqual(0, event.breakpoint_pair.break1.start)
+        self.assertEqual(19, event.breakpoint_pair.break1.end)
+        self.assertEqual(81, event.breakpoint_pair.break2.start)
+        self.assertEqual(149, event.breakpoint_pair.break2.end)
 
     def test_generate_window_orient_ns(self):
         b = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.NS)
