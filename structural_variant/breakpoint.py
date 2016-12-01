@@ -16,7 +16,7 @@ class Breakpoint(Interval):
     def key(self):
         return (self.chr, self.start, self.end, self.orient, self.strand)
 
-    def __init__(self, chr, start, end=None, strand=STRAND.NS, orient=ORIENT.NS, seq=None):
+    def __init__(self, chr, start, end=None, orient=ORIENT.NS, strand=STRAND.NS, seq=None):
         """
         Args:
             chr (str): the chromosome
@@ -58,7 +58,7 @@ class BreakpointPair:
         elif index == 1:
             return self.break2
         raise IndexError('index input accessor is out of bounds: 1 or 2 only', index)
-    
+
     def __hash__(self):
         return hash(self.key)
 

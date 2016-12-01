@@ -1,4 +1,4 @@
-from structural_variant.breakpoint import Breakpoint
+from structural_variant.breakpoint import Breakpoint, BreakpointPair
 from structural_variant.validate import *
 from structural_variant.annotate import load_reference_genome, Gene, Transcript
 from structural_variant.constants import ORIENT, READ_PAIR_TYPE
@@ -17,6 +17,20 @@ def setUpModule():
 
 
 class TestEvidence(unittest.TestCase):
+
+    def test__call_by_flanking_reads(self):
+        ev = Evidence(
+            BreakpointPair(
+                Breakpoint('fake', 100, orient=ORIENT.LEFT),
+                Breakpoint('fake', 500, orient=ORIENT.RIGHT),
+                opposing_strands=False
+            ),
+            None, None
+        )
+        ev.flanking_reads[0].add(MockRead(reference_start=20, reference_end=60, next_reference_start=600))
+        ev.flanking_reads[0].add(MockRead(reference_start=40, reference_end=80, next_reference_start=650))
+        bpp = Evidence._call_by_flanking_reads(ev, SVTYPE.DEL)
+
 
     def test_generate_window_orient_ns(self):
         b = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.NS)

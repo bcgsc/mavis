@@ -32,7 +32,7 @@ class TestBreakpoint(unittest.TestCase):
         temp.add(c)
         temp.add(d)
         self.assertEqual(2, len(temp))
-        
+
         temp = dict()
         temp[b] = None
         temp[c] = None
@@ -65,7 +65,7 @@ class TestBreakpoint(unittest.TestCase):
 
 
 class TestBreakpointPair(unittest.TestCase):
-    
+
     def test___eq__(self):
         b = BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 3), opposing_strands=True)
         c = BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 3), opposing_strands=True)
@@ -119,8 +119,8 @@ class TestBreakpointPair(unittest.TestCase):
             BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 2), stranded=True, opposing_strands=True)
 
     def test___get_item__(self):
-        bp1 = Breakpoint(1, 1, 2, STRAND.NS, ORIENT.LEFT)
-        bp2 = Breakpoint(2, 1, 2, STRAND.NS, ORIENT.LEFT)
+        bp1 = Breakpoint(1, 1, 2, ORIENT.LEFT)
+        bp2 = Breakpoint(2, 1, 2, ORIENT.LEFT)
         bpp = BreakpointPair(bp1, bp2, opposing_strands=True)
         self.assertEqual(bpp[0], bp1)
         self.assertEqual(bpp[1], bp2)
@@ -130,12 +130,12 @@ class TestBreakpointPair(unittest.TestCase):
             bpp[2]
 
     def test_interchromosomal(self):
-        bp1 = Breakpoint(1, 1, 2, STRAND.NS, ORIENT.LEFT)
-        bp2 = Breakpoint(2, 1, 2, STRAND.NS, ORIENT.LEFT)
+        bp1 = Breakpoint(1, 1, 2, ORIENT.LEFT)
+        bp2 = Breakpoint(2, 1, 2, ORIENT.LEFT)
         bpp = BreakpointPair(bp1, bp2, opposing_strands=True)
         self.assertTrue(bpp.interchromosomal)
-        bp1 = Breakpoint(1, 1, 2, STRAND.NS, ORIENT.LEFT)
-        bp2 = Breakpoint(1, 7, 8, STRAND.NS, ORIENT.LEFT)
+        bp1 = Breakpoint(1, 1, 2, ORIENT.LEFT)
+        bp2 = Breakpoint(1, 7, 8, ORIENT.LEFT)
         bpp = BreakpointPair(bp1, bp2, opposing_strands=True)
         self.assertFalse(bpp.interchromosomal)
 
@@ -184,31 +184,31 @@ class TestBreakpointPair(unittest.TestCase):
     def test___init__invalid_inter_RL_opp(self):
         with self.assertRaises(InvalidRearrangement):
             b = BreakpointPair(
-                Breakpoint(1, 1, 2, STRAND.NS, ORIENT.RIGHT),
-                Breakpoint(2, 1, 2, STRAND.NS, ORIENT.LEFT),
+                Breakpoint(1, 1, 2, ORIENT.RIGHT),
+                Breakpoint(2, 1, 2, ORIENT.LEFT),
                 opposing_strands=True
             )
 
     def test___init__invalid_inter_LR_opp(self):
         with self.assertRaises(InvalidRearrangement):
             b = BreakpointPair(
-                Breakpoint(1, 1, 2, STRAND.NS, ORIENT.LEFT),
-                Breakpoint(2, 1, 2, STRAND.NS, ORIENT.RIGHT),
+                Breakpoint(1, 1, 2, ORIENT.LEFT),
+                Breakpoint(2, 1, 2, ORIENT.RIGHT),
                 opposing_strands=True
             )
 
     def test_classify_inverted_translocation(self):
         b = BreakpointPair(
-            Breakpoint(1, 1, 2, STRAND.NS, ORIENT.LEFT),
-            Breakpoint(2, 1, 2, STRAND.NS, ORIENT.LEFT),
+            Breakpoint(1, 1, 2, ORIENT.LEFT),
+            Breakpoint(2, 1, 2, ORIENT.LEFT),
             opposing_strands=True
         )
         BreakpointPair.classify(b)
 
     def test_classify_translocation(self):
         b = BreakpointPair(
-            Breakpoint(1, 1, 2, STRAND.NS, ORIENT.RIGHT),
-            Breakpoint(2, 1, 2, STRAND.NS, ORIENT.LEFT),
+            Breakpoint(1, 1, 2, ORIENT.RIGHT),
+            Breakpoint(2, 1, 2, ORIENT.LEFT),
             opposing_strands=False
         )
         BreakpointPair.classify(b)

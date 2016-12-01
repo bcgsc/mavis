@@ -8,8 +8,8 @@ import unittest
 class TestIntervalPair(unittest.TestCase):
     def test_sets(self):
         i = Interval(1, 3)
-        h = Interval(1, 3)
-        s = set([IntervalPair(i, i, 1), IntervalPair(h, h, 1), IntervalPair(i, i, 2)])
+        h = Interval(1, 4)
+        s = set([IntervalPair(i, i), IntervalPair(h, h), IntervalPair(i, i)])
         self.assertEqual(2, len(s))
 
     def test_weighted_mean(self):
