@@ -415,7 +415,9 @@ def main():
         'linking_split_reads',
         'untemplated_sequence',
         'break1_homologous_sequence',
-        'break2_homologous_sequence'
+        'break2_homologous_sequence',
+        'break1_evidence_window',
+        'break2_evidence_window'
     ]
     with open(OUTPUT_FILE, 'w') as fh:
         fh.write('#' + '\t'.join(header) + '\n')
@@ -459,7 +461,9 @@ def main():
                 'linking_split_reads': link_count,
                 'untemplated_sequence': None,
                 'break1_homologous_sequence': b1_homseq,
-                'break2_homologous_sequence': b2_homseq
+                'break2_homologous_sequence': b2_homseq,
+                'break1_evidence_window': '{}-{}'.format(*ec.evidence.window1),
+                'break2_evidence_window': '{}-{}'.format(*ec.evidence.window2)
             }
             if ec.contig:
                 row['contig_sequence'] = ec.contig.seq

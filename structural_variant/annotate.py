@@ -450,6 +450,8 @@ def load_reference_genes(filepath):
         Dict[str,List[Gene]]: a dictionary keyed by chromosome name with values of list of genes on the chromosome
     """
     def parse_exon_list(row):
+        if not row:
+            return []
         exons = []
         for temp in row.split(';'):
             try:
@@ -460,6 +462,8 @@ def load_reference_genes(filepath):
         return exons
 
     def parse_domain_list(row):
+        if not row:
+            return []
         domains = []
         for d in row.split(';'):
             try:
@@ -469,7 +473,7 @@ def load_reference_genes(filepath):
                 temp = [(int(x), int(y)) for x, y in temp]
                 d = Domain(name, temp)
             except:
-                print('error in d:', d, row)
+                print('error in domain:', d, row)
         return domains
 
     def nullable_int(row):
@@ -494,13 +498,13 @@ def load_reference_genes(filepath):
             'ensembl_transcript_id'
         ],
         add={
-            'cdna_coding_start': '',
-            'cdna_coding_end': '',
+            'cdna_coding_start': 'null',
+            'cdna_coding_end': 'null',
             'AA_domain_ranges': '',
             'genomic_exon_ranges': '',
             'hugo_names': '',
-            'transcript_genomic_start': '',
-            'transcript_genomic_end': ''
+            'transcript_genomic_start': 'null',
+            'transcript_genomic_end': 'null'
         },
         cast={
             'genomic_exon_ranges': parse_exon_list,

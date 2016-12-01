@@ -31,10 +31,10 @@ def histogram_median(hist):
     if len(values) % 2 == 0:
         m = len(values) // 2
         n = len(values) // 2 + 1
-        return (values[m] + values[n]) / 2
+        return (values[m - 1] + values[n - 1]) / 2
     else:
         m = len(values) // 2 + 1
-        return values[m]
+        return values[m - 1]
 
 
 def histogram_stderr(hist, median):

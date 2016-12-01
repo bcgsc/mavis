@@ -130,3 +130,6 @@ PHASE = Vocab(FIRST=0, SECOND=1, LAST=2, NA=-1)
 FLAGS = Vocab(LQ='LOWQUAL')
 
 READ_PAIR_TYPE = Vocab(RR='RR', LL='LL', RL='RL', LR='LR')
+
+
+CALL_METHOD = Vocab(CONTIG='contig', SPLIT='split reads', FLANK='flanking reads', MIXED='split and flanking')

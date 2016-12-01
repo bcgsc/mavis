@@ -14,9 +14,6 @@ from functools import partial
 import math
 
 
-CALL_METHOD = Vocab(CONTIG='contig', SPLIT='split reads', FLANK='flanking reads', MIXED='split and flanking')
-
-
 class EventCall:
     """
     class for holding evidence and the related calls since we can't freeze the evidence object
@@ -93,14 +90,20 @@ class EventCall:
         support2 = set()
 
         for read in self.evidence.split_reads[0]:
-            bpos = breakpoint_pos(read, self.breakpoint_pair.break1.orient)
-            if Interval.overlaps((bpos, bpos), self.breakpoint_pair.break1):
-                support1.add(read)
+            try:
+                bpos = breakpoint_pos(read, self.breakpoint_pair.break1.orient)
+                if Interval.overlaps((bpos, bpos), self.breakpoint_pair.break1):
+                    support1.add(read)
+            except AttributeError:
+                pass
 
         for read in self.evidence.split_reads[1]:
-            bpos = breakpoint_pos(read, self.breakpoint_pair.break2.orient)
-            if Interval.overlaps((bpos, bpos), self.breakpoint_pair.break2):
-                support2.add(read)
+            try:
+                bpos = breakpoint_pos(read, self.breakpoint_pair.break2.orient)
+                if Interval.overlaps((bpos, bpos), self.breakpoint_pair.break2):
+                    support2.add(read)
+            except AttributeError:
+                pass
 
         links = 0
         query2_names = set([r.query_name for r in support2])
@@ -848,29 +851,17 @@ class Evidence:
         second_positions = set()
 
         intrachromosomal = (ev.break1.chr == ev.break2.chr)
-
+        print('_call_by_flanking_reads', ev, classification, first_breakpoint, second_breakpoint)
         for read in ev.flanking_reads[0]:
-            s = read.reference_start
-            if read.cigar[0][0] == CIGAR.S:
-                s -= read.cigar[0][1]
-            t = read.reference_end - 1
-            if read.cigar[-1][0] == CIGAR.S:
-                t += read.cigar[-1][1]
-            first_positions.add(s)
-            first_positions.add(t)
+            first_positions.add(read.reference_start)
+            first_positions.add(read.reference_end)
             second_positions.add(read.next_reference_start)
-
+        
         for read in ev.flanking_reads[1]:
-            s = read.reference_start
-            if read.cigar[0][0] == CIGAR.S:
-                s -= read.cigar[0][1]
-            t = read.reference_end - 1
-            if read.cigar[-1][0] == CIGAR.S:
-                t += read.cigar[-1][1]
-            second_positions.add(s)
-            second_positions.add(t)
+            second_positions.add(read.reference_start)
+            second_positions.add(read.reference_end - 1)
             first_positions.add(read.next_reference_start)
-
+        
         max_insert = ev.settings.median_insert_size + ev.settings.stdev_count_abnormal * ev.settings.stdev_isize
         call_method = CALL_METHOD.MIXED
 
@@ -882,40 +873,92 @@ class Evidence:
         if first_breakpoint is None:
             if len(first_positions) == 0:
                 raise UserWarning('no flanking reads available')
-            s = min(first_positions)
-            t = max(first_positions)
-            bp = sys_copy(ev.breakpoint_pair.break1)
+            coveri = Interval(min(first_positions), max(first_positions))
+            shift = 0 if len(coveri) <= ev.settings.read_length else len(coveri) - ev.settings.read_length
+
             if ev.break1.orient == ORIENT.LEFT:
-                bp.start = t
-                bp.end = s + max_insert
+                if len(second_positions) == 0 or ev.breakpoint_pair.interchromosomal:
+                    first_breakpoint = Breakpoint(
+                        ev.break1.chr,
+                        coveri.end,
+                        coveri.start + max_insert - shift,
+                        orient=ev.break1.orient,
+                        strand=ev.break1.strand
+                    )
+                elif min(second_positions) - 1 < coveri.end:
+                    raise AssertionError(
+                        'flanking coverage interval for the second breakpoint is ahead of the first',
+                        min(second_positions), coveri.end)
+                else:
+                    first_breakpoint = Breakpoint(
+                        ev.break1.chr,
+                        coveri.end,
+                        min(coveri.start + max_insert - shift, min(second_positions) - 1),
+                        orient=ev.break1.orient,
+                        strand=ev.break1.strand
+                    )
             elif ev.break1.orient == ORIENT.RIGHT:
-                bp.start = s - max_insert
-                bp.end = t
+                if len(second_positions) == 0 or ev.breakpoint_pair.interchromosomal:
+                    first_breakpoint = Breakpoint(
+                        ev.break1.chr,
+                        s - max_insert + shift,
+                        t,
+                        orient=ev.break1.orient,
+                        strand=ev.break1.strand
+                    )
+                elif max(second_positions) + 1 > coveri.end:
+                    raise AssertionError(
+                        'flanking coverage interval for the second breakpoint is ahead of the first',
+                        max(second_positions), coveri.end)
+                else:
+                    first_breakpoint = Breakpoint(
+                        ev.break1.chr,
+                        max(coveri.start - max_insert + shift, max(second_positions) + 1),
+                        coveri.end,
+                        orient=ev.break1.orient,
+                        strand=ev.break1.strand
+                    )
             else:
                 raise AttributeError('cannot call by flanking if orientation was not given')
-            first_breakpoint = bp
-            if intrachromosomal:
-                if bp.start >= second_breakpoint.start:
-                    raise UserWarning('invalid position, interval for first breakpoint must be before the second')
-                elif bp.end >= second_breakpoint.start:
-                    bp.end = second_breakpoint.start - 1
-
+        
         if second_breakpoint is None:
             if len(second_positions) == 0:
                 raise UserWarning('no flanking reads available')
-            s = min(second_positions)
-            t = max(second_positions)
-            bp = sys_copy(ev.breakpoint_pair.break2)
-            if ev.break2.orient == ORIENT.LEFT:
-                bp.start = t
-                bp.end = s + max_insert
-            elif ev.break2.orient == ORIENT.RIGHT:
-                bp.start = s - max_insert
-                bp.end = t
-            else:
+            coveri = Interval(min(second_positions), max(second_positions))
+            shift = 0 if len(coveri) <= ev.settings.read_length else len(coveri) - ev.settings.read_length
+
+            if ev.break1.orient == ORIENT.LEFT:
+                if len(first_positions) == 0 or ev.breakpoint_pair.interchromosomal:
+                    second_breakpoint = Breakpoint(
+                        ev.break1.chr,
+                        coveri.end,
+                        s + max_insert - shift,
+                        orient=ev.break1.orient,
+                        strand=ev.break1.strand
+                    )
+                elif max(first_positions) + 1 > x + max_insert - shift:
+                    raise AssertionError(
+                        'flanking coverage interval for the second breakpoint is ahead of the first',
+                        max(first_positions), x + max_insert - shift)
+                else:
+                    second_breakpoint = Breakpoint(
+                        ev.break1.chr,
+                        t,
+                        s + max_insert - shift,
+                        orient=ev.break1.orient,
+                        strand=ev.break1.strand
+                    )
+            elif ev.break1.orient == ORIENT.RIGHT:
+                second_breakpoint = Breakpoint(
+                    ev.break1.chr,
+                    s - max_insert + shift,
+                    t,
+                    orient=ev.break1.orient,
+                    strand=ev.break1.strand
+                )
                 raise AttributeError('cannot call by flanking if orientation was not given')
-            second_breakpoint = bp
-            if intrachromosomal:
+        
+        if not ev.breakpoint_pair.interchromosomal:
                 if bp.end <= first_breakpoint.end:
                     raise UserWarning('invalid position, interval for first breakpoint must be before the second')
                 elif bp.start <= first_breakpoint.end:
@@ -1009,6 +1052,10 @@ class Evidence:
                         linked_pairings.append(temp)
                     except UserWarning:
                         pass
+
+                if len(linked_pairings) == 0:  # call by flanking only
+                    temp = Evidence._call_by_flanking_reads(ev, classification)
+                    linked_pairings.append(temp)
         return linked_pairings
 
     def load_evidence(self, grab_unmapped_partners=True):

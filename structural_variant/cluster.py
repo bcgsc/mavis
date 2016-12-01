@@ -13,20 +13,20 @@ import warnings
 class IntervalPair:
     """
     """
-    def __init__(self, start, end, id=None):
+    def __init__(self, start, end, **kwargs):
         """
         Args:
             start (Interval): the first interval
             end (Interval): the second interval
             id (int, default=None): label for distinguishing between IntervalPairs
         """
-        self.id = id
+        self.data = kwargs
         self.start = start if isinstance(start, Interval) else Interval(start[0], start[1])
         self.end = end if isinstance(end, Interval) else Interval(end[0], end[1])
 
     def __eq__(self, other):
-        if not hasattr(other, 'start') or not hasattr(other, 'end') or not hasattr(other, 'id') \
-                or self.start != other.start or self.end != other.end or self.id != other.id:
+        if not hasattr(other, 'start') or not hasattr(other, 'end') \
+                or self.start != other.start or self.end != other.end:
             return False
         return True
 
@@ -38,7 +38,7 @@ class IntervalPair:
         return False
 
     def __hash__(self):
-        return hash((self.start, self.end, self.id))
+        return hash((self.start, self.end))
 
     @classmethod
     def weighted_mean(cls, *interval_pairs):
@@ -69,7 +69,7 @@ class IntervalPair:
         return d
 
     def __repr__(self):
-        return '{}<{}, {}, id={}>'.format(self.__class__.__name__, self.start, self.end, self.id)
+        return '{}<{}, {}, data={}>'.format(self.__class__.__name__, self.start, self.end, self.data)
 
     @classmethod
     def _redundant_maximal_kcliques(cls, G, k=10):
@@ -224,37 +224,45 @@ def cluster_breakpoint_pairs(input_pairs, r, k):
     #   # stop when no clusters improve/change or we hit a maximum number of iterations
     # classify the breakpoints.... by the possible pairs they could support
     # (explicit only)
-
+    input_pairs = list(input_pairs)
     node_sets = {}
+    input_mapping = {}  # new node to input index
 
     for index, bpp in enumerate(input_pairs):
         added = False
-        for chr1, chr2, o1, o2, s1, s2 in itertools.product(
-                [bpp.break1.chr],
-                [bpp.break2.chr],
+        for o1, o2 in itertools.product(
                 ORIENT.expand(bpp.break1.orient),
                 ORIENT.expand(bpp.break2.orient),
-                [bpp.break1.strand],
-                [bpp.break2.strand]
         ):
             try:
-                b1 = Breakpoint(chr1, bpp.break1.start, bpp.break1.end, s1, o1)
-                b2 = Breakpoint(chr2, bpp.break2.start, bpp.break2.end, s2, o2)
-                BreakpointPair(b1, b2, opposing_strands=bpp.opposing_strands)
+                temp = BreakpointPair.copy(bpp)
+                bpp.break1.orient = o1
+                bpp.break2.orient = o2
+                BreakpointPair.classify(bpp)  # will throw error if invalid combination
+                b1 = Interval(bpp.break1.start, bpp.break1.end)
+                b2 = Interval(bpp.break2.start, bpp.break2.end)
+                new_bpp = IntervalPair(b1, b2)
+                classification_key = (
+                    bpp.break1.chr, bpp.break2.chr,
+                    o1, o2,
+                    bpp.break1.strand,
+                    bpp.break2.strand,
+                    bpp.opposing_strands,
+                    bpp.stranded,
+                    bpp.untemplated_sequence
+                )
+                node_sets.setdefault(classification_key, set()).add(new_bpp)
+                input_mapping.setdefault(new_bpp, set()).add(index)
+                added = True
             except InvalidRearrangement:
-                continue
-            b1 = Interval(bpp.break1.start, bpp.break1.end)
-            b2 = Interval(bpp.break2.start, bpp.break2.end)
-            new_bpp = IntervalPair(b1, b2, index)
-            added = True
-            classification_key = chr1, chr2, o1, o2, s1, s2, bpp.opposing_strands
-            node_sets.setdefault(classification_key, set()).add(new_bpp)
+                pass
         if not added:
             raise AssertionError('error. did not add to clustering', bpp)
 
     result = {}
-    for ckey, group in node_sets.items():
-        chr1, chr2, o1, o2, s1, s2, opposing_strands = ckey
+    for ckey, group in sorted(node_sets.items()):
+        chr1, chr2, o1, o2, s1, s2, opposing_strands, stranded, seq = ckey
+        print('clustering subgroup', ckey)
         clusters = IntervalPair.cluster(group, r, k)
 
         for node in group:
@@ -265,17 +273,27 @@ def cluster_breakpoint_pairs(input_pairs, r, k):
                 raise AssertionError('error: dropped input pair did not complete clustering', node)
         for c in clusters:
             ip = IntervalPair.weighted_mean(*c)
-            b1 = Breakpoint(chr1, ip.start[0], ip.start[1], strand=s1, orient=o1)
-            b2 = Breakpoint(chr2, ip.end[0], ip.end[1], strand=s2, orient=o2)
-            bpp = BreakpointPair(b1, b2, opposing_strands=opposing_strands)
-            inputs = [input_pairs[k.id] for k in c]
-            result.setdefault(bpp, set()).update(set(inputs))
-    for inp in input_pairs:
-        found = False
-        for bpp, group in result.items():
-            if inp in group:
-                found = True
-                break
-        if not found:
-            raise AssertionError('lost in clustering:', inp)
+            # create the new breakpoint pair that represents the cluster
+            bpp = BreakpointPair(
+                Breakpoint(chr1, ip.start[0], ip.start[1], strand=s1, orient=o1),
+                Breakpoint(chr2, ip.end[0], ip.end[1], strand=s2, orient=o2),
+                opposing_strands=opposing_strands,
+                untemplated_sequence=seq,
+                stranded=stranded
+            )
+            # gather the original input pairs using the mapping
+            original_input_pairs = itertools.chain.from_iterable([input_mapping[node] for node in c])
+            result.setdefault(bpp, set()).update(original_input_pairs)
+    
+    all_input_indices = set()
+    for bpp, inputs in result.items():
+        all_input_indices.update(inputs)
+
+    for i in range(0, len(input_pairs)):
+        if i not in all_input_indices:
+            raise AssertionError('input breakpoint pair was not clustered', i, str(input_pairs[i]))
+    
+    for bpp in result:
+        result[bpp] = [input_pairs[i] for i in result[bpp]]
+    
     return result

@@ -22,6 +22,27 @@ class TestBreakpoint(unittest.TestCase):
         self.assertNotEqual(Breakpoint('1', 1), None)
         self.assertEqual(Breakpoint('1', 1), Breakpoint('1', 1))
 
+    def test___hash__(self):
+        b = Breakpoint('1', 1, 2)
+        c = Breakpoint('1', 1, 2)
+        d = Breakpoint('1', 1, 1)
+
+        temp = set()
+        temp.add(b)
+        temp.add(c)
+        temp.add(d)
+        self.assertEqual(2, len(temp))
+        
+        temp = dict()
+        temp[b] = None
+        temp[c] = None
+        temp[d] = None
+        self.assertEqual(2, len(temp.keys()))
+
+    def test___len__(self):
+        with self.assertRaises(AttributeError):
+            Breakpoint('11', 87042760, 87041922, orient=ORIENT.LEFT, strand=STRAND.NS)
+
     def test_inherited_interval_methods(self):
         b = Breakpoint('1', 1, 10)
         self.assertEqual(1, b[0])
@@ -44,6 +65,32 @@ class TestBreakpoint(unittest.TestCase):
 
 
 class TestBreakpointPair(unittest.TestCase):
+    
+    def test___eq__(self):
+        b = BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 3), opposing_strands=True)
+        c = BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 3), opposing_strands=True)
+        self.assertFalse(b is c)
+        self.assertEqual(b, c)
+        d = BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 3), opposing_strands=True, untemplated_sequence='')
+        self.assertNotEqual(b, d)
+        self.assertNotEqual(b, None)
+
+    def test___hash__(self):
+        b = BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 3), opposing_strands=True)
+        c = BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 3), opposing_strands=True)
+        d = BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 3), opposing_strands=True, untemplated_sequence='')
+        self.assertFalse(b is c)
+        temp = dict()
+        temp[b] = None
+        temp[d] = None
+        temp[c] = None
+        self.assertEqual(2, len(temp.keys()))
+
+        temp = set()
+        temp.add(b)
+        temp.add(c)
+        temp.add(d)
+        self.assertEqual(2, len(temp))
 
     def test___init__swap_break_order(self):
         b1 = Breakpoint('1', 1)
@@ -66,6 +113,10 @@ class TestBreakpointPair(unittest.TestCase):
     def test___init__opstrand_not_specified(self):
         with self.assertRaises(AttributeError):
             BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 2))
+
+    def test___init__stranded(self):
+        with self.assertRaises(AttributeError):
+            BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 2), stranded=True, opposing_strands=True)
 
     def test___get_item__(self):
         bp1 = Breakpoint(1, 1, 2, STRAND.NS, ORIENT.LEFT)

@@ -48,6 +48,7 @@ import os
 import errno
 import argparse
 import warnings
+import re
 from datetime import datetime
 from structural_variant.constants import *
 from structural_variant.align import *
@@ -58,7 +59,7 @@ from structural_variant import __version__
 
 __prog__ = os.path.basename(os.path.realpath(__file__))
 
-MAX_JOBS = 50
+MAX_JOBS = 20
 MIN_EVENTS_PER_JOB = 50
 
 TSV._verbose = False
@@ -66,8 +67,16 @@ TSV._verbose = False
 
 def load_input_file(filename):
     """
-    returns sets of breakpoint pairs keyed by (library, protocol, tool)
     """
+    def nullable_boolean(item):
+        try:
+            item = TSV.bool(item)
+        except TypeError:
+            if item == '?':
+                item = 'null'
+            item = TSV.null(item)
+        return item
+
     header, rows = TSV.read_file(
         filename,
         require=[
@@ -83,7 +92,9 @@ def load_input_file(filename):
             'start_pos2': int,
             'end_pos1': int,
             'end_pos2': int,
-            'stranded': TSV.bool
+            'stranded': TSV.bool,
+            'opposing_strands': nullable_boolean,
+            'untemplated_sequence': TSV.null
         },
         _in={
             'start_strand': STRAND,
@@ -94,63 +105,53 @@ def load_input_file(filename):
         },
         validate={
             'tool_version': '^.+_v\d+\.\d+\.\d+$',
-            'libraries': '^[\w-]+(;[\w-]+)*$'
+            'libraries': '^[\w-]+$'
         },
         add={
-            'opposing_strands': '?',
+            'opposing_strands': 'null',
             'start_strand': STRAND.NS,
             'end_strand': STRAND.NS,
-            'stranded': False
+            'stranded': False,
+            'untemplated_sequence': 'null'
         }
     )
-    breakpoints = {}
+    breakpoints = []
 
     for row in rows:
-        for lib, prot, tool in itertools.product(
-                row['libraries'].split(';'), row['protocol'].split(';'), row['tool_version'].split(';')):
-            label = {'library': lib, 'protocol': prot,
-                     'tool_version': tool, 'input_file': filename}
-            
-            opposing_strands = [None]
-            if row['opposing_strands'] == '?':
-                if row['start_strand'] == STRAND.NS or row['end_strand'] == STRAND.NS:
-                    opposing_strands = [True, False]
-            elif row['opposing_strands'].lower() in ['y', 't', 'true', 'yes']:
-                opposing_strands = [True]
-            elif row['opposing_strands'].lower() in ['n', 'f', 'false', 'no']:
-                opposing_strands = [False]
-            key = tuple([k[1] for k in sorted(label.items())])
-            
-            for opp in opposing_strands:
-                key = tuple([k[1] for k in sorted(label.items())])
-                b1 = Breakpoint(
-                    row['start_chromosome'],
-                    row['start_pos1'],
-                    row['start_pos2'],
-                    orient=row['start_orientation'],
-                    strand=row['start_strand'])
-                b2 = Breakpoint(
-                    row['end_chromosome'],
-                    row['end_pos1'],
-                    row['end_pos2'],
-                    orient=row['end_orientation'],
-                    strand=row['end_strand'])
-                try:
-                    flags = [l.upper() for l in row.get('filters', '').split(';')]
-                    if key not in breakpoints:
-                        breakpoints[key] = set()
-                    bpp = BreakpointPair(
-                        b1,
-                        b2,
-                        opposing_strands=opp,
-                        data=label
-                    )
-                    if not row['stranded']:
-                        bpp.break1.strand = STRAND.NS
-                        bpp.break2.strand = STRAND.NS
-                    breakpoints[key].add(bpp)
-                except InvalidRearrangement as e:
-                    warnings.warn(str(e) + '; reading: {}'.format(filename))
+        row['tools'] = set([row['tool_version']])
+        row['files'] = set([filename])
+        opposing_strands = [row['opposing_strands']]
+        if row['opposing_strands'] is None and STRAND.NS in [row['start_strand'], row['end_strand']]:
+            opposing_strands = [True, False]
+
+        for opp in opposing_strands:
+            b1 = Breakpoint(
+                row['start_chromosome'],
+                row['start_pos1'],
+                row['start_pos2'],
+                orient=row['start_orientation'],
+                strand=row['start_strand'])
+            b2 = Breakpoint(
+                row['end_chromosome'],
+                row['end_pos1'],
+                row['end_pos2'],
+                orient=row['end_orientation'],
+                strand=row['end_strand'])
+            try:
+                bpp = BreakpointPair(
+                    b1,
+                    b2,
+                    opposing_strands=opp,
+                    untemplated_sequence=row['untemplated_sequence'],
+                    stranded=row['stranded'],
+                    data=row
+                )
+                if not row['stranded']:
+                    bpp.break1.strand = STRAND.NS
+                    bpp.break2.strand = STRAND.NS
+                breakpoints.append(bpp)
+            except InvalidRearrangement as e:
+                warnings.warn(str(e) + '; reading: {}'.format(filename))
     return breakpoints
 
 
@@ -162,6 +163,19 @@ def mkdirp(dirname):
             pass
         else:
             raise
+
+
+def write_bed_file(filename, cluster_breakpoint_pairs):
+    with open(filename, 'w') as fh:
+        for bpp in cluster_breakpoint_pairs:
+            if bpp.interchromosomal:
+                fh.write('{}\t{}\t{}\tcluster={}\n'.format(
+                    bpp.break1.chr, bpp.break1.start, bpp.break1.end, bpp.data['cluster_id']))
+                fh.write('{}\t{}\t{}\tcluster={}\n'.format(
+                    bpp.break2.chr, bpp.break2.start, bpp.break2.end, bpp.data['cluster_id']))
+            else:
+                fh.write('{}\t{}\t{}\tcluster={}\n'.format(
+                    bpp.break1.chr, bpp.break1.start, bpp.break2.end, bpp.data['cluster_id']))
 
 
 def main():
@@ -220,121 +234,67 @@ def main():
             print('\nerror: input file {0} does not exist'.format(f))
             parser.print_help()
             exit(1)
+    
+    
+    mkdirp(os.path.join(args.output, 'inputs'))
 
-    for l, b in args.bamfile:
-        mkdirp(os.path.join(args.output, 'clustering', l))
-        mkdirp(os.path.join(args.output, 'validation', l))
-    mkdirp(os.path.join(args.output, 'log'))
-
-    pairs = {}
+    breakpoint_pairs = []
 
     for f in args.inputs:
         print('loading:', f)
         temp = load_input_file(f)
-        pairs.update(temp)
+        breakpoint_pairs.extend(temp)
 
-    bpp_by_library = {}
+    print('loaded {} breakpoint pairs'.format(len(breakpoint_pairs)))
 
-    for key, bpp_set in pairs.items():
-        filename, libname, protocol, tool = key
-        if libname not in BAM_FILE_ARGS:
+    # now split by library and protocol
+    bpp_by_libprot = {}
+
+    for bpp in breakpoint_pairs:
+        lib = bpp.data['libraries']
+        protocol = bpp.data['protocol']
+        
+        d = bpp_by_libprot.setdefault((lib, protocol), {})
+        
+        if bpp.key not in d:
+            d[bpp.key] = bpp
+        else:
+            d[bpp.key].data['files'].update(bpp.data['files'])
+            d[bpp.key].data['tools'].update(bpp.data['tools'])
+    
+    clusters_by_libprot = {}
+    cluster_id_prefix = re.sub(' ', '_', str(datetime.now()))
+    cluster_id = 1
+
+    for lib, protocol in bpp_by_libprot:
+        bpps = bpp_by_libprot[(lib, protocol)].values()
+        if lib not in BAM_FILE_ARGS:
+            print(
+                'warning: found breakpoints for library', lib,
+                ', but bam was not given therefore breakpoints will be ignored'
+            )
             continue
-        print('loaded', len(bpp_set), 'breakpoint pairs for', key)
-        if (libname, protocol) not in bpp_by_library:
-            bpp_by_library[(libname, protocol)] = []
-        bpp_by_library[(libname, protocol)].extend(list(bpp_set))
+        # set up directories
+        mkdirp(os.path.join(args.output, 'clustering/{}_{}'.format(lib, protocol)))
+        mkdirp(os.path.join(args.output, 'validation/{}_{}'.format(lib, protocol)))
+        print('computing clusters for', lib, protocol)
+        c = cluster_breakpoint_pairs(bpps, r=args.r, k=args.k)
+        clusters_by_libprot[(lib, protocol)] = c
+        
+        hist = {}
+        for cluster, input_pairs in c.items():
+            hist[len(input_pairs)] = hist.get(len(input_pairs), 0) + 1
+            cluster.data['cluster_id'] = '{}-{}'.format(cluster_id_prefix, cluster_id)
+            temp = set()
+            for p in input_pairs:
+                temp.update(p.data['tools'])
+            cluster.data['tools'] = ';'.join(sorted(list(temp)))
+            cluster_id += 1
 
-    cluster_id = 0
-    cluster_rows_by_lib = {}
+        print('cluster distribution', sorted(hist.items()))
+    
+    
 
-    for l in BAM_FILE_ARGS:
-        cluster_rows_by_lib[l] = []
-
-    temp = os.path.join(args.output, 'log/cluster_assignment.tsv')
-    with open(temp, 'w') as fh:
-        assignment_header = [
-            'cluster_ids',
-            'break1_chromosome',
-            'break1_position_start',
-            'break1_position_end',
-            'break1_orientation',
-            'break1_strand',
-            'break2_chromosome',
-            'break2_position_start',
-            'break2_position_end',
-            'break2_orientation',
-            'break2_strand',
-            'protocol',
-            'library',
-            'tool_version',
-            'input_file',
-        ]
-        fh.write('## {0} v{1} {2}\n'.format(
-            __prog__, __version__, datetime.now()))
-        fh.write(
-            '## this file details the inputs and the cluster ids they were assigned to\n')
-        fh.write('#' + '\t'.join(assignment_header) + '\n')
-        for key, bpp_list in bpp_by_library.items():
-            libname, protocol = key
-            print('for', key, 'there are', len(
-                bpp_list), 'input breakpoint pairs')
-
-            clusters = cluster_breakpoint_pairs(bpp_list, r=args.r, k=args.k)
-            initial_count = len(clusters)
-
-            # filter out the low quality clusters
-            temp = list(clusters.keys())
-            for cluster in temp:  # set the ids of the clusters
-                cluster.data['cluster_id'] = cluster_id
-                cluster_id += 1
-                if len(clusters[cluster]) == 1:
-                    if FLAGS.LQ in list(clusters[cluster])[0].flags:
-                        del clusters[cluster]
-            freq = {}
-            for c, group in clusters.items():
-                freq[len(group)] = freq.get(len(group), 0) + 1
-            print('after clustering there are', len(clusters),
-                  'quality breakpoint pairs and', initial_count, 'total pairs')
-            print('cluster distribution', sorted(freq.items()))
-            # track the inputs to their clusters
-            for bpp in bpp_list:
-                temp = []
-                for c, cset in clusters.items():
-                    if bpp in cset:
-                        temp.append(c.data['cluster_id'])
-                row = {
-                    'cluster_ids': ';'.join(sorted([str(k) for k in temp]))
-                }
-                row.update(BreakpointPair.flatten(bpp))
-                fh.write('\t'.join(str(row[k])
-                                   for k in assignment_header) + '\n')
-
-            for c in clusters:
-                tools = ';'.join(
-                    sorted(list(set([k.data['tool_version'] for k in clusters[c]]))))
-                row = BreakpointPair.flatten(c)
-                row.update({
-                    'cluster_id': c.data['cluster_id'],
-                    'cluster_size': len(clusters[c]),
-                    'protocol': protocol,
-                    'library': libname,
-                    'tools': tools
-                })
-                cluster_rows_by_lib[libname].append(row)
-                # add the reciprocal for translocations and inversions
-                if len(set([SVTYPE.INV, SVTYPE.ITRANS, SVTYPE.TRANS]) & set(BreakpointPair.classify(c))) > 0:
-                    reciprocal = {}
-                    reciprocal.update(row)
-                    if reciprocal['break1_orientation'] == ORIENT.LEFT:
-                        reciprocal['break1_orientation'] = ORIENT.RIGHT
-                    elif reciprocal['break1_orientation'] == ORIENT.RIGHT:
-                        reciprocal['break1_orientation'] = ORIENT.LEFT
-
-                    if reciprocal['break2_orientation'] == ORIENT.LEFT:
-                        reciprocal['break2_orientation'] = ORIENT.RIGHT
-                    elif reciprocal['break2_orientation'] == ORIENT.RIGHT:
-                        reciprocal['break2_orientation'] = ORIENT.LEFT
-                    cluster_rows_by_lib[libname].append(reciprocal)
 
     header = [
         'cluster_id',
@@ -352,90 +312,91 @@ def main():
         'opposing_strands',
         'protocol',
         'library',
+        'untemplated_sequence',
+        'stranded',
         'tools'
     ]
 
-    qsub = open(os.path.join(args.output, 'qsub_all.sh'), 'w')
-    qsub.write(
-        "# script to submit jobs to the cluster\n\n"
-        "# array to hold the job ids so we can create the dependency\n"
-        "VALIDATION_JOBS=()\n"
-    )
-
-    for lib, cluster_rows in cluster_rows_by_lib.items():
-        # decide on the number of clusters to validate per job
-        JOB_SIZE = MIN_EVENTS_PER_JOB
-        if len(cluster_rows) // MIN_EVENTS_PER_JOB > MAX_JOBS - 1:
-            JOB_SIZE = len(cluster_rows) // MAX_JOBS
-
-        print('splitting', len(cluster_rows), 'clusters into', len(
-            cluster_rows) // JOB_SIZE, 'jobs of size', JOB_SIZE)
-        # split the clusters by chromosomes
-        cluster_rows.sort(key=lambda x: (
-            x['break1_chromosome'], x['break2_chromosome']))
-
-        index = 0
-        fileno = 1
-        files = []
-        while index < len(cluster_rows):
-            # generate an output file
-            filename = os.path.abspath(os.path.join(
-                args.output, 'clustering/{0}/{0}-clusterset-{1}.tsv'.format(lib, fileno)))
-            files.append(filename)
-            row_subset = []
-            print('writing:', filename)
-            with open(filename, 'w') as fh:
-                temp = index
-                limit = index + JOB_SIZE
-                fh.write('#' + '\t'.join(header) + '\n')
-                if len(cluster_rows) - limit < MIN_EVENTS_PER_JOB or fileno == MAX_JOBS:
-                    limit = len(cluster_rows)
-                while temp < len(cluster_rows) and temp < limit:
-                    row = [str(cluster_rows[temp][k]) for k in header]
-                    row_subset.append(cluster_rows[temp])
-                    fh.write('\t'.join(row) + '\n')
-                    temp += 1
-            bedfile = os.path.abspath(os.path.join(
-                args.output, 'clustering/{0}/{0}-clusterset-{1}.bed'.format(lib, fileno)))
-            with open(bedfile, 'w') as fh:
-                print('writing:', bedfile)
-                for row in row_subset:
-                    if row['break1_chromosome'] == row['break2_chromosome']:
-                        fh.write('{0}\t{1}\t{2}\t{0}:{1}{3}{4}-{2}{5}{6}\n'.format(
-                            row['break2_chromosome'],
-                            row['break1_position_start'],
-                            row['break2_position_end'],
-                            row['break1_orientation'],
-                            row['break1_strand'],
-                            row['break2_orientation'],
-                            row['break2_strand']
-                        ))
+    # map input pairs to cluster ids
+    # now create the mapping from the original input files to the cluster(s)
+    for lib, protocol in clusters_by_libprot:
+        clusters = clusters_by_libprot[(lib, protocol)]
+        f = os.path.join(args.output, 'clustering/{}_{}_cluster_assignment.tsv'.format(lib, protocol))
+        with open(f, 'w') as fh:
+            print('writing:', f)
+            h = ['clusters'] + [c for c in header if c not in ['cluster_id', 'cluster_size']] + ['files']
+            rows = {}
+            fh.write('#' + '\t'.join(h) + '\n')
+            for cluster, input_pairs in clusters.items():
+                for p in input_pairs:
+                    if p in rows:
+                        rows[p]['tools'].update(p.data['tools'])
                     else:
-                        fh.write('{0}\t{1}\t{2}\t{0}:{1}{3}{4}\n'.format(
-                            row['break1_chromosome'],
-                            row['break1_position_start'],
-                            row['break1_position_end'],
-                            row['break1_orientation'],
-                            row['break1_strand']
-                        ))
-                        fh.write('{0}\t{1}\t{2}\t{0}:{1}{3}{4}\n'.format(
-                            row['break2_chromosome'],
-                            row['break2_position_start'],
-                            row['break2_position_end'],
-                            row['break2_orientation'],
-                            row['break2_strand']
-                        ))
-            index = limit
-            fileno += 1
+                        rows[p] = BreakpointPair.flatten(p)
+                    rows[p].setdefault('clusters', set()).add(cluster.data['cluster_id'])
 
-            output_file = os.path.abspath(os.path.join(args.output, 'validation', lib))
-            qsub.write(
-                'jid=$(qsub -b sv_validate.py -n {0} -o {1} -b {2} -l {3} -N sv_validate -terse)\n'.format(
-                    filename, output_file, BAM_FILE_ARGS[lib], lib) + 'VALIDATION_JOBS+=("$jid")\n'
-            )
-        # now create the qsub scripts
-    # merge the bam files
-    qsub.close()
+            for row in rows.values():
+                row['clusters'] = ';'.join([str(c) for c in sorted(list(row['clusters']))])
+                row['tools'] = ';'.join(sorted(list(row['tools'])))
+                row['library'] = lib
+                row['protocol'] = protocol
+                fh.write('\t'.join([str(row[c]) for c in h]) + '\n')
+
+
+
+    with open(os.path.join(args.output, 'qsub_all.sh'), 'w') as qsub:
+        qsub.write(
+            "# script to submit jobs to the cluster\n\n"
+            "# array to hold the job ids so we can create the dependency\n"
+            "VALIDATION_JOBS=()\n"
+        )
+
+        for lib, protocol in clusters_by_libprot:
+            clusters = clusters_by_libprot[(lib, protocol)]
+            # decide on the number of clusters to validate per job
+            JOB_SIZE = MIN_EVENTS_PER_JOB
+            if len(clusters) // MIN_EVENTS_PER_JOB > MAX_JOBS - 1:
+                JOB_SIZE = len(clusters) // MAX_JOBS
+
+            print('info: splitting', len(clusters), 'clusters into', len(clusters) // JOB_SIZE, 'jobs of size', JOB_SIZE)
+            
+            index = 0
+            fileno = 1
+            files = []
+
+            file_prefix = os.path.join(args.output, 'clustering/{}_{}/clusterset'.format(lib, protocol))
+            
+            bedfile = filename = file_prefix + '.bed'
+            print('writing bed file', bedfile)
+            write_bed_file(bedfile, clusters)
+            
+            rows = [c for c in clusters]
+
+            while index < len(rows):
+                # generate an output file
+                filename = file_prefix + '-{}.tsv'.format(fileno)
+                print('writing:', filename)
+                with open(filename, 'w') as fh:
+                    limit = index + JOB_SIZE
+                    fh.write('#' + '\t'.join(header) + '\n')
+                    if len(rows) - limit < MIN_EVENTS_PER_JOB or fileno == MAX_JOBS:
+                        limit = len(rows)
+
+                    while index < len(rows) and index < limit:
+                        row = BreakpointPair.flatten(rows[index])
+                        row['cluster_size'] = len(clusters[rows[index]])
+                        row['library'] = lib
+                        row['protocol'] = protocol
+                        fh.write('\t'.join([str(row[c]) for c in header]) + '\n')
+                        index += 1
+                fileno += 1
+
+                qsub.write(
+                    'jid=$(qsub -b sv_validate.py -n {0} -o {1} -b {2} -l {3} -N sv_validate -terse)\n'.format(
+                        filename, 
+                        os.path.join(args.output, 'validation', '{}_{}'.format(lib, protocol)), 
+                        BAM_FILE_ARGS[lib], lib) + 'VALIDATION_JOBS+=("$jid")\n'
+                )
 
 if __name__ == '__main__':
     main()

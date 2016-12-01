@@ -134,3 +134,6 @@ class TestAnnotate(unittest.TestCase):
         near, dist = list(first.nearest_gene_break2)[0]
         self.assertEqual(50, dist)
         self.assertEqual(2, len(ann_list[1].encompassed_genes))
+
+    def test_gather_annotations_interchromosomal(self):
+        pass

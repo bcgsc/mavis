@@ -57,8 +57,17 @@ class BreakpointPair:
             return self.break1
         elif index == 1:
             return self.break2
-        raise IndexError(
-            'index input accessor is out of bounds: 1 or 2 only', index)
+        raise IndexError('index input accessor is out of bounds: 1 or 2 only', index)
+    
+    def __hash__(self):
+        return hash(self.key)
+
+    def __eq__(self, other):
+        if not hasattr(other, 'key'):
+            return False
+        elif other.key != self.key:
+            return False
+        return True
 
     @property
     def key(self):
@@ -403,7 +412,7 @@ class BreakpointPair:
 
         b1_refseq = HUMAN_REFERENCE_GENOME[self.break1.chr].seq
         b2_refseq = HUMAN_REFERENCE_GENOME[self.break2.chr].seq
-
+        print(self.break1, self.break2)
         if len(self.break1) > 1 or len(self.break2) > 1:
             raise AttributeError('cannot call shared sequence for non-specific breakpoints')
 
@@ -473,9 +482,9 @@ def soft_null_cast(value):
     return value
 
 
-def read_bpp_from_input_file(filename):
-    header, rows = TSV.read_file(
-        cast={
+def read_bpp_from_input_file(filename, **kwargs):
+    kwargs.setdefault('cast', {}).update(
+        {
             'break1_position_start': int,
             'break1_position_end': int,
             'break2_position_start': int,
@@ -483,20 +492,21 @@ def read_bpp_from_input_file(filename):
             'opposing_strands': TSV.bool,
             'stranded': TSV.bool,
             'untemplated_sequence': soft_null_cast
-        },
-        require=[
-            'break1_chromosome',
-            'break2_chromosome'
-        ],
-        add={
-            'untemplated_sequence': None
-        },
-        _in={
+        })
+    kwargs.setdefault('require', []).extend(
+        ['break1_chromosome', 'break2_chromosome']
+    )
+    kwargs.setdefault('add', {}).update({'untemplated_sequence': None})
+    kwargs.setdefault('_in').update(
+        {
             'break1_orientation': ORIENT,
             'break1_strand': STRAND,
             'break2_orientation': ORIENT,
             'break2_strand': STRAND
-        }
+        })
+    header, rows = TSV.read_file(
+        filename,
+        **kwargs
     )
     pairs = []
     for row in rows:
