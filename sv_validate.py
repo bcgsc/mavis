@@ -323,8 +323,8 @@ def main():
     for chr in MASKED_REGIONS:
         for m in MASKED_REGIONS[chr]:
             if m.name == 'nspan':
-                m.start -= EVIDENCE_SETTINGS.read_length
-                m.end += EVIDENCE_SETTINGS.read_length
+                m.position.start -= EVIDENCE_SETTINGS.read_length
+                m.position.end += EVIDENCE_SETTINGS.read_length
 
     # load the reference genome
     print('loading the reference genome', args.reference_genome)
@@ -437,7 +437,7 @@ def main():
             except AttributeError:
                 pass
             row = {
-                'cluster_id': ec.evidence.data['cluster_id'],
+                'cluster_id': ec.data['cluster_id'],
                 'break1_chromosome': ec.break1.chr,
                 'break1_position_start': ec.break1.start,
                 'break1_position_end': ec.break1.end,
@@ -450,9 +450,9 @@ def main():
                 'break2_orientation': ec.break2.orient,
                 'event_type': ec.classification,
                 'opposing_strands': ec.opposing_strands,
-                'stranded': ec.evidence.stranded,
+                'stranded': ec.stranded,
                 'protocol': ec.evidence.protocol,
-                'tools': ec.evidence.data['tools'],
+                'tools': ec.data['tools'],
                 'contigs_assembled': len(ec.evidence.contigs),
                 'contigs_aligned': sum([len(c.alignments) for c in ec.evidence.contigs]),
                 'contig_sequence': None,

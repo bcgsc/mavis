@@ -205,7 +205,7 @@ class TestAnnotate(unittest.TestCase):
         b2 = Breakpoint('test', 375, 425, strand=STRAND.POS)
         bpp = BreakpointPair(b1, b2)
         ann_list = sorted(gather_annotations(REFERENCE_ANNOTATIONS, bpp),
-                          key=lambda x: (x.breakpoint_pair.break1, x.breakpoint_pair.break2))
+                          key=lambda x: (x.break1, x.break2))
         self.assertEqual(5, len(ann_list))
         first = ann_list[0]
         self.assertEqual(1, len(first.encompassed_genes))

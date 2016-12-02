@@ -3,26 +3,34 @@ from structural_variant.interval import Interval
 from structural_variant.constants import *
 import itertools
 from structural_variant.error import *
-from structural_variant.breakpoint import BreakpointPair
+from structural_variant.breakpoint import BreakpointPair, Breakpoint
 from Bio import SeqIO
 import re
 
 
-class Annotation:
+class Annotation(BreakpointPair):
     """
     a fusion of two transcripts created by the associated breakpoint_pair
     will also hold the other annotations for overlapping and encompassed and nearest genes
     """
     def __init__(self, bpp, transcript1=None, transcript2=None, data={}):
-        self.breakpoint_pair = bpp.copy()
-        if transcript1 is not None:
-            temp = bpp.break1 & transcript1
-            self.breakpoint_pair.break1.start = temp[0]
-            self.breakpoint_pair.break1.end = temp[1]
-        if transcript2 is not None:
-            temp = bpp.break2 & transcript2
-            self.breakpoint_pair.break2.start = temp[0]
-            self.breakpoint_pair.break2.end = temp[1]
+        # narrow the breakpoint windows by the transcripts being used for annotation
+        temp = bpp.break1 if transcript1 is None else bpp.break1 & transcript1
+        b1 = Breakpoint(bpp.break1.chr, temp[0], temp[1], strand=bpp.break1.strand, orient=bpp.break1.orient)
+
+        temp = bpp.break2 if transcript2 is None else bpp.break2 & transcript2
+        b2 = Breakpoint(bpp.break2.chr, temp[0], temp[1], strand=bpp.break2.strand, orient=bpp.break2.orient)
+        
+        BreakpointPair.__init__(
+            self,
+            b1,
+            b2,
+            opposing_strands=bpp.opposing_strands,
+            stranded=bpp.stranded,
+            data=bpp.data,
+            untemplated_sequence=bpp.untemplated_sequence
+        )
+
         self.transcript1 = transcript1
         self.transcript2 = transcript2
         self.data = {}
@@ -35,20 +43,20 @@ class Annotation:
         self.genes_at_break2 = set()
 
     def add_gene(self, gene):
-        if gene.chr not in [self.breakpoint_pair.break1.chr, self.breakpoint_pair.break2.chr]:
+        if gene.chr not in [self.break1.chr, self.break2.chr]:
             raise AttributeError('cannot add gene not on the same chromosome as either breakpoint')
 
-        if not self.breakpoint_pair.interchromosomal:
+        if not self.interchromosomal:
             try:
-                encompassment = Interval(self.breakpoint_pair.break1.end + 1, self.breakpoint_pair.break2.start - 1)
+                encompassment = Interval(self.break1.end + 1, self.break2.start - 1)
                 if gene in encompassment:
                     self.encompassed_genes.add(gene)
             except AttributeError:
                 pass
-        if Interval.overlaps(gene, self.breakpoint_pair.break1) and gene.chr == self.breakpoint_pair.break1.chr \
+        if Interval.overlaps(gene, self.break1) and gene.chr == self.break1.chr \
                 and gene != self.transcript1.reference_object:
             self.genes_at_break1.add(gene)
-        if Interval.overlaps(gene, self.breakpoint_pair.break2) and gene.chr == self.breakpoint_pair.break2.chr \
+        if Interval.overlaps(gene, self.break2) and gene.chr == self.break2.chr \
                 and gene != self.transcript2.reference_object:
             self.genes_at_break2.add(gene)
 
@@ -56,13 +64,13 @@ class Annotation:
                 or gene == self.transcript1.reference_object or gene == self.transcript2.reference_object:
             return
 
-        d1 = Interval.dist(gene, self.breakpoint_pair.break1)
-        d2 = Interval.dist(gene, self.breakpoint_pair.break2)
+        d1 = Interval.dist(gene, self.break1)
+        d2 = Interval.dist(gene, self.break2)
 
-        if self.breakpoint_pair.interchromosomal:
-            if gene.chr == self.breakpoint_pair.break1.chr:
+        if self.interchromosomal:
+            if gene.chr == self.break1.chr:
                 self.nearest_gene_break1.add((gene, d1))
-            elif gene.chr == self.breakpoint_pair.break2.chr:
+            elif gene.chr == self.break2.chr:
                 self.nearest_gene_break2.add((gene, d2))
         else:
             if d1 < 0:
@@ -148,7 +156,7 @@ class IntergenicRegion(BioInterval):
 class Gene(BioInterval):
     """
     """
-    def __init__(self, chr, start, end, name, strand, aliases=[]):
+    def __init__(self, chr, start, end, name=None, strand=STRAND.NS, aliases=[]):
         """
         Args:
             chr (str): the chromosome

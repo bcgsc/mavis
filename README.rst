@@ -179,6 +179,31 @@ During validation, for each breakpoint pair, we attempt to assemble a :term:`con
 
 Breakpoints can be called by multiple different :py:attr:`~structural_variant.validate.CALL_METHOD`.
 
+
+Breakpoint sequence homology
+..............................
+
+
+Annotation
+....................
+
+We make the following assumptions when determining the annotations for each event
+
+- If both breakpoints are in the same gene, they must also be in the same transcript
+- If the breakpoint intervals overlap we do not annotate encompassed genes
+- Encompassed and 'nearest' genes are reported without respect to strand
+
+There are specific question we want annotation to answer
+
+- does the event result in a novel fusion transcript?
+    - does this result in a protein?
+    - does it retain the frame of the original proteins?
+    - where does the breakpoint land in the original transcript?
+    - if it is not in-frame where is the new truncation?
+- what are the nearest genes outside the event (promoter swap?)
+- what genes are encompassed within the event?
+
+
 Splicing Model
 .....................
 
@@ -188,39 +213,3 @@ After the events have been called and an annotation has been attached, we often 
     :width: 100%
 
     Putative splicing scenarios. (A) a five-prime and the next three-prime splice sites are lost. (B) A five-prime splice site is lost. This brings about two splicing possibilities. Either the exon is skipped or the exon and proximal intron are retained. (C) A three-prime splice site is lost. (D) A three-prime splice site, and the next five-prime splice sites are lost.
-
-
-Breakpoint sequence homology
-..............................
-
-
-Annotation
-....................
-
-Structural variant (SV) events may result in
-
-1. fusion of two genes resulting in a fusion gene
-2. genes being encompassed between breakpoints (i.e. deletion, duplication)
-3. portions of a gene being deletion, exons being skipped, etc from an intra-gene SV
-4. intergenic events: nearest gene
-
-
-Assumptions made in Annotating
-,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-
-1. If both breakpoints are in the same gene, they must also be in the same transcript
-2. If the breakpoint intervals overlap we do not annotate encompassed genes
-3. encompassed and 'nearest' genes are reported without respect to strand
-
-
-Annotation Cases
-,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-
-create a set of non-overlapping intervals on each strand for the transcripts of all genes overlapping the breakpoints. Only in the case of breakpoint overlapping a region not covered by any transcript (on that strand) will we annotate a possible intergenic annotation for that breakpoint.
-
-.. figure:: _static/svmerge_annotation_breakpoint_cases.svg
-    :width: 100%
-
-    The breakpoint possibilities will be first annotated at the gen
-
-

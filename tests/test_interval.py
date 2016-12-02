@@ -138,6 +138,12 @@ class TestInterval(unittest.TestCase):
             mapping = {(1, 2): (4, 5), (3, 4): (1, 2), (5, 6): (3, 3)}
             Interval.convert_pos(mapping, 10)
 
+    def test_convert_pos_ratioed_intervals(self):
+        mapping = {(1, 100): (1, 21), (101, 500): (22, 30), (501, 600): (31, 51), (601, 900): (52, 57), (901, 1100): (58, 100)}
+        self.assertEqual(11, round(Interval.convert_pos(mapping, 50), 0))
+        self.assertEqual(1, round(Interval.convert_pos(mapping, 1), 0))
+        self.assertEqual(100, round(Interval.convert_pos(mapping, 1100), 0))
+
     def test_union(self):
         l = [Interval(1, 10), Interval(5, 7), Interval(7)]
         self.assertEqual(Interval(1, 10), Interval.union(*l))

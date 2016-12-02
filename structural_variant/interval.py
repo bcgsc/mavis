@@ -274,30 +274,27 @@ class Interval:
 
         # input check interval ranges are non-overlapping and increasing/decreasing
         for i in range(0, len(input_intervals)):
-            if input_intervals[i][1] - input_intervals[i][0] != mapped_to_intervals[i][1] - mapped_to_intervals[i][0]:
-                raise AttributeError('input mappings must have segments of equal length')
-            if i < 1:
-                continue
-            if Interval.overlaps(input_intervals[i - 1], input_intervals[i]):
-                raise AttributeError(
-                    'input intervals cannot be overlapping',
-                    input_intervals[i], input_intervals[i - 1]
-                )
-            if Interval.overlaps(mapped_to_intervals[i - 1], mapped_to_intervals[i]):
-                raise AttributeError(
-                    'mapped_to intervals cannot be overlapping',
-                    mapped_to_intervals[i], mapped_to_intervals[i - 1]
-                )
-            if mapped_to_intervals[i][0] > mapped_to_intervals[i - 1][1]:
-                if forward_to_reverse is None:
-                    forward_to_reverse = False
-                elif forward_to_reverse:
-                    raise AttributeError('direction of mapped intervals is not consistent')
-            elif mapped_to_intervals[i][1] < mapped_to_intervals[i - 1][0]:
-                if forward_to_reverse is None:
-                    forward_to_reverse = True
-                elif not forward_to_reverse:
-                    raise AttributeError('direction of mapped intervals is not consistent')
+            if i > 0:
+                if Interval.overlaps(input_intervals[i - 1], input_intervals[i]):
+                    raise AttributeError(
+                        'input intervals cannot be overlapping',
+                        input_intervals[i], input_intervals[i - 1]
+                    )
+                if Interval.overlaps(mapped_to_intervals[i - 1], mapped_to_intervals[i]):
+                    raise AttributeError(
+                        'mapped_to intervals cannot be overlapping',
+                        mapped_to_intervals[i], mapped_to_intervals[i - 1]
+                    )
+                if mapped_to_intervals[i][0] > mapped_to_intervals[i - 1][1]:
+                    if forward_to_reverse is None:
+                        forward_to_reverse = False
+                    elif forward_to_reverse:
+                        raise AttributeError('direction of mapped intervals is not consistent')
+                elif mapped_to_intervals[i][1] < mapped_to_intervals[i - 1][0]:
+                    if forward_to_reverse is None:
+                        forward_to_reverse = True
+                    elif not forward_to_reverse:
+                        raise AttributeError('direction of mapped intervals is not consistent')
 
         i, previous_flag = Interval.position_in_range(
             input_intervals, (pos, pos))  # get the input position
@@ -331,12 +328,11 @@ class Interval:
         else:
             # fell into a mapped region
             curr = input_intervals[i]
-            if not forward_to_reverse:
-                shift = pos - curr[0]
+            shift = pos - curr[0] if not forward_to_reverse else curr[1] - pos
+            if curr[1] - curr[0] == mapping[curr][1] - mapping[curr][0]:
                 return mapping[curr][0] + shift
             else:
-                shift = curr[1] - pos
-                return mapping[curr][0] + shift
+                return mapping[curr][0] + shift * (mapping[curr][1] - mapping[curr][0]) / (curr[1] - curr[0])
 
     @classmethod
     def union(cls, *intervals):
