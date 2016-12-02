@@ -68,16 +68,19 @@ import os
 import re
 from structural_variant import __version__
 from structural_variant.constants import *
-from structural_variant.align import *
 from structural_variant.error import *
+from structural_variant.read_tools import CigarTools
 from structural_variant.breakpoint import Breakpoint, BreakpointPair
+from structural_variant.read_tools import BamCache
 from structural_variant.validate import Evidence, EvidenceSettings
 from structural_variant.blat import blat_contigs
 from structural_variant.interval import Interval
 from structural_variant.annotate import load_masking_regions, load_reference_genome, load_reference_genes
 from tools import profile_bam
 import math
+import itertools
 from datetime import datetime
+import pysam
 
 __prog__ = os.path.basename(os.path.realpath(__file__))
 
@@ -375,7 +378,10 @@ def main():
             print('>', c.seq)
             for aln in c.alignments:
                 print(aln)
-        event_calls.extend(e.call_events())
+        try:
+            event_calls.extend(e.call_events())
+        except UserWarning as e:
+            print('warning: error in calling events', repr(e))
     # write the bam file for guiding the user in debugging why a particular cluster may not
     # pass validation
     # with open(EVIDENCE_BED, 'w') as fh:
@@ -427,24 +433,24 @@ def main():
             b1_homseq = None
             b2_homseq = None
             try:
-                b1_homseq, b2_homseq = ec.breakpoint_pair.breakpoint_sequence_homology(HUMAN_REFERENCE_GENOME)
+                b1_homseq, b2_homseq = ec.breakpoint_sequence_homology(HUMAN_REFERENCE_GENOME)
             except AttributeError:
                 pass
             row = {
                 'cluster_id': ec.evidence.data['cluster_id'],
-                'break1_chromosome': ec.breakpoint_pair.break1.chr,
-                'break1_position_start': ec.breakpoint_pair.break1.start,
-                'break1_position_end': ec.breakpoint_pair.break1.end,
+                'break1_chromosome': ec.break1.chr,
+                'break1_position_start': ec.break1.start,
+                'break1_position_end': ec.break1.end,
                 'break1_strand': '?',
-                'break1_orientation': ec.breakpoint_pair.break1.orient,
-                'break2_chromosome': ec.breakpoint_pair.break2.chr,
-                'break2_position_start': ec.breakpoint_pair.break2.start,
-                'break2_position_end': ec.breakpoint_pair.break2.end,
+                'break1_orientation': ec.break1.orient,
+                'break2_chromosome': ec.break2.chr,
+                'break2_position_start': ec.break2.start,
+                'break2_position_end': ec.break2.end,
                 'break2_strand': '?',
-                'break2_orientation': ec.breakpoint_pair.break2.orient,
+                'break2_orientation': ec.break2.orient,
                 'event_type': ec.classification,
-                'opposing_strands': ec.breakpoint_pair.opposing_strands,
-                'stranded': ec.evidence.breakpoint_pair.stranded,
+                'opposing_strands': ec.opposing_strands,
+                'stranded': ec.evidence.stranded,
                 'protocol': ec.evidence.protocol,
                 'tools': ec.evidence.data['tools'],
                 'contigs_assembled': len(ec.evidence.contigs),
@@ -474,11 +480,11 @@ def main():
                     row['contig_alignment_score'] = r1.get_tag('br')
                 else:
                     row['contig_alignment_score'] = int(round((r1.get_tag('br') + r2.get_tag('br')) / 2, 0))
-            if ec.breakpoint_pair.untemplated_sequence is not None:
-                row['untemplated_sequence'] = ec.breakpoint_pair.untemplated_sequence
-            if ec.breakpoint_pair.stranded:
-                row['break1_strand'] = ec.breakpoint_pair.break1.strand
-                row['break2_strand'] = ec.breakpoint_pair.break2.strand
+            if ec.untemplated_sequence is not None:
+                row['untemplated_sequence'] = ec.untemplated_sequence
+            if ec.stranded:
+                row['break1_strand'] = ec.break1.strand
+                row['break2_strand'] = ec.break2.strand
             fh.write('\t'.join([str(row[col]) for col in header]) + '\n')
 
     with pysam.AlignmentFile(CONTIG_BAM, 'wb', template=INPUT_BAM_CACHE.fh) as fh:

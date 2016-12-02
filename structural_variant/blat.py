@@ -7,7 +7,7 @@ import re
 import os
 import TSV
 from structural_variant.constants import *
-from structural_variant.align import CigarTools
+from structural_variant.read_tools import CigarTools
 from Bio.Seq import Seq
 import tempfile
 from structural_variant.interval import Interval

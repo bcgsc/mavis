@@ -2,7 +2,7 @@ from structural_variant.blat import Blat
 from structural_variant.interval import Interval
 from structural_variant.annotate import load_reference_genome
 from structural_variant.constants import CIGAR
-from structural_variant.align import BamCache
+from structural_variant.read_tools import BamCache
 import unittest
 from Bio import SeqIO
 from tests import REFERENCE_GENOME_FILE

@@ -110,6 +110,12 @@ class TestBreakpointPair(unittest.TestCase):
                 opposing_strands=True
             )
 
+    def test___init__opstrand_indv_not_specified(self):
+        bpp = BreakpointPair(Breakpoint('test', 1), Breakpoint('test', 10), opposing_strands=True)
+        self.assertTrue(bpp.opposing_strands)
+        bpp = BreakpointPair(Breakpoint('test', 1), Breakpoint('test', 10), opposing_strands=False)
+        self.assertFalse(bpp.opposing_strands)
+
     def test___init__opstrand_not_specified(self):
         with self.assertRaises(AttributeError):
             BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 2))

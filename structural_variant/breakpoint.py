@@ -60,18 +60,15 @@ class BreakpointPair:
         raise IndexError('index input accessor is out of bounds: 1 or 2 only', index)
 
     def __hash__(self):
-        return hash(self.key)
+        return hash((self.break1.key, self.break2.key, self.opposing_strands, self.stranded, self.untemplated_sequence))
 
     def __eq__(self, other):
-        if not hasattr(other, 'key'):
-            return False
-        elif other.key != self.key:
-            return False
+        for attr in ['break1', 'break2', 'opposing_strands', 'stranded', 'untemplated_sequence']:
+            if not hasattr(other, attr):
+                return False
+            elif getattr(self, attr) != getattr(other, attr):
+                return False
         return True
-
-    @property
-    def key(self):
-        return self.break1.key, self.break2.key, self.opposing_strands, self.stranded, self.untemplated_sequence
 
     @property
     def interchromosomal(self):

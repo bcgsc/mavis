@@ -51,7 +51,6 @@ import warnings
 import re
 from datetime import datetime
 from structural_variant.constants import *
-from structural_variant.align import *
 from structural_variant.error import *
 from structural_variant.breakpoint import Breakpoint, BreakpointPair
 from structural_variant.cluster import cluster_breakpoint_pairs

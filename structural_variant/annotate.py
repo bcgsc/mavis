@@ -101,30 +101,60 @@ class Annotation:
         self.nearest_gene_break2 = temp
 
 
-class Bio:
-    """
-    base class for biological type annotation objects
-    """
+class BioInterval:
+    def __init__(self, reference_object, start, end, name=None):
+        self.reference_object = reference_object
+        self.name = name
+        self.position = Interval(start, end)
+
+    @property
+    def start(self):
+        return self.position.start
+
+    @property
+    def end(self):
+        return self.position.end
+
+    def __getitem__(self, index):
+        return Interval.__getitem__(self, index)
+    
+    def __len__(self):
+        return len(self.position)
+
+    #def __lt__(self, other):
+    #    if not hasattr(other, 'reference_object'):
+    #        raise TypeError('unorderable objects', repr(self), repr(other))
+    #    if type(self.reference_object) is type(other.reference_object):
+    #        if self.reference_object < other.reference_object:
+    #            return True
+    #        elif self.reference_object > other.reference_object:
+    #            return False
+    #    else:
+    #        return Interval.__lt__(self, other)
+    #
+    #def __gt__(self, other):
+    #    if not hasattr(other, 'reference_object'):
+    #        raise TypeError('unorderable objects', repr(self), repr(other))
+    #    if type(self.reference_object) is type(other.reference_object):
+    #        if self.reference_object > other.reference_object:
+    #            return True
+    #        elif self.reference_object < other.reference_object:
+    #            return False
+    #    else:
+    #        return Interval.__gt__(self, other)
+    
     @property
     def key(self):
-        raise NotImplementedError('abstract method must be overidden')
+        return self.reference_object, self.position, self.name
 
-    def __init__(self, name=None, reference_object=None):
-        """
-        Args:
-            name (string): name of the biological object
-            reference_object: the object that is the 'parent' or reference for the current object/interval
-        """
-        self.name = name
-        self.reference_object = reference_object
+    def __eq__(self, other):
+        if not hasattr(other, 'key'):
+            return False
+        else:
+            return self.key == other.key
 
-
-class BioInterval(Bio, Interval):
-    """
-    """
-    def __init__(self, reference_object, start, end, name=None):
-        Bio.__init__(self, reference_object=reference_object, name=name)
-        Interval.__init__(self, start, end)
+    def __hash__(self):
+        return hash(self.key)
 
 
 class IntergenicRegion(BioInterval):
@@ -132,11 +162,15 @@ class IntergenicRegion(BioInterval):
         BioInterval.__init__(self, chr, start, end)
         self.strand = strand
 
+    @property
+    def key(self):
+        return self.reference_object, self.start, self.end, self.strand
+
 
 class Gene(BioInterval):
     """
     """
-    def __init__(self, chr, start, end, name=None, strand=None, aliases=[]):
+    def __init__(self, chr, start, end, name, strand, aliases=[]):
         """
         Args:
             chr (str): the chromosome
@@ -144,15 +178,12 @@ class Gene(BioInterval):
             strand (STRAND): the genomic strand '+' or '-'
             aliases (List[str]): a list of aliases. For example the hugo name could go here
         Example:
-            >>> Gene('X', 'ENG0001', '+', ['KRAS'])
+            >>> Gene('X', 1, 1000, 'ENG0001', '+', ['KRAS'])
         """
         BioInterval.__init__(self, name=name, reference_object=chr, start=start, end=end)
         self.transcripts = set()
         self.strand = STRAND.enforce(strand)
         self.aliases = aliases
-
-        if self.name is None or self.reference_object is None or self.strand == STRAND.NS:
-            raise AttributeError('properties: name, reference_object/chr, and strand are required')
 
     @property
     def chr(self):
@@ -331,19 +362,12 @@ class Exon(BioInterval):
         elif index == 1:
             return self.end
         raise IndexError('index out of bounds', index)
-
+    
     def __hash__(self):
-        return hash(self.key)
-
-    def __eq__(self, other):
-        return self.key == other.key
-
-    @property
-    def key(self):
-        return (self.transcript, self.start, self.end, self.name)
+        return hash((self.transcript, self.start, self.end, self.name))
 
 
-class Domain(Bio):
+class Domain:
     """
     """
     def __init__(self, name, regions, transcript=None):
@@ -357,7 +381,7 @@ class Domain(Bio):
         Example:
             >>> Domain('DNA binding domain', [(1, 4), (10, 24)], transcript)
         """
-        Bio.__init__(self, name=name, reference_object=transcript)
+        self.reference_object = transcript
         self.name = name
         self.regions = sorted(list(set(regions)))  # remove duplicates
 
@@ -365,8 +389,8 @@ class Domain(Bio):
             if region[0] > region[1]:
                 raise AttributeError('domain region start must be <= end')
         self.regions = Interval.min_nonoverlapping(*self.regions)
-        if self.transcript is not None:
-            self.transcript.domains.add(self)
+        if self.reference_object is not None:
+            self.reference_object.domains.add(self)
 
     @property
     def transcript(self):
@@ -376,12 +400,6 @@ class Domain(Bio):
     @property
     def key(self):
         return tuple([self.name, self.transcript] + self.regions)
-
-    def __hash__(self):
-        return hash(self.key)
-
-    def __eq__(self, other):
-        return self.key == other.key
 
 
 def load_masking_regions(filepath):
@@ -628,7 +646,7 @@ def gather_breakpoint_annotations(ref_ann, breakpoint):
         temp.append(IntergenicRegion(breakpoint.chr, breakpoint.start, breakpoint.end, STRAND.NEG))
     neg_overlapping_transcripts.extend(temp)
 
-    return sorted(pos_overlapping_transcripts), sorted(neg_overlapping_transcripts)
+    return sorted(pos_overlapping_transcripts, key=lambda x: x.position), sorted(neg_overlapping_transcripts, key=lambda x: x.position)
 
 
 def gather_annotations(ref, bp):  # TODO

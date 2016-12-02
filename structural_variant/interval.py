@@ -220,7 +220,7 @@ class Interval:
         num = 0
         found_inbetween_segment = False
 
-        segments = sorted(segments)
+        segments = sorted(segments, key=lambda x: (x[0], x[1]))
 
         while num < len(segments):
             current = segments[num]
@@ -374,7 +374,7 @@ class Interval:
         """
         if len(intervals) == 0:
             return []
-        intervals = sorted(list(intervals))
+        intervals = sorted(list(intervals), key=lambda x: (x[0], x[1]))
         new_intervals = [Interval(intervals[0][0], intervals[0][1])]
         for i in intervals[1:]:
             if Interval.overlaps(new_intervals[-1], i):

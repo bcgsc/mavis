@@ -39,6 +39,38 @@ class TestTranscript(unittest.TestCase):
         self.assertTrue(Interval.overlaps((1, 50), t))
 
 
+class TestBioInterval(unittest.TestCase):
+
+    def test___eq__(self):
+        a = BioInterval('test', 1, 2)
+        b = BioInterval('test', 1, 2)
+        c = BioInterval('test2', 1, 2)
+        d = BioInterval('test', 3, 6)
+        self.assertEqual(a, a)
+        self.assertEqual(a, b)
+        self.assertNotEqual(a, None)
+        self.assertNotEqual(a, c)
+
+
+class TestGene(unittest.TestCase):
+
+    def test___hash__(self):
+        g1 = Gene('test', 1, 2, 'name1', STRAND.POS)
+        g2 = Gene('test', 1, 2, 'name2', STRAND.POS)
+        h = set([g1, g2])
+        self.assertEqual(2, len(h))
+
+    def test___eq__(self):
+        g1 = Gene('test', 1, 2, 'name1', STRAND.POS)
+        g2 = Gene('test', 1, 2, 'name2', STRAND.POS)
+        self.assertNotEqual(g1, g2)
+        g3 = Gene('test2', 1, 2, 'name1', STRAND.POS)
+        self.assertNotEqual(g1, g3)
+        self.assertNotEqual(g3, g1)
+        self.assertNotEqual(g1, None)
+        self.assertNotEqual(None, g1)
+
+
 class TestAnnotate(unittest.TestCase):
     def test_overlapping_transcripts(self):
         b = Breakpoint('X', 1000, strand=STRAND.POS)
