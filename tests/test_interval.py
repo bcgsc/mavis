@@ -24,9 +24,8 @@ class TestInterval(unittest.TestCase):
         temp = Interval(1, 2, 3)
         self.assertEqual(1, temp[0])
         self.assertEqual(2, temp[1])
-        self.assertEqual(3, temp[2])
         with self.assertRaises(IndexError):
-            temp[4]
+            temp[3]
         with self.assertRaises(IndexError):
             temp[-1]
         with self.assertRaises(IndexError):

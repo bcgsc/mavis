@@ -304,7 +304,7 @@ class Evidence:
 
         for t in transcripts:
             current_length = 0
-            exons = t.get_exons()
+            exons = sorted(t.exons, key=lambda x: x.start)
             current_interval = Interval(breakpoint.start, breakpoint.end)
 
             # first going left
@@ -863,7 +863,7 @@ class Evidence:
             if read1 == read2:
                 self.flanking_reads[0].remove(read1)
                 self.flanking_reads[1].remove(read1)
-        
+
         # calculate the insert size stdev
 
 

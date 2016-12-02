@@ -16,17 +16,18 @@ def setUpModule():
 
 class TestTranscript(unittest.TestCase):
 
-    def test_transcript_constructor_with_reference_object(self):
-        g = Gene('1', 1, 9999, name='KRAS', strand='+')
+    def test___init__(self):
+        g = Gene('1', 1, 9999, name='KRAS', strand=STRAND.POS)
         t = Transcript(gene=g, cds_start=1, cds_end=10, genomic_start=1, genomic_end=100)
         self.assertEqual(1, len(g.transcripts))
         self.assertEqual(g, t.gene)
 
-    def test_transcript_constructor_without_reference_object(self):
         t = Transcript(gene=None, cds_start=1, cds_end=10, genomic_start=1, genomic_end=100)
         self.assertEqual(None, t.gene)
+        t = Transcript(1, 10, 1, 10, domains=[Domain('name', [])])
+        self.assertEqual(1, len(t.domains))
 
-    def test_transcript_constructor_implicit_genomic_start(self):
+    def test___init__implicit_genomic_start(self):
         t = Transcript(gene=None, cds_start=1, cds_end=10, exons=[(1, 100), (200, 300), (400, 500)])
         self.assertEqual(1, t.start)
         self.assertEqual(t.start, t.genomic_start)
@@ -38,6 +39,55 @@ class TestTranscript(unittest.TestCase):
         self.assertTrue(Interval.overlaps((1, 1), t))
         self.assertTrue(Interval.overlaps((1, 50), t))
 
+    def test___init__strand_mismatch(self):
+        g = Gene('1', 1, 9999, name='KRAS', strand=STRAND.POS)
+
+        with self.assertRaises(AttributeError):
+            t = Transcript(genomic_start=1, genomic_end=100, gene=g, strand=STRAND.NEG)
+
+    def test___init__cds_error(self):
+        with self.assertRaises(AttributeError):
+            Transcript(9, 2, 3, 4)
+
+        with self.assertRaises(AttributeError):
+            Transcript('&', 2, 3, 4)
+
+    def test___init__overlapping_exon_error(self):
+        with self.assertRaises(AttributeError):
+            Transcript(1, 10, exons=[Exon(1, 15), Exon(10, 20)])
+
+    def test_strand(self):
+        g = Gene('1', 1, 9999, name='KRAS', strand=STRAND.POS)
+        t = Transcript(genomic_start=1, genomic_end=100, gene=g)
+        self.assertEqual(STRAND.POS, t.strand)
+        t = Transcript(genomic_start=1, genomic_end=100, strand=STRAND.POS)
+        self.assertEqual(STRAND.POS, t.strand)
+
+    def test_genomic_length(self):
+        t = Transcript(1, 2, 3, 4)
+        self.assertEqual(2, t.genomic_length())
+
+
+class TestDomain(unittest.TestCase):
+
+    def test_key(self):
+        d = Domain('name', [])
+        self.assertEqual(('name', None), d.key)
+
+    def test___init__region_error(self):
+        with self.assertRaises(AttributeError):
+            Domain('name', [(1, 3), (4, 3)])
+
+    def test___init__with_transcript(self):
+        t = Transcript(1, 2, 3, 4)
+        Domain('name', [], transcript=t)
+        self.assertEqual(1, len(t.domains))
+
+class TestIntergenicRegion(unittest.TestCase):
+
+    def test_key(self):
+        b = IntergenicRegion('1', 1, 4, STRAND.NS)
+        self.assertEqual(('1', 1, 4, STRAND.NS), b.key)
 
 class TestBioInterval(unittest.TestCase):
 

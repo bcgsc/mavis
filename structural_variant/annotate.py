@@ -117,32 +117,10 @@ class BioInterval:
 
     def __getitem__(self, index):
         return Interval.__getitem__(self, index)
-    
+
     def __len__(self):
         return len(self.position)
 
-    #def __lt__(self, other):
-    #    if not hasattr(other, 'reference_object'):
-    #        raise TypeError('unorderable objects', repr(self), repr(other))
-    #    if type(self.reference_object) is type(other.reference_object):
-    #        if self.reference_object < other.reference_object:
-    #            return True
-    #        elif self.reference_object > other.reference_object:
-    #            return False
-    #    else:
-    #        return Interval.__lt__(self, other)
-    #
-    #def __gt__(self, other):
-    #    if not hasattr(other, 'reference_object'):
-    #        raise TypeError('unorderable objects', repr(self), repr(other))
-    #    if type(self.reference_object) is type(other.reference_object):
-    #        if self.reference_object > other.reference_object:
-    #            return True
-    #        elif self.reference_object < other.reference_object:
-    #            return False
-    #    else:
-    #        return Interval.__gt__(self, other)
-    
     @property
     def key(self):
         return self.reference_object, self.position, self.name
@@ -160,7 +138,7 @@ class BioInterval:
 class IntergenicRegion(BioInterval):
     def __init__(self, chr, start, end, strand):
         BioInterval.__init__(self, chr, start, end)
-        self.strand = strand
+        self.strand = STRAND.enforce(strand)
 
     @property
     def key(self):
@@ -253,7 +231,7 @@ class Transcript(BioInterval):
         if self.gene is not None:
             self.gene.transcripts.add(self)
 
-        exons = sorted(self.exons, key=lambda x: (x.start, x.end))
+        exons = sorted(self.exons, key=lambda x: x.start)
         for i, exon in enumerate(exons):
             if i == 0:
                 continue
@@ -276,11 +254,8 @@ class Transcript(BioInterval):
             return self.gene.strand
         return self._strand
 
-    def get_exons(self):
-        return sorted(self.exons, key=lambda x: x.start)
-
     def genomic_length(self):
-        return self.genomic_end() - self.genomic_start() + 1
+        return len(self.position)
 
     @property
     def genomic_start(self):
@@ -322,7 +297,7 @@ class Transcript(BioInterval):
         return (self.gene, self.name, self.start, self.end, self.cds_start, self.cds_end)
 
     def exon_number(self, exon):
-        for i, e in enumerate(self.get_exons()):
+        for i, e in enumerate(sorted(exons)):
             if e is exon:
                 return i
         raise AttributeError('can only calculate phase on associated exons')
@@ -352,17 +327,6 @@ class Exon(BioInterval):
         """(:class:`~structural_variant.annotate.Transcript`): the transcript this exon belongs to"""
         return self.reference_object
 
-    def __getitem__(self, index):
-        try:
-            index = int(index)
-        except ValueError:
-            raise IndexError('indices must be integers', index)
-        if index == 0:
-            return self.start
-        elif index == 1:
-            return self.end
-        raise IndexError('index out of bounds', index)
-    
     def __hash__(self):
         return hash((self.transcript, self.start, self.end, self.name))
 
@@ -603,7 +567,7 @@ def gather_breakpoint_annotations(ref_ann, breakpoint):
 
     pos_intervals = Interval.min_nonoverlapping(*pos_overlapping_transcripts)
     neg_intervals = Interval.min_nonoverlapping(*neg_overlapping_transcripts)
-    
+
     temp = []
     # before the first?
     if len(pos_intervals) > 0:
@@ -664,7 +628,7 @@ def gather_annotations(ref, bp):  # TODO
 
     break1_pos, break1_neg = gather_breakpoint_annotations(ref, bp.break1)
     break2_pos, break2_neg = gather_breakpoint_annotations(ref, bp.break2)
-    
+
     combinations = []
 
     if bp.stranded:
@@ -711,7 +675,3 @@ def load_reference_genome(filename):
     with open(filename, 'rU') as fh:
         HUMAN_REFERENCE_GENOME = SeqIO.to_dict(SeqIO.parse(fh, 'fasta'))
     return HUMAN_REFERENCE_GENOME
-
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()

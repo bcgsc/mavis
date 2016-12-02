@@ -81,8 +81,6 @@ class Interval:
             return self.start
         elif index == 1:
             return self.end
-        elif index == 2:
-            return self.freq
         raise IndexError(
             'index input accessor is out of bounds: 1 or 2 only', index)
 
@@ -147,7 +145,7 @@ class Interval:
         return self[0] + (len(self) - 1) / 2
 
     def __eq__(self, other):
-        if self[0] != other[0] or self[1] != other[1] or self[2] != other[2]:
+        if self[0] != other[0] or self[1] != other[1]:
             return False
         return True
 
