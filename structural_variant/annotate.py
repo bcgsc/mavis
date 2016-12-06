@@ -20,7 +20,7 @@ class Annotation(BreakpointPair):
 
         temp = bpp.break2 if transcript2 is None else bpp.break2 & transcript2
         b2 = Breakpoint(bpp.break2.chr, temp[0], temp[1], strand=bpp.break2.strand, orient=bpp.break2.orient)
-        
+
         BreakpointPair.__init__(
             self,
             b1,
@@ -269,14 +269,33 @@ class Transcript(BioInterval):
     def genomic_start(self):
         return self.start
 
+    def genomic_utr_regions(self):
+        utr = []
+        if self.strand not in [STRAND.POS, STRAND.NEG]:
+            raise AttributeError('strand must be positive or negative to calculate regions')
+        
+        exons = sorted(self.exons, key=lambda x: x.start)
+
+        if self.cds_start is not None:
+            if self.strand == STRAND.POS:
+                utr.append(Interval(exons[0].start, self.convert_cdna_to_genomic(self.cds_start)))
+            else:
+                utr.append(Interval(self.convert_cdna_to_genomic(self.cds_start), exons[-1].end))
+        if self.cds_end is not None:
+            if self.strand == STRAND.POS:
+                utr.append(Interval(self.convert_cdna_to_genomic(self.cds_end), exons[-1].end))
+            else:
+                utr.append(Interval(exons[0].start, self.convert_cdna_to_genomic(self.cds_end)))
+        return utr
+
     @property
     def genomic_end(self):
         return self.end
 
-    def _exon_genomic_to_cdna_mapping(self):
+    def _genomic_to_cdna_mapping(self):
         mapping = {}
 
-        exons = self.get_exons()
+        exons = sorted(self.exons, key=lambda x: x.start)
         if self.strand == STRAND.POS:
             pass
         elif self.strand == STRAND.NEG:
@@ -284,20 +303,24 @@ class Transcript(BioInterval):
         else:
             raise StrandSpecificityError('cannot convert without strand information')
 
-        l = 0
+        l = 1
         for e in exons:
-            mapping[(e.start, e.end)] = (l + 1, l + len(e))
+            mapping[Interval(e.start, e.end)] = Interval(l, l + len(e) - 1)
             l += len(e)
         return mapping
 
-    def _exon_cdna_to_genomic_mapping(self):
+    def _cdna_to_genomic_mapping(self):
         mapping = {}
-        for k, v in self._exon_genomic_to_cdna_mapping():
+        for k, v in self._genomic_to_cdna_mapping().items():
             mapping[v] = k
         return mapping
 
     def convert_genomic_to_cdna(self, pos):
-        mapping = self._exon_genomic_to_cdna_mapping()
+        mapping = self._genomic_to_cdna_mapping()
+        return Interval.convert_pos(mapping, pos)
+
+    def convert_cdna_to_genomic(self, pos):
+        mapping = self._cdna_to_genomic_mapping()
         return Interval.convert_pos(mapping, pos)
 
     @property

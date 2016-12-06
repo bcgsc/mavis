@@ -1,18 +1,9 @@
-from structural_variant.annotate import Gene
 from svgwrite import Drawing
 from structural_variant.interval import Interval
-from structural_variant.constants import STRAND
+from structural_variant.constants import STRAND, ORIENT
 
 # draw gene level view
 # draw gene box
-
-GENE_FORWARD_SVG="""
-<g class='.gene'>
-    <path d='M{0} 0 L{1} {2}'>
-    </path>
-    <rect>
-    </rect>
-</g>"""
 
 
 class Diagram:
@@ -27,46 +18,59 @@ class Diagram:
         GENE2_COLOR='#657E91',
         LABEL_FILL='#FFFFFF',
         LABEL_STROKE='#000000',
-        TRANSCRIPT1_COLOR='#4C9677',
-        TRANSCRIPT2_COLOR='#518DC5',
-        TRANSCRIPT1_UTR_COLOR='#7bddc1',
-        TRANSCRIPT2_UTR_COLOR='#7dc3d8',
+        LABEL_FONT_SIZE=14,
+        EXON1_COLOR='#4C9677',
+        EXON2_COLOR='#518DC5',
+        EXON1_UTR_COLOR='#7bddc1',
+        EXON2_UTR_COLOR='#7dc3d8',
         DOMAIN_COLOR='#b8d3ba',
         WIDTH=1000,
         PADDING=5
     ):
-        self.GENE1_COLOR_SELECTED = GENE1_COLOR_SELECTED
-        self.GENE2_COLOR_SELECTED = GENE2_COLOR_SELECTED
-        self.GENE1_COLOR = GENE1_COLOR
-        self.GENE2_COLOR = GENE2_COLOR
-        self.LABEL_FILL = LABEL_FILL
-        self.LABEL_STROKE = LABEL_STROKE
-        self.TRANSCRIPT1_COLOR = TRANSCRIPT1_COLOR
-        self.TRANSCRIPT2_COLOR = TRANSCRIPT2_COLOR
-        self.TRANSCRIPT1_UTR_COLOR = TRANSCRIPT1_UTR_COLOR
-        self.TRANSCRIPT2_UTR_COLOR = TRANSCRIPT2_UTR_COLOR
-        self.DOMAIN_COLOR = DOMAIN_COLOR
-        self.TRACK_HEIGHT = 50
-        self.BREAKPOINT_STROKE_DASHARRAY = [3, 3]
-        self.DOMAIN_TRACK_HEIGHT = 20
-        self.WIDTH = WIDTH
-        self.GENE_INTERGENIC_RATIO = 5
-        self.EXON_INTRON_RATIO = 5
-        self.MIN_WIDTH = 2 # no element (exon, gene, etc can be less than this wide)
-        self.GENE_MIN_BUFFER = 200
+        self.MIN_WIDTH = 2  # no element (exon, gene, etc can be less than this wide)
         self.TRACK_LINE_HEIGHT = 4
         self.LEFT_MARGIN = 20
         self.RIGHT_MARGIN = 20
         self.TOP_MARGIN = 20
         self.BOTTOM_MARGIN = 20
         self.INNER_MARGIN = 20
-        self.GENE_ARROW_WIDTH = 20
         self.PADDING = PADDING
         self.LINE_WIDTH = 3
         self.LINE_COLOR = '#000000'
+        self.TRACK_HEIGHT = 50
+        self.WIDTH = WIDTH
+        
+        self.GENE1_COLOR_SELECTED = GENE1_COLOR_SELECTED
+        self.GENE2_COLOR_SELECTED = GENE2_COLOR_SELECTED
+        self.GENE1_COLOR = GENE1_COLOR
+        self.GENE2_COLOR = GENE2_COLOR
+        self.GENE_MIN_BUFFER = 200
+        self.GENE_ARROW_WIDTH = 20
+        self.GENE_INTERGENIC_RATIO = 5
+        self.GENE_MIN_WIDTH = self.MIN_WIDTH + self.GENE_ARROW_WIDTH
+
+        self.LABEL_FILL = LABEL_FILL
+        self.LABEL_STROKE = LABEL_STROKE
+        self.LABEL_FONT_SIZE = LABEL_FONT_SIZE
+        
+        self.DOMAIN_COLOR = DOMAIN_COLOR
+        self.DOMAIN_TRACK_HEIGHT = 20
+        
         self.SPLICE_HEIGHT = self.TRACK_HEIGHT * 3 / 4
         self.SPLICE_STROKE_DASHARRAY = [2, 2]
         self.SPLICE_STROKE_WIDTH = 2
+        
+        self.BREAKPOINT_STROKE_DASHARRAY = [3, 3]
+        self.BREAKPOINT_ORIENT_STROKE_WIDTH = 2
+        
+        self.EXON_TEAR_TOOTH_WIDTH = 2
+        self.EXON_MIN_WIDTH = self.MIN_WIDTH + self.EXON_TEAR_TOOTH_WIDTH * 2
+        self.EXON_TEAR_TOOTH_HEIGHT = 2
+        self.EXON_INTRON_RATIO = 5
+        self.EXON1_COLOR = EXON1_COLOR
+        self.EXON2_COLOR = EXON2_COLOR
+        self.EXON1_UTR_COLOR = EXON1_UTR_COLOR
+        self.EXON2_UTR_COLOR = EXON2_UTR_COLOR
 
     def draw_legend(self):
         pass
@@ -76,7 +80,7 @@ class Diagram:
         left_gene_track = None
         right_gene_track = None
 
-        canvas = Drawing(height=100, width=self.WIDTH) # just set the height for now and change later
+        canvas = Drawing(height=100, width=self.WIDTH)  # just set the height for now and change later
 
         if ann.interchromosomal:  # two gene tracks
             pass
@@ -97,14 +101,32 @@ class Diagram:
         # add transcript tracks if applicable (and domains)
         # add fusion track if applicable
 
-    def draw_transcript(self, canvas, target_width, t, exon_color, utr_color, abrogated_splice_sites=[]):
-        exons = sorted(t.exons, key=lambda x: x.start)
+    def draw_transcript(self, canvas, target_width, transcript, exon_color, utr_color, abrogated_splice_sites=[], breakpoints=[]):
+        """
+        builds an svg group representing the transcript. Exons are drawn in a track with the splicing
+        information and domains are drawn in separate tracks below
+
+        Args:
+            canvas (svgwrite.Drawing): the main svgwrite object used to create new svg elements
+            target_width (int): the target width of the diagram
+            t (structural_variant.annotate.Transcript): the transcript being drawn
+            exon_color (str): the color being used for the fill of the exons
+            utr_color (str): the color for the fill of the UTR regions
+            abrogated_splice_sites (list of int): list of positions to ignore as splice sites
+            breakpoints (iterable of Breakpoint): the breakpoints to overlay
+
+        Return:
+            svgwrite.container.Group: the group element for the transcript diagram
+        """
+        if transcript.strand not in [STRAND.POS, STRAND.NEG]:
+            raise AttributeError('strand must be positive or negative to draw the transcript')
+        exons = sorted(transcript.exons, key=lambda x: x.start)
         main_group = canvas.g()
         mapping = self._generate_interval_mapping(
             target_width,
-            t.exons,
+            transcript.exons,
             self.EXON_INTRON_RATIO,
-            self.MIN_WIDTH
+            self.EXON_MIN_WIDTH
         )
 
         y = max(self.SPLICE_HEIGHT, self.TRACK_HEIGHT / 2)
@@ -114,7 +136,7 @@ class Diagram:
         for i, exon in enumerate(exons):
             if i > 0:
                 splice_sites.append(Interval.convert_pos(mapping, exon.start))
-            if i < len(t.exons) - 1:
+            if i < len(transcript.exons) - 1:
                 splice_sites.append(Interval.convert_pos(mapping, exon.end))
 
         if len(splice_sites) % 2 != 0:
@@ -128,7 +150,7 @@ class Diagram:
             polyline.extend(
                 [(a, y), (a + (b - a) / 2, y - self.SPLICE_HEIGHT), (b, y)])
 
-        p = canvas.polyline(polyline, fill='none')
+        p = canvas.polyline(polyline, fill='none', class_='splicing')
         p.dasharray(self.SPLICE_STROKE_DASHARRAY)
         p.stroke(self.LINE_COLOR, width=self.SPLICE_STROKE_WIDTH)
         main_group.add(p)
@@ -137,40 +159,58 @@ class Diagram:
             canvas.rect(
                 (0, y - self.LINE_WIDTH / 2),
                 (target_width, self.LINE_WIDTH),
-                fill=self.LINE_COLOR
+                fill=self.LINE_COLOR,
+                class_='scaffold'
                 ))
-
+        
         # draw the exons
         for exon in exons:
             s = Interval.convert_pos(mapping, exon.start)
             t = Interval.convert_pos(mapping, exon.end)
-
-            group = canvas.g(class_='exon')
+            pxi = Interval(s, t)
+            utr = []
+            for u in transcript.genomic_utr_regions():
+                temp = Interval(Interval.convert_pos(mapping, u.start), Interval.convert_pos(mapping, u.end))
+                if Interval.overlaps(u, exon):
+                    temp = temp & pxi
+                    utr.append(Interval(temp.start - s, temp.end - s))
+            group = self.draw_exon(
+                canvas, exon, len(pxi), self.TRACK_HEIGHT, self.EXON1_COLOR, utr=utr, utr_fill=self.EXON1_UTR_COLOR)
+            group.translate(pxi.start, y - self.TRACK_HEIGHT / 2)
             main_group.add(group)
-
-            group.add(
-                canvas.rect(
-                    (s, y - self.TRACK_HEIGHT / 2),
-                    (t - s + 1, self.TRACK_HEIGHT),
-                    fill=exon_color
-                ))
-
-
-        #y += self.TRACK_HEIGHT + self.PADDING
+        
+        # y += self.TRACK_HEIGHT + self.PADDING
 
         # now draw the domain tracks
         # need to convert the domain AA positions to cds positions to genomic
-
+        
+        setattr(main_group, 'height', y)
+        setattr(main_group, 'mapping', mapping)
         return main_group
 
 
-    def draw_gene_subdiagram(self, canvas, target_width, genes, breakpoints=[], colors={}):
+    def draw_genes(self, canvas, target_width, genes, breakpoints=[], colors={}):
+        """
+        draws the genes given in order of their start position trying to minimize
+        the number of tracks required to avoid overlap
+
+        Args:
+            canvas (svgwrite.Drawing): the main svgwrite object used to create new svg elements
+            target_width (int): the target width of the diagram
+            genes (iterable of Gene): the list of genes to draw
+            breakpoints (iterable of Breakpoint): the breakpoints to overlay
+            colors (Dict of Gene to str): dictionary of the colors assigned to each Gene as fill
+
+        Return:
+            svgwrite.container.Group: the group element for the diagram
+        """
+
         main_group = canvas.g()
         mapping = self._generate_interval_mapping(
             target_width,
             [g for g in genes] + breakpoints,
             self.GENE_INTERGENIC_RATIO,
-            self.MIN_WIDTH + self.GENE_ARROW_WIDTH,
+            self.GENE_MIN_WIDTH,
             buffer=self.GENE_MIN_BUFFER
         )
         print('draw_gene_subdiagram', canvas, target_width, genes, colors)
@@ -187,76 +227,195 @@ class Diagram:
             canvas.rect(
                 (0, y + self.TRACK_HEIGHT / 2 - self.LINE_WIDTH / 2 + (len(tracks) - 1) * (self.TRACK_HEIGHT + self.PADDING)),
                 (target_width, self.LINE_WIDTH),
-                fill=self.LINE_COLOR
+                fill=self.LINE_COLOR,
+                class_='scaffold'
                 ))
         tracks.reverse()
         for track in tracks:  # svg works from top down
             for genepx in track:
                 # draw the gene
-                wrect = genepx.end - self.GENE_ARROW_WIDTH - genepx.start + 1
                 gene = gene_px_intervals[genepx]
-                group = canvas.g(class_='gene')
+                group = self.draw_gene(canvas, gene, len(genepx), self.TRACK_HEIGHT, colors.get(gene, self.GENE1_COLOR))
+                group.translate(genepx.start, y)
                 main_group.add(group)
-
-                if gene.strand == STRAND.POS:
-                    group.translate(genepx.start, y)
-                    group.add(
-                        canvas.rect(
-                            (0, 0),
-                            (wrect, self.TRACK_HEIGHT),
-                            fill=colors.get(gene, self.GENE1_COLOR)
-                        )
-                    )
-                    group.add(
-                        canvas.polyline(
-                            [
-                                (wrect, 0),
-                                (wrect + self.GENE_ARROW_WIDTH, self.TRACK_HEIGHT / 2),
-                                (wrect, self.TRACK_HEIGHT)
-                            ],
-                            fill=colors.get(gene, self.GENE1_COLOR)
-                        )
-                    )
-                elif gene.strand == STRAND.NEG:
-                    group.translate(genepx.start, y)
-                    group.add(
-                        canvas.rect(
-                            (self.GENE_ARROW_WIDTH, 0),
-                            (wrect, self.TRACK_HEIGHT),
-                            fill=colors.get(gene, self.GENE1_COLOR)
-                        ))
-                    group.add(
-                        canvas.polyline(
-                            [
-                                (self.GENE_ARROW_WIDTH, 0),
-                                (0, self.TRACK_HEIGHT / 2),
-                                (self.GENE_ARROW_WIDTH, self.TRACK_HEIGHT)
-                            ], fill=colors.get(gene, self.GENE1_COLOR)
-                        ))
-                else:
-                    raise AttributeError('gene must specify positive or negative strand to be drawn')
             y += self.TRACK_HEIGHT + self.PADDING
         # now overlay the breakpoints on top of everything
         for b in breakpoints:
             s = Interval.convert_pos(mapping, b.start)
             t = Interval.convert_pos(mapping, b.end)
-            r = canvas.rect(
-                (s, 0),
-                (t - s + 1, y),
-                stroke='#000000',
-                class_='breakpoint',
-                fill='none'
-            )
-            r.dasharray(self.BREAKPOINT_STROKE_DASHARRAY)
-            main_group.add(r)
+            bg = self.draw_breakpoint(canvas, b, abs(t - s) + 1, y)
+            bg.translate(s, 0)
+            main_group.add(bg)
 
         setattr(main_group, 'height', y)
-
+        setattr(main_group, 'mapping', mapping)
 
         return main_group
 
     def read_config(self):
         pass
+    
+    def draw_breakpoint(self, canvas, breakpoint, width, height):
+        """
+        Args:
+            canvas (svgwrite.Drawing): the main svgwrite object used to create new svg elements
+            breakpoint (Breakpoint): the breakpoint to draw
+            width (int): the pixel width
+            height (int): the pixel height
+        Return:
+            svgwrite.container.Group: the group element for the diagram
+        """
+        g = canvas.g(class_='breakpoint')
+        r = canvas.rect(
+            (0, 0),
+            (width, height),
+            stroke=self.LINE_COLOR,
+            fill='none'
+        )
+        r.dasharray(self.BREAKPOINT_STROKE_DASHARRAY)
+        g.add(r)
+        
+        if breakpoint.orient == ORIENT.LEFT:
+            l = canvas.line((0, 0), (0, height))
+            l.stroke(self.LINE_COLOR, width=self.BREAKPOINT_ORIENT_STROKE_WIDTH)
+            g.add(l)
+        elif breakpoint.orient == ORIENT.RIGHT:
+            l = canvas.line((width, 0), (width, height))
+            l.stroke(self.LINE_COLOR, width=self.BREAKPOINT_ORIENT_STROKE_WIDTH)
+            g.add(l)
+        return g
+
+    def draw_exon(self, canvas, exon, width, height, fill, utr=[], utr_fill='#000000', tear_left=False, tear_right=False):
+        """
+        generates the svg object representing an exon
+
+        ::
+            
+            intact exon
+            
+            +-----+
+            |     |
+            +-----+
+
+            exon "torn" on the right side (abrogated 3' splice site if on the positive strand)
+
+            +----->
+            |     >
+            +----->
+
+            exon "torn" on the left side (abrogated 5' splice site if on the positive strand)
+
+            <-----+
+            <     |
+            <-----+
+
+        
+        Args:
+            canvas (svgwrite.Drawing): the main svgwrite object used to create new svg elements
+            exon (Exon): the exon to draw
+            width (int): the pixel width
+            height (int): the pixel height
+            fill (str): the fill color to use for the exon
+
+        Return:
+            svgwrite.container.Group: the group element for the diagram
+        """
+        g = canvas.g(class_='exon')
+
+        if tear_right and tear_left:
+            raise NotImplementedError('have not added support for tearing exons yet')
+        elif tear_left:
+            raise NotImplementedError('have not added support for tearing exons yet')
+        elif tear_right:
+            raise NotImplementedError('have not added support for tearing exons yet')
+        else:
+            g.add(canvas.rect((0, 0), (width, height), fill=fill))
+            for u in utr:
+                if u.start < 0 or u.end > width:
+                    print(u, width, height)
+                    raise AttributeError('utr outside exon region')
+                g.add(canvas.rect((u.start, 0), (len(u), height), class_='UTR', fill=utr_fill))
+        return g
+
+    def draw_gene(self, canvas, gene, width, height, fill):
+        """
+        generates the svg object representing a gene
+
+        ::
+            
+            gene on the positive/forward strand
+            
+            +-----\
+            +-----/
+
+            gene on the negative/reverse strand
+
+            /-----+
+            \-----+
+
+            gene with a non-specified strand
+
+            +-----+
+            +-----+
+        
+        Args:
+            canvas (svgwrite.Drawing): the main svgwrite object used to create new svg elements
+            gene (Gene): the gene to draw
+            width (int): the pixel width
+            height (int): the pixel height
+            fill (str): the fill color to use for the gene
+
+        Return:
+            svgwrite.container.Group: the group element for the diagram
+        """
+
+        group = canvas.g(class_='gene')
+        
+        wrect = width - self.GENE_ARROW_WIDTH
+        if wrect < 1:
+            raise AttributeError('width is not sufficient to draw gene')
+
+        if gene.strand == STRAND.POS:
+            group.add(
+                canvas.rect(
+                    (0, 0),
+                    (wrect, height),
+                    fill=fill
+                )
+            )
+            group.add(
+                canvas.polyline(
+                    [
+                        (wrect, 0),
+                        (wrect + self.GENE_ARROW_WIDTH, height / 2),
+                        (wrect, height)
+                    ],
+                    fill=fill
+                )
+            )
+        elif gene.strand == STRAND.NEG:
+            group.add(
+                canvas.rect(
+                    (self.GENE_ARROW_WIDTH, 0),
+                    (wrect, height),
+                    fill=fill
+                ))
+            group.add(
+                canvas.polyline(
+                    [
+                        (self.GENE_ARROW_WIDTH, 0),
+                        (0, height / 2),
+                        (self.GENE_ARROW_WIDTH, height)
+                    ], fill=fill
+                ))
+        else:
+            group.add(
+                canvas.rect(
+                    (0, 0),
+                    (width, height),
+                    fill=fill
+                ))
+        return group
 
     @classmethod
     def _split_intervals_into_tracks(cls, intervals):

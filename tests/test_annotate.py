@@ -67,6 +67,26 @@ class TestTranscript(unittest.TestCase):
         t = Transcript(1, 2, 3, 4)
         self.assertEqual(2, t.genomic_length())
 
+    def test_convert_cdna_to_genomic(self):
+        t = Transcript(gene=None, cds_start=50, cds_end=249, exons=[(1, 99), (200, 299), (400, 499)], strand=STRAND.POS)
+        self.assertEqual(50, t.cds_start)
+        self.assertEqual(249, t.cds_end)
+        self.assertEqual(50, t.convert_cdna_to_genomic(t.cds_start))
+        self.assertEqual(449, t.convert_cdna_to_genomic(t.cds_end))
+
+        t = Transcript(gene=None, cds_start=50, cds_end=249, exons=[(1, 99), (200, 299), (400, 499)], strand=STRAND.NEG)
+        self.assertEqual(50, t.cds_start)
+        self.assertEqual(249, t.cds_end)
+        self.assertEqual(450, t.convert_cdna_to_genomic(t.cds_start))
+        self.assertEqual(51, t.convert_cdna_to_genomic(t.cds_end))
+
+    def test_genomic_utr_regions(self):
+        t = Transcript(gene=None, cds_start=50, cds_end=249, exons=[(1, 99), (200, 299), (400, 499)], strand=STRAND.POS)
+        self.assertEqual([Interval(1, 50), Interval(449, 499)], t.genomic_utr_regions())
+
+        t = Transcript(gene=None, cds_start=50, cds_end=249, exons=[(1, 99), (200, 299), (400, 499)], strand=STRAND.NEG)
+        self.assertEqual([Interval(450, 499), Interval(1, 51)], t.genomic_utr_regions())
+
 
 class TestDomain(unittest.TestCase):
 

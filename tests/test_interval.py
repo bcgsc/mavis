@@ -117,11 +117,17 @@ class TestInterval(unittest.TestCase):
         mapping = {(41, 50): (101, 110), (21, 30): (201, 210), (1, 10): (301, 310)}
 
         self.assertEqual(306, Interval.convert_pos(mapping, 5))
+        self.assertEqual(110, Interval.convert_pos(mapping, 41))
+        self.assertEqual(210, Interval.convert_pos(mapping, 21))
+        self.assertEqual(310, Interval.convert_pos(mapping, 1))
+        self.assertEqual(309, Interval.convert_pos(mapping, 2))
 
         with self.assertRaises(DiscontiuousMappingError) as e:
             Interval.convert_pos(mapping, 15)
         self.assertEqual(210, e.exception.before)
         self.assertEqual(301, e.exception.after)
+
+        
 
         # test input errors
         with self.assertRaises(AttributeError):  # unequal length
