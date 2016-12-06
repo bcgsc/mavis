@@ -33,8 +33,7 @@ class Diagram:
         TRANSCRIPT2_UTR_COLOR='#7dc3d8',
         DOMAIN_COLOR='#b8d3ba',
         WIDTH=1000,
-        PADDING=5,
-        GENE_MIN_BUFFER=200
+        PADDING=5
     ):
         self.GENE1_COLOR_SELECTED = GENE1_COLOR_SELECTED
         self.GENE2_COLOR_SELECTED = GENE2_COLOR_SELECTED
@@ -48,14 +47,13 @@ class Diagram:
         self.TRANSCRIPT2_UTR_COLOR = TRANSCRIPT2_UTR_COLOR
         self.DOMAIN_COLOR = DOMAIN_COLOR
         self.TRACK_HEIGHT = 50
-        self.LINE_WIDTH = 4
-        self.LINE_COLOR = '#000000'
+        self.BREAKPOINT_STROKE_DASHARRAY = [3, 3]
         self.DOMAIN_TRACK_HEIGHT = 20
         self.WIDTH = WIDTH
-        self.GENE_INTERGENIC_RATIO = 10
-        self.EXON_INTRON_RATIO = 10
+        self.GENE_INTERGENIC_RATIO = 5
+        self.EXON_INTRON_RATIO = 5
         self.MIN_WIDTH = 2 # no element (exon, gene, etc can be less than this wide)
-        self.GENE_MIN_BUFFER = GENE_MIN_BUFFER
+        self.GENE_MIN_BUFFER = 200
         self.TRACK_LINE_HEIGHT = 4
         self.LEFT_MARGIN = 20
         self.RIGHT_MARGIN = 20
@@ -64,6 +62,11 @@ class Diagram:
         self.INNER_MARGIN = 20
         self.GENE_ARROW_WIDTH = 20
         self.PADDING = PADDING
+        self.LINE_WIDTH = 3
+        self.LINE_COLOR = '#000000'
+        self.SPLICE_HEIGHT = self.TRACK_HEIGHT * 3 / 4
+        self.SPLICE_STROKE_DASHARRAY = [2, 2]
+        self.SPLICE_STROKE_WIDTH = 2
 
     def draw_legend(self):
         pass
@@ -94,19 +97,51 @@ class Diagram:
         # add transcript tracks if applicable (and domains)
         # add fusion track if applicable
 
-    def draw_transcript(self, canvas, target_width, t, exon_color, utr_color):
+    def draw_transcript(self, canvas, target_width, t, exon_color, utr_color, abrogated_splice_sites=[]):
+        exons = sorted(t.exons, key=lambda x: x.start)
         main_group = canvas.g()
-        mapping = self._generate_exon_mapping(target_width, t.exons)
+        mapping = self._generate_interval_mapping(
+            target_width,
+            t.exons,
+            self.EXON_INTRON_RATIO,
+            self.MIN_WIDTH
+        )
+
+        y = max(self.SPLICE_HEIGHT, self.TRACK_HEIGHT / 2)
+
+        # draw the splicing lines
+        splice_sites = []
+        for i, exon in enumerate(exons):
+            if i > 0:
+                splice_sites.append(Interval.convert_pos(mapping, exon.start))
+            if i < len(t.exons) - 1:
+                splice_sites.append(Interval.convert_pos(mapping, exon.end))
+
+        if len(splice_sites) % 2 != 0:
+            raise AttributeError('splice sites must be an even multiple')
+
+        polyline = []
+
+        for i in range(0, len(splice_sites), 2):
+            a = splice_sites[i]
+            b = splice_sites[i + 1]
+            polyline.extend(
+                [(a, y), (a + (b - a) / 2, y - self.SPLICE_HEIGHT), (b, y)])
+
+        p = canvas.polyline(polyline, fill='none')
+        p.dasharray(self.SPLICE_STROKE_DASHARRAY)
+        p.stroke(self.LINE_COLOR, width=self.SPLICE_STROKE_WIDTH)
+        main_group.add(p)
 
         main_group.add(
             canvas.rect(
-                (0, self.TRACK_HEIGHT / 2 - self.LINE_WIDTH / 2),
+                (0, y - self.LINE_WIDTH / 2),
                 (target_width, self.LINE_WIDTH),
                 fill=self.LINE_COLOR
                 ))
-        y = 0
+
         # draw the exons
-        for exon in sorted(t.exons, key=lambda x: x.start):
+        for exon in exons:
             s = Interval.convert_pos(mapping, exon.start)
             t = Interval.convert_pos(mapping, exon.end)
 
@@ -115,10 +150,12 @@ class Diagram:
 
             group.add(
                 canvas.rect(
-                    (s, y),
+                    (s, y - self.TRACK_HEIGHT / 2),
                     (t - s + 1, self.TRACK_HEIGHT),
                     fill=exon_color
                 ))
+
+
         #y += self.TRACK_HEIGHT + self.PADDING
 
         # now draw the domain tracks
@@ -127,9 +164,15 @@ class Diagram:
         return main_group
 
 
-    def draw_gene_subdiagram(self, canvas, target_width, genes, breakpoint=None, colors={}):
+    def draw_gene_subdiagram(self, canvas, target_width, genes, breakpoints=[], colors={}):
         main_group = canvas.g()
-        mapping = self._generate_gene_mapping(target_width, genes)
+        mapping = self._generate_interval_mapping(
+            target_width,
+            [g for g in genes] + breakpoints,
+            self.GENE_INTERGENIC_RATIO,
+            self.MIN_WIDTH + self.GENE_ARROW_WIDTH,
+            buffer=self.GENE_MIN_BUFFER
+        )
         print('draw_gene_subdiagram', canvas, target_width, genes, colors)
         gene_px_intervals = {}
         for gene in genes:
@@ -138,11 +181,11 @@ class Diagram:
             gene_px_intervals[Interval(s, t)] = gene
         tracks = Diagram._split_intervals_into_tracks(gene_px_intervals)
 
-        y = 0
+        y = self.PADDING
 
         main_group.add(
             canvas.rect(
-                (0, self.TRACK_HEIGHT / 2 - self.LINE_WIDTH / 2 + (len(tracks) - 1) * (self.TRACK_HEIGHT + self.PADDING)),
+                (0, y + self.TRACK_HEIGHT / 2 - self.LINE_WIDTH / 2 + (len(tracks) - 1) * (self.TRACK_HEIGHT + self.PADDING)),
                 (target_width, self.LINE_WIDTH),
                 fill=self.LINE_COLOR
                 ))
@@ -156,9 +199,10 @@ class Diagram:
                 main_group.add(group)
 
                 if gene.strand == STRAND.POS:
+                    group.translate(genepx.start, y)
                     group.add(
                         canvas.rect(
-                            (genepx.start, y),
+                            (0, 0),
                             (wrect, self.TRACK_HEIGHT),
                             fill=colors.get(gene, self.GENE1_COLOR)
                         )
@@ -166,55 +210,53 @@ class Diagram:
                     group.add(
                         canvas.polyline(
                             [
-                                (genepx.start + wrect, y),
-                                (genepx.start + wrect + self.GENE_ARROW_WIDTH, y + self.TRACK_HEIGHT / 2),
-                                (genepx.start + wrect, y + self.TRACK_HEIGHT)
+                                (wrect, 0),
+                                (wrect + self.GENE_ARROW_WIDTH, self.TRACK_HEIGHT / 2),
+                                (wrect, self.TRACK_HEIGHT)
                             ],
                             fill=colors.get(gene, self.GENE1_COLOR)
                         )
                     )
                 elif gene.strand == STRAND.NEG:
+                    group.translate(genepx.start, y)
                     group.add(
                         canvas.rect(
-                            (genepx.start + self.GENE_ARROW_WIDTH, y),
+                            (self.GENE_ARROW_WIDTH, 0),
                             (wrect, self.TRACK_HEIGHT),
                             fill=colors.get(gene, self.GENE1_COLOR)
-                        )
-                    )
+                        ))
                     group.add(
                         canvas.polyline(
                             [
-                                (genepx.start + self.GENE_ARROW_WIDTH, y),
-                                (genepx.start, y + self.TRACK_HEIGHT / 2),
-                                (genepx.start + self.GENE_ARROW_WIDTH, y + self.TRACK_HEIGHT)
-                            ],
-                            fill=colors.get(gene, self.GENE1_COLOR)
-                        )
-                    )
+                                (self.GENE_ARROW_WIDTH, 0),
+                                (0, self.TRACK_HEIGHT / 2),
+                                (self.GENE_ARROW_WIDTH, self.TRACK_HEIGHT)
+                            ], fill=colors.get(gene, self.GENE1_COLOR)
+                        ))
                 else:
                     raise AttributeError('gene must specify positive or negative strand to be drawn')
             y += self.TRACK_HEIGHT + self.PADDING
+        # now overlay the breakpoints on top of everything
+        for b in breakpoints:
+            s = Interval.convert_pos(mapping, b.start)
+            t = Interval.convert_pos(mapping, b.end)
+            r = canvas.rect(
+                (s, 0),
+                (t - s + 1, y),
+                stroke='#000000',
+                class_='breakpoint',
+                fill='none'
+            )
+            r.dasharray(self.BREAKPOINT_STROKE_DASHARRAY)
+            main_group.add(r)
+
+        setattr(main_group, 'height', y)
+
+
         return main_group
 
     def read_config(self):
         pass
-
-    def _generate_exon_mapping(self, target_width, exons):
-        return self._generate_interval_mapping(
-            target_width,
-            exons,
-            self.EXON_INTRON_RATIO,
-            self.MIN_WIDTH
-        )
-
-    def _generate_gene_mapping(self, target_width, genes):
-        return self._generate_interval_mapping(
-            target_width,
-            genes,
-            self.GENE_INTERGENIC_RATIO,
-            self.MIN_WIDTH + self.GENE_ARROW_WIDTH,
-            buffer=self.GENE_MIN_BUFFER
-        )
 
     @classmethod
     def _split_intervals_into_tracks(cls, intervals):
