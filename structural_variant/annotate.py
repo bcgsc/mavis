@@ -273,7 +273,7 @@ class Transcript(BioInterval):
         utr = []
         if self.strand not in [STRAND.POS, STRAND.NEG]:
             raise AttributeError('strand must be positive or negative to calculate regions')
-        
+
         exons = sorted(self.exons, key=lambda x: x.start)
 
         if self.cds_start is not None:
@@ -322,6 +322,9 @@ class Transcript(BioInterval):
     def convert_cdna_to_genomic(self, pos):
         mapping = self._cdna_to_genomic_mapping()
         return Interval.convert_pos(mapping, pos)
+
+    def convert_aa_to_cdna(self, pos):
+        return Interval(self.cds_start - 1 + (pos - 1) * 3 + 1, self.cds_start - 1 + pos * 3)
 
     @property
     def key(self):

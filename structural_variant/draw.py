@@ -42,7 +42,7 @@ class Diagram:
         self.LINE_COLOR = '#000000'
         self.TRACK_HEIGHT = 50
         self.WIDTH = WIDTH
-        
+
         self.GENE1_COLOR_SELECTED = GENE1_COLOR_SELECTED
         self.GENE2_COLOR_SELECTED = GENE2_COLOR_SELECTED
         self.GENE1_COLOR = GENE1_COLOR
@@ -55,17 +55,17 @@ class Diagram:
         self.LABEL_COLOR = LABEL_COLOR
         self.LABEL_FONT_SIZE = LABEL_FONT_SIZE
         self.DYNAMIC_LABELS = DYNAMIC_LABELS
-        
+
         self.DOMAIN_COLOR = DOMAIN_COLOR
-        self.DOMAIN_TRACK_HEIGHT = 20
-        
+        self.DOMAIN_TRACK_HEIGHT = 30
+
         self.SPLICE_HEIGHT = self.TRACK_HEIGHT
         self.SPLICE_STROKE_DASHARRAY = [2, 2]
         self.SPLICE_STROKE_WIDTH = 2
-        
+
         self.BREAKPOINT_STROKE_DASHARRAY = [3, 3]
         self.BREAKPOINT_ORIENT_STROKE_WIDTH = 2
-        
+
         self.EXON_TEAR_TOOTH_WIDTH = 2
         self.EXON_MIN_WIDTH = self.MIN_WIDTH + self.EXON_TEAR_TOOTH_WIDTH * 2
         self.EXON_TEAR_TOOTH_HEIGHT = 2
@@ -126,8 +126,8 @@ class Diagram:
             raise AttributeError('strand must be positive or negative to draw the transcript')
         exons = sorted(transcript.exons, key=lambda x: x.start)
         main_group = canvas.g()
-        x = self.PADDING * 2 + self.LABEL_FONT_SIZE
-        target_width -= x 
+        x = self.PADDING * 2 + self.LABEL_FONT_SIZE * 2
+        target_width -= x
 
         mapping = self._generate_interval_mapping(
             target_width,
@@ -135,8 +135,8 @@ class Diagram:
             self.EXON_INTRON_RATIO,
             self.EXON_MIN_WIDTH
         )
-        
-        
+
+
         y = max(self.SPLICE_HEIGHT, self.TRACK_HEIGHT / 2) + self.PADDING
 
         # draw the splicing lines
@@ -170,7 +170,7 @@ class Diagram:
                 fill=self.LINE_COLOR,
                 class_='scaffold'
                 ))
-        
+
         # draw the exons
         for i, exon in enumerate(exons):
             s = Interval.convert_pos(mapping, exon.start)
@@ -189,22 +189,44 @@ class Diagram:
                 label=i + 1 if transcript.strand == STRAND.POS else len(exons) - i)
             group.translate(x + pxi.start, y - self.TRACK_HEIGHT / 2)
             main_group.add(group)
-        
+
         y += self.TRACK_HEIGHT / 2 + self.PADDING
 
         # now draw the domain tracks
         # need to convert the domain AA positions to cds positions to genomic
-        for d in transcript.domains:
-            g = main_group.g(class_='domain')
+        for i, d in enumerate(sorted(transcript.domains, key=lambda x: x.name)):
+            g = canvas.g(class_='domain')
             g.add(canvas.rect(
-                (0, self.DOMAIN_TRACK_HEIGHT / 2),
+                (x, self.DOMAIN_TRACK_HEIGHT / 2),
                 (target_width, self.LINE_WIDTH),
                 fill=self.LINE_COLOR,
                 class_='scaffold'
                 ))
             for region in d.regions:
                 # convert the AA position to cdna position, then convert the cdna to genomic, etc
-                pass
+                s = transcript.convert_aa_to_cdna(region[0])
+                t = transcript.convert_aa_to_cdna(region[1])
+                temp = s | t
+                s = Interval.convert_pos(mapping, transcript.convert_cdna_to_genomic(temp.start))
+                t = Interval.convert_pos(mapping, transcript.convert_cdna_to_genomic(temp.end))
+                if s > t:
+                    t, s = (s, t)
+                g.add(canvas.rect(
+                    (s, 0), (t - s + 1, self.DOMAIN_TRACK_HEIGHT),
+                    fill=self.DOMAIN_COLOR, class_='region'))
+            g.translate(0, y)
+            g.add(canvas.text(
+                'D{}'.format(i + 1),
+                insert=(self.PADDING, self.DOMAIN_TRACK_HEIGHT / 2),
+                fill=self.LABEL_COLOR if not self.DYNAMIC_LABELS else Diagram.dynamic_label_color(self.DOMAIN_COLOR),
+                font_size=self.LABEL_FONT_SIZE,
+                alignment_baseline='central',
+                class_='label'
+            ))
+            main_group.add(g)
+
+            y += self.DOMAIN_TRACK_HEIGHT + self.PADDING
+
 
         # now overlay the breakpoints on top of everything
         for b in breakpoints:
@@ -213,12 +235,12 @@ class Diagram:
             bg = self.draw_breakpoint(canvas, b, abs(t - s) + 1, y)
             bg.translate(x + s, 0)
             main_group.add(bg)
-        
+
         setattr(main_group, 'height', y)
         setattr(main_group, 'mapping', mapping)
         setattr(main_group, 'labels', labels)
         return main_group
-    
+
     def draw_genes(self, canvas, target_width, genes, breakpoints=[], colors={}):
         """
         draws the genes given in order of their start position trying to minimize
@@ -278,7 +300,7 @@ class Diagram:
             bg = self.draw_breakpoint(canvas, b, abs(t - s) + 1, y)
             bg.translate(s, 0)
             main_group.add(bg)
-        
+
         temp = labels
         labels = {}
         for k, v in temp.items():
@@ -291,7 +313,7 @@ class Diagram:
 
     def read_config(self):
         pass
-    
+
     def draw_breakpoint(self, canvas, breakpoint, width, height):
         """
         Args:
@@ -311,7 +333,7 @@ class Diagram:
         )
         r.dasharray(self.BREAKPOINT_STROKE_DASHARRAY)
         g.add(r)
-        
+
         if breakpoint.orient == ORIENT.LEFT:
             l = canvas.line((0, 0), (0, height))
             l.stroke(self.LINE_COLOR, width=self.BREAKPOINT_ORIENT_STROKE_WIDTH)
@@ -327,9 +349,9 @@ class Diagram:
         generates the svg object representing an exon
 
         ::
-            
+
             intact exon
-            
+
             +-----+
             |     |
             +-----+
@@ -346,7 +368,7 @@ class Diagram:
             <     |
             <-----+
 
-        
+
         Args:
             canvas (svgwrite.Drawing): the main svgwrite object used to create new svg elements
             exon (Exon): the exon to draw
@@ -389,9 +411,9 @@ class Diagram:
         generates the svg object representing a gene
 
         ::
-            
+
             gene on the positive/forward strand
-            
+
             +-----\
             +-----/
 
@@ -404,7 +426,7 @@ class Diagram:
 
             +-----+
             +-----+
-        
+
         Args:
             canvas (svgwrite.Drawing): the main svgwrite object used to create new svg elements
             gene (Gene): the gene to draw
@@ -417,11 +439,11 @@ class Diagram:
         """
 
         group = canvas.g(class_='gene')
-        
+
         wrect = width - self.GENE_ARROW_WIDTH
         if wrect < 1:
             raise AttributeError('width is not sufficient to draw gene')
-        
+
         label_color = self.LABEL_COLOR if not self.DYNAMIC_LABELS else Diagram.dynamic_label_color(fill)
 
         if gene.strand == STRAND.POS:
@@ -493,7 +515,7 @@ class Diagram:
                     class_='label'
                 ))
         return group
-    
+
     @classmethod
     def dynamic_label_color(cls, color):
         """

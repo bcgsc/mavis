@@ -1,6 +1,6 @@
 import unittest
 from structural_variant.draw import Diagram, HEX_BLACK, HEX_WHITE
-from structural_variant.annotate import Gene, Transcript
+from structural_variant.annotate import Gene, Transcript, Domain
 from svgwrite import Drawing
 from structural_variant.constants import STRAND, ORIENT
 from structural_variant.breakpoint import Breakpoint
@@ -45,14 +45,14 @@ class TestDraw(unittest.TestCase):
         x = Gene('1', 1000, 2000, strand=STRAND.POS)
         y = Gene('1', 5000, 7000, strand=STRAND.NEG)
         z = Gene('1', 1500, 2500, strand=STRAND.POS)
-        
+
         d = Diagram()
         breakpoints = [
             Breakpoint('1', 1100, 1200, orient=ORIENT.RIGHT)
         ]
         g = d.draw_genes(
             canvas, 500, [x, y, z], breakpoints, {x: d.GENE1_COLOR, y: d.GENE2_COLOR_SELECTED, z: d.GENE2_COLOR})
-        
+
         # test the class structure
         self.assertEqual(5, len(g.elements))
         self.assertEqual('scaffold', g.elements[0].attribs.get('class', ''))
@@ -71,10 +71,10 @@ class TestDraw(unittest.TestCase):
         canvas = Drawing(height=100, width=1000)
         d = Diagram()
         #domains = [Domain()]
-        t = Transcript(gene=None, cds_start=50, cds_end=249, exons=[(1, 99), (200, 299), (400, 499)], strand=STRAND.NEG)
+        t = Transcript(gene=None, cds_start=50, cds_end=249, exons=[(1, 99), (200, 299), (400, 499)], strand=STRAND.NEG, domains=[Domain('D1', [(10, 20), (30, 34)])])
         b = Breakpoint('1', 350, 410)
         g = d.draw_transcript(
-            canvas, 500, t, 
+            canvas, 500, t,
             exon_color='#325556',
             utr_color='#000000',
             abrogated_splice_sites=[200, 299],
