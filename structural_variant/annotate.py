@@ -15,7 +15,7 @@ class Annotation(BreakpointPair):
     a fusion of two transcripts created by the associated breakpoint_pair
     will also hold the other annotations for overlapping and encompassed and nearest genes
     """
-    def __init__(self, bpp, transcript1=None, transcript2=None, data={}):
+    def __init__(self, bpp, transcript1=None, transcript2=None, data={}, event_type=None):
         # narrow the breakpoint windows by the transcripts being used for annotation
         temp = bpp.break1 if transcript1 is None else bpp.break1 & transcript1
         b1 = Breakpoint(bpp.break1.chr, temp[0], temp[1], strand=bpp.break1.strand, orient=bpp.break1.orient)
@@ -43,6 +43,8 @@ class Annotation(BreakpointPair):
         self.nearest_gene_break2 = set()
         self.genes_at_break1 = set()
         self.genes_at_break2 = set()
+
+        self.event_type = event_type if event_type is None else SVTYPE.enforce(event_type)
 
     def add_gene(self, gene):
         if gene.chr not in [self.break1.chr, self.break2.chr]:
@@ -110,42 +112,32 @@ class Annotation(BreakpointPair):
 
         self.nearest_gene_break2 = temp
 
-    def build_fusion_transcripts(self):
+    def build_fusion_transcript(self, REFERENCE_GENOME):
         """
         builds a set of fusion transcripts with splicing defined
         also contains a map of exons to their original transcript
+
+        fusions are always drawn 5' to 3' and not given wrt the reference strand
         """
         # determine if any splice sites appear to be affected
         # determine the exon locations. use the first transcript as the reference point
+        # only draw fusion transcripts where they are 5' to 3'
         if len(self.break1) > 1 or len(self.break2) > 1:
             raise AttributeError('can only produce fusion transcripts for exact breakpoint calls')
         elif not self.transcript1 or not self.transcript2:
             raise AttributeError('cannot produce fusion transcript for non-annotated fusions')
-        abrogated_splice_sites = []
-        t1_exons = []
+        elif not self.event_type:
+            raise AttributeError('event_type must be specified to produce a fusion transcript')
+        elif ORIENT.NS in [self.break1.orient, self.break2.orient]:
+            raise AttributeError('cannot call a fusion transcript if the orientation of either breakpoint has not been specified')
 
-        if self.break1.orient == ORIENT.LEFT:
-            for ex in sorted(self.transcript1.exons, key=lambda x: x.start):
-                if self.break1.end < ex.start - SPLICE_SITE_RADIUS: # before this exon AND splice site
-                    break
-                elif self.break1.end < ex.end - SPLICE_SITE_RADIUS + 1: # first splice site only
-                    abrogated_splice_sites.append(ex.start)
-                elif self.break1.end <= ex.end + SPLICE_SITE_RADIUS: # second splice site also
-                    abrogated_splice_sites.append(ex.end)
-                else:
-                    t1_exons.append(ex)
-        if self.break1.orient == ORIENT.LEFT and self.break2.orient == ORIENT.LEFT:
-            exons = []
-            for ex in sorted(self.transcript1.exons, key=lambda x: x.start):
-                pass
-        elif self.break1.orient == ORIENT.LEFT and self.break2.orient == ORIENT.RIGHT:
+        ft = FusionTranscript()
+
+        if self.transcript1 == self.transcript2 \
+                and self.event_type not in [SVTYPE.DEL, SVTYPE.INS]:  # special case
+            # single transcript duplication and/or inversion
             pass
-        elif self.break1.orient == ORIENT.RIGHT and self.break2.orient == ORIENT.LEFT:
-            pass
-        elif self.break1.orient == ORIENT.RIGHT and self.break2.orient == ORIENT.RIGHT:
-            pass
-        else:
-            raise AttributeError('unexpected orientation, cannot generate fusion transcript')
+
 
 
 class BioInterval:
@@ -218,6 +210,109 @@ class Gene(BioInterval):
     @property
     def key(self):
         return (self.name, self.strand, self.chr, self.start, self.end)
+
+
+class FusionTranscript:
+    def __init__(self):
+        self.exon_mapping = {}
+        self.exons = []
+        self.sequence = ''
+
+    @classmethod
+    def pull_exons(cls, transcript, breakpoint, reference_sequence):
+        if len(breakpoint) > 1:
+            raise AttributeError('cannot pull exons on non-specific breakpoints')
+        new_exons = []
+        s = ''
+        if transcript.strand == STRAND.POS:
+            exons = sorted(transcript.exons, key=lambda x: x.start)
+            if breakpoint.orient == ORIENT.LEFT:  # five prime
+                for i, exon in enumerate(exons):
+                    intact_start_splice = True
+                    intact_end_splice = True
+                    if breakpoint.start < exon.start:  # =====----|----|----
+                        if i > 0:  # add intron
+                            s += reference_sequence[exons[i - 1].end:breakpoint.start]
+                        break
+                    else:
+                        if i > 0:  # add intron
+                            s += reference_sequence[exons[i - 1].end:exon.start]
+                        if breakpoint.start <= exon.end_splice_site().end:
+                            intact_end_splice = False
+                        if breakpoint.start <= exon.start_splice_site().end:
+                            intact_start_splice = False
+                        t = min(breakpoint.start, exon.end)
+                        e = Exon(
+                            len(s) + 1, len(s) + t - exon.start + 1,
+                            intact_start_splice=intact_start_splice,
+                            intact_end_splice=intact_end_splice
+                        )
+                        s += reference_sequence[exon.start - 1:t]
+                        new_exons.append((e, exon))
+            elif breakpoint.orient == ORIENT.RIGHT:  # three prime
+                pass
+
+            else:
+                raise AttributeError('breakpoint orientation must be specified to pull exons')
+        elif transcript.strand == STRAND.NEG:
+            exons = sorted(transcript.exons, key=lambda x: x.start, reverse=True)
+            if breakpoint.orient == ORIENT.LEFT:  # three prime
+                pass
+            elif breakpoint.orient == ORIENT.RIGHT:  # five prime
+                pass
+            else:
+                raise AttributeError('breakpoint orientation must be specified to pull exons')
+        else:
+            raise AttributeError('strand must be specified to pull exons')
+        return s, new_exons
+
+    def add_exon(self, exon, breakpoint, REFERENCE_GENOME, flip=False):
+        """
+        """
+        p = len(self.sequence) + 1
+        s = REFERENCE_GENOME[exon.reference_object].seq[exon.start - 1:exon.end]
+        e = Exon(p + 1, p + len(s))
+        if breakpoint.orient == ORIENT.LEFT:
+            if breakpoint.end < exon.start:  # outside exon
+                return  # ====----|--------|----
+            elif breakpoint.end <= exon.end:  # breakpoint lands in the exon
+                # ====|=====----|----
+                if breakpoint.end < exon.start + SPLICE_SITE_RADIUS:
+                    e.intact_left_splice = False  # ====|=-------|----
+                if breakpoint.end >= exon.end - SPLICE_SITE_RADIUS:
+                    e.intact_right_splice = False  # ====|=======-|----
+                e.end = breakpoint.end - exon.start + 1 + e.start
+                s = s[0:e.end - e.start + 1]
+            elif breakpoint.end <= exon.end + SPLICE_SITE_RADIUS:
+                 # ========|========|=----
+                e.intact_right_splice = False
+        elif breakpoint.orient == ORIENT.RIGHT:
+            if breakpoint.start > exon.end:  # outside exon
+                return  # ----|---------|----====
+            elif breakpoint.start >= exon.start:  # breakpoint lands in the exon
+                # ----|-----====|====
+                if breakpoint.start < exon.start + SPLICE_SITE_RADIUS:
+                    e.intact_left_splice = False  # ----|-=======|======
+                if breakpoint.start > exon.end - SPLICE_SITE_RADIUS:
+                    e.intact_right_splice = False  # ---=|========|======
+                e.end = exon.end - breakpoint.start + 1 + e.start
+                s = s[::-1]
+                s = s[0:e.end - e.start + 1]
+                s = s[::-1]
+            else:  # before the exon
+                 # -------=|=====|====
+                if breakpoint.start >= exon.start - SPLICE_SITE_RADIUS - 1:
+                    e.intact_left_splice = False
+        else:
+            raise AttributeError('breakpoint must have a specified orientation')
+        assert(len(s) == exon.end - exon.start + 1)
+        self.sequence += s[::-1] if flip else s
+        self.exons.append(e)
+        self.exon_mapping[e] = exon
+
+    def add_intron(self, genomic_region, REFERENCE_GENOME, flip=False):
+        temp = REFERENCE_GENOME[genomic_region.reference_object].seq[genomic_region.start - 1:genomic_region.end]
+        self.sequence += temp if not flip else temp[::-1]
 
 
 class Transcript(BioInterval):
@@ -379,7 +474,7 @@ class Transcript(BioInterval):
 class Exon(BioInterval):
     """
     """
-    def __init__(self, start, end, transcript=None, name=None):
+    def __init__(self, start, end, transcript=None, name=None, intact_start_splice=True, intact_end_splice=True):
         """
         Args:
             start (int): the genomic start position
@@ -394,6 +489,10 @@ class Exon(BioInterval):
         BioInterval.__init__(self, name=name, reference_object=transcript, start=start, end=end)
         if self.transcript is not None:
             self.transcript.exons.add(self)
+        self.intact_start_splice = intact_start_splice
+        self.intact_end_splice = intact_end_splice
+        if end - start + 1 < SPLICE_SITE_RADIUS * sum([intact_start_splice, intact_end_splice]):
+            raise AttributeError('exons must be greater than double the length of a splice site')
 
     @property
     def transcript(self):
@@ -403,6 +502,31 @@ class Exon(BioInterval):
     def __hash__(self):
         return hash((self.transcript, self.start, self.end, self.name))
 
+    @property
+    def start_phase(self):
+        if self.transcript is None:
+            raise AttributeError('cannot calculate exon phase unless there is an associated transcript')
+        cdna = self.transcript.convert_genomic_to_cdna(self.start)
+        if cdna < self.transcript.cds_start or cdna > self.transcript.cds_end:
+            return EXON_PHASE.NON_CODING
+        cdna -= self.transcript.cds_start - 1
+        return cdna % 3
+
+    @property
+    def end_phase(self):
+        if self.transcript is None:
+            raise AttributeError('cannot calculate exon phase unless there is an associated transcript')
+        cdna = self.transcript.convert_genomic_to_cdna(self.end)
+        if cdna < self.transcript.cds_start or cdna > self.transcript.cds_end:
+            return EXON_PHASE.NON_CODING
+        cdna -= self.transcript.cds_start - 1
+        return cdna % 3
+
+    def start_splice_site(self):
+        return Interval(self.start - SPLICE_SITE_RADIUS, self.start + SPLICE_SITE_RADIUS - 1)
+
+    def end_splice_site(self):
+        return Interval(self.end - SPLICE_SITE_RADIUS + 1, self.end + SPLICE_SITE_RADIUS)
 
 class Domain:
     """

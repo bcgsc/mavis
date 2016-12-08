@@ -95,13 +95,14 @@ def main():
             _in={
                 'protocol': PROTOCOL,
                 'call_method': CALL_METHOD,
+                'event_type': SVTYPE
             })
         bpps.extend(temp)
     print('read {} breakpoint pairs'.format(len(bpps)))
 
     annotations = []
     for bpp in bpps:
-        ann = gather_annotations(REFERENCE_ANNOTATIONS, bpp)
+        ann = gather_annotations(REFERENCE_ANNOTATIONS, bpp, event_type=bpp.data['event_type'])
         annotations.extend(ann)
         print(bpp)
         for a in ann:

@@ -58,6 +58,8 @@ SVTYPE = Vocab(
 - DUP: duplication
 """
 
+EXON_PHASE = Vocab(MIDDLE_BASE=2, FIRST_BASE=1, LAST_BASE=0, NON_CODING=-1)
+
 CIGAR = Vocab(M=0, I=1, D=2, N=3, S=4, H=5, P=6, X=8, EQ=7)
 """Vocab: Enum-like. For readable cigar values
 
