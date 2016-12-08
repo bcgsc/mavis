@@ -8,6 +8,8 @@ from Bio import SeqIO
 import re
 
 
+SPLICE_SITE_RADIUS = 2
+
 class Annotation(BreakpointPair):
     """
     a fusion of two transcripts created by the associated breakpoint_pair
@@ -107,6 +109,43 @@ class Annotation(BreakpointPair):
                 temp.add((gene, dist))
 
         self.nearest_gene_break2 = temp
+
+    def build_fusion_transcripts(self):
+        """
+        builds a set of fusion transcripts with splicing defined
+        also contains a map of exons to their original transcript
+        """
+        # determine if any splice sites appear to be affected
+        # determine the exon locations. use the first transcript as the reference point
+        if len(self.break1) > 1 or len(self.break2) > 1:
+            raise AttributeError('can only produce fusion transcripts for exact breakpoint calls')
+        elif not self.transcript1 or not self.transcript2:
+            raise AttributeError('cannot produce fusion transcript for non-annotated fusions')
+        abrogated_splice_sites = []
+        t1_exons = []
+
+        if self.break1.orient == ORIENT.LEFT:
+            for ex in sorted(self.transcript1.exons, key=lambda x: x.start):
+                if self.break1.end < ex.start - SPLICE_SITE_RADIUS: # before this exon AND splice site
+                    break
+                elif self.break1.end < ex.end - SPLICE_SITE_RADIUS + 1: # first splice site only
+                    abrogated_splice_sites.append(ex.start)
+                elif self.break1.end <= ex.end + SPLICE_SITE_RADIUS: # second splice site also
+                    abrogated_splice_sites.append(ex.end)
+                else:
+                    t1_exons.append(ex)
+        if self.break1.orient == ORIENT.LEFT and self.break2.orient == ORIENT.LEFT:
+            exons = []
+            for ex in sorted(self.transcript1.exons, key=lambda x: x.start):
+                pass
+        elif self.break1.orient == ORIENT.LEFT and self.break2.orient == ORIENT.RIGHT:
+            pass
+        elif self.break1.orient == ORIENT.RIGHT and self.break2.orient == ORIENT.LEFT:
+            pass
+        elif self.break1.orient == ORIENT.RIGHT and self.break2.orient == ORIENT.RIGHT:
+            pass
+        else:
+            raise AttributeError('unexpected orientation, cannot generate fusion transcript')
 
 
 class BioInterval:
