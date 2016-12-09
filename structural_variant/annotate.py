@@ -188,7 +188,7 @@ class FusionTranscript:
         self.exon_mapping = {}
         self.exons = []
         self.sequence = ''
-    
+
     @classmethod
     def determine_prime(cls, transcript, breakpoint):
         if transcript.strand == STRAND.POS:
@@ -217,7 +217,7 @@ class FusionTranscript:
         elif ann.untemplated_sequence is None:
             raise AttributeError(
                 'cannot build a fusion transcript where the untemplated sequence has not been specified')
-        
+
         ft = FusionTranscript()
 
         if ann.transcript1 == ann.transcript2 and ann.event_type not in [SVTYPE.DEL, SVTYPE.INS]:
@@ -227,7 +227,7 @@ class FusionTranscript:
                 seq1, ex1 = cls._pull_exons(ann.transcript1, ann.break1, REFERENCE_GENOME[ann.break1.chr].seq)
                 seq2, ex2 = cls._pull_exons(ann.transcript2, ann.break2, REFERENCE_GENOME[ann.break2.chr].seq)
                 useq = ann.untemplated_sequence
-                
+
                 if ann.transcript1.strand == STRAND.NEG:
                     seq1, seq2 = (seq2, seq1)
                     ex1, ex2 = (ex2, ex1)
@@ -259,9 +259,9 @@ class FusionTranscript:
                 seq1, ex1 = cls._pull_exons(ann.transcript1, b1, REFERENCE_GENOME[b1.chr].seq)
                 seq2, ex2 = cls._pull_exons(ann.transcript2, b1, REFERENCE_GENOME[b2.chr].seq)
                 useq = ann.untemplated_sequence
-                
+
                 if ann.transcript1.strand == STRAND.POS:
-                    ft.sequence = seq1 + useq + window_seq 
+                    ft.sequence = seq1 + useq + window_seq
                     for ex, old_ex in ex1:
                         ft.exons.append(ex)
                         ft.exon_mapping[ex] = old_ex
@@ -283,12 +283,12 @@ class FusionTranscript:
         else:
             t1 = cls.determine_prime(ann.transcript1, ann.break1)
             t2 = cls.determine_prime(ann.transcript2, ann.break2)
-            
+
             if t1 == t2:
                 raise NotImplementedError('do not produce fusion transcript for anti-sense fusions')
             seq1, ex1 = cls._pull_exons(ann.transcript1, ann.break1, REFERENCE_GENOME[ann.break1.chr].seq)
             seq2, ex2 = cls._pull_exons(ann.transcript2, ann.break2, REFERENCE_GENOME[ann.break2.chr].seq)
-            
+
             if t1 == PRIME.FIVE:
                 ft.sequence = seq1 + ann.untemplated_sequence if ann.transcript1.strand == STRAND.POS else \
                     reverse_complement(ann.untemplated_sequence)
@@ -375,7 +375,7 @@ class FusionTranscript:
                     pass
             i += 1
         return splice_site_sets
-    
+
     def decompose(self):
         """
         return a list of putative transcripts from the original transcript
@@ -419,7 +419,7 @@ class FusionTranscript:
             for i, exon in enumerate(exons):
                 intact_start_splice = True
                 intact_end_splice = True
-                
+
                 if breakpoint.start < exon.start:  # --==|====|====
                     if i > 0:  # add last intron
                         t = max(exons[i - 1].end + 1, breakpoint.start)
@@ -473,7 +473,7 @@ class FusionTranscript:
             raise AttributeError('transcript strand must be specified to pull exons')
         return s, new_exons
 
-    def translate(self, splicing_pattern):
+    def translate(self, splicing_pattern=[]):
         if len(splicing_pattern) % 2 != 0:
             raise AttributeError('splice sites must be an even number')
         for s in splicing_pattern:
@@ -481,25 +481,39 @@ class FusionTranscript:
                 raise AttributeError('splice points outside the transcript')
         ranges = [1] + sorted(splicing_pattern) + [len(self.sequence)]
         cdna = []
+        exons = []
 
         for i in range(0, len(ranges), 2):
             s = ranges[i]
             t = ranges[i + 1]
+            exons.append((s, t))
             cdna.append(self.sequence[s - 1:t])
         cdna = ''.join(cdna)
-        
-        translation = []
-        if all_reading_frames:
-            for i in range(0, CODON_SIZE):
-                t = translate(cdna, i)
-                # now calc the open reading frames
-                poss = [pos for pos, char in enumerate(t) if char == START_AA]
-                if len(pos) == 0:
-                    continue
-                stop = t.find(STOP_AA)
-                
-                if stop < 0:
-                    translation.append()
+        print(exons)
+        translations = []  # (cds_start, cds_end)
+        for i in range(0, CODON_SIZE):
+            aa_sequence = translate(cdna, i)
+            # now calc the open reading frames
+            temp = []
+            last_met_pos = -1
+            for aa_num, char in enumerate(aa_sequence):
+                if char == START_AA:
+                    if last_met_pos < 0:
+                        last_met_pos = aa_num
+                elif char == STOP_AA:
+                    if last_met_pos >= 0:
+                        temp.append((last_met_pos, aa_num))
+                        last_met_pos = -1
+
+            for start, end in temp:
+                translations.append((start * CODON_SIZE + i + 1, (end + 1) * CODON_SIZE + i))
+
+        transcripts = []
+        for cds_start, cds_end in sorted(translations):
+            print(cds_start, cds_end)
+            t = Transcript(cds_start, cds_end, gene=self, exons=exons, strand=STRAND.POS)
+            transcripts.append(t)
+        return transcripts
 
 
 class Transcript(BioInterval):
@@ -536,11 +550,11 @@ class Transcript(BioInterval):
 
         BioInterval.__init__(self, reference_object=gene, name=name, start=genomic_start, end=genomic_end)
 
-        self.exons = set()
+        self.exons = []
         self.domains = set()
         self._strand = strand
 
-        if self._strand and self.gene and self.gene.strand != self._strand:
+        if self._strand and self.gene and hasattr(self.gene, 'strand') and self.gene.strand != self._strand:
             raise AttributeError('strand does not match reference object')
 
         try:
@@ -554,12 +568,13 @@ class Transcript(BioInterval):
 
         for e in exons:
             if isinstance(e, Exon):
-                self.exons.add(e)
-                e.reference_object = self
+                if e not in self.exons:
+                    self.exons.append(e)
+                    e.reference_object = self
             else:
                 Exon(e[0], e[1], transcript=self)
 
-        if self.gene is not None:
+        if self.gene is not None and hasattr(self.gene, 'transcripts'):
             self.gene.transcripts.add(self)
 
         exons = sorted(self.exons, key=lambda x: x.start)
@@ -573,7 +588,7 @@ class Transcript(BioInterval):
         for d in domains:
             d.reference_object = self
             self.domains.add(d)
-    
+
     def reading_frame(self):
         """
         returns 0 if the reading frame begins on the first base of the sequence
@@ -593,9 +608,9 @@ class Transcript(BioInterval):
 
     @property
     def strand(self):
-        if self.gene is not None:
-            return self.gene.strand
-        return self._strand
+        if self._strand is not None:
+            return self._strand
+        return self.gene.strand
 
     def genomic_length(self):
         return len(self.position)
@@ -689,7 +704,8 @@ class Exon(BioInterval):
         """
         BioInterval.__init__(self, name=name, reference_object=transcript, start=start, end=end)
         if self.transcript is not None:
-            self.transcript.exons.add(self)
+            if self not in self.transcript.exons:
+                self.transcript.exons.append(self)
         self.intact_start_splice = intact_start_splice
         self.intact_end_splice = intact_end_splice
         if end - start + 1 < SPLICE_SITE_RADIUS * sum([intact_start_splice, intact_end_splice]):
@@ -718,11 +734,11 @@ class Exon(BioInterval):
         cdna = self.transcript.convert_genomic_to_cdna(self.end)
         cdna = abs(self.transcript.cds_start - 1 - cdna)
         return cdna % CODON_SIZE
-    
+
     @property
     def start_splice_site(self):
         return Interval(self.start - SPLICE_SITE_RADIUS, self.start + SPLICE_SITE_RADIUS - 1)
-    
+
     @property
     def end_splice_site(self):
         return Interval(self.end - SPLICE_SITE_RADIUS + 1, self.end + SPLICE_SITE_RADIUS)

@@ -28,7 +28,7 @@ class TestFusionTranscript(unittest.TestCase):
         reference_sequence += 'A' * 600 + 'T' * 100 + 'A' * 200 + 'C' * 100
         reference_sequence += 'A' * 100 + 'G' * 100 + 'A' * 200
         self.reference_sequence = reference_sequence
-    
+
     def test_determine_prime(self):
         tneg = Transcript(1, 2, 3, 4, strand=STRAND.NEG)
         tpos = Transcript(1, 2, 3, 4, strand=STRAND.POS)
@@ -121,7 +121,7 @@ class TestFusionTranscript(unittest.TestCase):
         seq, new_exons = FusionTranscript._pull_exons(t, b, self.reference_sequence)
         expt = 'A' * (499 - 300 + 1) + 'G' * 100 + 'A' * (1199 - 600 + 1) + 'T' * 100
         expt += 'A' * (1499 - 1300 + 1) + 'C' * 100 + 'A' * (1699 - 1600 + 1) + 'G' * 100
-        
+
         self.assertEqual(expt, seq)
         self.assertEqual(4, len(new_exons))
         e = new_exons[0][0]
@@ -230,13 +230,15 @@ class TestFusionTranscript(unittest.TestCase):
 
         expt = 'C' * len(self.x) + 'A' * (499 - 200 + 1) + 'G' * len(self.y) + 'ATCGATCG' + 'T' * len(self.z)
         expt += 'A' * (1499 - 1300 + 1) + 'C' * len(self.w) + 'A' * (1699 - 1600 + 1) + 'G' * len(self.s)
-        
+
         self.assertEqual(expt, ft.sequence)
         self.assertEqual(5, len(ft.exons))
 
         for i, ex in enumerate(t.exons):
-            self.assertEqual(ex, ft.exon_mapping[ft.exons[i]])
-        
+            n = ft.exons[i]
+            print(i, ex, (ex.start, ex.end), n, (n.start, n.end), ft.exon_mapping[n], (ft.exon_mapping[n].start, ft.exon_mapping[n].end))
+            self.assertEqual(ex, ft.exon_mapping[n])
+
         self.assertEqual(1, ft.exons[0].start)
         self.assertEqual(100, ft.exons[0].end)
 
@@ -250,7 +252,7 @@ class TestFusionTranscript(unittest.TestCase):
             self.assertEqual(t, ex.intact_end_splice)
             temp = ft.sequence[ex.start - 1:ex.end]
             self.assertEqual(char_pattern[i], ft.sequence[ex.start - 1:ex.end])
-    
+
     def test_build_single_transcript_inversion(self):
         pass  # TODO
 
@@ -369,7 +371,7 @@ class TestFusionTranscript(unittest.TestCase):
         patterns = sorted(patterns)
         self.assertEqual([self.x.end, self.z.start, self.z.end, self.w.start], patterns[1])
         self.assertEqual([self.x.end, self.y.start, self.z.end, self.w.start], patterns[0])
-    
+
     def test__splice_patterns_53(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
@@ -389,6 +391,21 @@ class TestFusionTranscript(unittest.TestCase):
         patterns = ft._splice_patterns()
         self.assertEqual(1, len(patterns))
         self.assertEqual([self.x.end, self.y.start, self.y.end, self.z.start, self.z.end, self.w.start], patterns[0])
+
+    def test_translate(self):
+        seq = 'ATG' 'TAT' 'GCT' 'AGC' 'ATG' 'GGC' 'TTA' 'GCT' 'ATA' 'TAG' 'TTA' 'GCT' 'ATG' \
+            'AGC' 'CTA' 'GCG' 'CTA' 'TAT' 'ATC' 'GAG' 'GGC' 'TTT' 'GTT' 'AGG' 'GCT' 'GGA' \
+            'TGC' 'TAA' 'CCA' 'AGC' 'CAT' 'TGA' 'AAG' 'GGC' 'CC'
+        ft = FusionTranscript()
+        ft.sequence = seq
+
+        transcripts = ft.translate()
+        self.assertEqual(3, len(transcripts))
+        self.assertEqual(1, transcripts[0].cds_start)
+        self.assertEqual(30, transcripts[0].cds_end)
+        self.assertEqual(5, transcripts[1].cds_start)
+        self.assertEqual(37, transcripts[2].cds_start)
+        self.assertEqual(84, transcripts[2].cds_end)
 
 
 class TestTranscript(unittest.TestCase):
@@ -658,7 +675,7 @@ class TestAnnotate(unittest.TestCase):
 
     def test_gather_annotations_interchromosomal(self):
         pass  # TODO
-    
+
     def test_gather_annotations_intrachromosomal_within_gene_inversion(self):
         g = Gene('test', 1000, 3000, strand=STRAND.POS)
         t = Transcript(50, 450, gene=g, exons=[(1001, 1100), (1501, 1600), (2001, 2100), (2501, 2600)])

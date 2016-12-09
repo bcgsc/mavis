@@ -180,10 +180,10 @@ class Diagram:
             g.translate(x, y)
             main_group.add(g)
             y += self.LEGEND_SWATCH_SIZE + self.PADDING
-        
+
         w = max([len(l) for c, l in swatches]) * self.LEGEND_FONT_SIZE * self.FONT_WIDTH_HEIGHT_RATIO + \
             self.PADDING * (3 if border else 1) + self.LEGEND_SWATCH_SIZE
-        
+
         if border:
             main_group.add(canvas.rect(
                 (0, 0), (w, y), fill='none', stroke=self.LEGEND_BORDER_STROKE,
@@ -202,9 +202,9 @@ class Diagram:
         this is the main drawing function. It decides between the 3 basic layouts
 
         ::
-            
+
             1. Breakpoints are in the same transcript
-                
+
                 +---------------------------+
                 | Genomic Level             |
                 +---------------------------+
@@ -214,7 +214,7 @@ class Diagram:
                 +---------------------------+
 
             2. Breakpoints are on the same template/chromosome but different genes
-                
+
                 +---------------------------+
                 | Genomic Level             |
                 +-------------+-------------+
@@ -224,7 +224,7 @@ class Diagram:
                 +---------------------------+
 
             3. Breakpoints are on different templates/chromosomes
-                
+
                 +-------------+-------------+
                 | Gene1       | Gene2       |
                 +-------------+-------------+
@@ -232,7 +232,7 @@ class Diagram:
                 +-------------+-------------+
                 | Fusion Level              |
                 +---------------------------+
-        
+
         """
         canvas = Drawing(height=1000, width=self.WIDTH)  # just set the height for now and change later
         labels = UniqueMapping()  # keep labels consistent within the drawing
@@ -245,14 +245,14 @@ class Diagram:
             w = self.WIDTH - self.LEFT_MARGIN - self.RIGHT_MARGIN
             colors = {}
             genes = set() | ann.encompassed_genes
-            
+
             for g in ann.encompassed_genes:
                 genes.add(g)
                 colors[g] = self.GENE2_COLOR
 
             for g, d in ann.nearest_gene_break1 | ann.nearest_gene_break2:
                 genes.add(g)
-            
+
             for gene in ann.genes_at_break1 | ann.genes_at_break2:
                 genes.add(gene)
                 colors[gene] = self.GENE1_COLOR
@@ -288,11 +288,11 @@ class Diagram:
             w = self.WIDTH - self.LEFT_MARGIN - self.RIGHT_MARGIN
             colors = {}
             genes = set() | ann.encompassed_genes
-            
+
             for g, d in ann.nearest_gene_break1:
                 genes.add(g)
                 colors[g] = self.GENE1_COLOR
-            
+
             for g, d in ann.nearest_gene_break2:
                 genes.add(g)
                 colors[g] = self.GENE2_COLOR
@@ -300,7 +300,7 @@ class Diagram:
             for gene in ann.genes_at_break1:
                 genes.add(gene)
                 colors[gene] = self.GENE1_COLOR
-            
+
             for gene in ann.genes_at_break2:
                 genes.add(gene)
                 colors[gene] = self.GENE2_COLOR
@@ -321,7 +321,7 @@ class Diagram:
             y += g.height + self.INNER_MARGIN
 
             tw = (w - self.INNER_MARGIN) / 2
-            
+
             h = [0]
             g = canvas.g()
             if ann.transcript1:
@@ -498,6 +498,13 @@ class Diagram:
         setattr(main_group, 'mapping', mapping)
         setattr(main_group, 'labels', labels)
         return main_group
+
+    def draw_fusion_transcript(self, canvas, fusion_transcript, target_width, colors={}):
+        """
+        draws the exons for the fusion transcript, followed by all splicing possibilities
+        and for each splicing posibility their ORFs
+        """
+        pass
 
     def draw_genes(self, canvas, genes, target_width, breakpoints=[], colors={}, labels=UniqueMapping()):
         """
@@ -828,7 +835,7 @@ class Diagram:
         end = intervals[-1].end + buffer
         genic_length = sum([len(i) for i in intervals])
         intergenic_length = (end - start) + 1 - genic_length
-        
+
         width = target_width - (len(intervals) * 2 + 1) * min_width  # reserved width
 
         if width < 0:
@@ -836,7 +843,7 @@ class Diagram:
 
         intergenic_unit = width / (genic_length * ratio + intergenic_length)
         genic_unit = intergenic_unit * ratio
-        
+
         if (intergenic_unit * intergenic_length + genic_unit * genic_length) > target_width:
             raise AssertionError('assert failed', intergenic_unit * intergenic_length + genic_unit * genic_length, target_width)
 
