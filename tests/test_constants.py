@@ -19,3 +19,16 @@ class TestConstants(unittest.TestCase):
         self.assertTrue(ORIENT.compare(ORIENT.LEFT, ORIENT.LEFT))
         self.assertFalse(ORIENT.compare(ORIENT.RIGHT, ORIENT.LEFT))
         self.assertFalse(ORIENT.compare(ORIENT.LEFT, ORIENT.RIGHT))
+
+    def test_reverse_complement(self):
+        self.assertEqual('ATCG', reverse_complement('CGAT'))
+        self.assertEqual('', reverse_complement(''))
+
+    def test_translate(self):
+        s = 'ATG' 'AAT' 'TCT' 'GGA' 'TGA'
+        t = translate(s, 0)
+        self.assertEqual('MNSG*', t)  # ATG AAT TCT GGA TGA
+        t = translate(s, 1)
+        self.assertEqual('*ILD', t)  # A TGA ATT CTG GAT GA
+        t = translate(s, 2)
+        self.assertEqual('EFWM', t)  # AT GAA TTC TGG ATG A

@@ -75,3 +75,9 @@ class MockBamFileHandle:
             if input_tid == tid:
                 return chrom
         raise KeyError('invalid id')
+
+
+class MockSeq:
+    def __init__(self, seq):
+        self.seq = seq
+

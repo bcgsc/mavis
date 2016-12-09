@@ -5,11 +5,24 @@ from Bio.Data.IUPACData import ambiguous_dna_values
 from Bio.Alphabet.IUPAC import ambiguous_dna
 from Bio.Seq import Seq
 
+CODON_SIZE = 3
+
 
 def reverse_complement(s):
     temp = Seq(s, DNA_ALPHABET)
     return str(temp.reverse_complement())
 
+
+def translate(s, reading_frame=0):
+    reading_frame = reading_frame % CODON_SIZE
+    
+    temp = s[reading_frame:]
+    if len(temp) % 3 == 1:
+        temp = temp[:-1]
+    elif len(temp) % 3 == 2:
+        temp = temp[:-2]
+    temp = Seq(temp, DNA_ALPHABET)
+    return str(temp.translate())
 
 GAP = '-'
 
@@ -135,3 +148,11 @@ READ_PAIR_TYPE = Vocab(RR='RR', LL='LL', RL='RL', LR='LR')
 
 
 CALL_METHOD = Vocab(CONTIG='contig', SPLIT='split reads', FLANK='flanking reads', MIXED='split and flanking')
+
+
+SPLICE_SITE_RADIUS = 2
+
+PRIME = Vocab(FIVE=5, THREE=3)
+
+START_AA = 'M'
+STOP_AA = '*'

@@ -8,8 +8,6 @@ from Bio import SeqIO
 import re
 
 
-SPLICE_SITE_RADIUS = 2
-
 class Annotation(BreakpointPair):
     """
     a fusion of two transcripts created by the associated breakpoint_pair
@@ -112,33 +110,6 @@ class Annotation(BreakpointPair):
 
         self.nearest_gene_break2 = temp
 
-    def build_fusion_transcript(self, REFERENCE_GENOME):
-        """
-        builds a set of fusion transcripts with splicing defined
-        also contains a map of exons to their original transcript
-
-        fusions are always drawn 5' to 3' and not given wrt the reference strand
-        """
-        # determine if any splice sites appear to be affected
-        # determine the exon locations. use the first transcript as the reference point
-        # only draw fusion transcripts where they are 5' to 3'
-        if len(self.break1) > 1 or len(self.break2) > 1:
-            raise AttributeError('can only produce fusion transcripts for exact breakpoint calls')
-        elif not self.transcript1 or not self.transcript2:
-            raise AttributeError('cannot produce fusion transcript for non-annotated fusions')
-        elif not self.event_type:
-            raise AttributeError('event_type must be specified to produce a fusion transcript')
-        elif ORIENT.NS in [self.break1.orient, self.break2.orient]:
-            raise AttributeError('cannot call a fusion transcript if the orientation of either breakpoint has not been specified')
-
-        ft = FusionTranscript()
-
-        if self.transcript1 == self.transcript2 \
-                and self.event_type not in [SVTYPE.DEL, SVTYPE.INS]:  # special case
-            # single transcript duplication and/or inversion
-            pass
-
-
 
 class BioInterval:
     def __init__(self, reference_object, start, end, name=None):
@@ -217,102 +188,318 @@ class FusionTranscript:
         self.exon_mapping = {}
         self.exons = []
         self.sequence = ''
+    
+    @classmethod
+    def determine_prime(cls, transcript, breakpoint):
+        if transcript.strand == STRAND.POS:
+            if breakpoint.orient == ORIENT.LEFT:
+                return PRIME.FIVE
+            elif breakpoint.orient == ORIENT.RIGHT:
+                return PRIME.THREE
+            else:
+                raise AttributeError('cannot determine_prime if the orient of the breakpoint has not been specified')
+        elif transcript.strand == STRAND.NEG:
+            if breakpoint.orient == ORIENT.LEFT:
+                return PRIME.THREE
+            elif breakpoint.orient == ORIENT.RIGHT:
+                return PRIME.FIVE
+            else:
+                raise AttributeError('cannot determine_prime if the orient of the breakpoint has not been specified')
+        else:
+            raise AttributeError('cannot determine prime if the strand of the transcript has not been specified')
 
     @classmethod
-    def pull_exons(cls, transcript, breakpoint, reference_sequence):
+    def build(cls, ann, REFERENCE_GENOME):
+        if not ann.transcript1 or not ann.transcript2:
+            raise AttributeError('cannot produce fusion transcript for non-annotated fusions')
+        elif not ann.event_type and ann.transcript1 == ann.transcript2:
+            raise AttributeError('event_type must be specified to produce a fusion transcript')
+        elif ann.untemplated_sequence is None:
+            raise AttributeError(
+                'cannot build a fusion transcript where the untemplated sequence has not been specified')
+        
+        ft = FusionTranscript()
+
+        if ann.transcript1 == ann.transcript2 and ann.event_type not in [SVTYPE.DEL, SVTYPE.INS]:
+            # single transcript events are special cases if the breakpoints face each other
+            # as is the case for duplications and inversions
+            if ann.event_type == SVTYPE.DUP:
+                seq1, ex1 = cls._pull_exons(ann.transcript1, ann.break1, REFERENCE_GENOME[ann.break1.chr].seq)
+                seq2, ex2 = cls._pull_exons(ann.transcript2, ann.break2, REFERENCE_GENOME[ann.break2.chr].seq)
+                useq = ann.untemplated_sequence
+                
+                if ann.transcript1.strand == STRAND.NEG:
+                    seq1, seq2 = (seq2, seq1)
+                    ex1, ex2 = (ex2, ex1)
+                    useq = reverse_complement(useq)
+                ft.sequence = seq2 + useq
+                for ex, old_ex in ex2:
+                    ft.exons.append(ex)
+                    ft.exon_mapping[ex] = old_ex
+                offset = len(ft.sequence) + 1
+                for ex, old_ex in ex1:
+                    e = Exon(
+                        ex.start + offset, ex.end + offset,
+                        intact_start_splice=ex.intact_start_splice,
+                        intact_end_splice=ex.intact_end_splice
+                    )
+                    ft.exons.append(e)
+                    ft.exon_mapping[e] = old_ex
+                ft.sequence += seq1
+            elif ann.event_type == SVTYPE.INV:
+                # pull the exons from either size of the breakpoints window
+                window = Interval(ann.break1.end + 1, ann.break2.end)
+                if ann.break1.orient == ORIENT.RIGHT:
+                    window = Interval(ann.break1.end + 1, ann.break2.start - 1)
+                window_seq = REFERENCE_GENOME[b1.chr].seq[window.start - 1:window.end]
+                # now create 'pseudo-deletion' breakpoints
+                b1 = Breakpoint(ann.break1.chr, window.start - 1, orient=ORIENT.LEFT)
+                b2 = Breakpoint(ann.break2.chr, window.end + 1, orient=ORIENT.RIGHT)
+
+                seq1, ex1 = cls._pull_exons(ann.transcript1, b1, REFERENCE_GENOME[b1.chr].seq)
+                seq2, ex2 = cls._pull_exons(ann.transcript2, b1, REFERENCE_GENOME[b2.chr].seq)
+                useq = ann.untemplated_sequence
+                
+                if ann.transcript1.strand == STRAND.POS:
+                    ft.sequence = seq1 + useq + window_seq 
+                    for ex, old_ex in ex1:
+                        ft.exons.append(ex)
+                        ft.exon_mapping[ex] = old_ex
+                    offset = len(ft.sequence)
+                    for ex, old_ex in ex2:
+                        e = Exon(
+                            ex.start + offset, ex.end + offset,
+                            intact_start_splice=ex.intact_start_splice,
+                            intact_end_splice=ex.intact_end_splice
+                        )
+                        ft.exons.append(e)
+                        ft.exon_mapping[e] = old_ex
+                    ft.sequence += seq2
+                else:
+                    pass
+                raise NotImplementedError('single transcript inversion have not yet been implemented')
+            else:
+                raise AttributeError('unrecognized event type')
+        else:
+            t1 = cls.determine_prime(ann.transcript1, ann.break1)
+            t2 = cls.determine_prime(ann.transcript2, ann.break2)
+            
+            if t1 == t2:
+                raise NotImplementedError('do not produce fusion transcript for anti-sense fusions')
+            seq1, ex1 = cls._pull_exons(ann.transcript1, ann.break1, REFERENCE_GENOME[ann.break1.chr].seq)
+            seq2, ex2 = cls._pull_exons(ann.transcript2, ann.break2, REFERENCE_GENOME[ann.break2.chr].seq)
+            
+            if t1 == PRIME.FIVE:
+                ft.sequence = seq1 + ann.untemplated_sequence if ann.transcript1.strand == STRAND.POS else \
+                    reverse_complement(ann.untemplated_sequence)
+                for ex, old_ex in ex1:
+                    ft.exons.append(ex)
+                    ft.exon_mapping[ex] = old_ex
+                offset = len(ft.sequence)
+                for ex, old_ex in ex2:
+                    e = Exon(
+                        ex.start + offset, ex.end + offset,
+                        intact_start_splice=ex.intact_start_splice,
+                        intact_end_splice=ex.intact_end_splice
+                    )
+                    ft.exons.append(e)
+                    ft.exon_mapping[e] = old_ex
+                ft.sequence += seq2
+            else:
+                ft.sequence = seq2 + ann.untemplated_sequence if ann.transcript2.strand == STRAND.POS else \
+                    reverse_complement(ann.untemplated_sequence)
+                for ex, old_ex in ex2:
+                    ft.exons.append(ex)
+                    ft.exon_mapping[ex] = old_ex
+                offset = len(ft.sequence)
+                for ex, old_ex in ex1:
+                    e = Exon(
+                        ex.start + offset, ex.end + offset,
+                        intact_start_splice=ex.intact_start_splice,
+                        intact_end_splice=ex.intact_end_splice
+                    )
+                    ft.exons.append(e)
+                    ft.exon_mapping[e] = old_ex
+                ft.sequence += seq1
+        return ft
+
+    def _splice_patterns(self):
+        """
+        returns a list of splice sites to be connected as a splicing pattern
+
+        1 or two splice sites are abrogated
+        """
+        splice_site_sets = [[]]
+
+        i = 1
+        while i < len(self.exons):
+            exon = self.exons[i]
+            prev = self.exons[i - 1]
+            # if the last nearest splice site is intact then add this splice site and it
+            if not exon.intact_start_splice and not exon.intact_end_splice:
+                if i < len(self.exons) - 1:
+                    nexxt = self.exons[i + 1]
+                    for s in splice_site_sets:
+                        s.extend([prev.end, nexxt.start])
+                    i += 1
+            elif prev.intact_end_splice:
+                if exon.intact_start_splice:  # both intact
+                    for s in splice_site_sets:
+                        s.extend([prev.end, exon.start])
+                else:  # previous is intact but the current is not
+                    # two options, can skip this exon or retain the previous intron
+                    # duplicate the current sets
+                    if i < len(self.exons) - 1:
+                        temp = []
+                        for s in splice_site_sets:
+                            # skip this exon
+                            nexxt = self.exons[i + 1]
+                            skip = s + [prev.end, nexxt.start]
+                            temp.append(skip)
+                            retain = s + [exon.end, nexxt.start]
+                            # retain the previous intron
+                            temp.append(retain)
+                        i += 1
+                        splice_site_sets = temp
+            else:
+                if exon.intact_start_splice:
+                    # two options: retain previous intron, or skip previous exon
+                    temp = []
+                    for s in splice_site_sets:
+                        skip = s[:]
+                        skip[-1] = exon.start
+                        temp.append(skip)
+                        temp.append(s)
+                    splice_site_sets = temp
+                else:  # both abrogated retain intron, essentially do nothing
+                    pass
+            i += 1
+        return splice_site_sets
+    
+    def decompose(self):
+        """
+        return a list of putative transcripts from the original transcript
+        """
+        pass
+
+    @classmethod
+    def _pull_exons(cls, transcript, breakpoint, reference_sequence):
         if len(breakpoint) > 1:
             raise AttributeError('cannot pull exons on non-specific breakpoints')
         new_exons = []
         s = ''
-        if transcript.strand == STRAND.POS:
-            exons = sorted(transcript.exons, key=lambda x: x.start)
-            if breakpoint.orient == ORIENT.LEFT:  # five prime
-                for i, exon in enumerate(exons):
-                    intact_start_splice = True
-                    intact_end_splice = True
-                    if breakpoint.start < exon.start:  # =====----|----|----
-                        if i > 0:  # add intron
-                            s += reference_sequence[exons[i - 1].end:breakpoint.start]
-                        break
-                    else:
-                        if i > 0:  # add intron
-                            s += reference_sequence[exons[i - 1].end:exon.start]
-                        if breakpoint.start <= exon.end_splice_site().end:
-                            intact_end_splice = False
-                        if breakpoint.start <= exon.start_splice_site().end:
-                            intact_start_splice = False
-                        t = min(breakpoint.start, exon.end)
-                        e = Exon(
-                            len(s) + 1, len(s) + t - exon.start + 1,
-                            intact_start_splice=intact_start_splice,
-                            intact_end_splice=intact_end_splice
-                        )
-                        s += reference_sequence[exon.start - 1:t]
-                        new_exons.append((e, exon))
-            elif breakpoint.orient == ORIENT.RIGHT:  # three prime
-                pass
-
-            else:
-                raise AttributeError('breakpoint orientation must be specified to pull exons')
-        elif transcript.strand == STRAND.NEG:
-            exons = sorted(transcript.exons, key=lambda x: x.start, reverse=True)
-            if breakpoint.orient == ORIENT.LEFT:  # three prime
-                pass
-            elif breakpoint.orient == ORIENT.RIGHT:  # five prime
-                pass
-            else:
-                raise AttributeError('breakpoint orientation must be specified to pull exons')
+        exons = sorted(transcript.exons, key=lambda x: x.start)
+        if breakpoint.orient == ORIENT.LEFT:  # five prime
+            for i, exon in enumerate(exons):
+                intact_start_splice = True
+                intact_end_splice = True
+                if breakpoint.start < exon.start:  # =====----|----|----
+                    if i > 0:  # add intron
+                        temp = reference_sequence[exons[i - 1].end:breakpoint.start]
+                        s += temp
+                    break
+                else:
+                    if i > 0:  # add intron
+                        temp = reference_sequence[exons[i - 1].end:exon.start - 1]
+                        s += temp
+                    if breakpoint.start <= exon.end_splice_site.end:
+                        intact_end_splice = False
+                    if breakpoint.start <= exon.start_splice_site.end:
+                        intact_start_splice = False
+                    t = min(breakpoint.start, exon.end)
+                    e = Exon(
+                        len(s) + 1, len(s) + t - exon.start + 1,
+                        intact_start_splice=intact_start_splice,
+                        intact_end_splice=intact_end_splice
+                    )
+                    temp = reference_sequence[exon.start - 1:t]
+                    s += temp
+                    new_exons.append((e, exon))
+        elif breakpoint.orient == ORIENT.RIGHT:  # three prime
+            for i, exon in enumerate(exons):
+                intact_start_splice = True
+                intact_end_splice = True
+                
+                if breakpoint.start < exon.start:  # --==|====|====
+                    if i > 0:  # add last intron
+                        t = max(exons[i - 1].end + 1, breakpoint.start)
+                        temp = reference_sequence[t - 1:exon.start - 1]
+                        s += temp
+                    if Interval.overlaps(breakpoint, exon.start_splice_site):
+                        intact_start_splice = False
+                    # add the exon
+                    e = Exon(
+                        len(s) + 1, len(s) + len(exon),
+                        intact_start_splice=intact_start_splice,
+                        intact_end_splice=intact_end_splice
+                    )
+                    temp = reference_sequence[exon.start - 1:exon.end]
+                    assert(len(temp) == len(e))
+                    s += temp
+                    new_exons.append((e, exon))
+                elif breakpoint.start <= exon.end:  # --|-====|====
+                    print('exon', exon.start, exon.end, exon)
+                    print('breakpoint', breakpoint)
+                    intact_start_splice = False
+                    temp = reference_sequence[breakpoint.start - 1:exon.end]
+                    if Interval.overlaps(breakpoint, exon.end_splice_site):
+                        intact_end_splice = False
+                    # add the exon
+                    e = Exon(
+                        len(s) + 1, len(s) + len(temp),
+                        intact_start_splice=intact_start_splice,
+                        intact_end_splice=intact_end_splice
+                    )
+                    print('new exon', e.start, e.end, intact_start_splice, intact_end_splice)
+                    s += temp
+                    new_exons.append((e, exon))
         else:
-            raise AttributeError('strand must be specified to pull exons')
+            raise AttributeError('breakpoint orientation must be specified to pull exons')
+        if transcript.strand == STRAND.NEG:
+            # reverse complement the sequence and reverse the exons
+            temp = new_exons
+            new_exons = []
+
+            for ex, old_exon in temp[::-1]:
+                e = Exon(
+                    len(s) - ex.end + 1,
+                    len(s) - ex.start + 1,
+                    intact_start_splice=ex.intact_end_splice,
+                    intact_end_splice=ex.intact_start_splice
+                )
+                new_exons.append((e, old_exon))
+            s = reverse_complement(s)
+        elif transcript.strand != STRAND.POS:
+            raise AttributeError('transcript strand must be specified to pull exons')
         return s, new_exons
 
-    def add_exon(self, exon, breakpoint, REFERENCE_GENOME, flip=False):
-        """
-        """
-        p = len(self.sequence) + 1
-        s = REFERENCE_GENOME[exon.reference_object].seq[exon.start - 1:exon.end]
-        e = Exon(p + 1, p + len(s))
-        if breakpoint.orient == ORIENT.LEFT:
-            if breakpoint.end < exon.start:  # outside exon
-                return  # ====----|--------|----
-            elif breakpoint.end <= exon.end:  # breakpoint lands in the exon
-                # ====|=====----|----
-                if breakpoint.end < exon.start + SPLICE_SITE_RADIUS:
-                    e.intact_left_splice = False  # ====|=-------|----
-                if breakpoint.end >= exon.end - SPLICE_SITE_RADIUS:
-                    e.intact_right_splice = False  # ====|=======-|----
-                e.end = breakpoint.end - exon.start + 1 + e.start
-                s = s[0:e.end - e.start + 1]
-            elif breakpoint.end <= exon.end + SPLICE_SITE_RADIUS:
-                 # ========|========|=----
-                e.intact_right_splice = False
-        elif breakpoint.orient == ORIENT.RIGHT:
-            if breakpoint.start > exon.end:  # outside exon
-                return  # ----|---------|----====
-            elif breakpoint.start >= exon.start:  # breakpoint lands in the exon
-                # ----|-----====|====
-                if breakpoint.start < exon.start + SPLICE_SITE_RADIUS:
-                    e.intact_left_splice = False  # ----|-=======|======
-                if breakpoint.start > exon.end - SPLICE_SITE_RADIUS:
-                    e.intact_right_splice = False  # ---=|========|======
-                e.end = exon.end - breakpoint.start + 1 + e.start
-                s = s[::-1]
-                s = s[0:e.end - e.start + 1]
-                s = s[::-1]
-            else:  # before the exon
-                 # -------=|=====|====
-                if breakpoint.start >= exon.start - SPLICE_SITE_RADIUS - 1:
-                    e.intact_left_splice = False
-        else:
-            raise AttributeError('breakpoint must have a specified orientation')
-        assert(len(s) == exon.end - exon.start + 1)
-        self.sequence += s[::-1] if flip else s
-        self.exons.append(e)
-        self.exon_mapping[e] = exon
+    def translate(self, splicing_pattern):
+        if len(splicing_pattern) % 2 != 0:
+            raise AttributeError('splice sites must be an even number')
+        for s in splicing_pattern:
+            if s < 1 or s > len(self.sequence):
+                raise AttributeError('splice points outside the transcript')
+        ranges = [1] + sorted(splicing_pattern) + [len(self.sequence)]
+        cdna = []
 
-    def add_intron(self, genomic_region, REFERENCE_GENOME, flip=False):
-        temp = REFERENCE_GENOME[genomic_region.reference_object].seq[genomic_region.start - 1:genomic_region.end]
-        self.sequence += temp if not flip else temp[::-1]
+        for i in range(0, len(ranges), 2):
+            s = ranges[i]
+            t = ranges[i + 1]
+            cdna.append(self.sequence[s - 1:t])
+        cdna = ''.join(cdna)
+        
+        translation = []
+        if all_reading_frames:
+            for i in range(0, CODON_SIZE):
+                t = translate(cdna, i)
+                # now calc the open reading frames
+                poss = [pos for pos, char in enumerate(t) if char == START_AA]
+                if len(pos) == 0:
+                    continue
+                stop = t.find(STOP_AA)
+                
+                if stop < 0:
+                    translation.append()
 
 
 class Transcript(BioInterval):
@@ -336,7 +523,9 @@ class Transcript(BioInterval):
             gene (Gene, optional): the gene this transcript belongs to
             name (str, optional): the name of the transcript or external db id. For example ENTS0001
             cds_start (int): the position (wrt the first exon) where translation would begin
-            cds_end (int): the position (wrt the first exon) where translation would terminate
+            cds_cdna = self.transcript.convert_genomic_to_cdna(self.start)
+        cdna = abs(self.transcript.cds_start - 1 - cdna)
+        return cdna % 3end (int): the position (wrt the first exon) where translation would terminate
             strand (STRAND, optional): the strand the transcript occurs on
 
         """
@@ -384,6 +573,18 @@ class Transcript(BioInterval):
         for d in domains:
             d.reference_object = self
             self.domains.add(d)
+    
+    def reading_frame(self):
+        """
+        returns 0 if the reading frame begins on the first base of the sequence
+        1 if the second, and so on up to 2
+        """
+        if self.cds_start is None:
+            raise AttributeError('cannot calculate reading frame if the translation start has not been given')
+        cdna = 1
+        cdna = abs(self.cds_start - 1 - cdna)
+        p = (cdna % CODON_SIZE) + CODON_SIZE - 1
+        return p % CODON_SIZE
 
     @property
     def gene(self):
@@ -507,24 +708,22 @@ class Exon(BioInterval):
         if self.transcript is None:
             raise AttributeError('cannot calculate exon phase unless there is an associated transcript')
         cdna = self.transcript.convert_genomic_to_cdna(self.start)
-        if cdna < self.transcript.cds_start or cdna > self.transcript.cds_end:
-            return EXON_PHASE.NON_CODING
-        cdna -= self.transcript.cds_start - 1
-        return cdna % 3
+        cdna = abs(self.transcript.cds_start - 1 - cdna)
+        return cdna % CODON_SIZE
 
     @property
     def end_phase(self):
         if self.transcript is None:
             raise AttributeError('cannot calculate exon phase unless there is an associated transcript')
         cdna = self.transcript.convert_genomic_to_cdna(self.end)
-        if cdna < self.transcript.cds_start or cdna > self.transcript.cds_end:
-            return EXON_PHASE.NON_CODING
-        cdna -= self.transcript.cds_start - 1
-        return cdna % 3
-
+        cdna = abs(self.transcript.cds_start - 1 - cdna)
+        return cdna % CODON_SIZE
+    
+    @property
     def start_splice_site(self):
         return Interval(self.start - SPLICE_SITE_RADIUS, self.start + SPLICE_SITE_RADIUS - 1)
-
+    
+    @property
     def end_splice_site(self):
         return Interval(self.end - SPLICE_SITE_RADIUS + 1, self.end + SPLICE_SITE_RADIUS)
 
@@ -770,9 +969,9 @@ def gather_breakpoint_annotations(ref_ann, breakpoint):
     if len(pos_intervals) > 0:
         first = pos_intervals[0]
         last = pos_intervals[-1]
-        if breakpoint < first:
+        if breakpoint.start < first.start:
             temp.append(IntergenicRegion(breakpoint.chr, breakpoint[0], first[0] - 1, STRAND.POS))
-        if breakpoint[1] > last[1]:
+        if breakpoint.end > last.end:
             temp.append(IntergenicRegion(breakpoint.chr, last[1] + 1, breakpoint[1], STRAND.POS))
 
         for i, curr in enumerate(pos_intervals):
@@ -821,7 +1020,7 @@ def gather_annotations(ref, bp):  # TODO
     the annotation at the breakpoint can be a transcript or an intergenic region
 
     """
-    annotations = []
+    annotations = dict()
 
     break1_pos, break1_neg = gather_breakpoint_annotations(ref, bp.break1)
     break2_pos, break2_neg = gather_breakpoint_annotations(ref, bp.break2)
@@ -848,6 +1047,18 @@ def gather_annotations(ref, bp):  # TODO
             combinations.extend(itertools.product(break1_neg, break2_neg))
 
     for a1, a2 in combinations:
+        if a1 != a2 and hasattr(a1, 'exons') != hasattr(a2, 'exons') and not bp.interchromosomal:
+            # one is a transcript, the other an intergenic region
+            # take the transcript if it covers both breakpoints
+            # this is due to the special case 'single transcript inversion'
+            if hasattr(a1, 'exons'):
+                if Interval.overlaps(bp.break1, a1) and Interval.overlaps(bp.break2, a1):
+                    a2 = a1
+            else:
+                if Interval.overlaps(bp.break1, a2) and Interval.overlaps(bp.break2, a2):
+                    a1 = a2
+        if (a1, a2) in annotations:  # ignore duplicates
+            continue
         b1_itvl = bp.break1 & a1
         b2_itvl = bp.break2 & a2
         bpp = BreakpointPair.copy(bp)
@@ -863,8 +1074,8 @@ def gather_annotations(ref, bp):  # TODO
         if bp.interchromosomal:
             for gene in ref[bp.break2.chr]:
                 a.add_gene(gene)
-        annotations.append(a)
-    return annotations
+        annotations[(a1, a2)] = a
+    return list(annotations.values())
 
 
 def load_reference_genome(filename):

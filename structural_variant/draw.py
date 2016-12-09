@@ -197,7 +197,7 @@ class Diagram:
         setattr(main_group, 'mapping', None)
         return main_group
 
-    def draw(self, ann):
+    def draw(self, ann, fusion_transcript=None):
         """
         this is the main drawing function. It decides between the 3 basic layouts
 

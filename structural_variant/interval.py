@@ -117,10 +117,14 @@ class Interval:
     def __lt__(self, other):
         if self[0] < other[0]:
             return True
+        elif self[0] == other[0] and self[1] < other[1]:
+            return True
         return False
 
     def __gt__(self, other):
         if self[1] > other[1]:
+            return True
+        elif self[1] == other[1] and self[0] > other[0]:
             return True
         return False
 

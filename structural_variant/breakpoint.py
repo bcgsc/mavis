@@ -92,6 +92,9 @@ class BreakpointPair:
             opposing_strands (bool, optional): are the strands at the breakpoint opposite? i.e. +/- instead of +/+
             untemplated_sequence (str, optional): sequence between the breakpoints that is not part of either breakpoint
             data (dict):
+
+        Note:
+            untemplated_sequence should always be given wrt to the positive/forward reference strand
         """
 
         if b1.key > b2.key:
@@ -271,7 +274,8 @@ class BreakpointPair:
             strand=STRAND.NEG if read.is_reverse else STRAND.POS,
             seq=read.query_sequence[seq_second_start:]
         )
-
+        #if read1.is_reverse and untemplated_sequence != '':
+        #    untemplated_seq = reverse_complement(untemplated_seq)
         return BreakpointPair(break1, break2, opposing_strands=False, untemplated_sequence=untemplated_seq)
 
     @classmethod
@@ -381,8 +385,8 @@ class BreakpointPair:
         else:  # query coverage overlaps
             pass
 
-        if read1.is_reverse and untemplated_sequence != '':
-            untemplated_sequence = reverse_complement(untemplated_sequence)
+        # if read1.is_reverse and untemplated_sequence != '':
+        #    untemplated_sequence = reverse_complement(untemplated_sequence)
 
         return BreakpointPair(b1, b2, untemplated_sequence=untemplated_sequence)
 
