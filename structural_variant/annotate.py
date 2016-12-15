@@ -183,11 +183,277 @@ class Gene(BioInterval):
         return (self.name, self.strand, self.chr, self.start, self.end)
 
 
-class FusionTranscript:
+class Translation(BioInterval):
+    def __init__(self, start, end, transcript, splicing_pattern, domains=[]):
+        BioInterval.__init__(self, reference_object=transcript, name=None, start=start, end=end)
+        self.splicing_pattern = tuple(sorted(splicing_pattern))
+        self.domains = []
+        for d in domains:
+            self.add_domain(d)
+        print('Translation(', start, end, transcript, splicing_pattern, domains, ')')
+    
+    @property
+    def transcript(self):
+        return self.reference_object
+
+    def convert_aa_to_cdna(self, pos):
+        return Interval(self.start - 1 + (pos - 1) * 3 + 1, self.start - 1 + pos * 3)
+    
+    def add_domain(self, domain):
+        domain.reference_object = self
+        if domain not in self.domains:
+            self.domains.append(domain)
+
+    def genomic_utr_regions(self):
+        utr = []
+        if self.transcript.strand not in [STRAND.POS, STRAND.NEG]:
+            raise AttributeError('strand must be positive or negative to calculate regions')
+
+        exons = sorted(self.transcript.exons, key=lambda x: x.start)
+
+        if self.transcript.strand == STRAND.POS:
+            utr.append(Interval(exons[0].start, self.transcript.convert_cdna_to_genomic(self.start)))
+        else:
+            utr.append(Interval(self.transcript.convert_cdna_to_genomic(self.start), exons[-1].end))
+        if self.transcript.strand == STRAND.POS:
+            utr.append(Interval(self.transcript.convert_cdna_to_genomic(self.end), exons[-1].end))
+        else:
+            utr.append(Interval(exons[0].start, self.transcript.convert_cdna_to_genomic(self.end)))
+        return utr
+
+    @property
+    def key(self):
+        return (self.reference_object, self.start, self.end, self.splicing_pattern)
+
+
+class Transcript(BioInterval):
+    """
+    """
+    def __init__(
+        self,
+        cds_start=None,
+        cds_end=None,
+        exons=[],
+        genomic_start=None,
+        genomic_end=None,
+        gene=None,
+        name=None,
+        strand=None,
+        domains=None,
+        translations=None
+    ):
+        """ creates a new transcript object
+
+        Args:
+            gene (Gene, optional): the gene this transcript belongs to
+            name (str, optional): the name of the transcript or external db id. For example ENTS0001
+            cds_start (int): the position (wrt the first exon) where translation would begin
+            cds_cdna = self.transcript.convert_genomic_to_cdna(self.start)
+        cdna = abs(self.transcript.cds_start - 1 - cdna)
+        return cdna % 3end (int): the position (wrt the first exon) where translation would terminate
+            strand (STRAND, optional): the strand the transcript occurs on
+
+        """
+        domains = [] if domains is None else domains
+        translations = [] if translations is None else translations
+
+        print('input translations', translations)
+        if genomic_start is None and len(exons) > 0:
+            genomic_start = min([e[0] for e in exons])
+        if genomic_end is None and len(exons) > 0:
+            genomic_end = max([e[1] for e in exons])
+        
+        BioInterval.__init__(self, reference_object=gene, name=name, start=genomic_start, end=genomic_end)
+
+        self.exons = []
+        self._strand = strand
+        self.translations = translations
+        print('before auto translation', self.translations)
+
+        if self._strand and self.gene and hasattr(self.gene, 'strand') and self.gene.strand != self._strand:
+            raise AttributeError('strand does not match reference object')
+        
+        for e in exons:
+            self.add_exon(e)
+
+        if self.gene is not None and hasattr(self.gene, 'transcripts'):
+            self.gene.transcripts.add(self)
+
+        if cds_start is not None or cds_end is not None:
+            for sp in self.splicing_patterns():
+                print(sp)
+                print('Transcript.__init__', self.translations)
+                tl = Translation(cds_start, cds_end, self, splicing_pattern=sp, domains=domains)
+                self.add_translation(tl)
+                print('Transcript.__init__', self.translations)
+    
+    def splicing_patterns(self):
+        """
+        returns a list of splice sites to be connected as a splicing pattern
+
+        1 or two splice sites are abrogated
+        """
+        splice_site_sets = [[]]
+
+        i = 1
+        while i < len(self.exons):
+            exon = self.exons[i]
+            prev = self.exons[i - 1]
+            # if the last nearest splice site is intact then add this splice site and it
+            if not exon.intact_start_splice and not exon.intact_end_splice:
+                if i < len(self.exons) - 1:
+                    nexxt = self.exons[i + 1]
+                    for s in splice_site_sets:
+                        s.extend([prev.end, nexxt.start])
+                    i += 1
+            elif prev.intact_end_splice:
+                if exon.intact_start_splice:  # both intact
+                    for s in splice_site_sets:
+                        s.extend([prev.end, exon.start])
+                else:  # previous is intact but the current is not
+                    # two options, can skip this exon or retain the previous intron
+                    # duplicate the current sets
+                    if i < len(self.exons) - 1:
+                        temp = []
+                        for s in splice_site_sets:
+                            # skip this exon
+                            nexxt = self.exons[i + 1]
+                            skip = s + [prev.end, nexxt.start]
+                            temp.append(skip)
+                            retain = s + [exon.end, nexxt.start]
+                            # retain the previous intron
+                            temp.append(retain)
+                        i += 1
+                        splice_site_sets = temp
+            else:
+                if exon.intact_start_splice:
+                    # two options: retain previous intron, or skip previous exon
+                    temp = []
+                    for s in splice_site_sets:
+                        skip = s[:]
+                        skip[-1] = exon.start
+                        temp.append(skip)
+                        temp.append(s)
+                    splice_site_sets = temp
+                else:  # both abrogated retain intron, essentially do nothing
+                    pass
+            i += 1
+        return splice_site_sets
+
+    def reading_frame(self):
+        """
+        returns 0 if the reading frame begins on the first base of the sequence
+        1 if the second, and so on up to 2
+        """
+        if self.cds_start is None:
+            raise AttributeError('cannot calculate reading frame if the translation start has not been given')
+        cdna = 1
+        cdna = abs(self.cds_start - 1 - cdna)
+        p = (cdna % CODON_SIZE) + CODON_SIZE - 1
+        return p % CODON_SIZE
+
+    @property
+    def gene(self):
+        """(:class:`~structural_variant.annotate.Gene`): the gene this transcript belongs to"""
+        return self.reference_object
+
+    @property
+    def strand(self):
+        if self._strand is not None:
+            return self._strand
+        return self.gene.strand
+
+    def genomic_length(self):
+        return len(self.position)
+
+    @property
+    def genomic_start(self):
+        return self.start
+
+    @property
+    def genomic_end(self):
+        return self.end
+
+    def _genomic_to_cdna_mapping(self):
+        mapping = {}
+
+        exons = sorted(self.exons, key=lambda x: x.start)
+        if self.strand == STRAND.POS:
+            pass
+        elif self.strand == STRAND.NEG:
+            exons.reverse()
+        else:
+            raise StrandSpecificityError('cannot convert without strand information')
+
+        l = 1
+        for e in exons:
+            mapping[Interval(e.start, e.end)] = Interval(l, l + len(e) - 1)
+            l += len(e)
+        return mapping
+
+    def _cdna_to_genomic_mapping(self):
+        mapping = {}
+        for k, v in self._genomic_to_cdna_mapping().items():
+            mapping[v] = k
+        return mapping
+
+    def convert_genomic_to_cdna(self, pos):
+        mapping = self._genomic_to_cdna_mapping()
+        return Interval.convert_pos(mapping, pos)
+
+    def convert_cdna_to_genomic(self, pos):
+        mapping = self._cdna_to_genomic_mapping()
+        return Interval.convert_pos(mapping, pos)
+    
+    def add_exon(self, exon):
+        if not isinstance(exon, Exon):
+            exon = Exon(exon[0], exon[1])
+
+        for e in self.exons:
+            if Interval.overlaps(e, exon):
+                raise AttributeError('exons cannot overlap', (e[0], e[1]), (exon[0], exon[1]))
+
+        self.exons.append(exon)
+        exon.reference_object = self
+        
+        self.exons = sorted(self.exons, key=lambda x: x.start)
+    
+    def add_translation(self, translation):
+        translation.reference_object = self
+        if translation not in self.translations:
+            self.translations.append(translation)
+
+    @property
+    def key(self):
+        return (self.gene, self.name, self.start, self.end)
+
+    def exon_number(self, exon):
+        for i, e in enumerate(self.exons):
+            if exon != e:
+                continue
+            if self.strand == STRAND.POS:
+                return i + 1
+            elif self.strand == STRAND.NEG:
+                return len(self.exons) - i
+            else:
+                raise AttributeError('strand must be pos or neg to calculate the exon number')
+        raise AttributeError('can only calculate phase on associated exons')
+
+
+class FusionTranscript(Transcript):
+
     def __init__(self):
         self.exon_mapping = {}
         self.exons = []
         self.sequence = ''
+        self.translations = []
+        self.domains = []
+        self.position = None
+        self._strand = STRAND.POS # always built on the positive strand
+
+    def exon_number(self, exon):
+        old_exon = self.exon_mapping[exon]
+        return old_exon.transcript.exon_number(old_exon)
 
     @classmethod
     def determine_prime(cls, transcript, breakpoint):
@@ -321,66 +587,8 @@ class FusionTranscript:
                     ft.exons.append(e)
                     ft.exon_mapping[e] = old_ex
                 ft.sequence += seq1
+        ft.position = Interval(1, len(ft.sequence))
         return ft
-
-    def _splice_patterns(self):
-        """
-        returns a list of splice sites to be connected as a splicing pattern
-
-        1 or two splice sites are abrogated
-        """
-        splice_site_sets = [[]]
-
-        i = 1
-        while i < len(self.exons):
-            exon = self.exons[i]
-            prev = self.exons[i - 1]
-            # if the last nearest splice site is intact then add this splice site and it
-            if not exon.intact_start_splice and not exon.intact_end_splice:
-                if i < len(self.exons) - 1:
-                    nexxt = self.exons[i + 1]
-                    for s in splice_site_sets:
-                        s.extend([prev.end, nexxt.start])
-                    i += 1
-            elif prev.intact_end_splice:
-                if exon.intact_start_splice:  # both intact
-                    for s in splice_site_sets:
-                        s.extend([prev.end, exon.start])
-                else:  # previous is intact but the current is not
-                    # two options, can skip this exon or retain the previous intron
-                    # duplicate the current sets
-                    if i < len(self.exons) - 1:
-                        temp = []
-                        for s in splice_site_sets:
-                            # skip this exon
-                            nexxt = self.exons[i + 1]
-                            skip = s + [prev.end, nexxt.start]
-                            temp.append(skip)
-                            retain = s + [exon.end, nexxt.start]
-                            # retain the previous intron
-                            temp.append(retain)
-                        i += 1
-                        splice_site_sets = temp
-            else:
-                if exon.intact_start_splice:
-                    # two options: retain previous intron, or skip previous exon
-                    temp = []
-                    for s in splice_site_sets:
-                        skip = s[:]
-                        skip[-1] = exon.start
-                        temp.append(skip)
-                        temp.append(s)
-                    splice_site_sets = temp
-                else:  # both abrogated retain intron, essentially do nothing
-                    pass
-            i += 1
-        return splice_site_sets
-
-    def decompose(self):
-        """
-        return a list of putative transcripts from the original transcript
-        """
-        pass
 
     @classmethod
     def _pull_exons(cls, transcript, breakpoint, reference_sequence):
@@ -472,14 +680,15 @@ class FusionTranscript:
         elif transcript.strand != STRAND.POS:
             raise AttributeError('transcript strand must be specified to pull exons')
         return s, new_exons
-
-    def translate(self, splicing_pattern=[]):
+    
+    @classmethod
+    def _translate(cls, ft, splicing_pattern=[]):
         if len(splicing_pattern) % 2 != 0:
             raise AttributeError('splice sites must be an even number')
         for s in splicing_pattern:
-            if s < 1 or s > len(self.sequence):
+            if s < 1 or s > len(ft.sequence):
                 raise AttributeError('splice points outside the transcript')
-        ranges = [1] + sorted(splicing_pattern) + [len(self.sequence)]
+        ranges = [1] + sorted(splicing_pattern) + [len(ft.sequence)]
         cdna = []
         exons = []
 
@@ -487,7 +696,7 @@ class FusionTranscript:
             s = ranges[i]
             t = ranges[i + 1]
             exons.append((s, t))
-            cdna.append(self.sequence[s - 1:t])
+            cdna.append(ft.sequence[s - 1:t])
         cdna = ''.join(cdna)
         print(exons)
         translations = []  # (cds_start, cds_end)
@@ -508,183 +717,6 @@ class FusionTranscript:
             for start, end in temp:
                 translations.append((start * CODON_SIZE + i + 1, (end + 1) * CODON_SIZE + i))
 
-        transcripts = []
-        for cds_start, cds_end in sorted(translations):
-            print(cds_start, cds_end)
-            t = Transcript(cds_start, cds_end, gene=self, exons=exons, strand=STRAND.POS)
-            transcripts.append(t)
-        return transcripts
-
-
-class Transcript(BioInterval):
-    """
-    """
-    def __init__(
-        self,
-        cds_start=None,
-        cds_end=None,
-        genomic_start=None,
-        genomic_end=None,
-        gene=None,
-        name=None,
-        strand=None,
-        exons=[],
-        domains=[]
-    ):
-        """ creates a new transcript object
-
-        Args:
-            gene (Gene, optional): the gene this transcript belongs to
-            name (str, optional): the name of the transcript or external db id. For example ENTS0001
-            cds_start (int): the position (wrt the first exon) where translation would begin
-            cds_cdna = self.transcript.convert_genomic_to_cdna(self.start)
-        cdna = abs(self.transcript.cds_start - 1 - cdna)
-        return cdna % 3end (int): the position (wrt the first exon) where translation would terminate
-            strand (STRAND, optional): the strand the transcript occurs on
-
-        """
-        if genomic_start is None and len(exons) > 0:
-            genomic_start = min([e[0] for e in exons])
-        if genomic_end is None and len(exons) > 0:
-            genomic_end = max([e[1] for e in exons])
-
-        BioInterval.__init__(self, reference_object=gene, name=name, start=genomic_start, end=genomic_end)
-
-        self.exons = []
-        self.domains = set()
-        self._strand = strand
-
-        if self._strand and self.gene and hasattr(self.gene, 'strand') and self.gene.strand != self._strand:
-            raise AttributeError('strand does not match reference object')
-
-        try:
-            self.cds_start = int(cds_start) if cds_start is not None else None
-            self.cds_end = int(cds_end) if cds_end is not None else None
-            if cds_start is not None and cds_end is not None:
-                if self.cds_start > self.cds_end:
-                    raise AttributeError('cds_end must be >= cds_start')
-        except ValueError:
-            raise AttributeError('cds_end and/or cds_start must be integers')
-
-        for e in exons:
-            if isinstance(e, Exon):
-                if e not in self.exons:
-                    self.exons.append(e)
-                    e.reference_object = self
-            else:
-                Exon(e[0], e[1], transcript=self)
-
-        if self.gene is not None and hasattr(self.gene, 'transcripts'):
-            self.gene.transcripts.add(self)
-
-        exons = sorted(self.exons, key=lambda x: x.start)
-        for i, exon in enumerate(exons):
-            if i == 0:
-                continue
-            previous = exons[i - 1]
-            if Interval.overlaps((previous.start, previous.end), (exon.start, exon.end)):
-                raise AttributeError('exons cannot overlap within a transcript')
-
-        for d in domains:
-            d.reference_object = self
-            self.domains.add(d)
-
-    def reading_frame(self):
-        """
-        returns 0 if the reading frame begins on the first base of the sequence
-        1 if the second, and so on up to 2
-        """
-        if self.cds_start is None:
-            raise AttributeError('cannot calculate reading frame if the translation start has not been given')
-        cdna = 1
-        cdna = abs(self.cds_start - 1 - cdna)
-        p = (cdna % CODON_SIZE) + CODON_SIZE - 1
-        return p % CODON_SIZE
-
-    @property
-    def gene(self):
-        """(:class:`~structural_variant.annotate.Gene`): the gene this transcript belongs to"""
-        return self.reference_object
-
-    @property
-    def strand(self):
-        if self._strand is not None:
-            return self._strand
-        return self.gene.strand
-
-    def genomic_length(self):
-        return len(self.position)
-
-    @property
-    def genomic_start(self):
-        return self.start
-
-    def genomic_utr_regions(self):
-        utr = []
-        if self.strand not in [STRAND.POS, STRAND.NEG]:
-            raise AttributeError('strand must be positive or negative to calculate regions')
-
-        exons = sorted(self.exons, key=lambda x: x.start)
-
-        if self.cds_start is not None:
-            if self.strand == STRAND.POS:
-                utr.append(Interval(exons[0].start, self.convert_cdna_to_genomic(self.cds_start)))
-            else:
-                utr.append(Interval(self.convert_cdna_to_genomic(self.cds_start), exons[-1].end))
-        if self.cds_end is not None:
-            if self.strand == STRAND.POS:
-                utr.append(Interval(self.convert_cdna_to_genomic(self.cds_end), exons[-1].end))
-            else:
-                utr.append(Interval(exons[0].start, self.convert_cdna_to_genomic(self.cds_end)))
-        return utr
-
-    @property
-    def genomic_end(self):
-        return self.end
-
-    def _genomic_to_cdna_mapping(self):
-        mapping = {}
-
-        exons = sorted(self.exons, key=lambda x: x.start)
-        if self.strand == STRAND.POS:
-            pass
-        elif self.strand == STRAND.NEG:
-            exons.reverse()
-        else:
-            raise StrandSpecificityError('cannot convert without strand information')
-
-        l = 1
-        for e in exons:
-            mapping[Interval(e.start, e.end)] = Interval(l, l + len(e) - 1)
-            l += len(e)
-        return mapping
-
-    def _cdna_to_genomic_mapping(self):
-        mapping = {}
-        for k, v in self._genomic_to_cdna_mapping().items():
-            mapping[v] = k
-        return mapping
-
-    def convert_genomic_to_cdna(self, pos):
-        mapping = self._genomic_to_cdna_mapping()
-        return Interval.convert_pos(mapping, pos)
-
-    def convert_cdna_to_genomic(self, pos):
-        mapping = self._cdna_to_genomic_mapping()
-        return Interval.convert_pos(mapping, pos)
-
-    def convert_aa_to_cdna(self, pos):
-        return Interval(self.cds_start - 1 + (pos - 1) * 3 + 1, self.cds_start - 1 + pos * 3)
-
-    @property
-    def key(self):
-        return (self.gene, self.name, self.start, self.end, self.cds_start, self.cds_end)
-
-    def exon_number(self, exon):
-        for i, e in enumerate(sorted(exons)):
-            if e is exon:
-                return i
-        raise AttributeError('can only calculate phase on associated exons')
 
 
 class Exon(BioInterval):
@@ -704,8 +736,7 @@ class Exon(BioInterval):
         """
         BioInterval.__init__(self, name=name, reference_object=transcript, start=start, end=end)
         if self.transcript is not None:
-            if self not in self.transcript.exons:
-                self.transcript.exons.append(self)
+            self.transcript.add_exon(self)
         self.intact_start_splice = intact_start_splice
         self.intact_end_splice = intact_end_splice
         if end - start + 1 < SPLICE_SITE_RADIUS * sum([intact_start_splice, intact_end_splice]):
@@ -720,22 +751,6 @@ class Exon(BioInterval):
         return hash((self.transcript, self.start, self.end, self.name))
 
     @property
-    def start_phase(self):
-        if self.transcript is None:
-            raise AttributeError('cannot calculate exon phase unless there is an associated transcript')
-        cdna = self.transcript.convert_genomic_to_cdna(self.start)
-        cdna = abs(self.transcript.cds_start - 1 - cdna)
-        return cdna % CODON_SIZE
-
-    @property
-    def end_phase(self):
-        if self.transcript is None:
-            raise AttributeError('cannot calculate exon phase unless there is an associated transcript')
-        cdna = self.transcript.convert_genomic_to_cdna(self.end)
-        cdna = abs(self.transcript.cds_start - 1 - cdna)
-        return cdna % CODON_SIZE
-
-    @property
     def start_splice_site(self):
         return Interval(self.start - SPLICE_SITE_RADIUS, self.start + SPLICE_SITE_RADIUS - 1)
 
@@ -743,10 +758,11 @@ class Exon(BioInterval):
     def end_splice_site(self):
         return Interval(self.end - SPLICE_SITE_RADIUS + 1, self.end + SPLICE_SITE_RADIUS)
 
+
 class Domain:
     """
     """
-    def __init__(self, name, regions, transcript=None):
+    def __init__(self, name, regions, translation=None):
         """
         Args:
             name (str): the name of the domain i.e. PF00876
@@ -757,25 +773,26 @@ class Domain:
         Example:
             >>> Domain('DNA binding domain', [(1, 4), (10, 24)], transcript)
         """
-        self.reference_object = transcript
+        self.reference_object = translation
         self.name = name
         self.regions = sorted(list(set(regions)))  # remove duplicates
-
+        
         for i, region in enumerate(self.regions):
             if region[0] > region[1]:
                 raise AttributeError('domain region start must be <= end')
         self.regions = Interval.min_nonoverlapping(*self.regions)
-        if self.reference_object is not None:
-            self.reference_object.domains.add(self)
+
+        if self.translation is not None:
+            self.translation.add_domain(self)
 
     @property
-    def transcript(self):
+    def translation(self):
         """(:class:`~structural_variant.annotate.Transcript`): the transcript this domain belongs to"""
         return self.reference_object
 
     @property
     def key(self):
-        return tuple([self.name, self.transcript] + self.regions)
+        return tuple([self.name, self.translation] + self.regions)
 
 
 def load_masking_regions(filepath):

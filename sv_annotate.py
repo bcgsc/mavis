@@ -1,13 +1,13 @@
 
 """
-collapses and annotates breakpoint pairs from the validation step
+annotates breakpoint pairs and draws visualizations
 """
 import argparse
 from structural_variant.breakpoint import read_bpp_from_input_file
 from structural_variant.annotate import gather_annotations, load_reference_genes
 from structural_variant import __version__
 import TSV
-from structural_variant.constants import PROTOCOL, CALL_METHOD
+from structural_variant.constants import PROTOCOL, SVTYPE
 
 
 def parse_arguments():
@@ -21,10 +21,13 @@ def parse_arguments():
         action='store_true', default=False,
         help='set flag to overwrite existing reviewed files'
     )
-    # parser.add_argument(
-    #     '-o', '--output',
-    #     help='path to the output directory', required=True
-    # )
+    parser.add_argument(
+        '--no_draw', default=True, action='store_false',
+        help='set flag to suppress svg drawings of putative annotations')
+    parser.add_argument(
+        '-o', '--output',
+        help='path to the output directory', required=True
+    )
     parser.add_argument(
         '-n', '--input', action='append',
         help='path to the input file', required=True
@@ -41,24 +44,6 @@ def parse_arguments():
     args = parser.parse_args()
     return args
 
-
-def compare_validation_row(current, other):
-    if current['call_method'] != other['call_method']:
-        if current['call_method'] == CALL_METHOD.CONTIG:
-            return current
-        elif other['call_method'] == CALL_METHOD.CONTIG:
-            return other
-        elif current['call_method'] == CALL_METHOD.SPLIT:
-            return current
-        elif other['call_method'] == CALL_METHOD.SPLIT:
-            return other
-        elif current['call_method'] == CALL_METHOD.MIXED:
-            return current
-        elif other['call_method'] == CALL_METHOD.MIXED:
-            return other
-
-def collapse_dictionaries(dicts, columns_to_collapse=[]):
-    pass
 
 def main():
     # load the file
@@ -80,23 +65,13 @@ def main():
             ],
             cast={
                 'cluster_id': lambda x: x.split(';'),
-                'stranded': TSV.bool,
-                'contigs_assembled': int,
-                'contigs_aligned': int,
-                'contig_remap_score': float,
-                'contig_alignment_score': float,
-                'flanking_reads': int,
-                'median_insert_size': int,
-                'stdev_insert_size': float,
-                'break1_split_reads': int,
-                'break2_split_reads': int,
-                'linking_split_reads': int,
+                'stranded': TSV.bool
             },
             _in={
                 'protocol': PROTOCOL,
-                'call_method': CALL_METHOD,
                 'event_type': SVTYPE
-            })
+            },
+            simplify=False)
         bpps.extend(temp)
     print('read {} breakpoint pairs'.format(len(bpps)))
 

@@ -78,6 +78,16 @@ class MockBamFileHandle:
 
 
 class MockSeq:
-    def __init__(self, seq):
+    def __init__(self, seq=None):
         self.seq = seq
 
+
+class MockString:
+    def __init__(self):
+        pass
+
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            return ' ' * (index.stop - index.start)
+        else:
+            return ' '

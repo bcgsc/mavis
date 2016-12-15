@@ -1,10 +1,11 @@
 import unittest
 from structural_variant.draw import Diagram, HEX_BLACK, HEX_WHITE
-from structural_variant.annotate import Gene, Transcript, Domain, Annotation
+from structural_variant.annotate import Gene, Transcript, Domain, Annotation, FusionTranscript
 from svgwrite import Drawing
 from structural_variant.constants import STRAND, ORIENT
 from structural_variant.breakpoint import Breakpoint, BreakpointPair
 from structural_variant.interval import Interval
+from tests import MockSeq, MockString
 
 
 class TestDraw(unittest.TestCase):
@@ -110,13 +111,11 @@ class TestDraw(unittest.TestCase):
         b = Breakpoint('1', 350, 410, orient=ORIENT.LEFT)
         g = d.draw_transcript(
             self.canvas, t, 500,
-            exon_color=d.EXON2_COLOR,
-            utr_color=d.EXON2_UTR_COLOR,
-            abrogated_splice_sites=[200, 299],
+            colors={t.exons[1]: '#FFFF00'},
             breakpoints=[b]
         )
         self.canvas.add(g)
-        self.canvas.saveas('test2.svg')
+        self.canvas.saveas('test_draw_transcript.svg')
         self.assertEqual(8, len(g.elements))
         self.assertEqual('splicing', g.elements[0].attribs.get('class', ''))
         self.assertEqual('scaffold', g.elements[1].attribs.get('class', ''))
@@ -190,7 +189,7 @@ class TestDraw(unittest.TestCase):
         d1 = Domain('first', [(55, 61), (71, 73)])
         d2 = Domain('second', [(10, 20), (30, 34)])
         g1 = Gene('1', 150, 1000, strand=STRAND.POS)
-        g2 = Gene('1', 5000, 7500, strand=STRAND.NEG)
+        g2 = Gene('1', 5000, 7500, strand=STRAND.POS)
         t1 = Transcript(
             gene=g1,
             cds_start=50,
@@ -205,14 +204,22 @@ class TestDraw(unittest.TestCase):
             exons=[(5100, 5299), (5800, 6199), (6500, 6549), (6700, 6799)]
         )
         b1 = Breakpoint('1', 350, orient=ORIENT.LEFT)
-        b2 = Breakpoint('1', 6500, 6650, orient=ORIENT.RIGHT)
-        bpp = BreakpointPair(b1, b2, opposing_strands=False)
+        b2 = Breakpoint('1', 6500, orient=ORIENT.RIGHT)
+        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_sequence='')
         ann = Annotation(bpp, transcript1=t1, transcript2=t2)
         ann.add_gene(Gene('1', 1500, 1950, strand=STRAND.POS))
         ann.add_gene(Gene('1', 3000, 3980, strand=STRAND.POS))
         ann.add_gene(Gene('1', 3700, 4400, strand=STRAND.NEG))
-        canvas = d.draw(ann)
-        canvas.saveas('test.svg')
+        
+        reference_genome = {'1': MockSeq(MockString())}
+
+        ft = FusionTranscript.build(ann, reference_genome)
+        self.assertEqual(t1.exons[0], ft.exon_mapping[ft.exons[0]])
+        self.assertEqual(t2.exons[2], ft.exon_mapping[ft.exons[1]])
+        self.assertEqual(t2.exons[3], ft.exon_mapping[ft.exons[2]])
+
+        canvas = d.draw(ann, ft)
+        canvas.saveas('test_layout_sg.svg')
         #self.assertEqual(5, len(canvas.elements))  # defs counts as element
 
     def test_draw_layout_translocation(self):

@@ -283,7 +283,7 @@ def main():
         hist = {}
         for cluster, input_pairs in c.items():
             hist[len(input_pairs)] = hist.get(len(input_pairs), 0) + 1
-            cluster.data['cluster_id'] = '{}-{}'.format(cluster_id_prefix, cluster_id)
+            cluster.data['cluster_id'] = 'cluster_{}-{}'.format(cluster_id_prefix, cluster_id)
             temp = set()
             for p in input_pairs:
                 temp.update(p.data['tools'])
