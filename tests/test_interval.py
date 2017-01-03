@@ -98,6 +98,8 @@ class TestInterval(unittest.TestCase):
         mapping = {(1, 10): (101, 110), (21, 30): (201, 210), (41, 50): (301, 310)}
 
         self.assertEqual(105, Interval.convert_pos(mapping, 5))
+        self.assertEqual(101, Interval.convert_pos(mapping, 1))
+        self.assertEqual(310, Interval.convert_pos(mapping, 50))
 
         with self.assertRaises(DiscontiuousMappingError) as e:
             Interval.convert_pos(mapping, 15)
@@ -127,7 +129,7 @@ class TestInterval(unittest.TestCase):
         self.assertEqual(210, e.exception.before)
         self.assertEqual(301, e.exception.after)
 
-        
+
 
         # test input errors
         with self.assertRaises(AttributeError):  # unequal length
@@ -145,10 +147,19 @@ class TestInterval(unittest.TestCase):
             Interval.convert_pos(mapping, 10)
 
     def test_convert_pos_ratioed_intervals(self):
-        mapping = {(1, 100): (1, 21), (101, 500): (22, 30), (501, 600): (31, 51), (601, 900): (52, 57), (901, 1100): (58, 100)}
-        self.assertEqual(11, round(Interval.convert_pos(mapping, 50), 0))
+        mapping = {(1, 100): (1, 20), (101, 500): (21, 30), (501, 600): (31, 51), (601, 900): (52, 57), (901, 1100): (58, 100)}
         self.assertEqual(1, round(Interval.convert_pos(mapping, 1), 0))
         self.assertEqual(100, round(Interval.convert_pos(mapping, 1100), 0))
+        self.assertEqual(10, round(Interval.convert_pos(mapping, 50), 0))
+
+        mapping = {(1, 100): (1, 1), (101, 500): (21, 30)}
+        self.assertEqual(1, round(Interval.convert_pos(mapping, 1), 0))
+        self.assertEqual(1, round(Interval.convert_pos(mapping, 100), 0))
+
+        mapping = {(1, 100): (21, 30), (101, 500): (1, 1)}
+        self.assertEqual(1, round(Interval.convert_pos(mapping, 101), 0))
+        self.assertEqual(1, round(Interval.convert_pos(mapping, 500), 0))
+        self.assertEqual(25, round(Interval.convert_pos(mapping, 50), 0))
 
     def test_union(self):
         l = [Interval(1, 10), Interval(5, 7), Interval(7)]

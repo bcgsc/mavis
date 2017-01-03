@@ -332,11 +332,12 @@ class Interval:
         else:
             # fell into a mapped region
             curr = input_intervals[i]
-            shift = pos - curr[0] if not forward_to_reverse else curr[1] - pos
-            if curr[1] - curr[0] == mapping[curr][1] - mapping[curr][0]:
-                return mapping[curr][0] + shift
-            else:
-                return mapping[curr][0] + shift * (mapping[curr][1] - mapping[curr][0]) / (curr[1] - curr[0])
+            nexxt = mapping[curr]
+            ratio = (nexxt[1] - nexxt[0] + 1) / (curr[1] - curr[0] + 1)
+            shift = int((pos - curr[0]) * ratio)
+            #print('curr', curr, 'next', nexxt, 'shift', shift, 'ratio', ratio)
+
+            return nexxt[1] - shift if forward_to_reverse else nexxt[0] + shift
 
     @classmethod
     def union(cls, *intervals):

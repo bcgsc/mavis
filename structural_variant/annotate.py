@@ -191,14 +191,14 @@ class Translation(BioInterval):
         for d in domains:
             self.add_domain(d)
         print('Translation(', start, end, transcript, splicing_pattern, domains, ')')
-    
+
     @property
     def transcript(self):
         return self.reference_object
 
     def convert_aa_to_cdna(self, pos):
         return Interval(self.start - 1 + (pos - 1) * 3 + 1, self.start - 1 + pos * 3)
-    
+
     def add_domain(self, domain):
         domain.reference_object = self
         if domain not in self.domains:
@@ -262,7 +262,7 @@ class Transcript(BioInterval):
             genomic_start = min([e[0] for e in exons])
         if genomic_end is None and len(exons) > 0:
             genomic_end = max([e[1] for e in exons])
-        
+
         BioInterval.__init__(self, reference_object=gene, name=name, start=genomic_start, end=genomic_end)
 
         self.exons = []
@@ -272,7 +272,7 @@ class Transcript(BioInterval):
 
         if self._strand and self.gene and hasattr(self.gene, 'strand') and self.gene.strand != self._strand:
             raise AttributeError('strand does not match reference object')
-        
+
         for e in exons:
             self.add_exon(e)
 
@@ -286,7 +286,7 @@ class Transcript(BioInterval):
                 tl = Translation(cds_start, cds_end, self, splicing_pattern=sp, domains=domains)
                 self.add_translation(tl)
                 print('Transcript.__init__', self.translations)
-    
+
     def splicing_patterns(self):
         """
         returns a list of splice sites to be connected as a splicing pattern
@@ -404,7 +404,7 @@ class Transcript(BioInterval):
     def convert_cdna_to_genomic(self, pos):
         mapping = self._cdna_to_genomic_mapping()
         return Interval.convert_pos(mapping, pos)
-    
+
     def add_exon(self, exon):
         if not isinstance(exon, Exon):
             exon = Exon(exon[0], exon[1])
@@ -415,9 +415,9 @@ class Transcript(BioInterval):
 
         self.exons.append(exon)
         exon.reference_object = self
-        
+
         self.exons = sorted(self.exons, key=lambda x: x.start)
-    
+
     def add_translation(self, translation):
         translation.reference_object = self
         if translation not in self.translations:
@@ -428,6 +428,9 @@ class Transcript(BioInterval):
         return (self.gene, self.name, self.start, self.end)
 
     def exon_number(self, exon):
+        """
+        exon numbering is based on the direction of translation
+        """
         for i, e in enumerate(self.exons):
             if exon != e:
                 continue
@@ -680,7 +683,7 @@ class FusionTranscript(Transcript):
         elif transcript.strand != STRAND.POS:
             raise AttributeError('transcript strand must be specified to pull exons')
         return s, new_exons
-    
+
     @classmethod
     def _translate(cls, ft, splicing_pattern=[]):
         if len(splicing_pattern) % 2 != 0:
@@ -776,7 +779,7 @@ class Domain:
         self.reference_object = translation
         self.name = name
         self.regions = sorted(list(set(regions)))  # remove duplicates
-        
+
         for i, region in enumerate(self.regions):
             if region[0] > region[1]:
                 raise AttributeError('domain region start must be <= end')

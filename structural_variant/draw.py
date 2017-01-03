@@ -88,7 +88,7 @@ class Diagram:
         LEGEND_BORDER_STROKE=HEX_BLACK,
         DOMAIN_LABEL_FONT_SIZE=20
     ):
-        self.MIN_WIDTH = 2  # no element (exon, gene, etc can be less than this wide)
+        self.MIN_WIDTH = 10  # no element (exon, gene, etc can be less than this wide)
         self.TRACK_LINE_HEIGHT = 4
         self.LEFT_MARGIN = 20
         self.RIGHT_MARGIN = 20
@@ -143,17 +143,19 @@ class Diagram:
         self.EXON_TEAR_TOOTH_WIDTH = 2
         self.EXON_MIN_WIDTH = self.MIN_WIDTH + self.EXON_TEAR_TOOTH_WIDTH * 2
         self.EXON_TEAR_TOOTH_HEIGHT = 2
-        self.EXON_INTRON_RATIO = 5
+        self.EXON_INTRON_RATIO = 10
         self.EXON1_COLOR = EXON1_COLOR
         self.EXON2_COLOR = EXON2_COLOR
         self.EXON1_UTR_COLOR = EXON1_UTR_COLOR
         self.EXON2_UTR_COLOR = EXON2_UTR_COLOR
+        self.EXON_FONT_SIZE = 20
 
         self.TRANSLATION_FONT_SIZE = 14
         self.TRANSLATION_SCAFFOLD_COLOR = self.SCAFFOLD_COLOR
         self.TRANSLATION_SCAFFOLD_HEIGHT = self.TRANSLATION_FONT_SIZE
         self.TRANSLATION_START_MARKER = 'M'
         self.TRANSLATION_END_MARKER = '*'
+        self.TRANSLATION_MARKER_PADDING = 4
 
         self.LEGEND_SWATCH_SIZE = 50
         self.LEGEND_FONT_SIZE = LEGEND_FONT_SIZE
@@ -238,9 +240,8 @@ class Diagram:
                 | Fusion Level              |
                 +---------------------------+
 
-        TODO: fusion level
         """
-        canvas = Drawing(height=1000, width=self.WIDTH)  # just set the height for now and change later
+        canvas = Drawing(size=(self.WIDTH, 1000))  # just set the height for now and change later
         labels = LabelMapping()  # keep labels consistent within the drawing
         y = self.TOP_MARGIN
         x = self.LEFT_MARGIN
@@ -251,7 +252,102 @@ class Diagram:
         drawing_width = self.WIDTH - dx_label_shift - self.LEFT_MARGIN - self.RIGHT_MARGIN
 
         if ann.interchromosomal:  # two gene tracks
-            raise NotImplementedError('does not support two gene tracks yet')
+            colors = {}
+            genes1 = set()
+            genes2 = set()
+
+            for g, d in ann.nearest_gene_break1:
+                genes1.add(g)
+                colors[g] = self.GENE1_COLOR
+
+            for g, d in ann.nearest_gene_break2:
+                genes2.add(g)
+                colors[g] = self.GENE2_COLOR
+
+            for gene in ann.genes_at_break1:
+                genes1.add(gene)
+                colors[gene] = self.GENE1_COLOR
+
+            for gene in ann.genes_at_break2:
+                genes2.add(gene)
+                colors[gene] = self.GENE2_COLOR
+
+            if ann.transcript1:
+                genes1.add(ann.transcript1.gene)
+                colors[ann.transcript1.gene] = self.GENE1_COLOR_SELECTED
+                for e in ann.transcript1.exons:
+                    colors[e] = self.EXON1_COLOR
+            if ann.transcript2:
+                genes2.add(ann.transcript2.gene)
+                colors[ann.transcript2.gene] = self.GENE2_COLOR_SELECTED
+                for e in ann.transcript2.exons:
+                    colors[e] = self.EXON2_COLOR
+
+            for gene in sorted(ann.genes_at_break1, key=lambda x: x.start):
+                labels.add(gene, self.GENE_LABEL_PREFIX)
+
+            twidth = (drawing_width - self.INNER_MARGIN - dx_label_shift) / 2
+
+            # first gene view
+            g = self.draw_genes(canvas, genes1, twidth, breakpoints=[ann.break1], colors=colors, labels=labels)
+            g.translate(x, y)
+            canvas.add(g)
+            # second gene view
+            g = self.draw_genes(canvas, genes2, twidth, breakpoints=[ann.break2], colors=colors, labels=labels)
+            g.translate(x + twidth + self.INNER_MARGIN + dx_label_shift, y)
+            canvas.add(g)
+
+            y += g.height + self.INNER_MARGIN
+
+            h = [0]
+
+            if ann.transcript1:
+                g = canvas.g(class_='transcript')
+                g = self.draw_transcript(
+                    canvas,
+                    ann.transcript1,
+                    twidth,
+                    breakpoints=[ann.break1],
+                    labels=labels,
+                    colors=colors
+                )
+                h.append(g.height)
+                g.translate(x, y)
+                canvas.add(g)
+
+            if ann.transcript2:
+                g = canvas.g(class_='transcript')
+                g = self.draw_transcript(
+                    canvas,
+                    ann.transcript2,
+                    twidth,
+                    breakpoints=[ann.break2],
+                    labels=labels,
+                    colors=colors
+                )
+                h.append(g.height)
+                temp = x + twidth + self.INNER_MARGIN + dx_label_shift
+                g.translate(x + twidth + self.INNER_MARGIN + dx_label_shift, y)
+                canvas.add(g)
+
+            y += max(h)
+
+            if fusion_transcript:
+                y += self.INNER_MARGIN
+                for ex, old_ex in fusion_transcript.exon_mapping.items():
+                    if old_ex in colors:
+                        colors[ex] = colors[old_ex]
+                g = canvas.g(class_='transcript')
+                g = self.draw_transcript(
+                    canvas,
+                    fusion_transcript,
+                    drawing_width,
+                    colors=colors,
+                    labels=labels
+                )
+                g.translate(x, y)
+                canvas.add(g)
+                y += g.height
         elif (ann.transcript1 or ann.transcript1) and ann.transcript1 == ann.transcript2:  # single gene track
             colors = {}
             genes = set() | ann.encompassed_genes
@@ -294,9 +390,23 @@ class Diagram:
             canvas.add(g)
             y += g.height
             # draw the genes in order
+            if fusion_transcript:
+                y += self.INNER_MARGIN
+                for ex, old_ex in fusion_transcript.exon_mapping.items():
+                    if old_ex in colors:
+                        colors[ex] = colors[old_ex]
+                g = canvas.g(class_='transcript')
+                g = self.draw_transcript(
+                    canvas,
+                    fusion_transcript,
+                    drawing_width,
+                    colors=colors,
+                    labels=labels
+                )
+                g.translate(x, y)
+                canvas.add(g)
+                y += g.height
         elif ann.transcript1 or ann.transcript1:
-            print('one gene diagram; two transcript diagrams')
-            w = self.WIDTH - self.LEFT_MARGIN - self.RIGHT_MARGIN
             colors = {}
             genes = set() | ann.encompassed_genes
 
@@ -335,8 +445,6 @@ class Diagram:
             canvas.add(g)
             y += g.height + self.INNER_MARGIN
 
-            tw = (w - self.INNER_MARGIN) / 2
-
             h = [0]
 
             twidth = (drawing_width - self.INNER_MARGIN - dx_label_shift) / 2
@@ -366,13 +474,14 @@ class Diagram:
                     colors=colors
                 )
                 h.append(g.height)
+                temp = x + twidth + self.INNER_MARGIN + dx_label_shift
                 g.translate(x + twidth + self.INNER_MARGIN + dx_label_shift, y)
                 canvas.add(g)
 
             y += max(h)
 
             if fusion_transcript:
-                y += self.PADDING
+                y += self.INNER_MARGIN
                 for ex, old_ex in fusion_transcript.exon_mapping.items():
                     if old_ex in colors:
                         colors[ex] = colors[old_ex]
@@ -389,16 +498,16 @@ class Diagram:
                 y += g.height
 
         y += self.BOTTOM_MARGIN
-        canvas.height = y
+        canvas.attribs['height'] = y
+        print('canvas.attribs', canvas.attribs)
         return canvas
 
         # add transcript tracks if applicable (and domains)
         # add fusion track if applicable
 
-    def _draw_exon_track(self, canvas, transcript, mapping, colors=None, labels=None):
+    def _draw_exon_track(self, canvas, transcript, mapping, colors=None):
         """
         """
-        labels = LabelMapping() if labels is None else labels
         colors = {} if colors is None else colors
         main_group = canvas.g(class_='exon_track')
 
@@ -458,7 +567,6 @@ class Diagram:
             raise AttributeError('mapping and target_width arguments are required and mutually exclusive')
 
         if mapping is None:
-            target_width -= self.PADDING + self.LABEL_FONT_SIZE * 2 * self.FONT_WIDTH_HEIGHT_RATIO
             mapping = self._generate_interval_mapping(
                 transcript.exons,
                 target_width,
@@ -466,13 +574,14 @@ class Diagram:
                 self.EXON_MIN_WIDTH
             )
 
-        main_group = canvas.g()
+        main_group = canvas.g(class_='transcript')
 
         y = self.BREAKPOINT_TOP_MARGIN
 
         if len(transcript.translations) == 0:
+            print('transcript has no translations')
             y += self.TRACK_HEIGHT / 2
-            exon_track_group = self._draw_exon_track(canvas, transcript, mapping, colors, labels)
+            exon_track_group = self._draw_exon_track(canvas, transcript, mapping, colors)
             main_group.add(exon_track_group)
             y += self.TRACK_HEIGHT / 2
         else:
@@ -481,16 +590,15 @@ class Diagram:
                 # if the splicing takes up more room than the track we need to adjust for it
                 y += max(self.SPLICE_HEIGHT, self.TRACK_HEIGHT / 2) - self.TRACK_HEIGHT / 2
 
-                exon_track_group = self._draw_exon_track(canvas, transcript, mapping, colors, labels)
+                exon_track_group = self._draw_exon_track(canvas, transcript, mapping, colors)
                 exon_track_group.translate(0, y)
 
                 y += self.TRACK_HEIGHT / 2
                 # draw the splicing pattern
                 polyline = []
-                print('splicing_pattern', tl.splicing_pattern)
                 for i in range(0, len(tl.splicing_pattern), 2):
-                    a = tl.splicing_pattern[i]
-                    b = tl.splicing_pattern[i + 1]
+                    a = Interval.convert_pos(mapping, tl.splicing_pattern[i])
+                    b = Interval.convert_pos(mapping, tl.splicing_pattern[i + 1])
                     polyline.extend(
                         [(a, y), (a + (b - a) / 2, y - self.SPLICE_HEIGHT), (b, y)])
 
@@ -505,34 +613,47 @@ class Diagram:
                 # translation track
                 y += self.PADDING
                 # convert the AA position to cdna position, then convert the cdna to genomic, etc
-                print(tl, tl.start, tl.end)
-                print(transcript.convert_cdna_to_genomic(tl.start), transcript.convert_cdna_to_genomic(tl.end))
-                s = Interval.convert_pos(mapping, transcript.convert_cdna_to_genomic(tl.start))
-                t = Interval.convert_pos(mapping, transcript.convert_cdna_to_genomic(tl.end))
-                print(s, t)
-                reverse = False
-                if s > t:
-                    t, s = (s, t)
-                    reverse = True
+                # ==================== adding the translation track ============
+                translation_sections = [
+                    transcript.convert_cdna_to_genomic(tl.start),
+                    transcript.convert_cdna_to_genomic(tl.end)
+                ]
+                translation_sections.sort()
+                s = Interval.convert_pos(mapping, translation_sections[0])
+                t = Interval.convert_pos(mapping, translation_sections[1])
+
+                tli = Interval(*translation_sections)
+                translation_sections = [tli]
+                for i in range(0, len(tl.splicing_pattern), 2):
+                    itemp = Interval(tl.splicing_pattern[i], tl.splicing_pattern[i + 1])
+                    temp = []
+                    for sec in translation_sections:
+                        temp.extend(sec - itemp)
+                    translation_sections = temp
+
                 gt = canvas.g(class_='translation')
                 gp.add(gt)
                 h = max(self.TRANSLATION_SCAFFOLD_HEIGHT, self.TRANSLATION_FONT_SIZE)
-                gt.add(canvas.rect(
-                    (s, h / 2 - self.TRANSLATION_SCAFFOLD_HEIGHT / 2),
-                    (t - s + 1, self.TRANSLATION_SCAFFOLD_HEIGHT),
-                    fill=self.TRANSLATION_SCAFFOLD_COLOR,
-                    class_='scaffold'
-                    ))
+
+                for sec in translation_sections:
+                    start = Interval.convert_pos(mapping, sec.start)
+                    end = Interval.convert_pos(mapping, sec.end)
+                    gt.add(canvas.rect(
+                        (start, h / 2 - self.TRANSLATION_SCAFFOLD_HEIGHT / 2),
+                        (end - start + 1, self.TRANSLATION_SCAFFOLD_HEIGHT),
+                        fill=self.TRANSLATION_SCAFFOLD_COLOR,
+                        class_='scaffold'
+                        ))
                 gt.add(canvas.text(
-                    self.TRANSLATION_END_MARKER if reverse else self.TRANSLATION_START_MARKER,
-                    insert=(s - 1, h / 2),
+                    self.TRANSLATION_END_MARKER if transcript.strand == STRAND.NEG else self.TRANSLATION_START_MARKER,
+                    insert=(s - self.TRANSLATION_MARKER_PADDING, h / 2),
                     fill=self.LABEL_COLOR,
                     style=self.FONT_STYLE.format(font_size=self.TRANSLATION_FONT_SIZE, text_anchor='end'),
                     class_='label'
                 ))
                 gt.add(canvas.text(
-                    self.TRANSLATION_START_MARKER if reverse else self.TRANSLATION_END_MARKER,
-                    insert=(t + 1, h / 2),
+                    self.TRANSLATION_START_MARKER if transcript.strand == STRAND.NEG else self.TRANSLATION_END_MARKER,
+                    insert=(t + self.TRANSLATION_MARKER_PADDING, h / 2),
                     fill=self.LABEL_COLOR,
                     style=self.FONT_STYLE.format(font_size=self.TRANSLATION_FONT_SIZE, text_anchor='start'),
                     class_='label'
@@ -612,7 +733,7 @@ class Diagram:
         colors = {} if colors is None else colors
         labels = LabelMapping() if labels is None else labels
 
-        main_group = canvas.g()
+        main_group = canvas.g(class_='genes')
         mapping = self._generate_interval_mapping(
             [g for g in genes] + breakpoints,
             target_width,
@@ -669,8 +790,67 @@ class Diagram:
 
         return main_group
 
+    def draw_area_plot(self, canvas, data, height, fill, xmapping=None, **kwargs):
+        ymin = kwargs.pop('ymin', min([y for x, y in data]))
+        ymax = kwargs.pop('ymax', max([y for x, y in data]))
+        yratio = height / (ymax - ymin + 1)
+
+        if kwargs:
+            raise AttributeError('invalid arguments', kwargs)
+
+        temp = []
+        for x, y in data:
+            x = Interval.convert_pos(xmapping, x) if xmapping is not None else x
+            temp.append((x, (ymax - y) * yratio))
+        data = temp
+
+        g = canvas.g(class_='area_plot')
+
+        data = sorted(data)
+        polyline = [(data[0][0], ymax * yratio)] + data + [(data[-1][0], ymax * yratio)]
+        p = canvas.polyline(polyline, fill=fill)
+        g.add(p)
+
+        h = max([y for x, y in data])
+        setattr(g, 'height', h)
+        return g
+
     def read_config(self):
         pass
+
+    def draw_transcripts_overlay(self, gene, markers=None, best_transcript=None):
+        markers = [] if markers is None else markers
+        canvas = Drawing(size=(self.WIDTH, 1000))  # just set the height for now and change later
+        w = self.WIDTH - self.LEFT_MARGIN - self.RIGHT_MARGIN
+        labels = LabelMapping()  # keep labels consistent within the drawing
+
+        all_exons = set()
+        colors = dict()
+        for tx in gene.transcripts:
+            for ex in tx.exons:
+                all_exons.add(ex)
+                colors[ex] = self.EXON1_COLOR if tx != best_transcript else self.EXON2_COLOR
+
+        mapping = Diagram._generate_interval_mapping(
+            all_exons,
+            w,
+            self.EXON_INTRON_RATIO,
+            self.MIN_WIDTH,
+            self.GENE_MIN_BUFFER
+        )
+        main_group = canvas.g(class_='overlay')
+
+        x = 0
+        y = 0
+        for tx in gene.transcripts:
+            g = Diagram._draw_exon_track(self, canvas, tx, mapping, colors=colors)
+            main_group.add(g)
+            g.translate(x, y)
+            y += self.PADDING + self.TRACK_HEIGHT
+
+        main_group.translate(self.LEFT_MARGIN, self.TOP_MARGIN)
+        canvas.add(main_group)
+        return canvas
 
     def draw_breakpoint(self, canvas, breakpoint, width, height, label=''):
         """
@@ -763,7 +943,7 @@ class Diagram:
                 label,
                 insert=(width / 2, height / 2),
                 fill=self.LABEL_COLOR if not self.DYNAMIC_LABELS else Diagram.dynamic_label_color(fill),
-                style=self.FONT_STYLE.format(font_size=self.LABEL_FONT_SIZE, text_anchor='middle'),
+                style=self.FONT_STYLE.format(font_size=self.EXON_FONT_SIZE, text_anchor='middle'),
                 class_='label'
             )
             g.add(t)

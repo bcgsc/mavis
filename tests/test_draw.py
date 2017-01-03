@@ -1,8 +1,8 @@
 import unittest
 from structural_variant.draw import Diagram, HEX_BLACK, HEX_WHITE
-from structural_variant.annotate import Gene, Transcript, Domain, Annotation, FusionTranscript
+from structural_variant.annotate import Gene, Transcript, Domain, Annotation, FusionTranscript, Exon
 from svgwrite import Drawing
-from structural_variant.constants import STRAND, ORIENT
+from structural_variant.constants import STRAND, ORIENT, SVTYPE
 from structural_variant.breakpoint import Breakpoint, BreakpointPair
 from structural_variant.interval import Interval
 from tests import MockSeq, MockString
@@ -11,7 +11,7 @@ from tests import MockSeq, MockString
 class TestDraw(unittest.TestCase):
     def setUp(self):
         self.canvas = Drawing(height=100, width=1000)
-    
+
     def test__generate_interval_mapping(self):
         x = Interval(150, 1000)
         y = Interval(1500, 1950)
@@ -116,18 +116,21 @@ class TestDraw(unittest.TestCase):
         )
         self.canvas.add(g)
         self.canvas.saveas('test_draw_transcript.svg')
-        self.assertEqual(8, len(g.elements))
-        self.assertEqual('splicing', g.elements[0].attribs.get('class', ''))
-        self.assertEqual('scaffold', g.elements[1].attribs.get('class', ''))
-        for i in range(2, 5):
-            self.assertEqual('exon', g.elements[i].attribs.get('class', ''))
-        for i in [5, 6]:
-            self.assertEqual('domain', g.elements[i].attribs.get('class', ''))
+        self.assertEqual(2, len(self.canvas.elements))
+        self.assertEqual(4, len(g.elements))
+        for el, cls in zip(g.elements, ['splicing', 'exon_track', 'protein', 'breakpoint']):
+            self.assertEqual(cls, el.attribs.get('class', ''))
+
+        for el, cls in zip(g.elements[1].elements, ['scaffold', 'exon', 'exon', 'exon']):
+            self.assertEqual(cls, el.attribs.get('class', ''))
+
+        for el, cls in zip(g.elements[2].elements, ['translation', 'domain', 'domain']):
+            self.assertEqual(cls, el.attribs.get('class', ''))
+
         self.assertEqual(d1, g.labels['D1'])
         self.assertEqual(d2, g.labels['D2'])
-        self.assertEqual('breakpoint', g.elements[7].attribs.get('class', ''))
         self.assertEqual(
-            d.TRACK_HEIGHT / 2 
+            d.TRACK_HEIGHT / 2
             + max(d.TRACK_HEIGHT / 2, d.SPLICE_HEIGHT)
             + 2 * d.PADDING + d.DOMAIN_TRACK_HEIGHT * 2
             + d.BREAKPOINT_TOP_MARGIN
@@ -150,7 +153,7 @@ class TestDraw(unittest.TestCase):
         g = d.draw_legend(self.canvas, swatches)
         self.canvas.add(g)
         self.canvas.saveas('test_legend.svg')
-        
+
         self.assertEqual('legend', g.attribs.get('class', ''))
         self.assertEqual(
             d.LEGEND_SWATCH_SIZE * len(swatches) + d.PADDING * (len(swatches) - 1 + 2),
@@ -161,7 +164,7 @@ class TestDraw(unittest.TestCase):
             6 * d.LEGEND_FONT_SIZE * d.FONT_WIDTH_HEIGHT_RATIO + d.PADDING * 3 + d.LEGEND_SWATCH_SIZE,
             g.width
         )
-    
+
     def test_draw_layout_single_transcript(self):
         d = Diagram()
         d1 = Domain('first', [(55, 61), (71, 73)])
@@ -174,15 +177,19 @@ class TestDraw(unittest.TestCase):
             exons=[(200, 299), (400, 499), (700, 899)],
             domains=[d2, d1]
         )
-        b1 = Breakpoint('1', 350, orient=ORIENT.LEFT)
-        b2 = Breakpoint('1', 600, orient=ORIENT.RIGHT)
-        bpp = BreakpointPair(b1, b2, opposing_strands=False)
-        ann = Annotation(bpp, transcript1=t, transcript2=t)
+        b1 = Breakpoint('1', 350, orient=ORIENT.RIGHT)
+        b2 = Breakpoint('1', 600, orient=ORIENT.LEFT)
+        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_sequence='')
+        ann = Annotation(bpp, transcript1=t, transcript2=t, event_type=SVTYPE.DUP)
         ann.add_gene(Gene('1', 1500, 1950, strand=STRAND.POS))
-        canvas = d.draw(ann)
-        #canvas.saveas('test.svg')
-        #self.assertEqual(4, len(canvas.elements))  # defs counts as element
-        
+
+        reference_genome = {'1': MockSeq(MockString())}
+        ft = FusionTranscript.build(ann, reference_genome)
+
+        canvas = d.draw(ann, ft)
+        canvas.saveas('test_draw_layout_single_transcript.svg')
+        self.assertEqual(4, len(canvas.elements))  # defs counts as element
+
 
     def test_draw_layout_single_genomic(self):
         d = Diagram()
@@ -210,7 +217,7 @@ class TestDraw(unittest.TestCase):
         ann.add_gene(Gene('1', 1500, 1950, strand=STRAND.POS))
         ann.add_gene(Gene('1', 3000, 3980, strand=STRAND.POS))
         ann.add_gene(Gene('1', 3700, 4400, strand=STRAND.NEG))
-        
+
         reference_genome = {'1': MockSeq(MockString())}
 
         ft = FusionTranscript.build(ann, reference_genome)
@@ -220,10 +227,85 @@ class TestDraw(unittest.TestCase):
 
         canvas = d.draw(ann, ft)
         canvas.saveas('test_layout_sg.svg')
-        #self.assertEqual(5, len(canvas.elements))  # defs counts as element
+        self.assertEqual(5, len(canvas.elements))  # defs counts as element
+
+    def test_draw_area_plot(self):
+        d = Diagram()
+        mapping = {Interval(1, 100): Interval(1, 100)}
+        data = [
+            (1, 10),
+            (2, 10),
+            (10, 20),
+            (40, 50),
+            (67, 0),
+            (75, 100),
+            (85, 150),
+            (95, 120)
+        ]
+        g = d.draw_area_plot(self.canvas, data, 100, '#FF0000')
+        self.canvas.add(g)
+        self.canvas.saveas('test_draw_area_plot.svg')
+        self.assertEqual(2, len(self.canvas.elements))
 
     def test_draw_layout_translocation(self):
-        pass
-    
+        d = Diagram()
+        d1 = Domain('first', [(55, 61), (71, 73)])
+        d2 = Domain('second', [(10, 20), (30, 34)])
+        g1 = Gene('1', 150, 1000, strand=STRAND.POS)
+        g2 = Gene('2', 5000, 7500, strand=STRAND.NEG)
+        t1 = Transcript(
+            gene=g1,
+            cds_start=50,
+            cds_end=249,
+            exons=[(200, 299), (400, 499), (700, 899)],
+            domains=[d2, d1]
+        )
+        t2 = Transcript(
+            gene=g2,
+            cds_start=120,
+            cds_end=700,
+            exons=[(5100, 5299), (5800, 6199), (6500, 6549), (6700, 6799)]
+        )
+        b1 = Breakpoint('1', 350, orient=ORIENT.LEFT)
+        b2 = Breakpoint('2', 6520, orient=ORIENT.LEFT)
+        bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_sequence='')
+        ann = Annotation(bpp, transcript1=t1, transcript2=t2)
+        # genes 1
+        ann.add_gene(Gene('1', 1500, 1950, strand=STRAND.POS))
+        ann.add_gene(Gene('1', 3000, 3980, strand=STRAND.POS))
+        ann.add_gene(Gene('1', 3700, 4400, strand=STRAND.NEG))
+        # genes 2
+        ann.add_gene(Gene('2', 1500, 1950, strand=STRAND.NEG))
+        ann.add_gene(Gene('2', 5500, 9000, strand=STRAND.POS))
+        ann.add_gene(Gene('2', 3700, 4400, strand=STRAND.NEG))
+
+        reference_genome = {'1': MockSeq(MockString()), '2': MockSeq(MockString())}
+
+        ft = FusionTranscript.build(ann, reference_genome)
+
+        canvas = d.draw(ann, ft)
+        canvas.saveas('test_layout_translocation.svg')
+        self.assertEqual(5, len(canvas.elements))  # defs counts as element
+
     def test_draw_layout_intergenic_breakpoint(self):
         pass
+
+    def test_draw_overlay(self):
+        gene = Gene('12', 25357723, 25403870, strand=STRAND.NEG, name='KRAS')
+        t = Transcript(193, 759,
+            [Exon(25403685, 25403865), Exon(25398208, 25398329), Exon(25380168, 25380346),
+                Exon(25378548, 25378707), Exon(25357723, 25362845)],
+            gene=gene)
+        Transcript(198, 425,
+            [Exon(25403685, 25403870), Exon(25398208, 25398329), Exon(25362102, 25362845)],
+            gene=gene)
+        Transcript(65, 634,
+            [Exon(25403685, 25403737), Exon(25398208, 25398329), Exon(25380168, 25380346), Exon(25378548, 25378707), Exon(25368371, 25368494), Exon(25362365, 25362845)],
+            gene=gene)
+        Transcript(65, 634,
+            [Exon(25403698, 25403863), Exon(25398208, 25398329), Exon(25386753, 25388160)],
+            gene=gene)
+        d = Diagram()
+        canvas = d.draw_transcripts_overlay(gene, best_transcript=t)
+        canvas.saveas('test_draw_overlay.svg')
+        self.assertEqual(5, len(canvas.elements))  # defs counts as element
