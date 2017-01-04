@@ -58,7 +58,7 @@ from structural_variant import __version__
 
 __prog__ = os.path.basename(os.path.realpath(__file__))
 
-MAX_JOBS = 20
+MAX_JOBS = 30
 MIN_EVENTS_PER_JOB = 50
 
 TSV._verbose = False
@@ -195,6 +195,8 @@ def main():
     parser.add_argument('--min-events-per-job', '-e', default=MIN_EVENTS_PER_JOB, type=int,
                         help='defines the minimum number of clusters to validate per job', dest='MIN_EVENTS_PER_JOB')
     parser.add_argument('-r', help='radius to use in clustering', default=50, type=int)
+    parser.add_argument('-q', '--queue', default='transabyss.q',
+            help='queue to submit validation jobs to, only affects the qsub script created')
     parser.add_argument(
         '-k', help='parameter used for computing cliques, smaller is faster, above 20 will be slow',
         default=15, type=int)
@@ -234,17 +236,16 @@ def main():
             parser.print_help()
             exit(1)
     
-    
     mkdirp(os.path.join(args.output, 'inputs'))
 
     breakpoint_pairs = []
 
     for f in args.inputs:
-        print('loading:', f)
+        print('[{}] loading: {}'.format(datetime.now(), f))
         temp = load_input_file(f)
         breakpoint_pairs.extend(temp)
 
-    print('loaded {} breakpoint pairs'.format(len(breakpoint_pairs)))
+    print('[{}] loaded {} breakpoint pairs'.format(datetime.now(), len(breakpoint_pairs)))
 
     # now split by library and protocol
     bpp_by_libprot = {}
@@ -255,11 +256,11 @@ def main():
         
         d = bpp_by_libprot.setdefault((lib, protocol), {})
         
-        if bpp.key not in d:
-            d[bpp.key] = bpp
+        if bpp not in d:
+            d[bpp] = bpp
         else:
-            d[bpp.key].data['files'].update(bpp.data['files'])
-            d[bpp.key].data['tools'].update(bpp.data['tools'])
+            d[bpp].data['files'].update(bpp.data['files'])
+            d[bpp].data['tools'].update(bpp.data['tools'])
     
     clusters_by_libprot = {}
     cluster_id_prefix = re.sub(' ', '_', str(datetime.now()))
@@ -268,7 +269,7 @@ def main():
     for lib, protocol in bpp_by_libprot:
         bpps = bpp_by_libprot[(lib, protocol)].values()
         if lib not in BAM_FILE_ARGS:
-            print(
+            print('[{}]'.format(datetime.now()),
                 'warning: found breakpoints for library', lib,
                 ', but bam was not given therefore breakpoints will be ignored'
             )
@@ -276,7 +277,7 @@ def main():
         # set up directories
         mkdirp(os.path.join(args.output, 'clustering/{}_{}'.format(lib, protocol)))
         mkdirp(os.path.join(args.output, 'validation/{}_{}'.format(lib, protocol)))
-        print('computing clusters for', lib, protocol)
+        print('[{}] computing clusters for {} {}'.format(datetime.now(), lib, protocol))
         c = cluster_breakpoint_pairs(bpps, r=args.r, k=args.k)
         clusters_by_libprot[(lib, protocol)] = c
         
@@ -290,11 +291,8 @@ def main():
             cluster.data['tools'] = ';'.join(sorted(list(temp)))
             cluster_id += 1
 
-        print('cluster distribution', sorted(hist.items()))
+        print('[{}] cluster distribution'.format(datetime.now()), sorted(hist.items()))
     
-    
-
-
     header = [
         'cluster_id',
         'cluster_size',
@@ -320,9 +318,9 @@ def main():
     # now create the mapping from the original input files to the cluster(s)
     for lib, protocol in clusters_by_libprot:
         clusters = clusters_by_libprot[(lib, protocol)]
-        f = os.path.join(args.output, 'clustering/{}_{}_cluster_assignment.tsv'.format(lib, protocol))
+        f = os.path.join(args.output, 'clustering/{}_{}/cluster_assignment.tsv'.format(lib, protocol))
         with open(f, 'w') as fh:
-            print('writing:', f)
+            print('[{}] writing: {}'.format(datetime.now(), f))
             h = ['clusters'] + [c for c in header if c not in ['cluster_id', 'cluster_size']] + ['files']
             rows = {}
             fh.write('#' + '\t'.join(h) + '\n')
@@ -341,61 +339,62 @@ def main():
                 row['protocol'] = protocol
                 fh.write('\t'.join([str(row[c]) for c in h]) + '\n')
 
+    for lib, protocol in clusters_by_libprot:
+        clusters = clusters_by_libprot[(lib, protocol)]
+        # decide on the number of clusters to validate per job
+        JOB_SIZE = MIN_EVENTS_PER_JOB
+        if len(clusters) // MIN_EVENTS_PER_JOB > MAX_JOBS - 1:
+            JOB_SIZE = len(clusters) // MAX_JOBS
 
+        print('[{}] info: splitting {} clusters into {} jobs of size {}'.format(
+            datetime.now(), len(clusters), len(clusters) // JOB_SIZE, JOB_SIZE))
+        
+        index = 0
+        fileno_start = 1
+        fileno = fileno_start
+        parent_dir = os.path.join(args.output, 'clustering/{}_{}'.format(lib, protocol))
+        
+        bedfile = filename = '{}/clusters.bed'.format(parent_dir)
+        print('[{}] writing bed file: {}'.format(datetime.now(), bedfile))
+        write_bed_file(bedfile, clusters)
+        
+        rows = [c for c in clusters]
+        
+        clusterset_file_prefix = parent_dir + '/clusterset-'
+        while index < len(rows):
+            # generate an output file
+            filename = '{}{}'.format(clusterset_file_prefix, fileno)
+            print('[{}] writing: {}'.format(datetime.now(), filename))
+            with open(filename, 'w') as fh:
+                limit = index + JOB_SIZE
+                fh.write('#' + '\t'.join(header) + '\n')
+                if len(rows) - limit < MIN_EVENTS_PER_JOB or fileno == MAX_JOBS:
+                    limit = len(rows)
 
-    with open(os.path.join(args.output, 'qsub_all.sh'), 'w') as qsub:
-        qsub.write(
-            "# script to submit jobs to the cluster\n\n"
-            "# array to hold the job ids so we can create the dependency\n"
-            "VALIDATION_JOBS=()\n"
-        )
+                while index < len(rows) and index < limit:
+                    row = BreakpointPair.flatten(rows[index])
+                    row['cluster_size'] = len(clusters[rows[index]])
+                    row['library'] = lib
+                    row['protocol'] = protocol
+                    fh.write('\t'.join([str(row[c]) for c in header]) + '\n')
+                    index += 1
+            fileno += 1
 
-        for lib, protocol in clusters_by_libprot:
-            clusters = clusters_by_libprot[(lib, protocol)]
-            # decide on the number of clusters to validate per job
-            JOB_SIZE = MIN_EVENTS_PER_JOB
-            if len(clusters) // MIN_EVENTS_PER_JOB > MAX_JOBS - 1:
-                JOB_SIZE = len(clusters) // MAX_JOBS
-
-            print('info: splitting', len(clusters), 'clusters into', len(clusters) // JOB_SIZE, 'jobs of size', JOB_SIZE)
-            
-            index = 0
-            fileno = 1
-            files = []
-
-            file_prefix = os.path.join(args.output, 'clustering/{}_{}/clusterset'.format(lib, protocol))
-            
-            bedfile = filename = file_prefix + '.bed'
-            print('writing bed file', bedfile)
-            write_bed_file(bedfile, clusters)
-            
-            rows = [c for c in clusters]
-
-            while index < len(rows):
-                # generate an output file
-                filename = file_prefix + '-{}.tsv'.format(fileno)
-                print('writing:', filename)
-                with open(filename, 'w') as fh:
-                    limit = index + JOB_SIZE
-                    fh.write('#' + '\t'.join(header) + '\n')
-                    if len(rows) - limit < MIN_EVENTS_PER_JOB or fileno == MAX_JOBS:
-                        limit = len(rows)
-
-                    while index < len(rows) and index < limit:
-                        row = BreakpointPair.flatten(rows[index])
-                        row['cluster_size'] = len(clusters[rows[index]])
-                        row['library'] = lib
-                        row['protocol'] = protocol
-                        fh.write('\t'.join([str(row[c]) for c in header]) + '\n')
-                        index += 1
-                fileno += 1
-
-                qsub.write(
-                    'jid=$(qsub -b sv_validate.py -n {0} -o {1} -b {2} -l {3} -N sv_validate -terse)\n'.format(
-                        filename, 
-                        os.path.join(args.output, 'validation', '{}_{}'.format(lib, protocol)), 
-                        BAM_FILE_ARGS[lib], lib) + 'VALIDATION_JOBS+=("$jid")\n'
-                )
+        # create the qsub script as well
+        with open('{}/qsub.sh'.format(parent_dir), 'w') as fh:
+            fh.write('#!/bin/sh\n')
+            fh.write('#$ -t {}-{}\n'.format(fileno_start, fileno - 1))  # array job
+            fh.write('#$ -V\n')  # copy environment variables
+            fh.write('#$ -N svmV_{}\n'.format(lib[-5:]))
+            fh.write('#$ -q {}\n'.format(args.queue))
+            fh.write('echo "Starting job: $SGE_TASK_ID"\n')
+            fh.write('python sv_validate.py -n {}$SGE_TASK_ID -o {}/{}/{}_{} -b {} -l {}\n'.format(
+                clusterset_file_prefix,
+                args.output, 'validation', lib, protocol,
+                BAM_FILE_ARGS[lib],
+                lib
+            ))
+            fh.write('echo "Job complete: $SGE_TASK_ID"\n')
 
 if __name__ == '__main__':
     main()

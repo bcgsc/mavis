@@ -262,7 +262,6 @@ def cluster_breakpoint_pairs(input_pairs, r, k):
     result = {}
     for ckey, group in sorted(node_sets.items()):
         chr1, chr2, o1, o2, s1, s2, opposing_strands, stranded, seq = ckey
-        print('clustering subgroup', ckey)
         clusters = IntervalPair.cluster(group, r, k)
 
         for node in group:

@@ -8,6 +8,9 @@ from structural_variant.annotate import gather_annotations, load_reference_genes
 from structural_variant import __version__
 import TSV
 from structural_variant.constants import PROTOCOL, SVTYPE
+import types
+import re
+import datetime
 
 
 def parse_arguments():
@@ -32,10 +35,6 @@ def parse_arguments():
         '-n', '--input', action='append',
         help='path to the input file', required=True
     )
-    # parser.add_argument(
-    #     '-l', '--library',
-    #     help='library id', required=True
-    # )
     parser.add_argument(
         '-a', '--annotations',
         default='/home/creisle/svn/ensembl_flatfiles/ensembl69_transcript_exons_and_domains_20160808.tsv',
@@ -55,16 +54,8 @@ def main():
     for f in args.input:
         temp = read_bpp_from_input_file(
             f,
-            require=[
-                'tools',
-                'contig_sequence',
-                # 'break1_homologous_sequence',
-                # 'break2_homologous_sequence',
-                'break1_evidence_window',
-                'break2_evidence_window'
-            ],
+            require=['cluster_id', 'validation_id'],
             cast={
-                'cluster_id': lambda x: x.split(';'),
                 'stranded': TSV.bool
             },
             _in={
@@ -74,22 +65,63 @@ def main():
             simplify=False)
         bpps.extend(temp)
     print('read {} breakpoint pairs'.format(len(bpps)))
+    
+    with open(args.output, 'w') as fh:
+        annotations = []
+        header = set()
+        for bpp in bpps:
+            ann = gather_annotations(REFERENCE_ANNOTATIONS, bpp, event_type=bpp.data['event_type'])
+            annotations.extend(ann)
+            header.update(ann.data.keys())
+        temp = header
+        header = [
+            'cluster_id',
+            'validation_id',
+            'annotation_id',
+            'break1_chromosome',
+            'break1_position_start',
+            'break1_position_end',
+            'break1_orientation',
+            'break1_strand',
+            'break2_chromosome',
+            'break2_position_start',
+            'break2_position_end',
+            'break2_orientation',
+            'break2_strand',
+            'opposing_strands',
+            'stranded',
+            'untemplated_sequence',
+            'event_type',
+            'transcript1',
+            'transcript2',
+            'genes_encompassed',
+            'genes_overlapping_break1',
+            'genes_overlapping_break2',
+            'genes_proximal_to_break1',
+            'genes_proximal_to_break2'
+        ]
+        for col in sorted(list(temp)):
+            if col not in header:
+                header.append(col)
+        fh.write('\t'.join(header) + '\n')
 
-    annotations = []
-    for bpp in bpps:
-        ann = gather_annotations(REFERENCE_ANNOTATIONS, bpp, event_type=bpp.data['event_type'])
-        annotations.extend(ann)
-        print(bpp)
-        for a in ann:
-            print('transcript1', a.transcript1)
-            print('transcript2', a.transcript2)
-            print('encompassed genes', a.encompassed_genes)
-            print('overlap1', a.genes_at_break1)
-            print('overlap2', a.genes_at_break2)
-            print('nearest_gene_break1', a.nearest_gene_break1)
-            print('nearest_gene_break2', a.nearest_gene_break2)
+        id_prefix = 'annotation_{}-'.format(re.sub(' ', '_', str(datetime.now())))
 
-    print('generated {} annotations'.format(len(annotations)))
+        for i, ann in enumerate(annotations):
+            row = ann.flatten()
+            row['annotation_id'] = id_prefix + str(i + 1)
+            temp = []
+            for col in header:
+                if not isinstance(row[col], types.StringTypes):
+                    try:
+                        temp.append(';'.join([str(x) for x in row[col]]))
+                        continue
+                    except TypeError:
+                        pass
+                temp.append(str(row[col]))
+            fh.write('\t'.join(temp) + '\n')
+
+        print('generated {} annotations'.format(len(annotations)))
 
 
 if __name__ == '__main__':

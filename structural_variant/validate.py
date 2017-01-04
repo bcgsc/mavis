@@ -130,8 +130,10 @@ class EventCall(BreakpointPair):
         for read in support1:
             if read.query_name in query2_names:
                 links += 1
-
-        return len(support1), len(support2), links
+        
+        realigns1 = len([r for r in support1 if r.get_tag('cr') == 1])
+        realigns2 = len([r for r in support2 if r.get_tag('cr') == 1])
+        return len(support1), realigns1, len(support2), realigns2, links
 
     def __hash__(self):
         raise NotImplementedError('this object type does not support hashing')
@@ -415,7 +417,7 @@ class Evidence:
         self.spanning_reads = set()
         # for each breakpoint stores the number of reads that were read from the associated
         # bamfile for the window surrounding the breakpoint
-        self.read_counts = {}
+        self.counts = [0, 0]
         self.contigs = []
 
         if self.protocol == PROTOCOL.GENOME:
@@ -889,7 +891,7 @@ class Evidence:
                     opposing_strands=bpp.opposing_strands,
                     stranded=bpp.stranded,
                     untemplated_sequence=bpp.untemplated_sequence,
-                    data=bpp.data
+                    data=ev.data
                 )
                 events.append(new_event)
         return events
@@ -936,43 +938,53 @@ class Evidence:
         cover1 = None if len(first_positions) == 0 else Interval(min(first_positions), max(first_positions))
         cover2 = None if len(second_positions) == 0 else Interval(min(second_positions), max(second_positions))
 
-        if cover1 and cover2 and Interval.overlaps(cover1, cover2):
-            raise AssertionError(
-                'cannot resolve by flanking reads, flanking read coverage overlaps at the breakpoint',
-                cover1, cover2)
+        if cover1 and cover2:
+            if Interval.overlaps(cover1, cover2):
+                raise AssertionError(
+                    'cannot resolve by flanking reads, flanking read coverage overlaps at the breakpoint',
+                    cover1, cover2)
+            elif cover1.start > cover2.start:
+                raise AssertionError(
+                    'cannot resolve by flanking reads. region of coverage for breakpoint1 falls ahead of the region of '
+                    'coverage for breakpoint2')
+            # have coverage for flanking evidence for both breakpoints
         elif cover1 is None and cover2 is None:
             raise UserWarning('unable to call by flanking reads, insufficient flanking reads available')
-
+        
+        print('cover1', cover1, 'cover2', cover2, 'max_insert', max_insert)
+        print('first_breakpoint', first_breakpoint, 'second_breakpoint', second_breakpoint)
         if first_breakpoint is None:
             if cover1 is None:
                 raise UserWarning('no flanking reads available to call this breakpoint')
-            shift = 0 if len(cover1) <= ev.settings.read_length else len(cover1) - ev.settings.read_length
-
+            shift = min([max([0, len(cover1) - ev.settings.read_length]), max_insert])
+            print('shift', shift)
             if ev.break1.orient == ORIENT.LEFT:
-                if cover2 is None or ev.breakpoint_pair.interchromosomal:
-                    first_breakpoint = Breakpoint(
-                        ev.break1.chr,
-                        cover1.end + 1,
-                        cover1.end + 1 + max_insert - shift,
-                        orient=ev.break1.orient,
-                        strand=ev.break1.strand
-                    )
-                elif cover2.start - 1 < cover1.end + 1:
-                    raise AssertionError(
-                        'flanking coverage interval for the second breakpoint is ahead of the first')
-                else:
-                    first_breakpoint = Breakpoint(
-                        ev.break1.chr,
-                        cover1.end + 1,
-                        min([cover1.end + 1 + max_insert - shift, cover2.start - 1]),
-                        orient=ev.break1.orient,
-                        strand=ev.break1.strand
-                    )
+                """
+                                                                  *  *              
+                coverage        ----------------=======---------------======----------------
+                other break     --------------------------------|=|-------------------------
+                raw window      ----------------------|==========================|----------
+                refined window  ----------------------|===========|-------------------------
+                """
+                right_side_bound = cover1.end + max_insert - shift
+                if not ev.breakpoint_pair.interchromosomal:
+                    if cover2 and right_side_bound > cover2.start - 1:
+                        right_side_bound = cover2.start - 1
+                    if second_breakpoint and right_side_bound > second_breakpoint.end:
+                        right_side_bound = second_breakpoint.end
+
+                first_breakpoint = Breakpoint(
+                    ev.break1.chr,
+                    cover1.end,
+                    right_side_bound,
+                    orient=ev.break1.orient,
+                    strand=ev.break1.strand
+                )
             elif ev.break1.orient == ORIENT.RIGHT:
                 first_breakpoint = Breakpoint(
                     ev.break1.chr,
-                    max([cover1.start - 1 - max_insert + shift, 0]),
-                    max([cover1.start - 1, 0]),
+                    max([cover1.start - max_insert + shift, 0]),
+                    max([cover1.start, 0]),
                     orient=ev.break1.orient,
                     strand=ev.break1.strand
                 )
@@ -982,39 +994,41 @@ class Evidence:
         if second_breakpoint is None:
             if cover2 is None:
                 raise UserWarning('no flanking reads available')
-            shift = 0 if len(cover2) <= ev.settings.read_length else len(cover2) - ev.settings.read_length
-
+            shift = min([max([0, len(cover2) - ev.settings.read_length]), max_insert])
+            print('shift', shift)
             if ev.break2.orient == ORIENT.LEFT:
                 second_breakpoint = Breakpoint(
                     ev.break2.chr,
-                    cover2.end + 1,
-                    cover2.end + 1 + max_insert - shift,
+                    cover2.end,
+                    cover2.end + max_insert - shift,
                     orient=ev.break2.orient,
                     strand=ev.break2.strand
                 )
             elif ev.break2.orient == ORIENT.RIGHT:
-                if cover1 is None or ev.breakpoint_pair.interchromosomal:
-                    second_breakpoint = Breakpoint(
-                        ev.break2.chr,
-                        max([cover2.start - 1 - max_insert + shift, 0]),
-                        max([cover2.start - 1, 0]),
-                        orient=ev.break2.orient,
-                        strand=ev.break2.strand
-                    )
-                elif cover1.end + 1 > cover2.start - 1:
-                    raise AssertionError(
-                        'flanking coverage interval for the second breakpoint is ahead of the first')
-                else:
-                    second_breakpoint = Breakpoint(
-                        ev.break2.chr,
-                        max([cover2.start - 1 - max_insert + shift, cover1.end + 1]),
-                        cover2.start - 1,
-                        orient=ev.break2.orient,
-                        strand=ev.break2.strand
-                    )
+                """
+                                                     * *
+                coverage        ----------------=======---------------======----------------
+                other break     ---------------------|====|---------------------------------
+                raw window      ------------------|===================|---------------------
+                refined window  -----------------------|==============|---------------------
+                """
+                left_side_bound = cover2.start - max_insert + shift
+                if not ev.breakpoint_pair.interchromosomal:
+                    if cover1 and left_side_bound < cover1.end + 1:
+                        left_side_bound = cover1.end + 1
+                    if first_breakpoint and left_side_bound < first_breakpoint.start:
+                        left_side_bound = first_breakpoint.start
+                
+                second_breakpoint = Breakpoint(
+                    ev.break2.chr,
+                    left_side_bound,
+                    cover2.start,
+                    orient=ev.break2.orient,
+                    strand=ev.break2.strand
+                )
             else:
                 raise AttributeError('cannot call by flanking if orientation was not given')
-        return EventCall(first_breakpoint, second_breakpoint, ev, classification, call_method)
+        return EventCall(first_breakpoint, second_breakpoint, ev, classification, call_method, data=ev.data)
 
     @classmethod
     def _call_by_supporting_reads(cls, ev, classification):
@@ -1055,24 +1069,23 @@ class Evidence:
             if links == 0:
                 continue
             first_breakpoint = Breakpoint(ev.break1.chr, first, strand=ev.break1.strand, orient=ev.break1.orient)
-            second_breakpoint = Breakpoint(ev.break2.chr, first, strand=ev.break2.strand, orient=ev.break2.orient)
-            call = EventCall(first_breakpoint, second_breakpoint, ev, classification, CALL_METHOD.SPLIT)
+            second_breakpoint = Breakpoint(ev.break2.chr, second, strand=ev.break2.strand, orient=ev.break2.orient)
+            call = EventCall(first_breakpoint, second_breakpoint, ev, classification, CALL_METHOD.SPLIT, data=ev.data)
             linked_pairings.append(call)
 
-        f = [p for p in pos1 if p not in [t.breakpoint_pair.break1.start for t in linked_pairings]]
-        s = [p for p in pos2 if p not in [t.breakpoint_pair.break2.start for t in linked_pairings]]
+        f = [p for p in pos1 if p not in [t.break1.start for t in linked_pairings]]
+        s = [p for p in pos2 if p not in [t.break2.start for t in linked_pairings]]
 
         for first, second in itertools.product(f, s):
             if ev.break1.chr == ev.break2.chr:
                 if first >= second:
                     continue
             first_breakpoint = Breakpoint(ev.break1.chr, first, strand=ev.break1.strand, orient=ev.break1.orient)
-            second_breakpoint = Breakpoint(ev.break2.chr, first, strand=ev.break2.strand, orient=ev.break2.orient)
-            call = EventCall(first_breakpoint, second_breakpoint, ev, classification, CALL_METHOD.SPLIT)
+            second_breakpoint = Breakpoint(ev.break2.chr, second, strand=ev.break2.strand, orient=ev.break2.orient)
+            call = EventCall(first_breakpoint, second_breakpoint, ev, classification, CALL_METHOD.SPLIT, data=ev.data)
             linked_pairings.append(call)
 
         if len(linked_pairings) == 0:  # then call by mixed or flanking only
-            assert(len(pos1.keys()) == 0 or len(pos2.keys()) == 0)
             fr = len(ev.flanking_reads[0]) + len(ev.flanking_reads[1])
             if fr > 0:
                 # if can call the first breakpoint by split
@@ -1115,7 +1128,6 @@ class Evidence:
         open the associated bam file and read and store the evidence
         does some preliminary read-quality filtering
         """
-        count = 0
         bin_gap_size = self.settings.read_length // 2
 
         max_dist = max(
@@ -1138,7 +1150,7 @@ class Evidence:
                 cache_if=partial(
                     lambda filt_sec, r: not filt_sec or (filt_sec and not r.is_secondary),
                     self.settings.filter_secondary_alignments)):
-            count += 1
+            self.counts[0] += 1
             if read.is_secondary and self.settings.filter_secondary_alignments:
                 continue
 
@@ -1158,7 +1170,7 @@ class Evidence:
                     self.add_flanking_read(read)
                 except UserWarning:
                     pass
-        count = 0
+
         for read in self.bam_cache.fetch(
                 '{0}'.format(self.break2.chr),
                 self.window2[0],
@@ -1170,7 +1182,7 @@ class Evidence:
                 cache_if=partial(
                     lambda filt_sec, r: not filt_sec or (filt_sec and not r.is_secondary),
                     self.settings.filter_secondary_alignments)):
-            count += 1
+            self.counts[1] += 1
             if read.is_secondary and self.settings.filter_secondary_alignments:
                 continue
 

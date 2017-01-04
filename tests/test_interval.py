@@ -45,6 +45,10 @@ class TestInterval(unittest.TestCase):
         self.assertTrue(Interval.overlaps(right, middle))
         self.assertTrue(Interval.overlaps(middle, left))
         self.assertTrue(Interval.overlaps(middle, right))
+        self.assertTrue(Interval.overlaps((1, 2), (2, 5)))
+        left = Interval(1148432, 1149343)
+        right = Interval(1149493, 1150024)
+        self.assertFalse(Interval.overlaps(left, right))
 
     def test___len__(self):
         self.assertEqual(5, len(Interval(1, 5)))

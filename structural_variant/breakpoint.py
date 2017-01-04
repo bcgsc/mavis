@@ -140,28 +140,27 @@ class BreakpointPair:
             repr(self.untemplated_sequence)
         )
 
-    @classmethod
-    def flatten(cls, pair):
+    def flatten(self):
         """
-        returns the key-value pair for the breakpoint pair information as
+        returns the key-value self for the breakpoint self information as
         can be written directly as a TSV row
         """
         row = {}
-        row.update(pair.data)
+        row.update(self.data)
         row.update({
-            'break1_chromosome': pair.break1.chr,
-            'break1_position_start': pair.break1.start,
-            'break1_position_end': pair.break1.end,
-            'break1_orientation': pair.break1.orient,
-            'break1_strand': pair.break1.strand,
-            'break2_chromosome': pair.break2.chr,
-            'break2_position_start': pair.break2.start,
-            'break2_position_end': pair.break2.end,
-            'break2_orientation': pair.break2.orient,
-            'break2_strand': pair.break2.strand,
-            'opposing_strands': pair.opposing_strands,
-            'stranded': pair.stranded,
-            'untemplated_sequence': pair.untemplated_sequence
+            'break1_chromosome': self.break1.chr,
+            'break1_position_start': self.break1.start,
+            'break1_position_end': self.break1.end,
+            'break1_orientation': self.break1.orient,
+            'break1_strand': self.break1.strand,
+            'break2_chromosome': self.break2.chr,
+            'break2_position_start': self.break2.start,
+            'break2_position_end': self.break2.end,
+            'break2_orientation': self.break2.orient,
+            'break2_strand': self.break2.strand,
+            'opposing_strands': self.opposing_strands,
+            'stranded': self.stranded,
+            'untemplated_sequence': self.untemplated_sequence
         })
         return row
 

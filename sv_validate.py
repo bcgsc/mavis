@@ -96,23 +96,6 @@ MASKED_REGIONS = None
 EVIDENCE_SETTINGS = EvidenceSettings(median_insert_size=385, stdev_isize=95)
 
 
-class Profile:
-    """
-    this is only being used while building the application
-    to get a sense of how long the different steps are taking
-    """
-    steps = []
-
-    @classmethod
-    def mark_step(cls, name):
-        cls.steps.append((datetime.now(), name))
-
-    @classmethod
-    def print(cls):
-        for step, time in cls.steps:
-            print(step, time)
-
-
 def mkdirp(dirname):
     try:
         os.makedirs(dirname)
@@ -187,8 +170,8 @@ def read_cluster_file(name, is_stranded):
                     INPUT_BAM_CACHE,
                     HUMAN_REFERENCE_GENOME,
                     annotations=REFERENCE_ANNOTATIONS,
-                    data=row,
-                    protocol=row['protocol']
+                    protocol=row['protocol'],
+                    data=row
                 )
                 evidence.append(e)
             except UserWarning as e:
@@ -216,10 +199,6 @@ def parse_arguments():
         help='path to the input file', required=True
     )
     parser.add_argument(
-        '--max_pools', default=MAX_POOL_SIZE, type=int,
-        help='defines the maximum number of processes', dest='MAX_POOL_SIZE'
-    )
-    parser.add_argument(
         '-b', '--bamfile',
         help='path to the input bam file', required=True
     )
@@ -233,7 +212,7 @@ def parse_arguments():
     )
     parser.add_argument(
         '-m', '--masking_file',
-        default='/home/creisle/svn/sv_compile/trunk/hg19_masked_regions.tsv',
+        default='/home/creisle/svn/svmerge/trunk/hg19_masked_regions.tsv',
         help='path to the masking regions file'
     )
     parser.add_argument(
@@ -252,10 +231,6 @@ def parse_arguments():
         choices=[PROTOCOL.GENOME, PROTOCOL.TRANS]
     )
     args = parser.parse_args()
-    if args.MAX_POOL_SIZE < 1:
-        print('\nerror: MAX_POOL_SIZE must be a positive integer')
-        parser.print_help()
-        exit(1)
     return args
 
 
@@ -264,29 +239,28 @@ def gather_evidence_from_bam(clusters):
 
     for i, e in enumerate(clusters):
         if e.protocol == PROTOCOL.GENOME:
+            tab = '[' + str(datetime.now()) + ']'
+            print()
             print(
-                datetime.now(),
-                '[{}/{}]'.format(i + 1, len(clusters)),
+                tab,
+                '({} of {})'.format(i + 1, len(clusters)),
                 'gathering evidence for:',
-                e.breakpoint_pair,
-                BreakpointPair.classify(e.breakpoint_pair)
+                e.breakpoint_pair
             )
+            tab = ' ' * len(tab)
+            print(tab, 'possible event type(s):', BreakpointPair.classify(e.breakpoint_pair))
             try:
                 e.load_evidence()
-            except NotImplementedError:
+            except NotImplementedError as err:
+                print(tab, repr(err))
                 continue
             print(
-                datetime.now(),
-                '[{}/{}]'.format(i + 1, len(clusters)),
-                'gathered evidence for:',
-                e.breakpoint_pair,
-                BreakpointPair.classify(e.breakpoint_pair),
+                tab,
                 'flanking reads:', [len(a) for a in e.flanking_reads],
                 'split reads:', [len(a) for a in e.split_reads]
             )
             e.assemble_split_reads()
-            for c in e.contigs:
-                print('>', c.seq)
+            print(tab, 'assembled {} contigs'.format(len(e.contigs)))
             evidence.append(e)
             ihist = {}
             for read in itertools.chain.from_iterable(e.flanking_reads):
@@ -295,9 +269,7 @@ def gather_evidence_from_bam(clusters):
             try:
                 median = profile_bam.histogram_median(ihist)
                 stdev = math.sqrt(profile_bam.histogram_stderr(ihist, median))
-                avg = profile_bam.histogram_average(ihist)
-                stdev_avg = math.sqrt(profile_bam.histogram_stderr(ihist, avg))
-                print('isize stats: median={}, stdev={}; avg={}, stdev={}'.format(median, stdev, avg, stdev_avg))
+                print(tab, 'insert size: {:.0f} +/- {:.2f}'.format(median, stdev))
             except:
                 pass
         else:
@@ -415,23 +387,24 @@ def write_outputs(filename, bed_filename, event_call):
         for row in rows:
             if row['break2_chromosome'] == row['break1_chromosome']:
                 fh.write('{}\t{}\t{}\t{}\n'.format(
-                    row['break1_chromosome'], 
-                    row['break1_position_start'], 
+                    row['break1_chromosome'],
+                    row['break1_position_start'],
                     row['break2_position_end'],
                     row['event_type']))
             else:
                 fh.write('{}\t{}\t{}\t{}_chr{}\n'.format(
-                    row['break1_chromosome'], 
-                    row['break1_position_start'], 
+                    row['break1_chromosome'],
+                    row['break1_position_start'],
                     row['break1_position_end'],
                     row['event_type'],
                     row['break2_chromosome']))
                 fh.write('{}\t{}\t{}\t{}_chr{}\n'.format(
-                    row['break2_chromosome'], 
-                    row['break2_position_start'], 
+                    row['break2_chromosome'],
+                    row['break2_position_start'],
                     row['break2_position_end'],
                     row['event_type'],
                     row['break1_chromosome']))
+
 
 def main():
     global INPUT_BAM_CACHE, REFERENCE_ANNOTATIONS, MASKED_REGIONS, HUMAN_REFERENCE_GENOME
@@ -448,12 +421,12 @@ def main():
     EVIDENCE_BAM = os.path.join(args.output, FILENAME_PREFIX + '.evidence.bam')
     CONTIG_BAM = os.path.join(args.output, FILENAME_PREFIX + '.contigs.bam')
     EVIDENCE_BED = os.path.join(args.output, FILENAME_PREFIX + '.evidence.bed')
-    OUTPUT_FILE = os.path.join(args.output, FILENAME_PREFIX + '.validated.tsv')
+    OUTPUT_FILE = os.path.join(args.output, FILENAME_PREFIX + '.validated')
     MIN_EXTEND_OVERLAP = 6  # on each end
     MIN_CONTIG_READ_REMAP = 3
     MIN_BREAKPOINT_RESOLUTION = 3
     INPUT_BAM_CACHE = BamCache(args.bamfile)
-    print('loading the masking regions:', args.masking_file)
+    print('[{}] loading the masking regions: {}'.format(datetime.now(), args.masking_file))
     MASKED_REGIONS = load_masking_regions(args.masking_file)
     for chr in MASKED_REGIONS:
         for m in MASKED_REGIONS[chr]:
@@ -462,37 +435,35 @@ def main():
                 m.position.end += EVIDENCE_SETTINGS.read_length
 
     # load the reference genome
-    print('loading the reference genome', args.reference_genome)
-    Profile.mark_step('start loading reference genome')
+    print('[{}] loading the reference genome: {}'.format(datetime.now(), args.reference_genome))
     HUMAN_REFERENCE_GENOME = load_reference_genome(args.reference_genome)
     if args.protocol == PROTOCOL.TRANS:
-        print('loading the reference annotations:', args.annotations)
+        print('[{}] loading the reference annotations: {}'.format(datetime.now(), args.annotations))
         REFERENCE_ANNOTATIONS = load_reference_genes(args.annotations)
-    Profile.mark_step('finished loading reference')
-    print('loading complete')
+    print('[{}] loading complete'.format(datetime.now()))
 
     evidence_reads = set()
 
     split_read_contigs = set()
     chr_to_index = {}
 
-    Profile.mark_step('load bam reads')
     clusters = read_cluster_file(args.input, args.stranded)
     filtered_clusters = []
     for cluster in clusters:
         overlaps_mask = None
-        for mask in MASKED_REGIONS[cluster.break1.chr]:
+        for mask in MASKED_REGIONS.get(cluster.break1.chr, []):
             if Interval.overlaps(cluster.window1, mask):
                 overlaps_mask = mask
                 break
-        for mask in MASKED_REGIONS[cluster.break2.chr]:
+        for mask in MASKED_REGIONS.get(cluster.break2.chr, []):
             if Interval.overlaps(cluster.window2, mask):
                 overlaps_mask = mask
                 break
         if overlaps_mask is None:
             filtered_clusters.append(cluster)
         else:
-            print('dropping cluster overlapping mask', mask, cluster.breakpoint_pair)
+            print('[{}] dropping cluster {} overlapping mask {}:{}-{}'.format(
+                datetime.now(), cluster.breakpoint_pair, mask.reference_object, mask.start, mask.end))
 
     evidence = gather_evidence_from_bam(filtered_clusters)
 
@@ -505,7 +476,7 @@ def main():
         INPUT_BAM_CACHE,
         reference_genome=HUMAN_REFERENCE_GENOME
     )
-    print('evidence gathering is complete')
+    print('[{}] evidence gathering is complete'.format(datetime.now()))
     event_calls = []
     for e in evidence:
         print(e.breakpoint_pair)
@@ -517,12 +488,6 @@ def main():
             event_calls.extend(e.call_events())
         except UserWarning as e:
             print('warning: error in calling events', repr(e))
-    # write the bam file for guiding the user in debugging why a particular cluster may not
-    # pass validation
-    # with open(EVIDENCE_BED, 'w') as fh:
-    #     print('writing:', EVIDENCE_BED)
-    #     for s in bedfile_regions:
-    #         fh.write(s + '\n')
 
     # write the output validated clusters (split by type and contig)
     header = [
@@ -553,13 +518,17 @@ def main():
         'median_insert_size',
         'stdev_insert_size',
         'break1_split_reads',
+        'break1_split_reads_forced',
         'break2_split_reads',
+        'break2_split_reads_forced',
         'linking_split_reads',
         'untemplated_sequence',
         'break1_homologous_sequence',
         'break2_homologous_sequence',
-        'break1_evidence_window',
-        'break2_evidence_window'
+        'break1_ewindow',
+        'break1_ewindow_count',
+        'break2_ewindow',
+        'break2_ewindow_count'
     ]
 
     id_prefix = re.sub(' ', '_', str(datetime.now()))
@@ -568,7 +537,7 @@ def main():
         fh.write('#' + '\t'.join(header) + '\n')
         for ec in event_calls:
             flank_count, flank_median, flank_stdev = ec.count_flanking_support()
-            b1_count, b2_count, link_count = ec.count_split_read_support()
+            b1_count, b1_custom, b2_count, b2_custom, link_count = ec.count_split_read_support()
             b1_homseq = None
             b2_homseq = None
             try:
@@ -603,13 +572,17 @@ def main():
                 'median_insert_size': flank_median,
                 'stdev_insert_size': flank_stdev,
                 'break1_split_reads': b1_count,
+                'break1_split_reads_forced': b1_custom,
                 'break2_split_reads': b2_count,
+                'break2_split_reads_forced': b2_custom,
                 'linking_split_reads': link_count,
                 'untemplated_sequence': None,
                 'break1_homologous_sequence': b1_homseq,
                 'break2_homologous_sequence': b2_homseq,
-                'break1_evidence_window': '{}-{}'.format(*ec.evidence.window1),
-                'break2_evidence_window': '{}-{}'.format(*ec.evidence.window2)
+                'break1_ewindow': '{}-{}'.format(*ec.evidence.window1),
+                'break2_ewindow': '{}-{}'.format(*ec.evidence.window2),
+                'break1_ewindow_count': ec.evidence.counts[0],
+                'break2_ewindow_count': ec.evidence.counts[1]
             }
             if ec.contig:
                 row['contig_sequence'] = ec.contig.seq
@@ -629,7 +602,7 @@ def main():
             id += 1
 
     with pysam.AlignmentFile(CONTIG_BAM, 'wb', template=INPUT_BAM_CACHE.fh) as fh:
-        print('writing:', CONTIG_BAM)
+        print('[{}] writing: {}'.format(datetime.now(), CONTIG_BAM))
         for ev in evidence:
             for c in ev.contigs:
                 for read1, read2 in c.alignments:
@@ -641,7 +614,7 @@ def main():
 
     # write the evidence
     with pysam.AlignmentFile(EVIDENCE_BAM, 'wb', template=INPUT_BAM_CACHE.fh) as fh:
-        print('writing:', EVIDENCE_BAM)
+        print('[{}] writing: {}'.format(datetime.now(), EVIDENCE_BAM))
         reads = set()
         for ev in evidence:
             print(ev)
@@ -652,27 +625,23 @@ def main():
             fh.write(read)
     # now sort the contig bam
     sort = re.sub('.bam$', '.sorted', CONTIG_BAM)
-    print('sorting the bam file', CONTIG_BAM)
+    print('[{}] sorting the bam file: {}'.format(datetime.now(), CONTIG_BAM))
     subprocess.call(['samtools', 'sort', CONTIG_BAM, sort])
     CONTIG_BAM = sort + '.bam'
-    print('indexing the sorted bam', CONTIG_BAM)
+    print('[{}] indexing the sorted bam: {}'.format(datetime.now(), CONTIG_BAM))
     subprocess.call(['samtools', 'index', CONTIG_BAM])
 
     # then sort the evidence bam file
     sort = re.sub('.bam$', '.sorted', EVIDENCE_BAM)
-    print('sorting the bam file', EVIDENCE_BAM)
+    print('[{}] sorting the bam file: {}'.format(datetime.now(), EVIDENCE_BAM))
     subprocess.call(['samtools', 'sort', EVIDENCE_BAM, sort])
     EVIDENCE_BAM = sort + '.bam'
-    print('indexing the sorted bam', EVIDENCE_BAM)
+    print('[{}] indexing the sorted bam: {}'.format(datetime.now(), EVIDENCE_BAM))
     subprocess.call(['samtools', 'index', EVIDENCE_BAM])
 
     INPUT_BAM_CACHE.close()
 
 if __name__ == '__main__':
-    try:
-        main()
-    finally:
-        print()
-        Profile.print()
-        print(datetime.now(), 'stopped at')
+    main()
+
 

@@ -109,6 +109,20 @@ class Annotation(BreakpointPair):
                 temp.add((gene, dist))
 
         self.nearest_gene_break2 = temp
+    
+    def flatten(self):
+        row = {
+            'transcript1': ann.transcript1,
+            'transcript2': ann.transcript2,
+            'genes_encompassed': ann.encompassed_genes,
+            'genes_overlapping_break1': ann.genes_at_break1,
+            'genes_overlapping_break2': ann.genes_at_break2,
+            'genes_proximal_to_break1': ann.nearest_gene_break1,
+            'genes_proximal_to_break2': ann.nearest_gene_break2
+        }
+        temp = BreakpointPair.flatten(self)
+        temp.update(row)
+        return row
 
 
 class BioInterval:
