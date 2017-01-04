@@ -27,7 +27,8 @@ class EventCall(BreakpointPair):
         b1, b2,
         ev,
         classification,
-        call_method,
+        call_method=None,
+        break2_call_method=None,
         contig=None,
         alignment=None,
         stranded=None,
@@ -53,10 +54,16 @@ class EventCall(BreakpointPair):
         self.evidence = ev
         self.classification = classification
         self.contig = contig
-        self.call_method = CALL_METHOD.enforce(call_method)
+        self.call_method = None
+        if contig:
+            self.call_method = (CALL_METHOD.CONTIG, CALL_METHOD.CONTIG)
+            if call_method or break2_call_method:
+                raise AttributeError('contig overrides call method arguments')
+        elif break2_call_method:
+            self.call_method = (CALL_METHOD.enforce(call_method), CALL_METHOD.enforce(break2_call_method))
+        else:
+            self.call_method = (CALL_METHOD.enforce(call_method), CALL_METHOD.enforce(call_method))
         self.alignment = alignment
-        if contig is None and self.call_method == CALL_METHOD.CONTIG:
-            raise AttributeError('if the call is by contig then the contig must be provided')
 
     def count_flanking_support(self):
         """
@@ -131,8 +138,8 @@ class EventCall(BreakpointPair):
             if read.query_name in query2_names:
                 links += 1
         
-        realigns1 = len([r for r in support1 if r.get_tag('cr') == 1])
-        realigns2 = len([r for r in support2 if r.get_tag('cr') == 1])
+        realigns1 = len([r for r in support1 if r.has_tag('cr') and r.get_tag('cr')])
+        realigns2 = len([r for r in support2 if r.has_tag('cr') and r.get_tag('cr')])
         return len(support1), realigns1, len(support2), realigns2, links
 
     def __hash__(self):
@@ -154,7 +161,7 @@ class EvidenceSettings:
             read_length=125,
             median_insert_size=380,
             stdev_isize=100,
-            stdev_count_abnormal=2,
+            stdev_count_abnormal=3,
             call_error=10,
             min_splits_reads_resolution=3,
             min_anchor_exact=6,
@@ -172,24 +179,24 @@ class EvidenceSettings:
     ):
         """
         Args:
-            read_length (int, default=125): length of individual reads
-            median_insert_size (int, default=380): expected average insert size for paired-end reads
-            stdev_isize (int, default=100): the expected deviation in the insert size
-            call_error (int, default=10): buffer for calculating the evidence window
-            min_splits_reads_resolution (int, default=3):
+            read_length (int): length of individual reads
+            median_insert_size (int): expected average insert size for paired-end reads
+            stdev_isize (int): the expected deviation in the insert size
+            call_error (int): buffer for calculating the evidence window
+            min_splits_reads_resolution (int):
                 minimum number of reads required to call the same breakpoint for it to be a valid breakpoint
-            min_anchor_exact (int, default=6):
+            min_anchor_exact (int):
                 minimum number of consecutive exact matches to satisfy the anchor constraint
-            min_anchor_fuzzy (int, default=10):
+            min_anchor_fuzzy (int):
                 minimum number of consecutive exact matches (allowing one mismatch/indel) to satisfy the anchor
                 constraint
-            min_mapping_quality (int, default=20):
+            min_mapping_quality (int):
                 mapping quality to filter on
-            fetch_reads_limit (int, default=10000):
+            fetch_reads_limit (int):
                 maximum number of reads to loop over for a given event
-            filter_secondary_alignments (bool, default=True):
+            filter_secondary_alignments (bool):
                 don't use secondary alignments when reading evidence from the bam file
-            sc_extension_stop (int, default=5):
+            sc_extension_stop (int):
                 when extending softclipped, stop given this number of exact consecutive matches
         """
         self.read_length = read_length
@@ -245,7 +252,7 @@ class Evidence:
 
     @property
     def untemplated_sequence(self):
-        """(str) the sequence that falls between the two breakpoints and does not map to the refernece template"""
+        """(str) the sequence that falls between the two breakpoints and does not map to the reference template"""
         return self.breakpoint_pair.untemplated_sequence
 
     @classmethod
@@ -846,17 +853,10 @@ class Evidence:
             for cls in clss:
                 # try calling by split reads
                 calls.extend(Evidence._call_by_supporting_reads(self, cls))
-        print('++++++++++++++++++++++++++++++++++++++evidence', self.breakpoint_pair, clss, 'has', len(calls), 'calls')
-        for ec in calls:
-            print('\n\nevent call', ec, ec.classification, ec.call_method)
-            if ec.contig:
-                print('contig', ec.contig.seq, ec.contig.remap_score(), ec.contig.score)
-            print('flanking counts', ec.count_flanking_support())
-            print('split read support', ec.count_split_read_support())
         return calls
 
     def clean_flanking_reads(self):
-        """
+        """ TODO
         cleans the current set of flanking read support
         1. remove any read that appear as evidence for flanking both breakpoints
         2. use the stdev insert size to greedy remove read pairs until the error is within acceptable limits
@@ -885,7 +885,6 @@ class Evidence:
                     bpp.break2,
                     ev,
                     classification,
-                    CALL_METHOD.CONTIG,
                     contig=ctg,
                     alignment=(read1, read2),
                     opposing_strands=bpp.opposing_strands,
@@ -927,13 +926,11 @@ class Evidence:
             second_positions.add(read.reference_end - 1)
             first_positions.add(read.next_reference_start)
 
-        max_insert = ev.settings.median_insert_size + ev.settings.stdev_count_abnormal * ev.settings.stdev_isize
-        call_method = CALL_METHOD.MIXED
+        break1_call_method = CALL_METHOD.SPLIT if first_breakpoint else CALL_METHOD.FLANK
+        break2_call_method = CALL_METHOD.SPLIT if second_breakpoint else CALL_METHOD.FLANK
 
         if first_breakpoint is not None and second_breakpoint is not None:
             raise AttributeError('don\'t need to call by flanking reads')
-        elif first_breakpoint is None and second_breakpoint is None:
-            call_method = CALL_METHOD.FLANK
 
         cover1 = None if len(first_positions) == 0 else Interval(min(first_positions), max(first_positions))
         cover2 = None if len(second_positions) == 0 else Interval(min(second_positions), max(second_positions))
@@ -941,23 +938,24 @@ class Evidence:
         if cover1 and cover2:
             if Interval.overlaps(cover1, cover2):
                 raise AssertionError(
-                    'cannot resolve by flanking reads, flanking read coverage overlaps at the breakpoint',
-                    cover1, cover2)
+                        'cannot resolve by flanking reads, flanking read coverage overlaps at the breakpoint: '
+                        '{} v {}'.format(cover1, cover2))
             elif cover1.start > cover2.start:
                 raise AssertionError(
-                    'cannot resolve by flanking reads. region of coverage for breakpoint1 falls ahead of the region of '
+                    'cannot resolve by flanking reads. Region of coverage for breakpoint1 falls ahead of the region of '
                     'coverage for breakpoint2')
             # have coverage for flanking evidence for both breakpoints
         elif cover1 is None and cover2 is None:
             raise UserWarning('unable to call by flanking reads, insufficient flanking reads available')
         
-        print('cover1', cover1, 'cover2', cover2, 'max_insert', max_insert)
-        print('first_breakpoint', first_breakpoint, 'second_breakpoint', second_breakpoint)
         if first_breakpoint is None:
             if cover1 is None:
                 raise UserWarning('no flanking reads available to call this breakpoint')
-            shift = min([max([0, len(cover1) - ev.settings.read_length]), max_insert])
-            print('shift', shift)
+            shift = max([0, len(cover1) - ev.settings.read_length])
+            if shift > expected_isize.end:
+                raise AssertionError(
+                    'Cannot resolve. Flanking coverage region is larger than expected. It is likely that these flanking'
+                    'reads are not all supporting the same event')
             if ev.break1.orient == ORIENT.LEFT:
                 """
                                                                   *  *              
@@ -966,7 +964,7 @@ class Evidence:
                 raw window      ----------------------|==========================|----------
                 refined window  ----------------------|===========|-------------------------
                 """
-                right_side_bound = cover1.end + max_insert - shift
+                right_side_bound = cover1.end + expected_isize.end - shift
                 if not ev.breakpoint_pair.interchromosomal:
                     if cover2 and right_side_bound > cover2.start - 1:
                         right_side_bound = cover2.start - 1
@@ -983,7 +981,7 @@ class Evidence:
             elif ev.break1.orient == ORIENT.RIGHT:
                 first_breakpoint = Breakpoint(
                     ev.break1.chr,
-                    max([cover1.start - max_insert + shift, 0]),
+                    max([cover1.start - expected_isize.end + shift, 0]),
                     max([cover1.start, 0]),
                     orient=ev.break1.orient,
                     strand=ev.break1.strand
@@ -994,13 +992,16 @@ class Evidence:
         if second_breakpoint is None:
             if cover2 is None:
                 raise UserWarning('no flanking reads available')
-            shift = min([max([0, len(cover2) - ev.settings.read_length]), max_insert])
-            print('shift', shift)
+            shift = max([0, len(cover2) - ev.settings.read_length])
+            if shift > expected_isize.end:
+                raise AssertionError(
+                    'Cannot resolve. Flanking coverage region is larger than expected. It is likely that these flanking'
+                    'reads are not all supporting the same event')
             if ev.break2.orient == ORIENT.LEFT:
                 second_breakpoint = Breakpoint(
                     ev.break2.chr,
                     cover2.end,
-                    cover2.end + max_insert - shift,
+                    cover2.end + expected_isize.end - shift,
                     orient=ev.break2.orient,
                     strand=ev.break2.strand
                 )
@@ -1012,7 +1013,7 @@ class Evidence:
                 raw window      ------------------|===================|---------------------
                 refined window  -----------------------|==============|---------------------
                 """
-                left_side_bound = cover2.start - max_insert + shift
+                left_side_bound = cover2.start - expected_isize.end + shift
                 if not ev.breakpoint_pair.interchromosomal:
                     if cover1 and left_side_bound < cover1.end + 1:
                         left_side_bound = cover1.end + 1
@@ -1028,7 +1029,8 @@ class Evidence:
                 )
             else:
                 raise AttributeError('cannot call by flanking if orientation was not given')
-        return EventCall(first_breakpoint, second_breakpoint, ev, classification, call_method, data=ev.data)
+        return first_breakpoint, second_breakpoint
+        #return EventCall(first_breakpoint, second_breakpoint, ev, classification, call_method, data=ev.data)
 
     @classmethod
     def _call_by_supporting_reads(cls, ev, classification):
@@ -1070,7 +1072,7 @@ class Evidence:
                 continue
             first_breakpoint = Breakpoint(ev.break1.chr, first, strand=ev.break1.strand, orient=ev.break1.orient)
             second_breakpoint = Breakpoint(ev.break2.chr, second, strand=ev.break2.strand, orient=ev.break2.orient)
-            call = EventCall(first_breakpoint, second_breakpoint, ev, classification, CALL_METHOD.SPLIT, data=ev.data)
+            call = EventCall(first_breakpoint, second_breakpoint, ev, classification, call_method=CALL_METHOD.SPLIT, data=ev.data)
             linked_pairings.append(call)
 
         f = [p for p in pos1 if p not in [t.break1.start for t in linked_pairings]]
@@ -1082,7 +1084,11 @@ class Evidence:
                     continue
             first_breakpoint = Breakpoint(ev.break1.chr, first, strand=ev.break1.strand, orient=ev.break1.orient)
             second_breakpoint = Breakpoint(ev.break2.chr, second, strand=ev.break2.strand, orient=ev.break2.orient)
-            call = EventCall(first_breakpoint, second_breakpoint, ev, classification, CALL_METHOD.SPLIT, data=ev.data)
+            call = EventCall(
+                first_breakpoint, second_breakpoint, ev, classification,
+                call_method=CALL_METHOD.SPLIT,
+                data=ev.data
+            )
             linked_pairings.append(call)
 
         if len(linked_pairings) == 0:  # then call by mixed or flanking only
@@ -1094,10 +1100,16 @@ class Evidence:
                     bp.start = pos
                     bp.end = pos
                     try:
-                        temp = Evidence._call_by_flanking_reads(ev, classification, first_breakpoint=bp)
-                        linked_pairings.append(temp)
-                    except AssertionError:
-                        warnings.warn('NotImplemented: currently not resolving overlapping flanking coverage intervals')
+                        f, s = Evidence._call_by_flanking_reads(ev, classification, first_breakpoint=bp)
+                        call = EventCall(
+                            f, s, ev, classification,
+                            call_method=CALL_METHOD.SPLIT,
+                            break2_call_method=CALL_METHOD.FLANK,
+                            data=ev.data
+                        )
+                        linked_pairings.append(call)
+                    except AssertionError as err:
+                        warnings.warn(str(err))
                     except UserWarning:
                         pass
 
@@ -1106,19 +1118,30 @@ class Evidence:
                     bp.start = pos
                     bp.end = pos
                     try:
-                        temp = Evidence._call_by_flanking_reads(ev, classification, second_breakpoint=bp)
-                        linked_pairings.append(temp)
-                    except AssertionError:
-                        warnings.warn('NotImplemented: currently not resolving overlapping flanking coverage intervals')
+                        f, s = Evidence._call_by_flanking_reads(ev, classification, second_breakpoint=bp)
+                        call = EventCall(
+                            f, s, ev, classification,
+                            call_method=CALL_METHOD.FLANK,
+                            break2_call_method=CALL_METHOD.SPLIT,
+                            data=ev.data
+                        )
+                        linked_pairings.append(call)
+                    except AssertionError as err:
+                        warnings.warn(str(err))
                     except UserWarning:
                         pass
 
                 if len(linked_pairings) == 0:  # call by flanking only
                     try:
-                        temp = Evidence._call_by_flanking_reads(ev, classification)
-                        linked_pairings.append(temp)
-                    except AssertionError:
-                        warnings.warn('NotImplemented: currently not resolving overlapping flanking coverage intervals')
+                        f, s = Evidence._call_by_flanking_reads(ev, classification)
+                        call = EventCall(
+                            f, s, ev, classification,
+                            call_method=CALL_METHOD.FLANK,
+                            data=ev.data
+                        )
+                        linked_pairings.append(call)
+                    except AssertionError as err:
+                        warnings.warn(str(err))
                     except UserWarning:
                         pass
         return linked_pairings

@@ -261,14 +261,14 @@ class BreakpointPair:
 
         break1 = Breakpoint(
             read.reference_name,
-            first_breakpoint,
+            first_breakpoint + 1, # 1-based coordinates
             orient=ORIENT.LEFT,
             strand=STRAND.NEG if read.is_reverse else STRAND.POS,
             seq=read.query_sequence[0:seq_first_stop]
         )
         break2 = Breakpoint(
             read.reference_name,
-            second_breakpoint + 1,  # need to add to be past the event
+            second_breakpoint + 2,  # need to add to be past the event
             orient=ORIENT.RIGHT,
             strand=STRAND.NEG if read.is_reverse else STRAND.POS,
             seq=read.query_sequence[seq_second_start:]
@@ -336,7 +336,7 @@ class BreakpointPair:
         if o1 == ORIENT.LEFT:  # ========++++
             b1 = Breakpoint(
                 read1.reference_name,
-                read1.reference_end - 1,
+                read1.reference_end,  # 1-based from 0-based exclusive end so don't need to -1
                 strand=s1,
                 orient=o1,
                 seq=read1.query_alignment_sequence
@@ -344,7 +344,7 @@ class BreakpointPair:
         else:
             b1 = Breakpoint(
                 read1.reference_name,
-                read1.reference_start,
+                read1.reference_start + 1,  # 1-based from 0-based
                 strand=s1,
                 orient=o1,
                 seq=read1.query_alignment_sequence
@@ -358,7 +358,7 @@ class BreakpointPair:
         if o2 == ORIENT.RIGHT:
             b2 = Breakpoint(
                 read2.reference_name,
-                read2.reference_start + overlap,
+                read2.reference_start + overlap + 1,  # 1-based from 0-based
                 strand=s2,
                 orient=o2,
                 seq=read2.query_alignment_sequence[overlap:]
@@ -369,7 +369,7 @@ class BreakpointPair:
                 s = read2.query_alignment_sequence[:-1 * overlap]
             b2 = Breakpoint(
                 read2.reference_name,
-                read2.reference_end - 1 - overlap,
+                read2.reference_end - overlap,  # 1-based from 0-based exclusive end so don't need to -1
                 strand=s2,
                 orient=o2,
                 seq=s

@@ -305,39 +305,6 @@ class TestFusionTranscript(unittest.TestCase):
         self.assertEqual(3, ft.exon_number(ft.exons[2]))
         self.assertEqual(3, ft.exon_number(ft.exons[3]))
     
-    def test_build_antisense(self):
-        d1 = Domain('first', [(55, 61), (71, 73)])
-        d2 = Domain('second', [(10, 20), (30, 34)])
-        g1 = Gene('1', 150, 1000, strand=STRAND.POS)
-        g2 = Gene('1', 5000, 7500, strand=STRAND.NEG)
-        t1 = Transcript(
-            gene=g1,
-            cds_start=50,
-            cds_end=249,
-            exons=[(200, 299), (400, 499), (700, 899)],
-            domains=[d2, d1]
-        )
-        t2 = Transcript(
-            gene=g2,
-            cds_start=20,
-            cds_end=500,
-            exons=[(5100, 5299), (5800, 6199), (6500, 6549), (6700, 6799)]
-        )
-        b1 = Breakpoint('1', 350, orient=ORIENT.LEFT)
-        b2 = Breakpoint('1', 6500, orient=ORIENT.RIGHT)
-        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_sequence='')
-        ann = Annotation(bpp, transcript1=t1, transcript2=t2)
-        ann.add_gene(Gene('1', 1500, 1950, strand=STRAND.POS))
-        ann.add_gene(Gene('1', 3000, 3980, strand=STRAND.POS))
-        ann.add_gene(Gene('1', 3700, 4400, strand=STRAND.NEG))
-        
-        reference_genome = {'1': MockSeq(MockString())}
-
-        ft = FusionTranscript.build(ann, reference_genome)
-        self.assertEqual(t1.exons[0], ft.exon_mapping[ft.exons[0]])
-        self.assertEqual(t2.exons[2], ft.exon_mapping[ft.exons[1]])
-        self.assertEqual(t2.exons[3], ft.exon_mapping[ft.exons[2]])
-
     def test_build_two_transcript_inversion_5prime_pos(self):
         pass  # TODO
 
@@ -361,14 +328,6 @@ class TestFusionTranscript(unittest.TestCase):
 
     def test_build_two_transcript_deletion_neg(self):
         pass  # TODO
-
-        transcripts = ft.translate()
-        self.assertEqual(3, len(transcripts))
-        self.assertEqual(1, transcripts[0].cds_start)
-        self.assertEqual(30, transcripts[0].cds_end)
-        self.assertEqual(5, transcripts[1].cds_start)
-        self.assertEqual(37, transcripts[2].cds_start)
-        self.assertEqual(84, transcripts[2].cds_end)
 
 
 class TestTranscript(unittest.TestCase):

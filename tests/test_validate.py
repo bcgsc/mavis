@@ -33,11 +33,11 @@ class TestEvidence(unittest.TestCase):
         )
         ev.flanking_reads[0].add(MockRead(reference_start=20, reference_end=60, next_reference_start=600))
         ev.flanking_reads[0].add(MockRead(reference_start=40, reference_end=80, next_reference_start=650))
-        event = Evidence._call_by_flanking_reads(ev, SVTYPE.DEL)
-        self.assertEqual(81, event.break1.start)
-        self.assertEqual(210, event.break1.end)
-        self.assertEqual(460, event.break2.start)
-        self.assertEqual(599, event.break2.end)
+        break1, break2 = Evidence._call_by_flanking_reads(ev, SVTYPE.DEL)
+        self.assertEqual(80, break1.start)
+        self.assertEqual(209, break1.end)
+        self.assertEqual(461, break2.start)
+        self.assertEqual(600, break2.end)
     
     def test__call_by_flanking_reads_intra_tighten_on_overlap(self):
         # this test is for ensuring that if a theoretical window calculated for the
@@ -59,11 +59,11 @@ class TestEvidence(unittest.TestCase):
             MockRead(reference_start=20, reference_end=60, next_reference_start=150, template_length=200))
         ev.flanking_reads[0].add(
             MockRead(reference_start=40, reference_end=80, next_reference_start=200, template_length=200))
-        event = Evidence._call_by_flanking_reads(ev, SVTYPE.DEL)
-        self.assertEqual(81, event.break1.start)
-        self.assertEqual(149, event.break1.end)
-        self.assertEqual(81, event.break2.start)
-        self.assertEqual(149, event.break2.end)
+        break1, break2 = Evidence._call_by_flanking_reads(ev, SVTYPE.DEL)
+        self.assertEqual(80, break1.start)
+        self.assertEqual(149, break1.end)
+        self.assertEqual(81, break2.start)
+        self.assertEqual(150, break2.end)
     
     def test__call_by_flanking_reads_close_to_zero(self):
         # this test is for ensuring that if a theoretical window calculated for the
@@ -83,12 +83,12 @@ class TestEvidence(unittest.TestCase):
         )
         ev.flanking_reads[0].add(MockRead(reference_start=20, reference_end=60, next_reference_start=250))
         ev.flanking_reads[0].add(MockRead(reference_start=40, reference_end=80, next_reference_start=300))
-        event = Evidence._call_by_flanking_reads(ev, SVTYPE.DEL)
+        break1, break2 = Evidence._call_by_flanking_reads(ev, SVTYPE.DEL)
 
-        self.assertEqual(0, event.break1.start)
-        self.assertEqual(19, event.break1.end)
-        self.assertEqual(110, event.break2.start)
-        self.assertEqual(249, event.break2.end)
+        self.assertEqual(0, break1.start)
+        self.assertEqual(20, break1.end)
+        self.assertEqual(111, break2.start)
+        self.assertEqual(250, break2.end)
     
     def test_expected_insert_size_range(self):
         ev = Evidence(

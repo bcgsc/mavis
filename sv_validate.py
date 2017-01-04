@@ -277,135 +277,6 @@ def gather_evidence_from_bam(clusters):
     return evidence
 
 
-def write_outputs(filename, bed_filename, event_call):
-    header = [
-        'cluster_id',
-        'validation_id',
-        'break1_chromosome',
-        'break1_position_start',
-        'break1_position_end',
-        'break1_orientation',
-        'break1_strand',
-        'break2_chromosome',
-        'break2_position_start',
-        'break2_position_end',
-        'break2_orientation',
-        'break2_strand',
-        'event_type',
-        'opposing_strands',
-        'stranded',
-        'protocol',
-        'tools',
-        'contigs_assembled',
-        'contigs_aligned',
-        'contig_sequence',
-        'contig_remap_score',
-        'contig_alignment_score',
-        'call_method',
-        'flanking_reads',
-        'median_insert_size',
-        'stdev_insert_size',
-        'break1_split_reads',
-        'break2_split_reads',
-        'linking_split_reads',
-        'untemplated_sequence',
-        'break1_homologous_sequence',
-        'break2_homologous_sequence',
-        'break1_evidence_window',
-        'break2_evidence_window'
-    ]
-    id_prefix = re.sub(' ', '_', str(datetime.now()))
-    id = id_start
-    rows = []
-    with open(filename, 'w') as fh:
-        fh.write('#' + '\t'.join(header) + '\n')
-        for ec in event_calls:
-            flank_count, flank_median, flank_stdev = ec.count_flanking_support()
-            b1_count, b2_count, link_count = ec.count_split_read_support()
-            b1_homseq = None
-            b2_homseq = None
-            try:
-                b1_homseq, b2_homseq = ec.breakpoint_sequence_homology(HUMAN_REFERENCE_GENOME)
-            except AttributeError:
-                pass
-            row = {
-                'cluster_id': ec.data['cluster_id'],
-                'validation_id': 'validation_{}-{}'.format(id_prefix, id),
-                'break1_chromosome': ec.break1.chr,
-                'break1_position_start': ec.break1.start,
-                'break1_position_end': ec.break1.end,
-                'break1_strand': STRAND.NS,
-                'break1_orientation': ec.break1.orient,
-                'break2_chromosome': ec.break2.chr,
-                'break2_position_start': ec.break2.start,
-                'break2_position_end': ec.break2.end,
-                'break2_strand': STRAND.NS,
-                'break2_orientation': ec.break2.orient,
-                'event_type': ec.classification,
-                'opposing_strands': ec.opposing_strands,
-                'stranded': ec.stranded,
-                'protocol': ec.evidence.protocol,
-                'tools': ec.data['tools'],
-                'contigs_assembled': len(ec.evidence.contigs),
-                'contigs_aligned': sum([len(c.alignments) for c in ec.evidence.contigs]),
-                'contig_sequence': None,
-                'contig_remap_score': None,
-                'contig_alignment_score': None,
-                'call_method': ec.call_method,
-                'flanking_reads': flank_count,
-                'median_insert_size': flank_median,
-                'stdev_insert_size': flank_stdev,
-                'break1_split_reads': b1_count,
-                'break2_split_reads': b2_count,
-                'linking_split_reads': link_count,
-                'untemplated_sequence': None,
-                'break1_homologous_sequence': b1_homseq,
-                'break2_homologous_sequence': b2_homseq,
-                'break1_evidence_window': '{}-{}'.format(*ec.evidence.window1),
-                'break2_evidence_window': '{}-{}'.format(*ec.evidence.window2)
-            }
-            if ec.contig:
-                row['contig_sequence'] = ec.contig.seq
-                row['contig_remap_score'] = ec.contig.remap_score()
-            if ec.alignment:
-                r1, r2 = ec.alignment
-                if r2 is None:
-                    row['contig_alignment_score'] = r1.get_tag('br')
-                else:
-                    row['contig_alignment_score'] = int(round((r1.get_tag('br') + r2.get_tag('br')) / 2, 0))
-            if ec.untemplated_sequence is not None:
-                row['untemplated_sequence'] = ec.untemplated_sequence
-            if ec.stranded:
-                row['break1_strand'] = ec.break1.strand
-                row['break2_strand'] = ec.break2.strand
-            rows.append(row)
-            fh.write('\t'.join([str(row[col]) for col in header]) + '\n')
-            id += 1
-
-    # now generate the bed file
-    with open(bed_filename, 'w') as fh:
-        for row in rows:
-            if row['break2_chromosome'] == row['break1_chromosome']:
-                fh.write('{}\t{}\t{}\t{}\n'.format(
-                    row['break1_chromosome'],
-                    row['break1_position_start'],
-                    row['break2_position_end'],
-                    row['event_type']))
-            else:
-                fh.write('{}\t{}\t{}\t{}_chr{}\n'.format(
-                    row['break1_chromosome'],
-                    row['break1_position_start'],
-                    row['break1_position_end'],
-                    row['event_type'],
-                    row['break2_chromosome']))
-                fh.write('{}\t{}\t{}\t{}_chr{}\n'.format(
-                    row['break2_chromosome'],
-                    row['break2_position_start'],
-                    row['break2_position_end'],
-                    row['event_type'],
-                    row['break1_chromosome']))
-
-
 def main():
     global INPUT_BAM_CACHE, REFERENCE_ANNOTATIONS, MASKED_REGIONS, HUMAN_REFERENCE_GENOME
     """
@@ -471,23 +342,23 @@ def main():
     for e in evidence:
         for c in e.contigs:
             blat_sequences.add(c.seq)
+    print('\n[{}] blatting {} contig sequences'.format(datetime.now(), len(blat_sequences)))
     blat_contig_alignments = blat_contigs(
         evidence,
         INPUT_BAM_CACHE,
         reference_genome=HUMAN_REFERENCE_GENOME
     )
-    print('[{}] evidence gathering is complete'.format(datetime.now()))
+    print('[{}] blat complete'.format(datetime.now()))
     event_calls = []
     for e in evidence:
-        print(e.breakpoint_pair)
-        for c in e.contigs:
-            print('>', c.seq)
-            for aln in c.alignments:
-                print(aln)
+        print('\n[{}] calling events for {}'.format(datetime.now(), e.breakpoint_pair))
+        calls = []
         try:
-            event_calls.extend(e.call_events())
+            calls = e.call_events()
+            event_calls.extend(calls)
         except UserWarning as e:
             print('warning: error in calling events', repr(e))
+        print('[{}] call {} events'.format(datetime.now(), len(calls)))
 
     # write the output validated clusters (split by type and contig)
     header = [
@@ -513,7 +384,8 @@ def main():
         'contig_sequence',
         'contig_remap_score',
         'contig_alignment_score',
-        'call_method',
+        'break1_call_method',
+        'break2_call_method',
         'flanking_reads',
         'median_insert_size',
         'stdev_insert_size',
@@ -567,7 +439,8 @@ def main():
                 'contig_sequence': None,
                 'contig_remap_score': None,
                 'contig_alignment_score': None,
-                'call_method': ec.call_method,
+                'break1_call_method': ec.call_method,
+                'break2_call_method': ec.call_method,
                 'flanking_reads': flank_count,
                 'median_insert_size': flank_median,
                 'stdev_insert_size': flank_stdev,

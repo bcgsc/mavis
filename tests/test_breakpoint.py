@@ -346,7 +346,7 @@ class TestBreakpointPair(unittest.TestCase):
         r = MockRead(
             reference_id=0,
             reference_name='1',
-            reference_start=1,
+            reference_start=0,
             cigar=[(CIGAR.M, 10), (CIGAR.I, 3), (CIGAR.D, 7), (CIGAR.M, 10)],
             query_sequence='ACTGAATCGTGGGTAGCTGCTAG'
         )
@@ -362,7 +362,7 @@ class TestBreakpointPair(unittest.TestCase):
         r = MockRead(
             reference_id=0,
             reference_name='1',
-            reference_start=1,
+            reference_start=0,
             cigar=[(CIGAR.M, 10), (CIGAR.I, 3), (CIGAR.M, 10), (CIGAR.D, 7), (CIGAR.M, 10)],
             query_sequence='ACTGAATCGT'
                            'GGGTAGCTGC'
@@ -422,7 +422,7 @@ class TestBreakpointPair(unittest.TestCase):
         r1 = MockRead(
             reference_id=0,
             reference_name='1',
-            reference_start=1,
+            reference_start=0,
             cigar=[(CIGAR.M, 9), (CIGAR.S, 21)],
             query_sequence=seq,
             is_reverse=False
@@ -431,7 +431,7 @@ class TestBreakpointPair(unittest.TestCase):
         r2 = MockRead(
             reference_id=0,
             reference_name='1',
-            reference_start=100,
+            reference_start=99,
             cigar=[(CIGAR.S, 21), (CIGAR.M, 9)],
             query_sequence=seq,
             is_reverse=False
@@ -455,7 +455,7 @@ class TestBreakpointPair(unittest.TestCase):
         r1 = MockRead(
             reference_id=0,
             reference_name='1',
-            reference_start=1,
+            reference_start=0,
             cigar=[(CIGAR.M, 21), (CIGAR.S, 9)],
             query_sequence=seq,
             is_reverse=False
@@ -464,7 +464,7 @@ class TestBreakpointPair(unittest.TestCase):
         r2 = MockRead(
             reference_id=0,
             reference_name='1',
-            reference_start=100,
+            reference_start=99,
             cigar=[(CIGAR.S, 21), (CIGAR.M, 9)],
             query_sequence=seq,
             is_reverse=False
@@ -487,7 +487,7 @@ class TestBreakpointPair(unittest.TestCase):
         r1 = MockRead(
             reference_id=0,
             reference_name='1',
-            reference_start=1,
+            reference_start=0,
             cigar=[(CIGAR.M, 21), (CIGAR.S, 9)],
             query_sequence=seq,
             is_reverse=False
@@ -496,11 +496,12 @@ class TestBreakpointPair(unittest.TestCase):
         r2 = MockRead(
             reference_id=0,
             reference_name='1',
-            reference_start=100,
+            reference_start=99,
             cigar=[(CIGAR.S, 18), (CIGAR.M, 12)],
             query_sequence=seq,
             is_reverse=False
         )
+        self.assertEqual(21, r1.reference_end)
         bpp = BreakpointPair.call_breakpoint_pair(r1, r2)
         self.assertEqual(STRAND.POS, bpp.break1.strand)
         self.assertEqual(STRAND.POS, bpp.break2.strand)
@@ -522,7 +523,7 @@ class TestBreakpointPair(unittest.TestCase):
         r1 = MockRead(
             reference_id=0,
             reference_name='1',
-            reference_start=1,
+            reference_start=0,
             cigar=[(CIGAR.M, 21), (CIGAR.S, 9)],
             query_sequence=seq,
             is_reverse=False
@@ -531,7 +532,7 @@ class TestBreakpointPair(unittest.TestCase):
         r2 = MockRead(
             reference_id=0,
             reference_name='1',
-            reference_start=100,
+            reference_start=99,
             cigar=[(CIGAR.M, 12), (CIGAR.S, 18)],
             query_sequence=reverse_complement(seq),
             is_reverse=True
@@ -557,7 +558,7 @@ class TestBreakpointPair(unittest.TestCase):
         r1 = MockRead(
             reference_id=0,
             reference_name='1',
-            reference_start=1,
+            reference_start=0,
             cigar=[(CIGAR.M, 16), (CIGAR.S, 14)],
             query_sequence=seq,
             is_reverse=False
@@ -566,7 +567,7 @@ class TestBreakpointPair(unittest.TestCase):
         r2 = MockRead(
             reference_id=0,
             reference_name='1',
-            reference_start=100,
+            reference_start=99,
             cigar=[(CIGAR.M, 12), (CIGAR.S, 18)],
             query_sequence=reverse_complement(seq),
             is_reverse=True

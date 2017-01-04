@@ -345,7 +345,7 @@ def blat_contigs(
         tempfiles.append(psl.name)
         # will raise subprocess.CalledProcessError if non-zero exit status
         # parameters from https://genome.ucsc.edu/FAQ/FAQblat.html#blat4
-        print(["blat", ref_2bit, fasta_name, psl.name, '-out=pslx', '-noHead'] + blat_options)
+        # print(["blat", ref_2bit, fasta_name, psl.name, '-out=pslx', '-noHead'] + blat_options)
         subprocess.check_output(["blat", ref_2bit, fasta_name, psl.name, '-out=pslx', '-noHead'] + blat_options)
         psl.close()
 

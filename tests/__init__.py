@@ -31,7 +31,7 @@ class MockRead:
         self.reference_start = reference_start
         self.reference_end = reference_end
         self.cigar = cigar
-        if self.reference_end is None and cigar and reference_start:
+        if self.reference_end is None and cigar and reference_start is not None:
             self.reference_end = reference_start + sum([f for v, f in cigar if v not in [CIGAR.S, CIGAR.I]])
         self.is_reverse = is_reverse
         self.mate_is_reverse = mate_is_reverse
