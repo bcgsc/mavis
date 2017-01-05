@@ -382,7 +382,7 @@ class TestBreakpointPair(unittest.TestCase):
         r = MockRead(
             reference_id=0,
             reference_name='1',
-            reference_start=1,
+            reference_start=0,
             cigar=[(CIGAR.M, 10), (CIGAR.D, 3), (CIGAR.M, 10), (CIGAR.D, 7), (CIGAR.M, 10)],
             query_sequence='ACTGAATCGT'
                            'GGGTAGCTGC'
@@ -399,7 +399,7 @@ class TestBreakpointPair(unittest.TestCase):
         r = MockRead(
             reference_id=0,
             reference_name='1',
-            reference_start=1,
+            reference_start=0,
             cigar=[(CIGAR.M, 10), (CIGAR.D, 7), (CIGAR.M, 10), (CIGAR.D, 3), (CIGAR.M, 10)],
             query_sequence='ACTGAATCGT'
                            'GGGTAGCTGC'

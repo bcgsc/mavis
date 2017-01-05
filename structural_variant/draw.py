@@ -256,19 +256,19 @@ class Diagram:
             genes1 = set()
             genes2 = set()
 
-            for g, d in ann.nearest_gene_break1:
+            for g, d in ann.genes_proximal_to_break1:
                 genes1.add(g)
                 colors[g] = self.GENE1_COLOR
 
-            for g, d in ann.nearest_gene_break2:
+            for g, d in ann.genes_proximal_to_break2:
                 genes2.add(g)
                 colors[g] = self.GENE2_COLOR
 
-            for gene in ann.genes_at_break1:
+            for gene in ann.genes_overlapping_break1:
                 genes1.add(gene)
                 colors[gene] = self.GENE1_COLOR
 
-            for gene in ann.genes_at_break2:
+            for gene in ann.genes_overlapping_break2:
                 genes2.add(gene)
                 colors[gene] = self.GENE2_COLOR
 
@@ -283,7 +283,7 @@ class Diagram:
                 for e in ann.transcript2.exons:
                     colors[e] = self.EXON2_COLOR
 
-            for gene in sorted(ann.genes_at_break1, key=lambda x: x.start):
+            for gene in sorted(ann.genes_overlapping_break1, key=lambda x: x.start):
                 labels.add(gene, self.GENE_LABEL_PREFIX)
 
             twidth = (drawing_width - self.INNER_MARGIN - dx_label_shift) / 2
@@ -356,10 +356,10 @@ class Diagram:
                 genes.add(g)
                 colors[g] = self.GENE2_COLOR
 
-            for g, d in ann.nearest_gene_break1 | ann.nearest_gene_break2:
+            for g, d in ann.genes_proximal_to_break1 | ann.genes_proximal_to_break2:
                 genes.add(g)
 
-            for gene in ann.genes_at_break1 | ann.genes_at_break2:
+            for gene in ann.genes_overlapping_break1 | ann.genes_overlapping_break2:
                 genes.add(gene)
                 colors[gene] = self.GENE1_COLOR
 
@@ -367,7 +367,7 @@ class Diagram:
                 genes.add(ann.transcript1.gene)
                 colors[ann.transcript1.gene] = self.GENE1_COLOR_SELECTED
 
-            for gene in sorted(ann.genes_at_break1, key=lambda x: x.start):
+            for gene in sorted(ann.genes_overlapping_break1, key=lambda x: x.start):
                 labels.add(gene, self.GENE_LABEL_PREFIX)
             g = self.draw_genes(canvas, genes, drawing_width, breakpoints=[ann.break1, ann.break2], colors=colors, labels=labels)
             g.translate(x, y)
@@ -410,19 +410,19 @@ class Diagram:
             colors = {}
             genes = set() | ann.encompassed_genes
 
-            for g, d in ann.nearest_gene_break1:
+            for g, d in ann.genes_proximal_to_break1:
                 genes.add(g)
                 colors[g] = self.GENE1_COLOR
 
-            for g, d in ann.nearest_gene_break2:
+            for g, d in ann.genes_proximal_to_break2:
                 genes.add(g)
                 colors[g] = self.GENE2_COLOR
 
-            for gene in ann.genes_at_break1:
+            for gene in ann.genes_overlapping_break1:
                 genes.add(gene)
                 colors[gene] = self.GENE1_COLOR
 
-            for gene in ann.genes_at_break2:
+            for gene in ann.genes_overlapping_break2:
                 genes.add(gene)
                 colors[gene] = self.GENE2_COLOR
 
@@ -437,7 +437,7 @@ class Diagram:
                 for e in ann.transcript2.exons:
                     colors[e] = self.EXON2_COLOR
 
-            for gene in sorted(ann.genes_at_break1, key=lambda x: x.start):
+            for gene in sorted(ann.genes_overlapping_break1, key=lambda x: x.start):
                 labels.add(gene, self.GENE_LABEL_PREFIX)
 
             g = self.draw_genes(canvas, genes, drawing_width, breakpoints=[ann.break1, ann.break2], colors=colors, labels=labels)

@@ -37,10 +37,10 @@ class Annotation(BreakpointPair):
         self.data.update(data)
 
         self.encompassed_genes = set()
-        self.nearest_gene_break1 = set()
-        self.nearest_gene_break2 = set()
-        self.genes_at_break1 = set()
-        self.genes_at_break2 = set()
+        self.genes_proximal_to_break1 = set()
+        self.genes_proximal_to_break2 = set()
+        self.genes_overlapping_break1 = set()
+        self.genes_overlapping_break2 = set()
 
         self.event_type = event_type if event_type is None else SVTYPE.enforce(event_type)
 
@@ -57,13 +57,14 @@ class Annotation(BreakpointPair):
                 pass
         if Interval.overlaps(gene, self.break1) and gene.chr == self.break1.chr \
                 and gene != self.transcript1.reference_object:
-            self.genes_at_break1.add(gene)
+            self.genes_overlapping_break1.add(gene)
         if Interval.overlaps(gene, self.break2) and gene.chr == self.break2.chr \
                 and gene != self.transcript2.reference_object:
-            self.genes_at_break2.add(gene)
+            self.genes_overlapping_break2.add(gene)
 
-        if gene in self.genes_at_break1 or gene in self.genes_at_break2 or gene in self.encompassed_genes \
-                or gene == self.transcript1.reference_object or gene == self.transcript2.reference_object:
+        if gene in self.genes_overlapping_break1 or gene in self.genes_overlapping_break2 or \
+                gene in self.encompassed_genes or gene == self.transcript1.reference_object or \
+                gene == self.transcript2.reference_object:
             return
 
         d1 = Interval.dist(gene, self.break1)
@@ -71,57 +72,64 @@ class Annotation(BreakpointPair):
 
         if self.interchromosomal:
             if gene.chr == self.break1.chr:
-                self.nearest_gene_break1.add((gene, d1))
+                self.genes_proximal_to_break1.add((gene, d1))
             elif gene.chr == self.break2.chr:
-                self.nearest_gene_break2.add((gene, d2))
+                self.genes_proximal_to_break2.add((gene, d2))
         else:
             if d1 < 0:
-                self.nearest_gene_break1.add((gene, d1))
+                self.genes_proximal_to_break1.add((gene, d1))
             if d2 > 0:
-                self.nearest_gene_break2.add((gene, d2))
+                self.genes_proximal_to_break2.add((gene, d2))
 
         temp = set()
 
-        tmin = [d for g, d in self.nearest_gene_break1 if d < 0]
-        tmax = [d for g, d in self.nearest_gene_break1 if d > 0]
+        tmin = [d for g, d in self.genes_proximal_to_break1 if d < 0]
+        tmax = [d for g, d in self.genes_proximal_to_break1 if d > 0]
         tmin = 0 if len(tmin) == 0 else max(tmin)
         tmax = 0 if len(tmax) == 0 else min(tmax)
 
-        for gene, dist in self.nearest_gene_break1:
+        for gene, dist in self.genes_proximal_to_break1:
             if tmin != 0 and dist == tmin:
                 temp.add((gene, dist))
             elif tmax != 0 and dist == tmax:
                 temp.add((gene, dist))
 
-        self.nearest_gene_break1 = temp
+        self.genes_proximal_to_break1 = temp
 
         temp = set()
 
-        tmin = [d for g, d in self.nearest_gene_break2 if d < 0]
-        tmax = [d for g, d in self.nearest_gene_break2 if d > 0]
+        tmin = [d for g, d in self.genes_proximal_to_break2 if d < 0]
+        tmax = [d for g, d in self.genes_proximal_to_break2 if d > 0]
         tmin = 0 if len(tmin) == 0 else max(tmin)
         tmax = 0 if len(tmax) == 0 else min(tmax)
 
-        for gene, dist in self.nearest_gene_break2:
+        for gene, dist in self.genes_proximal_to_break2:
             if tmin != 0 and dist == tmin:
                 temp.add((gene, dist))
             elif tmax != 0 and dist == tmax:
                 temp.add((gene, dist))
 
-        self.nearest_gene_break2 = temp
+        self.genes_proximal_to_break2 = temp
     
     def flatten(self):
-        row = {
-            'transcript1': ann.transcript1,
-            'transcript2': ann.transcript2,
-            'genes_encompassed': ann.encompassed_genes,
-            'genes_overlapping_break1': ann.genes_at_break1,
-            'genes_overlapping_break2': ann.genes_at_break2,
-            'genes_proximal_to_break1': ann.nearest_gene_break1,
-            'genes_proximal_to_break2': ann.nearest_gene_break2
-        }
-        temp = BreakpointPair.flatten(self)
-        temp.update(row)
+        row = BreakpointPair.flatten(self)
+        row.update({
+            COLUMNS.gene1.name: ann.transcript1.gene.name,
+            COLUMNS.gene2.name: ann.transcript2.gene.name,
+            COLUMNS.transcript1.name: ann.transcript1.name,
+            COLUMNS.transcript2.name: ann.transcript2.name,
+            COLUMNS.genes_proximal_to_break1.name: ann.genes_proximal_to_break1,
+            COLUMNS.genes_proximal_to_break2.name: ann.genes_proximal_to_break2
+        })
+        
+        row[COLUMNS.genes_encompassed.name] = ';'.join(sorted([x.name for x in ann.encompassed_genes]))
+        row[COLUMNS.genes_overlapping_break1.name] = ';'.join(sorted([x.name for x in ann.genes_overlapping_break1]))
+        row[COLUMNS.genes_overlapping_break2.name] = ';'.join(sorted([x.name for x in ann.genes_overlapping_break2]))
+        row[COLUMNS.genes_proximal_to_break1.name] = ';'.join(
+            sorted(['{}({})'.format(x[0].name, x[1]) for x in ann.genes_proximal_to_break1]))
+        row[COLUMNS.genes_proximal_to_break2.name] = ';'.join(
+            sorted(['{}({})'.format(x[0].name, x[1]) for x in ann.genes_proximal_to_break2]))
+
         return row
 
 

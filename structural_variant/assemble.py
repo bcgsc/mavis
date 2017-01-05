@@ -2,6 +2,7 @@ import networkx as nx
 import itertools
 import warnings
 from structural_variant.read_tools import CigarTools, nsb_align
+from structural_variant.constants import reverse_complement
 
 
 class Contig:
@@ -17,7 +18,11 @@ class Contig:
         return hash(self.seq)
 
     def add_mapped_read(self, read, multimap=1):
-        self.remapped_reads[read] = min(self.remapped_reads.get(read, 1), 1 / multimap)
+        rc = reverse_complement(read)
+        if rc in self.remapped_reads:
+            self.remapped_reads[rc] = min(self.remapped_reads.get(rc, 1), 1 / multimap)
+        else:
+            self.remapped_reads[read] = min(self.remapped_reads.get(read, 1), 1 / multimap)
 
     def remap_score(self):
         return sum(self.remapped_reads.values())

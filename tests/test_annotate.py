@@ -658,11 +658,11 @@ class TestAnnotate(unittest.TestCase):
         for ann in ann_list:
             print(ann, [(g.start, g.end) for g in ann.encompassed_genes])
         self.assertEqual(1, len(first.encompassed_genes))
-        self.assertEqual(0, len(first.nearest_gene_break1))
-        self.assertEqual(1, len(first.nearest_gene_break2))
-        self.assertEqual(0, len(first.genes_at_break1))
-        self.assertEqual(0, len(first.genes_at_break2))
-        near, dist = list(first.nearest_gene_break2)[0]
+        self.assertEqual(0, len(first.genes_proximal_to_break1))
+        self.assertEqual(1, len(first.genes_proximal_to_break2))
+        self.assertEqual(0, len(first.genes_overlapping_break1))
+        self.assertEqual(0, len(first.genes_overlapping_break2))
+        near, dist = list(first.genes_proximal_to_break2)[0]
         self.assertEqual(50, dist)
         self.assertEqual(2, len(ann_list[1].encompassed_genes))
 

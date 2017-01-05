@@ -1,7 +1,7 @@
 from __future__ import division
 
 from copy import copy as sys_copy
-from structural_variant.constants import *
+from structural_variant.constants import ORIENT, STRAND, COLUMNS, CIGAR, SVTYPE, reverse_complement, DNA_ALPHABET
 from structural_variant.error import *
 from structural_variant.interval import Interval
 import TSV
@@ -147,21 +147,24 @@ class BreakpointPair:
         """
         row = {}
         row.update(self.data)
-        row.update({
-            'break1_chromosome': self.break1.chr,
-            'break1_position_start': self.break1.start,
-            'break1_position_end': self.break1.end,
-            'break1_orientation': self.break1.orient,
-            'break1_strand': self.break1.strand,
-            'break2_chromosome': self.break2.chr,
-            'break2_position_start': self.break2.start,
-            'break2_position_end': self.break2.end,
-            'break2_orientation': self.break2.orient,
-            'break2_strand': self.break2.strand,
-            'opposing_strands': self.opposing_strands,
-            'stranded': self.stranded,
-            'untemplated_sequence': self.untemplated_sequence
-        })
+        temp = {
+            COLUMNS.break1_chromosome.name: self.break1.chr,
+            COLUMNS.break1_position_start.name: self.break1.start,
+            COLUMNS.break1_position_end.name: self.break1.end,
+            COLUMNS.break1_orientation.name: self.break1.orient,
+            COLUMNS.break1_strand.name: self.break1.strand,
+            COLUMNS.break2_chromosome.name: self.break2.chr,
+            COLUMNS.break2_position_start.name: self.break2.start,
+            COLUMNS.break2_position_end.name: self.break2.end,
+            COLUMNS.break2_orientation.name: self.break2.orient,
+            COLUMNS.break2_strand.name: self.break2.strand,
+            COLUMNS.opposing_strands.name: self.opposing_strands,
+            COLUMNS.stranded.name: self.stranded,
+            COLUMNS.untemplated_sequence.name: self.untemplated_sequence
+        }
+        for c in temp:
+            temp[c] = str(temp[c])
+        row.update(temp)
         return row
 
     @classmethod
@@ -261,7 +264,7 @@ class BreakpointPair:
 
         break1 = Breakpoint(
             read.reference_name,
-            first_breakpoint + 1, # 1-based coordinates
+            first_breakpoint + 1,  # 1-based coordinates
             orient=ORIENT.LEFT,
             strand=STRAND.NEG if read.is_reverse else STRAND.POS,
             seq=read.query_sequence[0:seq_first_stop]
@@ -273,8 +276,6 @@ class BreakpointPair:
             strand=STRAND.NEG if read.is_reverse else STRAND.POS,
             seq=read.query_sequence[seq_second_start:]
         )
-        #if read1.is_reverse and untemplated_sequence != '':
-        #    untemplated_seq = reverse_complement(untemplated_seq)
         return BreakpointPair(break1, break2, opposing_strands=False, untemplated_sequence=untemplated_seq)
 
     @classmethod
@@ -384,9 +385,6 @@ class BreakpointPair:
         else:  # query coverage overlaps
             pass
 
-        # if read1.is_reverse and untemplated_sequence != '':
-        #    untemplated_sequence = reverse_complement(untemplated_sequence)
-
         return BreakpointPair(b1, b2, untemplated_sequence=untemplated_sequence)
 
     def breakpoint_sequence_homology(self, HUMAN_REFERENCE_GENOME):
@@ -412,7 +410,6 @@ class BreakpointPair:
 
         b1_refseq = HUMAN_REFERENCE_GENOME[self.break1.chr].seq
         b2_refseq = HUMAN_REFERENCE_GENOME[self.break2.chr].seq
-        print(self.break1, self.break2)
         if len(self.break1) > 1 or len(self.break2) > 1:
             raise AttributeError('cannot call shared sequence for non-specific breakpoints')
 
@@ -485,24 +482,24 @@ def soft_null_cast(value):
 def read_bpp_from_input_file(filename, **kwargs):
     kwargs.setdefault('cast', {}).update(
         {
-            'break1_position_start': int,
-            'break1_position_end': int,
-            'break2_position_start': int,
-            'break2_position_end': int,
-            'opposing_strands': TSV.bool,
-            'stranded': TSV.bool,
-            'untemplated_sequence': soft_null_cast
+            COLUMNS.break1_position_start.name: int,
+            COLUMNS.break1_position_end.name: int,
+            COLUMNS.break2_position_start.name: int,
+            COLUMNS.break2_position_end.name: int,
+            COLUMNS.opposing_strands.name: TSV.bool,
+            COLUMNS.stranded.name: TSV.bool,
+            COLUMNS.untemplated_sequence.name: soft_null_cast
         })
     kwargs.setdefault('require', []).extend(
-        ['break1_chromosome', 'break2_chromosome']
+        [COLUMNS.break1_chromosome.name, COLUMNS.break2_chromosome.name]
     )
-    kwargs.setdefault('add', {}).update({'untemplated_sequence': None})
+    kwargs.setdefault('add', {}).update({COLUMNS.untemplated_sequence.name: None})
     kwargs.setdefault('_in').update(
         {
-            'break1_orientation': ORIENT,
-            'break1_strand': STRAND,
-            'break2_orientation': ORIENT,
-            'break2_strand': STRAND
+            COLUMNS.break1_orientation.name: ORIENT,
+            COLUMNS.break1_strand.name: STRAND,
+            COLUMNS.break2_orientation.name: ORIENT,
+            COLUMNS.break2_strand.name: STRAND
         })
     header, rows = TSV.read_file(
         filename,
@@ -511,25 +508,25 @@ def read_bpp_from_input_file(filename, **kwargs):
     pairs = []
     for row in rows:
         b1 = Breakpoint(
-            row['break1_chromosome'],
-            row['break1_position_start'],
-            row['break1_position_end'],
-            strand=row['break1_strand'],
-            orient=row['break1_orientation']
+            row[COLUMNS.break1_chromosome.name],
+            row[COLUMNS.break1_position_start.name],
+            row[COLUMNS.break1_position_end.name],
+            strand=row[COLUMNS.break1_strand.name],
+            orient=row[COLUMNS.break1_orientation.name]
         )
         b2 = Breakpoint(
-            row['break2_chromosome'],
-            row['break2_position_start'],
-            row['break2_position_end'],
-            strand=row['break2_strand'],
-            orient=row['break2_orientation']
+            row[COLUMNS.break2_chromosome.name],
+            row[COLUMNS.break2_position_start.name],
+            row[COLUMNS.break2_position_end.name],
+            strand=row[COLUMNS.break2_strand.name],
+            orient=row[COLUMNS.break2_orientation.name]
         )
         bpp = BreakpointPair(
             b1,
             b2,
-            opposing_strands=row['opposing_strands'],
-            untemplated_sequence=row['untemplated_sequence'],
-            stranded=row['stranded'],
+            opposing_strands=row[COLUMNS.opposing_strands.name],
+            untemplated_sequence=row[COLUMNS.untemplated_sequence.name],
+            stranded=row[COLUMNS.stranded.name],
             data=row
         )
         pairs.append(bpp)

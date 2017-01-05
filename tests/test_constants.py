@@ -32,3 +32,9 @@ class TestConstants(unittest.TestCase):
         self.assertEqual('*ILD', t)  # A TGA ATT CTG GAT GA
         t = translate(s, 2)
         self.assertEqual('EFWM', t)  # AT GAA TTC TGG ATG A
+
+    def test_sort_columns(self):
+        temp = ['NEW', 'NEW2', COLUMNS.break1_sequence.name, COLUMNS.break2_sequence.name, COLUMNS.break1_chromosome.name]
+        self.assertEqual(
+            [COLUMNS.break1_chromosome.name, COLUMNS.break1_sequence.name, COLUMNS.break2_sequence.name, 'NEW', 'NEW2'], 
+            sort_columns(temp))

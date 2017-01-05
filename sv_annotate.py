@@ -7,10 +7,17 @@ from structural_variant.breakpoint import read_bpp_from_input_file
 from structural_variant.annotate import gather_annotations, load_reference_genes
 from structural_variant import __version__
 import TSV
-from structural_variant.constants import PROTOCOL, SVTYPE
+from structural_variant.constants import PROTOCOL, SVTYPE, COLUMNS, sort_columns
 import types
 import re
 import datetime
+
+
+def log(*pos, time_stamp=True):
+    if time_stamp:
+        print('[{}]'.format(datetime.now()), *pos)
+    else:
+        print(' ' * 28, *pos)
 
 
 def parse_arguments():
@@ -54,62 +61,33 @@ def main():
     for f in args.input:
         temp = read_bpp_from_input_file(
             f,
-            require=['cluster_id', 'validation_id'],
+            require=[COLUMNS.cluster_id.name, COLUMNS.validation_id.name],
             cast={
-                'stranded': TSV.bool
+                COLUMNS.stranded.name: TSV.bool
             },
             _in={
-                'protocol': PROTOCOL,
-                'event_type': SVTYPE
+                COLUMNS.protocol.name: PROTOCOL,
+                COLUMNS.event_type.name: SVTYPE
             },
             simplify=False)
         bpps.extend(temp)
-    print('read {} breakpoint pairs'.format(len(bpps)))
+    log('read {} breakpoint pairs'.format(len(bpps)))
     
     with open(args.output, 'w') as fh:
         annotations = []
         header = set()
         for bpp in bpps:
-            ann = gather_annotations(REFERENCE_ANNOTATIONS, bpp, event_type=bpp.data['event_type'])
+            ann = gather_annotations(REFERENCE_ANNOTATIONS, bpp, event_type=bpp.data[COLUMNS.event_type.name])
             annotations.extend(ann)
             header.update(ann.data.keys())
-        temp = header
-        header = [
-            'cluster_id',
-            'validation_id',
-            'annotation_id',
-            'break1_chromosome',
-            'break1_position_start',
-            'break1_position_end',
-            'break1_orientation',
-            'break1_strand',
-            'break2_chromosome',
-            'break2_position_start',
-            'break2_position_end',
-            'break2_orientation',
-            'break2_strand',
-            'opposing_strands',
-            'stranded',
-            'untemplated_sequence',
-            'event_type',
-            'transcript1',
-            'transcript2',
-            'genes_encompassed',
-            'genes_overlapping_break1',
-            'genes_overlapping_break2',
-            'genes_proximal_to_break1',
-            'genes_proximal_to_break2'
-        ]
-        for col in sorted(list(temp)):
-            if col not in header:
-                header.append(col)
+        header = sort_columns(header)
         fh.write('\t'.join(header) + '\n')
 
         id_prefix = 'annotation_{}-'.format(re.sub(' ', '_', str(datetime.now())))
 
         for i, ann in enumerate(annotations):
             row = ann.flatten()
-            row['annotation_id'] = id_prefix + str(i + 1)
+            row[COLUMNS.annotation_id.name] = id_prefix + str(i + 1)
             temp = []
             for col in header:
                 if not isinstance(row[col], types.StringTypes):
@@ -121,7 +99,7 @@ def main():
                 temp.append(str(row[col]))
             fh.write('\t'.join(temp) + '\n')
 
-        print('generated {} annotations'.format(len(annotations)))
+        log('generated {} annotations'.format(len(annotations)))
 
 
 if __name__ == '__main__':
