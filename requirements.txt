@@ -22,3 +22,5 @@ snowballstemmer==1.2.1
 Sphinx==1.4.8
 sphinx-rtd-theme==0.1.9
 svgwrite==1.1.9
+-e svn+https://svn.bcgsc.ca/svn/SVIA/vocab/tags/v1.0.0#egg=vocab
+-e svn+https://svn.bcgsc.ca/svn/SVIA/TSV/tags/v3.0.0#egg=TSV
