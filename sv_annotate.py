@@ -1,6 +1,24 @@
 
 """
-annotates breakpoint pairs and draws visualizations
+This is the third step in the svmerge pipeline. It is responsible for annotating breakpoint pairs with reference
+formation and drawing visualizations. Outputs are written to the annotation subfolder in the following pattern
+
+::
+
+    <output_dir_name>/
+    |-- clustering/
+    |-- validation/
+    |-- annotation/
+    |   `--<library>_<protocol>/
+    |       |-- annotation-#.failed
+    |       |-- annotation-#.passed
+    |       `-- annotation-#_drawings/
+    |           |-- legend.svg
+    |           `-- <annotation_id>.svg
+    |-- pairing/
+    `-- summary/
+
+
 """
 import argparse
 from structural_variant.breakpoint import read_bpp_from_input_file

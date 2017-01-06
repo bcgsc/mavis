@@ -1,5 +1,33 @@
 #!/projects/tumour_char/analysis_scripts/python/centos06/anaconda3_v2.3.0/bin/python
+"""
+About
+---------
 
+This is the second step in the svmerge pipeline. This is the step responsible for validating
+the events/clusters from the first/merge step. The putative breakpoint pairs are investigated 
+in the respective bam file. The evidence is collected and summarized. Outputs are written to
+the validation subfolder in the pattern as follows
+
+::
+
+    <output_dir_name>/
+    |-- clustering/
+    |-- validation/
+    |   `-- <library>_<protocol>/
+    |       |-- qsub.sh
+    |       |-- log/
+    |       |-- clusterset-#.validation.failed
+    |       |-- clusterset-#.validation.passed
+    |       |-- clusterset-#.contigs.bam
+    |       |-- clusterset-#.contigs.sorted.bam
+    |       |-- clusterset-#.contigs.sorted.bam.bai
+    |       |-- clusterset-#.evidence.bam
+    |       |-- clusterset-#.evidence.sorted.bam
+    |       `-- clusterset-#.evidence.sorted.bam.bai
+    |-- annotation/
+    |-- pairing/
+    `-- summary/
+"""
 import subprocess
 import TSV
 import argparse
@@ -50,10 +78,6 @@ def mkdirp(dirname):
             pass
         else:
             raise
-
-
-def read_config_file(filename):
-    pass
 
 
 def read_cluster_file(name, is_stranded):

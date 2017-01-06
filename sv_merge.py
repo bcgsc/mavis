@@ -1,6 +1,31 @@
 """
-this is the script used for merging a set of input structural variant calls
-into clusters
+About
+--------
+
+This is the first step (other than preprocessing inputs) in the svmerge pipeline. Input files are taken in, separated by 
+library and protocol, and then clustered if they are similar types of event calls and are close together. The output is
+a list of estimated calls based on the median of each cluster
+
+This script is also responsible for setting up the directory structure of the outputs, which will be in the following
+pattern
+
+::
+
+    <output_dir_name>/
+    |-- clustering/
+    |   `-- <library>_<protocol>/
+    |       |-- clusters.bed
+    |       |-- cluster_assignment.tsv
+    |       `-- clusterset-#
+    |-- validation/
+    |   `-- <library>_<protocol>/
+    |       |-- qsub.sh
+    |       `-- log/
+    |-- annotation/
+    |   `--<library>_<protocol>/
+    |-- pairing/
+    `-- summary/
+
 
 Input File Expected Format
 --------------------------
@@ -19,7 +44,6 @@ Input File Expected Format
     | library           | library id                        |                                                |
     | tool_version      | <tool name>_<tool version number> |                                                |
     | opposing_strand   | <True,False,?>                    |                                                |
-
 """
 
 import TSV
@@ -348,7 +372,8 @@ def main():
             fileno += 1
 
         # create the qsub script as well
-        qsub_file = '{}/qsub.sh'.format(parent_dir)
+        output_folder = '{}/validation/{}_{}'.format(args.output, lib, protocol)
+        qsub_file = '{}/qsub.sh'.format(output_folder)
         with open(qsub_file, 'w') as fh:
             log('writing:', qsub_file)
             fh.write('#!/bin/sh\n')
@@ -357,7 +382,6 @@ def main():
             fh.write('#$ -N svmV_{}\n'.format(lib[-5:]))
             fh.write('#$ -j y\n')
             fh.write('#$ -q {}\n'.format(args.queue))
-            output_folder = '{}/validation/{}_{}'.format(args.output, lib, protocol)
             fh.write('#$ -o {}/log/\n'.format(output_folder))
             fh.write('#$ -l mem_free=12G,mem_token=12G,h_vmem=12G\n')
             fh.write('echo "Starting job: $SGE_TASK_ID"\n')

@@ -159,7 +159,8 @@ likely because it is more resistant to outliers.
 .. figure::  _static/svmerge_insert_size_distrb.svg
     :width: 100%
 
-    Distribution of insert sizes (absolute values) of proper read pairs. In the above image the standard deviation (stdev) was calculated with respect to the median (383) using the fraction (f=0.99).
+    Distribution of insert sizes (absolute values) of proper read pairs. In the above image the standard deviation 
+    (stdev) was calculated with respect to the median (383) using the fraction (f=0.99).
 
 
 
@@ -168,25 +169,35 @@ We use this in two ways
 1. to find flanking evidence supporting deletions and insertions
 2. to estimate the window size for where we will need to read from the bam when looking for evidence for a given event
 
-The :py:func:`~structural_variant.validate.Evidence.generate_window` function uses the above concepts. The user will define the :py:attr:`~structural_variant.validate.EvidenceSettings.median_insert_size` the :py:attr:`~structural_variant.validate.EvidenceSettings.tdev_isize`, and the :py:attr:`~structural_variant.validate.EvidenceSettings.stdev_count_abnormal` parameters defined in the :class:`~structural_variant.validate.EvidenceSettings` class.
+The :py:func:`~structural_variant.validate.Evidence.generate_window` function uses the above concepts. The user will 
+define the :py:attr:`~structural_variant.validate.EvidenceSettings.median_insert_size` the 
+:py:attr:`~structural_variant.validate.EvidenceSettings.tdev_isize`, and the 
+:py:attr:`~structural_variant.validate.EvidenceSettings.stdev_count_abnormal` parameters defined in the 
+:class:`~structural_variant.validate.EvidenceSettings` class.
 
-If the library has a transcriptome protocol this becomes a bit more complicated and we must take into account the possible annotations when calculating the evidence window. see :py:func:`~structural_variant.validate.Evidence.generate_transcriptome_window` for more
+If the library has a transcriptome protocol this becomes a bit more complicated and we must take into account the 
+possible annotations when calculating the evidence window. see 
+:py:func:`~structural_variant.validate.Evidence.generate_transcriptome_window` for more
 
 Classifying Events
 .....................
 
-the following decision tree is used in classifying events based on their breakpoints. Only valid combinations have been shown
+the following decision tree is used in classifying events based on their breakpoints. Only valid combinations have 
+been shown
 
 .. figure:: _static/svmerge_classification_tree.svg
     :width: 100%
 
-    Classification Decision Tree. The above  diagram details the decsion logic for classifying events based on the orientation, strand and chromosomes or their respective breakpoints
+    Classification Decision Tree. The above  diagram details the decsion logic for classifying events based on the 
+    orientation, strand and chromosomes or their respective breakpoints
 
 
 Assembling Contigs
 ......................
 
-During validation, for each breakpoint pair, we attempt to assemble a :term:`contig` to represent the sequence across the breakpoints. This is assembled from the :term:`split reads` and mates of :term:`half-mapped` reads that have been collected. The assembly uses a :term:`DeBruijn graph`.
+During validation, for each breakpoint pair, we attempt to assemble a :term:`contig` to represent the sequence across 
+the breakpoints. This is assembled from the :term:`split reads` and mates of :term:`half-mapped` reads that have been 
+collected. The assembly uses a :term:`DeBruijn graph`.
 
 Breakpoints can be called by multiple different :py:attr:`~structural_variant.validate.CALL_METHOD`.
 
@@ -226,12 +237,18 @@ There are specific question we want annotation to answer
 Splicing Model
 .....................
 
-After the events have been called and an annotation has been attached, we often want to predict information about the putative fusion protein, which may be a product. In some cases, when a fusion transcript disrupts a splice-site, it is not clear what the processed fusion transcript may be. SVMerge will calculate all possibilities according to the following model.
+After the events have been called and an annotation has been attached, we often want to predict information about the 
+putative fusion protein, which may be a product. In some cases, when a fusion transcript disrupts a splice-site, it is 
+not clear what the processed fusion transcript may be. SVMerge will calculate all possibilities according to the 
+following model.
 
 .. figure:: _static/svmerge_splicing_model.svg
     :width: 100%
 
-    Putative splicing scenarios. (A) a five-prime and the next three-prime splice sites are lost. (B) A five-prime splice site is lost. This brings about two splicing possibilities. Either the exon is skipped or the exon and proximal intron are retained. (C) A three-prime splice site is lost. (D) A three-prime splice site, and the next five-prime splice sites are lost.
+    Putative splicing scenarios. (A) a five-prime and the next three-prime splice sites are lost. (B) A five-prime 
+    splice site is lost. This brings about two splicing possibilities. Either the exon is skipped or the exon and 
+    proximal intron are retained. (C) A three-prime splice site is lost. (D) A three-prime splice site, and the next 
+    five-prime splice sites are lost.
 
 
 Development

@@ -13,7 +13,9 @@ SVMerge Documentation
    README
    glossary
    columns
-   sv_*
+   sv_merge
+   sv_validate
+   sv_annotate
    structural_variant
 
 
