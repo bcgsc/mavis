@@ -126,7 +126,11 @@ we make some base assumptions with regards to paired-end read data
 
 with the above assumptions we take the median insert size to be the expected normal
 
-Given that we expect mutations and therefore abnormal insert sizes we use a modified method to calculate the **median standard deviation** (*s* in the equations below). We calculate the squared distance for each fragment away from the median and then take a fraction of this to be 'normal' variation. So the most abnormal portion is ignored, assuming it is supposed to be abnormal. This results in a calculation as follows, where the original set Y is the set of insert sizes from the bam file and f is the fraction of insert sizes assumed to be normal
+Given that we expect mutations and therefore abnormal insert sizes we use a modified method to calculate the 
+**median standard deviation** (*s* in the equations below). We calculate the squared distance for each fragment 
+away from the median and then take a fraction of this to be 'normal' variation. So the most abnormal portion is 
+ignored, assuming it is supposed to be abnormal. This results in a calculation as follows, where the original set 
+Y is the set of insert sizes from the bam file and f is the fraction of insert sizes assumed to be normal
 
 .. math::
 
@@ -137,14 +141,20 @@ Given that we expect mutations and therefore abnormal insert sizes we use a modi
 
     s = \sqrt{\sum_{i=0}^{||l \cdot f||}{x_i}}
 
-Using the above equation we can generate a modified version of the standard deviation (s above) as shown in the figure below (stdev). This gives us an idea of when to judge an insert size as abnormal and where we expect our normal read pairs insert sizes to fall.
+Using the above equation we can generate a modified version of the standard deviation (s above) as shown in the figure 
+below (stdev). This gives us an idea of when to judge an insert size as abnormal and where we expect our normal read 
+pairs insert sizes to fall.
 
 .. figure:: _static/svmerge_insert_size_distrb_fractions.svg
     :width: 100%
 
-    Distribution of insert sizes (absolute values) of proper read pairs, and different normal distribution fits using the above equation. The different coloured curves are computed with different parameters. black: the standard calculation using all data points and the mean as centre; dark green: median as centre and a fraction of f=0.80; light green: median as centre, f=0.90; light blue: median and f=0.95; dark blue: median and f=1.00.
+    Distribution of insert sizes (absolute values) of proper read pairs, and different normal distribution fits using 
+    the above equation. The different coloured curves are computed with different parameters. black: the standard 
+    calculation using all data points and the mean as centre; dark green: median as centre and a fraction of f=0.80; 
+    light green: median as centre, f=0.90; light blue: median and f=0.95; dark blue: median and f=1.00.
 
-As we can see from the distribution above the median approximates the distribution centre better than the mean, likely because it is more resistant to outliers.
+As we can see from the distribution above the median approximates the distribution centre better than the mean, 
+likely because it is more resistant to outliers.
 
 .. figure::  _static/svmerge_insert_size_distrb.svg
     :width: 100%
