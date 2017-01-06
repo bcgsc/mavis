@@ -487,6 +487,9 @@ class Evidence:
         spanning read: a read covering BOTH breakpoints
 
         this is only applicable to small events
+
+        .. todo::
+            add support for indels
         """
         # check that the read fully covers BOTH breakpoints
         read_start = read.reference_start + 1 - \
@@ -1161,6 +1164,9 @@ class Evidence:
         """
         open the associated bam file and read and store the evidence
         does some preliminary read-quality filtering
+
+        .. todo::
+            support gathering evidence for small structural variants
         """
         bin_gap_size = self.settings.read_length // 2
 

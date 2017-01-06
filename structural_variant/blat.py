@@ -174,7 +174,7 @@ class Blat:
         given a 'row' from reading a pslx file. converts the row to a BlatAlignedSegment object
 
         Args:
-            row (dict[str,]): a row object from the 'read_pslx' method
+            row (Dict of str): a row object from the 'read_pslx' method
             bam_cache (BamCache): the bam file/cache to use as a template for creating reference_id from chr name
 
         """
@@ -305,17 +305,25 @@ def blat_contigs(
         MIN_EXTEND_OVERLAP=10,
         **kwargs):
     """
-    given a set of contigs, call blat from the commandline and adds the results to the contigs
+    given a set of contigs, call blat from the command line and adds the results to the contigs
     associated with each Evidence object
 
     Args:
-        evidence (List[Evidence]): the iterable container of of evidence object which has associated contigs
-        bam_cache (BamCache): the bam to use as a template in generating bam-like reads
-        ref (str): path to the reference genome 2bit file for blat
-        min_percent_of_max_score (float): filters all results with a score of a lower fraction of the best score
+        evidence (List of Evidence): the iterable container of of Evidence object which has associated contigs
+        INPUT_BAM_CACHE (BamCache): the bam to use as a template in generating bam-like reads        
+        reference_genome (Dict of string and string): reference fasta sequences by template name
+        ref_2bit (string): path to the 2bit file for blat
+        min_percent_of_max_score (float): ignores all alignments with a score less
         min_identity (float): minimum percent identity
-        is_protein (boolean): used in blat calculations
+        is_protein (boolean): is the sequence an amino acid sequence (used in the blat calculations)
+        MIN_EXTEND_OVERLAP (int): minimum amount of non-shared coverage of the template sequence required to pair alignments
+        =blat_options (List of string): optional, can specify alternate blat parameters to use
+
+    .. todo::
+        add support for blatting protein sequences
     """
+    if is_protein:
+        raise NotImplementedError('currently does not support blatting protein sequences')
     min_identity *= 100
     blat_options = kwargs.pop('blat_options',
                               ["-stepSize=5", "-repMatch=2253", "-minScore=0", "-minIdentity={0}".format(min_identity)])

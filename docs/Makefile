@@ -3,9 +3,10 @@
 
 # You can set these variables from the command line.
 SPHINXOPTS    =
-SPHINXBUILD   = sphinx-build
+SPHINXBUILD   = sphinx-build -E
 PAPER         =
 BUILDDIR      = build
+PREPROCESSING = python preprocess.py
 
 # Internal variables.
 PAPEROPT_a4     = -D latex_paper_size=a4
@@ -50,6 +51,7 @@ clean:
 
 .PHONY: html
 html:
+	$(PREPROCESSING)
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
@@ -156,6 +158,7 @@ text:
 
 .PHONY: man
 man:
+	$(PREPROCESSING)
 	$(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(BUILDDIR)/man
 	@echo
 	@echo "Build finished. The manual pages are in $(BUILDDIR)/man."

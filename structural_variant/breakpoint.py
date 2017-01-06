@@ -21,9 +21,15 @@ class Breakpoint(Interval):
         Args:
             chr (str): the chromosome
             start (int): the genomic position of the breakpoint
-            end (int, optional): if the breakpoint is uncertain (a range) then specify the end of the range here
-            strand (STRAND, default=STRAND.NS): the strand
-            orient (ORIENT, default=ORIENT.NS): the orientation (which side is retained at the break)
+            end (int): if the breakpoint is uncertain (a range) then specify the end of the range here
+            strand (STRAND): the strand
+            orient (ORIENT): the orientation (which side is retained at the break)
+
+        Examples:
+            >>> Breakpoint('1', 1, 2)
+            >>> Breakpoint('1', 1)
+            >>> Breakpoint('1', 1, 2, '+', 'R')
+            >>> Breakpoint('1', 1, orient='R')
         """
         Interval.__init__(self, start, end)
         self.orient = ORIENT.enforce(orient)
@@ -88,13 +94,17 @@ class BreakpointPair:
         Args:
             b1 (Breakpoint): the first breakpoint
             b2 (Breakpoint): the second breakpoint
-            stranded (bool, default=False): if not stranded then +/- is equivalent to -/+
-            opposing_strands (bool, optional): are the strands at the breakpoint opposite? i.e. +/- instead of +/+
-            untemplated_sequence (str, optional): sequence between the breakpoints that is not part of either breakpoint
-            data (dict):
+            stranded (boolean): if not stranded then +/- is equivalent to -/+
+            opposing_strands (boolean): are the strands at the breakpoint opposite? i.e. +/- instead of +/+
+            untemplated_sequence (string): sequence between the breakpoints that is not part of either breakpoint
+            data (dict): optional dictionary of attributes associated with this pair
 
         Note:
             untemplated_sequence should always be given wrt to the positive/forward reference strand
+
+        Example:
+            >>> BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 9999), opposing_strands=True)
+            >>> BreakpointPair(Breakpoint('1', 1, strand='+'), Breakpoint('1', 9999, strand='-'))
         """
 
         if b1.key > b2.key:
@@ -176,7 +186,11 @@ class BreakpointPair:
         Args:
             pair (BreakpointPair): the pair to classify
         Returns:
-            List[SVTYPE]: a list of possible SVTYPEs
+            List of SVTYPE: a list of possible SVTYPE
+
+        Example:
+            >>> BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 9999), opposing_strands=True)
+            [SVTYPE.INV]
         """
         if pair.break1.chr == pair.break2.chr:  # intrachromosomal
             if pair.opposing_strands:
@@ -206,14 +220,26 @@ class BreakpointPair:
 
     @classmethod
     def call_breakpoint_pair(cls, read1, read2=None):
+        """
+        calls a set of breakpoints from a single or a pair of pysam style read(s)
+
+        .. todo::
+
+            return multiple events not just the major event
+        """
         if read2 is None:
             return cls._call_from_single_contig(read1)
         return cls._call_from_paired_contig(read1, read2)
 
     @classmethod
     def _call_from_single_contig(cls, read):
-        # first find the major unaligned event
-        # TODO allow this to call multiple events from a single contig
+        """
+        calls a set of breakpoints from a pysam style read using the cigar values
+
+        .. todo::
+
+            return multiple events not just the major event
+        """
         read_events = []
         for i, t in enumerate(read.cigar):
             v, f = t
@@ -281,8 +307,13 @@ class BreakpointPair:
     @classmethod
     def _call_from_paired_contig(cls, read1, read2):
         """
+        calls a set of breakpoints from a pair of pysam style reads using their softclipping to
+        find the breakpoints and orientations
         if the first read and the second read have overlapping range on their mutual query sequence
         then the breakpoint is called as is on the first and shifted on the second
+
+        .. todo::
+            return multiple events not just the major event
         """
 
         if read1.reference_id > read2.reference_id:
@@ -480,6 +511,27 @@ def soft_null_cast(value):
 
 
 def read_bpp_from_input_file(filename, **kwargs):
+    """
+    reads a file using the TSV module. Each row is converted to a breakpoint pair and
+    other column data is stored in the data attribute
+    
+    Args:
+        filename (string): path to the input file
+    Returns:
+        List of BreakpointPair: a list of pairs
+    
+    Example:
+        >>> read_bpp_from_input_file('filename')
+        [BreakpointPair(), BreakpointPair(), ...]
+
+    One can also validate other expected columns that will go in the data attribute using the usual arguments 
+    to the TSV.read_file function
+
+    .. code-block:: python
+
+        >>> read_bpp_from_input_file('filename', cast={'index': int})
+        [BreakpointPair(), BreakpointPair(), ...] 
+    """
     kwargs.setdefault('cast', {}).update(
         {
             COLUMNS.break1_position_start.name: int,

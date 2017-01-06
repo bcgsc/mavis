@@ -8,18 +8,15 @@ SVMerge Documentation
 
 .. toctree::
    :maxdepth: 3
+   :glob:
 
    README
-   structural_variant
-   tools
    glossary
+   columns
+   sv_*
+   structural_variant
 
 
-.. automodule:: structural_variant
-    :members:
-    :private-members:
-    :show-inheritance:
-    :special-members:
 
 
 

@@ -1,5 +1,4 @@
 """
-
 this is the script used for merging a set of input structural variant calls
 into clusters
 
@@ -37,11 +36,6 @@ from structural_variant.cluster import cluster_breakpoint_pairs
 from structural_variant import __version__
 
 __prog__ = os.path.basename(os.path.realpath(__file__))
-
-MAX_JOBS = 100
-MIN_EVENTS_PER_JOB = 50
-
-TSV._verbose = False
 
 
 def log(*pos, time_stamp=True):
@@ -169,7 +163,6 @@ def write_bed_file(filename, cluster_breakpoint_pairs):
 
 
 def main():
-    global MAX_JOBS, MIN_EVENTS_PER_JOB
     args = parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + __version__,
                         help='Outputs the version number')
@@ -181,9 +174,9 @@ def main():
         '-n', '--inputs', help='path to the input files', required=True, action='append')
     parser.add_argument('-b', '--bamfile', metavar=('<library_name>', '</path/to/bam/file>'), nargs=2,
                         help='specify a bam file for a given library', action='append', required=True)
-    parser.add_argument('--max-jobs', '-j', default=MAX_JOBS, type=int, dest='MAX_JOBS',
+    parser.add_argument('--max-jobs', '-j', default=100, type=int, dest='MAX_JOBS',
                         help='defines the maximum number of jobs that can be created for the validation step')
-    parser.add_argument('--min-events-per-job', '-e', default=MIN_EVENTS_PER_JOB, type=int,
+    parser.add_argument('--min-events-per-job', '-e', default=50, type=int,
                         help='defines the minimum number of clusters to validate per job', dest='MIN_EVENTS_PER_JOB')
     parser.add_argument('-r', help='radius to use in clustering', default=50, type=int)
     parser.add_argument('-q', '--queue', default='transabyss.q',
@@ -202,9 +195,6 @@ def main():
         print('\nerror: MAX_JOBS cannot be less than 1')
         parser.print_help()
         exit(1)
-
-    MIN_EVENTS_PER_JOB = args.MIN_EVENTS_PER_JOB
-    MAX_JOBS = args.MAX_JOBS
 
     BAM_FILE_ARGS = {}
 
@@ -316,9 +306,9 @@ def main():
     for lib, protocol in clusters_by_libprot:
         clusters = clusters_by_libprot[(lib, protocol)]
         # decide on the number of clusters to validate per job
-        JOB_SIZE = MIN_EVENTS_PER_JOB
-        if len(clusters) // MIN_EVENTS_PER_JOB > MAX_JOBS - 1:
-            JOB_SIZE = len(clusters) // MAX_JOBS
+        JOB_SIZE = args.MIN_EVENTS_PER_JOB
+        if len(clusters) // args.MIN_EVENTS_PER_JOB > args.MAX_JOBS - 1:
+            JOB_SIZE = len(clusters) // args.MAX_JOBS
 
         log('info: splitting {} clusters into {} jobs of size {}'.format(
             len(clusters), len(clusters) // JOB_SIZE, JOB_SIZE))
@@ -342,7 +332,7 @@ def main():
             with open(filename, 'w') as fh:
                 limit = index + JOB_SIZE
                 header = None
-                if len(rows) - limit < MIN_EVENTS_PER_JOB or fileno == MAX_JOBS:
+                if len(rows) - limit < args.MIN_EVENTS_PER_JOB or fileno == args.MAX_JOBS:
                     limit = len(rows)
 
                 while index < len(rows) and index < limit:
@@ -369,7 +359,7 @@ def main():
             fh.write('#$ -q {}\n'.format(args.queue))
             output_folder = '{}/validation/{}_{}'.format(args.output, lib, protocol)
             fh.write('#$ -o {}/log/\n'.format(output_folder))
-            fn.write('#$ -l mem_free=4G,mem_token=4G,h_vmem=4G\n')
+            fh.write('#$ -l mem_free=12G,mem_token=12G,h_vmem=12G\n')
             fh.write('echo "Starting job: $SGE_TASK_ID"\n')
             fh.write('python sv_validate.py -n {}$SGE_TASK_ID -o {} -b {} -l {}\n'.format(
                 clusterset_file_prefix,

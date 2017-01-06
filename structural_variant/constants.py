@@ -1,4 +1,6 @@
-
+"""
+module responsible for small utility functions and constants used throughout the structural_variant package
+"""
 from vocab import Vocab
 from Bio.Alphabet import Gapped
 from Bio.Data.IUPACData import ambiguous_dna_values
@@ -9,6 +11,22 @@ CODON_SIZE = 3
 
 
 def reverse_complement(s):
+    """
+    wrapper for the Bio.Seq reverse_complement method
+
+    Args:
+        s (string): the input DNA sequence
+
+    Returns:
+        string: the reverse complement of the input sequence
+
+    Warning:
+        assumes the input is a DNA sequence
+
+    Example:
+        >>> reverse_complement('ATCCGGT')
+        'ACCGGAT'
+    """
     temp = Seq(str(s), DNA_ALPHABET)
     return str(temp.reverse_complement())
 
@@ -184,7 +202,7 @@ COLUMNS = Vocab(
         'Identifier for the annotation step'),
     event_type=Column(
         'event_type',
-        'The classification of the event'),
+        'The classification of the event. Has the following possible values: {}'.format(', '.join(SVTYPE.values()))),
     gene1=Column(
         'gene1',
         'Gene for the current annotation at the first breakpoint'),
@@ -224,10 +242,12 @@ COLUMNS = Vocab(
         'End (inclusive, 1-based) of the range representing breakpoint 1'),
     break1_orientation=Column(
         'break1_orientation',
-        'The side of the breakpoint wrt the positive/forward strand that is retained'),
+        'The side of the breakpoint wrt the positive/forward strand that is retained. Has the following possible '
+        'values: {}'.format(', '.join(ORIENT.values()))),
     break1_strand=Column(
         'break1_strand',
-        'The strand wrt to the reference positive/forward strand at this breakpoint'),
+        'The strand wrt to the reference positive/forward strand at this breakpoint. Has the following possible'
+        'values: {}'.format(', '.join(STRAND.values()))),
     break1_sequence=Column(
         'break1_sequence',
         'The sequence up to and including the breakpoint. Always given wrt to the positive/forward strand'),
@@ -242,10 +262,12 @@ COLUMNS = Vocab(
         'End (inclusive, 1-based) of the range representing breakpoint 2'),
     break2_orientation=Column(
         'break2_orientation',
-        'The side of the breakpoint wrt the positive/forward strand that is retained'),
+        'The side of the breakpoint wrt the positive/forward strand that is retained. Has the following possible '
+        'values: {}'.format(', '.join(ORIENT.values()))),
     break2_strand=Column(
         'break2_strand',
-        'The strand wrt to the reference positive/forward strand at this breakpoint'),
+        'The strand wrt to the reference positive/forward strand at this breakpoint. Has the following possible'
+        'values: {}'.format(', '.join(STRAND.values()))),
     break2_sequence=Column(
         'break2_sequence',
         'The sequence up to and including the breakpoint. Always given wrt to the positive/forward strand'),
@@ -279,8 +301,8 @@ COLUMNS = Vocab(
     contig_alignment_score=Column(
         'contig_alignment_score',
         'A rank based on the alignment tool (blat), etc.) of the alignment being used. An average if split alignments '
-        'were used. Lower numbers indicate a better alignment. If it was the base alignment possible then this would be'
-        'zero'),
+        'were used. Lower numbers indicate a better alignment. If it was the best alignment possible then this would be'
+        ' zero'),
     break1_call_method=Column(
         'break1_call_method',
         'The method used to call the first breakpoint'),
@@ -345,6 +367,17 @@ COLUMNS = Vocab(
         'Number of split reads before calling the breakpoint')
 )
 
+"""Vocab: Column names and definitions for i/o files used throughout the pipeline
+
+Example:
+    >>> COLUMNS.raw_break2_split_reads
+    Column()
+    >>> COLUMNS.raw_break2_split_reads.name
+    'raw_break2_split_reads'
+    >>> Column.raw_break2_split_reads.defn
+    'definition ....'
+
+"""
 
 def define_column(col):
     for c in COLUMNS.values():

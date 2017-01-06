@@ -18,7 +18,6 @@ class IntervalPair:
         Args:
             start (Interval): the first interval
             end (Interval): the second interval
-            id (int, default=None): label for distinguishing between IntervalPairs
         """
         self.data = kwargs
         self.start = start if isinstance(start, Interval) else Interval(start[0], start[1])
@@ -138,7 +137,7 @@ class IntervalPair:
         a given distance between weighted means of the different groups
 
         Args:
-            groups (List[Set[IntervalPair]]): a list of sets of interval pairs
+            groups (List of Set of IntervalPair): a list of sets of interval pairs
             r (int): the distance to determine grouping
         """
         queue = sorted(groups, key=lambda x: IntervalPair.weighted_mean(*x))
@@ -175,12 +174,12 @@ class IntervalPair:
         clusters a list of IntervalPair objects
 
         Args:
-            pairs (List[IntervalPair]): list of IntervalPair objects
+            pairs (List of IntervalPair): list of IntervalPair objects
             r (int): the distance for grouping clusters
             k (int): the clique size to look for
 
         Returns:
-            List[Set[IntervalPair]]: a list of sets of interval pairs representing their clusters/groupings
+            List of Set of IntervalPair: a list of sets of interval pairs representing their clusters/groupings
         """
         # build the initial graph
         G = nx.Graph()

@@ -14,6 +14,16 @@ class Annotation(BreakpointPair):
     will also hold the other annotations for overlapping and encompassed and nearest genes
     """
     def __init__(self, bpp, transcript1=None, transcript2=None, data={}, event_type=None):
+        """
+        Holds a breakpoint call and a set of transcripts, other information is gathered relative to these
+
+        Args:
+            bpp (BreakpointPair): the breakpoint pair call. Will be adjusted and then stored based on the transcripts
+            transcript1 (Transcript): transcript at the first breakpoint
+            transcript2 (Transcript): Transcript at the second breakpoint
+            data (Dict): optional dictionary to hold related attributes
+            event_type (SVTYPE): the type of event
+        """
         # narrow the breakpoint windows by the transcripts being used for annotation
         temp = bpp.break1 if transcript1 is None else bpp.break1 & transcript1
         b1 = Breakpoint(bpp.break1.chr, temp[0], temp[1], strand=bpp.break1.strand, orient=bpp.break1.orient)
@@ -45,6 +55,12 @@ class Annotation(BreakpointPair):
         self.event_type = event_type if event_type is None else SVTYPE.enforce(event_type)
 
     def add_gene(self, gene):
+        """
+        adds a gene to the current set of annotations. Checks which set it should be added to
+
+        Args:
+            gene (Gene): the gene being added
+        """
         if gene.chr not in [self.break1.chr, self.break2.chr]:
             raise AttributeError('cannot add gene not on the same chromosome as either breakpoint')
 
@@ -112,6 +128,9 @@ class Annotation(BreakpointPair):
         self.genes_proximal_to_break2 = temp
     
     def flatten(self):
+        """
+        generates a dictionary of the annotation information as strings
+        """
         row = BreakpointPair.flatten(self)
         row.update({
             COLUMNS.gene1.name: ann.transcript1.gene.name,
@@ -135,6 +154,20 @@ class Annotation(BreakpointPair):
 
 class BioInterval:
     def __init__(self, reference_object, start, end, name=None):
+        """
+        Args:
+            reference_object: the object this interval is on
+            start (int) start of the interval (inclusive)
+            end (int): end of the interval (inclusive)
+            name: optional
+
+        Example:
+            >>> b = BioInterval('1', 12572784, 12578898, 'q22.2')
+            >>> b[0]
+            12572784
+            >>> b[1]
+            12578898
+        """
         self.reference_object = reference_object
         self.name = name
         self.position = Interval(start, end)
@@ -151,6 +184,12 @@ class BioInterval:
         return Interval.__getitem__(self, index)
 
     def __len__(self):
+        """
+        Example:
+            >>> b = BioInterval('1', 12572784, 12578898, 'q22.2')
+            >>> len(b)
+            6115
+        """
         return len(self.position)
 
     @property
@@ -169,6 +208,16 @@ class BioInterval:
 
 class IntergenicRegion(BioInterval):
     def __init__(self, chr, start, end, strand):
+        """
+        Args:
+            chr: the reference object/chromosome for this region
+            start (int): the start of the IntergenicRegion
+            end (int): the end of the IntergenicRegion
+            strand (STRAND): the strand the region is defined on
+
+        Example:
+            >>> IntergenicRegion('1', 1, 100, '+')
+        """
         BioInterval.__init__(self, chr, start, end)
         self.strand = STRAND.enforce(strand)
 
@@ -207,12 +256,21 @@ class Gene(BioInterval):
 
 class Translation(BioInterval):
     def __init__(self, start, end, transcript, splicing_pattern, domains=[]):
+        """
+        describes the splicing pattern and cds start and end with reference to a particular transcript
+
+        Args:
+            start (int): start of the coding sequence (cds) relative to the start of the first exon in the transcript
+            end (int): end of the coding sequence (cds) relative to the start of the first exon in the transcript
+            transcript (Transcript): the transcript this is a Translation of
+            splicing_pattern (List of int): a list of splicing positions to be used
+            domains (List of Domain): a list of the domains on this translation
+        """
         BioInterval.__init__(self, reference_object=transcript, name=None, start=start, end=end)
         self.splicing_pattern = tuple(sorted(splicing_pattern))
         self.domains = []
         for d in domains:
             self.add_domain(d)
-        print('Translation(', start, end, transcript, splicing_pattern, domains, ')')
 
     @property
     def transcript(self):
@@ -255,7 +313,7 @@ class Transcript(BioInterval):
         self,
         cds_start=None,
         cds_end=None,
-        exons=[],
+        exons=None,
         genomic_start=None,
         genomic_end=None,
         gene=None,
@@ -267,15 +325,18 @@ class Transcript(BioInterval):
         """ creates a new transcript object
 
         Args:
-            gene (Gene, optional): the gene this transcript belongs to
-            name (str, optional): the name of the transcript or external db id. For example ENTS0001
-            cds_start (int): the position (wrt the first exon) where translation would begin
-            cds_cdna = self.transcript.convert_genomic_to_cdna(self.start)
-        cdna = abs(self.transcript.cds_start - 1 - cdna)
-        return cdna % 3end (int): the position (wrt the first exon) where translation would terminate
-            strand (STRAND, optional): the strand the transcript occurs on
-
+            cds_start (int): the start of the coding sequence relative to the start of the first exon
+            cds_end (int): the end of the coding sequence relative to the start of the first exon
+            exons (List of Exon): list of Exon that make up the transcript
+            genomic_start (int): genomic start position of the transcript
+            genomic_end (int): genomic end position of the transcript
+            gene (Gene): the gene this transcript belongs to
+            name (str): name of the transcript
+            strand (STRAND): strand the transcript is on, defaults to the strand of the Gene if not specified
+            domains (List of Domain): list of domains to add to translations
+            translations (List of Translation): Translation associated with this transcript
         """
+        exons
         domains = [] if domains is None else domains
         translations = [] if translations is None else translations
 
@@ -501,6 +562,10 @@ class FusionTranscript(Transcript):
 
     @classmethod
     def build(cls, ann, REFERENCE_GENOME):
+        """
+        .. todo::
+            support single transcript inversions
+        """
         if not ann.transcript1 or not ann.transcript2:
             raise AttributeError('cannot produce fusion transcript for non-annotated fusions')
         elif not ann.event_type and ann.transcript1 == ann.transcript2:
@@ -812,7 +877,7 @@ class Domain:
 
     @property
     def translation(self):
-        """(:class:`~structural_variant.annotate.Transcript`): the transcript this domain belongs to"""
+        """(:class:`~structural_variant.annotate.Translation`): the Translation this domain belongs to"""
         return self.reference_object
 
     @property
@@ -839,9 +904,13 @@ def load_masking_regions(filepath):
     Args:
         filepath (string): path to the input tab-delimited file
     Returns:
-        Dict[str,List[BioInterval]]:
+        Dict of string and List of BioInterval:
             a dictionary keyed by chromosome name with values of lists of regions on the chromosome
-
+    
+    Example:
+        >>> m = load_masking_regions('filename')
+        >>> m['1']
+        [BioInterval(), BioInterval(), ...]
     """
     header, rows = TSV.read_file(
         filepath,
@@ -883,7 +952,12 @@ def load_reference_genes(filepath):
         filepath (string): path to the input tab-delimited file
 
     Returns:
-        Dict[str,List[Gene]]: a dictionary keyed by chromosome name with values of list of genes on the chromosome
+        Dict of string and List of Gene: a dictionary keyed by chromosome name with values of list of genes on the chromosome
+
+    Example:
+        >>> ref = load_reference_genes('filename')
+        >>> ref['1']
+        [Gene(), Gene(), ....]
     """
     def parse_exon_list(row):
         if not row:
@@ -991,10 +1065,10 @@ def load_reference_genes(filepath):
 def overlapping_transcripts(ref_ann, breakpoint):
     """
     Args:
-        ref_ann (Dict[str,List[Gene]]): the reference list of genes split by chromosome
+        ref_ann (Dict of string and List of Gene): the reference list of genes split by chromosome
         breakpoint (Breakpoint): the breakpoint in question
     Returns:
-        List[Transcript]: a list of possible transcripts
+        List of Transcript: a list of possible transcripts
     """
     putative_annotations = []
     for gene in ref_ann[breakpoint.chr]:
