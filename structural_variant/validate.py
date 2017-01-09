@@ -887,7 +887,10 @@ class Evidence:
         events = []
         for ctg in ev.contigs:
             for read1, read2 in ctg.alignments:
-                bpp = BreakpointPair.call_breakpoint_pair(read1, read2)
+                try:
+                    bpp = BreakpointPair.call_breakpoint_pair(read1, read2)
+                except UserWarning as err:
+                    continue
                 if bpp.opposing_strands != ev.opposing_strands \
                         or (classification == SVTYPE.INS and bpp.untemplated_sequence == '') \
                         or classification not in BreakpointPair.classify(bpp):

@@ -239,6 +239,9 @@ class BreakpointPair:
         .. todo::
 
             return multiple events not just the major event
+
+        raises:
+            UserWarning: if the contig does not contain insertions/deletions
         """
         read_events = []
         for i, t in enumerate(read.cigar):
@@ -250,7 +253,10 @@ class BreakpointPair:
                 read_events[-1] = (start, i, size + f)
             else:
                 read_events.append((i, i, f))
-
+        
+        if len(read_events) == 0:
+            raise UserWarning(
+                'Cannot call event breakpoints from single contig. Contig does not contain any ins/del events')
         biggest = max(read_events, key=lambda x: x[2])
 
         first_breakpoint = read.reference_start - 1

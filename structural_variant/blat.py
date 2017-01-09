@@ -402,6 +402,7 @@ def blat_contigs(
             for contig in e.contigs:
                 aln = reads_by_query.get(contig.seq, [])
                 putative_alignments = []
+                combo_prohibited = set()
 
                 if e.break1.chr == e.break2.chr and not e.opposing_strands:
                     for read in aln:
@@ -411,9 +412,11 @@ def blat_contigs(
                                 and Interval.overlaps(e.window1, temp) \
                                 and Interval.overlaps(e.window2, temp):
                             # split the continuous alignment, assume ins/dup or indel
-                            putative_alignments.append((read, None))
+                            combo_prohibited.add(read)
+                            if any([c in [CIGAR.D, CIGAR.I] for c in read.cigar]):  # ignore alignments without events
+                                putative_alignments.append((read, None))
 
-                for a1, a2 in itertools.combinations([x for x in aln if (x, None) not in putative_alignments], 2):
+                for a1, a2 in itertools.combinations([x for x in aln if x not in combo_prohibited], 2):
                     # do they overlap both breakpoints
                     if a1.reference_id > a2.reference_id or \
                             (a1.reference_id == a2.reference_id and a1.reference_start > a2.reference_start):

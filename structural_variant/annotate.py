@@ -336,9 +336,9 @@ class Transcript(BioInterval):
             domains (List of Domain): list of domains to add to translations
             translations (List of Translation): Translation associated with this transcript
         """
-        exons
-        domains = [] if domains is None else domains
-        translations = [] if translations is None else translations
+        exons = [] if exons is None else exons  # cannot use mutable default args in the function decl
+        domains = [] if domains is None else domains  # cannot use mutable default args in the function decl
+        translations = [] if translations is None else translations  # cannot use mutable default args in the function decl
 
         print('input translations', translations)
         if genomic_start is None and len(exons) > 0:

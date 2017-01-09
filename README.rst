@@ -69,12 +69,7 @@ These pertain to the input files from the various tools you want to merge
 Available Pre-formatting scripts
 ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-- Trans-ABySS
-    - `convert_ta.py <https://svn.bcgsc.ca/svn/SVIA/sv_compile/tags/0.0.1/tools/convert_ta.py>`_
-- DELLY
-    - DUSTIN TO ADD
-- MANTA
-    - CALEB TO ADD
+- `convert_ta.py <https://svn.bcgsc.ca/svn/SVIA/sv_compile/tags/0.0.1/tools/convert_ta.py>`_
 
 
 Running the Pipeline
@@ -97,7 +92,7 @@ script with the -h/--help option
     sv_validate
 
 
-Theory
+Theory and Models
 --------------------
 
 A breakpoint is defined by the reference template (i.e. chromosome), position (or range of positions) on the template, 
