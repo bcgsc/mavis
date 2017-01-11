@@ -1,6 +1,6 @@
 import pysam
 import warnings
-from structural_variant.constants import *
+from .constants import *
 
 
 class BamCache:

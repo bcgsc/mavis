@@ -3,16 +3,19 @@ from structural_variant.annotate import *
 from structural_variant.constants import reverse_complement
 from structural_variant.constants import STRAND
 from structural_variant.breakpoint import Breakpoint, BreakpointPair
-from tests import REFERENCE_ANNOTATIONS_FILE, MockSeq
+from tests import REFERENCE_ANNOTATIONS_FILE, REFERENCE_GENOME_FILE, MockSeq
 
 
 REFERENCE_ANNOTATIONS = None
+REFERENCE_GENOME = None
 
 
 def setUpModule():
-    global REFERENCE_ANNOTATIONS
+    global REFERENCE_ANNOTATIONS, REFERENCE_GENOME
     REFERENCE_ANNOTATIONS = load_reference_genes(REFERENCE_ANNOTATIONS_FILE)
     print('loaded {} annotations', sum([len(l) for l in REFERENCE_ANNOTATIONS.values()]))
+    REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
+    print('loaded the reference genome', REFERENCE_GENOME_FILE)
 
 
 class TestFusionTranscript(unittest.TestCase):
@@ -29,30 +32,7 @@ class TestFusionTranscript(unittest.TestCase):
         reference_sequence += 'A' * 100 + 'G' * 100 + 'A' * 200
         self.reference_sequence = reference_sequence
 
-    def test_determine_prime(self):
-        tneg = Transcript(1, 2, genomic_start=3, genomic_end=4, strand=STRAND.NEG)
-        tpos = Transcript(1, 2, genomic_start=3, genomic_end=4, strand=STRAND.POS)
-        bleft = Breakpoint('test', 1, 2, orient=ORIENT.LEFT)
-        bright = Breakpoint('test', 1, 2, orient=ORIENT.RIGHT)
-        # positive left should be five prime
-        self.assertEqual(PRIME.FIVE, FusionTranscript.determine_prime(tpos, bleft))
-        # positive right should be three prime
-        self.assertEqual(PRIME.THREE, FusionTranscript.determine_prime(tpos, bright))
-        # negative left should be three prime
-        self.assertEqual(PRIME.THREE, FusionTranscript.determine_prime(tneg, bleft))
-        # negative right should be five prime
-        self.assertEqual(PRIME.FIVE, FusionTranscript.determine_prime(tneg, bright))
-
-        with self.assertRaises(AttributeError):
-            bleft.orient = ORIENT.NS
-            FusionTranscript.determine_prime(tpos, bleft)
-
-        with self.assertRaises(AttributeError):
-            FusionTranscript.determine_prime(tneg, bleft)
-
-        with self.assertRaises(AttributeError):
-            tpos._strand = STRAND.NS
-            FusionTranscript.determine_prime(tpos, bright)
+    
 
     def test__pull_exons_left_pos_intronic(self):
         # 100-199, 500-599, 1200-1299, 1500-1599, 1700-1799
@@ -431,6 +411,32 @@ class TestTranscript(unittest.TestCase):
         for i, e in enumerate(sorted(t.exons, key=lambda x: x.start, reverse=True)):
             self.assertEqual(i + 1, t.exon_number(e))
     
+    def test_get_sequence_from_gene(self):
+        ref = {'1': MockSeq('CCCCTTTTCCCCTTTT')}
+        g = Gene('1', 1, 16, strand=STRAND.POS, sequence='CCCCTTTTCCCCTTTT')
+        t = Transcript(1, 10, exons=[(2, 5), (7, 15)], gene=g)
+        self.assertEqual('CCCTTTTCCCCTTT', t.get_sequence())
+
+    def test_get_sequence_from_gene_revcomp(self):
+        ref = {'1': MockSeq('CCCCTTTTCCCCTTTT')}
+        g = Gene('1', 1, 16, strand=STRAND.NEG, sequence='CCCCTTTTCCCCTTTT')
+        t = Transcript(1, 10, exons=[(2, 5), (7, 15)], gene=g)
+        self.assertEqual(reverse_complement('CCCTTTTCCCCTTT'), t.get_sequence())
+    
+    def test_get_sequence_from_ref_error(self):
+        g = Gene('1', 1, 16, strand=STRAND.POS)
+        t = Transcript(1, 10, exons=[(2, 5), (7, 15)], gene=g)
+
+        with self.assertRaises(AttributeError):
+            t.get_sequence()
+    
+    def test_get_sequence_from_ref(self):
+        ref = {'1': MockSeq('CCCCTTTTCCCCTTTT')}
+        g = Gene('1', 1, 16, strand=STRAND.POS)
+        t = Transcript(1, 10, exons=[(2, 5), (7, 15)], gene=g)
+        self.assertEqual('CCCTTTTCCCCTTT', t.get_sequence(ref))
+
+    
     def test_splicing_patterns(self):
         t = Transcript(1, 2, genomic_start=3, genomic_end=4)
         self.assertEqual(1, len(t.splicing_patterns()))
@@ -495,6 +501,20 @@ class TestTranscript(unittest.TestCase):
         self.assertEqual([self.x.end, self.y.start, self.y.end, self.z.start, self.z.end, self.w.start], patterns[0])
 
 
+class TestTranslation(unittest.TestCase):
+    def test_get_sequence_from_ref(self):
+        ref = {'1': MockSeq('CCCTAATCCCCTTT')}
+        g = Gene('1', 1, 16, strand=STRAND.NEG)
+        t = Transcript(1, 10, exons=[(2, 5), (7, 15)], gene=g)
+        tl = Translation(4, 11, t, [])
+        self.assertEqual('GGGGATTA', tl.get_sequence(ref))
+
+    def test_get_sequence_from_transcript(self):
+        t = Transcript(1, 10, exons=[(2, 5), (7, 15)], sequence='CCCTAATCCCCTTT', strand=STRAND.NEG)
+        tl = Translation(4, 11, t, [])
+        self.assertEqual('TAATCCCC', tl.get_sequence())
+
+
 class TestDomain(unittest.TestCase):
 
     def test_key(self):
@@ -513,6 +533,20 @@ class TestDomain(unittest.TestCase):
         t = t.translations[0]
         Domain('name', [], translation=t)
         self.assertEqual(1, len(t.domains))
+
+    def test_get_sequence_from_ref(self):
+        ref = {'1': MockSeq('CCCTAATCCCCTTT')}
+        g = Gene('1', 1, 16, strand=STRAND.NEG)
+        t = Transcript(1, 10, exons=[(2, 5), (7, 15)], gene=g)
+        tl = Translation(4, 11, t, [])
+        d = Domain('name', [(1, 2)], translation=tl)
+        self.assertEqual([translate('GGGGAT')], d.get_sequences(ref))
+
+    def test_get_sequence_from_translation_seq(self):
+        t = Transcript(1, 10, exons=[(2, 5), (7, 15)], sequence='CCCTAATCCCCTTT', strand=STRAND.NEG)
+        tl = Translation(4, 11, t, [])
+        d = Domain('name', [(1, 2)], translation=tl)
+        self.assertEqual([translate('TAATCC')], d.get_sequences())
 
 
 class TestIntergenicRegion(unittest.TestCase):
@@ -552,6 +586,27 @@ class TestGene(unittest.TestCase):
         self.assertNotEqual(g3, g1)
         self.assertNotEqual(g1, None)
         self.assertNotEqual(None, g1)
+
+    def test_get_sequence(self):
+        ref = {'1': MockSeq('AACCCTTTGGG')}
+        g = Gene('1', 3, 8, strand=STRAND.POS)
+        self.assertEqual('CCCTTT', g.get_sequence(ref))
+        g = Gene('fake', 2836, 4144, strand=STRAND.POS)
+        seq = (
+            'GCAACTATATAATCTGTGGGAATATCTCCTTTTACACCTAGCCCTACTTCTGTCTGGCTACAGTCATTTATCTGGCTTTGGGAAATGTGACCACAGAATCAGATAT'
+            'ATACATGAGATTAAATAATACATGTGTATGTCATTTAAATATCTAGAAAAGTTATGACTTCACCAGGTATGAAAAATATAAAAAGAACTCTGTCAAGAATCATACA'
+            'GTAAATAGATTTTTGAATTTAATCTAGTACCTAAATAATCAGAGTAGGGAGGTTAGATATTAAAATCAGGCTAAAGATATAGGCAACATGGATCTAGAAAACATGG'
+            'ATTGCATGGCCATTTCACTTAGAGTTCATGGGCTTGGAATCTCTATTAACATAACTTTTACAATGTTAGAATTTGTTCCCATATTAATGAGGGAAAAACAAACAAT'
+            'TACCCTGAGTATCTGAAGCTCCAGATCTCATTTTCCAGTCAAAATCTCTGATAGGTAAACAACCTGAAAAAGTAGCCACAACTCACTGAGGTGATAACCTCATTTG'
+            'CTTAAGAGAATGTAATTGTTTTTATGATTTTTTTTATCCCAGGAAAACATTGAAAAAAAGTTTAGAGATGATGAAGTATATGAAAACTATAATATTTATACTTTAG'
+            'AGATGTGatatttatttataattgtattagtatttaaatataGATTAGCATTTTACATTCCAATTTTCAATGTGTAACAGAATATTTTAGATATTGGGGTTGTTTT'
+            'TTAGTTGAAATAATAAGCGGTTTTACCGAGTTGCCAGTAGTGGTTTAACATTGAAGATAATTTAACATTCATGATTTTGTGAGTTTAATTTATTAGCTCTATAAGG'
+            'GTTGTTTAAGTACTCTGAAGGCTTTATTTGTTAGTCCGATAATTAAAATGTTCATAAAGATAATTCAACATATTAAATTTGTAAATGTAGTTTAAAATCTTTAAGG'
+            'GAGTTTAATTAACTAAGTTGTAAATGGACAAAACATTAATCAAAGTCCCCCTTAAAAATAATTTTTAATGTACTAGATTTATAAATAGAACAACAAGATTTCTAAT'
+            'TTAAACTCAAAAATTTTTTAAATTGGTTAACAATTTAACATAATATGCTGCACATTAATTCAGAATATGAAATCTTATATGTAGTCCTTTTTACATTCAAGAATCA'
+            'CATCGATAAACATCACAAAATGACTACTGGTAACCACTATGAAACTCTTTAAGCGGTAGGTCCTGTATGAATTTTACTCCTCATGATTTGAAGATTATGCATAAAT'
+            'TCCTTCTTCCTGTTATTTTGTTTCCAATTTAGTCTTT').upper()
+        self.assertEqual(seq, g.get_sequence(REFERENCE_GENOME))
 
 
 class TestExon(unittest.TestCase):
@@ -683,3 +738,28 @@ class TestAnnotate(unittest.TestCase):
         print(ann_list)
         self.assertEqual(1, len(ann_list))
         self.assertEqual(ann_list[0].transcript1, ann_list[0].transcript2)
+    
+    def test_determine_prime(self):
+        tneg = Transcript(1, 2, genomic_start=3, genomic_end=4, strand=STRAND.NEG)
+        tpos = Transcript(1, 2, genomic_start=3, genomic_end=4, strand=STRAND.POS)
+        bleft = Breakpoint('test', 1, 2, orient=ORIENT.LEFT)
+        bright = Breakpoint('test', 1, 2, orient=ORIENT.RIGHT)
+        # positive left should be five prime
+        self.assertEqual(PRIME.FIVE, determine_prime(tpos, bleft))
+        # positive right should be three prime
+        self.assertEqual(PRIME.THREE, determine_prime(tpos, bright))
+        # negative left should be three prime
+        self.assertEqual(PRIME.THREE, determine_prime(tneg, bleft))
+        # negative right should be five prime
+        self.assertEqual(PRIME.FIVE, determine_prime(tneg, bright))
+
+        with self.assertRaises(AttributeError):
+            bleft.orient = ORIENT.NS
+            determine_prime(tpos, bleft)
+
+        with self.assertRaises(AttributeError):
+            determine_prime(tneg, bleft)
+
+        with self.assertRaises(AttributeError):
+            tpos._strand = STRAND.NS
+            determine_prime(tpos, bright)

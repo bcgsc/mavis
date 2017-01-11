@@ -1,9 +1,9 @@
 from __future__ import division
 
-from structural_variant.constants import *
-from structural_variant.error import *
-from structural_variant.interval import Interval
-from structural_variant.breakpoint import BreakpointPair, Breakpoint
+from .constants import *
+from .error import *
+from .interval import Interval
+from .breakpoint import BreakpointPair, Breakpoint
 
 import itertools
 import networkx as nx

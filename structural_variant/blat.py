@@ -6,11 +6,11 @@ import warnings
 import re
 import os
 import TSV
-from structural_variant.constants import *
-from structural_variant.read_tools import CigarTools
+from .constants import *
+from .read_tools import CigarTools
 from Bio.Seq import Seq
 import tempfile
-from structural_variant.interval import Interval
+from .interval import Interval
 
 
 class BlatAlignedSegment(pysam.AlignedSegment):
@@ -386,11 +386,11 @@ def blat_contigs(
             for rank, row in enumerate(filtered_rows):
                 try:
                     read = Blat.pslx_row_to_pysam(row, INPUT_BAM_CACHE, reference_genome)
-                    read.set_tag('bs', row['score'], value_type='i')
-                    read.set_tag('ba', len(filtered_rows), value_type='i')
-                    read.set_tag('bp', min_percent_of_max_score, value_type='f')
-                    read.set_tag('br', rank, value_type='i')
-                    read.set_tag('bi', row['percent_ident'], value_type='f')
+                    read.set_tag(PYSAM_READ_FLAGS.BLAT_SCORE, row['score'], value_type='i')
+                    read.set_tag(PYSAM_READ_FLAGS.BLAT_ALIGNMENTS, len(filtered_rows), value_type='i')
+                    read.set_tag(PYSAM_READ_FLAGS.BLAT_PMS, min_percent_of_max_score, value_type='f')
+                    read.set_tag(PYSAM_READ_FLAGS.BLAT_RANK, rank, value_type='i')
+                    read.set_tag(PYSAM_READ_FLAGS.BLAT_PERCENT_IDENTITY, row['percent_ident'], value_type='f')
                     reads.append(read)
                 except KeyError as e:
                     warnings.warn(
@@ -413,7 +413,7 @@ def blat_contigs(
                                 and Interval.overlaps(e.window2, temp):
                             # split the continuous alignment, assume ins/dup or indel
                             combo_prohibited.add(read)
-                            if any([c in [CIGAR.D, CIGAR.I] for c in read.cigar]):  # ignore alignments without events
+                            if any([c in [CIGAR.D, CIGAR.I, CIGAR.N] for c, v in read.cigar]):  # ignore alignments without events
                                 putative_alignments.append((read, None))
 
                 for a1, a2 in itertools.combinations([x for x in aln if x not in combo_prohibited], 2):

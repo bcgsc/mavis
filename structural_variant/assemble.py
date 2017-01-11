@@ -1,8 +1,8 @@
 import networkx as nx
 import itertools
 import warnings
-from structural_variant.read_tools import CigarTools, nsb_align
-from structural_variant.constants import reverse_complement
+from .read_tools import CigarTools, nsb_align
+from .constants import reverse_complement
 
 
 class Contig:

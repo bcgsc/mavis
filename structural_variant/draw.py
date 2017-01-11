@@ -1,6 +1,6 @@
 from svgwrite import Drawing
-from structural_variant.interval import Interval
-from structural_variant.constants import STRAND, ORIENT
+from .interval import Interval
+from .constants import STRAND, ORIENT
 from colour import Color
 
 # draw gene level view

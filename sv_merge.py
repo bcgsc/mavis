@@ -14,9 +14,10 @@ pattern
     <output_dir_name>/
     |-- clustering/
     |   `-- <library>_<protocol>/
+    |       |-- uninformative_clusters.txt
     |       |-- clusters.bed
-    |       |-- cluster_assignment.tsv
-    |       `-- clusterset-#
+    |       |-- cluster_assignment.tab
+    |       `-- clusterset-#.tab
     |-- validation/
     |   `-- <library>_<protocol>/
     |       |-- qsub.sh
@@ -44,6 +45,12 @@ Input File Expected Format
     | library           | library id                        |                                                |
     | tool_version      | <tool name>_<tool version number> |                                                |
     | opposing_strand   | <True,False,?>                    |                                                |
+
+Filtering
+------------
+
+Clusters are optionally post-filtered based on a gene annotation file. This reduces the number of clusters that need to
+go through validation which is the most expensive in terms of time
 """
 
 import TSV
@@ -55,9 +62,13 @@ import re
 from datetime import datetime
 from structural_variant.constants import *
 from structural_variant.error import *
+from structural_variant.interval import Interval
 from structural_variant.breakpoint import Breakpoint, BreakpointPair
 from structural_variant.cluster import cluster_breakpoint_pairs
+from structural_variant.annotate import load_reference_genes
+from structural_variant.validate import EvidenceSettings, Evidence
 from structural_variant import __version__
+from sv_validate import add_evidence_args_to_parser
 
 __prog__ = os.path.basename(os.path.realpath(__file__))
 
@@ -187,27 +198,48 @@ def write_bed_file(filename, cluster_breakpoint_pairs):
 
 
 def main():
-    args = parser = argparse.ArgumentParser()
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + __version__,
-                        help='Outputs the version number')
-    parser.add_argument('-f', '--overwrite', action='store_true', default=False,
-                        help='set flag to overwrite existing reviewed files')
+    args = parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument(
+        '-v', '--version', action='version', version='%(prog)s version ' + __version__,
+        help='Outputs the version number')
+    parser.add_argument(
+        '-f', '--overwrite', action='store_true', default=False,
+        help='set flag to overwrite existing reviewed files')
     parser.add_argument(
         '-o', '--output', help='path to the output directory', required=True)
     parser.add_argument(
         '-n', '--inputs', help='path to the input files', required=True, action='append')
-    parser.add_argument('-b', '--bamfile', metavar=('<library_name>', '</path/to/bam/file>'), nargs=2,
-                        help='specify a bam file for a given library', action='append', required=True)
-    parser.add_argument('--max-jobs', '-j', default=100, type=int, dest='MAX_JOBS',
-                        help='defines the maximum number of jobs that can be created for the validation step')
-    parser.add_argument('--min-events-per-job', '-e', default=50, type=int,
-                        help='defines the minimum number of clusters to validate per job', dest='MIN_EVENTS_PER_JOB')
-    parser.add_argument('-r', help='radius to use in clustering', default=50, type=int)
-    parser.add_argument('-q', '--queue', default='transabyss.q',
-                        help='queue to submit validation jobs to, only affects the qsub script created')
+    parser.add_argument(
+        '-b', '--bamfile', metavar=('<library_name>', '</path/to/bam/file>'), nargs=2,
+        help='specify a bam file for a given library', action='append', required=True)
+    g = parser.add_argument_group('qsub job options')
+    g.add_argument(
+        '--max-jobs', '-j', default=100, type=int, dest='MAX_JOBS',
+        help='defines the maximum number of jobs that can be created for the validation step')
+    g.add_argument(
+        '--min-events-per-job', '-e', default=50, type=int,
+        help='defines the minimum number of clusters to validate per job', dest='MIN_EVENTS_PER_JOB')
+    parser.add_argument(
+        '-r', help='radius to use in clustering', default=20, type=int)
+    g.add_argument(
+        '-q', '--queue', default='transabyss.q',
+        help='queue to submit validation jobs to, only affects the qsub script created')
     parser.add_argument(
         '-k', help='parameter used for computing cliques, smaller is faster, above 20 will be slow',
         default=15, type=int)
+    g = parser.add_argument_group('filter arguments')
+    g.add_argument(
+        '--no_filter', default=False, help='If flag is given the clusters will not be filtered '
+        'based on lack of annotation')
+    g.add_argument(
+        '--filter_proximity', '-p', type=int, default=5000, help='maximum distance to look for annotations'
+        'from evidence window')
+    g.add_argument(
+        '--annotations', '-a',
+        default='/home/creisle/svn/ensembl_flatfiles/ensembl69_transcript_exons_and_domains_20160808.tsv',
+        help='path to the reference annotations of genes, transcript, exons, domains, etc.')
+    g = parser.add_argument_group('evidence settings')
+    add_evidence_args_to_parser(g)
     args = parser.parse_args()
 
     if args.MIN_EVENTS_PER_JOB < 1:
@@ -219,8 +251,15 @@ def main():
         print('\nerror: MAX_JOBS cannot be less than 1')
         parser.print_help()
         exit(1)
-
+    
+    log('input arguments listed below')
+    for arg, val in sorted(args.__dict__.items()):
+        log(arg, '=', val, time_stamp=False)
     BAM_FILE_ARGS = {}
+    
+    if not args.no_filter:
+        log('loading:', args.annotations)
+        REFERENCE_GENES = load_reference_genes(args.annotations, verbose=False)
 
     for lib, bam in args.bamfile:
         if lib in BAM_FILE_ARGS:
@@ -296,14 +335,15 @@ def main():
                 temp.update(p.data[COLUMNS.tools.name])
             cluster.data[COLUMNS.tools.name] = ';'.join(sorted(list(temp)))
             cluster_id += 1
-
-        log('cluster distribution', sorted(hist.items()))
+        log('input', len(bpps), 'breakpoint pairs', time_stamp=False)
+        log('computed', len(c), 'clusters', time_stamp=False)
+        log('cluster distribution', sorted(hist.items()), time_stamp=False)
 
     # map input pairs to cluster ids
     # now create the mapping from the original input files to the cluster(s)
     for lib, protocol in clusters_by_libprot:
         clusters = clusters_by_libprot[(lib, protocol)]
-        f = os.path.join(args.output, 'clustering/{}_{}/cluster_assignment.tsv'.format(lib, protocol))
+        f = os.path.join(args.output, 'clustering/{}_{}/cluster_assignment.tab'.format(lib, protocol))
         with open(f, 'w') as fh:
             header = set()
             log('writing:', f)
@@ -326,33 +366,87 @@ def main():
             fh.write('#' + '\t'.join(header) + '\n')
             for row in rows.values():
                 fh.write('\t'.join([str(row.get(c, None)) for c in header]) + '\n')
+    
+    settings = EvidenceSettings.parse_args(args)
 
     for lib, protocol in clusters_by_libprot:
         clusters = clusters_by_libprot[(lib, protocol)]
         # decide on the number of clusters to validate per job
+        pass_clusters = []
+        fail_clusters = []
+        
+        for cluster in clusters:
+            # don't need to generate transcriptome windows b/c will default to genome if not in a gene anyway
+            w1 = Evidence.generate_window(
+                cluster.break1,
+                read_length=settings.read_length,
+                median_insert_size=settings.median_insert_size,
+                call_error=settings.call_error,
+                stdev_isize=settings.stdev_isize,
+                stdev_count_abnormal=settings.stdev_count_abnormal
+            )
+            w2 = Evidence.generate_window(
+                cluster.break2,
+                read_length=settings.read_length,
+                median_insert_size=settings.median_insert_size,
+                call_error=settings.call_error,
+                stdev_isize=settings.stdev_isize,
+                stdev_count_abnormal=settings.stdev_count_abnormal
+            )
+            if args.no_filter:
+                pass_clusters.append(cluster)
+            else:
+                # loop over the annotations
+                overlaps_gene = False
+                w1 = Interval(w1.start - args.filter_proximity, w1.end + args.filter_proximity)
+                w2 = Interval(w2.start - args.filter_proximity, w2.end + args.filter_proximity)
+                if not cluster.interchromosomal:
+                    w1 = w1 | w2
+                for gene in REFERENCE_GENES.get(cluster.break1.chr, []):
+                    if Interval.overlaps(gene, w1):
+                        overlaps_gene = True
+                        break
+                if cluster.interchromosomal:
+                    for gene in REFERENCE_GENES.get(cluster.break2.chr, []):
+                        if Interval.overlaps(gene, w2):
+                            overlaps_gene = True
+                            break
+                if overlaps_gene:
+                    pass_clusters.append(cluster)
+                else:
+                    fail_clusters.append(cluster)
+            
+        log('filtered', len(fail_clusters), 'clusters as not informative')
+        
         JOB_SIZE = args.MIN_EVENTS_PER_JOB
-        if len(clusters) // args.MIN_EVENTS_PER_JOB > args.MAX_JOBS - 1:
-            JOB_SIZE = len(clusters) // args.MAX_JOBS
+        if len(pass_clusters) // args.MIN_EVENTS_PER_JOB > args.MAX_JOBS - 1:
+            JOB_SIZE = len(pass_clusters) // args.MAX_JOBS
 
         log('info: splitting {} clusters into {} jobs of size {}'.format(
-            len(clusters), len(clusters) // JOB_SIZE, JOB_SIZE))
+            len(pass_clusters), len(pass_clusters) // JOB_SIZE, JOB_SIZE))
 
         index = 0
         fileno_start = 1
         fileno = fileno_start
         parent_dir = os.path.join(args.output, 'clustering/{}_{}'.format(lib, protocol))
+        uninform = os.path.join(parent_dir, 'uninformative_clusters.txt')
 
+        with open(uninform, 'w') as fh:
+            log('writing:', uninform)
+            for cluster in fail_clusters:
+                fh.write('{}\n'.format(cluster.data[COLUMNS.cluster_id]))
         bedfile = filename = '{}/clusters.bed'.format(parent_dir)
-        log('writing bed file:', bedfile)
+        log('writing:', bedfile)
         write_bed_file(bedfile, clusters)
 
         rows = [c for c in clusters]
 
         clusterset_file_prefix = parent_dir + '/clusterset-'
+        log('writing split outputs')
         while index < len(rows):
             # generate an output file
-            filename = '{}{}'.format(clusterset_file_prefix, fileno)
-            log('writing:', filename)
+            filename = '{}{}.tab'.format(clusterset_file_prefix, fileno)
+            log('writing:', filename, time_stamp=False)
             with open(filename, 'w') as fh:
                 limit = index + JOB_SIZE
                 header = None
@@ -385,12 +479,18 @@ def main():
             fh.write('#$ -o {}/log/\n'.format(output_folder))
             fh.write('#$ -l mem_free=12G,mem_token=12G,h_vmem=12G\n')
             fh.write('echo "Starting job: $SGE_TASK_ID"\n')
-            fh.write('python sv_validate.py -n {}$SGE_TASK_ID -o {} -b {} -l {}\n'.format(
+            fh.write('python sv_validate.py -n {}$SGE_TASK_ID.tab \\\n\t-o {} \\\n\t-b {} \\\n\t-l {} \\\n'.format(
                 clusterset_file_prefix,
                 output_folder,
                 BAM_FILE_ARGS[lib],
                 lib
             ))
+            temp = EvidenceSettings()
+            opt = []
+            for param, val in args.__dict__.items():
+                if hasattr(temp, param):
+                    opt.append('--{} {}'.format(param, val))
+            fh.write('\t{}\n'.format(' \\\n\t'.join(opt)))
             fh.write('echo "Job complete: $SGE_TASK_ID"\n')
 
 if __name__ == '__main__':

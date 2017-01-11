@@ -38,3 +38,8 @@ class TestConstants(unittest.TestCase):
         self.assertEqual(
             [COLUMNS.break1_chromosome.name, COLUMNS.break1_sequence.name, COLUMNS.break2_sequence.name, 'NEW', 'NEW2'], 
             sort_columns(temp))
+
+    def test_column_matches_column_name(self):
+        self.assertEqual(COLUMNS.library.name, COLUMNS.library)
+        s = set([COLUMNS.library.name, COLUMNS.library])
+        self.assertEqual(1, len(s))

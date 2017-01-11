@@ -16,9 +16,12 @@ the validation subfolder in the pattern as follows
     |   `-- <library>_<protocol>/
     |       |-- qsub.sh
     |       |-- log/
-    |       |-- clusterset-#.validation.failed
-    |       |-- clusterset-#.validation.passed
+    |       |-- clusterset-#.igv.batch
+    |       |-- clusterset-#.validation-failed.tab
+    |       |-- clusterset-#.validation-passed.tab
+    |       |-- clusterset-#.validation-passed.bed
     |       |-- clusterset-#.contigs.bam
+    |       |-- clusterset-#.contigs.tab
     |       |-- clusterset-#.contigs.sorted.bam
     |       |-- clusterset-#.contigs.sorted.bam.bai
     |       |-- clusterset-#.evidence.bam
@@ -60,7 +63,7 @@ INPUT_BAM_CACHE = None
 REFERENCE_ANNOTATIONS = None
 HUMAN_REFERENCE_GENOME = None
 MASKED_REGIONS = None
-EVIDENCE_SETTINGS = EvidenceSettings(median_insert_size=385, stdev_isize=95)
+EVIDENCE_SETTINGS = None
 
 
 def log(*pos, time_stamp=True):
@@ -84,58 +87,58 @@ def read_cluster_file(name, is_stranded):
     header, rows = TSV.read_file(
         name,
         require=[
-            COLUMNS.cluster_id.name,
-            COLUMNS.cluster_size.name,
-            COLUMNS.break1_chromosome.name,
-            COLUMNS.break1_position_start.name,
-            COLUMNS.break1_position_end.name,
-            COLUMNS.break1_orientation.name,
-            COLUMNS.break1_strand.name,
-            COLUMNS.break2_chromosome.name,
-            COLUMNS.break2_position_start.name,
-            COLUMNS.break2_position_end.name,
-            COLUMNS.break2_orientation.name,
-            COLUMNS.break2_strand.name,
-            COLUMNS.opposing_strands.name
+            COLUMNS.cluster_id,
+            COLUMNS.cluster_size,
+            COLUMNS.break1_chromosome,
+            COLUMNS.break1_position_start,
+            COLUMNS.break1_position_end,
+            COLUMNS.break1_orientation,
+            COLUMNS.break1_strand,
+            COLUMNS.break2_chromosome,
+            COLUMNS.break2_position_start,
+            COLUMNS.break2_position_end,
+            COLUMNS.break2_orientation,
+            COLUMNS.break2_strand,
+            COLUMNS.opposing_strands
         ],
         cast={
-            COLUMNS.cluster_size.name: int,
-            COLUMNS.break1_position_start.name: int,
-            COLUMNS.break1_position_end.name: int,
-            COLUMNS.break2_position_start.name: int,
-            COLUMNS.break2_position_end.name: int,
-            COLUMNS.opposing_strands.name: TSV.bool
+            COLUMNS.cluster_size: int,
+            COLUMNS.break1_position_start: int,
+            COLUMNS.break1_position_end: int,
+            COLUMNS.break2_position_start: int,
+            COLUMNS.break2_position_end: int,
+            COLUMNS.opposing_strands: TSV.bool
         }
     )
     evidence = []
     for row in rows:
-        strands = [(row[COLUMNS.break1_strand.name], row[COLUMNS.break2_strand.name])]
+        strands = [(row[COLUMNS.break1_strand], row[COLUMNS.break2_strand])]
         if is_stranded:
             strands = itertools.product(
-                STRAND.expand(row[COLUMNS.break1_strand.name]),
-                STRAND.expand(row[COLUMNS.break2_strand.name])
+                STRAND.expand(row[COLUMNS.break1_strand]),
+                STRAND.expand(row[COLUMNS.break2_strand])
             )
-            strands = [(s1, s2) for s1, s2 in strands if row[COLUMNS.opposing_strands.name] == (s1 != s2)]
+            strands = [(s1, s2) for s1, s2 in strands if row[COLUMNS.opposing_strands] == (s1 != s2)]
         if len(strands) == 0:
             raise UserWarning('error in reading input file. could not resolve strands', row)
 
         for s1, s2 in strands:
             bpp = BreakpointPair(
                 Breakpoint(
-                    row[COLUMNS.break1_chromosome.name],
-                    row[COLUMNS.break1_position_start.name],
-                    row[COLUMNS.break1_position_end.name],
+                    row[COLUMNS.break1_chromosome],
+                    row[COLUMNS.break1_position_start],
+                    row[COLUMNS.break1_position_end],
                     strand=s1,
-                    orient=row[COLUMNS.break1_orientation.name]
+                    orient=row[COLUMNS.break1_orientation]
                 ),
                 Breakpoint(
-                    row[COLUMNS.break2_chromosome.name],
-                    row[COLUMNS.break2_position_start.name],
-                    row[COLUMNS.break2_position_end.name],
+                    row[COLUMNS.break2_chromosome],
+                    row[COLUMNS.break2_position_start],
+                    row[COLUMNS.break2_position_end],
                     strand=s2,
-                    orient=row[COLUMNS.break2_orientation.name]
+                    orient=row[COLUMNS.break2_orientation]
                 ),
-                opposing_strands=row[COLUMNS.opposing_strands.name]
+                opposing_strands=row[COLUMNS.opposing_strands]
             )
             try:
                 e = Evidence(
@@ -143,7 +146,7 @@ def read_cluster_file(name, is_stranded):
                     INPUT_BAM_CACHE,
                     HUMAN_REFERENCE_GENOME,
                     annotations=REFERENCE_ANNOTATIONS,
-                    protocol=row[COLUMNS.protocol.name],
+                    protocol=row[COLUMNS.protocol],
                     data=row
                 )
                 evidence.append(e)
@@ -151,9 +154,70 @@ def read_cluster_file(name, is_stranded):
                 warnings.warn('failed to read cluster {}'.format(repr(e)))
     return evidence
 
+def add_evidence_args_to_parser(parse_group):
+    default = EvidenceSettings()
+    parse_group.add_argument(
+        '--read_length', default=default.read_length, type=int, help='length of reads in the bam file')
+    parse_group.add_argument(
+        '--stdev_isize', default=default.stdev_isize, type=int, 
+        help='the standard deviation in insert sizes of paired end reads')
+    parse_group.add_argument(
+        '--median_insert_size', default=default.median_insert_size, type=int, 
+        help='the median insert size of paired end reads')
+    parse_group.add_argument(
+        '--stdev_count_abnormal', default=default.stdev_count_abnormal, type=int, 
+        help='the number of standard deviations away from the normal considered expected and therefore not '
+        'qualifying as flanking reads')
+    parse_group.add_argument(
+        '--call_error', default=default.call_error, type=int, help='buffer zone for the evidence window')
+    parse_group.add_argument(
+        '--min_splits_reads_resolution', default=default.min_splits_reads_resolution, type=int, 
+        help='minimum number of split reads required to call a breakpoint by split reads')
+    parse_group.add_argument(
+        '--min_anchor_exact', default=default.min_anchor_exact, type=int)
+    parse_group.add_argument(
+        '--min_anchor_fuzzy', default=default.min_anchor_fuzzy, type=int)
+    parse_group.add_argument(
+        '--min_anchor_match', default=default.min_anchor_match, type=float)
+    parse_group.add_argument(
+        '--min_mapping_quality', default=default.min_mapping_quality, type=int, 
+        help='the minimum mapping quality of reads to be used as evidence')
+    parse_group.add_argument(
+        '--fetch_reads_limit', default=default.fetch_reads_limit, type=int, 
+        help='maximum number of reads, cap, to loop over for any given evidence window')
+    parse_group.add_argument(
+        '--fetch_reads_bins', default=default.fetch_reads_bins, type=int, 
+        help='number of bins to split an evidence window into to ensure more even sampling of high coverage '
+        'regions')
+    parse_group.add_argument(
+        '--filter_secondary_alignments', default=default.filter_secondary_alignments, type=bool, 
+        help='filter secondary alignments when gathering read evidence')
+    parse_group.add_argument(
+        '--consensus_req', default=default.consensus_req, type=int)
+    parse_group.add_argument(
+        '--sc_extension_stop', default=default.sc_extension_stop, type=int)
+    parse_group.add_argument(
+        '--assembly_min_edge_weight', default=default.assembly_min_edge_weight, type=int, 
+        help='when building the initial deBruijn graph edge weights are determined by the frequency of the kmer '
+        'they represent in all the input sequences. The parameter here discards edges to simply the graph if they '
+        'have a weight less than specified')
+    parse_group.add_argument(
+        '--assembly_min_remap', default=default.assembly_min_remap, type=int, 
+        help='The minimum input sequences that must remap for an assembly to be used')
+    parse_group.add_argument(
+        '--min_non_target_aligned_split_reads', default=default.min_non_target_aligned_split_reads, type=int,
+        help='The minimum number of split reads aligned to a breakpoint by the input bam and no forced by local '
+        'alignment to the target region to call a breakpoint by split read evidence')
+    parse_group.add_argument(
+        '--min_linking_split_reads', default=default.min_linking_split_reads, type=int,
+        help='The minimum number of split reads which aligned to both breakpoints')
+    parse_group.add_argument(
+        '--min_flanking_reads_resolution', default=default.min_flanking_reads_resolution, type=int,
+        help='the minimum number of flanking reads required to call a breakpoint by flanking evidence')
+
 
 def parse_arguments():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         '-v', '--version', action='version', version='%(prog)s version ' + __version__,
         help='Outputs the version number'
@@ -183,26 +247,30 @@ def parse_arguments():
         '-l', '--library',
         help='library id', required=True
     )
-    parser.add_argument(
+    g = parser.add_argument_group('reference files')
+    g.add_argument(
         '-m', '--masking_file',
         default='/home/creisle/svn/svmerge/trunk/hg19_masked_regions.tsv',
         help='path to the masking regions file'
     )
-    parser.add_argument(
+    g.add_argument(
         '-a', '--annotations',
         default='/home/creisle/svn/ensembl_flatfiles/ensembl69_transcript_exons_and_domains_20160808.tsv',
         help='path to the reference annotations of genes, transcript, exons, domains, etc.'
     )
-    parser.add_argument(
+    g.add_argument(
         '-r', '--reference_genome',
         default='/home/pubseq/genomes/Homo_sapiens/TCGA_Special/GRCh37-lite.fa',
         help='path to the human reference genome in fa format'
     )
+    parser.add_argument('--igv_genome', help='the genome name to use for the igv batch file output', default='hg19')
     parser.add_argument(
         '-p', '--protocol',
         default=PROTOCOL.GENOME,
         choices=[PROTOCOL.GENOME, PROTOCOL.TRANS]
     )
+    g = parser.add_argument_group('evidence settings')
+    add_evidence_args_to_parser(g)
     args = parser.parse_args()
     return args
 
@@ -248,7 +316,7 @@ def gather_evidence_from_bam(clusters):
 
 
 def main():
-    global INPUT_BAM_CACHE, REFERENCE_ANNOTATIONS, MASKED_REGIONS, HUMAN_REFERENCE_GENOME
+    global INPUT_BAM_CACHE, REFERENCE_ANNOTATIONS, MASKED_REGIONS, HUMAN_REFERENCE_GENOME, EVIDENCE_SETTINGS
     """
     - read the evidence
     - assemble contigs from the split reads
@@ -257,17 +325,22 @@ def main():
     - TODO: call the breakpoints and summarize the evidence
     """
     args = parse_arguments()
-
-    FILENAME_PREFIX = re.sub('\.(txt|tsv)$', '', os.path.basename(args.input))
+    EVIDENCE_SETTINGS = EvidenceSettings.parse_args(args)
+    FILENAME_PREFIX = re.sub('\.(txt|tsv|tab)$', '', os.path.basename(args.input))
     EVIDENCE_BAM = os.path.join(args.output, FILENAME_PREFIX + '.evidence.bam')
     CONTIG_BAM = os.path.join(args.output, FILENAME_PREFIX + '.contigs.bam')
     EVIDENCE_BED = os.path.join(args.output, FILENAME_PREFIX + '.evidence.bed')
-    PASSED_OUTPUT_FILE = os.path.join(args.output, FILENAME_PREFIX + '.validated.passed')
-    FAILED_OUTPUT_FILE = os.path.join(args.output, FILENAME_PREFIX + '.validated.failed')
-    MIN_EXTEND_OVERLAP = 6  # on each end
-    MIN_CONTIG_READ_REMAP = 3
-    MIN_BREAKPOINT_RESOLUTION = 3
+
+    PASSED_OUTPUT_FILE = os.path.join(args.output, FILENAME_PREFIX + '.validation-passed.tab')
+    PASSED_BED_FILE = os.path.join(args.output, FILENAME_PREFIX + '.validation-passed.bed')
+    FAILED_OUTPUT_FILE = os.path.join(args.output, FILENAME_PREFIX + '.validation-failed.tab')
+    CONTIG_OUTPUT_FILE = os.path.join(args.output, FILENAME_PREFIX + '.contigs.tab')
+    IGV_BATCH_FILE = os.path.join(args.output, FILENAME_PREFIX + '.igv.batch')
     INPUT_BAM_CACHE = BamCache(args.bamfile)
+
+    log('input arguments listed below')
+    for arg, val in sorted(args.__dict__.items()):
+        log(arg, '=', val, time_stamp=False)
     log('loading the masking regions:', args.masking_file)
     MASKED_REGIONS = load_masking_regions(args.masking_file)
     for chr in MASKED_REGIONS:
@@ -312,15 +385,23 @@ def main():
             row.update(cluster.breakpoint_pair.flatten())
             fl = set([r.query_name for r in cluster.flanking_reads[0]]) | \
                 set([r.query_name for r in cluster.flanking_reads[1]])
-            row[COLUMNS.raw_flanking_reads.name] = len(fl)
-            row[COLUMNS.raw_break1_split_reads.name] = len(cluster.split_reads[0])
-            row[COLUMNS.raw_break2_split_reads.name] = len(cluster.split_reads[1])
+            row[COLUMNS.raw_flanking_reads] = len(fl)
+            row[COLUMNS.raw_break1_split_reads] = len(cluster.split_reads[0])
+            row[COLUMNS.raw_break2_split_reads] = len(cluster.split_reads[1])
             row['failure_comment'] = 'dropped b/c overlapped a masked region {}:{}-{}'.format(
                 mask.reference_object, mask.start, mask.end
             )
             failed_cluster_rows.append(row)
 
     evidence = gather_evidence_from_bam(filtered_clusters)
+
+    # output all the assemblies to a file of contigs
+    with open(CONTIG_OUTPUT_FILE, 'w') as fh:
+        log('writing the contigs to an output file:', CONTIG_OUTPUT_FILE)
+        fh.write('#{}\t{}\t{}\n'.format(COLUMNS.cluster_id, COLUMNS.contig_sequence, COLUMNS.contig_remap_score))
+        for ev in evidence:
+            for c in ev.contigs:
+                fh.write('{}\t{}\t{}\n'.format(ev.data[COLUMNS.cluster_id], c.seq, c.remap_score()))
 
     blat_sequences = set()
     for e in evidence:
@@ -335,30 +416,35 @@ def main():
     )
     log('alignment complete')
     event_calls = []
-    for e in evidence:
-        print()
-        log('calling events for', e.breakpoint_pair)
-        calls = []
-        failure_comment = None
-        try:
-            calls = e.call_events()
-            event_calls.extend(calls)
-        except UserWarning as err:
-            log('warning: error in calling events', repr(err), time_stamp=False)
-            failure_comment = str(err)
+    with open(EVIDENCE_BED, 'w') as fh:
+        for e in evidence:
+            fh.write('{}\t{}\t{}\t{}\n'.format(
+                e.break1.chr, e.window1.start, e.window1.end, e.data[COLUMNS.cluster_id]))
+            fh.write('{}\t{}\t{}\t{}\n'.format(
+                e.break2.chr, e.window2.start, e.window2.end, e.data[COLUMNS.cluster_id]))
+            print()
+            log('calling events for', e.breakpoint_pair)
+            calls = []
+            failure_comment = None
+            try:
+                calls = e.call_events()
+                event_calls.extend(calls)
+            except UserWarning as err:
+                log('warning: error in calling events', repr(err), time_stamp=False)
+                failure_comment = str(err)
 
-        if failure_comment:
-            row = {}
-            row.update(e.data)
-            row.update(e.breakpoint_pair.flatten())
-            fl = set([r.query_name for r in e.flanking_reads[0]]) | set([r.query_name for r in e.flanking_reads[1]])
-            row[COLUMNS.raw_flanking_reads.name] = len(fl)
-            row[COLUMNS.raw_break1_split_reads.name] = len(e.split_reads[0])
-            row[COLUMNS.raw_break2_split_reads.name] = len(e.split_reads[1])
-            row['failure_comment'] = failure_comment
-            failed_cluster_rows.append(row)
+            if failure_comment:
+                row = {}
+                row.update(e.data)
+                row.update(e.breakpoint_pair.flatten())
+                fl = set([r.query_name for r in e.flanking_reads[0]]) | set([r.query_name for r in e.flanking_reads[1]])
+                row[COLUMNS.raw_flanking_reads] = len(fl)
+                row[COLUMNS.raw_break1_split_reads] = len(e.split_reads[0])
+                row[COLUMNS.raw_break2_split_reads] = len(e.split_reads[1])
+                row['failure_comment'] = failure_comment
+                failed_cluster_rows.append(row)
 
-        log('called {} event(s)'.format(len(calls)))
+            log('called {} event(s)'.format(len(calls)))
 
     # write the output validated clusters (split by type and contig)
 
@@ -379,71 +465,71 @@ def main():
             except AttributeError:
                 pass
             row = {
-                COLUMNS.cluster_id.name: ec.data[COLUMNS.cluster_id.name],
-                COLUMNS.validation_id.name: 'validation_{}-{}'.format(id_prefix, id),
-                COLUMNS.break1_chromosome.name: ec.break1.chr,
-                COLUMNS.break1_position_start.name: ec.break1.start,
-                COLUMNS.break1_position_end.name: ec.break1.end,
-                COLUMNS.break1_strand.name: STRAND.NS,
-                COLUMNS.break1_orientation.name: ec.break1.orient,
-                COLUMNS.break1_sequence.name: ec.break1.seq,
-                COLUMNS.break2_chromosome.name: ec.break2.chr,
-                COLUMNS.break2_position_start.name: ec.break2.start,
-                COLUMNS.break2_position_end.name: ec.break2.end,
-                COLUMNS.break2_strand.name: STRAND.NS,
-                COLUMNS.break2_orientation.name: ec.break2.orient,
-                COLUMNS.break2_sequence.name: ec.break2.seq,
-                COLUMNS.event_type.name: ec.classification,
-                COLUMNS.opposing_strands.name: ec.opposing_strands,
-                COLUMNS.stranded.name: ec.stranded,
-                COLUMNS.protocol.name: ec.evidence.protocol,
-                COLUMNS.tools.name: ec.data[COLUMNS.tools.name],
-                COLUMNS.contigs_assembled.name: len(ec.evidence.contigs),
-                COLUMNS.contigs_aligned.name: sum([len(c.alignments) for c in ec.evidence.contigs]),
-                COLUMNS.contig_sequence.name: None,
-                COLUMNS.contig_remap_score.name: None,
-                COLUMNS.contig_alignment_score.name: None,
-                COLUMNS.break1_call_method.name: ec.call_method[0],
-                COLUMNS.break2_call_method.name: ec.call_method[1],
-                COLUMNS.flanking_reads.name: flank_count,
-                COLUMNS.median_insert_size.name: round(flank_median, 0) if flank_median is not None else None,
-                COLUMNS.stdev_insert_size.name: round(flank_stdev, 0) if flank_stdev is not None else None,
-                COLUMNS.break1_split_reads.name: b1_count,
-                COLUMNS.break1_split_reads_forced.name: b1_custom,
-                COLUMNS.break2_split_reads.name: b2_count,
-                COLUMNS.break2_split_reads_forced.name: b2_custom,
-                COLUMNS.linking_split_reads.name: link_count,
-                COLUMNS.untemplated_sequence.name: None,
-                COLUMNS.break1_homologous_sequence.name: b1_homseq,
-                COLUMNS.break2_homologous_sequence.name: b2_homseq,
-                COLUMNS.break1_ewindow.name: '{}-{}'.format(*ec.evidence.window1),
-                COLUMNS.break2_ewindow.name: '{}-{}'.format(*ec.evidence.window2),
-                COLUMNS.break1_ewindow_count.name: ec.evidence.counts[0],
-                COLUMNS.break2_ewindow_count.name: ec.evidence.counts[1]
+                COLUMNS.cluster_id: ec.data[COLUMNS.cluster_id],
+                COLUMNS.validation_id: 'validation_{}-{}'.format(id_prefix, id),
+                COLUMNS.break1_chromosome: ec.break1.chr,
+                COLUMNS.break1_position_start: ec.break1.start,
+                COLUMNS.break1_position_end: ec.break1.end,
+                COLUMNS.break1_strand: STRAND.NS,
+                COLUMNS.break1_orientation: ec.break1.orient,
+                COLUMNS.break1_sequence: ec.break1.seq,
+                COLUMNS.break2_chromosome: ec.break2.chr,
+                COLUMNS.break2_position_start: ec.break2.start,
+                COLUMNS.break2_position_end: ec.break2.end,
+                COLUMNS.break2_strand: STRAND.NS,
+                COLUMNS.break2_orientation: ec.break2.orient,
+                COLUMNS.break2_sequence: ec.break2.seq,
+                COLUMNS.event_type: ec.classification,
+                COLUMNS.opposing_strands: ec.opposing_strands,
+                COLUMNS.stranded: ec.stranded,
+                COLUMNS.protocol: ec.evidence.protocol,
+                COLUMNS.tools: ec.data[COLUMNS.tools],
+                COLUMNS.contigs_assembled: len(ec.evidence.contigs),
+                COLUMNS.contigs_aligned: sum([len(c.alignments) for c in ec.evidence.contigs]),
+                COLUMNS.contig_sequence: None,
+                COLUMNS.contig_remap_score: None,
+                COLUMNS.contig_alignment_score: None,
+                COLUMNS.break1_call_method: ec.call_method[0],
+                COLUMNS.break2_call_method: ec.call_method[1],
+                COLUMNS.flanking_reads: flank_count,
+                COLUMNS.median_insert_size: round(flank_median, 0) if flank_median is not None else None,
+                COLUMNS.stdev_insert_size: round(flank_stdev, 0) if flank_stdev is not None else None,
+                COLUMNS.break1_split_reads: b1_count,
+                COLUMNS.break1_split_reads_forced: b1_custom,
+                COLUMNS.break2_split_reads: b2_count,
+                COLUMNS.break2_split_reads_forced: b2_custom,
+                COLUMNS.linking_split_reads: link_count,
+                COLUMNS.untemplated_sequence: None,
+                COLUMNS.break1_homologous_sequence: b1_homseq,
+                COLUMNS.break2_homologous_sequence: b2_homseq,
+                COLUMNS.break1_ewindow: '{}-{}'.format(*ec.evidence.window1),
+                COLUMNS.break2_ewindow: '{}-{}'.format(*ec.evidence.window2),
+                COLUMNS.break1_ewindow_count: ec.evidence.counts[0],
+                COLUMNS.break2_ewindow_count: ec.evidence.counts[1]
             }
             if ec.contig:
-                row[COLUMNS.contig_sequence.name] = ec.contig.seq
-                row[COLUMNS.contig_remap_score.name] = ec.contig.remap_score()
+                row[COLUMNS.contig_sequence] = ec.contig.seq
+                row[COLUMNS.contig_remap_score] = ec.contig.remap_score()
                 if ec.break1.strand == STRAND.NEG and not ec.stranded:
-                    row[COLUMNS.contig_sequence.name] = reverse_complement(row[COLUMNS.contig_sequence.name])
+                    row[COLUMNS.contig_sequence] = reverse_complement(row[COLUMNS.contig_sequence])
             if ec.alignment:
                 r1, r2 = ec.alignment
                 if r2 is None:
-                    row[COLUMNS.contig_alignment_score.name] = r1.get_tag('br')
+                    row[COLUMNS.contig_alignment_score] = r1.get_tag('br')
                 else:
-                    row[COLUMNS.contig_alignment_score.name] = int(round((r1.get_tag('br') + r2.get_tag('br')) / 2, 0))
+                    row[COLUMNS.contig_alignment_score] = int(round((r1.get_tag('br') + r2.get_tag('br')) / 2, 0))
             if ec.untemplated_sequence is not None:
-                row[COLUMNS.untemplated_sequence.name] = ec.untemplated_sequence
+                row[COLUMNS.untemplated_sequence] = ec.untemplated_sequence
             if ec.stranded:
-                row[COLUMNS.break1_strand.name] = ec.break1.strand
-                row[COLUMNS.break2_strand.name] = ec.break2.strand
+                row[COLUMNS.break1_strand] = ec.break1.strand
+                row[COLUMNS.break2_strand] = ec.break2.strand
             rows.append(row)
             header.update(row.keys())
+            id += 1
         header = sort_columns(header)
         fh.write('#' + '\t'.join(header) + '\n')
         for row in rows:
             fh.write('\t'.join([str(row[col]) for col in header]) + '\n')
-            id += 1
 
     with open(FAILED_OUTPUT_FILE, 'w') as fh:
         log('writing:', FAILED_OUTPUT_FILE)
@@ -456,7 +542,6 @@ def main():
         fh.write('#' + '\t'.join(header) + '\n')
         for row in failed_cluster_rows:
             fh.write('\t'.join([str(row.get(col, None)) for col in header]) + '\n')
-            id += 1
 
     with pysam.AlignmentFile(CONTIG_BAM, 'wb', template=INPUT_BAM_CACHE.fh) as fh:
         log('writing:', CONTIG_BAM)
@@ -484,7 +569,7 @@ def main():
     log('sorting the bam file:', CONTIG_BAM)
     subprocess.call(['samtools', 'sort', CONTIG_BAM, sort])
     CONTIG_BAM = sort + '.bam'
-    log(' indexing the sorted bam:', CONTIG_BAM)
+    log('indexing the sorted bam:', CONTIG_BAM)
     subprocess.call(['samtools', 'index', CONTIG_BAM])
 
     # then sort the evidence bam file
@@ -494,6 +579,17 @@ def main():
     EVIDENCE_BAM = sort + '.bam'
     log('indexing the sorted bam:', EVIDENCE_BAM)
     subprocess.call(['samtools', 'index', EVIDENCE_BAM])
+
+    # write the igv batch file
+    with open(IGV_BATCH_FILE, 'w') as fh:
+        log('writing:', IGV_BATCH_FILE)
+        fh.write('new\ngenome {}\n'.format(args.igv_genome))
+        
+        fh.write('load {} name="{}"\n'.format(PASSED_BED_FILE, 'passed events'))
+        fh.write('load {} name="{}"\n'.format(CONTIG_BAM, 'aligned contigs'))
+        fh.write('load {} name="{}"\n'.format(EVIDENCE_BED, 'evidence windows'))
+        fh.write('load {} name="{}"\n'.format(EVIDENCE_BAM, 'raw evidence'))
+        fh.write('load {} name="{} {} input"\n'.format(args.bamfile, args.library, args.protocol))
 
     INPUT_BAM_CACHE.close()
 

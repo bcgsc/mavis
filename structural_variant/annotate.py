@@ -1,9 +1,9 @@
 import TSV
-from structural_variant.interval import Interval
-from structural_variant.constants import *
+from .interval import Interval
+from .constants import *
 import itertools
-from structural_variant.error import *
-from structural_variant.breakpoint import BreakpointPair, Breakpoint
+from .error import *
+from .breakpoint import BreakpointPair, Breakpoint
 from Bio import SeqIO
 import re
 
@@ -13,7 +13,7 @@ class Annotation(BreakpointPair):
     a fusion of two transcripts created by the associated breakpoint_pair
     will also hold the other annotations for overlapping and encompassed and nearest genes
     """
-    def __init__(self, bpp, transcript1=None, transcript2=None, data={}, event_type=None):
+    def __init__(self, bpp, transcript1=None, transcript2=None, data={}, event_type=None, proximity=None):
         """
         Holds a breakpoint call and a set of transcripts, other information is gathered relative to these
 
@@ -43,7 +43,6 @@ class Annotation(BreakpointPair):
 
         self.transcript1 = transcript1
         self.transcript2 = transcript2
-        self.data = {}
         self.data.update(data)
 
         self.encompassed_genes = set()
@@ -53,6 +52,10 @@ class Annotation(BreakpointPair):
         self.genes_overlapping_break2 = set()
 
         self.event_type = event_type if event_type is None else SVTYPE.enforce(event_type)
+        self.proximity = proximity
+
+        # try building the fusion product
+
 
     def add_gene(self, gene):
         """
@@ -96,59 +99,79 @@ class Annotation(BreakpointPair):
                 self.genes_proximal_to_break1.add((gene, d1))
             if d2 > 0:
                 self.genes_proximal_to_break2.add((gene, d2))
+        
+        if len(self.genes_proximal_to_break1) > 0:
+            temp = set()
+            tgt = min([abs(d) for g, d in self.genes_proximal_to_break1])
 
-        temp = set()
+            for gene, dist in self.genes_proximal_to_break1:
+                if self.proximity is None:
+                    if abs(dist) == tgt:
+                        temp.add((gene, dist))
+                elif abs(dist) <= self.proximity:
+                    temp.add((gene, dist))
 
-        tmin = [d for g, d in self.genes_proximal_to_break1 if d < 0]
-        tmax = [d for g, d in self.genes_proximal_to_break1 if d > 0]
-        tmin = 0 if len(tmin) == 0 else max(tmin)
-        tmax = 0 if len(tmax) == 0 else min(tmax)
+            self.genes_proximal_to_break1 = temp
+        
+        if len(self.genes_proximal_to_break2) > 0:
+            temp = set()
+            tgt = min([abs(d) for g, d in self.genes_proximal_to_break2])
 
-        for gene, dist in self.genes_proximal_to_break1:
-            if tmin != 0 and dist == tmin:
-                temp.add((gene, dist))
-            elif tmax != 0 and dist == tmax:
-                temp.add((gene, dist))
+            for gene, dist in self.genes_proximal_to_break2:
+                if self.proximity is None:
+                    if abs(dist) == tgt:
+                        temp.add((gene, dist))
+                elif abs(dist) <= self.proximity:
+                    temp.add((gene, dist))
 
-        self.genes_proximal_to_break1 = temp
+            self.genes_proximal_to_break2 = temp
 
-        temp = set()
-
-        tmin = [d for g, d in self.genes_proximal_to_break2 if d < 0]
-        tmax = [d for g, d in self.genes_proximal_to_break2 if d > 0]
-        tmin = 0 if len(tmin) == 0 else max(tmin)
-        tmax = 0 if len(tmax) == 0 else min(tmax)
-
-        for gene, dist in self.genes_proximal_to_break2:
-            if tmin != 0 and dist == tmin:
-                temp.add((gene, dist))
-            elif tmax != 0 and dist == tmax:
-                temp.add((gene, dist))
-
-        self.genes_proximal_to_break2 = temp
-    
     def flatten(self):
         """
         generates a dictionary of the annotation information as strings
         """
         row = BreakpointPair.flatten(self)
         row.update({
-            COLUMNS.gene1.name: ann.transcript1.gene.name,
-            COLUMNS.gene2.name: ann.transcript2.gene.name,
-            COLUMNS.transcript1.name: ann.transcript1.name,
-            COLUMNS.transcript2.name: ann.transcript2.name,
-            COLUMNS.genes_proximal_to_break1.name: ann.genes_proximal_to_break1,
-            COLUMNS.genes_proximal_to_break2.name: ann.genes_proximal_to_break2
+            COLUMNS.genes_proximal_to_break1: self.genes_proximal_to_break1,
+            COLUMNS.genes_proximal_to_break2: self.genes_proximal_to_break2,
+            COLUMNS.gene1_direction: 'None',
+            COLUMNS.gene2_direction: 'None'
         })
-        
-        row[COLUMNS.genes_encompassed.name] = ';'.join(sorted([x.name for x in ann.encompassed_genes]))
-        row[COLUMNS.genes_overlapping_break1.name] = ';'.join(sorted([x.name for x in ann.genes_overlapping_break1]))
-        row[COLUMNS.genes_overlapping_break2.name] = ';'.join(sorted([x.name for x in ann.genes_overlapping_break2]))
-        row[COLUMNS.genes_proximal_to_break1.name] = ';'.join(
-            sorted(['{}({})'.format(x[0].name, x[1]) for x in ann.genes_proximal_to_break1]))
-        row[COLUMNS.genes_proximal_to_break2.name] = ';'.join(
-            sorted(['{}({})'.format(x[0].name, x[1]) for x in ann.genes_proximal_to_break2]))
-
+        if hasattr(self.transcript1, 'gene'):
+            row[COLUMNS.gene1] = self.transcript1.gene.name
+            row[COLUMNS.transcript1] = self.transcript1.name
+            try:
+                row[COLUMNS.gene1_direction] = str(determine_prime(self.transcript1, self.break1))
+            except AttributeError:
+                pass
+        else:
+            row[COLUMNS.gene1] = 'None'
+            row[COLUMNS.transcript1] = '{}:{}_{}{}'.format(
+                self.transcript1.reference_object,
+                self.transcript1.start,
+                self.transcript1.end,
+                self.transcript1.strand)
+        if hasattr(self.transcript2, 'gene'):
+            row[COLUMNS.gene2] = self.transcript2.gene.name
+            row[COLUMNS.transcript2] = self.transcript2.name
+            try:
+                row[COLUMNS.gene2_direction] = str(determine_prime(self.transcript2, self.break2))
+            except AttributeError:
+                pass
+        else:
+            row[COLUMNS.gene2] = 'None'
+            row[COLUMNS.transcript2] = '{}:{}_{}{}'.format(
+                self.transcript2.reference_object,
+                self.transcript2.start,
+                self.transcript2.end,
+                self.transcript2.strand)
+        row[COLUMNS.genes_encompassed] = ';'.join(sorted([x.name for x in self.encompassed_genes]))
+        row[COLUMNS.genes_overlapping_break1] = ';'.join(sorted([x.name for x in self.genes_overlapping_break1]))
+        row[COLUMNS.genes_overlapping_break2] = ';'.join(sorted([x.name for x in self.genes_overlapping_break2]))
+        row[COLUMNS.genes_proximal_to_break1] = ';'.join(
+            sorted(['{}({})'.format(x[0].name, x[1]) for x in self.genes_proximal_to_break1]))
+        row[COLUMNS.genes_proximal_to_break2] = ';'.join(
+            sorted(['{}({})'.format(x[0].name, x[1]) for x in self.genes_proximal_to_break2]))
         return row
 
 
@@ -205,6 +228,9 @@ class BioInterval:
     def __hash__(self):
         return hash(self.key)
 
+    def get_sequence(self, REFERENCE_GENOME=None):
+        raise NotImplementedError('abstract method must be overidden')
+
 
 class IntergenicRegion(BioInterval):
     def __init__(self, chr, start, end, strand):
@@ -229,20 +255,23 @@ class IntergenicRegion(BioInterval):
 class Gene(BioInterval):
     """
     """
-    def __init__(self, chr, start, end, name=None, strand=STRAND.NS, aliases=[]):
+    def __init__(self, chr, start, end, name=None, strand=STRAND.NS, aliases=None, sequence=None):
         """
         Args:
-            chr (str): the chromosome
-            name (str): the gene name/id i.e. ENSG0001
+            chr (string): the chromosome
+            name (string): the gene name/id i.e. ENSG0001
             strand (STRAND): the genomic strand '+' or '-'
-            aliases (List[str]): a list of aliases. For example the hugo name could go here
+            aliases (List of string): a list of aliases. For example the hugo name could go here
+            sequence (string): genomic sequence of the gene
         Example:
             >>> Gene('X', 1, 1000, 'ENG0001', '+', ['KRAS'])
         """
+        aliases = [] if aliases is None else aliases
         BioInterval.__init__(self, name=name, reference_object=chr, start=start, end=end)
         self.transcripts = set()
         self.strand = STRAND.enforce(strand)
         self.aliases = aliases
+        self.sequence = sequence
 
     @property
     def chr(self):
@@ -253,9 +282,20 @@ class Gene(BioInterval):
     def key(self):
         return (self.name, self.strand, self.chr, self.start, self.end)
 
+    def get_sequence(self, REFERENCE_GENOME):
+        """
+        gene sequence is always given wrt to the positive forward strand regardless of gene strand
+        """
+        if self.sequence:
+            return self.sequence
+        elif REFERENCE_GENOME is None:
+            raise AttributeError('reference genome is required to retrieve the gene sequence')
+        else:
+            return str(REFERENCE_GENOME[self.chr].seq[self.start - 1:self.end]).upper()
+
 
 class Translation(BioInterval):
-    def __init__(self, start, end, transcript, splicing_pattern, domains=[]):
+    def __init__(self, start, end, transcript, splicing_pattern, domains=None, sequence=None):
         """
         describes the splicing pattern and cds start and end with reference to a particular transcript
 
@@ -265,10 +305,13 @@ class Translation(BioInterval):
             transcript (Transcript): the transcript this is a Translation of
             splicing_pattern (List of int): a list of splicing positions to be used
             domains (List of Domain): a list of the domains on this translation
+            sequence (string): the cds sequence
         """
+        domains = [] if domains is None else domains
         BioInterval.__init__(self, reference_object=transcript, name=None, start=start, end=end)
-        self.splicing_pattern = tuple(sorted(splicing_pattern))
+        self.splicing_pattern = sorted(splicing_pattern)
         self.domains = []
+        self.sequence = sequence
         for d in domains:
             self.add_domain(d)
 
@@ -301,6 +344,46 @@ class Translation(BioInterval):
             utr.append(Interval(exons[0].start, self.transcript.convert_cdna_to_genomic(self.end)))
         return utr
 
+    def get_sequence(self, REFERENCE_GENOME=None):
+        if self.sequence:
+            return self.sequence
+        elif self.transcript and self.transcript.strand:
+            # transcript will be unspliced sequence
+            # splice points will be relative to the genome not transcript start
+            temp = sorted([self.transcript.start] + self.splicing_pattern + [self.transcript.end])
+            m = min(temp)
+            conti = []
+            for i in range(0, len(temp) - 1, 2):
+                conti.append((temp[i], temp[i + 1]))
+
+            if self.transcript.sequence:
+                ps = self.transcript.sequence
+                conti = [(i - m + 1, j - m + 1) for i, j in conti]
+                if self.transcript.strand == STRAND.NEG:
+                    ps = reverse_complement(ps)
+                s = [ps[i - 1:j] for i, j in conti]
+                s = ''.join(s)
+                if self.transcript.strand == STRAND.NEG:
+                    s = reverse_complement(s)
+                return s[self.start - 1:self.end]
+            elif REFERENCE_GENOME and self.transcript.gene:
+                s = [REFERENCE_GENOME[self.transcript.gene.chr].seq[i - 1:j] for i, j in conti]
+                s = ''.join(s)
+                if self.transcript.strand == STRAND.NEG:
+                    return reverse_complement(s)[self.start - 1:self.end]
+                else:
+                    return s[self.start - 1:self.end]
+        raise AttributeError(
+            'insufficient sequence information. reference_object sequence must be specified or REFERENCE_GENOME '
+            'argument must be given')
+
+    def get_cds_sequence(self, REFERENCE_GENOME=None):
+        return self.get_sequence(REFERENCE_GENOME)
+
+    def get_AA_sequence(self, REFERENCE_GENOME=None):
+        cds = self.get_cds_sequence(REFERENCE_GENOME)
+        return translate(cds)
+
     @property
     def key(self):
         return (self.reference_object, self.start, self.end, self.splicing_pattern)
@@ -320,7 +403,8 @@ class Transcript(BioInterval):
         name=None,
         strand=None,
         domains=None,
-        translations=None
+        translations=None,
+        sequence=None
     ):
         """ creates a new transcript object
 
@@ -335,12 +419,13 @@ class Transcript(BioInterval):
             strand (STRAND): strand the transcript is on, defaults to the strand of the Gene if not specified
             domains (List of Domain): list of domains to add to translations
             translations (List of Translation): Translation associated with this transcript
+            sequence (string): unspliced cDNA sequence
         """
-        exons = [] if exons is None else exons  # cannot use mutable default args in the function decl
-        domains = [] if domains is None else domains  # cannot use mutable default args in the function decl
-        translations = [] if translations is None else translations  # cannot use mutable default args in the function decl
+        # cannot use mutable default args in the function decl
+        exons = [] if exons is None else exons
+        domains = [] if domains is None else domains
+        translations = [] if translations is None else translations
 
-        print('input translations', translations)
         if genomic_start is None and len(exons) > 0:
             genomic_start = min([e[0] for e in exons])
         if genomic_end is None and len(exons) > 0:
@@ -351,7 +436,7 @@ class Transcript(BioInterval):
         self.exons = []
         self._strand = strand
         self.translations = translations
-        print('before auto translation', self.translations)
+        self.sequence = sequence
 
         if self._strand and self.gene and hasattr(self.gene, 'strand') and self.gene.strand != self._strand:
             raise AttributeError('strand does not match reference object')
@@ -364,11 +449,8 @@ class Transcript(BioInterval):
 
         if cds_start is not None or cds_end is not None:
             for sp in self.splicing_patterns():
-                print(sp)
-                print('Transcript.__init__', self.translations)
                 tl = Translation(cds_start, cds_end, self, splicing_pattern=sp, domains=domains)
                 self.add_translation(tl)
-                print('Transcript.__init__', self.translations)
 
     def splicing_patterns(self):
         """
@@ -525,6 +607,44 @@ class Transcript(BioInterval):
                 raise AttributeError('strand must be pos or neg to calculate the exon number')
         raise AttributeError('can only calculate phase on associated exons')
 
+    def get_sequence(self, REFERENCE_GENOME=None):
+        if self.sequence:
+            return self.sequence
+        elif self.gene and self.gene.sequence:
+            # gene has a sequence set
+            start = self.start - self.gene.start
+            end = self.end - self.gene.end + len(self.gene.sequence)
+            if self.strand == STRAND.NEG:
+                return reverse_complement(self.gene.sequence[start:end])
+            else:
+                return self.gene.sequence[start:end]
+        elif REFERENCE_GENOME is None:
+            raise AttributeError('reference genome is required to retrieve the gene sequence')
+        else:
+            if self.strand == STRAND.NEG:
+                return reverse_complement(REFERENCE_GENOME[self.gene.chr].seq[self.start - 1:self.end])
+            else:
+                return str(REFERENCE_GENOME[self.gene.chr].seq[self.start - 1:self.end])
+
+
+def determine_prime(transcript, breakpoint):
+    if transcript.strand == STRAND.POS:
+        if breakpoint.orient == ORIENT.LEFT:
+            return PRIME.FIVE
+        elif breakpoint.orient == ORIENT.RIGHT:
+            return PRIME.THREE
+        else:
+            raise AttributeError('cannot determine_prime if the orient of the breakpoint has not been specified')
+    elif transcript.strand == STRAND.NEG:
+        if breakpoint.orient == ORIENT.LEFT:
+            return PRIME.THREE
+        elif breakpoint.orient == ORIENT.RIGHT:
+            return PRIME.FIVE
+        else:
+            raise AttributeError('cannot determine_prime if the orient of the breakpoint has not been specified')
+    else:
+        raise AttributeError('cannot determine prime if the strand of the transcript has not been specified')
+
 
 class FusionTranscript(Transcript):
 
@@ -535,34 +655,18 @@ class FusionTranscript(Transcript):
         self.translations = []
         self.domains = []
         self.position = None
-        self._strand = STRAND.POS # always built on the positive strand
+        self._strand = STRAND.POS  # always built on the positive strand
 
     def exon_number(self, exon):
         old_exon = self.exon_mapping[exon]
         return old_exon.transcript.exon_number(old_exon)
 
     @classmethod
-    def determine_prime(cls, transcript, breakpoint):
-        if transcript.strand == STRAND.POS:
-            if breakpoint.orient == ORIENT.LEFT:
-                return PRIME.FIVE
-            elif breakpoint.orient == ORIENT.RIGHT:
-                return PRIME.THREE
-            else:
-                raise AttributeError('cannot determine_prime if the orient of the breakpoint has not been specified')
-        elif transcript.strand == STRAND.NEG:
-            if breakpoint.orient == ORIENT.LEFT:
-                return PRIME.THREE
-            elif breakpoint.orient == ORIENT.RIGHT:
-                return PRIME.FIVE
-            else:
-                raise AttributeError('cannot determine_prime if the orient of the breakpoint has not been specified')
-        else:
-            raise AttributeError('cannot determine prime if the strand of the transcript has not been specified')
-
-    @classmethod
     def build(cls, ann, REFERENCE_GENOME):
         """
+        Args:
+            ann (Annotation): the annotation object we want to build a FusionTranscript for
+            REFERENCE_GENOME (Dict of string and string): reference sequences by template/chr name
         .. todo::
             support single transcript inversions
         """
@@ -637,8 +741,8 @@ class FusionTranscript(Transcript):
             else:
                 raise AttributeError('unrecognized event type')
         else:
-            t1 = cls.determine_prime(ann.transcript1, ann.break1)
-            t2 = cls.determine_prime(ann.transcript2, ann.break2)
+            t1 = determine_prime(ann.transcript1, ann.break1)
+            t2 = determine_prime(ann.transcript2, ann.break2)
 
             if t1 == t2:
                 raise NotImplementedError('do not produce fusion transcript for anti-sense fusions')
@@ -736,8 +840,6 @@ class FusionTranscript(Transcript):
                     s += temp
                     new_exons.append((e, exon))
                 elif breakpoint.start <= exon.end:  # --|-====|====
-                    print('exon', exon.start, exon.end, exon)
-                    print('breakpoint', breakpoint)
                     intact_start_splice = False
                     temp = reference_sequence[breakpoint.start - 1:exon.end]
                     if Interval.overlaps(breakpoint, exon.end_splice_site):
@@ -748,7 +850,6 @@ class FusionTranscript(Transcript):
                         intact_start_splice=intact_start_splice,
                         intact_end_splice=intact_end_splice
                     )
-                    print('new exon', e.start, e.end, intact_start_splice, intact_end_splice)
                     s += temp
                     new_exons.append((e, exon))
         else:
@@ -788,7 +889,6 @@ class FusionTranscript(Transcript):
             exons.append((s, t))
             cdna.append(ft.sequence[s - 1:t])
         cdna = ''.join(cdna)
-        print(exons)
         translations = []  # (cds_start, cds_end)
         for i in range(0, CODON_SIZE):
             aa_sequence = translate(cdna, i)
@@ -806,7 +906,6 @@ class FusionTranscript(Transcript):
 
             for start, end in temp:
                 translations.append((start * CODON_SIZE + i + 1, (end + 1) * CODON_SIZE + i))
-
 
 
 class Exon(BioInterval):
@@ -884,6 +983,15 @@ class Domain:
     def key(self):
         return tuple([self.name, self.translation] + self.regions)
 
+    def get_sequences(self, REFERENCE_GENOME=None):
+        if self.translation:
+            aa = self.translation.get_AA_sequence(REFERENCE_GENOME)
+            s = [aa[r.start - 1:r.end] for r in self.regions]
+            return s
+        raise AttributeError(
+            'Insufficient information to gather sequence data. reference_object must have sequence information or '
+            'REFERENCE_GENOME must be provided')
+
 
 def load_masking_regions(filepath):
     """
@@ -906,7 +1014,7 @@ def load_masking_regions(filepath):
     Returns:
         Dict of string and List of BioInterval:
             a dictionary keyed by chromosome name with values of lists of regions on the chromosome
-    
+
     Example:
         >>> m = load_masking_regions('filename')
         >>> m['1']
@@ -924,7 +1032,7 @@ def load_masking_regions(filepath):
     return regions
 
 
-def load_reference_genes(filepath):
+def load_reference_genes(filepath, verbose=True):
     """
     given a file in the std input format (see below) reads and return a list of genes (and sub-objects)
 
@@ -952,7 +1060,8 @@ def load_reference_genes(filepath):
         filepath (string): path to the input tab-delimited file
 
     Returns:
-        Dict of string and List of Gene: a dictionary keyed by chromosome name with values of list of genes on the chromosome
+        Dict of string and List of Gene: a dictionary keyed by chromosome name with values of list of genes on the
+            chromosome
 
     Example:
         >>> ref = load_reference_genes('filename')
@@ -968,7 +1077,8 @@ def load_reference_genes(filepath):
                 s, t = temp.split('-')
                 exons.append(Exon(int(s), int(t)))
             except:
-                print('exon error:', temp, row)
+                if verbose:
+                    print('exon error:', temp, row)
         return exons
 
     def parse_domain_list(row):
@@ -983,7 +1093,8 @@ def load_reference_genes(filepath):
                 temp = [(int(x), int(y)) for x, y in temp]
                 d = Domain(name, temp)
             except:
-                print('error in domain:', d, row)
+                if verbose:
+                    print('error in domain:', d, row)
         return domains
 
     def nullable_int(row):
@@ -1138,10 +1249,12 @@ def gather_breakpoint_annotations(ref_ann, breakpoint):
         temp.append(IntergenicRegion(breakpoint.chr, breakpoint.start, breakpoint.end, STRAND.NEG))
     neg_overlapping_transcripts.extend(temp)
 
-    return sorted(pos_overlapping_transcripts, key=lambda x: x.position), sorted(neg_overlapping_transcripts, key=lambda x: x.position)
+    return (
+        sorted(pos_overlapping_transcripts, key=lambda x: x.position),
+        sorted(neg_overlapping_transcripts, key=lambda x: x.position))
 
 
-def gather_annotations(ref, bp):  # TODO
+def gather_annotations(ref, bp, event_type=None, proximity=None):  # TODO
     """
     Args:
         ref (Dict[str,List[Gene]]): the list of reference genes hashed by chromosomes
@@ -1199,7 +1312,7 @@ def gather_annotations(ref, bp):  # TODO
         bpp.break2.start = b2_itvl[0]
         bpp.break2.end = b2_itvl[1]
 
-        a = Annotation(bpp, a1, a2)
+        a = Annotation(bpp, a1, a2, event_type=event_type, proximity=proximity)
 
         for gene in ref[bp.break1.chr]:
             a.add_gene(gene)

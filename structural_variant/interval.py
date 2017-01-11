@@ -1,8 +1,6 @@
 import numpy as np
-import itertools
-import networkx as nx
-from structural_variant.constants import *
-from structural_variant.error import *
+from .constants import *
+from .error import *
 
 
 class Interval:
@@ -18,7 +16,7 @@ class Interval:
         self.start = int(start)
         self.end = int(end) if end is not None else self.start
         if self.start > self.end:
-            raise AttributeError('interval start > end is not allowed')
+            raise AttributeError('interval start > end is not allowed', self.start, self.end)
         self.freq = int(freq)
         if self.freq <= 0:
             raise AttributeError('Interval frequency must be a natural number')

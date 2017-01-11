@@ -117,7 +117,12 @@ PYSAM_READ_FLAGS = Vocab(
     LAST_IN_PAIR=128,
     SECONDARY=256,
     MULTIMAP=1,
-    CUSTOM_REALIGN='cr'
+    FORCED_TARGET_ALIGN='ft',
+    BLAT_RANK='br',
+    BLAT_SCORE='bs',
+    BLAT_ALIGNMENTS='ba',
+    BLAT_PERCENT_IDENTITY='bi',
+    BLAT_PMS='bp'
 )
 
 """Vocab: Enum-like. For readable PYSAM flag constants
@@ -184,6 +189,18 @@ class Column:
         self.name = name
         self.defn = defn
 
+    def __str__(self):
+        return str(self.name)
+
+    def __eq__(self, other):
+        try:
+            return str(self) == str(other)
+        except TypeError:
+            return False
+
+    def __hash__(self):
+        return hash(str(self))
+
 COLUMNS = Vocab(
     library=Column(
         'library',
@@ -206,9 +223,17 @@ COLUMNS = Vocab(
     gene1=Column(
         'gene1',
         'Gene for the current annotation at the first breakpoint'),
+    gene1_direction=Column(
+        'gene1_direction',
+        'The direction/prime of the gene. Has the following possible values: {}'.format(
+            ', '.join([str(p) for p in PRIME.values()]))),
     gene2=Column(
         'gene2',
         'Gene for the current annotation at the second breakpoint'),
+    gene2_direction=Column(
+        'gene2_direction',
+        'The direction/prime of the gene. Has the following possible values: {}'.format(
+            ', '.join([str(p) for p in PRIME.values()]))),
     transcript1=Column(
         'transcript1',
         'Transcript for the current annotation at the first breakpoint'),
@@ -246,7 +271,7 @@ COLUMNS = Vocab(
         'values: {}'.format(', '.join(ORIENT.values()))),
     break1_strand=Column(
         'break1_strand',
-        'The strand wrt to the reference positive/forward strand at this breakpoint. Has the following possible'
+        'The strand wrt to the reference positive/forward strand at this breakpoint. Has the following possible '
         'values: {}'.format(', '.join(STRAND.values()))),
     break1_sequence=Column(
         'break1_sequence',
@@ -324,13 +349,13 @@ COLUMNS = Vocab(
         'Number of split reads that call the exact breakpoint given'),
     break1_split_reads_forced=Column(
         'break1_split_reads_forced',
-        'Number of split reads which were re-aligned to the opposite breakpoint window'),
+        'Number of split reads which were aligned to the opposite breakpoint window using a targeted alignment'),
     break2_split_reads=Column(
         'break2_split_reads',
         'Number of split reads that call the exact breakpoint given'),
     break2_split_reads_forced=Column(
         'break2_split_reads_forced',
-        'Number of split reads which were re-aligned to the opposite breakpoint window'),
+        'Number of split reads which were aligned to the opposite breakpoint window using a targeted alignment'),
     linking_split_reads=Column(
         'linking_split_reads',
         'Number of split reads that align to both breakpoints'),
@@ -349,12 +374,20 @@ COLUMNS = Vocab(
     break1_ewindow_count=Column(
         'break1_ewindow_count',
         'Number of reads processed/looked-at in the first evidence window'),
+    break1_ewindow_practical_coverage=Column(
+        'break1_ewindow_practical_coverage',
+        'break1_ewindow_practical_coverage = break1_ewindow_count / len(break1_ewindow). Not the actual coverage as '
+        'bins are sampled within and there is a read limit cutoff'),
     break2_ewindow=Column(
         'break2_ewindow',
         'Window where evidence was gathered for the second breakpoint'),
     break2_ewindow_count=Column(
         'break2_ewindow_count',
         'Number of reads processed/looked-at in the second evidence window'),
+    break2_ewindow_practical_coverage=Column(
+        'break2_ewindow_practical_coverage',
+        'break2_ewindow_practical_coverage = break2_ewindow_count / len(break2_ewindow). Not the actual coverage as '
+        'bins are sampled within and there is a read limit cutoff'),
     raw_flanking_reads=Column(
         'raw_flanking_reads',
         'Number of flanking reads before calling the breakpoint. The count here is based on the number of unique query '

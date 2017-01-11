@@ -29,7 +29,8 @@ class TestEvidence(unittest.TestCase):
             read_length=40,
             stdev_isize=25,
             median_insert_size=100,
-            stdev_count_abnormal=2
+            stdev_count_abnormal=2,
+            min_flanking_reads_resolution=1
         )
         ev.flanking_reads[0].add(MockRead(reference_start=20, reference_end=60, next_reference_start=600))
         ev.flanking_reads[0].add(MockRead(reference_start=40, reference_end=80, next_reference_start=650))
@@ -53,7 +54,8 @@ class TestEvidence(unittest.TestCase):
             read_length=40,
             stdev_isize=25,
             median_insert_size=100,
-            stdev_count_abnormal=2
+            stdev_count_abnormal=2,
+            min_flanking_reads_resolution=1
         )
         ev.flanking_reads[0].add(
             MockRead(reference_start=20, reference_end=60, next_reference_start=150, template_length=200))
@@ -79,7 +81,8 @@ class TestEvidence(unittest.TestCase):
             read_length=40,
             stdev_isize=25,
             median_insert_size=100,
-            stdev_count_abnormal=2
+            stdev_count_abnormal=2,
+            min_flanking_reads_resolution=1
         )
         ev.flanking_reads[0].add(MockRead(reference_start=20, reference_end=60, next_reference_start=250))
         ev.flanking_reads[0].add(MockRead(reference_start=40, reference_end=80, next_reference_start=300))

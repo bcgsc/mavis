@@ -1,9 +1,9 @@
 from __future__ import division
 
 from copy import copy as sys_copy
-from structural_variant.constants import ORIENT, STRAND, COLUMNS, CIGAR, SVTYPE, reverse_complement, DNA_ALPHABET
-from structural_variant.error import *
-from structural_variant.interval import Interval
+from .constants import ORIENT, STRAND, COLUMNS, CIGAR, SVTYPE, reverse_complement, DNA_ALPHABET
+from .error import *
+from .interval import Interval
 import TSV
 
 

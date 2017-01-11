@@ -3,17 +3,16 @@
 
 import itertools
 from copy import copy as sys_copy
-from structural_variant.constants import *
-from structural_variant.error import *
-from structural_variant.read_tools import CigarTools, nsb_align, breakpoint_pos
-from structural_variant.assemble import assemble
-from structural_variant.interval import Interval
-from structural_variant.annotate import overlapping_transcripts
-from structural_variant.breakpoint import BreakpointPair, Breakpoint
+from .constants import *
+from .error import *
+from .read_tools import CigarTools, nsb_align, breakpoint_pos
+from .assemble import assemble
+from .interval import Interval
+from .annotate import overlapping_transcripts
+from .breakpoint import BreakpointPair, Breakpoint
 import tools.profile_bam as profile_bam
 from functools import partial
 import math
-import warnings
 
 
 class EventCall(BreakpointPair):
@@ -120,7 +119,8 @@ class EventCall(BreakpointPair):
                 bpos = breakpoint_pos(read, self.break1.orient)
                 if Interval.overlaps((bpos, bpos), self.break1):
                     support1.add(read.query_name)
-                    if read.has_tag('cr') and read.get_tag('cr'):
+                    if read.has_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN) and \
+                            read.get_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN):
                         realigns1.add(read.query_name)
             except AttributeError:
                 pass
@@ -130,7 +130,8 @@ class EventCall(BreakpointPair):
                 bpos = breakpoint_pos(read, self.break2.orient)
                 if Interval.overlaps((bpos, bpos), self.break2):
                     support2.add(read.query_name)
-                    if read.has_tag('cr') and read.get_tag('cr'):
+                    if read.has_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN) and \
+                            read.get_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN):
                         realigns2.add(read.query_name)
             except AttributeError:
                 pass
@@ -171,6 +172,9 @@ class EvidenceSettings:
             max_sc_preceeding_anchor=None,
             assembly_min_edge_weight=3,
             assembly_min_remap=3,
+            min_linking_split_reads=2,
+            min_non_target_aligned_split_reads=1,
+            min_flanking_reads_resolution=3
     ):
         """
         Args:
@@ -201,13 +205,13 @@ class EvidenceSettings:
         self.min_splits_reads_resolution = min_splits_reads_resolution
         self.min_anchor_exact = min_anchor_exact
         self.min_anchor_fuzzy = min_anchor_fuzzy
-        self.min_anchor_size = min(self.min_anchor_exact, self.min_anchor_fuzzy)
         self.min_anchor_match = min_anchor_match
+        assert(min_anchor_exact <= min_anchor_fuzzy)
         if self.min_anchor_match > 1 or self.min_anchor_match < 0:
             raise AttributeError('min_anchor_match must be a number between 0 and 1')
         self.min_mapping_quality = min_mapping_quality
         if max_sc_preceeding_anchor is None:
-            self.max_sc_preceeding_anchor = self.min_anchor_size
+            self.max_sc_preceeding_anchor = self.min_anchor_exact
         else:
             self.max_sc_preceeding_anchor = max_sc_preceeding_anchor
         self.fetch_reads_limit = fetch_reads_limit
@@ -218,6 +222,18 @@ class EvidenceSettings:
         self.assembly_min_edge_weight = assembly_min_edge_weight
         self.stdev_count_abnormal = stdev_count_abnormal
         self.assembly_min_remap = assembly_min_remap
+        self.min_linking_split_reads = min_linking_split_reads
+        self.min_non_target_aligned_split_reads = min_non_target_aligned_split_reads
+        self.min_flanking_reads_resolution = min_flanking_reads_resolution
+    
+    @staticmethod
+    def parse_args(args):
+        default = EvidenceSettings()
+        setttings = {}
+        for arg, val in args.__dict__.items():
+            if hasattr(default, arg):
+                setttings[arg] = val
+        return EvidenceSettings(**setttings)
 
 
 class Evidence:
@@ -264,7 +280,7 @@ class Evidence:
             median_insert_size (int): the median insert size
             call_error (int):
                 adds a buffer to the calculations if confidence in the breakpoint calls is low can increase this
-            stdev_isize:
+            stdev_isize (int):
                 the standard deviation away from the median for regular (non STV) read pairs
         Returns:
             Interval: the range where reads should be read from the bam looking for evidence for this event
@@ -673,14 +689,14 @@ class Evidence:
         else:
             raise AttributeError('cannot assign split reads to a breakpoint where the orientation has not been '
                                  'specified')
-        if len(primary) < self.settings.min_anchor_size or len(clipped) < self.settings.min_anchor_size:
+        if len(primary) < self.settings.min_anchor_exact or len(clipped) < self.settings.min_anchor_exact:
             raise UserWarning(
                 'split read does not meet the minimum anchor criteria', primary, clipped)
-        elif len(read.query_sequence) - (read.query_alignment_end + 2) < self.settings.min_anchor_size \
-                and (read.query_alignment_start + 1) < self.settings.min_anchor_size:
+        elif len(read.query_sequence) - (read.query_alignment_end + 2) < self.settings.min_anchor_exact \
+                and (read.query_alignment_start + 1) < self.settings.min_anchor_exact:
             raise UserWarning(
                 'split read does not meet the minimum anchor criteria')
-        elif len(primary) < self.settings.min_anchor_size or len(clipped) < self.settings.min_anchor_size:
+        elif len(primary) < self.settings.min_anchor_exact or len(clipped) < self.settings.min_anchor_exact:
             raise UserWarning(
                 'split read does not meet the minimum anchor criteria')
 
@@ -744,7 +760,7 @@ class Evidence:
             a.reference_id = self.bam_cache.reference_id(opposite_breakpoint.chr)
             # a.query_name = read.query_name + SUFFIX_DELIM + 'clipped-realign'
             a.query_name = read.query_name
-            a.set_tag(PYSAM_READ_FLAGS.CUSTOM_REALIGN, 1, value_type='i')
+            a.set_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN, 1, value_type='i')
             a.next_reference_start = read.next_reference_start
             a.next_reference_id = read.next_reference_id
             a.mapping_quality = NA_MAPPING_QUALITY
@@ -802,10 +818,10 @@ class Evidence:
         assembly_sequences = {}
         for r in itertools.chain.from_iterable(self.split_reads):
             s = r.query_sequence
-            if not strand_specific or (r.is_read1 and not r.get_tag(PYSAM_READ_FLAGS.CUSTOM_REALIGN)):
+            if not strand_specific or (r.is_read1 and not r.get_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN)):
                 assembly_sequences[s] = assembly_sequences.get(s, set())
                 assembly_sequences[s].add(r)
-            if not strand_specific or (r.is_read2 and not r.get_tag(PYSAM_READ_FLAGS.CUSTOM_REALIGN)):
+            if not strand_specific or (r.is_read2 and not r.get_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN)):
                 temp = reverse_complement(s)
                 assembly_sequences[temp] = assembly_sequences.get(temp, set())
                 assembly_sequences[temp].add(r)
@@ -813,10 +829,10 @@ class Evidence:
             if r.mate_is_unmapped:
                 for m in self.bam_cache.get_mate(r):
                     s = m.query_sequence
-                    if not strand_specific or (m.is_read1 and not r.get_tag(PYSAM_READ_FLAGS.CUSTOM_REALIGN)):
+                    if not strand_specific or (m.is_read1 and not r.get_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN)):
                         assembly_sequences[s] = assembly_sequences.get(s, set())
                         assembly_sequences[s].add(m)
-                    if not strand_specific or (m.is_read2 and not r.get_tag(PYSAM_READ_FLAGS.CUSTOM_REALIGN)):
+                    if not strand_specific or (m.is_read2 and not r.get_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN)):
                         temp = reverse_complement(s)
                         assembly_sequences[temp] = assembly_sequences.get(temp, set())
                         assembly_sequences[temp].add(m)
@@ -824,10 +840,10 @@ class Evidence:
             try:
                 for m in self.bam_cache.get_mate(r):
                     s = m.query_sequence
-                    if not strand_specific or (m.is_read1 and not r.get_tag(PYSAM_READ_FLAGS.CUSTOM_REALIGN)):
+                    if not strand_specific or (m.is_read1 and not r.get_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN)):
                         assembly_sequences[s] = assembly_sequences.get(s, set())
                         assembly_sequences[s].add(m)
-                    if not strand_specific or (m.is_read2 and not r.get_tag(PYSAM_READ_FLAGS.CUSTOM_REALIGN)):
+                    if not strand_specific or (m.is_read2 and not r.get_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN)):
                         temp = reverse_complement(s)
                         assembly_sequences[temp] = assembly_sequences.get(temp, set())
                         assembly_sequences[temp].add(m)
@@ -946,12 +962,18 @@ class Evidence:
 
         if first_breakpoint is not None and second_breakpoint is not None:
             raise AttributeError('don\'t need to call by flanking reads')
-
-        cover1 = None if len(first_positions) == 0 else Interval(min(first_positions), max(first_positions))
-        cover2 = None if len(second_positions) == 0 else Interval(min(second_positions), max(second_positions))
+        
+        cover1 = None
+        cover2 = None
+        if len(first_positions) >= ev.settings.min_flanking_reads_resolution:
+            cover1 = Interval(min(first_positions), max(first_positions))
+        if len(second_positions) >= ev.settings.min_flanking_reads_resolution:
+            cover2 = Interval(min(second_positions), max(second_positions))
 
         if cover1 and cover2:
-            if Interval.overlaps(cover1, cover2):
+            if ev.breakpoint_pair.interchromosomal:
+                pass
+            elif Interval.overlaps(cover1, cover2):
                 raise AssertionError(
                     'Cannot resolve {} by flanking reads, flanking read coverage overlaps at the breakpoint: '
                     '{} and {}'.format(classification, cover1, cover2))
@@ -963,13 +985,14 @@ class Evidence:
         else:
             raise UserWarning(
                 'Unable to call {} by flanking reads, insufficient flanking reads available'.format(classification))
-
+        
         if first_breakpoint is None:
             shift = max([0, len(cover1) - ev.settings.read_length])
             if shift > expected_isize.end:
                 raise AssertionError(
                     'Cannot resolve {} by flanking reads. Flanking coverage region is larger than expected. It is'
                     'likely that these flanking reads are not all supporting the same event'.format(classification))
+            
             if ev.break1.orient == ORIENT.LEFT:
                 """
                                                                   *  *
@@ -980,10 +1003,14 @@ class Evidence:
                 """
                 right_side_bound = cover1.end + expected_isize.end - shift
                 if not ev.breakpoint_pair.interchromosomal:
-                    if cover2 and right_side_bound > cover2.start - 1:
-                        right_side_bound = cover2.start - 1
-                    if second_breakpoint and right_side_bound > second_breakpoint.end:
-                        right_side_bound = second_breakpoint.end
+                    if cover2:
+                        right_side_bound = min([right_side_bound, cover2.start - 1])
+                    if second_breakpoint:
+                        if second_breakpoint.end < cover1.end:
+                            raise AssertionError(
+                                'Cannot call by flanking reads. Coverage region for the first breakpoint extends past '
+                                'the call region for the second breakpoint')
+                        right_side_bound = min([right_side_bound, second_breakpoint.end])
 
                 first_breakpoint = Breakpoint(
                     ev.break1.chr,
@@ -1027,10 +1054,14 @@ class Evidence:
                 """
                 left_side_bound = cover2.start - expected_isize.end + shift
                 if not ev.breakpoint_pair.interchromosomal:
-                    if cover1 and left_side_bound < cover1.end + 1:
-                        left_side_bound = cover1.end + 1
-                    if first_breakpoint and left_side_bound < first_breakpoint.start:
-                        left_side_bound = first_breakpoint.start
+                    if cover1:
+                        left_side_bound = max([left_side_bound, cover1.end + 1])
+                    if first_breakpoint:
+                        if first_breakpoint.start > cover2.start:
+                            raise AssertionError(
+                                'Cannot call by flanking reads. Coverage region for the first breakpoint extends past '
+                                'the call region for the second breakpoint')
+                        left_side_bound = max([left_side_bound, first_breakpoint.start])
 
                 second_breakpoint = Breakpoint(
                     ev.break2.chr,
@@ -1067,6 +1098,14 @@ class Evidence:
             for pos in putative_positions:
                 if len(d[pos]) < ev.settings.min_splits_reads_resolution:
                     del d[pos]
+                else:
+                    count = 0
+                    for r in d[pos]:
+                        if not r.has_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN) or \
+                                not r.get_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN):
+                            count += 1
+                    if count < ev.settings.min_non_target_aligned_split_reads:
+                        del d[pos]
 
         linked_pairings = []
         # now pair up the breakpoints with their putative partners
@@ -1079,7 +1118,7 @@ class Evidence:
             for read in pos2[second]:
                 if read.query_name in read_names:
                     links += 1
-            if links == 0:
+            if links < ev.settings.min_linking_split_reads:
                 continue
             first_breakpoint = Breakpoint(ev.break1.chr, first, strand=ev.break1.strand, orient=ev.break1.orient)
             second_breakpoint = Breakpoint(ev.break2.chr, second, strand=ev.break2.strand, orient=ev.break2.orient)
