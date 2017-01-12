@@ -24,25 +24,24 @@ formation and drawing visualizations. Outputs are written to the annotation subf
 General Process
 ----------------
 
-- Breakpoint pairs are first annotated by what transcripts are at each breakpoint (or lack thereof). All combinations 
-  are kept going forward. 
-- The related gene annotations are collected. 
-- The putative protein products are predicted. 
-- A Fusion transcript is built with different splicing possibilities according to the splicing model. 
-- For each splicing model a splice transcript is built. 
+- Breakpoint pairs are first annotated by what transcripts are at each breakpoint (or lack thereof). All combinations
+  are kept going forward.
+- The related gene annotations are collected.
+- The putative protein products are predicted.
+- A Fusion transcript is built with different splicing possibilities according to the splicing model.
+- For each splicing model a splice transcript is built.
 - ORFs are computed for the spliced transcript and translated to create the putative AA sequence
-- From the original transcript(s). The amino acid sequences of the domains is gathered and aligned to the new AA 
+- From the original transcript(s). The amino acid sequences of the domains is gathered and aligned to the new AA
   sequence
 - Each new 'protein' product is drawn and those without products are drawn without a fusion track
 
 """
 import argparse
 from structural_variant.breakpoint import read_bpp_from_input_file
-from structural_variant.annotate import gather_annotations, load_reference_genes
+from structural_variant.annotate import gather_annotations, load_reference_genes, load_reference_genome, FusionTranscript
 from structural_variant import __version__
 import TSV
 from structural_variant.constants import PROTOCOL, SVTYPE, COLUMNS, sort_columns
-import types
 import re
 import os
 from datetime import datetime
@@ -89,7 +88,7 @@ def parse_arguments():
         help='path to the human reference genome in fa format'
     )
     parser.add_argument(
-        '-p', '--max_proximity', default=5000, 
+        '-p', '--max_proximity', default=5000,
         help='The maximum distance away from breakpoints to look for proximal genes')
     args = parser.parse_args()
     return args
@@ -103,9 +102,11 @@ def main():
         log(arg, '=', val, time_stamp=False)
     FILENAME_PREFIX = re.sub('\.(tab|tsv|txt)$', '', os.path.basename(args.input))
 
+    log('loading:', args.reference_genome)
+    REFERENCE_GENOME = load_reference_genome(args.reference_genome)
     log('loading:', args.annotations)
     REFERENCE_ANNOTATIONS = load_reference_genes(args.annotations, verbose=False)
-    
+
     log('loading:', args.input)
     bpps = read_bpp_from_input_file(
         args.input,
@@ -119,7 +120,7 @@ def main():
         },
         simplify=False)
     log('read {} breakpoint pairs'.format(len(bpps)))
-    
+
     of = os.path.join(args.output, FILENAME_PREFIX + '.annotation.tab')
     with open(of, 'w') as fh:
         log('writing:', of)
@@ -127,29 +128,48 @@ def main():
         for bpp in bpps:
             log('gathering annotations for', bpp)
             ann = gather_annotations(
-                REFERENCE_ANNOTATIONS, 
-                bpp, 
-                event_type=bpp.data[COLUMNS.event_type], 
+                REFERENCE_ANNOTATIONS,
+                bpp,
+                event_type=bpp.data[COLUMNS.event_type],
                 proximity=args.max_proximity
             )
             annotations.extend(ann)
             log('generated', len(ann), 'annotations', time_stamp=False)
 
         id_prefix = 'annotation_{}-'.format(re.sub(' ', '_', str(datetime.now())))
-        
+        for i, ann in enumerate(annotations):
+            ann.data[COLUMNS.annotation_id] = id_prefix + str(i + 1)
+            # try building the fusion product
+            
+            try:
+                print('t1 domains', ann.transcript1.name)
+                for tl in ann.transcript1.translations:
+                    for d in tl.domains:
+                        print(d.name, d, d.regions)
+                        print(d.get_sequences(REFERENCE_GENOME))
+                print('t2 domains', ann.transcript1.name)
+                for tl in ann.transcript2.translations:
+                    for d in tl.domains:
+                        print(d.name, d, d.regions)
+                        print(d.get_sequences(REFERENCE_GENOME))
+                ft = FusionTranscript.build(ann, REFERENCE_GENOME)
+                print(ft)
+                # try building the fusion proteins
+            except (NotImplementedError, AttributeError) as err:
+                print(repr(err))
+
         rows = [ann.flatten() for ann in annotations]
-        
-        header = set([COLUMNS.annotation_id])
+
+        header = set()
 
         for row in rows:
             header.update(row.keys())
-        
+
         header = sort_columns([str(c) for c in header if not str(c).startswith('_')])
         fh.write('\t'.join([str(c) for c in header]) + '\n')
-        
+
         for i, row in enumerate(rows):
-            row[COLUMNS.annotation_id] = id_prefix + str(i + 1)
-            fh.write('\t'.join([str(row[c]) for c in header]) + '\n')
+            fh.write('\t'.join([str(row.get(c, None)) for c in header]) + '\n')
 
         log('generated {} annotations'.format(len(annotations)))
 

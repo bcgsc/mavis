@@ -13,7 +13,13 @@ class Annotation(BreakpointPair):
     a fusion of two transcripts created by the associated breakpoint_pair
     will also hold the other annotations for overlapping and encompassed and nearest genes
     """
-    def __init__(self, bpp, transcript1=None, transcript2=None, data={}, event_type=None, proximity=None):
+    def __init__(
+            self, bpp,
+            transcript1=None,
+            transcript2=None,
+            data={},
+            event_type=None,
+            proximity=None):
         """
         Holds a breakpoint call and a set of transcripts, other information is gathered relative to these
 
@@ -53,9 +59,6 @@ class Annotation(BreakpointPair):
 
         self.event_type = event_type if event_type is None else SVTYPE.enforce(event_type)
         self.proximity = proximity
-
-        # try building the fusion product
-
 
     def add_gene(self, gene):
         """
@@ -99,7 +102,7 @@ class Annotation(BreakpointPair):
                 self.genes_proximal_to_break1.add((gene, d1))
             if d2 > 0:
                 self.genes_proximal_to_break2.add((gene, d2))
-        
+
         if len(self.genes_proximal_to_break1) > 0:
             temp = set()
             tgt = min([abs(d) for g, d in self.genes_proximal_to_break1])
@@ -112,7 +115,7 @@ class Annotation(BreakpointPair):
                     temp.add((gene, dist))
 
             self.genes_proximal_to_break1 = temp
-        
+
         if len(self.genes_proximal_to_break2) > 0:
             temp = set()
             tgt = min([abs(d) for g, d in self.genes_proximal_to_break2])
@@ -362,13 +365,13 @@ class Translation(BioInterval):
                 if self.transcript.strand == STRAND.NEG:
                     ps = reverse_complement(ps)
                 s = [ps[i - 1:j] for i, j in conti]
-                s = ''.join(s)
+                s = ''.join([str(seg) for seg in s])
                 if self.transcript.strand == STRAND.NEG:
                     s = reverse_complement(s)
                 return s[self.start - 1:self.end]
             elif REFERENCE_GENOME and self.transcript.gene:
                 s = [REFERENCE_GENOME[self.transcript.gene.chr].seq[i - 1:j] for i, j in conti]
-                s = ''.join(s)
+                s = ''.join([str(seg) for seg in s])
                 if self.transcript.strand == STRAND.NEG:
                     return reverse_complement(s)[self.start - 1:self.end]
                 else:
@@ -667,8 +670,12 @@ class FusionTranscript(Transcript):
         Args:
             ann (Annotation): the annotation object we want to build a FusionTranscript for
             REFERENCE_GENOME (Dict of string and string): reference sequences by template/chr name
+
         .. todo::
             support single transcript inversions
+
+        .. todo::
+            map domain AA sequences from the original transcripts onto the fusion AA sequence
         """
         if not ann.transcript1 or not ann.transcript2:
             raise AttributeError('cannot produce fusion transcript for non-annotated fusions')
@@ -782,6 +789,8 @@ class FusionTranscript(Transcript):
                     ft.exon_mapping[e] = old_ex
                 ft.sequence += seq1
         ft.position = Interval(1, len(ft.sequence))
+        # now remap the domains from the original transcripts for each protein translation
+        
         return ft
 
     @classmethod
@@ -1092,9 +1101,10 @@ def load_reference_genes(filepath, verbose=True):
                 temp = [x.split('-') for x in temp]
                 temp = [(int(x), int(y)) for x, y in temp]
                 d = Domain(name, temp)
-            except:
+                domains.append(d)
+            except Exception as err:
                 if verbose:
-                    print('error in domain:', d, row)
+                    print('error in domain:', d, row, repr(err))
         return domains
 
     def nullable_int(row):
@@ -1153,7 +1163,6 @@ def load_reference_genes(filepath, verbose=True):
             g = genes[g.name]
         else:
             genes[g.name] = g
-
         t = Transcript(
             name=row['ensembl_transcript_id'],
             gene=g,
