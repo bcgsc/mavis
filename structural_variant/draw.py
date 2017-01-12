@@ -722,7 +722,7 @@ class Diagram:
             target_width (int): the target width of the diagram
             genes (iterable of Gene): the list of genes to draw
             breakpoints (iterable of Breakpoint): the breakpoints to overlay
-            colors (Dict of Gene to str): dictionary of the colors assigned to each Gene as fill
+            colors (dict of Gene and str): dictionary of the colors assigned to each Gene as fill
 
         Return:
             svgwrite.container.Group: the group element for the diagram.

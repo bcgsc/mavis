@@ -10,8 +10,8 @@ class Interval:
         """
         Args:
             start (int): the start of the interval (inclusive)
-            end (int, default=start): the end of the interval (inclusive)
-            freq (int, default=1): the frequency or weight of the interval
+            end (int): the end of the interval (inclusive)
+            freq (int): the frequency or weight of the interval
         """
         self.start = int(start)
         self.end = int(end) if end is not None else self.start
@@ -248,7 +248,7 @@ class Interval:
         """ convert any given position given a mapping of intervals to another range
 
         Args:
-            mapping (Dict[Interval, Interval]): a mapping of a set of continuous intervals
+            mapping (dict of Interval and Interval): a mapping of a set of continuous intervals
             pos (int): a position in the first coordinate system
 
         Returns:

@@ -49,9 +49,14 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.viewcode',
     'sphinx.ext.napoleon',
-    'sphinx.ext.mathjax'
+    'sphinx.ext.mathjax',
+    'sphinx.ext.intersphinx'
 ]
 
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3.6', None),
+    'pysam': ('http://pysam.readthedocs.io/en/latest/', None)
+}
 mathjax_path="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
 
 html_theme = "sphinx_rtd_theme"

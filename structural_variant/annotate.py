@@ -27,7 +27,7 @@ class Annotation(BreakpointPair):
             bpp (BreakpointPair): the breakpoint pair call. Will be adjusted and then stored based on the transcripts
             transcript1 (Transcript): transcript at the first breakpoint
             transcript2 (Transcript): Transcript at the second breakpoint
-            data (Dict): optional dictionary to hold related attributes
+            data (dict): optional dictionary to hold related attributes
             event_type (SVTYPE): the type of event
         """
         # narrow the breakpoint windows by the transcripts being used for annotation
@@ -132,6 +132,9 @@ class Annotation(BreakpointPair):
     def flatten(self):
         """
         generates a dictionary of the annotation information as strings
+
+        Returns:
+            :any:`dict` of :any:`str` and :any:`str`: dictionary of attribute names and values
         """
         row = BreakpointPair.flatten(self)
         row.update({
@@ -239,7 +242,7 @@ class IntergenicRegion(BioInterval):
     def __init__(self, chr, start, end, strand):
         """
         Args:
-            chr: the reference object/chromosome for this region
+            chr (str): the reference object/chromosome for this region
             start (int): the start of the IntergenicRegion
             end (int): the end of the IntergenicRegion
             strand (STRAND): the strand the region is defined on
@@ -261,11 +264,11 @@ class Gene(BioInterval):
     def __init__(self, chr, start, end, name=None, strand=STRAND.NS, aliases=None, sequence=None):
         """
         Args:
-            chr (string): the chromosome
-            name (string): the gene name/id i.e. ENSG0001
+            chr (str): the chromosome
+            name (str): the gene name/id i.e. ENSG0001
             strand (STRAND): the genomic strand '+' or '-'
-            aliases (List of string): a list of aliases. For example the hugo name could go here
-            sequence (string): genomic sequence of the gene
+            aliases (:any:`list` of :any:`str`): a list of aliases. For example the hugo name could go here
+            sequence (str): genomic sequence of the gene
         Example:
             >>> Gene('X', 1, 1000, 'ENG0001', '+', ['KRAS'])
         """
@@ -306,9 +309,9 @@ class Translation(BioInterval):
             start (int): start of the coding sequence (cds) relative to the start of the first exon in the transcript
             end (int): end of the coding sequence (cds) relative to the start of the first exon in the transcript
             transcript (Transcript): the transcript this is a Translation of
-            splicing_pattern (List of int): a list of splicing positions to be used
-            domains (List of Domain): a list of the domains on this translation
-            sequence (string): the cds sequence
+            splicing_pattern (:any:`list` of :any:`int`): a list of splicing positions to be used
+            domains (:any:`list` of :any:`Domain`): a list of the domains on this translation
+            sequence (str): the cds sequence
         """
         domains = [] if domains is None else domains
         BioInterval.__init__(self, reference_object=transcript, name=None, start=start, end=end)
@@ -348,6 +351,16 @@ class Translation(BioInterval):
         return utr
 
     def get_sequence(self, REFERENCE_GENOME=None):
+        """
+        Args:
+            REFERENCE_GENOME (dict of str and str): dict of reference sequence by template/chr name
+
+        Returns:
+            str: the cds sequence
+
+        Raises:
+            AttributeError: if the reference sequence has not been given and is not set
+        """
         if self.sequence:
             return self.sequence
         elif self.transcript and self.transcript.strand:
@@ -381,9 +394,22 @@ class Translation(BioInterval):
             'argument must be given')
 
     def get_cds_sequence(self, REFERENCE_GENOME=None):
+        """
+        wrapper for the sequence method
+        """
         return self.get_sequence(REFERENCE_GENOME)
 
     def get_AA_sequence(self, REFERENCE_GENOME=None):
+        """
+        Args:
+            REFERENCE_GENOME (dict of str and str): dict of reference sequence by template/chr name
+
+        Returns:
+            str: the amino acid sequence
+
+        Raises:
+            AttributeError: if the reference sequence has not been given and is not set
+        """
         cds = self.get_cds_sequence(REFERENCE_GENOME)
         return translate(cds)
 
@@ -414,15 +440,15 @@ class Transcript(BioInterval):
         Args:
             cds_start (int): the start of the coding sequence relative to the start of the first exon
             cds_end (int): the end of the coding sequence relative to the start of the first exon
-            exons (List of Exon): list of Exon that make up the transcript
+            exons (:any:`list` of :any:`Exon`): list of Exon that make up the transcript
             genomic_start (int): genomic start position of the transcript
             genomic_end (int): genomic end position of the transcript
             gene (Gene): the gene this transcript belongs to
             name (str): name of the transcript
             strand (STRAND): strand the transcript is on, defaults to the strand of the Gene if not specified
-            domains (List of Domain): list of domains to add to translations
-            translations (List of Translation): Translation associated with this transcript
-            sequence (string): unspliced cDNA sequence
+            domains (:any:`list` of :any:`Domain`): list of domains to add to translations
+            translations (:any:`list` of :any:`Translation`): Translation associated with this transcript
+            sequence (str): unspliced cDNA sequence
         """
         # cannot use mutable default args in the function decl
         exons = [] if exons is None else exons
@@ -522,7 +548,7 @@ class Transcript(BioInterval):
 
     @property
     def gene(self):
-        """(:class:`~structural_variant.annotate.Gene`): the gene this transcript belongs to"""
+        """(:any:`Gene`): the gene this transcript belongs to"""
         return self.reference_object
 
     @property
@@ -574,6 +600,15 @@ class Transcript(BioInterval):
         return Interval.convert_pos(mapping, pos)
 
     def add_exon(self, exon):
+        """
+        adds a given exon to the transcript
+
+        Args:
+            exon (Exon): the exon to be added
+
+        Raises:
+            AttributeError: if the input exon overlaps any of the existing exons
+        """
         if not isinstance(exon, Exon):
             exon = Exon(exon[0], exon[1])
 
@@ -587,6 +622,12 @@ class Transcript(BioInterval):
         self.exons = sorted(self.exons, key=lambda x: x.start)
 
     def add_translation(self, translation):
+        """
+        adds a translation to the transcript
+
+        Args:
+            translation (Translation): the translation to be added
+        """
         translation.reference_object = self
         if translation not in self.translations:
             self.translations.append(translation)
@@ -598,6 +639,9 @@ class Transcript(BioInterval):
     def exon_number(self, exon):
         """
         exon numbering is based on the direction of translation
+
+        Args:
+            exon (Exon): the exon to be numbered
         """
         for i, e in enumerate(self.exons):
             if exon != e:
@@ -611,6 +655,13 @@ class Transcript(BioInterval):
         raise AttributeError('can only calculate phase on associated exons')
 
     def get_sequence(self, REFERENCE_GENOME=None):
+        """
+        Args:
+            REFERENCE_GENOME (:any:`dict` of :any:`str` and :any:`str`): reference sequences
+
+        Returns:
+            str: the DNA sequence of the transcript including introns
+        """
         if self.sequence:
             return self.sequence
         elif self.gene and self.gene.sequence:
@@ -631,6 +682,19 @@ class Transcript(BioInterval):
 
 
 def determine_prime(transcript, breakpoint):
+    """
+    determine the side of the transcript 5' or 3' which is 'kept' given the breakpoint
+
+    Args:
+        transcript (Transcript): the transcript
+        breakpoint (Breakpoint): the breakpoint
+
+    Returns:
+        PRIME: 5' or 3'
+
+    Raises:
+        AttributeError: if the orientation of the breakpoint or the strand of the transcript is not specified
+    """
     if transcript.strand == STRAND.POS:
         if breakpoint.orient == ORIENT.LEFT:
             return PRIME.FIVE
@@ -669,7 +733,10 @@ class FusionTranscript(Transcript):
         """
         Args:
             ann (Annotation): the annotation object we want to build a FusionTranscript for
-            REFERENCE_GENOME (Dict of string and string): reference sequences by template/chr name
+            REFERENCE_GENOME (dict of str and str): reference sequences by template/chr name
+
+        Returns:
+            FusionTranscript: the newly built fusion transcript
 
         .. todo::
             support single transcript inversions
@@ -790,7 +857,7 @@ class FusionTranscript(Transcript):
                 ft.sequence += seq1
         ft.position = Interval(1, len(ft.sequence))
         # now remap the domains from the original transcripts for each protein translation
-        
+
         return ft
 
     @classmethod
@@ -925,8 +992,8 @@ class Exon(BioInterval):
         Args:
             start (int): the genomic start position
             end (int): the genomic end position
-            name (str, optional): the name of the exon
-            transcript (Transcript, optional): the 'parent' transcript this exon belongs to
+            name (str): the name of the exon
+            transcript (Transcript): the 'parent' transcript this exon belongs to
         Raises:
             AttributeError: if the exon start > the exon end
         Example:
@@ -964,8 +1031,8 @@ class Domain:
         """
         Args:
             name (str): the name of the domain i.e. PF00876
-            regions (List[Interval]): the amino acid ranges that are part of the domain
-            transcript (Transcript, optional): the 'parent' transcript this domain belongs to
+            regions (:any:`list` of :any:`Interval`): the amino acid ranges that are part of the domain
+            transcript (Transcript): the 'parent' transcript this domain belongs to
         Raises:
             AttributeError: if the end of any region is less than the start
         Example:
@@ -1019,9 +1086,9 @@ def load_masking_regions(filepath):
     +---------------+---------------+-----------------------+
 
     Args:
-        filepath (string): path to the input tab-delimited file
+        filepath (str): path to the input tab-delimited file
     Returns:
-        Dict of string and List of BioInterval:
+        dict of str and list of BioInterval:
             a dictionary keyed by chromosome name with values of lists of regions on the chromosome
 
     Example:
@@ -1066,10 +1133,10 @@ def load_reference_genes(filepath, verbose=True):
     +-----------------------+---------------------------+-----------------------------------------------------------+
 
     Args:
-        filepath (string): path to the input tab-delimited file
+        filepath (str): path to the input tab-delimited file
 
     Returns:
-        Dict of string and List of Gene: a dictionary keyed by chromosome name with values of list of genes on the
+        :any:`dict` of :any:`str` and :any:`list` of :any:`Gene`: a dictionary keyed by chromosome name with values of list of genes on the
             chromosome
 
     Example:
@@ -1185,10 +1252,10 @@ def load_reference_genes(filepath, verbose=True):
 def overlapping_transcripts(ref_ann, breakpoint):
     """
     Args:
-        ref_ann (Dict of string and List of Gene): the reference list of genes split by chromosome
+        ref_ann (:any:`dict` of :any:`str` and :any:`list` of :any:`Gene`): the reference list of genes split by chromosome
         breakpoint (Breakpoint): the breakpoint in question
     Returns:
-        List of Transcript: a list of possible transcripts
+        :any:`list` of :any:`Transcript`: a list of possible transcripts
     """
     putative_annotations = []
     for gene in ref_ann[breakpoint.chr]:
@@ -1266,8 +1333,8 @@ def gather_breakpoint_annotations(ref_ann, breakpoint):
 def gather_annotations(ref, bp, event_type=None, proximity=None):  # TODO
     """
     Args:
-        ref (Dict[str,List[Gene]]): the list of reference genes hashed by chromosomes
-        breakpoint_pairs (List[BreakpointPair]): breakpoint pairs we wish to annotate as events
+        ref (:any:`dict` of :any:`str` and :any:`list` of :any:`Gene`): the list of reference genes hashed by chromosomes
+        breakpoint_pairs (:any:`list` of :any:`BreakpointPair`): breakpoint pairs we wish to annotate as events
 
     each annotation is defined by the annotations selected at the breakpoints
     the other annotations are given relative to this

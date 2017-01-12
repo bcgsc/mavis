@@ -137,7 +137,7 @@ class IntervalPair:
         a given distance between weighted means of the different groups
 
         Args:
-            groups (List of Set of IntervalPair): a list of sets of interval pairs
+            groups (list of set of IntervalPair): a list of sets of interval pairs
             r (int): the distance to determine grouping
         """
         queue = sorted(groups, key=lambda x: IntervalPair.weighted_mean(*x))
@@ -174,12 +174,12 @@ class IntervalPair:
         clusters a list of IntervalPair objects
 
         Args:
-            pairs (List of IntervalPair): list of IntervalPair objects
+            pairs (list of IntervalPair): list of IntervalPair objects
             r (int): the distance for grouping clusters
             k (int): the clique size to look for
 
         Returns:
-            List of Set of IntervalPair: a list of sets of interval pairs representing their clusters/groupings
+            list of set of IntervalPair: a list of sets of interval pairs representing their clusters/groupings
         """
         # build the initial graph
         G = nx.Graph()
@@ -202,9 +202,9 @@ def is_complete(G, N):
 
     Args:
         G (nx.Graph): the input supergraph
-        N (List): a list of nodes in G
+        N (list): a list of nodes in G
     Returns:
-        boolean: True if N as a subgraph of G is complete False otherwise
+        bool: True if N as a subgraph of G is complete False otherwise
     """
     for node, other in itertools.combinations(N, 2):
         if not G.has_node(node) or not G.has_node(other):
@@ -282,7 +282,7 @@ def cluster_breakpoint_pairs(input_pairs, r, k):
             # gather the original input pairs using the mapping
             original_input_pairs = itertools.chain.from_iterable([input_mapping[node] for node in c])
             result.setdefault(bpp, set()).update(original_input_pairs)
-    
+
     all_input_indices = set()
     for bpp, inputs in result.items():
         all_input_indices.update(inputs)
@@ -290,8 +290,8 @@ def cluster_breakpoint_pairs(input_pairs, r, k):
     for i in range(0, len(input_pairs)):
         if i not in all_input_indices:
             raise AssertionError('input breakpoint pair was not clustered', i, str(input_pairs[i]))
-    
+
     for bpp in result:
         result[bpp] = [input_pairs[i] for i in result[bpp]]
-    
+
     return result

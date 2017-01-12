@@ -96,7 +96,7 @@ class BreakpointPair:
             b2 (Breakpoint): the second breakpoint
             stranded (boolean): if not stranded then +/- is equivalent to -/+
             opposing_strands (boolean): are the strands at the breakpoint opposite? i.e. +/- instead of +/+
-            untemplated_sequence (string): sequence between the breakpoints that is not part of either breakpoint
+            untemplated_sequence (str): sequence between the breakpoints that is not part of either breakpoint
             data (dict): optional dictionary of attributes associated with this pair
 
         Note:
@@ -186,7 +186,7 @@ class BreakpointPair:
         Args:
             pair (BreakpointPair): the pair to classify
         Returns:
-            List of SVTYPE: a list of possible SVTYPE
+            :any:`list` of :any:`SVTYPE`: a list of possible SVTYPE
 
         Example:
             >>> BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 9999), opposing_strands=True)
@@ -223,6 +223,10 @@ class BreakpointPair:
         """
         calls a set of breakpoints from a single or a pair of pysam style read(s)
 
+        Args:
+            read1 (pysam.AlignedSegment): the first read
+            read2 (pysam.AlignedSegment): the second read
+
         .. todo::
 
             return multiple events not just the major event
@@ -253,7 +257,7 @@ class BreakpointPair:
                 read_events[-1] = (start, i, size + f)
             else:
                 read_events.append((i, i, f))
-        
+
         if len(read_events) == 0:
             raise UserWarning(
                 'Cannot call event breakpoints from single contig. Contig does not contain any ins/del events')
@@ -520,23 +524,23 @@ def read_bpp_from_input_file(filename, **kwargs):
     """
     reads a file using the TSV module. Each row is converted to a breakpoint pair and
     other column data is stored in the data attribute
-    
+
     Args:
-        filename (string): path to the input file
+        filename (str): path to the input file
     Returns:
-        List of BreakpointPair: a list of pairs
-    
+        :any:`list` of :any:`BreakpointPair`: a list of pairs
+
     Example:
         >>> read_bpp_from_input_file('filename')
         [BreakpointPair(), BreakpointPair(), ...]
 
-    One can also validate other expected columns that will go in the data attribute using the usual arguments 
+    One can also validate other expected columns that will go in the data attribute using the usual arguments
     to the TSV.read_file function
 
     .. code-block:: python
 
         >>> read_bpp_from_input_file('filename', cast={'index': int})
-        [BreakpointPair(), BreakpointPair(), ...] 
+        [BreakpointPair(), BreakpointPair(), ...]
     """
     kwargs.setdefault('cast', {}).update(
         {

@@ -19,7 +19,7 @@ class BlatAlignedSegment(pysam.AlignedSegment):
     def __init__(self, reference_name=None, blat_score=None):
         """
         Args:
-            row (Dict[str,]): a row dictionary from the Blat.read_pslx method
+            row (dict of str): a row dictionary from the Blat.read_pslx method
         """
         pysam.AlignedSegment.__init__(self)
         if reference_name is None:
@@ -174,7 +174,7 @@ class Blat:
         given a 'row' from reading a pslx file. converts the row to a BlatAlignedSegment object
 
         Args:
-            row (Dict of str): a row object from the 'read_pslx' method
+            row (dict of str): a row object from the 'read_pslx' method
             bam_cache (BamCache): the bam file/cache to use as a template for creating reference_id from chr name
 
         """
@@ -309,15 +309,15 @@ def blat_contigs(
     associated with each Evidence object
 
     Args:
-        evidence (List of Evidence): the iterable container of of Evidence object which has associated contigs
-        INPUT_BAM_CACHE (BamCache): the bam to use as a template in generating bam-like reads        
-        reference_genome (Dict of string and string): reference fasta sequences by template name
-        ref_2bit (string): path to the 2bit file for blat
+        evidence (list of Evidence): the iterable container of of Evidence object which has associated contigs
+        INPUT_BAM_CACHE (BamCache): the bam to use as a template in generating bam-like reads
+        reference_genome (dict of string and str): reference fasta sequences by template name
+        ref_2bit (str): path to the 2bit file for blat
         min_percent_of_max_score (float): ignores all alignments with a score less
         min_identity (float): minimum percent identity
         is_protein (boolean): is the sequence an amino acid sequence (used in the blat calculations)
         MIN_EXTEND_OVERLAP (int): minimum amount of non-shared coverage of the template sequence required to pair alignments
-        =blat_options (List of string): optional, can specify alternate blat parameters to use
+        =blat_options (list of str): optional, can specify alternate blat parameters to use
 
     .. todo::
         add support for blatting protein sequences

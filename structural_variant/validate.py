@@ -41,7 +41,7 @@ class EventCall(BreakpointPair):
             classification (SVTYPE): the type of structural variant
             breakpoint_pair (BreakpointPair): the breakpoint pair representing the exact breakpoints
             call_method (CALL_METHOD): the way the breakpoints were called
-            contig (Contig, optional): the contig used to call the breakpoints (if applicable)
+            contig (Contig): the contig used to call the breakpoints (if applicable)
         """
         BreakpointPair.__init__(
             self, b1, b2,
@@ -193,7 +193,7 @@ class EvidenceSettings:
                 mapping quality to filter on
             fetch_reads_limit (int):
                 maximum number of reads to loop over for a given event
-            filter_secondary_alignments (bool):
+            filter_secondary_alignments (boolean):
                 don't use secondary alignments when reading evidence from the bam file
             sc_extension_stop (int):
                 when extending softclipped, stop given this number of exact consecutive matches
@@ -225,7 +225,7 @@ class EvidenceSettings:
         self.min_linking_split_reads = min_linking_split_reads
         self.min_non_target_aligned_split_reads = min_non_target_aligned_split_reads
         self.min_flanking_reads_resolution = min_flanking_reads_resolution
-    
+
     @staticmethod
     def parse_args(args):
         default = EvidenceSettings()
@@ -304,7 +304,7 @@ class Evidence:
 
         Args:
             breakpoint (Breakpoint): the breakpoint we are generating the evidence window for
-            annotations (Dict[str,List[Gene]]): the set of reference annotations: genes, transcripts, etc
+            annotations (dict of str and list of Gene): the set of reference annotations: genes, transcripts, etc
             read_length (int): the read length
             median_insert_size (int): the median insert size
             call_error (int):
@@ -397,10 +397,10 @@ class Evidence:
         Args:
             breakpoint_pair (BreakpointPair): the breakpoint pair to collect evidence for
             bam_cache (BamCache): the bam cache (and assc file) to collect evidence from
-            human_reference_genome (SeqIO.iterator[SeqIO.SeqRecord]): the human reference genome read as fasta
-            data (Dict, optional): a dictionary of data to associate with the evidence object
-            classification (SVTYPE, optional): the event type
-            protocol (PROTOCOL, default=PROTOCOL.GENOME): genome or transcriptome
+            human_reference_genome (SeqIO.iterator of SeqIO.SeqRecord): the human reference genome read as fasta
+            data (dict): a dictionary of data to associate with the evidence object
+            classification (SVTYPE): the event type
+            protocol (PROTOCOL): genome or transcriptome
             **kwargs: named arguments to be passed to EvidenceSettings
         """
         self.settings = EvidenceSettings(**kwargs)
@@ -962,7 +962,7 @@ class Evidence:
 
         if first_breakpoint is not None and second_breakpoint is not None:
             raise AttributeError('don\'t need to call by flanking reads')
-        
+
         cover1 = None
         cover2 = None
         if len(first_positions) >= ev.settings.min_flanking_reads_resolution:
@@ -985,14 +985,14 @@ class Evidence:
         else:
             raise UserWarning(
                 'Unable to call {} by flanking reads, insufficient flanking reads available'.format(classification))
-        
+
         if first_breakpoint is None:
             shift = max([0, len(cover1) - ev.settings.read_length])
             if shift > expected_isize.end:
                 raise AssertionError(
                     'Cannot resolve {} by flanking reads. Flanking coverage region is larger than expected. It is'
                     'likely that these flanking reads are not all supporting the same event'.format(classification))
-            
+
             if ev.break1.orient == ORIENT.LEFT:
                 """
                                                                   *  *

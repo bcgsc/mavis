@@ -103,14 +103,14 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
     below a weight threshold and the return all possible unitigs/contigs
 
     Args:
-        sequences (List of string): a list of strings/sequences to assemble
+        sequences (list of str): a list of strings/sequences to assemble
         kmer_size (int): the size of the kmer to use
         min_edge_weight (int): applies to trimming (see desc)
         min_match_quality (float): percent match for re-aligned reads to contigs
         min_read_mapping_overlap (int): the minimum amount of overlap required when aligning reads to contigs
 
     Returns:
-        List of Contig: a list of putative contigs
+        list of Contig: a list of putative contigs
     """
     if len(sequences) == 0:
         return []
@@ -197,11 +197,11 @@ def kmers(s, size):
     for a sequence, compute and return a list of all kmers of a specified size
 
     Args:
-        s (string): the input sequence
+        s (str): the input sequence
         size (int): the size of the kmers
 
     Returns:
-        List of string: the list of kmers
+        list of string: the list of kmers
 
     Example:
         >>> kmers('abcdef', 2)

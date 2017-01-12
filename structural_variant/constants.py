@@ -15,7 +15,7 @@ def reverse_complement(s):
     wrapper for the Bio.Seq reverse_complement method
 
     Args:
-        s (string): the input DNA sequence
+        s (str): the input DNA sequence
 
     Returns:
         string: the reverse complement of the input sequence
@@ -242,20 +242,20 @@ COLUMNS = Vocab(
         'Transcript for the current annotation at the second breakpoint'),
     genes_encompassed=Column(
         'genes_encompassed',
-        'Applies to intrachromosomal events only. List of genes which overlap any region that occurs between both '
+        'Applies to intrachromosomal events only. list of genes which overlap any region that occurs between both '
         'breakpoints. For example in a deletion event these would be deleted genes.'),
     genes_overlapping_break1=Column(
         'genes_overlapping_break1',
-        'List of genes which overlap the first breakpoint'),
+        'list of genes which overlap the first breakpoint'),
     genes_overlapping_break2=Column(
         'genes_overlapping_break2',
-        'List of genes which overlap the second breakpoint'),
+        'list of genes which overlap the second breakpoint'),
     genes_proximal_to_break1=Column(
         'genes_proximal_to_break1',
-        'List of genes near the breakpoint and the distance away from the breakpoint'),
+        'list of genes near the breakpoint and the distance away from the breakpoint'),
     genes_proximal_to_break2=Column(
         'genes_proximal_to_break2',
-        'List of genes near the breakpoint and the distance away from the breakpoint'),
+        'list of genes near the breakpoint and the distance away from the breakpoint'),
     break1_chromosome=Column(
         'break1_chromosome',
         'The name of the chromosome on which breakpoint 1 is situated'),

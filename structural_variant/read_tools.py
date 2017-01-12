@@ -93,10 +93,10 @@ class BamCache:
         """
         Args:
             read (pysam.AlignedSegment): the read
-            primary_only (boolean, default=True): ignore secondary alignments
-            allow_file_access (boolean, default=True): determines if the bam can be accessed to try to find the mate
+            primary_only (boolean): ignore secondary alignments
+            allow_file_access (boolean): determines if the bam can be accessed to try to find the mate
         Returns:
-            List[pysam.AlignedSegment]: list of mates of the input read
+            list of pysam.AlignedSegment: list of mates of the input read
         """
         # NOTE: will return all mate alignments that have been cached
         putative_mates = self.cache.get(read.query_name, set())
@@ -213,11 +213,11 @@ class CigarTools:
         """scoring based on sw alignment properties with gap extension penalties
 
         Args:
-            cigar (List<(CIGAR,int)>): list of cigar tuple values
-            MISMATCH (int, default=-1): mismatch penalty
-            MATCH (int, default=2): match penalty
-            GAP (int, default=-4): initial gap penalty
-            GAP_EXTEND (int, default=-1): gap extension penalty
+            cigar (list of CIGAR and int): list of cigar tuple values
+            MISMATCH (int): mismatch penalty
+            MATCH (int): match penalty
+            GAP (int): initial gap penalty
+            GAP_EXTEND (int): gap extension penalty
 
         Returns:
             int: the score value
@@ -257,7 +257,7 @@ class CigarTools:
             elif v == CIGAR.M:
                 raise AttributeError('cannot calculate match percent with non-specific alignments', cigar)
         if matches + mismatches == 0:
-            raise AttributeError('input cigar string does not have any aligned sections (X or =)', cigar)
+            raise AttributeError('input cigar str does not have any aligned sections (X or =)', cigar)
         else:
             return matches / (matches + mismatches)
 
@@ -289,11 +289,11 @@ class CigarTools:
         exact match aligned portion to signal stop
 
         Args:
-            original_cigar (List[CIGAR,int]): the input cigar
+            original_cigar (list of CIGAR and int): the input cigar
             min_exact_to_stop_softclipping (int): number of exact matches to terminate extension
 
         Returns:
-            (List[CIGAR,int], int): the new cigar string and a number representing the shift from the original
+            (list of CIGAR and int, int): the new cigar string and a number representing the shift from the original
                 start position
         """
         ref_start_shift = 0
