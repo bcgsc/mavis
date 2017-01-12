@@ -4,17 +4,17 @@ from structural_variant.annotate import load_reference_genome
 import unittest
 from tests import MockRead, MockBamFileHandle
 from tests import REFERENCE_GENOME_FILE
-
+from tests import BAM_INPUT
 
 REFERENCE_GENOME = None
 
 
 def setUpModule():
+    warnings.simplefilter("ignore")
     global REFERENCE_GENOME
     REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
     if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
         raise AssertionError('fake genome file does not have the expected contents')
-
 
 class TestBamCache(unittest.TestCase):
 
@@ -53,6 +53,24 @@ class TestBamCache(unittest.TestCase):
     def test__generate_fetch_bins_multi_gapped(self):
         self.assertEqual([(1, 45), (56, 100)], BamCache._generate_fetch_bins(1, 100, 2, 10))
 
+    def test_fetch_single_read(self):
+        b = BamCache(BAM_INPUT)
+        s = b.fetch('2',42052609,42052613,read_limit=1,sample_bins=1)
+        self.assertEqual(1,len(s))
+        r = list(s)[0]
+        self.assertEqual('HISEQX1_11:3:2122:25875:31230',r.qname)
+        b.close()
+
+    def test_get_mate(self):
+        b = BamCache(BAM_INPUT)
+        s = b.fetch('2',42052609,42052613,read_limit=1,sample_bins=1)
+        self.assertEqual(1,len(s))
+        r = list(s)[0]
+        self.assertEqual('HISEQX1_11:3:2122:25875:31230',r.qname)
+        o = b.get_mate(r)
+        self.assertEqual(1,len(o))
+        self.assertEqual('HISEQX1_11:3:2122:25875:31230',o[0].qname)
+
 
 class TestModule(unittest.TestCase):
     """
@@ -90,7 +108,7 @@ class TestModule(unittest.TestCase):
     def test_median_insert_size_even(self):
         reads = [MockRead(template_length=t) for t in range(-10, 0)]
         self.assertEqual(5.5, median_insert_size(reads))
-    
+
     def test_median_insert_size_odd(self):
         reads = [MockRead(template_length=t) for t in range(-10, -1)]
         self.assertEqual(6, median_insert_size(reads))
@@ -244,6 +262,12 @@ class TestCigarTools(unittest.TestCase):
     def test_extend_softclipping_mismatch(self):
         with self.assertRaises(AttributeError):
             CigarTools.extend_softclipping([(CIGAR.X, 10), (CIGAR.M, 20), (CIGAR.X, 10)], 30)
+
+    def test_extend_softclipping_insert(self):
+        self.assertEqual(
+            ([(CIGAR.S, 10), (CIGAR.S, 2), (CIGAR.S, 5), (CIGAR.M, 10), (CIGAR.S,5)],2),
+            CigarTools.extend_softclipping([(CIGAR.S,10), (CIGAR.M, 2), (CIGAR.I, 5), (CIGAR.M, 10), (CIGAR.I,5)],5)
+        )
 
     def test_alignment_matches(self):
         c = [(CIGAR.M, 10), (CIGAR.EQ, 10), (CIGAR.X, 10)]

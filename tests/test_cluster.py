@@ -12,6 +12,10 @@ class TestIntervalPair(unittest.TestCase):
         s = set([IntervalPair(i, i), IntervalPair(h, h), IntervalPair(i, i)])
         self.assertEqual(2, len(s))
 
+    def test__lt__(self):
+        self.assertTrue(IntervalPair((1,1),(1,1)) < IntervalPair((1,1),(1,10)))
+        self.assertFalse(IntervalPair((1,10),(1,1)) < IntervalPair((1,1),(1,10)))
+
     def test_weighted_mean(self):
         pairs = [IntervalPair((1, 2), (1, 10)), IntervalPair((1, 10), (2, 11)), IntervalPair((2, 11), (1, 2))]
         m = IntervalPair.weighted_mean(*pairs)
