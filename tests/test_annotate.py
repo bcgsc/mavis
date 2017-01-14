@@ -331,7 +331,7 @@ class TestTranscript(unittest.TestCase):
 
         t = Transcript(gene=None, cds_start=1, cds_end=10, genomic_start=1, genomic_end=100)
         self.assertEqual(None, t.gene)
-        t = Transcript(1, 10, genomic_start=1, genomic_end=10, domains=[Domain('name', [])])
+        t = Transcript(1, 10, genomic_start=1, genomic_end=10, domains=[Domain('name', [(1, 2)])])
         self.assertEqual(1, len(t.translations))
 
     def test___init__implicit_genomic_start(self):
@@ -518,7 +518,7 @@ class TestTranslation(unittest.TestCase):
 class TestDomain(unittest.TestCase):
 
     def test_key(self):
-        d = Domain('name', [])
+        d = Domain('name', [(1, 2)])
         self.assertEqual(('name', None), d.key)
 
     def test___init__region_error(self):
@@ -531,7 +531,7 @@ class TestDomain(unittest.TestCase):
             print(tl, tl.start, tl.end, tl.splicing_pattern)
         self.assertEqual(1, len(t.translations))
         t = t.translations[0]
-        Domain('name', [], translation=t)
+        Domain('name', [(1, 3)], translation=t)
         self.assertEqual(1, len(t.domains))
 
     def test_get_sequence_from_ref(self):
@@ -547,6 +547,51 @@ class TestDomain(unittest.TestCase):
         tl = Translation(4, 11, t, [])
         d = Domain('name', [(1, 2)], translation=tl)
         self.assertEqual([translate('TAATCC')], d.get_sequences())
+
+    def test_align_seq(self):
+        regions = [
+            DomainRegion(216, 261, 'DVNECITGSHSCRLGESCINTVGSFRCQRDSSCGTGYELTEDNSCK'),
+            DomainRegion(262, 307, 'DIDECESGIHNCLPDFICQNTLGSFRCRPKLQCKSGFIQDALGNCI'),
+            DomainRegion(308, 355, 'DINECLSISAPCPIGHTCINTEGSYTCQKNVPNCGRGYHLNEEGTRCV'),
+            DomainRegion(356, 398, 'DVDECAPPAEPCGKGHRCVNSPGSFRCECKTGYYFDGISRMCV'),
+            DomainRegion(399, 440, 'DVNECQRYPGRLCGHKCENTLGSYLCSCSVGFRLSVDGRSCE'),
+            DomainRegion(441, 480, 'DINECSSSPCSQECANVYGSYQCYCRRGYQLSDVDGVTCE'),
+            DomainRegion(481, 524, 'DIDECALPTGGHICSYRCINIPGSFQCSCPSSGYRLAPNGRNCQ'),
+            DomainRegion(525, 578, 'DIDECVTGIHNCSINETCFNIQGGFRCLAFECPENYRRSAATLQQEKTDTVRCI')
+        ]
+        refseq = 'MERAAPSRRVPLPLLLLGGLALLAAGVDADVLLEACCADGHRMATHQKDCSLPYATESKE' \
+            'CRMVQEQCCHSQLEELHCATGISLANEQDRCATPHGDNASLEATFVKRCCHCCLLGRAAQ' \
+            'AQGQSCEYSLMVGYQCGQVFQACCVKSQETGDLDVGGLQETDKIIEVEEEQEDPYLNDRC' \
+            'RGGGPCKQQCRDTGDEVVCSCFVGYQLLSDGVSCEDVNECITGSHSCRLGESCINTVGSF' \
+            'RCQRDSSCGTGYELTEDNSCKDIDECESGIHNCLPDFICQNTLGSFRCRPKLQCKSGFIQ' \
+            'DALGNCIDINECLSISAPCPIGHTCINTEGSYTCQKNVPNCGRGYHLNEEGTRCVDVDEC' \
+            'APPAEPCGKGHRCVNSPGSFRCECKTGYYFDGISRMCVDVNECQRYPGRLCGHKCENTLG' \
+            'SYLCSCSVGFRLSVDGRSCEDINECSSSPCSQECANVYGSYQCYCRRGYQLSDVDGVTCE' \
+            'DIDECALPTGGHICSYRCINIPGSFQCSCPSSGYRLAPNGRNCQDIDECVTGIHNCSINE' \
+            'TCFNIQGGFRCLAFECPENYRRSAATLQQEKTDTVRCIKSCRPNDVTCVFDPVHTISHTV' \
+            'ISLPTFREFTRPEEIIFLRAITPPHPASQANIIFDITEGNLRDSFDIIKRYMDGMTVGVV' \
+            'RQVRPIVGPFHAVLKLEMNYVVGGVVSHRNVVNVHIFVSEYWF'
+
+        d = Domain('name', regions)
+        self.assertTrue(len(refseq) >= 578)
+        temp = d.align_seq(refseq)
+        self.assertEqual(len(regions), len(temp))
+        for dr1, dr2 in zip(temp, regions):
+            self.assertEqual(dr1.start, dr2.start)
+            self.assertEqual(dr1.end, dr2.end)
+            self.assertEqual(dr1.sequence, dr2.sequence)
+
+        refseq = 'MHRPPRHMGNKAMEPMDSPLMSAIPRLRPLQPMGRPPMQLLMDSLPLVILLQLPPRHTASLSRGMALVLMIPPL' \
+            'LQSPPPRPPMQLSLHMALSLLIQPMGSSQQPLHLQAIPLHSRLVMIRAVTLSRTPMGNRAAMDSRVAMVNKAAMGSSLP' \
+            'LVTHPKLDPTAKLQVNIANRAAATGSRTLLMTQSEEELGAIT*'
+        
+        d = 'QAAAQQGYSAYTAQPTQGYAQTTQAYGQQSYGTYGQPTDVSYTQAQTTATYGQTAYATSYGQPPTGYTTPTAPQAYSQP' \
+            'VQGYGTGAYDTTTATVTTTQASYAAQSAYGTQPAYPAYGQQPAATAPTSYSSTQPTSYDQSSYSQQNTYGQPSSYGQQS' \
+            'SYGQQSSYGQQPPTSYPPQTGSYSQAPSQYSQQSSSYGQQSSFRQ'
+        
+        dom = Domain('name', [DomainRegion(1, len(d), d)])
+        with self.assertRaises(UserWarning):
+            dom.align_seq(refseq)
 
 
 class TestIntergenicRegion(unittest.TestCase):
@@ -763,3 +808,36 @@ class TestAnnotate(unittest.TestCase):
         with self.assertRaises(AttributeError):
             tpos._strand = STRAND.NS
             determine_prime(tpos, bright)
+
+    def test_calculate_ORF_nested(self):
+        seq = 'ATGAACACGCAGGAACACCCACGCTCCCGCTCCTCCTACT' \
+            'CCAGGGGGAGACCGAACCCGAGAGCGACATCCGGAGCTGG' \
+            'AAGCCGCTGCAACGGGGGCGCCGGCCTCCCTGCCCCGCAG' \
+            'TCTCCCGCCCTTTCCCAGACACCGGAGGATCCCAGACCAG' \
+            'CCCAGTATTCCAGACGGAGAGGGTGCCCGAGTCCTCCGCA' \
+            'GGGCCCCGCCTCCCTAGGCGCTCGGCGCTGGAGACCTAGG' \
+            'GGAGCGCGCGAGAGAAACGCTGAGCTCCACCCGGCTGGGG' \
+            'CGGAGGCTGAGCACTATACCCGGGACTCGAACCCCGCGCC' \
+            'CTCGTCCCCCAGCTTTAGGCATCCCACGGCGAGCCCTGGC' \
+            'CCAACGCCCCCGCGCCGCGTCTTCCCCCGCACCCCCGCCC' \
+            'GGAGCCGAGTCCCGGGTTGCCAGCGCGCCCATCCCGCCCC' \
+            'CAACAGGTCTCGGGCAGCGGGGAGCGCGCTGCCTGTCCCG' \
+            'CAGGCGCTGGGAGGCGAGCCGGAGCGAAGCCGAGGGCCGG' \
+            'CCGCGCGCGCGGGAGGGGTCGCCGAGGGCTGCGAGCCCGG' \
+            'CCACTTACGCGCGGGCTCTGGGGAACCCCATGGAGAGGAG' \
+            'CACGTCCAGCGCCGATCCATGCTTGATGGTGCCGGGGCGC' \
+            'TGTTGGCGGTTCCTCCGGGGGGTGACTTTGCTGTACAGCT' \
+            'CCTCTCTCGCAGCCATGCCGAGCGGACTGGGGTGGCCGTA' \
+            'CTGAGCCATGGCTCAGCGGCCAGCCATCGCCAGGGAAGGA' \
+            'GCCCGAGCCGGATGGTTCGGGAAGGAGGAGGGAGTCGGGC' \
+            'TGGGCCAGGGGAGGGGGCTCGGGGACCCAGAGCCAGGCAG' \
+            'GAGGCGGCGGCAGCGGAGGCGGCGCTCCGAGCTTCCCCAG' \
+            'TGTCGGGACTCTGA'
+        orfs = calculate_ORF(seq)
+        for orf in orfs:
+            print(orf)
+        orfs = sorted(orfs)
+        self.assertEqual(2, len(orfs))
+        self.assertEqual(Interval(1, 894), orfs[0])
+        self.assertEqual(Interval(589, 723), orfs[1])
+

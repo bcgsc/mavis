@@ -39,7 +39,9 @@ General Process
 import argparse
 from structural_variant.breakpoint import read_bpp_from_input_file
 from structural_variant.annotate import gather_annotations, load_reference_genes, load_reference_genome, FusionTranscript
+from structural_variant.error import DiscontiuousMappingError
 from structural_variant import __version__
+from structural_variant.draw import Diagram
 import TSV
 from structural_variant.constants import PROTOCOL, SVTYPE, COLUMNS, sort_columns
 import re
@@ -90,6 +92,10 @@ def parse_arguments():
     parser.add_argument(
         '-p', '--max_proximity', default=5000,
         help='The maximum distance away from breakpoints to look for proximal genes')
+    parser.add_argument(
+        '--min_orf_size', default=120, type=int, help='minimum size for putative ORFs')
+    parser.add_argument(
+        '--max_orf_cap', default=3, type=int, help='keep the n longest orfs')
     args = parser.parse_args()
     return args
 
@@ -105,7 +111,7 @@ def main():
     log('loading:', args.reference_genome)
     REFERENCE_GENOME = load_reference_genome(args.reference_genome)
     log('loading:', args.annotations)
-    REFERENCE_ANNOTATIONS = load_reference_genes(args.annotations, verbose=False)
+    REFERENCE_ANNOTATIONS = load_reference_genes(args.annotations)
 
     log('loading:', args.input)
     bpps = read_bpp_from_input_file(
@@ -121,43 +127,54 @@ def main():
         simplify=False)
     log('read {} breakpoint pairs'.format(len(bpps)))
 
+    
+    
+    annotations = []
+    for bpp in bpps:
+        log('gathering annotations for', bpp)
+        ann = gather_annotations(
+            REFERENCE_ANNOTATIONS,
+            bpp,
+            event_type=bpp.data[COLUMNS.event_type],
+            proximity=args.max_proximity
+        )
+        annotations.extend(ann)
+        log('generated', len(ann), 'annotations', time_stamp=False)
+
+    id_prefix = 'annotation_{}-'.format(re.sub(':', '-', re.sub(' ', '_', str(datetime.now()))))
+    for i, ann in enumerate(annotations):
+        ann.data[COLUMNS.annotation_id] = id_prefix + str(i + 1)
+        # try building the fusion product
+        
+        try:
+            domains = set()
+            for tl in ann.transcript1.translations + ann.transcript2.translations:
+                for d in tl.domains:
+                    domains.add(d.name)
+            print(ann.transcript1.name, *[[d.name for d in tl.domains] for tl in ann.transcript1.translations])
+            print(ann.transcript2.name, *[[d.name for d in tl.domains] for tl in ann.transcript2.translations])
+            ft = FusionTranscript.build(ann, REFERENCE_GENOME, min_orf_size=args.min_orf_size, max_orf_cap=args.max_orf_cap)
+            print('splicing options', len(ft.splicing_patterns()))
+            for spl in ft.splicing_patterns():
+                print(spl)
+                print('spliced sequence', len(ft.get_spliced_cdna_sequence(spl, REFERENCE_GENOME)))
+            # try building the fusion proteins
+            print('translations', len(ft.translations))
+            for tl in ft.translations:
+                new_domains = [d.name for d in tl.domains]
+                print('translation', tl.start, tl.end, tl.splicing_pattern)
+                print('kept', len(new_domains), 'of', len(domains))
+            d = Diagram()
+            canvas = d.draw(ann, ft, REFERENCE_GENOME=REFERENCE_GENOME)
+            name = os.path.join(args.output, FILENAME_PREFIX + '.' + ann.data[COLUMNS.annotation_id] + '.svg')
+            log('generating svg:', name)
+            canvas.saveas(name)
+        except (NotImplementedError, AttributeError, DiscontiuousMappingError) as err:
+            print(repr(err))
+    
     of = os.path.join(args.output, FILENAME_PREFIX + '.annotation.tab')
     with open(of, 'w') as fh:
         log('writing:', of)
-        annotations = []
-        for bpp in bpps:
-            log('gathering annotations for', bpp)
-            ann = gather_annotations(
-                REFERENCE_ANNOTATIONS,
-                bpp,
-                event_type=bpp.data[COLUMNS.event_type],
-                proximity=args.max_proximity
-            )
-            annotations.extend(ann)
-            log('generated', len(ann), 'annotations', time_stamp=False)
-
-        id_prefix = 'annotation_{}-'.format(re.sub(' ', '_', str(datetime.now())))
-        for i, ann in enumerate(annotations):
-            ann.data[COLUMNS.annotation_id] = id_prefix + str(i + 1)
-            # try building the fusion product
-            
-            try:
-                print('t1 domains', ann.transcript1.name)
-                for tl in ann.transcript1.translations:
-                    for d in tl.domains:
-                        print(d.name, d, d.regions)
-                        print(d.get_sequences(REFERENCE_GENOME))
-                print('t2 domains', ann.transcript1.name)
-                for tl in ann.transcript2.translations:
-                    for d in tl.domains:
-                        print(d.name, d, d.regions)
-                        print(d.get_sequences(REFERENCE_GENOME))
-                ft = FusionTranscript.build(ann, REFERENCE_GENOME)
-                print(ft)
-                # try building the fusion proteins
-            except (NotImplementedError, AttributeError) as err:
-                print(repr(err))
-
         rows = [ann.flatten() for ann in annotations]
 
         header = set()

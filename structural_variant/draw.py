@@ -81,12 +81,13 @@ class Diagram:
         DOMAIN_COLOR='#b8d3ba',
         DOMAIN_SCAFFOLD_COLOR=HEX_BLACK,
         SPLICE_COLOR=HEX_BLACK,
-        WIDTH=1000,
+        WIDTH=2000,
         PADDING=5,
         DYNAMIC_LABELS=True,
         LEGEND_FONT_SIZE=20,
         LEGEND_BORDER_STROKE=HEX_BLACK,
-        DOMAIN_LABEL_FONT_SIZE=20
+        DOMAIN_LABEL_FONT_SIZE=20,
+        DOMAIN_MISMATCH_COLOR='#B2182B'
     ):
         self.MIN_WIDTH = 10  # no element (exon, gene, etc can be less than this wide)
         self.TRACK_LINE_HEIGHT = 4
@@ -110,7 +111,7 @@ class Diagram:
         self.GENE1_COLOR = GENE1_COLOR
         self.GENE2_COLOR = GENE2_COLOR
         self.GENE_DEFAULT_COLOR = GENE_DEFAULT_COLOR
-        self.GENE_MIN_BUFFER = 200
+        self.GENE_MIN_BUFFER = 5000
         self.GENE_ARROW_WIDTH = 20
         self.GENE_INTERGENIC_RATIO = 5
         self.GENE_MIN_WIDTH = self.MIN_WIDTH + self.GENE_ARROW_WIDTH
@@ -126,6 +127,7 @@ class Diagram:
         self.DOMAIN_SCAFFOLD_COLOR = DOMAIN_SCAFFOLD_COLOR
         self.DOMAIN_LABEL_PREFIX = 'D'
         self.DOMAIN_LABEL_FONT_SIZE = DOMAIN_LABEL_FONT_SIZE
+        self.DOMAIN_FILL_GRADIENT = list(Color(DOMAIN_MISMATCH_COLOR).range_to(Color(DOMAIN_COLOR), 10))
 
         self.SPLICE_HEIGHT = self.TRACK_HEIGHT
         self.SPLICE_STROKE_DASHARRAY = [2, 2]
@@ -204,7 +206,7 @@ class Diagram:
         setattr(main_group, 'mapping', None)
         return main_group
 
-    def draw(self, ann, fusion_transcript=None):
+    def draw(self, ann, fusion_transcript=None, REFERENCE_GENOME=None):
         """
         this is the main drawing function. It decides between the 3 basic layouts
 
@@ -309,7 +311,8 @@ class Diagram:
                     twidth,
                     breakpoints=[ann.break1],
                     labels=labels,
-                    colors=colors
+                    colors=colors,
+                    REFERENCE_GENOME=REFERENCE_GENOME
                 )
                 h.append(g.height)
                 g.translate(x, y)
@@ -323,7 +326,8 @@ class Diagram:
                     twidth,
                     breakpoints=[ann.break2],
                     labels=labels,
-                    colors=colors
+                    colors=colors,
+                    REFERENCE_GENOME=REFERENCE_GENOME
                 )
                 h.append(g.height)
                 temp = x + twidth + self.INNER_MARGIN + dx_label_shift
@@ -343,7 +347,8 @@ class Diagram:
                     fusion_transcript,
                     drawing_width,
                     colors=colors,
-                    labels=labels
+                    labels=labels,
+                    REFERENCE_GENOME=REFERENCE_GENOME
                 )
                 g.translate(x, y)
                 canvas.add(g)
@@ -384,7 +389,8 @@ class Diagram:
                 drawing_width,
                 breakpoints=[ann.break1, ann.break2],
                 labels=labels,
-                colors=colors
+                colors=colors,
+                REFERENCE_GENOME=REFERENCE_GENOME
             )
             g.translate(x, y)
             canvas.add(g)
@@ -401,7 +407,8 @@ class Diagram:
                     fusion_transcript,
                     drawing_width,
                     colors=colors,
-                    labels=labels
+                    labels=labels,
+                    REFERENCE_GENOME=REFERENCE_GENOME
                 )
                 g.translate(x, y)
                 canvas.add(g)
@@ -457,7 +464,8 @@ class Diagram:
                     twidth,
                     breakpoints=[ann.break1],
                     labels=labels,
-                    colors=colors
+                    colors=colors,
+                    REFERENCE_GENOME=REFERENCE_GENOME
                 )
                 h.append(g.height)
                 g.translate(x, y)
@@ -471,7 +479,8 @@ class Diagram:
                     twidth,
                     breakpoints=[ann.break2],
                     labels=labels,
-                    colors=colors
+                    colors=colors,
+                    REFERENCE_GENOME=REFERENCE_GENOME
                 )
                 h.append(g.height)
                 temp = x + twidth + self.INNER_MARGIN + dx_label_shift
@@ -491,7 +500,8 @@ class Diagram:
                     fusion_transcript,
                     drawing_width,
                     colors=colors,
-                    labels=labels
+                    labels=labels,
+                    REFERENCE_GENOME=REFERENCE_GENOME
                 )
                 g.translate(x, y)
                 canvas.add(g)
@@ -540,7 +550,13 @@ class Diagram:
         return main_group
 
     def draw_transcript(
-        self, canvas, transcript, target_width=None, breakpoints=[], labels=LabelMapping(), colors={}, mapping=None
+        self, canvas, transcript, 
+        target_width=None, 
+        breakpoints=[], 
+        labels=LabelMapping(), 
+        colors={}, 
+        mapping=None, 
+        REFERENCE_GENOME=None
     ):
         """
         builds an svg group representing the transcript. Exons are drawn in a track with the splicing
@@ -670,6 +686,13 @@ class Diagram:
                         fill=self.DOMAIN_SCAFFOLD_COLOR,
                         class_='scaffold'
                     ))
+                    fill = self.DOMAIN_COLOR
+                    try:
+                        match, total = d.score_region_mapping(REFERENCE_GENOME)
+                        percent = int(round(match * 100 / total, 0)) % len(self.DOMAIN_FILL_GRADIENT)
+                        fill = self.DOMAIN_FILL_GRADIENT[percent]
+                    except AttributeError:
+                        pass
                     for region in d.regions:
                         # convert the AA position to cdna position, then convert the cdna to genomic, etc
                         s = tl.convert_aa_to_cdna(region[0])
@@ -681,11 +704,11 @@ class Diagram:
                             t, s = (s, t)
                         gd.add(canvas.rect(
                             (s, 0), (t - s + 1, self.DOMAIN_TRACK_HEIGHT),
-                            fill=self.DOMAIN_COLOR, class_='region'))
+                            fill=fill, class_='region'))
                     gd.translate(0, py)
 
                     gd.add(canvas.text(
-                        labels.add(d, self.DOMAIN_LABEL_PREFIX),
+                        labels.add(d.name, self.DOMAIN_LABEL_PREFIX),
                         insert=(0 - self.PADDING, self.DOMAIN_TRACK_HEIGHT / 2),
                         fill=self.LABEL_COLOR if not self.DYNAMIC_LABELS else Diagram.dynamic_label_color(self.DOMAIN_COLOR),
                         style=self.FONT_STYLE.format(font_size=self.DOMAIN_LABEL_FONT_SIZE, text_anchor='end'),
@@ -952,7 +975,7 @@ class Diagram:
             g.add(t)
         return g
 
-    def draw_gene(self, canvas, gene, width, height, fill, label=''):
+    def draw_gene(self, canvas, gene, width, height, fill, label='', REFERENCE_GENOME=None):
         """
         generates the svg object representing a gene
 

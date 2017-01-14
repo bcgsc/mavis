@@ -6,6 +6,52 @@ from .error import *
 from .breakpoint import BreakpointPair, Breakpoint
 from Bio import SeqIO
 import re
+import warnings
+
+
+def calculate_ORF(spliced_cdna_sequence, min_orf_size=None):
+    """
+    calculate all possible open reading frames given a spliced cdna sequence (no introns)
+
+    Args:
+        spliced_cdna_sequence (str): the sequence
+
+    Returns:
+        :any:`list` of :any:`Interval`: list of open reading frame positions on the input sequence
+    """
+    # do not revcomp
+    assert(START_AA != STOP_AA)
+    cds_orfs = []  # (cds_start, cds_end)
+    for offset in range(0, CODON_SIZE):
+        aa_sequence = translate(spliced_cdna_sequence, offset)
+        # now calc the open reading frames
+        starts = []
+        stops = []
+        for i, aa in enumerate(aa_sequence):
+            if aa == START_AA:
+                starts.append(i * CODON_SIZE + 1)
+            elif aa == STOP_AA:
+                stops.append((i + 1) * CODON_SIZE)
+        
+        orfs = []
+        
+        for s in starts:
+            for t in sorted(stops):
+                if t > s:
+                    i = Interval(s, t)
+                    if not min_orf_size or len(i) >= min_orf_size:
+                        orfs.append(Interval(s, t))
+                    break
+        
+        temp = {}
+        for orf in orfs:
+            if orf.end not in temp:
+                temp[orf.end] = orf
+            elif len(orf) > len(temp[orf.end]):
+                temp[orf.end] = orf
+
+        cds_orfs.extend(temp.values())
+    return cds_orfs
 
 
 class Annotation(BreakpointPair):
@@ -231,6 +277,17 @@ class BioInterval:
         else:
             return self.key == other.key
 
+    def __lt__(self, other):
+        if other.reference_object != self.reference_object:
+            if self.reference_object < other.reference_object:
+                return True
+            else:
+                return False
+        elif self.position < other.position:
+            return True
+        else:
+            return False
+
     def __hash__(self):
         return hash(self.key)
 
@@ -320,6 +377,8 @@ class Translation(BioInterval):
         self.sequence = sequence
         for d in domains:
             self.add_domain(d)
+        if self.transcript:
+            self.transcript.add_translation(self)
 
     @property
     def transcript(self):
@@ -364,34 +423,9 @@ class Translation(BioInterval):
         if self.sequence:
             return self.sequence
         elif self.transcript and self.transcript.strand:
-            # transcript will be unspliced sequence
-            # splice points will be relative to the genome not transcript start
-            temp = sorted([self.transcript.start] + self.splicing_pattern + [self.transcript.end])
-            m = min(temp)
-            conti = []
-            for i in range(0, len(temp) - 1, 2):
-                conti.append((temp[i], temp[i + 1]))
-
-            if self.transcript.sequence:
-                ps = self.transcript.sequence
-                conti = [(i - m + 1, j - m + 1) for i, j in conti]
-                if self.transcript.strand == STRAND.NEG:
-                    ps = reverse_complement(ps)
-                s = [ps[i - 1:j] for i, j in conti]
-                s = ''.join([str(seg) for seg in s])
-                if self.transcript.strand == STRAND.NEG:
-                    s = reverse_complement(s)
-                return s[self.start - 1:self.end]
-            elif REFERENCE_GENOME and self.transcript.gene:
-                s = [REFERENCE_GENOME[self.transcript.gene.chr].seq[i - 1:j] for i, j in conti]
-                s = ''.join([str(seg) for seg in s])
-                if self.transcript.strand == STRAND.NEG:
-                    return reverse_complement(s)[self.start - 1:self.end]
-                else:
-                    return s[self.start - 1:self.end]
-        raise AttributeError(
-            'insufficient sequence information. reference_object sequence must be specified or REFERENCE_GENOME '
-            'argument must be given')
+            seq = self.transcript.get_spliced_cdna_sequence(self.splicing_pattern, REFERENCE_GENOME)
+            return seq[self.start - 1:self.end]
+        raise AttributeError('insufficient sequence information')
 
     def get_cds_sequence(self, REFERENCE_GENOME=None):
         """
@@ -479,7 +513,6 @@ class Transcript(BioInterval):
         if cds_start is not None or cds_end is not None:
             for sp in self.splicing_patterns():
                 tl = Translation(cds_start, cds_end, self, splicing_pattern=sp, domains=domains)
-                self.add_translation(tl)
 
     def splicing_patterns(self):
         """
@@ -680,6 +713,19 @@ class Transcript(BioInterval):
             else:
                 return str(REFERENCE_GENOME[self.gene.chr].seq[self.start - 1:self.end])
 
+    def get_spliced_cdna_sequence(self, splicing_pattern, REFERENCE_GENOME=None):
+        temp = sorted([self.start] + splicing_pattern + [self.end])
+        m = min(temp)
+        conti = []
+        for i in range(0, len(temp) - 1, 2):
+            conti.append(Interval(temp[i] - m, temp[i + 1] - m))
+        seq = self.get_sequence(REFERENCE_GENOME)
+        if self.strand == STRAND.NEG:
+            # adjust the continuous intervals for the min and flip if revcomp
+            seq = reverse_complement(seq)
+        spliced_seq = ''.join([str(seq[i.start:i.end + 1]) for i in conti])
+        return spliced_seq if self.strand == STRAND.POS else reverse_complement(spliced_seq)
+
 
 def determine_prime(transcript, breakpoint):
     """
@@ -729,7 +775,7 @@ class FusionTranscript(Transcript):
         return old_exon.transcript.exon_number(old_exon)
 
     @classmethod
-    def build(cls, ann, REFERENCE_GENOME):
+    def build(cls, ann, REFERENCE_GENOME, min_orf_size=None, max_orf_cap=None):
         """
         Args:
             ann (Annotation): the annotation object we want to build a FusionTranscript for
@@ -856,8 +902,35 @@ class FusionTranscript(Transcript):
                     ft.exon_mapping[e] = old_ex
                 ft.sequence += seq1
         ft.position = Interval(1, len(ft.sequence))
-        # now remap the domains from the original transcripts for each protein translation
-
+        # get all splicing patterns
+        for spl_patt in ft.splicing_patterns():
+            # calculate all ORF for each splicing pattern
+            spliced_cdna_seq = ft.get_spliced_cdna_sequence(spl_patt, REFERENCE_GENOME)
+            orfs = calculate_ORF(spliced_cdna_seq, min_orf_size=min_orf_size)
+            if max_orf_cap and len(orfs) > max_orf_cap:  # limit the number of orfs returned
+                orfs = sorted(orfs, key=lambda x: len(x), reverse=True)
+                l = len(orfs[max_orf_cap - 1])
+                temp = []
+                for i, orf in enumerate(orfs):
+                    if len(orf) < l:
+                        break
+                    else:
+                        temp.append(orf)
+                orfs = temp
+            # create the translations
+            for orf in orfs:
+                tl = Translation(orf.start, orf.end, ft, spl_patt)
+        
+        # remap the domains from the original translations to the current translations
+        for new_tl in ft.translations:
+            aa_seq = new_tl.get_AA_sequence(REFERENCE_GENOME)
+            for tl in ann.transcript1.translations + ann.transcript2.translations:
+                for dom in tl.domains:
+                    try:
+                        regions = dom.align_seq(aa_seq, REFERENCE_GENOME)
+                        Domain(dom.name, regions, new_tl)
+                    except UserWarning:
+                        pass
         return ft
 
     @classmethod
@@ -948,41 +1021,6 @@ class FusionTranscript(Transcript):
             raise AttributeError('transcript strand must be specified to pull exons')
         return s, new_exons
 
-    @classmethod
-    def _translate(cls, ft, splicing_pattern=[]):
-        if len(splicing_pattern) % 2 != 0:
-            raise AttributeError('splice sites must be an even number')
-        for s in splicing_pattern:
-            if s < 1 or s > len(ft.sequence):
-                raise AttributeError('splice points outside the transcript')
-        ranges = [1] + sorted(splicing_pattern) + [len(ft.sequence)]
-        cdna = []
-        exons = []
-
-        for i in range(0, len(ranges), 2):
-            s = ranges[i]
-            t = ranges[i + 1]
-            exons.append((s, t))
-            cdna.append(ft.sequence[s - 1:t])
-        cdna = ''.join(cdna)
-        translations = []  # (cds_start, cds_end)
-        for i in range(0, CODON_SIZE):
-            aa_sequence = translate(cdna, i)
-            # now calc the open reading frames
-            temp = []
-            last_met_pos = -1
-            for aa_num, char in enumerate(aa_sequence):
-                if char == START_AA:
-                    if last_met_pos < 0:
-                        last_met_pos = aa_num
-                elif char == STOP_AA:
-                    if last_met_pos >= 0:
-                        temp.append((last_met_pos, aa_num))
-                        last_met_pos = -1
-
-            for start, end in temp:
-                translations.append((start * CODON_SIZE + i + 1, (end + 1) * CODON_SIZE + i))
-
 
 class Exon(BioInterval):
     """
@@ -1005,7 +1043,7 @@ class Exon(BioInterval):
         self.intact_start_splice = intact_start_splice
         self.intact_end_splice = intact_end_splice
         if end - start + 1 < SPLICE_SITE_RADIUS * sum([intact_start_splice, intact_end_splice]):
-            raise AttributeError('exons must be greater than double the length of a splice site')
+            warnings.warn('exons must be greater than double the length of a splice site')
 
     @property
     def transcript(self):
@@ -1024,6 +1062,14 @@ class Exon(BioInterval):
         return Interval(self.end - SPLICE_SITE_RADIUS + 1, self.end + SPLICE_SITE_RADIUS)
 
 
+class DomainRegion(Interval):
+    def __init__(self, start, end, seq=None):
+        Interval.__init__(self, start, end)
+        self.sequence = seq
+        if seq and len(seq) != len(self):
+            raise AttributeError('domain region sequence must be of equal length', self, seq)
+
+
 class Domain:
     """
     """
@@ -1031,7 +1077,7 @@ class Domain:
         """
         Args:
             name (str): the name of the domain i.e. PF00876
-            regions (:any:`list` of :any:`Interval`): the amino acid ranges that are part of the domain
+            regions (:any:`list` of :any:`DomainRegion`): the amino acid ranges that are part of the domain
             transcript (Transcript): the 'parent' transcript this domain belongs to
         Raises:
             AttributeError: if the end of any region is less than the start
@@ -1041,11 +1087,16 @@ class Domain:
         self.reference_object = translation
         self.name = name
         self.regions = sorted(list(set(regions)))  # remove duplicates
+        if len(regions) == 0:
+            raise AttributeError('at least one region must be given')
+        for r1, r2 in itertools.combinations(self.regions, 2):
+            if Interval.overlaps(r1, r2):
+                raise AttributeError('regions cannot overlap')
 
-        for i, region in enumerate(self.regions):
-            if region[0] > region[1]:
-                raise AttributeError('domain region start must be <= end')
-        self.regions = Interval.min_nonoverlapping(*self.regions)
+        for i in range(0, len(self.regions)):
+            curr = self.regions[i]
+            if not hasattr(curr, 'sequence'):
+                self.regions[i] = DomainRegion(curr[0], curr[1])
 
         if self.translation is not None:
             self.translation.add_domain(self)
@@ -1057,16 +1108,116 @@ class Domain:
 
     @property
     def key(self):
-        return tuple([self.name, self.translation] + self.regions)
-
-    def get_sequences(self, REFERENCE_GENOME=None):
+        return tuple([self.name, self.translation])
+    
+    def score_region_mapping(self, REFERENCE_GENOME=None):
         if self.translation:
             aa = self.translation.get_AA_sequence(REFERENCE_GENOME)
-            s = [aa[r.start - 1:r.end] for r in self.regions]
-            return s
-        raise AttributeError(
-            'Insufficient information to gather sequence data. reference_object must have sequence information or '
-            'REFERENCE_GENOME must be provided')
+            total = 0
+            matches = 0
+            for region in self.regions:
+                if not region.sequence:
+                    raise AttributeError('insufficient sequence information')
+                ref = aa[region.start - 1:region.end]
+                for c1, c2 in zip(ref, region.sequence):
+                    if c1 == c2:
+                        matches += 1
+                    total += 1
+            return matches, total
+        else:
+            raise AttributeError('insufficient sequence information')
+
+    def get_sequences(self, REFERENCE_GENOME=None):
+        """
+        returns the amino acid sequences for each of the domain regions associated with 
+        this domain in the order of the regions (sorted by start)
+        """
+        sequences = {}
+        for region in self.regions:
+            if region.sequence:
+                sequences[region] = region.sequence
+        if any([r not in sequences for r in self.regions]):
+            if self.translation:
+                aa = self.translation.get_AA_sequence(REFERENCE_GENOME)
+                for region in self.regions:
+                    s = aa[region.start - 1:region.end]
+                    if region not in sequences:
+                        sequences[region] = s
+            else:
+                raise AttributeError(
+                    'Insufficient information to gather sequence data. reference_object must have sequence information or '
+                    'REFERENCE_GENOME must be provided')
+        return [sequences[r] for r in self.regions]
+
+    def align_seq(self, input_sequence, REFERENCE_GENOME=None):
+        """
+        align each region to the input sequence starting with the last one.
+        then take the subset of sequence that remains to align the second last and so on
+        return a list of intervals for the alignment. If multiple alignments are found,
+        then raise an error
+
+        Returns:
+            :any:`list` of :any:`DomainRegion`: the list of domain regions on the new input sequence
+
+        Raises:
+            AttributeError: if sequence information is not available
+            UserWarning: if a valid alignment could not be found or no best alignment was found
+        """
+        seq_list = self.get_sequences(REFERENCE_GENOME)
+        
+        results = {}
+        for seq in set(seq_list):
+            # align the current sequence to find the best matches
+            scores = []
+            for p in range(0, len(input_sequence) - len(seq)):
+                score = 0
+                for i in range(0, len(seq)):
+                    if input_sequence[p + i].upper() == seq[i].upper():
+                        score += 1
+                if score > 0:
+                    scores.append((Interval(p, p + len(seq) - 1), score))
+            if len(scores) == 0:
+                raise UserWarning('could not align a given region')
+            results[seq] = scores
+
+        # take the best score for each region and see if they work in sequence
+        best = []
+        for seq in seq_list:
+            temp = max([t[1] for t in results[seq]])
+            curr = [t for t in results[seq] if t[1] == temp]
+            best.append(curr)
+
+        combinations = [best[0]]
+        for options in best[1:]:
+            new_combinations = []
+            for current_set in combinations:
+                last, last_score = current_set[-1]
+                for pos, score in options:
+                    if pos.start > last.end:
+                        new_combinations.append(current_set + [(pos, score)])
+            combinations = new_combinations
+        
+        # now go through the list for the highest score
+        scored_combinations = []
+        for pos_list in combinations:
+            score = sum([t[1] for t in pos_list])
+            scored_combinations.append((score, [t[0] for t in pos_list]))
+        
+        if len(scored_combinations) == 0:
+            raise UserWarning('could not map the sequences to the input')
+        else:
+            high = max([s for s, p in scored_combinations])
+            temp = []
+            for score, pl in scored_combinations:
+                if score == high:
+                    temp.append(pl)
+            if len(temp) > 1:
+                raise UserWarning('multiple mappings of equal score')
+            else:
+                regions = []
+                for pos, seq in zip(temp[0], seq_list):
+                    regions.append(DomainRegion(pos.start + 1, pos.end + 1, seq))
+                return regions
 
 
 def load_masking_regions(filepath):
@@ -1148,13 +1299,13 @@ def load_reference_genes(filepath, verbose=True):
         if not row:
             return []
         exons = []
-        for temp in row.split(';'):
+        for temp in re.split('[; ]', row):
             try:
                 s, t = temp.split('-')
-                exons.append(Exon(int(s), int(t)))
-            except:
+                exons.append((int(s), int(t)))
+            except Exception as err:
                 if verbose:
-                    print('exon error:', temp, row)
+                    print('exon error:', repr(temp), repr(err))
         return exons
 
     def parse_domain_list(row):
@@ -1167,6 +1318,7 @@ def load_reference_genes(filepath, verbose=True):
                 temp = temp.split(',')
                 temp = [x.split('-') for x in temp]
                 temp = [(int(x), int(y)) for x, y in temp]
+                temp = Interval.min_nonoverlapping(*temp)
                 d = Domain(name, temp)
                 domains.append(d)
             except Exception as err:
@@ -1230,16 +1382,19 @@ def load_reference_genes(filepath, verbose=True):
             g = genes[g.name]
         else:
             genes[g.name] = g
-        t = Transcript(
-            name=row['ensembl_transcript_id'],
-            gene=g,
-            genomic_start=row['transcript_genomic_start'],
-            genomic_end=row['transcript_genomic_end'],
-            exons=row['genomic_exon_ranges'],
-            domains=row['AA_domain_ranges'],
-            cds_start=row['cdna_coding_start'],
-            cds_end=row['cdna_coding_end']
-        )
+        try:
+            t = Transcript(
+                name=row['ensembl_transcript_id'],
+                gene=g,
+                genomic_start=row['transcript_genomic_start'],
+                genomic_end=row['transcript_genomic_end'],
+                exons=row['genomic_exon_ranges'],
+                domains=row['AA_domain_ranges'],
+                cds_start=row['cdna_coding_start'],
+                cds_end=row['cdna_coding_end']
+            )
+        except AttributeError as err:
+            print('failed loading', row['ensembl_transcript_id'], row['hugo_names'].split(';'), repr(err))
 
     ref = {}
     for g in genes.values():
