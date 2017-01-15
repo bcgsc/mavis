@@ -55,8 +55,11 @@ extensions = [
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3.6', None),
-    'pysam': ('http://pysam.readthedocs.io/en/latest/', None)
+    'pysam': ('http://pysam.readthedocs.io/en/latest/', None),
+    'Bio': ('http://biopython.org/DIST/docs/api/', None),
+    'networkx': ('https://networkx.readthedocs.io/en/stable/', None)
 }
+
 mathjax_path="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
 
 html_theme = "sphinx_rtd_theme"
@@ -87,7 +90,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'svmerge'
-copyright = '2016, creisle'
+copyright = '2017, creisle'
 author = 'creisle'
 
 # The version info for the project you're documenting, acts as replacement for

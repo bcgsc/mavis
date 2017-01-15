@@ -49,6 +49,9 @@ class DeBruijnGraph(nx.DiGraph):
     def trim_low_weight_tails(self, min_weight):
         """
         for any paths where all edges are lower than the minimum weight trim
+
+        Args:
+            min_weight (int): the minimum weight for an edge to be retained
         """
         for n in list(self.nodes()):
             if not self.has_node(n):
@@ -86,6 +89,12 @@ def digraph_connected_components(graph):
     this function assumes that connection != reachable
     this means there is no difference between connected components
     in a simple graph and a digraph
+
+    Args:
+        graph (networkx.DiGraph): the input graph to gather components from
+
+    Returns:
+        :class:`list` of :class:`list`: returns a list of compnents which are lists of node names
     """
     g = nx.Graph()
     for src, tgt in graph.edges():
@@ -103,14 +112,14 @@ def assemble(sequences, kmer_size=None, min_edge_weight=3, min_match_quality=0.9
     below a weight threshold and the return all possible unitigs/contigs
 
     Args:
-        sequences (list of str): a list of strings/sequences to assemble
+        sequences (:class:`list` of :class:`str`): a list of strings/sequences to assemble
         kmer_size (int): the size of the kmer to use
         min_edge_weight (int): applies to trimming (see desc)
         min_match_quality (float): percent match for re-aligned reads to contigs
         min_read_mapping_overlap (int): the minimum amount of overlap required when aligning reads to contigs
 
     Returns:
-        list of Contig: a list of putative contigs
+        :class:`list` of :class:`Contig`: a list of putative contigs
     """
     if len(sequences) == 0:
         return []
@@ -201,7 +210,7 @@ def kmers(s, size):
         size (int): the size of the kmers
 
     Returns:
-        list of string: the list of kmers
+        :class:`list` of :class:`str`: the list of kmers
 
     Example:
         >>> kmers('abcdef', 2)

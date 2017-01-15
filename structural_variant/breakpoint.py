@@ -186,7 +186,7 @@ class BreakpointPair:
         Args:
             pair (BreakpointPair): the pair to classify
         Returns:
-            :any:`list` of :any:`SVTYPE`: a list of possible SVTYPE
+            :class:`list` of :any:`SVTYPE`: a list of possible SVTYPE
 
         Example:
             >>> BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 9999), opposing_strands=True)
@@ -428,7 +428,7 @@ class BreakpointPair:
 
         return BreakpointPair(b1, b2, untemplated_sequence=untemplated_sequence)
 
-    def breakpoint_sequence_homology(self, HUMAN_REFERENCE_GENOME):
+    def breakpoint_sequence_homology(self, REFERENCE_GENOME):
         """
         for a given set of breakpoints matches the sequence opposite the partner breakpoint
         this sequence comparison is done with reference to a reference genome and does not
@@ -445,12 +445,15 @@ class BreakpointPair:
             ---------CT-CT------ first break homology
             -------TT-TT-------- second break homology
 
+        Args:
+            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence by template/chr name
+
         Raises:
             AttributeError: for non specific breakpoints
         """
 
-        b1_refseq = HUMAN_REFERENCE_GENOME[self.break1.chr].seq
-        b2_refseq = HUMAN_REFERENCE_GENOME[self.break2.chr].seq
+        b1_refseq = REFERENCE_GENOME[self.break1.chr].seq
+        b2_refseq = REFERENCE_GENOME[self.break2.chr].seq
         if len(self.break1) > 1 or len(self.break2) > 1:
             raise AttributeError('cannot call shared sequence for non-specific breakpoints')
 
@@ -528,7 +531,7 @@ def read_bpp_from_input_file(filename, **kwargs):
     Args:
         filename (str): path to the input file
     Returns:
-        :any:`list` of :any:`BreakpointPair`: a list of pairs
+        :class:`list` of :any:`BreakpointPair`: a list of pairs
 
     Example:
         >>> read_bpp_from_input_file('filename')
@@ -548,8 +551,8 @@ def read_bpp_from_input_file(filename, **kwargs):
             COLUMNS.break1_position_end.name: int,
             COLUMNS.break2_position_start.name: int,
             COLUMNS.break2_position_end.name: int,
-            COLUMNS.opposing_strands.name: TSV.bool,
-            COLUMNS.stranded.name: TSV.bool,
+            COLUMNS.opposing_strands.name: TSV.tsv_boolean,
+            COLUMNS.stranded.name: TSV.tsv_boolean,
             COLUMNS.untemplated_sequence.name: soft_null_cast
         })
     kwargs.setdefault('require', []).extend(

@@ -180,7 +180,7 @@ class Annotation(BreakpointPair):
         generates a dictionary of the annotation information as strings
 
         Returns:
-            :any:`dict` of :any:`str` and :any:`str`: dictionary of attribute names and values
+            :class:`dict` of :class:`str` and :class:`str`: dictionary of attribute names and values
         """
         row = BreakpointPair.flatten(self)
         row.update({
@@ -324,7 +324,7 @@ class Gene(BioInterval):
             chr (str): the chromosome
             name (str): the gene name/id i.e. ENSG0001
             strand (STRAND): the genomic strand '+' or '-'
-            aliases (:any:`list` of :any:`str`): a list of aliases. For example the hugo name could go here
+            aliases (:class:`list` of :class:`str`): a list of aliases. For example the hugo name could go here
             sequence (str): genomic sequence of the gene
         Example:
             >>> Gene('X', 1, 1000, 'ENG0001', '+', ['KRAS'])
@@ -366,8 +366,8 @@ class Translation(BioInterval):
             start (int): start of the coding sequence (cds) relative to the start of the first exon in the transcript
             end (int): end of the coding sequence (cds) relative to the start of the first exon in the transcript
             transcript (Transcript): the transcript this is a Translation of
-            splicing_pattern (:any:`list` of :any:`int`): a list of splicing positions to be used
-            domains (:any:`list` of :any:`Domain`): a list of the domains on this translation
+            splicing_pattern (:class:`list` of :any:`int`): a list of splicing positions to be used
+            domains (:class:`list` of :any:`Domain`): a list of the domains on this translation
             sequence (str): the cds sequence
         """
         domains = [] if domains is None else domains
@@ -412,7 +412,7 @@ class Translation(BioInterval):
     def get_sequence(self, REFERENCE_GENOME=None):
         """
         Args:
-            REFERENCE_GENOME (dict of str and str): dict of reference sequence by template/chr name
+            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence by template/chr name
 
         Returns:
             str: the cds sequence
@@ -430,13 +430,16 @@ class Translation(BioInterval):
     def get_cds_sequence(self, REFERENCE_GENOME=None):
         """
         wrapper for the sequence method
+
+        Args:
+            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence by template/chr name
         """
         return self.get_sequence(REFERENCE_GENOME)
 
     def get_AA_sequence(self, REFERENCE_GENOME=None):
         """
         Args:
-            REFERENCE_GENOME (dict of str and str): dict of reference sequence by template/chr name
+            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence by template/chr name
 
         Returns:
             str: the amino acid sequence
@@ -474,14 +477,14 @@ class Transcript(BioInterval):
         Args:
             cds_start (int): the start of the coding sequence relative to the start of the first exon
             cds_end (int): the end of the coding sequence relative to the start of the first exon
-            exons (:any:`list` of :any:`Exon`): list of Exon that make up the transcript
+            exons (:class:`list` of :any:`Exon`): list of Exon that make up the transcript
             genomic_start (int): genomic start position of the transcript
             genomic_end (int): genomic end position of the transcript
             gene (Gene): the gene this transcript belongs to
             name (str): name of the transcript
             strand (STRAND): strand the transcript is on, defaults to the strand of the Gene if not specified
-            domains (:any:`list` of :any:`Domain`): list of domains to add to translations
-            translations (:any:`list` of :any:`Translation`): Translation associated with this transcript
+            domains (:class:`list` of :any:`Domain`): list of domains to add to translations
+            translations (:class:`list` of :any:`Translation`): Translation associated with this transcript
             sequence (str): unspliced cDNA sequence
         """
         # cannot use mutable default args in the function decl
@@ -518,7 +521,8 @@ class Transcript(BioInterval):
         """
         returns a list of splice sites to be connected as a splicing pattern
 
-        1 or two splice sites are abrogated
+        Returns:
+            :class:`list` of :any:`int`: List of positions to be spliced together
         """
         splice_site_sets = [[]]
 
@@ -625,10 +629,27 @@ class Transcript(BioInterval):
         return mapping
 
     def convert_genomic_to_cdna(self, pos):
+        """
+        Args:
+            pos (int): the genomic position to be converted
+
+        Returns:
+            int: the cdna equivalent
+
+        Raises:
+            DiscontiuousMappingError: when a genomic position not present in the cdna is attempted to be converted
+        """
         mapping = self._genomic_to_cdna_mapping()
         return Interval.convert_pos(mapping, pos)
 
     def convert_cdna_to_genomic(self, pos):
+        """
+        Args:
+            pos (int): cdna position
+
+        Returns:
+            int: the genomic equivalent
+        """
         mapping = self._cdna_to_genomic_mapping()
         return Interval.convert_pos(mapping, pos)
 
@@ -675,6 +696,12 @@ class Transcript(BioInterval):
 
         Args:
             exon (Exon): the exon to be numbered
+
+        Returns:
+            int: the exon number (1 based)
+
+        Raises:
+            AttributeError: if the strand is not given or the exon does not belong to the transcript
         """
         for i, e in enumerate(self.exons):
             if exon != e:
@@ -690,7 +717,7 @@ class Transcript(BioInterval):
     def get_sequence(self, REFERENCE_GENOME=None):
         """
         Args:
-            REFERENCE_GENOME (:any:`dict` of :any:`str` and :any:`str`): reference sequences
+            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence by template/chr name
 
         Returns:
             str: the DNA sequence of the transcript including introns
@@ -771,6 +798,13 @@ class FusionTranscript(Transcript):
         self._strand = STRAND.POS  # always built on the positive strand
 
     def exon_number(self, exon):
+        """
+        Args:
+            exon (Exon): the exon to be numbered
+
+        Returns:
+            int: the number of the exon in the original transcript (prior to fusion)
+        """
         old_exon = self.exon_mapping[exon]
         return old_exon.transcript.exon_number(old_exon)
 
@@ -779,7 +813,7 @@ class FusionTranscript(Transcript):
         """
         Args:
             ann (Annotation): the annotation object we want to build a FusionTranscript for
-            REFERENCE_GENOME (dict of str and str): reference sequences by template/chr name
+            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence by template/chr name
 
         Returns:
             FusionTranscript: the newly built fusion transcript
@@ -787,8 +821,6 @@ class FusionTranscript(Transcript):
         .. todo::
             support single transcript inversions
 
-        .. todo::
-            map domain AA sequences from the original transcripts onto the fusion AA sequence
         """
         if not ann.transcript1 or not ann.transcript2:
             raise AttributeError('cannot produce fusion transcript for non-annotated fusions')
@@ -1055,10 +1087,12 @@ class Exon(BioInterval):
 
     @property
     def start_splice_site(self):
+        """(:class:`~structural_variant.interval.Interval`): the genomic range describing the splice site"""
         return Interval(self.start - SPLICE_SITE_RADIUS, self.start + SPLICE_SITE_RADIUS - 1)
 
     @property
     def end_splice_site(self):
+        """(:class:`~structural_variant.interval.Interval`): the genomic range describing the splice site"""
         return Interval(self.end - SPLICE_SITE_RADIUS + 1, self.end + SPLICE_SITE_RADIUS)
 
 
@@ -1111,6 +1145,10 @@ class Domain:
         return tuple([self.name, self.translation])
     
     def score_region_mapping(self, REFERENCE_GENOME=None):
+        """
+        Args:
+            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence by template/chr name
+        """
         if self.translation:
             aa = self.translation.get_AA_sequence(REFERENCE_GENOME)
             total = 0
@@ -1239,7 +1277,7 @@ def load_masking_regions(filepath):
     Args:
         filepath (str): path to the input tab-delimited file
     Returns:
-        dict of str and list of BioInterval:
+        :class:`dict` of :class:`str` and :class:`list` of :class:`BioInterval`:
             a dictionary keyed by chromosome name with values of lists of regions on the chromosome
 
     Example:
@@ -1287,8 +1325,7 @@ def load_reference_genes(filepath, verbose=True):
         filepath (str): path to the input tab-delimited file
 
     Returns:
-        :any:`dict` of :any:`str` and :any:`list` of :any:`Gene`: a dictionary keyed by chromosome name with values of list of genes on the
-            chromosome
+        :class:`dict` of :class:`str` and :class:`list` of :any:`Gene`: a dictionary keyed by chromosome name with values of list of genes on the chromosome
 
     Example:
         >>> ref = load_reference_genes('filename')
@@ -1407,10 +1444,10 @@ def load_reference_genes(filepath, verbose=True):
 def overlapping_transcripts(ref_ann, breakpoint):
     """
     Args:
-        ref_ann (:any:`dict` of :any:`str` and :any:`list` of :any:`Gene`): the reference list of genes split by chromosome
+        ref_ann (:class:`dict` of :class:`str` and :class:`list` of :any:`Gene`): the reference list of genes split by chromosome
         breakpoint (Breakpoint): the breakpoint in question
     Returns:
-        :any:`list` of :any:`Transcript`: a list of possible transcripts
+        :class:`list` of :any:`Transcript`: a list of possible transcripts
     """
     putative_annotations = []
     for gene in ref_ann[breakpoint.chr]:
@@ -1424,6 +1461,11 @@ def overlapping_transcripts(ref_ann, breakpoint):
 
 
 def gather_breakpoint_annotations(ref_ann, breakpoint):
+    """
+    Args:
+        ref_ann (:class:`dict` of :class:`str` and :class:`list` of :class:`Gene`): the reference annotations split into lists of genes by chromosome
+        breakpoint (Breakpoint): the breakpoint annotations are to be gathered for
+    """
 
     pos_overlapping_transcripts = []
     neg_overlapping_transcripts = []
@@ -1487,14 +1529,16 @@ def gather_breakpoint_annotations(ref_ann, breakpoint):
 
 def gather_annotations(ref, bp, event_type=None, proximity=None):  # TODO
     """
-    Args:
-        ref (:any:`dict` of :any:`str` and :any:`list` of :any:`Gene`): the list of reference genes hashed by chromosomes
-        breakpoint_pairs (:any:`list` of :any:`BreakpointPair`): breakpoint pairs we wish to annotate as events
-
     each annotation is defined by the annotations selected at the breakpoints
     the other annotations are given relative to this
     the annotation at the breakpoint can be a transcript or an intergenic region
 
+    Args:
+        ref (:class:`dict` of :class:`str` and :class:`list` of :any:`Gene`): the list of reference genes hashed by chromosomes
+        breakpoint_pairs (:class:`list` of :any:`BreakpointPair`): breakpoint pairs we wish to annotate as events
+
+    Returns:
+        :class:`list` of :class:`Annotation`: The annotations
     """
     annotations = dict()
 
@@ -1555,6 +1599,13 @@ def gather_annotations(ref, bp, event_type=None, proximity=None):  # TODO
 
 
 def load_reference_genome(filename):
+    """
+    Args:
+        filename (str): the path to the file containing the input fasta genome
+
+    Returns:
+        :class:`dict` of :class:`str` and :class:`Bio.SeqRecord`: a dictionary representing the sequences in the fasta file
+    """
     HUMAN_REFERENCE_GENOME = None
     with open(filename, 'rU') as fh:
         HUMAN_REFERENCE_GENOME = SeqIO.to_dict(SeqIO.parse(fh, 'fasta'))

@@ -387,7 +387,7 @@ class Evidence:
             self,
             breakpoint_pair,
             bam_cache,
-            human_reference_genome,
+            REFERENCE_GENOME,
             data={},
             classification=None,
             protocol=PROTOCOL.GENOME,
@@ -397,7 +397,7 @@ class Evidence:
         Args:
             breakpoint_pair (BreakpointPair): the breakpoint pair to collect evidence for
             bam_cache (BamCache): the bam cache (and assc file) to collect evidence from
-            human_reference_genome (SeqIO.iterator of SeqIO.SeqRecord): the human reference genome read as fasta
+            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence by template/chr name
             data (dict): a dictionary of data to associate with the evidence object
             classification (SVTYPE): the event type
             protocol (PROTOCOL): genome or transcriptome
@@ -408,7 +408,7 @@ class Evidence:
         self.data = data
         self.classification = classification
         self.protocol = PROTOCOL.enforce(protocol)
-        self.human_reference_genome = human_reference_genome
+        self.REFERENCE_GENOME = REFERENCE_GENOME
         self.annotations = annotations
 
         if self.classification is not None and self.classification not in BreakpointPair.classify(breakpoint_pair):
@@ -705,7 +705,7 @@ class Evidence:
             # recalculate the read cigar string to ensure M is replaced with = or X
             c = CigarTools.recompute_cigar_mismatch(
                 read,
-                self.human_reference_genome[self.bam_cache.chr(read)].seq
+                self.REFERENCE_GENOME[self.bam_cache.chr(read)].seq
             )
             prefix = 0
             try:
@@ -729,7 +729,7 @@ class Evidence:
 
         # try mapping the soft-clipped portion to the other breakpoint
         w = (opposite_window[0], opposite_window[1])
-        opposite_breakpoint_ref = self.human_reference_genome[
+        opposite_breakpoint_ref = self.REFERENCE_GENOME[
             opposite_breakpoint.chr].seq[w[0] - 1: w[1]]
 
         putative_alignments = None

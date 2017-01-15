@@ -2,7 +2,7 @@
 About
 --------
 
-This is the first step (other than preprocessing inputs) in the svmerge pipeline. Input files are taken in, separated by 
+This is the first step (other than preprocessing inputs) in the svmerge pipeline. Input files are taken in, separated by
 library and protocol, and then clustered if they are similar types of event calls and are close together. The output is
 a list of estimated calls based on the median of each cluster
 
@@ -85,7 +85,7 @@ def load_input_file(filename):
     """
     def nullable_boolean(item):
         try:
-            item = TSV.bool(item)
+            item = TSV.tsv_boolean(item)
         except TypeError:
             if item == '?':
                 item = 'null'
@@ -110,7 +110,7 @@ def load_input_file(filename):
             'start_pos2': int,
             'end_pos1': int,
             'end_pos2': int,
-            'stranded': TSV.bool,
+            'stranded': TSV.tsv_boolean,
             'opposing_strands': nullable_boolean,
             'untemplated_sequence': TSV.null
         },
@@ -251,12 +251,12 @@ def main():
         print('\nerror: MAX_JOBS cannot be less than 1')
         parser.print_help()
         exit(1)
-    
+
     log('input arguments listed below')
     for arg, val in sorted(args.__dict__.items()):
         log(arg, '=', val, time_stamp=False)
     BAM_FILE_ARGS = {}
-    
+
     if not args.no_filter:
         log('loading:', args.annotations)
         REFERENCE_GENES = load_reference_genes(args.annotations, verbose=False)
@@ -366,7 +366,7 @@ def main():
             fh.write('#' + '\t'.join(header) + '\n')
             for row in rows.values():
                 fh.write('\t'.join([str(row.get(c, None)) for c in header]) + '\n')
-    
+
     settings = EvidenceSettings.parse_args(args)
 
     for lib, protocol in clusters_by_libprot:
@@ -374,7 +374,7 @@ def main():
         # decide on the number of clusters to validate per job
         pass_clusters = []
         fail_clusters = []
-        
+
         for cluster in clusters:
             # don't need to generate transcriptome windows b/c will default to genome if not in a gene anyway
             w1 = Evidence.generate_window(
@@ -415,9 +415,9 @@ def main():
                     pass_clusters.append(cluster)
                 else:
                     fail_clusters.append(cluster)
-            
+
         log('filtered', len(fail_clusters), 'clusters as not informative')
-        
+
         JOB_SIZE = args.MIN_EVENTS_PER_JOB
         if len(pass_clusters) // args.MIN_EVENTS_PER_JOB > args.MAX_JOBS - 1:
             JOB_SIZE = len(pass_clusters) // args.MAX_JOBS

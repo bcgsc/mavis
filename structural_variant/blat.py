@@ -19,7 +19,7 @@ class BlatAlignedSegment(pysam.AlignedSegment):
     def __init__(self, reference_name=None, blat_score=None):
         """
         Args:
-            row (dict of str): a row dictionary from the Blat.read_pslx method
+            row (:class:`dict` of :class:`str`): a row dictionary from the Blat.read_pslx method
         """
         pysam.AlignedSegment.__init__(self)
         if reference_name is None:
@@ -29,6 +29,10 @@ class BlatAlignedSegment(pysam.AlignedSegment):
         self.blat_score = blat_score
 
     def query_coverage_interval(self):
+        """
+        Returns:
+            :class:`~structural_variant.interval.Interval`: The portion of the original query sequence that is aligned by this read
+        """
         seq = self.query_sequence
         s = 0
         t = len(seq) - 1
@@ -169,13 +173,14 @@ class Blat:
         return header, rows
 
     @staticmethod
-    def pslx_row_to_pysam(row, bam_cache, reference_genome):
+    def pslx_row_to_pysam(row, bam_cache, REFERENCE_GENOME):
         """
         given a 'row' from reading a pslx file. converts the row to a BlatAlignedSegment object
 
         Args:
             row (dict of str): a row object from the 'read_pslx' method
             bam_cache (BamCache): the bam file/cache to use as a template for creating reference_id from chr name
+            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence by template/chr name
 
         """
         chrom = bam_cache.reference_id(row['tname'])
@@ -186,7 +191,7 @@ class Blat:
             query_sequence = str(temp)
 
         # note: converting to inclusive range [] vs end-exclusive [)
-        reference_sequence = reference_genome[row['tname']].seq if reference_genome else None
+        reference_sequence = REFERENCE_GENOME[row['tname']].seq if REFERENCE_GENOME else None
         query_ranges = [(x, x + y - 1) for x, y in zip(row['qstarts'], row['block_sizes'])]
         ref_ranges = [(x, x + y - 1) for x, y in zip(row['tstarts'], row['block_sizes'])]
         seq = ''
@@ -297,7 +302,7 @@ class Blat:
 def blat_contigs(
         evidence,
         INPUT_BAM_CACHE,
-        reference_genome,
+        REFERENCE_GENOME,
         ref_2bit='/home/pubseq/genomes/Homo_sapiens/GRCh37/blat/hg19.2bit',
         min_percent_of_max_score=0.8,
         min_identity=0.95,
@@ -311,7 +316,7 @@ def blat_contigs(
     Args:
         evidence (list of Evidence): the iterable container of of Evidence object which has associated contigs
         INPUT_BAM_CACHE (BamCache): the bam to use as a template in generating bam-like reads
-        reference_genome (dict of string and str): reference fasta sequences by template name
+        REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence by template/chr name
         ref_2bit (str): path to the 2bit file for blat
         min_percent_of_max_score (float): ignores all alignments with a score less
         min_identity (float): minimum percent identity
@@ -385,7 +390,7 @@ def blat_contigs(
             reads = []
             for rank, row in enumerate(filtered_rows):
                 try:
-                    read = Blat.pslx_row_to_pysam(row, INPUT_BAM_CACHE, reference_genome)
+                    read = Blat.pslx_row_to_pysam(row, INPUT_BAM_CACHE, REFERENCE_GENOME)
                     read.set_tag(PYSAM_READ_FLAGS.BLAT_SCORE, row['score'], value_type='i')
                     read.set_tag(PYSAM_READ_FLAGS.BLAT_ALIGNMENTS, len(filtered_rows), value_type='i')
                     read.set_tag(PYSAM_READ_FLAGS.BLAT_PMS, min_percent_of_max_score, value_type='f')

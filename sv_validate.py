@@ -4,7 +4,7 @@ About
 ---------
 
 This is the second step in the svmerge pipeline. This is the step responsible for validating
-the events/clusters from the first/merge step. The putative breakpoint pairs are investigated 
+the events/clusters from the first/merge step. The putative breakpoint pairs are investigated
 in the respective bam file. The evidence is collected and summarized. Outputs are written to
 the validation subfolder in the pattern as follows
 
@@ -107,7 +107,7 @@ def read_cluster_file(name, is_stranded):
             COLUMNS.break1_position_end: int,
             COLUMNS.break2_position_start: int,
             COLUMNS.break2_position_end: int,
-            COLUMNS.opposing_strands: TSV.bool
+            COLUMNS.opposing_strands: TSV.tsv_boolean
         }
     )
     evidence = []
@@ -159,19 +159,19 @@ def add_evidence_args_to_parser(parse_group):
     parse_group.add_argument(
         '--read_length', default=default.read_length, type=int, help='length of reads in the bam file')
     parse_group.add_argument(
-        '--stdev_isize', default=default.stdev_isize, type=int, 
+        '--stdev_isize', default=default.stdev_isize, type=int,
         help='the standard deviation in insert sizes of paired end reads')
     parse_group.add_argument(
-        '--median_insert_size', default=default.median_insert_size, type=int, 
+        '--median_insert_size', default=default.median_insert_size, type=int,
         help='the median insert size of paired end reads')
     parse_group.add_argument(
-        '--stdev_count_abnormal', default=default.stdev_count_abnormal, type=int, 
+        '--stdev_count_abnormal', default=default.stdev_count_abnormal, type=int,
         help='the number of standard deviations away from the normal considered expected and therefore not '
         'qualifying as flanking reads')
     parse_group.add_argument(
         '--call_error', default=default.call_error, type=int, help='buffer zone for the evidence window')
     parse_group.add_argument(
-        '--min_splits_reads_resolution', default=default.min_splits_reads_resolution, type=int, 
+        '--min_splits_reads_resolution', default=default.min_splits_reads_resolution, type=int,
         help='minimum number of split reads required to call a breakpoint by split reads')
     parse_group.add_argument(
         '--min_anchor_exact', default=default.min_anchor_exact, type=int)
@@ -180,29 +180,29 @@ def add_evidence_args_to_parser(parse_group):
     parse_group.add_argument(
         '--min_anchor_match', default=default.min_anchor_match, type=float)
     parse_group.add_argument(
-        '--min_mapping_quality', default=default.min_mapping_quality, type=int, 
+        '--min_mapping_quality', default=default.min_mapping_quality, type=int,
         help='the minimum mapping quality of reads to be used as evidence')
     parse_group.add_argument(
-        '--fetch_reads_limit', default=default.fetch_reads_limit, type=int, 
+        '--fetch_reads_limit', default=default.fetch_reads_limit, type=int,
         help='maximum number of reads, cap, to loop over for any given evidence window')
     parse_group.add_argument(
-        '--fetch_reads_bins', default=default.fetch_reads_bins, type=int, 
+        '--fetch_reads_bins', default=default.fetch_reads_bins, type=int,
         help='number of bins to split an evidence window into to ensure more even sampling of high coverage '
         'regions')
     parse_group.add_argument(
-        '--filter_secondary_alignments', default=default.filter_secondary_alignments, type=bool, 
+        '--filter_secondary_alignments', default=default.filter_secondary_alignments, type=bool,
         help='filter secondary alignments when gathering read evidence')
     parse_group.add_argument(
         '--consensus_req', default=default.consensus_req, type=int)
     parse_group.add_argument(
         '--sc_extension_stop', default=default.sc_extension_stop, type=int)
     parse_group.add_argument(
-        '--assembly_min_edge_weight', default=default.assembly_min_edge_weight, type=int, 
+        '--assembly_min_edge_weight', default=default.assembly_min_edge_weight, type=int,
         help='when building the initial deBruijn graph edge weights are determined by the frequency of the kmer '
         'they represent in all the input sequences. The parameter here discards edges to simply the graph if they '
         'have a weight less than specified')
     parse_group.add_argument(
-        '--assembly_min_remap', default=default.assembly_min_remap, type=int, 
+        '--assembly_min_remap', default=default.assembly_min_remap, type=int,
         help='The minimum input sequences that must remap for an assembly to be used')
     parse_group.add_argument(
         '--min_non_target_aligned_split_reads', default=default.min_non_target_aligned_split_reads, type=int,
@@ -584,7 +584,7 @@ def main():
     with open(IGV_BATCH_FILE, 'w') as fh:
         log('writing:', IGV_BATCH_FILE)
         fh.write('new\ngenome {}\n'.format(args.igv_genome))
-        
+
         fh.write('load {} name="{}"\n'.format(PASSED_BED_FILE, 'passed events'))
         fh.write('load {} name="{}"\n'.format(CONTIG_BAM, 'aligned contigs'))
         fh.write('load {} name="{}"\n'.format(EVIDENCE_BED, 'evidence windows'))

@@ -118,7 +118,7 @@ def main():
         args.input,
         require=[COLUMNS.cluster_id, COLUMNS.validation_id],
         cast={
-            COLUMNS.stranded.name: TSV.bool
+            COLUMNS.stranded.name: TSV.tsv_boolean
         },
         _in={
             COLUMNS.protocol: PROTOCOL,

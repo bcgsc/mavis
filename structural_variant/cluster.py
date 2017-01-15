@@ -137,7 +137,7 @@ class IntervalPair:
         a given distance between weighted means of the different groups
 
         Args:
-            groups (list of set of IntervalPair): a list of sets of interval pairs
+            groups (:class:`list` of :class:`set` of :class:`IntervalPair`): a list of sets of interval pairs
             r (int): the distance to determine grouping
         """
         queue = sorted(groups, key=lambda x: IntervalPair.weighted_mean(*x))
@@ -174,12 +174,12 @@ class IntervalPair:
         clusters a list of IntervalPair objects
 
         Args:
-            pairs (list of IntervalPair): list of IntervalPair objects
+            pairs (:class:`list` of :class:`IntervalPair`): list of IntervalPair objects
             r (int): the distance for grouping clusters
             k (int): the clique size to look for
 
         Returns:
-            list of set of IntervalPair: a list of sets of interval pairs representing their clusters/groupings
+            :class:`list` of :class:`set` of :class:`IntervalPair`: a list of sets of interval pairs representing their clusters/groupings
         """
         # build the initial graph
         G = nx.Graph()
@@ -201,7 +201,7 @@ def is_complete(G, N):
     checks if N is a complete subgraph of G
 
     Args:
-        G (nx.Graph): the input supergraph
+        G (networkx.Graph): the input supergraph
         N (list): a list of nodes in G
     Returns:
         bool: True if N as a subgraph of G is complete False otherwise
