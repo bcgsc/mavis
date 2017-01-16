@@ -38,7 +38,8 @@ General Process
 """
 import argparse
 from structural_variant.breakpoint import read_bpp_from_input_file
-from structural_variant.annotate import gather_annotations, load_reference_genes, load_reference_genome, FusionTranscript
+from structural_variant.annotate import load_reference_genes, load_reference_genome
+from structural_variant.annotate.variant import gather_annotations, FusionTranscript
 from structural_variant.error import DiscontinuousMappingError
 from structural_variant import __version__
 from structural_variant.draw import Diagram
