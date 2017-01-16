@@ -24,9 +24,9 @@ def calculate_ORF(spliced_cdna_sequence, min_orf_size=None):
         stops = []
         for i, aa in enumerate(aa_sequence):
             if aa == START_AA:
-                starts.append(i * CODON_SIZE + 1)
+                starts.append(i * CODON_SIZE + 1 + offset)
             elif aa == STOP_AA:
-                stops.append((i + 1) * CODON_SIZE)
+                stops.append((i + 1) * CODON_SIZE + offset)
 
         orfs = []
 
@@ -199,7 +199,7 @@ class Domain:
                     scores.append((Interval(p, p + len(seq) - 1), score))
             if len(scores) == 0:
                 raise UserWarning('could not align a given region')
-            results[seq] = scores
+            results.setdefault(seq, []).extend(scores)
 
         # take the best score for each region and see if they work in sequence
         best = []

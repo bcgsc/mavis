@@ -1,3 +1,4 @@
+import svgwrite
 from svgwrite import Drawing
 from .interval import Interval
 from .constants import STRAND, ORIENT
@@ -7,6 +8,18 @@ from colour import Color
 # draw gene box
 HEX_WHITE = '#FFFFFF'
 HEX_BLACK = '#000000'
+
+
+class Tag(svgwrite.base.BaseElement):
+    def __init__(self, elementname, content='', **kwargs):
+        self.elementname = elementname
+        super(Tag, self).__init__(**kwargs)
+        self.content = content
+
+    def get_xml(self):
+        xml = super(Tag, self).get_xml()
+        xml.text = self.content
+        return xml
 
 
 class LabelMapping:
@@ -509,7 +522,6 @@ class Diagram:
 
         y += self.BOTTOM_MARGIN
         canvas.attribs['height'] = y
-        print('canvas.attribs', canvas.attribs)
         return canvas
 
         # add transcript tracks if applicable (and domains)
@@ -689,7 +701,7 @@ class Diagram:
                     fill = self.DOMAIN_COLOR
                     try:
                         match, total = d.score_region_mapping(REFERENCE_GENOME)
-                        percent = int(round(match * 100 / total, 0)) % len(self.DOMAIN_FILL_GRADIENT)
+                        percent = int(round(match * 100 / total, 0)) % len(self.DOMAIN_FILL_GRADIENT) - 1
                         fill = self.DOMAIN_FILL_GRADIENT[percent]
                     except AttributeError:
                         pass
@@ -702,9 +714,13 @@ class Diagram:
                         t = Interval.convert_pos(mapping, transcript.convert_cdna_to_genomic(temp.end))
                         if s > t:
                             t, s = (s, t)
-                        gd.add(canvas.rect(
+                        gdr = canvas.g(class_='domain_region')
+                        gdr.add(canvas.rect(
                             (s, 0), (t - s + 1, self.DOMAIN_TRACK_HEIGHT),
                             fill=fill, class_='region'))
+                        gdr.add(Tag('title', 'Domain {} region {}_{}aa'.format(
+                            d.name if d.name else '', region.start, region.end)))
+                        gd.add(gdr)
                     gd.translate(0, py)
 
                     gd.add(canvas.text(
@@ -717,7 +733,7 @@ class Diagram:
                     gp.add(gd)
                     py += self.DOMAIN_TRACK_HEIGHT
                 gp.translate(0, y)
-                y += py
+                y += py + self.INNER_MARGIN
                 main_group.add(gp)
 
         y += self.BREAKPOINT_BOTTOM_MARGIN
@@ -915,6 +931,8 @@ class Diagram:
             l = canvas.line((width, y), (width, height))
             l.stroke(self.BREAKPOINT_COLOR, width=self.BREAKPOINT_ORIENT_STROKE_WIDTH)
             g.add(l)
+        g.add(Tag('title', 'Breakpoint {}:{}-{} strand={} orient={}'.format(
+            breakpoint.chr, breakpoint.start, breakpoint.end, breakpoint.strand, breakpoint.orient)))
         return g
 
     def draw_exon(self, canvas, exon, width, height, fill, label='', tear_left=False, tear_right=False):
@@ -973,6 +991,7 @@ class Diagram:
                 class_='label'
             )
             g.add(t)
+            g.add(Tag('title', 'Exon {} {}_{}'.format(exon.name if exon.name else '', exon.start, exon.end)))
         return g
 
     def draw_gene(self, canvas, gene, width, height, fill, label='', REFERENCE_GENOME=None):
@@ -1077,6 +1096,10 @@ class Diagram:
                     style=self.FONT_STYLE.format(font_size=self.LABEL_FONT_SIZE, text_anchor='middle'),
                     class_='label'
                 ))
+        
+        group.add(
+            Tag('title', 'Gene {} {}:{}_{}{}'.format(gene.name if gene.name else '', 
+                gene.chr, gene.start, gene.end, gene.strand)))
         return group
 
     @classmethod

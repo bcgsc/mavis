@@ -185,7 +185,7 @@ class TestDraw(unittest.TestCase):
         ann = Annotation(bpp, transcript1=t, transcript2=t, event_type=SVTYPE.DUP)
         ann.add_gene(Gene('1', 1500, 1950, strand=STRAND.POS))
 
-        reference_genome = {'1': MockSeq(MockString())}
+        reference_genome = {'1': MockSeq(MockString('A'))}
         ft = FusionTranscript.build(ann, reference_genome)
 
         canvas = d.draw(ann, ft)
@@ -220,7 +220,7 @@ class TestDraw(unittest.TestCase):
         ann.add_gene(Gene('1', 3000, 3980, strand=STRAND.POS))
         ann.add_gene(Gene('1', 3700, 4400, strand=STRAND.NEG))
 
-        reference_genome = {'1': MockSeq(MockString())}
+        reference_genome = {'1': MockSeq(MockString('A'))}
 
         ft = FusionTranscript.build(ann, reference_genome)
         self.assertEqual(t1.exons[0], ft.exon_mapping[ft.exons[0]])
@@ -281,7 +281,7 @@ class TestDraw(unittest.TestCase):
         ann.add_gene(Gene('2', 5500, 9000, strand=STRAND.POS))
         ann.add_gene(Gene('2', 3700, 4400, strand=STRAND.NEG))
 
-        reference_genome = {'1': MockSeq(MockString()), '2': MockSeq(MockString())}
+        reference_genome = {'1': MockSeq(MockString('A')), '2': MockSeq(MockString('A'))}
 
         ft = FusionTranscript.build(ann, reference_genome)
 

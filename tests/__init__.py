@@ -85,11 +85,11 @@ class MockSeq:
 
 
 class MockString:
-    def __init__(self):
-        pass
+    def __init__(self, char=' '):
+        self.char = char
 
     def __getitem__(self, index):
         if isinstance(index, slice):
-            return ' ' * (index.stop - index.start)
+            return self.char * (index.stop - index.start)
         else:
-            return ' '
+            return self.char

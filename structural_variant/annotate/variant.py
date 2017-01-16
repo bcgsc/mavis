@@ -82,7 +82,11 @@ class FusionTranscript(Transcript):
         elif ann.untemplated_sequence is None:
             raise AttributeError(
                 'cannot build a fusion transcript where the untemplated sequence has not been specified')
-
+        
+        print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+        print('BUILDING FUSION:', ann.transcript1.name, ann.transcript2.name, ann)
+        print('transcript1 splicing', ann.transcript1.name, ann.transcript1.splicing_patterns())
+        print('transcript2 splicing', ann.transcript2.name, ann.transcript2.splicing_patterns())
         ft = FusionTranscript()
 
         if ann.transcript1 == ann.transcript2 and ann.event_type not in [SVTYPE.DEL, SVTYPE.INS]:
@@ -190,7 +194,7 @@ class FusionTranscript(Transcript):
         # get all splicing patterns
         for spl_patt in ft.splicing_patterns():
             # calculate all ORF for each splicing pattern
-            spliced_cdna_seq = ft.get_spliced_cdna_sequence(spl_patt, REFERENCE_GENOME)
+            spliced_cdna_seq = ft.get_spliced_cdna_sequence(spl_patt)
             orfs = calculate_ORF(spliced_cdna_seq, min_orf_size=min_orf_size)
             if max_orf_cap and len(orfs) > max_orf_cap:  # limit the number of orfs returned
                 orfs = sorted(orfs, key=lambda x: len(x), reverse=True)
@@ -204,20 +208,67 @@ class FusionTranscript(Transcript):
                 orfs = temp
             # create the translations
             for orf in orfs:
-                tl = Translation(orf.start, orf.end, ft, spl_patt)
+                s = spliced_cdna_seq[orf.start - 1:orf.end]
+                tl = Translation(orf.start, orf.end, ft, spl_patt, sequence=s)
 
         # remap the domains from the original translations to the current translations
         for new_tl in ft.translations:
-            aa_seq = new_tl.get_AA_sequence(REFERENCE_GENOME)
+            aa_seq = new_tl.get_AA_sequence()
+            print('ft translation', new_tl.get_AA_sequence())
+            print('ft splicing', new_tl.splicing_pattern)
             for tl in ann.transcript1.translations + ann.transcript2.translations:
                 for dom in tl.domains:
                     try:
                         match, total, regions = dom.align_seq(aa_seq, REFERENCE_GENOME)
                         if min_domain_mapping_match is None or match / total >= min_domain_mapping_match:
                             Domain(dom.name, regions, new_tl)
+                        else:
+                            print('domain failed to map', ann.transcript1.name, 'fused to', ann.transcript2.name)
+                            print('domain', dom.name, 'match=', match, 'total=', total, 'min_domain_mapping_match=', min_domain_mapping_match)
+                            print('domain original transcript', dom.translation.transcript.name)
+                            print('domain coord', [(dr.start, dr.end) for dr in dom.regions], dom.name)
+                            print('tranlsation aa seq')
+                            print(aa_seq)
+                            print('domain region seqs', dom.get_sequences(REFERENCE_GENOME))
                     except UserWarning:
                         pass
         return ft
+    
+    def get_sequence(self):
+        if self.sequence:
+            return self.sequence
+        elif self.gene and self.gene.sequence:
+            # gene has a sequence set
+            start = self.start - self.gene.start
+            end = self.end - self.gene.end + len(self.gene.sequence)
+            if self.strand == STRAND.NEG:
+                return reverse_complement(self.gene.sequence[start:end])
+            else:
+                return self.gene.sequence[start:end]
+        else:
+            raise AttributeError('insufficient sequence information')
+    
+    def get_spliced_cdna_sequence(self, splicing_pattern):
+        """
+        Args:
+            splicing_pattern (:class:`list` of :class:`int`): the list of splicing positions
+            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence
+                by template/chr name
+
+        Returns:
+            str: the spliced cDNA sequence
+        """
+        temp = sorted([self.start] + splicing_pattern + [self.end])
+        m = min(temp)
+        conti = []
+        for i in range(0, len(temp) - 1, 2):
+            conti.append(Interval(temp[i] - m, temp[i + 1] - m))
+        seq = self.get_sequence()
+        if self.strand == STRAND.NEG:
+            # adjust the continuous intervals for the min and flip if revcomp
+            seq = reverse_complement(seq)
+        spliced_seq = ''.join([str(seq[i.start:i.end + 1]) for i in conti])
+        return spliced_seq if self.strand == STRAND.POS else reverse_complement(spliced_seq)
 
     @classmethod
     def _pull_exons(cls, transcript, breakpoint, reference_sequence):

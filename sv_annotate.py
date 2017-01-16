@@ -98,7 +98,7 @@ def parse_arguments():
     parser.add_argument(
         '--max_orf_cap', default=3, type=int, help='keep the n longest orfs')
     parser.add_argument(
-        '--min_domain_match', default=0.8, type=float, 
+        '--min_domain_mapping_match', default=0.8, type=float, 
         help='minimum percent match for the domain to be considered aligned')
     args = parser.parse_args()
     return args
@@ -116,7 +116,27 @@ def main():
     REFERENCE_GENOME = load_reference_genome(args.reference_genome)
     log('loading:', args.annotations)
     REFERENCE_ANNOTATIONS = load_reference_genes(args.annotations)
-
+    
+    # test that the sequence makes sense for a random transcript
+    for gene in REFERENCE_ANNOTATIONS['22']:
+        if gene.name == 'ENSG00000182944':
+            for t in gene.transcripts:
+                if t.name == 'ENST00000332035':
+                    for tl in t.translations:
+                        
+                        s = 'MASTDYSTYSQAAAQQGYSAYTAQPTQGYAQTTQAYGQQSYGTYGQPTDVSYTQAQTTAT' \
+                            'YGQTAYATSYGQPPTGYTTPTAPQAYSQPVQGYGTGAYDTTTATVTTTQASYAAQSAYGT' \
+                            'QPAYPAYGQQPAATAPTSYSSTQPTSYDQSSYSQQNTYGQPSSYGQQSSYGQQSSYGQQP' \
+                            'PTSYPPQTGSYSQAPSQYSQQSSSYGQQSSFRQDHPSSMGVYGQESGGFSGPGENRSMSG' \
+                            'PDNRGRGRGGFDRGGMSRGGRGGGRGGMGSAGERGGFNKPGGPMDEGPDLDLGPPVDPDE' \
+                            'DSDNSAIYVQGLNDSVTLDDLADFFKQCGVVKMNKRTGQPMIHIYLDKETGKPKGDATVS' \
+                            'YEDPPTAKAAVEWFDGKDFQGSKLKVSLARKKPPMNSMRGGLPPREGRGMPPPLRGGPGG' \
+                            'PGGPGGPMGRMGGRGGDRGGFPPRGPRGSRGNPSGGGNVQHRAGDWQCPNPGCGNQNFAW' \
+                            'RTECNQCKAPKPEGFLPPPFPPPGGDRGRGGPGGMRGGRGGLMDRGGPGGMFRGGRGGDR' \
+                            'GGFRGGRGMDRGGFGGGRRGGPGGPPGPLMEQMGGRRGGRGGPGKMDKGEHRQERRDRPY*'
+                        print(s)
+                        print(tl.get_AA_sequence(REFERENCE_GENOME))
+                        assert(tl.get_AA_sequence(REFERENCE_GENOME) == s)
     log('loading:', args.input)
     bpps = read_bpp_from_input_file(
         args.input,
@@ -155,19 +175,17 @@ def main():
             for tl in ann.transcript1.translations + ann.transcript2.translations:
                 for d in tl.domains:
                     domains.add(d.name)
-            print(ann.transcript1.name, *[[d.name for d in tl.domains] for tl in ann.transcript1.translations])
-            print(ann.transcript2.name, *[[d.name for d in tl.domains] for tl in ann.transcript2.translations])
-            ft = FusionTranscript.build(ann, REFERENCE_GENOME, min_orf_size=args.min_orf_size, max_orf_cap=args.max_orf_cap)
-            print('splicing options', len(ft.splicing_patterns()))
-            for spl in ft.splicing_patterns():
-                print(spl)
-                print('spliced sequence', len(ft.get_spliced_cdna_sequence(spl, REFERENCE_GENOME)))
+            ft = FusionTranscript.build(
+                ann, REFERENCE_GENOME,
+                min_orf_size=args.min_orf_size,
+                max_orf_cap=args.max_orf_cap,
+                min_domain_mapping_match=args.min_domain_mapping_match
+            )
+            print('===========================================================================')
+            print('fusion', ann.transcript1.name, ann.transcript2.name)
             # try building the fusion proteins
-            print('translations', len(ft.translations))
             for tl in ft.translations:
-                new_domains = [d.name for d in tl.domains]
-                print('translation', tl.start, tl.end, tl.splicing_pattern)
-                print('kept', len(new_domains), 'of', len(domains))
+                print('translation seq', tl.get_AA_sequence())
             d = Diagram()
             canvas = d.draw(ann, ft, REFERENCE_GENOME=REFERENCE_GENOME)
             name = os.path.join(args.output, FILENAME_PREFIX + '.' + ann.data[COLUMNS.annotation_id] + '.svg')
