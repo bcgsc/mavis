@@ -70,6 +70,19 @@ class BamCache:
         """
         wrapper around the fetch method, returns a list to avoid errors with changing the file pointer
         position from within the loop. Also caches reads if requested and can return a limited read number
+
+        Args:
+            chrom (str): the chromosome
+            start (int): the start position
+            stop (int): the end position
+            read_limit (int): the maximum number of reads to parse
+            cache (bool): flag to store reads
+            sample_bins (int): number of bins to split the region into
+            cache_if (callable): function to check to against a read to determine if it should be cached
+            bin_gap_size (int): gap between the bins for the fetch area
+
+        Returns:
+            :class:`set` of :class:`pysam.AlignedSegment`: set of reads gathered from the region
         """
         # try using the cache to avoid fetching regions more than once
         result = []
@@ -93,10 +106,10 @@ class BamCache:
         """
         Args:
             read (pysam.AlignedSegment): the read
-            primary_only (boolean): ignore secondary alignments
-            allow_file_access (boolean): determines if the bam can be accessed to try to find the mate
+            primary_only (bool): ignore secondary alignments
+            allow_file_access (bool): determines if the bam can be accessed to try to find the mate
         Returns:
-            list of pysam.AlignedSegment: list of mates of the input read
+            :class:`list` of :class:`pysam.AlignedSegment`: list of mates of the input read
         """
         # NOTE: will return all mate alignments that have been cached
         putative_mates = self.cache.get(read.query_name, set())
@@ -143,6 +156,13 @@ class CigarTools:
         """
         for cigar tuples where M is used, recompute to replace with X/= for increased
         utility and specificity
+
+        Args:
+            read (pysam.AlignedSegment): the input read
+            ref (str): the reference sequence
+
+        Returns:
+            :class:`list` of :class:`tuple` of :class:`int` and :class:`int`: the cigar tuple
         """
         temp = []
         offset = 0
@@ -181,6 +201,10 @@ class CigarTools:
         """
         computes the longest sequence of exact matches allowing for 'x' event interrupts
 
+        Args:
+            cigar: cigar tuples
+            max_fuzzy_interupt (int): number of mismatches allowed
+
         """
         temp = CigarTools.join(cigar)
         longest_fuzzy_match = 0
@@ -205,6 +229,9 @@ class CigarTools:
     def longest_exact_match(cls, cigar):
         """
         returns the longest consecutive exact match
+
+        Args:
+            cigar (:class:`list` of :class:`tuple` of :class:`int` and :class:`int`): the cigar tuples
         """
         return CigarTools.longest_fuzzy_match(cigar, 0)
 
@@ -213,7 +240,7 @@ class CigarTools:
         """scoring based on sw alignment properties with gap extension penalties
 
         Args:
-            cigar (list of CIGAR and int): list of cigar tuple values
+            cigar (:class:`list` of :class:`~structural_variant.constants.CIGAR` and :class:`int`): list of cigar tuple values
             MISMATCH (int): mismatch penalty
             MATCH (int): match penalty
             GAP (int): initial gap penalty
@@ -289,7 +316,7 @@ class CigarTools:
         exact match aligned portion to signal stop
 
         Args:
-            original_cigar (list of CIGAR and int): the input cigar
+            original_cigar (:class:`list` of :class:`~structural_variant.constants.CIGAR` and :class:`int`): the input cigar
             min_exact_to_stop_softclipping (int): number of exact matches to terminate extension
 
         Returns:

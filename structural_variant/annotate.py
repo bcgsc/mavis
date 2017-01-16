@@ -32,9 +32,9 @@ def calculate_ORF(spliced_cdna_sequence, min_orf_size=None):
                 starts.append(i * CODON_SIZE + 1)
             elif aa == STOP_AA:
                 stops.append((i + 1) * CODON_SIZE)
-        
+
         orfs = []
-        
+
         for s in starts:
             for t in sorted(stops):
                 if t > s:
@@ -42,7 +42,7 @@ def calculate_ORF(spliced_cdna_sequence, min_orf_size=None):
                     if not min_orf_size or len(i) >= min_orf_size:
                         orfs.append(Interval(s, t))
                     break
-        
+
         temp = {}
         for orf in orfs:
             if orf.end not in temp:
@@ -348,6 +348,12 @@ class Gene(BioInterval):
     def get_sequence(self, REFERENCE_GENOME):
         """
         gene sequence is always given wrt to the positive forward strand regardless of gene strand
+
+        Args:
+            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence by template/chr name
+
+        Returns:
+            str: the sequence of the gene
         """
         if self.sequence:
             return self.sequence
@@ -385,9 +391,20 @@ class Translation(BioInterval):
         return self.reference_object
 
     def convert_aa_to_cdna(self, pos):
+        """
+        Args:
+            pos (int): the amino acid position
+
+        Returns:
+            int: the cdna equivalent
+        """
         return Interval(self.start - 1 + (pos - 1) * 3 + 1, self.start - 1 + pos * 3)
 
     def add_domain(self, domain):
+        """
+        Args:
+            domain (Domain): the domain to be added
+        """
         domain.reference_object = self
         if domain not in self.domains:
             self.domains.append(domain)
@@ -637,7 +654,7 @@ class Transcript(BioInterval):
             int: the cdna equivalent
 
         Raises:
-            DiscontiuousMappingError: when a genomic position not present in the cdna is attempted to be converted
+            :class:`~structural_variant.error.DiscontinuousMappingError`: when a genomic position not present in the cdna is attempted to be converted
         """
         mapping = self._genomic_to_cdna_mapping()
         return Interval.convert_pos(mapping, pos)
@@ -741,6 +758,14 @@ class Transcript(BioInterval):
                 return str(REFERENCE_GENOME[self.gene.chr].seq[self.start - 1:self.end])
 
     def get_spliced_cdna_sequence(self, splicing_pattern, REFERENCE_GENOME=None):
+        """
+        Args:
+            splicing_pattern (:class:`list` of :class:`int`): the list of splicing positions
+            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence by template/chr name
+
+        Returns:
+            str: the spliced cDNA sequence
+        """
         temp = sorted([self.start] + splicing_pattern + [self.end])
         m = min(temp)
         conti = []
@@ -952,7 +977,7 @@ class FusionTranscript(Transcript):
             # create the translations
             for orf in orfs:
                 tl = Translation(orf.start, orf.end, ft, spl_patt)
-        
+
         # remap the domains from the original translations to the current translations
         for new_tl in ft.translations:
             aa_seq = new_tl.get_AA_sequence(REFERENCE_GENOME)
@@ -1143,11 +1168,19 @@ class Domain:
     @property
     def key(self):
         return tuple([self.name, self.translation])
-    
+
     def score_region_mapping(self, REFERENCE_GENOME=None):
         """
+        compares the sequence in each DomainRegion to the sequence collected for that domain region from the translation object
+
         Args:
             REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence by template/chr name
+
+        Returns:
+            tuple of int and int: tuple contains
+
+                - int: the number of matching amino acids
+                - int: the total number of amino acids
         """
         if self.translation:
             aa = self.translation.get_AA_sequence(REFERENCE_GENOME)
@@ -1167,8 +1200,17 @@ class Domain:
 
     def get_sequences(self, REFERENCE_GENOME=None):
         """
-        returns the amino acid sequences for each of the domain regions associated with 
+        returns the amino acid sequences for each of the domain regions associated with
         this domain in the order of the regions (sorted by start)
+
+        Args:
+            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence by template/chr name
+
+        Returns:
+            :class:`list` of :class:`str`: list of amino acid sequences for each DomainRegion
+
+        Raises:
+            AttributeError: if there is not enough sequence information given to determine this
         """
         sequences = {}
         for region in self.regions:
@@ -1194,6 +1236,10 @@ class Domain:
         return a list of intervals for the alignment. If multiple alignments are found,
         then raise an error
 
+        Args:
+            input_sequence (str): the sequence to be aligned to
+            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence by template/chr name
+
         Returns:
             :any:`list` of :any:`DomainRegion`: the list of domain regions on the new input sequence
 
@@ -1202,7 +1248,7 @@ class Domain:
             UserWarning: if a valid alignment could not be found or no best alignment was found
         """
         seq_list = self.get_sequences(REFERENCE_GENOME)
-        
+
         results = {}
         for seq in set(seq_list):
             # align the current sequence to find the best matches
@@ -1234,13 +1280,13 @@ class Domain:
                     if pos.start > last.end:
                         new_combinations.append(current_set + [(pos, score)])
             combinations = new_combinations
-        
+
         # now go through the list for the highest score
         scored_combinations = []
         for pos_list in combinations:
             score = sum([t[1] for t in pos_list])
             scored_combinations.append((score, [t[0] for t in pos_list]))
-        
+
         if len(scored_combinations) == 0:
             raise UserWarning('could not map the sequences to the input')
         else:

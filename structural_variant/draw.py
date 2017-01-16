@@ -550,12 +550,12 @@ class Diagram:
         return main_group
 
     def draw_transcript(
-        self, canvas, transcript, 
-        target_width=None, 
-        breakpoints=[], 
-        labels=LabelMapping(), 
-        colors={}, 
-        mapping=None, 
+        self, canvas, transcript,
+        target_width=None,
+        breakpoints=[],
+        labels=LabelMapping(),
+        colors={},
+        mapping=None,
         REFERENCE_GENOME=None
     ):
         """
@@ -565,13 +565,13 @@ class Diagram:
         if there are mutltiple splicing variants then mutliple exon tracks are drawn
 
         Args:
-            canvas (svgwrite.Drawing): the main svgwrite object used to create new svg elements
+            canvas (svgwrite.drawing.Drawing): the main svgwrite object used to create new svg elements
             target_width (int): the target width of the diagram
-            t (structural_variant.annotate.Transcript): the transcript being drawn
+            t (Transcript): the transcript being drawn
             exon_color (str): the color being used for the fill of the exons
             utr_color (str): the color for the fill of the UTR regions
-            abrogated_splice_sites (list of int): list of positions to ignore as splice sites
-            breakpoints (iterable of Breakpoint): the breakpoints to overlay
+            abrogated_splice_sites (:class:`list` of :class:`int`): list of positions to ignore as splice sites
+            breakpoints (:class:`list` of :class:`Breakpoint`): the breakpoints to overlay
 
         Return:
             svgwrite.container.Group: the group element for the transcript diagram
@@ -741,11 +741,11 @@ class Diagram:
         the number of tracks required to avoid overlap
 
         Args:
-            canvas (svgwrite.Drawing): the main svgwrite object used to create new svg elements
+            canvas (svgwrite.drawing.Drawing): the main svgwrite object used to create new svg elements
             target_width (int): the target width of the diagram
-            genes (iterable of Gene): the list of genes to draw
-            breakpoints (iterable of Breakpoint): the breakpoints to overlay
-            colors (dict of Gene and str): dictionary of the colors assigned to each Gene as fill
+            genes (:class:`list` of :class:`Gene`): the list of genes to draw
+            breakpoints (:class:`list` of :class:`Breakpoint`): the breakpoints to overlay
+            colors (:class:`dict` of :class:`Gene` and :class:`str`): dictionary of the colors assigned to each Gene as fill
 
         Return:
             svgwrite.container.Group: the group element for the diagram.
@@ -878,7 +878,7 @@ class Diagram:
     def draw_breakpoint(self, canvas, breakpoint, width, height, label=''):
         """
         Args:
-            canvas (svgwrite.Drawing): the main svgwrite object used to create new svg elements
+            canvas (svgwrite.drawing.Drawing): the main svgwrite object used to create new svg elements
             breakpoint (Breakpoint): the breakpoint to draw
             width (int): the pixel width
             height (int): the pixel height
@@ -943,7 +943,7 @@ class Diagram:
 
 
         Args:
-            canvas (svgwrite.Drawing): the main svgwrite object used to create new svg elements
+            canvas (svgwrite.drawing.Drawing): the main svgwrite object used to create new svg elements
             exon (Exon): the exon to draw
             width (int): the pixel width
             height (int): the pixel height
@@ -997,7 +997,7 @@ class Diagram:
             +-----+
 
         Args:
-            canvas (svgwrite.Drawing): the main svgwrite object used to create new svg elements
+            canvas (svgwrite.drawing.Drawing): the main svgwrite object used to create new svg elements
             gene (Gene): the gene to draw
             width (int): the pixel width
             height (int): the pixel height

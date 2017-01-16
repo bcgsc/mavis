@@ -78,7 +78,7 @@ class BreakpointPair:
 
     @property
     def interchromosomal(self):
-        """(boolean): True if the breakpoints are on different chromosomes, False otherwise"""
+        """(:class:`bool`): True if the breakpoints are on different chromosomes, False otherwise"""
         if self.break1.chr == self.break2.chr:
             return False
         return True
@@ -94,8 +94,8 @@ class BreakpointPair:
         Args:
             b1 (Breakpoint): the first breakpoint
             b2 (Breakpoint): the second breakpoint
-            stranded (boolean): if not stranded then +/- is equivalent to -/+
-            opposing_strands (boolean): are the strands at the breakpoint opposite? i.e. +/- instead of +/+
+            stranded (bool): if not stranded then +/- is equivalent to -/+
+            opposing_strands (bool): are the strands at the breakpoint opposite? i.e. +/- instead of +/+
             untemplated_sequence (str): sequence between the breakpoints that is not part of either breakpoint
             data (dict): optional dictionary of attributes associated with this pair
 
@@ -227,6 +227,9 @@ class BreakpointPair:
             read1 (pysam.AlignedSegment): the first read
             read2 (pysam.AlignedSegment): the second read
 
+        Returns:
+            BreakpointPair: the newly called breakpoint pair from the contig
+
         .. todo::
 
             return multiple events not just the major event
@@ -244,7 +247,10 @@ class BreakpointPair:
 
             return multiple events not just the major event
 
-        raises:
+        Returns:
+            BreakpointPair: the newly called breakpoint pair from the contig
+
+        Raises:
             UserWarning: if the contig does not contain insertions/deletions
         """
         read_events = []
@@ -447,6 +453,11 @@ class BreakpointPair:
 
         Args:
             REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence by template/chr name
+
+        Returns:
+            :class:`tuple` of :class:`str` and :class:`str`: tuple contains
+                - str: homologous sequence at the first breakpoint
+                - str: homologous sequence at the second breakpoint
 
         Raises:
             AttributeError: for non specific breakpoints

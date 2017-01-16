@@ -1,6 +1,6 @@
 
 
-class DiscontiuousMappingError(Exception):
+class DiscontinuousMappingError(Exception):
     """
     class to describe errors associated with translating
     coordinates between continuous and discontinuous intervals

@@ -193,7 +193,7 @@ class EvidenceSettings:
                 mapping quality to filter on
             fetch_reads_limit (int):
                 maximum number of reads to loop over for a given event
-            filter_secondary_alignments (boolean):
+            filter_secondary_alignments (bool):
                 don't use secondary alignments when reading evidence from the bam file
             sc_extension_stop (int):
                 when extending softclipped, stop given this number of exact consecutive matches
@@ -640,7 +640,7 @@ class Evidence:
 
         Args:
             read (pysam.AlignedSegment): the read to add
-            first_breakpoint (boolean): add to the first breakpoint (or second if false)
+            first_breakpoint (bool): add to the first breakpoint (or second if false)
         Raises:
             UserWarning: the read does not support this breakpoint or does not pass quality filters
             AttributeError: orientation wasn't specified for the breakpoint

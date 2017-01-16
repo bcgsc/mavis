@@ -39,7 +39,7 @@ General Process
 import argparse
 from structural_variant.breakpoint import read_bpp_from_input_file
 from structural_variant.annotate import gather_annotations, load_reference_genes, load_reference_genome, FusionTranscript
-from structural_variant.error import DiscontiuousMappingError
+from structural_variant.error import DiscontinuousMappingError
 from structural_variant import __version__
 from structural_variant.draw import Diagram
 import TSV
@@ -127,8 +127,8 @@ def main():
         simplify=False)
     log('read {} breakpoint pairs'.format(len(bpps)))
 
-    
-    
+
+
     annotations = []
     for bpp in bpps:
         log('gathering annotations for', bpp)
@@ -145,7 +145,7 @@ def main():
     for i, ann in enumerate(annotations):
         ann.data[COLUMNS.annotation_id] = id_prefix + str(i + 1)
         # try building the fusion product
-        
+
         try:
             domains = set()
             for tl in ann.transcript1.translations + ann.transcript2.translations:
@@ -169,9 +169,9 @@ def main():
             name = os.path.join(args.output, FILENAME_PREFIX + '.' + ann.data[COLUMNS.annotation_id] + '.svg')
             log('generating svg:', name)
             canvas.saveas(name)
-        except (NotImplementedError, AttributeError, DiscontiuousMappingError) as err:
+        except (NotImplementedError, AttributeError, DiscontinuousMappingError) as err:
             print(repr(err))
-    
+
     of = os.path.join(args.output, FILENAME_PREFIX + '.annotation.tab')
     with open(of, 'w') as fh:
         log('writing:', of)

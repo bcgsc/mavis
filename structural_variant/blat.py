@@ -320,7 +320,7 @@ def blat_contigs(
         ref_2bit (str): path to the 2bit file for blat
         min_percent_of_max_score (float): ignores all alignments with a score less
         min_identity (float): minimum percent identity
-        is_protein (boolean): is the sequence an amino acid sequence (used in the blat calculations)
+        is_protein (bool): is the sequence an amino acid sequence (used in the blat calculations)
         MIN_EXTEND_OVERLAP (int): minimum amount of non-shared coverage of the template sequence required to pair alignments
         =blat_options (list of str): optional, can specify alternate blat parameters to use
 

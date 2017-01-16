@@ -83,9 +83,13 @@ class Interval:
             'index input accessor is out of bounds: 1 or 2 only', index)
 
     @classmethod
-    def overlaps(cls, self, other):
+    def overlaps(cls, first, other):
         """
         checks if two intervals have any portion of their given ranges in common
+
+        Args:
+            first (Interval): an interval to be compared
+            other (Interval): an interval to be compared
 
         Example:
             >>> Interval.overlaps(Interval(1, 4), Interval(5, 7))
@@ -95,9 +99,9 @@ class Interval:
             >>> Interval.overlaps((1, 10), (10, 11))
             True
         """
-        if self[1] < other[0]:
+        if first[1] < other[0]:
             return False
-        elif self[0] > other[1]:
+        elif first[0] > other[1]:
             return False
         else:
             return True
@@ -157,7 +161,7 @@ class Interval:
         return False
 
     @classmethod
-    def dist(cls, self, other):
+    def dist(cls, first, other):
         """returns the minimum distance between intervals
 
         Example:
@@ -168,10 +172,10 @@ class Interval:
             >>> Interval.dist((5, 8), (7, 9))
             0
         """
-        if self[1] < other[0]:
-            return self[1] - other[0]
-        elif self[0] > other[1]:
-            return self[0] - other[1]
+        if first[1] < other[0]:
+            return first[1] - other[0]
+        elif first[0] > other[1]:
+            return first[0] - other[1]
         else:
             return 0
 
@@ -248,7 +252,7 @@ class Interval:
         """ convert any given position given a mapping of intervals to another range
 
         Args:
-            mapping (dict of Interval and Interval): a mapping of a set of continuous intervals
+            mapping (:class:`dict` of :class:`Interval` and :class:`Interval`): a mapping of a set of continuous intervals
             pos (int): a position in the first coordinate system
 
         Returns:
@@ -256,7 +260,7 @@ class Interval:
 
         Raises:
             AttributeError: if the input position is outside the set of input segments
-            DiscontiuousMappingError: if the input position cannot be converted to the output system
+            :class:`~structural_variant.error.DiscontinuousMappingError`: if the input position cannot be converted to the output system
 
         Example:
             >>> mapping = {(1, 10): (101, 110), (11, 20): (555, 564)}
@@ -303,26 +307,26 @@ class Interval:
         if i == len(input_intervals):
             curr = input_intervals[i - 1]
             if not forward_to_reverse:
-                raise DiscontiuousMappingError('outside mapped range', after=mapping[curr][1])
+                raise DiscontinuousMappingError('outside mapped range', after=mapping[curr][1])
             else:
-                raise DiscontiuousMappingError('outside mapped range', before=mapping[curr][0])
+                raise DiscontinuousMappingError('outside mapped range', before=mapping[curr][0])
         elif previous_flag:
             curr = input_intervals[i]
             if i == 0:
                 if not forward_to_reverse:
-                    raise DiscontiuousMappingError('outside mapped range', before=mapping[curr][0])
+                    raise DiscontinuousMappingError('outside mapped range', before=mapping[curr][0])
                 else:
-                    raise DiscontiuousMappingError('outside mapped range', after=mapping[curr][1])
+                    raise DiscontinuousMappingError('outside mapped range', after=mapping[curr][1])
             else:  # between two segments
                 prev = input_intervals[i - 1]
                 if not forward_to_reverse:
-                    raise DiscontiuousMappingError(
+                    raise DiscontinuousMappingError(
                         'outside mapped range',
                         before=mapping[prev][1],
                         after=mapping[curr][0]
                     )
                 else:
-                    raise DiscontiuousMappingError(
+                    raise DiscontinuousMappingError(
                         'outside mapped range',
                         before=mapping[curr][1],
                         after=mapping[prev][0]
@@ -341,6 +345,10 @@ class Interval:
     def union(cls, *intervals):
         """
         returns the union of the set of input intervals
+
+        Example:
+            >>> Interval.union((1, 2), (4, 6), (4, 9), (20, 21))
+            Interval(1, 21)
         """
         if len(intervals) < 1:
             raise AttributeError('cannot compute the union of an empty set of intervals')
@@ -350,6 +358,12 @@ class Interval:
     def intersection(cls, *intervals):
         """
         returns None if there is no intersection
+
+        Example:
+            >>> Interval.intersection((1, 10), (2, 8), (7, 15))
+            Interval(7, 8)
+            >>> Interval.intersection((1, 2), (5, 9))
+            None
         """
         if len(intervals) < 1:
             raise AttributeError('cannot compute the intersection of an empty set of intervals')

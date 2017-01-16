@@ -1,5 +1,5 @@
 from structural_variant.interval import Interval
-from structural_variant.error import DiscontiuousMappingError
+from structural_variant.error import DiscontinuousMappingError
 import unittest
 
 class TestInterval(unittest.TestCase):
@@ -105,17 +105,17 @@ class TestInterval(unittest.TestCase):
         self.assertEqual(101, Interval.convert_pos(mapping, 1))
         self.assertEqual(310, Interval.convert_pos(mapping, 50))
 
-        with self.assertRaises(DiscontiuousMappingError) as e:
+        with self.assertRaises(DiscontinuousMappingError) as e:
             Interval.convert_pos(mapping, 15)
         self.assertEqual(110, e.exception.before)
         self.assertEqual(201, e.exception.after)
 
-        with self.assertRaises(DiscontiuousMappingError) as e:
+        with self.assertRaises(DiscontinuousMappingError) as e:
             Interval.convert_pos(mapping, 0)
         self.assertEqual(101, e.exception.before)
         self.assertEqual(None, e.exception.after)
 
-        with self.assertRaises(DiscontiuousMappingError) as e:
+        with self.assertRaises(DiscontinuousMappingError) as e:
             Interval.convert_pos(mapping, 80)
         self.assertEqual(310, e.exception.after)
         self.assertEqual(None, e.exception.before)
@@ -128,7 +128,7 @@ class TestInterval(unittest.TestCase):
         self.assertEqual(310, Interval.convert_pos(mapping, 1))
         self.assertEqual(309, Interval.convert_pos(mapping, 2))
 
-        with self.assertRaises(DiscontiuousMappingError) as e:
+        with self.assertRaises(DiscontinuousMappingError) as e:
             Interval.convert_pos(mapping, 15)
         self.assertEqual(210, e.exception.before)
         self.assertEqual(301, e.exception.after)

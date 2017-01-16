@@ -57,7 +57,8 @@ intersphinx_mapping = {
     'python': ('https://docs.python.org/3.6', None),
     'pysam': ('http://pysam.readthedocs.io/en/latest/', None),
     'Bio': ('http://biopython.org/DIST/docs/api/', None),
-    'networkx': ('https://networkx.readthedocs.io/en/stable/', None)
+    'networkx': ('https://networkx.readthedocs.io/en/stable/', None),
+    'svgwrite': ('https://pythonhosted.org/svgwrite/', None)
 }
 
 mathjax_path="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
