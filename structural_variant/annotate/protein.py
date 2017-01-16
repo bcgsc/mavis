@@ -190,13 +190,13 @@ class Domain:
         for seq in set(seq_list):
             # align the current sequence to find the best matches
             scores = []
-            for p in range(0, len(input_sequence) - len(seq)):
+            for p in range(0, len(input_sequence) - len(seq) + 1):
                 score = 0
                 for i in range(0, len(seq)):
                     if input_sequence[p + i].upper() == seq[i].upper():
                         score += 1
                 if score > 0:
-                    scores.append((Interval(p, p + len(seq) - 1), score))
+                    scores.append((Interval(p + 1, p + len(seq)), score))
             if len(scores) == 0:
                 raise UserWarning('could not align a given region')
             results.setdefault(seq, []).extend(scores)
@@ -204,32 +204,27 @@ class Domain:
         # take the best score for each region and see if they work in sequence
         best = []
         for seq in seq_list:
-            temp = max([t[1] for t in results[seq]])
-            curr = [t for t in results[seq] if t[1] == temp]
+            temp = max([s for i, s in results[seq]])
+            curr = [(i, s) for i, s in results[seq] if s == temp]
             best.append(curr)
 
-        combinations = [best[0]]
-        for options in best[1:]:
-            new_combinations = []
-            for current_set in combinations:
-                last, last_score = current_set[-1]
-                for pos, score in options:
-                    if pos.start > last.end:
-                        new_combinations.append(current_set + [(pos, score)])
-            combinations = new_combinations
+        combinations = []
+        for combo in itertools.product(*best):
+            total_score = sum([s for i, s in combo])
+            valid = True
+            for i in range(1, len(combo)):
+                if combo[i][0].start <= combo[i - 1][0].end:
+                    valid = False
+                    break
+            if valid:
+                combinations.append((total_score, [i for i, s in combo]))
 
-        # now go through the list for the highest score
-        scored_combinations = []
-        for pos_list in combinations:
-            score = sum([t[1] for t in pos_list])
-            scored_combinations.append((score, [t[0] for t in pos_list]))
-
-        if len(scored_combinations) == 0:
+        if len(combinations) == 0:
             raise UserWarning('could not map the sequences to the input')
         else:
-            high = max([s for s, p in scored_combinations])
+            high = max([s for s, pl in combinations])
             temp = []
-            for score, pl in scored_combinations:
+            for score, pl in combinations:
                 if score == high:
                     temp.append(pl)
             if len(temp) > 1:
@@ -237,7 +232,7 @@ class Domain:
             else:
                 regions = []
                 for pos, seq in zip(temp[0], seq_list):
-                    regions.append(DomainRegion(pos.start + 1, pos.end + 1, seq))
+                    regions.append(DomainRegion(pos.start, pos.end, seq))
                 return high, total, regions
 
 

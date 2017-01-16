@@ -94,7 +94,7 @@ class Diagram:
         DOMAIN_COLOR='#b8d3ba',
         DOMAIN_SCAFFOLD_COLOR=HEX_BLACK,
         SPLICE_COLOR=HEX_BLACK,
-        WIDTH=2000,
+        WIDTH=1000,
         PADDING=5,
         DYNAMIC_LABELS=True,
         LEGEND_FONT_SIZE=20,
@@ -158,7 +158,7 @@ class Diagram:
         self.EXON_TEAR_TOOTH_WIDTH = 2
         self.EXON_MIN_WIDTH = self.MIN_WIDTH + self.EXON_TEAR_TOOTH_WIDTH * 2
         self.EXON_TEAR_TOOTH_HEIGHT = 2
-        self.EXON_INTRON_RATIO = 10
+        self.EXON_INTRON_RATIO = 20
         self.EXON1_COLOR = EXON1_COLOR
         self.EXON2_COLOR = EXON2_COLOR
         self.EXON1_UTR_COLOR = EXON1_UTR_COLOR
@@ -699,10 +699,11 @@ class Diagram:
                         class_='scaffold'
                     ))
                     fill = self.DOMAIN_COLOR
+                    percent_match = None
                     try:
                         match, total = d.score_region_mapping(REFERENCE_GENOME)
-                        percent = int(round(match * 100 / total, 0)) % len(self.DOMAIN_FILL_GRADIENT) - 1
-                        fill = self.DOMAIN_FILL_GRADIENT[percent]
+                        percent_match = int(round(match * 100 / total, 0)) 
+                        fill = self.DOMAIN_FILL_GRADIENT[percent_match % len(self.DOMAIN_FILL_GRADIENT) - 1]
                     except AttributeError:
                         pass
                     for region in d.regions:
@@ -718,8 +719,9 @@ class Diagram:
                         gdr.add(canvas.rect(
                             (s, 0), (t - s + 1, self.DOMAIN_TRACK_HEIGHT),
                             fill=fill, class_='region'))
-                        gdr.add(Tag('title', 'Domain {} region {}_{}aa'.format(
-                            d.name if d.name else '', region.start, region.end)))
+                        gdr.add(Tag('title', 'Domain {} region {}_{}aa{}'.format(
+                            d.name if d.name else '', region.start, region.end,
+                            ' matched {}%'.format(percent_match) if percent_match is not None else '')))
                         gd.add(gdr)
                     gd.translate(0, py)
 

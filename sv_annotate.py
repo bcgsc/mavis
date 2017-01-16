@@ -181,11 +181,6 @@ def main():
                 max_orf_cap=args.max_orf_cap,
                 min_domain_mapping_match=args.min_domain_mapping_match
             )
-            print('===========================================================================')
-            print('fusion', ann.transcript1.name, ann.transcript2.name)
-            # try building the fusion proteins
-            for tl in ft.translations:
-                print('translation seq', tl.get_AA_sequence())
             d = Diagram()
             canvas = d.draw(ann, ft, REFERENCE_GENOME=REFERENCE_GENOME)
             name = os.path.join(args.output, FILENAME_PREFIX + '.' + ann.data[COLUMNS.annotation_id] + '.svg')

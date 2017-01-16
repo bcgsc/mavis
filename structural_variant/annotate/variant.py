@@ -83,10 +83,6 @@ class FusionTranscript(Transcript):
             raise AttributeError(
                 'cannot build a fusion transcript where the untemplated sequence has not been specified')
         
-        print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-        print('BUILDING FUSION:', ann.transcript1.name, ann.transcript2.name, ann)
-        print('transcript1 splicing', ann.transcript1.name, ann.transcript1.splicing_patterns())
-        print('transcript2 splicing', ann.transcript2.name, ann.transcript2.splicing_patterns())
         ft = FusionTranscript()
 
         if ann.transcript1 == ann.transcript2 and ann.event_type not in [SVTYPE.DEL, SVTYPE.INS]:
@@ -214,22 +210,12 @@ class FusionTranscript(Transcript):
         # remap the domains from the original translations to the current translations
         for new_tl in ft.translations:
             aa_seq = new_tl.get_AA_sequence()
-            print('ft translation', new_tl.get_AA_sequence())
-            print('ft splicing', new_tl.splicing_pattern)
             for tl in ann.transcript1.translations + ann.transcript2.translations:
                 for dom in tl.domains:
                     try:
                         match, total, regions = dom.align_seq(aa_seq, REFERENCE_GENOME)
                         if min_domain_mapping_match is None or match / total >= min_domain_mapping_match:
-                            Domain(dom.name, regions, new_tl)
-                        else:
-                            print('domain failed to map', ann.transcript1.name, 'fused to', ann.transcript2.name)
-                            print('domain', dom.name, 'match=', match, 'total=', total, 'min_domain_mapping_match=', min_domain_mapping_match)
-                            print('domain original transcript', dom.translation.transcript.name)
-                            print('domain coord', [(dr.start, dr.end) for dr in dom.regions], dom.name)
-                            print('tranlsation aa seq')
-                            print(aa_seq)
-                            print('domain region seqs', dom.get_sequences(REFERENCE_GENOME))
+                            new_dom = Domain(dom.name, regions, new_tl)
                     except UserWarning:
                         pass
         return ft
