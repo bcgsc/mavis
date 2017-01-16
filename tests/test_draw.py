@@ -1,6 +1,8 @@
 import unittest
 from structural_variant.draw import Diagram, HEX_BLACK, HEX_WHITE
-from structural_variant.annotate import Gene, Transcript, Domain, Annotation, FusionTranscript, Exon
+from structural_variant.annotate.genomic import Gene, Transcript, Exon
+from structural_variant.annotate.protein import Domain
+from structural_variant.annotate.variant import Annotation, FusionTranscript
 from svgwrite import Drawing
 from structural_variant.constants import STRAND, ORIENT, SVTYPE
 from structural_variant.breakpoint import Breakpoint, BreakpointPair

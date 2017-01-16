@@ -96,6 +96,9 @@ def parse_arguments():
         '--min_orf_size', default=120, type=int, help='minimum size for putative ORFs')
     parser.add_argument(
         '--max_orf_cap', default=3, type=int, help='keep the n longest orfs')
+    parser.add_argument(
+        '--min_domain_match', default=0.8, type=float, 
+        help='minimum percent match for the domain to be considered aligned')
     args = parser.parse_args()
     return args
 

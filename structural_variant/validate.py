@@ -8,7 +8,7 @@ from .error import *
 from .read_tools import CigarTools, nsb_align, breakpoint_pos
 from .assemble import assemble
 from .interval import Interval
-from .annotate import overlapping_transcripts
+from .annotate.variant import overlapping_transcripts
 from .breakpoint import BreakpointPair, Breakpoint
 import tools.profile_bam as profile_bam
 from functools import partial

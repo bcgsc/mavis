@@ -1,4 +1,7 @@
 import unittest
+from structural_variant.annotate.variant import *
+from structural_variant.annotate.genomic import *
+from structural_variant.annotate.protein import *
 from structural_variant.annotate import *
 from structural_variant.constants import reverse_complement
 from structural_variant.constants import STRAND
@@ -574,7 +577,7 @@ class TestDomain(unittest.TestCase):
 
         d = Domain('name', regions)
         self.assertTrue(len(refseq) >= 578)
-        temp = d.align_seq(refseq)
+        match, total, temp = d.align_seq(refseq)
         self.assertEqual(len(regions), len(temp))
         for dr1, dr2 in zip(temp, regions):
             self.assertEqual(dr1.start, dr2.start)
