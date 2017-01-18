@@ -1,4 +1,4 @@
-from .genomic import Transcript, Exon, IntergenicRegion
+from .genomic import usTranscript, Transcript, Exon, IntergenicRegion
 from ..constants import STRAND, SVTYPE, reverse_complement, ORIENT, PRIME, COLUMNS
 from ..breakpoint import Breakpoint, BreakpointPair
 from ..interval import Interval
@@ -20,14 +20,14 @@ def determine_prime(transcript, breakpoint):
     Raises:
         AttributeError: if the orientation of the breakpoint or the strand of the transcript is not specified
     """
-    if transcript.strand == STRAND.POS:
+    if transcript.get_strand() == STRAND.POS:
         if breakpoint.orient == ORIENT.LEFT:
             return PRIME.FIVE
         elif breakpoint.orient == ORIENT.RIGHT:
             return PRIME.THREE
         else:
             raise AttributeError('cannot determine_prime if the orient of the breakpoint has not been specified')
-    elif transcript.strand == STRAND.NEG:
+    elif transcript.get_strand() == STRAND.NEG:
         if breakpoint.orient == ORIENT.LEFT:
             return PRIME.THREE
         elif breakpoint.orient == ORIENT.RIGHT:
@@ -38,16 +38,15 @@ def determine_prime(transcript, breakpoint):
         raise AttributeError('cannot determine prime if the strand of the transcript has not been specified')
 
 
-class FusionTranscript(Transcript):
+class FusionTranscript(usTranscript):
 
     def __init__(self):
         self.exon_mapping = {}
         self.exons = []
-        self.sequence = ''
-        self.translations = []
-        self.domains = []
+        self.sequence = None
+        self.spliced_transcripts = []
         self.position = None
-        self._strand = STRAND.POS  # always built on the positive strand
+        self.strand = STRAND.POS  # always built on the positive strand
 
     def exon_number(self, exon):
         """
@@ -93,7 +92,7 @@ class FusionTranscript(Transcript):
                 seq2, ex2 = cls._pull_exons(ann.transcript2, ann.break2, REFERENCE_GENOME[ann.break2.chr].seq)
                 useq = ann.untemplated_sequence
 
-                if ann.transcript1.strand == STRAND.NEG:
+                if ann.transcript1.get_strand() == STRAND.NEG:
                     seq1, seq2 = (seq2, seq1)
                     ex1, ex2 = (ex2, ex1)
                     useq = reverse_complement(useq)
@@ -125,7 +124,7 @@ class FusionTranscript(Transcript):
                 seq2, ex2 = cls._pull_exons(ann.transcript2, b1, REFERENCE_GENOME[b2.chr].seq)
                 useq = ann.untemplated_sequence
 
-                if ann.transcript1.strand == STRAND.POS:
+                if ann.transcript1.get_strand() == STRAND.POS:
                     ft.sequence = seq1 + useq + window_seq
                     for ex, old_ex in ex1:
                         ft.exons.append(ex)
@@ -155,7 +154,7 @@ class FusionTranscript(Transcript):
             seq2, ex2 = cls._pull_exons(ann.transcript2, ann.break2, REFERENCE_GENOME[ann.break2.chr].seq)
 
             if t1 == PRIME.FIVE:
-                ft.sequence = seq1 + ann.untemplated_sequence if ann.transcript1.strand == STRAND.POS else \
+                ft.sequence = seq1 + ann.untemplated_sequence if ann.transcript1.get_strand() == STRAND.POS else \
                     reverse_complement(ann.untemplated_sequence)
                 for ex, old_ex in ex1:
                     ft.exons.append(ex)
@@ -171,7 +170,7 @@ class FusionTranscript(Transcript):
                     ft.exon_mapping[e] = old_ex
                 ft.sequence += seq2
             else:
-                ft.sequence = seq2 + ann.untemplated_sequence if ann.transcript2.strand == STRAND.POS else \
+                ft.sequence = seq2 + ann.untemplated_sequence if ann.transcript2.get_strand() == STRAND.POS else \
                     reverse_complement(ann.untemplated_sequence)
                 for ex, old_ex in ex2:
                     ft.exons.append(ex)
@@ -187,11 +186,14 @@ class FusionTranscript(Transcript):
                     ft.exon_mapping[e] = old_ex
                 ft.sequence += seq1
         ft.position = Interval(1, len(ft.sequence))
-        # get all splicing patterns
-        for spl_patt in ft.splicing_patterns():
-            # calculate all ORF for each splicing pattern
-            spliced_cdna_seq = ft.get_spliced_cdna_sequence(spl_patt)
-            orfs = calculate_ORF(spliced_cdna_seq, min_orf_size=min_orf_size)
+        
+        # add all splice variants
+        for spl_patt in ft.generate_splicing_patterns():
+            t = Transcript(ft, spl_patt)
+            ft.spliced_transcripts.append(t)
+            
+            # now add the possible translations
+            orfs = calculate_ORF(t.get_sequence(), min_orf_size=min_orf_size)
             if max_orf_cap and len(orfs) > max_orf_cap:  # limit the number of orfs returned
                 orfs = sorted(orfs, key=lambda x: len(x), reverse=True)
                 l = len(orfs[max_orf_cap - 1])
@@ -204,37 +206,27 @@ class FusionTranscript(Transcript):
                 orfs = temp
             # create the translations
             for orf in orfs:
-                s = spliced_cdna_seq[orf.start - 1:orf.end]
-                tl = Translation(orf.start, orf.end, ft, spl_patt, sequence=s)
+                tl = Translation(orf.start, orf.end, t)
+                t.translations.append(tl)
 
         # remap the domains from the original translations to the current translations
-        for new_tl in ft.translations:
-            aa_seq = new_tl.get_AA_sequence()
-            for tl in ann.transcript1.translations + ann.transcript2.translations:
-                for dom in tl.domains:
-                    try:
-                        match, total, regions = dom.align_seq(aa_seq, REFERENCE_GENOME)
-                        if min_domain_mapping_match is None or match / total >= min_domain_mapping_match:
-                            new_dom = Domain(dom.name, regions, new_tl)
-                    except UserWarning:
-                        pass
+        for t in ft.spliced_transcripts:
+            for new_tl in t.translations:
+                aa_seq = new_tl.get_AA_sequence()
+                for tl in ann.transcript1.translations + ann.transcript2.translations:
+                    for dom in tl.domains:
+                        try:
+                            match, total, regions = dom.align_seq(aa_seq, REFERENCE_GENOME)
+                            if min_domain_mapping_match is None or match / total >= min_domain_mapping_match:
+                                new_dom = Domain(dom.name, regions, new_tl)
+                        except UserWarning:
+                            pass
         return ft
     
-    def get_sequence(self):
-        if self.sequence:
-            return self.sequence
-        elif self.gene and self.gene.sequence:
-            # gene has a sequence set
-            start = self.start - self.gene.start
-            end = self.end - self.gene.end + len(self.gene.sequence)
-            if self.strand == STRAND.NEG:
-                return reverse_complement(self.gene.sequence[start:end])
-            else:
-                return self.gene.sequence[start:end]
-        else:
-            raise AttributeError('insufficient sequence information')
+    def get_sequence(self, REFERENCE_GENOME=None, ignore_cache=False):
+        return usTranscript.get_sequence(self)
     
-    def get_spliced_cdna_sequence(self, splicing_pattern):
+    def get_spliced_cdna_sequence(self, splicing_pattern, REFERENCE_GENOME=None, ignore_cache=False):
         """
         Args:
             splicing_pattern (:class:`list` of :class:`int`): the list of splicing positions
@@ -244,17 +236,7 @@ class FusionTranscript(Transcript):
         Returns:
             str: the spliced cDNA sequence
         """
-        temp = sorted([self.start] + splicing_pattern + [self.end])
-        m = min(temp)
-        conti = []
-        for i in range(0, len(temp) - 1, 2):
-            conti.append(Interval(temp[i] - m, temp[i + 1] - m))
-        seq = self.get_sequence()
-        if self.strand == STRAND.NEG:
-            # adjust the continuous intervals for the min and flip if revcomp
-            seq = reverse_complement(seq)
-        spliced_seq = ''.join([str(seq[i.start:i.end + 1]) for i in conti])
-        return spliced_seq if self.strand == STRAND.POS else reverse_complement(spliced_seq)
+        return usTranscript.get_spliced_cdna_sequence(self, splicing_pattern)
 
     @classmethod
     def _pull_exons(cls, transcript, breakpoint, reference_sequence):
@@ -326,7 +308,7 @@ class FusionTranscript(Transcript):
                     new_exons.append((e, exon))
         else:
             raise AttributeError('breakpoint orientation must be specified to pull exons')
-        if transcript.strand == STRAND.NEG:
+        if transcript.get_strand() == STRAND.NEG:
             # reverse complement the sequence and reverse the exons
             temp = new_exons
             new_exons = []
@@ -340,7 +322,7 @@ class FusionTranscript(Transcript):
                 )
                 new_exons.append((e, old_exon))
             s = reverse_complement(s)
-        elif transcript.strand != STRAND.POS:
+        elif transcript.get_strand() != STRAND.POS:
             raise AttributeError('transcript strand must be specified to pull exons')
         return s, new_exons
 
@@ -493,7 +475,7 @@ class Annotation(BreakpointPair):
                 self.transcript1.reference_object,
                 self.transcript1.start,
                 self.transcript1.end,
-                self.transcript1.strand)
+                self.transcript1.get_strand())
         if hasattr(self.transcript2, 'gene'):
             row[COLUMNS.gene2] = self.transcript2.gene.name
             row[COLUMNS.transcript2] = self.transcript2.name
@@ -507,7 +489,7 @@ class Annotation(BreakpointPair):
                 self.transcript2.reference_object,
                 self.transcript2.start,
                 self.transcript2.end,
-                self.transcript2.strand)
+                self.transcript2.get_strand())
         row[COLUMNS.genes_encompassed] = ';'.join(sorted([x.name for x in self.encompassed_genes]))
         row[COLUMNS.genes_overlapping_break1] = ';'.join(sorted([x.name for x in self.genes_overlapping_break1]))
         row[COLUMNS.genes_overlapping_break2] = ';'.join(sorted([x.name for x in self.genes_overlapping_break2]))
@@ -525,13 +507,15 @@ def overlapping_transcripts(ref_ann, breakpoint):
             by chromosome
         breakpoint (Breakpoint): the breakpoint in question
     Returns:
-        :class:`list` of :any:`Transcript`: a list of possible transcripts
+        :class:`list` of :any:`usTranscript`: a list of possible transcripts
     """
     putative_annotations = []
     for gene in ref_ann[breakpoint.chr]:
         for transcript in gene.transcripts:
-            if breakpoint.strand != STRAND.NS and transcript.strand != STRAND.NS \
-                    and transcript.strand != breakpoint.strand:
+            print('transcript', transcript.start, transcript.end, transcript.get_strand())
+            print('breakpoint', breakpoint)
+            if breakpoint.strand != STRAND.NS and transcript.get_strand() != STRAND.NS \
+                    and transcript.get_strand() != breakpoint.strand:
                 continue
             if Interval.overlaps(breakpoint, transcript):
                 putative_annotations.append(transcript)
@@ -544,16 +528,22 @@ def gather_breakpoint_annotations(ref_ann, breakpoint):
         ref_ann (:class:`dict` of :class:`str` and :class:`list` of :class:`Gene`): the reference annotations split
             into lists of genes by chromosome
         breakpoint (Breakpoint): the breakpoint annotations are to be gathered for
+
+    Returns:
+        tuple: tuple contains
+
+            - list: transcripts or intergenic regions overlapping the breakpoint on the positive strand
+            - list: transcripts or intergenic regions overlapping the breakpoint on the negative strand
     """
 
     pos_overlapping_transcripts = []
     neg_overlapping_transcripts = []
     for gene in ref_ann[breakpoint.chr]:
-        for t in gene.transcripts:
+        for t in gene.spliced_transcripts:
             if Interval.overlaps(t, breakpoint):
-                if STRAND.compare(t.strand, STRAND.POS):
+                if STRAND.compare(t.get_strand(), STRAND.POS):
                     pos_overlapping_transcripts.append(t)
-                if STRAND.compare(t.strand, STRAND.NEG):
+                if STRAND.compare(t.get_strand(), STRAND.NEG):
                     neg_overlapping_transcripts.append(t)
 
     pos_intervals = Interval.min_nonoverlapping(*pos_overlapping_transcripts)

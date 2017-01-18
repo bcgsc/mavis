@@ -1,8 +1,8 @@
 import TSV
 import re
-from .genomic import Gene, Transcript
+from .genomic import Gene, Transcript, usTranscript, Exon
 from .base import BioInterval
-from .protein import Domain
+from .protein import Domain, Translation
 from ..interval import Interval
 from ..constants import STRAND
 from Bio import SeqIO
@@ -90,7 +90,7 @@ def load_reference_genes(filepath, verbose=True):
         for temp in re.split('[; ]', row):
             try:
                 s, t = temp.split('-')
-                exons.append((int(s), int(t)))
+                exons.append(Exon(int(s), int(t)))
             except Exception as err:
                 if verbose:
                     print('exon error:', repr(temp), repr(err))
@@ -171,18 +171,28 @@ def load_reference_genes(filepath, verbose=True):
         else:
             genes[g.name] = g
         try:
-            t = Transcript(
+            ust = usTranscript(
                 name=row['ensembl_transcript_id'],
                 gene=g,
-                genomic_start=row['transcript_genomic_start'],
-                genomic_end=row['transcript_genomic_end'],
-                exons=row['genomic_exon_ranges'],
-                domains=row['AA_domain_ranges'],
-                cds_start=row['cdna_coding_start'],
-                cds_end=row['cdna_coding_end']
+                start=row['transcript_genomic_start'],
+                end=row['transcript_genomic_end'],
+                exons=row['genomic_exon_ranges']
             )
-        except AttributeError as err:
+            g.transcripts.append(ust)
+            if len(row['genomic_exon_ranges']) == 0:
+                continue
+            spl_patts = ust.generate_splicing_patterns()
+            assert(1 == len(spl_patts))
+            t = Transcript(ust, spl_patts[0])
+            ust.spliced_transcripts.append(t)
+            if row['cdna_coding_start'] is not None:
+                tx = Translation(
+                    row['cdna_coding_start'], row['cdna_coding_end'], transcript=t, domains=row['AA_domain_ranges'])
+                t.translations.append(tx)
+        except Exception as err:
+            pass
             print('failed loading', row['ensembl_transcript_id'], row['hugo_names'].split(';'), repr(err))
+            raise err
 
     ref = {}
     for g in genes.values():

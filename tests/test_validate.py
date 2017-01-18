@@ -1,6 +1,6 @@
 from structural_variant.breakpoint import Breakpoint, BreakpointPair
 from structural_variant.validate import *
-from structural_variant.annotate import load_reference_genome, Gene, Transcript
+from structural_variant.annotate import load_reference_genome, Gene, usTranscript
 from structural_variant.constants import ORIENT, READ_PAIR_TYPE
 from tests import MockRead
 import unittest
@@ -14,6 +14,99 @@ def setUpModule():
     REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
     if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
         raise AssertionError('fake genome file does not have the expected contents')
+
+
+class TestEvidenceWindow(unittest.TestCase):
+    def setUp(self):
+        self.annotations = {}
+        gene = Gene('1', 1, 9999, name='KRAS', strand=STRAND.POS)
+        t1 = usTranscript(gene=gene, exons=[(1000, 1100), (1400, 1500), (1701, 1750), (3001, 4000)])
+        gene.unspliced_transcripts.append(t1)
+        self.annotations[gene.chr] = [gene]
+    
+    def test_generate_window_orient_ns(self):
+        b = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.NS)
+        w = Evidence.generate_window(
+            b, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
+        self.assertEqual(440, w[0])
+        self.assertEqual(1560, w[1])
+
+    def test_generate_window_orient_left(self):
+        b = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.LEFT)
+        w = Evidence.generate_window(
+            b, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
+        self.assertEqual(440, w[0])
+        self.assertEqual(1110, w[1])
+        self.assertEqual(671, len(w))
+
+    def test_generate_window_orient_right(self):
+        b = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.RIGHT)
+        w = Evidence.generate_window(
+            b, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
+        self.assertEqual(890, w[0])
+        self.assertEqual(1560, w[1])
+
+    def test_generate_transcriptome_window_before_start(self):
+        b = Breakpoint(chr='1', start=100, orient=ORIENT.RIGHT)
+        w1 = Evidence.generate_window(
+            b, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
+        w2 = Evidence.generate_transcriptome_window(
+            b, self.annotations, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
+        self.assertEqual(w1, w2)
+
+    def test_generate_transcriptome_window_after_end(self):
+        b = Breakpoint(chr='1', start=5000, orient=ORIENT.RIGHT)
+        w1 = Evidence.generate_window(
+            b, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
+        w2 = Evidence.generate_transcriptome_window(
+            b, self.annotations, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
+        self.assertEqual(w1, w2)
+
+    def test_generate_transcriptome_window_exonic_long_exon(self):
+        b = Breakpoint(chr='1', start=3200, orient=ORIENT.RIGHT)
+        w1 = Evidence.generate_window(
+            b, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
+        w2 = Evidence.generate_transcriptome_window(
+            b, self.annotations, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
+        self.assertEqual(w1, w2)
+
+    def test_generate_transcriptome_window_intronic_long_exon(self):
+        b = Breakpoint(chr='1', start=2970, orient=ORIENT.RIGHT)
+        w1 = Evidence.generate_window(
+            b, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
+        w2 = Evidence.generate_transcriptome_window(
+            b, self.annotations, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
+        self.assertEqual(w1, w2)
+
+    def test_generate_transcriptome_window_intronic_long_intron(self):
+        b = Breakpoint(chr='1', start=2000, orient=ORIENT.RIGHT)
+        w1 = Evidence.generate_window(
+            b, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
+        w2 = Evidence.generate_transcriptome_window(
+            b, self.annotations, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
+        self.assertEqual(w1, w2)
+
+    def test_generate_transcriptome_window_intronic_short_exon_right(self):
+        b = Breakpoint(chr='1', start=1690, orient=ORIENT.RIGHT)
+        w = Evidence.generate_transcriptome_window(
+            b, self.annotations, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
+        self.assertEqual(Interval(1580, 3500), w)
+
+    def test_generate_transcriptome_window_intronic_short_exon_left(self):
+        b = Breakpoint(chr='1', start=2200, orient=ORIENT.LEFT)
+        w = Evidence.generate_transcriptome_window(
+            b, self.annotations, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
+        self.assertEqual(Interval(1440, 2310), w)
+
+    def test_generate_transcriptome_window_multiple_transcripts(self):
+        b = Breakpoint(chr='1', start=1150, orient=ORIENT.RIGHT)
+        gene = self.annotations['1'][0]
+        t2 = usTranscript(gene=gene, exons=[(1000, 1100), (1200, 1300), (2100, 2200)])
+        gene.transcripts.append(t2)
+
+        w = Evidence.generate_transcriptome_window(
+            b, self.annotations, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
+        self.assertEqual(Interval(1040, 3160), w)
 
 
 class TestEvidence(unittest.TestCase):
@@ -110,101 +203,7 @@ class TestEvidence(unittest.TestCase):
         self.assertEqual(50, i.start)
         self.assertEqual(150, i.end)
 
-    def test_generate_window_orient_ns(self):
-        b = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.NS)
-        w = Evidence.generate_window(
-            b, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
-        self.assertEqual(440, w[0])
-        self.assertEqual(1560, w[1])
-
-    def test_generate_window_orient_left(self):
-        b = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.LEFT)
-        w = Evidence.generate_window(
-            b, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
-        self.assertEqual(440, w[0])
-        self.assertEqual(1110, w[1])
-        self.assertEqual(671, len(w))
-
-    def test_generate_window_orient_right(self):
-        b = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.RIGHT)
-        w = Evidence.generate_window(
-            b, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
-        self.assertEqual(890, w[0])
-        self.assertEqual(1560, w[1])
-
-    def test_generate_transcriptome_window_before_start(self):
-        b = Breakpoint(chr='1', start=100, orient=ORIENT.RIGHT)
-        gene = Gene('1', 1, 9999, name='KRAS', strand='+')
-        t1 = Transcript(gene=gene, cds_start=1, cds_end=100, exons=[(1000, 1100), (1400, 1500)])
-        ann = {'1': [gene]}
-        w1 = Evidence.generate_window(
-            b, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
-        w2 = Evidence.generate_transcriptome_window(
-            b, ann, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
-        self.assertEqual(w1, w2)
-
-    def test_generate_transcriptome_window_after_end(self):
-        b = Breakpoint(chr='1', start=1600, orient=ORIENT.RIGHT)
-        gene = Gene('1', 1, 9999, name='KRAS', strand='+')
-        t1 = Transcript(gene=gene, cds_start=1, cds_end=100, exons=[(1000, 1100), (1400, 1500)])
-        ann = {'1': [gene]}
-        w1 = Evidence.generate_window(
-            b, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
-        w2 = Evidence.generate_transcriptome_window(
-            b, ann, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
-        self.assertEqual(w1, w2)
-
-    def test_generate_transcriptome_window_exonic_long_exon(self):
-        b = Breakpoint(chr='1', start=1200, orient=ORIENT.RIGHT)
-        gene = Gene('1', 1, 9999, name='KRAS', strand='+')
-        t1 = Transcript(gene=gene, cds_start=1, cds_end=100, exons=[(1000, 2000), (2400, 2500)])
-        ann = {'1': [gene]}
-        w1 = Evidence.generate_window(
-            b, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
-        w2 = Evidence.generate_transcriptome_window(
-            b, ann, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
-        self.assertEqual(w1, w2)
-
-    def test_generate_transcriptome_window_intronic_long_exon(self):
-        b = Breakpoint(chr='1', start=900, orient=ORIENT.RIGHT)
-        gene = Gene('1', 1, 9999, name='KRAS', strand='+')
-        t1 = Transcript(gene=gene, cds_start=1, cds_end=100, exons=[(1000, 2000), (2400, 2500)])
-        ann = {'1': [gene]}
-        w1 = Evidence.generate_window(
-            b, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
-        w2 = Evidence.generate_transcriptome_window(
-            b, ann, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
-        self.assertEqual(w1, w2)
-
-    def test_generate_transcriptome_window_intronic_long_intron(self):
-        b = Breakpoint(chr='1', start=1200, orient=ORIENT.RIGHT)
-        gene = Gene('1', 1, 9999, name='KRAS', strand='+')
-        t1 = Transcript(gene=gene, cds_start=1, cds_end=100, exons=[(1000, 1100), (2400, 2500)])
-        ann = {'1': [gene]}
-        w1 = Evidence.generate_window(
-            b, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
-        w2 = Evidence.generate_transcriptome_window(
-            b, ann, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
-        self.assertEqual(w1, w2)
-
-    def test_generate_transcriptome_window_intronic_short_exon(self):
-        b = Breakpoint(chr='1', start=1150, orient=ORIENT.RIGHT)
-        gene = Gene('1', 1, 9999, name='KRAS', strand='+')
-        t1 = Transcript(gene=gene, cds_start=1, cds_end=100, exons=[(1000, 1100), (1200, 1300), (1400, 1500)])
-        ann = {'1': [gene]}
-        w = Evidence.generate_transcriptome_window(
-            b, ann, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
-        self.assertEqual(Interval(1040, 1808), w)
-
-    def test_generate_transcriptome_window_multiple_transcripts(self):
-        b = Breakpoint(chr='1', start=1150, orient=ORIENT.RIGHT)
-        gene = Gene('1', 1, 9999, name='KRAS', strand='+')
-        Transcript(gene=gene, cds_start=1, cds_end=100, exons=[(1000, 1100), (1200, 1300), (1400, 1500)])
-        Transcript(gene=gene, cds_start=1, cds_end=100, exons=[(1000, 1100), (1200, 1300), (2100, 2200)])
-        ann = {'1': [gene]}
-        w = Evidence.generate_transcriptome_window(
-            b, ann, read_length=100, median_insert_size=250, call_error=10, stdev_isize=50, stdev_count_abnormal=2)
-        self.assertEqual(Interval(1040, 2508), w)
+    
 
     def test_read_pair_type_LR(self):
         r = MockRead(

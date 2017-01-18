@@ -1,5 +1,7 @@
 from structural_variant.constants import CIGAR
 from structural_variant.blat import BlatAlignedSegment
+from structural_variant.annotate.genomic import usTranscript, Transcript
+from structural_variant.annotate.protein import Translation
 import os
 
 
@@ -10,6 +12,7 @@ BAM_INPUT = os.path.join(filedir, 'mock_reads_for_events.sorted.bam')
 BASE_EVENTS = os.path.join(filedir, 'mock_sv_events.svmerge.tsv')
 BLAT_INPUT = os.path.join(filedir, 'blat_input.fa')
 BLAT_OUTPUT = os.path.join(filedir, 'blat_output.pslx')
+
 
 class MockRead:
     def __init__(
@@ -93,3 +96,18 @@ class MockString:
             return self.char * (index.stop - index.start)
         else:
             return self.char
+
+
+def build_transcript(gene, exons, cds_start, cds_end, domains):
+    ust = usTranscript(exons, gene.start, gene.end, gene)
+    gene.unspliced_transcripts.append(ust)
+    
+    for spl in ust.generate_splicing_patterns():
+        t = Transcript(ust, spl)
+        ust.spliced_transcripts.append(t)
+
+        tx = Translation(cds_start, cds_end, t, domains=domains)
+        t.translations.append(tx)
+    
+    return ust
+

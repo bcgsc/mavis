@@ -1,6 +1,6 @@
 from ..interval import Interval
 from .base import BioInterval
-from ..constants import STRAND, translate, START_AA, STOP_AA, CODON_SIZE
+from ..constants import translate, START_AA, STOP_AA, CODON_SIZE
 import itertools
 
 
@@ -49,12 +49,11 @@ def calculate_ORF(spliced_cdna_sequence, min_orf_size=None):
     return cds_orfs
 
 
-class DomainRegion(Interval):
-    def __init__(self, start, end, seq=None):
-        Interval.__init__(self, start, end)
-        self.sequence = seq
-        if seq and len(seq) != len(self):
-            raise AttributeError('domain region sequence must be of equal length', self, seq)
+class DomainRegion(BioInterval):
+    def __init__(self, start, end, sequence=None, domain=None, name=None):
+        BioInterval.__init__(self, domain, start, end, sequence=sequence, name=name)
+        if sequence and len(sequence) != len(self):
+            raise AssertionError('domain region sequence must be of equal length', self, sequence)
 
 
 class Domain:
@@ -85,15 +84,11 @@ class Domain:
             if not hasattr(curr, 'sequence'):
                 self.regions[i] = DomainRegion(curr[0], curr[1])
 
-        if self.translation is not None:
-            self.translation.add_domain(self)
-
     @property
     def translation(self):
         """(:class:`~structural_variant.annotate.Translation`): the Translation this domain belongs to"""
         return self.reference_object
 
-    @property
     def key(self):
         return tuple([self.name, self.translation])
 
@@ -128,7 +123,7 @@ class Domain:
         else:
             raise AttributeError('insufficient sequence information')
 
-    def get_sequences(self, REFERENCE_GENOME=None):
+    def get_sequences(self, REFERENCE_GENOME=None, ignore_cache=False):
         """
         returns the amino acid sequences for each of the domain regions associated with
         this domain in the order of the regions (sorted by start)
@@ -144,9 +139,10 @@ class Domain:
             AttributeError: if there is not enough sequence information given to determine this
         """
         sequences = {}
-        for region in self.regions:
-            if region.sequence:
-                sequences[region] = region.sequence
+        if not ignore_cache:
+            for region in self.regions:
+                if region.sequence:
+                    sequences[region] = region.sequence
         if any([r not in sequences for r in self.regions]):
             if self.translation:
                 aa = self.translation.get_AA_sequence(REFERENCE_GENOME)
@@ -237,7 +233,7 @@ class Domain:
 
 
 class Translation(BioInterval):
-    def __init__(self, start, end, transcript, splicing_pattern, domains=None, sequence=None):
+    def __init__(self, start, end, transcript=None, domains=None, sequence=None, name=None):
         """
         describes the splicing pattern and cds start and end with reference to a particular transcript
 
@@ -250,14 +246,11 @@ class Translation(BioInterval):
             sequence (str): the cds sequence
         """
         domains = [] if domains is None else domains
-        BioInterval.__init__(self, reference_object=transcript, name=None, start=start, end=end)
-        self.splicing_pattern = sorted(splicing_pattern)
-        self.domains = []
-        self.sequence = sequence
+        BioInterval.__init__(self, reference_object=transcript, name=name, start=start, end=end, sequence=sequence)
+        self.domains = [d for d in domains]
+
         for d in domains:
-            self.add_domain(d)
-        if self.transcript:
-            self.transcript.add_translation(self)
+            d.reference_object = self
 
     @property
     def transcript(self):
@@ -273,33 +266,7 @@ class Translation(BioInterval):
         """
         return Interval(self.start - 1 + (pos - 1) * 3 + 1, self.start - 1 + pos * 3)
 
-    def add_domain(self, domain):
-        """
-        Args:
-            domain (Domain): the domain to be added
-        """
-        domain.reference_object = self
-        if domain not in self.domains:
-            self.domains.append(domain)
-
-    def genomic_utr_regions(self):
-        utr = []
-        if self.transcript.strand not in [STRAND.POS, STRAND.NEG]:
-            raise AttributeError('strand must be positive or negative to calculate regions')
-
-        exons = sorted(self.transcript.exons, key=lambda x: x.start)
-
-        if self.transcript.strand == STRAND.POS:
-            utr.append(Interval(exons[0].start, self.transcript.convert_cdna_to_genomic(self.start)))
-        else:
-            utr.append(Interval(self.transcript.convert_cdna_to_genomic(self.start), exons[-1].end))
-        if self.transcript.strand == STRAND.POS:
-            utr.append(Interval(self.transcript.convert_cdna_to_genomic(self.end), exons[-1].end))
-        else:
-            utr.append(Interval(exons[0].start, self.transcript.convert_cdna_to_genomic(self.end)))
-        return utr
-
-    def get_sequence(self, REFERENCE_GENOME=None):
+    def get_cds_sequence(self, REFERENCE_GENOME=None, ignore_cache=False):
         """
         Args:
             REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence
@@ -311,14 +278,14 @@ class Translation(BioInterval):
         Raises:
             AttributeError: if the reference sequence has not been given and is not set
         """
-        if self.sequence:
+        if self.sequence and not ignore_cache:
             return self.sequence
-        elif self.transcript and self.transcript.strand:
-            seq = self.transcript.get_spliced_cdna_sequence(self.splicing_pattern, REFERENCE_GENOME)
+        elif self.transcript and self.transcript.get_strand():
+            seq = self.transcript.get_sequence(REFERENCE_GENOME, ignore_cache)
             return seq[self.start - 1:self.end]
         raise AttributeError('insufficient sequence information')
 
-    def get_cds_sequence(self, REFERENCE_GENOME=None):
+    def get_sequence(self, REFERENCE_GENOME=None, ignore_cache=False):
         """
         wrapper for the sequence method
 
@@ -326,9 +293,9 @@ class Translation(BioInterval):
             REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence
                 by template/chr name
         """
-        return self.get_sequence(REFERENCE_GENOME)
+        return self.get_cds_sequence(REFERENCE_GENOME, ignore_cache)
 
-    def get_AA_sequence(self, REFERENCE_GENOME=None):
+    def get_AA_sequence(self, REFERENCE_GENOME=None, ignore_cache=False):
         """
         Args:
             REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence
@@ -340,9 +307,8 @@ class Translation(BioInterval):
         Raises:
             AttributeError: if the reference sequence has not been given and is not set
         """
-        cds = self.get_cds_sequence(REFERENCE_GENOME)
+        cds = self.get_cds_sequence(REFERENCE_GENOME, ignore_cache)
         return translate(cds)
 
-    @property
     def key(self):
-        return (self.reference_object, self.start, self.end, self.splicing_pattern)
+        return BioInterval.key(self), self.splicing_pattern

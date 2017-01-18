@@ -11,13 +11,18 @@ from tests import REFERENCE_ANNOTATIONS_FILE, REFERENCE_GENOME_FILE, MockSeq
 
 REFERENCE_ANNOTATIONS = None
 REFERENCE_GENOME = None
+REF_CHR = None
 
 
 def setUpModule():
-    global REFERENCE_ANNOTATIONS, REFERENCE_GENOME
+    global REFERENCE_ANNOTATIONS, REFERENCE_GENOME, REF_CHR
     REFERENCE_ANNOTATIONS = load_reference_genes(REFERENCE_ANNOTATIONS_FILE)
-    print('loaded {} annotations', sum([len(l) for l in REFERENCE_ANNOTATIONS.values()]))
+    count = sum([len(l) for l in REFERENCE_ANNOTATIONS.values()])
+    print('loaded annotations', count)
+    assert(count == 6)  # make sure this is the file we expect
     REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
+    assert(1 == len(REFERENCE_GENOME.keys()))
+    REF_CHR = list(REFERENCE_GENOME.keys())[0]
     print('loaded the reference genome', REFERENCE_GENOME_FILE)
 
 
@@ -35,11 +40,9 @@ class TestFusionTranscript(unittest.TestCase):
         reference_sequence += 'A' * 100 + 'G' * 100 + 'A' * 200
         self.reference_sequence = reference_sequence
 
-    
-
     def test__pull_exons_left_pos_intronic(self):
         # 100-199, 500-599, 1200-1299, 1500-1599, 1700-1799
-        t = Transcript(50, 249, exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b = Breakpoint('test', 700, orient=ORIENT.LEFT)
         seq, new_exons = FusionTranscript._pull_exons(t, b, self.reference_sequence)
         expt = 'C' * len(self.x) + 'A' * (499 - 200 + 1) + 'G' * len(self.y) + 'A' * (700 - 600 + 1)
@@ -52,7 +55,7 @@ class TestFusionTranscript(unittest.TestCase):
         self.assertEqual(True, e.intact_end_splice)
 
     def test__pull_exons_left_pos_intronic_splice(self):
-        t = Transcript(50, 249, exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b = Breakpoint('test', 201, orient=ORIENT.LEFT)
         seq, new_exons = FusionTranscript._pull_exons(t, b, self.reference_sequence)
         expt = 'C' * 100 + 'A' * 2
@@ -65,7 +68,7 @@ class TestFusionTranscript(unittest.TestCase):
         self.assertEqual(False, e.intact_end_splice)
 
     def test__pull_exons_left_pos_exonic(self):
-        t = Transcript(50, 249, exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b = Breakpoint('test', 199, orient=ORIENT.LEFT)
         seq, new_exons = FusionTranscript._pull_exons(t, b, self.reference_sequence)
         expt = 'C' * 100
@@ -79,7 +82,7 @@ class TestFusionTranscript(unittest.TestCase):
 
     def test__pull_exons_left_pos_exonic_splice(self):
         # 100-199, 500-599, 1200-1299, 1500-1599, 1700-1799
-        t = Transcript(50, 249, exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t = usTranscript( exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b = Breakpoint('test', 101, orient=ORIENT.LEFT)
         seq, new_exons = FusionTranscript._pull_exons(t, b, self.reference_sequence)
         expt = 'C' * 2
@@ -93,7 +96,7 @@ class TestFusionTranscript(unittest.TestCase):
 
     def test__pull_exons_right_pos_intronic(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
-        t = Transcript(50, 249, exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b = Breakpoint('test', 1600, orient=ORIENT.RIGHT)
         seq, new_exons = FusionTranscript._pull_exons(t, b, self.reference_sequence)
         expt = 'A' * (1699 - 1600 + 1) + 'G' * len(self.s)
@@ -115,7 +118,7 @@ class TestFusionTranscript(unittest.TestCase):
 
     def test__pull_exons_right_pos_intronic_splice(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
-        t = Transcript(50, 249, exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b = Breakpoint('test', 1198, orient=ORIENT.RIGHT)
         seq, new_exons = FusionTranscript._pull_exons(t, b, self.reference_sequence)
         expt = 'AA' + 'T' * 100 + 'A' * (1499 - 1300 + 1) + 'C' * 100 + 'A' * (1699 - 1600 + 1) + 'G' * 100
@@ -127,7 +130,7 @@ class TestFusionTranscript(unittest.TestCase):
 
     def test__pull_exons_right_pos_exonic(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
-        t = Transcript(50, 249, exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b = Breakpoint('test', 1201, orient=ORIENT.RIGHT)
         seq, new_exons = FusionTranscript._pull_exons(t, b, self.reference_sequence)
         expt = 'T' * 99 + 'A' * (1499 - 1300 + 1) + 'C' * 100 + 'A' * (1699 - 1600 + 1) + 'G' * 100
@@ -139,7 +142,7 @@ class TestFusionTranscript(unittest.TestCase):
 
     def test__pull_exons_right_pos_exonic_splice(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
-        t = Transcript(50, 249, exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b = Breakpoint('test', 1298, orient=ORIENT.RIGHT)
         seq, new_exons = FusionTranscript._pull_exons(t, b, self.reference_sequence)
         expt = 'TT' + 'A' * (1499 - 1300 + 1) + 'C' * 100 + 'A' * (1699 - 1600 + 1) + 'G' * 100
@@ -151,7 +154,7 @@ class TestFusionTranscript(unittest.TestCase):
 
     def test__pull_exons_right_neg_intronic(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
-        t = Transcript(50, 249, exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
+        t = usTranscript( exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
         b = Breakpoint('test', 700, orient=ORIENT.RIGHT)
         seq, new_exons = FusionTranscript._pull_exons(t, b, self.reference_sequence)
         expt = 'A' * (1199 - 700 + 1) + 'T' * 100 + 'A' * (1499 - 1300 + 1) + 'C' * 100
@@ -174,7 +177,7 @@ class TestFusionTranscript(unittest.TestCase):
 
     def test__pull_exons_right_neg_intronic_splice(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
-        t = Transcript(50, 249, exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
+        t = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
         b = Breakpoint('test', 1198, orient=ORIENT.RIGHT)
         seq, new_exons = FusionTranscript._pull_exons(t, b, self.reference_sequence)
         expt = 'AA' + 'T' * 100 + 'A' * (1499 - 1300 + 1) + 'C' * 100 + 'A' * (1699 - 1600 + 1) + 'G' * 100
@@ -203,7 +206,7 @@ class TestFusionTranscript(unittest.TestCase):
     def test_build_single_transcript_indel(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
-        t = Transcript(50, 249, exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b1 = Breakpoint('test', 599, orient=ORIENT.LEFT)
         b2 = Breakpoint('test', 1200, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_sequence='ATCGATCG')
@@ -237,12 +240,12 @@ class TestFusionTranscript(unittest.TestCase):
             self.assertEqual(char_pattern[i], ft.sequence[ex.start - 1:ex.end])
 
     def test_build_single_transcript_inversion(self):
-        pass  # TODO
+        raise unittest.SkipTest('TODO')
 
     def test_build_single_transcript_duplication_pos(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
-        t = Transcript(50, 249, exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b1 = Breakpoint('test', 1200, orient=ORIENT.RIGHT)
         b2 = Breakpoint('test', 1299, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_sequence='ATCGATCG')
@@ -265,7 +268,7 @@ class TestFusionTranscript(unittest.TestCase):
     def test_build_single_transcript_duplication_neg(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
-        t = Transcript(50, 249, exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
+        t = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
         b1 = Breakpoint('test', 1200, orient=ORIENT.RIGHT)
         b2 = Breakpoint('test', 1299, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_sequence='ATCGATCG')
@@ -289,31 +292,234 @@ class TestFusionTranscript(unittest.TestCase):
         self.assertEqual(3, ft.exon_number(ft.exons[3]))
     
     def test_build_two_transcript_inversion_5prime_pos(self):
-        pass  # TODO
+        raise unittest.SkipTest('TODO')
 
     def test_build_two_transcript_inversion_5prime_neg(self):
-        pass  # TODO
+        raise unittest.SkipTest('TODO')
 
     def test_build_two_transcript_translocation(self):
-        pass  # TODO
+        raise unittest.SkipTest('TODO')
 
     def test_build_two_transcript_inverted_translocation(self):
-        pass  # TODO
+        raise unittest.SkipTest('TODO')
 
     def test_build_two_transcript_duplication_pos(self):
-        pass  # TODO
+        raise unittest.SkipTest('TODO')
 
     def test_build_two_transcript_duplication_neg(self):
-        pass  # TODO
+        raise unittest.SkipTest('TODO')
 
     def test_build_two_transcript_deletion_pos(self):
-        pass  # TODO
+        raise unittest.SkipTest('TODO')
 
     def test_build_two_transcript_deletion_neg(self):
-        pass  # TODO
+        raise unittest.SkipTest('TODO')
 
 
-class TestTranscript(unittest.TestCase):
+class TestSequenceFetching(unittest.TestCase):
+    
+    def setUp(self):
+        self.gene = Gene(REF_CHR, 1, 900, strand=STRAND.POS)
+        
+        self.ust = usTranscript(exons=[(101, 200), (301, 400), (501, 600), (701, 800)], gene=self.gene)
+        self.gene.transcripts.append(self.ust)
+        
+        self.transcript = Transcript(self.ust, self.ust.generate_splicing_patterns()[0])
+        self.ust.transcripts.append(self.transcript)
+        
+        self.translation = Translation(51, 350, self.transcript)
+        self.transcript.translations.append(self.translation)
+
+        self.spliced_seq = 'GGTGAATTTCTAGTTTGCCTTTTCAGCTAGGGATTAGCTTTTTAGGGGTCCCAATG' \
+            'CCTAGGGAGATTTCTAGGTCCTCTGTTCCTTGCTGACCTCCAATAATCAGAAAATGCTGTGAAGGAAAAAC' \
+            'AAAATGAAATTGCATTGTTTCTACCGGCCCTTTATCAAGCCCTGGCCACCATGATAGTCATGAATTCCAAT' \
+            'TGTGTTGAAATCACTTCAATGTGTTTCTCTTCTTTCTGGGAGCTTACACACTCAAGTTCTGGATGCTTTGA' \
+            'TTGCTATCAGAAGCCGTTAAATAGCTACTTATAAATAGCATTGAGTTATCAGTACTTTCATGTCTTGATAC' \
+            'ATTTCTTCTTGAAAATGTTCATGCTTGCTGATTTGTCTGTTTGTTGAGAGGAGAATGTTC' 
+
+        self.domain = Domain(name='test', regions=[(11, 20), (51, 60)], translation=self.translation)
+        self.translation.domains.append(self.domain)
+
+    def test_fetch_gene_seq_from_ref(self):
+        expt = str(REFERENCE_GENOME[REF_CHR][0:900].seq).upper()
+        self.assertEqual(expt, self.gene.get_sequence(REFERENCE_GENOME))
+        # gene seq should be the same if gene in on reverse strand b/c gene seq always given on pos
+        self.gene.strand = STRAND.NEG
+        self.assertEqual(expt, self.gene.get_sequence(REFERENCE_GENOME))
+
+    def test_fetch_gene_seq_from_stored(self):
+        expt = 'AAA'
+        self.gene.sequence = expt
+        self.assertEqual(expt, self.gene.get_sequence(REFERENCE_GENOME))
+
+    def test_fetch_gene_seq_force_uncached(self):
+        expt = str(REFERENCE_GENOME[REF_CHR][0:900].seq).upper()
+        self.gene.sequence = 'AAA'
+        self.assertEqual(expt, self.gene.get_sequence(REFERENCE_GENOME, ignore_cache=True))
+    
+    def test_fetch_us_transcript_seq_from_ref(self):
+        expt = str(REFERENCE_GENOME[REF_CHR][100:800].seq).upper()
+        self.assertEqual(expt, self.ust.get_sequence(REFERENCE_GENOME))
+    
+    def test_fetch_us_transcript_seq_from_ref_revcomp(self):
+        self.gene.strand = STRAND.NEG
+        expt = reverse_complement(str(REFERENCE_GENOME[REF_CHR][100:800].seq).upper())
+        self.assertEqual(expt, self.ust.get_sequence(REFERENCE_GENOME))
+
+    def test_fetch_us_transcript_seq_from_stored(self):
+        expt = 'AAA'
+        self.ust.sequence = expt
+        self.assertEqual(expt, self.ust.get_sequence(REFERENCE_GENOME))
+    
+    def test_fetch_us_transcript_seq_from_parent_gene(self):
+        self.gene.sequence = 'A' * len(self.gene)
+        self.assertEqual('A' * len(self.ust), self.ust.get_sequence())
+    
+    def test_fetch_us_transcript_seq_from_parent_gene_revcomp(self):
+        self.gene.sequence = 'A' * len(self.gene)
+        self.gene.strand = STRAND.NEG
+        self.assertEqual('T' * len(self.ust), self.ust.get_sequence())
+
+    def test_fetch_us_transcript_seq_force_uncached(self):
+        expt = str(REFERENCE_GENOME[REF_CHR][100:800].seq).upper()
+        self.ust.sequence = 'AAA'
+        self.assertEqual(expt, self.ust.get_sequence(REFERENCE_GENOME, ignore_cache=True))
+
+    def test_fetch_transcript_seq_from_ref(self):
+        self.assertEqual(self.spliced_seq, self.transcript.get_sequence(REFERENCE_GENOME))
+   
+    def test_fetch_transcript_seq_from_ref_revcomp(self):
+        self.gene.strand = STRAND.NEG
+        self.assertEqual(reverse_complement(self.spliced_seq), self.transcript.get_sequence(REFERENCE_GENOME))
+
+    def test_fetch_transcript_seq_from_stored(self):
+        expt = 'AAA'
+        self.transcript.sequence = expt
+        self.assertEqual(expt, self.transcript.get_sequence(REFERENCE_GENOME))
+    
+    def test_fetch_transcript_seq_from_parent_ust(self):
+        self.ust.sequence = 'A' * len(self.ust)
+        self.assertEqual('A' * len(self.transcript), self.transcript.get_sequence())
+   
+    def test_fetch_transcript_seq_from_parent_gene(self):
+        self.gene.sequence = 'A' * len(self.gene)
+        self.assertEqual('A' * len(self.transcript), self.transcript.get_sequence())
+
+    def test_fetch_transcript_seq_force_uncached(self):
+        self.transcript.sequence = 'AAA'
+        self.assertEqual(self.spliced_seq, self.transcript.get_sequence(REFERENCE_GENOME, ignore_cache=True))
+
+    def test_fetch_translation_AA_seq_from_ref(self):
+        cds = self.spliced_seq[self.translation.start - 1:self.translation.end]
+        self.assertEqual(translate(cds), self.translation.get_AA_sequence(REFERENCE_GENOME))
+    
+    def test_fetch_translation_cds_seq_from_ref(self):
+        cds = self.spliced_seq[self.translation.start - 1:self.translation.end]
+        self.assertEqual(cds, self.translation.get_sequence(REFERENCE_GENOME))
+    
+    def test_fetch_translation_cds_seq_from_ref_revcomp(self):
+        self.gene.strand = STRAND.NEG
+        cdna = reverse_complement(self.spliced_seq)
+        cds = cdna[self.translation.start - 1:self.translation.end]
+        self.assertEqual(cds, self.translation.get_sequence(REFERENCE_GENOME))
+
+    def test_fetch_translation_cds_seq_from_stored(self):
+        expt = 'AAA'
+        self.translation.sequence = expt
+        self.assertEqual(expt, self.translation.get_sequence(REFERENCE_GENOME))
+    
+    def test_fetch_translation_cds_seq_from_parent_transcript(self):
+        self.transcript.sequence = 'A' * len(self.transcript)
+        self.assertEqual('A' * len(self.translation), self.translation.get_sequence(REFERENCE_GENOME))
+
+    def test_fetch_translation_cds_seq_from_parent_ust(self):
+        self.ust.sequence = 'A' * len(self.ust)
+        self.assertEqual('A' * len(self.translation), self.translation.get_sequence(REFERENCE_GENOME))
+
+    def test_fetch_translation_cds_seq_from_parent_gene(self):
+        self.gene.sequence = 'A' * len(self.gene)
+        self.assertEqual('A' * len(self.translation), self.translation.get_sequence(REFERENCE_GENOME))
+    
+    def test_fetch_translation_cds_seq_force_uncached(self):
+        self.translation.sequence = 'AAA'
+        cds = self.spliced_seq[self.translation.start - 1:self.translation.end]
+        self.assertEqual(cds, self.translation.get_sequence(REFERENCE_GENOME, ignore_cache=True))
+
+    def test_fetch_domain_seq_from_ref(self):
+        seqs = ['VPC*PPIIRK', 'C*NHFNVFLF']
+        self.assertEqual(seqs, self.domain.get_sequences(REFERENCE_GENOME))
+
+
+class TestStrandInheritance(unittest.TestCase):
+    def setUp(self):
+        self.gene = Gene('1', 1, 500, strand=STRAND.POS)
+        ust = usTranscript(gene=self.gene, exons=[(1, 100), (200, 300), (400, 500)])
+        self.gene.unspliced_transcripts.append(ust)
+        for spl in ust.generate_splicing_patterns():
+            t = Transcript(ust, spl)
+            ust.spliced_transcripts.append(t)
+            tl = Translation(51, 250, t)
+            t.translations.append(tl)
+    
+    def test_strand_gene(self):
+        self.assertEqual(STRAND.POS, self.gene.get_strand())
+
+    def test_strand_us_transcript(self):
+        self.assertEqual(STRAND.POS, self.gene.unspliced_transcripts[0].get_strand())
+    
+    def test_strand_spl_transcript(self):
+        self.assertEqual(STRAND.POS, self.gene.spliced_transcripts[0].get_strand())
+
+    def test_strand_translation(self):
+        self.assertEqual(STRAND.POS, self.gene.spliced_transcripts[0].translations[0].get_strand())
+
+
+class TestCoordinateCoversion(unittest.TestCase):
+    def setUp(self):
+        self.gene = Gene('1', 1, 500, strand=STRAND.POS)
+        ust = usTranscript(gene=self.gene, exons=[(1, 100), (201, 300), (401, 500)])
+        self.gene.unspliced_transcripts.append(ust)
+        for spl in ust.generate_splicing_patterns():
+            t = Transcript(ust, spl)
+            ust.spliced_transcripts.append(t)
+            tl = Translation(51, 250, t)
+            t.translations.append(tl)
+        
+        self.rev_gene = Gene('1', 1, 500, strand=STRAND.NEG)
+        ust = usTranscript(gene=self.gene, exons=[(1, 100), (201, 300), (401, 500)])
+        self.gene.unspliced_transcripts.append(ust)
+        for spl in ust.generate_splicing_patterns():
+            t = Transcript(ust, spl)
+            ust.spliced_transcripts.append(t)
+            tl = Translation(51, 250, t)
+            t.translations.append(tl)
+
+    def test_convert_cdna_to_genomic(self):
+        for t in self.gene.spliced_transcripts:
+            self.assertEqual(50, t.convert_cdna_to_genomic(50))
+            self.assertEqual(450, t.convert_cdna_to_genomic(250))
+        
+        for t in self.rev_gene.spliced_transcripts:
+            self.assertEqual(451, t.convert_cdna_to_genomic(50))
+            self.assertEqual(51, t.convert_cdna_to_genomic(250))
+
+    def test_convert_genomic_to_cdna(self):
+        for t in self.gene.spliced_transcripts:
+            self.assertEqual(50, t.convert_genomic_to_cdna(50))
+            self.assertEqual(249, t.convert_genomic_to_cdna(449))
+        
+        for t in self.rev_gene.spliced_transcripts:
+            self.assertEqual(51, t.convert_genomic_to_cdna(449))
+            self.assertEqual(250, t.convert_genomic_to_cdna(50))
+
+    def test_convert_aa_to_cdna(self):
+        raise unittest.SkipTest('TODO')
+
+    def test_convert_cdna_to_aa(self):
+        raise unittest.SkipTest('TODO')
+
+
+class TestUSTranscript(unittest.TestCase):
     def setUp(self):
         self.x = Exon(100, 199)  # C
         self.y = Exon(500, 599)  # G
@@ -326,23 +532,12 @@ class TestTranscript(unittest.TestCase):
         reference_sequence += 'A' * 100 + 'G' * 100 + 'A' * 200
         self.reference_sequence = reference_sequence
 
-    def test___init__(self):
-        g = Gene('1', 1, 9999, name='KRAS', strand=STRAND.POS)
-        t = Transcript(gene=g, cds_start=1, cds_end=10, genomic_start=1, genomic_end=100)
-        self.assertEqual(1, len(g.transcripts))
-        self.assertEqual(g, t.gene)
-
-        t = Transcript(gene=None, cds_start=1, cds_end=10, genomic_start=1, genomic_end=100)
-        self.assertEqual(None, t.gene)
-        t = Transcript(1, 10, genomic_start=1, genomic_end=10, domains=[Domain('name', [(1, 2)])])
-        self.assertEqual(1, len(t.translations))
-
-    def test___init__implicit_genomic_start(self):
-        t = Transcript(gene=None, cds_start=1, cds_end=10, exons=[(1, 100), (200, 300), (400, 500)])
+    def test___init__implicit_start(self):
+        t = usTranscript(gene=None, exons=[(1, 100), (200, 300), (400, 500)])
         self.assertEqual(1, t.start)
-        self.assertEqual(t.start, t.genomic_start)
+        self.assertEqual(t.start, t.start)
         self.assertEqual(500, t.end)
-        self.assertEqual(t.end, t.genomic_end)
+        self.assertEqual(t.end, t.end)
         self.assertEqual(1, t[0])
         self.assertEqual(500, t[1])
         self.assertFalse(Interval.overlaps((0, 0), t))
@@ -352,83 +547,38 @@ class TestTranscript(unittest.TestCase):
     def test___init__strand_mismatch(self):
         g = Gene('1', 1, 9999, name='KRAS', strand=STRAND.POS)
 
-        with self.assertRaises(AttributeError):
-            t = Transcript(genomic_start=1, genomic_end=100, gene=g, strand=STRAND.NEG)
+        with self.assertRaises(AssertionError):
+            t = usTranscript(start=1, end=100, gene=g, strand=STRAND.NEG)
 
 
     def test___init__overlapping_exon_error(self):
         with self.assertRaises(AttributeError):
-            Transcript(exons=[Exon(1, 15), Exon(10, 20)])
+            usTranscript(exons=[Exon(1, 15), Exon(10, 20)])
 
-    def test_strand(self):
-        g = Gene('1', 1, 9999, name='KRAS', strand=STRAND.POS)
-        t = Transcript(genomic_start=1, genomic_end=100, gene=g)
-        self.assertEqual(STRAND.POS, t.strand)
-        t = Transcript(genomic_start=1, genomic_end=100, strand=STRAND.POS)
-        self.assertEqual(STRAND.POS, t.strand)
-
-    def test_genomic_length(self):
-        t = Transcript(genomic_start=1, genomic_end=2)
-        self.assertEqual(2, t.genomic_length())
-
-    def test_convert_cdna_to_genomic(self):
-        t = Transcript(gene=None, cds_start=50, cds_end=249, exons=[(1, 99), (200, 299), (400, 499)], strand=STRAND.POS)
-        self.assertEqual(1, len(t.translations))
-        tl = t.translations[0]
-        self.assertEqual(50, tl.start)
-        self.assertEqual(249, tl.end)
-        self.assertEqual(50, t.convert_cdna_to_genomic(tl.start))
-        self.assertEqual(449, t.convert_cdna_to_genomic(tl.end))
-
-        t = Transcript(gene=None, cds_start=50, cds_end=249, exons=[(1, 99), (200, 299), (400, 499)], strand=STRAND.NEG)
-        self.assertEqual(1, len(t.translations))
-        tl = t.translations[0]
-        self.assertEqual(50, tl.start)
-        self.assertEqual(249, tl.end)
-        self.assertEqual(450, t.convert_cdna_to_genomic(tl.start))
-        self.assertEqual(51, t.convert_cdna_to_genomic(tl.end))
-
-    def test_convert_aa_to_cdna(self):
-        t = Transcript(gene=None, cds_start=50, cds_end=249, exons=[(1, 99), (200, 299), (400, 499)], strand=STRAND.POS)
-        self.assertEqual(1, len(t.translations))
-        tl = t.translations[0]
-        self.assertEqual(50, tl.start)
-        self.assertEqual(249, tl.end)
-        self.assertEqual(Interval(56, 58), tl.convert_aa_to_cdna(3))
-
-    def test_genomic_utr_regions(self):
-        t = Transcript(gene=None, cds_start=50, cds_end=249, exons=[(1, 99), (200, 299), (400, 499)], strand=STRAND.POS)
-        tl = t.translations[0]
-        self.assertEqual([Interval(1, 50), Interval(449, 499)], tl.genomic_utr_regions())
-    
-        t = Transcript(gene=None, cds_start=50, cds_end=249, exons=[(1, 99), (200, 299), (400, 499)], strand=STRAND.NEG)
-        tl = t.translations[0]
-        self.assertEqual([Interval(450, 499), Interval(1, 51)], tl.genomic_utr_regions())
-    
     def test_exon_number(self):
-        t = Transcript(gene=None, cds_start=50, cds_end=249, exons=[(1, 99), (200, 299), (400, 499)], strand=STRAND.POS)
+        t = usTranscript(gene=None, exons=[(1, 99), (200, 299), (400, 499)], strand=STRAND.POS)
         for i, e in enumerate(t.exons):
             self.assertEqual(i + 1, t.exon_number(e))
 
-        t = Transcript(gene=None, cds_start=50, cds_end=249, exons=[(1, 99), (200, 299), (400, 499)], strand=STRAND.NEG)
+        t = usTranscript(gene=None, exons=[(1, 99), (200, 299), (400, 499)], strand=STRAND.NEG)
         for i, e in enumerate(sorted(t.exons, key=lambda x: x.start, reverse=True)):
             self.assertEqual(i + 1, t.exon_number(e))
     
     def test_get_sequence_from_gene(self):
         ref = {'1': MockSeq('CCCCTTTTCCCCTTTT')}
         g = Gene('1', 1, 16, strand=STRAND.POS, sequence='CCCCTTTTCCCCTTTT')
-        t = Transcript(1, 10, exons=[(2, 5), (7, 15)], gene=g)
+        t = usTranscript(exons=[(2, 5), (7, 15)], gene=g)
         self.assertEqual('CCCTTTTCCCCTTT', t.get_sequence())
 
     def test_get_sequence_from_gene_revcomp(self):
         ref = {'1': MockSeq('CCCCTTTTCCCCTTTT')}
         g = Gene('1', 1, 16, strand=STRAND.NEG, sequence='CCCCTTTTCCCCTTTT')
-        t = Transcript(1, 10, exons=[(2, 5), (7, 15)], gene=g)
+        t = usTranscript(exons=[(2, 5), (7, 15)], gene=g)
         self.assertEqual(reverse_complement('CCCTTTTCCCCTTT'), t.get_sequence())
     
     def test_get_sequence_from_ref_error(self):
         g = Gene('1', 1, 16, strand=STRAND.POS)
-        t = Transcript(1, 10, exons=[(2, 5), (7, 15)], gene=g)
+        t = usTranscript(exons=[(2, 5), (7, 15)], gene=g)
 
         with self.assertRaises(AttributeError):
             t.get_sequence()
@@ -436,39 +586,39 @@ class TestTranscript(unittest.TestCase):
     def test_get_sequence_from_ref(self):
         ref = {'1': MockSeq('CCCCTTTTCCCCTTTT')}
         g = Gene('1', 1, 16, strand=STRAND.POS)
-        t = Transcript(1, 10, exons=[(2, 5), (7, 15)], gene=g)
+        t = usTranscript(exons=[(2, 5), (7, 15)], gene=g)
         self.assertEqual('CCCTTTTCCCCTTT', t.get_sequence(ref))
 
     
     def test_splicing_patterns(self):
-        t = Transcript(1, 2, genomic_start=3, genomic_end=4)
-        self.assertEqual(1, len(t.splicing_patterns()))
+        t = usTranscript(start=3, end=4)
+        self.assertEqual(1, len(t.generate_splicing_patterns()))
 
     def test_splicing_patterns_35(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
-        ft = Transcript(exons=[self.x, self.y, self.z, self.w])
+        ft = usTranscript(exons=[self.x, self.y, self.z, self.w])
         self.y.intact_end_splice = False
         self.z.intact_start_splice = False
-        patterns = ft.splicing_patterns()
+        patterns = ft.generate_splicing_patterns()
         self.assertEqual(1, len(patterns))
         self.assertEqual([self.x.end, self.y.start, self.z.end, self.w.start], patterns[0])
 
     def test_splicing_patterns_5_last_exon(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
-        ft = Transcript(exons=[self.x, self.y, self.z, self.w])
+        ft = usTranscript(exons=[self.x, self.y, self.z, self.w])
         self.w.intact_start_splice = False
-        patterns = ft.splicing_patterns()
+        patterns = ft.generate_splicing_patterns()
         self.assertEqual(1, len(patterns))
         self.assertEqual([self.x.end, self.y.start, self.y.end, self.z.start], patterns[0])
 
     def test_splicing_patterns_5(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
-        ft = Transcript(exons=[self.x, self.y, self.z, self.w])
+        ft = usTranscript(exons=[self.x, self.y, self.z, self.w])
         self.y.intact_start_splice = False
-        patterns = ft.splicing_patterns()
+        patterns = ft.generate_splicing_patterns()
         self.assertEqual(2, len(patterns))
         patterns = sorted(patterns)
         self.assertEqual([self.x.end, self.z.start, self.z.end, self.w.start], patterns[0])
@@ -477,9 +627,9 @@ class TestTranscript(unittest.TestCase):
     def test_splicing_patterns_3(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
-        ft = Transcript(exons=[self.x, self.y, self.z, self.w])
+        ft = usTranscript(exons=[self.x, self.y, self.z, self.w])
         self.y.intact_end_splice = False
-        patterns = ft.splicing_patterns()
+        patterns = ft.generate_splicing_patterns()
         self.assertEqual(2, len(patterns))
         patterns = sorted(patterns)
         self.assertEqual([self.x.end, self.z.start, self.z.end, self.w.start], patterns[1])
@@ -488,18 +638,18 @@ class TestTranscript(unittest.TestCase):
     def test_splicing_patterns_53(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
-        ft = Transcript(exons=[self.x, self.y, self.z, self.w])
+        ft = usTranscript(exons=[self.x, self.y, self.z, self.w])
         self.y.intact_end_splice = False
         self.y.intact_start_splice = False
-        patterns = ft.splicing_patterns()
+        patterns = ft.generate_splicing_patterns()
         self.assertEqual(1, len(patterns))
         self.assertEqual([self.x.end, self.z.start, self.z.end, self.w.start], patterns[0])
 
     def test_splicing_patterns_normal(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
-        ft = Transcript(exons=[self.x, self.y, self.z, self.w])
-        patterns = ft.splicing_patterns()
+        ft = usTranscript(exons=[self.x, self.y, self.z, self.w])
+        patterns = ft.generate_splicing_patterns()
         self.assertEqual(1, len(patterns))
         self.assertEqual([self.x.end, self.y.start, self.y.end, self.z.start, self.z.end, self.w.start], patterns[0])
 
@@ -508,45 +658,32 @@ class TestTranslation(unittest.TestCase):
     def test_get_sequence_from_ref(self):
         ref = {'1': MockSeq('CCCTAATCCCCTTT')}
         g = Gene('1', 1, 16, strand=STRAND.NEG)
-        t = Transcript(1, 10, exons=[(2, 5), (7, 15)], gene=g)
+        t = usTranscript(exons=[(2, 5), (7, 15)], gene=g)
         tl = Translation(4, 11, t, [])
         self.assertEqual('GGGGATTA', tl.get_sequence(ref))
 
     def test_get_sequence_from_transcript(self):
-        t = Transcript(1, 10, exons=[(2, 5), (7, 15)], sequence='CCCTAATCCCCTTT', strand=STRAND.NEG)
+        t = usTranscript(exons=[(2, 5), (7, 15)], sequence='CCCTAATCCCCTTT', strand=STRAND.NEG)
         tl = Translation(4, 11, t, [])
         self.assertEqual('TAATCCCC', tl.get_sequence())
 
 
 class TestDomain(unittest.TestCase):
 
-    def test_key(self):
-        d = Domain('name', [(1, 2)])
-        self.assertEqual(('name', None), d.key)
-
     def test___init__region_error(self):
         with self.assertRaises(AttributeError):
             Domain('name', [(1, 3), (4, 3)])
 
-    def test___init__with_translation(self):
-        t = Transcript(1, 2, genomic_start=3, genomic_end=4)
-        for tl in t.translations:
-            print(tl, tl.start, tl.end, tl.splicing_pattern)
-        self.assertEqual(1, len(t.translations))
-        t = t.translations[0]
-        Domain('name', [(1, 3)], translation=t)
-        self.assertEqual(1, len(t.domains))
-
     def test_get_sequence_from_ref(self):
         ref = {'1': MockSeq('CCCTAATCCCCTTT')}
         g = Gene('1', 1, 16, strand=STRAND.NEG)
-        t = Transcript(1, 10, exons=[(2, 5), (7, 15)], gene=g)
+        t = usTranscript(exons=[(2, 5), (7, 15)], gene=g)
         tl = Translation(4, 11, t, [])
         d = Domain('name', [(1, 2)], translation=tl)
         self.assertEqual([translate('GGGGAT')], d.get_sequences(ref))
 
     def test_get_sequence_from_translation_seq(self):
-        t = Transcript(1, 10, exons=[(2, 5), (7, 15)], sequence='CCCTAATCCCCTTT', strand=STRAND.NEG)
+        t = usTranscript(exons=[(2, 5), (7, 15)], sequence='CCCTAATCCCCTTT', strand=STRAND.NEG)
         tl = Translation(4, 11, t, [])
         d = Domain('name', [(1, 2)], translation=tl)
         self.assertEqual([translate('TAATCC')], d.get_sequences())
@@ -606,13 +743,6 @@ class TestDomain(unittest.TestCase):
             m, t, regions = dom.align_seq(seq)
 
 
-class TestIntergenicRegion(unittest.TestCase):
-
-    def test_key(self):
-        b = IntergenicRegion('1', 1, 4, STRAND.NS)
-        self.assertEqual(('1', 1, 4, STRAND.NS), b.key)
-
-
 class TestBioInterval(unittest.TestCase):
 
     def test___eq__(self):
@@ -648,7 +778,7 @@ class TestGene(unittest.TestCase):
         ref = {'1': MockSeq('AACCCTTTGGG')}
         g = Gene('1', 3, 8, strand=STRAND.POS)
         self.assertEqual('CCCTTT', g.get_sequence(ref))
-        g = Gene('fake', 2836, 4144, strand=STRAND.POS)
+        g = Gene(REF_CHR, 2836, 4144, strand=STRAND.POS)
         seq = (
             'GCAACTATATAATCTGTGGGAATATCTCCTTTTACACCTAGCCCTACTTCTGTCTGGCTACAGTCATTTATCTGGCTTTGGGAAATGTGACCACAGAATCAGATAT'
             'ATACATGAGATTAAATAATACATGTGTATGTCATTTAAATATCTAGAAAAGTTATGACTTCACCAGGTATGAAAAATATAAAAAGAACTCTGTCAAGAATCATACA'
@@ -683,11 +813,14 @@ class TestAnnotate(unittest.TestCase):
     def test_overlapping_transcripts(self):
         b = Breakpoint('C', 1000, strand=STRAND.POS)
         g = Gene('C', 1, 9999, 'gene1', STRAND.POS)
-        t = Transcript(1, 10, exons=[(100, 199), (500, 699), (1200, 1300)], gene=g)
+        t = usTranscript(exons=[(100, 199), (500, 699), (1200, 1300)], gene=g)
+        g.transcripts.append(t)
         self.assertTrue(Interval.overlaps(b, t))
-        Transcript(1, 10, exons=[(100, 199), (500, 699), (800, 900)], gene=g)
+        t = usTranscript(exons=[(100, 199), (500, 699), (800, 900)], gene=g)
+        g.transcripts.append(t)
         h = Gene('C', 1, 9999, 'gene1', STRAND.NEG)
-        Transcript(1, 10, exons=[(100, 199), (500, 699), (1200, 1300)], gene=h, strand=STRAND.NEG)
+        t = usTranscript(exons=[(100, 199), (500, 699), (1200, 1300)], gene=h, strand=STRAND.NEG)
+        h.transcripts.append(t)
         d = {'C': [g, h]}
         tlist = overlapping_transcripts(d, b)
         self.assertEqual(1, len(tlist))
@@ -779,11 +912,12 @@ class TestAnnotate(unittest.TestCase):
         self.assertEqual(2, len(ann_list[1].encompassed_genes))
 
     def test_gather_annotations_interchromosomal(self):
-        pass  # TODO
+        raise unittest.SkipTest('TODO')
 
     def test_gather_annotations_intrachromosomal_within_gene_inversion(self):
         g = Gene('test', 1000, 3000, strand=STRAND.POS)
-        t = Transcript(50, 450, gene=g, exons=[(1001, 1100), (1501, 1600), (2001, 2100), (2501, 2600)])
+        t = usTranscript(gene=g, exons=[(1001, 1100), (1501, 1600), (2001, 2100), (2501, 2600)])
+        g.transcripts.append(t)
         ref = {
             'test': [g]
         }
@@ -797,8 +931,8 @@ class TestAnnotate(unittest.TestCase):
         self.assertEqual(ann_list[0].transcript1, ann_list[0].transcript2)
     
     def test_determine_prime(self):
-        tneg = Transcript(1, 2, genomic_start=3, genomic_end=4, strand=STRAND.NEG)
-        tpos = Transcript(1, 2, genomic_start=3, genomic_end=4, strand=STRAND.POS)
+        tneg = usTranscript(start=3, end=4, strand=STRAND.NEG)
+        tpos = usTranscript(start=3, end=4, strand=STRAND.POS)
         bleft = Breakpoint('test', 1, 2, orient=ORIENT.LEFT)
         bright = Breakpoint('test', 1, 2, orient=ORIENT.RIGHT)
         # positive left should be five prime
@@ -818,7 +952,7 @@ class TestAnnotate(unittest.TestCase):
             determine_prime(tneg, bleft)
 
         with self.assertRaises(AttributeError):
-            tpos._strand = STRAND.NS
+            tpos.strand = STRAND.NS
             determine_prime(tpos, bright)
 
     def test_calculate_ORF_nested(self):

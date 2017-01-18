@@ -318,69 +318,90 @@ class Evidence:
         window = cls.generate_window(
             breakpoint, read_length, median_insert_size, call_error, stdev_isize, stdev_count_abnormal)
 
-        tgt_left = breakpoint.start - window.start + 1
-        tgt_right = window.end - breakpoint.end + 1
+        tgt_left = breakpoint.start - window.start  # amount to expand to the left
+        tgt_right = window.end - breakpoint.end  # amount to expand to the right
+        print('tgt_left', tgt_left, 'tgt_right', tgt_right)
+        print('breakpoint', breakpoint)
 
         if len(transcripts) == 0:  # case 1. no overlapping transcripts
+            print('no overlapping transcripts')
             return window
 
         for t in transcripts:
             current_length = 0
             exons = sorted(t.exons, key=lambda x: x.start)
+            print('exons', [(e.start, e.end) for e in exons])
             current_interval = Interval(breakpoint.start, breakpoint.end)
+            segments = []
+            
+            # first going left
+            lleft = 0
+            epos, in_prev_intron = Interval.position_in_range(exons, (breakpoint.start, breakpoint.start))
+            print('eflt', epos, in_prev_intron)
+            if in_prev_intron:
+                epos -= 1
+                if epos >= 0:
+                    nexxt = exons[epos]
+                    l = Interval(nexxt.end + 1, breakpoint.start - 1)
+                    if lleft + len(l) > tgt_left:
+                        # only need part of the intron
+                        l = Interval(breakpoint.start - tgt_left + lleft, breakpoint.start - 1)
+                    segments.append(l)
+                    lleft += len(l)
+            print('lleft', lleft)
+            while epos >= 0 and lleft < tgt_left:
+                e = Interval(exons[epos].start, min([exons[epos].end, breakpoint.start - 1]))
+                if lleft + len(e) <= tgt_left:  # add the entire exon
+                    segments.append(e)
+                    lleft += len(e)
+                else:  # only need a part of the exon
+                    e = Interval(e.end - tgt_left + lleft + 1, e.end)
+                    segments.append(e)
+                    lleft += len(e)
+                epos -= 1
+            if lleft < tgt_left:
+                assert(epos == -1)
+                # add genomic region from ahead of the first exon
+                l = Interval(exons[0].start - tgt_left + lleft, exons[0].start - 1)
+                lleft += len(l)
+                segments.append(l)
+            print('segments', [(e.start, e.end) for e in segments])
+            print('lleft', lleft)
+            assert(lleft == tgt_left)
 
             # first going left
+            lright = 0
             epos, in_prev_intron = Interval.position_in_range(exons, (breakpoint.start, breakpoint.start))
-            if epos == 0 and in_prev_intron:
-                continue
-            elif in_prev_intron:
-                epos -= 1
-                current_length += breakpoint.start - exons[epos].end + 1
-                current_interval.start = exons[epos].end - 1
-                if current_length >= tgt_left:
-                    continue
-            while epos >= 0:
-                if current_length + len(exons[epos]) >= tgt_left:
-                    eshift = tgt_left - current_length
-                    current_interval.start = exons[epos].end - eshift
-                    current_length += eshift
-                    assert(current_length == tgt_left)
-                    break
-                else:
-                    current_length += len(exons[epos])
-                    current_length.start = exons[epos].start
-                    epos -= 1
-            if current_length < tgt_left:
-                assert(epos == -1)
-                eshift = tgt_left - current_length
-                current_interval.start = exons[0].start - eshift
-
-            current_length = 0
-            # next going right
-            epos, in_prev_intron = Interval.position_in_range(exons, (breakpoint.end, breakpoint.end))
-            if epos == len(exons):  # after the last exon
-                continue
-            elif in_prev_intron:
-                current_length += exons[epos].start - breakpoint.end + 1
-                current_interval.end = exons[epos].start - 1
-                if current_length >= tgt_right:
-                    continue
-            while epos < len(exons):
-                if current_length + len(exons[epos]) >= tgt_right:
-                    eshift = tgt_right - current_length
-                    current_interval.end = exons[epos].start + eshift
-                    current_length += eshift
-                    assert(current_length == tgt_right)
-                    break
-                else:
-                    current_length += len(exons[epos])
-                    current_interval.end = exons[epos].end
-                    epos += 1
-            if current_length < tgt_right:
+            print('right', epos, in_prev_intron)
+            if in_prev_intron:
+                curr = exons[epos]
+                l = Interval(breakpoint.end + 1, curr.start - 1)
+                if lright + len(l) > tgt_right:
+                    # only need part of the intron
+                    l  = Interval(breakpoint.end + 1, breakpoint.end + tgt_right - lright)
+                lright += len(l)
+                segments.append(l)
+            print('segments', [(e.start, e.end) for e in segments])
+            while epos < len(exons) and lright < tgt_right:
+                e = Interval(max([exons[epos].start, breakpoint.end + 1]), exons[epos].end)
+                if lright + len(e) <= tgt_right:  # add the entire exon
+                    segments.append(e)
+                    lright += len(e)
+                else:  # only need a part of the exon
+                    e = Interval(e.start, e.start + tgt_right - lright - 1)
+                    segments.append(e)
+                    lright += len(e)
+                epos += 1
+            if lright < tgt_right:
                 assert(epos == len(exons))
-                eshift = tgt_right - current_length
-                current_interval.end = exons[-1].end + eshift
-            window = window | current_interval
+                # add genomic region from after of the last exon
+                l = Interval(exons[-1].end + 1, exons[-1].end + 1 + tgt_right - lright - 1)
+                lright += len(l)
+                segments.append(l)
+            print('segments', [(e.start, e.end) for e in segments])
+            print('lright', lright)
+            assert(lright == tgt_right)
+            window = window | Interval.union(*segments)
         return window
 
     def __init__(
