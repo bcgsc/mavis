@@ -532,23 +532,25 @@ def gather_breakpoint_annotations(ref_ann, breakpoint):
     Returns:
         tuple: tuple contains
 
-            - list: transcripts or intergenic regions overlapping the breakpoint on the positive strand
-            - list: transcripts or intergenic regions overlapping the breakpoint on the negative strand
+            - :class:`list` of (:class:`usTranscript` or :class:`IntergenicRegion`): transcripts or intergenic regions
+              overlapping the breakpoint on the positive strand
+            - :class:`list` of (:class:`usTranscript` or :class:`IntergenicRegion`): transcripts or intergenic regions
+              overlapping the breakpoint on the negative strand
     """
 
     pos_overlapping_transcripts = []
     neg_overlapping_transcripts = []
     for gene in ref_ann[breakpoint.chr]:
-        for t in gene.spliced_transcripts:
+        for t in gene.transcripts:
             if Interval.overlaps(t, breakpoint):
                 if STRAND.compare(t.get_strand(), STRAND.POS):
                     pos_overlapping_transcripts.append(t)
                 if STRAND.compare(t.get_strand(), STRAND.NEG):
                     neg_overlapping_transcripts.append(t)
-
+    
     pos_intervals = Interval.min_nonoverlapping(*pos_overlapping_transcripts)
     neg_intervals = Interval.min_nonoverlapping(*neg_overlapping_transcripts)
-
+    
     temp = []
     # before the first?
     if len(pos_intervals) > 0:
