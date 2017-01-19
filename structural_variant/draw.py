@@ -1,8 +1,9 @@
 import svgwrite
 from svgwrite import Drawing
 from .interval import Interval
-from .constants import STRAND, ORIENT
+from .constants import STRAND, ORIENT, CODON_SIZE
 from colour import Color
+from .error import DrawingFitError, NotSpecifiedError
 
 # draw gene level view
 # draw gene box
@@ -318,7 +319,7 @@ class Diagram:
 
             if ann.transcript1:
                 g = canvas.g(class_='transcript')
-                g = self.draw_transcript(
+                g = self.draw_ustranscript(
                     canvas,
                     ann.transcript1,
                     twidth,
@@ -333,7 +334,7 @@ class Diagram:
 
             if ann.transcript2:
                 g = canvas.g(class_='transcript')
-                g = self.draw_transcript(
+                g = self.draw_ustranscript(
                     canvas,
                     ann.transcript2,
                     twidth,
@@ -355,7 +356,7 @@ class Diagram:
                     if old_ex in colors:
                         colors[ex] = colors[old_ex]
                 g = canvas.g(class_='transcript')
-                g = self.draw_transcript(
+                g = self.draw_ustranscript(
                     canvas,
                     fusion_transcript,
                     drawing_width,
@@ -396,7 +397,7 @@ class Diagram:
                 colors[exon] = self.EXON1_COLOR
 
             # now draw the transcript track
-            g = self.draw_transcript(
+            g = self.draw_ustranscript(
                 canvas,
                 ann.transcript1,
                 drawing_width,
@@ -415,7 +416,7 @@ class Diagram:
                     if old_ex in colors:
                         colors[ex] = colors[old_ex]
                 g = canvas.g(class_='transcript')
-                g = self.draw_transcript(
+                g = self.draw_ustranscript(
                     canvas,
                     fusion_transcript,
                     drawing_width,
@@ -471,7 +472,7 @@ class Diagram:
 
             if ann.transcript1:
                 g = canvas.g(class_='transcript')
-                g = self.draw_transcript(
+                g = self.draw_ustranscript(
                     canvas,
                     ann.transcript1,
                     twidth,
@@ -486,7 +487,7 @@ class Diagram:
 
             if ann.transcript2:
                 g = canvas.g(class_='transcript')
-                g = self.draw_transcript(
+                g = self.draw_ustranscript(
                     canvas,
                     ann.transcript2,
                     twidth,
@@ -508,7 +509,7 @@ class Diagram:
                     if old_ex in colors:
                         colors[ex] = colors[old_ex]
                 g = canvas.g(class_='transcript')
-                g = self.draw_transcript(
+                g = self.draw_ustranscript(
                     canvas,
                     fusion_transcript,
                     drawing_width,
@@ -561,8 +562,8 @@ class Diagram:
         setattr(main_group, 'width', t - s + 1)
         return main_group
 
-    def draw_transcript(
-        self, canvas, transcript,
+    def draw_ustranscript(
+        self, canvas, ust,
         target_width=None,
         breakpoints=[],
         labels=LabelMapping(),
@@ -589,44 +590,54 @@ class Diagram:
             svgwrite.container.Group: the group element for the transcript diagram
                     Has the added parameters of labels, height, and mapping
         """
-        if transcript.strand not in [STRAND.POS, STRAND.NEG]:
-            raise AttributeError('strand must be positive or negative to draw the transcript')
+        if ust.get_strand() not in [STRAND.POS, STRAND.NEG]:
+            raise NotSpecifiedError('strand must be positive or negative to draw the ust')
         if (mapping is None and target_width is None) or (mapping is not None and target_width is not None):
             raise AttributeError('mapping and target_width arguments are required and mutually exclusive')
-
+        
+        print('\nust', ust,  ust.exons, ust.name)
+        for tr in ust.transcripts:
+            print(tr, tr.start, tr.end, tr.splicing_pattern, tr.exons)
+            for tl in tr.translations:
+                print(tl, tl.start, tl.end)
         if mapping is None:
             mapping = self._generate_interval_mapping(
-                transcript.exons,
+                ust.exons,
                 target_width,
                 self.EXON_INTRON_RATIO,
                 self.EXON_MIN_WIDTH
             )
+        print('mapping')
+        for k, v in sorted(mapping.items()):
+            print(k, '==>', v)
 
-        main_group = canvas.g(class_='transcript')
+        main_group = canvas.g(class_='ust')
 
         y = self.BREAKPOINT_TOP_MARGIN
 
-        if len(transcript.translations) == 0:
-            print('transcript has no translations')
+        if len(ust.translations) == 0:
+            print('ust has no translations')
             y += self.TRACK_HEIGHT / 2
-            exon_track_group = self._draw_exon_track(canvas, transcript, mapping, colors)
+            exon_track_group = self._draw_exon_track(canvas, ust, mapping, colors)
             main_group.add(exon_track_group)
             y += self.TRACK_HEIGHT / 2
         else:
             # draw the protein features if there are any
-            for tl in transcript.translations:
+            for tl in ust.translations:
+                print('ust.translations', ust.translations)
+                tr = tl.transcript
                 # if the splicing takes up more room than the track we need to adjust for it
                 y += max(self.SPLICE_HEIGHT, self.TRACK_HEIGHT / 2) - self.TRACK_HEIGHT / 2
 
-                exon_track_group = self._draw_exon_track(canvas, transcript, mapping, colors)
+                exon_track_group = self._draw_exon_track(canvas, ust, mapping, colors)
                 exon_track_group.translate(0, y)
 
                 y += self.TRACK_HEIGHT / 2
                 # draw the splicing pattern
                 polyline = []
-                for i in range(0, len(tl.splicing_pattern), 2):
-                    a = Interval.convert_pos(mapping, tl.splicing_pattern[i])
-                    b = Interval.convert_pos(mapping, tl.splicing_pattern[i + 1])
+                for p1, p2 in zip(tr.splicing_pattern[::2], tr.splicing_pattern[1::2]):
+                    a = Interval.convert_pos(mapping, p1)
+                    b = Interval.convert_pos(mapping, p2)
                     polyline.extend(
                         [(a, y), (a + (b - a) / 2, y - self.SPLICE_HEIGHT), (b, y)])
 
@@ -642,28 +653,33 @@ class Diagram:
                 y += self.PADDING
                 # convert the AA position to cdna position, then convert the cdna to genomic, etc
                 # ==================== adding the translation track ============
-                translation_sections = [
-                    transcript.convert_cdna_to_genomic(tl.start),
-                    transcript.convert_cdna_to_genomic(tl.end)
-                ]
-                translation_sections.sort()
-                s = Interval.convert_pos(mapping, translation_sections[0])
-                t = Interval.convert_pos(mapping, translation_sections[1])
+                translated_genomic_regions = [
+                    tr.convert_cdna_to_genomic(tl.start), tr.convert_cdna_to_genomic(tl.end)]
+                translated_genomic_regions = [Interval(*sorted(translated_genomic_regions))]
 
-                tli = Interval(*translation_sections)
-                translation_sections = [tli]
-                for i in range(0, len(tl.splicing_pattern), 2):
-                    itemp = Interval(tl.splicing_pattern[i], tl.splicing_pattern[i + 1])
-                    temp = []
-                    for sec in translation_sections:
-                        temp.extend(sec - itemp)
-                    translation_sections = temp
+                for p1, p2 in zip(tr.splicing_pattern[::2], tr.splicing_pattern[1::2]):
+                    try:
+                        spliced_out_interval = Interval(p1 + 1, p2 - 1)
+                        temp = []
+                        for region in translated_genomic_regions:
+                            temp.extend(region - spliced_out_interval)
+                        translated_genomic_regions = temp
+                    except AttributeError:
+                        pass
+
+                if len(translated_genomic_regions) == 0:
+                    continue
+                print('translated_genomic_regions', translated_genomic_regions)
+                print('original', tr.convert_cdna_to_genomic(tl.start), tr.convert_cdna_to_genomic(tl.end))
+                print(tl.start, tl.end, tr.start, tr.end)
+                s = Interval.convert_pos(mapping, translated_genomic_regions[0].start)
+                t = Interval.convert_pos(mapping, translated_genomic_regions[-1].end)
 
                 gt = canvas.g(class_='translation')
                 gp.add(gt)
                 h = max(self.TRANSLATION_SCAFFOLD_HEIGHT, self.TRANSLATION_FONT_SIZE)
 
-                for sec in translation_sections:
+                for sec in translated_genomic_regions:
                     start = Interval.convert_pos(mapping, sec.start)
                     end = Interval.convert_pos(mapping, sec.end)
                     gt.add(canvas.rect(
@@ -673,19 +689,20 @@ class Diagram:
                         class_='scaffold'
                         ))
                 gt.add(canvas.text(
-                    self.TRANSLATION_END_MARKER if transcript.strand == STRAND.NEG else self.TRANSLATION_START_MARKER,
+                    self.TRANSLATION_END_MARKER if tr.get_strand() == STRAND.NEG else self.TRANSLATION_START_MARKER,
                     insert=(s - self.TRANSLATION_MARKER_PADDING, h / 2),
                     fill=self.LABEL_COLOR,
                     style=self.FONT_STYLE.format(font_size=self.TRANSLATION_FONT_SIZE, text_anchor='end'),
                     class_='label'
                 ))
                 gt.add(canvas.text(
-                    self.TRANSLATION_START_MARKER if transcript.strand == STRAND.NEG else self.TRANSLATION_END_MARKER,
+                    self.TRANSLATION_START_MARKER if tr.get_strand() == STRAND.NEG else self.TRANSLATION_END_MARKER,
                     insert=(t + self.TRANSLATION_MARKER_PADDING, h / 2),
                     fill=self.LABEL_COLOR,
                     style=self.FONT_STYLE.format(font_size=self.TRANSLATION_FONT_SIZE, text_anchor='start'),
                     class_='label'
                 ))
+                gt.add(Tag('title', 'cds: {}_{}; aa length: {}'.format(tl.start, tl.end, len(tl) // CODON_SIZE)))
                 py = h
                 # now draw the domain tracks
                 # need to convert the domain AA positions to cds positions to genomic
@@ -704,15 +721,16 @@ class Diagram:
                         match, total = d.score_region_mapping(REFERENCE_GENOME)
                         percent_match = int(round(match * 100 / total, 0)) 
                         fill = self.DOMAIN_FILL_GRADIENT[percent_match % len(self.DOMAIN_FILL_GRADIENT) - 1]
-                    except AttributeError:
+                    except (NotSpecifiedError, AttributeError):
                         pass
                     for region in d.regions:
                         # convert the AA position to cdna position, then convert the cdna to genomic, etc
-                        s = tl.convert_aa_to_cdna(region[0])
-                        t = tl.convert_aa_to_cdna(region[1])
-                        temp = s | t
-                        s = Interval.convert_pos(mapping, transcript.convert_cdna_to_genomic(temp.start))
-                        t = Interval.convert_pos(mapping, transcript.convert_cdna_to_genomic(temp.end))
+                        s = tl.convert_aa_to_cdna(region.start)
+                        t = tl.convert_aa_to_cdna(region.end)
+                        s = tr.convert_cdna_to_genomic(s.start)
+                        t = tr.convert_cdna_to_genomic(t.end)
+                        s = Interval.convert_pos(mapping, s)
+                        t = Interval.convert_pos(mapping, t)
                         if s > t:
                             t, s = (s, t)
                         gdr = canvas.g(class_='domain_region')
@@ -746,7 +764,7 @@ class Diagram:
             bg = self.draw_breakpoint(canvas, b, abs(t - s) + 1, y, label=labels.add(b, self.BREAKPOINT_LABEL_PREFIX))
             bg.translate(s, 0)
             main_group.add(bg)
-
+        print()
         setattr(main_group, 'height', y)
         setattr(main_group, 'width', target_width)
         setattr(main_group, 'mapping', mapping)
@@ -859,7 +877,7 @@ class Diagram:
     def read_config(self):
         pass
 
-    def draw_transcripts_overlay(self, gene, markers=None, best_transcript=None):
+    def draw_ustranscripts_overlay(self, gene, markers=None, best_transcript=None):
         markers = [] if markers is None else markers
         canvas = Drawing(size=(self.WIDTH, 1000))  # just set the height for now and change later
         w = self.WIDTH - self.LEFT_MARGIN - self.RIGHT_MARGIN
@@ -1032,11 +1050,11 @@ class Diagram:
 
         wrect = width - self.GENE_ARROW_WIDTH
         if wrect < 1:
-            raise AttributeError('width is not sufficient to draw gene')
+            raise DrawingFitError('width is not sufficient to draw gene')
 
         label_color = self.LABEL_COLOR if not self.DYNAMIC_LABELS else Diagram.dynamic_label_color(fill)
 
-        if gene.strand == STRAND.POS:
+        if gene.get_strand() == STRAND.POS:
             group.add(
                 canvas.rect(
                     (0, 0),
@@ -1060,7 +1078,7 @@ class Diagram:
                     style=self.FONT_STYLE.format(font_size=self.LABEL_FONT_SIZE, text_anchor='middle'),
                     class_='label'
                 ))
-        elif gene.strand == STRAND.NEG:
+        elif gene.get_strand() == STRAND.NEG:
             group.add(
                 canvas.rect(
                     (self.GENE_ARROW_WIDTH, 0),
@@ -1101,7 +1119,7 @@ class Diagram:
         
         group.add(
             Tag('title', 'Gene {} {}:{}_{}{}'.format(gene.name if gene.name else '', 
-                gene.chr, gene.start, gene.end, gene.strand)))
+                gene.chr, gene.start, gene.end, gene.get_strand())))
         return group
 
     @classmethod
@@ -1152,7 +1170,7 @@ class Diagram:
         width = target_width - (len(intervals) * 2 + 1) * min_width  # reserved width
 
         if width < 0:
-            raise AttributeError('width cannot accommodate the number of expected objects')
+            raise DrawingFitError('width cannot accommodate the number of expected objects')
 
         intergenic_unit = width / (genic_length * ratio + intergenic_length)
         genic_unit = intergenic_unit * ratio

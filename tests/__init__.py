@@ -99,7 +99,7 @@ class MockString:
 
 
 def build_transcript(gene, exons, cds_start, cds_end, domains):
-    ust = usTranscript(exons, gene.start, gene.end, gene)
+    ust = usTranscript(exons, gene=gene)
     gene.unspliced_transcripts.append(ust)
     
     for spl in ust.generate_splicing_patterns():

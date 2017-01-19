@@ -3,6 +3,7 @@ from ..constants import STRAND, SVTYPE, reverse_complement, ORIENT, PRIME, COLUM
 from ..breakpoint import Breakpoint, BreakpointPair
 from ..interval import Interval
 from .protein import Translation, Domain, calculate_ORF
+from ..error import NotSpecifiedError
 import itertools
 
 
@@ -26,16 +27,16 @@ def determine_prime(transcript, breakpoint):
         elif breakpoint.orient == ORIENT.RIGHT:
             return PRIME.THREE
         else:
-            raise AttributeError('cannot determine_prime if the orient of the breakpoint has not been specified')
+            raise NotSpecifiedError('cannot determine_prime if the orient of the breakpoint has not been specified')
     elif transcript.get_strand() == STRAND.NEG:
         if breakpoint.orient == ORIENT.LEFT:
             return PRIME.THREE
         elif breakpoint.orient == ORIENT.RIGHT:
             return PRIME.FIVE
         else:
-            raise AttributeError('cannot determine_prime if the orient of the breakpoint has not been specified')
+            raise NotSpecifiedError('cannot determine_prime if the orient of the breakpoint has not been specified')
     else:
-        raise AttributeError('cannot determine prime if the strand of the transcript has not been specified')
+        raise NotSpecifiedError('cannot determine prime if the strand of the transcript has not been specified')
 
 
 class FusionTranscript(usTranscript):
@@ -47,6 +48,8 @@ class FusionTranscript(usTranscript):
         self.spliced_transcripts = []
         self.position = None
         self.strand = STRAND.POS  # always built on the positive strand
+        self.reference_object = None
+        self.name = None
 
     def exon_number(self, exon):
         """
@@ -75,13 +78,12 @@ class FusionTranscript(usTranscript):
 
         """
         if not ann.transcript1 or not ann.transcript2:
-            raise AttributeError('cannot produce fusion transcript for non-annotated fusions')
+            raise NotSpecifiedError('cannot produce fusion transcript for non-annotated fusions')
         elif not ann.event_type and ann.transcript1 == ann.transcript2:
-            raise AttributeError('event_type must be specified to produce a fusion transcript')
+            raise NotSpecifiedError('event_type must be specified to produce a fusion transcript')
         elif ann.untemplated_sequence is None:
-            raise AttributeError(
+            raise NotSpecifiedError(
                 'cannot build a fusion transcript where the untemplated sequence has not been specified')
-        
         ft = FusionTranscript()
 
         if ann.transcript1 == ann.transcript2 and ann.event_type not in [SVTYPE.DEL, SVTYPE.INS]:
@@ -206,13 +208,14 @@ class FusionTranscript(usTranscript):
                 orfs = temp
             # create the translations
             for orf in orfs:
-                tl = Translation(orf.start, orf.end, t)
+                tl = Translation(orf.start - t.start + 1, orf.end - t.start + 1, t)
                 t.translations.append(tl)
 
         # remap the domains from the original translations to the current translations
         for t in ft.spliced_transcripts:
             for new_tl in t.translations:
                 aa_seq = new_tl.get_AA_sequence()
+                assert(aa_seq[0] == 'M')
                 for tl in ann.transcript1.translations + ann.transcript2.translations:
                     for dom in tl.domains:
                         try:
@@ -307,7 +310,7 @@ class FusionTranscript(usTranscript):
                     s += temp
                     new_exons.append((e, exon))
         else:
-            raise AttributeError('breakpoint orientation must be specified to pull exons')
+            raise NotSpecifiedError('breakpoint orientation must be specified to pull exons')
         if transcript.get_strand() == STRAND.NEG:
             # reverse complement the sequence and reverse the exons
             temp = new_exons
@@ -323,7 +326,7 @@ class FusionTranscript(usTranscript):
                 new_exons.append((e, old_exon))
             s = reverse_complement(s)
         elif transcript.get_strand() != STRAND.POS:
-            raise AttributeError('transcript strand must be specified to pull exons')
+            raise NotSpecifiedError('transcript strand must be specified to pull exons')
         return s, new_exons
 
 
@@ -467,7 +470,7 @@ class Annotation(BreakpointPair):
             row[COLUMNS.transcript1] = self.transcript1.name
             try:
                 row[COLUMNS.gene1_direction] = str(determine_prime(self.transcript1, self.break1))
-            except AttributeError:
+            except NotSpecifiedError:
                 pass
         else:
             row[COLUMNS.gene1] = 'None'
@@ -481,7 +484,7 @@ class Annotation(BreakpointPair):
             row[COLUMNS.transcript2] = self.transcript2.name
             try:
                 row[COLUMNS.gene2_direction] = str(determine_prime(self.transcript2, self.break2))
-            except AttributeError:
+            except NotSpecifiedError:
                 pass
         else:
             row[COLUMNS.gene2] = 'None'
@@ -512,8 +515,6 @@ def overlapping_transcripts(ref_ann, breakpoint):
     putative_annotations = []
     for gene in ref_ann[breakpoint.chr]:
         for transcript in gene.transcripts:
-            print('transcript', transcript.start, transcript.end, transcript.get_strand())
-            print('breakpoint', breakpoint)
             if breakpoint.strand != STRAND.NS and transcript.get_strand() != STRAND.NS \
                     and transcript.get_strand() != breakpoint.strand:
                 continue

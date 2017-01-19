@@ -442,7 +442,7 @@ class Evidence:
         self.breakpoint_pair = breakpoint_pair
 
         if self.break1.orient == ORIENT.NS or self.break2.orient == ORIENT.NS:
-            raise AttributeError(
+            raise NotSpecifiedError(
                 'input breakpoint pair must specify strand and orientation. Cannot be \'not specified'
                 '\' for evidence gathering')
 
@@ -708,7 +708,7 @@ class Evidence:
             primary = read.query_sequence[
                 read.query_alignment_start:read.query_alignment_end]
         else:
-            raise AttributeError('cannot assign split reads to a breakpoint where the orientation has not been '
+            raise NotSpecifiedError('cannot assign split reads to a breakpoint where the orientation has not been '
                                  'specified')
         if len(primary) < self.settings.min_anchor_exact or len(clipped) < self.settings.min_anchor_exact:
             raise UserWarning(
@@ -1049,7 +1049,7 @@ class Evidence:
                     strand=ev.break1.strand
                 )
             else:
-                raise AttributeError('Cannot call by flanking if orientation was not given')
+                raise NotSpecifiedError('Cannot call by flanking if orientation was not given')
 
         if second_breakpoint is None:
             shift = max([0, len(cover2) - ev.settings.read_length])
@@ -1092,7 +1092,7 @@ class Evidence:
                     strand=ev.break2.strand
                 )
             else:
-                raise AttributeError('Cannot call {} by flanking if orientation was not given'.format(classification))
+                raise NotSpecifiedError('Cannot call {} by flanking if orientation was not given'.format(classification))
         return first_breakpoint, second_breakpoint
 
     @classmethod

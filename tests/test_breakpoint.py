@@ -7,12 +7,14 @@ from tests import MockRead
 from tests import REFERENCE_GENOME_FILE
 
 REFERENCE_GENOME = None
+REF_CHR = None
 
 
 def setUpModule():
-    global REFERENCE_GENOME
+    global REFERENCE_GENOME, REF_CHR
     REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
-    if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
+    REF_CHR = list(REFERENCE_GENOME.keys())[0]
+    if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME[REF_CHR].seq[0:50].upper():
         raise AssertionError('fake genome file does not have the expected contents')
 
 
@@ -117,11 +119,11 @@ class TestBreakpointPair(unittest.TestCase):
         self.assertFalse(bpp.opposing_strands)
 
     def test___init__opstrand_not_specified(self):
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(NotSpecifiedError):
             BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 2))
 
     def test___init__stranded(self):
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(NotSpecifiedError):
             BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 2), stranded=True, opposing_strands=True)
 
     def test___get_item__(self):
@@ -584,13 +586,13 @@ class TestBreakpointPair(unittest.TestCase):
         self.assertEqual(reverse_complement('GGATCGATCGAT'), bpp.break2.seq)
 
     def test_breakpoint_sequence_homology_LPRP(self):
-        b1 = Breakpoint('fake', 157, strand=STRAND.POS, orient=ORIENT.LEFT)
-        b2 = Breakpoint('fake', 1788, strand=STRAND.POS, orient=ORIENT.RIGHT)
+        b1 = Breakpoint(REF_CHR, 157, strand=STRAND.POS, orient=ORIENT.LEFT)
+        b2 = Breakpoint(REF_CHR, 1788, strand=STRAND.POS, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2)
         self.assertEqual(('CAATGC', ''), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
 
-        b1 = Breakpoint('fake', 589, strand=STRAND.POS, orient=ORIENT.LEFT)
-        b2 = Breakpoint('fake', 704, strand=STRAND.POS, orient=ORIENT.RIGHT)
+        b1 = Breakpoint(REF_CHR, 589, strand=STRAND.POS, orient=ORIENT.LEFT)
+        b2 = Breakpoint(REF_CHR, 704, strand=STRAND.POS, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2)
         self.assertEqual(('TTAA', 'ATAGC'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
 
@@ -598,8 +600,8 @@ class TestBreakpointPair(unittest.TestCase):
         # CCC|AAA ------------ TTT|GGG
         # CCC                      CCC
         #     TTT              TTT
-        b1 = Breakpoint('fake', 1459, strand=STRAND.POS, orient=ORIENT.LEFT)
-        b2 = Breakpoint('fake', 2914, strand=STRAND.NEG, orient=ORIENT.LEFT)
+        b1 = Breakpoint(REF_CHR, 1459, strand=STRAND.POS, orient=ORIENT.LEFT)
+        b2 = Breakpoint(REF_CHR, 2914, strand=STRAND.NEG, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2)
         self.assertEqual(('CCC', 'TTT'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
 
@@ -607,8 +609,8 @@ class TestBreakpointPair(unittest.TestCase):
         # CCC|AAA ------------ TTT|GGG
         # CCC                      CCC
         #     TTT              TTT
-        b1 = Breakpoint('fake', 1459, strand=STRAND.NEG, orient=ORIENT.LEFT)
-        b2 = Breakpoint('fake', 2914, strand=STRAND.POS, orient=ORIENT.LEFT)
+        b1 = Breakpoint(REF_CHR, 1459, strand=STRAND.NEG, orient=ORIENT.LEFT)
+        b2 = Breakpoint(REF_CHR, 2914, strand=STRAND.POS, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2)
         self.assertEqual(('CCC', 'TTT'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
 
@@ -616,8 +618,8 @@ class TestBreakpointPair(unittest.TestCase):
         # CCC|AAA ------------ TTT|GGG
         # GGG                      GGG
         #     AAA              AAA
-        b1 = Breakpoint('fake', 1460, strand=STRAND.POS, orient=ORIENT.RIGHT)
-        b2 = Breakpoint('fake', 2915, strand=STRAND.NEG, orient=ORIENT.RIGHT)
+        b1 = Breakpoint(REF_CHR, 1460, strand=STRAND.POS, orient=ORIENT.RIGHT)
+        b2 = Breakpoint(REF_CHR, 2915, strand=STRAND.NEG, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2)
         self.assertEqual(('AAA', 'GGG'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
 
@@ -625,15 +627,15 @@ class TestBreakpointPair(unittest.TestCase):
         # CCC|AAA ------------ TTT|GGG
         # GGG                      GGG
         #     AAA              AAA
-        b1 = Breakpoint('fake', 1460, strand=STRAND.NEG, orient=ORIENT.RIGHT)
-        b2 = Breakpoint('fake', 2915, strand=STRAND.POS, orient=ORIENT.RIGHT)
+        b1 = Breakpoint(REF_CHR, 1460, strand=STRAND.NEG, orient=ORIENT.RIGHT)
+        b2 = Breakpoint(REF_CHR, 2915, strand=STRAND.POS, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2)
         self.assertEqual(('AAA', 'GGG'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
 
     def test_breakpoint_sequence_homology_close_del(self):
         # ....TT|TT....
-        b1 = Breakpoint('fake', 1001, strand=STRAND.POS, orient=ORIENT.LEFT)
-        b2 = Breakpoint('fake', 1002, strand=STRAND.POS, orient=ORIENT.RIGHT)
+        b1 = Breakpoint(REF_CHR, 1001, strand=STRAND.POS, orient=ORIENT.LEFT)
+        b2 = Breakpoint(REF_CHR, 1002, strand=STRAND.POS, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2)
         self.assertEqual(('', ''), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
 
@@ -643,14 +645,14 @@ class TestBreakpointPair(unittest.TestCase):
         # ===============>-----------
         # -------------CT-CT--------- first break homology
         # ------------T--T----------- second break homology
-        b1 = Breakpoint('fake', 745, strand=STRAND.POS, orient=ORIENT.RIGHT)
-        b2 = Breakpoint('fake', 747, strand=STRAND.POS, orient=ORIENT.LEFT)
+        b1 = Breakpoint(REF_CHR, 745, strand=STRAND.POS, orient=ORIENT.RIGHT)
+        b2 = Breakpoint(REF_CHR, 747, strand=STRAND.POS, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2)
         self.assertEqual(('CT', 'TT'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
 
     def test_breakpoint_sequence_homology_non_specific_error(self):
-        b1 = Breakpoint('fake', 740, 745, strand=STRAND.POS, orient=ORIENT.RIGHT)
-        b2 = Breakpoint('fake', 747, strand=STRAND.POS, orient=ORIENT.LEFT)
+        b1 = Breakpoint(REF_CHR, 740, 745, strand=STRAND.POS, orient=ORIENT.RIGHT)
+        b2 = Breakpoint(REF_CHR, 747, strand=STRAND.POS, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2)
         with self.assertRaises(AttributeError):
             bpp.breakpoint_sequence_homology(REFERENCE_GENOME)

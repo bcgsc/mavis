@@ -171,28 +171,26 @@ def load_reference_genes(filepath, verbose=True):
         else:
             genes[g.name] = g
         try:
+            exons = row['genomic_exon_ranges']
+            if len(exons) == 0:
+                exons = [(row['transcript_genomic_start'], row['transcript_genomic_end'])]
             ust = usTranscript(
                 name=row['ensembl_transcript_id'],
                 gene=g,
-                start=row['transcript_genomic_start'],
-                end=row['transcript_genomic_end'],
-                exons=row['genomic_exon_ranges']
+                exons=exons
             )
-            g.transcripts.append(ust)
-            if len(row['genomic_exon_ranges']) == 0:
-                continue
             spl_patts = ust.generate_splicing_patterns()
-            assert(1 == len(spl_patts))
+            if 1 != len(spl_patts):
+                raise AssertionError('expected 1 splicing pattern for reference loaded transcripts but found', len(spl_patts))
             t = Transcript(ust, spl_patts[0])
             ust.spliced_transcripts.append(t)
             if row['cdna_coding_start'] is not None:
                 tx = Translation(
                     row['cdna_coding_start'], row['cdna_coding_end'], transcript=t, domains=row['AA_domain_ranges'])
                 t.translations.append(tx)
+            g.transcripts.append(ust)
         except Exception as err:
-            pass
             print('failed loading', row['ensembl_transcript_id'], row['hugo_names'].split(';'), repr(err))
-            raise err
 
     ref = {}
     for g in genes.values():

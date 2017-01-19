@@ -2,6 +2,7 @@ from ..interval import Interval
 from .base import BioInterval
 from ..constants import translate, START_AA, STOP_AA, CODON_SIZE
 import itertools
+from ..error import NotSpecifiedError
 
 
 def calculate_ORF(spliced_cdna_sequence, min_orf_size=None):
@@ -113,7 +114,7 @@ class Domain:
             matches = 0
             for region in self.regions:
                 if not region.sequence:
-                    raise AttributeError('insufficient sequence information')
+                    raise NotSpecifiedError('insufficient sequence information')
                 ref = aa[region.start - 1:region.end]
                 for c1, c2 in zip(ref, region.sequence):
                     if c1 == c2:
@@ -121,7 +122,7 @@ class Domain:
                     total += 1
             return matches, total
         else:
-            raise AttributeError('insufficient sequence information')
+            raise NotSpecifiedError('insufficient sequence information')
 
     def get_sequences(self, REFERENCE_GENOME=None, ignore_cache=False):
         """
@@ -151,9 +152,7 @@ class Domain:
                     if region not in sequences:
                         sequences[region] = s
             else:
-                raise AttributeError(
-                    'Insufficient information to gather sequence data. reference_object must have sequence'
-                    ' information or REFERENCE_GENOME must be provided')
+                raise NotSpecifiedError('insufficient sequence information')
         return [sequences[r] for r in self.regions]
 
     def align_seq(self, input_sequence, REFERENCE_GENOME=None):
@@ -248,6 +247,11 @@ class Translation(BioInterval):
         domains = [] if domains is None else domains
         BioInterval.__init__(self, reference_object=transcript, name=name, start=start, end=end, sequence=sequence)
         self.domains = [d for d in domains]
+        
+        if start <= 0: 
+            raise AttributeError('start must be a positive integer')
+        if transcript and end > len(transcript):
+            raise AttributeError('translation cannot be outside of related transcript range', end, len(transcript))
 
         for d in domains:
             d.reference_object = self
@@ -262,10 +266,29 @@ class Translation(BioInterval):
             pos (int): the amino acid position
 
         Returns:
-            int: the cdna equivalent
+            Interval: the cdna equivalent (with CODON_SIZE uncertainty)
         """
         return Interval(self.start - 1 + (pos - 1) * 3 + 1, self.start - 1 + pos * 3)
 
+    def convert_cdna_to_aa(self, pos):
+        """
+        Args:
+            pos (int): the cdna position
+
+        Returns:
+            Interval: the cdna equivalent (with CODON_SIZE uncertainty)
+
+        Raises:
+            AttributeError: the cdna position is not translated
+        """
+        if pos < self.start or pos > self.end:
+            raise IndexError('position is out of bounds')
+        pos = pos - self.start + 1
+        aa = pos // CODON_SIZE
+        if pos % CODON_SIZE != 0:
+            aa += 1
+        return aa
+    
     def get_cds_sequence(self, REFERENCE_GENOME=None, ignore_cache=False):
         """
         Args:
@@ -283,7 +306,7 @@ class Translation(BioInterval):
         elif self.transcript and self.transcript.get_strand():
             seq = self.transcript.get_sequence(REFERENCE_GENOME, ignore_cache)
             return seq[self.start - 1:self.end]
-        raise AttributeError('insufficient sequence information')
+        raise NotSpecifiedError('insufficient sequence information')
 
     def get_sequence(self, REFERENCE_GENOME=None, ignore_cache=False):
         """

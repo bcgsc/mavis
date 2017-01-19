@@ -9,7 +9,6 @@ from structural_variant.breakpoint import Breakpoint, BreakpointPair
 from structural_variant.interval import Interval
 from tests import MockSeq, MockString, build_transcript
 
-raise unittest.SkipTest('skip drawing tests')
 
 class TestDraw(unittest.TestCase):
     def setUp(self):
@@ -96,7 +95,7 @@ class TestDraw(unittest.TestCase):
         self.assertEqual(y, g.labels['G3'])
         self.assertEqual(breakpoints[0], g.labels['B1'])
 
-    def test_draw_transcript(self):
+    def test_draw_ustranscript(self):
         d = Diagram()
         # domains = [Domain()]
         d1 = Domain('first', [(55, 61), (71, 73)])
@@ -111,13 +110,13 @@ class TestDraw(unittest.TestCase):
             domains=[d2, d1]
         )
         b = Breakpoint('1', 350, 410, orient=ORIENT.LEFT)
-        g = d.draw_transcript(
+        g = d.draw_ustranscript(
             self.canvas, t, 500,
             colors={t.exons[1]: '#FFFF00'},
             breakpoints=[b]
         )
         self.canvas.add(g)
-        self.canvas.saveas('test_draw_transcript.svg')
+        self.canvas.saveas('test_draw_ustranscript.svg')
         self.assertEqual(2, len(self.canvas.elements))
         self.assertEqual(4, len(g.elements))
         for el, cls in zip(g.elements, ['splicing', 'exon_track', 'protein', 'breakpoint']):
@@ -283,7 +282,7 @@ class TestDraw(unittest.TestCase):
 
         canvas = d.draw(ann, ft)
         canvas.saveas('test_layout_translocation.svg')
-        self.assertEqual(5, len(canvas.elements))  # defs counts as element
+        self.assertEqual(6, len(canvas.elements))  # defs counts as element
 
     def test_draw_layout_intergenic_breakpoint(self):
         pass
@@ -318,6 +317,6 @@ class TestDraw(unittest.TestCase):
             exons=[Exon(25403698, 25403863), Exon(25398208, 25398329), Exon(25386753, 25388160)],
             gene=gene, domains=[])
         d = Diagram()
-        canvas = d.draw_transcripts_overlay(gene, best_transcript=t)
+        canvas = d.draw_ustranscripts_overlay(gene, best_transcript=t)
         canvas.saveas('test_draw_overlay.svg')
         self.assertEqual(5, len(canvas.elements))  # defs counts as element

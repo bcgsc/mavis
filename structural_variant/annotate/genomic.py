@@ -1,6 +1,6 @@
 from ..constants import STRAND, SPLICE_SITE_RADIUS, reverse_complement
 from ..interval import Interval
-from ..error import StrandSpecificityError
+from ..error import NotSpecifiedError 
 from .base import BioInterval
 import warnings
 import itertools
@@ -76,7 +76,7 @@ class Gene(BioInterval):
         if self.sequence and not ignore_cache:
             return self.sequence
         elif REFERENCE_GENOME is None:
-            raise AttributeError('reference genome is required to retrieve the gene sequence')
+            raise NotSpecifiedError('reference genome is required to retrieve the gene sequence')
         else:
             return str(REFERENCE_GENOME[self.chr].seq[self.start - 1:self.end]).upper()
     
@@ -132,15 +132,16 @@ class Exon(BioInterval):
         """(:class:`~structural_variant.interval.Interval`): the genomic range describing the splice site"""
         return Interval(self.end - SPLICE_SITE_RADIUS + 1, self.end + SPLICE_SITE_RADIUS)
 
+    def __repr__(self):
+        return 'Exon({}, {})'.format(self.start, self.end)
+
 
 class usTranscript(BioInterval):
     """
     """
     def __init__(
         self,
-        exons=None,
-        start=None,
-        end=None,
+        exons,
         gene=None,
         name=None,
         strand=None,
@@ -159,14 +160,15 @@ class usTranscript(BioInterval):
             sequence (str): unspliced cDNA sequence
         """
         # cannot use mutable default args in the function decl
-        self.exons = [] if exons is None else exons
+        self.exons = exons
         self.spliced_transcripts = [] if spliced_transcripts is None else spliced_transcripts
         self.strand = strand
 
-        if start is None and len(self.exons) > 0:
-            start = min([e[0] for e in self.exons])
-        if end is None and len(self.exons) > 0:
-            end = max([e[1] for e in self.exons])
+        if len(exons) == 0:
+            raise AttributeError('exons must be given')
+
+        start = min([e[0] for e in self.exons])
+        end = max([e[1] for e in self.exons])
 
         BioInterval.__init__(self, gene, start, end, name=name, sequence=sequence)
         
@@ -176,7 +178,7 @@ class usTranscript(BioInterval):
                 curr.reference_object = self
             except AttributeError:
                 self.exons[i] = Exon(curr[0], curr[1], self)
-
+        self.exons = sorted(self.exons, key=lambda x: x.start)
         for e1, e2 in itertools.combinations(self.exons, 2):
             if Interval.overlaps(e1, e2):
                 raise AttributeError('exons cannot overlap')
@@ -255,18 +257,19 @@ class usTranscript(BioInterval):
             splicing_pattern (:class:`list` of :class:`int`): list of genomic splice sites 3'5' repeating
         """
         mapping = {}
-
-        exons = sorted(self.exons, key=lambda x: x.start)
+        l = 1
+        pos = sorted(splicing_pattern + [self.start, self.end])
+        genome_intervals = [Interval(s, t) for s, t in zip(pos[::2], pos[1::2])]
+        
         if self.get_strand() == STRAND.POS:
             pass
         elif self.get_strand() == STRAND.NEG:
-            exons.reverse()
+            genome_intervals.reverse()
         else:
-            raise StrandSpecificityError('cannot convert without strand information')
+            raise NotSpecifiedError('cannot convert without strand information')
 
-        l = 1
-        for e in exons:
-            mapping[Interval(e.start, e.end)] = Interval(l, l + len(e) - 1)
+        for e in genome_intervals:
+            mapping[e] = Interval(l, l + len(e) - 1)
             l += len(e)
         return mapping
 
@@ -329,7 +332,7 @@ class usTranscript(BioInterval):
             elif self.get_strand() == STRAND.NEG:
                 return len(self.exons) - i
             else:
-                raise AttributeError('strand must be pos or neg to calculate the exon number')
+                raise NotSpecifiedError('strand must be pos or neg to calculate the exon number')
         raise AttributeError('can only calculate phase on associated exons')
 
     def get_sequence(self, REFERENCE_GENOME=None, ignore_cache=False):
@@ -352,7 +355,7 @@ class usTranscript(BioInterval):
             else:
                 return self.gene.sequence[start:end]
         elif REFERENCE_GENOME is None:
-            raise AttributeError('reference genome is required to retrieve the gene sequence')
+            raise NotSpecifiedError('reference genome is required to retrieve the gene sequence')
         else:
             if self.get_strand() == STRAND.NEG:
                 return reverse_complement(REFERENCE_GENOME[self.gene.chr].seq[self.start - 1:self.end]).upper()
@@ -387,7 +390,7 @@ class usTranscript(BioInterval):
         tx = []
         for t in self.spliced_transcripts:
             for tl in t.translations:
-                tx.append(tx)
+                tx.append(tl)
         return tx
     
     @property
@@ -409,7 +412,6 @@ class Transcript(BioInterval):
         pos = sorted([ust.start, ust.end] + splicing_patt)
         self.splicing_pattern = sorted(splicing_patt)
         self.exons = [Exon(s, t, self) for s, t in zip(pos[::2], pos[1::2])]
-        
         BioInterval.__init__(self, ust, 1, sum([len(e) for e in self.exons]), sequence=None)
         self.translations = [] if translations is None else [tx for tx in translations]
         

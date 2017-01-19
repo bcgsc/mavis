@@ -307,27 +307,27 @@ class Interval:
         if i == len(input_intervals):
             curr = input_intervals[i - 1]
             if not forward_to_reverse:
-                raise DiscontinuousMappingError('outside mapped range', after=mapping[curr][1])
+                raise DiscontinuousMappingError(pos, 'is outside mapped range', mapping, after=mapping[curr][1])
             else:
-                raise DiscontinuousMappingError('outside mapped range', before=mapping[curr][0])
+                raise DiscontinuousMappingError(pos, 'is outside mapped range', mapping, before=mapping[curr][0])
         elif previous_flag:
             curr = input_intervals[i]
             if i == 0:
                 if not forward_to_reverse:
-                    raise DiscontinuousMappingError('outside mapped range', before=mapping[curr][0])
+                    raise DiscontinuousMappingError(pos, 'is outside mapped range', mapping, before=mapping[curr][0])
                 else:
-                    raise DiscontinuousMappingError('outside mapped range', after=mapping[curr][1])
+                    raise DiscontinuousMappingError(pos, 'is outside mapped range', mapping, after=mapping[curr][1])
             else:  # between two segments
                 prev = input_intervals[i - 1]
                 if not forward_to_reverse:
                     raise DiscontinuousMappingError(
-                        'outside mapped range',
+                        pos, 'is outside mapped range', mapping,
                         before=mapping[prev][1],
                         after=mapping[curr][0]
                     )
                 else:
                     raise DiscontinuousMappingError(
-                        'outside mapped range',
+                        pos, 'is outside mapped range', mapping,
                         before=mapping[curr][1],
                         after=mapping[prev][0]
                     )

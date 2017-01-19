@@ -19,17 +19,18 @@ class DiscontinuousMappingError(Exception):
         return '{0}<[{1},{2}], {3}>'.format(name, self.before, self.after, self.msg)
 
 
-class StrandSpecificityError(Exception):
+class NotSpecifiedError(Exception):
     """
-    raised when STRAND.NS is used a give process requires that the strand be specified
+    raised when information is required for a function but has not been given
+
+    for example if strand was required but had been set to STRAND.NS then this
+    error would be raised
     """
+    pass
 
-    def __init__(self, *pos):
-        self.msg = ' '.join(list(pos))
 
-    def __str__(self):
-        name = self.__class__.__name__
-        return '{0}<strand must be specified: {1}>'.format(name, self.msg)
+class DrawingFitError(Exception):
+    pass
 
 
 class InvalidRearrangement(Exception):

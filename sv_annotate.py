@@ -40,7 +40,7 @@ import argparse
 from structural_variant.breakpoint import read_bpp_from_input_file
 from structural_variant.annotate import load_reference_genes, load_reference_genome
 from structural_variant.annotate.variant import gather_annotations, FusionTranscript
-from structural_variant.error import DiscontinuousMappingError
+from structural_variant.error import DiscontinuousMappingError, DrawingFitError, NotSpecifiedError
 from structural_variant import __version__
 from structural_variant.draw import Diagram
 import TSV
@@ -112,31 +112,13 @@ def main():
         log(arg, '=', val, time_stamp=False)
     FILENAME_PREFIX = re.sub('\.(tab|tsv|txt)$', '', os.path.basename(args.input))
 
-    log('loading:', args.reference_genome)
-    REFERENCE_GENOME = load_reference_genome(args.reference_genome)
+    
     log('loading:', args.annotations)
     REFERENCE_ANNOTATIONS = load_reference_genes(args.annotations)
     
+    log('loading:', args.reference_genome)
+    REFERENCE_GENOME = load_reference_genome(args.reference_genome)
     # test that the sequence makes sense for a random transcript
-    for gene in REFERENCE_ANNOTATIONS['22']:
-        if gene.name == 'ENSG00000182944':
-            for t in gene.transcripts:
-                if t.name == 'ENST00000332035':
-                    for tl in t.translations:
-                        
-                        s = 'MASTDYSTYSQAAAQQGYSAYTAQPTQGYAQTTQAYGQQSYGTYGQPTDVSYTQAQTTAT' \
-                            'YGQTAYATSYGQPPTGYTTPTAPQAYSQPVQGYGTGAYDTTTATVTTTQASYAAQSAYGT' \
-                            'QPAYPAYGQQPAATAPTSYSSTQPTSYDQSSYSQQNTYGQPSSYGQQSSYGQQSSYGQQP' \
-                            'PTSYPPQTGSYSQAPSQYSQQSSSYGQQSSFRQDHPSSMGVYGQESGGFSGPGENRSMSG' \
-                            'PDNRGRGRGGFDRGGMSRGGRGGGRGGMGSAGERGGFNKPGGPMDEGPDLDLGPPVDPDE' \
-                            'DSDNSAIYVQGLNDSVTLDDLADFFKQCGVVKMNKRTGQPMIHIYLDKETGKPKGDATVS' \
-                            'YEDPPTAKAAVEWFDGKDFQGSKLKVSLARKKPPMNSMRGGLPPREGRGMPPPLRGGPGG' \
-                            'PGGPGGPMGRMGGRGGDRGGFPPRGPRGSRGNPSGGGNVQHRAGDWQCPNPGCGNQNFAW' \
-                            'RTECNQCKAPKPEGFLPPPFPPPGGDRGRGGPGGMRGGRGGLMDRGGPGGMFRGGRGGDR' \
-                            'GGFRGGRGMDRGGFGGGRRGGPGGPPGPLMEQMGGRRGGRGGPGKMDKGEHRQERRDRPY*'
-                        print(s)
-                        print(tl.get_AA_sequence(REFERENCE_GENOME))
-                        assert(tl.get_AA_sequence(REFERENCE_GENOME) == s)
     log('loading:', args.input)
     bpps = read_bpp_from_input_file(
         args.input,
@@ -150,8 +132,6 @@ def main():
         },
         simplify=False)
     log('read {} breakpoint pairs'.format(len(bpps)))
-
-
 
     annotations = []
     for bpp in bpps:
@@ -169,25 +149,34 @@ def main():
     for i, ann in enumerate(annotations):
         ann.data[COLUMNS.annotation_id] = id_prefix + str(i + 1)
         # try building the fusion product
+        if not hasattr(ann.transcript1, 'translations') or not hasattr(ann.transcript2, 'translations'):
+            continue
+        d = Diagram()
+        while True:
+            try:
+                ft = None
+                try:
+                    ft = FusionTranscript.build(
+                        ann, REFERENCE_GENOME,
+                        min_orf_size=args.min_orf_size,
+                        max_orf_cap=args.max_orf_cap,
+                        min_domain_mapping_match=args.min_domain_mapping_match
+                    )
+                except NotSpecifiedError:
+                    pass
+                
 
-        try:
-            domains = set()
-            for tl in ann.transcript1.translations + ann.transcript2.translations:
-                for d in tl.domains:
-                    domains.add(d.name)
-            ft = FusionTranscript.build(
-                ann, REFERENCE_GENOME,
-                min_orf_size=args.min_orf_size,
-                max_orf_cap=args.max_orf_cap,
-                min_domain_mapping_match=args.min_domain_mapping_match
-            )
-            d = Diagram()
-            canvas = d.draw(ann, ft, REFERENCE_GENOME=REFERENCE_GENOME)
-            name = os.path.join(args.output, FILENAME_PREFIX + '.' + ann.data[COLUMNS.annotation_id] + '.svg')
-            log('generating svg:', name)
-            canvas.saveas(name)
-        except (NotImplementedError, AttributeError, DiscontinuousMappingError) as err:
-            print(repr(err))
+                canvas = d.draw(ann, ft, REFERENCE_GENOME=REFERENCE_GENOME)
+                name = os.path.join(args.output, FILENAME_PREFIX + '.' + ann.data[COLUMNS.annotation_id] + '.svg')
+                log('generating svg:', name)
+                canvas.saveas(name)
+                break
+            except (NotImplementedError, AttributeError, DiscontinuousMappingError) as err:
+                print(repr(err))
+                raise err
+            except DrawingFitError as err:
+                d.WIDTH += 500
+
 
     of = os.path.join(args.output, FILENAME_PREFIX + '.annotation.tab')
     with open(of, 'w') as fh:

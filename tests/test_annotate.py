@@ -3,6 +3,7 @@ from structural_variant.annotate.variant import *
 from structural_variant.annotate.genomic import *
 from structural_variant.annotate.protein import *
 from structural_variant.annotate import *
+from structural_variant.error import NotSpecifiedError
 from structural_variant.constants import reverse_complement
 from structural_variant.constants import STRAND
 from structural_variant.breakpoint import Breakpoint, BreakpointPair
@@ -290,7 +291,7 @@ class TestFusionTranscript(unittest.TestCase):
         self.assertFalse(ft.exons[3].intact_start_splice)
         self.assertEqual(3, ft.exon_number(ft.exons[2]))
         self.assertEqual(3, ft.exon_number(ft.exons[3]))
-    
+
     def test_build_two_transcript_inversion_5prime_pos(self):
         raise unittest.SkipTest('TODO')
 
@@ -317,16 +318,16 @@ class TestFusionTranscript(unittest.TestCase):
 
 
 class TestSequenceFetching(unittest.TestCase):
-    
+
     def setUp(self):
         self.gene = Gene(REF_CHR, 1, 900, strand=STRAND.POS)
-        
+
         self.ust = usTranscript(exons=[(101, 200), (301, 400), (501, 600), (701, 800)], gene=self.gene)
         self.gene.transcripts.append(self.ust)
-        
+
         self.transcript = Transcript(self.ust, self.ust.generate_splicing_patterns()[0])
         self.ust.transcripts.append(self.transcript)
-        
+
         self.translation = Translation(51, 350, self.transcript)
         self.transcript.translations.append(self.translation)
 
@@ -335,7 +336,7 @@ class TestSequenceFetching(unittest.TestCase):
             'AAAATGAAATTGCATTGTTTCTACCGGCCCTTTATCAAGCCCTGGCCACCATGATAGTCATGAATTCCAAT' \
             'TGTGTTGAAATCACTTCAATGTGTTTCTCTTCTTTCTGGGAGCTTACACACTCAAGTTCTGGATGCTTTGA' \
             'TTGCTATCAGAAGCCGTTAAATAGCTACTTATAAATAGCATTGAGTTATCAGTACTTTCATGTCTTGATAC' \
-            'ATTTCTTCTTGAAAATGTTCATGCTTGCTGATTTGTCTGTTTGTTGAGAGGAGAATGTTC' 
+            'ATTTCTTCTTGAAAATGTTCATGCTTGCTGATTTGTCTGTTTGTTGAGAGGAGAATGTTC'
 
         self.domain = Domain(name=REF_CHR, regions=[(11, 20), (51, 60)], translation=self.translation)
         self.translation.domains.append(self.domain)
@@ -356,11 +357,11 @@ class TestSequenceFetching(unittest.TestCase):
         expt = str(REFERENCE_GENOME[REF_CHR][0:900].seq).upper()
         self.gene.sequence = 'AAA'
         self.assertEqual(expt, self.gene.get_sequence(REFERENCE_GENOME, ignore_cache=True))
-    
+
     def test_fetch_us_transcript_seq_from_ref(self):
         expt = str(REFERENCE_GENOME[REF_CHR][100:800].seq).upper()
         self.assertEqual(expt, self.ust.get_sequence(REFERENCE_GENOME))
-    
+
     def test_fetch_us_transcript_seq_from_ref_revcomp(self):
         self.gene.strand = STRAND.NEG
         expt = reverse_complement(str(REFERENCE_GENOME[REF_CHR][100:800].seq).upper())
@@ -370,11 +371,11 @@ class TestSequenceFetching(unittest.TestCase):
         expt = 'AAA'
         self.ust.sequence = expt
         self.assertEqual(expt, self.ust.get_sequence(REFERENCE_GENOME))
-    
+
     def test_fetch_us_transcript_seq_from_parent_gene(self):
         self.gene.sequence = 'A' * len(self.gene)
         self.assertEqual('A' * len(self.ust), self.ust.get_sequence())
-    
+
     def test_fetch_us_transcript_seq_from_parent_gene_revcomp(self):
         self.gene.sequence = 'A' * len(self.gene)
         self.gene.strand = STRAND.NEG
@@ -387,7 +388,7 @@ class TestSequenceFetching(unittest.TestCase):
 
     def test_fetch_transcript_seq_from_ref(self):
         self.assertEqual(self.spliced_seq, self.transcript.get_sequence(REFERENCE_GENOME))
-   
+
     def test_fetch_transcript_seq_from_ref_revcomp(self):
         self.gene.strand = STRAND.NEG
         self.assertEqual(reverse_complement(self.spliced_seq), self.transcript.get_sequence(REFERENCE_GENOME))
@@ -396,11 +397,11 @@ class TestSequenceFetching(unittest.TestCase):
         expt = 'AAA'
         self.transcript.sequence = expt
         self.assertEqual(expt, self.transcript.get_sequence(REFERENCE_GENOME))
-    
+
     def test_fetch_transcript_seq_from_parent_ust(self):
         self.ust.sequence = 'A' * len(self.ust)
         self.assertEqual('A' * len(self.transcript), self.transcript.get_sequence())
-   
+
     def test_fetch_transcript_seq_from_parent_gene(self):
         self.gene.sequence = 'A' * len(self.gene)
         self.assertEqual('A' * len(self.transcript), self.transcript.get_sequence())
@@ -412,11 +413,11 @@ class TestSequenceFetching(unittest.TestCase):
     def test_fetch_translation_AA_seq_from_ref(self):
         cds = self.spliced_seq[self.translation.start - 1:self.translation.end]
         self.assertEqual(translate(cds), self.translation.get_AA_sequence(REFERENCE_GENOME))
-    
+
     def test_fetch_translation_cds_seq_from_ref(self):
         cds = self.spliced_seq[self.translation.start - 1:self.translation.end]
         self.assertEqual(cds, self.translation.get_sequence(REFERENCE_GENOME))
-    
+
     def test_fetch_translation_cds_seq_from_ref_revcomp(self):
         self.gene.strand = STRAND.NEG
         cdna = reverse_complement(self.spliced_seq)
@@ -427,7 +428,7 @@ class TestSequenceFetching(unittest.TestCase):
         expt = 'AAA'
         self.translation.sequence = expt
         self.assertEqual(expt, self.translation.get_sequence(REFERENCE_GENOME))
-    
+
     def test_fetch_translation_cds_seq_from_parent_transcript(self):
         self.transcript.sequence = 'A' * len(self.transcript)
         self.assertEqual('A' * len(self.translation), self.translation.get_sequence(REFERENCE_GENOME))
@@ -439,7 +440,7 @@ class TestSequenceFetching(unittest.TestCase):
     def test_fetch_translation_cds_seq_from_parent_gene(self):
         self.gene.sequence = 'A' * len(self.gene)
         self.assertEqual('A' * len(self.translation), self.translation.get_sequence(REFERENCE_GENOME))
-    
+
     def test_fetch_translation_cds_seq_force_uncached(self):
         self.translation.sequence = 'AAA'
         cds = self.spliced_seq[self.translation.start - 1:self.translation.end]
@@ -460,13 +461,13 @@ class TestStrandInheritance(unittest.TestCase):
             ust.spliced_transcripts.append(t)
             tl = Translation(51, 250, t)
             t.translations.append(tl)
-    
+
     def test_strand_gene(self):
         self.assertEqual(STRAND.POS, self.gene.get_strand())
 
     def test_strand_us_transcript(self):
         self.assertEqual(STRAND.POS, self.gene.unspliced_transcripts[0].get_strand())
-    
+
     def test_strand_spl_transcript(self):
         self.assertEqual(STRAND.POS, self.gene.spliced_transcripts[0].get_strand())
 
@@ -476,47 +477,58 @@ class TestStrandInheritance(unittest.TestCase):
 
 class TestCoordinateCoversion(unittest.TestCase):
     def setUp(self):
-        self.gene = Gene('1', 1, 500, strand=STRAND.POS)
-        ust = usTranscript(gene=self.gene, exons=[(1, 100), (201, 300), (401, 500)])
-        self.gene.unspliced_transcripts.append(ust)
-        for spl in ust.generate_splicing_patterns():
-            t = Transcript(ust, spl)
-            ust.spliced_transcripts.append(t)
-            tl = Translation(51, 250, t)
-            t.translations.append(tl)
+        self.gene = Gene('1', 15, 700, strand=STRAND.POS)
         
-        self.rev_gene = Gene('1', 1, 500, strand=STRAND.NEG)
-        ust = usTranscript(gene=self.gene, exons=[(1, 100), (201, 300), (401, 500)])
-        self.gene.unspliced_transcripts.append(ust)
-        for spl in ust.generate_splicing_patterns():
-            t = Transcript(ust, spl)
-            ust.spliced_transcripts.append(t)
-            tl = Translation(51, 250, t)
-            t.translations.append(tl)
+        self.ust = usTranscript(gene=self.gene, exons=[(101, 200), (301, 400), (501, 600)])
+        self.gene.unspliced_transcripts.append(self.ust)
+        assert(1 == len(self.ust.generate_splicing_patterns()))
+        
+        spl = self.ust.generate_splicing_patterns()[0]
+        self.transcript = Transcript(self.ust, spl)
+        self.ust.spliced_transcripts.append(self.transcript)
+        
+        self.translation = Translation(51, 251, self.transcript)
+        self.transcript.translations.append(self.translation)
+
+        self.rev_gene = Gene('1', 15, 700, strand=STRAND.NEG)
+        self.rev_ust = usTranscript(gene=self.rev_gene, exons=[(101, 200), (301, 400), (501, 600)])
+        self.gene.unspliced_transcripts.append(self.rev_ust)
+        assert(1 == len(self.rev_ust.generate_splicing_patterns()))
+        
+        spl = self.rev_ust.generate_splicing_patterns()[0]
+        self.rev_transcript = Transcript(self.rev_ust, spl)
+        self.rev_ust.spliced_transcripts.append(self.rev_transcript)
+        
+        self.rev_translation = Translation(51, 251, self.rev_transcript)
+        self.rev_transcript.translations.append(self.rev_translation)
 
     def test_convert_cdna_to_genomic(self):
-        for t in self.gene.spliced_transcripts:
-            self.assertEqual(50, t.convert_cdna_to_genomic(50))
-            self.assertEqual(450, t.convert_cdna_to_genomic(250))
-        
-        for t in self.rev_gene.spliced_transcripts:
-            self.assertEqual(451, t.convert_cdna_to_genomic(50))
-            self.assertEqual(51, t.convert_cdna_to_genomic(250))
-
+        self.assertEqual(150, self.transcript.convert_cdna_to_genomic(50))
+        self.assertEqual(550, self.transcript.convert_cdna_to_genomic(250))
+    
+    def test_convert_cdna_to_genomic_revcomp(self):
+        self.assertEqual(551, self.rev_transcript.convert_cdna_to_genomic(50))
+        self.assertEqual(151, self.rev_transcript.convert_cdna_to_genomic(250))
+    
     def test_convert_genomic_to_cdna(self):
-        for t in self.gene.spliced_transcripts:
-            self.assertEqual(50, t.convert_genomic_to_cdna(50))
-            self.assertEqual(249, t.convert_genomic_to_cdna(449))
-        
-        for t in self.rev_gene.spliced_transcripts:
-            self.assertEqual(51, t.convert_genomic_to_cdna(449))
-            self.assertEqual(250, t.convert_genomic_to_cdna(50))
+        self.assertEqual(50, self.transcript.convert_genomic_to_cdna(150))
+        self.assertEqual(249, self.transcript.convert_genomic_to_cdna(549))
+    
+    def test_convert_genomic_to_cdna_revcomp(self):
+        self.assertEqual(50, self.rev_transcript.convert_genomic_to_cdna(551))
+        self.assertEqual(250, self.rev_transcript.convert_genomic_to_cdna(151))
 
     def test_convert_aa_to_cdna(self):
-        raise unittest.SkipTest('TODO')
+        self.assertEqual(Interval(51, 53), self.translation.convert_aa_to_cdna(1))
+        self.assertEqual(Interval(249, 251), self.translation.convert_aa_to_cdna(67))
 
     def test_convert_cdna_to_aa(self):
-        raise unittest.SkipTest('TODO')
+        self.assertEqual(1, self.translation.convert_cdna_to_aa(51))
+        self.assertEqual(67, self.translation.convert_cdna_to_aa(251))
+        with self.assertRaises(IndexError):
+            self.translation.convert_cdna_to_aa(50)
+        with self.assertRaises(IndexError):
+            self.translation.convert_cdna_to_aa(252)
 
 
 class TestUSTranscript(unittest.TestCase):
@@ -548,8 +560,7 @@ class TestUSTranscript(unittest.TestCase):
         g = Gene('1', 1, 9999, name='KRAS', strand=STRAND.POS)
 
         with self.assertRaises(AssertionError):
-            t = usTranscript(start=1, end=100, gene=g, strand=STRAND.NEG)
-
+            t = usTranscript([(1, 100)], gene=g, strand=STRAND.NEG)
 
     def test___init__overlapping_exon_error(self):
         with self.assertRaises(AttributeError):
@@ -563,7 +574,7 @@ class TestUSTranscript(unittest.TestCase):
         t = usTranscript(gene=None, exons=[(1, 99), (200, 299), (400, 499)], strand=STRAND.NEG)
         for i, e in enumerate(sorted(t.exons, key=lambda x: x.start, reverse=True)):
             self.assertEqual(i + 1, t.exon_number(e))
-    
+
     def test_get_sequence_from_gene(self):
         ref = {'1': MockSeq('CCCCTTTTCCCCTTTT')}
         g = Gene('1', 1, 16, strand=STRAND.POS, sequence='CCCCTTTTCCCCTTTT')
@@ -575,23 +586,23 @@ class TestUSTranscript(unittest.TestCase):
         g = Gene('1', 1, 16, strand=STRAND.NEG, sequence='CCCCTTTTCCCCTTTT')
         t = usTranscript(exons=[(2, 5), (7, 15)], gene=g)
         self.assertEqual(reverse_complement('CCCTTTTCCCCTTT'), t.get_sequence())
-    
+
     def test_get_sequence_from_ref_error(self):
         g = Gene('1', 1, 16, strand=STRAND.POS)
         t = usTranscript(exons=[(2, 5), (7, 15)], gene=g)
 
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(NotSpecifiedError):
             t.get_sequence()
-    
+
     def test_get_sequence_from_ref(self):
         ref = {'1': MockSeq('CCCCTTTTCCCCTTTT')}
         g = Gene('1', 1, 16, strand=STRAND.POS)
         t = usTranscript(exons=[(2, 5), (7, 15)], gene=g)
         self.assertEqual('CCCTTTTCCCCTTT', t.get_sequence(ref))
 
-    
+
     def test_splicing_patterns(self):
-        t = usTranscript(start=3, end=4)
+        t = usTranscript([(3, 4)])
         self.assertEqual(1, len(t.generate_splicing_patterns()))
 
     def test_splicing_patterns_35(self):
@@ -634,7 +645,7 @@ class TestUSTranscript(unittest.TestCase):
         patterns = sorted(patterns)
         self.assertEqual([self.x.end, self.z.start, self.z.end, self.w.start], patterns[1])
         self.assertEqual([self.x.end, self.y.start, self.z.end, self.w.start], patterns[0])
-    
+
     def test_splicing_patterns_53(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
@@ -726,19 +737,25 @@ class TestDomain(unittest.TestCase):
         refseq = 'MHRPPRHMGNKAMEPMDSPLMSAIPRLRPLQPMGRPPMQLLMDSLPLVILLQLPPRHTASLSRGMALVLMIPPL' \
             'LQSPPPRPPMQLSLHMALSLLIQPMGSSQQPLHLQAIPLHSRLVMIRAVTLSRTPMGNRAAMDSRVAMVNKAAMGSSLP' \
             'LVTHPKLDPTAKLQVNIANRAAATGSRTLLMTQSEEELGAIT*'
-        
+
         d = 'QAAAQQGYSAYTAQPTQGYAQTTQAYGQQSYGTYGQPTDVSYTQAQTTATYGQTAYATSYGQPPTGYTTPTAPQAYSQP' \
             'VQGYGTGAYDTTTATVTTTQASYAAQSAYGTQPAYPAYGQQPAATAPTSYSSTQPTSYDQSSYSQQNTYGQPSSYGQQS' \
             'SYGQQSSYGQQPPTSYPPQTGSYSQAPSQYSQQSSSYGQQSSFRQ'
-        
+
         dom = Domain('name', [DomainRegion(1, len(d), d)])
         with self.assertRaises(UserWarning):
             dom.align_seq(refseq)
 
-        seq = 'MASTDYSTYSQAAAQQGYSAYTAQPTQGYAQTTQAYGQQSYGTYGQPTDVSYTQAQTTATYGQTAYATSYGQPPTGYTTPTAPQAYSQPVQGYGTGAYDTTTATVTTTQASYAAQSAYGTQPAYPAYGQQPAATAPTRPQDGNKPTETSQPQSSTGGYNQPSLGYGQSNYSYPQVPGSYPMQPVTAPPSYPPTSYSSTQPTSYDQSSYSQQNTYGQPSSYGQQSSYGQQSSYGQQPPTSYPPQTGSYSQAPSQYSQQSSSYGQQNPSYDSVRRGAWGNNMNSGLNKSPPLGGAQTISKNTEQRPQPDPYQILGPTSSRLANPGSGQIQLWQFLLELLSDSANASCITWEGTNGEFKMTDPDEVARRWGERKSKPNMNYDKLSRALRYYYDKNIMTKVHGKRYAYKFDFHGIAQALQPHPTESSMYKYPSDISYMPSYHAHQQKVNFVPPHPSSMPVTSSSFFGAASQYWTSPTGGIYPNPNVPRHPNTHVPSHLGSYY'
+        seq = 'MASTDYSTYSQAAAQQGYSAYTAQPTQGYAQTTQAYGQQSYGTYGQPTDVSYTQAQTTATYGQTAYATSYGQPPTGY' \
+            'TTPTAPQAYSQPVQGYGTGAYDTTTATVTTTQASYAAQSAYGTQPAYPAYGQQPAATAPTRPQDGNKPTETSQPQSSTG' \
+            'GYNQPSLGYGQSNYSYPQVPGSYPMQPVTAPPSYPPTSYSSTQPTSYDQSSYSQQNTYGQPSSYGQQSSYGQQSSYGQQ' \
+            'PPTSYPPQTGSYSQAPSQYSQQSSSYGQQNPSYDSVRRGAWGNNMNSGLNKSPPLGGAQTISKNTEQRPQPDPYQILGP' \
+            'TSSRLANPGSGQIQLWQFLLELLSDSANASCITWEGTNGEFKMTDPDEVARRWGERKSKPNMNYDKLSRALRYYYDKNI' \
+            'MTKVHGKRYAYKFDFHGIAQALQPHPTESSMYKYPSDISYMPSYHAHQQKVNFVPPHPSSMPVTSSSFFGAASQYWTSP' \
+            'TGGIYPNPNVPRHPNTHVPSHLGSYY'
         d = 'IYVQGLNDSVTLDDLADFFKQCGVVKMNKRTGQPMIHIYLDKETGKPKGDATVSYEDPPTAKAAVEWFDGKDFQGSKLK'
         dom = Domain('name', [DomainRegion(1, len(d), d)])
-        
+
         with self.assertRaises(UserWarning):
             m, t, regions = dom.align_seq(seq)
 
@@ -934,8 +951,8 @@ class TestAnnotationGathering(unittest.TestCase):
 class TestAnnotate(unittest.TestCase):
 
     def test_determine_prime(self):
-        tneg = usTranscript(start=3, end=4, strand=STRAND.NEG)
-        tpos = usTranscript(start=3, end=4, strand=STRAND.POS)
+        tneg = usTranscript(exons=[(3, 4)], strand=STRAND.NEG)
+        tpos = usTranscript(exons=[(3, 4)], strand=STRAND.POS)
         bleft = Breakpoint(REF_CHR, 1, 2, orient=ORIENT.LEFT)
         bright = Breakpoint(REF_CHR, 1, 2, orient=ORIENT.RIGHT)
         # positive left should be five prime
@@ -947,14 +964,14 @@ class TestAnnotate(unittest.TestCase):
         # negative right should be five prime
         self.assertEqual(PRIME.FIVE, determine_prime(tneg, bright))
 
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(NotSpecifiedError):
             bleft.orient = ORIENT.NS
             determine_prime(tpos, bleft)
 
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(NotSpecifiedError):
             determine_prime(tneg, bleft)
 
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(NotSpecifiedError):
             tpos.strand = STRAND.NS
             determine_prime(tpos, bright)
 
@@ -990,7 +1007,7 @@ class TestAnnotate(unittest.TestCase):
         self.assertEqual(2, len(orfs))
         self.assertEqual(Interval(1, 894), orfs[0])
         self.assertEqual(Interval(590, 724), orfs[1])
-    
+
         seq = 'AAGGAGAGAAAATGGCGTCCACGGATTACAGTACCTATAGCCAAGCTGCAGCGCAGCAGGGCTACAGTGCTTACACCGCCCAGCCCACTCAAGGATATGCACAGACCACCCAGGCATATGGGCAACAAAGCTATGGAACCTATGGACAGCCCACTGATGTCAGCTATACCCAGGCTCAGACCACTGCAACCTATGGGCAGACCGCCTATGCAACTTCTTATGGACAGCCTCCCACTGGTTATACTACTCCAACTGCCCCCCAGGCATACAGCCAGCCTGTCCAGGGGTATGGCACTGGTGCTTATGATACCACCACTGCTACAGTCACCACCACCCAGGCCTCCTATGCAGCTCAGTCTGCATATGGCACTCAGCCTGCTTATCCAGCCTATGGGCAGCAGCCAGCAGCCACTGCACCTACAAGCTATTCCTCTACACAGCCGACTAGTTATGATCAGAGCAGTTACTCTCAGCAGAACACCTATGGGCAACCGAGCAGCTATGGACAGCAGAGTAGCTATGGTCAACAAAGCAGCTATGGGCAGCAGCCTCCCACTAGTTACCCACCCCAAACTGGATCCTACAGCCAAGCTCCAAGTCAATATAGCCAACAGAGCAGCAGCTACGGGCAGCAGAGTTCATTCCGACAGGACCACCCCAGTAGCATGGGTGTTTATGGGCAGGAGTCTGGAGGATTTTCCGGACCAGGAGAGAACCGGAGCATGAGTGGCCCTGATAACCGGGGCAGGGGAAGAGGGGGATTTGATCGTGGAGGCATGAGCAGAGGTGGGCGGGGAGGAGGACGCGGTGGAATGGGCAGCGCTGGAGAGCGAGGTGGCTTCAATAAGCCTGGTGGACCCATGGATGAAGGACCAGATCTTGATCTAGGCCCACCTGTAGATCCAGATGAAGACTCTGACAACAGTGCAATTTATGTACAAGGATTAAATGACAGTGTGACTCTAGATGATCTGGCAGACTTCTTTAAGCAGTGTGGGGTTGTTAAGATGAACAAGAGAACTGGGCAACCCATGATCCACATCTACCTGGACAAGGAAACAGGAAAGCCCAAAGGCGATGCCACAGTGTCCTATGAAGACCCACCCACTGCCAAGGCTGCCGTGGAATGGTTTGATGGGAAAGATTTTCAAGGGAGCAAACTTAAAGTCTCCCTTGCTCGGAAGAAGCCTCCAATGAACAGTATGCGGGGTGGTCTGCCACCCCGTGAGGGCAGAGGCATGCCACCACCACTCCGTGGAGGTCCAGGAGGCCCAGGAGGTCCTGGGGGACCCATGGGTCGCATGGGAGGCCGTGGAGGAGATAGAGGAGGCTTCCCTCCAAGAGGACCCCGGGGTTCCCGAGGGAACCCCTCTGGAGGAGGAAACGTCCAGCACCGAGCTGGAGACTGGCAGTGTCCCAATCCGGGTTGTGGAAACCAGAACTTCGCCTGGAGAACAGAGTGCAACCAGTGTAAGGCCCCAAAGCCTGAAGGCTTCCTCCCGCCACCCTTTCCGCCCCCGGGTGGTGATCGTGGCAGAGGTGGCCCTGGTGGCATGCGGGGAGGAAGAGGTGGCCTCATGGATCGTGGTGGTCCCGGTGGAATGTTCAGAGGTGGCCGTGGTGGAGACAGAGGTGGCTTCCGTGGTGGCCGGGGCATGGACCGAGGTGGCTTTGGTGGAGGAAGACGAGGTGGCCCTGGGGGGCCCCCTGGACCTTTGATGGAACAGATGGGAGGAAGAAGAGGAGGACGTGGAGGACCTGGAAAAATGGATAAAGGCGAGCACCGTCAGGAGCGCAGAGATCGGCCCTACTAGATGCAGAGACCCCGCAGAGCTGCATTGACTACCAGATTTATTTTTTAAACCAGAAAATGTTTTAAATTTATAATTCCATATTTATAATGTTGGCCACAACATTATGATTATTCCTTGTCTGTACTTTAGTATTTTTCACCATTTGTGAAGAAACATTAAAACAAGTTAAATGGTA'
 
         orfs = calculate_ORF(seq)
