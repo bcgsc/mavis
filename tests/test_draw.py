@@ -1,6 +1,6 @@
 import unittest
 from structural_variant.draw import Diagram, HEX_BLACK, HEX_WHITE
-from structural_variant.annotate.genomic import Gene, Exon
+from structural_variant.annotate.genomic import Gene, Exon, IntergenicRegion
 from structural_variant.annotate.protein import Domain
 from structural_variant.annotate.variant import Annotation, FusionTranscript
 from svgwrite import Drawing
@@ -19,7 +19,7 @@ class TestDraw(unittest.TestCase):
         y = Interval(1500, 1950)
         z = Interval(5000, 7500)
         temp = Diagram._generate_interval_mapping(
-            [x, y, z], target_width=960, ratio=5, min_width=22, buffer=200)
+            [x, y, z], target_width=1000, ratio=5, min_width=20, buffer_length=200)
         self.assertEqual(7, len(temp.keys()))
         expt = [
             (Interval(1, 149), Interval(1, 27)),
@@ -51,6 +51,15 @@ class TestDraw(unittest.TestCase):
         u = Interval.union(*m.values())
         self.assertLessEqual(1, u.start)
         self.assertGreaterEqual(500, u.end)"""
+
+    def test__generate_gene_mapping_err(self):
+        #  _generate_interval_mapping [IntergenicRegion(11:77361962_77361962+)] 1181.39453125 5 30 None 77356962 77366962)
+        ir = IntergenicRegion('11', 5000, 5000, STRAND.POS)
+        tgt_width = 1000
+        d = Diagram()
+        d.GENE_MIN_BUFFER = 10
+        # (self, canvas, gene, width, height, fill, label='', REFERENCE_GENOME=None)
+        d.draw_genes(self.canvas, [ir], tgt_width, [])
 
     def test__split_intervals_into_tracks(self):
         # ----======---------
@@ -282,7 +291,7 @@ class TestDraw(unittest.TestCase):
 
         canvas = d.draw(ann, ft)
         canvas.saveas('test_layout_translocation.svg')
-        self.assertEqual(6, len(canvas.elements))  # defs counts as element
+        self.assertEqual(8, len(canvas.elements))  # defs counts as element
 
     def test_draw_layout_intergenic_breakpoint(self):
         pass
@@ -317,6 +326,7 @@ class TestDraw(unittest.TestCase):
             exons=[Exon(25403698, 25403863), Exon(25398208, 25398329), Exon(25386753, 25388160)],
             gene=gene, domains=[])
         d = Diagram()
+        d.GENE_MIN_BUFFER = 0
         canvas = d.draw_ustranscripts_overlay(gene, best_transcript=t)
         canvas.saveas('test_draw_overlay.svg')
         self.assertEqual(5, len(canvas.elements))  # defs counts as element

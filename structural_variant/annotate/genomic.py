@@ -1,10 +1,31 @@
-from ..constants import STRAND, SPLICE_SITE_RADIUS, reverse_complement
+from ..constants import STRAND, SPLICE_SITE_RADIUS, reverse_complement, SPLICE_TYPE
 from ..interval import Interval
 from ..error import NotSpecifiedError 
 from .base import BioInterval
 import warnings
 import itertools
+from copy import copy
 
+
+class Template:
+    def __init__(self, name, sequence, length, bands=None):
+        bands = [] if bands is None else bands
+        self.name = name
+        self.sequence = sequence
+        if not self.sequence and not self.length:
+            raise AttributeError('required argument: sequence or length')
+        elif self.sequence and len(self.sequence) != length:
+            raise AttributeError('sequence length must equal input length')
+        self.length = length if length else len(self.sequence)
+        self.bands = bands
+
+    def __len__(self):
+        return self.length
+
+    def __eq__(self, other):
+        if not hasattr(other, 'name'):
+            return False
+        return self.name == other.name
 
 class IntergenicRegion(BioInterval):
     def __init__(self, chr, start, end, strand):
@@ -28,6 +49,9 @@ class IntergenicRegion(BioInterval):
     def chr(self):
         """returns the name of the chromosome that this gene resides on"""
         return self.reference_object
+    
+    def __repr__(self):
+        return 'IntergenicRegion({}:{}_{}{})'.format(self.chr, self.start, self.end, self.strand)
 
 
 class Gene(BioInterval):
@@ -136,6 +160,12 @@ class Exon(BioInterval):
         return 'Exon({}, {})'.format(self.start, self.end)
 
 
+class SplicingPattern(list):
+    def __init__(self, *args, splice_type=SPLICE_TYPE.NORMAL):
+        list.__init__(self, *args)
+        self.splice_type = splice_type
+
+
 class usTranscript(BioInterval):
     """
     """
@@ -198,51 +228,79 @@ class usTranscript(BioInterval):
 
         Returns:
             :class:`list` of :any:`int`: List of positions to be spliced together
+
+        .. todo::
+            check if this changes for transcripts on the reverse stand
         """
-        splice_site_sets = [[]]
+        exons = sorted(self.exons, key=lambda x: x[0])
+        abrogation_count = 0
+        for ex in exons:
+            if not ex.intact_start_splice:
+                abrogation_count += 1
+            if not ex.intact_end_splice:
+                abrogation_count += 1
+        if abrogation_count > 2 or not exons[0].intact_start_splice or not exons[-1].intact_end_splice:
+            raise NotImplementedError(
+                'splicing model assumes that at most 2 splice sites are disrupted and '
+                'that the terminal splice sites are intact', abrogation_count, exons[0].intact_start_splice,
+                exons[-1].intact_end_splice)
+
+        splice_site_sets = [SplicingPattern()]
 
         i = 1
-        while i < len(self.exons):
-            exon = self.exons[i]
-            prev = self.exons[i - 1]
-            # if the last nearest splice site is intact then add this splice site and it
-            if not exon.intact_start_splice and not exon.intact_end_splice:
-                if i < len(self.exons) - 1:
-                    nexxt = self.exons[i + 1]
-                    for s in splice_site_sets:
-                        s.extend([prev.end, nexxt.start])
-                    i += 1
-            elif prev.intact_end_splice:
-                if exon.intact_start_splice:  # both intact
-                    for s in splice_site_sets:
-                        s.extend([prev.end, exon.start])
-                else:  # previous is intact but the current is not
-                    # two options, can skip this exon or retain the previous intron
-                    # duplicate the current sets
-                    if i < len(self.exons) - 1:
-                        temp = []
-                        for s in splice_site_sets:
-                            # skip this exon
-                            nexxt = self.exons[i + 1]
-                            skip = s + [prev.end, nexxt.start]
-                            temp.append(skip)
-                            retain = s + [exon.end, nexxt.start]
-                            # retain the previous intron
-                            temp.append(retain)
-                        i += 1
-                        splice_site_sets = temp
+        while i < len(exons):
+            exon = exons[i]
+            prev = exons[i - 1]
+            if not exon.intact_start_splice and not exon.intact_end_splice:  # case A: both abrogated
+                # skip the current exon
+                nexxt = exons[i + 1]
+                for s in splice_site_sets:
+                    s.extend([prev.end, nexxt.start])
+                i += 1
+            elif prev.intact_end_splice and not exon.intact_start_splice:  # case B: start abrogated
+                # this leaves use with two options for splicing models
+                temp = []
+                for spl in splice_site_sets:
+                    # 1. Retain the preceding intron
+                    ri = copy(spl)
+                    ri.splice_type = SPLICE_TYPE.RETAIN
+                    temp.append(ri)
+                    # 2. Skip the current exon
+                    if i + 1>= len(exons):  # retain only, if this is the last exon
+                        continue
+                    nexxt = exons[i + 1]
+                    ri.extend([exon.end, nexxt.start])
+                    spl.extend([prev.end, nexxt.start])
+                    spl.splice_type = SPLICE_TYPE.SKIP
+                    temp.append(spl)
+                i += 1
+                splice_site_sets = temp
+            elif not prev.intact_end_splice and exon.intact_start_splice:  # case c: end abrogated
+                # this leaves use with two options for splicing models
+                temp = []
+                for spl in splice_site_sets:
+                    # 1. Retain the preceding intron
+                    ri = copy(spl)
+                    ri.splice_type = SPLICE_TYPE.RETAIN
+                    temp.append(ri)
+                    # 2. Skip the current exon
+                    spl[-1] = exon.start
+                    spl.splice_type = SPLICE_TYPE.SKIP
+                    temp.append(spl)
+                splice_site_sets = temp
+            elif not prev.intact_end_splice and not exon.intact_start_splice:  # case d: both abrogated (diff exons)
+                # must retain
+                for s in splice_site_sets:
+                    s.splice_type = SPLICE_TYPE.RETAIN
+            elif prev.intact_end_splice and exon.intact_start_splice:  # case e: normal splicing
+                for s in splice_site_sets:
+                    s.extend([prev.end, exon.start])
             else:
-                if exon.intact_start_splice:
-                    # two options: retain previous intron, or skip previous exon
-                    temp = []
-                    for s in splice_site_sets:
-                        skip = s[:]
-                        skip[-1] = exon.start
-                        temp.append(skip)
-                        temp.append(s)
-                    splice_site_sets = temp
-                else:  # both abrogated retain intron, essentially do nothing
-                    pass
+                raise NotImplementedError(
+                    'unanticipated splicing pattern has not been modelled previous: {} {}; current: {} {}'.format(
+                        pre.intact_start_splice, prev.intact_end_splice,
+                        exon.intact_start_splice, exon.intact_end_splice
+                    ))
             i += 1
         return splice_site_sets
 
@@ -410,9 +468,10 @@ class Transcript(BioInterval):
             translations (:class:`list` of :class:`Translation`): the list of translations of this transcript
         """
         pos = sorted([ust.start, ust.end] + splicing_patt)
-        self.splicing_pattern = sorted(splicing_patt)
-        self.exons = [Exon(s, t, self) for s, t in zip(pos[::2], pos[1::2])]
-        BioInterval.__init__(self, ust, 1, sum([len(e) for e in self.exons]), sequence=None)
+        splicing_patt.sort()
+        self.splicing_pattern = splicing_patt
+        exons = [Exon(s, t, self) for s, t in zip(pos[::2], pos[1::2])]
+        BioInterval.__init__(self, ust, 1, sum([len(e) for e in exons]), sequence=None)
         self.translations = [] if translations is None else [tx for tx in translations]
         
         for tx in self.translations:

@@ -46,6 +46,7 @@ from structural_variant.draw import Diagram
 import TSV
 from structural_variant.constants import PROTOCOL, SVTYPE, COLUMNS, sort_columns
 import re
+import json
 import os
 from datetime import datetime
 
@@ -146,13 +147,16 @@ def main():
         log('generated', len(ann), 'annotations', time_stamp=False)
 
     id_prefix = 'annotation_{}-'.format(re.sub(':', '-', re.sub(' ', '_', str(datetime.now()))))
+    rows = []  # hold the row information for the final tsv file
     for i, ann in enumerate(annotations):
         ann.data[COLUMNS.annotation_id] = id_prefix + str(i + 1)
+        row = ann.flatten()
         # try building the fusion product
-        if not hasattr(ann.transcript1, 'translations') or not hasattr(ann.transcript2, 'translations'):
-            continue
         d = Diagram()
-        while True:
+        ann_rows = []
+        drawing = None
+        retry_count = 0
+        while drawing is None:  # continue if drawing error and increase width
             try:
                 ft = None
                 try:
@@ -162,27 +166,58 @@ def main():
                         max_orf_cap=args.max_orf_cap,
                         min_domain_mapping_match=args.min_domain_mapping_match
                     )
+                    # add fusion information to the current row
+                    # duplicate the row for each translation
+                    for tl in ft.translations:
+                        nrow = dict()
+                        nrow.update(row)
+                        nrow[COLUMNS.fusion_splicing_pattern] = tl.transcript.splicing_pattern.splice_type
+                        nrow[COLUMNS.fusion_cdna_coding_start] = tl.start
+                        nrow[COLUMNS.fusion_cdna_coding_end] = tl.end
+                        nrow[COLUMNS.fusion_cdna_sequence] = ft.get_cdna_sequence(tl.transcript.splicing_pattern)
+                        domains = []
+                        for dom in tl.domains:
+                            m, t = dom.score_region_mapping()
+                            temp = {
+                                "name": dom.name,
+                                "sequences": dom.get_sequences(),
+                                "regions": [{"start": dr.start, "end": dr.end} for dr in sorted(dom.regions, key=lambda x: x.start)],
+                                "mapping_quality": round(m * 100 / t, 0),
+                                "matches": m
+                            }
+                            domains.append(temp)
+                        nrow[COLUMNS.fusion_mapped_domains] = json.dumps(domains)
+                        ann_rows.append(nrow)
                 except NotSpecifiedError:
                     pass
-                
-
+                except AttributeError as err:
+                    pass
                 canvas = d.draw(ann, ft, REFERENCE_GENOME=REFERENCE_GENOME)
-                name = os.path.join(args.output, FILENAME_PREFIX + '.' + ann.data[COLUMNS.annotation_id] + '.svg')
-                log('generating svg:', name)
-                canvas.saveas(name)
+                drawing = os.path.join(args.output, FILENAME_PREFIX + '.' + ann.data[COLUMNS.annotation_id] + '.svg')
+                for r in ann_rows:
+                    r[COLUMNS.annotation_figure] = drawing
+                log('generating svg:', drawing)
+                canvas.saveas(drawing)
                 break
             except (NotImplementedError, AttributeError, DiscontinuousMappingError) as err:
                 print(repr(err))
                 raise err
             except DrawingFitError as err:
+                print(repr(err))
+                print('extending width:', d.WIDTH, d.WIDTH + 500)
                 d.WIDTH += 500
+                retry_count += 1
+                if retry_count > 3:
+                    raise err
+        if len(ann_rows) == 0:
+            rows.append(row)
+        else:
+            rows.extend(ann_rows)
 
 
     of = os.path.join(args.output, FILENAME_PREFIX + '.annotation.tab')
     with open(of, 'w') as fh:
         log('writing:', of)
-        rows = [ann.flatten() for ann in annotations]
-
         header = set()
 
         for row in rows:

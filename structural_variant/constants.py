@@ -172,6 +172,9 @@ READ_PAIR_TYPE = Vocab(RR='RR', LL='LL', RL='RL', LR='LR')
 
 CALL_METHOD = Vocab(CONTIG='contig', SPLIT='split reads', FLANK='flanking reads')
 
+GENE_PRODUCT_TYPE = Vocab(SENSE='sense', ANTI_SENSE='anti-sense')
+
+SPLICE_TYPE = Vocab(RETAIN='retained intron', SKIP='skipped exon', NORMAL='normal')
 
 SPLICE_SITE_RADIUS = 2
 
@@ -234,12 +237,38 @@ COLUMNS = Vocab(
         'gene2_direction',
         'The direction/prime of the gene. Has the following possible values: {}'.format(
             ', '.join([str(p) for p in PRIME.values()]))),
+    gene_product_type=Column(
+        'gene_product_type',
+        'Describes if the putative fusion product will be sense or anti-sense. '
+        'Has the following possible values: {}'.format(', '.join([str(p) for p in GENE_PRODUCT_TYPE.values()]))),
     transcript1=Column(
         'transcript1',
         'Transcript for the current annotation at the first breakpoint'),
     transcript2=Column(
         'transcript2',
         'Transcript for the current annotation at the second breakpoint'),
+    fusion_splicing_pattern=Column(
+        'fusion_splicing_pattern',
+        'Type of splicing pattern used to create the fusion cDNA. '
+        'Has the following possible values: {}'.format(', '.join([str(p) for p in SPLICE_TYPE.values()]))),
+    fusion_cdna_coding_start=Column(
+        'fusion_cdna_coding_start',
+        'Position (wrt) the 5\' end of the fusion transcript where coding begins (first base of the Met amino acid).'),
+    fusion_cdna_coding_end=Column(
+        'fusion_cdna_coding_end',
+        'Position (wrt) the 5\' end of the fusion transcript where coding ends (last base of the stop codon)'),
+    fusion_mapped_domains=Column(
+        'fusion_mapped_domains',
+        'List of domains in json format where each domain start and end positions are given wrt to the fusion '
+        'transcript and the mapping quality is the number of matching amino acid positions over the total '
+        'number of amino acids. The sequence is the amino acid sequence of the domain on the reference/original'
+        ' transcript'),
+    fusion_cdna_sequence=Column(
+        'fusion_cdna_sequence',
+        ''),
+    annotation_figure=Column(
+        'annotation_figure',
+        'File path to the svg drawing representing the annotation'),
     genes_encompassed=Column(
         'genes_encompassed',
         'Applies to intrachromosomal events only. list of genes which overlap any region that occurs between both '

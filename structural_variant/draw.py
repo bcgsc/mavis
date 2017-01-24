@@ -4,6 +4,7 @@ from .interval import Interval
 from .constants import STRAND, ORIENT, CODON_SIZE
 from colour import Color
 from .error import DrawingFitError, NotSpecifiedError
+from .annotate.genomic import IntergenicRegion
 
 # draw gene level view
 # draw gene box
@@ -125,10 +126,10 @@ class Diagram:
         self.GENE1_COLOR = GENE1_COLOR
         self.GENE2_COLOR = GENE2_COLOR
         self.GENE_DEFAULT_COLOR = GENE_DEFAULT_COLOR
-        self.GENE_MIN_BUFFER = 5000
+        self.GENE_MIN_BUFFER = 1000
         self.GENE_ARROW_WIDTH = 20
         self.GENE_INTERGENIC_RATIO = 5
-        self.GENE_MIN_WIDTH = self.MIN_WIDTH + self.GENE_ARROW_WIDTH
+        self.GENE_MIN_WIDTH = 40 + self.GENE_ARROW_WIDTH
         self.GENE_LABEL_PREFIX = 'G'
 
         self.LABEL_COLOR = LABEL_COLOR
@@ -143,7 +144,7 @@ class Diagram:
         self.DOMAIN_LABEL_FONT_SIZE = DOMAIN_LABEL_FONT_SIZE
         self.DOMAIN_FILL_GRADIENT = list(Color(DOMAIN_MISMATCH_COLOR).range_to(Color(DOMAIN_COLOR), 10))
 
-        self.SPLICE_HEIGHT = self.TRACK_HEIGHT
+        self.SPLICE_HEIGHT = self.TRACK_HEIGHT / 2
         self.SPLICE_STROKE_DASHARRAY = [2, 2]
         self.SPLICE_STROKE_WIDTH = 2
         self.SPLICE_COLOR = SPLICE_COLOR
@@ -179,6 +180,12 @@ class Diagram:
         self.LEGEND_FONT_COLOR = HEX_BLACK
         self.LEGEND_BORDER_STROKE = LEGEND_BORDER_STROKE
         self.LEGEND_BORDER_STROKE_WIDTH = 1
+
+        self.TEMPLATE_BAND_FILL_ODD = 'grey'
+        self.TEMPLATE_BAND_FILL_EVEN = 'white'
+        self.TEMPLATE_TRACK_HEIGHT = self.TRACK_HEIGHT
+
+        self.REGION_LABEL_PREFIX = 'R'
 
     def draw_legend(self, canvas, swatches, border=True):
         main_group = canvas.g(class_='legend')
@@ -220,7 +227,7 @@ class Diagram:
         setattr(main_group, 'mapping', None)
         return main_group
 
-    def draw(self, ann, fusion_transcript=None, REFERENCE_GENOME=None):
+    def draw(self, ann, fusion_transcript=None, REFERENCE_GENOME=None, draw_templates=False):
         """
         this is the main drawing function. It decides between the 3 basic layouts
 
@@ -257,276 +264,172 @@ class Diagram:
                 +---------------------------+
 
         """
+        print('Digram.draw(', ann, ',', fusion_transcript, ', REFERENCE_GENOME,', draw_templates, ')')
         canvas = Drawing(size=(self.WIDTH, 1000))  # just set the height for now and change later
         labels = LabelMapping()  # keep labels consistent within the drawing
         y = self.TOP_MARGIN
         x = self.LEFT_MARGIN
 
+        if draw_templates and not REFERENCE_GENOME:
+            raise AttributeError('must specify reference genome to generate template level figures')
+
         dx_label_shift = self.PADDING + self.LABEL_FONT_SIZE * 2 * self.FONT_WIDTH_HEIGHT_RATIO
 
         x += dx_label_shift
         drawing_width = self.WIDTH - dx_label_shift - self.LEFT_MARGIN - self.RIGHT_MARGIN
+        
+        colors = dict()
+        genes = set()
+        genes1 = set()
+        genes2 = set()
+        
+        for g, d in ann.genes_proximal_to_break1:
+            genes1.add(g)
+            colors[g] = self.GENE1_COLOR
 
-        if ann.interchromosomal:  # two gene tracks
-            colors = {}
-            genes1 = set()
-            genes2 = set()
+        for g, d in ann.genes_proximal_to_break2:
+            genes2.add(g)
+            colors[g] = self.GENE2_COLOR
 
-            for g, d in ann.genes_proximal_to_break1:
-                genes1.add(g)
-                colors[g] = self.GENE1_COLOR
+        for gene in ann.genes_overlapping_break1:
+            genes1.add(gene)
+            colors[gene] = self.GENE1_COLOR
 
-            for g, d in ann.genes_proximal_to_break2:
-                genes2.add(g)
-                colors[g] = self.GENE2_COLOR
+        for gene in ann.genes_overlapping_break2:
+            genes2.add(gene)
+            colors[gene] = self.GENE2_COLOR
 
-            for gene in ann.genes_overlapping_break1:
-                genes1.add(gene)
-                colors[gene] = self.GENE1_COLOR
-
-            for gene in ann.genes_overlapping_break2:
-                genes2.add(gene)
-                colors[gene] = self.GENE2_COLOR
-
-            if ann.transcript1:
+        if ann.transcript1:
+            try:
                 genes1.add(ann.transcript1.gene)
                 colors[ann.transcript1.gene] = self.GENE1_COLOR_SELECTED
                 for e in ann.transcript1.exons:
                     colors[e] = self.EXON1_COLOR
-            if ann.transcript2:
+            except AttributeError:
+                genes1.add(ann.transcript1)
+        
+        if ann.transcript2:
+            try:
                 genes2.add(ann.transcript2.gene)
                 colors[ann.transcript2.gene] = self.GENE2_COLOR_SELECTED
                 for e in ann.transcript2.exons:
                     colors[e] = self.EXON2_COLOR
-
-            for gene in sorted(ann.genes_overlapping_break1, key=lambda x: x.start):
+            except AttributeError:
+                genes2.add(ann.transcript2)
+        
+        # set all the labels so that they are re-used correctly
+        for gene in sorted(genes1 | genes2, key=lambda x: x.start):
+            if isinstance(gene, IntergenicRegion):
+                labels.add(gene, self.REGION_LABEL_PREFIX)
+            else:
                 labels.add(gene, self.GENE_LABEL_PREFIX)
+        
+        # calculate the half-width for transcripts and genes etc
+        half_drawing_width = (drawing_width - self.INNER_MARGIN - dx_label_shift) / 2
+        second_drawing_shift = x + half_drawing_width + self.INNER_MARGIN + dx_label_shift
+        
+        gheights = [0]
 
-            twidth = (drawing_width - self.INNER_MARGIN - dx_label_shift) / 2
-
+        if ann.interchromosomal:
             # first gene view
-            g = self.draw_genes(canvas, genes1, twidth, breakpoints=[ann.break1], colors=colors, labels=labels)
+            g = self.draw_genes(canvas, genes1, half_drawing_width, [ann.break1], colors=colors, labels=labels)
             g.translate(x, y)
             canvas.add(g)
+            gheights.append(g.height)
+            
             # second gene view
-            g = self.draw_genes(canvas, genes2, twidth, breakpoints=[ann.break2], colors=colors, labels=labels)
-            g.translate(x + twidth + self.INNER_MARGIN + dx_label_shift, y)
+            g = self.draw_genes(canvas, genes2, half_drawing_width, [ann.break2], colors=colors, labels=labels)
+            g.translate(second_drawing_shift, y)
             canvas.add(g)
+            gheights.append(g.height)
+        else:
+            g = self.draw_genes(canvas, genes1 | genes2, drawing_width, [ann.break1, ann.break2], colors=colors, labels=labels)
+            g.translate(x, y)
+            canvas.add(g)
+            gheights.append(g.height)
 
-            y += g.height + self.INNER_MARGIN
-
-            h = [0]
-
-            if ann.transcript1:
+        y += max(gheights) + self.INNER_MARGIN
+        
+        theights = [0]
+        # now the transcript level drawings
+        if ann.transcript1 == ann.transcript2:
+            try:
                 g = canvas.g(class_='transcript')
                 g = self.draw_ustranscript(
                     canvas,
                     ann.transcript1,
-                    twidth,
+                    drawing_width,
+                    breakpoints=[ann.break1, ann.break2],
+                    labels=labels,
+                    colors=colors,
+                    REFERENCE_GENOME=REFERENCE_GENOME
+                )
+                theights.append(g.height)
+                g.translate(x, y)
+                canvas.add(g)
+            except AttributeError:
+                pass  # Intergenic region or None
+        else:  # separate drawings
+            try:
+                g = canvas.g(class_='transcript')
+                g = self.draw_ustranscript(
+                    canvas,
+                    ann.transcript1,
+                    half_drawing_width,
                     breakpoints=[ann.break1],
                     labels=labels,
                     colors=colors,
                     REFERENCE_GENOME=REFERENCE_GENOME
                 )
-                h.append(g.height)
+                theights.append(g.height)
                 g.translate(x, y)
                 canvas.add(g)
+            except AttributeError:
+                pass  # Intergenic region or None
 
-            if ann.transcript2:
+            try:
                 g = canvas.g(class_='transcript')
                 g = self.draw_ustranscript(
                     canvas,
                     ann.transcript2,
-                    twidth,
+                    half_drawing_width,
                     breakpoints=[ann.break2],
                     labels=labels,
                     colors=colors,
                     REFERENCE_GENOME=REFERENCE_GENOME
                 )
-                h.append(g.height)
-                temp = x + twidth + self.INNER_MARGIN + dx_label_shift
-                g.translate(x + twidth + self.INNER_MARGIN + dx_label_shift, y)
+                theights.append(g.height)
+                g.translate(second_drawing_shift, y)
                 canvas.add(g)
+            except AttributeError:
+                pass  # Intergenic region or None
 
-            y += max(h)
-
-            if fusion_transcript:
-                y += self.INNER_MARGIN
-                for ex, old_ex in fusion_transcript.exon_mapping.items():
-                    if old_ex in colors:
-                        colors[ex] = colors[old_ex]
-                g = canvas.g(class_='transcript')
-                g = self.draw_ustranscript(
-                    canvas,
-                    fusion_transcript,
-                    drawing_width,
-                    colors=colors,
-                    labels=labels,
-                    REFERENCE_GENOME=REFERENCE_GENOME
-                )
-                g.translate(x, y)
-                canvas.add(g)
-                y += g.height
-        elif (ann.transcript1 or ann.transcript1) and ann.transcript1 == ann.transcript2:  # single gene track
-            colors = {}
-            genes = set() | ann.encompassed_genes
-
-            for g in ann.encompassed_genes:
-                genes.add(g)
-                colors[g] = self.GENE2_COLOR
-
-            for g, d in ann.genes_proximal_to_break1 | ann.genes_proximal_to_break2:
-                genes.add(g)
-
-            for gene in ann.genes_overlapping_break1 | ann.genes_overlapping_break2:
-                genes.add(gene)
-                colors[gene] = self.GENE1_COLOR
-
-            if ann.transcript1:
-                genes.add(ann.transcript1.gene)
-                colors[ann.transcript1.gene] = self.GENE1_COLOR_SELECTED
-
-            for gene in sorted(ann.genes_overlapping_break1, key=lambda x: x.start):
-                labels.add(gene, self.GENE_LABEL_PREFIX)
-            g = self.draw_genes(canvas, genes, drawing_width, breakpoints=[ann.break1, ann.break2], colors=colors, labels=labels)
-            g.translate(x, y)
-            canvas.add(g)
-            y += g.height + self.INNER_MARGIN
-
-            for exon in ann.transcript1.exons:
-                colors[exon] = self.EXON1_COLOR
-
-            # now draw the transcript track
+        y += max(theights)
+        if max(theights) == 0:
+            y -= self.INNER_MARGIN
+        
+        # finally the fusion transcript level drawing
+        if fusion_transcript:
+            y += self.INNER_MARGIN
+            for ex, old_ex in fusion_transcript.exon_mapping.items():
+                if old_ex in colors:
+                    colors[ex] = colors[old_ex]
+            g = canvas.g(class_='transcript')
             g = self.draw_ustranscript(
                 canvas,
-                ann.transcript1,
+                fusion_transcript,
                 drawing_width,
-                breakpoints=[ann.break1, ann.break2],
-                labels=labels,
                 colors=colors,
+                labels=labels,
                 REFERENCE_GENOME=REFERENCE_GENOME
             )
             g.translate(x, y)
             canvas.add(g)
             y += g.height
-            # draw the genes in order
-            if fusion_transcript:
-                y += self.INNER_MARGIN
-                for ex, old_ex in fusion_transcript.exon_mapping.items():
-                    if old_ex in colors:
-                        colors[ex] = colors[old_ex]
-                g = canvas.g(class_='transcript')
-                g = self.draw_ustranscript(
-                    canvas,
-                    fusion_transcript,
-                    drawing_width,
-                    colors=colors,
-                    labels=labels,
-                    REFERENCE_GENOME=REFERENCE_GENOME
-                )
-                g.translate(x, y)
-                canvas.add(g)
-                y += g.height
-        elif ann.transcript1 or ann.transcript1:
-            colors = {}
-            genes = set() | ann.encompassed_genes
-
-            for g, d in ann.genes_proximal_to_break1:
-                genes.add(g)
-                colors[g] = self.GENE1_COLOR
-
-            for g, d in ann.genes_proximal_to_break2:
-                genes.add(g)
-                colors[g] = self.GENE2_COLOR
-
-            for gene in ann.genes_overlapping_break1:
-                genes.add(gene)
-                colors[gene] = self.GENE1_COLOR
-
-            for gene in ann.genes_overlapping_break2:
-                genes.add(gene)
-                colors[gene] = self.GENE2_COLOR
-
-            if ann.transcript1:
-                genes.add(ann.transcript1.gene)
-                colors[ann.transcript1.gene] = self.GENE1_COLOR_SELECTED
-                for e in ann.transcript1.exons:
-                    colors[e] = self.EXON1_COLOR
-            if ann.transcript2:
-                genes.add(ann.transcript2.gene)
-                colors[ann.transcript2.gene] = self.GENE2_COLOR_SELECTED
-                for e in ann.transcript2.exons:
-                    colors[e] = self.EXON2_COLOR
-
-            for gene in sorted(ann.genes_overlapping_break1, key=lambda x: x.start):
-                labels.add(gene, self.GENE_LABEL_PREFIX)
-
-            g = self.draw_genes(canvas, genes, drawing_width, breakpoints=[ann.break1, ann.break2], colors=colors, labels=labels)
-            g.translate(x, y)
-            canvas.add(g)
-            y += g.height + self.INNER_MARGIN
-
-            h = [0]
-
-            twidth = (drawing_width - self.INNER_MARGIN - dx_label_shift) / 2
-
-            if ann.transcript1:
-                g = canvas.g(class_='transcript')
-                g = self.draw_ustranscript(
-                    canvas,
-                    ann.transcript1,
-                    twidth,
-                    breakpoints=[ann.break1],
-                    labels=labels,
-                    colors=colors,
-                    REFERENCE_GENOME=REFERENCE_GENOME
-                )
-                h.append(g.height)
-                g.translate(x, y)
-                canvas.add(g)
-
-            if ann.transcript2:
-                g = canvas.g(class_='transcript')
-                g = self.draw_ustranscript(
-                    canvas,
-                    ann.transcript2,
-                    twidth,
-                    breakpoints=[ann.break2],
-                    labels=labels,
-                    colors=colors,
-                    REFERENCE_GENOME=REFERENCE_GENOME
-                )
-                h.append(g.height)
-                temp = x + twidth + self.INNER_MARGIN + dx_label_shift
-                g.translate(x + twidth + self.INNER_MARGIN + dx_label_shift, y)
-                canvas.add(g)
-
-            y += max(h)
-
-            if fusion_transcript:
-                y += self.INNER_MARGIN
-                for ex, old_ex in fusion_transcript.exon_mapping.items():
-                    if old_ex in colors:
-                        colors[ex] = colors[old_ex]
-                g = canvas.g(class_='transcript')
-                g = self.draw_ustranscript(
-                    canvas,
-                    fusion_transcript,
-                    drawing_width,
-                    colors=colors,
-                    labels=labels,
-                    REFERENCE_GENOME=REFERENCE_GENOME
-                )
-                g.translate(x, y)
-                canvas.add(g)
-                y += g.height
 
         y += self.BOTTOM_MARGIN
         canvas.attribs['height'] = y
         return canvas
-
-        # add transcript tracks if applicable (and domains)
-        # add fusion track if applicable
 
     def _draw_exon_track(self, canvas, transcript, mapping, colors=None):
         """
@@ -595,28 +498,20 @@ class Diagram:
         if (mapping is None and target_width is None) or (mapping is not None and target_width is not None):
             raise AttributeError('mapping and target_width arguments are required and mutually exclusive')
         
-        print('\nust', ust,  ust.exons, ust.name)
-        for tr in ust.transcripts:
-            print(tr, tr.start, tr.end, tr.splicing_pattern, tr.exons)
-            for tl in tr.translations:
-                print(tl, tl.start, tl.end)
         if mapping is None:
             mapping = self._generate_interval_mapping(
                 ust.exons,
                 target_width,
                 self.EXON_INTRON_RATIO,
-                self.EXON_MIN_WIDTH
+                self.EXON_MIN_WIDTH,
+                min_inter_width=self.MIN_WIDTH
             )
-        print('mapping')
-        for k, v in sorted(mapping.items()):
-            print(k, '==>', v)
 
         main_group = canvas.g(class_='ust')
 
         y = self.BREAKPOINT_TOP_MARGIN
 
         if len(ust.translations) == 0:
-            print('ust has no translations')
             y += self.TRACK_HEIGHT / 2
             exon_track_group = self._draw_exon_track(canvas, ust, mapping, colors)
             main_group.add(exon_track_group)
@@ -624,27 +519,27 @@ class Diagram:
         else:
             # draw the protein features if there are any
             for tl in ust.translations:
-                print('ust.translations', ust.translations)
                 tr = tl.transcript
                 # if the splicing takes up more room than the track we need to adjust for it
-                y += max(self.SPLICE_HEIGHT, self.TRACK_HEIGHT / 2) - self.TRACK_HEIGHT / 2
+                y += self.SPLICE_HEIGHT
 
                 exon_track_group = self._draw_exon_track(canvas, ust, mapping, colors)
                 exon_track_group.translate(0, y)
 
-                y += self.TRACK_HEIGHT / 2
                 # draw the splicing pattern
-                polyline = []
+                splice_group = canvas.g(class_='splicing')
                 for p1, p2 in zip(tr.splicing_pattern[::2], tr.splicing_pattern[1::2]):
                     a = Interval.convert_pos(mapping, p1)
                     b = Interval.convert_pos(mapping, p2)
-                    polyline.extend(
-                        [(a, y), (a + (b - a) / 2, y - self.SPLICE_HEIGHT), (b, y)])
+                    polyline = [(a, y), (a + (b - a) / 2, y - self.SPLICE_HEIGHT), (b, y)]
+                    p = canvas.polyline(polyline, fill='none')
+                    p.dasharray(self.SPLICE_STROKE_DASHARRAY)
+                    p.stroke(self.SPLICE_COLOR, width=self.SPLICE_STROKE_WIDTH)
+                    splice_group.add(p)
+                
+                y += self.TRACK_HEIGHT / 2
 
-                p = canvas.polyline(polyline, fill='none', class_='splicing')
-                p.dasharray(self.SPLICE_STROKE_DASHARRAY)
-                p.stroke(self.SPLICE_COLOR, width=self.SPLICE_STROKE_WIDTH)
-                main_group.add(p)
+                main_group.add(splice_group)
                 main_group.add(exon_track_group)
                 y += self.TRACK_HEIGHT / 2
 
@@ -669,9 +564,6 @@ class Diagram:
 
                 if len(translated_genomic_regions) == 0:
                     continue
-                print('translated_genomic_regions', translated_genomic_regions)
-                print('original', tr.convert_cdna_to_genomic(tl.start), tr.convert_cdna_to_genomic(tl.end))
-                print(tl.start, tl.end, tr.start, tr.end)
                 s = Interval.convert_pos(mapping, translated_genomic_regions[0].start)
                 t = Interval.convert_pos(mapping, translated_genomic_regions[-1].end)
 
@@ -764,7 +656,6 @@ class Diagram:
             bg = self.draw_breakpoint(canvas, b, abs(t - s) + 1, y, label=labels.add(b, self.BREAKPOINT_LABEL_PREFIX))
             bg.translate(s, 0)
             main_group.add(bg)
-        print()
         setattr(main_group, 'height', y)
         setattr(main_group, 'width', target_width)
         setattr(main_group, 'mapping', mapping)
@@ -787,25 +678,34 @@ class Diagram:
             svgwrite.container.Group: the group element for the diagram.
                 Has the added parameters of labels, height, and mapping
         """
+        print('draw_genes(', genes)
         # mutable default argument parameters
         breakpoints = [] if breakpoints is None else breakpoints
         colors = {} if colors is None else colors
         labels = LabelMapping() if labels is None else labels
-
+        
+        st = max(min([g.start for g in genes] + [b.start for b in breakpoints]) - self.GENE_MIN_BUFFER, 1)
+        end = max([g.end for g in genes] + [b.end for b in breakpoints]) + self.GENE_MIN_BUFFER
+        print('st', st, 'end', end)
+        print('genes', ['gene({}, {})'.format(g.start, g.end) for g in genes])
         main_group = canvas.g(class_='genes')
         mapping = self._generate_interval_mapping(
-            [g for g in genes] + breakpoints,
+            [g for g in genes],
             target_width,
             self.GENE_INTERGENIC_RATIO,
             self.GENE_MIN_WIDTH,
-            buffer=self.GENE_MIN_BUFFER
+            start=st, end=end,
+            min_inter_width=self.MIN_WIDTH
         )
+        print('mapping', mapping)
         gene_px_intervals = {}
         for i, gene in enumerate(sorted(genes, key=lambda x: x.start)):
-            s = Interval.convert_pos(mapping, gene.start)
-            t = Interval.convert_pos(mapping, gene.end)
-            gene_px_intervals[Interval(s, t)] = gene
-            labels.add(gene, self.GENE_LABEL_PREFIX)
+            s = Interval.convert_ratioed_pos(mapping, gene.start)
+            t = Interval.convert_ratioed_pos(mapping, gene.end)
+            print('gene', gene.start, gene.end, '==>', s.start, t.end)
+            gene_px_intervals[Interval(s.start, t.end)] = gene
+            l = labels.add(gene, self.GENE_LABEL_PREFIX)
+            print(l)
         tracks = Diagram._split_intervals_into_tracks(gene_px_intervals)
 
         y = self.BREAKPOINT_TOP_MARGIN
@@ -1011,8 +911,33 @@ class Diagram:
                 class_='label'
             )
             g.add(t)
-            g.add(Tag('title', 'Exon {} {}_{}'.format(exon.name if exon.name else '', exon.start, exon.end)))
+            g.add(Tag('title', 'Exon {} {}_{} L={}'.format(exon.name if exon.name else '', exon.start, exon.end, len(exon))))
         return g
+    
+    def draw_template(self, canvas, length, target_width, height, bands=None, labels=None, colors=None):
+        labels = LabelMapping() if labels is None else labels
+        colors = {} if colors is None else colors
+
+        group = canvas.g(class_='template')
+        mapping = self._generate_interval_mapping(
+            bands if bands is not None else [Interval(1, length)],
+            target_width,
+            1,  # do not alter ratio
+            self.GENE_MIN_WIDTH,
+            start=1, end=length
+        )
+        for i, band in enumerate(bands):
+            s = Interval.convert_pos(mapping, band[0])
+            t = Interval.convert_pos(mapping, band[1])
+            
+            f = self.TEMPLATE_BAND_FILL_EVEN if i % 2 == 0 else self.TEMPLATE_BAND_FILL_ODD
+            r = canvas.rect(
+                (s, 0),
+                (t - s + 1, height),
+                fill=f
+            )
+            group.add(f)
+        return group
 
     def draw_gene(self, canvas, gene, width, height, fill, label='', REFERENCE_GENOME=None):
         """
@@ -1045,10 +970,12 @@ class Diagram:
         Return:
             svgwrite.container.Group: the group element for the diagram
         """
-
+        
         group = canvas.g(class_='gene')
-
+        if width < self.GENE_MIN_WIDTH:
+            raise DrawingFitError('width is not sufficient to draw gene')
         wrect = width - self.GENE_ARROW_WIDTH
+        print('Diagram.draw_gene:', width, self.GENE_MIN_WIDTH)
         if wrect < 1:
             raise DrawingFitError('width is not sufficient to draw gene')
 
@@ -1153,59 +1080,116 @@ class Diagram:
         return tracks
 
     @classmethod
-    def _generate_interval_mapping(cls, input_intervals, target_width, ratio, min_width, buffer=0):
+    def _generate_interval_mapping(cls, input_intervals, target_width, ratio, min_width, buffer_length=None, start=None, end=None, min_inter_width=None):
+        min_inter_width = min_width if min_inter_width is None else min_inter_width
+        if start is not None and end is not None and buffer_length is not None:
+            raise AttributeError('buffer_length is a mutually exclusive argument with start/end')
+        
         intervals = []
-
+        print('_generate_interval_mapping', input_intervals, target_width, ratio, min_width, buffer_length, start, end)
         for i in Interval.min_nonoverlapping(*input_intervals):
             if len(intervals) == 0 or abs(Interval.dist(intervals[-1], i)) > 1:
                 intervals.append(i)
             else:
                 intervals[-1] = intervals[-1] | i
+        
+        # now split any intervals by start/end
+        breaks = {}
+        for i in intervals:
+            # split by input intervals
+            breaks[i] = set([i.start, i.end])
+            for ii in input_intervals:
+                if ii.start >= i.start and ii.start <= i.end:
+                    breaks[i].add(ii.start)
+                if ii.end >= i.start and ii.end <= i.end:
+                    breaks[i].add(ii.end)
+        temp = []
+        for itvl, breakpoints in breaks.items():
+            pos = sorted(breakpoints)
+            pos[0] -= 1
+            if len(pos) == 1:
+                pos.append(pos[0] + 1)
+            print(breakpoints, pos)
+            for i in range(1, len(pos)):
+                temp.append(Interval(pos[i - 1] + 1, pos[i]))
+        intervals = sorted(temp, key=lambda x: x.start)
+        print('intervals', intervals)
+        
+        
+        if buffer_length is None:
+            buffer_length = 0
 
-        start = max(intervals[0].start - buffer, 1)
-        end = intervals[-1].end + buffer
+        if start is None:
+            start = max(intervals[0].start - buffer_length, 1)
+        elif start <= 0:
+            raise AttributeError('start must be a natural number')
+
+        if end is None:
+            end = intervals[-1].end + buffer_length
+        elif end <= 0:
+            raise AttributeError('end must be a natural number')
+        
+        total_length = end - start + 1
         genic_length = sum([len(i) for i in intervals])
-        intergenic_length = (end - start) + 1 - genic_length
-
-        width = target_width - (len(intervals) * 2 + 1) * min_width  # reserved width
+        intergenic_length = total_length - genic_length
+        intermediate_intervals = len(intervals) - 1
+        if start < intervals[0].start:
+            intermediate_intervals += 1
+        if end > intervals[-1].end:
+            intermediate_intervals += 1
+        width = target_width - intermediate_intervals * min_inter_width - len(intervals) * min_width  # reserved width
+        print('genic_length', genic_length)
+        print('intergenic_length', intergenic_length)
+        print('width', width)
 
         if width < 0:
             raise DrawingFitError('width cannot accommodate the number of expected objects')
+        
+        intergenic_width = width / (ratio + 1)
+        genic_width = width - intergenic_width
+        intergenic_unit = intergenic_width / intergenic_length
+        genic_unit = genic_width / genic_length
+        print('ratio', ratio, genic_width / intergenic_width)
+        print('intergenic_unit', intergenic_unit)
+        print('genic_unit', genic_unit)
+        print('intergenic_width', intergenic_width)
+        print('genic_width', genic_width)
+        print('min_width', min_width)
+        print('min_inter_width', min_inter_width)
 
-        intergenic_unit = width / (genic_length * ratio + intergenic_length)
-        genic_unit = intergenic_unit * ratio
-
-        if (intergenic_unit * intergenic_length + genic_unit * genic_length) > target_width:
-            raise AssertionError('assert failed', intergenic_unit * intergenic_length + genic_unit * genic_length, target_width)
-
+        assert(genic_width + intergenic_width + len(intervals) * min_width + intermediate_intervals * min_inter_width == target_width)
         mapping = []
 
         pos = 1
         # do the intergenic region prior to the first genic region
-        if buffer > 0:
+        if start < intervals[0].start:
             ifrom = Interval(start, intervals[0].start - 1)
-            ito = Interval(pos, pos + min_width + max(len(ifrom) * intergenic_unit - 1, 0))
+            ito = Interval(pos, pos + min_inter_width + max(len(ifrom) * intergenic_unit, 0))
             mapping.append((ifrom, ito))
             pos += len(ito)
 
         for i, curr in enumerate(intervals):
-            if i > 0:
+            if i > 0 and intervals[i - 1].end + 1 < curr.start: # add between the intervals
                 prev = intervals[i - 1]
                 ifrom = Interval(prev.end + 1, curr.start - 1)
-                ito = Interval(pos, pos + min_width + max(len(ifrom) * intergenic_unit - 1, 0))
+                ito = Interval(pos, pos + min_inter_width + max(len(ifrom) * intergenic_unit, 0))
                 mapping.append((ifrom, ito))
                 pos += len(ito)
 
-            ito = Interval(pos, pos + min_width + max(len(curr) * genic_unit - 1, 0))
+            ito = Interval(pos, pos + min_width + max(len(curr) * genic_unit, 0))
             mapping.append((curr, ito))
             pos += len(ito)
+        
         # now the last intergenic region will make up for the rounding error
-        if buffer > 0:
+        if end > intervals[-1].end:
             ifrom = Interval(intervals[-1].end + 1, end)
-            ito = Interval(pos, pos + min_width + max(len(ifrom) * intergenic_unit - 1, 0))
+            ito = Interval(pos, pos + min_inter_width + max(len(ifrom) * intergenic_unit, 0))
             mapping.append((ifrom, ito))
             pos += len(ito)
-        mapping[-1][1].end = target_width
+        #mapping[-1][1].end = int(target_width)
+        print('actual end', mapping[-1][1].end, 'vs expected end', int(target_width))
+        for ifrom, ito in sorted(mapping):
+            print(ifrom, '==>', ito, len(ito))
         temp = mapping
         mapping = dict()
         for ifrom, ito in temp:

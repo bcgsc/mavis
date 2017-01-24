@@ -612,6 +612,8 @@ class TestUSTranscript(unittest.TestCase):
         self.y.intact_end_splice = False
         self.z.intact_start_splice = False
         patterns = ft.generate_splicing_patterns()
+        for p in patterns:
+            print(p, p.splice_type)
         self.assertEqual(1, len(patterns))
         self.assertEqual([self.x.end, self.y.start, self.z.end, self.w.start], patterns[0])
 

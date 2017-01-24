@@ -1,5 +1,5 @@
 from .genomic import usTranscript, Transcript, Exon, IntergenicRegion
-from ..constants import STRAND, SVTYPE, reverse_complement, ORIENT, PRIME, COLUMNS
+from ..constants import STRAND, SVTYPE, reverse_complement, ORIENT, PRIME, COLUMNS, GENE_PRODUCT_TYPE
 from ..breakpoint import Breakpoint, BreakpointPair
 from ..interval import Interval
 from .protein import Translation, Domain, calculate_ORF
@@ -222,8 +222,9 @@ class FusionTranscript(usTranscript):
                             match, total, regions = dom.align_seq(aa_seq, REFERENCE_GENOME)
                             if min_domain_mapping_match is None or match / total >= min_domain_mapping_match:
                                 new_dom = Domain(dom.name, regions, new_tl)
+                                new_tl.domains.append(new_dom)
                         except UserWarning:
-                            pass
+                            pass 
         return ft
     
     def get_sequence(self, REFERENCE_GENOME=None, ignore_cache=False):
@@ -484,6 +485,11 @@ class Annotation(BreakpointPair):
             row[COLUMNS.transcript2] = self.transcript2.name
             try:
                 row[COLUMNS.gene2_direction] = str(determine_prime(self.transcript2, self.break2))
+                if row[COLUMNS.gene1_direction] != 'None':
+                    if row[COLUMNS.gene1_direction] == row[COLUMNS.gene2_direction]:
+                        row[COLUMNS.gene_product_type] = GENE_PRODUCT_TYPE.ANTI_SENSE
+                    else:
+                        row[COLUMNS.gene_product_type] = GENE_PRODUCT_TYPE.SENSE
             except NotSpecifiedError:
                 pass
         else:

@@ -151,20 +151,20 @@ class TestInterval(unittest.TestCase):
             Interval.convert_pos(mapping, 10)
 
     def test_convert_pos_ratioed_intervals(self):
-        raise unittest.SkipTest('off by one due to rounding errors, works for drawing but would like to revisit later')
         mapping = {(1, 100): (1, 20), (101, 500): (21, 30), (501, 600): (31, 51), (601, 900): (52, 57), (901, 1100): (58, 100)}
-        self.assertEqual(1, round(Interval.convert_pos(mapping, 1), 0))
-        self.assertEqual(100, round(Interval.convert_pos(mapping, 1100), 0))
-        self.assertEqual(10, round(Interval.convert_pos(mapping, 50), 0))
+        self.assertEqual(Interval(1), Interval.convert_ratioed_pos(mapping, 1))
+        self.assertEqual(Interval(20), Interval.convert_ratioed_pos(mapping, 100))
+        self.assertEqual(Interval(100, 100), Interval.convert_ratioed_pos(mapping, 1100))
+        #self.assertEqual(Interval(10, 10), Interval.convert_ratioed_pos(mapping, 50))
 
         mapping = {(1, 100): (1, 1), (101, 500): (21, 30)}
-        self.assertEqual(1, round(Interval.convert_pos(mapping, 1), 0))
-        self.assertEqual(1, round(Interval.convert_pos(mapping, 100), 0))
+        self.assertEqual(Interval(1, 1), Interval.convert_ratioed_pos(mapping, 1))
+        self.assertEqual(Interval(1, 1), Interval.convert_ratioed_pos(mapping, 100))
 
         mapping = {(1, 100): (21, 30), (101, 500): (1, 1)}
-        self.assertEqual(1, round(Interval.convert_pos(mapping, 101), 0))
-        self.assertEqual(1, round(Interval.convert_pos(mapping, 500), 0))
-        self.assertEqual(25, round(Interval.convert_pos(mapping, 50), 0))
+        self.assertEqual(Interval(1, 1), Interval.convert_ratioed_pos(mapping, 101))
+        self.assertEqual(Interval(1, 1), Interval.convert_ratioed_pos(mapping, 500))
+        self.assertEqual(Interval(25, 25), Interval.convert_ratioed_pos(mapping, 50))
 
     def test_union(self):
         l = [Interval(1, 10), Interval(5, 7), Interval(7)]

@@ -246,9 +246,17 @@ class Interval:
                     break
             num += 1
         return num, found_inbetween_segment
-
+    
     @classmethod
     def convert_pos(cls, mapping, pos):
+        i = cls.convert_ratioed_pos(mapping, pos)
+        if i.forward_to_reverse:
+            return i.end
+        else:
+            return i.start
+
+    @classmethod
+    def convert_ratioed_pos(cls, mapping, pos):
         """ convert any given position given a mapping of intervals to another range
 
         Args:
@@ -335,11 +343,20 @@ class Interval:
             # fell into a mapped region
             curr = input_intervals[i]
             nexxt = mapping[curr]
-            ratio = (nexxt[1] - nexxt[0] + 1) / (curr[1] - curr[0] + 1)
-            shift = int((pos - curr[0]) * ratio)
-            #print('curr', curr, 'next', nexxt, 'shift', shift, 'ratio', ratio)
-
-            return nexxt[1] - shift if forward_to_reverse else nexxt[0] + shift
+            if len(curr) == 1 or len(nexxt) == 1:
+                i = Interval(nexxt[0], nexxt[1])
+            else:
+                ratio = (nexxt[1] - nexxt[0]) / (curr[1] - curr[0])
+                shift = int(round((pos - curr[0]) * ratio, 0))
+                shift2 = int(round((pos - curr[0]) * ratio + ratio, 0))
+                #print('curr', curr, 'next', nexxt, 'shift', shift, 'ratio', ratio)
+                if forward_to_reverse:
+                    i = Interval(nexxt[1] - shift2, nexxt[1] - shift)
+                else:
+                    i = Interval(nexxt[0] + shift, nexxt[0] + shift2)
+            setattr(i, 'forward_to_reverse', forward_to_reverse)
+            return i
+            #return nexxt[1] - shift if forward_to_reverse else nexxt[0] + shift
 
     @classmethod
     def union(cls, *intervals):
