@@ -137,15 +137,15 @@ class TestDraw(unittest.TestCase):
         for el, cls in zip(g.elements[2].elements, ['translation', 'domain', 'domain']):
             self.assertEqual(cls, el.attribs.get('class', ''))
 
-        self.assertEqual(d1, g.labels['D1'])
-        self.assertEqual(d2, g.labels['D2'])
         self.assertEqual(
-            d.TRACK_HEIGHT / 2
-            + max(d.TRACK_HEIGHT / 2, d.SPLICE_HEIGHT)
+            d.TRACK_HEIGHT + d.SPLICE_HEIGHT
             + 2 * d.PADDING + d.DOMAIN_TRACK_HEIGHT * 2
+            + d.TRANSLATION_SCAFFOLD_HEIGHT + d.PADDING
             + d.BREAKPOINT_TOP_MARGIN
             + d.BREAKPOINT_BOTTOM_MARGIN,
             g.height)
+        self.assertEqual(d1, g.labels['D1'])
+        self.assertEqual(d2, g.labels['D2'])
 
     def test_dynamic_label_color(self):
         self.assertEqual(HEX_WHITE, Diagram.dynamic_label_color(HEX_BLACK))
@@ -291,7 +291,19 @@ class TestDraw(unittest.TestCase):
 
         canvas = d.draw(ann, ft)
         canvas.saveas('test_layout_translocation.svg')
-        self.assertEqual(8, len(canvas.elements))  # defs counts as element
+        self.assertEqual(6, len(canvas.elements))  # defs counts as element
+        expected_height = d.TOP_MARGIN + d.BOTTOM_MARGIN + d.TRACK_HEIGHT * 2 + d.PADDING  + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN # gene height
+        print('expected_height', expected_height)
+        t = d.TRACK_HEIGHT + d.SPLICE_HEIGHT + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN # transcript track
+        t += d.PADDING + d.TRANSLATION_SCAFFOLD_HEIGHT # translation
+        t += d.PADDING * 2 + d.DOMAIN_SCAFFOLD_HEIGHT * 2
+        expected_height += t
+        print('expected_height', t, expected_height)
+        t = d.INNER_MARGIN + d.TRACK_HEIGHT  #fusion
+        expected_height += t
+        print('expected_height', t, expected_height)
+        print('elements', [(el.height, el.attribs['class']) for el in canvas.elements if hasattr(el, 'height')])
+        self.assertEqual(expected_height, canvas.attribs['height'])
 
     def test_draw_layout_intergenic_breakpoint(self):
         pass

@@ -98,16 +98,16 @@ class MockString:
             return self.char
 
 
-def build_transcript(gene, exons, cds_start, cds_end, domains):
-    ust = usTranscript(exons, gene=gene)
-    gene.unspliced_transcripts.append(ust)
-    
+def build_transcript(gene, exons, cds_start, cds_end, domains, strand=None):
+    ust = usTranscript(exons, gene=gene, strand=strand if strand is not None else gene.get_strand())
+    if gene is not None:
+        gene.unspliced_transcripts.append(ust)
+
     for spl in ust.generate_splicing_patterns():
         t = Transcript(ust, spl)
         ust.spliced_transcripts.append(t)
 
         tx = Translation(cds_start, cds_end, t, domains=domains)
         t.translations.append(tx)
-    
-    return ust
 
+    return ust

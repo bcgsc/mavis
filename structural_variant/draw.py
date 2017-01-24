@@ -277,12 +277,12 @@ class Diagram:
 
         x += dx_label_shift
         drawing_width = self.WIDTH - dx_label_shift - self.LEFT_MARGIN - self.RIGHT_MARGIN
-        
+
         colors = dict()
         genes = set()
         genes1 = set()
         genes2 = set()
-        
+
         for g, d in ann.genes_proximal_to_break1:
             genes1.add(g)
             colors[g] = self.GENE1_COLOR
@@ -307,7 +307,7 @@ class Diagram:
                     colors[e] = self.EXON1_COLOR
             except AttributeError:
                 genes1.add(ann.transcript1)
-        
+
         if ann.transcript2:
             try:
                 genes2.add(ann.transcript2.gene)
@@ -316,18 +316,18 @@ class Diagram:
                     colors[e] = self.EXON2_COLOR
             except AttributeError:
                 genes2.add(ann.transcript2)
-        
+
         # set all the labels so that they are re-used correctly
         for gene in sorted(genes1 | genes2, key=lambda x: x.start):
             if isinstance(gene, IntergenicRegion):
                 labels.add(gene, self.REGION_LABEL_PREFIX)
             else:
                 labels.add(gene, self.GENE_LABEL_PREFIX)
-        
+
         # calculate the half-width for transcripts and genes etc
         half_drawing_width = (drawing_width - self.INNER_MARGIN - dx_label_shift) / 2
         second_drawing_shift = x + half_drawing_width + self.INNER_MARGIN + dx_label_shift
-        
+
         gheights = [0]
 
         if ann.interchromosomal:
@@ -336,7 +336,7 @@ class Diagram:
             g.translate(x, y)
             canvas.add(g)
             gheights.append(g.height)
-            
+
             # second gene view
             g = self.draw_genes(canvas, genes2, half_drawing_width, [ann.break2], colors=colors, labels=labels)
             g.translate(second_drawing_shift, y)
@@ -349,7 +349,7 @@ class Diagram:
             gheights.append(g.height)
 
         y += max(gheights) + self.INNER_MARGIN
-        
+
         theights = [0]
         # now the transcript level drawings
         if ann.transcript1 == ann.transcript2:
@@ -407,7 +407,7 @@ class Diagram:
         y += max(theights)
         if max(theights) == 0:
             y -= self.INNER_MARGIN
-        
+
         # finally the fusion transcript level drawing
         if fusion_transcript:
             y += self.INNER_MARGIN
@@ -497,7 +497,7 @@ class Diagram:
             raise NotSpecifiedError('strand must be positive or negative to draw the ust')
         if (mapping is None and target_width is None) or (mapping is not None and target_width is not None):
             raise AttributeError('mapping and target_width arguments are required and mutually exclusive')
-        
+
         if mapping is None:
             mapping = self._generate_interval_mapping(
                 ust.exons,
@@ -509,19 +509,22 @@ class Diagram:
 
         main_group = canvas.g(class_='ust')
 
-        y = self.BREAKPOINT_TOP_MARGIN
+        y = 0
+        print('draw_ustranscript', y)
 
         if len(ust.translations) == 0:
-            y += self.TRACK_HEIGHT / 2
+            y += self.BREAKPOINT_TOP_MARGIN + self.TRACK_HEIGHT / 2
+            print('draw_ustranscript', y)
             exon_track_group = self._draw_exon_track(canvas, ust, mapping, colors)
             main_group.add(exon_track_group)
             y += self.TRACK_HEIGHT / 2
+            print('draw_ustranscript', y)
         else:
             # draw the protein features if there are any
             for tl in ust.translations:
                 tr = tl.transcript
                 # if the splicing takes up more room than the track we need to adjust for it
-                y += self.SPLICE_HEIGHT
+                y += self.SPLICE_HEIGHT + self.BREAKPOINT_TOP_MARGIN
 
                 exon_track_group = self._draw_exon_track(canvas, ust, mapping, colors)
                 exon_track_group.translate(0, y)
@@ -536,7 +539,7 @@ class Diagram:
                     p.dasharray(self.SPLICE_STROKE_DASHARRAY)
                     p.stroke(self.SPLICE_COLOR, width=self.SPLICE_STROKE_WIDTH)
                     splice_group.add(p)
-                
+
                 y += self.TRACK_HEIGHT / 2
 
                 main_group.add(splice_group)
@@ -611,7 +614,7 @@ class Diagram:
                     percent_match = None
                     try:
                         match, total = d.score_region_mapping(REFERENCE_GENOME)
-                        percent_match = int(round(match * 100 / total, 0)) 
+                        percent_match = int(round(match * 100 / total, 0))
                         fill = self.DOMAIN_FILL_GRADIENT[percent_match % len(self.DOMAIN_FILL_GRADIENT) - 1]
                     except (NotSpecifiedError, AttributeError):
                         pass
@@ -645,10 +648,9 @@ class Diagram:
                     gp.add(gd)
                     py += self.DOMAIN_TRACK_HEIGHT
                 gp.translate(0, y)
-                y += py + self.INNER_MARGIN
+                y += py + self.INNER_MARGIN + self.BREAKPOINT_BOTTOM_MARGIN
                 main_group.add(gp)
 
-        y += self.BREAKPOINT_BOTTOM_MARGIN
         # now overlay the breakpoints on top of everything
         for i, b in enumerate(breakpoints):
             s = Interval.convert_pos(mapping, b.start)
@@ -660,6 +662,7 @@ class Diagram:
         setattr(main_group, 'width', target_width)
         setattr(main_group, 'mapping', mapping)
         setattr(main_group, 'labels', labels)
+        print('draw_ustranscript', y)
         return main_group
 
     def draw_genes(self, canvas, genes, target_width, breakpoints=None, colors=None, labels=None):
@@ -683,11 +686,9 @@ class Diagram:
         breakpoints = [] if breakpoints is None else breakpoints
         colors = {} if colors is None else colors
         labels = LabelMapping() if labels is None else labels
-        
+
         st = max(min([g.start for g in genes] + [b.start for b in breakpoints]) - self.GENE_MIN_BUFFER, 1)
         end = max([g.end for g in genes] + [b.end for b in breakpoints]) + self.GENE_MIN_BUFFER
-        print('st', st, 'end', end)
-        print('genes', ['gene({}, {})'.format(g.start, g.end) for g in genes])
         main_group = canvas.g(class_='genes')
         mapping = self._generate_interval_mapping(
             [g for g in genes],
@@ -697,15 +698,12 @@ class Diagram:
             start=st, end=end,
             min_inter_width=self.MIN_WIDTH
         )
-        print('mapping', mapping)
         gene_px_intervals = {}
         for i, gene in enumerate(sorted(genes, key=lambda x: x.start)):
             s = Interval.convert_ratioed_pos(mapping, gene.start)
             t = Interval.convert_ratioed_pos(mapping, gene.end)
-            print('gene', gene.start, gene.end, '==>', s.start, t.end)
             gene_px_intervals[Interval(s.start, t.end)] = gene
             l = labels.add(gene, self.GENE_LABEL_PREFIX)
-            print(l)
         tracks = Diagram._split_intervals_into_tracks(gene_px_intervals)
 
         y = self.BREAKPOINT_TOP_MARGIN
@@ -913,7 +911,7 @@ class Diagram:
             g.add(t)
             g.add(Tag('title', 'Exon {} {}_{} L={}'.format(exon.name if exon.name else '', exon.start, exon.end, len(exon))))
         return g
-    
+
     def draw_template(self, canvas, length, target_width, height, bands=None, labels=None, colors=None):
         labels = LabelMapping() if labels is None else labels
         colors = {} if colors is None else colors
@@ -929,7 +927,7 @@ class Diagram:
         for i, band in enumerate(bands):
             s = Interval.convert_pos(mapping, band[0])
             t = Interval.convert_pos(mapping, band[1])
-            
+
             f = self.TEMPLATE_BAND_FILL_EVEN if i % 2 == 0 else self.TEMPLATE_BAND_FILL_ODD
             r = canvas.rect(
                 (s, 0),
@@ -970,7 +968,7 @@ class Diagram:
         Return:
             svgwrite.container.Group: the group element for the diagram
         """
-        
+
         group = canvas.g(class_='gene')
         if width < self.GENE_MIN_WIDTH:
             raise DrawingFitError('width is not sufficient to draw gene')
@@ -1043,9 +1041,9 @@ class Diagram:
                     style=self.FONT_STYLE.format(font_size=self.LABEL_FONT_SIZE, text_anchor='middle'),
                     class_='label'
                 ))
-        
+
         group.add(
-            Tag('title', 'Gene {} {}:{}_{}{}'.format(gene.name if gene.name else '', 
+            Tag('title', 'Gene {} {}:{}_{}{}'.format(gene.name if gene.name else '',
                 gene.chr, gene.start, gene.end, gene.get_strand())))
         return group
 
@@ -1084,15 +1082,15 @@ class Diagram:
         min_inter_width = min_width if min_inter_width is None else min_inter_width
         if start is not None and end is not None and buffer_length is not None:
             raise AttributeError('buffer_length is a mutually exclusive argument with start/end')
-        
+
         intervals = []
-        print('_generate_interval_mapping', input_intervals, target_width, ratio, min_width, buffer_length, start, end)
+        print('_generate_interval_mapping', ['Interval({}, {})'.format(g.start, g.end) for g in input_intervals], target_width, ratio, min_width, buffer_length, start, end)
         for i in Interval.min_nonoverlapping(*input_intervals):
             if len(intervals) == 0 or abs(Interval.dist(intervals[-1], i)) > 1:
                 intervals.append(i)
             else:
                 intervals[-1] = intervals[-1] | i
-        
+
         # now split any intervals by start/end
         breaks = {}
         for i in intervals:
@@ -1109,13 +1107,10 @@ class Diagram:
             pos[0] -= 1
             if len(pos) == 1:
                 pos.append(pos[0] + 1)
-            print(breakpoints, pos)
             for i in range(1, len(pos)):
                 temp.append(Interval(pos[i - 1] + 1, pos[i]))
         intervals = sorted(temp, key=lambda x: x.start)
-        print('intervals', intervals)
-        
-        
+
         if buffer_length is None:
             buffer_length = 0
 
@@ -1128,34 +1123,28 @@ class Diagram:
             end = intervals[-1].end + buffer_length
         elif end <= 0:
             raise AttributeError('end must be a natural number')
-        
+
         total_length = end - start + 1
         genic_length = sum([len(i) for i in intervals])
         intergenic_length = total_length - genic_length
-        intermediate_intervals = len(intervals) - 1
+        intermediate_intervals = 0
         if start < intervals[0].start:
             intermediate_intervals += 1
         if end > intervals[-1].end:
             intermediate_intervals += 1
+
+        for i in range(1, len(intervals)):
+            if intervals[i].start > intervals[i - 1].end + 1:
+                intermediate_intervals += 1
         width = target_width - intermediate_intervals * min_inter_width - len(intervals) * min_width  # reserved width
-        print('genic_length', genic_length)
-        print('intergenic_length', intergenic_length)
-        print('width', width)
 
         if width < 0:
             raise DrawingFitError('width cannot accommodate the number of expected objects')
-        
-        intergenic_width = width / (ratio + 1)
+
+        intergenic_width = width // (ratio + 1)
         genic_width = width - intergenic_width
-        intergenic_unit = intergenic_width / intergenic_length
-        genic_unit = genic_width / genic_length
-        print('ratio', ratio, genic_width / intergenic_width)
-        print('intergenic_unit', intergenic_unit)
-        print('genic_unit', genic_unit)
-        print('intergenic_width', intergenic_width)
-        print('genic_width', genic_width)
-        print('min_width', min_width)
-        print('min_inter_width', min_inter_width)
+        intergenic_unit = lambda x: x * intergenic_width / intergenic_length
+        genic_unit = lambda x: x * genic_width / genic_length
 
         assert(genic_width + intergenic_width + len(intervals) * min_width + intermediate_intervals * min_inter_width == target_width)
         mapping = []
@@ -1164,7 +1153,8 @@ class Diagram:
         # do the intergenic region prior to the first genic region
         if start < intervals[0].start:
             ifrom = Interval(start, intervals[0].start - 1)
-            ito = Interval(pos, pos + min_inter_width + max(len(ifrom) * intergenic_unit, 0))
+            s = round(max(intergenic_unit(len(ifrom)), 0), 0)
+            ito = Interval(pos, pos + min_inter_width - 1 + s)
             mapping.append((ifrom, ito))
             pos += len(ito)
 
@@ -1172,24 +1162,23 @@ class Diagram:
             if i > 0 and intervals[i - 1].end + 1 < curr.start: # add between the intervals
                 prev = intervals[i - 1]
                 ifrom = Interval(prev.end + 1, curr.start - 1)
-                ito = Interval(pos, pos + min_inter_width + max(len(ifrom) * intergenic_unit, 0))
+                s = round(max(intergenic_unit(len(ifrom)), 0), 0)
+                ito = Interval(pos, pos + min_inter_width - 1 + s)
                 mapping.append((ifrom, ito))
                 pos += len(ito)
-
-            ito = Interval(pos, pos + min_width + max(len(curr) * genic_unit, 0))
+            s = round(max(genic_unit(len(curr)), 0), 0)
+            ito = Interval(pos, pos + min_width - 1 + s)
             mapping.append((curr, ito))
             pos += len(ito)
-        
+
         # now the last intergenic region will make up for the rounding error
         if end > intervals[-1].end:
             ifrom = Interval(intervals[-1].end + 1, end)
-            ito = Interval(pos, pos + min_inter_width + max(len(ifrom) * intergenic_unit, 0))
+            s = round(max(intergenic_unit(len(ifrom)), 0), 0)
+            ito = Interval(pos, pos + min_inter_width - 1 + s)
             mapping.append((ifrom, ito))
             pos += len(ito)
-        #mapping[-1][1].end = int(target_width)
-        print('actual end', mapping[-1][1].end, 'vs expected end', int(target_width))
-        for ifrom, ito in sorted(mapping):
-            print(ifrom, '==>', ito, len(ito))
+        mapping[-1][1].end = int(target_width)
         temp = mapping
         mapping = dict()
         for ifrom, ito in temp:
