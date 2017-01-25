@@ -120,6 +120,7 @@ class TestInterval(unittest.TestCase):
         self.assertEqual(310, e.exception.after)
         self.assertEqual(None, e.exception.before)
 
+    def test_convert_pos_forward_to_reverse(self):
         mapping = {(41, 50): (101, 110), (21, 30): (201, 210), (1, 10): (301, 310)}
 
         self.assertEqual(306, Interval.convert_pos(mapping, 5))
@@ -133,8 +134,7 @@ class TestInterval(unittest.TestCase):
         self.assertEqual(210, e.exception.before)
         self.assertEqual(301, e.exception.after)
 
-
-
+    def test_convert_pos_input_errors(self):
         # test input errors
         with self.assertRaises(AttributeError):  # unequal length
             Interval.convert_pos({(1, 10): (4, 5)}, 3)
@@ -149,6 +149,15 @@ class TestInterval(unittest.TestCase):
         with self.assertRaises(AttributeError):  # range not increasing or decreasing
             mapping = {(1, 2): (4, 5), (3, 4): (1, 2), (5, 6): (3, 3)}
             Interval.convert_pos(mapping, 10)
+
+    def test_convert_pos_one_to_one(self):
+        mapping = {}
+        for x in range(0, 10):
+            s = x * 10 + 1
+            mapping[Interval(s, s + 9)] = Interval(s, s + 9)
+        for pos in range(1, 101):
+            self.assertEqual(pos, Interval.convert_pos(mapping, pos))
+
 
     def test_convert_pos_ratioed_intervals(self):
         mapping = {(1, 100): (1, 20), (101, 500): (21, 30), (501, 600): (31, 51), (601, 900): (52, 57), (901, 1100): (58, 100)}
