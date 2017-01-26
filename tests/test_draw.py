@@ -9,11 +9,58 @@ from structural_variant.constants import STRAND, ORIENT, SVTYPE, GIESMA_STAIN
 from structural_variant.breakpoint import Breakpoint, BreakpointPair
 from structural_variant.interval import Interval
 from tests import MockSeq, MockString, build_transcript
+from copy import copy
 
 
 class TestDraw(unittest.TestCase):
     def setUp(self):
         self.canvas = Drawing(height=100, width=1000)
+        self.template_1 = Template('1', 1, 135006517)
+        self.template_2 = Template('2', 1, 135006517)
+        bands = []
+        bands.append(BioInterval(None, 1, 2800001, 'p15.5'))
+        bands.append(BioInterval(None, 2800001, 10700000, 'p15.4'))
+        bands.append(BioInterval(None, 10700001, 12700000, 'p15.3'))
+        bands.append(BioInterval(None, 12700001, 16200000, 'p15.2'))
+        bands.append(BioInterval(None, 16200001, 21700000, 'p15.1'))
+        bands.append(BioInterval(None, 21700001, 26100000, 'p14.3'))
+        bands.append(BioInterval(None, 26100001, 27200000, 'p14.2'))
+        bands.append(BioInterval(None, 27200001, 31000000, 'p14.1'))
+        bands.append(BioInterval(None, 31000001, 36400000, 'p13'))
+        bands.append(BioInterval(None, 36400001, 43500000, 'p12'))
+        bands.append(BioInterval(None, 43500001, 48800000, 'p11.2'))
+        bands.append(BioInterval(None, 48800001, 51600000, 'p11.12'))
+        bands.append(BioInterval(None, 51600001, 53700000, 'p11.11', data={'giesma_stain': GIESMA_STAIN.ACEN}))
+        bands.append(BioInterval(None, 53700001, 55700000, 'q11', data={'giesma_stain': GIESMA_STAIN.ACEN}))
+        bands.append(BioInterval(None, 55700001, 59900000, 'q12.1'))
+        bands.append(BioInterval(None, 59900001, 61700000, 'q12.2'))
+        bands.append(BioInterval(None, 61700001, 63400000, 'q12.3'))
+        bands.append(BioInterval(None, 63400001, 65900000, 'q13.1'))
+        bands.append(BioInterval(None, 65900001, 68400000, 'q13.2'))
+        bands.append(BioInterval(None, 68400001, 70400000, 'q13.3'))
+        bands.append(BioInterval(None, 70400001, 75200000, 'q13.4'))
+        bands.append(BioInterval(None, 75200001, 77100000, 'q13.5'))
+        bands.append(BioInterval(None, 77100001, 85600000, 'q14.1'))
+        bands.append(BioInterval(None, 85600001, 88300000, 'q14.2'))
+        bands.append(BioInterval(None, 88300001, 92800000, 'q14.3'))
+        bands.append(BioInterval(None, 92800001, 97200000, 'q21'))
+        bands.append(BioInterval(None, 97200001, 102100000, 'q22.1'))
+        bands.append(BioInterval(None, 102100001, 102900000, 'q22.2'))
+        bands.append(BioInterval(None, 102900001, 110400000, 'q22.3'))
+        bands.append(BioInterval(None, 110400001, 112500000, 'q23.1'))
+        bands.append(BioInterval(None, 112500001, 114500000, 'q23.2'))
+        bands.append(BioInterval(None, 114500001, 121200000, 'q23.3'))
+        bands.append(BioInterval(None, 121200001, 123900000, 'q24.1'))
+        bands.append(BioInterval(None, 123900001, 127800000, 'q24.2'))
+        bands.append(BioInterval(None, 127800001, 130800000, 'q24.3'))
+        bands.append(BioInterval(None, 130800001, 135006517, 'q25'))
+        for b in bands:
+            b.reference_object = self.template_1
+            self.template_1.bands.append(b)
+            b = copy(b)
+            b.reference_object = self.template_2
+            self.template_2.bands.append(b)
+
 
     def test__generate_interval_mapping(self):
         x = Interval(150, 1000)
@@ -25,7 +72,7 @@ class TestDraw(unittest.TestCase):
         intergenic_intervals = 5
         min_inter_width = 10
         min_width = 20
-        
+
         temp = Diagram._generate_interval_mapping(
             [x, y, z], target_width=1000, ratio=5, min_width=min_width, start=1, end=10000, min_inter_width=min_inter_width)
         self.assertEqual(7, len(temp.keys()))
@@ -135,7 +182,6 @@ class TestDraw(unittest.TestCase):
         self.assertEqual(breakpoints[0], g.labels['B1'])
 
     def test_draw_ustranscript(self):
-        raise unittest.SkipTest('TODO')
         d = Diagram()
         # domains = [Domain()]
         d1 = Domain('first', [(55, 61), (71, 73)])
@@ -171,7 +217,7 @@ class TestDraw(unittest.TestCase):
         self.assertEqual(
             d.TRACK_HEIGHT + d.SPLICE_HEIGHT
             + 2 * d.PADDING + d.DOMAIN_TRACK_HEIGHT * 2
-            + d.TRANSLATION_SCAFFOLD_HEIGHT + d.PADDING
+            + d.TRANSLATION_TRACK_HEIGHT + d.PADDING
             + d.BREAKPOINT_TOP_MARGIN
             + d.BREAKPOINT_BOTTOM_MARGIN,
             g.height)
@@ -323,19 +369,16 @@ class TestDraw(unittest.TestCase):
         canvas = d.draw(ann, ft)
         canvas.saveas('test_layout_translocation.svg')
         self.assertEqual(6, len(canvas.elements))  # defs counts as element
-        expected_height = d.TOP_MARGIN + d.BOTTOM_MARGIN + d.TRACK_HEIGHT * 2 + d.PADDING  + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN # gene height
-        print('expected_height', expected_height)
-        t = d.TRACK_HEIGHT + d.SPLICE_HEIGHT + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN # transcript track
-        t += d.PADDING + d.TRANSLATION_SCAFFOLD_HEIGHT # translation
-        t += d.PADDING * 2 + d.DOMAIN_SCAFFOLD_HEIGHT * 2
-        expected_height += t
-        print('expected_height', t, expected_height)
-        t = d.INNER_MARGIN + d.TRACK_HEIGHT  #fusion
-        expected_height += t
-        print('expected_height', t, expected_height)
-        print('elements', [(el.height, el.attribs['class']) for el in canvas.elements if hasattr(el, 'height')])
+        expected_height = d.TOP_MARGIN + d.BOTTOM_MARGIN + \
+            d.TRACK_HEIGHT * 2 + d.PADDING  + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN + \
+            d.INNER_MARGIN + \
+            d.TRACK_HEIGHT + d.SPLICE_HEIGHT + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN + \
+            d.PADDING + d.TRANSLATION_TRACK_HEIGHT + \
+            d.PADDING * 2 + d.DOMAIN_TRACK_HEIGHT * 2 + \
+            d.INNER_MARGIN + \
+            d.TRACK_HEIGHT + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN
         self.assertEqual(expected_height, canvas.attribs['height'])
-    
+
     def test_draw_template(self):
         # def draw_template(self, canvas, template, target_width, height, labels=None, colors=None):
         d = Diagram()
@@ -351,72 +394,21 @@ class TestDraw(unittest.TestCase):
         canvas.attribs['height'] = g.height
         canvas.saveas('test_draw_template.svg')
         canvas = Drawing(size=(1000, 50))
-        t = Template('11', 1, 135006517)
-        t.bands.append(BioInterval(None, 1, 2800001, 'p15.5'))
-        t.bands.append(BioInterval(None, 2800001, 10700000, 'p15.4'))
-        t.bands.append(BioInterval(None, 10700001, 12700000, 'p15.3'))
-        t.bands.append(BioInterval(None, 12700001, 16200000, 'p15.2'))
-        t.bands.append(BioInterval(None, 16200001, 21700000, 'p15.1'))
-        t.bands.append(BioInterval(None, 21700001, 26100000, 'p14.3'))
-        t.bands.append(BioInterval(None, 26100001, 27200000, 'p14.2'))
-        t.bands.append(BioInterval(None, 27200001, 31000000, 'p14.1'))
-        t.bands.append(BioInterval(None, 31000001, 36400000, 'p13'))
-        t.bands.append(BioInterval(None, 36400001, 43500000, 'p12'))
-        t.bands.append(BioInterval(None, 43500001, 48800000, 'p11.2'))
-        t.bands.append(BioInterval(None, 48800001, 51600000, 'p11.12'))
-        t.bands.append(BioInterval(None, 51600001, 53700000, 'p11.11', data={'giesma_stain': GIESMA_STAIN.ACEN}))
-        t.bands.append(BioInterval(None, 53700001, 55700000, 'q11', data={'giesma_stain': GIESMA_STAIN.ACEN}))
-        t.bands.append(BioInterval(None, 55700001, 59900000, 'q12.1'))
-        t.bands.append(BioInterval(None, 59900001, 61700000, 'q12.2'))
-        t.bands.append(BioInterval(None, 61700001, 63400000, 'q12.3'))
-        t.bands.append(BioInterval(None, 63400001, 65900000, 'q13.1'))
-        t.bands.append(BioInterval(None, 65900001, 68400000, 'q13.2'))
-        t.bands.append(BioInterval(None, 68400001, 70400000, 'q13.3'))
-        t.bands.append(BioInterval(None, 70400001, 75200000, 'q13.4'))
-        t.bands.append(BioInterval(None, 75200001, 77100000, 'q13.5'))
-        t.bands.append(BioInterval(None, 77100001, 85600000, 'q14.1'))
-        t.bands.append(BioInterval(None, 85600001, 88300000, 'q14.2'))
-        t.bands.append(BioInterval(None, 88300001, 92800000, 'q14.3'))
-        t.bands.append(BioInterval(None, 92800001, 97200000, 'q21'))
-        t.bands.append(BioInterval(None, 97200001, 102100000, 'q22.1'))
-        t.bands.append(BioInterval(None, 102100001, 102900000, 'q22.2'))
-        t.bands.append(BioInterval(None, 102900001, 110400000, 'q22.3'))
-        t.bands.append(BioInterval(None, 110400001, 112500000, 'q23.1'))
-        t.bands.append(BioInterval(None, 112500001, 114500000, 'q23.2'))
-        t.bands.append(BioInterval(None, 114500001, 121200000, 'q23.3'))
-        t.bands.append(BioInterval(None, 121200001, 123900000, 'q24.1'))
-        t.bands.append(BioInterval(None, 123900001, 127800000, 'q24.2'))
-        t.bands.append(BioInterval(None, 127800001, 130800000, 'q24.3'))
-        t.bands.append(BioInterval(None, 130800001, 135006517, 'q25'))
-        for b in t.bands:
-            b.reference_object = t
-        
-        g = d.draw_template(canvas, t, 1000, 50)
+
+        g = d.draw_template(canvas, self.template_1, 1000, 50)
+        self.assertEqual(d.BREAKPOINT_TOP_MARGIN + d.BREAKPOINT_BOTTOM_MARGIN + d.TEMPLATE_TRACK_HEIGHT, g.height)
         canvas.add(g)
         canvas.attribs['height'] = g.height
-        canvas.saveas('test_draw_template_{}.svg'.format(t.name))
         self.assertEqual(2, len(canvas.elements))
 
 
     def test_draw_translocation_with_template(self):
-        tmp1 = Template(
-            '1', 1, 100000,
-            bands=[
-                BioInterval(None, 1, 8000, 'p1'),
-                BioInterval(None, 10000, 15000, 'p2')
-            ])
-        tmp2 = Template(
-            '2', 1, 100000,
-            bands=[
-                BioInterval(None, 1, 8000, 'p1'),
-                BioInterval(None, 10000, 15000, 'p2')
-            ])
         d = Diagram()
         d1 = Domain('first', [(55, 61), (71, 73)])
         d2 = Domain('second', [(10, 20), (30, 34)])
-        g1 = Gene(tmp1, 150, 1000, strand=STRAND.POS)
-        g2 = Gene(tmp2, 5000, 7500, strand=STRAND.NEG)
-        templates = {tmp1.name: tmp1, tmp2.name: tmp2}
+        g1 = Gene(self.template_1, 150, 1000, strand=STRAND.POS)
+        g2 = Gene(self.template_2, 5000, 7500, strand=STRAND.NEG)
+        templates = {self.template_1.name: self.template_1, self.template_2.name: self.template_2}
         t1 = build_transcript(
             gene=g1,
             cds_start=50,
@@ -450,20 +442,18 @@ class TestDraw(unittest.TestCase):
 
         canvas = d.draw(ann, ft, draw_template=True, templates=templates)
         canvas.saveas('test_layout_translocation_with_template.svg')
-        self.assertEqual(6, len(canvas.elements))  # defs counts as element
-        expected_height = d.TOP_MARGIN + d.BOTTOM_MARGIN + d.TRACK_HEIGHT * 2 + d.PADDING  + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN # gene height
-        print('expected_height', expected_height)
-        t = d.TRACK_HEIGHT + d.SPLICE_HEIGHT + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN # transcript track
-        t += d.PADDING + d.TRANSLATION_SCAFFOLD_HEIGHT # translation
-        t += d.PADDING * 2 + d.DOMAIN_SCAFFOLD_HEIGHT * 2
-        expected_height += t
-        print('expected_height', t, expected_height)
-        t = d.INNER_MARGIN + d.TRACK_HEIGHT  #fusion
-        expected_height += t
-        print('expected_height', t, expected_height)
-        print('elements', [(el.height, el.attribs['class']) for el in canvas.elements if hasattr(el, 'height')])
+        self.assertEqual(8, len(canvas.elements))  # defs counts as element
+        expected_height = d.TOP_MARGIN + d.BOTTOM_MARGIN + \
+            d.TRACK_HEIGHT * 2 + d.PADDING  + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN + \
+            d.INNER_MARGIN + \
+            d.TRACK_HEIGHT + d.SPLICE_HEIGHT + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN + \
+            d.PADDING + d.TRANSLATION_TRACK_HEIGHT + \
+            d.PADDING * 2 + d.DOMAIN_TRACK_HEIGHT * 2 + \
+            d.INNER_MARGIN + \
+            d.TRACK_HEIGHT + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN + \
+            d.TEMPLATE_TRACK_HEIGHT + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN
         self.assertEqual(expected_height, canvas.attribs['height'])
-    
+
     def test_draw_overlay(self):
         gene = Gene('12', 25357723, 25403870, strand=STRAND.NEG, name='KRAS')
         marker = BioInterval('12', 25403865, name='splice site mutation')

@@ -175,7 +175,7 @@ class Diagram:
 
         self.TRANSLATION_FONT_SIZE = 14
         self.TRANSLATION_SCAFFOLD_COLOR = self.SCAFFOLD_COLOR
-        self.TRANSLATION_SCAFFOLD_HEIGHT = self.TRANSLATION_FONT_SIZE
+        self.TRANSLATION_TRACK_HEIGHT = self.TRANSLATION_FONT_SIZE
         self.TRANSLATION_START_MARKER = 'M'
         self.TRANSLATION_END_MARKER = '*'
         self.TRANSLATION_MARKER_PADDING = 4
@@ -191,6 +191,7 @@ class Diagram:
         self.TEMPLATE_BAND_FILL_EVEN = '#696969'
         self.TEMPLATE_TRACK_HEIGHT = self.TRACK_HEIGHT
         self.TEMPLATE_DEFAULT_FILL = '#d3d3d3'
+        self.TEMPLATE_BAND_MIN_WIDTH = 2
 
         self.REGION_LABEL_PREFIX = 'R'
         self.OVERLAY_LEFT_LABEL = 16 * self.FONT_WIDTH_HEIGHT_RATIO * self.EXON_FONT_SIZE
@@ -304,7 +305,7 @@ class Diagram:
                     canvas.add(g)
                     g.translate(x, y)
                     h.append(g.height)
-                    
+
                     g = self.draw_template(
                         canvas, template2, half_drawing_width, breakpoints=[ann.break2], labels=labels)
                     canvas.add(g)
@@ -361,7 +362,7 @@ class Diagram:
                 labels.add(gene, self.REGION_LABEL_PREFIX)
             else:
                 labels.add(gene, self.GENE_LABEL_PREFIX)
-        
+
         gheights = [0]
 
         if ann.interchromosomal:
@@ -550,9 +551,10 @@ class Diagram:
             exon_track_group = self._draw_exon_track(canvas, ust, mapping, colors)
             main_group.add(exon_track_group)
             y += self.TRACK_HEIGHT / 2
+            y += self.BREAKPOINT_BOTTOM_MARGIN
         else:
             # draw the protein features if there are any
-            for tl in ust.translations:
+            for i, tl in enumerate(ust.translations):
                 tr = tl.transcript
                 # if the splicing takes up more room than the track we need to adjust for it
                 y += self.SPLICE_HEIGHT + self.BREAKPOINT_TOP_MARGIN
@@ -596,21 +598,21 @@ class Diagram:
                     except AttributeError:
                         pass
 
-                if len(translated_genomic_regions) == 0:
-                    continue
+                #if len(translated_genomic_regions) == 0:
+                #    continue
                 s = Interval.convert_pos(mapping, translated_genomic_regions[0].start)
                 t = Interval.convert_pos(mapping, translated_genomic_regions[-1].end)
 
                 gt = canvas.g(class_='translation')
                 gp.add(gt)
-                h = max(self.TRANSLATION_SCAFFOLD_HEIGHT, self.TRANSLATION_FONT_SIZE)
+                h = self.TRANSLATION_TRACK_HEIGHT
 
                 for sec in translated_genomic_regions:
                     start = Interval.convert_pos(mapping, sec.start)
                     end = Interval.convert_pos(mapping, sec.end)
                     gt.add(canvas.rect(
-                        (start, h / 2 - self.TRANSLATION_SCAFFOLD_HEIGHT / 2),
-                        (end - start + 1, self.TRANSLATION_SCAFFOLD_HEIGHT),
+                        (start, h / 2 - self.TRANSLATION_TRACK_HEIGHT / 2),
+                        (end - start + 1, self.TRANSLATION_TRACK_HEIGHT),
                         fill=self.TRANSLATION_SCAFFOLD_COLOR,
                         class_='scaffold'
                         ))
@@ -670,7 +672,7 @@ class Diagram:
                     gd.translate(0, py)
 
                     gd.add(canvas.text(
-                        labels.add(d.name, self.DOMAIN_LABEL_PREFIX),
+                        labels.add(d, self.DOMAIN_LABEL_PREFIX),
                         insert=(0 - self.PADDING, self.DOMAIN_TRACK_HEIGHT / 2),
                         fill=self.LABEL_COLOR if not self.DYNAMIC_LABELS else Diagram.dynamic_label_color(self.DOMAIN_COLOR),
                         style=self.FONT_STYLE.format(font_size=self.DOMAIN_LABEL_FONT_SIZE, text_anchor='end'),
@@ -679,7 +681,9 @@ class Diagram:
                     gp.add(gd)
                     py += self.DOMAIN_TRACK_HEIGHT
                 gp.translate(0, y)
-                y += py + self.INNER_MARGIN + self.BREAKPOINT_BOTTOM_MARGIN
+                if i < len(ust.translations):
+                    y += self.INNER_MARGIN
+                y += py + self.BREAKPOINT_BOTTOM_MARGIN
                 main_group.add(gp)
 
         # now overlay the breakpoints on top of everything
@@ -690,6 +694,7 @@ class Diagram:
             bg = self.draw_breakpoint(canvas, b, len(px_itvl), y, label=labels.add(b, self.BREAKPOINT_LABEL_PREFIX))
             bg.translate(px_itvl.start, 0)
             main_group.add(bg)
+
         setattr(main_group, 'height', y)
         setattr(main_group, 'width', target_width)
         setattr(main_group, 'mapping', mapping)
@@ -810,17 +815,17 @@ class Diagram:
         canvas = Drawing(size=(self.WIDTH, 1000))  # just set the height for now and change later
         w = self.WIDTH - self.LEFT_MARGIN - self.RIGHT_MARGIN - self.OVERLAY_LEFT_LABEL - self.PADDING
         labels = LabelMapping()  # keep labels consistent within the drawing
-        
+
         all_exons = set()
         colors = dict()
         for tx in gene.transcripts:
             for ex in tx.exons:
                 all_exons.add(ex)
                 colors[ex] = self.EXON1_COLOR if not tx.is_best_transcript else self.EXON2_COLOR
-        
+
         st = min([gene.start] + [m.start for m in markers])
         end = max([gene.end] + [m.end for m in markers])
-        
+
         mapping = Diagram._generate_interval_mapping(
             all_exons,
             w,
@@ -832,12 +837,12 @@ class Diagram:
 
         x = self.OVERLAY_LEFT_LABEL + self.PADDING
         y = self.MARKER_TOP_MARGIN
-        
+
         for tx in gene.transcripts:
             g = Diagram._draw_exon_track(self, canvas, tx, mapping, colors=colors)
             main_group.add(g)
             g.translate(x, y)
-            
+
             t = canvas.text(
                 tx.name,
                 insert=(x - self.PADDING, y + self.TRACK_HEIGHT / 2),
@@ -858,13 +863,13 @@ class Diagram:
                 canvas, m, len(px_itvl), y, label=labels.add(m, self.MARKER_LABEL_PREFIX))
             bg.translate(x + px_itvl.start, 0)
             main_group.add(bg)
-        
+
         main_group.translate(self.LEFT_MARGIN, self.TOP_MARGIN)
         y += self.BOTTOM_MARGIN
         canvas.add(main_group)
         canvas.attribs['height'] = y
         return canvas
-    
+
     def draw_marker(self, canvas, marker, width, height, label='', color=None):
         """
         Args:
@@ -1014,7 +1019,7 @@ class Diagram:
             template.bands,
             target_width,
             1,  # do not alter ratio
-            self.MIN_WIDTH,
+            self.TEMPLATE_BAND_MIN_WIDTH,
             start=template.start, end=template.end
         )
         scaffold = canvas.rect(
@@ -1028,7 +1033,7 @@ class Diagram:
         for i, band in enumerate(template.bands):
             s = Interval.convert_pos(mapping, band[0])
             t = Interval.convert_pos(mapping, band[1])
-            
+
             bgroup = canvas.g(class_='cytoband')
             f = self.TEMPLATE_BAND_FILL_EVEN if i % 2 == 0 else self.TEMPLATE_BAND_FILL_ODD
             r = None
@@ -1211,7 +1216,7 @@ class Diagram:
         min_inter_width = min_width if min_inter_width is None else min_inter_width
         if start is not None and end is not None and buffer_length is not None:
             raise AttributeError('buffer_length is a mutually exclusive argument with start/end')
-        
+
         intervals = []
         for i in Interval.min_nonoverlapping(*input_intervals):
             if len(intervals) == 0 or abs(Interval.dist(intervals[-1], i)) > 1:
@@ -1318,7 +1323,7 @@ class Diagram:
                 ito = Interval(pos, pos + min_inter_width - 1 + s)
                 mapping.append((ifrom, ito))
                 pos += len(ito)
-            
+
             s = round(max(genic_unit(len(curr)), 0), 0)
             ito = Interval(pos, pos + min_width - 1 + s)
             mapping.append((curr, ito))
