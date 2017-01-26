@@ -38,7 +38,7 @@ General Process
 """
 import argparse
 from structural_variant.breakpoint import read_bpp_from_input_file
-from structural_variant.annotate import load_reference_genes, load_reference_genome
+from structural_variant.annotate import load_reference_genes, load_reference_genome, load_templates
 from structural_variant.annotate.variant import gather_annotations, FusionTranscript
 from structural_variant.error import DiscontinuousMappingError, DrawingFitError, NotSpecifiedError
 from structural_variant import __version__
@@ -101,6 +101,9 @@ def parse_arguments():
     parser.add_argument(
         '--min_domain_mapping_match', default=0.8, type=float, 
         help='minimum percent match for the domain to be considered aligned')
+    parser.add_argument(
+        '--template_metadata', default='/home/creisle/svn/svmerge/trunk/cytoBand.txt',
+        help='file containing the cytoband template information')
     args = parser.parse_args()
     return args
 
@@ -112,10 +115,12 @@ def main():
     for arg, val in sorted(args.__dict__.items()):
         log(arg, '=', val, time_stamp=False)
     FILENAME_PREFIX = re.sub('\.(tab|tsv|txt)$', '', os.path.basename(args.input))
-
     
+    log('loading:', args.template_metadata)
+    TEMPLATES = load_templates(args.template_metadata)
     log('loading:', args.annotations)
     REFERENCE_ANNOTATIONS = load_reference_genes(args.annotations)
+    
     
     log('loading:', args.reference_genome)
     REFERENCE_GENOME = load_reference_genome(args.reference_genome)
@@ -192,7 +197,7 @@ def main():
                     pass
                 except AttributeError as err:
                     pass
-                canvas = d.draw(ann, ft, REFERENCE_GENOME=REFERENCE_GENOME)
+                canvas = d.draw(ann, ft, REFERENCE_GENOME=REFERENCE_GENOME, draw_template=True, templates=TEMPLATES)
                 drawing = os.path.join(args.output, FILENAME_PREFIX + '.' + ann.data[COLUMNS.annotation_id] + '.svg')
                 for r in ann_rows:
                     r[COLUMNS.annotation_figure] = drawing

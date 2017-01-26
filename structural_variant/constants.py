@@ -183,6 +183,17 @@ PRIME = Vocab(FIVE=5, THREE=3)
 START_AA = 'M'
 STOP_AA = '*'
 
+GIESMA_STAIN = Vocab(
+    GNEG='gneg', 
+    GPOS50='gpos50', 
+    GPOS75='gpos75', 
+    GPOS25='gpos25', 
+    GPOS100='gpos100', 
+    ACEN='acen',
+    GVAR='gvar', 
+    STALK='stalk'
+)
+
 # content related to tabbed files for input/output
 # ensure that we don't have to change ALL the code when we update column names
 

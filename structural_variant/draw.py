@@ -1,7 +1,7 @@
 import svgwrite
 from svgwrite import Drawing
 from .interval import Interval
-from .constants import STRAND, ORIENT, CODON_SIZE
+from .constants import STRAND, ORIENT, CODON_SIZE, GIESMA_STAIN
 from colour import Color
 from .error import DrawingFitError, NotSpecifiedError
 from .annotate.genomic import IntergenicRegion
@@ -157,6 +157,12 @@ class Diagram:
         self.BREAKPOINT_TOP_MARGIN = self.PADDING * 2 + self.BREAKPOINT_LABEL_FONT_SIZE + self.BREAKPOINT_BOTTOM_MARGIN
         self.BREAKPOINT_LABEL_PREFIX = 'B'
 
+        self.MARKER_LABEL_FONT_SIZE = self.BREAKPOINT_LABEL_FONT_SIZE
+        self.MARKER_LABEL_PREFIX = 'M'
+        self.MARKER_TOP_MARGIN = self.BREAKPOINT_TOP_MARGIN
+        self.MARKER_BOTTOM_MARGIN = self.BREAKPOINT_BOTTOM_MARGIN
+        self.MARKER_COLOR = self.BREAKPOINT_COLOR
+
         self.EXON_TEAR_TOOTH_WIDTH = 2
         self.EXON_MIN_WIDTH = self.MIN_WIDTH + self.EXON_TEAR_TOOTH_WIDTH * 2
         self.EXON_TEAR_TOOTH_HEIGHT = 2
@@ -181,11 +187,13 @@ class Diagram:
         self.LEGEND_BORDER_STROKE = LEGEND_BORDER_STROKE
         self.LEGEND_BORDER_STROKE_WIDTH = 1
 
-        self.TEMPLATE_BAND_FILL_ODD = 'grey'
-        self.TEMPLATE_BAND_FILL_EVEN = 'white'
+        self.TEMPLATE_BAND_FILL_ODD = '#bdbdbd'
+        self.TEMPLATE_BAND_FILL_EVEN = '#696969'
         self.TEMPLATE_TRACK_HEIGHT = self.TRACK_HEIGHT
+        self.TEMPLATE_DEFAULT_FILL = '#d3d3d3'
 
         self.REGION_LABEL_PREFIX = 'R'
+        self.OVERLAY_LEFT_LABEL = 16 * self.FONT_WIDTH_HEIGHT_RATIO * self.EXON_FONT_SIZE
 
     def draw_legend(self, canvas, swatches, border=True):
         main_group = canvas.g(class_='legend')
@@ -227,7 +235,7 @@ class Diagram:
         setattr(main_group, 'mapping', None)
         return main_group
 
-    def draw(self, ann, fusion_transcript=None, REFERENCE_GENOME=None, draw_templates=False):
+    def draw(self, ann, fusion_transcript=None, REFERENCE_GENOME=None, templates=None, ignore_absent_templates=True, draw_template=True):
         """
         this is the main drawing function. It decides between the 3 basic layouts
 
@@ -264,19 +272,49 @@ class Diagram:
                 +---------------------------+
 
         """
-        print('Digram.draw(', ann, ',', fusion_transcript, ', REFERENCE_GENOME,', draw_templates, ')')
+        templates = dict() if templates is None else templates
         canvas = Drawing(size=(self.WIDTH, 1000))  # just set the height for now and change later
         labels = LabelMapping()  # keep labels consistent within the drawing
         y = self.TOP_MARGIN
         x = self.LEFT_MARGIN
 
-        if draw_templates and not REFERENCE_GENOME:
-            raise AttributeError('must specify reference genome to generate template level figures')
-
         dx_label_shift = self.PADDING + self.LABEL_FONT_SIZE * 2 * self.FONT_WIDTH_HEIGHT_RATIO
 
         x += dx_label_shift
         drawing_width = self.WIDTH - dx_label_shift - self.LEFT_MARGIN - self.RIGHT_MARGIN
+        # calculate the half-width for transcripts and genes etc
+        half_drawing_width = (drawing_width - self.INNER_MARGIN - dx_label_shift) / 2
+        second_drawing_shift = x + half_drawing_width + self.INNER_MARGIN + dx_label_shift
+
+        if draw_template:
+            try:
+                template1 = templates[ann.transcript1.get_chr()]
+                template2 = templates[ann.transcript2.get_chr()]
+                h = [0]
+                if template1 == template2:  # single template
+                    g = self.draw_template(
+                        canvas, template1, half_drawing_width,
+                        breakpoints=[ann.break1, ann.break2], labels=labels)
+                    canvas.add(g)
+                    g.translate(x, y)
+                    h.append(g.height)
+                else:  # multiple templates
+                    g = self.draw_template(
+                        canvas, template1, half_drawing_width, breakpoints=[ann.break1], labels=labels)
+                    canvas.add(g)
+                    g.translate(x, y)
+                    h.append(g.height)
+                    
+                    g = self.draw_template(
+                        canvas, template2, half_drawing_width, breakpoints=[ann.break2], labels=labels)
+                    canvas.add(g)
+                    g.translate(second_drawing_shift, y)
+                    h.append(g.height)
+                y += max(h)
+            except KeyError as err:
+                if not ignore_absent_templates:
+                    raise err
+                print(repr(err))
 
         colors = dict()
         genes = set()
@@ -318,16 +356,12 @@ class Diagram:
                 genes2.add(ann.transcript2)
 
         # set all the labels so that they are re-used correctly
-        for gene in sorted(genes1 | genes2, key=lambda x: x.start):
+        for gene in sorted(genes1 | genes2, key=lambda x: (str(x.get_chr()), x.start)):
             if isinstance(gene, IntergenicRegion):
                 labels.add(gene, self.REGION_LABEL_PREFIX)
             else:
                 labels.add(gene, self.GENE_LABEL_PREFIX)
-
-        # calculate the half-width for transcripts and genes etc
-        half_drawing_width = (drawing_width - self.INNER_MARGIN - dx_label_shift) / 2
-        second_drawing_shift = x + half_drawing_width + self.INNER_MARGIN + dx_label_shift
-
+        
         gheights = [0]
 
         if ann.interchromosomal:
@@ -510,15 +544,12 @@ class Diagram:
         main_group = canvas.g(class_='ust')
 
         y = 0
-        print('draw_ustranscript', y)
 
         if len(ust.translations) == 0:
             y += self.BREAKPOINT_TOP_MARGIN + self.TRACK_HEIGHT / 2
-            print('draw_ustranscript', y)
             exon_track_group = self._draw_exon_track(canvas, ust, mapping, colors)
             main_group.add(exon_track_group)
             y += self.TRACK_HEIGHT / 2
-            print('draw_ustranscript', y)
         else:
             # draw the protein features if there are any
             for tl in ust.translations:
@@ -653,16 +684,16 @@ class Diagram:
 
         # now overlay the breakpoints on top of everything
         for i, b in enumerate(breakpoints):
-            s = Interval.convert_pos(mapping, b.start)
-            t = Interval.convert_pos(mapping, b.end)
-            bg = self.draw_breakpoint(canvas, b, abs(t - s) + 1, y, label=labels.add(b, self.BREAKPOINT_LABEL_PREFIX))
-            bg.translate(s, 0)
+            s = Interval.convert_ratioed_pos(mapping, b.start)
+            t = Interval.convert_ratioed_pos(mapping, b.end)
+            px_itvl = Interval(s.start, t.end)
+            bg = self.draw_breakpoint(canvas, b, len(px_itvl), y, label=labels.add(b, self.BREAKPOINT_LABEL_PREFIX))
+            bg.translate(px_itvl.start, 0)
             main_group.add(bg)
         setattr(main_group, 'height', y)
         setattr(main_group, 'width', target_width)
         setattr(main_group, 'mapping', mapping)
         setattr(main_group, 'labels', labels)
-        print('draw_ustranscript', y)
         return main_group
 
     def draw_genes(self, canvas, genes, target_width, breakpoints=None, colors=None, labels=None):
@@ -681,7 +712,6 @@ class Diagram:
             svgwrite.container.Group: the group element for the diagram.
                 Has the added parameters of labels, height, and mapping
         """
-        print('draw_genes(', genes)
         # mutable default argument parameters
         breakpoints = [] if breakpoints is None else breakpoints
         colors = {} if colors is None else colors
@@ -775,39 +805,101 @@ class Diagram:
     def read_config(self):
         pass
 
-    def draw_ustranscripts_overlay(self, gene, markers=None, best_transcript=None):
+    def draw_ustranscripts_overlay(self, gene, markers=None):
         markers = [] if markers is None else markers
         canvas = Drawing(size=(self.WIDTH, 1000))  # just set the height for now and change later
-        w = self.WIDTH - self.LEFT_MARGIN - self.RIGHT_MARGIN
+        w = self.WIDTH - self.LEFT_MARGIN - self.RIGHT_MARGIN - self.OVERLAY_LEFT_LABEL - self.PADDING
         labels = LabelMapping()  # keep labels consistent within the drawing
-
+        
         all_exons = set()
         colors = dict()
         for tx in gene.transcripts:
             for ex in tx.exons:
                 all_exons.add(ex)
-                colors[ex] = self.EXON1_COLOR if tx != best_transcript else self.EXON2_COLOR
-
+                colors[ex] = self.EXON1_COLOR if not tx.is_best_transcript else self.EXON2_COLOR
+        
+        st = min([gene.start] + [m.start for m in markers])
+        end = max([gene.end] + [m.end for m in markers])
+        
         mapping = Diagram._generate_interval_mapping(
             all_exons,
             w,
             self.EXON_INTRON_RATIO,
             self.MIN_WIDTH,
-            self.GENE_MIN_BUFFER
+            start=st, end=end
         )
         main_group = canvas.g(class_='overlay')
 
-        x = 0
-        y = 0
+        x = self.OVERLAY_LEFT_LABEL + self.PADDING
+        y = self.MARKER_TOP_MARGIN
+        
         for tx in gene.transcripts:
             g = Diagram._draw_exon_track(self, canvas, tx, mapping, colors=colors)
             main_group.add(g)
             g.translate(x, y)
+            
+            t = canvas.text(
+                tx.name,
+                insert=(x - self.PADDING, y + self.TRACK_HEIGHT / 2),
+                fill=self.LABEL_COLOR,
+                style=self.FONT_STYLE.format(font_size=self.EXON_FONT_SIZE, text_anchor='end'),
+                class_='label'
+            )
+            main_group.add(t)
             y += self.PADDING + self.TRACK_HEIGHT
 
+        y += self.MARKER_BOTTOM_MARGIN
+        # now draw the breakpoints overtop
+        for i, m in enumerate(sorted(markers)):
+            s = Interval.convert_ratioed_pos(mapping, m.start)
+            t = Interval.convert_ratioed_pos(mapping, m.end)
+            px_itvl = Interval(s.start, t.end)
+            bg = self.draw_marker(
+                canvas, m, len(px_itvl), y, label=labels.add(m, self.MARKER_LABEL_PREFIX))
+            bg.translate(x + px_itvl.start, 0)
+            main_group.add(bg)
+        
         main_group.translate(self.LEFT_MARGIN, self.TOP_MARGIN)
+        y += self.BOTTOM_MARGIN
         canvas.add(main_group)
+        canvas.attribs['height'] = y
         return canvas
+    
+    def draw_marker(self, canvas, marker, width, height, label='', color=None):
+        """
+        Args:
+            canvas (svgwrite.drawing.Drawing): the main svgwrite object used to create new svg elements
+            breakpoint (Breakpoint): the breakpoint to draw
+            width (int): the pixel width
+            height (int): the pixel height
+        Return:
+            svgwrite.container.Group: the group element for the diagram
+        """
+        color = self.MARKER_COLOR if color is None else color
+        g = canvas.g(class_='marker')
+        y = self.PADDING + self.MARKER_LABEL_FONT_SIZE / 2
+        t = canvas.text(
+            label,
+            insert=(width / 2, y),
+            fill=color,
+            style=self.FONT_STYLE.format(text_anchor='middle', font_size=self.MARKER_LABEL_FONT_SIZE),
+            class_='label'
+        )
+        y += self.MARKER_LABEL_FONT_SIZE / 2 + self.PADDING
+
+        g.add(t)
+
+        r = canvas.rect(
+            (0, y),
+            (width, height - y),
+            stroke=color,
+            fill='none'
+        )
+        g.add(r)
+
+        g.add(Tag('title', 'marker {}:{}-{} {}'.format(
+            marker.reference_object, marker.start, marker.end, marker.name)))
+        return g
 
     def draw_breakpoint(self, canvas, breakpoint, width, height, label=''):
         """
@@ -912,29 +1004,67 @@ class Diagram:
             g.add(Tag('title', 'Exon {} {}_{} L={}'.format(exon.name if exon.name else '', exon.start, exon.end, len(exon))))
         return g
 
-    def draw_template(self, canvas, length, target_width, height, bands=None, labels=None, colors=None):
+    def draw_template(self, canvas, template, target_width, labels=None, colors=None, breakpoints=None):
         labels = LabelMapping() if labels is None else labels
         colors = {} if colors is None else colors
-
+        breakpoints = [] if not breakpoints else breakpoints
+        total_height = self.TEMPLATE_TRACK_HEIGHT + self.BREAKPOINT_TOP_MARGIN + self.BREAKPOINT_BOTTOM_MARGIN
         group = canvas.g(class_='template')
         mapping = self._generate_interval_mapping(
-            bands if bands is not None else [Interval(1, length)],
+            template.bands,
             target_width,
             1,  # do not alter ratio
-            self.GENE_MIN_WIDTH,
-            start=1, end=length
+            self.MIN_WIDTH,
+            start=template.start, end=template.end
         )
-        for i, band in enumerate(bands):
+        scaffold = canvas.rect(
+            (0, 0),
+            (target_width, self.SCAFFOLD_HEIGHT),
+            fill=self.SCAFFOLD_COLOR
+        )
+        group.add(scaffold)
+        scaffold.translate((0, self.BREAKPOINT_TOP_MARGIN + self.TEMPLATE_TRACK_HEIGHT / 2))
+
+        for i, band in enumerate(template.bands):
             s = Interval.convert_pos(mapping, band[0])
             t = Interval.convert_pos(mapping, band[1])
-
+            
+            bgroup = canvas.g(class_='cytoband')
             f = self.TEMPLATE_BAND_FILL_EVEN if i % 2 == 0 else self.TEMPLATE_BAND_FILL_ODD
-            r = canvas.rect(
-                (s, 0),
-                (t - s + 1, height),
-                fill=f
-            )
-            group.add(f)
+            r = None
+            w = t - s + 1
+            if band.data.get('giesma_stain', None) == GIESMA_STAIN.ACEN:
+                if band.name[0] == 'p':
+                    r = canvas.polyline(
+                        [(0, 0), (w, self.TEMPLATE_TRACK_HEIGHT / 2), (0, self.TEMPLATE_TRACK_HEIGHT)],
+                        fill=f
+                    )
+                else:
+                    r = canvas.polyline(
+                        [(w, 0), (0, self.TEMPLATE_TRACK_HEIGHT / 2), (w, self.TEMPLATE_TRACK_HEIGHT)],
+                        fill=f
+                    )
+            else:
+                r = canvas.rect(
+                    (0, 0),
+                    (w, self.TEMPLATE_TRACK_HEIGHT),
+                    fill=f
+                )
+            bgroup.add(r)
+            bgroup.add(Tag('title', 'template {}: band {} {}-{} L={}M'.format(
+                template.name, band.name, band.start, band.end, round(len(band)/1000000, 0))))
+            bgroup.translate((s, self.BREAKPOINT_TOP_MARGIN))
+            group.add(bgroup)
+        # now draw the breakpoints overtop
+        for i, b in enumerate(sorted(breakpoints)):
+            s = Interval.convert_pos(mapping, b.start)
+            t = Interval.convert_pos(mapping, b.end)
+            bg = self.draw_breakpoint(
+                canvas, b, abs(t - s) + 1, total_height, label=labels.add(b, self.BREAKPOINT_LABEL_PREFIX))
+            bg.translate(s, 0)
+            group.add(bg)
+        setattr(
+            group, 'height', total_height)
         return group
 
     def draw_gene(self, canvas, gene, width, height, fill, label='', REFERENCE_GENOME=None):
@@ -971,9 +1101,8 @@ class Diagram:
 
         group = canvas.g(class_='gene')
         if width < self.GENE_MIN_WIDTH:
-            raise DrawingFitError('width is not sufficient to draw gene')
+            raise DrawingFitError('width of {} is not sufficient to draw a gene of minimum width {}'.format(width, self.GENE_MIN_WIDTH))
         wrect = width - self.GENE_ARROW_WIDTH
-        print('Diagram.draw_gene:', width, self.GENE_MIN_WIDTH)
         if wrect < 1:
             raise DrawingFitError('width is not sufficient to draw gene')
 
@@ -1082,15 +1211,27 @@ class Diagram:
         min_inter_width = min_width if min_inter_width is None else min_inter_width
         if start is not None and end is not None and buffer_length is not None:
             raise AttributeError('buffer_length is a mutually exclusive argument with start/end')
-
+        
         intervals = []
-        print('_generate_interval_mapping', ['Interval({}, {})'.format(g.start, g.end) for g in input_intervals], target_width, ratio, min_width, buffer_length, start, end)
         for i in Interval.min_nonoverlapping(*input_intervals):
             if len(intervals) == 0 or abs(Interval.dist(intervals[-1], i)) > 1:
                 intervals.append(i)
             else:
                 intervals[-1] = intervals[-1] | i
-
+        # break up the intervals by any intervals of length 1
+        for itvl_in in input_intervals:
+            if len(itvl_in) > 1:
+                continue
+            # try splitting all current interval
+            temp = []
+            for itvl in intervals:
+                split = itvl - itvl_in
+                if split is not None:
+                    temp.extend(split)
+            intervals = temp
+        for itvl_in in input_intervals:
+            if len(itvl_in) == 1:
+                intervals.append(itvl_in)
         # now split any intervals by start/end
         breaks = {}
         for i in intervals:
@@ -1103,12 +1244,16 @@ class Diagram:
                     breaks[i].add(ii.end)
         temp = []
         for itvl, breakpoints in breaks.items():
+            breakpoints.add(itvl.start)
+            breakpoints.add(itvl.end)
             pos = sorted(breakpoints)
-            pos[0] -= 1
             if len(pos) == 1:
-                pos.append(pos[0] + 1)
-            for i in range(1, len(pos)):
-                temp.append(Interval(pos[i - 1] + 1, pos[i]))
+                temp.append(Interval(pos[0]))
+            else:
+                # remove all the single intervals to start?
+                pos[0] -= 1
+                for i in range(1, len(pos)):
+                    temp.append(Interval(pos[i - 1] + 1, pos[i]))
         intervals = sorted(temp, key=lambda x: x.start)
 
         if buffer_length is None:
@@ -1117,12 +1262,12 @@ class Diagram:
         if start is None:
             start = max(intervals[0].start - buffer_length, 1)
         elif start <= 0:
-            raise AttributeError('start must be a natural number')
+            raise AttributeError('start must be a natural number', start)
 
         if end is None:
             end = intervals[-1].end + buffer_length
         elif end <= 0:
-            raise AttributeError('end must be a natural number')
+            raise AttributeError('end must be a natural number', end)
 
         total_length = end - start + 1
         genic_length = sum([len(i) for i in intervals])
@@ -1141,10 +1286,17 @@ class Diagram:
         if width < 0:
             raise DrawingFitError('width cannot accommodate the number of expected objects')
 
-        intergenic_width = width // (ratio + 1)
+        intergenic_width = width // (ratio + 1) if intergenic_length > 0 else 0
         genic_width = width - intergenic_width
         intergenic_unit = lambda x: x * intergenic_width / intergenic_length
         genic_unit = lambda x: x * genic_width / genic_length
+        # print('total_length', total_length)
+        # print('genic_length', genic_length)
+        # print('intergenic_length', intergenic_length)
+        # print('genic_width', genic_width)
+        # print('intergenic_width', intergenic_width)
+        # print('genic_intervals', len(intervals))
+        # print('intermediate_intervals', intermediate_intervals)
 
         assert(genic_width + intergenic_width + len(intervals) * min_width + intermediate_intervals * min_inter_width == target_width)
         mapping = []
@@ -1159,13 +1311,14 @@ class Diagram:
             pos += len(ito)
 
         for i, curr in enumerate(intervals):
-            if i > 0 and intervals[i - 1].end + 1 < curr.start: # add between the intervals
+            if i > 0 and intervals[i - 1].end + 1 < curr.start:  # add between the intervals
                 prev = intervals[i - 1]
                 ifrom = Interval(prev.end + 1, curr.start - 1)
                 s = round(max(intergenic_unit(len(ifrom)), 0), 0)
                 ito = Interval(pos, pos + min_inter_width - 1 + s)
                 mapping.append((ifrom, ito))
                 pos += len(ito)
+            
             s = round(max(genic_unit(len(curr)), 0), 0)
             ito = Interval(pos, pos + min_width - 1 + s)
             mapping.append((curr, ito))
@@ -1178,9 +1331,16 @@ class Diagram:
             ito = Interval(pos, pos + min_inter_width - 1 + s)
             mapping.append((ifrom, ito))
             pos += len(ito)
-        mapping[-1][1].end = int(target_width)
+        mapping[-1][1].end = min(int(target_width), mapping[-1][1].end)
         temp = mapping
         mapping = dict()
         for ifrom, ito in temp:
             mapping[ifrom] = ito
+
+        # assert that that mapping is correct
+        for itvl in input_intervals:
+            p1 = Interval.convert_ratioed_pos(mapping, itvl.start)
+            p2 = Interval.convert_ratioed_pos(mapping, itvl.end)
+            n = p1 | p2
+            assert(len(n) >= min_width)
         return mapping

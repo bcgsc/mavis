@@ -7,25 +7,24 @@ import itertools
 from copy import copy
 
 
-class Template:
-    def __init__(self, name, sequence, length, bands=None):
+class Template(BioInterval):
+    def __init__(self, name, start, end, sequence=None, bands=None):
         bands = [] if bands is None else bands
-        self.name = name
-        self.sequence = sequence
-        if not self.sequence and not self.length:
-            raise AttributeError('required argument: sequence or length')
-        elif self.sequence and len(self.sequence) != length:
-            raise AttributeError('sequence length must equal input length')
-        self.length = length if length else len(self.sequence)
+        BioInterval.__init__(self, None, start, end, name=name, sequence=sequence)
         self.bands = bands
-
-    def __len__(self):
-        return self.length
+        for i in range(0, len(bands)):
+            bands[i].reference_object = self
+        self.bands.sort()
+    
+    def __str__(self):
+        return str(self.name)
 
     def __eq__(self, other):
-        if not hasattr(other, 'name'):
-            return False
-        return self.name == other.name
+        return str(self) == str(other)
+
+    def __hash__(self):
+        return hash(self.name)
+
 
 class IntergenicRegion(BioInterval):
     def __init__(self, chr, start, end, strand):
@@ -176,7 +175,8 @@ class usTranscript(BioInterval):
         name=None,
         strand=None,
         spliced_transcripts=None,
-        sequence=None
+        sequence=None,
+        is_best_transcript=False
     ):
         """ creates a new transcript object
 
@@ -193,6 +193,7 @@ class usTranscript(BioInterval):
         self.exons = exons
         self.spliced_transcripts = [] if spliced_transcripts is None else spliced_transcripts
         self.strand = strand
+        self.is_best_transcript = is_best_transcript
 
         if len(exons) == 0:
             raise AttributeError('exons must be given')
@@ -209,6 +210,9 @@ class usTranscript(BioInterval):
             except AttributeError:
                 self.exons[i] = Exon(curr[0], curr[1], self)
         self.exons = sorted(self.exons, key=lambda x: x.start)
+        for ex in self.exons:
+            if ex.end > self.end or ex.start < self.start:
+                raise AssertionError('exon is outside transcript', self, ex)
         for e1, e2 in itertools.combinations(self.exons, 2):
             if Interval.overlaps(e1, e2):
                 raise AttributeError('exons cannot overlap')

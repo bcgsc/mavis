@@ -98,8 +98,8 @@ class MockString:
             return self.char
 
 
-def build_transcript(gene, exons, cds_start, cds_end, domains, strand=None):
-    ust = usTranscript(exons, gene=gene, strand=strand if strand is not None else gene.get_strand())
+def build_transcript(gene, exons, cds_start, cds_end, domains, strand=None, is_best_transcript=False):
+    ust = usTranscript(exons, gene=gene, strand=strand if strand is not None else gene.get_strand(), is_best_transcript=is_best_transcript)
     if gene is not None:
         gene.unspliced_transcripts.append(ust)
 

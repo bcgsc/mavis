@@ -2,7 +2,7 @@ from ..interval import Interval
 
 
 class BioInterval:
-    def __init__(self, reference_object, start, end, name=None, sequence=None):
+    def __init__(self, reference_object, start, end=None, name=None, sequence=None, data=None):
         """
         Args:
             reference_object: the object this interval is on
@@ -18,10 +18,13 @@ class BioInterval:
             >>> b[1]
             12578898
         """
+        data = {} if data is None else data
         self.reference_object = reference_object
         self.name = name
         self.position = Interval(start, end)
         self.sequence = sequence if not sequence else sequence.upper()
+        self.data = {}
+        self.data.update(data)
 
     @property
     def start(self):
@@ -115,3 +118,12 @@ class BioInterval:
             except AttributeError:
                 break
         raise AttributeError('chr has not been defined')
+
+    def __repr__(self):
+        cls = self.__class__.__name__
+        refname = self.reference_object
+        try:
+            refname = self.reference_object.name
+        except AttributeError:
+            pass
+        return '{}({}:{}-{}, name={})'.format(cls, refname, self.start, self.end, self.name)

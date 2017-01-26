@@ -1,10 +1,10 @@
 import TSV
 import re
-from .genomic import Gene, Transcript, usTranscript, Exon
+from .genomic import Gene, Transcript, usTranscript, Exon, Template
 from .base import BioInterval
 from .protein import Domain, Translation
 from ..interval import Interval
-from ..constants import STRAND
+from ..constants import STRAND, GIESMA_STAIN
 from Bio import SeqIO
 
 
@@ -127,7 +127,7 @@ def load_reference_genes(filepath, verbose=True):
         elif row in ['1', '+', '+1']:
             return STRAND.POS
         raise ValueError('cast to strand failed')
-
+    
     header, rows = TSV.read_file(
         filepath,
         require=[
@@ -142,7 +142,8 @@ def load_reference_genes(filepath, verbose=True):
             'genomic_exon_ranges': '',
             'hugo_names': '',
             'transcript_genomic_start': 'null',
-            'transcript_genomic_end': 'null'
+            'transcript_genomic_end': 'null',
+            'best_ensembl_transcript_id': 'null'
         },
         cast={
             'genomic_exon_ranges': parse_exon_list,
@@ -179,6 +180,10 @@ def load_reference_genes(filepath, verbose=True):
                 gene=g,
                 exons=exons
             )
+            if row['best_ensembl_transcript_id'] == row['ensembl_transcript_id']:
+                ust.is_best_transcript = True
+            assert(ust.start >= g.start)
+            assert(ust.end <= g.end)
             spl_patts = ust.generate_splicing_patterns()
             if 1 != len(spl_patts):
                 raise AssertionError('expected 1 splicing pattern for reference loaded transcripts but found', len(spl_patts))
@@ -213,3 +218,38 @@ def load_reference_genome(filename):
     with open(filename, 'rU') as fh:
         HUMAN_REFERENCE_GENOME = SeqIO.to_dict(SeqIO.parse(fh, 'fasta'))
     return HUMAN_REFERENCE_GENOME
+
+
+def load_templates(filename):
+    """
+    primarily useful if template drawings are required and is not necessary otherwise
+    assumes the input file is 0-indexed with [start,end) style
+    
+    Args:
+        filename (str): the path to the file with the cytoband template information
+
+    Returns:
+        :class:`list` of :class:`Template`: list of the templates loaded
+    """
+    header = ['name', 'start', 'end', 'band_name', 'giesma_stain']
+    header, rows = TSV.read_file(
+        filename,
+        header=header,
+        cast={'start': int, 'end': int, 'name': lambda x: re.sub('^chr', '', x)},
+        _in={'giesma_stain': GIESMA_STAIN}
+    )
+
+    bands_by_template = {}
+    for row in rows:
+        b = BioInterval(None, row['start'] + 1, row['end'], name=row['band_name'], data=row)
+        bands_by_template.setdefault(row['name'], []).append(b)
+
+    templates = dict()
+    for tname, bands in bands_by_template.items():
+        s = min([b.start for b in bands])
+        t = max([b.end for b in bands])
+        t = Template(tname, s, t, bands=bands)
+        templates[t.name] = t
+    return templates
+
+

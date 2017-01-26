@@ -27,6 +27,14 @@ def setUpModule():
     print('loaded the reference genome', REFERENCE_GENOME_FILE)
 
 
+class TestTemplate(unittest.TestCase):
+    def test_template_hashing(self):
+        t = Template('1', 1, 10)
+        d = {'1': 1, '2': 2, 1: '5'}
+        self.assertEqual('1', t.name)
+        self.assertEqual(1, d[t.name])
+        self.assertEqual(1, d[t])
+
 class TestFusionTranscript(unittest.TestCase):
 
     def setUp(self):
