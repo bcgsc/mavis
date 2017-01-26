@@ -189,7 +189,7 @@ class Diagram:
 
         self.TEMPLATE_BAND_FILL_ODD = '#bdbdbd'
         self.TEMPLATE_BAND_FILL_EVEN = '#696969'
-        self.TEMPLATE_TRACK_HEIGHT = self.TRACK_HEIGHT
+        self.TEMPLATE_TRACK_HEIGHT = self.TRACK_HEIGHT / 2
         self.TEMPLATE_DEFAULT_FILL = '#d3d3d3'
         self.TEMPLATE_BAND_MIN_WIDTH = 2
 

@@ -174,7 +174,6 @@ class TestDraw(unittest.TestCase):
             g.height
         )
         self.canvas.add(g)
-        self.canvas.saveas('test1.svg')
         self.assertEqual(len(g.labels), 4)
         self.assertEqual(x, g.labels['G1'])
         self.assertEqual(z, g.labels['G2'])
@@ -202,7 +201,6 @@ class TestDraw(unittest.TestCase):
             breakpoints=[b]
         )
         self.canvas.add(g)
-        self.canvas.saveas('test_draw_ustranscript.svg')
         self.assertEqual(2, len(self.canvas.elements))
         self.assertEqual(4, len(g.elements))
         for el, cls in zip(g.elements, ['splicing', 'exon_track', 'protein', 'breakpoint']):
@@ -239,7 +237,6 @@ class TestDraw(unittest.TestCase):
         ]
         g = d.draw_legend(self.canvas, swatches)
         self.canvas.add(g)
-        self.canvas.saveas('test_legend.svg')
 
         self.assertEqual('legend', g.attribs.get('class', ''))
         self.assertEqual(
@@ -268,9 +265,16 @@ class TestDraw(unittest.TestCase):
         ft = FusionTranscript.build(ann, reference_genome)
 
         canvas = d.draw(ann, ft)
-        canvas.saveas('test_draw_layout_single_transcript.svg')
         self.assertEqual(4, len(canvas.elements))  # defs counts as element
-
+        expected_height = d.TOP_MARGIN + d.BOTTOM_MARGIN + \
+            d.TRACK_HEIGHT + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN + \
+            d.INNER_MARGIN + \
+            d.TRACK_HEIGHT + d.SPLICE_HEIGHT + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN + \
+            d.PADDING + d.TRANSLATION_TRACK_HEIGHT + \
+            d.PADDING * 2 + d.DOMAIN_TRACK_HEIGHT * 2 + \
+            d.INNER_MARGIN + \
+            d.TRACK_HEIGHT + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN
+        self.assertEqual(expected_height, canvas.attribs['height'])
 
     def test_draw_layout_single_genomic(self):
         d = Diagram()
@@ -308,8 +312,17 @@ class TestDraw(unittest.TestCase):
         self.assertEqual(t2.exons[3], ft.exon_mapping[ft.exons[2]])
 
         canvas = d.draw(ann, ft)
-        canvas.saveas('test_layout_sg.svg')
         self.assertEqual(5, len(canvas.elements))  # defs counts as element
+
+        expected_height = d.TOP_MARGIN + d.BOTTOM_MARGIN + \
+            d.TRACK_HEIGHT + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN + \
+            d.INNER_MARGIN + \
+            d.TRACK_HEIGHT + d.SPLICE_HEIGHT + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN + \
+            d.PADDING + d.TRANSLATION_TRACK_HEIGHT + \
+            d.PADDING * 2 + d.DOMAIN_TRACK_HEIGHT * 2 + \
+            d.INNER_MARGIN + \
+            d.TRACK_HEIGHT + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN
+        self.assertEqual(expected_height, canvas.attribs['height'])
 
     def test_draw_area_plot(self):
         d = Diagram()
@@ -326,7 +339,6 @@ class TestDraw(unittest.TestCase):
         ]
         g = d.draw_area_plot(self.canvas, data, 100, '#FF0000')
         self.canvas.add(g)
-        self.canvas.saveas('test_draw_area_plot.svg')
         self.assertEqual(2, len(self.canvas.elements))
 
     def test_draw_layout_translocation(self):
@@ -367,7 +379,6 @@ class TestDraw(unittest.TestCase):
         ft = FusionTranscript.build(ann, reference_genome)
 
         canvas = d.draw(ann, ft)
-        canvas.saveas('test_layout_translocation.svg')
         self.assertEqual(6, len(canvas.elements))  # defs counts as element
         expected_height = d.TOP_MARGIN + d.BOTTOM_MARGIN + \
             d.TRACK_HEIGHT * 2 + d.PADDING  + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN + \
@@ -392,7 +403,6 @@ class TestDraw(unittest.TestCase):
         g = d.draw_template(canvas, t, 1000, 50)
         canvas.add(g)
         canvas.attribs['height'] = g.height
-        canvas.saveas('test_draw_template.svg')
         canvas = Drawing(size=(1000, 50))
 
         g = d.draw_template(canvas, self.template_1, 1000, 50)
@@ -441,7 +451,7 @@ class TestDraw(unittest.TestCase):
         ft = FusionTranscript.build(ann, reference_genome)
 
         canvas = d.draw(ann, ft, draw_template=True, templates=templates)
-        canvas.saveas('test_layout_translocation_with_template.svg')
+        canvas.saveas('test_figure.svg')
         self.assertEqual(8, len(canvas.elements))  # defs counts as element
         expected_height = d.TOP_MARGIN + d.BOTTOM_MARGIN + \
             d.TRACK_HEIGHT * 2 + d.PADDING  + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN + \
@@ -488,5 +498,6 @@ class TestDraw(unittest.TestCase):
         d = Diagram()
         d.GENE_MIN_BUFFER = 0
         canvas = d.draw_ustranscripts_overlay(gene, markers=[marker])
-        canvas.saveas('test_draw_overlay.svg')
         self.assertEqual(2, len(canvas.elements))  # defs counts as element
+        canvas.saveas('test_overlay_figure.svg')
+        raise unittest.SkipTest('TODO. add height calculation assert')

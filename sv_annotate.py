@@ -13,10 +13,11 @@ formation and drawing visualizations. Outputs are written to the annotation subf
     |-- validation/
     |-- annotation/
     |   `--<library>_<protocol>/
-    |       |-- annotation-#.failed
-    |       |-- annotation-#.passed
-    |       `-- annotation-#_drawings/
-    |           |-- legend.svg
+    |       |-- annotation.failed.tab
+    |       |-- annotation.passed.tab
+    |       |-- annotation.passed.fusions-cdna.fa
+    |       `-- drawings/
+    |           |-- <annotation_id>.legend.json
     |           `-- <annotation_id>.svg
     |-- pairing/
     `-- summary/
@@ -99,7 +100,7 @@ def parse_arguments():
     parser.add_argument(
         '--max_orf_cap', default=3, type=int, help='keep the n longest orfs')
     parser.add_argument(
-        '--min_domain_mapping_match', default=0.8, type=float, 
+        '--min_domain_mapping_match', default=0.8, type=float,
         help='minimum percent match for the domain to be considered aligned')
     parser.add_argument(
         '--template_metadata', default='/home/creisle/svn/svmerge/trunk/cytoBand.txt',
@@ -115,13 +116,13 @@ def main():
     for arg, val in sorted(args.__dict__.items()):
         log(arg, '=', val, time_stamp=False)
     FILENAME_PREFIX = re.sub('\.(tab|tsv|txt)$', '', os.path.basename(args.input))
-    
+
     log('loading:', args.template_metadata)
     TEMPLATES = load_templates(args.template_metadata)
     log('loading:', args.annotations)
     REFERENCE_ANNOTATIONS = load_reference_genes(args.annotations)
-    
-    
+
+
     log('loading:', args.reference_genome)
     REFERENCE_GENOME = load_reference_genome(args.reference_genome)
     # test that the sequence makes sense for a random transcript
@@ -153,50 +154,60 @@ def main():
 
     id_prefix = 'annotation_{}-'.format(re.sub(':', '-', re.sub(' ', '_', str(datetime.now()))))
     rows = []  # hold the row information for the final tsv file
+    fa_sequences = {}
     for i, ann in enumerate(annotations):
-        ann.data[COLUMNS.annotation_id] = id_prefix + str(i + 1)
+        annotation_id = id_prefix + str(i + 1)
+        ann.data[COLUMNS.annotation_id] = annotation_id
         row = ann.flatten()
         # try building the fusion product
-        d = Diagram()
         ann_rows = []
+        ft = None
+        try:
+            ft = FusionTranscript.build(
+                ann, REFERENCE_GENOME,
+                min_orf_size=args.min_orf_size,
+                max_orf_cap=args.max_orf_cap,
+                min_domain_mapping_match=args.min_domain_mapping_match
+            )
+            # add fusion information to the current row
+            # duplicate the row for each translation
+            for tl in ft.translations:
+                nrow = dict()
+                nrow.update(row)
+                nrow[COLUMNS.fusion_splicing_pattern] = tl.transcript.splicing_pattern.splice_type
+                nrow[COLUMNS.fusion_cdna_coding_start] = tl.start
+                nrow[COLUMNS.fusion_cdna_coding_end] = tl.end
+
+                fusion_fa_id = '{}_{}_{}-{}'.format(annotation_id, tl.transcript.splicing_pattern.splice_type, tl.start, tl.end)
+                if fusion_fa_id in fa_sequences:
+                    raise AssertionError('should not be duplicate fa sequence ids', fusion_fa_id)
+                fa_sequences[fusion_fa_id] = ft.get_cdna_sequence(tl.transcript.splicing_pattern)
+
+
+                domains = []
+                for dom in tl.domains:
+                    m, t = dom.score_region_mapping()
+                    temp = {
+                        "name": dom.name,
+                        "sequences": dom.get_sequences(),
+                        "regions": [{"start": dr.start, "end": dr.end} for dr in sorted(dom.regions, key=lambda x: x.start)],
+                        "mapping_quality": round(m * 100 / t, 0),
+                        "matches": m
+                    }
+                    domains.append(temp)
+                nrow[COLUMNS.fusion_mapped_domains] = json.dumps(domains)
+                ann_rows.append(nrow)
+        except NotSpecifiedError:
+            pass
+        except AttributeError as err:
+            pass
+
+        # now try generating the svg
+        d = Diagram()
         drawing = None
         retry_count = 0
         while drawing is None:  # continue if drawing error and increase width
             try:
-                ft = None
-                try:
-                    ft = FusionTranscript.build(
-                        ann, REFERENCE_GENOME,
-                        min_orf_size=args.min_orf_size,
-                        max_orf_cap=args.max_orf_cap,
-                        min_domain_mapping_match=args.min_domain_mapping_match
-                    )
-                    # add fusion information to the current row
-                    # duplicate the row for each translation
-                    for tl in ft.translations:
-                        nrow = dict()
-                        nrow.update(row)
-                        nrow[COLUMNS.fusion_splicing_pattern] = tl.transcript.splicing_pattern.splice_type
-                        nrow[COLUMNS.fusion_cdna_coding_start] = tl.start
-                        nrow[COLUMNS.fusion_cdna_coding_end] = tl.end
-                        nrow[COLUMNS.fusion_cdna_sequence] = ft.get_cdna_sequence(tl.transcript.splicing_pattern)
-                        domains = []
-                        for dom in tl.domains:
-                            m, t = dom.score_region_mapping()
-                            temp = {
-                                "name": dom.name,
-                                "sequences": dom.get_sequences(),
-                                "regions": [{"start": dr.start, "end": dr.end} for dr in sorted(dom.regions, key=lambda x: x.start)],
-                                "mapping_quality": round(m * 100 / t, 0),
-                                "matches": m
-                            }
-                            domains.append(temp)
-                        nrow[COLUMNS.fusion_mapped_domains] = json.dumps(domains)
-                        ann_rows.append(nrow)
-                except NotSpecifiedError:
-                    pass
-                except AttributeError as err:
-                    pass
                 canvas = d.draw(ann, ft, REFERENCE_GENOME=REFERENCE_GENOME, draw_template=True, templates=TEMPLATES)
                 drawing = os.path.join(args.output, FILENAME_PREFIX + '.' + ann.data[COLUMNS.annotation_id] + '.svg')
                 for r in ann_rows:
@@ -235,6 +246,13 @@ def main():
             fh.write('\t'.join([str(row.get(c, None)) for c in header]) + '\n')
 
         log('generated {} annotations'.format(len(annotations)))
+
+    of = os.path.join(args.output, FILENAME_PREFIX + '.annotation.fusion-cdna.fa')
+    with open(of, 'w') as fh:
+        log('writing:', of)
+        for name, seq in sorted(fa_sequences.items()):
+            fh.write('> {}\n'.format(name))
+            fh.write('{}\n'.format(seq))
 
 
 if __name__ == '__main__':

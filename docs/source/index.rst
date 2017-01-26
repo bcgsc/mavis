@@ -8,15 +8,11 @@ SVMerge Documentation
 
 .. toctree::
    :maxdepth: 3
-   :glob:
 
    README
    glossary
    columns
-   sv_merge
-   sv_validate
-   sv_annotate
-   structural_variant
+   api.rst
 
 
 

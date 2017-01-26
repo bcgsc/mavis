@@ -249,6 +249,13 @@ following model.
 Development
 --------------------------
 
+Guidelines for Contributors
+.............................
+
+- In general, follow pep8 style guides using a maximum line width of 120 characters
+- docstrings should follow sphinx google code style as seen here http://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html
+- any column name which may appear in any of the intermediate or final output files must be defined in :class:`~structural_variant.constants.COLUMNS`
+
 TODO
 ...........................
 
