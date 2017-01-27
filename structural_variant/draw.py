@@ -294,7 +294,7 @@ class Diagram:
                 h = [0]
                 if template1 == template2:  # single template
                     g = self.draw_template(
-                        canvas, template1, half_drawing_width,
+                        canvas, template1, drawing_width,
                         breakpoints=[ann.break1, ann.break2], labels=labels)
                     canvas.add(g)
                     g.translate(x, y)
@@ -672,7 +672,7 @@ class Diagram:
                     gd.translate(0, py)
 
                     gd.add(canvas.text(
-                        labels.add(d, self.DOMAIN_LABEL_PREFIX),
+                        labels.add(d.name, self.DOMAIN_LABEL_PREFIX),
                         insert=(0 - self.PADDING, self.DOMAIN_TRACK_HEIGHT / 2),
                         fill=self.LABEL_COLOR if not self.DYNAMIC_LABELS else Diagram.dynamic_label_color(self.DOMAIN_COLOR),
                         style=self.FONT_STYLE.format(font_size=self.DOMAIN_LABEL_FONT_SIZE, text_anchor='end'),
@@ -1028,7 +1028,7 @@ class Diagram:
             fill=self.SCAFFOLD_COLOR
         )
         group.add(scaffold)
-        scaffold.translate((0, self.BREAKPOINT_TOP_MARGIN + self.TEMPLATE_TRACK_HEIGHT / 2))
+        scaffold.translate((0, self.BREAKPOINT_TOP_MARGIN + self.TEMPLATE_TRACK_HEIGHT / 2 - self.SCAFFOLD_HEIGHT / 2))
 
         for i, band in enumerate(template.bands):
             s = Interval.convert_pos(mapping, band[0])
@@ -1177,8 +1177,8 @@ class Diagram:
                 ))
 
         group.add(
-            Tag('title', 'Gene {} {}:{}_{}{}'.format(gene.name if gene.name else '',
-                gene.chr, gene.start, gene.end, gene.get_strand())))
+            Tag('title', 'Gene {} {}:{}_{}{} aka {}'.format(gene.name if gene.name else '',
+                gene.chr, gene.start, gene.end, gene.get_strand(), ', '.join(gene.aliases))))
         return group
 
     @classmethod
@@ -1347,5 +1347,9 @@ class Diagram:
             p1 = Interval.convert_ratioed_pos(mapping, itvl.start)
             p2 = Interval.convert_ratioed_pos(mapping, itvl.end)
             n = p1 | p2
-            assert(len(n) >= min_width)
+            if len(n) < min_width:
+                raise AssertionError(
+                    'interval mapping should not map any intervals to less than the minimum required width. Interval {}'
+                    ' was mapped to a pixel interval of length {} but the minimum width is {}'.format(
+                        itvl, len(n), min_width), p1, p2, mapping)
         return mapping

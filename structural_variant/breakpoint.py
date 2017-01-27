@@ -569,7 +569,13 @@ def read_bpp_from_input_file(filename, **kwargs):
     kwargs.setdefault('require', []).extend(
         [COLUMNS.break1_chromosome.name, COLUMNS.break2_chromosome.name]
     )
-    kwargs.setdefault('add', {}).update({COLUMNS.untemplated_sequence.name: None})
+    kwargs.setdefault('add', {}).update({
+        COLUMNS.untemplated_sequence.name: None,
+        COLUMNS.break1_orientation.name: ORIENT.NS,
+        COLUMNS.break1_strand.name: STRAND.NS,
+        COLUMNS.break2_orientation.name: ORIENT.NS,
+        COLUMNS.break2_strand.name: STRAND.NS
+        })
     kwargs.setdefault('_in').update(
         {
             COLUMNS.break1_orientation.name: ORIENT,

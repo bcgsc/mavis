@@ -117,14 +117,7 @@ def main():
         log(arg, '=', val, time_stamp=False)
     FILENAME_PREFIX = re.sub('\.(tab|tsv|txt)$', '', os.path.basename(args.input))
 
-    log('loading:', args.template_metadata)
-    TEMPLATES = load_templates(args.template_metadata)
-    log('loading:', args.annotations)
-    REFERENCE_ANNOTATIONS = load_reference_genes(args.annotations)
-
-
-    log('loading:', args.reference_genome)
-    REFERENCE_GENOME = load_reference_genome(args.reference_genome)
+    
     # test that the sequence makes sense for a random transcript
     log('loading:', args.input)
     bpps = read_bpp_from_input_file(
@@ -139,6 +132,15 @@ def main():
         },
         simplify=False)
     log('read {} breakpoint pairs'.format(len(bpps)))
+    
+    log('loading:', args.template_metadata)
+    TEMPLATES = load_templates(args.template_metadata)
+    log('loading:', args.annotations)
+    REFERENCE_ANNOTATIONS = load_reference_genes(args.annotations)
+
+
+    log('loading:', args.reference_genome)
+    REFERENCE_GENOME = load_reference_genome(args.reference_genome)
 
     annotations = []
     for bpp in bpps:
@@ -159,6 +161,7 @@ def main():
         annotation_id = id_prefix + str(i + 1)
         ann.data[COLUMNS.annotation_id] = annotation_id
         row = ann.flatten()
+        log('current annotation', annotation_id, ann.transcript1, ann.transcript2, ann)
         # try building the fusion product
         ann_rows = []
         ft = None
@@ -197,10 +200,10 @@ def main():
                     domains.append(temp)
                 nrow[COLUMNS.fusion_mapped_domains] = json.dumps(domains)
                 ann_rows.append(nrow)
-        except NotSpecifiedError:
-            pass
+        except NotSpecifiedError as err:
+            print(repr(err))
         except AttributeError as err:
-            pass
+            print(repr(err))
 
         # now try generating the svg
         d = Diagram()
@@ -209,7 +212,20 @@ def main():
         while drawing is None:  # continue if drawing error and increase width
             try:
                 canvas = d.draw(ann, ft, REFERENCE_GENOME=REFERENCE_GENOME, draw_template=True, templates=TEMPLATES)
-                drawing = os.path.join(args.output, FILENAME_PREFIX + '.' + ann.data[COLUMNS.annotation_id] + '.svg')
+                gene_aliases1 = 'na'
+                gene_aliases2 = 'na'
+                try:
+                    if len(ann.transcript1.gene.aliases) > 0:
+                        gene_aliases1 = '-'.join(ann.transcript1.gene.aliases)
+                except AttributeError:
+                    pass
+                try:
+                    if len(ann.transcript2.gene.aliases) > 0:
+                        gene_aliases2 = '-'.join(ann.transcript2.gene.aliases)
+                except AttributeError:
+                    pass
+                name = '{}.{}.{}_{}.svg'.format(FILENAME_PREFIX, ann.data[COLUMNS.annotation_id], gene_aliases1, gene_aliases2)
+                drawing = os.path.join(args.output, name)
                 for r in ann_rows:
                     r[COLUMNS.annotation_figure] = drawing
                 log('generating svg:', drawing)

@@ -216,7 +216,10 @@ class FusionTranscript(usTranscript):
             for new_tl in t.translations:
                 aa_seq = new_tl.get_AA_sequence()
                 assert(aa_seq[0] == 'M')
-                for tl in ann.transcript1.translations + ann.transcript2.translations:
+                translations = ann.transcript1.translations[:]
+                if ann.transcript1 != ann.transcript2:
+                    translations += ann.transcript2.translations
+                for tl in translations:
                     for dom in tl.domains:
                         try:
                             match, total, regions = dom.align_seq(aa_seq, REFERENCE_GENOME)
@@ -644,7 +647,8 @@ def gather_annotations(ref, bp, event_type=None, proximity=None):  # TODO
         else:
             combinations.extend(itertools.product(break1_pos, break2_pos))
             combinations.extend(itertools.product(break1_neg, break2_neg))
-
+    
+    same = set()
     for a1, a2 in combinations:
         if a1 != a2 and hasattr(a1, 'exons') != hasattr(a2, 'exons') and not bp.interchromosomal:
             # one is a transcript, the other an intergenic region
@@ -658,6 +662,8 @@ def gather_annotations(ref, bp, event_type=None, proximity=None):  # TODO
                     a1 = a2
         if (a1, a2) in annotations:  # ignore duplicates
             continue
+        if a1 == a2 and hasattr(a1, 'exons'):
+            same.add(a1)
         b1_itvl = bp.break1 & a1
         b2_itvl = bp.break2 & a2
         bpp = BreakpointPair.copy(bp)
@@ -674,4 +680,12 @@ def gather_annotations(ref, bp, event_type=None, proximity=None):  # TODO
             for gene in ref[bp.break2.chr]:
                 a.add_gene(gene)
         annotations[(a1, a2)] = a
-    return list(annotations.values())
+    #print(same)
+    filtered = []  # remove any inter-gene/inter-region annotations where a same transcript was found
+    for pair, ann in annotations.items():
+        a1, a2 = pair
+        if a1 in same or a2 in same and a1 != a2:
+            pass
+        else:
+            filtered.append(ann)
+    return filtered

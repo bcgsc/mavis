@@ -212,6 +212,10 @@ class Column:
         except TypeError:
             return False
 
+    def __repr__(self):
+        cls = self.__class__.__name__
+        return '{}({})'.format(cls, str(self))
+
     def __hash__(self):
         return hash(str(self))
 
