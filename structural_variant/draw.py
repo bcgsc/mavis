@@ -1175,10 +1175,17 @@ class Diagram:
                     style=self.FONT_STYLE.format(font_size=self.LABEL_FONT_SIZE, text_anchor='middle'),
                     class_='label'
                 ))
-
+        
+        aliases = ''
+        try:
+            temp = ';'.join(sorted(gene.aliases))
+            if temp:
+                aliases = ' aka ' + temp
+        except AttributeError:
+            pass
         group.add(
-            Tag('title', 'Gene {} {}:{}_{}{} aka {}'.format(gene.name if gene.name else '',
-                gene.chr, gene.start, gene.end, gene.get_strand(), ', '.join(gene.aliases))))
+            Tag('title', 'Gene {} {}:{}_{}{}{}'.format(gene.name if gene.name else '',
+                gene.chr, gene.start, gene.end, gene.get_strand(), aliases)))
         return group
 
     @classmethod
@@ -1351,5 +1358,5 @@ class Diagram:
                 raise AssertionError(
                     'interval mapping should not map any intervals to less than the minimum required width. Interval {}'
                     ' was mapped to a pixel interval of length {} but the minimum width is {}'.format(
-                        itvl, len(n), min_width), p1, p2, mapping)
+                        itvl, len(n), min_width), p1, p2, mapping, input_intervals, target_width, ratio, min_inter_width)
         return mapping

@@ -90,6 +90,7 @@ class FusionTranscript(usTranscript):
             # single transcript events are special cases if the breakpoints face each other
             # as is the case for duplications and inversions
             if ann.event_type == SVTYPE.DUP:
+                print('building a fusion transcript for a single transcript duplication')
                 seq1, ex1 = cls._pull_exons(ann.transcript1, ann.break1, REFERENCE_GENOME[ann.break1.chr].seq)
                 seq2, ex2 = cls._pull_exons(ann.transcript2, ann.break2, REFERENCE_GENOME[ann.break2.chr].seq)
                 useq = ann.untemplated_sequence
@@ -111,6 +112,7 @@ class FusionTranscript(usTranscript):
                     )
                     ft.exons.append(e)
                     ft.exon_mapping[e] = old_ex
+                print('exons:', ft.exons)
                 ft.sequence += seq1
             elif ann.event_type == SVTYPE.INV:
                 # pull the exons from either size of the breakpoints window

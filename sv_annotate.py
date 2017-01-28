@@ -161,11 +161,12 @@ def main():
         annotation_id = id_prefix + str(i + 1)
         ann.data[COLUMNS.annotation_id] = annotation_id
         row = ann.flatten()
-        log('current annotation', annotation_id, ann.transcript1, ann.transcript2, ann)
+        log('current annotation', annotation_id, ann.transcript1, ann.transcript2, ann.event_type)
         # try building the fusion product
         ann_rows = []
         ft = None
         try:
+            print('building the fusion transcript')
             ft = FusionTranscript.build(
                 ann, REFERENCE_GENOME,
                 min_orf_size=args.min_orf_size,
