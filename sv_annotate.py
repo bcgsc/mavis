@@ -92,6 +92,9 @@ def parse_arguments():
         default='/home/pubseq/genomes/Homo_sapiens/TCGA_Special/GRCh37-lite.fa',
         help='path to the human reference genome in fa format'
     )
+    g.add_argument(
+        '--template_metadata', default=os.path.join(os.path.dirname(__file__), 'cytoBand.txt'),
+        help='file containing the cytoband template information')
     parser.add_argument(
         '-p', '--max_proximity', default=5000,
         help='The maximum distance away from breakpoints to look for proximal genes')
@@ -102,9 +105,7 @@ def parse_arguments():
     parser.add_argument(
         '--min_domain_mapping_match', default=0.8, type=float,
         help='minimum percent match for the domain to be considered aligned')
-    parser.add_argument(
-        '--template_metadata', default='/home/creisle/svn/svmerge/trunk/cytoBand.txt',
-        help='file containing the cytoband template information')
+
     args = parser.parse_args()
     return args
 
@@ -117,7 +118,7 @@ def main():
         log(arg, '=', val, time_stamp=False)
     FILENAME_PREFIX = re.sub('\.(tab|tsv|txt)$', '', os.path.basename(args.input))
 
-    
+
     # test that the sequence makes sense for a random transcript
     log('loading:', args.input)
     bpps = read_bpp_from_input_file(
@@ -132,15 +133,15 @@ def main():
         },
         simplify=False)
     log('read {} breakpoint pairs'.format(len(bpps)))
-    
-    log('loading:', args.template_metadata)
-    TEMPLATES = load_templates(args.template_metadata)
-    log('loading:', args.annotations)
-    REFERENCE_ANNOTATIONS = load_reference_genes(args.annotations)
-
 
     log('loading:', args.reference_genome)
     REFERENCE_GENOME = load_reference_genome(args.reference_genome)
+
+    log('loading:', args.template_metadata)
+    TEMPLATES = load_templates(args.template_metadata)
+
+    log('loading:', args.annotations)
+    REFERENCE_ANNOTATIONS = load_reference_genes(args.annotations, REFERENCE_GENOME=REFERENCE_GENOME)
 
     annotations = []
     for bpp in bpps:
@@ -158,15 +159,17 @@ def main():
     rows = []  # hold the row information for the final tsv file
     fa_sequences = {}
     for i, ann in enumerate(annotations):
+        print('\n\n')
         annotation_id = id_prefix + str(i + 1)
         ann.data[COLUMNS.annotation_id] = annotation_id
         row = ann.flatten()
         log('current annotation', annotation_id, ann.transcript1, ann.transcript2, ann.event_type)
+
         # try building the fusion product
         ann_rows = []
         ft = None
         try:
-            print('building the fusion transcript')
+            print('genes:', ann.transcript1.gene.name,  ann.transcript2.gene.name)
             ft = FusionTranscript.build(
                 ann, REFERENCE_GENOME,
                 min_orf_size=args.min_orf_size,
@@ -174,6 +177,12 @@ def main():
                 min_domain_mapping_match=args.min_domain_mapping_match
             )
             # add fusion information to the current row
+            for t in ft.transcripts:
+                fusion_fa_id = '{}_{}'.format(annotation_id, t.splicing_pattern.splice_type)
+                if fusion_fa_id in fa_sequences:
+                    raise AssertionError('should not be duplicate fa sequence ids', fusion_fa_id)
+                fa_sequences[fusion_fa_id] = ft.get_cdna_sequence(t.splicing_pattern)
+
             # duplicate the row for each translation
             for tl in ft.translations:
                 nrow = dict()
@@ -181,12 +190,6 @@ def main():
                 nrow[COLUMNS.fusion_splicing_pattern] = tl.transcript.splicing_pattern.splice_type
                 nrow[COLUMNS.fusion_cdna_coding_start] = tl.start
                 nrow[COLUMNS.fusion_cdna_coding_end] = tl.end
-
-                fusion_fa_id = '{}_{}_{}-{}'.format(annotation_id, tl.transcript.splicing_pattern.splice_type, tl.start, tl.end)
-                if fusion_fa_id in fa_sequences:
-                    raise AssertionError('should not be duplicate fa sequence ids', fusion_fa_id)
-                fa_sequences[fusion_fa_id] = ft.get_cdna_sequence(tl.transcript.splicing_pattern)
-
 
                 domains = []
                 for dom in tl.domains:
@@ -212,9 +215,9 @@ def main():
         retry_count = 0
         while drawing is None:  # continue if drawing error and increase width
             try:
-                canvas = d.draw(ann, ft, REFERENCE_GENOME=REFERENCE_GENOME, draw_template=True, templates=TEMPLATES)
-                gene_aliases1 = 'na'
-                gene_aliases2 = 'na'
+                canvas, legend = d.draw(ann, ft, REFERENCE_GENOME=REFERENCE_GENOME, draw_template=True, templates=TEMPLATES)
+                gene_aliases1 = 'NA'
+                gene_aliases2 = 'NA'
                 try:
                     if len(ann.transcript1.gene.aliases) > 0:
                         gene_aliases1 = '-'.join(ann.transcript1.gene.aliases)

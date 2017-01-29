@@ -5,6 +5,7 @@ from .constants import STRAND, ORIENT, CODON_SIZE, GIESMA_STAIN
 from colour import Color
 from .error import DrawingFitError, NotSpecifiedError
 from .annotate.genomic import IntergenicRegion
+from .annotate.variant import FusionTranscript
 
 # draw gene level view
 # draw gene box
@@ -38,6 +39,9 @@ class LabelMapping:
             raise KeyError('duplicate value: values must be unique', value)
         self._mapping[key] = value
         self._reverse_mapping[value] = key
+
+    def items(self):
+        return self._mapping.items()
 
     def __getitem__(self, key):
         return self._mapping[key]
@@ -82,18 +86,13 @@ class Diagram:
         self,
         BREAKPOINT_COLOR=HEX_BLACK,
         BREAKPOINT_LABEL_FONT_SIZE=20,
-        GENE1_COLOR_SELECTED='#4C9677',
-        GENE2_COLOR_SELECTED='#518DC5',
-        GENE1_COLOR='#325556',
-        GENE2_COLOR='#657E91',
-        GENE_DEFAULT_COLOR='#325556',
+        GENE2_COLOR_SELECTED='#4C9677',
+        GENE1_COLOR_SELECTED='#518DC5',
+        GENE2_COLOR='#325556',
+        GENE1_COLOR='#657E91',
         LABEL_COLOR=HEX_BLACK,
         LABEL_FONT_SIZE=28,
-        EXON1_COLOR='#4C9677',
-        EXON2_COLOR='#518DC5',
-        EXON1_UTR_COLOR='#7bddc1',
-        EXON2_UTR_COLOR='#7dc3d8',
-        DOMAIN_COLOR='#b8d3ba',
+        DOMAIN_COLOR='#d3d3d3',
         DOMAIN_SCAFFOLD_COLOR=HEX_BLACK,
         SPLICE_COLOR=HEX_BLACK,
         WIDTH=1000,
@@ -125,7 +124,7 @@ class Diagram:
         self.GENE2_COLOR_SELECTED = GENE2_COLOR_SELECTED
         self.GENE1_COLOR = GENE1_COLOR
         self.GENE2_COLOR = GENE2_COLOR
-        self.GENE_DEFAULT_COLOR = GENE_DEFAULT_COLOR
+        self.GENE_DEFAULT_COLOR = GENE1_COLOR
         self.GENE_MIN_BUFFER = 1000
         self.GENE_ARROW_WIDTH = 20
         self.GENE_INTERGENIC_RATIO = 5
@@ -135,6 +134,7 @@ class Diagram:
         self.LABEL_COLOR = LABEL_COLOR
         self.LABEL_FONT_SIZE = LABEL_FONT_SIZE
         self.DYNAMIC_LABELS = DYNAMIC_LABELS
+        self.LABEL_LEFT_MARGIN = LABEL_FONT_SIZE * self.FONT_WIDTH_HEIGHT_RATIO * 4
 
         self.DOMAIN_COLOR = DOMAIN_COLOR
         self.DOMAIN_TRACK_HEIGHT = 30
@@ -142,7 +142,7 @@ class Diagram:
         self.DOMAIN_SCAFFOLD_COLOR = DOMAIN_SCAFFOLD_COLOR
         self.DOMAIN_LABEL_PREFIX = 'D'
         self.DOMAIN_LABEL_FONT_SIZE = DOMAIN_LABEL_FONT_SIZE
-        self.DOMAIN_FILL_GRADIENT = list(Color(DOMAIN_MISMATCH_COLOR).range_to(Color(DOMAIN_COLOR), 10))
+        self.DOMAIN_FILL_GRADIENT = [c.hex for c in Color(DOMAIN_MISMATCH_COLOR).range_to(Color(DOMAIN_COLOR), 10)]
 
         self.SPLICE_HEIGHT = self.TRACK_HEIGHT / 2
         self.SPLICE_STROKE_DASHARRAY = [2, 2]
@@ -167,11 +167,12 @@ class Diagram:
         self.EXON_MIN_WIDTH = self.MIN_WIDTH + self.EXON_TEAR_TOOTH_WIDTH * 2
         self.EXON_TEAR_TOOTH_HEIGHT = 2
         self.EXON_INTRON_RATIO = 20
-        self.EXON1_COLOR = EXON1_COLOR
-        self.EXON2_COLOR = EXON2_COLOR
-        self.EXON1_UTR_COLOR = EXON1_UTR_COLOR
-        self.EXON2_UTR_COLOR = EXON2_UTR_COLOR
+        self.EXON1_COLOR = GENE1_COLOR_SELECTED
+        self.EXON2_COLOR = GENE2_COLOR_SELECTED
         self.EXON_FONT_SIZE = 20
+
+        self.TRANSCRIPT_LABEL_PREFIX = 'T'
+        self.FUSION_LABEL_PREFIX = 'F'
 
         self.TRANSLATION_FONT_SIZE = 14
         self.TRANSLATION_SCAFFOLD_COLOR = self.SCAFFOLD_COLOR
@@ -189,9 +190,10 @@ class Diagram:
 
         self.TEMPLATE_BAND_FILL_ODD = '#bdbdbd'
         self.TEMPLATE_BAND_FILL_EVEN = '#696969'
-        self.TEMPLATE_TRACK_HEIGHT = self.TRACK_HEIGHT / 2
+        self.TEMPLATE_TRACK_HEIGHT = max([self.TRACK_HEIGHT / 2, self.LABEL_FONT_SIZE])
         self.TEMPLATE_DEFAULT_FILL = '#d3d3d3'
         self.TEMPLATE_BAND_MIN_WIDTH = 2
+        self.TEMPLATE_LABEL_PREFIX = 'C'
 
         self.REGION_LABEL_PREFIX = 'R'
         self.OVERLAY_LEFT_LABEL = 16 * self.FONT_WIDTH_HEIGHT_RATIO * self.EXON_FONT_SIZE
@@ -279,7 +281,7 @@ class Diagram:
         y = self.TOP_MARGIN
         x = self.LEFT_MARGIN
 
-        dx_label_shift = self.PADDING + self.LABEL_FONT_SIZE * 2 * self.FONT_WIDTH_HEIGHT_RATIO
+        dx_label_shift = self.LABEL_LEFT_MARGIN
 
         x += dx_label_shift
         drawing_width = self.WIDTH - dx_label_shift - self.LEFT_MARGIN - self.RIGHT_MARGIN
@@ -328,15 +330,15 @@ class Diagram:
 
         for g, d in ann.genes_proximal_to_break2:
             genes2.add(g)
-            colors[g] = self.GENE2_COLOR
+            colors.setdefault(g, self.GENE2_COLOR)
 
-        for gene in ann.genes_overlapping_break1:
-            genes1.add(gene)
-            colors[gene] = self.GENE1_COLOR
+        for g in ann.genes_overlapping_break1:
+            genes1.add(g)
+            colors[g] = self.GENE1_COLOR
 
-        for gene in ann.genes_overlapping_break2:
-            genes2.add(gene)
-            colors[gene] = self.GENE2_COLOR
+        for g in ann.genes_overlapping_break2:
+            genes2.add(g)
+            colors.setdefault(g, self.GENE2_COLOR)
 
         if ann.transcript1:
             try:
@@ -346,15 +348,17 @@ class Diagram:
                     colors[e] = self.EXON1_COLOR
             except AttributeError:
                 genes1.add(ann.transcript1)
+                colors[ann.transcript1] = self.GENE1_COLOR_SELECTED
 
         if ann.transcript2:
             try:
                 genes2.add(ann.transcript2.gene)
-                colors[ann.transcript2.gene] = self.GENE2_COLOR_SELECTED
+                colors.setdefault(ann.transcript2.gene, self.GENE2_COLOR_SELECTED)
                 for e in ann.transcript2.exons:
-                    colors[e] = self.EXON2_COLOR
+                    colors.setdefault(e, self.EXON2_COLOR)
             except AttributeError:
                 genes2.add(ann.transcript2)
+                colors[ann.transcript2] = self.GENE2_COLOR_SELECTED
 
         # set all the labels so that they are re-used correctly
         for gene in sorted(genes1 | genes2, key=lambda x: (str(x.get_chr()), x.start)):
@@ -464,7 +468,14 @@ class Diagram:
 
         y += self.BOTTOM_MARGIN
         canvas.attribs['height'] = y
-        return canvas
+        legend = {}
+        for obj, label in labels.items():
+            try:
+                legend[label] = obj.name
+            except AttributeError:
+                legend[label] = obj
+        # now make the json legend
+        return canvas, legend
 
     def _draw_exon_track(self, canvas, transcript, mapping, colors=None):
         """
@@ -528,6 +539,7 @@ class Diagram:
             svgwrite.container.Group: the group element for the transcript diagram
                     Has the added parameters of labels, height, and mapping
         """
+
         if ust.get_strand() not in [STRAND.POS, STRAND.NEG]:
             raise NotSpecifiedError('strand must be positive or negative to draw the ust')
         if (mapping is None and target_width is None) or (mapping is not None and target_width is not None):
@@ -546,11 +558,23 @@ class Diagram:
 
         y = 0
 
+        LABEL_PREFIX = self.TRANSCRIPT_LABEL_PREFIX
+        if isinstance(ust, FusionTranscript):
+            LABEL_PREFIX = self.FUSION_LABEL_PREFIX
+
         if len(ust.translations) == 0:
-            y += self.BREAKPOINT_TOP_MARGIN + self.TRACK_HEIGHT / 2
+            y += self.SPLICE_HEIGHT + self.BREAKPOINT_TOP_MARGIN
             exon_track_group = self._draw_exon_track(canvas, ust, mapping, colors)
+            exon_track_group.translate(0, y)
+            exon_track_group.add(canvas.text(
+                labels.add(ust, LABEL_PREFIX),
+                insert=(0 - self.PADDING, self.TRACK_HEIGHT / 2),
+                fill=self.LABEL_COLOR,
+                style=self.FONT_STYLE.format(font_size=self.LABEL_FONT_SIZE, text_anchor='end'),
+                class_='label'
+            ))
             main_group.add(exon_track_group)
-            y += self.TRACK_HEIGHT / 2
+            y += self.TRACK_HEIGHT
             y += self.BREAKPOINT_BOTTOM_MARGIN
         else:
             # draw the protein features if there are any
@@ -561,6 +585,13 @@ class Diagram:
 
                 exon_track_group = self._draw_exon_track(canvas, ust, mapping, colors)
                 exon_track_group.translate(0, y)
+                exon_track_group.add(canvas.text(
+                    labels.add(tr, LABEL_PREFIX),
+                    insert=(0 - self.PADDING, self.TRACK_HEIGHT / 2),
+                    fill=self.LABEL_COLOR,
+                    style=self.FONT_STYLE.format(font_size=self.LABEL_FONT_SIZE, text_anchor='end'),
+                    class_='label'
+                ))
 
                 # draw the splicing pattern
                 splice_group = canvas.g(class_='splicing')
@@ -1029,6 +1060,13 @@ class Diagram:
         )
         group.add(scaffold)
         scaffold.translate((0, self.BREAKPOINT_TOP_MARGIN + self.TEMPLATE_TRACK_HEIGHT / 2 - self.SCAFFOLD_HEIGHT / 2))
+        group.add(canvas.text(
+            labels.add(template, self.TEMPLATE_LABEL_PREFIX),
+            insert=(0 - self.PADDING, self.BREAKPOINT_TOP_MARGIN + self.TEMPLATE_TRACK_HEIGHT / 2),
+            fill=self.LABEL_COLOR,
+            style=self.FONT_STYLE.format(font_size=self.LABEL_FONT_SIZE, text_anchor='end'),
+            class_='label'
+        ))
 
         for i, band in enumerate(template.bands):
             s = Interval.convert_pos(mapping, band[0])
@@ -1175,12 +1213,10 @@ class Diagram:
                     style=self.FONT_STYLE.format(font_size=self.LABEL_FONT_SIZE, text_anchor='middle'),
                     class_='label'
                 ))
-        
         aliases = ''
         try:
-            temp = ';'.join(sorted(gene.aliases))
-            if temp:
-                aliases = ' aka ' + temp
+            if len(gene.aliases) > 0:
+                aliases = ' aka {}'.format(';'.join(sorted(gene.aliases)))
         except AttributeError:
             pass
         group.add(
@@ -1221,7 +1257,7 @@ class Diagram:
     @classmethod
     def _generate_interval_mapping(cls, input_intervals, target_width, ratio, min_width, buffer_length=None, start=None, end=None, min_inter_width=None):
         min_inter_width = min_width if min_inter_width is None else min_inter_width
-        if start is not None and end is not None and buffer_length is not None:
+        if all([x is not None for x in [start, end, buffer_length]]):
             raise AttributeError('buffer_length is a mutually exclusive argument with start/end')
 
         intervals = []
@@ -1302,13 +1338,13 @@ class Diagram:
         genic_width = width - intergenic_width
         intergenic_unit = lambda x: x * intergenic_width / intergenic_length
         genic_unit = lambda x: x * genic_width / genic_length
-        # print('total_length', total_length)
-        # print('genic_length', genic_length)
-        # print('intergenic_length', intergenic_length)
-        # print('genic_width', genic_width)
-        # print('intergenic_width', intergenic_width)
-        # print('genic_intervals', len(intervals))
-        # print('intermediate_intervals', intermediate_intervals)
+        # print('\ttotal_length', total_length)
+        # print('\tgenic_length', genic_length)
+        # print('\tintergenic_length', intergenic_length)
+        # print('\tgenic_width', genic_width)
+        # print('\tintergenic_width', intergenic_width)
+        # print('\tgenic_intervals', len(intervals))
+        # print('\tintermediate_intervals', intermediate_intervals)
 
         assert(genic_width + intergenic_width + len(intervals) * min_width + intermediate_intervals * min_inter_width == target_width)
         mapping = []

@@ -71,6 +71,26 @@ Available Pre-formatting scripts
 
 - `convert_ta.py <https://svn.bcgsc.ca/svn/SVIA/sv_compile/tags/0.0.1/tools/convert_ta.py>`_
 
+Reference Files
+..................
+
+There are several reference files that are required for full functionality of the svmerge pipeline
+
+Fasta sequence file(s)
+,,,,,,,,,,,,,,,,,,,,,,,
+
+These are the sequence files in fasta format that are used in aligning and generating the fusion sequences. For hg19 these files can be found here: http://hgdownload.cse.ucsc.edu/goldenPath/hg19/chromosomes/chr<#>.fa.gz
+
+Reference Annotations
+,,,,,,,,,,,,,,,,,,,,,,,
+
+This is a custom file format. essentially just a tabbed file which contains the gene, transcript, exon, translation and protein domain positional information
+
+Template metadata file
+,,,,,,,,,,,,,,,,,,,,,,,,
+
+This is the file which contains the band information for the chromosomes. This is only used in drawing templates which is an optional step. Therefore this file is also optional. You can file the file for hg19 here: http://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/cytoBand.txt.gz
+
 
 Running the Pipeline
 .....................

@@ -90,7 +90,6 @@ class FusionTranscript(usTranscript):
             # single transcript events are special cases if the breakpoints face each other
             # as is the case for duplications and inversions
             if ann.event_type == SVTYPE.DUP:
-                print('building a fusion transcript for a single transcript duplication')
                 seq1, ex1 = cls._pull_exons(ann.transcript1, ann.break1, REFERENCE_GENOME[ann.break1.chr].seq)
                 seq2, ex2 = cls._pull_exons(ann.transcript2, ann.break2, REFERENCE_GENOME[ann.break2.chr].seq)
                 useq = ann.untemplated_sequence
@@ -112,7 +111,6 @@ class FusionTranscript(usTranscript):
                     )
                     ft.exons.append(e)
                     ft.exon_mapping[e] = old_ex
-                print('exons:', ft.exons)
                 ft.sequence += seq1
             elif ann.event_type == SVTYPE.INV:
                 # pull the exons from either size of the breakpoints window
@@ -190,12 +188,12 @@ class FusionTranscript(usTranscript):
                     ft.exon_mapping[e] = old_ex
                 ft.sequence += seq1
         ft.position = Interval(1, len(ft.sequence))
-        
+
         # add all splice variants
         for spl_patt in ft.generate_splicing_patterns():
             t = Transcript(ft, spl_patt)
             ft.spliced_transcripts.append(t)
-            
+
             # now add the possible translations
             orfs = calculate_ORF(t.get_sequence(), min_orf_size=min_orf_size)
             if max_orf_cap and len(orfs) > max_orf_cap:  # limit the number of orfs returned
@@ -229,12 +227,12 @@ class FusionTranscript(usTranscript):
                                 new_dom = Domain(dom.name, regions, new_tl)
                                 new_tl.domains.append(new_dom)
                         except UserWarning:
-                            pass 
+                            pass
         return ft
-    
+
     def get_sequence(self, REFERENCE_GENOME=None, ignore_cache=False):
         return usTranscript.get_sequence(self)
-    
+
     def get_spliced_cdna_sequence(self, splicing_pattern, REFERENCE_GENOME=None, ignore_cache=False):
         """
         Args:
@@ -333,6 +331,8 @@ class FusionTranscript(usTranscript):
             s = reverse_complement(s)
         elif transcript.get_strand() != STRAND.POS:
             raise NotSpecifiedError('transcript strand must be specified to pull exons')
+
+
         return s, new_exons
 
 
@@ -559,10 +559,10 @@ def gather_breakpoint_annotations(ref_ann, breakpoint):
                     pos_overlapping_transcripts.append(t)
                 if STRAND.compare(t.get_strand(), STRAND.NEG):
                     neg_overlapping_transcripts.append(t)
-    
+
     pos_intervals = Interval.min_nonoverlapping(*pos_overlapping_transcripts)
     neg_intervals = Interval.min_nonoverlapping(*neg_overlapping_transcripts)
-    
+
     temp = []
     # before the first?
     if len(pos_intervals) > 0:
@@ -649,9 +649,10 @@ def gather_annotations(ref, bp, event_type=None, proximity=None):  # TODO
         else:
             combinations.extend(itertools.product(break1_pos, break2_pos))
             combinations.extend(itertools.product(break1_neg, break2_neg))
-    
+
     same = set()
     for a1, a2 in combinations:
+        """
         if a1 != a2 and hasattr(a1, 'exons') != hasattr(a2, 'exons') and not bp.interchromosomal:
             # one is a transcript, the other an intergenic region
             # take the transcript if it covers both breakpoints
@@ -662,10 +663,18 @@ def gather_annotations(ref, bp, event_type=None, proximity=None):  # TODO
             else:
                 if Interval.overlaps(bp.break1, a2) and Interval.overlaps(bp.break2, a2):
                     a1 = a2
+        """
         if (a1, a2) in annotations:  # ignore duplicates
             continue
+        try:
+            if a1.gene == a2.gene and a1 != a2:
+                continue
+        except AttributeError:
+            pass
+
         if a1 == a2 and hasattr(a1, 'exons'):
             same.add(a1)
+
         b1_itvl = bp.break1 & a1
         b2_itvl = bp.break2 & a2
         bpp = BreakpointPair.copy(bp)
@@ -682,11 +691,10 @@ def gather_annotations(ref, bp, event_type=None, proximity=None):  # TODO
             for gene in ref[bp.break2.chr]:
                 a.add_gene(gene)
         annotations[(a1, a2)] = a
-    #print(same)
     filtered = []  # remove any inter-gene/inter-region annotations where a same transcript was found
     for pair, ann in annotations.items():
         a1, a2 = pair
-        if a1 in same or a2 in same and a1 != a2:
+        if (a1 in same or a2 in same) and a1 != a2:
             pass
         else:
             filtered.append(ann)

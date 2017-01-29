@@ -4,7 +4,7 @@ from .genomic import Gene, Transcript, usTranscript, Exon, Template
 from .base import BioInterval
 from .protein import Domain, Translation
 from ..interval import Interval
-from ..constants import STRAND, GIESMA_STAIN
+from ..constants import STRAND, GIESMA_STAIN, CODON_SIZE, translate
 from Bio import SeqIO
 
 
@@ -47,7 +47,7 @@ def load_masking_regions(filepath):
     return regions
 
 
-def load_reference_genes(filepath, verbose=True):
+def load_reference_genes(filepath, verbose=True, REFERENCE_GENOME=None):
     """
     given a file in the std input format (see below) reads and return a list of genes (and sub-objects)
 
@@ -82,6 +82,9 @@ def load_reference_genes(filepath, verbose=True):
         >>> ref = load_reference_genes('filename')
         >>> ref['1']
         [Gene(), Gene(), ....]
+
+    Warning:
+        does not load translations unless then start with 'M', end with '*' and have a length of multiple 3
     """
     def parse_exon_list(row):
         if not row:
@@ -127,7 +130,7 @@ def load_reference_genes(filepath, verbose=True):
         elif row in ['1', '+', '+1']:
             return STRAND.POS
         raise ValueError('cast to strand failed')
-    
+
     header, rows = TSV.read_file(
         filepath,
         require=[
@@ -157,6 +160,7 @@ def load_reference_genes(filepath, verbose=True):
             'gene_end': int
         }
     )
+    failures = 0
     genes = {}
     for row in rows:
         g = Gene(
@@ -189,10 +193,25 @@ def load_reference_genes(filepath, verbose=True):
                 raise AssertionError('expected 1 splicing pattern for reference loaded transcripts but found', len(spl_patts))
             t = Transcript(ust, spl_patts[0])
             ust.spliced_transcripts.append(t)
-            if row['cdna_coding_start'] is not None:
-                tx = Translation(
-                    row['cdna_coding_start'], row['cdna_coding_end'], transcript=t, domains=row['AA_domain_ranges'])
-                t.translations.append(tx)
+            try:
+                if row['cdna_coding_start'] is not None:
+                    tx = Translation(
+                        row['cdna_coding_start'], row['cdna_coding_end'], transcript=t, domains=row['AA_domain_ranges'])
+
+                    if len(tx) % CODON_SIZE != 0:
+                        raise AssertionError('the length of the coding sequence is not a multiple of {}. This violates the input assumption.'.format(CODON_SIZE), len(tx) % CODON_SIZE)
+
+                    if REFERENCE_GENOME and row['chr'] in REFERENCE_GENOME:
+                        # get the sequence near here to see why these are wrong?
+                        s = ust.get_cdna_sequence(t.splicing_pattern, REFERENCE_GENOME)
+                        m = s[tx.start - 1:tx.start + 2]
+                        stop = s[tx.end - CODON_SIZE: tx.end]
+                        if translate(m) != 'M' or translate(stop) != '*':
+                            raise AssertionError('translation sequence check failure: M={}, *={}'.format(translate(m), translate(stop)))
+
+                    t.translations.append(tx)
+            except AssertionError:
+                pass
             g.transcripts.append(ust)
         except Exception as err:
             print('failed loading', row['ensembl_transcript_id'], row['hugo_names'].split(';'), repr(err))
@@ -224,7 +243,7 @@ def load_templates(filename):
     """
     primarily useful if template drawings are required and is not necessary otherwise
     assumes the input file is 0-indexed with [start,end) style
-    
+
     Args:
         filename (str): the path to the file with the cytoband template information
 
@@ -251,5 +270,3 @@ def load_templates(filename):
         t = Template(tname, s, t, bands=bands)
         templates[t.name] = t
     return templates
-
-
