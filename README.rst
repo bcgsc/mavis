@@ -86,6 +86,14 @@ Reference Annotations
 
 This is a custom file format. essentially just a tabbed file which contains the gene, transcript, exon, translation and protein domain positional information
 
+.. warning::
+
+    the :func:`~structural_variant.annotate.file_io.load_reference_genes` will
+    only load valid translations. If the cds sequence in the annotation is not
+    a multiple of :attr:`~structural_variant.constants.CODON_SIZE` or if a
+    reference genome (sequences) is given and the cds start and end are not
+    M and * amino acids as expected the translation is not loaded
+
 Template metadata file
 ,,,,,,,,,,,,,,,,,,,,,,,,
 

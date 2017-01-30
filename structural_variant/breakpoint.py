@@ -50,6 +50,18 @@ class Breakpoint(Interval):
     def __hash__(self):
         return hash(self.key)
 
+    def to_dict(self):
+        d = {
+            'chr': self.chr,
+            'start': self.start,
+            'end': self.end,
+            'strand': self.strand,
+            'sequence': self.seq,
+            'orientation': self.orient,
+            'type': self.__class__.__name__
+        }
+        return d
+
 
 class BreakpointPair:
     """

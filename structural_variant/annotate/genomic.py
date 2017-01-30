@@ -1,6 +1,6 @@
 from ..constants import STRAND, SPLICE_SITE_RADIUS, reverse_complement, SPLICE_TYPE
 from ..interval import Interval
-from ..error import NotSpecifiedError 
+from ..error import NotSpecifiedError
 from .base import BioInterval
 import warnings
 import itertools
@@ -15,7 +15,7 @@ class Template(BioInterval):
         for i in range(0, len(bands)):
             bands[i].reference_object = self
         self.bands.sort()
-    
+
     def __str__(self):
         return str(self.name)
 
@@ -43,14 +43,19 @@ class IntergenicRegion(BioInterval):
 
     def key(self):
         return BioInterval.key(self), self.strand
-    
+
     @property
     def chr(self):
         """returns the name of the chromosome that this gene resides on"""
         return self.reference_object
-    
+
     def __repr__(self):
         return 'IntergenicRegion({}:{}_{}{})'.format(self.chr, self.start, self.end, self.strand)
+
+    def to_dict(self):
+        d = BioInterval.to_dict(self)
+        d['strand'] = self.strand
+        return d
 
 
 class Gene(BioInterval):
@@ -72,7 +77,7 @@ class Gene(BioInterval):
         self.unspliced_transcripts = []
         self.strand = STRAND.enforce(strand)
         self.aliases = aliases
-    
+
     @property
     def transcripts(self):
         return self.unspliced_transcripts
@@ -102,13 +107,18 @@ class Gene(BioInterval):
             raise NotSpecifiedError('reference genome is required to retrieve the gene sequence')
         else:
             return str(REFERENCE_GENOME[self.chr].seq[self.start - 1:self.end]).upper()
-    
+
     @property
     def spliced_transcripts(self):
         spl = []
         for t in self.unspliced_transcripts:
             spl.extend(t.spliced_transcripts)
         return spl
+
+    def to_dict(self):
+        d = BioInterval.to_dict(self)
+        d['strand'] = self.strand
+        return d
 
 
 class Exon(BioInterval):
@@ -202,7 +212,7 @@ class usTranscript(BioInterval):
         end = max([e[1] for e in self.exons])
 
         BioInterval.__init__(self, gene, start, end, name=name, sequence=sequence)
-        
+
         for i in range(0, len(self.exons)):
             curr = self.exons[i]
             try:
@@ -219,7 +229,7 @@ class usTranscript(BioInterval):
 
         for s in self.spliced_transcripts:
             s.reference_object = self
-        
+
         try:
             if self.get_strand() != self.gene.get_strand():
                 raise AssertionError('gene strand and transcript strand conflict')
@@ -322,7 +332,7 @@ class usTranscript(BioInterval):
         l = 1
         pos = sorted(splicing_pattern + [self.start, self.end])
         genome_intervals = [Interval(s, t) for s, t in zip(pos[::2], pos[1::2])]
-        
+
         if self.get_strand() == STRAND.POS:
             pass
         elif self.get_strand() == STRAND.NEG:
@@ -446,7 +456,7 @@ class usTranscript(BioInterval):
         spliced_seq = ''.join([str(seq[i.start:i.end + 1]) for i in conti])
         spliced_seq = spliced_seq.upper()
         return spliced_seq if self.get_strand() == STRAND.POS else reverse_complement(spliced_seq)
-    
+
     @property
     def translations(self):
         tx = []
@@ -454,7 +464,7 @@ class usTranscript(BioInterval):
             for tl in t.translations:
                 tx.append(tl)
         return tx
-    
+
     @property
     def transcripts(self):
         return self.spliced_transcripts
@@ -477,14 +487,14 @@ class Transcript(BioInterval):
         exons = [Exon(s, t, self) for s, t in zip(pos[::2], pos[1::2])]
         BioInterval.__init__(self, ust, 1, sum([len(e) for e in exons]), sequence=None)
         self.translations = [] if translations is None else [tx for tx in translations]
-        
+
         for tx in self.translations:
             tx.reference_object = self
         if len(splicing_patt) > 0 and (min(splicing_patt) < ust.start or max(splicing_patt) > ust.end):
             raise AssertionError('splicing pattern must be contained within the unspliced transcript')
         elif len(splicing_patt) % 2 != 0:
             raise AssertionError('splicing pattern must be a list of 3\'5\' splicing positions')
-    
+
     def convert_genomic_to_cdna(self, pos):
         """
         Args:
@@ -512,15 +522,14 @@ class Transcript(BioInterval):
         """
         mapping = self.unspliced_transcript._cdna_to_genomic_mapping(self.splicing_pattern)
         return Interval.convert_pos(mapping, pos)
-    
+
     def get_sequence(self, REFERENCE_GENOME=None, ignore_cache=False):
         if self.sequence and not ignore_cache:
             return self.sequence
         else:
             s = self.unspliced_transcript.get_cdna_sequence(self.splicing_pattern, REFERENCE_GENOME, ignore_cache)
             return s[self.start - 1:self.end]
-    
+
     @property
     def unspliced_transcript(self):
         return self.reference_object
-

@@ -94,7 +94,7 @@ class BioInterval:
             except AttributeError:
                 break
         raise AttributeError('strand has not been defined')
-    
+
     def get_chr(self):
         try:
             if self.chr is not None:
@@ -118,6 +118,21 @@ class BioInterval:
             except AttributeError:
                 break
         raise AttributeError('chr has not been defined')
+
+    def to_dict(self):
+        d = {
+            'name': self.name,
+            'start': self.start,
+            'end': self.end,
+            'type': self.__class__.__name__,
+            'sequence': self.sequence,
+            'data': self.data
+        }
+        try:
+            d['reference_object'] = self.reference_object.name
+        except AttributeError:
+            d['reference_object'] = str(self.reference_object)
+        return d
 
     def __repr__(self):
         cls = self.__class__.__name__

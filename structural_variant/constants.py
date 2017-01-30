@@ -184,13 +184,13 @@ START_AA = 'M'
 STOP_AA = '*'
 
 GIESMA_STAIN = Vocab(
-    GNEG='gneg', 
-    GPOS50='gpos50', 
-    GPOS75='gpos75', 
-    GPOS25='gpos25', 
-    GPOS100='gpos100', 
+    GNEG='gneg',
+    GPOS50='gpos50',
+    GPOS75='gpos75',
+    GPOS25='gpos25',
+    GPOS100='gpos100',
     ACEN='acen',
-    GVAR='gvar', 
+    GVAR='gvar',
     STALK='stalk'
 )
 
@@ -284,6 +284,9 @@ COLUMNS = Vocab(
     annotation_figure=Column(
         'annotation_figure',
         'File path to the svg drawing representing the annotation'),
+    annotation_figure_legend=Column(
+        'annotation_figure_legend',
+        'JSON data for the figure legend'),
     genes_encompassed=Column(
         'genes_encompassed',
         'Applies to intrachromosomal events only. list of genes which overlap any region that occurs between both '

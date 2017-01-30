@@ -36,6 +36,10 @@ General Process
   sequence
 - Each new 'protein' product is drawn and those without products are drawn without a fusion track
 
+.. todo::
+
+    allow multiple input files to be merged and duplicates filtered before annotating
+
 """
 import argparse
 from structural_variant.breakpoint import read_bpp_from_input_file
@@ -159,17 +163,15 @@ def main():
     rows = []  # hold the row information for the final tsv file
     fa_sequences = {}
     for i, ann in enumerate(annotations):
-        print('\n\n')
         annotation_id = id_prefix + str(i + 1)
         ann.data[COLUMNS.annotation_id] = annotation_id
         row = ann.flatten()
-        log('current annotation', annotation_id, ann.transcript1, ann.transcript2, ann.event_type)
+        log('current annotation', annotation_id, ann.transcript1.name, ann.transcript2.name, ann.event_type)
 
         # try building the fusion product
         ann_rows = []
         ft = None
         try:
-            print('genes:', ann.transcript1.gene.name,  ann.transcript2.gene.name)
             ft = FusionTranscript.build(
                 ann, REFERENCE_GENOME,
                 min_orf_size=args.min_orf_size,
@@ -205,9 +207,9 @@ def main():
                 nrow[COLUMNS.fusion_mapped_domains] = json.dumps(domains)
                 ann_rows.append(nrow)
         except NotSpecifiedError as err:
-            print(repr(err))
+            pass
         except AttributeError as err:
-            print(repr(err))
+            pass
 
         # now try generating the svg
         d = Diagram()
@@ -216,6 +218,7 @@ def main():
         while drawing is None:  # continue if drawing error and increase width
             try:
                 canvas, legend = d.draw(ann, ft, REFERENCE_GENOME=REFERENCE_GENOME, draw_template=True, templates=TEMPLATES)
+
                 gene_aliases1 = 'NA'
                 gene_aliases2 = 'NA'
                 try:
@@ -228,12 +231,18 @@ def main():
                         gene_aliases2 = '-'.join(ann.transcript2.gene.aliases)
                 except AttributeError:
                     pass
-                name = '{}.{}.{}_{}.svg'.format(FILENAME_PREFIX, ann.data[COLUMNS.annotation_id], gene_aliases1, gene_aliases2)
-                drawing = os.path.join(args.output, name)
-                for r in ann_rows:
+                name = '{}.{}.{}_{}'.format(FILENAME_PREFIX, ann.data[COLUMNS.annotation_id], gene_aliases1, gene_aliases2)
+                drawing = os.path.join(args.output, name + '.svg')
+                l = os.path.join(args.output, name + '.legend.json')
+                for r in ann_rows + [row]:
                     r[COLUMNS.annotation_figure] = drawing
-                log('generating svg:', drawing)
+                    r[COLUMNS.annotation_figure_legend] = l
+                log('generating svg:', drawing, time_stamp=False)
                 canvas.saveas(drawing)
+
+                log('generating legend:', l, time_stamp=False)
+                with open(l, 'w') as fh:
+                    json.dump(legend, fh)
                 break
             except (NotImplementedError, AttributeError, DiscontinuousMappingError) as err:
                 print(repr(err))

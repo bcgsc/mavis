@@ -323,6 +323,7 @@ class Diagram:
         genes = set()
         genes1 = set()
         genes2 = set()
+        legend = dict()
 
         for g, d in ann.genes_proximal_to_break1:
             genes1.add(g)
@@ -363,9 +364,9 @@ class Diagram:
         # set all the labels so that they are re-used correctly
         for gene in sorted(genes1 | genes2, key=lambda x: (str(x.get_chr()), x.start)):
             if isinstance(gene, IntergenicRegion):
-                labels.add(gene, self.REGION_LABEL_PREFIX)
+                l = labels.add(gene, self.REGION_LABEL_PREFIX)
             else:
-                labels.add(gene, self.GENE_LABEL_PREFIX)
+                l = labels.add(gene, self.GENE_LABEL_PREFIX)
 
         gheights = [0]
 
@@ -468,12 +469,13 @@ class Diagram:
 
         y += self.BOTTOM_MARGIN
         canvas.attribs['height'] = y
-        legend = {}
-        for obj, label in labels.items():
+        for label, obj in labels.items():
+            if label in legend:
+                continue
             try:
-                legend[label] = obj.name
+                legend[label] = obj.to_dict()
             except AttributeError:
-                legend[label] = obj
+                legend[label] = str(obj)
         # now make the json legend
         return canvas, legend
 
@@ -1338,13 +1340,6 @@ class Diagram:
         genic_width = width - intergenic_width
         intergenic_unit = lambda x: x * intergenic_width / intergenic_length
         genic_unit = lambda x: x * genic_width / genic_length
-        # print('\ttotal_length', total_length)
-        # print('\tgenic_length', genic_length)
-        # print('\tintergenic_length', intergenic_length)
-        # print('\tgenic_width', genic_width)
-        # print('\tintergenic_width', intergenic_width)
-        # print('\tgenic_intervals', len(intervals))
-        # print('\tintermediate_intervals', intermediate_intervals)
 
         assert(genic_width + intergenic_width + len(intervals) * min_width + intermediate_intervals * min_inter_width == target_width)
         mapping = []
