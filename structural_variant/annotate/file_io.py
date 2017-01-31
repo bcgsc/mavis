@@ -169,7 +169,7 @@ def load_reference_genes(filepath, verbose=True, REFERENCE_GENOME=None):
             row['gene_end'],
             name=row['ensembl_gene_id'],
             strand=row['strand'],
-            aliases=row['hugo_names'].split(';')
+            aliases=row['hugo_names'].split(';') if row['hugo_names'] else []
         )
         if g.name in genes:
             g = genes[g.name]

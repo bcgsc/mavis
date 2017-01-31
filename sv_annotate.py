@@ -13,9 +13,8 @@ formation and drawing visualizations. Outputs are written to the annotation subf
     |-- validation/
     |-- annotation/
     |   `--<library>_<protocol>/
-    |       |-- annotation.failed.tab
-    |       |-- annotation.passed.tab
-    |       |-- annotation.passed.fusions-cdna.fa
+    |       |-- annotations.tab
+    |       |-- annotations.fusions-cdna.fa
     |       `-- drawings/
     |           |-- <annotation_id>.legend.json
     |           `-- <annotation_id>.svg
@@ -42,7 +41,7 @@ General Process
 
 """
 import argparse
-from structural_variant.breakpoint import read_bpp_from_input_file
+from structural_variant.breakpoint import read_bpp_from_input_file, BreakpointPair
 from structural_variant.annotate import load_reference_genes, load_reference_genome, load_templates
 from structural_variant.annotate.variant import gather_annotations, FusionTranscript
 from structural_variant.error import DiscontinuousMappingError, DrawingFitError, NotSpecifiedError
@@ -54,6 +53,8 @@ import re
 import json
 import os
 from datetime import datetime
+import warnings
+import glob
 
 
 def log(*pos, time_stamp=True):
@@ -70,11 +71,6 @@ def parse_arguments():
         help='Outputs the version number'
     )
     parser.add_argument(
-        '-f', '--overwrite',
-        action='store_true', default=False,
-        help='set flag to overwrite existing reviewed files'
-    )
-    parser.add_argument(
         '--no_draw', default=True, action='store_false',
         help='set flag to suppress svg drawings of putative annotations')
     parser.add_argument(
@@ -83,7 +79,7 @@ def parse_arguments():
     )
     parser.add_argument(
         '-n', '--input',
-        help='path to the input file', required=True
+        help='path to the input file(s)', required=True, nargs='*'
     )
     g = parser.add_argument_group('reference files')
     g.add_argument(
@@ -109,7 +105,10 @@ def parse_arguments():
     parser.add_argument(
         '--min_domain_mapping_match', default=0.8, type=float,
         help='minimum percent match for the domain to be considered aligned')
-
+    g = parser.add_argument_group('visualization options')
+    g.add_argument(
+        '-d', '--domain_regex_filter', default='^PF\d+$',
+        help='only show domains which names (external identifiers) match the given pattern')
     args = parser.parse_args()
     return args
 
@@ -117,25 +116,47 @@ def parse_arguments():
 def main():
     # load the file
     args = parse_arguments()
+    
+    DRAWINGS_DIRECTORY = os.path.join(args.output, 'drawings')
+    TABBED_OUTPUT_FILE = os.path.join(args.output, 'annotations.tab')
+    FA_OUTPUT_FILE = os.path.join(args.output, 'annotations.fusion-cdna.fa')
+
+    glob_checks = [
+        os.path.join(args.output, '*.fa'),
+        os.path.join(args.output, '*.tab'),
+        os.path.join(DRAWINGS_DIRECTORY, '*.svg'),
+        os.path.join(DRAWINGS_DIRECTORY, '*.json')
+    ]
+    for g in glob_checks:
+        if len(glob.glob(g)) > 0:
+            warnings.warn('existing files will be overwritten and directories will not be cleaned')
+            break
+
+    if not os.path.exists(DRAWINGS_DIRECTORY):
+        os.mkdir(DRAWINGS_DIRECTORY)
+
     log('input arguments listed below')
     for arg, val in sorted(args.__dict__.items()):
         log(arg, '=', val, time_stamp=False)
-    FILENAME_PREFIX = re.sub('\.(tab|tsv|txt)$', '', os.path.basename(args.input))
-
+    
 
     # test that the sequence makes sense for a random transcript
-    log('loading:', args.input)
-    bpps = read_bpp_from_input_file(
-        args.input,
-        require=[COLUMNS.cluster_id, COLUMNS.validation_id],
-        cast={
-            COLUMNS.stranded.name: TSV.tsv_boolean
-        },
-        _in={
-            COLUMNS.protocol: PROTOCOL,
-            COLUMNS.event_type: SVTYPE
-        },
-        simplify=False)
+    bpps = []
+    for f in args.input:
+        log('loading:', f)
+        bpps.extend(
+            read_bpp_from_input_file(
+                f,
+                require=[COLUMNS.cluster_id, COLUMNS.validation_id],
+                cast={
+                    COLUMNS.stranded.name: TSV.tsv_boolean
+                },
+                _in={
+                    COLUMNS.protocol: PROTOCOL,
+                    COLUMNS.event_type: SVTYPE
+                },
+                simplify=False
+            ))
     log('read {} breakpoint pairs'.format(len(bpps)))
 
     log('loading:', args.reference_genome)
@@ -158,6 +179,12 @@ def main():
         )
         annotations.extend(ann)
         log('generated', len(ann), 'annotations', time_stamp=False)
+
+    for bpp in annotations:
+        if bpp.data[COLUMNS.event_type] not in BreakpointPair.classify(bpp):
+            raise AssertionError(
+                'input type does not fit with breakpoint pair description:', 
+                bpp.data[COLUMNS.event_type], BreakpointPair.classify(bpp))
 
     id_prefix = 'annotation_{}-'.format(re.sub(':', '-', re.sub(' ', '_', str(datetime.now()))))
     rows = []  # hold the row information for the final tsv file
@@ -210,30 +237,41 @@ def main():
             pass
         except AttributeError as err:
             pass
+        except NotImplementedError as err:
+            print(repr(err))
 
         # now try generating the svg
         d = Diagram()
+        d.DOMAIN_NAME_REGEX_FILTER = args.domain_regex_filter
         drawing = None
         retry_count = 0
         while drawing is None:  # continue if drawing error and increase width
             try:
-                canvas, legend = d.draw(ann, ft, REFERENCE_GENOME=REFERENCE_GENOME, draw_template=True, templates=TEMPLATES)
+                canvas, legend = d.draw(
+                    ann, ft, REFERENCE_GENOME=REFERENCE_GENOME, draw_template=True, templates=TEMPLATES)
 
                 gene_aliases1 = 'NA'
                 gene_aliases2 = 'NA'
                 try:
                     if len(ann.transcript1.gene.aliases) > 0:
                         gene_aliases1 = '-'.join(ann.transcript1.gene.aliases)
+                    if ann.transcript1.is_best_transcript:
+                        gene_aliases1 = 'b-' + gene_aliases1
                 except AttributeError:
                     pass
                 try:
                     if len(ann.transcript2.gene.aliases) > 0:
                         gene_aliases2 = '-'.join(ann.transcript2.gene.aliases)
+                    if ann.transcript2.is_best_transcript:
+                        gene_aliases2 = 'b-' + gene_aliases2
                 except AttributeError:
                     pass
-                name = '{}.{}.{}_{}'.format(FILENAME_PREFIX, ann.data[COLUMNS.annotation_id], gene_aliases1, gene_aliases2)
-                drawing = os.path.join(args.output, name + '.svg')
-                l = os.path.join(args.output, name + '.legend.json')
+
+                name = '{}.{}_{}'.format(
+                    ann.data[COLUMNS.annotation_id], gene_aliases1, gene_aliases2)
+
+                drawing = os.path.join(DRAWINGS_DIRECTORY, name + '.svg')
+                l = os.path.join(DRAWINGS_DIRECTORY, name + '.legend.json')
                 for r in ann_rows + [row]:
                     r[COLUMNS.annotation_figure] = drawing
                     r[COLUMNS.annotation_figure_legend] = l
@@ -244,12 +282,8 @@ def main():
                 with open(l, 'w') as fh:
                     json.dump(legend, fh)
                 break
-            except (NotImplementedError, AttributeError, DiscontinuousMappingError) as err:
-                print(repr(err))
-                raise err
             except DrawingFitError as err:
-                print(repr(err))
-                print('extending width:', d.WIDTH, d.WIDTH + 500)
+                log('extending width:', d.WIDTH, d.WIDTH + 500, time_stamp=False)
                 d.WIDTH += 500
                 retry_count += 1
                 if retry_count > 3:
@@ -260,9 +294,8 @@ def main():
             rows.extend(ann_rows)
 
 
-    of = os.path.join(args.output, FILENAME_PREFIX + '.annotation.tab')
-    with open(of, 'w') as fh:
-        log('writing:', of)
+    with open(TABBED_OUTPUT_FILE, 'w') as fh:
+        log('writing:', TABBED_OUTPUT_FILE)
         header = set()
 
         for row in rows:
@@ -276,9 +309,8 @@ def main():
 
         log('generated {} annotations'.format(len(annotations)))
 
-    of = os.path.join(args.output, FILENAME_PREFIX + '.annotation.fusion-cdna.fa')
-    with open(of, 'w') as fh:
-        log('writing:', of)
+    with open(FA_OUTPUT_FILE, 'w') as fh:
+        log('writing:', FA_OUTPUT_FILE)
         for name, seq in sorted(fa_sequences.items()):
             fh.write('> {}\n'.format(name))
             fh.write('{}\n'.format(seq))

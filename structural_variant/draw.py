@@ -1,4 +1,11 @@
+"""
+.. todo::
+
+    add optional scatter plots to subdiagrams for cna and expression data (possibly using matplotlib?)
+
+"""
 import svgwrite
+import re
 from svgwrite import Drawing
 from .interval import Interval
 from .constants import STRAND, ORIENT, CODON_SIZE, GIESMA_STAIN
@@ -84,24 +91,7 @@ class Diagram:
     """
     def __init__(
         self,
-        BREAKPOINT_COLOR=HEX_BLACK,
-        BREAKPOINT_LABEL_FONT_SIZE=20,
-        GENE2_COLOR_SELECTED='#4C9677',
-        GENE1_COLOR_SELECTED='#518DC5',
-        GENE2_COLOR='#325556',
-        GENE1_COLOR='#657E91',
-        LABEL_COLOR=HEX_BLACK,
-        LABEL_FONT_SIZE=28,
-        DOMAIN_COLOR='#d3d3d3',
-        DOMAIN_SCAFFOLD_COLOR=HEX_BLACK,
-        SPLICE_COLOR=HEX_BLACK,
         WIDTH=1000,
-        PADDING=5,
-        DYNAMIC_LABELS=True,
-        LEGEND_FONT_SIZE=20,
-        LEGEND_BORDER_STROKE=HEX_BLACK,
-        DOMAIN_LABEL_FONT_SIZE=20,
-        DOMAIN_MISMATCH_COLOR='#B2182B'
     ):
         self.MIN_WIDTH = 10  # no element (exon, gene, etc can be less than this wide)
         self.TRACK_LINE_HEIGHT = 4
@@ -110,49 +100,54 @@ class Diagram:
         self.TOP_MARGIN = 20
         self.BOTTOM_MARGIN = 20
         self.INNER_MARGIN = 20
-        self.PADDING = PADDING
+        self.PADDING = 5
         self.SCAFFOLD_HEIGHT = 3
         self.SCAFFOLD_COLOR = '#000000'
         self.TRACK_HEIGHT = 50
         self.WIDTH = WIDTH
-        self.FONT_STYLE = 'font-size:{font_size}px;font-weight:bold;alignment-baseline:central;' \
+        # removing unsupported attr: 'alignment-baseline:central;dominant-baseline:central;' \
+        self.FONT_STYLE = 'font-size:{font_size}px;font-weight:bold;alignment-baseline:baseline;' \
             'text-anchor:{text_anchor};font-family: consolas, courier new, monospace'
         # ratio for courier new which is wider than consolas, used for estimating width
         self.FONT_WIDTH_HEIGHT_RATIO = 1229 / 2048
+        self.FONT_CENTRAL_SHIFT_RATIO = 0.3
 
-        self.GENE1_COLOR_SELECTED = GENE1_COLOR_SELECTED
-        self.GENE2_COLOR_SELECTED = GENE2_COLOR_SELECTED
-        self.GENE1_COLOR = GENE1_COLOR
-        self.GENE2_COLOR = GENE2_COLOR
-        self.GENE_DEFAULT_COLOR = GENE1_COLOR
+        self.GENE1_COLOR_SELECTED = '#518DC5'
+        self.GENE2_COLOR_SELECTED = '#4C9677'
+        self.GENE1_COLOR = '#657E91'
+        self.GENE2_COLOR = '#325556'
+        self.GENE_DEFAULT_COLOR = self.GENE1_COLOR
         self.GENE_MIN_BUFFER = 1000
         self.GENE_ARROW_WIDTH = 20
         self.GENE_INTERGENIC_RATIO = 5
         self.GENE_MIN_WIDTH = 40 + self.GENE_ARROW_WIDTH
         self.GENE_LABEL_PREFIX = 'G'
 
-        self.LABEL_COLOR = LABEL_COLOR
-        self.LABEL_FONT_SIZE = LABEL_FONT_SIZE
-        self.DYNAMIC_LABELS = DYNAMIC_LABELS
-        self.LABEL_LEFT_MARGIN = LABEL_FONT_SIZE * self.FONT_WIDTH_HEIGHT_RATIO * 4
+        self.LABEL_COLOR = HEX_BLACK
+        self.LABEL_FONT_SIZE = 28
+        self.DYNAMIC_LABELS = True
+        self.LABEL_LEFT_MARGIN = self.LABEL_FONT_SIZE * self.FONT_WIDTH_HEIGHT_RATIO * 4
 
-        self.DOMAIN_COLOR = DOMAIN_COLOR
+        self.DOMAIN_COLOR = '#ccccb3'
         self.DOMAIN_TRACK_HEIGHT = 30
         self.DOMAIN_SCAFFOLD_HEIGHT = 1
-        self.DOMAIN_SCAFFOLD_COLOR = DOMAIN_SCAFFOLD_COLOR
+        self.DOMAIN_SCAFFOLD_COLOR = HEX_BLACK
         self.DOMAIN_LABEL_PREFIX = 'D'
-        self.DOMAIN_LABEL_FONT_SIZE = DOMAIN_LABEL_FONT_SIZE
-        self.DOMAIN_FILL_GRADIENT = [c.hex for c in Color(DOMAIN_MISMATCH_COLOR).range_to(Color(DOMAIN_COLOR), 10)]
+        self.DOMAIN_LABEL_FONT_SIZE = 20
+        self.DOMAIN_MISMATCH_COLOR = '#B2182B'
+        self.DOMAIN_FILL_GRADIENT = [
+            c.hex for c in Color(self.DOMAIN_MISMATCH_COLOR).range_to(Color(self.DOMAIN_COLOR), 10)]
+        self.DOMAIN_NAME_REGEX_FILTER = '.*'
 
         self.SPLICE_HEIGHT = self.TRACK_HEIGHT / 2
         self.SPLICE_STROKE_DASHARRAY = [2, 2]
         self.SPLICE_STROKE_WIDTH = 2
-        self.SPLICE_COLOR = SPLICE_COLOR
+        self.SPLICE_COLOR = HEX_BLACK
 
         self.BREAKPOINT_STROKE_DASHARRAY = [3, 3]
         self.BREAKPOINT_ORIENT_STROKE_WIDTH = 2
-        self.BREAKPOINT_COLOR = BREAKPOINT_COLOR
-        self.BREAKPOINT_LABEL_FONT_SIZE = BREAKPOINT_LABEL_FONT_SIZE
+        self.BREAKPOINT_COLOR = HEX_BLACK
+        self.BREAKPOINT_LABEL_FONT_SIZE = 20
         self.BREAKPOINT_BOTTOM_MARGIN = 20
         self.BREAKPOINT_TOP_MARGIN = self.PADDING * 2 + self.BREAKPOINT_LABEL_FONT_SIZE + self.BREAKPOINT_BOTTOM_MARGIN
         self.BREAKPOINT_LABEL_PREFIX = 'B'
@@ -167,8 +162,8 @@ class Diagram:
         self.EXON_MIN_WIDTH = self.MIN_WIDTH + self.EXON_TEAR_TOOTH_WIDTH * 2
         self.EXON_TEAR_TOOTH_HEIGHT = 2
         self.EXON_INTRON_RATIO = 20
-        self.EXON1_COLOR = GENE1_COLOR_SELECTED
-        self.EXON2_COLOR = GENE2_COLOR_SELECTED
+        self.EXON1_COLOR = self.GENE1_COLOR_SELECTED
+        self.EXON2_COLOR = self.GENE2_COLOR_SELECTED
         self.EXON_FONT_SIZE = 20
 
         self.TRANSCRIPT_LABEL_PREFIX = 'T'
@@ -182,16 +177,28 @@ class Diagram:
         self.TRANSLATION_MARKER_PADDING = 4
 
         self.LEGEND_SWATCH_SIZE = 50
-        self.LEGEND_FONT_SIZE = LEGEND_FONT_SIZE
+        self.LEGEND_FONT_SIZE = 20
         self.LEGEND_SWATCH_STROKE = HEX_BLACK
         self.LEGEND_FONT_COLOR = HEX_BLACK
-        self.LEGEND_BORDER_STROKE = LEGEND_BORDER_STROKE
+        self.LEGEND_BORDER_STROKE = HEX_BLACK
         self.LEGEND_BORDER_STROKE_WIDTH = 1
 
-        self.TEMPLATE_BAND_FILL_ODD = '#bdbdbd'
-        self.TEMPLATE_BAND_FILL_EVEN = '#696969'
-        self.TEMPLATE_TRACK_HEIGHT = max([self.TRACK_HEIGHT / 2, self.LABEL_FONT_SIZE])
-        self.TEMPLATE_DEFAULT_FILL = '#d3d3d3'
+        self.TEMPLATE_BAND_STROKE_WIDTH = 0.5 
+        temp = [c.hex for c in Color(HEX_WHITE).range_to(Color(HEX_BLACK), 5)]
+        self.TEMPLATE_BAND_FILL = {
+            GIESMA_STAIN.ACEN: '#800000',
+            GIESMA_STAIN.GPOS25: temp[1],
+            GIESMA_STAIN.GPOS50: temp[2],
+            GIESMA_STAIN.GPOS75: temp[3],
+            GIESMA_STAIN.GPOS100: temp[4],
+            GIESMA_STAIN.GNEG: HEX_WHITE
+        }
+        self.TEMPLATE_BAND_STROKE = HEX_BLACK
+        self.TEMPLATE_TRACK_HEIGHT = max([
+            self.TRACK_HEIGHT / 3, 
+            self.LABEL_FONT_SIZE - self.BREAKPOINT_BOTTOM_MARGIN - 
+            self.BREAKPOINT_TOP_MARGIN + self.BREAKPOINT_LABEL_FONT_SIZE])
+        self.TEMPLATE_DEFAULT_FILL = HEX_WHITE
         self.TEMPLATE_BAND_MIN_WIDTH = 2
         self.TEMPLATE_LABEL_PREFIX = 'C'
 
@@ -238,7 +245,16 @@ class Diagram:
         setattr(main_group, 'mapping', None)
         return main_group
 
-    def draw(self, ann, fusion_transcript=None, REFERENCE_GENOME=None, templates=None, ignore_absent_templates=True, draw_template=True):
+    def draw(
+        self, 
+        ann, 
+        fusion_transcript=None, 
+        REFERENCE_GENOME=None, 
+        templates=None, 
+        ignore_absent_templates=True, 
+        draw_template=True, 
+        label_gene_by_alias_if_unique=True
+    ):
         """
         this is the main drawing function. It decides between the 3 basic layouts
 
@@ -362,9 +378,33 @@ class Diagram:
                 colors[ann.transcript2] = self.GENE2_COLOR_SELECTED
 
         # set all the labels so that they are re-used correctly
+        aliases = {}
+        alias_failure = False
+        for gene in sorted(genes1 | genes2, key=lambda x: (str(x.get_chr()), x.start)):
+            if alias_failure:
+                break
+            try:
+                for alias in gene.aliases:
+                    if alias in aliases and aliases[alias] != gene:
+                        alias_failure = True
+                        break
+                if len(gene.aliases) == 1:
+                    aliases[gene.aliases[0]] = gene
+                else:
+                    for alias in gene.aliases:  # can't label when multiple
+                        aliases[alias] = None
+            except AttributeError:
+                pass
+        
+        alias_by_gene = {}
+        for k, v in aliases.items():
+            alias_by_gene[v] = k
+
         for gene in sorted(genes1 | genes2, key=lambda x: (str(x.get_chr()), x.start)):
             if isinstance(gene, IntergenicRegion):
                 l = labels.add(gene, self.REGION_LABEL_PREFIX)
+            elif label_gene_by_alias_if_unique and not alias_failure and gene in alias_by_gene:
+                labels[alias_by_gene[gene]] = gene
             else:
                 l = labels.add(gene, self.GENE_LABEL_PREFIX)
 
@@ -557,6 +597,8 @@ class Diagram:
             )
 
         main_group = canvas.g(class_='ust')
+        BTM = self.BREAKPOINT_TOP_MARGIN if len(breakpoints) > 0 else 0
+        BBM = self.BREAKPOINT_BOTTOM_MARGIN if len(breakpoints) > 0 else 0
 
         y = 0
 
@@ -565,31 +607,31 @@ class Diagram:
             LABEL_PREFIX = self.FUSION_LABEL_PREFIX
 
         if len(ust.translations) == 0:
-            y += self.SPLICE_HEIGHT + self.BREAKPOINT_TOP_MARGIN
+            y += self.SPLICE_HEIGHT + BTM
             exon_track_group = self._draw_exon_track(canvas, ust, mapping, colors)
             exon_track_group.translate(0, y)
             exon_track_group.add(canvas.text(
                 labels.add(ust, LABEL_PREFIX),
-                insert=(0 - self.PADDING, self.TRACK_HEIGHT / 2),
+                insert=(0 - self.PADDING, self.TRACK_HEIGHT / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.LABEL_FONT_SIZE),
                 fill=self.LABEL_COLOR,
                 style=self.FONT_STYLE.format(font_size=self.LABEL_FONT_SIZE, text_anchor='end'),
                 class_='label'
             ))
             main_group.add(exon_track_group)
             y += self.TRACK_HEIGHT
-            y += self.BREAKPOINT_BOTTOM_MARGIN
+            y += BBM
         else:
             # draw the protein features if there are any
             for i, tl in enumerate(ust.translations):
                 tr = tl.transcript
                 # if the splicing takes up more room than the track we need to adjust for it
-                y += self.SPLICE_HEIGHT + self.BREAKPOINT_TOP_MARGIN
+                y += self.SPLICE_HEIGHT + BTM
 
                 exon_track_group = self._draw_exon_track(canvas, ust, mapping, colors)
                 exon_track_group.translate(0, y)
                 exon_track_group.add(canvas.text(
                     labels.add(tr, LABEL_PREFIX),
-                    insert=(0 - self.PADDING, self.TRACK_HEIGHT / 2),
+                    insert=(0 - self.PADDING, self.TRACK_HEIGHT / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.LABEL_FONT_SIZE),
                     fill=self.LABEL_COLOR,
                     style=self.FONT_STYLE.format(font_size=self.LABEL_FONT_SIZE, text_anchor='end'),
                     class_='label'
@@ -651,14 +693,14 @@ class Diagram:
                         ))
                 gt.add(canvas.text(
                     self.TRANSLATION_END_MARKER if tr.get_strand() == STRAND.NEG else self.TRANSLATION_START_MARKER,
-                    insert=(s - self.TRANSLATION_MARKER_PADDING, h / 2),
+                    insert=(s - self.TRANSLATION_MARKER_PADDING, h / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.TRANSLATION_FONT_SIZE),
                     fill=self.LABEL_COLOR,
                     style=self.FONT_STYLE.format(font_size=self.TRANSLATION_FONT_SIZE, text_anchor='end'),
                     class_='label'
                 ))
                 gt.add(canvas.text(
                     self.TRANSLATION_START_MARKER if tr.get_strand() == STRAND.NEG else self.TRANSLATION_END_MARKER,
-                    insert=(t + self.TRANSLATION_MARKER_PADDING, h / 2),
+                    insert=(t + self.TRANSLATION_MARKER_PADDING, h / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.TRANSLATION_FONT_SIZE),
                     fill=self.LABEL_COLOR,
                     style=self.FONT_STYLE.format(font_size=self.TRANSLATION_FONT_SIZE, text_anchor='start'),
                     class_='label'
@@ -668,6 +710,8 @@ class Diagram:
                 # now draw the domain tracks
                 # need to convert the domain AA positions to cds positions to genomic
                 for i, d in enumerate(sorted(tl.domains, key=lambda x: x.name)):
+                    if not re.match(self.DOMAIN_NAME_REGEX_FILTER, str(d.name)):
+                        continue
                     py += self.PADDING
                     gd = canvas.g(class_='domain')
                     gd.add(canvas.rect(
@@ -706,7 +750,9 @@ class Diagram:
 
                     gd.add(canvas.text(
                         labels.add(d.name, self.DOMAIN_LABEL_PREFIX),
-                        insert=(0 - self.PADDING, self.DOMAIN_TRACK_HEIGHT / 2),
+                        insert=(
+                            0 - self.PADDING,
+                            self.DOMAIN_TRACK_HEIGHT / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.DOMAIN_LABEL_FONT_SIZE),
                         fill=self.LABEL_COLOR if not self.DYNAMIC_LABELS else Diagram.dynamic_label_color(self.DOMAIN_COLOR),
                         style=self.FONT_STYLE.format(font_size=self.DOMAIN_LABEL_FONT_SIZE, text_anchor='end'),
                         class_='label'
@@ -716,7 +762,7 @@ class Diagram:
                 gp.translate(0, y)
                 if i < len(ust.translations):
                     y += self.INNER_MARGIN
-                y += py + self.BREAKPOINT_BOTTOM_MARGIN
+                y += py + BBM
                 main_group.add(gp)
 
         # now overlay the breakpoints on top of everything
@@ -878,7 +924,7 @@ class Diagram:
 
             t = canvas.text(
                 tx.name,
-                insert=(x - self.PADDING, y + self.TRACK_HEIGHT / 2),
+                insert=(x - self.PADDING, y + self.TRACK_HEIGHT / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.EXON_FONT_SIZE),
                 fill=self.LABEL_COLOR,
                 style=self.FONT_STYLE.format(font_size=self.EXON_FONT_SIZE, text_anchor='end'),
                 class_='label'
@@ -918,7 +964,7 @@ class Diagram:
         y = self.PADDING + self.MARKER_LABEL_FONT_SIZE / 2
         t = canvas.text(
             label,
-            insert=(width / 2, y),
+            insert=(width / 2, y + self.FONT_CENTRAL_SHIFT_RATIO * self.MARKER_LABEL_FONT_SIZE),
             fill=color,
             style=self.FONT_STYLE.format(text_anchor='middle', font_size=self.MARKER_LABEL_FONT_SIZE),
             class_='label'
@@ -953,7 +999,7 @@ class Diagram:
         y = self.PADDING + self.BREAKPOINT_LABEL_FONT_SIZE / 2
         t = canvas.text(
             label,
-            insert=(width / 2, y),
+            insert=(width / 2, y + self.FONT_CENTRAL_SHIFT_RATIO * self.BREAKPOINT_LABEL_FONT_SIZE),
             fill=HEX_BLACK,
             style=self.FONT_STYLE.format(text_anchor='middle', font_size=self.BREAKPOINT_LABEL_FONT_SIZE),
             class_='label'
@@ -1033,7 +1079,7 @@ class Diagram:
             g.add(canvas.rect((0, 0), (width, height), fill=fill))
             t = canvas.text(
                 label,
-                insert=(width / 2, height / 2),
+                insert=(width / 2, height / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.EXON_FONT_SIZE),
                 fill=self.LABEL_COLOR if not self.DYNAMIC_LABELS else Diagram.dynamic_label_color(fill),
                 style=self.FONT_STYLE.format(font_size=self.EXON_FONT_SIZE, text_anchor='middle'),
                 class_='label'
@@ -1064,36 +1110,36 @@ class Diagram:
         scaffold.translate((0, self.BREAKPOINT_TOP_MARGIN + self.TEMPLATE_TRACK_HEIGHT / 2 - self.SCAFFOLD_HEIGHT / 2))
         group.add(canvas.text(
             labels.add(template, self.TEMPLATE_LABEL_PREFIX),
-            insert=(0 - self.PADDING, self.BREAKPOINT_TOP_MARGIN + self.TEMPLATE_TRACK_HEIGHT / 2),
+            insert=(0 - self.PADDING, self.BREAKPOINT_TOP_MARGIN + self.TEMPLATE_TRACK_HEIGHT / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.LABEL_FONT_SIZE),
             fill=self.LABEL_COLOR,
             style=self.FONT_STYLE.format(font_size=self.LABEL_FONT_SIZE, text_anchor='end'),
             class_='label'
         ))
 
-        for i, band in enumerate(template.bands):
+        for band in template.bands:
             s = Interval.convert_pos(mapping, band[0])
             t = Interval.convert_pos(mapping, band[1])
 
             bgroup = canvas.g(class_='cytoband')
-            f = self.TEMPLATE_BAND_FILL_EVEN if i % 2 == 0 else self.TEMPLATE_BAND_FILL_ODD
+            f = self.TEMPLATE_BAND_FILL.get(band.data.get('giesma_stain', None), self.TEMPLATE_DEFAULT_FILL)
             r = None
             w = t - s + 1
             if band.data.get('giesma_stain', None) == GIESMA_STAIN.ACEN:
                 if band.name[0] == 'p':
                     r = canvas.polyline(
                         [(0, 0), (w, self.TEMPLATE_TRACK_HEIGHT / 2), (0, self.TEMPLATE_TRACK_HEIGHT)],
-                        fill=f
+                        fill=f, stroke=self.TEMPLATE_BAND_STROKE, stroke_width=self.TEMPLATE_BAND_STROKE_WIDTH
                     )
                 else:
                     r = canvas.polyline(
                         [(w, 0), (0, self.TEMPLATE_TRACK_HEIGHT / 2), (w, self.TEMPLATE_TRACK_HEIGHT)],
-                        fill=f
+                        fill=f, stroke=self.TEMPLATE_BAND_STROKE, stroke_width=self.TEMPLATE_BAND_STROKE_WIDTH
                     )
             else:
                 r = canvas.rect(
                     (0, 0),
                     (w, self.TEMPLATE_TRACK_HEIGHT),
-                    fill=f
+                    fill=f, stroke=self.TEMPLATE_BAND_STROKE, stroke_width=self.TEMPLATE_BAND_STROKE_WIDTH
                 )
             bgroup.add(r)
             bgroup.add(Tag('title', 'template {}: band {} {}-{} L={}M'.format(
@@ -1172,7 +1218,7 @@ class Diagram:
             group.add(
                 canvas.text(
                     label,
-                    insert=(wrect / 2, height / 2),
+                    insert=(wrect / 2, height / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.LABEL_FONT_SIZE),
                     fill=label_color,
                     style=self.FONT_STYLE.format(font_size=self.LABEL_FONT_SIZE, text_anchor='middle'),
                     class_='label'
@@ -1195,7 +1241,7 @@ class Diagram:
             group.add(
                 canvas.text(
                     label,
-                    insert=(wrect / 2 + self.GENE_ARROW_WIDTH, height / 2),
+                    insert=(wrect / 2 + self.GENE_ARROW_WIDTH, height / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.LABEL_FONT_SIZE),
                     fill=label_color,
                     style=self.FONT_STYLE.format(font_size=self.LABEL_FONT_SIZE, text_anchor='middle'),
                     class_='label'
@@ -1210,7 +1256,7 @@ class Diagram:
             group.add(
                 canvas.text(
                     label,
-                    insert=(width / 2, height / 2),
+                    insert=(width / 2, height / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.LABEL_FONT_SIZE),
                     fill=label_color,
                     style=self.FONT_STYLE.format(font_size=self.LABEL_FONT_SIZE, text_anchor='middle'),
                     class_='label'
@@ -1257,7 +1303,10 @@ class Diagram:
         return tracks
 
     @classmethod
-    def _generate_interval_mapping(cls, input_intervals, target_width, ratio, min_width, buffer_length=None, start=None, end=None, min_inter_width=None):
+    def _generate_interval_mapping(
+        cls, input_intervals, target_width, ratio, min_width, 
+        buffer_length=None, start=None, end=None, min_inter_width=None
+    ):
         min_inter_width = min_width if min_inter_width is None else min_inter_width
         if all([x is not None for x in [start, end, buffer_length]]):
             raise AttributeError('buffer_length is a mutually exclusive argument with start/end')
@@ -1341,7 +1390,9 @@ class Diagram:
         intergenic_unit = lambda x: x * intergenic_width / intergenic_length
         genic_unit = lambda x: x * genic_width / genic_length
 
-        assert(genic_width + intergenic_width + len(intervals) * min_width + intermediate_intervals * min_inter_width == target_width)
+        assert(
+            genic_width + intergenic_width + len(intervals) * min_width + intermediate_intervals * min_inter_width == 
+            target_width)
         mapping = []
 
         pos = 1
@@ -1374,7 +1425,7 @@ class Diagram:
             ito = Interval(pos, pos + min_inter_width - 1 + s)
             mapping.append((ifrom, ito))
             pos += len(ito)
-        mapping[-1][1].end = min(int(target_width), mapping[-1][1].end)
+        mapping[-1][1].end = int(target_width)  # min(int(target_width), mapping[-1][1].end)
         temp = mapping
         mapping = dict()
         for ifrom, ito in temp:

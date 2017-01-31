@@ -74,7 +74,10 @@ class FusionTranscript(usTranscript):
             FusionTranscript: the newly built fusion transcript
 
         .. todo::
-            support single transcript inversions
+            
+            support any number of abrogated splice sites so long as the start and end are intact.
+            this requires changing the algorithm to look for the next intact splice site of the right
+            type
 
         """
         if not ann.transcript1 or not ann.transcript2:
@@ -84,6 +87,9 @@ class FusionTranscript(usTranscript):
         elif ann.untemplated_sequence is None:
             raise NotSpecifiedError(
                 'cannot build a fusion transcript where the untemplated sequence has not been specified')
+        elif len(ann.break1) > 1 or len(ann.break2) > 1:
+            raise NotSpecifiedError('cannot build fusion transcripts for non-specific breakpoints')
+
         ft = FusionTranscript()
 
         if ann.transcript1 == ann.transcript2 and ann.event_type not in [SVTYPE.DEL, SVTYPE.INS]:
@@ -116,7 +122,7 @@ class FusionTranscript(usTranscript):
                 # pull the exons from either size of the breakpoints window
                 window = Interval(ann.break1.end + 1, ann.break2.end)
                 if ann.break1.orient == ORIENT.RIGHT:
-                    window = Interval(ann.break1.end + 1, ann.break2.start - 1)
+                    window = Interval(ann.break1.end, ann.break2.start - 1)
                 window_seq = REFERENCE_GENOME[ann.break1.chr].seq[window.start - 1:window.end]
                 # now create 'pseudo-deletion' breakpoints
                 b1 = Breakpoint(ann.break1.chr, window.start - 1, orient=ORIENT.LEFT)
@@ -127,23 +133,33 @@ class FusionTranscript(usTranscript):
                 useq = ann.untemplated_sequence
 
                 if ann.transcript1.get_strand() == STRAND.POS:
-                    ft.sequence = seq1 + useq + window_seq
-                    for ex, old_ex in ex1:
-                        ft.exons.append(ex)
-                        ft.exon_mapping[ex] = old_ex
-                    offset = len(ft.sequence)
-                    for ex, old_ex in ex2:
-                        e = Exon(
-                            ex.start + offset, ex.end + offset,
-                            intact_start_splice=ex.intact_start_splice,
-                            intact_end_splice=ex.intact_end_splice
-                        )
-                        ft.exons.append(e)
-                        ft.exon_mapping[e] = old_ex
-                    ft.sequence += seq2
+                    window_seq = reverse_complement(window_seq)  # b/c inversion should be opposite
                 else:
-                    pass
-                raise NotImplementedError('single transcript inversion have not yet been implemented')
+                    useq = reverse_complement(useq)  # exon sequence will already be revcomp from pull exons method
+                    seq1, seq2 = seq2, seq1
+                    ex1, ex2 = ex2, ex1
+
+                ft.sequence = seq1
+                
+                if ann.break1.orient == ORIENT.LEFT:
+                    ft.sequence += useq + window_seq
+                else:
+                    ft.sequence += window_seq + useq
+                
+                for ex, old_ex in ex1:
+                    ft.exons.append(ex)
+                    ft.exon_mapping[ex] = old_ex
+                
+                offset = len(ft.sequence)
+                ft.sequence += seq2
+                for ex, old_ex in ex2:
+                    e = Exon(
+                        ex.start + offset, ex.end + offset,
+                        intact_start_splice=ex.intact_start_splice,
+                        intact_end_splice=ex.intact_end_splice
+                    )
+                    ft.exons.append(e)
+                    ft.exon_mapping[e] = old_ex
             else:
                 raise AttributeError('unrecognized event type')
         else:
@@ -154,39 +170,33 @@ class FusionTranscript(usTranscript):
                 raise NotImplementedError('do not produce fusion transcript for anti-sense fusions')
             seq1, ex1 = cls._pull_exons(ann.transcript1, ann.break1, REFERENCE_GENOME[ann.break1.chr].seq)
             seq2, ex2 = cls._pull_exons(ann.transcript2, ann.break2, REFERENCE_GENOME[ann.break2.chr].seq)
-
+            useq = ann.untemplated_sequence
+            
             if t1 == PRIME.FIVE:
-                ft.sequence = seq1 + ann.untemplated_sequence if ann.transcript1.get_strand() == STRAND.POS else \
-                    reverse_complement(ann.untemplated_sequence)
-                for ex, old_ex in ex1:
-                    ft.exons.append(ex)
-                    ft.exon_mapping[ex] = old_ex
-                offset = len(ft.sequence)
-                for ex, old_ex in ex2:
-                    e = Exon(
-                        ex.start + offset, ex.end + offset,
-                        intact_start_splice=ex.intact_start_splice,
-                        intact_end_splice=ex.intact_end_splice
-                    )
-                    ft.exons.append(e)
-                    ft.exon_mapping[e] = old_ex
-                ft.sequence += seq2
+                if ann.transcript1.strand == STRAND.NEG:
+                    useq = reverse_complement(useq)
             else:
-                ft.sequence = seq2 + ann.untemplated_sequence if ann.transcript2.get_strand() == STRAND.POS else \
-                    reverse_complement(ann.untemplated_sequence)
-                for ex, old_ex in ex2:
-                    ft.exons.append(ex)
-                    ft.exon_mapping[ex] = old_ex
-                offset = len(ft.sequence)
-                for ex, old_ex in ex1:
-                    e = Exon(
-                        ex.start + offset, ex.end + offset,
-                        intact_start_splice=ex.intact_start_splice,
-                        intact_end_splice=ex.intact_end_splice
-                    )
-                    ft.exons.append(e)
-                    ft.exon_mapping[e] = old_ex
-                ft.sequence += seq1
+                if ann.transcript2.strand == STRAND.NEG:
+                    useq = reverse_complement(useq)
+                seq1, seq2 = seq2, seq1
+                ex1, ex2 = ex2, ex1
+            
+            ft.sequence = seq1 + useq
+
+            for ex, old_ex in ex1:
+                ft.exons.append(ex)
+                ft.exon_mapping[ex] = old_ex
+            offset = len(ft.sequence)
+            for ex, old_ex in ex2:
+                e = Exon(
+                    ex.start + offset, ex.end + offset,
+                    intact_start_splice=ex.intact_start_splice,
+                    intact_end_splice=ex.intact_end_splice
+                )
+                ft.exons.append(e)
+                ft.exon_mapping[e] = old_ex
+            ft.sequence += seq2
+
         ft.position = Interval(1, len(ft.sequence))
 
         # add all splice variants
@@ -247,6 +257,12 @@ class FusionTranscript(usTranscript):
 
     @classmethod
     def _pull_exons(cls, transcript, breakpoint, reference_sequence):
+        """
+        given a transcript and breakpoint returns the exons and sequence expected
+        the exons are returned in the order wrt to strand (i.e. reversed from a genomic sort
+        if they are on the negative strand). The positions of the exons are wrt to the sequence 
+        being returned (starts at 1).
+        """
         if len(breakpoint) > 1:
             raise AttributeError('cannot pull exons on non-specific breakpoints')
         new_exons = []
