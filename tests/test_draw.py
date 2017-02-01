@@ -10,6 +10,7 @@ from structural_variant.constants import STRAND, ORIENT, SVTYPE
 from structural_variant.breakpoint import Breakpoint, BreakpointPair
 from structural_variant.interval import Interval
 from tests import MockSeq, MockString, build_transcript, TEMPLATE_METADATA_FILE
+import random
 
 TEMPLATE_METADATA = None
 
@@ -59,8 +60,11 @@ class TestDraw(unittest.TestCase):
         st = end + 1
         end = st + min_inter_width + 61 - 1
         expt.append((Interval(7501, 10000), Interval(st, 1000)))
-        for e, a in zip(expt, sorted(temp.items())):
-            self.assertEqual(e, a)
+        actual = sorted(temp.items())
+        for e, a in zip(expt, actual):
+            self.assertEqual(e[0], a[0])
+        self.assertAlmostEqual(1, actual[0][1].start)
+        self.assertAlmostEqual(1000, actual[-1][1].end)
 
     def test__generate_interval_mapping_outside_range_error(self):
         temp = [
@@ -475,11 +479,11 @@ class TestDraw(unittest.TestCase):
             exons=[Exon(25403698, 25403863), Exon(25398208, 25398329), Exon(25386753, 25388160)],
             gene=gene, domains=[])
         d = Diagram()
-        
-        scatterx = [x for x in range(gene.start, gene.end + 1, 5000)]
-        scattery = [x for x in range(0, len(scatterx))]
-        print(list(zip(scatterx, scattery)))
-        s = ScatterPlot(list(zip(scatterx, scattery)), 'cna')
+        for i, t in enumerate(gene.transcripts):
+            t.name = 'transcript {}'.format(i + 1)
+        scatterx = [Interval(x, x + 200) for x in range(gene.start, gene.end + 1, 400)]
+        scattery = [random.uniform(-0.2, 0.2) for x in scatterx]
+        s = ScatterPlot(list(zip(scatterx, scattery)), 'cna', ymin=-1, ymax=1)
 
         d.GENE_MIN_BUFFER = 0
         canvas = d.draw_ustranscripts_overlay(gene, vmarkers=[marker], plots=[s])

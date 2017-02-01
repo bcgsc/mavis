@@ -44,7 +44,7 @@ class BioInterval:
             >>> len(b)
             6115
         """
-        return len(self.position)
+        return self.position.length()
 
     def key(self):
         return (self.reference_object, self.position, self.sequence, self.name)

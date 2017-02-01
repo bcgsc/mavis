@@ -13,8 +13,15 @@ class Interval:
             end (int): the end of the interval (inclusive)
             freq (int): the frequency or weight of the interval
         """
-        self.start = int(start)
-        self.end = int(end) if end is not None else self.start
+        self.start = start
+        self.end = end if end is not None else start
+        self.number_type = int
+
+        if int(self.start) != float(self.start) or int(self.end) != float(self.end) or type(self.start) == float or type(self.end) == float:
+            self.number_type = float
+
+        self.start = self.number_type(self.start)
+        self.end = self.number_type(self.end)
         if self.start > self.end:
             raise AttributeError('interval start > end is not allowed', self.start, self.end)
         self.freq = int(freq)
@@ -44,6 +51,7 @@ class Interval:
                 return [Interval(self[0], other[0] - 1), Interval(other[1] + 1, self[1])]
         else:
             return [Interval(self[0], self[1])]
+
 
     def __and__(self, other):  # intersection
         """the intersection of two intervals
@@ -113,7 +121,18 @@ class Interval:
         Example:
             >>> len(Interval(1, 11))
             12
+
+        Warning:
+            only works for integer intervals
         """
+        return Interval.length(self)
+
+    def length(self):
+        try:
+            if self.number_type == float:
+                return self[1] - self[0]
+        except AttributeError:
+            pass
         return self[1] - self[0] + 1
 
     def __lt__(self, other):
@@ -148,7 +167,7 @@ class Interval:
             >>> Interval(1, 11).center
             6
         """
-        return self[0] + (len(self) - 1) / 2
+        return (self[1] + self[0]) / 2
 
     def __eq__(self, other):
         if self[0] != other[0] or self[1] != other[1]:
@@ -210,8 +229,8 @@ class Interval:
                 i = Interval(i[0], i[1])
             for temp in range(0, i.freq):
                 centers.append(i.center)
-                weights.append(1 / len(i))
-                lengths.append(len(i))
+                weights.append(1 / i.length())
+                lengths.append(i.length())
 
         center = np.average(centers, weights=weights)
         size = np.average(lengths, weights=weights) - 1
@@ -221,6 +240,7 @@ class Interval:
     def position_in_range(cls, segments, pos):
         if len(segments) == 0:
             raise AttributeError('cannot compute on an empty list')
+
         num = 0
         found_inbetween_segment = False
 
@@ -246,7 +266,7 @@ class Interval:
                     break
             num += 1
         return num, found_inbetween_segment
-    
+
     @classmethod
     def convert_pos(cls, mapping, pos):
         i = cls.convert_ratioed_pos(mapping, pos)
@@ -294,11 +314,11 @@ class Interval:
                         'input intervals cannot be overlapping',
                         input_intervals[i], input_intervals[i - 1]
                     )
-                if Interval.overlaps(mapped_to_intervals[i - 1], mapped_to_intervals[i]):
+                """if Interval.overlaps(mapped_to_intervals[i - 1], mapped_to_intervals[i]):
                     raise AttributeError(
                         'mapped_to intervals cannot be overlapping',
                         mapped_to_intervals[i], mapped_to_intervals[i - 1]
-                    )
+                    )"""
                 if mapped_to_intervals[i][0] > mapped_to_intervals[i - 1][1]:
                     if forward_to_reverse is None:
                         forward_to_reverse = False
@@ -343,12 +363,12 @@ class Interval:
             # fell into a mapped region
             curr = input_intervals[i]
             nexxt = mapping[curr]
-            if len(curr) == 1 or len(nexxt) == 1:
+            if curr[1] - curr[0] == 0:
                 i = Interval(nexxt[0], nexxt[1])
             else:
                 ratio = (nexxt[1] - nexxt[0]) / (curr[1] - curr[0])
-                shift = int(round((pos - curr[0]) * ratio, 0))
-                shift2 = int(round((pos - curr[0]) * ratio + ratio, 0))
+                shift = round((pos - curr[0]) * ratio, 0)
+                shift2 = round((pos - curr[0]) * ratio + ratio, 0)
                 #print('curr', curr, 'next', nexxt, 'shift', shift, 'ratio', ratio)
                 if forward_to_reverse:
                     i = Interval(nexxt[1] - shift2, nexxt[1] - shift)
@@ -356,7 +376,6 @@ class Interval:
                     i = Interval(nexxt[0] + shift, nexxt[0] + shift2)
             setattr(i, 'forward_to_reverse', forward_to_reverse)
             return i
-            #return nexxt[1] - shift if forward_to_reverse else nexxt[0] + shift
 
     @classmethod
     def union(cls, *intervals):

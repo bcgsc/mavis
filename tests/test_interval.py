@@ -13,11 +13,15 @@ class TestInterval(unittest.TestCase):
     def test___contains__(self):
         self.assertTrue(Interval(1, 2) in Interval(1, 7))
         self.assertFalse(Interval(1, 7) in Interval(1, 2))
+        self.assertTrue(Interval(1.0, 2) in Interval(1.0, 7))
+        self.assertFalse(Interval(1, 7) in Interval(1, 2))
 
     def test_eq(self):
         self.assertEqual(Interval(1, 2), Interval(1, 2))
+        self.assertEqual(Interval(1, 2), Interval(1, 2))
 
     def test_ne(self):
+        self.assertNotEqual(Interval(1, 2), Interval(1, 3))
         self.assertNotEqual(Interval(1, 2), Interval(1, 3))
 
     def test___get_item__(self):
@@ -34,6 +38,8 @@ class TestInterval(unittest.TestCase):
     def test___gt__(self):
         self.assertTrue(Interval(10) > Interval(1))
         self.assertFalse(Interval(1) > Interval(10))
+        self.assertTrue(Interval(10) > Interval(1))
+        self.assertFalse(Interval(1) > Interval(1.01))
 
     def test_overlaps(self):
         left = Interval(-4, 1)
@@ -50,8 +56,21 @@ class TestInterval(unittest.TestCase):
         right = Interval(1149493, 1150024)
         self.assertFalse(Interval.overlaps(left, right))
 
+        left = Interval(-4, 0.1)
+        middle = Interval(0, 10)
+        right = Interval(0.11, 12)
+        self.assertFalse(Interval.overlaps(left, right))
+        self.assertFalse(Interval.overlaps(right, left))
+        self.assertTrue(Interval.overlaps(left, middle))
+        self.assertTrue(Interval.overlaps(right, middle))
+        self.assertTrue(Interval.overlaps(middle, left))
+        self.assertTrue(Interval.overlaps(middle, right))
+
     def test___len__(self):
         self.assertEqual(5, len(Interval(1, 5)))
+        with self.assertRaises(TypeError):
+            len(Interval(1, 5.0))
+        self.assertEqual(4.0, Interval(1, 5.0).length())
 
     def test___lt__(self):
         self.assertTrue(Interval(1) < Interval(10))
@@ -160,7 +179,7 @@ class TestInterval(unittest.TestCase):
 
 
     def test_convert_pos_ratioed_intervals(self):
-        mapping = {(1, 100): (1, 20), (101, 500): (21, 30), (501, 600): (31, 51), (601, 900): (52, 57), (901, 1100): (58, 100)}
+        mapping = {(1.0, 100): (1, 20.0), (101.0, 500): (21.0, 30), (501.0, 600): (31.0, 51), (601.0, 900): (52, 57.0), (901.0, 1100): (58.0, 100)}
         self.assertEqual(Interval(1), Interval.convert_ratioed_pos(mapping, 1))
         self.assertEqual(Interval(20), Interval.convert_ratioed_pos(mapping, 100))
         self.assertEqual(Interval(100, 100), Interval.convert_ratioed_pos(mapping, 1100))
@@ -170,7 +189,7 @@ class TestInterval(unittest.TestCase):
         self.assertEqual(Interval(1, 1), Interval.convert_ratioed_pos(mapping, 1))
         self.assertEqual(Interval(1, 1), Interval.convert_ratioed_pos(mapping, 100))
 
-        mapping = {(1, 100): (21, 30), (101, 500): (1, 1)}
+        mapping = {(1, 100.0): (20.0, 30), (100.1, 500): (1.0, 1.0)}
         self.assertEqual(Interval(1, 1), Interval.convert_ratioed_pos(mapping, 101))
         self.assertEqual(Interval(1, 1), Interval.convert_ratioed_pos(mapping, 500))
         self.assertEqual(Interval(25, 25), Interval.convert_ratioed_pos(mapping, 50))

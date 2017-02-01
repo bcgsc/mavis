@@ -212,7 +212,7 @@ class Diagram:
         self.LEGEND_BORDER_STROKE = HEX_BLACK
         self.LEGEND_BORDER_STROKE_WIDTH = 1
 
-        self.TEMPLATE_BAND_STROKE_WIDTH = 0.5 
+        self.TEMPLATE_BAND_STROKE_WIDTH = 0.5
         temp = [c.hex for c in Color(HEX_WHITE).range_to(Color(HEX_BLACK), 5)]
         self.TEMPLATE_BAND_FILL = {
             GIESMA_STAIN.ACEN: '#800000',
@@ -224,8 +224,8 @@ class Diagram:
         }
         self.TEMPLATE_BAND_STROKE = HEX_BLACK
         self.TEMPLATE_TRACK_HEIGHT = max([
-            self.TRACK_HEIGHT / 3, 
-            self.LABEL_FONT_SIZE - self.BREAKPOINT_BOTTOM_MARGIN - 
+            self.TRACK_HEIGHT / 3,
+            self.LABEL_FONT_SIZE - self.BREAKPOINT_BOTTOM_MARGIN -
             self.BREAKPOINT_TOP_MARGIN + self.BREAKPOINT_LABEL_FONT_SIZE])
         self.TEMPLATE_DEFAULT_FILL = HEX_WHITE
         self.TEMPLATE_BAND_MIN_WIDTH = 2
@@ -235,6 +235,9 @@ class Diagram:
         self.OVERLAY_LEFT_LABEL = 16 * self.FONT_WIDTH_HEIGHT_RATIO * self.EXON_FONT_SIZE
 
         self.SCATTER_AXIS_FONT_SIZE = 12
+        self.SCATTER_ERROR_BAR_STROKE_WIDTH = 1
+        self.SCATTER_MARKER_RADIUS = 2
+        self.SCATTER_YAXIS_TICK_SIZE = 2
 
     def draw_legend(self, canvas, swatches, border=True):
         main_group = canvas.g(class_='legend')
@@ -277,12 +280,12 @@ class Diagram:
         return main_group
 
     def draw(
-        self, 
-        ann, 
-        fusion_transcript=None, 
-        REFERENCE_GENOME=None, 
-        templates=None, 
-        ignore_absent_templates=True, 
+        self,
+        ann,
+        fusion_transcript=None,
+        REFERENCE_GENOME=None,
+        templates=None,
+        ignore_absent_templates=True,
         draw_template=True,
         user_friendly_labels=True,
         template_display_label_prefix='c'
@@ -434,7 +437,7 @@ class Diagram:
                         aliases[alias] = None
             except AttributeError:
                 pass
-        
+
         alias_by_gene = {}
         for k, v in aliases.items():
             alias_by_gene[v] = k
@@ -584,45 +587,50 @@ class Diagram:
             t = Interval.convert_pos(mapping, exon.end)
             pxi = Interval(s, t)
             c = colors.get(exon, self.EXON1_COLOR)
-            group = self.draw_exon(canvas, exon, len(pxi), self.TRACK_HEIGHT, c, label=transcript.exon_number(exon))
+            group = self.draw_exon(canvas, exon, pxi.length(), self.TRACK_HEIGHT, c, label=transcript.exon_number(exon))
             group.translate(pxi.start, y - self.TRACK_HEIGHT / 2)
             main_group.add(group)
 
         setattr(main_group, 'height', y + self.TRACK_HEIGHT / 2)
         setattr(main_group, 'width', t - s + 1)
         return main_group
-    
+
     def draw_scatter(self, canvas, plot, xmapping):
         """
         given a xmapping, draw the scatter plot svg group
         """
         # generate the y coordinate mapping
         plot_group = canvas.g(class_='scatter_plot')
-        
+
         yratio = plot.height / (abs(plot.ymax - plot.ymin) + 1)
         print('yratio', yratio)
         ypx = []
         xpx = []
         for xp, yp in plot.points:
             try:
-                temp = Interval.convert_pos(xmapping, xp.start)
-                xp = Interval.convert_pos(xmapping, xp.end)
-                xp = Interval(temp, xp)
+                temp = Interval.convert_ratioed_pos(xmapping, xp.start)
+                xp = Interval.convert_ratioed_pos(xmapping, xp.end)
+                xp = xp | temp
                 xpx.append(xp)
-                s = abs(yp.start - plot.ymin) * yratio
-                t = abs(yp.end - plot.ymin) * yratio
-                yp = Interval(plot.height - t, plot.height - s)
+                yp = plot.height - abs(yp - plot.ymin) * yratio
                 ypx.append(yp)
             except DiscontinuousMappingError:
                 pass
         y = 0
         for xp, yp in zip(xpx, ypx):
-            plot_group.add(canvas.rect(
-                (xp.start, yp.start),
-                (len(xp), len(yp)),
-                fill=HEX_BLACK
+            if xp.length() > self.SCATTER_MARKER_RADIUS:
+                plot_group.add(canvas.line(
+                    (xp.start, yp),
+                    (xp.end, yp),
+                    stroke=HEX_BLACK,
+                    stroke_width=self.SCATTER_ERROR_BAR_STROKE_WIDTH
+                ))
+            plot_group.add(canvas.circle(
+                center=(xp.center, yp),
+                fill=HEX_BLACK,
+                r=self.SCATTER_MARKER_RADIUS
             ))
-        
+
         for py in plot.hmarkers:
             py = plot.height - abs(py - plot.ymin) * yratio
             plot_group.add(
@@ -636,6 +644,17 @@ class Diagram:
         plot_group.add(canvas.line(
             start=(0, 0), end=(0, plot.height), stroke=HEX_BLACK
         ))
+        # draw start and end markers on the y axis
+        for y in [plot.ymin, plot.ymax]:
+            py = plot.height - abs(y - plot.ymin) * yratio
+            plot_group.add(
+                canvas.line(
+                    start=(min(xpx).start - self.SCATTER_YAXIS_TICK_SIZE, py),
+                    end=(max(xpx).start, py),
+                    stroke='blue'
+                )
+            )
+
         plot_group.add(canvas.text(
             plot.y_axis_label,
             insert=(0 - self.PADDING, plot.height / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.SCATTER_AXIS_FONT_SIZE),
@@ -864,7 +883,7 @@ class Diagram:
             s = Interval.convert_ratioed_pos(mapping, b.start)
             t = Interval.convert_ratioed_pos(mapping, b.end)
             px_itvl = Interval(s.start, t.end)
-            bg = self.draw_breakpoint(canvas, b, len(px_itvl), y, label=labels.add(b, self.BREAKPOINT_LABEL_PREFIX))
+            bg = self.draw_breakpoint(canvas, b, px_itvl.length(), y, label=labels.add(b, self.BREAKPOINT_LABEL_PREFIX))
             bg.translate(px_itvl.start, 0)
             main_group.add(bg)
 
@@ -930,7 +949,7 @@ class Diagram:
                 # draw the gene
                 gene = gene_px_intervals[genepx]
                 group = self.draw_gene(
-                    canvas, gene, len(genepx),
+                    canvas, gene, genepx.length(),
                     self.TRACK_HEIGHT,
                     colors.get(gene, self.GENE1_COLOR),
                     labels.get_key(gene)
@@ -1041,7 +1060,7 @@ class Diagram:
             t = Interval.convert_ratioed_pos(mapping, m.end)
             px_itvl = Interval(s.start, t.end)
             bg = self.draw_vmarker(
-                canvas, m, len(px_itvl), y, label=labels.add(m, self.MARKER_LABEL_PREFIX))
+                canvas, m, px_itvl.length(), y, label=labels.add(m, self.MARKER_LABEL_PREFIX))
             bg.translate(x + px_itvl.start, 0)
             main_group.add(bg)
 
@@ -1406,7 +1425,7 @@ class Diagram:
 
     @classmethod
     def _generate_interval_mapping(
-        cls, input_intervals, target_width, ratio, min_width, 
+        cls, input_intervals, target_width, ratio, min_width,
         buffer_length=None, start=None, end=None, min_inter_width=None
     ):
         min_inter_width = min_width if min_inter_width is None else min_inter_width
@@ -1493,7 +1512,7 @@ class Diagram:
         genic_unit = lambda x: x * genic_width / genic_length
 
         assert(
-            genic_width + intergenic_width + len(intervals) * min_width + intermediate_intervals * min_inter_width == 
+            genic_width + intergenic_width + len(intervals) * min_width + intermediate_intervals * min_inter_width ==
             target_width)
         mapping = []
 
@@ -1501,32 +1520,32 @@ class Diagram:
         # do the intergenic region prior to the first genic region
         if start < intervals[0].start:
             ifrom = Interval(start, intervals[0].start - 1)
-            s = round(max(intergenic_unit(len(ifrom)), 0), 0)
-            ito = Interval(pos, pos + min_inter_width - 1 + s)
+            s = max(intergenic_unit(len(ifrom)), 0)
+            ito = Interval(pos, pos + min_inter_width + s)
             mapping.append((ifrom, ito))
-            pos += len(ito)
+            pos += ito.length()
 
         for i, curr in enumerate(intervals):
             if i > 0 and intervals[i - 1].end + 1 < curr.start:  # add between the intervals
                 prev = intervals[i - 1]
                 ifrom = Interval(prev.end + 1, curr.start - 1)
-                s = round(max(intergenic_unit(len(ifrom)), 0), 0)
-                ito = Interval(pos, pos + min_inter_width - 1 + s)
+                s = max(intergenic_unit(len(ifrom)), 0)
+                ito = Interval(pos, pos + min_inter_width + s)
                 mapping.append((ifrom, ito))
-                pos += len(ito)
+                pos += ito.length()
 
-            s = round(max(genic_unit(len(curr)), 0), 0)
-            ito = Interval(pos, pos + min_width - 1 + s)
+            s = max(genic_unit(len(curr)), 0)
+            ito = Interval(pos, pos + min_width + s)
             mapping.append((curr, ito))
-            pos += len(ito)
+            pos += ito.length()
 
         # now the last intergenic region will make up for the rounding error
         if end > intervals[-1].end:
             ifrom = Interval(intervals[-1].end + 1, end)
-            s = round(max(intergenic_unit(len(ifrom)), 0), 0)
-            ito = Interval(pos, pos + min_inter_width - 1 + s)
+            s = max(intergenic_unit(len(ifrom)), 0)
+            ito = Interval(pos, pos + min_inter_width + s)
             mapping.append((ifrom, ito))
-            pos += len(ito)
+            pos += ito.length()
         mapping[-1][1].end = int(target_width)  # min(int(target_width), mapping[-1][1].end)
         temp = mapping
         mapping = dict()
@@ -1538,9 +1557,9 @@ class Diagram:
             p1 = Interval.convert_ratioed_pos(mapping, itvl.start)
             p2 = Interval.convert_ratioed_pos(mapping, itvl.end)
             n = p1 | p2
-            if len(n) < min_width:
+            if n.length() < min_width:
                 raise AssertionError(
                     'interval mapping should not map any intervals to less than the minimum required width. Interval {}'
                     ' was mapped to a pixel interval of length {} but the minimum width is {}'.format(
-                        itvl, len(n), min_width), p1, p2, mapping, input_intervals, target_width, ratio, min_inter_width)
+                        itvl, n.length(), min_width), p1, p2, mapping, input_intervals, target_width, ratio, min_inter_width)
         return mapping
