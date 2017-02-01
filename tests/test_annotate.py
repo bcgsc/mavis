@@ -35,6 +35,7 @@ class TestTemplate(unittest.TestCase):
         self.assertEqual(1, d[t.name])
         self.assertEqual(1, d[t])
 
+
 class TestFusionTranscript(unittest.TestCase):
 
     def setUp(self):
@@ -91,7 +92,7 @@ class TestFusionTranscript(unittest.TestCase):
 
     def test__pull_exons_left_pos_exonic_splice(self):
         # 100-199, 500-599, 1200-1299, 1500-1599, 1700-1799
-        t = usTranscript( exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b = Breakpoint(REF_CHR, 101, orient=ORIENT.LEFT)
         seq, new_exons = FusionTranscript._pull_exons(t, b, self.reference_sequence)
         expt = 'C' * 2
@@ -163,7 +164,7 @@ class TestFusionTranscript(unittest.TestCase):
 
     def test__pull_exons_right_neg_intronic(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
-        t = usTranscript( exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
+        t = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
         b = Breakpoint(REF_CHR, 700, orient=ORIENT.RIGHT)
         seq, new_exons = FusionTranscript._pull_exons(t, b, self.reference_sequence)
         expt = 'A' * (1199 - 700 + 1) + 'T' * 100 + 'A' * (1499 - 1300 + 1) + 'C' * 100
@@ -231,7 +232,6 @@ class TestFusionTranscript(unittest.TestCase):
 
         for i, ex in enumerate(t.exons):
             n = ft.exons[i]
-            print(i, ex, (ex.start, ex.end), n, (n.start, n.end), ft.exon_mapping[n], (ft.exon_mapping[n].start, ft.exon_mapping[n].end))
             self.assertEqual(ex, ft.exon_mapping[n])
 
         self.assertEqual(1, ft.exons[0].start)
@@ -486,15 +486,15 @@ class TestStrandInheritance(unittest.TestCase):
 class TestCoordinateCoversion(unittest.TestCase):
     def setUp(self):
         self.gene = Gene('1', 15, 700, strand=STRAND.POS)
-        
+
         self.ust = usTranscript(gene=self.gene, exons=[(101, 200), (301, 400), (501, 600)])
         self.gene.unspliced_transcripts.append(self.ust)
         assert(1 == len(self.ust.generate_splicing_patterns()))
-        
+
         spl = self.ust.generate_splicing_patterns()[0]
         self.transcript = Transcript(self.ust, spl)
         self.ust.spliced_transcripts.append(self.transcript)
-        
+
         self.translation = Translation(51, 251, self.transcript)
         self.transcript.translations.append(self.translation)
 
@@ -502,26 +502,26 @@ class TestCoordinateCoversion(unittest.TestCase):
         self.rev_ust = usTranscript(gene=self.rev_gene, exons=[(101, 200), (301, 400), (501, 600)])
         self.gene.unspliced_transcripts.append(self.rev_ust)
         assert(1 == len(self.rev_ust.generate_splicing_patterns()))
-        
+
         spl = self.rev_ust.generate_splicing_patterns()[0]
         self.rev_transcript = Transcript(self.rev_ust, spl)
         self.rev_ust.spliced_transcripts.append(self.rev_transcript)
-        
+
         self.rev_translation = Translation(51, 251, self.rev_transcript)
         self.rev_transcript.translations.append(self.rev_translation)
 
     def test_convert_cdna_to_genomic(self):
         self.assertEqual(150, self.transcript.convert_cdna_to_genomic(50))
         self.assertEqual(550, self.transcript.convert_cdna_to_genomic(250))
-    
+
     def test_convert_cdna_to_genomic_revcomp(self):
         self.assertEqual(551, self.rev_transcript.convert_cdna_to_genomic(50))
         self.assertEqual(151, self.rev_transcript.convert_cdna_to_genomic(250))
-    
+
     def test_convert_genomic_to_cdna(self):
         self.assertEqual(50, self.transcript.convert_genomic_to_cdna(150))
         self.assertEqual(249, self.transcript.convert_genomic_to_cdna(549))
-    
+
     def test_convert_genomic_to_cdna_revcomp(self):
         self.assertEqual(50, self.rev_transcript.convert_genomic_to_cdna(551))
         self.assertEqual(250, self.rev_transcript.convert_genomic_to_cdna(151))
@@ -540,17 +540,6 @@ class TestCoordinateCoversion(unittest.TestCase):
 
 
 class TestUSTranscript(unittest.TestCase):
-    def setUp(self):
-        self.x = Exon(100, 199)  # C
-        self.y = Exon(500, 599)  # G
-        self.z = Exon(1200, 1299)  # T
-        self.w = Exon(1500, 1599)  # C
-        self.s = Exon(1700, 1799)  # G
-        # introns: 99, 300, 600, 200, 100, ...
-        reference_sequence = 'A' * 99 + 'C' * 100 + 'A' * 300 + 'G' * 100
-        reference_sequence += 'A' * 600 + 'T' * 100 + 'A' * 200 + 'C' * 100
-        reference_sequence += 'A' * 100 + 'G' * 100 + 'A' * 200
-        self.reference_sequence = reference_sequence
 
     def test___init__implicit_start(self):
         t = usTranscript(gene=None, exons=[(1, 100), (200, 300), (400, 500)])
@@ -583,37 +572,27 @@ class TestUSTranscript(unittest.TestCase):
         for i, e in enumerate(sorted(t.exons, key=lambda x: x.start, reverse=True)):
             self.assertEqual(i + 1, t.exon_number(e))
 
-    def test_get_sequence_from_gene(self):
-        ref = {'1': MockSeq('CCCCTTTTCCCCTTTT')}
-        g = Gene('1', 1, 16, strand=STRAND.POS, sequence='CCCCTTTTCCCCTTTT')
-        t = usTranscript(exons=[(2, 5), (7, 15)], gene=g)
-        self.assertEqual('CCCTTTTCCCCTTT', t.get_sequence())
 
-    def test_get_sequence_from_gene_revcomp(self):
-        ref = {'1': MockSeq('CCCCTTTTCCCCTTTT')}
-        g = Gene('1', 1, 16, strand=STRAND.NEG, sequence='CCCCTTTTCCCCTTTT')
-        t = usTranscript(exons=[(2, 5), (7, 15)], gene=g)
-        self.assertEqual(reverse_complement('CCCTTTTCCCCTTT'), t.get_sequence())
+class TestSplicingPatterns(unittest.TestCase):
 
-    def test_get_sequence_from_ref_error(self):
-        g = Gene('1', 1, 16, strand=STRAND.POS)
-        t = usTranscript(exons=[(2, 5), (7, 15)], gene=g)
-
-        with self.assertRaises(NotSpecifiedError):
-            t.get_sequence()
-
-    def test_get_sequence_from_ref(self):
-        ref = {'1': MockSeq('CCCCTTTTCCCCTTTT')}
-        g = Gene('1', 1, 16, strand=STRAND.POS)
-        t = usTranscript(exons=[(2, 5), (7, 15)], gene=g)
-        self.assertEqual('CCCTTTTCCCCTTT', t.get_sequence(ref))
-
+    def setUp(self):
+        self.x = Exon(100, 199)  # C
+        self.y = Exon(500, 599)  # G
+        self.z = Exon(1200, 1299)  # T
+        self.w = Exon(1500, 1599)  # C
+        self.s = Exon(1700, 1799)  # G
+        self.t = Exon(2000, 2099)  # C
+        # introns: 99, 300, 600, 200, 100, ...
+        reference_sequence = 'A' * 99 + 'C' * 100 + 'A' * 300 + 'G' * 100
+        reference_sequence += 'A' * 600 + 'T' * 100 + 'A' * 200 + 'C' * 100
+        reference_sequence += 'A' * 100 + 'G' * 100 + 'A' * 200 + 'C' * 100
+        self.reference_sequence = reference_sequence
 
     def test_splicing_patterns(self):
         t = usTranscript([(3, 4)])
         self.assertEqual(1, len(t.generate_splicing_patterns()))
 
-    def test_splicing_patterns_35(self):
+    def test_splicing_patterns_DA(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
         ft = usTranscript(exons=[self.x, self.y, self.z, self.w])
@@ -625,7 +604,7 @@ class TestUSTranscript(unittest.TestCase):
         self.assertEqual(1, len(patterns))
         self.assertEqual([self.x.end, self.y.start, self.z.end, self.w.start], patterns[0])
 
-    def test_splicing_patterns_5_last_exon(self):
+    def test_splicing_patterns_A_last_exon(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
         ft = usTranscript(exons=[self.x, self.y, self.z, self.w])
@@ -634,7 +613,7 @@ class TestUSTranscript(unittest.TestCase):
         self.assertEqual(1, len(patterns))
         self.assertEqual([self.x.end, self.y.start, self.y.end, self.z.start], patterns[0])
 
-    def test_splicing_patterns_5(self):
+    def test_splicing_patterns_A(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
         ft = usTranscript(exons=[self.x, self.y, self.z, self.w])
@@ -645,7 +624,7 @@ class TestUSTranscript(unittest.TestCase):
         self.assertEqual([self.x.end, self.z.start, self.z.end, self.w.start], patterns[0])
         self.assertEqual([self.y.end, self.z.start, self.z.end, self.w.start], patterns[1])
 
-    def test_splicing_patterns_3(self):
+    def test_splicing_patterns_D(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
         ft = usTranscript(exons=[self.x, self.y, self.z, self.w])
@@ -656,7 +635,7 @@ class TestUSTranscript(unittest.TestCase):
         self.assertEqual([self.x.end, self.z.start, self.z.end, self.w.start], patterns[1])
         self.assertEqual([self.x.end, self.y.start, self.z.end, self.w.start], patterns[0])
 
-    def test_splicing_patterns_53(self):
+    def test_splicing_patterns_AD(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
         ft = usTranscript(exons=[self.x, self.y, self.z, self.w])
@@ -673,20 +652,47 @@ class TestUSTranscript(unittest.TestCase):
         patterns = ft.generate_splicing_patterns()
         self.assertEqual(1, len(patterns))
         self.assertEqual([self.x.end, self.y.start, self.y.end, self.z.start, self.z.end, self.w.start], patterns[0])
+        self.assertEqual(SPLICE_TYPE.NORMAL, patterns[0].splice_type)
 
+    def test_splicing_patterns_ADA(self):
+        # DAD---DADA becomes DAD----ADA and DA----DADA
+        ft = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s, self.t])
+        self.z.intact_start_splice = False
+        self.z.intact_end_splice = False
+        self.w.intact_start_splice = False
 
-class TestTranslation(unittest.TestCase):
-    def test_get_sequence_from_ref(self):
-        ref = {'1': MockSeq('CCCTAATCCCCTTT')}
-        g = Gene('1', 1, 16, strand=STRAND.NEG)
-        t = usTranscript(exons=[(2, 5), (7, 15)], gene=g)
-        tl = Translation(4, 11, t, [])
-        self.assertEqual('GGGGATTA', tl.get_sequence(ref))
+        patterns = ft.generate_splicing_patterns()
+        self.assertEqual(2, len(patterns))
+        self.assertEqual(SPLICE_TYPE.MULTI_SKIP, patterns[0].splice_type)
+        self.assertEqual(SPLICE_TYPE.MULTI_RETAIN, patterns[1].splice_type)
+        self.assertEqual([self.x.end, self.y.start, self.y.end, self.s.start, self.s.end, self.t.start], patterns[0])
+        self.assertEqual([self.x.end, self.y.start, self.w.end, self.s.start, self.s.end, self.t.start], patterns[1])
 
-    def test_get_sequence_from_transcript(self):
-        t = usTranscript(exons=[(2, 5), (7, 15)], sequence='CCCTAATCCCCTTT', strand=STRAND.NEG)
-        tl = Translation(4, 11, t, [])
-        self.assertEqual('TAATCCCC', tl.get_sequence())
+    def test_splicing_patterns_ADA_last_exon(self):
+        # D AD AD AD -- - becomes D AD AD A- -- -
+        ft = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s, self.t])
+        self.s.intact_start_splice = False
+        self.s.intact_end_splice = False
+        self.t.intact_start_splice = False
+
+        patterns = ft.generate_splicing_patterns()
+        self.assertEqual(1, len(patterns))
+        self.assertEqual([self.x.end, self.y.start, self.y.end, self.z.start, self.z.end, self.w.start], patterns[0])
+        self.assertEqual(SPLICE_TYPE.MULTI_RETAIN, patterns[0].splice_type)
+
+    def test_splicing_patterns_DAD(self):
+        # D AD A- -- AD A becomes D AD A- -- -D A and D AD -- -- AD A
+        ft = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s, self.t])
+        self.z.intact_end_splice = False
+        self.w.intact_end_splice = False
+        self.w.intact_start_splice = False
+
+        patterns = ft.generate_splicing_patterns()
+        self.assertEqual(2, len(patterns))
+        self.assertEqual(SPLICE_TYPE.MULTI_RETAIN, patterns[0].splice_type)
+        self.assertEqual(SPLICE_TYPE.MULTI_SKIP, patterns[1].splice_type)
+        self.assertEqual([self.x.end, self.y.start, self.y.end, self.z.start, self.s.end, self.t.start], patterns[0])
+        self.assertEqual([self.x.end, self.y.start, self.y.end, self.s.start, self.s.end, self.t.start], patterns[1])
 
 
 class TestDomain(unittest.TestCase):
@@ -1018,7 +1024,26 @@ class TestAnnotate(unittest.TestCase):
         self.assertEqual(Interval(1, 894), orfs[0])
         self.assertEqual(Interval(590, 724), orfs[1])
 
-        seq = 'AAGGAGAGAAAATGGCGTCCACGGATTACAGTACCTATAGCCAAGCTGCAGCGCAGCAGGGCTACAGTGCTTACACCGCCCAGCCCACTCAAGGATATGCACAGACCACCCAGGCATATGGGCAACAAAGCTATGGAACCTATGGACAGCCCACTGATGTCAGCTATACCCAGGCTCAGACCACTGCAACCTATGGGCAGACCGCCTATGCAACTTCTTATGGACAGCCTCCCACTGGTTATACTACTCCAACTGCCCCCCAGGCATACAGCCAGCCTGTCCAGGGGTATGGCACTGGTGCTTATGATACCACCACTGCTACAGTCACCACCACCCAGGCCTCCTATGCAGCTCAGTCTGCATATGGCACTCAGCCTGCTTATCCAGCCTATGGGCAGCAGCCAGCAGCCACTGCACCTACAAGCTATTCCTCTACACAGCCGACTAGTTATGATCAGAGCAGTTACTCTCAGCAGAACACCTATGGGCAACCGAGCAGCTATGGACAGCAGAGTAGCTATGGTCAACAAAGCAGCTATGGGCAGCAGCCTCCCACTAGTTACCCACCCCAAACTGGATCCTACAGCCAAGCTCCAAGTCAATATAGCCAACAGAGCAGCAGCTACGGGCAGCAGAGTTCATTCCGACAGGACCACCCCAGTAGCATGGGTGTTTATGGGCAGGAGTCTGGAGGATTTTCCGGACCAGGAGAGAACCGGAGCATGAGTGGCCCTGATAACCGGGGCAGGGGAAGAGGGGGATTTGATCGTGGAGGCATGAGCAGAGGTGGGCGGGGAGGAGGACGCGGTGGAATGGGCAGCGCTGGAGAGCGAGGTGGCTTCAATAAGCCTGGTGGACCCATGGATGAAGGACCAGATCTTGATCTAGGCCCACCTGTAGATCCAGATGAAGACTCTGACAACAGTGCAATTTATGTACAAGGATTAAATGACAGTGTGACTCTAGATGATCTGGCAGACTTCTTTAAGCAGTGTGGGGTTGTTAAGATGAACAAGAGAACTGGGCAACCCATGATCCACATCTACCTGGACAAGGAAACAGGAAAGCCCAAAGGCGATGCCACAGTGTCCTATGAAGACCCACCCACTGCCAAGGCTGCCGTGGAATGGTTTGATGGGAAAGATTTTCAAGGGAGCAAACTTAAAGTCTCCCTTGCTCGGAAGAAGCCTCCAATGAACAGTATGCGGGGTGGTCTGCCACCCCGTGAGGGCAGAGGCATGCCACCACCACTCCGTGGAGGTCCAGGAGGCCCAGGAGGTCCTGGGGGACCCATGGGTCGCATGGGAGGCCGTGGAGGAGATAGAGGAGGCTTCCCTCCAAGAGGACCCCGGGGTTCCCGAGGGAACCCCTCTGGAGGAGGAAACGTCCAGCACCGAGCTGGAGACTGGCAGTGTCCCAATCCGGGTTGTGGAAACCAGAACTTCGCCTGGAGAACAGAGTGCAACCAGTGTAAGGCCCCAAAGCCTGAAGGCTTCCTCCCGCCACCCTTTCCGCCCCCGGGTGGTGATCGTGGCAGAGGTGGCCCTGGTGGCATGCGGGGAGGAAGAGGTGGCCTCATGGATCGTGGTGGTCCCGGTGGAATGTTCAGAGGTGGCCGTGGTGGAGACAGAGGTGGCTTCCGTGGTGGCCGGGGCATGGACCGAGGTGGCTTTGGTGGAGGAAGACGAGGTGGCCCTGGGGGGCCCCCTGGACCTTTGATGGAACAGATGGGAGGAAGAAGAGGAGGACGTGGAGGACCTGGAAAAATGGATAAAGGCGAGCACCGTCAGGAGCGCAGAGATCGGCCCTACTAGATGCAGAGACCCCGCAGAGCTGCATTGACTACCAGATTTATTTTTTAAACCAGAAAATGTTTTAAATTTATAATTCCATATTTATAATGTTGGCCACAACATTATGATTATTCCTTGTCTGTACTTTAGTATTTTTCACCATTTGTGAAGAAACATTAAAACAAGTTAAATGGTA'
+        seq = 'AAGGAGAGAAAATGGCGTCCACGGATTACAGTACCTATAGCCAAGCTGCAGCGCAGCAGGGCTACAGTGCTTACACCGCCCAGCCCACTCAAGGATATGC' \
+              'ACAGACCACCCAGGCATATGGGCAACAAAGCTATGGAACCTATGGACAGCCCACTGATGTCAGCTATACCCAGGCTCAGACCACTGCAACCTATGGGCAG' \
+              'ACCGCCTATGCAACTTCTTATGGACAGCCTCCCACTGGTTATACTACTCCAACTGCCCCCCAGGCATACAGCCAGCCTGTCCAGGGGTATGGCACTGGTG' \
+              'CTTATGATACCACCACTGCTACAGTCACCACCACCCAGGCCTCCTATGCAGCTCAGTCTGCATATGGCACTCAGCCTGCTTATCCAGCCTATGGGCAGCA' \
+              'GCCAGCAGCCACTGCACCTACAAGCTATTCCTCTACACAGCCGACTAGTTATGATCAGAGCAGTTACTCTCAGCAGAACACCTATGGGCAACCGAGCAGC' \
+              'TATGGACAGCAGAGTAGCTATGGTCAACAAAGCAGCTATGGGCAGCAGCCTCCCACTAGTTACCCACCCCAAACTGGATCCTACAGCCAAGCTCCAAGTC' \
+              'AATATAGCCAACAGAGCAGCAGCTACGGGCAGCAGAGTTCATTCCGACAGGACCACCCCAGTAGCATGGGTGTTTATGGGCAGGAGTCTGGAGGATTTTC' \
+              'CGGACCAGGAGAGAACCGGAGCATGAGTGGCCCTGATAACCGGGGCAGGGGAAGAGGGGGATTTGATCGTGGAGGCATGAGCAGAGGTGGGCGGGGAGGA' \
+              'GGACGCGGTGGAATGGGCAGCGCTGGAGAGCGAGGTGGCTTCAATAAGCCTGGTGGACCCATGGATGAAGGACCAGATCTTGATCTAGGCCCACCTGTAG' \
+              'ATCCAGATGAAGACTCTGACAACAGTGCAATTTATGTACAAGGATTAAATGACAGTGTGACTCTAGATGATCTGGCAGACTTCTTTAAGCAGTGTGGGGT' \
+              'TGTTAAGATGAACAAGAGAACTGGGCAACCCATGATCCACATCTACCTGGACAAGGAAACAGGAAAGCCCAAAGGCGATGCCACAGTGTCCTATGAAGAC' \
+              'CCACCCACTGCCAAGGCTGCCGTGGAATGGTTTGATGGGAAAGATTTTCAAGGGAGCAAACTTAAAGTCTCCCTTGCTCGGAAGAAGCCTCCAATGAACA' \
+              'GTATGCGGGGTGGTCTGCCACCCCGTGAGGGCAGAGGCATGCCACCACCACTCCGTGGAGGTCCAGGAGGCCCAGGAGGTCCTGGGGGACCCATGGGTCG' \
+              'CATGGGAGGCCGTGGAGGAGATAGAGGAGGCTTCCCTCCAAGAGGACCCCGGGGTTCCCGAGGGAACCCCTCTGGAGGAGGAAACGTCCAGCACCGAGCT' \
+              'GGAGACTGGCAGTGTCCCAATCCGGGTTGTGGAAACCAGAACTTCGCCTGGAGAACAGAGTGCAACCAGTGTAAGGCCCCAAAGCCTGAAGGCTTCCTCC' \
+              'CGCCACCCTTTCCGCCCCCGGGTGGTGATCGTGGCAGAGGTGGCCCTGGTGGCATGCGGGGAGGAAGAGGTGGCCTCATGGATCGTGGTGGTCCCGGTGG' \
+              'AATGTTCAGAGGTGGCCGTGGTGGAGACAGAGGTGGCTTCCGTGGTGGCCGGGGCATGGACCGAGGTGGCTTTGGTGGAGGAAGACGAGGTGGCCCTGGG' \
+              'GGGCCCCCTGGACCTTTGATGGAACAGATGGGAGGAAGAAGAGGAGGACGTGGAGGACCTGGAAAAATGGATAAAGGCGAGCACCGTCAGGAGCGCAGAG' \
+              'ATCGGCCCTACTAGATGCAGAGACCCCGCAGAGCTGCATTGACTACCAGATTTATTTTTTAAACCAGAAAATGTTTTAAATTTATAATTCCATATTTATA' \
+              'ATGTTGGCCACAACATTATGATTATTCCTTGTCTGTACTTTAGTATTTTTCACCATTTGTGAAGAAACATTAAAACAAGTTAAATGGTA'
 
         orfs = calculate_ORF(seq)
         for orf in orfs:

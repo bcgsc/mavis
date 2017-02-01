@@ -1,16 +1,15 @@
 import unittest
-from structural_variant.draw import Diagram, HEX_BLACK, HEX_WHITE
+from structural_variant.draw import Diagram, HEX_BLACK, HEX_WHITE, ScatterPlot
 from structural_variant.annotate.base import BioInterval
 from structural_variant.annotate.genomic import Gene, Exon, IntergenicRegion, Template
 from structural_variant.annotate.protein import Domain
 from structural_variant.annotate.variant import Annotation, FusionTranscript
 from structural_variant.annotate.file_io import load_templates
 from svgwrite import Drawing
-from structural_variant.constants import STRAND, ORIENT, SVTYPE, GIESMA_STAIN
+from structural_variant.constants import STRAND, ORIENT, SVTYPE
 from structural_variant.breakpoint import Breakpoint, BreakpointPair
 from structural_variant.interval import Interval
 from tests import MockSeq, MockString, build_transcript, TEMPLATE_METADATA_FILE
-from copy import copy
 
 TEMPLATE_METADATA = None
 
@@ -70,14 +69,14 @@ class TestDraw(unittest.TestCase):
             Interval(48575056, 48575078)
         ]
         mapping = Diagram._generate_interval_mapping(
-        	input_intervals=temp,
-        	target_width=431.39453125,
-        	ratio=20,
-        	min_width=14,
-        	buffer_length=None,
-        	end=None,
+            input_intervals=temp,
+            target_width=431.39453125,
+            ratio=20,
+            min_width=14,
+            buffer_length=None,
+            end=None,
             start=None,
-        	min_inter_width=10
+            min_inter_width=10
         )
         st = min([x.start for x in temp])
         end = min([x.end for x in temp])
@@ -398,7 +397,7 @@ class TestDraw(unittest.TestCase):
         d1 = Domain('first', [(55, 61), (71, 73)])
         d2 = Domain('second', [(10, 20), (30, 34)])
         g1 = Gene(TEMPLATE_METADATA['1'], 150, 1000, strand=STRAND.POS, aliases=['HUGO2'])
-        g2 = Gene(TEMPLATE_METADATA['2'], 5000, 7500, strand=STRAND.NEG, aliases=['HUGO3'])
+        g2 = Gene(TEMPLATE_METADATA['X'], 5000, 7500, strand=STRAND.NEG, aliases=['HUGO3'])
         t1 = build_transcript(
             gene=g1,
             cds_start=50,
@@ -476,8 +475,15 @@ class TestDraw(unittest.TestCase):
             exons=[Exon(25403698, 25403863), Exon(25398208, 25398329), Exon(25386753, 25388160)],
             gene=gene, domains=[])
         d = Diagram()
+        
+        scatterx = [x for x in range(gene.start, gene.end + 1, 5000)]
+        scattery = [x for x in range(0, len(scatterx))]
+        print(list(zip(scatterx, scattery)))
+        s = ScatterPlot(list(zip(scatterx, scattery)), 'cna')
+
         d.GENE_MIN_BUFFER = 0
-        canvas = d.draw_ustranscripts_overlay(gene, markers=[marker])
+        canvas = d.draw_ustranscripts_overlay(gene, vmarkers=[marker], plots=[s])
         self.assertEqual(2, len(canvas.elements))  # defs counts as element
         canvas.saveas('test_overlay_figure.svg')
+        self.assertFalse(True)
         raise unittest.SkipTest('TODO. add height calculation assert')

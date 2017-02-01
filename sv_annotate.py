@@ -37,18 +37,18 @@ General Process
 
 .. todo::
 
-    allow multiple input files to be merged and duplicates filtered before annotating
+    allow multiple duplicates between input files to be filtered before annotating
 
 """
 import argparse
 from structural_variant.breakpoint import read_bpp_from_input_file, BreakpointPair
 from structural_variant.annotate import load_reference_genes, load_reference_genome, load_templates
-from structural_variant.annotate.variant import gather_annotations, FusionTranscript
+from structural_variant.annotate.variant import gather_annotations, FusionTranscript, determine_prime
 from structural_variant.error import DiscontinuousMappingError, DrawingFitError, NotSpecifiedError
 from structural_variant import __version__
 from structural_variant.draw import Diagram
 import TSV
-from structural_variant.constants import PROTOCOL, SVTYPE, COLUMNS, sort_columns
+from structural_variant.constants import PROTOCOL, SVTYPE, COLUMNS, sort_columns, PRIME
 import re
 import json
 import os
@@ -193,6 +193,9 @@ def main():
         annotation_id = id_prefix + str(i + 1)
         ann.data[COLUMNS.annotation_id] = annotation_id
         row = ann.flatten()
+        row[COLUMNS.break1_strand] = ann.transcript1.get_strand()
+        row[COLUMNS.break2_strand] = ann.transcript2.get_strand()
+
         log('current annotation', annotation_id, ann.transcript1.name, ann.transcript2.name, ann.event_type)
 
         # try building the fusion product
@@ -265,6 +268,11 @@ def main():
                     if ann.transcript2.is_best_transcript:
                         gene_aliases2 = 'b-' + gene_aliases2
                 except AttributeError:
+                    pass
+                try:
+                    if determine_prime(ann.transcript1, ann.break1) == PRIME.THREE:
+                        gene_aliases1, gene_aliases2 = gene_aliases2, gene_aliases1
+                except NotSpecifiedError:
                     pass
 
                 name = '{}.{}_{}'.format(

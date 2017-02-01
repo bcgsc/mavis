@@ -10,7 +10,7 @@ from svgwrite import Drawing
 from .interval import Interval
 from .constants import STRAND, ORIENT, CODON_SIZE, GIESMA_STAIN
 from colour import Color
-from .error import DrawingFitError, NotSpecifiedError
+from .error import DrawingFitError, NotSpecifiedError, DiscontinuousMappingError
 from .annotate.genomic import IntergenicRegion
 from .annotate.variant import FusionTranscript
 
@@ -30,6 +30,35 @@ class Tag(svgwrite.base.BaseElement):
         xml = super(Tag, self).get_xml()
         xml.text = self.content
         return xml
+
+
+class ScatterPlot:
+    """
+    holds settings that will go into matplotlib after conversion using the mapping system
+    """
+    def __init__(
+        self, points, y_axis_label,
+        ymax=None, ymin=None, xmin=None, xmax=None, hmarkers=None, height=100, point_radius=2,
+        title=''
+    ):
+        self.hmarkers = hmarkers if hmarkers is not None else []
+        self.ymin = ymin
+        self.ymax = ymax
+        self.points = points
+        if self.ymin is None:
+            self.ymin = min([y.start for x, y in points])
+        if self.ymax is None:
+            self.ymax = max([y.end for x, y in points])
+        self.xmin = xmin
+        self.xmax = xmax
+        if self.xmin is None:
+            self.xmin = min([x.start for x, y in points])
+        if self.xmax is None:
+            self.xmax = max([x.end for x, y in points])
+        self.y_axis_label = y_axis_label
+        self.height = 100
+        self.point_radius = 2
+        self.title = title
 
 
 class LabelMapping:
@@ -205,6 +234,8 @@ class Diagram:
         self.REGION_LABEL_PREFIX = 'R'
         self.OVERLAY_LEFT_LABEL = 16 * self.FONT_WIDTH_HEIGHT_RATIO * self.EXON_FONT_SIZE
 
+        self.SCATTER_AXIS_FONT_SIZE = 12
+
     def draw_legend(self, canvas, swatches, border=True):
         main_group = canvas.g(class_='legend')
         y = self.PADDING if border else 0
@@ -252,8 +283,9 @@ class Diagram:
         REFERENCE_GENOME=None, 
         templates=None, 
         ignore_absent_templates=True, 
-        draw_template=True, 
-        label_gene_by_alias_if_unique=True
+        draw_template=True,
+        user_friendly_labels=True,
+        template_display_label_prefix='c'
     ):
         """
         this is the main drawing function. It decides between the 3 basic layouts
@@ -309,6 +341,13 @@ class Diagram:
             try:
                 template1 = templates[ann.transcript1.get_chr()]
                 template2 = templates[ann.transcript2.get_chr()]
+                if user_friendly_labels and \
+                        (len(template_display_label_prefix) + max([len(template1.name), len(template2.name)])) \
+                        * self.LEGEND_FONT_SIZE * self.FONT_WIDTH_HEIGHT_RATIO <= self.LABEL_LEFT_MARGIN and \
+                        template1.name and template2.name:
+                    labels[template_display_label_prefix + template1.name] = template1
+                    labels[template_display_label_prefix + template2.name] = template2
+
                 h = [0]
                 if template1 == template2:  # single template
                     g = self.draw_template(
@@ -403,7 +442,7 @@ class Diagram:
         for gene in sorted(genes1 | genes2, key=lambda x: (str(x.get_chr()), x.start)):
             if isinstance(gene, IntergenicRegion):
                 l = labels.add(gene, self.REGION_LABEL_PREFIX)
-            elif label_gene_by_alias_if_unique and not alias_failure and gene in alias_by_gene:
+            elif user_friendly_labels and not alias_failure and gene in alias_by_gene:
                 labels[alias_by_gene[gene]] = gene
             else:
                 l = labels.add(gene, self.GENE_LABEL_PREFIX)
@@ -552,6 +591,61 @@ class Diagram:
         setattr(main_group, 'height', y + self.TRACK_HEIGHT / 2)
         setattr(main_group, 'width', t - s + 1)
         return main_group
+    
+    def draw_scatter(self, canvas, plot, xmapping):
+        """
+        given a xmapping, draw the scatter plot svg group
+        """
+        # generate the y coordinate mapping
+        plot_group = canvas.g(class_='scatter_plot')
+        
+        yratio = plot.height / (abs(plot.ymax - plot.ymin) + 1)
+        print('yratio', yratio)
+        ypx = []
+        xpx = []
+        for xp, yp in plot.points:
+            try:
+                temp = Interval.convert_pos(xmapping, xp.start)
+                xp = Interval.convert_pos(xmapping, xp.end)
+                xp = Interval(temp, xp)
+                xpx.append(xp)
+                s = abs(yp.start - plot.ymin) * yratio
+                t = abs(yp.end - plot.ymin) * yratio
+                yp = Interval(plot.height - t, plot.height - s)
+                ypx.append(yp)
+            except DiscontinuousMappingError:
+                pass
+        y = 0
+        for xp, yp in zip(xpx, ypx):
+            plot_group.add(canvas.rect(
+                (xp.start, yp.start),
+                (len(xp), len(yp)),
+                fill=HEX_BLACK
+            ))
+        
+        for py in plot.hmarkers:
+            py = plot.height - abs(py - plot.ymin) * yratio
+            plot_group.add(
+                canvas.line(
+                    start=(min(xpx).start, py),
+                    end=(max(xpx).end, py),
+                    stroke='blue'
+                )
+            )
+        # draw left y axis
+        plot_group.add(canvas.line(
+            start=(0, 0), end=(0, plot.height), stroke=HEX_BLACK
+        ))
+        plot_group.add(canvas.text(
+            plot.y_axis_label,
+            insert=(0 - self.PADDING, plot.height / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.SCATTER_AXIS_FONT_SIZE),
+            fill=self.LABEL_COLOR,
+            style=self.FONT_STYLE.format(font_size=self.SCATTER_AXIS_FONT_SIZE, text_anchor='end'),
+            class_='y_axis_label'
+        ))
+        y += plot.height
+        setattr(plot_group, 'height', y)
+        return plot_group
 
     def draw_ustranscript(
         self, canvas, ust,
@@ -889,8 +983,10 @@ class Diagram:
     def read_config(self):
         pass
 
-    def draw_ustranscripts_overlay(self, gene, markers=None):
-        markers = [] if markers is None else markers
+    def draw_ustranscripts_overlay(self, gene, vmarkers=None, window_buffer=0, plots=None):
+        vmarkers = [] if vmarkers is None else vmarkers
+        plots = [] if plots is None else plots
+
         canvas = Drawing(size=(self.WIDTH, 1000))  # just set the height for now and change later
         w = self.WIDTH - self.LEFT_MARGIN - self.RIGHT_MARGIN - self.OVERLAY_LEFT_LABEL - self.PADDING
         labels = LabelMapping()  # keep labels consistent within the drawing
@@ -900,10 +996,10 @@ class Diagram:
         for tx in gene.transcripts:
             for ex in tx.exons:
                 all_exons.add(ex)
-                colors[ex] = self.EXON1_COLOR if not tx.is_best_transcript else self.EXON2_COLOR
+                colors[ex] = self.EXON1_COLOR if tx.is_best_transcript else self.EXON2_COLOR
 
-        st = min([gene.start] + [m.start for m in markers])
-        end = max([gene.end] + [m.end for m in markers])
+        st = min([max([gene.start - window_buffer, 1])] + [m.start for m in vmarkers] + [p.xmin for p in plots])
+        end = max([gene.end + window_buffer] + [m.end for m in vmarkers] + [p.xmax for p in plots])
 
         mapping = Diagram._generate_interval_mapping(
             all_exons,
@@ -916,6 +1012,12 @@ class Diagram:
 
         x = self.OVERLAY_LEFT_LABEL + self.PADDING
         y = self.MARKER_TOP_MARGIN
+
+        for plot in plots:
+            plot_group = self.draw_scatter(canvas, plot, mapping)
+            main_group.add(plot_group)
+            plot_group.translate(x, y)
+            y += plot.height + self.PADDING
 
         for tx in gene.transcripts:
             g = Diagram._draw_exon_track(self, canvas, tx, mapping, colors=colors)
@@ -934,11 +1036,11 @@ class Diagram:
 
         y += self.MARKER_BOTTOM_MARGIN
         # now draw the breakpoints overtop
-        for i, m in enumerate(sorted(markers)):
+        for i, m in enumerate(sorted(vmarkers)):
             s = Interval.convert_ratioed_pos(mapping, m.start)
             t = Interval.convert_ratioed_pos(mapping, m.end)
             px_itvl = Interval(s.start, t.end)
-            bg = self.draw_marker(
+            bg = self.draw_vmarker(
                 canvas, m, len(px_itvl), y, label=labels.add(m, self.MARKER_LABEL_PREFIX))
             bg.translate(x + px_itvl.start, 0)
             main_group.add(bg)
@@ -949,7 +1051,7 @@ class Diagram:
         canvas.attribs['height'] = y
         return canvas
 
-    def draw_marker(self, canvas, marker, width, height, label='', color=None):
+    def draw_vmarker(self, canvas, marker, width, height, label='', color=None):
         """
         Args:
             canvas (svgwrite.drawing.Drawing): the main svgwrite object used to create new svg elements

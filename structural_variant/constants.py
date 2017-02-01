@@ -174,7 +174,14 @@ CALL_METHOD = Vocab(CONTIG='contig', SPLIT='split reads', FLANK='flanking reads'
 
 GENE_PRODUCT_TYPE = Vocab(SENSE='sense', ANTI_SENSE='anti-sense')
 
-SPLICE_TYPE = Vocab(RETAIN='retained intron', SKIP='skipped exon', NORMAL='normal')
+SPLICE_TYPE = Vocab(
+    RETAIN='retained intron', 
+    SKIP='skipped exon', 
+    NORMAL='normal',
+    MULTI_RETAIN='retained multiple introns',
+    MULTI_SKIP='skipped multiple exons',
+    COMPLEX='complex'
+)
 
 SPLICE_SITE_RADIUS = 2
 

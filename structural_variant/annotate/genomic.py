@@ -247,75 +247,92 @@ class usTranscript(BioInterval):
             check if this changes for transcripts on the reverse stand
         """
         exons = sorted(self.exons, key=lambda x: x[0])
-        abrogation_count = 0
-        for ex in exons:
-            if not ex.intact_start_splice:
-                abrogation_count += 1
-            if not ex.intact_end_splice:
-                abrogation_count += 1
-        if abrogation_count > 2 or not exons[0].intact_start_splice or not exons[-1].intact_end_splice:
-            raise NotImplementedError(
-                'splicing model assumes that at most 2 splice sites are disrupted and '
-                'that the terminal splice sites are intact', abrogation_count, exons[0].intact_start_splice,
-                exons[-1].intact_end_splice)
+        if len(exons) < 2:
+            return [SplicingPattern()]
 
+        DONOR = 3
+        ACCEPTOR = 5
+
+        pattern = [(exons[0].end, exons[0].intact_end_splice, DONOR)]  # always start with a donor
+        for i in range(1, len(exons) - 1):
+            pattern.append((exons[i].start, exons[i].intact_start_splice, ACCEPTOR))
+            pattern.append((exons[i].end, exons[i].intact_end_splice, DONOR))
+        pattern.append((exons[-1].start, exons[-1].intact_start_splice, ACCEPTOR))  # always end with acceptor
+        
+        original_sites = [p for p, s, t in pattern]
+        pattern = [(p, t) for p, s, t in pattern if s]  # filter out abrogated splice sites
+        
+        def get_cons_sites(index, splice_type):
+            # get the next 'n' of any given type
+            temp = []
+            for i in range(index, len(pattern)):
+                if pattern[i][1] == splice_type:
+                    temp.append(pattern[i])
+                else:
+                    break
+            return temp
+        
         splice_site_sets = [SplicingPattern()]
 
-        i = 1
-        while i < len(exons):
-            exon = exons[i]
-            prev = exons[i - 1]
-            if not exon.intact_start_splice and not exon.intact_end_splice:  # case A: both abrogated
-                # skip the current exon
-                nexxt = exons[i + 1]
-                for s in splice_site_sets:
-                    s.extend([prev.end, nexxt.start])
-                i += 1
-            elif prev.intact_end_splice and not exon.intact_start_splice:  # case B: start abrogated
-                # this leaves use with two options for splicing models
+        # i should start at the first donor site
+        i = len(get_cons_sites(0, ACCEPTOR))
+
+        while i < len(pattern):
+            if pattern[i][1] == DONOR:
+                donors = get_cons_sites(i, DONOR)
+                acceptors = get_cons_sites(i + len(donors), ACCEPTOR)
+
                 temp = []
-                for spl in splice_site_sets:
-                    # 1. Retain the preceding intron
-                    ri = copy(spl)
-                    ri.splice_type = SPLICE_TYPE.RETAIN
-                    temp.append(ri)
-                    # 2. Skip the current exon
-                    if i + 1>= len(exons):  # retain only, if this is the last exon
-                        continue
-                    nexxt = exons[i + 1]
-                    ri.extend([exon.end, nexxt.start])
-                    spl.extend([prev.end, nexxt.start])
-                    spl.splice_type = SPLICE_TYPE.SKIP
-                    temp.append(spl)
-                i += 1
-                splice_site_sets = temp
-            elif not prev.intact_end_splice and exon.intact_start_splice:  # case c: end abrogated
-                # this leaves use with two options for splicing models
-                temp = []
-                for spl in splice_site_sets:
-                    # 1. Retain the preceding intron
-                    ri = copy(spl)
-                    ri.splice_type = SPLICE_TYPE.RETAIN
-                    temp.append(ri)
-                    # 2. Skip the current exon
-                    spl[-1] = exon.start
-                    spl.splice_type = SPLICE_TYPE.SKIP
-                    temp.append(spl)
-                splice_site_sets = temp
-            elif not prev.intact_end_splice and not exon.intact_start_splice:  # case d: both abrogated (diff exons)
-                # must retain
-                for s in splice_site_sets:
-                    s.splice_type = SPLICE_TYPE.RETAIN
-            elif prev.intact_end_splice and exon.intact_start_splice:  # case e: normal splicing
-                for s in splice_site_sets:
-                    s.extend([prev.end, exon.start])
+                for d, a in sorted(itertools.product(donors, acceptors)):
+                    for curr_splss in splice_site_sets:
+                        splss = copy(curr_splss)
+                        splss.extend([d[0], a[0]])
+                        temp.append(splss)
+                if len(temp) > 0: 
+                    splice_site_sets = temp
+                i += len(donors) + len(acceptors)
             else:
-                raise NotImplementedError(
-                    'unanticipated splicing pattern has not been modelled previous: {} {}; current: {} {}'.format(
-                        pre.intact_start_splice, prev.intact_end_splice,
-                        exon.intact_start_splice, exon.intact_end_splice
-                    ))
-            i += 1
+                raise AssertionError('should always be positioned at a donor splice site')
+        
+        # now need to decide the type for each set
+        for splss in splice_site_sets:
+            r_introns = 0
+            s_exons = 0
+            assert(len(splss) % 2 == 0)
+            
+            for d, a in zip(splss[0::2], splss[1::2]):
+                # check if any original splice positions are between this donor and acceptor
+                for s in original_sites:
+                    if s > d and s < a:
+                        s_exons += 1
+
+            for a, d in zip(splss[1::2], splss[2::2]):
+                for s in original_sites:
+                    if s > a and s < d:
+                        r_introns += 1
+
+            if len(splss) > 0:
+                # any skipped positions before the first donor or after the last acceptor
+                for s in original_sites:
+                    if s < splss[0] or s > splss[-1]:
+                        r_introns += 1
+
+            # now classifying the pattern
+            if r_introns + s_exons == 0:
+                splss.splice_type = SPLICE_TYPE.NORMAL
+            elif r_introns == 0:
+                if s_exons > 1:
+                    splss.splice_type = SPLICE_TYPE.MULTI_SKIP
+                else:
+                    splss.splice_type = SPLICE_TYPE.SKIP
+            elif s_exons == 0:
+                if r_introns > 1:
+                    splss.splice_type = SPLICE_TYPE.MULTI_RETAIN
+                else:
+                    splss.splice_type = SPLICE_TYPE.RETAIN
+            else:
+                splss.splice_type = SPLICE_TYPE.COMPLEX
+            
         return splice_site_sets
 
     @property
