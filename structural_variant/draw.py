@@ -39,16 +39,17 @@ class ScatterPlot:
     def __init__(
         self, points, y_axis_label,
         ymax=None, ymin=None, xmin=None, xmax=None, hmarkers=None, height=100, point_radius=2,
-        title=''
+        title='', yticks=None
     ):
         self.hmarkers = hmarkers if hmarkers is not None else []
+        self.yticks = yticks if yticks is not None else []
         self.ymin = ymin
         self.ymax = ymax
         self.points = points
         if self.ymin is None:
-            self.ymin = min([y.start for x, y in points])
+            self.ymin = min([y.start for x, y in points] + yticks)
         if self.ymax is None:
-            self.ymax = max([y.end for x, y in points])
+            self.ymax = max([y.end for x, y in points] + yticks)
         self.xmin = xmin
         self.xmax = xmax
         if self.xmin is None:
@@ -237,7 +238,7 @@ class Diagram:
         self.SCATTER_AXIS_FONT_SIZE = 12
         self.SCATTER_ERROR_BAR_STROKE_WIDTH = 1
         self.SCATTER_MARKER_RADIUS = 2
-        self.SCATTER_YAXIS_TICK_SIZE = 2
+        self.SCATTER_YAXIS_TICK_SIZE = self.PADDING
 
     def draw_legend(self, canvas, swatches, border=True):
         main_group = canvas.g(class_='legend')
@@ -602,7 +603,7 @@ class Diagram:
         # generate the y coordinate mapping
         plot_group = canvas.g(class_='scatter_plot')
 
-        yratio = plot.height / (abs(plot.ymax - plot.ymin) + 1)
+        yratio = plot.height / (abs(plot.ymax - plot.ymin))
         print('yratio', yratio)
         ypx = []
         xpx = []
@@ -616,7 +617,7 @@ class Diagram:
                 ypx.append(yp)
             except DiscontinuousMappingError:
                 pass
-        y = 0
+
         for xp, yp in zip(xpx, ypx):
             if xp.length() > self.SCATTER_MARKER_RADIUS:
                 plot_group.add(canvas.line(
@@ -645,24 +646,34 @@ class Diagram:
             start=(0, 0), end=(0, plot.height), stroke=HEX_BLACK
         ))
         # draw start and end markers on the y axis
-        for y in [plot.ymin, plot.ymax]:
+        for y in plot.yticks:
             py = plot.height - abs(y - plot.ymin) * yratio
             plot_group.add(
                 canvas.line(
-                    start=(min(xpx).start - self.SCATTER_YAXIS_TICK_SIZE, py),
-                    end=(max(xpx).start, py),
-                    stroke='blue'
+                    start=(0 - self.SCATTER_YAXIS_TICK_SIZE, py),
+                    end=(0, py),
+                    stroke=HEX_BLACK
                 )
             )
 
-        plot_group.add(canvas.text(
+        x = 0 - self.PADDING - self.SCATTER_AXIS_FONT_SIZE - self.SCATTER_YAXIS_TICK_SIZE
+        y = plot.height / 2 #+ len(plot.y_axis_label) * self.SCATTER_AXIS_FONT_SIZE
+        yaxis = canvas.text(
             plot.y_axis_label,
-            insert=(0 - self.PADDING, plot.height / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.SCATTER_AXIS_FONT_SIZE),
+            insert=(x, y),
             fill=self.LABEL_COLOR,
-            style=self.FONT_STYLE.format(font_size=self.SCATTER_AXIS_FONT_SIZE, text_anchor='end'),
+            style=self.FONT_STYLE.format(font_size=self.SCATTER_AXIS_FONT_SIZE, text_anchor='start'),
             class_='y_axis_label'
-        ))
-        y += plot.height
+        )
+        print('yaxis', yaxis.tostring())
+        plot_group.add(yaxis)
+        cx = len(plot.y_axis_label) * self.FONT_WIDTH_HEIGHT_RATIO * self.SCATTER_AXIS_FONT_SIZE / 2
+        yaxis.rotate(270, (x + cx, y))
+        print('yaxis', yaxis.tostring())
+        yaxis.translate(0, 0)
+        print('yaxis', yaxis.tostring())
+
+        y = plot.height
         setattr(plot_group, 'height', y)
         return plot_group
 
@@ -1546,7 +1557,7 @@ class Diagram:
             ito = Interval(pos, pos + min_inter_width + s)
             mapping.append((ifrom, ito))
             pos += ito.length()
-        mapping[-1][1].end = int(target_width)  # min(int(target_width), mapping[-1][1].end)
+        mapping[-1][1].end = target_width  # min(int(target_width), mapping[-1][1].end)
         temp = mapping
         mapping = dict()
         for ifrom, ito in temp:

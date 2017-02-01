@@ -483,7 +483,14 @@ class TestDraw(unittest.TestCase):
             t.name = 'transcript {}'.format(i + 1)
         scatterx = [Interval(x, x + 200) for x in range(gene.start, gene.end + 1, 400)]
         scattery = [random.uniform(-0.2, 0.2) for x in scatterx]
-        s = ScatterPlot(list(zip(scatterx, scattery)), 'cna', ymin=-1, ymax=1)
+        s = ScatterPlot(
+            list(zip(scatterx, scattery)),
+            'cna',
+            ymin=-1,
+            ymax=1,
+            #hmarkers=[-1, 1],
+            yticks=[-1, 0, 1]
+        )
 
         d.GENE_MIN_BUFFER = 0
         canvas = d.draw_ustranscripts_overlay(gene, vmarkers=[marker], plots=[s])
