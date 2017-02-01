@@ -73,12 +73,6 @@ class FusionTranscript(usTranscript):
         Returns:
             FusionTranscript: the newly built fusion transcript
 
-        .. todo::
-            
-            support any number of abrogated splice sites so long as the start and end are intact.
-            this requires changing the algorithm to look for the next intact splice site of the right
-            type
-
         """
         if not ann.transcript1 or not ann.transcript2:
             raise NotSpecifiedError('cannot produce fusion transcript for non-annotated fusions')
@@ -564,6 +558,11 @@ def gather_breakpoint_annotations(ref_ann, breakpoint):
               overlapping the breakpoint on the positive strand
             - :class:`list` of (:class:`usTranscript` or :class:`IntergenicRegion`): transcripts or intergenic regions
               overlapping the breakpoint on the negative strand
+
+    .. todo::
+         
+        Support for setting the transcript in the annotation when the breakpoint is just ahead of the transcript
+        and the transcript would be 3'. Then assuming the splicing model takes the 2nd exon onward 
     """
 
     pos_overlapping_transcripts = []
@@ -715,3 +714,82 @@ def gather_annotations(ref, bp, event_type=None, proximity=None):  # TODO
         else:
             filtered.append(ann)
     return filtered
+
+
+def predict_transcriptome_breakpoint(breakpoint, transcript):
+    """
+    for a given genomic breakpoint and the target transcript. Predicts the possible transcriptomic
+    breakpoints that would be expected based on the splicing model for abrogated splice sites
+
+    Args:
+        breakpoint (Breakpoint): the genomic breakpoint
+        transcript (usTranscript): the transcript
+    """
+    prime = determine_prime(transcript, breakpoint)
+    exons = transcript.exons[:]
+    if not Interval.overlaps(breakpoint, transcript):
+        raise AssertionError('breakpoint does not overlap the transcript')
+    if transcript.get_strand() == STRAND.NEG:
+        exons.reverse()
+
+    tbreaks = []
+    
+    for i, curr in enumerate(exons):
+        temp = curr.acceptor_splice_site | curr.donor_splice_site
+        
+        if Interval.overlaps(breakpoint, temp):  # overlaps a splice site or exon
+            if len(breakpoint) > 1:
+                raise NotSpecifiedError('breakpoint overlaps an exon or splice site and is not specific')
+            elif prime == PRIME.FIVE:
+                if i > 0:
+                    prev = exons[i - 1]
+                    tbreaks.append(
+                        Breakpoint(
+                            breakpoint.chr,
+                            prev.donor,
+                            strand=breakpoint.strand,
+                            orient=breakpoint.orient
+                        ))
+            else:  # prime == PRIME.THREE
+                if i + 1 < len(exons):
+                    nexxt = exons[i + 1]
+                    tbreaks.append(
+                        Breakpoint(
+                            breakpoint.chr,
+                            nexxt.acceptor,
+                            strand=breakpoint.strand,
+                            orient=breakpoint.orient
+                        ))
+            tbreaks.append(
+                Breakpoint(
+                    breakpoint.chr, breakpoint.start, breakpoint.end,
+                    strand=breakpoint.strand,
+                    orient=breakpoint.orient
+                ))
+        elif i > 0:  # look at the previous intron
+            prev = exons[i - 1]
+            try:
+                intron = Interval(prev.donor_splice_site.end + 1, curr.acceptor_splice_site.start - 1)
+                if Interval.overlaps(breakpoint, intron):
+                    if prime == PRIME.FIVE:
+                        tbreaks.append(
+                            Breakpoint(
+                                breakpoint.chr,
+                                prev.donor,
+                                strand=breakpoint.strand,
+                                orient=breakpoint.orient
+                            ))
+                    else:
+                        tbreaks.append(
+                            Breakpoint(
+                                breakpoint.chr,
+                                curr.acceptor,
+                                strand=breakpoint.strand,
+                                orient=breakpoint.orient
+                            ))
+            except AttributeError:  # for introns that are smaller than this ignore (covered by exon check)
+                pass
+
+    if len(tbreaks) == 0:
+        raise AssertionError('could not predict breakpoint')
+    return sorted(tbreaks)

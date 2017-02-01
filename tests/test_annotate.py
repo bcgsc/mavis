@@ -778,6 +778,49 @@ class TestSplicingPatterns(unittest.TestCase):
         self.assertTrue(SPLICE_TYPE.COMPLEX in [p.splice_type for p in patt])
 
 
+class TestBreakpointPrediction(unittest.TestCase):
+    def setUp(self):
+        self.ust = usTranscript([Exon(101, 200), Exon(301, 400), Exon(501, 600)], strand=STRAND.POS)
+    
+    def test_exonic_five_prime(self):
+        b = Breakpoint(REF_CHR, 350, orient=ORIENT.LEFT)
+        breaks = predict_transcriptome_breakpoint(b, self.ust)
+        self.assertEqual(2, len(breaks))
+        self.assertEqual(200, breaks[0].start)
+        self.assertEqual(b, breaks[1])
+
+    def test_exonic_five_prime_first_exon(self):
+        b = Breakpoint(REF_CHR, 150, orient=ORIENT.LEFT)
+        breaks = predict_transcriptome_breakpoint(b, self.ust)
+        self.assertEqual(1, len(breaks))
+        self.assertEqual(b, breaks[0])
+
+    def test_exonic_three_prime(self):
+        b = Breakpoint(REF_CHR, 350, orient=ORIENT.RIGHT)
+        breaks = predict_transcriptome_breakpoint(b, self.ust)
+        self.assertEqual(2, len(breaks))
+        self.assertEqual(501, breaks[1].start)
+        self.assertEqual(b, breaks[0])
+
+    def test_exonic_three_prime_last_exon(self):
+        b = Breakpoint(REF_CHR, 550, orient=ORIENT.RIGHT)
+        breaks = predict_transcriptome_breakpoint(b, self.ust)
+        self.assertEqual(1, len(breaks))
+        self.assertEqual(b, breaks[0])
+
+    def test_intronic_five_prime(self):
+        b = Breakpoint(REF_CHR, 450, orient=ORIENT.LEFT)
+        breaks = predict_transcriptome_breakpoint(b, self.ust)
+        self.assertEqual(1, len(breaks))
+        self.assertEqual(400, breaks[0].start)
+
+    def test_intronic_three_prime(self):
+        b = Breakpoint(REF_CHR, 250, orient=ORIENT.RIGHT)
+        breaks = predict_transcriptome_breakpoint(b, self.ust)
+        self.assertEqual(1, len(breaks))
+        self.assertEqual(301, breaks[0].start)
+
+
 class TestDomain(unittest.TestCase):
 
     def test___init__region_error(self):

@@ -164,6 +164,44 @@ class Exon(BioInterval):
     def end_splice_site(self):
         """(:class:`~structural_variant.interval.Interval`): the genomic range describing the splice site"""
         return Interval(self.end - SPLICE_SITE_RADIUS + 1, self.end + SPLICE_SITE_RADIUS)
+    
+    @property
+    def donor_splice_site(self):
+        """(:class:`~structural_variant.interval.Interval`): the genomic range describing the splice site"""
+        if self.get_strand() == STRAND.NEG:
+            return self.start_splice_site
+        elif self.get_strand() == STRAND.POS:
+            return self.end_splice_site
+        else:
+            raise NotSpecifiedError('strand was not given')
+
+    @property
+    def acceptor_splice_site(self):
+        """(:class:`~structural_variant.interval.Interval`): the genomic range describing the splice site"""
+        if self.get_strand() == STRAND.NEG:
+            return self.end_splice_site
+        elif self.get_strand() == STRAND.POS:
+            return self.start_splice_site
+        else:
+            raise NotSpecifiedError('strand was not given')
+
+    @property
+    def donor(self):
+        if self.get_strand() == STRAND.NEG:
+            return self.start
+        elif self.get_strand() == STRAND.POS:
+            return self.end
+        else:
+            raise NotSpecifiedError('strand was not given')
+
+    @property
+    def acceptor(self):
+        if self.get_strand() == STRAND.NEG:
+            return self.end
+        elif self.get_strand() == STRAND.POS:
+            return self.start
+        else:
+            raise NotSpecifiedError('strand was not given')
 
     def __repr__(self):
         return 'Exon({}, {})'.format(self.start, self.end)
@@ -243,8 +281,6 @@ class usTranscript(BioInterval):
         Returns:
             :class:`list` of :any:`int`: List of positions to be spliced together
 
-        .. todo::
-            check if this changes for transcripts on the reverse stand
         """
         exons = sorted(self.exons, key=lambda x: x[0])
         if len(exons) < 2:

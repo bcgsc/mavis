@@ -1035,9 +1035,6 @@ class Diagram:
         setattr(g, 'height', h)
         return g
 
-    def read_config(self):
-        pass
-
     def draw_ustranscripts_overlay(self, gene, vmarkers=None, window_buffer=0, plots=None):
         vmarkers = [] if vmarkers is None else vmarkers
         plots = [] if plots is None else plots
@@ -1073,7 +1070,7 @@ class Diagram:
             plot_group = self.draw_scatter(canvas, plot, mapping)
             main_group.add(plot_group)
             plot_group.translate(x, y)
-            y += plot.height + self.PADDING
+            y += plot.height + self.PADDING * 2
 
         for tx in gene.transcripts:
             g = Diagram._draw_exon_track(self, canvas, tx, mapping, colors=colors)
@@ -1082,7 +1079,10 @@ class Diagram:
 
             t = canvas.text(
                 tx.name,
-                insert=(x - self.PADDING, y + self.TRACK_HEIGHT / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.EXON_FONT_SIZE),
+                insert=(
+                    x - self.PADDING,
+                    y + self.TRACK_HEIGHT / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.EXON_FONT_SIZE
+                ),
                 fill=self.LABEL_COLOR,
                 style=self.FONT_STYLE.format(font_size=self.EXON_FONT_SIZE, text_anchor='end'),
                 class_='label'

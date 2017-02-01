@@ -493,7 +493,7 @@ class TestDraw(unittest.TestCase):
         )
 
         d.GENE_MIN_BUFFER = 0
-        canvas = d.draw_ustranscripts_overlay(gene, vmarkers=[marker], plots=[s])
+        canvas = d.draw_ustranscripts_overlay(gene, vmarkers=[marker], plots=[s, s])
         self.assertEqual(2, len(canvas.elements))  # defs counts as element
         canvas.saveas('test_overlay_figure.svg')
         self.assertFalse(True)
