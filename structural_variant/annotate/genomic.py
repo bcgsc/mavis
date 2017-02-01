@@ -249,18 +249,23 @@ class usTranscript(BioInterval):
         exons = sorted(self.exons, key=lambda x: x[0])
         if len(exons) < 2:
             return [SplicingPattern()]
-
+        
         DONOR = 3
         ACCEPTOR = 5
 
-        pattern = [(exons[0].end, exons[0].intact_end_splice, DONOR)]  # always start with a donor
+        reverse = True if self.get_strand() == STRAND.NEG else False
+
+        pattern = [(exons[0].end, exons[0].intact_end_splice, ACCEPTOR if reverse else DONOR)]  # always start with a donor
         for i in range(1, len(exons) - 1):
-            pattern.append((exons[i].start, exons[i].intact_start_splice, ACCEPTOR))
-            pattern.append((exons[i].end, exons[i].intact_end_splice, DONOR))
-        pattern.append((exons[-1].start, exons[-1].intact_start_splice, ACCEPTOR))  # always end with acceptor
+            pattern.append((exons[i].start, exons[i].intact_start_splice, DONOR if reverse else ACCEPTOR))
+            pattern.append((exons[i].end, exons[i].intact_end_splice, ACCEPTOR if reverse else DONOR))
+        pattern.append((exons[-1].start, exons[-1].intact_start_splice, DONOR if reverse else ACCEPTOR))  # always end with acceptor
         
         original_sites = [p for p, s, t in pattern]
         pattern = [(p, t) for p, s, t in pattern if s]  # filter out abrogated splice sites
+
+        if reverse:
+            pattern.reverse()
         
         def get_cons_sites(index, splice_type):
             # get the next 'n' of any given type
@@ -296,26 +301,42 @@ class usTranscript(BioInterval):
         
         # now need to decide the type for each set
         for splss in splice_site_sets:
+            splss.sort()
             r_introns = 0
             s_exons = 0
             assert(len(splss) % 2 == 0)
             
             for d, a in zip(splss[0::2], splss[1::2]):
                 # check if any original splice positions are between this donor and acceptor
+                temp = 0
                 for s in original_sites:
                     if s > d and s < a:
-                        s_exons += 1
+                        temp += 1
+                assert(temp % 2 == 0)
+                s_exons += temp // 2
 
             for a, d in zip(splss[1::2], splss[2::2]):
+                temp = 0
                 for s in original_sites:
                     if s > a and s < d:
-                        r_introns += 1
+                        temp += 1
+                assert(temp % 2 == 0)
+                r_introns += temp // 2
 
             if len(splss) > 0:
                 # any skipped positions before the first donor or after the last acceptor
+                temp = 0
                 for s in original_sites:
-                    if s < splss[0] or s > splss[-1]:
-                        r_introns += 1
+                    if s < splss[0]:
+                        temp += 1
+                assert(temp % 2 == 0)
+                r_introns += temp // 2
+                temp = 0
+                for s in original_sites:
+                    if s > splss[-1]:
+                        temp += 1
+                r_introns += temp // 2
+                assert(temp % 2 == 0)
 
             # now classifying the pattern
             if r_introns + s_exons == 0:

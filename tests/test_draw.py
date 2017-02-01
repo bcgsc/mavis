@@ -482,7 +482,7 @@ class TestDraw(unittest.TestCase):
         for i, t in enumerate(gene.transcripts):
             t.name = 'transcript {}'.format(i + 1)
         scatterx = [Interval(x, x + 200) for x in range(gene.start, gene.end + 1, 400)]
-        scattery = [random.uniform(-0.2, 0.2) for x in scatterx]
+        scattery = [Interval(random.uniform(-0.2, 0.2)) for x in scatterx]
         s = ScatterPlot(
             list(zip(scatterx, scattery)),
             'cna',

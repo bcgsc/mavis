@@ -2,6 +2,7 @@ from structural_variant.draw import Diagram, ScatterPlot
 from structural_variant.annotate.base import BioInterval
 from structural_variant.annotate.file_io import load_reference_genes
 from structural_variant import __version__
+from structural_variant.error import DrawingFitError
 import os
 from structural_variant.interval import Interval
 import argparse
@@ -111,7 +112,17 @@ for g in genes_to_draw:
         else:
             s = ScatterPlot(points, 'cna', ymin=-1, ymax=1, hmarkers=[-1, 0, 1])
             plots.append(s)
-    canvas = d.draw_ustranscripts_overlay(g, vmarkers=markers, plots=plots)
+    initial_width = d.WIDTH
+    while d.WIDTH < initial_width + 1000:
+        try:
+            canvas = d.draw_ustranscripts_overlay(g, vmarkers=markers, plots=plots)
+            break
+        except DrawingFitError as err:
+            print(repr(err), 'extending window')
+            d.WIDTH += 200
+    if d.WIDTH >= initial_width + 1000:
+        raise DrawingFitError('could not draw', initial_width, d.WIDTH)
+    d.WIDTH = initial_width
     print('writing:', svg)
     canvas.saveas(svg)
 

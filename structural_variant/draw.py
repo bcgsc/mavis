@@ -39,10 +39,11 @@ class ScatterPlot:
     def __init__(
         self, points, y_axis_label,
         ymax=None, ymin=None, xmin=None, xmax=None, hmarkers=None, height=100, point_radius=2,
-        title='', yticks=None
+        title='', yticks=None, colors=None
     ):
         self.hmarkers = hmarkers if hmarkers is not None else []
         self.yticks = yticks if yticks is not None else []
+        self.colors = colors if colors else {}
         self.ymin = ymin
         self.ymax = ymax
         self.points = points
@@ -187,14 +188,17 @@ class Diagram:
         self.MARKER_TOP_MARGIN = self.BREAKPOINT_TOP_MARGIN
         self.MARKER_BOTTOM_MARGIN = self.BREAKPOINT_BOTTOM_MARGIN
         self.MARKER_COLOR = self.BREAKPOINT_COLOR
-
+        
+        self.EXON_FONT_SIZE = 20
         self.EXON_TEAR_TOOTH_WIDTH = 2
-        self.EXON_MIN_WIDTH = self.MIN_WIDTH + self.EXON_TEAR_TOOTH_WIDTH * 2
+        self.EXON_MIN_WIDTH = max([
+            self.MIN_WIDTH + self.EXON_TEAR_TOOTH_WIDTH * 2,
+            self.EXON_FONT_SIZE * 2 * self.FONT_WIDTH_HEIGHT_RATIO + self.PADDING
+        ])
         self.EXON_TEAR_TOOTH_HEIGHT = 2
         self.EXON_INTRON_RATIO = 20
         self.EXON1_COLOR = self.GENE1_COLOR_SELECTED
         self.EXON2_COLOR = self.GENE2_COLOR_SELECTED
-        self.EXON_FONT_SIZE = 20
 
         self.TRANSCRIPT_LABEL_PREFIX = 'T'
         self.FUSION_LABEL_PREFIX = 'F'
@@ -239,6 +243,7 @@ class Diagram:
         self.SCATTER_ERROR_BAR_STROKE_WIDTH = 1
         self.SCATTER_MARKER_RADIUS = 2
         self.SCATTER_YAXIS_TICK_SIZE = self.PADDING
+        self.SCATTER_YTICK_FONT_SIZE = 10
 
     def draw_legend(self, canvas, swatches, border=True):
         main_group = canvas.g(class_='legend')
@@ -571,8 +576,8 @@ class Diagram:
         y = self.TRACK_HEIGHT / 2
         exons = sorted(transcript.exons, key=lambda x: x.start)
 
-        s = Interval.convert_pos(mapping, exons[0].start)
-        t = Interval.convert_pos(mapping, exons[-1].end)
+        s = Interval.convert_ratioed_pos(mapping, exons[0].start).start
+        t = Interval.convert_ratioed_pos(mapping, exons[-1].end).end
 
         main_group.add(
             canvas.rect(
@@ -584,8 +589,8 @@ class Diagram:
 
         # draw the exons
         for exon in exons:
-            s = Interval.convert_pos(mapping, exon.start)
-            t = Interval.convert_pos(mapping, exon.end)
+            s = Interval.convert_ratioed_pos(mapping, exon.start).start
+            t = Interval.convert_ratioed_pos(mapping, exon.end).end
             pxi = Interval(s, t)
             c = colors.get(exon, self.EXON1_COLOR)
             group = self.draw_exon(canvas, exon, pxi.length(), self.TRACK_HEIGHT, c, label=transcript.exon_number(exon))
@@ -604,40 +609,50 @@ class Diagram:
         plot_group = canvas.g(class_='scatter_plot')
 
         yratio = plot.height / (abs(plot.ymax - plot.ymin))
-        print('yratio', yratio)
         ypx = []
         xpx = []
-        for xp, yp in plot.points:
+        for xpo, ypo in plot.points:
             try:
-                temp = Interval.convert_ratioed_pos(xmapping, xp.start)
-                xp = Interval.convert_ratioed_pos(xmapping, xp.end)
+                temp = Interval.convert_ratioed_pos(xmapping, xpo.start)
+                xp = Interval.convert_ratioed_pos(xmapping, xpo.end)
                 xp = xp | temp
-                xpx.append(xp)
-                yp = plot.height - abs(yp - plot.ymin) * yratio
-                ypx.append(yp)
+                xpx.append((xp, xpo))
+                temp = plot.height - abs(ypo.start - plot.ymin) * yratio
+                yp = Interval(plot.height - abs(ypo.end - plot.ymin) * yratio, temp)
+                ypx.append((yp, ypo))
             except DiscontinuousMappingError:
                 pass
 
-        for xp, yp in zip(xpx, ypx):
+        for x, y in zip(xpx, ypx):
+            xp, xpo = x
+            yp, ypo = y
             if xp.length() > self.SCATTER_MARKER_RADIUS:
                 plot_group.add(canvas.line(
-                    (xp.start, yp),
-                    (xp.end, yp),
+                    (xp.start, yp.center),
+                    (xp.end, yp.center),
+                    stroke=HEX_BLACK,
+                    stroke_width=self.SCATTER_ERROR_BAR_STROKE_WIDTH
+                ))
+            if yp.length() > self.SCATTER_MARKER_RADIUS:
+                plot_group.add(canvas.line(
+                    (xp.center, yp.start),
+                    (xp.center, yp.end),
                     stroke=HEX_BLACK,
                     stroke_width=self.SCATTER_ERROR_BAR_STROKE_WIDTH
                 ))
             plot_group.add(canvas.circle(
-                center=(xp.center, yp),
-                fill=HEX_BLACK,
+                center=(xp.center, yp.center),
+                fill=plot.colors.get((xpo, ypo), HEX_BLACK),
                 r=self.SCATTER_MARKER_RADIUS
             ))
-
+        
+        xmax = Interval.convert_ratioed_pos(xmapping, plot.xmax).end
         for py in plot.hmarkers:
             py = plot.height - abs(py - plot.ymin) * yratio
             plot_group.add(
                 canvas.line(
-                    start=(min(xpx).start, py),
-                    end=(max(xpx).end, py),
+                    start=(0, py),
+                    end=(xmax, py),
                     stroke='blue'
                 )
             )
@@ -645,19 +660,31 @@ class Diagram:
         plot_group.add(canvas.line(
             start=(0, 0), end=(0, plot.height), stroke=HEX_BLACK
         ))
+        ytick_labels = [0]
         # draw start and end markers on the y axis
         for y in plot.yticks:
+            ytick_labels.append(len(str(y)))
             py = plot.height - abs(y - plot.ymin) * yratio
             plot_group.add(
                 canvas.line(
                     start=(0 - self.SCATTER_YAXIS_TICK_SIZE, py),
                     end=(0, py),
                     stroke=HEX_BLACK
-                )
-            )
-
-        x = 0 - self.PADDING - self.SCATTER_AXIS_FONT_SIZE - self.SCATTER_YAXIS_TICK_SIZE
-        y = plot.height / 2 #+ len(plot.y_axis_label) * self.SCATTER_AXIS_FONT_SIZE
+                ))
+            plot_group.add(
+                canvas.text(
+                    str(y),
+                    insert=(
+                        0 - self.SCATTER_YAXIS_TICK_SIZE - self.PADDING, 
+                        py + self.SCATTER_YTICK_FONT_SIZE * self.FONT_CENTRAL_SHIFT_RATIO),
+                    fill=self.LABEL_COLOR,
+                    style=self.FONT_STYLE.format(font_size=self.SCATTER_YTICK_FONT_SIZE, text_anchor='end')
+                ))
+        
+        shift = max(ytick_labels)
+        x = 0 - self.PADDING * 2 - self.SCATTER_AXIS_FONT_SIZE - self.SCATTER_YAXIS_TICK_SIZE - \
+            self.SCATTER_YTICK_FONT_SIZE * self.FONT_WIDTH_HEIGHT_RATIO * shift
+        y = plot.height / 2
         yaxis = canvas.text(
             plot.y_axis_label,
             insert=(x, y),
@@ -665,13 +692,10 @@ class Diagram:
             style=self.FONT_STYLE.format(font_size=self.SCATTER_AXIS_FONT_SIZE, text_anchor='start'),
             class_='y_axis_label'
         )
-        print('yaxis', yaxis.tostring())
         plot_group.add(yaxis)
         cx = len(plot.y_axis_label) * self.FONT_WIDTH_HEIGHT_RATIO * self.SCATTER_AXIS_FONT_SIZE / 2
         yaxis.rotate(270, (x + cx, y))
-        print('yaxis', yaxis.tostring())
         yaxis.translate(0, 0)
-        print('yaxis', yaxis.tostring())
 
         y = plot.height
         setattr(plot_group, 'height', y)
@@ -904,7 +928,7 @@ class Diagram:
         setattr(main_group, 'labels', labels)
         return main_group
 
-    def draw_genes(self, canvas, genes, target_width, breakpoints=None, colors=None, labels=None):
+    def draw_genes(self, canvas, genes, target_width, breakpoints=None, colors=None, labels=None, plots=None):
         """
         draws the genes given in order of their start position trying to minimize
         the number of tracks required to avoid overlap
@@ -924,6 +948,7 @@ class Diagram:
         breakpoints = [] if breakpoints is None else breakpoints
         colors = {} if colors is None else colors
         labels = LabelMapping() if labels is None else labels
+        plots = plots if plots else []
 
         st = max(min([g.start for g in genes] + [b.start for b in breakpoints]) - self.GENE_MIN_BUFFER, 1)
         end = max([g.end for g in genes] + [b.end for b in breakpoints]) + self.GENE_MIN_BUFFER
@@ -1035,7 +1060,8 @@ class Diagram:
             all_exons,
             w,
             self.EXON_INTRON_RATIO,
-            self.MIN_WIDTH,
+            self.EXON_MIN_WIDTH,
+            min_inter_width=self.MIN_WIDTH,
             start=st, end=end
         )
         main_group = canvas.g(class_='overlay')

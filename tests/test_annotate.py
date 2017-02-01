@@ -576,123 +576,206 @@ class TestUSTranscript(unittest.TestCase):
 class TestSplicingPatterns(unittest.TestCase):
 
     def setUp(self):
-        self.x = Exon(100, 199)  # C
-        self.y = Exon(500, 599)  # G
-        self.z = Exon(1200, 1299)  # T
-        self.w = Exon(1500, 1599)  # C
-        self.s = Exon(1700, 1799)  # G
-        self.t = Exon(2000, 2099)  # C
+        self.ex1 = Exon(100, 199)  # C
+        self.ex2 = Exon(500, 599)  # G
+        self.ex3 = Exon(1200, 1299)  # T
+        self.ex4 = Exon(1500, 1599)  # C
+        self.ex5 = Exon(1700, 1799)  # G
+        self.ex6 = Exon(2000, 2099)  # C
         # introns: 99, 300, 600, 200, 100, ...
         reference_sequence = 'A' * 99 + 'C' * 100 + 'A' * 300 + 'G' * 100
         reference_sequence += 'A' * 600 + 'T' * 100 + 'A' * 200 + 'C' * 100
         reference_sequence += 'A' * 100 + 'G' * 100 + 'A' * 200 + 'C' * 100
         self.reference_sequence = reference_sequence
+        self.ust = usTranscript(exons=[self.ex1, self.ex2, self.ex3, self.ex4, self.ex5, self.ex6], strand=STRAND.POS)
 
-    def test_splicing_patterns(self):
+    def test_single_exon(self):
         t = usTranscript([(3, 4)])
-        self.assertEqual(1, len(t.generate_splicing_patterns()))
+        patt = t.generate_splicing_patterns()
+        self.assertEqual(1, len(patt))
+        self.assertEqual(0, len(patt[0]))
+        self.assertEqual(SPLICE_TYPE.NORMAL, patt[0].splice_type)
+    
+    def test_normal_pattern(self):
+        for strand in [STRAND.POS, STRAND.NEG]:
+            self.ust.strand = strand
+            patt = self.ust.generate_splicing_patterns()
+            self.assertEqual(1, len(patt))
+            self.assertEqual(
+                [
+                    self.ex1.end, self.ex2.start,
+                    self.ex2.end, self.ex3.start,
+                    self.ex3.end, self.ex4.start,
+                    self.ex4.end, self.ex5.start,
+                    self.ex5.end, self.ex6.start
+                ],
+                patt[0]
+            )
+            self.assertEqual(SPLICE_TYPE.NORMAL, patt[0].splice_type)
+    
+    def test_abrogate_A(self):
+        for strand in [STRAND.POS, STRAND.NEG]:
+            self.ust.strand = strand
+            self.ex2.intact_start_splice = False
+            patt = self.ust.generate_splicing_patterns()
+            self.assertEqual(2, len(patt))
+            print(patt)
+            self.assertEqual(
+                [
+                    self.ex1.end, self.ex3.start,
+                    self.ex3.end, self.ex4.start,
+                    self.ex4.end, self.ex5.start,
+                    self.ex5.end, self.ex6.start
+                ],
+                patt[0]
+            )
+            self.assertEqual(SPLICE_TYPE.SKIP, patt[0].splice_type)
+            
+            self.assertEqual(
+                [
+                    self.ex2.end, self.ex3.start,
+                    self.ex3.end, self.ex4.start,
+                    self.ex4.end, self.ex5.start,
+                    self.ex5.end, self.ex6.start
+                ],
+                patt[1]
+            )
+            self.assertEqual(SPLICE_TYPE.RETAIN, patt[1].splice_type)
 
-    def test_splicing_patterns_DA(self):
-        # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
-        #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
-        ft = usTranscript(exons=[self.x, self.y, self.z, self.w])
-        self.y.intact_end_splice = False
-        self.z.intact_start_splice = False
-        patterns = ft.generate_splicing_patterns()
-        for p in patterns:
-            print(p, p.splice_type)
-        self.assertEqual(1, len(patterns))
-        self.assertEqual([self.x.end, self.y.start, self.z.end, self.w.start], patterns[0])
+    def test_abrogate_A_last_exon(self):
+        self.ex6.intact_start_splice = False
+        patt = self.ust.generate_splicing_patterns()
+        self.assertEqual(1, len(patt))
+        print(patt)
+        self.assertEqual(
+            [
+                self.ex1.end, self.ex2.start,
+                self.ex2.end, self.ex3.start,
+                self.ex3.end, self.ex4.start,
+                self.ex4.end, self.ex5.start
+            ],
+            patt[0]
+        )
+        self.assertEqual(SPLICE_TYPE.RETAIN, patt[0].splice_type)
 
-    def test_splicing_patterns_A_last_exon(self):
-        # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
-        #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
-        ft = usTranscript(exons=[self.x, self.y, self.z, self.w])
-        self.w.intact_start_splice = False
-        patterns = ft.generate_splicing_patterns()
-        self.assertEqual(1, len(patterns))
-        self.assertEqual([self.x.end, self.y.start, self.y.end, self.z.start], patterns[0])
+    def test_abrogate_D_first_exon(self):
+        self.ex1.intact_end_splice = False
+        patt = self.ust.generate_splicing_patterns()
+        self.assertEqual(1, len(patt))
+        self.assertEqual(
+            [
+                self.ex2.end, self.ex3.start,
+                self.ex3.end, self.ex4.start,
+                self.ex4.end, self.ex5.start,
+                self.ex5.end, self.ex6.start
+            ],
+            patt[0]
+        )
+        self.assertEqual(SPLICE_TYPE.RETAIN, patt[0].splice_type)
+    
+    def test_abrogate_AD(self):
+        self.ex2.intact_start_splice = False
+        patt = self.ust.generate_splicing_patterns()
+        self.assertEqual(2, len(patt))
+        print(patt)
+        self.assertEqual(
+            [
+                self.ex1.end, self.ex3.start,
+                self.ex3.end, self.ex4.start,
+                self.ex4.end, self.ex5.start,
+                self.ex5.end, self.ex6.start
+            ],
+            patt[0]
+        )
+        self.assertEqual(SPLICE_TYPE.SKIP, patt[0].splice_type)
+        
+        self.assertEqual(
+            [
+                self.ex2.end, self.ex3.start,
+                self.ex3.end, self.ex4.start,
+                self.ex4.end, self.ex5.start,
+                self.ex5.end, self.ex6.start
+            ],
+            patt[1]
+        )
+        self.assertEqual(SPLICE_TYPE.RETAIN, patt[1].splice_type)
 
-    def test_splicing_patterns_A(self):
-        # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
-        #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
-        ft = usTranscript(exons=[self.x, self.y, self.z, self.w])
-        self.y.intact_start_splice = False
-        patterns = ft.generate_splicing_patterns()
-        self.assertEqual(2, len(patterns))
-        patterns = sorted(patterns)
-        self.assertEqual([self.x.end, self.z.start, self.z.end, self.w.start], patterns[0])
-        self.assertEqual([self.y.end, self.z.start, self.z.end, self.w.start], patterns[1])
+    def test_abrogate_DA(self):
+        self.ex2.intact_end_splice = False
+        self.ex3.intact_start_splice = False
+        patt = self.ust.generate_splicing_patterns()
+        self.assertEqual(1, len(patt))
+        self.assertEqual(
+            [
+                self.ex1.end, self.ex2.start,
+                self.ex3.end, self.ex4.start,
+                self.ex4.end, self.ex5.start,
+                self.ex5.end, self.ex6.start
+            ],
+            patt[0]
+        )
+        self.assertEqual(SPLICE_TYPE.RETAIN, patt[0].splice_type)
 
-    def test_splicing_patterns_D(self):
-        # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
-        #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
-        ft = usTranscript(exons=[self.x, self.y, self.z, self.w])
-        self.y.intact_end_splice = False
-        patterns = ft.generate_splicing_patterns()
-        self.assertEqual(2, len(patterns))
-        patterns = sorted(patterns)
-        self.assertEqual([self.x.end, self.z.start, self.z.end, self.w.start], patterns[1])
-        self.assertEqual([self.x.end, self.y.start, self.z.end, self.w.start], patterns[0])
+    def test_multiple_exons_or_multiple_introns_abrogate_ADA(self):
+        self.ex2.intact_start_splice = False
+        self.ex2.intact_end_splice = False
+        self.ex3.intact_start_splice = False
+        patt = self.ust.generate_splicing_patterns()
+        self.assertEqual(2, len(patt))
+        
+        self.assertEqual(
+            [
+                self.ex1.end, self.ex4.start,
+                self.ex4.end, self.ex5.start,
+                self.ex5.end, self.ex6.start
+            ],
+            patt[0]
+        )
+        self.assertEqual(SPLICE_TYPE.MULTI_SKIP, patt[0].splice_type)
 
-    def test_splicing_patterns_AD(self):
-        # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
-        #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
-        ft = usTranscript(exons=[self.x, self.y, self.z, self.w])
-        self.y.intact_end_splice = False
-        self.y.intact_start_splice = False
-        patterns = ft.generate_splicing_patterns()
-        self.assertEqual(1, len(patterns))
-        self.assertEqual([self.x.end, self.z.start, self.z.end, self.w.start], patterns[0])
+        self.assertEqual(
+            [
+                self.ex3.end, self.ex4.start,
+                self.ex4.end, self.ex5.start,
+                self.ex5.end, self.ex6.start
+            ],
+            patt[1]
+        )
+        self.assertEqual(SPLICE_TYPE.MULTI_RETAIN, patt[1].splice_type)
 
-    def test_splicing_patterns_normal(self):
-        # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
-        #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
-        ft = usTranscript(exons=[self.x, self.y, self.z, self.w])
-        patterns = ft.generate_splicing_patterns()
-        self.assertEqual(1, len(patterns))
-        self.assertEqual([self.x.end, self.y.start, self.y.end, self.z.start, self.z.end, self.w.start], patterns[0])
-        self.assertEqual(SPLICE_TYPE.NORMAL, patterns[0].splice_type)
+    def test_multiple_exons_or_multiple_introns_abrogate_DAD(self):
+        self.ex2.intact_end_splice = False
+        self.ex3.intact_start_splice = False
+        self.ex3.intact_end_splice = False
+        patt = self.ust.generate_splicing_patterns()
+        self.assertEqual(2, len(patt))
+        
+        self.assertEqual(
+            [
+                self.ex1.end, self.ex2.start,
+                self.ex4.end, self.ex5.start,
+                self.ex5.end, self.ex6.start
+            ],
+            patt[0]
+        )
+        self.assertEqual(SPLICE_TYPE.MULTI_RETAIN, patt[0].splice_type)
 
-    def test_splicing_patterns_ADA(self):
-        # DAD---DADA becomes DAD----ADA and DA----DADA
-        ft = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s, self.t])
-        self.z.intact_start_splice = False
-        self.z.intact_end_splice = False
-        self.w.intact_start_splice = False
+        self.assertEqual(
+            [
+                self.ex1.end, self.ex4.start,
+                self.ex4.end, self.ex5.start,
+                self.ex5.end, self.ex6.start
+            ],
+            patt[1]
+        )
+        self.assertEqual(SPLICE_TYPE.MULTI_SKIP, patt[1].splice_type)
 
-        patterns = ft.generate_splicing_patterns()
-        self.assertEqual(2, len(patterns))
-        self.assertEqual(SPLICE_TYPE.MULTI_SKIP, patterns[0].splice_type)
-        self.assertEqual(SPLICE_TYPE.MULTI_RETAIN, patterns[1].splice_type)
-        self.assertEqual([self.x.end, self.y.start, self.y.end, self.s.start, self.s.end, self.t.start], patterns[0])
-        self.assertEqual([self.x.end, self.y.start, self.w.end, self.s.start, self.s.end, self.t.start], patterns[1])
-
-    def test_splicing_patterns_ADA_last_exon(self):
-        # D AD AD AD -- - becomes D AD AD A- -- -
-        ft = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s, self.t])
-        self.s.intact_start_splice = False
-        self.s.intact_end_splice = False
-        self.t.intact_start_splice = False
-
-        patterns = ft.generate_splicing_patterns()
-        self.assertEqual(1, len(patterns))
-        self.assertEqual([self.x.end, self.y.start, self.y.end, self.z.start, self.z.end, self.w.start], patterns[0])
-        self.assertEqual(SPLICE_TYPE.MULTI_RETAIN, patterns[0].splice_type)
-
-    def test_splicing_patterns_DAD(self):
-        # D AD A- -- AD A becomes D AD A- -- -D A and D AD -- -- AD A
-        ft = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s, self.t])
-        self.z.intact_end_splice = False
-        self.w.intact_end_splice = False
-        self.w.intact_start_splice = False
-
-        patterns = ft.generate_splicing_patterns()
-        self.assertEqual(2, len(patterns))
-        self.assertEqual(SPLICE_TYPE.MULTI_RETAIN, patterns[0].splice_type)
-        self.assertEqual(SPLICE_TYPE.MULTI_SKIP, patterns[1].splice_type)
-        self.assertEqual([self.x.end, self.y.start, self.y.end, self.z.start, self.s.end, self.t.start], patterns[0])
-        self.assertEqual([self.x.end, self.y.start, self.y.end, self.s.start, self.s.end, self.t.start], patterns[1])
+    def test_complex(self):
+        self.ex2.intact_end_splice = False
+        self.ex4.intact_end_splice = False
+        patt = self.ust.generate_splicing_patterns()
+        self.assertEqual(4, len(patt))
+        self.assertTrue(SPLICE_TYPE.COMPLEX in [p.splice_type for p in patt])
 
 
 class TestDomain(unittest.TestCase):
