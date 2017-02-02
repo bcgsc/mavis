@@ -472,7 +472,7 @@ class TestDraw(unittest.TestCase):
                 Exon(25378548, 25378707),
                 Exon(25368371, 25368494),
                 Exon(25362365, 25362845)],
-            gene=gene, domains=[],
+            gene=gene, domains=[Domain('domain1', [(1, 10)]), Domain('domain1', [(4, 10)])],
             is_best_transcript=True)
         build_transcript(
             cds_start=65, cds_end=634,

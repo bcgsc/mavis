@@ -595,7 +595,7 @@ class TestSplicingPatterns(unittest.TestCase):
         self.assertEqual(1, len(patt))
         self.assertEqual(0, len(patt[0]))
         self.assertEqual(SPLICE_TYPE.NORMAL, patt[0].splice_type)
-    
+
     def test_normal_pattern(self):
         for strand in [STRAND.POS, STRAND.NEG]:
             self.ust.strand = strand
@@ -612,7 +612,7 @@ class TestSplicingPatterns(unittest.TestCase):
                 patt[0]
             )
             self.assertEqual(SPLICE_TYPE.NORMAL, patt[0].splice_type)
-    
+
     def test_abrogate_A(self):
         for strand in [STRAND.POS, STRAND.NEG]:
             self.ust.strand = strand
@@ -630,7 +630,7 @@ class TestSplicingPatterns(unittest.TestCase):
                 patt[0]
             )
             self.assertEqual(SPLICE_TYPE.SKIP, patt[0].splice_type)
-            
+
             self.assertEqual(
                 [
                     self.ex2.end, self.ex3.start,
@@ -672,7 +672,7 @@ class TestSplicingPatterns(unittest.TestCase):
             patt[0]
         )
         self.assertEqual(SPLICE_TYPE.RETAIN, patt[0].splice_type)
-    
+
     def test_abrogate_AD(self):
         self.ex2.intact_start_splice = False
         patt = self.ust.generate_splicing_patterns()
@@ -688,7 +688,7 @@ class TestSplicingPatterns(unittest.TestCase):
             patt[0]
         )
         self.assertEqual(SPLICE_TYPE.SKIP, patt[0].splice_type)
-        
+
         self.assertEqual(
             [
                 self.ex2.end, self.ex3.start,
@@ -722,7 +722,7 @@ class TestSplicingPatterns(unittest.TestCase):
         self.ex3.intact_start_splice = False
         patt = self.ust.generate_splicing_patterns()
         self.assertEqual(2, len(patt))
-        
+
         self.assertEqual(
             [
                 self.ex1.end, self.ex4.start,
@@ -749,7 +749,7 @@ class TestSplicingPatterns(unittest.TestCase):
         self.ex3.intact_end_splice = False
         patt = self.ust.generate_splicing_patterns()
         self.assertEqual(2, len(patt))
-        
+
         self.assertEqual(
             [
                 self.ex1.end, self.ex2.start,
@@ -776,49 +776,6 @@ class TestSplicingPatterns(unittest.TestCase):
         patt = self.ust.generate_splicing_patterns()
         self.assertEqual(4, len(patt))
         self.assertTrue(SPLICE_TYPE.COMPLEX in [p.splice_type for p in patt])
-
-
-class TestBreakpointPrediction(unittest.TestCase):
-    def setUp(self):
-        self.ust = usTranscript([Exon(101, 200), Exon(301, 400), Exon(501, 600)], strand=STRAND.POS)
-    
-    def test_exonic_five_prime(self):
-        b = Breakpoint(REF_CHR, 350, orient=ORIENT.LEFT)
-        breaks = predict_transcriptome_breakpoint(b, self.ust)
-        self.assertEqual(2, len(breaks))
-        self.assertEqual(200, breaks[0].start)
-        self.assertEqual(b, breaks[1])
-
-    def test_exonic_five_prime_first_exon(self):
-        b = Breakpoint(REF_CHR, 150, orient=ORIENT.LEFT)
-        breaks = predict_transcriptome_breakpoint(b, self.ust)
-        self.assertEqual(1, len(breaks))
-        self.assertEqual(b, breaks[0])
-
-    def test_exonic_three_prime(self):
-        b = Breakpoint(REF_CHR, 350, orient=ORIENT.RIGHT)
-        breaks = predict_transcriptome_breakpoint(b, self.ust)
-        self.assertEqual(2, len(breaks))
-        self.assertEqual(501, breaks[1].start)
-        self.assertEqual(b, breaks[0])
-
-    def test_exonic_three_prime_last_exon(self):
-        b = Breakpoint(REF_CHR, 550, orient=ORIENT.RIGHT)
-        breaks = predict_transcriptome_breakpoint(b, self.ust)
-        self.assertEqual(1, len(breaks))
-        self.assertEqual(b, breaks[0])
-
-    def test_intronic_five_prime(self):
-        b = Breakpoint(REF_CHR, 450, orient=ORIENT.LEFT)
-        breaks = predict_transcriptome_breakpoint(b, self.ust)
-        self.assertEqual(1, len(breaks))
-        self.assertEqual(400, breaks[0].start)
-
-    def test_intronic_three_prime(self):
-        b = Breakpoint(REF_CHR, 250, orient=ORIENT.RIGHT)
-        breaks = predict_transcriptome_breakpoint(b, self.ust)
-        self.assertEqual(1, len(breaks))
-        self.assertEqual(301, breaks[0].start)
 
 
 class TestDomain(unittest.TestCase):

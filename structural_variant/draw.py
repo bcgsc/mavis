@@ -142,6 +142,7 @@ class Diagram:
         # ratio for courier new which is wider than consolas, used for estimating width
         self.FONT_WIDTH_HEIGHT_RATIO = 1229 / 2048
         self.FONT_CENTRAL_SHIFT_RATIO = 0.3
+        self.ABS_MIN_WIDTH = 0.01
 
         self.GENE1_COLOR_SELECTED = '#518DC5'
         self.GENE2_COLOR_SELECTED = '#4C9677'
@@ -155,7 +156,7 @@ class Diagram:
         self.GENE_LABEL_PREFIX = 'G'
 
         self.LABEL_COLOR = HEX_BLACK
-        self.LABEL_FONT_SIZE = 28
+        self.LABEL_FONT_SIZE = 20
         self.DYNAMIC_LABELS = True
         self.LABEL_LEFT_MARGIN = self.LABEL_FONT_SIZE * self.FONT_WIDTH_HEIGHT_RATIO * 4
 
@@ -769,9 +770,12 @@ class Diagram:
             y += self.TRACK_HEIGHT
             y += BBM
         else:
+            x_start = Interval.convert_ratioed_pos(mapping, ust.start).start
+            x_end = Interval.convert_ratioed_pos(mapping, ust.end).end
             # draw the protein features if there are any
             for i, tl in enumerate(ust.translations):
                 tr = tl.transcript
+                
                 # if the splicing takes up more room than the track we need to adjust for it
                 y += self.SPLICE_HEIGHT + BTM
 
@@ -863,8 +867,8 @@ class Diagram:
                     py += self.PADDING
                     gd = canvas.g(class_='domain')
                     gd.add(canvas.rect(
-                        (0, self.DOMAIN_TRACK_HEIGHT / 2),
-                        (target_width, self.DOMAIN_SCAFFOLD_HEIGHT),
+                        (x_start, self.DOMAIN_TRACK_HEIGHT / 2),
+                        (x_end - x_start, self.DOMAIN_SCAFFOLD_HEIGHT),
                         fill=self.DOMAIN_SCAFFOLD_COLOR,
                         class_='scaffold'
                     ))
@@ -1050,6 +1054,11 @@ class Diagram:
                 all_exons.add(ex)
                 colors[ex] = self.EXON1_COLOR if tx.is_best_transcript else self.EXON2_COLOR
 
+            for tr in tx.transcripts:
+                for tl in tr.translations:
+                    for dom in tl.domains:
+                        labels.set_key(dom.name, dom.name)
+
         st = min([max([gene.start - window_buffer, 1])] + [m.start for m in vmarkers] + [p.xmin for p in plots])
         end = max([gene.end + window_buffer] + [m.end for m in vmarkers] + [p.xmax for p in plots])
 
@@ -1071,8 +1080,9 @@ class Diagram:
             main_group.add(plot_group)
             plot_group.translate(x, y)
             y += plot.height + self.PADDING * 2
-
-        for tx in gene.transcripts:
+        
+        regular_transcripts = sorted([tx for tx in gene.transcripts if not tx.is_best_transcript], key=lambda x: x.name)
+        for tx in regular_transcripts:
             g = Diagram._draw_exon_track(self, canvas, tx, mapping, colors=colors)
             main_group.add(g)
             g.translate(x, y)
@@ -1081,14 +1091,26 @@ class Diagram:
                 tx.name,
                 insert=(
                     x - self.PADDING,
-                    y + self.TRACK_HEIGHT / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.EXON_FONT_SIZE
+                    y + self.TRACK_HEIGHT / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.LABEL_FONT_SIZE
                 ),
                 fill=self.LABEL_COLOR,
-                style=self.FONT_STYLE.format(font_size=self.EXON_FONT_SIZE, text_anchor='end'),
+                style=self.FONT_STYLE.format(font_size=self.LABEL_FONT_SIZE, text_anchor='end'),
                 class_='label'
             )
             main_group.add(t)
             y += self.PADDING + self.TRACK_HEIGHT
+        
+        best_transcripts = sorted([tx for tx in gene.transcripts if tx.is_best_transcript], key=lambda x: x.name)
+        for tx in best_transcripts:
+            for txx in tx.transcripts:
+                labels[tx.name] = txx
+            
+            g = Diagram.draw_ustranscript(self, canvas, tx, mapping=mapping, colors=colors, labels=labels)
+            main_group.add(g)
+            g.translate(x, y)
+            
+            main_group.add(t)
+            y += self.PADDING + g.height
 
         y += self.MARKER_BOTTOM_MARGIN
         # now draw the breakpoints overtop
@@ -1118,6 +1140,7 @@ class Diagram:
             svgwrite.container.Group: the group element for the diagram
         """
         color = self.MARKER_COLOR if color is None else color
+        width = max([self.ABS_MIN_WIDTH, width])
         g = canvas.g(class_='marker')
         y = self.PADDING + self.MARKER_LABEL_FONT_SIZE / 2
         t = canvas.text(

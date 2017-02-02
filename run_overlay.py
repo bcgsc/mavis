@@ -86,6 +86,7 @@ if args.cna_file:
         cna_by_chr[chr] = sorted(cna_by_chr[chr], key=lambda x: x['start'])
 
 d = Diagram(WIDTH=1000)
+d.DOMAIN_NAME_REGEX_FILTER = '^PF\d+$'
 
 for g in genes_to_draw:
     svg = os.path.join(args.output, '{}_{}_overlay.svg'.format(g.name, args.gene))

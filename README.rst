@@ -27,7 +27,7 @@ to run the tests
 
 .. code-block:: bash
 
-    nosetests --with-coverage --cover-html --cover-html-dir=coverage --cover-package=structural_variant --cover-erase
+    nosetests --with-coverage --cover-html --cover-html-dir=coverage --cover-package=structural_variant --cover-erase --cover-package=sv_pair
 
 
 Building the documentation
@@ -41,6 +41,14 @@ can build the documentation directly using make
     make html
 
 this will generate html documentation that can be viewed in a browser by opening the index.html file
+
+
+|
+
+------
+
+|
+
 
 
 Input Files
@@ -71,6 +79,15 @@ Available Pre-formatting scripts
 
 - `convert_ta.py <https://svn.bcgsc.ca/svn/SVIA/sv_compile/tags/0.0.1/tools/convert_ta.py>`_
 
+
+|
+
+------
+
+|
+
+
+
 Reference Files
 ..................
 
@@ -100,6 +117,14 @@ Template metadata file
 This is the file which contains the band information for the chromosomes. This is only used in drawing templates which is an optional step. Therefore this file is also optional. You can file the file for hg19 here: http://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/cytoBand.txt.gz
 
 
+|
+
+------
+
+|
+
+
+
 Running the Pipeline
 .....................
 
@@ -119,6 +144,13 @@ script with the -h/--help option
     sv_annotate
     sv_validate
 
+|
+|
+
+-----------------
+
+|
+|
 
 Theory and Models
 --------------------
@@ -133,6 +165,12 @@ major event types
 
 .. figure:: _static/svmerge_read_pairs_vs_contigs_evidence.svg
     :width: 100%
+
+|
+
+------
+
+|
 
 Gathering evidence from the bam file
 ......................................
@@ -202,6 +240,12 @@ If the library has a transcriptome protocol this becomes a bit more complicated 
 possible annotations when calculating the evidence window. see
 :py:func:`~structural_variant.validate.Evidence.generate_transcriptome_window` for more
 
+|
+
+-----------------
+
+|
+
 Classifying Events
 .....................
 
@@ -214,6 +258,11 @@ been shown
     Classification Decision Tree. The above  diagram details the decsion logic for classifying events based on the
     orientation, strand and chromosomes or their respective breakpoints
 
+|
+
+-----------------
+
+|
 
 Assembling Contigs
 ......................
@@ -224,10 +273,11 @@ collected. The assembly uses a :term:`DeBruijn graph`.
 
 Breakpoints can be called by multiple different :attr:`~structural_variant.constants.CALL_METHOD`.
 
+|
 
-Breakpoint sequence homology
-..............................
+-----------------
 
+|
 
 Annotation
 ....................
@@ -256,6 +306,11 @@ There are specific question we want annotation to answer
 - what are the nearest genes outside the event (promoter swap?)
 - what genes are encompassed within the event?
 
+|
+
+-----------------
+
+|
 
 Splicing Model
 .....................
@@ -272,6 +327,14 @@ following model.
     splice site is lost. This brings about two splicing possibilities. Either the exon is skipped or the exon and
     proximal intron are retained. (C) A three-prime splice site is lost. (D) A three-prime splice site, and the next
     five-prime splice sites are lost.
+
+|
+|
+
+-----------------
+
+|
+|
 
 
 Development
