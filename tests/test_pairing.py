@@ -85,7 +85,167 @@ class TestPairing(unittest.TestCase):
     def test_genome_protocol_by_mixed_call_methods(self):
         raise unittest.SkipTest('TODO')
 
-    def test_mixed_protocol(self):
+    def test_mixed_protocol_fusions_same_sequence(self):
+        SEQUENCES = {'a': 'AATG', 'b': 'AATG'}
+        genome_ev = BreakpointPair(
+            Breakpoint('1', 1),
+            Breakpoint('1', 10),
+            opposing_strands=True,
+            data={
+                COLUMNS.event_type: SVTYPE.DEL,
+                COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.fusion_sequence_fasta_id: 'a',
+                COLUMNS.protocol: PROTOCOL.GENOME,
+                COLUMNS.transcript1: None,
+                COLUMNS.transcript2: None,
+                COLUMNS.fusion_cdna_coding_start: 1,
+                COLUMNS.fusion_cdna_coding_end: 10
+            }
+        )
+        trans_ev = BreakpointPair(
+            Breakpoint('1', 50),
+            Breakpoint('1', 60),
+            opposing_strands=True,
+            data={
+                COLUMNS.event_type: SVTYPE.DEL,
+                COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.fusion_sequence_fasta_id: 'b',
+                COLUMNS.protocol: PROTOCOL.TRANS,
+                COLUMNS.transcript1: None,
+                COLUMNS.transcript2: None,
+                COLUMNS.fusion_cdna_coding_start: 1,
+                COLUMNS.fusion_cdna_coding_end: 10
+            }
+        )
+        self.assertFalse(equivalent_events(genome_ev, trans_ev, self.TRANSCRIPTS))
+        self.assertTrue(equivalent_events(genome_ev, trans_ev, self.TRANSCRIPTS, SEQUENCES=SEQUENCES))
+    
+    def test_mixed_protocol_fusions_same_sequence_diff_translation(self):
+        SEQUENCES = {'a': 'AATG', 'b': 'AATG'}
+        genome_ev = BreakpointPair(
+            Breakpoint('1', 1),
+            Breakpoint('1', 10),
+            opposing_strands=True,
+            data={
+                COLUMNS.event_type: SVTYPE.DEL,
+                COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.fusion_sequence_fasta_id: 'a',
+                COLUMNS.protocol: PROTOCOL.GENOME,
+                COLUMNS.transcript1: None,
+                COLUMNS.transcript2: None,
+                COLUMNS.fusion_cdna_coding_start: 1,
+                COLUMNS.fusion_cdna_coding_end: 10
+            }
+        )
+        trans_ev = BreakpointPair(
+            Breakpoint('1', 50),
+            Breakpoint('1', 60),
+            opposing_strands=True,
+            data={
+                COLUMNS.event_type: SVTYPE.DEL,
+                COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.fusion_sequence_fasta_id: 'b',
+                COLUMNS.protocol: PROTOCOL.TRANS,
+                COLUMNS.transcript1: None,
+                COLUMNS.transcript2: None,
+                COLUMNS.fusion_cdna_coding_start: 1,
+                COLUMNS.fusion_cdna_coding_end: 50
+            }
+        )
+        self.assertFalse(equivalent_events(genome_ev, trans_ev, self.TRANSCRIPTS, SEQUENCES=SEQUENCES))
+
+    def test_mixed_protocol_fusions_different_sequence(self):
+        SEQUENCES = {'a': 'AATT', 'b': 'AATG'}
+        genome_ev = BreakpointPair(
+            Breakpoint('1', 1),
+            Breakpoint('1', 10),
+            opposing_strands=True,
+            data={
+                COLUMNS.event_type: SVTYPE.DEL,
+                COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.fusion_sequence_fasta_id: 'a',
+                COLUMNS.protocol: PROTOCOL.GENOME,
+                COLUMNS.transcript1: None,
+                COLUMNS.transcript2: None,
+                COLUMNS.fusion_cdna_coding_start: 1,
+                COLUMNS.fusion_cdna_coding_end: 10
+            }
+        )
+        trans_ev = BreakpointPair(
+            Breakpoint('1', 50),
+            Breakpoint('1', 60),
+            opposing_strands=True,
+            data={
+                COLUMNS.event_type: SVTYPE.DEL,
+                COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.fusion_sequence_fasta_id: 'b',
+                COLUMNS.protocol: PROTOCOL.TRANS,
+                COLUMNS.transcript1: None,
+                COLUMNS.transcript2: None,
+                COLUMNS.fusion_cdna_coding_start: 1,
+                COLUMNS.fusion_cdna_coding_end: 10
+            }
+        )
+        self.assertFalse(equivalent_events(genome_ev, trans_ev, self.TRANSCRIPTS, SEQUENCES=SEQUENCES))
+
+    def test_mixed_protocol_one_predicted_one_match(self):
+        genome_ev = BreakpointPair(
+            Breakpoint('1', 350, orient=ORIENT.LEFT),
+            Breakpoint('1', 400, orient=ORIENT.RIGHT),
+            opposing_strands=False,
+            data={
+                COLUMNS.event_type: SVTYPE.DEL,
+                COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.fusion_sequence_fasta_id: None,
+                COLUMNS.protocol: PROTOCOL.GENOME,
+                COLUMNS.transcript1: self.ust1.name,
+                COLUMNS.transcript2: None
+            }
+        )
+        trans_ev = BreakpointPair(
+            Breakpoint('1', 350, orient=ORIENT.LEFT),
+            Breakpoint('1', 400, orient=ORIENT.RIGHT),
+            opposing_strands=False,
+            data={
+                COLUMNS.event_type: SVTYPE.DEL,
+                COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.fusion_sequence_fasta_id: None,
+                COLUMNS.protocol: PROTOCOL.TRANS,
+                COLUMNS.transcript1: self.ust1.name,
+                COLUMNS.transcript2: None
+            }
+        )
+        self.assertTrue(equivalent_events(genome_ev, trans_ev, self.TRANSCRIPTS))
+        self.assertTrue(equivalent_events(trans_ev, genome_ev, self.TRANSCRIPTS))
+        
+        genome_ev.data[COLUMNS.transcript2] = self.ust1.name
+        genome_ev.data[COLUMNS.transcript1] = None
+        trans_ev.data[COLUMNS.transcript2] = self.ust1.name
+        trans_ev.data[COLUMNS.transcript1] = None
+        self.assertTrue(equivalent_events(genome_ev, trans_ev, self.TRANSCRIPTS))
+        self.assertTrue(equivalent_events(trans_ev, genome_ev, self.TRANSCRIPTS))
+    
+    def test_mixed_protocol_one_predicted_one_mismatch(self):
+        pass
+
+    def test_mixed_protocol_both_predicted(self):
+        raise unittest.SkipTest('TODO')
+
+    def test_mixed_protocol_neither_predicted_one_match(self):
+        raise unittest.SkipTest('TODO')
+    
+    def test_mixed_protocol_neither_predicted_no_match(self):
+        raise unittest.SkipTest('TODO')
+
+    def test_mixed_protocol_neither_predicted_both_match(self):
         raise unittest.SkipTest('TODO')
 
     def test_transcriptome_protocol(self):

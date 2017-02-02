@@ -148,11 +148,12 @@ class TestDraw(unittest.TestCase):
             self.canvas, [x, y, z], 500, breakpoints, {x: d.GENE1_COLOR, y: d.GENE2_COLOR_SELECTED, z: d.GENE2_COLOR})
 
         # test the class structure
-        self.assertEqual(5, len(g.elements))
+        self.assertEqual(6, len(g.elements))
         self.assertEqual('scaffold', g.elements[0].attribs.get('class', ''))
         for i in range(1, 4):
             self.assertEqual('gene', g.elements[i].attribs.get('class', ''))
-        self.assertEqual('breakpoint', g.elements[4].attribs.get('class', ''))
+        self.assertEqual('mask', g.elements[4].attribs.get('class', ''))
+        self.assertEqual('breakpoint', g.elements[5].attribs.get('class', ''))
         self.assertEqual(
             d.TRACK_HEIGHT * 2 + d.PADDING + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN,
             g.height
@@ -186,8 +187,8 @@ class TestDraw(unittest.TestCase):
         )
         self.canvas.add(g)
         self.assertEqual(2, len(self.canvas.elements))
-        self.assertEqual(4, len(g.elements))
-        for el, cls in zip(g.elements, ['splicing', 'exon_track', 'protein', 'breakpoint']):
+        self.assertEqual(5, len(g.elements))
+        for el, cls in zip(g.elements, ['splicing', 'exon_track', 'protein', 'mask', 'breakpoint']):
             self.assertEqual(cls, el.attribs.get('class', ''))
 
         for el, cls in zip(g.elements[1].elements, ['scaffold', 'exon', 'exon', 'exon']):

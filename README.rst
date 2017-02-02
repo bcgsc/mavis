@@ -27,7 +27,7 @@ to run the tests
 
 .. code-block:: bash
 
-    nosetests --with-coverage --cover-html --cover-html-dir=coverage --cover-package=structural_variant --cover-erase --cover-package=sv_pair
+    nosetests --with-coverage --cover-html --cover-html-dir=coverage --cover-package=structural_variant --cover-erase
 
 
 Building the documentation

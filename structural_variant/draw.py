@@ -3,6 +3,11 @@
 
     add optional scatter plots to subdiagrams for cna and expression data (possibly using matplotlib?)
 
+.. todo::
+
+    add mask to highlight the region not kept by the breakpoints (for 2 of more breakpoints only)
+    can use the css property "pointer-events: none;" to avoid issues with interactivity
+
 """
 import svgwrite
 import re
@@ -189,7 +194,7 @@ class Diagram:
         self.MARKER_TOP_MARGIN = self.BREAKPOINT_TOP_MARGIN
         self.MARKER_BOTTOM_MARGIN = self.BREAKPOINT_BOTTOM_MARGIN
         self.MARKER_COLOR = self.BREAKPOINT_COLOR
-        
+
         self.EXON_FONT_SIZE = 20
         self.EXON_TEAR_TOOTH_WIDTH = 2
         self.EXON_MIN_WIDTH = max([
@@ -245,6 +250,9 @@ class Diagram:
         self.SCATTER_MARKER_RADIUS = 2
         self.SCATTER_YAXIS_TICK_SIZE = self.PADDING
         self.SCATTER_YTICK_FONT_SIZE = 10
+
+        self.MASK_FILL = '#FFFFFF'
+        self.MASK_OPACITY = 0.7
 
     def draw_legend(self, canvas, swatches, border=True):
         main_group = canvas.g(class_='legend')
@@ -461,6 +469,10 @@ class Diagram:
 
         if ann.interchromosomal:
             # first gene view
+            if ann.break1.orient == ORIENT.LEFT:
+                pass
+            elif ann.break2.orient == ORIENT.RIGHT:
+                pass
             g = self.draw_genes(canvas, genes1, half_drawing_width, [ann.break1], colors=colors, labels=labels)
             g.translate(x, y)
             canvas.add(g)
@@ -472,7 +484,8 @@ class Diagram:
             canvas.add(g)
             gheights.append(g.height)
         else:
-            g = self.draw_genes(canvas, genes1 | genes2, drawing_width, [ann.break1, ann.break2], colors=colors, labels=labels)
+            g = self.draw_genes(
+                canvas, genes1 | genes2, drawing_width, [ann.break1, ann.break2], colors=colors, labels=labels)
             g.translate(x, y)
             canvas.add(g)
             gheights.append(g.height)
@@ -646,7 +659,7 @@ class Diagram:
                 fill=plot.colors.get((xpo, ypo), HEX_BLACK),
                 r=self.SCATTER_MARKER_RADIUS
             ))
-        
+
         xmax = Interval.convert_ratioed_pos(xmapping, plot.xmax).end
         for py in plot.hmarkers:
             py = plot.height - abs(py - plot.ymin) * yratio
@@ -676,12 +689,12 @@ class Diagram:
                 canvas.text(
                     str(y),
                     insert=(
-                        0 - self.SCATTER_YAXIS_TICK_SIZE - self.PADDING, 
+                        0 - self.SCATTER_YAXIS_TICK_SIZE - self.PADDING,
                         py + self.SCATTER_YTICK_FONT_SIZE * self.FONT_CENTRAL_SHIFT_RATIO),
                     fill=self.LABEL_COLOR,
                     style=self.FONT_STYLE.format(font_size=self.SCATTER_YTICK_FONT_SIZE, text_anchor='end')
                 ))
-        
+
         shift = max(ytick_labels)
         x = 0 - self.PADDING * 2 - self.SCATTER_AXIS_FONT_SIZE - self.SCATTER_YAXIS_TICK_SIZE - \
             self.SCATTER_YTICK_FONT_SIZE * self.FONT_WIDTH_HEIGHT_RATIO * shift
@@ -709,7 +722,8 @@ class Diagram:
         labels=LabelMapping(),
         colors={},
         mapping=None,
-        REFERENCE_GENOME=None
+        REFERENCE_GENOME=None,
+        masks=None
     ):
         """
         builds an svg group representing the transcript. Exons are drawn in a track with the splicing
@@ -730,6 +744,7 @@ class Diagram:
             svgwrite.container.Group: the group element for the transcript diagram
                     Has the added parameters of labels, height, and mapping
         """
+        
 
         if ust.get_strand() not in [STRAND.POS, STRAND.NEG]:
             raise NotSpecifiedError('strand must be positive or negative to draw the ust')
@@ -750,6 +765,21 @@ class Diagram:
         BBM = self.BREAKPOINT_BOTTOM_MARGIN if len(breakpoints) > 0 else 0
 
         y = 0
+        x_start = Interval.convert_ratioed_pos(mapping, ust.start).start
+        x_end = Interval.convert_ratioed_pos(mapping, ust.end).end
+        
+        if target_width:
+            x_start = 0
+            x_end = target_width
+        
+        if masks is None:
+            masks = []
+            if len(breakpoints) == 1:
+                b = breakpoints[0]
+                if b.orient == ORIENT.LEFT:
+                    masks = [Interval(ust.start, b.start - 1)]
+                elif b.orient == ORIENT.RIGHT:
+                    masks = [Interval(b.end + 1, ust.end)]
 
         LABEL_PREFIX = self.TRANSCRIPT_LABEL_PREFIX
         if isinstance(ust, FusionTranscript):
@@ -770,12 +800,10 @@ class Diagram:
             y += self.TRACK_HEIGHT
             y += BBM
         else:
-            x_start = Interval.convert_ratioed_pos(mapping, ust.start).start
-            x_end = Interval.convert_ratioed_pos(mapping, ust.end).end
             # draw the protein features if there are any
             for i, tl in enumerate(ust.translations):
                 tr = tl.transcript
-                
+
                 # if the splicing takes up more room than the track we need to adjust for it
                 y += self.SPLICE_HEIGHT + BTM
 
@@ -783,7 +811,10 @@ class Diagram:
                 exon_track_group.translate(0, y)
                 exon_track_group.add(canvas.text(
                     labels.add(tr, LABEL_PREFIX),
-                    insert=(0 - self.PADDING, self.TRACK_HEIGHT / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.LABEL_FONT_SIZE),
+                    insert=(
+                        0 - self.PADDING,
+                        self.TRACK_HEIGHT / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.LABEL_FONT_SIZE
+                    ),
                     fill=self.LABEL_COLOR,
                     style=self.FONT_STYLE.format(font_size=self.LABEL_FONT_SIZE, text_anchor='end'),
                     class_='label'
@@ -825,8 +856,6 @@ class Diagram:
                     except AttributeError:
                         pass
 
-                #if len(translated_genomic_regions) == 0:
-                #    continue
                 s = Interval.convert_pos(mapping, translated_genomic_regions[0].start)
                 t = Interval.convert_pos(mapping, translated_genomic_regions[-1].end)
 
@@ -837,22 +866,29 @@ class Diagram:
                 for sec in translated_genomic_regions:
                     start = Interval.convert_pos(mapping, sec.start)
                     end = Interval.convert_pos(mapping, sec.end)
-                    gt.add(canvas.rect(
-                        (start, h / 2 - self.TRANSLATION_TRACK_HEIGHT / 2),
-                        (end - start + 1, self.TRANSLATION_TRACK_HEIGHT),
-                        fill=self.TRANSLATION_SCAFFOLD_COLOR,
-                        class_='scaffold'
+                    gt.add(
+                        canvas.rect(
+                            (start, h / 2 - self.TRANSLATION_TRACK_HEIGHT / 2),
+                            (end - start + 1, self.TRANSLATION_TRACK_HEIGHT),
+                            fill=self.TRANSLATION_SCAFFOLD_COLOR,
+                            class_='scaffold'
                         ))
                 gt.add(canvas.text(
                     self.TRANSLATION_END_MARKER if tr.get_strand() == STRAND.NEG else self.TRANSLATION_START_MARKER,
-                    insert=(s - self.TRANSLATION_MARKER_PADDING, h / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.TRANSLATION_FONT_SIZE),
+                    insert=(
+                        s - self.TRANSLATION_MARKER_PADDING,
+                        h / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.TRANSLATION_FONT_SIZE
+                    ),
                     fill=self.LABEL_COLOR,
                     style=self.FONT_STYLE.format(font_size=self.TRANSLATION_FONT_SIZE, text_anchor='end'),
                     class_='label'
                 ))
                 gt.add(canvas.text(
                     self.TRANSLATION_START_MARKER if tr.get_strand() == STRAND.NEG else self.TRANSLATION_END_MARKER,
-                    insert=(t + self.TRANSLATION_MARKER_PADDING, h / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.TRANSLATION_FONT_SIZE),
+                    insert=(
+                        t + self.TRANSLATION_MARKER_PADDING,
+                        h / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.TRANSLATION_FONT_SIZE
+                    ),
                     fill=self.LABEL_COLOR,
                     style=self.FONT_STYLE.format(font_size=self.TRANSLATION_FONT_SIZE, text_anchor='start'),
                     class_='label'
@@ -900,12 +936,13 @@ class Diagram:
                         gd.add(gdr)
                     gd.translate(0, py)
 
+                    f = self.LABEL_COLOR if not self.DYNAMIC_LABELS else Diagram.dynamic_label_color(self.DOMAIN_COLOR)
                     gd.add(canvas.text(
                         labels.add(d.name, self.DOMAIN_LABEL_PREFIX),
                         insert=(
                             0 - self.PADDING,
                             self.DOMAIN_TRACK_HEIGHT / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.DOMAIN_LABEL_FONT_SIZE),
-                        fill=self.LABEL_COLOR if not self.DYNAMIC_LABELS else Diagram.dynamic_label_color(self.DOMAIN_COLOR),
+                        fill=f,
                         style=self.FONT_STYLE.format(font_size=self.DOMAIN_LABEL_FONT_SIZE, text_anchor='end'),
                         class_='label'
                     ))
@@ -916,23 +953,31 @@ class Diagram:
                     y += self.INNER_MARGIN
                 y += py + BBM
                 main_group.add(gp)
-
+        
+        # add masks
+        for mask in masks:
+            pixel = Interval.convert_ratioed_pos(mapping, mask.start) | Interval.convert_ratioed_pos(mapping, mask.end)
+            m = canvas.rect(
+                (pixel.start, 0), (pixel.length(), y),
+                class_='mask', fill=self.MASK_FILL, opacity=self.MASK_OPACITY, pointer_events='none'
+            )
+            main_group.add(m)
+        
         # now overlay the breakpoints on top of everything
         for i, b in enumerate(breakpoints):
-            s = Interval.convert_ratioed_pos(mapping, b.start)
-            t = Interval.convert_ratioed_pos(mapping, b.end)
-            px_itvl = Interval(s.start, t.end)
-            bg = self.draw_breakpoint(canvas, b, px_itvl.length(), y, label=labels.add(b, self.BREAKPOINT_LABEL_PREFIX))
-            bg.translate(px_itvl.start, 0)
+            pixel = Interval.convert_ratioed_pos(mapping, b.start) | Interval.convert_ratioed_pos(mapping, b.end)
+            bg = self.draw_breakpoint(canvas, b, pixel.length(), y, label=labels.add(b, self.BREAKPOINT_LABEL_PREFIX))
+            bg.translate(pixel.start, 0)
             main_group.add(bg)
 
         setattr(main_group, 'height', y)
-        setattr(main_group, 'width', target_width)
+        setattr(main_group, 'width', x_end - x_start)
         setattr(main_group, 'mapping', mapping)
         setattr(main_group, 'labels', labels)
         return main_group
 
-    def draw_genes(self, canvas, genes, target_width, breakpoints=None, colors=None, labels=None, plots=None):
+    def draw_genes(
+            self, canvas, genes, target_width, breakpoints=None, colors=None, labels=None, plots=None, masks=None):
         """
         draws the genes given in order of their start position trying to minimize
         the number of tracks required to avoid overlap
@@ -942,7 +987,8 @@ class Diagram:
             target_width (int): the target width of the diagram
             genes (:class:`list` of :class:`Gene`): the list of genes to draw
             breakpoints (:class:`list` of :class:`Breakpoint`): the breakpoints to overlay
-            colors (:class:`dict` of :class:`Gene` and :class:`str`): dictionary of the colors assigned to each Gene as fill
+            colors (:class:`dict` of :class:`Gene` and :class:`str`): dictionary of the colors assigned to each Gene as
+             fill
 
         Return:
             svgwrite.container.Group: the group element for the diagram.
@@ -965,6 +1011,15 @@ class Diagram:
             start=st, end=end,
             min_inter_width=self.MIN_WIDTH
         )
+        if masks is None:
+            masks = []
+            if len(breakpoints) == 1:
+                b = breakpoints[0]
+                if b.orient == ORIENT.LEFT:
+                    masks = [Interval(st, b.start - 1)]
+                elif b.orient == ORIENT.RIGHT:
+                    masks = [Interval(b.end + 1, end)]
+        
         gene_px_intervals = {}
         for i, gene in enumerate(sorted(genes, key=lambda x: x.start)):
             s = Interval.convert_ratioed_pos(mapping, gene.start)
@@ -977,8 +1032,8 @@ class Diagram:
 
         main_group.add(
             canvas.rect(
-                (0, y + self.TRACK_HEIGHT / 2 - self.SCAFFOLD_HEIGHT / 2
-                    + (len(tracks) - 1) * (self.TRACK_HEIGHT + self.PADDING)),
+                (0, y + self.TRACK_HEIGHT / 2 - self.SCAFFOLD_HEIGHT / 2 +
+                    (len(tracks) - 1) * (self.TRACK_HEIGHT + self.PADDING)),
                 (target_width, self.SCAFFOLD_HEIGHT),
                 fill=self.SCAFFOLD_COLOR,
                 class_='scaffold'
@@ -999,6 +1054,16 @@ class Diagram:
             y += self.TRACK_HEIGHT + self.PADDING
 
         y += self.BREAKPOINT_BOTTOM_MARGIN - self.PADDING
+        
+        # adding the masks is the final step
+        for mask in masks:
+            pixel = Interval.convert_ratioed_pos(mapping, mask.start) | Interval.convert_ratioed_pos(mapping, mask.end)
+            m = canvas.rect(
+                (pixel.start, 0), (pixel.length(), y),
+                class_='mask', fill=self.MASK_FILL, pointer_events='none', opacity=self.MASK_OPACITY
+            )
+            main_group.add(m)
+
         # now overlay the breakpoints on top of everything
         for i, b in enumerate(sorted(breakpoints)):
             s = Interval.convert_pos(mapping, b.start)
@@ -1080,7 +1145,7 @@ class Diagram:
             main_group.add(plot_group)
             plot_group.translate(x, y)
             y += plot.height + self.PADDING * 2
-        
+
         regular_transcripts = sorted([tx for tx in gene.transcripts if not tx.is_best_transcript], key=lambda x: x.name)
         for tx in regular_transcripts:
             g = Diagram._draw_exon_track(self, canvas, tx, mapping, colors=colors)
@@ -1099,16 +1164,16 @@ class Diagram:
             )
             main_group.add(t)
             y += self.PADDING + self.TRACK_HEIGHT
-        
+
         best_transcripts = sorted([tx for tx in gene.transcripts if tx.is_best_transcript], key=lambda x: x.name)
         for tx in best_transcripts:
             for txx in tx.transcripts:
                 labels[tx.name] = txx
-            
+
             g = Diagram.draw_ustranscript(self, canvas, tx, mapping=mapping, colors=colors, labels=labels)
             main_group.add(g)
             g.translate(x, y)
-            
+
             main_group.add(t)
             y += self.PADDING + g.height
 
@@ -1266,7 +1331,8 @@ class Diagram:
                 class_='label'
             )
             g.add(t)
-            g.add(Tag('title', 'Exon {} {}_{} L={}'.format(exon.name if exon.name else '', exon.start, exon.end, len(exon))))
+            g.add(Tag('title', 'Exon {} {}_{} L={}'.format(
+                exon.name if exon.name else '', exon.start, exon.end, len(exon))))
         return g
 
     def draw_template(self, canvas, template, target_width, labels=None, colors=None, breakpoints=None):
@@ -1291,7 +1357,9 @@ class Diagram:
         scaffold.translate((0, self.BREAKPOINT_TOP_MARGIN + self.TEMPLATE_TRACK_HEIGHT / 2 - self.SCAFFOLD_HEIGHT / 2))
         group.add(canvas.text(
             labels.add(template, self.TEMPLATE_LABEL_PREFIX),
-            insert=(0 - self.PADDING, self.BREAKPOINT_TOP_MARGIN + self.TEMPLATE_TRACK_HEIGHT / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.LABEL_FONT_SIZE),
+            insert=(
+                0 - self.PADDING, self.BREAKPOINT_TOP_MARGIN + self.TEMPLATE_TRACK_HEIGHT / 2 +
+                self.FONT_CENTRAL_SHIFT_RATIO * self.LABEL_FONT_SIZE),
             fill=self.LABEL_COLOR,
             style=self.FONT_STYLE.format(font_size=self.LABEL_FONT_SIZE, text_anchor='end'),
             class_='label'
@@ -1323,8 +1391,9 @@ class Diagram:
                     fill=f, stroke=self.TEMPLATE_BAND_STROKE, stroke_width=self.TEMPLATE_BAND_STROKE_WIDTH
                 )
             bgroup.add(r)
-            bgroup.add(Tag('title', 'template {}: band {} {}-{} L={}M'.format(
-                template.name, band.name, band.start, band.end, round(len(band)/1000000, 0))))
+            bgroup.add(
+                Tag('title', 'template {}: band {} {}-{} L={}M'.format(
+                    template.name, band.name, band.start, band.end, round(len(band) / 1000000, 0))))
             bgroup.translate((s, self.BREAKPOINT_TOP_MARGIN))
             group.add(bgroup)
         # now draw the breakpoints overtop
@@ -1373,7 +1442,8 @@ class Diagram:
 
         group = canvas.g(class_='gene')
         if width < self.GENE_MIN_WIDTH:
-            raise DrawingFitError('width of {} is not sufficient to draw a gene of minimum width {}'.format(width, self.GENE_MIN_WIDTH))
+            raise DrawingFitError('width of {} is not sufficient to draw a gene of minimum width {}'.format(
+                width, self.GENE_MIN_WIDTH))
         wrect = width - self.GENE_ARROW_WIDTH
         if wrect < 1:
             raise DrawingFitError('width is not sufficient to draw gene')
@@ -1422,7 +1492,10 @@ class Diagram:
             group.add(
                 canvas.text(
                     label,
-                    insert=(wrect / 2 + self.GENE_ARROW_WIDTH, height / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.LABEL_FONT_SIZE),
+                    insert=(
+                        wrect / 2 + self.GENE_ARROW_WIDTH,
+                        height / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.LABEL_FONT_SIZE
+                    ),
                     fill=label_color,
                     style=self.FONT_STYLE.format(font_size=self.LABEL_FONT_SIZE, text_anchor='middle'),
                     class_='label'
@@ -1621,5 +1694,6 @@ class Diagram:
                 raise AssertionError(
                     'interval mapping should not map any intervals to less than the minimum required width. Interval {}'
                     ' was mapped to a pixel interval of length {} but the minimum width is {}'.format(
-                        itvl, n.length(), min_width), p1, p2, mapping, input_intervals, target_width, ratio, min_inter_width)
+                        itvl, n.length(), min_width),
+                    p1, p2, mapping, input_intervals, target_width, ratio, min_inter_width)
         return mapping

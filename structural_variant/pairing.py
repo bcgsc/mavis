@@ -99,23 +99,16 @@ def equivalent_events(ev1, ev2, TRANSCRIPTS, DISTANCES=None, SEQUENCES=None):
         print('basic diff')
         return False
 
+    if ev1.data[COLUMNS.protocol] != PROTOCOL.GENOME:
+        ev1, ev2 = ev2, ev1
+
     methods = set([
         ev1.data[COLUMNS.break1_call_method],
         ev1.data[COLUMNS.break2_call_method],
         ev2.data[COLUMNS.break1_call_method],
         ev2.data[COLUMNS.break2_call_method]
     ])
-
-    call_method = CALL_METHOD.CONTIG
-
-    if CALL_METHOD.FLANK in methods:  # lowest level
-        call_method = CALL_METHOD.FLANK
-    elif CALL_METHOD.SPLIT in methods:
-        call_method = CALL_METHOD.SPLIT
-    else:  # highest level of confidence
-        assert({CALL_METHOD.CONTIG} == methods)
-
-    max_distance = DISTANCES[call_method]
+    max_distance = max([DISTANCES.get(m, 0) for m in methods])
 
     fusion1 = SEQUENCES.get(ev1.data[COLUMNS.fusion_sequence_fasta_id], None)
     fusion2 = SEQUENCES.get(ev2.data[COLUMNS.fusion_sequence_fasta_id], None)
@@ -134,45 +127,30 @@ def equivalent_events(ev1, ev2, TRANSCRIPTS, DISTANCES=None, SEQUENCES=None):
             return True
 
         # predict genome breakpoints to compare by location
-        if ev1.data[COLUMNS.protocol] == PROTOCOL.GENOME:
-            t1 = TRANSCRIPTS.get(ev1.data[COLUMNS.transcript1], None)
-            if t1:
-                pbreaks = predict_transcriptome_breakpoint(ev1.break1, t1)
-                for b in pbreaks:
-                    if Interval.dist(b, ev2.break1) <= max_distance:
-                        break1_match = True
-                        break
-            t2 = TRANSCRIPTS.get(ev1.data[COLUMNS.transcript2], None)
-            if t2:
-                pbreaks = predict_transcriptome_breakpoint(ev1.break2, t1)
-                for b in pbreaks:
-                    if Interval.dist(b, ev2.break2) <= max_distance:
-                        break2_match = True
-                        break
-        else:
-            t1 = TRANSCRIPTS.get(ev2.data[COLUMNS.transcript1], None)
-            if t1:
-                pbreaks = predict_transcriptome_breakpoint(ev2.break1, t1)
-                for b in pbreaks:
-                    if Interval.dist(b, ev1.break1) <= max_distance:
-                        break1_match = True
-                        break
-            t2 = TRANSCRIPTS.get(ev2.data[COLUMNS.transcript2], None)
-            if t2:
-                pbreaks = predict_transcriptome_breakpoint(ev2.break2, t1)
-                for b in pbreaks:
-                    if Interval.dist(b, ev1.break2) <= max_distance:
-                        break2_match = True
-                        break
+        t1 = TRANSCRIPTS.get(ev1.data[COLUMNS.transcript1], None)
+        if t1:
+            pbreaks = predict_transcriptome_breakpoint(ev1.break1, t1)
+            for b in pbreaks:
+                if abs(Interval.dist(b, ev2.break1)) <= max_distance:
+                    break1_match = True
+                    break
+        t2 = TRANSCRIPTS.get(ev1.data[COLUMNS.transcript2], None)
+        if t2:
+            pbreaks = predict_transcriptome_breakpoint(ev1.break2, t2)
+            for b in pbreaks:
+                if abs(Interval.dist(b, ev2.break2)) <= max_distance:
+                    break2_match = True
+                    break
+
     elif ev1.data[COLUMNS.event_type] != ev2.data[COLUMNS.event_type]:
         print('diff events')
         return False
 
     # location comparison
-    if Interval.dist(ev1.break1, ev2.break1) <= max_distance:
+    if abs(Interval.dist(ev1.break1, ev2.break1)) <= max_distance:
         break1_match = True
     print('break1 dist:', Interval.dist(ev1.break1, ev2.break1), ev1.break1, ev2.break1)
-    if Interval.dist(ev1.break2, ev2.break2) <= max_distance:
+    if abs(Interval.dist(ev1.break2, ev2.break2)) <= max_distance:
         break2_match = True
     print('break2 dist:', Interval.dist(ev1.break2, ev2.break2), ev1.break2, ev2.break2)
     print('break1_match', break1_match, 'break2_match', break2_match)
