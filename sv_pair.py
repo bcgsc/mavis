@@ -23,9 +23,10 @@ General Process
 """
 import argparse
 from structural_variant.breakpoint import read_bpp_from_input_file
-from structural_variant.annotate import load_reference_genes, load_reference_genome, load_templates
+from structural_variant.annotate import load_reference_genes
 from structural_variant.interval import Interval
 from structural_variant import __version__
+from Bio import SeqIO
 import TSV
 from structural_variant.constants import PROTOCOL, SVTYPE, COLUMNS, SPLICE_TYPE, CALL_METHOD, STRAND, ORIENT
 from datetime import datetime
@@ -53,10 +54,6 @@ def parse_arguments():
         help='path to the input file(s)', required=True, nargs='+'
     )
     parser.add_argument(
-        '-f', '--fasta', help='path to the sequence files', required=True, nargs='+'
-    )
-
-    parser.add_argument(
         '-s', '--split_call_distance', default=10, type=int,
         help='distance allowed between breakpoint calls when pairing from split read (and higher) resolution calls'
     )
@@ -68,31 +65,30 @@ def parse_arguments():
         '--flanking_call_distance', default=0, type=int,
         help='distance allowed between breakpoint calls when pairing from contig (and higher) resolution calls'
     )
+    parser.add_argument(
+        '-a', '--annotations',
+        default='/home/creisle/svn/ensembl_flatfiles/ensembl69_transcript_exons_and_domains_20160808.tsv',
+        help='path to the reference annotations of genes, transcript, exons, domains, etc.'
+    )
 
     args = parser.parse_args()
     return args
 
 
-def compare_trans_events(ev1, ev2):
-    """
-    checks if two events, at least one of which is transcriptomic, produce the same product
-    """
-    pass
-
-
-def compare_genome_events(ev1, ev2, contig_distance=0, split_distance=10, flank_distance=0):
-    """
-    checks if 2 events are equivalent. Uses genomic breakpoints and call method
-    """
-    if ev1.break1.chr != ev2.break1.chr or ev1.break2.chr != ev2.break2.chr or \
-            ev1.data[COLUMNS.event_type] != ev2.data[COLUMNS.event_type] or \
+def equivalent_events(ev1, ev2, TRANSCRIPTS, DISTANCES=None, SEQUENCES=None):
+    if DISTANCES is None:
+        DISTANCES = {CALL_METHOD.CONTIG: 0, CALL_METHOD.SPLIT: 10, CALL_METHOD.FLANK: 0}
+    SEQUENCES = dict() if SEQUENCES is None else SEQUENCES
+    
+    # basic checks
+    if ev1.break1.chr != ev2.break1.chr or ev1.break2.chr != ev2.break2.chr or \ 
             len(set([STRAND.NS, ev1.break1.strand, ev2.break1.strand])) > 2 or \
             len(set([STRAND.NS, ev1.break2.strand, ev2.break2.strand])) > 2 or \
             len(set([ORIENT.NS, ev1.break1.orient, ev2.break1.orient])) > 2 or \
             len(set([ORIENT.NS, ev1.break2.orient, ev2.break2.orient])) > 2 or \
             ev1.opposing_strands != ev2.opposing_strands:
         return False
-
+    
     methods = set([
         ev1.data[COLUMNS.break1_call_method],
         ev1.data[COLUMNS.break2_call_method],
@@ -100,19 +96,54 @@ def compare_genome_events(ev1, ev2, contig_distance=0, split_distance=10, flank_
         ev2.data[COLUMNS.break2_call_method]
     ])
 
-    d = abs(Interval.dist(ev1.break1, ev2.break1)) + abs(Interval.dist(ev1.break2, ev2.break2))
-    ref_d = contig_distance
+    call_method = CALL_METHOD.CONTIG
 
     if CALL_METHOD.FLANK in methods:  # lowest level
-        ref_d = flank_distance
+        call_method = CALL_METHOD.FLANK
     elif CALL_METHOD.SPLIT in methods:
-        ref_d = split_distance
+        call_method = CALL_METHOD.SPLIT
     else:  # highest level of confidence
         assert({CALL_METHOD.CONTIG} == methods)
+    
+    min_distance = DISTANCES[call_method]
+    
+    fusion1 = SEQUENCES.get(ev1.data[COLUMNS.fusion_sequence_fasta_id], None)
+    fusion2 = SEQUENCES.get(ev2.data[COLUMNS.fusion_sequence_fasta_id], None)
+    
+    break1_match = False
+    break2_match = False
 
-    if d > ref_d * 2:
+    if ev1.data[COLUMNS.protocol] != ev2.data[COLUMNS.protocol]:  # mixed
+        if fusion1 and fusion2:
+            # compare product
+            if fusion1 != fusion2:
+                return False
+            for col in [COLUMNS.fusion_cdna_coding_start, COLUMNS.fusion_cdna_coding_end]:
+                if ev1.data[col] != ev2.data[col]:
+                    return False
+            return True
+
+        # predict genome breakpoints to compare by location
+        if ev1.data[COLUMNS.protocol] == PROTOCOL.GENOME:
+            t1 = TRANSCRIPTS.get(ev1.data[COLUMNS.transcript1], None)
+            if t1:
+                pbreaks = predict_transcriptome_breakpoint(ev1.break1, t1)
+                for b in pbreaks:
+                    if Interval.dist(b, ev2.break1):
+                        break1_match = True
+                        break
+
+
+        else:
+
+        for gbreak, tbreak, transcript in zip(gbreaks, tbreaks):
+            predicted_tbreaks = predict_transcriptome_breakpoint(gbreak, transcript)
+            for b in predicted_tbreaks:
+                
+    elif ev1.data[COLUMNS.event_type] != ev2.data[COLUMNS.event_type]:
         return False
-    return True
+    # location comparison
+
 
 
 def main():
@@ -124,6 +155,7 @@ def main():
         log(arg, '=', val, time_stamp=False)
 
     bpps = []
+    
     for f in args.input:
         log('loading:', f)
         bpps.extend(
@@ -135,7 +167,9 @@ def main():
                     COLUMNS.annotation_id,
                     COLUMNS.library,
                     COLUMNS.fusion_cdna_coding_start,
-                    COLUMNS.fusion_cdna_coding_end
+                    COLUMNS.fusion_cdna_coding_end,
+                    COLUMNS.fusion_sequence_fasta_id,
+                    COLUMNS.fusion_sequence_fasta_file
                 ],
                 cast={
                     COLUMNS.stranded.name: TSV.tsv_boolean
@@ -151,14 +185,33 @@ def main():
             ))
     log('read {} breakpoint pairs'.format(len(bpps)))
 
-    log('loading:', args.reference_genome)
-    REFERENCE_GENOME = load_reference_genome(args.reference_genome)
-
-    log('loading:', args.template_metadata)
-    TEMPLATES = load_templates(args.template_metadata)
-
+    SEQUENCES = dict()
+    sequence_files = set()
+    for bpp in bpps:
+        if bpp.data[COLUMNS.fusion_sequence_fasta_file]:
+            sequence_files.add(bpp.data[COLUMNS.fusion_sequence_fasta_file])
+    for f in sorted(list(sequence_files)):
+        log('loading:', f)
+        with open(f, 'rU') as fh:
+            temp = SeqIO.to_dict(SeqIO.parse(fh, 'fasta'))
+            for k in temp:
+                if k in SEQUENCES:
+                    raise AssertionError('sequence identifiers are not unique', k)
+            SEQUENCES.update(temp)
+    
     log('loading:', args.annotations)
-    REFERENCE_ANNOTATIONS = load_reference_genes(args.annotations, REFERENCE_GENOME=REFERENCE_GENOME)
+    REFERENCE_ANNOTATIONS = load_reference_genes(args.annotations)
+
+    TRANSCRIPTS = dict()
+
+    for chr in REFERENCE_ANNOTATIONS:
+        for gene in REFERENCE_ANNOTATIONS[chr]:
+            for t in gene.transcripts:
+                k = (gene.name, t.name)
+                if k in TRANSCRIPTS:
+                    raise AssertionError('gene + transcript is not unique', gene, t)
+                TRANSCRIPTS[k] = t
+
 
 
 if __name__ == '__main__':

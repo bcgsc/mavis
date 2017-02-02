@@ -195,6 +195,7 @@ def main():
         row = ann.flatten()
         row[COLUMNS.break1_strand] = ann.transcript1.get_strand()
         row[COLUMNS.break2_strand] = ann.transcript2.get_strand()
+        row[COLUMNS.fusion_sequence_fasta_file] = FA_OUTPUT_FILE
 
         log('current annotation', annotation_id, ann.transcript1.name, ann.transcript2.name, ann.event_type)
 
@@ -214,28 +215,31 @@ def main():
                 if fusion_fa_id in fa_sequences:
                     raise AssertionError('should not be duplicate fa sequence ids', fusion_fa_id)
                 fa_sequences[fusion_fa_id] = ft.get_cdna_sequence(t.splicing_pattern)
+                
+                # duplicate the row for each translation
+                for tl in t.translations:
+                    nrow = dict()
+                    nrow.update(row)
+                    nrow[COLUMNS.fusion_splicing_pattern] = tl.transcript.splicing_pattern.splice_type
+                    nrow[COLUMNS.fusion_cdna_coding_start] = tl.start
+                    nrow[COLUMNS.fusion_cdna_coding_end] = tl.end
+                    nrow[COLUMNS.fusion_sequence_fasta_id] = fusion_fa_id
 
-            # duplicate the row for each translation
-            for tl in ft.translations:
-                nrow = dict()
-                nrow.update(row)
-                nrow[COLUMNS.fusion_splicing_pattern] = tl.transcript.splicing_pattern.splice_type
-                nrow[COLUMNS.fusion_cdna_coding_start] = tl.start
-                nrow[COLUMNS.fusion_cdna_coding_end] = tl.end
-
-                domains = []
-                for dom in tl.domains:
-                    m, t = dom.score_region_mapping()
-                    temp = {
-                        "name": dom.name,
-                        "sequences": dom.get_sequences(),
-                        "regions": [{"start": dr.start, "end": dr.end} for dr in sorted(dom.regions, key=lambda x: x.start)],
-                        "mapping_quality": round(m * 100 / t, 0),
-                        "matches": m
-                    }
-                    domains.append(temp)
-                nrow[COLUMNS.fusion_mapped_domains] = json.dumps(domains)
-                ann_rows.append(nrow)
+                    domains = []
+                    for dom in tl.domains:
+                        m, t = dom.score_region_mapping()
+                        temp = {
+                            "name": dom.name,
+                            "sequences": dom.get_sequences(),
+                            "regions": [
+                                {"start": dr.start, "end": dr.end} for dr in sorted(dom.regions, key=lambda x: x.start)
+                            ],
+                            "mapping_quality": round(m * 100 / t, 0),
+                            "matches": m
+                        }
+                        domains.append(temp)
+                    nrow[COLUMNS.fusion_mapped_domains] = json.dumps(domains)
+                    ann_rows.append(nrow)
         except NotSpecifiedError as err:
             pass
         except AttributeError as err:
@@ -300,7 +304,6 @@ def main():
             rows.append(row)
         else:
             rows.extend(ann_rows)
-
 
     with open(TABBED_OUTPUT_FILE, 'w') as fh:
         log('writing:', TABBED_OUTPUT_FILE)

@@ -285,9 +285,12 @@ COLUMNS = Vocab(
         'transcript and the mapping quality is the number of matching amino acid positions over the total '
         'number of amino acids. The sequence is the amino acid sequence of the domain on the reference/original'
         ' transcript'),
-    fusion_cdna_sequence=Column(
-        'fusion_cdna_sequence',
-        ''),
+    fusion_sequence_fasta_id=Column(
+        'fusion_sequence_fasta_id',
+        'The sequence identifier for the cdna sequence output fasta file'),
+    fusion_sequence_fasta_file=Column(
+        'fusion_sequence_fasta_file',
+        'Path to the corresponding fasta output file'),
     annotation_figure=Column(
         'annotation_figure',
         'File path to the svg drawing representing the annotation'),
