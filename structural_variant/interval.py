@@ -369,7 +369,6 @@ class Interval:
                 ratio = (nexxt[1] - nexxt[0]) / (curr[1] - curr[0])
                 shift = round((pos - curr[0]) * ratio, 0)
                 shift2 = round((pos - curr[0]) * ratio + ratio, 0)
-                #print('curr', curr, 'next', nexxt, 'shift', shift, 'ratio', ratio)
                 if forward_to_reverse:
                     i = Interval(nexxt[1] - shift2, nexxt[1] - shift)
                 else:

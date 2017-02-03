@@ -774,12 +774,20 @@ class Diagram:
         
         if masks is None:
             masks = []
-            if len(breakpoints) == 1:
-                b = breakpoints[0]
-                if b.orient == ORIENT.LEFT:
-                    masks = [Interval(ust.start, b.start - 1)]
-                elif b.orient == ORIENT.RIGHT:
-                    masks = [Interval(b.end + 1, ust.end)]
+            try:
+                if len(breakpoints) == 1:
+                    b = breakpoints[0]
+                    if b.orient == ORIENT.RIGHT:
+                        masks = [Interval(ust.start, b.start - 1)]
+                    elif b.orient == ORIENT.LEFT:
+                        masks = [Interval(b.end + 1, ust.end)]
+                elif len(breakpoints) == 2:
+                    b1, b2 = sorted(breakpoints)
+                    if b1.orient == ORIENT.LEFT and b2.orient == ORIENT.RIGHT:
+                        masks = [Interval(b1.end + 1, b2.start - 1)]
+            except AttributeError:
+                pass
+
 
         LABEL_PREFIX = self.TRANSCRIPT_LABEL_PREFIX
         if isinstance(ust, FusionTranscript):
@@ -1013,13 +1021,20 @@ class Diagram:
         )
         if masks is None:
             masks = []
-            if len(breakpoints) == 1:
-                b = breakpoints[0]
-                if b.orient == ORIENT.LEFT:
-                    masks = [Interval(st, b.start - 1)]
-                elif b.orient == ORIENT.RIGHT:
-                    masks = [Interval(b.end + 1, end)]
-        
+            try:
+                if len(breakpoints) == 1:
+                    b = breakpoints[0]
+                    if b.orient == ORIENT.RIGHT:
+                        masks = [Interval(st, b.start - 1)]
+                    elif b.orient == ORIENT.LEFT:
+                        masks = [Interval(b.end + 1, end)]
+                elif len(breakpoints) == 2:
+                    b1, b2 = sorted(breakpoints)
+                    if b1.orient == ORIENT.LEFT and b2.orient == ORIENT.RIGHT:
+                        masks = [Interval(b1.end + 1, b2.start - 1)]
+            except AttributeError:
+                pass
+
         gene_px_intervals = {}
         for i, gene in enumerate(sorted(genes, key=lambda x: x.start)):
             s = Interval.convert_ratioed_pos(mapping, gene.start)

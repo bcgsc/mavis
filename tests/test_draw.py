@@ -309,6 +309,7 @@ class TestDraw(unittest.TestCase):
             d.INNER_MARGIN + \
             d.TRACK_HEIGHT + d.SPLICE_HEIGHT
         self.assertEqual(expected_height, canvas.attribs['height'])
+        canvas.saveas('test_draw_layout_single_genomic.svg')
 
     def test_draw_area_plot(self):
         d = Diagram()
@@ -435,7 +436,7 @@ class TestDraw(unittest.TestCase):
         ft = FusionTranscript.build(ann, reference_genome)
 
         canvas, legend = d.draw(ann, ft, draw_template=True, templates=TEMPLATE_METADATA)
-        canvas.saveas('test_figure.svg')
+        canvas.saveas('test_draw_translocation_with_template.svg')
         self.assertEqual(8, len(canvas.elements))  # defs counts as element
         expected_height = d.TOP_MARGIN + d.BOTTOM_MARGIN + \
             d.TRACK_HEIGHT * 2 + d.PADDING  + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN + \
@@ -496,6 +497,6 @@ class TestDraw(unittest.TestCase):
         d.GENE_MIN_BUFFER = 0
         canvas = d.draw_ustranscripts_overlay(gene, vmarkers=[marker], plots=[s, s])
         self.assertEqual(2, len(canvas.elements))  # defs counts as element
-        canvas.saveas('test_overlay_figure.svg')
+        canvas.saveas('test_draw_overlay.svg')
         self.assertFalse(True)
         raise unittest.SkipTest('TODO. add height calculation assert')

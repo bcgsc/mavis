@@ -320,24 +320,19 @@ class Evidence:
 
         tgt_left = breakpoint.start - window.start  # amount to expand to the left
         tgt_right = window.end - breakpoint.end  # amount to expand to the right
-        print('tgt_left', tgt_left, 'tgt_right', tgt_right)
-        print('breakpoint', breakpoint)
 
         if len(transcripts) == 0:  # case 1. no overlapping transcripts
-            print('no overlapping transcripts')
             return window
 
         for t in transcripts:
             current_length = 0
             exons = sorted(t.exons, key=lambda x: x.start)
-            print('exons', [(e.start, e.end) for e in exons])
             current_interval = Interval(breakpoint.start, breakpoint.end)
             segments = []
-            
+
             # first going left
             lleft = 0
             epos, in_prev_intron = Interval.position_in_range(exons, (breakpoint.start, breakpoint.start))
-            print('eflt', epos, in_prev_intron)
             if in_prev_intron:
                 epos -= 1
                 if epos >= 0:
@@ -348,7 +343,6 @@ class Evidence:
                         l = Interval(breakpoint.start - tgt_left + lleft, breakpoint.start - 1)
                     segments.append(l)
                     lleft += len(l)
-            print('lleft', lleft)
             while epos >= 0 and lleft < tgt_left:
                 e = Interval(exons[epos].start, min([exons[epos].end, breakpoint.start - 1]))
                 if lleft + len(e) <= tgt_left:  # add the entire exon
@@ -365,14 +359,11 @@ class Evidence:
                 l = Interval(exons[0].start - tgt_left + lleft, exons[0].start - 1)
                 lleft += len(l)
                 segments.append(l)
-            print('segments', [(e.start, e.end) for e in segments])
-            print('lleft', lleft)
             assert(lleft == tgt_left)
 
             # first going left
             lright = 0
             epos, in_prev_intron = Interval.position_in_range(exons, (breakpoint.start, breakpoint.start))
-            print('right', epos, in_prev_intron)
             if in_prev_intron:
                 curr = exons[epos]
                 l = Interval(breakpoint.end + 1, curr.start - 1)
@@ -381,7 +372,6 @@ class Evidence:
                     l  = Interval(breakpoint.end + 1, breakpoint.end + tgt_right - lright)
                 lright += len(l)
                 segments.append(l)
-            print('segments', [(e.start, e.end) for e in segments])
             while epos < len(exons) and lright < tgt_right:
                 e = Interval(max([exons[epos].start, breakpoint.end + 1]), exons[epos].end)
                 if lright + len(e) <= tgt_right:  # add the entire exon
@@ -398,8 +388,6 @@ class Evidence:
                 l = Interval(exons[-1].end + 1, exons[-1].end + 1 + tgt_right - lright - 1)
                 lright += len(l)
                 segments.append(l)
-            print('segments', [(e.start, e.end) for e in segments])
-            print('lright', lright)
             assert(lright == tgt_right)
             window = window | Interval.union(*segments)
         return window
@@ -740,7 +728,6 @@ class Evidence:
 
         if CigarTools.alignment_matches(read.cigar) >= 10 \
                 and CigarTools.match_percent(read.cigar) < self.settings.min_anchor_match:
-            # pass #print('bad quality read', read.cigar, read.query_name)
             raise UserWarning('alignment of too poor quality')
         if CigarTools.longest_exact_match(read.cigar) < self.settings.min_anchor_exact \
                 and CigarTools.longest_fuzzy_match(read.cigar, 1) < self.settings.min_anchor_fuzzy:

@@ -96,7 +96,6 @@ def equivalent_events(ev1, ev2, TRANSCRIPTS, DISTANCES=None, SEQUENCES=None):
             len(set([ORIENT.NS, ev1.break1.orient, ev2.break1.orient])) > 2 or \
             len(set([ORIENT.NS, ev1.break2.orient, ev2.break2.orient])) > 2 or \
             ev1.opposing_strands != ev2.opposing_strands:
-        print('basic diff')
         return False
 
     if ev1.data[COLUMNS.protocol] != PROTOCOL.GENOME:
@@ -143,15 +142,11 @@ def equivalent_events(ev1, ev2, TRANSCRIPTS, DISTANCES=None, SEQUENCES=None):
                     break
 
     elif ev1.data[COLUMNS.event_type] != ev2.data[COLUMNS.event_type]:
-        print('diff events')
         return False
 
     # location comparison
     if abs(Interval.dist(ev1.break1, ev2.break1)) <= max_distance:
         break1_match = True
-    print('break1 dist:', Interval.dist(ev1.break1, ev2.break1), ev1.break1, ev2.break1)
     if abs(Interval.dist(ev1.break2, ev2.break2)) <= max_distance:
         break2_match = True
-    print('break2 dist:', Interval.dist(ev1.break2, ev2.break2), ev1.break2, ev2.break2)
-    print('break1_match', break1_match, 'break2_match', break2_match)
     return break1_match and break2_match

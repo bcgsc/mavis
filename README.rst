@@ -155,16 +155,14 @@ script with the -h/--help option
 Theory and Models
 --------------------
 
-A breakpoint is defined by the reference template (i.e. chromosome), position (or range of positions) on the template,
-:term:`orientation`, and :term:`strand`.
+Structural Variants in this tool are defined as a pair of breakpoints. A breakpoint is a genomic position 
+(interval) on some reference/template/chromosome which has a :term:`strand` and :term:`orientation`. 
+The orientation describes the portion of the reference that is retained.
 
-One of the most confusing parts about working with :term:`contig` and paired-end reads is relating them to the
-breakpoint so that you can determine which types will support an event. For convenience We have shown the expected
-:term:`strand` and :term:`orientation` of both :term:`contig` and read-pair supporting evidence side-by-side for the
-major event types
-
-.. figure:: _static/svmerge_read_pairs_vs_contigs_evidence.svg
+.. figure:: _static/svmerge_example_figure.svg
     :width: 100%
+
+    Example output from the tool visulaizing a translocation.
 
 |
 
@@ -240,6 +238,14 @@ If the library has a transcriptome protocol this becomes a bit more complicated 
 possible annotations when calculating the evidence window. see
 :py:func:`~structural_variant.validate.Evidence.generate_transcriptome_window` for more
 
+One of the most confusing parts about working with :term:`contig` and paired-end reads is relating them to the
+breakpoint so that you can determine which types will support an event. For convenience We have shown the expected
+:term:`strand` and :term:`orientation` of both :term:`contig` and read-pair supporting evidence side-by-side for the
+major event types
+
+.. figure:: _static/svmerge_read_pairs_vs_contigs_evidence.svg
+    :width: 100%
+
 |
 
 -----------------
@@ -279,7 +285,7 @@ Breakpoints can be called by multiple different :attr:`~structural_variant.const
 
 |
 
-Annotation
+Annotating Events
 ....................
 
 We make the following assumptions when determining the annotations for each event
@@ -312,21 +318,78 @@ There are specific question we want annotation to answer
 
 |
 
-Splicing Model
-.....................
+Predicting Splicing Patterns
+............................
 
 After the events have been called and an annotation has been attached, we often want to predict information about the
 putative fusion protein, which may be a product. In some cases, when a fusion transcript disrupts a splice-site, it is
 not clear what the processed fusion transcript may be. SVMerge will calculate all possibilities according to the
-following model.
+following model. 
+
+
+.. figure:: _static/svmerge_splicing_pattern_default.svg
+    :width: 100%
+
+    The default splicing pattern is a list of pairs of donor and acceptor splice sites
+
+For a given list of non-abrogated splice sites (listed 5' to 3' on the strand of the transcript) donor splice sites
+are paired with all following as seen below
+
+.. figure:: _static/svmerge_splicing_pattern_multiple_donors.svg
+    :width: 100%
+
+    Multiple abrogated acceptors sites. As one can see above this situation will result in 3 different splicing 
+    patterns depending on which donor is paired with the 2nd acceptor site
+
+.. figure:: _static/svmerge_splicing_pattern_multiple_acceptors.svg
+    :width: 100%
+
+    Multiple abrogated donor sites. As one can see above this situation will result in 3 different splicing 
+    patterns depending on which acceptor is paired with the 2nd donor site
+
+
+More complex examples are drawn below. There are five classifications for the different splicing patterns: 
+
+1. Retained intron (:attr:`~structural_variant.constants.SPLICE_TYPE.RETAIN`)
+2. Skipped exon (:attr:`~structural_variant.constants.SPLICE_TYPE.SKIP`)
+3. Multiple retained introns (:attr:`~structural_variant.constants.SPLICE_TYPE.MULTI_RETAIN`)
+4. Multiple skipped exons (:attr:`~structural_variant.constants.SPLICE_TYPE.MULTI_SKIP`)
+5. Some combination of retained introns and skipped exons (:attr:`~structural_variant.constants.SPLICE_TYPE.COMPLEX`)
 
 .. figure:: _static/svmerge_splicing_model.svg
     :width: 100%
 
-    Putative splicing scenarios. (A) a five-prime and the next three-prime splice sites are lost. (B) A five-prime
-    splice site is lost. This brings about two splicing possibilities. Either the exon is skipped or the exon and
-    proximal intron are retained. (C) A three-prime splice site is lost. (D) A three-prime splice site, and the next
-    five-prime splice sites are lost.
+    Splicing scenarios
+
+|
+
+-----------------
+
+|
+
+Pairing Similar Events
+.......................
+
+After breakpoints have been called and annotated we often need to see if the same event was found in different samples. To do this we will need to compare events between genome and transcriptome libraries. For this, the following model is proposed. To compare events between different protocol (genome vs transcriptome) we use the annotation overlying the genome breakpoint and the splicing model we defined above to predict where we would expect to find the transcriptomic breakpoints. This gives rise to the following basic cases. **In all cases the predicted breakpoint is either the same as the genomic breakpoint, or it is the same as the nearest retained donor/acceptor to the breakpoint.**
+
+.. figure:: _static/svmerge_breakpoint_prediction_five_prime_exonic.svg
+    :width: 100%
+
+    The breakpoint lands in an exon and the five prime portion of the transcript is retained. (1) The original 
+    splicing pattern showing the placement of the genomic breakpoint and the retained five prime portion. (2) The first
+    splice site following the breakpoint is a donor and the second donor is used. (3) The first splice site following the 
+    breakpoint is a donor and the first donor is used. (4) The first slice site following the breakpoint is an acceptor
+
+
+.. figure:: _static/svmerge_breakpoint_prediction_three_prime_exonic.svg
+    :width: 100%
+
+    The breakpoint lands in an exon and the three prime portion of the transcript is retained. (1) The original 
+    splicing pattern showing the placement of the genomic breakpoint and the retained three prime portion. (2) The first
+    splice site prior to the breakpoint is an acceptor and the first acceptor is used. (3) The first splice site prior to the 
+    breakpoint is an acceptor and the second acceptor is used. (4) The first slice site prior to the breakpoint is a donor
+
+
 
 |
 |

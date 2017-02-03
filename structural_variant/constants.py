@@ -245,6 +245,10 @@ COLUMNS = Vocab(
     event_type=Column(
         'event_type',
         'The classification of the event. Has the following possible values: {}'.format(', '.join(SVTYPE.values()))),
+    pairing=Column(
+        'pairing',
+        'A semi colon delimited of event identifiers i.e. <annotation_id>_<splicing pattern>_<cds start>_<cds end>'
+    ),
     gene1=Column(
         'gene1',
         'Gene for the current annotation at the first breakpoint'),

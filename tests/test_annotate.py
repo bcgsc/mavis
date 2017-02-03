@@ -265,8 +265,6 @@ class TestFusionTranscript(unittest.TestCase):
         expt = 'C' * len(self.x) + 'A' * (499 - 200 + 1) + 'G' * len(self.y) + 'A' * (1199 - 600 + 1)
         expt += 'T' * len(self.z) + 'ATCGATCG' + 'T' * len(self.z)
         expt += 'A' * (1499 - 1300 + 1) + 'C' * len(self.w) + 'A' * (1699 - 1600 + 1) + 'G' * len(self.s)
-        print(expt)
-        print(ft.sequence)
         self.assertEqual(expt, ft.sequence)
         self.assertEqual(6, len(ft.exons))
         self.assertTrue(ft.exons[2].intact_start_splice)
@@ -289,8 +287,6 @@ class TestFusionTranscript(unittest.TestCase):
         expt += 'T' * len(self.z) + 'ATCGATCG' + 'T' * len(self.z)
         expt += 'A' * (1499 - 1300 + 1) + 'C' * len(self.w) + 'A' * (1699 - 1600 + 1) + 'G' * len(self.s)
         expt = reverse_complement(expt)
-        print(expt)
-        print(ft.sequence)
         self.assertEqual(expt, ft.sequence)
         self.assertEqual(6, len(ft.exons))
         self.assertTrue(ft.exons[2].intact_start_splice)
@@ -619,7 +615,6 @@ class TestSplicingPatterns(unittest.TestCase):
             self.ex2.intact_start_splice = False
             patt = self.ust.generate_splicing_patterns()
             self.assertEqual(2, len(patt))
-            print(patt)
             self.assertEqual(
                 [
                     self.ex1.end, self.ex3.start,
@@ -646,7 +641,6 @@ class TestSplicingPatterns(unittest.TestCase):
         self.ex6.intact_start_splice = False
         patt = self.ust.generate_splicing_patterns()
         self.assertEqual(1, len(patt))
-        print(patt)
         self.assertEqual(
             [
                 self.ex1.end, self.ex2.start,
@@ -677,7 +671,6 @@ class TestSplicingPatterns(unittest.TestCase):
         self.ex2.intact_start_splice = False
         patt = self.ust.generate_splicing_patterns()
         self.assertEqual(2, len(patt))
-        print(patt)
         self.assertEqual(
             [
                 self.ex1.end, self.ex3.start,
@@ -1015,9 +1008,6 @@ class TestAnnotationGathering(unittest.TestCase):
                           key=lambda x: (x.break1, x.break2))
         self.assertEqual(5, len(ann_list))
         first = ann_list[0]
-        print('original', bpp)
-        for ann in ann_list:
-            print(ann, [(g.start, g.end) for g in ann.encompassed_genes])
         self.assertEqual(1, len(first.encompassed_genes))
         self.assertEqual(0, len(first.genes_proximal_to_break1))
         self.assertEqual(1, len(first.genes_proximal_to_break2))
@@ -1042,7 +1032,6 @@ class TestAnnotationGathering(unittest.TestCase):
         bpp = BreakpointPair(b1, b2)
         ann_list = sorted(gather_annotations(ref, bpp),
                           key=lambda x: (x.break1, x.break2))
-        print(ann_list)
         self.assertEqual(1, len(ann_list))
         self.assertEqual(ann_list[0].transcript1, ann_list[0].transcript2)
 
@@ -1100,7 +1089,6 @@ class TestAnnotate(unittest.TestCase):
             'TGTCGGGACTCTGA'
         orfs = calculate_ORF(seq)
         for orf in orfs:
-            print(orf)
             self.assertEqual('ATG', seq[orf.start - 1:orf.start + 2])
         orfs = sorted(orfs)
         self.assertEqual(2, len(orfs))
