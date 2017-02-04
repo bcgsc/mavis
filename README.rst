@@ -1,8 +1,27 @@
 SVMerge User Manual
 ====================
 
-pipeline to merge and validate input from different structural variant callers into a single report
+About
+---------
 
+SVMerge is a pipeline to merge and validate input from different structural variant callers into a single report. 
+
+- Breakpoint pair calls are read in from various tools and clustered by library/sample. 
+- The clustered calls are filtered by proximity to annotations (this is done as validating 
+  the evidence for individual calls is the most expensive part of the pipeline)
+- The calls are validated against a paired-end read bam file where split, flanking, and spanning reads
+  are gathered and analyzed. From each cluster new breakpoint pairs are called from the evidence.
+- The pairs that passed validation are annotated (identical calls are merged). Fusion transcripts 
+  are predicted and figures are drawn for visualization.
+- Pairs are compared between libraries to determine if they are equivalent events. This is where somatic vs
+  germline and expressed vs not expressed can be determined.
+- Finally a summary report is created to make the information more accessible to the end user
+
+|
+
+--------------
+
+|
 
 Getting started
 --------------------
@@ -96,12 +115,13 @@ There are several reference files that are required for full functionality of th
 Fasta sequence file(s)
 ,,,,,,,,,,,,,,,,,,,,,,,
 
-These are the sequence files in fasta format that are used in aligning and generating the fusion sequences. For hg19 these files can be found here: http://hgdownload.cse.ucsc.edu/goldenPath/hg19/chromosomes/chr<#>.fa.gz
+These are the sequence files in fasta format that are used in aligning and generating the fusion sequences. Found here: 
+`UCSC hg19 chromosome fasta sequences <http://hgdownload.cse.ucsc.edu/goldenPath/hg19/chromosomes/>`_
 
 Reference Annotations
 ,,,,,,,,,,,,,,,,,,,,,,,
 
-This is a custom file format. essentially just a tabbed file which contains the gene, transcript, exon, translation and protein domain positional information
+This is a custom file format. Essentially just a tabbed file which contains the gene, transcript, exon, translation and protein domain positional information
 
 .. warning::
 
@@ -114,7 +134,9 @@ This is a custom file format. essentially just a tabbed file which contains the 
 Template metadata file
 ,,,,,,,,,,,,,,,,,,,,,,,,
 
-This is the file which contains the band information for the chromosomes. This is only used in drawing templates which is an optional step. Therefore this file is also optional. You can file the file for hg19 here: http://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/cytoBand.txt.gz
+This is the file which contains the band information for the chromosomes. 
+Found here: `UCSC hg19 cytoband file <http://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/cytoBand.txt.gz>`_. 
+This is only used during visualization.
 
 
 |
@@ -162,7 +184,87 @@ The orientation describes the portion of the reference that is retained.
 .. figure:: _static/svmerge_example_figure.svg
     :width: 100%
 
-    Example output from the tool visulaizing a translocation.
+    Example output from the tool visulaizing an inverted translocation. (c1) the first template, chromosome 1. (cX) the second template
+    chromosome X. (B1) the first breakpoint has a left orientation and retains the five prime portions of the gene, HUGO2. (B2) the 
+    second breakpoint also has a left orientation but retains the three prime portion of the gene, HUGO3. (T1) the original transcript 
+    for the first gene. (T2) the original transcript for the second gene. (F1) the fusion transcript
+|
+
+------
+
+|
+
+Paired-end Reads: Flanking evidence
+......................................
+
+One of the most confusing parts about working with :term:`contig` and paired-end reads is relating them to the
+breakpoint so that you can determine which types will support an event. The flanking read types we outline here
+are similarly described by `IGV <http://software.broadinstitute.org/software/igv/interpreting_insert_size>`_. 
+We have used similar coloring for the read pairs in the following diagrams to 
+facilitate ease of use for those already familiar with viewing bam files in IGV.
+
+.. note:: 
+    
+    The major assumptions here are that the 'normal' read-pair is a read pair which has one read on the positive/forward 
+    strand and its partner on the negative/reverse strand. It is assumed that partners share a read name. As is the case for illumina reads
+
+
+Deletion
+,,,,,,,,,
+
+For a deletion, we expect the flanking reads to be in the normal orientation but that the 
+insert size should be abnormal (for large deletions).
+
+.. figure:: _static/svmerge_read_pairs_deletion.svg
+    :width: 100%
+
+    Flanking read pair evidence for a deletion event. the read pairs will have a larger than expected insert size when mapped to the 
+    reference genome because in the mutant genome they are closer together, owing to the deletion event. (B1) the first breakpoint 
+    which has a left orientation (B2) the second breakpoint which has a right orientation. Both breakpoints would be on the positive 
+    strand (assuming that the input is stranded) which means that the first read in the pair would be on the positive strand and the 
+    second read in the pair would be on the negative/reverse strand.
+
+
+
+Insertion
+,,,,,,,,,,
+
+.. figure:: _static/svmerge_read_pairs_insertion.svg
+    :width: 100%
+
+    Flanking read pair evidence for an insertion event. the read pairs will have a smaller than expected insert size when mapped to the 
+    reference genome because in the mutant genome they are father apart, owing to the insertion event. (B1) the first breakpoint 
+    which has a left orientation (B2) the second breakpoint which has a right orientation. Both breakpoints would be on the positive 
+    strand (assuming that the input is stranded) which means that the first read in the pair would be on the positive strand and the 
+    second read in the pair would be on the negative/reverse strand.
+
+
+
+Duplication
+,,,,,,,,,,,,,
+
+.. figure:: _static/svmerge_read_pairs_duplication.svg
+    :width: 100%
+
+    Flanking read pair evidence for a tandem duplication event. the read pairs will have an abnormal orientation but still the
+    same strands as the normal read pair. (B1) the first breakpoint will be on the positive strand and have a right orientation.
+    (B2) the second breakpoint will be on the positive strand and have a left orientation.
+
+
+
+Inversion
+,,,,,,,,,,
+
+.. figure:: _static/svmerge_read_pairs_inversion.svg
+    :width: 100%
+
+Translocation
+,,,,,,,,,,,,,,
+
+
+Inverted Translocation
+,,,,,,,,,,,,,,,,,,,,,,,,
+
 
 |
 
@@ -170,7 +272,7 @@ The orientation describes the portion of the reference that is retained.
 
 |
 
-Gathering evidence from the bam file
+Calculating the Evidence Window
 ......................................
 
 we make some base assumptions with regards to paired-end read data
@@ -238,13 +340,6 @@ If the library has a transcriptome protocol this becomes a bit more complicated 
 possible annotations when calculating the evidence window. see
 :py:func:`~structural_variant.validate.Evidence.generate_transcriptome_window` for more
 
-One of the most confusing parts about working with :term:`contig` and paired-end reads is relating them to the
-breakpoint so that you can determine which types will support an event. For convenience We have shown the expected
-:term:`strand` and :term:`orientation` of both :term:`contig` and read-pair supporting evidence side-by-side for the
-major event types
-
-.. figure:: _static/svmerge_read_pairs_vs_contigs_evidence.svg
-    :width: 100%
 
 |
 
@@ -418,5 +513,3 @@ TODO
 
 .. todolist::
 
-
-- Pairing events between libraries

@@ -6,6 +6,7 @@ from .protein import Domain, Translation
 from ..interval import Interval
 from ..constants import STRAND, GIESMA_STAIN, CODON_SIZE, translate
 from Bio import SeqIO
+import json
 
 
 def load_masking_regions(filepath):
@@ -47,7 +48,93 @@ def load_masking_regions(filepath):
     return regions
 
 
-def load_reference_genes(filepath, verbose=True, REFERENCE_GENOME=None):
+def load_reference_genes(filepath, verbose=True, REFERENCE_GENOME=None, filetype=None):
+    if filetype is None:
+        m = re.match('.*\.(?P<ext>tsv|tab|json)$', filepath)
+        if m:
+            filetype = m.group('ext')
+
+    if filetype == 'json':
+        return _load_reference_genes_json(filepath, verbose, REFERENCE_GENOME)
+    elif filetype == 'tab' or filetype == 'tsv':
+        return _load_reference_genes_tabbed(filepath, verbose, REFERENCE_GENOME)
+    else:
+        raise NotImplementedError('unsupported filetype:', filetype, filepath)
+
+
+def _load_reference_genes_json(filepath, verbose=True, REFERENCE_GENOME=None):
+    genes_by_chr = dict()
+    with open(filepath) as fh:
+        data = json.load(fh)
+        for gene in data['genes']:
+            if gene['strand'] == '1':
+                gene['strand'] = STRAND.POS
+            elif gene['strand'] == '-1':
+                gene['strand'] = STRAND.NEG
+            else:
+                raise AssertionError('input has unexpected form. strand must be 1 or -1 but found', gene['strand'])
+
+            g = Gene(
+                chr=gene['chr'],
+                start=gene['start'],
+                end=gene['end'],
+                name=gene['name'],
+                aliases=gene['aliases'],
+                strand=gene['strand']
+            )
+            genes_by_chr.setdefault(g.chr, []).append(g)
+            print(g, gene['aliases'])
+
+            for transcript in gene['transcripts']:
+                if transcript['is_best_transcript'] == 'true':
+                    transcript['is_best_transcript'] = True
+                elif transcript['is_best_transcript'] == 'false':
+                    transcript['is_best_transcript'] = False
+
+                exons = [Exon(**ex) for ex in transcript['exons']]
+                if len(exons) == 0:
+                    exons[(transcript['start'], transcript['end'])]
+                ust = usTranscript(
+                    name=transcript['name'],
+                    gene=g,
+                    exons=exons,
+                    is_best_transcript=transcript['is_best_transcript']
+                )
+                g.transcripts.append(ust)
+
+                if transcript['cdna_coding_end'] is None or transcript['cdna_coding_start'] is None:
+                    continue
+
+                for spl_patt in ust.generate_splicing_patterns():
+                    # make splice transcripts and translations
+                    t = Transcript(ust, spl_patt)
+                    ust.spliced_transcripts.append(t)
+
+                    domains = []
+                    for dom in transcript['domains']:
+                        regions = [Interval(r['start'], r['end']) for r in dom['regions']]
+                        regions = Interval.min_nonoverlapping(*regions)
+                        domains.append(
+                            Domain(name=dom['name'], data={'desc': dom['desc']}, regions=regions)
+                        )
+                    tx = Translation(
+                        transcript['cdna_coding_start'], transcript['cdna_coding_end'], transcript=t, domains=domains
+                    )
+                    # check that the translation makes sense before including it
+                    if len(tx) % CODON_SIZE != 0:
+                        continue
+                    if REFERENCE_GENOME and g['chr'] in REFERENCE_GENOME:
+                        # get the sequence near here to see why these are wrong?
+                        s = ust.get_cdna_sequence(t.splicing_pattern, REFERENCE_GENOME)
+                        m = s[tx.start - 1:tx.start + 2]
+                        stop = s[tx.end - CODON_SIZE: tx.end]
+                        if translate(m) != 'M' or translate(stop) != '*':
+                            continue
+                    t.translations.append(tx)
+    return genes_by_chr
+
+
+def _load_reference_genes_tabbed(filepath, verbose=True, REFERENCE_GENOME=None):
     """
     given a file in the std input format (see below) reads and return a list of genes (and sub-objects)
 

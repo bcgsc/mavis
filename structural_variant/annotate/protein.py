@@ -60,7 +60,7 @@ class DomainRegion(BioInterval):
 class Domain:
     """
     """
-    def __init__(self, name, regions, translation=None):
+    def __init__(self, name, regions, translation=None, data=None):
         """
         Args:
             name (str): the name of the domain i.e. PF00876
@@ -74,6 +74,9 @@ class Domain:
         self.reference_object = translation
         self.name = name
         self.regions = sorted(list(set(regions)))  # remove duplicates
+        self.data = dict()
+        if data is not None :
+            self.data.update(data)
         if len(regions) == 0:
             raise AttributeError('at least one region must be given')
         for r1, r2 in itertools.combinations(self.regions, 2):

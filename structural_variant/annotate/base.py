@@ -18,6 +18,8 @@ class BioInterval:
             >>> b[1]
             12578898
         """
+        start = int(start)
+        end = int(end) if end is not None else None
         data = {} if data is None else data
         self.reference_object = reference_object
         self.name = name

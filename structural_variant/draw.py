@@ -199,7 +199,7 @@ class Diagram:
         self.EXON_TEAR_TOOTH_WIDTH = 2
         self.EXON_MIN_WIDTH = max([
             self.MIN_WIDTH + self.EXON_TEAR_TOOTH_WIDTH * 2,
-            self.EXON_FONT_SIZE * 2 * self.FONT_WIDTH_HEIGHT_RATIO + self.PADDING
+            self.EXON_FONT_SIZE * 2 * self.FONT_WIDTH_HEIGHT_RATIO
         ])
         self.EXON_TEAR_TOOTH_HEIGHT = 2
         self.EXON_INTRON_RATIO = 20
@@ -1189,7 +1189,6 @@ class Diagram:
             main_group.add(g)
             g.translate(x, y)
 
-            main_group.add(t)
             y += self.PADDING + g.height
 
         y += self.MARKER_BOTTOM_MARGIN
