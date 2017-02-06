@@ -51,12 +51,6 @@ class TestBreakpoint(unittest.TestCase):
         self.assertEqual(10, b[1])
         self.assertEqual(10, len(b))
 
-    def test_soft_null_cast(self):
-        self.assertTrue(soft_null_cast('none') is None)
-        self.assertTrue(soft_null_cast('null') is None)
-        self.assertTrue(soft_null_cast('NUll') is None)
-        self.assertEqual(soft_null_cast('notnull'), 'notnull')
-
     def test_breakpoint_constructor(self):
         b = Breakpoint('1', 10, 50)
         self.assertEqual(10, b[0])

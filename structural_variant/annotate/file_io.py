@@ -83,7 +83,6 @@ def _load_reference_genes_json(filepath, verbose=True, REFERENCE_GENOME=None):
                 strand=gene['strand']
             )
             genes_by_chr.setdefault(g.chr, []).append(g)
-            print(g, gene['aliases'])
 
             for transcript in gene['transcripts']:
                 if transcript['is_best_transcript'] == 'true':

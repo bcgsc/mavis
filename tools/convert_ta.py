@@ -38,14 +38,14 @@ def main():
     
     header, rows = TSV.read_file(
             args.input,
-            retain = ['id'],
+            require = ['id'],
             split = {
-                'breakpoint': ('^([^:]+):(\d+)\|([^:]+):(\d+)$', ['chr1', 'pos1', 'chr2', 'pos2']),
-                'orientations': ('^([RL]),([RL])$', ['or1', 'or2']),
-                'strands': ('^([\+-]),([\+-])$', ['strand1', 'strand2'])
+                'breakpoint': '^(?P<chr1>[^:]+):(?P<pos1>\d+)\|(?P<chr2>[^:]+):(?P<pos2>\d+)$',
+                'orientations': '^(?P<or1>[RL]),(?P<or2>[RL])$',
+                'strands': '^(?P<strand1>[\+-]),(?P<strand2>[\+-])$'
                 },
-            cast = {'pos1': 'int', 'pos2': 'int'},
-            strict = False
+            cast = {'pos1': int, 'pos2': int},
+            strict=False
             )
     
     output_header = [

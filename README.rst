@@ -80,6 +80,7 @@ These pertain to the input files from the various tools you want to merge
 
     | column name       | description                                                                       |
     |-------------------|-----------------------------------------------------------------------------------|
+    | start_chromosome  | 
     | start_position    | range for the first breakpoint position                                           |
     | start_strand      | the reference strand aligned to                                                   |
     | start_orientation | the orientation (L or R) retained at the first breakpoint wrt the positive strand |
@@ -223,7 +224,7 @@ Structural Variants in this tool are defined as a pair of breakpoints. A breakpo
 (interval) on some reference/template/chromosome which has a :term:`strand` and :term:`orientation`.
 The orientation describes the portion of the reference that is retained.
 
-.. figure:: _static/svmerge_example_figure.svg
+.. figure:: _static/example_figure.svg
     :width: 100%
 
     Example output from the tool visulaizing an inverted translocation. (c1) the first template, chromosome 1. (cX) the second template
@@ -257,7 +258,7 @@ Deletion
 For a deletion, we expect the flanking reads to be in the normal orientation but that the
 insert size should be abnormal (for large deletions).
 
-.. figure:: _static/svmerge_read_pairs_deletion.svg
+.. figure:: _static/read_pairs_deletion.svg
     :width: 100%
 
     Flanking read pair evidence for a deletion event. the read pairs will have a larger than expected insert size when mapped to the
@@ -271,7 +272,7 @@ insert size should be abnormal (for large deletions).
 Insertion
 ,,,,,,,,,,
 
-.. figure:: _static/svmerge_read_pairs_insertion.svg
+.. figure:: _static/read_pairs_insertion.svg
     :width: 100%
 
     Flanking read pair evidence for an insertion event. the read pairs will have a smaller than expected insert size when mapped to the
@@ -285,7 +286,7 @@ Insertion
 Duplication
 ,,,,,,,,,,,,,
 
-.. figure:: _static/svmerge_read_pairs_duplication.svg
+.. figure:: _static/read_pairs_duplication.svg
     :width: 100%
 
     Flanking read pair evidence for a tandem duplication event. the read pairs will have an abnormal orientation but still the
@@ -297,12 +298,12 @@ Duplication
 Inversion
 ,,,,,,,,,,
 
-.. figure:: _static/svmerge_read_pairs_inversion_LL.svg
+.. figure:: _static/read_pairs_inversion_LL.svg
     :width: 100%
 
     Flanking read pair evidence for an inversion. Both breakpoints have left orientation.
 
-.. figure:: _static/svmerge_read_pairs_inversion_RR.svg
+.. figure:: _static/read_pairs_inversion_RR.svg
     :width: 100%
 
     Flanking read pair evidence for an inversion. Both breakpoints have right orientation.
@@ -312,12 +313,12 @@ Inversion
 Translocation
 ,,,,,,,,,,,,,,
 
-.. figure:: _static/svmerge_read_pairs_translocation_LR.svg
+.. figure:: _static/read_pairs_translocation_LR.svg
     :width: 100%
 
     Flanking read pair evidence for a translocation. (B1) the first breakpoint with a left orientation. (B2) the second breakpoint with a right orientation.
 
-.. figure:: _static/svmerge_read_pairs_translocation_RL.svg
+.. figure:: _static/read_pairs_translocation_RL.svg
     :width: 100%
 
     Flanking read pair evidence for a translocation. (B1) the first breakpoint with a right orientation. (B2) the second breakpoint with a left orientation.
@@ -325,12 +326,12 @@ Translocation
 Inverted Translocation
 ,,,,,,,,,,,,,,,,,,,,,,,,
 
-.. figure:: _static/svmerge_read_pairs_translocated_inversion_LL.svg
+.. figure:: _static/read_pairs_translocated_inversion_LL.svg
     :width: 100%
 
     Flanking read pair evidence for an inverted translocation. Both breakpoints have left orientation.
 
-.. figure:: _static/svmerge_read_pairs_translocated_inversion_RR.svg
+.. figure:: _static/read_pairs_translocated_inversion_RR.svg
     :width: 100%
 
     Flanking read pair evidence for an inverted translocation. Both breakpoints have right orientation.
@@ -379,7 +380,7 @@ Using the above calculations we can generate a modified version of the standard 
 below (stdev). This gives us an idea of when to judge an insert size as abnormal and where we expect our normal read
 pairs insert sizes to fall.
 
-.. figure:: _static/svmerge_insert_size_distrb_fractions.svg
+.. figure:: _static/insert_size_distrb_fractions.svg
     :width: 100%
 
     Distribution of insert sizes (absolute values) of proper read pairs, and different normal distribution fits using
@@ -390,7 +391,7 @@ pairs insert sizes to fall.
 As we can see from the distribution above the median approximates the distribution centre better than the mean,
 likely because it is more resistant to outliers.
 
-.. figure::  _static/svmerge_insert_size_distrb.svg
+.. figure::  _static/insert_size_distrb.svg
     :width: 100%
 
     Distribution of insert sizes (absolute values) of proper read pairs. In the above image the standard deviation
@@ -426,7 +427,7 @@ Classifying Events
 the following decision tree is used in classifying events based on their breakpoints. Only valid combinations have
 been shown
 
-.. figure:: _static/svmerge_classification_tree.svg
+.. figure:: _static/classification_tree.svg
     :width: 100%
 
     Classification Decision Tree. The above  diagram details the decsion logic for classifying events based on the
@@ -476,7 +477,7 @@ in the case of a potential promoter swap); what genes (besides the one selected)
 also overlap the breakpoint; what genes are encompassed between the breakpoints
 (for example in a deletion event the genes that would be deleted).
 
-.. figure:: _static/svmerge_annotations_summary.svg
+.. figure:: _static/annotations_summary.svg
     :width: 100%
 
     Gene level annotations at each breakpoint. Note: genes which fall
@@ -503,7 +504,7 @@ not clear what the processed fusion transcript may be. |TOOLNAME| will calculate
 following model.
 
 
-.. figure:: _static/svmerge_splicing_pattern_default.svg
+.. figure:: _static/splicing_pattern_default.svg
     :width: 100%
 
     The default splicing pattern is a list of pairs of donor and acceptor splice sites
@@ -511,13 +512,13 @@ following model.
 For a given list of non-abrogated splice sites (listed 5' to 3' on the strand of the transcript) donor splice sites
 are paired with all following as seen below
 
-.. figure:: _static/svmerge_splicing_pattern_multiple_donors.svg
+.. figure:: _static/splicing_pattern_multiple_donors.svg
     :width: 100%
 
     Multiple abrogated acceptors sites. As one can see above this situation will result in 3 different splicing
     patterns depending on which donor is paired with the 2nd acceptor site
 
-.. figure:: _static/svmerge_splicing_pattern_multiple_acceptors.svg
+.. figure:: _static/splicing_pattern_multiple_acceptors.svg
     :width: 100%
 
     Multiple abrogated donor sites. As one can see above this situation will result in 3 different splicing
@@ -532,7 +533,7 @@ More complex examples are drawn below. There are five classifications (:class:`~
 4. Multiple skipped exons (:attr:`~structural_variant.constants.SPLICE_TYPE.MULTI_SKIP`)
 5. Some combination of retained introns and skipped exons (:attr:`~structural_variant.constants.SPLICE_TYPE.COMPLEX`)
 
-.. figure:: _static/svmerge_splicing_model.svg
+.. figure:: _static/splicing_model.svg
     :width: 100%
 
     Splicing scenarios
@@ -551,22 +552,17 @@ After breakpoints have been called and annotated we often need to see if the sam
 .. note::
     In all cases the predicted breakpoint is either the same as the genomic breakpoint, or it is the same as the nearest retained donor/acceptor to the breakpoint.
 
-.. figure:: _static/svmerge_breakpoint_prediction_five_prime_exonic.svg
+.. figure:: _static/breakpoint_prediction_exonic.svg
     :width: 100%
 
-    The breakpoint lands in an exon and the five prime portion of the transcript is retained. (1) The original
-    splicing pattern showing the placement of the genomic breakpoint and the retained five prime portion. (2) The first
-    splice site following the breakpoint is a donor and the second donor is used. (3) The first splice site following the
-    breakpoint is a donor and the first donor is used. (4) The first slice site following the breakpoint is an acceptor
-
-
-.. figure:: _static/svmerge_breakpoint_prediction_three_prime_exonic.svg
-    :width: 100%
-
-    The breakpoint lands in an exon and the three prime portion of the transcript is retained. (1) The original
-    splicing pattern showing the placement of the genomic breakpoint and the retained three prime portion. (2) The first
-    splice site prior to the breakpoint is an acceptor and the first acceptor is used. (3) The first splice site prior to the
-    breakpoint is an acceptor and the second acceptor is used. (4) The first slice site prior to the breakpoint is a donor
+    (A-D) The breakpoint lands in an exon and the five prime portion of the transcript is retained. (A) The original
+    splicing pattern showing the placement of the genomic breakpoint and the retained five prime portion. (B) The first
+    splice site following the breakpoint is a donor and the second donor is used. (C) The first splice site following the
+    breakpoint is a donor and the first donor is used. (D) The first slice site following the breakpoint is an acceptor. 
+    (E-H) The breakpoint lands in an exon and the three prime portion of the transcript is retained. (E) The original
+    splicing pattern showing the placement of the genomic breakpoint and the retained three prime portion. (F) The first
+    splice site prior to the breakpoint is an acceptor and the first acceptor is used. (G) The first splice site prior to the
+    breakpoint is an acceptor and the second acceptor is used. (H) The first slice site prior to the breakpoint is a donor
 
 
 

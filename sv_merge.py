@@ -122,7 +122,7 @@ def load_input_file(filename):
             'protocol': PROTOCOL
         },
         validate={
-            'tool_version': '^.+_v\d+\.\d+\.\d+$',
+            'tool_version': '^.+_v?\d+\.\d+\.\d+$',
             'libraries': '^[\w-]+$'
         },
         add={
@@ -198,7 +198,7 @@ def write_bed_file(filename, cluster_breakpoint_pairs):
 
 
 def main():
-    args = parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         '-v', '--version', action='version', version='%(prog)s version ' + __version__,
         help='Outputs the version number')
@@ -236,7 +236,7 @@ def main():
         'from evidence window')
     g.add_argument(
         '--annotations', '-a',
-        default='/home/creisle/svn/ensembl_flatfiles/ensembl69_transcript_exons_and_domains_20160808.tsv',
+        default='/home/creisle/svn/ensembl_flatfiles/ensembl69_annotations_20170203.json',
         help='path to the reference annotations of genes, transcript, exons, domains, etc.')
     g = parser.add_argument_group('evidence settings')
     add_evidence_args_to_parser(g)
