@@ -203,7 +203,8 @@ SPLICE_TYPE = Vocab(
 """
 
 SPLICE_SITE_RADIUS = 2
-"""int: number of bases away from an exon boundary considered to be part of the splice site such that if it were altered the splice site would be considered to be abrogated.
+"""int: number of bases away from an exon boundary considered to be part of the splice site such that if it were altered 
+        the splice site would be considered to be abrogated.
 """
 
 PRIME = Vocab(FIVE=5, THREE=3)

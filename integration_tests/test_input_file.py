@@ -7,7 +7,7 @@ import re
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('input', help='input file to check')
 args = parser.parse_args()
-
+print('loading:', args.input)
 bpps = read_bpp_from_input_file(
     args.input,
     validate={
@@ -18,3 +18,5 @@ bpps = read_bpp_from_input_file(
         COLUMNS.protocol: PROTOCOL
     }
 )
+
+print('OK! no errors were detected')
