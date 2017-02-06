@@ -5,6 +5,7 @@ from .constants import ORIENT, STRAND, COLUMNS, CIGAR, SVTYPE, reverse_complemen
 from .error import *
 from .interval import Interval
 import TSV
+import re
 
 
 class Breakpoint(Interval):

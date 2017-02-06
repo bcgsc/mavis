@@ -1,6 +1,7 @@
 from structural_variant.breakpoint import read_bpp_from_input_file
 from structural_variant.constants import COLUMNS, PROTOCOL
 import argparse
+import re
 
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -10,7 +11,7 @@ args = parser.parse_args()
 bpps = read_bpp_from_input_file(
     args.input,
     validate={
-        COLUMNS.tools: '^(\S+_v?\d+\.\d+\.\d+)(;\S+_v?\d+\.\d+\.\d+)$',
+        COLUMNS.tools: '^(\S+_v?\d+\.\d+\.\d+)(;\S+_v?\d+\.\d+\.\d+)*$',
         COLUMNS.library: '^[\w-]+$'
     },
     _in={
