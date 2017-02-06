@@ -249,6 +249,9 @@ class Column:
         except TypeError:
             return False
 
+    def __lt__(self, other):
+        return str(self) < str(other)
+
     def __repr__(self):
         cls = self.__class__.__name__
         return '{}({})'.format(cls, str(self))
