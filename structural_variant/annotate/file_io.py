@@ -4,7 +4,7 @@ from .genomic import Gene, Transcript, usTranscript, Exon, Template
 from .base import BioInterval
 from .protein import Domain, Translation
 from ..interval import Interval
-from ..constants import STRAND, GIESMA_STAIN, CODON_SIZE, translate
+from ..constants import STRAND, GIESMA_STAIN, CODON_SIZE, translate, START_AA, STOP_AA
 from Bio import SeqIO
 import json
 
@@ -128,7 +128,7 @@ def _load_reference_genes_json(filepath, verbose=True, REFERENCE_GENOME=None):
                         s = ust.get_cdna_sequence(t.splicing_pattern, REFERENCE_GENOME)
                         m = s[tx.start - 1:tx.start + 2]
                         stop = s[tx.end - CODON_SIZE: tx.end]
-                        if translate(m) != 'M' or translate(stop) != '*':
+                        if translate(m) != START_AA or translate(stop) != STOP_AA:
                             continue
                     t.translations.append(tx)
     return genes_by_chr
@@ -293,7 +293,7 @@ def _load_reference_genes_tabbed(filepath, verbose=True, REFERENCE_GENOME=None):
                         s = ust.get_cdna_sequence(t.splicing_pattern, REFERENCE_GENOME)
                         m = s[tx.start - 1:tx.start + 2]
                         stop = s[tx.end - CODON_SIZE: tx.end]
-                        if translate(m) != 'M' or translate(stop) != '*':
+                        if translate(m) != START_AA or translate(stop) != STOP_AA:
                             raise AssertionError('translation sequence check failure: M={}, *={}'.format(translate(m), translate(stop)))
 
                     t.translations.append(tx)

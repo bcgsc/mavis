@@ -37,8 +37,16 @@ for f in glob.glob(os.path.join(d, 'source/structural_variant.*.rst')):
             if re.match('^\.\.\s+automodule::\s+.*$', line):
                 fh.write(line)
                 fh.write('    :special-members: __and__, __or__, __xor__, __len__, __sub__, __add__\n')
+            elif re.match('(\S+)\.(\S+)\s+(module|package)', line):
+                m = re.match('(\S+)\.(\S+)\s+(module|package)', line)
+                if m.group(1) == 'package':
+                    line = re.sub('(\S+)\.(\S+)\s+(package)', '\g<2> package', line)
+                else:
+                    line = re.sub('(\S+)\.(\S+)\s+(module)', '\g<2>', line)
+                fh.write(line)
             else:
                 fh.write(line)
+
 
 # copy the README file to the source directory
 subprocess.check_call('cp {} {}'.format(os.path.join(d, './../README.rst'), os.path.join(d, 'source')), shell=True)

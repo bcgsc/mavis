@@ -8,6 +8,7 @@ from Bio.Alphabet.IUPAC import ambiguous_dna
 from Bio.Seq import Seq
 
 CODON_SIZE = 3
+"""int: the number of bases making up a codon"""
 
 
 def reverse_complement(s):
@@ -32,6 +33,8 @@ def reverse_complement(s):
 
 
 def translate(s, reading_frame=0):
+    """
+    """
     reading_frame = reading_frame % CODON_SIZE
 
     temp = s[reading_frame:]
@@ -47,9 +50,9 @@ GAP = '-'
 ORIENT = Vocab(LEFT='L', RIGHT='R', NS='?')
 """Vocab: holds controlled vocabulary for allowed orientation values
 
-- LEFT: left wrt to the positive/forward strand
-- RIGHT: right wrt to the positive/forward strand
-- NS: orientation is not specified
+- ``LEFT``: left wrt to the positive/forward strand
+- ``RIGHT``: right wrt to the positive/forward strand
+- ``NS``: orientation is not specified
 """
 setattr(ORIENT, 'expand', lambda x: [ORIENT.LEFT, ORIENT.RIGHT] if x == ORIENT.NS else [x])
 setattr(ORIENT, 'compare', lambda x, y: True if ORIENT.NS in [x, y] else (x == y))
@@ -57,16 +60,16 @@ setattr(ORIENT, 'compare', lambda x, y: True if ORIENT.NS in [x, y] else (x == y
 PROTOCOL = Vocab(GENOME='genome', TRANS='transcriptome')
 """Vocab: holds controlled vocabulary for allowed protocol values
 
-- GENOME: genome
-- TRANS: transcriptome
+- ``GENOME``: genome
+- ``TRANS``: transcriptome
 """
 
 STRAND = Vocab(POS='+', NEG='-', NS='?')
 """Vocab: holds controlled vocabulary for allowed strand values
 
-- POS: the positive/forward strand
-- NEG: the negative/reverse strand
-- NS: strand is not specified
+- ``POS``: the positive/forward strand
+- ``NEG``: the negative/reverse strand
+- ``NS``: strand is not specified
 """
 setattr(STRAND, 'expand', lambda x: [STRAND.POS, STRAND.NEG] if x == STRAND.NS else [x])
 setattr(STRAND, 'compare', lambda x, y: True if STRAND.NS in [x, y] else (x == y))
@@ -81,32 +84,32 @@ SVTYPE = Vocab(
 )
 """Vocab: holds controlled vocabulary for acceptable structural variant classifications
 
-- DEL: deletion
-- TRANS: translocation
-- ITRANS: inverted translocation
-- INV: inversion
-- INS: insertion
-- DUP: duplication
+- ``DEL``: deletion
+- ``TRANS``: translocation
+- ``ITRANS``: inverted translocation
+- ``INV``: inversion
+- ``INS``: insertion
+- ``DUP``: duplication
 """
-
-EXON_PHASE = Vocab(MIDDLE_BASE=2, FIRST_BASE=1, LAST_BASE=0, NON_CODING=-1)
 
 CIGAR = Vocab(M=0, I=1, D=2, N=3, S=4, H=5, P=6, X=8, EQ=7)
 """Vocab: Enum-like. For readable cigar values
 
-- M: alignment match (can be a sequence match or mismatch)
-- I: insertion to the reference
-- D: deletion from the reference
-- N: skipped region from the reference
-- S: soft clipping (clipped sequences present in SEQ)
-- H: hard clipping (clipped sequences NOT present in SEQ)
-- P: padding (silent deletion from padded reference)
-- EQ(=): sequence match
-- X: sequence mismatch
+- ``M``: alignment match (can be a sequence match or mismatch)
+- ``I``: insertion to the reference
+- ``D``: deletion from the reference
+- ``N``: skipped region from the reference
+- ``S``: soft clipping (clipped sequences present in SEQ)
+- ``H``: hard clipping (clipped sequences NOT present in SEQ)
+- ``P``: padding (silent deletion from padded reference)
+- ``EQ``: sequence match (=)
+- ``X``: sequence mismatch
 
-note: descriptions are taken from the samfile documentation https://samtools.github.io/hts-specs/SAMv1.pdf
+note: descriptions are taken from the `samfile documentation <https://samtools.github.io/hts-specs/SAMv1.pdf>`_
 """
 
+NA_MAPPING_QUALITY=255
+"""int: mapping qaulity value to indicate mapping was not performed/calculated"""
 
 PYSAM_READ_FLAGS = Vocab(
     REVERSE=16,
@@ -127,16 +130,16 @@ PYSAM_READ_FLAGS = Vocab(
 
 """Vocab: Enum-like. For readable PYSAM flag constants
 
-- MULTIMAP: template having multiple segments in sequencing
-- UNMAPPED: segment unmapped
-- MATE_UNMAPPED: next segment in the template unmapped
-- REVERSE: SEQ being reverse complemented
-- MATE_REVERSE: SEQ of the next segment in the template being reverse complemented
-- FIRST_IN_PAIR: the first segment in the template
-- LAST_IN_PAIR: the last segment in the template
-- SECONDARY: secondary alignment
+- ``MULTIMAP``: template having multiple segments in sequencing
+- ``UNMAPPED``: segment unmapped
+- ``MATE_UNMAPPED``: next segment in the template unmapped
+- ``REVERSE``: SEQ being reverse complemented
+- ``MATE_REVERSE``: SEQ of the next segment in the template being reverse complemented
+- ``FIRST_IN_PAIR``: the first segment in the template
+- ``LAST_IN_PAIR``: the last segment in the template
+- ``SECONDARY``: secondary alignment
 
-note: descriptions are taken from the samfile documentation https://samtools.github.io/hts-specs/SAMv1.pdf
+note: descriptions are taken from the `samfile documentation <https://samtools.github.io/hts-specs/SAMv1.pdf>`_
 """
 
 # read paired, read mapped in proper pair, mate reverse strand, first in pair
@@ -162,33 +165,60 @@ def _match_ambiguous_dna(x, y):
 DNA_ALPHABET = alphabet = Gapped(ambiguous_dna, '-')
 DNA_ALPHABET.match = lambda x, y: _match_ambiguous_dna(x, y)
 
-NA_MAPPING_QUALITY = 255
-PHASE = Vocab(FIRST=0, SECOND=1, LAST=2, NA=-1)
-
 FLAGS = Vocab(LQ='LOWQUAL')
 
 READ_PAIR_TYPE = Vocab(RR='RR', LL='LL', RL='RL', LR='LR')
 
-
 CALL_METHOD = Vocab(CONTIG='contig', SPLIT='split reads', FLANK='flanking reads')
+"""Vocab: holds controlled vocabulary for allowed call methods
+
+- ``CONTIG``: a contig was assembled and aligned across the breakpoints
+- ``SPLIT``: the event was called by split reads
+- ``FLANK``: the event was called by flanking reads
+"""
 
 GENE_PRODUCT_TYPE = Vocab(SENSE='sense', ANTI_SENSE='anti-sense')
+"""Vocab: controlled vocabulary for gene products
+
+- ``SENSE``: the gene product is a sense fusion
+- ``ANTI_SENSE``: the gene product is anti-sense
+"""
 
 SPLICE_TYPE = Vocab(
-    RETAIN='retained intron', 
-    SKIP='skipped exon', 
+    RETAIN='retained intron',
+    SKIP='skipped exon',
     NORMAL='normal',
     MULTI_RETAIN='retained multiple introns',
     MULTI_SKIP='skipped multiple exons',
     COMPLEX='complex'
 )
+"""Vocab: holds controlled vocabulary for allowed splice type classification values
+
+- ``RETAIN``: an intron was retained
+- ``SKIP``: an exon was skipped
+- ``NORMAL``: no exons were skipped and no introns were retained. the normal/expected splicing pattern was followed
+- ``MULTI_RETAIN``: multiple introns were retained
+- ``MULTI_SKIP``: multiple exons were skipped
+- ``COMPLEX``: some combination of exon skipping and intron retention
+"""
 
 SPLICE_SITE_RADIUS = 2
+"""int: number of bases away from an exon boundary considered to be part of the splice site such that if it were altered the splice site would be considered to be abrogated.
+"""
 
 PRIME = Vocab(FIVE=5, THREE=3)
+"""Vocab: holds controlled vocabulary
+
+- ``FIVE``: five prime
+- ``THREE``: three prime
+"""
 
 START_AA = 'M'
+"""string: The amino acid expected to start translation
+"""
 STOP_AA = '*'
+"""string: The amino acid expected to end translation
+"""
 
 GIESMA_STAIN = Vocab(
     GNEG='gneg',
@@ -460,7 +490,6 @@ COLUMNS = Vocab(
         'raw_break2_split_reads',
         'Number of split reads before calling the breakpoint')
 )
-
 """Vocab: Column names and definitions for i/o files used throughout the pipeline
 
 Example:

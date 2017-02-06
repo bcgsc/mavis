@@ -7,7 +7,7 @@ SVMerge Documentation
 ===================================
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 9
 
    README
    glossary

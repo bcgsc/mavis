@@ -67,6 +67,7 @@ html_theme = "sphinx_rtd_theme"
 
 html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 print(html_theme_path)
+max_depth = 4
 
 
 # Add any paths that contain templates here, relative to this directory.
