@@ -46,8 +46,6 @@ from structural_variant.validate import Evidence, EvidenceSettings
 from structural_variant.blat import blat_contigs
 from structural_variant.interval import Interval
 from structural_variant.annotate import load_masking_regions, load_reference_genome, load_reference_genes
-from tools import profile_bam
-import math
 import itertools
 from datetime import datetime
 import pysam
@@ -300,16 +298,6 @@ def gather_evidence_from_bam(clusters):
             e.assemble_split_reads()
             log('assembled {} contigs'.format(len(e.contigs)), time_stamp=False)
             evidence.append(e)
-            ihist = {}
-            for read in itertools.chain.from_iterable(e.flanking_reads):
-                isize = abs(read.template_length)
-                ihist[isize] = ihist.get(isize, 0) + 1
-            try:
-                median = profile_bam.histogram_median(ihist)
-                stdev = math.sqrt(profile_bam.histogram_stderr(ihist, median))
-                log('insert size: {:.0f} +/- {:.2f}'.format(median, stdev), time_stamp=False)
-            except:
-                pass
         else:
             raise NotImplementedError('currently only genome protocols are supported')
     return evidence
@@ -412,7 +400,7 @@ def main():
     blat_contig_alignments = blat_contigs(
         evidence,
         INPUT_BAM_CACHE,
-        reference_genome=HUMAN_REFERENCE_GENOME
+        REFERENCE_GENOME=HUMAN_REFERENCE_GENOME
     )
     log('alignment complete')
     event_calls = []
@@ -527,7 +515,7 @@ def main():
             header.update(row.keys())
             id += 1
         header = sort_columns(header)
-        fh.write('#' + '\t'.join(header) + '\n')
+        fh.write('#' + '\t'.join([str(c) for c in header]) + '\n')
         for row in rows:
             fh.write('\t'.join([str(row[col]) for col in header]) + '\n')
 
@@ -539,7 +527,7 @@ def main():
             header.update(row.keys())
 
         header = sort_columns(header)
-        fh.write('#' + '\t'.join(header) + '\n')
+        fh.write('#' + '\t'.join([str(c) for c in header]) + '\n')
         for row in failed_cluster_rows:
             fh.write('\t'.join([str(row.get(col, None)) for col in header]) + '\n')
 

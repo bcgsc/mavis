@@ -28,24 +28,6 @@ pattern
     `-- summary/
 
 
-Input File Expected Format
---------------------------
-::
-
-    | column name       | expected value                    | description                                    |
-    |-------------------|-----------------------------------|------------------------------------------------|
-    | start_position    | <int>-<int>                       |                                                |
-    | start_strand      | <+,-,?>                           | the reference strand aligned to                |
-    | start_orientation | <L,R,?>                           |                                                |
-    | end_chromosome    | <1-22,X,Y,MT>                     |                                                |
-    | end_position      | <int>-<int>                       |                                                |
-    | end_strand        | <+,-,?>                           | the reference strand aligned to                |
-    | end_orientation   | <L,R,?>                           |                                                |
-    | protocol          | <genome or transcriptome>         |                                                |
-    | library           | library id                        |                                                |
-    | tool_version      | <tool name>_<tool version number> |                                                |
-    | opposing_strand   | <True,False,?>                    |                                                |
-
 Filtering
 ------------
 
@@ -63,7 +45,7 @@ from datetime import datetime
 from structural_variant.constants import *
 from structural_variant.error import *
 from structural_variant.interval import Interval
-from structural_variant.breakpoint import Breakpoint, BreakpointPair
+from structural_variant.breakpoint import Breakpoint, BreakpointPair, read_bpp_from_input_file
 from structural_variant.cluster import cluster_breakpoint_pairs
 from structural_variant.annotate import load_reference_genes
 from structural_variant.validate import EvidenceSettings, Evidence
@@ -252,14 +234,16 @@ def main():
         parser.print_help()
         exit(1)
 
+    if os.path.exists(args.output) and not args.overwrite:
+        print(
+            '\nerror: output directory {0} already exists. please use the --overwrite option'.format(args.output))
+        parser.print_help()
+        exit(1)
+
     log('input arguments listed below')
     for arg, val in sorted(args.__dict__.items()):
         log(arg, '=', val, time_stamp=False)
     BAM_FILE_ARGS = {}
-
-    if not args.no_filter:
-        log('loading:', args.annotations)
-        REFERENCE_GENES = load_reference_genes(args.annotations, verbose=False)
 
     for lib, bam in args.bamfile:
         if lib in BAM_FILE_ARGS:
@@ -267,12 +251,6 @@ def main():
             parser.print_help()
             exit(1)
         BAM_FILE_ARGS[lib] = bam
-
-    if os.path.exists(args.output) and not args.overwrite:
-        print(
-            '\nerror: output directory {0} already exists. please use the --overwrite option'.format(args.output))
-        parser.print_help()
-        exit(1)
 
     args.output = os.path.abspath(args.output)
 
@@ -288,16 +266,31 @@ def main():
 
     for f in args.inputs:
         log('loading:', f)
-        temp = load_input_file(f)
-        breakpoint_pairs.extend(temp)
+        bpps = read_bpp_from_input_file(
+            f,
+            validate={
+                COLUMNS.tools: '^(\S+_v?\d+\.\d+\.\d+)(;\S+_v?\d+\.\d+\.\d+)*$',
+                COLUMNS.library: '^[\w-]+$'
+            },
+            _in={
+                COLUMNS.protocol: PROTOCOL
+            }
+        )
+        for bpp in bpps:
+            bpp.data[COLUMNS.tools] = set(';'.split(bpp.data[COLUMNS.tools]))
+        breakpoint_pairs.extend(bpps)
 
     log('loaded {} breakpoint pairs'.format(len(breakpoint_pairs)))
+
+    if not args.no_filter:
+        log('loading:', args.annotations)
+        REFERENCE_GENES = load_reference_genes(args.annotations, verbose=False)
 
     # now split by library and protocol
     bpp_by_libprot = {}
 
     for bpp in breakpoint_pairs:
-        lib = bpp.data['libraries']
+        lib = bpp.data[COLUMNS.library]
         protocol = bpp.data[COLUMNS.protocol.name]
 
         d = bpp_by_libprot.setdefault((lib, protocol), {})
@@ -306,7 +299,7 @@ def main():
             d[bpp] = bpp
         else:
             d[bpp].data['files'].update(bpp.data['files'])
-            d[bpp].data[COLUMNS.tools.name].update(bpp.data[COLUMNS.tools.name])
+            d[bpp].data[COLUMNS.tools].update(bpp.data[COLUMNS.tools])
 
     clusters_by_libprot = {}
     cluster_id_prefix = re.sub(' ', '_', str(datetime.now()))
@@ -358,12 +351,12 @@ def main():
                     rows[p].setdefault('clusters', set()).add(cluster.data[COLUMNS.cluster_id.name])
             for row in rows.values():
                 row['clusters'] = ';'.join([str(c) for c in sorted(list(row['clusters']))])
-                row[COLUMNS.tools.name] = ';'.join(sorted(list(row[COLUMNS.tools.name])))
-                row[COLUMNS.library.name] = lib
-                row[COLUMNS.protocol.name] = protocol
+                row[COLUMNS.tools] = ';'.join(sorted(list(row[COLUMNS.tools.name])))
+                row[COLUMNS.library] = lib
+                row[COLUMNS.protocol] = protocol
                 header.update(row.keys())
             header = sort_columns(header)
-            fh.write('#' + '\t'.join(header) + '\n')
+            fh.write('#' + '\t'.join([str(c) for c in header]) + '\n')
             for row in rows.values():
                 fh.write('\t'.join([str(row.get(c, None)) for c in header]) + '\n')
 

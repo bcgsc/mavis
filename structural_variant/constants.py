@@ -356,10 +356,10 @@ COLUMNS = Vocab(
         'The name of the chromosome on which breakpoint 1 is situated'),
     break1_position_start=Column(
         'break1_position_start',
-        'Start (inclusive, 1-based) of the range representing breakpoint 1'),
+        'Start (integer, inclusive, 1-based) of the range representing breakpoint 1'),
     break1_position_end=Column(
         'break1_position_end',
-        'End (inclusive, 1-based) of the range representing breakpoint 1'),
+        'End (integer, inclusive, 1-based) of the range representing breakpoint 1'),
     break1_orientation=Column(
         'break1_orientation',
         'The side of the breakpoint wrt the positive/forward strand that is retained. Has the following possible '
@@ -376,10 +376,10 @@ COLUMNS = Vocab(
         'The name of the chromosome on which breakpoint 2 is situated'),
     break2_position_start=Column(
         'break2_position_start',
-        'Start (inclusive, 1-based) of the range representing breakpoint 2'),
+        'Start (integer, inclusive, 1-based) of the range representing breakpoint 2'),
     break2_position_end=Column(
         'break2_position_end',
-        'End (inclusive, 1-based) of the range representing breakpoint 2'),
+        'End (integer, inclusive, 1-based) of the range representing breakpoint 2'),
     break2_orientation=Column(
         'break2_orientation',
         'The side of the breakpoint wrt the positive/forward strand that is retained. Has the following possible '
@@ -393,16 +393,17 @@ COLUMNS = Vocab(
         'The sequence up to and including the breakpoint. Always given wrt to the positive/forward strand'),
     opposing_strands=Column(
         'opposing_strands',
-        'Specifies if breakpoints are on opposite strands wrt to the reference'),
+        'Specifies if breakpoints are on opposite strands wrt to the reference. Expects a boolean'),
     stranded=Column(
         'stranded',
-        'Specifies if the sequencing protocol was strand specific or not'),
+        'Specifies if the sequencing protocol was strand specific or not. Expects a boolean'),
     protocol=Column(
         'protocol',
-        'Genome or transcriptome'),
+        'Specifies the type of library. Has the following possible values: {}'.format(', '.join(PROTOCOL.values()))),
     tools=Column(
         'tools',
-        'The tools that called the event originally (from the cluster step)'),
+        'The tools that called the event originally (from the cluster step). Should be a semi-colon delimited list of '
+        '<tool name>_<tool version>'),
     contigs_assembled=Column(
         'contigs_assembled',
         'Number of contigs that were built from split read sequences'),

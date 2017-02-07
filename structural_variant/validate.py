@@ -10,7 +10,7 @@ from .assemble import assemble
 from .interval import Interval
 from .annotate.variant import overlapping_transcripts
 from .breakpoint import BreakpointPair, Breakpoint
-import tools.profile_bam as profile_bam
+import statistics
 from functools import partial
 import math
 
@@ -77,25 +77,25 @@ class EventCall(BreakpointPair):
         support = set()
         exp_isize_range = self.evidence.expected_insert_size_range()
 
-        ihist = {}
+        insert_sizes = []
         for read in itertools.chain.from_iterable(self.evidence.flanking_reads):
             isize = abs(read.template_length)
             if (self.classification == SVTYPE.INS and isize < exp_isize_range.start) \
                     or (self.classification == SVTYPE.DEL and isize > exp_isize_range.end) \
                     or self.classification not in [SVTYPE.DEL, SVTYPE.INS]:
                 support.add(read.query_name)
-                ihist[isize] = ihist.get(isize, 0) + 1
-        stdev = None
-        median = None
+                insert_sizes.append(isize)
 
-        if len(support) > 1:
-            median = profile_bam.histogram_median(ihist)
-            stdev = math.sqrt(profile_bam.histogram_stderr(ihist, median))
-        elif len(support) == 1:
-            median = list(ihist.values())[0]
-            stdev = 0
-
-        return len(support), median, stdev
+        if len(support) > 0:
+            median = statistics.median(insert_sizes)
+            err = 0
+            for insert in insert_sizes:
+                err += math.pow(insert - median, 2)
+            err /= len(insert_sizes)
+            stdev = math.sqrt(err)
+            return len(support), median, stdev
+        else:
+            return 0, 0, 0
 
     def count_split_read_support(self):
         """

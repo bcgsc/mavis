@@ -40,38 +40,16 @@ def histogram_median(hist):
 def histogram_stderr(hist, median):
     return histogram_distrib_stderr(hist, median, 1)
 
-def histogram_distrib_stderr_correct_zero_bias(hist, median, fraction):
-    arr = []
-    for v, f in sorted(hist.items()):
-        if v > 2 * median:
-            break
-        for i in range(0, f):
-            arr.append(v)
-    # m = subset[len(subset) // 2] if len(subset) % 2 == 0 else subset[(len(subset) - 1) // 2 + 1]
-    err = 0
-    total = 0
-    for v in arr:
-        err += math.pow(median - v, 2)
-        total += 1
-    return err / total
 
-
-def histogram_distrib_stderr(hist, median, fraction):
+def histogram_distrib_stderr(hist, median, fraction, error_function=lambda x, y: math.pow(x - y, 2)):
     values = []
     for v, f in hist.items():
         for i in range(0, f):
-            values.append(v)
+            values.append(error_function(v, median))
     values.sort()
-
-    count = int(len(values) * fraction)
-    start = (len(values) - count) // 2
-
-    err = 0
-    total = 0
-    for i in range(start, start + count):
-        err += math.pow(values[i] - median, 2)
-        total += 1
-    return err / total
+    
+    end = int(len(values) * fraction)
+    return sum(values[0:end]) / end
 
 
 def histogram_abserr(hist, avg=None):
@@ -106,19 +84,50 @@ if __name__ == '__main__':
         parser.add_argument(
             '--chromosomes', '-c', nargs='*', default=None,
             help='pick chromosomes to use as samples for profiling the bam')
-
+        parser.add_argument(
+            '--bin_size', type=int, default=1000,
+            help='number of reads to consume per bin'
+        )
+        parser.add_argument(
+            '--inter_bin_size', type=int, default=100000,
+            help='space to skip between bins'
+        )
+        parser.add_argument(
+            '--sample_cap', type=int, default=1000,
+            help='max number of reads to parse per bin')
         args = parser.parse_args()
         return args
     
     def profile_chr(chr):
         print('profiling chr', chr)
         hist = {}
-        for read in BAM.fetch(chr, multiple_iterators=True):
-            if read.is_unmapped or read.mate_is_unmapped or read.mapping_quality < MIN_MAPPING_QUALITY \
-                    or read.next_reference_id != read.reference_id or read.is_secondary or not read.is_proper_pair:
-                continue
-            i = abs(read.template_length)
-            hist[i] = hist.get(i, 0) + 1
+        bin_start = 1
+        total_reads = 0
+        bin_end = bin_start
+        for ref, length in zip(BAM.references, BAM.lengths):
+            if ref == chr:
+                bin_end = length - args.bin_size
+                break
+        if bin_start == bin_end:
+            raise KeyError('did not find reference template', chr)
+        while True:
+            if bin_start >= bin_end:
+                break
+            try:
+                sample_count = 0
+                for read in BAM.fetch(chr, bin_start, bin_start + args.bin_size, multiple_iterators=True):
+                    if read.is_unmapped or read.mate_is_unmapped or read.mapping_quality < MIN_MAPPING_QUALITY \
+                            or read.next_reference_id != read.reference_id or read.is_secondary \
+                            or not read.is_proper_pair:
+                        continue
+                    sample_count += 1
+                    if sample_count > args.sample_cap:
+                        break
+                    i = abs(read.template_length)
+                    hist[i] = hist.get(i, 0) + 1
+                bin_start += args.bin_size + args.inter_bin_size
+            except ValueError:
+                break
         return chr, hist
     insert_size_by_chr = {}
     args = parse_arguments()
@@ -130,27 +139,22 @@ if __name__ == '__main__':
     hist = sum_histograms([v for k, v in insert_sizes])
     print('\nFINAL')
     a = histogram_average(hist)
-    print('average', a)
+    print('average                    {:.2f}'.format(a))
     s = histogram_stderr(hist, a)
-    print('stderr', s)
-    print('stdev', math.sqrt(s))
+    print('average stdev              {:.2f}'.format(math.sqrt(s)))
     m = histogram_median(hist)
-    print('median', m)
-    e100 = histogram_stderr(hist, m)
-    print('median stderr', e100)
-    print('median stdev', math.sqrt(e100))
+    print('median                     {}'.format(m))
+    
     e80 = histogram_distrib_stderr(hist, m, 0.8)
-    print('median distrib[0.8] stderr', e80)
-    print('median distrib[0.8] stdev', math.sqrt(e80))
+    print('median distrib[0.80] stdev {:.2f}'.format(math.sqrt(e80)))
     e90 = histogram_distrib_stderr(hist, m, 0.9)
-    print('median distrib[0.9] stderr', e90)
-    print('median distrib[0.9] stdev', math.sqrt(e90))
+    print('median distrib[0.90] stdev {:.2f}'.format(math.sqrt(e90)))
     e95 = histogram_distrib_stderr(hist, m, 0.95)
-    print('median distrib[0.95] stderr', e95)
-    print('median distrib[0.95] stdev', math.sqrt(e95))
-    e = histogram_distrib_stderr_correct_zero_bias(hist, m, 0.95)
-    print('median zero corrected[0.95] stderr', e)
-    print('median zero corrected[0.95] stdev', math.sqrt(e))
+    print('median distrib[0.95] stdev {:.2f}'.format(math.sqrt(e95)))
+    e99 = histogram_distrib_stderr(hist, m, 0.99)
+    print('median distrib[0.99] stdev {:.2f}'.format(math.sqrt(e99)))
+    e100 = histogram_stderr(hist, m)
+    print('median distrib[1.00] stdev {:.2f}'.format(math.sqrt(e100)))
 
     # now make a chart?
     try:
@@ -183,11 +187,10 @@ if __name__ == '__main__':
         plt.grid(True)
         x = numpy.linspace(min(hist), max(hist), 100)
         ax.plot(x, mlab.normpdf(x, a, math.sqrt(s)), color='r', linewidth=2)
-        ax.plot(x, mlab.normpdf(x, m, math.sqrt(e100)), color='g', linewidth=2)
-        ax.plot(x, mlab.normpdf(x, m, math.sqrt(e95)), color='g', linewidth=2)
-        ax.plot(x, mlab.normpdf(x, m, math.sqrt(e90)), color='g', linewidth=2)
-        ax.plot(x, mlab.normpdf(x, m, math.sqrt(e80)), color='g', linewidth=2)
-        ax.plot(x, mlab.normpdf(x, m, math.sqrt(e)), color='y', linewidth=2)
+        ax.plot(x, mlab.normpdf(x, m, math.sqrt(e100)), color='b', linewidth=2)
+        ax.plot(x, mlab.normpdf(x, m, math.sqrt(e95)), color='b', linewidth=2)
+        ax.plot(x, mlab.normpdf(x, m, math.sqrt(e90)), color='b', linewidth=2)
+        ax.plot(x, mlab.normpdf(x, m, math.sqrt(e80)), color='b', linewidth=2)
         plt.savefig('insert_sizes_histogram_chr22.svg')
         print('wrote figure: insert_sizes_histogram_chr22.svg')
     except ImportError:

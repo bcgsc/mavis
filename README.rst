@@ -74,25 +74,27 @@ Input Files
 ....................
 
 The requirements are described in `JIRA <https://www.bcgsc.ca/jira/browse/APA-618>`_ and are listed below.
-These pertain to the input files from the various tools you want to merge
+These pertain to the input files from the various tools you want to merge. The expected input columns are given 
+below. All columns must be given except: individual breakpoint strand columns do not need to be given if
+the input is not stranded and opposing_strands has been specified
 
-::
 
-    | column name       | description                                                                       |
-    |-------------------|-----------------------------------------------------------------------------------|
-    | start_chromosome  | 
-    | start_position    | range for the first breakpoint position                                           |
-    | start_strand      | the reference strand aligned to                                                   |
-    | start_orientation | the orientation (L or R) retained at the first breakpoint wrt the positive strand |
-    | end_chromosome    |                                                                                   |
-    | end_position      | range for the second breakpoint position                                          |
-    | end_strand        | the reference strand aligned to                                                   |
-    | end_orientation   | the orientation (L or R) retained at the second breakpoint wrt the positive strand|
-    | protocol          | genome or transcriptome                                                           |
-    | library           |                                                                                   |
-    | tool_version      | tool name and tool version number joined with an underscore, no spaces            |
-    | opposing_strand   | boolean value to describe if the breakpoints are on opposing strands              |
-    | stranded          | boolean, if True then read1 in read pairs is assume to be the proper strand       |
+- :term:`break1_chromosome`
+- :term:`break1_position_start`
+- :term:`break1_position_end`
+- :term:`break1_strand`
+- :term:`break1_orientation`
+- :term:`break2_chromosome`
+- :term:`break2_position_start`
+- :term:`break2_position_end`
+- :term:`break2_strand`
+- :term:`break2_orientation`
+- :term:`opposing_strands`
+- :term:`stranded`
+- :term:`library`
+- :term:`protocol`
+- :term:`tools`
+
 
 Available Pre-formatting scripts
 ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
@@ -367,11 +369,12 @@ Y is the set of insert sizes from the bam file and f is the fraction of insert s
 .. code::
 
     from statistics import median
+    import math
 
     inserts = [abs(read.template_length) for read in reads]  # the insert sizes of the reads
     f = 0.95 # fraction
     m = median(inserts) # get the median insert size value
-    X = [(i - m)^2 for i in inserts]  # take the square error for each point
+    X = [math.pow(i - m, 2) for i in inserts]  # take the square error for each point
     end = int(round(len(X) * f))
     X = sorted(X)[0:end]
     stdev = math.sqrt(sum(X) / len(X))
