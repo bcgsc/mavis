@@ -178,8 +178,7 @@ def write_bed_file(filename, cluster_breakpoint_pairs):
                 fh.write('{}\t{}\t{}\tcluster={}\n'.format(
                     bpp.break1.chr, bpp.break1.start, bpp.break2.end, bpp.data['cluster_id']))
 
-
-def main():
+def parse_arguments():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         '-v', '--version', action='version', version='%(prog)s version ' + __version__,
@@ -239,10 +238,13 @@ def main():
             '\nerror: output directory {0} already exists. please use the --overwrite option'.format(args.output))
         parser.print_help()
         exit(1)
+    
+    for f in args.inputs:
+        if not os.path.exists(f):
+            print('\nerror: input file {0} does not exist'.format(f))
+            parser.print_help()
+            exit(1)
 
-    log('input arguments listed below')
-    for arg, val in sorted(args.__dict__.items()):
-        log(arg, '=', val, time_stamp=False)
     BAM_FILE_ARGS = {}
 
     for lib, bam in args.bamfile:
@@ -252,13 +254,20 @@ def main():
             exit(1)
         BAM_FILE_ARGS[lib] = bam
 
-    args.output = os.path.abspath(args.output)
+    return args
 
-    for f in args.inputs:
-        if not os.path.exists(f):
-            print('\nerror: input file {0} does not exist'.format(f))
-            parser.print_help()
-            exit(1)
+
+def main(args):
+    
+    log('input arguments listed below')
+    for arg, val in sorted(args.__dict__.items()):
+        log(arg, '=', val, time_stamp=False)
+    BAM_FILE_ARGS = {}
+
+    for lib, bam in args.bamfile:
+        BAM_FILE_ARGS[lib] = bam
+
+    args.output = os.path.abspath(args.output)
 
     mkdirp(os.path.join(args.output, 'inputs'))
 
@@ -487,4 +496,4 @@ def main():
             fh.write('echo "Job complete: $SGE_TASK_ID"\n')
 
 if __name__ == '__main__':
-    main()
+    main(parse_arguments())

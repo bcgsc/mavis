@@ -18,5 +18,5 @@ if __name__ == '__main__':
             COLUMNS.protocol: PROTOCOL
         }
     )
-    
+    print('loaded:', len(bpps), 'breakpoint pairs')
     print('OK! no errors were detected')

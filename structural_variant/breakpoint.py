@@ -6,6 +6,7 @@ from .error import *
 from .interval import Interval
 import TSV
 import re
+import itertools
 
 
 class Breakpoint(Interval):
@@ -539,7 +540,7 @@ class BreakpointPair:
         return ''.join(first_seq).upper(), ''.join(second_seq).upper()
 
 
-def read_bpp_from_input_file(filename, **kwargs):
+def read_bpp_from_input_file(filename, expand_ns=True, **kwargs):
     """
     reads a file using the TSV module. Each row is converted to a breakpoint pair and
     other column data is stored in the data attribute
@@ -573,7 +574,8 @@ def read_bpp_from_input_file(filename, **kwargs):
         try:
             return TSV.tsv_boolean(value)
         except TypeError:
-            pass
+            if value == '?':
+                value = 'null'
         return TSV.null(value)
 
     kwargs.setdefault('cast', {}).update(
@@ -610,27 +612,40 @@ def read_bpp_from_input_file(filename, **kwargs):
     )
     pairs = []
     for row in rows:
-        b1 = Breakpoint(
-            row[COLUMNS.break1_chromosome],
-            row[COLUMNS.break1_position_start],
-            row[COLUMNS.break1_position_end],
-            strand=row[COLUMNS.break1_strand],
-            orient=row[COLUMNS.break1_orientation]
-        )
-        b2 = Breakpoint(
-            row[COLUMNS.break2_chromosome],
-            row[COLUMNS.break2_position_start],
-            row[COLUMNS.break2_position_end],
-            strand=row[COLUMNS.break2_strand],
-            orient=row[COLUMNS.break2_orientation]
-        )
-        bpp = BreakpointPair(
-            b1,
-            b2,
-            opposing_strands=row[COLUMNS.opposing_strands],
-            untemplated_sequence=row[COLUMNS.untemplated_sequence],
-            stranded=row[COLUMNS.stranded],
-            data=row
-        )
-        pairs.append(bpp)
+        stranded = row[COLUMNS.stranded]
+        opp = row[COLUMNS.opposing_strands]
+        for o1, o2, opp, s1, s2 in itertools.product(
+            ORIENT.expand(row[COLUMNS.break1_orientation]) if expand_ns else [row[COLUMNS.break1_orientation]],
+            ORIENT.expand(row[COLUMNS.break2_orientation]) if expand_ns else [row[COLUMNS.break2_orientation]],
+            [True, False] if opp is None and expand_ns else [opp],
+            STRAND.expand(row[COLUMNS.break1_strand]) if stranded and expand_ns else [row[COLUMNS.break1_strand]],
+            STRAND.expand(row[COLUMNS.break2_strand]) if stranded and expand_ns else [row[COLUMNS.break2_strand]]
+        ):
+            try:
+                b1 = Breakpoint(
+                    row[COLUMNS.break1_chromosome],
+                    row[COLUMNS.break1_position_start],
+                    row[COLUMNS.break1_position_end],
+                    strand=s1,
+                    orient=o1
+                )
+                b2 = Breakpoint(
+                    row[COLUMNS.break2_chromosome],
+                    row[COLUMNS.break2_position_start],
+                    row[COLUMNS.break2_position_end],
+                    strand=s2,
+                    orient=o2
+                )
+                bpp = BreakpointPair(
+                    b1,
+                    b2,
+                    opposing_strands=opp,
+                    untemplated_sequence=row[COLUMNS.untemplated_sequence],
+                    stranded=row[COLUMNS.stranded],
+                    data=row
+                )
+                pairs.append(bpp)
+            except (AttributeError, InvalidRearrangement) as err:
+                if not expand_ns:
+                    raise err
     return pairs

@@ -211,6 +211,30 @@ script with the -h/--help option
     sv_annotate
     sv_validate
 
+There are some parameters that need to be computed from the bam files. This can generally be done by running the 
+profile_bam.py script found in the tools directory
+
+.. code-block:: bash
+
+    >>> python tools/profile_bam.py -b /path/to/bam/file -c 16
+    profiling chr 16
+
+    FINAL
+    average                    396.72
+    average stdev              98.89
+    median                     383
+    median distrib[0.80] stdev 59.56
+    median distrib[0.90] stdev 72.80
+    median distrib[0.95] stdev 82.20
+    median distrib[0.99] stdev 93.94
+    median distrib[1.00] stdev 99.84
+
+generally giving it a single chromosome will be enough reads but it can be given as many chromosomes/templates as 
+required. This script calculates the median insert size and then the standard deviation (wrt to the median not mean) 
+from all or a portion of the distribution of insert sizes
+
+
+
 |
 |
 
