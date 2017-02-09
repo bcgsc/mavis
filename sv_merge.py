@@ -62,100 +62,6 @@ def log(*pos, time_stamp=True):
         print(' ' * 28, *pos)
 
 
-def load_input_file(filename):
-    """
-    """
-    def nullable_boolean(item):
-        try:
-            item = TSV.tsv_boolean(item)
-        except TypeError:
-            if item == '?':
-                item = 'null'
-            item = TSV.null(item)
-        return item
-
-    header, rows = TSV.read_file(
-        filename,
-        require=[
-            'start_chromosome',
-            'end_chromosome'
-        ],
-        rename={
-            'tool_version': ['tools']
-        },
-        split={
-            'start_position': '^(?P<start_pos1>\d+)-(?P<start_pos2>\d+)$',
-            'end_position': '^(?P<end_pos1>\d+)-(?P<end_pos2>\d+)$',
-        },
-        cast={
-            'start_pos1': int,
-            'start_pos2': int,
-            'end_pos1': int,
-            'end_pos2': int,
-            'stranded': TSV.tsv_boolean,
-            'opposing_strands': nullable_boolean,
-            'untemplated_sequence': TSV.null
-        },
-        _in={
-            'start_strand': STRAND,
-            'end_strand': STRAND,
-            'start_orientation': ORIENT,
-            'end_orientation': ORIENT,
-            'protocol': PROTOCOL
-        },
-        validate={
-            'tool_version': '^.+_v?\d+\.\d+\.\d+$',
-            'libraries': '^[\w-]+$'
-        },
-        add={
-            'opposing_strands': 'null',
-            'start_strand': STRAND.NS,
-            'end_strand': STRAND.NS,
-            'stranded': False,
-            'untemplated_sequence': 'null'
-        },
-        simplify=True
-    )
-    breakpoints = []
-
-    for row in rows:
-        row['files'] = set([filename])
-        row[COLUMNS.tools.name] = set([row[COLUMNS.tools.name]])
-        opposing_strands = [row['opposing_strands']]
-        if row['opposing_strands'] is None and STRAND.NS in [row['start_strand'], row['end_strand']]:
-            opposing_strands = [True, False]
-
-        for opp in opposing_strands:
-            b1 = Breakpoint(
-                row['start_chromosome'],
-                row['start_pos1'],
-                row['start_pos2'],
-                orient=row['start_orientation'],
-                strand=row['start_strand'])
-            b2 = Breakpoint(
-                row['end_chromosome'],
-                row['end_pos1'],
-                row['end_pos2'],
-                orient=row['end_orientation'],
-                strand=row['end_strand'])
-            try:
-                bpp = BreakpointPair(
-                    b1,
-                    b2,
-                    opposing_strands=opp,
-                    untemplated_sequence=row['untemplated_sequence'],
-                    stranded=row['stranded'],
-                    data=row
-                )
-                if not row['stranded']:
-                    bpp.break1.strand = STRAND.NS
-                    bpp.break2.strand = STRAND.NS
-                breakpoints.append(bpp)
-            except InvalidRearrangement as e:
-                warnings.warn(str(e) + '; reading: {}'.format(filename))
-    return breakpoints
-
-
 def mkdirp(dirname):
     try:
         os.makedirs(dirname)
@@ -177,6 +83,7 @@ def write_bed_file(filename, cluster_breakpoint_pairs):
             else:
                 fh.write('{}\t{}\t{}\tcluster={}\n'.format(
                     bpp.break1.chr, bpp.break1.start, bpp.break2.end, bpp.data['cluster_id']))
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -254,11 +161,12 @@ def parse_arguments():
             exit(1)
         BAM_FILE_ARGS[lib] = bam
 
+    args.output = os.path.abspath(args.output)
+
     return args
 
 
 def main(args):
-    
     log('input arguments listed below')
     for arg, val in sorted(args.__dict__.items()):
         log(arg, '=', val, time_stamp=False)
@@ -266,13 +174,12 @@ def main(args):
 
     for lib, bam in args.bamfile:
         BAM_FILE_ARGS[lib] = bam
-
-    args.output = os.path.abspath(args.output)
-
+    
+    # set up the output directory
     mkdirp(os.path.join(args.output, 'inputs'))
-
+    
+    # load the input files
     breakpoint_pairs = []
-
     for f in args.inputs:
         log('loading:', f)
         bpps = read_bpp_from_input_file(
@@ -287,10 +194,11 @@ def main(args):
         )
         for bpp in bpps:
             bpp.data[COLUMNS.tools] = set(';'.split(bpp.data[COLUMNS.tools]))
+            bpp.data['files'] = {f}
         breakpoint_pairs.extend(bpps)
-
     log('loaded {} breakpoint pairs'.format(len(breakpoint_pairs)))
-
+    
+    # load the reference annotations for filtering uninformative clusters
     if not args.no_filter:
         log('loading:', args.annotations)
         REFERENCE_GENES = load_reference_genes(args.annotations, verbose=False)
@@ -370,7 +278,8 @@ def main(args):
                 fh.write('\t'.join([str(row.get(c, None)) for c in header]) + '\n')
 
     settings = EvidenceSettings.parse_args(args)
-
+    
+    # filter clusters based on annotations
     for lib, protocol in clusters_by_libprot:
         clusters = clusters_by_libprot[(lib, protocol)]
         # decide on the number of clusters to validate per job
@@ -417,19 +326,15 @@ def main(args):
                     pass_clusters.append(cluster)
                 else:
                     fail_clusters.append(cluster)
+        assert(len(fail_clusters) + len(pass_clusters) == len(clusters))
 
         log('filtered', len(fail_clusters), 'clusters as not informative')
 
         JOB_SIZE = args.MIN_EVENTS_PER_JOB
         if len(pass_clusters) // args.MIN_EVENTS_PER_JOB > args.MAX_JOBS - 1:
             JOB_SIZE = len(pass_clusters) // args.MAX_JOBS
+            assert(len(pass_clusters) // JOB_SIZE == args.MAX_JOBS)
 
-        log('info: splitting {} clusters into {} jobs of size {}'.format(
-            len(pass_clusters), len(pass_clusters) // JOB_SIZE, JOB_SIZE))
-
-        index = 0
-        fileno_start = 1
-        fileno = fileno_start
         parent_dir = os.path.join(args.output, 'clustering/{}_{}'.format(lib, protocol))
         uninform = os.path.join(parent_dir, 'uninformative_clusters.txt')
 
@@ -441,31 +346,47 @@ def main(args):
         log('writing:', bedfile)
         write_bed_file(bedfile, clusters)
 
-        rows = [c for c in clusters]
-
         clusterset_file_prefix = parent_dir + '/clusterset-'
         log('writing split outputs')
-        while index < len(rows):
-            # generate an output file
-            filename = '{}{}.tab'.format(clusterset_file_prefix, fileno)
-            log('writing:', filename, time_stamp=False)
-            with open(filename, 'w') as fh:
-                limit = index + JOB_SIZE
-                header = None
-                if len(rows) - limit < args.MIN_EVENTS_PER_JOB or fileno == args.MAX_JOBS:
-                    limit = len(rows)
-
-                while index < len(rows) and index < limit:
-                    row = BreakpointPair.flatten(rows[index])
-                    row[COLUMNS.cluster_size.name] = len(clusters[rows[index]])
+        jobs = []
+        i = 0
+        header = set()
+        while i < len(pass_clusters):
+            job = []
+            for j in range(0, JOB_SIZE):
+                if i >= len(pass_clusters):
+                    break
+                curr = pass_clusters[i]
+                row = BreakpointPair.flatten(curr)
+                row[COLUMNS.cluster_size.name] = len(clusters[curr])
+                row[COLUMNS.library.name] = lib
+                row[COLUMNS.protocol.name] = protocol
+                job.append(row)
+                header.update(row.keys())
+                i += 1
+            jobs.append(job)
+            if len(jobs) == args.MAX_JOBS:
+                while i < len(pass_clusters):
+                    curr = pass_clusters[i]
+                    row = BreakpointPair.flatten(curr)
+                    row[COLUMNS.cluster_size.name] = len(clusters[curr])
                     row[COLUMNS.library.name] = lib
                     row[COLUMNS.protocol.name] = protocol
-                    if not header:
-                        header = sort_columns(row.keys())
-                        fh.write('#' + '\t'.join(header) + '\n')
+                    job.append(row)
+                    header.update(row.keys())
+                    i += 1
+        assert(len(jobs) <= args.MAX_JOBS)
+        log('splitting {} clusters into {} jobs of size ~{}'.format(len(pass_clusters), len(jobs), JOB_SIZE))
+        header = sort_columns(header)
+
+        for i, job in enumerate(jobs):
+            # generate an output file
+            filename = '{}{}.tab'.format(clusterset_file_prefix, i + 1)
+            log('writing:', filename, time_stamp=False)
+            with open(filename, 'w') as fh:
+                fh.write('#' + '\t'.join([str(c) for c in header]) + '\n')
+                for row in job:
                     fh.write('\t'.join([str(row[c]) for c in header]) + '\n')
-                    index += 1
-            fileno += 1
 
         # create the qsub script as well
         output_folder = '{}/validation/{}_{}'.format(args.output, lib, protocol)
@@ -473,7 +394,7 @@ def main(args):
         with open(qsub_file, 'w') as fh:
             log('writing:', qsub_file)
             fh.write('#!/bin/sh\n')
-            fh.write('#$ -t {}-{}\n'.format(fileno_start, fileno - 1))  # array job
+            fh.write('#$ -t {}-{}\n'.format(1, len(jobs)))  # array job
             fh.write('#$ -V\n')  # copy environment variables
             fh.write('#$ -N svmV_{}\n'.format(lib[-5:]))
             fh.write('#$ -j y\n')

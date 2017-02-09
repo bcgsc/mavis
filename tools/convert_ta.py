@@ -2,8 +2,9 @@
 script for converting Trans-ABySS output file into the SVMerge accepted input format
 """
 import TSV
-from structural_variant.constants import COLUMNS, sort_columns
+from structural_variant.constants import COLUMNS, sort_columns, ORIENT, SVTYPE
 from structural_variant.breakpoint import Breakpoint, BreakpointPair
+from structural_variant.error import *
 import argparse
 import os
 
@@ -25,6 +26,7 @@ def main():
     parser.add_argument('-n', '--input', help='path to the input file to be converted', required=True)
     parser.add_argument('-p', '--protocol', choices=['genome', 'transcriptome'], required=True)
     parser.add_argument('-l', '--library_id', required=True)
+    parser.add_argument('--stranded', action='store_true', default=False)
 
     # /projects/POG/POG_data/POG098/wgs/GV2/POG098_POG098-OCT-1-unique-14-filters/POG098-OCT-1_genome_fusions_concat.tsv
 
@@ -38,10 +40,11 @@ def main():
         print('error: input file {0} does not exist'.format(args.input))
         parser.print_help()
         exit()
-
+    print('reading:', args.input)
     header, rows = TSV.read_file(
         args.input,
         require=['id'],
+        rename={'rearrangement': [COLUMNS.event_type.name]},
         split={
             'breakpoint': '^(?P<chr1>[^:]+):(?P<pos1>\d+)\|(?P<chr2>[^:]+):(?P<pos2>\d+)$',
             'orientations': '^(?P<or1>[RL]),(?P<or2>[RL])$',
@@ -59,9 +62,20 @@ def main():
             data={
                 COLUMNS.library: args.library_id,
                 COLUMNS.protocol: args.protocol,
-                COLUMNS.tools: '{1}_v{0}'.format(__version__, __prog__)
-            }
+                COLUMNS.tools: '{1}_v{0}'.format(__version__, __prog__),
+                COLUMNS.event_type: row[COLUMNS.event_type]
+            },
+            stranded=args.stranded
         )
+        if len(set([bpp.break1.orient, bpp.break2.orient, ORIENT.NS])) == 2:
+            if not bpp.interchromosomal:
+                bpp.data[COLUMNS.event_type] = SVTYPE.INV
+            else:
+                bpp.data[COLUMNS.event_type] = SVTYPE.ITRANS
+        if bpp.data[COLUMNS.event_type] not in BreakpointPair.classify(bpp):
+            print(bpp.break1, bpp.break2)
+            print(row)
+            raise InvalidRearrangement('expected', BreakpointPair.classify(bpp), 'found', bpp.data[COLUMNS.event_type])
         bpps.add(bpp)
 
     header = set()
@@ -74,6 +88,7 @@ def main():
     header = sort_columns(header)
 
     with open(args.output, 'w') as fh:
+        print('writing:', args.output)
         fh.write('## {1} v{0}\n'.format(__version__, __prog__))
         fh.write('## input: {0}\n'.format(args.input))
         fh.write('## output: {0}\n'.format(args.output))

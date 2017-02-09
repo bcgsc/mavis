@@ -521,6 +521,7 @@ class Annotation(BreakpointPair):
             sorted(['{}({})'.format(x[0].name, x[1]) for x in self.genes_proximal_to_break1]))
         row[COLUMNS.genes_proximal_to_break2] = ';'.join(
             sorted(['{}({})'.format(x[0].name, x[1]) for x in self.genes_proximal_to_break2]))
+        row[COLUMNS.event_type] = self.event_type
         return row
 
 

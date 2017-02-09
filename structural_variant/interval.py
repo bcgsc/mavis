@@ -268,15 +268,15 @@ class Interval:
         return num, found_inbetween_segment
 
     @classmethod
-    def convert_pos(cls, mapping, pos):
-        i = cls.convert_ratioed_pos(mapping, pos)
+    def convert_pos(cls, mapping, pos, forward_to_reverse=None):
+        i = cls.convert_ratioed_pos(mapping, pos, forward_to_reverse)
         if i.forward_to_reverse:
             return i.end
         else:
             return i.start
 
     @classmethod
-    def convert_ratioed_pos(cls, mapping, pos):
+    def convert_ratioed_pos(cls, mapping, pos, forward_to_reverse=None):
         """ convert any given position given a mapping of intervals to another range
 
         Args:
@@ -297,14 +297,13 @@ class Interval:
             >>> Interval.convert_pos(mapping, 15)
             559
         """
-        if len(mapping.keys()) < 2:
+        if len(mapping.keys()) < 2 and forward_to_reverse is None:
             raise AttributeError(
                 'mapping is insufficient to determine orientation')
 
         # order the input intervals
         input_intervals = sorted(mapping.keys())
         mapped_to_intervals = [mapping[i] for i in input_intervals]
-        forward_to_reverse = None
 
         # input check interval ranges are non-overlapping and increasing/decreasing
         for i in range(0, len(input_intervals)):

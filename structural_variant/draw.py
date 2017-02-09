@@ -175,6 +175,8 @@ class Diagram:
         self.DOMAIN_FILL_GRADIENT = [
             c.hex for c in Color(self.DOMAIN_MISMATCH_COLOR).range_to(Color(self.DOMAIN_COLOR), 10)]
         self.DOMAIN_NAME_REGEX_FILTER = '.*'
+        self.PFAM_DOMAIN = '^PF\d+$'
+        self.PFAM_LINK = 'http://pfam.xfam.org/family/{.name}'
 
         self.SPLICE_HEIGHT = self.TRACK_HEIGHT / 2
         self.SPLICE_STROKE_DASHARRAY = [2, 2]
@@ -194,7 +196,9 @@ class Diagram:
         self.MARKER_TOP_MARGIN = self.BREAKPOINT_TOP_MARGIN
         self.MARKER_BOTTOM_MARGIN = self.BREAKPOINT_BOTTOM_MARGIN
         self.MARKER_COLOR = self.BREAKPOINT_COLOR
-
+        
+        self.TRANSCRIPT_HYPERLINK = 'http://dec2013.archive.ensembl.org/Homo_sapiens/Transcript/Summary?' \
+            'db=core;t={.name}'
         self.EXON_FONT_SIZE = 20
         self.EXON_TEAR_TOOTH_WIDTH = 2
         self.EXON_MIN_WIDTH = max([
@@ -363,8 +367,8 @@ class Diagram:
                         (len(template_display_label_prefix) + max([len(template1.name), len(template2.name)])) \
                         * self.LEGEND_FONT_SIZE * self.FONT_WIDTH_HEIGHT_RATIO <= self.LABEL_LEFT_MARGIN and \
                         template1.name and template2.name:
-                    labels[template_display_label_prefix + template1.name] = template1
-                    labels[template_display_label_prefix + template2.name] = template2
+                    labels.set_key(template_display_label_prefix + template1.name, template1)
+                    labels.set_key(template_display_label_prefix + template2.name, template2)
 
                 h = [0]
                 if template1 == template2:  # single template
@@ -581,7 +585,7 @@ class Diagram:
         # now make the json legend
         return canvas, legend
 
-    def _draw_exon_track(self, canvas, transcript, mapping, colors=None):
+    def _draw_exon_track(self, canvas, transcript, mapping, colors=None, x_start=None, x_end=None):
         """
         """
         colors = {} if colors is None else colors
@@ -589,9 +593,9 @@ class Diagram:
 
         y = self.TRACK_HEIGHT / 2
         exons = sorted(transcript.exons, key=lambda x: x.start)
-
-        s = Interval.convert_ratioed_pos(mapping, exons[0].start).start
-        t = Interval.convert_ratioed_pos(mapping, exons[-1].end).end
+        
+        s = Interval.convert_ratioed_pos(mapping, exons[0].start).start if x_start is None else x_start
+        t = Interval.convert_ratioed_pos(mapping, exons[-1].end).end if x_end is None else x_end
 
         main_group.add(
             canvas.rect(
@@ -714,6 +718,188 @@ class Diagram:
         y = plot.height
         setattr(plot_group, 'height', y)
         return plot_group
+    
+    def _draw_transcript_with_translation(
+        self, canvas, translation,
+        labels,
+        colors,
+        mapping,
+        REFERENCE_GENOME=None,
+        x_start=None,
+        x_end=None
+    ):
+        main_group = canvas.g()
+        ust = translation.transcript.reference_object
+        tr = translation.transcript
+
+        if x_start is None:
+            x_start = Interval.convert_ratioed_pos(mapping, ust.start).start
+        if x_end is None:
+            x_end = Interval.convert_ratioed_pos(mapping, ust.end).end
+
+        LABEL_PREFIX = self.TRANSCRIPT_LABEL_PREFIX
+        if isinstance(ust, FusionTranscript):
+            LABEL_PREFIX = self.FUSION_LABEL_PREFIX
+
+        # if the splicing takes up more room than the track we need to adjust for it
+        y = self.SPLICE_HEIGHT
+
+        exon_track_group = self._draw_exon_track(canvas, ust, mapping, colors)
+        exon_track_group.translate(0, y)
+        exon_track_group.add(canvas.text(
+            labels.add(tr, LABEL_PREFIX),
+            insert=(
+                0 - self.PADDING,
+                self.TRACK_HEIGHT / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.LABEL_FONT_SIZE
+            ),
+            fill=self.LABEL_COLOR,
+            style=self.FONT_STYLE.format(font_size=self.LABEL_FONT_SIZE, text_anchor='end'),
+            class_='label'
+        ))
+
+        # draw the splicing pattern
+        splice_group = canvas.g(class_='splicing')
+        for p1, p2 in zip(tr.splicing_pattern[::2], tr.splicing_pattern[1::2]):
+            a = Interval.convert_pos(mapping, p1)
+            b = Interval.convert_pos(mapping, p2)
+            polyline = [(a, y), (a + (b - a) / 2, y - self.SPLICE_HEIGHT), (b, y)]
+            p = canvas.polyline(polyline, fill='none')
+            p.dasharray(self.SPLICE_STROKE_DASHARRAY)
+            p.stroke(self.SPLICE_COLOR, width=self.SPLICE_STROKE_WIDTH)
+            splice_group.add(p)
+
+        y += self.TRACK_HEIGHT / 2
+
+        main_group.add(splice_group)
+        main_group.add(exon_track_group)
+        y += self.TRACK_HEIGHT / 2
+
+        gp = canvas.g(class_='protein')
+        y += self.PADDING
+        gp.translate(0, y)
+        # translation track
+        
+        # convert the AA position to cdna position, then convert the cdna to genomic, etc
+        # ==================== adding the translation track ============
+        translated_genomic_regions = [
+            tr.convert_cdna_to_genomic(translation.start), 
+            tr.convert_cdna_to_genomic(translation.end)
+        ]
+        translated_genomic_regions = [Interval(*sorted(translated_genomic_regions))]
+
+        for p1, p2 in zip(tr.splicing_pattern[::2], tr.splicing_pattern[1::2]):
+            try:
+                spliced_out_interval = Interval(p1 + 1, p2 - 1)
+                temp = []
+                for region in translated_genomic_regions:
+                    temp.extend(region - spliced_out_interval)
+                translated_genomic_regions = temp
+            except AttributeError:
+                pass
+
+        s = Interval.convert_pos(mapping, translated_genomic_regions[0].start)
+        t = Interval.convert_pos(mapping, translated_genomic_regions[-1].end)
+
+        gt = canvas.g(class_='translation')
+        gp.add(gt)
+        h = self.TRANSLATION_TRACK_HEIGHT
+
+        for sec in translated_genomic_regions:
+            start = Interval.convert_pos(mapping, sec.start)
+            end = Interval.convert_pos(mapping, sec.end)
+            gt.add(
+                canvas.rect(
+                    (start, h / 2 - self.TRANSLATION_TRACK_HEIGHT / 2),
+                    (end - start + 1, self.TRANSLATION_TRACK_HEIGHT),
+                    fill=self.TRANSLATION_SCAFFOLD_COLOR,
+                    class_='scaffold'
+                ))
+        gt.add(canvas.text(
+            self.TRANSLATION_END_MARKER if tr.get_strand() == STRAND.NEG else self.TRANSLATION_START_MARKER,
+            insert=(
+                s - self.TRANSLATION_MARKER_PADDING,
+                h / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.TRANSLATION_FONT_SIZE
+            ),
+            fill=self.LABEL_COLOR,
+            style=self.FONT_STYLE.format(font_size=self.TRANSLATION_FONT_SIZE, text_anchor='end'),
+            class_='label'
+        ))
+        gt.add(canvas.text(
+            self.TRANSLATION_START_MARKER if tr.get_strand() == STRAND.NEG else self.TRANSLATION_END_MARKER,
+            insert=(
+                t + self.TRANSLATION_MARKER_PADDING,
+                h / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.TRANSLATION_FONT_SIZE
+            ),
+            fill=self.LABEL_COLOR,
+            style=self.FONT_STYLE.format(font_size=self.TRANSLATION_FONT_SIZE, text_anchor='start'),
+            class_='label'
+        ))
+        gt.add(Tag('title', 'cds: {}_{}; aa length: {}'.format(
+            translation.start, translation.end, len(translation) // CODON_SIZE)))
+        py = h
+        # now draw the domain tracks
+        # need to convert the domain AA positions to cds positions to genomic
+        for i, d in enumerate(sorted(translation.domains, key=lambda x: x.name)):
+            if not re.match(self.DOMAIN_NAME_REGEX_FILTER, str(d.name)):
+                continue
+            py += self.PADDING
+            gd = canvas.g(class_='domain')
+            gd.add(canvas.rect(
+                (x_start, self.DOMAIN_TRACK_HEIGHT / 2),
+                (x_end - x_start, self.DOMAIN_SCAFFOLD_HEIGHT),
+                fill=self.DOMAIN_SCAFFOLD_COLOR,
+                class_='scaffold'
+            ))
+            fill = self.DOMAIN_COLOR
+            percent_match = None
+            try:
+                match, total = d.score_region_mapping(REFERENCE_GENOME)
+                percent_match = int(round(match * 100 / total, 0))
+                fill = self.DOMAIN_FILL_GRADIENT[percent_match % len(self.DOMAIN_FILL_GRADIENT) - 1]
+            except (NotSpecifiedError, AttributeError):
+                pass
+            for region in d.regions:
+                # convert the AA position to cdna position, then convert the cdna to genomic, etc
+                s = translation.convert_aa_to_cdna(region.start)
+                t = translation.convert_aa_to_cdna(region.end)
+                s = tr.convert_cdna_to_genomic(s.start)
+                t = tr.convert_cdna_to_genomic(t.end)
+                s = Interval.convert_pos(mapping, s)
+                t = Interval.convert_pos(mapping, t)
+                if s > t:
+                    t, s = (s, t)
+                gdr = canvas.g(class_='domain_region')
+                gdr.add(canvas.rect(
+                    (s, 0), (t - s + 1, self.DOMAIN_TRACK_HEIGHT),
+                    fill=fill, class_='region'))
+                gdr.add(Tag('title', 'Domain {} region {}_{}aa{}'.format(
+                    d.name if d.name else '', region.start, region.end,
+                    ' matched {}%'.format(percent_match) if percent_match is not None else '')))
+                gd.add(gdr)
+            gd.translate(0, py)
+
+            f = self.LABEL_COLOR if not self.DYNAMIC_LABELS else Diagram.dynamic_label_color(self.DOMAIN_COLOR)
+            label_group = None
+            if re.match(self.PFAM_DOMAIN, d.name):
+                label_group = canvas.a(self.PFAM_LINK.format(d), target='_blank')
+            else:
+                label_group = canvas.g()
+            gd.add(label_group)
+            label_group.add(canvas.text(
+                labels.add(d.name, self.DOMAIN_LABEL_PREFIX),
+                insert=(
+                    0 - self.PADDING,
+                    self.DOMAIN_TRACK_HEIGHT / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.DOMAIN_LABEL_FONT_SIZE),
+                fill=f,
+                style=self.FONT_STYLE.format(font_size=self.DOMAIN_LABEL_FONT_SIZE, text_anchor='end'),
+                class_='label'
+            ))
+            gp.add(gd)
+            py += self.DOMAIN_TRACK_HEIGHT
+        y += py
+        main_group.add(gp)
+        setattr(main_group, 'height', y)
+        return main_group
 
     def draw_ustranscript(
         self, canvas, ust,
@@ -729,7 +915,7 @@ class Diagram:
         builds an svg group representing the transcript. Exons are drawn in a track with the splicing
         information and domains are drawn in separate tracks below
 
-        if there are mutltiple splicing variants then mutliple exon tracks are drawn
+        if there are multiple splicing variants then multiple exon tracks are drawn
 
         Args:
             canvas (svgwrite.drawing.Drawing): the main svgwrite object used to create new svg elements
@@ -761,10 +947,8 @@ class Diagram:
             )
 
         main_group = canvas.g(class_='ust')
-        BTM = self.BREAKPOINT_TOP_MARGIN if len(breakpoints) > 0 else 0
-        BBM = self.BREAKPOINT_BOTTOM_MARGIN if len(breakpoints) > 0 else 0
 
-        y = 0
+        y = self.BREAKPOINT_TOP_MARGIN if len(breakpoints) > 0 else 0
         x_start = Interval.convert_ratioed_pos(mapping, ust.start).start
         x_end = Interval.convert_ratioed_pos(mapping, ust.end).end
         
@@ -788,13 +972,12 @@ class Diagram:
             except AttributeError:
                 pass
 
-
         LABEL_PREFIX = self.TRANSCRIPT_LABEL_PREFIX
         if isinstance(ust, FusionTranscript):
             LABEL_PREFIX = self.FUSION_LABEL_PREFIX
 
         if len(ust.translations) == 0:
-            y += self.SPLICE_HEIGHT + BTM
+            y += self.SPLICE_HEIGHT
             exon_track_group = self._draw_exon_track(canvas, ust, mapping, colors)
             exon_track_group.translate(0, y)
             exon_track_group.add(canvas.text(
@@ -806,162 +989,19 @@ class Diagram:
             ))
             main_group.add(exon_track_group)
             y += self.TRACK_HEIGHT
-            y += BBM
         else:
             # draw the protein features if there are any
             for i, tl in enumerate(ust.translations):
-                tr = tl.transcript
-
-                # if the splicing takes up more room than the track we need to adjust for it
-                y += self.SPLICE_HEIGHT + BTM
-
-                exon_track_group = self._draw_exon_track(canvas, ust, mapping, colors)
-                exon_track_group.translate(0, y)
-                exon_track_group.add(canvas.text(
-                    labels.add(tr, LABEL_PREFIX),
-                    insert=(
-                        0 - self.PADDING,
-                        self.TRACK_HEIGHT / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.LABEL_FONT_SIZE
-                    ),
-                    fill=self.LABEL_COLOR,
-                    style=self.FONT_STYLE.format(font_size=self.LABEL_FONT_SIZE, text_anchor='end'),
-                    class_='label'
-                ))
-
-                # draw the splicing pattern
-                splice_group = canvas.g(class_='splicing')
-                for p1, p2 in zip(tr.splicing_pattern[::2], tr.splicing_pattern[1::2]):
-                    a = Interval.convert_pos(mapping, p1)
-                    b = Interval.convert_pos(mapping, p2)
-                    polyline = [(a, y), (a + (b - a) / 2, y - self.SPLICE_HEIGHT), (b, y)]
-                    p = canvas.polyline(polyline, fill='none')
-                    p.dasharray(self.SPLICE_STROKE_DASHARRAY)
-                    p.stroke(self.SPLICE_COLOR, width=self.SPLICE_STROKE_WIDTH)
-                    splice_group.add(p)
-
-                y += self.TRACK_HEIGHT / 2
-
-                main_group.add(splice_group)
-                main_group.add(exon_track_group)
-                y += self.TRACK_HEIGHT / 2
-
-                gp = canvas.g(class_='protein')
-                # translation track
-                y += self.PADDING
-                # convert the AA position to cdna position, then convert the cdna to genomic, etc
-                # ==================== adding the translation track ============
-                translated_genomic_regions = [
-                    tr.convert_cdna_to_genomic(tl.start), tr.convert_cdna_to_genomic(tl.end)]
-                translated_genomic_regions = [Interval(*sorted(translated_genomic_regions))]
-
-                for p1, p2 in zip(tr.splicing_pattern[::2], tr.splicing_pattern[1::2]):
-                    try:
-                        spliced_out_interval = Interval(p1 + 1, p2 - 1)
-                        temp = []
-                        for region in translated_genomic_regions:
-                            temp.extend(region - spliced_out_interval)
-                        translated_genomic_regions = temp
-                    except AttributeError:
-                        pass
-
-                s = Interval.convert_pos(mapping, translated_genomic_regions[0].start)
-                t = Interval.convert_pos(mapping, translated_genomic_regions[-1].end)
-
-                gt = canvas.g(class_='translation')
-                gp.add(gt)
-                h = self.TRANSLATION_TRACK_HEIGHT
-
-                for sec in translated_genomic_regions:
-                    start = Interval.convert_pos(mapping, sec.start)
-                    end = Interval.convert_pos(mapping, sec.end)
-                    gt.add(
-                        canvas.rect(
-                            (start, h / 2 - self.TRANSLATION_TRACK_HEIGHT / 2),
-                            (end - start + 1, self.TRANSLATION_TRACK_HEIGHT),
-                            fill=self.TRANSLATION_SCAFFOLD_COLOR,
-                            class_='scaffold'
-                        ))
-                gt.add(canvas.text(
-                    self.TRANSLATION_END_MARKER if tr.get_strand() == STRAND.NEG else self.TRANSLATION_START_MARKER,
-                    insert=(
-                        s - self.TRANSLATION_MARKER_PADDING,
-                        h / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.TRANSLATION_FONT_SIZE
-                    ),
-                    fill=self.LABEL_COLOR,
-                    style=self.FONT_STYLE.format(font_size=self.TRANSLATION_FONT_SIZE, text_anchor='end'),
-                    class_='label'
-                ))
-                gt.add(canvas.text(
-                    self.TRANSLATION_START_MARKER if tr.get_strand() == STRAND.NEG else self.TRANSLATION_END_MARKER,
-                    insert=(
-                        t + self.TRANSLATION_MARKER_PADDING,
-                        h / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.TRANSLATION_FONT_SIZE
-                    ),
-                    fill=self.LABEL_COLOR,
-                    style=self.FONT_STYLE.format(font_size=self.TRANSLATION_FONT_SIZE, text_anchor='start'),
-                    class_='label'
-                ))
-                gt.add(Tag('title', 'cds: {}_{}; aa length: {}'.format(tl.start, tl.end, len(tl) // CODON_SIZE)))
-                py = h
-                # now draw the domain tracks
-                # need to convert the domain AA positions to cds positions to genomic
-                for i, d in enumerate(sorted(tl.domains, key=lambda x: x.name)):
-                    if not re.match(self.DOMAIN_NAME_REGEX_FILTER, str(d.name)):
-                        continue
-                    py += self.PADDING
-                    gd = canvas.g(class_='domain')
-                    gd.add(canvas.rect(
-                        (x_start, self.DOMAIN_TRACK_HEIGHT / 2),
-                        (x_end - x_start, self.DOMAIN_SCAFFOLD_HEIGHT),
-                        fill=self.DOMAIN_SCAFFOLD_COLOR,
-                        class_='scaffold'
-                    ))
-                    fill = self.DOMAIN_COLOR
-                    percent_match = None
-                    try:
-                        match, total = d.score_region_mapping(REFERENCE_GENOME)
-                        percent_match = int(round(match * 100 / total, 0))
-                        fill = self.DOMAIN_FILL_GRADIENT[percent_match % len(self.DOMAIN_FILL_GRADIENT) - 1]
-                    except (NotSpecifiedError, AttributeError):
-                        pass
-                    for region in d.regions:
-                        # convert the AA position to cdna position, then convert the cdna to genomic, etc
-                        s = tl.convert_aa_to_cdna(region.start)
-                        t = tl.convert_aa_to_cdna(region.end)
-                        s = tr.convert_cdna_to_genomic(s.start)
-                        t = tr.convert_cdna_to_genomic(t.end)
-                        s = Interval.convert_pos(mapping, s)
-                        t = Interval.convert_pos(mapping, t)
-                        if s > t:
-                            t, s = (s, t)
-                        gdr = canvas.g(class_='domain_region')
-                        gdr.add(canvas.rect(
-                            (s, 0), (t - s + 1, self.DOMAIN_TRACK_HEIGHT),
-                            fill=fill, class_='region'))
-                        gdr.add(Tag('title', 'Domain {} region {}_{}aa{}'.format(
-                            d.name if d.name else '', region.start, region.end,
-                            ' matched {}%'.format(percent_match) if percent_match is not None else '')))
-                        gd.add(gdr)
-                    gd.translate(0, py)
-
-                    f = self.LABEL_COLOR if not self.DYNAMIC_LABELS else Diagram.dynamic_label_color(self.DOMAIN_COLOR)
-                    gd.add(canvas.text(
-                        labels.add(d.name, self.DOMAIN_LABEL_PREFIX),
-                        insert=(
-                            0 - self.PADDING,
-                            self.DOMAIN_TRACK_HEIGHT / 2 + self.FONT_CENTRAL_SHIFT_RATIO * self.DOMAIN_LABEL_FONT_SIZE),
-                        fill=f,
-                        style=self.FONT_STYLE.format(font_size=self.DOMAIN_LABEL_FONT_SIZE, text_anchor='end'),
-                        class_='label'
-                    ))
-                    gp.add(gd)
-                    py += self.DOMAIN_TRACK_HEIGHT
+                gp = self._draw_transcript_with_translation(
+                    canvas, tl, labels, colors, mapping, x_start=x_start, x_end=x_end
+                )
                 gp.translate(0, y)
-                if i < len(ust.translations):
+                if i < len(ust.translations) - 1:
                     y += self.INNER_MARGIN
-                y += py + BBM
+                y += gp.height
                 main_group.add(gp)
         
+        y += self.BREAKPOINT_BOTTOM_MARGIN if len(breakpoints) > 0 else 0
         # add masks
         for mask in masks:
             pixel = Interval.convert_ratioed_pos(mapping, mask.start) | Interval.convert_ratioed_pos(mapping, mask.end)
@@ -1031,7 +1071,7 @@ class Diagram:
                 elif len(breakpoints) == 2:
                     b1, b2 = sorted(breakpoints)
                     if b1.orient == ORIENT.LEFT and b2.orient == ORIENT.RIGHT:
-                        masks = [Interval(b1.end + 1, b2.start - 1)]
+                        masks = [Interval(b1.end, b2.start)]
             except AttributeError:
                 pass
 
@@ -1700,14 +1740,17 @@ class Diagram:
             mapping[ifrom] = ito
 
         # assert that that mapping is correct
-        for itvl in input_intervals:
-            p1 = Interval.convert_ratioed_pos(mapping, itvl.start)
-            p2 = Interval.convert_ratioed_pos(mapping, itvl.end)
+        for ifrom in input_intervals:
+            ifrom = Interval(ifrom.start, ifrom.end)
+            p1 = Interval.convert_ratioed_pos(mapping, ifrom.start)
+            p2 = Interval.convert_ratioed_pos(mapping, ifrom.end)
+            if ifrom in mapping and ito.end == target_width:
+                continue
             n = p1 | p2
-            if n.length() < min_width:
+            if n.length() < min_width and abs(n.length() - min_width) > 0.01:  # precision error allowable
                 raise AssertionError(
                     'interval mapping should not map any intervals to less than the minimum required width. Interval {}'
                     ' was mapped to a pixel interval of length {} but the minimum width is {}'.format(
-                        itvl, n.length(), min_width),
+                        ifrom, n.length(), min_width),
                     p1, p2, mapping, input_intervals, target_width, ratio, min_inter_width)
         return mapping

@@ -34,10 +34,4 @@ class DrawingFitError(Exception):
 
 
 class InvalidRearrangement(Exception):
-
-    def __init__(self, *pos):
-        self.msg = ' '.join([str(p) for p in pos])
-
-    def __str__(self):
-        name = self.__class__.__name__
-        return '{0}<rearrangement would not produce a proper genetic molecule: {1}>'.format(name, self.msg)
+    pass

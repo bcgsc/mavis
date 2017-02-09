@@ -48,21 +48,21 @@ def load_masking_regions(filepath):
     return regions
 
 
-def load_reference_genes(filepath, verbose=True, REFERENCE_GENOME=None, filetype=None):
+def load_reference_genes(filepath, verbose=True, REFERENCE_GENOME=None, filetype=None, best_transcripts_only=False):
     if filetype is None:
         m = re.match('.*\.(?P<ext>tsv|tab|json)$', filepath)
         if m:
             filetype = m.group('ext')
 
     if filetype == 'json':
-        return _load_reference_genes_json(filepath, verbose, REFERENCE_GENOME)
+        return _load_reference_genes_json(filepath, verbose, REFERENCE_GENOME, best_transcripts_only)
     elif filetype == 'tab' or filetype == 'tsv':
-        return _load_reference_genes_tabbed(filepath, verbose, REFERENCE_GENOME)
+        return _load_reference_genes_tabbed(filepath, verbose, REFERENCE_GENOME, best_transcripts_only)
     else:
         raise NotImplementedError('unsupported filetype:', filetype, filepath)
 
 
-def _load_reference_genes_json(filepath, verbose=True, REFERENCE_GENOME=None):
+def _load_reference_genes_json(filepath, verbose=True, REFERENCE_GENOME=None, best_transcripts_only=False):
     genes_by_chr = dict()
     with open(filepath) as fh:
         data = json.load(fh)
@@ -82,13 +82,10 @@ def _load_reference_genes_json(filepath, verbose=True, REFERENCE_GENOME=None):
                 aliases=gene['aliases'],
                 strand=gene['strand']
             )
-            genes_by_chr.setdefault(g.chr, []).append(g)
-
+            
+            has_best = False
             for transcript in gene['transcripts']:
-                if transcript['is_best_transcript'] == 'true':
-                    transcript['is_best_transcript'] = True
-                elif transcript['is_best_transcript'] == 'false':
-                    transcript['is_best_transcript'] = False
+                transcript['is_best_transcript'] = TSV.tsv_boolean(transcript['is_best_transcript'])
 
                 exons = [Exon(**ex) for ex in transcript['exons']]
                 if len(exons) == 0:
@@ -99,6 +96,10 @@ def _load_reference_genes_json(filepath, verbose=True, REFERENCE_GENOME=None):
                     exons=exons,
                     is_best_transcript=transcript['is_best_transcript']
                 )
+                if ust.is_best_transcript:
+                    has_best = True
+                if best_transcripts_only and not ust.is_best_transcript:
+                    continue
                 g.transcripts.append(ust)
 
                 if transcript['cdna_coding_end'] is None or transcript['cdna_coding_start'] is None:
@@ -130,10 +131,13 @@ def _load_reference_genes_json(filepath, verbose=True, REFERENCE_GENOME=None):
                         if translate(m) != START_AA or translate(stop) != STOP_AA:
                             continue
                     t.translations.append(tx)
+            if not best_transcripts_only or has_best:
+                genes_by_chr.setdefault(g.chr, []).append(g)
+
     return genes_by_chr
 
 
-def _load_reference_genes_tabbed(filepath, verbose=True, REFERENCE_GENOME=None):
+def _load_reference_genes_tabbed(filepath, verbose=True, REFERENCE_GENOME=None, best_transcripts_only=False):
     """
     given a file in the std input format (see below) reads and return a list of genes (and sub-objects)
 
@@ -257,6 +261,8 @@ def _load_reference_genes_tabbed(filepath, verbose=True, REFERENCE_GENOME=None):
             strand=row['strand'],
             aliases=row['hugo_names'].split(';') if row['hugo_names'] else []
         )
+        if best_transcripts_only and row['best_ensembl_transcript_id'] != row['ensembl_transcript_id']:
+            continue
         if g.name in genes:
             g = genes[g.name]
         else:

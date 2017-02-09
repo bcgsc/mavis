@@ -7,6 +7,7 @@ import os
 from structural_variant.interval import Interval
 import argparse
 import TSV
+import pysam
 import re
 
 
@@ -25,11 +26,14 @@ def parse_arguments():
         help='path to the output folder'
     )
     parser.add_argument(
-        '-b', '--buffer', help='genomic length to plot on either side of the target gene', default=0, type=int
+        '--buffer', help='genomic length to plot on either side of the target gene', default=0, type=int
     )
     parser.add_argument(
         '-c', '--cna_file', help='path to the cna file to plot'
     )
+    parser.add_argument(
+        '-b', '--bam_file', help='read to add a coverage plot', default=[], action='append', nargs=3,
+        metavar=('<yaxis name>', '</path/to/bam/file>', '<bin size>'))
     
     parser.add_argument('--markers', '-m', nargs=3, metavar=('start', 'end', 'name'), action='append', default=[])
     g = parser.add_argument_group('reference files')
@@ -61,7 +65,7 @@ genes_to_draw = []
 for chr in GENES:
     for gene in GENES[chr]:
         if args.gene in gene.aliases:
-            print('found gene', gene)
+            print('found gene', gene, gene.aliases)
             genes_to_draw.append(gene)
 
 cna_by_chr = {}
@@ -89,6 +93,29 @@ d = Diagram(WIDTH=1000)
 d.DOMAIN_NAME_REGEX_FILTER = '^PF\d+$'
 
 for g in genes_to_draw:
+    plots = []
+    for bname, bfile, bin_size in args.bam_file:
+        bin_size = int(bin_size)
+        # one plot per bam
+        samfile = pysam.AlignmentFile(bfile, "rb")
+        points = []
+        for pileupcolumn in samfile.pileup(g.chr, g.start, g.end):
+            points.append((pileupcolumn.pos, pileupcolumn.n))
+
+        temp = [x for x in range(0, len(points), bin_size)]
+        temp.append(None)
+        avg_points = []
+        for st, end in zip(temp[0::], temp[1::]):
+            pos = [x for x, y in points[st:end]]
+            pos = Interval(min(pos), max(pos))
+            cov = [y for x, y in points[st:end]]
+            cov = Interval(sum(cov) / len(cov))
+            avg_points.append((pos, cov))
+        ymax = max([y.start for x, y in avg_points] + [100])
+        s = ScatterPlot(avg_points, bname, ymin=0, ymax=ymax)
+        print('scatter plot has', len(avg_points), 'points')
+        plots.append(s)
+
     svg = os.path.join(args.output, '{}_{}_overlay.svg'.format(g.name, args.gene))
     markers = []
 
@@ -100,7 +127,6 @@ for g in genes_to_draw:
         m = BioInterval(g.chr, int(m[0]), int(m[1]), name=m[2])
         markers.append(m)
 
-    plots = []
     if args.cna_file:
         points = []
         for row in cna_by_chr.get(g.chr, []):

@@ -81,6 +81,15 @@ class Gene(BioInterval):
     @property
     def transcripts(self):
         return self.unspliced_transcripts
+    
+    @property
+    def translations(self):
+        translations = []
+        for ust in self.unspliced_transcripts:
+            for tx in ust.transcripts:
+                for tl in tx.translations:
+                    translations.append(tl)
+        return translations
 
     @property
     def chr(self):
@@ -443,7 +452,7 @@ class usTranscript(BioInterval):
                 cdna is attempted to be converted
         """
         mapping = self._genomic_to_cdna_mapping(splicing_pattern)
-        return Interval.convert_pos(mapping, pos)
+        return Interval.convert_pos(mapping, pos, True if self.get_strand() == STRAND.NEG else False)
 
     def convert_cdna_to_genomic(self, pos, splicing_pattern):
         """
@@ -455,7 +464,7 @@ class usTranscript(BioInterval):
             int: the genomic equivalent
         """
         mapping = self._cdna_to_genomic_mapping(splicing_pattern)
-        return Interval.convert_pos(mapping, pos)
+        return Interval.convert_pos(mapping, pos, True if self.get_strand() == STRAND.NEG else False)
 
     def exon_number(self, exon):
         """
@@ -582,8 +591,7 @@ class Transcript(BioInterval):
             :class:`~structural_variant.error.DiscontinuousMappingError`: when a genomic position not present in the
                 cdna is attempted to be converted
         """
-        mapping = self.unspliced_transcript._genomic_to_cdna_mapping(self.splicing_pattern)
-        return Interval.convert_pos(mapping, pos)
+        return self.unspliced_transcript.convert_genomic_to_cdna(pos, self.splicing_pattern)
 
     def convert_cdna_to_genomic(self, pos):
         """
@@ -594,8 +602,7 @@ class Transcript(BioInterval):
         Returns:
             int: the genomic equivalent
         """
-        mapping = self.unspliced_transcript._cdna_to_genomic_mapping(self.splicing_pattern)
-        return Interval.convert_pos(mapping, pos)
+        return self.unspliced_transcript.convert_cdna_to_genomic(pos, self.splicing_pattern)
 
     def get_sequence(self, REFERENCE_GENOME=None, ignore_cache=False):
         if self.sequence and not ignore_cache:

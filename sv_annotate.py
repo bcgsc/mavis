@@ -112,6 +112,18 @@ def parse_arguments():
     args = parser.parse_args()
     return args
 
+class Index:
+    def __init__(self, start=1, prefix=None):
+        self.curr = start
+        self.prefix = prefix
+
+    def __call__(self):
+        temp = self.curr
+        self.curr += 1
+        if self.prefix:
+            return '{}{}'.format(self.prefix, temp)
+        return temp
+
 
 def main():
     # load the file
@@ -138,7 +150,6 @@ def main():
     log('input arguments listed below')
     for arg, val in sorted(args.__dict__.items()):
         log(arg, '=', val, time_stamp=False)
-    
 
     # test that the sequence makes sense for a random transcript
     bpps = []
@@ -147,13 +158,16 @@ def main():
         bpps.extend(
             read_bpp_from_input_file(
                 f,
-                require=[COLUMNS.cluster_id, COLUMNS.validation_id],
                 cast={
                     COLUMNS.stranded.name: TSV.tsv_boolean
                 },
                 _in={
                     COLUMNS.protocol: PROTOCOL,
                     COLUMNS.event_type: SVTYPE
+                },
+                add={
+                    COLUMNS.cluster_id: Index(1),
+                    COLUMNS.validation_id: Index(1)
                 },
                 simplify=False
             ))
@@ -171,13 +185,16 @@ def main():
     annotations = []
     for bpp in bpps:
         log('gathering annotations for', bpp)
-        ann = gather_annotations(
-            REFERENCE_ANNOTATIONS,
-            bpp,
-            event_type=bpp.data[COLUMNS.event_type],
-            proximity=args.max_proximity
-        )
-        annotations.extend(ann)
+        try:
+            ann = gather_annotations(
+                REFERENCE_ANNOTATIONS,
+                bpp,
+                event_type=bpp.data[COLUMNS.event_type],
+                proximity=args.max_proximity
+            )
+            annotations.extend(ann)
+        except KeyError:
+            pass
         log('generated', len(ann), 'annotations', time_stamp=False)
 
     for bpp in annotations:
@@ -279,8 +296,9 @@ def main():
                 except NotSpecifiedError:
                     pass
 
-                name = '{}.{}_{}'.format(
-                    ann.data[COLUMNS.annotation_id], gene_aliases1, gene_aliases2)
+                name = '{}.chr{}_chr{}.{}_{}'.format(
+                    ann.data[COLUMNS.annotation_id], ann.break1.chr, ann.break2.chr,
+                    gene_aliases1, gene_aliases2)
 
                 drawing = os.path.join(DRAWINGS_DIRECTORY, name + '.svg')
                 l = os.path.join(DRAWINGS_DIRECTORY, name + '.legend.json')
@@ -298,7 +316,7 @@ def main():
                 log('extending width:', d.WIDTH, d.WIDTH + 500, time_stamp=False)
                 d.WIDTH += 500
                 retry_count += 1
-                if retry_count > 3:
+                if retry_count > 10:
                     raise err
         if len(ann_rows) == 0:
             rows.append(row)

@@ -186,15 +186,16 @@ class TestDraw(unittest.TestCase):
             breakpoints=[b]
         )
         self.canvas.add(g)
+        self.canvas.saveas('test_draw_ustranscript.svg')
         self.assertEqual(2, len(self.canvas.elements))
-        self.assertEqual(5, len(g.elements))
-        for el, cls in zip(g.elements, ['splicing', 'exon_track', 'protein', 'mask', 'breakpoint']):
+        self.assertEqual(3, len(g.elements))
+        for el, cls in zip(g.elements[0].elements, ['splicing', 'exon_track', 'protein']):
             self.assertEqual(cls, el.attribs.get('class', ''))
 
-        for el, cls in zip(g.elements[1].elements, ['scaffold', 'exon', 'exon', 'exon']):
+        for el, cls in zip(g.elements[0].elements[1].elements, ['scaffold', 'exon', 'exon', 'exon']):
             self.assertEqual(cls, el.attribs.get('class', ''))
 
-        for el, cls in zip(g.elements[2].elements, ['translation', 'domain', 'domain']):
+        for el, cls in zip(g.elements[0].elements[2].elements, ['translation', 'domain', 'domain']):
             self.assertEqual(cls, el.attribs.get('class', ''))
 
         self.assertEqual(
@@ -400,8 +401,8 @@ class TestDraw(unittest.TestCase):
 
     def test_draw_translocation_with_template(self):
         d = Diagram()
-        d1 = Domain('first', [(55, 61), (71, 73)])
-        d2 = Domain('second', [(10, 20), (30, 34)])
+        d1 = Domain('PF0001', [(55, 61), (71, 73)])
+        d2 = Domain('PF0002', [(10, 20), (30, 34)])
         g1 = Gene(TEMPLATE_METADATA['1'], 150, 1000, strand=STRAND.POS, aliases=['HUGO2'])
         g2 = Gene(TEMPLATE_METADATA['X'], 5000, 7500, strand=STRAND.NEG, aliases=['HUGO3'])
         t1 = build_transcript(

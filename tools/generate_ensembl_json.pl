@@ -32,7 +32,7 @@ sub main
 {
     my $outputfile;
     my $drug_target_file = '/projects/tumour_char/analysis_scripts/databases/processed_files/drug_target_tables/compiled_gene_drug_pathway.v1_2_4.tsv'; 
-    my $best_transcript_file = 'ens69_best_transcript.txt';
+    my $best_transcript_file = '/home/creisle/svn/ensembl_flatfiles/ens69_best_transcript.txt';
     my $option_check = GetOptions(
         "output=s" => \$outputfile,
         "best_transcript_file" => \$best_transcript_file,
@@ -126,7 +126,10 @@ sub main
             my $tid = $t->stable_id();
             my $best = 'false';
             if ( exists $best_transcript_mapping{$gid} ){
-                $best = 'true';
+                my $temp = $best_transcript_mapping{$gid};
+                if ($temp eq $tid){
+                    $best = 'true';
+                }
             }
             my $tjson = {
                 "name" => $tid,

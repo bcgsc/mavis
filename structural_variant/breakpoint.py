@@ -614,6 +614,8 @@ def read_bpp_from_input_file(filename, expand_ns=True, **kwargs):
     for row in rows:
         stranded = row[COLUMNS.stranded]
         opp = row[COLUMNS.opposing_strands]
+
+        temp = []
         for o1, o2, opp, s1, s2 in itertools.product(
             ORIENT.expand(row[COLUMNS.break1_orientation]) if expand_ns else [row[COLUMNS.break1_orientation]],
             ORIENT.expand(row[COLUMNS.break2_orientation]) if expand_ns else [row[COLUMNS.break2_orientation]],
@@ -641,11 +643,19 @@ def read_bpp_from_input_file(filename, expand_ns=True, **kwargs):
                     b2,
                     opposing_strands=opp,
                     untemplated_sequence=row[COLUMNS.untemplated_sequence],
-                    stranded=row[COLUMNS.stranded],
+                    stranded=stranded,
                     data=row
                 )
-                pairs.append(bpp)
+                event_type = bpp.data.get(COLUMNS.event_type, None)
+                if event_type and event_type not in BreakpointPair.classify(bpp):
+                    raise InvalidRearrangement(
+                        'error: expected one of', BreakpointPair.classify(bpp), 'but found', event_type)
+                temp.append(bpp)
             except (AttributeError, InvalidRearrangement) as err:
                 if not expand_ns:
                     raise err
+        if len(temp) == 0:
+            raise InvalidRearrangement('could not produce a valid rearrangement')
+        else:
+            pairs.extend(temp)
     return pairs

@@ -3,14 +3,14 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-SVMerge Documentation
+|TOOLNAME| User Manual
 ===================================
 
 .. toctree::
    :maxdepth: 9
 
    README
-   glossary
+   theory.rst
    columns
    api.rst
 
@@ -24,3 +24,5 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+.. |TOOLNAME| replace:: **SVMerge**
