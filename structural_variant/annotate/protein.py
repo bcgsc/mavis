@@ -102,7 +102,7 @@ class Domain:
         translation object
 
         Args:
-            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence
+            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
                 by template/chr name
 
         Returns:
@@ -133,7 +133,7 @@ class Domain:
         this domain in the order of the regions (sorted by start)
 
         Args:
-            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence
+            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
                 by template/chr name
 
         Returns:
@@ -167,7 +167,7 @@ class Domain:
 
         Args:
             input_sequence (str): the sequence to be aligned to
-            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence
+            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
                 by template/chr name
 
         Returns:
@@ -250,8 +250,8 @@ class Translation(BioInterval):
         domains = [] if domains is None else domains
         BioInterval.__init__(self, reference_object=transcript, name=name, start=start, end=end, sequence=sequence)
         self.domains = [d for d in domains]
-        
-        if start <= 0: 
+
+        if start <= 0:
             raise AttributeError('start must be a positive integer')
         if transcript and end > len(transcript):
             raise AttributeError('translation cannot be outside of related transcript range', end, len(transcript))
@@ -291,11 +291,11 @@ class Translation(BioInterval):
         if pos % CODON_SIZE != 0:
             aa += 1
         return aa
-    
+
     def get_cds_sequence(self, REFERENCE_GENOME=None, ignore_cache=False):
         """
         Args:
-            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence
+            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
                 by template/chr name
 
         Returns:
@@ -316,7 +316,7 @@ class Translation(BioInterval):
         wrapper for the sequence method
 
         Args:
-            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence
+            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
                 by template/chr name
         """
         return self.get_cds_sequence(REFERENCE_GENOME, ignore_cache)
@@ -324,7 +324,7 @@ class Translation(BioInterval):
     def get_AA_sequence(self, REFERENCE_GENOME=None, ignore_cache=False):
         """
         Args:
-            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence
+            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
                 by template/chr name
 
         Returns:

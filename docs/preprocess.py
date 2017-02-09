@@ -27,6 +27,8 @@ subprocess.check_call('sphinx-apidoc -f -P -M -o {} {} --separate'.format(
 
 # now we need to add showing only select special members
 for f in glob.glob(os.path.join(d, 'source/structural_variant.*.rst')):
+    if '.custom.' in f:
+        continue
     # now open and read the file
     lines = []
     with open(f, 'r') as fh:
@@ -42,7 +44,7 @@ for f in glob.glob(os.path.join(d, 'source/structural_variant.*.rst')):
                 if m.group(1) == 'package':
                     line = re.sub('(\S+)\.(\S+)\s+(package)', '\g<2> package', line)
                 else:
-                    line = re.sub('(\S+)\.(\S+)\s+(module)', '\g<2>', line)
+                    line = re.sub('(\S+)\.(\S+)\s+(module)', '\g<2> module', line)
                 fh.write(line)
             else:
                 fh.write(line)

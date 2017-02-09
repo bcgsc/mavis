@@ -406,7 +406,7 @@ class Evidence:
         Args:
             breakpoint_pair (BreakpointPair): the breakpoint pair to collect evidence for
             bam_cache (BamCache): the bam cache (and assc file) to collect evidence from
-            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence by template/chr name
+            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by template/chr name
             data (dict): a dictionary of data to associate with the evidence object
             classification (SVTYPE): the event type
             protocol (PROTOCOL): genome or transcriptome

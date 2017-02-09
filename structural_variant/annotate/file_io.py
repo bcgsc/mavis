@@ -28,7 +28,7 @@ def load_masking_regions(filepath):
     Args:
         filepath (str): path to the input tab-delimited file
     Returns:
-        :class:`dict` of :class:`str` and :class:`list` of :class:`BioInterval`:
+        :class:`dict` of :class:`list` of :class:`BioInterval` by :class:`str`:
             a dictionary keyed by chromosome name with values of lists of regions on the chromosome
 
     Example:
@@ -49,6 +49,19 @@ def load_masking_regions(filepath):
 
 
 def load_reference_genes(filepath, verbose=True, REFERENCE_GENOME=None, filetype=None, best_transcripts_only=False):
+    """
+    loads gene models from an input file. Expects a tabbed or json file.
+
+    Args:
+        filepath (str): path to the input file
+        verbose (bool): output extra information to stdout
+        REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by
+            template/chr name
+        filetype (str): json or tab/tsv. only required if the file type can't be interpolated from the path extenstion
+
+    Returns:
+        :class:`dict` of :class:`list` of :class:`~structural_variant.annotate.genomic.Gene` by :class:`str`: lists of genes keyed by chromosome name
+    """
     if filetype is None:
         m = re.match('.*\.(?P<ext>tsv|tab|json)$', filepath)
         if m:
@@ -82,7 +95,7 @@ def _load_reference_genes_json(filepath, verbose=True, REFERENCE_GENOME=None, be
                 aliases=gene['aliases'],
                 strand=gene['strand']
             )
-            
+
             has_best = False
             for transcript in gene['transcripts']:
                 transcript['is_best_transcript'] = TSV.tsv_boolean(transcript['is_best_transcript'])
@@ -165,7 +178,7 @@ def _load_reference_genes_tabbed(filepath, verbose=True, REFERENCE_GENOME=None, 
         filepath (str): path to the input tab-delimited file
 
     Returns:
-        :class:`dict` of :class:`str` and :class:`list` of :any:`Gene`: a dictionary keyed by chromosome name with
+        :class:`dict` of :class:`list` of :any:`Gene` by :class:`str`: a dictionary keyed by chromosome name with
             values of list of genes on the chromosome
 
     Example:
@@ -322,7 +335,7 @@ def load_reference_genome(filename):
         filename (str): the path to the file containing the input fasta genome
 
     Returns:
-        :class:`dict` of :class:`str` and :class:`Bio.SeqRecord`: a dictionary representing the sequences in the
+        :class:`dict` of :class:`Bio.SeqRecord` by :class:`str`: a dictionary representing the sequences in the
             fasta file
     """
     HUMAN_REFERENCE_GENOME = None

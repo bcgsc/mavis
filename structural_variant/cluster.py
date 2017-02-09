@@ -101,13 +101,13 @@ class IntervalPair:
                     break
             if not is_subset:
                 refined_cliques.append(cliques[i])
-        
+
         # calculate the number of cliques any give node is part of
         participation = {}
         for cluster in refined_cliques:
             for node in cluster:
                 participation[node] = participation.get(node, 0) + 1
-        
+
         # pick the best clique for each node (where possible)
         # start with the nodes that participate in the most cliques
         for count, node in sorted([(c, n) for n, c in participation.items() if c > 1], reverse=True):

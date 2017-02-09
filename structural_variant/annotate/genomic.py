@@ -80,10 +80,12 @@ class Gene(BioInterval):
 
     @property
     def transcripts(self):
+        """:any:`list` of :class:`usTranscript`: list of unspliced transcripts"""
         return self.unspliced_transcripts
-    
+
     @property
     def translations(self):
+        """:any:`list` of :class:`~structural_variant.annotate.protein.Translation`: list of translations"""
         translations = []
         for ust in self.unspliced_transcripts:
             for tx in ust.transcripts:
@@ -104,8 +106,9 @@ class Gene(BioInterval):
         gene sequence is always given wrt to the positive forward strand regardless of gene strand
 
         Args:
-            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence by
+            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by
                 template/chr name
+            ignore_cache (bool): if True then stored sequences will be ignored and the function will attempt to retrieve the sequence using the positions and the input REFERENCE_GENOME
 
         Returns:
             str: the sequence of the gene
@@ -119,6 +122,7 @@ class Gene(BioInterval):
 
     @property
     def spliced_transcripts(self):
+        """:any:`list` of :class:`Transcript`: list of transcripts"""
         spl = []
         for t in self.unspliced_transcripts:
             spl.extend(t.spliced_transcripts)
@@ -161,22 +165,22 @@ class Exon(BioInterval):
 
     @property
     def transcript(self):
-        """(:class:`~structural_variant.annotate.usTranscript`): the transcript this exon belongs to"""
+        """:class:`usTranscript`: the transcript this exon belongs to"""
         return self.reference_object
 
     @property
     def start_splice_site(self):
-        """(:class:`~structural_variant.interval.Interval`): the genomic range describing the splice site"""
+        """:class:`~structural_variant.interval.Interval`: the genomic range describing the splice site"""
         return Interval(self.start - SPLICE_SITE_RADIUS, self.start + SPLICE_SITE_RADIUS - 1)
 
     @property
     def end_splice_site(self):
-        """(:class:`~structural_variant.interval.Interval`): the genomic range describing the splice site"""
+        """:class:`~structural_variant.interval.Interval`: the genomic range describing the splice site"""
         return Interval(self.end - SPLICE_SITE_RADIUS + 1, self.end + SPLICE_SITE_RADIUS)
-    
+
     @property
     def donor_splice_site(self):
-        """(:class:`~structural_variant.interval.Interval`): the genomic range describing the splice site"""
+        """:class:`~structural_variant.interval.Interval`: the genomic range describing the splice site"""
         if self.get_strand() == STRAND.NEG:
             return self.start_splice_site
         elif self.get_strand() == STRAND.POS:
@@ -186,7 +190,7 @@ class Exon(BioInterval):
 
     @property
     def acceptor_splice_site(self):
-        """(:class:`~structural_variant.interval.Interval`): the genomic range describing the splice site"""
+        """:class:`~structural_variant.interval.Interval`: the genomic range describing the splice site"""
         if self.get_strand() == STRAND.NEG:
             return self.end_splice_site
         elif self.get_strand() == STRAND.POS:
@@ -196,6 +200,7 @@ class Exon(BioInterval):
 
     @property
     def donor(self):
+        """`int`: returns the genomic exonic position of the donor splice site"""
         if self.get_strand() == STRAND.NEG:
             return self.start
         elif self.get_strand() == STRAND.POS:
@@ -205,6 +210,7 @@ class Exon(BioInterval):
 
     @property
     def acceptor(self):
+        """`int`: returns the genomic exonic position of the acceptor splice site"""
         if self.get_strand() == STRAND.NEG:
             return self.end
         elif self.get_strand() == STRAND.POS:
@@ -294,7 +300,7 @@ class usTranscript(BioInterval):
         exons = sorted(self.exons, key=lambda x: x[0])
         if len(exons) < 2:
             return [SplicingPattern()]
-        
+
         DONOR = 3
         ACCEPTOR = 5
 
@@ -305,13 +311,13 @@ class usTranscript(BioInterval):
             pattern.append((exons[i].start, exons[i].intact_start_splice, DONOR if reverse else ACCEPTOR))
             pattern.append((exons[i].end, exons[i].intact_end_splice, ACCEPTOR if reverse else DONOR))
         pattern.append((exons[-1].start, exons[-1].intact_start_splice, DONOR if reverse else ACCEPTOR))  # always end with acceptor
-        
+
         original_sites = [p for p, s, t in pattern]
         pattern = [(p, t) for p, s, t in pattern if s]  # filter out abrogated splice sites
 
         if reverse:
             pattern.reverse()
-        
+
         def get_cons_sites(index, splice_type):
             # get the next 'n' of any given type
             temp = []
@@ -321,7 +327,7 @@ class usTranscript(BioInterval):
                 else:
                     break
             return temp
-        
+
         splice_site_sets = [SplicingPattern()]
 
         # i should start at the first donor site
@@ -338,19 +344,19 @@ class usTranscript(BioInterval):
                         splss = copy(curr_splss)
                         splss.extend([d[0], a[0]])
                         temp.append(splss)
-                if len(temp) > 0: 
+                if len(temp) > 0:
                     splice_site_sets = temp
                 i += len(donors) + len(acceptors)
             else:
                 raise AssertionError('should always be positioned at a donor splice site')
-        
+
         # now need to decide the type for each set
         for splss in splice_site_sets:
             splss.sort()
             r_introns = 0
             s_exons = 0
             assert(len(splss) % 2 == 0)
-            
+
             for d, a in zip(splss[0::2], splss[1::2]):
                 # check if any original splice positions are between this donor and acceptor
                 temp = 0
@@ -398,12 +404,12 @@ class usTranscript(BioInterval):
                     splss.splice_type = SPLICE_TYPE.RETAIN
             else:
                 splss.splice_type = SPLICE_TYPE.COMPLEX
-            
+
         return splice_site_sets
 
     @property
     def gene(self):
-        """(:any:`Gene`): the gene this transcript belongs to"""
+        """:any:`Gene`: the gene this transcript belongs to"""
         return self.reference_object
 
     def _genomic_to_cdna_mapping(self, splicing_pattern):
@@ -493,8 +499,9 @@ class usTranscript(BioInterval):
     def get_sequence(self, REFERENCE_GENOME=None, ignore_cache=False):
         """
         Args:
-            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence
+            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
                 by template/chr name
+            ignore_cache (bool): if True then stored sequences will be ignored and the function will attempt to retrieve the sequence using the positions and the input REFERENCE_GENOME
 
         Returns:
             str: the sequence of the transcript including introns (but relative to strand)
@@ -521,8 +528,9 @@ class usTranscript(BioInterval):
         """
         Args:
             splicing_pattern (:class:`list` of :class:`int`): the list of splicing positions
-            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence
+            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
                 by template/chr name
+            ignore_cache (bool): if True then stored sequences will be ignored and the function will attempt to retrieve the sequence using the positions and the input REFERENCE_GENOME
 
         Returns:
             str: the spliced cDNA sequence
@@ -542,6 +550,7 @@ class usTranscript(BioInterval):
 
     @property
     def translations(self):
+        """:class:`list` of :class:`~structural_variant.annotate.protein.Translation`: list of translations associated with this transcript"""
         tx = []
         for t in self.spliced_transcripts:
             for tl in t.translations:
@@ -550,6 +559,7 @@ class usTranscript(BioInterval):
 
     @property
     def transcripts(self):
+        """:class:`list` of :class:`Transcript`: list of spliced transcripts"""
         return self.spliced_transcripts
 
 
@@ -562,7 +572,7 @@ class Transcript(BioInterval):
             us_transcript (usTranscript): the unspliced transcript
             splicing_patt (:class:`list` of :class:`int`): the list of splicing positions
             sequence (str): the cdna sequence
-            translations (:class:`list` of :class:`Translation`): the list of translations of this transcript
+            translations (:class:`list` of :class:`~structural_variant.annotate.protein.Translation`): the list of translations of this transcript
         """
         pos = sorted([ust.start, ust.end] + splicing_patt)
         splicing_patt.sort()
@@ -605,6 +615,15 @@ class Transcript(BioInterval):
         return self.unspliced_transcript.convert_cdna_to_genomic(pos, self.splicing_pattern)
 
     def get_sequence(self, REFERENCE_GENOME=None, ignore_cache=False):
+        """
+        Args:
+            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by
+                template/chr name
+            ignore_cache (bool): if True then stored sequences will be ignored and the function will attempt to retrieve the sequence using the positions and the input REFERENCE_GENOME
+
+        Returns:
+            str: the sequence corresponding to the spliced cdna
+        """
         if self.sequence and not ignore_cache:
             return self.sequence
         else:
@@ -613,4 +632,5 @@ class Transcript(BioInterval):
 
     @property
     def unspliced_transcript(self):
+        """:class:`usTranscript`: the unsplice transcript this splice variant belongs to"""
         return self.reference_object

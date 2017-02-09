@@ -19,7 +19,7 @@ class BlatAlignedSegment(pysam.AlignedSegment):
     def __init__(self, reference_name=None, blat_score=None):
         """
         Args:
-            row (:class:`dict` of :class:`str`): a row dictionary from the Blat.read_pslx method
+            row (:class:`dict` by :class:`str`): a row dictionary from the Blat.read_pslx method
         """
         pysam.AlignedSegment.__init__(self)
         if reference_name is None:
@@ -180,7 +180,7 @@ class Blat:
         Args:
             row (dict of str): a row object from the 'read_pslx' method
             bam_cache (BamCache): the bam file/cache to use as a template for creating reference_id from chr name
-            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence by template/chr name
+            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by template/chr name
 
         """
         chrom = bam_cache.reference_id(row['tname'])
@@ -316,7 +316,7 @@ def blat_contigs(
     Args:
         evidence (list of Evidence): the iterable container of of Evidence object which has associated contigs
         INPUT_BAM_CACHE (BamCache): the bam to use as a template in generating bam-like reads
-        REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence by template/chr name
+        REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by template/chr name
         ref_2bit (str): path to the 2bit file for blat
         min_percent_of_max_score (float): ignores all alignments with a score less
         min_identity (float): minimum percent identity

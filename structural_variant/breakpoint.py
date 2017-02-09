@@ -466,7 +466,7 @@ class BreakpointPair:
             -------TT-TT-------- second break homology
 
         Args:
-            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence by template/chr name
+            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by template/chr name
 
         Returns:
             :class:`tuple` of :class:`str` and :class:`str`: tuple contains

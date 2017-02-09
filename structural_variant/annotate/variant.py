@@ -67,7 +67,7 @@ class FusionTranscript(usTranscript):
         """
         Args:
             ann (Annotation): the annotation object we want to build a FusionTranscript for
-            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence
+            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
                 by template/chr name
 
         Returns:
@@ -134,16 +134,16 @@ class FusionTranscript(usTranscript):
                     ex1, ex2 = ex2, ex1
 
                 ft.sequence = seq1
-                
+
                 if ann.break1.orient == ORIENT.LEFT:
                     ft.sequence += useq + window_seq
                 else:
                     ft.sequence += window_seq + useq
-                
+
                 for ex, old_ex in ex1:
                     ft.exons.append(ex)
                     ft.exon_mapping[ex] = old_ex
-                
+
                 offset = len(ft.sequence)
                 ft.sequence += seq2
                 for ex, old_ex in ex2:
@@ -165,7 +165,7 @@ class FusionTranscript(usTranscript):
             seq1, ex1 = cls._pull_exons(ann.transcript1, ann.break1, REFERENCE_GENOME[ann.break1.chr].seq)
             seq2, ex2 = cls._pull_exons(ann.transcript2, ann.break2, REFERENCE_GENOME[ann.break2.chr].seq)
             useq = ann.untemplated_sequence
-            
+
             if t1 == PRIME.FIVE:
                 if ann.transcript1.strand == STRAND.NEG:
                     useq = reverse_complement(useq)
@@ -174,7 +174,7 @@ class FusionTranscript(usTranscript):
                     useq = reverse_complement(useq)
                 seq1, seq2 = seq2, seq1
                 ex1, ex2 = ex2, ex1
-            
+
             ft.sequence = seq1 + useq
 
             for ex, old_ex in ex1:
@@ -241,7 +241,7 @@ class FusionTranscript(usTranscript):
         """
         Args:
             splicing_pattern (:class:`list` of :class:`int`): the list of splicing positions
-            REFERENCE_GENOME (:class:`dict` of :class:`str` and :class:`Bio.SeqRecord`): dict of reference sequence
+            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
                 by template/chr name
 
         Returns:
@@ -254,7 +254,7 @@ class FusionTranscript(usTranscript):
         """
         given a transcript and breakpoint returns the exons and sequence expected
         the exons are returned in the order wrt to strand (i.e. reversed from a genomic sort
-        if they are on the negative strand). The positions of the exons are wrt to the sequence 
+        if they are on the negative strand). The positions of the exons are wrt to the sequence
         being returned (starts at 1).
         """
         if len(breakpoint) > 1:
@@ -472,7 +472,7 @@ class Annotation(BreakpointPair):
         generates a dictionary of the annotation information as strings
 
         Returns:
-            :class:`dict` of :class:`str` and :class:`str`: dictionary of attribute names and values
+            :class:`dict` of :class:`str` by :class:`str`: dictionary of attribute names and values
         """
         row = BreakpointPair.flatten(self)
         row.update({
@@ -528,7 +528,7 @@ class Annotation(BreakpointPair):
 def overlapping_transcripts(ref_ann, breakpoint):
     """
     Args:
-        ref_ann (:class:`dict` of :class:`str` and :class:`list` of :any:`Gene`): the reference list of genes split
+        ref_ann (:class:`dict` of :class:`list` of :any:`Gene` by :class:`str`): the reference list of genes split
             by chromosome
         breakpoint (Breakpoint): the breakpoint in question
     Returns:
@@ -548,7 +548,7 @@ def overlapping_transcripts(ref_ann, breakpoint):
 def gather_breakpoint_annotations(ref_ann, breakpoint):
     """
     Args:
-        ref_ann (:class:`dict` of :class:`str` and :class:`list` of :class:`Gene`): the reference annotations split
+        ref_ann (:class:`dict` of :class:`list` of :class:`Gene` by :class:`str`): the reference annotations split
             into lists of genes by chromosome
         breakpoint (Breakpoint): the breakpoint annotations are to be gathered for
 
@@ -561,9 +561,9 @@ def gather_breakpoint_annotations(ref_ann, breakpoint):
               overlapping the breakpoint on the negative strand
 
     .. todo::
-         
+
         Support for setting the transcript in the annotation when the breakpoint is just ahead of the transcript
-        and the transcript would be 3'. Then assuming the splicing model takes the 2nd exon onward 
+        and the transcript would be 3'. Then assuming the splicing model takes the 2nd exon onward
     """
 
     pos_overlapping_transcripts = []
@@ -633,7 +633,7 @@ def gather_annotations(ref, bp, event_type=None, proximity=None):  # TODO
     the annotation at the breakpoint can be a transcript or an intergenic region
 
     Args:
-        ref (:class:`dict` of :class:`str` and :class:`list` of :any:`Gene`): the list of reference genes hashed
+        ref (:class:`dict` of :class:`list` of :any:`Gene` by :class:`str`): the list of reference genes hashed
             by chromosomes
         breakpoint_pairs (:class:`list` of :any:`BreakpointPair`): breakpoint pairs we wish to annotate as events
 

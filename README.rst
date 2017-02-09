@@ -71,7 +71,7 @@ Input Files
 ....................
 
 The requirements are described in `JIRA <https://www.bcgsc.ca/jira/browse/APA-618>`_ and are listed below.
-These pertain to the input files from the various tools you want to merge. The expected input columns are given 
+These pertain to the input files from the various tools you want to merge. The expected input columns are given
 below. All columns must be given except: individual breakpoint strand columns do not need to be given if
 the input is not stranded and opposing_strands has been specified
 
@@ -187,8 +187,8 @@ Example of the json format can be seen below
         ...
     }
 
-This reference file can be generated from any database with the necessary information. 
-There is a `basic perl script <https://svn.bcgsc.ca/svn/SVIA/svmerge/tools/generate_ensembl_json.pl>`_ 
+This reference file can be generated from any database with the necessary information.
+There is a `basic perl script <https://svn.bcgsc.ca/svn/SVIA/svmerge/tools/generate_ensembl_json.pl>`_
 to generate the json file using a connection to the `Ensembl <http://uswest.ensembl.org/index.html>`_ perl api.
 
 
@@ -237,7 +237,7 @@ script with the -h/--help option
     sv_pair
     sv_summary
 
-There are some parameters that need to be computed from the bam files. This can generally be done by running the 
+There are some parameters that need to be computed from the bam files. This can generally be done by running the
 profile_bam.py script found in the tools directory
 
 .. code-block:: bash
@@ -255,8 +255,8 @@ profile_bam.py script found in the tools directory
     median distrib[0.99] stdev 93.94
     median distrib[1.00] stdev 99.84
 
-generally giving it a single chromosome will be enough reads but it can be given as many chromosomes/templates as 
-required. This script calculates the median insert size and then the standard deviation (wrt to the median not mean) 
+generally giving it a single chromosome will be enough reads but it can be given as many chromosomes/templates as
+required. This script calculates the median insert size and then the standard deviation (wrt to the median not mean)
 from all or a portion of the distribution of insert sizes
 
 
@@ -280,10 +280,26 @@ Guidelines for Contributors
 - docstrings should follow `sphinx google code style <http://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html>`_
 - any column name which may appear in any of the intermediate or final output files must be defined in :class:`~structural_variant.constants.COLUMNS`
 
+Formatting Types in docstrings
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+if you want to be more explicit with nested types, the following conventions are used throughout the code
+
+- dictionary: ``d = {<key>: <value>}`` becomes ``dict of <value> by <key>``
+- list: ``l = [1, 2, 3]`` becomes ``list of int``
+- mixed: ``d = {'a': [1, 2, 3], 'b': [4, 5, 6]}`` becomes ``dict of list of int by str``
+- tuples: ``('a', 1)`` becomes ``tuple of str and int``
+
+
+
+
+
+
+
+
 TODO
 ...........................
 
 .. todolist::
 
 .. |TOOLNAME| replace:: **SVMerge**
-

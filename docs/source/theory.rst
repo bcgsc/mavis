@@ -22,7 +22,7 @@ The orientation describes the portion of the reference that is retained.
 Paired-end Reads: Flanking evidence
 ......................................
 
-One of the most confusing parts about working with :term:`contig` and paired-end reads is relating them to the
+One of the most confusing parts about working with contig and paired-end reads is relating them to the
 breakpoint so that you can determine which types will support an event. The flanking read types we outline here
 are similarly described by `IGV <http://software.broadinstitute.org/software/igv/interpreting_insert_size>`_.
 We have used similar coloring for the read pairs in the following diagrams to
@@ -131,7 +131,7 @@ Calculating the Evidence Window
 .. figure:: _static/read_pair_definitions.svg
     :width: 100%
 
-    Basic Terms used in describing read pairs are shown above: insert size: the distance between the pair; 
+    Basic Terms used in describing read pairs are shown above: insert size: the distance between the pair;
     read length: the length of the read; fragment size: the combined length of both reads and the insert size
 
 we make some base assumptions with regards to paired-end read data
@@ -231,7 +231,7 @@ been shown
 Assembling Contigs
 ......................
 
-During validation, for each breakpoint pair, we attempt to assemble a :term:`contig` to represent the sequence across
+During validation, for each breakpoint pair, we attempt to assemble a contig to represent the sequence across
 the breakpoints. This is assembled from the :term:`split reads` and mates of :term:`half-mapped` reads that have been
 collected. The assembly uses a :term:`DeBruijn graph`.
 
@@ -347,10 +347,52 @@ After breakpoints have been called and annotated we often need to see if the sam
     (A-D) The breakpoint lands in an exon and the five prime portion of the transcript is retained. (A) The original
     splicing pattern showing the placement of the genomic breakpoint and the retained five prime portion. (B) The first
     splice site following the breakpoint is a donor and the second donor is used. (C) The first splice site following the
-    breakpoint is a donor and the first donor is used. (D) The first slice site following the breakpoint is an acceptor. 
+    breakpoint is a donor and the first donor is used. (D) The first slice site following the breakpoint is an acceptor.
     (E-H) The breakpoint lands in an exon and the three prime portion of the transcript is retained. (E) The original
     splicing pattern showing the placement of the genomic breakpoint and the retained three prime portion. (F) The first
     splice site prior to the breakpoint is an acceptor and the first acceptor is used. (G) The first splice site prior to the
     breakpoint is an acceptor and the second acceptor is used. (H) The first slice site prior to the breakpoint is a donor
+
+|
+
+------
+
+|
+
+Glossary
+.............
+
+..  glossary::
+	:sorted:
+
+    flanking read pair
+        a pair of reads where one read maps to one side of a set of breakpoints and its mate maps to the other
+
+    split read
+        a read which aligns next to a breakpoint and is softclipped at one or more sides
+
+    spanning read
+        applies primarily to small strutural variants. Reads which span both breakpoints
+
+    half-mapped read
+        a read whose mate is unaligned. Generally this refers to reads in the evidence stage that are mapped next to a breakpoint.
+
+    breakpoint
+         A breakpoint is a genomic position (interval) on some reference/template/chromosome which has a strand and orientation. The orientation describes the portion of the reference that is retained.
+
+    event
+        used interchangably with :term:`structural variant`
+
+    event type
+        classification for a structural variant. see :term:`event_type`
+
+    structural variant
+        a genomic alteration that can be described by a pair of breakpoints and an :term:`event type`. The two breakpoints represent regions in the genome that are broken apart and reattached together.
+
+    breakpoint pair
+        :term:`structural variant` which has not been classified/given a type
+
+
+
 
 .. |TOOLNAME| replace:: **SVMerge**
