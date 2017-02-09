@@ -55,21 +55,22 @@ class TestBamCache(unittest.TestCase):
 
     def test_fetch_single_read(self):
         b = BamCache(BAM_INPUT)
-        s = b.fetch('2',42052609,42052613,read_limit=1,sample_bins=1)
+        s = b.fetch('reference3', 1382,1383,read_limit=1, sample_bins=1)
         self.assertEqual(1,len(s))
         r = list(s)[0]
-        self.assertEqual('HISEQX1_11:3:2122:25875:31230',r.qname)
+        self.assertEqual('HISEQX1_11:4:2122:14275:37717:split',r.qname)
         b.close()
 
     def test_get_mate(self):
+        #dependant on fetch working
         b = BamCache(BAM_INPUT)
-        s = b.fetch('2',42052609,42052613,read_limit=1,sample_bins=1)
+        s = b.fetch('reference3', 1382,1383,read_limit=1, sample_bins=1)
         self.assertEqual(1,len(s))
         r = list(s)[0]
-        self.assertEqual('HISEQX1_11:3:2122:25875:31230',r.qname)
+        self.assertEqual('HISEQX1_11:4:2122:14275:37717:split',r.qname)
         o = b.get_mate(r)
         self.assertEqual(1,len(o))
-        self.assertEqual('HISEQX1_11:3:2122:25875:31230',o[0].qname)
+        self.assertEqual('HISEQX1_11:4:2122:14275:37717:split',o[0].qname)
 
 
 class TestModule(unittest.TestCase):

@@ -2,9 +2,10 @@ from structural_variant.breakpoint import Breakpoint, BreakpointPair
 from structural_variant.validate import *
 from structural_variant.annotate import load_reference_genome, Gene, usTranscript
 from structural_variant.constants import ORIENT, READ_PAIR_TYPE
+from structural_variant.read_tools import BamCache
 from tests import MockRead
 import unittest
-from tests import REFERENCE_GENOME_FILE
+from tests import REFERENCE_GENOME_FILE,BAM_INPUT
 
 REFERENCE_GENOME = None
 
@@ -14,7 +15,22 @@ def setUpModule():
     REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
     if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
         raise AssertionError('fake genome file does not have the expected contents')
+    global BAM_CACHE
+    BAM_CACHE = BamCache(BAM_INPUT)
+    global READS
+    READS = {}
+    for read in BAM_CACHE.fetch('reference3',1,8000):
+        if read.qname not in READS:
+            READS[read.qname] = [None,None]
+        if read.is_supplementary:
+            continue
+        if read.is_read1:
+            READS[read.qname][0] = read
+        else:
+            READS[read.qname][1] = read
 
+
+    #add a check to determine if it is the expected bam file
 
 class TestEvidenceWindow(unittest.TestCase):
     def setUp(self):
@@ -23,7 +39,7 @@ class TestEvidenceWindow(unittest.TestCase):
         t1 = usTranscript(gene=gene, exons=[(1000, 1100), (1400, 1500), (1701, 1750), (3001, 4000)])
         gene.unspliced_transcripts.append(t1)
         self.annotations[gene.chr] = [gene]
-    
+
     def test_generate_window_orient_ns(self):
         b = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.NS)
         w = Evidence.generate_window(
@@ -109,8 +125,69 @@ class TestEvidenceWindow(unittest.TestCase):
         self.assertEqual(Interval(1040, 3160), w)
 
 
-class TestEvidence(unittest.TestCase):
+class TestEvidenceGathering(unittest.TestCase):
+    def setUp(self):
+    # test loading of evidence for event found on reference3 1114 2187
+        self.ev1 = Evidence(
+            BreakpointPair(
+                Breakpoint('reference3',1114,orient=ORIENT.RIGHT),
+                Breakpoint('reference3',2187,orient=ORIENT.RIGHT),
+                opposing_strands=True
+            ),
+            BAM_CACHE, REFERENCE_GENOME,
+            read_length=125,
+            stdev_isize=100,
+            median_insert_size=380,
+            stdev_count_abnormal=3,
+            min_flanking_reads_resolution=3
+        )
 
+    def test_add_split_read(self):
+        ev1_sr = MockRead(query_name='HISEQX1_11:3:1105:15351:25130:split',
+                           reference_id=1, cigar=[(4,68),(7,82)], reference_start=1114,
+                           reference_end=1154, query_alignment_start=110,
+                           query_sequence='TCGTGAGTGGCAGGTGCCATCGTGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG',
+                          query_alignment_end=150, flag=113,
+                          next_reference_id=1, next_reference_start=2341)
+        self.ev1.add_split_read(ev1_sr,True)
+        self.assertEqual(ev1_sr, list(self.ev1.split_reads[0])[0])
+
+
+    def test_add_split_read_errors(self):
+        #wrong cigar string
+        ev1_sr = MockRead(query_name='HISEQX1_11:4:1203:3062:55280:split',
+                          reference_id=1, cigar=[(7,110),(7,40)], reference_start=1114,
+                          reference_end=1154, query_alignment_start=110,
+                          query_sequence='CTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCGTGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATG',
+                          query_alignment_end=150, flag=371,
+                          next_reference_id=1, next_reference_start=2550)
+        with self.assertRaises(UserWarning):
+            self.ev1.add_split_read(ev1_sr,True)
+
+
+    def test_add_flanking_read(self):
+        ev1_fr = MockRead(query_name='HISEQX_11:3:2206:22140:26976:flanking',
+                          reference_id=1, reference_start=2214,
+                          reference_end=2364, flag=113,
+                          next_reference_id=1, next_reference_start=1120)
+        self.ev1.add_flanking_read(ev1_fr)
+        self.assertEqual(ev1_fr, list(self.ev1.flanking_reads[1])[0])
+
+    def test_add_flanking_read_errors(self):
+        #read pairs overlap by 1 but in windows
+        ev1_fr = MockRead(reference_id=1, reference_start=1903,
+                          reference_end=2053, flag=113,
+                          next_reference_id=1, next_reference_start=2052)
+        with self.assertRaises(UserWarning):
+            self.ev1.add_flanking_read(ev1_fr)
+
+    def test_load_evidence(self):
+        self.ev1.load_evidence()
+        self.assertEqual(4,len(self.ev1.split_reads[0]))
+        self.assertEqual(8, len(self.ev1.flanking_reads[0]))
+
+
+class TestEvidence(unittest.TestCase):
     def test__call_by_flanking_reads_intra(self):
         ev = Evidence(
             BreakpointPair(
@@ -132,7 +209,7 @@ class TestEvidence(unittest.TestCase):
         self.assertEqual(209, break1.end)
         self.assertEqual(461, break2.start)
         self.assertEqual(600, break2.end)
-    
+
     def test__call_by_flanking_reads_intra_tighten_on_overlap(self):
         # this test is for ensuring that if a theoretical window calculated for the
         # first breakpoint overlaps the actual coverage for the second breakpoint (or the reverse)

@@ -9,8 +9,8 @@ filedir = os.path.join(os.path.dirname(__file__), 'files')
 REFERENCE_GENOME_FILE = os.path.join(filedir, 'mock_reference_genome.fa')
 REFERENCE_ANNOTATIONS_FILE = os.path.join(filedir, 'mock_reference_annotations.tsv')
 TEMPLATE_METADATA_FILE = os.path.join(filedir, 'cytoBand.txt')
-BAM_INPUT = os.path.join(filedir, 'mock_reads_for_events.sorted.bam')
-BASE_EVENTS = os.path.join(filedir, 'mock_sv_events.svmerge.tsv')
+BAM_INPUT = os.path.join(filedir, 'mini_mock_reads_for_events.sorted.bam')
+BASE_EVENTS = os.path.join(filedir, 'mini_mock_sv_events.svmerge.tsv')
 BLAT_INPUT = os.path.join(filedir, 'blat_input.fa')
 BLAT_OUTPUT = os.path.join(filedir, 'blat_output.pslx')
 
@@ -30,7 +30,11 @@ class MockRead:
         reference_name=None,
         query_sequence=None,
         template_length=None,
-        query_alignment_sequence=None
+        query_alignment_sequence=None,
+        query_alignment_start=None,
+        query_alignment_end=None,
+        flag=None,
+        tags=[]
     ):
         self.query_name = query_name
         self.reference_id = reference_id
@@ -46,6 +50,10 @@ class MockRead:
         self.reference_name = reference_name
         self.query_sequence = query_sequence
         self.query_alignment_sequence = query_alignment_sequence
+        self.query_alignment_start = query_alignment_start
+        self.query_alignment_end = query_alignment_end
+        self.flag = flag
+        self.tags = tags
         if query_alignment_sequence is None and cigar and query_sequence:
             s = 0 if cigar[0][0] != CIGAR.S else cigar[0][1]
             t = len(query_sequence)
@@ -58,10 +66,32 @@ class MockRead:
             self.template_length = next_reference_start - reference_end
         else:
             self.template_length = template_length
+        if flag:
+            self.is_unmapped = bool(self.flag & int(0x4))
+            self.mate_is_unmapped = bool(self.flag & int(0x8))
+            self.is_reverse = bool(self.flag & int(0x10))
+            self.mate_is_reverse = bool(self.flag & int(0x20))
+            self.is_read1 = bool(self.flag & int(0x40))
+            self.is_read2 = bool(self.flag & int(0x80))
+            self.is_secondary = bool(self.flag & int(0x100))
+            self.is_qcfail = bool(self.flag & int(0x200))
+            self.is_supplementary = bool(self.flag & int(0x400))
 
     def query_coverage_interval(self):
         return BlatAlignedSegment.query_coverage_interval(self)
 
+    def set_tag(self, tag, value, value_type=None, replace=True):
+        new_tag=(tag,value)
+        if not replace and new_tag in self.tags:
+            self.tags.append(new_tag)
+        else:
+            self.tags.append(new_tag)
+
+    def has_tag(self, tag):
+        return tag in dict(self.tags).keys()
+
+    def get_tag(self, tag):
+        return dict(self.tags)[tag] if tag in dict(self.tags).keys() else False
 
 class MockBamFileHandle:
     def __init__(self, chrom_to_tid={}):

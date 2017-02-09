@@ -1,0 +1,3 @@
+#start_chromosome	start_position	end_chromosome	end_position	start_orientation	end_orientation	start_strand	end_strand	protocol	tool_version	libraries	tool_evidence	comments	filters	flanking_reads	mapping_quality	split_reads
+reference3	1114-1114	reference3	2187-2187	R	R	+	-	genome	convert_ta.py_v0.0.1	A36971						
+reference10	519-519	reference19	965-965	R	L	+	+	genome	convert_ta.py_v0.0.1	A36971						
