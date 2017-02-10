@@ -8,6 +8,7 @@ import os
 filedir = os.path.join(os.path.dirname(__file__), 'files')
 REFERENCE_GENOME_FILE = os.path.join(filedir, 'mock_reference_genome.fa')
 REFERENCE_ANNOTATIONS_FILE = os.path.join(filedir, 'mock_reference_annotations.tsv')
+REFERENCE_ANNOTATIONS_FILE_JSON = os.path.join(filedir, 'mock_reference_annotations.json')
 TEMPLATE_METADATA_FILE = os.path.join(filedir, 'cytoBand.txt')
 BAM_INPUT = os.path.join(filedir, 'mini_mock_reads_for_events.sorted.bam')
 BASE_EVENTS = os.path.join(filedir, 'mini_mock_sv_events.svmerge.tsv')

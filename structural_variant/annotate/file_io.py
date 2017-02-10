@@ -1,3 +1,6 @@
+"""
+module which holds all functions relating to loading reference files
+"""
 import TSV
 import re
 from .genomic import Gene, Transcript, usTranscript, Exon, Template
@@ -12,24 +15,24 @@ import json
 def load_masking_regions(filepath):
     """
     reads a file of regions. The expect input format for the file is tab-delimited and
+    the header should contain the following columns
 
-    +---------------+---------------+-----------------------+
-    | column name   | value type    | description           |
-    +===============+===============+=======================+
-    | chr           | string        | the chromosome name   |
-    +---------------+---------------+-----------------------+
-    | start         | int           | the start position    |
-    +---------------+---------------+-----------------------+
-    | end           | int           | the end position      |
-    +---------------+---------------+-----------------------+
-    | name          | string        | label for the region  |
-    +---------------+---------------+-----------------------+
+    - chr: the chromosome
+    - start: start of the region, 1-based inclusive
+    - end: end of the region, 1-based inclusive
+    - name: the name/label of the region
+
+    For example:
+
+    .. code-block:: text
+
+        #chr    start   end     name
+        chr20	25600000	27500000	centromere
 
     Args:
         filepath (str): path to the input tab-delimited file
     Returns:
-        :class:`dict` of :class:`list` of :class:`BioInterval` by :class:`str`:
-            a dictionary keyed by chromosome name with values of lists of regions on the chromosome
+        :class:`dict` of :class:`list` of :class:`BioInterval` by :class:`str`: a dictionary keyed by chromosome name with values of lists of regions on the chromosome
 
     Example:
         >>> m = load_masking_regions('filename')
@@ -347,13 +350,28 @@ def load_reference_genome(filename):
 def load_templates(filename):
     """
     primarily useful if template drawings are required and is not necessary otherwise
-    assumes the input file is 0-indexed with [start,end) style
+    assumes the input file is 0-indexed with [start,end) style. Columns are expected in
+    the following order, tab-delimited. A header should not be given
+
+    1. name
+    2. start
+    3. end
+    4. band_name
+    5. giesma_stain
+
+    for example
+
+    .. code-block:: text
+
+        chr1	0	2300000	p36.33	gneg
+        chr1	2300000	5400000	p36.32	gpos25
 
     Args:
         filename (str): the path to the file with the cytoband template information
 
     Returns:
         :class:`list` of :class:`Template`: list of the templates loaded
+
     """
     header = ['name', 'start', 'end', 'band_name', 'giesma_stain']
     header, rows = TSV.read_file(

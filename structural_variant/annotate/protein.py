@@ -90,10 +90,11 @@ class Domain:
 
     @property
     def translation(self):
-        """(:class:`~structural_variant.annotate.Translation`): the Translation this domain belongs to"""
+        """:class:`~structural_variant.annotate.Translation`: the Translation this domain belongs to"""
         return self.reference_object
 
     def key(self):
+        """:class:`tuple`: a tuple representing the items expected to be unique. for hashing and comparing"""
         return tuple([self.name, self.translation])
 
     def score_region_mapping(self, REFERENCE_GENOME=None):
@@ -261,6 +262,7 @@ class Translation(BioInterval):
 
     @property
     def transcript(self):
+        """:class:`~structural_variant.annotate.genomic.Transcript`: the spliced transcript this translation belongs to"""
         return self.reference_object
 
     def convert_aa_to_cdna(self, pos):
@@ -337,4 +339,5 @@ class Translation(BioInterval):
         return translate(cds)
 
     def key(self):
+        """see :func:`structural_variant.annotate.base.BioInterval.key`"""
         return BioInterval.key(self), self.splicing_pattern

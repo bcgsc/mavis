@@ -7,12 +7,12 @@ from structural_variant.error import NotSpecifiedError
 from structural_variant.constants import reverse_complement
 from structural_variant.constants import STRAND
 from structural_variant.breakpoint import Breakpoint, BreakpointPair
-from tests import REFERENCE_ANNOTATIONS_FILE, REFERENCE_GENOME_FILE, MockSeq
+from tests import REFERENCE_ANNOTATIONS_FILE, REFERENCE_GENOME_FILE, MockSeq, REFERENCE_ANNOTATIONS_FILE_JSON
 
 
 REFERENCE_ANNOTATIONS = None
 REFERENCE_GENOME = None
-REF_CHR = None
+REF_CHR = 'fake'
 
 
 def setUpModule():
@@ -23,7 +23,7 @@ def setUpModule():
     assert(count == 6)  # make sure this is the file we expect
     REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
     assert(4 == len(REFERENCE_GENOME.keys()))
-    REF_CHR = list(REFERENCE_GENOME.keys())[0]
+    assert(REF_CHR in REFERENCE_GENOME)
     print('loaded the reference genome', REFERENCE_GENOME_FILE)
 
 
@@ -1037,6 +1037,15 @@ class TestAnnotationGathering(unittest.TestCase):
 
 
 class TestAnnotate(unittest.TestCase):
+
+    def test_loading_json_annotations(self):
+        annotations = load_reference_genes(REFERENCE_ANNOTATIONS_FILE_JSON)
+        self.assertEqual(1, len(annotations.keys()))
+        self.assertEqual(1, len(list(annotations.values())[0]))
+
+    def test_loading_annotations_unsupported_filetype(self):
+        with self.assertRaises(NotImplementedError):
+            load_reference_genes('file.other')
 
     def test_determine_prime(self):
         tneg = usTranscript(exons=[(3, 4)], strand=STRAND.NEG)

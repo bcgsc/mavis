@@ -203,7 +203,7 @@ SPLICE_TYPE = Vocab(
 """
 
 SPLICE_SITE_RADIUS = 2
-"""int: number of bases away from an exon boundary considered to be part of the splice site such that if it were altered 
+"""int: number of bases away from an exon boundary considered to be part of the splice site such that if it were altered
         the splice site would be considered to be abrogated.
 """
 
@@ -231,6 +231,7 @@ GIESMA_STAIN = Vocab(
     GVAR='gvar',
     STALK='stalk'
 )
+"""Vocab: holds controlled vocabulary relating to stains of chromosome bands"""
 
 # content related to tabbed files for input/output
 # ensure that we don't have to change ALL the code when we update column names

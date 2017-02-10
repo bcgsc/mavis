@@ -42,6 +42,7 @@ class IntergenicRegion(BioInterval):
         self.strand = STRAND.enforce(strand)
 
     def key(self):
+        """see :func:`structural_variant.annotate.base.BioInterval.key`"""
         return BioInterval.key(self), self.strand
 
     @property
@@ -53,6 +54,7 @@ class IntergenicRegion(BioInterval):
         return 'IntergenicRegion({}:{}_{}{})'.format(self.chr, self.start, self.end, self.strand)
 
     def to_dict(self):
+        """see :func:`structural_variant.annotate.base.BioInterval.to_dict`"""
         d = BioInterval.to_dict(self)
         d['strand'] = self.strand
         return d
@@ -99,6 +101,7 @@ class Gene(BioInterval):
         return self.reference_object
 
     def key(self):
+        """see :func:`structural_variant.annotate.base.BioInterval.key`"""
         return BioInterval.key(self), self.strand
 
     def get_sequence(self, REFERENCE_GENOME, ignore_cache=False):
@@ -129,6 +132,7 @@ class Gene(BioInterval):
         return spl
 
     def to_dict(self):
+        """see :func:`structural_variant.annotate.base.BioInterval.to_dict`"""
         d = BioInterval.to_dict(self)
         d['strand'] = self.strand
         return d
@@ -160,8 +164,6 @@ class Exon(BioInterval):
         BioInterval.__init__(self, name=name, reference_object=transcript, start=start, end=end, sequence=sequence)
         self.intact_start_splice = intact_start_splice
         self.intact_end_splice = intact_end_splice
-        if end - start + 1 < SPLICE_SITE_RADIUS * sum([intact_start_splice, intact_end_splice]):
-            warnings.warn('exons must be greater than double the length of a splice site')
 
     @property
     def transcript(self):

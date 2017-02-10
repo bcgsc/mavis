@@ -30,10 +30,12 @@ class BioInterval:
 
     @property
     def start(self):
+        """*int*: the start position"""
         return self.position.start
 
     @property
     def end(self):
+        """*int*: the end position"""
         return self.position.end
 
     def __getitem__(self, index):
@@ -49,6 +51,7 @@ class BioInterval:
         return self.position.length()
 
     def key(self):
+        """:class:`tuple`: a tuple representing the items expected to be unique. for hashing and comparing"""
         return (self.reference_object, self.position, self.sequence, self.name)
 
     def __eq__(self, other):
@@ -75,6 +78,16 @@ class BioInterval:
         raise NotImplementedError('abstract method must be overidden')
 
     def get_strand(self):
+        """
+        pulls strand information from the current object, or follows reference
+        objects until the strand is found
+
+        Returns:
+            STRAND: the strand of this or any of its reference objects
+
+        Raises:
+            AttributeError: raised if the strand is not set on this or any of its reference objects
+        """
         try:
             if self.strand is not None:
                 return self.strand
@@ -98,6 +111,16 @@ class BioInterval:
         raise AttributeError('strand has not been defined')
 
     def get_chr(self):
+        """
+        pulls chromosome information from the current object, or follows reference
+        objects until the chromosome is found
+
+        Returns:
+            str: the chromosome of this or any of its reference objects
+
+        Raises:
+            AttributeError: raised if the chromosome is not set on this or any of its reference objects
+        """
         try:
             if self.chr is not None:
                 return self.chr
@@ -122,6 +145,12 @@ class BioInterval:
         raise AttributeError('chr has not been defined')
 
     def to_dict(self):
+        """
+        creates a dictionary representing the current object
+
+        Returns:
+            :class:`dict` by :class:`str`: the dictionary of attribute values
+        """
         d = {
             'name': self.name,
             'start': self.start,

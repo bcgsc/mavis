@@ -7,13 +7,12 @@ from tests import MockRead
 from tests import REFERENCE_GENOME_FILE
 
 REFERENCE_GENOME = None
-REF_CHR = None
+REF_CHR = 'fake'
 
 
 def setUpModule():
-    global REFERENCE_GENOME, REF_CHR
+    global REFERENCE_GENOME
     REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
-    REF_CHR = list(REFERENCE_GENOME.keys())[0]
     if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME[REF_CHR].seq[0:50].upper():
         raise AssertionError('fake genome file does not have the expected contents')
 

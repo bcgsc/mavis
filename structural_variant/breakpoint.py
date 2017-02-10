@@ -92,7 +92,7 @@ class BreakpointPair:
 
     @property
     def interchromosomal(self):
-        """(:class:`bool`): True if the breakpoints are on different chromosomes, False otherwise"""
+        """:class:`bool`: True if the breakpoints are on different chromosomes, False otherwise"""
         if self.break1.chr == self.break2.chr:
             return False
         return True

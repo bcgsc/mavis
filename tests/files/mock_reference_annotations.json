@@ -1,0 +1,38 @@
+{
+    "genes": [
+        {
+            "chr": "fake",
+            "start": 1,
+            "end": 1000,
+            "strand": "1",
+            "name": "ENSG0001",
+            "aliases": [],
+            "transcripts": [
+                {
+                    "is_best_transcript": true,
+                    "name": "ENST001",
+                    "start": 101,
+                    "end": 900,
+                    "exons": [
+                        {"start": 101, "end": 200},
+                        {"start": 401, "end": 500},
+                        {"start": 601, "end": 700},
+                        {"start": 801, "end": 900}
+                    ],
+                    "domains": [
+                        {
+                            "name": "PF001",
+                            "desc": "",
+                            "regions": [
+                                {"start": 1, "end": 10},
+                                {"start": 50, "end": 63}
+                            ]
+                        }
+                    ],
+                    "cdna_coding_start": 51,
+                    "cdna_coding_end": 350
+                }
+            ]
+        }
+    ]
+}
