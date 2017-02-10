@@ -187,6 +187,7 @@ class TestEvidenceGathering(unittest.TestCase):
         self.assertEqual(4,len(self.ev1.split_reads[0]))
         self.assertEqual(8, len(self.ev1.flanking_reads[0]))
 
+#    @unittest.skip("demonstrating skipping")
     def test_assemble_split_reads(self):
         sr1 = MockRead(query_name='HISEQX1_11:3:1105:15351:25130:split',
                        query_sequence='TCGTGAGTGGCAGGTGCCATCGTGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG',
@@ -352,7 +353,136 @@ class TestEvidence(unittest.TestCase):
         self.assertEqual(20, break1.end)
         self.assertEqual(111, break2.start)
         self.assertEqual(250, break2.end)
-    
+
+    def test__call_by_supporting_reads_split_read(self):
+        ev = Evidence(
+            BreakpointPair(
+                Breakpoint('fake', 50,150, orient=ORIENT.RIGHT),
+                Breakpoint('fake', 450,550, orient=ORIENT.RIGHT),
+                opposing_strands=True
+            ),
+            None, None,
+            read_length=40,
+            stdev_isize=25,
+            median_insert_size=100,
+            stdev_count_abnormal=2,
+            min_splits_reads_resolution=1
+        )
+        ev.split_reads[0].add(MockRead(query_name='t1',reference_start=100, reference_end=120, cigar = [(CIGAR.S,20),(CIGAR.EQ,20)]))
+        ev.split_reads[1].add(MockRead(query_name='t1',reference_start=500, reference_end=520, cigar = [(CIGAR.S,20),(CIGAR.EQ,20)]))
+        ev.split_reads[0].add(MockRead(query_name='t2',reference_start=100, reference_end=120, cigar = [(CIGAR.S,20),(CIGAR.EQ,20)]))
+        ev.split_reads[1].add(MockRead(query_name='t2',reference_start=500, reference_end=520, cigar = [(CIGAR.S,20),(CIGAR.EQ,20)]))
+
+        break1, break2 = Evidence._call_by_supporting_reads(ev, SVTYPE.INV)[0]
+
+        self.assertEqual(100, break1.start)
+        self.assertEqual(100, break1.end)
+        self.assertEqual(500, break2.start)
+        self.assertEqual(500, break2.end)
+
+    def test__call_by_supporting_reads_split_read2(self):
+        ev = Evidence(
+            BreakpointPair(
+                Breakpoint('fake', 50,150, orient=ORIENT.RIGHT),
+                Breakpoint('fake', 450,550, orient=ORIENT.RIGHT),
+                opposing_strands=True
+            ),
+            None, None,
+            read_length=40,
+            stdev_isize=25,
+            median_insert_size=100,
+            stdev_count_abnormal=2,
+            min_splits_reads_resolution=1
+        )
+        ev.split_reads[0].add(MockRead(query_name='t1',reference_start=100, reference_end=120, cigar = [(CIGAR.S,20),(CIGAR.EQ,20)]))
+        ev.split_reads[1].add(MockRead(query_name='t1',reference_start=500, reference_end=520, cigar = [(CIGAR.S,20),(CIGAR.EQ,20)]))
+
+        break1, break2 = Evidence._call_by_supporting_reads(ev, SVTYPE.INV)[0]
+
+        self.assertEqual(100, break1.start)
+        self.assertEqual(100, break1.end)
+        self.assertEqual(500, break2.start)
+        self.assertEqual(500, break2.end)
+
+    def test__call_by_supporting_reads_flanking_split_read(self):
+        ev = Evidence(
+            BreakpointPair(
+                Breakpoint('fake', 50,150, orient=ORIENT.RIGHT),
+                Breakpoint('fake', 450,550, orient=ORIENT.RIGHT),
+                opposing_strands=True
+            ),
+            None, None,
+            read_length=40,
+            stdev_isize=25,
+            median_insert_size=100,
+            stdev_count_abnormal=2,
+            min_splits_reads_resolution=1,
+            min_flanking_reads_resolution=1
+           )
+        ev.split_reads[0].add(MockRead(query_name='t1',reference_start=100, reference_end=120, cigar = [(CIGAR.S,20),(CIGAR.EQ,20)]))
+        ev.flanking_reads[1].add(MockRead(query_name='t2',reference_start=505, reference_end=520, cigar = [(CIGAR.S,20),(CIGAR.EQ,20)], next_reference_start = 150))
+        break1, break2 = Evidence._call_by_supporting_reads(ev, SVTYPE.INV)[0]
+        print(break1.start,break1.end,break2.start,break2.end)
+        self.assertEqual(100, break1.start)
+        self.assertEqual(100, break1.end)
+        self.assertEqual(355, break2.start)
+        self.assertEqual(505, break2.end)
+
+    def test__call_by_supporting_reads_split_flanking_read(self):
+        ev = Evidence(
+            BreakpointPair(
+                Breakpoint('fake', 50,150, orient=ORIENT.RIGHT),
+                Breakpoint('fake', 450,550, orient=ORIENT.RIGHT),
+                opposing_strands=True
+            ),
+            None, None,
+            read_length=40,
+            stdev_isize=25,
+            median_insert_size=100,
+            stdev_count_abnormal=2,
+            min_splits_reads_resolution=1,
+            min_flanking_reads_resolution=1
+        )
+        ev.split_reads[1].add(MockRead(query_name='t1',reference_start=500, reference_end=520, cigar = [(CIGAR.S,20),(CIGAR.EQ,20)]))
+        ev.flanking_reads[0].add(MockRead(query_name='t2',reference_start=120, reference_end=140, cigar = [(CIGAR.S,20),(CIGAR.EQ,20)], next_reference_start = 520))
+        break1, break2 = Evidence._call_by_supporting_reads(ev, SVTYPE.INV)[0]
+        print(break1.start,break1.end,break2.start,break2.end)
+        self.assertEqual(0, break1.start)
+        self.assertEqual(120, break1.end)
+        self.assertEqual(500, break2.start)
+        self.assertEqual(500, break2.end)
+
+    def test__call_by_supporting_reads_flanking_read(self):
+        ev = Evidence(
+            BreakpointPair(
+                Breakpoint('fake', 50,150, orient=ORIENT.RIGHT),
+                Breakpoint('fake', 450,550, orient=ORIENT.RIGHT),
+                opposing_strands=True
+            ),
+            None, None,
+            read_length=40,
+            stdev_isize=25,
+            median_insert_size=100,
+            stdev_count_abnormal=2,
+            min_splits_reads_resolution=1,
+            min_flanking_reads_resolution=1
+        )
+        ev.flanking_reads[1].add(MockRead(query_name='t1',reference_start=500, reference_end=520, cigar = [(CIGAR.S,20),(CIGAR.EQ,20)], next_reference_start= 150))
+        ev.flanking_reads[0].add(MockRead(query_name='t2',reference_start=120, reference_end=140, cigar = [(CIGAR.S,20),(CIGAR.EQ,20)], next_reference_start = 520))
+        break1, break2 = Evidence._call_by_supporting_reads(ev, SVTYPE.INV)[0]
+        print(break1.start,break1.end,break2.start,break2.end)
+        self.assertEqual(0, break1.start)
+        self.assertEqual(120, break1.end)
+        self.assertEqual(350, break2.start)
+        self.assertEqual(500, break2.end)
+        pass
+
+    def test__call_by_supporting_reads_empty(self):
+        pass
+
+    def test__call_by_supporting_reads(self):
+        pass
+
     def test_expected_insert_size_range(self):
         ev = Evidence(
             BreakpointPair(
@@ -369,8 +499,6 @@ class TestEvidence(unittest.TestCase):
         i = ev.expected_insert_size_range()
         self.assertEqual(50, i.start)
         self.assertEqual(150, i.end)
-
-    
 
     def test_read_pair_type_LR(self):
         r = MockRead(
