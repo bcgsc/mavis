@@ -6,7 +6,7 @@ from .error import *
 class Interval:
     """
     """
-    def __init__(self, start, end=None, freq=1):
+    def __init__(self, start, end=None, freq=1, number_type=None):
         """
         Args:
             start (int): the start of the interval (inclusive)
@@ -15,10 +15,14 @@ class Interval:
         """
         self.start = start
         self.end = end if end is not None else start
-        self.number_type = int
-
-        if int(self.start) != float(self.start) or int(self.end) != float(self.end) or type(self.start) == float or type(self.end) == float:
-            self.number_type = float
+        
+        if number_type is None:
+            if int(self.start) != float(self.start) or int(self.end) != float(self.end) \
+                    or type(self.start) == float or type(self.end) == float:
+                number_type = float
+            else:
+                number_type = int
+        self.number_type = number_type
 
         self.start = self.number_type(self.start)
         self.end = self.number_type(self.end)
@@ -151,10 +155,13 @@ class Interval:
 
     def __repr__(self):
         cls = self.__class__.__name__
+        number_type = ''
+        if self.number_type != int:
+            number_type = ', type={}'.format(self.number_type)
         if self.freq != 1:
-            return '{}({}, {}, freq={})'.format(cls, self.start, self.end, self.freq)
+            return '{}({}, {}, freq={}{})'.format(cls, self.start, self.end, self.freq, number_type)
         else:
-            return '{}({}, {})'.format(cls, self.start, self.end)
+            return '{}({}, {}{})'.format(cls, self.start, self.end, number_type)
 
     @property
     def center(self):
@@ -368,10 +375,11 @@ class Interval:
                 ratio = (nexxt[1] - nexxt[0]) / (curr[1] - curr[0])
                 shift = round((pos - curr[0]) * ratio, 0)
                 shift2 = round((pos - curr[0]) * ratio + ratio, 0)
+                number_type = int if ratio == 1 else float
                 if forward_to_reverse:
-                    i = Interval(nexxt[1] - shift2, nexxt[1] - shift)
+                    i = Interval(nexxt[1] - shift2, nexxt[1] - shift, number_type=number_type)
                 else:
-                    i = Interval(nexxt[0] + shift, nexxt[0] + shift2)
+                    i = Interval(nexxt[0] + shift, nexxt[0] + shift2, number_type=number_type)
             setattr(i, 'forward_to_reverse', forward_to_reverse)
             return i
 

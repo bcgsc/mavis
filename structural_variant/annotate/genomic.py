@@ -574,13 +574,14 @@ class Transcript(BioInterval):
             us_transcript (usTranscript): the unspliced transcript
             splicing_patt (:class:`list` of :class:`int`): the list of splicing positions
             sequence (str): the cdna sequence
-            translations (:class:`list` of :class:`~structural_variant.annotate.protein.Translation`): the list of translations of this transcript
+            translations (:class:`list` of :class:`~structural_variant.annotate.protein.Translation`): 
+             the list of translations of this transcript
         """
         pos = sorted([ust.start, ust.end] + splicing_patt)
         splicing_patt.sort()
         self.splicing_pattern = splicing_patt
-        exons = [Exon(s, t, self) for s, t in zip(pos[::2], pos[1::2])]
-        BioInterval.__init__(self, ust, 1, sum([len(e) for e in exons]), sequence=None)
+        self.exons = [Exon(s, t, self) for s, t in zip(pos[::2], pos[1::2])]
+        BioInterval.__init__(self, ust, 1, sum([len(e) for e in self.exons]), sequence=None)
         self.translations = [] if translations is None else [tx for tx in translations]
 
         for tx in self.translations:
@@ -589,7 +590,7 @@ class Transcript(BioInterval):
             raise AssertionError('splicing pattern must be contained within the unspliced transcript')
         elif len(splicing_patt) % 2 != 0:
             raise AssertionError('splicing pattern must be a list of 3\'5\' splicing positions')
-
+    
     def convert_genomic_to_cdna(self, pos):
         """
         Args:

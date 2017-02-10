@@ -23,7 +23,7 @@ class BioInterval:
         data = {} if data is None else data
         self.reference_object = reference_object
         self.name = name
-        self.position = Interval(start, end)
+        self.position = Interval(start, end, number_type=int)
         self.sequence = sequence if not sequence else sequence.upper()
         self.data = {}
         self.data.update(data)

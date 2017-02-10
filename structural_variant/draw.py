@@ -585,7 +585,7 @@ class Diagram:
         # now make the json legend
         return canvas, legend
 
-    def _draw_exon_track(self, canvas, transcript, mapping, colors=None, x_start=None, x_end=None):
+    def _draw_exon_track(self, canvas, transcript, mapping, colors=None, x_start=None, x_end=None, translation=None):
         """
         """
         colors = {} if colors is None else colors
@@ -611,7 +611,15 @@ class Diagram:
             t = Interval.convert_ratioed_pos(mapping, exon.end).end
             pxi = Interval(s, t)
             c = colors.get(exon, self.EXON1_COLOR)
-            group = self.draw_exon(canvas, exon, pxi.length(), self.TRACK_HEIGHT, c, label=transcript.exon_number(exon))
+            group = self.draw_exon(
+                canvas, 
+                exon, 
+                pxi.length(), 
+                self.TRACK_HEIGHT, 
+                c, 
+                label=transcript.exon_number(exon), 
+                translation=translation
+            )
             group.translate(pxi.start, y - self.TRACK_HEIGHT / 2)
             main_group.add(group)
 
@@ -744,7 +752,7 @@ class Diagram:
         # if the splicing takes up more room than the track we need to adjust for it
         y = self.SPLICE_HEIGHT
 
-        exon_track_group = self._draw_exon_track(canvas, ust, mapping, colors)
+        exon_track_group = self._draw_exon_track(canvas, ust, mapping, colors, translation=translation)
         exon_track_group.translate(0, y)
         exon_track_group.add(canvas.text(
             labels.add(tr, LABEL_PREFIX),
@@ -1325,11 +1333,13 @@ class Diagram:
             l = canvas.line((width, y), (width, height))
             l.stroke(self.BREAKPOINT_COLOR, width=self.BREAKPOINT_ORIENT_STROKE_WIDTH)
             g.add(l)
-        g.add(Tag('title', 'Breakpoint {}:{}-{} strand={} orient={}'.format(
+        g.add(Tag('title', 'Breakpoint {}:g.{}-{} strand={} orient={}'.format(
             breakpoint.chr, breakpoint.start, breakpoint.end, breakpoint.strand, breakpoint.orient)))
         return g
 
-    def draw_exon(self, canvas, exon, width, height, fill, label='', tear_left=False, tear_right=False):
+    def draw_exon(
+        self, canvas, exon, width, height, fill, label='', tear_left=False, tear_right=False, translation=None
+    ):
         """
         generates the svg object representing an exon
 
@@ -1385,8 +1395,15 @@ class Diagram:
                 class_='label'
             )
             g.add(t)
-            g.add(Tag('title', 'Exon {} {}_{} L={}'.format(
-                exon.name if exon.name else '', exon.start, exon.end, len(exon))))
+            title = 'Exon {} g.{}_{} L={}'.format(
+                exon.name if exon.name else '', exon.start, exon.end, len(exon))
+            if translation:
+                cds_start = translation.convert_genomic_to_cds(exon.start)
+                cds_end = translation.convert_genomic_to_cds(exon.end)
+                if cds_end < cds_start:
+                    cds_start, cds_end = cds_end, cds_start
+                title += ' c.{}_{}'.format(cds_start, cds_end)
+            g.add(Tag('title', title))
         return g
 
     def draw_template(self, canvas, template, target_width, labels=None, colors=None, breakpoints=None):
@@ -1576,7 +1593,7 @@ class Diagram:
         except AttributeError:
             pass
         group.add(
-            Tag('title', 'Gene {} {}:{}_{}{}{}'.format(gene.name if gene.name else '',
+            Tag('title', 'Gene {} {}:g.{}_{}{}{}'.format(gene.name if gene.name else '',
                 gene.chr, gene.start, gene.end, gene.get_strand(), aliases)))
         return group
 

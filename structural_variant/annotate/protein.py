@@ -2,7 +2,7 @@ from ..interval import Interval
 from .base import BioInterval
 from ..constants import translate, START_AA, STOP_AA, CODON_SIZE
 import itertools
-from ..error import NotSpecifiedError
+from ..error import NotSpecifiedError, DiscontinuousMappingError
 
 
 def calculate_ORF(spliced_cdna_sequence, min_orf_size=None):
@@ -293,6 +293,38 @@ class Translation(BioInterval):
         if pos % CODON_SIZE != 0:
             aa += 1
         return aa
+
+    def convert_genomic_to_cds(self, pos):
+        cdna_pos = self.transcript.convert_genomic_to_cdna(pos)
+        if cdna_pos < self.start:
+            return cdna_pos - self.start
+        return cdna_pos - self.start + 1
+
+    def convert_genomic_to_cds_notation(self, pos):
+        try:
+            cds_pos = self.convert_genomic_to_cds(pos)
+            if cds_pos > len(self):
+                return 'c.*{}'.format(cds_pos - len(self))
+            print(cds_pos, self)
+            return 'c.{}'.format(cds_pos)
+        except DiscontinuousMappingError as err:  # should give you the nearest positions
+            # between two exons?
+            exon_list = self.transcript.exons
+            for ex1, ex2 in zip(self.transcript.exons[0::], self.transcript.exons[1::]):
+                if abs(Interval.dist(ex1, ex2)) > 0:
+                    intron = Interval(ex1.end + 1, ex2.start - 1)
+                    if pos >= intron.start and pos <= intron.end:
+                        # inside this intron
+                        if abs(pos - intron.end) > abs(pos - intron.start):  # prefer +
+                            ref_pos = self.convert_genomic_to_cds(ex1.end)
+                            shift = pos - intron.start + 1
+                            return 'c.{}+{}'.format(ref_pos, shift)
+                        else:
+                            ref_pos = self.convert_genomic_to_cds(ex2.start)
+                            shift = intron.end - pos + 1
+                            return 'c.{}-{}'.format(ref_pos, shift)
+            raise err
+
 
     def get_cds_sequence(self, REFERENCE_GENOME=None, ignore_cache=False):
         """

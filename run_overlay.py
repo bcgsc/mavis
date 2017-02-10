@@ -151,5 +151,6 @@ for g in genes_to_draw:
         raise DrawingFitError('could not draw', initial_width, d.WIDTH)
     d.WIDTH = initial_width
     print('writing:', svg)
+
     canvas.saveas(svg)
 
