@@ -1,12 +1,15 @@
 from argparse import Namespace
 from datetime import datetime
+import argparse
+import warnings
 import errno
 import os
+import sys
 from configparser import ConfigParser, ExtendedInterpolation
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from structural_variant.validate import DEFAULTS as VDEFAULTS
-import warnings
 from structural_variant.constants import PROTOCOL
-import argparse
 from sv_merge import main as merge
 
 
@@ -23,9 +26,9 @@ DEFAULTS = Namespace(
     max_files=100,
     cluster_clique_size=15,
     cluster_radius=20,
-    **VDEFAULTS.__dict__,
     no_filter=False
 )
+DEFAULTS.__dict__.update(VDEFAULTS.__dict__)
 
 
 def log(*pos, time_stamp=True):
@@ -77,7 +80,7 @@ def read_config(filepath):
             except ValueError:
                 defaults[attr] = value
                 warnings.warn('type check failed for attr {} with value {}'.format(attr, repr(value)))
-    
+
     library_sections = []
 
     for sec in parser.sections():
@@ -94,7 +97,7 @@ def read_config(filepath):
                         sec, attr, LIBRARY_REQ_ATTR)
             section.update(defaults)
             section['library'] = sec
-    
+
         for attr, value in parser[sec].items():
             if attr == 'protocol':
                 PROTOCOL.enforce(value)
@@ -143,11 +146,13 @@ def main():
         mkdirp(os.path.join(base, 'clustering'))
         mkdirp(os.path.join(base, 'validation'))
         mkdirp(os.path.join(base, 'annotation'))
-        
+
         # run the merge
         log('clustering')
         section.__dict__.update(config['reference'].__dict__)
-        merge(section)
+        setattr(section, 'output', os.path.join(base, 'clustering'))
+        output_files = merge(section)
+        setattr(section, 'output', None)  # erase before setting up the other jobs
 
 
     # run sv_merge
