@@ -304,9 +304,9 @@ class Translation(BioInterval):
         try:
             cds_pos = self.convert_genomic_to_cds(pos)
             if cds_pos > len(self):
-                return 'c.*{}'.format(cds_pos - len(self))
+                return '*{}'.format(cds_pos - len(self))
             print(cds_pos, self)
-            return 'c.{}'.format(cds_pos)
+            return '{}'.format(cds_pos)
         except DiscontinuousMappingError as err:  # should give you the nearest positions
             # between two exons?
             exon_list = self.transcript.exons
@@ -318,11 +318,11 @@ class Translation(BioInterval):
                         if abs(pos - intron.end) > abs(pos - intron.start):  # prefer +
                             ref_pos = self.convert_genomic_to_cds(ex1.end)
                             shift = pos - intron.start + 1
-                            return 'c.{}+{}'.format(ref_pos, shift)
+                            return '{}+{}'.format(ref_pos, shift)
                         else:
                             ref_pos = self.convert_genomic_to_cds(ex2.start)
                             shift = intron.end - pos + 1
-                            return 'c.{}-{}'.format(ref_pos, shift)
+                            return '{}-{}'.format(ref_pos, shift)
             raise err
 
 

@@ -13,6 +13,7 @@
    theory.rst
    columns
    api.rst
+   structural_variant.rst
 
 
 

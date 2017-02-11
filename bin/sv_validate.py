@@ -42,7 +42,7 @@ from structural_variant.error import *
 from structural_variant.read_tools import CigarTools
 from structural_variant.breakpoint import Breakpoint, BreakpointPair
 from structural_variant.read_tools import BamCache
-from structural_variant.validate import Evidence, EvidenceSettings
+from structural_variant.validate import Evidence, DEFAULTS
 from structural_variant.blat import blat_contigs
 from structural_variant.interval import Interval
 from structural_variant.annotate import load_masking_regions, load_reference_genome, load_reference_genes
@@ -152,67 +152,6 @@ def read_cluster_file(name, is_stranded):
                 warnings.warn('failed to read cluster {}'.format(repr(e)))
     return evidence
 
-def add_evidence_args_to_parser(parse_group):
-    default = EvidenceSettings()
-    parse_group.add_argument(
-        '--read_length', default=default.read_length, type=int, help='length of reads in the bam file')
-    parse_group.add_argument(
-        '--stdev_isize', default=default.stdev_isize, type=int,
-        help='the standard deviation in insert sizes of paired end reads')
-    parse_group.add_argument(
-        '--median_insert_size', default=default.median_insert_size, type=int,
-        help='the median insert size of paired end reads')
-    parse_group.add_argument(
-        '--stdev_count_abnormal', default=default.stdev_count_abnormal, type=int,
-        help='the number of standard deviations away from the normal considered expected and therefore not '
-        'qualifying as flanking reads')
-    parse_group.add_argument(
-        '--call_error', default=default.call_error, type=int, help='buffer zone for the evidence window')
-    parse_group.add_argument(
-        '--min_splits_reads_resolution', default=default.min_splits_reads_resolution, type=int,
-        help='minimum number of split reads required to call a breakpoint by split reads')
-    parse_group.add_argument(
-        '--min_anchor_exact', default=default.min_anchor_exact, type=int)
-    parse_group.add_argument(
-        '--min_anchor_fuzzy', default=default.min_anchor_fuzzy, type=int)
-    parse_group.add_argument(
-        '--min_anchor_match', default=default.min_anchor_match, type=float)
-    parse_group.add_argument(
-        '--min_mapping_quality', default=default.min_mapping_quality, type=int,
-        help='the minimum mapping quality of reads to be used as evidence')
-    parse_group.add_argument(
-        '--fetch_reads_limit', default=default.fetch_reads_limit, type=int,
-        help='maximum number of reads, cap, to loop over for any given evidence window')
-    parse_group.add_argument(
-        '--fetch_reads_bins', default=default.fetch_reads_bins, type=int,
-        help='number of bins to split an evidence window into to ensure more even sampling of high coverage '
-        'regions')
-    parse_group.add_argument(
-        '--filter_secondary_alignments', default=default.filter_secondary_alignments, type=bool,
-        help='filter secondary alignments when gathering read evidence')
-    parse_group.add_argument(
-        '--consensus_req', default=default.consensus_req, type=int)
-    parse_group.add_argument(
-        '--sc_extension_stop', default=default.sc_extension_stop, type=int)
-    parse_group.add_argument(
-        '--assembly_min_edge_weight', default=default.assembly_min_edge_weight, type=int,
-        help='when building the initial deBruijn graph edge weights are determined by the frequency of the kmer '
-        'they represent in all the input sequences. The parameter here discards edges to simply the graph if they '
-        'have a weight less than specified')
-    parse_group.add_argument(
-        '--assembly_min_remap', default=default.assembly_min_remap, type=int,
-        help='The minimum input sequences that must remap for an assembly to be used')
-    parse_group.add_argument(
-        '--min_non_target_aligned_split_reads', default=default.min_non_target_aligned_split_reads, type=int,
-        help='The minimum number of split reads aligned to a breakpoint by the input bam and no forced by local '
-        'alignment to the target region to call a breakpoint by split read evidence')
-    parse_group.add_argument(
-        '--min_linking_split_reads', default=default.min_linking_split_reads, type=int,
-        help='The minimum number of split reads which aligned to both breakpoints')
-    parse_group.add_argument(
-        '--min_flanking_reads_resolution', default=default.min_flanking_reads_resolution, type=int,
-        help='the minimum number of flanking reads required to call a breakpoint by flanking evidence')
-
 
 def parse_arguments():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -247,7 +186,7 @@ def parse_arguments():
     )
     g = parser.add_argument_group('reference files')
     g.add_argument(
-        '-m', '--masking_file',
+        '-m', '--masking',
         default='/home/creisle/svn/svmerge/trunk/hg19_masked_regions.tsv',
         help='path to the masking regions file'
     )
@@ -261,14 +200,19 @@ def parse_arguments():
         default='/home/pubseq/genomes/Homo_sapiens/TCGA_Special/GRCh37-lite.fa',
         help='path to the human reference genome in fa format'
     )
+    g = parser.add_argument_group('evidence settings')
+    for attr, value in DEFAULTS.__dict__.items():
+        g.add_argument('-{}'.format(attr), default=value, type=type(value), help='see user manual for description')
+    g.add_argument('--read_length', type=int, help='the length of the reads in the bam file', required=True)
+    g.add_argument('--stdev_insert_size', type=int, help='expected standard deviation in insert sizes', required=True)
+    g.add_argument('--median_insert_size', type=int, help='median inset size for pairs in the bam file', required=True)
+
     parser.add_argument('--igv_genome', help='the genome name to use for the igv batch file output', default='hg19')
     parser.add_argument(
         '-p', '--protocol',
         default=PROTOCOL.GENOME,
         choices=[PROTOCOL.GENOME, PROTOCOL.TRANS]
     )
-    g = parser.add_argument_group('evidence settings')
-    add_evidence_args_to_parser(g)
     args = parser.parse_args()
     return args
 
@@ -329,8 +273,8 @@ def main():
     log('input arguments listed below')
     for arg, val in sorted(args.__dict__.items()):
         log(arg, '=', val, time_stamp=False)
-    log('loading the masking regions:', args.masking_file)
-    MASKED_REGIONS = load_masking_regions(args.masking_file)
+    log('loading the masking regions:', args.masking)
+    MASKED_REGIONS = load_masking_regions(args.masking)
     for chr in MASKED_REGIONS:
         for m in MASKED_REGIONS[chr]:
             if m.name == 'nspan':

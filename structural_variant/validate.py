@@ -13,6 +13,81 @@ from .breakpoint import BreakpointPair, Breakpoint
 import statistics
 from functools import partial
 import math
+from argparse import Namespace
+
+
+DEFAULTS = Namespace(
+    stdev_count_abnormal=3,
+    call_error=10,
+    min_splits_reads_resolution=3,
+    min_anchor_exact=6,
+    min_anchor_fuzzy=10,
+    min_anchor_match=0.9,
+    min_mapping_quality=20,
+    fetch_reads_limit=10000,
+    fetch_reads_bins=3,
+    filter_secondary_alignments=True,
+    consensus_req=3,
+    sc_extension_stop=5,
+    assembly_min_edge_weight=3,
+    assembly_min_remap=3,
+    min_linking_split_reads=2,
+    min_non_target_aligned_split_reads=1,
+    min_flanking_reads_resolution=3
+)
+"""Namespace: holds the settings for computations with the Evidence objects
+
+.. glossary::
+
+    read_length
+        length of reads in the bam file
+
+    stdev_insert_size
+        the standard deviation in insert sizes of paired end reads
+
+    median_insert_size
+        the median insert size of paired end reads
+
+    stdev_count_abnormal
+        the number of standard deviations away from the normal considered expected and therefore not qualifying as 
+        flanking reads
+
+    call_error
+        buffer zone for the evidence window
+
+    min_splits_reads_resolution
+        minimum number of split reads required to call a breakpoint by split reads
+
+    min_mapping_quality
+        the minimum mapping quality of reads to be used as evidence
+
+    fetch_reads_limit
+        maximum number of reads, cap, to loop over for any given evidence window
+
+    fetch_reads_bins
+        number of bins to split an evidence window into to ensure more even sampling of high coverage regions
+
+    filter_secondary_alignments
+        filter secondary alignments when gathering read evidence
+
+    assembly_min_edge_weight
+        when building the initial deBruijn graph edge weights are determined by the frequency of the kmer they represent
+        in all the input sequences. The parameter here discards edges to the kmer they represent in all the input
+        sequences. The parameter here discards edges to simply the graph if they have a weight less than specified
+
+    assembly_min_remap
+        The minimum input sequences that must remap for an assembly to be used
+
+    min_non_target_aligned_split_reads
+        The minimum number of split reads aligned to a breakpoint by the input bam and no forced by local alignment
+        to the target region to call a breakpoint by split read evidence
+
+    min_linking_split_reads
+        The minimum number of split reads which aligned to both breakpoints
+
+    min_flanking_reads_resolution
+        the minimum number of flanking reads required to call a breakpoint by flanking evidence
+"""
 
 
 class EventCall(BreakpointPair):
@@ -145,97 +220,6 @@ class EventCall(BreakpointPair):
         object.__eq__(self, other)
 
 
-class EvidenceSettings:
-    """
-    holds all the user input settings associated with evidence gathering
-    separate class to allow for easy transfer and sharing of settings
-    between evidence objects
-    """
-
-    def __init__(
-            self,
-            read_length=125,
-            median_insert_size=380,
-            stdev_isize=100,
-            stdev_count_abnormal=3,
-            call_error=10,
-            min_splits_reads_resolution=3,
-            min_anchor_exact=6,
-            min_anchor_fuzzy=10,
-            min_anchor_match=0.9,
-            min_mapping_quality=20,
-            fetch_reads_limit=10000,
-            fetch_reads_bins=3,
-            filter_secondary_alignments=True,
-            consensus_req=3,
-            sc_extension_stop=5,
-            max_sc_preceeding_anchor=None,
-            assembly_min_edge_weight=3,
-            assembly_min_remap=3,
-            min_linking_split_reads=2,
-            min_non_target_aligned_split_reads=1,
-            min_flanking_reads_resolution=3
-    ):
-        """
-        Args:
-            read_length (int): length of individual reads
-            median_insert_size (int): expected average insert size for paired-end reads
-            stdev_isize (int): the expected deviation in the insert size
-            call_error (int): buffer for calculating the evidence window
-            min_splits_reads_resolution (int):
-                minimum number of reads required to call the same breakpoint for it to be a valid breakpoint
-            min_anchor_exact (int):
-                minimum number of consecutive exact matches to satisfy the anchor constraint
-            min_anchor_fuzzy (int):
-                minimum number of consecutive exact matches (allowing one mismatch/indel) to satisfy the anchor
-                constraint
-            min_mapping_quality (int):
-                mapping quality to filter on
-            fetch_reads_limit (int):
-                maximum number of reads to loop over for a given event
-            filter_secondary_alignments (bool):
-                don't use secondary alignments when reading evidence from the bam file
-            sc_extension_stop (int):
-                when extending softclipped, stop given this number of exact consecutive matches
-        """
-        self.read_length = read_length
-        self.median_insert_size = median_insert_size
-        self.stdev_isize = stdev_isize
-        self.call_error = call_error
-        self.min_splits_reads_resolution = min_splits_reads_resolution
-        self.min_anchor_exact = min_anchor_exact
-        self.min_anchor_fuzzy = min_anchor_fuzzy
-        self.min_anchor_match = min_anchor_match
-        assert(min_anchor_exact <= min_anchor_fuzzy)
-        if self.min_anchor_match > 1 or self.min_anchor_match < 0:
-            raise AttributeError('min_anchor_match must be a number between 0 and 1')
-        self.min_mapping_quality = min_mapping_quality
-        if max_sc_preceeding_anchor is None:
-            self.max_sc_preceeding_anchor = self.min_anchor_exact
-        else:
-            self.max_sc_preceeding_anchor = max_sc_preceeding_anchor
-        self.fetch_reads_limit = fetch_reads_limit
-        self.fetch_reads_bins = fetch_reads_bins
-        self.filter_secondary_alignments = filter_secondary_alignments
-        self.consensus_req = consensus_req
-        self.sc_extension_stop = sc_extension_stop
-        self.assembly_min_edge_weight = assembly_min_edge_weight
-        self.stdev_count_abnormal = stdev_count_abnormal
-        self.assembly_min_remap = assembly_min_remap
-        self.min_linking_split_reads = min_linking_split_reads
-        self.min_non_target_aligned_split_reads = min_non_target_aligned_split_reads
-        self.min_flanking_reads_resolution = min_flanking_reads_resolution
-
-    @staticmethod
-    def parse_args(args):
-        default = EvidenceSettings()
-        setttings = {}
-        for arg, val in args.__dict__.items():
-            if hasattr(default, arg):
-                setttings[arg] = val
-        return EvidenceSettings(**setttings)
-
-
 class Evidence:
     @property
     def window1(self):
@@ -268,7 +252,7 @@ class Evidence:
 
     @classmethod
     def generate_window(
-        cls, breakpoint, read_length, median_insert_size, call_error, stdev_isize, stdev_count_abnormal
+        cls, breakpoint, read_length, median_insert_size, call_error, stdev_insert_size, stdev_count_abnormal
     ):
         """
         given some input breakpoint uses the current evidence setting to determine an
@@ -280,12 +264,12 @@ class Evidence:
             median_insert_size (int): the median insert size
             call_error (int):
                 adds a buffer to the calculations if confidence in the breakpoint calls is low can increase this
-            stdev_isize (int):
+            stdev_insert_size (int):
                 the standard deviation away from the median for regular (non STV) read pairs
         Returns:
             Interval: the range where reads should be read from the bam looking for evidence for this event
         """
-        fragment_size = read_length * 2 + median_insert_size + stdev_isize * stdev_count_abnormal
+        fragment_size = read_length * 2 + median_insert_size + stdev_insert_size * stdev_count_abnormal
         start = breakpoint.start - fragment_size - call_error
         end = breakpoint.end + fragment_size + call_error
 
@@ -297,7 +281,7 @@ class Evidence:
 
     @classmethod
     def generate_transcriptome_window(cls, breakpoint, annotations, read_length, median_insert_size, call_error,
-                                      stdev_isize, stdev_count_abnormal):
+                                      stdev_insert_size, stdev_count_abnormal):
         """
         given some input breakpoint uses the current evidence setting to determine an
         appropriate window/range of where one should search for supporting reads
@@ -309,14 +293,14 @@ class Evidence:
             median_insert_size (int): the median insert size
             call_error (int):
                 adds a buffer to the calculations if confidence in the breakpoint calls is low can increase this
-            stdev_isize:
+            stdev_insert_size:
                 the standard deviation away from the median for regular (non STV) read pairs
         Returns:
             Interval: the range where reads should be read from the bam looking for evidence for this event
         """
         transcripts = overlapping_transcripts(annotations, breakpoint)
         window = cls.generate_window(
-            breakpoint, read_length, median_insert_size, call_error, stdev_isize, stdev_count_abnormal)
+            breakpoint, read_length, median_insert_size, call_error, stdev_insert_size, stdev_count_abnormal)
 
         tgt_left = breakpoint.start - window.start  # amount to expand to the left
         tgt_right = window.end - breakpoint.end  # amount to expand to the right
@@ -412,7 +396,12 @@ class Evidence:
             protocol (PROTOCOL): genome or transcriptome
             **kwargs: named arguments to be passed to EvidenceSettings
         """
-        self.settings = EvidenceSettings(**kwargs)
+        d = dict()
+        d.update(DEFAULTS.__dict__)
+        d.update(kwargs)
+        if any([x not in d for x in ['read_length', 'stdev_insert_size', 'median_insert_size']]):
+            raise KeyError('required argument missing')
+        self.settings = Namespace(**d)
         self.bam_cache = bam_cache
         self.data = data
         self.classification = classification
@@ -455,7 +444,7 @@ class Evidence:
                 read_length=self.settings.read_length,
                 median_insert_size=self.settings.median_insert_size,
                 call_error=self.settings.call_error,
-                stdev_isize=self.settings.stdev_isize,
+                stdev_insert_size=self.settings.stdev_insert_size,
                 stdev_count_abnormal=self.settings.stdev_count_abnormal
             )
             w2 = Evidence.generate_window(
@@ -463,7 +452,7 @@ class Evidence:
                 read_length=self.settings.read_length,
                 median_insert_size=self.settings.median_insert_size,
                 call_error=self.settings.call_error,
-                stdev_isize=self.settings.stdev_isize,
+                stdev_insert_size=self.settings.stdev_insert_size,
                 stdev_count_abnormal=self.settings.stdev_count_abnormal
             )
             self.windows = (w1, w2)
@@ -474,7 +463,7 @@ class Evidence:
                 read_length=self.settings.read_length,
                 median_insert_size=self.settings.median_insert_size,
                 call_error=self.settings.call_error,
-                stdev_isize=self.settings.stdev_isize,
+                stdev_insert_size=self.settings.stdev_insert_size,
                 stdev_count_abnormal=self.settings.stdev_count_abnormal
             )
             w2 = Evidence.generate_transcriptome_window(
@@ -483,7 +472,7 @@ class Evidence:
                 read_length=self.settings.read_length,
                 median_insert_size=self.settings.median_insert_size,
                 call_error=self.settings.call_error,
-                stdev_isize=self.settings.stdev_isize,
+                stdev_insert_size=self.settings.stdev_insert_size,
                 stdev_count_abnormal=self.settings.stdev_count_abnormal
             )
             self.windows = (w1, w2)
@@ -492,7 +481,7 @@ class Evidence:
         self.half_mapped = (set(), set())
 
     def expected_insert_size_range(self):
-        v = self.settings.stdev_count_abnormal * self.settings.stdev_isize
+        v = self.settings.stdev_count_abnormal * self.settings.stdev_insert_size
         return Interval(self.settings.median_insert_size - v, self.settings.median_insert_size + v)
 
     def supporting_reads(self):
@@ -1225,7 +1214,7 @@ class Evidence:
             len(self.untemplated_sequence if self.untemplated_sequence else '')
         )
 
-        if max_dist < self.settings.stdev_isize * self.settings.stdev_count_abnormal:
+        if max_dist < self.settings.stdev_insert_size * self.settings.stdev_count_abnormal:
             raise NotImplementedError('evidence gathering for small structural variants is not supported')
             # needs special consideration b/c won't have flanking reads and may have spanning reads
 

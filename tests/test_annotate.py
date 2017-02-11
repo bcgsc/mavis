@@ -545,21 +545,20 @@ class TestCoordinateCoversion(unittest.TestCase):
         self.assertEqual(202, self.translation.convert_genomic_to_cds(552))
 
     def test_convert_genomic_to_cds_notation(self):
-        self.assertEqual('c.1', self.translation.convert_genomic_to_cds_notation(151))
-        self.assertEqual('c.201', self.translation.convert_genomic_to_cds_notation(551))
+        self.assertEqual('1', self.translation.convert_genomic_to_cds_notation(151))
+        self.assertEqual('201', self.translation.convert_genomic_to_cds_notation(551))
 
     def test_convert_genomic_to_cds_notation_3prime_utr(self):
-        self.assertEqual('c.-1', self.translation.convert_genomic_to_cds_notation(150))
+        self.assertEqual('-1', self.translation.convert_genomic_to_cds_notation(150))
 
     def test_convert_genomic_to_cds_notation_5prime_utr(self):
-        self.assertEqual('c.*1', self.translation.convert_genomic_to_cds_notation(552))
+        self.assertEqual('*1', self.translation.convert_genomic_to_cds_notation(552))
 
     def test_convert_genomic_to_cds_notation_intronic_pos(self):
-        self.assertEqual('c.50+2', self.translation.convert_genomic_to_cds_notation(202))
+        self.assertEqual('50+2', self.translation.convert_genomic_to_cds_notation(202))
     
     def test_convert_genomic_to_cds_notation_intronic_neg(self):
-        self.assertEqual('c.51-2', self.translation.convert_genomic_to_cds_notation(299))
-
+        self.assertEqual('51-2', self.translation.convert_genomic_to_cds_notation(299))
 
 
 class TestUSTranscript(unittest.TestCase):
