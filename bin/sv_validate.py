@@ -35,7 +35,9 @@ import subprocess
 import TSV
 import argparse
 import os
+import sys
 import re
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from structural_variant import __version__
 from structural_variant.constants import *
 from structural_variant.error import *
@@ -62,6 +64,7 @@ REFERENCE_ANNOTATIONS = None
 HUMAN_REFERENCE_GENOME = None
 MASKED_REGIONS = None
 EVIDENCE_SETTINGS = None
+PASS_SUFFIX = '.validation-passed.tab'
 
 
 def log(*pos, time_stamp=True):
@@ -160,7 +163,7 @@ def parse_arguments():
         help='Outputs the version number'
     )
     parser.add_argument(
-        '-f', '--overwrite',
+        '-f', '--force_overwrite',
         action='store_true', default=False,
         help='set flag to overwrite existing reviewed files'
     )
@@ -173,7 +176,7 @@ def parse_arguments():
         help='path to the input file', required=True
     )
     parser.add_argument(
-        '-b', '--bamfile',
+        '-b', '--bam_file',
         help='path to the input bam file', required=True
     )
     parser.add_argument(
@@ -208,11 +211,7 @@ def parse_arguments():
     g.add_argument('--median_insert_size', type=int, help='median inset size for pairs in the bam file', required=True)
 
     parser.add_argument('--igv_genome', help='the genome name to use for the igv batch file output', default='hg19')
-    parser.add_argument(
-        '-p', '--protocol',
-        default=PROTOCOL.GENOME,
-        choices=[PROTOCOL.GENOME, PROTOCOL.TRANS]
-    )
+    parser.add_argument('-p', '--protocol', required=True, choices=PROTOCOL.values())
     args = parser.parse_args()
     return args
 
@@ -263,12 +262,12 @@ def main():
     CONTIG_BAM = os.path.join(args.output, FILENAME_PREFIX + '.contigs.bam')
     EVIDENCE_BED = os.path.join(args.output, FILENAME_PREFIX + '.evidence.bed')
 
-    PASSED_OUTPUT_FILE = os.path.join(args.output, FILENAME_PREFIX + '.validation-passed.tab')
+    PASSED_OUTPUT_FILE = os.path.join(args.output, FILENAME_PREFIX + PASS_SUFFIX)
     PASSED_BED_FILE = os.path.join(args.output, FILENAME_PREFIX + '.validation-passed.bed')
     FAILED_OUTPUT_FILE = os.path.join(args.output, FILENAME_PREFIX + '.validation-failed.tab')
     CONTIG_OUTPUT_FILE = os.path.join(args.output, FILENAME_PREFIX + '.contigs.tab')
     IGV_BATCH_FILE = os.path.join(args.output, FILENAME_PREFIX + '.igv.batch')
-    INPUT_BAM_CACHE = BamCache(args.bamfile)
+    INPUT_BAM_CACHE = BamCache(args.bam_file)
 
     log('input arguments listed below')
     for arg, val in sorted(args.__dict__.items()):
@@ -521,7 +520,7 @@ def main():
         fh.write('load {} name="{}"\n'.format(CONTIG_BAM, 'aligned contigs'))
         fh.write('load {} name="{}"\n'.format(EVIDENCE_BED, 'evidence windows'))
         fh.write('load {} name="{}"\n'.format(EVIDENCE_BAM, 'raw evidence'))
-        fh.write('load {} name="{} {} input"\n'.format(args.bamfile, args.library, args.protocol))
+        fh.write('load {} name="{} {} input"\n'.format(args.bam_file, args.library, args.protocol))
 
     INPUT_BAM_CACHE.close()
 

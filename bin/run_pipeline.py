@@ -4,13 +4,15 @@ import argparse
 import warnings
 import errno
 import os
+import re
 import sys
 from configparser import ConfigParser, ExtendedInterpolation
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from structural_variant.validate import DEFAULTS as VDEFAULTS
 from structural_variant.constants import PROTOCOL
-from sv_merge import main as merge
+import sv_merge
+import sv_validate
 
 
 QSUB_HEADER = """#!/bin/bash
@@ -18,15 +20,21 @@ QSUB_HEADER = """#!/bin/bash
 #$ -N {name}
 #$ -q {queue}
 #$ -o {output}
-#$ -l mem_free={memory}G,mem_token={memory}G,h_vmem={memory}G
+#$ -l 'mem_free': {memory}G,'mem_token': {memory}G,'h_vmem': {memory}G
 #$ -j y"""
 
 DEFAULTS = Namespace(
     min_clusters_per_file=50,
-    max_files=100,
+    max_files=10,
     cluster_clique_size=15,
     cluster_radius=20,
-    no_filter=False
+    no_filter=False,
+    min_orf_size=120,
+    max_orf_cap=3,
+    min_domain_mapping_match=0.8,
+    domain_regex_filter='^PF\d+$',
+    stranded=False,
+    max_proximity=5000
 )
 DEFAULTS.__dict__.update(VDEFAULTS.__dict__)
 
@@ -46,26 +54,36 @@ def mkdirp(dirname):
             pass
         else:
             raise
+    return dirname
 
 
 def read_config(filepath):
     """
     reads the configuration settings from the configuration file
+
+    Args:
+        filepath (str): path to the input configuration file
+
+    Returns:
+        class:`list` of :class:`Namespace`: namespace arguments for each library
     """
     parser = ConfigParser(interpolation=ExtendedInterpolation())
     parser.read(filepath)
 
-    LIBRARY_REQ_ATTR = ['protocol', 'bam_file', 'read_length', 'median_insert_size', 'stdev_isize', 'inputs']
+    LIBRARY_REQ_ATTR = ['protocol', 'bam_file', 'read_length', 'median_insert_size', 'stdev_insert_size', 'inputs']
     TYPE_CHECK = DEFAULTS.__dict__
 
     config = {
-        'qsub': Namespace(memory=12, queue='transabyss.q'),
-        'reference': Namespace(
-            template_metadata=os.path.join(os.path.dirname(__file__), 'cytoBand.txt'),
-            reference_genome='/home/pubseq/genomes/Homo_sapiens/TCGA_Special/GRCh37-lite.fa',
-            annotations='/home/creisle/svn/ensembl_flatfiles/ensembl69_transcript_exons_and_domains_20160808.tsv',
-            masking='/home/creisle/svn/svmerge/trunk/hg19_masked_regions.tsv'
-        )
+        'qsub': {
+            'memory': 12,
+            'queue': 'transabyss.q'
+        },
+        'reference': {
+            'template_metadata': os.path.join(os.path.dirname(__file__), 'cytoBand.txt'),
+            'reference_genome': '/home/pubseq/genomes/Homo_sapiens/TCGA_Special/GRCh37-lite.fa',
+            'annotations': '/home/creisle/svn/ensembl_flatfiles/ensembl69_transcript_exons_and_domains_20160808.tsv',
+            'masking': '/home/creisle/svn/svmerge/trunk/hg19_masked_regions.tsv'
+        }
     }
 
     defaults = dict()
@@ -85,7 +103,7 @@ def read_config(filepath):
 
     for sec in parser.sections():
         section = dict()
-        section.update(config.get(sec, Namespace()).__dict__)
+        section.update(config.get(sec, {}))
         if sec == 'DEFAULTS':
             continue
         elif sec not in ['reference', 'qsub', 'visualization']:  # assume this is a library configuration
@@ -106,7 +124,7 @@ def read_config(filepath):
                     value = type(TYPE_CHECK[attr])(value)
                 except ValueError:
                     warnings.warn('type check failed for attr {} with value {}'.format(attr, repr(value)))
-            elif attr in ['stdev_isize', 'median_insert_size', 'read_length']:
+            elif attr in ['stdev_insert_size', 'median_insert_size', 'read_length']:
                 try:
                     value = int(value)
                 except ValueError:
@@ -115,10 +133,18 @@ def read_config(filepath):
                 value = value.split(';') if value else []
             section[attr] = value
 
-        n = Namespace(**section)
-        config[sec] = n
+        config[sec] = section
 
-    return config, library_sections
+    for lib, section in [(l, config[l]) for l in library_sections]:
+        d = dict()
+        d.update(config['qsub'])
+        d.update(config['visualization'])
+        d.update(config['reference'])
+        d.update(section)
+        config[lib] = Namespace(**d)
+
+
+    return [config[l] for l in library_sections]
 
 
 def main():
@@ -135,57 +161,111 @@ def main():
         print('error: must specify the overwrite option or delete the existing output directory')
         parser.print_help()
         exit(1)
-    config, library_sections = read_config(args.config)
+    args.output = os.path.abspath(args.output)
+    configs = read_config(args.config)
     # read the config
     # set up the directory structure and run svmerge
-    for library in library_sections:
-        section = config[library]
-        base = os.path.join(args.output, '{}_{}'.format(library, section.protocol))
-        log('setting up the directory structure for', library, 'as', base)
-        base = os.path.join(args.output, '{}_{}'.format(library, section.protocol))
-        mkdirp(os.path.join(base, 'clustering'))
-        mkdirp(os.path.join(base, 'validation'))
-        mkdirp(os.path.join(base, 'annotation'))
+    annotation_jobs = []
+    for sec in configs:
+        base = os.path.join(args.output, '{}_{}'.format(sec.library, sec.protocol))
+        log('setting up the directory structure for', sec.library, 'as', base)
+        base = os.path.join(args.output, '{}_{}'.format(sec.library, sec.protocol))
+        cluster_output = mkdirp(os.path.join(base, 'clustering'))
+        validation_output = mkdirp(os.path.join(base, 'validation'))
+        annotation_output = mkdirp(os.path.join(base, 'annotation'))
 
         # run the merge
         log('clustering')
-        section.__dict__.update(config['reference'].__dict__)
-        setattr(section, 'output', os.path.join(base, 'clustering'))
-        output_files = merge(section)
-        setattr(section, 'output', None)  # erase before setting up the other jobs
+        setattr(sec, 'output', os.path.join(base, 'clustering'))
+        merge_args = {
+            'output': cluster_output,
+            'max_proximity': sec.max_proximity,
+            'cluster_radius': sv_merge.CLUSTER_RADIUS,
+            'cluster_clique_size': sv_merge.CLUSTER_CLIQUE_SIZE,
+            'max_files': sv_merge.MAX_FILES,
+            'min_clusters_per_file': sv_merge.MIN_CLUSTERS_PER_FILE
+        }
+        merge_args.update(sec.__dict__)
+        output_files = sv_merge.main(Namespace(**merge_args))
+        merge_file_prefix = None
+        for f in output_files:
+            m = re.match('^(?P<prefix>.*\D)\d+.tab$', f)
+            if not m:
+                raise UserWarning('cluster file did not match expected format', f)
+            if merge_file_prefix is None:
+                merge_file_prefix = m.group('prefix')
+            elif merge_file_prefix != m.group('prefix'):
+                raise UserWarning('merge file prefixes are not consistent', output_files)
+
+        # now set up the qsub script for the validation and the held job for the annotation
+        validation_args = {
+            'output': validation_output,
+            'masking': sec.masking,
+            'reference_genome': sec.reference_genome,
+            'annotations': sec.annotations,
+            'library': sec.library,
+            'bam_file': sec.bam_file,
+            'protocol': sec.protocol,
+            'read_length': sec.read_length,
+            'stdev_insert_size': sec.stdev_insert_size,
+            'median_insert_size': sec.median_insert_size,
+            'force_overwrite': args.force_overwrite
+        }
+        for attr in VDEFAULTS.__dict__:
+            validation_args[attr] = getattr(sec, attr)
+
+        qsub = os.path.join(validation_output, 'qsub.sh')
+        validation_jobname = 'validation_{}_{}'.format(sec.library, sec.protocol)
+        with open(qsub, 'w') as fh:
+            log('writing:', qsub)
+            fh.write(
+                QSUB_HEADER.format(
+                    queue=sec.queue, memory=sec.memory, name=validation_jobname, output=validation_output
+                ) + '\n')
+            fh.write('#$ -t {}-{}\n'.format(1, len(output_files)))
+            validation_args = ['--{} {}'.format(k, v) for k, v in validation_args.items()]
+            if sec.stranded:
+                validation_args.append('--stranded')
+            validation_args.append('-n {}$SGE_TASK_ID.tab'.format(merge_file_prefix))
+            fh.write('python sv_validate.py {}\n'.format(' '.join(validation_args)))
+
+        # set up the annotations job
+        # for all files with the right suffix
+        annotation_args = {
+            'output': annotation_output,
+            'reference_genome': sec.reference_genome,
+            'annotations': sec.annotations,
+            'template_metadata': sec.template_metadata,
+            'min_orf_size': sec.min_orf_size,
+            'max_orf_cap': sec.max_orf_cap,
+            'min_domain_mapping_match': sec.min_domain_mapping_match,
+            'domain_regex_filter': sec.domain_regex_filter,
+            'max_proximity': sec.max_proximity
+        }
+        annotation_args = ['--{} {}'.format(k, v) for k, v in annotation_args.items()]
+        if args.force_overwrite:
+            annotation_args.append('--force_overwrite')
+        qsub = os.path.join(annotation_output, 'qsub.sh')
+        annotation_jobname = 'annotation_{}_{}'.format(sec.library, sec.protocol)
+        annotation_jobs.append(annotation_jobname)
+        with open(qsub, 'w') as fh:
+            log('writing:', qsub)
+            fh.write(
+                QSUB_HEADER.format(
+                    queue=sec.queue, memory=sec.memory, name=annotation_jobname, output=annotation_output
+                ) + '\n')
+            fh.write('#$ -hold_jid {}\n'.format(validation_jobname))
+            fh.write('python sv_annotate.py {} -n {}/*{}\n'.format(
+                ' '.join(annotation_args), validation_output, sv_validate.PASS_SUFFIX))
 
 
-    # run sv_merge
-    # set up sv_validate jobs
-    # set up sv_annotate jobs
-    # set up sv_pair jobs
-    """
-        output_folder = '{}/validation/{}_{}'.format(args.output, lib, protocol)
-        qsub_file = '{}/qsub.sh'.format(output_folder)
-        with open(qsub_file, 'w') as fh:
-            log('writing:', qsub_file)
-            fh.write('#!/bin/sh\n')
-            fh.write('#$ -t {}-{}\n'.format(1, len(jobs)))  # array job
-            fh.write('#$ -V\n')  # copy environment variables
-            fh.write('#$ -N svmV_{}\n'.format(lib[-5:]))
-            fh.write('#$ -j y\n')
-            fh.write('#$ -q {}\n'.format(args.queue))
-            fh.write('#$ -o {}/log/\n'.format(output_folder))
-            fh.write('#$ -l mem_free=12G,mem_token=12G,h_vmem=12G\n')
-            fh.write('echo "Starting job: $SGE_TASK_ID"\n')
-            fh.write('python sv_validate.py -n {}$SGE_TASK_ID.tab \\\n\t-o {} \\\n\t-b {} \\\n\t-l {} \\\n'.format(
-                clusterset_file_prefix,
-                output_folder,
-                BAM_FILE_ARGS[lib],
-                lib
-            ))
-            temp = EvidenceSettings()
-            opt = []
-            for param, val in args.__dict__.items():
-                if hasattr(temp, param):
-                    opt.append('--{} {}'.format(param, val))
-            fh.write('\t{}\n'.format(' \\\n\t'.join(opt)))
-            fh.write('echo "Job complete: $SGE_TASK_ID"\n'"""
+    # set up scripts for the pairing held on all of the annotation jobs
+    pairing_output = mkdirp(os.path.join(base, 'pairing'))
+    qsub = os.path.join(pairing_output, 'qsub.sh')
+    with open(qsub, 'w') as fh:
+        log('writing:', qsub)
+
+
 
 if __name__ == '__main__':
     main()

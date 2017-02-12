@@ -36,18 +36,25 @@ go through validation which is the most expensive in terms of time
 """
 
 import os
+import sys
 import argparse
 import re
 from datetime import datetime
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from structural_variant.constants import *
 from structural_variant.error import *
 from structural_variant.interval import Interval
 from structural_variant.breakpoint import BreakpointPair, read_bpp_from_input_file
 from structural_variant.cluster import cluster_breakpoint_pairs
-from structural_variant.annotate import load_reference_genes
+from structural_variant.annotate import load_reference_genes, load_masking_regions
 from structural_variant import __version__
 
 __prog__ = os.path.basename(os.path.realpath(__file__))
+MIN_CLUSTERS_PER_FILE = 50
+MAX_FILES = 100
+CLUSTER_RADIUS = 20
+CLUSTER_CLIQUE_SIZE = 15
+MAX_PROXIMITY = 5000
 
 
 def log(*pos, time_stamp=True):
@@ -76,9 +83,9 @@ def parse_arguments():
         '-v', '--version', action='version', version='%(prog)s version ' + __version__,
         help='Outputs the version number')
     parser.add_argument(
-        '-f', '--overwrite', action='store_true', default=False,
+        '-f', '--force_overwrite', action='store_true', default=False,
         help='set flag to overwrite existing reviewed files')
-    
+
     parser.add_argument(
         '-n', '--inputs', help='path to the input files', required=True, action='append')
     parser.add_argument('library', help='library name')
@@ -86,28 +93,32 @@ def parse_arguments():
     parser.add_argument('output', help='path to the output directory')
     g = parser.add_argument_group('file splitting options')
     g.add_argument(
-        '--max_files', '-j', default=100, type=int, dest='max_files',
+        '--max_files', '-j', default=MAX_FILES, type=int, dest='max_files',
         help='defines the maximum number of files that can be created')
     g.add_argument(
-        '--min_clusters_per_file', '-e', default=50, type=int,
+        '--min_clusters_per_file', '-e', default=MIN_CLUSTERS_PER_FILE, type=int,
         help='defines the minimum number of clusters per file')
     parser.add_argument(
-        '-r', '--cluster_radius', help='radius to use in clustering', default=20, type=int)
+        '-r', '--cluster_radius', help='radius to use in clustering', default=CLUSTER_RADIUS, type=int)
     parser.add_argument(
         '-k', '-cluster_clique_size',
         help='parameter used for computing cliques, smaller is faster, above 20 will be slow',
-        default=15, type=int)
+        default=CLUSTER_CLIQUE_SIZE, type=int)
     g = parser.add_argument_group('filter arguments')
     g.add_argument(
         '--no_filter', default=False, help='If flag is given the clusters will not be filtered '
         'based on lack of annotation', action='store_true')
     g.add_argument(
-        '--filter_proximity', '-p', type=int, default=5000, help='maximum distance to look for annotations'
+        '--max_proximity', '-p', type=int, default=MAX_PROXIMITY, help='maximum distance to look for annotations'
         'from evidence window')
     g.add_argument(
         '--annotations', '-a',
         default='/home/creisle/svn/ensembl_flatfiles/ensembl69_annotations_20170203.json',
         help='path to the reference annotations of genes, transcript, exons, domains, etc.')
+    g.add_argument(
+        '--masking', '-m',
+        default='/home/creisle/svn/svmerge/trunk/hg19_masked_regions.tsv'
+    )
     args = parser.parse_args()
 
     if args.min_clusters_per_file < 1:
@@ -120,12 +131,12 @@ def parse_arguments():
         parser.print_help()
         exit(1)
 
-    if os.path.exists(args.output) and not args.overwrite:
+    if os.path.exists(args.output) and not args.force_overwrite:
         print(
-            '\nerror: output directory {0} already exists. please use the --overwrite option'.format(args.output))
+            '\nerror: output directory {0} already exists. please use the --force_overwrite option'.format(args.output))
         parser.print_help()
         exit(1)
-    
+
     for f in args.inputs:
         if not os.path.exists(f):
             print('\nerror: input file {0} does not exist'.format(f))
@@ -142,6 +153,9 @@ def parse_arguments():
 def main(args):
     # load the input files
     breakpoint_pairs = []
+    log('loading:', args.masking)
+    masks = load_masking_regions(args.masking)
+    mask_filtered = 0
     for f in args.inputs:
         log('loading:', f)
         bpps = read_bpp_from_input_file(
@@ -161,10 +175,18 @@ def main(args):
         for bpp in bpps:
             bpp.data[COLUMNS.tools] = set(';'.split(bpp.data[COLUMNS.tools]))
             bpp.data['files'] = {f}
+            # filter if the breakpoint call is not in the library we are looking for
+            # filter if overlaps a masking region
             if bpp.data[COLUMNS.library] == args.library and bpp.data[COLUMNS.protocol] == args.protocol:
-                breakpoint_pairs.append(bpp)
+                if not any([Interval.overlaps(m, bpp.break1) for m in masks[bpp.break1.chr]]) and \
+                        not any([Interval.overlaps(m, bpp.break2) for m in masks[bpp.break2.chr]]):
+                    breakpoint_pairs.append(bpp)
+                else:
+                    mask_filtered += 1
+
     log('loaded {} breakpoint pairs'.format(len(breakpoint_pairs)))
-    
+    log('filtered', mask_filtered, 'breakpoint pairs based on overlap with a masked region')
+
     # load the reference annotations for filtering uninformative clusters
     if not args.no_filter:
         log('loading:', args.annotations)
@@ -228,8 +250,8 @@ def main(args):
         else:
             # loop over the annotations
             overlaps_gene = False
-            w1 = Interval(cluster.break1.start - args.filter_proximity, cluster.break1.end + args.filter_proximity)
-            w2 = Interval(cluster.break2.start - args.filter_proximity, cluster.break2.end + args.filter_proximity)
+            w1 = Interval(cluster.break1.start - args.max_proximity, cluster.break1.end + args.max_proximity)
+            w2 = Interval(cluster.break2.start - args.max_proximity, cluster.break2.end + args.max_proximity)
             if not cluster.interchromosomal:
                 w1 = w1 | w2
             for gene in REFERENCE_GENES.get(cluster.break1.chr, []):
@@ -295,7 +317,7 @@ def main(args):
     assert(len(jobs) <= args.max_files)
     log('splitting {} clusters into {} files of size ~{}'.format(len(pass_clusters), len(jobs), JOB_SIZE))
     header = sort_columns(header)
-    
+
     for i, job in enumerate(jobs):
         # generate an output file
         filename = '{}{}.tab'.format(clusterset_file_prefix, i + 1)

@@ -23,7 +23,11 @@ with open(g, 'w') as fh:
 # auto build the other documentation
 subprocess.check_call('sphinx-apidoc -f -P -M -o {} {} --separate'.format(
     os.path.join(d, 'source'),
-    os.path.join(d, './../')), shell=True)
+    os.path.join(d, './../structural_variant')), shell=True)
+
+subprocess.check_call('sphinx-apidoc -f -P -M -o {} {}'.format(
+    os.path.join(d, 'source'),
+    os.path.join(d, './../bin')), shell=True)
 
 # now we need to add showing only select special members
 for f in glob.glob(os.path.join(d, 'source/structural_variant.*.rst')):

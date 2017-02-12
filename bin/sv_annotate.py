@@ -41,6 +41,9 @@ General Process
 
 """
 import argparse
+import os
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from structural_variant.breakpoint import read_bpp_from_input_file, BreakpointPair
 from structural_variant.annotate import load_reference_genes, load_reference_genome, load_templates
 from structural_variant.annotate.variant import gather_annotations, FusionTranscript, determine_prime
@@ -51,7 +54,6 @@ import TSV
 from structural_variant.constants import PROTOCOL, SVTYPE, COLUMNS, sort_columns, PRIME
 import re
 import json
-import os
 from datetime import datetime
 import warnings
 import glob
@@ -70,6 +72,9 @@ def parse_arguments():
         '-v', '--version', action='version', version='%(prog)s version ' + __version__,
         help='Outputs the version number'
     )
+    parser.add_argument(
+        '-f', '--force_overwrite', action='store_true', default=False,
+        help='set flag to overwrite existing reviewed files')
     parser.add_argument(
         '--no_draw', default=True, action='store_false',
         help='set flag to suppress svg drawings of putative annotations')
@@ -128,7 +133,7 @@ class Index:
 def main():
     # load the file
     args = parse_arguments()
-    
+
     DRAWINGS_DIRECTORY = os.path.join(args.output, 'drawings')
     TABBED_OUTPUT_FILE = os.path.join(args.output, 'annotations.tab')
     FA_OUTPUT_FILE = os.path.join(args.output, 'annotations.fusion-cdna.fa')
@@ -200,7 +205,7 @@ def main():
     for bpp in annotations:
         if bpp.data[COLUMNS.event_type] not in BreakpointPair.classify(bpp):
             raise AssertionError(
-                'input type does not fit with breakpoint pair description:', 
+                'input type does not fit with breakpoint pair description:',
                 bpp.data[COLUMNS.event_type], BreakpointPair.classify(bpp))
 
     id_prefix = 'annotation_{}-'.format(re.sub(':', '-', re.sub(' ', '_', str(datetime.now()))))
@@ -232,7 +237,7 @@ def main():
                 if fusion_fa_id in fa_sequences:
                     raise AssertionError('should not be duplicate fa sequence ids', fusion_fa_id)
                 fa_sequences[fusion_fa_id] = ft.get_cdna_sequence(t.splicing_pattern)
-                
+
                 # duplicate the row for each translation
                 for tl in t.translations:
                     nrow = dict()

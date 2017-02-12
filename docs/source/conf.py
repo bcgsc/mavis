@@ -35,6 +35,9 @@ d = os.path.abspath('../../')
 sys.path.insert(0, d)
 from structural_variant import __version__
 
+d = os.path.abspath('../../bin')
+sys.path.insert(0, d)
+
 print('added to path:', d)
 
 autoclass_content = 'both'

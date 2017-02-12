@@ -208,6 +208,19 @@ This is only used during visualization.
     chr1    7200000 9200000 p36.23  gpos25
     chr1    9200000 12700000        p36.22  gneg
 
+Masking File
+,,,,,,,,,,,,,,,,,,,,,,,
+
+File which contains regions that we should ignore calls in. This can be used to filter out
+regions with known false positives, bad mapping, centromeres, telomeres etc. An example is
+shown below
+
+.. code-block:: text
+
+    #chr    start   end     name
+    chr1    0       2300000 centromere
+    chr1    9200000 12700000        telomere
+
 |
 
 ------

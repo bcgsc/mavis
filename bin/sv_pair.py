@@ -23,6 +23,9 @@ General Process
 
 """
 import argparse
+import os
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from structural_variant.breakpoint import read_bpp_from_input_file
 from structural_variant.annotate import load_reference_genes
 from structural_variant.pairing import equivalent_events
@@ -33,7 +36,6 @@ from structural_variant.constants import PROTOCOL, SVTYPE, COLUMNS, SPLICE_TYPE,
 from datetime import datetime
 import networkx as nx
 import itertools
-import os
 
 
 def log(*pos, time_stamp=True):
@@ -164,7 +166,7 @@ def main():
             bpp.data[COLUMNS.fusion_cdna_coding_end]
         ]
         return '_'.join([str(k) for k in key])
-    
+
     all_bpp = dict()
     for bpp in bpps:
         key = (bpp.data[COLUMNS.library], bpp.data[COLUMNS.protocol])
@@ -192,7 +194,7 @@ def main():
                 SEQUENCES=SEQUENCES
             ):
                 pairing.add_edge(bpp1, bpp2)
-    
+
     OUTPUT_DIR = os.path.join(args.output, '_'.join(sorted(list(libraries))))
     of = os.path.join(OUTPUT_DIR, 'edges.tab')
     with open(of, 'w') as fh:
