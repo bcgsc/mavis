@@ -178,8 +178,8 @@ def main(args):
             # filter if the breakpoint call is not in the library we are looking for
             # filter if overlaps a masking region
             if bpp.data[COLUMNS.library] == args.library and bpp.data[COLUMNS.protocol] == args.protocol:
-                if not any([Interval.overlaps(m, bpp.break1) for m in masks[bpp.break1.chr]]) and \
-                        not any([Interval.overlaps(m, bpp.break2) for m in masks[bpp.break2.chr]]):
+                if not any([Interval.overlaps(m, bpp.break1) for m in masks.get(bpp.break1.chr, [])]) and \
+                        not any([Interval.overlaps(m, bpp.break2) for m in masks.get(bpp.break2.chr, [])]):
                     breakpoint_pairs.append(bpp)
                 else:
                     mask_filtered += 1

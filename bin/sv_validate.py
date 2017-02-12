@@ -32,7 +32,6 @@ the validation subfolder in the pattern as follows
     `-- summary/
 """
 import subprocess
-import TSV
 import argparse
 import os
 import sys
@@ -42,13 +41,12 @@ from structural_variant import __version__
 from structural_variant.constants import *
 from structural_variant.error import *
 from structural_variant.read_tools import CigarTools
-from structural_variant.breakpoint import Breakpoint, BreakpointPair
+from structural_variant.breakpoint import BreakpointPair, read_bpp_from_input_file
 from structural_variant.read_tools import BamCache
 from structural_variant.validate import Evidence, DEFAULTS
 from structural_variant.blat import blat_contigs
 from structural_variant.interval import Interval
 from structural_variant.annotate import load_masking_regions, load_reference_genome, load_reference_genes
-import itertools
 from datetime import datetime
 import pysam
 
@@ -84,75 +82,27 @@ def mkdirp(dirname):
             raise
 
 
-def read_cluster_file(name, is_stranded):
-    header, rows = TSV.read_file(
+def read_cluster_file(name):
+    bpps = read_bpp_from_input_file(
         name,
         require=[
-            COLUMNS.cluster_id,
-            COLUMNS.cluster_size,
-            COLUMNS.break1_chromosome,
-            COLUMNS.break1_position_start,
-            COLUMNS.break1_position_end,
-            COLUMNS.break1_orientation,
-            COLUMNS.break1_strand,
-            COLUMNS.break2_chromosome,
-            COLUMNS.break2_position_start,
-            COLUMNS.break2_position_end,
-            COLUMNS.break2_orientation,
-            COLUMNS.break2_strand,
-            COLUMNS.opposing_strands
+            COLUMNS.cluster_id
         ],
         cast={
-            COLUMNS.cluster_size: int,
-            COLUMNS.break1_position_start: int,
-            COLUMNS.break1_position_end: int,
-            COLUMNS.break2_position_start: int,
-            COLUMNS.break2_position_end: int,
-            COLUMNS.opposing_strands: TSV.tsv_boolean
+            COLUMNS.cluster_size: int
         }
     )
     evidence = []
-    for row in rows:
-        strands = [(row[COLUMNS.break1_strand], row[COLUMNS.break2_strand])]
-        if is_stranded:
-            strands = itertools.product(
-                STRAND.expand(row[COLUMNS.break1_strand]),
-                STRAND.expand(row[COLUMNS.break2_strand])
-            )
-            strands = [(s1, s2) for s1, s2 in strands if row[COLUMNS.opposing_strands] == (s1 != s2)]
-        if len(strands) == 0:
-            raise UserWarning('error in reading input file. could not resolve strands', row)
-
-        for s1, s2 in strands:
-            bpp = BreakpointPair(
-                Breakpoint(
-                    row[COLUMNS.break1_chromosome],
-                    row[COLUMNS.break1_position_start],
-                    row[COLUMNS.break1_position_end],
-                    strand=s1,
-                    orient=row[COLUMNS.break1_orientation]
-                ),
-                Breakpoint(
-                    row[COLUMNS.break2_chromosome],
-                    row[COLUMNS.break2_position_start],
-                    row[COLUMNS.break2_position_end],
-                    strand=s2,
-                    orient=row[COLUMNS.break2_orientation]
-                ),
-                opposing_strands=row[COLUMNS.opposing_strands]
-            )
-            try:
-                e = Evidence(
-                    bpp,
-                    INPUT_BAM_CACHE,
-                    HUMAN_REFERENCE_GENOME,
-                    annotations=REFERENCE_ANNOTATIONS,
-                    protocol=row[COLUMNS.protocol],
-                    data=row
-                )
-                evidence.append(e)
-            except UserWarning as e:
-                warnings.warn('failed to read cluster {}'.format(repr(e)))
+    for bpp in bpps:
+        e = Evidence(
+            bpp,
+            INPUT_BAM_CACHE,
+            HUMAN_REFERENCE_GENOME,
+            annotations=REFERENCE_ANNOTATIONS,
+            protocol=row[COLUMNS.protocol],
+            data=bpp.data
+        )
+        evidence.append(e)
     return evidence
 
 
@@ -205,7 +155,13 @@ def parse_arguments():
     )
     g = parser.add_argument_group('evidence settings')
     for attr, value in DEFAULTS.__dict__.items():
-        g.add_argument('-{}'.format(attr), default=value, type=type(value), help='see user manual for description')
+        if type(value) == bool:
+            g.add_argument(
+                '--{}'.format(attr), default=value, action='store_false' if value else 'store_true',
+                help='see user manual for desc'
+                )
+        else:
+            g.add_argument('--{}'.format(attr), default=value, type=type(value), help='see user manual for desc')
     g.add_argument('--read_length', type=int, help='the length of the reads in the bam file', required=True)
     g.add_argument('--stdev_insert_size', type=int, help='expected standard deviation in insert sizes', required=True)
     g.add_argument('--median_insert_size', type=int, help='median inset size for pairs in the bam file', required=True)
@@ -256,7 +212,6 @@ def main():
     - TODO: call the breakpoints and summarize the evidence
     """
     args = parse_arguments()
-    EVIDENCE_SETTINGS = EvidenceSettings.parse_args(args)
     FILENAME_PREFIX = re.sub('\.(txt|tsv|tab)$', '', os.path.basename(args.input))
     EVIDENCE_BAM = os.path.join(args.output, FILENAME_PREFIX + '.evidence.bam')
     CONTIG_BAM = os.path.join(args.output, FILENAME_PREFIX + '.contigs.bam')
@@ -277,8 +232,8 @@ def main():
     for chr in MASKED_REGIONS:
         for m in MASKED_REGIONS[chr]:
             if m.name == 'nspan':
-                m.position.start -= EVIDENCE_SETTINGS.read_length
-                m.position.end += EVIDENCE_SETTINGS.read_length
+                m.position.start -= args.read_length
+                m.position.end += args.read_length
 
     # load the reference genome
     log('loading the reference genome:', args.reference_genome)
@@ -293,7 +248,30 @@ def main():
     split_read_contigs = set()
     chr_to_index = {}
 
-    clusters = read_cluster_file(args.input, args.stranded)
+    bpps = read_bpp_from_input_file(
+        args.input,
+        require=[
+            COLUMNS.cluster_id
+        ],
+        cast={
+            COLUMNS.cluster_size: int
+        }
+    )
+    clusters = []
+    for bpp in bpps:
+        e = Evidence(
+            bpp,
+            INPUT_BAM_CACHE,
+            HUMAN_REFERENCE_GENOME,
+            annotations=REFERENCE_ANNOTATIONS,
+            protocol=bpp.data[COLUMNS.protocol],
+            data=bpp.data,
+            stdev_insert_size=args.stdev_insert_size,
+            read_length=args.read_length,
+            median_insert_size=args.median_insert_size
+        )
+        clusters.append(e)
+    
     failed_cluster_rows = []
     filtered_clusters = []
     for cluster in clusters:

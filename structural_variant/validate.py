@@ -298,16 +298,105 @@ class Evidence:
         Returns:
             Interval: the range where reads should be read from the bam looking for evidence for this event
         """
+        print('generate_transcriptome_window')
         transcripts = overlapping_transcripts(annotations, breakpoint)
         window = cls.generate_window(
             breakpoint, read_length, median_insert_size, call_error, stdev_insert_size, stdev_count_abnormal)
 
-        tgt_left = breakpoint.start - window.start  # amount to expand to the left
-        tgt_right = window.end - breakpoint.end  # amount to expand to the right
-
+        tgt_left = breakpoint.start - window.start + 1  # amount to expand to the left
+        tgt_right = window.end - breakpoint.end + 1  # amount to expand to the right
+        print(tgt_left, tgt_right)
         if len(transcripts) == 0:  # case 1. no overlapping transcripts
+            print('no overlapping transcripts')
             return window
 
+        intervals = [breakpoint]
+
+        for ust in transcripts:
+            print('t', ust.name)
+            for t in ust.transcripts:
+                print('t', ust.name)
+                curr = Interval(breakpoint.start, breakpoint.end)
+
+                if breakpoint.start < ust.start:
+                    print('before the start')
+                    curr = curr | Interval(breakpoint.start - tgt_left, breakpoint.start)
+                elif breakpoint.start > ust.end:
+                    print('after the end')
+                    tgt = tgt_left - (breakpoint.start - ust.end)
+                    c = t.convert_genomic_to_cdna(ust.end)
+                    g = ust.start - (tgt - c)
+                    if c >= tgt:
+                        g = t.convert_cdna_to_genomic(c - tgt + 1)
+                    curr = curr | Interval(g, breakpoint.start)
+                else:
+                    for ex1, ex2 in zip(ust.exons, ust.exons[1:]): 
+                        if (breakpoint.start >= ex1.start and breakpoint.start <= ex1.end) or \
+                                (breakpoint.start >= ex2.start and breakpoint.start <= ex2.end):
+                            print('exonic')
+                            # in an exon
+                            c = t.convert_genomic_to_cdna(breakpoint.start)
+                            g = ust.start - (tgt_left - c + 1)
+                            if c >= tgt_left:
+                                g = t.convert_cdna_to_genomic(c - tgt_left + 1)
+                            curr = curr | Interval(g, breakpoint.start)
+                        elif breakpoint.start > ex1.end and breakpoint.start < ex2.start:
+                            print('intronic')
+                            # in an intron
+                            tgt = tgt_left - (breakpoint.start - ex1.end)
+                            print('adjusted tgt', tgt_left, tgt)
+                            c = t.convert_genomic_to_cdna(ex1.end)
+                            print('c', c)
+                            g = ust.start - (tgt - c + 1)
+                            if c >= tgt:
+                                print('dont need the whole thing', c - tgt)
+                                g = t.convert_cdna_to_genomic(c - tgt)
+                            curr = curr | Interval(g, breakpoint.start)
+                        else:
+                            continue
+                        break
+                if breakpoint.end > ust.end:
+                    print('after the end')
+                    curr = curr | Interval(breakpoint.end, breakpoint.end + tgt_right)
+                elif breakpoint.end < ust.start:
+                    print('before the start')
+                    tgt = tgt_right - (ust.start - breakpoint.end)
+                    c = t.convert_genomic_to_cdna(ust.end)
+                    cr = len(t) - c
+                    g = ust.end + (tgt - cr)
+                    if cr > tgt:
+                        cr -= tgt
+                        g = t.convert_cdna_to_genomic(len(t) - cr + tgt)
+                    curr = curr | Interval(g, breakpoint.end)
+                else:
+                    for ex1, ex2 in zip(ust.exons, ust.exons[1:]): 
+                        if (breakpoint.end >= ex1.start and breakpoint.end <= ex1.end) or \
+                                (breakpoint.end >= ex2.start and breakpoint.end <= ex2.end):
+                            # in an exon
+                            print('exonic')
+                            c = t.convert_genomic_to_cdna(breakpoint.end)
+                            cr = len(t) - c
+                            g = ust.end + (tgt_right - cr)
+                            print(c, cr)
+                            if cr > tgt_right:
+                                print('dont need the whole thing')
+                                g = t.convert_cdna_to_genomic(c + tgt_right - 1)
+                            curr = curr | Interval(breakpoint.end, g)
+                        elif breakpoint.end > ex1.end and breakpoint.end < ex2.start:
+                            # in an intron
+                            print('intronic')
+                            tgt = tgt_left - (breakpoint.end - ex1.end)
+                            c = t.convert_genomic_to_cdna(ex1.end)
+                            g = ust.end - (tgt - c)
+                            if c >= tgt:
+                                g = t.convert_cdna_to_genomic(c - tgt + 1)
+                            curr = curr | Interval(g, breakpoint.end)
+                        else:
+                            continue
+                        break
+                intervals.append(curr)
+        return Interval.union(*intervals)
+        
         for t in transcripts:
             current_length = 0
             exons = sorted(t.exons, key=lambda x: x.start)
@@ -399,8 +488,9 @@ class Evidence:
         d = dict()
         d.update(DEFAULTS.__dict__)
         d.update(kwargs)
-        if any([x not in d for x in ['read_length', 'stdev_insert_size', 'median_insert_size']]):
-            raise KeyError('required argument missing')
+        REQ = ['read_length', 'stdev_insert_size', 'median_insert_size']
+        if any([x not in d for x in REQ]):
+            raise KeyError('required argument missing', [x for x in REQ if x not in d])
         self.settings = Namespace(**d)
         self.bam_cache = bam_cache
         self.data = data

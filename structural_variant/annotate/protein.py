@@ -281,7 +281,7 @@ class Translation(BioInterval):
             pos (int): the cdna position
 
         Returns:
-            Interval: the cdna equivalent (with CODON_SIZE uncertainty)
+            int: the protein/amino-acid position
 
         Raises:
             AttributeError: the cdna position is not translated
@@ -295,17 +295,51 @@ class Translation(BioInterval):
         return aa
 
     def convert_genomic_to_cds(self, pos):
+        """
+        converts a genomic position to its cds (coding sequence) equivalent
+
+        Args:
+            pos (int): the genomic position
+
+        Returns:
+            int: the cds position (negative if before the initiation start site)
+        """
         cdna_pos = self.transcript.convert_genomic_to_cdna(pos)
         if cdna_pos < self.start:
             return cdna_pos - self.start
         return cdna_pos - self.start + 1
 
     def convert_genomic_to_cds_notation(self, pos):
+        """
+        converts a genomic position to its cds (coding sequence) equivalent using hgvs cds notation
+
+        Args:
+            pos (int): the genomic position
+
+        Returns:
+            str: the cds position notation
+
+        Example:
+            >>> tl = Translation(...)
+            
+            # a position before the translation start
+            >>> tl.convert_genomic_to_cds_notation(1010)
+            '-50'
+            
+            # a position after the translation end
+            >>> tl.convert_genomic_to_cds_notation(2031)
+            '*72'
+
+            # an intronic position
+            >>> tl.convert_genomic_to_cds_notation(1542)
+            '50+10'
+            >>> tl.convert_genomic_to_cds_notation(1589)
+            '51-14'
+        """
         try:
             cds_pos = self.convert_genomic_to_cds(pos)
             if cds_pos > len(self):
                 return '*{}'.format(cds_pos - len(self))
-            print(cds_pos, self)
             return '{}'.format(cds_pos)
         except DiscontinuousMappingError as err:  # should give you the nearest positions
             # between two exons?

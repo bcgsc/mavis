@@ -842,8 +842,8 @@ class Diagram:
             style=self.FONT_STYLE.format(font_size=self.TRANSLATION_FONT_SIZE, text_anchor='start'),
             class_='label'
         ))
-        gt.add(Tag('title', 'cds: {}_{}; aa length: {}'.format(
-            translation.start, translation.end, len(translation) // CODON_SIZE)))
+        gt.add(Tag('title', 'translation  cdna({}_{})  c.{}_{}  p.{}_{}'.format(
+            translation.start, translation.end, 1, len(translation), 1, len(translation) // CODON_SIZE)))
         py = h
         # now draw the domain tracks
         # need to convert the domain AA positions to cds positions to genomic
@@ -880,16 +880,17 @@ class Diagram:
                 gdr.add(canvas.rect(
                     (s, 0), (t - s + 1, self.DOMAIN_TRACK_HEIGHT),
                     fill=fill, class_='region'))
-                gdr.add(Tag('title', 'Domain {} region {}_{}aa{}'.format(
+                gdr.add(Tag('title', 'domain {} region p.{}_{}{}'.format(
                     d.name if d.name else '', region.start, region.end,
-                    ' matched {}%'.format(percent_match) if percent_match is not None else '')))
+                    '  matched({}%)'.format(percent_match) if percent_match is not None else '')))
                 gd.add(gdr)
             gd.translate(0, py)
 
             f = self.LABEL_COLOR if not self.DYNAMIC_LABELS else Diagram.dynamic_label_color(self.DOMAIN_COLOR)
             label_group = None
             if re.match(self.PFAM_DOMAIN, d.name):
-                label_group = canvas.a(self.PFAM_LINK.format(d), target='_blank')
+                label_group = canvas.a(
+                    self.PFAM_LINK.format(d), target='_blank')
             else:
                 label_group = canvas.g()
             gd.add(label_group)
@@ -1333,7 +1334,7 @@ class Diagram:
             l = canvas.line((width, y), (width, height))
             l.stroke(self.BREAKPOINT_COLOR, width=self.BREAKPOINT_ORIENT_STROKE_WIDTH)
             g.add(l)
-        g.add(Tag('title', 'Breakpoint {}:g.{}-{} strand={} orient={}'.format(
+        g.add(Tag('title', 'Breakpoint {}:g.{}_{}{} {}'.format(
             breakpoint.chr, breakpoint.start, breakpoint.end, breakpoint.strand, breakpoint.orient)))
         return g
 
@@ -1395,19 +1396,20 @@ class Diagram:
                 class_='label'
             )
             g.add(t)
-            title = 'Exon {} g.{}_{} L={}'.format(
-                exon.name if exon.name else '', exon.start, exon.end, len(exon))
+            title = 'Exon {}  g.{}_{}'.format(
+                exon.name if exon.name else '', exon.start, exon.end)
             if translation:
-                cds_start = translation.convert_genomic_to_cds(exon.start)
-                cds_end = translation.convert_genomic_to_cds(exon.end)
-                if cds_end < cds_start:
+                cds_start = translation.convert_genomic_to_cds_notation(exon.start)
+                cds_end = translation.convert_genomic_to_cds_notation(exon.end)
+                if exon.get_strand() == STRAND.NEG:
                     cds_start, cds_end = cds_end, cds_start
-                title += ' c.{}_{}'.format(cds_start, cds_end)
+                title += '  c.{}_{}'.format(cds_start, cds_end)
                 cdna_start = translation.transcript.convert_genomic_to_cdna(exon.start)
                 cdna_end = translation.transcript.convert_genomic_to_cdna(exon.end)
                 if cdna_end < cdna_start:
                     cdna_start, cdna_end = cdna_end, cdna_start
-                title += ' cdna({}_{})'.format(cdna_start, cdna_end)
+                title += '  cdna({}_{})'.format(cdna_start, cdna_end)
+            title += '  length({})'.format(len(exon))
             g.add(Tag('title', title))
         return g
 
@@ -1431,7 +1433,8 @@ class Diagram:
         )
         group.add(scaffold)
         scaffold.translate((0, self.BREAKPOINT_TOP_MARGIN + self.TEMPLATE_TRACK_HEIGHT / 2 - self.SCAFFOLD_HEIGHT / 2))
-        group.add(canvas.text(
+        label_group = canvas.g()
+        label_group.add(canvas.text(
             labels.add(template, self.TEMPLATE_LABEL_PREFIX),
             insert=(
                 0 - self.PADDING, self.BREAKPOINT_TOP_MARGIN + self.TEMPLATE_TRACK_HEIGHT / 2 +
@@ -1440,6 +1443,8 @@ class Diagram:
             style=self.FONT_STYLE.format(font_size=self.LABEL_FONT_SIZE, text_anchor='end'),
             class_='label'
         ))
+        label_group.add(Tag('title', 'template {}'.format(template.name)))
+        group.add(label_group)
 
         for band in template.bands:
             s = Interval.convert_pos(mapping, band[0])
@@ -1468,8 +1473,8 @@ class Diagram:
                 )
             bgroup.add(r)
             bgroup.add(
-                Tag('title', 'template {}: band {} {}-{} L={}M'.format(
-                    template.name, band.name, band.start, band.end, round(len(band) / 1000000, 0))))
+                Tag('title', 'cytoband  {0}:y.{1}  {0}:g.{2}_{3}'.format(
+                    template.name, band.name, band.start, band.end)))
             bgroup.translate((s, self.BREAKPOINT_TOP_MARGIN))
             group.add(bgroup)
         # now draw the breakpoints overtop

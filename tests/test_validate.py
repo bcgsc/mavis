@@ -1,11 +1,11 @@
 from structural_variant.breakpoint import Breakpoint, BreakpointPair
 from structural_variant.validate import *
-from structural_variant.annotate import load_reference_genome, Gene, usTranscript
+from structural_variant.annotate import load_reference_genome, Gene, usTranscript, Transcript
 from structural_variant.constants import ORIENT, READ_PAIR_TYPE
 from structural_variant.read_tools import BamCache
 from tests import MockRead
 import unittest
-from tests import REFERENCE_GENOME_FILE,BAM_INPUT
+from tests import REFERENCE_GENOME_FILE, BAM_INPUT
 
 REFERENCE_GENOME = None
 
@@ -19,25 +19,27 @@ def setUpModule():
     BAM_CACHE = BamCache(BAM_INPUT)
     global READS
     READS = {}
-    for read in BAM_CACHE.fetch('reference3',1,8000):
+    for read in BAM_CACHE.fetch('reference3', 1, 8000):
         if read.qname not in READS:
-            READS[read.qname] = [None,None]
+            READS[read.qname] = [None, None]
         if read.is_supplementary:
             continue
         if read.is_read1:
             READS[read.qname][0] = read
         else:
             READS[read.qname][1] = read
+    # add a check to determine if it is the expected bam file
 
-
-    #add a check to determine if it is the expected bam file
 
 class TestEvidenceWindow(unittest.TestCase):
     def setUp(self):
         self.annotations = {}
         gene = Gene('1', 1, 9999, name='KRAS', strand=STRAND.POS)
-        t1 = usTranscript(gene=gene, exons=[(1000, 1100), (1400, 1500), (1701, 1750), (3001, 4000)])
+        t1 = usTranscript(gene=gene, exons=[(1001, 1100), (1401, 1500), (1701, 1750), (3001, 4000)])
         gene.unspliced_transcripts.append(t1)
+        for spl in t1.generate_splicing_patterns():
+            t = Transcript(t1, spl)
+            t1.transcripts.append(t)
         self.annotations[gene.chr] = [gene]
 
     def test_generate_window_orient_ns(self):

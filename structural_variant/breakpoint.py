@@ -599,7 +599,7 @@ def read_bpp_from_input_file(filename, expand_ns=True, **kwargs):
         COLUMNS.break2_strand: STRAND.NS,
         COLUMNS.opposing_strands: None
     })
-    kwargs.setdefault('_in').update(
+    kwargs.setdefault('_in', {}).update(
         {
             COLUMNS.break1_orientation: ORIENT,
             COLUMNS.break1_strand: STRAND,

@@ -1,3 +1,10 @@
+"""
+wrapper script for the pipeline
+
+- sets up the directory structure
+- runs the clustering
+- sets up qsub scripts for validation, annotation and pairing jobs
+"""
 from argparse import Namespace
 from datetime import datetime
 import argparse
@@ -14,13 +21,14 @@ from structural_variant.constants import PROTOCOL
 import sv_merge
 import sv_validate
 
+basedir = os.path.dirname(__file__)
 
 QSUB_HEADER = """#!/bin/bash
 #$ -V
 #$ -N {name}
 #$ -q {queue}
 #$ -o {output}
-#$ -l 'mem_free': {memory}G,'mem_token': {memory}G,'h_vmem': {memory}G
+#$ -l mem_free={memory}G,mem_token={memory}G,h_vmem={memory}G
 #$ -j y"""
 
 DEFAULTS = Namespace(
@@ -143,7 +151,6 @@ def read_config(filepath):
         d.update(section)
         config[lib] = Namespace(**d)
 
-
     return [config[l] for l in library_sections]
 
 
@@ -223,11 +230,10 @@ def main():
                     queue=sec.queue, memory=sec.memory, name=validation_jobname, output=validation_output
                 ) + '\n')
             fh.write('#$ -t {}-{}\n'.format(1, len(output_files)))
-            validation_args = ['--{} {}'.format(k, v) for k, v in validation_args.items()]
-            if sec.stranded:
-                validation_args.append('--stranded')
+            temp = ['--{} {}'.format(k, v) for k, v in validation_args.items() if type(v) != bool]
+            validation_args = temp + ['--{}'.format(k) for k, v in validation_args.items() if type(v) == bool]
             validation_args.append('-n {}$SGE_TASK_ID.tab'.format(merge_file_prefix))
-            fh.write('python sv_validate.py {}\n'.format(' '.join(validation_args)))
+            fh.write('python {}/sv_validate.py {}\n'.format(basedir, ' \\\n\t'.join(validation_args)))
 
         # set up the annotations job
         # for all files with the right suffix
@@ -242,9 +248,9 @@ def main():
             'domain_regex_filter': sec.domain_regex_filter,
             'max_proximity': sec.max_proximity
         }
-        annotation_args = ['--{} {}'.format(k, v) for k, v in annotation_args.items()]
-        if args.force_overwrite:
-            annotation_args.append('--force_overwrite')
+        temp = ['--{} {}'.format(k, v) for k, v in annotation_args.items() if type(v) != bool]
+        annotation_args = temp + ['--{}'.format(k) for k, v in annotation_args.items() if type(v) == bool]
+        annotation_args.append('--input {}/*{}'.format(validation_output, sv_validate.PASS_SUFFIX))
         qsub = os.path.join(annotation_output, 'qsub.sh')
         annotation_jobname = 'annotation_{}_{}'.format(sec.library, sec.protocol)
         annotation_jobs.append(annotation_jobname)
@@ -255,16 +261,13 @@ def main():
                     queue=sec.queue, memory=sec.memory, name=annotation_jobname, output=annotation_output
                 ) + '\n')
             fh.write('#$ -hold_jid {}\n'.format(validation_jobname))
-            fh.write('python sv_annotate.py {} -n {}/*{}\n'.format(
-                ' '.join(annotation_args), validation_output, sv_validate.PASS_SUFFIX))
-
+            fh.write('python {}/sv_annotate.py {}\n'.format(basedir, ' \\\n\t'.join(annotation_args)))
 
     # set up scripts for the pairing held on all of the annotation jobs
     pairing_output = mkdirp(os.path.join(base, 'pairing'))
     qsub = os.path.join(pairing_output, 'qsub.sh')
     with open(qsub, 'w') as fh:
         log('writing:', qsub)
-
 
 
 if __name__ == '__main__':

@@ -277,6 +277,10 @@ COLUMNS = Vocab(
     annotation_id=Column(
         'annotation_id',
         'Identifier for the annotation step'),
+    product_id=Column(
+        'product_id',
+        'Unique identifier of the final fusion (including splicing and ORF) decision from the annotation step'
+    ),
     event_type=Column(
         'event_type',
         'The classification of the event. Has the following possible values: {}'.format(', '.join(SVTYPE.values()))),
