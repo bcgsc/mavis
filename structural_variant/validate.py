@@ -49,7 +49,7 @@ DEFAULTS = Namespace(
         the median insert size of paired end reads
 
     stdev_count_abnormal
-        the number of standard deviations away from the normal considered expected and therefore not qualifying as 
+        the number of standard deviations away from the normal considered expected and therefore not qualifying as
         flanking reads
 
     call_error
@@ -313,157 +313,103 @@ class Evidence:
         intervals = [breakpoint]
 
         for ust in transcripts:
+            mapping = {}
+            cdna_length = sum([len(e) for e in ust.exons])
+            s = 1
+            for ex in ust.exons:
+                mapping[Interval(ex.start, ex.end)] = Interval(s, s + len(ex) - 1)
+                s += len(ex)
+            reverse_mapping = {}
+            for k, v in mapping.items():
+                reverse_mapping[v] = k
             print('t', ust.name)
-            for t in ust.transcripts:
-                print('t', ust.name)
-                curr = Interval(breakpoint.start, breakpoint.end)
+            curr = Interval(breakpoint.start, breakpoint.end)
 
-                if breakpoint.start < ust.start:
-                    print('before the start')
-                    curr = curr | Interval(breakpoint.start - tgt_left, breakpoint.start)
-                elif breakpoint.start > ust.end:
-                    print('after the end')
-                    tgt = tgt_left - (breakpoint.start - ust.end)
-                    c = t.convert_genomic_to_cdna(ust.end)
-                    g = ust.start - (tgt - c)
-                    if c >= tgt:
-                        g = t.convert_cdna_to_genomic(c - tgt + 1)
-                    curr = curr | Interval(g, breakpoint.start)
-                else:
-                    for ex1, ex2 in zip(ust.exons, ust.exons[1:]): 
-                        if (breakpoint.start >= ex1.start and breakpoint.start <= ex1.end) or \
-                                (breakpoint.start >= ex2.start and breakpoint.start <= ex2.end):
-                            print('exonic')
-                            # in an exon
-                            c = t.convert_genomic_to_cdna(breakpoint.start)
-                            g = ust.start - (tgt_left - c + 1)
-                            if c >= tgt_left:
-                                g = t.convert_cdna_to_genomic(c - tgt_left + 1)
-                            curr = curr | Interval(g, breakpoint.start)
-                        elif breakpoint.start > ex1.end and breakpoint.start < ex2.start:
-                            print('intronic')
+            if breakpoint.start < ust.start:
+                print('before the start')
+                curr = curr | Interval(breakpoint.start - tgt_left, breakpoint.start)
+            elif breakpoint.start > ust.end:
+                print('after the end')
+                tgt = tgt_left - (breakpoint.start - ust.end)
+                c = Interval.convert_pos(ust.end)
+                g = ust.start - (tgt - c)
+                if c >= tgt:
+                    g = Interval.convert_pos(reverse_mapping, c - tgt + 1)
+                curr = curr | Interval(g, breakpoint.start)
+            else:
+                for ex1, ex2 in zip(ust.exons, ust.exons[1:]):
+                    if (breakpoint.start >= ex1.start and breakpoint.start <= ex1.end) or \
+                            (breakpoint.start >= ex2.start and breakpoint.start <= ex2.end):
+                        print('exonic', ex1, ex2, breakpoint.start, 'left')
+                        # in an exon
+                        c = Interval.convert_pos(mapping, breakpoint.start)
+                        g = ust.start - (tgt_left - c + 1)
+                        if c >= tgt_left:
+                            g = Interval.convert_pos(reverse_mapping, c - tgt_left + 1)
+                        curr = curr | Interval(g, breakpoint.start)
+                        break
+                    elif breakpoint.start > ex1.end and breakpoint.start < ex2.start:
+                        print('intronic', ex1, ex2, breakpoint.start, 'left')
+                        isize = breakpoint.start - ex1.end
+                        if isize >= tgt_left:
+                            curr = curr | Interval(breakpoint.start - tgt_left + 1, breakpoint.start)
+                        else:
                             # in an intron
-                            tgt = tgt_left - (breakpoint.start - ex1.end)
+                            tgt = tgt_left - isize
                             print('adjusted tgt', tgt_left, tgt)
-                            c = t.convert_genomic_to_cdna(ex1.end)
+                            c = Interval.convert_pos(mapping, ex1.end)
                             print('c', c)
                             g = ust.start - (tgt - c + 1)
                             if c >= tgt:
                                 print('dont need the whole thing', c - tgt)
-                                g = t.convert_cdna_to_genomic(c - tgt)
+                                g = Interval.convert_pos(reverse_mapping, c - tgt + 1)
                             curr = curr | Interval(g, breakpoint.start)
-                        else:
-                            continue
+                            break
+            if breakpoint.end > ust.end:
+                print('after the end')
+                curr = curr | Interval(breakpoint.end, breakpoint.end + tgt_right)
+            elif breakpoint.end < ust.start:
+                print('before the start')
+                tgt = tgt_right - (ust.start - breakpoint.end)
+                c = Interval.convert_pos(mapping, ust.end)
+                cr = cdna_length - c
+                g = ust.end + (tgt - cr)
+                if cr > tgt:
+                    cr -= tgt
+                    g = Interval.convert_pos(reverse_mapping, cdna_length - cr + tgt)
+                curr = curr | Interval(g, breakpoint.end)
+            else:
+                for ex1, ex2 in zip(ust.exons, ust.exons[1:]):
+                    if (breakpoint.end >= ex1.start and breakpoint.end <= ex1.end) or \
+                            (breakpoint.end >= ex2.start and breakpoint.end <= ex2.end):
+                        # in an exon
+                        print('exonic', ex1, ex2, breakpoint.end, 'right')
+                        c = Interval.convert_pos(mapping, breakpoint.end)
+                        rem_c = cdna_length - c
+                        g = ust.end + (tgt_right - cdna_length + rem_c)
+                        if rem_c > tgt_right:
+                            print('dont need the whole thing')
+                            g = Interval.convert_pos(reverse_mapping, c + tgt_right - 1)
+                        curr = curr | Interval(breakpoint.end, g)
                         break
-                if breakpoint.end > ust.end:
-                    print('after the end')
-                    curr = curr | Interval(breakpoint.end, breakpoint.end + tgt_right)
-                elif breakpoint.end < ust.start:
-                    print('before the start')
-                    tgt = tgt_right - (ust.start - breakpoint.end)
-                    c = t.convert_genomic_to_cdna(ust.end)
-                    cr = len(t) - c
-                    g = ust.end + (tgt - cr)
-                    if cr > tgt:
-                        cr -= tgt
-                        g = t.convert_cdna_to_genomic(len(t) - cr + tgt)
-                    curr = curr | Interval(g, breakpoint.end)
-                else:
-                    for ex1, ex2 in zip(ust.exons, ust.exons[1:]): 
-                        if (breakpoint.end >= ex1.start and breakpoint.end <= ex1.end) or \
-                                (breakpoint.end >= ex2.start and breakpoint.end <= ex2.end):
-                            # in an exon
-                            print('exonic')
-                            c = t.convert_genomic_to_cdna(breakpoint.end)
-                            cr = len(t) - c
-                            g = ust.end + (tgt_right - cr)
-                            print(c, cr)
-                            if cr > tgt_right:
+                    elif breakpoint.end > ex1.end and breakpoint.end < ex2.start:
+                        # in an intron
+                        print('intronic', ex1, ex2, breakpoint.end, 'right')
+                        isize = ex2.start - breakpoint.end
+                        if isize >= tgt_right:
+                            curr = curr | Interval(breakpoint.end, breakpoint.end + tgt_right - 1)
+                        else:
+                            tgt = tgt_right - isize
+                            c = Interval.convert_pos(mapping, ex2.start)
+                            rem_c = cdna_length - c
+                            g = ust.end + (tgt - rem_c)
+                            if rem_c >= tgt:
                                 print('dont need the whole thing')
-                                g = t.convert_cdna_to_genomic(c + tgt_right - 1)
+                                g = Interval.convert_pos(reverse_mapping, c + tgt - 1)
                             curr = curr | Interval(breakpoint.end, g)
-                        elif breakpoint.end > ex1.end and breakpoint.end < ex2.start:
-                            # in an intron
-                            print('intronic')
-                            tgt = tgt_left - (breakpoint.end - ex1.end)
-                            c = t.convert_genomic_to_cdna(ex1.end)
-                            g = ust.end - (tgt - c)
-                            if c >= tgt:
-                                g = t.convert_cdna_to_genomic(c - tgt + 1)
-                            curr = curr | Interval(g, breakpoint.end)
-                        else:
-                            continue
                         break
-                intervals.append(curr)
+            intervals.append(curr)
         return Interval.union(*intervals)
-        
-        for t in transcripts:
-            current_length = 0
-            exons = sorted(t.exons, key=lambda x: x.start)
-            current_interval = Interval(breakpoint.start, breakpoint.end)
-            segments = []
-
-            # first going left
-            lleft = 0
-            epos, in_prev_intron = Interval.position_in_range(exons, (breakpoint.start, breakpoint.start))
-            if in_prev_intron:
-                epos -= 1
-                if epos >= 0:
-                    nexxt = exons[epos]
-                    l = Interval(nexxt.end + 1, breakpoint.start - 1)
-                    if lleft + len(l) > tgt_left:
-                        # only need part of the intron
-                        l = Interval(breakpoint.start - tgt_left + lleft, breakpoint.start - 1)
-                    segments.append(l)
-                    lleft += len(l)
-            while epos >= 0 and lleft < tgt_left:
-                e = Interval(exons[epos].start, min([exons[epos].end, breakpoint.start - 1]))
-                if lleft + len(e) <= tgt_left:  # add the entire exon
-                    segments.append(e)
-                    lleft += len(e)
-                else:  # only need a part of the exon
-                    e = Interval(e.end - tgt_left + lleft + 1, e.end)
-                    segments.append(e)
-                    lleft += len(e)
-                epos -= 1
-            if lleft < tgt_left:
-                assert(epos == -1)
-                # add genomic region from ahead of the first exon
-                l = Interval(exons[0].start - tgt_left + lleft, exons[0].start - 1)
-                lleft += len(l)
-                segments.append(l)
-            assert(lleft == tgt_left)
-
-            # first going left
-            lright = 0
-            epos, in_prev_intron = Interval.position_in_range(exons, (breakpoint.start, breakpoint.start))
-            if in_prev_intron:
-                curr = exons[epos]
-                l = Interval(breakpoint.end + 1, curr.start - 1)
-                if lright + len(l) > tgt_right:
-                    # only need part of the intron
-                    l  = Interval(breakpoint.end + 1, breakpoint.end + tgt_right - lright)
-                lright += len(l)
-                segments.append(l)
-            while epos < len(exons) and lright < tgt_right:
-                e = Interval(max([exons[epos].start, breakpoint.end + 1]), exons[epos].end)
-                if lright + len(e) <= tgt_right:  # add the entire exon
-                    segments.append(e)
-                    lright += len(e)
-                else:  # only need a part of the exon
-                    e = Interval(e.start, e.start + tgt_right - lright - 1)
-                    segments.append(e)
-                    lright += len(e)
-                epos += 1
-            if lright < tgt_right:
-                assert(epos == len(exons))
-                # add genomic region from after of the last exon
-                l = Interval(exons[-1].end + 1, exons[-1].end + 1 + tgt_right - lright - 1)
-                lright += len(l)
-                segments.append(l)
-            assert(lright == tgt_right)
-            window = window | Interval.union(*segments)
-        return window
 
     def __init__(
             self,

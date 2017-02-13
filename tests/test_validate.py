@@ -72,6 +72,13 @@ class TestEvidenceWindow(unittest.TestCase):
             b, self.annotations, read_length=100, median_insert_size=250, call_error=10, stdev_insert_size=50, stdev_count_abnormal=2)
         self.assertEqual(w1, w2)
 
+        b = Breakpoint(chr='1', start=500, orient=ORIENT.RIGHT)
+        w1 = Evidence.generate_window(
+            b, read_length=100, median_insert_size=250, call_error=10, stdev_insert_size=50, stdev_count_abnormal=2)
+        w2 = Evidence.generate_transcriptome_window(
+            b, self.annotations, read_length=100, median_insert_size=250, call_error=10, stdev_insert_size=50, stdev_count_abnormal=2)
+        self.assertEqual(w1, w2)
+
     def test_generate_transcriptome_window_after_end(self):
         b = Breakpoint(chr='1', start=5000, orient=ORIENT.RIGHT)
         w1 = Evidence.generate_window(
@@ -329,7 +336,7 @@ class TestEvidence(unittest.TestCase):
         self.assertEqual(149, break1.end)
         self.assertEqual(81, break2.start)
         self.assertEqual(150, break2.end)
-    
+
     def test__call_by_flanking_reads_close_to_zero(self):
         # this test is for ensuring that if a theoretical window calculated for the
         # first breakpoint overlaps the actual coverage for the second breakpoint (or the reverse)

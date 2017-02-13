@@ -311,7 +311,8 @@ class Translation(BioInterval):
 
     def convert_genomic_to_cds_notation(self, pos):
         """
-        converts a genomic position to its cds (coding sequence) equivalent using hgvs cds notation
+        converts a genomic position to its cds (coding sequence) equivalent using
+        `hgvs <http://www.hgvs.org/mutnomen/recs-DNA.html>`_ cds notation
 
         Args:
             pos (int): the genomic position
@@ -321,15 +322,12 @@ class Translation(BioInterval):
 
         Example:
             >>> tl = Translation(...)
-            
             # a position before the translation start
             >>> tl.convert_genomic_to_cds_notation(1010)
             '-50'
-            
             # a position after the translation end
             >>> tl.convert_genomic_to_cds_notation(2031)
             '*72'
-
             # an intronic position
             >>> tl.convert_genomic_to_cds_notation(1542)
             '50+10'
