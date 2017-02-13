@@ -313,6 +313,7 @@ class Evidence:
         intervals = [breakpoint]
 
         for ust in transcripts:
+            print('ust', ust)
             mapping = {}
             cdna_length = sum([len(e) for e in ust.exons])
             s = 1
@@ -386,9 +387,8 @@ class Evidence:
                         print('exonic', ex1, ex2, breakpoint.end, 'right')
                         c = Interval.convert_pos(mapping, breakpoint.end)
                         rem_c = cdna_length - c
-                        g = ust.end + (tgt_right - cdna_length + rem_c)
+                        g = ust.end + (tgt_right - rem_c)
                         if rem_c > tgt_right:
-                            print('dont need the whole thing')
                             g = Interval.convert_pos(reverse_mapping, c + tgt_right - 1)
                         curr = curr | Interval(breakpoint.end, g)
                         break
@@ -396,7 +396,7 @@ class Evidence:
                         # in an intron
                         print('intronic', ex1, ex2, breakpoint.end, 'right')
                         isize = ex2.start - breakpoint.end
-                        if isize >= tgt_right:
+                        if isize > tgt_right:
                             curr = curr | Interval(breakpoint.end, breakpoint.end + tgt_right - 1)
                         else:
                             tgt = tgt_right - isize

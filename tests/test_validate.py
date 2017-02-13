@@ -133,6 +133,28 @@ class TestEvidenceWindow(unittest.TestCase):
             b, self.annotations, read_length=100, median_insert_size=250, call_error=10, stdev_insert_size=50, stdev_count_abnormal=2)
         self.assertEqual(Interval(1040, 3160), w)
 
+    def test_generate_transcriptome_window(self):
+        g = Gene('fake', 17271277, 17279592)
+        ust = usTranscript(
+            gene=g,
+            exons=[
+                (17271277, 17271984),
+                (17272649, 17272709),
+                (17275586, 17275681),
+                (17275769, 17275930),
+                (17276692, 17276817),
+                (17277168, 17277388),
+                (17277845, 17277888),
+                (17278293, 17278378),
+                (17279229, 17279592)
+            ])
+        g.transcripts.append(ust)
+        ref = {'fake': [g]}
+        b = Breakpoint(chr='fake', start=17279591, orient=ORIENT.LEFT)
+        w1 = Evidence.generate_transcriptome_window(
+            b, ref, read_length=100, median_insert_size=250, call_error=10, stdev_insert_size=50, stdev_count_abnormal=2)
+        self.assertEqual(Interval(1, 2), w1)
+
 
 class TestEvidenceGathering(unittest.TestCase):
     def setUp(self):
