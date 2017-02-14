@@ -153,7 +153,7 @@ class TestEvidenceWindow(unittest.TestCase):
         b = Breakpoint(chr='fake', start=17279591, orient=ORIENT.LEFT)
         w1 = Evidence.generate_transcriptome_window(
             b, ref, read_length=100, median_insert_size=250, call_error=10, stdev_insert_size=50, stdev_count_abnormal=2)
-        self.assertEqual(Interval(1, 2), w1)
+        self.assertEqual(Interval(17277321, 17279702), w1)
 
 
 class TestEvidenceGathering(unittest.TestCase):

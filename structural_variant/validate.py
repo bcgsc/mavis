@@ -33,7 +33,8 @@ DEFAULTS = Namespace(
     assembly_min_remap=3,
     min_linking_split_reads=2,
     min_non_target_aligned_split_reads=1,
-    min_flanking_reads_resolution=3
+    min_flanking_reads_resolution=3,
+    assembly_max_paths=20
 )
 """Namespace: holds the settings for computations with the Evidence objects
 
@@ -87,6 +88,11 @@ DEFAULTS = Namespace(
 
     min_flanking_reads_resolution
         the minimum number of flanking reads required to call a breakpoint by flanking evidence
+
+    assembly_max_paths
+        the maximum number of paths to resolve. This is used to limit when there is a messy assembly graph to resolve.
+        The assmebly will pre-calculate the number of paths (or putative assemblies) and stop if it is greater than
+        the given setting.
 """
 
 
@@ -144,7 +150,7 @@ class EventCall(BreakpointPair):
         counts the flanking read-pair support for the event called
 
         Returns:
-            tuple[int, int, int]:
+            tuple of int and int and int:
             * (*int*) - the number of flanking read pairs
             * (*int*) - the median insert size
             * (*int*) - the standard deviation (from the median) of the insert size
@@ -179,7 +185,7 @@ class EventCall(BreakpointPair):
         with this call
 
         Returns:
-            tuple[int, int, int]:
+            tuple of int and int and int:
             * (*int*) - the number of split reads supporting the first breakpoint
             * (*int*) - the number of split reads supporting the second breakpoint
             * (*int*) - the number of split reads supporting the pairing of these breakpoints
@@ -882,7 +888,11 @@ class Evidence:
                         assembly_sequences[temp].add(m)
             except KeyError:
                 pass
-        contigs = assemble(assembly_sequences, min_edge_weight=self.settings.assembly_min_edge_weight)
+        contigs = assemble(
+            assembly_sequences,
+            assembly_min_edge_weight=self.settings.assembly_min_edge_weight,
+            assembly_max_paths=self.settings.assembly_max_paths
+        )
         filtered_contigs = {}
         for c in sorted(contigs, key=lambda x: x.seq):  # sort so that the function is deterministic
             if c.remap_score() < self.settings.assembly_min_remap:
@@ -896,6 +906,9 @@ class Evidence:
         """
         use the associated evidence and classifications and split the current evidence object
         into more specific objects.
+
+        Returns:
+            :class:`list` of :class:`EventCall`: list of calls
         """
         results = []
         clss = [self.classification] if self.classification else BreakpointPair.classify(self.breakpoint_pair)
@@ -916,19 +929,6 @@ class Evidence:
         if len(calls) == 0:
             raise UserWarning(';'.join(sorted(list(errors))))
         return calls
-
-    def clean_flanking_reads(self):
-        """ TODO
-        cleans the current set of flanking read support
-        1. remove any read that appear as evidence for flanking both breakpoints
-        2. use the stdev insert size to greedy remove read pairs until the error is within acceptable limits
-        """
-        for read1, read2 in itertools.product(self.flanking_reads[0], self.flanking_reads[1]):
-            if read1 == read2:
-                self.flanking_reads[0].remove(read1)
-                self.flanking_reads[1].remove(read1)
-
-        # calculate the insert size stdev
 
     @classmethod
     def _call_by_contigs(cls, ev, classification):

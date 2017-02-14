@@ -176,29 +176,26 @@ def gather_evidence_from_bam(clusters):
     evidence = []
 
     for i, e in enumerate(clusters):
-        if e.protocol == PROTOCOL.GENOME:
-            print()
-            log(
-                '({} of {})'.format(i + 1, len(clusters)),
-                'gathering evidence for:',
-                e.breakpoint_pair
-            )
-            log('possible event type(s):', BreakpointPair.classify(e.breakpoint_pair), time_stamp=False)
-            try:
-                e.load_evidence()
-            except NotImplementedError as err:
-                log(repr(err), time_stamp=False)
-                continue
-            log(
-                'flanking reads:', [len(a) for a in e.flanking_reads],
-                'split reads:', [len(a) for a in e.split_reads],
-                time_stamp=False
-            )
-            e.assemble_split_reads()
-            log('assembled {} contigs'.format(len(e.contigs)), time_stamp=False)
-            evidence.append(e)
-        else:
-            raise NotImplementedError('currently only genome protocols are supported')
+        print()
+        log(
+            '({} of {})'.format(i + 1, len(clusters)),
+            'gathering evidence for:',
+            e.breakpoint_pair
+        )
+        log('possible event type(s):', BreakpointPair.classify(e.breakpoint_pair), time_stamp=False)
+        try:
+            e.load_evidence()
+        except NotImplementedError as err:
+            log(repr(err), time_stamp=False)
+            continue
+        log(
+            'flanking reads:', [len(a) for a in e.flanking_reads],
+            'split reads:', [len(a) for a in e.split_reads],
+            time_stamp=False
+        )
+        e.assemble_split_reads()
+        log('assembled {} contigs'.format(len(e.contigs)), time_stamp=False)
+        evidence.append(e)
     return evidence
 
 
@@ -271,7 +268,7 @@ def main():
             median_insert_size=args.median_insert_size
         )
         clusters.append(e)
-    
+
     failed_cluster_rows = []
     filtered_clusters = []
     for cluster in clusters:
