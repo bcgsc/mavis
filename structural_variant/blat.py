@@ -288,6 +288,7 @@ class Blat:
 
         if row['strand'] == STRAND.NEG:
             read.flag = read.flag | PYSAM_READ_FLAGS.REVERSE
+            read.cigar = read.cigar[::-1]
         if read.query_sequence != row['qseq_full'] and read.query_sequence != reverse_complement(row['qseq_full']):
             raise AssertionError(
                 'read sequence should reproduce input sequence',
