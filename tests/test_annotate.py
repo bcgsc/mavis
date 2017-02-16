@@ -560,6 +560,32 @@ class TestCoordinateCoversion(unittest.TestCase):
     def test_convert_genomic_to_cds_notation_intronic_neg(self):
         self.assertEqual('51-2', self.translation.convert_genomic_to_cds_notation(299))
 
+    def test_convert_genomic_to_nearest_cdna_exonic(self):
+        self.assertEqual((1, 0), self.transcript.convert_genomic_to_nearest_cdna(101))
+        self.assertEqual((300, 0), self.transcript.convert_genomic_to_nearest_cdna(600))
+        self.assertEqual((101, 0), self.transcript.convert_genomic_to_nearest_cdna(301))
+
+    def test_convert_genomic_to_nearest_cdna_intronic_pos(self):
+        self.assertEqual((100, 10), self.transcript.convert_genomic_to_nearest_cdna(210))
+
+    def test_convert_genomic_to_nearest_cdna_intronic_neg(self):
+        self.assertEqual((101, -2), self.transcript.convert_genomic_to_nearest_cdna(299))
+
+    def test_convert_genomic_to_nearest_cdna_rev_exonic(self):
+        self.assertEqual((300, 0), self.rev_transcript.convert_genomic_to_nearest_cdna(101))
+        self.assertEqual((1, 0), self.rev_transcript.convert_genomic_to_nearest_cdna(600))
+        self.assertEqual((101, 0), self.rev_transcript.convert_genomic_to_nearest_cdna(400))
+
+    def test_convert_genomic_to_nearest_cdna_rev_intronic_pos(self):
+        self.assertEqual((201, -10), self.rev_transcript.convert_genomic_to_nearest_cdna(210))
+
+    def test_convert_genomic_to_nearest_cdna_rev_intronic_neg(self):
+        self.assertEqual((200, 2), self.rev_transcript.convert_genomic_to_nearest_cdna(299))
+
+    def test_convert_genomic_to_nearest_cdna_indexerror(self):
+        with self.assertRaises(IndexError):
+            self.transcript.convert_genomic_to_nearest_cdna(1)
+
 
 class TestUSTranscript(unittest.TestCase):
 

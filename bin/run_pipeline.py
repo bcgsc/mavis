@@ -78,7 +78,7 @@ def read_config(filepath):
     parser = ConfigParser(interpolation=ExtendedInterpolation())
     parser.read(filepath)
 
-    LIBRARY_REQ_ATTR = ['protocol', 'bam_file', 'read_length', 'median_insert_size', 'stdev_insert_size', 'inputs']
+    LIBRARY_REQ_ATTR = ['protocol', 'bam_file', 'read_length', 'median_fragment_size', 'stdev_fragment_size', 'inputs']
     TYPE_CHECK = DEFAULTS.__dict__
 
     config = {
@@ -132,7 +132,7 @@ def read_config(filepath):
                     value = type(TYPE_CHECK[attr])(value)
                 except ValueError:
                     warnings.warn('type check failed for attr {} with value {}'.format(attr, repr(value)))
-            elif attr in ['stdev_insert_size', 'median_insert_size', 'read_length']:
+            elif attr in ['stdev_fragment_size', 'median_fragment_size', 'read_length']:
                 try:
                     value = int(value)
                 except ValueError:
@@ -214,8 +214,8 @@ def main():
             'bam_file': sec.bam_file,
             'protocol': sec.protocol,
             'read_length': sec.read_length,
-            'stdev_insert_size': sec.stdev_insert_size,
-            'median_insert_size': sec.median_insert_size,
+            'stdev_fragment_size': sec.stdev_fragment_size,
+            'median_fragment_size': sec.median_fragment_size,
             'force_overwrite': args.force_overwrite
         }
         for attr in VDEFAULTS.__dict__:

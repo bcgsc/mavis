@@ -130,7 +130,7 @@ def parse_arguments():
         help='path to the input bam file', required=True
     )
     parser.add_argument(
-        '--stranded', default=False,
+        '--stranded', default=False, action='store_true',
         help='indicates that the input bam file is strand specific'
     )
     parser.add_argument(
@@ -163,8 +163,8 @@ def parse_arguments():
         else:
             g.add_argument('--{}'.format(attr), default=value, type=type(value), help='see user manual for desc')
     g.add_argument('--read_length', type=int, help='the length of the reads in the bam file', required=True)
-    g.add_argument('--stdev_insert_size', type=int, help='expected standard deviation in insert sizes', required=True)
-    g.add_argument('--median_insert_size', type=int, help='median inset size for pairs in the bam file', required=True)
+    g.add_argument('--stdev_fragment_size', type=int, help='expected standard deviation in insert sizes', required=True)
+    g.add_argument('--median_fragment_size', type=int, help='median inset size for pairs in the bam file', required=True)
 
     parser.add_argument('--igv_genome', help='the genome name to use for the igv batch file output', default='hg19')
     parser.add_argument('-p', '--protocol', required=True, choices=PROTOCOL.values())
@@ -191,9 +191,10 @@ def gather_evidence_from_bam(clusters):
         log(
             'flanking reads:', [len(a) for a in e.flanking_reads],
             'split reads:', [len(a) for a in e.split_reads],
+            'half-mapped reads:', [len(a) for a in e.half_mapped],
             time_stamp=False
         )
-        e.assemble_split_reads()
+        e.assemble_split_reads(log=log)
         log('assembled {} contigs'.format(len(e.contigs)), time_stamp=False)
         evidence.append(e)
     return evidence
@@ -219,7 +220,7 @@ def main():
     FAILED_OUTPUT_FILE = os.path.join(args.output, FILENAME_PREFIX + '.validation-failed.tab')
     CONTIG_OUTPUT_FILE = os.path.join(args.output, FILENAME_PREFIX + '.contigs.tab')
     IGV_BATCH_FILE = os.path.join(args.output, FILENAME_PREFIX + '.igv.batch')
-    INPUT_BAM_CACHE = BamCache(args.bam_file)
+    INPUT_BAM_CACHE = BamCache(args.bam_file, args.stranded)
 
     log('input arguments listed below')
     for arg, val in sorted(args.__dict__.items()):
@@ -263,9 +264,9 @@ def main():
             annotations=REFERENCE_ANNOTATIONS,
             protocol=bpp.data[COLUMNS.protocol],
             data=bpp.data,
-            stdev_insert_size=args.stdev_insert_size,
+            stdev_fragment_size=args.stdev_fragment_size,
             read_length=args.read_length,
-            median_insert_size=args.median_insert_size
+            median_fragment_size=args.median_fragment_size
         )
         clusters.append(e)
 
@@ -315,13 +316,15 @@ def main():
             blat_sequences.add(c.seq)
     print()
     log('aligning {} contig sequences'.format(len(blat_sequences)))
-    blat_contig_alignments = blat_contigs(
-        evidence,
-        INPUT_BAM_CACHE,
-        REFERENCE_GENOME=HUMAN_REFERENCE_GENOME
-    )
+    if len(blat_sequences) > 0:
+        blat_contig_alignments = blat_contigs(
+            evidence,
+            INPUT_BAM_CACHE,
+            REFERENCE_GENOME=HUMAN_REFERENCE_GENOME
+        )
     log('alignment complete')
     event_calls = []
+    passes = 0
     with open(EVIDENCE_BED, 'w') as fh:
         for e in evidence:
             fh.write('{}\t{}\t{}\t{}\n'.format(
@@ -335,11 +338,15 @@ def main():
             try:
                 calls = e.call_events()
                 event_calls.extend(calls)
+                if len(calls) == 0:
+                    failure_comment = 'zero events were called'
+                else:
+                    passes += 1
             except UserWarning as err:
                 log('warning: error in calling events', repr(err), time_stamp=False)
                 failure_comment = str(err)
 
-            if failure_comment:
+            if failure_comment is not None:
                 row = {}
                 row.update(e.data)
                 row.update(e.breakpoint_pair.flatten())
@@ -351,7 +358,8 @@ def main():
                 failed_cluster_rows.append(row)
 
             log('called {} event(s)'.format(len(calls)))
-
+    if len(failed_cluster_rows) + passes != len(evidence):
+        raise AssertionError('totals do not match pass + fails == total', passes, len(failed_cluster_rows), len(evidence))
     # write the output validated clusters (split by type and contig)
 
     id_prefix = re.sub(' ', '_', str(datetime.now()))
@@ -398,8 +406,8 @@ def main():
                 COLUMNS.break1_call_method: ec.call_method[0],
                 COLUMNS.break2_call_method: ec.call_method[1],
                 COLUMNS.flanking_reads: flank_count,
-                COLUMNS.median_insert_size: round(flank_median, 0) if flank_median is not None else None,
-                COLUMNS.stdev_insert_size: round(flank_stdev, 0) if flank_stdev is not None else None,
+                COLUMNS.median_fragment_size: round(flank_median, 0) if flank_median is not None else None,
+                COLUMNS.stdev_fragment_size: round(flank_stdev, 0) if flank_stdev is not None else None,
                 COLUMNS.break1_split_reads: b1_count,
                 COLUMNS.break1_split_reads_forced: b1_custom,
                 COLUMNS.break2_split_reads: b2_count,

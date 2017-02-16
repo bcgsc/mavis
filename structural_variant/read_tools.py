@@ -1,6 +1,7 @@
 import pysam
 import warnings
 from .constants import *
+from .interval import Interval
 
 
 class BamCache:
@@ -8,12 +9,13 @@ class BamCache:
     caches reads by name to facilitate getting read mates without jumping around
     the file if we've already read that section
     """
-    def __init__(self, bamfile):
+    def __init__(self, bamfile, stranded=False):
         """
         Args:
             bamfile (str): path to the input bam file
         """
         self.cache = {}
+        self.stranded = stranded
         self.fh = bamfile
         if not hasattr(bamfile, 'fetch'):
             self.fh = pysam.AlignmentFile(bamfile, 'rb')
@@ -479,13 +481,15 @@ def breakpoint_pos(read, orient=ORIENT.NS):
         return read.reference_end - 1
 
 
-def nsb_align(ref, seq, weight_of_score=0.5, min_overlap_percent=100):
+def nsb_align(ref, seq, weight_of_score=0.5, min_overlap_percent=100, min_match=0):
     """
     given some reference string and a smaller sequence string computes the best non-space-breaking alignment
     i.e. an alignment that does not allow for indels (straight-match)
     """
     if len(ref) < 1 or len(seq) < 1:
         raise AttributeError('cannot overlap on an empty sequence')
+    if min_match < 0 or min_match > 1:
+        raise AttributeError('min_match must be between 0 and 1')
 
     if min_overlap_percent <= 0 or min_overlap_percent > 100:
         raise AttributeError('percent must be greater than 0 and up to 100', min_overlap_percent)
@@ -495,19 +499,29 @@ def nsb_align(ref, seq, weight_of_score=0.5, min_overlap_percent=100):
     # store to improve speed and space (don't need to store all alignments)
     best_score = 0
     results = []
-
+    
     for ref_start in range(min_overlap - len(seq), len(ref) + len(seq) - min_overlap):
         score = 0
         cigar = []
+        mismatches = 0
+        length = len(seq)
         for i in range(0, len(seq)):
+            if length == 0:
+                break
             r = ref_start + i
-            if r < 0 or r >= len(ref):
+            if r < 0 or r >= len(ref):  # outside the length of the reference seq
                 cigar.append((CIGAR.S, 1))
+                length -= 1
                 continue
             if DNA_ALPHABET.match(ref[r], seq[i]):
                 cigar.append((CIGAR.EQ, 1))
             else:
                 cigar.append((CIGAR.X, 1))
+                mismatches += 1
+                if mismatches / length > 1 - min_match:
+                    break
+        if length == 0 or mismatches / length > 1 - min_match:
+            continue
 
         cigar = CigarTools.join(cigar)
         # end mismatches we set as soft-clipped
@@ -553,3 +567,50 @@ def stderr_insert_size(reads, centre):
 
 def stdev_insert_size(reads, centre):
     return math.sqrt(stderr_insert_size(reads, centre))
+
+
+def transcriptomic_insert_sizes(GENES, read, mate=None):
+    geni = Interval(abs(read.template_length))
+    if read.reference_id != read.next_reference_id:
+        return 0  # translocations always have 0 insert
+    m = None
+    if mate is None:
+        m = Interval(
+            read.next_reference_start,
+            read.next_reference_start + read.reference_end - read.reference_start
+        )
+    else:
+        m = Interval(mate.reference_start, mate.reference_end)
+    r = Interval(read.reference_start, read.reference_end)
+    
+    p1 = r.end
+    p2 = m.start
+    if r > m:
+        p1 = m.end
+        p2 = r.start
+
+    putative_inserts = []
+    for gene in GENES:
+        for ust in gene.transcripts:
+            if p1 <= ust.end and p1 >= ust.start and p2 <= ust.end and p2 >= ust.start:
+                # both positions fall in this transcript, calculate their cdna distance
+                for t in ust.transcripts:
+                    c1, s1 = t.convert_genomic_to_nearest_cdna(p1)
+                    c2, s2 = t.convert_genomic_to_nearest_cdna(p2)
+                    d = 0
+                    if c1 == c2:
+                        d = abs(s1 - s2)
+                    elif c1 < c2:
+                        d = c2 - c1
+                        if s1 < 0:
+                            d += abs(s1)
+                        if s2 > 0:
+                            d += abs(s2)
+                    else:
+                        d = c1 - c2
+                        if s2 < 0:
+                            d += abs(s2)
+                        if s1 > 0:
+                            d += abs(s1)
+                    putative_inserts.append(d)
+    return putative_inserts

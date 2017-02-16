@@ -9,13 +9,13 @@ class Contig:
     """
     """
     def __init__(self, sequence, score):
-        self.seq = sequence
+        self.sequence = sequence
         self.remapped_reads = {}
         self.score = score
         self.alignments = None
 
     def __hash__(self):
-        return hash(self.seq)
+        return hash(self.sequence)
 
     def add_mapped_read(self, read, multimap=1):
         rc = reverse_complement(read)
@@ -111,7 +111,9 @@ def assemble(
     assembly_min_match_quality=0.95,
     assembly_min_read_mapping_overlap=None,
     assembly_min_contig_length=None,
-    assembly_max_paths=20
+    assembly_min_consec_match_remap=3,
+    assembly_max_paths=20,
+    log=lambda *x: None
 ):
     """
     for a set of sequences creates a DeBruijnGraph
@@ -146,13 +148,13 @@ def assemble(
         assembly_min_read_mapping_overlap
     assembly_min_contig_length = min_seq + 1 if assembly_min_contig_length is None else assembly_min_contig_length
     assembly = DeBruijnGraph()
-
+    log('hashing kmers')
     for s in sequences:
         for kmer in kmers(s, assembly_kmer_size):
             l = kmer[:-1]
             r = kmer[1:]
             assembly.add_edge(l, r)
-
+    log('graph is complete')
     if not nx.is_directed_acyclic_graph(assembly):
         NotImplementedError('assembly not supported for cyclic graphs')
 
@@ -177,9 +179,24 @@ def assemble(
                 sinks.add(node)
         if len(sources) * len(sinks) > assembly_max_paths:
             continue
-        if len(sources) * len(sinks) > 10:
-            warnings.warn('source/sink combinations: {}'.format(len(sources) * len(sinks)))
 
+        # if the assembly has too many sinks/sources we'll need to clean it
+        # we can do this by removing all current sources/sinks
+        while len(sources) * len(sinks) > assembly_max_paths:
+            warnings.warn(
+                'source/sink combinations: {} from {} nodes'.format(len(sources) * len(sinks), len(component)))
+            for s in sources | sinks:
+                assembly.remove_node(s)
+                component.remove(s)
+            sources = set()
+            sinks = set()
+            for node in component:
+                if assembly.degree(node) == 0:  # ignore singlets
+                    pass
+                elif assembly.in_degree(node) == 0:
+                    sources.add(node)
+                elif assembly.out_degree(node) == 0:
+                    sinks.add(node)
         for source, sink in itertools.product(sources, sinks):
             for path in nx.all_simple_paths(assembly, source, sink):
                 s = path[0] + ''.join([p[-1] for p in path[1:]])
@@ -192,15 +209,23 @@ def assemble(
     for seq, score in list(path_scores.items()):
         if seq not in sequences and len(seq) >= assembly_min_contig_length:
             contigs[seq] = Contig(seq, score)
+    log('remapping reads to {} contigs'.format(len(contigs.keys())))
 
+    contig_exact = {}
+    for contig in contigs:
+        contig_exact[contig] = set(kmers(contig, assembly_min_consec_match_remap))
     # remap the input reads
     for input_seq in sequences:
         maps_to = {}  # contig, score
+        exact_match_kmers = set(kmers(input_seq, assembly_min_consec_match_remap))
         for contig in contigs.values():
+            if len(exact_match_kmers & contig_exact[contig.sequence]) == 0:
+                continue
             a = nsb_align(
-                contig.seq,
+                contig.sequence,
                 input_seq,
-                min_overlap_percent=assembly_min_read_mapping_overlap / len(contig.seq)
+                min_overlap_percent=assembly_min_read_mapping_overlap / len(contig.sequence),
+                min_match=assembly_min_match_quality
             )
             if len(a) != 1:
                 continue
@@ -209,6 +234,7 @@ def assemble(
             maps_to[contig] = a[0]
         for contig, read in maps_to.items():
             contig.add_mapped_read(read, len(maps_to.keys()))
+    log('assemblies complete')
     return list(contigs.values())
 
 

@@ -296,7 +296,7 @@ class usTranscript(BioInterval):
         returns a list of splice sites to be connected as a splicing pattern
 
         Returns:
-            :class:`list` of :any:`int`: List of positions to be spliced together
+            :class:`list` of :class:`SplicingPattern`: List of positions to be spliced together
 
         """
         exons = sorted(self.exons, key=lambda x: x[0])
@@ -417,7 +417,7 @@ class usTranscript(BioInterval):
     def _genomic_to_cdna_mapping(self, splicing_pattern):
         """
         Args:
-            splicing_pattern (:class:`list` of :class:`int`): list of genomic splice sites 3'5' repeating
+            splicing_pattern (SplicingPattern): list of genomic splice sites 3'5' repeating
         """
         mapping = {}
         l = 1
@@ -439,7 +439,7 @@ class usTranscript(BioInterval):
     def _cdna_to_genomic_mapping(self, splicing_pattern):
         """
         Args:
-            splicing_pattern (:class:`list` of :class:`int`): list of genomic splice sites 3'5' repeating
+            splicing_pattern (SplicingPattern): list of genomic splice sites 3'5' repeating
         """
         mapping = {}
         for k, v in self._genomic_to_cdna_mapping(splicing_pattern).items():
@@ -450,7 +450,7 @@ class usTranscript(BioInterval):
         """
         Args:
             pos (int): the genomic position to be converted
-            splicing_pattern (:class:`list` of :class:`int`): list of genomic splice sites 3'5' repeating
+            splicing_pattern (SplicingPattern): list of genomic splice sites 3'5' repeating
 
         Returns:
             int: the cdna equivalent
@@ -459,21 +459,58 @@ class usTranscript(BioInterval):
             :class:`~structural_variant.error.DiscontinuousMappingError`: when a genomic position not present in the
                 cdna is attempted to be converted
         """
+        c, shift = self.convert_genomic_to_nearest_cdna(pos, splicing_pattern)
+        if shift != 0:
+            raise IndexError('outside of exonic regions')
+        return c
+    
+    def convert_genomic_to_nearest_cdna(self, pos, splicing_pattern):
+        """
+        converts a genomic position to its cdna equivalent or (if intronic) the nearest cdna and shift
+
+        Args:
+            pos (int): the genomic position
+            splicing_pattern (SplicingPattern): the splicing pattern
+
+        Returns: 
+            tuple of int and int:
+                * *int* - the exonic cdna position
+                * *int* - the intronic shift
+
+        """
         mapping = self._genomic_to_cdna_mapping(splicing_pattern)
-        return Interval.convert_pos(mapping, pos, True if self.get_strand() == STRAND.NEG else False)
+        exons = sorted(list(mapping.keys()))
+        # exonic
+        for ex in exons:
+            if pos <= ex.end and pos >= ex.start:
+                # in the current exon
+                c = Interval.convert_pos(mapping, pos, True if self.get_strand() == STRAND.NEG else False)
+                return c, 0
+        # intronic
+        for ex1, ex2 in zip(exons, exons[1::]):
+            if pos > ex1.end and pos < ex2.start:
+                # in the current intron
+                if abs(pos - ex1.end) <= abs(pos - ex2.start):
+                    # closest to the first exon
+                    c = Interval.convert_pos(mapping, ex1.end, True if self.get_strand() == STRAND.NEG else False)
+                    return c, pos - ex1.end if self.get_strand() == STRAND.POS else ex1.end - pos
+                else:
+                    c = Interval.convert_pos(mapping, ex2.start, True if self.get_strand() == STRAND.NEG else False)
+                    return c, pos - ex2.start if self.get_strand() == STRAND.POS else ex2.start - pos 
+        raise IndexError('position does not fall within the current transcript')
 
     def convert_cdna_to_genomic(self, pos, splicing_pattern):
         """
         Args:
             pos (int): cdna position
-            splicing_pattern (:class:`list` of :class:`int`): list of genomic splice sites 3'5' repeating
+            splicing_pattern (SplicingPattern): list of genomic splice sites 3'5' repeating
 
         Returns:
             int: the genomic equivalent
         """
         mapping = self._cdna_to_genomic_mapping(splicing_pattern)
         return Interval.convert_pos(mapping, pos, True if self.get_strand() == STRAND.NEG else False)
-
+    
     def exon_number(self, exon):
         """
         exon numbering is based on the direction of translation
@@ -529,7 +566,7 @@ class usTranscript(BioInterval):
     def get_cdna_sequence(self, splicing_pattern, REFERENCE_GENOME=None, ignore_cache=False):
         """
         Args:
-            splicing_pattern (:class:`list` of :class:`int`): the list of splicing positions
+            splicing_pattern (SplicingPattern): the list of splicing positions
             REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
                 by template/chr name
             ignore_cache (bool): if True then stored sequences will be ignored and the function will attempt to retrieve the sequence using the positions and the input REFERENCE_GENOME
@@ -595,7 +632,6 @@ class Transcript(BioInterval):
         """
         Args:
             pos (int): the genomic position to be converted
-            splicing_pattern (:class:`list` of :class:`int`): list of genomic splice sites 3'5' repeating
 
         Returns:
             int: the cdna equivalent
@@ -605,12 +641,14 @@ class Transcript(BioInterval):
                 cdna is attempted to be converted
         """
         return self.unspliced_transcript.convert_genomic_to_cdna(pos, self.splicing_pattern)
+    
+    def convert_genomic_to_nearest_cdna(self, pos):
+        return self.reference_object.convert_genomic_to_nearest_cdna(pos, self.splicing_pattern)
 
     def convert_cdna_to_genomic(self, pos):
         """
         Args:
             pos (int): cdna position
-            splicing_pattern (:class:`list` of :class:`int`): list of genomic splice sites 3'5' repeating
 
         Returns:
             int: the genomic equivalent

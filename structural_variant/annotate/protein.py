@@ -244,7 +244,6 @@ class Translation(BioInterval):
             start (int): start of the coding sequence (cds) relative to the start of the first exon in the transcript
             end (int): end of the coding sequence (cds) relative to the start of the first exon in the transcript
             transcript (Transcript): the transcript this is a Translation of
-            splicing_pattern (:class:`list` of :any:`int`): a list of splicing positions to be used
             domains (:class:`list` of :any:`Domain`): a list of the domains on this translation
             sequence (str): the cds sequence
         """
@@ -304,10 +303,30 @@ class Translation(BioInterval):
         Returns:
             int: the cds position (negative if before the initiation start site)
         """
-        cdna_pos = self.transcript.convert_genomic_to_cdna(pos)
-        if cdna_pos < self.start:
-            return cdna_pos - self.start
-        return cdna_pos - self.start + 1
+        cds, shift = self.convert_genomic_to_nearest_cds(pos)
+        if shift != 0:
+            raise IndexError('conversion failed. position is outside the exonic region')
+        return cds
+
+    def convert_genomic_to_nearest_cds(self, pos):
+        """
+        converts a genomic position to its cds equivalent or (if intronic) the nearest cds and shift
+
+        Args:
+            pos (int): the genomic position
+
+        Returns: 
+            tuple of int and int:
+                * *int* - the cds position
+                * *int* - the intronic shift
+
+        """
+        c, shift = self.transcript.convert_genomic_to_nearest_cdna(pos)
+        if c >= self.start:
+            c = c - self.start + 1
+        else:
+            c -= self.start
+        return c, shift
 
     def convert_genomic_to_cds_notation(self, pos):
         """
@@ -334,29 +353,16 @@ class Translation(BioInterval):
             >>> tl.convert_genomic_to_cds_notation(1589)
             '51-14'
         """
-        try:
-            cds_pos = self.convert_genomic_to_cds(pos)
-            if cds_pos > len(self):
-                return '*{}'.format(cds_pos - len(self))
-            return '{}'.format(cds_pos)
-        except DiscontinuousMappingError as err:  # should give you the nearest positions
-            # between two exons?
-            exon_list = self.transcript.exons
-            for ex1, ex2 in zip(self.transcript.exons[0::], self.transcript.exons[1::]):
-                if abs(Interval.dist(ex1, ex2)) > 0:
-                    intron = Interval(ex1.end + 1, ex2.start - 1)
-                    if pos >= intron.start and pos <= intron.end:
-                        # inside this intron
-                        if abs(pos - intron.end) > abs(pos - intron.start):  # prefer +
-                            ref_pos = self.convert_genomic_to_cds(ex1.end)
-                            shift = pos - intron.start + 1
-                            return '{}+{}'.format(ref_pos, shift)
-                        else:
-                            ref_pos = self.convert_genomic_to_cds(ex2.start)
-                            shift = intron.end - pos + 1
-                            return '{}-{}'.format(ref_pos, shift)
-            raise err
+        c, shift = self.convert_genomic_to_nearest_cds(pos)
+        sc = '' 
+        if shift > 0:
+            sc = '+{}'.format(shift)
+        elif shift < 0:
+            sc = str(shift)
 
+        if c > len(self):
+            return '*{}{}'.format(c - len(self), sc)
+        return '{}{}'.format(c, sc)
 
     def get_cds_sequence(self, REFERENCE_GENOME=None, ignore_cache=False):
         """

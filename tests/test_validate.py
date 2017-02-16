@@ -45,14 +45,14 @@ class TestEvidenceWindow(unittest.TestCase):
     def test_generate_window_orient_ns(self):
         b = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.NS)
         w = Evidence.generate_window(
-            b, read_length=100, median_insert_size=250, call_error=10, stdev_insert_size=50, stdev_count_abnormal=2)
+            b, read_length=100, median_fragment_size=450, call_error=11, stdev_fragment_size=50, stdev_count_abnormal=2)
         self.assertEqual(440, w[0])
         self.assertEqual(1560, w[1])
 
     def test_generate_window_orient_left(self):
         b = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.LEFT)
         w = Evidence.generate_window(
-            b, read_length=100, median_insert_size=250, call_error=10, stdev_insert_size=50, stdev_count_abnormal=2)
+            b, read_length=100, median_fragment_size=450, call_error=11, stdev_fragment_size=50, stdev_count_abnormal=2)
         self.assertEqual(440, w[0])
         self.assertEqual(1110, w[1])
         self.assertEqual(671, len(w))
@@ -60,78 +60,107 @@ class TestEvidenceWindow(unittest.TestCase):
     def test_generate_window_orient_right(self):
         b = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.RIGHT)
         w = Evidence.generate_window(
-            b, read_length=100, median_insert_size=250, call_error=10, stdev_insert_size=50, stdev_count_abnormal=2)
+            b, read_length=100, median_fragment_size=450, call_error=11, stdev_fragment_size=50, stdev_count_abnormal=2)
         self.assertEqual(890, w[0])
         self.assertEqual(1560, w[1])
 
     def test_generate_transcriptome_window_before_start(self):
         b = Breakpoint(chr='1', start=100, orient=ORIENT.RIGHT)
         w1 = Evidence.generate_window(
-            b, read_length=100, median_insert_size=250, call_error=10, stdev_insert_size=50, stdev_count_abnormal=2)
+            b, read_length=100, median_fragment_size=450, call_error=11, stdev_fragment_size=50, stdev_count_abnormal=2)
         w2 = Evidence.generate_transcriptome_window(
-            b, self.annotations, read_length=100, median_insert_size=250, call_error=10, stdev_insert_size=50, stdev_count_abnormal=2)
+            b, self.annotations, read_length=100, median_fragment_size=450, call_error=11, stdev_fragment_size=50, stdev_count_abnormal=2)
         self.assertEqual(w1, w2)
 
         b = Breakpoint(chr='1', start=500, orient=ORIENT.RIGHT)
         w1 = Evidence.generate_window(
-            b, read_length=100, median_insert_size=250, call_error=10, stdev_insert_size=50, stdev_count_abnormal=2)
+            b, read_length=100, median_fragment_size=450, call_error=11, stdev_fragment_size=50, stdev_count_abnormal=2)
         w2 = Evidence.generate_transcriptome_window(
-            b, self.annotations, read_length=100, median_insert_size=250, call_error=10, stdev_insert_size=50, stdev_count_abnormal=2)
+            b, self.annotations, read_length=100, median_fragment_size=450, call_error=11, stdev_fragment_size=50, stdev_count_abnormal=2)
         self.assertEqual(w1, w2)
 
     def test_generate_transcriptome_window_after_end(self):
         b = Breakpoint(chr='1', start=5000, orient=ORIENT.RIGHT)
         w1 = Evidence.generate_window(
-            b, read_length=100, median_insert_size=250, call_error=10, stdev_insert_size=50, stdev_count_abnormal=2)
+            b, read_length=100, median_fragment_size=450, call_error=11, stdev_fragment_size=50, stdev_count_abnormal=2)
         w2 = Evidence.generate_transcriptome_window(
-            b, self.annotations, read_length=100, median_insert_size=250, call_error=10, stdev_insert_size=50, stdev_count_abnormal=2)
+            b, self.annotations, read_length=100, median_fragment_size=450, call_error=11, stdev_fragment_size=50, stdev_count_abnormal=2)
         self.assertEqual(w1, w2)
 
     def test_generate_transcriptome_window_exonic_long_exon(self):
         b = Breakpoint(chr='1', start=3200, orient=ORIENT.RIGHT)
         w1 = Evidence.generate_window(
-            b, read_length=100, median_insert_size=250, call_error=10, stdev_insert_size=50, stdev_count_abnormal=2)
+            b, read_length=100, median_fragment_size=450, call_error=11, stdev_fragment_size=50, stdev_count_abnormal=2)
         w2 = Evidence.generate_transcriptome_window(
-            b, self.annotations, read_length=100, median_insert_size=250, call_error=10, stdev_insert_size=50, stdev_count_abnormal=2)
+            b, self.annotations, read_length=100, median_fragment_size=450, call_error=11, stdev_fragment_size=50, stdev_count_abnormal=2)
         self.assertEqual(w1, w2)
 
     def test_generate_transcriptome_window_intronic_long_exon(self):
         b = Breakpoint(chr='1', start=2970, orient=ORIENT.RIGHT)
-        w1 = Evidence.generate_window(
-            b, read_length=100, median_insert_size=250, call_error=10, stdev_insert_size=50, stdev_count_abnormal=2)
         w2 = Evidence.generate_transcriptome_window(
-            b, self.annotations, read_length=100, median_insert_size=250, call_error=10, stdev_insert_size=50, stdev_count_abnormal=2)
-        self.assertEqual(w1, w2)
+            b, self.annotations,
+            read_length=100,
+            median_fragment_size=450,
+            call_error=11,
+            stdev_fragment_size=50,
+            stdev_count_abnormal=2
+        )
+        self.assertEqual(Interval(1440, 3561), w2)
 
     def test_generate_transcriptome_window_intronic_long_intron(self):
         b = Breakpoint(chr='1', start=2000, orient=ORIENT.RIGHT)
-        w1 = Evidence.generate_window(
-            b, read_length=100, median_insert_size=250, call_error=10, stdev_insert_size=50, stdev_count_abnormal=2)
         w2 = Evidence.generate_transcriptome_window(
-            b, self.annotations, read_length=100, median_insert_size=250, call_error=10, stdev_insert_size=50, stdev_count_abnormal=2)
-        self.assertEqual(w1, w2)
+            b, self.annotations,
+            read_length=100,
+            median_fragment_size=450,
+            call_error=11,
+            stdev_fragment_size=50,
+            stdev_count_abnormal=2
+        )
+        self.assertEqual(Interval(1440, 3561), w2)
 
     def test_generate_transcriptome_window_intronic_short_exon_right(self):
         b = Breakpoint(chr='1', start=1690, orient=ORIENT.RIGHT)
         w = Evidence.generate_transcriptome_window(
-            b, self.annotations, read_length=100, median_insert_size=250, call_error=10, stdev_insert_size=50, stdev_count_abnormal=2)
-        self.assertEqual(Interval(1580, 3500), w)
+            b, self.annotations,
+            read_length=100,
+            median_fragment_size=450,
+            call_error=11,
+            stdev_fragment_size=50,
+            stdev_count_abnormal=2
+        )
+        self.assertEqual(Interval(1090, 3511), w)
 
     def test_generate_transcriptome_window_intronic_short_exon_left(self):
         b = Breakpoint(chr='1', start=2200, orient=ORIENT.LEFT)
         w = Evidence.generate_transcriptome_window(
-            b, self.annotations, read_length=100, median_insert_size=250, call_error=10, stdev_insert_size=50, stdev_count_abnormal=2)
-        self.assertEqual(Interval(1440, 2310), w)
+            b, self.annotations,
+            read_length=100,
+            median_fragment_size=450,
+            call_error=11,
+            stdev_fragment_size=50,
+            stdev_count_abnormal=2
+        )
+        self.assertEqual(Interval(690, 3111), w)
 
     def test_generate_transcriptome_window_multiple_transcripts(self):
+        #  [(1001, 1100), (1401, 1500), (1701, 1750), (3001, 4000)])
         b = Breakpoint(chr='1', start=1150, orient=ORIENT.RIGHT)
         gene = self.annotations['1'][0]
-        t2 = usTranscript(gene=gene, exons=[(1000, 1100), (1200, 1300), (2100, 2200)])
+        t2 = usTranscript(gene=gene, exons=[(1001, 1100), (1200, 1300), (2100, 2200)])
         gene.transcripts.append(t2)
 
         w = Evidence.generate_transcriptome_window(
-            b, self.annotations, read_length=100, median_insert_size=250, call_error=10, stdev_insert_size=50, stdev_count_abnormal=2)
-        self.assertEqual(Interval(1040, 3160), w)
+            b, self.annotations, 
+            read_length=100, 
+            median_fragment_size=450, 
+            call_error=11, 
+            stdev_fragment_size=50, 
+            stdev_count_abnormal=2
+        )
+        # 989 - 2561
+        # 989 - 3411
+        self.assertEqual(Interval(990, 3411), w)
 
     def test_generate_transcriptome_window(self):
         g = Gene('fake', 17271277, 17279592)
@@ -152,7 +181,7 @@ class TestEvidenceWindow(unittest.TestCase):
         ref = {'fake': [g]}
         b = Breakpoint(chr='fake', start=17279591, orient=ORIENT.LEFT)
         w1 = Evidence.generate_transcriptome_window(
-            b, ref, read_length=100, median_insert_size=250, call_error=10, stdev_insert_size=50, stdev_count_abnormal=2)
+            b, ref, read_length=100, median_fragment_size=450, call_error=11, stdev_fragment_size=50, stdev_count_abnormal=2)
         self.assertEqual(Interval(17277321, 17279702), w1)
 
 
@@ -167,8 +196,8 @@ class TestEvidenceGathering(unittest.TestCase):
             ),
             BAM_CACHE, REFERENCE_GENOME,
             read_length=125,
-            stdev_insert_size=100,
-            median_insert_size=380,
+            stdev_fragment_size=100,
+            median_fragment_size=380,
             stdev_count_abnormal=3,
             min_flanking_reads_resolution=3
         )
@@ -251,7 +280,8 @@ class TestEvidenceGathering(unittest.TestCase):
         self.ev1.half_mapped=([],[sr2])
         self.ev1.assemble_split_reads()
         print(self.ev1.contigs)
-        self.assertEqual('CAACAATATGTAGGAAGCCATTATCTGAAGTGTAAGCAACTGCATAGTGCTATTTTAATTATGCATTGCAGGGAAACTGTGAGCAGAGCTATATATTTAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAACCAAACAGGAAAGAATC', self.ev1.contigs[0].seq)
+        self.assertEqual('CAACAATATGTAGGAAGCCATTATCTGAAGTGTAAGCAACTGCATAGTGCTATTTTAATTATGCATTGCAGGGAAACTGTGAGCAGAGCTATATATTTAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAACCAAACAGGAAAGAATC', self.ev1.contigs[0].sequence)
+
 
 class TestEventCall(unittest.TestCase):
     def setUp(self):
@@ -263,8 +293,8 @@ class TestEventCall(unittest.TestCase):
             ),
             BAM_CACHE, REFERENCE_GENOME,
             read_length=125,
-            stdev_insert_size=100,
-            median_insert_size=380,
+            stdev_fragment_size=100,
+            median_fragment_size=380,
             stdev_count_abnormal=3,
             min_flanking_reads_resolution=3
         )
@@ -393,6 +423,7 @@ class TestCallBySupportingReads(unittest.TestCase):
         evs =  Evidence._call_by_supporting_reads(self.ev, SVTYPE.INV)
         self.assertEqual(4, len(evs))
 
+
 class TestEvidence(unittest.TestCase):
     def test__call_by_flanking_reads_intra(self):
         ev = Evidence(
@@ -403,8 +434,8 @@ class TestEvidence(unittest.TestCase):
             ),
             None, None,
             read_length=40,
-            stdev_insert_size=25,
-            median_insert_size=100,
+            stdev_fragment_size=25,
+            median_fragment_size=100,
             stdev_count_abnormal=2,
             min_flanking_reads_resolution=1
         )
@@ -428,8 +459,8 @@ class TestEvidence(unittest.TestCase):
             ),
             None, None,
             read_length=40,
-            stdev_insert_size=25,
-            median_insert_size=100,
+            stdev_fragment_size=25,
+            median_fragment_size=100,
             stdev_count_abnormal=2,
             min_flanking_reads_resolution=1
         )
@@ -455,8 +486,8 @@ class TestEvidence(unittest.TestCase):
             ),
             None, None,
             read_length=40,
-            stdev_insert_size=25,
-            median_insert_size=100,
+            stdev_fragment_size=25,
+            median_fragment_size=100,
             stdev_count_abnormal=2,
             min_flanking_reads_resolution=1
         )
@@ -469,7 +500,7 @@ class TestEvidence(unittest.TestCase):
         self.assertEqual(111, break2.start)
         self.assertEqual(250, break2.end)
 
-    def test_expected_insert_size_range(self):
+    def test_expected_fragment_size_range(self):
         ev = Evidence(
             BreakpointPair(
                 Breakpoint('fake', 100, orient=ORIENT.RIGHT),
@@ -478,11 +509,11 @@ class TestEvidence(unittest.TestCase):
             ),
             None, None,
             read_length=40,
-            stdev_insert_size=25,
-            median_insert_size=100,
+            stdev_fragment_size=25,
+            median_fragment_size=100,
             stdev_count_abnormal=2
         )
-        i = ev.expected_insert_size_range()
+        i = ev.expected_fragment_size_range()
         self.assertEqual(50, i.start)
         self.assertEqual(150, i.end)
 
@@ -551,6 +582,7 @@ class TestEvidence(unittest.TestCase):
             mate_is_reverse=True
         )
         self.assertEqual(READ_PAIR_TYPE.RL, Evidence.read_pair_type(r))
+
 
 class MockEvidence:
     def __init__(self, ref=None):

@@ -17,24 +17,28 @@ from argparse import Namespace
 
 
 DEFAULTS = Namespace(
-    stdev_count_abnormal=3,
+    assembly_include_flanking_reads=False,
+    assembly_include_half_mapped_reads=True,
+    assembly_max_paths=20,
+    assembly_min_edge_weight=3,
+    assembly_min_remap=3,
+    assembly_min_tgt_to_exclude_half_map=7,
+    assembly_strand_concordance=0.7,
     call_error=10,
-    min_splits_reads_resolution=3,
+    consensus_req=3,
+    fetch_reads_bins=3,
+    fetch_reads_limit=3000,
+    filter_secondary_alignments=True,
     min_anchor_exact=6,
     min_anchor_fuzzy=10,
     min_anchor_match=0.9,
-    min_mapping_quality=20,
-    fetch_reads_limit=10000,
-    fetch_reads_bins=3,
-    filter_secondary_alignments=True,
-    consensus_req=3,
-    sc_extension_stop=5,
-    assembly_min_edge_weight=3,
-    assembly_min_remap=3,
-    min_linking_split_reads=2,
-    min_non_target_aligned_split_reads=1,
     min_flanking_reads_resolution=3,
-    assembly_max_paths=20
+    min_linking_split_reads=2,
+    min_mapping_quality=20,
+    min_non_target_aligned_split_reads=1,
+    min_splits_reads_resolution=3,
+    sc_extension_stop=5,
+    stdev_count_abnormal=3
 )
 """Namespace: holds the settings for computations with the Evidence objects
 
@@ -43,10 +47,10 @@ DEFAULTS = Namespace(
     read_length
         length of reads in the bam file
 
-    stdev_insert_size
+    stdev_fragment_size
         the standard deviation in insert sizes of paired end reads
 
-    median_insert_size
+    median_fragment_size
         the median insert size of paired end reads
 
     stdev_count_abnormal
@@ -93,6 +97,10 @@ DEFAULTS = Namespace(
         the maximum number of paths to resolve. This is used to limit when there is a messy assembly graph to resolve.
         The assmebly will pre-calculate the number of paths (or putative assemblies) and stop if it is greater than
         the given setting.
+    
+    assembly_strand_concordance
+        when the number of remapped reads from each strand are compared, the ratio must be above this number to decide
+        on the strand
 """
 
 
@@ -156,23 +164,23 @@ class EventCall(BreakpointPair):
             * (*int*) - the standard deviation (from the median) of the insert size
         """
         support = set()
-        exp_isize_range = self.evidence.expected_insert_size_range()
+        exp_isize_range = self.evidence.expected_fragment_size_range()
 
-        insert_sizes = []
+        fragment_sizes = []
         for read in itertools.chain.from_iterable(self.evidence.flanking_reads):
             isize = abs(read.template_length)
             if (self.classification == SVTYPE.INS and isize < exp_isize_range.start) \
                     or (self.classification == SVTYPE.DEL and isize > exp_isize_range.end) \
                     or self.classification not in [SVTYPE.DEL, SVTYPE.INS]:
                 support.add(read.query_name)
-                insert_sizes.append(isize)
+                fragment_sizes.append(isize)
 
         if len(support) > 0:
-            median = statistics.median(insert_sizes)
+            median = statistics.median(fragment_sizes)
             err = 0
-            for insert in insert_sizes:
+            for insert in fragment_sizes:
                 err += math.pow(insert - median, 2)
-            err /= len(insert_sizes)
+            err /= len(fragment_sizes)
             stdev = math.sqrt(err)
             return len(support), median, stdev
         else:
@@ -258,7 +266,7 @@ class Evidence:
 
     @classmethod
     def generate_window(
-        cls, breakpoint, read_length, median_insert_size, call_error, stdev_insert_size, stdev_count_abnormal
+        cls, breakpoint, read_length, median_fragment_size, call_error, stdev_fragment_size, stdev_count_abnormal
     ):
         """
         given some input breakpoint uses the current evidence setting to determine an
@@ -267,27 +275,27 @@ class Evidence:
         Args:
             breakpoint (Breakpoint): the breakpoint we are generating the evidence window for
             read_length (int): the read length
-            median_insert_size (int): the median insert size
+            median_fragment_size (int): the median insert size
             call_error (int):
                 adds a buffer to the calculations if confidence in the breakpoint calls is low can increase this
-            stdev_insert_size (int):
+            stdev_fragment_size (int):
                 the standard deviation away from the median for regular (non STV) read pairs
         Returns:
             Interval: the range where reads should be read from the bam looking for evidence for this event
         """
-        fragment_size = read_length * 2 + median_insert_size + stdev_insert_size * stdev_count_abnormal
-        start = breakpoint.start - fragment_size - call_error
-        end = breakpoint.end + fragment_size + call_error
+        fragment_size = median_fragment_size + stdev_fragment_size * stdev_count_abnormal
+        start = breakpoint.start - fragment_size - call_error + 1
+        end = breakpoint.end + fragment_size + call_error - 1
 
         if breakpoint.orient == ORIENT.LEFT:
-            end = breakpoint.end + call_error + read_length
+            end = breakpoint.end + call_error + read_length - 1
         elif breakpoint.orient == ORIENT.RIGHT:
-            start = breakpoint.start - call_error - read_length
+            start = breakpoint.start - call_error - read_length + 1
         return Interval(start, end)
 
     @classmethod
-    def generate_transcriptome_window(cls, breakpoint, annotations, read_length, median_insert_size, call_error,
-                                      stdev_insert_size, stdev_count_abnormal):
+    def generate_transcriptome_window(cls, breakpoint, annotations, read_length, median_fragment_size, call_error,
+                                      stdev_fragment_size, stdev_count_abnormal):
         """
         given some input breakpoint uses the current evidence setting to determine an
         appropriate window/range of where one should search for supporting reads
@@ -296,31 +304,28 @@ class Evidence:
             breakpoint (Breakpoint): the breakpoint we are generating the evidence window for
             annotations (dict of str and list of Gene): the set of reference annotations: genes, transcripts, etc
             read_length (int): the read length
-            median_insert_size (int): the median insert size
+            median_fragment_size (int): the median insert size
             call_error (int):
                 adds a buffer to the calculations if confidence in the breakpoint calls is low can increase this
-            stdev_insert_size:
+            stdev_fragment_size:
                 the standard deviation away from the median for regular (non STV) read pairs
         Returns:
             Interval: the range where reads should be read from the bam looking for evidence for this event
         """
-        print('generate_transcriptome_window')
         transcripts = overlapping_transcripts(annotations, breakpoint)
         window = cls.generate_window(
-            breakpoint, read_length, median_insert_size, call_error, stdev_insert_size, stdev_count_abnormal)
+            breakpoint, read_length, median_fragment_size, call_error, stdev_fragment_size, stdev_count_abnormal)
 
         tgt_left = breakpoint.start - window.start + 1  # amount to expand to the left
         tgt_right = window.end - breakpoint.end + 1  # amount to expand to the right
-        print(tgt_left, tgt_right)
         if len(transcripts) == 0:  # case 1. no overlapping transcripts
-            print('no overlapping transcripts')
             return window
 
-        intervals = [breakpoint]
+        intervals = [(breakpoint.start - tgt_left + 1, breakpoint.end + tgt_right - 1)]
 
         for ust in transcripts:
-            print('ust', ust)
             mapping = {}
+            
             cdna_length = sum([len(e) for e in ust.exons])
             s = 1
             for ex in ust.exons:
@@ -329,92 +334,27 @@ class Evidence:
             reverse_mapping = {}
             for k, v in mapping.items():
                 reverse_mapping[v] = k
-            print('t', ust.name)
-            curr = Interval(breakpoint.start, breakpoint.end)
+            bs = breakpoint.start
+            be = breakpoint.end
+            # follow the window either direction to the nearest exon boundary
+            for ex1, ex2 in zip(ust.exons, ust.exons[1::]):
+                if bs > ex1.end and bs < ex2.start:
+                    bs = ex1.end
+                if be > ex1.end and be < ex2.start:
+                    be = ex2.start
+            assert(bs <= be)
+            # now convert the exonic coordinates to determine the window boundaries
+            cs = Interval.convert_pos(mapping, bs)
+            gs = ust.start - (tgt_left - cs)
+            if cs > tgt_left:
+                gs = Interval.convert_pos(reverse_mapping, cs - tgt_left + 1)
+            
+            ce = Interval.convert_pos(mapping, be)
+            ge = ust.end + (tgt_right - cdna_length + ce)
+            if cdna_length > ce + tgt_right:
+                ge = Interval.convert_pos(reverse_mapping, ce + tgt_right - 1)
 
-            if breakpoint.start < ust.start:
-                print('before the start')
-                curr = curr | Interval(breakpoint.start - tgt_left, breakpoint.start)
-            elif breakpoint.start > ust.end:
-                print('after the end')
-                tgt = tgt_left - (breakpoint.start - ust.end)
-                c = Interval.convert_pos(ust.end)
-                g = ust.start - (tgt - c)
-                if c >= tgt:
-                    g = Interval.convert_pos(reverse_mapping, c - tgt + 1)
-                curr = curr | Interval(g, breakpoint.start)
-            else:
-                for ex1, ex2 in zip(ust.exons, ust.exons[1:]):
-                    if (breakpoint.start >= ex1.start and breakpoint.start <= ex1.end) or \
-                            (breakpoint.start >= ex2.start and breakpoint.start <= ex2.end):
-                        print('exonic', ex1, ex2, breakpoint.start, 'left')
-                        # in an exon
-                        c = Interval.convert_pos(mapping, breakpoint.start)
-                        g = ust.start - (tgt_left - c + 1)
-                        if c >= tgt_left:
-                            g = Interval.convert_pos(reverse_mapping, c - tgt_left + 1)
-                        curr = curr | Interval(g, breakpoint.start)
-                        break
-                    elif breakpoint.start > ex1.end and breakpoint.start < ex2.start:
-                        print('intronic', ex1, ex2, breakpoint.start, 'left')
-                        isize = breakpoint.start - ex1.end
-                        if isize >= tgt_left:
-                            curr = curr | Interval(breakpoint.start - tgt_left + 1, breakpoint.start)
-                        else:
-                            # in an intron
-                            tgt = tgt_left - isize
-                            print('adjusted tgt', tgt_left, tgt)
-                            c = Interval.convert_pos(mapping, ex1.end)
-                            print('c', c)
-                            g = ust.start - (tgt - c + 1)
-                            if c >= tgt:
-                                print('dont need the whole thing', c - tgt)
-                                g = Interval.convert_pos(reverse_mapping, c - tgt + 1)
-                            curr = curr | Interval(g, breakpoint.start)
-                            break
-            if breakpoint.end > ust.end:
-                print('after the end')
-                curr = curr | Interval(breakpoint.end, breakpoint.end + tgt_right)
-            elif breakpoint.end < ust.start:
-                print('before the start')
-                tgt = tgt_right - (ust.start - breakpoint.end)
-                c = Interval.convert_pos(mapping, ust.end)
-                cr = cdna_length - c
-                g = ust.end + (tgt - cr)
-                if cr > tgt:
-                    cr -= tgt
-                    g = Interval.convert_pos(reverse_mapping, cdna_length - cr + tgt)
-                curr = curr | Interval(g, breakpoint.end)
-            else:
-                for ex1, ex2 in zip(ust.exons, ust.exons[1:]):
-                    if (breakpoint.end >= ex1.start and breakpoint.end <= ex1.end) or \
-                            (breakpoint.end >= ex2.start and breakpoint.end <= ex2.end):
-                        # in an exon
-                        print('exonic', ex1, ex2, breakpoint.end, 'right')
-                        c = Interval.convert_pos(mapping, breakpoint.end)
-                        rem_c = cdna_length - c
-                        g = ust.end + (tgt_right - rem_c)
-                        if rem_c > tgt_right:
-                            g = Interval.convert_pos(reverse_mapping, c + tgt_right - 1)
-                        curr = curr | Interval(breakpoint.end, g)
-                        break
-                    elif breakpoint.end > ex1.end and breakpoint.end < ex2.start:
-                        # in an intron
-                        print('intronic', ex1, ex2, breakpoint.end, 'right')
-                        isize = ex2.start - breakpoint.end
-                        if isize > tgt_right:
-                            curr = curr | Interval(breakpoint.end, breakpoint.end + tgt_right - 1)
-                        else:
-                            tgt = tgt_right - isize
-                            c = Interval.convert_pos(mapping, ex2.start)
-                            rem_c = cdna_length - c
-                            g = ust.end + (tgt - rem_c)
-                            if rem_c >= tgt:
-                                print('dont need the whole thing')
-                                g = Interval.convert_pos(reverse_mapping, c + tgt - 1)
-                            curr = curr | Interval(breakpoint.end, g)
-                        break
-            intervals.append(curr)
+            intervals.append(Interval(gs, ge))
         return Interval.union(*intervals)
 
     def __init__(
@@ -440,7 +380,7 @@ class Evidence:
         d = dict()
         d.update(DEFAULTS.__dict__)
         d.update(kwargs)
-        REQ = ['read_length', 'stdev_insert_size', 'median_insert_size']
+        REQ = ['read_length', 'stdev_fragment_size', 'median_fragment_size']
         if any([x not in d for x in REQ]):
             raise KeyError('required argument missing', [x for x in REQ if x not in d])
         self.settings = Namespace(**d)
@@ -484,17 +424,17 @@ class Evidence:
             w1 = Evidence.generate_window(
                 self.break1,
                 read_length=self.settings.read_length,
-                median_insert_size=self.settings.median_insert_size,
+                median_fragment_size=self.settings.median_fragment_size,
                 call_error=self.settings.call_error,
-                stdev_insert_size=self.settings.stdev_insert_size,
+                stdev_fragment_size=self.settings.stdev_fragment_size,
                 stdev_count_abnormal=self.settings.stdev_count_abnormal
             )
             w2 = Evidence.generate_window(
                 self.break2,
                 read_length=self.settings.read_length,
-                median_insert_size=self.settings.median_insert_size,
+                median_fragment_size=self.settings.median_fragment_size,
                 call_error=self.settings.call_error,
-                stdev_insert_size=self.settings.stdev_insert_size,
+                stdev_fragment_size=self.settings.stdev_fragment_size,
                 stdev_count_abnormal=self.settings.stdev_count_abnormal
             )
             self.windows = (w1, w2)
@@ -503,18 +443,18 @@ class Evidence:
                 self.break1,
                 self.annotations,
                 read_length=self.settings.read_length,
-                median_insert_size=self.settings.median_insert_size,
+                median_fragment_size=self.settings.median_fragment_size,
                 call_error=self.settings.call_error,
-                stdev_insert_size=self.settings.stdev_insert_size,
+                stdev_fragment_size=self.settings.stdev_fragment_size,
                 stdev_count_abnormal=self.settings.stdev_count_abnormal
             )
             w2 = Evidence.generate_transcriptome_window(
                 self.break2,
                 self.annotations,
                 read_length=self.settings.read_length,
-                median_insert_size=self.settings.median_insert_size,
+                median_fragment_size=self.settings.median_fragment_size,
                 call_error=self.settings.call_error,
-                stdev_insert_size=self.settings.stdev_insert_size,
+                stdev_fragment_size=self.settings.stdev_fragment_size,
                 stdev_count_abnormal=self.settings.stdev_count_abnormal
             )
             self.windows = (w1, w2)
@@ -522,9 +462,12 @@ class Evidence:
             raise AttributeError('invalid protocol', self.protocol)
         self.half_mapped = (set(), set())
 
-    def expected_insert_size_range(self):
-        v = self.settings.stdev_count_abnormal * self.settings.stdev_insert_size
-        return Interval(self.settings.median_insert_size - v, self.settings.median_insert_size + v)
+    def expected_fragment_size_range(self):
+        v = self.settings.stdev_count_abnormal * self.settings.stdev_fragment_size
+        return Interval(
+            max([0, self.settings.median_fragment_size - v]),
+            self.settings.median_fragment_size + v
+        )
 
     def supporting_reads(self):
         """
@@ -608,19 +551,24 @@ class Evidence:
             self.breakpoint_pair)
         classifications = sorted(classifications)
 
-        insert_size = abs(read.template_length)
+        fragment_size = abs(read.template_length)
 
-        expected_isize = self.expected_insert_size_range()
-
-        if classifications == sorted([SVTYPE.DEL, SVTYPE.INS]):
-            if insert_size <= expected_isize.end and insert_size >= expected_isize.start:
-                raise UserWarning('insert size is not abnormal. does not support del/ins', insert_size)
-        elif classifications == [SVTYPE.DEL]:
-            if insert_size <= expected_isize.end:
-                raise UserWarning('insert size is smaller than expected for a deletion type event', insert_size)
-        elif classifications == [SVTYPE.INS]:
-            if insert_size >= expected_isize.start:
-                raise UserWarning('insert size is larger than expected for an insertion type event', insert_size)
+        expected_isize = self.expected_fragment_size_range()
+        
+        if self.protocol == PROTOCOL.GENOME:
+            if classifications == sorted([SVTYPE.DEL, SVTYPE.INS]):
+                if fragment_size <= expected_isize.end and fragment_size >= expected_isize.start:
+                    raise UserWarning('insert size is not abnormal. does not support del/ins', fragment_size)
+            elif classifications == [SVTYPE.DEL]:
+                if fragment_size <= expected_isize.end:
+                    raise UserWarning('insert size is smaller than expected for a deletion type event', fragment_size)
+            elif classifications == [SVTYPE.INS]:
+                if fragment_size >= expected_isize.start:
+                    raise UserWarning('insert size is larger than expected for an insertion type event', fragment_size)
+        elif self.protocol == PROTOCOL.TRANS:
+            pass
+        else:
+            raise NotImplementedError('unrecognized protocol', self.protocol)
 
         # check if the read orientation makes sense with the event type
         rt = Evidence.read_pair_type(read)
@@ -645,13 +593,15 @@ class Evidence:
         # correct for psyam using 0-based coordinates
         w2 = (w2[0] - 1, w2[1] - 1)
 
+        stranded = self.bam_cache.stranded and self.breakpoint_pair.stranded
+
         added = False
         if read.reference_start >= w1[0] and read.reference_end <= w1[1] \
                 and read.reference_id == self.bam_cache.reference_id(self.break1.chr) \
                 and read.next_reference_start >= w2[0] and read.next_reference_start <= w2[1] \
                 and read.next_reference_id == self.bam_cache.reference_id(self.break2.chr) \
                 and (
-                    not self.breakpoint_pair.stranded or not read.is_read1 or
+                    not stranded or not read.is_read1 or
                     read.is_reverse == (self.break1.strand == STRAND.NEG)) \
                 and (self.breakpoint_pair.interchromosomal or read.reference_end < read.next_reference_start):
             # current read falls in the first breakpoint window, mate in the
@@ -663,7 +613,7 @@ class Evidence:
                 and read.next_reference_start >= w1[0] and read.next_reference_start <= w1[1] \
                 and self.bam_cache.reference_id(self.break1.chr) == read.next_reference_id \
                 and (
-                    not self.breakpoint_pair.stranded or not read.is_read2 or
+                    not stranded or not read.is_read2 or
                     read.is_reverse != (self.break2.strand == STRAND.NEG)) \
                 and (self.breakpoint_pair.interchromosomal or read.reference_start > read.next_reference_start):
             # current read falls in the second breakpoint window, mate in the
@@ -768,8 +718,7 @@ class Evidence:
 
         # try mapping the soft-clipped portion to the other breakpoint
         w = (opposite_window[0], opposite_window[1])
-        opposite_breakpoint_ref = self.REFERENCE_GENOME[
-            opposite_breakpoint.chr].seq[w[0] - 1: w[1]]
+        opposite_breakpoint_ref = self.REFERENCE_GENOME[opposite_breakpoint.chr].seq[w[0] - 1: w[1]]
 
         putative_alignments = None
 
@@ -844,7 +793,7 @@ class Evidence:
             clipped = scores[0][2]
             self.split_reads[1 if first_breakpoint else 0].add(clipped)
 
-    def assemble_split_reads(self):
+    def assemble_split_reads(self, log=lambda *x: None):
         """
         uses the split reads and the partners of the half mapped reads to create a contig
         representing the sequence across the breakpoints
@@ -852,54 +801,111 @@ class Evidence:
         if it is not strand specific then sequences are sorted alphanumerically and only the
         first of a pair is kept (paired by sequence)
         """
-        strand_specific = self.breakpoint_pair.stranded
+        strand_specific = self.breakpoint_pair.stranded and self.bam_cache.stranded
         # gather reads for the putative assembly
         assembly_sequences = {}
+        targeted = 0
+        # add split reads
         for r in itertools.chain.from_iterable(self.split_reads):
-            s = r.query_sequence
-            if not strand_specific or (r.is_read1 and not r.get_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN)):
-                assembly_sequences[s] = assembly_sequences.get(s, set())
-                assembly_sequences[s].add(r)
-            if not strand_specific or (r.is_read2 and not r.get_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN)):
-                temp = reverse_complement(s)
-                assembly_sequences[temp] = assembly_sequences.get(temp, set())
-                assembly_sequences[temp].add(r)
-            # only collect the mates if they are unmapped
-            if r.mate_is_unmapped:
-                for m in self.bam_cache.get_mate(r):
-                    s = m.query_sequence
-                    if not strand_specific or (m.is_read1 and not r.get_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN)):
-                        assembly_sequences[s] = assembly_sequences.get(s, set())
-                        assembly_sequences[s].add(m)
-                    if not strand_specific or (m.is_read2 and not r.get_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN)):
-                        temp = reverse_complement(s)
-                        assembly_sequences[temp] = assembly_sequences.get(temp, set())
-                        assembly_sequences[temp].add(m)
-        for r in itertools.chain.from_iterable(self.half_mapped):
-            try:
-                for m in self.bam_cache.get_mate(r):
-                    s = m.query_sequence
-                    if not strand_specific or (m.is_read1 and not r.get_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN)):
-                        assembly_sequences[s] = assembly_sequences.get(s, set())
-                        assembly_sequences[s].add(m)
-                    if not strand_specific or (m.is_read2 and not r.get_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN)):
-                        temp = reverse_complement(s)
-                        assembly_sequences[temp] = assembly_sequences.get(temp, set())
-                        assembly_sequences[temp].add(m)
-            except KeyError:
-                pass
+            # ignore targeted realignments
+            if r.has_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN) and r.get_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN):
+                targeted += 1
+                continue
+            assembly_sequences.setdefault(r.query_sequence, set()).add(r)
+            if self.opposing_strands:
+                rqs_comp = reverse_complement(r.query_sequence)
+                assembly_sequences.setdefault(rqs_comp, set()).add(r)
+        
+        # add half-mapped reads
+        # exlude half-mapped reads if there is 'n' split reads that target align
+        if targeted < self.settings.assembly_min_tgt_to_exclude_half_map and \
+                self.settings.assembly_include_half_mapped_reads:
+            for r in itertools.chain.from_iterable(self.half_mapped):
+                assembly_sequences.setdefault(r.query_sequence, set()).add(r)
+                if self.opposing_strands:
+                    rqs_comp = reverse_complement(r.query_sequence)
+                    assembly_sequences.setdefault(rqs_comp, set()).add(r)
+                try:
+                    for m in self.bam_cache.get_mate(r):
+                        if not m.is_unmapped:
+                            continue
+                        assembly_sequences.setdefault(m.query_sequence, set()).add(m)
+                        if self.opposing_strands:
+                            rqs_comp = reverse_complement(m.query_sequence)
+                            assembly_sequences.setdefault(rqs_comp, set()).add(m)
+                except KeyError:
+                    pass
+        
+        # add flanking reads
+        if self.settings.assembly_include_flanking_reads:
+            for r in itertools.chain.from_iterable(self.flanking_reads):
+                if r.has_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN) and r.get_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN):
+                    continue
+                assembly_sequences.setdefault(r.query_sequence, set()).add(r)
+                if self.opposing_strands:
+                    rqs_comp = reverse_complement(r.query_sequence)
+                    assembly_sequences.setdefault(rqs_comp, set()).add(r)
+
+        log('assembly size of {} sequences'.format(len(assembly_sequences) // 2))
         contigs = assemble(
             assembly_sequences,
             assembly_min_edge_weight=self.settings.assembly_min_edge_weight,
-            assembly_max_paths=self.settings.assembly_max_paths
+            assembly_max_paths=self.settings.assembly_max_paths,
+            log=log,
+            assembly_min_consec_match_remap=self.settings.min_anchor_exact,
+            assembly_min_contig_length=self.settings.read_length
         )
+
+        # now determine the strand from the remapped reads if possible
+        if self.breakpoint_pair.stranded and self.bam_cache.stranded:  # strand specific
+            for contig in contigs:
+                if len(contig.remapped_reads.keys()) == 0:
+                    continue
+                strand_calls = {STRAND.POS: 0, STRAND.NEG: 0}
+                for seq in contig.remapped_reads:
+                    for read in assembly_sequences[seq.query_sequence]:
+                        if read.is_read1:
+                            if read.is_reverse:
+                                strand_calls[STRAND.NEG] += 1
+                            else:
+                                strand_calls[STRAND.POS] += 1
+                        else:
+                            if read.is_reverse:
+                                strand_calls[STRAND.POS] += 1
+                            else:
+                                strand_calls[STRAND.NEG] += 1
+                
+                if strand_calls[STRAND.NEG] == 0 and strand_calls[STRAND.POS] == 0:
+                    raise AssertionError('could not determine strand', strand_calls)
+                elif strand_calls[STRAND.POS] > strand_calls[STRAND.NEG]:
+                    ratio = strand_calls[STRAND.POS] / (strand_calls[STRAND.NEG] + strand_calls[STRAND.POS])
+                    if ratio >= self.settings.assembly_strand_concordance:
+                        continue
+                elif strand_calls[STRAND.NEG] > strand_calls[STRAND.POS]:
+                    ratio = strand_calls[STRAND.NEG] / (strand_calls[STRAND.NEG] + strand_calls[STRAND.POS])
+                    if ratio >= self.settings.assembly_strand_concordance:
+                        # negative strand. should reverse
+                        contig.sequence = reverse_complement(contig.sequence)
+                        continue
+                reverse = True if strand_calls[STRAND.NEG] > strand_calls[STRAND.POS] else False
+                for seq in contig.remapped_reads:
+                    for read in assembly_sequences[seq.query_sequence]:
+                        if read.is_reverse != reverse:
+                            print('conflicting read', read, read.cigar)
+                raise AssertionError('could not determine contig strand', strand_calls)
+
         filtered_contigs = {}
-        for c in sorted(contigs, key=lambda x: x.seq):  # sort so that the function is deterministic
-            if c.remap_score() < self.settings.assembly_min_remap:
+        # sort so that the function is deterministic
+        for c in sorted(contigs, key=lambda x: (x.remap_score() * -1, x.sequence)):  
+            if c.remap_score() < self.settings.assembly_min_remap:  # filter on evidence level
                 continue
-            rseq = reverse_complement(c.seq)
-            if c.seq not in filtered_contigs and (strand_specific or rseq not in filtered_contigs):
-                filtered_contigs[c.seq] = c
+            if not self.breakpoint_pair.stranded or not self.bam_cache.stranded:  # not strand specific
+                rseq = reverse_complement(c.sequence)
+                if c.sequence not in filtered_contigs and (strand_specific or rseq not in filtered_contigs):
+                    filtered_contigs[c.sequence] = c
+            else:
+                if c.sequence not in filtered_contigs:
+                    filtered_contigs[c.sequence] = c
         self.contigs = list(filtered_contigs.values())
 
     def call_events(self):
@@ -926,8 +932,10 @@ class Evidence:
                     calls.extend(Evidence._call_by_supporting_reads(self, cls))
                 except UserWarning as err:
                     errors.add(str(err))
-        if len(calls) == 0:
+        if len(calls) == 0 and len(errors) > 0:
             raise UserWarning(';'.join(sorted(list(errors))))
+        elif len(calls) == 0:
+            raise UserWarning('insufficient evidence to call events')
         return calls
 
     @classmethod
@@ -966,7 +974,7 @@ class Evidence:
         first_positions = set()
         second_positions = set()
 
-        expected_isize = ev.expected_insert_size_range()
+        expected_isize = ev.expected_fragment_size_range()
 
         for read in ev.flanking_reads[0]:
             if classification == SVTYPE.DEL:
@@ -1250,7 +1258,7 @@ class Evidence:
             len(self.untemplated_sequence if self.untemplated_sequence else '')
         )
 
-        if max_dist < self.settings.stdev_insert_size * self.settings.stdev_count_abnormal:
+        if max_dist < self.settings.stdev_fragment_size * self.settings.stdev_count_abnormal:
             raise NotImplementedError('evidence gathering for small structural variants is not supported')
             # needs special consideration b/c won't have flanking reads and may have spanning reads
 

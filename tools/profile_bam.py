@@ -5,6 +5,7 @@ from structural_variant import __version__
 from structural_variant.annotate.file_io import load_reference_genes
 from structural_variant.error import DiscontinuousMappingError
 from structural_variant.interval import Interval
+from structural_variant.constants import STRAND
 import multiprocessing
 import pysam
 import math
@@ -20,6 +21,8 @@ INTER_BIN_SIZE = 100000
 SAMPLE_CAP = 3000
 READ_LENGTH = None
 ANNOTATIONS = None
+STRANDED = True
+MIN_GENES_PER_POOL = 50
 
 
 def histogram_average(hist):
@@ -119,6 +122,8 @@ def parse_arguments():
         '--genes_set_size', default=1000, type=int,
         help='randomly samples this many genes per chromosome'
     )
+    g.add_argument(
+        '--unstranded', default=False, action='store_true', help='this is not a stranded protocol')
     parser.add_argument(
         '-p', '--pool_size', default=2, type=int,
         help='number of processing to use'
@@ -163,38 +168,49 @@ def profile_chr(chr):
     return chr, hist
 
 
-def profile_genes(index_start, index_end):
-    print('profiling genes:', index_start, index_end)
+def profile_genes(set_size):
+    genes = []
+    while len(genes) < set_size:
+        i = np.random.choice(range(0, len(ANNOTATIONS)))
+        genes.append(ANNOTATIONS[i])
     hist = dict()
-    for gene in ANNOTATIONS[index_start:index_end]:
-        putative_pairs = []
-        for read in BAM.fetch(chr, gene.start, gene.end, multiple_iterators=True):
+    for gene in genes:
+        inserts = []
+        read_count = 0
+        for read in BAM.fetch(gene.chr, gene.start, gene.end, multiple_iterators=True):
             if read.is_unmapped or read.mate_is_unmapped or read.mapping_quality < MIN_MAPPING_QUALITY \
                     or read.next_reference_id != read.reference_id or read.is_secondary \
                     or not read.is_proper_pair:
                 continue
-            s = Interval(read.reference_start, read.reference_end)
-            t = Interval(read.next_reference_start, read.next_reference_start + READ_LENGTH)
-            if s > t:
-                t, s = s, t
-            if not Interval.overlaps(gene, s) or not Interval.overlaps(gene, t) or Interval.overlaps(s, t):
+            if STRANDED:
+                if read.is_read1:
+                    if read.is_reverse:
+                        if gene.get_strand() == STRAND.POS:
+                            continue
+                    elif gene.get_strand() == STRAND.NEG:
+                        continue
+                else:
+                    if read.is_reverse:
+                        if gene.get_strand() == STRAND.NEG:
+                            continue
+                    elif gene.get_strand() == STRAND.POS:
+                        continue
+
+            if read.reference_end > read.next_reference_start:
                 continue
-            putative_pairs.append((s, t))
-            if len(putative_pairs) >= SAMPLE_CAP:
+
+            for t in gene.spliced_transcripts:
+                try:
+                    c1 = t.convert_genomic_to_cdna(read.reference_start)
+                    c2 = t.convert_genomic_to_cdna(read.next_reference_start)
+                    inserts.append(abs(c1 - c2) - 2 + READ_LENGTH)
+                except IndexError:
+                    pass
+            read_count += 1
+            if read_count >= SAMPLE_CAP:
                 break
-        transcripts = gene.transcripts
-        if any([t.is_best_transcript for t in gene.transcripts]):
-            transcripts = [t for t in gene.transcripts if t.is_best_transcript]
-        for ust in transcripts:
-            for tx in ust.transcripts:  # spliced transcripts
-                for s, t in putative_pairs:
-                    try:
-                        s = tx.convert_genomic_to_cdna(s.end)
-                        t = tx.convert_genomic_to_cdna(t.start)
-                        l = abs(t - s) + 1
-                        hist[l] = hist.get(l, 0) + 1
-                    except DiscontinuousMappingError:
-                        pass
+        for ins in inserts:
+            hist[ins] = hist.get(ins, 0) + 1
     return hist
 
 
@@ -204,24 +220,23 @@ def profile_transcriptome(BAM, GENES_SET_SIZE, best_transcripts_only=True):
     total_reads = 0
 
     print('selecting', GENES_SET_SIZE, 'random genes from', len(ANNOTATIONS), 'total genes')
+    sets = []
+    temp = GENES_SET_SIZE
+    each = max([GENES_SET_SIZE // POOL_SIZE, MIN_GENES_PER_POOL])
+    while temp >= 2 * each:
+        sets.append(each)
+        temp -= each
+    if temp > 0:
+        sets.append(temp)
     
-    indicies = np.random.choice(range(0, len(ANNOTATIONS)), GENES_SET_SIZE)
-    pools = []
-    genes_per_pool = len(indicies) // POOL_SIZE
-    for p in range(0, POOL_SIZE - 1):
-        pools.append((p * genes_per_pool, (p + 1) * genes_per_pool))
-    pools.append(((POOL_SIZE - 1) * genes_per_pool, None))
-    
-    insert_sizes = {}
     with multiprocessing.Pool(POOL_SIZE) as p:
-        for ps, pt in pools:
-            print('starting pool', ps, pt)
-            insert_sizes[(ps, pt)] = p.apply_async(profile_genes, args=(ps, pt))
-    return sum_histograms([v.get() for v in insert_sizes.values()])
+        fragment_sizes = p.map(profile_genes, sets)
+    return sum_histograms(fragment_sizes)
 
 
 def main(args):
-    global BIN_SIZE, INTER_BIN_SIZE, SAMPLE_CAP, BAM, POOL_SIZE, READ_LENGTH, ANNOTATIONS
+    global BIN_SIZE, INTER_BIN_SIZE, SAMPLE_CAP, BAM, POOL_SIZE, READ_LENGTH, ANNOTATIONS, STRANDED
+    STRANDED = not args.unstranded
     POOL_SIZE = args.pool_size
     BIN_SIZE = args.bin_size
     INTER_BIN_SIZE = args.inter_bin_size
@@ -229,13 +244,15 @@ def main(args):
     BAM = pysam.AlignmentFile(args.bamfile)
     READ_LENGTH = args.read_length
 
-    # run different protocols for transcriptome vs genome
+    # run different protocols for transcriptom vs genome
     hist = dict()
     if args.transcriptome:
         print('loading:', args.annotations)
         ANNOTATIONS = load_reference_genes(args.annotations, best_transcripts_only=True)
         temp = []
-        for l in ANNOTATIONS.values():
+        for chr, l in ANNOTATIONS.items():
+            if chr not in BAM.references:
+                continue
             temp.extend(l)
         ANNOTATIONS = temp
         hist = profile_transcriptome(BAM, args.genes_set_size)
@@ -243,11 +260,12 @@ def main(args):
         references = args.chromosomes if args.chromosomes is not None else [r for r in BAM.references]
         # map processing pools, one per chromosome
         with multiprocessing.Pool(POOL_SIZE) as p:
-            insert_sizes = p.map(profile_chr, references)
-        hist = sum_histograms([v for k, v in insert_sizes])
+            fragment_sizes = p.map(profile_chr, references)
+        hist = sum_histograms([v for k, v in fragment_sizes])
     
     # output the stats
     print('\nFINAL')
+    print('sample size', sum(hist.values()), 'reads')
     a = histogram_average(hist)
     print('average                   \t{:.2f}'.format(a))
     s = histogram_stderr(hist, a)
@@ -294,10 +312,10 @@ def main(args):
         #     print('error: no scipy support. cannot test normal fit')
         binwidth = 10
         ax.hist(x, normed=True, bins=range(min(hist), max(hist) + binwidth, binwidth), color='b')
-        ax.set_xlabel('abs insert size')
+        ax.set_xlabel('abs fragment size')
         ax.set_ylabel('frequency')
         ax.set_xticks([0, m, max(x)])
-        ax.set_title('histogram of absolute insert sizes')
+        ax.set_title('histogram of absolute fragment sizes')
         plt.grid(True)
         x = numpy.linspace(min(hist), max(hist), 100)
         ax.plot(x, mlab.normpdf(x, a, math.sqrt(s)), color='r', linewidth=2)
@@ -305,8 +323,8 @@ def main(args):
         ax.plot(x, mlab.normpdf(x, m, math.sqrt(e95)), color='b', linewidth=2)
         ax.plot(x, mlab.normpdf(x, m, math.sqrt(e90)), color='b', linewidth=2)
         ax.plot(x, mlab.normpdf(x, m, math.sqrt(e80)), color='b', linewidth=2)
-        plt.savefig('insert_sizes_histogram_chr22.svg')
-        print('wrote figure: insert_sizes_histogram_chr22.svg')
+        plt.savefig('fragment_sizes_histogram_chr22.svg')
+        print('wrote figure: fragment_sizes_histogram_chr22.svg')
     except ImportError:
         print('cannot import matplotlib, will not generate figure')
 

@@ -439,12 +439,12 @@ COLUMNS = Vocab(
         'flanking_reads',
         'Number of read-pairs where one read aligns to the first breakpoint window and the second read aligns to the '
         'other. The count here is based on the number of unique query names'),
-    median_insert_size=Column(
-        'median_insert_size',
-        'The median insert size of the flanking reads being used as evidence'),
-    stdev_insert_size=Column(
-        'stdev_insert_size',
-        'The standard deviation in insert size of the flanking reads being used as evidence'),
+    median_fragment_size=Column(
+        'median_fragment_size',
+        'The median fragment size of the flanking reads being used as evidence'),
+    stdev_fragment_size=Column(
+        'stdev_fragment_size',
+        'The standard deviation in fragment size of the flanking reads being used as evidence'),
     break1_split_reads=Column(
         'break1_split_reads',
         'Number of split reads that call the exact breakpoint given'),
