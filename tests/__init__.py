@@ -7,6 +7,7 @@ import os
 
 filedir = os.path.join(os.path.dirname(__file__), 'files')
 REFERENCE_GENOME_FILE = os.path.join(filedir, 'mock_reference_genome.fa')
+REFERENCE_GENOME_FILE_2BIT = os.path.join(filedir, 'mock_reference_genome.2bit')
 REFERENCE_ANNOTATIONS_FILE = os.path.join(filedir, 'mock_reference_annotations.tsv')
 REFERENCE_ANNOTATIONS_FILE_JSON = os.path.join(filedir, 'mock_reference_annotations.json')
 TEMPLATE_METADATA_FILE = os.path.join(filedir, 'cytoBand.txt')
