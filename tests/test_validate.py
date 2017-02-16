@@ -349,8 +349,8 @@ class TestCallBySupportingReads(unittest.TestCase):
                 ),
             None, None,
             read_length=40,
-            stdev_insert_size=25,
-            median_insert_size=100,
+            stdev_fragment_size=25,
+            median_fragment_size=100,
             stdev_count_abnormal=2,
             min_splits_reads_resolution=1,
             min_flanking_reads_resolution=1
