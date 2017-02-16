@@ -69,7 +69,35 @@ class TestBlat(unittest.TestCase):
         self.assertEqual(Interval(93, 112), read.query_coverage_interval())
 
     def test_pslx_row_to_pysam_reverse(self):
-        pslx_row = {'match': 128, 'mismatch': 0, 'repmatch': 0, 'ncount': 0, 'qgap_count': 0, 'qgap_bases': 0, 'tgap_count': 0, 'tgap_bases': 0, 'strand': '-', 'qname': 'seq1', 'qsize': 245, 'qstart': 0, 'qend': 128, 'tname': 'reference3', 'tsize': 3711, 'tstart': 2187, 'tend': 2315, 'block_count': 1, 'block_sizes': [128], 'qstarts': [117], 'tstarts': [2187], 'qseqs': ['TGAGCAGAGCTATATATTTAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAACCAAACAGGAAAGAATCCAAATTCTGTGTTTACAGGGCTTTCATGCTCAG'], 'tseqs': ['TGAGCAGAGCTATATATTTAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAACCAAACAGGAAAGAATCCAAATTCTGTGTTTACAGGGCTTTCATGCTCAG'], '_index': 1, 'score': 128, 'percent_ident': 100.0, 'qseq_full': 'CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT'}
+        pslx_row = {
+            'match': 128,
+            'mismatch': 0,
+            'repmatch': 0,
+            'ncount': 0,
+            'qgap_count': 0,
+            'qgap_bases': 0,
+            'tgap_count': 0,
+            'tgap_bases': 0,
+            'strand': '-',
+            'qname': 'seq1',
+            'qsize': 245,
+            'qstart': 0,
+            'qend': 128,
+            'tname': 'reference3',
+            'tsize': 3711,
+            'tstart': 2187,
+            'tend': 2315,
+            'block_count': 1,
+            'block_sizes': [128],
+            'qstarts': [117],
+            'tstarts': [2187],
+            'qseqs': ['TGAGCAGAGCTATATATTTAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAACCAAACAGGAAAGAATCCAAATTCTGTGTTTACAGGGCTTTCATGCTCAG'],
+            'tseqs': ['TGAGCAGAGCTATATATTTAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAACCAAACAGGAAAGAATCCAAATTCTGTGTTTACAGGGCTTTCATGCTCAG'],
+            '_index': 1,
+            'score': 128,
+            'percent_ident': 100.0,
+            'qseq_full': 'CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT'
+        }
         read = Blat.pslx_row_to_pysam(pslx_row, self.cache, None)
         print(read.cigar)
         raise(UserWarning)
