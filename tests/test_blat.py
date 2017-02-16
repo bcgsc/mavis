@@ -24,7 +24,7 @@ def setUpModule():
         raise AssertionError('fake genome file does not have the expected contents')
     global BAM_CACHE
     BAM_CACHE = BamCache(BAM_INPUT)
-    
+
 class TestBlat(unittest.TestCase):
     def setUp(self):
         self.cache = BamCache(MockBamFileHandle({'Y': 23, 'fake': 0,'reference3':3}))
@@ -68,7 +68,7 @@ class TestBlat(unittest.TestCase):
         self.assertEqual(23, read.reference_id)
         self.assertEqual(Interval(93, 112), read.query_coverage_interval())
 
-    def test_pslx_row_to_pysam_reverse(self):
+    def test_pslx_row_to_pysam_full_reverse(self):
         pslx_row = {
             'match': 128,
             'mismatch': 0,
@@ -99,8 +99,10 @@ class TestBlat(unittest.TestCase):
             'qseq_full': 'CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT'
         }
         read = Blat.pslx_row_to_pysam(pslx_row, self.cache, None)
-        print(read.cigar)
-        raise(UserWarning)
+        self.assertEqual(3, read.reference_id)
+        self.assertEqual([(CIGAR.M,128),(CIGAR.S,117)], read.cigar)
+        self.assertEqual(2187, read.reference_start)
+        self.assertEqual(Interval(0, 127), read.query_coverage_interval())
 
     def test_pslx_row_to_pysam_simple(self):
         pslx_row = {
@@ -206,15 +208,21 @@ class TestBlat(unittest.TestCase):
                 ),
             None, None,
             read_length=40,
-            stdev_insert_size=25,
-            median_insert_size=100,
+            stdev_fragment_size=25,
+            median_fragment_size=100,
             stdev_count_abnormal=2,
             min_splits_reads_resolution=1,
             min_flanking_reads_resolution=1
             )
-        c = Contig("CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT",0)
-        ev.contigs=[c]
+        ev.contigs=[Contig("CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT",0)]
         blat_contigs([ev], BAM_CACHE, REFERENCE_GENOME, ref_2bit=REFERENCE_GENOME_FILE_2BIT)
-        c2 = ev.contigs[0]
-        print(c2.alignments)
-        raise(UserWarning)
+        read1,read2 = ev.contigs[0].alignments[0]
+
+        self.assertEqual(1, read1.reference_id)
+        self.assertEqual(1, read2.reference_id)
+        self.assertEqual(Interval(125, 244), read1.query_coverage_interval())
+        self.assertEqual(Interval(0, 127),read2.query_coverage_interval())
+        self.assertEqual(1114, read1.reference_start)
+        self.assertEqual(2187, read2.reference_start)
+        self.assertEqual([(CIGAR.S, 125),(CIGAR.EQ, 120)], read1.cigar)
+        self.assertEqual([(CIGAR.EQ, 128), (CIGAR.S, 117)], read2.cigar)

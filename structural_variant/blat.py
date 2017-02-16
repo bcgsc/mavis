@@ -346,7 +346,7 @@ def blat_contigs(
         sequences = set()
         for e in evidence:
             for c in e.contigs:
-                sequences.add(c.seq)
+                sequences.add(c.sequence)
         for seq in sequences:
             n = 'seq{0}'.format(count)
             query_id_mapping[n] = seq
@@ -406,7 +406,7 @@ def blat_contigs(
         # now for each evidence assign an alignment to each contig
         for e in evidence:
             for contig in e.contigs:
-                aln = reads_by_query.get(contig.seq, [])
+                aln = reads_by_query.get(contig.sequence, [])
                 putative_alignments = []
                 combo_prohibited = set()
 
