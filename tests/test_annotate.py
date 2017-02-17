@@ -22,7 +22,6 @@ def setUpModule():
     print('loaded annotations', count)
     assert(count == 6)  # make sure this is the file we expect
     REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
-    assert(6 == len(REFERENCE_GENOME.keys()))
     assert(REF_CHR in REFERENCE_GENOME)
     print('loaded the reference genome', REFERENCE_GENOME_FILE)
 
@@ -557,7 +556,7 @@ class TestCoordinateCoversion(unittest.TestCase):
 
     def test_convert_genomic_to_cds_notation_intronic_pos(self):
         self.assertEqual('50+2', self.translation.convert_genomic_to_cds_notation(202))
-    
+
     def test_convert_genomic_to_cds_notation_intronic_neg(self):
         self.assertEqual('51-2', self.translation.convert_genomic_to_cds_notation(299))
 

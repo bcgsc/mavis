@@ -499,5 +499,3 @@ class TestDraw(unittest.TestCase):
         canvas = d.draw_ustranscripts_overlay(gene, vmarkers=[marker], plots=[s, s])
         self.assertEqual(2, len(canvas.elements))  # defs counts as element
         canvas.saveas('test_draw_overlay.svg')
-        self.assertFalse(True)
-        raise unittest.SkipTest('TODO. add height calculation assert')

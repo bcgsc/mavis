@@ -39,7 +39,10 @@ DEFAULTS = Namespace(
     min_splits_reads_resolution=3,
     sc_extension_stop=5,
     stdev_count_abnormal=3,
-    strand_determining_read=2
+    strand_determining_read=2,
+    min_sample_size_to_apply_percentage=10,
+    fuzzy_mismatch_number=1,
+    max_sc_preceeding_anchor=6
 )
 """Namespace: holds the settings for computations with the Evidence objects
 
@@ -106,6 +109,12 @@ DEFAULTS = Namespace(
     strand_determining_read
         1 or 2. The read in the pair which determines if (assuming a stranded protocol) the first or second read in the
         pair matches the strand sequenced
+
+    max_sc_preceeding_anchor
+        when remapping a softclipped read this determines the amount of softclipping allowed on the side opposite
+        of where we expect it. For example for a softclipped read on a breakpoint with a left orientation this limits
+        the amount of softclipping that is allowed on the right. If this is set to None then there is no limit on
+        softclipping
 """
 
 
@@ -213,8 +222,8 @@ class EventCall(BreakpointPair):
                 bpos = breakpoint_pos(read, self.break1.orient)
                 if Interval.overlaps((bpos, bpos), self.break1):
                     support1.add(read.query_name)
-                    if read.has_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN) and \
-                            read.get_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN):
+                    if read.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT) and \
+                            read.get_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT):
                         realigns1.add(read.query_name)
             except AttributeError:
                 pass
@@ -224,8 +233,8 @@ class EventCall(BreakpointPair):
                 bpos = breakpoint_pos(read, self.break2.orient)
                 if Interval.overlaps((bpos, bpos), self.break2):
                     support2.add(read.query_name)
-                    if read.has_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN) and \
-                            read.get_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN):
+                    if read.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT) and \
+                            read.get_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT):
                         realigns2.add(read.query_name)
             except AttributeError:
                 pass
@@ -555,6 +564,58 @@ class Evidence:
         else:
             raise NotImplementedError('unexpected orientation for pair')
 
+    def read_pair_supports_type(self, read, event_type):
+        """
+        checks if the orientation is compatible with the type and also
+        if the insert size makes sense
+        """
+        temp = self.expected_fragment_size_range()  # normal range for genomes
+        gmin = temp[0]
+        gmax = temp[1]
+
+        fragment_sizes = abs(read.template_length)
+        if self.protocol == PROTOCOL.TRANS:
+            raise NotImplementedError('TODO')
+
+        if event_type == SVTYPE.DEL:
+            if Evidence.read_pair_type(read) != READ_PAIR_TYPE.LR:
+                return False
+            if self.protocol == PROTOCOL.GENOME:
+                if abs(read.template_length) <= self.expected_fragment_size_range()[1]:
+                    return False
+            elif self.protocol == PROTOCOL.TRANS:
+                pass
+            else:
+                raise ValueError('protocol not recognized', self.protocol)
+        elif event_type == SVTYPE.INS:
+            if Evidence.read_pair_type(read) != READ_PAIR_TYPE.LR:
+                return False
+            if self.protocol == PROTOCOL.GENOME:
+                if abs(read.template_length) >= self.expected_fragment_size_range()[0]:
+                    return False
+            elif self.protocol == PROTOCOL.TRANS:
+                pass
+            else:
+                raise ValueError('protocol not recognized', self.protocol)
+        elif event_type == SVTYPE.TRANS:
+            if Evidence.read_pair_type(read) != READ_PAIR_TYPE.LR and \
+                    Evidence.read_pair_type(read) != READ_PAIR_TYPE.RL:
+                return False
+        elif event_type == SVTYPE.ITRANS:
+            if Evidence.read_pair_type(read) != READ_PAIR_TYPE.LL and \
+                    Evidence.read_pair_type(read) != READ_PAIR_TYPE.RR:
+                return False
+        elif event_type == SVTYPE.INV:
+            if Evidence.read_pair_type(read) != READ_PAIR_TYPE.LL and \
+                    Evidence.read_pair_type(read) != READ_PAIR_TYPE.RR:
+                return False
+        elif event_type == SVTYPE.DUP:
+            if Evidence.read_pair_type(read) != READ_PAIR_TYPE.RL:
+                return False
+        else:
+            raise ValueError('unexpected event type', event_type)
+        return True
+
     def add_flanking_read(self, read):
         """
         checks if a given read meets the minimum quality criteria to be counted as evidence as stored as support for
@@ -575,27 +636,24 @@ class Evidence:
         classifications = sorted(classifications)
 
         fragment_size = abs(read.template_length)
-        # need to compute the fragment size using the annotations for transcriptomes
+        if self.protocol == PROTOCOL.TRANS:
+            # then we need to use the annotations to calculate the fragmentsize
+            raise NotImplementedError('TODO')
 
         expected_isize = self.expected_fragment_size_range()
 
         if self.breakpoint_pair.interchromosomal != (read.reference_id != read.next_reference_id):
             raise UserWarning('flanking read references are not expected')
 
-        if self.protocol == PROTOCOL.GENOME:
-            if classifications == sorted([SVTYPE.DEL, SVTYPE.INS]):
-                if fragment_size <= expected_isize.end and fragment_size >= expected_isize.start:
-                    raise UserWarning('insert size is not abnormal. does not support del/ins', fragment_size)
-            elif classifications == [SVTYPE.DEL]:
-                if fragment_size <= expected_isize.end:
-                    raise UserWarning('insert size is smaller than expected for a deletion type event', fragment_size)
-            elif classifications == [SVTYPE.INS]:
-                if fragment_size >= expected_isize.start:
-                    raise UserWarning('insert size is larger than expected for an insertion type event', fragment_size)
-        elif self.protocol == PROTOCOL.TRANS:
-            pass
-        else:
-            raise NotImplementedError('unrecognized protocol', self.protocol)
+        if classifications == sorted([SVTYPE.DEL, SVTYPE.INS]):
+            if fragment_size <= expected_isize.end and fragment_size >= expected_isize.start:
+                raise UserWarning('insert size is not abnormal. does not support del/ins', fragment_size)
+        elif classifications == [SVTYPE.DEL]:
+            if fragment_size <= expected_isize.end:
+                raise UserWarning('insert size is smaller than expected for a deletion type event', fragment_size)
+        elif classifications == [SVTYPE.INS]:
+            if fragment_size >= expected_isize.start:
+                raise UserWarning('insert size is larger than expected for an insertion type event', fragment_size)
 
         # check if the read orientation makes sense with the event type
         rt = Evidence.read_pair_type(read)
@@ -718,8 +776,8 @@ class Evidence:
             raise UserWarning(
                 'split read does not meet the minimum anchor criteria')
 
-        if not read.has_tag('ca') or read.get_tag('ca') != 1:
-            read.set_tag('ca', 1, value_type='i')
+        if not read.has_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR) or not read.get_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR):
+            read.set_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR, 1, value_type='i')
             # recalculate the read cigar string to ensure M is replaced with = or X
             c = CigarTools.recompute_cigar_mismatch(
                 read,
@@ -735,11 +793,11 @@ class Evidence:
             read.reference_start = read.reference_start + prefix
         # data quality filters
 
-        if CigarTools.alignment_matches(read.cigar) >= 10 \
+        if CigarTools.alignment_matches(read.cigar) >= self.settings.min_sample_size_to_apply_percentage \
                 and CigarTools.match_percent(read.cigar) < self.settings.min_anchor_match:
             raise UserWarning('alignment of too poor quality')
         if CigarTools.longest_exact_match(read.cigar) < self.settings.min_anchor_exact \
-                and CigarTools.longest_fuzzy_match(read.cigar, 1) < self.settings.min_anchor_fuzzy:
+                and CigarTools.longest_fuzzy_match(read.cigar, self.settings.fuzzy_mismatch_number) < self.settings.min_anchor_fuzzy:
             raise UserWarning('alignment of too poor quality')
         else:
             self.split_reads[0 if first_breakpoint else 1].add(read)
@@ -750,14 +808,14 @@ class Evidence:
 
         putative_alignments = None
 
-        if not self.breakpoint_pair.opposing_strands:
+        if not self.breakpoint_pair.opposing_strands:  # same strand
             sc_align = nsb_align(opposite_breakpoint_ref, read.query_sequence)
 
             for a in sc_align:
                 a.flag = read.flag
             putative_alignments = sc_align
         else:
-            # check if the revcomp will give us sc_align better alignment
+            # should align opposite the current read
             revcomp_sc_align = reverse_complement(read.query_sequence)
             revcomp_sc_align = nsb_align(opposite_breakpoint_ref, revcomp_sc_align)
 
@@ -767,16 +825,16 @@ class Evidence:
 
         scores = []
 
-        for a in putative_alignments:
+        for a in putative_alignments:  # loop over the alignments
             # a.flag = a.flag ^ 64 ^ 128
-            a.flag = a.flag | PYSAM_READ_FLAGS.SECONDARY
-            a.set_tag('ca', 1, value_type='i')
+            a.flag = a.flag | PYSAM_READ_FLAGS.SECONDARY  # this is a secondary alignment
+            a.set_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR, 1, value_type='i')  # set this falg so we don't recompute the cigar multiple
             # add information from the original read
             a.reference_start = w[0] - 1 + a.reference_start
             a.reference_id = self.bam_cache.reference_id(opposite_breakpoint.chr)
             # a.query_name = read.query_name + SUFFIX_DELIM + 'clipped-realign'
             a.query_name = read.query_name
-            a.set_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN, 1, value_type='i')
+            a.set_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT, 1, value_type='i')
             a.next_reference_start = read.next_reference_start
             a.next_reference_id = read.next_reference_id
             a.mapping_quality = NA_MAPPING_QUALITY
@@ -792,34 +850,42 @@ class Evidence:
             s = CigarTools.score(a.cigar)
 
             if a.reference_id == a.next_reference_id:
-                if a.is_read1:
-                    a.template_length = (a.next_reference_start + self.settings.read_length) - a.reference_start
+                # https://samtools.github.io/hts-specs/SAMv1.pdf
+                # unsigned observed template length equals the number of bases from the leftmost
+                # mapped base to the rightmost mapped base
+                tlen = abs(a.reference_start - a.next_reference_start) + 1
+                if a.reference_start < a.next_reference_start:
+                    a.template_length = tlen
                 else:
-                    a.template_length = a.reference_start - (a.next_reference_start + self.settings.read_length)
+                    a.template_length = -1 * tlen
+            else:
+                a.template_length = 0
 
-            if CigarTools.alignment_matches(a.cigar) >= 10 \
+            if CigarTools.alignment_matches(a.cigar) >= self.settings.min_sample_size_to_apply_percentage \
                     and CigarTools.match_percent(a.cigar) < self.settings.min_anchor_match:
                 continue
             if CigarTools.longest_exact_match(a.cigar) < self.settings.min_anchor_exact \
-                    and CigarTools.longest_fuzzy_match(a.cigar, 1) < self.settings.min_anchor_fuzzy:
+                    and CigarTools.longest_fuzzy_match(a.cigar, self.settings.fuzzy_mismatch_number) < self.settings.min_anchor_fuzzy:
                 continue
-            if opposite_breakpoint.orient == ORIENT.LEFT:
-                if a.cigar[0][0] == CIGAR.S and a.cigar[0][1] > self.settings.max_sc_preceeding_anchor:
-                    continue
-            elif opposite_breakpoint.orient == ORIENT.RIGHT:
-                if a.cigar[-1][0] == CIGAR.S and a.cigar[-1][1] > self.settings.max_sc_preceeding_anchor:
-                    continue
+            if self.settings.max_sc_preceeding_anchor is not None:
+                if opposite_breakpoint.orient == ORIENT.LEFT:
+                    if a.cigar[0][0] == CIGAR.S and a.cigar[0][1] > self.settings.max_sc_preceeding_anchor:
+                        continue
+                elif opposite_breakpoint.orient == ORIENT.RIGHT:
+                    if a.cigar[-1][0] == CIGAR.S and a.cigar[-1][1] > self.settings.max_sc_preceeding_anchor:
+                        continue
             scores.append((s, CigarTools.match_percent(a.cigar), a))
 
         scores = sorted(scores, key=lambda x: (x[0], x[1]), reverse=True) if len(scores) > 0 else []
 
         if len(scores) > 1:
-            if scores[0][0] != scores[1][0] and scores[0][1] != scores[1][1]:  # not multimap
+            if scores[0][0] != scores[1][0] and scores[0][1] != scores[1][1]:
+                # not multimap, pick highest scoring alignment
                 clipped = scores[0][2]
-                self.split_reads[1 if first_breakpoint else 0].add(clipped)
+                self.split_reads[1 if first_breakpoint else 0].add(clipped)  # add to the opposite breakpoint
         elif len(scores) == 1:
             clipped = scores[0][2]
-            self.split_reads[1 if first_breakpoint else 0].add(clipped)
+            self.split_reads[1 if first_breakpoint else 0].add(clipped)  # add to the opposite breakpoint
 
     def assemble_split_reads(self, log=lambda *x: None):
         """
@@ -836,7 +902,7 @@ class Evidence:
         # add split reads
         for r in itertools.chain.from_iterable(self.split_reads):
             # ignore targeted realignments
-            if r.has_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN) and r.get_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN):
+            if r.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT) and r.get_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT):
                 targeted += 1
                 continue
             assembly_sequences.setdefault(r.query_sequence, set()).add(r)
@@ -867,7 +933,7 @@ class Evidence:
         # add flanking reads
         if self.settings.assembly_include_flanking_reads:
             for r in itertools.chain.from_iterable(self.flanking_reads):
-                if r.has_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN) and r.get_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN):
+                if r.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT) and r.get_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT):
                     continue
                 assembly_sequences.setdefault(r.query_sequence, set()).add(r)
                 if self.opposing_strands:
@@ -1172,8 +1238,8 @@ class Evidence:
                 else:
                     count = 0
                     for r in d[pos]:
-                        if not r.has_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN) or \
-                                not r.get_tag(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN):
+                        if not r.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT) or \
+                                not r.get_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT):
                             count += 1
                     if count < ev.settings.min_non_target_aligned_split_reads:
                         del d[pos]

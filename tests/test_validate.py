@@ -189,7 +189,7 @@ class TestEvidenceWindow(unittest.TestCase):
 
 
 class TestFullEvidenceGathering(unittest.TestCase):
-    # need to make the assertions more specific by checking the actual names of the reads found in each bin 
+    # need to make the assertions more specific by checking the actual names of the reads found in each bin
     # rather than just the counts.
     def test_load_evidence_translocation(self):
         ev1 = Evidence(
@@ -524,14 +524,14 @@ class TestEventCall(unittest.TestCase):
                                                      reference_start=1108, reference_end=1115))
         self.ev.evidence.split_reads[0].add(MockRead(query_name="test3", cigar=[(CIGAR.S, 30), (CIGAR.EQ, 120)],
                                                      reference_start=1114, reference_end=1154,
-                                                     tags=[(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN, 1)]))
+                                                     tags=[(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT, 1)]))
         self.ev.evidence.split_reads[1].add(MockRead(query_name="test4", cigar=[(CIGAR.EQ, 30), (CIGAR.S, 120)],
                                                      reference_start=2187))
         self.ev.evidence.split_reads[1].add(MockRead(query_name="test5", cigar=[(CIGAR.S, 30), (CIGAR.EQ, 120)],
                                                      reference_start=2187))
         self.ev.evidence.split_reads[1].add(MockRead(query_name="test1", cigar=[(CIGAR.S, 30), (CIGAR.EQ, 120)],
                                                      reference_start=2187, reference_end=2307,
-                                                     tags=[(PYSAM_READ_FLAGS.FORCED_TARGET_ALIGN, 1)]))
+                                                     tags=[(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT, 1)]))
         c = self.ev.count_split_read_support()
         self.assertEqual((2, 1, 2, 1, 1), c)
 
