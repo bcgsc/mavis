@@ -38,7 +38,8 @@ DEFAULTS = Namespace(
     min_non_target_aligned_split_reads=1,
     min_splits_reads_resolution=3,
     sc_extension_stop=5,
-    stdev_count_abnormal=3
+    stdev_count_abnormal=3,
+    strand_determining_read=2
 )
 """Namespace: holds the settings for computations with the Evidence objects
 
@@ -101,6 +102,10 @@ DEFAULTS = Namespace(
     assembly_strand_concordance
         when the number of remapped reads from each strand are compared, the ratio must be above this number to decide
         on the strand
+
+    strand_determining_read
+        1 or 2. The read in the pair which determines if (assuming a stranded protocol) the first or second read in the 
+        pair matches the strand sequenced
 """
 
 
@@ -502,6 +507,24 @@ class Evidence:
         else:
             raise UserWarning(
                 'this does not cover/span both breakpoints and cannot be added as spanning evidence')
+    
+    def read_pair_strand(self, read):
+        if not read.is_paired:
+            return STRAND.NEG if read.is_reverse else STRAND.POS
+        elif self.settings.strand_determining_read == 1:
+            if read.is_read1:
+                return STRAND.NEG if read.is_reverse else STRAND.POS
+            else:
+                return STRAND.POS if read.is_reverse else STRAND.NEG
+        elif self.settings.strand_determining_read == 2:
+            if read.is_read2:
+                return STRAND.NEG if read.is_reverse else STRAND.POS
+            else:
+                return STRAND.POS if read.is_reverse else STRAND.NEG
+        else:
+            raise ValueError(
+                'unexpected value for strand_determining_read. Expected 1 or 2, found:', 
+                self.settings.strand_determining_read)
 
     @staticmethod
     def read_pair_type(read):
@@ -552,9 +575,13 @@ class Evidence:
         classifications = sorted(classifications)
 
         fragment_size = abs(read.template_length)
+        # need to compute the fragment size using the annotations for transcriptomes
 
         expected_isize = self.expected_fragment_size_range()
         
+        if self.breakpoint_pair.interchromosomal != (read.reference_id != read.next_reference_id):
+            raise UserWarning('flanking read references are not expected')
+
         if self.protocol == PROTOCOL.GENOME:
             if classifications == sorted([SVTYPE.DEL, SVTYPE.INS]):
                 if fragment_size <= expected_isize.end and fragment_size >= expected_isize.start:
@@ -586,40 +613,41 @@ class Evidence:
                     'read pair orientation does not match event type', rt, classifications)
 
         # check if this read falls in the first breakpoint window
-        w1 = self.window1
-        # correct for psyam using 0-based coordinates
-        w1 = (w1[0] - 1, w1[1] - 1)
-        w2 = self.window2
-        # correct for psyam using 0-based coordinates
-        w2 = (w2[0] - 1, w2[1] - 1)
-
         stranded = self.bam_cache.stranded and self.breakpoint_pair.stranded
 
         added = False
-        if read.reference_start >= w1[0] and read.reference_end <= w1[1] \
-                and read.reference_id == self.bam_cache.reference_id(self.break1.chr) \
-                and read.next_reference_start >= w2[0] and read.next_reference_start <= w2[1] \
-                and read.next_reference_id == self.bam_cache.reference_id(self.break2.chr) \
-                and (
-                    not stranded or not read.is_read1 or
-                    read.is_reverse == (self.break1.strand == STRAND.NEG)) \
-                and (self.breakpoint_pair.interchromosomal or read.reference_end < read.next_reference_start):
-            # current read falls in the first breakpoint window, mate in the
-            # second
-            self.flanking_reads[0].add(read)
-            added = True
-        if read.reference_start >= w2[0] and read.reference_end <= w2[1] \
-                and self.bam_cache.reference_id(self.break2.chr) == read.reference_id \
-                and read.next_reference_start >= w1[0] and read.next_reference_start <= w1[1] \
-                and self.bam_cache.reference_id(self.break1.chr) == read.next_reference_id \
-                and (
-                    not stranded or not read.is_read2 or
-                    read.is_reverse != (self.break2.strand == STRAND.NEG)) \
-                and (self.breakpoint_pair.interchromosomal or read.reference_start > read.next_reference_start):
-            # current read falls in the second breakpoint window, mate in the
-            # first
-            self.flanking_reads[1].add(read)
-            added = True
+        iread = Interval(read.reference_start + 1, read.reference_end)
+        imate = Interval(read.next_reference_start + 1)
+        
+        if self.breakpoint_pair.interchromosomal:
+            if all([
+                    read.reference_id == self.bam_cache.reference_id(self.break1.chr),
+                    read.next_reference_id == self.bam_cache.reference_id(self.break2.chr),
+                    Interval.overlaps(iread, self.window1),
+                    Interval.overlaps(imate, self.window2)]):
+                # read is flanking in the first breakpoint window
+                if not stranded or self.read_pair_strand(read) == self.break1.strand:
+                    self.flanking_reads[0].add(read)
+                    added = True
+            elif all([
+                    read.reference_id == self.bam_cache.reference_id(self.break2.chr),
+                    read.next_reference_id == self.bam_cache.reference_id(self.break1.chr),
+                    Interval.overlaps(iread, self.window2),
+                    Interval.overlaps(imate, self.window1)]):
+                # read is flanking in the second breakpoint window
+                if not stranded or self.read_pair_strand(read) == self.break2.strand:
+                    self.flanking_reads[1].add(read)
+                    added = True
+        elif read.reference_id == self.bam_cache.reference_id(self.break1.chr):
+            if all([Interval.overlaps(iread, self.window1), Interval.overlaps(imate, self.window2)]):
+                if not stranded or self.read_pair_strand(read) == self.break1.strand:
+                    self.flanking_reads[0].add(read)
+                    added = True
+            if all([Interval.overlaps(iread, self.window2), Interval.overlaps(imate, self.window1)]):
+                if not stranded or self.read_pair_strand(read) == self.break2.strand:
+                    self.flanking_reads[1].add(read)
+                    added = True
+
         if not added:
             raise UserWarning(
                 'does not map to the expected regions. does not support the current breakpoint pair')
@@ -864,6 +892,8 @@ class Evidence:
                 strand_calls = {STRAND.POS: 0, STRAND.NEG: 0}
                 for seq in contig.remapped_reads:
                     for read in assembly_sequences[seq.query_sequence]:
+                        if read.is_unmapped:
+                            continue
                         if read.is_read1:
                             if read.is_reverse:
                                 strand_calls[STRAND.NEG] += 1
@@ -891,7 +921,8 @@ class Evidence:
                 for seq in contig.remapped_reads:
                     for read in assembly_sequences[seq.query_sequence]:
                         if read.is_reverse != reverse:
-                            print('conflicting read', read, read.cigar)
+                            print('conflicting read', read.cigar, read.query_sequence)
+                print(contig.sequence)
                 raise AssertionError('could not determine contig strand', strand_calls)
 
         filtered_contigs = {}
@@ -960,7 +991,6 @@ class Evidence:
                     contig=ctg,
                     alignment=(read1, read2),
                     opposing_strands=bpp.opposing_strands,
-                    stranded=bpp.stranded,
                     untemplated_sequence=bpp.untemplated_sequence,
                     data=ev.data
                 )

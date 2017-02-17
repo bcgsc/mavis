@@ -59,7 +59,7 @@ class FusionTranscript(usTranscript):
         Returns:
             int: the number of the exon in the original transcript (prior to fusion)
         """
-        old_exon = self.exon_mapping[exon]
+        old_exon = self.exon_mapping[exon.position]
         return old_exon.transcript.exon_number(old_exon)
 
     @classmethod
@@ -101,16 +101,17 @@ class FusionTranscript(usTranscript):
                 ft.sequence = seq2 + useq
                 for ex, old_ex in ex2:
                     ft.exons.append(ex)
-                    ft.exon_mapping[ex] = old_ex
+                    ex.reference_object = ft
+                    ft.exon_mapping[ex.position] = old_ex
                 offset = len(ft.sequence) + 1
                 for ex, old_ex in ex1:
                     e = Exon(
-                        ex.start + offset, ex.end + offset,
+                        ex.start + offset, ex.end + offset, ft,
                         intact_start_splice=ex.intact_start_splice,
                         intact_end_splice=ex.intact_end_splice
                     )
                     ft.exons.append(e)
-                    ft.exon_mapping[e] = old_ex
+                    ft.exon_mapping[e.position] = old_ex
                 ft.sequence += seq1
             elif ann.event_type == SVTYPE.INV:
                 # pull the exons from either size of the breakpoints window
@@ -142,18 +143,19 @@ class FusionTranscript(usTranscript):
 
                 for ex, old_ex in ex1:
                     ft.exons.append(ex)
-                    ft.exon_mapping[ex] = old_ex
+                    ex.reference_object = ft
+                    ft.exon_mapping[ex.position] = old_ex
 
                 offset = len(ft.sequence)
                 ft.sequence += seq2
                 for ex, old_ex in ex2:
                     e = Exon(
-                        ex.start + offset, ex.end + offset,
+                        ex.start + offset, ex.end + offset, ft,
                         intact_start_splice=ex.intact_start_splice,
                         intact_end_splice=ex.intact_end_splice
                     )
                     ft.exons.append(e)
-                    ft.exon_mapping[e] = old_ex
+                    ft.exon_mapping[e.position] = old_ex
             else:
                 raise AttributeError('unrecognized event type')
         else:
@@ -179,16 +181,17 @@ class FusionTranscript(usTranscript):
 
             for ex, old_ex in ex1:
                 ft.exons.append(ex)
-                ft.exon_mapping[ex] = old_ex
+                ex.reference_object = ft
+                ft.exon_mapping[ex.position] = old_ex
             offset = len(ft.sequence)
             for ex, old_ex in ex2:
                 e = Exon(
-                    ex.start + offset, ex.end + offset,
+                    ex.start + offset, ex.end + offset, ft,
                     intact_start_splice=ex.intact_start_splice,
                     intact_end_splice=ex.intact_end_splice
                 )
                 ft.exons.append(e)
-                ft.exon_mapping[e] = old_ex
+                ft.exon_mapping[e.position] = old_ex
             ft.sequence += seq2
 
         ft.position = Interval(1, len(ft.sequence))

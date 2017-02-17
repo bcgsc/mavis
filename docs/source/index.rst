@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-|TOOLNAME| User Manual
+MARVIN User Manual
 ===================================
 
 .. toctree::
@@ -25,4 +25,3 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
-.. |TOOLNAME| replace:: **SVMerge**

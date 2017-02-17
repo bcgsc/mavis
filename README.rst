@@ -315,4 +315,4 @@ TODO
 
 .. todolist::
 
-.. |TOOLNAME| replace:: **SVMerge**
+.. |TOOLNAME| replace:: **MARVIN**

@@ -183,6 +183,7 @@ def gather_evidence_from_bam(clusters):
             e.breakpoint_pair
         )
         log('possible event type(s):', BreakpointPair.classify(e.breakpoint_pair), time_stamp=False)
+        log('window regions', e.breakpoint_pair.break1.chr, e.window1, e.breakpoint_pair.break2.chr, e.window2, e.protocol, time_stamp=False)
         try:
             e.load_evidence()
         except NotImplementedError as err:
@@ -308,12 +309,12 @@ def main():
         fh.write('#{}\t{}\t{}\n'.format(COLUMNS.cluster_id, COLUMNS.contig_sequence, COLUMNS.contig_remap_score))
         for ev in evidence:
             for c in ev.contigs:
-                fh.write('{}\t{}\t{}\n'.format(ev.data[COLUMNS.cluster_id], c.seq, c.remap_score()))
+                fh.write('{}\t{}\t{}\n'.format(ev.data[COLUMNS.cluster_id], c.sequence, c.remap_score()))
 
     blat_sequences = set()
     for e in evidence:
         for c in e.contigs:
-            blat_sequences.add(c.seq)
+            blat_sequences.add(c.sequence)
     print()
     log('aligning {} contig sequences'.format(len(blat_sequences)))
     if len(blat_sequences) > 0:
@@ -422,7 +423,7 @@ def main():
                 COLUMNS.break2_ewindow_count: ec.evidence.counts[1]
             }
             if ec.contig:
-                row[COLUMNS.contig_sequence] = ec.contig.seq
+                row[COLUMNS.contig_sequence] = ec.contig.sequence
                 row[COLUMNS.contig_remap_score] = ec.contig.remap_score()
                 if ec.break1.strand == STRAND.NEG and not ec.stranded:
                     row[COLUMNS.contig_sequence] = reverse_complement(row[COLUMNS.contig_sequence])

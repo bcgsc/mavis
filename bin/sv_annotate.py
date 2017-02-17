@@ -101,7 +101,7 @@ def parse_arguments():
         '--template_metadata', default=os.path.join(os.path.dirname(__file__), 'cytoBand.txt'),
         help='file containing the cytoband template information')
     parser.add_argument(
-        '-p', '--max_proximity', default=5000,
+        '-p', '--max_proximity', default=5000, type=int,
         help='The maximum distance away from breakpoints to look for proximal genes')
     parser.add_argument(
         '--min_orf_size', default=120, type=int, help='minimum size for putative ORFs')

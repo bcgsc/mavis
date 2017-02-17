@@ -93,7 +93,7 @@ source_suffix = ['.rst', '.md']
 master_doc = 'index'
 
 # General information about the project.
-project = 'svmerge'
+project = 'MARVIN'
 copyright = '2017, creisle'
 author = 'creisle'
 
@@ -143,4 +143,4 @@ todo_include_todos = True
 html_static_path = ['_static']
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'svmergedoc'
+htmlhelp_basename = 'MARVINdoc'

@@ -232,7 +232,7 @@ class TestFusionTranscript(unittest.TestCase):
 
         for i, ex in enumerate(t.exons):
             n = ft.exons[i]
-            self.assertEqual(ex, ft.exon_mapping[n])
+            self.assertEqual(ex, ft.exon_mapping[n.position])
 
         self.assertEqual(1, ft.exons[0].start)
         self.assertEqual(100, ft.exons[0].end)
@@ -261,6 +261,7 @@ class TestFusionTranscript(unittest.TestCase):
         ref = {REF_CHR: MockSeq(self.reference_sequence)}
         ann = Annotation(bpp, transcript1=t, transcript2=t, event_type=SVTYPE.DUP)
         ft = FusionTranscript.build(ann, ref)
+        self.assertEqual(STRAND.POS, ft.get_strand())
 
         expt = 'C' * len(self.x) + 'A' * (499 - 200 + 1) + 'G' * len(self.y) + 'A' * (1199 - 600 + 1)
         expt += 'T' * len(self.z) + 'ATCGATCG' + 'T' * len(self.z)

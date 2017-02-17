@@ -557,9 +557,10 @@ class Diagram:
         # finally the fusion transcript level drawing
         if fusion_transcript:
             y += self.INNER_MARGIN
-            for ex, old_ex in fusion_transcript.exon_mapping.items():
+            for exon in fusion_transcript.exons:
+                old_ex = fusion_transcript.exon_mapping[exon.position]
                 if old_ex in colors:
-                    colors[ex] = colors[old_ex]
+                    colors[exon] = colors[old_ex]
             g = canvas.g(class_='transcript')
             g = self.draw_ustranscript(
                 canvas,
@@ -588,6 +589,7 @@ class Diagram:
     def _draw_exon_track(self, canvas, transcript, mapping, colors=None, x_start=None, x_end=None, translation=None):
         """
         """
+        print('_draw_exon_track', repr(transcript), transcript.exons, transcript.gene)
         colors = {} if colors is None else colors
         main_group = canvas.g(class_='exon_track')
 

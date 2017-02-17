@@ -108,7 +108,7 @@ class BioInterval:
                 parent = parent.reference_object
             except AttributeError:
                 break
-        raise AttributeError('strand has not been defined')
+        raise AttributeError('strand has not been defined', self)
 
     def get_chr(self):
         """

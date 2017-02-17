@@ -38,12 +38,12 @@ Deletion
 ,,,,,,,,,
 
 For a deletion, we expect the flanking reads to be in the normal orientation but that the
-insert size should be abnormal (for large deletions).
+fragment size should be abnormal (for large deletions).
 
 .. figure:: _static/read_pairs_deletion.svg
     :width: 100%
 
-    Flanking read pair evidence for a deletion event. the read pairs will have a larger than expected insert size when mapped to the
+    Flanking read pair evidence for a deletion event. the read pairs will have a larger than expected fragment size when mapped to the
     reference genome because in the mutant genome they are closer together, owing to the deletion event. (B1) the first breakpoint
     which has a left orientation (B2) the second breakpoint which has a right orientation. Both breakpoints would be on the positive
     strand (assuming that the input is stranded) which means that the first read in the pair would be on the positive strand and the
@@ -57,7 +57,7 @@ Insertion
 .. figure:: _static/read_pairs_insertion.svg
     :width: 100%
 
-    Flanking read pair evidence for an insertion event. the read pairs will have a smaller than expected insert size when mapped to the
+    Flanking read pair evidence for an insertion event. the read pairs will have a smaller than expected fragment size when mapped to the
     reference genome because in the mutant genome they are father apart, owing to the insertion event. (B1) the first breakpoint
     which has a left orientation (B2) the second breakpoint which has a right orientation. Both breakpoints would be on the positive
     strand (assuming that the input is stranded) which means that the first read in the pair would be on the positive strand and the
@@ -131,48 +131,48 @@ Calculating the Evidence Window
 .. figure:: _static/read_pair_definitions.svg
     :width: 100%
 
-    Basic Terms used in describing read pairs are shown above: insert size: the distance between the pair;
-    read length: the length of the read; fragment size: the combined length of both reads and the insert size
+    Basic Terms used in describing read pairs are shown above: fragment size: the distance between the pair;
+    read length: the length of the read; fragment size: the combined length of both reads and the fragment size
 
 we make some base assumptions with regards to paired-end read data
 
 .. note::
 
-    the distribution of insert sizes approximately follows a normal distribution
+    the distribution of fragment sizes approximately follows a normal distribution
 
 .. note::
 
-    the most common insert size is the unmutated 'normal' fragment
+    the most common fragment size is the unmutated 'normal' fragment
 
-with the above assumptions we take the median insert size to be the expected normal
+with the above assumptions we take the median fragment size to be the expected normal
 
-Given that we expect mutations and therefore abnormal insert sizes we use a modified method to calculate the
+Given that we expect mutations and therefore abnormal fragment sizes we use a modified method to calculate the
 **median standard deviation** (*s* in the equations below). We calculate the squared distance for each fragment
 away from the median and then take a fraction of this to be 'normal' variation. So the most abnormal portion is
 ignored, assuming it is supposed to be abnormal. This results in a calculation as follows, where the original set
-Y is the set of insert sizes from the bam file and f is the fraction of insert sizes assumed to be normal
+Y is the set of fragment sizes from the bam file and f is the fraction of fragment sizes assumed to be normal
 
 .. code::
 
     from statistics import median
     import math
 
-    inserts = [abs(read.template_length) for read in reads]  # the insert sizes of the reads
+    fragments = [abs(read.template_length) for read in reads]  # the fragment sizes of the reads
     f = 0.95 # fraction
-    m = median(inserts) # get the median insert size value
-    X = [math.pow(i - m, 2) for i in inserts]  # take the square error for each point
+    m = median(fragments) # get the median fragment size value
+    X = [math.pow(i - m, 2) for i in fragments]  # take the square error for each point
     end = int(round(len(X) * f))
     X = sorted(X)[0:end]
     stdev = math.sqrt(sum(X) / len(X))
 
 Using the above calculations we can generate a modified version of the standard deviation (s above) as shown in the figure
-below (stdev). This gives us an idea of when to judge an insert size as abnormal and where we expect our normal read
-pairs insert sizes to fall.
+below (stdev). This gives us an idea of when to judge an fragment size as abnormal and where we expect our normal read
+pairs fragment sizes to fall.
 
 .. figure:: _static/insert_size_distrb_fractions.svg
     :width: 100%
 
-    Distribution of insert sizes (absolute values) of proper read pairs, and different normal distribution fits using
+    Distribution of fragment sizes (absolute values) of proper read pairs, and different normal distribution fits using
     the above equation. The different coloured curves are computed with different parameters. black: the standard
     calculation using all data points and the mean as centre; dark green: median as centre and a fraction of f=0.80;
     light green: median as centre, f=0.90; light blue: median and f=0.95; dark blue: median and f=1.00.
@@ -183,7 +183,7 @@ likely because it is more resistant to outliers.
 .. figure::  _static/insert_size_distrb.svg
     :width: 100%
 
-    Distribution of insert sizes (absolute values) of proper read pairs. In the above image the standard deviation
+    Distribution of fragment sizes (absolute values) of proper read pairs. In the above image the standard deviation
     (stdev) was calculated with respect to the median (383) using the fraction (f=0.99).
 
 
@@ -194,8 +194,8 @@ We use this in two ways
 2. to estimate the window size for where we will need to read from the bam when looking for evidence for a given event
 
 The :py:func:`~structural_variant.validate.Evidence.generate_window` function uses the above concepts. The user will
-define the :py:attr:`~structural_variant.validate.EvidenceSettings.median_insert_size` the
-:py:attr:`~structural_variant.validate.EvidenceSettings.tdev_isize`, and the
+define the :py:attr:`~structural_variant.validate.EvidenceSettings.median_fragment_size` the
+:py:attr:`~structural_variant.validate.EvidenceSettings.stdev_fragment_size`, and the
 :py:attr:`~structural_variant.validate.EvidenceSettings.stdev_count_abnormal` parameters defined in the
 :class:`~structural_variant.validate.EvidenceSettings` class.
 
@@ -273,7 +273,7 @@ also overlap the breakpoint; what genes are encompassed between the breakpoints
     between a breakpoint pair, encompassed genes, will not be present for
     interchromosomal events (translocations)
 
-Next there are the fusion-product level annotations. If the event result ina fusion
+Next there are the fusion-product level annotations. If the event result in a fusion
 transcript, the sequence of the fusion transcript is computed. This is translated
 to a putative amino acid sequence from which protein metrics such as the possible
 ORFs and domain sequences can be computed.
@@ -372,7 +372,7 @@ Glossary
         a read which aligns next to a breakpoint and is softclipped at one or more sides
 
     spanning read
-        applies primarily to small strutural variants. Reads which span both breakpoints
+        applies primarily to small structural variants. Reads which span both breakpoints
 
     half-mapped read
         a read whose mate is unaligned. Generally this refers to reads in the evidence stage that are mapped next to a breakpoint.
@@ -381,7 +381,7 @@ Glossary
          A breakpoint is a genomic position (interval) on some reference/template/chromosome which has a strand and orientation. The orientation describes the portion of the reference that is retained.
 
     event
-        used interchangably with :term:`structural variant`
+        used interchangeably with :term:`structural variant`
 
     event type
         classification for a structural variant. see :term:`event_type`
@@ -395,4 +395,4 @@ Glossary
 
 
 
-.. |TOOLNAME| replace:: **SVMerge**
+.. |TOOLNAME| replace:: **MARVIN**

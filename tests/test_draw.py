@@ -294,9 +294,9 @@ class TestDraw(unittest.TestCase):
         reference_genome = {'1': MockSeq(MockString('A'))}
 
         ft = FusionTranscript.build(ann, reference_genome)
-        self.assertEqual(t1.exons[0], ft.exon_mapping[ft.exons[0]])
-        self.assertEqual(t2.exons[2], ft.exon_mapping[ft.exons[1]])
-        self.assertEqual(t2.exons[3], ft.exon_mapping[ft.exons[2]])
+        self.assertEqual(t1.exons[0], ft.exon_mapping[ft.exons[0].position])
+        self.assertEqual(t2.exons[2], ft.exon_mapping[ft.exons[1].position])
+        self.assertEqual(t2.exons[3], ft.exon_mapping[ft.exons[2].position])
 
         canvas, legend = d.draw(ann, ft)
         self.assertEqual(5, len(canvas.elements))  # defs counts as element
