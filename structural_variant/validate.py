@@ -98,13 +98,13 @@ DEFAULTS = Namespace(
         the maximum number of paths to resolve. This is used to limit when there is a messy assembly graph to resolve.
         The assmebly will pre-calculate the number of paths (or putative assemblies) and stop if it is greater than
         the given setting.
-    
+
     assembly_strand_concordance
         when the number of remapped reads from each strand are compared, the ratio must be above this number to decide
         on the strand
 
     strand_determining_read
-        1 or 2. The read in the pair which determines if (assuming a stranded protocol) the first or second read in the 
+        1 or 2. The read in the pair which determines if (assuming a stranded protocol) the first or second read in the
         pair matches the strand sequenced
 """
 
@@ -330,7 +330,7 @@ class Evidence:
 
         for ust in transcripts:
             mapping = {}
-            
+
             cdna_length = sum([len(e) for e in ust.exons])
             s = 1
             for ex in ust.exons:
@@ -353,7 +353,7 @@ class Evidence:
             gs = ust.start - (tgt_left - cs)
             if cs > tgt_left:
                 gs = Interval.convert_pos(reverse_mapping, cs - tgt_left + 1)
-            
+
             ce = Interval.convert_pos(mapping, be)
             ge = ust.end + (tgt_right - cdna_length + ce)
             if cdna_length > ce + tgt_right:
@@ -507,7 +507,7 @@ class Evidence:
         else:
             raise UserWarning(
                 'this does not cover/span both breakpoints and cannot be added as spanning evidence')
-    
+
     def read_pair_strand(self, read):
         if not read.is_paired:
             return STRAND.NEG if read.is_reverse else STRAND.POS
@@ -515,15 +515,15 @@ class Evidence:
             if read.is_read1:
                 return STRAND.NEG if read.is_reverse else STRAND.POS
             else:
-                return STRAND.POS if read.is_reverse else STRAND.NEG
+                return STRAND.NEG if read.mate_is_reverse else STRAND.POS
         elif self.settings.strand_determining_read == 2:
             if read.is_read2:
                 return STRAND.NEG if read.is_reverse else STRAND.POS
             else:
-                return STRAND.POS if read.is_reverse else STRAND.NEG
+                return STRAND.NEG if read.mate_is_reverse else STRAND.POS
         else:
             raise ValueError(
-                'unexpected value for strand_determining_read. Expected 1 or 2, found:', 
+                'unexpected value for strand_determining_read. Expected 1 or 2, found:',
                 self.settings.strand_determining_read)
 
     @staticmethod
@@ -578,7 +578,7 @@ class Evidence:
         # need to compute the fragment size using the annotations for transcriptomes
 
         expected_isize = self.expected_fragment_size_range()
-        
+
         if self.breakpoint_pair.interchromosomal != (read.reference_id != read.next_reference_id):
             raise UserWarning('flanking read references are not expected')
 
@@ -618,7 +618,7 @@ class Evidence:
         added = False
         iread = Interval(read.reference_start + 1, read.reference_end)
         imate = Interval(read.next_reference_start + 1)
-        
+
         if self.breakpoint_pair.interchromosomal:
             if all([
                     read.reference_id == self.bam_cache.reference_id(self.break1.chr),
@@ -843,7 +843,7 @@ class Evidence:
             if self.opposing_strands:
                 rqs_comp = reverse_complement(r.query_sequence)
                 assembly_sequences.setdefault(rqs_comp, set()).add(r)
-        
+
         # add half-mapped reads
         # exlude half-mapped reads if there is 'n' split reads that target align
         if targeted < self.settings.assembly_min_tgt_to_exclude_half_map and \
@@ -863,7 +863,7 @@ class Evidence:
                             assembly_sequences.setdefault(rqs_comp, set()).add(m)
                 except KeyError:
                     pass
-        
+
         # add flanking reads
         if self.settings.assembly_include_flanking_reads:
             for r in itertools.chain.from_iterable(self.flanking_reads):
@@ -904,7 +904,7 @@ class Evidence:
                                 strand_calls[STRAND.POS] += 1
                             else:
                                 strand_calls[STRAND.NEG] += 1
-                
+
                 if strand_calls[STRAND.NEG] == 0 and strand_calls[STRAND.POS] == 0:
                     raise AssertionError('could not determine strand', strand_calls)
                 elif strand_calls[STRAND.POS] > strand_calls[STRAND.NEG]:
@@ -927,7 +927,7 @@ class Evidence:
 
         filtered_contigs = {}
         # sort so that the function is deterministic
-        for c in sorted(contigs, key=lambda x: (x.remap_score() * -1, x.sequence)):  
+        for c in sorted(contigs, key=lambda x: (x.remap_score() * -1, x.sequence)):
             if c.remap_score() < self.settings.assembly_min_remap:  # filter on evidence level
                 continue
             if not self.breakpoint_pair.stranded or not self.bam_cache.stranded:  # not strand specific

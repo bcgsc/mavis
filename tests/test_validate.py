@@ -151,11 +151,11 @@ class TestEvidenceWindow(unittest.TestCase):
         gene.transcripts.append(t2)
 
         w = Evidence.generate_transcriptome_window(
-            b, self.annotations, 
-            read_length=100, 
-            median_fragment_size=450, 
-            call_error=11, 
-            stdev_fragment_size=50, 
+            b, self.annotations,
+            read_length=100,
+            median_fragment_size=450,
+            call_error=11,
+            stdev_fragment_size=50,
             stdev_count_abnormal=2
         )
         # 989 - 2561
@@ -583,6 +583,88 @@ class TestEvidence(unittest.TestCase):
             mate_is_reverse=True
         )
         self.assertEqual(READ_PAIR_TYPE.RL, Evidence.read_pair_type(r))
+
+class TestReadPairStrand(unittest.TestCase):
+    def setUp(self):
+        self.read1_pos_neg = MockRead(is_reverse=False, is_read1=True, mate_is_reverse=True)
+        assert(not self.read1_pos_neg.is_read2)
+        self.read1_neg_pos = MockRead(is_reverse=True, is_read1=True, mate_is_reverse=False)
+        self.read2_pos_neg = MockRead(is_reverse=False, is_read1=False, mate_is_reverse=True)
+        assert(self.read2_pos_neg.is_read2)
+        self.read2_neg_pos = MockRead(is_reverse=True, is_read1=False, mate_is_reverse=False)
+        self.read1_pos_pos = MockRead(is_reverse=False, is_read1=True, mate_is_reverse=False)
+        self.read1_neg_neg = MockRead(is_reverse=True, is_read1=True, mate_is_reverse=True)
+        self.read2_pos_pos = MockRead(is_reverse=False, is_read1=False, mate_is_reverse=False)
+        self.read2_neg_neg = MockRead(is_reverse=True, is_read1=False, mate_is_reverse=True)
+        self.unpaired_pos = MockRead(is_reverse=False, is_paired=False)
+        self.unpaired_neg = MockRead(is_reverse=True, is_paired=False)
+
+    def test_read_pair_strand_det_read1(self):
+        ev = Evidence(
+            BreakpointPair(
+                Breakpoint('fake', 100, orient=ORIENT.LEFT),
+                Breakpoint('fake', 500, orient=ORIENT.RIGHT),
+                opposing_strands=False
+            ),
+            None, None,
+            read_length=40,
+            stdev_fragment_size=25,
+            median_fragment_size=100,
+            stdev_count_abnormal=2,
+            strand_determining_read=1
+        )
+        self.assertEqual(STRAND.POS, ev.read_pair_strand(self.read1_pos_neg))
+        self.assertEqual(STRAND.NEG, ev.read_pair_strand(self.read2_pos_neg))
+        self.assertEqual(STRAND.NEG, ev.read_pair_strand(self.read1_neg_pos))
+        self.assertEqual(STRAND.POS, ev.read_pair_strand(self.read2_neg_pos))
+
+        self.assertEqual(STRAND.POS, ev.read_pair_strand(self.read1_pos_pos))
+        self.assertEqual(STRAND.POS, ev.read_pair_strand(self.read2_pos_pos))
+        self.assertEqual(STRAND.NEG, ev.read_pair_strand(self.read1_neg_neg))
+        self.assertEqual(STRAND.NEG, ev.read_pair_strand(self.read2_neg_neg))
+
+    def test_read_pair_strand_det_read2(self):
+        ev = Evidence(
+            BreakpointPair(
+                Breakpoint('fake', 100, orient=ORIENT.LEFT),
+                Breakpoint('fake', 500, orient=ORIENT.RIGHT),
+                opposing_strands=False
+            ),
+            None, None,
+            read_length=40,
+            stdev_fragment_size=25,
+            median_fragment_size=100,
+            stdev_count_abnormal=2,
+            strand_determining_read=2
+        )
+        self.assertEqual(STRAND.NEG, ev.read_pair_strand(self.read1_pos_neg))
+        self.assertEqual(STRAND.POS, ev.read_pair_strand(self.read2_pos_neg))
+        self.assertEqual(STRAND.POS, ev.read_pair_strand(self.read1_neg_pos))
+        self.assertEqual(STRAND.NEG, ev.read_pair_strand(self.read2_neg_pos))
+
+        self.assertEqual(STRAND.POS, ev.read_pair_strand(self.read1_pos_pos))
+        self.assertEqual(STRAND.POS, ev.read_pair_strand(self.read2_pos_pos))
+        self.assertEqual(STRAND.NEG, ev.read_pair_strand(self.read1_neg_neg))
+        self.assertEqual(STRAND.NEG, ev.read_pair_strand(self.read2_neg_neg))
+
+    def test_read_pair_strand_unpaired(self):
+        ev = Evidence(
+            BreakpointPair(
+                Breakpoint('fake', 100, orient=ORIENT.LEFT),
+                Breakpoint('fake', 500, orient=ORIENT.RIGHT),
+                opposing_strands=False
+            ),
+            None, None,
+            read_length=40,
+            stdev_fragment_size=25,
+            median_fragment_size=100,
+            stdev_count_abnormal=2,
+            strand_determining_read=2
+        )
+        self.assertEqual(STRAND.POS, ev.read_pair_strand(self.unpaired_pos))
+        self.assertEqual(STRAND.NEG, ev.read_pair_strand(self.unpaired_neg))
+
+
 
 
 class MockEvidence:
