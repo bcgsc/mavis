@@ -7,7 +7,7 @@ import re
 import os
 import TSV
 from .constants import *
-from .read_tools import CigarTools
+from .bam import cigar as cigar_tools
 from Bio.Seq import Seq
 import tempfile
 from .interval import Interval
@@ -180,7 +180,8 @@ class Blat:
         Args:
             row (dict of str): a row object from the 'read_pslx' method
             bam_cache (BamCache): the bam file/cache to use as a template for creating reference_id from chr name
-            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by template/chr name
+            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`):
+              dict of reference sequence by template/chr name
 
         """
         chrom = bam_cache.reference_id(row['tname'])
@@ -282,7 +283,7 @@ class Blat:
         read.query_sequence = seq
         read.reference_start = row['tstarts'][0]
         read.reference_id = chrom
-        read.cigar = CigarTools.join(cigar)
+        read.cigar = cigar_tools.join(cigar)
         read.query_name = row['qname']
         read.mapping_quality = NA_MAPPING_QUALITY
 

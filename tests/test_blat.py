@@ -2,10 +2,10 @@ from structural_variant.blat import *
 from structural_variant.interval import Interval
 from structural_variant.annotate import load_reference_genome
 from structural_variant.constants import ORIENT, CIGAR
-from structural_variant.read_tools import BamCache
+from structural_variant.bam.cache import BamCache
 from structural_variant.assemble import Contig
-from structural_variant.validate import Evidence
 from structural_variant.breakpoint import Breakpoint, BreakpointPair
+from structural_variant.validate.evidence import GenomeEvidence
 
 import unittest
 import shutil
@@ -24,6 +24,7 @@ def setUpModule():
         raise AssertionError('fake genome file does not have the expected contents')
     global BAM_CACHE
     BAM_CACHE = BamCache(BAM_INPUT)
+
 
 class TestBlat(unittest.TestCase):
     def setUp(self):
@@ -200,20 +201,19 @@ class TestBlat(unittest.TestCase):
 
     @unittest.skipIf(not shutil.which('blat'), "missing the blat command")
     def test_blat_contigs(self):
-        ev = Evidence(
-            BreakpointPair(
-                Breakpoint('reference3', 1114, orient=ORIENT.RIGHT),
-                Breakpoint('reference3', 2187, orient=ORIENT.RIGHT),
-                opposing_strands=True
-                ),
-            None, None,
+        ev = GenomeEvidence(
+            Breakpoint('reference3', 1114, orient=ORIENT.RIGHT),
+            Breakpoint('reference3', 2187, orient=ORIENT.RIGHT),
+            opposing_strands=True,
+            bam_cache=None, 
+            REFERENCE_GENOME=None,
             read_length=40,
             stdev_fragment_size=25,
             median_fragment_size=100,
             stdev_count_abnormal=2,
             min_splits_reads_resolution=1,
             min_flanking_reads_resolution=1
-            )
+        )
         ev.contigs=[Contig("CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT",0)]
         blat_contigs([ev], BAM_CACHE, REFERENCE_GENOME, ref_2bit=REFERENCE_GENOME_FILE_2BIT)
         read1,read2 = ev.contigs[0].alignments[0]

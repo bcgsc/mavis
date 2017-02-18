@@ -15,7 +15,7 @@ from svgwrite import Drawing
 from .interval import Interval
 from .constants import STRAND, ORIENT, CODON_SIZE, GIESMA_STAIN
 from colour import Color
-from .error import DrawingFitError, NotSpecifiedError, DiscontinuousMappingError
+from .error import DrawingFitError, NotSpecifiedError
 from .annotate.genomic import IntergenicRegion
 from .annotate.variant import FusionTranscript
 
@@ -648,7 +648,7 @@ class Diagram:
                 temp = plot.height - abs(ypo.start - plot.ymin) * yratio
                 yp = Interval(plot.height - abs(ypo.end - plot.ymin) * yratio, temp)
                 ypx.append((yp, ypo))
-            except DiscontinuousMappingError:
+            except IndexError:
                 pass
 
         for x, y in zip(xpx, ypx):

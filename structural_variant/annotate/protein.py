@@ -2,7 +2,7 @@ from ..interval import Interval
 from .base import BioInterval
 from ..constants import translate, START_AA, STOP_AA, CODON_SIZE
 import itertools
-from ..error import NotSpecifiedError, DiscontinuousMappingError
+from ..error import NotSpecifiedError
 
 
 def calculate_ORF(spliced_cdna_sequence, min_orf_size=None):
@@ -75,7 +75,7 @@ class Domain:
         self.name = name
         self.regions = sorted(list(set(regions)))  # remove duplicates
         self.data = dict()
-        if data is not None :
+        if data is not None:
             self.data.update(data)
         if len(regions) == 0:
             raise AttributeError('at least one region must be given')
@@ -261,7 +261,8 @@ class Translation(BioInterval):
 
     @property
     def transcript(self):
-        """:class:`~structural_variant.annotate.genomic.Transcript`: the spliced transcript this translation belongs to"""
+        """:class:`~structural_variant.annotate.genomic.Transcript`: the spliced transcript this translation belongs to
+        """
         return self.reference_object
 
     def convert_aa_to_cdna(self, pos):
@@ -315,7 +316,7 @@ class Translation(BioInterval):
         Args:
             pos (int): the genomic position
 
-        Returns: 
+        Returns:
             tuple of int and int:
                 * *int* - the cds position
                 * *int* - the intronic shift
@@ -354,7 +355,7 @@ class Translation(BioInterval):
             '51-14'
         """
         c, shift = self.convert_genomic_to_nearest_cds(pos)
-        sc = '' 
+        sc = ''
         if shift > 0:
             sc = '+{}'.format(shift)
         elif shift < 0:

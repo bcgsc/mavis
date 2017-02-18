@@ -1,7 +1,8 @@
 import networkx as nx
 import itertools
 import warnings
-from .read_tools import CigarTools, nsb_align
+from .bam import cigar as cigar_tools
+from .bam.read import nsb_align
 from .constants import reverse_complement
 
 
@@ -229,7 +230,7 @@ def assemble(
             )
             if len(a) != 1:
                 continue
-            if CigarTools.match_percent(a[0].cigar) < assembly_min_match_quality:
+            if cigar_tools.match_percent(a[0].cigar) < assembly_min_match_quality:
                 continue
             maps_to[contig] = a[0]
         for contig, read in maps_to.items():

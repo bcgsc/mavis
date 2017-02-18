@@ -295,7 +295,7 @@ class Interval:
 
         Raises:
             AttributeError: if the input position is outside the set of input segments
-            :class:`~structural_variant.error.DiscontinuousMappingError`: if the input position cannot be converted to the output system
+            IndexError: if the input position cannot be converted to the output system
 
         Example:
             >>> mapping = {(1, 10): (101, 110), (11, 20): (555, 564)}
@@ -341,30 +341,22 @@ class Interval:
         if i == len(input_intervals):
             curr = input_intervals[i - 1]
             if not forward_to_reverse:
-                raise DiscontinuousMappingError(pos, 'is outside mapped range', mapping, after=mapping[curr][1])
+                raise IndexError(pos, 'is outside mapped range', mapping)
             else:
-                raise DiscontinuousMappingError(pos, 'is outside mapped range', mapping, before=mapping[curr][0])
+                raise IndexError(pos, 'is outside mapped range', mapping)
         elif previous_flag:
             curr = input_intervals[i]
             if i == 0:
                 if not forward_to_reverse:
-                    raise DiscontinuousMappingError(pos, 'is outside mapped range', mapping, before=mapping[curr][0])
+                    raise IndexError(pos, 'is outside mapped range', mapping)
                 else:
-                    raise DiscontinuousMappingError(pos, 'is outside mapped range', mapping, after=mapping[curr][1])
+                    raise IndexError(pos, 'is outside mapped range', mapping)
             else:  # between two segments
                 prev = input_intervals[i - 1]
                 if not forward_to_reverse:
-                    raise DiscontinuousMappingError(
-                        pos, 'is outside mapped range', mapping,
-                        before=mapping[prev][1],
-                        after=mapping[curr][0]
-                    )
+                    raise IndexError(pos, 'is outside mapped range', mapping)
                 else:
-                    raise DiscontinuousMappingError(
-                        pos, 'is outside mapped range', mapping,
-                        before=mapping[curr][1],
-                        after=mapping[prev][0]
-                    )
+                    raise IndexError(pos, 'is outside mapped range', mapping)
         else:
             # fell into a mapped region
             curr = input_intervals[i]
