@@ -47,7 +47,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from structural_variant.breakpoint import read_bpp_from_input_file, BreakpointPair
 from structural_variant.annotate import load_reference_genes, load_reference_genome, load_templates
 from structural_variant.annotate.variant import gather_annotations, FusionTranscript, determine_prime
-from structural_variant.error import DiscontinuousMappingError, DrawingFitError, NotSpecifiedError
+from structural_variant.error import DrawingFitError, NotSpecifiedError
 from structural_variant import __version__
 from structural_variant.draw import Diagram
 import TSV

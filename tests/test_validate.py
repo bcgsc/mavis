@@ -1,4 +1,4 @@
-from structural_variant.breakpoint import Breakpoint, BreakpointPair
+from structural_variant.breakpoint import Breakpoint
 from structural_variant.annotate import load_reference_genome, Gene, usTranscript, Transcript
 from structural_variant.constants import ORIENT, STRAND, CIGAR, PYSAM_READ_FLAGS, SVTYPE, CALL_METHOD
 from structural_variant.interval import Interval
@@ -39,14 +39,14 @@ def setUpModule():
 
 class TestGenomeEvidenceWindow(unittest.TestCase):
 
-    def test_generate_window_orient_ns(self):
+    def test_orient_ns(self):
         b = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.NS)
         w = GenomeEvidence._generate_window(
             b, read_length=100, max_expected_fragment_size=550, call_error=11)
         self.assertEqual(440, w[0])
         self.assertEqual(1560, w[1])
 
-    def test_generate_window_orient_left(self):
+    def test_orient_left(self):
         b = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.LEFT)
         w = GenomeEvidence._generate_window(
             b, read_length=100, call_error=11, max_expected_fragment_size=550)
@@ -54,7 +54,7 @@ class TestGenomeEvidenceWindow(unittest.TestCase):
         self.assertEqual(1110, w[1])
         self.assertEqual(671, len(w))
 
-    def test_generate_window_orient_right(self):
+    def test_orient_right(self):
         b = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.RIGHT)
         w = GenomeEvidence._generate_window(
             b, read_length=100, call_error=11, max_expected_fragment_size=550)
@@ -79,9 +79,9 @@ class TestTranscriptomeEvidenceWindow(unittest.TestCase):
 
     def transcriptome_window(self, breakpoint, annotations=None):
         return TranscriptomeEvidence._generate_window(
-            breakpoint, [self.ust] if annotations is None else annotations, 
-            read_length=self.read_length, 
-            call_error=self.call_error, 
+            breakpoint, [self.ust] if annotations is None else annotations,
+            read_length=self.read_length,
+            call_error=self.call_error,
             max_expected_fragment_size=self.max_expected_fragment_size
         )
 
@@ -89,42 +89,42 @@ class TestTranscriptomeEvidenceWindow(unittest.TestCase):
         return GenomeEvidence._generate_window(
             breakpoint,
             read_length=self.read_length,
-            call_error=self.call_error, 
+            call_error=self.call_error,
             max_expected_fragment_size=self.max_expected_fragment_size
         )
 
-    def test_generate_transcriptome_window_before_start(self):
+    def test_before_start(self):
         b = Breakpoint(chr='1', start=100, orient=ORIENT.RIGHT)
         self.assertEqual(self.genome_window(b), self.transcriptome_window(b))
 
         b = Breakpoint(chr='1', start=500, orient=ORIENT.RIGHT)
         self.assertEqual(self.genome_window(b), self.transcriptome_window(b))
 
-    def test_generate_transcriptome_window_after_end(self):
+    def test_after_end(self):
         b = Breakpoint(chr='1', start=5000, orient=ORIENT.RIGHT)
         self.assertEqual(self.genome_window(b), self.transcriptome_window(b))
 
-    def test_generate_transcriptome_window_exonic_long_exon(self):
+    def test_exonic_long_exon(self):
         b = Breakpoint(chr='1', start=3200, orient=ORIENT.RIGHT)
         self.assertEqual(self.genome_window(b), self.transcriptome_window(b))
 
-    def test_generate_transcriptome_window_intronic_long_exon(self):
+    def test_intronic_long_exon(self):
         b = Breakpoint(chr='1', start=2970, orient=ORIENT.RIGHT)
         self.assertEqual(Interval(1440, 3561), self.transcriptome_window(b))
 
-    def test_generate_transcriptome_window_intronic_long_intron(self):
+    def test_intronic_long_intron(self):
         b = Breakpoint(chr='1', start=2000, orient=ORIENT.RIGHT)
         self.assertEqual(Interval(1440, 3561), self.transcriptome_window(b))
 
-    def test_generate_transcriptome_window_intronic_short_exon_right(self):
+    def test_intronic_short_exon_right(self):
         b = Breakpoint(chr='1', start=1690, orient=ORIENT.RIGHT)
         self.assertEqual(Interval(1090, 3511), self.transcriptome_window(b))
 
-    def test_generate_transcriptome_window_intronic_short_exon_left(self):
+    def test_intronic_short_exon_left(self):
         b = Breakpoint(chr='1', start=2200, orient=ORIENT.LEFT)
         self.assertEqual(Interval(690, 3111), self.transcriptome_window(b))
 
-    def test_generate_transcriptome_window_multiple_transcripts(self):
+    def test_multiple_transcripts(self):
         #  [(1001, 1100), (1401, 1500), (1701, 1750), (3001, 4000)])
         b = Breakpoint(chr='1', start=1150, orient=ORIENT.RIGHT)
         gene = self.annotations['1'][0]
@@ -134,7 +134,7 @@ class TestTranscriptomeEvidenceWindow(unittest.TestCase):
         # 989 - 3411
         self.assertEqual(Interval(990, 3411), self.transcriptome_window(b, [self.ust, t2]))
 
-    def test_generate_transcriptome_window(self):
+    def test_many_small_exons(self):
         g = Gene('fake', 17271277, 17279592)
         ust = usTranscript(
             gene=g,
@@ -432,20 +432,36 @@ class TestEventCall(unittest.TestCase):
         self.assertEqual((0, 0, 0, 0, 0), c)
 
     def test_count_split_read_support(self):
-        self.ev.evidence.split_reads[0].add(MockRead(query_name="test1", cigar=[(CIGAR.S, 110), (CIGAR.EQ, 40)],
-                                                     reference_start=1114, reference_end=1150))
-        self.ev.evidence.split_reads[0].add(MockRead(query_name="test2", cigar=[(CIGAR.EQ, 30), (CIGAR.S, 120)],
-                                                     reference_start=1108, reference_end=1115))
-        self.ev.evidence.split_reads[0].add(MockRead(query_name="test3", cigar=[(CIGAR.S, 30), (CIGAR.EQ, 120)],
-                                                     reference_start=1114, reference_end=1154,
-                                                     tags=[(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT, 1)]))
-        self.ev.evidence.split_reads[1].add(MockRead(query_name="test4", cigar=[(CIGAR.EQ, 30), (CIGAR.S, 120)],
-                                                     reference_start=2187))
-        self.ev.evidence.split_reads[1].add(MockRead(query_name="test5", cigar=[(CIGAR.S, 30), (CIGAR.EQ, 120)],
-                                                     reference_start=2187))
-        self.ev.evidence.split_reads[1].add(MockRead(query_name="test1", cigar=[(CIGAR.S, 30), (CIGAR.EQ, 120)],
-                                                     reference_start=2187, reference_end=2307,
-                                                     tags=[(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT, 1)]))
+        self.ev.evidence.split_reads[0].add(
+            MockRead(
+                query_name="test1", cigar=[(CIGAR.S, 110), (CIGAR.EQ, 40)],
+                reference_start=1114, reference_end=1150
+            ))
+        self.ev.evidence.split_reads[0].add(
+            MockRead(
+                query_name="test2", cigar=[(CIGAR.EQ, 30), (CIGAR.S, 120)],
+                reference_start=1108, reference_end=1115
+            ))
+        self.ev.evidence.split_reads[0].add(
+            MockRead(
+                query_name="test3", cigar=[(CIGAR.S, 30), (CIGAR.EQ, 120)],
+                reference_start=1114, reference_end=1154,
+                tags=[(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT, 1)]
+            ))
+        self.ev.evidence.split_reads[1].add(
+            MockRead(
+                query_name="test4", cigar=[(CIGAR.EQ, 30), (CIGAR.S, 120)], reference_start=2187
+            ))
+        self.ev.evidence.split_reads[1].add(
+            MockRead(
+                query_name="test5", cigar=[(CIGAR.S, 30), (CIGAR.EQ, 120)], reference_start=2187
+            ))
+        self.ev.evidence.split_reads[1].add(
+            MockRead(
+                query_name="test1", cigar=[(CIGAR.S, 30), (CIGAR.EQ, 120)],
+                reference_start=2187, reference_end=2307,
+                tags=[(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT, 1)]
+            ))
         c = self.ev.count_split_read_support()
         self.assertEqual((2, 1, 2, 1, 1), c)
 
@@ -466,45 +482,50 @@ class TestCallBySupportingReads(unittest.TestCase):
             min_flanking_pairs_resolution=1
         )
 
-    def test__call_by_supporting_reads_empty(self):
+    def test_empty(self):
         with self.assertRaises(UserWarning):
             break1, break2 = call._call_by_supporting_reads(self.ev, SVTYPE.INV)[0]
 
-    def test__call_by_supporting_reads_split_read(self):
-        self.ev.split_reads[0].add(MockRead(query_name='t1', reference_start=100,
-                                            reference_end=120, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)]))
-        self.ev.split_reads[1].add(MockRead(query_name='t1', reference_start=500,
-                                            reference_end=520, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)]))
-        self.ev.split_reads[0].add(MockRead(query_name='t2', reference_start=100,
-                                            reference_end=120, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)]))
-        self.ev.split_reads[1].add(MockRead(query_name='t2', reference_start=500,
-                                            reference_end=520, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)]))
+    def test_call_both_by_split_read(self):
+        self.ev.split_reads[0].add(
+            MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
+        )
+        self.ev.split_reads[1].add(
+            MockRead(query_name='t1', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
+        )
+        self.ev.split_reads[0].add(
+            MockRead(query_name='t2', reference_start=100, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
+        )
+        self.ev.split_reads[1].add(
+            MockRead(query_name='t2', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
+        )
 
         break1, break2 = call._call_by_supporting_reads(self.ev, SVTYPE.INV)[0]
 
-        self.assertEqual(100, break1.start)
-        self.assertEqual(100, break1.end)
-        self.assertEqual(500, break2.start)
-        self.assertEqual(500, break2.end)
+        self.assertEqual(101, break1.start)
+        self.assertEqual(101, break1.end)
+        self.assertEqual(501, break2.start)
+        self.assertEqual(501, break2.end)
 
-    def test__call_by_supporting_reads_split_read2(self):
-        self.ev.split_reads[0].add(MockRead(query_name='t1', reference_start=100,
-                                            reference_end=120, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)]))
-        self.ev.split_reads[1].add(MockRead(query_name='t1', reference_start=500,
-                                            reference_end=520, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)]))
+    def test_call_both_by_split_read_low_resolution(self):
+        self.ev.split_reads[0].add(
+            MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
+        )
+        self.ev.split_reads[1].add(
+            MockRead(query_name='t1', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
+        )
 
         break1, break2 = call._call_by_supporting_reads(self.ev, SVTYPE.INV)[0]
 
-        self.assertEqual(100, break1.start)
-        self.assertEqual(100, break1.end)
-        self.assertEqual(500, break2.start)
-        self.assertEqual(500, break2.end)
+        self.assertEqual(101, break1.start)
+        self.assertEqual(101, break1.end)
+        self.assertEqual(501, break2.start)
+        self.assertEqual(501, break2.end)
 
-    def test__call_by_supporting_reads_flanking_split_read(self):
+    def test_mixed_split_then_flanking(self):
         self.ev.split_reads[0].add(
             MockRead(
-                query_name='t1', reference_start=100,
-                reference_end=120, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)]
+                query_name='t1', reference_start=100, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)]
             )
         )
         self.ev.flanking_pairs.add((
@@ -513,12 +534,12 @@ class TestCallBySupportingReads(unittest.TestCase):
         ))
         break1, break2 = call._call_by_supporting_reads(self.ev, SVTYPE.INV)[0]
 
-        self.assertEqual(100, break1.start)
-        self.assertEqual(100, break1.end)
-        self.assertEqual(355, break2.start)
-        self.assertEqual(505, break2.end)
+        self.assertEqual(101, break1.start)
+        self.assertEqual(101, break1.end)
+        self.assertEqual(451, break2.start)
+        self.assertEqual(506, break2.end)
 
-    def test__call_by_supporting_reads_split_flanking_read(self):
+    def test_split_flanking_read(self):
         self.ev.split_reads[1].add(MockRead(query_name='t1', reference_start=500,
                                             reference_end=520, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)]))
         self.ev.flanking_pairs.add((
@@ -527,12 +548,12 @@ class TestCallBySupportingReads(unittest.TestCase):
         ))
         break1, break2 = call._call_by_supporting_reads(self.ev, SVTYPE.INV)[0]
 
-        self.assertEqual(0, break1.start)
+        self.assertEqual(1, break1.start)
         self.assertEqual(120, break1.end)
         self.assertEqual(500, break2.start)
         self.assertEqual(500, break2.end)
 
-    def test__call_by_supporting_reads_flanking_read(self):
+    def test_flanking_read(self):
         self.ev.flanking_pairs.add((
             MockRead(
                 query_name='t1', reference_start=150, reference_end=150, next_reference_start=500
@@ -551,7 +572,7 @@ class TestCallBySupportingReads(unittest.TestCase):
         ))
         break1, break2 = call._call_by_supporting_reads(self.ev, SVTYPE.INV)[0]
 
-        self.assertEqual(0, break1.start)
+        self.assertEqual(1, break1.start)
         self.assertEqual(120, break1.end)
         self.assertEqual(350, break2.start)
         self.assertEqual(500, break2.end)
@@ -570,64 +591,93 @@ class TestCallBySupportingReads(unittest.TestCase):
         self.assertEqual(4, len(evs))
 
 
-class TestEvidence(unittest.TestCase):
-
-    def test__call_by_flanking_pairs_intra(self):
-        ev = GenomeEvidence(
-            BreakpointPair(
-                Breakpoint('fake', 100, orient=ORIENT.LEFT),
-                Breakpoint('fake', 500, orient=ORIENT.RIGHT),
-                opposing_strands=False
-            ),
+class TestCallByFlankingReads(unittest.TestCase):
+    def setUp(self):
+        self.ev_LR = GenomeEvidence(
+            Breakpoint('fake', 100, orient=ORIENT.LEFT),
+            Breakpoint('fake', 200, orient=ORIENT.RIGHT),
             None, None,
-            read_length=40,
+            opposing_strands=False,
+            read_length=25,
             stdev_fragment_size=25,
             median_fragment_size=100,
             stdev_count_abnormal=2,
             min_flanking_pairs_resolution=1
         )
-        ev.flanking_pairs.add((
-            MockRead(reference_start=20, reference_end=60, next_reference_start=600),
-            MockRead(reference_start=600, reference_end=650, next_reference_start=20)
+
+    def test_call_both_intrachromosomal_LR(self):
+        # --LLL-100------------500-RRR-------
+        # max fragment size: 100 + 2 * 25 = 150
+        # max distance = 150 - read_length = 100
+        # coverage ranges: 40->80    600->700
+        self.assertEqual(150, self.ev_LR.max_expected_fragment_size)
+        self.ev_LR.flanking_pairs.add((
+            MockRead(reference_start=19, reference_end=60, next_reference_start=599),
+            MockRead(reference_start=599, reference_end=650, next_reference_start=19)
         ))
-        ev.flanking_pairs.add((
-            MockRead(reference_start=40, reference_end=80, next_reference_start=650),
-            MockRead(reference_start=650, reference_end=700, next_reference_start=40)
+        self.ev_LR.flanking_pairs.add((
+            MockRead(reference_start=39, reference_end=80, next_reference_start=649),
+            MockRead(reference_start=649, reference_end=675, next_reference_start=39)
         ))
-        break1, break2 = call._call_by_flanking_pairs(ev, SVTYPE.DEL)
+        # add a pair that will be ignored
+        self.ev_LR.flanking_pairs.add((
+            MockRead(reference_start=39, reference_end=50, next_reference_start=91),
+            MockRead(reference_start=91, reference_end=110, next_reference_start=39)
+        ))
+        break1, break2 = call._call_by_flanking_pairs(self.ev_LR, SVTYPE.DEL)
         self.assertEqual(80, break1.start)
-        self.assertEqual(209, break1.end)
-        self.assertEqual(461, break2.start)
+        self.assertEqual(80 + 39, break1.end)
+        self.assertEqual(600 - 24, break2.start)
         self.assertEqual(600, break2.end)
 
-    def test__call_by_flanking_pairs_intra_tighten_on_overlap(self):
+    def test_call_both_intrachromosomal_LR_coverage_overlaps_range(self):
         # this test is for ensuring that if a theoretical window calculated for the
         # first breakpoint overlaps the actual coverage for the second breakpoint (or the reverse)
         # that we adjust the theoretical window accordingly
-        ev = GenomeEvidence(
-            BreakpointPair(
-                Breakpoint('fake', 100, orient=ORIENT.LEFT),
-                Breakpoint('fake', 200, orient=ORIENT.RIGHT),
-                opposing_strands=False
-            ),
-            None, None,
-            read_length=40,
-            stdev_fragment_size=25,
-            median_fragment_size=100,
-            stdev_count_abnormal=2,
-            min_flanking_pairs_resolution=1
-        )
-        ev.flanking_pairs[0].add(
-            MockRead(reference_start=20, reference_end=60, next_reference_start=150, template_length=200))
-        ev.flanking_pairs[0].add(
-            MockRead(reference_start=40, reference_end=80, next_reference_start=200, template_length=200))
-        break1, break2 = call._call_by_flanking_pairs(ev, SVTYPE.DEL)
+        self.ev_LR.flanking_pairs.add((
+            MockRead(reference_start=21, reference_end=60, next_reference_start=80),
+            MockRead(reference_start=80, reference_end=120, next_reference_start=21)
+        ))
+        self.ev_LR.flanking_pairs.add((
+            MockRead(reference_start=41, reference_end=80, next_reference_start=110),
+            MockRead(reference_start=110, reference_end=140, next_reference_start=41)
+        ))
+        # pair to skip
+        self.ev_LR.flanking_pairs.add((
+            MockRead(reference_start=39, reference_end=80, next_reference_start=649),
+            MockRead(reference_start=649, reference_end=675, next_reference_start=39)
+        ))
+        break1, break2 = call._call_by_flanking_pairs(self.ev_LR, SVTYPE.INS)
         self.assertEqual(80, break1.start)
-        self.assertEqual(149, break1.end)
+        self.assertEqual(80, break1.end) # 119
         self.assertEqual(81, break2.start)
-        self.assertEqual(150, break2.end)
+        self.assertEqual(81, break2.end)
 
-    def test__call_by_flanking_pairs_close_to_zero(self):
+    def test_intrachromosomal_flanking_coverage_overlap_error(self):
+        self.ev_LR.flanking_pairs.add((
+            MockRead(reference_start=19, reference_end=60, next_reference_start=599),
+            MockRead(reference_start=599, reference_end=650, next_reference_start=19)
+        ))
+        self.ev_LR.flanking_pairs.add((
+            MockRead(reference_start=620, reference_end=80, next_reference_start=780),
+            MockRead(reference_start=780, reference_end=820, next_reference_start=620)
+        ))
+        with self.assertRaises(AssertionError):
+            call._call_by_flanking_pairs(self.ev_LR, SVTYPE.DEL)
+
+    def test_coverage_larger_than_max_expected_variance_error(self):
+        self.ev_LR.flanking_pairs.add((
+            MockRead(reference_start=19, reference_end=60, next_reference_start=599),
+            MockRead(reference_start=599, reference_end=650, next_reference_start=19)
+        ))
+        self.ev_LR.flanking_pairs.add((
+            MockRead(reference_start=301, reference_end=350, next_reference_start=780),
+            MockRead(reference_start=780, reference_end=820, next_reference_start=301)
+        ))
+        with self.assertRaises(AssertionError):
+            call._call_by_flanking_pairs(self.ev_LR, SVTYPE.DEL)
+
+    def test_call_both_close_to_zero(self):
         # this test is for ensuring that if a theoretical window calculated for the
         # first breakpoint overlaps the actual coverage for the second breakpoint (or the reverse)
         # that we adjust the theoretical window accordingly
@@ -638,40 +688,74 @@ class TestEvidence(unittest.TestCase):
             opposing_strands=True,
             read_length=40,
             stdev_fragment_size=25,
-            median_fragment_size=100,
+            median_fragment_size=180,
             stdev_count_abnormal=2,
             min_flanking_pairs_resolution=1
         )
         ev.flanking_pairs.add((
-            MockRead(reference_start=20, reference_end=60, next_reference_start=250),
-            MockRead(reference_start=250, reference_end=250, next_reference_start=20)
+            MockRead(reference_start=19, reference_end=60, next_reference_start=149),
+            MockRead(reference_start=149, reference_end=150, next_reference_start=19)
         ))
         ev.flanking_pairs.add((
-            MockRead(reference_start=40, reference_end=80, next_reference_start=300),
-            MockRead(reference_start=300, reference_end=300, next_reference_start=40)
+            MockRead(reference_start=39, reference_end=80, next_reference_start=199),
+            MockRead(reference_start=199, reference_end=200, next_reference_start=39)
         ))
-        break1, break2 = call._call_by_flanking_pairs(ev, SVTYPE.DEL)
+        break1, break2 = call._call_by_flanking_pairs(ev, SVTYPE.INV)
 
-        self.assertEqual(0, break1.start)
+        self.assertEqual(1, break1.start)
         self.assertEqual(20, break1.end)
-        self.assertEqual(111, break2.start)
-        self.assertEqual(250, break2.end)
+        self.assertEqual(81, break2.start)
+        self.assertEqual(150, break2.end)
 
-    def test_expected_fragment_sizes(self):
-        ev = GenomeEvidence(
-            Breakpoint('fake', 100, orient=ORIENT.RIGHT),
-            Breakpoint('fake', 500, orient=ORIENT.RIGHT),
-            None, None,
-            read_length=40,
-            stdev_fragment_size=25,
-            median_fragment_size=100,
-            stdev_count_abnormal=2,
-            opposing_strands=True
+    def test_call_first_with_second_given_incompatible_error(self):
+        self.ev_LR.flanking_pairs.add((
+            MockRead(reference_start=100, reference_end=120, next_reference_start=200),
+            MockRead(reference_start=200, reference_end=220, next_reference_start=100)
+        ))
+        with self.assertRaises(AssertionError):
+            break1, break2 = call._call_by_flanking_pairs(
+                self.ev_LR, SVTYPE.INV,
+                second_breakpoint_called=Breakpoint(self.ev_LR.break2.chr, 110, orient=ORIENT.RIGHT)
+            )
+
+    def test_call_first_with_second_given_and_overlap(self):
+        self.ev_LR.flanking_pairs.add((
+            MockRead(reference_start=100, reference_end=120, next_reference_start=200),
+            MockRead(reference_start=200, reference_end=220, next_reference_start=100)
+        ))
+        b2 = Breakpoint(self.ev_LR.break2.chr, 119, 150, orient=ORIENT.RIGHT)
+        break1, break2 = call._call_by_flanking_pairs(
+            self.ev_LR, SVTYPE.INV,
+            second_breakpoint_called=b2
         )
-        self.assertEqual(50, ev.min_expected_fragment_size)
-        self.assertEqual(150, ev.max_expected_fragment_size)
+        self.assertEqual(b2, break2)
+        self.assertEqual(120, break1.start)
+        self.assertEqual(149, break1.end)
 
+    def test_call_second_with_first_given_incompatible_error(self):
+        self.ev_LR.flanking_pairs.add((
+            MockRead(reference_start=100, reference_end=120, next_reference_start=200),
+            MockRead(reference_start=200, reference_end=220, next_reference_start=100)
+        ))
+        with self.assertRaises(AssertionError):
+            break1, break2 = call._call_by_flanking_pairs(
+                self.ev_LR, SVTYPE.INV,
+                first_breakpoint_called=Breakpoint(self.ev_LR.break2.chr, 210, orient=ORIENT.LEFT)
+            )
 
+    def test_call_second_with_first_given_and_overlap(self):
+        self.ev_LR.flanking_pairs.add((
+            MockRead(reference_start=100, reference_end=120, next_reference_start=200),
+            MockRead(reference_start=200, reference_end=220, next_reference_start=100)
+        ))
+        b1 = Breakpoint(self.ev_LR.break2.chr, 185, orient=ORIENT.LEFT)
+        break1, break2 = call._call_by_flanking_pairs(
+            self.ev_LR, SVTYPE.INV,
+            first_breakpoint_called=b1
+        )
+        self.assertEqual(b1, break1)
+        self.assertEqual(186, break2.start)
+        self.assertEqual(201, break2.end)
 
 
 class MockEvidence:

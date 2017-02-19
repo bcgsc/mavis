@@ -113,7 +113,7 @@ class Evidence(BreakpointPair):
             raise NotImplementedError('abstract class cannot be initialized')
         except:
             pass
-    
+
     def putative_event_types(self):
         if self.classification:
             return [self.classification]
@@ -192,7 +192,7 @@ class Evidence(BreakpointPair):
         imate = Interval(mate.reference_start + 1, mate.reference_end)
         added = False
         for event_type in self.putative_event_types():
-            
+
             # check that the pair orientation is correct
             if not read_tools.orientation_supports_type(read, event_type):
                 continue
@@ -250,7 +250,7 @@ class Evidence(BreakpointPair):
         if self.stranded and self.bam_cache.stranded:
             if read_tools.read_pair_strand(read) != (breakpoint.strand == STRAND.NEG):
                 return False  # split read not on the appropriate strand
-        
+
         primary = ''
         clipped = ''
         if breakpoint.orient == ORIENT.LEFT:
@@ -439,6 +439,10 @@ class Evidence(BreakpointPair):
                     assembly_sequences.setdefault(rqs_comp, set()).add(r)
 
         log('assembly size of {} sequences'.format(len(assembly_sequences) // 2))
+
+        for seq in assembly_sequences:
+            if reverse_complement(seq) not in assembly_sequences:
+                print('sequence missing reverse', seq)
         contigs = assemble(
             assembly_sequences,
             assembly_min_edge_weight=self.assembly_min_edge_weight,
@@ -450,6 +454,7 @@ class Evidence(BreakpointPair):
 
         # now determine the strand from the remapped reads if possible
         if self.stranded and self.bam_cache.stranded:  # strand specific
+            print('this is a stranded assmebly')
             for contig in contigs:
                 if len(contig.remapped_reads.keys()) == 0:
                     continue
@@ -492,6 +497,7 @@ class Evidence(BreakpointPair):
         filtered_contigs = {}
         # sort so that the function is deterministic
         for c in sorted(contigs, key=lambda x: (x.remap_score() * -1, x.sequence)):
+            print(c, c.remap_score(), c.sequence)
             if c.remap_score() < self.assembly_min_remap:  # filter on evidence level
                 continue
             if not self.stranded or not self.bam_cache.stranded:  # not strand specific
@@ -521,14 +527,14 @@ class Evidence(BreakpointPair):
         if not self.interchromosomal and max_dist < self.stdev_fragment_size * self.stdev_count_abnormal:
             raise NotImplementedError('evidence gathering for small structural variants is not supported')
             # needs special consideration b/c won't have flanking reads and may have spanning reads
-        
+
         def filter_if_true(read):
             if self.filter_secondary_alignments and read.is_secondary:
                 return True
             elif read.mapping_quality < self.min_mapping_quality:
                 return True
             return False
-        
+
         flanking_pairs = []  # collect putative pairs
 
         for read in self.bam_cache.fetch(
@@ -581,7 +587,7 @@ class Evidence(BreakpointPair):
             elif any([read_tools.orientation_supports_type(read, et) for et in self.putative_event_types()]) and \
                     (read.reference_id != read.next_reference_id) == self.interchromosomal:
                 flanking_pairs.append(read)
-        
+
         added = set()
         for fl in flanking_pairs:
             # try and get the mate from the cache

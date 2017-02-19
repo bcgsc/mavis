@@ -9,7 +9,7 @@ def breakpoint_pos(read, orient=ORIENT.NS):
     softclipping (unless and orientation has been specified)
 
     Args:
-        read (psyam.AlignedSegment): the read object
+        read (:class:`~pysam.AlignedSegment`): the read object
         orient (ORIENT): the orientation
 
     Returns:
@@ -41,23 +41,50 @@ def breakpoint_pos(read, orient=ORIENT.NS):
         return read.reference_end - 1
 
 
-def nsb_align(ref, seq, weight_of_score=0.5, min_overlap_percent=100, min_match=0):
+def calculate_alignment_score(read):
+    score = 0
+    qlen = read.reference_end - read.reference_start
+    max_score = 2 * qlen - 1
+    for c, v in read.cigar:
+        if c == CIGAR.M:
+            raise ValueError('cannot calculate the alignment score if mismatch v match has not been specified')
+        elif c == CIGAR.EQ:
+            score += 2 * v - 1
+    return score / max_score
+
+
+def nsb_align(
+        ref, seq, weight_of_score=0.5, min_overlap_percent=1, min_match=0, scoring_function=calculate_alignment_score):
     """
     given some reference string and a smaller sequence string computes the best non-space-breaking alignment
-    i.e. an alignment that does not allow for indels (straight-match)
+    i.e. an alignment that does not allow for indels (straight-match). Positions in the aligned segments are
+    given relative to the length of the reference sequence (1-based)
+
+    Args:
+        ref (str): the reference sequence
+        seq (str): the sequence being aligned
+        weight_of_score (float): when scoring alignments this determines the amount
+            of weigth to place on the cigar match. Should be a number between 0 and 1
+        min_overlap_percent (float): the minimum amount of overlap of the input sequence to the reference
+            should be a number between 0 and 1
+        min_match (float): the minimum number of matches compared to total
+
+    Returns:
+        :class:`list` of :class:`~pysam.AlignedSegment`: list of aligned segments
     """
+    print('nsb_align', ref, seq)
     if len(ref) < 1 or len(seq) < 1:
         raise AttributeError('cannot overlap on an empty sequence')
     if min_match < 0 or min_match > 1:
         raise AttributeError('min_match must be between 0 and 1')
 
-    if min_overlap_percent <= 0 or min_overlap_percent > 100:
-        raise AttributeError('percent must be greater than 0 and up to 100', min_overlap_percent)
+    if min_overlap_percent <= 0 or min_overlap_percent > 1:
+        raise AttributeError('percent must be greater than 0 and up to 1', min_overlap_percent)
 
-    min_overlap = int(round(min_overlap_percent * len(seq) / 100, 0))
+    min_overlap = int(round(min_overlap_percent * len(seq), 0))
 
     # store to improve speed and space (don't need to store all alignments)
-    best_score = 0
+    best_score = (0, 0)
     results = []
 
     for ref_start in range(min_overlap - len(seq), len(ref) + len(seq) - min_overlap):
@@ -92,24 +119,44 @@ def nsb_align(ref, seq, weight_of_score=0.5, min_overlap_percent=100, min_match=
 
         qstart = 0 if cigar[0][0] != CIGAR.S else cigar[0][1]
 
-        score = cigar_tools.score(cigar) * weight_of_score + \
-            cigar_tools.longest_exact_match(cigar) * (1 - weight_of_score)
-        score = cigar_tools.score(cigar)
         a = pysam.AlignedSegment()
         a.query_sequence = str(seq)
         a.reference_start = ref_start + qstart
         a.cigar = cigar
+        qlen = a.reference_end - a.reference_start
+        score = (scoring_function(a), qlen) # this way for equal identity matches we take the longer alignment
+        if qlen < min_overlap:
+            continue
+        print('score =', score, a.cigar)
 
         if score >= best_score:
             best_score = score
             results.append((a, score))
 
     filtered = [x for x, y in results if y == best_score]
+    print('filtered', filtered)
 
     return filtered
 
 
 def read_pair_strand(read, strand_determining_read=2):
+    """
+    determines the strand that was sequenced
+
+    Args:
+        read (:class:`~pysam.AlignedSegment`): the read being used to determine the strand
+        strand_determining_read (int): which read in the read pair is the same as the sequenced strand
+
+    Returns:
+        STRAND: the strand that was sequenced
+
+    Raises:
+        ValueError: if strand_determining_read is not 1 or 2
+
+    Warning:
+        if the input pair is unstranded the information will not be representative of the
+        strand sequenced since the assumed convetion is not followed
+    """
     if not read.is_paired:
         return STRAND.NEG if read.is_reverse else STRAND.POS
     elif strand_determining_read == 1:
@@ -130,6 +177,15 @@ def read_pair_type(read):
     # check if the read pair is in the expected orientation
     """
     assumptions based on illumina pairs: only 4 possible combinations
+
+    Args:
+        read (:class:`~pysam.AlignedSegment`): the input read
+
+    Returns:
+        READ_PAIR_TYPE: the type of input read pair
+
+    Raises:
+        NotImplementedError: for any read that does not fall into the four expected configurations (see below)
 
     ::
 
@@ -157,8 +213,16 @@ def read_pair_type(read):
 
 def orientation_supports_type(read, event_type):
     """
-    checks if the orientation is compatible with the type and also
-    if the insert size makes sense
+    checks if the orientation is compatible with the type of event
+
+    Args:
+        read (:class:`~pysam.AlignedSegment`): a read from the pair
+        event_type (SVTYPE): the type of event to check
+
+    Returns:
+        bool:
+            - ``True`` - the read pair is in the correct orientation for this event type
+            - ``False`` - the read is not in the correct orientation
     """
     if event_type == SVTYPE.DEL:
         if read_pair_type(read) != READ_PAIR_TYPE.LR:

@@ -40,9 +40,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from structural_variant import __version__
 from structural_variant.constants import *
 from structural_variant.error import *
-from structural_variant.read_tools import CigarTools
+from structural_variant.bam import cigar as cigar_tools
 from structural_variant.breakpoint import BreakpointPair, read_bpp_from_input_file
-from structural_variant.read_tools import BamCache
+from structural_variant.bam.cache import BamCache
 from structural_variant.validate import Evidence, DEFAULTS
 from structural_variant.blat import blat_contigs
 from structural_variant.interval import Interval
@@ -463,10 +463,10 @@ def main():
         for ev in evidence:
             for c in ev.contigs:
                 for read1, read2 in c.alignments:
-                    read1.cigar = CigarTools.convert_for_igv(read1.cigar)
+                    read1.cigar = cigar_tools.convert_for_igv(read1.cigar)
                     fh.write(read1)
                     if read2:
-                        read2.cigar = CigarTools.convert_for_igv(read2.cigar)
+                        read2.cigar = cigar_tools.convert_for_igv(read2.cigar)
                         fh.write(read2)
 
     # write the evidence
@@ -477,7 +477,7 @@ def main():
             temp = ev.supporting_reads()
             reads.update(temp)
         for read in reads:
-            read.cigar = CigarTools.convert_for_igv(read.cigar)
+            read.cigar = cigar_tools.convert_for_igv(read.cigar)
             fh.write(read)
     # now sort the contig bam
     sort = re.sub('.bam$', '.sorted', CONTIG_BAM)

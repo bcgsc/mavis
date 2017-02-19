@@ -16,7 +16,7 @@ import sys
 from configparser import ConfigParser, ExtendedInterpolation
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from structural_variant.validate import DEFAULTS as VDEFAULTS
+from structural_variant.validate import VALIDATION_DEFAULTS
 from structural_variant.constants import PROTOCOL
 import sv_merge
 import sv_validate
@@ -44,7 +44,7 @@ DEFAULTS = Namespace(
     stranded=False,
     max_proximity=5000
 )
-DEFAULTS.__dict__.update(VDEFAULTS.__dict__)
+DEFAULTS.__dict__.update(VALIDATION_DEFAULTS.__dict__)
 
 
 def log(*pos, time_stamp=True):

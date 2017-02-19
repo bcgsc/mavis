@@ -1,7 +1,7 @@
 from structural_variant.constants import *
 from structural_variant.bam import read as read_tools
 from structural_variant.bam import cigar as cigar_tools
-from structural_variant.bam.read import read_pair_strand, read_pair_type, breakpoint_pos
+from structural_variant.bam.read import read_pair_strand, read_pair_type, breakpoint_pos, orientation_supports_type
 from structural_variant.bam.cache import BamCache
 from structural_variant.annotate import load_reference_genome
 import unittest
@@ -110,6 +110,14 @@ class TestModule(unittest.TestCase):
         with self.assertRaises(AttributeError):
             r = MockRead(reference_start=10, cigar=[(CIGAR.X, 10), (CIGAR.M, 10)])
             read_tools.breakpoint_pos(r, ORIENT.LEFT)
+
+    def test_nsb_align(self):
+        ref = 'GATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAG' \
+              'TTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG'
+        seq = 'TGTAGGAAGCCATTATCTGAAGTGTAAGCAACTGCATAGTGCTATTTTAATTATGCATTGCAGGGAAACTGTGAGCAGAGCTATATATTTAGGTAGAC' \
+              'TGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAAC'
+        alignment = read_tools.nsb_align(ref, seq)
+        # GATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG
 
 
 class Testcigar_tools(unittest.TestCase):
@@ -317,10 +325,14 @@ class TestReadPairStrand(unittest.TestCase):
         self.assertEqual(STRAND.POS, read_pair_strand(self.unpaired_pos))
         self.assertEqual(STRAND.NEG, read_pair_strand(self.unpaired_neg))
 
+    def test_read_pair_strand_det_error(self):
+        with self.assertRaises(ValueError):
+            read_pair_strand(self.read1_pos_neg, strand_determining_read=3)
+
 
 class TestReadPairType(unittest.TestCase):
-    def test_read_pair_type_LR(self):
-        r = MockRead(
+    def setUp(self):
+        self.LR = MockRead(
             reference_id=0,
             next_reference_id=0,
             reference_start=1,
@@ -328,59 +340,75 @@ class TestReadPairType(unittest.TestCase):
             is_reverse=False,
             mate_is_reverse=True
         )
-        self.assertEqual(READ_PAIR_TYPE.LR, read_pair_type(r))
-
-    def test_read_pair_type_LR_reverse(self):
-        r = MockRead(
-            reference_id=1,
+        self.LL = MockRead(
+            reference_id=0,
+            next_reference_id=0,
+            reference_start=1,
+            next_reference_start=2,
+            is_reverse=False,
+            mate_is_reverse=False
+        )
+        self.RR = MockRead(
+            reference_id=0,
+            next_reference_id=0,
+            reference_start=1,
+            next_reference_start=2,
+            is_reverse=True,
+            mate_is_reverse=True
+        )
+        self.RL = MockRead(
+            reference_id=0,
             next_reference_id=0,
             reference_start=1,
             next_reference_start=2,
             is_reverse=True,
             mate_is_reverse=False
         )
-        self.assertEqual(READ_PAIR_TYPE.LR, read_pair_type(r))
+
+    def test_read_pair_type_LR(self):
+        self.assertEqual(READ_PAIR_TYPE.LR, read_pair_type(self.LR))
 
     def test_read_pair_type_LL(self):
-        r = MockRead(
-            reference_id=0,
-            next_reference_id=0,
-            reference_start=1,
-            next_reference_start=2,
-            is_reverse=False,
-            mate_is_reverse=False
-        )
-        self.assertEqual(READ_PAIR_TYPE.LL, read_pair_type(r))
+        self.assertEqual(READ_PAIR_TYPE.LL, read_pair_type(self.LL))
 
     def test_read_pair_type_RR(self):
-        r = MockRead(
-            reference_id=0,
-            next_reference_id=0,
-            reference_start=1,
-            next_reference_start=2,
-            is_reverse=True,
-            mate_is_reverse=True
-        )
-        self.assertEqual(READ_PAIR_TYPE.RR, read_pair_type(r))
+        self.assertEqual(READ_PAIR_TYPE.RR, read_pair_type(self.RR))
 
     def test_read_pair_type_RL(self):
-        r = MockRead(
-            reference_id=0,
-            next_reference_id=0,
-            reference_start=1,
-            next_reference_start=2,
-            is_reverse=True,
-            mate_is_reverse=False
-        )
-        self.assertEqual(READ_PAIR_TYPE.RL, read_pair_type(r))
+        self.assertEqual(READ_PAIR_TYPE.RL, read_pair_type(self.RL))
 
-    def test_read_pair_type_RL_reverse(self):
-        r = MockRead(
-            reference_id=1,
-            next_reference_id=0,
-            reference_start=1,
-            next_reference_start=2,
-            is_reverse=False,
-            mate_is_reverse=True
-        )
-        self.assertEqual(READ_PAIR_TYPE.RL, read_pair_type(r))
+    def test_orientation_supports_type_deletion(self):
+        self.assertTrue(orientation_supports_type(self.LR, SVTYPE.DEL))
+        self.assertFalse(orientation_supports_type(self.RL, SVTYPE.DEL))
+        self.assertFalse(orientation_supports_type(self.LL, SVTYPE.DEL))
+        self.assertFalse(orientation_supports_type(self.RR, SVTYPE.DEL))
+
+    def test_orientation_supports_type_insertion(self):
+        self.assertTrue(orientation_supports_type(self.LR, SVTYPE.INS))
+        self.assertFalse(orientation_supports_type(self.RL, SVTYPE.INS))
+        self.assertFalse(orientation_supports_type(self.LL, SVTYPE.INS))
+        self.assertFalse(orientation_supports_type(self.RR, SVTYPE.INS))
+
+    def test_orientation_supports_type_inversion(self):
+        self.assertFalse(orientation_supports_type(self.LR, SVTYPE.INV))
+        self.assertFalse(orientation_supports_type(self.RL, SVTYPE.INV))
+        self.assertTrue(orientation_supports_type(self.LL, SVTYPE.INV))
+        self.assertTrue(orientation_supports_type(self.RR, SVTYPE.INV))
+
+    def test_orientation_supports_type_translocation_inversion(self):
+        self.assertFalse(orientation_supports_type(self.LR, SVTYPE.ITRANS))
+        self.assertFalse(orientation_supports_type(self.RL, SVTYPE.ITRANS))
+        self.assertTrue(orientation_supports_type(self.LL, SVTYPE.ITRANS))
+        self.assertTrue(orientation_supports_type(self.RR, SVTYPE.ITRANS))
+
+    def test_orientation_supports_type_trans_duplication(self):
+        self.assertFalse(orientation_supports_type(self.LR, SVTYPE.DUP))
+        self.assertTrue(orientation_supports_type(self.RL, SVTYPE.DUP))
+        self.assertFalse(orientation_supports_type(self.LL, SVTYPE.DUP))
+        self.assertFalse(orientation_supports_type(self.RR, SVTYPE.DUP))
+
+    def test_orientation_supports_type_translocation(self):
+        self.assertTrue(orientation_supports_type(self.LR, SVTYPE.TRANS))
+        self.assertTrue(orientation_supports_type(self.RL, SVTYPE.TRANS))
+        self.assertFalse(orientation_supports_type(self.LL, SVTYPE.TRANS))
+        self.assertFalse(orientation_supports_type(self.RR, SVTYPE.TRANS))

@@ -15,6 +15,7 @@ structural_variant package
 
    structural_variant.annotate.custom.rst
    structural_variant.assemble
+   structural_variant.bam.custom.rst
    structural_variant.blat
    structural_variant.breakpoint
    structural_variant.cluster
@@ -23,5 +24,4 @@ structural_variant package
    structural_variant.error
    structural_variant.interval
    structural_variant.pairing
-   structural_variant.read_tools
-   structural_variant.validate
+   structural_variant.validate.custom.rst

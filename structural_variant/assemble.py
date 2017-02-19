@@ -132,6 +132,7 @@ def assemble(
     Returns:
         :class:`list` of :class:`Contig`: a list of putative contigs
     """
+    print('len(sequences)', len(sequences))
     if len(sequences) == 0:
         return []
     min_seq = min([len(s) for s in sequences])
@@ -233,6 +234,8 @@ def assemble(
             if cigar_tools.match_percent(a[0].cigar) < assembly_min_match_quality:
                 continue
             maps_to[contig] = a[0]
+        print('input_seq', input_seq)
+        print('maps to', len(maps_to.keys()))
         for contig, read in maps_to.items():
             contig.add_mapped_read(read, len(maps_to.keys()))
     log('assemblies complete')

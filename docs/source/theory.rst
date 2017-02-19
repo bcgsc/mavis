@@ -239,6 +239,30 @@ Breakpoints can be called by multiple different :attr:`~structural_variant.const
 
 |
 
+------
+
+|
+
+Calling Breakpoints by Flanking Evidence
+..........................................
+
+Breakpoints are called by contig, split-read of flanking pairs evidence. Contigs and split reads are used to call exact
+breakpoints, where breakpoints called by flanking reads are generally assigned a probabalistic range.
+
+The metrics used here are similar to those used in calculating the evidence window. We use the
+:term:`max_expected_fragment_size` as the outer limit of how large the range can be. This is further refined taking
+into account the range spanned by the :term:`flanking pairs` evidence and the position of the opposing breakpoint.
+
+.. figure:: _static/call_breakpoint_by_flanking_reads.svg
+    :width: 100%
+
+    Calculation of the left-oriented breakpoint by flanking reads. Reads mapped to the breakpoint are shown in grey.
+    The read on the right (black outline, no fill) demonstrates the read length used to narrow the right side bound of
+    the estimated breakpoint interval.
+
+
+|
+
 -----------------
 
 |

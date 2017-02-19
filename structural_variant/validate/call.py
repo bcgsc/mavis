@@ -72,7 +72,7 @@ class EventCall(BreakpointPair):
             * (*int*) - the standard deviation (from the median) of the insert size
         """
         support = set()
-        
+
         fragment_sizes = []
         for read in itertools.chain.from_iterable(self.evidence.flanking_pairs):
             isize = abs(read.template_length)
@@ -205,95 +205,69 @@ def _call_by_flanking_pairs(ev, event_type, first_breakpoint_called=None, second
     if first_breakpoint_called and second_breakpoint_called:
         raise ValueError('do not bother calling when both breakpoints have already been called')
 
+    flanking_count = 0
     for read, mate in ev.flanking_pairs:
         # check that the fragment size is reasonable
         fragment_size = ev.compute_fragment_size(read, mate)
-
         if event_type == SVTYPE.DEL:
             if fragment_size.end <= ev.max_expected_fragment_size:
                 continue
         elif event_type == SVTYPE.INS:
             if fragment_size.start >= ev.min_expected_fragment_size:
                 continue
-        first_positions.extend([read.reference_start, read.reference_end - 1, mate.next_reference_start])
-        second_positions.extend([mate.reference_start, mate.reference_end - 1, read.next_reference_start])
-        print(first_positions)
-        print(second_positions)
-    
-    if (len(first_positions) == 0 and not first_breakpoint_called) or \
-            (len(second_positions) == 0 and not second_breakpoint_called):
-        raise AssertionError('Insufficient coverage. Could not resolve by flanking reads')
+        flanking_count += 1
+        first_positions.extend([read.reference_start + 1, read.reference_end, mate.next_reference_start + 1])
+        second_positions.extend([mate.reference_start + 1, mate.reference_end, read.next_reference_start + 1])
 
-    cover1 = None
-    cover2 = None
-    if len(first_positions) >= ev.min_flanking_pairs_resolution:
-        cover1 = Interval(min(first_positions), max(first_positions))
-    if len(second_positions) >= ev.min_flanking_pairs_resolution:
-        cover2 = Interval(min(second_positions), max(second_positions))
+    if flanking_count < ev.min_flanking_pairs_resolution:
+        raise AssertionError('insufficient coverage to call by flanking reads')
 
-    if cover1 and not first_breakpoint_called and len(cover1) > ev.max_expected_fragment_size:
+    cover1 = Interval(min(first_positions), max(first_positions))
+    cover2 = Interval(min(second_positions), max(second_positions))
+
+    print('first_positions', first_positions)
+    print('second_positions', second_positions)
+    print('first_breakpoint_called', first_breakpoint_called)
+    print('second_breakpoint_called', second_breakpoint_called)
+    print(cover1, cover2)
+    if not ev.interchromosomal and Interval.overlaps(cover1, cover2):
+        raise AssertionError('flanking read coverage overlaps. cannot call by flanking reads', cover1, cover2)
+    if len(cover1) + ev.read_length * 2 > ev.max_expected_fragment_size or \
+            len(cover2) + ev.read_length * 2 > ev.max_expected_fragment_size:
         raise AssertionError(
             'Cannot resolve by flanking reads. Coverage interval of flanking reads is larger than '
             'expected for normal variation. It is likely there are flanking reads for multiple events',
-            event_type, cover1, ev.max_expected_fragment_size
+            cover1, cover2, ev.max_expected_fragment_size
         )
-    if cover2 and not second_breakpoint_called and len(cover2) > ev.max_expected_fragment_size:
-        raise AssertionError(
-            'Cannot resolve by flanking reads. Coverage interval of flanking reads is larger than '
-            'expected for normal variation. It is likely there are flanking reads for multiple events',
-            event_type, cover2, ev.max_expected_fragment_size
-        )
-
-    if cover1 and cover2:
-        if ev.interchromosomal:
-            pass
-        elif Interval.overlaps(cover1, cover2):
-            raise AssertionError(
-                'Cannot resolve {} by flanking reads, flanking read coverage overlaps at the breakpoint: '
-                '{} and {}'.format(event_type, cover1, cover2))
-        elif cover1.start > cover2.start:
-            raise AssertionError(
-                'Cannot resolve {} by flanking reads. Region of coverage for breakpoint1 falls ahead of the region '
-                'of coverage for breakpoint2'.format(event_type))
-        # have coverage for flanking evidence for both breakpoints
-    else:
-        raise UserWarning(
-            'Unable to call {} by flanking reads, insufficient flanking reads available'.format(event_type))
 
     if first_breakpoint_called is None:
-        shift = max([0, len(cover1) - ev.read_length])
+        max_breakpoint_width = ev.max_expected_fragment_size - len(cover1) - ev.read_length * 2
+        print('1 max_breakpoint_width', max_breakpoint_width)
 
         if ev.break1.orient == ORIENT.LEFT:
-            """
-                                                              *  *
-            coverage        ----------------=======---------------======----------------
-            other break     --------------------------------|=|-------------------------
-            raw window      ----------------------|==========================|----------
-            refined window  ----------------------|===========|-------------------------
-            """
-            right_side_bound = cover1.end + ev.max_expected_fragment_size - shift
+            end = cover1.end + max_breakpoint_width
+            print(end)
             if not ev.interchromosomal:
-                if cover2:
-                    right_side_bound = min([right_side_bound, cover2.start - 1])
+                end = min([end, cover2.start - 1])
+                print(end)
                 if second_breakpoint_called:
-                    if second_breakpoint_called.end < cover1.end:
-                        raise AssertionError(
-                            'Cannot call by flanking reads. Coverage region for the first breakpoint extends past '
-                            'the call region for the second breakpoint')
-                    right_side_bound = min([right_side_bound, second_breakpoint_called.end])
-
-            first_breakpoint_called = Breakpoint(
-                ev.break1.chr,
-                cover1.end,
-                right_side_bound,
-                orient=ev.break1.orient,
-                strand=ev.break1.strand
-            )
+                    end = min([end, second_breakpoint_called.end - 1])
+                    print(end)
+            try:
+                first_breakpoint_called = Breakpoint(
+                    ev.break1.chr,
+                    cover1.end, end,
+                    orient=ev.break1.orient,
+                    strand=ev.break1.strand
+                )
+            except AttributeError:
+                raise AssertionError(
+                    'input breakpoint is incompatible with flanking coverage region', cover1, second_breakpoint_called)
         elif ev.break1.orient == ORIENT.RIGHT:
             first_breakpoint_called = Breakpoint(
                 ev.break1.chr,
-                max([cover1.start - ev.max_expected_fragment_size + shift, 0]),
-                max([cover1.start, 0]),
+                max([cover1.start - max_breakpoint_width, 1]),
+                max([cover1.start, 1]),
                 orient=ev.break1.orient,
                 strand=ev.break1.strand
             )
@@ -301,43 +275,40 @@ def _call_by_flanking_pairs(ev, event_type, first_breakpoint_called=None, second
             raise NotSpecifiedError('Cannot call by flanking if orientation was not given')
 
     if second_breakpoint_called is None:
-        shift = max([0, len(cover2) - ev.read_length])
+        max_breakpoint_width = ev.max_expected_fragment_size - len(cover2) - ev.read_length * 2
+        print(ev.max_expected_fragment_size, len(cover2), ev.read_length * 2)
+        print('2 max_breakpoint_width', max_breakpoint_width)
+
         if ev.break2.orient == ORIENT.LEFT:
             second_breakpoint_called = Breakpoint(
                 ev.break2.chr,
                 cover2.end,
-                cover2.end + ev.max_expected_fragment_size - shift,
+                cover2.end + max_breakpoint_width,
                 orient=ev.break2.orient,
                 strand=ev.break2.strand
             )
         elif ev.break2.orient == ORIENT.RIGHT:
-            """
-                                                 * *
-            coverage        ----------------=======---------------======----------------
-            other break     ---------------------|====|---------------------------------
-            raw window      ------------------|===================|---------------------
-            refined window  -----------------------|==============|---------------------
-            """
-            left_side_bound = cover2.start - ev.max_expected_fragment_size + shift
+            start = max([cover2.start - max_breakpoint_width, 1])
+            print('s2', start)
             if not ev.interchromosomal:
-                if cover1:
-                    left_side_bound = max([left_side_bound, cover1.end + 1])
+                start = max([start, cover1.end + 1])
+                print('s2', start)
                 if first_breakpoint_called:
-                    if first_breakpoint_called.start > cover2.start:
-                        raise AssertionError(
-                            'Cannot call by flanking reads. Coverage region for the first breakpoint extends past '
-                            'the call region for the second breakpoint')
-                    left_side_bound = max([left_side_bound, first_breakpoint_called.start])
-
-            second_breakpoint_called = Breakpoint(
-                ev.break2.chr,
-                left_side_bound,
-                cover2.start,
-                orient=ev.break2.orient,
-                strand=ev.break2.strand
-            )
+                    start = max([start, first_breakpoint_called.start + 1])
+                    print('s2', start)
+            try:
+                second_breakpoint_called = Breakpoint(
+                    ev.break2.chr,
+                    start,
+                    cover2.start,
+                    orient=ev.break2.orient,
+                    strand=ev.break2.strand
+                )
+            except AttributeError:
+                raise AssertionError(
+                    'input breakpoint is incompatible with flanking coverage region', cover2, first_breakpoint_called)
         else:
-            raise NotSpecifiedError('Cannot call {} by flanking if orientation was not given'.format(event_type))
+            raise NotSpecifiedError('Cannot call by flanking if orientation was not given')
     return first_breakpoint_called, second_breakpoint_called
 
 
@@ -354,7 +325,8 @@ def _call_by_supporting_reads(ev, event_type):
     for i, breakpoint, d in [(0, ev.break1, pos1), (1, ev.break2, pos2)]:
         for read in ev.split_reads[i]:
             try:
-                pos = breakpoint_pos(read, breakpoint.orient)
+                pos = breakpoint_pos(read, breakpoint.orient) + 1
+                print(pos)
                 if pos not in d:
                     d[pos] = []
                 d[pos].append(read)

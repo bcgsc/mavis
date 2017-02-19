@@ -9,7 +9,7 @@ from Bio.Seq import Seq
 from argparse import Namespace
 
 CODON_SIZE = 3
-"""int: the number of bases making up a codon"""
+""":class:`int`: the number of bases making up a codon"""
 
 
 def reverse_complement(s):
@@ -20,7 +20,7 @@ def reverse_complement(s):
         s (str): the input DNA sequence
 
     Returns:
-        string: the reverse complement of the input sequence
+        :class:`str`: the reverse complement of the input sequence
 
     Warning:
         assumes the input is a DNA sequence
@@ -35,6 +35,14 @@ def reverse_complement(s):
 
 def translate(s, reading_frame=0):
     """
+    given a DNA sequence, translates it and returns the protein amino acid sequence
+
+    Args:
+        s (str): the input DNA sequence
+        reading_frame (int): where to start translating the sequence
+
+    Returns:
+        str: the amino acid sequence
     """
     reading_frame = reading_frame % CODON_SIZE
 
@@ -49,7 +57,7 @@ def translate(s, reading_frame=0):
 GAP = '-'
 
 ORIENT = Vocab(LEFT='L', RIGHT='R', NS='?')
-"""Vocab: holds controlled vocabulary for allowed orientation values
+""":class:`Vocab`: holds controlled vocabulary for allowed orientation values
 
 - ``LEFT``: left wrt to the positive/forward strand
 - ``RIGHT``: right wrt to the positive/forward strand
@@ -59,14 +67,14 @@ setattr(ORIENT, 'expand', lambda x: [ORIENT.LEFT, ORIENT.RIGHT] if x == ORIENT.N
 setattr(ORIENT, 'compare', lambda x, y: True if ORIENT.NS in [x, y] else (x == y))
 
 PROTOCOL = Vocab(GENOME='genome', TRANS='transcriptome')
-"""Vocab: holds controlled vocabulary for allowed protocol values
+""":class:`Vocab`: holds controlled vocabulary for allowed protocol values
 
 - ``GENOME``: genome
 - ``TRANS``: transcriptome
 """
 
 STRAND = Vocab(POS='+', NEG='-', NS='?')
-"""Vocab: holds controlled vocabulary for allowed strand values
+""":class:`Vocab`: holds controlled vocabulary for allowed strand values
 
 - ``POS``: the positive/forward strand
 - ``NEG``: the negative/reverse strand
@@ -83,7 +91,7 @@ SVTYPE = Vocab(
     INS='insertion',
     DUP='duplication'
 )
-"""Vocab: holds controlled vocabulary for acceptable structural variant classifications
+""":class:`Vocab`: holds controlled vocabulary for acceptable structural variant classifications
 
 - ``DEL``: deletion
 - ``TRANS``: translocation
@@ -94,7 +102,7 @@ SVTYPE = Vocab(
 """
 
 CIGAR = Vocab(M=0, I=1, D=2, N=3, S=4, H=5, P=6, X=8, EQ=7)
-"""Vocab: Enum-like. For readable cigar values
+""":class:`Vocab`: Enum-like. For readable cigar values
 
 - ``M``: alignment match (can be a sequence match or mismatch)
 - ``I``: insertion to the reference
@@ -110,7 +118,7 @@ note: descriptions are taken from the `samfile documentation <https://samtools.g
 """
 
 NA_MAPPING_QUALITY = 255
-"""int: mapping qaulity value to indicate mapping was not performed/calculated"""
+""":class:`int`: mapping qaulity value to indicate mapping was not performed/calculated"""
 
 PYSAM_READ_FLAGS = Vocab(
     REVERSE=16,
@@ -130,7 +138,7 @@ PYSAM_READ_FLAGS = Vocab(
     BLAT_PMS='bp'
 )
 
-"""Vocab: Enum-like. For readable PYSAM flag constants
+""":class:`Vocab`: Enum-like. For readable PYSAM flag constants
 
 - ``MULTIMAP``: template having multiple segments in sequencing
 - ``UNMAPPED``: segment unmapped
@@ -172,7 +180,7 @@ FLAGS = Vocab(LQ='LOWQUAL')
 READ_PAIR_TYPE = Vocab(RR='RR', LL='LL', RL='RL', LR='LR')
 
 CALL_METHOD = Vocab(CONTIG='contig', SPLIT='split reads', FLANK='flanking reads')
-"""Vocab: holds controlled vocabulary for allowed call methods
+""":class:`Vocab`: holds controlled vocabulary for allowed call methods
 
 - ``CONTIG``: a contig was assembled and aligned across the breakpoints
 - ``SPLIT``: the event was called by split reads
@@ -180,7 +188,7 @@ CALL_METHOD = Vocab(CONTIG='contig', SPLIT='split reads', FLANK='flanking reads'
 """
 
 GENE_PRODUCT_TYPE = Vocab(SENSE='sense', ANTI_SENSE='anti-sense')
-"""Vocab: controlled vocabulary for gene products
+""":class:`Vocab`: controlled vocabulary for gene products
 
 - ``SENSE``: the gene product is a sense fusion
 - ``ANTI_SENSE``: the gene product is anti-sense
@@ -194,7 +202,7 @@ SPLICE_TYPE = Vocab(
     MULTI_SKIP='skipped multiple exons',
     COMPLEX='complex'
 )
-"""Vocab: holds controlled vocabulary for allowed splice type classification values
+""":class:`Vocab`: holds controlled vocabulary for allowed splice type classification values
 
 - ``RETAIN``: an intron was retained
 - ``SKIP``: an exon was skipped
@@ -205,22 +213,22 @@ SPLICE_TYPE = Vocab(
 """
 
 SPLICE_SITE_RADIUS = 2
-"""int: number of bases away from an exon boundary considered to be part of the splice site such that if it were altered
+""":class:`int`: number of bases away from an exon boundary considered to be part of the splice site such that if it were altered
         the splice site would be considered to be abrogated.
 """
 
 PRIME = Vocab(FIVE=5, THREE=3)
-"""Vocab: holds controlled vocabulary
+""":class:`Vocab`: holds controlled vocabulary
 
 - ``FIVE``: five prime
 - ``THREE``: three prime
 """
 
 START_AA = 'M'
-"""string: The amino acid expected to start translation
+""":class:`str`: The amino acid expected to start translation
 """
 STOP_AA = '*'
-"""string: The amino acid expected to end translation
+""":class:`str`: The amino acid expected to end translation
 """
 
 GIESMA_STAIN = Vocab(
@@ -233,7 +241,7 @@ GIESMA_STAIN = Vocab(
     GVAR='gvar',
     STALK='stalk'
 )
-"""Vocab: holds controlled vocabulary relating to stains of chromosome bands"""
+""":class:`Vocab`: holds controlled vocabulary relating to stains of chromosome bands"""
 
 # content related to tabbed files for input/output
 # ensure that we don't have to change ALL the code when we update column names
@@ -502,7 +510,7 @@ COLUMNS = Vocab(
         'raw_break2_split_reads',
         'Number of split reads before calling the breakpoint')
 )
-"""Vocab: Column names and definitions for i/o files used throughout the pipeline
+""":class:`Vocab`: Column names and definitions for i/o files used throughout the pipeline
 
 Example:
     >>> COLUMNS.raw_break2_split_reads
@@ -560,9 +568,10 @@ VALIDATION_DEFAULTS = Namespace(
     fuzzy_mismatch_number=1,
     max_sc_preceeding_anchor=6
 )
-"""Namespace: holds the settings for computations with the Evidence objects
+""":class:`~argparse.Namespace`: holds the settings for computations with the Evidence objects
 
 .. glossary::
+    :sorted:
 
     read_length
         length of reads in the bam file

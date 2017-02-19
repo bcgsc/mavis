@@ -1073,6 +1073,7 @@ class TestAnnotationGathering(unittest.TestCase):
         raise unittest.SkipTest('TODO')
 
     def test_intrachromosomal_within_gene_inversion(self):
+        raise unittest.SkipTest('TODO')
         g = Gene(REF_CHR, 1000, 3000, strand=STRAND.POS)
         t = usTranscript(gene=g, exons=[(1001, 1100), (1501, 1600), (2001, 2100), (2501, 2600)])
         g.transcripts.append(t)
