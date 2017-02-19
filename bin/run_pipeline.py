@@ -16,8 +16,7 @@ import sys
 from configparser import ConfigParser, ExtendedInterpolation
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from structural_variant.validate import VALIDATION_DEFAULTS
-from structural_variant.constants import PROTOCOL
+from structural_variant.constants import PROTOCOL, VALIDATION_DEFAULTS
 import sv_merge
 import sv_validate
 
@@ -218,7 +217,7 @@ def main():
             'median_fragment_size': sec.median_fragment_size,
             'force_overwrite': args.force_overwrite
         }
-        for attr in VDEFAULTS.__dict__:
+        for attr in VALIDATION_DEFAULTS.__dict__:
             validation_args[attr] = getattr(sec, attr)
 
         qsub = os.path.join(validation_output, 'qsub.sh')

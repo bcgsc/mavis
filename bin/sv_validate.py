@@ -40,10 +40,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from structural_variant import __version__
 from structural_variant.constants import *
 from structural_variant.error import *
+from structural_variant.validate.evidence import GenomeEvidence, TranscriptomeEvidence
 from structural_variant.bam import cigar as cigar_tools
 from structural_variant.breakpoint import BreakpointPair, read_bpp_from_input_file
 from structural_variant.bam.cache import BamCache
-from structural_variant.validate import Evidence, DEFAULTS
 from structural_variant.blat import blat_contigs
 from structural_variant.interval import Interval
 from structural_variant.annotate import load_masking_regions, load_reference_genome, load_reference_genes
@@ -80,30 +80,6 @@ def mkdirp(dirname):
             pass
         else:
             raise
-
-
-def read_cluster_file(name):
-    bpps = read_bpp_from_input_file(
-        name,
-        require=[
-            COLUMNS.cluster_id
-        ],
-        cast={
-            COLUMNS.cluster_size: int
-        }
-    )
-    evidence = []
-    for bpp in bpps:
-        e = Evidence(
-            bpp,
-            INPUT_BAM_CACHE,
-            HUMAN_REFERENCE_GENOME,
-            annotations=REFERENCE_ANNOTATIONS,
-            protocol=row[COLUMNS.protocol],
-            data=bpp.data
-        )
-        evidence.append(e)
-    return evidence
 
 
 def parse_arguments():
@@ -154,7 +130,7 @@ def parse_arguments():
         help='path to the human reference genome in fa format'
     )
     g = parser.add_argument_group('evidence settings')
-    for attr, value in DEFAULTS.__dict__.items():
+    for attr, value in VALIDATION_DEFAULTS.__dict__.items():
         if type(value) == bool:
             g.add_argument(
                 '--{}'.format(attr), default=value, action='store_false' if value else 'store_true',
@@ -258,18 +234,37 @@ def main():
     )
     clusters = []
     for bpp in bpps:
-        e = Evidence(
-            bpp,
-            INPUT_BAM_CACHE,
-            HUMAN_REFERENCE_GENOME,
-            annotations=REFERENCE_ANNOTATIONS,
-            protocol=bpp.data[COLUMNS.protocol],
-            data=bpp.data,
-            stdev_fragment_size=args.stdev_fragment_size,
-            read_length=args.read_length,
-            median_fragment_size=args.median_fragment_size
-        )
-        clusters.append(e)
+        if bpp.data[COLUMNS.protocol] == PROTOCOL.GENOME:
+            e = Evidence(
+                bpp.break1, bpp.break2,
+                INPUT_BAM_CACHE,
+                HUMAN_REFERENCE_GENOME,
+                opposing_strands=bpp.opposing_strands,
+                stranded=bpp.stranded,
+                untemplated_sequence=bpp.untemplated_sequence,
+                data=bpp.data,
+                stdev_fragment_size=args.stdev_fragment_size,
+                read_length=args.read_length,
+                median_fragment_size=args.median_fragment_size
+            )
+            clusters.append(e)
+        elif bpp.data[COLUMNS.protocol] == PROTOCOL.TRANS:
+            e = TranscriptomeEvidence(
+                REFERENCE_ANNOTATIONS,
+                bpp.break1, bpp.break2,
+                INPUT_BAM_CACHE,
+                HUMAN_REFERENCE_GENOME,
+                opposing_strands=bpp.opposing_strands,
+                stranded=bpp.stranded,
+                untemplated_sequence=bpp.untemplated_sequence,
+                data=bpp.data,
+                stdev_fragment_size=args.stdev_fragment_size,
+                read_length=args.read_length,
+                median_fragment_size=args.median_fragment_size
+            )
+            clusters.append(e)
+        else:
+            raise ValueError('protocol not recognized', bpp.data[COLUMNS.protocol])
 
     failed_cluster_rows = []
     filtered_clusters = []

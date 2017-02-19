@@ -84,6 +84,7 @@ class TranscriptomeEvidence(Evidence):
                 max_expected_fragment_size=self.max_expected_fragment_size
             )
         )
+        # TODO max expected fragment size properties override
 
     def compute_fragment_size(self, read, mate):
         all_fragments = []
