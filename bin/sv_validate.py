@@ -166,9 +166,10 @@ def gather_evidence_from_bam(clusters):
             log(repr(err), time_stamp=False)
             continue
         log(
-            'flanking reads:', [len(a) for a in e.flanking_reads],
+            'flanking pairs:', len(e.flanking_pairs),
             'split reads:', [len(a) for a in e.split_reads],
             'half-mapped reads:', [len(a) for a in e.half_mapped],
+            'spanning-reads:', len(e.spanning_reads),
             time_stamp=False
         )
         e.assemble_split_reads(log=log)
@@ -286,9 +287,8 @@ def main():
             row = {}
             row.update(cluster.data)
             row.update(cluster.flatten())
-            fl = set([r.query_name for r in cluster.flanking_reads[0]]) | \
-                set([r.query_name for r in cluster.flanking_reads[1]])
-            row[COLUMNS.raw_flanking_reads] = len(fl)
+            row[COLUMNS.raw_flanking_pairs] = len(cluster.flanking_pairs)
+            row[COLUMNS.raw_spanning_reads] = len(cluster.spanning_reads)
             row[COLUMNS.raw_break1_split_reads] = len(cluster.split_reads[0])
             row[COLUMNS.raw_break2_split_reads] = len(cluster.split_reads[1])
             row['failure_comment'] = 'dropped b/c overlapped a masked region {}:{}-{}'.format(
@@ -350,15 +350,17 @@ def main():
                 row = {}
                 row.update(e.data)
                 row.update(e.flatten())
-                row[COLUMNS.raw_flanking_reads] = len(self.flanking_pairs)
+                row[COLUMNS.raw_flanking_pairs] = len(e.flanking_pairs)
+                row[COLUMNS.raw_spanning_reads] = len(e.spanning_reads)
                 row[COLUMNS.raw_break1_split_reads] = len(e.split_reads[0])
                 row[COLUMNS.raw_break2_split_reads] = len(e.split_reads[1])
                 row['failure_comment'] = failure_comment
                 failed_cluster_rows.append(row)
-
             log('called {} event(s)'.format(len(calls)))
+
     if len(failed_cluster_rows) + passes != len(evidence):
-        raise AssertionError('totals do not match pass + fails == total', passes, len(failed_cluster_rows), len(evidence))
+        raise AssertionError(
+            'totals do not match pass + fails == total', passes, len(failed_cluster_rows), len(evidence))
     # write the output validated clusters (split by type and contig)
 
     id_prefix = re.sub(' ', '_', str(datetime.now()))
@@ -404,7 +406,7 @@ def main():
                 COLUMNS.contig_alignment_score: None,
                 COLUMNS.break1_call_method: ec.call_method[0],
                 COLUMNS.break2_call_method: ec.call_method[1],
-                COLUMNS.flanking_reads: flank_count,
+                COLUMNS.flanking_pairs: flank_count,
                 COLUMNS.median_fragment_size: round(flank_median, 0) if flank_median is not None else None,
                 COLUMNS.stdev_fragment_size: round(flank_stdev, 0) if flank_stdev is not None else None,
                 COLUMNS.break1_split_reads: b1_count,

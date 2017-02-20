@@ -340,13 +340,23 @@ class TestEvidenceGathering(unittest.TestCase):
         )
         self.assertEqual(1, len(self.ev1.flanking_pairs))
 
-    def test_add_flanking_pair_errors(self):
-        # read pairs overlap by 1 but in windows
-        ev1_fr = MockRead(reference_id=1, reference_start=1903,
-                          reference_end=2053, flag=113,
-                          next_reference_id=1, next_reference_start=2052)
-        with self.assertRaises(UserWarning):
-            self.ev1.add_flanking_pair(ev1_fr)
+    def test_add_flanking_pair_not_overlapping_evidence_window(self):
+        # first read in pair does not overlap the first evidence window
+        # therefore this should return False and not add to the flanking_pairs
+        read = MockRead(
+            reference_id=1, reference_start=1903,
+            reference_end=2053,
+            is_read1=True, is_reverse=True, mate_is_reverse=True, is_paired=True,
+            next_reference_id=1, next_reference_start=2052
+        )
+        mate = MockRead(
+            reference_id=1, reference_start=2052,
+            reference_end=2053,
+            is_read1=False, is_reverse=True, mate_is_reverse=True, is_paired=True,
+            next_reference_id=1, next_reference_start=1903
+        )
+        self.assertFalse(self.ev1.add_flanking_pair(read, mate))
+        self.assertEqual(0, len(self.ev1.flanking_pairs))
 
 #    @unittest.skip("demonstrating skipping")
     def test_load_evidence(self):
@@ -424,7 +434,8 @@ class TestEventCall(unittest.TestCase):
 
     def test_count_flanking_support_empty(self):
         c = self.ev.count_flanking_support()
-        self.assertEqual((0, 0, 0), c)
+        self.assertEqual(3, len(c))
+        self.assertEqual((set(), 0, 0), c)
 
     def test_count_flanking_support(self):
         # 1114 ++
@@ -473,12 +484,15 @@ class TestEventCall(unittest.TestCase):
                 is_reverse=True, mate_is_reverse=True
             )
         ))
-        c = self.ev.count_flanking_support()
-        self.assertEqual((2, 530, 30), c)
+        reads, median, stdev = self.ev.count_flanking_support()
+        self.assertEqual(2, len(reads))
+        self.assertEqual(530, median)
+        self.assertEqual(30, stdev)
 
     def test_count_split_read_support_empty(self):
         c = self.ev.count_split_read_support()
-        self.assertEqual((0, 0, 0, 0, 0), c)
+        self.assertEqual(0, sum([len(x) for x in c]))
+        self.assertEqual(4, len(c))
 
     def test_count_split_read_support(self):
         self.ev.source_evidence.split_reads[0].add(
@@ -511,8 +525,12 @@ class TestEventCall(unittest.TestCase):
                 reference_start=2187, reference_end=2307,
                 tags=[(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT, 1)]
             ))
-        c = self.ev.count_split_read_support()
-        self.assertEqual((2, 1, 2, 1, 1), c)
+        f, ftgt, s, stgt = self.ev.count_split_read_support()
+        self.assertEqual(2, len(f))
+        self.assertEqual(1, len(ftgt))
+        self.assertEqual(2, len(s))
+        self.assertEqual(1, len(stgt))
+        self.assertEqual(1, len(f & s))
 
 
 class TestCallBySupportingReads(unittest.TestCase):

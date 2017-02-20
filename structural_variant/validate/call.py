@@ -45,6 +45,7 @@ class EventCall(BreakpointPair):
             data=source_evidence.data
         )
         self.source_evidence = source_evidence
+        # check that the event type is compatible
         self.event_type = SVTYPE.enforce(event_type)
         if event_type not in BreakpointPair.classify(source_evidence):
             raise ValueError(
@@ -63,11 +64,13 @@ class EventCall(BreakpointPair):
 
     def count_flanking_support(self):
         """
-        counts the flanking read-pair support for the event called
+        counts the flanking read-pair support for the event called. The original source evidence may 
+        have contained evidence for multiple events and uses a larger range so flanking pairs here
+        are checked specifically against the current breakpoint call
 
         Returns:
-            tuple of int and int and int:
-            * (*int*) - the number of flanking read pairs
+            tuple:
+            * :class:`set` of :class:`str`: set of the read query_names
             * (*int*) - the median insert size
             * (*int*) - the standard deviation (from the median) of the insert size
         """
@@ -75,7 +78,6 @@ class EventCall(BreakpointPair):
 
         fragment_sizes = []
         for read, mate in self.source_evidence.flanking_pairs:
-            print('read', read, 'mate', mate)
             # check that the fragment size is reasonable
             fragment_size = self.source_evidence.compute_fragment_size(read, mate)
             if self.event_type == SVTYPE.DEL:
@@ -107,7 +109,9 @@ class EventCall(BreakpointPair):
                         continue
             support.add(read.query_name)
             fragment_sizes.extend([fragment_size.start, fragment_size.end])
-
+        
+        median = 0
+        stdev = 0
         if len(support) > 0:
             median = statistics.median(fragment_sizes)
             err = 0
@@ -115,9 +119,7 @@ class EventCall(BreakpointPair):
                 err += math.pow(insert - median, 2)
             err /= len(fragment_sizes)
             stdev = math.sqrt(err)
-            return len(support), median, stdev
-        else:
-            return 0, 0, 0
+        return support, median, stdev
 
     def count_split_read_support(self):
         """
@@ -126,10 +128,11 @@ class EventCall(BreakpointPair):
         with this call
 
         Returns:
-            tuple of int and int and int:
-            * (*int*) - the number of split reads supporting the first breakpoint
-            * (*int*) - the number of split reads supporting the second breakpoint
-            * (*int*) - the number of split reads supporting the pairing of these breakpoints
+            tuple:
+            * :class:`set` - the read query names of split reads supporting the first breakpoint
+            * :class:`set` - the read query names of split reads which target aligned to the first breakpoint
+            * :class:`set` - the read query names of split reads supporting the second breakpoint
+            * :class:`set` - the read query names of split reads which target aligned to the second breakpoint
         """
         support1 = set()
         realigns1 = set()
@@ -140,10 +143,10 @@ class EventCall(BreakpointPair):
             try:
                 bpos = read_tools.breakpoint_pos(read, self.break1.orient)
                 if Interval.overlaps((bpos, bpos), self.break1):
-                    support1.add(read.query_name)
                     if read.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT) and \
                             read.get_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT):
                         realigns1.add(read.query_name)
+                    support1.add(read.query_name)
             except AttributeError:
                 pass
 
@@ -151,14 +154,14 @@ class EventCall(BreakpointPair):
             try:
                 bpos = read_tools.breakpoint_pos(read, self.break2.orient)
                 if Interval.overlaps((bpos, bpos), self.break2):
-                    support2.add(read.query_name)
                     if read.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT) and \
                             read.get_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT):
                         realigns2.add(read.query_name)
+                    support2.add(read.query_name)
             except AttributeError:
                 pass
 
-        return len(support1), len(realigns1), len(support2), len(realigns2), len(support1 & support2)
+        return support1, realigns1, support2, realigns2
 
     def __hash__(self):
         raise NotImplementedError('this object type does not support hashing')

@@ -228,6 +228,8 @@ class Evidence(BreakpointPair):
                 if not is_stranded or self.read_pair_strand(read) == self.break1.strand:
                     self.flanking_pairs.add((read, mate))
                     added = True
+            else:
+                print('does not overlap windows', iread, imate, self.outer_window1, self.outer_window2)
         return added
 
     def add_split_read(self, read, first_breakpoint):

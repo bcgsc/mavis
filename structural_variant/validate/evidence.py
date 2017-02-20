@@ -103,7 +103,9 @@ class TranscriptomeEvidence(Evidence):
         all_fragments = []
         if read.reference_start > mate.reference_start:
             read, mate = mate, read
-        for t in itertools.chain.from_iterable([ust.transcripts for ust in self.transcripts]):
+        transcripts = self.overlapping_transcripts[0] & self.overlapping_transcripts[1]
+
+        for t in itertools.chain.from_iterable([ust.transcripts for ust in transcripts]):
             try:
                 cs = t.convert_genomic_to_nearest_cdna(read.reference_start + 1)
                 ct = t.convert_genomic_to_nearest_cdna(mate.reference_end)

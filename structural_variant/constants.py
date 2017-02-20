@@ -445,8 +445,8 @@ COLUMNS = Vocab(
     break2_call_method=Column(
         'break2_call_method',
         'The method used to call the second breakpoint'),
-    flanking_reads=Column(
-        'flanking_reads',
+    flanking_pairs=Column(
+        'flanking_pairs',
         'Number of read-pairs where one read aligns to the first breakpoint window and the second read aligns to the '
         'other. The count here is based on the number of unique query names'),
     median_fragment_size=Column(
@@ -499,10 +499,13 @@ COLUMNS = Vocab(
         'break2_ewindow_practical_coverage',
         'break2_ewindow_practical_coverage = break2_ewindow_count / len(break2_ewindow). Not the actual coverage as '
         'bins are sampled within and there is a read limit cutoff'),
-    raw_flanking_reads=Column(
-        'raw_flanking_reads',
+    raw_flanking_pairs=Column(
+        'raw_flanking_pairs',
         'Number of flanking reads before calling the breakpoint. The count here is based on the number of unique query '
         'names'),
+    raw_spanning_reads=Column(
+        'raw_spanning_reads',
+        'Number of spanning reads collected during evidence collection before calling the breakpoint'),
     raw_break1_split_reads=Column(
         'raw_break1_split_reads',
         'Number of split reads before calling the breakpoint'),
