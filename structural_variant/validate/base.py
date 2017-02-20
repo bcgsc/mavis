@@ -10,38 +10,33 @@ from ..bam import cigar as cigar_tools
 
 class Evidence(BreakpointPair):
     @property
-    def window1(self):
+    def outer_window1(self):
         """(:class:`~structural_variant.interval.Interval`): the window where evidence will be gathered for the first
         breakpoint
         """
         try:
-            return self.windows[0]
+            return self.outer_windows[0]
         except AttributeError:
             raise NotImplementedError('abstract property must be overridden')
 
     @property
-    def window2(self):
+    def outer_window2(self):
         """(:class:`~structural_variant.interval.Interval`): the window where evidence will be gathered for the second
         breakpoint
         """
         try:
-            return self.windows[1]
+            return self.outer_windows[1]
         except AttributeError:
             raise NotImplementedError('abstract property must be overridden')
 
     @property
     def min_expected_fragment_size(self):
-        try:
-            return self._min_expected_fragment_size
-        except AttributeError:
-            raise NotImplementedError('abstract property must be overridden')
+        # cannot be negative
+        return max([self.median_fragment_size - self.stdev_fragment_size * self.stdev_count_abnormal, 0])
 
     @property
     def max_expected_fragment_size(self):
-        try:
-            return self._max_expected_fragment_size
-        except AttributeError:
-            raise NotImplementedError('abstract property must be overridden')
+        return self.median_fragment_size + self.stdev_fragment_size * self.stdev_count_abnormal
 
     def __init__(
             self,
@@ -144,6 +139,10 @@ class Evidence(BreakpointPair):
         .. todo::
             add support for indels
         """
+        if self.interchromosomal:
+            return False
+        elif Interval.dist(self.break1, self.break2) > self.read_length + self.call_error * 2:
+            return False
         # check that the read fully covers BOTH breakpoints
         read_start = read.reference_start + 1 - \
             self.call_error  # adjust b/c pysam is 0-indexed
@@ -208,7 +207,7 @@ class Evidence(BreakpointPair):
                     continue
 
             # check that the positions of the reads and the strands make sense
-            if Interval.overlaps(iread, self.window1) and Interval.overlaps(imate, self.window2):
+            if Interval.overlaps(iread, self.outer_window1) and Interval.overlaps(imate, self.outer_window2):
                 if not is_stranded or self.read_pair_strand(read) == self.break1.strand:
                     self.flanking_pairs.add((read, mate))
                     added = True
@@ -226,9 +225,9 @@ class Evidence(BreakpointPair):
             AttributeError: orientation wasn't specified for the breakpoint
         """
         breakpoint = self.break1 if first_breakpoint else self.break2
-        window = self.window1 if first_breakpoint else self.window2
+        window = self.outer_window1 if first_breakpoint else self.outer_window2
         opposite_breakpoint = self.break2 if first_breakpoint else self.break1
-        opposite_window = self.window2 if first_breakpoint else self.window1
+        opposite_window = self.outer_window2 if first_breakpoint else self.outer_window1
 
         if read.cigar[0][0] != CIGAR.S and read.cigar[-1][0] != CIGAR.S:
             raise UserWarning('split read is not softclipped')
@@ -524,10 +523,6 @@ class Evidence(BreakpointPair):
             len(self.untemplated_sequence if self.untemplated_sequence else '')
         )
 
-        if not self.interchromosomal and max_dist < self.stdev_fragment_size * self.stdev_count_abnormal:
-            raise NotImplementedError('evidence gathering for small structural variants is not supported')
-            # needs special consideration b/c won't have flanking reads and may have spanning reads
-
         def filter_if_true(read):
             if self.filter_secondary_alignments and read.is_secondary:
                 return True
@@ -539,8 +534,8 @@ class Evidence(BreakpointPair):
 
         for read in self.bam_cache.fetch(
                 '{0}'.format(self.break1.chr),
-                self.window1[0],
-                self.window1[1],
+                self.outer_window1[0],
+                self.outer_window1[1],
                 read_limit=self.fetch_reads_limit,
                 sample_bins=self.fetch_reads_bins,
                 bin_gap_size=bin_gap_size,
@@ -564,8 +559,8 @@ class Evidence(BreakpointPair):
         print('flanking_pairs', len(flanking_pairs))
         for read in self.bam_cache.fetch(
                 '{0}'.format(self.break2.chr),
-                self.window2[0],
-                self.window2[1],
+                self.outer_window2[0],
+                self.outer_window2[1],
                 read_limit=self.fetch_reads_limit,
                 sample_bins=self.fetch_reads_bins,
                 bin_gap_size=bin_gap_size,

@@ -416,8 +416,8 @@ def blat_contigs(
                         # if it covers both breakpoints add to putative alignments
                         temp = Interval(read.reference_start, read.reference_end - 1)
                         if INPUT_BAM_CACHE.chr(read) == e.break1.chr \
-                                and Interval.overlaps(e.window1, temp) \
-                                and Interval.overlaps(e.window2, temp):
+                                and Interval.overlaps(e.outer_window1, temp) \
+                                and Interval.overlaps(e.outer_window2, temp):
                             # split the continuous alignment, assume ins/dup or indel
                             combo_prohibited.add(read)
                             if any([c in [CIGAR.D, CIGAR.I, CIGAR.N] for c, v in read.cigar]):  # ignore alignments without events
@@ -439,14 +439,14 @@ def blat_contigs(
                         continue
 
                     if INPUT_BAM_CACHE.chr(a1) == e.break1.chr \
-                            and Interval.overlaps(e.window1, (a1.reference_start, a1.reference_end - 1)) \
+                            and Interval.overlaps(e.outer_window1, (a1.reference_start, a1.reference_end - 1)) \
                             and INPUT_BAM_CACHE.chr(a2) == e.break2.chr \
-                            and Interval.overlaps(e.window2, (a2.reference_start, a2.reference_end - 1)):
+                            and Interval.overlaps(e.outer_window2, (a2.reference_start, a2.reference_end - 1)):
                         putative_alignments.append((a1, a2))
                     elif INPUT_BAM_CACHE.chr(a2) == e.break1.chr \
-                            and Interval.overlaps(e.window1, (a2.reference_start, a2.reference_end - 1)) \
+                            and Interval.overlaps(e.outer_window1, (a2.reference_start, a2.reference_end - 1)) \
                             and INPUT_BAM_CACHE.chr(a1) == e.break2.chr \
-                            and Interval.overlaps(e.window2, (a1.reference_start, a1.reference_end - 1)):
+                            and Interval.overlaps(e.outer_window2, (a1.reference_start, a1.reference_end - 1)):
                         putative_alignments.append((a2, a1))
                 contig.alignments = putative_alignments
     finally:

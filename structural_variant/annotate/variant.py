@@ -537,14 +537,14 @@ def overlapping_transcripts(ref_ann, breakpoint):
     Returns:
         :class:`list` of :any:`usTranscript`: a list of possible transcripts
     """
-    putative_annotations = []
+    putative_annotations = set()
     for gene in ref_ann[breakpoint.chr]:
         for transcript in gene.transcripts:
             if breakpoint.strand != STRAND.NS and transcript.get_strand() != STRAND.NS \
                     and transcript.get_strand() != breakpoint.strand:
                 continue
             if Interval.overlaps(breakpoint, transcript):
-                putative_annotations.append(transcript)
+                putative_annotations.add(transcript)
     return putative_annotations
 
 
@@ -629,7 +629,7 @@ def gather_breakpoint_annotations(ref_ann, breakpoint):
         sorted(neg_overlapping_transcripts, key=lambda x: x.position))
 
 
-def gather_annotations(ref, bp, event_type=None, proximity=None):  # TODO
+def gather_annotations(ref, bp, event_type=None, proximity=None):
     """
     each annotation is defined by the annotations selected at the breakpoints
     the other annotations are given relative to this

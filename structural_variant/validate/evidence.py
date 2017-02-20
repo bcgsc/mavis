@@ -1,6 +1,6 @@
 from .base import Evidence
 from ..interval import Interval
-from ..constants import ORIENT, STRAND
+from ..constants import ORIENT
 from ..annotate.variant import overlapping_transcripts
 import itertools
 
@@ -10,12 +10,7 @@ class GenomeEvidence(Evidence):
     def __init__(self, *pos, **kwargs):
         Evidence.__init__(self, *pos, **kwargs)
 
-        self._min_expected_fragment_size = max([
-            self.median_fragment_size - self.stdev_fragment_size * self.stdev_count_abnormal, 0])  # can't be negative
-        self._max_expected_fragment_size = self.median_fragment_size + self.stdev_fragment_size * \
-            self.stdev_count_abnormal
-
-        self.windows = (
+        self.outer_windows = (
             GenomeEvidence._generate_window(
                 self.break1,
                 max_expected_fragment_size=self.max_expected_fragment_size,
@@ -29,7 +24,16 @@ class GenomeEvidence(Evidence):
                 read_length=self.read_length
             )
         )
-        print(self.windows)
+        self.inner_windows = (
+            Interval(
+                max([self.break1.start - self.call_error - self.read_length + 1, 1]),
+                self.break1.end + self.call_error + self.read_length - 1
+            ),
+            Interval(
+                max([self.break2.start - self.call_error - self.read_length + 1, 1]),
+                self.break2.end + self.call_error + self.read_length - 1
+            )
+        )
 
     @staticmethod
     def _generate_window(breakpoint, max_expected_fragment_size, call_error, read_length):
@@ -68,7 +72,7 @@ class TranscriptomeEvidence(Evidence):
             overlapping_transcripts(ANNOTATIONS, self.break2)
         )
 
-        self.windows = (
+        self.outer_windows = (
             TranscriptomeEvidence._generate_window(
                 self.break1,
                 transcripts=self.overlapping_transcripts[0],
@@ -84,7 +88,14 @@ class TranscriptomeEvidence(Evidence):
                 max_expected_fragment_size=self.max_expected_fragment_size
             )
         )
-        # TODO max expected fragment size properties override
+        w1 = TranscriptomeEvidence._expand_breakpoint_interval_by_exonic(
+            self.break1, self.overlapping_transcripts[0], self.call_error + self.read_length - 1
+        )
+        w2 = TranscriptomeEvidence._expand_breakpoint_interval_by_exonic(
+            self.break2, self.overlapping_transcripts[1], self.call_error + self.read_length - 1
+        )
+
+        self.inner_windows = (w1, w2)
 
     def compute_fragment_size(self, read, mate):
         all_fragments = []
@@ -134,7 +145,11 @@ class TranscriptomeEvidence(Evidence):
         tgt_right = window.end - breakpoint.end + 1  # amount to expand to the right
         if len(transcripts) == 0:  # case 1. no overlapping transcripts
             return window
-
+        return TranscriptomeEvidence._expand_breakpoint_interval_by_exonic(
+            breakpoint, transcripts, tgt_left, tgt_right)
+    
+    @staticmethod
+    def _expand_breakpoint_interval_by_exonic(breakpoint, transcripts, tgt_left, tgt_right):
         intervals = [(breakpoint.start - tgt_left + 1, breakpoint.end + tgt_right - 1)]
 
         for ust in transcripts:
@@ -172,6 +187,3 @@ class TranscriptomeEvidence(Evidence):
 
             intervals.append(Interval(gs, ge))
         return Interval.union(*intervals)
-
-
-
