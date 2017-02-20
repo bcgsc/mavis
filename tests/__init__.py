@@ -45,36 +45,43 @@ class MockRead:
         mate_is_unmapped=False,
         **kwargs
     ):
-        args = {
-            is_reverse: False, mate_is_reverse: True,
-            is_unmapped: False, mate_is_unmapped: False,
-            next_reference_end: None, reference_end: None,
-            reference_start: None, next_reference_start: None,
-            template_length: None, query_sequence: None
-        }
-        kwargs.setdefault('is_read2', not kwargs.get('is_read1', True))
-        kwargs.setdefault('is_read1', not kwargs['is_read2'])
-        args.update(kwargs)
-
-        for attr, val in args.items():
+        for attr, val in kwargs.items():
             setattr(self, attr, val)
-
-        if self.reference_end is None and self.cigar and self.reference_start is not None:
+        self.query_name = query_name
+        self.reference_id = reference_id
+        self.reference_start = reference_start
+        self.reference_end = reference_end
+        self.cigar = cigar
+        if self.reference_end is None and cigar and reference_start is not None:
             self.reference_end = reference_start + sum([f for v, f in cigar if v not in [CIGAR.S, CIGAR.I]])
-
-        if self.query_alignment_sequence is None and self.cigar and self.query_sequence:
-            s = 0 if self.cigar[0][0] != CIGAR.S else self.cigar[0][1]
-            t = len(self.query_sequence)
-            if self.cigar[-1][0] == CIGAR.S:
-                t -= self.cigar[-1][1]
-            self.query_alignment_sequence = self.query_sequence[s:t]
-        if self.cigar and self.query_sequence:
-            assert(len(self.query_sequence) == sum([f for v, f in self.cigar if v not in [CIGAR.H, CIGAR.N, CIGAR.D]]))
-        if self.template_length is None and self.reference_end and self.next_reference_start:
+        self.is_reverse = is_reverse
+        self.mate_is_reverse = mate_is_reverse
+        self.next_reference_start = next_reference_start
+        self.next_reference_id = next_reference_id
+        self.reference_name = reference_name
+        self.query_sequence = query_sequence
+        self.query_alignment_sequence = query_alignment_sequence
+        self.query_alignment_start = query_alignment_start
+        self.query_alignment_end = query_alignment_end
+        self.flag = flag
+        self.tags = tags
+        if query_alignment_sequence is None and cigar and query_sequence:
+            s = 0 if cigar[0][0] != CIGAR.S else cigar[0][1]
+            t = len(query_sequence)
+            if cigar[-1][0] == CIGAR.S:
+                t -= cigar[-1][1]
+            self.query_alignment_sequence = query_sequence[s:t]
+        if cigar and query_sequence:
+            assert(len(query_sequence) == sum([f for v, f in cigar if v not in [CIGAR.H, CIGAR.N, CIGAR.D]]))
+        if template_length is None and reference_end and next_reference_start:
             self.template_length = next_reference_start - reference_end
         else:
             self.template_length = template_length
-
+        self.is_read1 = is_read1
+        self.is_read2 = (not is_read1)
+        self.is_paired = is_paired
+        self.is_unmapped = is_unmapped
+        self.mate_is_unmapped = mate_is_unmapped
         if flag:
             self.is_unmapped = bool(self.flag & int(0x4))
             self.mate_is_unmapped = bool(self.flag & int(0x8))
