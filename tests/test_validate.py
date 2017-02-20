@@ -326,12 +326,18 @@ class TestEvidenceGathering(unittest.TestCase):
             self.ev1.add_split_read(ev1_sr, True)
 
     def test_add_flanking_pair(self):
-        ev1_fr = MockRead(query_name='HISEQX_11:3:2206:22140:26976:flanking',
-                          reference_id=1, reference_start=2214,
-                          reference_end=2364, flag=113,
-                          next_reference_id=1, next_reference_start=1120)
-        self.ev1.add_flanking_pair(ev1_fr)
-        self.assertEqual(ev1_fr, list(self.ev1.flanking_pairs[1])[0])
+        self.ev1.add_flanking_pair(
+            MockRead(
+                reference_id=1, reference_start=2214, reference_end=2364, is_reverse=True,
+                next_reference_id=1, next_reference_start=1120, mate_is_reverse=True
+            ),
+            MockRead(
+                reference_id=1, reference_start=1120, reference_end=2364, is_reverse=True,
+                next_reference_id=1, next_reference_start=1120, mate_is_reverse=True,
+                is_read1=False
+            )
+        )
+        self.assertEqual(1, len(self.ev1.flanking_pairs))
 
     def test_add_flanking_pair_errors(self):
         # read pairs overlap by 1 but in windows
@@ -540,20 +546,21 @@ class TestCallBySupportingReads(unittest.TestCase):
         self.assertEqual(506, break2.end)
 
     def test_split_flanking_read(self):
-        self.ev.split_reads[1].add(MockRead(query_name='t1', reference_start=500,
-                                            reference_end=520, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)]))
+        self.ev.split_reads[1].add(
+            MockRead(query_name='t1', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
+        )
         self.ev.flanking_pairs.add((
             MockRead(query_name='t2', reference_start=120, reference_end=140, next_reference_start=520),
             MockRead(query_name='t2', reference_start=520, reference_end=520, next_reference_start=120)
         ))
         break1, break2 = call._call_by_supporting_reads(self.ev, SVTYPE.INV)[0]
 
-        self.assertEqual(1, break1.start)
-        self.assertEqual(120, break1.end)
-        self.assertEqual(500, break2.start)
-        self.assertEqual(500, break2.end)
+        self.assertEqual(71, break1.start)
+        self.assertEqual(121, break1.end)
+        self.assertEqual(501, break2.start)
+        self.assertEqual(501, break2.end)
 
-    def test_flanking_read(self):
+    def test_both_by_flanking_pairs(self):
         self.ev.flanking_pairs.add((
             MockRead(
                 query_name='t1', reference_start=150, reference_end=150, next_reference_start=500
@@ -571,21 +578,26 @@ class TestCallBySupportingReads(unittest.TestCase):
             )
         ))
         break1, break2 = call._call_by_supporting_reads(self.ev, SVTYPE.INV)[0]
+        # 120-149  ..... 500-519
+        # max frag = 150 - 80 = 70
+        self.assertEqual(82, break1.start)
+        self.assertEqual(121, break1.end)
+        self.assertEqual(452, break2.start)  # 70 - 21 = 49
+        self.assertEqual(501, break2.end)
 
-        self.assertEqual(1, break1.start)
-        self.assertEqual(120, break1.end)
-        self.assertEqual(350, break2.start)
-        self.assertEqual(500, break2.end)
-
-    def test__call_by_supporting_reads(self):
-        self.ev.split_reads[0].add(MockRead(query_name='t1', reference_start=100,
-                                            reference_end=120, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)]))
-        self.ev.split_reads[1].add(MockRead(query_name='t1', reference_start=500,
-                                            reference_end=520, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)]))
-        self.ev.split_reads[0].add(MockRead(query_name='t2', reference_start=110,
-                                            reference_end=130, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)]))
-        self.ev.split_reads[1].add(MockRead(query_name='t2', reference_start=520,
-                                            reference_end=540, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)]))
+    def test_call_both_by_split_reads_multiple_calls(self):
+        self.ev.split_reads[0].add(
+            MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
+        )
+        self.ev.split_reads[1].add(
+            MockRead(query_name='t1', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
+        )
+        self.ev.split_reads[0].add(
+            MockRead(query_name='t2', reference_start=110, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
+        )
+        self.ev.split_reads[1].add(
+            MockRead(query_name='t2', reference_start=520, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
+        )
 
         evs = call._call_by_supporting_reads(self.ev, SVTYPE.INV)
         self.assertEqual(4, len(evs))

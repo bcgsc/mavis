@@ -239,6 +239,9 @@ def _call_by_flanking_pairs(ev, event_type, first_breakpoint_called=None, second
             'expected for normal variation. It is likely there are flanking reads for multiple events',
             cover1, cover2, ev.max_expected_fragment_size
         )
+    print('cover1', cover1, len(cover1), 'cover2', cover2, len(cover2))
+    print('ev.max_expected_fragment_size', ev.max_expected_fragment_size)
+    print('ev.read_length', ev.read_length)
 
     if first_breakpoint_called is None:
         max_breakpoint_width = ev.max_expected_fragment_size - len(cover1) - ev.read_length * 2

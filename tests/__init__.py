@@ -40,7 +40,10 @@ class MockRead:
         flag=None,
         tags=[],
         is_read1=True,
-        is_paired=True
+        is_paired=True,
+        is_unmapped=False,
+        mate_is_unmapped=False,
+        **kwargs
     ):
         self.query_name = query_name
         self.reference_id = reference_id
@@ -72,6 +75,11 @@ class MockRead:
             self.template_length = next_reference_start - reference_end
         else:
             self.template_length = template_length
+        self.is_read1 = is_read1
+        self.is_read2 = (not is_read1)
+        self.is_paired = is_paired
+        self.is_unmapped = is_unmapped
+        self.mate_is_unmapped = mate_is_unmapped
         if flag:
             self.is_unmapped = bool(self.flag & int(0x4))
             self.mate_is_unmapped = bool(self.flag & int(0x8))
@@ -82,9 +90,6 @@ class MockRead:
             self.is_secondary = bool(self.flag & int(0x100))
             self.is_qcfail = bool(self.flag & int(0x200))
             self.is_supplementary = bool(self.flag & int(0x400))
-        self.is_read1 = is_read1
-        self.is_read2 = (not is_read1)
-        self.is_paired = is_paired
 
     def query_coverage_interval(self):
         return BlatAlignedSegment.query_coverage_interval(self)
