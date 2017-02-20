@@ -1,6 +1,6 @@
 from ..breakpoint import BreakpointPair, Breakpoint
 from ..constants import CALL_METHOD, SVTYPE, PYSAM_READ_FLAGS, ORIENT
-from ..bam.read import breakpoint_pos
+from ..bam import read as read_tools
 from ..interval import Interval
 from ..error import NotSpecifiedError
 import itertools
@@ -44,7 +44,7 @@ class EventCall(BreakpointPair):
             untemplated_sequence=untemplated_sequence,
             data=source_evidence.data
         )
-        self.evidence = source_evidence
+        self.source_evidence = source_evidence
         self.event_type = SVTYPE.enforce(event_type)
         if event_type not in BreakpointPair.classify(source_evidence):
             raise ValueError(
@@ -74,13 +74,39 @@ class EventCall(BreakpointPair):
         support = set()
 
         fragment_sizes = []
-        for read in itertools.chain.from_iterable(self.evidence.flanking_pairs):
-            isize = abs(read.template_length)
-            if (self.event_type == SVTYPE.INS and isize < exp_isize_range.start) \
-                    or (self.event_type == SVTYPE.DEL and isize > exp_isize_range.end) \
-                    or self.event_type not in [SVTYPE.DEL, SVTYPE.INS]:
-                support.add(read.query_name)
-                fragment_sizes.append(isize)
+        for read, mate in self.source_evidence.flanking_pairs:
+            print('read', read, 'mate', mate)
+            # check that the fragment size is reasonable
+            fragment_size = self.source_evidence.compute_fragment_size(read, mate)
+            if self.event_type == SVTYPE.DEL:
+                if fragment_size.end <= self.source_evidence.max_expected_fragment_size:
+                    continue
+            elif self.event_type == SVTYPE.INS:
+                if fragment_size.start >= self.source_evidence.min_expected_fragment_size:
+                    continue
+            # check that the flanking reads work with the current call
+            if not read_tools.orientation_supports_type(read, self.event_type):
+                continue
+            # check that the positions make sense
+            if self.break1.orient == ORIENT.LEFT:
+                if self.break2.orient == ORIENT.LEFT:  # L L
+                    if read.reference_end > self.break1.end or mate.reference_end > self.break2.end or \
+                            mate.reference_start + 1 <= self.break1.end:
+                        continue
+                else:  # L R
+                    if read.reference_end > self.break1.end or mate.reference_start + 1 < self.break2.start:
+                        continue
+            else:
+                if self.break2.orient == ORIENT.LEFT:  # R L
+                    if read.reference_start + 1 < self.break1.start or mate.reference_end > self.break2.end or \
+                            read.reference_end > self.break1.end or mate.reference_start + 1 < self.break1.start:
+                        continue
+                else:  # R R
+                    if read.reference_start + 1 < self.break1.start or mate.reference_start + 1 < self.break2.start or \
+                            mate.reference_start + 1 < self.break1.start:
+                        continue
+            support.add(read.query_name)
+            fragment_sizes.extend([fragment_size.start, fragment_size.end])
 
         if len(support) > 0:
             median = statistics.median(fragment_sizes)
@@ -110,9 +136,9 @@ class EventCall(BreakpointPair):
         support2 = set()
         realigns2 = set()
 
-        for read in self.evidence.split_reads[0]:
+        for read in self.source_evidence.split_reads[0]:
             try:
-                bpos = breakpoint_pos(read, self.break1.orient)
+                bpos = read_tools.breakpoint_pos(read, self.break1.orient)
                 if Interval.overlaps((bpos, bpos), self.break1):
                     support1.add(read.query_name)
                     if read.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT) and \
@@ -121,9 +147,9 @@ class EventCall(BreakpointPair):
             except AttributeError:
                 pass
 
-        for read in self.evidence.split_reads[1]:
+        for read in self.source_evidence.split_reads[1]:
             try:
-                bpos = breakpoint_pos(read, self.break2.orient)
+                bpos = read_tools.breakpoint_pos(read, self.break2.orient)
                 if Interval.overlaps((bpos, bpos), self.break2):
                     support2.add(read.query_name)
                     if read.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT) and \
@@ -315,21 +341,23 @@ def _call_by_flanking_pairs(ev, event_type, first_breakpoint_called=None, second
     return first_breakpoint_called, second_breakpoint_called
 
 
-def _call_by_supporting_reads(ev, event_type):
+def _call_by_supporting_reads(ev, event_type, evidence_consumed=None):
     """
     use split read evidence to resolve bp-level calls for breakpoint pairs (where possible)
     if a bp level call is not possible for one of the breakpoints then returns None
     if no breakpoints can be resolved returns the original event only with NO split read evidence
     also sets the SV type call if multiple are input
     """
+    if evidence_consumed is None:
+        evidence_consumed = set()
     pos1 = {}
     pos2 = {}
-
+    
+    # check for spanning reads
     for i, breakpoint, d in [(0, ev.break1, pos1), (1, ev.break2, pos2)]:
         for read in ev.split_reads[i]:
             try:
-                pos = breakpoint_pos(read, breakpoint.orient) + 1
-                print(pos)
+                pos = read_tools.breakpoint_pos(read, breakpoint.orient) + 1
                 if pos not in d:
                     d[pos] = []
                 d[pos].append(read)

@@ -1,6 +1,6 @@
 from .base import Evidence
 from ..interval import Interval
-from ..constants import ORIENT
+from ..constants import ORIENT, PROTOCOL
 from ..annotate.variant import overlapping_transcripts
 import itertools
 
@@ -9,6 +9,7 @@ class GenomeEvidence(Evidence):
 
     def __init__(self, *pos, **kwargs):
         Evidence.__init__(self, *pos, **kwargs)
+        self.protocol = PROTOCOL.GENOME
 
         self.outer_windows = (
             GenomeEvidence._generate_window(
@@ -65,7 +66,7 @@ class GenomeEvidence(Evidence):
 class TranscriptomeEvidence(Evidence):
     def __init__(self, ANNOTATIONS, *pos, **kwargs):
         Evidence.__init__(self, *pos, **kwargs)
-
+        self.protocol = PROTOCOL.TRANS
         # get the list of overlapping transcripts
         self.overlapping_transcripts = (
             overlapping_transcripts(ANNOTATIONS, self.break1),
@@ -88,11 +89,12 @@ class TranscriptomeEvidence(Evidence):
                 max_expected_fragment_size=self.max_expected_fragment_size
             )
         )
+        tgt = self.call_error + self.read_length - 1
         w1 = TranscriptomeEvidence._expand_breakpoint_interval_by_exonic(
-            self.break1, self.overlapping_transcripts[0], self.call_error + self.read_length - 1
+            self.break1, self.overlapping_transcripts[0], tgt, tgt 
         )
         w2 = TranscriptomeEvidence._expand_breakpoint_interval_by_exonic(
-            self.break2, self.overlapping_transcripts[1], self.call_error + self.read_length - 1
+            self.break2, self.overlapping_transcripts[1], tgt, tgt
         )
 
         self.inner_windows = (w1, w2)

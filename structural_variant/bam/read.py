@@ -72,7 +72,6 @@ def nsb_align(
     Returns:
         :class:`list` of :class:`~pysam.AlignedSegment`: list of aligned segments
     """
-    print('nsb_align', ref, seq)
     if len(ref) < 1 or len(seq) < 1:
         raise AttributeError('cannot overlap on an empty sequence')
     if min_match < 0 or min_match > 1:
@@ -124,17 +123,15 @@ def nsb_align(
         a.reference_start = ref_start + qstart
         a.cigar = cigar
         qlen = a.reference_end - a.reference_start
-        score = (scoring_function(a), qlen) # this way for equal identity matches we take the longer alignment
+        score = (scoring_function(a), qlen)  # this way for equal identity matches we take the longer alignment
         if qlen < min_overlap:
             continue
-        print('score =', score, a.cigar)
 
         if score >= best_score:
             best_score = score
             results.append((a, score))
 
     filtered = [x for x, y in results if y == best_score]
-    print('filtered', filtered)
 
     return filtered
 

@@ -45,6 +45,7 @@ class TestGenomeEvidenceWindow(unittest.TestCase):
             b, read_length=100, max_expected_fragment_size=550, call_error=11)
         self.assertEqual(440, w[0])
         self.assertEqual(1560, w[1])
+        self.assertEqual(1121, len(w))
 
     def test_orient_left(self):
         b = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.LEFT)
@@ -60,6 +61,7 @@ class TestGenomeEvidenceWindow(unittest.TestCase):
             b, read_length=100, call_error=11, max_expected_fragment_size=550)
         self.assertEqual(890, w[0])
         self.assertEqual(1560, w[1])
+        self.assertEqual(671, len(w))
 
 
 class TestTranscriptomeEvidenceWindow(unittest.TestCase):
@@ -314,7 +316,7 @@ class TestEvidenceGathering(unittest.TestCase):
         self.ev1.add_split_read(ev1_sr, True)
         self.assertEqual(ev1_sr, list(self.ev1.split_reads[0])[0])
 
-    def test_add_split_read_errors(self):
+    def test_add_split_read_failure(self):
         # wrong cigar string
         ev1_sr = MockRead(query_name='HISEQX1_11:4:1203:3062:55280:split',
                           reference_id=1, cigar=[(7, 110), (7, 40)], reference_start=1114,
@@ -322,8 +324,7 @@ class TestEvidenceGathering(unittest.TestCase):
                           query_sequence='CTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCGTGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATG',
                           query_alignment_end=150, flag=371,
                           next_reference_id=1, next_reference_start=2550)
-        with self.assertRaises(UserWarning):
-            self.ev1.add_split_read(ev1_sr, True)
+        self.assertFalse(self.ev1.add_split_read(ev1_sr, True))
 
     def test_add_flanking_pair(self):
         self.ev1.add_flanking_pair(
@@ -349,7 +350,9 @@ class TestEvidenceGathering(unittest.TestCase):
 
 #    @unittest.skip("demonstrating skipping")
     def test_load_evidence(self):
+        print(self.ev1)
         self.ev1.load_evidence()
+        print(self.ev1.spanning_reads)
         self.assertEqual(
             2,
             len([r for r in self.ev1.split_reads[0] if not r.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT)]))
@@ -424,11 +427,51 @@ class TestEventCall(unittest.TestCase):
         self.assertEqual((0, 0, 0), c)
 
     def test_count_flanking_support(self):
-        self.ev.evidence.flanking_pairs.add((
-            MockRead(query_name="test1", template_length=500), MockRead(query_name="test1", template_length=-500)
+        # 1114 ++
+        # 2187 ++
+        self.ev.source_evidence.flanking_pairs.add((
+            MockRead(
+                query_name="test1",
+                reference_id=3, next_reference_id=3,
+                template_length=500, 
+                reference_start=1150, 
+                reference_end=1200, 
+                next_reference_start=2200,
+                is_read1=True,
+                is_reverse=True, mate_is_reverse=True
+            ), 
+            MockRead(
+                query_name="test1", 
+                reference_id=3, next_reference_id=3,
+                template_length=-500, 
+                reference_start=2200, 
+                reference_end=2250, 
+                next_reference_start=1150,
+                is_read1=False,
+                is_reverse=True, mate_is_reverse=True
+            )
         ))
-        self.ev.evidence.flanking_pairs.add((
-            MockRead(query_name="test2", template_length=560), MockRead(query_name="test2", template_length=-560)
+        self.ev.source_evidence.flanking_pairs.add((
+            MockRead(
+                query_name="test2", 
+                reference_id=3, next_reference_id=3,
+                template_length=560, 
+                reference_start=1150, 
+                reference_end=1200, 
+                next_reference_start=2200,
+                is_read1=True,
+                is_reverse=True, mate_is_reverse=True
+            ), 
+            MockRead(
+                query_name="test2",
+                reference_id=3, next_reference_id=3,
+                template_length=-560, 
+                reference_start=2200, 
+                reference_end=2250, 
+                next_reference_start=1150,
+                is_read1=False,
+                is_reverse=True, mate_is_reverse=True
+            )
         ))
         c = self.ev.count_flanking_support()
         self.assertEqual((2, 530, 30), c)
@@ -438,31 +481,31 @@ class TestEventCall(unittest.TestCase):
         self.assertEqual((0, 0, 0, 0, 0), c)
 
     def test_count_split_read_support(self):
-        self.ev.evidence.split_reads[0].add(
+        self.ev.source_evidence.split_reads[0].add(
             MockRead(
                 query_name="test1", cigar=[(CIGAR.S, 110), (CIGAR.EQ, 40)],
                 reference_start=1114, reference_end=1150
             ))
-        self.ev.evidence.split_reads[0].add(
+        self.ev.source_evidence.split_reads[0].add(
             MockRead(
                 query_name="test2", cigar=[(CIGAR.EQ, 30), (CIGAR.S, 120)],
                 reference_start=1108, reference_end=1115
             ))
-        self.ev.evidence.split_reads[0].add(
+        self.ev.source_evidence.split_reads[0].add(
             MockRead(
                 query_name="test3", cigar=[(CIGAR.S, 30), (CIGAR.EQ, 120)],
                 reference_start=1114, reference_end=1154,
                 tags=[(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT, 1)]
             ))
-        self.ev.evidence.split_reads[1].add(
+        self.ev.source_evidence.split_reads[1].add(
             MockRead(
                 query_name="test4", cigar=[(CIGAR.EQ, 30), (CIGAR.S, 120)], reference_start=2187
             ))
-        self.ev.evidence.split_reads[1].add(
+        self.ev.source_evidence.split_reads[1].add(
             MockRead(
                 query_name="test5", cigar=[(CIGAR.S, 30), (CIGAR.EQ, 120)], reference_start=2187
             ))
-        self.ev.evidence.split_reads[1].add(
+        self.ev.source_evidence.split_reads[1].add(
             MockRead(
                 query_name="test1", cigar=[(CIGAR.S, 30), (CIGAR.EQ, 120)],
                 reference_start=2187, reference_end=2307,

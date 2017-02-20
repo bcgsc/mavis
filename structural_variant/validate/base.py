@@ -28,7 +28,27 @@ class Evidence(BreakpointPair):
             return self.outer_windows[1]
         except AttributeError:
             raise NotImplementedError('abstract property must be overridden')
+    
+    @property
+    def inner_window1(self):
+        """(:class:`~structural_variant.interval.Interval`): the window where evidence will be gathered for the first
+        breakpoint
+        """
+        try:
+            return self.inner_windows[0]
+        except AttributeError:
+            raise NotImplementedError('abstract property must be overridden')
 
+    @property
+    def inner_window2(self):
+        """(:class:`~structural_variant.interval.Interval`): the window where evidence will be gathered for the second
+        breakpoint
+        """
+        try:
+            return self.inner_windows[1]
+        except AttributeError:
+            raise NotImplementedError('abstract property must be overridden')
+    
     @property
     def min_expected_fragment_size(self):
         # cannot be negative
@@ -141,20 +161,17 @@ class Evidence(BreakpointPair):
         """
         if self.interchromosomal:
             return False
-        elif Interval.dist(self.break1, self.break2) > self.read_length + self.call_error * 2:
+        elif not Interval.overlaps(self.inner_window1, self.inner_window2):
+            # too far apart to call spanning reads
             return False
-        # check that the read fully covers BOTH breakpoints
-        read_start = read.reference_start + 1 - \
-            self.call_error  # adjust b/c pysam is 0-indexed
-        # don't adjust b/c pysam is 0-indexed but end coord are one past
-        read_end = read.reference_end + self.call_error
-        if self.break1.start >= read_start and self.break1.end <= read_end  \
-                and self.break2.start >= read_start and self.break2.end <= read_end:
-            pass  # now check if this supports the putative event types
-            raise NotImplementedError('have not added support for indels yet')
+        
+        combined = self.inner_window1 & self.inner_window2
+
+        if read.reference_start + 1 >= combined.start and read.reference_end <= combined.end:
+            self.spanning_reads.add(read)
+            return True
         else:
-            raise UserWarning(
-                'this does not cover/span both breakpoints and cannot be added as spanning evidence')
+            return False
 
     def add_flanking_pair(self, read, mate):
         """
@@ -225,16 +242,16 @@ class Evidence(BreakpointPair):
             AttributeError: orientation wasn't specified for the breakpoint
         """
         breakpoint = self.break1 if first_breakpoint else self.break2
-        window = self.outer_window1 if first_breakpoint else self.outer_window2
+        window = self.inner_window1 if first_breakpoint else self.inner_window2
         opposite_breakpoint = self.break2 if first_breakpoint else self.break1
-        opposite_window = self.outer_window2 if first_breakpoint else self.outer_window1
+        opposite_window = self.inner_window2 if first_breakpoint else self.inner_window1
 
         if read.cigar[0][0] != CIGAR.S and read.cigar[-1][0] != CIGAR.S:
-            raise UserWarning('split read is not softclipped')
+            return False  # split read is not softclipped
         elif breakpoint.orient == ORIENT.LEFT and read.cigar[-1][0] != CIGAR.S:
-            raise UserWarning('split read is not softclipped')
+            return False  # split read is not softclipped
         elif breakpoint.orient == ORIENT.RIGHT and read.cigar[0][0] != CIGAR.S:
-            raise UserWarning('split read is not softclipped')
+            return False  # split read is not softclipped
 
         # the first breakpoint of a BreakpointPair is always the lower breakpoint
         # if this is being added to the second breakpoint then we'll need to check if the
@@ -397,15 +414,14 @@ class Evidence(BreakpointPair):
         assembly_sequences = {}
         targeted = 0
         # add split reads
-        for r in itertools.chain.from_iterable(self.split_reads):
+        for r in list(itertools.chain.from_iterable(self.split_reads)) + list(self.spanning_reads):
             # ignore targeted realignments
             if r.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT) and r.get_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT):
                 targeted += 1
                 continue
             assembly_sequences.setdefault(r.query_sequence, set()).add(r)
-            if self.opposing_strands:
-                rqs_comp = reverse_complement(r.query_sequence)
-                assembly_sequences.setdefault(rqs_comp, set()).add(r)
+            rqs_comp = reverse_complement(r.query_sequence)
+            assembly_sequences.setdefault(rqs_comp, set()).add(r)
 
         # add half-mapped reads
         # exclude half-mapped reads if there is 'n' split reads that target align
@@ -413,17 +429,15 @@ class Evidence(BreakpointPair):
                 self.assembly_include_half_mapped_reads:
             for r in itertools.chain.from_iterable(self.half_mapped):
                 assembly_sequences.setdefault(r.query_sequence, set()).add(r)
-                if self.opposing_strands:
-                    rqs_comp = reverse_complement(r.query_sequence)
-                    assembly_sequences.setdefault(rqs_comp, set()).add(r)
+                rqs_comp = reverse_complement(r.query_sequence)
+                assembly_sequences.setdefault(rqs_comp, set()).add(r)
                 try:
                     for m in self.bam_cache.get_mate(r):
                         if not m.is_unmapped:
                             continue
                         assembly_sequences.setdefault(m.query_sequence, set()).add(m)
-                        if self.opposing_strands:
-                            rqs_comp = reverse_complement(m.query_sequence)
-                            assembly_sequences.setdefault(rqs_comp, set()).add(m)
+                        rqs_comp = reverse_complement(m.query_sequence)
+                        assembly_sequences.setdefault(rqs_comp, set()).add(m)
                 except KeyError:
                     pass
 
@@ -433,15 +447,11 @@ class Evidence(BreakpointPair):
                 if r.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT) and r.get_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT):
                     continue
                 assembly_sequences.setdefault(r.query_sequence, set()).add(r)
-                if self.opposing_strands:
-                    rqs_comp = reverse_complement(r.query_sequence)
-                    assembly_sequences.setdefault(rqs_comp, set()).add(r)
+                rqs_comp = reverse_complement(r.query_sequence)
+                assembly_sequences.setdefault(rqs_comp, set()).add(r)
 
         log('assembly size of {} sequences'.format(len(assembly_sequences) // 2))
 
-        for seq in assembly_sequences:
-            if reverse_complement(seq) not in assembly_sequences:
-                print('sequence missing reverse', seq)
         contigs = assemble(
             assembly_sequences,
             assembly_min_edge_weight=self.assembly_min_edge_weight,
@@ -453,7 +463,6 @@ class Evidence(BreakpointPair):
 
         # now determine the strand from the remapped reads if possible
         if self.stranded and self.bam_cache.stranded:  # strand specific
-            print('this is a stranded assmebly')
             for contig in contigs:
                 if len(contig.remapped_reads.keys()) == 0:
                     continue
@@ -490,13 +499,11 @@ class Evidence(BreakpointPair):
                     for read in assembly_sequences[seq.query_sequence]:
                         if read.is_reverse != reverse:
                             print('conflicting read', read.cigar, read.query_sequence)
-                print(contig.sequence)
                 raise AssertionError('could not determine contig strand', strand_calls)
 
         filtered_contigs = {}
         # sort so that the function is deterministic
         for c in sorted(contigs, key=lambda x: (x.remap_score() * -1, x.sequence)):
-            print(c, c.remap_score(), c.sequence)
             if c.remap_score() < self.assembly_min_remap:  # filter on evidence level
                 continue
             if not self.stranded or not self.bam_cache.stranded:  # not strand specific
@@ -544,18 +551,14 @@ class Evidence(BreakpointPair):
             self.counts[0] += 1
             if read.is_unmapped:
                 continue
-            try:
+            if not self.add_split_read(read, True):
                 self.add_spanning_read(read)
-            except (UserWarning, NotImplementedError):  # TODO: ADD SUPPORT FOR INDELS
-                try:
-                    self.add_split_read(read, True)
-                except UserWarning:
-                    pass
             if read.mate_is_unmapped:
                 self.half_mapped[0].add(read)
             elif any([read_tools.orientation_supports_type(read, et) for et in self.putative_event_types()]) and \
                     (read.reference_id != read.next_reference_id) == self.interchromosomal:
                 flanking_pairs.append(read)
+        
         print('flanking_pairs', len(flanking_pairs))
         for read in self.bam_cache.fetch(
                 '{0}'.format(self.break2.chr),
@@ -570,13 +573,8 @@ class Evidence(BreakpointPair):
 
             if read.is_unmapped:
                 continue
-            try:
+            if not self.add_split_read(read, False):
                 self.add_spanning_read(read)
-            except (UserWarning, NotImplementedError):  # TODO: ADD SUPPORT FOR INDELS
-                try:
-                    self.add_split_read(read, False)
-                except UserWarning:
-                    pass
             if read.mate_is_unmapped:
                 self.half_mapped[1].add(read)
             elif any([read_tools.orientation_supports_type(read, et) for et in self.putative_event_types()]) and \

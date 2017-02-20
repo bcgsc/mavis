@@ -156,10 +156,10 @@ def gather_evidence_from_bam(clusters):
         log(
             '({} of {})'.format(i + 1, len(clusters)),
             'gathering evidence for:',
-            e.breakpoint_pair
+            e
         )
-        log('possible event type(s):', BreakpointPair.classify(e.breakpoint_pair), time_stamp=False)
-        log('window regions', e.breakpoint_pair.break1.chr, e.window1, e.breakpoint_pair.break2.chr, e.window2, e.protocol, time_stamp=False)
+        log('possible event type(s):', BreakpointPair.classify(e), time_stamp=False)
+        log('window regions', e.break1.chr, e.outer_window1, e.break2.chr, e.outer_window2, e.protocol, time_stamp=False)
         try:
             e.load_evidence()
         except NotImplementedError as err:
@@ -271,21 +271,21 @@ def main():
     for cluster in clusters:
         overlaps_mask = None
         for mask in MASKED_REGIONS.get(cluster.break1.chr, []):
-            if Interval.overlaps(cluster.window1, mask):
+            if Interval.overlaps(cluster.outer_window1, mask):
                 overlaps_mask = mask
                 break
         for mask in MASKED_REGIONS.get(cluster.break2.chr, []):
-            if Interval.overlaps(cluster.window2, mask):
+            if Interval.overlaps(cluster.outer_window2, mask):
                 overlaps_mask = mask
                 break
         if overlaps_mask is None:
             filtered_clusters.append(cluster)
         else:
             log('dropping cluster {} overlapping mask {}:{}-{}'.format(
-                cluster.breakpoint_pair, mask.reference_object, mask.start, mask.end))
+                cluster, mask.reference_object, mask.start, mask.end))
             row = {}
             row.update(cluster.data)
-            row.update(cluster.breakpoint_pair.flatten())
+            row.update(cluster.flatten())
             fl = set([r.query_name for r in cluster.flanking_reads[0]]) | \
                 set([r.query_name for r in cluster.flanking_reads[1]])
             row[COLUMNS.raw_flanking_reads] = len(fl)
@@ -323,12 +323,16 @@ def main():
     passes = 0
     with open(EVIDENCE_BED, 'w') as fh:
         for e in evidence:
-            fh.write('{}\t{}\t{}\t{}\n'.format(
-                e.break1.chr, e.window1.start, e.window1.end, e.data[COLUMNS.cluster_id]))
-            fh.write('{}\t{}\t{}\t{}\n'.format(
-                e.break2.chr, e.window2.start, e.window2.end, e.data[COLUMNS.cluster_id]))
+            fh.write('{}\t{}\t{}\touter-{}\n'.format(
+                e.break1.chr, e.outer_window1.start, e.outer_window1.end, e.data[COLUMNS.cluster_id]))
+            fh.write('{}\t{}\t{}\touter-{}\n'.format(
+                e.break2.chr, e.outer_window2.start, e.outer_window2.end, e.data[COLUMNS.cluster_id]))
+            fh.write('{}\t{}\t{}\tinner-{}\n'.format(
+                e.break1.chr, e.inner_window1.start, e.inner_window1.end, e.data[COLUMNS.cluster_id]))
+            fh.write('{}\t{}\t{}\tinner-{}\n'.format(
+                e.break2.chr, e.inner_window2.start, e.inner_window2.end, e.data[COLUMNS.cluster_id]))
             print()
-            log('calling events for', e.breakpoint_pair)
+            log('calling events for', e)
             calls = []
             failure_comment = None
             try:
@@ -345,9 +349,8 @@ def main():
             if failure_comment is not None:
                 row = {}
                 row.update(e.data)
-                row.update(e.breakpoint_pair.flatten())
-                fl = set([r.query_name for r in e.flanking_reads[0]]) | set([r.query_name for r in e.flanking_reads[1]])
-                row[COLUMNS.raw_flanking_reads] = len(fl)
+                row.update(e.flatten())
+                row[COLUMNS.raw_flanking_reads] = len(self.flanking_pairs)
                 row[COLUMNS.raw_break1_split_reads] = len(e.split_reads[0])
                 row[COLUMNS.raw_break2_split_reads] = len(e.split_reads[1])
                 row['failure_comment'] = failure_comment
@@ -412,8 +415,8 @@ def main():
                 COLUMNS.untemplated_sequence: None,
                 COLUMNS.break1_homologous_sequence: b1_homseq,
                 COLUMNS.break2_homologous_sequence: b2_homseq,
-                COLUMNS.break1_ewindow: '{}-{}'.format(*ec.evidence.window1),
-                COLUMNS.break2_ewindow: '{}-{}'.format(*ec.evidence.window2),
+                COLUMNS.break1_ewindow: '{}-{}'.format(*ec.evidence.outer_window1),
+                COLUMNS.break2_ewindow: '{}-{}'.format(*ec.evidence.outer_window2),
                 COLUMNS.break1_ewindow_count: ec.evidence.counts[0],
                 COLUMNS.break2_ewindow_count: ec.evidence.counts[1]
             }
