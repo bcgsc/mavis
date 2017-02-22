@@ -1,3 +1,15 @@
+"""
+
+"In general the coordinates in psl files are “zero based half open.” The first base in a sequence is numbered 
+zero rather than one. When representing a range the end coordinate is not included in the range. Thus the first 
+100 bases of a sequence are represented as 0-100, and the second 100 bases are represented as 100-200. There is 
+another little unusual feature in the .psl format. It has to do with how coordinates are handled on the 
+negative strand. In the qStart/qEnd fields the coordinates are where it matches from the point of view of the forward 
+strand (even when the match is on the reverse strand). However on the qStarts[] list, the coordinates are reversed."
+--- http://wiki.bits.vib.be/index.php/Blat
+
+
+"""
 import pysam
 import itertools
 import math
@@ -8,7 +20,6 @@ import os
 import TSV
 from .constants import *
 from .bam import cigar as cigar_tools
-from Bio.Seq import Seq
 import tempfile
 from .interval import Interval
 
@@ -187,16 +198,23 @@ class Blat:
         chrom = bam_cache.reference_id(row['tname'])
         query_sequence = row['qseq_full']
         if row['strand'] == STRAND.NEG:
-            temp = Seq(query_sequence, DNA_ALPHABET)
-            temp = temp.reverse_complement()
-            query_sequence = str(temp)
+            query_sequence = reverse_complement(query_sequence)
+            print(row['qstarts'])
+            temp = [q + b for q, b in zip(row['qstarts'], row['block_sizes'])]
+            print(temp)
+            temp = [len(query_sequence) - q for q in temp][::-1]
+            print(temp)
 
         # note: converting to inclusive range [] vs end-exclusive [)
         reference_sequence = REFERENCE_GENOME[row['tname']].seq if REFERENCE_GENOME else None
-        query_ranges = [(x, x + y - 1) for x, y in zip(row['qstarts'], row['block_sizes'])]
-        ref_ranges = [(x, x + y - 1) for x, y in zip(row['tstarts'], row['block_sizes'])]
+        query_ranges = [Interval(x, x + y - 1) for x, y in zip(row['qstarts'], row['block_sizes'])]
+        ref_ranges = [Interval(x, x + y - 1) for x, y in zip(row['tstarts'], row['block_sizes'])]
         seq = ''
         cigar = []
+        #print(query_ranges, ref_ranges)
+        #print([query_sequence[q.start:q.end + 1] for q in query_ranges])
+        #print('ref', [str(reference_sequence[r.start:r.end + 1]) for r in ref_ranges])
+        #print('ref 0-20', reference_sequence[0:20])
 
         # try extending by consuming from the next aligned portion
         if reference_sequence:
@@ -236,6 +254,7 @@ class Blat:
                 i = n
             query_ranges = new_query_ranges
             ref_ranges = new_ref_ranges
+        print(query_ranges, ref_ranges)
         for i in range(0, len(query_ranges)):
             rcurr = ref_ranges[i]
             qcurr = query_ranges[i]
@@ -286,10 +305,11 @@ class Blat:
         read.cigar = cigar_tools.join(cigar)
         read.query_name = row['qname']
         read.mapping_quality = NA_MAPPING_QUALITY
-
+        print('pslx_row_to_pysam:', sorted(row.items()))
         if row['strand'] == STRAND.NEG:
+            print('on the negative strand', row)
             read.flag = read.flag | PYSAM_READ_FLAGS.REVERSE
-            read.cigar = read.cigar[::-1]
+            #read.cigar = read.cigar[::-1] # DON't REVERSE b/c blat reports on the positive strand already
         if read.query_sequence != row['qseq_full'] and read.query_sequence != reverse_complement(row['qseq_full']):
             raise AssertionError(
                 'read sequence should reproduce input sequence',
@@ -384,9 +404,10 @@ def blat_contigs(
             # filter on score
             scores = sorted([r['score'] for r in rows])
             max_score = scores[-1]
-            second_score = scores[-2]
-            min_score = max_score * min_percent_of_max_score
-            filtered_rows = [row for row in filtered_rows if row['score'] >= min_score or row['score'] == second_score]
+            if len(scores) > 1:
+                second_score = scores[-2]
+                min_score = max_score * min_percent_of_max_score
+                filtered_rows = [row for row in filtered_rows if row['score'] >= min_score or row['score'] == second_score]
 
             filtered_rows.sort(key=lambda x: x['score'], reverse=True)
             reads = []
@@ -399,6 +420,11 @@ def blat_contigs(
                     read.set_tag(PYSAM_READ_FLAGS.BLAT_RANK, rank, value_type='i')
                     read.set_tag(PYSAM_READ_FLAGS.BLAT_PERCENT_IDENTITY, row['percent_ident'], value_type='f')
                     reads.append(read)
+                    print('blat_contigs: built a read')
+                    print(read)
+                    print(read.cigar)
+                    print(read.query_coverage_interval())
+                    print()
                 except KeyError as e:
                     warnings.warn(
                         'warning: reference template name not recognized {0}'.format(e))
@@ -428,14 +454,18 @@ def blat_contigs(
                     if a1.reference_id > a2.reference_id or \
                             (a1.reference_id == a2.reference_id and a1.reference_start > a2.reference_start):
                         a1, a2 = (a2, a1)
+                    
+                    q1 = a1.query_coverage_interval()
+                    q2 = a2.query_coverage_interval()
 
-                    if (a1.is_reverse != a2.is_reverse) != e.opposing_strands:
+                    if a2.query_sequence != a1.query_sequence:  # alignments aligned to opposite strands
+                        if not e.opposing_strands:
+                            continue
+                        q2 = Interval(len(a2.query_sequence) - q2.end, len(a2.query_sequence) - q2.start)
+                    elif e.opposing_strands:
                         continue
-
-                    union = Interval.union(a1.query_coverage_interval(),
-                                           a2.query_coverage_interval())
-                    if len(union) - len(a1.query_coverage_interval()) < MIN_EXTEND_OVERLAP \
-                            or len(union) - len(a2.query_coverage_interval()) < MIN_EXTEND_OVERLAP:
+                    union = q1 | q2 
+                    if len(union) - len(q1) < MIN_EXTEND_OVERLAP or len(union) - len(q2) < MIN_EXTEND_OVERLAP:
                         continue
 
                     if INPUT_BAM_CACHE.chr(a1) == e.break1.chr \

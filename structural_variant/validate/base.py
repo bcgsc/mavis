@@ -268,28 +268,27 @@ class Evidence(BreakpointPair):
         if self.stranded and self.bam_cache.stranded:
             if read_tools.read_pair_strand(read) != (breakpoint.strand == STRAND.NEG):
                 return False  # split read not on the appropriate strand
-
+        unused = ''
         primary = ''
         clipped = ''
         if breakpoint.orient == ORIENT.LEFT:
+            unused = read.query_sequence[:read.query_alignment_start]
             primary = read.query_sequence[read.query_alignment_start:read.query_alignment_end]
             # end is exclusive in pysam
             clipped = read.query_sequence[read.query_alignment_end:]
         elif breakpoint.orient == ORIENT.RIGHT:
             clipped = read.query_sequence[:read.query_alignment_start]
             primary = read.query_sequence[read.query_alignment_start:read.query_alignment_end]
+            unused = read.query_sequence[read.query_alignment_end:]
         else:
             raise NotSpecifiedError(
                 'cannot assign split reads to a breakpoint where the orientation has not been specified')
-        assert(len(primary) + len(clipped) == len(read.query_sequence))
-        if len(primary) < self.min_anchor_exact or len(clipped) < self.min_anchor_exact:
-            # split read does not meet the minimum anchor criteria
-            return False
-        elif len(read.query_sequence) - (read.query_alignment_end + 2) < self.min_anchor_exact \
-                and (read.query_alignment_start + 1) < self.min_anchor_exact:
-            # split read does not meet the minimum anchor criteria
-            return False
-        elif len(primary) < self.min_anchor_exact or len(clipped) < self.min_anchor_exact:
+        if len(primary) + len(clipped) + len(unused) != len(read.query_sequence):
+            raise AssertionError(
+                'unused, primary, and clipped sequences should make up the original sequence',
+                unused, primary, clipped, read.query_sequence, len(read.query_sequence))
+        
+        if len(primary) < self.min_anchor_exact or len(clipped) < self.min_softclipping:
             # split read does not meet the minimum anchor criteria
             return False
 
@@ -311,6 +310,7 @@ class Evidence(BreakpointPair):
         # data quality filters
         if cigar_tools.alignment_matches(read.cigar) >= self.min_sample_size_to_apply_percentage \
                 and cigar_tools.match_percent(read.cigar) < self.min_anchor_match:
+            print('too poor quality of an alignment')
             return False  # too poor quality of an alignment
         if cigar_tools.longest_exact_match(read.cigar) < self.min_anchor_exact \
                 and cigar_tools.longest_fuzzy_match(read.cigar, self.fuzzy_mismatch_number) < self.min_anchor_fuzzy:

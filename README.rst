@@ -304,6 +304,11 @@ if you want to be more explicit with nested types, the following conventions are
 - tuples: ``('a', 1)`` becomes ``tuple of str and int``
 
 
+Tests
+,,,,,,,,,,,,
+
+- all new code must have unit tests in the tests/ subdirectory
+- in general for assertEqual statements, the expected value is given first
 
 
 

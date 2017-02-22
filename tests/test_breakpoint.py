@@ -198,7 +198,10 @@ class TestBreakpointPair(unittest.TestCase):
                 opposing_strands=True
             )
 
-    def test_classify_inverted_translocation(self):
+
+class TestClassifyBreakpointPair(unittest.TestCase):
+
+    def test_inverted_translocation(self):
         b = BreakpointPair(
             Breakpoint(1, 1, 2, ORIENT.LEFT),
             Breakpoint(2, 1, 2, ORIENT.LEFT),
@@ -206,7 +209,7 @@ class TestBreakpointPair(unittest.TestCase):
         )
         BreakpointPair.classify(b)
 
-    def test_classify_translocation(self):
+    def test_translocation(self):
         b = BreakpointPair(
             Breakpoint(1, 1, 2, ORIENT.RIGHT),
             Breakpoint(2, 1, 2, ORIENT.LEFT),
@@ -214,7 +217,7 @@ class TestBreakpointPair(unittest.TestCase):
         )
         BreakpointPair.classify(b)
 
-    def test_classify_inversion(self):
+    def test_inversion(self):
         b = BreakpointPair(
             Breakpoint(1, 1, 2, strand=STRAND.POS, orient=ORIENT.RIGHT),
             Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.RIGHT)
@@ -251,7 +254,7 @@ class TestBreakpointPair(unittest.TestCase):
         )
         self.assertEqual([SVTYPE.INV], BreakpointPair.classify(b))
 
-    def test_classify_duplication(self):
+    def test_duplication(self):
         b = BreakpointPair(
             Breakpoint(1, 1, 2, strand=STRAND.POS, orient=ORIENT.RIGHT),
             Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.LEFT)
@@ -282,7 +285,7 @@ class TestBreakpointPair(unittest.TestCase):
         )
         self.assertEqual([SVTYPE.DUP], BreakpointPair.classify(b))
 
-    def test_classify_deletion_or_insertion(self):
+    def test_deletion_or_insertion(self):
         b = BreakpointPair(
             Breakpoint(1, 1, 2, strand=STRAND.POS, orient=ORIENT.LEFT),
             Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.RIGHT)
@@ -337,7 +340,10 @@ class TestBreakpointPair(unittest.TestCase):
         self.assertEqual(sorted([SVTYPE.DEL, SVTYPE.INS]),
                          sorted(BreakpointPair.classify(b)))
 
-    def test_call_breakpoint_pair_single_one_event(self):
+
+class TestCallBreakpointPair(unittest.TestCase):
+
+    def test_single_one_event(self):
         r = MockRead(
             reference_id=0,
             reference_name='1',
@@ -353,7 +359,7 @@ class TestBreakpointPair(unittest.TestCase):
         self.assertEqual(18, bpp.break2.end)
         self.assertEqual('GGG', bpp.untemplated_sequence)
 
-    def test_call_breakpoint_pair_single_multi_events(self):
+    def test_single_multi_events(self):
         r = MockRead(
             reference_id=0,
             reference_name='1',
@@ -408,7 +414,7 @@ class TestBreakpointPair(unittest.TestCase):
         self.assertEqual(18, bpp.break2.end)
         self.assertEqual('', bpp.untemplated_sequence)
 
-    def test_call_breakpoint_pair_two_indel(self):
+    def test_read_pair_indel(self):
         # seq AAATTTCCCGGGAATTCCGGATCGATCGAT 1-30     1-?
         # r1  AAATTTCCCgggaattccggatcgatcgat 1-9      1-9
         # r2  aaatttcccgggaattccggaTCGATCGAT 22-30    100-108
@@ -442,7 +448,7 @@ class TestBreakpointPair(unittest.TestCase):
         self.assertEqual('AAATTTCCC', bpp.break1.seq)
         self.assertEqual('TCGATCGAT', bpp.break2.seq)
 
-    def test_call_breakpoint_pair_two_del(self):
+    def test_read_pair_deletion(self):
         # seq AAATTTCCCGGGAATTCCGGATCGATCGAT
         # r1  AAATTTCCCGGGAATTCCGGAtcgatcgat
         # r2  aaatttcccgggaattccggaTCGATCGAT
@@ -473,7 +479,7 @@ class TestBreakpointPair(unittest.TestCase):
         self.assertEqual(21, bpp.break1.start)
         self.assertEqual(100, bpp.break2.start)
 
-    def test_call_breakpoint_pair_two_del_overlap(self):
+    def test_read_pair_deletion_overlapping_query_coverage(self):
         # seq AAATTTCCCGGGAATTCCGGATCGATCGAT
         # r1  AAATTTCCCGGGAATTCCGGAtcgatcgat
         # r2  aaatttcccgggaattccGGATCGATCGAT
@@ -508,7 +514,7 @@ class TestBreakpointPair(unittest.TestCase):
         self.assertEqual('AAATTTCCCGGGAATTCCGGA', bpp.break1.seq)
         self.assertEqual('TCGATCGAT', bpp.break2.seq)
 
-    def test_call_breakpoint_pair_two_inversion_overlap(self):
+    def test_read_pair_inversion_overlapping_query_coverage(self):
         # seq AAATTTCCCGGGAATTCCGGATCGATCGAT
         # r1  AAATTTCCCGGGAATTCCGGAtcgatcgat +
         # r2c aaatttcccgggaattccGGATCGATCGAT -
@@ -542,8 +548,47 @@ class TestBreakpointPair(unittest.TestCase):
         self.assertEqual(108, bpp.break2.start)
         self.assertEqual('AAATTTCCCGGGAATTCCGGA', bpp.break1.seq)
         self.assertEqual(reverse_complement('TCGATCGAT'), bpp.break2.seq)
-
-    def test_call_breakpoint_pair_two_inversion_gap(self):
+    
+    def test_read_pair_large_inversion_overlapping_query_coverage(self):
+        s = 'CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT'
+        # first part of the inversion
+        pslx_row = {
+            'block_count': 1,
+            'tstarts': [1114],
+            'block_sizes': [120],
+            'qname': 'seq1',
+            'tname': 'reference3',
+            'qstarts': [125],
+            'strand': '+',
+            'qseq_full': s,
+            'score': 1,
+            'qseqs': [
+                'TCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGG'
+                'TTTTCATTTCTGTATGTTAAT'],
+            'tseqs': [
+                'TCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGG'
+                'TTTTCATTTCTGTATGTTAAT']
+        }
+        read1 = MockRead(
+            reference_id=3, reference_start=1114, cigar=[(CIGAR.S, 125), (CIGAR.EQ, 120)], query_sequence=s,
+            is_reverse=False
+        )
+        read2 = MockRead(
+            reference_id=3, reference_start=2187, cigar=[(CIGAR.S, 117), (CIGAR.EQ, 128)],
+            query_sequence=reverse_complement(s), is_reverse=True
+        )
+        bpp = BreakpointPair.call_breakpoint_pair(read1, read2)
+        self.assertEqual(STRAND.POS, bpp.break1.strand)
+        self.assertEqual(STRAND.NEG, bpp.break2.strand)
+        self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
+        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
+        self.assertEqual('', bpp.untemplated_sequence)
+        self.assertEqual(1115, bpp.break1.start)
+        self.assertEqual(2188 + 3, bpp.break2.start)
+        self.assertEqual('TAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCAC', bpp.break1.seq)
+        self.assertEqual('CCAAATTCTGTGTTTACAGGGCTTTCATGCTCAG', bpp.break2.seq)
+    
+    def test_read_pair_inversion_gap_in_query_coverage(self):
         # seq AAATTTCCCGGGAATTCCGGATCGATCGAT
         # r1  AAATTTCCCGGGAATTccggatcgatcgat +
         # r2c aaatttcccgggaattccGGATCGATCGAT -
@@ -578,7 +623,10 @@ class TestBreakpointPair(unittest.TestCase):
         self.assertEqual('AAATTTCCCGGGAATT', bpp.break1.seq)
         self.assertEqual(reverse_complement('GGATCGATCGAT'), bpp.break2.seq)
 
-    def test_breakpoint_sequence_homology_LPRP(self):
+
+class TestBreakpointSequenceHomology(unittest.TestCase):
+
+    def test_left_pos_right_pos(self):
         b1 = Breakpoint(REF_CHR, 157, strand=STRAND.POS, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 1788, strand=STRAND.POS, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2)
@@ -589,7 +637,7 @@ class TestBreakpointPair(unittest.TestCase):
         bpp = BreakpointPair(b1, b2)
         self.assertEqual(('TTAA', 'ATAGC'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
 
-    def test_breakpoint_sequence_homology_LPLN(self):
+    def test_left_pos_left_neg(self):
         # CCC|AAA ------------ TTT|GGG
         # CCC                      CCC
         #     TTT              TTT
@@ -598,7 +646,7 @@ class TestBreakpointPair(unittest.TestCase):
         bpp = BreakpointPair(b1, b2)
         self.assertEqual(('CCC', 'TTT'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
 
-    def test_breakpoint_sequence_homology_LNLP(self):
+    def test_left_neg_left_pos(self):
         # CCC|AAA ------------ TTT|GGG
         # CCC                      CCC
         #     TTT              TTT
@@ -607,7 +655,7 @@ class TestBreakpointPair(unittest.TestCase):
         bpp = BreakpointPair(b1, b2)
         self.assertEqual(('CCC', 'TTT'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
 
-    def test_breakpoint_sequence_homology_RPRN(self):
+    def test_right_pos_right_neg(self):
         # CCC|AAA ------------ TTT|GGG
         # GGG                      GGG
         #     AAA              AAA
@@ -616,7 +664,7 @@ class TestBreakpointPair(unittest.TestCase):
         bpp = BreakpointPair(b1, b2)
         self.assertEqual(('AAA', 'GGG'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
 
-    def test_breakpoint_sequence_homology_RNRP(self):
+    def test_right_neg_right_pos(self):
         # CCC|AAA ------------ TTT|GGG
         # GGG                      GGG
         #     AAA              AAA
@@ -625,14 +673,14 @@ class TestBreakpointPair(unittest.TestCase):
         bpp = BreakpointPair(b1, b2)
         self.assertEqual(('AAA', 'GGG'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
 
-    def test_breakpoint_sequence_homology_close_del(self):
+    def test_close_del(self):
         # ....TT|TT....
         b1 = Breakpoint(REF_CHR, 1001, strand=STRAND.POS, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 1002, strand=STRAND.POS, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2)
         self.assertEqual(('', ''), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
 
-    def test_breakpoint_sequence_homology_close_dup(self):
+    def test_close_dup(self):
         # ....GATACATTTCTTCTTGAAAA...
         # -------------<=============
         # ===============>-----------
@@ -643,7 +691,7 @@ class TestBreakpointPair(unittest.TestCase):
         bpp = BreakpointPair(b1, b2)
         self.assertEqual(('CT', 'TT'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
 
-    def test_breakpoint_sequence_homology_non_specific_error(self):
+    def test_non_specific_error(self):
         b1 = Breakpoint(REF_CHR, 740, 745, strand=STRAND.POS, orient=ORIENT.RIGHT)
         b2 = Breakpoint(REF_CHR, 747, strand=STRAND.POS, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2)

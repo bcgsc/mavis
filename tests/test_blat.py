@@ -28,7 +28,7 @@ def setUpModule():
 
 class TestBlat(unittest.TestCase):
     def setUp(self):
-        self.cache = BamCache(MockBamFileHandle({'Y': 23, 'fake': 0,'reference3':3}))
+        self.cache = BamCache(MockBamFileHandle({'Y': 23, 'fake': 0, 'reference3': 3}))
 
     def test_read_pslx(self):
         mapping = {}
@@ -81,14 +81,8 @@ class TestBlat(unittest.TestCase):
             'tgap_bases': 0,
             'strand': '-',
             'qname': 'seq1',
-            'qsize': 245,
-            'qstart': 0,
-            'qend': 128,
             'tname': 'reference3',
             'tsize': 3711,
-            'tstart': 2187,
-            'tend': 2315,
-            'block_count': 1,
             'block_sizes': [128],
             'qstarts': [117],
             'tstarts': [2187],
@@ -101,9 +95,9 @@ class TestBlat(unittest.TestCase):
         }
         read = Blat.pslx_row_to_pysam(pslx_row, self.cache, None)
         self.assertEqual(3, read.reference_id)
-        self.assertEqual([(CIGAR.M,128),(CIGAR.S,117)], read.cigar)
+        self.assertEqual([(CIGAR.S, 117), (CIGAR.M, 128)], read.cigar)
         self.assertEqual(2187, read.reference_start)
-        self.assertEqual(Interval(0, 127), read.query_coverage_interval())
+        self.assertEqual(Interval(117, 244), read.query_coverage_interval())
 
     def test_pslx_row_to_pysam_simple(self):
         pslx_row = {
@@ -214,15 +208,153 @@ class TestBlat(unittest.TestCase):
             min_splits_reads_resolution=1,
             min_flanking_reads_resolution=1
         )
-        ev.contigs=[Contig("CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT",0)]
+        ev.contigs = [
+            Contig(
+                "CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAG"
+                "TCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTG"
+                "TTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT", 0)
+        ]
+        print(ev.contigs[0].sequence)
         blat_contigs([ev], BAM_CACHE, REFERENCE_GENOME, ref_2bit=REFERENCE_GENOME_FILE_2BIT)
-        read1,read2 = ev.contigs[0].alignments[0]
-
+        read1, read2 = ev.contigs[0].alignments[0]
+        self.assertEqual(reverse_complement(read1.query_sequence), read2.query_sequence)
         self.assertEqual(1, read1.reference_id)
         self.assertEqual(1, read2.reference_id)
         self.assertEqual(Interval(125, 244), read1.query_coverage_interval())
-        self.assertEqual(Interval(0, 127),read2.query_coverage_interval())
+        self.assertEqual(Interval(117, 244), read2.query_coverage_interval())
         self.assertEqual(1114, read1.reference_start)
         self.assertEqual(2187, read2.reference_start)
-        self.assertEqual([(CIGAR.S, 125),(CIGAR.EQ, 120)], read1.cigar)
-        self.assertEqual([(CIGAR.EQ, 128), (CIGAR.S, 117)], read2.cigar)
+        self.assertEqual([(CIGAR.S, 125), (CIGAR.EQ, 120)], read1.cigar)
+        self.assertEqual([(CIGAR.S, 117), (CIGAR.EQ, 128)], read2.cigar)
+
+    @unittest.skipIf(not shutil.which('blat'), "missing the blat command")
+    def test_blat_contigs_deletion(self):
+        ev = GenomeEvidence(
+            Breakpoint('fake', 1714, orient=ORIENT.LEFT),
+            Breakpoint('fake', 2968, orient=ORIENT.RIGHT),
+            opposing_strands=False,
+            bam_cache=None,
+            REFERENCE_GENOME=None,
+            read_length=40,
+            stdev_fragment_size=25,
+            median_fragment_size=100
+        )
+        ev.contigs = [
+            Contig(
+                'GGTATATATTTCTCAGATAAAAGATATTTTCCCTTTTATCTTTCCCTAAGCTCACACTACATATATTGCATTTATCTTATATCTGCTTTAAAACCTATTTAT'
+                'TATGTCATTTAAATATCTAGAAAAGTTATGACTTCACCAGGTATGAAAAATATAAAAAGAACTCTGTCAAGAAT', 0)
+        ]
+        blat_contigs([ev], BAM_CACHE, REFERENCE_GENOME, ref_2bit=REFERENCE_GENOME_FILE_2BIT)
+        read1, read2 = ev.contigs[0].alignments[0]
+        self.assertTrue(read2 is None)
+        self.assertEqual(0, read1.reference_id)
+        self.assertTrue(not read1.is_reverse)
+        #self.assertEqual(Interval(0, 101), read1.query_coverage_interval())
+        #self.assertEqual(Interval(102, 175), read2.query_coverage_interval())
+        self.assertEqual(Interval(0, 175), read1.query_coverage_interval())
+        self.assertEqual(1612, read1.reference_start)
+        #self.assertEqual(2966, read2.reference_start)
+        self.assertEqual([(CIGAR.EQ, 102), (CIGAR.D, 1253), (CIGAR.EQ, 74)], read1.cigar)
+        #self.assertEqual([(CIGAR.EQ, 128), (CIGAR.S, 117)], read2.cigar)
+
+    @unittest.skipIf(not shutil.which('blat'), "missing the blat command")
+    def test_blat_contigs_deletion_revcomp(self):
+        ev = GenomeEvidence(
+            Breakpoint('fake', 1714, orient=ORIENT.LEFT),
+            Breakpoint('fake', 2968, orient=ORIENT.RIGHT),
+            opposing_strands=False,
+            bam_cache=None,
+            REFERENCE_GENOME=None,
+            read_length=40,
+            stdev_fragment_size=25,
+            median_fragment_size=100
+        )
+        seq = 'GGTATATATTTCTCAGATAAAAGATATTTTCCCTTTTATCTTTCCCTAAGCTCACACTACATATATTGCATTTATCTTATATCTGCTTTAAAACCTATTTAT' \
+              'TATGTCATTTAAATATCTAGAAAAGTTATGACTTCACCAGGTATGAAAAATATAAAAAGAACTCTGTCAAGAAT'
+        ev.contigs = [Contig(reverse_complement(seq), 0)]
+        blat_contigs([ev], BAM_CACHE, REFERENCE_GENOME, ref_2bit=REFERENCE_GENOME_FILE_2BIT)
+        read1, read2 = ev.contigs[0].alignments[0]
+        self.assertTrue(read2 is None)
+        self.assertEqual(0, read1.reference_id)
+        self.assertTrue(read1.is_reverse)
+        self.assertEqual(seq, read1.query_sequence)
+        #self.assertEqual(Interval(0, 101), read1.query_coverage_interval())
+        #self.assertEqual(Interval(102, 175), read2.query_coverage_interval())
+        self.assertEqual(Interval(0, 175), read1.query_coverage_interval())
+        self.assertEqual(1612, read1.reference_start)
+        #self.assertEqual(2966, read2.reference_start)
+        self.assertEqual([(CIGAR.EQ, 102), (CIGAR.D, 1253), (CIGAR.EQ, 74)], read1.cigar)
+        #self.assertEqual([(CIGAR.EQ, 128), (CIGAR.S, 117)], read2.cigar)
+
+    def test_pslx_row_to_pysam_revcomp_deletion(self):
+        pslx_row = {
+            'block_count': 2,
+            'tstarts': [2205, 2281],
+            'block_sizes': [50, 34],
+            'qname': 'seq1',
+            'tname': 'reference3',
+            'qstarts': [0, 50],
+            'strand': '-',
+            'qseq_full': 'CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTA',
+            'score': 1,
+            'qseqs': ['TAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCA', 'CCAAATTCTGTGTTTACAGGGCTTTCATGCTCAG'],
+            'tseqs': ['TAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCA', 'CCAAATTCTGTGTTTACAGGGCTTTCATGCTCAG']
+        }
+        read = Blat.pslx_row_to_pysam(pslx_row, self.cache, REFERENCE_GENOME)
+        self.assertEqual(3, read.reference_id)
+        self.assertEqual(Interval(0, 83), read.query_coverage_interval())
+        self.assertEqual(2205, read.reference_start)
+        self.assertEqual([(CIGAR.EQ, 51), (CIGAR.D, 26), (CIGAR.EQ, 33)], read.cigar)
+        self.assertEqual('TAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCA', read.query_sequence[0:50])
+        self.assertEqual('CCAAATTCTGTGTTTACAGGGCTTTCATGCTCAG', read.query_sequence[50:])
+    
+    def test_pslx_row_to_pysam_inversion(self):
+        s = 'CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT'
+        # first part of the inversion
+        pslx_row = {
+            'block_count': 1,
+            'tstarts': [1114],
+            'block_sizes': [120],
+            'qname': 'seq1',
+            'tname': 'reference3',
+            'qstarts': [125],
+            'strand': '+',
+            'qseq_full': s,
+            'score': 1,
+            'qseqs': [
+                'TCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGG'
+                'TTTTCATTTCTGTATGTTAAT'],
+            'tseqs': [
+                'TCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGG'
+                'TTTTCATTTCTGTATGTTAAT']
+        }
+        read1 = Blat.pslx_row_to_pysam(pslx_row, self.cache, REFERENCE_GENOME)
+        self.assertEqual(3, read1.reference_id)
+        self.assertEqual(Interval(125, 244), read1.query_coverage_interval())
+        self.assertEqual(1114, read1.reference_start)
+        self.assertEqual([(CIGAR.S, 125), (CIGAR.EQ, 120)], read1.cigar)
+
+        # second part of the inversion
+        pslx_row = {
+            'block_count': 1,
+            'tstarts': [2187],
+            'block_sizes': [128],
+            'qname': 'seq1',
+            'tname': 'reference3',
+            'qstarts': [117],
+            'strand': '-',
+            'qseq_full': s,
+            'score': 1,
+            'qseqs': [
+                'TGAGCAGAGCTATATATTTAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAACCAAACAGGAAAGAATCCAAAT'
+                'TCTGTGTTTACAGGGCTTTCATGCTCAG'],
+            'tseqs': [
+                'TGAGCAGAGCTATATATTTAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAACCAAACAGGAAAGAATCCAAAT'
+                'TCTGTGTTTACAGGGCTTTCATGCTCAG']
+        }
+        read2 = Blat.pslx_row_to_pysam(pslx_row, self.cache, REFERENCE_GENOME)
+        self.assertEqual(3, read2.reference_id)
+        self.assertEqual(2187, read2.reference_start)
+        self.assertEqual([(CIGAR.S, 117), (CIGAR.EQ, 128)], read2.cigar)
+        self.assertEqual(Interval(117, 244), read2.query_coverage_interval())
+        self.assertEqual(read1.query_sequence, reverse_complement(read2.query_sequence))

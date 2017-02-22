@@ -35,6 +35,10 @@ class GenomeEvidence(Evidence):
                 self.break2.end + self.call_error + self.read_length - 1
             )
         )
+        print('GenomeEvidence outer {0}:{2}-{3} {1}:{4}-{5} inner {0}:{6}-{7}  {1}:{8}-{9}'.format(
+            self.break1.chr, self.break2.chr, self.outer_window1[0], self.outer_window1[1],
+            self.outer_window2[0], self.outer_window2[1], self.inner_window1[0], self.inner_window1[1],
+            self.inner_window2[0], self.inner_window2[1]))
 
     @staticmethod
     def _generate_window(breakpoint, max_expected_fragment_size, call_error, read_length):
@@ -57,7 +61,7 @@ class GenomeEvidence(Evidence):
             end = breakpoint.end + call_error + read_length - 1
         elif breakpoint.orient == ORIENT.RIGHT:
             start = breakpoint.start - call_error - read_length + 1
-        return Interval(max([1, start]), end)
+        return Interval(max([1, start]), max([end, 1]))
 
     def compute_fragment_size(self, read, mate=None):
         return Interval(abs(read.template_length))
@@ -190,4 +194,5 @@ class TranscriptomeEvidence(Evidence):
                 ge = Interval.convert_pos(reverse_mapping, ce + tgt_right - 1)
 
             intervals.append(Interval(gs, ge))
-        return Interval.union(*intervals)
+        temp = Interval.union(*intervals)
+        return Interval(max([1, temp.start]), max([temp.end, 1]))

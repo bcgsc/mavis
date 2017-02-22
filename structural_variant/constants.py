@@ -557,6 +557,7 @@ VALIDATION_DEFAULTS = Namespace(
     fetch_reads_limit=3000,
     filter_secondary_alignments=True,
     min_anchor_exact=6,
+    min_softclipping=6,
     min_anchor_fuzzy=10,
     min_anchor_match=0.9,
     min_flanking_reads_resolution=3,
@@ -594,6 +595,9 @@ VALIDATION_DEFAULTS = Namespace(
 
     min_splits_reads_resolution
         minimum number of split reads required to call a breakpoint by split reads
+
+    min_softclipping
+        minimum number of soft-clipped bases required for a read to be used as soft-clipped evidence
 
     min_mapping_quality
         the minimum mapping quality of reads to be used as evidence

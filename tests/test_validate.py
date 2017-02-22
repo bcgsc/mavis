@@ -156,6 +156,7 @@ class TestTranscriptomeEvidenceWindow(unittest.TestCase):
         b = Breakpoint(chr='fake', start=17279591, orient=ORIENT.LEFT)
         self.assertEqual(Interval(17277321, 17279702), self.transcriptome_window(b, [ust]))
 
+
 @unittest.skip('skip because slow')
 class TestFullEvidenceGathering(unittest.TestCase):
     # need to make the assertions more specific by checking the actual names of the reads found in each bin
@@ -172,6 +173,16 @@ class TestFullEvidenceGathering(unittest.TestCase):
             max_sc_preceeding_anchor=3
         )
 
+    def count_original_reads(self, reads):
+        count = 0
+        for read in reads:
+            if not read.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT):
+                count += 1
+                print(read.query_name)
+            elif not read.get_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT):
+                count += 1
+        return count
+
     def test_load_evidence_translocation(self):
         ev1 = self.genome_evidence(
             Breakpoint('reference10', 520, orient=ORIENT.RIGHT),
@@ -179,13 +190,26 @@ class TestFullEvidenceGathering(unittest.TestCase):
             opposing_strands=False
         )
         ev1.load_evidence()
-        print(ev1.split_reads[0])
-        print(ev1.flanking_pairs[0])
-        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs[0]))
-        self.assertEqual(22, len(ev1.split_reads[0]))
-        self.assertEqual(21, len(ev1.flanking_pairs[0]))
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
+        self.assertEqual(14, self.count_original_reads(ev1.split_reads[0]))
+        self.assertEqual(20, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(21, len(ev1.flanking_pairs))
+
+        # second example
+        ev1 = self.genome_evidence(
+            Breakpoint('reference2', 2000, orient=ORIENT.LEFT),
+            Breakpoint('reference4', 2000, orient=ORIENT.RIGHT),
+            opposing_strands=False
+        )
+        ev1.load_evidence()
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
+        self.assertEqual(21, self.count_original_reads(ev1.split_reads[0]))
+        # one of the reads that appears to look good in the bam is too low quality % match
+        self.assertEqual(40, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(57, len(ev1.flanking_pairs))
 
     def test_load_evidence_inversion(self):
+        # first example
         ev1 = self.genome_evidence(
             Breakpoint('reference3', 1114, orient=ORIENT.RIGHT),
             Breakpoint('reference3', 2187, orient=ORIENT.RIGHT),
@@ -193,11 +217,22 @@ class TestFullEvidenceGathering(unittest.TestCase):
         )
 
         ev1.load_evidence()
-        print(ev1.split_reads[0])
-        print(ev1.flanking_pairs[0])
-        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs[0]))
-        self.assertEqual(72, len(ev1.split_reads[0]))
-        self.assertEqual(104, len(ev1.flanking_pairs[0]))
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
+        self.assertEqual(54, self.count_original_reads(ev1.split_reads[0]))
+        self.assertEqual(20, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(104, len(ev1.flanking_pairs))
+        
+        # second example 
+        ev1 = self.genome_evidence(
+            Breakpoint('reference7', 15000, orient=ORIENT.RIGHT),
+            Breakpoint('reference7', 19000, orient=ORIENT.RIGHT),
+            opposing_strands=True
+        )
+        ev1.load_evidence()
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
+        self.assertEqual(15, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(27, self.count_original_reads(ev1.split_reads[0]))
+        self.assertEqual(52, len(ev1.flanking_pairs))
 
     def test_load_evidence_duplication(self):
         ev1 = self.genome_evidence(
@@ -206,88 +241,58 @@ class TestFullEvidenceGathering(unittest.TestCase):
             opposing_strands=False
         )
         ev1.load_evidence()
-        print(ev1.split_reads[0])
-        print(ev1.flanking_pairs[0])
-        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs[0]))
-        self.assertEqual(41, len(ev1.split_reads[0]))
-        self.assertEqual(65, len(ev1.flanking_pairs[0]))
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
+        self.assertEqual(34, self.count_original_reads(ev1.split_reads[0]))
+        self.assertEqual(12, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(65, len(ev1.flanking_pairs))
 
     def test_load_evidence_deletion(self):
+        # first example
         ev1 = self.genome_evidence(
             Breakpoint('reference20', 2000, orient=ORIENT.LEFT),
             Breakpoint('reference20', 6000, orient=ORIENT.RIGHT),
             opposing_strands=False
         )
         ev1.load_evidence()
-        print(ev1.split_reads[0])
-        print(ev1.flanking_pairs[0])
-        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs[0]))
-        self.assertEqual(43, len(ev1.split_reads[0]))
-        self.assertEqual(49, len(ev1.flanking_pairs[0]))
-
-    def test_load_evidence_inversion2(self):
-        ev1 = self.genome_evidence(
-            Breakpoint('reference7', 15000, orient=ORIENT.RIGHT),
-            Breakpoint('reference7', 19000, orient=ORIENT.RIGHT),
-            opposing_strands=True
-        )
-        ev1.load_evidence()
-        print(ev1.split_reads[0])
-        print(ev1.flanking_pairs[0])
-        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs[0]))
-        self.assertEqual(40, len(ev1.split_reads[0]))
-        self.assertEqual(52, len(ev1.flanking_pairs[0]))
-
-    def test_load_evidence_translocation2(self):
-        ev1 = self.genome_evidence(
-            Breakpoint('reference2', 2000, orient=ORIENT.RIGHT),
-            Breakpoint('reference4', 2000, orient=ORIENT.LEFT),
-            opposing_strands=False
-        )
-        ev1.load_evidence()
-        print(ev1.split_reads[0])
-        print(ev1.flanking_pairs[0])
-        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs[0]))
-        raise(UserWarning)
-
-    def test_load_evidence_deletion1(self):
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
+        self.assertEqual(22, self.count_original_reads(ev1.split_reads[0]))
+        self.assertEqual(14, self.count_original_reads(ev1.split_reads[1]))
+        
+        # second example
         ev1 = self.genome_evidence(
             Breakpoint('referenceX', 2000, orient=ORIENT.LEFT),
             Breakpoint('referenceX', 6000, orient=ORIENT.RIGHT),
             opposing_strands=False
         )
         ev1.load_evidence()
-        print(ev1.split_reads[0])
-        print(ev1.flanking_pairs[0])
-        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs[0]))
-        self.assertEqual(40, len(ev1.split_reads[0]))
-        self.assertEqual(52, len(ev1.flanking_pairs[0]))
-
-    def test_load_evidence_deletion2(self):
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
+        self.assertEqual(4, self.count_original_reads(ev1.split_reads[0]))
+        self.assertEqual(10, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(27, len(ev1.flanking_pairs))
+        
+        # third example
         ev1 = self.genome_evidence(
             Breakpoint('referenceX', 10000, orient=ORIENT.LEFT),
             Breakpoint('referenceX', 14000, orient=ORIENT.RIGHT),
             opposing_strands=False
         )
         ev1.load_evidence()
-        print(ev1.split_reads[0])
-        print(ev1.flanking_pairs[0])
-        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs[0]))
-        self.assertEqual(10, len(ev1.split_reads[0]))
-        self.assertEqual(26, len(ev1.flanking_pairs[0]))
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
+        self.assertEqual(8, self.count_original_reads(ev1.split_reads[0]))
+        self.assertEqual(9, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(26, len(ev1.flanking_pairs))
 
     def test_load_evidence_low_qual_deletion(self):
         ev1 = self.genome_evidence(
-            Breakpoint('reference19', 5000-5620, orient=ORIENT.LEFT),
-            Breakpoint('reference19', 8620-9240, orient=ORIENT.RIGHT),
+            Breakpoint('reference19', 5000, 5620, orient=ORIENT.LEFT),
+            Breakpoint('reference19', 8620, 9240, orient=ORIENT.RIGHT),
             opposing_strands=False
         )
         ev1.load_evidence()
-        print(ev1.split_reads[0])
-        print(ev1.flanking_pairs[0])
-        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs[0]))
-        self.assertEqual(40, len(ev1.split_reads[0]))
-        self.assertEqual(52, len(ev1.flanking_pairs[0]))
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
+        self.assertEqual(0, len(ev1.split_reads[0]))
+        self.assertEqual(0, len(ev1.split_reads[1]))
+        self.assertEqual(0, len(ev1.flanking_pairs))
 
 
 class TestEvidenceGathering(unittest.TestCase):
