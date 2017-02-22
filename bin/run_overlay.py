@@ -1,4 +1,6 @@
-from structural_variant.draw import Diagram, ScatterPlot
+from structural_variant.illustrate.scatter ScatterPlot
+from structural_variant.illustrate.draw import *
+from structural_variant.illustrate.settings import DiagramSettings
 from structural_variant.annotate.base import BioInterval
 from structural_variant.annotate.file_io import load_reference_genes
 from structural_variant import __version__
@@ -34,7 +36,7 @@ def parse_arguments():
     parser.add_argument(
         '-b', '--bam_file', help='read to add a coverage plot', default=[], action='append', nargs=3,
         metavar=('<yaxis name>', '</path/to/bam/file>', '<bin size>'))
-    
+
     parser.add_argument('--markers', '-m', nargs=3, metavar=('start', 'end', 'name'), action='append', default=[])
     g = parser.add_argument_group('reference files')
     g.add_argument(
@@ -50,9 +52,9 @@ def parse_arguments():
     g.add_argument(
         '--template_metadata', default='/home/creisle/svn/svmerge/trunk/cytoBand.txt',
         help='file containing the cytoband template information')
-    
+
     args = parser.parse_args()
-    
+
     return args
 
 args = parse_arguments()
@@ -76,20 +78,20 @@ if args.cna_file:
         args.cna_file,
         header=['chr', 'start', 'end', 'cna', 'hmm'],
         cast={
-            'start': int, 
-            'end': int, 
-            'cna': float, 
+            'start': int,
+            'end': int,
+            'cna': float,
             'chr': lambda x: re.sub('^chr', '', x)
         })
 
     for row in rows:
         cna_by_chr.setdefault(row['chr'], []).append(row)
         row['pos'] = int(round((row['start'] + row['end']) / 2, 0))
-    
+
     for chr in cna_by_chr:
         cna_by_chr[chr] = sorted(cna_by_chr[chr], key=lambda x: x['start'])
 
-d = Diagram(WIDTH=1000)
+d = DiagramSettings(WIDTH=1000)
 d.DOMAIN_NAME_REGEX_FILTER = '^PF\d+$'
 
 for g in genes_to_draw:
@@ -142,7 +144,7 @@ for g in genes_to_draw:
     initial_width = d.WIDTH
     while d.WIDTH < initial_width + 1000:
         try:
-            canvas = d.draw_ustranscripts_overlay(g, vmarkers=markers, plots=plots)
+            canvas = draw_multi_transcript_overlay(d, g, vmarkers=markers, plots=plots)
             break
         except DrawingFitError as err:
             print(repr(err), 'extending window')
@@ -153,4 +155,3 @@ for g in genes_to_draw:
     print('writing:', svg)
 
     canvas.saveas(svg)
-

@@ -110,7 +110,6 @@ def draw(
             names (where possible)
         template_display_label_prefix (str): the character to precede the template label
     """
-    print('draw(', DS, ann, fusion_transcript)
     templates = dict() if templates is None else templates
     canvas = Drawing(size=(DS.WIDTH, 1000))  # just set the height for now and change later
     labels = LabelMapping()  # keep labels consistent within the drawing
@@ -136,18 +135,18 @@ def draw(
 
             h = [0]
             if template1 == template2:  # single template
-                g = draw_template(
+                g = _draw_template(
                     DS, canvas, template1, drawing_width, breakpoints=[ann.break1, ann.break2], labels=labels)
                 canvas.add(g)
                 g.translate(x, y)
                 h.append(g.height)
             else:  # multiple templates
-                g = draw_template(DS, canvas, template1, half_drawing_width, breakpoints=[ann.break1], labels=labels)
+                g = _draw_template(DS, canvas, template1, half_drawing_width, breakpoints=[ann.break1], labels=labels)
                 canvas.add(g)
                 g.translate(x, y)
                 h.append(g.height)
 
-                g = draw_template(DS, canvas, template2, half_drawing_width, breakpoints=[ann.break2], labels=labels)
+                g = _draw_template(DS, canvas, template2, half_drawing_width, breakpoints=[ann.break2], labels=labels)
                 canvas.add(g)
                 g.translate(second_drawing_shift, y)
                 h.append(g.height)
@@ -232,18 +231,18 @@ def draw(
     gheights = [0]
 
     if ann.interchromosomal:
-        g = draw_genes(DS, canvas, genes1, half_drawing_width, [ann.break1], colors=colors, labels=labels)
+        g = _draw_genes(DS, canvas, genes1, half_drawing_width, [ann.break1], colors=colors, labels=labels)
         g.translate(x, y)
         canvas.add(g)
         gheights.append(g.height)
 
         # second gene view
-        g = draw_genes(DS, canvas, genes2, half_drawing_width, [ann.break2], colors=colors, labels=labels)
+        g = _draw_genes(DS, canvas, genes2, half_drawing_width, [ann.break2], colors=colors, labels=labels)
         g.translate(second_drawing_shift, y)
         canvas.add(g)
         gheights.append(g.height)
     else:
-        g = draw_genes(DS,
+        g = _draw_genes(DS,
             canvas, genes1 | genes2, drawing_width, [ann.break1, ann.break2], colors=colors, labels=labels)
         g.translate(x, y)
         canvas.add(g)
@@ -256,7 +255,7 @@ def draw(
     if ann.transcript1 == ann.transcript2:
         try:
             g = canvas.g(class_='transcript')
-            g = draw_ustranscript(DS,
+            g = _draw_ustranscript(DS,
                 canvas, ann.transcript1, drawing_width,
                 breakpoints=[ann.break1, ann.break2],
                 labels=labels,
@@ -271,7 +270,7 @@ def draw(
     else:  # separate drawings
         try:
             g = canvas.g(class_='transcript')
-            g = draw_ustranscript(DS,
+            g = _draw_ustranscript(DS,
                 canvas, ann.transcript1, half_drawing_width,
                 breakpoints=[ann.break1],
                 labels=labels,
@@ -286,7 +285,7 @@ def draw(
 
         try:
             g = canvas.g(class_='transcript')
-            g = draw_ustranscript(DS,
+            g = _draw_ustranscript(DS,
                 canvas, ann.transcript2, half_drawing_width,
                 breakpoints=[ann.break2],
                 labels=labels,
@@ -311,7 +310,7 @@ def draw(
             if old_ex in colors:
                 colors[exon] = colors[old_ex]
         g = canvas.g(class_='transcript')
-        g = draw_ustranscript(DS,
+        g = _draw_ustranscript(DS,
             canvas, fusion_transcript, drawing_width,
             colors=colors,
             labels=labels,
@@ -359,7 +358,7 @@ def _draw_exon_track(DS, canvas, transcript, mapping, colors=None, x_start=None,
         t = Interval.convert_ratioed_pos(mapping, exon.end).end
         pxi = Interval(s, t)
         c = colors.get(exon, DS.EXON1_COLOR)
-        group = draw_exon(DS,
+        group = _draw_exon(DS,
             canvas, exon, pxi.length(), DS.TRACK_HEIGHT, c,
             label=transcript.exon_number(exon),
             translation=translation
@@ -540,7 +539,7 @@ def _draw_transcript_with_translation(
     return main_group
 
 
-def draw_ustranscript(
+def _draw_ustranscript(
     DS, canvas, ust, target_width=None, breakpoints=[], labels=LabelMapping(), colors={},
     mapping=None, REFERENCE_GENOME=None, masks=None
 ):
@@ -647,7 +646,7 @@ def draw_ustranscript(
     # now overlay the breakpoints on top of everything
     for i, b in enumerate(breakpoints):
         pixel = Interval.convert_ratioed_pos(mapping, b.start) | Interval.convert_ratioed_pos(mapping, b.end)
-        bg = draw_breakpoint(DS, canvas, b, pixel.length(), y, label=labels.add(b, DS.BREAKPOINT_LABEL_PREFIX))
+        bg = _draw_breakpoint(DS, canvas, b, pixel.length(), y, label=labels.add(b, DS.BREAKPOINT_LABEL_PREFIX))
         bg.translate(pixel.start, 0)
         main_group.add(bg)
 
@@ -658,7 +657,7 @@ def draw_ustranscript(
     return main_group
 
 
-def draw_genes(DS, canvas, genes, target_width, breakpoints=None, colors=None, labels=None, plots=None, masks=None):
+def _draw_genes(DS, canvas, genes, target_width, breakpoints=None, colors=None, labels=None, plots=None, masks=None):
     """
     draws the genes given in order of their start position trying to minimize
     the number of tracks required to avoid overlap
@@ -731,7 +730,7 @@ def draw_genes(DS, canvas, genes, target_width, breakpoints=None, colors=None, l
         for genepx in track:
             # draw the gene
             gene = gene_px_intervals[genepx]
-            group = draw_gene(DS,
+            group = _draw_gene(DS,
                 canvas, gene, genepx.length(),
                 DS.TRACK_HEIGHT,
                 colors.get(gene, DS.GENE1_COLOR),
@@ -756,7 +755,7 @@ def draw_genes(DS, canvas, genes, target_width, breakpoints=None, colors=None, l
     for i, b in enumerate(sorted(breakpoints)):
         s = Interval.convert_pos(mapping, b.start)
         t = Interval.convert_pos(mapping, b.end)
-        bg = draw_breakpoint(DS, canvas, b, abs(t - s) + 1, y, label=labels.add(b, DS.BREAKPOINT_LABEL_PREFIX))
+        bg = _draw_breakpoint(DS, canvas, b, abs(t - s) + 1, y, label=labels.add(b, DS.BREAKPOINT_LABEL_PREFIX))
         bg.translate(s, 0)
         main_group.add(bg)
 
@@ -768,7 +767,7 @@ def draw_genes(DS, canvas, genes, target_width, breakpoints=None, colors=None, l
     return main_group
 
 
-def draw_ustranscripts_overlay(DS, gene, vmarkers=None, window_buffer=0, plots=None):
+def draw_multi_transcript_overlay(DS, gene, vmarkers=None, window_buffer=0, plots=None):
     vmarkers = [] if vmarkers is None else vmarkers
     plots = [] if plots is None else plots
 
@@ -834,7 +833,7 @@ def draw_ustranscripts_overlay(DS, gene, vmarkers=None, window_buffer=0, plots=N
         for txx in tx.transcripts:
             labels[tx.name] = txx
 
-        g = draw_ustranscript(DS, canvas, tx, mapping=mapping, colors=colors, labels=labels)
+        g = _draw_ustranscript(DS, canvas, tx, mapping=mapping, colors=colors, labels=labels)
         main_group.add(g)
         g.translate(x, y)
 
@@ -846,7 +845,7 @@ def draw_ustranscripts_overlay(DS, gene, vmarkers=None, window_buffer=0, plots=N
         s = Interval.convert_ratioed_pos(mapping, m.start)
         t = Interval.convert_ratioed_pos(mapping, m.end)
         px_itvl = Interval(s.start, t.end)
-        bg = draw_vmarker(DS,
+        bg = _draw_vmarker(DS,
             canvas, m, px_itvl.length(), y, label=labels.add(m, DS.MARKER_LABEL_PREFIX))
         bg.translate(x + px_itvl.start, 0)
         main_group.add(bg)
@@ -858,7 +857,7 @@ def draw_ustranscripts_overlay(DS, gene, vmarkers=None, window_buffer=0, plots=N
     return canvas
 
 
-def draw_vmarker(DS, canvas, marker, width, height, label='', color=None):
+def _draw_vmarker(DS, canvas, marker, width, height, label='', color=None):
     """
     Args:
         canvas (svgwrite.drawing.Drawing): the main svgwrite object used to create new svg elements
@@ -888,7 +887,7 @@ def draw_vmarker(DS, canvas, marker, width, height, label='', color=None):
     return g
 
 
-def draw_breakpoint(DS, canvas, breakpoint, width, height, label=''):
+def _draw_breakpoint(DS, canvas, breakpoint, width, height, label=''):
     """
     Args:
         canvas (svgwrite.drawing.Drawing): the main svgwrite object used to create new svg elements
@@ -928,7 +927,7 @@ def draw_breakpoint(DS, canvas, breakpoint, width, height, label=''):
     return g
 
 
-def draw_exon(DS, canvas, exon, width, height, fill, label='', translation=None):
+def _draw_exon(DS, canvas, exon, width, height, fill, label='', translation=None):
     """
     generates the svg object representing an exon
 
@@ -974,7 +973,7 @@ def draw_exon(DS, canvas, exon, width, height, fill, label='', translation=None)
     return g
 
 
-def draw_template(DS, canvas, template, target_width, labels=None, colors=None, breakpoints=None):
+def _draw_template(DS, canvas, template, target_width, labels=None, colors=None, breakpoints=None):
     labels = LabelMapping() if labels is None else labels
     colors = {} if colors is None else colors
     breakpoints = [] if not breakpoints else breakpoints
@@ -1038,7 +1037,7 @@ def draw_template(DS, canvas, template, target_width, labels=None, colors=None, 
     for i, b in enumerate(sorted(breakpoints)):
         s = Interval.convert_pos(mapping, b.start)
         t = Interval.convert_pos(mapping, b.end)
-        bg = draw_breakpoint(DS,
+        bg = _draw_breakpoint(DS,
             canvas, b, abs(t - s) + 1, total_height, label=labels.add(b, DS.BREAKPOINT_LABEL_PREFIX))
         bg.translate(s, 0)
         group.add(bg)
@@ -1047,7 +1046,7 @@ def draw_template(DS, canvas, template, target_width, labels=None, colors=None, 
     return group
 
 
-def draw_gene(DS, canvas, gene, width, height, fill, label='', REFERENCE_GENOME=None):
+def _draw_gene(DS, canvas, gene, width, height, fill, label='', REFERENCE_GENOME=None):
     """
     generates the svg object representing a gene
 

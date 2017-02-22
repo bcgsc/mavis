@@ -2,6 +2,7 @@ import unittest
 from structural_variant.illustrate.settings import DiagramSettings
 from structural_variant.illustrate.scatter import ScatterPlot
 from structural_variant.illustrate.draw import *
+from structural_variant.illustrate.draw import _draw_template, _draw_ustranscript, _draw_genes
 from structural_variant.annotate import *
 from svgwrite import Drawing
 from structural_variant.constants import STRAND, ORIENT, SVTYPE
@@ -112,7 +113,7 @@ class TestDraw(unittest.TestCase):
         d = DiagramSettings()
         d.GENE_MIN_BUFFER = 10
         # (self, canvas, gene, width, height, fill, label='', REFERENCE_GENOME=None)
-        draw_genes(d, self.canvas, [ir], tgt_width, [])
+        _draw_genes(d, self.canvas, [ir], tgt_width, [])
 
         # _generate_interval_mapping ['Interval(29684391, 29684391)', 'Interval(29663998, 29696515)'] 1181.39453125 5 60 None 29662998 29697515
         # def generate_interval_mapping(cls, input_intervals, target_width, ratio, min_width, buffer_length=None, start=None, end=None, min_inter_width=None)
@@ -141,7 +142,7 @@ class TestDraw(unittest.TestCase):
         breakpoints = [
             Breakpoint('1', 1100, 1200, orient=ORIENT.RIGHT)
         ]
-        g = draw_genes(
+        g = _draw_genes(
             d, self.canvas, [x, y, z], 500, breakpoints,
             {x: d.GENE1_COLOR, y: d.GENE2_COLOR_SELECTED, z: d.GENE2_COLOR})
 
@@ -178,7 +179,7 @@ class TestDraw(unittest.TestCase):
             domains=[d2, d1]
         )
         b = Breakpoint('1', 350, 410, orient=ORIENT.LEFT)
-        g = draw_ustranscript(
+        g = _draw_ustranscript(
             d, self.canvas, t, 500,
             colors={t.exons[1]: '#FFFF00'},
             breakpoints=[b]
@@ -360,7 +361,7 @@ class TestDraw(unittest.TestCase):
         self.assertEqual(expected_height, canvas.attribs['height'])
 
     def test_draw_template(self):
-        # def draw_template(self, canvas, template, target_width, height, labels=None, colors=None):
+        # def _draw_template(self, canvas, template, target_width, height, labels=None, colors=None):
         d = DiagramSettings()
         canvas = Drawing(size=(1000, 50))
         t = Template(
@@ -369,12 +370,12 @@ class TestDraw(unittest.TestCase):
                 BioInterval(None, 1, 8000, 'p1'),
                 BioInterval(None, 10000, 15000, 'p2')
             ])
-        g = draw_template(d, canvas, t, 1000)
+        g = _draw_template(d, canvas, t, 1000)
         canvas.add(g)
         canvas.attribs['height'] = g.height
         canvas = Drawing(size=(1000, 50))
 
-        g = draw_template(d, canvas, TEMPLATE_METADATA['1'], 1000)
+        g = _draw_template(d, canvas, TEMPLATE_METADATA['1'], 1000)
         self.assertEqual(d.BREAKPOINT_TOP_MARGIN + d.BREAKPOINT_BOTTOM_MARGIN + d.TEMPLATE_TRACK_HEIGHT, g.height)
         canvas.add(g)
         canvas.attribs['height'] = g.height
@@ -477,6 +478,6 @@ class TestDraw(unittest.TestCase):
         )
 
         d.GENE_MIN_BUFFER = 0
-        canvas = draw_ustranscripts_overlay(d, gene, vmarkers=[marker], plots=[s, s])
+        canvas = draw_multi_transcript_overlay(d, gene, vmarkers=[marker], plots=[s, s])
         self.assertEqual(2, len(canvas.elements))  # defs counts as element
         canvas.saveas('test_draw_overlay.svg')
