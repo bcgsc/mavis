@@ -585,8 +585,14 @@ class TestCallBreakpointPair(unittest.TestCase):
         self.assertEqual('', bpp.untemplated_sequence)
         self.assertEqual(1115, bpp.break1.start)
         self.assertEqual(2188 + 3, bpp.break2.start)
-        self.assertEqual('TAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCAC', bpp.break1.seq)
-        self.assertEqual('CCAAATTCTGTGTTTACAGGGCTTTCATGCTCAG', bpp.break2.seq)
+        print(bpp.break1.seq)
+        print(bpp.break2.seq)
+        self.assertEqual(
+            'TCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAG'
+            'GGTTTTCATTTCTGTATGTTAAT', bpp.break1.seq)
+        self.assertEqual(
+            'GCAGAGCTATATATTTAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAACCAAACAGGAAAGAATCCA'
+            'AATTCTGTGTTTACAGGGCTTTCATGCTCAG', bpp.break2.seq)
     
     def test_read_pair_inversion_gap_in_query_coverage(self):
         # seq AAATTTCCCGGGAATTCCGGATCGATCGAT
