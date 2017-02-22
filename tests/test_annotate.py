@@ -13,7 +13,7 @@ from tests import REFERENCE_ANNOTATIONS_FILE, REFERENCE_GENOME_FILE, MockSeq, RE
 REFERENCE_ANNOTATIONS = None
 REFERENCE_GENOME = None
 REF_CHR = 'fake'
-
+ALT_REF_CHR = 'ref2'
 
 def setUpModule():
     global REFERENCE_ANNOTATIONS, REFERENCE_GENOME, REF_CHR
@@ -64,7 +64,7 @@ class TestFusionTranscript(unittest.TestCase):
         self.b6 = Exon(2100, 2199) # A
         alternate_sequence = 'C' * 599 + 'A' * 100 + 'C' * 100 + 'G' * 100
         alternate_sequence += 'C' * 200 + 'T' * 100 + 'C' * 200 + 'A' * 100
-        alternate_sequence += 'C' * 200 + 'C' * 100 + 'C' * 300 + 'A' *100
+        alternate_sequence += 'C' * 200 + 'G' * 100 + 'C' * 300 + 'A' *100
         alternate_sequence += 'C' * 200
         self.alternate_sequence = alternate_sequence
 
@@ -284,6 +284,24 @@ class TestFusionTranscript(unittest.TestCase):
         self.assertEqual(expt, ft.sequence)
         self.assertEqual(4, len(ft.exons))
 
+    def test_build_single_transcript_inversion_neg(self):
+        # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
+        #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
+        t = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
+        b1 = Breakpoint(REF_CHR, 1300, orient=ORIENT.RIGHT)
+        b2 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
+        bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_sequence='ATCGTC')
+        ref = {REF_CHR: MockSeq(self.reference_sequence)}
+        ann = Annotation(bpp, transcript1=t, transcript2=t, event_type=SVTYPE.INV)
+        ft = FusionTranscript.build(ann, ref)
+
+        expt = 'C' * len(self.s) + 'T' * (1699 - 1600 + 1) + 'G' * len(self.w) +'T' * (1499 - 1300 +1)
+        expt += 'T' * len(self.z) + 'GACGAT' + 'T' * (1199 - 600 + 1) + 'C' * len(self.y)
+        expt += 'T' * (499 - 200 + 1) + 'G' * len(self.x)
+
+        self.assertEqual(expt, ft.sequence)
+        self.assertEqual(4, len(ft.exons))
+
     def test_build_single_transcript_duplication_pos(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
@@ -464,15 +482,81 @@ class TestFusionTranscript(unittest.TestCase):
         self.assertEqual(3, ft.exon_number(ft.exons[2]))
         self.assertEqual(3, ft.exon_number(ft.exons[3]))
 
+
     def test_build_two_transcript_translocation(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
         # 1:600-699, 2:800-899, 3:1100-1199, 4:1400-1499, 5:1700-1799 6:2100-2199
         #   AAAAAAA    GGGGGGG,   TTTTTTTTT,   AAAAAAAAA,   GGGGGGGGG   AAAAAAAAA
-        raise unittest.SkipTest('TODO')
+        t1 = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t2 = usTranscript(exons=[self.b1, self.b2, self.b3, self.b4, self.b5, self.b6], strand=STRAND.POS)
+        b1 = Breakpoint(REF_CHR, 1199, orient=ORIENT.LEFT)
+        b2 = Breakpoint('ref2', 1200, orient=ORIENT.RIGHT)
+        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_sequence='GCAACATAT')
+        ref = {REF_CHR: MockSeq(self.reference_sequence), 'ref2': MockSeq(self.alternate_sequence)}
+        ann = Annotation(bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.TRANS)
+        self.assertEqual(b1, ann.break1)
+        ft = FusionTranscript.build(ann, ref)
+
+        expt = 'C' * len(self.x) + 'A' * (499 - 200 + 1) + 'G' * len(self.y) + 'A' * (1199 - 600 + 1)
+        expt += 'GCAACATAT' + 'C' * (1399 - 1200 + 1) + 'A' * len(self.b4) + 'C' * (1699 - 1500 + 1)
+        expt += 'G' * len(self.b5) + 'C' * (2099 - 1800 + 1) + 'A' * len(self.b6)
+
+        self.assertEqual(expt, ft.sequence)
+        self.assertTrue(5, len(ft.exons))
+        self.assertTrue(2, ft.exon_number(ft.exons[1]))
+        self.assertTrue(4, ft.exon_number(ft.exons[2]))
+
+    def test_build_two_transcript_translocation_neg(self):
+        # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
+        #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
+        # 1:600-699, 2:800-899, 3:1100-1199, 4:1400-1499, 5:1700-1799 6:2100-2199
+        #   AAAAAAA    GGGGGGG,   TTTTTTTTT,   AAAAAAAAA,   GGGGGGGGG   AAAAAAAAA
+        t1 = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
+        t2 = usTranscript(exons=[self.b1, self.b2, self.b3, self.b4, self.b5, self.b6], strand=STRAND.NEG)
+        b1 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
+        b2 = Breakpoint(ALT_REF_CHR, 1199, orient=ORIENT.LEFT)
+        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_sequence='TCTACATAT')
+        ref = {REF_CHR: MockSeq(self.reference_sequence), ALT_REF_CHR: MockSeq(self.alternate_sequence)}
+        ann = Annotation(bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.TRANS)
+        self.assertEqual(b1, ann.break1)
+        self.assertEqual(b2, ann.break2)
+        ft = FusionTranscript.build(ann, ref)
+
+        expt = 'C' * len(self.s) + 'T' * (1699 - 1600 + 1) + 'G' * len(self.w) +  'T' * (1499 - 1300 + 1)
+        expt += 'A' * len(self.z) +  'ATATGTAGA' + 'A' * len(self.b3) + 'G' * (1099 - 900 + 1)
+        expt += 'C' * len(self.b2) + 'G' * (799 - 700 + 1) + 'T' * len(self.b1)
+
+        self.assertEqual(expt, ft.sequence)
+        self.assertEqual(6, len(ft.exons))
+        self.assertTrue(3, ft.exon_number(ft.exons[2]))
+        self.assertTrue(3, ft.exon_number(ft.exons[3]))
+
 
     def test_build_two_transcript_inverted_translocation(self):
-        raise unittest.SkipTest('TODO')
+        # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
+        #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
+        # 1:600-699, 2:800-899, 3:1100-1199, 4:1400-1499, 5:1700-1799 6:2100-2199
+        #   AAAAAAA    GGGGGGG,   TTTTTTTTT,   AAAAAAAAA,   GGGGGGGGG   AAAAAAAAA
+        t1 = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
+        t2 = usTranscript(exons=[self.b1, self.b2, self.b3, self.b4, self.b5, self.b6], strand=STRAND.POS)
+        b1 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
+        b2 = Breakpoint(ALT_REF_CHR, 1200, orient=ORIENT.RIGHT)
+        bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_sequence='GATACATAT')
+        ref = {REF_CHR: MockSeq(self.reference_sequence), ALT_REF_CHR: MockSeq(self.alternate_sequence)}
+        ann = Annotation(bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.TRANS)
+        self.assertEqual(b1, ann.break1)
+        self.assertEqual(b2, ann.break2)
+        ft = FusionTranscript.build(ann, ref)
+
+        expt = 'C' * len(self.s) + 'T' * (1699 - 1600 + 1) + 'G' * len(self.w) +  'T' * (1499 - 1300 + 1)
+        expt += 'A' * len(self.z) +  'ATATGTATC' + 'C' * (1399 - 1200 + 1) + 'A' * len(self.b4)
+        expt += 'C' * (1699 - 1500 + 1) + 'G' * len(self.b5) + 'C' * (2099 - 1800 + 1) + 'A' * len(self.b6)
+
+        self.assertEqual(expt, ft.sequence)
+        self.assertEqual(6, len(ft.exons))
+        self.assertTrue(3, ft.exon_number(ft.exons[2]))
+        self.assertTrue(4, ft.exon_number(ft.exons[3]))
 
 class TestSequenceFetching(unittest.TestCase):
 
