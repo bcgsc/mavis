@@ -124,7 +124,7 @@ class FusionTranscript(usTranscript):
                 b2 = Breakpoint(ann.break2.chr, window.end + 1, orient=ORIENT.RIGHT)
 
                 seq1, ex1 = cls._pull_exons(ann.transcript1, b1, REFERENCE_GENOME[b1.chr].seq)
-                seq2, ex2 = cls._pull_exons(ann.transcript2, b1, REFERENCE_GENOME[b2.chr].seq)
+                seq2, ex2 = cls._pull_exons(ann.transcript2, b2, REFERENCE_GENOME[b2.chr].seq)
                 useq = ann.untemplated_sequence
 
                 if ann.transcript1.get_strand() == STRAND.POS:
