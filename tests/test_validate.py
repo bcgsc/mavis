@@ -157,7 +157,7 @@ class TestTranscriptomeEvidenceWindow(unittest.TestCase):
         self.assertEqual(Interval(17277321, 17279702), self.transcriptome_window(b, [ust]))
 
 
-#@unittest.skip('skip because slow')
+@unittest.skip('skip because slow')
 class TestFullEvidenceGathering(unittest.TestCase):
     # need to make the assertions more specific by checking the actual names of the reads found in each bin
     # rather than just the counts.
@@ -221,8 +221,8 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(54, self.count_original_reads(ev1.split_reads[0]))
         self.assertEqual(20, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(104, len(ev1.flanking_pairs))
-        
-        # second example 
+
+        # second example
         ev1 = self.genome_evidence(
             Breakpoint('reference7', 15000, orient=ORIENT.RIGHT),
             Breakpoint('reference7', 19000, orient=ORIENT.RIGHT),
@@ -257,7 +257,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         self.assertEqual(22, self.count_original_reads(ev1.split_reads[0]))
         self.assertEqual(14, self.count_original_reads(ev1.split_reads[1]))
-        
+
         # second example
         ev1 = self.genome_evidence(
             Breakpoint('referenceX', 2000, orient=ORIENT.LEFT),
@@ -269,7 +269,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(4, self.count_original_reads(ev1.split_reads[0]))
         self.assertEqual(10, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(27, len(ev1.flanking_pairs))
-        
+
         # third example
         ev1 = self.genome_evidence(
             Breakpoint('referenceX', 10000, orient=ORIENT.LEFT),
@@ -449,19 +449,19 @@ class TestEventCall(unittest.TestCase):
             MockRead(
                 query_name="test1",
                 reference_id=3, next_reference_id=3,
-                template_length=500, 
-                reference_start=1150, 
-                reference_end=1200, 
+                template_length=500,
+                reference_start=1150,
+                reference_end=1200,
                 next_reference_start=2200,
                 is_read1=True,
                 is_reverse=True, mate_is_reverse=True
-            ), 
+            ),
             MockRead(
-                query_name="test1", 
+                query_name="test1",
                 reference_id=3, next_reference_id=3,
-                template_length=-500, 
-                reference_start=2200, 
-                reference_end=2250, 
+                template_length=-500,
+                reference_start=2200,
+                reference_end=2250,
                 next_reference_start=1150,
                 is_read1=False,
                 is_reverse=True, mate_is_reverse=True
@@ -469,21 +469,21 @@ class TestEventCall(unittest.TestCase):
         ))
         self.ev.source_evidence.flanking_pairs.add((
             MockRead(
-                query_name="test2", 
+                query_name="test2",
                 reference_id=3, next_reference_id=3,
-                template_length=560, 
-                reference_start=1150, 
-                reference_end=1200, 
+                template_length=560,
+                reference_start=1150,
+                reference_end=1200,
                 next_reference_start=2200,
                 is_read1=True,
                 is_reverse=True, mate_is_reverse=True
-            ), 
+            ),
             MockRead(
                 query_name="test2",
                 reference_id=3, next_reference_id=3,
-                template_length=-560, 
-                reference_start=2200, 
-                reference_end=2250, 
+                template_length=-560,
+                reference_start=2200,
+                reference_end=2250,
                 next_reference_start=1150,
                 is_read1=False,
                 is_reverse=True, mate_is_reverse=True

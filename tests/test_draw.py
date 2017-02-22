@@ -1,10 +1,8 @@
 import unittest
-from structural_variant.draw import Diagram, HEX_BLACK, HEX_WHITE, ScatterPlot
-from structural_variant.annotate.base import BioInterval
-from structural_variant.annotate.genomic import Gene, Exon, IntergenicRegion, Template
-from structural_variant.annotate.protein import Domain
-from structural_variant.annotate.variant import Annotation, FusionTranscript
-from structural_variant.annotate.file_io import load_templates
+from structural_variant.illustrate.settings import DiagramSettings
+from structural_variant.illustrate.scatter import ScatterPlot
+from structural_variant.illustrate.draw import *
+from structural_variant.annotate import *
 from svgwrite import Drawing
 from structural_variant.constants import STRAND, ORIENT, SVTYPE
 from structural_variant.breakpoint import Breakpoint, BreakpointPair
@@ -24,7 +22,7 @@ class TestDraw(unittest.TestCase):
     def setUp(self):
         self.canvas = Drawing(height=100, width=1000)
 
-    def test__generate_interval_mapping(self):
+    def test_generate_interval_mapping(self):
         x = Interval(150, 1000)
         y = Interval(1500, 1950)
         z = Interval(5000, 7500)
@@ -35,7 +33,7 @@ class TestDraw(unittest.TestCase):
         min_inter_width = 10
         min_width = 20
 
-        temp = Diagram._generate_interval_mapping(
+        temp = generate_interval_mapping(
             [x, y, z], target_width=1000, ratio=5, min_width=min_width, start=1, end=10000, min_inter_width=min_inter_width)
         self.assertEqual(7, len(temp.keys()))
         expt = []
@@ -66,13 +64,13 @@ class TestDraw(unittest.TestCase):
         self.assertAlmostEqual(1, actual[0][1].start)
         self.assertAlmostEqual(1000, actual[-1][1].end)
 
-    def test__generate_interval_mapping_outside_range_error(self):
+    def test_generate_interval_mapping_outside_range_error(self):
         temp = [
             Interval(48556470, 48556646),
             Interval(48573290, 48573665),
             Interval(48575056, 48575078)
         ]
-        mapping = Diagram._generate_interval_mapping(
+        mapping = generate_interval_mapping(
             input_intervals=temp,
             target_width=431.39453125,
             ratio=20,
@@ -87,13 +85,13 @@ class TestDraw(unittest.TestCase):
         Interval.convert_pos(mapping, st)
         Interval.convert_pos(mapping, end)
 
-    def test__generate_gene_mapping(self):
-        d = Diagram()
+    def test_generate_gene_mapping(self):
+        d = DiagramSettings()
         a = Gene('1', 1000, 2000)
         b = Gene('1', 5000, 7000)
         c = Gene('1', 1500, 2500)
         genes = [a, b, c]
-        """return self._generate_interval_mapping(
+        """return self.generate_interval_mapping(
             target_width,
             genes,
             self.GENE_INTERGENIC_RATIO,
@@ -107,26 +105,25 @@ class TestDraw(unittest.TestCase):
         self.assertLessEqual(1, u.start)
         self.assertGreaterEqual(500, u.end)"""
 
-    def test__generate_gene_mapping_err(self):
+    def test_generate_gene_mapping_err(self):
         #  _generate_interval_mapping [IntergenicRegion(11:77361962_77361962+)] 1181.39453125 5 30 None 77356962 77366962)
         ir = IntergenicRegion('11', 5000, 5000, STRAND.POS)
         tgt_width = 1000
-        d = Diagram()
+        d = DiagramSettings()
         d.GENE_MIN_BUFFER = 10
         # (self, canvas, gene, width, height, fill, label='', REFERENCE_GENOME=None)
-        d.draw_genes(self.canvas, [ir], tgt_width, [])
+        draw_genes(d, self.canvas, [ir], tgt_width, [])
 
         # _generate_interval_mapping ['Interval(29684391, 29684391)', 'Interval(29663998, 29696515)'] 1181.39453125 5 60 None 29662998 29697515
-        # def _generate_interval_mapping(cls, input_intervals, target_width, ratio, min_width, buffer_length=None, start=None, end=None, min_inter_width=None)
+        # def generate_interval_mapping(cls, input_intervals, target_width, ratio, min_width, buffer_length=None, start=None, end=None, min_inter_width=None)
         itvls = [Interval(29684391, 29684391), Interval(29663998, 29696515)]
-        mapping = Diagram._generate_interval_mapping(
-            itvls, 1181.39, 5, 60, None, 29662998, 29697515)
+        mapping = generate_interval_mapping(itvls, 1181.39, 5, 60, None, 29662998, 29697515)
 
-    def test__split_intervals_into_tracks(self):
+    def test_split_intervals_into_tracks(self):
         # ----======---------
         # ------======--------
         # -----===============
-        t = Diagram._split_intervals_into_tracks(
+        t = split_intervals_into_tracks(
             [(1, 3), (3, 7), (2, 2), (4, 5), (3, 10)]
         )
         self.assertEqual(3, len(t))
@@ -140,12 +137,13 @@ class TestDraw(unittest.TestCase):
         y = Gene('1', 5000, 7000, strand=STRAND.NEG)
         z = Gene('1', 1500, 2500, strand=STRAND.POS)
 
-        d = Diagram()
+        d = DiagramSettings()
         breakpoints = [
             Breakpoint('1', 1100, 1200, orient=ORIENT.RIGHT)
         ]
-        g = d.draw_genes(
-            self.canvas, [x, y, z], 500, breakpoints, {x: d.GENE1_COLOR, y: d.GENE2_COLOR_SELECTED, z: d.GENE2_COLOR})
+        g = draw_genes(
+            d, self.canvas, [x, y, z], 500, breakpoints,
+            {x: d.GENE1_COLOR, y: d.GENE2_COLOR_SELECTED, z: d.GENE2_COLOR})
 
         # test the class structure
         self.assertEqual(6, len(g.elements))
@@ -166,7 +164,7 @@ class TestDraw(unittest.TestCase):
         self.assertEqual(breakpoints[0], g.labels['B1'])
 
     def test_draw_ustranscript(self):
-        d = Diagram()
+        d = DiagramSettings()
         # domains = [Domain()]
         d1 = Domain('first', [(55, 61), (71, 73)])
         d2 = Domain('second', [(10, 20), (30, 34)])
@@ -180,8 +178,8 @@ class TestDraw(unittest.TestCase):
             domains=[d2, d1]
         )
         b = Breakpoint('1', 350, 410, orient=ORIENT.LEFT)
-        g = d.draw_ustranscript(
-            self.canvas, t, 500,
+        g = draw_ustranscript(
+            d, self.canvas, t, 500,
             colors={t.exons[1]: '#FFFF00'},
             breakpoints=[b]
         )
@@ -209,11 +207,11 @@ class TestDraw(unittest.TestCase):
         self.assertEqual(d2.name, g.labels['D2'])
 
     def test_dynamic_label_color(self):
-        self.assertEqual(HEX_WHITE, Diagram.dynamic_label_color(HEX_BLACK))
-        self.assertEqual(HEX_BLACK, Diagram.dynamic_label_color(HEX_WHITE))
+        self.assertEqual(HEX_WHITE, dynamic_label_color(HEX_BLACK))
+        self.assertEqual(HEX_BLACK, dynamic_label_color(HEX_WHITE))
 
     def test_draw_legend(self):
-        d = Diagram()
+        d = DiagramSettings()
         swatches = [
             ('#000000', 'black'),
             ('#FF0000', 'red'),
@@ -221,7 +219,7 @@ class TestDraw(unittest.TestCase):
             ('#00FF00', 'green'),
             ('#FFFF00', 'yellow')
         ]
-        g = d.draw_legend(self.canvas, swatches)
+        g = draw_legend(d, self.canvas, swatches)
         self.canvas.add(g)
 
         self.assertEqual('legend', g.attribs.get('class', ''))
@@ -236,7 +234,7 @@ class TestDraw(unittest.TestCase):
         )
 
     def test_draw_layout_single_transcript(self):
-        d = Diagram()
+        d = DiagramSettings()
         d1 = Domain('first', [(55, 61), (71, 73)])
         d2 = Domain('second', [(10, 20), (30, 34)])
         g1 = Gene('1', 150, 1000, strand=STRAND.POS)
@@ -250,7 +248,7 @@ class TestDraw(unittest.TestCase):
         reference_genome = {'1': MockSeq(MockString('A'))}
         ft = FusionTranscript.build(ann, reference_genome)
 
-        canvas, legend = d.draw(ann, ft)
+        canvas, legend = draw(d, ann, ft)
         self.assertEqual(4, len(canvas.elements))  # defs counts as element
         expected_height = d.TOP_MARGIN + d.BOTTOM_MARGIN + \
             d.TRACK_HEIGHT + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN + \
@@ -264,7 +262,7 @@ class TestDraw(unittest.TestCase):
         self.assertEqual(expected_height, canvas.attribs['height'])
 
     def test_draw_layout_single_genomic(self):
-        d = Diagram()
+        d = DiagramSettings()
         d1 = Domain('first', [(55, 61), (71, 73)])
         d2 = Domain('second', [(10, 20), (30, 34)])
         g1 = Gene('1', 150, 1000, strand=STRAND.POS)
@@ -298,7 +296,7 @@ class TestDraw(unittest.TestCase):
         self.assertEqual(t2.exons[2], ft.exon_mapping[ft.exons[1].position])
         self.assertEqual(t2.exons[3], ft.exon_mapping[ft.exons[2].position])
 
-        canvas, legend = d.draw(ann, ft)
+        canvas, legend = draw(d, ann, ft)
         self.assertEqual(5, len(canvas.elements))  # defs counts as element
 
         expected_height = d.TOP_MARGIN + d.BOTTOM_MARGIN + \
@@ -312,25 +310,8 @@ class TestDraw(unittest.TestCase):
         self.assertEqual(expected_height, canvas.attribs['height'])
         canvas.saveas('test_draw_layout_single_genomic.svg')
 
-    def test_draw_area_plot(self):
-        d = Diagram()
-        mapping = {Interval(1, 100): Interval(1, 100)}
-        data = [
-            (1, 10),
-            (2, 10),
-            (10, 20),
-            (40, 50),
-            (67, 0),
-            (75, 100),
-            (85, 150),
-            (95, 120)
-        ]
-        g = d.draw_area_plot(self.canvas, data, 100, '#FF0000')
-        self.canvas.add(g)
-        self.assertEqual(2, len(self.canvas.elements))
-
     def test_draw_layout_translocation(self):
-        d = Diagram()
+        d = DiagramSettings()
         d1 = Domain('first', [(55, 61), (71, 73)])
         d2 = Domain('second', [(10, 20), (30, 34)])
         g1 = Gene('1', 150, 1000, strand=STRAND.POS)
@@ -366,7 +347,7 @@ class TestDraw(unittest.TestCase):
 
         ft = FusionTranscript.build(ann, reference_genome)
 
-        canvas, legend = d.draw(ann, ft)
+        canvas, legend = draw(d, ann, ft)
         self.assertEqual(6, len(canvas.elements))  # defs counts as element
         expected_height = d.TOP_MARGIN + d.BOTTOM_MARGIN + \
             d.TRACK_HEIGHT * 2 + d.PADDING + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN + \
@@ -380,7 +361,7 @@ class TestDraw(unittest.TestCase):
 
     def test_draw_template(self):
         # def draw_template(self, canvas, template, target_width, height, labels=None, colors=None):
-        d = Diagram()
+        d = DiagramSettings()
         canvas = Drawing(size=(1000, 50))
         t = Template(
             '1', 1, 100000,
@@ -388,19 +369,19 @@ class TestDraw(unittest.TestCase):
                 BioInterval(None, 1, 8000, 'p1'),
                 BioInterval(None, 10000, 15000, 'p2')
             ])
-        g = d.draw_template(canvas, t, 1000)
+        g = draw_template(d, canvas, t, 1000)
         canvas.add(g)
         canvas.attribs['height'] = g.height
         canvas = Drawing(size=(1000, 50))
 
-        g = d.draw_template(canvas, TEMPLATE_METADATA['1'], 1000)
+        g = draw_template(d, canvas, TEMPLATE_METADATA['1'], 1000)
         self.assertEqual(d.BREAKPOINT_TOP_MARGIN + d.BREAKPOINT_BOTTOM_MARGIN + d.TEMPLATE_TRACK_HEIGHT, g.height)
         canvas.add(g)
         canvas.attribs['height'] = g.height
         self.assertEqual(2, len(canvas.elements))
 
     def test_draw_translocation_with_template(self):
-        d = Diagram()
+        d = DiagramSettings()
         d1 = Domain('PF0001', [(55, 61), (71, 73)])
         d2 = Domain('PF0002', [(10, 20), (30, 34)])
         g1 = Gene(TEMPLATE_METADATA['1'], 150, 1000, strand=STRAND.POS, aliases=['HUGO2'])
@@ -436,7 +417,7 @@ class TestDraw(unittest.TestCase):
 
         ft = FusionTranscript.build(ann, reference_genome)
 
-        canvas, legend = d.draw(ann, ft, draw_template=True, templates=TEMPLATE_METADATA)
+        canvas, legend = draw(d, ann, ft, show_template=True, templates=TEMPLATE_METADATA)
         canvas.saveas('test_draw_translocation_with_template.svg')
         self.assertEqual(8, len(canvas.elements))  # defs counts as element
         expected_height = d.TOP_MARGIN + d.BOTTOM_MARGIN + \
@@ -481,7 +462,7 @@ class TestDraw(unittest.TestCase):
             cds_start=65, cds_end=634,
             exons=[Exon(25403698, 25403863), Exon(25398208, 25398329), Exon(25386753, 25388160)],
             gene=gene, domains=[])
-        d = Diagram()
+        d = DiagramSettings()
         for i, t in enumerate(gene.transcripts):
             t.name = 'transcript {}'.format(i + 1)
         scatterx = [Interval(x, x + 200) for x in range(gene.start, gene.end + 1, 400)]
@@ -496,6 +477,6 @@ class TestDraw(unittest.TestCase):
         )
 
         d.GENE_MIN_BUFFER = 0
-        canvas = d.draw_ustranscripts_overlay(gene, vmarkers=[marker], plots=[s, s])
+        canvas = draw_ustranscripts_overlay(d, gene, vmarkers=[marker], plots=[s, s])
         self.assertEqual(2, len(canvas.elements))  # defs counts as element
         canvas.saveas('test_draw_overlay.svg')
