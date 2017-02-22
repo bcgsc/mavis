@@ -157,7 +157,7 @@ class TestTranscriptomeEvidenceWindow(unittest.TestCase):
         self.assertEqual(Interval(17277321, 17279702), self.transcriptome_window(b, [ust]))
 
 
-@unittest.skip('skip because slow')
+#@unittest.skip('skip because slow')
 class TestFullEvidenceGathering(unittest.TestCase):
     # need to make the assertions more specific by checking the actual names of the reads found in each bin
     # rather than just the counts.
