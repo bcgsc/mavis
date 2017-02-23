@@ -1,12 +1,12 @@
-#start_chromosome	start_position	end_chromosome	end_position	start_orientation	end_orientation	start_strand	end_strand	event_type	protocol	tool_version	libraries	tool_evidence	comments	filters	flanking_reads	mapping_quality	split_reads
-7	104485067-104485067	7	104612302-104612302	R	L	-	-	duplication	genome	convert_ta.py_v0.0.1	A36971						
-20	13160730-13160730	20	13164100-13164100	L	R	+	+	deletion	genome	convert_ta.py_v0.0.1	A36971						
-10	7059511-7059511	19	17396811-17396811	R	L	+	+	translocation	genome	convert_ta.py_v0.0.1	A36971						
-X	32098533-32098533	X	32201251-32201251	L	R	+	+	deletion	genome	convert_ta.py_v0.0.1	A36971						
-3	24565106-24565106	3	24566179-24566179	R	R	+	-	inversion	genome	convert_ta.py_v0.0.1	A36971						
-20	14962958-14962958	20	15013948-15013948	L	R	+	+	deletion	genome	convert_ta.py_v0.0.1	A36971						
-X	31301203-31301203	X	32038750-32038750	L	R	-	-	deletion	genome	convert_ta.py_v0.0.1	A36971						
-2	42052609-42052609	4	66413931-66413931	L	R	-	-	translocation	genome	convert_ta.py_v0.0.1	A36971						
-7	126098488-126098488	7	126167441-126167441	R	R	+	-	inversion	genome	convert_ta.py_v0.0.1	A36971						
-2	89834368-89835192	2	89834881-89835705	R	L	+	+	duplication	genome	DELLY_v0.6.1	A36971	{'filters': 'PASS', 'flanking_reads': 5, 'mapping_quality': 24, 'split_reads': 0}	{'SVTYPE': 'DUP', 'record_id': 'DUP00000703', 'CT': '5to3', 'filename': '/projects/trans_scratch/validations/DELLY/COLO-829/bwa_mem/COLO-829/delly-0.6.1/A36971_A36973/Somatic_Germline_Quality_tagged.vcf', 'mapping_qualitiy': 24}	PASS	5	240	
-19	31954787-31955407	19	31955423-31956043	L	R	+	+	deletion	genome	DELLY_v0.6.1	A36971	{'filters': 'PASS;Quality', 'flanking_reads': 12, 'mapping_quality': 60, 'split_reads': 0}	{'SVTYPE': 'DEL', 'record_id': '19DEL00000161', 'CT': '3to5', 'filename': '/projects/trans_scratch/validations/DELLY/COLO-829/bwa_mem/COLO-829/delly-0.6.1/A36971_A36973/Somatic_Germline_Quality_tagged.vcf', 'mapping_qualitiy': 60}	PASS;Quality	12	60	0
+#stranded	break1_chromosome	break1_position_start	break1_position_end	break2_chromosome	break2_position_start	break2_position_end	break1_orientation	break2_orientation	break1_strand	break2_strand	event_type	protocol	tools	library
+False	7	104485067	104485067	7	104612302	104612302	R	L	-	-	duplication	genome	convert_ta.py_v0.0.1	A36971
+False	20	13160730	13160730	20	13164100	13164100	L	R	+	+	deletion	genome	convert_ta.py_v0.0.1	A36971
+False	10	7059511	7059511	19	17396811	17396811	R	L	+	+	translocation	genome	convert_ta.py_v0.0.1	A36971
+False	X	32098533	32098533	X	32201251	32201251	L	R	+	+	deletion	genome	convert_ta.py_v0.0.1	A36971
+False	3	24565106	24565106	3	24566179	24566179	R	R	+	-	inversion	genome	convert_ta.py_v0.0.1	A36971
+False	20	14962958	14962958	20	15013948	15013948	L	R	+	+	deletion	genome	convert_ta.py_v0.0.1	A36971
+False	X	31301203	31301203	X	32038750	32038750	L	R	-	-	deletion	genome	convert_ta.py_v0.0.1	A36971
+False	2	42052609	42052609	4	66413931	66413931	L	R	-	-	translocation	genome	convert_ta.py_v0.0.1	A36971
+False	7	126098488	126098488	7	126167441	126167441	R	R	+	-	inversion	genome	convert_ta.py_v0.0.1	A36971
+False	2	89834368	89835192	2	89834881	89835705	R	L	+	+	duplication	genome	DELLY_v0.6.1	A36971
+False	19	31954787	31955407	19	31955423	31956043	L	R	+	+	deletion	genome	DELLY_v0.6.1	A36971
