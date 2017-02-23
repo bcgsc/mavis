@@ -9,10 +9,10 @@ The orientation describes the portion of the reference that is retained.
 .. figure:: _static/example_figure.svg
     :width: 100%
 
-    Example output from the tool visulaizing an inverted translocation. (c1) the first template, chromosome 1. (cX) the second template
-    chromosome X. (B1) the first breakpoint has a left orientation and retains the five prime portions of the gene, HUGO2. (B2) the
-    second breakpoint also has a left orientation but retains the three prime portion of the gene, HUGO3. (T1) the original transcript
-    for the first gene. (T2) the original transcript for the second gene. (F1) the fusion transcript
+    Example output from the tool visulaizing an inverted translocation. (c1) The first template, chromosome 1. (cX) The second template
+    chromosome X. (B1) The first breakpoint has a left orientation and retains the five prime portions of the gene, HUGO2. (B2) The
+    second breakpoint also has a left orientation but retains the three prime portion of the gene, HUGO3. (T1) The original transcript
+    for the first gene. (T2) The original transcript for the second gene. (F1) The fusion transcript.
 |
 
 ------
@@ -31,7 +31,7 @@ facilitate ease of use for those already familiar with viewing bam files in IGV.
 .. note::
 
     The major assumptions here are that the 'normal' read-pair is a read pair which has one read on the positive/forward
-    strand and its partner on the negative/reverse strand. It is assumed that partners share a read name. As is the case for illumina reads
+    strand and its partner on the negative/reverse strand. It is assumed that partners share a read name, as is the case for Illumina reads.
 
 
 Deletion
@@ -44,8 +44,8 @@ fragment size should be abnormal (for large deletions).
     :width: 100%
 
     Flanking read pair evidence for a deletion event. the read pairs will have a larger than expected fragment size when mapped to the
-    reference genome because in the mutant genome they are closer together, owing to the deletion event. (B1) the first breakpoint
-    which has a left orientation (B2) the second breakpoint which has a right orientation. Both breakpoints would be on the positive
+    reference genome because in the mutant genome they are closer together, owing to the deletion event. (B1) The first breakpoint
+    which has a left orientation. (B2) The second breakpoint which has a right orientation. Both breakpoints would be on the positive
     strand (assuming that the input is stranded) which means that the first read in the pair would be on the positive strand and the
     second read in the pair would be on the negative/reverse strand.
 
@@ -57,9 +57,9 @@ Insertion
 .. figure:: _static/read_pairs_insertion.svg
     :width: 100%
 
-    Flanking read pair evidence for an insertion event. the read pairs will have a smaller than expected fragment size when mapped to the
-    reference genome because in the mutant genome they are father apart, owing to the insertion event. (B1) the first breakpoint
-    which has a left orientation (B2) the second breakpoint which has a right orientation. Both breakpoints would be on the positive
+    Flanking read pair evidence for an insertion event. The read pairs will have a smaller than expected fragment size when mapped to the
+    reference genome because in the mutant genome they are father apart, owing to the insertion event. (B1) The first breakpoint
+    which has a left orientation. (B2) The second breakpoint which has a right orientation. Both breakpoints would be on the positive
     strand (assuming that the input is stranded) which means that the first read in the pair would be on the positive strand and the
     second read in the pair would be on the negative/reverse strand.
 
@@ -71,9 +71,9 @@ Duplication
 .. figure:: _static/read_pairs_duplication.svg
     :width: 100%
 
-    Flanking read pair evidence for a tandem duplication event. the read pairs will have an abnormal orientation but still the
-    same strands as the normal read pair. (B1) the first breakpoint will be on the positive strand and have a right orientation.
-    (B2) the second breakpoint will be on the positive strand and have a left orientation.
+    Flanking read pair evidence for a tandem duplication event. The read pairs will have an abnormal orientation but still the
+    same strands as the normal read pair. (B1) The first breakpoint will be on the positive strand and have a right orientation.
+    (B2) The second breakpoint will be on the positive strand and have a left orientation.
 
 
 
@@ -134,7 +134,7 @@ Calculating the Evidence Window
     Basic Terms used in describing read pairs are shown above: fragment size: the distance between the pair;
     read length: the length of the read; fragment size: the combined length of both reads and the fragment size
 
-we make some base assumptions with regards to paired-end read data
+We make some base assumptions with regards to paired-end read data:
 
 .. note::
 
@@ -144,11 +144,11 @@ we make some base assumptions with regards to paired-end read data
 
     the most common fragment size is the unmutated 'normal' fragment
 
-with the above assumptions we take the median fragment size to be the expected normal
+With the above assumptions we take the median fragment size to be the expected normal.
 
-Given that we expect mutations and therefore abnormal fragment sizes we use a modified method to calculate the
-**median standard deviation** (*s* in the equations below). We calculate the squared distance for each fragment
-away from the median and then take a fraction of this to be 'normal' variation. So the most abnormal portion is
+Given that we expect mutations and therefore abnormal fragment sizes, we use a modified method to calculate the
+**median standard deviation** (*s* in the equations below). We calculate the squared distance away from the 
+median for each fragment and then take a fraction of this to be 'normal' variation. So the most abnormal portion is
 ignored, assuming it is supposed to be abnormal. This results in a calculation as follows, where the original set
 Y is the set of fragment sizes from the bam file and f is the fraction of fragment sizes assumed to be normal
 
@@ -213,8 +213,8 @@ possible annotations when calculating the evidence window. see
 Classifying Events
 .....................
 
-the following decision tree is used in classifying events based on their breakpoints. Only valid combinations have
-been shown
+The following decision tree is used in classifying events based on their breakpoints. Only valid combinations have
+been shown.
 
 .. figure:: _static/classification_tree.svg
     :width: 100%
@@ -246,7 +246,7 @@ Breakpoints can be called by multiple different :attr:`~structural_variant.const
 Calling Breakpoints by Flanking Evidence
 ..........................................
 
-Breakpoints are called by contig, split-read of flanking pairs evidence. Contigs and split reads are used to call exact
+Breakpoints are called by contig, split-read, or flanking pairs evidence. Contigs and split reads are used to call exact
 breakpoints, where breakpoints called by flanking reads are generally assigned a probabalistic range.
 
 The metrics used here are similar to those used in calculating the evidence window. We use the
@@ -371,11 +371,11 @@ After breakpoints have been called and annotated we often need to see if the sam
     (A-D) The breakpoint lands in an exon and the five prime portion of the transcript is retained. (A) The original
     splicing pattern showing the placement of the genomic breakpoint and the retained five prime portion. (B) The first
     splice site following the breakpoint is a donor and the second donor is used. (C) The first splice site following the
-    breakpoint is a donor and the first donor is used. (D) The first slice site following the breakpoint is an acceptor.
+    breakpoint is a donor and the first donor is used. (D) The first splice site following the breakpoint is an acceptor.
     (E-H) The breakpoint lands in an exon and the three prime portion of the transcript is retained. (E) The original
     splicing pattern showing the placement of the genomic breakpoint and the retained three prime portion. (F) The first
     splice site prior to the breakpoint is an acceptor and the first acceptor is used. (G) The first splice site prior to the
-    breakpoint is an acceptor and the second acceptor is used. (H) The first slice site prior to the breakpoint is a donor
+    breakpoint is an acceptor and the second acceptor is used. (H) The first splice site prior to the breakpoint is a donor
 
 |
 
