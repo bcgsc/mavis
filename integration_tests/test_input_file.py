@@ -1,7 +1,12 @@
-from structural_variant.breakpoint import read_bpp_from_input_file
-from structural_variant.constants import COLUMNS, PROTOCOL
 import argparse
 import re
+import os
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+from structural_variant.breakpoint import read_bpp_from_input_file
+from structural_variant.constants import COLUMNS, PROTOCOL
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
