@@ -101,7 +101,7 @@ def parse_arguments():
     parser.add_argument(
         '-r', '--cluster_radius', help='radius to use in clustering', default=CLUSTER_RADIUS, type=int)
     parser.add_argument(
-        '-k', '-cluster_clique_size',
+        '-k', '--cluster_clique_size',
         help='parameter used for computing cliques, smaller is faster, above 20 will be slow',
         default=CLUSTER_CLIQUE_SIZE, type=int)
     g = parser.add_argument_group('filter arguments')
