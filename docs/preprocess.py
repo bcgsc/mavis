@@ -22,17 +22,15 @@ with open(g, 'w') as fh:
 
 # auto build the other documentation
 subprocess.check_call('sphinx-apidoc -f -P -M -o {} {} --separate'.format(
-    os.path.join(d, 'source'),
+    os.path.join(d, 'source/auto'),
     os.path.join(d, './../structural_variant')), shell=True)
 
 subprocess.check_call('sphinx-apidoc -f -P -M -o {} {}'.format(
-    os.path.join(d, 'source'),
+    os.path.join(d, 'source/auto'),
     os.path.join(d, './../bin')), shell=True)
 
 # now we need to add showing only select special members
-for f in glob.glob(os.path.join(d, 'source/structural_variant.*.rst')):
-    if '.custom.' in f:
-        continue
+for f in glob.glob(os.path.join(d, 'source/auto/*.rst')):
     # now open and read the file
     lines = []
     with open(f, 'r') as fh:
@@ -55,4 +53,4 @@ for f in glob.glob(os.path.join(d, 'source/structural_variant.*.rst')):
 
 
 # copy the README file to the source directory
-subprocess.check_call('cp {} {}'.format(os.path.join(d, './../README.rst'), os.path.join(d, 'source')), shell=True)
+# subprocess.check_call('cp {} {}'.format(os.path.join(d, './../README.rst'), os.path.join(d, 'source')), shell=True)

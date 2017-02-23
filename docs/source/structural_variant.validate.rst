@@ -7,11 +7,12 @@ validate subpackage
     :undoc-members:
     :show-inheritance:
 
+
 ---
 
 
 .. toctree::
 
-   structural_variant.validate.base
-   structural_variant.validate.call
-   structural_variant.validate.evidence
+    auto/structural_variant.validate.base
+    auto/structural_variant.validate.call
+    auto/structural_variant.validate.evidence

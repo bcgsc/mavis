@@ -12,8 +12,8 @@ annotate subpackage
 
 .. toctree::
 
-   structural_variant.annotate.base
-   structural_variant.annotate.file_io
-   structural_variant.annotate.genomic
-   structural_variant.annotate.protein
-   structural_variant.annotate.variant
+    auto/structural_variant.annotate.base
+    auto/structural_variant.annotate.file_io
+    auto/structural_variant.annotate.genomic
+    auto/structural_variant.annotate.protein
+    auto/structural_variant.annotate.variant

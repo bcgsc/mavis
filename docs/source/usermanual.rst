@@ -244,11 +244,11 @@ script with the -h/--help option
 .. toctree::
     :maxdepth: 1
 
-    sv_merge
-    sv_annotate
-    sv_validate
-    sv_pair
-    sv_summary
+    auto/sv_merge
+    auto/sv_annotate
+    auto/sv_validate
+    auto/sv_pair
+    auto/sv_summary
 
 There are some parameters that need to be computed from the bam files. This can generally be done by running the
 profile_bam.py script found in the tools directory

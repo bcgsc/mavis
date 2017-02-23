@@ -1,0 +1,19 @@
+Instructions for Building the User Manual
+-------------------------------------------
+
+The user manual contains instructions for running the tool, background theory,
+api documentation, and guidelines for contributors. To build the user manual
+python3 is required as well as other python modules listed in the requirements.txt
+file. To install the required modules, use the python package manager, pip.
+
+    pip install -r requirements.txt
+
+The user manual can then be built
+
+    cd docs/
+    make html
+
+This will create the user manual in html. Open the docs/build/html/index.html file in an
+internet browser (i.e. chrome, firefox, etc.) to explore the documentation
+
+    open docs/build/html/index.html

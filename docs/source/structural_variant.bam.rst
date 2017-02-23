@@ -12,6 +12,6 @@ bam subpackage
 
 .. toctree::
 
-   structural_variant.bam.cache
-   structural_variant.bam.cigar
-   structural_variant.bam.read
+   auto/structural_variant.bam.cache
+   auto/structural_variant.bam.cigar
+   auto/structural_variant.bam.read
