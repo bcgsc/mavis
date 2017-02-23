@@ -213,6 +213,9 @@ def main(args):
 
     # map input pairs to cluster ids
     # now create the mapping from the original input files to the cluster(s)
+    if not os.path.exists(args.output):
+        log("Creating output directory: '{}'".format(args.output))
+        os.makedirs(args.output, mode=0o775)
     f = os.path.join(args.output, 'cluster_assignment.tab')
     with open(f, 'w') as fh:
         header = set()
