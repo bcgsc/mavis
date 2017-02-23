@@ -91,7 +91,11 @@ class Evidence(BreakpointPair):
             data=data
         )
         d = dict()
+        for arg in kwargs:
+            if arg not in VALIDATION_DEFAULTS.__dict__:
+                raise AttributeError('unrecognized attribute', arg)
         d.update(VALIDATION_DEFAULTS.__dict__)
+        kwargs.setdefault('assembly_min_contig_length', read_length)
         d.update(kwargs)  # input arguments should override the defaults
         for arg, val in d.items():
             setattr(self, arg, val)
@@ -228,8 +232,6 @@ class Evidence(BreakpointPair):
                 if not is_stranded or self.read_pair_strand(read) == self.break1.strand:
                     self.flanking_pairs.add((read, mate))
                     added = True
-            else:
-                print('does not overlap windows', iread, imate, self.outer_window1, self.outer_window2)
         return added
 
     def add_split_read(self, read, first_breakpoint):
@@ -310,7 +312,6 @@ class Evidence(BreakpointPair):
         # data quality filters
         if cigar_tools.alignment_matches(read.cigar) >= self.min_sample_size_to_apply_percentage \
                 and cigar_tools.match_percent(read.cigar) < self.min_anchor_match:
-            print('too poor quality of an alignment')
             return False  # too poor quality of an alignment
         if cigar_tools.longest_exact_match(read.cigar) < self.min_anchor_exact \
                 and cigar_tools.longest_fuzzy_match(read.cigar, self.fuzzy_mismatch_number) < self.min_anchor_fuzzy:
@@ -460,7 +461,7 @@ class Evidence(BreakpointPair):
             assembly_max_paths=self.assembly_max_paths,
             log=log,
             assembly_min_consec_match_remap=self.min_anchor_exact,
-            assembly_min_contig_length=self.read_length
+            assembly_min_contig_length=self.assembly_min_contig_length
         )
 
         # now determine the strand from the remapped reads if possible
@@ -538,6 +539,15 @@ class Evidence(BreakpointPair):
             elif read.mapping_quality < self.min_mapping_quality:
                 return True
             return False
+        
+        def cache_if_true(read):
+            if any([read_tools.orientation_supports_type(read, et) for et in self.putative_event_types()]):
+                return True
+            elif read.is_unmapped or read.mate_is_unmapped:
+                return True
+            elif self.interchromosomal and read.reference_id != read.next_reference_id:
+                return True
+            return False
 
         flanking_pairs = []  # collect putative pairs
 
@@ -549,6 +559,7 @@ class Evidence(BreakpointPair):
                 sample_bins=self.fetch_reads_bins,
                 bin_gap_size=bin_gap_size,
                 cache=True,
+                cache_if=cache_if_true,
                 filter_if=filter_if_true):
             self.counts[0] += 1
             if read.is_unmapped:
@@ -561,7 +572,6 @@ class Evidence(BreakpointPair):
                     (read.reference_id != read.next_reference_id) == self.interchromosomal:
                 flanking_pairs.append(read)
         
-        print('flanking_pairs', len(flanking_pairs))
         for read in self.bam_cache.fetch(
                 '{0}'.format(self.break2.chr),
                 self.outer_window2[0],
@@ -592,7 +602,6 @@ class Evidence(BreakpointPair):
                     self.add_flanking_pair(fl, mate)
             except KeyError:
                 pass
-        print('counts', self.counts)
 
     def copy(self):
         raise NotImplementedError('not appropriate for copy of evidence')

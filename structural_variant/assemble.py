@@ -132,7 +132,6 @@ def assemble(
     Returns:
         :class:`list` of :class:`Contig`: a list of putative contigs
     """
-    print('len(sequences)', len(sequences))
     if len(sequences) == 0:
         return []
     min_seq = min([len(s) for s in sequences])
@@ -209,6 +208,7 @@ def assemble(
     # now map the contigs to the possible input sequences
     contigs = {}
     for seq, score in list(path_scores.items()):
+        print(score, seq)
         if seq not in sequences and len(seq) >= assembly_min_contig_length:
             contigs[seq] = Contig(seq, score)
     log('remapping reads to {} contigs'.format(len(contigs.keys())))
@@ -234,8 +234,6 @@ def assemble(
             if cigar_tools.match_percent(a[0].cigar) < assembly_min_match_quality:
                 continue
             maps_to[contig] = a[0]
-        print('input_seq', input_seq)
-        print('maps to', len(maps_to.keys()))
         for contig, read in maps_to.items():
             contig.add_mapped_read(read, len(maps_to.keys()))
     log('assemblies complete')

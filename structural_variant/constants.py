@@ -556,21 +556,21 @@ VALIDATION_DEFAULTS = Namespace(
     fetch_reads_bins=3,
     fetch_reads_limit=3000,
     filter_secondary_alignments=True,
+    fuzzy_mismatch_number=1,
+    max_sc_preceeding_anchor=6,
     min_anchor_exact=6,
-    min_softclipping=6,
     min_anchor_fuzzy=10,
     min_anchor_match=0.9,
-    min_flanking_reads_resolution=3,
+    min_flanking_pairs_resolution=3,
     min_linking_split_reads=2,
     min_mapping_quality=20,
     min_non_target_aligned_split_reads=1,
+    min_sample_size_to_apply_percentage=10,
+    min_softclipping=6,
     min_splits_reads_resolution=3,
     sc_extension_stop=5,
     stdev_count_abnormal=3,
-    strand_determining_read=2,
-    min_sample_size_to_apply_percentage=10,
-    fuzzy_mismatch_number=1,
-    max_sc_preceeding_anchor=6
+    strand_determining_read=2
 )
 """:class:`~argparse.Namespace`: holds the settings for computations with the Evidence objects
 
@@ -626,7 +626,7 @@ VALIDATION_DEFAULTS = Namespace(
     min_linking_split_reads
         The minimum number of split reads which aligned to both breakpoints
 
-    min_flanking_reads_resolution
+    min_flanking_pairs_resolution
         the minimum number of flanking reads required to call a breakpoint by flanking evidence
 
     assembly_max_paths

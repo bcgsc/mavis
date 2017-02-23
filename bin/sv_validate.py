@@ -41,6 +41,7 @@ from structural_variant import __version__
 from structural_variant.constants import *
 from structural_variant.error import *
 from structural_variant.validate.evidence import GenomeEvidence, TranscriptomeEvidence
+from structural_variant.validate.call import call_events
 from structural_variant.bam import cigar as cigar_tools
 from structural_variant.breakpoint import BreakpointPair, read_bpp_from_input_file
 from structural_variant.bam.cache import BamCache
@@ -236,7 +237,7 @@ def main():
     clusters = []
     for bpp in bpps:
         if bpp.data[COLUMNS.protocol] == PROTOCOL.GENOME:
-            e = Evidence(
+            e = GenomeEvidence(
                 bpp.break1, bpp.break2,
                 INPUT_BAM_CACHE,
                 HUMAN_REFERENCE_GENOME,
@@ -334,19 +335,17 @@ def main():
             print()
             log('calling events for', e)
             calls = []
-            failure_comment = None
-            try:
-                calls = e.call_events()
-                event_calls.extend(calls)
-                if len(calls) == 0:
-                    failure_comment = 'zero events were called'
-                else:
-                    passes += 1
-            except UserWarning as err:
-                log('warning: error in calling events', repr(err), time_stamp=False)
-                failure_comment = str(err)
-
-            if failure_comment is not None:
+            failure_comment = []
+            for event_type in e.putative_event_types():
+                try:
+                    temp = call_events(e, event_type)
+                    calls.extend(temp)
+                except UserWarning as err:
+                    log('warning: error in calling events', repr(err), time_stamp=False)
+                    failure_comment = str(err)
+            event_calls.extend(calls)
+            if len(calls) == 0:
+                failure_comment = ['zero events were called'] if not failure_comment else failure_comment
                 row = {}
                 row.update(e.data)
                 row.update(e.flatten())
@@ -354,8 +353,11 @@ def main():
                 row[COLUMNS.raw_spanning_reads] = len(e.spanning_reads)
                 row[COLUMNS.raw_break1_split_reads] = len(e.split_reads[0])
                 row[COLUMNS.raw_break2_split_reads] = len(e.split_reads[1])
-                row['failure_comment'] = failure_comment
+                row['failure_comment'] = failure_comment.join(';')
                 failed_cluster_rows.append(row)
+            else:
+                passes += 1
+            
             log('called {} event(s)'.format(len(calls)))
 
     if len(failed_cluster_rows) + passes != len(evidence):
@@ -372,7 +374,7 @@ def main():
         header = set()
         for ec in event_calls:
             flank_count, flank_median, flank_stdev = ec.count_flanking_support()
-            b1_count, b1_custom, b2_count, b2_custom, link_count = ec.count_split_read_support()
+            b1_count, b1_tgt, b2_count, b2_tgt = ec.count_split_read_support()
             b1_homseq = None
             b2_homseq = None
             try:
@@ -406,14 +408,14 @@ def main():
                 COLUMNS.contig_alignment_score: None,
                 COLUMNS.break1_call_method: ec.call_method[0],
                 COLUMNS.break2_call_method: ec.call_method[1],
-                COLUMNS.flanking_pairs: flank_count,
+                COLUMNS.flanking_pairs: len(flank_count),
                 COLUMNS.median_fragment_size: round(flank_median, 0) if flank_median is not None else None,
                 COLUMNS.stdev_fragment_size: round(flank_stdev, 0) if flank_stdev is not None else None,
-                COLUMNS.break1_split_reads: b1_count,
-                COLUMNS.break1_split_reads_forced: b1_custom,
-                COLUMNS.break2_split_reads: b2_count,
-                COLUMNS.break2_split_reads_forced: b2_custom,
-                COLUMNS.linking_split_reads: link_count,
+                COLUMNS.break1_split_reads: len(b1_count),
+                COLUMNS.break1_split_reads_forced: len(b1_tgt),
+                COLUMNS.break2_split_reads: len(b2_count),
+                COLUMNS.break2_split_reads_forced: len(b2_tgt),
+                COLUMNS.linking_split_reads: len(b1_count & b2_count),
                 COLUMNS.untemplated_sequence: None,
                 COLUMNS.break1_homologous_sequence: b1_homseq,
                 COLUMNS.break2_homologous_sequence: b2_homseq,

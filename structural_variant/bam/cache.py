@@ -65,8 +65,10 @@ class BamCache:
         fetch_regions[-1] = fetch_regions[-1][0], stop
         return fetch_regions
 
-    def fetch(self, chrom, start, stop, read_limit=10000, cache=False, sample_bins=3,
-            cache_if=lambda x: True, bin_gap_size=0, filter_if=lambda x: False):
+    def fetch(
+        self, chrom, start, stop, read_limit=10000, cache=False, sample_bins=3,
+        cache_if=lambda x: True, bin_gap_size=0, filter_if=lambda x: False
+    ):
         """
         wrapper around the fetch method, returns a list to avoid errors with changing the file pointer
         position from within the loop. Also caches reads if requested and can return a limited read number
@@ -97,9 +99,8 @@ class BamCache:
                     break
                 if not filter_if(read):
                     result.append(read)
-                    if cache:
-                        if cache_if(read):
-                            self.add_read(read)
+                    if cache and cache_if(read):
+                        self.add_read(read)
                 count += 1
         return set(result)
 

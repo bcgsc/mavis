@@ -206,7 +206,7 @@ class TestBlat(unittest.TestCase):
             median_fragment_size=100,
             stdev_count_abnormal=2,
             min_splits_reads_resolution=1,
-            min_flanking_reads_resolution=1
+            min_flanking_pairs_resolution=1
         )
         ev.contigs = [
             Contig(

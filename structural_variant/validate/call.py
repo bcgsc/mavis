@@ -70,9 +70,9 @@ class EventCall(BreakpointPair):
 
         Returns:
             tuple:
-            * :class:`set` of :class:`str`: set of the read query_names
-            * (*int*) - the median insert size
-            * (*int*) - the standard deviation (from the median) of the insert size
+            * :class:`set` of :class:`str` - set of the read query_names
+            * :class`int` - the median insert size
+            * :class`int` - the standard deviation (from the median) of the insert size
         """
         support = set()
 
@@ -172,11 +172,18 @@ class EventCall(BreakpointPair):
 
 def call_events(source_evidence, event_type):
     """
-    use the associated evidence and event_types and split the current evidence object
-    into more specific objects.
+    generates a set of event calls based on the evidence associated with the source_evidence object
+
+    Args:
+        source_evidence (Evidence): the input evidence
+        event_type (SVTYPE): the type of event we are collecting evidence for
 
     Returns:
         :class:`list` of :class:`EventCall`: list of calls
+
+    .. figure:: _static/call_breakpoint_by_flanking_reads.svg
+        
+        model used in calculating the uncertainty interval for breakpoints called by flanking read pair evidence
     """
     if event_type not in source_evidence.putative_event_types():
         raise ValueError(
@@ -227,6 +234,15 @@ def _call_by_contigs(ev, event_type):
 
 
 def _call_by_flanking_pairs(ev, event_type, first_breakpoint_called=None, second_breakpoint_called=None):
+    """
+    Given a set of flanking reads, computes the coverage interval (the area that is covered by flanking read alignments)
+    this area gives the starting position for computing the breakpoint interval.
+
+    .. figure:: _static/call_breakpoint_by_flanking_reads.svg
+        
+        model used in calculating the uncertainty interval for breakpoints called by flanking read pair evidence
+
+    """
     # for all flanking read pairs mark the farthest possible distance to the breakpoint
     # the start/end of the read on the breakpoint side
     first_positions = []
@@ -259,7 +275,7 @@ def _call_by_flanking_pairs(ev, event_type, first_breakpoint_called=None, second
     print('first_breakpoint_called', first_breakpoint_called)
     print('second_breakpoint_called', second_breakpoint_called)
     print(cover1, cover2)
-    if not ev.interchromosomal and Interval.overlaps(cover1, cover2):
+    if not ev.interchromosomal and Interval.overlaps(cover1, cover2) and event_type != SVTYPE.DUP:
         raise AssertionError('flanking read coverage overlaps. cannot call by flanking reads', cover1, cover2)
     if len(cover1) + ev.read_length * 2 > ev.max_expected_fragment_size or \
             len(cover2) + ev.read_length * 2 > ev.max_expected_fragment_size:

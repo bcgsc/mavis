@@ -199,11 +199,8 @@ class Blat:
         query_sequence = row['qseq_full']
         if row['strand'] == STRAND.NEG:
             query_sequence = reverse_complement(query_sequence)
-            print(row['qstarts'])
             temp = [q + b for q, b in zip(row['qstarts'], row['block_sizes'])]
-            print(temp)
             temp = [len(query_sequence) - q for q in temp][::-1]
-            print(temp)
 
         # note: converting to inclusive range [] vs end-exclusive [)
         reference_sequence = REFERENCE_GENOME[row['tname']].seq if REFERENCE_GENOME else None
@@ -254,7 +251,6 @@ class Blat:
                 i = n
             query_ranges = new_query_ranges
             ref_ranges = new_ref_ranges
-        print(query_ranges, ref_ranges)
         for i in range(0, len(query_ranges)):
             rcurr = ref_ranges[i]
             qcurr = query_ranges[i]
@@ -305,9 +301,7 @@ class Blat:
         read.cigar = cigar_tools.join(cigar)
         read.query_name = row['qname']
         read.mapping_quality = NA_MAPPING_QUALITY
-        print('pslx_row_to_pysam:', sorted(row.items()))
         if row['strand'] == STRAND.NEG:
-            print('on the negative strand', row)
             read.flag = read.flag | PYSAM_READ_FLAGS.REVERSE
             #read.cigar = read.cigar[::-1] # DON't REVERSE b/c blat reports on the positive strand already
         if read.query_sequence != row['qseq_full'] and read.query_sequence != reverse_complement(row['qseq_full']):
@@ -420,11 +414,6 @@ def blat_contigs(
                     read.set_tag(PYSAM_READ_FLAGS.BLAT_RANK, rank, value_type='i')
                     read.set_tag(PYSAM_READ_FLAGS.BLAT_PERCENT_IDENTITY, row['percent_ident'], value_type='f')
                     reads.append(read)
-                    print('blat_contigs: built a read')
-                    print(read)
-                    print(read.cigar)
-                    print(read.query_coverage_interval())
-                    print()
                 except KeyError as e:
                     warnings.warn(
                         'warning: reference template name not recognized {0}'.format(e))
