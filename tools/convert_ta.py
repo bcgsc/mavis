@@ -2,10 +2,11 @@
 script for converting Trans-ABySS output file into the SVMerge accepted input format
 """
 import TSV
-from structural_variant.constants import COLUMNS, sort_columns, ORIENT, SVTYPE
+from structural_variant.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND
 from structural_variant.breakpoint import Breakpoint, BreakpointPair
 from structural_variant.error import *
 import argparse
+import warnings
 import os
 
 __version__ = '0.0.1'
@@ -29,7 +30,7 @@ def main():
     parser.add_argument('--stranded', action='store_true', default=False)
 
     # /projects/POG/POG_data/POG098/wgs/GV2/POG098_POG098-OCT-1-unique-14-filters/POG098-OCT-1_genome_fusions_concat.tsv
-
+    warnings.warn('currently assuming that trans-abyss is calling the strand exactly opposite and swapping them')
     args = parser.parse_args()
 
     if os.path.exists(args.output) and not args.overwrite:
@@ -44,14 +45,25 @@ def main():
     header, rows = TSV.read_file(
         args.input,
         require=['id'],
-        rename={'rearrangement': [COLUMNS.event_type.name]},
+        rename={'rearrangement': [COLUMNS.event_type]},
         split={
             'breakpoint': '^(?P<chr1>[^:]+):(?P<pos1>\d+)\|(?P<chr2>[^:]+):(?P<pos2>\d+)$',
             'orientations': '^(?P<or1>[RL]),(?P<or2>[RL])$',
             'strands': '^(?P<strand1>[\+-]),(?P<strand2>[\+-])$'
         },
-        cast={'pos1': int, 'pos2': int},
-        strict=False
+        cast={
+            'pos1': int, 
+            'pos2': int,
+            'strand1': lambda x: STRAND.NEG if x == STRAND.POS else STRAND.POS,
+            'strand2': lambda x: STRAND.NEG if x == STRAND.POS else STRAND.POS
+        },
+        strict=False,
+        _in={
+            'strand1': STRAND,
+            'strand2': STRAND,
+            'or1': ORIENT,
+            'or2': ORIENT
+        }
     )
 
     bpps = set()

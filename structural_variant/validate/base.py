@@ -159,10 +159,9 @@ class Evidence(BreakpointPair):
         """
         spanning read: a read covering BOTH breakpoints
 
-        this is only applicable to small events
+        This is only applicable to small events. Do not need to look for soft clipped reads
+        here since they will be collected already
 
-        .. todo::
-            add support for indels
         """
         if self.interchromosomal:
             return False
@@ -173,10 +172,20 @@ class Evidence(BreakpointPair):
         combined = self.inner_window1 & self.inner_window2
 
         if read.reference_start + 1 >= combined.start and read.reference_end <= combined.end:
-            self.spanning_reads.add(read)
-            return True
-        else:
-            return False
+            # in the correct position, now determine if it can support the event types
+            for event_type in self.putative_event_types():
+                if event_type in [SVTYPE.DUP, SVTYPE.INS]:
+                    if CIGAR.I in read.cigar:
+                        self.spanning_reads.add(read)
+                        return True
+                elif event_type == SVTYPE.DEL:
+                    if CIGAR.D in read.cigar:
+                        self.spanning_reads.add(read)
+                        return True
+                elif event_type == SVTYPE.INV:
+                    if CIGAR.X in read.cigar:
+                        return True
+        return False
 
     def add_flanking_pair(self, read, mate):
         """
@@ -407,7 +416,7 @@ class Evidence(BreakpointPair):
             self.split_reads[1 if first_breakpoint else 0].add(clipped)  # add to the opposite breakpoint
         return True
 
-    def assemble_split_reads(self, log=lambda *x: None):
+    def assemble_contig(self, log=lambda *x: None):
         """
         uses the split reads and the partners of the half mapped reads to create a contig
         representing the sequence across the breakpoints
