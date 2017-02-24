@@ -8,18 +8,6 @@ d = os.path.dirname(os.path.abspath(__file__))
 
 sys.path.insert(0, os.path.join(d, '..'))
 
-from structural_variant.constants import COLUMNS
-
-# write the columns.rst file
-g = os.path.join(d, 'source/columns.rst')
-
-with open(g, 'w') as fh:
-    print('writing', g)
-    fh.write('Column Definitions\n======================\n\n')
-    fh.write('..  glossary::\n\t:sorted:\n\n')
-    for col in COLUMNS.values():
-        fh.write('\t{}\n\t\t{}\n\n'.format(col.name, col.defn))
-
 # auto build the other documentation
 subprocess.check_call('sphinx-apidoc -f -P -M -o {} {} --separate'.format(
     os.path.join(d, 'source/auto'),

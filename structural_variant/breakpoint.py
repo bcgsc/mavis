@@ -172,19 +172,19 @@ class BreakpointPair:
         row = {}
         row.update(self.data)
         temp = {
-            COLUMNS.break1_chromosome.name: self.break1.chr,
-            COLUMNS.break1_position_start.name: self.break1.start,
-            COLUMNS.break1_position_end.name: self.break1.end,
-            COLUMNS.break1_orientation.name: self.break1.orient,
-            COLUMNS.break1_strand.name: self.break1.strand,
-            COLUMNS.break2_chromosome.name: self.break2.chr,
-            COLUMNS.break2_position_start.name: self.break2.start,
-            COLUMNS.break2_position_end.name: self.break2.end,
-            COLUMNS.break2_orientation.name: self.break2.orient,
-            COLUMNS.break2_strand.name: self.break2.strand,
-            COLUMNS.opposing_strands.name: self.opposing_strands,
-            COLUMNS.stranded.name: self.stranded,
-            COLUMNS.untemplated_sequence.name: self.untemplated_sequence
+            COLUMNS.break1_chromosome: self.break1.chr,
+            COLUMNS.break1_position_start: self.break1.start,
+            COLUMNS.break1_position_end: self.break1.end,
+            COLUMNS.break1_orientation: self.break1.orient,
+            COLUMNS.break1_strand: self.break1.strand,
+            COLUMNS.break2_chromosome: self.break2.chr,
+            COLUMNS.break2_position_start: self.break2.start,
+            COLUMNS.break2_position_end: self.break2.end,
+            COLUMNS.break2_orientation: self.break2.orient,
+            COLUMNS.break2_strand: self.break2.strand,
+            COLUMNS.opposing_strands: self.opposing_strands,
+            COLUMNS.stranded: self.stranded,
+            COLUMNS.untemplated_sequence: self.untemplated_sequence
         }
         for c in temp:
             temp[c] = str(temp[c])

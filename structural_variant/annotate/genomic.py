@@ -456,14 +456,14 @@ class usTranscript(BioInterval):
             int: the cdna equivalent
 
         Raises:
-            :class:`~structural_variant.error.DiscontinuousMappingError`: when a genomic position not present in the
+            :class:`~structural_variant.error.IndexError`: when a genomic position not present in the
                 cdna is attempted to be converted
         """
         c, shift = self.convert_genomic_to_nearest_cdna(pos, splicing_pattern)
         if shift != 0:
             raise IndexError('outside of exonic regions')
         return c
-    
+
     def convert_genomic_to_nearest_cdna(self, pos, splicing_pattern):
         """
         converts a genomic position to its cdna equivalent or (if intronic) the nearest cdna and shift
@@ -472,7 +472,7 @@ class usTranscript(BioInterval):
             pos (int): the genomic position
             splicing_pattern (SplicingPattern): the splicing pattern
 
-        Returns: 
+        Returns:
             tuple of int and int:
                 * *int* - the exonic cdna position
                 * *int* - the intronic shift
@@ -496,7 +496,7 @@ class usTranscript(BioInterval):
                     return c, pos - ex1.end if self.get_strand() == STRAND.POS else ex1.end - pos
                 else:
                     c = Interval.convert_pos(mapping, ex2.start, True if self.get_strand() == STRAND.NEG else False)
-                    return c, pos - ex2.start if self.get_strand() == STRAND.POS else ex2.start - pos 
+                    return c, pos - ex2.start if self.get_strand() == STRAND.POS else ex2.start - pos
         raise IndexError('position does not fall within the current transcript')
 
     def convert_cdna_to_genomic(self, pos, splicing_pattern):
@@ -510,7 +510,7 @@ class usTranscript(BioInterval):
         """
         mapping = self._cdna_to_genomic_mapping(splicing_pattern)
         return Interval.convert_pos(mapping, pos, True if self.get_strand() == STRAND.NEG else False)
-    
+
     def exon_number(self, exon):
         """
         exon numbering is based on the direction of translation
@@ -640,7 +640,7 @@ class Transcript(BioInterval):
             IndexError: when a genomic position not present in the cdna is attempted to be converted
         """
         return self.unspliced_transcript.convert_genomic_to_cdna(pos, self.splicing_pattern)
-    
+
     def convert_genomic_to_nearest_cdna(self, pos):
         return self.reference_object.convert_genomic_to_nearest_cdna(pos, self.splicing_pattern)
 

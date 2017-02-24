@@ -202,11 +202,11 @@ def main(args):
     hist = {}
     for cluster, input_pairs in clusters.items():
         hist[len(input_pairs)] = hist.get(len(input_pairs), 0) + 1
-        cluster.data[COLUMNS.cluster_id.name] = 'cluster_{}-{}'.format(cluster_id_prefix, cluster_id)
+        cluster.data[COLUMNS.cluster_id] = 'cluster_{}-{}'.format(cluster_id_prefix, cluster_id)
         temp = set()
         for p in input_pairs:
-            temp.update(p.data[COLUMNS.tools.name])
-        cluster.data[COLUMNS.tools.name] = ';'.join(sorted(list(temp)))
+            temp.update(p.data[COLUMNS.tools])
+        cluster.data[COLUMNS.tools] = ';'.join(sorted(list(temp)))
         cluster_id += 1
     log('computed', len(clusters), 'clusters', time_stamp=False)
     log('cluster distribution', sorted(hist.items()), time_stamp=False)
@@ -225,13 +225,13 @@ def main(args):
         for cluster, input_pairs in clusters.items():
             for p in input_pairs:
                 if p in rows:
-                    rows[p][COLUMNS.tools.name].update(p.data[COLUMNS.tools.name])
+                    rows[p][COLUMNS.tools].update(p.data[COLUMNS.tools])
                 else:
                     rows[p] = BreakpointPair.flatten(p)
-                rows[p].setdefault('clusters', set()).add(cluster.data[COLUMNS.cluster_id.name])
+                rows[p].setdefault('clusters', set()).add(cluster.data[COLUMNS.cluster_id])
         for row in rows.values():
             row['clusters'] = ';'.join([str(c) for c in sorted(list(row['clusters']))])
-            row[COLUMNS.tools] = ';'.join(sorted(list(row[COLUMNS.tools.name])))
+            row[COLUMNS.tools] = ';'.join(sorted(list(row[COLUMNS.tools])))
             row[COLUMNS.library] = args.library
             row[COLUMNS.protocol] = args.protocol
             header.update(row.keys())
@@ -300,9 +300,9 @@ def main(args):
                 break
             curr = pass_clusters[i]
             row = BreakpointPair.flatten(curr)
-            row[COLUMNS.cluster_size.name] = len(clusters[curr])
-            row[COLUMNS.library.name] = args.library
-            row[COLUMNS.protocol.name] = args.protocol
+            row[COLUMNS.cluster_size] = len(clusters[curr])
+            row[COLUMNS.library] = args.library
+            row[COLUMNS.protocol] = args.protocol
             job.append(row)
             header.update(row.keys())
             i += 1
@@ -311,9 +311,9 @@ def main(args):
             while i < len(pass_clusters):
                 curr = pass_clusters[i]
                 row = BreakpointPair.flatten(curr)
-                row[COLUMNS.cluster_size.name] = len(clusters[curr])
-                row[COLUMNS.library.name] = args.library
-                row[COLUMNS.protocol.name] = args.protocol
+                row[COLUMNS.cluster_size] = len(clusters[curr])
+                row[COLUMNS.library] = args.library
+                row[COLUMNS.protocol] = args.protocol
                 job.append(row)
                 header.update(row.keys())
                 i += 1

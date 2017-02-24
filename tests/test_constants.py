@@ -34,12 +34,12 @@ class TestConstants(unittest.TestCase):
         self.assertEqual('EFWM', t)  # AT GAA TTC TGG ATG A
 
     def test_sort_columns(self):
-        temp = ['NEW', 'NEW2', COLUMNS.break1_sequence.name, COLUMNS.break2_sequence.name, COLUMNS.break1_chromosome.name]
+        temp = ['NEW', 'NEW2', COLUMNS.break1_sequence, COLUMNS.break2_sequence, COLUMNS.break1_chromosome]
         self.assertEqual(
-            [COLUMNS.break1_chromosome.name, COLUMNS.break1_sequence.name, COLUMNS.break2_sequence.name, 'NEW', 'NEW2'], 
+            [COLUMNS.break1_chromosome, COLUMNS.break1_sequence, COLUMNS.break2_sequence, 'NEW', 'NEW2'],
             sort_columns(temp))
 
     def test_column_matches_column_name(self):
-        self.assertEqual(COLUMNS.library.name, COLUMNS.library)
-        s = set([COLUMNS.library.name, COLUMNS.library])
+        self.assertEqual(COLUMNS.library, COLUMNS.library)
+        s = set([COLUMNS.library, COLUMNS.library])
         self.assertEqual(1, len(s))
