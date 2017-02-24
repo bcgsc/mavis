@@ -95,7 +95,8 @@ class Evidence(BreakpointPair):
             if arg not in VALIDATION_DEFAULTS.__dict__:
                 raise AttributeError('unrecognized attribute', arg)
         d.update(VALIDATION_DEFAULTS.__dict__)
-        kwargs.setdefault('assembly_min_contig_length', read_length)
+        kwargs.setdefault('assembly_min_contig_length', int(read_length * 1.25))
+        kwargs.setdefault('assembly_max_kmer_size', int(read_length * 0.7))
         d.update(kwargs)  # input arguments should override the defaults
         for arg, val in d.items():
             setattr(self, arg, val)
@@ -194,6 +195,8 @@ class Evidence(BreakpointPair):
             if read.reference_id == read.next_reference_id:
                 return False
         elif read.reference_id != read.next_reference_id:
+            return False
+        elif read.mapping_quality < self.min_mapping_quality or mate.mapping_quality < self.min_mapping_quality:
             return False
 
         # order the read pairs so that they are in the same order that we expect for the breakpoints
@@ -431,9 +434,9 @@ class Evidence(BreakpointPair):
         if targeted < self.assembly_min_tgt_to_exclude_half_map and \
                 self.assembly_include_half_mapped_reads:
             for r in itertools.chain.from_iterable(self.half_mapped):
-                assembly_sequences.setdefault(r.query_sequence, set()).add(r)
-                rqs_comp = reverse_complement(r.query_sequence)
-                assembly_sequences.setdefault(rqs_comp, set()).add(r)
+                # assembly_sequences.setdefault(r.query_sequence, set()).add(r)
+                # rqs_comp = reverse_complement(r.query_sequence)
+                # assembly_sequences.setdefault(rqs_comp, set()).add(r)
                 try:
                     for m in self.bam_cache.get_mate(r):
                         if not m.is_unmapped:
@@ -446,12 +449,14 @@ class Evidence(BreakpointPair):
 
         # add flanking reads
         if self.assembly_include_flanking_pairs:
-            for r in itertools.chain.from_iterable(self.flanking_pairs):
-                if r.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT) and r.get_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT):
-                    continue
-                assembly_sequences.setdefault(r.query_sequence, set()).add(r)
-                rqs_comp = reverse_complement(r.query_sequence)
-                assembly_sequences.setdefault(rqs_comp, set()).add(r)
+            for read, mate in self.flanking_pairs:
+                assembly_sequences.setdefault(read.query_sequence, set()).add(read)
+                rqs_comp = reverse_complement(read.query_sequence)
+                assembly_sequences.setdefault(rqs_comp, set()).add(read)
+                
+                assembly_sequences.setdefault(mate.query_sequence, set()).add(mate)
+                rqs_comp = reverse_complement(mate.query_sequence)
+                assembly_sequences.setdefault(rqs_comp, set()).add(mate)
 
         log('assembly size of {} sequences'.format(len(assembly_sequences) // 2))
 
@@ -461,16 +466,17 @@ class Evidence(BreakpointPair):
             assembly_max_paths=self.assembly_max_paths,
             log=log,
             assembly_min_consec_match_remap=self.min_anchor_exact,
-            assembly_min_contig_length=self.assembly_min_contig_length
+            assembly_min_contig_length=self.assembly_min_contig_length,
+            assembly_max_kmer_size=self.assembly_max_kmer_size
         )
 
         # now determine the strand from the remapped reads if possible
         if self.stranded and self.bam_cache.stranded:  # strand specific
             for contig in contigs:
-                if len(contig.remapped_reads.keys()) == 0:
+                if len(contig.remapped_sequences.keys()) == 0:
                     continue
                 strand_calls = {STRAND.POS: 0, STRAND.NEG: 0}
-                for seq in contig.remapped_reads:
+                for seq in contig.remapped_sequences:
                     for read in assembly_sequences[seq.query_sequence]:
                         if read.is_unmapped:
                             continue
@@ -498,7 +504,7 @@ class Evidence(BreakpointPair):
                         contig.sequence = reverse_complement(contig.sequence)
                         continue
                 reverse = True if strand_calls[STRAND.NEG] > strand_calls[STRAND.POS] else False
-                for seq in contig.remapped_reads:
+                for seq in contig.remapped_sequences:
                     for read in assembly_sequences[seq.query_sequence]:
                         if read.is_reverse != reverse:
                             print('conflicting read', read.cigar, read.query_sequence)
@@ -536,8 +542,6 @@ class Evidence(BreakpointPair):
         def filter_if_true(read):
             if self.filter_secondary_alignments and read.is_secondary:
                 return True
-            elif read.mapping_quality < self.min_mapping_quality:
-                return True
             return False
         
         def cache_if_true(read):
@@ -559,8 +563,10 @@ class Evidence(BreakpointPair):
                 sample_bins=self.fetch_reads_bins,
                 bin_gap_size=bin_gap_size,
                 cache=True,
-                cache_if=cache_if_true,
+                #cache_if=cache_if_true,
                 filter_if=filter_if_true):
+            if read.mapping_quality < self.min_mapping_quality:
+                continue
             self.counts[0] += 1
             if read.is_unmapped:
                 continue
@@ -581,8 +587,11 @@ class Evidence(BreakpointPair):
                 bin_gap_size=bin_gap_size,
                 cache=True,
                 filter_if=filter_if_true):
-            self.counts[1] += 1
+            if read.mapping_quality < self.min_mapping_quality:
+                continue
 
+            self.counts[1] += 1
+            
             if read.is_unmapped:
                 continue
             if not self.add_split_read(read, False):

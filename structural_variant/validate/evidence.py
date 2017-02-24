@@ -107,8 +107,21 @@ class TranscriptomeEvidence(Evidence):
         w2 = w2 | temp
 
         self.inner_windows = (w1, w2)
-    
+        print('TranscriptomeEvidence.outer_windows', self.outer_windows)
+        print('TranscriptomeEvidence.inner_windows', self.inner_windows)
+
     def traverse_exonic_distance(start, distance, direction, transcripts):
+        """
+        given some genomic position and a distance. Uses the input transcripts to
+        compute all possible genomic end positions at that distance if intronic
+        positions are ignored
+
+        Args:
+            start (int): the genomic start position
+            distance (int): the amount of exonic/intergenic units to traverse
+            direction (ORIENT): the direction wrt to the positive/forward reference strand to traverse
+            transcripts (:class:`list` of :class:`usTranscript`): list of transcripts to use
+        """
         is_left = True if direction == ORIENT.LEFT else False
         input_distance = distance
         positions = [start - distance + 1 if is_left else start + distance - 1]
@@ -210,65 +223,32 @@ class TranscriptomeEvidence(Evidence):
             return GenomeEvidence.compute_fragment_size(self, read, mate)
         else:
             return Interval(min(all_fragments), max(all_fragments))
-
-    def compute_distance(self, start, end):
+    
+    @staticmethod
+    def compute_exonic_distance(start, end, transcripts):
         """
-        give the current list of transcripts, computes the putative cdna distance
-        given two genomic positions
-
-        warning:
-            only different from the genomic distance if both points land in the same transcript
+        give the current list of transcripts, computes the putative exonic/intergenic distance
+        given two genomic positions. Intronic positions are ignored
         """
         all_fragments = []
-        transcripts = self.overlapping_transcripts[0] | self.overlapping_transcripts[1]
 
-        for t in itertools.chain.from_iterable([ust.transcripts for ust in transcripts]):
-            try:
-                cs = t.convert_genomic_to_nearest_cdna(start)
-                ct = t.convert_genomic_to_nearest_cdna(end)
-                cs = cs[0] - cs[1] if cs[1] < 0 else cs[0]
-                ct = ct[0] + ct[1] if ct[1] > 0 else ct[0]
-                fragment_size = abs(ct - cs) + 1
-                all_fragments.append(fragment_size)
-            except IndexError:
-                pass
+        for ust in transcripts:
+            sections = [Interval(start, end)]
+            for intron in [(s.end + 1, t.start - 1) for s, t in zip(ust.exons, ust.exons[1::])]:
+                if intron[1] < intron[0]:
+                    continue
+                intron = Interval(intron[0], intron[1])
+
+                temp = []
+                for curr in sections:
+                    temp.extend(curr - intron)
+                sections = temp
+            dist = sum([len(e) for e in sections])
+            all_fragments.append(dist)
         if len(all_fragments) == 0:
             return Interval(start, end)
         else:
             return Interval(min(all_fragments), max(all_fragments))
-
-    def get_genomic_offset(self, genomic_pos, cdna_distance):
-        """
-        given some genomic position and the amount of cdna we wish to travel computes the
-        new genomic position based on the transcripts associated with this evidence 
-        object
-        """
-        all_pos = []
-        transcripts = self.overlapping_transcripts[0] | self.overlapping_transcripts[1]
-
-        for t in itertools.chain.from_iterable([ust.transcripts for ust in transcripts]):
-            try:
-                pos, off = t.convert_genomic_to_nearest_cdna(genomic_pos)
-                gpos = genomic_pos + cdna_distance
-                if t.get_strand() == STRAND.NEG:
-                    if pos - cdna_distance + 1 >= 1:
-                        gpos = t.convert_cdna_to_genomic(pos - cdna_distance + 1)
-                    else:
-                        gpos = t.convert_cdna_to_genomic(1)
-                        gpos += cdna_distance - pos
-                else:
-                    if pos + cdna_distance - 1 > t.end:
-                        gpos = t.convert_cdna_to_genomic(t.end)
-                        gpos += cdna_distance - (t.end - pos)
-                    else:
-                        gpos = t.convert_cdna_to_genomic(pos + cdna_distance - 1)
-                all_pos.append(gpos)
-            except IndexError:
-                pass
-        if len(all_pos) == 0:
-            return Interval(genomic_pos + cdna_distance - 1)
-        else:
-            return Interval(min(all_pos), max(all_pos))
 
     @staticmethod
     def _generate_window(breakpoint, transcripts, read_length, call_error, max_expected_fragment_size):

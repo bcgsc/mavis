@@ -118,6 +118,10 @@ class TestTraverseExonicDistance(unittest.TestCase):
         self.assertEqual(Interval(1360), gpos)
 
 
+class TestComputeExonicDistance(unittest.TestCase):
+    pass
+
+
 class TestTranscriptomeEvidenceWindow(unittest.TestCase):
 
     def setUp(self):
@@ -491,12 +495,12 @@ class TestEventCall(unittest.TestCase):
             call_method=CALL_METHOD.SPLIT
         )
 
-    def test_count_flanking_support_empty(self):
-        c = self.ev.count_flanking_support()
+    def test_flanking_support_empty(self):
+        c = self.ev.flanking_support()
         self.assertEqual(3, len(c))
         self.assertEqual((set(), 0, 0), c)
 
-    def test_count_flanking_support(self):
+    def test_flanking_support(self):
         # 1114 ++
         # 2187 ++
         self.ev.source_evidence.flanking_pairs.add((
@@ -543,17 +547,17 @@ class TestEventCall(unittest.TestCase):
                 is_reverse=True, mate_is_reverse=True
             )
         ))
-        reads, median, stdev = self.ev.count_flanking_support()
+        reads, median, stdev = self.ev.flanking_support()
         self.assertEqual(2, len(reads))
         self.assertEqual(530, median)
         self.assertEqual(30, stdev)
 
-    def test_count_split_read_support_empty(self):
-        c = self.ev.count_split_read_support()
+    def test_split_read_support_empty(self):
+        c = self.ev.split_read_support()
         self.assertEqual(0, sum([len(x) for x in c]))
         self.assertEqual(4, len(c))
 
-    def test_count_split_read_support(self):
+    def test_split_read_support(self):
         self.ev.source_evidence.split_reads[0].add(
             MockRead(
                 query_name="test1", cigar=[(CIGAR.S, 110), (CIGAR.EQ, 40)],
@@ -584,7 +588,11 @@ class TestEventCall(unittest.TestCase):
                 reference_start=2187, reference_end=2307,
                 tags=[(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT, 1)]
             ))
-        f, ftgt, s, stgt = self.ev.count_split_read_support()
+        f, ftgt, s, stgt = self.ev.split_read_support()
+        for curr in [f, ftgt, s, stgt]:
+            temp = set([r.query_name for r in curr])
+            curr.clear()
+            curr.update(temp)
         self.assertEqual(2, len(f))
         self.assertEqual(1, len(ftgt))
         self.assertEqual(2, len(s))

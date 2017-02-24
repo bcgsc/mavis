@@ -637,8 +637,7 @@ class Transcript(BioInterval):
             int: the cdna equivalent
 
         Raises:
-            :class:`~structural_variant.error.DiscontinuousMappingError`: when a genomic position not present in the
-                cdna is attempted to be converted
+            IndexError: when a genomic position not present in the cdna is attempted to be converted
         """
         return self.unspliced_transcript.convert_genomic_to_cdna(pos, self.splicing_pattern)
     
@@ -673,5 +672,5 @@ class Transcript(BioInterval):
 
     @property
     def unspliced_transcript(self):
-        """:class:`usTranscript`: the unsplice transcript this splice variant belongs to"""
+        """:class:`usTranscript`: the unspliced transcript this splice variant belongs to"""
         return self.reference_object

@@ -551,6 +551,7 @@ VALIDATION_DEFAULTS = Namespace(
     assembly_min_remap=3,
     assembly_min_tgt_to_exclude_half_map=7,
     assembly_strand_concordance=0.7,
+    assembly_max_kmer_size=None,
     call_error=10,
     consensus_req=3,
     fetch_reads_bins=3,
@@ -633,6 +634,10 @@ VALIDATION_DEFAULTS = Namespace(
         the maximum number of paths to resolve. This is used to limit when there is a messy assembly graph to resolve.
         The assembly will pre-calculate the number of paths (or putative assemblies) and stop if it is greater than
         the given setting.
+
+    assembly_max_kmer_size
+        the minimum between this and the smallest length input sequence is used as the kmer size for assembling
+        the DeBruijn Graph. If this is not set the default is the 75% of the minimum length input sequence
 
     assembly_strand_concordance
         when the number of remapped reads from each strand are compared, the ratio must be above this number to decide

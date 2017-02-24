@@ -1,4 +1,4 @@
-from structural_variant.constants import CIGAR
+from structural_variant.constants import CIGAR, NA_MAPPING_QUALITY
 from structural_variant.blat import BlatAlignedSegment
 from structural_variant.annotate.genomic import usTranscript, Transcript
 from structural_variant.annotate.protein import Translation
@@ -43,10 +43,12 @@ class MockRead:
         is_paired=True,
         is_unmapped=False,
         mate_is_unmapped=False,
+        mapping_quality=NA_MAPPING_QUALITY,
         **kwargs
     ):
         for attr, val in kwargs.items():
             setattr(self, attr, val)
+        self.mapping_quality = mapping_quality
         self.query_name = query_name
         self.reference_id = reference_id
         self.reference_start = reference_start

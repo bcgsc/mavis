@@ -73,7 +73,7 @@ def parse_arguments():
         help='Outputs the version number'
     )
     parser.add_argument(
-        '-f', '--force_overwrite', action='store_true', default=False,
+        '-f', '--force_overwrite', default=False, type=bool,
         help='set flag to overwrite existing reviewed files')
     parser.add_argument(
         '--no_draw', default=True, action='store_false',

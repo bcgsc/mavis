@@ -11,22 +11,22 @@ class Contig:
     """
     def __init__(self, sequence, score):
         self.sequence = sequence
-        self.remapped_reads = {}
+        self.remapped_sequences = {}
         self.score = score
         self.alignments = None
 
     def __hash__(self):
         return hash(self.sequence)
 
-    def add_mapped_read(self, read, multimap=1):
+    def add_mapped_sequence(self, read, multimap=1):
         rc = reverse_complement(read)
-        if rc in self.remapped_reads:
-            self.remapped_reads[rc] = min(self.remapped_reads.get(rc, 1), 1 / multimap)
+        if rc in self.remapped_sequences:
+            self.remapped_sequences[rc] = min(self.remapped_sequences.get(rc, 1), 1 / multimap)
         else:
-            self.remapped_reads[read] = min(self.remapped_reads.get(read, 1), 1 / multimap)
+            self.remapped_sequences[read] = min(self.remapped_sequences.get(read, 1), 1 / multimap)
 
     def remap_score(self):
-        return sum(self.remapped_reads.values())
+        return sum(self.remapped_sequences.values())
 
 
 class DeBruijnGraph(nx.DiGraph):
@@ -107,7 +107,7 @@ def digraph_connected_components(graph):
 
 def assemble(
     sequences,
-    assembly_kmer_size=None,
+    assembly_max_kmer_size=None,
     assembly_min_edge_weight=3,
     assembly_min_match_quality=0.95,
     assembly_min_read_mapping_overlap=None,
@@ -123,7 +123,7 @@ def assemble(
 
     Args:
         sequences (:class:`list` of :class:`str`): a list of strings/sequences to assemble
-        assembly_kmer_size (int): the size of the kmer to use
+        assembly_max_kmer_size (int): the size of the kmer to use
         assembly_min_edge_weight (int): see :term:`assembly_min_edge_weight`
         assembly_min_match_quality (float): percent match for re-aligned reads to contigs
         assembly_min_read_mapping_overlap (int): the minimum amount of overlap required when aligning reads to contigs
@@ -135,23 +135,23 @@ def assemble(
     if len(sequences) == 0:
         return []
     min_seq = min([len(s) for s in sequences])
-    if assembly_kmer_size is None:
+    if assembly_max_kmer_size is None:
         temp = int(min_seq * 0.75)
         if temp < 10:
-            assembly_kmer_size = min(min_seq, 10)
+            assembly_max_kmer_size = min(min_seq, 10)
         else:
-            assembly_kmer_size = temp
-    elif assembly_kmer_size > min_seq:
-        assembly_kmer_size = min_seq
+            assembly_max_kmer_size = temp
+    elif assembly_max_kmer_size > min_seq:
+        assembly_max_kmer_size = min_seq
         warnings.warn(
             'cannot specify a kmer size larger than one of the input sequences. reset to {0}'.format(min_seq))
-    assembly_min_read_mapping_overlap = assembly_kmer_size if assembly_min_read_mapping_overlap is None else \
+    assembly_min_read_mapping_overlap = assembly_max_kmer_size if assembly_min_read_mapping_overlap is None else \
         assembly_min_read_mapping_overlap
     assembly_min_contig_length = min_seq + 1 if assembly_min_contig_length is None else assembly_min_contig_length
     assembly = DeBruijnGraph()
     log('hashing kmers')
     for s in sequences:
-        for kmer in kmers(s, assembly_kmer_size):
+        for kmer in kmers(s, assembly_max_kmer_size):
             l = kmer[:-1]
             r = kmer[1:]
             assembly.add_edge(l, r)
@@ -208,7 +208,6 @@ def assemble(
     # now map the contigs to the possible input sequences
     contigs = {}
     for seq, score in list(path_scores.items()):
-        print(score, seq)
         if seq not in sequences and len(seq) >= assembly_min_contig_length:
             contigs[seq] = Contig(seq, score)
     log('remapping reads to {} contigs'.format(len(contigs.keys())))
@@ -235,7 +234,7 @@ def assemble(
                 continue
             maps_to[contig] = a[0]
         for contig, read in maps_to.items():
-            contig.add_mapped_read(read, len(maps_to.keys()))
+            contig.add_mapped_sequence(read, len(maps_to.keys()))
     log('assemblies complete')
     return list(contigs.values())
 

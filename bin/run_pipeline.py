@@ -229,8 +229,9 @@ def main():
                     queue=sec.queue, memory=sec.memory, name=validation_jobname, output=validation_output
                 ) + '\n')
             fh.write('#$ -t {}-{}\n'.format(1, len(output_files)))
-            temp = ['--{} {}'.format(k, v) for k, v in validation_args.items() if type(v) != bool]
-            validation_args = temp + ['--{}'.format(k) for k, v in validation_args.items() if type(v) == bool]
+            temp = ['--{} {}'.format(k, v) for k, v in validation_args.items() if not isinstance(v, str) and v is not None]
+            temp.extend(['--{} "{}"'.format(k, v) for k, v in validation_args.items() if isinstance(v, str) and v is not None])
+            validation_args = temp
             validation_args.append('-n {}$SGE_TASK_ID.tab'.format(merge_file_prefix))
             fh.write('python {}/sv_validate.py {}\n'.format(basedir, ' \\\n\t'.join(validation_args)))
 
@@ -247,8 +248,9 @@ def main():
             'domain_regex_filter': sec.domain_regex_filter,
             'max_proximity': sec.max_proximity
         }
-        temp = ['--{} {}'.format(k, v) for k, v in annotation_args.items() if type(v) != bool]
-        annotation_args = temp + ['--{}'.format(k) for k, v in annotation_args.items() if type(v) == bool]
+        temp = ['--{} {}'.format(k, v) for k, v in annotation_args.items() if not isinstance(v, str) and v is not None]
+        temp.extend(['--{} "{}"'.format(k, v) for k, v in annotation_args.items() if isinstance(v, str) and v is not None])
+        annotation_args = temp
         annotation_args.append('--input {}/*{}'.format(validation_output, sv_validate.PASS_SUFFIX))
         qsub = os.path.join(annotation_output, 'qsub.sh')
         annotation_jobname = 'annotation_{}_{}'.format(sec.library, sec.protocol)

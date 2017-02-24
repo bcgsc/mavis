@@ -342,6 +342,7 @@ def blat_contigs(
 
     .. todo::
         add support for blatting protein sequences
+        allow one alignment to be lower score if its partner is higher score? or recompute a combined score?
     """
     if is_protein:
         raise NotImplementedError('currently does not support blatting protein sequences')

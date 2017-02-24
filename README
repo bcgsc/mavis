@@ -17,3 +17,13 @@ This will create the user manual in html. Open the docs/build/html/index.html fi
 internet browser (i.e. chrome, firefox, etc.) to explore the documentation
 
     open docs/build/html/index.html
+
+
+Instructions for Running the Unit Tests
+----------------------------------------
+
+Unit tests for this package are run with nose and should be run from the top level directory. You will
+need to have installed the python dependencies before running tests. The following command will run
+the unit tests and compute the test coverage for the main package.
+
+    nosetests --with-coverage --cover-html --cover-html-dir=coverage --cover-package=structural_variant --cover-erase

@@ -62,7 +62,7 @@ class EventCall(BreakpointPair):
             self.call_method = (CALL_METHOD.enforce(call_method), CALL_METHOD.enforce(call_method))
         self.contig_alignment = contig_alignment
 
-    def count_flanking_support(self):
+    def flanking_support(self):
         """
         counts the flanking read-pair support for the event called. The original source evidence may 
         have contained evidence for multiple events and uses a larger range so flanking pairs here
@@ -71,8 +71,8 @@ class EventCall(BreakpointPair):
         Returns:
             tuple:
             * :class:`set` of :class:`str` - set of the read query_names
-            * :class`int` - the median insert size
-            * :class`int` - the standard deviation (from the median) of the insert size
+            * :class:`int` - the median insert size
+            * :class:`int` - the standard deviation (from the median) of the insert size
         """
         support = set()
 
@@ -107,7 +107,7 @@ class EventCall(BreakpointPair):
                     if read.reference_start + 1 < self.break1.start or mate.reference_start + 1 < self.break2.start or \
                             mate.reference_start + 1 < self.break1.start:
                         continue
-            support.add(read.query_name)
+            support.add(read)
             fragment_sizes.extend([fragment_size.start, fragment_size.end])
         
         median = 0
@@ -121,7 +121,7 @@ class EventCall(BreakpointPair):
             stdev = math.sqrt(err)
         return support, median, stdev
 
-    def count_split_read_support(self):
+    def split_read_support(self):
         """
         counts the split read support for the event called. split reads are only considered to
         be supporting the current call if they exactly match the breakpoint pair associated
@@ -145,8 +145,8 @@ class EventCall(BreakpointPair):
                 if Interval.overlaps((bpos, bpos), self.break1):
                     if read.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT) and \
                             read.get_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT):
-                        realigns1.add(read.query_name)
-                    support1.add(read.query_name)
+                        realigns1.add(read)
+                    support1.add(read)
             except AttributeError:
                 pass
 
@@ -156,8 +156,8 @@ class EventCall(BreakpointPair):
                 if Interval.overlaps((bpos, bpos), self.break2):
                     if read.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT) and \
                             read.get_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT):
-                        realigns2.add(read.query_name)
-                    support2.add(read.query_name)
+                        realigns2.add(read)
+                    support2.add(read)
             except AttributeError:
                 pass
 
@@ -188,17 +188,29 @@ def call_events(source_evidence, event_type):
     if event_type not in source_evidence.putative_event_types():
         raise ValueError(
             'event_type is not compatible with the evidence object', event_type, source_evidence.putative_event_types())
+    consumed_evidence_reads = set()  # keep track to minimize evidence re-use
     calls = []
     errors = set()
     # try calling by contigs
-    calls.extend(_call_by_contigs(source_evidence, event_type))
+    contig_calls = _call_by_contigs(source_evidence, event_type)
 
-    if len(calls) == 0:
-        # try calling by split reads
-        try:
-            calls.extend(_call_by_supporting_reads(source_evidence, event_type))
-        except UserWarning as err:
-            errors.add(str(err))
+    split_reads_by_sequence = dict()
+    for read in itertools.chain.from_iterable(source_evidence.split_reads):
+        split_reads_by_sequence.setdefault(read.query_sequence, []).append(read)
+
+    for call in contig_calls:
+        for seq in call.remapped_sequences:
+            for read in split_reads_by_sequence:
+                consumed_evidence_reads.add(read)
+        fl, med, stdev = call.flanking_support()
+        consumed_evidence_reads.update(fl)
+    
+    # try calling by split/flanking reads
+    try:
+        calls.extend(_call_by_supporting_reads(source_evidence, event_type, consumed_evidence_reads))
+    except UserWarning as err:
+        errors.add(str(err))
+    
     if len(calls) == 0 and len(errors) > 0:
         raise UserWarning(';'.join(sorted(list(errors))))
     elif len(calls) == 0:
@@ -225,7 +237,7 @@ def _call_by_contigs(ev, event_type):
                 ev,
                 event_type,
                 contig=ctg,
-                alignment=(read1, read2),
+                contig_alignment=(read1, read2),
                 opposing_strands=bpp.opposing_strands,
                 untemplated_sequence=bpp.untemplated_sequence
             )
@@ -233,7 +245,7 @@ def _call_by_contigs(ev, event_type):
     return events
 
 
-def _call_by_flanking_pairs(ev, event_type, first_breakpoint_called=None, second_breakpoint_called=None):
+def _call_by_flanking_pairs(ev, event_type, first_breakpoint_called=None, second_breakpoint_called=None, consumed_evidence_reads=None):
     """
     Given a set of flanking reads, computes the coverage interval (the area that is covered by flanking read alignments)
     this area gives the starting position for computing the breakpoint interval.
@@ -243,6 +255,8 @@ def _call_by_flanking_pairs(ev, event_type, first_breakpoint_called=None, second
         model used in calculating the uncertainty interval for breakpoints called by flanking read pair evidence
 
     """
+    if consumed_evidence_reads is None:
+        consumed_evidence_reads = set()
     # for all flanking read pairs mark the farthest possible distance to the breakpoint
     # the start/end of the read on the breakpoint side
     first_positions = []
@@ -252,6 +266,8 @@ def _call_by_flanking_pairs(ev, event_type, first_breakpoint_called=None, second
 
     flanking_count = 0
     for read, mate in ev.flanking_pairs:
+        if read in consumed_evidence_reads:
+            continue
         # check that the fragment size is reasonable
         fragment_size = ev.compute_fragment_size(read, mate)
         if event_type == SVTYPE.DEL:
@@ -360,21 +376,22 @@ def _call_by_flanking_pairs(ev, event_type, first_breakpoint_called=None, second
     return first_breakpoint_called, second_breakpoint_called
 
 
-def _call_by_supporting_reads(ev, event_type, evidence_consumed=None):
+def _call_by_supporting_reads(ev, event_type, consumed_evidence_reads=None):
     """
     use split read evidence to resolve bp-level calls for breakpoint pairs (where possible)
     if a bp level call is not possible for one of the breakpoints then returns None
     if no breakpoints can be resolved returns the original event only with NO split read evidence
     also sets the SV type call if multiple are input
     """
-    if evidence_consumed is None:
-        evidence_consumed = set()
+    if consumed_evidence_reads is None:
+        consumed_evidence_reads = set()
     pos1 = {}
     pos2 = {}
     
-    # check for spanning reads
     for i, breakpoint, d in [(0, ev.break1, pos1), (1, ev.break2, pos2)]:
         for read in ev.split_reads[i]:
+            if read in consumed_evidence_reads:
+                continue
             try:
                 pos = read_tools.breakpoint_pos(read, breakpoint.orient) + 1
                 if pos not in d:
@@ -430,50 +447,56 @@ def _call_by_supporting_reads(ev, event_type, evidence_consumed=None):
             call_method=CALL_METHOD.SPLIT
         )
         linked_pairings.append(call)
+    
+    for call in linked_pairings:
+        fl, med, stdev = call.flanking_support()
+        consumed_evidence_reads.update(fl)
 
-    if len(linked_pairings) == 0:  # then call by mixed or flanking only
-        error_messages = set()
-        # if can call the first breakpoint by split
-        for pos in pos1:
-            bp = sys_copy(ev.break1)
-            bp.start = pos
-            bp.end = pos
-            try:
-                f, s = _call_by_flanking_pairs(ev, event_type, first_breakpoint_called=bp)
-                call = EventCall(
-                    f, s, ev, event_type,
-                    call_method=CALL_METHOD.SPLIT,
-                    break2_call_method=CALL_METHOD.FLANK
-                )
-                linked_pairings.append(call)
-            except (AssertionError, UserWarning) as err:
-                error_messages.add(str(err))
+    error_messages = set()
+    # if can call the first breakpoint by split
+    for pos in pos1:
+        bp = sys_copy(ev.break1)
+        bp.start = pos
+        bp.end = pos
+        try:
+            f, s = _call_by_flanking_pairs(
+                ev, event_type, first_breakpoint_called=bp, consumed_evidence_reads=consumed_evidence_reads)
+            call = EventCall(
+                f, s, ev, event_type,
+                call_method=CALL_METHOD.SPLIT,
+                break2_call_method=CALL_METHOD.FLANK
+            )
+            linked_pairings.append(call)
+        except (AssertionError, UserWarning) as err:
+            error_messages.add(str(err))
 
-        for pos in pos2:
-            bp = sys_copy(ev.break2)
-            bp.start = pos
-            bp.end = pos
-            try:
-                f, s = _call_by_flanking_pairs(ev, event_type, second_breakpoint_called=bp)
-                call = EventCall(
-                    f, s, ev, event_type,
-                    call_method=CALL_METHOD.FLANK,
-                    break2_call_method=CALL_METHOD.SPLIT
-                )
-                linked_pairings.append(call)
-            except (AssertionError, UserWarning) as err:
-                error_messages.add(str(err))
+    for pos in pos2:
+        bp = sys_copy(ev.break2)
+        bp.start = pos
+        bp.end = pos
+        try:
+            f, s = _call_by_flanking_pairs(
+                ev, event_type, second_breakpoint_called=bp, consumed_evidence_reads=consumed_evidence_reads)
+            call = EventCall(
+                f, s, ev, event_type,
+                call_method=CALL_METHOD.FLANK,
+                break2_call_method=CALL_METHOD.SPLIT
+            )
+            linked_pairings.append(call)
+        except (AssertionError, UserWarning) as err:
+            error_messages.add(str(err))
 
-        if len(linked_pairings) == 0:  # call by flanking only
-            try:
-                f, s = _call_by_flanking_pairs(ev, event_type)
-                call = EventCall(
-                    f, s, ev, event_type,
-                    call_method=CALL_METHOD.FLANK
-                )
-                linked_pairings.append(call)
-            except (AssertionError, UserWarning) as err:
-                error_messages.add(str(err))
+    if len(linked_pairings) == 0:  # call by flanking only
+        try:
+            f, s = _call_by_flanking_pairs(ev, event_type, consumed_evidence_reads=consumed_evidence_reads)
+            call = EventCall(
+                f, s, ev, event_type,
+                call_method=CALL_METHOD.FLANK
+            )
+            linked_pairings.append(call)
+        except (AssertionError, UserWarning) as err:
+            error_messages.add(str(err))
+
     if len(linked_pairings) == 0:
         raise UserWarning(';'.join(list(error_messages)))
     return linked_pairings

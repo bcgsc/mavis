@@ -90,8 +90,7 @@ def parse_arguments():
         help='Outputs the version number'
     )
     parser.add_argument(
-        '-f', '--force_overwrite',
-        action='store_true', default=False,
+        '-f', '--force_overwrite', type=bool, default=False,
         help='set flag to overwrite existing reviewed files'
     )
     parser.add_argument(
@@ -132,13 +131,7 @@ def parse_arguments():
     )
     g = parser.add_argument_group('evidence settings')
     for attr, value in VALIDATION_DEFAULTS.__dict__.items():
-        if type(value) == bool:
-            g.add_argument(
-                '--{}'.format(attr), default=value, action='store_false' if value else 'store_true',
-                help='see user manual for desc'
-                )
-        else:
-            g.add_argument('--{}'.format(attr), default=value, type=type(value), help='see user manual for desc')
+        g.add_argument('--{}'.format(attr), default=value, type=type(value), help='see user manual for desc')
     g.add_argument('--read_length', type=int, help='the length of the reads in the bam file', required=True)
     g.add_argument('--stdev_fragment_size', type=int, help='expected standard deviation in insert sizes', required=True)
     g.add_argument('--median_fragment_size', type=int, help='median inset size for pairs in the bam file', required=True)
