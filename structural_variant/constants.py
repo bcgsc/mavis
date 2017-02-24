@@ -247,281 +247,322 @@ GIESMA_STAIN = Vocab(
 # ensure that we don't have to change ALL the code when we update column names
 
 
-class Column:
-    def __init__(self, name, defn):
-        self.name = name
-        self.defn = defn
-
-    def __str__(self):
-        return str(self.name)
-
-    def __eq__(self, other):
-        try:
-            return str(self) == str(other)
-        except TypeError:
-            return False
-
-    def __lt__(self, other):
-        return str(self) < str(other)
-
-    def __repr__(self):
-        cls = self.__class__.__name__
-        return '{}({})'.format(cls, str(self))
-
-    def __hash__(self):
-        return hash(str(self))
-
 COLUMNS = Vocab(
-    library=Column(
-        'library',
-        'Identifier for the library/source'),
-    cluster_id=Column(
-        'cluster_id',
-        'Identifier for the merging/clustering step'),
-    cluster_size=Column(
-        'cluster_size',
-        'The number of breakpoint pair calls that were grouped in creating the cluster'),
-    validation_id=Column(
-        'validation_id',
-        'Identifier for the validation step'),
-    annotation_id=Column(
-        'annotation_id',
-        'Identifier for the annotation step'),
-    product_id=Column(
-        'product_id',
-        'Unique identifier of the final fusion (including splicing and ORF) decision from the annotation step'
-    ),
-    event_type=Column(
-        'event_type',
-        'The classification of the event. Has the following possible values: {}'.format(', '.join(SVTYPE.values()))),
-    pairing=Column(
-        'pairing',
-        'A semi colon delimited of event identifiers i.e. <annotation_id>_<splicing pattern>_<cds start>_<cds end>'
-    ),
-    gene1=Column(
-        'gene1',
-        'Gene for the current annotation at the first breakpoint'),
-    gene1_direction=Column(
-        'gene1_direction',
-        'The direction/prime of the gene. Has the following possible values: {}'.format(
-            ', '.join([str(p) for p in PRIME.values()]))),
-    gene2=Column(
-        'gene2',
-        'Gene for the current annotation at the second breakpoint'),
-    gene2_direction=Column(
-        'gene2_direction',
-        'The direction/prime of the gene. Has the following possible values: {}'.format(
-            ', '.join([str(p) for p in PRIME.values()]))),
-    gene_product_type=Column(
-        'gene_product_type',
-        'Describes if the putative fusion product will be sense or anti-sense. '
-        'Has the following possible values: {}'.format(', '.join([str(p) for p in GENE_PRODUCT_TYPE.values()]))),
-    transcript1=Column(
-        'transcript1',
-        'Transcript for the current annotation at the first breakpoint'),
-    transcript2=Column(
-        'transcript2',
-        'Transcript for the current annotation at the second breakpoint'),
-    fusion_splicing_pattern=Column(
-        'fusion_splicing_pattern',
-        'Type of splicing pattern used to create the fusion cDNA. '
-        'Has the following possible values: {}'.format(', '.join([str(p) for p in SPLICE_TYPE.values()]))),
-    fusion_cdna_coding_start=Column(
-        'fusion_cdna_coding_start',
-        'Position (wrt) the 5\' end of the fusion transcript where coding begins (first base of the Met amino acid).'),
-    fusion_cdna_coding_end=Column(
-        'fusion_cdna_coding_end',
-        'Position (wrt) the 5\' end of the fusion transcript where coding ends (last base of the stop codon)'),
-    fusion_mapped_domains=Column(
-        'fusion_mapped_domains',
-        'List of domains in json format where each domain start and end positions are given wrt to the fusion '
-        'transcript and the mapping quality is the number of matching amino acid positions over the total '
-        'number of amino acids. The sequence is the amino acid sequence of the domain on the reference/original'
-        ' transcript'),
-    fusion_sequence_fasta_id=Column(
-        'fusion_sequence_fasta_id',
-        'The sequence identifier for the cdna sequence output fasta file'),
-    fusion_sequence_fasta_file=Column(
-        'fusion_sequence_fasta_file',
-        'Path to the corresponding fasta output file'),
-    annotation_figure=Column(
-        'annotation_figure',
-        'File path to the svg drawing representing the annotation'),
-    annotation_figure_legend=Column(
-        'annotation_figure_legend',
-        'JSON data for the figure legend'),
-    genes_encompassed=Column(
-        'genes_encompassed',
-        'Applies to intrachromosomal events only. list of genes which overlap any region that occurs between both '
-        'breakpoints. For example in a deletion event these would be deleted genes.'),
-    genes_overlapping_break1=Column(
-        'genes_overlapping_break1',
-        'list of genes which overlap the first breakpoint'),
-    genes_overlapping_break2=Column(
-        'genes_overlapping_break2',
-        'list of genes which overlap the second breakpoint'),
-    genes_proximal_to_break1=Column(
-        'genes_proximal_to_break1',
-        'list of genes near the breakpoint and the distance away from the breakpoint'),
-    genes_proximal_to_break2=Column(
-        'genes_proximal_to_break2',
-        'list of genes near the breakpoint and the distance away from the breakpoint'),
-    break1_chromosome=Column(
-        'break1_chromosome',
-        'The name of the chromosome on which breakpoint 1 is situated'),
-    break1_position_start=Column(
-        'break1_position_start',
-        'Start (integer, inclusive, 1-based) of the range representing breakpoint 1'),
-    break1_position_end=Column(
-        'break1_position_end',
-        'End (integer, inclusive, 1-based) of the range representing breakpoint 1'),
-    break1_orientation=Column(
-        'break1_orientation',
-        'The side of the breakpoint wrt the positive/forward strand that is retained. Has the following possible '
-        'values: {}'.format(', '.join(ORIENT.values()))),
-    break1_strand=Column(
-        'break1_strand',
-        'The strand wrt to the reference positive/forward strand at this breakpoint. Has the following possible '
-        'values: {}'.format(', '.join(STRAND.values()))),
-    break1_sequence=Column(
-        'break1_sequence',
-        'The sequence up to and including the breakpoint. Always given wrt to the positive/forward strand'),
-    break2_chromosome=Column(
-        'break2_chromosome',
-        'The name of the chromosome on which breakpoint 2 is situated'),
-    break2_position_start=Column(
-        'break2_position_start',
-        'Start (integer, inclusive, 1-based) of the range representing breakpoint 2'),
-    break2_position_end=Column(
-        'break2_position_end',
-        'End (integer, inclusive, 1-based) of the range representing breakpoint 2'),
-    break2_orientation=Column(
-        'break2_orientation',
-        'The side of the breakpoint wrt the positive/forward strand that is retained. Has the following possible '
-        'values: {}'.format(', '.join(ORIENT.values()))),
-    break2_strand=Column(
-        'break2_strand',
-        'The strand wrt to the reference positive/forward strand at this breakpoint. Has the following possible'
-        'values: {}'.format(', '.join(STRAND.values()))),
-    break2_sequence=Column(
-        'break2_sequence',
-        'The sequence up to and including the breakpoint. Always given wrt to the positive/forward strand'),
-    opposing_strands=Column(
-        'opposing_strands',
-        'Specifies if breakpoints are on opposite strands wrt to the reference. Expects a boolean'),
-    stranded=Column(
-        'stranded',
-        'Specifies if the sequencing protocol was strand specific or not. Expects a boolean'),
-    protocol=Column(
-        'protocol',
-        'Specifies the type of library. Has the following possible values: {}'.format(', '.join(PROTOCOL.values()))),
-    tools=Column(
-        'tools',
-        'The tools that called the event originally (from the cluster step). Should be a semi-colon delimited list of '
-        '<tool name>_<tool version>'),
-    contigs_assembled=Column(
-        'contigs_assembled',
-        'Number of contigs that were built from split read sequences'),
-    contigs_aligned=Column(
-        'contigs_aligned',
-        'Number of contigs that were able to align'),
-    contig_sequence=Column(
-        'contig_sequence',
-        'Sequence of the current contig (wrt to the positive forward strand if not strand specific)'),
-    contig_remap_score=Column(
-        'contig_remap_score',
-        'Score representing the number of sequences (from the set of sequences given to the assembly algorithm) that '
-        'were aligned to the resulting contig with an acceptable scoring (based on user-set thresholds). For any '
-        'sequence its contribution to the score is divided by the number of mappings (to give less weight to multimaps)'
-    ),
-    contig_alignment_score=Column(
-        'contig_alignment_score',
-        'A rank based on the alignment tool (blat), etc.) of the alignment being used. An average if split alignments '
-        'were used. Lower numbers indicate a better alignment. If it was the best alignment possible then this would be'
-        ' zero'),
-    break1_call_method=Column(
-        'break1_call_method',
-        'The method used to call the first breakpoint'),
-    break2_call_method=Column(
-        'break2_call_method',
-        'The method used to call the second breakpoint'),
-    flanking_pairs=Column(
-        'flanking_pairs',
-        'Number of read-pairs where one read aligns to the first breakpoint window and the second read aligns to the '
-        'other. The count here is based on the number of unique query names'),
-    median_fragment_size=Column(
-        'median_fragment_size',
-        'The median fragment size of the flanking reads being used as evidence'),
-    stdev_fragment_size=Column(
-        'stdev_fragment_size',
-        'The standard deviation in fragment size of the flanking reads being used as evidence'),
-    break1_split_reads=Column(
-        'break1_split_reads',
-        'Number of split reads that call the exact breakpoint given'),
-    break1_split_reads_forced=Column(
-        'break1_split_reads_forced',
-        'Number of split reads which were aligned to the opposite breakpoint window using a targeted alignment'),
-    break2_split_reads=Column(
-        'break2_split_reads',
-        'Number of split reads that call the exact breakpoint given'),
-    break2_split_reads_forced=Column(
-        'break2_split_reads_forced',
-        'Number of split reads which were aligned to the opposite breakpoint window using a targeted alignment'),
-    linking_split_reads=Column(
-        'linking_split_reads',
-        'Number of split reads that align to both breakpoints'),
-    untemplated_sequence=Column(
-        'untemplated_sequence',
-        'The untemplated/novel sequence between the breakpoints'),
-    break1_homologous_sequence=Column(
-        'break1_homologous_sequence',
-        'Sequence in common at the first breakpoint and other side of the second breakpoint'),
-    break2_homologous_sequence=Column(
-        'break2_homologous_sequence',
-        'Sequence in common at the second breakpoint and other side of the first breakpoint'),
-    break1_ewindow=Column(
-        'break1_ewindow',
-        'Window where evidence was gathered for the first breakpoint'),
-    break1_ewindow_count=Column(
-        'break1_ewindow_count',
-        'Number of reads processed/looked-at in the first evidence window'),
-    break1_ewindow_practical_coverage=Column(
-        'break1_ewindow_practical_coverage',
-        'break1_ewindow_practical_coverage = break1_ewindow_count / len(break1_ewindow). Not the actual coverage as '
-        'bins are sampled within and there is a read limit cutoff'),
-    break2_ewindow=Column(
-        'break2_ewindow',
-        'Window where evidence was gathered for the second breakpoint'),
-    break2_ewindow_count=Column(
-        'break2_ewindow_count',
-        'Number of reads processed/looked-at in the second evidence window'),
-    break2_ewindow_practical_coverage=Column(
-        'break2_ewindow_practical_coverage',
-        'break2_ewindow_practical_coverage = break2_ewindow_count / len(break2_ewindow). Not the actual coverage as '
-        'bins are sampled within and there is a read limit cutoff'),
-    raw_flanking_pairs=Column(
-        'raw_flanking_pairs',
-        'Number of flanking reads before calling the breakpoint. The count here is based on the number of unique query '
-        'names'),
-    raw_spanning_reads=Column(
-        'raw_spanning_reads',
-        'Number of spanning reads collected during evidence collection before calling the breakpoint'),
-    raw_break1_split_reads=Column(
-        'raw_break1_split_reads',
-        'Number of split reads before calling the breakpoint'),
-    raw_break2_split_reads=Column(
-        'raw_break2_split_reads',
-        'Number of split reads before calling the breakpoint')
+    library='library',
+    cluster_id='cluster_id',
+    cluster_size='cluster_size',
+    validation_id='validation_id',
+    annotation_id='annotation_id',
+    product_id='product_id',
+    event_type='event_type',
+    pairing='pairing',
+    gene1='gene1',
+    gene1_direction='gene1_direction',
+    gene2='gene2',
+    gene2_direction='gene2_direction',
+    gene_product_type='gene_product_type',
+    transcript1='transcript1',
+    transcript2='transcript2',
+    fusion_splicing_pattern='fusion_splicing_pattern',
+    fusion_cdna_coding_start='fusion_cdna_coding_start',
+    fusion_cdna_coding_end='fusion_cdna_coding_end',
+    fusion_mapped_domains='fusion_mapped_domains',
+    fusion_sequence_fasta_id='fusion_sequence_fasta_id',
+    fusion_sequence_fasta_file='fusion_sequence_fasta_file',
+    annotation_figure='annotation_figure',
+    annotation_figure_legend='annotation_figure_legend',
+    genes_encompassed='genes_encompassed',
+    genes_overlapping_break1='genes_overlapping_break1',
+    genes_overlapping_break2='genes_overlapping_break2',
+    genes_proximal_to_break1='genes_proximal_to_break1',
+    genes_proximal_to_break2='genes_proximal_to_break2',
+    break1_chromosome='break1_chromosome',
+    break1_position_start='break1_position_start',
+    break1_position_end='break1_position_end',
+    break1_orientation='break1_orientation',
+    break1_strand='break1_strand',
+    break1_sequence='break1_sequence',
+    break2_chromosome='break2_chromosome',
+    break2_position_start='break2_position_start',
+    break2_position_end='break2_position_end',
+    break2_orientation='break2_orientation',
+    break2_strand='break2_strand',
+    break2_sequence='break2_sequence',
+    opposing_strands='opposing_strands',
+    stranded='stranded',
+    protocol='protocol',
+    tools='tools',
+    break1_call_method='break1_call_method',
+    break1_ewindow='break1_ewindow',
+    break1_ewindow_count='break1_ewindow_count',
+    break1_ewindow_practical_coverage='break1_ewindow_practical_coverage',
+    break1_homologous_sequence='break1_homologous_sequence',
+    break1_split_read_names='break1_split_read_names',
+    break1_split_reads='break1_split_reads',
+    break1_split_reads_forced='break1_split_reads_forced',
+    break2_call_method='break2_call_method',
+    break2_ewindow='break2_ewindow',
+    break2_ewindow_count='break2_ewindow_count',
+    break2_ewindow_practical_coverage='break2_ewindow_practical_coverage',
+    break2_homologous_sequence='break2_homologous_sequence',
+    break2_split_read_names='break2_split_read_names',
+    break2_split_reads='break2_split_reads',
+    break2_split_reads_forced='break2_split_reads_forced',
+    contig_alignment_score='contig_alignment_score',
+    contig_remap_score='contig_remap_score',
+    contig_remapped_read_names='contig_remapped_read_names',
+    contig_sequence='contig_sequence',
+    contigs_aligned='contigs_aligned',
+    contigs_assembled='contigs_assembled',
+    flanking_pairs='flanking_pairs',
+    flanking_pairs_read_names='flanking_pairs_read_names',
+    linking_split_read_names='linking_split_read_names',
+    linking_split_reads='linking_split_reads',
+    median_fragment_size='median_fragment_size',
+    raw_break1_split_reads='raw_break1_split_reads',
+    raw_break2_split_reads='raw_break2_split_reads',
+    raw_flanking_pairs='raw_flanking_pairs',
+    raw_spanning_reads='raw_spanning_reads',
+    stdev_fragment_size='stdev_fragment_size',
+    untemplated_sequence='untemplated_sequence',
 )
-""":class:`Vocab`: Column names and definitions for i/o files used throughout the pipeline
+""":class:`Vocab`: Column names for i/o files used throughout the pipeline
 
-Example:
-    >>> COLUMNS.raw_break2_split_reads
-    Column()
-    >>> COLUMNS.raw_break2_split_reads.name
-    'raw_break2_split_reads'
-    >>> Column.raw_break2_split_reads.defn
-    'definition ....'
+
+.. glossary::
+    :sorted:
+
+    library
+        Identifier for the library/source
+
+    cluster_id
+        Identifier for the merging/clustering step
+
+    cluster_size
+        The number of breakpoint pair calls that were grouped in creating the cluster
+
+    validation_id
+        Identifier for the validation step
+
+    annotation_id
+        Identifier for the annotation step
+
+    product_id
+        Unique identifier of the final fusion including splicing and ORF decision from the annotation step
+
+    event_type
+        :class:`SVTYPE` - The classification of the event
+
+    pairing
+        A semi colon delimited of event identifiers i.e. <annotation_id>_<splicing pattern>_<cds start>_<cds end>
+
+    gene1
+        Gene for the current annotation at the first breakpoint
+
+    gene1_direction
+        :class:`PRIME` - The direction/prime of the gene
+
+    gene2
+        Gene for the current annotation at the second breakpoint
+
+    gene2_direction
+        :class:`PRIME` - The direction/prime of the gene. Has the following possible values
+
+    gene_product_type
+        :class:`GENE_PRODUCT_TYPE` - Describes if the putative fusion product will be sense or anti-sense
+
+    transcript1
+        Transcript for the current annotation at the first breakpoint
+
+    transcript2
+        Transcript for the current annotation at the second breakpoint
+
+    fusion_splicing_pattern
+        :class:`SPLICE_TYPE` - Type of splicing pattern used to create the fusion cDNA.
+
+    fusion_cdna_coding_start
+        Position wrt the 5\ end of the fusion transcript where coding begins first base of the Met amino acid.
+
+    fusion_cdna_coding_end
+        Position wrt the 5\ end of the fusion transcript where coding ends last base of the stop codon
+
+    fusion_mapped_domains
+        ``JSON`` - List of domains in json format where each domain start and end positions are given wrt to the fusion
+        transcript and the mapping quality is the number of matching amino acid positions over the total
+        number of amino acids. The sequence is the amino acid sequence of the domain on the reference/original
+        transcript
+
+    fusion_sequence_fasta_id
+        The sequence identifier for the cdna sequence output fasta file
+
+    fusion_sequence_fasta_file
+        Path to the corresponding fasta output file
+
+    annotation_figure
+        File path to the svg drawing representing the annotation
+
+    annotation_figure_legend
+        ``JSON`` - JSON data for the figure legend
+
+    genes_encompassed
+        Applies to intrachromosomal events only. list of genes which overlap any region that occurs between both
+        breakpoints. For example in a deletion event these would be deleted genes.
+
+    genes_overlapping_break1
+        list of genes which overlap the first breakpoint
+
+    genes_overlapping_break2
+        list of genes which overlap the second breakpoint
+
+    genes_proximal_to_break1
+        list of genes near the breakpoint and the distance away from the breakpoint
+
+    genes_proximal_to_break2
+        list of genes near the breakpoint and the distance away from the breakpoint
+
+    break1_chromosome
+        :class:`str` - The name of the chromosome on which breakpoint 1 is situated
+
+    break1_position_start
+        :class:`int` - Start integer inclusive 1-based of the range representing breakpoint 1
+
+    break1_position_end
+        :class:`int` - End integer inclusive 1-based of the range representing breakpoint 1
+
+    break1_orientation
+        :class:`ORIENT` - The side of the breakpoint wrt the positive/forward strand that is retained.
+
+    break1_strand
+        :class:`STRAND` - The strand wrt to the reference positive/forward strand at this breakpoint.
+
+    break1_sequence
+        :class:`str` - The sequence up to and including the breakpoint. Always given wrt to the positive/forward strand
+
+    break2_chromosome
+        The name of the chromosome on which breakpoint 2 is situated
+
+    break2_position_start
+        :class:`int` - Start integer inclusive 1-based of the range representing breakpoint 2
+
+    break2_position_end
+        :class:`int` - End integer inclusive 1-based of the range representing breakpoint 2
+
+    break2_orientation
+        :class:`ORIENT` - The side of the breakpoint wrt the positive/forward strand that is retained.
+
+    break2_strand
+        :class:`STRAND` - The strand wrt to the reference positive/forward strand at this breakpoint.
+
+    break2_sequence
+        :class:`str` - The sequence up to and including the breakpoint. Always given wrt to the positive/forward strand
+
+    opposing_strands
+        :class:`bool` - Specifies if breakpoints are on opposite strands wrt to the reference. Expects a boolean
+
+    stranded
+        :class:`bool` - Specifies if the sequencing protocol was strand specific or not. Expects a boolean
+
+    protocol
+        :class:`PROTOCOL` - Specifies the type of library
+
+    tools
+        The tools that called the event originally from the cluster step. Should be a semi-colon delimited list of
+        <tool name>_<tool version>
+
+    contigs_assembled
+        :class:`int` - Number of contigs that were built from split read sequences
+
+    contigs_aligned
+        :class:`int` - Number of contigs that were able to align
+
+    contig_sequence
+        :class:`str` - Sequence of the current contig wrt to the positive forward strand if not strand specific
+
+    contig_remap_score
+        :class:`float` - Score representing the number of sequences from the set of sequences given to the assembly
+        algorithm that were aligned to the resulting contig with an acceptable scoring based on user-set thresholds.
+        For any sequence its contribution to the score is divided by the number of mappings to give less weight to
+        multimaps
+
+    contig_alignment_score
+        :class:`float` - A rank based on the alignment tool blat etc. of the alignment being used. An average if
+        split alignments were used. Lower numbers indicate a better alignment. If it was the best alignment possible
+        then this would be zero.
+
+    break1_call_method
+        :class:`CALL_METHOD` - The method used to call the first breakpoint
+
+    break2_call_method
+        :class:`CALL_METHOD` - The method used to call the second breakpoint
+
+    flanking_pairs
+        :class:`int` - Number of read-pairs where one read aligns to the first breakpoint window and the second read
+        aligns to the other. The count here is based on the number of unique query names
+
+    median_fragment_size
+        :class:`int` - The median fragment size of the flanking reads being used as evidence
+
+    stdev_fragment_size
+        :class:`float` - The standard deviation in fragment size of the flanking reads being used as evidence
+
+    break1_split_reads
+        :class:`int` - Number of split reads that call the exact breakpoint given
+
+    break1_split_reads_forced
+        :class:`int` - Number of split reads which were aligned to the opposite breakpoint window using a targeted
+        alignment
+
+    break2_split_reads
+        :class:`int` - Number of split reads that call the exact breakpoint given
+
+    break2_split_reads_forced
+        :class:`int` - Number of split reads which were aligned to the opposite breakpoint window using a targeted
+        alignment
+
+    linking_split_reads
+        :class:`int` - Number of split reads that align to both breakpoints
+
+    untemplated_sequence
+        :class:`str` - The untemplated/novel sequence between the breakpoints
+
+    break1_homologous_sequence
+        :class:`str` - Sequence in common at the first breakpoint and other side of the second breakpoint
+
+    break2_homologous_sequence
+        :class:`str` - Sequence in common at the second breakpoint and other side of the first breakpoint
+
+    break1_ewindow
+        Window where evidence was gathered for the first breakpoint
+
+    break1_ewindow_count
+        :class:`int` - Number of reads processed/looked-at in the first evidence window
+
+    break1_ewindow_practical_coverage
+        :class:`float` - break2_ewindow_practical_coverage, break1_ewindow_count / len(break1_ewindow). Not the actual
+        coverage as bins are sampled within and there is a read limit cutoff
+
+    break2_ewindow
+        Window where evidence was gathered for the second breakpoint
+
+    break2_ewindow_count
+        :class:`int` - Number of reads processed/looked-at in the second evidence window
+
+    break2_ewindow_practical_coverage
+        :class:`float` - break2_ewindow_practical_coverage, break2_ewindow_count / len(break2_ewindow). Not the actual
+        coverage as bins are sampled within and there is a read limit cutoff
+
+    raw_flanking_pairs
+        :class:`int` - Number of flanking reads before calling the breakpoint. The count here is based on the number of
+        unique query names
+
+    raw_spanning_reads
+        :class:`int` - Number of spanning reads collected during evidence collection before calling the breakpoint
+
+    raw_break1_split_reads
+        :class:`int` - Number of split reads before calling the breakpoint
+
+    raw_break2_split_reads
+        :class:`int` - Number of split reads before calling the breakpoint
 
 """
 
