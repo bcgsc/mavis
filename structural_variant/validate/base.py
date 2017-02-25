@@ -175,15 +175,15 @@ class Evidence(BreakpointPair):
             # in the correct position, now determine if it can support the event types
             for event_type in self.putative_event_types():
                 if event_type in [SVTYPE.DUP, SVTYPE.INS]:
-                    if CIGAR.I in read.cigar:
+                    if CIGAR.I in [c[0] for c in read.cigar]:
                         self.spanning_reads.add(read)
                         return True
                 elif event_type == SVTYPE.DEL:
-                    if CIGAR.D in read.cigar:
+                    if CIGAR.D in [c[0] for c in read.cigar]:
                         self.spanning_reads.add(read)
                         return True
                 elif event_type == SVTYPE.INV:
-                    if CIGAR.X in read.cigar:
+                    if CIGAR.X in [c[0] for c in read.cigar]:
                         return True
         return False
 
