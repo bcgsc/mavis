@@ -14,6 +14,7 @@ class Contig:
         self.remapped_sequences = {}
         self.score = score
         self.alignments = None
+        self.input_reads = set()
 
     def __hash__(self):
         return hash(self.seq)

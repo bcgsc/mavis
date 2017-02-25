@@ -386,7 +386,7 @@ def main():
         header = sort_columns(header)
         fh.write('#' + '\t'.join([str(c) for c in header]) + '\n')
         for row in rows:
-            fh.write('\t'.join([str(row[col]) for col in header]) + '\n')
+            fh.write('\t'.join([str(row.get(col, None)) for col in header]) + '\n')
 
     with open(FAILED_OUTPUT_FILE, 'w') as fh:
         log('writing:', FAILED_OUTPUT_FILE)
@@ -422,18 +422,18 @@ def main():
             read.cigar = cigar_tools.convert_for_igv(read.cigar)
             fh.write(read)
     # now sort the contig bam
-    sort = re.sub('.bam$', '.sorted', CONTIG_BAM)
+    sort = re.sub('.bam$', '.sorted.bam', CONTIG_BAM)
     log('sorting the bam file:', CONTIG_BAM)
-    subprocess.call(['samtools', 'sort', CONTIG_BAM, sort])
-    CONTIG_BAM = sort + '.bam'
+    subprocess.call(['samtools', 'sort', CONTIG_BAM, '-o', sort])
+    CONTIG_BAM = sort
     log('indexing the sorted bam:', CONTIG_BAM)
     subprocess.call(['samtools', 'index', CONTIG_BAM])
 
     # then sort the evidence bam file
-    sort = re.sub('.bam$', '.sorted', EVIDENCE_BAM)
+    sort = re.sub('.bam$', '.sorted.bam', EVIDENCE_BAM)
     log('sorting the bam file:', EVIDENCE_BAM)
-    subprocess.call(['samtools', 'sort', EVIDENCE_BAM, sort])
-    EVIDENCE_BAM = sort + '.bam'
+    subprocess.call(['samtools', 'sort', EVIDENCE_BAM, '-o', sort])
+    EVIDENCE_BAM = sort
     log('indexing the sorted bam:', EVIDENCE_BAM)
     subprocess.call(['samtools', 'index', EVIDENCE_BAM])
 

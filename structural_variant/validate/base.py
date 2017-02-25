@@ -525,6 +525,10 @@ class Evidence(BreakpointPair):
                     filtered_contigs[c.seq] = c
         self.contigs = list(filtered_contigs.values())
 
+        for ctg in self.contigs:
+            for read_seq in ctg.remapped_sequences:
+                ctg.input_reads.update(assembly_sequences[read_seq.query_sequence])
+
     def load_evidence(self, log=lambda *pos, **kwargs: None):
         """
         open the associated bam file and read and store the evidence

@@ -53,13 +53,9 @@ class EventCall(BreakpointPair):
             raise ValueError(
                 'event_type is not compatible with the evidence source allowable types', event_type, source_evidence)
         self.contig = contig
-        self.call_method = None
-        if contig and self.call_method != CALL_METHOD.CONTIG:
+        self.call_method = (CALL_METHOD.enforce(call_method), CALL_METHOD.enforce(break2_call_method))
+        if contig and self.call_method != (CALL_METHOD.CONTIG, CALL_METHOD.CONTIG):
             raise ValueError('if a contig is given the call method must be by contig')
-        elif contig:
-            self.call_method = (CALL_METHOD.contig, CALL_METHOD.contig)
-        else:
-            self.call_method = (CALL_METHOD.enforce(call_method), CALL_METHOD.enforce(break2_call_method))
         self.contig_alignment = contig_alignment
 
     def flanking_support(self):
@@ -184,7 +180,7 @@ class EventCall(BreakpointPair):
             COLUMNS.flanking_pairs: len(flank),
             COLUMNS.flanking_median_fragment_size: med,
             COLUMNS.flanking_stdev_fragment_size: stdev,
-            COLUMNS.flanking_pairs_read_names: ';'.join(sorted([f.query_name for f, m in flank]))
+            COLUMNS.flanking_pairs_read_names: ';'.join(sorted([f.query_name for f in flank]))
         })
 
         b1, b1_tgt, b2, b2_tgt = self.split_read_support()
@@ -256,10 +252,10 @@ def call_events(source_evidence):
             for event_type in source_evidence.putative_event_types():
                 if event_type == SVTYPE.INS:
                     if len(bpp.untemplated_seq) == 0 or \
-                            len(bpp.untemplated_seq) <= Interval.dist(bpp.break1, bpp.break2):
+                            len(bpp.untemplated_seq) <= abs(Interval.dist(bpp.break1, bpp.break2)):
                         continue
                 elif event_type == SVTYPE.DEL:
-                    if len(bpp.untemplated_seq) > Interval.dist(bpp.break1, bpp.break2):
+                    if len(bpp.untemplated_seq) > abs(Interval.dist(bpp.break1, bpp.break2)):
                         continue
                 new_event = EventCall(
                     bpp.break1,
@@ -272,23 +268,10 @@ def call_events(source_evidence):
                     call_method=CALL_METHOD.CONTIG
                 )
                 contig_calls.append(new_event)
-
-    # consume the reads used in any of the contigs
-    reads_by_sequence = dict()
-    for read in itertools.chain.from_iterable(source_evidence.split_reads):
-        reads_by_sequence.setdefault(read.query_sequence, []).append(read)
-
-    for read, mate in source_evidence.flanking_pairs:
-        reads_by_sequence.setdefault(read.query_sequence, []).append(read)
-        reads_by_sequence.setdefault(mate.query_sequence, []).append(mate)
-
-    for read in source_evidence.spanning_reads:
-        reads_by_sequence.setdefault(read.query_sequence, []).append(read)
+    calls.extend(contig_calls)
 
     for call in contig_calls:
-        for seq in call.remapped_sequences:
-            for read in reads_by_sequence[seq]:
-                consumed_evidence_reads.add(read)
+        consumed_evidence_reads.update(call.contig.input_reads)
         fl, med, stdev = call.flanking_support()
         consumed_evidence_reads.update(fl)
 
@@ -304,33 +287,6 @@ def call_events(source_evidence):
         elif len(calls) == 0:
             raise UserWarning('insufficient evidence to call events')
     return calls
-
-
-def _call_by_contigs(ev, event_type):
-    # resolve the overlap if multi-read alignment
-    events = []
-    for ctg in ev.contigs:
-        for read1, read2 in ctg.alignments:
-            try:
-                bpp = BreakpointPair.call_breakpoint_pair(read1, read2)
-            except UserWarning as err:
-                continue
-            if bpp.opposing_strands != ev.opposing_strands \
-                    or (event_type == SVTYPE.INS and bpp.untemplated_seq == '') \
-                    or event_type not in BreakpointPair.classify(bpp):
-                continue
-            new_event = EventCall(
-                bpp.break1,
-                bpp.break2,
-                ev,
-                event_type,
-                contig=ctg,
-                contig_alignment=(read1, read2),
-                opposing_strands=bpp.opposing_strands,
-                untemplated_seq=bpp.untemplated_seq
-            )
-            events.append(new_event)
-    return events
 
 
 def _call_by_flanking_pairs(
@@ -375,11 +331,6 @@ def _call_by_flanking_pairs(
     cover1 = Interval(min(first_positions), max(first_positions))
     cover2 = Interval(min(second_positions), max(second_positions))
 
-    print('first_positions', first_positions)
-    print('second_positions', second_positions)
-    print('first_breakpoint_called', first_breakpoint_called)
-    print('second_breakpoint_called', second_breakpoint_called)
-    print(cover1, cover2)
     if not ev.interchromosomal and Interval.overlaps(cover1, cover2) and event_type != SVTYPE.DUP:
         raise AssertionError('flanking read coverage overlaps. cannot call by flanking reads', cover1, cover2)
     if len(cover1) + ev.read_length * 2 > ev.max_expected_fragment_size or \
@@ -389,9 +340,6 @@ def _call_by_flanking_pairs(
             'expected for normal variation. It is likely there are flanking reads for multiple events',
             cover1, cover2, ev.max_expected_fragment_size
         )
-    print('cover1', cover1, len(cover1), 'cover2', cover2, len(cover2))
-    print('ev.max_expected_fragment_size', ev.max_expected_fragment_size)
-    print('ev.read_length', ev.read_length)
 
     cover1_length = len(cover1)
     cover2_length = len(cover2)
@@ -401,7 +349,6 @@ def _call_by_flanking_pairs(
 
     if first_breakpoint_called is None:
         max_breakpoint_width = ev.max_expected_fragment_size - len(cover1) - ev.read_length * 2
-        print('1 max_breakpoint_width', max_breakpoint_width)
 
         if ev.break1.orient == ORIENT.LEFT:
             end = cover1.end + max_breakpoint_width
@@ -435,8 +382,6 @@ def _call_by_flanking_pairs(
 
     if second_breakpoint_called is None:
         max_breakpoint_width = ev.max_expected_fragment_size - len(cover2) - ev.read_length * 2
-        print(ev.max_expected_fragment_size, len(cover2), ev.read_length * 2)
-        print('2 max_breakpoint_width', max_breakpoint_width)
 
         if ev.break2.orient == ORIENT.LEFT:
             second_breakpoint_called = Breakpoint(
@@ -448,13 +393,10 @@ def _call_by_flanking_pairs(
             )
         elif ev.break2.orient == ORIENT.RIGHT:
             start = max([cover2.start - max_breakpoint_width, 1])
-            print('s2', start)
             if not ev.interchromosomal:
                 start = max([start, cover1.end + 1])
-                print('s2', start)
                 if first_breakpoint_called:
                     start = max([start, first_breakpoint_called.start + 1])
-                    print('s2', start)
             try:
                 second_breakpoint_called = Breakpoint(
                     ev.break2.chr,
