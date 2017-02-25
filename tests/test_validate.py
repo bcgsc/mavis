@@ -215,7 +215,7 @@ class TestTranscriptomeEvidenceWindow(unittest.TestCase):
         self.assertEqual(Interval(17277321, 17279702), self.transcriptome_window(b, [ust]))
 
 
-@unittest.skip('skip because slow')
+#@unittest.skip('skip because slow')
 class TestFullEvidenceGathering(unittest.TestCase):
     # need to make the assertions more specific by checking the actual names of the reads found in each bin
     # rather than just the counts.
@@ -467,7 +467,7 @@ class TestEvidenceGathering(unittest.TestCase):
         # full contig with more read support should be
         # CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT
         self.ev1.half_mapped = ([], [sr2])
-        self.ev1.assemble_split_reads()
+        self.ev1.assemble_contig()
         print(self.ev1.contigs)
         self.assertEqual(
             'CAACAATATGTAGGAAGCCATTATCTGAAGTGTAAGCAACTGCATAGTGCTATTTTAATTATGCATTGCAGGGAAACTGTGAGCAGAGCTATATATTTAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAACCAAACAGGAAAGAATC', self.ev1.contigs[0].sequence)

@@ -319,7 +319,7 @@ def blat_contigs(
         evidence,
         INPUT_BAM_CACHE,
         REFERENCE_GENOME,
-        ref_2bit='/home/pubseq/genomes/Homo_sapiens/GRCh37/blat/hg19.2bit',
+        blat_2bit_reference='/home/pubseq/genomes/Homo_sapiens/GRCh37/blat/hg19.2bit',
         min_percent_of_max_score=0.8,
         min_identity=0.95,
         is_protein=False,
@@ -333,7 +333,7 @@ def blat_contigs(
         evidence (list of Evidence): the iterable container of of Evidence object which has associated contigs
         INPUT_BAM_CACHE (BamCache): the bam to use as a template in generating bam-like reads
         REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by template/chr name
-        ref_2bit (str): path to the 2bit file for blat
+        blat_2bit_reference (str): path to the 2bit file for blat
         min_percent_of_max_score (float): ignores all alignments with a score less
         min_identity (float): minimum percent identity
         is_protein (bool): is the sequence an amino acid sequence (used in the blat calculations)
@@ -375,8 +375,8 @@ def blat_contigs(
         tempfiles.append(psl.name)
         # will raise subprocess.CalledProcessError if non-zero exit status
         # parameters from https://genome.ucsc.edu/FAQ/FAQblat.html#blat4
-        # print(["blat", ref_2bit, fasta_name, psl.name, '-out=pslx', '-noHead'] + blat_options)
-        subprocess.check_output(["blat", ref_2bit, fasta_name, psl.name, '-out=pslx', '-noHead'] + blat_options)
+        # print(["blat", blat_2bit_reference, fasta_name, psl.name, '-out=pslx', '-noHead'] + blat_options)
+        subprocess.check_output(["blat", blat_2bit_reference, fasta_name, psl.name, '-out=pslx', '-noHead'] + blat_options)
         psl.close()
 
         header, rows = Blat.read_pslx(psl.name, query_id_mapping, is_protein=is_protein)

@@ -35,10 +35,6 @@ class GenomeEvidence(Evidence):
                 self.break2.end + self.call_error + self.read_length - 1
             )
         )
-        print('GenomeEvidence outer {0}:{2}-{3} {1}:{4}-{5} inner {0}:{6}-{7}  {1}:{8}-{9}'.format(
-            self.break1.chr, self.break2.chr, self.outer_window1[0], self.outer_window1[1],
-            self.outer_window2[0], self.outer_window2[1], self.inner_window1[0], self.inner_window1[1],
-            self.inner_window2[0], self.inner_window2[1]))
 
     @staticmethod
     def _generate_window(breakpoint, max_expected_fragment_size, call_error, read_length):
@@ -204,6 +200,10 @@ class TranscriptomeEvidence(Evidence):
         return Interval(min(positions), max(positions))
 
     def compute_fragment_size(self, read, mate):
+        if read.reference_start > mate.reference_start:
+            read, mate = mate, read
+        t = self.overlapping_transcripts[0] | self.overlapping_transcripts[1]
+        return TranscriptomeEvidence.traverse_exonic_distance(read.start, mate.end, t)
         all_fragments = []
         if read.reference_start > mate.reference_start:
             read, mate = mate, read

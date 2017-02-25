@@ -129,6 +129,10 @@ def parse_arguments():
         default='/home/pubseq/genomes/Homo_sapiens/TCGA_Special/GRCh37-lite.fa',
         help='path to the human reference genome in fa format'
     )
+    g.add_argument(
+        '--blat_2bit_reference', default='/home/pubseq/genomes/Homo_sapiens/GRCh37/blat/hg19.2bit',
+        help='path to the 2bit reference file used for blatting contig sequences'
+    )
     g = parser.add_argument_group('evidence settings')
     for attr, value in VALIDATION_DEFAULTS.__dict__.items():
         g.add_argument('--{}'.format(attr), default=value, type=type(value), help='see user manual for desc')
@@ -153,7 +157,12 @@ def gather_evidence_from_bam(clusters):
             e
         )
         log('possible event type(s):', BreakpointPair.classify(e), time_stamp=False)
-        log('window regions', e.break1.chr, e.outer_window1, e.break2.chr, e.outer_window2, e.protocol, time_stamp=False)
+        log('outer window regions:  {}:{}-{}  {}:{}-{}'.format(
+            e.break1.chr, e.outer_window1[0], e.outer_window1[1], 
+            e.break2.chr, e.outer_window2[0], e.outer_window2[1]), time_stamp=False)
+        log('inner window regions:  {}:{}-{}  {}:{}-{}'.format(
+            e.break1.chr, e.inner_window1[0], e.inner_window1[1], 
+            e.break2.chr, e.inner_window2[0], e.inner_window2[1]), time_stamp=False)
         try:
             e.load_evidence()
         except NotImplementedError as err:
@@ -166,7 +175,7 @@ def gather_evidence_from_bam(clusters):
             'spanning-reads:', len(e.spanning_reads),
             time_stamp=False
         )
-        e.assemble_split_reads(log=log)
+        e.assemble_contig(log=log)
         log('assembled {} contigs'.format(len(e.contigs)), time_stamp=False)
         evidence.append(e)
     return evidence
@@ -310,7 +319,8 @@ def main():
         blat_contig_alignments = blat_contigs(
             evidence,
             INPUT_BAM_CACHE,
-            REFERENCE_GENOME=HUMAN_REFERENCE_GENOME
+            REFERENCE_GENOME=HUMAN_REFERENCE_GENOME,
+            blat_2bit_reference=args.blat_2bit_reference
         )
     log('alignment complete')
     event_calls = []
@@ -329,14 +339,12 @@ def main():
             log('calling events for', e)
             calls = []
             failure_comment = []
-            for event_type in e.putative_event_types():
-                try:
-                    temp = call_events(e, event_type)
-                    calls.extend(temp)
-                except UserWarning as err:
-                    log('warning: error in calling events', repr(err), time_stamp=False)
-                    failure_comment = str(err)
-            event_calls.extend(calls)
+            try:
+                calls.extend(call_events(e))
+                event_calls.extend(calls)
+            except UserWarning as err:
+                log('warning: error in calling events', repr(err), time_stamp=False)
+                failure_comment = str(err)
             if len(calls) == 0:
                 failure_comment = ['zero events were called'] if not failure_comment else failure_comment
                 row = {}

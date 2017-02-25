@@ -1,5 +1,5 @@
 from ..breakpoint import BreakpointPair, Breakpoint
-from ..constants import CALL_METHOD, SVTYPE, PYSAM_READ_FLAGS, ORIENT
+from ..constants import CALL_METHOD, SVTYPE, PYSAM_READ_FLAGS, ORIENT, PROTOCOL
 from ..bam import read as read_tools
 from ..interval import Interval
 from ..error import NotSpecifiedError
@@ -77,11 +77,36 @@ class EventCall(BreakpointPair):
         support = set()
 
         fragment_sizes = []
+        # make the new target fragment size for flanking pairs now that we have defined breakpoints
+        # min_fragment_size = 0
+        # acceptable_range = None
+
+        # if not self.interchromosomal and self.event_type == SVTYPE.DEL:
+        #     encompass = self.break1 | self.break2
+        #     if Interval.overlaps(self.break1, self.break2):
+        #         encompass = Interval(0, len(encompass))
+        #     else:
+        #         encompass = Interval(self.break2.start - self.break1.end, len(encompass))
+
+        #     window1 = Interval(self.break1.start - self.source_evidence.read_length, self.break1.start)
+        #     window2 = Interval(self.break2.end, self.break2.end + self.source_evidence.read_length)
+
+        #     if self.source_evidence.protocol == PROTOCOL.TRANS:
+        #         transcripts = self.source_evidence.overlapping_transcripts[0] | self.source_evidence.overlapping_transcripts[1]
+        #         cdna_min = Interval(0)
+        #         if not Interval.overlaps(self.break1, self.break2):
+        #             cdna_min = TranscriptomeEvidence.compute_exonic_distance(self.break1.end, self.break2.start, transcripts)
+        #         cdna_max = TranscriptomeEvidence.compute_exonic_distance(self.break1.start, self.break2.end, transcripts)
+        #         encompass = cdna_min | cdna_max
+        #     
+        #     stdev = self.source_evidence.stdev_fragment_size * self.source_evidence.stdev_count_abnormal
+        #     acceptable_range = Interval(max([0, encompass.start - stdev]), encompass.end + stdev)
+
         for read, mate in self.source_evidence.flanking_pairs:
             # check that the fragment size is reasonable
             fragment_size = self.source_evidence.compute_fragment_size(read, mate)
             if self.event_type == SVTYPE.DEL:
-                if fragment_size.end <= self.source_evidence.max_expected_fragment_size:
+                if fragment_size.end <= acceptable_range.end:
                     continue
             elif self.event_type == SVTYPE.INS:
                 if fragment_size.start >= self.source_evidence.min_expected_fragment_size:
@@ -170,9 +195,10 @@ class EventCall(BreakpointPair):
         object.__eq__(self, other)
 
 
-def call_events(source_evidence, event_type):
+def call_events(source_evidence):
     """
     generates a set of event calls based on the evidence associated with the source_evidence object
+    will also narrow down the event type?
 
     Args:
         source_evidence (Evidence): the input evidence
@@ -185,36 +211,74 @@ def call_events(source_evidence, event_type):
         
         model used in calculating the uncertainty interval for breakpoints called by flanking read pair evidence
     """
-    if event_type not in source_evidence.putative_event_types():
-        raise ValueError(
-            'event_type is not compatible with the evidence object', event_type, source_evidence.putative_event_types())
     consumed_evidence_reads = set()  # keep track to minimize evidence re-use
     calls = []
     errors = set()
-    # try calling by contigs
-    contig_calls = _call_by_contigs(source_evidence, event_type)
+    contig_calls = []
 
-    split_reads_by_sequence = dict()
+    # try calling by contigs
+    for ctg in source_evidence.contigs:
+        for read1, read2 in ctg.alignments:
+            curr = []
+            try:
+                bpp = BreakpointPair.call_breakpoint_pair(read1, read2)
+            except UserWarning as err:
+                continue
+            if bpp.opposing_strands != source_evidence.opposing_strands:
+                continue
+            
+            if len(set(BreakpointPair.classify(bpp)) & set(source_evidence.putative_event_types())) < 1:
+                continue
+            
+            for event_type in source_evidence.putative_event_types():
+                if event_type == SVTYPE.INS:
+                    if len(bpp.untemplated_sequence) == 0 or \
+                            len(bpp.untemplated_sequence) <= Interval.dist(bpp.break1, bpp.break2):
+                        continue
+                elif event_type == SVTYPE.DEL:
+                    if len(bpp.untemplated_sequence) > Interval.dist(bpp.break1, bpp.break2):
+                        continue
+                new_event = EventCall(
+                    bpp.break1,
+                    bpp.break2,
+                    source_evidence,
+                    event_type,
+                    contig=ctg,
+                    contig_alignment=(read1, read2),
+                    untemplated_sequence=bpp.untemplated_sequence
+                )
+                contig_calls.append(new_event)
+    
+    # consume the reads used in any of the contigs
+    reads_by_sequence = dict()
     for read in itertools.chain.from_iterable(source_evidence.split_reads):
-        split_reads_by_sequence.setdefault(read.query_sequence, []).append(read)
+        reads_by_sequence.setdefault(read.query_sequence, []).append(read)
+    
+    for read, mate in source_evidence.flanking_pairs:
+        reads_by_sequence.setdefault(read.query_sequence, []).append(read)
+        reads_by_sequence.setdefault(mate.query_sequence, []).append(mate)
+
+    for read in source_evidence.spanning_reads:
+        reads_by_sequence.setdefault(read.query_sequence, []).append(read)
 
     for call in contig_calls:
         for seq in call.remapped_sequences:
-            for read in split_reads_by_sequence:
+            for read in reads_by_sequence[seq]:
                 consumed_evidence_reads.add(read)
         fl, med, stdev = call.flanking_support()
         consumed_evidence_reads.update(fl)
     
-    # try calling by split/flanking reads
-    try:
-        calls.extend(_call_by_supporting_reads(source_evidence, event_type, consumed_evidence_reads))
-    except UserWarning as err:
-        errors.add(str(err))
-    
-    if len(calls) == 0 and len(errors) > 0:
-        raise UserWarning(';'.join(sorted(list(errors))))
-    elif len(calls) == 0:
-        raise UserWarning('insufficient evidence to call events')
+    for event_type in sorted(source_evidence.putative_event_types()):
+        # try calling by split/flanking reads
+        try:
+            calls.extend(_call_by_supporting_reads(source_evidence, event_type, consumed_evidence_reads))
+        except UserWarning as err:
+            errors.add(str(err))
+        
+        if len(calls) == 0 and len(errors) > 0:
+            raise UserWarning(';'.join(sorted(list(errors))))
+        elif len(calls) == 0:
+            raise UserWarning('insufficient evidence to call events')
     return calls
 
 
@@ -245,7 +309,8 @@ def _call_by_contigs(ev, event_type):
     return events
 
 
-def _call_by_flanking_pairs(ev, event_type, first_breakpoint_called=None, second_breakpoint_called=None, consumed_evidence_reads=None):
+def _call_by_flanking_pairs(
+        ev, event_type, first_breakpoint_called=None, second_breakpoint_called=None, consumed_evidence_reads=None):
     """
     Given a set of flanking reads, computes the coverage interval (the area that is covered by flanking read alignments)
     this area gives the starting position for computing the breakpoint interval.
@@ -303,6 +368,13 @@ def _call_by_flanking_pairs(ev, event_type, first_breakpoint_called=None, second
     print('cover1', cover1, len(cover1), 'cover2', cover2, len(cover2))
     print('ev.max_expected_fragment_size', ev.max_expected_fragment_size)
     print('ev.read_length', ev.read_length)
+
+    cover1_length = len(cover1)
+    cover2_length = len(cover2)
+
+    if ev.protocol == PROTOCOL.TRANS:
+        cover1_length = ev.compute_fragment_size
+
 
     if first_breakpoint_called is None:
         max_breakpoint_width = ev.max_expected_fragment_size - len(cover1) - ev.read_length * 2

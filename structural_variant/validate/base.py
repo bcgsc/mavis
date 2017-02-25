@@ -170,8 +170,9 @@ class Evidence(BreakpointPair):
             return False
         
         combined = self.inner_window1 & self.inner_window2
+        read_interval = Interval(read.reference_start + 1, read.reference_end)
 
-        if read.reference_start + 1 >= combined.start and read.reference_end <= combined.end:
+        if Interval.overlaps(combined, read_interval):
             # in the correct position, now determine if it can support the event types
             for event_type in self.putative_event_types():
                 if event_type in [SVTYPE.DUP, SVTYPE.INS]:
@@ -443,18 +444,9 @@ class Evidence(BreakpointPair):
         if targeted < self.assembly_min_tgt_to_exclude_half_map and \
                 self.assembly_include_half_mapped_reads:
             for r in itertools.chain.from_iterable(self.half_mapped):
-                # assembly_sequences.setdefault(r.query_sequence, set()).add(r)
-                # rqs_comp = reverse_complement(r.query_sequence)
-                # assembly_sequences.setdefault(rqs_comp, set()).add(r)
-                try:
-                    for m in self.bam_cache.get_mate(r):
-                        if not m.is_unmapped:
-                            continue
-                        assembly_sequences.setdefault(m.query_sequence, set()).add(m)
-                        rqs_comp = reverse_complement(m.query_sequence)
-                        assembly_sequences.setdefault(rqs_comp, set()).add(m)
-                except KeyError:
-                    pass
+                assembly_sequences.setdefault(r.query_sequence, set()).add(r)
+                rqs_comp = reverse_complement(r.query_sequence)
+                assembly_sequences.setdefault(rqs_comp, set()).add(r)
 
         # add flanking reads
         if self.assembly_include_flanking_pairs:
@@ -563,6 +555,8 @@ class Evidence(BreakpointPair):
             return False
 
         flanking_pairs = []  # collect putative pairs
+        half_mapped_partners1 = []
+        half_mapped_partners2 = []
 
         for read in self.bam_cache.fetch(
                 '{0}'.format(self.break1.chr),
@@ -572,7 +566,7 @@ class Evidence(BreakpointPair):
                 sample_bins=self.fetch_reads_bins,
                 bin_gap_size=bin_gap_size,
                 cache=True,
-                #cache_if=cache_if_true,
+                cache_if=cache_if_true,
                 filter_if=filter_if_true):
             if read.mapping_quality < self.min_mapping_quality:
                 continue
@@ -582,7 +576,7 @@ class Evidence(BreakpointPair):
             if not self.add_split_read(read, True):
                 self.add_spanning_read(read)
             if read.mate_is_unmapped:
-                self.half_mapped[0].add(read)
+                half_mapped_partners1.append(read)
             elif any([read_tools.orientation_supports_type(read, et) for et in self.putative_event_types()]) and \
                     (read.reference_id != read.next_reference_id) == self.interchromosomal:
                 flanking_pairs.append(read)
@@ -595,6 +589,7 @@ class Evidence(BreakpointPair):
                 sample_bins=self.fetch_reads_bins,
                 bin_gap_size=bin_gap_size,
                 cache=True,
+                cache_if=cache_if_true,
                 filter_if=filter_if_true):
             if read.mapping_quality < self.min_mapping_quality:
                 continue
@@ -606,7 +601,7 @@ class Evidence(BreakpointPair):
             if not self.add_split_read(read, False):
                 self.add_spanning_read(read)
             if read.mate_is_unmapped:
-                self.half_mapped[1].add(read)
+                half_mapped_partners2.append(read)
             elif any([read_tools.orientation_supports_type(read, et) for et in self.putative_event_types()]) and \
                     (read.reference_id != read.next_reference_id) == self.interchromosomal:
                 flanking_pairs.append(read)
@@ -621,8 +616,42 @@ class Evidence(BreakpointPair):
             except KeyError:
                 pass
 
+        for read in half_mapped_partners1:
+            # try and get the mate from the cache
+            try:
+                mates = self.bam_cache.get_mate(read, allow_file_access=False)
+                for mate in mates:
+                    self.half_mapped[0].add(mate)
+            except KeyError:
+                pass
+        for read in half_mapped_partners2:
+            # try and get the mate from the cache
+            try:
+                mates = self.bam_cache.get_mate(read, allow_file_access=False)
+                for mate in mates:
+                    self.half_mapped[1].add(mate)
+            except KeyError:
+                pass
+
     def copy(self):
         raise NotImplementedError('not appropriate for copy of evidence')
 
     def flatten(self):
-        raise NotImplementedError('TODO')
+        row = BreakpointPair.flatten(self)
+        row.update({
+            COLUMNS.raw_flanking_pairs: len(self.flanking_pairs),
+            COLUMNS.raw_spanning_reads: len(self.spanning_reads),
+            COLUMNS.raw_break1_split_reads: len(self.split_reads[0]),
+            COLUMNS.raw_break2_split_reads: len(self.split_reads[1]),
+            COLUMNS.raw_break1_half_mapped_reads: len(self.half_mapped[0]),
+            COLUMNS.raw_break2_half_mapped_reads: len(self.half_mapped[1]),
+            COLUMNS.protocol: self.protocol,
+            COLUMNS.event_type: ';'.join(sorted(self.putative_event_types())),
+            COLUMNS.contigs_assembled: len(self.contigs),
+            COLUMNS.break1_ewindow: '{}-{}'.format(*self.outer_window1),
+            COLUMNS.break2_ewindow: '{}-{}'.format(*self.outer_window2),
+            COLUMNS.break1_ewindow_count: self.counts[0],
+            COLUMNS.break2_ewindow_count: self.counts[1],
+            COLUMNS.contigs_aligned: sum([len(c.alignments) for c in self.contigs])
+        })
+        return row

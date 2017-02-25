@@ -106,8 +106,8 @@ def parse_arguments():
         default=CLUSTER_CLIQUE_SIZE, type=int)
     g = parser.add_argument_group('filter arguments')
     g.add_argument(
-        '--no_filter', default=False, help='If flag is given the clusters will not be filtered '
-        'based on lack of annotation', action='store_true')
+        '--uninformative_filter', default=True, help='If flag is False then the clusters will not be filtered '
+        'based on lack of annotation', type=bool)
     g.add_argument(
         '--max_proximity', '-p', type=int, default=MAX_PROXIMITY, help='maximum distance to look for annotations'
         'from evidence window')
@@ -188,7 +188,7 @@ def main(args):
     log('filtered', mask_filtered, 'breakpoint pairs based on overlap with a masked region')
 
     # load the reference annotations for filtering uninformative clusters
-    if not args.no_filter:
+    if args.uninformative_filter:
         log('loading:', args.annotations)
         REFERENCE_GENES = load_reference_genes(args.annotations, verbose=False)
 
@@ -248,7 +248,7 @@ def main(args):
 
     for cluster in clusters:
         # don't need to generate transcriptome windows b/c will default to genome if not in a gene anyway
-        if args.no_filter:
+        if not args.uninformative_filter:
             pass_clusters.append(cluster)
         else:
             # loop over the annotations

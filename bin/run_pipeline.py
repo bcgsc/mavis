@@ -14,6 +14,7 @@ import os
 import re
 import sys
 from configparser import ConfigParser, ExtendedInterpolation
+import TSV
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from structural_variant.constants import PROTOCOL, VALIDATION_DEFAULTS
@@ -35,14 +36,16 @@ DEFAULTS = Namespace(
     max_files=10,
     cluster_clique_size=15,
     cluster_radius=20,
-    no_filter=False,
     min_orf_size=120,
     max_orf_cap=3,
     min_domain_mapping_match=0.8,
     domain_regex_filter='^PF\d+$',
     stranded=False,
-    max_proximity=5000
+    max_proximity=5000,
+    uninformative_filter=True,
+    blat_2bit_reference='/home/pubseq/genomes/Homo_sapiens/GRCh37/blat/hg19.2bit'
 )
+
 DEFAULTS.__dict__.update(VALIDATION_DEFAULTS.__dict__)
 
 
@@ -98,19 +101,23 @@ def read_config(filepath):
     for attr, value in parser['DEFAULTS'].items():
         if attr == 'protocol':
             PROTOCOL.enforce(value)
-        elif attr in TYPE_CHECK and type(TYPE_CHECK[attr]) != type(value):
+        if attr in TYPE_CHECK and type(TYPE_CHECK[attr]) != type(value):
             try:
-                value = type(TYPE_CHECK[attr])(value)
-                defaults[attr] = value
+                if type(TYPE_CHECK[attr]) == bool:
+                    value = TSV.tsv_boolean(value)
+                else:
+                    value = type(TYPE_CHECK[attr])(value)
             except ValueError:
-                defaults[attr] = value
                 warnings.warn('type check failed for attr {} with value {}'.format(attr, repr(value)))
+        elif attr not in TYPE_CHECK:
+            raise ValueError('unexpected value in DEFAULTS section', attr, value)
+        defaults[attr] = value
 
     library_sections = []
 
     for sec in parser.sections():
+
         section = dict()
-        section.update(config.get(sec, {}))
         if sec == 'DEFAULTS':
             continue
         elif sec not in ['reference', 'qsub', 'visualization']:  # assume this is a library configuration
@@ -120,7 +127,6 @@ def read_config(filepath):
                     raise KeyError(
                         'missing one or more required attribute(s) for the library section',
                         sec, attr, LIBRARY_REQ_ATTR)
-            section.update(defaults)
             section['library'] = sec
 
         for attr, value in parser[sec].items():
@@ -139,11 +145,11 @@ def read_config(filepath):
             elif attr == 'inputs':
                 value = value.split(';') if value else []
             section[attr] = value
-
-        config[sec] = section
+        config.setdefault(sec, dict()).update(section)
 
     for lib, section in [(l, config[l]) for l in library_sections]:
         d = dict()
+        d.update(defaults)
         d.update(config['qsub'])
         d.update(config['visualization'])
         d.update(config['reference'])
@@ -189,7 +195,8 @@ def main():
             'cluster_radius': sv_merge.CLUSTER_RADIUS,
             'cluster_clique_size': sv_merge.CLUSTER_CLIQUE_SIZE,
             'max_files': sv_merge.MAX_FILES,
-            'min_clusters_per_file': sv_merge.MIN_CLUSTERS_PER_FILE
+            'min_clusters_per_file': sv_merge.MIN_CLUSTERS_PER_FILE,
+            'uninformative_filter': True
         }
         merge_args.update(sec.__dict__)
         output_files = sv_merge.main(Namespace(**merge_args))
@@ -208,6 +215,7 @@ def main():
             'output': validation_output,
             'masking': sec.masking,
             'reference_genome': sec.reference_genome,
+            'blat_2bit_reference': sec.blat_2bit_reference,
             'annotations': sec.annotations,
             'library': sec.library,
             'bam_file': sec.bam_file,

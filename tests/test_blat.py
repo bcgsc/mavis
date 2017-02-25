@@ -215,7 +215,7 @@ class TestBlat(unittest.TestCase):
                 "TTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT", 0)
         ]
         print(ev.contigs[0].sequence)
-        blat_contigs([ev], BAM_CACHE, REFERENCE_GENOME, ref_2bit=REFERENCE_GENOME_FILE_2BIT)
+        blat_contigs([ev], BAM_CACHE, REFERENCE_GENOME, blat_2bit_reference=REFERENCE_GENOME_FILE_2BIT)
         read1, read2 = ev.contigs[0].alignments[0]
         self.assertEqual(reverse_complement(read1.query_sequence), read2.query_sequence)
         self.assertEqual(1, read1.reference_id)
@@ -244,7 +244,7 @@ class TestBlat(unittest.TestCase):
                 'GGTATATATTTCTCAGATAAAAGATATTTTCCCTTTTATCTTTCCCTAAGCTCACACTACATATATTGCATTTATCTTATATCTGCTTTAAAACCTATTTAT'
                 'TATGTCATTTAAATATCTAGAAAAGTTATGACTTCACCAGGTATGAAAAATATAAAAAGAACTCTGTCAAGAAT', 0)
         ]
-        blat_contigs([ev], BAM_CACHE, REFERENCE_GENOME, ref_2bit=REFERENCE_GENOME_FILE_2BIT)
+        blat_contigs([ev], BAM_CACHE, REFERENCE_GENOME, blat_2bit_reference=REFERENCE_GENOME_FILE_2BIT)
         read1, read2 = ev.contigs[0].alignments[0]
         self.assertTrue(read2 is None)
         self.assertEqual(0, read1.reference_id)
@@ -272,7 +272,7 @@ class TestBlat(unittest.TestCase):
         seq = 'GGTATATATTTCTCAGATAAAAGATATTTTCCCTTTTATCTTTCCCTAAGCTCACACTACATATATTGCATTTATCTTATATCTGCTTTAAAACCTATTTAT' \
               'TATGTCATTTAAATATCTAGAAAAGTTATGACTTCACCAGGTATGAAAAATATAAAAAGAACTCTGTCAAGAAT'
         ev.contigs = [Contig(reverse_complement(seq), 0)]
-        blat_contigs([ev], BAM_CACHE, REFERENCE_GENOME, ref_2bit=REFERENCE_GENOME_FILE_2BIT)
+        blat_contigs([ev], BAM_CACHE, REFERENCE_GENOME, blat_2bit_reference=REFERENCE_GENOME_FILE_2BIT)
         read1, read2 = ev.contigs[0].alignments[0]
         self.assertTrue(read2 is None)
         self.assertEqual(0, read1.reference_id)

@@ -324,6 +324,8 @@ COLUMNS = Vocab(
     raw_break2_split_reads='raw_break2_split_reads',
     raw_flanking_pairs='raw_flanking_pairs',
     raw_spanning_reads='raw_spanning_reads',
+    raw_break1_half_mapped_reads='raw_break1_half_mapped_reads',
+    raw_break2_half_mapped_reads='raw_break2_half_mapped_reads',
     stdev_fragment_size='stdev_fragment_size',
     untemplated_sequence='untemplated_sequence',
 )
@@ -661,7 +663,7 @@ VALIDATION_DEFAULTS = Namespace(
     min_linking_split_reads
         The minimum number of split reads which aligned to both breakpoints
 
-    min_flanking_pairs_resolution
+    min_flanking_pairs_resolutionraw_break1_half_mapped_reads
         the minimum number of flanking reads required to call a breakpoint by flanking evidence
 
     assembly_max_paths
