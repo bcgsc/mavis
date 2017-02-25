@@ -1,9 +1,14 @@
 from structural_variant.interval import Interval
 import networkx as nx
 import itertools
+import structural_variant.cluster
 from structural_variant.cluster import IntervalPair
+from structural_variant.breakpoint import Breakpoint, BreakpointPair
+from structural_variant.constants import STRAND
+
 import unittest
 
+REF_CHR='fake'
 
 class TestIntervalPair(unittest.TestCase):
     def test_sets(self):
@@ -106,6 +111,44 @@ class TestIntervalPair(unittest.TestCase):
         self.assertEqual(2, len(groups))
         self.assertEqual([a, b, c], groups[0])
         self.assertEqual([c, d, e], groups[1])
+
+    @unittest.skip("TODO")
+    def test_cluster_breakpoint_pairs(self):
+        bpp1 = BreakpointPair(Breakpoint(REF_CHR, 31),
+                              Breakpoint(REF_CHR, 129),
+                              opposing_strands=False)
+        bpp2 = BreakpointPair(Breakpoint(REF_CHR, 32),
+                              Breakpoint(REF_CHR, 120),
+                              opposing_strands=False)
+        bpp3 = BreakpointPair(Breakpoint(REF_CHR, 40),
+                              Breakpoint(REF_CHR, 139),
+                              opposing_strands=False)
+        bpp4 = BreakpointPair(Breakpoint(REF_CHR, 43),
+                              Breakpoint(REF_CHR, 151),
+                              opposing_strands=False)
+        bpp4 = BreakpointPair(Breakpoint(REF_CHR, 45),
+                              Breakpoint(REF_CHR, 146),
+                              opposing_strands=False)
+        bpp5 = BreakpointPair(Breakpoint(REF_CHR, 50),
+                              Breakpoint(REF_CHR, 150),
+                              opposing_strands=False)
+        from pprint import pprint
+        I = {bpp1, bpp2, bpp3, bpp4, bpp5}
+        print(I)
+        groups = structural_variant.cluster.cluster_breakpoint_pairs(I, 9, 4)
+#        groups = sorted([sorted(list(c)) for c in groups])
+        pprint(groups)
+        groups2 = sorted(groups.keys())
+        print(groups2)
+        for key in groups.keys():
+            print(str(key))
+            print("grouping")
+            for i in groups[key]:
+                print(str(i))
+            print("done")
+        print(str(groups[list(groups.keys())[0]][0]))
+        self.assertTrue(False)
+
 
 if __name__ == "__main__":
     unittest.main()

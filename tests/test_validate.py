@@ -214,8 +214,7 @@ class TestTranscriptomeEvidenceWindow(unittest.TestCase):
         b = Breakpoint(chr='fake', start=17279591, orient=ORIENT.LEFT)
         self.assertEqual(Interval(17277321, 17279702), self.transcriptome_window(b, [ust]))
 
-
-#@unittest.skip('skip because slow')
+@unittest.skip('skip because VERY slow')
 class TestFullEvidenceGathering(unittest.TestCase):
     # need to make the assertions more specific by checking the actual names of the reads found in each bin
     # rather than just the counts.
@@ -233,7 +232,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
 
     def count_original_reads(self, reads):
         count = 0
-        for read in reads:
+        for read in sorted(reads, key=lambda x: x.query_name):
             if not read.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT):
                 count += 1
                 print(read.query_name)
@@ -241,6 +240,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
                 count += 1
         return count
 
+    @unittest.skip('skip because slow')
     def test_load_evidence_translocation(self):
         ev1 = self.genome_evidence(
             Breakpoint('reference10', 520, orient=ORIENT.RIGHT),
@@ -266,6 +266,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(40, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(57, len(ev1.flanking_pairs))
 
+    @unittest.skip('skip because slow')
     def test_load_evidence_inversion(self):
         # first example
         ev1 = self.genome_evidence(
@@ -292,6 +293,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(27, self.count_original_reads(ev1.split_reads[0]))
         self.assertEqual(52, len(ev1.flanking_pairs))
 
+    @unittest.skip('skip because slow')
     def test_load_evidence_duplication(self):
         ev1 = self.genome_evidence(
             Breakpoint('reference7', 5000, orient=ORIENT.RIGHT),
@@ -300,10 +302,11 @@ class TestFullEvidenceGathering(unittest.TestCase):
         )
         ev1.load_evidence()
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
-        self.assertEqual(34, self.count_original_reads(ev1.split_reads[0]))
-        self.assertEqual(12, self.count_original_reads(ev1.split_reads[1]))
-        self.assertEqual(65, len(ev1.flanking_pairs))
+        self.assertEqual(35, self.count_original_reads(ev1.split_reads[0]))
+        self.assertEqual(11, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(64, len(ev1.flanking_pairs))
 
+    @unittest.skip('skip because slow')
     def test_load_evidence_deletion(self):
         # first example
         ev1 = self.genome_evidence(
@@ -340,17 +343,331 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(9, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(26, len(ev1.flanking_pairs))
 
-    def test_load_evidence_low_qual_deletion(self):
+        # forth example
         ev1 = self.genome_evidence(
-            Breakpoint('reference19', 5000, 5620, orient=ORIENT.LEFT),
-            Breakpoint('reference19', 8620, 9240, orient=ORIENT.RIGHT),
+            Breakpoint('reference10', 3609, orient=ORIENT.LEFT),
+            Breakpoint('reference10', 3818, orient=ORIENT.RIGHT),
             opposing_strands=False
         )
         ev1.load_evidence()
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
+        self.assertEqual(20, self.count_original_reads(ev1.split_reads[0]))
+        self.assertEqual(17, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(40, len(ev1.flanking_pairs))
+
+    @unittest.skip('skip because slow')
+    def test_load_evidence_small_deletion(self):
+        # first example
+        ev1 = self.genome_evidence(
+            Breakpoint('reference11', 6000, orient=ORIENT.LEFT),
+            Breakpoint('reference11', 6003, orient=ORIENT.RIGHT),
+            opposing_strands=False
+        )
+        ev1.load_evidence()
+
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
+        print(len(ev1.spanning_reads))
+
+        self.assertEqual(5, self.count_original_reads(ev1.split_reads[0]))
+        self.assertEqual(3, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(20, len(ev1.spanning_reads))
+        self.assertEqual(6, len(ev1.flanking_pairs))
+
+        # second example
+        ev1 = self.genome_evidence(
+            Breakpoint('reference11', 10000, orient=ORIENT.LEFT),
+            Breakpoint('reference11', 10030, orient=ORIENT.RIGHT),
+            opposing_strands=False
+        )
+        ev1.load_evidence()
+
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
+        print(len(ev1.spanning_reads))
+        for read in sorted(ev1.spanning_reads, key=lambda x: x.query_name):
+            print(read.query_name)
+
+        self.assertEqual(27, self.count_original_reads(ev1.split_reads[0]))
+        self.assertEqual(52, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(19, len(ev1.spanning_reads))
+        self.assertEqual(9, len(ev1.flanking_pairs))
+
+    @unittest.skip('skip because slow')
+    def test_load_evidence_small_deletion_test1(self):
+        ev1 = self.genome_evidence(
+            Breakpoint('reference12', 2001, orient=ORIENT.LEFT),
+            Breakpoint('reference12', 2120, orient=ORIENT.RIGHT),
+            opposing_strands=False
+        )
+        ev1.load_evidence()
+
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
+        print(len(ev1.spanning_reads))
+        for read in sorted(ev1.spanning_reads, key=lambda x: x.query_name):
+            print(read.query_name)
+
+        self.assertEqual(18, self.count_original_reads(ev1.split_reads[0]))
+        self.assertEqual(16, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(0, len(ev1.spanning_reads))
+        self.assertEqual(26, len(ev1.flanking_pairs))
+
+    @unittest.skip('skip because slow')
+    def test_load_evidence_small_deletion_test2(self):
+        ev1 = self.genome_evidence(
+            Breakpoint('reference10', 3609, orient=ORIENT.LEFT),
+            Breakpoint('reference10', 3818, orient=ORIENT.RIGHT),
+            opposing_strands=False
+        )
+        ev1.load_evidence()
+
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
+        print(len(ev1.spanning_reads))
+        for read in sorted(ev1.spanning_reads, key=lambda x: x.query_name):
+            print(read.query_name)
+
+        self.assertEqual(20, self.count_original_reads(ev1.split_reads[0]))
+        self.assertEqual(17, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(0, len(ev1.spanning_reads))
+        self.assertEqual(40, len(ev1.flanking_pairs))
+
+    @unittest.skip('skip because slow')
+    def test_load_evidence_small_deletion_test3(self):
+        ev1 = self.genome_evidence(
+            Breakpoint('reference10', 8609, orient=ORIENT.LEFT),
+            Breakpoint('reference10', 8927, orient=ORIENT.RIGHT),
+            opposing_strands=False
+        )
+        ev1.load_evidence()
+
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
+        print(len(ev1.spanning_reads))
+        for read in sorted(ev1.spanning_reads, key=lambda x: x.query_name):
+            print(read.query_name)
+
+        self.assertEqual(27, self.count_original_reads(ev1.split_reads[0]))
+        self.assertEqual(5, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(0, len(ev1.spanning_reads))
+        self.assertEqual(53, len(ev1.flanking_pairs))
+
+    @unittest.skip('skip because slow')
+    def test_load_evidence_small_deletion_test4(self):
+        ev1 = self.genome_evidence(
+            Breakpoint('reference10', 12609, orient=ORIENT.LEFT),
+            Breakpoint('reference10', 13123, orient=ORIENT.RIGHT),
+            opposing_strands=False
+        )
+        ev1.load_evidence()
+
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
+        print(len(ev1.spanning_reads))
+        print(self.count_original_reads(ev1.split_reads[0]))
+        print(self.count_original_reads(ev1.split_reads[1]))
+
+        self.assertEqual(33, self.count_original_reads(ev1.split_reads[0]))
+        self.assertEqual(6, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(0, len(ev1.spanning_reads))
+        self.assertEqual(77, len(ev1.flanking_pairs))
+
+    @unittest.skip('skip because slow')
+    def test_load_evidence_small_deletion_test5(self):
+        ev1 = self.genome_evidence(
+            Breakpoint('reference10', 17109, orient=ORIENT.LEFT),
+            Breakpoint('reference10', 17899, orient=ORIENT.RIGHT),
+            opposing_strands=False
+        )
+        ev1.load_evidence()
+
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
+        print(len(ev1.spanning_reads))
+        print(self.count_original_reads(ev1.split_reads[0]))
+        print(self.count_original_reads(ev1.split_reads[1]))
+
+        self.assertEqual(19, self.count_original_reads(ev1.split_reads[0]))
+        self.assertEqual(11, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(0, len(ev1.spanning_reads))
+        self.assertEqual(48, len(ev1.flanking_pairs))
+
+    @unittest.skip('skip because slow')
+    def test_load_evidence_small_deletion_test6(self):
+        ev1 = self.genome_evidence(
+            Breakpoint('reference10', 22109, orient=ORIENT.LEFT),
+            Breakpoint('reference10', 24330, orient=ORIENT.RIGHT),
+            opposing_strands=False
+        )
+        ev1.load_evidence()
+
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
+        print(len(ev1.spanning_reads))
+        print(self.count_original_reads(ev1.split_reads[0]))
+        print(self.count_original_reads(ev1.split_reads[1]))
+
+        self.assertEqual(18, self.count_original_reads(ev1.split_reads[0]))
+        self.assertEqual(13, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(53, len(ev1.flanking_pairs))
+
+    @unittest.skip('skip because slow')
+    def test_load_evidence_small_deletion_test7(self):
+        ev1 = self.genome_evidence(
+            Breakpoint('reference10', 28109, orient=ORIENT.LEFT),
+            Breakpoint('reference10', 31827, orient=ORIENT.RIGHT),
+            opposing_strands=False
+        )
+        ev1.load_evidence()
+
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
+        print(len(ev1.spanning_reads))
+        print(self.count_original_reads(ev1.split_reads[0]))
+        print(self.count_original_reads(ev1.split_reads[1]))
+
+        self.assertEqual(39, self.count_original_reads(ev1.split_reads[0]))
+        self.assertEqual(13, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(49, len(ev1.flanking_pairs))
+
+    @unittest.skip('skip because slow')
+    def test_load_evidence_small_deletion_test8(self):
+        ev1 = self.genome_evidence(
+            Breakpoint('reference10', 36109, orient=ORIENT.LEFT),
+            Breakpoint('reference10', 42159, orient=ORIENT.RIGHT),
+            opposing_strands=False
+        )
+        ev1.load_evidence()
+
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
+        print(len(ev1.spanning_reads))
+        print(self.count_original_reads(ev1.split_reads[0]))
+        print(self.count_original_reads(ev1.split_reads[1]))
+
+        self.assertEqual(59, self.count_original_reads(ev1.split_reads[0]))
+        self.assertEqual(8, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(59, len(ev1.flanking_pairs))
+
+
+    @unittest.skip('skip because too complex')
+    def test_load_evidence_complex_deletion(self):
+        ev1 = self.genome_evidence(
+            Breakpoint('reference12', 6001, orient=ORIENT.LEFT),
+            Breakpoint('reference12', 6016, orient=ORIENT.RIGHT),
+            opposing_strands=False
+        )
+        ev1.load_evidence()
+
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
+        print(len(ev1.spanning_reads))
+        print(self.count_original_reads(ev1.split_reads[0]))
+        print(self.count_original_reads(ev1.split_reads[1]))
+
+        for read in sorted(ev1.spanning_reads, key=lambda x: x.query_name):
+            print(read.query_name)
+
+        self.assertEqual(76, self.count_original_reads(ev1.split_reads[0]))
+        self.assertEqual(83, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(1, len(ev1.spanning_reads))
+        self.assertEqual(2, len(ev1.flanking_pairs))
+
+    @unittest.skip('skip because high coverage')
+    def test_load_evidence_small_insertion(self):
+        ev1 = self.genome_evidence(
+            Breakpoint('reference1', 2000, orient=ORIENT.LEFT),
+            Breakpoint('reference1', 2001, orient=ORIENT.RIGHT),
+            opposing_strands=False
+        )
+        ev1.load_evidence()
+
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
+        print(len(ev1.spanning_reads))
+        for read in sorted(ev1.spanning_reads, key=lambda x: x.query_name):
+            print(read.query_name)
+
+        self.assertEqual(17, self.count_original_reads(ev1.split_reads[0]))
+        self.assertEqual(17, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(48, len(ev1.spanning_reads))
+        self.assertEqual(4, len(ev1.flanking_pairs))
+
+    @unittest.skip('skip because too high coverage')
+    def test_load_evidence_small_insertion_high_coverage(self):
+        ev1 = self.genome_evidence(
+            Breakpoint('reference9', 2000, orient=ORIENT.LEFT),
+            Breakpoint('reference9', 2001, orient=ORIENT.RIGHT),
+            opposing_strands=False
+        )
+        ev1.load_evidence()
+
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
+        print(len(ev1.spanning_reads))
+        for read in sorted(ev1.spanning_reads, key=lambda x: x.query_name):
+            print(read.query_name)
+
+        self.assertEqual(37, self.count_original_reads(ev1.split_reads[0]))
+        self.assertEqual(52, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(37, len(ev1.spanning_reads))
+        self.assertEqual(9, len(ev1.flanking_pairs))
+
+        ev1 = self.genome_evidence(
+            Breakpoint('reference16', 2000, orient=ORIENT.LEFT),
+            Breakpoint('reference16', 2001, orient=ORIENT.RIGHT),
+            opposing_strands=False
+        )
+        ev1.load_evidence()
+
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
+        print(len(ev1.spanning_reads))
+        for read in sorted(ev1.spanning_reads, key=lambda x: x.query_name):
+            print(read.query_name)
+
+        self.assertEqual(27, self.count_original_reads(ev1.split_reads[0]))
+        self.assertEqual(52, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(19, len(ev1.spanning_reads))
+        self.assertEqual(9, len(ev1.flanking_pairs))
+
+    @unittest.skip('skip because slow')
+    def test_load_evidence_small_duplication(self):
+        ev1 = self.genome_evidence(
+            Breakpoint('reference12', 10000, orient=ORIENT.RIGHT),
+            Breakpoint('reference12', 10021, orient=ORIENT.LEFT),
+            opposing_strands=False
+        )
+        ev1.load_evidence()
+
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
+        print(len(ev1.spanning_reads))
+        for read in sorted(ev1.spanning_reads, key=lambda x: x.query_name):
+            print(read.query_name)
+
+        self.assertEqual(29, self.count_original_reads(ev1.split_reads[0]))
+        self.assertEqual(51, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(0, len(ev1.spanning_reads))
+        self.assertEqual(0, len(ev1.flanking_pairs))
+
+        #Example 2
+        ev1 = self.genome_evidence(
+            Breakpoint('reference17', 1974, orient=ORIENT.RIGHT),
+            Breakpoint('reference17', 2020, orient=ORIENT.LEFT),
+            opposing_strands=False
+        )
+        ev1.load_evidence()
+
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
+        print(len(ev1.spanning_reads))
+        for read in sorted(ev1.spanning_reads, key=lambda x: x.query_name):
+            print(read.query_name)
+
+        self.assertEqual(25, self.count_original_reads(ev1.split_reads[0]))
+        self.assertEqual(56, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(3, len(ev1.spanning_reads))
+        self.assertEqual(0, len(ev1.flanking_pairs))
+
+    def test_load_evidence_low_qual_deletion(self):
+        ev1 = self.genome_evidence(
+            Breakpoint('reference19', 4847, 4847, orient=ORIENT.LEFT),
+            Breakpoint('reference19', 5219, 5219, orient=ORIENT.RIGHT),
+            opposing_strands=False
+        )
+        ev1.load_evidence()
+        print(len(ev1.spanning_reads))
+        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         self.assertEqual(0, len(ev1.split_reads[0]))
         self.assertEqual(0, len(ev1.split_reads[1]))
         self.assertEqual(0, len(ev1.flanking_pairs))
+
 
 
 class TestEvidenceGathering(unittest.TestCase):

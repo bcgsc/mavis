@@ -535,6 +535,12 @@ class Evidence(BreakpointPair):
         """
         bin_gap_size = self.read_length // 2
 
+        print('outer{}-{}'.format(*self.outer_window1))
+        print('{}-{}'.format(*self.outer_window2))
+        print('inner{}-{}'.format(*self.inner_window1))
+        print('{}-{}'.format(*self.inner_window2))
+
+
         max_dist = max(
             len(Interval.union(self.break1, self.break2)),
             len(self.untemplated_sequence if self.untemplated_sequence else '')
