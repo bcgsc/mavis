@@ -164,14 +164,14 @@ def gather_evidence_from_bam(clusters):
             e.break1.chr, e.inner_window1[0], e.inner_window1[1], 
             e.break2.chr, e.inner_window2[0], e.inner_window2[1]), time_stamp=False)
         try:
-            e.load_evidence()
+            e.load_evidence(log=log)
         except NotImplementedError as err:
             log(repr(err), time_stamp=False)
             continue
         log(
-            'flanking pairs:', len(e.flanking_pairs),
-            'split reads:', [len(a) for a in e.split_reads],
-            'half-mapped reads:', [len(a) for a in e.half_mapped],
+            'flanking pairs: {};'.format(len(e.flanking_pairs)),
+            'split reads: {}, {};'.format(*[len(a) for a in e.split_reads]),
+            'half-mapped reads: {}, {};'.format(*[len(a) for a in e.half_mapped]),
             'spanning-reads:', len(e.spanning_reads),
             time_stamp=False
         )
@@ -347,13 +347,7 @@ def main():
                 failure_comment = str(err)
             if len(calls) == 0:
                 failure_comment = ['zero events were called'] if not failure_comment else failure_comment
-                row = {}
-                row.update(e.data)
-                row.update(e.flatten())
-                row[COLUMNS.raw_flanking_pairs] = len(e.flanking_pairs)
-                row[COLUMNS.raw_spanning_reads] = len(e.spanning_reads)
-                row[COLUMNS.raw_break1_split_reads] = len(e.split_reads[0])
-                row[COLUMNS.raw_break2_split_reads] = len(e.split_reads[1])
+                row = e.flatten()
                 row['failure_comment'] = failure_comment.join(';')
                 failed_cluster_rows.append(row)
             else:
@@ -374,73 +368,18 @@ def main():
         rows = []
         header = set()
         for ec in event_calls:
-            flank_count, flank_median, flank_stdev = ec.count_flanking_support()
-            b1_count, b1_tgt, b2_count, b2_tgt = ec.count_split_read_support()
             b1_homseq = None
             b2_homseq = None
             try:
                 b1_homseq, b2_homseq = ec.breakpoint_sequence_homology(HUMAN_REFERENCE_GENOME)
             except AttributeError:
                 pass
-            row = {
-                COLUMNS.cluster_id: ec.data[COLUMNS.cluster_id],
+            row = ec.flatten()
+            row.update({
                 COLUMNS.validation_id: 'validation_{}-{}'.format(id_prefix, id),
-                COLUMNS.break1_chromosome: ec.break1.chr,
-                COLUMNS.break1_position_start: ec.break1.start,
-                COLUMNS.break1_position_end: ec.break1.end,
-                COLUMNS.break1_strand: STRAND.NS,
-                COLUMNS.break1_orientation: ec.break1.orient,
-                COLUMNS.break1_sequence: ec.break1.seq,
-                COLUMNS.break2_chromosome: ec.break2.chr,
-                COLUMNS.break2_position_start: ec.break2.start,
-                COLUMNS.break2_position_end: ec.break2.end,
-                COLUMNS.break2_strand: STRAND.NS,
-                COLUMNS.break2_orientation: ec.break2.orient,
-                COLUMNS.break2_sequence: ec.break2.seq,
-                COLUMNS.event_type: ec.classification,
-                COLUMNS.opposing_strands: ec.opposing_strands,
-                COLUMNS.stranded: ec.stranded,
-                COLUMNS.protocol: ec.evidence.protocol,
-                COLUMNS.tools: ec.data[COLUMNS.tools],
-                COLUMNS.contigs_assembled: len(ec.evidence.contigs),
-                COLUMNS.contigs_aligned: sum([len(c.alignments) for c in ec.evidence.contigs]),
-                COLUMNS.contig_sequence: None,
-                COLUMNS.contig_remap_score: None,
-                COLUMNS.contig_alignment_score: None,
-                COLUMNS.break1_call_method: ec.call_method[0],
-                COLUMNS.break2_call_method: ec.call_method[1],
-                COLUMNS.flanking_pairs: len(flank_count),
-                COLUMNS.median_fragment_size: round(flank_median, 0) if flank_median is not None else None,
-                COLUMNS.stdev_fragment_size: round(flank_stdev, 0) if flank_stdev is not None else None,
-                COLUMNS.break1_split_reads: len(b1_count),
-                COLUMNS.break1_split_reads_forced: len(b1_tgt),
-                COLUMNS.break2_split_reads: len(b2_count),
-                COLUMNS.break2_split_reads_forced: len(b2_tgt),
-                COLUMNS.linking_split_reads: len(b1_count & b2_count),
-                COLUMNS.untemplated_sequence: None,
                 COLUMNS.break1_homologous_sequence: b1_homseq,
                 COLUMNS.break2_homologous_sequence: b2_homseq,
-                COLUMNS.break1_ewindow: '{}-{}'.format(*ec.evidence.outer_window1),
-                COLUMNS.break2_ewindow: '{}-{}'.format(*ec.evidence.outer_window2),
-                COLUMNS.break1_ewindow_count: ec.evidence.counts[0],
-                COLUMNS.break2_ewindow_count: ec.evidence.counts[1]
-            }
-            if ec.contig:
-                row[COLUMNS.contig_sequence] = ec.contig.sequence
-                row[COLUMNS.contig_remap_score] = ec.contig.remap_score()
-                if ec.break1.strand == STRAND.NEG and not ec.stranded:
-                    row[COLUMNS.contig_sequence] = reverse_complement(row[COLUMNS.contig_sequence])
-            if ec.alignment:
-                r1, r2 = ec.alignment
-                if r2 is None:
-                    row[COLUMNS.contig_alignment_score] = r1.get_tag('br')
-                else:
-                    row[COLUMNS.contig_alignment_score] = int(round((r1.get_tag('br') + r2.get_tag('br')) / 2, 0))
-            if ec.untemplated_sequence is not None:
-                row[COLUMNS.untemplated_sequence] = ec.untemplated_sequence
-            if ec.stranded:
-                row[COLUMNS.break1_strand] = ec.break1.strand
-                row[COLUMNS.break2_strand] = ec.break2.strand
+            })
             rows.append(row)
             header.update(row.keys())
             id += 1

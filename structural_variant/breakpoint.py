@@ -184,8 +184,13 @@ class BreakpointPair:
             COLUMNS.break2_strand: self.break2.strand,
             COLUMNS.opposing_strands: self.opposing_strands,
             COLUMNS.stranded: self.stranded,
-            COLUMNS.untemplated_sequence: self.untemplated_sequence
+            COLUMNS.untemplated_sequence: self.untemplated_sequence,
+            COLUMNS.break1_sequence: self.break1.sequence,
+            COLUMNS.break2_sequence: self.break2.sequence
         }
+        if not self.stranded:
+            row[COLUMNS.break1_strand] = STRAND.NS
+            row[COLUMNS.break2_strand] = STRAND.NS
         for c in temp:
             temp[c] = str(temp[c])
         row.update(temp)

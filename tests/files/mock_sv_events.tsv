@@ -1,3 +1,4 @@
+## False	reference9	2000	2000	reference9	2001	2001	L	R	+	+	insertion	genome	convert_ta.py_v0.0.1	mock_A36971	9:66466004
 #stranded	break1_chromosome	break1_position_start	break1_position_end	break2_chromosome	break2_position_start	break2_position_end	break1_orientation	break2_orientation	break1_strand	break2_strand	event_type	protocol	tools	library	comment
 False	reference7	5000	5000	reference7	11000	11000	R	L	-	-	duplication	genome	convert_ta.py_v0.0.1	mock_A36971	7:104485067|7:104612302
 False	reference20	2000	2000	reference20	6000	6000	L	R	+	+	deletion	genome	convert_ta.py_v0.0.1	mock_A36971	20:13160730|20:13164100
@@ -20,7 +21,6 @@ False	reference10	28109	28109	reference10	38127	38127	L	R	+	+	deletion	genome	co
 False	reference10	36109	36109	reference10	42159	42159	L	R	+	+	deletion	genome	convert_ta.py_v0.0.1	mock_A36971	10:6411580|10:6417630
 False	reference12	6001	6001	reference12	6016	6016	L	R	+	+	deletion	genome	convert_ta.py_v0.0.1	mock_A36971	12:127413217|12:127413233 complex event
 False	reference1	2000	2000	reference1	2001	2001	L	R	+	+	insertion	genome	convert_ta.py_v0.0.1	mock_A36971	1:8877520
-False	reference9	2000	2000	reference9	2001	2001	L	R	+	+	insertion	genome	convert_ta.py_v0.0.1	mock_A36971	9:66466004
 False	reference16	2000	2000	reference16	2001	2001	L	R	+	+	insertion	genome	convert_ta.py_v0.0.1	mock_A36971	16:57847634
 False	reference12	10000	10000	reference12	10001	10021	R	L	+	+	duplication	genome	convert_ta.py_v0.0.1	mock_A36971	12:53207583 reported as an insertion
 False	reference17	1974	1974	reference17	2020	2020	R	L	+	+	duplication	genome	convert_ta.py_v0.0.1	mock_A36971	17:72889676 reported as an insertion

@@ -99,8 +99,8 @@ class BamCache:
                     break
                 if not filter_if(read):
                     result.append(read)
-                    if cache and cache_if(read):
-                        self.add_read(read)
+                if cache and cache_if(read):
+                    self.add_read(read)
                 count += 1
         return set(result)
 
@@ -120,13 +120,15 @@ class BamCache:
         #     putative_mates.update(self.cache.get(temp, set()))
         mates = []
         for mate in putative_mates:
-            if any([read.is_read1 == mate.is_read1,
-                    read.is_read2 == mate.is_read2,
+            if not mate.is_unmapped:
+                if any([
+                    read.is_read1 == mate.is_read1,
                     read.next_reference_start != mate.reference_start,
                     read.next_reference_id != mate.reference_id,
                     primary_only and mate.is_secondary,
-                    abs(read.template_length) != abs(mate.template_length)]):
-                continue
+                    abs(read.template_length) != abs(mate.template_length)
+                ]):
+                    continue
             mates.append(mate)
         if len(mates) == 0:
             if not allow_file_access or read.mate_is_unmapped:

@@ -315,18 +315,18 @@ COLUMNS = Vocab(
     contig_sequence='contig_sequence',
     contigs_aligned='contigs_aligned',
     contigs_assembled='contigs_assembled',
+    flanking_median_fragment_size='flanking_median_fragment_size',
     flanking_pairs='flanking_pairs',
     flanking_pairs_read_names='flanking_pairs_read_names',
+    flanking_stdev_fragment_size='flanking_stdev_fragment_size',
     linking_split_read_names='linking_split_read_names',
     linking_split_reads='linking_split_reads',
-    median_fragment_size='median_fragment_size',
+    raw_break1_half_mapped_reads='raw_break1_half_mapped_reads',
     raw_break1_split_reads='raw_break1_split_reads',
+    raw_break2_half_mapped_reads='raw_break2_half_mapped_reads',
     raw_break2_split_reads='raw_break2_split_reads',
     raw_flanking_pairs='raw_flanking_pairs',
     raw_spanning_reads='raw_spanning_reads',
-    raw_break1_half_mapped_reads='raw_break1_half_mapped_reads',
-    raw_break2_half_mapped_reads='raw_break2_half_mapped_reads',
-    stdev_fragment_size='stdev_fragment_size',
     untemplated_sequence='untemplated_sequence',
 )
 """:class:`Vocab`: Column names for i/o files used throughout the pipeline
@@ -502,10 +502,10 @@ COLUMNS = Vocab(
         :class:`int` - Number of read-pairs where one read aligns to the first breakpoint window and the second read
         aligns to the other. The count here is based on the number of unique query names
 
-    median_fragment_size
+    flanking_median_fragment_size
         :class:`int` - The median fragment size of the flanking reads being used as evidence
 
-    stdev_fragment_size
+    flanking_stdev_fragment_size
         :class:`float` - The standard deviation in fragment size of the flanking reads being used as evidence
 
     break1_split_reads

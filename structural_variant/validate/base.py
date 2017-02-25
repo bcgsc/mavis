@@ -525,7 +525,7 @@ class Evidence(BreakpointPair):
                     filtered_contigs[c.sequence] = c
         self.contigs = list(filtered_contigs.values())
 
-    def load_evidence(self, grab_unmapped_partners=True):
+    def load_evidence(self, log=lambda x: None):
         """
         open the associated bam file and read and store the evidence
         does some preliminary read-quality filtering
@@ -546,11 +546,15 @@ class Evidence(BreakpointPair):
             return False
         
         def cache_if_true(read):
-            if any([read_tools.orientation_supports_type(read, et) for et in self.putative_event_types()]):
+            if self.filter_secondary_alignments and read.is_secondary:
+                return False
+            elif any([read_tools.orientation_supports_type(read, et) for et in self.putative_event_types()]):
                 return True
             elif read.is_unmapped or read.mate_is_unmapped:
                 return True
             elif self.interchromosomal and read.reference_id != read.next_reference_id:
+                return True
+            elif read.is_unmapped:
                 return True
             return False
 
@@ -615,7 +619,7 @@ class Evidence(BreakpointPair):
                     self.add_flanking_pair(fl, mate)
             except KeyError:
                 pass
-
+        log('collected', len(half_mapped_partners1), 'half mapped reads at the first break', time_stamp=False)
         for read in half_mapped_partners1:
             # try and get the mate from the cache
             try:
@@ -624,6 +628,7 @@ class Evidence(BreakpointPair):
                     self.half_mapped[0].add(mate)
             except KeyError:
                 pass
+        log('collected', len(half_mapped_partners1), 'half mapped reads at the second break', time_stamp=False)
         for read in half_mapped_partners2:
             # try and get the mate from the cache
             try:
@@ -652,6 +657,7 @@ class Evidence(BreakpointPair):
             COLUMNS.break2_ewindow: '{}-{}'.format(*self.outer_window2),
             COLUMNS.break1_ewindow_count: self.counts[0],
             COLUMNS.break2_ewindow_count: self.counts[1],
-            COLUMNS.contigs_aligned: sum([len(c.alignments) for c in self.contigs])
+            COLUMNS.contigs_aligned: sum([len(c.alignments) for c in self.contigs]),
+            COLUMNS.contigs_assembled: len(self.contigs)
         })
         return row
