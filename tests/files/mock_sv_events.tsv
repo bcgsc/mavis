@@ -17,7 +17,7 @@ False	reference10	8609	8609	reference10	8927	8927	L	R	+	+	deletion	genome	conver
 False	reference10	12609	12609	reference10	13123	13123	L	R	+	+	deletion	genome	convert_ta.py_v0.0.1	mock_A36971	10:18503076|10:18503590
 False	reference10	17109	17109	reference10	17899	17899	L	R	+	+	deletion	genome	convert_ta.py_v0.0.1	mock_A36971	10:127745195|10:127745985
 False	reference10	22109	22109	reference10	24330	24330	L	R	+	+	deletion	genome	convert_ta.py_v0.0.1	mock_A36971	10:108030321|10:108032542
-False	reference10	28109	28109	reference10	38127	38127	L	R	+	+	deletion	genome	convert_ta.py_v0.0.1	mock_A36971	10:132909062|10:132912780
+False	reference10	28109	28109	reference10	31827	31827	L	R	+	+	deletion	genome	convert_ta.py_v0.0.1	mock_A36971	10:132909062|10:132912780
 False	reference10	36109	36109	reference10	42159	42159	L	R	+	+	deletion	genome	convert_ta.py_v0.0.1	mock_A36971	10:6411580|10:6417630
 False	reference12	6001	6001	reference12	6016	6016	L	R	+	+	deletion	genome	convert_ta.py_v0.0.1	mock_A36971	12:127413217|12:127413233 complex event
 False	reference1	2000	2000	reference1	2001	2001	L	R	+	+	insertion	genome	convert_ta.py_v0.0.1	mock_A36971	1:8877520
