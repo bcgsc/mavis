@@ -282,13 +282,13 @@ COLUMNS = Vocab(
     break1_position_end='break1_position_end',
     break1_orientation='break1_orientation',
     break1_strand='break1_strand',
-    break1_sequence='break1_sequence',
+    break1_seq='break1_seq',
     break2_chromosome='break2_chromosome',
     break2_position_start='break2_position_start',
     break2_position_end='break2_position_end',
     break2_orientation='break2_orientation',
     break2_strand='break2_strand',
-    break2_sequence='break2_sequence',
+    break2_seq='break2_seq',
     opposing_strands='opposing_strands',
     stranded='stranded',
     protocol='protocol',
@@ -297,7 +297,7 @@ COLUMNS = Vocab(
     break1_ewindow='break1_ewindow',
     break1_ewindow_count='break1_ewindow_count',
     break1_ewindow_practical_coverage='break1_ewindow_practical_coverage',
-    break1_homologous_sequence='break1_homologous_sequence',
+    break1_homologous_seq='break1_homologous_seq',
     break1_split_read_names='break1_split_read_names',
     break1_split_reads='break1_split_reads',
     break1_split_reads_forced='break1_split_reads_forced',
@@ -305,14 +305,14 @@ COLUMNS = Vocab(
     break2_ewindow='break2_ewindow',
     break2_ewindow_count='break2_ewindow_count',
     break2_ewindow_practical_coverage='break2_ewindow_practical_coverage',
-    break2_homologous_sequence='break2_homologous_sequence',
+    break2_homologous_seq='break2_homologous_seq',
     break2_split_read_names='break2_split_read_names',
     break2_split_reads='break2_split_reads',
     break2_split_reads_forced='break2_split_reads_forced',
     contig_alignment_score='contig_alignment_score',
     contig_remap_score='contig_remap_score',
     contig_remapped_read_names='contig_remapped_read_names',
-    contig_sequence='contig_sequence',
+    contig_seq='contig_seq',
     contigs_aligned='contigs_aligned',
     contigs_assembled='contigs_assembled',
     flanking_median_fragment_size='flanking_median_fragment_size',
@@ -327,7 +327,7 @@ COLUMNS = Vocab(
     raw_break2_split_reads='raw_break2_split_reads',
     raw_flanking_pairs='raw_flanking_pairs',
     raw_spanning_reads='raw_spanning_reads',
-    untemplated_sequence='untemplated_sequence',
+    untemplated_seq='untemplated_seq',
 )
 """:class:`Vocab`: Column names for i/o files used throughout the pipeline
 
@@ -438,7 +438,7 @@ COLUMNS = Vocab(
     break1_strand
         :class:`STRAND` - The strand wrt to the reference positive/forward strand at this breakpoint.
 
-    break1_sequence
+    break1_seq
         :class:`str` - The sequence up to and including the breakpoint. Always given wrt to the positive/forward strand
 
     break2_chromosome
@@ -456,7 +456,7 @@ COLUMNS = Vocab(
     break2_strand
         :class:`STRAND` - The strand wrt to the reference positive/forward strand at this breakpoint.
 
-    break2_sequence
+    break2_seq
         :class:`str` - The sequence up to and including the breakpoint. Always given wrt to the positive/forward strand
 
     opposing_strands
@@ -478,7 +478,7 @@ COLUMNS = Vocab(
     contigs_aligned
         :class:`int` - Number of contigs that were able to align
 
-    contig_sequence
+    contig_seq
         :class:`str` - Sequence of the current contig wrt to the positive forward strand if not strand specific
 
     contig_remap_score
@@ -525,13 +525,13 @@ COLUMNS = Vocab(
     linking_split_reads
         :class:`int` - Number of split reads that align to both breakpoints
 
-    untemplated_sequence
+    untemplated_seq
         :class:`str` - The untemplated/novel sequence between the breakpoints
 
-    break1_homologous_sequence
+    break1_homologous_seq
         :class:`str` - Sequence in common at the first breakpoint and other side of the second breakpoint
 
-    break2_homologous_sequence
+    break2_homologous_seq
         :class:`str` - Sequence in common at the second breakpoint and other side of the first breakpoint
 
     break1_ewindow

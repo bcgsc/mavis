@@ -44,7 +44,7 @@ class FusionTranscript(usTranscript):
     def __init__(self):
         self.exon_mapping = {}
         self.exons = []
-        self.sequence = None
+        self.seq = None
         self.spliced_transcripts = []
         self.position = None
         self.strand = STRAND.POS  # always built on the positive strand
@@ -78,7 +78,7 @@ class FusionTranscript(usTranscript):
             raise NotSpecifiedError('cannot produce fusion transcript for non-annotated fusions')
         elif not ann.event_type and ann.transcript1 == ann.transcript2:
             raise NotSpecifiedError('event_type must be specified to produce a fusion transcript')
-        elif ann.untemplated_sequence is None:
+        elif ann.untemplated_seq is None:
             raise NotSpecifiedError(
                 'cannot build a fusion transcript where the untemplated sequence has not been specified')
         elif len(ann.break1) > 1 or len(ann.break2) > 1:
@@ -92,18 +92,18 @@ class FusionTranscript(usTranscript):
             if ann.event_type == SVTYPE.DUP:
                 seq1, ex1 = cls._pull_exons(ann.transcript1, ann.break1, REFERENCE_GENOME[ann.break1.chr].seq)
                 seq2, ex2 = cls._pull_exons(ann.transcript2, ann.break2, REFERENCE_GENOME[ann.break2.chr].seq)
-                useq = ann.untemplated_sequence
+                useq = ann.untemplated_seq
 
                 if ann.transcript1.get_strand() == STRAND.NEG:
                     seq1, seq2 = (seq2, seq1)
                     ex1, ex2 = (ex2, ex1)
                     useq = reverse_complement(useq)
-                ft.sequence = seq2 + useq
+                ft.seq = seq2 + useq
                 for ex, old_ex in ex2:
                     ft.exons.append(ex)
                     ex.reference_object = ft
                     ft.exon_mapping[ex.position] = old_ex
-                offset = len(ft.sequence) + 1
+                offset = len(ft.seq) + 1
                 for ex, old_ex in ex1:
                     e = Exon(
                         ex.start + offset, ex.end + offset, ft,
@@ -112,7 +112,7 @@ class FusionTranscript(usTranscript):
                     )
                     ft.exons.append(e)
                     ft.exon_mapping[e.position] = old_ex
-                ft.sequence += seq1
+                ft.seq += seq1
             elif ann.event_type == SVTYPE.INV:
                 # pull the exons from either size of the breakpoints window
                 window = Interval(ann.break1.end + 1, ann.break2.end)
@@ -125,7 +125,7 @@ class FusionTranscript(usTranscript):
 
                 seq1, ex1 = cls._pull_exons(ann.transcript1, b1, REFERENCE_GENOME[b1.chr].seq)
                 seq2, ex2 = cls._pull_exons(ann.transcript2, b2, REFERENCE_GENOME[b2.chr].seq)
-                useq = ann.untemplated_sequence
+                useq = ann.untemplated_seq
 
                 if ann.transcript1.get_strand() == STRAND.POS:
                     window_seq = reverse_complement(window_seq)  # b/c inversion should be opposite
@@ -134,20 +134,20 @@ class FusionTranscript(usTranscript):
                     seq1, seq2 = seq2, seq1
                     ex1, ex2 = ex2, ex1
 
-                ft.sequence = seq1
+                ft.seq = seq1
 
                 if ann.break1.orient == ORIENT.LEFT:
-                    ft.sequence += useq + window_seq
+                    ft.seq += useq + window_seq
                 else:
-                    ft.sequence += window_seq + useq
+                    ft.seq += window_seq + useq
 
                 for ex, old_ex in ex1:
                     ft.exons.append(ex)
                     ex.reference_object = ft
                     ft.exon_mapping[ex.position] = old_ex
 
-                offset = len(ft.sequence)
-                ft.sequence += seq2
+                offset = len(ft.seq)
+                ft.seq += seq2
                 for ex, old_ex in ex2:
                     e = Exon(
                         ex.start + offset, ex.end + offset, ft,
@@ -166,7 +166,7 @@ class FusionTranscript(usTranscript):
                 raise NotImplementedError('do not produce fusion transcript for anti-sense fusions')
             seq1, ex1 = cls._pull_exons(ann.transcript1, ann.break1, REFERENCE_GENOME[ann.break1.chr].seq)
             seq2, ex2 = cls._pull_exons(ann.transcript2, ann.break2, REFERENCE_GENOME[ann.break2.chr].seq)
-            useq = ann.untemplated_sequence
+            useq = ann.untemplated_seq
 
             if t1 == PRIME.FIVE:
                 if ann.transcript1.strand == STRAND.NEG:
@@ -177,13 +177,13 @@ class FusionTranscript(usTranscript):
                 seq1, seq2 = seq2, seq1
                 ex1, ex2 = ex2, ex1
 
-            ft.sequence = seq1 + useq
+            ft.seq = seq1 + useq
 
             for ex, old_ex in ex1:
                 ft.exons.append(ex)
                 ex.reference_object = ft
                 ft.exon_mapping[ex.position] = old_ex
-            offset = len(ft.sequence)
+            offset = len(ft.seq)
             for ex, old_ex in ex2:
                 e = Exon(
                     ex.start + offset, ex.end + offset, ft,
@@ -192,9 +192,9 @@ class FusionTranscript(usTranscript):
                 )
                 ft.exons.append(e)
                 ft.exon_mapping[e.position] = old_ex
-            ft.sequence += seq2
+            ft.seq += seq2
 
-        ft.position = Interval(1, len(ft.sequence))
+        ft.position = Interval(1, len(ft.seq))
 
         # add all splice variants
         for spl_patt in ft.generate_splicing_patterns():
@@ -202,7 +202,7 @@ class FusionTranscript(usTranscript):
             ft.spliced_transcripts.append(t)
 
             # now add the possible translations
-            orfs = calculate_ORF(t.get_sequence(), min_orf_size=min_orf_size)
+            orfs = calculate_ORF(t.get_seq(), min_orf_size=min_orf_size)
             if max_orf_cap and len(orfs) > max_orf_cap:  # limit the number of orfs returned
                 orfs = sorted(orfs, key=lambda x: len(x), reverse=True)
                 l = len(orfs[max_orf_cap - 1])
@@ -221,7 +221,7 @@ class FusionTranscript(usTranscript):
         # remap the domains from the original translations to the current translations
         for t in ft.spliced_transcripts:
             for new_tl in t.translations:
-                aa_seq = new_tl.get_AA_sequence()
+                aa_seq = new_tl.get_AA_seq()
                 assert(aa_seq[0] == 'M')
                 translations = ann.transcript1.translations[:]
                 if ann.transcript1 != ann.transcript2:
@@ -237,20 +237,20 @@ class FusionTranscript(usTranscript):
                             pass
         return ft
 
-    def get_sequence(self, REFERENCE_GENOME=None, ignore_cache=False):
-        return usTranscript.get_sequence(self)
+    def get_seq(self, REFERENCE_GENOME=None, ignore_cache=False):
+        return usTranscript.get_seq(self)
 
-    def get_spliced_cdna_sequence(self, splicing_pattern, REFERENCE_GENOME=None, ignore_cache=False):
+    def get_spliced_cdna_seq(self, splicing_pattern, REFERENCE_GENOME=None, ignore_cache=False):
         """
         Args:
             splicing_pattern (:class:`list` of :class:`int`): the list of splicing positions
-            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
+            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference seq
                 by template/chr name
 
         Returns:
-            str: the spliced cDNA sequence
+            str: the spliced cDNA seq
         """
-        return usTranscript.get_spliced_cdna_sequence(self, splicing_pattern)
+        return usTranscript.get_spliced_cdna_seq(self, splicing_pattern)
 
     @classmethod
     def _pull_exons(cls, transcript, breakpoint, reference_sequence):
@@ -385,7 +385,7 @@ class Annotation(BreakpointPair):
             opposing_strands=bpp.opposing_strands,
             stranded=bpp.stranded,
             data=bpp.data,
-            untemplated_sequence=bpp.untemplated_sequence
+            untemplated_seq=bpp.untemplated_seq
         )
 
         self.transcript1 = transcript1

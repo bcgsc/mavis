@@ -255,7 +255,7 @@ def cluster_breakpoint_pairs(input_pairs, r, k):
                     bpp.break2.strand,
                     bpp.opposing_strands,
                     bpp.stranded,
-                    bpp.untemplated_sequence
+                    bpp.untemplated_seq
                 )
                 node_sets.setdefault(classification_key, set()).add(new_bpp)
                 input_mapping.setdefault(new_bpp, set()).add(index)
@@ -283,7 +283,7 @@ def cluster_breakpoint_pairs(input_pairs, r, k):
                 Breakpoint(chr1, ip.start[0], ip.start[1], strand=s1, orient=o1),
                 Breakpoint(chr2, ip.end[0], ip.end[1], strand=s2, orient=o2),
                 opposing_strands=opposing_strands,
-                untemplated_sequence=seq,
+                untemplated_seq=seq,
                 stranded=stranded
             )
             # gather the original input pairs using the mapping

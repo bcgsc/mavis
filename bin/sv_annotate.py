@@ -236,7 +236,7 @@ def main():
                 fusion_fa_id = '{}_{}'.format(annotation_id, t.splicing_pattern.splice_type)
                 if fusion_fa_id in fa_sequences:
                     raise AssertionError('should not be duplicate fa sequence ids', fusion_fa_id)
-                fa_sequences[fusion_fa_id] = ft.get_cdna_sequence(t.splicing_pattern)
+                fa_sequences[fusion_fa_id] = ft.get_cdna_seq(t.splicing_pattern)
 
                 # duplicate the row for each translation
                 for tl in t.translations:
@@ -252,7 +252,7 @@ def main():
                         m, t = dom.score_region_mapping()
                         temp = {
                             "name": dom.name,
-                            "sequences": dom.get_sequences(),
+                            "sequences": dom.get_seqs(),
                             "regions": [
                                 {"start": dr.start, "end": dr.end} for dr in sorted(dom.regions, key=lambda x: x.start)
                             ],

@@ -24,7 +24,7 @@ class EventCall(BreakpointPair):
         break2_call_method=None,
         contig=None,
         contig_alignment=None,
-        untemplated_sequence=None
+        untemplated_seq=None
     ):
         """
         Args:
@@ -34,8 +34,8 @@ class EventCall(BreakpointPair):
             call_method (CALL_METHOD): the way the breakpoints were called
             contig (Contig): the contig used to call the breakpoints (if applicable)
         """
-        if untemplated_sequence is None:
-            untemplated_sequence = source_evidence.untemplated_sequence
+        if untemplated_seq is None:
+            untemplated_seq = source_evidence.untemplated_seq
         if break2_call_method is None:
             break2_call_method = call_method
 
@@ -43,7 +43,7 @@ class EventCall(BreakpointPair):
             self, b1, b2,
             stranded=source_evidence.stranded and source_evidence.bam_cache.stranded,
             opposing_strands=source_evidence.opposing_strands,
-            untemplated_sequence=untemplated_sequence,
+            untemplated_seq=untemplated_seq,
             data=source_evidence.data
         )
         self.source_evidence = source_evidence
@@ -211,7 +211,7 @@ class EventCall(BreakpointPair):
             if r2:
                 ascore = int(round((r1.get_tag('br') + r2.get_tag('br')) / 2, 0))
             row.update({
-                COLUMNS.contig_sequence: self.contig.sequence,
+                COLUMNS.contig_seq: self.contig.seq,
                 COLUMNS.contig_remap_score: self.contig.remap_score(),
                 COLUMNS.contig_alignment_score: ascore
             })
@@ -255,11 +255,11 @@ def call_events(source_evidence):
 
             for event_type in source_evidence.putative_event_types():
                 if event_type == SVTYPE.INS:
-                    if len(bpp.untemplated_sequence) == 0 or \
-                            len(bpp.untemplated_sequence) <= Interval.dist(bpp.break1, bpp.break2):
+                    if len(bpp.untemplated_seq) == 0 or \
+                            len(bpp.untemplated_seq) <= Interval.dist(bpp.break1, bpp.break2):
                         continue
                 elif event_type == SVTYPE.DEL:
-                    if len(bpp.untemplated_sequence) > Interval.dist(bpp.break1, bpp.break2):
+                    if len(bpp.untemplated_seq) > Interval.dist(bpp.break1, bpp.break2):
                         continue
                 new_event = EventCall(
                     bpp.break1,
@@ -268,7 +268,7 @@ def call_events(source_evidence):
                     event_type,
                     contig=ctg,
                     contig_alignment=(read1, read2),
-                    untemplated_sequence=bpp.untemplated_sequence,
+                    untemplated_seq=bpp.untemplated_seq,
                     call_method=CALL_METHOD.CONTIG
                 )
                 contig_calls.append(new_event)
@@ -316,7 +316,7 @@ def _call_by_contigs(ev, event_type):
             except UserWarning as err:
                 continue
             if bpp.opposing_strands != ev.opposing_strands \
-                    or (event_type == SVTYPE.INS and bpp.untemplated_sequence == '') \
+                    or (event_type == SVTYPE.INS and bpp.untemplated_seq == '') \
                     or event_type not in BreakpointPair.classify(bpp):
                 continue
             new_event = EventCall(
@@ -327,7 +327,7 @@ def _call_by_contigs(ev, event_type):
                 contig=ctg,
                 contig_alignment=(read1, read2),
                 opposing_strands=bpp.opposing_strands,
-                untemplated_sequence=bpp.untemplated_sequence
+                untemplated_seq=bpp.untemplated_seq
             )
             events.append(new_event)
     return events

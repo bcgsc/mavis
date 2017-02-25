@@ -1,10 +1,10 @@
 """
 
-"In general the coordinates in psl files are “zero based half open.” The first base in a sequence is numbered 
-zero rather than one. When representing a range the end coordinate is not included in the range. Thus the first 
-100 bases of a sequence are represented as 0-100, and the second 100 bases are represented as 100-200. There is 
-another little unusual feature in the .psl format. It has to do with how coordinates are handled on the 
-negative strand. In the qStart/qEnd fields the coordinates are where it matches from the point of view of the forward 
+"In general the coordinates in psl files are “zero based half open.” The first base in a sequence is numbered
+zero rather than one. When representing a range the end coordinate is not included in the range. Thus the first
+100 bases of a sequence are represented as 0-100, and the second 100 bases are represented as 100-200. There is
+another little unusual feature in the .psl format. It has to do with how coordinates are handled on the
+negative strand. In the qStart/qEnd fields the coordinates are where it matches from the point of view of the forward
 strand (even when the match is on the reverse strand). However on the qStarts[] list, the coordinates are reversed."
 --- http://wiki.bits.vib.be/index.php/Blat
 
@@ -362,7 +362,7 @@ def blat_contigs(
         sequences = set()
         for e in evidence:
             for c in e.contigs:
-                sequences.add(c.sequence)
+                sequences.add(c.seq)
         for seq in sequences:
             n = 'seq{0}'.format(count)
             query_id_mapping[n] = seq
@@ -423,7 +423,7 @@ def blat_contigs(
         # now for each evidence assign an alignment to each contig
         for e in evidence:
             for contig in e.contigs:
-                aln = reads_by_query.get(contig.sequence, [])
+                aln = reads_by_query.get(contig.seq, [])
                 putative_alignments = []
                 combo_prohibited = set()
 
@@ -444,7 +444,7 @@ def blat_contigs(
                     if a1.reference_id > a2.reference_id or \
                             (a1.reference_id == a2.reference_id and a1.reference_start > a2.reference_start):
                         a1, a2 = (a2, a1)
-                    
+
                     q1 = a1.query_coverage_interval()
                     q2 = a2.query_coverage_interval()
 
@@ -454,7 +454,7 @@ def blat_contigs(
                         q2 = Interval(len(a2.query_sequence) - q2.end, len(a2.query_sequence) - q2.start)
                     elif e.opposing_strands:
                         continue
-                    union = q1 | q2 
+                    union = q1 | q2
                     if len(union) - len(q1) < MIN_EXTEND_OVERLAP or len(union) - len(q2) < MIN_EXTEND_OVERLAP:
                         continue
 

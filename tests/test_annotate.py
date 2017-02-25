@@ -238,7 +238,7 @@ class TestFusionTranscript(unittest.TestCase):
         t = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b1 = Breakpoint(REF_CHR, 599, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
-        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_sequence='ATCGATCG')
+        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='ATCGATCG')
         ref = {REF_CHR: MockSeq(self.reference_sequence)}
         ann = Annotation(bpp, transcript1=t, transcript2=t, event_type=SVTYPE.DEL)
         ft = FusionTranscript.build(ann, ref)
@@ -246,7 +246,7 @@ class TestFusionTranscript(unittest.TestCase):
         expt = 'C' * len(self.x) + 'A' * (499 - 200 + 1) + 'G' * len(self.y) + 'ATCGATCG' + 'T' * len(self.z)
         expt += 'A' * (1499 - 1300 + 1) + 'C' * len(self.w) + 'A' * (1699 - 1600 + 1) + 'G' * len(self.s)
 
-        self.assertEqual(expt, ft.sequence)
+        self.assertEqual(expt, ft.seq)
         self.assertEqual(5, len(ft.exons))
 
         for i, ex in enumerate(t.exons):
@@ -264,8 +264,8 @@ class TestFusionTranscript(unittest.TestCase):
             ex = ft.exons[i]
             self.assertEqual(s, ex.intact_start_splice)
             self.assertEqual(t, ex.intact_end_splice)
-            temp = ft.sequence[ex.start - 1:ex.end]
-            self.assertEqual(char_pattern[i], ft.sequence[ex.start - 1:ex.end])
+            temp = ft.seq[ex.start - 1:ex.end]
+            self.assertEqual(char_pattern[i], ft.seq[ex.start - 1:ex.end])
 
     def test_build_single_transcript_inversion(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
@@ -273,7 +273,7 @@ class TestFusionTranscript(unittest.TestCase):
         t = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b1 = Breakpoint(REF_CHR, 1199, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 1299, orient=ORIENT.LEFT)
-        bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_sequence='ATCGTC')
+        bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_seq='ATCGTC')
         ref = {REF_CHR: MockSeq(self.reference_sequence)}
         ann = Annotation(bpp, transcript1=t, transcript2=t, event_type=SVTYPE.INV)
         ft = FusionTranscript.build(ann, ref)
@@ -281,7 +281,7 @@ class TestFusionTranscript(unittest.TestCase):
         expt += 'ATCGTC' + 'A' * len(self.z)
         expt += 'A' * (1499 - 1300 + 1) + 'C' * len(self.w) + 'A' * (1699 - 1600 + 1) + 'G' * len(self.s)
 
-        self.assertEqual(expt, ft.sequence)
+        self.assertEqual(expt, ft.seq)
         self.assertEqual(4, len(ft.exons))
 
     def test_build_single_transcript_inversion_neg(self):
@@ -290,7 +290,7 @@ class TestFusionTranscript(unittest.TestCase):
         t = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
         b1 = Breakpoint(REF_CHR, 1300, orient=ORIENT.RIGHT)
         b2 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
-        bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_sequence='ATCGTC')
+        bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_seq='ATCGTC')
         ref = {REF_CHR: MockSeq(self.reference_sequence)}
         ann = Annotation(bpp, transcript1=t, transcript2=t, event_type=SVTYPE.INV)
         ft = FusionTranscript.build(ann, ref)
@@ -299,7 +299,7 @@ class TestFusionTranscript(unittest.TestCase):
         expt += 'T' * len(self.z) + 'GACGAT' + 'T' * (1199 - 600 + 1) + 'C' * len(self.y)
         expt += 'T' * (499 - 200 + 1) + 'G' * len(self.x)
 
-        self.assertEqual(expt, ft.sequence)
+        self.assertEqual(expt, ft.seq)
         self.assertEqual(4, len(ft.exons))
 
     def test_build_single_transcript_duplication_pos(self):
@@ -308,7 +308,7 @@ class TestFusionTranscript(unittest.TestCase):
         t = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b1 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
         b2 = Breakpoint(REF_CHR, 1299, orient=ORIENT.LEFT)
-        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_sequence='ATCGATCG')
+        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='ATCGATCG')
         ref = {REF_CHR: MockSeq(self.reference_sequence)}
         ann = Annotation(bpp, transcript1=t, transcript2=t, event_type=SVTYPE.DUP)
         ft = FusionTranscript.build(ann, ref)
@@ -317,7 +317,7 @@ class TestFusionTranscript(unittest.TestCase):
         expt = 'C' * len(self.x) + 'A' * (499 - 200 + 1) + 'G' * len(self.y) + 'A' * (1199 - 600 + 1)
         expt += 'T' * len(self.z) + 'ATCGATCG' + 'T' * len(self.z)
         expt += 'A' * (1499 - 1300 + 1) + 'C' * len(self.w) + 'A' * (1699 - 1600 + 1) + 'G' * len(self.s)
-        self.assertEqual(expt, ft.sequence)
+        self.assertEqual(expt, ft.seq)
         self.assertEqual(6, len(ft.exons))
         self.assertTrue(ft.exons[2].intact_start_splice)
         self.assertTrue(ft.exons[3].intact_end_splice)
@@ -330,7 +330,7 @@ class TestFusionTranscript(unittest.TestCase):
         t = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
         b1 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
         b2 = Breakpoint(REF_CHR, 1299, orient=ORIENT.LEFT)
-        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_sequence='ATCGATCG')
+        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='ATCGATCG')
         ref = {REF_CHR: MockSeq(self.reference_sequence)}
         ann = Annotation(bpp, transcript1=t, transcript2=t, event_type=SVTYPE.DUP)
         ft = FusionTranscript.build(ann, ref)
@@ -339,7 +339,7 @@ class TestFusionTranscript(unittest.TestCase):
         expt += 'T' * len(self.z) + 'ATCGATCG' + 'T' * len(self.z)
         expt += 'A' * (1499 - 1300 + 1) + 'C' * len(self.w) + 'A' * (1699 - 1600 + 1) + 'G' * len(self.s)
         expt = reverse_complement(expt)
-        self.assertEqual(expt, ft.sequence)
+        self.assertEqual(expt, ft.seq)
         self.assertEqual(6, len(ft.exons))
         self.assertTrue(ft.exons[2].intact_start_splice)
         self.assertTrue(ft.exons[3].intact_end_splice)
@@ -357,13 +357,13 @@ class TestFusionTranscript(unittest.TestCase):
         t2 = usTranscript(exons=[self.a, self.b, self.c, self.d], strand=STRAND.NEG)
         b1 = Breakpoint(REF_CHR, 1199, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 2699, orient=ORIENT.LEFT)
-        bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_sequence='ATCGACTC')
+        bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_seq='ATCGACTC')
         ref = {REF_CHR: MockSeq(self.reference_sequence)}
         ann = Annotation(bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.INV)
         ft = FusionTranscript.build(ann, ref)
         expt = 'C' * len(self.x) + 'A' * (499 - 200 + 1) + 'G' * len(self.y) + 'A' * (1199 - 600 + 1)
         expt += 'ATCGACTC' + 'G' * len(self.b) + 'T' * (2599 - 2100 + 1) + 'A' * len(self.a)
-        self.assertEqual(expt, ft.sequence)
+        self.assertEqual(expt, ft.seq)
         self.assertEqual(4, len(ft.exons))
         self.assertTrue(ft.exons[3].intact_end_splice)
         self.assertFalse(ft.exons[2].intact_start_splice)
@@ -381,7 +381,7 @@ class TestFusionTranscript(unittest.TestCase):
         t2 = usTranscript(exons=[self.a, self.b, self.c, self.d], strand=STRAND.POS)
         b1 = Breakpoint(REF_CHR, 1199, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 2699, orient=ORIENT.LEFT)
-        bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_sequence='ATCGACTC')
+        bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_seq='ATCGACTC')
         ref = {REF_CHR: MockSeq(self.reference_sequence)}
         ann = Annotation(bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.INV)
         ft = FusionTranscript.build(ann, ref)
@@ -391,7 +391,7 @@ class TestFusionTranscript(unittest.TestCase):
         self.assertEqual(4, len(ft.exons))
         self.assertEqual(2, ft.exon_number(ft.exons[1]))
         self.assertEqual(4, ft.exon_number(ft.exons[2]))
-        self.assertEqual(expt, ft.sequence)
+        self.assertEqual(expt, ft.seq)
 
     def test_build_two_transcript_duplication_pos(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
@@ -402,7 +402,7 @@ class TestFusionTranscript(unittest.TestCase):
         t2 = usTranscript(exons=[self.a, self.b, self.c, self.d], strand=STRAND.POS)
         b1 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
         b2 = Breakpoint(REF_CHR, 2699, orient=ORIENT.LEFT)
-        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_sequence='ATCGAC')
+        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='ATCGAC')
         ref = {REF_CHR: MockSeq(self.reference_sequence)}
         ann = Annotation(bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.DUP)
         ft = FusionTranscript.build(ann, ref)
@@ -413,7 +413,7 @@ class TestFusionTranscript(unittest.TestCase):
         self.assertEqual(5, len(ft.exons))
         self.assertEqual(2, ft.exon_number(ft.exons[1]))
         self.assertEqual(3, ft.exon_number(ft.exons[2]))
-        self.assertEqual(expt, ft.sequence)
+        self.assertEqual(expt, ft.seq)
 
     def test_build_two_transcript_duplication_neg(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
@@ -424,7 +424,7 @@ class TestFusionTranscript(unittest.TestCase):
         t2 = usTranscript(exons=[self.a, self.b, self.c, self.d], strand=STRAND.NEG)
         b1 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
         b2 = Breakpoint(REF_CHR, 2699, orient=ORIENT.LEFT)
-        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_sequence='ATCGAC')
+        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='ATCGAC')
         ref = {REF_CHR: MockSeq(self.reference_sequence)}
         ann = Annotation(bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.DUP)
         ft = FusionTranscript.build(ann, ref)
@@ -436,7 +436,7 @@ class TestFusionTranscript(unittest.TestCase):
         self.assertEqual(5, len(ft.exons))
         self.assertEqual(2, ft.exon_number(ft.exons[1]))
         self.assertEqual(3, ft.exon_number(ft.exons[2]))
-        self.assertEqual(expt, ft.sequence)
+        self.assertEqual(expt, ft.seq)
 
     def test_build_two_transcript_deletion_pos(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
@@ -447,7 +447,7 @@ class TestFusionTranscript(unittest.TestCase):
         t2 = usTranscript(exons=[self.a, self.b, self.c, self.d], strand=STRAND.POS)
         b1 = Breakpoint(REF_CHR, 1199, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 2700, orient=ORIENT.RIGHT)
-        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_sequence='AACGTGT')
+        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='AACGTGT')
         ref = {REF_CHR: MockSeq(self.reference_sequence)}
         ann = Annotation(bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.DEL)
         ft = FusionTranscript.build(ann, ref)
@@ -455,7 +455,7 @@ class TestFusionTranscript(unittest.TestCase):
         expt = 'C' * len(self.x) + 'A' * (499 - 200 + 1) + 'G' * len(self.y) + 'A' * (1199 - 600 + 1) + 'AACGTGT'
         expt += 'A' * (2999 - 2700 + 1) + 'G' * len(self.c) + 'A' * (3299 - 3100 + 1) + 'T' * len(self.d)
 
-        self.assertEqual(expt, ft.sequence)
+        self.assertEqual(expt, ft.seq)
         self.assertTrue(4, len(ft.exons))
 
     def test_build_two_transcript_deletion_neg(self):
@@ -467,7 +467,7 @@ class TestFusionTranscript(unittest.TestCase):
         t2 = usTranscript(exons=[self.a, self.b, self.c, self.d], strand=STRAND.NEG)
         b1 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
         b2 = Breakpoint(REF_CHR, 2699, orient=ORIENT.LEFT)
-        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_sequence='AACGAGTGT')
+        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='AACGAGTGT')
         ref = {REF_CHR: MockSeq(self.reference_sequence)}
         ann = Annotation(bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.DEL)
         ft = FusionTranscript.build(ann, ref)
@@ -477,7 +477,7 @@ class TestFusionTranscript(unittest.TestCase):
         expt += 'A' * len(self.z) + 'ACACTCGTT' + 'G' * len(self.b) + 'T' * (2599 - 2100 + 1)
         expt += 'A' * len(self.a)
 
-        self.assertEqual(expt, ft.sequence)
+        self.assertEqual(expt, ft.seq)
         self.assertTrue(5, len(ft.exons))
         self.assertEqual(3, ft.exon_number(ft.exons[2]))
         self.assertEqual(3, ft.exon_number(ft.exons[3]))
@@ -492,7 +492,7 @@ class TestFusionTranscript(unittest.TestCase):
         t2 = usTranscript(exons=[self.b1, self.b2, self.b3, self.b4, self.b5, self.b6], strand=STRAND.POS)
         b1 = Breakpoint(REF_CHR, 1199, orient=ORIENT.LEFT)
         b2 = Breakpoint('ref2', 1200, orient=ORIENT.RIGHT)
-        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_sequence='GCAACATAT')
+        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='GCAACATAT')
         ref = {REF_CHR: MockSeq(self.reference_sequence), 'ref2': MockSeq(self.alternate_sequence)}
         ann = Annotation(bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.TRANS)
         self.assertEqual(b1, ann.break1)
@@ -502,7 +502,7 @@ class TestFusionTranscript(unittest.TestCase):
         expt += 'GCAACATAT' + 'C' * (1399 - 1200 + 1) + 'A' * len(self.b4) + 'C' * (1699 - 1500 + 1)
         expt += 'G' * len(self.b5) + 'C' * (2099 - 1800 + 1) + 'A' * len(self.b6)
 
-        self.assertEqual(expt, ft.sequence)
+        self.assertEqual(expt, ft.seq)
         self.assertTrue(5, len(ft.exons))
         self.assertTrue(2, ft.exon_number(ft.exons[1]))
         self.assertTrue(4, ft.exon_number(ft.exons[2]))
@@ -516,7 +516,7 @@ class TestFusionTranscript(unittest.TestCase):
         t2 = usTranscript(exons=[self.b1, self.b2, self.b3, self.b4, self.b5, self.b6], strand=STRAND.NEG)
         b1 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
         b2 = Breakpoint(ALT_REF_CHR, 1199, orient=ORIENT.LEFT)
-        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_sequence='TCTACATAT')
+        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='TCTACATAT')
         ref = {REF_CHR: MockSeq(self.reference_sequence), ALT_REF_CHR: MockSeq(self.alternate_sequence)}
         ann = Annotation(bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.TRANS)
         self.assertEqual(b1, ann.break1)
@@ -527,7 +527,7 @@ class TestFusionTranscript(unittest.TestCase):
         expt += 'A' * len(self.z) +  'ATATGTAGA' + 'A' * len(self.b3) + 'G' * (1099 - 900 + 1)
         expt += 'C' * len(self.b2) + 'G' * (799 - 700 + 1) + 'T' * len(self.b1)
 
-        self.assertEqual(expt, ft.sequence)
+        self.assertEqual(expt, ft.seq)
         self.assertEqual(6, len(ft.exons))
         self.assertTrue(3, ft.exon_number(ft.exons[2]))
         self.assertTrue(3, ft.exon_number(ft.exons[3]))
@@ -542,7 +542,7 @@ class TestFusionTranscript(unittest.TestCase):
         t2 = usTranscript(exons=[self.b1, self.b2, self.b3, self.b4, self.b5, self.b6], strand=STRAND.POS)
         b1 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
         b2 = Breakpoint(ALT_REF_CHR, 1200, orient=ORIENT.RIGHT)
-        bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_sequence='GATACATAT')
+        bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_seq='GATACATAT')
         ref = {REF_CHR: MockSeq(self.reference_sequence), ALT_REF_CHR: MockSeq(self.alternate_sequence)}
         ann = Annotation(bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.TRANS)
         self.assertEqual(b1, ann.break1)
@@ -553,7 +553,7 @@ class TestFusionTranscript(unittest.TestCase):
         expt += 'A' * len(self.z) +  'ATATGTATC' + 'C' * (1399 - 1200 + 1) + 'A' * len(self.b4)
         expt += 'C' * (1699 - 1500 + 1) + 'G' * len(self.b5) + 'C' * (2099 - 1800 + 1) + 'A' * len(self.b6)
 
-        self.assertEqual(expt, ft.sequence)
+        self.assertEqual(expt, ft.seq)
         self.assertEqual(6, len(ft.exons))
         self.assertTrue(3, ft.exon_number(ft.exons[2]))
         self.assertTrue(4, ft.exon_number(ft.exons[3]))
@@ -584,112 +584,112 @@ class TestSequenceFetching(unittest.TestCase):
 
     def test_fetch_gene_seq_from_ref(self):
         expt = str(REFERENCE_GENOME[REF_CHR][0:900].seq).upper()
-        self.assertEqual(expt, self.gene.get_sequence(REFERENCE_GENOME))
+        self.assertEqual(expt, self.gene.get_seq(REFERENCE_GENOME))
         # gene seq should be the same if gene in on reverse strand b/c gene seq always given on pos
         self.gene.strand = STRAND.NEG
-        self.assertEqual(expt, self.gene.get_sequence(REFERENCE_GENOME))
+        self.assertEqual(expt, self.gene.get_seq(REFERENCE_GENOME))
 
     def test_fetch_gene_seq_from_stored(self):
         expt = 'AAA'
-        self.gene.sequence = expt
-        self.assertEqual(expt, self.gene.get_sequence(REFERENCE_GENOME))
+        self.gene.seq = expt
+        self.assertEqual(expt, self.gene.get_seq(REFERENCE_GENOME))
 
     def test_fetch_gene_seq_force_uncached(self):
         expt = str(REFERENCE_GENOME[REF_CHR][0:900].seq).upper()
-        self.gene.sequence = 'AAA'
-        self.assertEqual(expt, self.gene.get_sequence(REFERENCE_GENOME, ignore_cache=True))
+        self.gene.seq = 'AAA'
+        self.assertEqual(expt, self.gene.get_seq(REFERENCE_GENOME, ignore_cache=True))
 
     def test_fetch_us_transcript_seq_from_ref(self):
         expt = str(REFERENCE_GENOME[REF_CHR][100:800].seq).upper()
-        self.assertEqual(expt, self.ust.get_sequence(REFERENCE_GENOME))
+        self.assertEqual(expt, self.ust.get_seq(REFERENCE_GENOME))
 
     def test_fetch_us_transcript_seq_from_ref_revcomp(self):
         self.gene.strand = STRAND.NEG
         expt = reverse_complement(str(REFERENCE_GENOME[REF_CHR][100:800].seq).upper())
-        self.assertEqual(expt, self.ust.get_sequence(REFERENCE_GENOME))
+        self.assertEqual(expt, self.ust.get_seq(REFERENCE_GENOME))
 
     def test_fetch_us_transcript_seq_from_stored(self):
         expt = 'AAA'
-        self.ust.sequence = expt
-        self.assertEqual(expt, self.ust.get_sequence(REFERENCE_GENOME))
+        self.ust.seq = expt
+        self.assertEqual(expt, self.ust.get_seq(REFERENCE_GENOME))
 
     def test_fetch_us_transcript_seq_from_parent_gene(self):
-        self.gene.sequence = 'A' * len(self.gene)
-        self.assertEqual('A' * len(self.ust), self.ust.get_sequence())
+        self.gene.seq = 'A' * len(self.gene)
+        self.assertEqual('A' * len(self.ust), self.ust.get_seq())
 
     def test_fetch_us_transcript_seq_from_parent_gene_revcomp(self):
-        self.gene.sequence = 'A' * len(self.gene)
+        self.gene.seq = 'A' * len(self.gene)
         self.gene.strand = STRAND.NEG
-        self.assertEqual('T' * len(self.ust), self.ust.get_sequence())
+        self.assertEqual('T' * len(self.ust), self.ust.get_seq())
 
     def test_fetch_us_transcript_seq_force_uncached(self):
         expt = str(REFERENCE_GENOME[REF_CHR][100:800].seq).upper()
-        self.ust.sequence = 'AAA'
-        self.assertEqual(expt, self.ust.get_sequence(REFERENCE_GENOME, ignore_cache=True))
+        self.ust.seq = 'AAA'
+        self.assertEqual(expt, self.ust.get_seq(REFERENCE_GENOME, ignore_cache=True))
 
     def test_fetch_transcript_seq_from_ref(self):
-        self.assertEqual(self.spliced_seq, self.transcript.get_sequence(REFERENCE_GENOME))
+        self.assertEqual(self.spliced_seq, self.transcript.get_seq(REFERENCE_GENOME))
 
     def test_fetch_transcript_seq_from_ref_revcomp(self):
         self.gene.strand = STRAND.NEG
-        self.assertEqual(reverse_complement(self.spliced_seq), self.transcript.get_sequence(REFERENCE_GENOME))
+        self.assertEqual(reverse_complement(self.spliced_seq), self.transcript.get_seq(REFERENCE_GENOME))
 
     def test_fetch_transcript_seq_from_stored(self):
         expt = 'AAA'
-        self.transcript.sequence = expt
-        self.assertEqual(expt, self.transcript.get_sequence(REFERENCE_GENOME))
+        self.transcript.seq = expt
+        self.assertEqual(expt, self.transcript.get_seq(REFERENCE_GENOME))
 
     def test_fetch_transcript_seq_from_parent_ust(self):
-        self.ust.sequence = 'A' * len(self.ust)
-        self.assertEqual('A' * len(self.transcript), self.transcript.get_sequence())
+        self.ust.seq = 'A' * len(self.ust)
+        self.assertEqual('A' * len(self.transcript), self.transcript.get_seq())
 
     def test_fetch_transcript_seq_from_parent_gene(self):
-        self.gene.sequence = 'A' * len(self.gene)
-        self.assertEqual('A' * len(self.transcript), self.transcript.get_sequence())
+        self.gene.seq = 'A' * len(self.gene)
+        self.assertEqual('A' * len(self.transcript), self.transcript.get_seq())
 
     def test_fetch_transcript_seq_force_uncached(self):
-        self.transcript.sequence = 'AAA'
-        self.assertEqual(self.spliced_seq, self.transcript.get_sequence(REFERENCE_GENOME, ignore_cache=True))
+        self.transcript.seq = 'AAA'
+        self.assertEqual(self.spliced_seq, self.transcript.get_seq(REFERENCE_GENOME, ignore_cache=True))
 
     def test_fetch_translation_AA_seq_from_ref(self):
         cds = self.spliced_seq[self.translation.start - 1:self.translation.end]
-        self.assertEqual(translate(cds), self.translation.get_AA_sequence(REFERENCE_GENOME))
+        self.assertEqual(translate(cds), self.translation.get_AA_seq(REFERENCE_GENOME))
 
     def test_fetch_translation_cds_seq_from_ref(self):
         cds = self.spliced_seq[self.translation.start - 1:self.translation.end]
-        self.assertEqual(cds, self.translation.get_sequence(REFERENCE_GENOME))
+        self.assertEqual(cds, self.translation.get_seq(REFERENCE_GENOME))
 
     def test_fetch_translation_cds_seq_from_ref_revcomp(self):
         self.gene.strand = STRAND.NEG
         cdna = reverse_complement(self.spliced_seq)
         cds = cdna[self.translation.start - 1:self.translation.end]
-        self.assertEqual(cds, self.translation.get_sequence(REFERENCE_GENOME))
+        self.assertEqual(cds, self.translation.get_seq(REFERENCE_GENOME))
 
     def test_fetch_translation_cds_seq_from_stored(self):
         expt = 'AAA'
-        self.translation.sequence = expt
-        self.assertEqual(expt, self.translation.get_sequence(REFERENCE_GENOME))
+        self.translation.seq = expt
+        self.assertEqual(expt, self.translation.get_seq(REFERENCE_GENOME))
 
     def test_fetch_translation_cds_seq_from_parent_transcript(self):
-        self.transcript.sequence = 'A' * len(self.transcript)
-        self.assertEqual('A' * len(self.translation), self.translation.get_sequence(REFERENCE_GENOME))
+        self.transcript.seq = 'A' * len(self.transcript)
+        self.assertEqual('A' * len(self.translation), self.translation.get_seq(REFERENCE_GENOME))
 
     def test_fetch_translation_cds_seq_from_parent_ust(self):
-        self.ust.sequence = 'A' * len(self.ust)
-        self.assertEqual('A' * len(self.translation), self.translation.get_sequence(REFERENCE_GENOME))
+        self.ust.seq = 'A' * len(self.ust)
+        self.assertEqual('A' * len(self.translation), self.translation.get_seq(REFERENCE_GENOME))
 
     def test_fetch_translation_cds_seq_from_parent_gene(self):
-        self.gene.sequence = 'A' * len(self.gene)
-        self.assertEqual('A' * len(self.translation), self.translation.get_sequence(REFERENCE_GENOME))
+        self.gene.seq = 'A' * len(self.gene)
+        self.assertEqual('A' * len(self.translation), self.translation.get_seq(REFERENCE_GENOME))
 
     def test_fetch_translation_cds_seq_force_uncached(self):
-        self.translation.sequence = 'AAA'
+        self.translation.seq = 'AAA'
         cds = self.spliced_seq[self.translation.start - 1:self.translation.end]
-        self.assertEqual(cds, self.translation.get_sequence(REFERENCE_GENOME, ignore_cache=True))
+        self.assertEqual(cds, self.translation.get_seq(REFERENCE_GENOME, ignore_cache=True))
 
     def test_fetch_domain_seq_from_ref(self):
         seqs = ['VPC*PPIIRK', 'C*NHFNVFLF']
-        self.assertEqual(seqs, self.domain.get_sequences(REFERENCE_GENOME))
+        self.assertEqual(seqs, self.domain.get_seqs(REFERENCE_GENOME))
 
 
 class TestStrandInheritance(unittest.TestCase):
@@ -1066,19 +1066,19 @@ class TestDomain(unittest.TestCase):
         with self.assertRaises(AttributeError):
             Domain('name', [(1, 3), (4, 3)])
 
-    def test_get_sequence_from_ref(self):
+    def test_get_seq_from_ref(self):
         ref = {'1': MockSeq('CCCTAATCCCCTTT')}
         g = Gene('1', 1, 16, strand=STRAND.NEG)
         t = usTranscript(exons=[(2, 5), (7, 15)], gene=g)
         tl = Translation(4, 11, t, [])
         d = Domain('name', [(1, 2)], translation=tl)
-        self.assertEqual([translate('GGGGAT')], d.get_sequences(ref))
+        self.assertEqual([translate('GGGGAT')], d.get_seqs(ref))
 
-    def test_get_sequence_from_translation_seq(self):
-        t = usTranscript(exons=[(2, 5), (7, 15)], sequence='CCCTAATCCCCTTT', strand=STRAND.NEG)
+    def test_get_seq_from_translation_seq(self):
+        t = usTranscript(exons=[(2, 5), (7, 15)], seq='CCCTAATCCCCTTT', strand=STRAND.NEG)
         tl = Translation(4, 11, t, [])
         d = Domain('name', [(1, 2)], translation=tl)
-        self.assertEqual([translate('TAATCC')], d.get_sequences())
+        self.assertEqual([translate('TAATCC')], d.get_seqs())
 
     def test_align_seq(self):
         regions = [
@@ -1107,13 +1107,13 @@ class TestDomain(unittest.TestCase):
         d = Domain('name', regions)
         self.assertTrue(len(refseq) >= 578)
         match, total, temp = d.align_seq(refseq)
-        self.assertEqual(sum([len(d.sequence) for d in regions]), total)
+        self.assertEqual(sum([len(d.seq) for d in regions]), total)
         self.assertEqual(total, match)
         self.assertEqual(len(regions), len(temp))
         for dr1, dr2 in zip(temp, regions):
             self.assertEqual(dr1.start, dr2.start)
             self.assertEqual(dr1.end, dr2.end)
-            self.assertEqual(dr1.sequence, dr2.sequence)
+            self.assertEqual(dr1.seq, dr2.seq)
 
         refseq = 'MHRPPRHMGNKAMEPMDSPLMSAIPRLRPLQPMGRPPMQLLMDSLPLVILLQLPPRHTASLSRGMALVLMIPPL' \
             'LQSPPPRPPMQLSLHMALSLLIQPMGSSQQPLHLQAIPLHSRLVMIRAVTLSRTPMGNRAAMDSRVAMVNKAAMGSSLP' \
@@ -1172,10 +1172,10 @@ class TestGene(unittest.TestCase):
         self.assertNotEqual(g1, None)
         self.assertNotEqual(None, g1)
 
-    def test_get_sequence(self):
+    def test_get_seq(self):
         ref = {'1': MockSeq('AACCCTTTGGG')}
         g = Gene('1', 3, 8, strand=STRAND.POS)
-        self.assertEqual('CCCTTT', g.get_sequence(ref))
+        self.assertEqual('CCCTTT', g.get_seq(ref))
         g = Gene(REF_CHR, 2836, 4144, strand=STRAND.POS)
         seq = (
             'GCAACTATATAATCTGTGGGAATATCTCCTTTTACACCTAGCCCTACTTCTGTCTGGCTACAGTCATTTATCTGGCTTTGGGAAATGTGACCACAGAATCAGATAT'
@@ -1191,7 +1191,7 @@ class TestGene(unittest.TestCase):
             'TTAAACTCAAAAATTTTTTAAATTGGTTAACAATTTAACATAATATGCTGCACATTAATTCAGAATATGAAATCTTATATGTAGTCCTTTTTACATTCAAGAATCA'
             'CATCGATAAACATCACAAAATGACTACTGGTAACCACTATGAAACTCTTTAAGCGGTAGGTCCTGTATGAATTTTACTCCTCATGATTTGAAGATTATGCATAAAT'
             'TCCTTCTTCCTGTTATTTTGTTTCCAATTTAGTCTTT').upper()
-        self.assertEqual(seq, g.get_sequence(REFERENCE_GENOME))
+        self.assertEqual(seq, g.get_seq(REFERENCE_GENOME))
 
 
 class TestExon(unittest.TestCase):

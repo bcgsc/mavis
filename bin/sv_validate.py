@@ -158,10 +158,10 @@ def gather_evidence_from_bam(clusters):
         )
         log('possible event type(s):', BreakpointPair.classify(e), time_stamp=False)
         log('outer window regions:  {}:{}-{}  {}:{}-{}'.format(
-            e.break1.chr, e.outer_window1[0], e.outer_window1[1], 
+            e.break1.chr, e.outer_window1[0], e.outer_window1[1],
             e.break2.chr, e.outer_window2[0], e.outer_window2[1]), time_stamp=False)
         log('inner window regions:  {}:{}-{}  {}:{}-{}'.format(
-            e.break1.chr, e.inner_window1[0], e.inner_window1[1], 
+            e.break1.chr, e.inner_window1[0], e.inner_window1[1],
             e.break2.chr, e.inner_window2[0], e.inner_window2[1]), time_stamp=False)
         try:
             e.load_evidence(log=log)
@@ -245,7 +245,7 @@ def main():
                 HUMAN_REFERENCE_GENOME,
                 opposing_strands=bpp.opposing_strands,
                 stranded=bpp.stranded,
-                untemplated_sequence=bpp.untemplated_sequence,
+                untemplated_seq=bpp.untemplated_seq,
                 data=bpp.data,
                 stdev_fragment_size=args.stdev_fragment_size,
                 read_length=args.read_length,
@@ -260,7 +260,7 @@ def main():
                 HUMAN_REFERENCE_GENOME,
                 opposing_strands=bpp.opposing_strands,
                 stranded=bpp.stranded,
-                untemplated_sequence=bpp.untemplated_sequence,
+                untemplated_seq=bpp.untemplated_seq,
                 data=bpp.data,
                 stdev_fragment_size=args.stdev_fragment_size,
                 read_length=args.read_length,
@@ -304,15 +304,15 @@ def main():
     # output all the assemblies to a file of contigs
     with open(CONTIG_OUTPUT_FILE, 'w') as fh:
         log('writing the contigs to an output file:', CONTIG_OUTPUT_FILE)
-        fh.write('#{}\t{}\t{}\n'.format(COLUMNS.cluster_id, COLUMNS.contig_sequence, COLUMNS.contig_remap_score))
+        fh.write('#{}\t{}\t{}\n'.format(COLUMNS.cluster_id, COLUMNS.contig_seq, COLUMNS.contig_remap_score))
         for ev in evidence:
             for c in ev.contigs:
-                fh.write('{}\t{}\t{}\n'.format(ev.data[COLUMNS.cluster_id], c.sequence, c.remap_score()))
+                fh.write('{}\t{}\t{}\n'.format(ev.data[COLUMNS.cluster_id], c.seq, c.remap_score()))
 
     blat_sequences = set()
     for e in evidence:
         for c in e.contigs:
-            blat_sequences.add(c.sequence)
+            blat_sequences.add(c.seq)
     print()
     log('aligning {} contig sequences'.format(len(blat_sequences)))
     if len(blat_sequences) > 0:
@@ -352,7 +352,7 @@ def main():
                 failed_cluster_rows.append(row)
             else:
                 passes += 1
-            
+
             log('called {} event(s)'.format(len(calls)))
 
     if len(failed_cluster_rows) + passes != len(evidence):
@@ -377,8 +377,8 @@ def main():
             row = ec.flatten()
             row.update({
                 COLUMNS.validation_id: 'validation_{}-{}'.format(id_prefix, id),
-                COLUMNS.break1_homologous_sequence: b1_homseq,
-                COLUMNS.break2_homologous_sequence: b2_homseq,
+                COLUMNS.break1_homologous_seq: b1_homseq,
+                COLUMNS.break2_homologous_seq: b2_homseq,
             })
             rows.append(row)
             header.update(row.keys())

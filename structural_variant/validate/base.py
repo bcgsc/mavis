@@ -28,7 +28,7 @@ class Evidence(BreakpointPair):
             return self.outer_windows[1]
         except AttributeError:
             raise NotImplementedError('abstract property must be overridden')
-    
+
     @property
     def inner_window1(self):
         """(:class:`~structural_variant.interval.Interval`): the window where evidence will be gathered for the first
@@ -48,7 +48,7 @@ class Evidence(BreakpointPair):
             return self.inner_windows[1]
         except AttributeError:
             raise NotImplementedError('abstract property must be overridden')
-    
+
     @property
     def min_expected_fragment_size(self):
         # cannot be negative
@@ -68,7 +68,7 @@ class Evidence(BreakpointPair):
             median_fragment_size,
             stranded=False,
             opposing_strands=None,
-            untemplated_sequence=None,
+            untemplated_seq=None,
             data={},
             classification=None,
             **kwargs):
@@ -87,7 +87,7 @@ class Evidence(BreakpointPair):
             self, break1, break2,
             stranded=stranded,
             opposing_strands=opposing_strands,
-            untemplated_sequence=untemplated_sequence,
+            untemplated_seq=untemplated_seq,
             data=data
         )
         d = dict()
@@ -168,7 +168,7 @@ class Evidence(BreakpointPair):
         elif not Interval.overlaps(self.inner_window1, self.inner_window2):
             # too far apart to call spanning reads
             return False
-        
+
         combined = self.inner_window1 & self.inner_window2
         read_interval = Interval(read.reference_start + 1, read.reference_end)
 
@@ -302,7 +302,7 @@ class Evidence(BreakpointPair):
             raise AssertionError(
                 'unused, primary, and clipped sequences should make up the original sequence',
                 unused, primary, clipped, read.query_sequence, len(read.query_sequence))
-        
+
         if len(primary) < self.min_anchor_exact or len(clipped) < self.min_softclipping:
             # split read does not meet the minimum anchor criteria
             return False
@@ -454,7 +454,7 @@ class Evidence(BreakpointPair):
                 assembly_sequences.setdefault(read.query_sequence, set()).add(read)
                 rqs_comp = reverse_complement(read.query_sequence)
                 assembly_sequences.setdefault(rqs_comp, set()).add(read)
-                
+
                 assembly_sequences.setdefault(mate.query_sequence, set()).add(mate)
                 rqs_comp = reverse_complement(mate.query_sequence)
                 assembly_sequences.setdefault(rqs_comp, set()).add(mate)
@@ -502,7 +502,7 @@ class Evidence(BreakpointPair):
                     ratio = strand_calls[STRAND.NEG] / (strand_calls[STRAND.NEG] + strand_calls[STRAND.POS])
                     if ratio >= self.assembly_strand_concordance:
                         # negative strand. should reverse
-                        contig.sequence = reverse_complement(contig.sequence)
+                        contig.seq = reverse_complement(contig.seq)
                         continue
                 reverse = True if strand_calls[STRAND.NEG] > strand_calls[STRAND.POS] else False
                 for seq in contig.remapped_sequences:
@@ -513,19 +513,19 @@ class Evidence(BreakpointPair):
 
         filtered_contigs = {}
         # sort so that the function is deterministic
-        for c in sorted(contigs, key=lambda x: (x.remap_score() * -1, x.sequence)):
+        for c in sorted(contigs, key=lambda x: (x.remap_score() * -1, x.seq)):
             if c.remap_score() < self.assembly_min_remap:  # filter on evidence level
                 continue
             if not self.stranded or not self.bam_cache.stranded:  # not strand specific
-                rseq = reverse_complement(c.sequence)
-                if c.sequence not in filtered_contigs and (strand_specific or rseq not in filtered_contigs):
-                    filtered_contigs[c.sequence] = c
+                rseq = reverse_complement(c.seq)
+                if c.seq not in filtered_contigs and (strand_specific or rseq not in filtered_contigs):
+                    filtered_contigs[c.seq] = c
             else:
-                if c.sequence not in filtered_contigs:
-                    filtered_contigs[c.sequence] = c
+                if c.seq not in filtered_contigs:
+                    filtered_contigs[c.seq] = c
         self.contigs = list(filtered_contigs.values())
 
-    def load_evidence(self, log=lambda x: None):
+    def load_evidence(self, log=lambda *pos, **kwargs: None):
         """
         open the associated bam file and read and store the evidence
         does some preliminary read-quality filtering
@@ -537,14 +537,14 @@ class Evidence(BreakpointPair):
 
         max_dist = max(
             len(Interval.union(self.break1, self.break2)),
-            len(self.untemplated_sequence if self.untemplated_sequence else '')
+            len(self.untemplated_seq if self.untemplated_seq else '')
         )
 
         def filter_if_true(read):
             if self.filter_secondary_alignments and read.is_secondary:
                 return True
             return False
-        
+
         def cache_if_true(read):
             if self.filter_secondary_alignments and read.is_secondary:
                 return False
@@ -584,7 +584,7 @@ class Evidence(BreakpointPair):
             elif any([read_tools.orientation_supports_type(read, et) for et in self.putative_event_types()]) and \
                     (read.reference_id != read.next_reference_id) == self.interchromosomal:
                 flanking_pairs.append(read)
-        
+
         for read in self.bam_cache.fetch(
                 '{0}'.format(self.break2.chr),
                 self.outer_window2[0],
@@ -599,7 +599,7 @@ class Evidence(BreakpointPair):
                 continue
 
             self.counts[1] += 1
-            
+
             if read.is_unmapped:
                 continue
             if not self.add_split_read(read, False):

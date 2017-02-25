@@ -242,7 +242,7 @@ class TestDraw(unittest.TestCase):
         t = build_transcript(g1, [(200, 299), (400, 499), (700, 899)], 50, 249, [d2, d1])
         b1 = Breakpoint('1', 350, orient=ORIENT.RIGHT)
         b2 = Breakpoint('1', 600, orient=ORIENT.LEFT)
-        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_sequence='')
+        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='')
         ann = Annotation(bpp, transcript1=t, transcript2=t, event_type=SVTYPE.DUP)
         ann.add_gene(Gene('1', 1500, 1950, strand=STRAND.POS))
 
@@ -284,7 +284,7 @@ class TestDraw(unittest.TestCase):
         )
         b1 = Breakpoint('1', 350, orient=ORIENT.LEFT)
         b2 = Breakpoint('1', 6500, orient=ORIENT.RIGHT)
-        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_sequence='')
+        bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='')
         ann = Annotation(bpp, transcript1=t1, transcript2=t2)
         ann.add_gene(Gene('1', 1500, 1950, strand=STRAND.POS))
         ann.add_gene(Gene('1', 3000, 3980, strand=STRAND.POS))
@@ -333,7 +333,7 @@ class TestDraw(unittest.TestCase):
         )
         b1 = Breakpoint('1', 350, orient=ORIENT.LEFT)
         b2 = Breakpoint('2', 6520, orient=ORIENT.LEFT)
-        bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_sequence='')
+        bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_seq='')
         ann = Annotation(bpp, transcript1=t1, transcript2=t2)
         # genes 1
         ann.add_gene(Gene('1', 1500, 1950, strand=STRAND.POS))
@@ -403,7 +403,7 @@ class TestDraw(unittest.TestCase):
         )
         b1 = Breakpoint('1', 350, orient=ORIENT.LEFT)
         b2 = Breakpoint('2', 6520, orient=ORIENT.LEFT)
-        bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_sequence='')
+        bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_seq='')
         ann = Annotation(bpp, transcript1=t1, transcript2=t2)
         # genes 1
         ann.add_gene(Gene('1', 1500, 1950, strand=STRAND.POS, aliases=['HUGO5']))

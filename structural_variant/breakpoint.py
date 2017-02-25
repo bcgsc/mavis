@@ -58,7 +58,7 @@ class Breakpoint(Interval):
             'start': self.start,
             'end': self.end,
             'strand': self.strand,
-            'sequence': self.seq,
+            'seq': self.seq,
             'orientation': self.orient,
             'type': self.__class__.__name__
         }
@@ -80,10 +80,10 @@ class BreakpointPair:
         raise IndexError('index input accessor is out of bounds: 1 or 2 only', index)
 
     def __hash__(self):
-        return hash((self.break1.key, self.break2.key, self.opposing_strands, self.stranded, self.untemplated_sequence))
+        return hash((self.break1.key, self.break2.key, self.opposing_strands, self.stranded, self.untemplated_seq))
 
     def __eq__(self, other):
-        for attr in ['break1', 'break2', 'opposing_strands', 'stranded', 'untemplated_sequence']:
+        for attr in ['break1', 'break2', 'opposing_strands', 'stranded', 'untemplated_seq']:
             if not hasattr(other, attr):
                 return False
             elif getattr(self, attr) != getattr(other, attr):
@@ -103,18 +103,18 @@ class BreakpointPair:
         temp.break2 = sys_copy(self.break2)
         return temp
 
-    def __init__(self, b1, b2, stranded=False, opposing_strands=None, untemplated_sequence=None, data={}):
+    def __init__(self, b1, b2, stranded=False, opposing_strands=None, untemplated_seq=None, data={}):
         """
         Args:
             b1 (Breakpoint): the first breakpoint
             b2 (Breakpoint): the second breakpoint
             stranded (bool): if not stranded then +/- is equivalent to -/+
             opposing_strands (bool): are the strands at the breakpoint opposite? i.e. +/- instead of +/+
-            untemplated_sequence (str): sequence between the breakpoints that is not part of either breakpoint
+            untemplated_seq (str): seq between the breakpoints that is not part of either breakpoint
             data (dict): optional dictionary of attributes associated with this pair
 
         Note:
-            untemplated_sequence should always be given wrt to the positive/forward reference strand
+            untemplated_seq should always be given wrt to the positive/forward reference strand
 
         Example:
             >>> BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 9999), opposing_strands=True)
@@ -130,7 +130,7 @@ class BreakpointPair:
         self.stranded = stranded
         self.opposing_strands = opposing_strands
         # between break1 and break2 not in either
-        self.untemplated_sequence = untemplated_sequence
+        self.untemplated_seq = untemplated_seq
         self.data = {}
         self.data.update(data)
 
@@ -161,7 +161,7 @@ class BreakpointPair:
             str(self.break1),
             str(self.break2),
             self.opposing_strands,
-            repr(self.untemplated_sequence)
+            repr(self.untemplated_seq)
         )
 
     def flatten(self):
@@ -184,9 +184,9 @@ class BreakpointPair:
             COLUMNS.break2_strand: self.break2.strand,
             COLUMNS.opposing_strands: self.opposing_strands,
             COLUMNS.stranded: self.stranded,
-            COLUMNS.untemplated_sequence: self.untemplated_sequence,
-            COLUMNS.break1_sequence: self.break1.sequence,
-            COLUMNS.break2_sequence: self.break2.sequence
+            COLUMNS.untemplated_seq: self.untemplated_seq,
+            COLUMNS.break1_seq: self.break1.seq,
+            COLUMNS.break2_seq: self.break2.seq
         }
         if not self.stranded:
             row[COLUMNS.break1_strand] = STRAND.NS
@@ -337,7 +337,7 @@ class BreakpointPair:
             strand=STRAND.NEG if read.is_reverse else STRAND.POS,
             seq=read.query_sequence[seq_second_start:]
         )
-        return BreakpointPair(break1, break2, opposing_strands=False, untemplated_sequence=untemplated_seq)
+        return BreakpointPair(break1, break2, opposing_strands=False, untemplated_seq=untemplated_seq)
 
     @classmethod
     def _call_from_paired_contig(cls, read1, read2):
@@ -442,16 +442,16 @@ class BreakpointPair:
                 seq=s
             )
         # now check for untemplated sequence
-        untemplated_sequence = ''
+        untemplated_seq = ''
         d = Interval.dist(r1_qci, r2_qci)
         if d > 0:  # query coverage for read1 is after query coverage for read2
-            untemplated_sequence = read1.query_sequence[r2_qci[1] + 1:r1_qci[0]]
+            untemplated_seq = read1.query_sequence[r2_qci[1] + 1:r1_qci[0]]
         elif d < 0:  # query coverage for read2 is after query coverage for read1
-            untemplated_sequence = read1.query_sequence[r1_qci[1] + 1:r2_qci[0]]
+            untemplated_seq = read1.query_sequence[r1_qci[1] + 1:r2_qci[0]]
         else:  # query coverage overlaps
             pass
 
-        return BreakpointPair(b1, b2, untemplated_sequence=untemplated_sequence)
+        return BreakpointPair(b1, b2, untemplated_seq=untemplated_seq)
 
     def breakpoint_sequence_homology(self, REFERENCE_GENOME):
         """
@@ -591,13 +591,13 @@ def read_bpp_from_input_file(filename, expand_ns=True, **kwargs):
             COLUMNS.break2_position_end: int,
             COLUMNS.opposing_strands: soft_boolean_cast,
             COLUMNS.stranded: TSV.tsv_boolean,
-            COLUMNS.untemplated_sequence: soft_null_cast,
+            COLUMNS.untemplated_seq: soft_null_cast,
             COLUMNS.break1_chromosome: lambda x: re.sub('^chr', '', x),
             COLUMNS.break2_chromosome: lambda x: re.sub('^chr', '', x)
         })
     kwargs.setdefault('require', [])
     kwargs.setdefault('add', {}).update({
-        COLUMNS.untemplated_sequence: None,
+        COLUMNS.untemplated_seq: None,
         COLUMNS.break1_orientation: ORIENT.NS,
         COLUMNS.break1_strand: STRAND.NS,
         COLUMNS.break2_orientation: ORIENT.NS,
@@ -647,7 +647,7 @@ def read_bpp_from_input_file(filename, expand_ns=True, **kwargs):
                     b1,
                     b2,
                     opposing_strands=opp,
-                    untemplated_sequence=row[COLUMNS.untemplated_sequence],
+                    untemplated_seq=row[COLUMNS.untemplated_seq],
                     stranded=stranded,
                     data=row
                 )

@@ -141,7 +141,7 @@ def _load_reference_genes_json(filepath, verbose=True, REFERENCE_GENOME=None, be
                         continue
                     if REFERENCE_GENOME and g['chr'] in REFERENCE_GENOME:
                         # get the sequence near here to see why these are wrong?
-                        s = ust.get_cdna_sequence(t.splicing_pattern, REFERENCE_GENOME)
+                        s = ust.get_cdna_seq(t.splicing_pattern, REFERENCE_GENOME)
                         m = s[tx.start - 1:tx.start + 2]
                         stop = s[tx.end - CODON_SIZE: tx.end]
                         if translate(m) != START_AA or translate(stop) != STOP_AA:
@@ -311,7 +311,7 @@ def _load_reference_genes_tabbed(filepath, verbose=True, REFERENCE_GENOME=None, 
 
                     if REFERENCE_GENOME and row['chr'] in REFERENCE_GENOME:
                         # get the sequence near here to see why these are wrong?
-                        s = ust.get_cdna_sequence(t.splicing_pattern, REFERENCE_GENOME)
+                        s = ust.get_cdna_seq(t.splicing_pattern, REFERENCE_GENOME)
                         m = s[tx.start - 1:tx.start + 2]
                         stop = s[tx.end - CODON_SIZE: tx.end]
                         if translate(m) != START_AA or translate(stop) != STOP_AA:

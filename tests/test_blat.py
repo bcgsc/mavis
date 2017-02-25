@@ -199,7 +199,7 @@ class TestBlat(unittest.TestCase):
             Breakpoint('reference3', 1114, orient=ORIENT.RIGHT),
             Breakpoint('reference3', 2187, orient=ORIENT.RIGHT),
             opposing_strands=True,
-            bam_cache=None, 
+            bam_cache=None,
             REFERENCE_GENOME=None,
             read_length=40,
             stdev_fragment_size=25,
@@ -214,7 +214,7 @@ class TestBlat(unittest.TestCase):
                 "TCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTG"
                 "TTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT", 0)
         ]
-        print(ev.contigs[0].sequence)
+        print(ev.contigs[0].seq)
         blat_contigs([ev], BAM_CACHE, REFERENCE_GENOME, blat_2bit_reference=REFERENCE_GENOME_FILE_2BIT)
         read1, read2 = ev.contigs[0].alignments[0]
         self.assertEqual(reverse_complement(read1.query_sequence), read2.query_sequence)
@@ -307,7 +307,7 @@ class TestBlat(unittest.TestCase):
         self.assertEqual([(CIGAR.EQ, 51), (CIGAR.D, 26), (CIGAR.EQ, 33)], read.cigar)
         self.assertEqual('TAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCA', read.query_sequence[0:50])
         self.assertEqual('CCAAATTCTGTGTTTACAGGGCTTTCATGCTCAG', read.query_sequence[50:])
-    
+
     def test_pslx_row_to_pysam_inversion(self):
         s = 'CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT'
         # first part of the inversion

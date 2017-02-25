@@ -8,9 +8,9 @@ from copy import copy
 
 
 class Template(BioInterval):
-    def __init__(self, name, start, end, sequence=None, bands=None):
+    def __init__(self, name, start, end, seq=None, bands=None):
         bands = [] if bands is None else bands
-        BioInterval.__init__(self, None, start, end, name=name, sequence=sequence)
+        BioInterval.__init__(self, None, start, end, name=name, seq=seq)
         self.bands = bands
         for i in range(0, len(bands)):
             bands[i].reference_object = self
@@ -63,19 +63,19 @@ class IntergenicRegion(BioInterval):
 class Gene(BioInterval):
     """
     """
-    def __init__(self, chr, start, end, name=None, strand=STRAND.NS, aliases=None, sequence=None):
+    def __init__(self, chr, start, end, name=None, strand=STRAND.NS, aliases=None, seq=None):
         """
         Args:
             chr (str): the chromosome
             name (str): the gene name/id i.e. ENSG0001
             strand (STRAND): the genomic strand '+' or '-'
             aliases (:class:`list` of :class:`str`): a list of aliases. For example the hugo name could go here
-            sequence (str): genomic sequence of the gene
+            seq (str): genomic seq of the gene
         Example:
             >>> Gene('X', 1, 1000, 'ENG0001', '+', ['KRAS'])
         """
         aliases = [] if aliases is None else aliases
-        BioInterval.__init__(self, name=name, reference_object=chr, start=start, end=end, sequence=sequence)
+        BioInterval.__init__(self, name=name, reference_object=chr, start=start, end=end, seq=seq)
         self.unspliced_transcripts = []
         self.strand = STRAND.enforce(strand)
         self.aliases = aliases
@@ -104,7 +104,7 @@ class Gene(BioInterval):
         """see :func:`structural_variant.annotate.base.BioInterval.key`"""
         return BioInterval.key(self), self.strand
 
-    def get_sequence(self, REFERENCE_GENOME, ignore_cache=False):
+    def get_seq(self, REFERENCE_GENOME, ignore_cache=False):
         """
         gene sequence is always given wrt to the positive forward strand regardless of gene strand
 
@@ -116,8 +116,8 @@ class Gene(BioInterval):
         Returns:
             str: the sequence of the gene
         """
-        if self.sequence and not ignore_cache:
-            return self.sequence
+        if self.seq and not ignore_cache:
+            return self.seq
         elif REFERENCE_GENOME is None:
             raise NotSpecifiedError('reference genome is required to retrieve the gene sequence')
         else:
@@ -147,7 +147,7 @@ class Exon(BioInterval):
             name=None,
             intact_start_splice=True,
             intact_end_splice=True,
-            sequence=None):
+            seq=None):
         """
         Args:
             start (int): the genomic start position
@@ -161,7 +161,7 @@ class Exon(BioInterval):
         Example:
             >>> Exon(15, 78)
         """
-        BioInterval.__init__(self, name=name, reference_object=transcript, start=start, end=end, sequence=sequence)
+        BioInterval.__init__(self, name=name, reference_object=transcript, start=start, end=end, seq=seq)
         self.intact_start_splice = intact_start_splice
         self.intact_end_splice = intact_end_splice
 
@@ -240,7 +240,7 @@ class usTranscript(BioInterval):
         name=None,
         strand=None,
         spliced_transcripts=None,
-        sequence=None,
+        seq=None,
         is_best_transcript=False
     ):
         """ creates a new transcript object
@@ -252,7 +252,7 @@ class usTranscript(BioInterval):
             gene (Gene): the gene this transcript belongs to
             name (str): name of the transcript
             strand (STRAND): strand the transcript is on, defaults to the strand of the Gene if not specified
-            sequence (str): unspliced cDNA sequence
+            seq (str): unspliced cDNA seq
         """
         # cannot use mutable default args in the function decl
         self.exons = exons
@@ -266,7 +266,7 @@ class usTranscript(BioInterval):
         start = min([e[0] for e in self.exons])
         end = max([e[1] for e in self.exons])
 
-        BioInterval.__init__(self, gene, start, end, name=name, sequence=sequence)
+        BioInterval.__init__(self, gene, start, end, name=name, seq=seq)
 
         for i in range(0, len(self.exons)):
             curr = self.exons[i]
@@ -535,7 +535,7 @@ class usTranscript(BioInterval):
                 raise NotSpecifiedError('strand must be pos or neg to calculate the exon number')
         raise AttributeError('can only calculate phase on associated exons')
 
-    def get_sequence(self, REFERENCE_GENOME=None, ignore_cache=False):
+    def get_seq(self, REFERENCE_GENOME=None, ignore_cache=False):
         """
         Args:
             REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
@@ -545,16 +545,16 @@ class usTranscript(BioInterval):
         Returns:
             str: the sequence of the transcript including introns (but relative to strand)
         """
-        if self.sequence and not ignore_cache:
-            return self.sequence
-        elif self.gene and self.gene.sequence and not ignore_cache:
-            # gene has a sequence set
+        if self.seq and not ignore_cache:
+            return self.seq
+        elif self.gene and self.gene.seq and not ignore_cache:
+            # gene has a seq set
             start = self.start - self.gene.start
-            end = self.end - self.gene.end + len(self.gene.sequence)
+            end = self.end - self.gene.end + len(self.gene.seq)
             if self.get_strand() == STRAND.NEG:
-                return reverse_complement(self.gene.sequence[start:end])
+                return reverse_complement(self.gene.seq[start:end])
             else:
-                return self.gene.sequence[start:end]
+                return self.gene.seq[start:end]
         elif REFERENCE_GENOME is None:
             raise NotSpecifiedError('reference genome is required to retrieve the gene sequence')
         else:
@@ -563,7 +563,7 @@ class usTranscript(BioInterval):
             else:
                 return str(REFERENCE_GENOME[self.gene.chr].seq[self.start - 1:self.end]).upper()
 
-    def get_cdna_sequence(self, splicing_pattern, REFERENCE_GENOME=None, ignore_cache=False):
+    def get_cdna_seq(self, splicing_pattern, REFERENCE_GENOME=None, ignore_cache=False):
         """
         Args:
             splicing_pattern (SplicingPattern): the list of splicing positions
@@ -579,7 +579,7 @@ class usTranscript(BioInterval):
         conti = []
         for i in range(0, len(temp) - 1, 2):
             conti.append(Interval(temp[i] - m, temp[i + 1] - m))
-        seq = self.get_sequence(REFERENCE_GENOME, ignore_cache)
+        seq = self.get_seq(REFERENCE_GENOME, ignore_cache)
         if self.get_strand() == STRAND.NEG:
             # adjust the continuous intervals for the min and flip if revcomp
             seq = reverse_complement(seq)
@@ -603,14 +603,14 @@ class usTranscript(BioInterval):
 
 
 class Transcript(BioInterval):
-    def __init__(self, ust, splicing_patt, sequence=None, translations=None):
+    def __init__(self, ust, splicing_patt, seq=None, translations=None):
         """
         splicing pattern is given in genomic coordinates
 
         Args:
             us_transcript (usTranscript): the unspliced transcript
             splicing_patt (:class:`list` of :class:`int`): the list of splicing positions
-            sequence (str): the cdna sequence
+            seq (str): the cdna sequence
             translations (:class:`list` of :class:`~structural_variant.annotate.protein.Translation`):
              the list of translations of this transcript
         """
@@ -618,7 +618,7 @@ class Transcript(BioInterval):
         splicing_patt.sort()
         self.splicing_pattern = splicing_patt
         self.exons = [Exon(s, t, self) for s, t in zip(pos[::2], pos[1::2])]
-        BioInterval.__init__(self, ust, 1, sum([len(e) for e in self.exons]), sequence=None)
+        BioInterval.__init__(self, ust, 1, sum([len(e) for e in self.exons]), seq=None)
         self.translations = [] if translations is None else [tx for tx in translations]
 
         for tx in self.translations:
@@ -654,7 +654,7 @@ class Transcript(BioInterval):
         """
         return self.unspliced_transcript.convert_cdna_to_genomic(pos, self.splicing_pattern)
 
-    def get_sequence(self, REFERENCE_GENOME=None, ignore_cache=False):
+    def get_seq(self, REFERENCE_GENOME=None, ignore_cache=False):
         """
         Args:
             REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by
@@ -664,10 +664,10 @@ class Transcript(BioInterval):
         Returns:
             str: the sequence corresponding to the spliced cdna
         """
-        if self.sequence and not ignore_cache:
-            return self.sequence
+        if self.seq and not ignore_cache:
+            return self.seq
         else:
-            s = self.unspliced_transcript.get_cdna_sequence(self.splicing_pattern, REFERENCE_GENOME, ignore_cache)
+            s = self.unspliced_transcript.get_cdna_seq(self.splicing_pattern, REFERENCE_GENOME, ignore_cache)
             return s[self.start - 1:self.end]
 
     @property

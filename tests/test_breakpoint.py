@@ -66,14 +66,14 @@ class TestBreakpointPair(unittest.TestCase):
         c = BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 3), opposing_strands=True)
         self.assertFalse(b is c)
         self.assertEqual(b, c)
-        d = BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 3), opposing_strands=True, untemplated_sequence='')
+        d = BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 3), opposing_strands=True, untemplated_seq='')
         self.assertNotEqual(b, d)
         self.assertNotEqual(b, None)
 
     def test___hash__(self):
         b = BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 3), opposing_strands=True)
         c = BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 3), opposing_strands=True)
-        d = BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 3), opposing_strands=True, untemplated_sequence='')
+        d = BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 3), opposing_strands=True, untemplated_seq='')
         self.assertFalse(b is c)
         temp = dict()
         temp[b] = None
@@ -357,7 +357,7 @@ class TestCallBreakpointPair(unittest.TestCase):
         self.assertEqual(10, bpp.break1.end)
         self.assertEqual(18, bpp.break2.start)
         self.assertEqual(18, bpp.break2.end)
-        self.assertEqual('GGG', bpp.untemplated_sequence)
+        self.assertEqual('GGG', bpp.untemplated_seq)
 
     def test_single_multi_events(self):
         r = MockRead(
@@ -376,7 +376,7 @@ class TestCallBreakpointPair(unittest.TestCase):
         self.assertEqual(20, bpp.break1.end)
         self.assertEqual(28, bpp.break2.start)
         self.assertEqual(28, bpp.break2.end)
-        self.assertEqual('', bpp.untemplated_sequence)
+        self.assertEqual('', bpp.untemplated_seq)
         self.assertEqual('ACTGAATCGTGGGTAGCTGCTAG', bpp.break1.seq)
         self.assertEqual('GGGCCTGCTC', bpp.break2.seq)
 
@@ -395,7 +395,7 @@ class TestCallBreakpointPair(unittest.TestCase):
         self.assertEqual(23, bpp.break1.end)
         self.assertEqual(31, bpp.break2.start)
         self.assertEqual(31, bpp.break2.end)
-        self.assertEqual('', bpp.untemplated_sequence)
+        self.assertEqual('', bpp.untemplated_seq)
 
         r = MockRead(
             reference_id=0,
@@ -412,7 +412,7 @@ class TestCallBreakpointPair(unittest.TestCase):
         self.assertEqual(10, bpp.break1.end)
         self.assertEqual(18, bpp.break2.start)
         self.assertEqual(18, bpp.break2.end)
-        self.assertEqual('', bpp.untemplated_sequence)
+        self.assertEqual('', bpp.untemplated_seq)
 
     def test_read_pair_indel(self):
         # seq AAATTTCCCGGGAATTCCGGATCGATCGAT 1-30     1-?
@@ -442,7 +442,7 @@ class TestCallBreakpointPair(unittest.TestCase):
         self.assertEqual(STRAND.POS, bpp.break2.strand)
         self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
         self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
-        self.assertEqual('GGGAATTCCGGA', bpp.untemplated_sequence)
+        self.assertEqual('GGGAATTCCGGA', bpp.untemplated_seq)
         self.assertEqual(9, bpp.break1.start)
         self.assertEqual(100, bpp.break2.start)
         self.assertEqual('AAATTTCCC', bpp.break1.seq)
@@ -475,7 +475,7 @@ class TestCallBreakpointPair(unittest.TestCase):
         self.assertEqual(STRAND.POS, bpp.break2.strand)
         self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
         self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
-        self.assertEqual('', bpp.untemplated_sequence)
+        self.assertEqual('', bpp.untemplated_seq)
         self.assertEqual(21, bpp.break1.start)
         self.assertEqual(100, bpp.break2.start)
 
@@ -508,7 +508,7 @@ class TestCallBreakpointPair(unittest.TestCase):
         self.assertEqual(STRAND.POS, bpp.break2.strand)
         self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
         self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
-        self.assertEqual('', bpp.untemplated_sequence)
+        self.assertEqual('', bpp.untemplated_seq)
         self.assertEqual(21, bpp.break1.start)
         self.assertEqual(103, bpp.break2.start)
         self.assertEqual('AAATTTCCCGGGAATTCCGGA', bpp.break1.seq)
@@ -543,12 +543,12 @@ class TestCallBreakpointPair(unittest.TestCase):
         self.assertEqual(STRAND.NEG, bpp.break2.strand)
         self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
         self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
-        self.assertEqual('', bpp.untemplated_sequence)
+        self.assertEqual('', bpp.untemplated_seq)
         self.assertEqual(21, bpp.break1.start)
         self.assertEqual(108, bpp.break2.start)
         self.assertEqual('AAATTTCCCGGGAATTCCGGA', bpp.break1.seq)
         self.assertEqual(reverse_complement('TCGATCGAT'), bpp.break2.seq)
-    
+
     def test_read_pair_large_inversion_overlapping_query_coverage(self):
         s = 'CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT'
         # first part of the inversion
@@ -582,7 +582,7 @@ class TestCallBreakpointPair(unittest.TestCase):
         self.assertEqual(STRAND.NEG, bpp.break2.strand)
         self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
         self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
-        self.assertEqual('', bpp.untemplated_sequence)
+        self.assertEqual('', bpp.untemplated_seq)
         self.assertEqual(1115, bpp.break1.start)
         self.assertEqual(2188 + 3, bpp.break2.start)
         print(bpp.break1.seq)
@@ -593,7 +593,7 @@ class TestCallBreakpointPair(unittest.TestCase):
         self.assertEqual(
             'GCAGAGCTATATATTTAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAACCAAACAGGAAAGAATCCA'
             'AATTCTGTGTTTACAGGGCTTTCATGCTCAG', bpp.break2.seq)
-    
+
     def test_read_pair_inversion_gap_in_query_coverage(self):
         # seq AAATTTCCCGGGAATTCCGGATCGATCGAT
         # r1  AAATTTCCCGGGAATTccggatcgatcgat +
@@ -623,7 +623,7 @@ class TestCallBreakpointPair(unittest.TestCase):
         self.assertEqual(STRAND.NEG, bpp.break2.strand)
         self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
         self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
-        self.assertEqual('CC', bpp.untemplated_sequence)
+        self.assertEqual('CC', bpp.untemplated_seq)
         self.assertEqual(16, bpp.break1.start)
         self.assertEqual(111, bpp.break2.start)
         self.assertEqual('AAATTTCCCGGGAATT', bpp.break1.seq)

@@ -10,13 +10,13 @@ class Contig:
     """
     """
     def __init__(self, sequence, score):
-        self.sequence = sequence
+        self.seq = sequence
         self.remapped_sequences = {}
         self.score = score
         self.alignments = None
 
     def __hash__(self):
-        return hash(self.sequence)
+        return hash(self.seq)
 
     def add_mapped_sequence(self, read, multimap=1):
         rc = reverse_complement(read)
@@ -220,12 +220,12 @@ def assemble(
         maps_to = {}  # contig, score
         exact_match_kmers = set(kmers(input_seq, assembly_min_consec_match_remap))
         for contig in contigs.values():
-            if len(exact_match_kmers & contig_exact[contig.sequence]) == 0:
+            if len(exact_match_kmers & contig_exact[contig.seq]) == 0:
                 continue
             a = nsb_align(
-                contig.sequence,
+                contig.seq,
                 input_seq,
-                min_overlap_percent=assembly_min_read_mapping_overlap / len(contig.sequence),
+                min_overlap_percent=assembly_min_read_mapping_overlap / len(contig.seq),
                 min_match=assembly_min_match_quality
             )
             if len(a) != 1:

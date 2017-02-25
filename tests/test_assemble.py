@@ -23,7 +23,7 @@ class TestModule(unittest.TestCase):
         sequences = ['ABCD', 'BCDE', 'CDEF', 'ABCDE', 'DEFG']
         c = assemble(sequences, assembly_min_edge_weight=1)
         self.assertEqual(1, len(c))
-        self.assertEqual('ABCDEFG', c[0].sequence)
+        self.assertEqual('ABCDEFG', c[0].seq)
         self.assertEqual(5, c[0].remap_score())
 
     def test_assemble_empty_list(self):

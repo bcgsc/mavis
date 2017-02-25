@@ -65,7 +65,7 @@ class TestGenomeEvidenceWindow(unittest.TestCase):
 
 
 class TestTraverseExonicDistance(unittest.TestCase):
-    
+
     def setUp(self):
         self.ust1 = usTranscript([(1001, 1100), (1301, 1400), (1701, 1800)], strand=STRAND.POS)
 
@@ -87,7 +87,7 @@ class TestTraverseExonicDistance(unittest.TestCase):
         gpos = TranscriptomeEvidence.traverse_exonic_distance(1750, 200, ORIENT.LEFT, [self.ust1])
         self.assertEqual(1051, gpos.start)
         self.assertEqual(1551, gpos.end)
-    
+
     def test_left_within_exon(self):
         gpos = TranscriptomeEvidence.traverse_exonic_distance(1750, 20, ORIENT.LEFT, [self.ust1])
         self.assertEqual(1731, gpos.start)
@@ -112,7 +112,7 @@ class TestTraverseExonicDistance(unittest.TestCase):
     def test_right_within_transcript(self):
         gpos = TranscriptomeEvidence.traverse_exonic_distance(1351, 100, ORIENT.RIGHT, [self.ust1])
         self.assertEqual(Interval(1450, 1750), gpos)
-    
+
     def test_right_within_exon(self):
         gpos = TranscriptomeEvidence.traverse_exonic_distance(1351, 10, ORIENT.RIGHT, [self.ust1])
         self.assertEqual(Interval(1360), gpos)
@@ -787,7 +787,7 @@ class TestEvidenceGathering(unittest.TestCase):
         self.ev1.assemble_contig()
         print(self.ev1.contigs)
         self.assertEqual(
-            'CAACAATATGTAGGAAGCCATTATCTGAAGTGTAAGCAACTGCATAGTGCTATTTTAATTATGCATTGCAGGGAAACTGTGAGCAGAGCTATATATTTAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAACCAAACAGGAAAGAATC', self.ev1.contigs[0].sequence)
+            'CAACAATATGTAGGAAGCCATTATCTGAAGTGTAAGCAACTGCATAGTGCTATTTTAATTATGCATTGCAGGGAAACTGTGAGCAGAGCTATATATTTAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAACCAAACAGGAAAGAATC', self.ev1.contigs[0].seq)
 
 
 class TestEventCall(unittest.TestCase):

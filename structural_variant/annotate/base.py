@@ -2,14 +2,14 @@ from ..interval import Interval
 
 
 class BioInterval:
-    def __init__(self, reference_object, start, end=None, name=None, sequence=None, data=None):
+    def __init__(self, reference_object, start, end=None, name=None, seq=None, data=None):
         """
         Args:
             reference_object: the object this interval is on
             start (int) start of the interval (inclusive)
             end (int): end of the interval (inclusive)
             name: optional
-            sequence (str): the sequence relating to this interval
+            seq (str): the seq relating to this interval
 
         Example:
             >>> b = BioInterval('1', 12572784, 12578898, 'q22.2')
@@ -24,7 +24,7 @@ class BioInterval:
         self.reference_object = reference_object
         self.name = name
         self.position = Interval(start, end, number_type=int)
-        self.sequence = sequence if not sequence else sequence.upper()
+        self.seq = seq if not seq else seq.upper()
         self.data = {}
         self.data.update(data)
 
@@ -52,7 +52,7 @@ class BioInterval:
 
     def key(self):
         """:class:`tuple`: a tuple representing the items expected to be unique. for hashing and comparing"""
-        return (self.reference_object, self.position, self.sequence, self.name)
+        return (self.reference_object, self.position, self.seq, self.name)
 
     def __eq__(self, other):
         if not hasattr(other, 'key'):
@@ -74,7 +74,7 @@ class BioInterval:
     def __hash__(self):
         return hash(self.key())
 
-    def get_sequence(self, REFERENCE_GENOME=None, ignore_cache=False):
+    def get_seq(self, REFERENCE_GENOME=None, ignore_cache=False):
         raise NotImplementedError('abstract method must be overidden')
 
     def get_strand(self):
@@ -156,7 +156,7 @@ class BioInterval:
             'start': self.start,
             'end': self.end,
             'type': self.__class__.__name__,
-            'sequence': self.sequence,
+            'seq': self.seq,
             'data': self.data
         }
         try:
