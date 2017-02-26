@@ -1,6 +1,6 @@
 """
 
-.. figure:: _static/svmerge_annotation_model.svg
+.. figure:: _static/annotation_model.svg
     :width: 100%
 
     The Annotation subpackage has objects for genetic annotations and related calculations. The basic layout of the

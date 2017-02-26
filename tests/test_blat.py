@@ -358,3 +358,26 @@ class TestBlat(unittest.TestCase):
         self.assertEqual([(CIGAR.S, 117), (CIGAR.EQ, 128)], read2.cigar)
         self.assertEqual(Interval(117, 244), read2.query_coverage_interval())
         self.assertEqual(read1.query_sequence, reverse_complement(read2.query_sequence))
+
+    @unittest.skipIf(not shutil.which('blat'), "missing the blat command")
+    def test_pslx_row_to_pysam_duplication(self):
+        raise unittest.SkipTest('TODO')
+        """
+        s = 'CTCCCACCAGGAGCTCGTCCTCACCACGTCCTGCACCAGCACCTCCAGCTCCCGCAGCAGCGCCTCGCCCCCACGGTGCGC' \
+            'GCTCCGCGCCGGTTCCATGGGCTCCGTAGGTTCCATGGGCTCCGTAGGTTCCATGGGCTCCGTAGGTTCCATGGGCTCCGT' \
+            'AGGTTCCATCGGCTCCGTGGGTTCCATGGACTCTGTGGGCTCGGGCCCGACGCGCACGGAGGACTGGAGGACTGGGGCGTG' \
+            'TGTCTGCGGTGCAGGCGAGGCGGGGCGGGCCGGGGC'
+
+        pslx_row = {
+            'block_count': 2,
+            'tstarts': [2187],
+            'block_sizes': [126,10],
+            'qname': 'seq1',
+            'tname': 'reference17',
+            'qstarts': [117],
+            'strand': '+',
+            'qseq_full': s,
+            'score': 1
+        }
+        # 136	0	0	0	1	19	1	1	+	contig2	175	0	155	reference17	4000	1882	2019	2	126,10,	0,145,	1882,2009,	ctcccaccaggagctcgtcctcaccacgtcctgcaccagcacctccagctcccgcagcagcgcctcgcccccacggtgcgcgctccgcgccggttccatgggctccgtaggttccatgggctccgt,ggttccatgg,	ctcccaccaggagctcgtcctcaccacgtcctgcaccagcacctccagctcccgcagcagcgcctcgcccccacggtgcgcgctccgcgccggttccatgggctccgtaggttccatgggctccgt,ggttccatgg,
+        """

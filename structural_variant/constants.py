@@ -130,6 +130,7 @@ PYSAM_READ_FLAGS = Vocab(
     LAST_IN_PAIR=128,
     SECONDARY=256,
     MULTIMAP=1,
+    SUPPLEMENTARY=2048,
     TARGETED_ALIGNMENT='ta',
     RECOMPUTED_CIGAR='rc',
     BLAT_RANK='br',
@@ -149,6 +150,7 @@ PYSAM_READ_FLAGS = Vocab(
 - ``FIRST_IN_PAIR``: the first segment in the template
 - ``LAST_IN_PAIR``: the last segment in the template
 - ``SECONDARY``: secondary alignment
+- ``SUPPLEMENTARY``: supplementary alignment
 
 note: descriptions are taken from the `samfile documentation <https://samtools.github.io/hts-specs/SAMv1.pdf>`_
 """

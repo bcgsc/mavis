@@ -9,11 +9,11 @@ d = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(d, '..'))
 
 # auto build the other documentation
-subprocess.check_call('sphinx-apidoc -f -P -M -o {} {} --separate'.format(
+subprocess.check_call('sphinx-apidoc -f -P -o {} {} --separate'.format(
     os.path.join(d, 'source/auto'),
     os.path.join(d, './../structural_variant')), shell=True)
 
-subprocess.check_call('sphinx-apidoc -f -P -M -o {} {}'.format(
+subprocess.check_call('sphinx-apidoc -f -P -o {} {}'.format(
     os.path.join(d, 'source/auto'),
     os.path.join(d, './../bin')), shell=True)
 

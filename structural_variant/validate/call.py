@@ -89,20 +89,31 @@ class EventCall(BreakpointPair):
             # check that the positions make sense
             if self.break1.orient == ORIENT.LEFT:
                 if self.break2.orient == ORIENT.LEFT:  # L L
-                    if read.reference_end > self.break1.end or mate.reference_end > self.break2.end or \
-                            mate.reference_start + 1 <= self.break1.end:
+                    if not all([
+                        read.reference_start + 1 <= self.break1.end,
+                        mate.reference_end > self.break1.start,
+                        mate.reference_start + 1 <= self.break2.end
+                    ]):
                         continue
                 else:  # L R
-                    if read.reference_end > self.break1.end or mate.reference_start + 1 < self.break2.start:
+                    if not all([
+                        read.reference_start + 1 <= self.break1.end,
+                        mate.reference_end >= self.break2.start
+                    ]):
                         continue
             else:
                 if self.break2.orient == ORIENT.LEFT:  # R L
-                    if read.reference_start + 1 < self.break1.start or mate.reference_end > self.break2.end or \
-                            read.reference_end > self.break1.end or mate.reference_start + 1 < self.break1.start:
+                    if not all([
+                        read.reference_start + 1 <= self.break1.end,
+                        mate.reference_end >= self.break2.start
+                    ]):
                         continue
                 else:  # R R
-                    if read.reference_start + 1 < self.break1.start or mate.reference_start + 1 < self.break2.start or \
-                            mate.reference_start + 1 < self.break1.start:
+                    if not all([
+                        read.reference_end >= self.break1.start,
+                        read.reference_end < self.break2.end,
+                        mate.reference_end >= self.break2.start
+                    ]):
                         continue
             support.add(read)
             fragment_sizes.extend([fragment_size.start, fragment_size.end])
@@ -275,17 +286,19 @@ def call_events(source_evidence):
         fl, med, stdev = call.flanking_support()
         consumed_evidence_reads.update(fl)
 
+    scalls = []
     for event_type in sorted(source_evidence.putative_event_types()):
         # try calling by split/flanking reads
         try:
-            calls.extend(_call_by_supporting_reads(source_evidence, event_type, consumed_evidence_reads))
+            contig_consumed_evidence = set().update(consumed_evidence_reads)
+            scalls.extend(_call_by_supporting_reads(source_evidence, event_type, contig_consumed_evidence))
         except UserWarning as err:
             errors.add(str(err))
 
-        if len(calls) == 0 and len(errors) > 0:
-            raise UserWarning(';'.join(sorted(list(errors))))
-        elif len(calls) == 0:
-            raise UserWarning('insufficient evidence to call events')
+    if len(calls) == 0 and len(errors) > 0:
+        raise UserWarning(';'.join(sorted(list(errors))))
+    elif len(calls) == 0:
+        raise UserWarning('insufficient evidence to call events')
     return calls
 
 
@@ -352,13 +365,10 @@ def _call_by_flanking_pairs(
 
         if ev.break1.orient == ORIENT.LEFT:
             end = cover1.end + max_breakpoint_width
-            print(end)
             if not ev.interchromosomal:
                 end = min([end, cover2.start - 1])
-                print(end)
                 if second_breakpoint_called:
                     end = min([end, second_breakpoint_called.end - 1])
-                    print(end)
             try:
                 first_breakpoint_called = Breakpoint(
                     ev.break1.chr,

@@ -356,7 +356,7 @@ class Evidence(BreakpointPair):
         scores = []
 
         for a in putative_alignments:  # loop over the alignments
-            a.flag = a.flag | PYSAM_READ_FLAGS.SECONDARY  # this is a secondary alignment
+            a.flag = a.flag | PYSAM_READ_FLAGS.SUPPLEMENTARY 
             # set this flag so we don't recompute the cigar multiple
             a.set_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR, 1, value_type='i')
             # add information from the original read

@@ -140,7 +140,6 @@ def parse_arguments():
     g.add_argument('--stdev_fragment_size', type=int, help='expected standard deviation in insert sizes', required=True)
     g.add_argument('--median_fragment_size', type=int, help='median inset size for pairs in the bam file', required=True)
 
-    parser.add_argument('--igv_genome', help='the genome name to use for the igv batch file output', default='hg19')
     parser.add_argument('-p', '--protocol', required=True, choices=PROTOCOL.values())
     args = parser.parse_args()
     return args
@@ -440,7 +439,7 @@ def main():
     # write the igv batch file
     with open(IGV_BATCH_FILE, 'w') as fh:
         log('writing:', IGV_BATCH_FILE)
-        fh.write('new\ngenome {}\n'.format(args.igv_genome))
+        fh.write('new\ngenome {}\n'.format(args.reference_genome))
 
         fh.write('load {} name="{}"\n'.format(PASSED_BED_FILE, 'passed events'))
         fh.write('load {} name="{}"\n'.format(CONTIG_BAM, 'aligned contigs'))

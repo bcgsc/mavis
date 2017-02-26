@@ -7,15 +7,12 @@ MARVIN User Manual
 ===================================
 
 .. toctree::
-   :maxdepth: 9
+   :maxdepth: -1
 
    usermanual.rst
    theory.rst
    columns
-   api.rst
-
-
-
+   development.rst
 
 
 Indices and tables

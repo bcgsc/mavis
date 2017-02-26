@@ -249,7 +249,8 @@ def cluster_breakpoint_pairs(input_pairs, r, k):
                 b2 = Interval(bpp.break2.start, bpp.break2.end)
                 new_bpp = IntervalPair(b1, b2)
                 classification_key = (
-                    bpp.break1.chr, bpp.break2.chr,
+                    bpp.break1.chr,
+                    bpp.break2.chr,
                     o1, o2,
                     bpp.break1.strand,
                     bpp.break2.strand,
@@ -257,8 +258,9 @@ def cluster_breakpoint_pairs(input_pairs, r, k):
                     bpp.stranded,
                     bpp.untemplated_seq
                 )
+                input_mapping.setdefault(classification_key, dict())
                 node_sets.setdefault(classification_key, set()).add(new_bpp)
-                input_mapping.setdefault(new_bpp, set()).add(index)
+                input_mapping[classification_key].setdefault(new_bpp, set()).add(index)
                 added = True
             except InvalidRearrangement:
                 pass
@@ -269,7 +271,7 @@ def cluster_breakpoint_pairs(input_pairs, r, k):
     for ckey, group in sorted(node_sets.items()):
         chr1, chr2, o1, o2, s1, s2, opposing_strands, stranded, seq = ckey
         clusters = IntervalPair.cluster(group, r, k)
-
+        print('cluster key:', ckey)
         for node in group:
             particpation = sum([1 for c in clusters if node in c])
             if particpation > 1:
@@ -286,8 +288,11 @@ def cluster_breakpoint_pairs(input_pairs, r, k):
                 untemplated_seq=seq,
                 stranded=stranded
             )
+            for node in c:
+                print(node)
+            print()
             # gather the original input pairs using the mapping
-            original_input_pairs = itertools.chain.from_iterable([input_mapping[node] for node in c])
+            original_input_pairs = itertools.chain.from_iterable([input_mapping[ckey][node] for node in c])
             result.setdefault(bpp, set()).update(original_input_pairs)
 
     all_input_indices = set()
