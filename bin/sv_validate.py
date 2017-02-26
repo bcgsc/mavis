@@ -337,7 +337,7 @@ def main():
             print()
             log('calling events for', e)
             calls = []
-            failure_comment = []
+            failure_comment = None
             try:
                 calls.extend(call_events(e))
                 event_calls.extend(calls)
@@ -345,14 +345,16 @@ def main():
                 log('warning: error in calling events', repr(err), time_stamp=False)
                 failure_comment = str(err)
             if len(calls) == 0:
-                failure_comment = ['zero events were called'] if not failure_comment else failure_comment
+                failure_comment = ['zero events were called'] if failure_comment is None else failure_comment
                 row = e.flatten()
-                row['failure_comment'] = failure_comment.join(';')
+                row['failure_comment'] = failure_comment
                 failed_cluster_rows.append(row)
             else:
                 passes += 1
 
             log('called {} event(s)'.format(len(calls)))
+            for ev in calls:
+                log(ev, ev.event_type, ev.call_method, time_stamp=False)
 
     if len(failed_cluster_rows) + passes != len(evidence):
         raise AssertionError(

@@ -20,7 +20,7 @@ def breakpoint_pos(read, orient=ORIENT.NS):
     ORIENT.enforce(orient)
 
     if typ != CIGAR.S and end_typ != CIGAR.S:
-        raise AttributeError('cannot compute breakpoint for a read without soft-clipping')
+        raise AttributeError('cannot compute breakpoint for a read without soft-clipping', read.cigar)
 
     if orient == ORIENT.NS:
         if (typ == CIGAR.S and end_typ == CIGAR.S and freq > end_freq) \
@@ -33,11 +33,11 @@ def breakpoint_pos(read, orient=ORIENT.NS):
 
     if orient == ORIENT.RIGHT:
         if typ != CIGAR.S:
-            raise AttributeError('soft clipping doesn\'t support input orientation for a breakpoint')
+            raise AttributeError('soft clipping doesn\'t support input orientation for a breakpoint', repr(orient), read.cigar, read.get_tags())
         return read.reference_start
     else:
         if end_typ != CIGAR.S:
-            raise AttributeError('soft clipping doesn\'t support input orientation for a breakpoint')
+            raise AttributeError('soft clipping doesn\'t support input orientation for a breakpoint', orient, read.cigar, read.get_tags())
         return read.reference_end - 1
 
 

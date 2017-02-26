@@ -115,6 +115,7 @@ def assemble(
     assembly_min_contig_length=None,
     assembly_min_consec_match_remap=3,
     assembly_max_paths=20,
+    assembly_max_kmer_strict=False,
     log=lambda *x: None
 ):
     """
@@ -143,15 +144,18 @@ def assemble(
         else:
             assembly_max_kmer_size = temp
     elif assembly_max_kmer_size > min_seq:
-        assembly_max_kmer_size = min_seq
-        warnings.warn(
-            'cannot specify a kmer size larger than one of the input sequences. reset to {0}'.format(min_seq))
+        if not assembly_max_kmer_strict:
+            assembly_max_kmer_size = min_seq
+            warnings.warn(
+                'cannot specify a kmer size larger than one of the input sequences. reset to {0}'.format(min_seq))
     assembly_min_read_mapping_overlap = assembly_max_kmer_size if assembly_min_read_mapping_overlap is None else \
         assembly_min_read_mapping_overlap
     assembly_min_contig_length = min_seq + 1 if assembly_min_contig_length is None else assembly_min_contig_length
     assembly = DeBruijnGraph()
     log('hashing kmers')
     for s in sequences:
+        if len(s) < assembly_max_kmer_size:
+            continue
         for kmer in kmers(s, assembly_max_kmer_size):
             l = kmer[:-1]
             r = kmer[1:]

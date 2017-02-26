@@ -320,7 +320,7 @@ class Evidence(BreakpointPair):
                 c, prefix = cigar_tools.extend_softclipping(c, self.sc_extension_stop)
             except AttributeError:
                 pass
-            read.cigar = c
+            read.cigar = cigar_tools.join(c)
             read.reference_start = read.reference_start + prefix
         # data quality filters
         if cigar_tools.alignment_matches(read.cigar) >= self.min_sample_size_to_apply_percentage \
@@ -356,7 +356,7 @@ class Evidence(BreakpointPair):
         scores = []
 
         for a in putative_alignments:  # loop over the alignments
-            a.flag = a.flag | PYSAM_READ_FLAGS.SUPPLEMENTARY 
+            a.flag = a.flag | PYSAM_READ_FLAGS.SUPPLEMENTARY
             # set this flag so we don't recompute the cigar multiple
             a.set_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR, 1, value_type='i')
             # add information from the original read
@@ -377,7 +377,7 @@ class Evidence(BreakpointPair):
                 # softclipping
                 pass
             s = cigar_tools.score(a.cigar)
-
+            a.cigar = cigar_tools.join(a.cigar)
             if a.reference_id == a.next_reference_id:
                 # https://samtools.github.io/hts-specs/SAMv1.pdf
                 # unsigned observed template length equals the number of bases from the leftmost
@@ -468,7 +468,8 @@ class Evidence(BreakpointPair):
             log=log,
             assembly_min_consec_match_remap=self.min_anchor_exact,
             assembly_min_contig_length=self.assembly_min_contig_length,
-            assembly_max_kmer_size=self.assembly_max_kmer_size
+            assembly_max_kmer_size=self.assembly_max_kmer_size,
+            assembly_max_kmer_strict=self.assembly_max_kmer_strict
         )
 
         # now determine the strand from the remapped reads if possible
@@ -623,7 +624,6 @@ class Evidence(BreakpointPair):
                     self.add_flanking_pair(fl, mate)
             except KeyError:
                 pass
-        log('collected', len(half_mapped_partners1), 'half mapped reads at the first break', time_stamp=False)
         for read in half_mapped_partners1:
             # try and get the mate from the cache
             try:
@@ -632,7 +632,13 @@ class Evidence(BreakpointPair):
                     self.half_mapped[0].add(mate)
             except KeyError:
                 pass
-        log('collected', len(half_mapped_partners1), 'half mapped reads at the second break', time_stamp=False)
+        log(
+            'collected',
+            [
+                len(set([r.query_name for r in half_mapped_partners1])),
+                len(set([r.query_name for r in half_mapped_partners2]))
+            ],
+            'half mapped reads', time_stamp=False)
         for read in half_mapped_partners2:
             # try and get the mate from the cache
             try:

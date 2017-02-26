@@ -284,7 +284,8 @@ class Testcigar_tools(unittest.TestCase):
         self.assertEqual([(CIGAR.M, 10), (CIGAR.X, 20)], cigar_tools.join(c))
         k = [(CIGAR.X, 10), (CIGAR.M, 10), (CIGAR.X, 10)]
         self.assertEqual([(CIGAR.M, 10), (CIGAR.X, 30), (CIGAR.M, 10), (CIGAR.X, 10)], cigar_tools.join(c, k))
-
+        k = [(4, 1), (4, 2), (7, 5), (8, 7), (7, 2), (8, 5), (7, 28), (8, 1), (7, 99)]
+        self.assertEqual([(4, 3), (7, 5), (8, 7), (7, 2), (8, 5), (7, 28), (8, 1), (7, 99)], cigar_tools.join(k))
 
 class TestReadPairStrand(unittest.TestCase):
     def setUp(self):

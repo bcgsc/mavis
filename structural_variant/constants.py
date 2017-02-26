@@ -313,6 +313,7 @@ COLUMNS = Vocab(
     break2_split_reads_forced='break2_split_reads_forced',
     contig_alignment_score='contig_alignment_score',
     contig_remap_score='contig_remap_score',
+    contig_remapped_reads='contig_remapped_reads',
     contig_remapped_read_names='contig_remapped_read_names',
     contig_seq='contig_seq',
     contigs_aligned='contigs_aligned',
@@ -489,6 +490,13 @@ COLUMNS = Vocab(
         For any sequence its contribution to the score is divided by the number of mappings to give less weight to
         multimaps
 
+    contig_remapped_reads
+        :class:`int` - the number of reads from the input bam that map to the assembled contig
+
+    contig_remapped_read_names
+        read query names for the reads that were remapped. A -1 or -2 has been appended to the end of the name to
+        indicate if this is the first or second read in the pair
+
     contig_alignment_score
         :class:`float` - A rank based on the alignment tool blat etc. of the alignment being used. An average if
         split alignments were used. Lower numbers indicate a better alignment. If it was the best alignment possible
@@ -590,6 +598,7 @@ VALIDATION_DEFAULTS = Namespace(
     assembly_min_tgt_to_exclude_half_map=7,
     assembly_strand_concordance=0.7,
     assembly_max_kmer_size=None,
+    assembly_max_kmer_strict=True,
     call_error=10,
     consensus_req=3,
     fetch_reads_bins=3,
@@ -676,6 +685,11 @@ VALIDATION_DEFAULTS = Namespace(
     assembly_max_kmer_size
         the minimum between this and the smallest length input sequence is used as the kmer size for assembling
         the DeBruijn Graph. If this is not set the default is the 75% of the minimum length input sequence
+
+    assembly_max_kmer_strict
+        if set to True then any sequences input to the assembly algorithm that cannot create a kmer of this size will
+        be discard. However, if this is set to False, then the kmer size will be reduced accordingly and all input
+        sequences will be used in the assembly algorithm
 
     assembly_strand_concordance
         when the number of remapped reads from each strand are compared, the ratio must be above this number to decide
