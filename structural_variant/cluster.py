@@ -271,7 +271,6 @@ def cluster_breakpoint_pairs(input_pairs, r, k):
     for ckey, group in sorted(node_sets.items()):
         chr1, chr2, o1, o2, s1, s2, opposing_strands, stranded, seq = ckey
         clusters = IntervalPair.cluster(group, r, k)
-        print('cluster key:', ckey)
         for node in group:
             particpation = sum([1 for c in clusters if node in c])
             if particpation > 1:
@@ -288,9 +287,6 @@ def cluster_breakpoint_pairs(input_pairs, r, k):
                 untemplated_seq=seq,
                 stranded=stranded
             )
-            for node in c:
-                print(node)
-            print()
             # gather the original input pairs using the mapping
             original_input_pairs = itertools.chain.from_iterable([input_mapping[ckey][node] for node in c])
             result.setdefault(bpp, set()).update(original_input_pairs)

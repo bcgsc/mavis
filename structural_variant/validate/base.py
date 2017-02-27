@@ -224,6 +224,13 @@ class Evidence(BreakpointPair):
         iread = Interval(read.reference_start + 1, read.reference_end)
         imate = Interval(mate.reference_start + 1, mate.reference_end)
         added = False
+        pet = self.putative_event_types()
+
+        # flanking evidence overlap for duplications/insertions/internal translocations
+        if SVTYPE.INS in pet or SVTYPE.DUP in pet:
+            pet = set(pet + [SVTYPE.INS, SVTYPE.DUP])
+            pet = sorted(list(pet))
+
         for event_type in self.putative_event_types():
 
             # check that the pair orientation is correct

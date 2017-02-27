@@ -359,6 +359,30 @@ class TestCallBreakpointPair(unittest.TestCase):
         self.assertEqual(18, bpp.break2.end)
         self.assertEqual('GGG', bpp.untemplated_seq)
 
+    def test_single_delins(self):
+        raise unittest.SkipTest('TODO')
+
+    def test_single_insertion(self):
+        raise unittest.SkipTest('TODO')
+
+    def test_single_duplication(self):
+        raise unittest.SkipTest('TODO')
+
+    def test_single_duplication_with_untemplated(self):
+        r = MockRead(
+            query_sequence=(
+                'CTCCCACCAGGAGCTCGTCCTCACCACGTCCTGCACCAGCACCTCCAGCTCCCGCAGCAGCGCCTCGCCCCCACGGTGCGCGCTCCGCGCCGGTTCC'
+                'ATGGGCTCCGTAGGTTCCATGGGCTCCGTAGGTTCCATGGGCTCCGTAGGTTCCATGGGCTCCGTAGGTTCCATCGGCTCCGTGGGTTCCATGGACT'
+                'CTGTGGGCTCGGGCCCGACGCGCACGGAGGACTGGAGGACTGGGGCGTGTGTCTGCGGTGCAGGCGAGGCGGGGCGGGC'),
+            query_name='duplication_with_untemp',
+            reference_id=16,
+            reference_name='reference17',
+            reference_start=1882,
+            cigar=[(CIGAR.EQ, 126), (CIGAR.I, 54), (CIGAR.EQ, 93)],
+            is_reverse=False)
+        bpp = BreakpointPair.call_breakpoint_pair(r, REFERENCE_GENOME=REFERENCE_GENOME)
+        self.assertTrue(False)
+
     def test_single_multi_events(self):
         r = MockRead(
             reference_id=0,

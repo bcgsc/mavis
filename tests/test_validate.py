@@ -1,6 +1,6 @@
 from structural_variant.breakpoint import Breakpoint
 from structural_variant.annotate import load_reference_genome, Gene, usTranscript, Transcript
-from structural_variant.constants import ORIENT, STRAND, CIGAR, PYSAM_READ_FLAGS, SVTYPE, CALL_METHOD
+from structural_variant.constants import ORIENT, STRAND, PYSAM_READ_FLAGS
 from structural_variant.interval import Interval
 from structural_variant.bam.cache import BamCache
 from . import MockRead, mock_read_pair
@@ -10,10 +10,9 @@ import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from structural_variant.validate.evidence import GenomeEvidence, TranscriptomeEvidence
-import structural_variant.validate.call as call
-from structural_variant.validate.call import EventCall
 
 REFERENCE_GENOME = None
+RUN_FULL = os.environ.get('RUN_FULL', False)
 
 
 def setUpModule():
@@ -216,7 +215,7 @@ class TestTranscriptomeEvidenceWindow(unittest.TestCase):
         b = Breakpoint(chr='fake', start=17279591, orient=ORIENT.LEFT)
         self.assertEqual(Interval(17277321, 17279702), self.transcriptome_window(b, [ust]))
 
-@unittest.skip('skip because VERY slow')
+@unittest.skipIf(not RUN_FULL, 'slower tests will not be run unless the environment variable RUN_FULL is given')
 class TestFullEvidenceGathering(unittest.TestCase):
     # need to make the assertions more specific by checking the actual names of the reads found in each bin
     # rather than just the counts.
@@ -242,7 +241,6 @@ class TestFullEvidenceGathering(unittest.TestCase):
                 count += 1
         return count
 
-    @unittest.skip('skip because slow')
     def test_load_evidence_translocation(self):
         ev1 = self.genome_evidence(
             Breakpoint('reference10', 520, orient=ORIENT.RIGHT),
@@ -268,7 +266,6 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(40, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(57, len(ev1.flanking_pairs))
 
-    @unittest.skip('skip because slow')
     def test_load_evidence_inversion(self):
         # first example
         ev1 = self.genome_evidence(
@@ -295,7 +292,6 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(27, self.count_original_reads(ev1.split_reads[0]))
         self.assertEqual(52, len(ev1.flanking_pairs))
 
-    @unittest.skip('skip because slow')
     def test_load_evidence_duplication(self):
         ev1 = self.genome_evidence(
             Breakpoint('reference7', 5000, orient=ORIENT.RIGHT),
@@ -308,7 +304,6 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(11, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(64, len(ev1.flanking_pairs))
 
-    @unittest.skip('skip because slow')
     def test_load_evidence_deletion(self):
         # first example
         ev1 = self.genome_evidence(
@@ -357,7 +352,6 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(17, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(40, len(ev1.flanking_pairs))
 
-    @unittest.skip('skip because slow')
     def test_load_evidence_small_deletion(self):
         # first example
         ev1 = self.genome_evidence(
@@ -393,7 +387,6 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(19, len(ev1.spanning_reads))
         self.assertEqual(9, len(ev1.flanking_pairs))
 
-    @unittest.skip('skip because slow')
     def test_load_evidence_small_deletion_test1(self):
         ev1 = self.genome_evidence(
             Breakpoint('reference12', 2001, orient=ORIENT.LEFT),
@@ -412,7 +405,6 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(0, len(ev1.spanning_reads))
         self.assertEqual(26, len(ev1.flanking_pairs))
 
-    @unittest.skip('skip because slow')
     def test_load_evidence_small_deletion_test2(self):
         ev1 = self.genome_evidence(
             Breakpoint('reference10', 3609, orient=ORIENT.LEFT),
@@ -431,7 +423,6 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(0, len(ev1.spanning_reads))
         self.assertEqual(40, len(ev1.flanking_pairs))
 
-    @unittest.skip('skip because slow')
     def test_load_evidence_small_deletion_test3(self):
         ev1 = self.genome_evidence(
             Breakpoint('reference10', 8609, orient=ORIENT.LEFT),
@@ -450,7 +441,6 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(0, len(ev1.spanning_reads))
         self.assertEqual(53, len(ev1.flanking_pairs))
 
-    @unittest.skip('skip because slow')
     def test_load_evidence_small_deletion_test4(self):
         ev1 = self.genome_evidence(
             Breakpoint('reference10', 12609, orient=ORIENT.LEFT),
@@ -469,7 +459,6 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(0, len(ev1.spanning_reads))
         self.assertEqual(77, len(ev1.flanking_pairs))
 
-    @unittest.skip('skip because slow')
     def test_load_evidence_small_deletion_test5(self):
         ev1 = self.genome_evidence(
             Breakpoint('reference10', 17109, orient=ORIENT.LEFT),
@@ -488,7 +477,6 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(0, len(ev1.spanning_reads))
         self.assertEqual(48, len(ev1.flanking_pairs))
 
-    @unittest.skip('skip because slow')
     def test_load_evidence_small_deletion_test6(self):
         ev1 = self.genome_evidence(
             Breakpoint('reference10', 22109, orient=ORIENT.LEFT),
@@ -506,7 +494,6 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(13, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(53, len(ev1.flanking_pairs))
 
-    @unittest.skip('skip because slow')
     def test_load_evidence_small_deletion_test7(self):
         ev1 = self.genome_evidence(
             Breakpoint('reference10', 28109, orient=ORIENT.LEFT),
@@ -524,7 +511,6 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(13, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(49, len(ev1.flanking_pairs))
 
-    @unittest.skip('skip because slow')
     def test_load_evidence_small_deletion_test8(self):
         ev1 = self.genome_evidence(
             Breakpoint('reference10', 36109, orient=ORIENT.LEFT),
@@ -620,7 +606,6 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(19, len(ev1.spanning_reads))
         self.assertEqual(9, len(ev1.flanking_pairs))
 
-    @unittest.skip('skip because slow')
     def test_load_evidence_small_duplication(self):
         ev1 = self.genome_evidence(
             Breakpoint('reference12', 10000, orient=ORIENT.RIGHT),

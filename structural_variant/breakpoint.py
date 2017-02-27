@@ -245,7 +245,7 @@ class BreakpointPair:
                 return [SVTYPE.TRANS]
 
     @classmethod
-    def call_breakpoint_pair(cls, read1, read2=None):
+    def call_breakpoint_pair(cls, read1, read2=None, REFERENCE_GENOME=None):
         """
         calls a set of breakpoints from a single or a pair of pysam style read(s)
 
@@ -261,11 +261,11 @@ class BreakpointPair:
             return multiple events not just the major event
         """
         if read2 is None:
-            return cls._call_from_single_contig(read1)
-        return cls._call_from_paired_contig(read1, read2)
+            return cls._call_from_single_contig(read1, REFERENCE_GENOME=REFERENCE_GENOME)
+        return cls._call_from_paired_contig(read1, read2, REFERENCE_GENOME=REFERENCE_GENOME)
 
     @classmethod
-    def _call_from_single_contig(cls, read):
+    def _call_from_single_contig(cls, read, REFERENCE_GENOME=None):
         """
         calls a set of breakpoints from a pysam style read using the cigar values
 
@@ -278,6 +278,9 @@ class BreakpointPair:
 
         Raises:
             UserWarning: if the contig does not contain insertions/deletions
+
+        if the duplicated sequence is longer than the untemplated sequence then this should
+        be called as a duplication and not an insertion
         """
         read_events = []
         for i, t in enumerate(read.cigar):
@@ -329,6 +332,22 @@ class BreakpointPair:
             else:   # after the event
                 seq_second_start = seq_pos
                 break
+        
+        # determine if the inserted sequence is a repeat of the aligned portion
+        # assume that events with deletions cannot be duplications
+        if first_breakpoint == second_breakpoint and REFERENCE_GENOME:  # insertion or duplication
+            refseq = REFERENCE_GENOME[read.reference_name][
+                first_breakpoint - len(untemplated_seq):second_breakpoint + len(untemplated_seq) + 1]
+            print('refseq', refseq)
+            midpoint = len(untemplated_seq) // 2 + 1  # more than the untemplated
+            match = None
+            for dup_len in range(len(untemplated_seq), midpoint - 1, -1):
+                subseq = untemplated_seq[0:dup_len]
+                if subseq in untemplated_seq:
+                    match = subseq
+                    break
+            if match is not None:
+                print(match, untemplated_seq)
 
         break1 = Breakpoint(
             read.reference_name,
@@ -347,7 +366,7 @@ class BreakpointPair:
         return BreakpointPair(break1, break2, opposing_strands=False, untemplated_seq=untemplated_seq)
 
     @classmethod
-    def _call_from_paired_contig(cls, read1, read2):
+    def _call_from_paired_contig(cls, read1, read2, REFERENCE_GENOME=None):
         """
         calls a set of breakpoints from a pair of pysam style reads using their softclipping to
         find the breakpoints and orientations
