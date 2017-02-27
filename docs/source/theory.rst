@@ -147,10 +147,9 @@ We make some base assumptions with regards to paired-end read data:
 With the above assumptions we take the median fragment size to be the expected normal.
 
 Given that we expect mutations and therefore abnormal fragment sizes, we use a modified method to calculate the
-**median standard deviation** (*s* in the equations below). We calculate the squared distance away from the 
+**median standard deviation** (see code below). We calculate the squared distance away from the
 median for each fragment and then take a fraction of this to be 'normal' variation. So the most abnormal portion is
-ignored, assuming it is supposed to be abnormal. This results in a calculation as follows, where the original set
-Y is the set of fragment sizes from the bam file and f is the fraction of fragment sizes assumed to be normal
+ignored, assuming it is supposed to be abnormal. This results in a calculation as follows.
 
 .. code::
 
@@ -165,27 +164,19 @@ Y is the set of fragment sizes from the bam file and f is the fraction of fragme
     X = sorted(X)[0:end]
     stdev = math.sqrt(sum(X) / len(X))
 
-Using the above calculations we can generate a modified version of the standard deviation (s above) as shown in the figure
-below (stdev). This gives us an idea of when to judge an fragment size as abnormal and where we expect our normal read
+This gives us an idea of when to judge an fragment size as abnormal and where we expect our normal read
 pairs fragment sizes to fall.
 
-.. figure:: _static/insert_size_distrb_fractions.svg
+.. figure:: _static/fragment_sizes_histogram.svg
     :width: 100%
 
-    Distribution of fragment sizes (absolute values) of proper read pairs, and different normal distribution fits using
-    the above equation. The different coloured curves are computed with different parameters. black: the standard
-    calculation using all data points and the mean as centre; dark green: median as centre and a fraction of f=0.80;
-    light green: median as centre, f=0.90; light blue: median and f=0.95; dark blue: median and f=1.00.
+    Distribution of fragment sizes (absolute values) of proper read pairs. The black curve representings the fit for
+    a normal distribution using the standard deviation calculated with all data points. The blue curve is the expected
+    distribution using a 0.95 fraction of the data. The thick vertical black line is the median and the thin black
+    lines are standard deviations away from the median.
 
-As we can see from the distribution above the median approximates the distribution centre better than the mean,
-likely because it is more resistant to outliers.
-
-.. figure::  _static/insert_size_distrb.svg
-    :width: 100%
-
-    Distribution of fragment sizes (absolute values) of proper read pairs. In the above image the standard deviation
-    (stdev) was calculated with respect to the median (383) using the fraction (f=0.99).
-
+As we can see from the diagram above, removing the outliers reproduces the observed distribution better than using
+all data points
 
 
 We use this in two ways
@@ -193,15 +184,13 @@ We use this in two ways
 1. to find flanking evidence supporting deletions and insertions
 2. to estimate the window size for where we will need to read from the bam when looking for evidence for a given event
 
-The :py:func:`~structural_variant.validate.Evidence.generate_window` function uses the above concepts. The user will
-define the :py:attr:`~structural_variant.validate.EvidenceSettings.median_fragment_size` the
-:py:attr:`~structural_variant.validate.EvidenceSettings.stdev_fragment_size`, and the
-:py:attr:`~structural_variant.validate.EvidenceSettings.stdev_count_abnormal` parameters defined in the
-:class:`~structural_variant.validate.EvidenceSettings` class.
+The :py:func:`~structural_variant.validate.evidence.GenomeEvidence._generate_window` function uses the above concepts.
+The user will define the ``median_fragment_size`` the ``stdev_fragment_size`` , and the ``stdev_count_abnormal``
+parameters defined in the :class:`~structural_variant.constants.VALIDATION_DEFAULTS` class.
 
 If the library has a transcriptome protocol this becomes a bit more complicated and we must take into account the
 possible annotations when calculating the evidence window. see
-:py:func:`~structural_variant.validate.Evidence.generate_transcriptome_window` for more
+:py:func:`~structural_variant.validate.evidence.TranscriptomeEvidence._generate_window` for more
 
 
 |
@@ -214,7 +203,7 @@ Classifying Events
 .....................
 
 The following decision tree is used in classifying events based on their breakpoints. Only valid combinations have
-been shown.
+been shown. see :py:func:`~structural_variant.breakpoint.BreakpointPair.classify`
 
 .. figure:: _static/classification_tree.svg
     :width: 100%

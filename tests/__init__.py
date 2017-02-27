@@ -13,8 +13,8 @@ REFERENCE_ANNOTATIONS_FILE_JSON = os.path.join(filedir, 'mock_reference_annotati
 TEMPLATE_METADATA_FILE = os.path.join(filedir, 'cytoBand.txt')
 BAM_INPUT = os.path.join(filedir, 'mini_mock_reads_for_events.sorted.bam')
 FULL_BAM_INPUT = os.path.join(filedir, 'mock_reads_for_events.sorted.bam')
-FULL_BASE_EVENTS = os.path.join(filedir, 'mock_sv_events.svmerge.tsv')
-BASE_EVENTS = os.path.join(filedir, 'mini_mock_sv_events.svmerge.tsv')
+FULL_BASE_EVENTS = os.path.join(filedir, 'mock_sv_events.tsv')
+BASE_EVENTS = os.path.join(filedir, 'mini_mock_sv_events.tsv')
 BLAT_INPUT = os.path.join(filedir, 'blat_input.fa')
 BLAT_OUTPUT = os.path.join(filedir, 'blat_output.pslx')
 
@@ -145,6 +145,25 @@ class MockString:
             return self.char * (index.stop - index.start)
         else:
             return self.char
+
+
+def mock_read_pair(mock1, mock2):
+    mock1.next_reference_id = mock2.reference_id
+    mock1.next_reference_start = mock2.reference_start
+    mock1.mate_is_reverse = mock2.is_reverse
+    mock1.is_paired = True
+    mock1.is_read1 = True
+    if mock1.template_length is None:
+        mock1.template_length = mock2.reference_end - mock1.reference_start
+
+    mock2.next_reference_id = mock1.reference_id
+    mock2.next_reference_start = mock1.reference_start
+    mock2.mate_is_reverse = mock1.is_reverse
+    mock2.is_paired = True
+    mock2.is_read1 = False
+    mock2.query_name = mock1.query_name
+    mock2.template_length = -1 * mock1.template_length
+    return mock1, mock2
 
 
 def build_transcript(gene, exons, cds_start, cds_end, domains, strand=None, is_best_transcript=False):

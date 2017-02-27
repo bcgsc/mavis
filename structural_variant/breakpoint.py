@@ -208,8 +208,15 @@ class BreakpointPair:
             :class:`list` of :any:`SVTYPE`: a list of possible SVTYPE
 
         Example:
-            >>> BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 9999), opposing_strands=True)
-            [SVTYPE.INV]
+            >>> bpp = BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 9999), opposing_strands=True)
+            >>> BreakpointPair.classify(bpp)
+            ['inversion']
+            >>> bpp = BreakpointPair(Breakpoint('1', 1, orient='L'), Breakpoint('1', 9999, orient='R'), opposing_strands=False)
+            >>> BreakpointPair.classify(bpp)
+            ['deletion', 'insertion']
+
+        .. figure:: ./../_static/classification_tree.svg
+            :width: 100%
         """
         if pair.break1.chr == pair.break2.chr:  # intrachromosomal
             if pair.opposing_strands:
@@ -474,9 +481,9 @@ class BreakpointPair:
             REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by template/chr name
 
         Returns:
-            :class:`tuple` of :class:`str` and :class:`str`: tuple contains
-                - str: homologous sequence at the first breakpoint
-                - str: homologous sequence at the second breakpoint
+            tuple:
+                - :class:`str` - homologous sequence at the first breakpoint
+                - :class:`str` - homologous sequence at the second breakpoint
 
         Raises:
             AttributeError: for non specific breakpoints

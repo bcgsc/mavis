@@ -24,8 +24,7 @@ class EventCall(BreakpointPair):
         break2_call_method=None,
         contig=None,
         contig_alignment=None,
-        untemplated_seq=None,
-        blacklisted_evidence=None
+        untemplated_seq=None
     ):
         """
         Args:
@@ -69,7 +68,8 @@ class EventCall(BreakpointPair):
             support.add(mate)
         support.update(self.break1_split_reads)
         support.update(self.break2_split_reads)
-        support.update(self.contig.input_reads)
+        if self.contig:
+            support.update(self.contig.input_reads)
         return support
 
     def pull_flanking_support(self, flanking_pairs):
@@ -88,11 +88,19 @@ class EventCall(BreakpointPair):
 
         fragment_sizes = []
 
+        min_frag = max([
+            self.source_evidence.min_expected_fragment_size + Interval.dist(self.break1, self.break2),
+            self.source_evidence.max_expected_fragment_size])
+        max_frag = len(self.break1 | self.break2) + self.source_evidence.max_expected_fragment_size
+        print('event size', len(self.break1 | self.break2))
+        print('stdev', self.source_evidence.stdev_fragment_size, self.source_evidence.stdev_count_abnormal)
+        print('min-max', min_frag, max_frag)
+
         for read, mate in flanking_pairs:
             # check that the fragment size is reasonable
             fragment_size = self.source_evidence.compute_fragment_size(read, mate)
             if self.event_type == SVTYPE.DEL:
-                if fragment_size.end <= self.source_evidence.max_expected_fragment_size:
+                if fragment_size.end < min_frag or fragment_size.start > max_frag:
                     continue
             elif self.event_type == SVTYPE.INS:
                 if fragment_size.start >= self.source_evidence.min_expected_fragment_size:
@@ -130,18 +138,6 @@ class EventCall(BreakpointPair):
                     ]):
                         continue
             self.flanking_pairs.add((read, mate))
-            #fragment_sizes.extend([fragment_size.start, fragment_size.end])
-        """
-        median = 0
-        stdev = 0
-        if len(support) > 0:
-            median = statistics.median(fragment_sizes)
-            err = 0
-            for insert in fragment_sizes:
-                err += math.pow(insert - median, 2)
-            err /= len(fragment_sizes)
-            stdev = math.sqrt(err)
-        return support, median, stdev"""
 
     def __hash__(self):
         raise NotImplementedError('this object type does not support hashing')
@@ -149,14 +145,18 @@ class EventCall(BreakpointPair):
     def __eq__(self, other):
         object.__eq__(self, other)
 
-    def flatten(self):
-        row = self.source_evidence.flatten()
-        row.update(BreakpointPair.flatten(self))  # this will overwrite the evidence breakpoint which is what we want
-        row.update({
-            COLUMNS.break1_call_method: self.call_method[0],
-            COLUMNS.break2_call_method: self.call_method[1],
-            COLUMNS.event_type: self.event_type
-        })
+    def flanking_metrics(self):
+        """
+        computes the median and standard deviation of the flanking pairs. Note that standard
+        deviation is calculated wrt the median and not the average. Also that the fragment size
+        is calculated as a range so the start and end of the range are used in computing these
+        metrics
+
+        Returns:
+            tuple:
+                - ``float`` - the median fragment size
+                - ``float`` - the fragment size standard deviation wrt the median
+        """
         fragment_sizes = []
         for read, mate in self.flanking_pairs:
             # check that the fragment size is reasonable
@@ -172,14 +172,25 @@ class EventCall(BreakpointPair):
                 err += math.pow(insert - median, 2)
             err /= len(fragment_sizes)
             stdev = math.sqrt(err)
+        return median, stdev
+
+    def flatten(self):
+        row = self.source_evidence.flatten()
+        row.update(BreakpointPair.flatten(self))  # this will overwrite the evidence breakpoint which is what we want
+        row.update({
+            COLUMNS.break1_call_method: self.call_method[0],
+            COLUMNS.break2_call_method: self.call_method[1],
+            COLUMNS.event_type: self.event_type
+        })
+        median, stdev = self.flanking_metrics()
         flank = set()
         for f, m in self.flanking_pairs:
-            flank.update({f, m})
+            flank.update({f.query_name, m.query_name})
         row.update({
             COLUMNS.flanking_pairs: len(self.flanking_pairs),
             COLUMNS.flanking_median_fragment_size: median,
             COLUMNS.flanking_stdev_fragment_size: stdev,
-            COLUMNS.flanking_pairs_read_names: ';'.join(sorted([f.query_name for f in flank]))
+            COLUMNS.flanking_pairs_read_names: ';'.join(sorted(list(flank)))
         })
 
         b1 = set()
@@ -222,7 +233,7 @@ class EventCall(BreakpointPair):
                 COLUMNS.contig_alignment_score: ascore,
                 COLUMNS.contig_remapped_reads: len(self.contig.input_reads),
                 COLUMNS.contig_remapped_read_names:
-                    ';'.join(sorted([r.query_name for r in self.contig.input_reads]))
+                    ';'.join(sorted(set([r.query_name for r in self.contig.input_reads])))
             })
         return row
 
@@ -239,7 +250,7 @@ def call_events(source_evidence):
     Returns:
         :class:`list` of :class:`EventCall`: list of calls
 
-    .. figure:: _static/call_breakpoint_by_flanking_reads.svg
+    .. figure:: ../_static/call_breakpoint_by_flanking_reads.svg
 
         model used in calculating the uncertainty interval for breakpoints called by flanking read pair evidence
     """
@@ -510,6 +521,7 @@ def _call_by_supporting_reads(ev, event_type, consumed_evidence=None):
         linked_pairings.append(call)
 
     for call in linked_pairings:
+        print('removing', call, call.call_method, call.event_type)
         if call.break1.start in pos1:
             del pos1[call.break1.start]
         if call.break2.start in pos2:

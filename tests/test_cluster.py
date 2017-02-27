@@ -2,9 +2,10 @@ from structural_variant.interval import Interval
 import networkx as nx
 import itertools
 import structural_variant.cluster
-from structural_variant.cluster import IntervalPair
-from structural_variant.breakpoint import Breakpoint, BreakpointPair
+from structural_variant.cluster import IntervalPair, cluster_breakpoint_pairs
+from structural_variant.breakpoint import Breakpoint, BreakpointPair, read_bpp_from_input_file
 from structural_variant.constants import STRAND
+from tests import FULL_BASE_EVENTS
 
 import unittest
 
@@ -148,6 +149,18 @@ class TestIntervalPair(unittest.TestCase):
             print("done")
         print(str(groups[list(groups.keys())[0]][0]))
         self.assertTrue(False)
+
+
+class TestFullClustering(unittest.TestCase):
+    def test_mocked_events(self):
+        # none of the 24 events in the mocked file should cluster together
+        # if we change the mock file we may need to update this function
+        bpps = read_bpp_from_input_file(FULL_BASE_EVENTS)
+        self.assertEqual(24, len(bpps))
+        clusters = cluster_breakpoint_pairs(bpps, 10, 10)
+        self.assertEqual(24, len(clusters))
+        for cluster, input_pairs in clusters.items():
+            self.assertEqual(1, len(input_pairs))
 
 
 if __name__ == "__main__":

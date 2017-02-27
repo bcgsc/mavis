@@ -1,9 +1,10 @@
 #!/projects/tumour_char/analysis_scripts/python/centos06/anaconda3_v2.3.0/bin/python
 import argparse
 import os
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from structural_variant import __version__
 from structural_variant.annotate.file_io import load_reference_genes
-from structural_variant.error import DiscontinuousMappingError
 from structural_variant.interval import Interval
 from structural_variant.constants import STRAND
 import multiprocessing
@@ -59,7 +60,7 @@ def histogram_distrib_stderr(hist, median, fraction, error_function=lambda x, y:
         for i in range(0, f):
             values.append(error_function(v, median))
     values.sort()
-    
+
     end = int(len(values) * fraction)
     return sum(values[0:end]) / end
 
@@ -228,7 +229,7 @@ def profile_transcriptome(BAM, GENES_SET_SIZE, best_transcripts_only=True):
         temp -= each
     if temp > 0:
         sets.append(temp)
-    
+
     with multiprocessing.Pool(POOL_SIZE) as p:
         fragment_sizes = p.map(profile_genes, sets)
     return sum_histograms(fragment_sizes)
@@ -262,7 +263,7 @@ def main(args):
         with multiprocessing.Pool(POOL_SIZE) as p:
             fragment_sizes = p.map(profile_chr, references)
         hist = sum_histograms([v for k, v in fragment_sizes])
-    
+
     # output the stats
     print('\nFINAL')
     print('sample size', sum(hist.values()), 'reads')
@@ -272,7 +273,7 @@ def main(args):
     print('average stdev             \t{:.2f}'.format(math.sqrt(s)))
     m = histogram_median(hist)
     print('median                    \t{}'.format(m))
-    
+
     e80 = histogram_distrib_stderr(hist, m, 0.8)
     print('median_distrib[0.80] stdev\t{:.2f}'.format(math.sqrt(e80)))
     e90 = histogram_distrib_stderr(hist, m, 0.9)
@@ -311,20 +312,22 @@ def main(args):
         # except ImportError:
         #     print('error: no scipy support. cannot test normal fit')
         binwidth = 10
-        ax.hist(x, normed=True, bins=range(min(hist), max(hist) + binwidth, binwidth), color='b')
+        ax.hist(x, normed=True, bins=range(min(hist), max(hist) + binwidth, binwidth), color='0.5')
         ax.set_xlabel('abs fragment size')
         ax.set_ylabel('frequency')
         ax.set_xticks([0, m, max(x)])
         ax.set_title('histogram of absolute fragment sizes')
-        plt.grid(True)
+        plt.grid(False)
         x = numpy.linspace(min(hist), max(hist), 100)
-        ax.plot(x, mlab.normpdf(x, a, math.sqrt(s)), color='r', linewidth=2)
-        ax.plot(x, mlab.normpdf(x, m, math.sqrt(e100)), color='b', linewidth=2)
+        ax.plot(x, mlab.normpdf(x, m, math.sqrt(e100)), color='k', linewidth=2)
         ax.plot(x, mlab.normpdf(x, m, math.sqrt(e95)), color='b', linewidth=2)
-        ax.plot(x, mlab.normpdf(x, m, math.sqrt(e90)), color='b', linewidth=2)
-        ax.plot(x, mlab.normpdf(x, m, math.sqrt(e80)), color='b', linewidth=2)
-        plt.savefig('fragment_sizes_histogram_chr22.svg')
-        print('wrote figure: fragment_sizes_histogram_chr22.svg')
+        plt.axvline(x=m, color='k')
+        stdev = math.sqrt(e95)
+        for i in list(range(1, 4)) + list(range(-3, 0)):
+            plt.axvline(x=m + stdev * i, color='k', linewidth=0.5)
+
+        plt.savefig('fragment_sizes_histogram.svg')
+        print('wrote figure: fragment_sizes_histogram.svg')
     except ImportError:
         print('cannot import matplotlib, will not generate figure')
 
