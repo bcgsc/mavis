@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from structural_variant.validate.evidence import GenomeEvidence, TranscriptomeEvidence
 
 REFERENCE_GENOME = None
-RUN_FULL = os.environ.get('RUN_FULL', False)
+RUN_FULL = int(os.environ.get('RUN_FULL', 0))
 
 
 def setUpModule():
