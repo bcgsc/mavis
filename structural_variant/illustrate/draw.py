@@ -1,12 +1,5 @@
 """
-.. todo::
-
-    add optional scatter plots to subdiagrams for cna and expression data (possibly using matplotlib?)
-
-.. todo::
-
-    add mask to highlight the region not kept by the breakpoints (for 2 of more breakpoints only)
-    can use the css property "pointer-events: none;" to avoid issues with interactivity
+This is the primary module responsible for generating svg visualizations
 
 """
 import svgwrite

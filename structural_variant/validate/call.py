@@ -344,6 +344,11 @@ def _call_by_flanking_pairs(
 
         model used in calculating the uncertainty interval for breakpoints called by flanking read pair evidence
 
+    .. todo::
+
+        pre-split pairs into clusters by position and fragment size. This will enable calling mutliple
+        events in close proximity by flanking reads only. It will also aid in stopping FP reads from
+        interfering with resolving events by flanking pairs.
     """
     if consumed_evidence is None:
         consumed_evidence = set()
