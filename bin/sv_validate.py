@@ -82,6 +82,22 @@ def mkdirp(dirname):
         else:
             raise
 
+def samtools_v0_sort(input_bam, output_bam):
+    prefix = re.sub('\.bam$', '', output_bam)
+    return 'samtools sort {} {}'.format(input_bam, prefix)
+
+def samtools_v1_sort(input_bam, output_bam):
+    return 'samtools sort {} -o {}'.format(input_bam, output_bam)
+
+
+def get_samtools_version():
+    proc = subprocess.getoutput(['samtools'])
+    for line in proc.split('\n'):
+        m = re.search('Version: (?P<major>\d+)\.(?P<mid>\d+)\.(?P<minor>\d+)', line)
+        if m:
+            return int(m.group('major')), int(m.group('mid')), int(m.group('minor'))
+    raise ValueError('unable to parse samtools version number')
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -201,10 +217,14 @@ def main():
     CONTIG_OUTPUT_FILE = os.path.join(args.output, FILENAME_PREFIX + '.contigs.tab')
     IGV_BATCH_FILE = os.path.join(args.output, FILENAME_PREFIX + '.igv.batch')
     INPUT_BAM_CACHE = BamCache(args.bam_file, args.stranded)
-
+    
     log('input arguments listed below')
     for arg, val in sorted(args.__dict__.items()):
         log(arg, '=', val, time_stamp=False)
+
+    SAMTOOLS_VERSION = get_samtools_version()
+    log('samtools version parsed: v{}.{}.{}'.format(*SAMTOOLS_VERSION))
+
     log('loading the masking regions:', args.masking)
     MASKED_REGIONS = load_masking_regions(args.masking)
     for chr in MASKED_REGIONS:
@@ -315,7 +335,7 @@ def main():
     print()
     log('aligning {} contig sequences'.format(len(blat_sequences)))
     if len(blat_sequences) > 0:
-        blat_contig_alignments = blat_contigs(
+        blat_contigs(
             evidence,
             INPUT_BAM_CACHE,
             REFERENCE_GENOME=HUMAN_REFERENCE_GENOME,
@@ -425,7 +445,10 @@ def main():
     # now sort the contig bam
     sort = re.sub('.bam$', '.sorted.bam', CONTIG_BAM)
     log('sorting the bam file:', CONTIG_BAM)
-    subprocess.call(['samtools', 'sort', CONTIG_BAM, '-o', sort])
+    if SAMTOOLS_VERSION[0] < 1:
+        subprocess.call(samtools_v0_sort(CONTIG_BAM, sort), shell=True)
+    else:
+        subprocess.call(samtools_v1_sort(CONTIG_BAM, sort), shell=True)
     CONTIG_BAM = sort
     log('indexing the sorted bam:', CONTIG_BAM)
     subprocess.call(['samtools', 'index', CONTIG_BAM])
@@ -433,7 +456,10 @@ def main():
     # then sort the evidence bam file
     sort = re.sub('.bam$', '.sorted.bam', EVIDENCE_BAM)
     log('sorting the bam file:', EVIDENCE_BAM)
-    subprocess.call(['samtools', 'sort', EVIDENCE_BAM, '-o', sort])
+    if SAMTOOLS_VERSION[0] < 1:
+        subprocess.call(samtools_v0_sort(EVIDENCE_BAM, sort), shell=True)
+    else:
+        subprocess.call(samtools_v1_sort(EVIDENCE_BAM, sort), shell=True)
     EVIDENCE_BAM = sort
     log('indexing the sorted bam:', EVIDENCE_BAM)
     subprocess.call(['samtools', 'index', EVIDENCE_BAM])
