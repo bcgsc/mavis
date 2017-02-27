@@ -333,22 +333,6 @@ class BreakpointPair:
                 seq_second_start = seq_pos
                 break
         
-        # determine if the inserted sequence is a repeat of the aligned portion
-        # assume that events with deletions cannot be duplications
-        if first_breakpoint == second_breakpoint and REFERENCE_GENOME:  # insertion or duplication
-            refseq = REFERENCE_GENOME[read.reference_name][
-                first_breakpoint - len(untemplated_seq):second_breakpoint + len(untemplated_seq) + 1]
-            print('refseq', refseq)
-            midpoint = len(untemplated_seq) // 2 + 1  # more than the untemplated
-            match = None
-            for dup_len in range(len(untemplated_seq), midpoint - 1, -1):
-                subseq = untemplated_seq[0:dup_len]
-                if subseq in untemplated_seq:
-                    match = subseq
-                    break
-            if match is not None:
-                print(match, untemplated_seq)
-
         break1 = Breakpoint(
             read.reference_name,
             first_breakpoint + 1,  # 1-based coordinates
@@ -363,6 +347,36 @@ class BreakpointPair:
             strand=STRAND.NEG if read.is_reverse else STRAND.POS,
             seq=read.query_sequence[seq_second_start:]
         )
+        # determine if the inserted sequence is a repeat of the aligned portion
+        # assume that events with deletions cannot be duplications
+        if first_breakpoint == second_breakpoint and REFERENCE_GENOME:  # insertion or duplication
+            refseq = REFERENCE_GENOME[read.reference_name].seq[
+                first_breakpoint - len(untemplated_seq) + 1:first_breakpoint + 1]
+            refseq = str(refseq)
+            midpoint = len(untemplated_seq) // 2 + 1  # more than the untemplated
+            match = None
+            for dup_len in range(len(untemplated_seq), midpoint - 1, -1):
+                subseq = untemplated_seq[0:dup_len]
+                if subseq == refseq[-1 * dup_len:]:
+                    match = subseq
+                    pos = first_breakpoint - len(subseq) + 1
+                    break1 = Breakpoint(
+                        read.reference_name,
+                        pos + 1,
+                        orient=ORIENT.RIGHT,
+                        strand=STRAND.NEG if read.is_reverse else STRAND.POS,
+                        seq=read.query_sequence[pos:]
+                    )
+                    break2 = Breakpoint(
+                        read.reference_name,
+                        first_breakpoint + 1,
+                        orient=ORIENT.LEFT,
+                        strand=STRAND.NEG if read.is_reverse else STRAND.POS,
+                        seq=read.query_sequence[:first_breakpoint + 1]
+                    )
+                    untemplated_seq = untemplated_seq[dup_len:]
+                    break
+
         return BreakpointPair(break1, break2, opposing_strands=False, untemplated_seq=untemplated_seq)
 
     @classmethod

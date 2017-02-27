@@ -368,7 +368,7 @@ class TestCallBreakpointPair(unittest.TestCase):
     def test_single_duplication(self):
         raise unittest.SkipTest('TODO')
 
-    def test_single_duplication_with_untemplated(self):
+    def test_single_duplication_with_leading_untemp(self):
         r = MockRead(
             query_sequence=(
                 'CTCCCACCAGGAGCTCGTCCTCACCACGTCCTGCACCAGCACCTCCAGCTCCCGCAGCAGCGCCTCGCCCCCACGGTGCGCGCTCCGCGCCGGTTCC'
@@ -381,7 +381,48 @@ class TestCallBreakpointPair(unittest.TestCase):
             cigar=[(CIGAR.EQ, 126), (CIGAR.I, 54), (CIGAR.EQ, 93)],
             is_reverse=False)
         bpp = BreakpointPair.call_breakpoint_pair(r, REFERENCE_GENOME=REFERENCE_GENOME)
-        self.assertTrue(False)
+        self.assertEqual('AGGTTCCATGGGCTCCGTAGGTTCCATGGGCTCCGTAGGTTCCATCGGCTCCGT', bpp.untemplated_seq)
+        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
+        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
+
+    def test_single_duplication_with_no_untemp(self):
+        r = MockRead(
+            query_sequence=(
+                'GGATGATTTACCTTGGGTAATGAAACTCAGATTTTGCTGTTGTTTTTGTTCGATTTTGCTGTTGTTTTTGTTCCAAAGTGTTTTATACTGATAAAGCAACC'
+                'CCGGTTTAGCATTGCCATTGGTAA'),
+            query_name='duplication_with_untemp',
+            reference_id=2,
+            reference_name='reference3',
+            reference_start=1497,
+            cigar=[(CIGAR.EQ, 51), (CIGAR.I, 22), (CIGAR.EQ, 52)],
+            is_reverse=False)
+        # repeat: GATTTTGCTGTTGTTTTTGTTC
+        bpp = BreakpointPair.call_breakpoint_pair(r, REFERENCE_GENOME=REFERENCE_GENOME)
+        self.assertEqual('', bpp.untemplated_seq)
+        self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
+        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
+        self.assertEqual(bpp.break2.start, 1548)
+        self.assertEqual(bpp.break1.start, 1527)
+
+    def test_single_duplication_with_trailing_untemp(self):
+        r = MockRead(
+            query_sequence=(
+                'GGATGATTTACCTTGGGTAATGAAACTCAGATTTTGCTGTTGTTTTTGTTC'
+                'GATTTTGCTGTTGTTTTTGTTC' 'GTCAA'
+                'CAAAGTGTTTTATACTGATAAAGCAACCCCGGTTTAGCATTGCCATTGGTAA'),
+            query_name='duplication_with_untemp',
+            reference_id=2,
+            reference_name='reference3',
+            reference_start=1497,
+            cigar=[(CIGAR.EQ, 51), (CIGAR.I, 27), (CIGAR.EQ, 52)],
+            is_reverse=False)
+        # repeat: GATTTTGCTGTTGTTTTTGTTC
+        bpp = BreakpointPair.call_breakpoint_pair(r, REFERENCE_GENOME=REFERENCE_GENOME)
+        self.assertEqual('GTCAA', bpp.untemplated_seq)
+        self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
+        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
+        self.assertEqual(bpp.break2.start, 1548)
+        self.assertEqual(bpp.break1.start, 1527)
 
     def test_single_multi_events(self):
         r = MockRead(
