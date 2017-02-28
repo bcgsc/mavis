@@ -119,8 +119,8 @@ class EventCall(BreakpointPair):
                 if self.break2.orient == ORIENT.LEFT:  # L L
                     if not all([
                         read.reference_start + 1 <= self.break1.end,
-                        mate.reference_end > self.break1.start,
-                        mate.reference_start + 1 <= self.break2.end
+                        mate.reference_start + 1 <= self.break2.end,
+                        mate.reference_end > self.break1.start
                     ]):
                         continue
                 else:  # L R
@@ -132,15 +132,15 @@ class EventCall(BreakpointPair):
             else:
                 if self.break2.orient == ORIENT.LEFT:  # R L
                     if not all([
-                        read.reference_start + 1 <= self.break2.end,
-                        mate.reference_end >= self.break1.start
+                        read.reference_end < self.break1.start,
+                        mate.reference_end >= self.break2.start
                     ]):
                         continue
                 else:  # R R
                     if not all([
                         read.reference_end >= self.break1.start,
-                        read.reference_end < self.break2.end,
-                        mate.reference_end >= self.break2.start
+                        mate.reference_end >= self.break2.start,
+                        read.reference_end < self.break2.end
                     ]):
                         continue
             self.flanking_pairs.add((read, mate))
