@@ -12,6 +12,13 @@ import numpy as np
 
 
 def merge_integer_intervals(*intervals):
+    """
+    Merges a set of integer intervals into a single interval where the center is the
+    weighted mean of the input intervals. The weight is inversely proportional to the
+    length of each interval. The length of the final interval is the average of the lengths
+    of the input intervals capped in size so that it never extends beyond the union of the
+    input intervals
+    """
     intervals = list(intervals)
     centers = []
     weights = []
@@ -27,7 +34,7 @@ def merge_integer_intervals(*intervals):
             lengths.append(intervals[i].length())
 
     center = round(np.average(centers, weights=weights) * 2, 0) / 2
-    size = np.average(lengths) # -1 b/c center counts as one
+    size = np.average(lengths)  # -1 b/c center counts as one
     start = max([round(center - size / 2, 0), min([i[0] for i in intervals])])
     end = min([round(center + size / 2, 0), max([i[1] for i in intervals])])
     offset = min([center - start, end - center])

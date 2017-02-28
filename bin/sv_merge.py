@@ -206,8 +206,13 @@ def main(args):
     clusters = cluster_breakpoint_pairs(breakpoint_pairs, r=args.cluster_radius, k=args.cluster_clique_size)
 
     hist = {}
+    length_hist = {}
     for cluster, input_pairs in clusters.items():
         hist[len(input_pairs)] = hist.get(len(input_pairs), 0) + 1
+        c1 = round(len(cluster[0]), -2)
+        c2 = round(len(cluster[1]), -2)
+        length_hist[c1] = length_hist.get(c1, 0) + 1
+        length_hist[c2] = length_hist.get(c2, 0) + 1
         cluster.data[COLUMNS.cluster_id] = 'cluster_{}-{}'.format(cluster_id_prefix, cluster_id)
         temp = set()
         for p in input_pairs:
@@ -215,8 +220,8 @@ def main(args):
         cluster.data[COLUMNS.tools] = ';'.join(sorted(list(temp)))
         cluster_id += 1
     log('computed', len(clusters), 'clusters', time_stamp=False)
-    log('cluster distribution', sorted(hist.items()), time_stamp=False)
-
+    log('cluster input pairs distribution', sorted(hist.items()), time_stamp=False)
+    log('cluster intervals lengths', sorted(length_hist.items()), time_stamp=False)
     # map input pairs to cluster ids
     # now create the mapping from the original input files to the cluster(s)
     if not os.path.exists(args.output):
