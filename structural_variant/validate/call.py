@@ -86,7 +86,8 @@ class EventCall(BreakpointPair):
             * :class:`int` - the standard deviation (from the median) of the insert size
         """
         support = set()
-
+        print('pull_flanking_support')
+        
         fragment_sizes = []
 
         min_frag = max([
@@ -101,6 +102,8 @@ class EventCall(BreakpointPair):
             print('insertion', len(self.break1 | self.break2), self.untemplated_seq)
 
         for read, mate in flanking_pairs:
+            print(read.reference_start, read.reference_end, read.cigar, read.is_reverse)
+            print(mate.reference_start, mate.reference_end, mate.cigar, mate.is_reverse)
             # check that the fragment size is reasonable
             fragment_size = self.source_evidence.compute_fragment_size(read, mate)
             if self.event_type == SVTYPE.DEL:
@@ -132,9 +135,10 @@ class EventCall(BreakpointPair):
             else:
                 if self.break2.orient == ORIENT.LEFT:  # R L
                     if not all([
-                        read.reference_end < self.break1.start,
-                        mate.reference_end >= self.break2.start
+                        read.reference_end >= self.break1.start,
+                        mate.reference_start + 1 <= self.break2.end
                     ]):
+                        print('position failed')
                         continue
                 else:  # R R
                     if not all([
