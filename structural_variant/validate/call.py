@@ -50,6 +50,7 @@ class EventCall(BreakpointPair):
         self.flanking_pairs = set()
         self.break1_split_reads = set()
         self.break2_split_reads = set()
+        self.compatible_flanking_pairs = set()
         # check that the event type is compatible
         self.event_type = SVTYPE.enforce(event_type)
         if event_type not in BreakpointPair.classify(self):
@@ -92,6 +93,12 @@ class EventCall(BreakpointPair):
             self.source_evidence.min_expected_fragment_size + Interval.dist(self.break1, self.break2),
             self.source_evidence.max_expected_fragment_size])
         max_frag = len(self.break1 | self.break2) + self.source_evidence.max_expected_fragment_size
+
+        encompass = len(self.break1 | self.break2)
+        if self.event_type == SVTYPE.DEL and encompass < self.source_evidence.stdev_fragment_size:
+            print('deletion', len(self.break1 | self.break2), self.untemplated_seq)
+        elif self.event_type == SVTYPE.INS:
+            print('insertion', len(self.break1 | self.break2), self.untemplated_seq)
 
         for read, mate in flanking_pairs:
             # check that the fragment size is reasonable
@@ -274,7 +281,7 @@ def call_events(source_evidence):
 
             if len(set(BreakpointPair.classify(bpp)) & putative_event_types) == 0:
                 continue
-            
+
             for event_type in putative_event_types:
                 if event_type == SVTYPE.INS:
                     if len(bpp.untemplated_seq) == 0 or \
@@ -513,11 +520,27 @@ def _call_by_supporting_reads(ev, event_type, consumed_evidence=None):
                 continue
         links = 0
         read_names = set([r.query_name for r in pos1[first]])
+        reads = set([(r.query_name, r.query_sequence) for r in pos1[first]])
+        tgt_align = 0
         for read in pos2[second]:
             if read.query_name in read_names:
                 links += 1
+            if (read.query_name, read.query_sequence) in reads:
+                tgt_align += 1
         if links < ev.min_linking_split_reads:
             continue
+        deletion_size = second - first - 1
+        if tgt_align >= ev.min_double_aligned_to_estimate_insertion_size:
+            # we can estimate the fragment size
+            max_insert = ev.read_length - 2 * ev.min_softclipping
+            if event_type == SVTYPE.INS and max_insert < deletion_size:
+                continue
+            elif event_type == SVTYPE.DEL and deletion_size < max_insert:
+                continue
+        elif links >= ev.min_double_aligned_to_estimate_insertion_size:
+            if deletion_size > ev.max_expected_fragment_size and event_type == SVTYPE.INS:
+                continue
+
         first_breakpoint = Breakpoint(ev.break1.chr, first, strand=ev.break1.strand, orient=ev.break1.orient)
         second_breakpoint = Breakpoint(ev.break2.chr, second, strand=ev.break2.strand, orient=ev.break2.orient)
         call = EventCall(

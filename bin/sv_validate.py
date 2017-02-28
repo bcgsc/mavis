@@ -39,6 +39,7 @@ import re
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from structural_variant import __version__
 from structural_variant.constants import *
+from structural_variant.validate.constants import VALIDATION_DEFAULTS
 from structural_variant.error import *
 from structural_variant.validate.evidence import GenomeEvidence, TranscriptomeEvidence
 from structural_variant.validate.call import call_events
@@ -169,9 +170,9 @@ def gather_evidence_from_bam(clusters):
         log(
             '({} of {})'.format(i + 1, len(clusters)),
             'gathering evidence for:',
-            e.data['cluster_id'],
-            e
+            e.data['cluster_id']
         )
+        log(e, time_stamp=False)
         log('possible event type(s):', BreakpointPair.classify(e), time_stamp=False)
         log('outer window regions:  {}:{}-{}  {}:{}-{}'.format(
             e.break1.chr, e.outer_window1[0], e.outer_window1[1],
@@ -219,7 +220,7 @@ def main():
     CONTIG_OUTPUT_FILE = os.path.join(args.output, FILENAME_PREFIX + '.contigs.tab')
     IGV_BATCH_FILE = os.path.join(args.output, FILENAME_PREFIX + '.igv.batch')
     INPUT_BAM_CACHE = BamCache(args.bam_file, args.stranded)
-    
+
     log('input arguments listed below')
     for arg, val in sorted(args.__dict__.items()):
         log(arg, '=', val, time_stamp=False)
@@ -357,7 +358,7 @@ def main():
             fh.write('{}\t{}\t{}\tinner-{}\n'.format(
                 e.break2.chr, e.inner_window2.start, e.inner_window2.end, e.data[COLUMNS.cluster_id]))
             print()
-            log('calling events for', e)
+            log('calling events for:', e.data[COLUMNS.cluster_id], e.putative_event_types())
             calls = []
             failure_comment = None
             try:
@@ -376,7 +377,13 @@ def main():
 
             log('called {} event(s)'.format(len(calls)))
             for ev in calls:
-                log(ev, ev.event_type, ev.call_method, time_stamp=False)
+                log(ev, time_stamp=False)
+                log(ev.event_type, ev.call_method, time_stamp=False)
+                log('remapped reads: {}; split reads: [{}, {}], flanking pairs: {}'.format(
+                    0 if not ev.contig else len(ev.contig.input_reads),
+                    len(ev.break1_split_reads), len(ev.break2_split_reads),
+                    len(ev.flanking_pairs)), time_stamp=False)
+
 
     if len(failed_cluster_rows) + passes != len(evidence):
         raise AssertionError(

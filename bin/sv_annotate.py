@@ -49,7 +49,8 @@ from structural_variant.annotate import load_reference_genes, load_reference_gen
 from structural_variant.annotate.variant import gather_annotations, FusionTranscript, determine_prime
 from structural_variant.error import DrawingFitError, NotSpecifiedError
 from structural_variant import __version__
-from structural_variant.draw import Diagram
+from structural_variant.illustrate.settings import DiagramSettings
+from structural_variant.illustrate.draw import draw_sv_summary_diagram
 import TSV
 from structural_variant.constants import PROTOCOL, SVTYPE, COLUMNS, sort_columns, PRIME
 import re
@@ -86,6 +87,9 @@ def parse_arguments():
         '-n', '--input',
         help='path to the input file(s)', required=True, nargs='*'
     )
+    parser.add_argument(
+        '--low_memory', default=False, type=bool,
+        help='when working on a machine with less memory this is sacrifice time for memory where possible')
     g = parser.add_argument_group('reference files')
     g.add_argument(
         '-a', '--annotations',
@@ -164,7 +168,7 @@ def main():
             read_bpp_from_input_file(
                 f,
                 cast={
-                    COLUMNS.stranded.name: TSV.tsv_boolean
+                    COLUMNS.stranded: TSV.tsv_boolean
                 },
                 _in={
                     COLUMNS.protocol: PROTOCOL,
@@ -178,8 +182,8 @@ def main():
             ))
     log('read {} breakpoint pairs'.format(len(bpps)))
 
-    log('loading:', args.reference_genome)
-    REFERENCE_GENOME = load_reference_genome(args.reference_genome)
+    log('loading:' if not args.low_memory else 'indexing:', args.reference_genome)
+    REFERENCE_GENOME = load_reference_genome(args.reference_genome, low_mem=args.low_memory)
 
     log('loading:', args.template_metadata)
     TEMPLATES = load_templates(args.template_metadata)
@@ -219,7 +223,7 @@ def main():
         row[COLUMNS.break2_strand] = ann.transcript2.get_strand()
         row[COLUMNS.fusion_sequence_fasta_file] = FA_OUTPUT_FILE
 
-        log('current annotation', annotation_id, ann.transcript1.name, ann.transcript2.name, ann.event_type)
+        log('current annotation', annotation_id, ann.transcript1, ann.transcript2, ann.event_type)
 
         # try building the fusion product
         ann_rows = []
@@ -251,7 +255,7 @@ def main():
                     for dom in tl.domains:
                         m, t = dom.score_region_mapping()
                         temp = {
-                            "name": dom.name,
+                            "name": dom,
                             "sequences": dom.get_seqs(),
                             "regions": [
                                 {"start": dr.start, "end": dr.end} for dr in sorted(dom.regions, key=lambda x: x.start)
@@ -263,21 +267,21 @@ def main():
                     nrow[COLUMNS.fusion_mapped_domains] = json.dumps(domains)
                     ann_rows.append(nrow)
         except NotSpecifiedError as err:
-            pass
+            print(repr(err))
         except AttributeError as err:
-            pass
+            print(repr(err))
         except NotImplementedError as err:
             print(repr(err))
 
         # now try generating the svg
-        d = Diagram()
-        d.DOMAIN_NAME_REGEX_FILTER = args.domain_regex_filter
+        DS = DiagramSettings()
+        DS.DOMAIN_NAME_REGEX_FILTER = args.domain_regex_filter
         drawing = None
         retry_count = 0
         while drawing is None:  # continue if drawing error and increase width
             try:
-                canvas, legend = d.draw(
-                    ann, ft, REFERENCE_GENOME=REFERENCE_GENOME, draw_template=True, templates=TEMPLATES)
+                canvas, legend = draw_sv_summary_diagram(
+                    DS, ann, ft, REFERENCE_GENOME=REFERENCE_GENOME, templates=TEMPLATES)
 
                 gene_aliases1 = 'NA'
                 gene_aliases2 = 'NA'
@@ -318,8 +322,8 @@ def main():
                     json.dump(legend, fh)
                 break
             except DrawingFitError as err:
-                log('extending width:', d.WIDTH, d.WIDTH + 500, time_stamp=False)
-                d.WIDTH += 500
+                log('extending width:', DS.WIDTH, DS.WIDTH + 500, time_stamp=False)
+                DS.WIDTH += 500
                 retry_count += 1
                 if retry_count > 10:
                     raise err

@@ -160,7 +160,6 @@ def assemble(
             l = kmer[:-1]
             r = kmer[1:]
             assembly.add_edge(l, r)
-    log('graph is complete')
     if not nx.is_directed_acyclic_graph(assembly):
         NotImplementedError('assembly not supported for cyclic graphs')
 

@@ -1,6 +1,7 @@
 import itertools
 from ..constants import *
 from ..error import *
+from .constants import VALIDATION_DEFAULTS
 from ..assemble import assemble
 from ..interval import Interval
 from ..breakpoint import BreakpointPair
@@ -136,7 +137,7 @@ class Evidence(BreakpointPair):
             raise NotImplementedError('abstract class cannot be initialized')
         except:
             pass
-    
+
     def standardize_read(self, read):
         if not read.has_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR) or not read.get_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR):
             # recomputing to standardize b/c split reads can be used to call breakpoints exactly
@@ -208,7 +209,7 @@ class Evidence(BreakpointPair):
                     if CIGAR.X in [c[0] for c in read.cigar]:
                         return True
         return False
-    
+
     def add_compatible_flanking_pair(self, read, mate, compatible_type):
         if read.is_unmapped or mate.is_unmapped or read.query_name != mate.query_name or read.is_read1 == mate.is_read1:
             raise ValueError('input reads must be a mapped and mated pair')
@@ -254,7 +255,7 @@ class Evidence(BreakpointPair):
             if not is_stranded or self.read_pair_strand(read) == self.break1.strand:
                 self.compatible_flanking_pairs.add((read, mate))
                 return True
-        
+
         return False
 
     def add_flanking_pair(self, read, mate):
@@ -283,7 +284,7 @@ class Evidence(BreakpointPair):
                 return False
         elif read.reference_id != read.next_reference_id:
             return False
-        
+
         # order the read pairs so that they are in the same order that we expect for the breakpoints
         if read.reference_id != mate.reference_id:
             if self.bam_cache.chr(read) > self.bam_cache.chr(mate):
@@ -293,7 +294,7 @@ class Evidence(BreakpointPair):
 
         if self.bam_cache.chr(read) != self.break1.chr or self.bam_cache.chr(mate) != self.break2.chr:
             return False
-        
+
         read = self.standardize_read(read)
         mate = self.standardize_read(mate)
         # check if this read falls in the first breakpoint window
@@ -323,7 +324,7 @@ class Evidence(BreakpointPair):
                 if not is_stranded or self.read_pair_strand(read) == self.break1.strand:
                     self.flanking_pairs.add((read, mate))
                     added = True
-            
+
         return added
 
     def add_split_read(self, read, first_breakpoint):
@@ -687,12 +688,12 @@ class Evidence(BreakpointPair):
                     self.add_flanking_pair(fl, mate)
             except KeyError:
                 pass
-        
+
         if self.compatible_windows:
             compatible_type = SVTYPE.DUP
             if SVTYPE.DUP in self.putative_event_types():
                 compatible_type = SVTYPE.INS
-            
+
             compt_flanking = set()
             for read in self.bam_cache.fetch(
                     '{0}'.format(self.break1.chr),
@@ -706,7 +707,7 @@ class Evidence(BreakpointPair):
                     filter_if=filter_if_true):
                 if read_tools.orientation_supports_type(read, compatible_type):
                     compt_flanking.add(read)
-            
+
             for read in self.bam_cache.fetch(
                     '{0}'.format(self.break2.chr),
                     self.compatible_windows[1][0],

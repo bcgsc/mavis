@@ -73,7 +73,7 @@ def draw_legend(DS, canvas, swatches, border=True):
     return main_group
 
 
-def draw(
+def draw_sv_summary_diagram(
     DS, ann, fusion_transcript=None, REFERENCE_GENOME=None, templates=None, ignore_absent_templates=True,
     show_template=True, user_friendly_labels=True, template_display_label_prefix='c'
 ):
@@ -329,7 +329,6 @@ def draw(
 def _draw_exon_track(DS, canvas, transcript, mapping, colors=None, x_start=None, x_end=None, translation=None):
     """
     """
-    print('_draw_exon_track', repr(transcript), transcript.exons, transcript.gene)
     colors = {} if colors is None else colors
     main_group = canvas.g(class_='exon_track')
 

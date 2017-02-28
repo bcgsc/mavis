@@ -3,7 +3,22 @@ from ..constants import GIESMA_STAIN
 
 
 class DiagramSettings:
-    def __init__(self, WIDTH=1000):
+    def __init__(
+        self, WIDTH=1000,
+        SCAFFOLD_COLOR = '#000000',
+        GENE1_COLOR_SELECTED='#518DC5',
+        GENE2_COLOR_SELECTED = '#4C9677',
+        GENE1_COLOR = '#657E91',
+        GENE2_COLOR = '#325556',
+        LABEL_COLOR = '#000000',
+        DOMAIN_COLOR = '#ccccb3',
+        DOMAIN_MISMATCH_COLOR = '#B2182B',
+        SPLICE_COLOR = '#000000',
+        BREAKPOINT_COLOR = '#000000',
+        MASK_FILL = '#FFFFFF',
+        MASK_OPACITY=0.7,
+        DOMAIN_NAME_REGEX_FILTER='.*'
+    ):
         self.MIN_WIDTH = 10  # no element (exon, gene, etc can be less than this wide)
         self.TRACK_LINE_HEIGHT = 4
         self.LEFT_MARGIN = 20
@@ -13,7 +28,7 @@ class DiagramSettings:
         self.INNER_MARGIN = 20
         self.PADDING = 5
         self.SCAFFOLD_HEIGHT = 3
-        self.SCAFFOLD_COLOR = '#000000'
+        self.SCAFFOLD_COLOR = SCAFFOLD_COLOR
         self.TRACK_HEIGHT = 50
         self.WIDTH = WIDTH
         # removing unsupported attr: 'alignment-baseline:central;dominant-baseline:central;' \
@@ -24,10 +39,10 @@ class DiagramSettings:
         self.FONT_CENTRAL_SHIFT_RATIO = 0.3
         self.ABS_MIN_WIDTH = 0.01
 
-        self.GENE1_COLOR_SELECTED = '#518DC5'
-        self.GENE2_COLOR_SELECTED = '#4C9677'
-        self.GENE1_COLOR = '#657E91'
-        self.GENE2_COLOR = '#325556'
+        self.GENE1_COLOR_SELECTED = GENE1_COLOR_SELECTED
+        self.GENE2_COLOR_SELECTED = GENE2_COLOR_SELECTED
+        self.GENE1_COLOR = GENE1_COLOR
+        self.GENE2_COLOR = GENE2_COLOR
         self.GENE_DEFAULT_COLOR = self.GENE1_COLOR
         self.GENE_MIN_BUFFER = 1000
         self.GENE_ARROW_WIDTH = 20
@@ -35,32 +50,32 @@ class DiagramSettings:
         self.GENE_MIN_WIDTH = 40 + self.GENE_ARROW_WIDTH
         self.GENE_LABEL_PREFIX = 'G'
 
-        self.LABEL_COLOR = '#000000'
+        self.LABEL_COLOR = LABEL_COLOR
         self.LABEL_FONT_SIZE = 20
         self.DYNAMIC_LABELS = True
         self.LABEL_LEFT_MARGIN = self.LABEL_FONT_SIZE * self.FONT_WIDTH_HEIGHT_RATIO * 4
 
-        self.DOMAIN_COLOR = '#ccccb3'
+        self.DOMAIN_COLOR = DOMAIN_COLOR
         self.DOMAIN_TRACK_HEIGHT = 30
         self.DOMAIN_SCAFFOLD_HEIGHT = 1
-        self.DOMAIN_SCAFFOLD_COLOR = '#000000'
+        self.DOMAIN_SCAFFOLD_COLOR = SCAFFOLD_COLOR
         self.DOMAIN_LABEL_PREFIX = 'D'
         self.DOMAIN_LABEL_FONT_SIZE = 20
-        self.DOMAIN_MISMATCH_COLOR = '#B2182B'
+        self.DOMAIN_MISMATCH_COLOR = DOMAIN_MISMATCH_COLOR
         self.DOMAIN_FILL_GRADIENT = [
             c.hex for c in Color(self.DOMAIN_MISMATCH_COLOR).range_to(Color(self.DOMAIN_COLOR), 10)]
-        self.DOMAIN_NAME_REGEX_FILTER = '.*'
+        self.DOMAIN_NAME_REGEX_FILTER = DOMAIN_NAME_REGEX_FILTER
         self.PFAM_DOMAIN = '^PF\d+$'
         self.PFAM_LINK = 'http://pfam.xfam.org/family/{.name}'
 
         self.SPLICE_HEIGHT = self.TRACK_HEIGHT / 2
         self.SPLICE_STROKE_DASHARRAY = [2, 2]
         self.SPLICE_STROKE_WIDTH = 2
-        self.SPLICE_COLOR = '#000000'
+        self.SPLICE_COLOR = SPLICE_COLOR
 
         self.BREAKPOINT_STROKE_DASHARRAY = [3, 3]
         self.BREAKPOINT_ORIENT_STROKE_WIDTH = 2
-        self.BREAKPOINT_COLOR = '#000000'
+        self.BREAKPOINT_COLOR = BREAKPOINT_COLOR
         self.BREAKPOINT_LABEL_FONT_SIZE = 20
         self.BREAKPOINT_BOTTOM_MARGIN = 20
         self.BREAKPOINT_TOP_MARGIN = self.PADDING * 2 + self.BREAKPOINT_LABEL_FONT_SIZE + self.BREAKPOINT_BOTTOM_MARGIN
@@ -130,5 +145,5 @@ class DiagramSettings:
         self.SCATTER_YAXIS_TICK_SIZE = self.PADDING
         self.SCATTER_YTICK_FONT_SIZE = 10
 
-        self.MASK_FILL = '#FFFFFF'
-        self.MASK_OPACITY = 0.7
+        self.MASK_FILL = MASK_FILL
+        self.MASK_OPACITY = MASK_OPACITY

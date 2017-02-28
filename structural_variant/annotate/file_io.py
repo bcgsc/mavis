@@ -332,7 +332,7 @@ def _load_reference_genes_tabbed(filepath, verbose=True, REFERENCE_GENOME=None, 
     return ref
 
 
-def load_reference_genome(filename):
+def load_reference_genome(filename, low_mem=False):
     """
     Args:
         filename (str): the path to the file containing the input fasta genome
@@ -342,8 +342,11 @@ def load_reference_genome(filename):
             fasta file
     """
     HUMAN_REFERENCE_GENOME = None
-    with open(filename, 'rU') as fh:
-        HUMAN_REFERENCE_GENOME = SeqIO.to_dict(SeqIO.parse(fh, 'fasta'))
+    if not low_mem:
+        with open(filename, 'rU') as fh:
+            HUMAN_REFERENCE_GENOME = SeqIO.to_dict(SeqIO.parse(fh, 'fasta'))
+    else:
+        HUMAN_REFERENCE_GENOME = SeqIO.index(filename, "fasta")
     return HUMAN_REFERENCE_GENOME
 
 
