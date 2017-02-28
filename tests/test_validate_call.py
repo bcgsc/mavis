@@ -195,6 +195,7 @@ class TestPullFlankingSupport(unittest.TestCase):
             Breakpoint('1', 900, orient=ORIENT.RIGHT),
             evidence, SVTYPE.INS, CALL_METHOD.SPLIT)
         event.pull_flanking_support(flanking_pairs)
+        # not sure if there should be 1 or 0 here...
         self.assertEqual(1, len(event.flanking_pairs))
 
     def test_inversion(self):
