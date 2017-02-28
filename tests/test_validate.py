@@ -5,6 +5,7 @@ from structural_variant.interval import Interval
 from structural_variant.bam.cache import BamCache
 from . import MockRead, mock_read_pair
 import unittest
+import itertools
 from . import REFERENCE_GENOME_FILE, BAM_INPUT, FULL_BAM_INPUT
 import os
 import sys
@@ -220,7 +221,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
     # need to make the assertions more specific by checking the actual names of the reads found in each bin
     # rather than just the counts.
     def genome_evidence(self, break1, break2, opposing_strands):
-        return GenomeEvidence(
+        ge = GenomeEvidence(
             break1, break2, FULL_BAM_CACHE, REFERENCE_GENOME,
             opposing_strands=opposing_strands,
             read_length=125,
@@ -230,13 +231,17 @@ class TestFullEvidenceGathering(unittest.TestCase):
             min_flanking_pairs_resolution=3,
             max_sc_preceeding_anchor=3
         )
+        print(ge.break1.chr, ge.outer_windows[0])
+        print(ge.break1.chr, ge.inner_windows[0])
+        print(ge.break2.chr, ge.outer_windows[1])
+        print(ge.break2.chr, ge.inner_windows[1])
+        return ge
 
     def count_original_reads(self, reads):
         count = 0
         for read in sorted(reads, key=lambda x: x.query_name):
             if not read.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT):
                 count += 1
-                print(read.query_name)
             elif not read.get_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT):
                 count += 1
         return count
@@ -304,7 +309,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(11, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(64, len(ev1.flanking_pairs))
 
-    def test_load_evidence_deletion(self):
+    def test_load_evidence_deletion1(self):
         # first example
         ev1 = self.genome_evidence(
             Breakpoint('reference20', 2000, orient=ORIENT.LEFT),
@@ -315,7 +320,8 @@ class TestFullEvidenceGathering(unittest.TestCase):
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         self.assertEqual(22, self.count_original_reads(ev1.split_reads[0]))
         self.assertEqual(14, self.count_original_reads(ev1.split_reads[1]))
-
+    
+    def test_load_evidence_deletion2(self):
         # second example
         ev1 = self.genome_evidence(
             Breakpoint('referenceX', 2000, orient=ORIENT.LEFT),
@@ -327,7 +333,8 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(4, self.count_original_reads(ev1.split_reads[0]))
         self.assertEqual(10, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(27, len(ev1.flanking_pairs))
-
+    
+    def test_load_evidence_deletion3(self):
         # third example
         ev1 = self.genome_evidence(
             Breakpoint('referenceX', 10000, orient=ORIENT.LEFT),
@@ -339,7 +346,8 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(8, self.count_original_reads(ev1.split_reads[0]))
         self.assertEqual(9, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(26, len(ev1.flanking_pairs))
-
+    
+    def test_load_evidence_deletion4(self):
         # forth example
         ev1 = self.genome_evidence(
             Breakpoint('reference10', 3609, orient=ORIENT.LEFT),
@@ -352,7 +360,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(17, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(40, len(ev1.flanking_pairs))
 
-    def test_load_evidence_small_deletion(self):
+    def test_load_evidence_small_deletion1(self):
         # first example
         ev1 = self.genome_evidence(
             Breakpoint('reference11', 6000, orient=ORIENT.LEFT),
@@ -368,7 +376,8 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(3, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(20, len(ev1.spanning_reads))
         self.assertEqual(6, len(ev1.flanking_pairs))
-
+    
+    def test_load_evidence_small_deletion2(self):
         # second example
         ev1 = self.genome_evidence(
             Breakpoint('reference11', 10000, orient=ORIENT.LEFT),
@@ -379,13 +388,13 @@ class TestFullEvidenceGathering(unittest.TestCase):
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
         print(len(ev1.spanning_reads))
-        for read in sorted(ev1.spanning_reads, key=lambda x: x.query_name):
+        for read, mate in ev1.flanking_pairs:
             print(read.query_name)
 
         self.assertEqual(27, self.count_original_reads(ev1.split_reads[0]))
         self.assertEqual(52, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(19, len(ev1.spanning_reads))
-        self.assertEqual(9, len(ev1.flanking_pairs))
+        self.assertEqual(7, len(ev1.flanking_pairs))
 
     def test_load_evidence_small_deletion_test1(self):
         ev1 = self.genome_evidence(
@@ -397,13 +406,13 @@ class TestFullEvidenceGathering(unittest.TestCase):
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
         print(len(ev1.spanning_reads))
-        for read in sorted(ev1.spanning_reads, key=lambda x: x.query_name):
+        for read, mate in ev1.flanking_pairs:
             print(read.query_name)
 
         self.assertEqual(18, self.count_original_reads(ev1.split_reads[0]))
         self.assertEqual(16, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(0, len(ev1.spanning_reads))
-        self.assertEqual(26, len(ev1.flanking_pairs))
+        self.assertEqual(22, len(ev1.flanking_pairs))
 
     def test_load_evidence_small_deletion_test2(self):
         ev1 = self.genome_evidence(
@@ -412,16 +421,10 @@ class TestFullEvidenceGathering(unittest.TestCase):
             opposing_strands=False
         )
         ev1.load_evidence()
-
-        print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
-        print(len(ev1.spanning_reads))
-        for read in sorted(ev1.spanning_reads, key=lambda x: x.query_name):
-            print(read.query_name)
-
         self.assertEqual(20, self.count_original_reads(ev1.split_reads[0]))
         self.assertEqual(17, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(0, len(ev1.spanning_reads))
-        self.assertEqual(40, len(ev1.flanking_pairs))
+        self.assertEqual(40, len(set(ev1.flanking_pairs)))
 
     def test_load_evidence_small_deletion_test3(self):
         ev1 = self.genome_evidence(
@@ -710,19 +713,11 @@ class TestEvidenceGathering(unittest.TestCase):
     def test_add_flanking_pair_not_overlapping_evidence_window(self):
         # first read in pair does not overlap the first evidence window
         # therefore this should return False and not add to the flanking_pairs
-        read = MockRead(
-            reference_id=1, reference_start=1903,
-            reference_end=2053,
-            is_read1=True, is_reverse=True, mate_is_reverse=True, is_paired=True,
-            next_reference_id=1, next_reference_start=2052
+        pair = mock_read_pair(
+            MockRead(reference_id=1, reference_start=1903, reference_end=2053, is_reverse=True),
+            MockRead(reference_id=1, reference_start=2052, reference_end=2053, is_reverse=True)
         )
-        mate = MockRead(
-            reference_id=1, reference_start=2052,
-            reference_end=2053,
-            is_read1=False, is_reverse=True, mate_is_reverse=True, is_paired=True,
-            next_reference_id=1, next_reference_start=1903
-        )
-        self.assertFalse(self.ev1.add_flanking_pair(read, mate))
+        self.assertFalse(self.ev1.add_flanking_pair(*pair))
         self.assertEqual(0, len(self.ev1.flanking_pairs))
 
 #    @unittest.skip("demonstrating skipping")

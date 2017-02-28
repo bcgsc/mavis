@@ -52,9 +52,9 @@ class EventCall(BreakpointPair):
         self.break2_split_reads = set()
         # check that the event type is compatible
         self.event_type = SVTYPE.enforce(event_type)
-        if event_type not in BreakpointPair.classify(source_evidence):
+        if event_type not in BreakpointPair.classify(self):
             raise ValueError(
-                'event_type is not compatible with the evidence source allowable types', event_type, source_evidence)
+                'event_type is not compatible with the breakpoint call', event_type, BreakpointPair.classify(self))
         self.contig = contig
         self.call_method = (CALL_METHOD.enforce(call_method), CALL_METHOD.enforce(break2_call_method))
         if contig and self.call_method != (CALL_METHOD.CONTIG, CALL_METHOD.CONTIG):
@@ -269,11 +269,14 @@ def call_events(source_evidence):
                 continue
             if bpp.opposing_strands != source_evidence.opposing_strands:
                 continue
+            putative_event_types = set(source_evidence.putative_event_types())
+            if set([SVTYPE.DUP, SVTYPE.INS]) & putative_event_types:
+                putative_event_types.update([SVTYPE.DUP, SVTYPE.INS])
 
-            if len(set(BreakpointPair.classify(bpp)) & set(source_evidence.putative_event_types())) < 1:
+            if len(set(BreakpointPair.classify(bpp)) & putative_event_types) == 0:
                 continue
-
-            for event_type in source_evidence.putative_event_types():
+            
+            for event_type in putative_event_types:
                 if event_type == SVTYPE.INS:
                     if len(bpp.untemplated_seq) == 0 or \
                             len(bpp.untemplated_seq) <= abs(Interval.dist(bpp.break1, bpp.break2)):
@@ -281,6 +284,8 @@ def call_events(source_evidence):
                 elif event_type == SVTYPE.DEL:
                     if len(bpp.untemplated_seq) > abs(Interval.dist(bpp.break1, bpp.break2)):
                         continue
+                if event_type not in BreakpointPair.classify(bpp):
+                    continue
                 new_event = EventCall(
                     bpp.break1,
                     bpp.break2,
@@ -526,7 +531,6 @@ def _call_by_supporting_reads(ev, event_type, consumed_evidence=None):
         linked_pairings.append(call)
 
     for call in linked_pairings:
-        print('removing', call, call.call_method, call.event_type)
         if call.break1.start in pos1:
             del pos1[call.break1.start]
         if call.break2.start in pos2:

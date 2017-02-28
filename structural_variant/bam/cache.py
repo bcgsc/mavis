@@ -125,7 +125,7 @@ class BamCache:
                     read.is_read1 == mate.is_read1,
                     read.next_reference_start != mate.reference_start,
                     read.next_reference_id != mate.reference_id,
-                    primary_only and mate.is_secondary,
+                    primary_only and (mate.is_secondary or mate.is_supplementary),
                     abs(read.template_length) != abs(mate.template_length)
                 ]):
                     continue

@@ -84,6 +84,11 @@ class MockRead:
         self.is_paired = is_paired
         self.is_unmapped = is_unmapped
         self.mate_is_unmapped = mate_is_unmapped
+        if self.reference_start and self.reference_end:
+            if not cigar:
+                self.cigar = [(CIGAR.M, self.reference_end - self.reference_start)]
+            if not self.query_sequence:
+                self.query_sequence = 'N' * (self.reference_end - self.reference_start)
         if flag:
             self.is_unmapped = bool(self.flag & int(0x4))
             self.mate_is_unmapped = bool(self.flag & int(0x8))
@@ -99,7 +104,7 @@ class MockRead:
         return BlatAlignedSegment.query_coverage_interval(self)
 
     def set_tag(self, tag, value, value_type=None, replace=True):
-        new_tag=(tag,value)
+        new_tag = (tag, value)
         if not replace and new_tag in self.tags:
             self.tags.append(new_tag)
         else:

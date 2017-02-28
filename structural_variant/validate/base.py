@@ -82,6 +82,7 @@ class Evidence(BreakpointPair):
             classification (SVTYPE): the event type
             protocol (PROTOCOL): genome or transcriptome
         """
+        cls = self.__class__
         # initialize the breakpoint pair
         BreakpointPair.__init__(
             self, break1, break2,
@@ -107,6 +108,7 @@ class Evidence(BreakpointPair):
         self.read_length = read_length
         self.stdev_fragment_size = stdev_fragment_size
         self.median_fragment_size = median_fragment_size
+        self.compatible_windows = None
 
         if self.classification is not None and self.classification not in BreakpointPair.classify(self):
             raise AttributeError(
@@ -119,6 +121,7 @@ class Evidence(BreakpointPair):
 
         self.split_reads = (set(), set())
         self.flanking_pairs = set()
+        self.compatible_flanking_pairs = set()
         self.spanning_reads = set()
         # for each breakpoint stores the number of reads that were read from the associated
         # bamfile for the window surrounding the breakpoint
@@ -133,6 +136,24 @@ class Evidence(BreakpointPair):
             raise NotImplementedError('abstract class cannot be initialized')
         except:
             pass
+    
+    def standardize_read(self, read):
+        if not read.has_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR) or not read.get_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR):
+            # recomputing to standardize b/c split reads can be used to call breakpoints exactly
+            read.set_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR, 1, value_type='i')
+            # recalculate the read cigar string to ensure M is replaced with = or X
+            c = cigar_tools.recompute_cigar_mismatch(
+                read,
+                self.REFERENCE_GENOME[self.bam_cache.chr(read)].seq
+            )
+            prefix = 0
+            try:
+                c, prefix = cigar_tools.extend_softclipping(c, self.sc_extension_stop)
+            except AttributeError:
+                pass
+            read.cigar = cigar_tools.join(c)
+            read.reference_start = read.reference_start + prefix
+        return read
 
     def putative_event_types(self):
         if self.classification:
@@ -187,6 +208,54 @@ class Evidence(BreakpointPair):
                     if CIGAR.X in [c[0] for c in read.cigar]:
                         return True
         return False
+    
+    def add_compatible_flanking_pair(self, read, mate, compatible_type):
+        if read.is_unmapped or mate.is_unmapped or read.query_name != mate.query_name or read.is_read1 == mate.is_read1:
+            raise ValueError('input reads must be a mapped and mated pair')
+        if not self.compatible_windows:
+            raise ValueError('compatible windows were not given')
+        if self.interchromosomal:
+            raise NotImplementedError('interchromosomal events do not have compatible flanking pairs')
+        # check that the references are right for the pair
+        if read.reference_id != read.next_reference_id:
+            return False
+        elif read.mapping_quality < self.min_mapping_quality or mate.mapping_quality < self.min_mapping_quality:
+            return False
+
+        # order the read pairs so that they are in the same order that we expect for the breakpoints
+        if read.reference_start > mate.reference_start:
+            read, mate = mate, read
+
+        if self.bam_cache.chr(read) != self.break1.chr or self.bam_cache.chr(mate) != self.break2.chr:
+            return False
+
+        # check if this read falls in the first breakpoint window
+        is_stranded = self.bam_cache.stranded and self.stranded
+        iread = Interval(read.reference_start + 1, read.reference_end)
+        imate = Interval(mate.reference_start + 1, mate.reference_end)
+        added = False
+
+        # check that the pair orientation is correct
+        if not read_tools.orientation_supports_type(read, compatible_type):
+            return False
+
+        # check that the fragment size is reasonable
+        fragment_size = self.compute_fragment_size(read, mate)
+
+        if compatible_type == SVTYPE.DEL:
+            if fragment_size.end <= self.max_expected_fragment_size:
+                return False
+        elif compatible_type == SVTYPE.INS:
+            if fragment_size.start >= self.min_expected_fragment_size:
+                return False
+
+        # check that the positions of the reads and the strands make sense
+        if Interval.overlaps(iread, self.compatible_windows[0]) and Interval.overlaps(imate, self.compatible_windows[1]):
+            if not is_stranded or self.read_pair_strand(read) == self.break1.strand:
+                self.compatible_flanking_pairs.add((read, mate))
+                return True
+        
+        return False
 
     def add_flanking_pair(self, read, mate):
         """
@@ -198,17 +267,23 @@ class Evidence(BreakpointPair):
         Raises:
             UserWarning: the read does not support this event or does not pass quality filters
         """
-        if read.is_unmapped or mate.is_unmapped or read.query_name != mate.query_name or read.is_read1 == mate.is_read1:
-            raise ValueError('input reads must be a mapped and mated pair')
+        if read.is_unmapped or mate.is_unmapped:
+            raise ValueError('input reads must be a mapped and mated pair. One or both of the reads is unmapped')
+        elif read.query_name != mate.query_name:
+            raise ValueError('input reads must be a mapped and mated pair. The query names do not match')
+        elif abs(read.template_length) != abs(mate.template_length):
+            raise ValueError(
+                'input reads must be a mapped and mated pair. The template lengths (abs value) do not match',
+                abs(read.template_length), abs(mate.template_length))
+        elif read.mapping_quality < self.min_mapping_quality or mate.mapping_quality < self.min_mapping_quality:
+            return False  # do not meet the minimum mapping quality requirements
         # check that the references are right for the pair
         if self.interchromosomal:
             if read.reference_id == read.next_reference_id:
                 return False
         elif read.reference_id != read.next_reference_id:
             return False
-        elif read.mapping_quality < self.min_mapping_quality or mate.mapping_quality < self.min_mapping_quality:
-            return False
-
+        
         # order the read pairs so that they are in the same order that we expect for the breakpoints
         if read.reference_id != mate.reference_id:
             if self.bam_cache.chr(read) > self.bam_cache.chr(mate):
@@ -218,18 +293,14 @@ class Evidence(BreakpointPair):
 
         if self.bam_cache.chr(read) != self.break1.chr or self.bam_cache.chr(mate) != self.break2.chr:
             return False
-
+        
+        read = self.standardize_read(read)
+        mate = self.standardize_read(mate)
         # check if this read falls in the first breakpoint window
         is_stranded = self.bam_cache.stranded and self.stranded
         iread = Interval(read.reference_start + 1, read.reference_end)
         imate = Interval(mate.reference_start + 1, mate.reference_end)
         added = False
-        pet = self.putative_event_types()
-
-        # flanking evidence overlap for duplications/insertions/internal translocations
-        if SVTYPE.INS in pet or SVTYPE.DUP in pet:
-            pet = set(pet + [SVTYPE.INS, SVTYPE.DUP])
-            pet = sorted(list(pet))
 
         for event_type in self.putative_event_types():
 
@@ -252,6 +323,7 @@ class Evidence(BreakpointPair):
                 if not is_stranded or self.read_pair_strand(read) == self.break1.strand:
                     self.flanking_pairs.add((read, mate))
                     added = True
+            
         return added
 
     def add_split_read(self, read, first_breakpoint):
@@ -314,21 +386,7 @@ class Evidence(BreakpointPair):
             # split read does not meet the minimum anchor criteria
             return False
 
-        if not read.has_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR) or not read.get_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR):
-            # recomputing to standardize b/c split reads can be used to call breakpoints exactly
-            read.set_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR, 1, value_type='i')
-            # recalculate the read cigar string to ensure M is replaced with = or X
-            c = cigar_tools.recompute_cigar_mismatch(
-                read,
-                self.REFERENCE_GENOME[self.bam_cache.chr(read)].seq
-            )
-            prefix = 0
-            try:
-                c, prefix = cigar_tools.extend_softclipping(c, self.sc_extension_stop)
-            except AttributeError:
-                pass
-            read.cigar = cigar_tools.join(c)
-            read.reference_start = read.reference_start + prefix
+        read = self.standardize_read(read)
         # data quality filters
         if cigar_tools.alignment_matches(read.cigar) >= self.min_sample_size_to_apply_percentage \
                 and cigar_tools.match_percent(read.cigar) < self.min_anchor_match:
@@ -560,13 +618,13 @@ class Evidence(BreakpointPair):
         def cache_if_true(read):
             if self.filter_secondary_alignments and read.is_secondary:
                 return False
-            elif any([read_tools.orientation_supports_type(read, et) for et in self.putative_event_types()]):
+            elif any([
+                not self.interchromosomal and not read.is_proper_pair,
+                read.is_unmapped, read.mate_is_unmapped,
+                self.interchromosomal and read.reference_id != read.next_reference_id
+            ]):
                 return True
-            elif read.is_unmapped or read.mate_is_unmapped:
-                return True
-            elif self.interchromosomal and read.reference_id != read.next_reference_id:
-                return True
-            elif read.is_unmapped:
+            elif any([read_tools.orientation_supports_type(read, t) for t in self.putative_event_types()]):
                 return True
             return False
 
@@ -621,8 +679,6 @@ class Evidence(BreakpointPair):
             elif any([read_tools.orientation_supports_type(read, et) for et in self.putative_event_types()]) and \
                     (read.reference_id != read.next_reference_id) == self.interchromosomal:
                 flanking_pairs.append(read)
-
-        added = set()
         for fl in flanking_pairs:
             # try and get the mate from the cache
             try:
@@ -631,6 +687,56 @@ class Evidence(BreakpointPair):
                     self.add_flanking_pair(fl, mate)
             except KeyError:
                 pass
+        
+        if self.compatible_windows:
+            compatible_type = SVTYPE.DUP
+            if SVTYPE.DUP in self.putative_event_types():
+                compatible_type = SVTYPE.INS
+            
+            compt_flanking = set()
+            for read in self.bam_cache.fetch(
+                    '{0}'.format(self.break1.chr),
+                    self.compatible_windows[0][0],
+                    self.compatible_windows[0][1],
+                    read_limit=self.fetch_reads_limit,
+                    sample_bins=self.fetch_reads_bins,
+                    bin_gap_size=bin_gap_size,
+                    cache=True,
+                    cache_if=cache_if_true,
+                    filter_if=filter_if_true):
+                if read_tools.orientation_supports_type(read, compatible_type):
+                    compt_flanking.add(read)
+            
+            for read in self.bam_cache.fetch(
+                    '{0}'.format(self.break2.chr),
+                    self.compatible_windows[1][0],
+                    self.compatible_windows[1][1],
+                    read_limit=self.fetch_reads_limit,
+                    sample_bins=self.fetch_reads_bins,
+                    bin_gap_size=bin_gap_size,
+                    cache=True,
+                    cache_if=cache_if_true,
+                    filter_if=filter_if_true):
+                if read_tools.orientation_supports_type(read, compatible_type):
+                    compt_flanking.add(read)
+
+            for fl in compt_flanking:
+                # try and get the mate from the cache
+                try:
+                    mates = self.bam_cache.get_mate(fl, allow_file_access=False)
+                    for mate in mates:
+                        self.add_compatible_flanking_pair(fl, mate, compatible_type)
+                except KeyError:
+                    pass
+
+        # now collect the half mapped reads
+        log(
+            'collected',
+            [
+                len(set([r.query_name for r in half_mapped_partners1])),
+                len(set([r.query_name for r in half_mapped_partners2]))
+            ],
+            'half mapped reads', time_stamp=False)
         for read in half_mapped_partners1:
             # try and get the mate from the cache
             try:
@@ -639,13 +745,6 @@ class Evidence(BreakpointPair):
                     self.half_mapped[0].add(mate)
             except KeyError:
                 pass
-        log(
-            'collected',
-            [
-                len(set([r.query_name for r in half_mapped_partners1])),
-                len(set([r.query_name for r in half_mapped_partners2]))
-            ],
-            'half mapped reads', time_stamp=False)
         for read in half_mapped_partners2:
             # try and get the mate from the cache
             try:

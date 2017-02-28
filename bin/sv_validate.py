@@ -187,7 +187,8 @@ def gather_evidence_from_bam(clusters):
             'flanking pairs: {};'.format(len(e.flanking_pairs)),
             'split reads: {}, {};'.format(*[len(a) for a in e.split_reads]),
             'half-mapped reads: {}, {};'.format(*[len(a) for a in e.half_mapped]),
-            'spanning-reads:', len(e.spanning_reads),
+            'spanning-reads: {};'.format(len(e.spanning_reads)),
+            'compatible flanking pairs:', len(e.compatible_flanking_pairs),
             time_stamp=False
         )
         e.assemble_contig(log=log)

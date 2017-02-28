@@ -1,7 +1,8 @@
 from .base import Evidence
 from ..interval import Interval
-from ..constants import ORIENT, PROTOCOL, STRAND
+from ..constants import ORIENT, PROTOCOL, SVTYPE
 from ..annotate.variant import overlapping_transcripts
+from ..breakpoint import Breakpoint
 import itertools
 
 
@@ -35,6 +36,49 @@ class GenomeEvidence(Evidence):
                 self.break2.end + self.call_error + self.read_length - 1
             )
         )
+
+        if SVTYPE.INS in self.putative_event_types():
+            comb = len(self.break1 | self.break2)
+            if comb > len(self.break1) and comb > len(self.break2):
+                compt_break1 = Breakpoint(
+                    self.break1.chr, self.break1.start, self.break1.end, orient=ORIENT.RIGHT, strand=self.break1.strand)
+                compt_break2 = Breakpoint(
+                    self.break2.chr, self.break2.start, self.break2.end, orient=ORIENT.LEFT, strand=self.break2.strand)
+                
+                self.compatible_windows = (
+                    GenomeEvidence._generate_window(
+                        compt_break1,
+                        max_expected_fragment_size=self.max_expected_fragment_size,
+                        call_error=self.call_error,
+                        read_length=self.read_length
+                    ),
+                    GenomeEvidence._generate_window(
+                        compt_break2,
+                        max_expected_fragment_size=self.max_expected_fragment_size,
+                        call_error=self.call_error,
+                        read_length=self.read_length
+                    )
+                )
+        elif SVTYPE.DUP in self.putative_event_types():
+            compt_break1 = Breakpoint(
+                self.break1.chr, self.break1.start, self.break1.end, orient=ORIENT.LEFT, strand=self.break1.strand)
+            compt_break2 = Breakpoint(
+                self.break2.chr, self.break2.start, self.break2.end, orient=ORIENT.RIGHT, strand=self.break2.strand)
+            
+            self.compatible_windows = (
+                GenomeEvidence._generate_window(
+                    compt_break1,
+                    max_expected_fragment_size=self.max_expected_fragment_size,
+                    call_error=self.call_error,
+                    read_length=self.read_length
+                ),
+                GenomeEvidence._generate_window(
+                    compt_break2,
+                    max_expected_fragment_size=self.max_expected_fragment_size,
+                    call_error=self.call_error,
+                    read_length=self.read_length
+                )
+            )
 
     @staticmethod
     def _generate_window(breakpoint, max_expected_fragment_size, call_error, read_length):
@@ -105,6 +149,54 @@ class TranscriptomeEvidence(Evidence):
         self.inner_windows = (w1, w2)
         print('TranscriptomeEvidence.outer_windows', self.outer_windows)
         print('TranscriptomeEvidence.inner_windows', self.inner_windows)
+
+        if SVTYPE.INS in self.putative_event_types():
+            comb = len(self.break1 | self.break2)
+            if comb > len(self.break1) and comb > len(self.break2):
+                compt_break1 = Breakpoint(
+                    self.break1.chr, self.break1.start, self.break1.end, orient=ORIENT.RIGHT, strand=self.break1.strand)
+                compt_break2 = Breakpoint(
+                    self.break2.chr, self.break2.start, self.break2.end, orient=ORIENT.LEFT, strand=self.break2.strand)
+                
+                self.compatible_windows = (
+                    TranscriptomeEvidence._generate_window(
+                        compt_break1,
+                        max_expected_fragment_size=self.max_expected_fragment_size,
+                        call_error=self.call_error,
+                        read_length=self.read_length,
+                        transcripts=self.overlapping_transcripts[0]
+                    ),
+                    TranscriptomeEvidence._generate_window(
+                        compt_break2,
+                        max_expected_fragment_size=self.max_expected_fragment_size,
+                        call_error=self.call_error,
+                        read_length=self.read_length,
+                        transcripts=self.overlapping_transcripts[1]
+                    )
+                )
+        elif SVTYPE.DUP in self.putative_event_types():
+            compt_break1 = Breakpoint(
+                self.break1.chr, self.break1.start, self.break1.end, orient=ORIENT.LEFT, strand=self.break1.strand)
+            compt_break2 = Breakpoint(
+                self.break2.chr, self.break2.start, self.break2.end, orient=ORIENT.RIGHT, strand=self.break2.strand)
+            
+            self.compatible_windows = (
+                TranscriptomeEvidence._generate_window(
+                    compt_break1,
+                    max_expected_fragment_size=self.max_expected_fragment_size,
+                    call_error=self.call_error,
+                    read_length=self.read_length,
+                    transcripts=self.overlapping_transcripts[0]
+                ),
+                TranscriptomeEvidence._generate_window(
+                    compt_break2,
+                    max_expected_fragment_size=self.max_expected_fragment_size,
+                    call_error=self.call_error,
+                    read_length=self.read_length,
+                    transcripts=self.overlapping_transcripts[1]
+                )
+            )
+
 
     def traverse_exonic_distance(start, distance, direction, transcripts):
         """

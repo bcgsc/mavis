@@ -320,7 +320,9 @@ COLUMNS = Vocab(
     contigs_assembled='contigs_assembled',
     flanking_median_fragment_size='flanking_median_fragment_size',
     flanking_pairs='flanking_pairs',
+    flanking_pairs_compatible='flanking_pairs_compatible',
     flanking_pairs_read_names='flanking_pairs_read_names',
+    flanking_pairs_compatible_read_names='flanking_pairs_compatible_read_names',
     flanking_stdev_fragment_size='flanking_stdev_fragment_size',
     linking_split_read_names='linking_split_read_names',
     linking_split_reads='linking_split_reads',
@@ -511,6 +513,11 @@ COLUMNS = Vocab(
     flanking_pairs
         :class:`int` - Number of read-pairs where one read aligns to the first breakpoint window and the second read
         aligns to the other. The count here is based on the number of unique query names
+
+    flanking_pairs_compatible
+        :class:`int` - Number of flanking pairs of a compatible orientation type. This applies to insertions and
+        duplications. Flanking pairs supporting an insertion will be compatible to a duplication and flanking pairs
+        supporting a duplication will be compatible to an insertion (possibly indicating an internal translocation)
 
     flanking_median_fragment_size
         :class:`int` - The median fragment size of the flanking reads being used as evidence
