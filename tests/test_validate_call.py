@@ -183,13 +183,13 @@ class TestPullFlankingSupport(unittest.TestCase):
     def test_insertion(self):
         evidence = self.build_genome_evidence(
             Breakpoint('1', 800, orient=ORIENT.LEFT),
-            Breakpoint('1', 900, orient=ORIENT.RIGHT)
-            )
+            Breakpoint('1', 900, orient=ORIENT.RIGHT))
         flanking_pairs = [
             mock_read_pair(
                 MockRead('r1', 0, 700, 750, is_reverse=False),
-                MockRead('r1', 0, 950, 1050, is_reverse=True)
-                )]
+                MockRead('r1', 0, 950, 1049, is_reverse=True)
+            )]
+        print(evidence.min_expected_fragment_size)
         event = EventCall(
             Breakpoint('1', 800, orient=ORIENT.LEFT),
             Breakpoint('1', 900, orient=ORIENT.RIGHT),
