@@ -126,8 +126,8 @@ class EventCall(BreakpointPair):
             else:
                 if self.break2.orient == ORIENT.LEFT:  # R L
                     if not all([
-                        read.reference_start + 1 <= self.break1.end,
-                        mate.reference_end >= self.break2.start
+                        read.reference_start + 1 <= self.break2.end,
+                        mate.reference_end >= self.break1.start
                     ]):
                         continue
                 else:  # R R

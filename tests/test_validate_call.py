@@ -181,16 +181,95 @@ class TestPullFlankingSupport(unittest.TestCase):
         self.assertEqual(0, len(event.flanking_pairs))
 
     def test_insertion(self):
-        raise unittest.SkipTest('TODO')
+        evidence = self.build_genome_evidence(
+            Breakpoint('1', 800, orient=ORIENT.LEFT),
+            Breakpoint('1', 900, orient=ORIENT.RIGHT)
+            )
+        flanking_pairs = [
+            mock_read_pair(
+                MockRead('r1', 0, 700, 750, is_reverse=False),
+                MockRead('r1', 0, 950, 1050, is_reverse=True)
+                )]
+        event = EventCall(
+            Breakpoint('1', 800, orient=ORIENT.LEFT),
+            Breakpoint('1', 900, orient=ORIENT.RIGHT),
+            evidence, SVTYPE.INS, CALL_METHOD.SPLIT)
+        event.pull_flanking_support(flanking_pairs)
+        self.assertEqual(1, len(event.flanking_pairs))
 
     def test_inversion(self):
-        raise unittest.SkipTest('TODO')
+        evidence = self.build_genome_evidence(
+            Breakpoint('1', 500, orient=ORIENT.LEFT),
+            Breakpoint('1', 1000, orient=ORIENT.LEFT),
+            opposing_strands=True
+        )
+        flanking_pairs = [
+            mock_read_pair(
+                MockRead('r1', 0, 400, 450, is_reverse=False),
+                MockRead('r1', 0, 900, 950, is_reverse=False)
+            )]
+        event = EventCall(
+            Breakpoint('1', 500, orient=ORIENT.LEFT),
+            Breakpoint('1', 1000, orient=ORIENT.LEFT),
+            evidence, SVTYPE.INV, CALL_METHOD.SPLIT)
+
+        event.pull_flanking_support(flanking_pairs)
+        self.assertEqual(1, len(event.flanking_pairs))
+
+        # test read that is the right type but the positioning does not support the current call
+        flanking_pairs.append(
+            mock_read_pair(
+                MockRead('r1', 0, 501, 600, is_reverse=False),
+                MockRead('r1', 0, 900,950, is_reverse=True)
+            ))
+        event.pull_flanking_support(flanking_pairs)
+        self.assertEqual(1, len(event.flanking_pairs))
 
     def test_inverted_translocation(self):
-        raise unittest.SkipTest('TODO')
+        evidence = self.build_genome_evidence(
+            Breakpoint('1', 1200, orient=ORIENT.LEFT),
+            Breakpoint('2', 1300, orient=ORIENT.LEFT),
+            opposing_strands=True
+        )
+        flanking_pairs = [
+            mock_read_pair(
+                MockRead('r1', 0, 1100, 1150, is_reverse=True),
+                MockRead('r1', 1, 1200, 1250, is_reverse=True)
+                )]
+        event = EventCall(
+            Breakpoint('1', 1200, orient=ORIENT.LEFT),
+            Breakpoint('2', 1300, orient=ORIENT.LEFT),
+            evidence, SVTYPE.ITRANS, CALL_METHOD.SPLIT)
+        event.pull_flanking_support(flanking_pairs)
+        self.assertEqual(1, len(event.flanking_pairs))
 
     def test_translocation(self):
-        raise unittest.SkipTest('TODO')
+        evidence = self.build_genome_evidence(
+            Breakpoint('1', 1200, orient=ORIENT.RIGHT),
+            Breakpoint('2', 1250, orient=ORIENT.LEFT)
+        )
+        flanking_pairs = [
+            mock_read_pair(
+                MockRead('r1', 0, 1201, 1249, is_reverse=True),
+                MockRead('r1', 1, 1201, 1249, is_reverse=False)
+            )]
+        event = EventCall(
+            Breakpoint('1', 1200, orient=ORIENT.RIGHT),
+            Breakpoint('2', 1250, orient=ORIENT.LEFT),
+            evidence, SVTYPE.TRANS, CALL_METHOD.SPLIT)
+
+        event.pull_flanking_support(flanking_pairs)
+        self.assertEqual(1, len(event.flanking_pairs))
+
+        # test read that is the right type but the positioning does not support the current call
+        # the mate is on the wrong chromosome (not sure if this would actually be added as flanking support)
+        flanking_pairs.append(
+            mock_read_pair(
+                MockRead('r1', 0, 1200, 1249, is_reverse=True),
+                MockRead('r1', 0, 1201, 1249, is_reverse=False)
+            ))
+        event.pull_flanking_support(flanking_pairs)
+        self.assertEqual(1, len(event.flanking_pairs))
 
     def test_duplication(self):
         raise unittest.SkipTest('TODO')
