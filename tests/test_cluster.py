@@ -1,15 +1,14 @@
 from structural_variant.interval import Interval
 import networkx as nx
 import itertools
-import structural_variant.cluster
-from structural_variant.cluster import IntervalPair, cluster_breakpoint_pairs
+from structural_variant.cluster import IntervalPair, cluster_breakpoint_pairs, merge_integer_intervals
 from structural_variant.breakpoint import Breakpoint, BreakpointPair, read_bpp_from_input_file
-from structural_variant.constants import STRAND
 from tests import FULL_BASE_EVENTS
 
 import unittest
 
-REF_CHR='fake'
+REF_CHR = 'fake'
+
 
 class TestIntervalPair(unittest.TestCase):
     def test_sets(self):
@@ -19,24 +18,28 @@ class TestIntervalPair(unittest.TestCase):
         self.assertEqual(2, len(s))
 
     def test__lt__(self):
-        self.assertTrue(IntervalPair((1,1),(1,1)) < IntervalPair((1,1),(1,10)))
-        self.assertFalse(IntervalPair((1,10),(1,1)) < IntervalPair((1,1),(1,10)))
+        self.assertTrue(IntervalPair((1, 1), (1, 1)) < IntervalPair((1, 1), (1, 10)))
+        self.assertFalse(IntervalPair((1, 10), (1, 1)) < IntervalPair((1, 1), (1, 10)))
 
-    def test_weighted_mean(self):
+    def test_merge(self):
         pairs = [IntervalPair((1, 2), (1, 10)), IntervalPair((1, 10), (2, 11)), IntervalPair((2, 11), (1, 2))]
-        m = IntervalPair.weighted_mean(*pairs)
-        self.assertEqual(IntervalPair(
-            Interval.weighted_mean(*[p.start for p in pairs]), Interval.weighted_mean(*[p.end for p in pairs])), m)
+        m = IntervalPair.merge(*pairs)
+        s = merge_integer_intervals(*[p[0] for p in pairs])
+        t = merge_integer_intervals(*[p[1] for p in pairs])
+        self.assertEqual(s, m[0])
+        self.assertEqual(t, m[1])
 
         pairs = [IntervalPair((1, 2), (1, 10)), IntervalPair((1, 10), (1, 10)), IntervalPair((2, 11), (1, 10))]
-        m = IntervalPair.weighted_mean(*pairs)
-        self.assertEqual(IntervalPair(
-            Interval.weighted_mean(*[p.start for p in pairs]), Interval.weighted_mean(*[p.end for p in pairs])), m)
+        m = IntervalPair.merge(*pairs)
+        s = merge_integer_intervals(*[p[0] for p in pairs])
+        t = merge_integer_intervals(*[p[1] for p in pairs])
+        self.assertEqual(s, m[0])
+        self.assertEqual(t, m[1])
 
-    def test_dist(self):
+    def test_abs_dist(self):
         x = IntervalPair((1, 1), (10, 11))
         y = IntervalPair((1, 1), (40, 41))
-        self.assertEqual(15, x.dist(y))
+        self.assertEqual(14.5, IntervalPair.abs_dist(x, y))
 
     def test__redundant_maximal_kcliques(self):
         r = 10
@@ -49,7 +52,7 @@ class TestIntervalPair(unittest.TestCase):
         for n in [a, b, c, d, e]:
             G.add_node(n)
         for n1, n2 in itertools.combinations([a, b, c, d, e], 2):
-            if n1.dist(n2) <= r:
+            if IntervalPair.abs_dist(n1, n2) <= r:
                 G.add_edge(n1, n2)
         self.assertTrue(G.has_edge(a, b))
         self.assertTrue(G.has_edge(a, c))
@@ -65,7 +68,7 @@ class TestIntervalPair(unittest.TestCase):
         for n in [a, b, c, d, e]:
             G.add_node(n)
         for n1, n2 in itertools.combinations([a, b, c, d, e], 2):
-            if n1.dist(n2) <= r:
+            if IntervalPair.abs_dist(n1, n2) <= r:
                 G.add_edge(n1, n2)
 
         self.assertTrue(G.has_edge(a, b))
@@ -86,7 +89,7 @@ class TestIntervalPair(unittest.TestCase):
         for n in [a, b, c]:
             G.add_node(n)
         for n1, n2 in itertools.combinations([a, b, c], 2):
-            if n1.dist(n2) <= r:
+            if IntervalPair.abs_dist(n1, n2) <= r:
                 G.add_edge(n1, n2)
         self.assertTrue(G.has_edge(b, c))
         self.assertTrue(G.has_edge(a, c))
@@ -112,9 +115,9 @@ class TestIntervalPair(unittest.TestCase):
         self.assertEqual(2, len(groups))
         self.assertEqual([a, b, c], groups[0])
         self.assertEqual([c, d, e], groups[1])
-
-    @unittest.skip("TODO")
+    
     def test_cluster_breakpoint_pairs(self):
+        raise unittest.SkipTest('TODO')
         bpp1 = BreakpointPair(Breakpoint(REF_CHR, 31),
                               Breakpoint(REF_CHR, 129),
                               opposing_strands=False)
@@ -136,7 +139,7 @@ class TestIntervalPair(unittest.TestCase):
         from pprint import pprint
         I = {bpp1, bpp2, bpp3, bpp4, bpp5}
         print(I)
-        groups = structural_variant.cluster.cluster_breakpoint_pairs(I, 9, 4)
+        groups = cluster_breakpoint_pairs(I, 9, 4)
 #        groups = sorted([sorted(list(c)) for c in groups])
         pprint(groups)
         groups2 = sorted(groups.keys())
@@ -162,6 +165,27 @@ class TestFullClustering(unittest.TestCase):
         for cluster, input_pairs in clusters.items():
             self.assertEqual(1, len(input_pairs))
 
+
+class TestMergeIntegerIntervals(unittest.TestCase):
+    def test_varying_lengths(self):
+        m = merge_integer_intervals((1, 2), (1, 9), (2, 10))
+        self.assertEqual(Interval(1, 4), m)
+
+    def test_same_length(self):
+        m = merge_integer_intervals((1, 1), (10, 10))
+        self.assertEqual(Interval(6), m)
+
+    def test_empty_list_error(self):
+        with self.assertRaises(AttributeError):
+            merge_integer_intervals()
+
+    def test_identical_even_length(self):
+        m = merge_integer_intervals((1, 2), (1, 2), (1, 2))
+        self.assertEqual(Interval(1, 2), m)
+
+    def test_identical_odd_length(self):
+        m = merge_integer_intervals((1, 3), (1, 3), (1, 3))
+        self.assertEqual(Interval(1, 3), m)
 
 if __name__ == "__main__":
     unittest.main()

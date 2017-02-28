@@ -8,6 +8,31 @@ from .breakpoint import BreakpointPair, Breakpoint
 import itertools
 import networkx as nx
 import warnings
+import numpy as np
+
+
+def merge_integer_intervals(*intervals):
+    intervals = list(intervals)
+    centers = []
+    weights = []
+    lengths = []
+    if len(intervals) == 0:
+        raise AttributeError('cannot compute the weighted mean interval of an empty set of intervals')
+    for i in range(0, len(intervals)):
+        curr = intervals[i]
+        intervals[i] = Interval(curr[0], curr[1] + 0.9)
+        for temp in range(0, intervals[i].freq):
+            centers.append(intervals[i].center)
+            weights.append(1 / intervals[i].length())
+            lengths.append(intervals[i].length())
+
+    center = round(np.average(centers, weights=weights) * 2, 0) / 2
+    size = np.average(lengths) # -1 b/c center counts as one
+    start = max([round(center - size / 2, 0), min([i[0] for i in intervals])])
+    end = min([round(center + size / 2, 0), max([i[1] for i in intervals])])
+    offset = min([center - start, end - center])
+    result = Interval(int(round(center - offset, 0)), int(round(center + offset / 2, 0)))
+    return result
 
 
 class IntervalPair:
@@ -40,7 +65,7 @@ class IntervalPair:
         return hash((self.start, self.end))
 
     @classmethod
-    def weighted_mean(cls, *interval_pairs):
+    def merge(cls, *interval_pairs):
         """
         returns a new IntervalPair where the start interval is the weighted mean of the starts of all
         the input interval pairs, similar for the end
@@ -50,11 +75,19 @@ class IntervalPair:
         Returns:
             IntervalPair: the new IntervalPair
         """
-        start = Interval.weighted_mean(*[i.start for i in interval_pairs])
-        end = Interval.weighted_mean(*[i.end for i in interval_pairs])
+        start = merge_integer_intervals(*[i.start for i in interval_pairs])
+        end = merge_integer_intervals(*[i.end for i in interval_pairs])
         return IntervalPair(start, end)
+    
+    @staticmethod
+    def abs_dist(self, other):
+        """
+        """
+        d = abs(Interval.dist(self[0], other[0])) + abs(Interval.dist(self[1], other[1]))
+        return d / 2
 
-    def dist(self, other):
+    @staticmethod
+    def center_dist(self, other):
         """
         computes the distance between IntervalPairs by averaging the distance between
         the first Interval centers of each and the second Interval centers of each
@@ -64,8 +97,7 @@ class IntervalPair:
         """
         d = abs(self.start.center - other.start.center)
         d += abs(self.end.center - other.end.center)
-        d /= 2
-        return d
+        return d / 2
 
     def __repr__(self):
         return '{}<{}, {}, data={}>'.format(self.__class__.__name__, self.start, self.end, self.data)
@@ -119,7 +151,7 @@ class IntervalPair:
                 if len(cluster) == 1:
                     distances.append((0, cluster))  # only participant in the cluster
                 else:
-                    d = sum([node.dist(x) for x in cluster if x != node]) / (len(cluster) - 1)
+                    d = sum([IntervalPair.center_dist(node, x) for x in cluster if x != node]) / (len(cluster) - 1)
                     distances.append((d, cluster))
             lowest = min(distances, key=lambda x: x[0])[0]
             for score, cluster in distances:
@@ -147,7 +179,7 @@ class IntervalPair:
             groups (:class:`list` of :class:`set` of :class:`IntervalPair`): a list of sets of interval pairs
             r (int): the distance to determine grouping
         """
-        queue = sorted(groups, key=lambda x: IntervalPair.weighted_mean(*x))
+        queue = sorted(groups, key=lambda x: IntervalPair.merge(*x))
         complete_groups = []
 
         while len(queue) > 0:
@@ -155,24 +187,26 @@ class IntervalPair:
             for i in range(0, len(queue)):
                 merged = False
                 curr = queue[i]
-                curri = IntervalPair.weighted_mean(*curr)
+                curr_ci = IntervalPair.merge(*curr)
                 if i > 0:
                     prev = queue[i - 1]
-                    if IntervalPair.weighted_mean(*prev).dist(curri) <= r:
+                    prev_ci = IntervalPair.merge(*prev)
+                    if IntervalPair.abs_dist(prev_ci, curr_ci) <= r:
                         d = curr | prev
                         if d not in temp_queue:
                             temp_queue.append(d)
                         merged = True
                 if i < len(queue) - 1:
-                    nexxt = queue[i + 1]
-                    if IntervalPair.weighted_mean(*nexxt).dist(curri) <= r:
-                        d = curr | nexxt
+                    next_ = queue[i + 1]
+                    next_ci = IntervalPair.merge(*next_)
+                    if IntervalPair.abs_dist(next_ci, curr_ci) <= r:
+                        d = curr | next_
                         if d not in temp_queue:
                             temp_queue.append(d)
                         merged = True
                 if not merged:
                     complete_groups.append(curr)
-            queue = sorted(temp_queue, key=lambda x: IntervalPair.weighted_mean(*x))
+            queue = sorted(temp_queue, key=lambda x: IntervalPair.merge(*x))
         return complete_groups
 
     @classmethod
@@ -193,13 +227,20 @@ class IntervalPair:
         for p in pairs:
             G.add_node(p)
         for curr, other in itertools.combinations(pairs, 2):
-            if curr.dist(other) <= r:
+            if IntervalPair.abs_dist(curr, other) <= r:
                 G.add_edge(curr, other)
 
         # pull out the highly connected components
         subgraphs = cls._redundant_maximal_kcliques(G, k)
         subgraphs = cls._redundant_ordered_hierarchical_clustering(subgraphs, r)
         return subgraphs
+    
+    def __getitem__(self, index):
+        if index == 0:
+            return self.start
+        elif index == 1:
+            return self.end
+        raise IndexError('index is out of bounds', index)
 
 
 def is_complete(G, N):
@@ -278,7 +319,8 @@ def cluster_breakpoint_pairs(input_pairs, r, k):
             elif particpation == 0:
                 raise AssertionError('error: dropped input pair did not complete clustering', node)
         for c in clusters:
-            ip = IntervalPair.weighted_mean(*c)
+            ip = IntervalPair.merge(*c)
+            # calculate a confidence interval?
             # create the new breakpoint pair that represents the cluster
             bpp = BreakpointPair(
                 Breakpoint(chr1, ip.start[0], ip.start[1], strand=s1, orient=o1),

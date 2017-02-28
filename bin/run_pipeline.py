@@ -170,6 +170,8 @@ def main():
         default=False, action='store_true')
     args = parser.parse_args()
 
+    READ_FILES = {}
+
     if os.path.exists(args.output) and not args.force_overwrite:
         print('error: must specify the overwrite option or delete the existing output directory')
         parser.print_help()
@@ -200,7 +202,11 @@ def main():
             'uninformative_filter': True
         }
         merge_args.update(sec.__dict__)
-        output_files = sv_merge.main(Namespace(**merge_args))
+        ann = merge_args['annotations']
+        merge_args['annotations'] = READ_FILES.get(ann, ann)
+        merge_args = Namespace(**merge_args)
+        output_files = sv_merge.main(merge_args)
+        READ_FILES[ann] = merge_args[ann] 
         merge_file_prefix = None
         for f in output_files:
             m = re.match('^(?P<prefix>.*\D)\d+.tab$', f)

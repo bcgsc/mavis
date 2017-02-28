@@ -99,6 +99,13 @@ def get_samtools_version():
             return int(m.group('major')), int(m.group('mid')), int(m.group('minor'))
     raise ValueError('unable to parse samtools version number')
 
+def get_blat_version():
+    proc = subprocess.getoutput(['blat'])
+    for line in proc.split('\n'):
+        m = re.search('blat - Standalone BLAT v. (\d+(x\d+)?)', line)
+        if m:
+            return m.group(1)
+    raise ValueError('unable to parse blat version number')
 
 def parse_arguments():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -359,6 +366,7 @@ def main():
                 e.break2.chr, e.inner_window2.start, e.inner_window2.end, e.data[COLUMNS.cluster_id]))
             print()
             log('calling events for:', e.data[COLUMNS.cluster_id], e.putative_event_types())
+            log('source:', e, time_stamp=False)
             calls = []
             failure_comment = None
             try:

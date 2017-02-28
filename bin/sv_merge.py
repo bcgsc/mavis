@@ -153,8 +153,11 @@ def parse_arguments():
 def main(args):
     # load the input files
     breakpoint_pairs = []
-    log('loading:', args.masking)
-    masks = load_masking_regions(args.masking)
+    masks = args.masking
+    if isinstance(args.masking, str):
+        log('loading:', args.masking)
+        masks = load_masking_regions(args.masking)
+        args.masking = masks
     mask_filtered = 0
     for f in args.inputs:
         log('loading:', f)
@@ -189,8 +192,11 @@ def main(args):
 
     # load the reference annotations for filtering uninformative clusters
     if args.uninformative_filter:
-        log('loading:', args.annotations)
-        REFERENCE_GENES = load_reference_genes(args.annotations, verbose=False)
+        REFERENCE_GENES = args.annotations
+        if isinstance(args.annotations, str):
+            log('loading:', args.annotations)
+            REFERENCE_GENES = load_reference_genes(args.annotations, verbose=False)
+            args.annotations = REFERENCE_GENES
 
     cluster_id_prefix = re.sub(' ', '_', str(datetime.now()))
     cluster_id = 1

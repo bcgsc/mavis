@@ -1,4 +1,3 @@
-import numpy as np
 from .constants import *
 from .error import *
 
@@ -208,40 +207,50 @@ class Interval:
     def __hash__(self):
         return hash((self[0], self[1], self.freq))
 
-    @classmethod
-    def weighted_mean(cls, *intervals):
-        """
-        Args:
-            intervals (Interval): a list of intervals
+    # @classmethod
+    # def weighted_mean_ci(cls, *intervals):
+    #     """
+    #     Calculates the weighted mean of a set of intervals. The weighting is inversely proportional to
+    #     the size of the input interval. The length of the final interval is the weight mean length of 
+    #     the input intervals also weighted by length
 
-        Returns:
-            Interval: the weighted mean interval of the input intervals
+    #     Args:
+    #         intervals (Interval): a list of intervals
 
-        Raises:
-            AttributeError: if the input list is empty
+    #     Returns:
+    #         Interval: the weighted mean interval of the input intervals
 
-        Example:
-            >>> Interval.weighted_mean((1, 2), (1, 9), (2, 10))
-            Interval(1, 4)
-            >>> Interval.weighted_mean((1, 1), (10, 10))
-            Interval(6)
-        """
-        centers = []
-        weights = []
-        lengths = []
-        if len(intervals) == 0:
-            raise AttributeError('cannot compute the weighted mean interval of an empty set of intervals')
-        for i in intervals:
-            if not isinstance(i, Interval):
-                i = Interval(i[0], i[1])
-            for temp in range(0, i.freq):
-                centers.append(i.center)
-                weights.append(1 / i.length())
-                lengths.append(i.length())
+    #     Raises:
+    #         AttributeError: if the input list is empty
 
-        center = np.average(centers, weights=weights)
-        size = np.average(lengths, weights=weights) - 1
-        return Interval(round(center - size / 2, 0), round(center + size / 2, 0))
+    #     Example:
+    #         >>> Interval.weighted_mean((1, 2), (1, 9), (2, 10))
+    #         Interval(1, 4)
+    #         >>> Interval.weighted_mean((1, 1), (10, 10))
+    #         Interval(6)
+    #     """
+    #     centers = []
+    #     weights = []
+    #     lengths = []
+    #     number_type = int
+    #     if len(intervals) == 0:
+    #         raise AttributeError('cannot compute the weighted mean interval of an empty set of intervals')
+    #     for i in intervals:
+    #         try:
+    #             if i.number_type == float:
+    #                 number_type = float
+    #         except AttributeError:
+    #             pass
+    #         if not isinstance(i, Interval):
+    #             i = Interval(i[0], i[1])
+    #         for temp in range(0, i.freq):
+    #             centers.append(i.center)
+    #             weights.append(1 / i.length())
+    #             lengths.append(i.length())
+
+    #     center = np.average(centers, weights=weights)
+    #     size = max([np.average(lengths) - 1, 1]) if number_type == int else np.average(lengths)
+    #     return Interval(round(center - size / 2, 0), round(center + size / 2, 0))
 
     @classmethod
     def position_in_range(cls, segments, pos):

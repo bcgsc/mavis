@@ -153,6 +153,9 @@ class MockString:
 
 
 def mock_read_pair(mock1, mock2):
+    if mock1.reference_id != mock2.reference_id:
+        mock1.template_length = 0
+        mock2.template_length = 0
     mock1.next_reference_id = mock2.reference_id
     mock1.next_reference_start = mock2.reference_start
     mock1.mate_is_reverse = mock2.is_reverse

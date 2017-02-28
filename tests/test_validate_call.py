@@ -236,15 +236,49 @@ class TestPullFlankingSupport(unittest.TestCase):
             mock_read_pair(
                 MockRead('r1', 0, 1100, 1150, is_reverse=True),
                 MockRead('r1', 1, 1200, 1250, is_reverse=True)
-                )]
+            )]
         event = EventCall(
             Breakpoint('1', 1200, orient=ORIENT.LEFT),
             Breakpoint('2', 1300, orient=ORIENT.LEFT),
             evidence, SVTYPE.ITRANS, CALL_METHOD.SPLIT)
         event.pull_flanking_support(flanking_pairs)
         self.assertEqual(1, len(event.flanking_pairs))
+    
+    def test_translocation_RL(self):
+        b1 = Breakpoint('11', 128675261, orient=ORIENT.RIGHT, strand=STRAND.POS)
+        b2 = Breakpoint('22', 29683123, orient=ORIENT.LEFT, strand=STRAND.POS)
+        evidence = self.build_genome_evidence(b1, b2)
+        event = EventCall(b1, b2, evidence, SVTYPE.TRANS, CALL_METHOD.CONTIG)
+        flanking_pairs = [
+            mock_read_pair(
+                MockRead('x', '11', 128675264, 128677087, is_reverse=False),
+                MockRead('x', '22', 29683030, 29683105, is_reverse=True)
+            ),
+            mock_read_pair(
+                MockRead('x', '11', 128675286, 128677109, is_reverse=False),
+                MockRead('x', '22', 29683016, 29683091, is_reverse=True)
+            ),
+            mock_read_pair(
+                MockRead('x', '11', 128675260, 128677083, is_reverse=False),
+                MockRead('x', '22', 29683049, 29683123, is_reverse=True)
+            ),
+            mock_read_pair(
+                MockRead('x', '11', 128675289, 128677110, is_reverse=False),
+                MockRead('x', '22', 29683047, 29683122, is_reverse=True)
+            ),
+            mock_read_pair(
+                MockRead('x', '11', 128675306, 128677129, is_reverse=False),
+                MockRead('x', '22', 29683039, 29683114, is_reverse=True)
+            ),
+            mock_read_pair(
+                MockRead('x', '11', 128675289, 128677110, is_reverse=False),
+                MockRead('x', '22', 29683047, 29683122, is_reverse=True)
+            )
+        ]
+        event.pull_flanking_support(flanking_pairs)
+        self.assertEqual(len(flanking_pairs), len(event.flanking_pairs))
 
-    def test_translocation(self):
+    def test_translocation_RL_filter_nonsupporting(self):
         evidence = self.build_genome_evidence(
             Breakpoint('1', 1200, orient=ORIENT.RIGHT),
             Breakpoint('2', 1250, orient=ORIENT.LEFT)
