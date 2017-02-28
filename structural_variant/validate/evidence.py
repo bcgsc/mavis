@@ -196,8 +196,8 @@ class TranscriptomeEvidence(Evidence):
                     transcripts=self.overlapping_transcripts[1]
                 )
             )
-
-
+    
+    @staticmethod
     def traverse_exonic_distance(start, distance, direction, transcripts):
         """
         given some genomic position and a distance. Uses the input transcripts to
@@ -295,26 +295,7 @@ class TranscriptomeEvidence(Evidence):
         if read.reference_start > mate.reference_start:
             read, mate = mate, read
         t = self.overlapping_transcripts[0] | self.overlapping_transcripts[1]
-        return TranscriptomeEvidence.traverse_exonic_distance(read.start, mate.end, t)
-        all_fragments = []
-        if read.reference_start > mate.reference_start:
-            read, mate = mate, read
-        transcripts = self.overlapping_transcripts[0] & self.overlapping_transcripts[1]
-
-        for t in itertools.chain.from_iterable([ust.transcripts for ust in transcripts]):
-            try:
-                cs = t.convert_genomic_to_nearest_cdna(read.reference_start + 1)
-                ct = t.convert_genomic_to_nearest_cdna(mate.reference_end)
-                cs = cs[0] - cs[1] if cs[1] < 0 else cs[0]
-                ct = ct[0] + ct[1] if ct[1] > 0 else ct[0]
-                fragment_size = abs(ct - cs) + 1
-                all_fragments.append(fragment_size)
-            except IndexError:
-                pass
-        if len(all_fragments) == 0:
-            return GenomeEvidence.compute_fragment_size(self, read, mate)
-        else:
-            return Interval(min(all_fragments), max(all_fragments))
+        return TranscriptomeEvidence.compute_exonic_distance(read.reference_start, mate.reference_end, t)
     
     @staticmethod
     def compute_exonic_distance(start, end, transcripts):
