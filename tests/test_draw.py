@@ -249,7 +249,7 @@ class TestDraw(unittest.TestCase):
         reference_genome = {'1': MockSeq(MockString('A'))}
         ft = FusionTranscript.build(ann, reference_genome)
 
-        canvas, legend = draw(d, ann, ft)
+        canvas, legend = draw_sv_summary_diagram(d, ann, ft)
         self.assertEqual(4, len(canvas.elements))  # defs counts as element
         expected_height = d.TOP_MARGIN + d.BOTTOM_MARGIN + \
             d.TRACK_HEIGHT + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN + \
@@ -297,7 +297,7 @@ class TestDraw(unittest.TestCase):
         self.assertEqual(t2.exons[2], ft.exon_mapping[ft.exons[1].position])
         self.assertEqual(t2.exons[3], ft.exon_mapping[ft.exons[2].position])
 
-        canvas, legend = draw(d, ann, ft)
+        canvas, legend = draw_sv_summary_diagram(d, ann, ft)
         self.assertEqual(5, len(canvas.elements))  # defs counts as element
 
         expected_height = d.TOP_MARGIN + d.BOTTOM_MARGIN + \
@@ -348,7 +348,7 @@ class TestDraw(unittest.TestCase):
 
         ft = FusionTranscript.build(ann, reference_genome)
 
-        canvas, legend = draw(d, ann, ft)
+        canvas, legend = draw_sv_summary_diagram(d, ann, ft)
         self.assertEqual(6, len(canvas.elements))  # defs counts as element
         expected_height = d.TOP_MARGIN + d.BOTTOM_MARGIN + \
             d.TRACK_HEIGHT * 2 + d.PADDING + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN + \
@@ -418,11 +418,11 @@ class TestDraw(unittest.TestCase):
 
         ft = FusionTranscript.build(ann, reference_genome)
 
-        canvas, legend = draw(d, ann, ft, show_template=True, templates=TEMPLATE_METADATA)
+        canvas, legend = draw_sv_summary_diagram(d, ann, ft, show_template=True, templates=TEMPLATE_METADATA)
         canvas.saveas('test_draw_translocation_with_template.svg')
         self.assertEqual(8, len(canvas.elements))  # defs counts as element
         expected_height = d.TOP_MARGIN + d.BOTTOM_MARGIN + \
-            d.TRACK_HEIGHT * 2 + d.PADDING  + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN + \
+            d.TRACK_HEIGHT * 2 + d.PADDING + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN + \
             d.INNER_MARGIN + \
             d.TRACK_HEIGHT + d.SPLICE_HEIGHT + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN + \
             d.PADDING + d.TRANSLATION_TRACK_HEIGHT + \

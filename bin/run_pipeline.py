@@ -17,9 +17,10 @@ from configparser import ConfigParser, ExtendedInterpolation
 import TSV
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from structural_variant.constants import PROTOCOL, VALIDATION_DEFAULTS
+from structural_variant.constants import PROTOCOL
 import sv_merge
 import sv_validate
+from structural_variant.validate.constants import VALIDATION_DEFAULTS
 
 basedir = os.path.dirname(__file__)
 
