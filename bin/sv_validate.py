@@ -169,6 +169,7 @@ def gather_evidence_from_bam(clusters):
         log(
             '({} of {})'.format(i + 1, len(clusters)),
             'gathering evidence for:',
+            e.data['cluster_id'],
             e
         )
         log('possible event type(s):', BreakpointPair.classify(e), time_stamp=False)

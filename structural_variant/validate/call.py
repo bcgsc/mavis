@@ -92,9 +92,6 @@ class EventCall(BreakpointPair):
             self.source_evidence.min_expected_fragment_size + Interval.dist(self.break1, self.break2),
             self.source_evidence.max_expected_fragment_size])
         max_frag = len(self.break1 | self.break2) + self.source_evidence.max_expected_fragment_size
-        print('event size', len(self.break1 | self.break2))
-        print('stdev', self.source_evidence.stdev_fragment_size, self.source_evidence.stdev_count_abnormal)
-        print('min-max', min_frag, max_frag)
 
         for read, mate in flanking_pairs:
             # check that the fragment size is reasonable
@@ -104,14 +101,12 @@ class EventCall(BreakpointPair):
                     continue
             elif self.event_type == SVTYPE.INS:
                 if fragment_size.start >= self.source_evidence.min_expected_fragment_size:
-                    print(fragment_size.start)
                     continue
             if self.interchromosomal != (read.reference_id != mate.reference_id):
                 continue
             # check that the flanking reads work with the current call
             if not read_tools.orientation_supports_type(read, self.event_type):
                 continue
-            print('passed size filters')
             # check that the positions make sense
             if self.break1.orient == ORIENT.LEFT:
                 if self.break2.orient == ORIENT.LEFT:  # L L
@@ -141,7 +136,6 @@ class EventCall(BreakpointPair):
                         mate.reference_end >= self.break2.start
                     ]):
                         continue
-            print('passed position filters')
             self.flanking_pairs.add((read, mate))
 
     def __hash__(self):
