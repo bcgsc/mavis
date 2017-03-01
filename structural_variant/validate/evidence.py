@@ -3,7 +3,6 @@ from ..interval import Interval
 from ..constants import ORIENT, PROTOCOL, SVTYPE
 from ..annotate.variant import overlapping_transcripts
 from ..breakpoint import Breakpoint
-import itertools
 
 
 class GenomeEvidence(Evidence):
@@ -147,8 +146,6 @@ class TranscriptomeEvidence(Evidence):
         w2 = w2 | temp
 
         self.inner_windows = (w1, w2)
-        print('TranscriptomeEvidence.outer_windows', self.outer_windows)
-        print('TranscriptomeEvidence.inner_windows', self.inner_windows)
 
         if SVTYPE.INS in self.putative_event_types():
             comb = len(self.break1 | self.break2)

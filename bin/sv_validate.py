@@ -50,6 +50,7 @@ from structural_variant.blat import blat_contigs
 from structural_variant.interval import Interval
 from structural_variant.annotate import load_masking_regions, load_reference_genome, load_reference_genes
 from datetime import datetime
+from structural_variant.constants import build_batch_id, log
 import pysam
 
 try:
@@ -65,13 +66,6 @@ HUMAN_REFERENCE_GENOME = None
 MASKED_REGIONS = None
 EVIDENCE_SETTINGS = None
 PASS_SUFFIX = '.validation-passed.tab'
-
-
-def log(*pos, time_stamp=True):
-    if time_stamp:
-        print('[{}]'.format(datetime.now()), *pos)
-    else:
-        print(' ' * 28, *pos)
 
 
 def mkdirp(dirname):
@@ -130,7 +124,7 @@ def parse_arguments():
         help='path to the input bam file', required=True
     )
     parser.add_argument(
-        '--stranded', default=False, action='store_true',
+        '--stranded_bam', default=False, type=bool,
         help='indicates that the input bam file is strand specific'
     )
     parser.add_argument(
@@ -225,8 +219,10 @@ def main():
     PASSED_BED_FILE = os.path.join(args.output, FILENAME_PREFIX + '.validation-passed.bed')
     FAILED_OUTPUT_FILE = os.path.join(args.output, FILENAME_PREFIX + '.validation-failed.tab')
     CONTIG_OUTPUT_FILE = os.path.join(args.output, FILENAME_PREFIX + '.contigs.tab')
+    CONTIG_BLAT_FA = os.path.join(args.output, FILENAME_PREFIX + '.contigs.fa')
+    CONTIG_BLAT_OUTPUT = os.path.join(args.output, FILENAME_PREFIX + '.contigs.blat_out.pslx')
     IGV_BATCH_FILE = os.path.join(args.output, FILENAME_PREFIX + '.igv.batch')
-    INPUT_BAM_CACHE = BamCache(args.bam_file, args.stranded)
+    INPUT_BAM_CACHE = BamCache(args.bam_file, args.stranded_bam)
 
     log('input arguments listed below')
     for arg, val in sorted(args.__dict__.items()):
@@ -344,12 +340,16 @@ def main():
             blat_sequences.add(c.seq)
     print()
     log('aligning {} contig sequences'.format(len(blat_sequences)))
+    log('will output:', CONTIG_BLAT_FA, CONTIG_BLAT_OUTPUT)
     if len(blat_sequences) > 0:
         blat_contigs(
             evidence,
             INPUT_BAM_CACHE,
             REFERENCE_GENOME=HUMAN_REFERENCE_GENOME,
-            blat_2bit_reference=args.blat_2bit_reference
+            blat_2bit_reference=args.blat_2bit_reference,
+            blat_fa_input_file=CONTIG_BLAT_FA,
+            blat_pslx_output_file=CONTIG_BLAT_OUTPUT,
+            clean_files=False
         )
     log('alignment complete')
     event_calls = []
@@ -392,13 +392,12 @@ def main():
                     len(ev.break1_split_reads), len(ev.break2_split_reads),
                     len(ev.flanking_pairs)), time_stamp=False)
 
-
     if len(failed_cluster_rows) + passes != len(evidence):
         raise AssertionError(
             'totals do not match pass + fails == total', passes, len(failed_cluster_rows), len(evidence))
     # write the output validated clusters (split by type and contig)
 
-    id_prefix = re.sub(' ', '_', str(datetime.now()))
+    id_prefix = build_batch_id()
     id = 1
     with open(PASSED_OUTPUT_FILE, 'w') as fh:
         print()

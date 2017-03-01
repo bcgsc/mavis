@@ -41,10 +41,10 @@ DEFAULTS = Namespace(
     max_orf_cap=3,
     min_domain_mapping_match=0.8,
     domain_regex_filter='^PF\d+$',
-    stranded=False,
     max_proximity=5000,
     uninformative_filter=True,
-    blat_2bit_reference='/home/pubseq/genomes/Homo_sapiens/GRCh37/blat/hg19.2bit'
+    blat_2bit_reference='/home/pubseq/genomes/Homo_sapiens/GRCh37/blat/hg19.2bit',
+    stranded_bam=False
 )
 
 DEFAULTS.__dict__.update(VALIDATION_DEFAULTS.__dict__)
@@ -230,7 +230,8 @@ def main():
             'read_length': sec.read_length,
             'stdev_fragment_size': sec.stdev_fragment_size,
             'median_fragment_size': sec.median_fragment_size,
-            'force_overwrite': args.force_overwrite
+            'force_overwrite': args.force_overwrite,
+            'stranded_bam': sec.stranded_bam
         }
         for attr in VALIDATION_DEFAULTS.__dict__:
             validation_args[attr] = getattr(sec, attr)

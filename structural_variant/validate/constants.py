@@ -1,13 +1,13 @@
 from argparse import Namespace
 
 VALIDATION_DEFAULTS = Namespace(
-    assembly_include_flanking_pairs=False,
+    assembly_include_flanking_pairs=True,
     assembly_include_half_mapped_reads=True,
     assembly_max_paths=20,
     assembly_min_edge_weight=3,
     assembly_min_remap=3,
     assembly_min_tgt_to_exclude_half_map=7,
-    assembly_strand_concordance=0.7,
+    assembly_strand_concordance=0.51,
     assembly_max_kmer_size=None,
     assembly_max_kmer_strict=True,
     call_error=10,

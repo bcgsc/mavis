@@ -48,6 +48,7 @@ from structural_variant.breakpoint import BreakpointPair, read_bpp_from_input_fi
 from structural_variant.cluster import cluster_breakpoint_pairs
 from structural_variant.annotate import load_reference_genes, load_masking_regions
 from structural_variant import __version__
+from structural_variant.constants import log, build_batch_id
 
 __prog__ = os.path.basename(os.path.realpath(__file__))
 MIN_CLUSTERS_PER_FILE = 50
@@ -55,13 +56,6 @@ MAX_FILES = 100
 CLUSTER_RADIUS = 20
 CLUSTER_CLIQUE_SIZE = 15
 MAX_PROXIMITY = 5000
-
-
-def log(*pos, time_stamp=True):
-    if time_stamp:
-        print('[{}]'.format(datetime.now()), *pos)
-    else:
-        print(' ' * 28, *pos)
 
 
 def write_bed_file(filename, cluster_breakpoint_pairs):
@@ -173,7 +167,8 @@ def main(args):
             add={
                 COLUMNS.protocol: args.protocol,
                 COLUMNS.library: args.library
-            }
+            },
+            force_stranded=True if args.stranded else False
         )
         for bpp in bpps:
             bpp.data[COLUMNS.tools] = set(';'.split(bpp.data[COLUMNS.tools]))
@@ -198,7 +193,7 @@ def main(args):
             REFERENCE_GENES = load_reference_genes(args.annotations, verbose=False)
             args.annotations = REFERENCE_GENES
 
-    cluster_id_prefix = re.sub(' ', '_', str(datetime.now()))
+    cluster_id_prefix = build_batch_id()
     cluster_id = 1
 
     # set up directories

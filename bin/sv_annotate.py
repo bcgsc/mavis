@@ -52,19 +52,12 @@ from structural_variant import __version__
 from structural_variant.illustrate.settings import DiagramSettings
 from structural_variant.illustrate.draw import draw_sv_summary_diagram
 import TSV
-from structural_variant.constants import PROTOCOL, SVTYPE, COLUMNS, sort_columns, PRIME
+from structural_variant.constants import PROTOCOL, SVTYPE, COLUMNS, sort_columns, PRIME, build_batch_id, log
 import re
 import json
 from datetime import datetime
 import warnings
 import glob
-
-
-def log(*pos, time_stamp=True):
-    if time_stamp:
-        print('[{}]'.format(datetime.now()), *pos)
-    else:
-        print(' ' * 28, *pos)
 
 
 def parse_arguments():
@@ -212,7 +205,7 @@ def main():
                 'input type does not fit with breakpoint pair description:',
                 bpp.data[COLUMNS.event_type], BreakpointPair.classify(bpp))
 
-    id_prefix = 'annotation_{}-'.format(re.sub(':', '-', re.sub(' ', '_', str(datetime.now()))))
+    id_prefix = 'annotation_{}-'.format(build_batch_id())
     rows = []  # hold the row information for the final tsv file
     fa_sequences = {}
     for i, ann in enumerate(annotations):
@@ -255,7 +248,7 @@ def main():
                     for dom in tl.domains:
                         m, t = dom.score_region_mapping()
                         temp = {
-                            "name": dom,
+                            "name": dom.name,
                             "sequences": dom.get_seqs(),
                             "regions": [
                                 {"start": dr.start, "end": dr.end} for dr in sorted(dom.regions, key=lambda x: x.start)
@@ -305,9 +298,9 @@ def main():
                 except NotSpecifiedError:
                     pass
 
-                name = '{}.chr{}_chr{}.{}_{}'.format(
-                    ann.data[COLUMNS.annotation_id], ann.break1.chr, ann.break2.chr,
-                    gene_aliases1, gene_aliases2)
+                name = 'chr{}_chr{}.{}_{}.{}'.format(
+                    ann.break1.chr, ann.break2.chr,
+                    gene_aliases1, gene_aliases2, ann.data[COLUMNS.annotation_id])
 
                 drawing = os.path.join(DRAWINGS_DIRECTORY, name + '.svg')
                 l = os.path.join(DRAWINGS_DIRECTORY, name + '.legend.json')

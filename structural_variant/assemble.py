@@ -13,7 +13,7 @@ class Contig:
         self.seq = sequence
         self.remapped_sequences = {}
         self.score = score
-        self.alignments = None
+        self.alignments = []
         self.input_reads = set()
 
     def __hash__(self):

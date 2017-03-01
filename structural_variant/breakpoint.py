@@ -585,7 +585,7 @@ class BreakpointPair:
         return ''.join(first_seq).upper(), ''.join(second_seq).upper()
 
 
-def read_bpp_from_input_file(filename, expand_ns=True, **kwargs):
+def read_bpp_from_input_file(filename, expand_ns=True, force_stranded=False, **kwargs):
     """
     reads a file using the TSV module. Each row is converted to a breakpoint pair and
     other column data is stored in the data attribute
@@ -652,12 +652,13 @@ def read_bpp_from_input_file(filename, expand_ns=True, **kwargs):
             COLUMNS.break2_strand: STRAND
         })
     header, rows = TSV.read_file(
-        filename,
+        filename, suppress_index=True,
         **kwargs
     )
     pairs = []
     for row in rows:
-        stranded = row[COLUMNS.stranded]
+        stranded = row[COLUMNS.stranded] or force_stranded
+        row[COLUMNS.stranded] = stranded
         opp = row[COLUMNS.opposing_strands]
 
         temp = []

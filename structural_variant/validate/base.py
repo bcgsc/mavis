@@ -7,6 +7,7 @@ from ..interval import Interval
 from ..breakpoint import BreakpointPair
 from ..bam import read as read_tools
 from ..bam import cigar as cigar_tools
+import warnings
 
 
 class Evidence(BreakpointPair):
@@ -191,6 +192,11 @@ class Evidence(BreakpointPair):
             # too far apart to call spanning reads
             return False
 
+        if self.bam_cache.stranded and self.stranded:
+            strand = read_tools.read_pair_strand(read, self.strand_determining_read)
+            if strand != self.break1.strand and strand != self.break2.strand:
+                return False
+
         combined = self.inner_window1 & self.inner_window2
         read_interval = Interval(read.reference_start + 1, read.reference_end)
 
@@ -222,19 +228,25 @@ class Evidence(BreakpointPair):
             return False
         elif read.mapping_quality < self.min_mapping_quality or mate.mapping_quality < self.min_mapping_quality:
             return False
-
+        
+        read = self.standardize_read(read)
+        mate = self.standardize_read(mate)
         # order the read pairs so that they are in the same order that we expect for the breakpoints
         if read.reference_start > mate.reference_start:
             read, mate = mate, read
 
         if self.bam_cache.chr(read) != self.break1.chr or self.bam_cache.chr(mate) != self.break2.chr:
             return False
-
+        
         # check if this read falls in the first breakpoint window
-        is_stranded = self.bam_cache.stranded and self.stranded
         iread = Interval(read.reference_start + 1, read.reference_end)
         imate = Interval(mate.reference_start + 1, mate.reference_end)
-        added = False
+
+        if self.bam_cache.stranded and self.stranded:
+            strand1 = read_tools.read_pair_strand(read, self.strand_determining_read)
+            strand2 = read_tools.read_pair_strand(mate, self.strand_determining_read)
+            if strand1 != self.break1.strand or strand2 != self.break2.strand:
+                return False
 
         # check that the pair orientation is correct
         if not read_tools.orientation_supports_type(read, compatible_type):
@@ -252,9 +264,8 @@ class Evidence(BreakpointPair):
 
         # check that the positions of the reads and the strands make sense
         if Interval.overlaps(iread, self.compatible_windows[0]) and Interval.overlaps(imate, self.compatible_windows[1]):
-            if not is_stranded or self.read_pair_strand(read) == self.break1.strand:
-                self.compatible_flanking_pairs.add((read, mate))
-                return True
+            self.compatible_flanking_pairs.add((read, mate))
+            return True
 
         return False
 
@@ -284,7 +295,9 @@ class Evidence(BreakpointPair):
                 return False
         elif read.reference_id != read.next_reference_id:
             return False
-
+        
+        read = self.standardize_read(read)
+        mate = self.standardize_read(mate)
         # order the read pairs so that they are in the same order that we expect for the breakpoints
         if read.reference_id != mate.reference_id:
             if self.bam_cache.chr(read) > self.bam_cache.chr(mate):
@@ -294,14 +307,23 @@ class Evidence(BreakpointPair):
 
         if self.bam_cache.chr(read) != self.break1.chr or self.bam_cache.chr(mate) != self.break2.chr:
             return False
-
-        read = self.standardize_read(read)
-        mate = self.standardize_read(mate)
+        if any([
+            self.break1.orient == ORIENT.LEFT and read.is_reverse,
+            self.break1.orient == ORIENT.RIGHT and not read.is_reverse,
+            self.break2.orient == ORIENT.LEFT and mate.is_reverse,
+            self.break2.orient == ORIENT.RIGHT and not mate.is_reverse
+        ]):
+            return False
         # check if this read falls in the first breakpoint window
-        is_stranded = self.bam_cache.stranded and self.stranded
         iread = Interval(read.reference_start + 1, read.reference_end)
         imate = Interval(mate.reference_start + 1, mate.reference_end)
-        added = False
+
+        if self.bam_cache.stranded and self.stranded:
+            strand1 = read_tools.read_pair_strand(read, self.strand_determining_read)
+            strand2 = read_tools.read_pair_strand(mate, self.strand_determining_read)
+            
+            if strand1 != self.break1.strand or strand2 != self.break2.strand:
+                return False
 
         for event_type in self.putative_event_types():
 
@@ -321,11 +343,10 @@ class Evidence(BreakpointPair):
 
             # check that the positions of the reads and the strands make sense
             if Interval.overlaps(iread, self.outer_window1) and Interval.overlaps(imate, self.outer_window2):
-                if not is_stranded or self.read_pair_strand(read) == self.break1.strand:
-                    self.flanking_pairs.add((read, mate))
-                    added = True
+                self.flanking_pairs.add((read, mate))
+                return True
 
-        return added
+        return False
 
     def add_split_read(self, read, first_breakpoint):
         """
@@ -361,7 +382,8 @@ class Evidence(BreakpointPair):
             return False  # read not in breakpoint evidence window
         # can only enforce strand if both the breakpoint and the bam are stranded
         if self.stranded and self.bam_cache.stranded:
-            if read_tools.read_pair_strand(read) != (breakpoint.strand == STRAND.NEG):
+            strand = read_tools.read_pair_strand(read, strand_determining_read=self.strand_determining_read)
+            if strand != breakpoint.strand:
                 return False  # split read not on the appropriate strand
         unused = ''
         primary = ''
@@ -482,6 +504,33 @@ class Evidence(BreakpointPair):
             clipped = scores[0][2]
             self.split_reads[1 if first_breakpoint else 0].add(clipped)  # add to the opposite breakpoint
         return True
+    
+    def decide_sequenced_strand(self, reads):
+        if len(reads) == 0:
+            raise ValueError('cannot determine the strand of a set of reads if the set is empty')
+
+        strand_calls = {STRAND.POS: 0, STRAND.NEG: 0}
+        for read in reads:
+            try:
+                strand = read_tools.read_pair_strand(read, self.strand_determining_read)
+                strand_calls[strand] = strand_calls.get(strand, 0) + 1
+            except ValueError as err:
+                pass
+        if sum(strand_calls.values()) == 0:
+            raise ValueError('Could not determine strand. Insufficient mapped reads')
+        print(strand_calls)
+        if strand_calls[STRAND.POS] == 0:
+            return STRAND.NEG
+        elif strand_calls[STRAND.NEG] == 0:
+            return STRAND.POS
+        else:
+            ratio = strand_calls[STRAND.POS] / (strand_calls[STRAND.NEG] + strand_calls[STRAND.POS])
+            neg_ratio = 1 - ratio
+            if ratio >= self.assembly_strand_concordance:
+                return STRAND.POS
+            elif nratio >= self.assembly_strand_concordance:
+                return STRAND.NEG
+            raise ValueError('Could not determine the strand. Equivocal POS/(NEG + POS) ratio', ratio)
 
     def assemble_contig(self, log=lambda *x: None):
         """
@@ -537,64 +586,60 @@ class Evidence(BreakpointPair):
             assembly_max_kmer_size=self.assembly_max_kmer_size,
             assembly_max_kmer_strict=self.assembly_max_kmer_strict
         )
+        
+        # add the input reads
+        for ctg in contigs:
+            for read_seq in ctg.remapped_sequences:
+                ctg.input_reads.update(assembly_sequences[read_seq.query_sequence])
 
         # now determine the strand from the remapped reads if possible
         if self.stranded and self.bam_cache.stranded:  # strand specific
             for contig in contigs:
-                if len(contig.remapped_sequences.keys()) == 0:
-                    continue
-                strand_calls = {STRAND.POS: 0, STRAND.NEG: 0}
-                for seq in contig.remapped_sequences:
-                    for read in assembly_sequences[seq.query_sequence]:
-                        if read.is_unmapped:
-                            continue
-                        if read.is_read1:
-                            if read.is_reverse:
-                                strand_calls[STRAND.NEG] += 1
-                            else:
-                                strand_calls[STRAND.POS] += 1
+                build_strand = {STRAND.POS: 0, STRAND.NEG: 0}
+                for read_seq in contig.remapped_sequences:
+                    for read in assembly_sequences[read_seq.query_sequence]:
+                        if read_seq.query_sequence == read.query_sequence:
+                            build_strand[STRAND.POS] += 1
                         else:
-                            if read.is_reverse:
-                                strand_calls[STRAND.POS] += 1
-                            else:
-                                strand_calls[STRAND.NEG] += 1
-
-                if strand_calls[STRAND.NEG] == 0 and strand_calls[STRAND.POS] == 0:
-                    raise AssertionError('could not determine strand', strand_calls)
-                elif strand_calls[STRAND.POS] > strand_calls[STRAND.NEG]:
-                    ratio = strand_calls[STRAND.POS] / (strand_calls[STRAND.NEG] + strand_calls[STRAND.POS])
+                            build_strand[STRAND.NEG] += 1
+                det_build_strand = None
+                if sum(build_strand.values()) == 0:
+                    print('could not determine build string')
+                    continue
+                elif build_strand[STRAND.POS] == 0:
+                    det_build_strand = STRAND.NEG
+                elif build_strand[STRAND.NEG] == 0:
+                    det_build_strand = STRAND.POS
+                else:
+                    ratio = build_strand[STRAND.POS] / sum(build_strand.values())
+                    nratio = 1 - ratio
                     if ratio >= self.assembly_strand_concordance:
+                        det_build_strand = STRAND.POS
+                    elif nratio >= self.assembly_strand_concordance:
+                        det_build_strand = STRAND.NEG
+                    else:
+                        print('Could not determine the build strand. Equivocal POS/(NEG + POS) ratio', ratio)
                         continue
-                elif strand_calls[STRAND.NEG] > strand_calls[STRAND.POS]:
-                    ratio = strand_calls[STRAND.NEG] / (strand_calls[STRAND.NEG] + strand_calls[STRAND.POS])
-                    if ratio >= self.assembly_strand_concordance:
-                        # negative strand. should reverse
+                try:
+                    strand = self.decide_sequenced_strand(contig.input_reads)
+                    print(build_strand)
+                    if strand != det_build_strand: 
                         contig.seq = reverse_complement(contig.seq)
-                        continue
-                reverse = True if strand_calls[STRAND.NEG] > strand_calls[STRAND.POS] else False
-                for seq in contig.remapped_sequences:
-                    for read in assembly_sequences[seq.query_sequence]:
-                        if read.is_reverse != reverse:
-                            print('conflicting read', read.cigar, read.query_sequence)
-                raise AssertionError('could not determine contig strand', strand_calls)
+                except ValueError as err:
+                    pass
 
         filtered_contigs = {}
         # sort so that the function is deterministic
         for c in sorted(contigs, key=lambda x: (x.remap_score() * -1, x.seq)):
             if c.remap_score() < self.assembly_min_remap:  # filter on evidence level
                 continue
-            if not self.stranded or not self.bam_cache.stranded:  # not strand specific
-                rseq = reverse_complement(c.seq)
-                if c.seq not in filtered_contigs and (strand_specific or rseq not in filtered_contigs):
-                    filtered_contigs[c.seq] = c
+            if self.stranded and self.bam_cache.stranded:
+                filtered_contigs.setdefault(c.seq, c)
             else:
-                if c.seq not in filtered_contigs:
+                rseq = reverse_complement(c.seq)
+                if c.seq not in filtered_contigs and rseq not in filtered_contigs:
                     filtered_contigs[c.seq] = c
         self.contigs = list(filtered_contigs.values())
-
-        for ctg in self.contigs:
-            for read_seq in ctg.remapped_sequences:
-                ctg.input_reads.update(assembly_sequences[read_seq.query_sequence])
 
     def load_evidence(self, log=lambda *pos, **kwargs: None):
         """
@@ -726,7 +771,10 @@ class Evidence(BreakpointPair):
                 try:
                     mates = self.bam_cache.get_mate(fl, allow_file_access=False)
                     for mate in mates:
-                        self.add_compatible_flanking_pair(fl, mate, compatible_type)
+                        try:
+                            self.add_compatible_flanking_pair(fl, mate, compatible_type)
+                        except ValueError:
+                            pass
                 except KeyError:
                     pass
 

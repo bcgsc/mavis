@@ -20,6 +20,7 @@ import os
 import TSV
 from .constants import *
 from .bam import cigar as cigar_tools
+from .bam import read as read_tools
 import tempfile
 from .interval import Interval
 
@@ -315,15 +316,32 @@ class Blat:
         return read
 
 
+def paired_alignment_score(read1, read2=None):
+    score = read_tools.calculate_alignment_score(read1) * read1.query_coverage_interval().length()
+    if read2 is not None:
+        qci1 = read1.query_coverage_interval()
+        qci2 = read2.query_coverage_interval()
+        total_len = qci1.length() + qci2.length()
+        s1 = read_tools.calculate_alignment_score(read1)
+        s2 = read_tools.calculate_alignment_score(read2)
+        avg = s1 * qci1.length() / total_len + s2 * qci2.length() / total_len
+        score = avg * len(qci1 | qci2)
+    return score
+
+
 def blat_contigs(
         evidence,
         INPUT_BAM_CACHE,
         REFERENCE_GENOME,
+        blat_pslx_output_file='blat_out.pslx',
+        blat_fa_input_file='blat_in.fa',
         blat_2bit_reference='/home/pubseq/genomes/Homo_sapiens/GRCh37/blat/hg19.2bit',
         min_percent_of_max_score=0.8,
         min_identity=0.95,
         is_protein=False,
         MIN_EXTEND_OVERLAP=10,
+        pair_scoring_function=paired_alignment_score,
+        clean_files=True,
         **kwargs):
     """
     given a set of contigs, call blat from the command line and adds the results to the contigs
@@ -350,36 +368,29 @@ def blat_contigs(
     blat_options = kwargs.pop('blat_options',
                               ["-stepSize=5", "-repMatch=2253", "-minScore=0", "-minIdentity={0}".format(min_identity)])
 
-    tempfiles = []
     try:
         # write the input sequences to a fasta file
-
-        fasta = tempfile.NamedTemporaryFile(mode='w', delete=False)
-        tempfiles.append(fasta.name)
-        fasta_name = fasta.name
         query_id_mapping = {}
         count = 1
         sequences = set()
         for e in evidence:
             for c in e.contigs:
                 sequences.add(c.seq)
-        for seq in sequences:
-            n = 'seq{0}'.format(count)
-            query_id_mapping[n] = seq
-            fasta.write('>' + n + '\n' + seq + '\n')
-            count += 1
-        fasta.close()
+        with open(blat_fa_input_file, 'w') as fh:
+            for seq in sequences:
+                n = 'seq{0}'.format(count)
+                query_id_mapping[n] = seq
+                fh.write('>' + n + '\n' + seq + '\n')
+                count += 1
 
         # call the blat subprocess
-        psl = tempfile.NamedTemporaryFile(delete=False)
-        tempfiles.append(psl.name)
         # will raise subprocess.CalledProcessError if non-zero exit status
         # parameters from https://genome.ucsc.edu/FAQ/FAQblat.html#blat4
         # print(["blat", blat_2bit_reference, fasta_name, psl.name, '-out=pslx', '-noHead'] + blat_options)
-        subprocess.check_output(["blat", blat_2bit_reference, fasta_name, psl.name, '-out=pslx', '-noHead'] + blat_options)
-        psl.close()
+        subprocess.check_output(["blat", blat_2bit_reference,
+            blat_fa_input_file, blat_pslx_output_file, '-out=pslx', '-noHead'] + blat_options)
 
-        header, rows = Blat.read_pslx(psl.name, query_id_mapping, is_protein=is_protein)
+        header, rows = Blat.read_pslx(blat_pslx_output_file, query_id_mapping, is_protein=is_protein)
 
         # split the rows by query id
         rows_by_query = {}
@@ -399,11 +410,6 @@ def blat_contigs(
             # filter on score
             scores = sorted([r['score'] for r in rows])
             max_score = scores[-1]
-            if len(scores) > 1:
-                second_score = scores[-2]
-                min_score = max_score * min_percent_of_max_score
-                filtered_rows = [row for row in filtered_rows if row['score'] >= min_score or row['score'] == second_score]
-
             filtered_rows.sort(key=lambda x: x['score'], reverse=True)
             reads = []
             for rank, row in enumerate(filtered_rows):
@@ -468,12 +474,23 @@ def blat_contigs(
                             and INPUT_BAM_CACHE.chr(a1) == e.break2.chr \
                             and Interval.overlaps(e.outer_window2, (a1.reference_start, a1.reference_end - 1)):
                         putative_alignments.append((a2, a1))
-                contig.alignments = putative_alignments
+                if len(putative_alignments) == 0:
+                    continue
+                score_by_alignments = {}
+                for read1, read2 in putative_alignments:
+                    score = pair_scoring_function(read1, read2)
+                    score_by_alignments[(read1, read2)] = score
+                max_score = max(list(score_by_alignments.values()))
+                for pair in putative_alignments:
+                    score = score_by_alignments[pair]
+                    if score / max_score >= min_percent_of_max_score:
+                        contig.alignments.append(pair)
     finally:
         # clean up the temporary files
-        for f in tempfiles:
-            if os.path.exists(f):
-                try:
-                    os.remove(f)
-                except OSError as e:
-                    warnings.warn(repr(e))
+        if clean_files:
+            for f in [blat_pslx_output_file, blat_fa_input_file]:
+                if os.path.exists(f):
+                    try:
+                        os.remove(f)
+                    except OSError as e:
+                        warnings.warn(repr(e))

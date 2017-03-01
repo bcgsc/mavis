@@ -6,7 +6,9 @@ from Bio.Alphabet import Gapped
 from Bio.Data.IUPACData import ambiguous_dna_values
 from Bio.Alphabet.IUPAC import ambiguous_dna
 from Bio.Seq import Seq
-from argparse import Namespace
+from datetime import datetime
+import random
+import math
 
 CODON_SIZE = 3
 """:class:`int`: the number of bases making up a codon"""
@@ -31,6 +33,20 @@ def reverse_complement(s):
     """
     temp = Seq(str(s), DNA_ALPHABET)
     return str(temp.reverse_complement())
+
+
+def build_batch_id(prefix='', suffix='', size=6):
+    date = datetime.now()
+    m = int(math.pow(10, size) - 1)
+    return 'batch{prefix}{date.year}{date.month:02d}{date.day:02d}r{r:06d}{suffix}'.format(
+        prefix=prefix, suffix=suffix, date=date, r=random.randint(1, m))
+
+
+def log(*pos, time_stamp=True):
+    if time_stamp:
+        print('[{}]'.format(datetime.now()), *pos)
+    else:
+        print(' ' * 28, *pos)
 
 
 def translate(s, reading_frame=0):
