@@ -1,12 +1,12 @@
 import unittest
-from structural_variant.annotate.variant import *
-from structural_variant.annotate.genomic import *
-from structural_variant.annotate.protein import *
-from structural_variant.annotate import *
-from structural_variant.error import NotSpecifiedError
-from structural_variant.constants import reverse_complement
-from structural_variant.constants import STRAND
-from structural_variant.breakpoint import Breakpoint, BreakpointPair
+from mavis.annotate.variant import *
+from mavis.annotate.genomic import *
+from mavis.annotate.protein import *
+from mavis.annotate import *
+from mavis.error import NotSpecifiedError
+from mavis.constants import reverse_complement
+from mavis.constants import STRAND
+from mavis.breakpoint import Breakpoint, BreakpointPair
 from tests import REFERENCE_ANNOTATIONS_FILE, REFERENCE_GENOME_FILE, MockSeq, REFERENCE_ANNOTATIONS_FILE_JSON
 
 

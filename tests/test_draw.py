@@ -1,13 +1,13 @@
 import unittest
-from structural_variant.illustrate.settings import DiagramSettings
-from structural_variant.illustrate.scatter import ScatterPlot
-from structural_variant.illustrate.draw import *
-from structural_variant.illustrate.draw import _draw_template, _draw_ustranscript, _draw_genes
-from structural_variant.annotate import *
+from mavis.illustrate.settings import DiagramSettings
+from mavis.illustrate.scatter import ScatterPlot
+from mavis.illustrate.draw import *
+from mavis.illustrate.draw import _draw_template, _draw_ustranscript, _draw_genes
+from mavis.annotate import *
 from svgwrite import Drawing
-from structural_variant.constants import STRAND, ORIENT, SVTYPE
-from structural_variant.breakpoint import Breakpoint, BreakpointPair
-from structural_variant.interval import Interval
+from mavis.constants import STRAND, ORIENT, SVTYPE
+from mavis.breakpoint import Breakpoint, BreakpointPair
+from mavis.interval import Interval
 from tests import MockSeq, MockString, build_transcript, TEMPLATE_METADATA_FILE
 import random
 

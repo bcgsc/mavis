@@ -1,4 +1,4 @@
-from structural_variant.interval import Interval
+from mavis.interval import Interval
 import unittest
 
 class TestInterval(unittest.TestCase):

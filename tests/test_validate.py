@@ -1,8 +1,8 @@
-from structural_variant.breakpoint import Breakpoint
-from structural_variant.annotate import load_reference_genome, Gene, usTranscript, Transcript
-from structural_variant.constants import ORIENT, STRAND, PYSAM_READ_FLAGS
-from structural_variant.interval import Interval
-from structural_variant.bam.cache import BamCache
+from mavis.breakpoint import Breakpoint
+from mavis.annotate import load_reference_genome, Gene, usTranscript, Transcript
+from mavis.constants import ORIENT, STRAND, PYSAM_READ_FLAGS
+from mavis.interval import Interval
+from mavis.bam.cache import BamCache
 from . import MockRead, mock_read_pair
 import unittest
 import itertools
@@ -10,7 +10,7 @@ from . import REFERENCE_GENOME_FILE, BAM_INPUT, FULL_BAM_INPUT
 import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from structural_variant.validate.evidence import GenomeEvidence, TranscriptomeEvidence
+from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
 
 REFERENCE_GENOME = None
 RUN_FULL = int(os.environ.get('RUN_FULL', 0))

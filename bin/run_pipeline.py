@@ -16,10 +16,10 @@ from configparser import ConfigParser, ExtendedInterpolation
 import TSV
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from structural_variant.constants import PROTOCOL, log
+from mavis.constants import PROTOCOL, log
 import sv_merge
 import sv_validate
-from structural_variant.validate.constants import VALIDATION_DEFAULTS
+from mavis.validate.constants import VALIDATION_DEFAULTS
 
 
 basedir = os.path.dirname(__file__)

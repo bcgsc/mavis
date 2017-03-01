@@ -44,15 +44,15 @@ import argparse
 import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from structural_variant.breakpoint import read_bpp_from_input_file, BreakpointPair
-from structural_variant.annotate import load_reference_genes, load_reference_genome, load_templates
-from structural_variant.annotate.variant import gather_annotations, FusionTranscript, determine_prime
-from structural_variant.error import DrawingFitError, NotSpecifiedError
-from structural_variant import __version__
-from structural_variant.illustrate.settings import DiagramSettings
-from structural_variant.illustrate.draw import draw_sv_summary_diagram
+from mavis.breakpoint import read_bpp_from_input_file, BreakpointPair
+from mavis.annotate import load_reference_genes, load_reference_genome, load_templates
+from mavis.annotate.variant import gather_annotations, FusionTranscript, determine_prime
+from mavis.error import DrawingFitError, NotSpecifiedError
+from mavis import __version__
+from mavis.illustrate.settings import DiagramSettings
+from mavis.illustrate.draw import draw_sv_summary_diagram
 import TSV
-from structural_variant.constants import PROTOCOL, SVTYPE, COLUMNS, sort_columns, PRIME, build_batch_id, log
+from mavis.constants import PROTOCOL, SVTYPE, COLUMNS, sort_columns, PRIME, build_batch_id, log
 import re
 import json
 from datetime import datetime

@@ -41,14 +41,14 @@ import argparse
 import re
 from datetime import datetime
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from structural_variant.constants import *
-from structural_variant.error import *
-from structural_variant.interval import Interval
-from structural_variant.breakpoint import BreakpointPair, read_bpp_from_input_file
-from structural_variant.cluster import cluster_breakpoint_pairs
-from structural_variant.annotate import load_reference_genes, load_masking_regions
-from structural_variant import __version__
-from structural_variant.constants import log, build_batch_id
+from mavis.constants import *
+from mavis.error import *
+from mavis.interval import Interval
+from mavis.breakpoint import BreakpointPair, read_bpp_from_input_file
+from mavis.cluster import cluster_breakpoint_pairs
+from mavis.annotate import load_reference_genes, load_masking_regions
+from mavis import __version__
+from mavis.constants import log, build_batch_id
 
 __prog__ = os.path.basename(os.path.realpath(__file__))
 MIN_CLUSTERS_PER_FILE = 50

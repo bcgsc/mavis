@@ -1,9 +1,9 @@
-from structural_variant.constants import *
-from structural_variant.bam import read as read_tools
-from structural_variant.bam import cigar as cigar_tools
-from structural_variant.bam.read import sequenced_strand, read_pair_type, breakpoint_pos, orientation_supports_type
-from structural_variant.bam.cache import BamCache
-from structural_variant.annotate import load_reference_genome
+from mavis.constants import *
+from mavis.bam import read as read_tools
+from mavis.bam import cigar as cigar_tools
+from mavis.bam.read import sequenced_strand, read_pair_type, breakpoint_pos, orientation_supports_type
+from mavis.bam.cache import BamCache
+from mavis.annotate import load_reference_genome
 import unittest
 import warnings
 from tests import MockRead, MockBamFileHandle

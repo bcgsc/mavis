@@ -3,17 +3,17 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, os.path.dirname(__file__))
 
-from structural_variant.breakpoint import Breakpoint
-from structural_variant.annotate import load_reference_genome, Gene, usTranscript, Transcript
-from structural_variant.constants import ORIENT, STRAND, CIGAR, PYSAM_READ_FLAGS, SVTYPE, CALL_METHOD
-from structural_variant.interval import Interval
-from structural_variant.bam.cache import BamCache
+from mavis.breakpoint import Breakpoint
+from mavis.annotate import load_reference_genome, Gene, usTranscript, Transcript
+from mavis.constants import ORIENT, STRAND, CIGAR, PYSAM_READ_FLAGS, SVTYPE, CALL_METHOD
+from mavis.interval import Interval
+from mavis.bam.cache import BamCache
 from tests import MockRead, mock_read_pair
 import unittest
 from tests import REFERENCE_GENOME_FILE, BAM_INPUT, FULL_BAM_INPUT, MockBamFileHandle
-from structural_variant.validate.evidence import GenomeEvidence, TranscriptomeEvidence
-import structural_variant.validate.call as call
-from structural_variant.validate.call import EventCall
+from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
+import mavis.validate.call as call
+from mavis.validate.call import EventCall
 
 REFERENCE_GENOME = None
 

@@ -1,11 +1,11 @@
-from structural_variant.blat import *
-from structural_variant.interval import Interval
-from structural_variant.annotate import load_reference_genome
-from structural_variant.constants import ORIENT, CIGAR
-from structural_variant.bam.cache import BamCache
-from structural_variant.assemble import Contig
-from structural_variant.breakpoint import Breakpoint, BreakpointPair
-from structural_variant.validate.evidence import GenomeEvidence
+from mavis.blat import *
+from mavis.interval import Interval
+from mavis.annotate import load_reference_genome
+from mavis.constants import ORIENT, CIGAR
+from mavis.bam.cache import BamCache
+from mavis.assemble import Contig
+from mavis.breakpoint import Breakpoint, BreakpointPair
+from mavis.validate.evidence import GenomeEvidence
 
 import unittest
 import shutil

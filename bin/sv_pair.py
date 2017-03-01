@@ -26,13 +26,13 @@ import argparse
 import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from structural_variant.breakpoint import read_bpp_from_input_file
-from structural_variant.annotate import load_reference_genes
-from structural_variant.pairing import equivalent_events
-from structural_variant import __version__
+from mavis.breakpoint import read_bpp_from_input_file
+from mavis.annotate import load_reference_genes
+from mavis.pairing import equivalent_events
+from mavis import __version__
 from Bio import SeqIO
 import TSV
-from structural_variant.constants import PROTOCOL, SVTYPE, COLUMNS, SPLICE_TYPE, CALL_METHOD, log
+from mavis.constants import PROTOCOL, SVTYPE, COLUMNS, SPLICE_TYPE, CALL_METHOD, log
 import networkx as nx
 import itertools
 

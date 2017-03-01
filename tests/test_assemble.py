@@ -1,5 +1,5 @@
-from structural_variant.constants import *
-from structural_variant.assemble import *
+from mavis.constants import *
+from mavis.assemble import *
 import unittest
 
 

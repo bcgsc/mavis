@@ -1,5 +1,5 @@
 import unittest
-from structural_variant.constants import *
+from mavis.constants import *
 
 
 class TestConstants(unittest.TestCase):

@@ -1,8 +1,8 @@
 import unittest
-from structural_variant.pairing import *
-from structural_variant.constants import SVTYPE, COLUMNS, CALL_METHOD, ORIENT, STRAND, PROTOCOL
-from structural_variant.breakpoint import BreakpointPair, Breakpoint
-from structural_variant.annotate.genomic import usTranscript, Exon
+from mavis.pairing import *
+from mavis.constants import SVTYPE, COLUMNS, CALL_METHOD, ORIENT, STRAND, PROTOCOL
+from mavis.breakpoint import BreakpointPair, Breakpoint
+from mavis.annotate.genomic import usTranscript, Exon
 
 
 class TestPairing(unittest.TestCase):

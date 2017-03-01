@@ -1,7 +1,7 @@
-from structural_variant.constants import CIGAR, NA_MAPPING_QUALITY
-from structural_variant.blat import BlatAlignedSegment
-from structural_variant.annotate.genomic import usTranscript, Transcript
-from structural_variant.annotate.protein import Translation
+from mavis.constants import CIGAR, NA_MAPPING_QUALITY
+from mavis.blat import BlatAlignedSegment
+from mavis.annotate.genomic import usTranscript, Transcript
+from mavis.annotate.protein import Translation
 import os
 
 

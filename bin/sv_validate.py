@@ -37,20 +37,20 @@ import os
 import sys
 import re
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from structural_variant import __version__
-from structural_variant.constants import *
-from structural_variant.validate.constants import VALIDATION_DEFAULTS
-from structural_variant.error import *
-from structural_variant.validate.evidence import GenomeEvidence, TranscriptomeEvidence
-from structural_variant.validate.call import call_events
-from structural_variant.bam import cigar as cigar_tools
-from structural_variant.breakpoint import BreakpointPair, read_bpp_from_input_file
-from structural_variant.bam.cache import BamCache
-from structural_variant.blat import blat_contigs
-from structural_variant.interval import Interval
-from structural_variant.annotate import load_masking_regions, load_reference_genome, load_reference_genes
+from mavis import __version__
+from mavis.constants import *
+from mavis.validate.constants import VALIDATION_DEFAULTS
+from mavis.error import *
+from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
+from mavis.validate.call import call_events
+from mavis.bam import cigar as cigar_tools
+from mavis.breakpoint import BreakpointPair, read_bpp_from_input_file
+from mavis.bam.cache import BamCache
+from mavis.blat import blat_contigs
+from mavis.interval import Interval
+from mavis.annotate import load_masking_regions, load_reference_genome, load_reference_genes
 from datetime import datetime
-from structural_variant.constants import build_batch_id, log
+from mavis.constants import build_batch_id, log
 import pysam
 
 try:

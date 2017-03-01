@@ -1,12 +1,12 @@
-from structural_variant.illustrate.scatter ScatterPlot
-from structural_variant.illustrate.draw import *
-from structural_variant.illustrate.settings import DiagramSettings
-from structural_variant.annotate.base import BioInterval
-from structural_variant.annotate.file_io import load_reference_genes
-from structural_variant import __version__
-from structural_variant.error import DrawingFitError
+from mavis.illustrate.scatter ScatterPlot
+from mavis.illustrate.draw import *
+from mavis.illustrate.settings import DiagramSettings
+from mavis.annotate.base import BioInterval
+from mavis.annotate.file_io import load_reference_genes
+from mavis import __version__
+from mavis.error import DrawingFitError
 import os
-from structural_variant.interval import Interval
+from mavis.interval import Interval
 import argparse
 import TSV
 import pysam
