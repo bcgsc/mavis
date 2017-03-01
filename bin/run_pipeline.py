@@ -6,7 +6,6 @@ wrapper script for the pipeline
 - sets up qsub scripts for validation, annotation and pairing jobs
 """
 from argparse import Namespace
-from datetime import datetime
 import argparse
 import warnings
 import errno
@@ -17,10 +16,11 @@ from configparser import ConfigParser, ExtendedInterpolation
 import TSV
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from structural_variant.constants import PROTOCOL
+from structural_variant.constants import PROTOCOL, log
 import sv_merge
 import sv_validate
 from structural_variant.validate.constants import VALIDATION_DEFAULTS
+
 
 basedir = os.path.dirname(__file__)
 
@@ -48,13 +48,6 @@ DEFAULTS = Namespace(
 )
 
 DEFAULTS.__dict__.update(VALIDATION_DEFAULTS.__dict__)
-
-
-def log(*pos, time_stamp=True):
-    if time_stamp:
-        print('[{}]'.format(datetime.now()), *pos)
-    else:
-        print(' ' * 28, *pos)
 
 
 def mkdirp(dirname):
@@ -205,7 +198,6 @@ def main():
         ann = merge_args['annotations']
         merge_args['annotations'] = READ_FILES.get(ann, ann)
         merge_args = Namespace(**merge_args)
-        print('merge_args', merge_args)
         output_files = sv_merge.main(merge_args)
         READ_FILES[ann] = getattr(merge_args, 'annotations')
         merge_file_prefix = None

@@ -410,4 +410,4 @@ Glossary
 
 
 
-.. |TOOLNAME| replace:: **MARVIN**
+.. |TOOLNAME| replace:: **MAVIS**

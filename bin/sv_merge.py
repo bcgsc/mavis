@@ -183,6 +183,7 @@ def main(args):
                     mask_filtered += 1
 
     log('loaded {} breakpoint pairs'.format(len(breakpoint_pairs)))
+    log('stranded_bam', args.stranded_bam)
     log('filtered', mask_filtered, 'breakpoint pairs based on overlap with a masked region')
 
     # load the reference annotations for filtering uninformative clusters

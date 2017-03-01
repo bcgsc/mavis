@@ -518,7 +518,6 @@ class Evidence(BreakpointPair):
                 pass
         if sum(strand_calls.values()) == 0:
             raise ValueError('Could not determine strand. Insufficient mapped reads')
-        print(strand_calls)
         if strand_calls[STRAND.POS] == 0:
             return STRAND.NEG
         elif strand_calls[STRAND.NEG] == 0:
@@ -530,7 +529,7 @@ class Evidence(BreakpointPair):
                 return STRAND.POS
             elif nratio >= self.assembly_strand_concordance:
                 return STRAND.NEG
-            raise ValueError('Could not determine the strand. Equivocal POS/(NEG + POS) ratio', ratio)
+            raise ValueError('Could not determine the strand. Equivocal POS/(NEG + POS) ratio', ratio, strand_calls)
 
     def assemble_contig(self, log=lambda *x: None):
         """

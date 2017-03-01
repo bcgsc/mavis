@@ -272,4 +272,4 @@ generally giving it a single chromosome will be enough reads but it can be given
 required. This script calculates the median insert size and then the standard deviation (wrt to the median not mean)
 from all or a portion of the distribution of insert sizes
 
-.. |TOOLNAME| replace:: **MARVIN**
+.. |TOOLNAME| replace:: **MAVIS**

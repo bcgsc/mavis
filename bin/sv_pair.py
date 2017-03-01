@@ -32,17 +32,9 @@ from structural_variant.pairing import equivalent_events
 from structural_variant import __version__
 from Bio import SeqIO
 import TSV
-from structural_variant.constants import PROTOCOL, SVTYPE, COLUMNS, SPLICE_TYPE, CALL_METHOD
-from datetime import datetime
+from structural_variant.constants import PROTOCOL, SVTYPE, COLUMNS, SPLICE_TYPE, CALL_METHOD, log
 import networkx as nx
 import itertools
-
-
-def log(*pos, time_stamp=True):
-    if time_stamp:
-        print('[{}]'.format(datetime.now()), *pos)
-    else:
-        print(' ' * 28, *pos)
 
 
 def parse_arguments():
@@ -211,8 +203,6 @@ def main():
                 p = all_bpp[node]
                 temp = '{}_{}'.format(p.data[COLUMNS.library], p.data[COLUMNS.protocol])
                 paired_to.add(temp)
-
-
 
 
 if __name__ == '__main__':

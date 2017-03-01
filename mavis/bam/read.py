@@ -154,28 +154,21 @@ def sequenced_strand(read, strand_determining_read=2):
         if the input pair is unstranded the information will not be representative of the
         strand sequenced since the assumed convention is not followed
     """
-    print('strand_determining_read', strand_determining_read)
-    print('is_read1', read.is_read1, 'is_read2', read.is_read2, 'is_reverse', read.is_reverse)
     if read.is_unmapped or not read.is_paired:
         raise ValueError('cannot determine strand if the read is unmapped or unpaired')
     strand = None
     if strand_determining_read == 1:
         if read.is_read1:
-            print('keep')
             strand = STRAND.NEG if read.is_reverse else STRAND.POS
         else:
-            print('flip')
             strand = STRAND.NEG if not read.is_reverse else STRAND.POS
     elif strand_determining_read == 2:
         if read.is_read2:
-            print('keep')
             strand = STRAND.NEG if read.is_reverse else STRAND.POS
         else:
-            print('flip')
             strand = STRAND.NEG if not read.is_reverse else STRAND.POS
     else:
         raise ValueError('unexpected value. Expected 1 or 2, found:', strand_determining_read)
-    print('strand', strand)
     return strand
 
 
