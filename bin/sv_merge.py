@@ -168,7 +168,7 @@ def main(args):
                 COLUMNS.protocol: args.protocol,
                 COLUMNS.library: args.library
             },
-            force_stranded=True if args.stranded else False
+            force_stranded=True if args.stranded_bam else False
         )
         for bpp in bpps:
             bpp.data[COLUMNS.tools] = set(';'.split(bpp.data[COLUMNS.tools]))

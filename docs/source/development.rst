@@ -89,7 +89,7 @@ API Documentation
    structural_variant.rst
 
 
-TODO
+Development Goals
 -------------------------------
 
 Features to be implemented

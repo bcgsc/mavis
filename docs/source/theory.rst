@@ -221,8 +221,10 @@ Assembling Contigs
 ......................
 
 During validation, for each breakpoint pair, we attempt to assemble a contig to represent the sequence across
-the breakpoints. This is assembled from the :term:`split reads` and mates of :term:`half-mapped` reads that have been
-collected. The assembly uses a :term:`DeBruijn graph`.
+the breakpoints. This is assembled from the supporting reads (:term:`split reads`, :term:`half-mapped reads`,
+:term:`flanking pairs`, and :term:`spanning reads`) which have already been collected for the given
+event. The sequence from each read and its reverse complement are assembled into contigs using a :term:`DeBruijn graph`.
+For strand specific events, we then attempt to resolve the sequence strand of the contig.
 
 Breakpoints can be called by multiple different :attr:`~structural_variant.constants.CALL_METHOD`.
 

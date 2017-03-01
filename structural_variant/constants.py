@@ -406,10 +406,10 @@ COLUMNS = Vocab(
         :class:`SPLICE_TYPE` - Type of splicing pattern used to create the fusion cDNA.
 
     fusion_cdna_coding_start
-        Position wrt the 5\ end of the fusion transcript where coding begins first base of the Met amino acid.
+        Position wrt the 5' end of the fusion transcript where coding begins first base of the Met amino acid.
 
     fusion_cdna_coding_end
-        Position wrt the 5\ end of the fusion transcript where coding ends last base of the stop codon
+        Position wrt the 5' end of the fusion transcript where coding ends last base of the stop codon
 
     fusion_mapped_domains
         ``JSON`` - List of domains in json format where each domain start and end positions are given wrt to the fusion

@@ -1,7 +1,7 @@
 from structural_variant.constants import *
 from structural_variant.bam import read as read_tools
 from structural_variant.bam import cigar as cigar_tools
-from structural_variant.bam.read import read_pair_strand, read_pair_type, breakpoint_pos, orientation_supports_type
+from structural_variant.bam.read import sequenced_strand, read_pair_type, breakpoint_pos, orientation_supports_type
 from structural_variant.bam.cache import BamCache
 from structural_variant.annotate import load_reference_genome
 import unittest
@@ -303,32 +303,34 @@ class TestReadPairStrand(unittest.TestCase):
         self.unpaired_neg = MockRead(is_reverse=True, is_paired=False)
 
     def test_read_pair_strand_det_read1(self):
-        self.assertEqual(STRAND.POS, read_pair_strand(self.read1_pos_neg, strand_determining_read=1))
-        self.assertEqual(STRAND.NEG, read_pair_strand(self.read2_pos_neg, strand_determining_read=1))
-        self.assertEqual(STRAND.NEG, read_pair_strand(self.read1_neg_pos, strand_determining_read=1))
-        self.assertEqual(STRAND.POS, read_pair_strand(self.read2_neg_pos, strand_determining_read=1))
-        self.assertEqual(STRAND.POS, read_pair_strand(self.read1_pos_pos, strand_determining_read=1))
-        self.assertEqual(STRAND.POS, read_pair_strand(self.read2_pos_pos, strand_determining_read=1))
-        self.assertEqual(STRAND.NEG, read_pair_strand(self.read1_neg_neg, strand_determining_read=1))
-        self.assertEqual(STRAND.NEG, read_pair_strand(self.read2_neg_neg, strand_determining_read=1))
+        self.assertEqual(STRAND.POS, sequenced_strand(self.read1_pos_neg, strand_determining_read=1))
+        self.assertEqual(STRAND.POS, sequenced_strand(self.read2_pos_neg, strand_determining_read=1))
+        self.assertEqual(STRAND.NEG, sequenced_strand(self.read1_neg_pos, strand_determining_read=1))
+        self.assertEqual(STRAND.NEG, sequenced_strand(self.read2_neg_pos, strand_determining_read=1))
+        self.assertEqual(STRAND.POS, sequenced_strand(self.read1_pos_pos, strand_determining_read=1))
+        self.assertEqual(STRAND.POS, sequenced_strand(self.read2_pos_pos, strand_determining_read=1))
+        self.assertEqual(STRAND.NEG, sequenced_strand(self.read1_neg_neg, strand_determining_read=1))
+        self.assertEqual(STRAND.NEG, sequenced_strand(self.read2_neg_neg, strand_determining_read=1))
 
     def test_read_pair_strand_det_read2(self):
-        self.assertEqual(STRAND.NEG, read_pair_strand(self.read1_pos_neg, strand_determining_read=2))
-        self.assertEqual(STRAND.POS, read_pair_strand(self.read2_pos_neg, strand_determining_read=2))
-        self.assertEqual(STRAND.POS, read_pair_strand(self.read1_neg_pos, strand_determining_read=2))
-        self.assertEqual(STRAND.NEG, read_pair_strand(self.read2_neg_pos, strand_determining_read=2))
-        self.assertEqual(STRAND.POS, read_pair_strand(self.read1_pos_pos, strand_determining_read=2))
-        self.assertEqual(STRAND.POS, read_pair_strand(self.read2_pos_pos, strand_determining_read=2))
-        self.assertEqual(STRAND.NEG, read_pair_strand(self.read1_neg_neg, strand_determining_read=2))
-        self.assertEqual(STRAND.NEG, read_pair_strand(self.read2_neg_neg, strand_determining_read=2))
+        self.assertEqual(STRAND.NEG, sequenced_strand(self.read1_pos_neg, strand_determining_read=2))
+        self.assertEqual(STRAND.POS, sequenced_strand(self.read2_pos_neg, strand_determining_read=2))
+        self.assertEqual(STRAND.POS, sequenced_strand(self.read1_neg_pos, strand_determining_read=2))
+        self.assertEqual(STRAND.NEG, sequenced_strand(self.read2_neg_pos, strand_determining_read=2))
+        self.assertEqual(STRAND.POS, sequenced_strand(self.read1_pos_pos, strand_determining_read=2))
+        self.assertEqual(STRAND.POS, sequenced_strand(self.read2_pos_pos, strand_determining_read=2))
+        self.assertEqual(STRAND.NEG, sequenced_strand(self.read1_neg_neg, strand_determining_read=2))
+        self.assertEqual(STRAND.NEG, sequenced_strand(self.read2_neg_neg, strand_determining_read=2))
 
     def test_read_pair_strand_unpaired(self):
-        self.assertEqual(STRAND.POS, read_pair_strand(self.unpaired_pos))
-        self.assertEqual(STRAND.NEG, read_pair_strand(self.unpaired_neg))
+        with self.assertRaises(ValueError):
+            sequenced_strand(self.unpaired_pos)
+        with self.assertRaises(ValueError):
+            sequenced_strand(self.unpaired_neg)
 
     def test_read_pair_strand_det_error(self):
         with self.assertRaises(ValueError):
-            read_pair_strand(self.read1_pos_neg, strand_determining_read=3)
+            sequenced_strand(self.read1_pos_neg, strand_determining_read=3)
 
 
 class TestReadPairType(unittest.TestCase):

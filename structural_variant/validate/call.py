@@ -1,5 +1,5 @@
 from ..breakpoint import BreakpointPair, Breakpoint
-from ..constants import CALL_METHOD, SVTYPE, PYSAM_READ_FLAGS, ORIENT, PROTOCOL, COLUMNS
+from ..constants import CALL_METHOD, SVTYPE, PYSAM_READ_FLAGS, ORIENT, PROTOCOL, COLUMNS, STRAND
 from ..bam import read as read_tools
 from ..interval import Interval
 from ..error import NotSpecifiedError
@@ -86,7 +86,7 @@ class EventCall(BreakpointPair):
             * :class:`int` - the standard deviation (from the median) of the insert size
         """
         support = set()
-        
+
         fragment_sizes = []
 
         min_frag = max([
@@ -233,8 +233,9 @@ class EventCall(BreakpointPair):
             ascore = r1.get_tag('br')
             if r2:
                 ascore = int(round((r1.get_tag('br') + r2.get_tag('br')) / 2, 0))
+            cseq = self.contig_alignment[0].query_sequence
             row.update({
-                COLUMNS.contig_seq: self.contig.seq,
+                COLUMNS.contig_seq: cseq,  # don't output sequence directly from contig b/c must always be wrt to the positive strand
                 COLUMNS.contig_remap_score: self.contig.remap_score(),
                 COLUMNS.contig_alignment_score: ascore,
                 COLUMNS.contig_remapped_reads: len(self.contig.input_reads),
@@ -288,6 +289,10 @@ def call_events(source_evidence):
                     bpp.break2.strand != source_evidence.break2.strand
                 ]):
                     continue
+            else:
+                bpp.stranded = False
+                bpp.break1.strand = STRAND.NS
+                bpp.break2.strand = STRAND.NS
 
             for event_type in putative_event_types:
                 if event_type == SVTYPE.INS:

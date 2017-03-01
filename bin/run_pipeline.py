@@ -205,8 +205,9 @@ def main():
         ann = merge_args['annotations']
         merge_args['annotations'] = READ_FILES.get(ann, ann)
         merge_args = Namespace(**merge_args)
+        print('merge_args', merge_args)
         output_files = sv_merge.main(merge_args)
-        READ_FILES[ann] = getattr(merge_args, 'annotations') 
+        READ_FILES[ann] = getattr(merge_args, 'annotations')
         merge_file_prefix = None
         for f in output_files:
             m = re.match('^(?P<prefix>.*\D)\d+.tab$', f)

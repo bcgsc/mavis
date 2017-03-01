@@ -40,9 +40,16 @@ class Breakpoint(Interval):
         self.seq = seq
 
     def __repr__(self):
-        temp = '{0}:{1}{2}{3}{4}'.format(
-            self.chr, self.start, '-' + str(self.end) if self.end != self.start else '', self.orient, self.strand)
-        return 'Breakpoint(' + temp + ')'
+        strand = '' if self.strand == STRAND.NS else self.strand
+        orient = '' if self.orient == ORIENT.NS else self.orient
+
+        return 'Breakpoint({0}:{1}{2}{3}{4})'.format(
+            self.chr,
+            self.start,
+            '-' + str(self.end) if self.end != self.start else '',
+            orient,
+            strand
+        )
 
     def __eq__(self, other):
         if not hasattr(other, 'key'):
@@ -157,11 +164,11 @@ class BreakpointPair:
         BreakpointPair.classify(self)
 
     def __str__(self):
-        return 'BPP<{}==>{}; opposing={} seq={}>'.format(
+        return 'BPP({}, {}{}{})'.format(
             str(self.break1),
             str(self.break2),
-            self.opposing_strands,
-            repr(self.untemplated_seq)
+            ', opposing={}'.format(self.opposing_strands) if not self.stranded else '',
+            ', seq=' + repr(self.untemplated_seq) if self.untemplated_seq is not None else ''
         )
 
     def flatten(self):
@@ -332,7 +339,7 @@ class BreakpointPair:
             else:   # after the event
                 seq_second_start = seq_pos
                 break
-        
+
         break1 = Breakpoint(
             read.reference_name,
             first_breakpoint + 1,  # 1-based coordinates
@@ -704,4 +711,8 @@ def read_bpp_from_input_file(filename, expand_ns=True, force_stranded=False, **k
             raise InvalidRearrangement('could not produce a valid rearrangement')
         else:
             pairs.extend(temp)
+    for pair in pairs:
+        if not pair.stranded:
+            pair.break1.strand = STRAND.NS
+            pair.break2.strand = STRAND.NS
     return pairs

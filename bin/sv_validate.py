@@ -230,6 +230,7 @@ def main():
 
     SAMTOOLS_VERSION = get_samtools_version()
     log('samtools version parsed: v{}.{}.{}'.format(*SAMTOOLS_VERSION))
+    log('blat version parsed:', get_blat_version())
 
     log('loading the masking regions:', args.masking)
     MASKED_REGIONS = load_masking_regions(args.masking)
@@ -355,7 +356,7 @@ def main():
     event_calls = []
     passes = 0
     with open(EVIDENCE_BED, 'w') as fh:
-        for e in evidence:
+        for index, e in enumerate(evidence):
             fh.write('{}\t{}\t{}\touter-{}\n'.format(
                 e.break1.chr, e.outer_window1.start, e.outer_window1.end, e.data[COLUMNS.cluster_id]))
             fh.write('{}\t{}\t{}\touter-{}\n'.format(
@@ -365,7 +366,8 @@ def main():
             fh.write('{}\t{}\t{}\tinner-{}\n'.format(
                 e.break2.chr, e.inner_window2.start, e.inner_window2.end, e.data[COLUMNS.cluster_id]))
             print()
-            log('calling events for:', e.data[COLUMNS.cluster_id], e.putative_event_types())
+            log('({} of {}) calling events for:'.format
+                (index + 1, len(evidence)), e.data[COLUMNS.cluster_id], e.putative_event_types())
             log('source:', e, time_stamp=False)
             calls = []
             failure_comment = None

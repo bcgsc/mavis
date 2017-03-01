@@ -193,7 +193,7 @@ class Evidence(BreakpointPair):
             return False
 
         if self.bam_cache.stranded and self.stranded:
-            strand = read_tools.read_pair_strand(read, self.strand_determining_read)
+            strand = read_tools.sequenced_strand(read, self.strand_determining_read)
             if strand != self.break1.strand and strand != self.break2.strand:
                 return False
 
@@ -228,7 +228,7 @@ class Evidence(BreakpointPair):
             return False
         elif read.mapping_quality < self.min_mapping_quality or mate.mapping_quality < self.min_mapping_quality:
             return False
-        
+
         read = self.standardize_read(read)
         mate = self.standardize_read(mate)
         # order the read pairs so that they are in the same order that we expect for the breakpoints
@@ -237,14 +237,14 @@ class Evidence(BreakpointPair):
 
         if self.bam_cache.chr(read) != self.break1.chr or self.bam_cache.chr(mate) != self.break2.chr:
             return False
-        
+
         # check if this read falls in the first breakpoint window
         iread = Interval(read.reference_start + 1, read.reference_end)
         imate = Interval(mate.reference_start + 1, mate.reference_end)
 
         if self.bam_cache.stranded and self.stranded:
-            strand1 = read_tools.read_pair_strand(read, self.strand_determining_read)
-            strand2 = read_tools.read_pair_strand(mate, self.strand_determining_read)
+            strand1 = read_tools.sequenced_strand(read, self.strand_determining_read)
+            strand2 = read_tools.sequenced_strand(mate, self.strand_determining_read)
             if strand1 != self.break1.strand or strand2 != self.break2.strand:
                 return False
 
@@ -295,7 +295,7 @@ class Evidence(BreakpointPair):
                 return False
         elif read.reference_id != read.next_reference_id:
             return False
-        
+
         read = self.standardize_read(read)
         mate = self.standardize_read(mate)
         # order the read pairs so that they are in the same order that we expect for the breakpoints
@@ -319,9 +319,9 @@ class Evidence(BreakpointPair):
         imate = Interval(mate.reference_start + 1, mate.reference_end)
 
         if self.bam_cache.stranded and self.stranded:
-            strand1 = read_tools.read_pair_strand(read, self.strand_determining_read)
-            strand2 = read_tools.read_pair_strand(mate, self.strand_determining_read)
-            
+            strand1 = read_tools.sequenced_strand(read, self.strand_determining_read)
+            strand2 = read_tools.sequenced_strand(mate, self.strand_determining_read)
+
             if strand1 != self.break1.strand or strand2 != self.break2.strand:
                 return False
 
@@ -382,7 +382,7 @@ class Evidence(BreakpointPair):
             return False  # read not in breakpoint evidence window
         # can only enforce strand if both the breakpoint and the bam are stranded
         if self.stranded and self.bam_cache.stranded:
-            strand = read_tools.read_pair_strand(read, strand_determining_read=self.strand_determining_read)
+            strand = read_tools.sequenced_strand(read, strand_determining_read=self.strand_determining_read)
             if strand != breakpoint.strand:
                 return False  # split read not on the appropriate strand
         unused = ''
@@ -504,7 +504,7 @@ class Evidence(BreakpointPair):
             clipped = scores[0][2]
             self.split_reads[1 if first_breakpoint else 0].add(clipped)  # add to the opposite breakpoint
         return True
-    
+
     def decide_sequenced_strand(self, reads):
         if len(reads) == 0:
             raise ValueError('cannot determine the strand of a set of reads if the set is empty')
@@ -512,7 +512,7 @@ class Evidence(BreakpointPair):
         strand_calls = {STRAND.POS: 0, STRAND.NEG: 0}
         for read in reads:
             try:
-                strand = read_tools.read_pair_strand(read, self.strand_determining_read)
+                strand = read_tools.sequenced_strand(read, self.strand_determining_read)
                 strand_calls[strand] = strand_calls.get(strand, 0) + 1
             except ValueError as err:
                 pass
@@ -586,7 +586,7 @@ class Evidence(BreakpointPair):
             assembly_max_kmer_size=self.assembly_max_kmer_size,
             assembly_max_kmer_strict=self.assembly_max_kmer_strict
         )
-        
+
         # add the input reads
         for ctg in contigs:
             for read_seq in ctg.remapped_sequences:
@@ -615,7 +615,7 @@ class Evidence(BreakpointPair):
                     raise AssertionError('mixed population should not be possible for the build strand', build_strand)
                 try:
                     strand = self.decide_sequenced_strand(contig.input_reads)
-                    if strand != det_build_strand: 
+                    if strand != det_build_strand:
                         contig.seq = reverse_complement(contig.seq)
                     contig.strand_specific = True
                 except ValueError as err:
