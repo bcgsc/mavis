@@ -615,9 +615,9 @@ class Evidence(BreakpointPair):
                     raise AssertionError('mixed population should not be possible for the build strand', build_strand)
                 try:
                     strand = self.decide_sequenced_strand(contig.input_reads)
-                    print('build_strand', build_strand)
                     if strand != det_build_strand: 
                         contig.seq = reverse_complement(contig.seq)
+                    contig.strand_specific = True
                 except ValueError as err:
                     pass
 

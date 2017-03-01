@@ -239,7 +239,8 @@ class EventCall(BreakpointPair):
                 COLUMNS.contig_alignment_score: ascore,
                 COLUMNS.contig_remapped_reads: len(self.contig.input_reads),
                 COLUMNS.contig_remapped_read_names:
-                    ';'.join(sorted(set([r.query_name for r in self.contig.input_reads])))
+                    ';'.join(sorted(set([r.query_name for r in self.contig.input_reads]))),
+                COLUMNS.contig_strand_specific: self.contig.strand_specific
             })
         return row
 
@@ -268,8 +269,6 @@ def call_events(source_evidence):
     # try calling by contigs
     for ctg in source_evidence.contigs:
         for read1, read2 in ctg.alignments:
-            print('alignment', ctg.seq)
-            print(read1.reference_id, read1.reference_start, read2.reference_id, read2.reference_start)
             curr = []
             try:
                 bpp = BreakpointPair.call_breakpoint_pair(read1, read2)
@@ -288,7 +287,6 @@ def call_events(source_evidence):
                     bpp.break1.strand != source_evidence.break1.strand,
                     bpp.break2.strand != source_evidence.break2.strand
                 ]):
-                    print('failed strand check', bpp)
                     continue
 
             for event_type in putative_event_types:

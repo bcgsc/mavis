@@ -334,6 +334,7 @@ COLUMNS = Vocab(
     contig_seq='contig_seq',
     contigs_aligned='contigs_aligned',
     contigs_assembled='contigs_assembled',
+    contig_strand_specific='contig_strand_specific',
     flanking_median_fragment_size='flanking_median_fragment_size',
     flanking_pairs='flanking_pairs',
     flanking_pairs_compatible='flanking_pairs_compatible',
@@ -519,6 +520,9 @@ COLUMNS = Vocab(
         :class:`float` - A rank based on the alignment tool blat etc. of the alignment being used. An average if
         split alignments were used. Lower numbers indicate a better alignment. If it was the best alignment possible
         then this would be zero.
+
+    contig_strand_specific
+        :class:`bool` - A flag to indicate if it was possible to resolve the strand for this contig
 
     break1_call_method
         :class:`CALL_METHOD` - The method used to call the first breakpoint
