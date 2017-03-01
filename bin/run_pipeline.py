@@ -17,8 +17,8 @@ import TSV
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from mavis.constants import PROTOCOL, log
-import sv_merge
-import sv_validate
+import mavis_cluster
+import mavis_validate
 from mavis.validate.constants import VALIDATION_DEFAULTS
 
 
@@ -188,17 +188,17 @@ def main():
         merge_args = {
             'output': cluster_output,
             'max_proximity': sec.max_proximity,
-            'cluster_radius': sv_merge.CLUSTER_RADIUS,
-            'cluster_clique_size': sv_merge.CLUSTER_CLIQUE_SIZE,
-            'max_files': sv_merge.MAX_FILES,
-            'min_clusters_per_file': sv_merge.MIN_CLUSTERS_PER_FILE,
+            'cluster_radius': mavis_cluster.CLUSTER_RADIUS,
+            'cluster_clique_size': mavis_cluster.CLUSTER_CLIQUE_SIZE,
+            'max_files': mavis_cluster.MAX_FILES,
+            'min_clusters_per_file': mavis_cluster.MIN_CLUSTERS_PER_FILE,
             'uninformative_filter': True
         }
         merge_args.update(sec.__dict__)
         ann = merge_args['annotations']
         merge_args['annotations'] = READ_FILES.get(ann, ann)
         merge_args = Namespace(**merge_args)
-        output_files = sv_merge.main(merge_args)
+        output_files = mavis_cluster.main(merge_args)
         READ_FILES[ann] = getattr(merge_args, 'annotations')
         merge_file_prefix = None
         for f in output_files:
@@ -226,7 +226,7 @@ def main():
             'force_overwrite': args.force_overwrite,
             'stranded_bam': sec.stranded_bam
         }
-        for attr in VALIDATION_DEFAULTS.__dict__:
+        for attr in sorted(VALIDATION_DEFAULTS.__dict__.keys()):
             validation_args[attr] = getattr(sec, attr)
 
         qsub = os.path.join(validation_output, 'qsub.sh')
@@ -242,7 +242,7 @@ def main():
             temp.extend(['--{} "{}"'.format(k, v) for k, v in validation_args.items() if isinstance(v, str) and v is not None])
             validation_args = temp
             validation_args.append('-n {}$SGE_TASK_ID.tab'.format(merge_file_prefix))
-            fh.write('python {}/sv_validate.py {}\n'.format(basedir, ' \\\n\t'.join(validation_args)))
+            fh.write('python {}/mavis_validate.py {}\n'.format(basedir, ' \\\n\t'.join(validation_args)))
 
         # set up the annotations job
         # for all files with the right suffix
@@ -260,7 +260,7 @@ def main():
         temp = ['--{} {}'.format(k, v) for k, v in annotation_args.items() if not isinstance(v, str) and v is not None]
         temp.extend(['--{} "{}"'.format(k, v) for k, v in annotation_args.items() if isinstance(v, str) and v is not None])
         annotation_args = temp
-        annotation_args.append('--input {}/*{}'.format(validation_output, sv_validate.PASS_SUFFIX))
+        annotation_args.append('--input {}/*{}'.format(validation_output, mavis_validate.PASS_SUFFIX))
         qsub = os.path.join(annotation_output, 'qsub.sh')
         annotation_jobname = 'annotation_{}_{}'.format(sec.library, sec.protocol)
         annotation_jobs.append(annotation_jobname)
@@ -271,7 +271,7 @@ def main():
                     queue=sec.queue, memory=sec.memory, name=annotation_jobname, output=annotation_output
                 ) + '\n')
             fh.write('#$ -hold_jid {}\n'.format(validation_jobname))
-            fh.write('python {}/sv_annotate.py {}\n'.format(basedir, ' \\\n\t'.join(annotation_args)))
+            fh.write('python {}/mavis_annotate.py {}\n'.format(basedir, ' \\\n\t'.join(annotation_args)))
 
     # set up scripts for the pairing held on all of the annotation jobs
     pairing_output = mkdirp(os.path.join(base, 'pairing'))

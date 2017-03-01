@@ -49,14 +49,10 @@ from mavis.bam.cache import BamCache
 from mavis.blat import blat_contigs
 from mavis.interval import Interval
 from mavis.annotate import load_masking_regions, load_reference_genome, load_reference_genes
-from datetime import datetime
 from mavis.constants import build_batch_id, log
 import pysam
+import TSV
 
-try:
-    from configparser import ConfigParser
-except ImportError:
-    from ConfigParser import ConfigParser
 
 __prog__ = os.path.basename(os.path.realpath(__file__))
 
@@ -101,14 +97,21 @@ def get_blat_version():
             return m.group(1)
     raise ValueError('unable to parse blat version number')
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    g = parser.add_argument_group('evidence settings')
+    for attr, value in VALIDATION_DEFAULTS.__dict__.items():
+        vtype = type(value)
+        if type(value) == bool:
+            vtype = TSV.tsv_boolean
+        g.add_argument('--{}'.format(attr), default=value, type=vtype, help='see user manual for desc')
     parser.add_argument(
         '-v', '--version', action='version', version='%(prog)s version ' + __version__,
         help='Outputs the version number'
     )
     parser.add_argument(
-        '-f', '--force_overwrite', type=bool, default=False,
+        '-f', '--force_overwrite', type=TSV.tsv_boolean, default=False,
         help='set flag to overwrite existing reviewed files'
     )
     parser.add_argument(
@@ -124,7 +127,7 @@ def parse_arguments():
         help='path to the input bam file', required=True
     )
     parser.add_argument(
-        '--stranded_bam', default=False, type=bool,
+        '--stranded_bam', default=False, type=TSV.tsv_boolean,
         help='indicates that the input bam file is strand specific'
     )
     parser.add_argument(
@@ -151,9 +154,6 @@ def parse_arguments():
         '--blat_2bit_reference', default='/home/pubseq/genomes/Homo_sapiens/GRCh37/blat/hg19.2bit',
         help='path to the 2bit reference file used for blatting contig sequences'
     )
-    g = parser.add_argument_group('evidence settings')
-    for attr, value in VALIDATION_DEFAULTS.__dict__.items():
-        g.add_argument('--{}'.format(attr), default=value, type=type(value), help='see user manual for desc')
     g.add_argument('--read_length', type=int, help='the length of the reads in the bam file', required=True)
     g.add_argument('--stdev_fragment_size', type=int, help='expected standard deviation in insert sizes', required=True)
     g.add_argument('--median_fragment_size', type=int, help='median inset size for pairs in the bam file', required=True)
@@ -201,7 +201,7 @@ def gather_evidence_from_bam(clusters):
 
 
 def main():
-    global INPUT_BAM_CACHE, REFERENCE_ANNOTATIONS, MASKED_REGIONS, HUMAN_REFERENCE_GENOME, EVIDENCE_SETTINGS
+    global INPUT_BAM_CACHE
     """
     - read the evidence
     - assemble contigs from the split reads

@@ -36,20 +36,19 @@ class DeBruijnGraph(nx.DiGraph):
     wrapper for a basic digraph
     enforces edge weights
     """
-
-    def __init__(self, *pos, **kwargs):
-        nx.DiGraph.__init__(self, *pos, **kwargs)
-        self.edge_freq = {}
+    def get_edge_freq(self, n1, n2):
+        if not self.has_edge(n1, n2):
+            raise KeyError('missing edge', n1, n2)
+        data = self.get_edge_data(n1, n2)
+        return data['freq']
 
     def add_edge(self, n1, n2, freq=1):
-        self.edge_freq[(n1, n2)] = self.edge_freq.get((n1, n2), 0) + freq
-        nx.DiGraph.add_edge(self, n1, n2)
+        if self.has_edge(n1, n2):
+            data = self.get_edge_data(n1, n2)
+            freq += data['freq']
+        nx.DiGraph.add_edge(self, n1, n2, freq=freq)
 
-    def remove_edge(self, n1, n2):
-        del self.edge_freq[(n1, n2)]
-        nx.DiGraph.remove_edge(self, n1, n2)
-
-    def trim_low_weight_tails(self, min_weight):
+    def trim_tails_by_freq(self, min_weight):
         """
         for any paths where all edges are lower than the minimum weight trim
 
@@ -63,15 +62,15 @@ class DeBruijnGraph(nx.DiGraph):
             curr = n
             while self.degree(curr) == 1:
                 if self.out_degree(curr) == 1:
-                    curr, other = self.out_edges(curr)[0]
-                    if self.edge_freq[(curr, other)] < min_weight:
+                    curr, other, data = self.out_edges(curr, data=True)[0]
+                    if data['freq'] < min_weight:
                         self.remove_node(curr)
                         curr = other
                     else:
                         break
                 elif self.in_degree(curr) == 1:
-                    other, curr = self.in_edges(curr)[0]
-                    if self.edge_freq[(other, curr)] < min_weight:
+                    other, curr, data = self.in_edges(curr, data=True)[0]
+                    if data['freq'] < min_weight:
                         self.remove_node(curr)
                         curr = other
                     else:
@@ -83,6 +82,20 @@ class DeBruijnGraph(nx.DiGraph):
                 continue
             if self.degree(n) == 0:
                 self.remove_node(n)
+
+    def trim_noncutting_edges_by_freq(self, min_weight):
+        """
+        trim any low weight edges where another path exists between the source and target
+        of higher weight
+        """
+        current_edges = list(self.edges(data=True))
+        for src, tgt, data in sorted(current_edges, key=lambda x: (x[2]['freq'], x[0], x[1])):
+            try:
+                self.remove_edge(src, tgt)
+                if not nx.has_path(self, src, tgt):  # guaranteed to be higher or equal weight
+                    self.add_edge(src, tgt, **data)
+            except KeyError:
+                pass
 
 
 def digraph_connected_components(graph):
@@ -164,11 +177,10 @@ def assemble(
     if not nx.is_directed_acyclic_graph(assembly):
         NotImplementedError('assembly not supported for cyclic graphs')
 
-    for s, t in sorted(assembly.edges()):
-        f = assembly.edge_freq[(s, t)]
     # now just work with connected components
+    assembly.trim_noncutting_edges_by_freq(assembly_min_edge_weight)
     # trim all paths from sources or to sinks where the edge weight is low
-    assembly.trim_low_weight_tails(assembly_min_edge_weight)
+    assembly.trim_tails_by_freq(assembly_min_edge_weight)
     path_scores = {}  # path_str => score_int
 
     for component in digraph_connected_components(assembly):
@@ -208,23 +220,32 @@ def assemble(
                 s = path[0] + ''.join([p[-1] for p in path[1:]])
                 score = 0
                 for i in range(0, len(path) - 1):
-                    score += assembly.edge_freq[(path[i], path[i + 1])]
+                    score += assembly.get_edge_freq(path[i], path[i + 1])
                 path_scores[s] = max(path_scores.get(s, 0), score)
     # now map the contigs to the possible input sequences
     contigs = {}
     for seq, score in list(path_scores.items()):
         if seq not in sequences and len(seq) >= assembly_min_contig_length:
             contigs[seq] = Contig(seq, score)
-    log('remapping reads to {} contigs'.format(len(contigs.keys())))
 
     contig_exact = {}
     for contig in contigs:
         contig_exact[contig] = set(kmers(contig, assembly_min_consec_match_remap))
     # remap the input reads
+    filtered_contigs = {}
+    for seq, contig in sorted(contigs.items()):
+        rseq = reverse_complement(seq)
+        if seq not in filtered_contigs and rseq not in filtered_contigs:
+            filtered_contigs[seq] = contig
+    
+    contigs = list(filtered_contigs.values())
+
+    log('remapping reads to {} contigs'.format(len(contigs)))
+
     for input_seq in sequences:
         maps_to = {}  # contig, score
         exact_match_kmers = set(kmers(input_seq, assembly_min_consec_match_remap))
-        for contig in contigs.values():
+        for contig in contigs:
             if len(exact_match_kmers & contig_exact[contig.seq]) == 0:
                 continue
             a = nsb_align(
@@ -241,7 +262,7 @@ def assemble(
         for contig, read in maps_to.items():
             contig.add_mapped_sequence(read, len(maps_to.keys()))
     log('assemblies complete')
-    return list(contigs.values())
+    return contigs
 
 
 def kmers(s, size):

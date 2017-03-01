@@ -32,7 +32,7 @@ class TestModule(unittest.TestCase):
 
 class TestDeBruijnGraph(unittest.TestCase):
 
-    def test_trim_low_weight_tails_forks(self):
+    def test_trim_tails_by_freq_forks(self):
         G = DeBruijnGraph()
         for s, t in itertools.combinations([1, 2, 3, 4, 5, 6], 2):
             G.add_edge(s, t)
@@ -40,7 +40,7 @@ class TestDeBruijnGraph(unittest.TestCase):
         G.add_edge(7, 6)
         G.add_edge(8, 7)
         G.add_edge(9, 8)
-        G.trim_low_weight_tails(2)
+        G.trim_tails_by_freq(2)
         self.assertEqual([1, 2, 3, 4, 5, 6], sorted(G.nodes()))
 
         G = DeBruijnGraph()
@@ -51,7 +51,7 @@ class TestDeBruijnGraph(unittest.TestCase):
         G.add_edge(7, 8)
         G.add_edge(8, 7)
         G.add_edge(9, 8)
-        G.trim_low_weight_tails(2)
+        G.trim_tails_by_freq(2)
         self.assertEqual([1, 2, 3, 4, 5, 6, 7, 8], sorted(G.nodes()))
 
         G = DeBruijnGraph()
@@ -61,14 +61,14 @@ class TestDeBruijnGraph(unittest.TestCase):
         G.add_edge(7, 6)
         G.add_edge(7, 8)
         G.add_edge(9, 8)
-        G.trim_low_weight_tails(2)
+        G.trim_tails_by_freq(2)
         self.assertEqual([1, 2, 3, 4, 5, 6], sorted(G.nodes()))
 
     def test_add_edge(self):
         G = DeBruijnGraph()
         G.add_edge(1, 2)
-        self.assertEqual(1, G.edge_freq[(1, 2)])
+        self.assertEqual(1, G.get_edge_freq(1, 2))
         G.add_edge(1, 2)
-        self.assertEqual(2, G.edge_freq[(1, 2)])
+        self.assertEqual(2, G.get_edge_freq(1, 2))
         G.add_edge(1, 2, 5)
-        self.assertEqual(7, G.edge_freq[(1, 2)])
+        self.assertEqual(7, G.get_edge_freq(1, 2))

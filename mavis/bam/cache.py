@@ -1,5 +1,6 @@
 import pysam
 import warnings
+import atexit
 
 
 class BamCache:
@@ -17,6 +18,7 @@ class BamCache:
         self.fh = bamfile
         if not hasattr(bamfile, 'fetch'):
             self.fh = pysam.AlignmentFile(bamfile, 'rb')
+        atexit.register(self.close)
 
     def add_read(self, read):
         """
@@ -115,9 +117,6 @@ class BamCache:
         """
         # NOTE: will return all mate alignments that have been cached
         putative_mates = self.cache.get(read.query_name, set())
-        # if SUFFIX_DELIM in read.query_name:
-        #     prefix, temp = read.query_name.split(SUFFIX_DELIM, 1)
-        #     putative_mates.update(self.cache.get(temp, set()))
         mates = []
         for mate in putative_mates:
             if not mate.is_unmapped:
@@ -142,7 +141,7 @@ class BamCache:
                 self.add_read(m)
                 return [m]
         return mates
-
+    
     def close(self):
         """
         close the bam file handle

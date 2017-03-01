@@ -67,10 +67,7 @@ def parse_arguments():
         help='Outputs the version number'
     )
     parser.add_argument(
-        '-f', '--force_overwrite', default=False, type=bool,
-        help='set flag to overwrite existing reviewed files')
-    parser.add_argument(
-        '--no_draw', default=True, action='store_false',
+        '--output_svgs', default=True, type=TSV.tsv_boolean,
         help='set flag to suppress svg drawings of putative annotations')
     parser.add_argument(
         '-o', '--output',
@@ -81,7 +78,7 @@ def parse_arguments():
         help='path to the input file(s)', required=True, nargs='*'
     )
     parser.add_argument(
-        '--low_memory', default=False, type=bool,
+        '--low_memory', default=False, type=TSV.tsv_boolean,
         help='when working on a machine with less memory this is sacrifice time for memory where possible')
     g = parser.add_argument_group('reference files')
     g.add_argument(
@@ -113,6 +110,7 @@ def parse_arguments():
         help='only show domains which names (external identifiers) match the given pattern')
     args = parser.parse_args()
     return args
+
 
 class Index:
     def __init__(self, start=1, prefix=None):

@@ -77,13 +77,13 @@ def parse_arguments():
         '-v', '--version', action='version', version='%(prog)s version ' + __version__,
         help='Outputs the version number')
     parser.add_argument(
-        '-f', '--force_overwrite', action='store_true', default=False,
+        '-f', '--force_overwrite', default=False, type=TSV.tsv_boolean,
         help='set flag to overwrite existing reviewed files')
 
     parser.add_argument(
         '-n', '--inputs', help='path to the input files', required=True, action='append')
     parser.add_argument('library', help='library name')
-    parser.add_argument('protocol', help='the library protocol: genome or transcriptome')
+    parser.add_argument('protocol', help='the library protocol: genome or transcriptome', choices=PROTOCOL.values())
     parser.add_argument('output', help='path to the output directory')
     g = parser.add_argument_group('file splitting options')
     g.add_argument(
@@ -101,7 +101,7 @@ def parse_arguments():
     g = parser.add_argument_group('filter arguments')
     g.add_argument(
         '--uninformative_filter', default=True, help='If flag is False then the clusters will not be filtered '
-        'based on lack of annotation', type=bool)
+        'based on lack of annotation', type=TSV.tsv_boolean)
     g.add_argument(
         '--max_proximity', '-p', type=int, default=MAX_PROXIMITY, help='maximum distance to look for annotations'
         'from evidence window')
@@ -136,8 +136,6 @@ def parse_arguments():
             print('\nerror: input file {0} does not exist'.format(f))
             parser.print_help()
             exit(1)
-
-    PROTOCOL.enforce(args.protocol)
 
     args.output = os.path.abspath(args.output)
 
