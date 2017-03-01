@@ -598,31 +598,24 @@ class Evidence(BreakpointPair):
                 build_strand = {STRAND.POS: 0, STRAND.NEG: 0}
                 for read_seq in contig.remapped_sequences:
                     for read in assembly_sequences[read_seq.query_sequence]:
+                        if read.is_unmapped:
+                            continue
                         if read_seq.query_sequence == read.query_sequence:
                             build_strand[STRAND.POS] += 1
                         else:
                             build_strand[STRAND.NEG] += 1
                 det_build_strand = None
                 if sum(build_strand.values()) == 0:
-                    print('could not determine build string')
                     continue
                 elif build_strand[STRAND.POS] == 0:
                     det_build_strand = STRAND.NEG
                 elif build_strand[STRAND.NEG] == 0:
                     det_build_strand = STRAND.POS
                 else:
-                    ratio = build_strand[STRAND.POS] / sum(build_strand.values())
-                    nratio = 1 - ratio
-                    if ratio >= self.assembly_strand_concordance:
-                        det_build_strand = STRAND.POS
-                    elif nratio >= self.assembly_strand_concordance:
-                        det_build_strand = STRAND.NEG
-                    else:
-                        print('Could not determine the build strand. Equivocal POS/(NEG + POS) ratio', ratio)
-                        continue
+                    raise AssertionError('mixed population should not be possible for the build strand', build_strand)
                 try:
                     strand = self.decide_sequenced_strand(contig.input_reads)
-                    print(build_strand)
+                    print('build_strand', build_strand)
                     if strand != det_build_strand: 
                         contig.seq = reverse_complement(contig.seq)
                 except ValueError as err:

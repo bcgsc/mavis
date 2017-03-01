@@ -288,6 +288,7 @@ def call_events(source_evidence):
                     bpp.break1.strand != source_evidence.break1.strand,
                     bpp.break2.strand != source_evidence.break2.strand
                 ]):
+                    print('failed strand check', bpp)
                     continue
 
             for event_type in putative_event_types:

@@ -15,6 +15,7 @@ class Contig:
         self.score = score
         self.alignments = []
         self.input_reads = set()
+        self.strand_specific = False
 
     def __hash__(self):
         return hash(self.seq)
