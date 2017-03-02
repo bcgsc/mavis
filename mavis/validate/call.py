@@ -3,6 +3,7 @@ from ..constants import CALL_METHOD, SVTYPE, PYSAM_READ_FLAGS, ORIENT, PROTOCOL,
 from ..bam import read as read_tools
 from ..interval import Interval
 from ..error import NotSpecifiedError
+from .evidence import GenomeEvidence, TranscriptomeEvidence
 import itertools
 import statistics
 import math
@@ -383,11 +384,15 @@ def _call_by_flanking_pairs(
         raise ValueError('do not bother calling when both breakpoints have already been called')
 
     flanking_count = 0
+    cover1_reads = []
+    cover2_reads = []
+
     for read, mate in ev.flanking_pairs:
         if (read, mate) in consumed_evidence:
             continue
         # check that the fragment size is reasonable
         fragment_size = ev.compute_fragment_size(read, mate)
+        print('fragment_size', fragment_size)
         if event_type == SVTYPE.DEL:
             if fragment_size.end <= ev.max_expected_fragment_size:
                 continue
@@ -395,6 +400,8 @@ def _call_by_flanking_pairs(
             if fragment_size.start >= ev.min_expected_fragment_size:
                 continue
         flanking_count += 1
+        cover1_reads.append(read)
+        cover2_reads.append(mate)
         first_positions.extend([read.reference_start + 1, read.reference_end, mate.next_reference_start + 1])
         second_positions.extend([mate.reference_start + 1, mate.reference_end, read.next_reference_start + 1])
 
@@ -403,6 +410,7 @@ def _call_by_flanking_pairs(
 
     cover1 = Interval(min(first_positions), max(first_positions))
     cover2 = Interval(min(second_positions), max(second_positions))
+    print('coverage intervals', cover1, cover2)
 
     if not ev.interchromosomal and Interval.overlaps(cover1, cover2) and event_type != SVTYPE.DUP:
         raise AssertionError('flanking read coverage overlaps. cannot call by flanking reads', cover1, cover2)
@@ -413,18 +421,34 @@ def _call_by_flanking_pairs(
             'expected for normal variation. It is likely there are flanking reads for multiple events',
             cover1, cover2, ev.max_expected_fragment_size
         )
-
+    break1_strand = STRAND.NS
+    break2_strand = STRAND.NS
+    if ev.stranded:
+        break1_strand = ev.decide_sequenced_strand(cover1_reads)
+        break2_strand = ev.decide_sequenced_strand(cover2_reads)
+    print('strands', break1_strand, break2_strand)
     cover1_length = len(cover1)
     cover2_length = len(cover2)
-
+    print(cover1_length, cover2_length)
     if ev.protocol == PROTOCOL.TRANS:
-        cover1_length = ev.compute_fragment_size
-
+        cover1_length = TranscriptomeEvidence.compute_exonic_distance(
+            cover1.start, cover1.end, ev.overlapping_transcripts[0]).start
+        cover2_length = TranscriptomeEvidence.compute_exonic_distance(
+            cover2.start, cover2.end, ev.overlapping_transcripts[1]).start
+    print('cover length', cover1_length, cover2_length)
     if first_breakpoint_called is None:
-        max_breakpoint_width = ev.max_expected_fragment_size - len(cover1) - ev.read_length * 2
+        print(ev.max_expected_fragment_size, '-', cover1_length, '-', ev.read_length, '*', 2)
+        max_breakpoint_width = ev.max_expected_fragment_size - cover1_length - ev.read_length * 2
 
         if ev.break1.orient == ORIENT.LEFT:
             end = cover1.end + max_breakpoint_width
+            print('end', end)
+            try:
+                end = ev.traverse_exonic_distance(
+                    cover1.end, max_breakpoint_width, ORIENT.RIGHT, ev.overlapping_transcripts[0]).end
+                print('end', end)
+            except AttributeError:
+                pass
             if not ev.interchromosomal:
                 end = min([end, cover2.start - 1])
                 if second_breakpoint_called:
@@ -433,8 +457,8 @@ def _call_by_flanking_pairs(
                 first_breakpoint_called = Breakpoint(
                     ev.break1.chr,
                     cover1.end, end,
-                    orient=ev.break1.orient,
-                    strand=ev.break1.strand
+                    orient=ORIENT.LEFT,
+                    strand=break1_strand
                 )
             except AttributeError:
                 raise AssertionError(
@@ -444,8 +468,8 @@ def _call_by_flanking_pairs(
                 ev.break1.chr,
                 max([cover1.start - max_breakpoint_width, 1]),
                 max([cover1.start, 1]),
-                orient=ev.break1.orient,
-                strand=ev.break1.strand
+                orient=ORIENT.RIGHT,
+                strand=break1_strand
             )
         else:
             raise NotSpecifiedError('Cannot call by flanking if orientation was not given')
@@ -458,11 +482,16 @@ def _call_by_flanking_pairs(
                 ev.break2.chr,
                 cover2.end,
                 cover2.end + max_breakpoint_width,
-                orient=ev.break2.orient,
-                strand=ev.break2.strand
+                orient=ORIENT.LEFT,
+                strand=break2_strand
             )
         elif ev.break2.orient == ORIENT.RIGHT:
             start = max([cover2.start - max_breakpoint_width, 1])
+            try:
+                start = ev.traverse_exonic_distance(
+                    cover2.start, max_breakpoint_width, ORIENT.LEFT, ev.overlapping_transcripts[1]).start
+            except AttributeError:
+                pass
             if not ev.interchromosomal:
                 start = max([start, cover1.end + 1])
                 if first_breakpoint_called:
@@ -472,8 +501,8 @@ def _call_by_flanking_pairs(
                     ev.break2.chr,
                     start,
                     cover2.start,
-                    orient=ev.break2.orient,
-                    strand=ev.break2.strand
+                    orient=ORIENT.RIGHT,
+                    strand=break2_strand
                 )
             except AttributeError:
                 raise AssertionError(

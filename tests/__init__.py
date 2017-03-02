@@ -165,6 +165,7 @@ def mock_read_pair(mock1, mock2):
     mock1.mate_is_reverse = mock2.is_reverse
     mock1.is_paired = True
     mock1.is_read1 = True
+    mock1.is_read2 = not mock1.is_read1
     if mock1.template_length is None:
         mock1.template_length = mock2.reference_end - mock1.reference_start
 
@@ -172,7 +173,8 @@ def mock_read_pair(mock1, mock2):
     mock2.next_reference_start = mock1.reference_start
     mock2.mate_is_reverse = mock1.is_reverse
     mock2.is_paired = True
-    mock2.is_read1 = False
+    mock2.is_read1 = not mock1.is_read1
+    mock2.is_read2 = not mock1.is_read2
     mock2.query_name = mock1.query_name
     mock2.template_length = -1 * mock1.template_length
     return mock1, mock2

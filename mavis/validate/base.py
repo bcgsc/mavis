@@ -86,6 +86,11 @@ class Evidence(BreakpointPair):
         """
         cls = self.__class__
         # initialize the breakpoint pair
+        self.bam_cache = bam_cache
+        if stranded and bam_cache.stranded:
+            self.stranded = True
+        else:
+            self.stranded = False
         BreakpointPair.__init__(
             self, break1, break2,
             stranded=stranded,
@@ -192,7 +197,7 @@ class Evidence(BreakpointPair):
             # too far apart to call spanning reads
             return False
 
-        if self.bam_cache.stranded and self.stranded:
+        if self.stranded:
             strand = read_tools.sequenced_strand(read, self.strand_determining_read)
             if strand != self.break1.strand and strand != self.break2.strand:
                 return False
@@ -242,7 +247,7 @@ class Evidence(BreakpointPair):
         iread = Interval(read.reference_start + 1, read.reference_end)
         imate = Interval(mate.reference_start + 1, mate.reference_end)
 
-        if self.bam_cache.stranded and self.stranded:
+        if self.stranded:
             strand1 = read_tools.sequenced_strand(read, self.strand_determining_read)
             strand2 = read_tools.sequenced_strand(mate, self.strand_determining_read)
             if strand1 != self.break1.strand or strand2 != self.break2.strand:
@@ -318,7 +323,7 @@ class Evidence(BreakpointPair):
         iread = Interval(read.reference_start + 1, read.reference_end)
         imate = Interval(mate.reference_start + 1, mate.reference_end)
 
-        if self.bam_cache.stranded and self.stranded:
+        if self.stranded:
             strand1 = read_tools.sequenced_strand(read, self.strand_determining_read)
             strand2 = read_tools.sequenced_strand(mate, self.strand_determining_read)
 
@@ -527,7 +532,7 @@ class Evidence(BreakpointPair):
             neg_ratio = 1 - ratio
             if ratio >= self.assembly_strand_concordance:
                 return STRAND.POS
-            elif nratio >= self.assembly_strand_concordance:
+            elif neg_ratio >= self.assembly_strand_concordance:
                 return STRAND.NEG
             raise ValueError('Could not determine the strand. Equivocal POS/(NEG + POS) ratio', ratio, strand_calls)
 

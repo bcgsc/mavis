@@ -29,11 +29,11 @@ Unit tests for this package are run with nose and should be run from the top lev
 need to have installed the python dependencies before running tests. The following command will run
 the unit tests and compute the test coverage for the main package.
 
-    nosetests --with-coverage --cover-html --cover-html-dir=coverage --cover-package=structural_variant --cover-erase
+    nosetests --with-coverage --cover-html --cover-html-dir=coverage --cover-package=mavis --cover-erase
 
 Dependencies
 ----------------
 
-Other than python3 and the python packages listed in the requirements.txt file, the tool also requires samtools (for 
+Other than python3 and the python packages listed in the requirements.txt file, the tool also requires samtools (for
 sorting and indexing the output bam files) and an aligner. Currently the only aligner supported is blat. Testing
 was performed using BLAT v.36x2

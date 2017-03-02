@@ -8,6 +8,7 @@ from mavis.annotate import load_reference_genome, Gene, usTranscript, Transcript
 from mavis.constants import ORIENT, STRAND, CIGAR, PYSAM_READ_FLAGS, SVTYPE, CALL_METHOD
 from mavis.interval import Interval
 from mavis.bam.cache import BamCache
+from mavis.bam.read import sequenced_strand
 from tests import MockRead, mock_read_pair
 import unittest
 from tests import REFERENCE_GENOME_FILE, BAM_INPUT, FULL_BAM_INPUT, MockBamFileHandle
@@ -339,7 +340,7 @@ class TestCallBySupportingReads(unittest.TestCase):
         self.ev = GenomeEvidence(
             Breakpoint('fake', 50, 150, orient=ORIENT.RIGHT),
             Breakpoint('fake', 450, 550, orient=ORIENT.RIGHT),
-            None, None,
+            BamCache(MockBamFileHandle()), None,
             opposing_strands=True,
             read_length=40,
             stdev_fragment_size=25,
@@ -533,7 +534,7 @@ class TestCallByFlankingReadsGenome(unittest.TestCase):
         self.ev_LR = GenomeEvidence(
             Breakpoint('fake', 100, orient=ORIENT.LEFT),
             Breakpoint('fake', 200, orient=ORIENT.RIGHT),
-            None, None,
+            BamCache(MockBamFileHandle()), None,
             opposing_strands=False,
             read_length=25,
             stdev_fragment_size=25,
@@ -621,7 +622,7 @@ class TestCallByFlankingReadsGenome(unittest.TestCase):
         ev = GenomeEvidence(
             Breakpoint('fake', 100, orient=ORIENT.RIGHT),
             Breakpoint('fake', 500, orient=ORIENT.RIGHT),
-            None, None,
+            BamCache(MockBamFileHandle()), None,
             opposing_strands=True,
             read_length=40,
             stdev_fragment_size=25,
@@ -700,14 +701,16 @@ class TestCallByFlankingReadsTranscriptome(unittest.TestCase):
         return TranscriptomeEvidence(
             {}, # fake the annotations
             b1, b2,
-            None, None,  # bam_cache and reference_genome
+            BamCache(MockBamFileHandle(), stranded=True), None,  # bam_cache and reference_genome
             opposing_strands=opposing_strands,
+            stranded=True,
             read_length=50,
             stdev_fragment_size=100,
             median_fragment_size=100,
             stdev_count_abnormal=3,
             min_splits_reads_resolution=1,
-            min_flanking_pairs_resolution=1
+            min_flanking_pairs_resolution=1,
+            strand_determining_read=2
         )
 
     def test_call_translocation(self):
@@ -726,29 +729,41 @@ class TestCallByFlankingReadsTranscriptome(unittest.TestCase):
         # transcriptome test will use exonic coordinates for the asociated transcripts
         t1 = usTranscript([(1001, 1100), (1501, 1700), (2001, 2100), (2201, 2300)], strand='+')
         evidence = self.build_transcriptome_evidence(
-            Breakpoint('1', 1051, 1051, 'L'),
-            Breakpoint('1', 1551, 1551, 'R')
+            Breakpoint('1', 1051, 1051, 'L', '+'),
+            Breakpoint('1', 1551, 1551, 'R', '+')
         )
         #evidence.overlapping_transcripts[0].add(t1)
         #evidence.overlapping_transcripts[1].add(t1)
         # now add the flanking pairs
         pair = mock_read_pair(
-            MockRead('name', '1', 951, 1051, is_reverse=False),
-            MockRead('name', '1', 2301, 2401, is_reverse=True)
+            MockRead('name', '1', 951, 1051, is_reverse=True),
+            MockRead('name', '1', 2299, 2399, is_reverse=False)
         )
+        # following help in debugging the mockup
+        self.assertTrue(pair[0].is_reverse)
+        self.assertTrue(pair[0].is_read1)
+        self.assertFalse(pair[0].is_read2)
+        self.assertFalse(pair[1].is_reverse)
+        self.assertFalse(pair[1].is_read1)
+        self.assertTrue(pair[1].is_read2)
+        self.assertEqual(STRAND.POS, sequenced_strand(pair[0], 2))
+        self.assertEqual(STRAND.POS, evidence.decide_sequenced_strand([pair[0]]))
+        self.assertEqual(STRAND.POS, sequenced_strand(pair[1], 2))
+        self.assertEqual(STRAND.POS, evidence.decide_sequenced_strand([pair[1]]))
         print('mock read pair', *pair)
         evidence.flanking_pairs.add(pair)
         b1, b2 = call._call_by_flanking_pairs(evidence, SVTYPE.DEL)
         self.assertEqual(Breakpoint('1', 1051, 1250, 'L', '+'), b1)
+        self.assertEqual(Breakpoint('1', 2101, 2300, 'R', '+'), b2)
 
         evidence.flanking_pairs.update({
             mock_read_pair(
-                MockRead('name', '1', 1051 - evidence.read_length + 1, 1051, is_reverse=False),
-                MockRead('name', '1', 2300, 2300 + evidence.read_length - 1, is_reverse=True)
+                MockRead('name', '1', 1051 - evidence.read_length + 1, 1051, is_reverse=True),
+                MockRead('name', '1', 2300, 2300 + evidence.read_length - 1, is_reverse=False)
             )
         })
 
-        raise unittest.SkipTest('TODO')
+        #raise unittest.SkipTest('TODO')
 
 if __name__ == "__main__":
     unittest.main()

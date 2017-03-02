@@ -538,7 +538,7 @@ def overlapping_transcripts(ref_ann, breakpoint):
         :class:`list` of :any:`usTranscript`: a list of possible transcripts
     """
     putative_annotations = set()
-    for gene in ref_ann[breakpoint.chr]:
+    for gene in ref_ann.get(breakpoint.chr, []):
         for transcript in gene.transcripts:
             if breakpoint.strand != STRAND.NS and transcript.get_strand() != STRAND.NS \
                     and transcript.get_strand() != breakpoint.strand:
