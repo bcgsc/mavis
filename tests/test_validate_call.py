@@ -243,7 +243,7 @@ class TestPullFlankingSupport(unittest.TestCase):
             evidence, SVTYPE.ITRANS, CALL_METHOD.SPLIT)
         event.pull_flanking_support(flanking_pairs)
         self.assertEqual(1, len(event.flanking_pairs))
-    
+
     def test_translocation_RL(self):
         b1 = Breakpoint('11', 128675261, orient=ORIENT.RIGHT, strand=STRAND.POS)
         b2 = Breakpoint('22', 29683123, orient=ORIENT.LEFT, strand=STRAND.POS)
@@ -528,7 +528,7 @@ class TestCallBySupportingReads(unittest.TestCase):
         self.assertEqual(1, len(b1 & b2))
 
 
-class TestCallByFlankingReads(unittest.TestCase):
+class TestCallByFlankingReadsGenome(unittest.TestCase):
     def setUp(self):
         self.ev_LR = GenomeEvidence(
             Breakpoint('fake', 100, orient=ORIENT.LEFT),
@@ -694,20 +694,60 @@ class TestCallByFlankingReads(unittest.TestCase):
         self.assertEqual(186, break2.start)
         self.assertEqual(201, break2.end)
 
-    def test_call_transcriptome_translocation(self):
+
+class TestCallByFlankingReadsTranscriptome(unittest.TestCase):
+    def build_transcriptome_evidence(self, b1, b2, opposing_strands=False):
+        return TranscriptomeEvidence(
+            {}, # fake the annotations
+            b1, b2,
+            None, None,  # bam_cache and reference_genome
+            opposing_strands=opposing_strands,
+            read_length=50,
+            stdev_fragment_size=100,
+            median_fragment_size=100,
+            stdev_count_abnormal=3,
+            min_splits_reads_resolution=1,
+            min_flanking_pairs_resolution=1
+        )
+
+    def test_call_translocation(self):
         # transcriptome test will use exonic coordinates for the asociated transcripts
         raise unittest.SkipTest('TODO')
 
-    def test_call_transcriptome_inversion(self):
+    def test_call_inversion(self):
         # transcriptome test will use exonic coordinates for the asociated transcripts
         raise unittest.SkipTest('TODO')
 
-    def test_call_transcriptome_inversion_overlapping_breakpoint_calls(self):
+    def test_call_inversion_overlapping_breakpoint_calls(self):
         # transcriptome test will use exonic coordinates for the asociated transcripts
         raise unittest.SkipTest('TODO')
 
-    def test_call_transcriptome_deletion(self):
+    def test_call_deletion_evidence_spans_exons(self):
         # transcriptome test will use exonic coordinates for the asociated transcripts
+        t1 = usTranscript([(1001, 1100), (1501, 1700), (2001, 2100), (2201, 2300)], strand='+')
+        evidence = self.build_transcriptome_evidence(
+            Breakpoint('1', 1051, 1051, 'L'),
+            Breakpoint('1', 1551, 1551, 'R')
+        )
+        #evidence.overlapping_transcripts[0].add(t1)
+        #evidence.overlapping_transcripts[1].add(t1)
+        # now add the flanking pairs
+        pair = mock_read_pair(
+            MockRead('name', '1', 951, 1051, is_reverse=False),
+            MockRead('name', '1', 2301, 2401, is_reverse=True)
+        )
+        print('mock read pair', *pair)
+        evidence.flanking_pairs.add(pair)
+        b1, b2 = call._call_by_flanking_pairs(evidence, SVTYPE.DEL)
+        self.assertEqual(Breakpoint('1', 1051, 1250, 'L', '+'), b1)
+
+        evidence.flanking_pairs.update({
+            mock_read_pair(
+                MockRead('name', '1', 1051 - evidence.read_length + 1, 1051, is_reverse=False),
+                MockRead('name', '1', 2300, 2300 + evidence.read_length - 1, is_reverse=True)
+            )
+        })
+
         raise unittest.SkipTest('TODO')
 
 if __name__ == "__main__":

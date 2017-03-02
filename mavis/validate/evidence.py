@@ -43,7 +43,7 @@ class GenomeEvidence(Evidence):
                     self.break1.chr, self.break1.start, self.break1.end, orient=ORIENT.RIGHT, strand=self.break1.strand)
                 compt_break2 = Breakpoint(
                     self.break2.chr, self.break2.start, self.break2.end, orient=ORIENT.LEFT, strand=self.break2.strand)
-                
+
                 self.compatible_windows = (
                     GenomeEvidence._generate_window(
                         compt_break1,
@@ -63,7 +63,7 @@ class GenomeEvidence(Evidence):
                 self.break1.chr, self.break1.start, self.break1.end, orient=ORIENT.LEFT, strand=self.break1.strand)
             compt_break2 = Breakpoint(
                 self.break2.chr, self.break2.start, self.break2.end, orient=ORIENT.RIGHT, strand=self.break2.strand)
-            
+
             self.compatible_windows = (
                 GenomeEvidence._generate_window(
                     compt_break1,
@@ -154,7 +154,7 @@ class TranscriptomeEvidence(Evidence):
                     self.break1.chr, self.break1.start, self.break1.end, orient=ORIENT.RIGHT, strand=self.break1.strand)
                 compt_break2 = Breakpoint(
                     self.break2.chr, self.break2.start, self.break2.end, orient=ORIENT.LEFT, strand=self.break2.strand)
-                
+
                 self.compatible_windows = (
                     TranscriptomeEvidence._generate_window(
                         compt_break1,
@@ -176,7 +176,7 @@ class TranscriptomeEvidence(Evidence):
                 self.break1.chr, self.break1.start, self.break1.end, orient=ORIENT.LEFT, strand=self.break1.strand)
             compt_break2 = Breakpoint(
                 self.break2.chr, self.break2.start, self.break2.end, orient=ORIENT.RIGHT, strand=self.break2.strand)
-            
+
             self.compatible_windows = (
                 TranscriptomeEvidence._generate_window(
                     compt_break1,
@@ -193,7 +193,7 @@ class TranscriptomeEvidence(Evidence):
                     transcripts=self.overlapping_transcripts[1]
                 )
             )
-    
+
     @staticmethod
     def traverse_exonic_distance(start, distance, direction, transcripts):
         """
@@ -207,6 +207,7 @@ class TranscriptomeEvidence(Evidence):
             direction (ORIENT): the direction wrt to the positive/forward reference strand to traverse
             transcripts (:class:`list` of :class:`usTranscript`): list of transcripts to use
         """
+        print('traverse_exonic_distance', start, distance, direction, transcripts)
         is_left = True if direction == ORIENT.LEFT else False
         input_distance = distance
         positions = [start - distance + 1 if is_left else start + distance - 1]
@@ -286,22 +287,26 @@ class TranscriptomeEvidence(Evidence):
                 if distance > 0:  # didn't consume all the distance, keep going right
                     pos = ust.end + distance
             positions.append(pos)
-        return Interval(min(positions), max(positions))
+
+        d = Interval(min(positions), max(positions))
+        print(d)
+        return d
 
     def compute_fragment_size(self, read, mate):
+        print('compute_fragment_size', read, mate)
         if read.reference_start > mate.reference_start:
             read, mate = mate, read
         t = self.overlapping_transcripts[0] | self.overlapping_transcripts[1]
-        return TranscriptomeEvidence.compute_exonic_distance(read.reference_start, mate.reference_end, t)
-    
+        return TranscriptomeEvidence.compute_exonic_distance(read.reference_start + 1, mate.reference_end, t)
+
     @staticmethod
     def compute_exonic_distance(start, end, transcripts):
         """
         give the current list of transcripts, computes the putative exonic/intergenic distance
         given two genomic positions. Intronic positions are ignored
         """
-        all_fragments = []
-
+        print('compute_exonic_distance', start, end, transcripts)
+        all_fragments = [end - start + 1]
         for ust in transcripts:
             sections = [Interval(start, end)]
             for intron in [(s.end + 1, t.start - 1) for s, t in zip(ust.exons, ust.exons[1::])]:
@@ -315,10 +320,7 @@ class TranscriptomeEvidence(Evidence):
                 sections = temp
             dist = sum([len(e) for e in sections])
             all_fragments.append(dist)
-        if len(all_fragments) == 0:
-            return Interval(start, end)
-        else:
-            return Interval(min(all_fragments), max(all_fragments))
+        return Interval(min(all_fragments), max(all_fragments))
 
     @staticmethod
     def _generate_window(breakpoint, transcripts, read_length, call_error, max_expected_fragment_size):

@@ -116,6 +116,10 @@ class MockRead:
     def get_tag(self, tag):
         return dict(self.tags)[tag] if tag in dict(self.tags).keys() else False
 
+    def __str__(self):
+        return '{}(ref_id={}, start={}, end={})'.format(
+            self.__class__.__name__, self.reference_id, self.reference_start, self.reference_end)
+
 class MockBamFileHandle:
     def __init__(self, chrom_to_tid={}):
         self.chrom_to_tid = chrom_to_tid
