@@ -6,7 +6,7 @@ Guidelines for Contributors
 
 - In general, follow `pep8 <https://www.python.org/dev/peps/pep-0008/>`_ style guides using a maximum line width of 120 characters
 - docstrings should follow `sphinx google code style <http://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html>`_
-- any column name which may appear in any of the intermediate or final output files must be defined in :class:`~structural_variant.constants.COLUMNS`
+- any column name which may appear in any of the intermediate or final output files must be defined in :class:`~mavis.constants.COLUMNS`
 
 Formatting Types in docstrings
 .................................
@@ -31,7 +31,7 @@ the unit tests and compute the test coverage for the main package.
 
 .. code-block:: bash
 
-    nosetests --with-coverage --cover-html --cover-html-dir=coverage --cover-package=structural_variant --cover-erase
+    nosetests --with-coverage --cover-html --cover-html-dir=coverage --cover-package=mavis --cover-erase
 
 Virtual Environment
 ........................
@@ -81,12 +81,10 @@ API Documentation
 
 .. toctree::
    :maxdepth: -1
+   :glob:
 
-   auto/sv_merge
-   auto/sv_validate
-   auto/sv_annotate
-   auto/sv_pair
-   structural_variant.rst
+   auto/mavis_*
+   mavis.rst
 
 
 Development Goals
@@ -96,4 +94,4 @@ Features to be implemented
 
 .. todolist::
 
-.. |TOOLNAME| replace:: **MARVIN**
+.. |TOOLNAME| replace:: **MAVIS**

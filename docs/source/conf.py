@@ -33,7 +33,7 @@ from recommonmark.parser import CommonMarkParser
 
 d = os.path.abspath('../../')
 sys.path.insert(0, d)
-from structural_variant import __version__
+from mavis import __version__
 
 d = os.path.abspath('../../bin')
 sys.path.insert(0, d)
@@ -91,7 +91,7 @@ source_suffix = ['.rst', '.md']
 master_doc = 'index'
 
 # General information about the project.
-project = 'MARVIN'
+project = 'MAVIS'
 copyright = '2017, creisle'
 author = 'creisle'
 
@@ -141,4 +141,4 @@ todo_include_todos = True
 html_static_path = ['_static']
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'MARVINdoc'
+htmlhelp_basename = 'MAVISdoc'

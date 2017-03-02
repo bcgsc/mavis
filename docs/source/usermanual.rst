@@ -43,7 +43,7 @@ to run the tests
 
 .. code-block:: bash
 
-    nosetests --with-coverage --cover-html --cover-html-dir=coverage --cover-package=structural_variant --cover-erase
+    nosetests --with-coverage --cover-html --cover-html-dir=coverage --cover-package=mavis --cover-erase
 
 
 Building the documentation
@@ -143,9 +143,9 @@ This is a custom file format. Essentially just a tabbed or json file which conta
 
 .. warning::
 
-    the :func:`~structural_variant.annotate.file_io.load_reference_genes` will
+    the :func:`~mavis.annotate.file_io.load_reference_genes` will
     only load valid translations. If the cds sequence in the annotation is not
-    a multiple of :attr:`~structural_variant.constants.CODON_SIZE` or if a
+    a multiple of :attr:`~mavis.constants.CODON_SIZE` or if a
     reference genome (sequences) is given and the cds start and end are not
     M and * amino acids as expected the translation is not loaded
 

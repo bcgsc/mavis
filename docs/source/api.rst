@@ -3,9 +3,7 @@ API Documentation
 
 .. toctree::
    :maxdepth: -1
+   :glob:
 
-   auto/sv_merge
-   auto/sv_validate
-   auto/sv_annotate
-   auto/sv_pair
-   structural_variant.rst
+   auto/mavis_*
+   mavis.rst

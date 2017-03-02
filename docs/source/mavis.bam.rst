@@ -1,7 +1,7 @@
 bam subpackage
 ===================================
 
-.. automodule:: structural_variant.bam
+.. automodule:: mavis.bam
     :special-members: __and__, __or__, __xor__, __len__, __sub__, __add__
     :members:
     :undoc-members:
@@ -12,6 +12,6 @@ bam subpackage
 
 .. toctree::
 
-   auto/structural_variant.bam.cache
-   auto/structural_variant.bam.cigar
-   auto/structural_variant.bam.read
+   auto/mavis.bam.cache
+   auto/mavis.bam.cigar
+   auto/mavis.bam.read

@@ -184,13 +184,13 @@ We use this in two ways
 1. to find flanking evidence supporting deletions and insertions
 2. to estimate the window size for where we will need to read from the bam when looking for evidence for a given event
 
-The :py:func:`~structural_variant.validate.evidence.GenomeEvidence._generate_window` function uses the above concepts.
+The :py:func:`~mavis.validate.evidence.GenomeEvidence._generate_window` function uses the above concepts.
 The user will define the ``median_fragment_size`` the ``stdev_fragment_size`` , and the ``stdev_count_abnormal``
-parameters defined in the :class:`~structural_variant.constants.VALIDATION_DEFAULTS` class.
+parameters defined in the :class:`~mavis.constants.VALIDATION_DEFAULTS` class.
 
 If the library has a transcriptome protocol this becomes a bit more complicated and we must take into account the
 possible annotations when calculating the evidence window. see
-:py:func:`~structural_variant.validate.evidence.TranscriptomeEvidence._generate_window` for more
+:py:func:`~mavis.validate.evidence.TranscriptomeEvidence._generate_window` for more
 
 
 |
@@ -203,7 +203,7 @@ Classifying Events
 .....................
 
 The following decision tree is used in classifying events based on their breakpoints. Only valid combinations have
-been shown. see :py:func:`~structural_variant.breakpoint.BreakpointPair.classify`
+been shown. see :py:func:`~mavis.breakpoint.BreakpointPair.classify`
 
 .. figure:: _static/classification_tree.svg
     :width: 100%
@@ -226,7 +226,7 @@ the breakpoints. This is assembled from the supporting reads (:term:`split reads
 event. The sequence from each read and its reverse complement are assembled into contigs using a :term:`DeBruijn graph`.
 For strand specific events, we then attempt to resolve the sequence strand of the contig.
 
-Breakpoints can be called by multiple different :attr:`~structural_variant.constants.CALL_METHOD`.
+Breakpoints can be called by multiple different :attr:`~mavis.constants.CALL_METHOD`.
 
 |
 
@@ -329,13 +329,13 @@ are paired with all following as seen below
     patterns depending on which acceptor is paired with the 2nd donor site
 
 
-More complex examples are drawn below. There are five classifications (:class:`~structural_variant.constants.SPLICE_TYPE`) for the different splicing patterns:
+More complex examples are drawn below. There are five classifications (:class:`~mavis.constants.SPLICE_TYPE`) for the different splicing patterns:
 
-1. Retained intron (:class:`~structural_variant.constants.SPLICE_TYPE.RETAIN`)
-2. Skipped exon (:attr:`~structural_variant.constants.SPLICE_TYPE.SKIP`)
-3. Multiple retained introns (:attr:`~structural_variant.constants.SPLICE_TYPE.MULTI_RETAIN`)
-4. Multiple skipped exons (:attr:`~structural_variant.constants.SPLICE_TYPE.MULTI_SKIP`)
-5. Some combination of retained introns and skipped exons (:attr:`~structural_variant.constants.SPLICE_TYPE.COMPLEX`)
+1. Retained intron (:class:`~mavis.constants.SPLICE_TYPE.RETAIN`)
+2. Skipped exon (:attr:`~mavis.constants.SPLICE_TYPE.SKIP`)
+3. Multiple retained introns (:attr:`~mavis.constants.SPLICE_TYPE.MULTI_RETAIN`)
+4. Multiple skipped exons (:attr:`~mavis.constants.SPLICE_TYPE.MULTI_SKIP`)
+5. Some combination of retained introns and skipped exons (:attr:`~mavis.constants.SPLICE_TYPE.COMPLEX`)
 
 .. figure:: _static/splicing_model.svg
     :width: 100%

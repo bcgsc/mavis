@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.join(d, '..'))
 # auto build the other documentation
 subprocess.check_call('sphinx-apidoc -f -P -o {} {} --separate'.format(
     os.path.join(d, 'source/auto'),
-    os.path.join(d, './../structural_variant')), shell=True)
+    os.path.join(d, './../mavis')), shell=True)
 
 subprocess.check_call('sphinx-apidoc -f -P -o {} {}'.format(
     os.path.join(d, 'source/auto'),
