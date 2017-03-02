@@ -32,8 +32,8 @@ class TestModule(unittest.TestCase):
     def test_repeat_region_assembly(self):
         rep = 'ABCDEF'
         seqs = kmers(rep + rep, len(rep))
-        with self.assertRaises(NotImplementedError):
-            assemble(seqs, assembly_min_edge_weight=1, assembly_min_exact_match_to_remap=1)
+        contigs = assemble(seqs, assembly_min_edge_weight=1, assembly_min_exact_match_to_remap=1)
+        self.assertEqual(0, len(contigs))
 
 
 class TestDeBruijnGraph(unittest.TestCase):

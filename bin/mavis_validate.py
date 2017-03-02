@@ -194,10 +194,7 @@ def gather_evidence_from_bam(clusters):
             'compatible flanking pairs:', len(e.compatible_flanking_pairs),
             time_stamp=False
         )
-        try:
-            e.assemble_contig(log=log)
-        except NotImplementedError:
-            log('Putative repeat region. Could not assemble contigs')
+        e.assemble_contig(log=log)
         log('assembled {} contigs'.format(len(e.contigs)), time_stamp=False)
         evidence.append(e)
     return evidence

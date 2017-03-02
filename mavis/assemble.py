@@ -198,8 +198,6 @@ def assemble(
             l = kmer[:-1]
             r = kmer[1:]
             assembly.add_edge(l, r)
-    if not nx.is_directed_acyclic_graph(assembly):
-        raise NotImplementedError('assembly not supported for cyclic graphs')
     # now just work with connected components
     assembly.trim_noncutting_edges_by_freq(assembly_min_edge_weight)
     # trim all paths from sources or to sinks where the edge weight is low
@@ -215,9 +213,15 @@ def assemble(
         paths_est = len(assembly.get_sinks(component)) * len(assembly.get_sources(component))
         # if the assembly has too many sinks/sources we'll need to clean it
         # we can do this by removing all current sources/sinks
+        subgraph = assembly.subgraph(component)
+        if not nx.is_directed_acyclic_graph(subgraph):
+            log('dropping cyclic subgraph', time_stamp=False)
+            continue
 
         if paths_est > assembly_max_paths:
-            log('source/sink combinations', paths_est, 'from', len(component), 'nodes', time_stamp=False)
+            log(
+                'source/sink combinations', paths_est, 'from', 
+                len(component), 'nodes', 'filter increase', w + 1, time_stamp=False)
             w += 1
             assembly.trim_noncutting_edges_by_freq(w)
             assembly.trim_tails_by_freq(w)
