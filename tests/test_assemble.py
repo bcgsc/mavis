@@ -21,13 +21,19 @@ class TestModule(unittest.TestCase):
 
     def test_assemble(self):
         sequences = ['ABCD', 'BCDE', 'CDEF', 'ABCDE', 'DEFG']
-        c = assemble(sequences, assembly_min_edge_weight=1)
+        c = assemble(sequences, assembly_min_edge_weight=1, assembly_min_exact_match_to_remap=1)
         self.assertEqual(1, len(c))
         self.assertEqual('ABCDEFG', c[0].seq)
         self.assertEqual(5, c[0].remap_score())
 
     def test_assemble_empty_list(self):
         self.assertEqual([], assemble([]))
+
+    def test_repeat_region_assembly(self):
+        rep = 'ABCDEF'
+        seqs = kmers(rep + rep, len(rep))
+        with self.assertRaises(NotImplementedError):
+            assemble(seqs, assembly_min_edge_weight=1, assembly_min_exact_match_to_remap=1)
 
 
 class TestDeBruijnGraph(unittest.TestCase):

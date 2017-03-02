@@ -531,7 +531,7 @@ class Evidence(BreakpointPair):
                 return STRAND.NEG
             raise ValueError('Could not determine the strand. Equivocal POS/(NEG + POS) ratio', ratio, strand_calls)
 
-    def assemble_contig(self, log=lambda *x: None):
+    def assemble_contig(self, log=lambda *pos, **kwargs: None):
         """
         uses the split reads and the partners of the half mapped reads to create a contig
         representing the sequence across the breakpoints
@@ -580,7 +580,7 @@ class Evidence(BreakpointPair):
             assembly_min_edge_weight=self.assembly_min_edge_weight,
             assembly_max_paths=self.assembly_max_paths,
             log=log,
-            assembly_min_consec_match_remap=self.min_anchor_exact,
+            assembly_min_exact_match_to_remap=self.assembly_min_exact_match_to_remap,
             assembly_min_contig_length=self.assembly_min_contig_length,
             assembly_max_kmer_size=self.assembly_max_kmer_size,
             assembly_max_kmer_strict=self.assembly_max_kmer_strict
@@ -623,7 +623,7 @@ class Evidence(BreakpointPair):
         filtered_contigs = {}
         # sort so that the function is deterministic
         for c in sorted(contigs, key=lambda x: (x.remap_score() * -1, x.seq)):
-            if c.remap_score() < self.assembly_min_remap:  # filter on evidence level
+            if c.remap_score() < self.assembly_min_remapped_seq:  # filter on evidence level
                 continue
             if self.stranded and self.bam_cache.stranded:
                 filtered_contigs.setdefault(c.seq, c)

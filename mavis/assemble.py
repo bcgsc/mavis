@@ -97,8 +97,26 @@ class DeBruijnGraph(nx.DiGraph):
             except KeyError:
                 pass
 
+    def get_sinks(self, subgraph=None):
+        nodeset = set()
+        if subgraph is None:
+            subgraph = self.nodes()
+        for node in subgraph:
+            if self.out_degree(node) == 0:
+                nodeset.add(node)
+        return nodeset
 
-def digraph_connected_components(graph):
+    def get_sources(self, subgraph=None):
+        nodeset = set()
+        if subgraph is None:
+            subgraph = self.nodes()
+        for node in subgraph:
+            if self.in_degree(node) == 0:
+                nodeset.add(node)
+        return nodeset
+
+
+def digraph_connected_components(graph, subgraph=None):
     """
     the networkx module does not support deriving connected
     components from digraphs (only simple graphs)
@@ -112,11 +130,15 @@ def digraph_connected_components(graph):
     Returns:
         :class:`list` of :class:`list`: returns a list of compnents which are lists of node names
     """
+    if subgraph is None:
+        subgraph = graph.nodes()
     g = nx.Graph()
     for src, tgt in graph.edges():
-        g.add_edge(src, tgt)
+        if src in subgraph and tgt in subgraph:
+            g.add_edge(src, tgt)
     for n in graph.nodes():
-        g.add_node(n)
+        if n in subgraph: 
+            g.add_node(n)
     return nx.connected_components(g)
 
 
@@ -127,10 +149,10 @@ def assemble(
     assembly_min_match_quality=0.95,
     assembly_min_read_mapping_overlap=None,
     assembly_min_contig_length=None,
-    assembly_min_consec_match_remap=3,
+    assembly_min_exact_match_to_remap=6,
     assembly_max_paths=20,
     assembly_max_kmer_strict=False,
-    log=lambda *x: None
+    log=lambda *pos, **kwargs: None
 ):
     """
     for a set of sequences creates a DeBruijnGraph
@@ -165,72 +187,57 @@ def assemble(
     assembly_min_read_mapping_overlap = assembly_max_kmer_size if assembly_min_read_mapping_overlap is None else \
         assembly_min_read_mapping_overlap
     assembly_min_contig_length = min_seq + 1 if assembly_min_contig_length is None else assembly_min_contig_length
+    
     assembly = DeBruijnGraph()
     log('hashing kmers')
     for s in sequences:
         if len(s) < assembly_max_kmer_size:
             continue
-        for kmer in kmers(s, assembly_max_kmer_size):
+        kmers_list = kmers(s, assembly_max_kmer_size)
+        for kmer in kmers_list:
             l = kmer[:-1]
             r = kmer[1:]
             assembly.add_edge(l, r)
     if not nx.is_directed_acyclic_graph(assembly):
-        NotImplementedError('assembly not supported for cyclic graphs')
-
+        raise NotImplementedError('assembly not supported for cyclic graphs')
     # now just work with connected components
     assembly.trim_noncutting_edges_by_freq(assembly_min_edge_weight)
     # trim all paths from sources or to sinks where the edge weight is low
     assembly.trim_tails_by_freq(assembly_min_edge_weight)
     path_scores = {}  # path_str => score_int
-
-    for component in digraph_connected_components(assembly):
+    
+    unresolved_components = [(assembly_min_edge_weight, c) for c in digraph_connected_components(assembly)]
+    
+    while len(unresolved_components) > 0:
         # since now we know it's a tree, the assemblies will all be ltd to
         # simple paths
-        sources = set()
-        sinks = set()
-        for node in component:
-            if assembly.degree(node) == 0:  # ignore singlets
-                pass
-            elif assembly.in_degree(node) == 0:
-                sources.add(node)
-            elif assembly.out_degree(node) == 0:
-                sinks.add(node)
-        if len(sources) * len(sinks) > assembly_max_paths:
-            continue
-
+        w, component = unresolved_components.pop(0)
+        paths_est = len(assembly.get_sinks(component)) * len(assembly.get_sources(component))
         # if the assembly has too many sinks/sources we'll need to clean it
         # we can do this by removing all current sources/sinks
-        while len(sources) * len(sinks) > assembly_max_paths:
-            warnings.warn(
-                'source/sink combinations: {} from {} nodes'.format(len(sources) * len(sinks), len(component)))
-            for s in sources | sinks:
-                assembly.remove_node(s)
-                component.remove(s)
-            sources = set()
-            sinks = set()
-            for node in component:
-                if assembly.degree(node) == 0:  # ignore singlets
-                    pass
-                elif assembly.in_degree(node) == 0:
-                    sources.add(node)
-                elif assembly.out_degree(node) == 0:
-                    sinks.add(node)
-        for source, sink in itertools.product(sources, sinks):
-            for path in nx.all_simple_paths(assembly, source, sink):
-                s = path[0] + ''.join([p[-1] for p in path[1:]])
-                score = 0
-                for i in range(0, len(path) - 1):
-                    score += assembly.get_edge_freq(path[i], path[i + 1])
-                path_scores[s] = max(path_scores.get(s, 0), score)
+
+        if paths_est > assembly_max_paths:
+            log('source/sink combinations', paths_est, 'from', len(component), 'nodes', time_stamp=False)
+            w += 1
+            assembly.trim_noncutting_edges_by_freq(w)
+            assembly.trim_tails_by_freq(w)
+            
+            for new_comp in digraph_connected_components(assembly, component):
+                unresolved_components.append((w, new_comp))
+        else:
+            for source, sink in itertools.product(assembly.get_sources(component), assembly.get_sinks(component)):
+                for path in nx.all_simple_paths(assembly, source, sink):
+                    s = path[0] + ''.join([p[-1] for p in path[1:]])
+                    score = 0
+                    for i in range(0, len(path) - 1):
+                        score += assembly.get_edge_freq(path[i], path[i + 1])
+                    path_scores[s] = max(path_scores.get(s, 0), score)
     # now map the contigs to the possible input sequences
     contigs = {}
     for seq, score in list(path_scores.items()):
         if seq not in sequences and len(seq) >= assembly_min_contig_length:
             contigs[seq] = Contig(seq, score)
 
-    contig_exact = {}
-    for contig in contigs:
-        contig_exact[contig] = set(kmers(contig, assembly_min_consec_match_remap))
     # remap the input reads
     filtered_contigs = {}
     for seq, contig in sorted(contigs.items()):
@@ -239,14 +246,20 @@ def assemble(
             filtered_contigs[seq] = contig
     
     contigs = list(filtered_contigs.values())
+    
+    input_seq_kmers = {}
+    for seq in sequences:
+        input_seq_kmers[seq] = set(kmers(seq, assembly_min_exact_match_to_remap))
+    contig_kmers = {}
+    for contig in contigs:
+        contig_kmers[contig.seq] = set(kmers(contig.seq, assembly_min_exact_match_to_remap))
 
     log('remapping reads to {} contigs'.format(len(contigs)))
 
     for input_seq in sequences:
         maps_to = {}  # contig, score
-        exact_match_kmers = set(kmers(input_seq, assembly_min_consec_match_remap))
         for contig in contigs:
-            if len(exact_match_kmers & contig_exact[contig.seq]) == 0:
+            if len(input_seq_kmers[input_seq] & contig_kmers[contig.seq]) == 0:
                 continue
             a = nsb_align(
                 contig.seq,

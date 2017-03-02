@@ -146,4 +146,7 @@ class BamCache:
         """
         close the bam file handle
         """
-        self.fh.close()
+        try:
+            self.fh.close()
+        except AttributeError:
+            pass
