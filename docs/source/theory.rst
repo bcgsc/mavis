@@ -251,6 +251,25 @@ into account the range spanned by the :term:`flanking pairs` evidence and the po
     The read on the right (black outline, no fill) demonstrates the read length used to narrow the right side bound of
     the estimated breakpoint interval.
 
+|
+
+-----------------
+
+|
+
+Determining Flanking support
+..............................
+
+.. figure:: _static/flanking_pairs_fragment_sizes_deletion.svg
+    :width: 100%
+
+    After a breakpoint has been called we can narrow the interval of expected fragment sizes using the
+    size of the event. (Left) The colored portion of the graph represents the range in fragment sizes we
+    expect for a normal/unmutated genome. (Right) For a deletion event we expect the fragment size to be bigger,
+    outside the normal range. Reads that would flank the breakpoint should follow a similar distribution
+    to the normal genome but the median will be shifted by the size of the event. The shaded portion of the
+    graph represents the range in fragment sizes we expect for flanking pairs supporting the deletion event.
+
 
 |
 
