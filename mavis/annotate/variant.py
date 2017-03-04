@@ -345,7 +345,6 @@ class FusionTranscript(usTranscript):
         elif transcript.get_strand() != STRAND.POS:
             raise NotSpecifiedError('transcript strand must be specified to pull exons')
 
-
         return s, new_exons
 
 
@@ -355,12 +354,13 @@ class Annotation(BreakpointPair):
     will also hold the other annotations for overlapping and encompassed and nearest genes
     """
     def __init__(
-            self, bpp,
-            transcript1=None,
-            transcript2=None,
-            data={},
-            event_type=None,
-            proximity=None):
+        self, bpp,
+        transcript1=None,
+        transcript2=None,
+        data={},
+        event_type=None,
+        proximity=5000
+    ):
         """
         Holds a breakpoint call and a set of transcripts, other information is gathered relative to these
 
@@ -400,6 +400,7 @@ class Annotation(BreakpointPair):
 
         self.event_type = event_type if event_type is None else SVTYPE.enforce(event_type)
         self.proximity = proximity
+        self.fusion = None
 
     def add_gene(self, gene):
         """
@@ -548,7 +549,7 @@ def overlapping_transcripts(ref_ann, breakpoint):
     return putative_annotations
 
 
-def gather_breakpoint_annotations(ref_ann, breakpoint):
+def _gather_breakpoint_annotations(ref_ann, breakpoint):
     """
     Args:
         ref_ann (:class:`dict` of :class:`list` of :class:`Gene` by :class:`str`): the reference annotations split
@@ -629,7 +630,7 @@ def gather_breakpoint_annotations(ref_ann, breakpoint):
         sorted(neg_overlapping_transcripts, key=lambda x: x.position))
 
 
-def gather_annotations(ref, bp, event_type=None, proximity=None):
+def _gather_annotations(ref, bp, event_type=None, proximity=None):
     """
     each annotation is defined by the annotations selected at the breakpoints
     the other annotations are given relative to this
@@ -718,3 +719,43 @@ def gather_annotations(ref, bp, event_type=None, proximity=None):
         else:
             filtered.append(ann)
     return filtered
+
+
+def annotate_events(
+    bpps,
+    REFERENCE_ANNOTATIONS,
+    REFERENCE_GENOME,
+    max_proximity=5000,
+    min_orf_size=200,
+    min_domain_mapping_match=0.95,
+    max_orf_cap=3,
+    log=lambda *pos, **kwargs: None
+):
+    annotations = []
+    for bpp in bpps:
+        log('gathering annotations for', bpp)
+        try:
+            ann = _gather_annotations(
+                REFERENCE_ANNOTATIONS,
+                bpp,
+                event_type=bpp.data[COLUMNS.event_type],
+                proximity=max_proximity
+            )
+            annotations.extend(ann)
+        except KeyError:
+            pass
+        log('generated', len(ann), 'annotations', time_stamp=False)
+
+    for i, ann in enumerate(annotations):
+        # try building the fusion product
+        try:
+            ft = FusionTranscript.build(
+                ann, REFERENCE_GENOME,
+                min_orf_size=min_orf_size,
+                max_orf_cap=max_orf_cap,
+                min_domain_mapping_match=min_domain_mapping_match
+            )
+            ann.fusion = ft
+        except NotSpecifiedError:
+            pass
+    return annotations

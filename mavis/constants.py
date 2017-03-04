@@ -35,18 +35,7 @@ def reverse_complement(s):
     return str(temp.reverse_complement())
 
 
-def build_batch_id(prefix='', suffix='', size=6):
-    date = datetime.now()
-    m = int(math.pow(10, size) - 1)
-    return 'batch{prefix}{date.year}{date.month:02d}{date.day:02d}r{r:06d}{suffix}'.format(
-        prefix=prefix, suffix=suffix, date=date, r=random.randint(1, m))
 
-
-def log(*pos, time_stamp=True):
-    if time_stamp:
-        print('[{}]'.format(datetime.now()), *pos)
-    else:
-        print(' ' * 28, *pos)
 
 
 def translate(s, reading_frame=0):
@@ -350,6 +339,7 @@ COLUMNS = Vocab(
     raw_flanking_pairs='raw_flanking_pairs',
     raw_spanning_reads='raw_spanning_reads',
     untemplated_seq='untemplated_seq',
+    filter_comment='filter_comment'
 )
 """:class:`Vocab`: Column names for i/o files used throughout the pipeline
 

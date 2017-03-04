@@ -181,11 +181,7 @@ def gather_evidence_from_bam(clusters):
         log('inner window regions:  {}:{}-{}  {}:{}-{}'.format(
             e.break1.chr, e.inner_window1[0], e.inner_window1[1],
             e.break2.chr, e.inner_window2[0], e.inner_window2[1]), time_stamp=False)
-        try:
-            e.load_evidence(log=log)
-        except NotImplementedError as err:
-            log(repr(err), time_stamp=False)
-            continue
+        e.load_evidence(log=log)
         log(
             'flanking pairs: {};'.format(len(e.flanking_pairs)),
             'split reads: {}, {};'.format(*[len(a) for a in e.split_reads]),
