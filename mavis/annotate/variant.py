@@ -646,8 +646,8 @@ def _gather_annotations(ref, bp, event_type=None, proximity=None):
     """
     annotations = dict()
 
-    break1_pos, break1_neg = gather_breakpoint_annotations(ref, bp.break1)
-    break2_pos, break2_neg = gather_breakpoint_annotations(ref, bp.break2)
+    break1_pos, break1_neg = _gather_breakpoint_annotations(ref, bp.break1)
+    break2_pos, break2_neg = _gather_breakpoint_annotations(ref, bp.break2)
 
     combinations = []
 

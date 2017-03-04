@@ -1,11 +1,11 @@
 import unittest
-from mavis.annotate.variant import *
+from mavis.annotate.variant import _gather_annotations, FusionTranscript, determine_prime
+from mavis.annotate.variant import _gather_breakpoint_annotations, overlapping_transcripts
 from mavis.annotate.genomic import *
 from mavis.annotate.protein import *
 from mavis.annotate import *
 from mavis.error import NotSpecifiedError
-from mavis.constants import reverse_complement
-from mavis.constants import STRAND
+from mavis.constants import STRAND, ORIENT, reverse_complement, SVTYPE, PRIME
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from tests import REFERENCE_ANNOTATIONS_FILE, REFERENCE_GENOME_FILE, MockSeq, REFERENCE_ANNOTATIONS_FILE_JSON
 
@@ -1225,7 +1225,7 @@ class TestAnnotationGathering(unittest.TestCase):
 
     def test_breakpoint_within_gene(self):
         b = Breakpoint(REF_CHR, 150, 150)
-        pos, neg = gather_breakpoint_annotations(REFERENCE_ANNOTATIONS, b)
+        pos, neg = _gather_breakpoint_annotations(REFERENCE_ANNOTATIONS, b)
         self.assertEqual(1, len(pos))
         self.assertEqual(1, len(neg))
         self.assertEqual(STRAND.POS, pos[0].get_strand())
@@ -1235,7 +1235,7 @@ class TestAnnotationGathering(unittest.TestCase):
 
     def test_breakpoint_overlapping_gene(self):
         b = Breakpoint(REF_CHR, 150, 230)
-        pos, neg = gather_breakpoint_annotations(REFERENCE_ANNOTATIONS, b)
+        pos, neg = _gather_breakpoint_annotations(REFERENCE_ANNOTATIONS, b)
         self.assertEqual(2, len(pos))
         self.assertEqual(201, pos[1].start)
         self.assertEqual(b.end, pos[1].end)
@@ -1244,7 +1244,7 @@ class TestAnnotationGathering(unittest.TestCase):
         self.assertEqual(b.end, neg[0].end)
 
         b = Breakpoint(REF_CHR, 150, 225, strand=STRAND.POS)
-        pos, neg = gather_breakpoint_annotations(REFERENCE_ANNOTATIONS, b)
+        pos, neg = _gather_breakpoint_annotations(REFERENCE_ANNOTATIONS, b)
         self.assertEqual(2, len(pos))
         self.assertEqual(100, pos[0].start)
         self.assertEqual(200, pos[0].end)
@@ -1255,7 +1255,7 @@ class TestAnnotationGathering(unittest.TestCase):
         self.assertEqual(b.end, neg[0].end)
 
         b = Breakpoint(REF_CHR, 375, 425, strand=STRAND.POS)
-        pos, neg = gather_breakpoint_annotations(REFERENCE_ANNOTATIONS, b)
+        pos, neg = _gather_breakpoint_annotations(REFERENCE_ANNOTATIONS, b)
         self.assertEqual(2, len(pos))
         self.assertEqual(300, pos[0].start)
         self.assertEqual(400, pos[0].end)
@@ -1267,7 +1267,7 @@ class TestAnnotationGathering(unittest.TestCase):
 
     def test_breakpoint_overlapping_mutliple_genes_and_intergenic(self):
         b = Breakpoint(REF_CHR, 150, 275)
-        pos, neg = gather_breakpoint_annotations(REFERENCE_ANNOTATIONS, b)
+        pos, neg = _gather_breakpoint_annotations(REFERENCE_ANNOTATIONS, b)
         self.assertEqual(2, len(pos))
         self.assertEqual(201, pos[1].start)
         self.assertEqual(b.end, pos[1].end)
@@ -1277,7 +1277,7 @@ class TestAnnotationGathering(unittest.TestCase):
 
     def test_breakpoint_overlapping_mutliple_pos_genes(self):
         b = Breakpoint(REF_CHR, 575, 625)
-        pos, neg = gather_breakpoint_annotations(REFERENCE_ANNOTATIONS, b)
+        pos, neg = _gather_breakpoint_annotations(REFERENCE_ANNOTATIONS, b)
         self.assertEqual(2, len(pos))
         self.assertEqual(1, len(neg))
         self.assertEqual(b.start, neg[0].start)
@@ -1285,7 +1285,7 @@ class TestAnnotationGathering(unittest.TestCase):
 
     def test_breakpoint_overlapping_mutliple_genes(self):
         b = Breakpoint(REF_CHR, 300, 350)
-        pos, neg = gather_breakpoint_annotations(REFERENCE_ANNOTATIONS, b)
+        pos, neg = _gather_breakpoint_annotations(REFERENCE_ANNOTATIONS, b)
         self.assertEqual(1, len(pos))
         self.assertEqual(1, len(neg))
 
@@ -1293,7 +1293,7 @@ class TestAnnotationGathering(unittest.TestCase):
         b1 = Breakpoint(REF_CHR, 150, 225, strand=STRAND.POS)
         b2 = Breakpoint(REF_CHR, 375, 425, strand=STRAND.POS)
         bpp = BreakpointPair(b1, b2)
-        ann_list = sorted(gather_annotations(REFERENCE_ANNOTATIONS, bpp),
+        ann_list = sorted(_gather_annotations(REFERENCE_ANNOTATIONS, bpp),
                           key=lambda x: (x.break1, x.break2))
         self.assertEqual(5, len(ann_list))
         first = ann_list[0]
@@ -1320,7 +1320,7 @@ class TestAnnotationGathering(unittest.TestCase):
         b1 = Breakpoint(REF_CHR, 1250, strand=STRAND.POS)
         b2 = Breakpoint(REF_CHR, 2250, strand=STRAND.NEG)
         bpp = BreakpointPair(b1, b2)
-        ann_list = sorted(gather_annotations(ref, bpp),
+        ann_list = sorted(_gather_annotations(ref, bpp),
                           key=lambda x: (x.break1, x.break2))
         self.assertEqual(1, len(ann_list))
         self.assertEqual(ann_list[0].transcript1, ann_list[0].transcript2)
