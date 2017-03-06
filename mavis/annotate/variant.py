@@ -723,34 +723,35 @@ def _gather_annotations(ref, bp, event_type=None, proximity=None):
 
 def annotate_events(
     bpps,
-    REFERENCE_ANNOTATIONS,
-    REFERENCE_GENOME,
+    annotations,
+    reference_genome,
     max_proximity=5000,
     min_orf_size=200,
     min_domain_mapping_match=0.95,
     max_orf_cap=3,
     log=lambda *pos, **kwargs: None
 ):
-    annotations = []
+    results = []
     for bpp in bpps:
         log('gathering annotations for', bpp)
         try:
             ann = _gather_annotations(
-                REFERENCE_ANNOTATIONS,
+                annotations,
                 bpp,
                 event_type=bpp.data[COLUMNS.event_type],
                 proximity=max_proximity
             )
-            annotations.extend(ann)
+            results.extend(ann)
+            log('generated', len(ann), 'annotations', time_stamp=False)
         except KeyError:
-            pass
-        log('generated', len(ann), 'annotations', time_stamp=False)
+            log('generated', 0, 'annotations', time_stamp=False)
 
-    for i, ann in enumerate(annotations):
+
+    for i, ann in enumerate(results):
         # try building the fusion product
         try:
             ft = FusionTranscript.build(
-                ann, REFERENCE_GENOME,
+                ann, reference_genome,
                 min_orf_size=min_orf_size,
                 max_orf_cap=max_orf_cap,
                 min_domain_mapping_match=min_domain_mapping_match
@@ -758,4 +759,4 @@ def annotate_events(
             ann.fusion = ft
         except NotSpecifiedError:
             pass
-    return annotations
+    return results

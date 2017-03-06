@@ -7,6 +7,10 @@ import warnings
 from argparse import Namespace
 import subprocess
 from datetime import datetime
+import errno
+import math
+import random
+import pysam
 
 import TSV
 from vocab import Vocab
@@ -19,6 +23,14 @@ from mavis import __version__
 from mavis.constants import PROTOCOL, COLUMNS, sort_columns
 from mavis.validate.constants import VALIDATION_DEFAULTS
 from mavis.interval import Interval
+from mavis.cluster import cluster_breakpoint_pairs
+from mavis.bam.cache import BamCache
+import mavis.bam.cigar as cigar_tools
+from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
+from mavis.validate.call import call_events
+from mavis.blat import blat_contigs
+from mavis.annotate.variant import annotate_events
+from mavis.illustrate.settings import DiagramSettings
 
 
 
@@ -29,6 +41,7 @@ CLUSTER_RADIUS = 20
 MIN_ORF_SIZE = 120
 MAX_ORF_CAP = 3
 MAX_PROXIMITY = 5000
+VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
 DEFAULTS = Namespace(
     min_clusters_per_file=50,
     max_files=10,
@@ -57,6 +70,13 @@ PIPELINE_STEP = Vocab(
     SUMMARY='summary'
 )
 
+QSUB_HEADER = """#!/bin/bash
+#$ -V
+#$ -N {name}
+#$ -q {queue}
+#$ -o {output}
+#$ -l mem_free={memory}G,mem_token={memory}G,h_vmem={memory}G
+#$ -j y"""
 
 def build_batch_id(prefix='', suffix='', size=6):
     date = datetime.now()
@@ -108,6 +128,7 @@ def mkdirp(dirname):
             pass
         else:
             raise exc
+    return dirname
 
 
 def read_config(filepath):
@@ -219,7 +240,7 @@ def main_validate(args):
     CONTIG_BAM = os.path.join(args.output, FILENAME_PREFIX + '.contigs.bam')
     EVIDENCE_BED = os.path.join(args.output, FILENAME_PREFIX + '.evidence.bed')
 
-    PASSED_OUTPUT_FILE = os.path.join(args.output, FILENAME_PREFIX + PASS_SUFFIX)
+    PASSED_OUTPUT_FILE = os.path.join(args.output, FILENAME_PREFIX + VALIDATION_PASS_SUFFIX)
     PASSED_BED_FILE = os.path.join(args.output, FILENAME_PREFIX + '.validation-passed.bed')
     FAILED_OUTPUT_FILE = os.path.join(args.output, FILENAME_PREFIX + '.validation-failed.tab')
     CONTIG_BLAT_FA = os.path.join(args.output, FILENAME_PREFIX + '.contigs.fa')
@@ -231,14 +252,15 @@ def main_validate(args):
 
     split_read_contigs = set()
     chr_to_index = {}
-    bpps = read_inputs([args.input])
+    bpps = read_inputs(
+        [args.input], add={COLUMNS.protocol: args.protocol, COLUMNS.library: args.library})
     evidence_clusters = []
     for bpp in bpps:
         if bpp.data[COLUMNS.protocol] == PROTOCOL.GENOME:
             e = GenomeEvidence(
                 bpp.break1, bpp.break2,
                 INPUT_BAM_CACHE,
-                args.reference_genome,
+                args.reference_genome[1],
                 opposing_strands=bpp.opposing_strands,
                 stranded=bpp.stranded,
                 untemplated_seq=bpp.untemplated_seq,
@@ -250,10 +272,10 @@ def main_validate(args):
             evidence_clusters.append(e)
         elif bpp.data[COLUMNS.protocol] == PROTOCOL.TRANS:
             e = TranscriptomeEvidence(
-                REFERENCE_ANNOTATIONS,
+                args.annotations[1],
                 bpp.break1, bpp.break2,
                 INPUT_BAM_CACHE,
-                args.reference_genome,
+                args.reference_genome[1],
                 opposing_strands=bpp.opposing_strands,
                 stranded=bpp.stranded,
                 untemplated_seq=bpp.untemplated_seq,
@@ -265,14 +287,14 @@ def main_validate(args):
             evidence_clusters.append(e)
         else:
             raise ValueError('protocol not recognized', bpp.data[COLUMNS.protocol])
-    
-    for chr, masks in args.masking.items(): # extend masking by read length
+
+    for chr, masks in args.masking[1].items(): # extend masking by read length
         for mask in masks:
-            mask.start -= args.read_length
-            mask.end += args.read_length
-    
-    evidence_clusters, filtered_evidence_clusters = filter_on_overlap(evidence_clusters, args.masking)
-    
+            mask.position.start -= args.read_length
+            mask.position.end += args.read_length
+
+    evidence_clusters, filtered_evidence_clusters = filter_on_overlap(evidence_clusters, args.masking[1])
+
     for i, e in enumerate(evidence_clusters):
         print()
         log(
@@ -300,24 +322,22 @@ def main_validate(args):
         e.assemble_contig(log=log)
         log('assembled {} contigs'.format(len(e.contigs)), time_stamp=False)
 
-    log('aligning {} contig sequences'.format(len(blat_sequences)))
     log('will output:', CONTIG_BLAT_FA, CONTIG_BLAT_OUTPUT)
-    if len(blat_sequences) > 0:
-        blat_contigs(
-            evidence,
-            INPUT_BAM_CACHE,
-            REFERENCE_GENOME=HUMAN_REFERENCE_GENOME,
-            blat_2bit_reference=args.blat_2bit_reference,
-            blat_fa_input_file=CONTIG_BLAT_FA,
-            blat_pslx_output_file=CONTIG_BLAT_OUTPUT,
-            clean_files=False
-        )
+    blat_contigs(
+        evidence_clusters,
+        INPUT_BAM_CACHE,
+        REFERENCE_GENOME=args.reference_genome[1],
+        blat_2bit_reference=args.blat_2bit_reference,
+        blat_fa_input_file=CONTIG_BLAT_FA,
+        blat_pslx_output_file=CONTIG_BLAT_OUTPUT,
+        clean_files=False
+    )
     log('alignment complete')
     event_calls = []
     passes = 0
-    
+
     with open(EVIDENCE_BED, 'w') as fh:
-        for index, e in enumerate(evidence):
+        for index, e in enumerate(evidence_clusters):
             fh.write('{}\t{}\t{}\touter-{}\n'.format(
                 e.break1.chr, e.outer_window1.start, e.outer_window1.end, e.data[COLUMNS.cluster_id]))
             fh.write('{}\t{}\t{}\touter-{}\n'.format(
@@ -328,7 +348,7 @@ def main_validate(args):
                 e.break2.chr, e.inner_window2.start, e.inner_window2.end, e.data[COLUMNS.cluster_id]))
             print()
             log('({} of {}) calling events for:'.format
-                (index + 1, len(evidence)), e.data[COLUMNS.cluster_id], e.putative_event_types())
+                (index + 1, len(evidence_clusters)), e.data[COLUMNS.cluster_id], e.putative_event_types())
             log('source:', e, time_stamp=False)
             calls = []
             failure_comment = None
@@ -354,16 +374,16 @@ def main_validate(args):
                     len(ev.break1_split_reads), len(ev.break2_split_reads),
                     len(ev.flanking_pairs)), time_stamp=False)
 
-    if len(failed_cluster_rows) + passes != len(evidence):
+    if len(filtered_evidence_clusters) + passes != len(evidence_clusters):
         raise AssertionError(
-            'totals do not match pass + fails == total', passes, len(failed_cluster_rows), len(evidence))
+            'totals do not match pass + fails == total', passes, len(filtered_evidence_clusters), len(evidence_clusters))
     # write the output validated clusters (split by type and contig)
     validation_batch_id = build_batch_id(prefix='validation-')
     for i, ec in enumerate(event_calls):
         b1_homseq = None
         b2_homseq = None
         try:
-            b1_homseq, b2_homseq = ec.breakpoint_sequence_homology(HUMAN_REFERENCE_GENOME)
+            b1_homseq, b2_homseq = ec.breakpoint_sequence_homology(args.reference_genome[1])
         except AttributeError:
             pass
         ec.data.update({
@@ -377,7 +397,7 @@ def main_validate(args):
 
     with pysam.AlignmentFile(CONTIG_BAM, 'wb', template=INPUT_BAM_CACHE.fh) as fh:
         log('writing:', CONTIG_BAM)
-        for ev in evidence:
+        for ev in evidence_clusters:
             for c in ev.contigs:
                 for read1, read2 in c.alignments:
                     read1.cigar = cigar_tools.convert_for_igv(read1.cigar)
@@ -387,10 +407,10 @@ def main_validate(args):
                         fh.write(read2)
 
     # write the evidence
-    with pysam.AlignmentFile(EVIDENCE_BAM, 'wb', template=INPUT_BAM_CACHE.fh) as fh:
-        log('writing:', EVIDENCE_BAM)
+    with pysam.AlignmentFile(RAW_EVIDENCE_BAM, 'wb', template=INPUT_BAM_CACHE.fh) as fh:
+        log('writing:', RAW_EVIDENCE_BAM)
         reads = set()
-        for ev in evidence:
+        for ev in evidence_clusters:
             temp = ev.supporting_reads()
             reads.update(temp)
         for read in reads:
@@ -399,7 +419,7 @@ def main_validate(args):
     # now sort the contig bam
     sort = re.sub('.bam$', '.sorted.bam', CONTIG_BAM)
     log('sorting the bam file:', CONTIG_BAM)
-    if SAMTOOLS_VERSION[0] < 1:
+    if args.samtools_version[0] < 1:
         subprocess.call(samtools_v0_sort(CONTIG_BAM, sort), shell=True)
     else:
         subprocess.call(samtools_v1_sort(CONTIG_BAM, sort), shell=True)
@@ -408,15 +428,15 @@ def main_validate(args):
     subprocess.call(['samtools', 'index', CONTIG_BAM])
 
     # then sort the evidence bam file
-    sort = re.sub('.bam$', '.sorted.bam', EVIDENCE_BAM)
-    log('sorting the bam file:', EVIDENCE_BAM)
-    if SAMTOOLS_VERSION[0] < 1:
-        subprocess.call(samtools_v0_sort(EVIDENCE_BAM, sort), shell=True)
+    sort = re.sub('.bam$', '.sorted.bam', RAW_EVIDENCE_BAM)
+    log('sorting the bam file:', RAW_EVIDENCE_BAM)
+    if args.samtools_version[0] < 1:
+        subprocess.call(samtools_v0_sort(RAW_EVIDENCE_BAM, sort), shell=True)
     else:
-        subprocess.call(samtools_v1_sort(EVIDENCE_BAM, sort), shell=True)
-    EVIDENCE_BAM = sort
-    log('indexing the sorted bam:', EVIDENCE_BAM)
-    subprocess.call(['samtools', 'index', EVIDENCE_BAM])
+        subprocess.call(samtools_v1_sort(RAW_EVIDENCE_BAM, sort), shell=True)
+    RAW_EVIDENCE_BAM = sort
+    log('indexing the sorted bam:', RAW_EVIDENCE_BAM)
+    subprocess.call(['samtools', 'index', RAW_EVIDENCE_BAM])
 
     # write the igv batch file
     with open(IGV_BATCH_FILE, 'w') as fh:
@@ -426,19 +446,19 @@ def main_validate(args):
         fh.write('load {} name="{}"\n'.format(PASSED_BED_FILE, 'passed events'))
         fh.write('load {} name="{}"\n'.format(CONTIG_BAM, 'aligned contigs'))
         fh.write('load {} name="{}"\n'.format(EVIDENCE_BED, 'evidence windows'))
-        fh.write('load {} name="{}"\n'.format(EVIDENCE_BAM, 'raw evidence'))
+        fh.write('load {} name="{}"\n'.format(RAW_EVIDENCE_BAM, 'raw evidence'))
         fh.write('load {} name="{} {} input"\n'.format(args.bam_file, args.library, args.protocol))
 
 
 def parse_arguments(pstep):
     PIPELINE_STEP.enforce(pstep)
-    
+
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         '-v', '--version', action='version', version='%(prog)s version ' + __version__,
         help='Outputs the version number'
     )
-    
+
     if pstep != PIPELINE_STEP.PIPELINE:
         g = parser.add_argument_group('reference input arguments')
         g.add_argument(
@@ -473,12 +493,13 @@ def parse_arguments(pstep):
             )
     else:
         parser.add_argument('config', help='path to the pipeline configuration file')
-    parser.add_argument('output', help='path to the output directory')
-    parser.add_argument(
-        '-f', '--force_overwrite', default=False, type=TSV.tsv_boolean,
-        help='set flag to overwrite existing reviewed files'
-    )
-    
+        parser.add_argument(
+            '-f', '--force_overwrite', default=False, type=TSV.tsv_boolean,
+            help='set flag to overwrite existing reviewed files'
+        )
+    parser.add_argument('--output', help='path to the output directory')
+
+
     if pstep == PIPELINE_STEP.ANNOTATE:
         parser.add_argument(
             '--output_svgs', default=True, type=TSV.tsv_boolean,
@@ -507,11 +528,11 @@ def parse_arguments(pstep):
         parser.add_argument('-n', '--inputs', required=True, nargs='+', help='1 or more input files')
     elif pstep == PIPELINE_STEP.VALIDATE or pstep == PIPELINE_STEP.PAIR:
         parser.add_argument('-n', '--input', help='path to the input file', required=True)
-    
+
     if pstep == PIPELINE_STEP.CLUSTER or pstep == PIPELINE_STEP.VALIDATE:
-        parser.add_argument('library', help='library name')
-        parser.add_argument('protocol', help='the library protocol: genome or transcriptome', choices=PROTOCOL.values())
-    
+        parser.add_argument('-l', '--library', help='library name')
+        parser.add_argument('--protocol', help='the library protocol: genome or transcriptome', choices=PROTOCOL.values())
+
     if pstep == PIPELINE_STEP.CLUSTER:
         g = parser.add_argument_group('output arguments')
         g.add_argument(
@@ -531,7 +552,7 @@ def parse_arguments(pstep):
             '--uninformative_filter', default=True, help='If flag is False then the clusters will not be filtered '
             'based on lack of annotation', type=TSV.tsv_boolean
         )
-    
+
     if pstep == PIPELINE_STEP.PAIR:
         parser.add_argument(
             '--split_call_distance', default=10, type=int,
@@ -569,20 +590,23 @@ def parse_arguments(pstep):
             '--median_fragment_size', type=int, help='median inset size for pairs in the bam file', required=True
         )
 
-        parser.add_argument('-p', '--protocol', required=True, choices=PROTOCOL.values())
 
     args = parser.parse_args()
     if pstep == PIPELINE_STEP.VALIDATE:
         args.samtools_version = get_samtools_version()
         args.blat_version = get_blat_version()
     args.output = os.path.abspath(args.output)
-    if os.path.exists(args.output) and not args.force_overwrite:
-        parser.print_help()
-        print(
-            '\nerror: output directory {} exists, --force_overwrite must be specified or the directory removed'.format(
-                repr(args.output)))
-        exit(1)
-    return parser, args
+    try:
+        if os.path.exists(args.output) and not args.force_overwrite:
+            parser.print_help()
+            print(
+                '\nerror: output directory {} exists, --force_overwrite must be specified or the directory removed'.format(
+                    repr(args.output)))
+            exit(1)
+    except AttributeError:
+        pass
+
+    return args
 
 
 def filter_on_overlap(bpps, regions_by_reference_name):
@@ -610,30 +634,23 @@ def filter_on_overlap(bpps, regions_by_reference_name):
     return passed, failed
 
 
-def main_pipeline(parser, args):
+def main_pipeline(configs):
 
     READ_FILES = {}
-
-    if os.path.exists(args.output) and not args.force_overwrite:
-        print('error: must specify the overwrite option or delete the existing output directory')
-        parser.print_help()
-        exit(1)
-    args.output = os.path.abspath(args.output)
-    configs = read_config(args.config)
     # read the config
     # set up the directory structure and run svmerge
     annotation_jobs = []
     for sec in configs:
-        base = os.path.join(args.output, '{}_{}'.format(sec.library, sec.protocol))
+        print('sec.output', sec.output)
+        base = os.path.join(sec.output, '{}_{}'.format(sec.library, sec.protocol))
         log('setting up the directory structure for', sec.library, 'as', base)
-        base = os.path.join(args.output, '{}_{}'.format(sec.library, sec.protocol))
+        base = os.path.join(sec.output, '{}_{}'.format(sec.library, sec.protocol))
         cluster_output = mkdirp(os.path.join(base, 'clustering'))
         validation_output = mkdirp(os.path.join(base, 'validation'))
         annotation_output = mkdirp(os.path.join(base, 'annotation'))
 
         # run the merge
         log('clustering')
-        setattr(sec, 'output', os.path.join(base, 'clustering'))
         merge_args = {
             'output': cluster_output,
             'max_proximity': sec.max_proximity,
@@ -644,11 +661,8 @@ def main_pipeline(parser, args):
             'uninformative_filter': True
         }
         merge_args.update(sec.__dict__)
-        ann = merge_args['annotations']
-        merge_args['annotations'] = READ_FILES.get(ann, ann)
-        merge_args = Namespace(**merge_args)
-        output_files = cluster_main(merge_args)
-        READ_FILES[ann] = getattr(merge_args, 'annotations')
+        merge_args['output'] = os.path.join(base, 'clustering')
+        output_files = main_cluster(Namespace(**merge_args))
         merge_file_prefix = None
         for f in output_files:
             m = re.match('^(?P<prefix>.*\D)\d+.tab$', f)
@@ -662,18 +676,18 @@ def main_pipeline(parser, args):
         # now set up the qsub script for the validation and the held job for the annotation
         validation_args = {
             'output': validation_output,
-            'masking': sec.masking,
-            'reference_genome': sec.reference_genome,
+            'masking': sec.masking[0],
+            'reference_genome': sec.reference_genome[0],
             'blat_2bit_reference': sec.blat_2bit_reference,
-            'annotations': sec.annotations,
+            'annotations': sec.annotations[0],
             'library': sec.library,
             'bam_file': sec.bam_file,
             'protocol': sec.protocol,
             'read_length': sec.read_length,
             'stdev_fragment_size': sec.stdev_fragment_size,
             'median_fragment_size': sec.median_fragment_size,
-            'force_overwrite': args.force_overwrite,
-            'stranded_bam': sec.stranded_bam
+            'stranded_bam': sec.stranded_bam,
+            'protocol': sec.protocol
         }
         for attr in sorted(VALIDATION_DEFAULTS.__dict__.keys()):
             validation_args[attr] = getattr(sec, attr)
@@ -691,15 +705,15 @@ def main_pipeline(parser, args):
             temp.extend(['--{} "{}"'.format(k, v) for k, v in validation_args.items() if isinstance(v, str) and v is not None])
             validation_args = temp
             validation_args.append('-n {}$SGE_TASK_ID.tab'.format(merge_file_prefix))
-            fh.write('python {}/mavis_validate.py {}\n'.format(basedir, ' \\\n\t'.join(validation_args)))
+            fh.write('python {} validate {}\n'.format(__file__, ' \\\n\t'.join(validation_args)))
 
         # set up the annotations job
         # for all files with the right suffix
         annotation_args = {
             'output': annotation_output,
-            'reference_genome': sec.reference_genome,
-            'annotations': sec.annotations,
-            'template_metadata': sec.template_metadata,
+            'reference_genome': sec.reference_genome[0],
+            'annotations': sec.annotations[0],
+            'template_metadata': sec.template_metadata[0],
             'min_orf_size': sec.min_orf_size,
             'max_orf_cap': sec.max_orf_cap,
             'min_domain_mapping_match': sec.min_domain_mapping_match,
@@ -709,7 +723,7 @@ def main_pipeline(parser, args):
         temp = ['--{} {}'.format(k, v) for k, v in annotation_args.items() if not isinstance(v, str) and v is not None]
         temp.extend(['--{} "{}"'.format(k, v) for k, v in annotation_args.items() if isinstance(v, str) and v is not None])
         annotation_args = temp
-        annotation_args.append('--input {}/*{}'.format(validation_output, PASS_SUFFIX))
+        annotation_args.append('--input {}/*{}'.format(validation_output, VALIDATION_PASS_SUFFIX))
         qsub = os.path.join(annotation_output, 'qsub.sh')
         annotation_jobname = 'annotation_{}_{}'.format(sec.library, sec.protocol)
         annotation_jobs.append(annotation_jobname)
@@ -720,23 +734,22 @@ def main_pipeline(parser, args):
                     queue=sec.queue, memory=sec.memory, name=annotation_jobname, output=annotation_output
                 ) + '\n')
             fh.write('#$ -hold_jid {}\n'.format(validation_jobname))
-            fh.write('python {}/mavis_annotate.py {}\n'.format(basedir, ' \\\n\t'.join(annotation_args)))
+            fh.write('python {} annotate {}\n'.format(__file__, ' \\\n\t'.join(annotation_args)))
 
     # set up scripts for the pairing held on all of the annotation jobs
-    pairing_output = mkdirp(os.path.join(base, 'pairing'))
+    pairing_output = mkdirp(os.path.join(sec.output, 'pairing'))
     qsub = os.path.join(pairing_output, 'qsub.sh')
     with open(qsub, 'w') as fh:
         log('writing:', qsub)
 
 
 def read_inputs(inputs, force_stranded=False, **kwargs):
+    print('read_inputs', kwargs)
     bpps = []
     kwargs.setdefault('require', [])
     kwargs['require'] = list(set(kwargs['require'] + [COLUMNS.library, COLUMNS.protocol]))
-    kwargs.setdefault('validate', {})
-    kwargs['validate'][COLUMNS.library] = '^[\w-]+$'
-    kwargs.setdefault('_in', {})
-    kwargs['_in'][COLUMNS.protocol] = PROTOCOL
+    kwargs.setdefault('in_', {})
+    kwargs['in_'][COLUMNS.protocol] = PROTOCOL
     for finput in inputs:
         log('loading:', finput)
         bpps.extend(read_bpp_from_input_file(
@@ -758,18 +771,30 @@ def output_tabbed_file(bpps, filename):
         header.update(row)
 
     header = sort_columns(header)
-    
+
     with open(filename, 'w') as fh:
+        log('writing:', filename)
         fh.write('#' + '\t'.join(header) + '\n')
         for row in rows:
-            fh.write('\t'.join([str(row[c]) for c in header]) + '\n')
+            fh.write('\t'.join([str(row.get(c, None)) for c in header]) + '\n')
+
+def write_bed_file(filename, cluster_breakpoint_pairs):
+    with open(filename, 'w') as fh:
+        for bpp in cluster_breakpoint_pairs:
+            if bpp.interchromosomal:
+                fh.write('{}\t{}\t{}\tcluster={}\n'.format(
+                    bpp.break1.chr, bpp.break1.start, bpp.break1.end, bpp.data['cluster_id']))
+                fh.write('{}\t{}\t{}\tcluster={}\n'.format(
+                    bpp.break2.chr, bpp.break2.start, bpp.break2.end, bpp.data['cluster_id']))
+            else:
+                fh.write('{}\t{}\t{}\tcluster={}\n'.format(
+                    bpp.break1.chr, bpp.break1.start, bpp.break2.end, bpp.data['cluster_id']))
 
 
 def main_cluster(args):
     # output files
     cluster_batch_id = build_batch_id(prefix='cluster-')
     UNINFORM_OUTPUT = os.path.join(args.output, 'uninformative_clusters.txt')
-    CLUSTER_ASSIGN_OUTPUT = os.path.join(args.output, 'cluster_assignment.tab')
     CLUSTER_ASSIGN_OUTPUT = os.path.join(args.output, 'cluster_assignment.tab')
     CLUSTER_BED_OUTPUT = os.path.join(args.output, 'clusters.bed')
     split_file_name_func = lambda x: os.path.join(args.output, '{}-{}.tab'.format(cluster_batch_id, x))
@@ -780,36 +805,35 @@ def main_cluster(args):
         add={COLUMNS.library: args.library, COLUMNS.protocol: args.protocol}
     )
     # filter by masking file
-    breakpoint_pairs, filtered_bpp = filter_on_overlap(breakpoint_pairs, args.masking)
+    breakpoint_pairs, filtered_bpp = filter_on_overlap(breakpoint_pairs, args.masking[1])
 
     log('computing clusters')
     clusters = cluster_breakpoint_pairs(breakpoint_pairs, r=args.cluster_radius, k=args.cluster_clique_size)
 
     hist = {}
     length_hist = {}
-    for cluster, input_pairs in clusters.items():
+    for index, cluster in enumerate(clusters):
+        input_pairs = clusters[cluster]
         hist[len(input_pairs)] = hist.get(len(input_pairs), 0) + 1
         c1 = round(len(cluster[0]), -2)
         c2 = round(len(cluster[1]), -2)
         length_hist[c1] = length_hist.get(c1, 0) + 1
         length_hist[c2] = length_hist.get(c2, 0) + 1
-        cluster.data[COLUMNS.cluster_id] = '{}-{}'.format(cluster_id_prefix, cluster_id)
+        cluster.data[COLUMNS.cluster_id] = '{}-{}'.format(cluster_batch_id, index + 1)
         cluster.data[COLUMNS.cluster_size] = len(input_pairs)
         temp = set()
         for p in input_pairs:
             temp.update(p.data[COLUMNS.tools])
         cluster.data[COLUMNS.tools] = ';'.join(sorted(list(temp)))
-        cluster_id += 1
     log('computed', len(clusters), 'clusters', time_stamp=False)
     log('cluster input pairs distribution', sorted(hist.items()), time_stamp=False)
     log('cluster intervals lengths', sorted(length_hist.items()), time_stamp=False)
     # map input pairs to cluster ids
     # now create the mapping from the original input files to the cluster(s)
     mkdirp(args.output)
-    
+
     with open(CLUSTER_ASSIGN_OUTPUT, 'w') as fh:
         header = set()
-        log('writing:', CLUSTER_ASSIGN_OUTPUT)
         rows = {}
 
         for cluster, input_pairs in clusters.items():
@@ -829,7 +853,7 @@ def main_cluster(args):
     output_files = []
     # filter clusters based on annotations
     # decide on the number of clusters to validate per job
-    pass_clusters = clusters
+    pass_clusters = list(clusters)
     fail_clusters = []
 
     if args.uninformative_filter:
@@ -858,7 +882,7 @@ def main_cluster(args):
     if len(pass_clusters) // args.min_clusters_per_file > args.max_files - 1:
         JOB_SIZE = len(pass_clusters) // args.max_files
         assert(len(pass_clusters) // JOB_SIZE == args.max_files)
-    
+
     bedfile = os.path.join(args.output, 'clusters.bed')
     log('writing:', bedfile)
     write_bed_file(bedfile, clusters)
@@ -880,18 +904,19 @@ def main_annotate(args):
     DRAWINGS_DIRECTORY = os.path.join(args.output, 'drawings')
     TABBED_OUTPUT_FILE = os.path.join(args.output, 'annotations.tab')
     FA_OUTPUT_FILE = os.path.join(args.output, 'annotations.fusion-cdna.fa')
-    
+
     mkdirp(DRAWINGS_DIRECTORY)
     # test that the sequence makes sense for a random transcript
-    bpps = read_inputs(args.inputs, _in={COLUMNS.protocol: PROTOCOL})
+    bpps = read_inputs(args.inputs, in_={COLUMNS.protocol: PROTOCOL})
     log('read {} breakpoint pairs'.format(len(bpps)))
 
     annotations = annotate_events(
-        bpps, 
-        reference_genome=args.reference_genome, annotations=args.annotations, 
+        bpps,
+        reference_genome=args.reference_genome[1], annotations=args.annotations[1],
         min_orf_size=args.min_orf_size, min_domain_mapping_match=args.min_domain_mapping_match,
-        max_orf_cap=args.max_orf_cap
-    ) 
+        max_orf_cap=args.max_orf_cap,
+        log=log
+    )
 
     id_prefix = build_batch_id(prefix='annotation', suffix='-')
     rows = []  # hold the row information for the final tsv file
@@ -997,7 +1022,7 @@ def main_annotate(args):
             rows.append(row)
         else:
             rows.extend(ann_rows)
-    
+
     output_tabbed_file(rows, TABBED_OUTPUT_FILE)
 
     with open(FA_OUTPUT_FILE, 'w') as fh:
@@ -1018,64 +1043,68 @@ def main():
         print('usage: {} {{cluster,validate,annotate,pairing,summary,pipeline}}'.format(name))
         print('{}: error:'.format(name), err)
         exit(1)
-    
+
     if len(sys.argv) < 2:
         usage('the <pipeline step> argument is required')
-    
+
     pstep = sys.argv.pop(1)
     sys.argv[0] = '{} {}'.format(sys.argv[0], pstep)
-    
+
     if pstep == PIPELINE_STEP.SUMMARY:
         raise NotImplementedError('summary script has not been written')
+    args = parse_arguments(pstep)
+    config = []
+    log('input arguments')
+    for arg, val in sorted(args.__dict__.items()):
+        log(arg, '=', repr(val), time_stamp=False)
+    if pstep == PIPELINE_STEP.PIPELINE:
+        config = read_config(args.config)
+        for sec in config:
+            sec.output = args.output
+        args = config[0]
+        print('sec args', args)
+
+    # load the reference files if they have been given?
+    if any([
+            pstep not in [PIPELINE_STEP.PIPELINE, PIPELINE_STEP.VALIDATE],
+            hasattr(args, 'uninformative_filter') and args.uninformative_filter,
+            pstep == PIPELINE_STEP.VALIDATE and args.protocol == PROTOCOL.TRANS]):
+        log('loading:', args.annotations)
+        args.__dict__['annotations'] = args.annotations, load_reference_genes(args.annotations)
+    else:
+        args.__dict__['annotations'] = args.annotations, None
     try:
-        args = parse_arguments(pstep)
-        config = None
-        log('input arguments')
-        for arg, val in sorted(args.__dict__.items()):
-            log(arg, '=', repr(val), time_stamp=False)
-        if pstep == PIPELINE_STEP.PIPELINE:
-            config = read_config(args.config)
-            args = config[0]
-        
-        # load the reference files if they have been given?
-        if any([
-                pstep not in [PIPELINE_STEP.PIPELINE, PIPELINE.VALIDATE],
-                args.uninformative_filter,
-                pstep == PIPELINE_STEP.VALIDATE and args.protocol == PROTOCOL.TRANS]):
-            log('loading:', args.annotations)
-            args.__dict__['annotations'] = load_reference_genes(args.annotations)
-        try:
-            log('loading:' if not args.low_memory else 'indexing:', args.reference_genome)
-            args.__dict__['reference_genome'] = load_reference_genome(args.reference_genome, args.low_memory)
-        except AttributeError:
-            pass
-        try:
-            log('loading:', args.masking)
-            args.__dict__['masking'] = load_masking_regions(args.masking)
-        except AttributeError:
-            pass
-        try:
-            log('loading:', args.template_metadata)
-            args.__dict__['template_metadata'] = load_templates(args.template_metadata)
-        except AttributeError:
-            pass
-        
-        if pstep == PIPELINE_STEP.CLUSTER:
-            main_cluster(args)
-        elif pstep == PIPELINE_STEP.VALIDATE:
-            main_validate(args)
-        elif pstep == PIPELINE_STEP.ANNOTATE:
-            main_annotate(args)
-        elif pstep == PIPELINE_STEP.PAIR:
-            main_pairing(args)
-        elif pstep == PIPELINE_STEP.SUMMARY:
-            main_summary(args)
-        else:  # PIPELINE
-            main_pipeline(config)
+        log('loading:' if not args.low_memory else 'indexing:', args.reference_genome)
+        args.__dict__['reference_genome'] = args.reference_genome, load_reference_genome(args.reference_genome, args.low_memory)
+    except AttributeError:
+        args.__dict__['reference_genome'] = args.__dict__.get('reference_genome', None), None
+    try:
+        log('loading:', args.masking)
+        args.__dict__['masking'] = args.masking, load_masking_regions(args.masking)
+    except AttributeError as err:
+        args.__dict__['masking'] = args.__dict__.get('masking', None), None
+    try:
+        log('loading:', args.template_metadata)
+        args.__dict__['template_metadata'] = args.template_metadata, load_templates(args.template_metadata)
+    except AttributeError:
+        args.__dict__['template_metadata'] = args.__dict__.get('template_metadata', None)
 
+    for attr in ['annotations', 'masking', 'template_metadata', 'reference_genome']:
+        for sec in config:
+            sec.__dict__[attr] = args.__dict__[attr]
 
-    except KeyError:
-        usage('unrecognized value {} for <pipeline step>'.format(repr(pstep)))
+    if pstep == PIPELINE_STEP.CLUSTER:
+        main_cluster(args)
+    elif pstep == PIPELINE_STEP.VALIDATE:
+        main_validate(args)
+    elif pstep == PIPELINE_STEP.ANNOTATE:
+        main_annotate(args)
+    elif pstep == PIPELINE_STEP.PAIR:
+        main_pairing(args)
+    elif pstep == PIPELINE_STEP.SUMMARY:
+        main_summary(args)
+    else:  # PIPELINE
+        main_pipeline(config)
 
 if __name__ == '__main__':
     main()

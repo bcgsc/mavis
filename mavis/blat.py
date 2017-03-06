@@ -342,6 +342,7 @@ def blat_contigs(
         MIN_EXTEND_OVERLAP=10,
         pair_scoring_function=paired_alignment_score,
         clean_files=True,
+        log=lambda *pos, **kwargs: None,
         **kwargs):
     """
     given a set of contigs, call blat from the command line and adds the results to the contigs
@@ -382,7 +383,9 @@ def blat_contigs(
                 query_id_mapping[n] = seq
                 fh.write('>' + n + '\n' + seq + '\n')
                 count += 1
-
+        if len(sequences) == 0:
+            return
+        log('will blat', len(sequences), 'unique sequences', time_stamp=False)
         # call the blat subprocess
         # will raise subprocess.CalledProcessError if non-zero exit status
         # parameters from https://genome.ucsc.edu/FAQ/FAQblat.html#blat4

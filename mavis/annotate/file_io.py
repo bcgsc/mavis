@@ -381,7 +381,7 @@ def load_templates(filename):
         filename,
         header=header,
         cast={'start': int, 'end': int, 'name': lambda x: re.sub('^chr', '', x)},
-        _in={'giesma_stain': GIESMA_STAIN}
+        in_={'giesma_stain': GIESMA_STAIN}
     )
 
     bands_by_template = {}
