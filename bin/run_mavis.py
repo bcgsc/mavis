@@ -1,32 +1,22 @@
 from argparse import Namespace
-from configparser import ConfigParser, ExtendedInterpolation
-from datetime import datetime
-import argparse
-import errno
-import math
 import os
 import pysam
-import random
 import re
 import subprocess
 import sys
-import warnings
 import itertools
 import json
 
-import TSV
-from vocab import Vocab
 
 # local modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from mavis import __version__
 from mavis.annotate import load_reference_genes, load_reference_genome, load_masking_regions, load_templates
 from mavis.annotate.variant import annotate_events, determine_prime
 from mavis.bam.cache import BamCache
 from mavis.blat import blat_contigs
-from mavis.breakpoint import read_bpp_from_input_file, BreakpointPair
+from mavis.breakpoint import BreakpointPair
 from mavis.cluster import cluster_breakpoint_pairs
-from mavis.constants import PROTOCOL, COLUMNS, sort_columns, PRIME
+from mavis.constants import PROTOCOL, COLUMNS, PRIME
 from mavis.error import DrawingFitError, NotSpecifiedError
 from mavis.illustrate.constants import DiagramSettings
 from mavis.illustrate.diagram import draw_sv_summary_diagram
@@ -35,44 +25,10 @@ from mavis.validate.call import call_events
 from mavis.validate.constants import VALIDATION_DEFAULTS
 from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
 import mavis.bam.cigar as cigar_tools
+from mavis.pipeline.config import read_config, parse_arguments
+from mavis.pipeline.util import *
 
-
-
-MIN_CLUSTERS_PER_FILE = 50
-MAX_FILES = 100
-CLUSTER_CLIQUE_SIZE = 15
-CLUSTER_RADIUS = 20
-MIN_ORF_SIZE = 120
-MAX_ORF_CAP = 3
-MAX_PROXIMITY = 5000
 VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
-DEFAULTS = Namespace(
-    min_clusters_per_file=50,
-    max_files=10,
-    cluster_clique_size=15,
-    cluster_radius=20,
-    min_orf_size=120,
-    max_orf_cap=3,
-    min_domain_mapping_match=0.8,
-    domain_regex_filter='^PF\d+$',
-    max_proximity=5000,
-    uninformative_filter=True,
-    blat_2bit_reference='/home/pubseq/genomes/Homo_sapiens/GRCh37/blat/hg19.2bit',
-    stranded_bam=False
-)
-DEFAULTS.__dict__.update(VALIDATION_DEFAULTS.__dict__)
-OUTPUT_FILES = Namespace(
-    CLUSTER_SET='{prefix}'
-)
-
-PIPELINE_STEP = Vocab(
-    ANNOTATE='annotate',
-    VALIDATE='validate',
-    PIPELINE='pipeline',
-    CLUSTER='cluster',
-    PAIR='pairing',
-    SUMMARY='summary'
-)
 
 QSUB_HEADER = """#!/bin/bash
 #$ -V
@@ -81,154 +37,6 @@ QSUB_HEADER = """#!/bin/bash
 #$ -o {output}
 #$ -l mem_free={memory}G,mem_token={memory}G,h_vmem={memory}G
 #$ -j y"""
-
-def build_batch_id(prefix='', suffix='', size=6):
-    date = datetime.now()
-    m = int(math.pow(10, size) - 1)
-    return 'batch{prefix}{date.year}{date.month:02d}{date.day:02d}r{r:06d}{suffix}'.format(
-        prefix=prefix, suffix=suffix, date=date, r=random.randint(1, m))
-
-
-def samtools_v0_sort(input_bam, output_bam):
-    prefix = re.sub('\.bam$', '', output_bam)
-    return 'samtools sort {} {}'.format(input_bam, prefix)
-
-
-def samtools_v1_sort(input_bam, output_bam):
-    return 'samtools sort {} -o {}'.format(input_bam, output_bam)
-
-
-def get_samtools_version():
-    proc = subprocess.getoutput(['samtools'])
-    for line in proc.split('\n'):
-        m = re.search('Version: (?P<major>\d+)\.(?P<mid>\d+)\.(?P<minor>\d+)', line)
-        if m:
-            return int(m.group('major')), int(m.group('mid')), int(m.group('minor'))
-    raise ValueError('unable to parse samtools version number')
-
-
-def get_blat_version():
-    proc = subprocess.getoutput(['blat'])
-    for line in proc.split('\n'):
-        m = re.search('blat - Standalone BLAT v. (\d+(x\d+)?)', line)
-        if m:
-            return m.group(1)
-    raise ValueError('unable to parse blat version number')
-
-
-def log(*pos, time_stamp=True):
-    if time_stamp:
-        print('[{}]'.format(datetime.now()), *pos)
-    else:
-        print(' ' * 28, *pos)
-
-
-def mkdirp(dirname):
-    log("creating output directory: '{}'".format(dirname))
-    try:
-        os.makedirs(dirname)
-    except OSError as exc:  # Python >2.5: http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
-        if exc.errno == errno.EEXIST and os.path.isdir(dirname):
-            pass
-        else:
-            raise exc
-    return dirname
-
-
-def read_config(filepath):
-    """
-    reads the configuration settings from the configuration file
-
-    Args:
-        filepath (str): path to the input configuration file
-
-    Returns:
-        class:`list` of :class:`Namespace`: namespace arguments for each library
-    """
-    parser = ConfigParser(interpolation=ExtendedInterpolation())
-    parser.read(filepath)
-
-    LIBRARY_REQ_ATTR = ['protocol', 'bam_file', 'read_length', 'median_fragment_size', 'stdev_fragment_size', 'inputs']
-    TYPE_CHECK = DEFAULTS.__dict__
-
-    config = {
-        'qsub': {
-            'memory': 12,
-            'queue': 'transabyss.q'
-        },
-        'reference': {
-            'template_metadata': os.path.join(os.path.dirname(__file__), 'cytoBand.txt'),
-            'reference_genome': '/home/pubseq/genomes/Homo_sapiens/TCGA_Special/GRCh37-lite.fa',
-            'annotations': '/home/creisle/svn/ensembl_flatfiles/ensembl69_transcript_exons_and_domains_20160808.tsv',
-            'masking': '/home/creisle/svn/svmerge/trunk/hg19_masked_regions.tsv'
-        }
-    }
-
-    defaults = dict()
-    defaults.update(DEFAULTS.__dict__)
-    for attr, value in parser['DEFAULTS'].items():
-        if attr == 'protocol':
-            PROTOCOL.enforce(value)
-        if attr in TYPE_CHECK and type(TYPE_CHECK[attr]) != type(value):
-            try:
-                if type(TYPE_CHECK[attr]) == bool:
-                    value = TSV.tsv_boolean(value)
-                else:
-                    value = type(TYPE_CHECK[attr])(value)
-            except ValueError:
-                warnings.warn('type check failed for attr {} with value {}'.format(attr, repr(value)))
-        elif attr not in TYPE_CHECK:
-            raise ValueError('unexpected value in DEFAULTS section', attr, value)
-        defaults[attr] = value
-
-    library_sections = []
-
-    for sec in parser.sections():
-
-        section = dict()
-        if sec == 'DEFAULTS':
-            continue
-        elif sec not in ['reference', 'qsub', 'visualization']:  # assume this is a library configuration
-            library_sections.append(sec)
-            for attr in LIBRARY_REQ_ATTR:
-                if not parser.has_option(sec, attr):
-                    raise KeyError(
-                        'missing one or more required attribute(s) for the library section',
-                        sec, attr, LIBRARY_REQ_ATTR)
-                if attr in config['reference']:
-                    raise ValueError(
-                        'this attribute cannot be given per library and must be general between libraries', attr)
-            section['library'] = sec
-
-        for attr, value in parser[sec].items():
-            if attr == 'protocol':
-                PROTOCOL.enforce(value)
-            elif attr in TYPE_CHECK and type(TYPE_CHECK[attr]) != type(value):
-                try:
-                    value = type(TYPE_CHECK[attr])(value)
-                except ValueError:
-                    warnings.warn('type check failed for attr {} with value {}'.format(attr, repr(value)))
-            elif attr in ['stdev_fragment_size', 'median_fragment_size', 'read_length']:
-                try:
-                    value = int(value)
-                except ValueError:
-                    value = float(value)
-            elif attr == 'inputs':
-                value = value.split(';') if value else []
-            section[attr] = value
-        config.setdefault(sec, dict()).update(section)
-
-    for lib, section in [(l, config[l]) for l in library_sections]:
-        d = dict()
-        d.update(defaults)
-        d.update(config['qsub'])
-        d.update(config['visualization'])
-        d.update(config['reference'])
-        d.update(section)
-        config[lib] = Namespace(**d)
-    if len(library_sections) < 1:
-        raise UserWarning('configuration file must have 1 or more library sections')
-    return [config[l] for l in library_sections]
 
 
 def main_validate(args):
@@ -292,7 +100,7 @@ def main_validate(args):
         else:
             raise ValueError('protocol not recognized', bpp.data[COLUMNS.protocol])
 
-    for chr, masks in args.masking[1].items(): # extend masking by read length
+    for chr, masks in args.masking[1].items():  # extend masking by read length
         for mask in masks:
             mask.position.start -= args.read_length
             mask.position.end += args.read_length
@@ -445,190 +253,6 @@ def main_validate(args):
         fh.write('load {} name="{} {} input"\n'.format(args.bam_file, args.library, args.protocol))
 
 
-def parse_arguments(pstep):
-    PIPELINE_STEP.enforce(pstep)
-
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument(
-        '-v', '--version', action='version', version='%(prog)s version ' + __version__,
-        help='Outputs the version number'
-    )
-
-    if pstep != PIPELINE_STEP.PIPELINE:
-        g = parser.add_argument_group('reference input arguments')
-        g.add_argument(
-            '--annotations',
-            default='/home/creisle/svn/ensembl_flatfiles/ensembl69_transcript_exons_and_domains_20160808.tsv',
-            help='path to the reference annotations of genes, transcript, exons, domains, etc.'
-        )
-        if pstep in [PIPELINE_STEP.ANNOTATE, PIPELINE_STEP.VALIDATE]:
-            g.add_argument(
-                '--reference_genome',
-                default='/home/pubseq/genomes/Homo_sapiens/TCGA_Special/GRCh37-lite.fa',
-                help='path to the human reference genome in fa format'
-            )
-        if pstep == PIPELINE_STEP.ANNOTATE:
-            g.add_argument(
-                '--template_metadata', default=os.path.join(os.path.dirname(__file__), 'cytoBand.txt'),
-                help='file containing the cytoband template information'
-            )
-        if pstep in [PIPELINE_STEP.CLUSTER, PIPELINE_STEP.VALIDATE]:
-            g.add_argument(
-                '--masking',
-                default='/home/creisle/svn/svmerge/trunk/hg19_masked_regions.tsv'
-            )
-        g.add_argument(
-            '--low_memory', default=False, type=TSV.tsv_boolean,
-            help='when working on a machine with less memory this is sacrifice time for memory where possible'
-        )
-        if pstep == PIPELINE_STEP.VALIDATE:
-            g.add_argument(
-                '--blat_2bit_reference', default='/home/pubseq/genomes/Homo_sapiens/GRCh37/blat/hg19.2bit',
-                help='path to the 2bit reference file used for blatting contig sequences'
-            )
-    else:
-        parser.add_argument('config', help='path to the pipeline configuration file')
-        parser.add_argument(
-            '-f', '--force_overwrite', default=False, type=TSV.tsv_boolean,
-            help='set flag to overwrite existing reviewed files'
-        )
-    parser.add_argument('--output', help='path to the output directory', required=True)
-
-
-    if pstep == PIPELINE_STEP.ANNOTATE:
-        parser.add_argument(
-            '--output_svgs', default=True, type=TSV.tsv_boolean,
-            help='set flag to suppress svg drawings of putative annotations')
-        parser.add_argument(
-            '--min_orf_size', default=MIN_ORF_SIZE, type=int, help='minimum size for putative ORFs'
-        )
-        parser.add_argument(
-            '--max_orf_cap', default=MAX_ORF_CAP, type=int, help='keep the n longest orfs'
-        )
-        parser.add_argument(
-            '--min_domain_mapping_match', default=0.8, type=float,
-            help='minimum percent match for the domain to be considered aligned'
-        )
-        g = parser.add_argument_group('visualization options')
-        g.add_argument(
-            '--domain_regex_filter', default='^PF\d+$',
-            help='only show domains which names (external identifiers) match the given pattern'
-        )
-
-    if pstep == PIPELINE_STEP.CLUSTER or pstep == PIPELINE_STEP.ANNOTATE:
-        parser.add_argument(
-            '--max_proximity', default=MAX_PROXIMITY, type=int,
-            help='The maximum distance away from breakpoints to look for proximal genes'
-        )
-        parser.add_argument('-n', '--inputs', required=True, nargs='+', help='1 or more input files')
-    elif pstep == PIPELINE_STEP.VALIDATE or pstep == PIPELINE_STEP.PAIR:
-        parser.add_argument('-n', '--input', help='path to the input file', required=True)
-
-    if pstep == PIPELINE_STEP.CLUSTER or pstep == PIPELINE_STEP.VALIDATE:
-        parser.add_argument('-l', '--library', help='library name')
-        parser.add_argument('--protocol', help='the library protocol: genome or transcriptome', choices=PROTOCOL.values())
-
-    if pstep == PIPELINE_STEP.CLUSTER:
-        g = parser.add_argument_group('output arguments')
-        g.add_argument(
-            '--max_files', default=MAX_FILES, type=int, dest='max_files',
-            help='defines the maximum number of files that can be created')
-        g.add_argument(
-            '--min_clusters_per_file', default=MIN_CLUSTERS_PER_FILE, type=int,
-            help='defines the minimum number of clusters per file')
-        parser.add_argument(
-            '-r', '--cluster_radius', help='radius to use in clustering', default=CLUSTER_RADIUS, type=int)
-        parser.add_argument(
-            '-k', '--cluster_clique_size',
-            help='parameter used for computing cliques, smaller is faster, above 20 will be slow',
-            default=CLUSTER_CLIQUE_SIZE, type=int
-        )
-        parser.add_argument(
-            '--uninformative_filter', default=True, help='If flag is False then the clusters will not be filtered '
-            'based on lack of annotation', type=TSV.tsv_boolean
-        )
-
-    if pstep == PIPELINE_STEP.PAIR:
-        parser.add_argument(
-            '--split_call_distance', default=10, type=int,
-            help='distance allowed between breakpoint calls when pairing from split read (and higher) resolution calls'
-        )
-        parser.add_argument(
-            '--contig_call_distance', default=0, type=int,
-            help='distance allowed between breakpoint calls when pairing from contig (and higher) resolution calls'
-        )
-        parser.add_argument(
-            '--flanking_call_distance', default=0, type=int,
-            help='distance allowed between breakpoint calls when pairing from contig (and higher) resolution calls'
-        )
-
-    if pstep == PIPELINE_STEP.VALIDATE:
-        g = parser.add_argument_group('evidence arguments')
-        for attr, value in VALIDATION_DEFAULTS.__dict__.items():
-            vtype = type(value)
-            if type(value) == bool:
-                vtype = TSV.tsv_boolean
-            g.add_argument('--{}'.format(attr), default=value, type=vtype, help='see user manual for desc')
-        parser.add_argument(
-            '-b', '--bam_file',
-            help='path to the input bam file', required=True
-        )
-        parser.add_argument(
-            '--stranded_bam', default=False, type=TSV.tsv_boolean,
-            help='indicates that the input bam file is strand specific'
-        )
-        g.add_argument('--read_length', type=int, help='the length of the reads in the bam file', required=True)
-        g.add_argument(
-            '--stdev_fragment_size', type=int, help='expected standard deviation in insert sizes', required=True
-        )
-        g.add_argument(
-            '--median_fragment_size', type=int, help='median inset size for pairs in the bam file', required=True
-        )
-
-
-    args = parser.parse_args()
-    if pstep == PIPELINE_STEP.VALIDATE:
-        args.samtools_version = get_samtools_version()
-        args.blat_version = get_blat_version()
-    args.output = os.path.abspath(args.output)
-    try:
-        if os.path.exists(args.output) and not args.force_overwrite:
-            parser.print_help()
-            print(
-                '\nerror: output directory {} exists, --force_overwrite must be specified or the directory removed'.format(
-                    repr(args.output)))
-            exit(1)
-    except AttributeError:
-        pass
-
-    return args
-
-
-def filter_on_overlap(bpps, regions_by_reference_name):
-    log('filtering on overlaps with regions')
-    failed = []
-    passed = []
-    for bpp in bpps:
-        overlaps = False
-        for r in regions_by_reference_name.get(bpp.break1.chr, []):
-            if Interval.overlaps(r, bpp.break1):
-                overlaps = True
-                bpp.data['failure_comment'] = 'overlapped masked region: ' + str(r)
-                break
-        for r in regions_by_reference_name.get(bpp.break2.chr, []):
-            if overlaps:
-                break
-            if Interval.overlaps(r, bpp.break2):
-                overlaps = True
-                bpp.data[COLUMNS.filter_comment] = 'overlapped masked region: ' + str(r)
-        if overlaps:
-            failed.append(bpp)
-        else:
-            passed.append(bpp)
-    log('filtered', len(bpps), 'to', len(passed))
-    return passed, failed
-
-
 def main_pipeline(configs):
 
     READ_FILES = {}
@@ -645,15 +269,7 @@ def main_pipeline(configs):
 
         # run the merge
         log('clustering')
-        merge_args = {
-            'output': cluster_output,
-            'max_proximity': sec.max_proximity,
-            'cluster_radius': CLUSTER_RADIUS,
-            'cluster_clique_size': CLUSTER_CLIQUE_SIZE,
-            'max_files': MAX_FILES,
-            'min_clusters_per_file': MIN_CLUSTERS_PER_FILE,
-            'uninformative_filter': True
-        }
+        merge_args = {}
         merge_args.update(sec.__dict__)
         merge_args['output'] = os.path.join(base, 'clustering')
         output_files = main_cluster(Namespace(**merge_args))
@@ -737,47 +353,6 @@ def main_pipeline(configs):
         log('writing:', qsub)
 
 
-def read_inputs(inputs, force_stranded=False, **kwargs):
-    bpps = []
-    kwargs.setdefault('require', [])
-    kwargs['require'] = list(set(kwargs['require'] + [COLUMNS.library, COLUMNS.protocol]))
-    kwargs.setdefault('in_', {})
-    kwargs['in_'][COLUMNS.protocol] = PROTOCOL
-    for finput in inputs:
-        log('loading:', finput)
-        bpps.extend(read_bpp_from_input_file(
-            finput, force_stranded=force_stranded,
-            **kwargs
-        ))
-    return bpps
-
-
-def output_tabbed_file(bpps, filename):
-    header = set()
-    rows = []
-    for row in bpps:
-        try:
-            row = row.flatten()
-        except AttributeError:
-            pass
-        rows.append(row)
-        header.update(row)
-
-    header = sort_columns(header)
-
-    with open(filename, 'w') as fh:
-        log('writing:', filename)
-        fh.write('#' + '\t'.join(header) + '\n')
-        for row in rows:
-            fh.write('\t'.join([str(row.get(c, None)) for c in header]) + '\n')
-
-def write_bed_file(filename, bed_rows):
-    log('writing:', filename)
-    with open(filename, 'w') as fh:
-        for bed in bed_rows:
-            fh.write('\t'.join([str(c) for c in bed]) + '\n')
-
-
 def main_cluster(args):
     # output files
     cluster_batch_id = build_batch_id(prefix='cluster-')
@@ -788,7 +363,7 @@ def main_cluster(args):
     # load the input files
     breakpoint_pairs = read_inputs(
         args.inputs, args.stranded_bam,
-        cast={COLUMNS.tools: lambda x: set(';'.split(x)) if x else set()},
+        cast={COLUMNS.tools: lambda x: set(x.split(';')) if x else set()},
         add={COLUMNS.library: args.library, COLUMNS.protocol: args.protocol}
     )
     # filter by masking file
@@ -844,16 +419,17 @@ def main_cluster(args):
     fail_clusters = []
 
     if args.uninformative_filter:
+        pass_clusters = []
         for cluster in clusters:
             # loop over the annotations
             overlaps_gene = False
             w1 = Interval(cluster.break1.start - args.max_proximity, cluster.break1.end + args.max_proximity)
             w2 = Interval(cluster.break2.start - args.max_proximity, cluster.break2.end + args.max_proximity)
-            for gene in args.annotations.get(cluster.break1.chr, []):
+            for gene in args.annotations[1].get(cluster.break1.chr, []):
                 if Interval.overlaps(gene, w1):
                     overlaps_gene = True
                     break
-            for gene in args.annotations.get(cluster.break2.chr, []):
+            for gene in args.annotations[1].get(cluster.break2.chr, []):
                 if Interval.overlaps(gene, w2):
                     overlaps_gene = True
                     break
@@ -861,7 +437,8 @@ def main_cluster(args):
                 pass_clusters.append(cluster)
             else:
                 fail_clusters.append(cluster)
-    assert(len(fail_clusters) + len(pass_clusters) == len(clusters))
+    if len(fail_clusters) + len(pass_clusters) != len(clusters):
+        raise AssertionError('totals do not add up', len(fail_clusters), len(pass_clusters), 'does not total to', len(clusters))
     log('filtered', len(fail_clusters), 'clusters as not informative')
     output_tabbed_file(fail_clusters, UNINFORM_OUTPUT)
 
@@ -904,7 +481,7 @@ def main_annotate(args):
         log=log
     )
 
-    id_prefix = build_batch_id(prefix='annotation', suffix='-')
+    id_prefix = build_batch_id(prefix='annotation-', suffix='-')
     rows = []  # hold the row information for the final tsv file
     fa_sequences = {}
     # now try generating the svg
@@ -925,10 +502,10 @@ def main_annotate(args):
         # add fusion information to the current row
         transcripts = [] if not ann.fusion else ann.fusion.transcripts
         for t in transcripts:
-            fusion_fa_id = '{}_{}'.format(annotation_id, t.splicing_pattern.splice_type)
+            fusion_fa_id = '{}_{}'.format(ann.data[COLUMNS.annotation_id], t.splicing_pattern.splice_type)
             if fusion_fa_id in fa_sequences:
                 raise AssertionError('should not be duplicate fa sequence ids', fusion_fa_id)
-            fa_sequences[fusion_fa_id] = ft.get_cdna_seq(t.splicing_pattern)
+            fa_sequences[fusion_fa_id] = ann.fusion.get_cdna_seq(t.splicing_pattern)
 
             # duplicate the row for each translation
             for tl in t.translations:
@@ -984,7 +561,7 @@ def main_annotate(args):
                 except NotSpecifiedError:
                     pass
 
-                name = 'chr{}_chr{}.{}_{}.{}'.format(
+                name = 'mavis_{}_{}.{}_{}.{}'.format(
                     ann.break1.chr, ann.break2.chr, gene_aliases1, gene_aliases2, ann.data[COLUMNS.annotation_id])
 
                 drawing = os.path.join(DRAWINGS_DIRECTORY, name + '.svg')
@@ -1049,7 +626,6 @@ def main():
         for sec in config:
             sec.output = args.output
         args = config[0]
-
     # load the reference files if they have been given and reset the arguments to hold the original file name and the
     # loaded data
     if any([
@@ -1062,7 +638,8 @@ def main():
         args.__dict__['annotations'] = args.annotations, None
     try:
         log('loading:' if not args.low_memory else 'indexing:', args.reference_genome)
-        args.__dict__['reference_genome'] = args.reference_genome, load_reference_genome(args.reference_genome, args.low_memory)
+        args.__dict__['reference_genome'] = args.reference_genome, load_reference_genome(
+            args.reference_genome, args.low_memory)
     except AttributeError:
         args.__dict__['reference_genome'] = args.__dict__.get('reference_genome', None), None
     try:
@@ -1074,7 +651,7 @@ def main():
         log('loading:', args.template_metadata)
         args.__dict__['template_metadata'] = args.template_metadata, load_templates(args.template_metadata)
     except AttributeError:
-        args.__dict__['template_metadata'] = args.__dict__.get('template_metadata', None)
+        args.__dict__['template_metadata'] = args.__dict__.get('template_metadata', None), None
 
     for attr in ['annotations', 'masking', 'template_metadata', 'reference_genome']:
         for sec in config:

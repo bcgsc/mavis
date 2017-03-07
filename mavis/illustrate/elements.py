@@ -479,8 +479,8 @@ def draw_genes(DS, canvas, genes, target_width, breakpoints=None, colors=None, l
 
     # now overlay the breakpoints on top of everything
     for i, b in enumerate(sorted(breakpoints)):
-        s = Interval.convert_pos(mapping, b.start)
-        t = Interval.convert_pos(mapping, b.end)
+        s = Interval.convert_ratioed_pos(mapping, b.start).start
+        t = Interval.convert_ratioed_pos(mapping, b.end).end
         bg = draw_breakpoint(DS, canvas, b, abs(t - s) + 1, y, label=labels.add(b, DS.BREAKPOINT_LABEL_PREFIX))
         bg.translate(s, 0)
         main_group.add(bg)
