@@ -88,7 +88,6 @@ def equivalent_events(ev1, ev2, TRANSCRIPTS, DISTANCES=None, SEQUENCES=None):
     if DISTANCES is None:
         DISTANCES = {CALL_METHOD.CONTIG: 0, CALL_METHOD.SPLIT: 10, CALL_METHOD.FLANK: 0}
     SEQUENCES = dict() if SEQUENCES is None else SEQUENCES
-
     # basic checks
     if ev1.break1.chr != ev2.break1.chr or ev1.break2.chr != ev2.break2.chr or \
             len(set([STRAND.NS, ev1.break1.strand, ev2.break1.strand])) > 2 or \

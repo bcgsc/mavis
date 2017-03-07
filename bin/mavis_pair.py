@@ -100,7 +100,9 @@ def main():
                     COLUMNS.fusion_cdna_coding_start,
                     COLUMNS.fusion_cdna_coding_end,
                     COLUMNS.fusion_sequence_fasta_id,
-                    COLUMNS.fusion_sequence_fasta_file
+                    COLUMNS.fusion_sequence_fasta_file,
+                    COLUMNS.transcript1,
+                    COLUMNS.transcript2
                 ],
                 cast={
                     COLUMNS.stranded.name: TSV.tsv_boolean

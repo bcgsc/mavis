@@ -196,13 +196,13 @@ def parse_arguments(pstep):
             help='only show domains which names (external identifiers) match the given pattern'
         )
 
-    if pstep == PIPELINE_STEP.CLUSTER or pstep == PIPELINE_STEP.ANNOTATE:
+    if pstep == PIPELINE_STEP.CLUSTER or pstep == PIPELINE_STEP.ANNOTATE or pstep == PIPELINE_STEP.PAIR:
         parser.add_argument(
             '--max_proximity', default=LIBRARY_DEFAULT_TAGS['max_proximity'], type=int,
             help='The maximum distance away from breakpoints to look for proximal genes'
         )
         parser.add_argument('-n', '--inputs', required=True, nargs='+', help='1 or more input files')
-    elif pstep == PIPELINE_STEP.VALIDATE or pstep == PIPELINE_STEP.PAIR:
+    elif pstep == PIPELINE_STEP.VALIDATE:
         parser.add_argument('-n', '--input', help='path to the input file', required=True)
 
     if pstep == PIPELINE_STEP.CLUSTER or pstep == PIPELINE_STEP.VALIDATE:
