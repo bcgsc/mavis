@@ -233,22 +233,21 @@ Running the Pipeline
 .....................
 
 The pipeline consists of five main scripts. The usage menus for any of the scripts can be viewed by running the
-script with the -h/--help option
+script without any arguments.
 
 **Example:**
 
 .. code-block:: bash
 
-    python sv_merge.py -h
+    python bin/run_mavis.py
 
-.. toctree::
-    :maxdepth: 1
 
-    auto/sv_merge
-    auto/sv_annotate
-    auto/sv_validate
-    auto/sv_pair
-    auto/sv_summary
+Help sub-menus can be found by giving the pipeline step followed by no arguments or the -h options
+
+.. code-block:: bash
+    
+    python bin/run_mavis.py cluster -h
+
 
 There are some parameters that need to be computed from the bam files. This can generally be done by running the
 profile_bam.py script found in the tools directory

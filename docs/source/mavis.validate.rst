@@ -12,7 +12,6 @@ validate subpackage
 
 
 .. toctree::
+    :glob:
 
-    auto/mavis.validate.base
-    auto/mavis.validate.call
-    auto/mavis.validate.evidence
+    auto/mavis.validate.*

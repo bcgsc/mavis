@@ -11,7 +11,6 @@ MARVIN User Manual
 
    usermanual.rst
    theory.rst
-   columns
    development.rst
 
 

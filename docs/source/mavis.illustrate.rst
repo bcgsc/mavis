@@ -1,4 +1,4 @@
-mavis.illustrate package
+illustrate subpackage
 =====================================
 
 .. automodule:: mavis.illustrate
@@ -7,13 +7,9 @@ mavis.illustrate package
     :undoc-members:
     :show-inheritance:
 
-Submodules
-----------
 
 .. toctree::
-
-   auto/mavis.illustrate.draw
-   auto/mavis.illustrate.labels
-   auto/mavis.illustrate.scatter
-   auto/mavis.illustrate.settings
+    :glob:
+    
+    auto/mavis.illustrate.*
 

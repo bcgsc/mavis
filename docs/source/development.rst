@@ -76,15 +76,31 @@ Current Limitations
   future releases.
 
 
-API Documentation
--------------------------------
+MAVIS Package Documentation
+----------------------------
+
+.. automodule:: mavis
+    :special-members: __and__, __or__, __xor__, __len__, __sub__, __add__
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 .. toctree::
-   :maxdepth: -1
-   :glob:
+    :maxdepth: -1
 
-   auto/mavis_*
-   mavis.rst
+    mavis.annotate
+    auto/mavis.assemble
+    mavis.bam
+    auto/mavis.blat
+    auto/mavis.breakpoint
+    auto/mavis.cluster
+    auto/mavis.constants
+    auto/mavis.error
+    mavis.illustrate
+    auto/mavis.interval
+    auto/mavis.pairing
+    mavis.pipeline
+    mavis.validate
 
 
 Development Goals
