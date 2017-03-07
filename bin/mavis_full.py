@@ -1,36 +1,40 @@
-import argparse
-import os
-import sys
-from configparser import ConfigParser, ExtendedInterpolation
-import re
-import warnings
 from argparse import Namespace
-import subprocess
+from configparser import ConfigParser, ExtendedInterpolation
 from datetime import datetime
+import argparse
 import errno
 import math
-import random
+import os
 import pysam
+import random
+import re
+import subprocess
+import sys
+import warnings
+import itertools
+import json
 
 import TSV
 from vocab import Vocab
 
 # local modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from mavis.breakpoint import read_bpp_from_input_file, BreakpointPair
-from mavis.annotate import load_reference_genes, load_reference_genome, load_masking_regions, load_templates
 from mavis import __version__
-from mavis.constants import PROTOCOL, COLUMNS, sort_columns
-from mavis.validate.constants import VALIDATION_DEFAULTS
-from mavis.interval import Interval
-from mavis.cluster import cluster_breakpoint_pairs
+from mavis.annotate import load_reference_genes, load_reference_genome, load_masking_regions, load_templates
+from mavis.annotate.variant import annotate_events, determine_prime
 from mavis.bam.cache import BamCache
-import mavis.bam.cigar as cigar_tools
-from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
-from mavis.validate.call import call_events
 from mavis.blat import blat_contigs
-from mavis.annotate.variant import annotate_events
-from mavis.illustrate.settings import DiagramSettings
+from mavis.breakpoint import read_bpp_from_input_file, BreakpointPair
+from mavis.cluster import cluster_breakpoint_pairs
+from mavis.constants import PROTOCOL, COLUMNS, sort_columns, PRIME
+from mavis.error import DrawingFitError, NotSpecifiedError
+from mavis.illustrate.constants import DiagramSettings
+from mavis.illustrate.diagram import draw_sv_summary_diagram
+from mavis.interval import Interval
+from mavis.validate.call import call_events
+from mavis.validate.constants import VALIDATION_DEFAULTS
+from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
+import mavis.bam.cigar as cigar_tools
 
 
 
@@ -326,7 +330,7 @@ def main_validate(args):
     blat_contigs(
         evidence_clusters,
         INPUT_BAM_CACHE,
-        REFERENCE_GENOME=args.reference_genome[1],
+        reference_genome=args.reference_genome[1],
         blat_2bit_reference=args.blat_2bit_reference,
         blat_fa_input_file=CONTIG_BLAT_FA,
         blat_pslx_output_file=CONTIG_BLAT_OUTPUT,
@@ -335,44 +339,35 @@ def main_validate(args):
     log('alignment complete')
     event_calls = []
     passes = 0
+    write_bed_file(EVIDENCE_BED, itertools.chain.from_iterable([e.get_bed_repesentation() for e in evidence_clusters]))
+    for index, e in enumerate(evidence_clusters):
+        print()
+        log('({} of {}) calling events for:'.format
+            (index + 1, len(evidence_clusters)), e.data[COLUMNS.cluster_id], e.putative_event_types())
+        log('source:', e, time_stamp=False)
+        calls = []
+        failure_comment = None
+        try:
+            calls.extend(call_events(e))
+            event_calls.extend(calls)
+        except UserWarning as err:
+            log('warning: error in calling events', repr(err), time_stamp=False)
+            failure_comment = str(err)
+        if len(calls) == 0:
+            failure_comment = ['zero events were called'] if failure_comment is None else failure_comment
+            e.data[COLUMNS.filter_comment] = failure_comment
+            filtered_evidence_clusters.append(e)
+        else:
+            passes += 1
 
-    with open(EVIDENCE_BED, 'w') as fh:
-        for index, e in enumerate(evidence_clusters):
-            fh.write('{}\t{}\t{}\touter-{}\n'.format(
-                e.break1.chr, e.outer_window1.start, e.outer_window1.end, e.data[COLUMNS.cluster_id]))
-            fh.write('{}\t{}\t{}\touter-{}\n'.format(
-                e.break2.chr, e.outer_window2.start, e.outer_window2.end, e.data[COLUMNS.cluster_id]))
-            fh.write('{}\t{}\t{}\tinner-{}\n'.format(
-                e.break1.chr, e.inner_window1.start, e.inner_window1.end, e.data[COLUMNS.cluster_id]))
-            fh.write('{}\t{}\t{}\tinner-{}\n'.format(
-                e.break2.chr, e.inner_window2.start, e.inner_window2.end, e.data[COLUMNS.cluster_id]))
-            print()
-            log('({} of {}) calling events for:'.format
-                (index + 1, len(evidence_clusters)), e.data[COLUMNS.cluster_id], e.putative_event_types())
-            log('source:', e, time_stamp=False)
-            calls = []
-            failure_comment = None
-            try:
-                calls.extend(call_events(e))
-                event_calls.extend(calls)
-            except UserWarning as err:
-                log('warning: error in calling events', repr(err), time_stamp=False)
-                failure_comment = str(err)
-            if len(calls) == 0:
-                failure_comment = ['zero events were called'] if failure_comment is None else failure_comment
-                e.data[COLUMNS.filter_comment] = failure_comment
-                filtered_evidence_clusters.append(e)
-            else:
-                passes += 1
-
-            log('called {} event(s)'.format(len(calls)))
-            for ev in calls:
-                log(ev, time_stamp=False)
-                log(ev.event_type, ev.call_method, time_stamp=False)
-                log('remapped reads: {}; split reads: [{}, {}], flanking pairs: {}'.format(
-                    0 if not ev.contig else len(ev.contig.input_reads),
-                    len(ev.break1_split_reads), len(ev.break2_split_reads),
-                    len(ev.flanking_pairs)), time_stamp=False)
+        log('called {} event(s)'.format(len(calls)))
+        for ev in calls:
+            log(ev, time_stamp=False)
+            log(ev.event_type, ev.call_method, time_stamp=False)
+            log('remapped reads: {}; split reads: [{}, {}], flanking pairs: {}'.format(
+                0 if not ev.contig else len(ev.contig.input_reads),
+                len(ev.break1_split_reads), len(ev.break2_split_reads),
+                len(ev.flanking_pairs)), time_stamp=False)
 
     if len(filtered_evidence_clusters) + passes != len(evidence_clusters):
         raise AssertionError(
@@ -497,7 +492,7 @@ def parse_arguments(pstep):
             '-f', '--force_overwrite', default=False, type=TSV.tsv_boolean,
             help='set flag to overwrite existing reviewed files'
         )
-    parser.add_argument('--output', help='path to the output directory')
+    parser.add_argument('--output', help='path to the output directory', required=True)
 
 
     if pstep == PIPELINE_STEP.ANNOTATE:
@@ -641,7 +636,6 @@ def main_pipeline(configs):
     # set up the directory structure and run svmerge
     annotation_jobs = []
     for sec in configs:
-        print('sec.output', sec.output)
         base = os.path.join(sec.output, '{}_{}'.format(sec.library, sec.protocol))
         log('setting up the directory structure for', sec.library, 'as', base)
         base = os.path.join(sec.output, '{}_{}'.format(sec.library, sec.protocol))
@@ -744,7 +738,6 @@ def main_pipeline(configs):
 
 
 def read_inputs(inputs, force_stranded=False, **kwargs):
-    print('read_inputs', kwargs)
     bpps = []
     kwargs.setdefault('require', [])
     kwargs['require'] = list(set(kwargs['require'] + [COLUMNS.library, COLUMNS.protocol]))
@@ -778,17 +771,11 @@ def output_tabbed_file(bpps, filename):
         for row in rows:
             fh.write('\t'.join([str(row.get(c, None)) for c in header]) + '\n')
 
-def write_bed_file(filename, cluster_breakpoint_pairs):
+def write_bed_file(filename, bed_rows):
+    log('writing:', filename)
     with open(filename, 'w') as fh:
-        for bpp in cluster_breakpoint_pairs:
-            if bpp.interchromosomal:
-                fh.write('{}\t{}\t{}\tcluster={}\n'.format(
-                    bpp.break1.chr, bpp.break1.start, bpp.break1.end, bpp.data['cluster_id']))
-                fh.write('{}\t{}\t{}\tcluster={}\n'.format(
-                    bpp.break2.chr, bpp.break2.start, bpp.break2.end, bpp.data['cluster_id']))
-            else:
-                fh.write('{}\t{}\t{}\tcluster={}\n'.format(
-                    bpp.break1.chr, bpp.break1.start, bpp.break2.end, bpp.data['cluster_id']))
+        for bed in bed_rows:
+            fh.write('\t'.join([str(c) for c in bed]) + '\n')
 
 
 def main_cluster(args):
@@ -884,8 +871,7 @@ def main_cluster(args):
         assert(len(pass_clusters) // JOB_SIZE == args.max_files)
 
     bedfile = os.path.join(args.output, 'clusters.bed')
-    log('writing:', bedfile)
-    write_bed_file(bedfile, clusters)
+    write_bed_file(bedfile, itertools.chain.from_iterable([b.get_bed_repesentation() for b in pass_clusters]))
 
     job_ranges = list(range(0, len(pass_clusters), JOB_SIZE))
     if job_ranges[-1] != len(pass_clusters):
@@ -932,12 +918,13 @@ def main_annotate(args):
         row[COLUMNS.break2_strand] = ann.transcript2.get_strand()
         row[COLUMNS.fusion_sequence_fasta_file] = FA_OUTPUT_FILE
 
-        log('current annotation', annotation_id, ann.transcript1, ann.transcript2, ann.event_type)
+        log('current annotation', ann.data[COLUMNS.annotation_id], ann.transcript1, ann.transcript2, ann.event_type)
 
         # try building the fusion product
         ann_rows = []
         # add fusion information to the current row
-        for t in ft.transcripts:
+        transcripts = [] if not ann.fusion else ann.fusion.transcripts
+        for t in transcripts:
             fusion_fa_id = '{}_{}'.format(annotation_id, t.splicing_pattern.splice_type)
             if fusion_fa_id in fa_sequences:
                 raise AssertionError('should not be duplicate fa sequence ids', fusion_fa_id)
@@ -973,7 +960,7 @@ def main_annotate(args):
         while drawing is None:  # continue if drawing error and increase width
             try:
                 canvas, legend = draw_sv_summary_diagram(
-                    DS, ann, REFERENCE_GENOME=REFERENCE_GENOME, templates=TEMPLATES)
+                    DS, ann, reference_genome=args.reference_genome[1], templates=args.template_metadata[1])
 
                 gene_aliases1 = 'NA'
                 gene_aliases2 = 'NA'
@@ -1062,9 +1049,9 @@ def main():
         for sec in config:
             sec.output = args.output
         args = config[0]
-        print('sec args', args)
 
-    # load the reference files if they have been given?
+    # load the reference files if they have been given and reset the arguments to hold the original file name and the
+    # loaded data
     if any([
             pstep not in [PIPELINE_STEP.PIPELINE, PIPELINE_STEP.VALIDATE],
             hasattr(args, 'uninformative_filter') and args.uninformative_filter,
@@ -1093,6 +1080,7 @@ def main():
         for sec in config:
             sec.__dict__[attr] = args.__dict__[attr]
 
+    # decide which main function to execute
     if pstep == PIPELINE_STEP.CLUSTER:
         main_cluster(args)
     elif pstep == PIPELINE_STEP.VALIDATE:

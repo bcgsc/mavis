@@ -823,3 +823,12 @@ class Evidence(BreakpointPair):
             COLUMNS.contigs_assembled: len(self.contigs)
         })
         return row
+
+    def get_bed_repesentation(self):
+        bed = []
+        name = self.data.get(COLUMNS.cluster_id, None)
+        bed.append((self.break1.chr, self.outer_window1[0], self.outer_window1[1], name))
+        bed.append((self.break1.chr, self.inner_window1[0], self.inner_window1[1], name))
+        bed.append((self.break2.chr, self.outer_window2[0], self.outer_window2[1], name))
+        bed.append((self.break2.chr, self.inner_window2[0], self.inner_window2[1], name))
+        return bed

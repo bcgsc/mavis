@@ -39,183 +39,6 @@ def setUpModule():
     # add a check to determine if it is the expected bam file
 
 
-class TestGenomeEvidenceWindow(unittest.TestCase):
-
-    def test_orient_ns(self):
-        b = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.NS)
-        w = GenomeEvidence._generate_window(
-            b, read_length=100, max_expected_fragment_size=550, call_error=11)
-        self.assertEqual(440, w[0])
-        self.assertEqual(1560, w[1])
-        self.assertEqual(1121, len(w))
-
-    def test_orient_left(self):
-        b = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.LEFT)
-        w = GenomeEvidence._generate_window(
-            b, read_length=100, call_error=11, max_expected_fragment_size=550)
-        self.assertEqual(440, w[0])
-        self.assertEqual(1110, w[1])
-        self.assertEqual(671, len(w))
-
-    def test_orient_right(self):
-        b = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.RIGHT)
-        w = GenomeEvidence._generate_window(
-            b, read_length=100, call_error=11, max_expected_fragment_size=550)
-        self.assertEqual(890, w[0])
-        self.assertEqual(1560, w[1])
-        self.assertEqual(671, len(w))
-
-
-class TestTraverseExonicDistance(unittest.TestCase):
-
-    def setUp(self):
-        self.ust1 = usTranscript([(1001, 1100), (1301, 1400), (1701, 1800)], strand=STRAND.POS)
-
-    def test_left_before_transcript(self):
-        gpos = TranscriptomeEvidence.traverse_exonic_distance(900, 500, ORIENT.LEFT, [self.ust1])
-        self.assertEqual(401, gpos.start)
-        self.assertEqual(401, gpos.end)
-
-    def test_left_after_transcript(self):
-        gpos = TranscriptomeEvidence.traverse_exonic_distance(2200, 100, ORIENT.LEFT, [self.ust1])
-        self.assertEqual(2101, gpos.start)
-        self.assertEqual(2101, gpos.end)
-
-        gpos = TranscriptomeEvidence.traverse_exonic_distance(1900, 500, ORIENT.LEFT, [self.ust1])
-        self.assertEqual(901, gpos.start)
-        self.assertEqual(1401, gpos.end)
-
-    def test_left_within_transcript_exonic(self):
-        gpos = TranscriptomeEvidence.traverse_exonic_distance(1750, 200, ORIENT.LEFT, [self.ust1])
-        self.assertEqual(1051, gpos.start)
-        self.assertEqual(1551, gpos.end)
-
-    def test_left_within_exon(self):
-        gpos = TranscriptomeEvidence.traverse_exonic_distance(1750, 20, ORIENT.LEFT, [self.ust1])
-        self.assertEqual(1731, gpos.start)
-        self.assertEqual(1731, gpos.end)
-
-    def test_left_within_transcript_intronic(self):
-        gpos = TranscriptomeEvidence.traverse_exonic_distance(1600, 150, ORIENT.LEFT, [self.ust1])
-        self.assertEqual(1051, gpos.start)
-        self.assertEqual(1451, gpos.end)
-
-    def test_right_before_transcript(self):
-        gpos = TranscriptomeEvidence.traverse_exonic_distance(500, 100, ORIENT.RIGHT, [self.ust1])
-        self.assertEqual(Interval(599), gpos)
-
-        gpos = TranscriptomeEvidence.traverse_exonic_distance(901, 500, ORIENT.RIGHT, [self.ust1])
-        self.assertEqual(Interval(1400, 1900), gpos)
-
-    def test_right_after_transcript(self):
-        gpos = TranscriptomeEvidence.traverse_exonic_distance(2201, 100, ORIENT.RIGHT, [self.ust1])
-        self.assertEqual(Interval(2300), gpos)
-
-    def test_right_within_transcript(self):
-        gpos = TranscriptomeEvidence.traverse_exonic_distance(1351, 100, ORIENT.RIGHT, [self.ust1])
-        self.assertEqual(Interval(1450, 1750), gpos)
-
-    def test_right_within_exon(self):
-        gpos = TranscriptomeEvidence.traverse_exonic_distance(1351, 10, ORIENT.RIGHT, [self.ust1])
-        self.assertEqual(Interval(1360), gpos)
-
-
-class TestComputeExonicDistance(unittest.TestCase):
-    pass
-
-
-class TestTranscriptomeEvidenceWindow(unittest.TestCase):
-
-    def setUp(self):
-        self.annotations = {}
-        gene = Gene('1', 1, 9999, name='KRAS', strand=STRAND.POS)
-        self.ust = usTranscript(gene=gene, exons=[(1001, 1100), (1401, 1500), (1701, 1750), (3001, 4000)])
-        gene.unspliced_transcripts.append(self.ust)
-        for spl in self.ust.generate_splicing_patterns():
-            t = Transcript(self.ust, spl)
-            self.ust.transcripts.append(t)
-        self.annotations[gene.chr] = [gene]
-        self.read_length = 100
-        self.max_expected_fragment_size = 550
-        self.call_error = 11
-
-    def transcriptome_window(self, breakpoint, annotations=None):
-        return TranscriptomeEvidence._generate_window(
-            breakpoint, [self.ust] if annotations is None else annotations,
-            read_length=self.read_length,
-            call_error=self.call_error,
-            max_expected_fragment_size=self.max_expected_fragment_size
-        )
-
-    def genome_window(self, breakpoint):
-        return GenomeEvidence._generate_window(
-            breakpoint,
-            read_length=self.read_length,
-            call_error=self.call_error,
-            max_expected_fragment_size=self.max_expected_fragment_size
-        )
-
-    def test_before_start(self):
-        b = Breakpoint(chr='1', start=100, orient=ORIENT.RIGHT)
-        self.assertEqual(self.genome_window(b), self.transcriptome_window(b))
-
-        b = Breakpoint(chr='1', start=500, orient=ORIENT.RIGHT)
-        self.assertEqual(self.genome_window(b), self.transcriptome_window(b))
-
-    def test_after_end(self):
-        b = Breakpoint(chr='1', start=5000, orient=ORIENT.RIGHT)
-        self.assertEqual(self.genome_window(b), self.transcriptome_window(b))
-
-    def test_exonic_long_exon(self):
-        b = Breakpoint(chr='1', start=3200, orient=ORIENT.RIGHT)
-        self.assertEqual(self.genome_window(b), self.transcriptome_window(b))
-
-    def test_intronic_long_exon(self):
-        b = Breakpoint(chr='1', start=2970, orient=ORIENT.RIGHT)
-        self.assertEqual(Interval(1440, 3561), self.transcriptome_window(b))
-
-    def test_intronic_long_intron(self):
-        b = Breakpoint(chr='1', start=2000, orient=ORIENT.RIGHT)
-        self.assertEqual(Interval(1440, 3561), self.transcriptome_window(b))
-
-    def test_intronic_short_exon_right(self):
-        b = Breakpoint(chr='1', start=1690, orient=ORIENT.RIGHT)
-        self.assertEqual(Interval(1090, 3511), self.transcriptome_window(b))
-
-    def test_intronic_short_exon_left(self):
-        b = Breakpoint(chr='1', start=2200, orient=ORIENT.LEFT)
-        self.assertEqual(Interval(690, 3111), self.transcriptome_window(b))
-
-    def test_multiple_transcripts(self):
-        #  [(1001, 1100), (1401, 1500), (1701, 1750), (3001, 4000)])
-        b = Breakpoint(chr='1', start=1150, orient=ORIENT.RIGHT)
-        gene = self.annotations['1'][0]
-        t2 = usTranscript(gene=gene, exons=[(1001, 1100), (1200, 1300), (2100, 2200)])
-        gene.transcripts.append(t2)
-        # 989 - 2561
-        # 989 - 3411
-        self.assertEqual(Interval(990, 3411), self.transcriptome_window(b, [self.ust, t2]))
-
-    def test_many_small_exons(self):
-        g = Gene('fake', 17271277, 17279592)
-        ust = usTranscript(
-            gene=g,
-            exons=[
-                (17271277, 17271984),
-                (17272649, 17272709),
-                (17275586, 17275681),
-                (17275769, 17275930),
-                (17276692, 17276817),
-                (17277168, 17277388),
-                (17277845, 17277888),
-                (17278293, 17278378),
-                (17279229, 17279592)
-            ])
-        g.transcripts.append(ust)
-        ref = {'fake': [g]}
-        b = Breakpoint(chr='fake', start=17279591, orient=ORIENT.LEFT)
-        self.assertEqual(Interval(17277321, 17279702), self.transcriptome_window(b, [ust]))
-
 @unittest.skipIf(not RUN_FULL, 'slower tests will not be run unless the environment variable RUN_FULL is given')
 class TestFullEvidenceGathering(unittest.TestCase):
     # need to make the assertions more specific by checking the actual names of the reads found in each bin
@@ -320,7 +143,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         self.assertEqual(22, self.count_original_reads(ev1.split_reads[0]))
         self.assertEqual(14, self.count_original_reads(ev1.split_reads[1]))
-    
+
     def test_load_evidence_deletion2(self):
         # second example
         ev1 = self.genome_evidence(
@@ -333,7 +156,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(4, self.count_original_reads(ev1.split_reads[0]))
         self.assertEqual(10, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(27, len(ev1.flanking_pairs))
-    
+
     def test_load_evidence_deletion3(self):
         # third example
         ev1 = self.genome_evidence(
@@ -346,7 +169,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(8, self.count_original_reads(ev1.split_reads[0]))
         self.assertEqual(9, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(26, len(ev1.flanking_pairs))
-    
+
     def test_load_evidence_deletion4(self):
         # forth example
         ev1 = self.genome_evidence(
@@ -376,7 +199,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(3, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(20, len(ev1.spanning_reads))
         self.assertEqual(6, len(ev1.flanking_pairs))
-    
+
     def test_load_evidence_small_deletion2(self):
         # second example
         ev1 = self.genome_evidence(
@@ -772,11 +595,11 @@ class TestEvidenceGathering(unittest.TestCase):
             'CAACAATATGTAGGAAGCCATTATCTGAAGTGTAAGCAACTGCATAGTGCTATTTTAATTATGCATTGCAGGGAAACTGTGAGCAGAGCTATATATTTAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAACCAAACAGGAAAGAATC', self.ev1.contigs[0].seq)
 
 
-
 class MockEvidence:
 
     def __init__(self, ref=None):
         self.HUMAN_REFERENCE_GENOME = ref
+
 
 
 if __name__ == "__main__":

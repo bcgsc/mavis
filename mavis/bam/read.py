@@ -42,6 +42,15 @@ def breakpoint_pos(read, orient=ORIENT.NS):
 
 
 def calculate_alignment_score(read):
+    """
+    calculates a score for comparing alignments
+
+    Args:
+        read (pysam.AlignedSegment): the input read
+
+    Returns:
+        float: the score
+    """
     score = 0
     qlen = read.reference_end - read.reference_start
     max_score = 2 * qlen - 1
@@ -68,9 +77,15 @@ def nsb_align(
         min_overlap_percent (float): the minimum amount of overlap of the input sequence to the reference
             should be a number between 0 and 1
         min_match (float): the minimum number of matches compared to total
+        scoring_function (callable): any function that will take a read as input and return a float
+          used in comparing alignments to choose the best alignment
 
     Returns:
         :class:`list` of :class:`~pysam.AlignedSegment`: list of aligned segments
+
+    Note:
+        using a higher min_match may improve performance as low quality alignments are rejected more quickly. However
+        this may also result in no match being returned when there is no high quality match to be found.
     """
     if len(ref) < 1 or len(seq) < 1:
         raise AttributeError('cannot overlap on an empty sequence')

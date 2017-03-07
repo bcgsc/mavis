@@ -18,7 +18,7 @@ class BamCache:
         self.fh = bamfile
         if not hasattr(bamfile, 'fetch'):
             self.fh = pysam.AlignmentFile(bamfile, 'rb')
-        atexit.register(self.close)
+        atexit.register(self.close)  # makes the file 'auto close' on normal python exit
 
     def add_read(self, read):
         """
@@ -141,7 +141,7 @@ class BamCache:
                 self.add_read(m)
                 return [m]
         return mates
-    
+
     def close(self):
         """
         close the bam file handle

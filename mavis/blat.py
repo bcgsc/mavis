@@ -185,14 +185,14 @@ class Blat:
         return header, rows
 
     @staticmethod
-    def pslx_row_to_pysam(row, bam_cache, REFERENCE_GENOME):
+    def pslx_row_to_pysam(row, bam_cache, reference_genome):
         """
         given a 'row' from reading a pslx file. converts the row to a BlatAlignedSegment object
 
         Args:
             row (dict of str): a row object from the 'read_pslx' method
             bam_cache (BamCache): the bam file/cache to use as a template for creating reference_id from chr name
-            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`):
+            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`):
               dict of reference sequence by template/chr name
 
         """
@@ -204,7 +204,7 @@ class Blat:
             temp = [len(query_sequence) - q for q in temp][::-1]
 
         # note: converting to inclusive range [] vs end-exclusive [)
-        reference_sequence = REFERENCE_GENOME[row['tname']].seq if REFERENCE_GENOME else None
+        reference_sequence = reference_genome[row['tname']].seq if reference_genome else None
         query_ranges = [Interval(x, x + y - 1) for x, y in zip(row['qstarts'], row['block_sizes'])]
         ref_ranges = [Interval(x, x + y - 1) for x, y in zip(row['tstarts'], row['block_sizes'])]
         seq = ''
@@ -332,14 +332,14 @@ def paired_alignment_score(read1, read2=None):
 def blat_contigs(
         evidence,
         INPUT_BAM_CACHE,
-        REFERENCE_GENOME,
+        reference_genome,
         blat_pslx_output_file='blat_out.pslx',
         blat_fa_input_file='blat_in.fa',
         blat_2bit_reference='/home/pubseq/genomes/Homo_sapiens/GRCh37/blat/hg19.2bit',
         min_percent_of_max_score=0.8,
         min_identity=0.95,
         is_protein=False,
-        MIN_EXTEND_OVERLAP=10,
+        min_extend_overlap=10,
         pair_scoring_function=paired_alignment_score,
         clean_files=True,
         log=lambda *pos, **kwargs: None,
@@ -351,12 +351,12 @@ def blat_contigs(
     Args:
         evidence (list of Evidence): the iterable container of of Evidence object which has associated contigs
         INPUT_BAM_CACHE (BamCache): the bam to use as a template in generating bam-like reads
-        REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by template/chr name
+        reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by template/chr name
         blat_2bit_reference (str): path to the 2bit file for blat
         min_percent_of_max_score (float): ignores all alignments with a score less
         min_identity (float): minimum percent identity
         is_protein (bool): is the sequence an amino acid sequence (used in the blat calculations)
-        MIN_EXTEND_OVERLAP (int): minimum amount of non-shared coverage of the template sequence required to pair alignments
+        min_extend_overlap (int): minimum amount of non-shared coverage of the template sequence required to pair alignments
         =blat_options (list of str): optional, can specify alternate blat parameters to use
 
     .. todo::
@@ -417,7 +417,7 @@ def blat_contigs(
             reads = []
             for rank, row in enumerate(filtered_rows):
                 try:
-                    read = Blat.pslx_row_to_pysam(row, INPUT_BAM_CACHE, REFERENCE_GENOME)
+                    read = Blat.pslx_row_to_pysam(row, INPUT_BAM_CACHE, reference_genome)
                     read.set_tag(PYSAM_READ_FLAGS.BLAT_SCORE, row['score'], value_type='i')
                     read.set_tag(PYSAM_READ_FLAGS.BLAT_ALIGNMENTS, len(filtered_rows), value_type='i')
                     read.set_tag(PYSAM_READ_FLAGS.BLAT_PMS, min_percent_of_max_score, value_type='f')
@@ -464,7 +464,7 @@ def blat_contigs(
                     elif e.opposing_strands:
                         continue
                     union = q1 | q2
-                    if len(union) - len(q1) < MIN_EXTEND_OVERLAP or len(union) - len(q2) < MIN_EXTEND_OVERLAP:
+                    if len(union) - len(q1) < min_extend_overlap or len(union) - len(q2) < min_extend_overlap:
                         continue
 
                     if INPUT_BAM_CACHE.chr(a1) == e.break1.chr \

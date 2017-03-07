@@ -572,7 +572,7 @@ def _gather_breakpoint_annotations(ref_ann, breakpoint):
 
     pos_overlapping_transcripts = []
     neg_overlapping_transcripts = []
-    for gene in ref_ann[breakpoint.chr]:
+    for gene in ref_ann.get(breakpoint.chr, []):
         for t in gene.transcripts:
             if Interval.overlaps(t, breakpoint):
                 if STRAND.compare(t.get_strand(), STRAND.POS):
@@ -625,6 +625,10 @@ def _gather_breakpoint_annotations(ref_ann, breakpoint):
         temp.append(IntergenicRegion(breakpoint.chr, breakpoint.start, breakpoint.end, STRAND.NEG))
     neg_overlapping_transcripts.extend(temp)
 
+    if len(pos_overlapping_transcripts) == 0:
+        raise AssertionError('neither strand group should ever be empty', pos_overlapping_transcripts)
+    if len(neg_overlapping_transcripts) == 0:
+        raise AssertionError('neither strand group should ever be empty', neg_overlapping_transcripts)
     return (
         sorted(pos_overlapping_transcripts, key=lambda x: x.position),
         sorted(neg_overlapping_transcripts, key=lambda x: x.position))
@@ -705,10 +709,10 @@ def _gather_annotations(ref, bp, event_type=None, proximity=None):
 
         a = Annotation(bpp, a1, a2, event_type=event_type, proximity=proximity)
 
-        for gene in ref[bp.break1.chr]:
+        for gene in ref.get(bp.break1.chr, []):
             a.add_gene(gene)
         if bp.interchromosomal:
-            for gene in ref[bp.break2.chr]:
+            for gene in ref.get(bp.break2.chr, []):
                 a.add_gene(gene)
         annotations[(a1, a2)] = a
     filtered = []  # remove any inter-gene/inter-region annotations where a same transcript was found
@@ -743,8 +747,8 @@ def annotate_events(
             )
             results.extend(ann)
             log('generated', len(ann), 'annotations', time_stamp=False)
-        except KeyError:
-            log('generated', 0, 'annotations', time_stamp=False)
+        except KeyError as err:
+            log('generated', 0, 'annotations', repr(err), time_stamp=False)
 
 
     for i, ann in enumerate(results):
@@ -757,6 +761,6 @@ def annotate_events(
                 min_domain_mapping_match=min_domain_mapping_match
             )
             ann.fusion = ft
-        except NotSpecifiedError:
+        except (NotSpecifiedError, AttributeError):
             pass
     return results

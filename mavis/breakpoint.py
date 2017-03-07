@@ -591,6 +591,14 @@ class BreakpointPair:
 
         return ''.join(first_seq).upper(), ''.join(second_seq).upper()
 
+    def get_bed_repesentation(self):
+        bed = []
+        if self.interchromosomal:
+            bed.append((self.break1.chr, self.break1.start, self.break1.end, self.data.get(COLUMNS.cluster_id, None)))
+            bed.append((self.break2.chr, self.break2.start, self.break2.end, self.data.get(COLUMNS.cluster_id, None)))
+        else:
+            bed.append((self.break1.chr, self.break1.start, self.break2.end, self.data.get(COLUMNS.cluster_id, None)))
+        return bed
 
 def read_bpp_from_input_file(filename, expand_ns=True, force_stranded=False, **kwargs):
     """

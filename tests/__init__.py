@@ -175,7 +175,8 @@ def mock_read_pair(mock1, mock2):
     mock2.is_paired = True
     mock2.is_read1 = not mock1.is_read1
     mock2.is_read2 = not mock1.is_read2
-    mock2.query_name = mock1.query_name
+    if mock2.query_name is None:
+        mock2.query_name = mock1.query_name
     mock2.template_length = -1 * mock1.template_length
     return mock1, mock2
 
