@@ -3,10 +3,10 @@ import argparse
 import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from structural_variant import __version__
-from structural_variant.annotate.file_io import load_reference_genes
-from structural_variant.interval import Interval
-from structural_variant.constants import STRAND
+from mavis import __version__
+from mavis.annotate.file_io import load_reference_genes
+from mavis.interval import Interval
+from mavis.constants import STRAND
 import multiprocessing
 import pysam
 import math

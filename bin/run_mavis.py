@@ -362,11 +362,15 @@ def main_cluster(args):
     CLUSTER_BED_OUTPUT = os.path.join(args.output, 'clusters.bed')
     split_file_name_func = lambda x: os.path.join(args.output, '{}-{}.tab'.format(cluster_batch_id, x))
     # load the input files
-    breakpoint_pairs = read_inputs(
+    temp = read_inputs(
         args.inputs, args.stranded_bam,
         cast={COLUMNS.tools: lambda x: set(x.split(';')) if x else set()},
         add={COLUMNS.library: args.library, COLUMNS.protocol: args.protocol}
     )
+    breakpoint_pairs = []
+    for bpp in temp:
+        if bpp.data[COLUMNS.library] == args.library and bpp.data[COLUMNS.protocol] == args.protocol:
+            breakpoint_pairs.append(bpp)
     # filter by masking file
     breakpoint_pairs, filtered_bpp = filter_on_overlap(breakpoint_pairs, args.masking[1])
 

@@ -3,6 +3,7 @@ import networkx as nx
 import itertools
 from mavis.cluster import IntervalPair, cluster_breakpoint_pairs, merge_integer_intervals
 from mavis.breakpoint import Breakpoint, BreakpointPair, read_bpp_from_input_file
+from mavis.constants import PROTOCOL, COLUMNS
 from tests import FULL_BASE_EVENTS
 
 import unittest
@@ -158,10 +159,13 @@ class TestFullClustering(unittest.TestCase):
     def test_mocked_events(self):
         # none of the 24 events in the mocked file should cluster together
         # if we change the mock file we may need to update this function
-        bpps = read_bpp_from_input_file(FULL_BASE_EVENTS)
-        self.assertEqual(24, len(bpps))
+        bpps = []
+        for bpp in read_bpp_from_input_file(FULL_BASE_EVENTS):
+            if bpp.data[COLUMNS.protocol] == PROTOCOL.GENOME:
+                bpps.append(bpp)
+        self.assertEqual(28, len(bpps))
         clusters = cluster_breakpoint_pairs(bpps, 10, 10)
-        self.assertEqual(24, len(clusters))
+        self.assertEqual(len(bpps), len(clusters))
         for cluster, input_pairs in clusters.items():
             self.assertEqual(1, len(input_pairs))
 

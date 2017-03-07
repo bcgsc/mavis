@@ -207,7 +207,6 @@ class TranscriptomeEvidence(Evidence):
             direction (ORIENT): the direction wrt to the positive/forward reference strand to traverse
             transcripts (:class:`list` of :class:`usTranscript`): list of transcripts to use
         """
-        print('traverse_exonic_distance', start, distance, direction, transcripts)
         is_left = True if direction == ORIENT.LEFT else False
         input_distance = distance
         positions = [start - distance + 1 if is_left else start + distance - 1]
@@ -289,11 +288,9 @@ class TranscriptomeEvidence(Evidence):
             positions.append(pos)
 
         d = Interval(min(positions), max(positions))
-        print(d)
         return d
 
     def compute_fragment_size(self, read, mate):
-        print('compute_fragment_size', read, mate)
         if read.reference_start > mate.reference_start:
             read, mate = mate, read
         t = self.overlapping_transcripts[0] | self.overlapping_transcripts[1]
@@ -305,7 +302,6 @@ class TranscriptomeEvidence(Evidence):
         give the current list of transcripts, computes the putative exonic/intergenic distance
         given two genomic positions. Intronic positions are ignored
         """
-        print('compute_exonic_distance', start, end, transcripts)
         all_fragments = [end - start + 1]
         for ust in transcripts:
             sections = [Interval(start, end)]

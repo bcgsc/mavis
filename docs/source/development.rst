@@ -47,7 +47,7 @@ are below
     source venv/bin/activate
     pip install -r requirements.txt
 
-then if new modules/dependencies are required, they can be installed to the virtual python. Before commiting
+then if new modules/dependencies are required, they can be installed to the virtual python. Before committing
 regenerate the requirements.txt file using pip
 
 .. code-block:: bash

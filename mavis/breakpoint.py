@@ -676,10 +676,10 @@ def read_bpp_from_input_file(filename, expand_ns=True, force_stranded=False, **k
             row[attr] = soft_null_cast(val)
         for attr in row:
             if attr in [COLUMNS.cluster_id, COLUMNS.annotation_id, COLUMNS.validation_id]:
-                if not re.match('^([^_]|[A-Za-z0-9-])+$', row[attr]):
+                if not re.match('^[A-Za-z0-9-]+$', row[attr]):
                     raise AssertionError(
                         'error in input id. All mavis pipeline step ids must satisfy the regex:'
-                        ' ^([^_]|[A-Za-z0-9-])+$ ')
+                        ' ^[A-Za-z0-9-]+$ ')
         stranded = row[COLUMNS.stranded] or force_stranded
         row[COLUMNS.stranded] = stranded
         opp = row[COLUMNS.opposing_strands]
@@ -724,7 +724,6 @@ def read_bpp_from_input_file(filename, expand_ns=True, force_stranded=False, **k
             except (AttributeError, InvalidRearrangement) as err:
                 if not expand_ns:
                     raise err
-                print(repr(err))
         if len(temp) == 0:
             raise InvalidRearrangement('could not produce a valid rearrangement')
         else:
