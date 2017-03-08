@@ -11,6 +11,9 @@ VALIDATION_DEFAULTS = Namespace(
     assembly_min_exact_match_to_remap=4,
     assembly_min_tgt_to_exclude_half_map=7,
     assembly_strand_concordance=0.51,
+    blat_min_percent_of_max_score=0.8,
+    blat_min_identity=0.9,
+    blat_min_query_consumption=0.7,
     call_error=10,
     consensus_req=3,
     fetch_reads_bins=3,
@@ -85,7 +88,7 @@ VALIDATION_DEFAULTS = Namespace(
         to the target region to call a breakpoint by split read evidence
 
     min_double_aligned_to_estimate_insertion_size
-        The minimum number of reads which map soft-clipped to both breakpoints to assume the size of the untemplated 
+        The minimum number of reads which map soft-clipped to both breakpoints to assume the size of the untemplated
         sequence between the breakpoints is at most the read length - 2 * min_softclipping
 
     min_linking_split_reads
@@ -124,5 +127,14 @@ VALIDATION_DEFAULTS = Namespace(
         of where we expect it. For example for a softclipped read on a breakpoint with a left orientation this limits
         the amount of softclipping that is allowed on the right. If this is set to None then there is no limit on
         softclipping
-"""
 
+    blat_min_identity
+        the minimum percent identity match required for blat results when aligning contigs
+
+    blat_min_percent_of_max_score
+        filter based on blat score values. The best match, highest score, is used as the top value and other results
+        must be at least this fraction of the maximum score or they are filtered out
+
+    blat_min_query_consumption
+        minimum fraction of the original query sequence that must be used by the read(s) of the alignment
+"""

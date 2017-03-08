@@ -336,8 +336,9 @@ def blat_contigs(
         blat_pslx_output_file='blat_out.pslx',
         blat_fa_input_file='blat_in.fa',
         blat_2bit_reference='/home/pubseq/genomes/Homo_sapiens/GRCh37/blat/hg19.2bit',
-        min_percent_of_max_score=0.8,
-        min_identity=0.95,
+        blat_min_percent_of_max_score=0.8,
+        blat_min_identity=0.7,
+        blat_min_query_consumption=0.5,
         is_protein=False,
         min_extend_overlap=10,
         pair_scoring_function=paired_alignment_score,
@@ -353,8 +354,8 @@ def blat_contigs(
         INPUT_BAM_CACHE (BamCache): the bam to use as a template in generating bam-like reads
         reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by template/chr name
         blat_2bit_reference (str): path to the 2bit file for blat
-        min_percent_of_max_score (float): ignores all alignments with a score less
-        min_identity (float): minimum percent identity
+        blat_min_percent_of_max_score (float): ignores all alignments with a score less
+        blat_min_identity (float): minimum percent identity
         is_protein (bool): is the sequence an amino acid sequence (used in the blat calculations)
         min_extend_overlap (int): minimum amount of non-shared coverage of the template sequence required to pair alignments
         =blat_options (list of str): optional, can specify alternate blat parameters to use
@@ -365,9 +366,9 @@ def blat_contigs(
     """
     if is_protein:
         raise NotImplementedError('currently does not support blatting protein sequences')
-    min_identity *= 100
+    blat_min_identity *= 100
     blat_options = kwargs.pop('blat_options',
-                              ["-stepSize=5", "-repMatch=2253", "-minScore=0", "-minIdentity={0}".format(min_identity)])
+                              ["-stepSize=5", "-repMatch=2253", "-minScore=0", "-minIdentity={0}".format(blat_min_identity)])
 
     try:
         # write the input sequences to a fasta file
@@ -410,7 +411,7 @@ def blat_contigs(
         for query_id, rows in rows_by_query.items():
             query_seq = query_id_mapping[query_id]
             # filter on percent id
-            filtered_rows = [row for row in rows if round(row['percent_ident'], 0) >= min_identity]
+            filtered_rows = [row for row in rows if round(row['percent_ident'], 0) >= blat_min_identity]
 
             # filter on score
             scores = sorted([r['score'] for r in rows])
@@ -422,7 +423,7 @@ def blat_contigs(
                     read = Blat.pslx_row_to_pysam(row, INPUT_BAM_CACHE, reference_genome)
                     read.set_tag(PYSAM_READ_FLAGS.BLAT_SCORE, row['score'], value_type='i')
                     read.set_tag(PYSAM_READ_FLAGS.BLAT_ALIGNMENTS, len(filtered_rows), value_type='i')
-                    read.set_tag(PYSAM_READ_FLAGS.BLAT_PMS, min_percent_of_max_score, value_type='f')
+                    read.set_tag(PYSAM_READ_FLAGS.BLAT_PMS, blat_min_percent_of_max_score, value_type='f')
                     read.set_tag(PYSAM_READ_FLAGS.BLAT_RANK, rank, value_type='i')
                     read.set_tag(PYSAM_READ_FLAGS.BLAT_PERCENT_IDENTITY, row['percent_ident'], value_type='f')
                     reads.append(read)
@@ -437,6 +438,7 @@ def blat_contigs(
                 aln = reads_by_query.get(contig.seq, [])
                 putative_alignments = []
                 combo_prohibited = set()
+                putative_event_types = e.putative_event_types()
 
                 if e.break1.chr == e.break2.chr and not e.opposing_strands:
                     for read in aln:
@@ -446,10 +448,18 @@ def blat_contigs(
                                 and Interval.overlaps(e.outer_window1, temp) \
                                 and Interval.overlaps(e.outer_window2, temp):
                             # split the continuous alignment, assume ins/dup or indel
-                            combo_prohibited.add(read)
-                            if any([c in [CIGAR.D, CIGAR.I, CIGAR.N] for c, v in read.cigar]):  # ignore alignments without events
-                                putative_alignments.append((read, None))
+                            ins = sum([v for c, v in read.cigar if c == CIGAR.I] + [0])
+                            dln = sum([v for c, v in read.cigar if c in [CIGAR.D, CIGAR.N]] + [0])
+                            consume = len(read.query_coverage_interval()) / len(read.query_sequence)
+                            if consume < blat_min_query_consumption:
+                                continue
+                            for event_type in e.putative_event_types():
+                                if event_type in [SVTYPE.INS, SVTYPE.DUP] and ins > 0 and ins > dln:
+                                    putative_alignments.append((read, None))
+                                elif event_type == SVTYPE.DEL and dln > 0 and dln > ins:
+                                    putative_alignments.append((read, None))
 
+                combo_prohibited = [x for x, y in putative_alignments]
                 for a1, a2 in itertools.combinations([x for x in aln if x not in combo_prohibited], 2):
                     # do they overlap both breakpoints
                     if a1.reference_id > a2.reference_id or \
@@ -459,6 +469,13 @@ def blat_contigs(
                     q1 = a1.query_coverage_interval()
                     q2 = a2.query_coverage_interval()
 
+                    if a1.is_reverse != a1.is_reverse:
+                        l = len(a1.query_sequence) - 1
+                        q2 = Interval(l - q2.end, l - q2.start)
+
+                    if not e.interchromosomal and a1.reference_end > a2.reference_end:
+                        continue
+
                     if a2.query_sequence != a1.query_sequence:  # alignments aligned to opposite strands
                         if not e.opposing_strands:
                             continue
@@ -466,9 +483,14 @@ def blat_contigs(
                     elif e.opposing_strands:
                         continue
                     union = q1 | q2
-                    if len(union) - len(q1) < min_extend_overlap or len(union) - len(q2) < min_extend_overlap:
+                    consume = len(union)
+                    if not Interval.overlaps(q1, q2):
+                        consume = len(q1) + len(q2)
+                    if consume / len(a1.query_sequence) < blat_min_query_consumption:
                         continue
 
+                    if len(union) - len(q1) < min_extend_overlap or len(union) - len(q2) < min_extend_overlap:
+                        continue
                     if INPUT_BAM_CACHE.chr(a1) == e.break1.chr \
                             and Interval.overlaps(e.outer_window1, (a1.reference_start, a1.reference_end - 1)) \
                             and INPUT_BAM_CACHE.chr(a2) == e.break2.chr \
@@ -488,7 +510,7 @@ def blat_contigs(
                 max_score = max(list(score_by_alignments.values()))
                 for pair in putative_alignments:
                     score = score_by_alignments[pair]
-                    if score / max_score >= min_percent_of_max_score:
+                    if score / max_score >= blat_min_percent_of_max_score:
                         contig.alignments.append(pair)
     finally:
         # clean up the temporary files

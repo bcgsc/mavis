@@ -322,6 +322,7 @@ COLUMNS = Vocab(
     contig_remapped_read_names='contig_remapped_read_names',
     contig_seq='contig_seq',
     contigs_aligned='contigs_aligned',
+    contig_alignment_query_coverage='contig_alignment_query_coverage',
     contigs_assembled='contigs_assembled',
     contig_strand_specific='contig_strand_specific',
     flanking_median_fragment_size='flanking_median_fragment_size',

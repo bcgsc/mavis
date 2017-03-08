@@ -144,7 +144,10 @@ def main_validate(args):
         blat_2bit_reference=args.blat_2bit_reference,
         blat_fa_input_file=CONTIG_BLAT_FA,
         blat_pslx_output_file=CONTIG_BLAT_OUTPUT,
-        clean_files=False
+        clean_files=False,
+        blat_min_percent_of_max_score=args.blat_min_percent_of_max_score,
+        blat_min_identity=args.blat_min_identity,
+        blat_min_query_consumption=args.blat_min_query_consumption
     )
     log('alignment complete')
     event_calls = []
@@ -686,7 +689,7 @@ def main_pairing(args):
         calls_by_lib[key][k] = bpp
         all_bpp[k] = bpp
         pairing.add_node(k)
-    
+
     # pairwise comparison of breakpoints between all libraries
     for l1, l2 in itertools.combinations(calls_by_lib.keys(), 2):
         # for each two libraries pair all calls

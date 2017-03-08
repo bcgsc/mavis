@@ -235,6 +235,12 @@ class EventCall(BreakpointPair):
             if r2:
                 ascore = int(round((r1.get_tag('br') + r2.get_tag('br')) / 2, 0))
             cseq = self.contig_alignment[0].query_sequence
+            caqc = len(r1.query_coverage_interval())
+            if r2:
+                if Interval.overlaps(r1.query_coverage_interval(), r2.query_coverage_interval()):
+                    caqc = len(r1.query_coverage_interval() | r2.query_coverage_interval())
+                else:
+                    caqc = len(r1.query_coverage_interval()) + len(r2.query_coverage_interval())
             row.update({
                 COLUMNS.contig_seq: cseq,  # don't output sequence directly from contig b/c must always be wrt to the positive strand
                 COLUMNS.contig_remap_score: self.contig.remap_score(),
@@ -242,7 +248,8 @@ class EventCall(BreakpointPair):
                 COLUMNS.contig_remapped_reads: len(self.contig.input_reads),
                 COLUMNS.contig_remapped_read_names:
                     ';'.join(sorted(set([r.query_name for r in self.contig.input_reads]))),
-                COLUMNS.contig_strand_specific: self.contig.strand_specific
+                COLUMNS.contig_strand_specific: self.contig.strand_specific,
+                COLUMNS.contig_alignment_query_coverage: caqc
             })
         return row
 
