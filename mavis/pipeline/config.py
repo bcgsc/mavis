@@ -7,8 +7,9 @@ from .. import __version__
 from ..constants import PROTOCOL
 from ..validate.constants import VALIDATION_DEFAULTS
 from .util import get_blat_version, get_samtools_version, PIPELINE_STEP
+from ..illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 
-QSUB_TAGS = dict(memory=12, queue='transabyss.q')
+QSUB_TAGS = dict(validate_memory=12, default_memory=4, queue='transabyss.q')
 
 LIBRARY_DEFAULT_TAGS = dict(
     min_clusters_per_file=50,
@@ -37,11 +38,19 @@ LIBRARY_REQUIRED_TAGS = dict(
     pairing=lambda x: x.split(';') if x else []
 )
 
+PAIRING_DEFAULTS = dict(
+    split_call_distance=10,
+    contig_call_distance=0,
+    flanking_call_distance=0,
+    max_proximity=5000,
+    low_memory=False
+)
+
 
 def write_config(filename, include_defaults=False):
     config = ConfigParser()
     
-    for sec in ['DEFAULTS', 'reference', '<LIBRARY NAME>', 'qsub']:
+    for sec in ['DEFAULTS', 'reference', '<LIBRARY NAME>', 'qsub', 'illustrate']:
         config[sec] = {}
     
     for tag in REFERENCE_TAGS:
@@ -54,6 +63,8 @@ def write_config(filename, include_defaults=False):
             config['qsub'][tag] = str(val)
         for tag, val in LIBRARY_DEFAULT_TAGS.items():
             config['DEFAULTS'][tag] = str(val)
+        for tag, val in ILLUSTRATION_DEFAULTS.__dict__.items():
+            config['illustrate'][tag] = str(val)
     
     with open(filename, 'w') as configfile:
         config.write(configfile)
@@ -65,6 +76,16 @@ def cast(value, cast_func):
     else:
         value = cast_func(value)
     return value
+
+
+def validate_and_cast_section(section, defaults):
+    d = {}
+    for attr, value in section.items():
+        if attr not in defaults:
+            raise KeyError('tag not recognized', attr)
+        else:
+            d[attr] = cast(value, type(defaults[attr]))
+    return d
 
 
 def read_config(filepath):
@@ -83,51 +104,55 @@ def read_config(filepath):
     # get the library sections and add the default settings
     library_sections = []
     for sec in parser.sections():
-        if sec not in ['DEFAULTS', 'reference', 'qsub']:
+        if sec not in ['DEFAULTS', 'reference', 'qsub', 'illustrate']:
             library_sections.append(sec)
     
     all_libs = {}
-    all_libs.update(QSUB_TAGS)
+    args = {}
+    args.update(QSUB_TAGS)
     all_libs.update(LIBRARY_DEFAULT_TAGS)
+    args.update(ILLUSTRATION_DEFAULTS.__dict__)
+    args.update(PAIRING_DEFAULTS)
     # check that the reference files all exist
     for attr, fname in parser['reference'].items():
         if not os.path.exists(fname):
             raise KeyError(attr, 'file at', fname, 'dose not exist')
-        all_libs[attr] = fname
+        args[attr] = fname
     for attr in REFERENCE_TAGS:
         if attr not in parser['reference']:
             raise KeyError('missing required tag', attr, 'in reference section')
 
     # type check the qsub options
-    for attr, value in parser['qsub'].items():
-        if attr not in QSUB_TAGS:
-            raise KeyError('unrecognized tag in the sub section', attr)
-        all_libs[attr] = cast(value, type(QSUB_TAGS[attr]))
+    if 'qsub' in parser:
+        args.update(validate_and_cast_section(parser['qsub'], QSUB_TAGS))
     
     # cast the defaults
-    for attr, value in parser['DEFAULTS'].items():
-        if attr not in LIBRARY_DEFAULT_TAGS:
-            raise KeyError('unrecognized tag in the DEFAULTS section', attr)
-        all_libs[attr] = cast(value, type(LIBRARY_DEFAULT_TAGS[attr]))
+    if 'DEFAULTS' in parser:
+        d = validate_and_cast_section(parser['DEFAULTS'], LIBRARY_DEFAULT_TAGS)
+        all_libs.update(d)
     
+    if 'illustrate' in parser:
+        args.update(validate_and_cast_section(parser['illustrate'], ILLUSTRATION_DEFAULTS.__dict__))
+    
+    if 'pairing' in parser:
+        args.update(validate_and_cast_section(parser['pairing'], PAIRING_DEFAULTS))
     sections = []
     for sec in library_sections:
         d = {}
         d.update(all_libs)
-        for attr, value in parser[sec].items():
-            if attr in LIBRARY_DEFAULT_TAGS:
-                value = cast(value, type(LIBRARY_DEFAULT_TAGS[attr]))
-            d[attr] = value
+        temp = {k: v for k, v in parser[sec].items() if k not in LIBRARY_REQUIRED_TAGS}
+        temp = validate_and_cast_section(temp, LIBRARY_DEFAULT_TAGS)
+        d.update(temp)
         for attr in LIBRARY_REQUIRED_TAGS:
             if attr not in parser[sec]:
                 raise KeyError('required tag', attr, 'not found in library section', sec)
-            else:
-                d[attr] = LIBRARY_REQUIRED_TAGS[attr](parser[sec][attr])
+            d[attr] = LIBRARY_REQUIRED_TAGS[attr](parser[sec][attr])
         d['library'] = sec
         sections.append(Namespace(**d))
     if len(library_sections) < 1:
         raise UserWarning('configuration file must have 1 or more library sections')
-    return sections
+
+    return Namespace(**args), sections
 
 
 def parse_arguments(pstep):
@@ -163,7 +188,7 @@ def parse_arguments(pstep):
                 default='/home/creisle/svn/svmerge/trunk/hg19_masked_regions.tsv'
             )
         g.add_argument(
-            '--low_memory', default=False, type=TSV.tsv_boolean,
+            '--low_memory', default=PAIRING_DEFAULTS['low_memory'], type=TSV.tsv_boolean,
             help='when working on a machine with less memory this is sacrifice time for memory where possible'
         )
         if pstep == PIPELINE_STEP.VALIDATE:

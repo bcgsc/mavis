@@ -7,6 +7,7 @@ import sys
 import itertools
 import json
 import networkx as nx
+from Bio import SeqIO
 
 
 # local modules
@@ -258,15 +259,15 @@ def main_validate(args):
         fh.write('load {} name="{} {} input"\n'.format(args.bam_file, args.library, args.protocol))
 
 
-def main_pipeline(configs):
-
+def main_pipeline(args, configs):
     # read the config
     # set up the directory structure and run svmerge
+    annotation_files = []
     annotation_jobs = []
     for sec in configs:
-        base = os.path.join(sec.output, '{}_{}'.format(sec.library, sec.protocol))
+        base = os.path.join(args.output, '{}_{}'.format(sec.library, sec.protocol))
         log('setting up the directory structure for', sec.library, 'as', base)
-        base = os.path.join(sec.output, '{}_{}'.format(sec.library, sec.protocol))
+        base = os.path.join(args.output, '{}_{}'.format(sec.library, sec.protocol))
         cluster_output = mkdirp(os.path.join(base, 'clustering'))
         validation_output = mkdirp(os.path.join(base, 'validation'))
         annotation_output = mkdirp(os.path.join(base, 'annotation'))
@@ -275,6 +276,7 @@ def main_pipeline(configs):
         log('clustering')
         merge_args = {}
         merge_args.update(sec.__dict__)
+        merge_args.update(args.__dict__)
         merge_args['output'] = os.path.join(base, 'clustering')
         output_files = main_cluster(Namespace(**merge_args))
         merge_file_prefix = None
@@ -290,10 +292,10 @@ def main_pipeline(configs):
         # now set up the qsub script for the validation and the held job for the annotation
         validation_args = {
             'output': validation_output,
-            'masking': sec.masking[0],
-            'reference_genome': sec.reference_genome[0],
-            'blat_2bit_reference': sec.blat_2bit_reference,
-            'annotations': sec.annotations[0],
+            'masking': args.masking[0],
+            'reference_genome': args.reference_genome[0],
+            'blat_2bit_reference': args.blat_2bit_reference,
+            'annotations': args.annotations[0],
             'library': sec.library,
             'bam_file': sec.bam_file,
             'protocol': sec.protocol,
@@ -312,7 +314,7 @@ def main_pipeline(configs):
             log('writing:', qsub)
             fh.write(
                 QSUB_HEADER.format(
-                    queue=sec.queue, memory=sec.memory, name=validation_jobname, output=validation_output
+                    queue=args.queue, memory=args.validate_memory, name=validation_jobname, output=validation_output
                 ) + '\n')
             fh.write('#$ -t {}-{}\n'.format(1, len(output_files)))
             temp = ['--{} {}'.format(k, v) for k, v in validation_args.items() if not isinstance(v, str) and v is not None]
@@ -325,9 +327,9 @@ def main_pipeline(configs):
         # for all files with the right suffix
         annotation_args = {
             'output': annotation_output,
-            'reference_genome': sec.reference_genome[0],
-            'annotations': sec.annotations[0],
-            'template_metadata': sec.template_metadata[0],
+            'reference_genome': args.reference_genome[0],
+            'annotations': args.annotations[0],
+            'template_metadata': args.template_metadata[0],
             'min_orf_size': sec.min_orf_size,
             'max_orf_cap': sec.max_orf_cap,
             'min_domain_mapping_match': sec.min_domain_mapping_match,
@@ -337,24 +339,45 @@ def main_pipeline(configs):
         temp = ['--{} {}'.format(k, v) for k, v in annotation_args.items() if not isinstance(v, str) and v is not None]
         temp.extend(['--{} "{}"'.format(k, v) for k, v in annotation_args.items() if isinstance(v, str) and v is not None])
         annotation_args = temp
-        annotation_args.append('--input {}/*{}'.format(validation_output, VALIDATION_PASS_SUFFIX))
+        annotation_args.append('--inputs {}/*{}*{}'.format(
+            validation_output, os.path.basename(merge_file_prefix), VALIDATION_PASS_SUFFIX))
         qsub = os.path.join(annotation_output, 'qsub.sh')
         annotation_jobname = 'annotation_{}_{}'.format(sec.library, sec.protocol)
         annotation_jobs.append(annotation_jobname)
+        annotation_files.append(os.path.join(annotation_output, 'annotations.tab'))
         with open(qsub, 'w') as fh:
             log('writing:', qsub)
             fh.write(
                 QSUB_HEADER.format(
-                    queue=sec.queue, memory=sec.memory, name=annotation_jobname, output=annotation_output
+                    queue=args.queue, memory=args.default_memory, name=annotation_jobname, output=annotation_output
                 ) + '\n')
             fh.write('#$ -hold_jid {}\n'.format(validation_jobname))
             fh.write('python {} annotate {}\n'.format(__file__, ' \\\n\t'.join(annotation_args)))
 
     # set up scripts for the pairing held on all of the annotation jobs
-    pairing_output = mkdirp(os.path.join(sec.output, 'pairing'))
+    pairing_output = mkdirp(os.path.join(args.output, 'pairing'))
+    pairing_args = dict(
+        output=pairing_output,
+        split_call_distance=args.split_call_distance,
+        contig_call_distance=args.contig_call_distance,
+        flanking_call_distance=args.flanking_call_distance,
+        max_proximity=args.max_proximity,
+        annotations=args.annotations[0],
+        low_memory=args.low_memory
+    )
+    temp = ['--{} {}'.format(k, v) for k, v in pairing_args.items() if not isinstance(v, str) and v is not None]
+    temp.extend(['--{} "{}"'.format(k, v) for k, v in pairing_args.items() if isinstance(v, str) and v is not None])
+    temp.append('--inputs {}'.format(' '.join(annotation_files)))
+    pairing_args = temp
     qsub = os.path.join(pairing_output, 'qsub.sh')
     with open(qsub, 'w') as fh:
         log('writing:', qsub)
+        fh.write(
+            QSUB_HEADER.format(
+                queue=args.queue, memory=args.default_memory, name='mavis_pairing', output=pairing_output
+            ) + '\n')
+        fh.write('#$ -hold_jid {}\n'.format(' '.join(annotation_jobs)))
+        fh.write('python {} pairing {}\n'.format(__file__, ' \\\n\t'.join(pairing_args)))
 
 
 def main_cluster(args):
@@ -630,7 +653,14 @@ def main_pairing(args):
             COLUMNS.event_type: SVTYPE,
             COLUMNS.break1_call_method: CALL_METHOD,
             COLUMNS.break2_call_method: CALL_METHOD,
-            COLUMNS.fusion_splicing_pattern: SPLICE_TYPE.values() + ['None']
+            COLUMNS.fusion_splicing_pattern: SPLICE_TYPE.values() + [None, 'None']
+        },
+        add={
+            COLUMNS.fusion_cdna_coding_start: None,
+            COLUMNS.fusion_cdna_coding_end: None,
+            COLUMNS.fusion_sequence_fasta_id: None,
+            COLUMNS.fusion_sequence_fasta_file: None,
+            COLUMNS.fusion_splicing_pattern: None
         }
     ))
     log('read {} breakpoint pairs'.format(len(bpps)))
@@ -753,21 +783,26 @@ def main():
             pconf.write_config(args.config, include_defaults=True)
             exit()
         else:
-            config = pconf.read_config(args.config)
+            temp, config = pconf.read_config(args.config)
+            args.__dict__.update(temp.__dict__)
             for sec in config:
                 sec.output = args.output
-            args = config[0]
     # load the reference files if they have been given and reset the arguments to hold the original file name and the
     # loaded data
     if any([
-            pstep not in [PIPELINE_STEP.PIPELINE, PIPELINE_STEP.VALIDATE],
-            hasattr(args, 'uninformative_filter') and args.uninformative_filter,
-            pstep == PIPELINE_STEP.VALIDATE and args.protocol == PROTOCOL.TRANS]):
+        pstep not in [PIPELINE_STEP.PIPELINE, PIPELINE_STEP.VALIDATE],
+        hasattr(args, 'uninformative_filter') and args.uninformative_filter,
+        pstep in [PIPELINE_STEP.VALIDATE, PIPELINE_STEP.CLUSTER] and args.protocol == PROTOCOL.TRANS,
+        pstep == PIPELINE_STEP.PIPELINE and any([sec.protocol == PROTOCOL.TRANS for sec in config])
+    ]):
         log('loading:', args.annotations)
         args.__dict__['annotations'] = args.annotations, load_reference_genes(args.annotations)
     else:
         args.__dict__['annotations'] = args.annotations, None
+
     try:
+        if pstep == PIPELINE_STEP.PIPELINE:
+            raise AttributeError()
         log('loading:' if not args.low_memory else 'indexing:', args.reference_genome)
         args.__dict__['reference_genome'] = args.reference_genome, load_reference_genome(
             args.reference_genome, args.low_memory)
@@ -779,15 +814,14 @@ def main():
     except AttributeError as err:
         args.__dict__['masking'] = args.__dict__.get('masking', None), None
     try:
+        if pstep == PIPELINE_STEP.PIPELINE:
+            raise AttributeError()
         log('loading:', args.template_metadata)
         args.__dict__['template_metadata'] = args.template_metadata, load_templates(args.template_metadata)
     except AttributeError:
         args.__dict__['template_metadata'] = args.__dict__.get('template_metadata', None), None
 
-    for attr in ['annotations', 'masking', 'template_metadata', 'reference_genome']:
-        for sec in config:
-            sec.__dict__[attr] = args.__dict__[attr]
-
+    
     # decide which main function to execute
     if pstep == PIPELINE_STEP.CLUSTER:
         main_cluster(args)
@@ -800,7 +834,7 @@ def main():
     elif pstep == PIPELINE_STEP.SUMMARY:
         main_summary(args)
     else:  # PIPELINE
-        main_pipeline(config)
+        main_pipeline(args, config)
 
 if __name__ == '__main__':
     main()

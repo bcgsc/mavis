@@ -17,7 +17,7 @@ def predict_transcriptome_breakpoint(breakpoint, transcript):
     prime = determine_prime(transcript, breakpoint)
     exons = transcript.exons[:]
     if not Interval.overlaps(breakpoint, transcript):
-        raise AssertionError('breakpoint does not overlap the transcript')
+        raise AssertionError('breakpoint does not overlap the transcript', breakpoint, transcript)
     if transcript.get_strand() == STRAND.NEG:
         exons.reverse()
 
