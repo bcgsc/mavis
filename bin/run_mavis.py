@@ -26,7 +26,7 @@ from mavis.validate.call import call_events
 from mavis.validate.constants import VALIDATION_DEFAULTS
 from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
 import mavis.bam.cigar as cigar_tools
-from mavis.pipeline.config import read_config, parse_arguments
+import mavis.pipeline.config as pconf
 from mavis.pipeline.util import *
 from mavis.pairing import equivalent_events
 
@@ -742,16 +742,21 @@ def main():
 
     if pstep == PIPELINE_STEP.SUMMARY:
         raise NotImplementedError('summary script has not been written')
-    args = parse_arguments(pstep)
+    args = pconf.parse_arguments(pstep)
     config = []
     log('input arguments')
     for arg, val in sorted(args.__dict__.items()):
         log(arg, '=', repr(val), time_stamp=False)
     if pstep == PIPELINE_STEP.PIPELINE:
-        config = read_config(args.config)
-        for sec in config:
-            sec.output = args.output
-        args = config[0]
+        if args.write:
+            log('writing:', args.config)
+            pconf.write_config(args.config, include_defaults=True)
+            exit()
+        else:
+            config = pconf.read_config(args.config)
+            for sec in config:
+                sec.output = args.output
+            args = config[0]
     # load the reference files if they have been given and reset the arguments to hold the original file name and the
     # loaded data
     if any([

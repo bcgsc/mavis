@@ -40,18 +40,20 @@ LIBRARY_REQUIRED_TAGS = dict(
 
 def write_config(filename, include_defaults=False):
     config = ConfigParser()
-    config['qsub'] = {}
     
-    config['reference'] = {}
+    for sec in ['DEFAULTS', 'reference', '<LIBRARY NAME>', 'qsub']:
+        config[sec] = {}
+    
     for tag in REFERENCE_TAGS:
         config['reference'][tag] = '<REQUIRED>'
-    config['<LIBRARY NAME>'] = {}
     for tag in LIBRARY_REQUIRED_TAGS:
         config['<LIBRARY NAME>'][tag] = '<REQUIRED>'
     
     if include_defaults:
-        config['qsub'].update(QSUB_TAGS)
-        config['<LIBRARY NAME>'].update(LIBRARY_DEFAULT_TAGS)
+        for tag, val in QSUB_TAGS.items():
+            config['qsub'][tag] = str(val)
+        for tag, val in LIBRARY_DEFAULT_TAGS.items():
+            config['DEFAULTS'][tag] = str(val)
     
     with open(filename, 'w') as configfile:
         config.write(configfile)
@@ -92,6 +94,9 @@ def read_config(filepath):
         if not os.path.exists(fname):
             raise KeyError(attr, 'file at', fname, 'dose not exist')
         all_libs[attr] = fname
+    for attr in REFERENCE_TAGS:
+        if attr not in parser['reference']:
+            raise KeyError('missing required tag', attr, 'in reference section')
 
     # type check the qsub options
     for attr, value in parser['qsub'].items():
@@ -172,7 +177,12 @@ def parse_arguments(pstep):
             '-f', '--force_overwrite', default=False, type=TSV.tsv_boolean,
             help='set flag to overwrite existing reviewed files'
         )
-    parser.add_argument('--output', help='path to the output directory', required=True)
+    if pstep == PIPELINE_STEP.PIPELINE:
+        m = parser.add_mutually_exclusive_group(required=True)
+        m.add_argument('--output', help='path to the output directory')
+        m.add_argument('--write', default=False, action='store_true', help='write a config')
+    else:
+        parser.add_argument('--output', help='path to the output directory', required=True)
 
     if pstep == PIPELINE_STEP.ANNOTATE:
         parser.add_argument(
@@ -272,15 +282,15 @@ def parse_arguments(pstep):
     if pstep == PIPELINE_STEP.VALIDATE:
         args.samtools_version = get_samtools_version()
         args.blat_version = get_blat_version()
-    args.output = os.path.abspath(args.output)
     try:
+        args.output = os.path.abspath(args.output)
         if os.path.exists(args.output) and not args.force_overwrite:
             parser.print_help()
             print(
                 '\nerror: output directory {} exists, --force_overwrite must be specified or the directory removed'.format(
                     repr(args.output)))
             exit(1)
-    except AttributeError:
+    except (AttributeError, TypeError):
         pass
 
     return args
