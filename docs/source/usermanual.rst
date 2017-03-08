@@ -106,7 +106,7 @@ the locations to conversion scripts are listed below
 +============================================================================+========================================================================+
 | `trans-abyss <http://www.bcgsc.ca/platform/bioinfo/software/trans-abyss>`_ | https://svn.bcgsc.ca/svn/SVIA/svmerge/trunk/tools/convert_ta.py        |
 +----------------------------------------------------------------------------+------------------------------------------------------------------------+
-| `DELLY <https://github.com/dellytools/delly>`_                             |                                                                        |
+| `DELLY <https://github.com/dellytools/delly>`_                             | https://svn.bcgsc.ca/svn/SVIA/delly/trunk/delly_vcf_2_tsv.py           |
 +----------------------------------------------------------------------------+------------------------------------------------------------------------+
 | `Manta <https://github.com/Illumina/manta>`_                               | https://svn.bcgsc.ca/svn/SVIA/manta/trunk/manta_svmerge.py             |
 +----------------------------------------------------------------------------+------------------------------------------------------------------------+
