@@ -366,7 +366,18 @@ class TestCallBreakpointPair(unittest.TestCase):
         raise unittest.SkipTest('TODO')
 
     def test_single_duplication(self):
-        raise unittest.SkipTest('TODO')
+        r = MockRead(
+            name='seq1',
+            reference_name='gene3',
+            reference_start=27155,
+            cigar=[(CIGAR.M, 65), (CIGAR.I, 6), (CIGAR.D, 95), (CIGAR.M, 21), (CIGAR.S, 17)],
+            query_sequence='TAGTTGGATCTCTGTGCTGACTGACTGACAGACAGACTTTAGTGTCTGTGTGCTGACTGACAGACAGACTTTAGTGTCTGTGTGCTGACT'
+                           'GACAGACTCTAGTAGTGTC'
+        )
+        bpp = BreakpointPair.call_breakpoint_pair(r, REFERENCE_GENOME=REFERENCE_GENOME)
+        self.assertEqual(27220, bpp.break1.start)
+        self.assertEqual(27316, bpp.break2.start)
+        self.assertEqual('AGACTT', bpp.untemplated_seq)
 
     def test_single_duplication_with_leading_untemp(self):
         r = MockRead(

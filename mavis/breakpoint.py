@@ -681,17 +681,19 @@ def read_bpp_from_input_file(filename, expand_ns=True, force_stranded=False, **k
                         'error in input id. All mavis pipeline step ids must satisfy the regex:'
                         ' ^[A-Za-z0-9-]+$ ')
         stranded = row[COLUMNS.stranded] or force_stranded
-        row[COLUMNS.stranded] = stranded
         opp = row[COLUMNS.opposing_strands]
-
+        
+        strand1 = row[COLUMNS.break1_strand] if row[COLUMNS.stranded] else STRAND.NS
+        strand2 = row[COLUMNS.break2_strand] if row[COLUMNS.stranded] else STRAND.NS
+        row[COLUMNS.stranded] = stranded
         temp = []
         errors = []
         for o1, o2, opp, s1, s2 in itertools.product(
             ORIENT.expand(row[COLUMNS.break1_orientation]) if expand_ns else [row[COLUMNS.break1_orientation]],
             ORIENT.expand(row[COLUMNS.break2_orientation]) if expand_ns else [row[COLUMNS.break2_orientation]],
             [True, False] if opp is None and expand_ns else [opp],
-            STRAND.expand(row[COLUMNS.break1_strand]) if stranded and expand_ns else [row[COLUMNS.break1_strand]],
-            STRAND.expand(row[COLUMNS.break2_strand]) if stranded and expand_ns else [row[COLUMNS.break2_strand]]
+            STRAND.expand(strand1) if stranded and expand_ns else [strand1],
+            STRAND.expand(strand2) if stranded and expand_ns else [strand2]
         ):
             try:
                 b1 = Breakpoint(

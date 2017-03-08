@@ -374,12 +374,14 @@ def blat_contigs(
         query_id_mapping = {}
         count = 1
         sequences = set()
+        ev_by_seq = {}
         for e in evidence:
             for c in e.contigs:
                 sequences.add(c.seq)
+                ev_by_seq.setdefault(c.seq, []).append(e.data.get(COLUMNS.cluster_id, None))
         with open(blat_fa_input_file, 'w') as fh:
             for seq in sequences:
-                n = 'seq{0}'.format(count)
+                n = 'seq{}_{}'.format(count, '_'.join(sorted([x for x in ev_by_seq[seq] if x is not None])))
                 query_id_mapping[n] = seq
                 fh.write('>' + n + '\n' + seq + '\n')
                 count += 1
