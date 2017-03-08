@@ -26,9 +26,9 @@ False	reference12	10000	10000	reference12	10001	10021	R	L	+	+	duplication	genome
 False	reference17	1974	1974	reference17	2020	2020	R	L	+	+	duplication	genome	convert_ta.py_v0.0.1	mock_A36971	17:72889676 reported as an insertion
 False	gene3	27175	27175	gene3	27176	27176	R	L	+	+	duplication	transcriptome	convert_ta.py_v0.0.1	mock_A36973	1:207249992
 False	gene3	27175	27175	gene3	27176	27176	R	L	+	+	duplication	genome	convert_ta.py_v0.0.1	mock_A36971	1:207249992
-False	gene1	34090	34090	gene5	608	608	L	R	+	+	translocation	transcriptome	convert_ta.py_v0.0.1	mock_A36973	15:40854971|7:26241389
-False	gene5	608	608	gene1	33309	33309	L	R	+	+	translocation	genome	convert_ta.py_v0.0.1	mock_A36971	7:26252971|15:40854190
+True	gene1	34090	34090	gene5	608	608	R	L	+	-	translocation	transcriptome	convert_ta.py_v0.0.1	mock_A36973	15:40854971|7:26241389
+False	gene5	608	608	gene1	33309	33309	R	R	+	-	translocation	genome	convert_ta.py_v0.0.1	mock_A36971	7:26252971|15:40854190
 False	gene2	22408	22408	gene2	23783	23783	R	L	+	+	duplication	transcriptome	convert_ta.py_v0.0.1	mock_A36973	15:41623873|15:41625248#this one is pretty low qual
 False	gene2	18827	19827	gene2	27757	28045	R	L	+	+	duplication	genome	convert_ta.py_v0.0.1	mock_A36971	15:41621292|15:41628510
 False	gene6	77430	77430	gene6	89472	89472	L	R	+	+	deletion	genome	convert_ta.py_v0.0.1	mock_A36971	10:89700299|10:89712341
-False	gene6	70139	70139	gene6	94739	94739	L	R	+	+	deletion	transcriptome	convert_ta.py_v0.0.1	mock_A36973	approx 10:89700299|10:89712341
+False	gene6	77430	77430	gene6	89472	89472	L	R	+	+	deletion	transcriptome	convert_ta.py_v0.0.1	mock_A36973	approx 10:89700299|10:89712341
