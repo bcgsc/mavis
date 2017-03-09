@@ -691,11 +691,13 @@ def main_pairing(args):
                     raise AssertionError('transcript is not unique', gene, t)
                 TRANSCRIPTS[t.name] = t
 
-    # now try comparing breakpoints between libraries
     calls_by_lib = dict()
+    pairkey_bpp_mapping = dict()
+    pairing = dict()
 
-    def pair_key(bpp):
-        key = [
+    for bpp in bpps:
+        lib_key = (bpp.data[COLUMNS.library], bpp.data[COLUMNS.protocol])
+        pair_key = [
             bpp.data[COLUMNS.library],
             bpp.data[COLUMNS.protocol],
             bpp.data[COLUMNS.annotation_id],
@@ -703,54 +705,51 @@ def main_pairing(args):
             bpp.data[COLUMNS.fusion_cdna_coding_start],
             bpp.data[COLUMNS.fusion_cdna_coding_end]
         ]
-        return '_'.join([str(k) for k in key if k is not None])
+        pair_key = '_'.join([str(k) for k in pair_key if k is not None])
+        bpp.data[COLUMNS.product_id] = pair_key
+        calls_by_lib.setdefault(lib_key, set())
+        calls_by_lib[lib_key].add(pair_key)
 
-    all_bpp = dict()
-    pairing = nx.Graph()
-
-    for bpp in bpps:
-        key = (bpp.data[COLUMNS.library], bpp.data[COLUMNS.protocol])
-        if key not in calls_by_lib:
-            calls_by_lib[key] = dict()
-
-        k = pair_key(bpp)
-        if k in calls_by_lib[key]:
-            raise KeyError('duplicate bpp is not unique within lib', k, bpp, bpp.data)
-        calls_by_lib[key][k] = bpp
-        all_bpp[k] = bpp
-        pairing.add_node(k)
+        if pair_key in calls_by_lib:
+            raise KeyError('duplicate bpp is not unique within lib', pair_key, bpp, bpp.data)
+        pairkey_bpp_mapping[pair_key] = bpp
+        pairing[pair_key] = set()
 
     # pairwise comparison of breakpoints between all libraries
-    for l1, l2 in itertools.combinations(calls_by_lib.keys(), 2):
+    for lib1, lib2 in itertools.combinations(calls_by_lib.keys(), 2):
         # for each two libraries pair all calls
-        log(len(calls_by_lib[l1]) * len(calls_by_lib[l2]), 'comparison(s) between', l1, 'and', l2)
-        for bpp1, bpp2 in itertools.product(calls_by_lib[l1], calls_by_lib[l2]):
+        log(len(calls_by_lib[lib1]) * len(calls_by_lib[lib2]), 'comparison(s) between', lib1, 'and', lib2)
+        for pkey1, pkey2 in itertools.product(calls_by_lib[lib1], calls_by_lib[lib2]):
             if equivalent_events(
-                calls_by_lib[l1][bpp1],
-                calls_by_lib[l2][bpp2],
+                pairkey_bpp_mapping[pkey1],
+                pairkey_bpp_mapping[pkey2],
                 DISTANCES=DISTANCES,
                 TRANSCRIPTS=TRANSCRIPTS,
                 SEQUENCES=SEQUENCES
             ):
-                pairing.add_edge(bpp1, bpp2)
+                pairing[pkey1].add(pkey2)
+                pairing[pkey2].add(pkey1)
+    
+    for pkey, pairs in pairing.items():
+        bpp = pairkey_bpp_mapping[pkey]
+        # filter any matches where genes match but transcripts do not
+        filtered = []
+        for pkey2 in pairs:
+            pair_bpp = pairkey_bpp_mapping[pkey2]
+            if bpp.data[COLUMNS.gene1] and bpp.data[COLUMNS.gene1] == pair_bpp.data[COLUMNS.gene1]:
+                if bpp.data[COLUMNS.transcript1] != pair_bpp.data[COLUMNS.transcript1]:
+                    continue
+            if bpp.data[COLUMNS.gene2] and bpp.data[COLUMNS.gene2] == pair_bpp.data[COLUMNS.gene2]:
+                if bpp.data[COLUMNS.transcript2] != pair_bpp.data[COLUMNS.transcript2]:
+                    continue
+            filtered.append(pkey2)
+        bpp.data[COLUMNS.pairing] = ';'.join(sorted(filtered))
 
-    of = os.path.join(args.output, 'edges.tab')
-    with open(of, 'w') as fh:
-        log('writing:', of)
-        fh.write('source\ttarget\t\n')
-        for src, tgt in pairing.edges():
-            fh.write('{}\t{}\n'.format(src, tgt))
-
-    for key, bpp in all_bpp.items():
-        paired_to = set()
-        for node in nx.all_neighbors(pairing, key):
-            paired_to.add(node)
-        bpp.data[COLUMNS.pairing] = ';'.join(sorted(list(paired_to)))
     fname = os.path.join(
         args.output,
         'mavis_paired_{}.tab'.format('_'.join(sorted([l for l, p in calls_by_lib])))
     )
-    output_tabbed_file(all_bpp.values(), fname)
+    output_tabbed_file(bpps, fname)
 
 
 def main_summary(args):
