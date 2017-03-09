@@ -78,3 +78,32 @@ class TestDeBruijnGraph(unittest.TestCase):
         self.assertEqual(2, G.get_edge_freq(1, 2))
         G.add_edge(1, 2, 5)
         self.assertEqual(7, G.get_edge_freq(1, 2))
+
+    def test_trim_noncutting_paths_by_freq_degree_stop(self):
+        g = DeBruijnGraph()
+        for s, t in itertools.combinations([1, 2, 3, 4], 2):
+            g.add_edge(s, t, freq=4)
+        for s, t in itertools.combinations([5, 6, 7, 8], 2):
+            g.add_edge(s, t, freq=4)
+        path1 = [5, 9, 10, 11, 12, 1]
+        for s, t in zip(path1, path1[1:]):
+            g.add_edge(s, t)
+        for edge in g.edges():
+            print(edge)
+        g.trim_noncutting_paths_by_freq(3)
+        self.assertEqual(list(range(1, 9)) + path1[1:-1], g.nodes())
+
+        # add an equal weight path to force namesorting
+        path2 = [5, 13, 14, 15, 16, 1]
+        for s, t in zip(path2, path2[1:]):
+            g.add_edge(s, t)
+        
+        g.trim_noncutting_paths_by_freq(3)
+        self.assertEqual(list(range(1, 9)) + path2[1:-1], g.nodes())
+        
+        # add back the original path with a higher weight
+        for s, t in zip(path1, path1[1:]):
+            g.add_edge(s, t, freq=2)
+        
+        g.trim_noncutting_paths_by_freq(3)
+        self.assertEqual(list(range(1, 9)) + path1[1:-1], g.nodes())

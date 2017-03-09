@@ -83,19 +83,47 @@ class DeBruijnGraph(nx.DiGraph):
             if self.degree(n) == 0:
                 self.remove_node(n)
 
-    def trim_noncutting_edges_by_freq(self, min_weight):
+    def trim_noncutting_paths_by_freq(self, min_weight):
         """
         trim any low weight edges where another path exists between the source and target
         of higher weight
         """
         current_edges = list(self.edges(data=True))
         for src, tgt, data in sorted(current_edges, key=lambda x: (x[2]['freq'], x[0], x[1])):
-            try:
-                self.remove_edge(src, tgt)
-                if not nx.has_path(self, src, tgt):  # guaranteed to be higher or equal weight
-                    self.add_edge(src, tgt, **data)
-            except KeyError:
-                pass
+            # come up with the path by extending this edge either direction until the degree > 2
+            if not self.has_node(src) or not self.has_node(tgt) or not self.has_edge(src, tgt):
+                continue
+            path = []
+            while self.in_degree(src) == 1 and self.out_degree(src) == 1:
+                temp = self.in_edges(src, data=True)[0]
+                if temp[2]['freq'] >= min_weight:
+                    break
+                path.insert(0, src)
+                src = temp[0]
+            path.insert(0, src)
+            
+            while self.in_degree(tgt) == 1 and self.out_degree(tgt) == 1:
+                temp = self.out_edges(tgt, data=True)[0]
+                if temp[2]['freq'] >= min_weight:
+                    break
+                path.append(tgt)
+                tgt = temp[1]
+            path.append(tgt)
+            start_edge_data = self.get_edge_data(path[0], path[1])
+            self.remove_edge(path[0], path[1])
+            
+            end_edge_data = None
+            if len(path) > 2:
+                end_edge_data = self.get_edge_data(path[-2], path[-1])
+                self.remove_edge(path[-2], path[-1])
+            
+            if not nx.has_path(self, src, tgt):
+                self.add_edge(path[0], path[1], **start_edge_data)
+                if len(path) > 2:
+                    self.add_edge(path[-2], path[-1], **end_edge_data)
+            else:
+                for node in path[1:-1]:
+                    self.remove_node(node)
 
     def get_sinks(self, subgraph=None):
         nodeset = set()
@@ -140,6 +168,66 @@ def digraph_connected_components(graph, subgraph=None):
         if n in subgraph: 
             g.add_node(n)
     return nx.connected_components(g)
+
+
+def _pull_assembled_paths(assembly, assembly_min_edge_weight, assembly_max_paths, log=lambda *pos, **kwargs: None):
+    path_scores = {}  # path_str => score_int
+    
+    unresolved_components = [(assembly_min_edge_weight, c) for c in digraph_connected_components(assembly)]
+    
+    while len(unresolved_components) > 0:
+        # since now we know it's a tree, the assemblies will all be ltd to
+        # simple paths
+        w, component = unresolved_components.pop(0)
+        paths_est = len(assembly.get_sinks(component)) * len(assembly.get_sources(component))
+        # if the assembly has too many sinks/sources we'll need to clean it
+        # we can do this by removing all current sources/sinks
+        subgraph = assembly.subgraph(component)
+        if not nx.is_directed_acyclic_graph(subgraph):
+            log('dropping cyclic subgraph', time_stamp=False)
+            continue
+        
+        all_paths = []
+        if paths_est <= assembly_max_paths:
+            for source, sink in itertools.product(assembly.get_sources(component), assembly.get_sinks(component)): 
+                all_paths.extend(list(nx.all_simple_paths(assembly, source, sink)))
+                if len(all_paths) > assembly_max_paths:
+                    break
+        paths_est = max([paths_est, len(all_paths)])
+        
+        if paths_est > assembly_max_paths:
+            log(
+                'reducing estimated paths. Current estimate is {}+ from'.format(paths_est), 
+                len(component), 'nodes', 'filter increase', w + 1, time_stamp=False)
+            w += 1
+            assembly.trim_noncutting_paths_by_freq(w)
+            assembly.trim_tails_by_freq(w)
+            # with open('assembly_failed_edges.txt', 'w') as fh:
+            #     fh.write('source\ttarget\n')
+            #     for src, tgt in assembly.edges():
+            #         fh.write('{}\t{}\n'.format(src, tgt))
+            # print('wrote: assembly_failed_edges.txt')
+            # with open('assembly_failed_edges.tgf', 'w') as fh:
+            #     for node in assembly.nodes():
+            #         fh.write(node + '\n')
+            #     fh.write('#\n')
+            #     for src, tgt, data in assembly.edges(data=True):
+            #         fh.write('{} {} {}\n'.format(src, tgt, data['freq']))
+            # print('wrote: assembly_failed_edges.tgf')
+            # exit(1)
+            
+            for new_comp in digraph_connected_components(assembly, component):
+                unresolved_components.append((w, new_comp))
+        else:
+            for source, sink in itertools.product(assembly.get_sources(component), assembly.get_sinks(component)):
+                paths = list(nx.all_simple_paths(assembly, source, sink))
+                for path in paths:
+                    s = path[0] + ''.join([p[-1] for p in path[1:]])
+                    score = 0
+                    for i in range(0, len(path) - 1):
+                        score += assembly.get_edge_freq(path[i], path[i + 1])
+                    path_scores[s] = max(path_scores.get(s, 0), score)
+    return path_scores
 
 
 def assemble(
@@ -199,43 +287,16 @@ def assemble(
             r = kmer[1:]
             assembly.add_edge(l, r)
     # now just work with connected components
-    assembly.trim_noncutting_edges_by_freq(assembly_min_edge_weight)
+    assembly.trim_noncutting_paths_by_freq(assembly_min_edge_weight)
     # trim all paths from sources or to sinks where the edge weight is low
     assembly.trim_tails_by_freq(assembly_min_edge_weight)
-    path_scores = {}  # path_str => score_int
-    
-    unresolved_components = [(assembly_min_edge_weight, c) for c in digraph_connected_components(assembly)]
-    
-    while len(unresolved_components) > 0:
-        # since now we know it's a tree, the assemblies will all be ltd to
-        # simple paths
-        w, component = unresolved_components.pop(0)
-        paths_est = len(assembly.get_sinks(component)) * len(assembly.get_sources(component))
-        # if the assembly has too many sinks/sources we'll need to clean it
-        # we can do this by removing all current sources/sinks
-        subgraph = assembly.subgraph(component)
-        if not nx.is_directed_acyclic_graph(subgraph):
-            log('dropping cyclic subgraph', time_stamp=False)
-            continue
+    path_scores = _pull_assembled_paths(
+        assembly,
+        assembly_min_edge_weight=assembly_min_edge_weight,
+        assembly_max_paths=assembly_max_paths,
+        log=log
+    )
 
-        if paths_est > assembly_max_paths:
-            log(
-                'source/sink combinations', paths_est, 'from', 
-                len(component), 'nodes', 'filter increase', w + 1, time_stamp=False)
-            w += 1
-            assembly.trim_noncutting_edges_by_freq(w)
-            assembly.trim_tails_by_freq(w)
-            
-            for new_comp in digraph_connected_components(assembly, component):
-                unresolved_components.append((w, new_comp))
-        else:
-            for source, sink in itertools.product(assembly.get_sources(component), assembly.get_sinks(component)):
-                for path in nx.all_simple_paths(assembly, source, sink):
-                    s = path[0] + ''.join([p[-1] for p in path[1:]])
-                    score = 0
-                    for i in range(0, len(path) - 1):
-                        score += assembly.get_edge_freq(path[i], path[i + 1])
-                    path_scores[s] = max(path_scores.get(s, 0), score)
     # now map the contigs to the possible input sequences
     contigs = {}
     for seq, score in list(path_scores.items()):
