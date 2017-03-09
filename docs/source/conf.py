@@ -29,7 +29,6 @@
 import sys
 import os
 import sphinx_rtd_theme
-from recommonmark.parser import CommonMarkParser
 
 d = os.path.abspath('../../')
 sys.path.insert(0, d)
@@ -76,12 +75,9 @@ templates_path = ['source/_templates']
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
-source_parsers = {
-    '.md': CommonMarkParser
-}
 numfig = True
 numfig_format = {'figure': 'Figure %s.'}
-source_suffix = ['.rst', '.md']
+source_suffix = ['.rst']
 
 # The encoding of source files.
 #

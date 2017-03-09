@@ -1,6 +1,6 @@
-from mavis.illustrate.scatter ScatterPlot
-from mavis.illustrate.draw import *
-from mavis.illustrate.settings import DiagramSettings
+from mavis.illustrate.scatter import ScatterPlot
+from mavis.illustrate.diagram import *
+from mavis.illustrate.constants import DiagramSettings
 from mavis.annotate.base import BioInterval
 from mavis.annotate.file_io import load_reference_genes
 from mavis import __version__
