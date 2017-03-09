@@ -185,7 +185,7 @@ class TestDraw(unittest.TestCase):
             breakpoints=[b]
         )
         self.canvas.add(g)
-        self.canvas.saveas('test_draw_ustranscript.svg')
+        # self.canvas.saveas('test_draw_ustranscript.svg')
         self.assertEqual(2, len(self.canvas.elements))
         self.assertEqual(3, len(g.elements))
         for el, cls in zip(g.elements[0].elements, ['splicing', 'exon_track', 'protein']):
@@ -259,7 +259,7 @@ class TestDraw(unittest.TestCase):
             d.PADDING * 2 + d.DOMAIN_TRACK_HEIGHT * 2 + \
             d.INNER_MARGIN + \
             d.TRACK_HEIGHT + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN + d.SPLICE_HEIGHT
-        canvas.saveas('test_draw_layout_single_transcript.svg')
+        # canvas.saveas('test_draw_layout_single_transcript.svg')
         self.assertEqual(expected_height, canvas.attribs['height'])
 
     def test_draw_layout_single_genomic(self):
@@ -309,7 +309,7 @@ class TestDraw(unittest.TestCase):
             d.INNER_MARGIN + \
             d.TRACK_HEIGHT + d.SPLICE_HEIGHT
         self.assertEqual(expected_height, canvas.attribs['height'])
-        canvas.saveas('test_draw_layout_single_genomic.svg')
+        # canvas.saveas('test_draw_layout_single_genomic.svg')
 
     def test_draw_layout_translocation(self):
         d = DiagramSettings()
@@ -419,7 +419,7 @@ class TestDraw(unittest.TestCase):
         ft = FusionTranscript.build(ann, reference_genome)
 
         canvas, legend = draw_sv_summary_diagram(d, ann, ft, show_template=True, templates=TEMPLATE_METADATA)
-        canvas.saveas('test_draw_translocation_with_template.svg')
+        # canvas.saveas('test_draw_translocation_with_template.svg')
         self.assertEqual(8, len(canvas.elements))  # defs counts as element
         expected_height = d.TOP_MARGIN + d.BOTTOM_MARGIN + \
             d.TRACK_HEIGHT * 2 + d.PADDING + d.BREAKPOINT_BOTTOM_MARGIN + d.BREAKPOINT_TOP_MARGIN + \
@@ -480,4 +480,4 @@ class TestDraw(unittest.TestCase):
         d.GENE_MIN_BUFFER = 0
         canvas = draw_multi_transcript_overlay(d, gene, vmarkers=[marker], plots=[s, s])
         self.assertEqual(2, len(canvas.elements))  # defs counts as element
-        canvas.saveas('test_draw_overlay.svg')
+        # canvas.saveas('test_draw_overlay.svg')
