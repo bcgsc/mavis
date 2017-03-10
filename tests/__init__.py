@@ -10,7 +10,9 @@ REFERENCE_GENOME_FILE = os.path.join(filedir, 'mock_reference_genome.fa')
 REFERENCE_GENOME_FILE_2BIT = os.path.join(filedir, 'mock_reference_genome.2bit')
 REFERENCE_ANNOTATIONS_FILE = os.path.join(filedir, 'mock_reference_annotations.tsv')
 REFERENCE_ANNOTATIONS_FILE_JSON = os.path.join(filedir, 'mock_reference_annotations.json')
+FULL_REFERENCE_ANNOTATIONS_FILE_JSON = os.path.join(filedir, 'mock_annotations.json')
 TEMPLATE_METADATA_FILE = os.path.join(filedir, 'cytoBand.txt')
+TRANSCRIPTOME_BAM_INPUT = os.path.join(filedir, 'mock_trans_reads_for_events.sorted.bam')
 BAM_INPUT = os.path.join(filedir, 'mini_mock_reads_for_events.sorted.bam')
 FULL_BAM_INPUT = os.path.join(filedir, 'mock_reads_for_events.sorted.bam')
 FULL_BASE_EVENTS = os.path.join(filedir, 'mock_sv_events.tsv')
@@ -119,6 +121,11 @@ class MockRead:
     def __str__(self):
         return '{}(ref_id={}, start={}, end={})'.format(
             self.__class__.__name__, self.reference_id, self.reference_start, self.reference_end)
+
+class MockContig:
+    def __init__(self, seq, alignments=None):
+        self.seq=seq,
+        self.alignments=alignments
 
 class MockBamFileHandle:
     def __init__(self, chrom_to_tid={}):
