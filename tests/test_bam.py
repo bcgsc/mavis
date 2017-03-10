@@ -287,6 +287,80 @@ class Testcigar_tools(unittest.TestCase):
         k = [(4, 1), (4, 2), (7, 5), (8, 7), (7, 2), (8, 5), (7, 28), (8, 1), (7, 99)]
         self.assertEqual([(4, 3), (7, 5), (8, 7), (7, 2), (8, 5), (7, 28), (8, 1), (7, 99)], cigar_tools.join(k))
 
+
+class TestHgvsStandardizeCigars(unittest.TestCase):
+    def no_change_aligned(self):
+        ref = 'AAATTTGGGCCCAATT'
+        read = MockRead('name', '1', 1, cigar=[(CIGAR.M, 10)], query_sequence='AAATTTGGGC')
+        self.assertEqual([(CIGAR.M, 10)], cigar_tools.hgvs_standardize_cigar(read, ref))
+    
+    def no_change_proper_indel(self):
+        ref = 'ATAGGC' 'ATCTACGAG' 'ATCGCTACG'
+        read = MockRead(
+            'name',
+            1,
+            6,
+            query_sequence='ATCTAC' 'CCC' 'ATCG',
+            cigar=[(CIGAR.EQ, 6), (CIGAR.I, 3), (CIGAR.D, 3), (CIGAR.EQ, 4)]
+        )
+        self.assertEqual([(CIGAR.EQ, 6), (CIGAR.I, 3), (CIGAR.D, 3), (CIGAR.EQ, 4)], cigar_tools.hgvs_standardize_cigar(read, ref))
+
+    def ins_after_deletion(self):
+        ref = 'ATAGGC' 'ATCTACGAG' 'ATCGCTACG'
+        read = MockRead(
+            'name',
+            1,
+            6,
+            query_sequence='ATCTAC' 'CCC' 'ATCG',
+            cigar=[(CIGAR.EQ, 6), (CIGAR.D, 3), (CIGAR.I, 3), (CIGAR.EQ, 4)]
+        )
+        self.assertEqual([(CIGAR.EQ, 6), (CIGAR.I, 3), (CIGAR.D, 3), (CIGAR.EQ, 4)], cigar_tools.hgvs_standardize_cigar(read, ref))
+
+    def test_insertion_in_repeat(self):
+        ref = 'ATAGGC' 'ATCT' 'ACGA' 'GATCGCTACG'
+        read = MockRead(
+            'name',
+            1,
+            6,
+            query_sequence='ATCT' 'ACGA' 'ACGA' 'GATC',
+            cigar=[(CIGAR.EQ, 4), (CIGAR.I, 4), (CIGAR.EQ, 8)]
+        )
+        self.assertEqual([(CIGAR.EQ, 8), (CIGAR.I, 4), (CIGAR.EQ, 4)], cigar_tools.hgvs_standardize_cigar(read, ref))
+
+    def test_deletion_in_repeat(self):
+        ref = 'ATAGGC' 'ATCT' 'ACGA' 'ACGA' 'ACGA' 'GATCGCTACG'
+        read = MockRead(
+            'name',
+            1,
+            6,
+            query_sequence='ATCT' 'ACGA' 'ACGA' 'GATC',
+            cigar=[(CIGAR.EQ, 4), (CIGAR.D, 4), (CIGAR.EQ, 12)]
+        )
+        self.assertEqual([(CIGAR.EQ, 12), (CIGAR.D, 4), (CIGAR.EQ, 4)], cigar_tools.hgvs_standardize_cigar(read, ref))
+
+    def test_bubble_sort_indel_sections(self):
+        ref = 'ATAGGC' 'ATCT' 'ACGA' 'ACGA' 'ACGA' 'GATCGCTACG'
+        read = MockRead(
+            'name',
+            1,
+            6,
+            query_sequence='ATCT' 'ACGA' 'TTTTT' 'ACGA' 'GATC',
+            cigar=[(CIGAR.EQ, 4), (CIGAR.D, 2), (CIGAR.I, 3), (CIGAR.D, 2), (CIGAR.I, 2), (CIGAR.EQ, 12)]
+        )
+        self.assertEqual([(CIGAR.EQ, 4), (CIGAR.I, 5), (CIGAR.D, 4), (CIGAR.EQ, 12)], cigar_tools.hgvs_standardize_cigar(read, ref))
+    
+    def test_bubble_sort_indel_sections_drop_mismatch(self):
+        ref = 'ATAGGC' 'ATCT' 'ACGA' 'ACGA' 'ACGA' 'GATCGCTACG'
+        read = MockRead(
+            'name',
+            1,
+            6,
+            query_sequence='ATCT' 'ACGAC' 'TTTTT' 'ACGA' 'GATC',
+            cigar=[(CIGAR.EQ, 4), (CIGAR.X, 1), (CIGAR.D, 2), (CIGAR.I, 3), (CIGAR.D, 2), (CIGAR.I, 2), (CIGAR.EQ, 12)]
+        )
+        self.assertEqual([(CIGAR.EQ, 4), (CIGAR.I, 6), (CIGAR.D, 5), (CIGAR.EQ, 12)], cigar_tools.hgvs_standardize_cigar(read, ref))
+
+
 class TestReadPairStrand(unittest.TestCase):
     def setUp(self):
         self.read1_pos_neg = MockRead(is_reverse=False, is_read1=True, mate_is_reverse=True)

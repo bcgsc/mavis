@@ -294,3 +294,86 @@ def alignment_matches(cigar):
         if v in [CIGAR.X, CIGAR.EQ, CIGAR.M]:
             result += f
     return result
+
+
+def hgvs_standardize_cigar(read, reference_seq):
+    """
+    extend alignments as long as matches are possible.
+    call insertions before deletions
+    """
+    ci = 0
+    cigar = join(read.cigar)
+    new_cigar = []
+    # ensure that any del ins become ins del
+    for i in range(0, len(cigar)):
+        convert = False
+        if cigar[i][0] == CIGAR.X:
+            if i > 0:
+                if cigar[i - 1][0] in [CIGAR.I, CIGAR.D, CIGAR.N]:
+                    convert = True
+            if i < len(cigar) - 1:
+                if cigar[i + 1][0] in [CIGAR.I, CIGAR.D, CIGAR.N]:
+                    convert = True
+        if cigar[i][0] == CIGAR.N:
+            new_cigar.append((CIGAR.D, cigar[i][1]))
+        elif convert:
+            new_cigar.append((CIGAR.I, cigar[i][1]))
+            new_cigar.append((CIGAR.D, cigar[i][1]))
+        else:
+            new_cigar.append(cigar[i])
+    # now sort any consecutive ins/dels so that that insertions come first
+    for i in range(0, len(new_cigar)):
+        t = i - 1  # for bubbling
+        if new_cigar[i][0] == CIGAR.I:
+            while t >= 0:
+                if new_cigar[t][0] != CIGAR.D:
+                    break
+                t -= 1
+            if t < i - 1:
+                t += 1
+                new_cigar[i], new_cigar[t] = new_cigar[t], new_cigar[i]
+    new_cigar = join(new_cigar)
+    # now we need to extend any insertions
+    rpos = read.reference_start
+    qpos = 0
+    cigar = []
+    i = 0
+    while i < len(new_cigar):
+        if i < len(new_cigar) - 1:
+            c, v = new_cigar[i]
+            next_c, next_v = new_cigar[i + 1]
+            
+            if c == CIGAR.I:
+                qpos += v
+                if next_c == CIGAR.EQ and next_v >= v:
+                    qseq = read.query_sequence[qpos - v:qpos]
+                    rseq = reference_seq[rpos:rpos + v]
+                    if qseq == rseq:
+                        cigar.append((CIGAR.EQ, v))
+                        rpos += v
+                        if next_v == v:
+                            del new_cigar[i + 1]
+                        else:
+                            new_cigar[i + 1] = next_c, next_v - v
+                        continue
+            elif c == CIGAR.D:
+                rpos += v
+                if next_c == CIGAR.EQ and next_v >= v:
+                    qseq = read.query_sequence[qpos:qpos + v]
+                    rseq = reference_seq[rpos - v:rpos]
+                    if qseq == rseq:
+                        cigar.append((CIGAR.EQ, v))
+                        qpos += v
+                        if next_v == v:
+                            del new_cigar[i + 1]
+                        else:
+                            new_cigar[i + 1] = next_c, next_v - v
+                        continue
+            elif c == CIGAR.S:
+                qpos += v
+            elif c != CIGAR.H:
+                qpos += v
+                rpos += v
+        cigar.append(new_cigar[i])
+        i += 1
+    return join(cigar)
