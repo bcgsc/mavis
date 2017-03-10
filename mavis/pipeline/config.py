@@ -28,6 +28,10 @@ LIBRARY_DEFAULT_TAGS.update(VALIDATION_DEFAULTS.__dict__)
 
 REFERENCE_TAGS = ['template_metadata', 'reference_genome', 'annotations', 'masking', 'blat_2bit_reference']
 
+REFERENCE_DEFAULT_TAGS = dict(
+    low_memory=False
+)
+
 LIBRARY_REQUIRED_TAGS = dict(
     protocol=PROTOCOL.enforce,
     bam_file=str, 
@@ -110,12 +114,13 @@ def read_config(filepath):
     all_libs = {}
     args = {}
     args.update(QSUB_TAGS)
+    args.update(REFERENCE_DEFAULT_TAGS)
     all_libs.update(LIBRARY_DEFAULT_TAGS)
     args.update(ILLUSTRATION_DEFAULTS.__dict__)
     args.update(PAIRING_DEFAULTS)
     # check that the reference files all exist
     for attr, fname in parser['reference'].items():
-        if not os.path.exists(fname):
+        if attr in REFERENCE_TAGS and not os.path.exists(fname):
             raise KeyError(attr, 'file at', fname, 'dose not exist')
         args[attr] = fname
     for attr in REFERENCE_TAGS:

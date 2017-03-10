@@ -1,7 +1,7 @@
 from mavis.interval import Interval
 import networkx as nx
 import itertools
-from mavis.cluster import IntervalPair, cluster_breakpoint_pairs, merge_integer_intervals
+from mavis.cluster.cluster import IntervalPair, cluster_breakpoint_pairs, merge_integer_intervals
 from mavis.breakpoint import Breakpoint, BreakpointPair, read_bpp_from_input_file
 from mavis.constants import PROTOCOL, COLUMNS
 from tests import FULL_BASE_EVENTS

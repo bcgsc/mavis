@@ -1,9 +1,9 @@
 from __future__ import division
 
-from .constants import *
-from .error import *
-from .interval import Interval
-from .breakpoint import BreakpointPair, Breakpoint
+from ..constants import *
+from ..error import *
+from ..interval import Interval
+from ..breakpoint import BreakpointPair, Breakpoint
 
 import itertools
 import networkx as nx

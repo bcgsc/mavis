@@ -1,5 +1,5 @@
 import unittest
-from mavis.pairing import *
+from mavis.pairing.pairing import *
 from mavis.constants import SVTYPE, COLUMNS, CALL_METHOD, ORIENT, STRAND, PROTOCOL
 from mavis.breakpoint import BreakpointPair, Breakpoint
 from mavis.annotate.genomic import usTranscript, Exon

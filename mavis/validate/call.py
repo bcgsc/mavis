@@ -96,10 +96,6 @@ class EventCall(BreakpointPair):
         max_frag = len(self.break1 | self.break2) + self.source_evidence.max_expected_fragment_size
 
         encompass = len(self.break1 | self.break2)
-        if self.event_type == SVTYPE.DEL and encompass < self.source_evidence.stdev_fragment_size:
-            print('deletion', len(self.break1 | self.break2), self.untemplated_seq)
-        elif self.event_type == SVTYPE.INS:
-            print('insertion', len(self.break1 | self.break2), self.untemplated_seq)
 
         for read, mate in flanking_pairs:
             # check that the fragment size is reasonable
@@ -235,12 +231,13 @@ class EventCall(BreakpointPair):
             if r2:
                 ascore = int(round((r1.get_tag('br') + r2.get_tag('br')) / 2, 0))
             cseq = self.contig_alignment[0].query_sequence
-            caqc = len(r1.query_coverage_interval())
+            qc1 = r1.query_coverage_interval()
+            qc2 = qc1
             if r2:
-                if Interval.overlaps(r1.query_coverage_interval(), r2.query_coverage_interval()):
-                    caqc = len(r1.query_coverage_interval() | r2.query_coverage_interval())
-                else:
-                    caqc = len(r1.query_coverage_interval()) + len(r2.query_coverage_interval())
+                qc2 = r2.query_coverage_interval()
+                if r2.is_reverse != r1.is_reverse:
+                    qc2 = Interval(len(self.contig.seq) - qc2.end, len(self.contig.seq) - qc2.start)
+            caqc = len(qc1 | qc2) if not Interval.overlaps(qc1, qc2) else len(qc1) + len(qc2)
             row.update({
                 COLUMNS.contig_seq: cseq,  # don't output sequence directly from contig b/c must always be wrt to the positive strand
                 COLUMNS.contig_remap_score: self.contig.remap_score(),
@@ -399,7 +396,6 @@ def _call_by_flanking_pairs(
             continue
         # check that the fragment size is reasonable
         fragment_size = ev.compute_fragment_size(read, mate)
-        print('fragment_size', fragment_size)
         if event_type == SVTYPE.DEL:
             if fragment_size.end <= ev.max_expected_fragment_size:
                 continue
@@ -417,7 +413,6 @@ def _call_by_flanking_pairs(
 
     cover1 = Interval(min(first_positions), max(first_positions))
     cover2 = Interval(min(second_positions), max(second_positions))
-    print('coverage intervals', cover1, cover2)
 
     if not ev.interchromosomal and Interval.overlaps(cover1, cover2) and event_type != SVTYPE.DUP:
         raise AssertionError('flanking read coverage overlaps. cannot call by flanking reads', cover1, cover2)
@@ -433,27 +428,21 @@ def _call_by_flanking_pairs(
     if ev.stranded:
         break1_strand = ev.decide_sequenced_strand(cover1_reads)
         break2_strand = ev.decide_sequenced_strand(cover2_reads)
-    print('strands', break1_strand, break2_strand)
     cover1_length = len(cover1)
     cover2_length = len(cover2)
-    print(cover1_length, cover2_length)
     if ev.protocol == PROTOCOL.TRANS:
         cover1_length = TranscriptomeEvidence.compute_exonic_distance(
             cover1.start, cover1.end, ev.overlapping_transcripts[0]).start
         cover2_length = TranscriptomeEvidence.compute_exonic_distance(
             cover2.start, cover2.end, ev.overlapping_transcripts[1]).start
-    print('cover length', cover1_length, cover2_length)
     if first_breakpoint_called is None:
-        print(ev.max_expected_fragment_size, '-', cover1_length, '-', ev.read_length, '*', 2)
         max_breakpoint_width = ev.max_expected_fragment_size - cover1_length - ev.read_length * 2
 
         if ev.break1.orient == ORIENT.LEFT:
             end = cover1.end + max_breakpoint_width
-            print('end', end)
             try:
                 end = ev.traverse_exonic_distance(
                     cover1.end, max_breakpoint_width, ORIENT.RIGHT, ev.overlapping_transcripts[0]).end
-                print('end', end)
             except AttributeError:
                 pass
             if not ev.interchromosomal:

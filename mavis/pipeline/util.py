@@ -28,15 +28,6 @@ def build_batch_id(prefix='', suffix='', size=6):
         prefix=prefix, suffix=suffix, date=date, r=random.randint(1, m))
 
 
-def samtools_v0_sort(input_bam, output_bam):
-    prefix = re.sub('\.bam$', '', output_bam)
-    return 'samtools sort {} {}'.format(input_bam, prefix)
-
-
-def samtools_v1_sort(input_bam, output_bam):
-    return 'samtools sort {} -o {}'.format(input_bam, output_bam)
-
-
 def get_samtools_version():
     proc = subprocess.getoutput(['samtools'])
     for line in proc.split('\n'):
@@ -75,7 +66,7 @@ def mkdirp(dirname):
 
 
 def filter_on_overlap(bpps, regions_by_reference_name):
-    log('filtering on overlaps with regions')
+    log('filtering', len(bpps), 'on overlaps with regions')
     failed = []
     passed = []
     for bpp in bpps:
@@ -111,6 +102,7 @@ def read_inputs(inputs, force_stranded=False, **kwargs):
             finput, force_stranded=force_stranded,
             **kwargs
         ))
+    log('loaded', len(bpps), 'breakpoint pairs')
     return bpps
 
 

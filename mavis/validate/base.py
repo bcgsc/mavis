@@ -159,7 +159,10 @@ class Evidence(BreakpointPair):
             except AttributeError:
                 pass
             read.cigar = cigar_tools.join(c)
+            read.cigar = cigar_tools.hgvs_standardize_cigar(read, self.REFERENCE_GENOME[self.bam_cache.chr(read)].seq)
             read.reference_start = read.reference_start + prefix
+            # now shift any indel portions
+
         return read
 
     def putative_event_types(self):

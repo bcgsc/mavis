@@ -101,9 +101,18 @@ class TestDeBruijnGraph(unittest.TestCase):
         g.trim_noncutting_paths_by_freq(3)
         self.assertEqual(list(range(1, 9)) + path2[1:-1], g.nodes())
         
-        # add back the original path with a higher weight
+        # add back the original path with a higher (but still low) weight
         for s, t in zip(path1, path1[1:]):
             g.add_edge(s, t, freq=2)
         
         g.trim_noncutting_paths_by_freq(3)
         self.assertEqual(list(range(1, 9)) + path1[1:-1], g.nodes())
+
+        # add the second path with 1 high weight edge
+        path2 = [5, 13, 14, 15, 16, 1]
+        for s, t in zip(path2, path2[1:]):
+            g.add_edge(s, t)
+        g.add_edge(14, 15, freq=6)
+        
+        g.trim_noncutting_paths_by_freq(3)
+        self.assertEqual(list(range(1, 9)) + path2[1:-1], g.nodes())
