@@ -241,7 +241,9 @@ class EventCall(BreakpointPair):
             COLUMNS.break2_split_reads_forced: len(b2_tgt),
             COLUMNS.break2_split_read_names: ';'.join(sorted(b2)),
             COLUMNS.linking_split_reads: len(linking),
-            COLUMNS.linking_split_read_names: ';'.join(sorted(linking))
+            COLUMNS.linking_split_read_names: ';'.join(sorted(linking)),
+            COLUMNS.spanning_reads: len(self.spanning_reads),
+            COLUMNS.spanning_read_names: ';'.join(sorted([r.query_name for r in self.spanning_reads]))
         })
 
         if self.contig:
@@ -361,6 +363,8 @@ def _call_by_spanning_reads(source_evidence, consumed_evidence):
         if len(reads) < source_evidence.min_spanning_reads_resolution:
             continue
         bpp, event_type = k
+        bpp.break1.seq = None  # unless we are collecting a consensus we shouldn't assign sequences to the breaks
+        bpp.break2.seq = None
         new_event = EventCall(
             bpp.break1, bpp.break2,
             source_evidence,

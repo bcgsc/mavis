@@ -187,12 +187,13 @@ FLAGS = Vocab(LQ='LOWQUAL')
 
 READ_PAIR_TYPE = Vocab(RR='RR', LL='LL', RL='RL', LR='LR')
 
-CALL_METHOD = Vocab(CONTIG='contig', SPLIT='split reads', FLANK='flanking reads', SPAN='spanning')
+CALL_METHOD = Vocab(CONTIG='contig', SPLIT='split reads', FLANK='flanking reads', SPAN='spanning reads')
 """:class:`Vocab`: holds controlled vocabulary for allowed call methods
 
 - ``CONTIG``: a contig was assembled and aligned across the breakpoints
 - ``SPLIT``: the event was called by split reads
 - ``FLANK``: the event was called by flanking reads
+- ``SPAN``: the event was called by spanning reads
 """
 
 GENE_PRODUCT_TYPE = Vocab(SENSE='sense', ANTI_SENSE='anti-sense')
@@ -325,6 +326,8 @@ COLUMNS = Vocab(
     contig_alignment_query_coverage='contig_alignment_query_coverage',
     contigs_assembled='contigs_assembled',
     contig_strand_specific='contig_strand_specific',
+    spanning_reads='spanning_reads',
+    spanning_read_names='spanning_read_names',
     flanking_median_fragment_size='flanking_median_fragment_size',
     flanking_pairs='flanking_pairs',
     flanking_pairs_compatible='flanking_pairs_compatible',
@@ -514,6 +517,12 @@ COLUMNS = Vocab(
 
     contig_strand_specific
         :class:`bool` - A flag to indicate if it was possible to resolve the strand for this contig
+
+    spanning_reads
+        :class:`int` - the number of spanning reads which support the event
+
+    spanning_read_names
+        read query names of the spanning reads which support the current event
 
     break1_call_method
         :class:`CALL_METHOD` - The method used to call the first breakpoint
