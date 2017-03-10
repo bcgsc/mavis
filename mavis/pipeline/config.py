@@ -81,7 +81,7 @@ def write_config(filename, include_defaults=False):
     for sec in config:
         for tag in config[sec]:
             if '_regex_' in tag:
-                config[sec][tag] = re.sub('$', '$$', config[sec][tag])
+                config[sec][tag] = re.sub('\$', '$$', config[sec][tag])
     with open(filename, 'w') as configfile:
         config.write(configfile)
 
