@@ -19,7 +19,6 @@ from mavis.constants import PROTOCOL
 VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
 
 QSUB_HEADER = """#!/bin/bash
-#$ /bin/bash
 #$ -V
 #$ -N {name}
 #$ -q {queue}
