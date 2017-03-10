@@ -333,7 +333,6 @@ def blat_contigs(
         evidence,
         INPUT_BAM_CACHE,
         reference_genome,
-        blat_prog='blat',
         blat_pslx_output_file='blat_out.pslx',
         blat_fa_input_file='blat_in.fa',
         blat_2bit_reference='/home/pubseq/genomes/Homo_sapiens/GRCh37/blat/hg19.2bit',
@@ -394,7 +393,7 @@ def blat_contigs(
         # will raise subprocess.CalledProcessError if non-zero exit status
         # parameters from https://genome.ucsc.edu/FAQ/FAQblat.html#blat4
         # print(["blat", blat_2bit_reference, fasta_name, psl.name, '-out=pslx', '-noHead'] + blat_options)
-        subprocess.check_output([blat_prog, blat_2bit_reference,
+        subprocess.check_output(['blat', blat_2bit_reference,
             blat_fa_input_file, blat_pslx_output_file, '-out=pslx', '-noHead'] + blat_options)
 
         header, rows = Blat.read_pslx(blat_pslx_output_file, query_id_mapping, is_protein=is_protein)
