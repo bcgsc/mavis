@@ -145,23 +145,22 @@ class Evidence(BreakpointPair):
             pass
 
     def standardize_read(self, read):
-        if not read.has_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR) or not read.get_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR):
-            # recomputing to standardize b/c split reads can be used to call breakpoints exactly
-            read.set_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR, 1, value_type='i')
-            # recalculate the read cigar string to ensure M is replaced with = or X
-            c = cigar_tools.recompute_cigar_mismatch(
-                read,
-                self.REFERENCE_GENOME[self.bam_cache.chr(read)].seq
-            )
-            prefix = 0
-            try:
-                c, prefix = cigar_tools.extend_softclipping(c, self.sc_extension_stop)
-            except AttributeError:
-                pass
-            read.cigar = cigar_tools.join(c)
-            read.cigar = cigar_tools.hgvs_standardize_cigar(read, self.REFERENCE_GENOME[self.bam_cache.chr(read)].seq)
-            read.reference_start = read.reference_start + prefix
-            # now shift any indel portions
+        # recomputing to standardize b/c split reads can be used to call breakpoints exactly
+        read.set_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR, 1, value_type='i')
+        # recalculate the read cigar string to ensure M is replaced with = or X
+        c = cigar_tools.recompute_cigar_mismatch(
+            read,
+            self.REFERENCE_GENOME[self.bam_cache.chr(read)].seq
+        )
+        prefix = 0
+        try:
+            c, prefix = cigar_tools.extend_softclipping(c, self.sc_extension_stop)
+        except AttributeError:
+            pass
+        read.cigar = cigar_tools.join(c)
+        read.cigar = cigar_tools.hgvs_standardize_cigar(read, self.REFERENCE_GENOME[self.bam_cache.chr(read)].seq)
+        read.reference_start = read.reference_start + prefix
+        # now shift any indel portions
 
         return read
 
@@ -236,9 +235,10 @@ class Evidence(BreakpointPair):
             return False
         elif read.mapping_quality < self.min_mapping_quality or mate.mapping_quality < self.min_mapping_quality:
             return False
-
-        read = self.standardize_read(read)
-        mate = self.standardize_read(mate)
+        if not read.has_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR) or not read.get_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR):
+            read = self.standardize_read(read)
+        if not mate.has_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR) or not mate.get_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR):
+            mate = self.standardize_read(mate)
         # order the read pairs so that they are in the same order that we expect for the breakpoints
         if read.reference_start > mate.reference_start:
             read, mate = mate, read
@@ -304,8 +304,10 @@ class Evidence(BreakpointPair):
         elif read.reference_id != read.next_reference_id:
             return False
 
-        read = self.standardize_read(read)
-        mate = self.standardize_read(mate)
+        if not read.has_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR) or not read.get_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR):
+            read = self.standardize_read(read)
+        if not mate.has_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR) or not mate.get_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR):
+            mate = self.standardize_read(mate)
         # order the read pairs so that they are in the same order that we expect for the breakpoints
         if read.reference_id != mate.reference_id:
             if self.bam_cache.chr(read) > self.bam_cache.chr(mate):
@@ -416,8 +418,8 @@ class Evidence(BreakpointPair):
         if len(primary) < self.min_anchor_exact or len(clipped) < self.min_softclipping:
             # split read does not meet the minimum anchor criteria
             return False
-
-        read = self.standardize_read(read)
+        if not read.has_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR) or not read.get_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR):
+            read = self.standardize_read(read)
         # data quality filters
         if cigar_tools.alignment_matches(read.cigar) >= self.min_sample_size_to_apply_percentage \
                 and cigar_tools.match_percent(read.cigar) < self.min_anchor_match:

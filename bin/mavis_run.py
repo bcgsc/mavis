@@ -62,7 +62,6 @@ def main_pipeline(args, configs):
             'output': validation_output,
             'masking': args.masking_filename,
             'reference_genome': args.reference_genome_filename,
-            'blat_prog': args.blat_prog,
             'blat_2bit_reference': args.blat_2bit_reference,
             'annotations': args.annotations_filename,
             'library': sec.library,

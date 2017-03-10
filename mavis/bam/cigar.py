@@ -296,6 +296,15 @@ def alignment_matches(cigar):
     return result
 
 
+def smallest_nonoverlapping_repeat(s):
+    for repsize in range(1, len(s) + 1):
+        if len(s) % repsize == 0:
+            substrings = [s[i:i + repsize] for i in range(0, len(s), repsize)]
+            if len(set(substrings)) == 1:
+                return substrings[0]
+    return s
+
+
 def hgvs_standardize_cigar(read, reference_seq):
     """
     extend alignments as long as matches are possible.
@@ -345,29 +354,37 @@ def hgvs_standardize_cigar(read, reference_seq):
             
             if c == CIGAR.I:
                 qpos += v
-                if next_c == CIGAR.EQ and next_v >= v:
-                    qseq = read.query_sequence[qpos - v:qpos]
-                    rseq = reference_seq[rpos:rpos + v]
-                    if qseq == rseq:
-                        cigar.append((CIGAR.EQ, v))
-                        rpos += v
-                        if next_v == v:
+                qseq = read.query_sequence[qpos - v:qpos]
+                qrep = smallest_nonoverlapping_repeat(qseq)
+                if next_c == CIGAR.EQ and next_v >= len(qrep):
+                    rseq = reference_seq[rpos:rpos + next_v]
+                    t = 0
+                    while t + len(qrep) <= next_v and rseq[t:t + len(qrep)] == qrep:
+                        t += len(qrep)
+                    if t > 0:
+                        cigar.append((CIGAR.EQ, t))
+                        rpos += t
+                        if t == next_v:
                             del new_cigar[i + 1]
                         else:
-                            new_cigar[i + 1] = next_c, next_v - v
+                            new_cigar[i + 1] = next_c, next_v - t
                         continue
             elif c == CIGAR.D:
                 rpos += v
-                if next_c == CIGAR.EQ and next_v >= v:
-                    qseq = read.query_sequence[qpos:qpos + v]
-                    rseq = reference_seq[rpos - v:rpos]
-                    if qseq == rseq:
-                        cigar.append((CIGAR.EQ, v))
-                        qpos += v
-                        if next_v == v:
+                rseq = reference_seq[rpos - v:rpos]
+                rrep = smallest_nonoverlapping_repeat(rseq)
+                if next_c == CIGAR.EQ and next_v >= len(rrep):
+                    qseq = read.query_sequence[qpos:qpos + next_v]
+                    t = 0
+                    while t + len(rrep) <= next_v and qseq[t:t + len(rrep)] == rrep:
+                        t += len(rrep)
+                    if t > 0:
+                        cigar.append((CIGAR.EQ, t))
+                        qpos += t
+                        if t == next_v:
                             del new_cigar[i + 1]
                         else:
-                            new_cigar[i + 1] = next_c, next_v - v
+                            new_cigar[i + 1] = next_c, next_v - t
                         continue
             elif c == CIGAR.S:
                 qpos += v

@@ -360,6 +360,51 @@ class TestHgvsStandardizeCigars(unittest.TestCase):
         )
         self.assertEqual([(CIGAR.EQ, 4), (CIGAR.I, 6), (CIGAR.D, 5), (CIGAR.EQ, 12)], cigar_tools.hgvs_standardize_cigar(read, ref))
 
+    def test_homopolymer_even_odd(self):
+        ref = 'ATCGAGAT' + 'A' * 15 + 'TCGAGAT'
+        read = MockRead(
+            'name',
+            1,
+            1,
+            query_sequence='ATCGAGATA' + 'A' * 12 + 'TCGAGAT',
+            cigar=[(CIGAR.EQ, 8), (CIGAR.D, 2), (CIGAR.EQ, 20)]
+        )
+        self.assertEqual([(CIGAR.EQ, 9 + 12), (CIGAR.D, 2), (CIGAR.EQ, 7)], cigar_tools.hgvs_standardize_cigar(read, ref))
+        ref = 'CCCCGGCTCATGTCTGGTTTTGTTTTCCGGGGGCGGGGGGGCTCCCTGGGGATGATGGTGATTTTTTTTTTTTTTTAATCCTCAACTAGGAGAGAAAA' \
+              'TGAGGCAGAGACAATGTGGGGAGCGAGAGAGGGGAAAAGGACGGGGGAGG'
+
+        read = MockRead(
+            'name', '1', 0, 149, 
+            query_sequence=(
+                'CCCCGGCTCATGTCTGGTTTTGTTTTCCGGGGGCGGGGGGGCTCCCTGGGGATGATGGTGATTTTTTTTTTTTTTTTTAATCCTCAACTAGGAGAGAAAA'
+                'TGAGGCAGAGACAATGTGGGGAGCGAGAGAGGGGAAAAGGACGGGGGAGG'),
+            cigar=[(CIGAR.EQ, 61), (CIGAR.I, 2), (CIGAR.EQ, 87)]
+        )
+        self.assertEqual([(CIGAR.EQ, 61 + 15), (CIGAR.I, 2), (CIGAR.EQ, 87 - 15)], cigar_tools.hgvs_standardize_cigar(read, ref))
+        
+        ref = 'CCTCCTCGGTCGGGCAGATCTTTCAGAAGCAGGAGCCCAGGATCATGTCTGGTTTTGTTTTCCGAGGGCGAGGGGGCTCCCTGAGGATGATGGTGATTT' \
+            'TTTTTTTTTTTTAATCCTCAACTAGGAGAGAAAATGAGGCAGAGACA'
+
+        read = MockRead(
+            'name', '1', 0, 149, 
+            query_sequence=(
+                'CCCCTCCTCGGTCGGGCAGATCTTTCAGAAGCAGGAGCCCAGGATCATGTCTGGTTTTGTTTTCCGAGGGCGAGGGGGCTCCCTGAGGATGATGGTGATTTT'
+                'TTTTTTTTTTTTTAATCCTCAACTAGGAGAGAAAATGAGGCAGAGACA'),
+            cigar=[(CIGAR.S, 2), (CIGAR.EQ, 96), (CIGAR.I, 2), (CIGAR.EQ, 50)]
+        )
+        self.assertEqual([(CIGAR.S, 2), (CIGAR.EQ, 96 + 15), (CIGAR.I, 2), (CIGAR.EQ, 50 - 15)], cigar_tools.hgvs_standardize_cigar(read, ref))
+
+
+    def test_smallest_nonoverlapping_repeat(self):
+        s = 'ATATATATAA'
+        self.assertEqual(s, cigar_tools.smallest_nonoverlapping_repeat(s))
+        s = 'ATATATATAT'
+        self.assertEqual('AT', cigar_tools.smallest_nonoverlapping_repeat(s))
+        s = 'AAAAAA'
+        self.assertEqual('A', cigar_tools.smallest_nonoverlapping_repeat(s))
+        s = 'ATGGCATGGCATGGC'
+        self.assertEqual('ATGGC', cigar_tools.smallest_nonoverlapping_repeat(s))
+
 
 class TestReadPairStrand(unittest.TestCase):
     def setUp(self):

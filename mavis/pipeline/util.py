@@ -37,8 +37,8 @@ def get_samtools_version():
     raise ValueError('unable to parse samtools version number')
 
 
-def get_blat_version(blat_exe):
-    proc = subprocess.getoutput([blat_exe])
+def get_blat_version():
+    proc = subprocess.getoutput(['blat'])
     for line in proc.split('\n'):
         m = re.search('blat - Standalone BLAT v. (\d+(x\d+)?)', line)
         if m:

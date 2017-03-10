@@ -3,6 +3,7 @@ from configparser import ConfigParser, ExtendedInterpolation
 import argparse
 import os
 import TSV
+import re
 from .. import __version__
 from ..constants import PROTOCOL
 from ..validate.constants import VALIDATION_DEFAULTS
@@ -22,7 +23,7 @@ LIBRARY_DEFAULT_TAGS = dict(
     max_proximity=5000,
     uninformative_filter=True,
     stranded_bam=False,
-    domain_regex_filter='^PF\d+$$'  # $$ is required to represent $ with the config parser options.
+    domain_regex_filter='^PF\d+$'
 )
 LIBRARY_DEFAULT_TAGS.update(VALIDATION_DEFAULTS.__dict__)
 
@@ -48,16 +49,13 @@ PAIRING_DEFAULTS = dict(
     low_memory=False
 )
 
-REFERENCE_TAGS = ['template_metadata', 'reference_genome', 'annotations', 'masking', 'blat_2bit_reference', 'blat_prog']
+REFERENCE_REQUIRED_FILES = ['template_metadata', 'reference_genome', 'annotations', 'masking', 'blat_2bit_reference']
 
-REFERENCE_DEFAULTS_HG19 = dict(
-    template_metadata=os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'cytoBand.txt')),
-    reference_genome='/projects/seqref/genomes/Homo_sapiens/GRCh37/1000genomes/bwa_ind/genome/GRCh37-lite.fa',
-    annotations='/home/creisle/svn/ensembl_flatfiles/ensembl69_transcript_exons_and_domains_20160808.tsv',
-    masking='/projects/tumour_char/analysis_scripts/SVIA/delly/reference_data/GRCh37/human_nspan.hg19.excl.with_header.tsv',
-    blat_2bit_reference='/home/pubseq/genomes/Homo_sapiens/GRCh37/blat/hg19.2bit',
-    blat_prog='/projects/trans_scratch/software/BLAT/v36/blat',
-)
+REFERENCE_DEFAULTS = {}
+for fname in REFERENCE_REQUIRED_FILES:
+    env_var = 'MAVIS_' + fname.upper()
+    REFERENCE_DEFAULTS[fname] = os.environ.get(env_var, None)
+
 
 def write_config(filename, include_defaults=False):
     config = ConfigParser()
@@ -65,14 +63,14 @@ def write_config(filename, include_defaults=False):
     for sec in ['DEFAULTS', 'reference', '<LIBRARY NAME>', 'qsub', 'illustrate']:
         config[sec] = {}
     
-    for tag in REFERENCE_TAGS:
+    for tag in REFERENCE_REQUIRED_FILES:
         config['reference'][tag] = '<REQUIRED>'
     for tag in LIBRARY_REQUIRED_TAGS:
         config['<LIBRARY NAME>'][tag] = '<REQUIRED>'
     
     if include_defaults:
-        for tag in REFERENCE_TAGS:
-            config['reference'][tag] = REFERENCE_DEFAULTS_HG19[tag]
+        for tag in REFERENCE_REQUIRED_FILES:
+            config['reference'][tag] = '<REQUIRED>' if REFERENCE_DEFAULTS[tag] is None else REFERENCE_DEFAULTS[tag]
         for tag, val in QSUB_TAGS.items():
             config['qsub'][tag] = str(val)
         for tag, val in LIBRARY_DEFAULT_TAGS.items():
@@ -80,6 +78,10 @@ def write_config(filename, include_defaults=False):
         for tag, val in ILLUSTRATION_DEFAULTS.__dict__.items():
             config['illustrate'][tag] = str(val)
     
+    for sec in config:
+        for tag in config[sec]:
+            if '_regex_' in tag:
+                config[sec][tag] = re.sub('$', '$$', config[sec][tag])
     with open(filename, 'w') as configfile:
         config.write(configfile)
 
@@ -140,10 +142,10 @@ def read_config(filepath):
     args.update(PAIRING_DEFAULTS)
     # check that the reference files all exist
     for attr, fname in parser['reference'].items():
-        if attr in REFERENCE_TAGS and not os.path.exists(fname):
+        if attr in REFERENCE_REQUIRED_FILES and not os.path.exists(fname):
             raise KeyError(attr, 'file at', fname, 'dose not exist')
         args[attr] = fname
-    for attr in REFERENCE_TAGS:
+    for attr in REFERENCE_REQUIRED_FILES:
         if attr not in parser['reference']:
             raise KeyError('missing required tag', attr, 'in reference section')
 
@@ -193,24 +195,24 @@ def parse_arguments(pstep):
         g = parser.add_argument_group('reference input arguments')
         g.add_argument(
             '--annotations',
-            default=REFERENCE_DEFAULTS_HG19['annotations'],
+            default=REFERENCE_DEFAULTS['annotations'],
             help='path to the reference annotations of genes, transcript, exons, domains, etc.'
         )
         if pstep in [PIPELINE_STEP.ANNOTATE, PIPELINE_STEP.VALIDATE]:
             g.add_argument(
                 '--reference_genome',
-                default=REFERENCE_DEFAULTS_HG19['reference_genome'],
+                default=REFERENCE_DEFAULTS['reference_genome'],
                 help='path to the human reference genome in fa format'
             )
         if pstep == PIPELINE_STEP.ANNOTATE:
             g.add_argument(
-                '--template_metadata', default=REFERENCE_DEFAULTS_HG19['template_metadata'],
+                '--template_metadata', default=REFERENCE_DEFAULTS['template_metadata'],
                 help='file containing the cytoband template information'
             )
         if pstep in [PIPELINE_STEP.CLUSTER, PIPELINE_STEP.VALIDATE]:
             g.add_argument(
                 '--masking',
-                default=REFERENCE_DEFAULTS_HG19['masking'],
+                default=REFERENCE_DEFAULTS['masking'],
             )
         g.add_argument(
             '--low_memory', default=PAIRING_DEFAULTS['low_memory'], type=TSV.tsv_boolean,
@@ -218,11 +220,7 @@ def parse_arguments(pstep):
         )
         if pstep == PIPELINE_STEP.VALIDATE:
             g.add_argument(
-                '--blat_prog', default=REFERENCE_DEFAULTS_HG19['blat_prog'],
-                help='path to blat'
-            )
-            g.add_argument(
-                '--blat_2bit_reference', default=REFERENCE_DEFAULTS_HG19['blat_2bit_reference'],
+                '--blat_2bit_reference', default=REFERENCE_DEFAULTS['blat_2bit_reference'],
                 help='path to the 2bit reference file used for blatting contig sequences'
             )
     else:
@@ -335,7 +333,7 @@ def parse_arguments(pstep):
     args = parser.parse_args()
     if pstep == PIPELINE_STEP.VALIDATE:
         args.samtools_version = get_samtools_version()
-        args.blat_version = get_blat_version(args.blat_prog)
+        args.blat_version = get_blat_version()
     try:
         args.output = os.path.abspath(args.output)
         if os.path.exists(args.output) and not args.force_overwrite:

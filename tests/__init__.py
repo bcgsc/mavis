@@ -76,7 +76,8 @@ class MockRead:
                 t -= cigar[-1][1]
             self.query_alignment_sequence = query_sequence[s:t]
         if cigar and query_sequence:
-            assert(len(query_sequence) == sum([f for v, f in cigar if v not in [CIGAR.H, CIGAR.N, CIGAR.D]]))
+            if len(query_sequence) != sum([f for v, f in cigar if v not in [CIGAR.H, CIGAR.N, CIGAR.D]]):
+                raise AssertionError('length of sequence does not match cigar', len(query_sequence),sum([f for v, f in cigar if v not in [CIGAR.H, CIGAR.N, CIGAR.D]]) )
         if template_length is None and reference_end and next_reference_start:
             self.template_length = next_reference_start - reference_end
         else:
