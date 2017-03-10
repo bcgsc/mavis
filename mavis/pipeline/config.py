@@ -22,11 +22,9 @@ LIBRARY_DEFAULT_TAGS = dict(
     max_proximity=5000,
     uninformative_filter=True,
     stranded_bam=False,
-    domain_regex_filter='^PF\d+$'
+    domain_regex_filter='^PF\d+$$'  # $$ is required to represent $ with the config parser options.
 )
 LIBRARY_DEFAULT_TAGS.update(VALIDATION_DEFAULTS.__dict__)
-
-REFERENCE_TAGS = ['template_metadata', 'reference_genome', 'annotations', 'masking', 'blat_2bit_reference']
 
 REFERENCE_DEFAULT_TAGS = dict(
     low_memory=False
@@ -50,6 +48,16 @@ PAIRING_DEFAULTS = dict(
     low_memory=False
 )
 
+REFERENCE_TAGS = ['template_metadata', 'reference_genome', 'annotations', 'masking', 'blat_2bit_reference', 'blat_prog']
+
+REFERENCE_DEFAULTS_HG19 = dict(
+    template_metadata=os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'cytoBand.txt')),
+    reference_genome='/projects/seqref/genomes/Homo_sapiens/GRCh37/1000genomes/bwa_ind/genome/GRCh37-lite.fa',
+    annotations='/home/creisle/svn/ensembl_flatfiles/ensembl69_transcript_exons_and_domains_20160808.tsv',
+    masking='/projects/tumour_char/analysis_scripts/SVIA/delly/reference_data/GRCh37/human_nspan.hg19.excl.with_header.tsv',
+    blat_2bit_reference='/home/pubseq/genomes/Homo_sapiens/GRCh37/blat/hg19.2bit',
+    blat_prog='/projects/trans_scratch/software/BLAT/v36/blat',
+)
 
 def write_config(filename, include_defaults=False):
     config = ConfigParser()
@@ -63,6 +71,8 @@ def write_config(filename, include_defaults=False):
         config['<LIBRARY NAME>'][tag] = '<REQUIRED>'
     
     if include_defaults:
+        for tag in REFERENCE_TAGS:
+            config['reference'][tag] = REFERENCE_DEFAULTS_HG19[tag]
         for tag, val in QSUB_TAGS.items():
             config['qsub'][tag] = str(val)
         for tag, val in LIBRARY_DEFAULT_TAGS.items():
@@ -87,6 +97,13 @@ def validate_and_cast_section(section, defaults):
     for attr, value in section.items():
         if attr not in defaults:
             raise KeyError('tag not recognized', attr)
+        elif defaults[attr] is None and attr == 'assembly_max_kmer_size':
+            if value == 'None':
+                d[attr] = None
+            elif attr == 'assembly_max_kmer_size':
+                d[attr] = cast(value, int)
+            else:
+                d[attr] = cast(value, type(defaults[attr]))
         else:
             d[attr] = cast(value, type(defaults[attr]))
     return d
@@ -116,7 +133,10 @@ def read_config(filepath):
     args.update(QSUB_TAGS)
     args.update(REFERENCE_DEFAULT_TAGS)
     all_libs.update(LIBRARY_DEFAULT_TAGS)
-    args.update(ILLUSTRATION_DEFAULTS.__dict__)
+    illustration_defaults = {}
+    for k, v in ILLUSTRATION_DEFAULTS.__dict__.items():
+        illustration_defaults[k.lower()] = v
+    args.update(illustration_defaults)
     args.update(PAIRING_DEFAULTS)
     # check that the reference files all exist
     for attr, fname in parser['reference'].items():
@@ -137,7 +157,7 @@ def read_config(filepath):
         all_libs.update(d)
     
     if 'illustrate' in parser:
-        args.update(validate_and_cast_section(parser['illustrate'], ILLUSTRATION_DEFAULTS.__dict__))
+        args.update(validate_and_cast_section(parser['illustrate'], illustration_defaults))
     
     if 'pairing' in parser:
         args.update(validate_and_cast_section(parser['pairing'], PAIRING_DEFAULTS))
@@ -173,24 +193,24 @@ def parse_arguments(pstep):
         g = parser.add_argument_group('reference input arguments')
         g.add_argument(
             '--annotations',
-            default='/home/creisle/svn/ensembl_flatfiles/ensembl69_transcript_exons_and_domains_20160808.tsv',
+            default=REFERENCE_DEFAULTS_HG19['annotations'],
             help='path to the reference annotations of genes, transcript, exons, domains, etc.'
         )
         if pstep in [PIPELINE_STEP.ANNOTATE, PIPELINE_STEP.VALIDATE]:
             g.add_argument(
                 '--reference_genome',
-                default='/home/pubseq/genomes/Homo_sapiens/TCGA_Special/GRCh37-lite.fa',
+                default=REFERENCE_DEFAULTS_HG19['reference_genome'],
                 help='path to the human reference genome in fa format'
             )
         if pstep == PIPELINE_STEP.ANNOTATE:
             g.add_argument(
-                '--template_metadata', default=os.path.join(os.path.dirname(__file__), 'cytoBand.txt'),
+                '--template_metadata', default=REFERENCE_DEFAULTS_HG19['template_metadata'],
                 help='file containing the cytoband template information'
             )
         if pstep in [PIPELINE_STEP.CLUSTER, PIPELINE_STEP.VALIDATE]:
             g.add_argument(
                 '--masking',
-                default='/home/creisle/svn/svmerge/trunk/hg19_masked_regions.tsv'
+                default=REFERENCE_DEFAULTS_HG19['masking'],
             )
         g.add_argument(
             '--low_memory', default=PAIRING_DEFAULTS['low_memory'], type=TSV.tsv_boolean,
@@ -198,7 +218,11 @@ def parse_arguments(pstep):
         )
         if pstep == PIPELINE_STEP.VALIDATE:
             g.add_argument(
-                '--blat_2bit_reference', default='/home/pubseq/genomes/Homo_sapiens/GRCh37/blat/hg19.2bit',
+                '--blat_prog', default=REFERENCE_DEFAULTS_HG19['blat_prog'],
+                help='path to blat'
+            )
+            g.add_argument(
+                '--blat_2bit_reference', default=REFERENCE_DEFAULTS_HG19['blat_2bit_reference'],
                 help='path to the 2bit reference file used for blatting contig sequences'
             )
     else:
@@ -311,7 +335,7 @@ def parse_arguments(pstep):
     args = parser.parse_args()
     if pstep == PIPELINE_STEP.VALIDATE:
         args.samtools_version = get_samtools_version()
-        args.blat_version = get_blat_version()
+        args.blat_version = get_blat_version(args.blat_prog)
     try:
         args.output = os.path.abspath(args.output)
         if os.path.exists(args.output) and not args.force_overwrite:
