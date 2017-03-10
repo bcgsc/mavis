@@ -93,12 +93,12 @@ MAVIS Package Documentation
     mavis.bam
     auto/mavis.blat
     auto/mavis.breakpoint
-    auto/mavis.cluster
+    mavis.cluster
     auto/mavis.constants
     auto/mavis.error
     mavis.illustrate
     auto/mavis.interval
-    auto/mavis.pairing
+    mavis.pairing
     mavis.pipeline
     mavis.validate
 

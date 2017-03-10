@@ -8,7 +8,12 @@ from ..breakpoint import BreakpointPair, Breakpoint
 import itertools
 import networkx as nx
 import warnings
-import numpy as np
+
+
+def weighted_mean(values, weights=None):
+    if weights is None:
+        weights = [1 for v in values]
+    return sum(x * w for x, w in zip(values, weights)) / sum(weights)
 
 
 def merge_integer_intervals(*intervals):
@@ -33,8 +38,8 @@ def merge_integer_intervals(*intervals):
             weights.append(1 / intervals[i].length())
             lengths.append(intervals[i].length())
 
-    center = round(np.average(centers, weights=weights) * 2, 0) / 2
-    size = np.average(lengths)  # -1 b/c center counts as one
+    center = round(weighted_mean(centers, weights=weights) * 2, 0) / 2
+    size = weighted_mean(lengths)  # -1 b/c center counts as one
     start = max([round(center - size / 2, 0), min([i[0] for i in intervals])])
     end = min([round(center + size / 2, 0), max([i[1] for i in intervals])])
     offset = min([center - start, end - center])
@@ -85,7 +90,7 @@ class IntervalPair:
         start = merge_integer_intervals(*[i.start for i in interval_pairs])
         end = merge_integer_intervals(*[i.end for i in interval_pairs])
         return IntervalPair(start, end)
-    
+
     @staticmethod
     def abs_dist(self, other):
         """
@@ -241,7 +246,7 @@ class IntervalPair:
         subgraphs = cls._redundant_maximal_kcliques(G, k)
         subgraphs = cls._redundant_ordered_hierarchical_clustering(subgraphs, r)
         return subgraphs
-    
+
     def __getitem__(self, index):
         if index == 0:
             return self.start

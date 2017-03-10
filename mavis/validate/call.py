@@ -48,6 +48,7 @@ class EventCall(BreakpointPair):
             data=source_evidence.data
         )
         self.source_evidence = source_evidence
+        self.spanning_reads = set()
         self.flanking_pairs = set()
         self.break1_split_reads = set()
         self.break2_split_reads = set()
@@ -63,11 +64,11 @@ class EventCall(BreakpointPair):
             raise ValueError('if a contig is given the call method must be by contig')
         self.contig_alignment = contig_alignment
 
-    def supporting_reads(self):
+    def support(self):
         support = set()
+        support.update(self.spanning_reads)
         for read, mate in self.flanking_pairs:
-            support.add(read)
-            support.add(mate)
+            support.add((read, mate))
         support.update(self.break1_split_reads)
         support.update(self.break2_split_reads)
         if self.contig:
@@ -144,9 +145,6 @@ class EventCall(BreakpointPair):
 
     def __hash__(self):
         raise NotImplementedError('this object type does not support hashing')
-
-    def __eq__(self, other):
-        object.__eq__(self, other)
 
     def flanking_metrics(self):
         """
@@ -251,6 +249,137 @@ class EventCall(BreakpointPair):
         return row
 
 
+def _call_by_reads(source_evidence, read1, read2=None):
+    try:
+        bpp = BreakpointPair.call_breakpoint_pair(read1, read2)
+        if bpp.opposing_strands != source_evidence.opposing_strands:
+            return None, []
+        putative_event_types = set(source_evidence.putative_event_types())
+        if set([SVTYPE.DUP, SVTYPE.INS]) & putative_event_types:
+            putative_event_types.update([SVTYPE.DUP, SVTYPE.INS])
+
+        if len(set(BreakpointPair.classify(bpp)) & putative_event_types) == 0:
+            return None, []
+        if source_evidence.bam_cache.stranded and source_evidence.stranded:  # strand specific
+            if any([
+                bpp.break1.strand != source_evidence.break1.strand,
+                bpp.break2.strand != source_evidence.break2.strand
+            ]):
+                return None, []
+        else:
+            bpp.stranded = False
+            bpp.break1.strand = STRAND.NS
+            bpp.break2.strand = STRAND.NS
+
+        calls = []
+        for event_type in putative_event_types:
+            if event_type == SVTYPE.INS:
+                if len(bpp.untemplated_seq) == 0 or \
+                        len(bpp.untemplated_seq) <= abs(Interval.dist(bpp.break1, bpp.break2)):
+                    continue
+            elif event_type == SVTYPE.DEL:
+                if len(bpp.untemplated_seq) > abs(Interval.dist(bpp.break1, bpp.break2)):
+                    continue
+            if event_type not in BreakpointPair.classify(bpp):
+                continue
+            calls.append(event_type)
+        return bpp, calls
+    except UserWarning as err:
+        return None, []
+
+
+def _call_by_contigs(source_evidence):
+    # try calling by contigs
+    contig_calls = []
+    for ctg in source_evidence.contigs:
+        for read1, read2 in ctg.alignments:
+            bpp, event_types = _call_by_reads(source_evidence, read1, read2)
+
+            for event_type in event_types:
+                new_event = EventCall(
+                    bpp.break1,
+                    bpp.break2,
+                    source_evidence,
+                    event_type,
+                    contig=ctg,
+                    contig_alignment=(read1, read2),
+                    untemplated_seq=bpp.untemplated_seq,
+                    call_method=CALL_METHOD.CONTIG
+                )
+                # add the flanking support
+                new_event.pull_flanking_support(source_evidence.flanking_pairs)
+                # add any spanning reads that call the same event
+                for read in source_evidence.spanning_reads:
+                    try:
+                        bpp = BreakpointPair.call_breakpoint_pair(read)
+                        if new_event == bpp:
+                            new_event.spanning_reads.add(read)
+                    except UserWarning as err:
+                        continue
+                # add any split read support (this will be consumed for non-contig calls)
+                for read in source_evidence.split_reads[0]:
+                    try:
+                        p = read_tools.breakpoint_pos(read, source_evidence.break1.orient) + 1
+                        if Interval.overlaps((p, p), source_evidence.break1):
+                            new_event.break1_split_reads.add(read)
+                    except AttributeError:
+                        pass
+                for read in source_evidence.split_reads[1]:
+                    try:
+                        p = read_tools.breakpoint_pos(read, source_evidence.break2.orient) + 1
+                        if Interval.overlaps((p, p), source_evidence.break2):
+                            new_event.break2_split_reads.add(read)
+                    except AttributeError:
+                        pass
+
+                contig_calls.append(new_event)
+    return contig_calls
+
+
+def _call_by_spanning_reads(source_evidence, consumed_evidence):
+    spanning_calls = {}
+    for read in source_evidence.spanning_reads:
+        if read in consumed_evidence:
+            continue
+        bpp, event_types = _call_by_reads(source_evidence, read)
+        for event_type in event_types:
+            spanning_calls.setdefault((bpp, event_type), set()).add(read)
+    result = []
+    for k, reads in spanning_calls.items():
+        if len(reads) < source_evidence.min_spanning_reads_resolution:
+            continue
+        bpp, event_type = k
+        new_event = EventCall(
+            bpp.break1, bpp.break2,
+            source_evidence,
+            event_type,
+            CALL_METHOD.SPAN,
+            break2_call_method=CALL_METHOD.SPAN,
+            untemplated_seq=bpp.untemplated_seq
+        )
+        new_event.spanning_reads.update(reads)
+        # add any supporting split reads
+        # add the flanking support
+        new_event.pull_flanking_support(source_evidence.flanking_pairs)
+        # add any split read support (this will be consumed for non-contig calls)
+        for read in source_evidence.split_reads[0]:
+            try:
+                p = read_tools.breakpoint_pos(read, source_evidence.break1.orient) + 1
+                if Interval.overlaps((p, p), source_evidence.break1):
+                    new_event.break1_split_reads.add(read)
+            except AttributeError:
+                pass
+        for read in source_evidence.split_reads[1]:
+            try:
+                p = read_tools.breakpoint_pos(read, source_evidence.break2.orient) + 1
+                if Interval.overlaps((p, p), source_evidence.break2):
+                    new_event.break2_split_reads.add(read)
+            except AttributeError:
+                pass
+        result.append(new_event)
+    return result
+
+
 def call_events(source_evidence):
     """
     generates a set of event calls based on the evidence associated with the source_evidence object
@@ -270,81 +399,16 @@ def call_events(source_evidence):
     consumed_evidence = set()  # keep track to minimize evidence re-use
     calls = []
     errors = set()
-    contig_calls = []
 
-    # try calling by contigs
-    for ctg in source_evidence.contigs:
-        for read1, read2 in ctg.alignments:
-            curr = []
-            try:
-                bpp = BreakpointPair.call_breakpoint_pair(read1, read2)
-            except UserWarning as err:
-                continue
-            if bpp.opposing_strands != source_evidence.opposing_strands:
-                continue
-            putative_event_types = set(source_evidence.putative_event_types())
-            if set([SVTYPE.DUP, SVTYPE.INS]) & putative_event_types:
-                putative_event_types.update([SVTYPE.DUP, SVTYPE.INS])
-
-            if len(set(BreakpointPair.classify(bpp)) & putative_event_types) == 0:
-                continue
-            if source_evidence.bam_cache.stranded and source_evidence.stranded:  # strand specific
-                if any([
-                    bpp.break1.strand != source_evidence.break1.strand,
-                    bpp.break2.strand != source_evidence.break2.strand
-                ]):
-                    continue
-            else:
-                bpp.stranded = False
-                bpp.break1.strand = STRAND.NS
-                bpp.break2.strand = STRAND.NS
-
-            for event_type in putative_event_types:
-                if event_type == SVTYPE.INS:
-                    if len(bpp.untemplated_seq) == 0 or \
-                            len(bpp.untemplated_seq) <= abs(Interval.dist(bpp.break1, bpp.break2)):
-                        continue
-                elif event_type == SVTYPE.DEL:
-                    if len(bpp.untemplated_seq) > abs(Interval.dist(bpp.break1, bpp.break2)):
-                        continue
-                if event_type not in BreakpointPair.classify(bpp):
-                    continue
-                new_event = EventCall(
-                    bpp.break1,
-                    bpp.break2,
-                    source_evidence,
-                    event_type,
-                    contig=ctg,
-                    contig_alignment=(read1, read2),
-                    untemplated_seq=bpp.untemplated_seq,
-                    call_method=CALL_METHOD.CONTIG
-                )
-                # add the flanking support
-                new_event.pull_flanking_support(source_evidence.flanking_pairs)
-                # add any split read support (this will be consumed for non-contig calls)
-                for read in source_evidence.split_reads[0]:
-                    try:
-                        p = read_tools.breakpoint_pos(read, source_evidence.break1.orient) + 1
-                        if Interval.overlaps((p, p), source_evidence.break1):
-                            new_event.break1_split_reads.add(read)
-                    except AttributeError:
-                        pass
-                for read in source_evidence.split_reads[1]:
-                    try:
-                        p = read_tools.breakpoint_pos(read, source_evidence.break2.orient) + 1
-                        if Interval.overlaps((p, p), source_evidence.break2):
-                            new_event.break2_split_reads.add(read)
-                    except AttributeError:
-                        pass
-
-                contig_calls.append(new_event)
+    contig_calls = _call_by_contigs(source_evidence)
     calls.extend(contig_calls)
-
     for call in contig_calls:
-        consumed_evidence.update(call.contig.input_reads)
-        consumed_evidence.update(call.break1_split_reads)
-        consumed_evidence.update(call.break2_split_reads)
-        consumed_evidence.update(call.flanking_pairs)
+        consumed_evidence.update(call.support())
+
+    spanning_calls = _call_by_spanning_reads(source_evidence, consumed_evidence)
+    for call in spanning_calls:
+        consumed_evidence.update(call.support())
+    calls.extend(spanning_calls)
 
     for event_type in sorted(source_evidence.putative_event_types()):
         # try calling by split/flanking reads

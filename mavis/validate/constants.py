@@ -34,7 +34,8 @@ VALIDATION_DEFAULTS = Namespace(
     min_splits_reads_resolution=3,
     sc_extension_stop=5,
     stdev_count_abnormal=3,
-    strand_determining_read=2
+    strand_determining_read=2,
+    min_spanning_reads_resolution=3
 )
 """:class:`~argparse.Namespace`: holds the settings for computations with the Evidence objects
 

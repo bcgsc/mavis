@@ -182,8 +182,9 @@ def main(
         for ev in calls:
             log(ev, time_stamp=False)
             log(ev.event_type, ev.call_method, time_stamp=False)
-            log('remapped reads: {}; split reads: [{}, {}], flanking pairs: {}'.format(
+            log('remapped reads: {}; spanning reads: {}; split reads: [{}, {}], flanking pairs: {}'.format(
                 0 if not ev.contig else len(ev.contig.input_reads),
+                len(ev.spanning_reads),
                 len(ev.break1_split_reads), len(ev.break2_split_reads),
                 len(ev.flanking_pairs)), time_stamp=False)
 

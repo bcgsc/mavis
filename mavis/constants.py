@@ -187,7 +187,7 @@ FLAGS = Vocab(LQ='LOWQUAL')
 
 READ_PAIR_TYPE = Vocab(RR='RR', LL='LL', RL='RL', LR='LR')
 
-CALL_METHOD = Vocab(CONTIG='contig', SPLIT='split reads', FLANK='flanking reads')
+CALL_METHOD = Vocab(CONTIG='contig', SPLIT='split reads', FLANK='flanking reads', SPAN='spanning')
 """:class:`Vocab`: holds controlled vocabulary for allowed call methods
 
 - ``CONTIG``: a contig was assembled and aligned across the breakpoints

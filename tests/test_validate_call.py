@@ -587,7 +587,7 @@ class TestCallBySupportingReads(unittest.TestCase):
         events = call._call_by_supporting_reads(self.ev, SVTYPE.INV)
         self.assertEqual(1, len(events))
         event = events[0]
-        self.assertEqual(4, len(event.supporting_reads()))
+        self.assertEqual(4, len(event.support()))
         self.assertEqual(101, event.break1.start)
         self.assertEqual(101, event.break1.end)
         self.assertEqual(501, event.break2.start)
@@ -979,7 +979,46 @@ class TestCallByFlankingReadsTranscriptome(unittest.TestCase):
             )
         })
 
-        #raise unittest.SkipTest('TODO')
+
+class TestCallBySpanningReads(unittest.TestCase):
+    def test_deletion(self):
+        # ATCGATCTAGATCTAGGATAGTTCTAGCAGTCATAGCTAT
+        ev = GenomeEvidence(
+            Breakpoint('fake', 100, orient=ORIENT.LEFT),
+            Breakpoint('fake', 500, orient=ORIENT.RIGHT),
+            BamCache(MockBamFileHandle()), None,
+            opposing_strands=False,
+            read_length=40,
+            stdev_fragment_size=25,
+            median_fragment_size=180,
+            min_flanking_pairs_resolution=1,
+            min_spanning_reads_resolution=1
+        )
+        spanning_reads = [
+            MockRead(
+                'name', '1', 50, cigar=[(CIGAR.EQ, 15), (CIGAR.D, 5), (CIGAR.I, 2), (CIGAR.EQ, 10)],
+                query_sequence='ATCGATCTAGATCTA' 'GG' 'ATAGTTCTAG'),
+            MockRead(
+                'name', '1', 50, cigar=[(CIGAR.EQ, 15), (CIGAR.I, 2), (CIGAR.D, 5), (CIGAR.EQ, 10)],
+                query_sequence='ATCGATCTAGATCTA' 'GG' 'ATAGTTCTAG')
+        ]
+        ev.spanning_reads = set(spanning_reads)
+        calls = call._call_by_spanning_reads(ev, set())
+        self.assertEqual(1, len(calls))
+        self.assertEqual(2, len(calls[0].support()))
+
+    def test_insertion(self):
+        pass
+
+    def test_indel(self):
+        pass
+
+    def test_inversion(self):
+        pass
+
+    def test_duplication(self):
+        pass
+
 
 if __name__ == "__main__":
     unittest.main()
