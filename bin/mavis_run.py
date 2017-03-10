@@ -19,6 +19,7 @@ from mavis.constants import PROTOCOL
 VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
 
 QSUB_HEADER = """#!/bin/bash
+#$ /bin/bash
 #$ -V
 #$ -N {name}
 #$ -q {queue}
@@ -62,6 +63,7 @@ def main_pipeline(args, configs):
             'output': validation_output,
             'masking': args.masking_filename,
             'reference_genome': args.reference_genome_filename,
+            'blat_prog': args.blat_prog,
             'blat_2bit_reference': args.blat_2bit_reference,
             'annotations': args.annotations_filename,
             'library': sec.library,
@@ -91,7 +93,7 @@ def main_pipeline(args, configs):
                 ['--{} "{}"'.format(k, v) for k, v in validation_args.items() if isinstance(v, str) and v is not None])
             validation_args = temp
             validation_args.append('-n {}$SGE_TASK_ID.tab'.format(merge_file_prefix))
-            fh.write('python {} validate {}\n'.format(__file__, ' \\\n\t'.join(validation_args)))
+            fh.write('python {} validate {}\n'.format(os.path.abspath(__file__), ' \\\n\t'.join(validation_args)))
 
         # set up the annotations job
         # for all files with the right suffix
@@ -124,7 +126,7 @@ def main_pipeline(args, configs):
                     queue=args.queue, memory=args.default_memory, name=annotation_jobname, output=annotation_output
                 ) + '\n')
             fh.write('#$ -hold_jid {}\n'.format(validation_jobname))
-            fh.write('python {} annotate {}\n'.format(__file__, ' \\\n\t'.join(annotation_args)))
+            fh.write('python {} annotate {}\n'.format(os.path.abspath(__file__), ' \\\n\t'.join(annotation_args)))
 
     # set up scripts for the pairing held on all of the annotation jobs
     pairing_output = mkdirp(os.path.join(args.output, 'pairing'))
@@ -149,7 +151,7 @@ def main_pipeline(args, configs):
                 queue=args.queue, memory=args.default_memory, name='mavis_pairing', output=pairing_output
             ) + '\n')
         fh.write('#$ -hold_jid {}\n'.format(' '.join(annotation_jobs)))
-        fh.write('python {} pairing {}\n'.format(__file__, ' \\\n\t'.join(pairing_args)))
+        fh.write('python {} pairing {}\n'.format(os.path.abspath(__file__), ' \\\n\t'.join(pairing_args)))
 
 
 def main():
@@ -185,7 +187,7 @@ def main():
     # load the reference files if they have been given and reset the arguments to hold the original file name and the
     # loaded data
     if any([
-        pstep not in [pconf.PIPELINE_STEP.PIPELINE, pconf.PIPELINE_STEP.VALIDATE],
+        pstep not in [pconf.PIPELINE_STEP.VALIDATE],
         hasattr(args, 'uninformative_filter') and args.uninformative_filter,
         pstep in [pconf.PIPELINE_STEP.VALIDATE, pconf.PIPELINE_STEP.CLUSTER] and args.protocol == PROTOCOL.TRANS,
         pstep == pconf.PIPELINE_STEP.PIPELINE and any([sec.protocol == PROTOCOL.TRANS for sec in config])
