@@ -128,7 +128,10 @@ the locations to conversion scripts are listed below
 Reference Files
 ..................
 
-There are several reference files that are required for full functionality of the |TOOLNAME| pipeline
+There are several reference files that are required for full functionality of the |TOOLNAME| pipeline. If the same
+reference file will be resused often then the user may find it helpful to set reasonable defaults. Default values
+for any of the reference file arguments can be configured through ``MAVIS_`` prefixed environment variables. An
+example environment variable file can be found under integrations_tests/example_env.sh
 
 Fasta sequence file(s)
 ,,,,,,,,,,,,,,,,,,,,,,,

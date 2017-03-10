@@ -151,7 +151,7 @@ class TestPullFlankingSupport(unittest.TestCase):
             Breakpoint('1', 1000, orient=ORIENT.RIGHT),
             evidence, SVTYPE.DEL, CALL_METHOD.SPLIT)
 
-        event.pull_flanking_support(flanking_pairs)
+        event.add_flanking_support(flanking_pairs)
         self.assertEqual(1, len(event.flanking_pairs))
 
         # now test one where the read pair type is right but the positioning of the reads doesn't
@@ -161,7 +161,7 @@ class TestPullFlankingSupport(unittest.TestCase):
                 MockRead('r1', 0, 501, 600, is_reverse=False),
                 MockRead('r1', 0, 1200, 1260, is_reverse=True)
             ))
-        event.pull_flanking_support(flanking_pairs)
+        event.add_flanking_support(flanking_pairs)
         self.assertEqual(1, len(event.flanking_pairs))
 
     def test_small_deletion_flanking_for_larger_deletion(self):
@@ -179,7 +179,7 @@ class TestPullFlankingSupport(unittest.TestCase):
             Breakpoint('1', 1000, orient=ORIENT.RIGHT),
             evidence, SVTYPE.DEL, CALL_METHOD.SPLIT)
 
-        event.pull_flanking_support(flanking_pairs)
+        event.add_flanking_support(flanking_pairs)
         self.assertEqual(0, len(event.flanking_pairs))
 
     def test_insertion(self):
@@ -196,7 +196,7 @@ class TestPullFlankingSupport(unittest.TestCase):
             Breakpoint('1', 800, orient=ORIENT.LEFT),
             Breakpoint('1', 900, orient=ORIENT.RIGHT),
             evidence, SVTYPE.INS, CALL_METHOD.SPLIT)
-        event.pull_flanking_support(flanking_pairs)
+        event.add_flanking_support(flanking_pairs)
         self.assertEqual(1, len(event.flanking_pairs))
 
     def test_inversion(self):
@@ -215,7 +215,7 @@ class TestPullFlankingSupport(unittest.TestCase):
             Breakpoint('1', 1000, orient=ORIENT.LEFT),
             evidence, SVTYPE.INV, CALL_METHOD.SPLIT)
 
-        event.pull_flanking_support(flanking_pairs)
+        event.add_flanking_support(flanking_pairs)
         self.assertEqual(1, len(event.flanking_pairs))
 
         # test read that is the right type but the positioning does not support the current call
@@ -224,7 +224,7 @@ class TestPullFlankingSupport(unittest.TestCase):
                 MockRead('r1', 0, 501, 600, is_reverse=False),
                 MockRead('r1', 0, 900,950, is_reverse=True)
             ))
-        event.pull_flanking_support(flanking_pairs)
+        event.add_flanking_support(flanking_pairs)
         self.assertEqual(1, len(event.flanking_pairs))
 
     def test_inverted_translocation(self):
@@ -242,7 +242,7 @@ class TestPullFlankingSupport(unittest.TestCase):
             Breakpoint('1', 1200, orient=ORIENT.LEFT),
             Breakpoint('2', 1300, orient=ORIENT.LEFT),
             evidence, SVTYPE.ITRANS, CALL_METHOD.SPLIT)
-        event.pull_flanking_support(flanking_pairs)
+        event.add_flanking_support(flanking_pairs)
         self.assertEqual(1, len(event.flanking_pairs))
 
     def test_translocation_RL(self):
@@ -276,7 +276,7 @@ class TestPullFlankingSupport(unittest.TestCase):
                 MockRead('x', '22', 29683047, 29683122, is_reverse=True)
             )
         ]
-        event.pull_flanking_support(flanking_pairs)
+        event.add_flanking_support(flanking_pairs)
         self.assertEqual(len(flanking_pairs), len(event.flanking_pairs))
 
     def test_translocation_RL_filter_nonsupporting(self):
@@ -294,7 +294,7 @@ class TestPullFlankingSupport(unittest.TestCase):
             Breakpoint('2', 1250, orient=ORIENT.LEFT),
             evidence, SVTYPE.TRANS, CALL_METHOD.SPLIT)
 
-        event.pull_flanking_support(flanking_pairs)
+        event.add_flanking_support(flanking_pairs)
         self.assertEqual(1, len(event.flanking_pairs))
 
         # test read that is the right type but the positioning does not support the current call
@@ -304,7 +304,7 @@ class TestPullFlankingSupport(unittest.TestCase):
                 MockRead('r1', 0, 1200, 1249, is_reverse=True),
                 MockRead('r1', 0, 1201, 1249, is_reverse=False)
             ))
-        event.pull_flanking_support(flanking_pairs)
+        event.add_flanking_support(flanking_pairs)
         self.assertEqual(1, len(event.flanking_pairs))
 
     def test_duplication(self):
@@ -323,7 +323,7 @@ class TestPullFlankingSupport(unittest.TestCase):
             Breakpoint('1', 1300, orient=ORIENT.LEFT),
             evidence, SVTYPE.DUP, CALL_METHOD.SPLIT)
 
-        event.pull_flanking_support(flanking_pairs)
+        event.add_flanking_support(flanking_pairs)
         self.assertEqual(1, len(event.flanking_pairs))
 
     def test_outside_call_range(self):
@@ -352,9 +352,18 @@ class TestEvidenceConsumption(unittest.TestCase):
             Breakpoint('1', 450, 500, orient=ORIENT.RIGHT),
             opposing_strands=False
         )
-        contig = MockContig('',
-                            [mock_read_pair(MockRead(query_name='t1', reference_id=0, reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)], query_sequence='A'*100),
-                                            MockRead(query_name='t1', reference_id=0, reference_start=460, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)], query_sequence='A'*100))])
+        contig = MockContig(
+            '',
+            [
+                mock_read_pair(
+                    MockRead(
+                        query_name='t1', reference_id=0, reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)], 
+                        query_sequence='A' * 100),
+                                            
+                    MockRead(
+                        query_name='t1', reference_id=0, reference_start=460, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)], 
+                        query_sequence='A' * 100))
+            ])
         contig.input_reads={MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])}
         evidence.contigs.append(contig)
 

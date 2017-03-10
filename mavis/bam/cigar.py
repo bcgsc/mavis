@@ -18,7 +18,7 @@ def recompute_cigar_mismatch(read, ref):
     Returns:
         :class:`list` of :class:`tuple` of :class:`int` and :class:`int`: the cigar tuple
     """
-    temp = []
+    result = []
     offset = 0
 
     ref_pos = read.reference_start
@@ -26,29 +26,29 @@ def recompute_cigar_mismatch(read, ref):
 
     for cigar_value, freq in read.cigar:
         if cigar_value in [CIGAR.S, CIGAR.I]:
-            temp.append((cigar_value, freq))
+            result.append((cigar_value, freq))
             seq_pos += freq
         elif cigar_value in [CIGAR.D, CIGAR.N]:
-            temp.append((cigar_value, freq))
+            result.append((cigar_value, freq))
             ref_pos += freq
         elif cigar_value in [CIGAR.M, CIGAR.X, CIGAR.EQ]:
             for offset in range(0, freq):
                 if DNA_ALPHABET.match(ref[ref_pos], read.query_sequence[seq_pos]):
-                    if len(temp) == 0 or temp[-1][0] != CIGAR.EQ:
-                        temp.append((CIGAR.EQ, 1))
+                    if len(result) == 0 or result[-1][0] != CIGAR.EQ:
+                        result.append((CIGAR.EQ, 1))
                     else:
-                        temp[-1] = (CIGAR.EQ, temp[-1][1] + 1)
+                        result[-1] = (CIGAR.EQ, result[-1][1] + 1)
                 else:
-                    if len(temp) == 0 or temp[-1][0] != CIGAR.X:
-                        temp.append((CIGAR.X, 1))
+                    if len(result) == 0 or result[-1][0] != CIGAR.X:
+                        result.append((CIGAR.X, 1))
                     else:
-                        temp[-1] = (CIGAR.X, temp[-1][1] + 1)
+                        result[-1] = (CIGAR.X, result[-1][1] + 1)
                 ref_pos += 1
                 seq_pos += 1
         else:
             raise NotImplementedError('unexpected CIGAR value {0} is not supported currently'.format(cigar_value))
-    assert(sum([x[1] for x in temp]) == sum(x[1] for x in read.cigar))
-    return temp
+    assert(sum([x[1] for x in result]) == sum(x[1] for x in read.cigar))
+    return result
 
 
 def longest_fuzzy_match(cigar, max_fuzzy_interupt=1):
