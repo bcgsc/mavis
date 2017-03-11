@@ -1,3 +1,5 @@
+.. _mavis-annotate:
+
 annotate subpackage
 ==========================
 
@@ -7,7 +9,9 @@ annotate subpackage
     :undoc-members:
     :show-inheritance:
 
+-------------------------------
 
+**modules**
 
 .. toctree::
     :glob:

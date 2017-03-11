@@ -19,7 +19,9 @@ The orientation describes the portion of the reference that is retained.
 
 |
 
-Paired-end Reads: Flanking evidence
+.. _theory-types-of-flanking-evidence:
+
+Types of Flanking evidence
 ......................................
 
 One of the most confusing parts about working with contig and paired-end reads is relating them to the
@@ -125,6 +127,8 @@ Inverted Translocation
 
 |
 
+.. _theory-calculating-the-evidence-window:
+
 Calculating the Evidence Window
 ......................................
 
@@ -199,6 +203,8 @@ possible annotations when calculating the evidence window. see
 
 |
 
+.. _theory-classifying-events:
+
 Classifying Events
 .....................
 
@@ -217,6 +223,8 @@ been shown. see :py:func:`~mavis.breakpoint.BreakpointPair.classify`
 
 |
 
+.. _theory-assembling-contigs:
+
 Assembling Contigs
 ......................
 
@@ -234,11 +242,13 @@ Breakpoints can be called by multiple different :attr:`~mavis.constants.CALL_MET
 
 |
 
+.. _theory-calling-breakpoints-by-flanking-evidence:
+
 Calling Breakpoints by Flanking Evidence
 ..........................................
 
 Breakpoints are called by contig, split-read, or flanking pairs evidence. Contigs and split reads are used to call exact
-breakpoints, where breakpoints called by flanking reads are generally assigned a probabalistic range.
+breakpoints, where breakpoints called by flanking reads are generally assigned a probabilistic range.
 
 The metrics used here are similar to those used in calculating the evidence window. We use the
 :term:`max_expected_fragment_size` as the outer limit of how large the range can be. This is further refined taking
@@ -256,6 +266,8 @@ into account the range spanned by the :term:`flanking pairs` evidence and the po
 -----------------
 
 |
+
+.. _theory-determining-flanking-support:
 
 Determining Flanking support
 ..............................
@@ -276,6 +288,8 @@ Determining Flanking support
 -----------------
 
 |
+
+.. _theory-annotation-events:
 
 Annotating Events
 ....................
@@ -317,6 +331,8 @@ ORFs and domain sequences can be computed.
 -----------------
 
 |
+
+.. _theory-predicting-splicing-patterns:
 
 Predicting Splicing Patterns
 ............................
@@ -366,6 +382,8 @@ More complex examples are drawn below. There are five classifications (:class:`~
 -----------------
 
 |
+
+.. _theory-pairing-similar-events:
 
 Pairing Similar Events
 .......................
@@ -426,7 +444,31 @@ Glossary
     breakpoint pair
         :term:`structural variant` which has not been classified/given a type
 
+    bed file
+        see `UCSC <https://genome.ucsc.edu/FAQ/FAQformat#format1>`_
 
+    IGV batch file
+        This is a file format type defined by `IGV <https://software.broadinstitute.org/software/igv/batch>`_
+    
+    bam file
+        see `UCSC <https://genome.ucsc.edu/FAQ/FAQformat#format5.1>`_
 
+    2bit file
+        see `UCSC <https://genome.ucsc.edu/FAQ/FAQformat#format7>`_
+    
+    fasta file
+        see `UCSC <https://genome.ucsc.edu/FAQ/FAQformat#format18>`_
+    
+    psl file
+        see `UCSC <https://genome.ucsc.edu/FAQ/FAQformat#format2>`_
+
+    pslx file
+        extended format of a :term:`psl file`
+
+    svg file
+        SVG (Scalable vector graph) is an image format. see `w3 schools <https://www.w3schools.com/graphics/svg_intro.asp>`_
+
+    json file
+        JSON (JavaScript Object Notation) is a data file format. see `w3 schools <https://www.w3schools.com/js/js_json_intro.asp>`_
 
 .. |TOOLNAME| replace:: **MAVIS**

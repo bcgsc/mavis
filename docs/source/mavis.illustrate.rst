@@ -1,3 +1,5 @@
+.. _mavis-illustrate:
+
 illustrate subpackage
 =====================================
 

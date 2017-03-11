@@ -303,60 +303,60 @@ class TestGenomeEvidenceAddReads(unittest.TestCase):
         # outer windows (901, 1649)  (5852, 6600)
         # inner windows (1351, 1649)  (5852, 6150)
 
-    def test_add_flanking_pair_error_unmapped_read(self):
+    def test_collect_flanking_pair_error_unmapped_read(self):
         read, mate = mock_read_pair(
             MockRead('test', 0, 900, 1000, is_reverse=False),
             MockRead('test', 0, 6000, 6099, is_reverse=True)
         )
         read.is_unmapped = True
         with self.assertRaises(ValueError):
-            self.ge.add_flanking_pair(read, mate)
+            self.ge.collect_flanking_pair(read, mate)
 
-    def test_add_flanking_pair_error_mate_unmapped(self):
+    def test_collect_flanking_pair_error_mate_unmapped(self):
         read, mate = mock_read_pair(
             MockRead('test', 0, 900, 1000, is_reverse=False),
             MockRead('test', 0, 6000, 6099, is_reverse=True)
         )
         mate.is_unmapped = True
         with self.assertRaises(ValueError):
-            self.ge.add_flanking_pair(read, mate)
+            self.ge.collect_flanking_pair(read, mate)
 
-    def test_add_flanking_pair_error_query_names_dont_match(self):
+    def test_collect_flanking_pair_error_query_names_dont_match(self):
         read, mate = mock_read_pair(
             MockRead('test1', 0, 900, 1000, is_reverse=False),
             MockRead('test', 0, 6000, 6099, is_reverse=True)
         )
         with self.assertRaises(ValueError):
-            self.ge.add_flanking_pair(read, mate)
+            self.ge.collect_flanking_pair(read, mate)
 
-    def test_add_flanking_pair_error_template_lengths_dont_match(self):
+    def test_collect_flanking_pair_error_template_lengths_dont_match(self):
         read, mate = mock_read_pair(
             MockRead('test', 0, 900, 1000, is_reverse=False, template_length=50),
             MockRead('test', 0, 6000, 6099, is_reverse=True)
         )
         mate.template_length = 55
         with self.assertRaises(ValueError):
-            self.ge.add_flanking_pair(read, mate)
+            self.ge.collect_flanking_pair(read, mate)
 
-    def test_add_flanking_pair_read_low_mq(self):
+    def test_collect_flanking_pair_read_low_mq(self):
         read, mate = mock_read_pair(
             MockRead('test', 0, 900, 1000, is_reverse=False),
             MockRead('test', 0, 6000, 6099, is_reverse=True)
         )
         read.mapping_quality = 0
-        self.assertFalse(self.ge.add_flanking_pair(read, mate))
+        self.assertFalse(self.ge.collect_flanking_pair(read, mate))
 
-    def test_add_flanking_pair_mate_low_mq(self):
+    def test_collect_flanking_pair_mate_low_mq(self):
         read, mate = mock_read_pair(
             MockRead('test', 0, 900, 1000, is_reverse=False),
             MockRead('test', 0, 6000, 6099, is_reverse=True)
         )
         mate.mapping_quality = 0
-        self.assertFalse(self.ge.add_flanking_pair(read, mate))
+        self.assertFalse(self.ge.collect_flanking_pair(read, mate))
 
-    def test_add_flanking_pair_interchromosomal(self):
+    def test_collect_flanking_pair_interchromosomal(self):
         read, mate = mock_read_pair(
             MockRead('test', 1, 900, 1000, is_reverse=False),
             MockRead('test', 0, 6000, 6099, is_reverse=True)
         )
-        self.assertFalse(self.ge.add_flanking_pair(read, mate))
+        self.assertFalse(self.ge.collect_flanking_pair(read, mate))

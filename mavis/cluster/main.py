@@ -18,6 +18,25 @@ def main(
     masking, cluster_clique_size, cluster_radius, uninformative_filter, max_proximity,
     annotations, min_clusters_per_file, max_files, **kwargs
 ):
+    """
+    Args:
+        inputs: list of input files to read
+        output: path to the output directory
+        stranded_bam (bool): is the bam using a strand specific protocol
+        library: the library to look for in each of the input files
+        protocol (PROTOCOL): the sequence protocol (genome or transcriptome)
+        masking: the masking regions object
+        cluster_clique_size (int): the maximum size of cliques to search for using the exact algorithm
+        cluster_radius (int): distance (in breakpoint pairs) used in deciding to join bpps in a cluster
+        uninformative_filter (bool): if True then clusters should be filtered out if they are not
+          within a specified (max_proximity) distance to any annotation
+        max_proximity (int): the maximum distance away an annotation can be before the uninformative_filter 
+          is applied
+        annotations: the reference annotations
+        min_clusters_per_file (int): the minimum number of clusters to output to a file
+        max_files (int): the maximum number of files to split clusters into
+    """
+
     # output files
     cluster_batch_id = build_batch_id(prefix='cluster-')
     UNINFORM_OUTPUT = os.path.join(output, 'uninformative_clusters.txt')

@@ -85,6 +85,8 @@ class EventCall(BreakpointPair):
             * :class:`set` of :class:`str` - set of the read query_names
             * :class:`int` - the median insert size
             * :class:`int` - the standard deviation (from the median) of the insert size
+
+        see :ref:`related theory documentation <theory-determining-flanking-support>`
         """
         support = set()
 

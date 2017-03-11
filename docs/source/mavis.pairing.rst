@@ -1,3 +1,5 @@
+.. _mavis-pairing:
+
 pairing subpackage
 =====================================
 
@@ -7,6 +9,9 @@ pairing subpackage
     :undoc-members:
     :show-inheritance:
 
+--------------------------
+
+**modules**
 
 .. toctree::
     :glob:

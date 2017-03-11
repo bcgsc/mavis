@@ -7,7 +7,6 @@ from ..interval import Interval
 from ..breakpoint import BreakpointPair
 from ..bam import read as read_tools
 from ..bam import cigar as cigar_tools
-import warnings
 
 
 class Evidence(BreakpointPair):
@@ -15,6 +14,8 @@ class Evidence(BreakpointPair):
     def outer_window1(self):
         """(:class:`~structural_variant.interval.Interval`): the window where evidence will be gathered for the first
         breakpoint
+
+        see :ref:`related theory documentation <theory-calculating-the-evidence-window>`
         """
         try:
             return self.outer_windows[0]
@@ -25,6 +26,8 @@ class Evidence(BreakpointPair):
     def outer_window2(self):
         """(:class:`~structural_variant.interval.Interval`): the window where evidence will be gathered for the second
         breakpoint
+
+        see :ref:`related theory documentation <theory-calculating-the-evidence-window>`
         """
         try:
             return self.outer_windows[1]
@@ -185,7 +188,7 @@ class Evidence(BreakpointPair):
         result.update(self.spanning_reads)
         return result
 
-    def add_spanning_read(self, read):  # TODO
+    def collect_spanning_read(self, read):  # TODO
         """
         spanning read: a read covering BOTH breakpoints
 
@@ -223,7 +226,7 @@ class Evidence(BreakpointPair):
                         return True
         return False
 
-    def add_compatible_flanking_pair(self, read, mate, compatible_type):
+    def collect_compatible_flanking_pair(self, read, mate, compatible_type):
         if read.is_unmapped or mate.is_unmapped or read.query_name != mate.query_name or read.is_read1 == mate.is_read1:
             raise ValueError('input reads must be a mapped and mated pair')
         if not self.compatible_windows:
@@ -277,7 +280,7 @@ class Evidence(BreakpointPair):
 
         return False
 
-    def add_flanking_pair(self, read, mate):
+    def collect_flanking_pair(self, read, mate):
         """
         checks if a given read meets the minimum quality criteria to be counted as evidence as stored as support for
         this event
@@ -286,6 +289,8 @@ class Evidence(BreakpointPair):
             read (pysam.AlignedSegment): the read to add
         Raises:
             UserWarning: the read does not support this event or does not pass quality filters
+
+        see :ref:`related theory documentation <theory-types-of-flanking-evidence>`
         """
         if read.is_unmapped or mate.is_unmapped:
             raise ValueError('input reads must be a mapped and mated pair. One or both of the reads is unmapped')
@@ -358,7 +363,7 @@ class Evidence(BreakpointPair):
 
         return False
 
-    def add_split_read(self, read, first_breakpoint):
+    def collect_split_read(self, read, first_breakpoint):
         """
         adds a split read if it passes the criteria filters and raises a warning if it does not
 
@@ -695,8 +700,8 @@ class Evidence(BreakpointPair):
             self.counts[0] += 1
             if read.is_unmapped:
                 continue
-            if not self.add_split_read(read, True):
-                self.add_spanning_read(read)
+            if not self.collect_split_read(read, True):
+                self.collect_spanning_read(read)
             if read.mate_is_unmapped:
                 half_mapped_partners1.append(read)
             elif any([read_tools.orientation_supports_type(read, et) for et in self.putative_event_types()]) and \
@@ -720,8 +725,8 @@ class Evidence(BreakpointPair):
 
             if read.is_unmapped:
                 continue
-            if not self.add_split_read(read, False):
-                self.add_spanning_read(read)
+            if not self.collect_split_read(read, False):
+                self.collect_spanning_read(read)
             if read.mate_is_unmapped:
                 half_mapped_partners2.append(read)
             elif any([read_tools.orientation_supports_type(read, et) for et in self.putative_event_types()]) and \
@@ -732,7 +737,7 @@ class Evidence(BreakpointPair):
             try:
                 mates = self.bam_cache.get_mate(fl, allow_file_access=False)
                 for mate in mates:
-                    self.add_flanking_pair(fl, mate)
+                    self.collect_flanking_pair(fl, mate)
             except KeyError:
                 pass
 
@@ -774,7 +779,7 @@ class Evidence(BreakpointPair):
                     mates = self.bam_cache.get_mate(fl, allow_file_access=False)
                     for mate in mates:
                         try:
-                            self.add_compatible_flanking_pair(fl, mate, compatible_type)
+                            self.collect_compatible_flanking_pair(fl, mate, compatible_type)
                         except ValueError:
                             pass
                 except KeyError:

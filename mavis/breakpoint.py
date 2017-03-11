@@ -221,9 +221,8 @@ class BreakpointPair:
             >>> bpp = BreakpointPair(Breakpoint('1', 1, orient='L'), Breakpoint('1', 9999, orient='R'), opposing_strands=False)
             >>> BreakpointPair.classify(bpp)
             ['deletion', 'insertion']
-
-        .. figure:: ./../_static/classification_tree.svg
-            :width: 100%
+        
+        see :ref:`related theory documentation <theory-classifying-events>`
         """
         if pair.break1.chr == pair.break2.chr:  # intrachromosomal
             if pair.opposing_strands:

@@ -499,17 +499,17 @@ class TestEvidenceGathering(unittest.TestCase):
             min_flanking_pairs_resolution=3
         )
 
-    def test_add_split_read(self):
+    def test_collect_split_read(self):
         ev1_sr = MockRead(query_name='HISEQX1_11:3:1105:15351:25130:split',
                           reference_id=1, cigar=[(4, 68), (7, 82)], reference_start=1114,
                           reference_end=1154, query_alignment_start=110,
                           query_sequence='TCGTGAGTGGCAGGTGCCATCGTGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG',
                           query_alignment_end=150, flag=113,
                           next_reference_id=1, next_reference_start=2341)
-        self.ev1.add_split_read(ev1_sr, True)
+        self.ev1.collect_split_read(ev1_sr, True)
         self.assertEqual(ev1_sr, list(self.ev1.split_reads[0])[0])
 
-    def test_add_split_read_failure(self):
+    def test_collect_split_read_failure(self):
         # wrong cigar string
         ev1_sr = MockRead(query_name='HISEQX1_11:4:1203:3062:55280:split',
                           reference_id=1, cigar=[(7, 110), (7, 40)], reference_start=1114,
@@ -517,10 +517,10 @@ class TestEvidenceGathering(unittest.TestCase):
                           query_sequence='CTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCGTGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATG',
                           query_alignment_end=150, flag=371,
                           next_reference_id=1, next_reference_start=2550)
-        self.assertFalse(self.ev1.add_split_read(ev1_sr, True))
+        self.assertFalse(self.ev1.collect_split_read(ev1_sr, True))
 
-    def test_add_flanking_pair(self):
-        self.ev1.add_flanking_pair(
+    def test_collect_flanking_pair(self):
+        self.ev1.collect_flanking_pair(
             MockRead(
                 reference_id=1, reference_start=2214, reference_end=2364, is_reverse=True,
                 next_reference_id=1, next_reference_start=1120, mate_is_reverse=True
@@ -533,14 +533,14 @@ class TestEvidenceGathering(unittest.TestCase):
         )
         self.assertEqual(1, len(self.ev1.flanking_pairs))
 
-    def test_add_flanking_pair_not_overlapping_evidence_window(self):
+    def test_collect_flanking_pair_not_overlapping_evidence_window(self):
         # first read in pair does not overlap the first evidence window
         # therefore this should return False and not add to the flanking_pairs
         pair = mock_read_pair(
             MockRead(reference_id=1, reference_start=1903, reference_end=2053, is_reverse=True),
             MockRead(reference_id=1, reference_start=2052, reference_end=2053, is_reverse=True)
         )
-        self.assertFalse(self.ev1.add_flanking_pair(*pair))
+        self.assertFalse(self.ev1.collect_flanking_pair(*pair))
         self.assertEqual(0, len(self.ev1.flanking_pairs))
 
 #    @unittest.skip("demonstrating skipping")

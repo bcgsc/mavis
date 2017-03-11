@@ -1,18 +1,16 @@
+
+.. figure:: _static/acronym.svg
+
 About
 ---------
 
 |TOOLNAME| is a pipeline to merge and validate input from different structural variant callers into a single report.
+The pipeline consists four of main steps
 
-- Breakpoint pair calls are read in from various tools and clustered by library/sample.
-- The clustered calls are filtered by proximity to annotations (this is done as validating
-  the evidence for individual calls is the most expensive part of the pipeline)
-- The calls are validated against a paired-end read bam file where split, flanking, and spanning reads
-  are gathered and analyzed. From each cluster new breakpoint pairs are called from the evidence.
-- The pairs that passed validation are annotated (identical calls are merged). Fusion transcripts
-  are predicted and figures are drawn for visualization.
-- Pairs are compared between libraries to determine if they are equivalent events. This is where somatic vs
-  germline and expressed vs not expressed can be determined.
-- Finally a summary report is created to make the information more accessible to the end user
+- :ref:`cluster <mavis-cluster>`
+- :ref:`validate <mavis-validate>`
+- :ref:`annotate <mavis-annotate>`
+- :ref:`pairing <mavis-pairing>`
 
 |
 
@@ -129,20 +127,44 @@ Reference Files
 ..................
 
 There are several reference files that are required for full functionality of the |TOOLNAME| pipeline. If the same
-reference file will be resused often then the user may find it helpful to set reasonable defaults. Default values
-for any of the reference file arguments can be configured through ``MAVIS_`` prefixed environment variables. An
-example environment variable file can be found under integrations_tests/example_env.sh
+reference file will be reused often then the user may find it helpful to set reasonable defaults. Default values
+for any of the reference file arguments can be configured through ``MAVIS_`` prefixed environment variables.
 
-Fasta sequence file(s)
++--------------------------------------------------------------+----------------------------------+-----------------------------+
+| file                                                         | file type/format                 | environment variable        |
++==============================================================+==================================+=============================+
+| :ref:`reference genome <reference-files-reference-genome>`   | :term:`fasta file`               | ``MAVIS_REFERENCE_GENOME``  |
++--------------------------------------------------------------+----------------------------------+-----------------------------+
+| :ref:`annotations <reference-files-annotations>`             | :term:`json file` or text/tabbed | ``MAVIS_ANNOTATIONS``       |
++--------------------------------------------------------------+----------------------------------+-----------------------------+
+| :ref:`masking <reference-files-masking>`                     | text/tabbed                      | ``MAVIS_MASKING``           |
++--------------------------------------------------------------+----------------------------------+-----------------------------+
+| :ref:`template metadata <reference-files-template-metadata>` | text/tabbed                      | ``MAVIS_TEMPLATE_METADATA`` |
++--------------------------------------------------------------+----------------------------------+-----------------------------+
+
+
+If the environment variables above are set they will be used as the default values when any step of the pipeline
+script is called (including generating the template config file)
+
+
+.. _reference-files-reference-genome:
+
+Reference Genome
 ,,,,,,,,,,,,,,,,,,,,,,,
 
-These are the sequence files in fasta format that are used in aligning and generating the fusion sequences. Found here:
-`UCSC hg19 chromosome fasta sequences <http://hgdownload.cse.ucsc.edu/goldenPath/hg19/chromosomes/>`_
+These are the sequence files in fasta format that are used in aligning and generating the fusion sequences.
 
-Reference Annotations
+**Examples:**
+
+- `UCSC hg19 chromosome fasta sequences <http://hgdownload.cse.ucsc.edu/goldenPath/hg19/chromosomes/>`_
+
+.. _reference-files-annotations:
+
+Annotations
 ,,,,,,,,,,,,,,,,,,,,,,,
 
-This is a custom file format. Essentially just a tabbed or json file which contains the gene, transcript, exon, translation and protein domain positional information
+This is a custom file format. Essentially just a tabbed or json file which contains the gene, transcript, exon, 
+translation and protein domain positional information
 
 .. warning::
 
@@ -152,7 +174,7 @@ This is a custom file format. Essentially just a tabbed or json file which conta
     reference genome (sequences) is given and the cds start and end are not
     M and * amino acids as expected the translation is not loaded
 
-Example of the json format can be seen below
+Example of the json structure can be seen below
 
 .. code-block:: javascript
 
@@ -194,14 +216,16 @@ This reference file can be generated from any database with the necessary inform
 There is a `basic perl script <https://svn.bcgsc.ca/svn/SVIA/svmerge/tools/generate_ensembl_json.pl>`_
 to generate the json file using a connection to the `Ensembl <http://uswest.ensembl.org/index.html>`_ perl api.
 
+.. _reference-files-template-metadata:
 
-
-Template metadata file
+Template Metadata
 ,,,,,,,,,,,,,,,,,,,,,,,,
 
-This is the file which contains the band information for the chromosomes.
-Found here: `UCSC hg19 cytoband file <http://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/cytoBand.txt.gz>`_.
-This is only used during visualization.
+This is the file which contains the band information for the chromosomes. This is only used during visualization.
+
+**Examples:**
+
+- `UCSC hg19 cytoband file <http://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/cytoBand.txt.gz>`_.
 
 .. code-block:: text
 
@@ -210,6 +234,8 @@ This is only used during visualization.
     chr1    5400000 7200000 p36.31  gneg
     chr1    7200000 9200000 p36.23  gpos25
     chr1    9200000 12700000        p36.22  gneg
+
+.. _reference-files-masking:
 
 Masking File
 ,,,,,,,,,,,,,,,,,,,,,,,
@@ -235,22 +261,25 @@ shown below
 Running the Pipeline
 .....................
 
-The pipeline consists of five main scripts. The usage menus for any of the scripts can be viewed by running the
-script without any arguments.
+The pipeline can be run calling the main script (see below) followed the pipeline step. The usage menu can be viewed 
+by running the without any arguments, or by giving the -h/--help option
 
 **Example:**
 
 .. code-block:: bash
 
-    python bin/run_mavis.py
+    python bin/mavis_run.py
 
 
 Help sub-menus can be found by giving the pipeline step followed by no arguments or the -h options
 
 .. code-block:: bash
     
-    python bin/run_mavis.py cluster -h
+    python bin/mavis_run.py cluster -h
 
+
+Determining Input Parameters
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
 There are some parameters that need to be computed from the bam files. This can generally be done by running the
 profile_bam.py script found in the tools directory
@@ -270,8 +299,22 @@ profile_bam.py script found in the tools directory
     median distrib[0.99] stdev 93.94
     median distrib[1.00] stdev 99.84
 
-generally giving it a single chromosome will be enough reads but it can be given as many chromosomes/templates as
+Generally giving it a single chromosome will be enough reads but it can be given as many chromosomes/templates as
 required. This script calculates the median insert size and then the standard deviation (wrt to the median not mean)
 from all or a portion of the distribution of insert sizes
+
+Generating a config file
+,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+The pipeline can be run in steps or it can be configured using a configuration file and setup in a single step. Scripts
+will be generated to run all steps following clustering. The configuration file can be built from scratch or a template
+can be output as shown below
+
+.. code-block:: bash
+    
+    >>> mavis_run.py pipeline template.cfg --write
+
+This will create a template config file called template.cfg which can then be edited by the user.
+
 
 .. |TOOLNAME| replace:: **MAVIS**

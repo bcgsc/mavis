@@ -1,3 +1,5 @@
+.. _mavis-cluster:
+
 cluster subpackage
 =====================================
 
@@ -7,6 +9,11 @@ cluster subpackage
     :undoc-members:
     :show-inheritance:
 
+
+-------------------
+
+
+**modules**
 
 .. toctree::
     :glob:

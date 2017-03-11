@@ -1,3 +1,5 @@
+.. _mavis-validate:
+
 validate subpackage
 ===================================
 
@@ -8,8 +10,9 @@ validate subpackage
     :show-inheritance:
 
 
----
+------------------
 
+**modules**
 
 .. toctree::
     :glob:
