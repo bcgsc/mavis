@@ -1,0 +1,99 @@
+
+# /
+/.~lock*
+/.noseids
+/cytoBand.txt
+/temp*
+/coverage
+/test*svg
+/venv
+/.coverage
+/*ods
+/*.pyc
+/__pycache__
+/*.tsv
+/*.bk
+/TSV.py
+/vocab.py
+/*.bed
+/*.fa
+
+# /bin/
+/bin/*.pyc
+/bin/__pycache__
+
+# /docs/
+/docs/build
+/docs/source/modules.rst
+/docs/source/vocab.rst
+/docs/source/TSV.rst
+/docs/source/s*.rst
+/docs/source/t*.rst
+/docs/source/c*.rst
+
+# /docs/source/
+/docs/source/tools*.rst
+/docs/source/auto
+/docs/source/run_*.rst
+/docs/source/run_overlay.rst
+/docs/source/columns.rst
+/docs/source/README.rst
+/docs/source/modules.rst
+/docs/source/vocab.rst
+/docs/source/structural_variant*.rst
+/docs/source/TSV.rst
+/docs/source/tests*.rst
+/docs/source/convert_ta.rst
+/docs/source/sv_*.rst
+/docs/source/.nfs*
+/docs/source/_static/.nfs*
+
+# /docs/source/_static/
+/docs/source/_static/.nfs*
+
+# /integration_tests/
+/integration_tests/__pycache__
+/integration_tests/*.pyc
+
+# /mavis/
+/mavis/__pycache__
+/mavis/*pyc
+
+# /mavis/annotate/
+/mavis/annotate/*.pyc
+/mavis/annotate/__pycache__
+
+# /mavis/bam/
+/mavis/bam/*.pyc
+/mavis/bam/__pycache__
+
+# /mavis/cluster/
+/mavis/cluster/*.pyc
+/mavis/cluster/__pycache__
+
+# /mavis/illustrate/
+/mavis/illustrate/*.pyc
+/mavis/illustrate/__pycache__
+
+# /mavis/pairing/
+/mavis/pairing/*.pyc
+/mavis/pairing/__pycache__
+
+# /mavis/pipeline/
+/mavis/pipeline/*.pyc
+/mavis/pipeline/__pycache__
+
+# /mavis/validate/
+/mavis/validate/*.pyc
+/mavis/validate/__pycache__
+
+# /tests/
+/tests/__pycache__
+/tests/*.pyc
+
+# /tests/files/
+/tests/files/*.fai
+
+# /tools/
+/tools/__pycache__
+/tools/*.pyc
