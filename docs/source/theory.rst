@@ -229,8 +229,8 @@ Assembling Contigs
 ......................
 
 During validation, for each breakpoint pair, we attempt to assemble a contig to represent the sequence across
-the breakpoints. This is assembled from the supporting reads (:term:`split reads`, :term:`half-mapped reads`,
-:term:`flanking pairs`, and :term:`spanning reads`) which have already been collected for the given
+the breakpoints. This is assembled from the supporting reads (:term:`split read`, :term:`half-mapped read`,
+:term:`flanking read pair`, and :term:`spanning read`) which have already been collected for the given
 event. The sequence from each read and its reverse complement are assembled into contigs using a :term:`DeBruijn graph`.
 For strand specific events, we then attempt to resolve the sequence strand of the contig.
 
@@ -252,7 +252,7 @@ breakpoints, where breakpoints called by flanking reads are generally assigned a
 
 The metrics used here are similar to those used in calculating the evidence window. We use the
 :term:`max_expected_fragment_size` as the outer limit of how large the range can be. This is further refined taking
-into account the range spanned by the :term:`flanking pairs` evidence and the position of the opposing breakpoint.
+into account the range spanned by the :term:`flanking read pair` evidence and the position of the opposing breakpoint.
 
 .. figure:: _static/call_breakpoint_by_flanking_reads.svg
     :width: 100%
@@ -289,7 +289,7 @@ Determining Flanking support
 
 |
 
-.. _theory-annotation-events:
+.. _theory-annotating-events:
 
 Annotating Events
 ....................
@@ -411,11 +411,13 @@ After breakpoints have been called and annotated we often need to see if the sam
 
 |
 
+
 Glossary
 .............
 
-..  glossary::
-	:sorted:
+
+.. glossary::
+    :sorted:
 
     flanking read pair
         a pair of reads where one read maps to one side of a set of breakpoints and its mate maps to the other
@@ -444,31 +446,38 @@ Glossary
     breakpoint pair
         :term:`structural variant` which has not been classified/given a type
 
-    bed file
+    bed
         see `UCSC <https://genome.ucsc.edu/FAQ/FAQformat#format1>`_
 
     IGV batch file
-        This is a file format type defined by `IGV <https://software.broadinstitute.org/software/igv/batch>`_
+        This is a file format type defined by :term:`IGV` see 
+        `running IGV with a batch file <https://software.broadinstitute.org/software/igv/batch>`_
     
-    bam file
+    bam
         see `UCSC <https://genome.ucsc.edu/FAQ/FAQformat#format5.1>`_
 
-    2bit file
+    2bit
         see `UCSC <https://genome.ucsc.edu/FAQ/FAQformat#format7>`_
     
-    fasta file
+    fasta
         see `UCSC <https://genome.ucsc.edu/FAQ/FAQformat#format18>`_
     
-    psl file
+    psl
         see `UCSC <https://genome.ucsc.edu/FAQ/FAQformat#format2>`_
 
-    pslx file
-        extended format of a :term:`psl file`
+    pslx
+        extended format of a :term:`psl`
 
-    svg file
+    SVG
         SVG (Scalable vector graph) is an image format. see `w3 schools <https://www.w3schools.com/graphics/svg_intro.asp>`_
 
-    json file
+    JSON
         JSON (JavaScript Object Notation) is a data file format. see `w3 schools <https://www.w3schools.com/js/js_json_intro.asp>`_
+
+    blat
+        Alignment tool. see https://genome.ucsc.edu/FAQ/FAQblat.html
+
+    IGV
+        Visualization tool. see http://software.broadinstitute.org/software/igv/
 
 .. |TOOLNAME| replace:: **MAVIS**

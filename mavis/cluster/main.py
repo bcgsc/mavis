@@ -20,19 +20,19 @@ def main(
 ):
     """
     Args:
-        inputs: list of input files to read
-        output: path to the output directory
+        inputs (:class:`List` of :class:`str`): list of input files to read
+        output (str): path to the output directory
         stranded_bam (bool): is the bam using a strand specific protocol
-        library: the library to look for in each of the input files
+        library (str): the library to look for in each of the input files
         protocol (PROTOCOL): the sequence protocol (genome or transcriptome)
-        masking: the masking regions object
+        masking (object): see :func:`~mavis.annotate.file_io.load_masking_regions`
         cluster_clique_size (int): the maximum size of cliques to search for using the exact algorithm
         cluster_radius (int): distance (in breakpoint pairs) used in deciding to join bpps in a cluster
         uninformative_filter (bool): if True then clusters should be filtered out if they are not
           within a specified (max_proximity) distance to any annotation
         max_proximity (int): the maximum distance away an annotation can be before the uninformative_filter 
           is applied
-        annotations: the reference annotations
+        annotations (object): see :func:`~mavis.annotate.file_io.load_reference_genes`
         min_clusters_per_file (int): the minimum number of clusters to output to a file
         max_files (int): the maximum number of files to split clusters into
     """

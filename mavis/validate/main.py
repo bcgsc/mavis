@@ -39,11 +39,18 @@ def main(
     samtools_version, **kwargs
 ):
     """
-    - read the evidence
-    - assemble contigs from the split reads
-    - blat the contigs
-    - pair the blatted contigs (where appropriate)
-    - TODO: call the breakpoints and summarize the evidence
+    Args:
+        input (str): the input file containing the breakpoint pairs
+        output (str): path to the output directory
+        bam_file (str): path the bam file
+        stranded_bam (bool): flag to indicate the input bam is using a strand specific protocol
+        median_fragment_size (int): the median fragment size
+        stdev_fragment_size (int): the standard deviation in fragment size
+        read_length (int): read length
+        reference_genome (Object): see :func:`~mavis.annotate.file_io.load_reference_genome`
+        annotations (object): see :func:`~mavis.annotate.file_io.load_reference_genes`
+        masking (object): see :func:`~mavis.annotate.file_io.load_masking_regions`
+        blat_2bit_reference (str): path to the 2bit reference file
     """
     FILENAME_PREFIX = re.sub('\.(txt|tsv|tab)$', '', os.path.basename(input))
     RAW_EVIDENCE_BAM = os.path.join(output, FILENAME_PREFIX + '.raw_evidence.bam')

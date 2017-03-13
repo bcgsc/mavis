@@ -14,21 +14,21 @@ further into events and also for developers debugging when adding new features, 
 +-----------------------------+------------------------+------------------------------------+
 | expected name/suffix        | file type/format       | content                            |
 +=============================+========================+====================================+
-| ``*.raw_evidence.bam``      | :term:`bam file`       | raw evidence                       |
+| ``*.raw_evidence.bam``      | :term:`bam`            | raw evidence                       |
 +-----------------------------+------------------------+------------------------------------+
-| ``*.contigs.bam``           | :term:`bam file`       | aligned contigs                    |
+| ``*.contigs.bam``           | :term:`bam`            | aligned contigs                    |
 +-----------------------------+------------------------+------------------------------------+
-| ``*.evidence.bed``          | :term:`bed file`       | evidence collection window regions |
+| ``*.evidence.bed``          | :term:`bed`            | evidence collection window regions |
 +-----------------------------+------------------------+------------------------------------+
-| ``*.validation-passed.bed`` | :term:`bed file`       | validated event positions          |
+| ``*.validation-passed.bed`` | :term:`bed`            | validated event positions          |
 +-----------------------------+------------------------+------------------------------------+
 | ``*.validation-failed.tab`` | text/tabbed            | failed events                      |
 +-----------------------------+------------------------+------------------------------------+
 | ``*.validation-passed.tab`` | text/tabbed            | validated events                   |
 +-----------------------------+------------------------+------------------------------------+
-| ``*.contigs.fa``            | :term:`fasta file`     | assembled contigs                  |
+| ``*.contigs.fa``            | :term:`fasta`          | assembled contigs                  |
 +-----------------------------+------------------------+------------------------------------+
-| ``*.contigs.blat_out.pslx`` | :term:`pslx file`      | results from blatting contigs      |
+| ``*.contigs.blat_out.pslx`` | :term:`pslx`           | results from blatting contigs      |
 +-----------------------------+------------------------+------------------------------------+
 | ``*.igv.batch``             | :term:`IGV batch file` | igv batch file                     |
 +-----------------------------+------------------------+------------------------------------+
@@ -41,25 +41,27 @@ Algorithm Overview
 
     - :ref:`Calculate the window/region <theory-calculating-the-evidence-window>` to read from the bam and collect
       evidence
-    - Store evidence (:term:`flanking pairs`, :term:`half-mapped reads`, :term:`spanning reads`, :term:`split reads`,
+    - Store evidence (:term:`flanking read pair`, :term:`half-mapped read`, :term:`spanning read`, :term:`split read`,
       :term:`compatible flanking pairs`) which match the expected event type and position
-    - :ref:`Assemble a contig <theory-assembling-contigs>` from the collected reads
+    - Assemble a contig from the collected reads. see :ref:`theory - assembling contigs <theory-assembling-contigs>`
 
-- Generate a Fasta File containing all the contig sequences
-- Align contigs to the reference genome (currently blat is used to perform this step)
+- Generate a :term:`fasta` file containing all the contig sequences
+- Align contigs to the reference genome (currently :term:`blat` is used to perform this step)
 - Make the final event calls
 - (For each breakpoint pair)
 
     - call by contig
-    - if fails, then call by spanning reads
-    - if fails, then call by split reads
-    - if fails, then call by mixed split/flanking reads
-    - if fails, then :ref:`call by flanking pairs <theory-calling-breakpoints-by-flanking-evidence>`
+    - if fails, then call by :term:`spanning read`
+    - if fails, then call by :term:`split read`
+    - if fails, then call by mixed :term:`split read` / :term:`flanking read pair`
+    - if fails, then call by :term:`flanking read pair`. see 
+      :ref:`theory - calling breakpoints by flanking evidence <theory-calling-breakpoints-by-flanking-evidence>`
     - if fails, then the event is failed
 
 - (For each breakpoint pair)
 
-    - :ref:`determine the amount of support <theory-determining-flanking-support>` for the more specific call
+    - determine the amount of support for the more specific call. see 
+      :ref:`theory - determining flanking support <theory-determining-flanking-support>`
 
 - Output new calls, evidence, contigs, etc
 

@@ -6,9 +6,7 @@ from Bio.Alphabet import Gapped
 from Bio.Data.IUPACData import ambiguous_dna_values
 from Bio.Alphabet.IUPAC import ambiguous_dna
 from Bio.Seq import Seq
-from datetime import datetime
-import random
-import math
+
 
 CODON_SIZE = 3
 """:class:`int`: the number of bases making up a codon"""
@@ -33,9 +31,6 @@ def reverse_complement(s):
     """
     temp = Seq(str(s), DNA_ALPHABET)
     return str(temp.reverse_complement())
-
-
-
 
 
 def translate(s, reading_frame=0):
@@ -191,9 +186,9 @@ CALL_METHOD = Vocab(CONTIG='contig', SPLIT='split reads', FLANK='flanking reads'
 """:class:`Vocab`: holds controlled vocabulary for allowed call methods
 
 - ``CONTIG``: a contig was assembled and aligned across the breakpoints
-- ``SPLIT``: the event was called by split reads
-- ``FLANK``: the event was called by flanking reads
-- ``SPAN``: the event was called by spanning reads
+- ``SPLIT``: the event was called by :term:`split read`
+- ``FLANK``: the event was called by :term:`flanking read pair`
+- ``SPAN``: the event was called by :term:`spanning read`
 """
 
 GENE_PRODUCT_TYPE = Vocab(SENSE='sense', ANTI_SENSE='anti-sense')
@@ -348,6 +343,7 @@ COLUMNS = Vocab(
 """:class:`Vocab`: Column names for i/o files used throughout the pipeline
 
 
+
 .. glossary::
     :sorted:
 
@@ -406,7 +402,7 @@ COLUMNS = Vocab(
         Position wrt the 5' end of the fusion transcript where coding ends last base of the stop codon
 
     fusion_mapped_domains
-        ``JSON`` - List of domains in json format where each domain start and end positions are given wrt to the fusion
+        ``JSON`` - List of domains in :term:`JSON` format where each domain start and end positions are given wrt to the fusion
         transcript and the mapping quality is the number of matching amino acid positions over the total
         number of amino acids. The sequence is the amino acid sequence of the domain on the reference/original
         transcript
@@ -421,7 +417,7 @@ COLUMNS = Vocab(
         File path to the svg drawing representing the annotation
 
     annotation_figure_legend
-        ``JSON`` - JSON data for the figure legend
+        ``JSON`` - :term:`JSON` data for the figure legend
 
     genes_encompassed
         Applies to intrachromosomal events only. List of genes which overlap any region that occurs between both

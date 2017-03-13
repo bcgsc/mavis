@@ -130,17 +130,17 @@ There are several reference files that are required for full functionality of th
 reference file will be reused often then the user may find it helpful to set reasonable defaults. Default values
 for any of the reference file arguments can be configured through ``MAVIS_`` prefixed environment variables.
 
-+--------------------------------------------------------------+----------------------------------+-----------------------------+
-| file                                                         | file type/format                 | environment variable        |
-+==============================================================+==================================+=============================+
-| :ref:`reference genome <reference-files-reference-genome>`   | :term:`fasta file`               | ``MAVIS_REFERENCE_GENOME``  |
-+--------------------------------------------------------------+----------------------------------+-----------------------------+
-| :ref:`annotations <reference-files-annotations>`             | :term:`json file` or text/tabbed | ``MAVIS_ANNOTATIONS``       |
-+--------------------------------------------------------------+----------------------------------+-----------------------------+
-| :ref:`masking <reference-files-masking>`                     | text/tabbed                      | ``MAVIS_MASKING``           |
-+--------------------------------------------------------------+----------------------------------+-----------------------------+
-| :ref:`template metadata <reference-files-template-metadata>` | text/tabbed                      | ``MAVIS_TEMPLATE_METADATA`` |
-+--------------------------------------------------------------+----------------------------------+-----------------------------+
++--------------------------------------------------------------+-----------------------------+-----------------------------+
+| file                                                         | file type/format            | environment variable        |
++==============================================================+=============================+=============================+
+| :ref:`reference genome <reference-files-reference-genome>`   | :term:`fasta`               | ``MAVIS_REFERENCE_GENOME``  |
++--------------------------------------------------------------+-----------------------------+-----------------------------+
+| :ref:`annotations <reference-files-annotations>`             | :term:`JSON` or text/tabbed | ``MAVIS_ANNOTATIONS``       |
++--------------------------------------------------------------+-----------------------------+-----------------------------+
+| :ref:`masking <reference-files-masking>`                     | text/tabbed                 | ``MAVIS_MASKING``           |
++--------------------------------------------------------------+-----------------------------+-----------------------------+
+| :ref:`template metadata <reference-files-template-metadata>` | text/tabbed                 | ``MAVIS_TEMPLATE_METADATA`` |
++--------------------------------------------------------------+-----------------------------+-----------------------------+
 
 
 If the environment variables above are set they will be used as the default values when any step of the pipeline
@@ -163,7 +163,7 @@ These are the sequence files in fasta format that are used in aligning and gener
 Annotations
 ,,,,,,,,,,,,,,,,,,,,,,,
 
-This is a custom file format. Essentially just a tabbed or :term:`json file` which contains the gene, transcript, exon,
+This is a custom file format. Essentially just a tabbed or :term:`JSON` file which contains the gene, transcript, exon,
 translation and protein domain positional information
 
 .. warning::
@@ -174,7 +174,7 @@ translation and protein domain positional information
     reference genome (sequences) is given and the cds start and end are not
     M and * amino acids as expected the translation is not loaded
 
-Example of the :term:`json file` structure can be seen below
+Example of the :term:`JSON` file structure can be seen below
 
 .. code-block:: javascript
 
@@ -214,7 +214,7 @@ Example of the :term:`json file` structure can be seen below
 
 This reference file can be generated from any database with the necessary information.
 There is a `basic perl script <https://svn.bcgsc.ca/svn/SVIA/svmerge/tools/generate_ensembl_json.pl>`_
-to generate the :term:`json file` using a connection to the `Ensembl <http://uswest.ensembl.org/index.html>`_ perl api.
+to generate the :term:`JSON` file using a connection to the `Ensembl <http://uswest.ensembl.org/index.html>`_ perl api.
 
 .. _reference-files-template-metadata:
 
@@ -281,7 +281,7 @@ Help sub-menus can be found by giving the pipeline step followed by no arguments
 Determining Input Parameters
 ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-There are some parameters that need to be computed from the bam files. This can generally be done by running the
+There are some parameters that need to be computed from the :term:`bam` files. This can generally be done by running the
 profile_bam.py script found in the tools directory
 
 .. code-block:: bash

@@ -6,17 +6,28 @@ Sub-package Documentation
 Types of Output Files
 ------------------------
 
-+--------------------------------+--------------------+------------------------------------------+
-| expected name/suffix           | file type/format   | content                                  |
-+================================+====================+==========================================+
-| ``annotations.tab``            | text/tabbed        | annotated events                         |
-+--------------------------------+--------------------+------------------------------------------+
-| ``annotations.fusion-cdna.fa`` | :term:`fasta file` | putative fusion unspliced cDNA sequences |
-+--------------------------------+--------------------+------------------------------------------+
-|                                | :term:`svg file`   | diagrams                                 |
-+--------------------------------+--------------------+------------------------------------------+
-|                                | :term:`json file`  | diagram legend/metadata                  |
-+--------------------------------+--------------------+------------------------------------------+
++--------------------------------+------------------+------------------------------------------+
+| expected name/suffix           | file type/format | content                                  |
++================================+==================+==========================================+
+| ``annotations.tab``            | text/tabbed      | annotated events                         |
++--------------------------------+------------------+------------------------------------------+
+| ``annotations.fusion-cdna.fa`` | :term:`fasta`    | putative fusion unspliced cDNA sequences |
++--------------------------------+------------------+------------------------------------------+
+| ``drawings/*.svg``             | :term:`SVG`      | diagrams                                 |
++--------------------------------+------------------+------------------------------------------+
+| ``drawings/*.legend.json``     | :term:`JSON`     | diagram legend/metadata                  |
++--------------------------------+------------------+------------------------------------------+
+
+
+Algorithm Overview
+----------------------
+
+see :ref:`theory - annotating events <theory-annotating-events>`
+
+- read in breakpoint pairs
+- generate strand-specific annotations (one annotation per strand, multiple if multiple genes/transcripts in the region)
+- try building fusion transcripts for bp-specific calls
+- generate :term:`SVG` diagrams
 
 
 .. figure:: _static/annotation_model.svg

@@ -12,6 +12,14 @@ from . import equivalent_events
 
 
 def main(inputs, output, flanking_call_distance, split_call_distance, contig_call_distance, **kwargs):
+    """
+    Args:
+        inputs (:class:`List` of :class:`str`): list of input files to read
+        output (str): path to the output directory
+        flanking_call_distance (int): pairing distance for pairing with an event called by :term:`flanking read pair`
+        split_call_distance (int): pairing distance for pairing with an event called by :term:`split read`
+        contig_call_distance (int): pairing distance for pairing with an event called by contig or :term:`spanning read`
+    """
     # load the file
     DISTANCES = {
         CALL_METHOD.FLANK: flanking_call_distance,

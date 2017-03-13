@@ -20,6 +20,17 @@ def main(
     min_domain_mapping_match, min_orf_size, max_orf_cap,
     **kwargs
 ):
+    """
+    Args:
+        inputs (:class:`List` of :class:`str`): list of input files to read
+        output (str): path to the output directory
+        reference_genome (object): see :func:`~mavis.annotate.file_io.load_reference_genome`
+        annotations(object): see :func:`~mavis.annotate.file_io.load_reference_genes`
+        template_metadata (object): see :func:`~mavis.annotate.file_io.load_templates`
+        min_domain_mapping_match (float): min mapping match percent (0-1) to count a domain as mapped
+        min_orf_size (int): minimum size of an :term:`open reading frame` to keep as a putative translation
+        max_orf_cap (int): the maximum number of :term:`open reading frame` s to collect for any given event
+    """
     DRAWINGS_DIRECTORY = os.path.join(output, 'drawings')
     TABBED_OUTPUT_FILE = os.path.join(output, 'annotations.tab')
     FA_OUTPUT_FILE = os.path.join(output, 'annotations.fusion-cdna.fa')
