@@ -175,8 +175,9 @@ def extend_softclipping(cigar, min_exact_to_stop_softclipping):
         min_exact_to_stop_softclipping (int): number of exact matches to terminate extension
 
     Returns:
-        (list of CIGAR and int, int): the new cigar string and a number representing the shift from the original
-            start position
+        tuple:
+            - :class:`list` of :class:`~structural_variant.constants.CIGAR` and :class:`int` - new cigar list
+            - :class:`int` - shift from the original start position
     """
     ref_start_shift = 0
     # determine how far to scoop for the front softclipping
@@ -297,6 +298,18 @@ def alignment_matches(cigar):
 
 
 def smallest_nonoverlapping_repeat(s):
+    """
+    for a given string returns the smallest substring that is
+    a repeat consuming the entire string
+
+    Example:
+        >>> smallest_nonoverlapping_repeat('ATATATA')
+        'ATATATA'
+        >>> smallest_nonoverlapping_repeat('ATATAT')
+        'AT'
+        >>> smallest_nonoverlapping_repeat('CCCCCCCC')
+        'C'
+    """
     for repsize in range(1, len(s) + 1):
         if len(s) % repsize == 0:
             substrings = [s[i:i + repsize] for i in range(0, len(s), repsize)]
@@ -351,7 +364,7 @@ def hgvs_standardize_cigar(read, reference_seq):
         if i < len(new_cigar) - 1:
             c, v = new_cigar[i]
             next_c, next_v = new_cigar[i + 1]
-            
+
             if c == CIGAR.I:
                 qpos += v
                 qseq = read.query_sequence[qpos - v:qpos]

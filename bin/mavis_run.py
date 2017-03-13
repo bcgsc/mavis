@@ -10,6 +10,7 @@ from mavis import validate
 from mavis import cluster
 from mavis import pairing
 from mavis import annotate
+from mavis import __version__
 
 from mavis.validate.constants import VALIDATION_DEFAULTS
 import mavis.pipeline.config as pconf
@@ -153,14 +154,42 @@ def main_pipeline(args, configs):
 
 
 def main():
-    def usage(err):
+    def usage(err=None, detail=False):
         name = os.path.basename(__file__)
-        print('usage: {} {{cluster,validate,annotate,pairing,summary,pipeline}}'.format(name))
-        print('{}: error:'.format(name), err)
-        exit(1)
+        u =  '\nusage: {} {{cluster,validate,annotate,pairing,pipeline}} [-h] [-v]'.format(name)
+        helpmenu = """
+required arguments:
+
+    pipeline_step
+        specifies which step in the pipeline or which subprogram
+        should be run. See possible input values above
+
+optional arguments:
+    -h, --help
+        bring up this help menu
+    -v, --version
+        output the version number
+
+To bring up individual help menus for a given pipeline step
+use the -h/--help option
+
+    >>> {} <pipeline step> -h
+    """.format(name)
+        print(u)
+        if detail:
+            print(helpmenu)
+        if err:
+            print('{}: error:'.format(name), err, '\n')
+            exit(1)
+        exit(0)
 
     if len(sys.argv) < 2:
         usage('the <pipeline step> argument is required')
+    elif sys.argv[1] in ['-h', '--help']:
+        usage(detail=True)
+    elif sys.argv[1] in ['-v', '--version']:
+        print('{} version {}'.format(os.path.basename(__file__), __version__))
+        exit(0)
 
     pstep = sys.argv.pop(1)
     sys.argv[0] = '{} {}'.format(sys.argv[0], pstep)

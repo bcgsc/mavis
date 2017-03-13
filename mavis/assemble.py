@@ -37,12 +37,18 @@ class DeBruijnGraph(nx.DiGraph):
     enforces edge weights
     """
     def get_edge_freq(self, n1, n2):
+        """
+        returns the freq from the data attribute for a specified edge
+        """
         if not self.has_edge(n1, n2):
             raise KeyError('missing edge', n1, n2)
         data = self.get_edge_data(n1, n2)
         return data['freq']
 
     def add_edge(self, n1, n2, freq=1):
+        """
+        add a given edge to the graph, if it exists add the frequency to the existing frequency count
+        """
         if self.has_edge(n1, n2):
             data = self.get_edge_data(n1, n2)
             freq += data['freq']
@@ -101,7 +107,7 @@ class DeBruijnGraph(nx.DiGraph):
                 path.insert(0, src)
                 src = temp[0]
             path.insert(0, src)
-            
+
             while self.in_degree(tgt) == 1 and self.out_degree(tgt) == 1:
                 temp = self.out_edges(tgt, data=True)[0]
                 if temp[2]['freq'] >= min_weight:
@@ -111,12 +117,12 @@ class DeBruijnGraph(nx.DiGraph):
             path.append(tgt)
             start_edge_data = self.get_edge_data(path[0], path[1])
             self.remove_edge(path[0], path[1])
-            
+
             end_edge_data = None
             if len(path) > 2:
                 end_edge_data = self.get_edge_data(path[-2], path[-1])
                 self.remove_edge(path[-2], path[-1])
-            
+
             if not nx.has_path(self, src, tgt):
                 self.add_edge(path[0], path[1], **start_edge_data)
                 if len(path) > 2:
@@ -126,6 +132,9 @@ class DeBruijnGraph(nx.DiGraph):
                     self.remove_node(node)
 
     def get_sinks(self, subgraph=None):
+        """
+        returns all nodes with an outgoing degree of zero
+        """
         nodeset = set()
         if subgraph is None:
             subgraph = self.nodes()
@@ -135,6 +144,9 @@ class DeBruijnGraph(nx.DiGraph):
         return nodeset
 
     def get_sources(self, subgraph=None):
+        """
+        returns all nodes with an incoming degree of zero
+        """
         nodeset = set()
         if subgraph is None:
             subgraph = self.nodes()
@@ -165,16 +177,16 @@ def digraph_connected_components(graph, subgraph=None):
         if src in subgraph and tgt in subgraph:
             g.add_edge(src, tgt)
     for n in graph.nodes():
-        if n in subgraph: 
+        if n in subgraph:
             g.add_node(n)
     return nx.connected_components(g)
 
 
 def _pull_assembled_paths(assembly, assembly_min_edge_weight, assembly_max_paths, log=lambda *pos, **kwargs: None):
     path_scores = {}  # path_str => score_int
-    
+
     unresolved_components = [(assembly_min_edge_weight, c) for c in digraph_connected_components(assembly)]
-    
+
     while len(unresolved_components) > 0:
         # since now we know it's a tree, the assemblies will all be ltd to
         # simple paths
@@ -186,18 +198,18 @@ def _pull_assembled_paths(assembly, assembly_min_edge_weight, assembly_max_paths
         if not nx.is_directed_acyclic_graph(subgraph):
             log('dropping cyclic subgraph', time_stamp=False)
             continue
-        
+
         all_paths = []
         if paths_est <= assembly_max_paths:
-            for source, sink in itertools.product(assembly.get_sources(component), assembly.get_sinks(component)): 
+            for source, sink in itertools.product(assembly.get_sources(component), assembly.get_sinks(component)):
                 all_paths.extend(list(nx.all_simple_paths(assembly, source, sink)))
                 if len(all_paths) > assembly_max_paths:
                     break
         paths_est = max([paths_est, len(all_paths)])
-        
+
         if paths_est > assembly_max_paths:
             log(
-                'reducing estimated paths. Current estimate is {}+ from'.format(paths_est), 
+                'reducing estimated paths. Current estimate is {}+ from'.format(paths_est),
                 len(component), 'nodes', 'filter increase', w + 1, time_stamp=False)
             w += 1
             assembly.trim_noncutting_paths_by_freq(w)
@@ -215,7 +227,7 @@ def _pull_assembled_paths(assembly, assembly_min_edge_weight, assembly_max_paths
             #         fh.write('{} {} {}\n'.format(src, tgt, data['freq']))
             # print('wrote: assembly_failed_edges.tgf')
             # exit(1)
-            
+
             for new_comp in digraph_connected_components(assembly, component):
                 unresolved_components.append((w, new_comp))
         else:
@@ -275,7 +287,7 @@ def assemble(
     assembly_min_read_mapping_overlap = assembly_max_kmer_size if assembly_min_read_mapping_overlap is None else \
         assembly_min_read_mapping_overlap
     assembly_min_contig_length = min_seq + 1 if assembly_min_contig_length is None else assembly_min_contig_length
-    
+
     assembly = DeBruijnGraph()
     log('hashing kmers')
     for s in sequences:
@@ -309,9 +321,9 @@ def assemble(
         rseq = reverse_complement(seq)
         if seq not in filtered_contigs and rseq not in filtered_contigs:
             filtered_contigs[seq] = contig
-    
+
     contigs = list(filtered_contigs.values())
-    
+
     input_seq_kmers = {}
     for seq in sequences:
         input_seq_kmers[seq] = set(kmers(seq, assembly_min_exact_match_to_remap))

@@ -12,10 +12,10 @@ from ..bam import cigar as cigar_tools
 class Evidence(BreakpointPair):
     @property
     def outer_window1(self):
-        """(:class:`~structural_variant.interval.Interval`): the window where evidence will be gathered for the first
+        """:class:`~structural_variant.interval.Interval`: the window where evidence will be gathered for the first
         breakpoint
 
-        see :ref:`related theory documentation <theory-calculating-the-evidence-window>`
+        see :ref:`theory - calculating the evidence window <theory-calculating-the-evidence-window>`
         """
         try:
             return self.outer_windows[0]
@@ -24,10 +24,10 @@ class Evidence(BreakpointPair):
 
     @property
     def outer_window2(self):
-        """(:class:`~structural_variant.interval.Interval`): the window where evidence will be gathered for the second
+        """:class:`~structural_variant.interval.Interval`: the window where evidence will be gathered for the second
         breakpoint
 
-        see :ref:`related theory documentation <theory-calculating-the-evidence-window>`
+        see :ref:`theory - calculating the evidence window <theory-calculating-the-evidence-window>`
         """
         try:
             return self.outer_windows[1]
@@ -36,7 +36,7 @@ class Evidence(BreakpointPair):
 
     @property
     def inner_window1(self):
-        """(:class:`~structural_variant.interval.Interval`): the window where evidence will be gathered for the first
+        """:class:`~structural_variant.interval.Interval`: the window where evidence will be gathered for the first
         breakpoint
         """
         try:
@@ -46,7 +46,7 @@ class Evidence(BreakpointPair):
 
     @property
     def inner_window2(self):
-        """(:class:`~structural_variant.interval.Interval`): the window where evidence will be gathered for the second
+        """:class:`~structural_variant.interval.Interval`: the window where evidence will be gathered for the second
         breakpoint
         """
         try:
@@ -290,7 +290,7 @@ class Evidence(BreakpointPair):
         Raises:
             UserWarning: the read does not support this event or does not pass quality filters
 
-        see :ref:`related theory documentation <theory-types-of-flanking-evidence>`
+        see :ref:`theory - types of flanking evidence <theory-types-of-flanking-evidence>`
         """
         if read.is_unmapped or mate.is_unmapped:
             raise ValueError('input reads must be a mapped and mated pair. One or both of the reads is unmapped')

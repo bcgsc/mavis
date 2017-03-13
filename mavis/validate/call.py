@@ -86,7 +86,7 @@ class EventCall(BreakpointPair):
             * :class:`int` - the median insert size
             * :class:`int` - the standard deviation (from the median) of the insert size
 
-        see :ref:`related theory documentation <theory-determining-flanking-support>`
+        see :ref:`theory - determining flanking support <theory-determining-flanking-support>`
         """
         support = set()
 
@@ -277,7 +277,7 @@ class EventCall(BreakpointPair):
 def _call_by_reads(source_evidence, read1, read2=None):
     """
     for any read or given set of reads calls a breakpoint pair
-    also ensures that the call is compatible with the source_evidence object 
+    also ensures that the call is compatible with the source_evidence object
     putative event types
     """
     try:
@@ -391,7 +391,7 @@ def _call_by_spanning_reads(source_evidence, consumed_evidence):
 def call_events(source_evidence):
     """
     generates a set of event calls based on the evidence associated with the source_evidence object
-    will also narrow down the event type?
+    will also narrow down the event type
 
     Args:
         source_evidence (Evidence): the input evidence
@@ -399,10 +399,6 @@ def call_events(source_evidence):
 
     Returns:
         :class:`list` of :class:`EventCall`: list of calls
-
-    .. figure:: ../_static/call_breakpoint_by_flanking_reads.svg
-
-        model used in calculating the uncertainty interval for breakpoints called by flanking read pair evidence
     """
     consumed_evidence = set()  # keep track to minimize evidence re-use
     calls = []
@@ -439,10 +435,6 @@ def _call_by_flanking_pairs(
     """
     Given a set of flanking reads, computes the coverage interval (the area that is covered by flanking read alignments)
     this area gives the starting position for computing the breakpoint interval.
-
-    .. figure:: _static/call_breakpoint_by_flanking_reads.svg
-
-        model used in calculating the uncertainty interval for breakpoints called by flanking read pair evidence
 
     .. todo::
 

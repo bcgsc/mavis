@@ -163,7 +163,7 @@ These are the sequence files in fasta format that are used in aligning and gener
 Annotations
 ,,,,,,,,,,,,,,,,,,,,,,,
 
-This is a custom file format. Essentially just a tabbed or json file which contains the gene, transcript, exon, 
+This is a custom file format. Essentially just a tabbed or :term:`json file` which contains the gene, transcript, exon,
 translation and protein domain positional information
 
 .. warning::
@@ -174,7 +174,7 @@ translation and protein domain positional information
     reference genome (sequences) is given and the cds start and end are not
     M and * amino acids as expected the translation is not loaded
 
-Example of the json structure can be seen below
+Example of the :term:`json file` structure can be seen below
 
 .. code-block:: javascript
 
@@ -214,7 +214,7 @@ Example of the json structure can be seen below
 
 This reference file can be generated from any database with the necessary information.
 There is a `basic perl script <https://svn.bcgsc.ca/svn/SVIA/svmerge/tools/generate_ensembl_json.pl>`_
-to generate the json file using a connection to the `Ensembl <http://uswest.ensembl.org/index.html>`_ perl api.
+to generate the :term:`json file` using a connection to the `Ensembl <http://uswest.ensembl.org/index.html>`_ perl api.
 
 .. _reference-files-template-metadata:
 
@@ -261,7 +261,7 @@ shown below
 Running the Pipeline
 .....................
 
-The pipeline can be run calling the main script (see below) followed the pipeline step. The usage menu can be viewed 
+The pipeline can be run calling the main script (see below) followed the pipeline step. The usage menu can be viewed
 by running the without any arguments, or by giving the -h/--help option
 
 **Example:**
@@ -274,7 +274,7 @@ by running the without any arguments, or by giving the -h/--help option
 Help sub-menus can be found by giving the pipeline step followed by no arguments or the -h options
 
 .. code-block:: bash
-    
+
     python bin/mavis_run.py cluster -h
 
 
@@ -311,7 +311,7 @@ will be generated to run all steps following clustering. The configuration file 
 can be output as shown below
 
 .. code-block:: bash
-    
+
     >>> mavis_run.py pipeline template.cfg --write
 
 This will create a template config file called template.cfg which can then be edited by the user.
