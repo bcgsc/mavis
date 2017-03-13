@@ -234,7 +234,7 @@ class TestTranscriptomeEvidenceWindow(unittest.TestCase):
         g.transcripts.append(ust)
         ref = {'fake': [g]}
         b = Breakpoint(chr='fake', start=17279591, orient=ORIENT.LEFT)
-        self.assertEqual(Interval(17277321, 17279702), self.transcriptome_window(b, [ust]))
+        self.assertEqual(Interval(17277321, 17279701), self.transcriptome_window(b, [ust]))
 
 
 class TestGenomeEvidenceWindow(unittest.TestCase):
