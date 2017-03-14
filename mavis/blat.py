@@ -444,7 +444,7 @@ def blat_contigs(
                     for read in aln:
                         # if it covers both breakpoints add to putative alignments
                         temp = Interval(read.reference_start, read.reference_end - 1)
-                        if INPUT_BAM_CACHE.chr(read) == e.break1.chr \
+                        if INPUT_BAM_CACHE.get_read_reference_name(read) == e.break1.chr \
                                 and Interval.overlaps(e.outer_window1, temp) \
                                 and Interval.overlaps(e.outer_window2, temp):
                             # split the continuous alignment, assume ins/dup or indel
@@ -491,14 +491,14 @@ def blat_contigs(
 
                     if len(union) - len(q1) < min_extend_overlap or len(union) - len(q2) < min_extend_overlap:
                         continue
-                    if INPUT_BAM_CACHE.chr(a1) == e.break1.chr \
+                    if INPUT_BAM_CACHE.get_read_reference_name(a1) == e.break1.chr \
                             and Interval.overlaps(e.outer_window1, (a1.reference_start, a1.reference_end - 1)) \
-                            and INPUT_BAM_CACHE.chr(a2) == e.break2.chr \
+                            and INPUT_BAM_CACHE.get_read_reference_name(a2) == e.break2.chr \
                             and Interval.overlaps(e.outer_window2, (a2.reference_start, a2.reference_end - 1)):
                         putative_alignments.append((a1, a2))
-                    elif INPUT_BAM_CACHE.chr(a2) == e.break1.chr \
+                    elif INPUT_BAM_CACHE.get_read_reference_name(a2) == e.break1.chr \
                             and Interval.overlaps(e.outer_window1, (a2.reference_start, a2.reference_end - 1)) \
-                            and INPUT_BAM_CACHE.chr(a1) == e.break2.chr \
+                            and INPUT_BAM_CACHE.get_read_reference_name(a1) == e.break2.chr \
                             and Interval.overlaps(e.outer_window2, (a1.reference_start, a1.reference_end - 1)):
                         putative_alignments.append((a2, a1))
                 if len(putative_alignments) == 0:

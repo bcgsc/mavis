@@ -153,7 +153,7 @@ class Evidence(BreakpointPair):
         # recalculate the read cigar string to ensure M is replaced with = or X
         c = cigar_tools.recompute_cigar_mismatch(
             read,
-            self.REFERENCE_GENOME[self.bam_cache.chr(read)].seq
+            self.REFERENCE_GENOME[self.bam_cache.get_read_reference_name(read)].seq
         )
         prefix = 0
         try:
@@ -161,7 +161,8 @@ class Evidence(BreakpointPair):
         except AttributeError:
             pass
         read.cigar = cigar_tools.join(c)
-        read.cigar = cigar_tools.hgvs_standardize_cigar(read, self.REFERENCE_GENOME[self.bam_cache.chr(read)].seq)
+        read.cigar = cigar_tools.hgvs_standardize_cigar(
+            read, self.REFERENCE_GENOME[self.bam_cache.get_read_reference_name(read)].seq)
         read.reference_start = read.reference_start + prefix
         # now shift any indel portions
 
@@ -246,7 +247,8 @@ class Evidence(BreakpointPair):
         if read.reference_start > mate.reference_start:
             read, mate = mate, read
 
-        if self.bam_cache.chr(read) != self.break1.chr or self.bam_cache.chr(mate) != self.break2.chr:
+        if self.bam_cache.get_read_reference_name(read) != self.break1.chr or \
+                self.bam_cache.get_read_reference_name(mate) != self.break2.chr:
             return False
 
         # check if this read falls in the first breakpoint window
@@ -315,12 +317,13 @@ class Evidence(BreakpointPair):
             mate = self.standardize_read(mate)
         # order the read pairs so that they are in the same order that we expect for the breakpoints
         if read.reference_id != mate.reference_id:
-            if self.bam_cache.chr(read) > self.bam_cache.chr(mate):
+            if self.bam_cache.get_read_reference_name(read) > self.bam_cache.get_read_reference_name(mate):
                 read, mate = mate, read
         elif read.reference_start > mate.reference_start:
             read, mate = mate, read
 
-        if self.bam_cache.chr(read) != self.break1.chr or self.bam_cache.chr(mate) != self.break2.chr:
+        if self.bam_cache.get_read_reference_name(read) != self.break1.chr or \
+                self.bam_cache.get_read_reference_name(mate) != self.break2.chr:
             return False
         if any([
             self.break1.orient == ORIENT.LEFT and read.is_reverse,
@@ -393,7 +396,7 @@ class Evidence(BreakpointPair):
         # check if the read falls within the evidence collection window
         # recall that pysam is 0-indexed and the window is 1-indexed
         if read.reference_start > window.end - 1 or read.reference_end < window.start \
-                or self.bam_cache.chr(read) != breakpoint.chr:
+                or self.bam_cache.get_read_reference_name(read) != breakpoint.chr:
             return False  # read not in breakpoint evidence window
         # can only enforce strand if both the breakpoint and the bam are stranded
         if self.stranded and self.bam_cache.stranded:

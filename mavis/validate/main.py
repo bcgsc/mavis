@@ -17,7 +17,7 @@ from .evidence import GenomeEvidence, TranscriptomeEvidence
 from .constants import VALIDATION_DEFAULTS
 from ..annotate.base import BioInterval
 from ..bam import cigar as cigar_tools
-from ..pipeline.util import read_inputs, log, output_tabbed_file, filter_on_overlap, write_bed_file, build_batch_id
+from ..pipeline.util import read_inputs, log, output_tabbed_file, filter_on_overlap, write_bed_file, build_batch_id, get_samtools_version
 
 VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
 
@@ -64,6 +64,8 @@ def main(
     CONTIG_BLAT_OUTPUT = os.path.join(output, FILENAME_PREFIX + '.contigs.blat_out.pslx')
     IGV_BATCH_FILE = os.path.join(output, FILENAME_PREFIX + '.igv.batch')
     INPUT_BAM_CACHE = BamCache(bam_file, stranded_bam)
+    if samtools_version is None:
+        samtools_version = get_samtools_version()
 
     validation_settings = {k: v for k, v in kwargs.items() if k in VALIDATION_DEFAULTS.__dict__}
     evidence_reads = set()  # keep track of collected reads to use for ouput

@@ -8,11 +8,15 @@ from mavis.constants import PROTOCOL
 from mavis.annotate.file_io import load_reference_genes
 from mavis.bam.stats import compute_transcriptome_bam_stats, compute_genome_bam_stats
 import pysam
+from configparser import ConfigParser
+import mavis.pipeline.config as pconf
 from mavis.pipeline.util import log
+import re
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('output', help='path to the output file')
     parser.add_argument(
         '-v', '--version', action='version', version='%(prog)s version ' + __version__,
         help='Outputs the version number'
@@ -46,13 +50,39 @@ def main(args):
         PROTOCOL.enforce(protocol)
         if not os.path.exists(bam_file):
             raise UserWarning('input bam file does not exist', bam_file)
+    
+    # now build the configuration file
+    config = ConfigParser()
+    for sec in ['DEFAULTS', 'reference', 'qsub', 'illustrate']:
+        config[sec] = {}
+    
+    for tag in pconf.REFERENCE_REQUIRED_FILES:
+        config['reference'][tag] = pconf.REFERENCE_DEFAULTS[tag] if pconf.REFERENCE_DEFAULTS[tag] else ''
+    for tag, val in pconf.QSUB_TAGS.items():
+        config['qsub'][tag] = str(val)
+    for tag, val in pconf.LIBRARY_DEFAULT_TAGS.items():
+        config['DEFAULTS'][tag] = str(val)
+    for tag, val in pconf.ILLUSTRATION_DEFAULTS.__dict__.items():
+        config['illustrate'][tag] = str(val)
+    
+    for sec in config:
+        for tag in config[sec]:
+            if '_regex_' in tag:
+                config[sec][tag] = re.sub('\$', '$$', config[sec][tag])
+    
+    # load the annotations file if given
     annotations = None
     if args.annotations:
         log('loading reference annotations:', args.annotations)
         annotations = load_reference_genes(args.annotations, args.best_transcripts_only)
-
+    
+    # compute the required stats for the input libraries
     for lib, protocol, bam_file in args.library:
         print('profiling:', lib, protocol, 'from', bam_file)
+        bam = None
+        config[lib] = {}
+        config[lib]['protocol'] = protocol
+        config[lib]['bam_file'] = bam_file
         try:
             bam = pysam.AlignmentFile(bam_file, 'rb')
             bamstats = None
@@ -66,7 +96,7 @@ def main(args):
                     log=log
                 )
             elif protocol == PROTOCOL.GENOME:
-                 bamstats = compute_genome_bam_stats(
+                bamstats = compute_genome_bam_stats(
                     bam, 
                     sample_size=args.bins,
                     sample_bin_size=args.bin_size, 
@@ -80,8 +110,17 @@ def main(args):
                 'median', bamstats.median_fragment_size, 
                 'stdev', bamstats.stdev_fragment_size, 
                 'read length', bamstats.read_length)
+            config[lib]['median_fragment_size'] = str(int(bamstats.median_fragment_size))
+            config[lib]['stdev_fragment_size'] = str(int(bamstats.stdev_fragment_size))
+            config[lib]['read_length'] = str(int(bamstats.read_length))
         finally:
-            bam.close()
+            try:
+                bam.close()
+            except AttributeError:
+                pass
+    with open(args.output, 'w') as configfile:
+        log('writing:', args.output)
+        config.write(configfile)
     """
     # now make a chart?
     try:

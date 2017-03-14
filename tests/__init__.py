@@ -20,6 +20,8 @@ BASE_EVENTS = os.path.join(filedir, 'mini_mock_sv_events.tsv')
 BLAT_INPUT = os.path.join(filedir, 'blat_input.fa')
 BLAT_OUTPUT = os.path.join(filedir, 'blat_output.pslx')
 
+RUN_FULL = int(os.environ.get('RUN_FULL', 1))
+
 
 class MockRead:
     def __init__(

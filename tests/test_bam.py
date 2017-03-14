@@ -3,12 +3,14 @@ from mavis.bam import read as read_tools
 from mavis.bam import cigar as cigar_tools
 from mavis.bam.read import sequenced_strand, read_pair_type, breakpoint_pos, orientation_supports_type
 from mavis.bam.cache import BamCache
-from mavis.annotate import load_reference_genome
+from mavis.bam.stats import Histogram, compute_transcriptome_bam_stats, compute_genome_bam_stats
+from mavis.annotate import load_reference_genome, load_reference_genes
+import pysam
 import unittest
 import warnings
 from tests import MockRead, MockBamFileHandle
-from tests import REFERENCE_GENOME_FILE
-from tests import BAM_INPUT
+from tests import REFERENCE_GENOME_FILE, TRANSCRIPTOME_BAM_INPUT, FULL_REFERENCE_ANNOTATIONS_FILE_JSON
+from tests import BAM_INPUT, FULL_BAM_INPUT
 
 REFERENCE_GENOME = None
 
@@ -43,11 +45,11 @@ class TestBamCache(unittest.TestCase):
         with self.assertRaises(KeyError):
             b.reference_id('2')
 
-    def test_chr(self):
+    def test_get_read_reference_name(self):
         fh = MockBamFileHandle({'1': 0})
         b = BamCache(fh)
         r = MockRead('name', 0)
-        self.assertEqual('1', b.chr(r))
+        self.assertEqual('1', b.get_read_reference_name(r))
 
     def test__generate_fetch_bins_single(self):
         self.assertEqual([(1, 100)], BamCache._generate_fetch_bins(1, 100, 1, 0))
@@ -60,22 +62,22 @@ class TestBamCache(unittest.TestCase):
 
     def test_fetch_single_read(self):
         b = BamCache(BAM_INPUT)
-        s = b.fetch('reference3', 1382,1383,read_limit=1, sample_bins=1)
-        self.assertEqual(1,len(s))
+        s = b.fetch('reference3', 1382, 1383, read_limit=1, sample_bins=1)
+        self.assertEqual(1, len(s))
         r = list(s)[0]
-        self.assertEqual('HISEQX1_11:4:2122:14275:37717:split',r.qname)
+        self.assertEqual('HISEQX1_11:4:2122:14275:37717:split', r.qname)
         b.close()
 
     def test_get_mate(self):
         #dependant on fetch working
         b = BamCache(BAM_INPUT)
-        s = b.fetch('reference3', 1382,1383,read_limit=1, sample_bins=1)
-        self.assertEqual(1,len(s))
+        s = b.fetch('reference3', 1382, 1383, read_limit=1, sample_bins=1)
+        self.assertEqual(1, len(s))
         r = list(s)[0]
-        self.assertEqual('HISEQX1_11:4:2122:14275:37717:split',r.qname)
+        self.assertEqual('HISEQX1_11:4:2122:14275:37717:split', r.qname)
         o = b.get_mate(r)
-        self.assertEqual(1,len(o))
-        self.assertEqual('HISEQX1_11:4:2122:14275:37717:split',o[0].qname)
+        self.assertEqual(1, len(o))
+        self.assertEqual('HISEQX1_11:4:2122:14275:37717:split', o[0].qname)
 
 
 class TestModule(unittest.TestCase):
@@ -271,8 +273,8 @@ class Testcigar_tools(unittest.TestCase):
 
     def test_extend_softclipping_insert(self):
         self.assertEqual(
-            ([(CIGAR.S, 10), (CIGAR.S, 2), (CIGAR.S, 5), (CIGAR.M, 10), (CIGAR.S,5)],2),
-            cigar_tools.extend_softclipping([(CIGAR.S,10), (CIGAR.M, 2), (CIGAR.I, 5), (CIGAR.M, 10), (CIGAR.I,5)],5)
+            ([(CIGAR.S, 10), (CIGAR.S, 2), (CIGAR.S, 5), (CIGAR.M, 10), (CIGAR.S, 5)], 2),
+            cigar_tools.extend_softclipping([(CIGAR.S, 10), (CIGAR.M, 2), (CIGAR.I, 5), (CIGAR.M, 10), (CIGAR.I, 5)], 5)
         )
 
     def test_alignment_matches(self):
@@ -293,7 +295,7 @@ class TestHgvsStandardizeCigars(unittest.TestCase):
         ref = 'AAATTTGGGCCCAATT'
         read = MockRead('name', '1', 1, cigar=[(CIGAR.M, 10)], query_sequence='AAATTTGGGC')
         self.assertEqual([(CIGAR.M, 10)], cigar_tools.hgvs_standardize_cigar(read, ref))
-    
+
     def no_change_proper_indel(self):
         ref = 'ATAGGC' 'ATCTACGAG' 'ATCGCTACG'
         read = MockRead(
@@ -303,7 +305,8 @@ class TestHgvsStandardizeCigars(unittest.TestCase):
             query_sequence='ATCTAC' 'CCC' 'ATCG',
             cigar=[(CIGAR.EQ, 6), (CIGAR.I, 3), (CIGAR.D, 3), (CIGAR.EQ, 4)]
         )
-        self.assertEqual([(CIGAR.EQ, 6), (CIGAR.I, 3), (CIGAR.D, 3), (CIGAR.EQ, 4)], cigar_tools.hgvs_standardize_cigar(read, ref))
+        self.assertEqual(
+            [(CIGAR.EQ, 6), (CIGAR.I, 3), (CIGAR.D, 3), (CIGAR.EQ, 4)], cigar_tools.hgvs_standardize_cigar(read, ref))
 
     def ins_after_deletion(self):
         ref = 'ATAGGC' 'ATCTACGAG' 'ATCGCTACG'
@@ -314,7 +317,8 @@ class TestHgvsStandardizeCigars(unittest.TestCase):
             query_sequence='ATCTAC' 'CCC' 'ATCG',
             cigar=[(CIGAR.EQ, 6), (CIGAR.D, 3), (CIGAR.I, 3), (CIGAR.EQ, 4)]
         )
-        self.assertEqual([(CIGAR.EQ, 6), (CIGAR.I, 3), (CIGAR.D, 3), (CIGAR.EQ, 4)], cigar_tools.hgvs_standardize_cigar(read, ref))
+        self.assertEqual(
+            [(CIGAR.EQ, 6), (CIGAR.I, 3), (CIGAR.D, 3), (CIGAR.EQ, 4)], cigar_tools.hgvs_standardize_cigar(read, ref))
 
     def test_insertion_in_repeat(self):
         ref = 'ATAGGC' 'ATCT' 'ACGA' 'GATCGCTACG'
@@ -347,8 +351,9 @@ class TestHgvsStandardizeCigars(unittest.TestCase):
             query_sequence='ATCT' 'ACGA' 'TTTTT' 'ACGA' 'GATC',
             cigar=[(CIGAR.EQ, 4), (CIGAR.D, 2), (CIGAR.I, 3), (CIGAR.D, 2), (CIGAR.I, 2), (CIGAR.EQ, 12)]
         )
-        self.assertEqual([(CIGAR.EQ, 4), (CIGAR.I, 5), (CIGAR.D, 4), (CIGAR.EQ, 12)], cigar_tools.hgvs_standardize_cigar(read, ref))
-    
+        self.assertEqual(
+            [(CIGAR.EQ, 4), (CIGAR.I, 5), (CIGAR.D, 4), (CIGAR.EQ, 12)], cigar_tools.hgvs_standardize_cigar(read, ref))
+
     def test_bubble_sort_indel_sections_drop_mismatch(self):
         ref = 'ATAGGC' 'ATCT' 'ACGA' 'ACGA' 'ACGA' 'GATCGCTACG'
         read = MockRead(
@@ -358,7 +363,8 @@ class TestHgvsStandardizeCigars(unittest.TestCase):
             query_sequence='ATCT' 'ACGAC' 'TTTTT' 'ACGA' 'GATC',
             cigar=[(CIGAR.EQ, 4), (CIGAR.X, 1), (CIGAR.D, 2), (CIGAR.I, 3), (CIGAR.D, 2), (CIGAR.I, 2), (CIGAR.EQ, 12)]
         )
-        self.assertEqual([(CIGAR.EQ, 4), (CIGAR.I, 6), (CIGAR.D, 5), (CIGAR.EQ, 12)], cigar_tools.hgvs_standardize_cigar(read, ref))
+        self.assertEqual(
+            [(CIGAR.EQ, 4), (CIGAR.I, 6), (CIGAR.D, 5), (CIGAR.EQ, 12)], cigar_tools.hgvs_standardize_cigar(read, ref))
 
     def test_homopolymer_even_odd(self):
         ref = 'ATCGAGAT' + 'A' * 15 + 'TCGAGAT'
@@ -369,30 +375,34 @@ class TestHgvsStandardizeCigars(unittest.TestCase):
             query_sequence='ATCGAGATA' + 'A' * 12 + 'TCGAGAT',
             cigar=[(CIGAR.EQ, 8), (CIGAR.D, 2), (CIGAR.EQ, 20)]
         )
-        self.assertEqual([(CIGAR.EQ, 9 + 12), (CIGAR.D, 2), (CIGAR.EQ, 7)], cigar_tools.hgvs_standardize_cigar(read, ref))
+        self.assertEqual(
+            [(CIGAR.EQ, 9 + 12), (CIGAR.D, 2), (CIGAR.EQ, 7)], cigar_tools.hgvs_standardize_cigar(read, ref))
         ref = 'CCCCGGCTCATGTCTGGTTTTGTTTTCCGGGGGCGGGGGGGCTCCCTGGGGATGATGGTGATTTTTTTTTTTTTTTAATCCTCAACTAGGAGAGAAAA' \
               'TGAGGCAGAGACAATGTGGGGAGCGAGAGAGGGGAAAAGGACGGGGGAGG'
 
         read = MockRead(
-            'name', '1', 0, 149, 
+            'name', '1', 0, 149,
             query_sequence=(
                 'CCCCGGCTCATGTCTGGTTTTGTTTTCCGGGGGCGGGGGGGCTCCCTGGGGATGATGGTGATTTTTTTTTTTTTTTTTAATCCTCAACTAGGAGAGAAAA'
                 'TGAGGCAGAGACAATGTGGGGAGCGAGAGAGGGGAAAAGGACGGGGGAGG'),
             cigar=[(CIGAR.EQ, 61), (CIGAR.I, 2), (CIGAR.EQ, 87)]
         )
-        self.assertEqual([(CIGAR.EQ, 61 + 15), (CIGAR.I, 2), (CIGAR.EQ, 87 - 15)], cigar_tools.hgvs_standardize_cigar(read, ref))
-        
+        self.assertEqual(
+            [(CIGAR.EQ, 61 + 15), (CIGAR.I, 2), (CIGAR.EQ, 87 - 15)], cigar_tools.hgvs_standardize_cigar(read, ref))
+
         ref = 'CCTCCTCGGTCGGGCAGATCTTTCAGAAGCAGGAGCCCAGGATCATGTCTGGTTTTGTTTTCCGAGGGCGAGGGGGCTCCCTGAGGATGATGGTGATTT' \
             'TTTTTTTTTTTTAATCCTCAACTAGGAGAGAAAATGAGGCAGAGACA'
 
         read = MockRead(
-            'name', '1', 0, 149, 
+            'name', '1', 0, 149,
             query_sequence=(
                 'CCCCTCCTCGGTCGGGCAGATCTTTCAGAAGCAGGAGCCCAGGATCATGTCTGGTTTTGTTTTCCGAGGGCGAGGGGGCTCCCTGAGGATGATGGTGATTTT'
                 'TTTTTTTTTTTTTAATCCTCAACTAGGAGAGAAAATGAGGCAGAGACA'),
             cigar=[(CIGAR.S, 2), (CIGAR.EQ, 96), (CIGAR.I, 2), (CIGAR.EQ, 50)]
         )
-        self.assertEqual([(CIGAR.S, 2), (CIGAR.EQ, 96 + 15), (CIGAR.I, 2), (CIGAR.EQ, 50 - 15)], cigar_tools.hgvs_standardize_cigar(read, ref))
+        self.assertEqual(
+            [(CIGAR.S, 2), (CIGAR.EQ, 96 + 15), (CIGAR.I, 2), (CIGAR.EQ, 50 - 15)],
+            cigar_tools.hgvs_standardize_cigar(read, ref))
 
 
     def test_smallest_nonoverlapping_repeat(self):
@@ -540,3 +550,91 @@ class TestReadPairType(unittest.TestCase):
         self.assertTrue(orientation_supports_type(self.RL, SVTYPE.TRANS))
         self.assertFalse(orientation_supports_type(self.LL, SVTYPE.TRANS))
         self.assertFalse(orientation_supports_type(self.RR, SVTYPE.TRANS))
+
+
+class TestHistogram(unittest.TestCase):
+    def test_add(self):
+        h = Histogram()
+        h.add(1)
+        h.add(1)
+        self.assertEqual(2, h[1])
+        h.add(1, 4)
+        self.assertEqual(6, h[1])
+
+    def test_median(self):
+        h = Histogram()
+        for i in range(1, 11):
+            h.add(i)
+        self.assertEqual(5.5, h.median())
+        h.add(11)
+        self.assertEqual(6, h.median())
+
+    def test_distib_stderr(self):
+        h = Histogram()
+        for i in range(0, 11):
+            h.add(i)
+        for i in range(4, 8):
+            h.add(i)
+        m = h.median()
+        self.assertEqual(5, m)
+        err = h.distribution_stderr(m, 1)
+        self.assertEqual(116 / 15, err)
+
+    def test_add_operator(self):
+        x = Histogram()
+        y = Histogram()
+        x.add(1)
+        y.add(1, 4)
+        z = x + y
+        self.assertEqual(1, x[1])
+        self.assertEqual(4, y[1])
+        self.assertEqual(5, z[1])
+
+
+class TestBamStats(unittest.TestCase):
+    def test_genome_bam_stats(self):
+        bamfh = None
+        try:
+            bamfh = pysam.AlignmentFile(FULL_BAM_INPUT, 'rb')
+            stats = compute_genome_bam_stats(
+                bamfh,
+                1000,
+                100,
+                min_mapping_quality=1,
+                sample_cap=10000,
+                distribution_fraction=0.99
+            )
+            self.assertGreaterEqual(10, abs(stats.median_fragment_size - 420))
+            self.assertEqual(150, stats.read_length)
+            self.assertGreaterEqual(120, stats.stdev_fragment_size)
+        finally:
+            try:
+                bamfh.close()
+            except AttributeError:
+                pass
+
+    def test_trans_bam_stats(self):
+        bamfh = None
+        try:
+            bamfh = pysam.AlignmentFile(TRANSCRIPTOME_BAM_INPUT, 'rb')
+            annotations = load_reference_genes(FULL_REFERENCE_ANNOTATIONS_FILE_JSON)
+            stats = compute_transcriptome_bam_stats(
+                bamfh,
+                annotations,
+                100,
+                best_transcripts_only=False,
+                min_mapping_quality=1,
+                stranded=True,
+                sample_cap=10000,
+                distribution_fraction=0.99
+            )
+            self.assertTrue(abs(stats.median_fragment_size - 185) < 5)
+            self.assertEqual(75, stats.read_length)
+            self.assertTrue(stats.stdev_fragment_size < 50)
+        finally:
+            try:
+                bamfh.close()
+            except AttributeError:
+                pass
+
+

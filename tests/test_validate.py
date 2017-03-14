@@ -1,19 +1,16 @@
 from mavis.breakpoint import Breakpoint
-from mavis.annotate import load_reference_genome, Gene, usTranscript, Transcript
-from mavis.constants import ORIENT, STRAND, PYSAM_READ_FLAGS
-from mavis.interval import Interval
+from mavis.annotate import load_reference_genome
+from mavis.constants import ORIENT, PYSAM_READ_FLAGS
 from mavis.bam.cache import BamCache
 from . import MockRead, mock_read_pair
 import unittest
-import itertools
-from . import REFERENCE_GENOME_FILE, BAM_INPUT, FULL_BAM_INPUT
+from . import REFERENCE_GENOME_FILE, BAM_INPUT, FULL_BAM_INPUT, RUN_FULL
 import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
+from mavis.validate.evidence import GenomeEvidence
 
 REFERENCE_GENOME = None
-RUN_FULL = int(os.environ.get('RUN_FULL', 0))
 
 
 def setUpModule():

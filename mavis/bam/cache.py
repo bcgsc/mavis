@@ -18,6 +18,11 @@ class BamCache:
         self.fh = bamfile
         if not hasattr(bamfile, 'fetch'):
             self.fh = pysam.AlignmentFile(bamfile, 'rb')
+        else:
+            try:
+                self.fh = bamfile.fh
+            except AttributeError:
+                pass
         atexit.register(self.close)  # makes the file 'auto close' on normal python exit
 
     def add_read(self, read):
@@ -39,7 +44,7 @@ class BamCache:
             raise KeyError('invalid reference name not present in bam file')
         return tid
 
-    def chr(self, read):
+    def get_read_reference_name(self, read):
         """
         Args:
             read (pysam.AlignedSegment): the read we want the chromosome name for
