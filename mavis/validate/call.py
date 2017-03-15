@@ -269,7 +269,8 @@ class EventCall(BreakpointPair):
                 COLUMNS.contig_remapped_read_names:
                     ';'.join(sorted(set([r.query_name for r in self.contig.input_reads]))),
                 COLUMNS.contig_strand_specific: self.contig.strand_specific,
-                COLUMNS.contig_alignment_query_coverage: caqc
+                COLUMNS.contig_alignment_query_coverage: caqc,
+                COLUMNS.contig_build_score: self.contig.score
             })
         return row
 
