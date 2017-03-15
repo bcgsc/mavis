@@ -34,6 +34,7 @@ def main_pipeline(args, configs):
     annotation_files = []
     annotation_jobs = []
     for sec in configs:
+        print()
         base = os.path.join(args.output, '{}_{}'.format(sec.library, sec.protocol))
         log('setting up the directory structure for', sec.library, 'as', base)
         base = os.path.join(args.output, '{}_{}'.format(sec.library, sec.protocol))
@@ -198,9 +199,7 @@ use the -h/--help option
         raise NotImplementedError('summary script has not been written')
     args = pconf.parse_arguments(pstep)
     config = []
-    log('input arguments')
-    for arg, val in sorted(args.__dict__.items()):
-        log(arg, '=', repr(val), time_stamp=False)
+
     if pstep == pconf.PIPELINE_STEP.PIPELINE:
         if args.write:
             log('writing:', args.config)
@@ -211,6 +210,15 @@ use the -h/--help option
             args.__dict__.update(temp.__dict__)
             for sec in config:
                 sec.output = args.output
+    for arg in ['output', 'reference_genome', 'template_metadata', 'annotations', 'masking']:
+        try:
+            args.__dict__[arg] = os.path.abspath(args.__dict__[arg])
+        except KeyError:
+            pass
+
+    log('input arguments')
+    for arg, val in sorted(args.__dict__.items()):
+        log(arg, '=', repr(val), time_stamp=False)
     # load the reference files if they have been given and reset the arguments to hold the original file name and the
     # loaded data
     if any([

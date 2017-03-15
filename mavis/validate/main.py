@@ -35,7 +35,7 @@ def main(
     input, output,
     bam_file, stranded_bam,
     library, protocol, median_fragment_size, stdev_fragment_size, read_length,
-    reference_genome, annotations, masking, blat_2bit_reference,
+    reference_genome, reference_genome_filename, annotations, masking, blat_2bit_reference,
     samtools_version, **kwargs
 ):
     """
@@ -265,7 +265,7 @@ def main(
     # write the igv batch file
     with open(IGV_BATCH_FILE, 'w') as fh:
         log('writing:', IGV_BATCH_FILE)
-        fh.write('new\ngenome {}\n'.format(reference_genome))
+        fh.write('new\ngenome {}\n'.format(reference_genome_filename))
 
         fh.write('load {} name="{}"\n'.format(PASSED_BED_FILE, 'passed events'))
         fh.write('load {} name="{}"\n'.format(CONTIG_BAM, 'aligned contigs'))

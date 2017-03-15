@@ -314,6 +314,7 @@ COLUMNS = Vocab(
     break2_split_reads_forced='break2_split_reads_forced',
     contig_alignment_query_coverage='contig_alignment_query_coverage',
     contig_alignment_score='contig_alignment_score',
+    contig_alignment_query_name='contig_alignment_query_coverage',
     contig_build_score='contig_build_score',
     contig_remap_score='contig_remap_score',
     contig_remapped_read_names='contig_remapped_read_names',
@@ -490,6 +491,9 @@ COLUMNS = Vocab(
 
     contigs_aligned
         :class:`int` - Number of contigs that were able to align
+
+    contig_alignment_query_name
+        The query name for the contig alignment. Should match the 'read' name(s) in the .contigs.bam output file
 
     contig_seq
         :class:`str` - Sequence of the current contig wrt to the positive forward strand if not strand specific

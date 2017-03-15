@@ -33,11 +33,11 @@ REFERENCE_DEFAULT_TAGS = dict(
 
 LIBRARY_REQUIRED_TAGS = dict(
     protocol=PROTOCOL.enforce,
-    bam_file=str, 
-    read_length=int, 
-    median_fragment_size=int, 
-    stdev_fragment_size=int, 
-    inputs=lambda x: x.split(';') if x else [], 
+    bam_file=str,
+    read_length=int,
+    median_fragment_size=int,
+    stdev_fragment_size=int,
+    inputs=lambda x: x.split(';') if x else [],
     pairing=lambda x: x.split(';') if x else []
 )
 
@@ -59,15 +59,15 @@ for fname in REFERENCE_REQUIRED_FILES:
 
 def write_config(filename, include_defaults=False):
     config = ConfigParser()
-    
+
     for sec in ['DEFAULTS', 'reference', '<LIBRARY NAME>', 'qsub', 'illustrate']:
         config[sec] = {}
-    
+
     for tag in REFERENCE_REQUIRED_FILES:
         config['reference'][tag] = '<REQUIRED>'
     for tag in LIBRARY_REQUIRED_TAGS:
         config['<LIBRARY NAME>'][tag] = '<REQUIRED>'
-    
+
     if include_defaults:
         for tag in REFERENCE_REQUIRED_FILES:
             config['reference'][tag] = '<REQUIRED>' if REFERENCE_DEFAULTS[tag] is None else REFERENCE_DEFAULTS[tag]
@@ -77,7 +77,7 @@ def write_config(filename, include_defaults=False):
             config['DEFAULTS'][tag] = str(val)
         for tag, val in ILLUSTRATION_DEFAULTS.__dict__.items():
             config['illustrate'][tag] = str(val)
-    
+
     for sec in config:
         for tag in config[sec]:
             if '_regex_' in tag:
@@ -129,7 +129,7 @@ def read_config(filepath):
     for sec in parser.sections():
         if sec not in ['DEFAULTS', 'reference', 'qsub', 'illustrate']:
             library_sections.append(sec)
-    
+
     all_libs = {}
     args = {}
     args.update(QSUB_TAGS)
@@ -152,15 +152,15 @@ def read_config(filepath):
     # type check the qsub options
     if 'qsub' in parser:
         args.update(validate_and_cast_section(parser['qsub'], QSUB_TAGS))
-    
+
     # cast the defaults
     if 'DEFAULTS' in parser:
         d = validate_and_cast_section(parser['DEFAULTS'], LIBRARY_DEFAULT_TAGS)
         all_libs.update(d)
-    
+
     if 'illustrate' in parser:
         args.update(validate_and_cast_section(parser['illustrate'], illustration_defaults))
-    
+
     if 'pairing' in parser:
         args.update(validate_and_cast_section(parser['pairing'], PAIRING_DEFAULTS))
     sections = []
@@ -241,11 +241,11 @@ def parse_arguments(pstep):
             '--output_svgs', default=True, type=TSV.tsv_boolean,
             help='set flag to suppress svg drawings of putative annotations')
         parser.add_argument(
-            '--min_orf_size', default=LIBRARY_DEFAULT_TAGS['min_orf_size'], type=int, 
+            '--min_orf_size', default=LIBRARY_DEFAULT_TAGS['min_orf_size'], type=int,
             help='minimum size for putative ORFs'
         )
         parser.add_argument(
-            '--max_orf_cap', default=LIBRARY_DEFAULT_TAGS['max_orf_cap'], type=int, 
+            '--max_orf_cap', default=LIBRARY_DEFAULT_TAGS['max_orf_cap'], type=int,
             help='keep the n longest orfs'
         )
         parser.add_argument(
@@ -280,7 +280,7 @@ def parse_arguments(pstep):
             '--min_clusters_per_file', default=LIBRARY_DEFAULT_TAGS['min_clusters_per_file'], type=int,
             help='defines the minimum number of clusters per file')
         parser.add_argument(
-            '-r', '--cluster_radius', help='radius to use in clustering', 
+            '-r', '--cluster_radius', help='radius to use in clustering',
             default=LIBRARY_DEFAULT_TAGS['cluster_radius'], type=int)
         parser.add_argument(
             '-k', '--cluster_clique_size',
@@ -288,7 +288,7 @@ def parse_arguments(pstep):
             default=LIBRARY_DEFAULT_TAGS['cluster_clique_size'], type=int
         )
         parser.add_argument(
-            '--uninformative_filter', default=LIBRARY_DEFAULT_TAGS['uninformative_filter'], 
+            '--uninformative_filter', default=LIBRARY_DEFAULT_TAGS['uninformative_filter'],
             help='If flag is False then the clusters will not be filtered '
             'based on lack of annotation', type=TSV.tsv_boolean
         )
@@ -346,5 +346,3 @@ def parse_arguments(pstep):
         pass
 
     return args
-
-

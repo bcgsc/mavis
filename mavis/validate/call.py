@@ -270,7 +270,8 @@ class EventCall(BreakpointPair):
                     ';'.join(sorted(set([r.query_name for r in self.contig.input_reads]))),
                 COLUMNS.contig_strand_specific: self.contig.strand_specific,
                 COLUMNS.contig_alignment_query_coverage: caqc,
-                COLUMNS.contig_build_score: self.contig.score
+                COLUMNS.contig_build_score: self.contig.score,
+                COLUMNS.contig_alignment_query_name: self.contig_alignment[0].query_name
             })
         return row
 

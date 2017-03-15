@@ -16,3 +16,4 @@
 /docs/source/auto
 /output
 /hg19_masked_regions.tsv
+*.fai
