@@ -23,7 +23,7 @@ LIBRARY_DEFAULT_TAGS = dict(
     max_proximity=5000,
     uninformative_filter=True,
     stranded_bam=False,
-    domain_regex_filter='^PF\d+$'
+    domain_name_regex_filter='^PF\d+$'
 )
 LIBRARY_DEFAULT_TAGS.update(VALIDATION_DEFAULTS.__dict__)
 
@@ -254,7 +254,7 @@ def parse_arguments(pstep):
         )
         g = parser.add_argument_group('visualization options')
         g.add_argument(
-            '--domain_regex_filter', default='^PF\d+$',
+            '--domain_name_regex_filter', default=ILLUSTRATION_DEFAULTS.domain_name_regex_filter,
             help='only show domains which names (external identifiers) match the given pattern'
         )
 
@@ -345,4 +345,14 @@ def parse_arguments(pstep):
     except (AttributeError, TypeError):
         pass
 
+    for filename in REFERENCE_REQUIRED_FILES:
+        try:
+            v = args.__dict__[filename]
+            if not v:
+                parser.print_help()
+                print('\nerror: required file {} has not been specified'.format(repr(filename)))
+                print('provide the --{} option or set the environment variable MAVIS_{}\n'.format(filename, filename.upper()))
+                exit(1)
+        except KeyError:
+            pass
     return args

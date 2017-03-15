@@ -143,8 +143,8 @@ def main(
                     json.dump(legend, fh)
                 break
             except DrawingFitError as err:
-                log('extending width:', DS.WIDTH, DS.WIDTH + 500, time_stamp=False)
-                DS.WIDTH += 500
+                log('extending width:', DS.width, DS.width + 500, time_stamp=False)
+                DS.width += 500
                 retry_count += 1
                 if retry_count > 10:
                     raise err

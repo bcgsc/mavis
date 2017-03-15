@@ -17,3 +17,4 @@
 /output
 /hg19_masked_regions.tsv
 *.fai
+POG*

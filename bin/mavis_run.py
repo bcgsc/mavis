@@ -105,7 +105,7 @@ def main_pipeline(args, configs):
             'min_orf_size': sec.min_orf_size,
             'max_orf_cap': sec.max_orf_cap,
             'min_domain_mapping_match': sec.min_domain_mapping_match,
-            'domain_regex_filter': sec.domain_regex_filter,
+            'domain_name_regex_filter': sec.domain_name_regex_filter,
             'max_proximity': sec.max_proximity
         }
         temp = [
@@ -213,7 +213,7 @@ use the -h/--help option
     for arg in ['output', 'reference_genome', 'template_metadata', 'annotations', 'masking']:
         try:
             args.__dict__[arg] = os.path.abspath(args.__dict__[arg])
-        except KeyError:
+        except (KeyError, TypeError):
             pass
 
     log('input arguments')

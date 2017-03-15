@@ -52,18 +52,18 @@ def draw_sv_summary_diagram(
         template_display_label_prefix (str): the character to precede the template label
     """
     templates = dict() if templates is None else templates
-    canvas = Drawing(size=(DS.WIDTH, 1000))  # just set the height for now and change later
+    canvas = Drawing(size=(DS.width, 1000))  # just set the height for now and change later
     labels = LabelMapping()  # keep labels consistent within the drawing
-    y = DS.TOP_MARGIN
-    x = DS.LEFT_MARGIN
+    y = DS.top_margin
+    x = DS.left_margin
 
-    dx_label_shift = DS.LABEL_LEFT_MARGIN
+    dx_label_shift = DS.label_left_margin
 
     x += dx_label_shift
-    drawing_width = DS.WIDTH - dx_label_shift - DS.LEFT_MARGIN - DS.RIGHT_MARGIN
+    drawing_width = DS.width - dx_label_shift - DS.left_margin - DS.right_margin
     # calculate the half-width for transcripts and genes etc
-    half_drawing_width = (drawing_width - DS.INNER_MARGIN - dx_label_shift) / 2
-    second_drawing_shift = x + half_drawing_width + DS.INNER_MARGIN + dx_label_shift
+    half_drawing_width = (drawing_width - DS.inner_margin - dx_label_shift) / 2
+    second_drawing_shift = x + half_drawing_width + DS.inner_margin + dx_label_shift
 
     if show_template:
         try:
@@ -104,39 +104,39 @@ def draw_sv_summary_diagram(
 
     for g in ann.genes_overlapping_break1:
         genes1.add(g)
-        colors[g] = DS.GENE1_COLOR
+        colors[g] = DS.gene1_color
 
     for g, d in ann.genes_proximal_to_break1:
         genes1.add(g)
-        colors[g] = DS.GENE1_COLOR
+        colors[g] = DS.gene1_color
 
     for g in ann.genes_overlapping_break2:
         genes2.add(g)
-        colors.setdefault(g, DS.GENE2_COLOR)
+        colors.setdefault(g, DS.gene2_color)
 
     for g, d in ann.genes_proximal_to_break2:
         genes2.add(g)
-        colors.setdefault(g, DS.GENE2_COLOR)
+        colors.setdefault(g, DS.gene2_color)
 
     if ann.transcript1:
         try:
             genes1.add(ann.transcript1.gene)
-            colors[ann.transcript1.gene] = DS.GENE1_COLOR_SELECTED
+            colors[ann.transcript1.gene] = DS.gene1_color_selected
             for e in ann.transcript1.exons:
-                colors[e] = DS.EXON1_COLOR
+                colors[e] = DS.exon1_color
         except AttributeError:
             genes1.add(ann.transcript1)
-            colors[ann.transcript1] = DS.GENE1_COLOR_SELECTED
+            colors[ann.transcript1] = DS.gene1_color_selected
 
     if ann.transcript2:
         try:
             genes2.add(ann.transcript2.gene)
-            colors.setdefault(ann.transcript2.gene, DS.GENE2_COLOR_SELECTED)
+            colors.setdefault(ann.transcript2.gene, DS.gene2_color_selected)
             for e in ann.transcript2.exons:
-                colors.setdefault(e, DS.EXON2_COLOR)
+                colors.setdefault(e, DS.exon2_color)
         except AttributeError:
             genes2.add(ann.transcript2)
-            colors[ann.transcript2] = DS.GENE2_COLOR_SELECTED
+            colors[ann.transcript2] = DS.gene2_color_selected
 
     # set all the labels so that they are re-used correctly
     aliases = {}
@@ -163,11 +163,11 @@ def draw_sv_summary_diagram(
 
     for gene in sorted(genes1 | genes2, key=lambda x: (str(x.get_chr()), x.start)):
         if isinstance(gene, IntergenicRegion):
-            l = labels.add(gene, DS.REGION_LABEL_PREFIX)
+            l = labels.add(gene, DS.region_label_prefix)
         elif user_friendly_labels and not alias_failure and gene in alias_by_gene:
             labels[alias_by_gene[gene]] = gene
         else:
-            l = labels.add(gene, DS.GENE_LABEL_PREFIX)
+            l = labels.add(gene, DS.gene_label_prefix)
 
     gheights = [0]
 
@@ -189,7 +189,7 @@ def draw_sv_summary_diagram(
         canvas.add(g)
         gheights.append(g.height)
 
-    y += max(gheights) + DS.INNER_MARGIN
+    y += max(gheights) + DS.inner_margin
 
     theights = [0]
     # now the transcript level drawings
@@ -241,11 +241,11 @@ def draw_sv_summary_diagram(
 
     y += max(theights)
     if max(theights) == 0:
-        y -= DS.INNER_MARGIN
+        y -= DS.inner_margin
 
     # finally the fusion transcript level drawing
     if fusion_transcript:
-        y += DS.INNER_MARGIN
+        y += DS.inner_margin
         for exon in fusion_transcript.exons:
             old_ex = fusion_transcript.exon_mapping[exon.position]
             if old_ex in colors:
@@ -261,7 +261,7 @@ def draw_sv_summary_diagram(
         canvas.add(g)
         y += g.height
 
-    y += DS.BOTTOM_MARGIN
+    y += DS.bottom_margin
     canvas.attribs['height'] = y
     for label, obj in labels.items():
         if label in legend:
@@ -278,8 +278,8 @@ def draw_multi_transcript_overlay(DS, gene, vmarkers=None, window_buffer=0, plot
     vmarkers = [] if vmarkers is None else vmarkers
     plots = [] if plots is None else plots
 
-    canvas = Drawing(size=(DS.WIDTH, 1000))  # just set the height for now and change later
-    w = DS.WIDTH - DS.LEFT_MARGIN - DS.RIGHT_MARGIN - DS.OVERLAY_LEFT_LABEL - DS.PADDING
+    canvas = Drawing(size=(DS.width, 1000))  # just set the height for now and change later
+    w = DS.width - DS.left_margin - DS.right_margin - DS.overlay_left_label - DS.padding
     labels = LabelMapping()  # keep labels consistent within the drawing
 
     all_exons = set()
@@ -287,7 +287,7 @@ def draw_multi_transcript_overlay(DS, gene, vmarkers=None, window_buffer=0, plot
     for tx in gene.transcripts:
         for ex in tx.exons:
             all_exons.add(ex)
-            colors[ex] = DS.EXON1_COLOR if tx.is_best_transcript else DS.EXON2_COLOR
+            colors[ex] = DS.exon1_color if tx.is_best_transcript else DS.exon2_color
 
         for tr in tx.transcripts:
             for tl in tr.translations:
@@ -300,21 +300,21 @@ def draw_multi_transcript_overlay(DS, gene, vmarkers=None, window_buffer=0, plot
     mapping = generate_interval_mapping(
         all_exons,
         w,
-        DS.EXON_INTRON_RATIO,
-        DS.EXON_MIN_WIDTH,
-        min_inter_width=DS.MIN_WIDTH,
+        DS.exon_intron_ratio,
+        DS.exon_min_width,
+        min_inter_width=DS.min_width,
         start=st, end=end
     )
     main_group = canvas.g(class_='overlay')
 
-    x = DS.OVERLAY_LEFT_LABEL + DS.PADDING
-    y = DS.MARKER_TOP_MARGIN
+    x = DS.overlay_left_label + DS.padding
+    y = DS.marker_top_margin
 
     for plot in plots:
         plot_group = draw_scatter(DS, canvas, plot, mapping)
         main_group.add(plot_group)
         plot_group.translate(x, y)
-        y += plot.height + DS.PADDING * 2
+        y += plot.height + DS.padding * 2
 
     regular_transcripts = sorted([tx for tx in gene.transcripts if not tx.is_best_transcript], key=lambda x: x.name)
     for tx in regular_transcripts:
@@ -325,15 +325,15 @@ def draw_multi_transcript_overlay(DS, gene, vmarkers=None, window_buffer=0, plot
         t = canvas.text(
             tx.name,
             insert=(
-                x - DS.PADDING,
-                y + DS.TRACK_HEIGHT / 2 + DS.FONT_CENTRAL_SHIFT_RATIO * DS.LABEL_FONT_SIZE
+                x - DS.padding,
+                y + DS.track_height / 2 + DS.font_central_shift_ratio * DS.label_font_size
             ),
-            fill=DS.LABEL_COLOR,
-            style=DS.FONT_STYLE.format(font_size=DS.LABEL_FONT_SIZE, text_anchor='end'),
+            fill=DS.label_color,
+            style=DS.font_style.format(font_size=DS.label_font_size, text_anchor='end'),
             class_='label'
         )
         main_group.add(t)
-        y += DS.PADDING + DS.TRACK_HEIGHT
+        y += DS.padding + DS.track_height
 
     best_transcripts = sorted([tx for tx in gene.transcripts if tx.is_best_transcript], key=lambda x: x.name)
     for tx in best_transcripts:
@@ -344,21 +344,21 @@ def draw_multi_transcript_overlay(DS, gene, vmarkers=None, window_buffer=0, plot
         main_group.add(g)
         g.translate(x, y)
 
-        y += DS.PADDING + g.height
+        y += DS.padding + g.height
 
-    y += DS.MARKER_BOTTOM_MARGIN
+    y += DS.marker_bottom_margin
     # now draw the breakpoints overtop
     for i, m in enumerate(sorted(vmarkers)):
         s = Interval.convert_ratioed_pos(mapping, m.start)
         t = Interval.convert_ratioed_pos(mapping, m.end)
         px_itvl = Interval(s.start, t.end)
         bg = draw_vmarker(DS,
-            canvas, m, px_itvl.length(), y, label=labels.add(m, DS.MARKER_LABEL_PREFIX))
+            canvas, m, px_itvl.length(), y, label=labels.add(m, DS.marker_label_prefix))
         bg.translate(x + px_itvl.start, 0)
         main_group.add(bg)
 
-    main_group.translate(DS.LEFT_MARGIN, DS.TOP_MARGIN)
-    y += DS.BOTTOM_MARGIN
+    main_group.translate(DS.left_margin, DS.top_margin)
+    y += DS.bottom_margin
     canvas.add(main_group)
     canvas.attribs['height'] = y
     return canvas

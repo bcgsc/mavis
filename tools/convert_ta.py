@@ -2,9 +2,9 @@
 script for converting Trans-ABySS output file into the SVMerge accepted input format
 """
 import TSV
-from structural_variant.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND
-from structural_variant.breakpoint import Breakpoint, BreakpointPair
-from structural_variant.error import *
+from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND
+from mavis.breakpoint import Breakpoint, BreakpointPair
+from mavis.error import *
 import argparse
 import warnings
 import os
@@ -58,7 +58,7 @@ def main():
             'strand2': lambda x: STRAND.NEG if x == STRAND.POS else STRAND.POS
         },
         strict=False,
-        _in={
+        in_={
             'strand1': STRAND,
             'strand2': STRAND,
             'or1': ORIENT,

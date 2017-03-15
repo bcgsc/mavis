@@ -64,24 +64,24 @@ def draw_scatter(DS, canvas, plot, xmapping):
     for x, y in zip(xpx, ypx):
         xp, xpo = x
         yp, ypo = y
-        if xp.length() > DS.SCATTER_MARKER_RADIUS:
+        if xp.length() > DS.scatter_marker_radius:
             plot_group.add(canvas.line(
                 (xp.start, yp.center),
                 (xp.end, yp.center),
                 stroke='#000000',
-                stroke_width=DS.SCATTER_ERROR_BAR_STROKE_WIDTH
+                stroke_width=DS.scatter_error_bar_stroke_width
             ))
-        if yp.length() > DS.SCATTER_MARKER_RADIUS:
+        if yp.length() > DS.scatter_marker_radius:
             plot_group.add(canvas.line(
                 (xp.center, yp.start),
                 (xp.center, yp.end),
                 stroke='#000000',
-                stroke_width=DS.SCATTER_ERROR_BAR_STROKE_WIDTH
+                stroke_width=DS.scatter_error_bar_stroke_width
             ))
         plot_group.add(canvas.circle(
             center=(xp.center, yp.center),
             fill=plot.colors.get((xpo, ypo), '#000000'),
-            r=DS.SCATTER_MARKER_RADIUS
+            r=DS.scatter_marker_radius
         ))
 
     xmax = Interval.convert_ratioed_pos(xmapping, plot.xmax).end
@@ -105,7 +105,7 @@ def draw_scatter(DS, canvas, plot, xmapping):
         py = plot.height - abs(y - plot.ymin) * yratio
         plot_group.add(
             canvas.line(
-                start=(0 - DS.SCATTER_YAXIS_TICK_SIZE, py),
+                start=(0 - DS.scatter_yaxis_tick_size, py),
                 end=(0, py),
                 stroke='#000000'
             ))
@@ -113,25 +113,25 @@ def draw_scatter(DS, canvas, plot, xmapping):
             canvas.text(
                 str(y),
                 insert=(
-                    0 - DS.SCATTER_YAXIS_TICK_SIZE - DS.PADDING,
-                    py + DS.SCATTER_YTICK_FONT_SIZE * DS.FONT_CENTRAL_SHIFT_RATIO),
-                fill=DS.LABEL_COLOR,
-                style=DS.FONT_STYLE.format(font_size=DS.SCATTER_YTICK_FONT_SIZE, text_anchor='end')
+                    0 - DS.scatter_yaxis_tick_size - DS.padding,
+                    py + DS.scatter_ytick_font_size * DS.font_central_shift_ratio),
+                fill=DS.label_color,
+                style=DS.font_style.format(font_size=DS.scatter_ytick_font_size, text_anchor='end')
             ))
 
     shift = max(ytick_labels)
-    x = 0 - DS.PADDING * 2 - DS.SCATTER_AXIS_FONT_SIZE - DS.SCATTER_YAXIS_TICK_SIZE - \
-        DS.SCATTER_YTICK_FONT_SIZE * DS.FONT_WIDTH_HEIGHT_RATIO * shift
+    x = 0 - DS.padding * 2 - DS.scatter_axis_font_size - DS.scatter_yaxis_tick_size - \
+        DS.scatter_ytick_font_size * DS.font_width_height_ratio * shift
     y = plot.height / 2
     yaxis = canvas.text(
         plot.y_axis_label,
         insert=(x, y),
-        fill=DS.LABEL_COLOR,
-        style=DS.FONT_STYLE.format(font_size=DS.SCATTER_AXIS_FONT_SIZE, text_anchor='start'),
+        fill=DS.label_color,
+        style=DS.font_style.format(font_size=DS.scatter_axis_font_size, text_anchor='start'),
         class_='y_axis_label'
     )
     plot_group.add(yaxis)
-    cx = len(plot.y_axis_label) * DS.FONT_WIDTH_HEIGHT_RATIO * DS.SCATTER_AXIS_FONT_SIZE / 2
+    cx = len(plot.y_axis_label) * DS.font_width_height_ratio * DS.scatter_axis_font_size / 2
     yaxis.rotate(270, (x + cx, y))
     yaxis.translate(0, 0)
 

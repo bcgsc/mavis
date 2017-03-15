@@ -3,21 +3,21 @@ from ..constants import GIESMA_STAIN
 from argparse import Namespace
 
 DEFAULTS = Namespace(
-    WIDTH=1000,
-    SCAFFOLD_COLOR='#000000',
-    GENE1_COLOR_SELECTED='#518DC5',
-    GENE2_COLOR_SELECTED='#4C9677',
-    GENE1_COLOR='#657E91',
-    GENE2_COLOR='#325556',
-    LABEL_COLOR='#000000',
-    DOMAIN_COLOR='#ccccb3',
-    DOMAIN_MISMATCH_COLOR='#B2182B',
-    SPLICE_COLOR='#000000',
-    BREAKPOINT_COLOR='#000000',
-    MASK_FILL='#FFFFFF',
-    MASK_OPACITY=0.7,
-    DOMAIN_NAME_REGEX_FILTER='.*',
-    DOMAIN_SCAFFOLD_COLOR='#000000'
+    width=1000,
+    scaffold_color='#000000',
+    gene1_color_selected='#518dc5',
+    gene2_color_selected='#4c9677',
+    gene1_color='#657e91',
+    gene2_color='#325556',
+    label_color='#000000',
+    domain_color='#ccccb3',
+    domain_mismatch_color='#b2182b',
+    splice_color='#000000',
+    breakpoint_color='#000000',
+    mask_fill='#ffffff',
+    mask_opacity=0.7,
+    domain_name_regex_filter='.*',
+    domain_scaffold_color='#000000'
 )
 
 
@@ -32,115 +32,115 @@ class DiagramSettings:
             if arg not in DEFAULTS.__dict__:
                 raise KeyError('unrecognized argument', arg)
             setattr(self, arg, val)
-        self.MIN_WIDTH = 10  # no element (exon, gene, etc can be less than this wide)
-        self.TRACK_LINE_HEIGHT = 4
-        self.LEFT_MARGIN = 20
-        self.RIGHT_MARGIN = 20
-        self.TOP_MARGIN = 20
-        self.BOTTOM_MARGIN = 20
-        self.INNER_MARGIN = 20
-        self.PADDING = 5
-        self.SCAFFOLD_HEIGHT = 3
-        self.TRACK_HEIGHT = 50
+        self.min_width = 10  # no element (exon, gene, etc can be less than this wide)
+        self.track_line_height = 4
+        self.left_margin = 20
+        self.right_margin = 20
+        self.top_margin = 20
+        self.bottom_margin = 20
+        self.inner_margin = 20
+        self.padding = 5
+        self.scaffold_height = 3
+        self.track_height = 50
         # removing unsupported attr: 'alignment-baseline:central;dominant-baseline:central;' \
-        self.FONT_STYLE = 'font-size:{font_size}px;font-weight:bold;alignment-baseline:baseline;' \
+        self.font_style = 'font-size:{font_size}px;font-weight:bold;alignment-baseline:baseline;' \
             'text-anchor:{text_anchor};font-family: consolas, courier new, monospace'
         # ratio for courier new which is wider than consolas, used for estimating width
-        self.FONT_WIDTH_HEIGHT_RATIO = 1229 / 2048
-        self.FONT_CENTRAL_SHIFT_RATIO = 0.3
-        self.ABS_MIN_WIDTH = 0.01
+        self.font_width_height_ratio = 1229 / 2048
+        self.font_central_shift_ratio = 0.3
+        self.abs_min_width = 0.01
 
-        self.GENE_DEFAULT_COLOR = self.GENE1_COLOR
-        self.GENE_MIN_BUFFER = 1000
-        self.GENE_ARROW_WIDTH = 20
-        self.GENE_INTERGENIC_RATIO = 5
-        self.GENE_MIN_WIDTH = 40 + self.GENE_ARROW_WIDTH
-        self.GENE_LABEL_PREFIX = 'G'
+        self.gene_default_color = self.gene1_color
+        self.gene_min_buffer = 1000
+        self.gene_arrow_width = 20
+        self.gene_intergenic_ratio = 5
+        self.gene_min_width = 40 + self.gene_arrow_width
+        self.gene_label_prefix = 'G'
 
-        self.LABEL_FONT_SIZE = 20
-        self.DYNAMIC_LABELS = True
-        self.LABEL_LEFT_MARGIN = self.LABEL_FONT_SIZE * self.FONT_WIDTH_HEIGHT_RATIO * 4
+        self.label_font_size = 20
+        self.dynamic_labels = True
+        self.label_left_margin = self.label_font_size * self.font_width_height_ratio * 4
 
-        self.DOMAIN_TRACK_HEIGHT = 30
-        self.DOMAIN_SCAFFOLD_HEIGHT = 1
-        self.DOMAIN_LABEL_PREFIX = 'D'
-        self.DOMAIN_LABEL_FONT_SIZE = 20
-        self.DOMAIN_FILL_GRADIENT = [
-            c.hex for c in Color(self.DOMAIN_MISMATCH_COLOR).range_to(Color(self.DOMAIN_COLOR), 10)]
-        self.PFAM_DOMAIN = '^PF\d+$'
-        self.PFAM_LINK = 'http://pfam.xfam.org/family/{.name}'
+        self.domain_track_height = 30
+        self.domain_scaffold_height = 1
+        self.domain_label_prefix = 'D'
+        self.domain_label_font_size = 20
+        self.domain_fill_gradient = [
+            c.hex for c in Color(self.domain_mismatch_color).range_to(Color(self.domain_color), 10)]
+        self.pfam_domain = '^PF\d+$'
+        self.pfam_link = 'http://pfam.xfam.org/family/{.name}'
 
-        self.SPLICE_HEIGHT = self.TRACK_HEIGHT / 2
-        self.SPLICE_STROKE_DASHARRAY = [2, 2]
-        self.SPLICE_STROKE_WIDTH = 2
+        self.splice_height = self.track_height / 2
+        self.splice_stroke_dasharray = [2, 2]
+        self.splice_stroke_width = 2
 
-        self.BREAKPOINT_STROKE_DASHARRAY = [3, 3]
-        self.BREAKPOINT_ORIENT_STROKE_WIDTH = 2
-        self.BREAKPOINT_LABEL_FONT_SIZE = 20
-        self.BREAKPOINT_BOTTOM_MARGIN = 20
-        self.BREAKPOINT_TOP_MARGIN = self.PADDING * 2 + self.BREAKPOINT_LABEL_FONT_SIZE + self.BREAKPOINT_BOTTOM_MARGIN
-        self.BREAKPOINT_LABEL_PREFIX = 'B'
+        self.breakpoint_stroke_dasharray = [3, 3]
+        self.breakpoint_orient_stroke_width = 2
+        self.breakpoint_label_font_size = 20
+        self.breakpoint_bottom_margin = 20
+        self.breakpoint_top_margin = self.padding * 2 + self.breakpoint_label_font_size + self.breakpoint_bottom_margin
+        self.breakpoint_label_prefix = 'B'
 
-        self.MARKER_LABEL_FONT_SIZE = self.BREAKPOINT_LABEL_FONT_SIZE
-        self.MARKER_LABEL_PREFIX = 'M'
-        self.MARKER_TOP_MARGIN = self.BREAKPOINT_TOP_MARGIN
-        self.MARKER_BOTTOM_MARGIN = self.BREAKPOINT_BOTTOM_MARGIN
-        self.MARKER_COLOR = self.BREAKPOINT_COLOR
+        self.marker_label_font_size = self.breakpoint_label_font_size
+        self.marker_label_prefix = 'M'
+        self.marker_top_margin = self.breakpoint_top_margin
+        self.marker_bottom_margin = self.breakpoint_bottom_margin
+        self.marker_color = self.breakpoint_color
 
-        self.TRANSCRIPT_HYPERLINK = 'http://dec2013.archive.ensembl.org/Homo_sapiens/Transcript/Summary?' \
+        self.transcript_hyperlink = 'http://dec2013.archive.ensembl.org/Homo_sapiens/Transcript/Summary?' \
             'db=core;t={.name}'
-        self.EXON_FONT_SIZE = 20
-        self.EXON_TEAR_TOOTH_WIDTH = 2
-        self.EXON_MIN_WIDTH = max([
-            self.MIN_WIDTH + self.EXON_TEAR_TOOTH_WIDTH * 2,
-            self.EXON_FONT_SIZE * 2 * self.FONT_WIDTH_HEIGHT_RATIO
+        self.exon_font_size = 20
+        self.exon_tear_tooth_width = 2
+        self.exon_min_width = max([
+            self.min_width + self.exon_tear_tooth_width * 2,
+            self.exon_font_size * 2 * self.font_width_height_ratio
         ])
-        self.EXON_TEAR_TOOTH_HEIGHT = 2
-        self.EXON_INTRON_RATIO = 20
-        self.EXON1_COLOR = self.GENE1_COLOR_SELECTED
-        self.EXON2_COLOR = self.GENE2_COLOR_SELECTED
+        self.exon_tear_tooth_height = 2
+        self.exon_intron_ratio = 20
+        self.exon1_color = self.gene1_color_selected
+        self.exon2_color = self.gene2_color_selected
 
-        self.TRANSCRIPT_LABEL_PREFIX = 'T'
-        self.FUSION_LABEL_PREFIX = 'F'
+        self.transcript_label_prefix = 'T'
+        self.fusion_label_prefix = 'F'
 
-        self.TRANSLATION_FONT_SIZE = 14
-        self.TRANSLATION_SCAFFOLD_COLOR = self.SCAFFOLD_COLOR
-        self.TRANSLATION_TRACK_HEIGHT = self.TRANSLATION_FONT_SIZE
-        self.TRANSLATION_START_MARKER = 'M'
-        self.TRANSLATION_END_MARKER = '*'
-        self.TRANSLATION_MARKER_PADDING = 4
+        self.translation_font_size = 14
+        self.translation_scaffold_color = self.scaffold_color
+        self.translation_track_height = self.translation_font_size
+        self.translation_start_marker = 'M'
+        self.translation_end_marker = '*'
+        self.translation_marker_padding = 4
 
-        self.LEGEND_SWATCH_SIZE = 50
-        self.LEGEND_FONT_SIZE = 20
-        self.LEGEND_SWATCH_STROKE = '#000000'
-        self.LEGEND_FONT_COLOR = '#000000'
-        self.LEGEND_BORDER_STROKE = '#000000'
-        self.LEGEND_BORDER_STROKE_WIDTH = 1
+        self.legend_swatch_size = 50
+        self.legend_font_size = 20
+        self.legend_swatch_stroke = '#000000'
+        self.legend_font_color = '#000000'
+        self.legend_border_stroke = '#000000'
+        self.legend_border_stroke_width = 1
 
-        self.TEMPLATE_BAND_STROKE_WIDTH = 0.5
-        temp = [c.hex for c in Color('#FFFFFF').range_to(Color('#000000'), 5)]
-        self.TEMPLATE_BAND_FILL = {
+        self.template_band_stroke_width = 0.5
+        temp = [c.hex for c in Color('#ffffff').range_to(Color('#000000'), 5)]
+        self.template_band_fill = {
             GIESMA_STAIN.ACEN: '#800000',
             GIESMA_STAIN.GPOS25: temp[1],
             GIESMA_STAIN.GPOS50: temp[2],
             GIESMA_STAIN.GPOS75: temp[3],
             GIESMA_STAIN.GPOS100: temp[4],
-            GIESMA_STAIN.GNEG: '#FFFFFF'
+            GIESMA_STAIN.GNEG: '#ffffff'
         }
-        self.TEMPLATE_BAND_STROKE = '#000000'
-        self.TEMPLATE_TRACK_HEIGHT = max([
-            self.TRACK_HEIGHT / 3,
-            self.LABEL_FONT_SIZE - self.BREAKPOINT_BOTTOM_MARGIN -
-            self.BREAKPOINT_TOP_MARGIN + self.BREAKPOINT_LABEL_FONT_SIZE])
-        self.TEMPLATE_DEFAULT_FILL = '#FFFFFF'
-        self.TEMPLATE_BAND_MIN_WIDTH = 2
-        self.TEMPLATE_LABEL_PREFIX = 'C'
+        self.template_band_stroke = '#000000'
+        self.template_track_height = max([
+            self.track_height / 3,
+            self.label_font_size - self.breakpoint_bottom_margin -
+            self.breakpoint_top_margin + self.breakpoint_label_font_size])
+        self.template_default_fill = '#ffffff'
+        self.template_band_min_width = 2
+        self.template_label_prefix = 'C'
 
-        self.REGION_LABEL_PREFIX = 'R'
-        self.OVERLAY_LEFT_LABEL = 16 * self.FONT_WIDTH_HEIGHT_RATIO * self.EXON_FONT_SIZE
+        self.region_label_prefix = 'R'
+        self.overlay_left_label = 16 * self.font_width_height_ratio * self.exon_font_size
 
-        self.SCATTER_AXIS_FONT_SIZE = 12
-        self.SCATTER_ERROR_BAR_STROKE_WIDTH = 1
-        self.SCATTER_MARKER_RADIUS = 2
-        self.SCATTER_YAXIS_TICK_SIZE = self.PADDING
-        self.SCATTER_YTICK_FONT_SIZE = 10
+        self.scatter_axis_font_size = 12
+        self.scatter_error_bar_stroke_width = 1
+        self.scatter_marker_radius = 2
+        self.scatter_yaxis_tick_size = self.padding
+        self.scatter_ytick_font_size = 10

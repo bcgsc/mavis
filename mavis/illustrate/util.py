@@ -1,4 +1,5 @@
 from ..interval import Interval
+from ..error import DrawingFitError
 from colour import Color
 import svgwrite
 
