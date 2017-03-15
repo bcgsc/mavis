@@ -1,0 +1,7 @@
+[v0.0.1]
+
+- initial beta release
+
+[v0.0.2]
+
+- bugfix: some imports used in extending the drawing width had not been updated after module renaming
