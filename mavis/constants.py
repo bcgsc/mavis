@@ -312,15 +312,16 @@ COLUMNS = Vocab(
     break2_split_read_names='break2_split_read_names',
     break2_split_reads='break2_split_reads',
     break2_split_reads_forced='break2_split_reads_forced',
-    contig_alignment_score='contig_alignment_score',
-    contig_remap_score='contig_remap_score',
-    contig_remapped_reads='contig_remapped_reads',
-    contig_remapped_read_names='contig_remapped_read_names',
-    contig_seq='contig_seq',
-    contigs_aligned='contigs_aligned',
     contig_alignment_query_coverage='contig_alignment_query_coverage',
-    contigs_assembled='contigs_assembled',
+    contig_alignment_score='contig_alignment_score',
+    contig_build_score='contig_build_score',
+    contig_remap_score='contig_remap_score',
+    contig_remapped_read_names='contig_remapped_read_names',
+    contig_remapped_reads='contig_remapped_reads',
+    contig_seq='contig_seq',
     contig_strand_specific='contig_strand_specific',
+    contigs_aligned='contigs_aligned',
+    contigs_assembled='contigs_assembled',
     spanning_reads='spanning_reads',
     spanning_read_names='spanning_read_names',
     flanking_median_fragment_size='flanking_median_fragment_size',
@@ -510,6 +511,9 @@ COLUMNS = Vocab(
         :class:`float` - A rank based on the alignment tool blat etc. of the alignment being used. An average if
         split alignments were used. Lower numbers indicate a better alignment. If it was the best alignment possible
         then this would be zero.
+
+    contig_build_score
+        :class:`int` - Score representing the edge weights of all edges used in building the sequence
 
     contig_strand_specific
         :class:`bool` - A flag to indicate if it was possible to resolve the strand for this contig

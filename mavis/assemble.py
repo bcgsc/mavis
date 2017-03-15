@@ -2,7 +2,7 @@ import networkx as nx
 import itertools
 import warnings
 from .bam import cigar as cigar_tools
-from .bam.read import nsb_align
+from .bam.read import nsb_align, calculate_alignment_score
 from .constants import reverse_complement
 
 
@@ -349,9 +349,20 @@ def assemble(
             if cigar_tools.match_percent(a[0].cigar) < assembly_min_match_quality:
                 continue
             maps_to[contig] = a[0]
-        for contig, read in maps_to.items():
-            contig.add_mapped_sequence(read, len(maps_to.keys()))
-    log('assemblies complete')
+        if len(maps_to) > 0:
+            scores = []
+            for contig, read in maps_to.items():
+                score = calculate_alignment_score(read)
+                scores.append((contig, read, score, read.reference_end - read.reference_start))
+            max_score = max([(t[2], t[3]) for t in scores])[0:2]
+            best_alignments = []
+            for contig, read, score1, score2 in scores:
+                if max_score == (score1, score2):
+                    best_alignments.append((contig, read))
+            assert(len(best_alignments) >= 1)
+            for contig, read in best_alignments:
+                contig.add_mapped_sequence(read, len(best_alignments))
+    log('assemblies complete. scores (build, remap):', [(c.score, c.remap_score()) for c in contigs])
     return contigs
 
 
