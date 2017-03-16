@@ -137,9 +137,8 @@ def main(
 
     bedfile = os.path.join(output, 'clusters.bed')
     write_bed_file(bedfile, itertools.chain.from_iterable([b.get_bed_repesentation() for b in pass_clusters]))
-
     job_ranges = list(range(0, len(pass_clusters), JOB_SIZE))
-    if job_ranges[-1] != len(pass_clusters):
+    if len(job_ranges) == 0 or job_ranges[-1] != len(pass_clusters):
         job_ranges.append(len(pass_clusters))
     job_ranges = zip(job_ranges, job_ranges[1::])
 
