@@ -37,8 +37,7 @@ LIBRARY_REQUIRED_TAGS = dict(
     read_length=int,
     median_fragment_size=int,
     stdev_fragment_size=int,
-    inputs=lambda x: x.split(';') if x else [],
-    pairing=lambda x: x.split(';') if x else []
+    inputs=lambda x: [r for r in re.split('[;\s]+', x) if r] if x else []
 )
 
 PAIRING_DEFAULTS = dict(

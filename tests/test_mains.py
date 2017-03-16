@@ -9,9 +9,9 @@ from . import REFERENCE_GENOME_FILE, FULL_REFERENCE_ANNOTATIONS_FILE_JSON, TEMPL
 from . import FULL_BAM_INPUT, TRANSCRIPTOME_BAM_INPUT, FULL_BASE_EVENTS, REFERENCE_GENOME_FILE_2BIT
 from . import RUN_FULL
 from mavis.annotate.file_io import load_templates, load_reference_genes, load_reference_genome
-import mavis.cluster
-import mavis.validate
-import mavis.annotate
+from mavis.cluster.main import main as cluster_main
+from mavis.validate.main import main as validate_main
+from mavis.annotate.main import main as annotate_main
 
 annotations = None
 reference_genome = None
@@ -47,7 +47,7 @@ class TestPipeline(unittest.TestCase):
     
     def test_mains(self):
         # test the clustering
-        cluster_files = mavis.cluster.main(
+        cluster_files =cluster_main(
             [FULL_BASE_EVENTS], self.output, False, 'mock-A36971', 'genome',
             masking=masking, cluster_clique_size=15, cluster_radius=20,
             uninformative_filter=True, max_proximity=5000,
@@ -56,11 +56,12 @@ class TestPipeline(unittest.TestCase):
         self.assertGreaterEqual(100, len(cluster_files))
         self.assertLessEqual(1, len(cluster_files))
         # next test the validate runs without errors
-        mavis.validate.main(
+        validate_main(
             cluster_files[0], self.output, genome_bam_fh, False, 'mock-A36971', 'genome',
             median_fragment_size=427, stdev_fragment_size=106, read_length=150,
             reference_genome=reference_genome, annotations=annotations, masking=masking,
-            blat_2bit_reference=REFERENCE_GENOME_FILE_2BIT, samtools_version=None
+            blat_2bit_reference=REFERENCE_GENOME_FILE_2BIT, samtools_version=None,
+            reference_genome_filename=REFERENCE_GENOME_FILE
         )
         prefix = re.sub('\.tab$', '', cluster_files[0])
         for suffix in [
@@ -77,7 +78,7 @@ class TestPipeline(unittest.TestCase):
             self.assertTrue(os.path.exists(prefix + suffix))
         
         # test the annotation
-        mavis.annotate.main(
+        annotate_main(
             [prefix + '.validation-passed.tab'], self.output,
             reference_genome, annotations, template_metadata,
             min_domain_mapping_match=0.95, min_orf_size=300, max_orf_cap=3,
