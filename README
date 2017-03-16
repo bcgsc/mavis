@@ -1,39 +1,43 @@
 MAVIS
 =======
 
-Instructions for Building the User Manual
+Install Instructions for Developers
 -------------------------------------------
 
-The user manual contains instructions for running the tool, background theory,
-api documentation, and guidelines for contributors. To build the user manual
-python3 is required as well as other python modules listed in the requirements.txt
-file. To install the required modules, use the python package manager, pip.
+Clone the repository and switch to the development branch
 
-    pip install -r requirements.txt
+    >>> git clone https://svn.bcgsc.ca/bitbucket/scm/svia/mavis.git
+    >>> cd mavis
+    >>> git checkout develop
 
-The user manual can then be built
+Set up a python virtual environment. If you are developing in python setting up with a virtual environment can be incredibly helpful. 
+This can be used to generate the requirements.txt file that pip uses for install. Instructions for setting up the environment
+are below
 
-    cd docs/
-    make html
+    >>> pip install virtualenv
+    >>> virtualenv venv
+    >>> source venv/bin/activate
+    (venv) >>>
 
-This will create the user manual in html. Open the docs/build/html/index.html file in an
-internet browser (i.e. chrome, firefox, etc.) to explore the documentation
+Install the MAVIS python package
 
-    open docs/build/html/index.html
+    (venv) >>> python setup.py develop
 
+Run the unit tests and compute code coverage
 
-Instructions for Running the Unit Tests
-----------------------------------------
+    (venv) >>> nosetests --with-coverage --cover-html --cover-html-dir=coverage --cover-package=mavis --cover-erase
 
-Unit tests for this package are run with nose and should be run from the top level directory. You will
-need to have installed the python dependencies before running tests. The following command will run
-the unit tests and compute the test coverage for the main package.
+Make the user manual
 
-    nosetests --with-coverage --cover-html --cover-html-dir=coverage --cover-package=mavis --cover-erase
+    (venv) >>> cd docs
+    (venv) >>> make html
+
+The contents of the user manual can then be viewed by opening the build/html/index.html in any available
+web browser (i.e. google-chrome, firefox, etc.)
 
 Dependencies
 ----------------
 
-Other than python3 and the python packages listed in the requirements.txt file, the tool also requires samtools (for
+Other than python3 and the python packages listed in the requirements.txt or setup.py file, the tool also requires samtools (for
 sorting and indexing the output bam files) and an aligner. Currently the only aligner supported is blat. Testing
 was performed using BLAT v.36x2

@@ -1,10 +1,5 @@
 import os
-import sys
 import json
-
-
-# local modules
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from .variant import annotate_events, determine_prime
 from ..constants import PROTOCOL, COLUMNS, PRIME
 from ..error import DrawingFitError, NotSpecifiedError

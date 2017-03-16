@@ -263,13 +263,13 @@ use the -h/--help option
 
     # decide which main function to execute
     if pstep == pconf.PIPELINE_STEP.CLUSTER:
-        cluster.main(**args.__dict__)
+        cluster.main.main(**args.__dict__)
     elif pstep == pconf.PIPELINE_STEP.VALIDATE:
-        validate.main(**args.__dict__)
+        validate.main.main(**args.__dict__)
     elif pstep == pconf.PIPELINE_STEP.ANNOTATE:
-        annotate.main(**args.__dict__)
+        annotate.main.main(**args.__dict__)
     elif pstep == pconf.PIPELINE_STEP.PAIR:
-        pairing.main(**args.__dict__)
+        pairing.main.main(**args.__dict__)
     elif pstep == pconf.PIPELINE_STEP.SUMMARY:
         pass    # main_summary(args)
     else:  # PIPELINE

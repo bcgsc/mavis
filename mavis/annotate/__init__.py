@@ -51,4 +51,3 @@ from .file_io import *
 from .genomic import Gene, Transcript, usTranscript, Exon, Template, IntergenicRegion
 from .protein import Translation, Domain
 from .variant import Annotation, FusionTranscript
-from .main import main

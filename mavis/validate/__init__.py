@@ -66,4 +66,3 @@ Algorithm Overview
 - Output new calls, evidence, contigs, etc
 
 """
-from .main import main
