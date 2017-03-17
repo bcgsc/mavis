@@ -45,6 +45,7 @@ class TestPipeline(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.output)
     
+    @unittest.skipIf(not shutil.which('blat'), "missing the blat command")
     def test_mains(self):
         # test the clustering
         cluster_files =cluster_main(

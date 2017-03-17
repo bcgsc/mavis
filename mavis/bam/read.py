@@ -1,6 +1,26 @@
 from ..constants import ORIENT, CIGAR, DNA_ALPHABET, STRAND, READ_PAIR_TYPE, SVTYPE
 from . import cigar as cigar_tools
 import pysam
+import subprocess
+import re
+
+
+def get_samtools_version():
+    proc = subprocess.getoutput(['samtools'])
+    for line in proc.split('\n'):
+        m = re.search('Version: (?P<major>\d+)\.(?P<mid>\d+)\.(?P<minor>\d+)', line)
+        if m:
+            return int(m.group('major')), int(m.group('mid')), int(m.group('minor'))
+    raise ValueError('unable to parse samtools version number')
+
+
+def samtools_v0_sort(input_bam, output_bam):
+    prefix = re.sub('\.bam$', '', output_bam)
+    return 'samtools sort {} {}'.format(input_bam, prefix)
+
+
+def samtools_v1_sort(input_bam, output_bam):
+    return 'samtools sort {} -o {}'.format(input_bam, output_bam)
 
 
 def breakpoint_pos(read, orient=ORIENT.NS):
