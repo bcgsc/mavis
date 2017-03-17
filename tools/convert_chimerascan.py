@@ -97,7 +97,7 @@ def write_output(events, output_file_name):
         fh.write('## {} v{}\n'.format(__prog__, __version__))
         fh.write('## inputs: {}\n'.format(" ".join(sys.argv)))
         fh.write('## file generated on {}\n'.format(time.strftime('%B %d, %Y')))
-        fh.write(header+"\n")
+        fh.write(header + "\n")
         for event in events:
             line = []
             for element in elements:
