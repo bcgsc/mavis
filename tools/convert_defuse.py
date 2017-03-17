@@ -8,7 +8,7 @@ import TSV
 import sys
 import os
 import time
-from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND
+from mavis.constants import COLUMNS, sort_columns, ORIENT, STRAND
 
 __version__ = '0.0.1'
 __prog__ = os.path.basename(os.path.realpath(__file__))
@@ -24,8 +24,8 @@ def make_tsv(patient_id, tsv, library_name, version=None, output_dir=""):
 
     for row in rows:
         output = {}
-        o1 = 'L' if row['genomic_strand1'] == '+' else 'R'
-        o2 = 'L' if row['genomic_strand2'] == '+' else 'R'
+        o1 = ORIENT.LEFT if row['genomic_strand1'] == '+' else ORIENT.RIGHT
+        o2 = ORIENT.LEFT if row['genomic_strand2'] == '+' else ORIENT.RIGHT
         output[COLUMNS.break1_orientation] = o1
         output[COLUMNS.break2_orientation] = o2
         output[COLUMNS.break1_chromosome] = row['gene_chromosome1']
@@ -62,13 +62,13 @@ def make_tsv(patient_id, tsv, library_name, version=None, output_dir=""):
 def __main__():
     parser = argparse.ArgumentParser(
         description="Pulls gene breakpoint coordinates, strands, and orientations from deFuse result \
-tsv and generates the sv merge input file",
+tsv and generates the MAVIS input file",
         add_help=False, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('path_to_result', type=str,
-                        help='absolute path to results.filtered.tsv from deFuse')
     required = parser.add_argument_group('Required arguments')
     required.add_argument('-i', '--id', help='The id used in the deFuse run.', type=str, required=True)
     required.add_argument('-l', '--library_id', help='The library id for the input bam file.', required=True)
+    required.add_argument('path_to_result', type=str,
+                          help='absolute path to results.filtered.tsv from deFuse')
 
     optional = parser.add_argument_group('Optional arguments')
     optional.add_argument('-h', '--help', action='help', help='Show this help message and exit')
@@ -85,7 +85,7 @@ tsv and generates the sv merge input file",
     version = args.version
 
     if os.path.isfile(result):
-        make_tsv_TSV(pogid, result, libraryid, version, outputDir)
+        make_tsv(pogid, result, libraryid, version, outputDir)
     else:
         print("ERROR: Cannot find file: " + result)
 
