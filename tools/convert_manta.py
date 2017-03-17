@@ -5,7 +5,6 @@ Script for converting Manta output into the MAVIS accepted input format
 
 import vcf
 import argparse
-import pysam
 import sys
 import os
 import time
