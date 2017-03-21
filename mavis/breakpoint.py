@@ -4,6 +4,7 @@ from copy import copy as sys_copy
 from .constants import ORIENT, STRAND, COLUMNS, CIGAR, SVTYPE, reverse_complement, DNA_ALPHABET
 from .error import *
 from .interval import Interval
+from .annotate.base import ReferenceName
 import TSV
 import re
 import itertools
@@ -35,7 +36,7 @@ class Breakpoint(Interval):
         """
         Interval.__init__(self, start, end)
         self.orient = ORIENT.enforce(orient)
-        self.chr = str(chr)
+        self.chr = ReferenceName(chr)
         self.strand = STRAND.enforce(strand)
         self.seq = seq
 

@@ -1,8 +1,7 @@
 from ..constants import STRAND, SPLICE_SITE_RADIUS, reverse_complement, SPLICE_TYPE
 from ..interval import Interval
 from ..error import NotSpecifiedError
-from .base import BioInterval
-import warnings
+from .base import BioInterval, ReferenceName
 import itertools
 from copy import copy
 
@@ -10,6 +9,7 @@ from copy import copy
 class Template(BioInterval):
     def __init__(self, name, start, end, seq=None, bands=None):
         bands = [] if bands is None else bands
+        name = ReferenceName(name)
         BioInterval.__init__(self, None, start, end, name=name, seq=seq)
         self.bands = bands
         for i in range(0, len(bands)):
@@ -75,6 +75,7 @@ class Gene(BioInterval):
             >>> Gene('X', 1, 1000, 'ENG0001', '+', ['KRAS'])
         """
         aliases = [] if aliases is None else aliases
+        chr = ReferenceName(chr)
         BioInterval.__init__(self, name=name, reference_object=chr, start=start, end=end, seq=seq)
         self.unspliced_transcripts = []
         self.strand = STRAND.enforce(strand)
