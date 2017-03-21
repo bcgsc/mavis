@@ -5,6 +5,7 @@ Script for converting Chimerascan output into the MAVIS accepted input format
 
 from __future__ import print_function
 from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND
+from mavis.breakpoint import Breakpoint, BreakpointPair
 import argparse
 import TSV
 import sys
@@ -29,7 +30,7 @@ def parse_arguments():
 
     optional = parser.add_argument_group('Optional arguemts')
     optional.add_argument('-h', '--help', action='help', help='Show this help message and exit')
-    optional.add_argument('-o', '--output_file', help="The output file name", default="svmerge_chimerascan.tsv")
+    optional.add_argument('-o', '--output_file', help="The output file name", default="mavis_chimerascan.tsv")
     optional.add_argument('-v', '--version',
                           help='the version of ChimeraScan that was used in the analysis', default='0.4.5')
     args = parser.parse_args()
@@ -40,8 +41,7 @@ def chromosome_str(chr_repr):
     """
     Adjust the chromosome names of from the ChimeraScan output
     """
-    ret_val = str(chr_repr).strip()
-    ret_val = chr_repr.replace('chr', '').replace('Chr', '').replace('CHR', '')
+    ret_val = str(chr_repr).strip().upper().replace('CHR', '')
     ret_val.replace('23', 'X').replace('24', 'Y').replace('25', 'MT')
     ret_val.replace('M', 'MT')
     return ret_val
@@ -62,16 +62,16 @@ def load_bedpe(input_bedpe, library_name, version):
 
         # Chimerascan's breakpoint is based on the strand of the gene, if it is + + then it is 5pend -> 3pstart
         if row['strand5p'] == '+':
-            output[COLUMNS.break1_position_start] = output['break1_position_end'] = row['end5p']
+            output[COLUMNS.break1_position_start] = output[COLUMNS.break1_position_end] = row['end5p']
             output[COLUMNS.break1_orientation] = ORIENT.LEFT
         else:
-            output[COLUMNS.break1_position_start] = output['break1_position_end'] = row['start5p']
+            output[COLUMNS.break1_position_start] = output[COLUMNS.break1_position_end] = row['start5p']
             output[COLUMNS.break1_orientation] = ORIENT.RIGHT
         if row['strand3p'] == '+':
-            output[COLUMNS.break2_position_start] = output['break2_position_end'] = row['start3p']
+            output[COLUMNS.break2_position_start] = output[COLUMNS.break2_position_end] = row['start3p']
             output[COLUMNS.break2_orientation] = ORIENT.LEFT
         else:
-            output[COLUMNS.break2_position_start] = output['break2_position_end'] = row['end3p']
+            output[COLUMNS.break2_position_start] = output[COLUMNS.break2_position_end] = row['end3p']
             output[COLUMNS.break2_orientation] = ORIENT.RIGHT
 
         output[COLUMNS.opposing_strands] = True if output[COLUMNS.break1_orientation] == \
@@ -80,9 +80,22 @@ def load_bedpe(input_bedpe, library_name, version):
         output[COLUMNS.protocol] = "transcriptome"  # Chimerascan is assumed to only be run on transcriptomes
         output[COLUMNS.library] = library_name
         output[COLUMNS.tools] = "ChimeraScan_v"+version
-        evidence = "total_frags:{}".format(row['spanning_frags'])
-        output['tool_evidence'] = evidence
+        evidence = "total_spanning_frags:{}".format(row['spanning_frags'])
+        output['chimerascan_evidence'] = evidence
         output[COLUMNS.stranded] = False
+        bpp = BreakpointPair(
+            Breakpoint(row['chrom5p'], output[COLUMNS.break1_position_start],
+                       orient=output[COLUMNS.break1_orientation]),
+            Breakpoint(row['chrom3p'], output[COLUMNS.break2_position_start],
+                       orient=output[COLUMNS.break2_orientation]),
+            data={},
+            opposing_strands=output[COLUMNS.opposing_strands]
+            )
+        event_types = BreakpointPair.classify(bpp)
+        if len(event_types) == 1 or event_types == ['deletion', 'insertion']:
+            output[COLUMNS.event_type] = event_types[0]
+        else:
+            print("ERROR: event_type generated was not one of the expected event types")
         events.append(output)
     return events
 

@@ -13,6 +13,13 @@ from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND
 __version__ = '0.0.1'
 __prog__ = os.path.basename(os.path.realpath(__file__))
 
+SVTYPES = {'DEL': 'deletion',
+           'INV': 'inversion',
+           'DUP': 'duplication',
+           'BND': 'translocation',
+           'INS': 'insertion',
+           }
+
 
 def load_vcf(vcf_filename, library, version, filter=None):
     """
@@ -68,7 +75,8 @@ def load_vcf(vcf_filename, library, version, filter=None):
             event[COLUMNS.break2_position_start] = start_b
             event[COLUMNS.break2_position_end] = end_b
             event[COLUMNS.protocol] = 'genome'
-            event['tool_evidence'] = str(record.ID) + " " + str(record.INFO) + " " + str(record.samples)
+            event[COLUMNS.event_type] = SVTYPES[event_type]
+            event['manta_evidence'] = str(record.ID) + " " + str(record.INFO) + " " + str(record.samples)
             event[COLUMNS.stranded] = 'False'
             event[COLUMNS.library] = library
             event[COLUMNS.tools] = "Manta_v{}".format(version)
@@ -96,7 +104,7 @@ def load_vcf(vcf_filename, library, version, filter=None):
     return events
 
 parser = argparse.ArgumentParser(
-    description='Convert a Manta vcf file to the SVmerge pre processed output. \
+    description='Convert a Manta vcf file to the MAVIS pre processed output. \
 Note this has the option to filter the results for diploid.tsv based on if an event has 2 split reads \
  and 2 flanking reads',
     add_help=False)

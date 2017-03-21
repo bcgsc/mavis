@@ -74,7 +74,7 @@ def delly_vcf_to_tsv(delly_vcf_list, output_filename=None):
 #            end_position = (record.INFO['END'] + record.INFO['CIEND'][0], record.INFO['END'] + record.INFO['CIEND'][1])
             call[COLUMNS.break2_position_start] = record.INFO['END'] + record.INFO['CIEND'][0]
             call[COLUMNS.break2_position_end] = record.INFO['END'] + record.INFO['CIEND'][1]
-            call['comments'] = repr(extra_info)
+            call['delly_comments'] = repr(extra_info)
             call[COLUMNS.stranded] = False  # Never stranded for genomes
 
             # Orientations on the genome are somewhat ambiguous
@@ -103,9 +103,9 @@ def delly_vcf_to_tsv(delly_vcf_list, output_filename=None):
                 call[COLUMNS.opposing_strands] = False
             else:
                 raise ValueError("Unrecognized record['CT'] value of '{}'".format(record.INFO['CT']))
-            call['event_type'] = SVTYPES[record.INFO['SVTYPE']]
+            call[COLUMNS.event_type] = SVTYPES[record.INFO['SVTYPE']]
             if record.INFO['SVTYPE'] == 'TRA' and call['opposing_strands']:
-                call['event_type'] = 'inverted translocation'
+                call[COLUMNS.event_type] = 'inverted translocation'
 
             for sample in record.samples:
                 lib = sample.sample.split('_')[0]  # by naming convention
@@ -125,18 +125,18 @@ def delly_vcf_to_tsv(delly_vcf_list, output_filename=None):
                 if flanking_pairs_variant or split_read_variants:
                     new_row = {}
                     new_row.update(call)
-                    new_row['library'] = lib
+                    new_row[COLUMNS.library] = lib
                     # TODO Check if start and end evidence can be different.
-                    new_row['split_reads'] = split_read_variants
-                    new_row['flanking_reads'] = flanking_pairs_variant
-                    new_row['mapping_quality'] = extra_info['mapping_qualitiy']
-                    new_row['filters'] = ';'.join(filters)
-                    tool_evidence = {}
-                    tool_evidence['split_reads'] = new_row['split_reads']
-                    tool_evidence['flanking_reads'] = new_row['flanking_reads']
-                    tool_evidence['mapping_quality'] = new_row['mapping_quality']
-                    tool_evidence['filters'] = new_row['filters']
-                    new_row['tool_evidence'] = pprint.pformat(tool_evidence).replace('\n', '')
+                    new_row['delly_split_reads'] = split_read_variants
+                    new_row['delly_flanking_reads'] = flanking_pairs_variant
+                    new_row['delly_mapping_quality'] = extra_info['mapping_qualitiy']
+                    new_row['delly_filters'] = ';'.join(filters)
+                    # tool_evidence = {}
+                    # tool_evidence['split_reads'] = new_row['delly_split_reads']
+                    # tool_evidence['flanking_reads'] = new_row['delly_flanking_reads']
+                    # tool_evidence['mapping_quality'] = new_row['delly_mapping_quality']
+                    # tool_evidence['filters'] = new_row['delly_filters']
+                    # new_row['delly_evidence'] = pprint.pformat(tool_evidence).replace('\n', '')
                     events.append(new_row)
 
     elements = sort_columns(events[0].keys())
@@ -161,7 +161,7 @@ def main():
 in a file, one per line, and specified on the commandline like '%(prog)s @filename'",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-f', '--vcf-files', required=True, help='DELLY *.vcf output', nargs='+')
-    parser.add_argument('-o', '--output-filename', help='DELLY *.tsv output', default='delly_results.tsv')
+    parser.add_argument('-o', '--output-filename', help='DELLY *.tsv output', default='mavis_delly.tsv')
     args = parser.parse_args()
     delly_vcf_to_tsv(delly_vcf_list=args.vcf_files, output_filename=args.output_filename)
 

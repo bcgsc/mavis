@@ -8,7 +8,9 @@ import TSV
 import sys
 import os
 import time
+import warnings
 from mavis.constants import COLUMNS, sort_columns, ORIENT, STRAND
+from mavis.breakpoint import Breakpoint, BreakpointPair
 
 __version__ = '0.0.1'
 __prog__ = os.path.basename(os.path.realpath(__file__))
@@ -38,10 +40,32 @@ def make_tsv(patient_id, tsv, library_name, version=None, output_dir=""):
         output[COLUMNS.library] = library_name
         output[COLUMNS.tools] = 'deFuse_v{}'.format(version)
         output[COLUMNS.stranded] = False
-        output['spanning_read_count'] = row['span_count']
-        output['split_read_count'] = row['splitr_count']
-        output['cluster_id'] = row['cluster_id']
-        output['probability'] = row['probability']
+        output['defuse_spanning_read_count'] = row['span_count']
+        output['defuse_split_read_count'] = row['splitr_count']
+        output['defuse_cluster_id'] = row['cluster_id']
+        output['defuse_probability'] = row['probability']
+        bpp = BreakpointPair(
+            Breakpoint(row['gene_chromosome1'], row['genomic_break_pos1'], orient=o1),
+            Breakpoint(row['gene_chromosome2'], row['genomic_break_pos2'], orient=o2),
+            data={},
+            opposing_strands=output[COLUMNS.opposing_strands]
+            )
+        event_type = ''
+        event = {'deletion': row['deletion'],
+                 'translocation':  row['interchromosomal'],
+                 'inversion': row['inversion'],
+                 'duplication': row['eversion']}
+        for key in event.keys():
+            if event[key] == 'Y':
+                event_type = key
+        event_types = BreakpointPair.classify(bpp)
+        output[COLUMNS.event_type] = event_type
+        if event_type not in event_types and event_type not in event_types[0]:
+            print(output)
+            warnings.warn("WARNING: Expected {}, found {}. Will add \"{}\" for the event type".format(
+                    event_types, event_type, event_types[0]))
+            # grabs the first event_type found, might not be the right choice
+            output[COLUMNS.event_type] = event_types[0]
         events.append(output)
 
     elements = sort_columns(events[0].keys())
