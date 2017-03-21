@@ -1328,6 +1328,24 @@ class TestAnnotationGathering(unittest.TestCase):
 
 
 class TestAnnotate(unittest.TestCase):
+    
+    def test_reference_name_eq(self):
+        first, second = ReferenceName('chr1'), ReferenceName('1')
+        self.assertEqual(first, second)
+
+    def test_reference_name_set(self):
+        first, second = ReferenceName('chr1'), ReferenceName('1')
+        d = {first, second}
+        self.assertEqual(1, len(d))
+
+    def test_reference_name_dict(self):
+        first, second = ReferenceName('chr1'), ReferenceName('1')
+        d = {first: 1}
+        d[second] = 2
+        print(d)
+        self.assertEqual(1, len(d))
+        d = {first: 1, second: 2}
+        self.assertEqual(1, len(d))
 
     def test_loading_json_annotations(self):
         annotations = load_reference_genes(REFERENCE_ANNOTATIONS_FILE_JSON)

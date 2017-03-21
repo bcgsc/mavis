@@ -1,6 +1,8 @@
 import pysam
 import warnings
 import atexit
+import re
+from ..annotate.base import ReferenceName
 
 
 class BamCache:
@@ -41,6 +43,10 @@ class BamCache:
         """
         tid = self.fh.get_tid(chrom)
         if tid == -1:
+            tid = self.fh.get_tid(re.sub('^chr', '', chrom))
+        if tid == -1:
+            tid = self.fh.get_tid('chr' + chrom)
+        if tid == -1:
             raise KeyError('invalid reference name not present in bam file')
         return tid
 
@@ -51,7 +57,7 @@ class BamCache:
         Returns:
             str: the name of the chromosome
         """
-        return self.fh.get_reference_name(read.reference_id)
+        return ReferenceName(self.fh.get_reference_name(read.reference_id))
 
     @classmethod
     def _generate_fetch_bins(cls, start, stop, sample_bins, bin_gap_size):
@@ -73,7 +79,7 @@ class BamCache:
         return fetch_regions
 
     def fetch(
-        self, chrom, start, stop, read_limit=10000, cache=False, sample_bins=3,
+        self, input_chrom, start, stop, read_limit=10000, cache=False, sample_bins=3,
         cache_if=lambda x: True, bin_gap_size=0, filter_if=lambda x: False
     ):
         """
@@ -96,7 +102,14 @@ class BamCache:
         # try using the cache to avoid fetching regions more than once
         result = []
         bin_limit = int(read_limit / sample_bins) if read_limit else None
+        chrom = input_chrom
         # split into multiple fetches based on the 'sample_bins'
+        if str(chrom) not in self.fh.references:
+            chrom = re.sub('^chr', '', chrom)
+            if chrom not in self.fh.references:
+                chrom = 'chr' + chrom
+            if chrom not in self.fh.references:
+                raise KeyError('bam file does not contain the expected reference', input_chrom)
         for fstart, fend in self.__class__._generate_fetch_bins(start, stop, sample_bins, bin_gap_size):
             count = 0
             for read in self.fh.fetch(chrom, fstart, fend):
