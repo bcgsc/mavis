@@ -3,8 +3,6 @@ import errno
 import math
 import os
 import random
-import re
-import subprocess
 from mavis.breakpoint import read_bpp_from_input_file
 from mavis.constants import PROTOCOL, COLUMNS, sort_columns
 from mavis.interval import Interval
@@ -26,24 +24,6 @@ def build_batch_id(prefix='', suffix='', size=6):
     m = int(math.pow(10, size) - 1)
     return '{prefix}batch{date.year}{date.month:02d}{date.day:02d}r{r:06d}{suffix}'.format(
         prefix=prefix, suffix=suffix, date=date, r=random.randint(1, m))
-
-
-def get_samtools_version():
-    proc = subprocess.getoutput(['samtools'])
-    for line in proc.split('\n'):
-        m = re.search('Version: (?P<major>\d+)\.(?P<mid>\d+)\.(?P<minor>\d+)', line)
-        if m:
-            return int(m.group('major')), int(m.group('mid')), int(m.group('minor'))
-    raise ValueError('unable to parse samtools version number')
-
-
-def get_blat_version():
-    proc = subprocess.getoutput(['blat'])
-    for line in proc.split('\n'):
-        m = re.search('blat - Standalone BLAT v. (\d+(x\d+)?)', line)
-        if m:
-            return m.group(1)
-    raise ValueError("unable to parse blat version number from:'{}'".format(proc))
 
 
 def log(*pos, time_stamp=True):

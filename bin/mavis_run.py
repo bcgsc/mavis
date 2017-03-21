@@ -6,10 +6,10 @@ import sys
 # local modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from mavis.annotate import load_reference_genes, load_reference_genome, load_masking_regions, load_templates
-from mavis import validate
-from mavis import cluster
-from mavis import pairing
-from mavis import annotate
+from mavis.validate.main import main as validate_main
+from mavis.cluster.main import main as cluster_main
+from mavis.pairing.main import main as pairing_main
+from mavis.annotate.main import main as annotate_main
 from mavis import __version__
 
 from mavis.validate.constants import VALIDATION_DEFAULTS
@@ -48,7 +48,11 @@ def main_pipeline(args, configs):
         merge_args.update(sec.__dict__)
         merge_args.update(args.__dict__)
         merge_args['output'] = os.path.join(base, 'clustering')
-        output_files = cluster.main(**merge_args)
+        output_files = cluster_main(**merge_args)
+
+        if len(output_files) == 0:
+            log('warning: no inputs after clustering. Will not set up other pipeline steps')
+            continue
         merge_file_prefix = None
         for f in output_files:
             m = re.match('^(?P<prefix>.*\D)\d+.tab$', f)
@@ -263,13 +267,13 @@ use the -h/--help option
 
     # decide which main function to execute
     if pstep == pconf.PIPELINE_STEP.CLUSTER:
-        cluster.main(**args.__dict__)
+        cluster_main(**args.__dict__)
     elif pstep == pconf.PIPELINE_STEP.VALIDATE:
-        validate.main(**args.__dict__)
+        validate_main(**args.__dict__)
     elif pstep == pconf.PIPELINE_STEP.ANNOTATE:
-        annotate.main(**args.__dict__)
+        annotate_main(**args.__dict__)
     elif pstep == pconf.PIPELINE_STEP.PAIR:
-        pairing.main(**args.__dict__)
+        pairing_main(**args.__dict__)
     elif pstep == pconf.PIPELINE_STEP.SUMMARY:
         pass    # main_summary(args)
     else:  # PIPELINE

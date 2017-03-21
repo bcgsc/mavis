@@ -4,7 +4,7 @@ module which holds all functions relating to loading reference files
 import TSV
 import re
 from .genomic import Gene, Transcript, usTranscript, Exon, Template
-from .base import BioInterval
+from .base import BioInterval, ReferenceName
 from .protein import Domain, Translation
 from ..interval import Interval
 from ..constants import STRAND, GIESMA_STAIN, CODON_SIZE, translate, START_AA, STOP_AA
@@ -42,7 +42,7 @@ def load_masking_regions(filepath):
     header, rows = TSV.read_file(
         filepath,
         require=['chr', 'start', 'end', 'name'],
-        cast={'start': int, 'end': int, 'chr': lambda x: re.sub('^chr', '', x)}
+        cast={'start': int, 'end': int, 'chr': ReferenceName}
     )
     regions = {}
     for row in rows:
@@ -380,7 +380,7 @@ def load_templates(filename):
     header, rows = TSV.read_file(
         filename,
         header=header,
-        cast={'start': int, 'end': int, 'name': lambda x: re.sub('^chr', '', x)},
+        cast={'start': int, 'end': int},
         in_={'giesma_stain': GIESMA_STAIN}
     )
 

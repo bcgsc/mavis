@@ -1,5 +1,5 @@
 from mavis.illustrate.scatter import ScatterPlot
-from mavis.illustrate.diagram import *
+from mavis.illustrate.diagram import draw_multi_transcript_overlay
 from mavis.illustrate.constants import DiagramSettings
 from mavis.annotate.base import BioInterval
 from mavis.annotate.file_io import load_reference_genes
@@ -39,22 +39,18 @@ def parse_arguments():
 
     parser.add_argument('--markers', '-m', nargs=3, metavar=('start', 'end', 'name'), action='append', default=[])
     g = parser.add_argument_group('reference files')
-    g.add_argument(
-        '-a', '--annotations',
-        default='/home/creisle/svn/ensembl_flatfiles/ensembl69_transcript_exons_and_domains_20160808.tsv',
-        help='path to the reference annotations of genes, transcript, exons, domains, etc.'
-    )
-    g.add_argument(
-        '-r', '--reference_genome',
-        default='/home/pubseq/genomes/Homo_sapiens/TCGA_Special/GRCh37-lite.fa',
-        help='path to the human reference genome in fa format'
-    )
-    g.add_argument(
-        '--template_metadata', default='/home/creisle/svn/svmerge/trunk/cytoBand.txt',
-        help='file containing the cytoband template information')
-
+    if os.environ.get('MAVIS_ANNOTATIONS', None):
+        g.add_argument(
+            '-a', '--annotations',
+            default=os.environ.get('MAVIS_ANNOTATIONS', None),
+            help='path to the reference annotations of genes, transcript, exons, domains, etc.'
+        )
+    else:
+        g.add_argument(
+            '-a', '--annotations', required=True,
+            help='path to the reference annotations of genes, transcript, exons, domains, etc.'
+        )
     args = parser.parse_args()
-
     return args
 
 args = parse_arguments()
@@ -91,8 +87,8 @@ if args.cna_file:
     for chr in cna_by_chr:
         cna_by_chr[chr] = sorted(cna_by_chr[chr], key=lambda x: x['start'])
 
-d = DiagramSettings(WIDTH=1000)
-d.DOMAIN_NAME_REGEX_FILTER = '^PF\d+$'
+d = DiagramSettings(width=1000)
+d.domain_name_regex_filter = '^PF\d+$'
 
 for g in genes_to_draw:
     plots = []
@@ -141,17 +137,17 @@ for g in genes_to_draw:
         else:
             s = ScatterPlot(points, 'cna', ymin=-1, ymax=1, hmarkers=[-1, 0, 1])
             plots.append(s)
-    initial_width = d.WIDTH
-    while d.WIDTH < initial_width + 1000:
+    initial_width = d.width
+    while d.width < initial_width + 1000:
         try:
             canvas = draw_multi_transcript_overlay(d, g, vmarkers=markers, plots=plots)
             break
         except DrawingFitError as err:
             print(repr(err), 'extending window')
-            d.WIDTH += 200
-    if d.WIDTH >= initial_width + 1000:
-        raise DrawingFitError('could not draw', initial_width, d.WIDTH)
-    d.WIDTH = initial_width
+            d.width += 200
+    if d.width >= initial_width + 1000:
+        raise DrawingFitError('could not draw', initial_width, d.width)
+    d.width = initial_width
     print('writing:', svg)
 
     canvas.saveas(svg)

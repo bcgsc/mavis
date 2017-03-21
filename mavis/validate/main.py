@@ -4,7 +4,7 @@ import re
 import subprocess
 import sys
 import itertools
-
+import argparse
 
 # local modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -16,21 +16,94 @@ from .call import call_events
 from .evidence import GenomeEvidence, TranscriptomeEvidence
 from .constants import VALIDATION_DEFAULTS
 from ..annotate.base import BioInterval
+from ..bam.read import get_samtools_version, samtools_v0_sort, samtools_v1_sort
 from ..bam import cigar as cigar_tools
-from ..pipeline.util import read_inputs, log, output_tabbed_file, filter_on_overlap, write_bed_file, build_batch_id, get_samtools_version
+from ..pipeline.util import read_inputs, log, output_tabbed_file, filter_on_overlap, write_bed_file, build_batch_id
 
 VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
 
+def parse_arguments():
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    greq = parser.add_argument_group('required arguments')
+    parser.add_argument(
+        '-v', '--version', action='version', version='%(prog)s version ' + __version__,
+        help='Outputs the version number'
+    )
 
-def samtools_v0_sort(input_bam, output_bam):
-    prefix = re.sub('\.bam$', '', output_bam)
-    return 'samtools sort {} {}'.format(input_bam, prefix)
+    g = parser.add_argument_group('reference input arguments')
+    g.add_argument(
+        '--annotations',
+        default=REFERENCE_DEFAULTS['annotations'],
+        help='path to the reference annotations of genes, transcript, exons, domains, etc.'
+    )
+    if pstep in [PIPELINE_STEP.ANNOTATE, PIPELINE_STEP.VALIDATE]:
+        g.add_argument(
+            '--reference_genome',
+            default=REFERENCE_DEFAULTS['reference_genome'],
+            help='path to the human reference genome in fa format'
+        )
+    if pstep == PIPELINE_STEP.ANNOTATE:
+        g.add_argument(
+            '--template_metadata', default=REFERENCE_DEFAULTS['template_metadata'],
+            help='file containing the cytoband template information'
+        )
+    g.add_argument(
+        '--masking',
+        default=REFERENCE_DEFAULTS['masking'],
+    )
+    parser.add_argument(
+        '--stranded_bam', default=False, type=TSV.tsv_boolean,
+        help='indicates that the input bam file is strand specific'
+    )
+    g.add_argument(
+        '--low_memory', default=PAIRING_DEFAULTS['low_memory'], type=TSV.tsv_boolean,
+        help='when working on a machine with less memory this is sacrifice time for memory where possible'
+    )
+    g.add_argument(
+        '--blat_2bit_reference', default=REFERENCE_DEFAULTS['blat_2bit_reference'],
+        help='path to the 2bit reference file used for blatting contig sequences'
+    )
+    parser.add_argument('--output', help='path to the output directory', required=True)
 
+    parser.add_argument('-n', '--input', help='path to the input file', required=True)
 
-def samtools_v1_sort(input_bam, output_bam):
-    return 'samtools sort {} -o {}'.format(input_bam, output_bam)
+    parser.add_argument('-l', '--library', help='library name')
+    parser.add_argument('--protocol', help='the library protocol: genome or transcriptome', choices=PROTOCOL.values())
 
+    g = parser.add_argument_group('evidence arguments (optional)')
+    for attr, value in VALIDATION_DEFAULTS.__dict__.items():
+        vtype = type(value)
+        if type(value) == bool:
+            vtype = TSV.tsv_boolean
+        g.add_argument('--{}'.format(attr), default=value, type=vtype, help='see user manual for desc')
+    parser.add_argument(
+        '-b', '--bam_file',
+        help='path to the input bam file', required=True
+    )
+    g.add_argument('--read_length', type=int, help='the length of the reads in the bam file', required=True)
+    g.add_argument(
+        '--stdev_fragment_size', type=int, help='expected standard deviation in insert sizes', required=True
+    )
+    g.add_argument(
+        '--median_fragment_size', type=int, help='median inset size for pairs in the bam file', required=True
+    )
 
+    args = parser.parse_args()
+    args.samtools_version = get_samtools_version()
+    args.blat_version = get_blat_version()
+    args.output = os.path.abspath(args.output)
+
+    for filename in REFERENCE_REQUIRED_FILES:
+        try:
+            v = args.__dict__[filename]
+            if not v:
+                parser.print_help()
+                print('\nerror: required file {} has not been specified'.format(repr(filename)))
+                print('provide the --{} option or set the environment variable MAVIS_{}\n'.format(filename, filename.upper()))
+                exit(1)
+        except KeyError:
+            pass
+    return args
 def main(
     input, output,
     bam_file, stranded_bam,

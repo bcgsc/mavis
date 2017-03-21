@@ -19,7 +19,7 @@ if __name__ == '__main__':
             COLUMNS.tools: '^(\S+_v?\d+\.\d+\.\d+)(;\S+_v?\d+\.\d+\.\d+)*$',
             COLUMNS.library: '^[\w-]+$'
         },
-        _in={
+        in_={
             COLUMNS.protocol: PROTOCOL
         }
     )

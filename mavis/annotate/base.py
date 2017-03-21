@@ -1,4 +1,22 @@
 from ..interval import Interval
+import re
+import itertools
+
+
+class ReferenceName(str):
+    def __eq__(self, other):
+        print('ReferenceName eq', self, other)
+        putative_other = [other, 'chr' + str(other), re.sub('^chr', '', str(other))]
+        putative_self = [self, 'chr' + str(self), re.sub('^chr', '', str(self))]
+
+        for s, o in itertools.product(putative_self, putative_other):
+            if str.__eq__(s, o):
+                return True
+        return False
+
+    def __hash__(self):
+        print('hash self')
+        return hash(re.sub('^chr', '', str(self)))
 
 
 class BioInterval:

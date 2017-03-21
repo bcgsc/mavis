@@ -1,5 +1,5 @@
 """
-script for converting Trans-ABySS output file into the SVMerge accepted input format
+script for converting Trans-ABySS output file into the MAVIS accepted input format
 """
 import TSV
 from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND
@@ -16,7 +16,7 @@ TSV._verbose = True
 
 
 def main():
-    args = parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument(
         '-v', '--version', action='version', version='%(prog)s version ' + __version__,
         help='Outputs the version number')
@@ -52,7 +52,7 @@ def main():
             'strands': '^(?P<strand1>[\+-]),(?P<strand2>[\+-])$'
         },
         cast={
-            'pos1': int, 
+            'pos1': int,
             'pos2': int,
             'strand1': lambda x: STRAND.NEG if x == STRAND.POS else STRAND.POS,
             'strand2': lambda x: STRAND.NEG if x == STRAND.POS else STRAND.POS

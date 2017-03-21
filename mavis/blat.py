@@ -21,7 +21,6 @@ import TSV
 from .constants import *
 from .bam import cigar as cigar_tools
 from .bam import read as read_tools
-import tempfile
 from .interval import Interval
 
 
@@ -314,6 +313,15 @@ class Blat:
                 reverse_complement(row['qseq_full'])
             )
         return read
+
+
+def get_blat_version():
+    proc = subprocess.getoutput(['blat'])
+    for line in proc.split('\n'):
+        m = re.search('blat - Standalone BLAT v. (\d+(x\d+)?)', line)
+        if m:
+            return m.group(1)
+    raise ValueError("unable to parse blat version number from:'{}'".format(proc))
 
 
 def paired_alignment_score(read1, read2=None):

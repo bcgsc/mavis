@@ -21,41 +21,7 @@ The pipeline consists four of main steps
 Getting started
 --------------------
 
-Install
-....................
-
-Installing Dependencies
-,,,,,,,,,,,,,,,,,,,,,,,,,
-
-to install dependencies, use the requirements.txt file
-
-.. code-block:: bash
-
-    pip install -r requirements.txt
-
-
-Running Unit Tests
-,,,,,,,,,,,,,,,,,,,,
-
-to run the tests
-
-.. code-block:: bash
-
-    nosetests --with-coverage --cover-html --cover-html-dir=coverage --cover-package=mavis --cover-erase
-
-
-Building the documentation
-,,,,,,,,,,,,,,,,,,,,,,,,,,,
-
-can build the documentation directly using make
-
-.. code-block:: bash
-
-    cd docs
-    make html
-
-this will generate html documentation that can be viewed in a browser by opening the index.html file
-
+see :ref:`Installation for developers <development-install>`
 
 |
 
@@ -268,14 +234,14 @@ by running the without any arguments, or by giving the -h/--help option
 
 .. code-block:: bash
 
-    python bin/mavis_run.py
+    >>> mavis_run.py
 
 
 Help sub-menus can be found by giving the pipeline step followed by no arguments or the -h options
 
 .. code-block:: bash
 
-    python bin/mavis_run.py cluster -h
+    >>> mavis_run.py cluster -h
 
 
 Determining Input Parameters

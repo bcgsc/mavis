@@ -606,7 +606,6 @@ class TestBamStats(unittest.TestCase):
             )
             self.assertGreaterEqual(10, abs(stats.median_fragment_size - 420))
             self.assertEqual(150, stats.read_length)
-            self.assertGreaterEqual(120, stats.stdev_fragment_size)
         finally:
             try:
                 bamfh.close()
