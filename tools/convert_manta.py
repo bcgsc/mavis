@@ -68,12 +68,20 @@ def load_vcf(vcf_filename, library, version, filter=None):
                 start_b = position_b
                 end_b = position_b
 
-            event[COLUMNS.break1_chromosome] = chrom_a
-            event[COLUMNS.break2_chromosome] = chrom_b
-            event[COLUMNS.break1_position_start] = start_a
-            event[COLUMNS.break1_position_end] = end_a
-            event[COLUMNS.break2_position_start] = start_b
-            event[COLUMNS.break2_position_end] = end_b
+            key1 = (chrom_a, start_a, end_a)
+            key2 = (chrom_b, start_b, end_b)
+
+            if key1 > key2:
+                event[COLUMNS.break1_chromosome], event[COLUMNS.break1_position_start], \
+                    event[COLUMNS.break1_position_end] = key2
+                event[COLUMNS.break2_chromosome], event[COLUMNS.break2_position_start], \
+                    event[COLUMNS.break2_position_end] = key1
+            else:
+                event[COLUMNS.break1_chromosome], event[COLUMNS.break1_position_start], \
+                    event[COLUMNS.break1_position_end] = key1
+                event[COLUMNS.break2_chromosome], event[COLUMNS.break2_position_start], \
+                    event[COLUMNS.break2_position_end] = key2
+
             event[COLUMNS.protocol] = 'genome'
             event[COLUMNS.event_type] = SVTYPES[event_type]
             event['manta_evidence'] = str(record.ID) + " " + str(record.INFO) + " " + str(record.samples)
@@ -98,7 +106,7 @@ def load_vcf(vcf_filename, library, version, filter=None):
                 events.append(event)
             elif event_type == 'BND':
                 event[COLUMNS.break1_orientation], event[COLUMNS.break2_orientation] = ('?', '?')
-                event[COLUMNS.opposing_strands] = 'null'
+                event[COLUMNS.opposing_strands] = STRAND.NS
                 events.append(event)
 
     return events
