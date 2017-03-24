@@ -1,7 +1,7 @@
 import os
 import re
 import sys
-
+import random
 
 # local modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -16,6 +16,7 @@ from mavis.validate.constants import VALIDATION_DEFAULTS
 import mavis.pipeline.config as pconf
 from mavis.pipeline.util import log, mkdirp
 from mavis.constants import PROTOCOL
+import math
 
 VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
 
@@ -33,6 +34,7 @@ def main_pipeline(args, configs):
     # set up the directory structure and run svmerge
     annotation_files = []
     annotation_jobs = []
+    rand = int(random.random() * math.pow(10, 10))
     for sec in configs:
         print()
         base = os.path.join(args.output, '{}_{}'.format(sec.library, sec.protocol))
@@ -83,7 +85,7 @@ def main_pipeline(args, configs):
             validation_args[attr] = getattr(sec, attr)
 
         qsub = os.path.join(validation_output, 'qsub.sh')
-        validation_jobname = 'validation_{}_{}'.format(sec.library, sec.protocol)
+        validation_jobname = 'validation_{}_{}_{}'.format(sec.library, sec.protocol, rand)
         with open(qsub, 'w') as fh:
             log('writing:', qsub)
             fh.write(
@@ -120,7 +122,7 @@ def main_pipeline(args, configs):
         annotation_args.append('--inputs {}/*{}*{}'.format(
             validation_output, os.path.basename(merge_file_prefix), VALIDATION_PASS_SUFFIX))
         qsub = os.path.join(annotation_output, 'qsub.sh')
-        annotation_jobname = 'annotation_{}_{}'.format(sec.library, sec.protocol)
+        annotation_jobname = 'annotation_{}_{}_{}'.format(sec.library, sec.protocol, rand)
         annotation_jobs.append(annotation_jobname)
         annotation_files.append(os.path.join(annotation_output, 'annotations.tab'))
         with open(qsub, 'w') as fh:
