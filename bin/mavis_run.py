@@ -90,7 +90,7 @@ def main_pipeline(args, configs):
             log('writing:', qsub)
             fh.write(
                 QSUB_HEADER.format(
-                    queue=args.queue, memory=args.validate_memory, name=validation_jobname, output=validation_output
+                    queue=args.queue, memory=args.validate_memory_gb, name=validation_jobname, output=validation_output
                 ) + '\n')
             fh.write('#$ -t {}-{}\n'.format(1, len(output_files)))
             temp = [
@@ -129,7 +129,7 @@ def main_pipeline(args, configs):
             log('writing:', qsub)
             fh.write(
                 QSUB_HEADER.format(
-                    queue=args.queue, memory=args.default_memory, name=annotation_jobname, output=annotation_output
+                    queue=args.queue, memory=args.default_memory_gb, name=annotation_jobname, output=annotation_output
                 ) + '\n')
             fh.write('#$ -hold_jid {}\n'.format(validation_jobname))
             fh.write('python {} annotate {}\n'.format(os.path.abspath(__file__), ' \\\n\t'.join(annotation_args)))
@@ -154,7 +154,7 @@ def main_pipeline(args, configs):
         log('writing:', qsub)
         fh.write(
             QSUB_HEADER.format(
-                queue=args.queue, memory=args.default_memory, name='mavis_pairing', output=pairing_output
+                queue=args.queue, memory=args.default_memory_gb, name='mavis_pairing', output=pairing_output
             ) + '\n')
         fh.write('#$ -hold_jid {}\n'.format(','.join(annotation_jobs)))
         fh.write('python {} pairing {}\n'.format(os.path.abspath(__file__), ' \\\n\t'.join(pairing_args)))
