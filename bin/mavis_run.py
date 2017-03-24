@@ -154,14 +154,14 @@ def main_pipeline(args, configs):
             QSUB_HEADER.format(
                 queue=args.queue, memory=args.default_memory, name='mavis_pairing', output=pairing_output
             ) + '\n')
-        fh.write('#$ -hold_jid {}\n'.format(' '.join(annotation_jobs)))
+        fh.write('#$ -hold_jid {}\n'.format(','.join(annotation_jobs)))
         fh.write('python {} pairing {}\n'.format(os.path.abspath(__file__), ' \\\n\t'.join(pairing_args)))
 
 
 def main():
     def usage(err=None, detail=False):
         name = os.path.basename(__file__)
-        u =  '\nusage: {} {{cluster,validate,annotate,pairing,pipeline}} [-h] [-v]'.format(name)
+        u = '\nusage: {} {{cluster,validate,annotate,pairing,pipeline}} [-h] [-v]'.format(name)
         helpmenu = """
 required arguments:
 

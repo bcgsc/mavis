@@ -93,7 +93,7 @@ def nsb_align(
         ref (str): the reference sequence
         seq (str): the sequence being aligned
         weight_of_score (float): when scoring alignments this determines the amount
-            of weigth to place on the cigar match. Should be a number between 0 and 1
+            of weight to place on the cigar match. Should be a number between 0 and 1
         min_overlap_percent (float): the minimum amount of overlap of the input sequence to the reference
             should be a number between 0 and 1
         min_match (float): the minimum number of matches compared to total
@@ -258,21 +258,14 @@ def orientation_supports_type(read, event_type):
             - ``True`` - the read pair is in the correct orientation for this event type
             - ``False`` - the read is not in the correct orientation
     """
-    if event_type == SVTYPE.DEL:
-        if read_pair_type(read) != READ_PAIR_TYPE.LR:
-            return False
-    elif event_type == SVTYPE.INS:
+    if event_type == SVTYPE.DEL or event_type == SVTYPE.INS:
         if read_pair_type(read) != READ_PAIR_TYPE.LR:
             return False
     elif event_type == SVTYPE.TRANS:
         if read_pair_type(read) != READ_PAIR_TYPE.LR and \
                 read_pair_type(read) != READ_PAIR_TYPE.RL:
             return False
-    elif event_type == SVTYPE.ITRANS:
-        if read_pair_type(read) != READ_PAIR_TYPE.LL and \
-                read_pair_type(read) != READ_PAIR_TYPE.RR:
-            return False
-    elif event_type == SVTYPE.INV:
+    elif event_type == SVTYPE.ITRANS or event_type == SVTYPE.INV:
         if read_pair_type(read) != READ_PAIR_TYPE.LL and \
                 read_pair_type(read) != READ_PAIR_TYPE.RR:
             return False

@@ -12,7 +12,7 @@ from ..illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from ..blat import get_blat_version
 from ..bam.read import get_samtools_version
 
-QSUB_TAGS = dict(validate_memory=12, default_memory=4, queue='transabyss.q')
+QSUB_TAGS = dict(validate_memory=12, default_memory=6, queue='transabyss.q')
 ENV_VAR_PREFIX = 'MAVIS_'
 
 LIBRARY_DEFAULT_TAGS = dict(
