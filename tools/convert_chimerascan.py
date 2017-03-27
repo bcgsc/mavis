@@ -42,8 +42,8 @@ def chromosome_str(chr_repr):
     Adjust the chromosome names of from the ChimeraScan output
     """
     ret_val = str(chr_repr).strip().upper().replace('CHR', '')
-    ret_val.replace('23', 'X').replace('24', 'Y').replace('25', 'MT')
-    ret_val.replace('M', 'MT')
+    ret_val = ret_val.replace('23', 'X').replace('24', 'Y').replace('25', 'MT')
+    ret_val = ret_val.replace('M', 'MT')
     return ret_val
 
 
@@ -92,10 +92,11 @@ def load_bedpe(input_bedpe, library_name, version):
             opposing_strands=output[COLUMNS.opposing_strands]
             )
         event_types = BreakpointPair.classify(bpp)
-        if len(event_types) == 1 or event_types == ['deletion', 'insertion']:
+        if len(event_types) == 1 or event_types == [SVTYPE.DEL, SVTYPE.INS]:
             output[COLUMNS.event_type] = event_types[0]
         else:
             print("ERROR: event_type generated was not one of the expected event types")
+            sys.exit(2)
         events.append(output)
     return events
 
