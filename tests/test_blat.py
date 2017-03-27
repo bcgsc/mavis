@@ -256,6 +256,10 @@ class TestBlat(unittest.TestCase):
         #self.assertEqual(2966, read2.reference_start)
         self.assertEqual([(CIGAR.EQ, 102), (CIGAR.D, 1253), (CIGAR.EQ, 74)], read1.cigar)
         #self.assertEqual([(CIGAR.EQ, 128), (CIGAR.S, 117)], read2.cigar)
+    
+    @unittest.skipIf(not shutil.which('blat'), "missing the blat command")
+    def test_blat_contigs_inversion(self):
+        raise unittest.SkipTest('TODO') 
 
     @unittest.skipIf(not shutil.which('blat'), "missing the blat command")
     def test_blat_contigs_deletion_revcomp(self):
