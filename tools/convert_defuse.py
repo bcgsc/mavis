@@ -9,7 +9,7 @@ import sys
 import os
 import time
 import warnings
-from mavis.constants import COLUMNS, sort_columns, ORIENT, STRAND, SVTYPE
+from mavis.constants import COLUMNS, sort_columns, ORIENT, STRAND, SVTYPE, PROTOCOL
 from mavis.breakpoint import Breakpoint, BreakpointPair
 
 __version__ = '0.0.1'
@@ -40,7 +40,7 @@ def make_tsv(patient_id, tsv, library_name, version=None, output_dir=""):
         output[COLUMNS.library] = library_name
         output[COLUMNS.tools] = 'deFuse_v{}'.format(version)
         output[COLUMNS.stranded] = False
-        output[COLUMNS.protocol] = 'transcriptome'
+        output[COLUMNS.protocol] = PROTOCOL.TRANS
         output['defuse_spanning_read_count'] = row['span_count']
         output['defuse_split_read_count'] = row['splitr_count']
         output['defuse_cluster_id'] = row['cluster_id']

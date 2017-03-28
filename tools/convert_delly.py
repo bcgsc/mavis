@@ -11,7 +11,7 @@ import sys
 import pprint
 import time
 import vcf
-from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND
+from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND, PROTOCOL
 
 __version__ = '0.0.1'
 __prog__ = os.path.abspath(os.path.realpath(__file__))
@@ -77,7 +77,7 @@ def delly_vcf_to_tsv(delly_vcf_list, output_filename=None):
                 call[COLUMNS.break1_chromosome], call[COLUMNS.break1_position_start],call[COLUMNS.break1_position_end] = position1
                 call[COLUMNS.break2_chromosome], call[COLUMNS.break2_position_start],call[COLUMNS.break2_position_end] = position2
 
-            call[COLUMNS.protocol] = 'genome'  # Just hardcoded by DELLY usage
+            call[COLUMNS.protocol] = PROTOCOL.GENOME  # Just hardcoded by DELLY usage
             call['delly_comments'] = repr(extra_info)
             call[COLUMNS.stranded] = False  # Never stranded for genomes
 

@@ -4,7 +4,7 @@ Script for converting Chimerascan output into the MAVIS accepted input format
 """
 
 from __future__ import print_function
-from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND
+from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND, PROTOCOL
 from mavis.breakpoint import Breakpoint, BreakpointPair
 import argparse
 import TSV
@@ -77,7 +77,7 @@ def load_bedpe(input_bedpe, library_name, version):
         output[COLUMNS.opposing_strands] = True if output[COLUMNS.break1_orientation] == \
             output[COLUMNS.break2_orientation] else False
 
-        output[COLUMNS.protocol] = "transcriptome"  # Chimerascan is assumed to only be run on transcriptomes
+        output[COLUMNS.protocol] = PROTOCOL.TRANS  # Chimerascan is assumed to only be run on transcriptomes
         output[COLUMNS.library] = library_name
         output[COLUMNS.tools] = "ChimeraScan_v"+version
         evidence = "total_spanning_frags:{}".format(row['spanning_frags'])
