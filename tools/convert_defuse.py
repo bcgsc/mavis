@@ -51,22 +51,32 @@ def make_tsv(patient_id, tsv, library_name, version=None, output_dir=""):
             data={},
             opposing_strands=output[COLUMNS.opposing_strands]
             )
-        event_type = ''
+        event_type = False
         event = {SVTYPE.DEL: row['deletion'],
                  SVTYPE.TRANS: row['interchromosomal'],
                  SVTYPE.INV: row['inversion'],
                  SVTYPE.DUP: row['eversion']}
         for key in event.keys():
             if event[key] == 'Y':
+                if event_type:
+                    warnings.warn("WARNING: deFuse has classified an event as more than one type")
                 event_type = key
+        if not event_type:
+            warnings.warn("WARNING: deFuse has given an event a classification")
+
         event_types = BreakpointPair.classify(bpp)
         output[COLUMNS.event_type] = event_type
         if event_type not in event_types:
-            warnings.warn("WARNING: Expected {}, found {}. Will add \"{}\" for the event type".format(
-                    event_types, event_type, event_types[0]))
-            # grabs the first event_type found, might not be the right choice, expects deletion
-            output[COLUMNS.event_type] = event_types[0]
-        events.append(output)
+            for found_event_type in event_types:
+                # ignore insertions as defuse is not expected to report this type of event.
+                if found_event_type == SVTYPE.INS:
+                    continue
+                warnings.warn("WARNING: Expected {}, found {}. Will add \"{}\" for the event type".format(
+                    event_types, event_type, found_event_type))
+                output[COLUMNS.event_type] = found_event_type
+                events.append(output)
+        else:
+            events.append(output)
 
     elements = sort_columns(events[0].keys())
     header = "\t".join(elements)
