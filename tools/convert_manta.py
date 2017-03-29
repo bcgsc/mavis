@@ -8,7 +8,7 @@ import argparse
 import sys
 import os
 import time
-from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND
+from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND, PROTOCOL
 
 __version__ = '0.0.1'
 __prog__ = os.path.basename(os.path.realpath(__file__))
@@ -68,13 +68,21 @@ def load_vcf(vcf_filename, library, version, filter=None):
                 start_b = position_b
                 end_b = position_b
 
-            event[COLUMNS.break1_chromosome] = chrom_a
-            event[COLUMNS.break2_chromosome] = chrom_b
-            event[COLUMNS.break1_position_start] = start_a
-            event[COLUMNS.break1_position_end] = end_a
-            event[COLUMNS.break2_position_start] = start_b
-            event[COLUMNS.break2_position_end] = end_b
-            event[COLUMNS.protocol] = 'genome'
+            key1 = (chrom_a, start_a, end_a)
+            key2 = (chrom_b, start_b, end_b)
+
+            if key1 > key2:
+                event[COLUMNS.break1_chromosome], event[COLUMNS.break1_position_start], \
+                    event[COLUMNS.break1_position_end] = key2
+                event[COLUMNS.break2_chromosome], event[COLUMNS.break2_position_start], \
+                    event[COLUMNS.break2_position_end] = key1
+            else:
+                event[COLUMNS.break1_chromosome], event[COLUMNS.break1_position_start], \
+                    event[COLUMNS.break1_position_end] = key1
+                event[COLUMNS.break2_chromosome], event[COLUMNS.break2_position_start], \
+                    event[COLUMNS.break2_position_end] = key2
+
+            event[COLUMNS.protocol] = PROTOCOL.GENOME
             event[COLUMNS.event_type] = SVTYPES[event_type]
             event['manta_evidence'] = str(record.ID) + " " + str(record.INFO) + " " + str(record.samples)
             event[COLUMNS.stranded] = 'False'
@@ -82,23 +90,23 @@ def load_vcf(vcf_filename, library, version, filter=None):
             event[COLUMNS.tools] = "Manta_v{}".format(version)
 
             if event_type == 'DEL' or event_type == 'INS':
-                event[COLUMNS.break1_orientation], event[COLUMNS.break2_orientation] = ('L', 'R')
+                event[COLUMNS.break1_orientation], event[COLUMNS.break2_orientation] = (ORIENT.LEFT, ORIENT.RIGHT)
                 event[COLUMNS.opposing_strands] = False
                 events.append(event)
             elif event_type == 'DUP':
-                event[COLUMNS.break1_orientation], event[COLUMNS.break2_orientation] = ('R', 'L')
+                event[COLUMNS.break1_orientation], event[COLUMNS.break2_orientation] = (ORIENT.RIGHT, ORIENT.LEFT)
                 event[COLUMNS.opposing_strands] = False
                 events.append(event)
             elif event_type == 'INV':
-                event[COLUMNS.break1_orientation], event[COLUMNS.break2_orientation] = ('L', 'L')
+                event[COLUMNS.break1_orientation], event[COLUMNS.break2_orientation] = (ORIENT.LEFT, ORIENT.LEFT)
                 event[COLUMNS.opposing_strands] = True
                 events.append(event)
-                event[COLUMNS.break1_orientation], event[COLUMNS.break2_orientation] = ('R', 'R')
+                event[COLUMNS.break1_orientation], event[COLUMNS.break2_orientation] = (ORIENT.RIGHT, ORIENT.RIGHT)
                 event[COLUMNS.opposing_strands] = True
                 events.append(event)
             elif event_type == 'BND':
-                event[COLUMNS.break1_orientation], event[COLUMNS.break2_orientation] = ('?', '?')
-                event[COLUMNS.opposing_strands] = 'null'
+                event[COLUMNS.break1_orientation], event[COLUMNS.break2_orientation] = (ORIENT.NS, ORIENT.NS)
+                event[COLUMNS.opposing_strands] = STRAND.NS
                 events.append(event)
 
     return events

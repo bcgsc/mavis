@@ -87,17 +87,16 @@ def main(
 
         for cluster, input_pairs in clusters.items():
             for p in input_pairs:
-                if p in rows:
-                    rows[p][COLUMNS.tools].update(p.data[COLUMNS.tools])
-                else:
-                    rows[p] = BreakpointPair.flatten(p)
+                if p not in rows:
+                    rows[p] = p.flatten()
+                rows[p][COLUMNS.tools].update(p.data[COLUMNS.tools])
                 rows[p].setdefault('clusters', set()).add(cluster.data[COLUMNS.cluster_id])
         for row in rows.values():
             row['clusters'] = ';'.join([str(c) for c in sorted(list(row['clusters']))])
             row[COLUMNS.tools] = ';'.join(sorted(list(row[COLUMNS.tools])))
             row[COLUMNS.library] = library
             row[COLUMNS.protocol] = protocol
-        output_tabbed_file(rows, CLUSTER_ASSIGN_OUTPUT)
+        output_tabbed_file(rows.values(), CLUSTER_ASSIGN_OUTPUT)
 
     output_files = []
     # filter clusters based on annotations

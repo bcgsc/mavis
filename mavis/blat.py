@@ -22,6 +22,8 @@ from .constants import *
 from .bam import cigar as cigar_tools
 from .bam import read as read_tools
 from .interval import Interval
+from .error import InvalidRearrangement
+from .breakpoint import BreakpointPair
 
 
 class BlatAlignedSegment(pysam.AlignedSegment):
@@ -401,6 +403,8 @@ def blat_contigs(
         # will raise subprocess.CalledProcessError if non-zero exit status
         # parameters from https://genome.ucsc.edu/FAQ/FAQblat.html#blat4
         # print(["blat", blat_2bit_reference, fasta_name, psl.name, '-out=pslx', '-noHead'] + blat_options)
+        log(['blat', blat_2bit_reference,
+            blat_fa_input_file, blat_pslx_output_file, '-out=pslx', '-noHead'] + blat_options)
         subprocess.check_output(['blat', blat_2bit_reference,
             blat_fa_input_file, blat_pslx_output_file, '-out=pslx', '-noHead'] + blat_options)
 
@@ -468,15 +472,22 @@ def blat_contigs(
                                     putative_alignments.append((read, None))
 
                 combo_prohibited = [x for x, y in putative_alignments]
-                for a1, a2 in itertools.combinations([x for x in aln if x not in combo_prohibited], 2):
+                for a1, a2 in sorted(
+                        itertools.combinations([x for x in aln if x not in combo_prohibited], 2),
+                        key=lambda x: x[0].get_tag('br') + x[1].get_tag('br')):
                     # do they overlap both breakpoints
                     if a1.reference_id > a2.reference_id or \
                             (a1.reference_id == a2.reference_id and a1.reference_start > a2.reference_start):
                         a1, a2 = (a2, a1)
-
+    
+                    if set([
+                            INPUT_BAM_CACHE.get_read_reference_name(a1),
+                            INPUT_BAM_CACHE.get_read_reference_name(a2)
+                    ]) != set([e.break1.chr, e.break2.chr]):
+                        continue
+                    
                     q1 = a1.query_coverage_interval()
                     q2 = a2.query_coverage_interval()
-
                     if a1.is_reverse != a1.is_reverse:
                         l = len(a1.query_sequence) - 1
                         q2 = Interval(l - q2.end, l - q2.start)
@@ -490,15 +501,21 @@ def blat_contigs(
                         q2 = Interval(len(a2.query_sequence) - q2.end, len(a2.query_sequence) - q2.start)
                     elif e.opposing_strands:
                         continue
+                    
                     union = q1 | q2
                     consume = len(union)
                     if not Interval.overlaps(q1, q2):
                         consume = len(q1) + len(q2)
                     if consume / len(a1.query_sequence) < blat_min_query_consumption:
                         continue
-
                     if len(union) - len(q1) < min_extend_overlap or len(union) - len(q2) < min_extend_overlap:
                         continue
+                    
+                    try:
+                        BreakpointPair.call_breakpoint_pair(a1, a2)
+                    except (InvalidRearrangement, AssertionError) as err:
+                        continue
+                    
                     if INPUT_BAM_CACHE.get_read_reference_name(a1) == e.break1.chr \
                             and Interval.overlaps(e.outer_window1, (a1.reference_start, a1.reference_end - 1)) \
                             and INPUT_BAM_CACHE.get_read_reference_name(a2) == e.break2.chr \
@@ -512,7 +529,7 @@ def blat_contigs(
                 if len(putative_alignments) == 0:
                     continue
                 score_by_alignments = {}
-                for read1, read2 in putative_alignments:
+                for read1, read2 in sorted(putative_alignments, key=lambda x: pair_scoring_function(x[0], x[1])):
                     score = pair_scoring_function(read1, read2)
                     score_by_alignments[(read1, read2)] = score
                 max_score = max(list(score_by_alignments.values()))

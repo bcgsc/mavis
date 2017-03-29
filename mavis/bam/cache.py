@@ -47,7 +47,7 @@ class BamCache:
         if tid == -1:
             tid = self.fh.get_tid('chr' + chrom)
         if tid == -1:
-            raise KeyError('invalid reference name not present in bam file')
+            raise KeyError('invalid reference name not present in bam file', chrom)
         return tid
 
     def get_read_reference_name(self, read):

@@ -11,7 +11,7 @@ import sys
 import pprint
 import time
 import vcf
-from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND
+from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND, PROTOCOL
 
 __version__ = '0.0.1'
 __prog__ = os.path.abspath(os.path.realpath(__file__))
@@ -65,15 +65,19 @@ def delly_vcf_to_tsv(delly_vcf_list, output_filename=None):
             call = {}
             # Should be a semi-colon delimited list of <tool name>_<tool version>
             call[COLUMNS.tools] = record.INFO['SVMETHOD'].replace('EMBL.DELLY', 'DELLY_')
-            call[COLUMNS.break1_chromosome] = chromosome_standard_str(record.CHROM)
-            # Prevent minimal start position from being negative
-            call[COLUMNS.break1_position_start] = max(1, record.POS + record.INFO['CIPOS'][0])
-            call[COLUMNS.break1_position_end] = record.POS + record.INFO['CIPOS'][1]
-            call[COLUMNS.protocol] = 'genome'  # Just hardcoded by DELLY usage
-            call[COLUMNS.break2_chromosome] = chromosome_standard_str(record.INFO['CHR2'])
-#            end_position = (record.INFO['END'] + record.INFO['CIEND'][0], record.INFO['END'] + record.INFO['CIEND'][1])
-            call[COLUMNS.break2_position_start] = record.INFO['END'] + record.INFO['CIEND'][0]
-            call[COLUMNS.break2_position_end] = record.INFO['END'] + record.INFO['CIEND'][1]
+
+            position1 = (chromosome_standard_str(record.CHROM), max(1, record.POS + record.INFO['CIPOS'][0]), record.POS + record.INFO['CIPOS'][1])
+            position2 = (chromosome_standard_str(record.INFO['CHR2']),  record.INFO['END'] + record.INFO['CIEND'][0], record.INFO['END'] + record.INFO['CIEND'][1])
+
+            if position1 > position2:
+                call[COLUMNS.break1_chromosome], call[COLUMNS.break1_position_start],call[COLUMNS.break1_position_end] = position2
+                call[COLUMNS.break2_chromosome], call[COLUMNS.break2_position_start],call[COLUMNS.break2_position_end] = position1
+
+            else:
+                call[COLUMNS.break1_chromosome], call[COLUMNS.break1_position_start],call[COLUMNS.break1_position_end] = position1
+                call[COLUMNS.break2_chromosome], call[COLUMNS.break2_position_start],call[COLUMNS.break2_position_end] = position2
+
+            call[COLUMNS.protocol] = PROTOCOL.GENOME  # Just hardcoded by DELLY usage
             call['delly_comments'] = repr(extra_info)
             call[COLUMNS.stranded] = False  # Never stranded for genomes
 

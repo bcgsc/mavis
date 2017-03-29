@@ -4,7 +4,7 @@ Script for converting Chimerascan output into the MAVIS accepted input format
 """
 
 from __future__ import print_function
-from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND
+from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND, PROTOCOL
 from mavis.breakpoint import Breakpoint, BreakpointPair
 import argparse
 import TSV
@@ -41,9 +41,10 @@ def chromosome_str(chr_repr):
     """
     Adjust the chromosome names of from the ChimeraScan output
     """
+    mapping = {'23': 'X', 'M': 'MT', '24': 'Y', '25': 'MT'}
     ret_val = str(chr_repr).strip().upper().replace('CHR', '')
-    ret_val.replace('23', 'X').replace('24', 'Y').replace('25', 'MT')
-    ret_val.replace('M', 'MT')
+    if ret_val in mapping:
+        ret_val = mapping[ret_val]
     return ret_val
 
 
@@ -77,7 +78,7 @@ def load_bedpe(input_bedpe, library_name, version):
         output[COLUMNS.opposing_strands] = True if output[COLUMNS.break1_orientation] == \
             output[COLUMNS.break2_orientation] else False
 
-        output[COLUMNS.protocol] = "transcriptome"  # Chimerascan is assumed to only be run on transcriptomes
+        output[COLUMNS.protocol] = PROTOCOL.TRANS  # Chimerascan is assumed to only be run on transcriptomes
         output[COLUMNS.library] = library_name
         output[COLUMNS.tools] = "ChimeraScan_v"+version
         evidence = "total_spanning_frags:{}".format(row['spanning_frags'])
@@ -92,10 +93,11 @@ def load_bedpe(input_bedpe, library_name, version):
             opposing_strands=output[COLUMNS.opposing_strands]
             )
         event_types = BreakpointPair.classify(bpp)
-        if len(event_types) == 1 or event_types == ['deletion', 'insertion']:
+        if len(event_types) == 1 or event_types == [SVTYPE.DEL, SVTYPE.INS]:
             output[COLUMNS.event_type] = event_types[0]
         else:
             print("ERROR: event_type generated was not one of the expected event types")
+            sys.exit(2)
         events.append(output)
     return events
 

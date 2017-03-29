@@ -4,7 +4,6 @@ from copy import copy as sys_copy
 from .constants import ORIENT, STRAND, COLUMNS, CIGAR, SVTYPE, reverse_complement, DNA_ALPHABET
 from .error import *
 from .interval import Interval
-from .annotate.base import ReferenceName
 import TSV
 import re
 import itertools
@@ -34,6 +33,8 @@ class Breakpoint(Interval):
             >>> Breakpoint('1', 1, 2, '+', 'R')
             >>> Breakpoint('1', 1, orient='R')
         """
+        from .annotate.base import ReferenceName
+
         Interval.__init__(self, start, end)
         self.orient = ORIENT.enforce(orient)
         self.chr = ReferenceName(chr)
@@ -397,7 +398,6 @@ class BreakpointPair:
         .. todo::
             return multiple events not just the major event
         """
-
         if read1.reference_id > read2.reference_id:
             read1, read2 = (read2, read1)
         elif read1.reference_id == read2.reference_id and read1.reference_start > read2.reference_start:
@@ -412,7 +412,6 @@ class BreakpointPair:
             assert(read1.query_sequence == reverse_complement(read2.query_sequence))
             l = len(read1.query_sequence) - 1
             r2_qci = Interval(l - r2_qci.end, l - r2_qci.start)
-
         b1 = None
         b2 = None
 
@@ -422,26 +421,22 @@ class BreakpointPair:
         s2 = STRAND.NEG if read2.is_reverse else STRAND.POS
 
         # <==============
-        if read1.cigar[0][0] == CIGAR.S and read1.cigar[-1][0] == CIGAR.S:
-            if read1.cigar[0][1] > read1.cigar[-1][1]:
-                o1 = ORIENT.RIGHT
-            elif read1.cigar[0][1] < read1.cigar[-1][1]:
-                o1 = ORIENT.LEFT
-        elif read1.cigar[0][0] == CIGAR.S:
+        r1_st = read1.cigar[0][1] if read1.cigar[0][0] == CIGAR.S else 0
+        r1_end = read1.cigar[-1][1] if read1.cigar[-1][0] == CIGAR.S else 0
+
+        if r1_st > r1_end:
             o1 = ORIENT.RIGHT
-        elif read1.cigar[-1][0] == CIGAR.S:
+        elif r1_end > r1_st:
             o1 = ORIENT.LEFT
 
-        if read2.cigar[0][0] == CIGAR.S and read2.cigar[-1][0] == CIGAR.S:
-            if read2.cigar[0][1] > read2.cigar[-1][1]:
-                o2 = ORIENT.RIGHT
-            elif read2.cigar[0][1] < read2.cigar[-1][1]:
-                o2 = ORIENT.LEFT
-        elif read2.cigar[0][0] == CIGAR.S:
-            o2 = ORIENT.RIGHT
-        elif read2.cigar[-1][0] == CIGAR.S:
-            o2 = ORIENT.LEFT
+        r2_st = read2.cigar[0][1] if read2.cigar[0][0] == CIGAR.S else 0
+        r2_end = read2.cigar[-1][1] if read2.cigar[-1][0] == CIGAR.S else 0
 
+        if r2_st > r2_end:
+            o2 = ORIENT.RIGHT
+        elif r2_end > r2_st:
+            o2 = ORIENT.LEFT
+        
         if o1 == ORIENT.NS or o2 == ORIENT.NS:
             raise AssertionError(
                 'read does not have softclipping on either end and cannot therefore determine orientation',

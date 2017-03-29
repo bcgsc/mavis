@@ -9,7 +9,7 @@ import sys
 import os
 import time
 import warnings
-from mavis.constants import COLUMNS, sort_columns, ORIENT, STRAND
+from mavis.constants import COLUMNS, sort_columns, ORIENT, STRAND, SVTYPE, PROTOCOL
 from mavis.breakpoint import Breakpoint, BreakpointPair
 
 __version__ = '0.0.1'
@@ -40,6 +40,7 @@ def make_tsv(patient_id, tsv, library_name, version=None, output_dir=""):
         output[COLUMNS.library] = library_name
         output[COLUMNS.tools] = 'deFuse_v{}'.format(version)
         output[COLUMNS.stranded] = False
+        output[COLUMNS.protocol] = PROTOCOL.TRANS
         output['defuse_spanning_read_count'] = row['span_count']
         output['defuse_split_read_count'] = row['splitr_count']
         output['defuse_cluster_id'] = row['cluster_id']
@@ -50,23 +51,32 @@ def make_tsv(patient_id, tsv, library_name, version=None, output_dir=""):
             data={},
             opposing_strands=output[COLUMNS.opposing_strands]
             )
-        event_type = ''
-        event = {'deletion': row['deletion'],
-                 'translocation':  row['interchromosomal'],
-                 'inversion': row['inversion'],
-                 'duplication': row['eversion']}
+        event_type = False
+        event = {SVTYPE.DEL: row['deletion'],
+                 SVTYPE.TRANS: row['interchromosomal'],
+                 SVTYPE.INV: row['inversion'],
+                 SVTYPE.DUP: row['eversion']}
         for key in event.keys():
             if event[key] == 'Y':
+                if event_type:
+                    warnings.warn("WARNING: deFuse has classified an event as more than one type")
                 event_type = key
+        if not event_type:
+            warnings.warn("WARNING: deFuse has not given an event a classification")
+
         event_types = BreakpointPair.classify(bpp)
         output[COLUMNS.event_type] = event_type
-        if event_type not in event_types and event_type not in event_types[0]:
-            print(output)
-            warnings.warn("WARNING: Expected {}, found {}. Will add \"{}\" for the event type".format(
-                    event_types, event_type, event_types[0]))
-            # grabs the first event_type found, might not be the right choice
-            output[COLUMNS.event_type] = event_types[0]
-        events.append(output)
+        if event_type not in event_types:
+            for found_event_type in event_types:
+                # ignore insertions as defuse is not expected to report this type of event.
+                if found_event_type == SVTYPE.INS:
+                    continue
+                warnings.warn("WARNING: Expected {}, found {}. Will add \"{}\" for the event type".format(
+                    event_types, event_type, found_event_type))
+                output[COLUMNS.event_type] = found_event_type
+                events.append(output)
+        else:
+            events.append(output)
 
     elements = sort_columns(events[0].keys())
     header = "\t".join(elements)
