@@ -62,7 +62,7 @@ def make_tsv(patient_id, tsv, library_name, version=None, output_dir=""):
                     warnings.warn("WARNING: deFuse has classified an event as more than one type")
                 event_type = key
         if not event_type:
-            warnings.warn("WARNING: deFuse has given an event a classification")
+            warnings.warn("WARNING: deFuse has not given an event a classification")
 
         event_types = BreakpointPair.classify(bpp)
         output[COLUMNS.event_type] = event_type
