@@ -184,6 +184,9 @@ class Domain:
         """
         seq_list = self.get_seqs(REFERENCE_GENOME)
         total = sum([len(s) for s in seq_list])
+        
+        if total > len(input_sequence):
+            raise UserWarning('could not map the sequences to the input')
 
         results = {}
         for seq in set(seq_list):
