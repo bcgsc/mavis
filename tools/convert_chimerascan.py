@@ -41,9 +41,10 @@ def chromosome_str(chr_repr):
     """
     Adjust the chromosome names of from the ChimeraScan output
     """
+    mapping = {'23': 'X', 'M': 'MT', '24': 'Y', '25': 'MT'}
     ret_val = str(chr_repr).strip().upper().replace('CHR', '')
-    ret_val = ret_val.replace('23', 'X').replace('24', 'Y').replace('25', 'MT')
-    ret_val = ret_val.replace('M', 'MT')
+    if ret_val in mapping:
+        ret_val = mapping[ret_val]
     return ret_val
 
 
