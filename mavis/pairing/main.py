@@ -11,7 +11,7 @@ from ..pipeline.util import read_inputs, output_tabbed_file, log
 from . import equivalent_events
 
 
-def main(inputs, output, flanking_call_distance, split_call_distance, contig_call_distance, **kwargs):
+def main(inputs, output, flanking_call_distance, split_call_distance, contig_call_distance, annotations, **kwargs):
     """
     Args:
         inputs (:class:`List` of :class:`str`): list of input files to read
@@ -76,7 +76,7 @@ def main(inputs, output, flanking_call_distance, split_call_distance, contig_cal
 
     TRANSCRIPTS = dict()
 
-    for chr, genes in args.annotations[1].items():
+    for chr, genes in annotations[1].items():
         for gene in genes:
             for t in gene.transcripts:
                 if t.name in TRANSCRIPTS:
