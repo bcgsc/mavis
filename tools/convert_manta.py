@@ -13,11 +13,11 @@ from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND, PROTO
 __version__ = '0.0.1'
 __prog__ = os.path.basename(os.path.realpath(__file__))
 
-SVTYPES = {'DEL': 'deletion',
-           'INV': 'inversion',
-           'DUP': 'duplication',
-           'BND': 'translocation',
-           'INS': 'insertion',
+SVTYPES = {'DEL': SVTYPE.DEL,
+           'INV': SVTYPE.INV,
+           'DUP': SVTYPE.DUP,
+           'BND': SVTYPE.TRA,
+           'INS': SVTYPE.INS
            }
 
 
