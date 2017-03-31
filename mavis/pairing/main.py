@@ -76,7 +76,7 @@ def main(inputs, output, flanking_call_distance, split_call_distance, contig_cal
 
     TRANSCRIPTS = dict()
 
-    for chr, genes in annotations[1].items():
+    for chr, genes in annotations.items():
         for gene in genes:
             for t in gene.transcripts:
                 if t.name in TRANSCRIPTS:
