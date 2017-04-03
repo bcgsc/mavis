@@ -1,22 +1,22 @@
 import os
-import sys
 import itertools
-
-
-# local modules
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from ..breakpoint import BreakpointPair
 from .cluster import cluster_breakpoint_pairs
 from ..constants import COLUMNS
 from ..interval import Interval
-from ..pipeline.util import read_inputs, output_tabbed_file, write_bed_file
-from ..pipeline.util import build_batch_id, filter_on_overlap, log, mkdirp
+from .constants import DEFAULTS
+from ..util import read_inputs, output_tabbed_file, write_bed_file
+from ..util import build_batch_id, filter_on_overlap, log, mkdirp
 
 
 def main(
-    inputs, output, stranded_bam, library, protocol,
-    masking, cluster_clique_size, cluster_radius, uninformative_filter, max_proximity,
-    annotations, min_clusters_per_file, max_files, **kwargs
+    inputs, output, stranded_bam, library, protocol, masking, annotations,
+    cluster_clique_size=DEFAULTS.cluster_clique_size,
+    cluster_radius=DEFAULTS.cluster_radius,
+    uninformative_filter=DEFAULTS.uninformative_filter,
+    max_proximity=DEFAULTS.max_proximity,
+    min_clusters_per_file=DEFAULTS.min_clusters_per_file,
+    max_files=DEFAULTS.max_files,
+    **kwargs
 ):
     """
     Args:

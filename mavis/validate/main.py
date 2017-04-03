@@ -14,11 +14,11 @@ from ..breakpoint import BreakpointPair
 from ..constants import PROTOCOL, COLUMNS
 from .call import call_events
 from .evidence import GenomeEvidence, TranscriptomeEvidence
-from .constants import VALIDATION_DEFAULTS
+from .constants import DEFAULTS
 from ..annotate.base import BioInterval
 from ..bam.read import get_samtools_version, samtools_v0_sort, samtools_v1_sort
 from ..bam import cigar as cigar_tools
-from ..pipeline.util import read_inputs, log, output_tabbed_file, filter_on_overlap, write_bed_file, build_batch_id
+from ..util import read_inputs, log, output_tabbed_file, filter_on_overlap, write_bed_file, build_batch_id
 
 VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
 
@@ -71,7 +71,7 @@ def parse_arguments():
     parser.add_argument('--protocol', help='the library protocol: genome or transcriptome', choices=PROTOCOL.values())
 
     g = parser.add_argument_group('evidence arguments (optional)')
-    for attr, value in VALIDATION_DEFAULTS.__dict__.items():
+    for attr, value in DEFAULTS.__dict__.items():
         vtype = type(value)
         if type(value) == bool:
             vtype = TSV.tsv_boolean
@@ -140,7 +140,7 @@ def main(
     if samtools_version is None:
         samtools_version = get_samtools_version()
 
-    validation_settings = {k: v for k, v in kwargs.items() if k in VALIDATION_DEFAULTS.__dict__}
+    validation_settings = {k: v for k, v in kwargs.items() if k in DEFAULTS.__dict__}
     evidence_reads = set()  # keep track of collected reads to use for ouput
 
     split_read_contigs = set()
@@ -231,10 +231,10 @@ def main(
         blat_pslx_output_file=CONTIG_BLAT_OUTPUT,
         clean_files=False,
         blat_min_percent_of_max_score=kwargs.get(
-            'blat_min_percent_of_max_score', VALIDATION_DEFAULTS.blat_min_percent_of_max_score),
-        blat_min_identity=kwargs.get('blat_min_identity', VALIDATION_DEFAULTS.blat_min_identity),
+            'blat_min_percent_of_max_score', DEFAULTS.blat_min_percent_of_max_score),
+        blat_min_identity=kwargs.get('blat_min_identity', DEFAULTS.blat_min_identity),
         blat_min_query_consumption=kwargs.get(
-            'blat_min_query_consumption', VALIDATION_DEFAULTS.blat_min_query_consumption)
+            'blat_min_query_consumption', DEFAULTS.blat_min_query_consumption)
     )
     log('alignment complete')
     event_calls = []

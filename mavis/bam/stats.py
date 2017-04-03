@@ -1,5 +1,6 @@
 #!/projects/tumour_char/analysis_scripts/python/centos06/anaconda3_v2.3.0/bin/python
 from ..constants import STRAND
+from ..util import devnull
 import math
 import numpy as np
 import statistics as stats
@@ -69,7 +70,7 @@ def compute_transcriptome_bam_stats(
     bam_file_handle,
     annotations,
     sample_size,
-    log=lambda *pos, **kwargs: None,
+    log=devnull,
     best_transcripts_only=False,
     min_mapping_quality=1,
     stranded=True,
@@ -159,7 +160,7 @@ def compute_genome_bam_stats(
     bam_file_handle,
     sample_bin_size,
     sample_size,
-    log=lambda *pos, **kwargs: None,
+    log=devnull,
     min_mapping_quality=1,
     sample_cap=10000,
     distribution_fraction=0.99
