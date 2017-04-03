@@ -148,4 +148,4 @@ with open(output_filename, 'w') as fh:
         for element in elements:
             line.append(str(event[element]))
         fh.write("{}\n".format("\t".join(line)))
-    print("Wrote {} gene fusion events {}".format(len(events), output_filename))
+    print("Wrote {} gene fusion events to {}".format(len(events), output_filename))

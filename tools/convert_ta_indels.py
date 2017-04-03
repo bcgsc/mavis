@@ -119,5 +119,6 @@ def main():
         fh.write('#' + '\t'.join([str(c) for c in header]) + '\n')
         for row in rows:
             fh.write('\t'.join([row[c] for c in header]) + '\n')
+        print("Wrote {} gene fusion events to {}".format(len(rows), args.output))
 if __name__ == '__main__':
     main()
