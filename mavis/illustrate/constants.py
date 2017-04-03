@@ -1,8 +1,8 @@
 from colour import Color
 from ..constants import GIESMA_STAIN
-from argparse import Namespace
+from ..util import MavisNamespace
 
-DEFAULTS = Namespace(
+DEFAULTS = MavisNamespace(
     width=1000,
     scaffold_color='#000000',
     gene1_color_selected='#518dc5',

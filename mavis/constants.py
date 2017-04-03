@@ -8,6 +8,16 @@ from Bio.Alphabet.IUPAC import ambiguous_dna
 from Bio.Seq import Seq
 
 
+PIPELINE_STEP = Vocab(
+    ANNOTATE='annotate',
+    VALIDATE='validate',
+    PIPELINE='pipeline',
+    CLUSTER='cluster',
+    PAIR='pairing',
+    SUMMARY='summary'
+)
+
+
 CODON_SIZE = 3
 """:class:`int`: the number of bases making up a codon"""
 

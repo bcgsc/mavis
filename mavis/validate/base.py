@@ -1,7 +1,7 @@
 import itertools
 from ..constants import *
 from ..error import *
-from .constants import VALIDATION_DEFAULTS
+from .constants import DEFAULTS
 from ..assemble import assemble
 from ..interval import Interval
 from ..breakpoint import BreakpointPair
@@ -103,9 +103,9 @@ class Evidence(BreakpointPair):
         )
         d = dict()
         for arg in kwargs:
-            if arg not in VALIDATION_DEFAULTS.__dict__:
+            if arg not in DEFAULTS.__dict__:
                 raise AttributeError('unrecognized attribute', arg)
-        d.update(VALIDATION_DEFAULTS.__dict__)
+        d.update(DEFAULTS.__dict__)
         kwargs.setdefault('assembly_min_contig_length', int(read_length * 1.25))
         kwargs.setdefault('assembly_max_kmer_size', int(read_length * 0.7))
         d.update(kwargs)  # input arguments should override the defaults
@@ -276,7 +276,8 @@ class Evidence(BreakpointPair):
                 return False
 
         # check that the positions of the reads and the strands make sense
-        if Interval.overlaps(iread, self.compatible_windows[0]) and Interval.overlaps(imate, self.compatible_windows[1]):
+        if Interval.overlaps(iread, self.compatible_windows[0]) and \
+                Interval.overlaps(imate, self.compatible_windows[1]):
             self.compatible_flanking_pairs.add((read, mate))
             return True
 

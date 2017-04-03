@@ -3,20 +3,27 @@ import errno
 import math
 import os
 import random
-from mavis.breakpoint import read_bpp_from_input_file
-from mavis.constants import PROTOCOL, COLUMNS, sort_columns
-from mavis.interval import Interval
-from vocab import Vocab
+from .breakpoint import read_bpp_from_input_file
+from .constants import PROTOCOL, COLUMNS, sort_columns
+from .interval import Interval
+from argparse import Namespace
 
 
-PIPELINE_STEP = Vocab(
-    ANNOTATE='annotate',
-    VALIDATE='validate',
-    PIPELINE='pipeline',
-    CLUSTER='cluster',
-    PAIR='pairing',
-    SUMMARY='summary'
-)
+class MavisNamespace(Namespace):
+    def items(self):
+        return self.__dict__.items()
+
+    def __add__(self, other):
+        d = {}
+        d.update(self.__dict__)
+        d.update(other.__dict__)
+        return MavisNamespace(**d)
+
+    def update(self, other):
+        self.__dict__.update(other.__dict__)
+
+    def __getitem__(self, key):
+        return getattr(self, key)
 
 
 def build_batch_id(prefix='', suffix='', size=6):
@@ -31,6 +38,10 @@ def log(*pos, time_stamp=True):
         print('[{}]'.format(datetime.now()), *pos)
     else:
         print(' ' * 28, *pos)
+
+
+def devnull(*pos, **kwargs):
+    pass
 
 
 def mkdirp(dirname):

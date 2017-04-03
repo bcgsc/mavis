@@ -1,6 +1,6 @@
-from argparse import Namespace
+from ..util import MavisNamespace
 
-VALIDATION_DEFAULTS = Namespace(
+DEFAULTS = MavisNamespace(
     assembly_include_flanking_pairs=True,
     assembly_include_half_mapped_reads=True,
     assembly_max_kmer_size=None,
@@ -37,7 +37,7 @@ VALIDATION_DEFAULTS = Namespace(
     strand_determining_read=2,
     min_spanning_reads_resolution=3
 )
-""":class:`~argparse.Namespace`: holds the settings for computations with the Evidence objects
+""":class:`MavisNamespace`: holds the settings for computations with the Evidence objects
 
 .. glossary::
     :sorted:

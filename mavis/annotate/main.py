@@ -6,13 +6,16 @@ from ..error import DrawingFitError, NotSpecifiedError
 from ..illustrate.constants import DiagramSettings
 from ..illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from ..illustrate.diagram import draw_sv_summary_diagram
-from ..pipeline.util import output_tabbed_file, log, build_batch_id, mkdirp, read_inputs
+from .constants import DEFAULTS
+from ..util import output_tabbed_file, log, build_batch_id, mkdirp, read_inputs
 
 
 def main(
     inputs, output,
     reference_genome, annotations, template_metadata,
-    min_domain_mapping_match, min_orf_size, max_orf_cap,
+    min_domain_mapping_match=DEFAULTS.min_domain_mapping_match,
+    min_orf_size=DEFAULTS.min_orf_size,
+    max_orf_cap=DEFAULTS.max_orf_cap,
     **kwargs
 ):
     """
