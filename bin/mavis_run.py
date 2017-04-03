@@ -23,6 +23,7 @@ from mavis.constants import PROTOCOL, PIPELINE_STEP
 import math
 
 VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
+PROGNAME = os.path.basename(__file__)
 
 QSUB_HEADER = """#!/bin/bash
 #$ -V
@@ -103,7 +104,7 @@ def main_pipeline(args, configs):
                 ['--{} "{}"'.format(k, v) for k, v in validation_args.items() if isinstance(v, str) and v is not None])
             validation_args = temp
             validation_args.append('-n {}$SGE_TASK_ID.tab'.format(merge_file_prefix))
-            fh.write('python {} validate {}\n'.format(os.path.abspath(__file__), ' \\\n\t'.join(validation_args)))
+            fh.write('{} validate {}\n'.format(PROGNAME, ' \\\n\t'.join(validation_args)))
 
         # set up the annotations job
         # for all files with the right suffix
@@ -136,7 +137,7 @@ def main_pipeline(args, configs):
                     queue=args.queue, memory=args.default_memory_gb, name=annotation_jobname, output=annotation_output
                 ) + '\n')
             fh.write('#$ -hold_jid {}\n'.format(validation_jobname))
-            fh.write('python {} annotate {}\n'.format(os.path.abspath(__file__), ' \\\n\t'.join(annotation_args)))
+            fh.write('{} annotate {}\n'.format(PROGNAME, ' \\\n\t'.join(annotation_args)))
 
     # set up scripts for the pairing held on all of the annotation jobs
     pairing_output = mkdirp(os.path.join(args.output, 'pairing'))
@@ -161,7 +162,7 @@ def main_pipeline(args, configs):
                 queue=args.queue, memory=args.default_memory_gb, name='mavis_pairing', output=pairing_output
             ) + '\n')
         fh.write('#$ -hold_jid {}\n'.format(','.join(annotation_jobs)))
-        fh.write('python {} pairing {}\n'.format(os.path.abspath(__file__), ' \\\n\t'.join(pairing_args)))
+        fh.write('{} pairing {}\n'.format(PROGNAME, ' \\\n\t'.join(pairing_args)))
 
 
 def generate_config(parser, required, optional):
@@ -293,15 +294,15 @@ use the -h/--help option
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
             augment_parser(
                 required, optional,
-                ['library', 'protocol'] +
+                ['library', 'protocol', 'stranded_bam'] +
                 ['annotations', 'masking'] + [k for k in vars(CLUSTER_DEFAULTS)]
             )
         elif pstep == PIPELINE_STEP.VALIDATE:
             required.add_argument('-n', '--input', nargs='+', help='path to the input file', required=True)
             augment_parser(
                 required, optional,
-                ['library', 'protocol', 'bam_file'] +
-                ['annotations', 'reference_genome', 'blat_2bit_reference', 'masking'] +
+                ['library', 'protocol', 'bam_file', 'read_length', 'stdev_fragment_size', 'median_fragment_size'] +
+                ['stranded_bam', 'annotations', 'reference_genome', 'blat_2bit_reference', 'masking'] +
                 [k for k in vars(VALIDATION_DEFAULTS)]
             )
         elif pstep == PIPELINE_STEP.ANNOTATE:

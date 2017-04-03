@@ -327,7 +327,7 @@ def augment_parser(parser, optparser, arguments):
             parser.add_argument('config', 'path to the config file')
         elif arg == 'stranded_bam':
             optparser.add_argument(
-                '--stranded_bam', default=False, type=TSV.tsv_boolean, 
+                '--stranded_bam', required=True, type=TSV.tsv_boolean, 
                 help='indicates that the input bam file is strand specific')
         elif arg == 'low_memory':
             optparser.add_argument(
