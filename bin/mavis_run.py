@@ -226,7 +226,7 @@ def generate_config(parser, required, optional):
 
 
 def log_arguments(args):
-    log('MAVIS: v{}'.format(__version__))
+    log('MAVIS: {}'.format(__version__))
     log('input arguments')
     for arg, val in sorted(args.__dict__.items()):
         if isinstance(val, list):
