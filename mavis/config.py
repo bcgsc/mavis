@@ -27,7 +27,7 @@ def cast(value, cast_func):
 
 class LibraryConfig:
     def __init__(
-        self, library, protocol, bam_file, inputs, read_length, median_fragment_size, stdev_fragment_size, 
+        self, library, protocol, bam_file, inputs, read_length, median_fragment_size, stdev_fragment_size, stranded_bam, 
         **kwargs
     ):
         self.library = library
@@ -36,6 +36,7 @@ class LibraryConfig:
         self.read_length = int(read_length)
         self.median_fragment_size = int(median_fragment_size)
         self.stdev_fragment_size = int(stdev_fragment_size)
+        self.stranded_bam = cast(stranded_bam, bool)
         try:
             self.inputs = [f for f in re.split('[;\s]+', inputs) if f]
         except TypeError:
@@ -43,7 +44,6 @@ class LibraryConfig:
 
         acceptable = {}
         acceptable.update(VALIDATION_DEFAULTS.__dict__)
-        acceptable.update(CLUSTER_DEFAULTS.__dict__)
 
         for attr, value in kwargs.items():
             if attr == 'assembly_max_kmer_size' and value in [None, 'None', '']:  # special case
@@ -150,6 +150,7 @@ class ReferenceFilesConfig:
     def flatten(self):
         result = {}
         result.update(self.__dict__)
+        print('ReferenceFilesConfig.flatten', result)
         return result
 
 
@@ -186,9 +187,9 @@ def write_config(filename, include_defaults=False, libraries=[], log=devnull):
         config['qsub'] = JobSchedulingConfig().flatten()
         config['illustrate'] = {}
         config['illustrate'].update(ILLUSTRATION_DEFAULTS.__dict__)
-        config['DEFAULTS'] = {}
-        config['DEFAULTS'].update(VALIDATION_DEFAULTS.__dict__)
-        config['DEFAULTS'].update(CLUSTER_DEFAULTS.__dict__)
+        config['validation'] = {}
+        config['validation'].update(VALIDATION_DEFAULTS.__dict__)
+        config['validation'].update(CLUSTER_DEFAULTS.__dict__)
 
     for sec in config:
         for tag, value in config[sec].items():
@@ -234,27 +235,41 @@ def read_config(filepath):
     # get the library sections and add the default settings
     library_sections = []
     for sec in parser.sections():
-        if sec not in ['DEFAULTS', 'reference', 'qsub', 'illustrate']:
+        if sec not in ['validation', 'reference', 'qsub', 'illustrate', 'annotation', 'cluster']:
             library_sections.append(sec)
 
-    job_sched = JobSchedulingConfig(**parser['qsub'])
-    ref = ReferenceFilesConfig(**parser['reference'])
-    pairing = PairingConfig(**parser['pairing'])
+    job_sched = JobSchedulingConfig(**(parser['qsub'] if 'qsub' in parser else {}))
+    ref = ReferenceFilesConfig(**(parser['reference'] if 'reference' in parser else {}))
+    pairing = PairingConfig(**(parser['pairing'] if 'pairing' in parser else {}))
     
     global_args = {}
     global_args.update(job_sched.flatten())
     global_args.update(ref.flatten())
-    global_args.update(ILLUSTRATION_DEFAULTS)
+    global_args.update(ILLUSTRATION_DEFAULTS.__dict__)
     global_args.update(pairing.flatten())
+    global_args.update(ANNOTATION_DEFAULTS.__dict__)
+    global_args.update(CLUSTER_DEFAULTS.__dict__)
     try:
         global_args.update(validate_and_cast_section(parser['illustrate'], ILLUSTRATION_DEFAULTS))
     except KeyError:
         pass
 
-    args = {}
-    args.update(VALIDATION_DEFAULTS)
     try:
-        args.update(parser['DEFAULTS'])
+        global_args.update(validate_and_cast_section(parser['annotation'], ANNOTATION_DEFAULTS))
+    except KeyError:
+        pass
+    
+    try:
+        global_args.update(validate_and_cast_section(parser['cluster'], CLUSTER_DEFAULTS))
+    except KeyError:
+        pass
+
+
+
+    args = {}
+    args.update(VALIDATION_DEFAULTS.__dict__)
+    try:
+        args.update(parser['validation'] if 'validation' in parser else {})
     except KeyError:
         pass
     
@@ -300,13 +315,11 @@ def add_semi_optional_argument(argname, success_parser, failure_parser, help_msg
 
 
 def augment_parser(parser, optparser, arguments):
-    #parser_main = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, add_help=False)
-    
     try:
         optparser.add_argument('-h', '--help', action='help', help='show this help message and exit')
-        optparser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + __version__,
-            help='Outputs the version number'
-        )
+        optparser.add_argument(
+            '-v', '--version', action='version', version='%(prog)s version ' + __version__,
+            help='Outputs the version number')
     except ArgumentError:
         pass
     
@@ -316,6 +329,9 @@ def augment_parser(parser, optparser, arguments):
                 arg, optparser, parser, 'Path to the reference annotations of genes, transcript, exons, domains, etc.')
         elif arg == 'reference_genome':
             add_semi_optional_argument(arg, optparser, parser, 'Path to the human reference genome fasta file.')
+            optparser.add_argument(
+                '--low_memory', default=False, type=TSV.tsv_boolean,
+                help='if true defaults to indexing vs loading the reference genome')
         elif arg == 'template_metadata':
             add_semi_optional_argument(arg, optparser, parser, 'File containing the cytoband template information.')
         elif arg == 'masking':

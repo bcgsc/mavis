@@ -20,6 +20,8 @@ from mavis.illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from mavis.config import augment_parser, write_config, LibraryConfig, read_config
 from mavis.util import log, mkdirp, devnull
 from mavis.constants import PROTOCOL, PIPELINE_STEP
+from mavis.bam.read import get_samtools_version
+from mavis.blat import get_blat_version
 import math
 
 VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
@@ -52,8 +54,8 @@ def main_pipeline(args, configs):
         # run the merge
         log('clustering')
         merge_args = {}
-        merge_args.update(sec.__dict__)
         merge_args.update(args.__dict__)
+        merge_args.update(sec.__dict__)
         merge_args['output'] = os.path.join(base, 'clustering')
         output_files = cluster_main(**merge_args)
 
@@ -113,11 +115,11 @@ def main_pipeline(args, configs):
             'reference_genome': args.reference_genome_filename,
             'annotations': args.annotations_filename,
             'template_metadata': args.template_metadata_filename,
-            'min_orf_size': sec.min_orf_size,
-            'max_orf_cap': sec.max_orf_cap,
-            'min_domain_mapping_match': sec.min_domain_mapping_match,
-            'domain_name_regex_filter': sec.domain_name_regex_filter,
-            'max_proximity': sec.max_proximity
+            'min_orf_size': args.min_orf_size,
+            'max_orf_cap': args.max_orf_cap,
+            'min_domain_mapping_match': args.min_domain_mapping_match,
+            'domain_name_regex_filter': args.domain_name_regex_filter,
+            'max_proximity': args.max_proximity
         }
         temp = [
             '--{} {}'.format(k, v) for k, v in annotation_args.items() if not isinstance(v, str) and v is not None]
@@ -147,8 +149,7 @@ def main_pipeline(args, configs):
         contig_call_distance=args.contig_call_distance,
         flanking_call_distance=args.flanking_call_distance,
         max_proximity=args.max_proximity,
-        annotations=args.annotations_filename,
-        low_memory=args.low_memory
+        annotations=args.annotations_filename
     )
     temp = ['--{} {}'.format(k, v) for k, v in pairing_args.items() if not isinstance(v, str) and v is not None]
     temp.extend(['--{} "{}"'.format(k, v) for k, v in pairing_args.items() if isinstance(v, str) and v is not None])
@@ -286,7 +287,7 @@ use the -h/--help option
         generate_config(parser, required, optional)
         exit(0)
     else:
-        required.add_argument('-o', '--output', help='path to the output directory')
+        required.add_argument('-o', '--output', help='path to the output directory', required=True)
         if pstep == PIPELINE_STEP.PIPELINE:
             required.add_argument('config', help='path to the input pipeline configuration file')
             augment_parser(required, optional, [])
@@ -298,7 +299,7 @@ use the -h/--help option
                 ['annotations', 'masking'] + [k for k in vars(CLUSTER_DEFAULTS)]
             )
         elif pstep == PIPELINE_STEP.VALIDATE:
-            required.add_argument('-n', '--input', nargs='+', help='path to the input file', required=True)
+            required.add_argument('-n', '--input', help='path to the input file', required=True)
             augment_parser(
                 required, optional,
                 ['library', 'protocol', 'bam_file', 'read_length', 'stdev_fragment_size', 'median_fragment_size'] +
@@ -309,7 +310,7 @@ use the -h/--help option
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
             augment_parser(
                 required, optional,
-                ['annotations', 'reference_genome', 'masking'] +
+                ['annotations', 'reference_genome', 'masking', 'max_proximity', 'template_metadata'] +
                 [k for k in vars(ANNOTATION_DEFAULTS)] +
                 [k for k in vars(ILLUSTRATION_DEFAULTS)]
             )
@@ -317,12 +318,14 @@ use the -h/--help option
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
             augment_parser(
                 required, optional,
-                ['annotations'] +
+                ['annotations', 'max_proximity'] +
                 [k for k in vars(PAIRING_DEFAULTS)]
             )
         else:
             raise NotImplementedError('invalid value for <pipeline step>', pstep)
     args = parser.parse_args()
+    args.samtools_version = get_samtools_version()
+    args.blat_version = get_blat_version()
 
     # set all reference files to their absolute paths to make tracking them down later easier
     for arg in ['output', 'reference_genome', 'template_metadata', 'annotations', 'masking', 'blat_2bit_reference']:
@@ -363,7 +366,8 @@ use the -h/--help option
         else:
             args.reference_genome_filename = args.reference_genome
             args.reference_genome = None
-    except AttributeError:
+    except AttributeError as err:
+        print(repr(err))
         pass
 
     # masking file
