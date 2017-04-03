@@ -1,5 +1,6 @@
 """
 holds submodules related to structural variants
 """
+from .util import get_version
 
-__version__ = '0.0.2'
+__version__ = get_version()
