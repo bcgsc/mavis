@@ -7,6 +7,7 @@ from .breakpoint import read_bpp_from_input_file
 from .constants import PROTOCOL, COLUMNS, sort_columns
 from .interval import Interval
 from argparse import Namespace
+import subprocess
 
 
 class MavisNamespace(Namespace):
@@ -24,6 +25,13 @@ class MavisNamespace(Namespace):
 
     def __getitem__(self, key):
         return getattr(self, key)
+
+
+def get_version():
+    v = subprocess.check_output(['git', 'describe'])
+    v = v.decode('UTF8')
+    v = v.strip()
+    return v
 
 
 def build_batch_id(prefix='', suffix='', size=6):

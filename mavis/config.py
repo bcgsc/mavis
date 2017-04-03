@@ -150,7 +150,6 @@ class ReferenceFilesConfig:
     def flatten(self):
         result = {}
         result.update(self.__dict__)
-        print('ReferenceFilesConfig.flatten', result)
         return result
 
 
