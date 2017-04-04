@@ -24,6 +24,7 @@ from .bam import read as read_tools
 from .interval import Interval
 from .error import InvalidRearrangement
 from .breakpoint import BreakpointPair
+from .util import devnull
 
 
 class BlatAlignedSegment(pysam.AlignedSegment):
@@ -367,7 +368,7 @@ def blat_contigs(
         min_extend_overlap=10,
         pair_scoring_function=paired_alignment_score,
         clean_files=True,
-        log=lambda *pos, **kwargs: None,
+        log=devnull,
         **kwargs):
     """
     given a set of contigs, call blat from the command line and adds the results to the contigs
@@ -391,8 +392,8 @@ def blat_contigs(
     if is_protein:
         raise NotImplementedError('currently does not support blatting protein sequences')
     blat_min_identity *= 100
-    blat_options = kwargs.pop('blat_options',
-                              ["-stepSize=5", "-repMatch=2253", "-minScore=0", "-minIdentity={0}".format(blat_min_identity)])
+    blat_options = kwargs.pop(
+        'blat_options', ["-stepSize=5", "-repMatch=2253", "-minScore=0", "-minIdentity={0}".format(blat_min_identity)])
 
     try:
         # write the input sequences to a fasta file
@@ -406,7 +407,8 @@ def blat_contigs(
                 ev_by_seq.setdefault(c.seq, []).append(e.data.get(COLUMNS.cluster_id, None))
         with open(blat_fa_input_file, 'w') as fh:
             for seq in sequences:
-                n = 'seq{}_{}'.format(count, '_'.join(sorted([x for x in ev_by_seq[seq] if x is not None])))
+                n = 'seq{}_{}'.format(count)
+                log(n, [x for x in ev_by_seq[seq] if x is not None])
                 query_id_mapping[n] = seq
                 fh.write('>' + n + '\n' + seq + '\n')
                 count += 1
@@ -419,7 +421,8 @@ def blat_contigs(
         # print(["blat", blat_2bit_reference, fasta_name, psl.name, '-out=pslx', '-noHead'] + blat_options)
         log(['blat', blat_2bit_reference,
             blat_fa_input_file, blat_pslx_output_file, '-out=pslx', '-noHead'] + blat_options)
-        subprocess.check_output(['blat', blat_2bit_reference,
+        subprocess.check_output([
+            'blat', blat_2bit_reference,
             blat_fa_input_file, blat_pslx_output_file, '-out=pslx', '-noHead'] + blat_options)
 
         header, rows = Blat.read_pslx(blat_pslx_output_file, query_id_mapping, is_protein=is_protein)
