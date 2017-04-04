@@ -407,7 +407,7 @@ def blat_contigs(
                 ev_by_seq.setdefault(c.seq, []).append(e.data.get(COLUMNS.cluster_id, None))
         with open(blat_fa_input_file, 'w') as fh:
             for seq in sequences:
-                n = 'seq{}_{}'.format(count)
+                n = 'seq{}'.format(count)
                 log(n, [x for x in ev_by_seq[seq] if x is not None])
                 query_id_mapping[n] = seq
                 fh.write('>' + n + '\n' + seq + '\n')
