@@ -28,7 +28,7 @@ class MavisNamespace(Namespace):
 
 
 def get_version():
-    v = subprocess.check_output(['git', 'describe'])
+    v = subprocess.check_output('cd {}; git describe'.format(os.path.dirname(__file__)), shell=True)
     v = v.decode('UTF8')
     v = v.strip()
     return v
