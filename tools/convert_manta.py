@@ -13,11 +13,11 @@ from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND, PROTO
 __version__ = '0.0.1'
 __prog__ = os.path.basename(os.path.realpath(__file__))
 
-SVTYPES = {'DEL': 'deletion',
-           'INV': 'inversion',
-           'DUP': 'duplication',
-           'BND': 'translocation',
-           'INS': 'insertion',
+SVTYPES = {'DEL': SVTYPE.DEL,
+           'INV': SVTYPE.INV,
+           'DUP': SVTYPE.DUP,
+           'BND': SVTYPE.TRA,
+           'INS': SVTYPE.INS
            }
 
 
@@ -148,4 +148,4 @@ with open(output_filename, 'w') as fh:
         for element in elements:
             line.append(str(event[element]))
         fh.write("{}\n".format("\t".join(line)))
-    print("Wrote {} gene fusion events {}".format(len(events), output_filename))
+    print("Wrote {} gene fusion events to {}".format(len(events), output_filename))
