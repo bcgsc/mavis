@@ -1,11 +1,6 @@
 import os
-import sys
 import itertools
 from Bio import SeqIO
-
-
-# local modules
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from ..constants import PROTOCOL, COLUMNS, CALL_METHOD, SVTYPE, SPLICE_TYPE
 from .constants import DEFAULTS
 from ..util import read_inputs, output_tabbed_file, log

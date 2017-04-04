@@ -24,6 +24,7 @@ from .bam import read as read_tools
 from .interval import Interval
 from .error import InvalidRearrangement
 from .breakpoint import BreakpointPair
+from .util import devnull
 
 
 class BlatAlignedSegment(pysam.AlignedSegment):
@@ -131,7 +132,7 @@ class Blat:
         return 100 - int(Blat.millibad(row, is_protein, is_mrna)) * 0.1
 
     @staticmethod
-    def read_pslx(filename, seqid_to_sequence_mapping, is_protein=False):
+    def read_pslx(filename, seqid_to_sequence_mapping, is_protein=False, verbose=True):
         pslx_header = [
             'match', 'mismatch', 'repmatch', 'ncount',
             'qgap_count', 'qgap_bases',
@@ -177,13 +178,29 @@ class Blat:
                 'strand': '^[\+-]$'
             }
         )
-
+        
+        final_rows = []
         for row in rows:
-            row['score'] = Blat.score(row, is_protein=is_protein)
-            row['percent_ident'] = Blat.percent_identity(row, is_protein=is_protein)
-            qseq = seqid_to_sequence_mapping[row['qname']]
-            row['qseq_full'] = qseq
-        return header, rows
+            try:
+                row['score'] = Blat.score(row, is_protein=is_protein)
+                row['percent_ident'] = Blat.percent_identity(row, is_protein=is_protein)
+                qseq = seqid_to_sequence_mapping[row['qname']]
+                row['qseq_full'] = qseq
+
+                for x in [
+                    'qgap_count', 'qgap_bases', 'tgap_count',
+                    'tgap_bases', 'qsize', 'tsize', 'ncount',
+                    'match', 'mismatch', 'repmatch'
+                ]:
+                    if row[x] < 0 and verbose:
+                        raise AssertionError(
+                            'Blat error: blat returned a negative number, which are not allowed: {}={}'.format(
+                                x, row[x]))
+                final_rows.append(row)
+            except AssertionError as err:
+                if verbose:
+                    warnings.warn(repr(err))
+        return header, final_rows
 
     @staticmethod
     def pslx_row_to_pysam(row, bam_cache, reference_genome):
@@ -214,7 +231,6 @@ class Blat:
         #print([query_sequence[q.start:q.end + 1] for q in query_ranges])
         #print('ref', [str(reference_sequence[r.start:r.end + 1]) for r in ref_ranges])
         #print('ref 0-20', reference_sequence[0:20])
-
         # try extending by consuming from the next aligned portion
         if reference_sequence:
             i = 0
@@ -286,7 +302,6 @@ class Blat:
                     else:
                         cigar.append((CIGAR.X, 1))
             seq += query_sequence[qcurr[0]:qcurr[1] + 1]
-
         # add initial soft-clipping
         if query_ranges[0][0] > 0:  # first block starts after the query start
             temp = query_sequence[0:query_ranges[0][0]]
@@ -353,7 +368,7 @@ def blat_contigs(
         min_extend_overlap=10,
         pair_scoring_function=paired_alignment_score,
         clean_files=True,
-        log=lambda *pos, **kwargs: None,
+        log=devnull,
         **kwargs):
     """
     given a set of contigs, call blat from the command line and adds the results to the contigs
@@ -377,8 +392,8 @@ def blat_contigs(
     if is_protein:
         raise NotImplementedError('currently does not support blatting protein sequences')
     blat_min_identity *= 100
-    blat_options = kwargs.pop('blat_options',
-                              ["-stepSize=5", "-repMatch=2253", "-minScore=0", "-minIdentity={0}".format(blat_min_identity)])
+    blat_options = kwargs.pop(
+        'blat_options', ["-stepSize=5", "-repMatch=2253", "-minScore=0", "-minIdentity={0}".format(blat_min_identity)])
 
     try:
         # write the input sequences to a fasta file
@@ -392,7 +407,8 @@ def blat_contigs(
                 ev_by_seq.setdefault(c.seq, []).append(e.data.get(COLUMNS.cluster_id, None))
         with open(blat_fa_input_file, 'w') as fh:
             for seq in sequences:
-                n = 'seq{}_{}'.format(count, '_'.join(sorted([x for x in ev_by_seq[seq] if x is not None])))
+                n = 'seq{}_{}'.format(count)
+                log(n, [x for x in ev_by_seq[seq] if x is not None])
                 query_id_mapping[n] = seq
                 fh.write('>' + n + '\n' + seq + '\n')
                 count += 1
@@ -405,7 +421,8 @@ def blat_contigs(
         # print(["blat", blat_2bit_reference, fasta_name, psl.name, '-out=pslx', '-noHead'] + blat_options)
         log(['blat', blat_2bit_reference,
             blat_fa_input_file, blat_pslx_output_file, '-out=pslx', '-noHead'] + blat_options)
-        subprocess.check_output(['blat', blat_2bit_reference,
+        subprocess.check_output([
+            'blat', blat_2bit_reference,
             blat_fa_input_file, blat_pslx_output_file, '-out=pslx', '-noHead'] + blat_options)
 
         header, rows = Blat.read_pslx(blat_pslx_output_file, query_id_mapping, is_protein=is_protein)

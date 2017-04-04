@@ -16,12 +16,12 @@ setup(
         'Sphinx',  # for building the documentation only
         'sphinx-rtd-theme',  # for building the documentation only
         'pysam',
-        'TSV==3.1.0',
+        'TSV==3.1.1',
         'vocab==1.0.0'
     ],
     author_email='creisle@bcgsc.ca',
     dependency_links=[
-        'svn+https://svn.bcgsc.ca/svn/SVIA/TSV/tags/v3.1.0#egg=TSV-3.1.0',
+        'svn+https://svn.bcgsc.ca/svn/SVIA/TSV/tags/v3.1.1#egg=TSV-3.1.1',
         'svn+https://svn.bcgsc.ca/svn/SVIA/vocab/tags/v1.0.0#egg=vocab-1.0.0'
     ],
     test_suite='nose.collector',
