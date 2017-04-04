@@ -188,7 +188,13 @@ def write_config(filename, include_defaults=False, libraries=[], log=devnull):
         config['illustrate'].update(ILLUSTRATION_DEFAULTS.__dict__)
         config['validation'] = {}
         config['validation'].update(VALIDATION_DEFAULTS.__dict__)
-        config['validation'].update(CLUSTER_DEFAULTS.__dict__)
+        config['cluster'] = {}
+        config['cluster'].update(CLUSTER_DEFAULTS.__dict__)
+        
+        for sec in ['qsub', 'illustrate', 'validation', 'cluster']:
+            for tag, val in config[sec].items():
+                env = ENV_VAR_PREFIX + tag.upper()
+                config[sec][tag] = os.environ.get(env, None) or val
 
     for sec in config:
         for tag, value in config[sec].items():
