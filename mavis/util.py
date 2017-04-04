@@ -8,6 +8,7 @@ from .constants import PROTOCOL, COLUMNS, sort_columns
 from .interval import Interval
 from argparse import Namespace
 import subprocess
+from TSV.TSV import EmptyHeaderError
 
 
 class MavisNamespace(Namespace):
@@ -96,11 +97,14 @@ def read_inputs(inputs, force_stranded=False, **kwargs):
     kwargs.setdefault('in_', {})
     kwargs['in_'][COLUMNS.protocol] = PROTOCOL
     for finput in inputs:
-        log('loading:', finput)
-        bpps.extend(read_bpp_from_input_file(
-            finput, force_stranded=force_stranded,
-            **kwargs
-        ))
+        try:
+            log('loading:', finput)
+            bpps.extend(read_bpp_from_input_file(
+                finput, force_stranded=force_stranded,
+                **kwargs
+            ))
+        except EmptyHeaderError:
+            log('ignoring empty file:', finput)
     log('loaded', len(bpps), 'breakpoint pairs')
     return bpps
 

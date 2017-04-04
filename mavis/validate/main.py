@@ -3,8 +3,6 @@ import pysam
 import re
 import subprocess
 import itertools
-import argparse
-
 from ..bam.cache import BamCache
 from ..blat import blat_contigs
 from ..breakpoint import BreakpointPair
@@ -61,8 +59,8 @@ def main(
 
     split_read_contigs = set()
     chr_to_index = {}
-    bpps = read_inputs(
-        [input], add={COLUMNS.protocol: protocol, COLUMNS.library: library})
+    bpps = []
+    bpps = read_inputs([input], add={COLUMNS.protocol: protocol, COLUMNS.library: library})
     evidence_clusters = []
     for bpp in bpps:
         if bpp.data[COLUMNS.protocol] == PROTOCOL.GENOME:

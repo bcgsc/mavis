@@ -131,7 +131,7 @@ class Blat:
         return 100 - int(Blat.millibad(row, is_protein, is_mrna)) * 0.1
 
     @staticmethod
-    def read_pslx(filename, seqid_to_sequence_mapping, is_protein=False):
+    def read_pslx(filename, seqid_to_sequence_mapping, is_protein=False, verbose=True):
         pslx_header = [
             'match', 'mismatch', 'repmatch', 'ncount',
             'qgap_count', 'qgap_bases',
@@ -177,13 +177,29 @@ class Blat:
                 'strand': '^[\+-]$'
             }
         )
-
+        
+        final_rows = []
         for row in rows:
-            row['score'] = Blat.score(row, is_protein=is_protein)
-            row['percent_ident'] = Blat.percent_identity(row, is_protein=is_protein)
-            qseq = seqid_to_sequence_mapping[row['qname']]
-            row['qseq_full'] = qseq
-        return header, rows
+            try:
+                row['score'] = Blat.score(row, is_protein=is_protein)
+                row['percent_ident'] = Blat.percent_identity(row, is_protein=is_protein)
+                qseq = seqid_to_sequence_mapping[row['qname']]
+                row['qseq_full'] = qseq
+
+                for x in [
+                    'qgap_count', 'qgap_bases', 'tgap_count',
+                    'tgap_bases', 'qsize', 'tsize', 'ncount',
+                    'match', 'mismatch', 'repmatch'
+                ]:
+                    if row[x] < 0 and verbose:
+                        raise AssertionError(
+                            'Blat error: blat returned a negative number, which are not allowed: {}={}'.format(
+                                x, row[x]))
+                final_rows.append(row)
+            except AssertionError as err:
+                if verbose:
+                    warnings.warn(repr(err))
+        return header, final_rows
 
     @staticmethod
     def pslx_row_to_pysam(row, bam_cache, reference_genome):
@@ -214,7 +230,6 @@ class Blat:
         #print([query_sequence[q.start:q.end + 1] for q in query_ranges])
         #print('ref', [str(reference_sequence[r.start:r.end + 1]) for r in ref_ranges])
         #print('ref 0-20', reference_sequence[0:20])
-
         # try extending by consuming from the next aligned portion
         if reference_sequence:
             i = 0
@@ -286,7 +301,6 @@ class Blat:
                     else:
                         cigar.append((CIGAR.X, 1))
             seq += query_sequence[qcurr[0]:qcurr[1] + 1]
-
         # add initial soft-clipping
         if query_ranges[0][0] > 0:  # first block starts after the query start
             temp = query_sequence[0:query_ranges[0][0]]
