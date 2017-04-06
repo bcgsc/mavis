@@ -99,8 +99,7 @@ SVTYPE = Vocab(
     ITRANS='inverted translocation',
     INV='inversion',
     INS='insertion',
-    DUP='duplication',
-    INDEL='indel'
+    DUP='duplication'
 )
 """:class:`Vocab`: holds controlled vocabulary for acceptable structural variant classifications
 
