@@ -17,7 +17,7 @@ from mavis.annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
 from mavis.pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from mavis.illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 
-from mavis.config import augment_parser, write_config, LibraryConfig, read_config
+from mavis.config import augment_parser, write_config, LibraryConfig, read_config, get_env_variable
 from mavis.util import log, mkdirp, devnull
 from mavis.constants import PROTOCOL, PIPELINE_STEP
 from mavis.bam.read import get_samtools_version
@@ -85,8 +85,7 @@ def main_pipeline(args, configs):
             'read_length': sec.read_length,
             'stdev_fragment_size': sec.stdev_fragment_size,
             'median_fragment_size': sec.median_fragment_size,
-            'stranded_bam': sec.stranded_bam,
-            'protocol': sec.protocol
+            'stranded_bam': sec.stranded_bam
         }
         for attr in sorted(VALIDATION_DEFAULTS.__dict__.keys()):
             validation_args[attr] = getattr(sec, attr)
@@ -183,14 +182,17 @@ def generate_config(parser, required, optional):
         nargs='+', action='append', default=[]
     )
     optional.add_argument(
-        '--best_transcripts_only', default=True, type=TSV.tsv_boolean, help='compute from best transcript models only')
+        '--best_transcripts_only', default=get_env_variable('best_transcripts_only', True),
+        type=TSV.tsv_boolean, help='compute from best transcript models only')
     optional.add_argument(
-        '--genome_bins', default=100, type=int,
+        '--genome_bins', default=get_env_variable('genome_bins', 100), type=int,
         help='number of bins/samples to use in calculating the fragment size stats for genomes')
     optional.add_argument(
-        '--transcriptome_bins', default=500, type=int,
+        '--transcriptome_bins', default=get_env_variable('transcriptome_bins', 500), type=int,
         help='number of genes to use in calculating the fragment size stats for genomes')
-    optional.add_argument('--verbose', default=False, type=TSV.tsv_boolean, help='verbosely output logging information')
+    optional.add_argument(
+        '--verbose', default=get_env_variable('verbose', False), type=TSV.tsv_boolean,
+        help='verbosely output logging information')
     augment_parser(required, optional, ['annotations'])
     args = parser.parse_args()
     log_arguments(args)
@@ -333,7 +335,7 @@ use the -h/--help option
             args.__dict__[arg] = os.path.abspath(args.__dict__[arg])
         except (KeyError, TypeError):
             pass
-    
+
     log_arguments(args)
 
     config = []
@@ -341,7 +343,7 @@ use the -h/--help option
     if pstep == PIPELINE_STEP.PIPELINE:  # load the configuration file
         temp, config = read_config(args.config)
         args.__dict__.update(temp.__dict__)
-    
+
     # load the reference files if they have been given and reset the arguments to hold the original file name and the
     # loaded data
     if any([
@@ -356,7 +358,7 @@ use the -h/--help option
     else:
         args.annotations_filename = args.annotations
         args.annotations = None
-    
+
     # reference genome
     try:
         if pstep in [PIPELINE_STEP.VALIDATE, PIPELINE_STEP.ANNOTATE]:
