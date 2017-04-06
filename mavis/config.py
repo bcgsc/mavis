@@ -319,6 +319,23 @@ def add_semi_optional_argument(argname, success_parser, failure_parser, help_msg
         failure_parser.add_argument('--{}'.format(argname), required=True, help=help_msg)
 
 
+def get_env_variable(arg, default, cast_type=None):
+    """
+    Args:
+        arg (str): the argument/variable name
+    Returns:
+        the setting from the environment variable if given, otherwise the default value
+    """
+    if cast_type is None:
+        cast_type = type(default)
+    name = ENV_VAR_PREFIX + arg.upper()
+    result = os.environ.get(name, None)
+    if result is not None:
+        return cast(result, cast_type)
+    else:
+        return default
+
+
 def augment_parser(parser, optparser, arguments):
     try:
         optparser.add_argument('-h', '--help', action='help', help='show this help message and exit')
@@ -335,7 +352,7 @@ def augment_parser(parser, optparser, arguments):
         elif arg == 'reference_genome':
             add_semi_optional_argument(arg, optparser, parser, 'Path to the human reference genome fasta file.')
             optparser.add_argument(
-                '--low_memory', default=False, type=TSV.tsv_boolean,
+                '--low_memory', default=get_env_variable(arg, False), type=TSV.tsv_boolean,
                 help='if true defaults to indexing vs loading the reference genome')
         elif arg == 'template_metadata':
             add_semi_optional_argument(arg, optparser, parser, 'File containing the cytoband template information.')
@@ -350,74 +367,75 @@ def augment_parser(parser, optparser, arguments):
             optparser.add_argument(
                 '--stranded_bam', required=True, type=TSV.tsv_boolean, 
                 help='indicates that the input bam file is strand specific')
-        elif arg == 'low_memory':
-            optparser.add_argument(
-                '--low_memory', default=PAIRING_DEFAULTS['low_memory'], type=TSV.tsv_boolean,
-                help='when working on a machine with less memory this is sacrifice time for memory where possible')
         elif arg == 'force_overwrite':
             optparser.add_argument(
-                '-f', '--force_overwrite', default=False, type=TSV.tsv_boolean,
+                '-f', '--force_overwrite', default=get_env_variable(arg, False), type=TSV.tsv_boolean,
                 help='set flag to overwrite existing reviewed files')
         elif arg == 'output_svgs':
             optparser.add_argument(
-                '--output_svgs', default=True, type=TSV.tsv_boolean,
+                '--output_svgs', default=get_env_variable(arg, True), type=TSV.tsv_boolean,
                 help='set flag to suppress svg drawings of putative annotations')
         elif arg == 'min_orf_size':
             optparser.add_argument(
-                '--min_orf_size', default=ANNOTATION_DEFAULTS.min_orf_size, type=int,
+                '--min_orf_size', default=get_env_variable(arg, ANNOTATION_DEFAULTS.min_orf_size), type=int,
                 help='minimum sfize for putative ORFs')
         elif arg == 'max_orf_cap':
             optparser.add_argument(
-                '--max_orf_cap', default=ANNOTATION_DEFAULTS.max_orf_cap, type=int,
+                '--max_orf_cap', default=get_env_variable(arg, ANNOTATION_DEFAULTS.max_orf_cap), type=int,
                 help='keep the n longest orfs')
         elif arg == 'min_domain_mapping_match':
             optparser.add_argument(
-                '--min_domain_mapping_match', default=ANNOTATION_DEFAULTS.min_domain_mapping_match, type=float,
+                '--min_domain_mapping_match',
+                default=get_env_variable(arg, ANNOTATION_DEFAULTS.min_domain_mapping_match), type=float,
                 help='minimum percent match for the domain to be considered aligned')
         elif arg == 'max_files':
             optparser.add_argument(
-                '--max_files', default=CLUSTER_DEFAULTS.max_files, type=int, dest='max_files',
+                '--max_files', default=get_env_variable(arg, CLUSTER_DEFAULTS.max_files), type=int, dest='max_files',
                 help='defines the maximum number of files that can be created')
         elif arg == 'min_clusters_per_file':
             optparser.add_argument(
-                '--min_clusters_per_file', default=CLUSTER_DEFAULTS.min_clusters_per_file, type=int,
-                help='defines the minimum number of clusters per file')
+                '--min_clusters_per_file', default=get_env_variable(arg, CLUSTER_DEFAULTS.min_clusters_per_file),
+                type=int, help='defines the minimum number of clusters per file')
         elif arg == 'cluster_radius':
             optparser.add_argument(
                 '-r', '--cluster_radius', help='radius to use in clustering',
-                default=CLUSTER_DEFAULTS.cluster_radius, type=int)
+                default=get_env_variable(arg, CLUSTER_DEFAULTS.cluster_radius), type=int)
         elif arg == 'cluster_clique_size':
             optparser.add_argument(
-                '-k', '--cluster_clique_size', default=CLUSTER_DEFAULTS.cluster_clique_size, type=int,
-                help='parameter used for computing cliques, smaller is faster, above 20 will be slow')
+                '-k', '--cluster_clique_size', default=get_env_variable(arg, CLUSTER_DEFAULTS.cluster_clique_size),
+                type=int, help='parameter used for computing cliques, smaller is faster, above 20 will be slow')
         elif arg == 'uninformative_filter':
             optparser.add_argument(
-                '--uninformative_filter', default=CLUSTER_DEFAULTS.uninformative_filter, type=TSV.tsv_boolean,
+                '--uninformative_filter', default=get_env_variable(arg, CLUSTER_DEFAULTS.uninformative_filter),
+                type=TSV.tsv_boolean,
                 help='If flag is False then the clusters will not be filtered based on lack of annotation'
             )
         elif arg == 'split_call_distance':
             optparser.add_argument(
-                '--split_call_distance', default=PAIRING_DEFAULTS.split_call_distance, type=int,
+                '--split_call_distance', default=get_env_variable(arg, PAIRING_DEFAULTS.split_call_distance), type=int,
                 help='distance allowed between breakpoint calls when pairing from split read (and higher) resolution calls')
         elif arg == 'contig_call_distance':
             optparser.add_argument(
-                '--contig_call_distance', default=PAIRING_DEFAULTS.contig_call_distance, type=int,
+                '--contig_call_distance', default=get_env_variable(arg, PAIRING_DEFAULTS.contig_call_distance), type=int,
                 help='distance allowed between breakpoint calls when pairing from contig (and higher) resolution calls')
         elif arg == 'flanking_call_distance':
             optparser.add_argument(
-            '--flanking_call_distance', default=PAIRING_DEFAULTS.flanking_call_distance, type=int,
+            '--flanking_call_distance',
+            default=get_env_variable(arg, PAIRING_DEFAULTS.flanking_call_distance), type=int,
             help='distance allowed between breakpoint calls when pairing from contig (and higher) resolution calls')
         elif arg in VALIDATION_DEFAULTS:
             value = VALIDATION_DEFAULTS[arg]
             vtype = type(value) if type(value) != bool else TSV.tsv_boolean
-            optparser.add_argument('--{}'.format(arg), default=value, type=vtype, help='see user manual for desc')
+            optparser.add_argument(
+                '--{}'.format(arg), default=get_env_variable(arg, value), type=vtype, help='see user manual for desc')
         elif arg in ILLUSTRATION_DEFAULTS:
             value = ILLUSTRATION_DEFAULTS[arg]
             vtype = type(value) if type(value) != bool else TSV.tsv_boolean
-            optparser.add_argument('--{}'.format(arg), default=value, type=vtype, help='see user manual for desc')
+            optparser.add_argument(
+                '--{}'.format(arg), default=get_env_variable(arg, value), type=vtype, help='see user manual for desc')
         elif arg == 'max_proximity':
             optparser.add_argument(
-                '--{}'.format(arg), default=CLUSTER_DEFAULTS[arg], type=int, 
+                '--{}'.format(arg), default=get_env_variable(arg, CLUSTER_DEFAULTS[arg]), type=int, 
                 help='maximum distance away from an annotation before the uninformative filter is applied or the'
                 'annotation is not considered for a given event')
         elif arg == 'bam_file':
