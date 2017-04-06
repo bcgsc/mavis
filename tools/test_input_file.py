@@ -16,7 +16,7 @@ if __name__ == '__main__':
     bpps = read_bpp_from_input_file(
         args.input,
         validate={
-            COLUMNS.tools: '^(\S+_v?\d+\.\d+\.\d+)(;\S+_v?\d+\.\d+\.\d+)*$',
+            COLUMNS.tools: '^(\S+_[^\s;]+)(;\S+_[^\s;]+)*$',
             COLUMNS.library: '^[\w-]+$'
         },
         in_={

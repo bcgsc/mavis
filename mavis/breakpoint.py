@@ -722,7 +722,7 @@ def read_bpp_from_input_file(filename, expand_ns=True, force_stranded=False, **k
                 if not expand_ns:
                     raise err
         if len(temp) == 0:
-            raise InvalidRearrangement('could not produce a valid rearrangement')
+            raise InvalidRearrangement('could not produce a valid rearrangement', row)
         else:
             pairs.extend(temp)
     for pair in pairs:
