@@ -197,9 +197,6 @@ class BreakpointPair:
             COLUMNS.break1_seq: self.break1.seq,
             COLUMNS.break2_seq: self.break2.seq
         }
-        if not self.stranded:
-            row[COLUMNS.break1_strand] = STRAND.NS
-            row[COLUMNS.break2_strand] = STRAND.NS
         for c in temp:
             temp[c] = str(temp[c])
         row.update(temp)
@@ -595,6 +592,7 @@ class BreakpointPair:
             bed.append((self.break1.chr, self.break1.start, self.break2.end, self.data.get(COLUMNS.cluster_id, None)))
         return bed
 
+
 def read_bpp_from_input_file(filename, expand_ns=True, force_stranded=False, **kwargs):
     """
     reads a file using the TSV module. Each row is converted to a breakpoint pair and
@@ -678,8 +676,8 @@ def read_bpp_from_input_file(filename, expand_ns=True, force_stranded=False, **k
         stranded = row[COLUMNS.stranded] or force_stranded
         opp = row[COLUMNS.opposing_strands]
         
-        strand1 = row[COLUMNS.break1_strand] if row[COLUMNS.stranded] else STRAND.NS
-        strand2 = row[COLUMNS.break2_strand] if row[COLUMNS.stranded] else STRAND.NS
+        strand1 = row[COLUMNS.break1_strand]
+        strand2 = row[COLUMNS.break2_strand]
         row[COLUMNS.stranded] = stranded
         temp = []
         errors = []

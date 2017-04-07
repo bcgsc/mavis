@@ -8,9 +8,9 @@ from mavis.annotate import load_reference_genome, Gene, usTranscript, Transcript
 from mavis.constants import ORIENT, STRAND, CIGAR, PYSAM_READ_FLAGS, SVTYPE, CALL_METHOD
 from mavis.interval import Interval
 from mavis.bam.cache import BamCache
-from tests import MockRead, mock_read_pair
+from . import MockRead, mock_read_pair
 import unittest
-from tests import REFERENCE_GENOME_FILE, BAM_INPUT, FULL_BAM_INPUT, MockBamFileHandle
+from . import REFERENCE_GENOME_FILE, BAM_INPUT, FULL_BAM_INPUT, MockBamFileHandle
 from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
 import mavis.validate.call as call
 from mavis.validate.call import EventCall

@@ -144,7 +144,7 @@ class ReferenceFilesConfig:
         self.reference_genome = reference_genome or os.environ.get(ENV_VAR_PREFIX + 'REFERENCE_GENOME', None)
         self.template_metadata = template_metadata or os.environ.get(ENV_VAR_PREFIX + 'TEMPLATE_METADATA', None)
         self.masking = masking or os.environ.get(ENV_VAR_PREFIX + 'MASKING', None)
-        self.low_memory = low_memory
+        self.low_memory = low_memory or os.environ.get(ENV_VAR_PREFIX + 'LOW_MEMORY', None)
         self.blat_2bit_reference = blat_2bit_reference or os.environ.get(ENV_VAR_PREFIX + 'BLAT_2BIT_REFERENCE', None)
 
     def flatten(self):
@@ -280,7 +280,7 @@ def read_config(filepath):
     
     # check that the reference files all exist
     for attr, fname in parser['reference'].items():
-        if not os.path.exists(fname):
+        if not os.path.exists(fname) and attr != 'low_memory':
             raise KeyError(attr, 'file at', fname, 'does not exist')
         global_args[attr] = fname
     
@@ -292,12 +292,12 @@ def read_config(filepath):
 
         # now try building the LibraryConfig object
         try:
-            lc = LibraryConfig(sec, **d)
+            lc = LibraryConfig(**d)
             sections.append(lc)
             continue
         except TypeError as terr:  # missing required argument
             try:
-                lc = LibraryConfig.build(sec, **d)
+                lc = LibraryConfig.build(**d)
                 sections.append(lc)
             except Exception as err:
                 raise UserWarning('could not build configuration file', terr, err)

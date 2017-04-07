@@ -8,9 +8,9 @@ from mavis.annotate import load_reference_genome, load_reference_genes
 import pysam
 import unittest
 import warnings
-from tests import MockRead, MockBamFileHandle
-from tests import REFERENCE_GENOME_FILE, TRANSCRIPTOME_BAM_INPUT, FULL_REFERENCE_ANNOTATIONS_FILE_JSON
-from tests import BAM_INPUT, FULL_BAM_INPUT
+from . import MockRead, MockBamFileHandle
+from . import REFERENCE_GENOME_FILE, TRANSCRIPTOME_BAM_INPUT, FULL_REFERENCE_ANNOTATIONS_FILE_JSON
+from . import BAM_INPUT, FULL_BAM_INPUT
 
 REFERENCE_GENOME = None
 

@@ -8,7 +8,7 @@ from svgwrite import Drawing
 from mavis.constants import STRAND, ORIENT, SVTYPE
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.interval import Interval
-from tests import MockSeq, MockString, build_transcript, TEMPLATE_METADATA_FILE
+from . import MockSeq, MockString, build_transcript, TEMPLATE_METADATA_FILE
 import random
 
 TEMPLATE_METADATA = None

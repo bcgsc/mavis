@@ -10,8 +10,8 @@ from mavis.validate.evidence import GenomeEvidence
 import unittest
 import shutil
 from Bio import SeqIO
-from tests import REFERENCE_GENOME_FILE, REFERENCE_GENOME_FILE_2BIT
-from tests import BLAT_INPUT, BLAT_OUTPUT, BAM_INPUT, MockBamFileHandle
+from . import REFERENCE_GENOME_FILE, REFERENCE_GENOME_FILE_2BIT
+from . import BLAT_INPUT, BLAT_OUTPUT, BAM_INPUT, MockBamFileHandle
 
 
 REFERENCE_GENOME = None

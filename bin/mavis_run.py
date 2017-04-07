@@ -42,8 +42,9 @@ def main_pipeline(args, configs):
     annotation_files = []
     annotation_jobs = []
     rand = int(random.random() * math.pow(10, 10))
+    print(args.annotations, args.annotations_filename)
     for sec in configs:
-        print()
+        print(sec)
         base = os.path.join(args.output, '{}_{}'.format(sec.library, sec.protocol))
         log('setting up the directory structure for', sec.library, 'as', base)
         base = os.path.join(args.output, '{}_{}'.format(sec.library, sec.protocol))
@@ -348,6 +349,7 @@ use the -h/--help option
     # loaded data
     if any([
         pstep == PIPELINE_STEP.CLUSTER and args.uninformative_filter,
+        pstep == PIPELINE_STEP.PIPELINE and args.uninformative_filter,
         pstep == PIPELINE_STEP.VALIDATE and args.protocol == PROTOCOL.TRANS,
         pstep == PIPELINE_STEP.PIPELINE and any([sec.protocol == PROTOCOL.TRANS for sec in config]),
         pstep == PIPELINE_STEP.PAIR or pstep == PIPELINE_STEP.ANNOTATE

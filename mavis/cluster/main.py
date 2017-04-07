@@ -1,7 +1,7 @@
 import os
 import itertools
 from .cluster import cluster_breakpoint_pairs
-from ..constants import COLUMNS
+from ..constants import COLUMNS, STRAND
 from ..interval import Interval
 from .constants import DEFAULTS
 from ..util import read_inputs, output_tabbed_file, write_bed_file
@@ -50,9 +50,15 @@ def main(
         add={COLUMNS.library: library, COLUMNS.protocol: protocol}
     )
     breakpoint_pairs = []
+    
     for bpp in temp:
         if bpp.data[COLUMNS.library] == library and bpp.data[COLUMNS.protocol] == protocol:
             breakpoint_pairs.append(bpp)
+        if any([
+            not bpp.stranded and bpp.break1.strand != STRAND.NS,
+            not bpp.stranded and bpp.break2.strand != STRAND.NS
+        ]):
+            raise UserWarning('Error in input file. Cannot specify the strand if the pair is not stranded')
     # filter by masking file
     breakpoint_pairs, filtered_bpp = filter_on_overlap(breakpoint_pairs, masking)
 
