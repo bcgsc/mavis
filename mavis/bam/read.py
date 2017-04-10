@@ -8,9 +8,12 @@ import re
 def get_samtools_version():
     proc = subprocess.getoutput(['samtools'])
     for line in proc.split('\n'):
-        m = re.search('Version: (?P<major>\d+)\.(?P<mid>\d+)\.(?P<minor>\d+)', line)
+        m = re.search('Version: (?P<major>\d+)(\.(?P<mid>\d+)(\.(?P<minor>\d+))?)?', line)
         if m:
-            return int(m.group('major')), int(m.group('mid')), int(m.group('minor'))
+            major = int(m.group('major'))
+            mid = int(m.group('mid')) if m.group('mid') else 0
+            minor = int(m.group('minor')) if m.group('minor') else 0
+            return major, mid, minor
     raise ValueError('unable to parse samtools version number')
 
 
