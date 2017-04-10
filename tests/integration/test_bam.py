@@ -604,7 +604,7 @@ class TestBamStats(unittest.TestCase):
                 sample_cap=10000,
                 distribution_fraction=0.99
             )
-            self.assertGreaterEqual(10, abs(stats.median_fragment_size - 420))
+            self.assertGreaterEqual(50, abs(stats.median_fragment_size - 420))
             self.assertEqual(150, stats.read_length)
         finally:
             try:

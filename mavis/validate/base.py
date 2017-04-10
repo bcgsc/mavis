@@ -597,6 +597,7 @@ class Evidence(BreakpointPair):
         contigs = assemble(
             assembly_sequences,
             assembly_min_edge_weight=self.assembly_min_edge_weight,
+            assembly_min_nc_edge_weight=self.assembly_min_nc_edge_weight,
             assembly_max_paths=self.assembly_max_paths,
             log=log,
             assembly_min_exact_match_to_remap=self.assembly_min_exact_match_to_remap,
