@@ -525,6 +525,12 @@ COLUMNS = Vocab(
         split alignments were used. Lower numbers indicate a better alignment. If it was the best alignment possible
         then this would be zero.
 
+    contig_alignment_reference_start
+        The reference start(s) <chr>:<position> of the contig alignment. Semi-colon delimited
+
+    contig_alignment_cigar
+        The cigar string(s) representing the contig alignment. Semi-colon delimited
+
     contig_build_score
         :class:`int` - Score representing the edge weights of all edges used in building the sequence
 

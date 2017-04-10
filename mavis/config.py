@@ -352,7 +352,7 @@ def augment_parser(parser, optparser, arguments):
         elif arg == 'reference_genome':
             add_semi_optional_argument(arg, optparser, parser, 'Path to the human reference genome fasta file.')
             optparser.add_argument(
-                '--low_memory', default=get_env_variable(arg, False), type=TSV.tsv_boolean,
+                '--low_memory', default=get_env_variable('low_memory', False), type=TSV.tsv_boolean,
                 help='if true defaults to indexing vs loading the reference genome')
         elif arg == 'template_metadata':
             add_semi_optional_argument(arg, optparser, parser, 'File containing the cytoband template information.')

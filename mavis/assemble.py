@@ -101,19 +101,19 @@ class DeBruijnGraph(nx.DiGraph):
                 continue
             path = []
             while self.in_degree(src) == 1 and self.out_degree(src) == 1:
-                temp = self.in_edges(src, data=True)[0]
-                if temp[2]['freq'] >= min_weight:
+                s, t, data = self.in_edges(src, data=True)[0]
+                if data['freq'] >= min_weight:
                     break
                 path.insert(0, src)
-                src = temp[0]
+                src = s
             path.insert(0, src)
 
             while self.in_degree(tgt) == 1 and self.out_degree(tgt) == 1:
-                temp = self.out_edges(tgt, data=True)[0]
-                if temp[2]['freq'] >= min_weight:
+                s, t, data = self.out_edges(tgt, data=True)[0]
+                if data['freq'] >= min_weight:
                     break
                 path.append(tgt)
-                tgt = temp[1]
+                tgt = t
             path.append(tgt)
             start_edge_data = self.get_edge_data(path[0], path[1])
             self.remove_edge(path[0], path[1])
@@ -246,6 +246,7 @@ def assemble(
     sequences,
     assembly_max_kmer_size=None,
     assembly_min_edge_weight=3,
+    assembly_abs_min_edge_weight=2,
     assembly_min_match_quality=0.95,
     assembly_min_read_mapping_overlap=None,
     assembly_min_contig_length=None,
@@ -298,6 +299,16 @@ def assemble(
             l = kmer[:-1]
             r = kmer[1:]
             assembly.add_edge(l, r)
+    # use the ab min edge weight to remove all low weight edges first
+    edges = list(assembly.edges(data=True))
+    for s, t, data in edges:
+        if data['freq'] < assembly_abs_min_edge_weight:
+            assembly.remove_edge(s, t)
+    # then remove all nodes with no edges
+    nodes = list(assembly.nodes())
+    for n in nodes:
+        if assembly.degree(n) == 0:
+            assembly.remove_node(n)
     # now just work with connected components
     assembly.trim_noncutting_paths_by_freq(assembly_min_edge_weight)
     # trim all paths from sources or to sinks where the edge weight is low

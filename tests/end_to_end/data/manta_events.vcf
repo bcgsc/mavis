@@ -1,0 +1,135 @@
+##fileformat=VCFv4.1
+##fileDate=20160919
+##source=GenerateSVCandidates 1.0.0
+##reference=file:///projects/trans_scratch/transabyss/trans-ABySS/annotations/hg19/201009/GRCh37-lite.fa
+##contig=<ID=1,length=249250621>
+##contig=<ID=2,length=243199373>
+##contig=<ID=3,length=198022430>
+##contig=<ID=4,length=191154276>
+##contig=<ID=5,length=180915260>
+##contig=<ID=6,length=171115067>
+##contig=<ID=7,length=159138663>
+##contig=<ID=8,length=146364022>
+##contig=<ID=9,length=141213431>
+##contig=<ID=10,length=135534747>
+##contig=<ID=11,length=135006516>
+##contig=<ID=12,length=133851895>
+##contig=<ID=13,length=115169878>
+##contig=<ID=14,length=107349540>
+##contig=<ID=15,length=102531392>
+##contig=<ID=16,length=90354753>
+##contig=<ID=17,length=81195210>
+##contig=<ID=18,length=78077248>
+##contig=<ID=19,length=59128983>
+##contig=<ID=20,length=63025520>
+##contig=<ID=21,length=48129895>
+##contig=<ID=22,length=51304566>
+##contig=<ID=X,length=155270560>
+##contig=<ID=Y,length=59373566>
+##contig=<ID=MT,length=16569>
+##contig=<ID=GL000207.1,length=4262>
+##contig=<ID=GL000226.1,length=15008>
+##contig=<ID=GL000229.1,length=19913>
+##contig=<ID=GL000231.1,length=27386>
+##contig=<ID=GL000210.1,length=27682>
+##contig=<ID=GL000239.1,length=33824>
+##contig=<ID=GL000235.1,length=34474>
+##contig=<ID=GL000201.1,length=36148>
+##contig=<ID=GL000247.1,length=36422>
+##contig=<ID=GL000245.1,length=36651>
+##contig=<ID=GL000197.1,length=37175>
+##contig=<ID=GL000203.1,length=37498>
+##contig=<ID=GL000246.1,length=38154>
+##contig=<ID=GL000249.1,length=38502>
+##contig=<ID=GL000196.1,length=38914>
+##contig=<ID=GL000248.1,length=39786>
+##contig=<ID=GL000244.1,length=39929>
+##contig=<ID=GL000238.1,length=39939>
+##contig=<ID=GL000202.1,length=40103>
+##contig=<ID=GL000234.1,length=40531>
+##contig=<ID=GL000232.1,length=40652>
+##contig=<ID=GL000206.1,length=41001>
+##contig=<ID=GL000240.1,length=41933>
+##contig=<ID=GL000236.1,length=41934>
+##contig=<ID=GL000241.1,length=42152>
+##contig=<ID=GL000243.1,length=43341>
+##contig=<ID=GL000242.1,length=43523>
+##contig=<ID=GL000230.1,length=43691>
+##contig=<ID=GL000237.1,length=45867>
+##contig=<ID=GL000233.1,length=45941>
+##contig=<ID=GL000204.1,length=81310>
+##contig=<ID=GL000198.1,length=90085>
+##contig=<ID=GL000208.1,length=92689>
+##contig=<ID=GL000191.1,length=106433>
+##contig=<ID=GL000227.1,length=128374>
+##contig=<ID=GL000228.1,length=129120>
+##contig=<ID=GL000214.1,length=137718>
+##contig=<ID=GL000221.1,length=155397>
+##contig=<ID=GL000209.1,length=159169>
+##contig=<ID=GL000218.1,length=161147>
+##contig=<ID=GL000220.1,length=161802>
+##contig=<ID=GL000213.1,length=164239>
+##contig=<ID=GL000211.1,length=166566>
+##contig=<ID=GL000199.1,length=169874>
+##contig=<ID=GL000217.1,length=172149>
+##contig=<ID=GL000216.1,length=172294>
+##contig=<ID=GL000215.1,length=172545>
+##contig=<ID=GL000205.1,length=174588>
+##contig=<ID=GL000219.1,length=179198>
+##contig=<ID=GL000224.1,length=179693>
+##contig=<ID=GL000223.1,length=180455>
+##contig=<ID=GL000195.1,length=182896>
+##contig=<ID=GL000212.1,length=186858>
+##contig=<ID=GL000222.1,length=186861>
+##contig=<ID=GL000200.1,length=187035>
+##contig=<ID=GL000193.1,length=189789>
+##contig=<ID=GL000194.1,length=191469>
+##contig=<ID=GL000225.1,length=211173>
+##contig=<ID=GL000192.1,length=547496>
+##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">
+##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
+##INFO=<ID=SVLEN,Number=.,Type=Integer,Description="Difference in length between REF and ALT alleles">
+##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
+##INFO=<ID=CIPOS,Number=2,Type=Integer,Description="Confidence interval around POS">
+##INFO=<ID=CIEND,Number=2,Type=Integer,Description="Confidence interval around END">
+##INFO=<ID=CIGAR,Number=A,Type=String,Description="CIGAR alignment for each alternate indel allele">
+##INFO=<ID=MATEID,Number=.,Type=String,Description="ID of mate breakend">
+##INFO=<ID=EVENT,Number=1,Type=String,Description="ID of event associated to breakend">
+##INFO=<ID=HOMLEN,Number=.,Type=Integer,Description="Length of base pair identical homology at event breakpoints">
+##INFO=<ID=HOMSEQ,Number=.,Type=String,Description="Sequence of base pair identical homology at event breakpoints">
+##INFO=<ID=SVINSLEN,Number=.,Type=Integer,Description="Length of insertion">
+##INFO=<ID=SVINSSEQ,Number=.,Type=String,Description="Sequence of insertion">
+##INFO=<ID=LEFT_SVINSSEQ,Number=.,Type=String,Description="Known left side of insertion for an insertion of unknown length">
+##INFO=<ID=RIGHT_SVINSSEQ,Number=.,Type=String,Description="Known right side of insertion for an insertion of unknown length">
+##INFO=<ID=INV3,Number=0,Type=Flag,Description="Inversion breakends open 3' of reported location">
+##INFO=<ID=INV5,Number=0,Type=Flag,Description="Inversion breakends open 5' of reported location">
+##INFO=<ID=BND_DEPTH,Number=1,Type=Integer,Description="Read depth at local translocation breakend">
+##INFO=<ID=MATE_BND_DEPTH,Number=1,Type=Integer,Description="Read depth at remote translocation mate breakend">
+##INFO=<ID=SOMATIC,Number=0,Type=Flag,Description="Somatic mutation">
+##INFO=<ID=SOMATICSCORE,Number=1,Type=Integer,Description="Somatic variant quality score">
+##INFO=<ID=JUNCTION_SOMATICSCORE,Number=1,Type=Integer,Description="If the SV junctino is part of an EVENT (ie. a multi-adjacency variant), this field provides the SOMATICSCORE value for the adjacency in question only">
+##FORMAT=<ID=PR,Number=.,Type=Integer,Description="Spanning paired-read support for the ref and alt alleles in the order listed">
+##FORMAT=<ID=SR,Number=.,Type=Integer,Description="Split reads for the ref and alt alleles in the order listed, for reads where P(allele|read)>0.999">
+##FILTER=<ID=MaxDepth,Description="Normal sample site depth is greater than 3x the median chromosome depth near one or both variant breakends">
+##FILTER=<ID=MinSomaticScore,Description="Somatic score is less than 30">
+##FILTER=<ID=MaxMQ0Frac,Description="For a small variant (<1000 bases) in the normal sample, the fraction of reads with MAPQ0 around either breakend exceeds 0.4">
+##ALT=<ID=BND,Description="Translocation Breakend">
+##ALT=<ID=INV,Description="Inversion">
+##ALT=<ID=DEL,Description="Deletion">
+##ALT=<ID=INS,Description="Insertion">
+##ALT=<ID=DUP:TANDEM,Description="Tandem Duplication">
+##cmdline=/projects/trans_scratch/software/manta-1.0.0.centos5_x86_64/bin/configManta.py --normalBam=/projects/analysis/analysis24/A36973/HMTGGCCXX_5/A36973/150nt/hg19a/bwa-mem-0.7.6a/A36973_1_lane_dupsFlagged.bam --tumorBam=/projects/analysis/analysis24/A36971/merge_bwa-mem-0.7.6a/150nt/hg19a/A36971_2_lanes_dupsFlagged.bam --referenceFasta=/projects/trans_scratch/transabyss/trans-ABySS/annotations/hg19/201009/GRCh37-lite.fa --runDir=/projects/trans_scratch/validations/Manta/POG/test/COLO829-hiseqX/manta-1.0.0/A36971_A36973
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	COLO829BL	COLO829
+1	207981229	MantaDEL:20644:0:2:0:0:0	A	<DEL>	.	PASS	END=208014817;SVTYPE=DEL;SVLEN=-33588;CIPOS=0,4;CIEND=0,4;HOMLEN=4;HOMSEQ=GAGG;SOMATIC;SOMATICSCORE=76	PR:SR	59,0:63,0	94,17:103,19
+1	224646602	MantaDUP:TANDEM:22477:0:1:0:9:0	G	<DUP:TANDEM>	.	PASS	END=224800120;SVTYPE=DUP;SVLEN=153518;SVINSLEN=37;SVINSSEQ=CAAAACTTACTATAGCAGTTCTGTGAGCTGCTCTAGC;SOMATIC;SOMATICSCORE=125	PR:SR	53,0:51,0	126,46:121,50
+10	89700299	MantaDEL:180676:0:1:0:0:0	A	<DEL>	.	PASS	END=89712340;SVTYPE=DEL;SVLEN=-12041;SVINSLEN=18;SVINSSEQ=GAGATTATACTTTGTGTA;SOMATIC;SOMATICSCORE=228	PR:SR	43,0:49,0	0,52:0,56
+10	7059511	MantaBND:173633:0:1:0:0:0:0	T	]19:17396810]T	.	PASS	SVTYPE=BND;MATEID=MantaBND:173633:0:1:0:0:0:1;CIPOS=0,1;HOMLEN=1;HOMSEQ=C;SOMATIC;SOMATICSCORE=95;BND_DEPTH=44;MATE_BND_DEPTH=54	PR:SR	63,0:50,0	71,20:59,19
+19	17396810	MantaBND:173633:0:1:0:0:0:1	T	T[10:7059511[	.	PASS	SVTYPE=BND;MATEID=MantaBND:173633:0:1:0:0:0:0;CIPOS=0,1;HOMLEN=1;HOMSEQ=T;SOMATIC;SOMATICSCORE=95;BND_DEPTH=54;MATE_BND_DEPTH=44	PR:SR	63,0:50,0	71,20:59,19
+7	150746657	MantaBND:144626:0:1:0:0:0:1	C	C[15:84810725[	.	PASS	SVTYPE=BND;MATEID=MantaBND:144626:0:1:0:0:0:0;SOMATIC;SOMATICSCORE=161;BND_DEPTH=48;MATE_BND_DEPTH=46	PR:SR	56,0:59,0	78,57:72,35
+15	84810725	MantaBND:144626:0:1:0:0:0:0	G	]7:150746657]G	.	PASS	SVTYPE=BND;MATEID=MantaBND:144626:0:1:0:0:0:1;SOMATIC;SOMATICSCORE=161;BND_DEPTH=46;MATE_BND_DEPTH=48	PR:SR	56,0:59,0	78,57:72,35
+3	24565105	MantaINV:53136:0:1:0:0:0	A	<INV>	.	PASS	END=24566181;SVTYPE=INV;SVLEN=1076;CIPOS=0,3;CIEND=-3,0;HOMLEN=3;HOMSEQ=CAC;INV5;SOMATIC;SOMATICSCORE=182	PR:SR	74,0:73,0	169,97:161,86
+7	125746123	MantaDEL:4:28280:28281:0:0:0	A	<DEL>	.	PASS	END=126166900;SVTYPE=DEL;SVLEN=-420777;CIPOS=0,1;CIEND=0,1;HOMLEN=1;HOMSEQ=G;SVINSLEN=1;SVINSSEQ=T;SOMATIC;SOMATICSCORE=119	PR:SR	50,0:49,0	104,44:105,37
+7	104485066	MantaDUP:TANDEM:139077:0:1:0:0:0	T	<DUP:TANDEM>	.	PASS	END=104612300;SVTYPE=DUP;SVLEN=127234;CIPOS=0,2;CIEND=0,2;HOMLEN=2;HOMSEQ=GT;SOMATIC;SOMATICSCORE=104	PR:SR	46,0:45,0	163,55:166,51
+7	126098487	MantaINV:4:28281:28286:0:0:0	T	<INV>	.	PASS	END=126167443;SVTYPE=INV;SVLEN=68956;CIPOS=0,3;CIEND=-3,0;HOMLEN=3;HOMSEQ=ATG;INV5;SOMATIC;SOMATICSCORE=120	PR:SR	42,0:48,0	95,45:104,36
+9	28031861	MantaINV:162252:2:3:0:0:0	A	<INV>	.	PASS	END=28034467;SVTYPE=INV;SVLEN=2606;CIPOS=0,1;CIEND=-1,0;HOMLEN=1;HOMSEQ=C;SVINSLEN=11;SVINSSEQ=TTTTCGGAATT;INV5;SOMATIC;SOMATICSCORE=104	PR:SR	45,0:42,0	41,19:26,19
+X	31196943	MantaDEL:290420:0:1:0:0:0	A	<DEL>	.	PASS	END=31216210;SVTYPE=DEL;SVLEN=-19267;SVINSLEN=8;SVINSSEQ=ATGTAGTG;SOMATIC;SOMATICSCORE=124	PR:SR	35,0:25,0	43,32:32,31

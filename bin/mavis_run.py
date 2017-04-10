@@ -42,9 +42,7 @@ def main_pipeline(args, configs):
     annotation_files = []
     annotation_jobs = []
     rand = int(random.random() * math.pow(10, 10))
-    print(args.annotations, args.annotations_filename)
     for sec in configs:
-        print(sec)
         base = os.path.join(args.output, '{}_{}'.format(sec.library, sec.protocol))
         log('setting up the directory structure for', sec.library, 'as', base)
         base = os.path.join(args.output, '{}_{}'.format(sec.library, sec.protocol))
