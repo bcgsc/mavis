@@ -8,4 +8,4 @@ export MAVIS_MAX_FILES=100
 export MAVIS_MIN_CLUSTERS_PER_FILE=30
 export PYTHONUNBUFFERED='True'
 
-PATH=$BLAT:$PATH
+export PATH=/projects/trans_scratch/transabyss/trans-ABySS/v1.4.8/bin:$PATH
