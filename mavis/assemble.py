@@ -264,6 +264,7 @@ def assemble(
         sequences (:class:`list` of :class:`str`): a list of strings/sequences to assemble
         assembly_max_kmer_size (int): the size of the kmer to use
         assembly_min_nc_edge_weight (int): see :term:`assembly_min_nc_edge_weight`
+        assembly_min_edge_weight (int): see :term:`assembly_min_edge_weight`
         assembly_min_match_quality (float): percent match for re-aligned reads to contigs
         assembly_min_read_mapping_overlap (int): the minimum amount of overlap required when aligning reads to contigs
         assembly_max_paths (int): see :term:`assembly_max_paths`

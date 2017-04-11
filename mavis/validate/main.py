@@ -59,7 +59,6 @@ def main(
 
     split_read_contigs = set()
     chr_to_index = {}
-    bpps = []
     bpps = read_inputs([input], add={COLUMNS.protocol: protocol, COLUMNS.library: library})
     evidence_clusters = []
     for bpp in bpps:

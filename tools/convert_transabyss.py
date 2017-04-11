@@ -1,16 +1,20 @@
 """
-script for converting Trans-ABySS output file into the MAVIS accepted input format
+Script for converting Trans-ABySS output file into the MAVIS accepted input format
 """
-import TSV
-from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND
-from mavis.breakpoint import Breakpoint, BreakpointPair
-from mavis.error import *
-import sys
-import argparse
-import warnings
-import os
 
-__version__ = '0.0.1'
+import argparse
+import os
+import sys
+import time
+import TSV
+import warnings
+
+from mavis.breakpoint import Breakpoint, BreakpointPair
+from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND, PROTOCOL
+from mavis.error import InvalidRearrangement
+from mavis.util import get_version
+
+__version__ = get_version()
 __prog__ = os.path.basename(os.path.realpath(__file__))
 
 TSV._verbose = True
@@ -32,21 +36,23 @@ def main():
         description='Convert a TA output file to the MAVIS input format, takes both indels and fusions',
         add_help=False)
     required = parser.add_argument_group('Required arguments')
-    required.add_argument('-o', '--output', help='path to the output file', required=True)
     required.add_argument('-n', '--input', help='path to the input file to be converted', required=True)
-    required.add_argument('-p', '--protocol', choices=['genome', 'transcriptome'], required=True)
-    required.add_argument('-l', '--library_id', required=True,
-                          help="The library id of that was used as input")
+    required.add_argument('-o', '--output', help='path to the output file', required=True)
+    required.add_argument('-p', '--protocol', choices=[PROTOCOL.GENOME, PROTOCOL.TRANS], required=True)
+    required.add_argument('-l', '--library', required=True,
+                          help="the library id of that was used as input")
 
     optional = parser.add_argument_group('Optional arguments')
     optional.add_argument('-h', '--help', action='help', help='Show this help message and exit')
     optional.add_argument(
         '-v', '--version', action='version', version='%(prog)s version ' + __version__,
-        help='Outputs the version number')
+        help='outputs the version number')
     optional.add_argument(
         '-f', '--overwrite', action='store_true', default=False,
         help='set flag to overwrite existing reviewed files')
     optional.add_argument('--stranded', action='store_true', default=False)
+    optional.add_argument('--tool-version', help='the version of defuse that was used in the analysis',
+                          default='1.4.10')
     optional.add_argument('--no-filter', action='store_true', default=False,
                           help='turn off filtering of events that are in the "MT" and "GL" chromosomes')
 
@@ -138,9 +144,9 @@ def main():
             Breakpoint(chr1, pos1, strand=strand1, orient=orient1),
             Breakpoint(chr2, pos2, strand=strand2, orient=orient2),
             data={
-                COLUMNS.library: args.library_id,
+                COLUMNS.library: args.library,
                 COLUMNS.protocol: args.protocol,
-                COLUMNS.tools: '{1}_v{0}'.format(__version__, __prog__),
+                COLUMNS.tools: 'TransABySS_v{0}'.format(args.tool_version),
                 COLUMNS.event_type: event_type
             },
             stranded=args.stranded
@@ -171,15 +177,17 @@ def main():
     with open(args.output, 'w') as fh:
         print('writing:', args.output)
         fh.write('## {1} v{0}\n'.format(__version__, __prog__))
-        fh.write('## input: {0}\n'.format(args.input))
-        fh.write('## output: {0}\n'.format(args.output))
-        fh.write('## overwrite: {0}\n'.format(args.overwrite))
-        fh.write('## library: {0}\n'.format(args.library_id))
-        fh.write('## protocol: {0}\n'.format(args.protocol))
+        fh.write('## inputs {0}\n'.format(" ".join(sys.argv)))
+        # fh.write('## input: {0}\n'.format(args.input))
+        # fh.write('## output: {0}\n'.format(args.output))
+        # fh.write('## overwrite: {0}\n'.format(args.overwrite))
+        # fh.write('## library: {0}\n'.format(args.library))
+        # fh.write('## protocol: {0}\n'.format(args.protocol))
+        fh.write('## file generated on {0}\n'.format(time.strftime('%B %d, %Y')))
         fh.write('#' + '\t'.join([str(c) for c in header]) + '\n')
         for row in rows:
             fh.write('\t'.join([row[c] for c in header]) + '\n')
-        print("Wrote {} gene {} events to {}".format(len(rows), file_type, args.output))
+        print("Wrote {0} gene {1} events to {2}".format(len(rows), file_type, args.output))
 
 if __name__ == '__main__':
     main()
