@@ -1,4 +1,3 @@
-#! /projects/tumour_char/analysis_scripts/python/centos06/anaconda3_v4.3.0/envs/python3.4/bin/python
 # Requires the PyVcf (vcf) non-standard module.
 """
 Script for converting DELLY VCF output into the MAVIS accepted input format
@@ -9,11 +8,12 @@ import os
 import sys
 import time
 import vcf
+
 from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, PROTOCOL
+from mavis.util import get_version
 
-__version__ = '0.0.1'
+__version__ = get_version()
 __prog__ = os.path.basename(os.path.realpath(__file__))
-
 
 SVTYPES = {'DEL': SVTYPE.DEL,
            'INV': SVTYPE.INV,
@@ -45,6 +45,7 @@ def delly_vcf_to_tsv(delly_vcf_list, output_filename=None, filter_event=True):
     events = []
     filter_count = 0
     for vcf_fn in delly_vcf_list:
+        print('reading:', vcf_fn)
         vcf_reader = vcf.Reader(filename=vcf_fn)
         for record in vcf_reader:
             extra_info = {}
@@ -106,7 +107,7 @@ def delly_vcf_to_tsv(delly_vcf_list, output_filename=None, filter_event=True):
                 call[COLUMNS.break1_orientation] = call[COLUMNS.break2_orientation] = ORIENT.NS
                 call[COLUMNS.opposing_strands] = False
             else:
-                raise ValueError("Unrecognized record['CT'] value of '{}'".format(record.INFO['CT']))
+                raise ValueError("Unrecognized record['CT'] value of '{0}'".format(record.INFO['CT']))
             call[COLUMNS.event_type] = SVTYPES[record.INFO['SVTYPE']]
             if record.INFO['SVTYPE'] == 'TRA' and call['opposing_strands']:
                 call[COLUMNS.event_type] = 'inverted translocation'
@@ -135,12 +136,6 @@ def delly_vcf_to_tsv(delly_vcf_list, output_filename=None, filter_event=True):
                     new_row['delly_flanking_reads'] = flanking_pairs_variant
                     new_row['delly_mapping_quality'] = extra_info['mapping_qualitiy']
                     new_row['delly_filters'] = ';'.join(filters)
-                    # tool_evidence = {}
-                    # tool_evidence['split_reads'] = new_row['delly_split_reads']
-                    # tool_evidence['flanking_reads'] = new_row['delly_flanking_reads']
-                    # tool_evidence['mapping_quality'] = new_row['delly_mapping_quality']
-                    # tool_evidence['filters'] = new_row['delly_filters']
-                    # new_row['delly_evidence'] = pprint.pformat(tool_evidence).replace('\n', '')
                     events.append(new_row)
     if filter_count > 0:
         print('{0} events have been filtered'.format(filter_count))
@@ -148,16 +143,16 @@ def delly_vcf_to_tsv(delly_vcf_list, output_filename=None, filter_event=True):
     elements = sort_columns(events[0].keys())
     header = "\t".join(elements)
     with open(output_filename, 'w') as fh:
-        fh.write('## {} v{}\n'.format(__prog__, __version__))
-        fh.write('## inputs: {}\n'.format(" ".join(sys.argv)))
-        fh.write('## file generated on {}\n'.format(time.strftime('%B %d, %Y')))
-        fh.write('#{}\n'.format(header))
+        fh.write('## {0} v{1}\n'.format(__prog__, __version__))
+        fh.write('## inputs: {0}\n'.format(" ".join(sys.argv)))
+        fh.write('## file generated on {0}\n'.format(time.strftime('%B %d, %Y')))
+        fh.write('#{0}\n'.format(header))
         for event in events:
             line = []
             for element in elements:
                 line.append(str(event[element]))
-            fh.write("{}\n".format("\t".join(line)))
-        print("Wrote {} gene fusion events to {}".format(len(events), output_filename))
+            fh.write("{0}\n".format("\t".join(line)))
+        print("Wrote {0} gene fusion events to {1}".format(len(events), output_filename))
 
 
 def main():
@@ -165,16 +160,20 @@ def main():
         description="Convert a DELLY VCF output file to the MAVIS input format",
         add_help=False,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    #library and tool version are determined from the vcf file
     required = parser.add_argument_group('Required arguments')
-    required.add_argument('-f', '--vcf-files', required=True, help='DELLY *.vcf output', nargs='+')
+    required.add_argument('-n', '--input', required=True, help='the path to all the DELLY *.vcf output', nargs='+')
+    required.add_argument('-o', '--output', help='path to the output file', required=True)
 
     optional = parser.add_argument_group('Optional arguments')
     optional.add_argument('-h', '--help', action='help', help='Show this help message and exit')
-    optional.add_argument('-o', '--output', help='DELLY *.tsv output', default='mavis_delly.tsv')
+    optional.add_argument('-v', '--version', action='version', version='%(prog)s version ' + __version__,
+                          help='outputs the version number')
     optional.add_argument('--no-filter', action='store_true', default=False,
                           help='turn off filtering of events that are in the "MT" and "GL" chromosomes')
     args = parser.parse_args()
-    delly_vcf_to_tsv(delly_vcf_list=args.vcf_files, output_filename=args.output,
+    delly_vcf_to_tsv(delly_vcf_list=args.input, output_filename=args.output,
                      filter_event=not args.no_filter)
 
 
