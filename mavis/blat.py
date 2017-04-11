@@ -354,6 +354,90 @@ def paired_alignment_score(read1, read2=None):
     return score
 
 
+def select_paired_alignements(bpp, aligned_contigs, min_query_consumption, min_extend_overlap):
+    # now for each bpp assign an alignment to each contig
+    putative_alignments = []
+    putative_event_types = set(bpp.putative_event_types())
+    if {SVTYPE.INS, SVTYPE.DUP} & putative_event_types:
+        putative_event_types = putative_event_types | {SVTYPE.INS, SVTYPE.DUP}
+    
+    # for events on the same template and strand we expect to find a single contig alignment
+    if not bpp.interchromosomal and not bpp.opposing_strands:
+        for read in aligned_contigs:
+            # if it covers both breakpoints add to putative alignments
+            read_cover = Interval(read.reference_start, read.reference_end - 1)
+            if all([
+                read.reference_name == bpp.break1.chr,
+                Interval.overlaps(bpp.outer_window1, read_cover),
+                Interval.overlaps(bpp.outer_window2, read_cover)
+            ]):
+                # split the continuous alignment, assume ins/dup or indel
+                ins = sum([v for c, v in read.cigar if c == CIGAR.I] + [0])
+                dln = sum([v for c, v in read.cigar if c in [CIGAR.D, CIGAR.N]] + [0])
+                consume = len(read.query_coverage_interval()) / len(read.query_sequence)
+                if consume < min_query_consumption:
+                    continue
+                
+                for event_type in putative_event_types:
+                    if event_type in {SVTYPE.INS, SVTYPE.DUP} and ins > 0 and ins > dln:
+                        putative_alignments.append((read, None))
+                    elif event_type in {SVTYPE.DEL, SVTYPE.INV} and dln > 0 and dln > ins:
+                        putative_alignments.append((read, None))
+    
+    # don't use reads in combined alignments if they have already been assigned in a single alignment
+    combo_prohibited = [x for x, y in putative_alignments]
+    
+    for read1, read2 in itertools.combinations([x for x in aligned_contigs if x not in combo_prohibited], 2):
+        # do they overlap both breakpoints
+        if any([
+            read1.reference_name > read2.reference_name,
+            read1.reference_name == read2.reference_name and read1.reference_start > read2.reference_start
+        ]):
+            read1, read2 = read2, read1
+        # check that the coverage intervals overlap
+        if any([
+            read1.reference_name != bpp.break1.chr,
+            read2.reference_name != bpp.break2.chr,
+            not Interval.overlaps((read1.reference_start + 1, read1.reference_end), bpp.outer_window1),
+            not Interval.overlaps((read2.reference_start + 1, read2.reference_end), bpp.outer_window2)
+        ]):
+            continue
+        # reads should have unique reference overlap
+        if not bpp.interchromosomal and read1.reference_end > read2.reference_end:
+            continue
+        # check that the combination extends the amount of the initial query sequence we consume
+        query_cover1 = read1.query_coverage_interval()
+        query_cover2 = read2.query_coverage_interval()
+
+        if read2.query_sequence != read1.query_sequence:  # alignments aligned to opposite strands
+            if not bpp.opposing_strands:
+                continue
+            if read2.query_sequence != reverse_complement(read1.query_sequence):
+                continue
+            l = len(read1.query_sequence) - 1
+            query_cover2 = Interval(l - query_cover2.end, l - query_cover2.start)
+        elif bpp.opposing_strands:
+            continue
+        
+        consume = len(query_cover1 | query_cover2)
+        if not Interval.overlaps(query_cover1, query_cover2):
+            consume = len(query_cover1) + len(query_cover2)
+        
+        if consume / len(read1.query_sequence) < min_query_consumption:
+            continue
+        if consume - len(query_cover1) < min_extend_overlap or consume - len(query_cover2) < min_extend_overlap:
+            continue
+        
+        try:
+            call = BreakpointPair.call_breakpoint_pair(read1, read2)
+            if not set(BreakpointPair.classify(call)) & putative_event_types:
+                continue
+        except (InvalidRearrangement, AssertionError) as err:
+            continue
+        putative_alignments.append((read1, read2))
+    return putative_alignments
+
+
 def blat_contigs(
         evidence,
         INPUT_BAM_CACHE,
@@ -465,84 +549,9 @@ def blat_contigs(
         for e in evidence:
             for contig in e.contigs:
                 aln = reads_by_query.get(contig.seq, [])
-                putative_alignments = []
-                combo_prohibited = set()
-                putative_event_types = e.putative_event_types()
-
-                if e.break1.chr == e.break2.chr and not e.opposing_strands:
-                    for read in aln:
-                        # if it covers both breakpoints add to putative alignments
-                        temp = Interval(read.reference_start, read.reference_end - 1)
-                        if INPUT_BAM_CACHE.get_read_reference_name(read) == e.break1.chr \
-                                and Interval.overlaps(e.outer_window1, temp) \
-                                and Interval.overlaps(e.outer_window2, temp):
-                            # split the continuous alignment, assume ins/dup or indel
-                            ins = sum([v for c, v in read.cigar if c == CIGAR.I] + [0])
-                            dln = sum([v for c, v in read.cigar if c in [CIGAR.D, CIGAR.N]] + [0])
-                            consume = len(read.query_coverage_interval()) / len(read.query_sequence)
-                            if consume < blat_min_query_consumption:
-                                continue
-                            for event_type in e.putative_event_types():
-                                if event_type in [SVTYPE.INS, SVTYPE.DUP] and ins > 0 and ins > dln:
-                                    putative_alignments.append((read, None))
-                                elif event_type == SVTYPE.DEL and dln > 0 and dln > ins:
-                                    putative_alignments.append((read, None))
-
-                combo_prohibited = [x for x, y in putative_alignments]
-                for a1, a2 in sorted(
-                        itertools.combinations([x for x in aln if x not in combo_prohibited], 2),
-                        key=lambda x: x[0].get_tag('br') + x[1].get_tag('br')):
-                    # do they overlap both breakpoints
-                    if a1.reference_id > a2.reference_id or \
-                            (a1.reference_id == a2.reference_id and a1.reference_start > a2.reference_start):
-                        a1, a2 = (a2, a1)
-    
-                    if set([
-                            INPUT_BAM_CACHE.get_read_reference_name(a1),
-                            INPUT_BAM_CACHE.get_read_reference_name(a2)
-                    ]) != set([e.break1.chr, e.break2.chr]):
-                        continue
-                    
-                    q1 = a1.query_coverage_interval()
-                    q2 = a2.query_coverage_interval()
-                    if a1.is_reverse != a1.is_reverse:
-                        l = len(a1.query_sequence) - 1
-                        q2 = Interval(l - q2.end, l - q2.start)
-
-                    if not e.interchromosomal and a1.reference_end > a2.reference_end:
-                        continue
-
-                    if a2.query_sequence != a1.query_sequence:  # alignments aligned to opposite strands
-                        if not e.opposing_strands:
-                            continue
-                        q2 = Interval(len(a2.query_sequence) - q2.end, len(a2.query_sequence) - q2.start)
-                    elif e.opposing_strands:
-                        continue
-                    
-                    union = q1 | q2
-                    consume = len(union)
-                    if not Interval.overlaps(q1, q2):
-                        consume = len(q1) + len(q2)
-                    if consume / len(a1.query_sequence) < blat_min_query_consumption:
-                        continue
-                    if len(union) - len(q1) < min_extend_overlap or len(union) - len(q2) < min_extend_overlap:
-                        continue
-                    
-                    try:
-                        BreakpointPair.call_breakpoint_pair(a1, a2)
-                    except (InvalidRearrangement, AssertionError) as err:
-                        continue
-                    
-                    if INPUT_BAM_CACHE.get_read_reference_name(a1) == e.break1.chr \
-                            and Interval.overlaps(e.outer_window1, (a1.reference_start, a1.reference_end - 1)) \
-                            and INPUT_BAM_CACHE.get_read_reference_name(a2) == e.break2.chr \
-                            and Interval.overlaps(e.outer_window2, (a2.reference_start, a2.reference_end - 1)):
-                        putative_alignments.append((a1, a2))
-                    elif INPUT_BAM_CACHE.get_read_reference_name(a2) == e.break1.chr \
-                            and Interval.overlaps(e.outer_window1, (a2.reference_start, a2.reference_end - 1)) \
-                            and INPUT_BAM_CACHE.get_read_reference_name(a1) == e.break2.chr \
-                            and Interval.overlaps(e.outer_window2, (a1.reference_start, a1.reference_end - 1)):
-                        putative_alignments.append((a2, a1))
+                putative_alignments = select_paired_alignements(
+                    e, aln, min_extend_overlap=min_extend_overlap, min_query_consumption=blat_min_query_consumption
+                )
                 if len(putative_alignments) == 0:
                     continue
                 score_by_alignments = {}
