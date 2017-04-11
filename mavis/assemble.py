@@ -102,7 +102,7 @@ class DeBruijnGraph(nx.DiGraph):
             path = []
             while self.in_degree(src) == 1 and self.out_degree(src) == 1:
                 s, t, data = self.in_edges(src, data=True)[0]
-                if data['freq'] >= min_weight:
+                if data['freq'] >= min_weight or s in path:
                     break
                 path.insert(0, src)
                 src = s
@@ -110,7 +110,7 @@ class DeBruijnGraph(nx.DiGraph):
 
             while self.in_degree(tgt) == 1 and self.out_degree(tgt) == 1:
                 s, t, data = self.out_edges(tgt, data=True)[0]
-                if data['freq'] >= min_weight:
+                if data['freq'] >= min_weight or t in path:
                     break
                 path.append(tgt)
                 tgt = t
