@@ -15,7 +15,9 @@ DEFAULTS = MavisNamespace(
     assembly_strand_concordance=0.51,
     blat_min_percent_of_max_score=0.8,
     blat_min_identity=0.9,
-    blat_min_query_consumption=0.7,
+    contig_aln_min_query_consumption=0.7,
+    contig_aln_max_event_size=50,
+    contig_aln_min_anchor_size=50,
     call_error=10,
     consensus_req=3,
     fetch_reads_bins=3,
@@ -143,6 +145,14 @@ DEFAULTS = MavisNamespace(
         filter based on blat score values. The best match, highest score, is used as the top value and other results
         must be at least this fraction of the maximum score or they are filtered out
 
-    blat_min_query_consumption
+    contig_aln_min_query_consumption
         minimum fraction of the original query sequence that must be used by the read(s) of the alignment
+
+    contig_aln_max_event_size
+        relates to determining breakpoints when pairing contig alignments. For any given read in a putative pair the 
+        soft clipping is extended to include any events of greater than this size. The softclipping is added to the
+        side of the alignment as indicated by the breakpoint we are assigning pairs to
+
+    contig_aln_min_anchor_size
+        the minimum number of aligned bases for a contig (M or =) in order to simplify. Do not have to be consecutive.
 """

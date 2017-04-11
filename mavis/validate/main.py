@@ -145,9 +145,14 @@ def main(
         clean_files=False,
         blat_min_percent_of_max_score=kwargs.get(
             'blat_min_percent_of_max_score', DEFAULTS.blat_min_percent_of_max_score),
-        blat_min_identity=kwargs.get('blat_min_identity', DEFAULTS.blat_min_identity),
-        blat_min_query_consumption=kwargs.get(
-            'blat_min_query_consumption', DEFAULTS.blat_min_query_consumption)
+        blat_min_identity=kwargs.get(
+            'blat_min_identity', DEFAULTS.blat_min_identity),
+        contig_aln_min_query_consumption=kwargs.get(
+            'contig_aln_min_query_consumption', DEFAULTS.contig_aln_min_query_consumption),
+        contig_aln_max_event_size=kwargs.get(
+            'contig_aln_max_event_size', DEFAULTS.contig_aln_max_event_size),
+        contig_aln_min_anchor_size=kwargs.get(
+            'contig_aln_min_anchor_size', DEFAULTS.contig_aln_min_anchor_size)
     )
     log('alignment complete')
     event_calls = []
@@ -190,6 +195,7 @@ def main(
     # write the output validated clusters (split by type and contig)
     validation_batch_id = build_batch_id(prefix='validation-')
     for i, ec in enumerate(event_calls):
+        print(ec)
         b1_homseq = None
         b2_homseq = None
         try:

@@ -406,13 +406,14 @@ class BreakpointPair:
         .. todo::
             return multiple events not just the major event
         """
+        from .blat import BlatAlignedSegment
         if read1.reference_id > read2.reference_id:
             read1, read2 = (read2, read1)
         elif read1.reference_id == read2.reference_id and read1.reference_start > read2.reference_start:
             read1, read2 = (read2, read1)
 
-        r1_qci = read1.query_coverage_interval()
-        r2_qci = read2.query_coverage_interval()
+        r1_qci = BlatAlignedSegment.query_coverage_interval(read1)
+        r2_qci = BlatAlignedSegment.query_coverage_interval(read2)
 
         if read1.is_reverse == read2.is_reverse:
             assert(read1.query_sequence == read2.query_sequence)

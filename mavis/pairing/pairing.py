@@ -102,7 +102,6 @@ def equivalent_events(ev1, ev2, reference_transcripts, DISTANCES=None, product_s
         len(set([ORIENT.NS, ev1.break2.orient, ev2.break2.orient])) > 2,
         ev1.opposing_strands != ev2.opposing_strands
     ]):
-        print('first fail')
         return False
 
     if ev1.data[COLUMNS.protocol] != PROTOCOL.GENOME:
@@ -149,9 +148,7 @@ def equivalent_events(ev1, ev2, reference_transcripts, DISTANCES=None, product_s
 
     elif ev1.data[COLUMNS.event_type] != ev2.data[COLUMNS.event_type]:
         return False
-    print('waypoint1')
     # location comparison
-    print(abs(Interval.dist(ev1.break1, ev2.break1)), ev1.break1, ev2.break1)
     if abs(Interval.dist(ev1.break1, ev2.break1)) <= max_distance:
         break1_match = True
     if abs(Interval.dist(ev1.break2, ev2.break2)) <= max_distance:

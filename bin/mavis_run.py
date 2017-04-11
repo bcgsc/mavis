@@ -318,7 +318,7 @@ use the -h/--help option
         elif pstep == PIPELINE_STEP.PAIR:
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
             optional.add_argument(
-                '-f', '--product_sequences', nargs='+', help='paths to fasta files with product sequences',
+                '-f', '--product_sequence_files', nargs='+', help='paths to fasta files with product sequences',
                 required=False, default=[])
             augment_parser(
                 required, optional,

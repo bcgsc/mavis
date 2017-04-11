@@ -41,6 +41,20 @@ class BlatAlignedSegment(pysam.AlignedSegment):
         else:
             self._reference_name = reference_name
         self.blat_score = blat_score
+
+    def __copy__(self):
+        cp = BlatAlignedSegment(self.reference_name, self.blat_score)
+        cp.query_sequence = self.query_sequence
+        cp.reference_start = self.reference_start
+        cp.reference_id = self.reference_id
+        cp.cigar = self.cigar
+        cp.query_name = self.query_name
+        cp.mapping_quality = self.mapping_quality
+        cp.set_tags(self.get_tags())
+        cp.flag = self.flag
+        cp.next_reference_id = self.next_reference_id
+        cp.next_reference_start = self.next_reference_start
+        return cp
     
     def query_coverage_interval(self):
         """
@@ -342,10 +356,10 @@ def get_blat_version():
 
 
 def paired_alignment_score(read1, read2=None):
-    score = read_tools.calculate_alignment_score(read1) * read1.query_coverage_interval().length()
+    score = read_tools.calculate_alignment_score(read1) * BlatAlignedSegment.query_coverage_interval(read1).length()
     if read2 is not None:
-        qci1 = read1.query_coverage_interval()
-        qci2 = read2.query_coverage_interval()
+        qci1 = BlatAlignedSegment.query_coverage_interval(read1)
+        qci2 = BlatAlignedSegment.query_coverage_interval(read2)
         total_len = qci1.length() + qci2.length()
         s1 = read_tools.calculate_alignment_score(read1)
         s2 = read_tools.calculate_alignment_score(read2)
@@ -354,7 +368,9 @@ def paired_alignment_score(read1, read2=None):
     return score
 
 
-def select_paired_alignements(bpp, aligned_contigs, min_query_consumption, min_extend_overlap):
+def select_paired_alignments(
+    bpp, aligned_contigs, min_query_consumption, min_extend_overlap, max_event_size, min_anchor_size
+):
     # now for each bpp assign an alignment to each contig
     putative_alignments = []
     putative_event_types = set(bpp.putative_event_types())
@@ -394,10 +410,16 @@ def select_paired_alignements(bpp, aligned_contigs, min_query_consumption, min_e
             read1.reference_name == read2.reference_name and read1.reference_start > read2.reference_start
         ]):
             read1, read2 = read2, read1
+
+        if read1.reference_name != bpp.break1.chr or read2.reference_name != bpp.break2.chr:
+            continue
+
+        read1 = read_tools.convert_events_to_softclipping(
+            read1, bpp.break1.orient, max_event_size=max_event_size, min_anchor_size=min_anchor_size)
+        read2 = read_tools.convert_events_to_softclipping(
+            read2, bpp.break2.orient, max_event_size=max_event_size, min_anchor_size=min_anchor_size)
         # check that the coverage intervals overlap
         if any([
-            read1.reference_name != bpp.break1.chr,
-            read2.reference_name != bpp.break2.chr,
             not Interval.overlaps((read1.reference_start + 1, read1.reference_end), bpp.outer_window1),
             not Interval.overlaps((read2.reference_start + 1, read2.reference_end), bpp.outer_window2)
         ]):
@@ -447,7 +469,9 @@ def blat_contigs(
         blat_2bit_reference='/home/pubseq/genomes/Homo_sapiens/GRCh37/blat/hg19.2bit',
         blat_min_percent_of_max_score=0.8,
         blat_min_identity=0.7,
-        blat_min_query_consumption=0.5,
+        contig_aln_min_query_consumption=0.5,
+        contig_aln_max_event_size=50,
+        contig_aln_min_anchor_size=50,
         is_protein=False,
         min_extend_overlap=10,
         pair_scoring_function=paired_alignment_score,
@@ -549,8 +573,12 @@ def blat_contigs(
         for e in evidence:
             for contig in e.contigs:
                 aln = reads_by_query.get(contig.seq, [])
-                putative_alignments = select_paired_alignements(
-                    e, aln, min_extend_overlap=min_extend_overlap, min_query_consumption=blat_min_query_consumption
+                putative_alignments = select_paired_alignments(
+                    e, aln,
+                    min_extend_overlap=min_extend_overlap,
+                    min_query_consumption=contig_aln_min_query_consumption,
+                    min_anchor_size=contig_aln_min_anchor_size,
+                    max_event_size=contig_aln_max_event_size
                 )
                 if len(putative_alignments) == 0:
                     continue
