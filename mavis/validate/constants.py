@@ -1,13 +1,15 @@
-from argparse import Namespace
+from ..util import MavisNamespace
 
-VALIDATION_DEFAULTS = Namespace(
+DEFAULTS = MavisNamespace(
     assembly_include_flanking_pairs=True,
     assembly_include_half_mapped_reads=True,
     assembly_max_kmer_size=None,
     assembly_max_kmer_strict=True,
     assembly_max_paths=20,
-    assembly_min_edge_weight=3,
+    assembly_min_nc_edge_weight=4,
+    assembly_min_edge_weight=2,
     assembly_min_remapped_seq=3,
+    assembly_min_remap_coverage=3,
     assembly_min_exact_match_to_remap=4,
     assembly_min_tgt_to_exclude_half_map=7,
     assembly_strand_concordance=0.51,
@@ -37,7 +39,7 @@ VALIDATION_DEFAULTS = Namespace(
     strand_determining_read=2,
     min_spanning_reads_resolution=3
 )
-""":class:`~argparse.Namespace`: holds the settings for computations with the Evidence objects
+""":class:`MavisNamespace`: holds the settings for computations with the Evidence objects
 
 .. glossary::
     :sorted:
@@ -76,14 +78,6 @@ VALIDATION_DEFAULTS = Namespace(
     filter_secondary_alignments
         filter secondary alignments when gathering read evidence
 
-    assembly_min_edge_weight
-        when building the initial deBruijn graph edge weights are determined by the frequency of the kmer they represent
-        in all the input sequences. The parameter here discards edges to the kmer they represent in all the input
-        sequences. The parameter here discards edges to simply the graph if they have a weight less than specified
-
-    assembly_min_remap
-        The minimum input sequences that must remap for an assembly to be used
-
     min_non_target_aligned_split_reads
         The minimum number of split reads aligned to a breakpoint by the input bam and no forced by local alignment
         to the target region to call a breakpoint by split read evidence
@@ -95,7 +89,7 @@ VALIDATION_DEFAULTS = Namespace(
     min_linking_split_reads
         The minimum number of split reads which aligned to both breakpoints
 
-    min_flanking_pairs_resolutionraw_break1_half_mapped_reads
+    min_flanking_pairs_resolution
         the minimum number of flanking reads required to call a breakpoint by flanking evidence
 
     assembly_max_paths
@@ -111,7 +105,20 @@ VALIDATION_DEFAULTS = Namespace(
         if set to True then any sequences input to the assembly algorithm that cannot create a kmer of this size will
         be discard. However, if this is set to False, then the kmer size will be reduced accordingly and all input
         sequences will be used in the assembly algorithm
+    
+    assembly_min_nc_edge_weight
+        Discards all non-cutting edges with a weight/frequency less than this from the DeBruijn graph
 
+    assembly_min_edge_weight
+        Discards all edges with a weight/frequency less than this from the DeBruijn graph
+
+    assembly_min_remapped_seq
+        The minimum input sequences that must remap for an assembled contig to be used
+
+    assembly_min_remap_coverage
+        Metric measuring the sum of the lengths of the remapped sequences over the length of the contig. Required to be 
+        greater than or equal to this
+    
     assembly_strand_concordance
         when the number of remapped reads from each strand are compared, the ratio must be above this number to decide
         on the strand

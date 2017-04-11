@@ -2,9 +2,8 @@ import os
 import re
 import sys
 import random
-
-# local modules
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+import argparse
+import TSV
 from mavis.annotate import load_reference_genes, load_reference_genome, load_masking_regions, load_templates
 from mavis.validate.main import main as validate_main
 from mavis.cluster.main import main as cluster_main
@@ -12,13 +11,21 @@ from mavis.pairing.main import main as pairing_main
 from mavis.annotate.main import main as annotate_main
 from mavis import __version__
 
-from mavis.validate.constants import VALIDATION_DEFAULTS
-import mavis.pipeline.config as pconf
-from mavis.pipeline.util import log, mkdirp
-from mavis.constants import PROTOCOL
+from mavis.validate.constants import DEFAULTS as VALIDATION_DEFAULTS
+from mavis.cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
+from mavis.annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
+from mavis.pairing.constants import DEFAULTS as PAIRING_DEFAULTS
+from mavis.illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
+
+from mavis.config import augment_parser, write_config, LibraryConfig, read_config, get_env_variable
+from mavis.util import log, mkdirp, devnull
+from mavis.constants import PROTOCOL, PIPELINE_STEP
+from mavis.bam.read import get_samtools_version
+from mavis.blat import get_blat_version
 import math
 
 VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
+PROGNAME = os.path.basename(__file__)
 
 QSUB_HEADER = """#!/bin/bash
 #$ -V
@@ -36,7 +43,6 @@ def main_pipeline(args, configs):
     annotation_jobs = []
     rand = int(random.random() * math.pow(10, 10))
     for sec in configs:
-        print()
         base = os.path.join(args.output, '{}_{}'.format(sec.library, sec.protocol))
         log('setting up the directory structure for', sec.library, 'as', base)
         base = os.path.join(args.output, '{}_{}'.format(sec.library, sec.protocol))
@@ -47,8 +53,8 @@ def main_pipeline(args, configs):
         # run the merge
         log('clustering')
         merge_args = {}
-        merge_args.update(sec.__dict__)
         merge_args.update(args.__dict__)
+        merge_args.update(sec.__dict__)
         merge_args['output'] = os.path.join(base, 'clustering')
         output_files = cluster_main(**merge_args)
 
@@ -78,8 +84,7 @@ def main_pipeline(args, configs):
             'read_length': sec.read_length,
             'stdev_fragment_size': sec.stdev_fragment_size,
             'median_fragment_size': sec.median_fragment_size,
-            'stranded_bam': sec.stranded_bam,
-            'protocol': sec.protocol
+            'stranded_bam': sec.stranded_bam
         }
         for attr in sorted(VALIDATION_DEFAULTS.__dict__.keys()):
             validation_args[attr] = getattr(sec, attr)
@@ -99,7 +104,7 @@ def main_pipeline(args, configs):
                 ['--{} "{}"'.format(k, v) for k, v in validation_args.items() if isinstance(v, str) and v is not None])
             validation_args = temp
             validation_args.append('-n {}$SGE_TASK_ID.tab'.format(merge_file_prefix))
-            fh.write('python {} validate {}\n'.format(os.path.abspath(__file__), ' \\\n\t'.join(validation_args)))
+            fh.write('{} validate {}\n'.format(PROGNAME, ' \\\n\t'.join(validation_args)))
 
         # set up the annotations job
         # for all files with the right suffix
@@ -108,11 +113,11 @@ def main_pipeline(args, configs):
             'reference_genome': args.reference_genome_filename,
             'annotations': args.annotations_filename,
             'template_metadata': args.template_metadata_filename,
-            'min_orf_size': sec.min_orf_size,
-            'max_orf_cap': sec.max_orf_cap,
-            'min_domain_mapping_match': sec.min_domain_mapping_match,
-            'domain_name_regex_filter': sec.domain_name_regex_filter,
-            'max_proximity': sec.max_proximity
+            'min_orf_size': args.min_orf_size,
+            'max_orf_cap': args.max_orf_cap,
+            'min_domain_mapping_match': args.min_domain_mapping_match,
+            'domain_name_regex_filter': args.domain_name_regex_filter,
+            'max_proximity': args.max_proximity
         }
         temp = [
             '--{} {}'.format(k, v) for k, v in annotation_args.items() if not isinstance(v, str) and v is not None]
@@ -132,7 +137,7 @@ def main_pipeline(args, configs):
                     queue=args.queue, memory=args.default_memory_gb, name=annotation_jobname, output=annotation_output
                 ) + '\n')
             fh.write('#$ -hold_jid {}\n'.format(validation_jobname))
-            fh.write('python {} annotate {}\n'.format(os.path.abspath(__file__), ' \\\n\t'.join(annotation_args)))
+            fh.write('{} annotate {}\n'.format(PROGNAME, ' \\\n\t'.join(annotation_args)))
 
     # set up scripts for the pairing held on all of the annotation jobs
     pairing_output = mkdirp(os.path.join(args.output, 'pairing'))
@@ -142,8 +147,7 @@ def main_pipeline(args, configs):
         contig_call_distance=args.contig_call_distance,
         flanking_call_distance=args.flanking_call_distance,
         max_proximity=args.max_proximity,
-        annotations=args.annotations_filename,
-        low_memory=args.low_memory
+        annotations=args.annotations_filename
     )
     temp = ['--{} {}'.format(k, v) for k, v in pairing_args.items() if not isinstance(v, str) and v is not None]
     temp.extend(['--{} "{}"'.format(k, v) for k, v in pairing_args.items() if isinstance(v, str) and v is not None])
@@ -157,13 +161,88 @@ def main_pipeline(args, configs):
                 queue=args.queue, memory=args.default_memory_gb, name='mavis_pairing', output=pairing_output
             ) + '\n')
         fh.write('#$ -hold_jid {}\n'.format(','.join(annotation_jobs)))
-        fh.write('python {} pairing {}\n'.format(os.path.abspath(__file__), ' \\\n\t'.join(pairing_args)))
+        fh.write('{} pairing {}\n'.format(PROGNAME, ' \\\n\t'.join(pairing_args)))
+
+
+def generate_config(parser, required, optional):
+    """
+    Args:
+        parser (argparse.ArgumentParser): the main parser
+        required: the argparse required arguments group
+        optional: the argparse optional arguments group
+    """
+    # the config sub  program is used for writing pipeline configuration files
+    required.add_argument('-w', '--write', help='path to the new configuration file', required=True)
+    optional.add_argument(
+        '--library', metavar=('<name>', '(genome|transcriptome)', '</path/to/bam/file>', '<stranded_bam>'), nargs=4,
+        action='append', help='configuration for libraries to be analyzed by mavis', default=[])
+    optional.add_argument(
+        '--input', help='path to an input file for mavis followed by the library names it should be used for',
+        nargs='+', action='append', default=[]
+    )
+    optional.add_argument(
+        '--best_transcripts_only', default=get_env_variable('best_transcripts_only', True),
+        type=TSV.tsv_boolean, help='compute from best transcript models only')
+    optional.add_argument(
+        '--genome_bins', default=get_env_variable('genome_bins', 100), type=int,
+        help='number of bins/samples to use in calculating the fragment size stats for genomes')
+    optional.add_argument(
+        '--transcriptome_bins', default=get_env_variable('transcriptome_bins', 500), type=int,
+        help='number of genes to use in calculating the fragment size stats for genomes')
+    optional.add_argument(
+        '--verbose', default=get_env_variable('verbose', False), type=TSV.tsv_boolean,
+        help='verbosely output logging information')
+    augment_parser(required, optional, ['annotations'])
+    args = parser.parse_args()
+    log_arguments(args)
+
+    # now write the config file
+    inputs_by_lib = {k[0]: [] for k in args.library}
+    for temp in args.input:
+        if len(temp) < 2:
+            raise ValueError('--input requires 2+ arguments', temp)
+        for lib in temp[1:]:
+            if lib not in inputs_by_lib:
+                raise KeyError('--input specified a library that was not configured with --library', lib)
+            inputs_by_lib[lib].append(temp[0])
+
+    libs = []
+    # load the annotations if we need them
+    if any([p == 'transcriptome' for l, p, b, s in args.library]):
+        log('loading the reference annotations file', args.annotations)
+        args.annotations_filename = args.annotations
+        args.annotations = load_reference_genes(args.annotations, best_transcripts_only=args.best_transcripts_only)
+
+    for lib, protocol, bam, stranded in args.library:
+        if lib not in inputs_by_lib:
+            raise KeyError('not input was given for the library', lib)
+        log('generating the config section for:', lib)
+        l = LibraryConfig.build(
+            library=lib, protocol=protocol, bam_file=bam, inputs=inputs_by_lib[lib], stranded_bam=stranded,
+            annotations=args.annotations, log=log if args.verbose else devnull,
+            sample_size=args.genome_bins if protocol == PROTOCOL.GENOME else args.transcriptome_bins
+        )
+        libs.append(l)
+    write_config(args.write, include_defaults=True, libraries=libs, log=log)
+
+
+def log_arguments(args):
+    log('MAVIS: {}'.format(__version__))
+    log('input arguments')
+    for arg, val in sorted(args.__dict__.items()):
+        if isinstance(val, list):
+            log(arg, '= [', time_stamp=False)
+            for v in val:
+                log('\t', repr(v), time_stamp=False)
+            log(']', time_stamp=False)
+        else:
+            log(arg, '=', repr(val), time_stamp=False)
 
 
 def main():
     def usage(err=None, detail=False):
         name = os.path.basename(__file__)
-        u = '\nusage: {} {{cluster,validate,annotate,pairing,pipeline}} [-h] [-v]'.format(name)
+        u = '\nusage: {} {{cluster,validate,annotate,pairing,pipeline,config}} [-h] [-v]'.format(name)
         helpmenu = """
 required arguments:
 
@@ -201,37 +280,77 @@ use the -h/--help option
     pstep = sys.argv.pop(1)
     sys.argv[0] = '{} {}'.format(sys.argv[0], pstep)
 
-    if pstep == pconf.PIPELINE_STEP.SUMMARY:
-        raise NotImplementedError('summary script has not been written')
-    args = pconf.parse_arguments(pstep)
-    config = []
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, add_help=False)
+    required = parser.add_argument_group('required arguments')
+    optional = parser.add_argument_group('optional arguments')
 
-    if pstep == pconf.PIPELINE_STEP.PIPELINE:
-        if args.write:
-            log('writing:', args.config)
-            pconf.write_config(args.config, include_defaults=True)
-            exit()
+    if pstep == 'config':
+        generate_config(parser, required, optional)
+        exit(0)
+    else:
+        required.add_argument('-o', '--output', help='path to the output directory', required=True)
+        if pstep == PIPELINE_STEP.PIPELINE:
+            required.add_argument('config', help='path to the input pipeline configuration file')
+            augment_parser(required, optional, [])
+        elif pstep == PIPELINE_STEP.CLUSTER:
+            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
+            augment_parser(
+                required, optional,
+                ['library', 'protocol', 'stranded_bam'] +
+                ['annotations', 'masking'] + [k for k in vars(CLUSTER_DEFAULTS)]
+            )
+        elif pstep == PIPELINE_STEP.VALIDATE:
+            required.add_argument('-n', '--input', help='path to the input file', required=True)
+            augment_parser(
+                required, optional,
+                ['library', 'protocol', 'bam_file', 'read_length', 'stdev_fragment_size', 'median_fragment_size'] +
+                ['stranded_bam', 'annotations', 'reference_genome', 'blat_2bit_reference', 'masking'] +
+                [k for k in vars(VALIDATION_DEFAULTS)]
+            )
+        elif pstep == PIPELINE_STEP.ANNOTATE:
+            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
+            augment_parser(
+                required, optional,
+                ['annotations', 'reference_genome', 'masking', 'max_proximity', 'template_metadata'] +
+                [k for k in vars(ANNOTATION_DEFAULTS)] +
+                [k for k in vars(ILLUSTRATION_DEFAULTS)]
+            )
+        elif pstep == PIPELINE_STEP.PAIR:
+            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
+            augment_parser(
+                required, optional,
+                ['annotations', 'max_proximity'] +
+                [k for k in vars(PAIRING_DEFAULTS)]
+            )
         else:
-            temp, config = pconf.read_config(args.config)
-            args.__dict__.update(temp.__dict__)
-            for sec in config:
-                sec.output = args.output
-    for arg in ['output', 'reference_genome', 'template_metadata', 'annotations', 'masking']:
+            raise NotImplementedError('invalid value for <pipeline step>', pstep)
+    args = parser.parse_args()
+    args.samtools_version = get_samtools_version()
+    args.blat_version = get_blat_version()
+
+    # set all reference files to their absolute paths to make tracking them down later easier
+    for arg in ['output', 'reference_genome', 'template_metadata', 'annotations', 'masking', 'blat_2bit_reference']:
         try:
             args.__dict__[arg] = os.path.abspath(args.__dict__[arg])
         except (KeyError, TypeError):
             pass
 
-    log('input arguments')
-    for arg, val in sorted(args.__dict__.items()):
-        log(arg, '=', repr(val), time_stamp=False)
+    log_arguments(args)
+
+    config = []
+
+    if pstep == PIPELINE_STEP.PIPELINE:  # load the configuration file
+        temp, config = read_config(args.config)
+        args.__dict__.update(temp.__dict__)
+
     # load the reference files if they have been given and reset the arguments to hold the original file name and the
     # loaded data
     if any([
-        pstep not in [pconf.PIPELINE_STEP.VALIDATE],
-        hasattr(args, 'uninformative_filter') and args.uninformative_filter,
-        pstep in [pconf.PIPELINE_STEP.VALIDATE, pconf.PIPELINE_STEP.CLUSTER] and args.protocol == PROTOCOL.TRANS,
-        pstep == pconf.PIPELINE_STEP.PIPELINE and any([sec.protocol == PROTOCOL.TRANS for sec in config])
+        pstep == PIPELINE_STEP.CLUSTER and args.uninformative_filter,
+        pstep == PIPELINE_STEP.PIPELINE and args.uninformative_filter,
+        pstep == PIPELINE_STEP.VALIDATE and args.protocol == PROTOCOL.TRANS,
+        pstep == PIPELINE_STEP.PIPELINE and any([sec.protocol == PROTOCOL.TRANS for sec in config]),
+        pstep == PIPELINE_STEP.PAIR or pstep == PIPELINE_STEP.ANNOTATE
     ]):
         log('loading:', args.annotations)
         args.annotations_filename = args.annotations
@@ -240,24 +359,34 @@ use the -h/--help option
         args.annotations_filename = args.annotations
         args.annotations = None
 
+    # reference genome
     try:
-        if pstep != pconf.PIPELINE_STEP.PIPELINE:
+        if pstep in [PIPELINE_STEP.VALIDATE, PIPELINE_STEP.ANNOTATE]:
             log('loading:' if not args.low_memory else 'indexing:', args.reference_genome)
             args.reference_genome_filename = args.reference_genome
             args.reference_genome = load_reference_genome(args.reference_genome, args.low_memory)
         else:
             args.reference_genome_filename = args.reference_genome
             args.reference_genome = None
-    except AttributeError:
+    except AttributeError as err:
+        print(repr(err))
         pass
+
+    # masking file
     try:
-        log('loading:', args.masking)
-        args.masking_filename = args.masking
-        args.masking = load_masking_regions(args.masking)
+        if pstep in [PIPELINE_STEP.VALIDATE, PIPELINE_STEP.CLUSTER, PIPELINE_STEP.PIPELINE]:
+            log('loading:', args.masking)
+            args.masking_filename = args.masking
+            args.masking = load_masking_regions(args.masking)
+        else:
+            args.masking_filename = args.maksing
+            args.masking = None
     except AttributeError as err:
         pass
+
+    # template metadata
     try:
-        if pstep != pconf.PIPELINE_STEP.PIPELINE:
+        if pstep == PIPELINE_STEP.ANNOTATE:
             log('loading:', args.template_metadata)
             args.template_metadata_filename = args.template_metadata
             args.template_metadata = load_templates(args.template_metadata)
@@ -268,15 +397,15 @@ use the -h/--help option
         pass
 
     # decide which main function to execute
-    if pstep == pconf.PIPELINE_STEP.CLUSTER:
+    if pstep == PIPELINE_STEP.CLUSTER:
         cluster_main(**args.__dict__)
-    elif pstep == pconf.PIPELINE_STEP.VALIDATE:
+    elif pstep == PIPELINE_STEP.VALIDATE:
         validate_main(**args.__dict__)
-    elif pstep == pconf.PIPELINE_STEP.ANNOTATE:
+    elif pstep == PIPELINE_STEP.ANNOTATE:
         annotate_main(**args.__dict__)
-    elif pstep == pconf.PIPELINE_STEP.PAIR:
+    elif pstep == PIPELINE_STEP.PAIR:
         pairing_main(**args.__dict__)
-    elif pstep == pconf.PIPELINE_STEP.SUMMARY:
+    elif pstep == PIPELINE_STEP.SUMMARY:
         pass    # main_summary(args)
     else:  # PIPELINE
         main_pipeline(args, config)

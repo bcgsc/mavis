@@ -5,7 +5,7 @@ from mavis.annotate.protein import Translation
 import os
 
 
-filedir = os.path.join(os.path.dirname(__file__), 'files')
+filedir = os.path.join(os.path.dirname(__file__), 'data')
 REFERENCE_GENOME_FILE = os.path.join(filedir, 'mock_reference_genome.fa')
 REFERENCE_GENOME_FILE_2BIT = os.path.join(filedir, 'mock_reference_genome.2bit')
 REFERENCE_ANNOTATIONS_FILE = os.path.join(filedir, 'mock_reference_annotations.tsv')

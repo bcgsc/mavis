@@ -1,17 +1,19 @@
 import os
-import sys
 import itertools
 from Bio import SeqIO
-
-
-# local modules
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from ..constants import PROTOCOL, COLUMNS, CALL_METHOD, SVTYPE, SPLICE_TYPE
-from ..pipeline.util import read_inputs, output_tabbed_file, log
+from .constants import DEFAULTS
+from ..util import read_inputs, output_tabbed_file, log
 from . import equivalent_events
 
 
-def main(inputs, output, flanking_call_distance, split_call_distance, contig_call_distance, **kwargs):
+def main(
+    inputs, output, annotations,
+    flanking_call_distance=DEFAULTS.flanking_call_distance,
+    split_call_distance=DEFAULTS.split_call_distance,
+    contig_call_distance=DEFAULTS.contig_call_distance,
+    **kwargs
+):
     """
     Args:
         inputs (:class:`List` of :class:`str`): list of input files to read
@@ -76,7 +78,7 @@ def main(inputs, output, flanking_call_distance, split_call_distance, contig_cal
 
     TRANSCRIPTS = dict()
 
-    for chr, genes in args.annotations[1].items():
+    for chr, genes in annotations.items():
         for gene in genes:
             for t in gene.transcripts:
                 if t.name in TRANSCRIPTS:

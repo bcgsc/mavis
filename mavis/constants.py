@@ -8,6 +8,16 @@ from Bio.Alphabet.IUPAC import ambiguous_dna
 from Bio.Seq import Seq
 
 
+PIPELINE_STEP = Vocab(
+    ANNOTATE='annotate',
+    VALIDATE='validate',
+    PIPELINE='pipeline',
+    CLUSTER='cluster',
+    PAIR='pairing',
+    SUMMARY='summary'
+)
+
+
 CODON_SIZE = 3
 """:class:`int`: the number of bases making up a codon"""
 
@@ -89,8 +99,7 @@ SVTYPE = Vocab(
     ITRANS='inverted translocation',
     INV='inversion',
     INS='insertion',
-    DUP='duplication',
-    INDEL='indel'
+    DUP='duplication'
 )
 """:class:`Vocab`: holds controlled vocabulary for acceptable structural variant classifications
 
@@ -515,6 +524,12 @@ COLUMNS = Vocab(
         :class:`float` - A rank based on the alignment tool blat etc. of the alignment being used. An average if
         split alignments were used. Lower numbers indicate a better alignment. If it was the best alignment possible
         then this would be zero.
+
+    contig_alignment_reference_start
+        The reference start(s) <chr>:<position> of the contig alignment. Semi-colon delimited
+
+    contig_alignment_cigar
+        The cigar string(s) representing the contig alignment. Semi-colon delimited
 
     contig_build_score
         :class:`int` - Score representing the edge weights of all edges used in building the sequence

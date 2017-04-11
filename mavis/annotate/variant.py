@@ -482,8 +482,29 @@ class Annotation(BreakpointPair):
         row.update({
             COLUMNS.genes_proximal_to_break1: self.genes_proximal_to_break1,
             COLUMNS.genes_proximal_to_break2: self.genes_proximal_to_break2,
-            COLUMNS.gene1_direction: 'None',
-            COLUMNS.gene2_direction: 'None'
+            COLUMNS.gene1_direction: None,
+            COLUMNS.gene2_direction: None,
+            COLUMNS.gene_product_type: None,
+            COLUMNS.gene1: None,
+            COLUMNS.gene2: None,
+            COLUMNS.transcript1: '{}:{}_{}{}'.format(
+                self.transcript1.reference_object,
+                self.transcript1.start,
+                self.transcript1.end,
+                self.transcript1.get_strand()),
+            COLUMNS.transcript2: '{}:{}_{}{}'.format(
+                self.transcript2.reference_object,
+                self.transcript2.start,
+                self.transcript2.end,
+                self.transcript2.get_strand()),
+            COLUMNS.genes_encompassed: ';'.join(sorted([x.name for x in self.encompassed_genes])),
+            COLUMNS.genes_overlapping_break1: ';'.join(sorted([x.name for x in self.genes_overlapping_break1])),
+            COLUMNS.genes_overlapping_break2: ';'.join(sorted([x.name for x in self.genes_overlapping_break2])),
+            COLUMNS.genes_proximal_to_break1: ';'.join(
+                sorted(['{}({})'.format(x[0].name, x[1]) for x in self.genes_proximal_to_break1])),
+            COLUMNS.genes_proximal_to_break2: ';'.join(
+                sorted(['{}({})'.format(x[0].name, x[1]) for x in self.genes_proximal_to_break2])),
+            COLUMNS.event_type: self.event_type
         })
         if hasattr(self.transcript1, 'gene'):
             row[COLUMNS.gene1] = self.transcript1.gene.name
@@ -492,40 +513,18 @@ class Annotation(BreakpointPair):
                 row[COLUMNS.gene1_direction] = str(determine_prime(self.transcript1, self.break1))
             except NotSpecifiedError:
                 pass
-        else:
-            row[COLUMNS.gene1] = 'None'
-            row[COLUMNS.transcript1] = '{}:{}_{}{}'.format(
-                self.transcript1.reference_object,
-                self.transcript1.start,
-                self.transcript1.end,
-                self.transcript1.get_strand())
         if hasattr(self.transcript2, 'gene'):
             row[COLUMNS.gene2] = self.transcript2.gene.name
             row[COLUMNS.transcript2] = self.transcript2.name
             try:
                 row[COLUMNS.gene2_direction] = str(determine_prime(self.transcript2, self.break2))
-                if row[COLUMNS.gene1_direction] != 'None':
+                if row[COLUMNS.gene1_direction] is not None:
                     if row[COLUMNS.gene1_direction] == row[COLUMNS.gene2_direction]:
                         row[COLUMNS.gene_product_type] = GENE_PRODUCT_TYPE.ANTI_SENSE
                     else:
                         row[COLUMNS.gene_product_type] = GENE_PRODUCT_TYPE.SENSE
             except NotSpecifiedError:
                 pass
-        else:
-            row[COLUMNS.gene2] = 'None'
-            row[COLUMNS.transcript2] = '{}:{}_{}{}'.format(
-                self.transcript2.reference_object,
-                self.transcript2.start,
-                self.transcript2.end,
-                self.transcript2.get_strand())
-        row[COLUMNS.genes_encompassed] = ';'.join(sorted([x.name for x in self.encompassed_genes]))
-        row[COLUMNS.genes_overlapping_break1] = ';'.join(sorted([x.name for x in self.genes_overlapping_break1]))
-        row[COLUMNS.genes_overlapping_break2] = ';'.join(sorted([x.name for x in self.genes_overlapping_break2]))
-        row[COLUMNS.genes_proximal_to_break1] = ';'.join(
-            sorted(['{}({})'.format(x[0].name, x[1]) for x in self.genes_proximal_to_break1]))
-        row[COLUMNS.genes_proximal_to_break2] = ';'.join(
-            sorted(['{}({})'.format(x[0].name, x[1]) for x in self.genes_proximal_to_break2]))
-        row[COLUMNS.event_type] = self.event_type
         return row
 
 
@@ -736,8 +735,9 @@ def annotate_events(
     log=lambda *pos, **kwargs: None
 ):
     results = []
-    for bpp in bpps:
-        log('gathering annotations for', bpp)
+    total = len(bpps)
+    for i, bpp in enumerate(bpps):
+        log('({} of {}) gathering annotations for'.format(i + 1, total), bpp)
         try:
             ann = _gather_annotations(
                 annotations,
@@ -749,7 +749,6 @@ def annotate_events(
             log('generated', len(ann), 'annotations', time_stamp=False)
         except KeyError as err:
             log('generated', 0, 'annotations', repr(err), time_stamp=False)
-
 
     for i, ann in enumerate(results):
         # try building the fusion product

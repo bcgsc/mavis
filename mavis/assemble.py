@@ -101,19 +101,19 @@ class DeBruijnGraph(nx.DiGraph):
                 continue
             path = []
             while self.in_degree(src) == 1 and self.out_degree(src) == 1:
-                temp = self.in_edges(src, data=True)[0]
-                if temp[2]['freq'] >= min_weight:
+                s, t, data = self.in_edges(src, data=True)[0]
+                if data['freq'] >= min_weight:
                     break
                 path.insert(0, src)
-                src = temp[0]
+                src = s
             path.insert(0, src)
 
             while self.in_degree(tgt) == 1 and self.out_degree(tgt) == 1:
-                temp = self.out_edges(tgt, data=True)[0]
-                if temp[2]['freq'] >= min_weight:
+                s, t, data = self.out_edges(tgt, data=True)[0]
+                if data['freq'] >= min_weight:
                     break
                 path.append(tgt)
-                tgt = temp[1]
+                tgt = t
             path.append(tgt)
             start_edge_data = self.get_edge_data(path[0], path[1])
             self.remove_edge(path[0], path[1])
@@ -182,10 +182,10 @@ def digraph_connected_components(graph, subgraph=None):
     return nx.connected_components(g)
 
 
-def _pull_assembled_paths(assembly, assembly_min_edge_weight, assembly_max_paths, log=lambda *pos, **kwargs: None):
+def _pull_assembled_paths(assembly, assembly_min_nc_edge_weight, assembly_max_paths, log=lambda *pos, **kwargs: None):
     path_scores = {}  # path_str => score_int
 
-    unresolved_components = [(assembly_min_edge_weight, c) for c in digraph_connected_components(assembly)]
+    unresolved_components = [(assembly_min_nc_edge_weight, c) for c in digraph_connected_components(assembly)]
 
     while len(unresolved_components) > 0:
         # since now we know it's a tree, the assemblies will all be ltd to
@@ -245,7 +245,8 @@ def _pull_assembled_paths(assembly, assembly_min_edge_weight, assembly_max_paths
 def assemble(
     sequences,
     assembly_max_kmer_size=None,
-    assembly_min_edge_weight=3,
+    assembly_min_nc_edge_weight=3,
+    assembly_min_edge_weight=2,
     assembly_min_match_quality=0.95,
     assembly_min_read_mapping_overlap=None,
     assembly_min_contig_length=None,
@@ -262,7 +263,7 @@ def assemble(
     Args:
         sequences (:class:`list` of :class:`str`): a list of strings/sequences to assemble
         assembly_max_kmer_size (int): the size of the kmer to use
-        assembly_min_edge_weight (int): see :term:`assembly_min_edge_weight`
+        assembly_min_nc_edge_weight (int): see :term:`assembly_min_nc_edge_weight`
         assembly_min_match_quality (float): percent match for re-aligned reads to contigs
         assembly_min_read_mapping_overlap (int): the minimum amount of overlap required when aligning reads to contigs
         assembly_max_paths (int): see :term:`assembly_max_paths`
@@ -298,13 +299,23 @@ def assemble(
             l = kmer[:-1]
             r = kmer[1:]
             assembly.add_edge(l, r)
+    # use the ab min edge weight to remove all low weight edges first
+    edges = list(assembly.edges(data=True))
+    for s, t, data in edges:
+        if data['freq'] < assembly_min_edge_weight:
+            assembly.remove_edge(s, t)
+    # then remove all nodes with no edges
+    nodes = list(assembly.nodes())
+    for n in nodes:
+        if assembly.in_degree(n) == 0 and assembly.out_degree(n) == 0:
+            assembly.remove_node(n)
     # now just work with connected components
-    assembly.trim_noncutting_paths_by_freq(assembly_min_edge_weight)
+    assembly.trim_noncutting_paths_by_freq(assembly_min_nc_edge_weight)
     # trim all paths from sources or to sinks where the edge weight is low
-    assembly.trim_tails_by_freq(assembly_min_edge_weight)
+    assembly.trim_tails_by_freq(assembly_min_nc_edge_weight)
     path_scores = _pull_assembled_paths(
         assembly,
-        assembly_min_edge_weight=assembly_min_edge_weight,
+        assembly_min_nc_edge_weight=assembly_min_nc_edge_weight,
         assembly_max_paths=assembly_max_paths,
         log=log
     )

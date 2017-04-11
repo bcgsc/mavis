@@ -13,28 +13,30 @@ from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND, PROTO
 __version__ = '0.0.1'
 __prog__ = os.path.basename(os.path.realpath(__file__))
 
-SVTYPES = {'DEL': 'deletion',
-           'INV': 'inversion',
-           'DUP': 'duplication',
-           'BND': 'translocation',
-           'INS': 'insertion',
+SVTYPES = {'DEL': SVTYPE.DEL,
+           'INV': SVTYPE.INV,
+           'DUP': SVTYPE.DUP,
+           'BND': SVTYPE.TRANS,
+           'INS': SVTYPE.INS
            }
 
 
-def load_vcf(vcf_filename, library, version, filter=None):
+def load_vcf(vcf_filename, library, version, filter_evidence=None, filter_event=True):
     """
     Function to parse the manta vcf file.
     """
     events = []
+    filter_count = 0
     with open(vcf_filename) as vcf_file:
         vcf_reader = vcf.Reader(vcf_file)
         for record in vcf_reader:
             event = {}
-            if filter:
+            if filter_evidence:
                 if 'SR' in record.samples[0].data._fields and 'PR' in record.samples[0].data._fields:
                     paired_read = record.samples[0].data.PR[1]
                     split_read = record.samples[0].data.SR[1]
                     if int(paired_read) < 2 or int(split_read) < 2:
+                        filter_count += 1
                         continue
 
             record_id = record.ID
@@ -51,7 +53,8 @@ def load_vcf(vcf_filename, library, version, filter=None):
                 chrom_b = str(record.ALT[0].chr)
                 position_b = record.ALT[0].pos
 
-            if "GL" in chrom_a or "GL" in chrom_b:  # filter GL chromosomes
+            if filter_event and ("GL" in chrom_a+chrom_b or "M" in chrom_a+chrom_b):  # filter GL chromosomes
+                filter_count += 1
                 continue
 
             if 'CIPOS' in record.INFO:
@@ -108,7 +111,8 @@ def load_vcf(vcf_filename, library, version, filter=None):
                 event[COLUMNS.break1_orientation], event[COLUMNS.break2_orientation] = (ORIENT.NS, ORIENT.NS)
                 event[COLUMNS.opposing_strands] = STRAND.NS
                 events.append(event)
-
+    if filter_count > 0:
+        print('{0} events have been filtered'.format(filter_count))
     return events
 
 parser = argparse.ArgumentParser(
@@ -123,9 +127,13 @@ required.add_argument('-l', '--library', required=True, help='libary name of the
 optional = parser.add_argument_group('Optional arguments')
 # optional.add_argument('-b', '--bam', help = 'path to the evidence bam file for the tumour library')
 optional.add_argument('-h', '--help', action='help', help='Show this help message and exit')
-optional.add_argument('-f', '--filter', action='store_true',
-                      help='Filter the events based on flanking and split read evidence')
-optional.add_argument('-v', '--version', help='the version of Manta that was used in the analysis', default='1.0.0')
+optional.add_argument('-f', '--filter-evidence', action='store_true',
+                      help='turn on addtional filtering of events based on flanking and split read evidence')
+optional.add_argument('-v', '--version', default='1.0.0',
+                      help='the version of Manta that was used in the analysis')
+optional.add_argument('--no-filter', action='store_true', default=False,
+                      help='turn off filtering of events that are in the Mitochondria and "GL" chromosomes')
+
 if len(sys.argv) == 1:
     parser.print_help()
     exit(2)
@@ -134,7 +142,7 @@ args = parser.parse_args()
 vcf_filename = args.input
 output_filename = args.output
 
-events = load_vcf(vcf_filename, args.library, args.version, args.filter)
+events = load_vcf(vcf_filename, args.library, args.version, args.filter_evidence, not args.no_filter)
 elements = sort_columns(events[0].keys())
 header = "\t".join(elements)
 
@@ -148,4 +156,4 @@ with open(output_filename, 'w') as fh:
         for element in elements:
             line.append(str(event[element]))
         fh.write("{}\n".format("\t".join(line)))
-    print("Wrote {} gene fusion events {}".format(len(events), output_filename))
+    print("Wrote {} gene fusion events to {}".format(len(events), output_filename))

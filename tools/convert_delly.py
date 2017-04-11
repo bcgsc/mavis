@@ -5,53 +5,45 @@ Script for converting DELLY VCF output into the MAVIS accepted input format
 """
 
 import argparse
-import datetime
 import os
 import sys
-import pprint
 import time
 import vcf
-from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND, PROTOCOL
+from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, PROTOCOL
 
 __version__ = '0.0.1'
-__prog__ = os.path.abspath(os.path.realpath(__file__))
+__prog__ = os.path.basename(os.path.realpath(__file__))
 
 
-SVTYPES = {'DEL': 'deletion',
-           'INV': 'inversion',
-           'DUP': 'duplication',
-           'TRA': 'translocation',
-           'INS': 'insertion',
+SVTYPES = {'DEL': SVTYPE.DEL,
+           'INV': SVTYPE.INV,
+           'DUP': SVTYPE.DUP,
+           'TRA': SVTYPE.TRANS,
+           'INS': SVTYPE.INS
            }
 
 
-def chromosome_standard_str(chrom):
+def chromosome_str(chrom):
     """Convert and of the chromosome notations to a single standard.
     """
+    mapping = {'23': 'X', 'M': 'MT', '24': 'Y', '25': 'MT'}
     if not isinstance(chrom, str):
         chrom = str(chrom)
     # eliminate any 'chr' type notations or spaces
     chrom = chrom.strip().upper().replace('CHR', '')
     # Use letters X, Y instead of chromosome numbers.
     # Use 'MT' for mitochondrial
-    if chrom == '23':
-        chrom = 'X'
-    elif chrom == '24':
-        chrom = 'Y'
-    elif chrom == '25':
-        chrom = 'MT'
-    elif chrom == 'MT':
-        chrom = 'MT'
-    elif chrom == 'M':
-        chrom = 'MT'
+    if chrom in mapping:
+        chrom = mapping[chrom]
     return chrom
 
 
-def delly_vcf_to_tsv(delly_vcf_list, output_filename=None):
+def delly_vcf_to_tsv(delly_vcf_list, output_filename=None, filter_event=True):
     """
     Converts from the DELLY VCF format to the SV_Merging TSV format
     """
     events = []
+    filter_count = 0
     for vcf_fn in delly_vcf_list:
         vcf_reader = vcf.Reader(filename=vcf_fn)
         for record in vcf_reader:
@@ -66,16 +58,24 @@ def delly_vcf_to_tsv(delly_vcf_list, output_filename=None):
             # Should be a semi-colon delimited list of <tool name>_<tool version>
             call[COLUMNS.tools] = record.INFO['SVMETHOD'].replace('EMBL.DELLY', 'DELLY_')
 
-            position1 = (chromosome_standard_str(record.CHROM), max(1, record.POS + record.INFO['CIPOS'][0]), record.POS + record.INFO['CIPOS'][1])
-            position2 = (chromosome_standard_str(record.INFO['CHR2']),  record.INFO['END'] + record.INFO['CIEND'][0], record.INFO['END'] + record.INFO['CIEND'][1])
+            if filter_event and ("GL" in chromosome_str(record.CHROM) + chromosome_str(record.INFO['CHR2']) or
+                                 "MT" in chromosome_str(record.CHROM) + chromosome_str(record.INFO['CHR2'])):
+                filter_count += 1
+                continue
 
+            position1 = (chromosome_str(record.CHROM), max(1, record.POS + record.INFO['CIPOS'][0]),
+                         record.POS + record.INFO['CIPOS'][1])
+            position2 = (chromosome_str(record.INFO['CHR2']),  record.INFO['END'] + record.INFO['CIEND'][0],
+                         record.INFO['END'] + record.INFO['CIEND'][1])
+
+            # sort the positions so the orientations match
             if position1 > position2:
-                call[COLUMNS.break1_chromosome], call[COLUMNS.break1_position_start],call[COLUMNS.break1_position_end] = position2
-                call[COLUMNS.break2_chromosome], call[COLUMNS.break2_position_start],call[COLUMNS.break2_position_end] = position1
+                call[COLUMNS.break1_chromosome], call[COLUMNS.break1_position_start], call[COLUMNS.break1_position_end] = position2
+                call[COLUMNS.break2_chromosome], call[COLUMNS.break2_position_start], call[COLUMNS.break2_position_end] = position1
 
             else:
-                call[COLUMNS.break1_chromosome], call[COLUMNS.break1_position_start],call[COLUMNS.break1_position_end] = position1
-                call[COLUMNS.break2_chromosome], call[COLUMNS.break2_position_start],call[COLUMNS.break2_position_end] = position2
+                call[COLUMNS.break1_chromosome], call[COLUMNS.break1_position_start], call[COLUMNS.break1_position_end] = position1
+                call[COLUMNS.break2_chromosome], call[COLUMNS.break2_position_start], call[COLUMNS.break2_position_end] = position2
 
             call[COLUMNS.protocol] = PROTOCOL.GENOME  # Just hardcoded by DELLY usage
             call['delly_comments'] = repr(extra_info)
@@ -86,24 +86,24 @@ def delly_vcf_to_tsv(delly_vcf_list, output_filename=None):
             # only one will be used in clustering.
             if record.INFO['CT'] == "3to5":  # Deletions
                 # call[COLUMNS.break1_strand] = call[COLUMNS.break2_strand] = '+'
-                call[COLUMNS.break1_orientation], call[COLUMNS.break2_orientation] = ('L', 'R')
+                call[COLUMNS.break1_orientation], call[COLUMNS.break2_orientation] = (ORIENT.LEFT, ORIENT.RIGHT)
                 call[COLUMNS.opposing_strands] = False
             elif record.INFO['CT'] == "5to3":  # Tandem Duplication
                 # call['break1_strand'] = call['break2_strand'] = '+'
-                call[COLUMNS.break1_orientation], call[COLUMNS.break2_orientation] = ('R', 'L')
+                call[COLUMNS.break1_orientation], call[COLUMNS.break2_orientation] = (ORIENT.RIGHT, ORIENT.LEFT)
                 call[COLUMNS.opposing_strands] = False
             elif record.INFO['CT'] == "3to3":  # Inversion
                 # call[COLUMNS.break1_strand], call[COLUMNS.break2_strand] = ('+', '-')
-                call[COLUMNS.break1_orientation] = call[COLUMNS.break2_orientation] = 'L'
+                call[COLUMNS.break1_orientation] = call[COLUMNS.break2_orientation] = ORIENT.LEFT
                 call[COLUMNS.opposing_strands] = True
             elif record.INFO['CT'] == "5to5":  # Inversion
                 # call[COLUMNS.break1_strand], call[COLUMNS.break2_strand] = ('-', '+')
-                call[COLUMNS.break1_orientation] = call[COLUMNS.break2_orientation] = 'R'
+                call[COLUMNS.break1_orientation] = call[COLUMNS.break2_orientation] = ORIENT.RIGHT
                 call[COLUMNS.opposing_strands] = True
             elif record.INFO['CT'] == "NtoN":  # Blank No-data
                 # Insertions in v0.7.3 are NtoN
                 # call['break1_strand'] = call['break2_strand'] = '?'
-                call[COLUMNS.break1_orientation] = call[COLUMNS.break2_orientation] = '?'
+                call[COLUMNS.break1_orientation] = call[COLUMNS.break2_orientation] = ORIENT.NS
                 call[COLUMNS.opposing_strands] = False
             else:
                 raise ValueError("Unrecognized record['CT'] value of '{}'".format(record.INFO['CT']))
@@ -113,7 +113,7 @@ def delly_vcf_to_tsv(delly_vcf_list, output_filename=None):
 
             for sample in record.samples:
                 lib = sample.sample.split('_')[0]  # by naming convention
-                flanking_pairs_reference = sample['DR']
+                flanking_pairs_reference = sample['DR']  # TODO need to determine the normal library, right now using the tumor evidence for both?
                 flanking_pairs_variant = sample['DV']
                 split_read_reference = sample['RR']
                 split_read_variants = sample['RV']
@@ -142,6 +142,8 @@ def delly_vcf_to_tsv(delly_vcf_list, output_filename=None):
                     # tool_evidence['filters'] = new_row['delly_filters']
                     # new_row['delly_evidence'] = pprint.pformat(tool_evidence).replace('\n', '')
                     events.append(new_row)
+    if filter_count > 0:
+        print('{0} events have been filtered'.format(filter_count))
 
     elements = sort_columns(events[0].keys())
     header = "\t".join(elements)
@@ -159,15 +161,21 @@ def delly_vcf_to_tsv(delly_vcf_list, output_filename=None):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="DELLY VCF to TSV conversion for merging of values",
-                                     fromfile_prefix_chars='@',
-                                     epilog="As an alternative to the commandline, params can be placed \
-in a file, one per line, and specified on the commandline like '%(prog)s @filename'",
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-f', '--vcf-files', required=True, help='DELLY *.vcf output', nargs='+')
-    parser.add_argument('-o', '--output-filename', help='DELLY *.tsv output', default='mavis_delly.tsv')
+    parser = argparse.ArgumentParser(
+        description="Convert a DELLY VCF output file to the MAVIS input format",
+        add_help=False,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    required = parser.add_argument_group('Required arguments')
+    required.add_argument('-f', '--vcf-files', required=True, help='DELLY *.vcf output', nargs='+')
+
+    optional = parser.add_argument_group('Optional arguments')
+    optional.add_argument('-h', '--help', action='help', help='Show this help message and exit')
+    optional.add_argument('-o', '--output', help='DELLY *.tsv output', default='mavis_delly.tsv')
+    optional.add_argument('--no-filter', action='store_true', default=False,
+                          help='turn off filtering of events that are in the "MT" and "GL" chromosomes')
     args = parser.parse_args()
-    delly_vcf_to_tsv(delly_vcf_list=args.vcf_files, output_filename=args.output_filename)
+    delly_vcf_to_tsv(delly_vcf_list=args.vcf_files, output_filename=args.output,
+                     filter_event=not args.no_filter)
 
 
 if __name__ == "__main__":

@@ -244,33 +244,8 @@ Help sub-menus can be found by giving the pipeline step followed by no arguments
     >>> mavis_run.py cluster -h
 
 
-Determining Input Parameters
-,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-
-There are some parameters that need to be computed from the :term:`bam` files. This can generally be done by running the
-profile_bam.py script found in the tools directory
-
-.. code-block:: bash
-
-    >>> python tools/profile_bam.py /path/to/bam/file -c 16
-    profiling chr 16
-
-    FINAL
-    average                    396.72
-    average stdev              98.89
-    median                     383
-    median distrib[0.80] stdev 59.56
-    median distrib[0.90] stdev 72.80
-    median distrib[0.95] stdev 82.20
-    median distrib[0.99] stdev 93.94
-    median distrib[1.00] stdev 99.84
-
-Generally giving it a single chromosome will be enough reads but it can be given as many chromosomes/templates as
-required. This script calculates the median insert size and then the standard deviation (wrt to the median not mean)
-from all or a portion of the distribution of insert sizes
-
-Generating a config file
-,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Generating a config file automatically
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
 The pipeline can be run in steps or it can be configured using a configuration file and setup in a single step. Scripts
 will be generated to run all steps following clustering. The configuration file can be built from scratch or a template
@@ -278,9 +253,45 @@ can be output as shown below
 
 .. code-block:: bash
 
-    >>> mavis_run.py pipeline template.cfg --write
+    >>> mavis_run.py config --write template.cfg
 
-This will create a template config file called template.cfg which can then be edited by the user.
+This will create a template config file called template.cfg which can then be edited by the user. However this will be 
+a simple config with no library information. To generate a configuration file with the library information as well as 
+estimates for the fragment size parameters more inputs are required.
+
+A simple example with a single library would look like this (see below)
+
+.. code-block:: bash
+
+    >>> mavis_run.py config --write output.cfg \
+        --library Library1 genome /path/to/bam/file/library1.bam False
+
+This creates a configuration file but is still missing some information before it can be run by the pipeline, the input
+files containing the breakpoint pairs. So a more complete example is shown below
+
+.. code-block:: bash
+
+    >>> mavis_run.py config --write output.cfg \
+        --library Library1 genome /path/to/bam/file/library1.bam False \
+        --input /path/to/bpp/file Library1
+
+Manually creating the configuration File
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+While not recommended, the configuration file can also be built manually. The minimum required inputs are the library 
+configuration sections. There must be at least one library section and the library section must at minimum have the 
+following attributes given (see below). 
+
+.. code-block:: python
+
+    [library1]
+    protocol = genome
+    bam_file = /path/to/bam/file/library1.bam
+    read_length = 125
+    median_fragment_size = 435
+    stdev_fragment_size = 100
+    stranded_bam = False
+    inputs = /path/to/bpp/file
 
 
 .. |TOOLNAME| replace:: **MAVIS**

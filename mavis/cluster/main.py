@@ -1,22 +1,22 @@
 import os
-import sys
 import itertools
-
-
-# local modules
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from ..breakpoint import BreakpointPair
 from .cluster import cluster_breakpoint_pairs
-from ..constants import COLUMNS
+from ..constants import COLUMNS, STRAND
 from ..interval import Interval
-from ..pipeline.util import read_inputs, output_tabbed_file, write_bed_file
-from ..pipeline.util import build_batch_id, filter_on_overlap, log, mkdirp
+from .constants import DEFAULTS
+from ..util import read_inputs, output_tabbed_file, write_bed_file
+from ..util import build_batch_id, filter_on_overlap, log, mkdirp
 
 
 def main(
-    inputs, output, stranded_bam, library, protocol,
-    masking, cluster_clique_size, cluster_radius, uninformative_filter, max_proximity,
-    annotations, min_clusters_per_file, max_files, **kwargs
+    inputs, output, stranded_bam, library, protocol, masking, annotations,
+    cluster_clique_size=DEFAULTS.cluster_clique_size,
+    cluster_radius=DEFAULTS.cluster_radius,
+    uninformative_filter=DEFAULTS.uninformative_filter,
+    max_proximity=DEFAULTS.max_proximity,
+    min_clusters_per_file=DEFAULTS.min_clusters_per_file,
+    max_files=DEFAULTS.max_files,
+    **kwargs
 ):
     """
     Args:
@@ -50,9 +50,15 @@ def main(
         add={COLUMNS.library: library, COLUMNS.protocol: protocol}
     )
     breakpoint_pairs = []
+    
     for bpp in temp:
         if bpp.data[COLUMNS.library] == library and bpp.data[COLUMNS.protocol] == protocol:
             breakpoint_pairs.append(bpp)
+        if any([
+            not bpp.stranded and bpp.break1.strand != STRAND.NS,
+            not bpp.stranded and bpp.break2.strand != STRAND.NS
+        ]):
+            raise UserWarning('Error in input file. Cannot specify the strand if the pair is not stranded')
     # filter by masking file
     breakpoint_pairs, filtered_bpp = filter_on_overlap(breakpoint_pairs, masking)
 

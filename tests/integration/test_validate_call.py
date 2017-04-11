@@ -9,9 +9,9 @@ from mavis.constants import ORIENT, STRAND, CIGAR, PYSAM_READ_FLAGS, SVTYPE, CAL
 from mavis.interval import Interval
 from mavis.bam.cache import BamCache
 from mavis.bam.read import sequenced_strand
-from tests import MockRead, mock_read_pair, MockContig
+from . import MockRead, mock_read_pair, MockContig
 import unittest
-from tests import REFERENCE_GENOME_FILE, BAM_INPUT, FULL_BAM_INPUT, MockBamFileHandle
+from . import REFERENCE_GENOME_FILE, BAM_INPUT, FULL_BAM_INPUT, MockBamFileHandle
 from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
 import mavis.validate.call as call
 from mavis.validate.call import EventCall
@@ -581,10 +581,33 @@ class TestCallBySupportingReads(unittest.TestCase):
             min_splits_reads_resolution=1,
             min_flanking_pairs_resolution=1
         )
+        self.dup = GenomeEvidence(
+            Breakpoint('fake', 50, orient=ORIENT.RIGHT),
+            Breakpoint('fake', 90, orient=ORIENT.LEFT),
+            BamCache(MockBamFileHandle()), None,
+            opposing_strands=False,
+            read_length=40,
+            stdev_fragment_size=25,
+            median_fragment_size=100,
+            stdev_count_abnormal=2,
+            min_splits_reads_resolution=1,
+            min_flanking_pairs_resolution=1
+        )
 
     def test_empty(self):
         with self.assertRaises(UserWarning):
             break1, break2 = call._call_by_supporting_reads(self.ev, SVTYPE.INV)[0]
+    
+    def test_call_duplication_by_split_reads_error(self):
+        self.dup.split_reads[0].add(
+            MockRead(query_name='t1', reference_start=30, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 20)])
+        )
+        self.dup.split_reads[1].add(
+            MockRead(query_name='t1', reference_start=90, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
+        )
+
+        with self.assertRaises(UserWarning):
+            call._call_by_supporting_reads(self.ev, SVTYPE.DUP)
 
     def test_call_both_by_split_read(self):
         self.ev.split_reads[0].add(

@@ -7,7 +7,7 @@ from mavis.annotate import *
 from mavis.error import NotSpecifiedError
 from mavis.constants import STRAND, ORIENT, reverse_complement, SVTYPE, PRIME
 from mavis.breakpoint import Breakpoint, BreakpointPair
-from tests import REFERENCE_ANNOTATIONS_FILE, REFERENCE_GENOME_FILE, MockSeq, REFERENCE_ANNOTATIONS_FILE_JSON
+from . import REFERENCE_ANNOTATIONS_FILE, REFERENCE_GENOME_FILE, MockSeq, REFERENCE_ANNOTATIONS_FILE_JSON
 
 
 REFERENCE_ANNOTATIONS = None

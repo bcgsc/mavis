@@ -493,7 +493,9 @@ class TestEvidenceGathering(unittest.TestCase):
             stdev_fragment_size=100,
             median_fragment_size=380,
             stdev_count_abnormal=3,
-            min_flanking_pairs_resolution=3
+            min_flanking_pairs_resolution=3,
+            assembly_min_nc_edge_weight=3,
+            assembly_min_edge_weight=0
         )
 
     def test_collect_split_read(self):

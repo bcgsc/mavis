@@ -440,7 +440,7 @@ def _call_by_flanking_pairs(
 
     .. todo::
 
-        pre-split pairs into clusters by position and fragment size. This will enable calling mutliple
+        pre-split pairs into clusters by position and fragment size. This will enable calling multiple
         events in close proximity by flanking reads only. It will also aid in stopping FP reads from
         interfering with resolving events by flanking pairs.
     """
@@ -571,6 +571,12 @@ def _call_by_flanking_pairs(
                     'input breakpoint is incompatible with flanking coverage region', cover2, first_breakpoint_called)
         else:
             raise NotSpecifiedError('Cannot call by flanking if orientation was not given')
+    if first_breakpoint_called > second_breakpoint_called:
+        raise AssertionError(
+            'input breakpoint is incompatible with flanking coverage region', 
+            second_breakpoint_called, 
+            first_breakpoint_called
+        )
     return first_breakpoint_called, second_breakpoint_called
 
 

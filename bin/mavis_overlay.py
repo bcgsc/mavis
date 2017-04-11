@@ -88,7 +88,7 @@ if args.cna_file:
         cna_by_chr[chr] = sorted(cna_by_chr[chr], key=lambda x: x['start'])
 
 d = DiagramSettings(width=1000)
-d.domain_name_regex_filter = '^PF\d+$'
+d.domain_name_regex_filter = '.*'
 
 for g in genes_to_draw:
     plots = []

@@ -1,14 +1,8 @@
 from mavis.interval import Interval
 import networkx as nx
 import itertools
-from mavis.cluster.cluster import IntervalPair, cluster_breakpoint_pairs, merge_integer_intervals
-from mavis.breakpoint import Breakpoint, BreakpointPair, read_bpp_from_input_file
-from mavis.constants import PROTOCOL, COLUMNS
-from tests import FULL_BASE_EVENTS
-
+from mavis.cluster.cluster import IntervalPair, merge_integer_intervals
 import unittest
-
-REF_CHR = 'fake'
 
 
 class TestIntervalPair(unittest.TestCase):
@@ -116,58 +110,6 @@ class TestIntervalPair(unittest.TestCase):
         self.assertEqual(2, len(groups))
         self.assertEqual([a, b, c], groups[0])
         self.assertEqual([c, d, e], groups[1])
-    
-    def test_cluster_breakpoint_pairs(self):
-        raise unittest.SkipTest('TODO')
-        bpp1 = BreakpointPair(Breakpoint(REF_CHR, 31),
-                              Breakpoint(REF_CHR, 129),
-                              opposing_strands=False)
-        bpp2 = BreakpointPair(Breakpoint(REF_CHR, 32),
-                              Breakpoint(REF_CHR, 120),
-                              opposing_strands=False)
-        bpp3 = BreakpointPair(Breakpoint(REF_CHR, 40),
-                              Breakpoint(REF_CHR, 139),
-                              opposing_strands=False)
-        bpp4 = BreakpointPair(Breakpoint(REF_CHR, 43),
-                              Breakpoint(REF_CHR, 151),
-                              opposing_strands=False)
-        bpp4 = BreakpointPair(Breakpoint(REF_CHR, 45),
-                              Breakpoint(REF_CHR, 146),
-                              opposing_strands=False)
-        bpp5 = BreakpointPair(Breakpoint(REF_CHR, 50),
-                              Breakpoint(REF_CHR, 150),
-                              opposing_strands=False)
-        from pprint import pprint
-        I = {bpp1, bpp2, bpp3, bpp4, bpp5}
-        print(I)
-        groups = cluster_breakpoint_pairs(I, 9, 4)
-#        groups = sorted([sorted(list(c)) for c in groups])
-        pprint(groups)
-        groups2 = sorted(groups.keys())
-        print(groups2)
-        for key in groups.keys():
-            print(str(key))
-            print("grouping")
-            for i in groups[key]:
-                print(str(i))
-            print("done")
-        print(str(groups[list(groups.keys())[0]][0]))
-        self.assertTrue(False)
-
-
-class TestFullClustering(unittest.TestCase):
-    def test_mocked_events(self):
-        # none of the 24 events in the mocked file should cluster together
-        # if we change the mock file we may need to update this function
-        bpps = []
-        for bpp in read_bpp_from_input_file(FULL_BASE_EVENTS):
-            if bpp.data[COLUMNS.protocol] == PROTOCOL.GENOME:
-                bpps.append(bpp)
-        self.assertEqual(28, len(bpps))
-        clusters = cluster_breakpoint_pairs(bpps, 10, 10)
-        self.assertEqual(len(bpps), len(clusters))
-        for cluster, input_pairs in clusters.items():
-            self.assertEqual(1, len(input_pairs))
 
 
 class TestMergeIntegerIntervals(unittest.TestCase):
@@ -190,6 +132,7 @@ class TestMergeIntegerIntervals(unittest.TestCase):
     def test_identical_odd_length(self):
         m = merge_integer_intervals((1, 3), (1, 3), (1, 3))
         self.assertEqual(Interval(1, 3), m)
+
 
 if __name__ == "__main__":
     unittest.main()
