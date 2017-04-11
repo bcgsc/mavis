@@ -41,7 +41,7 @@ class BlatAlignedSegment(pysam.AlignedSegment):
         else:
             self._reference_name = reference_name
         self.blat_score = blat_score
-
+    
     def query_coverage_interval(self):
         """
         Returns:
@@ -374,7 +374,7 @@ def select_paired_alignements(bpp, aligned_contigs, min_query_consumption, min_e
                 # split the continuous alignment, assume ins/dup or indel
                 ins = sum([v for c, v in read.cigar if c == CIGAR.I] + [0])
                 dln = sum([v for c, v in read.cigar if c in [CIGAR.D, CIGAR.N]] + [0])
-                consume = len(read.query_coverage_interval()) / len(read.query_sequence)
+                consume = len(BlatAlignedSegment.query_coverage_interval(read)) / len(read.query_sequence)
                 if consume < min_query_consumption:
                     continue
                 
@@ -406,8 +406,8 @@ def select_paired_alignements(bpp, aligned_contigs, min_query_consumption, min_e
         if not bpp.interchromosomal and read1.reference_end > read2.reference_end:
             continue
         # check that the combination extends the amount of the initial query sequence we consume
-        query_cover1 = read1.query_coverage_interval()
-        query_cover2 = read2.query_coverage_interval()
+        query_cover1 = BlatAlignedSegment.query_coverage_interval(read1)
+        query_cover2 = BlatAlignedSegment.query_coverage_interval(read2)
 
         if read2.query_sequence != read1.query_sequence:  # alignments aligned to opposite strands
             if not bpp.opposing_strands:

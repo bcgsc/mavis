@@ -185,6 +185,25 @@ class TestBreakpointPair(unittest.TestCase):
                 opposing_strands=True
             )
 
+    def test_accessing_data_attributes(self):
+        bp1 = Breakpoint(1, 1, 2, ORIENT.LEFT)
+        bp2 = Breakpoint(2, 1, 2, ORIENT.LEFT)
+        bpp = BreakpointPair(bp1, bp2, opposing_strands=True)
+        bpp.data['a'] = 1
+        self.assertEqual(1, bpp.a)
+        with self.assertRaises(AttributeError):
+            bpp.random_attr
+
+        with self.assertRaises(AttributeError):
+            bpp.break1_call_method
+
+        bpp.data[COLUMNS.break1_call_method] = 1
+        self.assertEqual(1, bpp.break1_call_method)
+
+        COLUMNS.break2_call_method = 'bbreak2_call_method'
+        bpp.data[COLUMNS.break2_call_method] = 2
+        self.assertEqual(2, bpp.break2_call_method)
+
 
 class TestClassifyBreakpointPair(unittest.TestCase):
 

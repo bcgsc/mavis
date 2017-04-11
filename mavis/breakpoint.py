@@ -77,6 +77,17 @@ class Breakpoint(Interval):
 class BreakpointPair:
     """
     """
+    def __getattr__(self, attr):
+        data = object.__getattribute__(self, 'data')
+        try:
+            return data[COLUMNS[attr]]
+        except KeyError:
+            try:
+                return data[attr]
+            except KeyError:
+                pass
+        raise AttributeError(attr)
+
     def __getitem__(self, index):
         try:
             index = int(index)
