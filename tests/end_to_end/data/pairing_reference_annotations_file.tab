@@ -1,0 +1,5 @@
+## input file used to map hugo gene names: compiled_gene_drug_pathway.v1_2_5.tsv
+## input file for picking best transcript: ens69_best_transcript.txt
+## Ensembl Api version 69
+## generated at: Thu Aug  4 16:38:01 2016
+#ensembl_gene_id	hugo_names	chr	strand	gene_start	gene_end	best_ensembl_transcript_id	ensembl_transcript_id	refseq_equivalents	transcript_genomic_start	transcript_genomic_end	cdna_coding_start	cdna_coding_end	genomic_exon_ranges	AA_domain_ranges

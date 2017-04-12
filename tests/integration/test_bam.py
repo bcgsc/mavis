@@ -1,7 +1,7 @@
 from mavis.constants import *
 from mavis.bam import read as read_tools
 from mavis.bam import cigar as cigar_tools
-from mavis.bam.read import sequenced_strand, read_pair_type, breakpoint_pos, orientation_supports_type
+from mavis.bam.read import sequenced_strand, read_pair_type, breakpoint_pos, orientation_supports_type, get_samtools_version
 from mavis.bam.cache import BamCache
 from mavis.bam.stats import Histogram, compute_transcriptome_bam_stats, compute_genome_bam_stats
 from mavis.annotate import load_reference_genome, load_reference_genes
@@ -11,6 +11,7 @@ import warnings
 from . import MockRead, MockBamFileHandle
 from . import REFERENCE_GENOME_FILE, TRANSCRIPTOME_BAM_INPUT, FULL_REFERENCE_ANNOTATIONS_FILE_JSON
 from . import BAM_INPUT, FULL_BAM_INPUT
+import shutil
 
 REFERENCE_GENOME = None
 
@@ -21,6 +22,13 @@ def setUpModule():
     REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
     if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
         raise AssertionError('fake genome file does not have the expected contents')
+
+
+class TestGetSamtoolsVersion(unittest.TestCase):
+    
+    @unittest.skipIf(not shutil.which('samtools'), "missing the samtools command")
+    def test_get_samtools_version(self):
+        self.assertEqual(3, len(get_samtools_version()))
 
 
 class TestBamCache(unittest.TestCase):

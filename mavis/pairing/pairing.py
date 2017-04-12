@@ -86,17 +86,22 @@ def predict_transcriptome_breakpoint(breakpoint, transcript):
     return sorted(tbreaks)
 
 
-def equivalent_events(ev1, ev2, TRANSCRIPTS, DISTANCES=None, SEQUENCES=None):
-    if DISTANCES is None:
-        DISTANCES = {CALL_METHOD.CONTIG: 0, CALL_METHOD.SPLIT: 10, CALL_METHOD.FLANK: 0}
-    SEQUENCES = dict() if SEQUENCES is None else SEQUENCES
+def equivalent_events(ev1, ev2, reference_transcripts, DISTANCES=None, product_sequences=None):
+    temp = {CALL_METHOD.CONTIG: 0, CALL_METHOD.SPLIT: 10, CALL_METHOD.FLANK: 0}
+    temp.update(DISTANCES if DISTANCES else {})
+    DISTANCES = temp
+
+    product_sequences = dict() if product_sequences is None else product_sequences
     # basic checks
-    if ev1.break1.chr != ev2.break1.chr or ev1.break2.chr != ev2.break2.chr or \
-            len(set([STRAND.NS, ev1.break1.strand, ev2.break1.strand])) > 2 or \
-            len(set([STRAND.NS, ev1.break2.strand, ev2.break2.strand])) > 2 or \
-            len(set([ORIENT.NS, ev1.break1.orient, ev2.break1.orient])) > 2 or \
-            len(set([ORIENT.NS, ev1.break2.orient, ev2.break2.orient])) > 2 or \
-            ev1.opposing_strands != ev2.opposing_strands:
+    if any([
+        ev1.break1.chr != ev2.break1.chr,
+        ev1.break2.chr != ev2.break2.chr,
+        len(set([STRAND.NS, ev1.break1.strand, ev2.break1.strand])) > 2,
+        len(set([STRAND.NS, ev1.break2.strand, ev2.break2.strand])) > 2,
+        len(set([ORIENT.NS, ev1.break1.orient, ev2.break1.orient])) > 2,
+        len(set([ORIENT.NS, ev1.break2.orient, ev2.break2.orient])) > 2,
+        ev1.opposing_strands != ev2.opposing_strands
+    ]):
         return False
 
     if ev1.data[COLUMNS.protocol] != PROTOCOL.GENOME:
@@ -108,33 +113,32 @@ def equivalent_events(ev1, ev2, TRANSCRIPTS, DISTANCES=None, SEQUENCES=None):
         ev2.data[COLUMNS.break1_call_method],
         ev2.data[COLUMNS.break2_call_method]
     ])
-    max_distance = max([DISTANCES.get(m, 0) for m in methods])
-
-    fusion1 = SEQUENCES.get(ev1.data[COLUMNS.fusion_sequence_fasta_id], None)
-    fusion2 = SEQUENCES.get(ev2.data[COLUMNS.fusion_sequence_fasta_id], None)
-
+    max_distance = max([DISTANCES[m] for m in methods])
+        
+    if ev1.data[COLUMNS.fusion_sequence_fasta_id] and ev2.data[COLUMNS.fusion_sequence_fasta_id]:
+        fusion1 = product_sequences[ev1.data[COLUMNS.fusion_sequence_fasta_id]]
+        fusion2 = product_sequences[ev2.data[COLUMNS.fusion_sequence_fasta_id]]
+    
+        if fusion1 != fusion2:
+            return False
+        for col in [COLUMNS.fusion_cdna_coding_start, COLUMNS.fusion_cdna_coding_end]:
+            if ev1.data[col] != ev2.data[col]:
+                return False
+        return True
+    
     break1_match = False
     break2_match = False
 
     if ev1.data[COLUMNS.protocol] != ev2.data[COLUMNS.protocol]:  # mixed
-        if fusion1 and fusion2:
-            # compare product
-            if fusion1 != fusion2:
-                return False
-            for col in [COLUMNS.fusion_cdna_coding_start, COLUMNS.fusion_cdna_coding_end]:
-                if ev1.data[col] != ev2.data[col]:
-                    return False
-            return True
-
         # predict genome breakpoints to compare by location
-        t1 = TRANSCRIPTS.get(ev1.data[COLUMNS.transcript1], None)
+        t1 = reference_transcripts.get(ev1.data[COLUMNS.transcript1], None)
         if t1:
             pbreaks = predict_transcriptome_breakpoint(ev1.break1, t1)
             for b in pbreaks:
                 if abs(Interval.dist(b, ev2.break1)) <= max_distance:
                     break1_match = True
                     break
-        t2 = TRANSCRIPTS.get(ev1.data[COLUMNS.transcript2], None)
+        t2 = reference_transcripts.get(ev1.data[COLUMNS.transcript2], None)
         if t2:
             pbreaks = predict_transcriptome_breakpoint(ev1.break2, t2)
             for b in pbreaks:
@@ -144,7 +148,6 @@ def equivalent_events(ev1, ev2, TRANSCRIPTS, DISTANCES=None, SEQUENCES=None):
 
     elif ev1.data[COLUMNS.event_type] != ev2.data[COLUMNS.event_type]:
         return False
-
     # location comparison
     if abs(Interval.dist(ev1.break1, ev2.break1)) <= max_distance:
         break1_match = True

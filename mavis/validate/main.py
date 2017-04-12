@@ -59,8 +59,10 @@ def main(
 
     split_read_contigs = set()
     chr_to_index = {}
-    bpps = []
-    bpps = read_inputs([input], add={COLUMNS.protocol: protocol, COLUMNS.library: library})
+    bpps = read_inputs(
+        [input], add={COLUMNS.protocol: protocol, COLUMNS.library: library},
+        expand_ns=False, explicit_strand=False
+    )
     evidence_clusters = []
     for bpp in bpps:
         if bpp.data[COLUMNS.protocol] == PROTOCOL.GENOME:
@@ -146,9 +148,14 @@ def main(
         clean_files=False,
         blat_min_percent_of_max_score=kwargs.get(
             'blat_min_percent_of_max_score', DEFAULTS.blat_min_percent_of_max_score),
-        blat_min_identity=kwargs.get('blat_min_identity', DEFAULTS.blat_min_identity),
-        blat_min_query_consumption=kwargs.get(
-            'blat_min_query_consumption', DEFAULTS.blat_min_query_consumption)
+        blat_min_identity=kwargs.get(
+            'blat_min_identity', DEFAULTS.blat_min_identity),
+        contig_aln_min_query_consumption=kwargs.get(
+            'contig_aln_min_query_consumption', DEFAULTS.contig_aln_min_query_consumption),
+        contig_aln_max_event_size=kwargs.get(
+            'contig_aln_max_event_size', DEFAULTS.contig_aln_max_event_size),
+        contig_aln_min_anchor_size=kwargs.get(
+            'contig_aln_min_anchor_size', DEFAULTS.contig_aln_min_anchor_size)
     )
     log('alignment complete')
     event_calls = []

@@ -1,16 +1,18 @@
-#!/projects/tumour_char/analysis_scripts/python/centos06/anaconda3_v4.3.0/envs/python3.4/bin/python
+# Requires the PyVcf (vcf) non-standard module.
 """
 Script for converting Manta output into the MAVIS accepted input format
 """
 
-import vcf
 import argparse
-import sys
 import os
+import sys
 import time
-from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND, PROTOCOL
+import vcf
 
-__version__ = '0.0.1'
+from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND, PROTOCOL
+from mavis.util import get_version
+
+__version__ = get_version()
 __prog__ = os.path.basename(os.path.realpath(__file__))
 
 SVTYPES = {'DEL': SVTYPE.DEL,
@@ -90,7 +92,7 @@ def load_vcf(vcf_filename, library, version, filter_evidence=None, filter_event=
             event['manta_evidence'] = str(record.ID) + " " + str(record.INFO) + " " + str(record.samples)
             event[COLUMNS.stranded] = 'False'
             event[COLUMNS.library] = library
-            event[COLUMNS.tools] = "Manta_v{}".format(version)
+            event[COLUMNS.tools] = "Manta_v{0}".format(version)
 
             if event_type == 'DEL' or event_type == 'INS':
                 event[COLUMNS.break1_orientation], event[COLUMNS.break2_orientation] = (ORIENT.LEFT, ORIENT.RIGHT)
@@ -120,40 +122,40 @@ parser = argparse.ArgumentParser(
 Note this has the option to filter the results for diploid.tsv based on if an event has 2 split reads \
  and 2 flanking reads',
     add_help=False)
+
+# TODO determine input to use to get the germline events instead of running convert script 3 times...
 required = parser.add_argument_group('Required arguments')
-required.add_argument('-i', '--input', required=True, help='Manta/DeFuse vcf file to process')
+required.add_argument('-n', '--input', required=True, help='Manta/DeFuse vcf file to process')
 required.add_argument('-o', '--output', required=True, help='output file name')
 required.add_argument('-l', '--library', required=True, help='libary name of the tumor bam')
+
 optional = parser.add_argument_group('Optional arguments')
 # optional.add_argument('-b', '--bam', help = 'path to the evidence bam file for the tumour library')
 optional.add_argument('-h', '--help', action='help', help='Show this help message and exit')
-optional.add_argument('-f', '--filter-evidence', action='store_true',
+optional.add_argument('--filter-evidence', action='store_true',
                       help='turn on addtional filtering of events based on flanking and split read evidence')
-optional.add_argument('-v', '--version', default='1.0.0',
-                      help='the version of Manta that was used in the analysis')
+optional.add_argument('-v', '--version', action='version', version='%(prog)s version ' + __version__,
+                      help='outputs the version number')
+optional.add_argument('--tool-version', default='1.0.0', help='the version of Manta that was used in the analysis')
 optional.add_argument('--no-filter', action='store_true', default=False,
-                      help='turn off filtering of events that are in the Mitochondria and "GL" chromosomes')
-
-if len(sys.argv) == 1:
-    parser.print_help()
-    exit(2)
+                      help='turn off filtering of events that are in the "MT" and "GL" chromosomes')
 
 args = parser.parse_args()
 vcf_filename = args.input
 output_filename = args.output
 
-events = load_vcf(vcf_filename, args.library, args.version, args.filter_evidence, not args.no_filter)
+events = load_vcf(vcf_filename, args.library, args.tool_version, args.filter_evidence, not args.no_filter)
 elements = sort_columns(events[0].keys())
 header = "\t".join(elements)
 
 with open(output_filename, 'w') as fh:
-    fh.write('## {} v{}\n'.format(__prog__, __version__))
-    fh.write('## inputs: {}\n'.format(" ".join(sys.argv)))
-    fh.write('## file generated on {}\n'.format(time.strftime('%B %d, %Y')))
-    fh.write('#{}\n'.format(header))
+    fh.write('## {0} {1}\n'.format(__prog__, __version__))
+    fh.write('## inputs: {0}\n'.format(" ".join(sys.argv)))
+    fh.write('## file generated on {0}\n'.format(time.strftime('%B %d, %Y')))
+    fh.write('#{0}\n'.format(header))
     for event in events:
         line = []
         for element in elements:
             line.append(str(event[element]))
-        fh.write("{}\n".format("\t".join(line)))
-    print("Wrote {} gene fusion events to {}".format(len(events), output_filename))
+        fh.write("{0}\n".format("\t".join(line)))
+    print("Wrote {0} gene fusion events to {1}".format(len(events), output_filename))

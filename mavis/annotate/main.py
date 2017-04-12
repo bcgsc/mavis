@@ -35,7 +35,7 @@ def main(
 
     mkdirp(DRAWINGS_DIRECTORY)
     # test that the sequence makes sense for a random transcript
-    bpps = read_inputs(inputs, in_={COLUMNS.protocol: PROTOCOL})
+    bpps = read_inputs(inputs, in_={COLUMNS.protocol: PROTOCOL}, expand_ns=False, explicit_strand=False)
     log('read {} breakpoint pairs'.format(len(bpps)))
 
     annotations = annotate_events(
@@ -81,6 +81,7 @@ def main(
             if header is None:
                 header_req.update(row.keys())
                 header = sort_columns(header_req)
+                tabbed_fh.write('\t'.join([str(c) for c in header]) + '\n')
             log(
                 '({} of {}) current annotation'.format(i + 1, total),
                 ann.data[COLUMNS.annotation_id], ann.transcript1, ann.transcript2, ann.event_type)

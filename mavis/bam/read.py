@@ -3,14 +3,18 @@ from . import cigar as cigar_tools
 import pysam
 import subprocess
 import re
+from copy import copy
 
 
 def get_samtools_version():
     proc = subprocess.getoutput(['samtools'])
     for line in proc.split('\n'):
-        m = re.search('Version: (?P<major>\d+)\.(?P<mid>\d+)\.(?P<minor>\d+)', line)
+        m = re.search('Version: (?P<major>\d+)(\.(?P<mid>\d+)(\.(?P<minor>\d+))?)?', line)
         if m:
-            return int(m.group('major')), int(m.group('mid')), int(m.group('minor'))
+            major = int(m.group('major'))
+            mid = int(m.group('mid')) if m.group('mid') else 0
+            minor = int(m.group('minor')) if m.group('minor') else 0
+            return major, mid, minor
     raise ValueError('unable to parse samtools version number')
 
 
@@ -275,3 +279,71 @@ def orientation_supports_type(read, event_type):
     else:
         raise ValueError('unexpected event type', event_type)
     return True
+
+
+def convert_events_to_softclipping(read, orientation, max_event_size, min_anchor_size=None):
+    """
+    given an alignment, simplifies the alignment by grouping everything past the first anchor and including the
+    first event considered too large and un-aligning them turning them into softclipping
+    
+    """
+    if min_anchor_size is None:
+        min_anchor_size = max_event_size
+    event_states = [CIGAR.D, CIGAR.I, CIGAR.N, CIGAR.X]
+    aligned_states = [CIGAR.M, CIGAR.X, CIGAR.EQ]
+    reference_aligned_states = aligned_states + [CIGAR.D, CIGAR.N]
+    
+    if orientation == ORIENT.LEFT:
+        event_size = 0
+        adjusted_cigar = []
+        anchor = 0
+        for state, count in read.cigar:
+            if anchor < min_anchor_size:
+                if state == CIGAR.EQ or state == CIGAR.M:
+                    anchor += count
+            elif state in event_states:
+                event_size += count
+                if event_size > max_event_size:
+                    break
+            else:
+                event_size = 0
+            adjusted_cigar.append((state, count))
+        if event_size > max_event_size:
+            while adjusted_cigar[-1][0] in event_states:
+                del adjusted_cigar[-1]
+            aligned = sum([y for x, y in adjusted_cigar if x in aligned_states] + [0])
+            sc = len(read.query_sequence) - aligned
+            adjusted_cigar.append((CIGAR.S, sc))
+            read = copy(read)
+            read.cigar = adjusted_cigar
+    elif orientation == ORIENT.RIGHT:
+        # more complicated than left b/c need to also adjust the start position
+        event_size = 0
+        anchor = 0
+        adjusted_cigar = []
+        for state, count in read.cigar[::-1]:  # first event from the right
+            if anchor < min_anchor_size:
+                if state == CIGAR.EQ or state == CIGAR.M:
+                    anchor += count
+            elif state in event_states:
+                event_size += count
+                if event_size > max_event_size:
+                    break
+            else:
+                event_size = 0
+            adjusted_cigar.append((state, count))
+        if event_size > max_event_size:
+            while adjusted_cigar[-1][0] in event_states:
+                del adjusted_cigar[-1]
+            originally_refaligned = sum([y for x, y in read.cigar if x in reference_aligned_states] + [0])
+            refaligned = sum([y for x, y in adjusted_cigar if x in reference_aligned_states] + [0])
+            aligned = sum([y for x, y in adjusted_cigar if x in aligned_states] + [0])
+            sc = len(read.query_sequence) - aligned
+            adjusted_cigar = [(CIGAR.S, sc)] + adjusted_cigar[::-1]
+            read = copy(read)
+            read.cigar = adjusted_cigar
+            read.reference_start += originally_refaligned - refaligned
+    else:
+        raise ValueError('orientation must be specified', orientation)
+    return read
+
