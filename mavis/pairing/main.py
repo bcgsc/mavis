@@ -59,7 +59,9 @@ def main(
             COLUMNS.fusion_sequence_fasta_id: None,
             COLUMNS.fusion_sequence_fasta_file: None,
             COLUMNS.fusion_splicing_pattern: None
-        }
+        },
+        explicit_strand=True,
+        expand_ns=False
     ))
     log('read {} breakpoint pairs'.format(len(bpps)))
     libraries = set()
@@ -81,8 +83,6 @@ def main(
             with open(fname, 'rU') as fh:
                 temp = SeqIO.to_dict(SeqIO.parse(fh, 'fasta'))
                 for fid, fseq in temp.items():
-                    print(fid)
-                    print(fseq)
                     if fid in product_sequences and product_sequences[fid] is not None and \
                             product_sequences[fid] != fseq:
                         raise AssertionError('sequence identifiers are not unique', fid, fseq, product_sequences[fid])

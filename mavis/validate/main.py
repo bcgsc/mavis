@@ -59,7 +59,8 @@ def main(
 
     split_read_contigs = set()
     chr_to_index = {}
-    bpps = read_inputs([input], add={COLUMNS.protocol: protocol, COLUMNS.library: library})
+    bpps = read_inputs(
+        [input], add={COLUMNS.protocol: protocol, COLUMNS.library: library}, expand_ns=False, explicit_strand=False)
     evidence_clusters = []
     for bpp in bpps:
         if bpp.data[COLUMNS.protocol] == PROTOCOL.GENOME:
@@ -195,7 +196,6 @@ def main(
     # write the output validated clusters (split by type and contig)
     validation_batch_id = build_batch_id(prefix='validation-')
     for i, ec in enumerate(event_calls):
-        print(ec)
         b1_homseq = None
         b2_homseq = None
         try:

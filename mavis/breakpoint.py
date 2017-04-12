@@ -159,8 +159,10 @@ class BreakpointPair:
             if self.opposing_strands is None:
                 self.opposing_strands = opposing
             elif self.opposing_strands != opposing:
-                raise AttributeError('conflict in input arguments, opposing_strands must agree with input breakpoints'
-                                     'when the strand has been specified')
+                raise AssertionError(
+                    'conflict in input arguments, opposing_strands must agree with input breakpoints'
+                    ' when the strand has been specified'
+                )
         if self.break1.orient != ORIENT.NS and self.break2.orient != ORIENT.NS:
             if self.opposing_strands is not None:
                 if (self.break1.orient == self.break2.orient and not self.opposing_strands) \
@@ -231,7 +233,7 @@ class BreakpointPair:
             >>> bpp = BreakpointPair(Breakpoint('1', 1, orient='L'), Breakpoint('1', 9999, orient='R'), opposing_strands=False)
             >>> BreakpointPair.classify(bpp)
             ['deletion', 'insertion']
-        
+
         see :ref:`related theory documentation <theory-classifying-events>`
         """
         if pair.break1.chr == pair.break2.chr:  # intrachromosomal
@@ -445,7 +447,7 @@ class BreakpointPair:
             o2 = ORIENT.RIGHT
         elif r2_end > r2_st:
             o2 = ORIENT.LEFT
-        
+
         if o1 == ORIENT.NS or o2 == ORIENT.NS:
             raise AssertionError(
                 'read does not have softclipping on either end and cannot therefore determine orientation',
@@ -605,13 +607,16 @@ class BreakpointPair:
         return bed
 
 
-def read_bpp_from_input_file(filename, expand_ns=True, force_stranded=False, **kwargs):
+def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, **kwargs):
     """
     reads a file using the TSV module. Each row is converted to a breakpoint pair and
     other column data is stored in the data attribute
 
     Args:
         filename (str): path to the input file
+        expand_ns (bool): expand not specified orient/strand settings to all specific version
+            (for strand this is only applied if the bam itself is stranded)
+        explicit_strand (bool): used to stop unstranded breakpoint pairs from losing input strand information
     Returns:
         :class:`list` of :any:`BreakpointPair`: a list of pairs
 
@@ -675,6 +680,21 @@ def read_bpp_from_input_file(filename, expand_ns=True, force_stranded=False, **k
         filename, suppress_index=True,
         **kwargs
     )
+    restricted = [
+        COLUMNS.break1_chromosome,
+        COLUMNS.break1_position_start,
+        COLUMNS.break1_position_end,
+        COLUMNS.break1_strand,
+        COLUMNS.break1_orientation,
+        COLUMNS.break2_chromosome,
+        COLUMNS.break2_position_start,
+        COLUMNS.break2_position_end,
+        COLUMNS.break2_strand,
+        COLUMNS.break2_orientation,
+        COLUMNS.stranded,
+        COLUMNS.opposing_strands,
+        COLUMNS.untemplated_seq
+    ]
     pairs = []
     for row in rows:
         for attr, val in row.items():
@@ -685,11 +705,15 @@ def read_bpp_from_input_file(filename, expand_ns=True, force_stranded=False, **k
                     raise AssertionError(
                         'error in input id. All mavis pipeline step ids must satisfy the regex:'
                         ' ^[A-Za-z0-9-]+$ ')
-        stranded = row[COLUMNS.stranded] or force_stranded
+        stranded = row[COLUMNS.stranded] or explicit_strand
         opp = row[COLUMNS.opposing_strands]
         
-        strand1 = row[COLUMNS.break1_strand]
-        strand2 = row[COLUMNS.break2_strand]
+        strand1 = row[COLUMNS.break1_strand] if stranded else STRAND.NS
+        strand2 = row[COLUMNS.break2_strand] if stranded else STRAND.NS
+
+        if explicit_strand and not expand_ns and {strand1, strand2} & {STRAND.NS}:
+            raise AssertionError('cannot use explicit strand and not expand unknowns unless the strand is given')
+
         row[COLUMNS.stranded] = stranded
         temp = []
         errors = []
@@ -697,8 +721,8 @@ def read_bpp_from_input_file(filename, expand_ns=True, force_stranded=False, **k
             ORIENT.expand(row[COLUMNS.break1_orientation]) if expand_ns else [row[COLUMNS.break1_orientation]],
             ORIENT.expand(row[COLUMNS.break2_orientation]) if expand_ns else [row[COLUMNS.break2_orientation]],
             [True, False] if opp is None and expand_ns else [opp],
-            STRAND.expand(strand1) if stranded and expand_ns else [strand1],
-            STRAND.expand(strand2) if stranded and expand_ns else [strand2]
+            STRAND.expand(strand1) if (stranded and expand_ns) else [strand1],
+            STRAND.expand(strand2) if (stranded and expand_ns) else [strand2]
         ):
             try:
                 b1 = Breakpoint(
@@ -715,28 +739,29 @@ def read_bpp_from_input_file(filename, expand_ns=True, force_stranded=False, **k
                     strand=s2,
                     orient=o2
                 )
+
+                data = {k: v for k, v in row.items() if k not in restricted}
                 bpp = BreakpointPair(
                     b1,
                     b2,
                     opposing_strands=opp,
                     untemplated_seq=row[COLUMNS.untemplated_seq],
-                    stranded=stranded,
-                    data=row
+                    stranded=row[COLUMNS.stranded],
+                    data=data
                 )
                 event_type = bpp.data.get(COLUMNS.event_type, None)
                 if event_type and event_type not in BreakpointPair.classify(bpp):
                     raise InvalidRearrangement(
                         'error: expected one of', BreakpointPair.classify(bpp), 'but found', event_type)
                 temp.append(bpp)
-            except (AttributeError, InvalidRearrangement) as err:
+            except InvalidRearrangement as err:
                 if not expand_ns:
+                    raise err
+            except AssertionError as err:
+                if not expand_ns and not explicit_strand:
                     raise err
         if len(temp) == 0:
             raise InvalidRearrangement('could not produce a valid rearrangement', row)
         else:
             pairs.extend(temp)
-    for pair in pairs:
-        if not pair.stranded:
-            pair.break1.strand = STRAND.NS
-            pair.break2.strand = STRAND.NS
     return pairs
