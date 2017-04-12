@@ -242,6 +242,7 @@ def read_config(filepath):
     for sec in parser.sections():
         if sec not in ['validation', 'reference', 'qsub', 'illustrate', 'annotation', 'cluster']:
             library_sections.append(sec)
+            parser[sec]['library'] = sec
 
     job_sched = JobSchedulingConfig(**(parser['qsub'] if 'qsub' in parser else {}))
     ref = ReferenceFilesConfig(**(parser['reference'] if 'reference' in parser else {}))
