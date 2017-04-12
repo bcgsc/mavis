@@ -1,4 +1,3 @@
-
 export MAVIS_TEMPLATE_METADATA='/home/creisle/git/mavis/tests/integration/data/cytoBand.txt'
 export MAVIS_REFERENCE_GENOME='/projects/seqref/genomes/Homo_sapiens/GRCh37/1000genomes/bwa_ind/genome/GRCh37-lite.fa'
 export MAVIS_ANNOTATIONS='/home/creisle/svn/ensembl_flatfiles/ensembl69_transcript_exons_and_domains_20160808.tsv'
@@ -8,4 +7,5 @@ export MAVIS_MAX_FILES=100
 export MAVIS_MIN_CLUSTERS_PER_FILE=30
 export PYTHONUNBUFFERED='True'
 
-export PATH=/projects/trans_scratch/transabyss/trans-ABySS/v1.4.8/bin:$PATH
+#Add paths for samtools, blat and git
+export PATH=/projects/trans_scratch/transabyss/trans-ABySS/v1.4.8:/bin/gsc/software/linux-x86_64-centos6/git-2.12.0/bin/:$PATH
