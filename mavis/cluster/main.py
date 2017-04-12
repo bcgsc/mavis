@@ -44,15 +44,25 @@ def main(
     CLUSTER_BED_OUTPUT = os.path.join(output, 'clusters.bed')
     split_file_name_func = lambda x: os.path.join(output, '{}-{}.tab'.format(cluster_batch_id, x))
     # load the input files
-    breakpoint_pairs = read_inputs(
+    all_breakpoint_pairs = read_inputs(
         inputs,
         cast={COLUMNS.tools: lambda x: set(x.split(';')) if x else set()},
         add={COLUMNS.library: library, COLUMNS.protocol: protocol},
         expand_ns=True, explicit_strand=False
     )
+    # ignore other library inputs
+    other_libs = set()
+    unfiltered_breakpoint_pairs = []
+    for bpp in all_breakpoint_pairs:
+        if bpp.library != library:
+            other_libs.add(bpp.library)
+        else:
+            unfiltered_breakpoint_pairs.append(bpp)
+    if len(other_libs) > 0:
+        log('warning: ignoring breakpoints found for other libraries:', sorted([l for l in other_libs]))
 
     # filter by masking file
-    breakpoint_pairs, filtered_bpp = filter_on_overlap(breakpoint_pairs, masking)
+    breakpoint_pairs, filtered_bpp = filter_on_overlap(unfiltered_breakpoint_pairs, masking)
 
     log('computing clusters')
     clusters = cluster_breakpoint_pairs(breakpoint_pairs, r=cluster_radius, k=cluster_clique_size)

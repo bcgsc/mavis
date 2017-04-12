@@ -60,7 +60,9 @@ def main(
     split_read_contigs = set()
     chr_to_index = {}
     bpps = read_inputs(
-        [input], add={COLUMNS.protocol: protocol, COLUMNS.library: library}, expand_ns=False, explicit_strand=False)
+        [input], add={COLUMNS.protocol: protocol, COLUMNS.library: library},
+        expand_ns=False, explicit_strand=False
+    )
     evidence_clusters = []
     for bpp in bpps:
         if bpp.data[COLUMNS.protocol] == PROTOCOL.GENOME:
