@@ -47,9 +47,6 @@ def main():
     optional.add_argument(
         '-v', '--version', action='version', version='%(prog)s version ' + __version__,
         help='outputs the version number')
-    optional.add_argument(
-        '-f', '--overwrite', action='store_true', default=False,
-        help='set flag to overwrite existing reviewed files')
     optional.add_argument('--stranded', action='store_true', default=False)
     optional.add_argument('--tool-version', help='the version of defuse that was used in the analysis',
                           default='1.4.10')
@@ -60,9 +57,6 @@ def main():
     warnings.warn('currently assuming that trans-abyss is calling the strand exactly opposite and swapping them')
     args = parser.parse_args()
 
-    if os.path.exists(args.output) and not args.overwrite:
-        print('error: output file {0} already exists. please use the --overwrite option'.format(args.output))
-        sys.exit()
     if not os.path.exists(args.input):
         print('error: input file {0} does not exist'.format(args.input))
         sys.exit()
@@ -180,7 +174,6 @@ def main():
         fh.write('## inputs {0}\n'.format(" ".join(sys.argv)))
         # fh.write('## input: {0}\n'.format(args.input))
         # fh.write('## output: {0}\n'.format(args.output))
-        # fh.write('## overwrite: {0}\n'.format(args.overwrite))
         # fh.write('## library: {0}\n'.format(args.library))
         # fh.write('## protocol: {0}\n'.format(args.protocol))
         fh.write('## file generated on {0}\n'.format(time.strftime('%B %d, %Y')))
