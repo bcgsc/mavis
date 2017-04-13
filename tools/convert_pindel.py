@@ -1,11 +1,18 @@
 """
-This script converts .vcf files produced by pindel into a tsv file that is compatible with MAVIS. 
+Script for converting pindel output into the MAVIS accepted input format
 """
 
-import sys, os
+import sys
+import os
 import argparse
 import TSV
 from mavis.constants import COLUMNS, sort_columns, ORIENT, STRAND, SVTYPE, PROTOCOL
+
+from mavis.util import get_version
+
+__version__ = get_version()
+__prog__ = os.path.basename(os.path.realpath(__file__))
+default_version = '0.2.5b9'
 
 def make_duplicate(output, events):
     """
@@ -40,7 +47,7 @@ def get_info_map(info_string):
     return result
 
 
-def make_tsv(pd_files, library_name, output_file):
+def make_tsv(pd_files, library_name, output_file, tool_version):
     """
     Function to parse the pindel vcf file and output the MAVIS tsv file
     """
@@ -70,7 +77,7 @@ def make_tsv(pd_files, library_name, output_file):
                 output[COLUMNS.break1_strand] = output[COLUMNS.break2_strand] = STRAND.NS
                 output[COLUMNS.library] = library_name
                 output[COLUMNS.protocol] = PROTOCOL.GENOME
-                output[COLUMNS.tools] = 'pindel_v0.2.5b9'
+                output[COLUMNS.tools] = 'pindel_v' + tool_version
                 output[COLUMNS.stranded] = False
                 output[COLUMNS.event_type] = event_type = SVTYPES[info["SVTYPE"]]
                 
@@ -106,11 +113,19 @@ def make_tsv(pd_files, library_name, output_file):
             print("Number of events: " + str(len(events)))
 
 def main():
-    parser = argparse.ArgumentParser(description='Converts pindel vcf to mavis-compatible tab file.')
+    parser = argparse.ArgumentParser(description='Converts pindel vcf to mavis-compatible tab file.',
+            add_help=False)
     required = parser.add_argument_group('Required arguments')
     required.add_argument('-n', '--input', required=True, help='Pindel *.vcf output', nargs='+')
     required.add_argument('-o', '--output', required=True, help='Full name of the converted output file')
     required.add_argument('-l', '--library', help='The library id for file.', required=True)
+
+    optional = parser.add_argument_group('Optional arguments')
+    optional.add_argument('-h', '--help', action='help', help='Show this help message and exit')
+    optional.add_argument('-v', '--version', action='version', version='%(prog)s version ' + __version__,
+            help='outputs version number')
+    optional.add_argument('--tool-version', help='the version of pindel that was used in the analysis',
+            default=default_version)
 
     args = parser.parse_args()
 
@@ -118,9 +133,9 @@ def main():
         if not os.path.isfile(f):
             print("ERROR: Cannot find file: " + f)
             print("Exiting.")
-            sys.exit()
+            exit(1)
 
-    make_tsv(args.input, args.library, args.output)
+    make_tsv(args.input, args.library, args.output, args.tool_version)
 
 if __name__ == '__main__':
     main()

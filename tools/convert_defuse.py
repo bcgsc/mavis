@@ -127,6 +127,7 @@ tsv and generates the MAVIS input file",
         make_tsv(args.input, args.library, args.tool_version, args.output, not args.no_filter)
     else:
         print("ERROR: Cannot find file: " + args.input)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
