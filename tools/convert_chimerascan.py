@@ -144,6 +144,7 @@ def main():
         write_output(output, args.output)
     else:
         print("ERROR: Cannot find file: " + args.input)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
