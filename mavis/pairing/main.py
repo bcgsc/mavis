@@ -23,10 +23,7 @@ def main(
         split_call_distance (int): pairing distance for pairing with an event called by :term:`split read`
         contig_call_distance (int): pairing distance for pairing with an event called by contig or :term:`spanning read`
     """
-    if product_sequence_files is None:
-        product_sequence_files = set()
-    else:
-        product_sequence_files = set(product_sequence_files)
+    product_sequence_files = set() if product_sequence_files is None else set(product_sequence_files)
     # load the file
     DISTANCES = {
         CALL_METHOD.FLANK: flanking_call_distance,

@@ -41,8 +41,7 @@ def main(
     cluster_batch_id = build_batch_id(prefix='cluster-')
     UNINFORM_OUTPUT = os.path.join(output, 'uninformative_clusters.txt')
     CLUSTER_ASSIGN_OUTPUT = os.path.join(output, 'cluster_assignment.tab')
-    CLUSTER_BED_OUTPUT = os.path.join(output, 'clusters.bed')
-    COMPLETE_STAMP = os.path.join(output, 'CLUSTERING.COMPLETE')
+    # TODO: CLUSTER_BED_OUTPUT = os.path.join(output, 'clusters.bed')
     split_file_name_func = lambda x: os.path.join(output, '{}-{}.tab'.format(cluster_batch_id, x))
     # load the input files
     all_breakpoint_pairs = read_inputs(
