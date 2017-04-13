@@ -1,5 +1,6 @@
 import os
 import json
+import re
 from .variant import annotate_events, determine_prime
 from ..constants import PROTOCOL, COLUMNS, PRIME, sort_columns
 from ..error import DrawingFitError, NotSpecifiedError
@@ -93,6 +94,7 @@ def main(
             transcripts = [] if not ann.fusion else ann.fusion.transcripts
             for t in transcripts:
                 fusion_fa_id = '{}_{}'.format(ann.data[COLUMNS.annotation_id], t.splicing_pattern.splice_type)
+                fusion_fa_id = re.sub('\s', '-', fusion_fa_id)
                 if fusion_fa_id in fa_sequence_names:
                     raise AssertionError('should not be duplicate fa sequence ids', fusion_fa_id)
                 seq = ann.fusion.get_cdna_seq(t.splicing_pattern)

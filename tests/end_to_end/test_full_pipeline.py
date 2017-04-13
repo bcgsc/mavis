@@ -13,13 +13,14 @@ mavis_home = os.path.join(os.path.dirname(__file__), './../..')
 main_run_script = os.path.join(mavis_home, 'bin/mavis_run.py')
 config = os.path.join(data_prefix, 'pipeline_config.cfg')
 mock_genome = 'mock-A36971'
-mock_trans = 'mock-A36973'
+mock_trans = 'mock-A47933'
 
 
 def setUpModule():
     global temp_output
     # create the temp output directory to store file outputs
     temp_output = tempfile.mkdtemp()
+    print('output dir', temp_output)
 
 
 def glob_exists(*pos, strict=True):
@@ -95,12 +96,12 @@ class TestFullPipeline(unittest.TestCase):
             output = subprocess.check_output(command, shell=True)
             tail(output)
             # check the generated files
-            self.assertTrue(glob_exists(temp_output, lib, 'annotation', 'annotations.tab'))
-            self.assertTrue(glob_exists(temp_output, lib, 'annotation', 'annotations.fusion-cdna.fa'))
-            self.assertTrue(glob_exists(temp_output, lib, 'annotation', 'drawings'))
-            self.assertTrue(glob_exists(temp_output, lib, 'annotation', 'drawings', '*svg', strict=False))
-            self.assertTrue(glob_exists(temp_output, lib, 'annotation', 'drawings', '*json', strict=False))
-            self.assertTrue(glob_exists(temp_output, lib, 'annotation', '*.COMPLETE'))
+            self.assertTrue(glob_exists(temp_output, lib, 'annotation/*', 'annotations.tab'))
+            self.assertTrue(glob_exists(temp_output, lib, 'annotation/*', 'annotations.fusion-cdna.fa'))
+            self.assertTrue(glob_exists(temp_output, lib, 'annotation/*', 'drawings'))
+            self.assertTrue(glob_exists(temp_output, lib, 'annotation/*', 'drawings', '*svg', strict=False))
+            self.assertTrue(glob_exists(temp_output, lib, 'annotation/*', 'drawings', '*json', strict=False))
+            self.assertTrue(glob_exists(temp_output, lib, 'annotation/*', '*.COMPLETE'))
         # now run the pairing
         self.assertTrue(glob_exists(temp_output, 'pairing'))
         qsub = os.path.join(temp_output, 'pairing', 'qsub.sh')
@@ -117,7 +118,7 @@ class TestFullPipeline(unittest.TestCase):
 def tearDownModule():
     # remove the temp directory and outputs
     shutil.rmtree(temp_output)
-
+    pass
 
 if __name__ == "__main__":
     unittest.main()
