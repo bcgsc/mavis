@@ -4,6 +4,7 @@ import warnings
 from .bam import cigar as cigar_tools
 from .bam.read import nsb_align, calculate_alignment_score
 from .constants import reverse_complement
+from .util import devnull
 
 
 class Contig:
@@ -186,9 +187,22 @@ def digraph_connected_components(graph, subgraph=None):
     return nx.connected_components(g)
 
 
-def pull_paths_from_component(
-    assembly, component, assembly_min_nc_edge_weight, assembly_max_paths, log=lambda *pos, **kwargs: None
+def pull_contigs_from_component(
+    assembly, component, assembly_min_nc_edge_weight, assembly_max_paths, log=devnull
 ):
+    """
+    builds contigs from the a connected component of the assembly DeBruijn graph
+
+    Args:
+        assembly (DeBruijnGraph): the assembly graph
+        component (list):  list of nodes which make up the connected component
+        assembly_min_nc_edge_weight (int): the minimum weight to not remove a non cutting edge/path
+        assembly_max_paths (int): the maximum number of paths allowed before the graph is further simplified
+        log (function): the log function
+
+    Returns:
+        :class:`Dict` of :class:`int` by :class:`str`: the paths/contigs and their scores
+    """
     path_scores = {}  # path_str => score_int
     w = assembly_min_nc_edge_weight
     unresolved_components = [component]
@@ -249,12 +263,15 @@ def assemble(
 
     Args:
         sequences (:class:`list` of :class:`str`): a list of strings/sequences to assemble
-        assembly_max_kmer_size (int): the size of the kmer to use
-        assembly_min_nc_edge_weight (int): see :term:`assembly_min_nc_edge_weight`
-        assembly_min_edge_weight (int): see :term:`assembly_min_edge_weight`
-        assembly_min_match_quality (float): percent match for re-aligned reads to contigs
-        assembly_min_read_mapping_overlap (int): the minimum amount of overlap required when aligning reads to contigs
-        assembly_max_paths (int): see :term:`assembly_max_paths`
+        assembly_max_kmer_size: see :term:`assembly_max_kmer_size`
+        assembly_min_nc_edge_weight: see :term:`assembly_min_nc_edge_weight`
+        assembly_min_edge_weight: see :term:`assembly_min_edge_weight`
+        assembly_min_match_quality: see :term:`assembly_min_match_quality`
+        assembly_min_read_mapping_overlap: see :term:`assembly_min_read_mapping_overlap`
+        assembly_min_contig_length: see :term:`assembly_min_contig_length`
+        assembly_min_exact_match_to_remap: see :term:`assembly_min_exact_match_to_remap`
+        assembly_max_paths: see :term:`assembly_max_paths`
+        log (function): the log function
 
     Returns:
         :class:`list` of :class:`Contig`: a list of putative contigs
@@ -296,7 +313,7 @@ def assemble(
     for n in nodes:
         if assembly.in_degree(n) == 0 and assembly.out_degree(n) == 0:
             assembly.remove_node(n)
-    
+
     # drop all cyclic components
     for component in digraph_connected_components(assembly):
         subgraph = assembly.subgraph(component)
@@ -304,16 +321,16 @@ def assemble(
             log('dropping cyclic component', time_stamp=False)
             for node in subgraph.nodes():
                 assembly.remove_node(node)
-    
-    # initial data cleaning 
+
+    # initial data cleaning
     assembly.trim_noncutting_paths_by_freq(assembly_min_nc_edge_weight)
     assembly.trim_tails_by_freq(assembly_min_nc_edge_weight)
-    
+
     path_scores = {}
 
     for component in digraph_connected_components(assembly):
         # pull the path scores
-        path_scores.update(pull_paths_from_component(
+        path_scores.update(pull_contigs_from_component(
             assembly, component,
             assembly_min_nc_edge_weight=assembly_min_nc_edge_weight,
             assembly_max_paths=assembly_max_paths,
