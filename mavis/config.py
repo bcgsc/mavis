@@ -411,19 +411,10 @@ def augment_parser(parser, optparser, arguments):
                 type=TSV.tsv_boolean,
                 help='If flag is False then the clusters will not be filtered based on lack of annotation'
             )
-        elif arg == 'split_call_distance':
+        elif arg in PAIRING_DEFAULTS:
             optparser.add_argument(
-                '--split_call_distance', default=get_env_variable(arg, PAIRING_DEFAULTS.split_call_distance), type=int,
-                help='distance allowed between breakpoint calls when pairing from split read (and higher) resolution calls')
-        elif arg == 'contig_call_distance':
-            optparser.add_argument(
-                '--contig_call_distance', default=get_env_variable(arg, PAIRING_DEFAULTS.contig_call_distance), type=int,
-                help='distance allowed between breakpoint calls when pairing from contig (and higher) resolution calls')
-        elif arg == 'flanking_call_distance':
-            optparser.add_argument(
-            '--flanking_call_distance',
-            default=get_env_variable(arg, PAIRING_DEFAULTS.flanking_call_distance), type=int,
-            help='distance allowed between breakpoint calls when pairing from contig (and higher) resolution calls')
+                '--{}'.format(arg), default=get_env_variable(arg, PAIRING_DEFAULTS[arg]), type=int,
+                help='distance allowed between breakpoint calls when pairing breakpoints of this call method')
         elif arg in VALIDATION_DEFAULTS:
             value = VALIDATION_DEFAULTS[arg]
             vtype = type(value) if type(value) != bool else TSV.tsv_boolean
