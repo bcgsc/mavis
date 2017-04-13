@@ -12,6 +12,7 @@ def main(
     flanking_call_distance=DEFAULTS.flanking_call_distance,
     split_call_distance=DEFAULTS.split_call_distance,
     contig_call_distance=DEFAULTS.contig_call_distance,
+    spanning_call_distance=DEFAULTS.spanning_call_distance,
     **kwargs
 ):
     """
@@ -30,7 +31,8 @@ def main(
     DISTANCES = {
         CALL_METHOD.FLANK: flanking_call_distance,
         CALL_METHOD.SPLIT: split_call_distance,
-        CALL_METHOD.CONTIG: contig_call_distance
+        CALL_METHOD.CONTIG: contig_call_distance,
+        CALL_METHOD.SPAN: spanning_call_distance
     }
 
     bpps = []
