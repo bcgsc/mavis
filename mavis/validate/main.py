@@ -14,6 +14,7 @@ from ..annotate.base import BioInterval
 from ..bam.read import get_samtools_version, samtools_v0_sort, samtools_v1_sort
 from ..bam import cigar as cigar_tools
 from ..util import read_inputs, log, output_tabbed_file, filter_on_overlap, write_bed_file, build_batch_id
+from ..util import generate_complete_stamp
 
 VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
 
@@ -51,6 +52,7 @@ def main(
     CONTIG_BLAT_OUTPUT = os.path.join(output, FILENAME_PREFIX + '.contigs.blat_out.pslx')
     IGV_BATCH_FILE = os.path.join(output, FILENAME_PREFIX + '.igv.batch')
     INPUT_BAM_CACHE = BamCache(bam_file, stranded_bam)
+
     if samtools_version is None:
         samtools_version = get_samtools_version()
 
@@ -266,3 +268,5 @@ def main(
         fh.write('load {} name="{}"\n'.format(EVIDENCE_BED, 'evidence windows'))
         fh.write('load {} name="{}"\n'.format(RAW_EVIDENCE_BAM, 'raw evidence'))
         fh.write('load {} name="{} {} input"\n'.format(bam_file, library, protocol))
+
+    generate_complete_stamp(output, log)

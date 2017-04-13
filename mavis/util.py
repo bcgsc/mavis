@@ -134,3 +134,11 @@ def write_bed_file(filename, bed_rows):
     with open(filename, 'w') as fh:
         for bed in bed_rows:
             fh.write('\t'.join([str(c) for c in bed]) + '\n')
+
+
+def generate_complete_stamp(output_dir, log=devnull, prefix='MAVIS.'):
+    stamp = os.path.join(output_dir, str(prefix) + 'COMPLETE')
+    log('complete:', stamp)
+    with open(stamp, 'w') as fh:
+        pass
+    return stamp
