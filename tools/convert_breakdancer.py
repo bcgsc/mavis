@@ -1,7 +1,13 @@
-import sys, os
+import sys
+import os
 import argparse
 import TSV
 from mavis.constants import COLUMNS, sort_columns, ORIENT, STRAND, SVTYPE, PROTOCOL
+from mavis.util import get_version
+
+__version__ = get_version()
+__prog__ = os.path.basename(os.path.realpath(__file__))
+default_version = '1.3.7'
 
 def make_duplicate(output, events):
     """
@@ -21,7 +27,7 @@ def make_duplicate(output, events):
     
     events.append(duplicate)
 
-def make_tsv(bd_list, library_name, output_file):
+def make_tsv(bd_list, library_name, output_file, tool_version):
     """
     Function that parses the breakdancer files and outputs a single
     mavis-compatible file. 
@@ -44,7 +50,7 @@ def make_tsv(bd_list, library_name, output_file):
             output[COLUMNS.break2_strand] = STRAND.NS
             output[COLUMNS.library] = library_name
             output[COLUMNS.protocol] = PROTOCOL.GENOME
-            output[COLUMNS.tools] = 'breakdancer_v1.3.7'
+            output[COLUMNS.tools] = 'breakdancer_v' + tool_version
             output[COLUMNS.stranded] = False
     
             bd_event = row['Type']
@@ -74,7 +80,7 @@ def make_tsv(bd_list, library_name, output_file):
             else:
                 output[COLUMNS.break1_orientation] = ORIENT.NS
                 output[COLUMNS.break2_orientation] = ORIENT.NS
-                output[COLUMNS.opposing_strands] = ORIENT.NS
+                output[COLUMNS.opposing_strands] = False # not sure if this is correct
     
             events.append(output)
 
@@ -89,11 +95,21 @@ def make_tsv(bd_list, library_name, output_file):
             fh.write("\t".join(line) + "\n")
 
 def main():
-    parser = argparse.ArgumentParser(description='Converts breakdancer file(s) to mavis-compatible tab file.')
+    parser = argparse.ArgumentParser(
+            description='Converts breakdancer file(s) to mavis-compatible tab file.',
+            add_help=False)
     required = parser.add_argument_group('Required arguments')
     required.add_argument('-n', '--input', required=True, help='Breakdancer *.max output', nargs='+')
     required.add_argument('-o', '--output', required=True, help='Full name of the converted output file')
-    required.add_argument('-l', '--library', help='The library id for the input bam file.', required=True)
+    required.add_argument('-l', '--library', help='The library id for the input bam file.',
+            required=True)
+
+    optional = parser.add_argument_group('Optional arguments')
+    optional.add_argument('-h', '--help', action='help', help='Show this help message and exit')
+    optional.add_argument('-v', '--version', action='version', version='%(prog)s version ' + __version__,
+            help='outputs version number')
+    optional.add_argument('--tool-version', default=default_version,
+            help='the version of breakdander that was used in the analysis')
 
     args = parser.parse_args()
 
@@ -101,9 +117,9 @@ def main():
         if not os.path.isfile(f):
             print("ERROR: Cannot find file: " + f)
             print("Exiting.")
-            exit()
+            exit(1)
 
-    make_tsv(args.input, args.library, args.output)
+    make_tsv(args.input, args.library, args.output, args.tool_version)
 
 if __name__ == '__main__':
     main()
