@@ -58,7 +58,8 @@ class TestFullPipeline(unittest.TestCase):
             self.assertTrue(glob_exists(temp_output, lib, 'clustering', 'uninformative_clusters.txt'))
             self.assertTrue(glob_exists(temp_output, lib, 'clustering', 'clusters.bed'))
             self.assertTrue(glob_exists(temp_output, lib, 'clustering', 'cluster_assignment.tab'))
-
+            self.assertTrue(glob_exists(temp_output, lib, 'clustering', '*.COMPLETE'))
+            
             # run validation
             self.assertTrue(glob_exists(temp_output, lib, 'validation'))
             qsub = os.path.join(temp_output, lib, 'validation', 'qsub.sh')
@@ -83,7 +84,8 @@ class TestFullPipeline(unittest.TestCase):
                 'validation-passed.tab'
             ]:
                 self.assertTrue(glob_exists(temp_output, lib, 'validation', '*.' + suffix))
-            
+            self.assertTrue(glob_exists(temp_output, lib, 'validation', '*.COMPLETE'))
+
             # run annotation
             self.assertTrue(glob_exists(temp_output, lib, 'annotation'))
             qsub = os.path.join(temp_output, lib, 'annotation', 'qsub.sh')
@@ -98,7 +100,7 @@ class TestFullPipeline(unittest.TestCase):
             self.assertTrue(glob_exists(temp_output, lib, 'annotation', 'drawings'))
             self.assertTrue(glob_exists(temp_output, lib, 'annotation', 'drawings', '*svg', strict=False))
             self.assertTrue(glob_exists(temp_output, lib, 'annotation', 'drawings', '*json', strict=False))
-        
+            self.assertTrue(glob_exists(temp_output, lib, 'annotation', '*.COMPLETE'))
         # now run the pairing
         self.assertTrue(glob_exists(temp_output, 'pairing'))
         qsub = os.path.join(temp_output, 'pairing', 'qsub.sh')
@@ -109,6 +111,7 @@ class TestFullPipeline(unittest.TestCase):
         tail(output)
 
         self.assertTrue(glob_exists(temp_output, 'pairing', 'mavis_paired*.tab'))
+        self.assertTrue(glob_exists(temp_output, 'pairing', '*.COMPLETE'))
 
 
 def tearDownModule():

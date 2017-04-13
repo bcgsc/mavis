@@ -113,6 +113,7 @@ def main_pipeline(args, configs):
             'reference_genome': args.reference_genome_filename,
             'annotations': args.annotations_filename,
             'template_metadata': args.template_metadata_filename,
+            'masking': args.masking_filename,
             'min_orf_size': args.min_orf_size,
             'max_orf_cap': args.max_orf_cap,
             'min_domain_mapping_match': args.min_domain_mapping_match,

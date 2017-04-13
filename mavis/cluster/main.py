@@ -1,10 +1,10 @@
 import os
 import itertools
 from .cluster import cluster_breakpoint_pairs
-from ..constants import COLUMNS, STRAND
+from ..constants import COLUMNS
 from ..interval import Interval
 from .constants import DEFAULTS
-from ..util import read_inputs, output_tabbed_file, write_bed_file
+from ..util import read_inputs, output_tabbed_file, write_bed_file, generate_complete_stamp
 from ..util import build_batch_id, filter_on_overlap, log, mkdirp
 
 
@@ -42,6 +42,7 @@ def main(
     UNINFORM_OUTPUT = os.path.join(output, 'uninformative_clusters.txt')
     CLUSTER_ASSIGN_OUTPUT = os.path.join(output, 'cluster_assignment.tab')
     CLUSTER_BED_OUTPUT = os.path.join(output, 'clusters.bed')
+    COMPLETE_STAMP = os.path.join(output, 'CLUSTERING.COMPLETE')
     split_file_name_func = lambda x: os.path.join(output, '{}-{}.tab'.format(cluster_batch_id, x))
     # load the input files
     all_breakpoint_pairs = read_inputs(
@@ -154,5 +155,6 @@ def main(
         filename = split_file_name_func(i + 1)
         output_files.append(filename)
         output_tabbed_file(pass_clusters[jrange[0]:jrange[1]], filename)
-
+    
+    generate_complete_stamp(output, log)
     return output_files

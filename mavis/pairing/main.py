@@ -3,7 +3,7 @@ import itertools
 from Bio import SeqIO
 from ..constants import PROTOCOL, COLUMNS, CALL_METHOD, SVTYPE, SPLICE_TYPE
 from .constants import DEFAULTS
-from ..util import read_inputs, output_tabbed_file, log
+from ..util import read_inputs, output_tabbed_file, log, generate_complete_stamp
 from . import equivalent_events
 
 
@@ -172,3 +172,4 @@ def main(
         'mavis_paired_{}.tab'.format('_'.join(sorted(list(libraries))))
     )
     output_tabbed_file(bpps, fname)
+    generate_complete_stamp(output, log)

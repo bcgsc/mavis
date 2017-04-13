@@ -7,7 +7,7 @@ from ..illustrate.constants import DiagramSettings
 from ..illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from ..illustrate.diagram import draw_sv_summary_diagram
 from .constants import DEFAULTS
-from ..util import log, build_batch_id, mkdirp, read_inputs
+from ..util import log, build_batch_id, mkdirp, read_inputs, generate_complete_stamp
 
 
 def main(
@@ -69,7 +69,8 @@ def main(
     tabbed_fh = open(TABBED_OUTPUT_FILE, 'w')
     log('opening for write:', FA_OUTPUT_FILE)
     fasta_fh = open(FA_OUTPUT_FILE, 'w')
-
+    
+    errored_out = None
     try:
         total = len(annotations)
         for i, ann in enumerate(annotations):
@@ -177,8 +178,14 @@ def main(
 
             for row in rows:
                 tabbed_fh.write('\t'.join([str(row.get(k, None)) for k in header]) + '\n')
+    except Exception as err:
+        errored_out = err
     finally:
         log('closing:', TABBED_OUTPUT_FILE)
         tabbed_fh.close()
         log('closing:', FA_OUTPUT_FILE)
         fasta_fh.close()
+        if errored_out is None:
+            generate_complete_stamp(output, log)
+        else:
+            log('Error. Annotation is incomplete', errored_out)
