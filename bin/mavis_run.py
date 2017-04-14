@@ -39,7 +39,6 @@ QSUB_HEADER = """#!/bin/bash
 def main_pipeline(args, configs):
     # read the config
     # set up the directory structure and run svmerge
-    annotation_files = []
     annotation_jobs = []
     rand = int(random.random() * math.pow(10, 10))
     for sec in configs:
@@ -109,10 +108,10 @@ def main_pipeline(args, configs):
         # set up the annotations job
         # for all files with the right suffix
         annotation_args = {
-            'output': annotation_output,
             'reference_genome': args.reference_genome_filename,
             'annotations': args.annotations_filename,
             'template_metadata': args.template_metadata_filename,
+            'masking': args.masking_filename,
             'min_orf_size': args.min_orf_size,
             'max_orf_cap': args.max_orf_cap,
             'min_domain_mapping_match': args.min_domain_mapping_match,
@@ -124,20 +123,23 @@ def main_pipeline(args, configs):
         temp.extend(
             ['--{} "{}"'.format(k, v) for k, v in annotation_args.items() if isinstance(v, str) and v is not None])
         annotation_args = temp
-        annotation_args.append('--inputs {}/*{}*{}'.format(
+        annotation_args.append('--inputs {}/{}$SGE_TASK_ID{}'.format(
             validation_output, os.path.basename(merge_file_prefix), VALIDATION_PASS_SUFFIX))
         qsub = os.path.join(annotation_output, 'qsub.sh')
         annotation_jobname = 'annotation_{}_{}_{}'.format(sec.library, sec.protocol, rand)
         annotation_jobs.append(annotation_jobname)
-        annotation_files.append(os.path.join(annotation_output, 'annotations.tab'))
         with open(qsub, 'w') as fh:
             log('writing:', qsub)
             fh.write(
                 QSUB_HEADER.format(
                     queue=args.queue, memory=args.default_memory_gb, name=annotation_jobname, output=annotation_output
                 ) + '\n')
+            fh.write('#$ -t {}-{}\n'.format(1, len(output_files)))
             fh.write('#$ -hold_jid {}\n'.format(validation_jobname))
-            fh.write('{} annotate {}\n'.format(PROGNAME, ' \\\n\t'.join(annotation_args)))
+            fh.write('{} annotate {}'.format(PROGNAME, ' \\\n\t'.join(annotation_args)))
+            fh.write(
+                ' \\\n\t--output {}\n'.format(
+                    os.path.join(annotation_output, os.path.basename(merge_file_prefix) + '$SGE_TASK_ID')))
 
     # set up scripts for the pairing held on all of the annotation jobs
     pairing_output = mkdirp(os.path.join(args.output, 'pairing'))
@@ -151,7 +153,7 @@ def main_pipeline(args, configs):
     )
     temp = ['--{} {}'.format(k, v) for k, v in pairing_args.items() if not isinstance(v, str) and v is not None]
     temp.extend(['--{} "{}"'.format(k, v) for k, v in pairing_args.items() if isinstance(v, str) and v is not None])
-    temp.append('--inputs {}'.format(' '.join(annotation_files)))
+    temp.append('--inputs {}'.format(os.path.join(args.output, '*/annotation/*/annotations.tab')))
     pairing_args = temp
     qsub = os.path.join(pairing_output, 'qsub.sh')
     with open(qsub, 'w') as fh:
@@ -317,6 +319,9 @@ use the -h/--help option
             )
         elif pstep == PIPELINE_STEP.PAIR:
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
+            optional.add_argument(
+                '-f', '--product_sequence_files', nargs='+', help='paths to fasta files with product sequences',
+                required=False, default=[])
             augment_parser(
                 required, optional,
                 ['annotations', 'max_proximity'] +
@@ -369,7 +374,6 @@ use the -h/--help option
             args.reference_genome_filename = args.reference_genome
             args.reference_genome = None
     except AttributeError as err:
-        print(repr(err))
         pass
 
     # masking file

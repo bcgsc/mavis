@@ -14,6 +14,7 @@ from ..annotate.base import BioInterval
 from ..bam.read import get_samtools_version, samtools_v0_sort, samtools_v1_sort
 from ..bam import cigar as cigar_tools
 from ..util import read_inputs, log, output_tabbed_file, filter_on_overlap, write_bed_file, build_batch_id
+from ..util import generate_complete_stamp
 
 VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
 
@@ -51,6 +52,7 @@ def main(
     CONTIG_BLAT_OUTPUT = os.path.join(output, FILENAME_PREFIX + '.contigs.blat_out.pslx')
     IGV_BATCH_FILE = os.path.join(output, FILENAME_PREFIX + '.igv.batch')
     INPUT_BAM_CACHE = BamCache(bam_file, stranded_bam)
+
     if samtools_version is None:
         samtools_version = get_samtools_version()
 
@@ -59,8 +61,10 @@ def main(
 
     split_read_contigs = set()
     chr_to_index = {}
-    bpps = []
-    bpps = read_inputs([input], add={COLUMNS.protocol: protocol, COLUMNS.library: library})
+    bpps = read_inputs(
+        [input], add={COLUMNS.protocol: protocol, COLUMNS.library: library},
+        expand_ns=False, explicit_strand=False
+    )
     evidence_clusters = []
     for bpp in bpps:
         if bpp.data[COLUMNS.protocol] == PROTOCOL.GENOME:
@@ -146,9 +150,14 @@ def main(
         clean_files=False,
         blat_min_percent_of_max_score=kwargs.get(
             'blat_min_percent_of_max_score', DEFAULTS.blat_min_percent_of_max_score),
-        blat_min_identity=kwargs.get('blat_min_identity', DEFAULTS.blat_min_identity),
-        blat_min_query_consumption=kwargs.get(
-            'blat_min_query_consumption', DEFAULTS.blat_min_query_consumption)
+        blat_min_identity=kwargs.get(
+            'blat_min_identity', DEFAULTS.blat_min_identity),
+        contig_aln_min_query_consumption=kwargs.get(
+            'contig_aln_min_query_consumption', DEFAULTS.contig_aln_min_query_consumption),
+        contig_aln_max_event_size=kwargs.get(
+            'contig_aln_max_event_size', DEFAULTS.contig_aln_max_event_size),
+        contig_aln_min_anchor_size=kwargs.get(
+            'contig_aln_min_anchor_size', DEFAULTS.contig_aln_min_anchor_size)
     )
     log('alignment complete')
     event_calls = []
@@ -259,3 +268,5 @@ def main(
         fh.write('load {} name="{}"\n'.format(EVIDENCE_BED, 'evidence windows'))
         fh.write('load {} name="{}"\n'.format(RAW_EVIDENCE_BAM, 'raw evidence'))
         fh.write('load {} name="{} {} input"\n'.format(bam_file, library, protocol))
+
+    generate_complete_stamp(output, log)

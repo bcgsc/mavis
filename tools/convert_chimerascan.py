@@ -1,18 +1,18 @@
-#!/projects/tumour_char/analysis_scripts/python/centos06/anaconda3_v2.3.0/bin/python
 """
 Script for converting Chimerascan output into the MAVIS accepted input format
 """
 
-from __future__ import print_function
-from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, PROTOCOL
-from mavis.breakpoint import Breakpoint, BreakpointPair
 import argparse
-import TSV
-import sys
 import os
+import sys
 import time
+import TSV
 
-__version__ = '0.0.1'
+from mavis.breakpoint import Breakpoint, BreakpointPair
+from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, PROTOCOL
+from mavis.util import get_version
+
+__version__ = get_version()
 __prog__ = os.path.basename(os.path.realpath(__file__))
 
 
@@ -24,18 +24,21 @@ def parse_arguments():
         description='Convert a ChimeraScan bedpe file to the MAVIS input format.',
         add_help=False, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     required = parser.add_argument_group('Required arguments')
-    required.add_argument('-i', '--input_file', required=True,
-                          help="The path to the input ChimeraScan bedpe file")
+    required.add_argument('-n', '--input', required=True,
+                          help="the path to the input ChimeraScan bedpe file")
+    required.add_argument('-o', '--output', help='path to the output file', required=True)
     required.add_argument('-l', '--library', required=True,
                           help="The library id of that was used as input")
 
     optional = parser.add_argument_group('Optional arguemts')
     optional.add_argument('-h', '--help', action='help', help='Show this help message and exit')
-    optional.add_argument('-o', '--output', help="The output file name", default="mavis_chimerascan.tsv")
-    optional.add_argument('-v', '--version',
-                          help='the version of ChimeraScan that was used in the analysis', default='0.4.5')
+    optional.add_argument('-v', '--version', action='version', version='%(prog)s version ' + __version__,
+        help='outputs the version number')
+    optional.add_argument('--tool-version', help='the version of ChimeraScan that was used in the analysis',
+                          default='0.4.5')
     optional.add_argument('--no-filter', action='store_true', default=False,
                           help='turn off filtering of events that are in the "MT" and "GL" chromosomes')
+
     args = parser.parse_args()
     return args
 
@@ -89,8 +92,8 @@ def load_bedpe(input_bedpe, library_name, version, filter_event=True):
 
         output[COLUMNS.protocol] = PROTOCOL.TRANS  # Chimerascan is assumed to only be run on transcriptomes
         output[COLUMNS.library] = library_name
-        output[COLUMNS.tools] = "ChimeraScan_v"+version
-        evidence = "total_spanning_frags:{}".format(row['spanning_frags'])
+        output[COLUMNS.tools] = 'ChimeraScan_v{0}'.format(version)
+        evidence = "total_spanning_frags:{0}".format(row['spanning_frags'])
         output['chimerascan_evidence'] = evidence
         output[COLUMNS.stranded] = False
         bpp = BreakpointPair(
@@ -121,26 +124,27 @@ def write_output(events, output_file_name):
     elements = sort_columns(events[0].keys())
     header = "\t".join(elements)
     with open(output_file_name, 'w') as fh:
-        fh.write('## {} v{}\n'.format(__prog__, __version__))
-        fh.write('## inputs: {}\n'.format(" ".join(sys.argv)))
-        fh.write('## file generated on {}\n'.format(time.strftime('%B %d, %Y')))
+        fh.write('## {0} {1}\n'.format(__prog__, __version__))
+        fh.write('## inputs: {0}\n'.format(" ".join(sys.argv)))
+        fh.write('## file generated on {0}\n'.format(time.strftime('%B %d, %Y')))
         fh.write(header + "\n")
         for event in events:
             line = []
             for element in elements:
                 line.append(str(event[element]))
             fh.write("\t".join(line) + "\n")
-    print("Wrote {} gene fusion events to {}".format(len(events), output_file_name))
+    print("Wrote {0} gene fusion events to {1}".format(len(events), output_file_name))
 
 
 def main():
     args = parse_arguments()
 
-    if os.path.isfile(args.input_file):
-        output = load_bedpe(args.input_file, args.library, args.version, not args.no_filter)
+    if os.path.isfile(args.input):
+        output = load_bedpe(args.input, args.library, args.tool_version, not args.no_filter)
         write_output(output, args.output)
     else:
-        print("ERROR: Cannot find file: " + args.input_file)
+        print("ERROR: Cannot find file: " + args.input)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

@@ -90,7 +90,7 @@ def filter_on_overlap(bpps, regions_by_reference_name):
     return passed, failed
 
 
-def read_inputs(inputs, force_stranded=False, **kwargs):
+def read_inputs(inputs, **kwargs):
     bpps = []
     kwargs.setdefault('require', [])
     kwargs['require'] = list(set(kwargs['require'] + [COLUMNS.library, COLUMNS.protocol]))
@@ -100,7 +100,7 @@ def read_inputs(inputs, force_stranded=False, **kwargs):
         try:
             log('loading:', finput)
             bpps.extend(read_bpp_from_input_file(
-                finput, force_stranded=force_stranded,
+                finput,
                 **kwargs
             ))
         except EmptyHeaderError:
@@ -134,3 +134,11 @@ def write_bed_file(filename, bed_rows):
     with open(filename, 'w') as fh:
         for bed in bed_rows:
             fh.write('\t'.join([str(c) for c in bed]) + '\n')
+
+
+def generate_complete_stamp(output_dir, log=devnull, prefix='MAVIS.'):
+    stamp = os.path.join(output_dir, str(prefix) + 'COMPLETE')
+    log('complete:', stamp)
+    with open(stamp, 'w') as fh:
+        pass
+    return stamp

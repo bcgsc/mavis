@@ -47,6 +47,9 @@ class EventCall(BreakpointPair):
             untemplated_seq=untemplated_seq,
             data=source_evidence.data
         )
+        if not source_evidence.bam_cache.stranded:
+            self.break1.strand = STRAND.NS
+            self.break2.strand = STRAND.NS
         self.source_evidence = source_evidence
         self.spanning_reads = set()
         self.flanking_pairs = set()

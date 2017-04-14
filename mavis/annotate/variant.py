@@ -760,6 +760,6 @@ def annotate_events(
                 min_domain_mapping_match=min_domain_mapping_match
             )
             ann.fusion = ft
-        except (NotSpecifiedError, AttributeError):
+        except (NotSpecifiedError, AttributeError, NotImplementedError):
             pass
     return results

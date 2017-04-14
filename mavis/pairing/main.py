@@ -3,15 +3,16 @@ import itertools
 from Bio import SeqIO
 from ..constants import PROTOCOL, COLUMNS, CALL_METHOD, SVTYPE, SPLICE_TYPE
 from .constants import DEFAULTS
-from ..util import read_inputs, output_tabbed_file, log
+from ..util import read_inputs, output_tabbed_file, log, generate_complete_stamp
 from . import equivalent_events
 
 
 def main(
-    inputs, output, annotations,
+    inputs, output, annotations, product_sequence_files=None,
     flanking_call_distance=DEFAULTS.flanking_call_distance,
     split_call_distance=DEFAULTS.split_call_distance,
     contig_call_distance=DEFAULTS.contig_call_distance,
+    spanning_call_distance=DEFAULTS.spanning_call_distance,
     **kwargs
 ):
     """
@@ -22,11 +23,16 @@ def main(
         split_call_distance (int): pairing distance for pairing with an event called by :term:`split read`
         contig_call_distance (int): pairing distance for pairing with an event called by contig or :term:`spanning read`
     """
+    if product_sequence_files is None:
+        product_sequence_files = set()
+    else:
+        product_sequence_files = set(product_sequence_files)
     # load the file
     DISTANCES = {
         CALL_METHOD.FLANK: flanking_call_distance,
         CALL_METHOD.SPLIT: split_call_distance,
-        CALL_METHOD.CONTIG: contig_call_distance
+        CALL_METHOD.CONTIG: contig_call_distance,
+        CALL_METHOD.SPAN: spanning_call_distance
     }
 
     bpps = []
@@ -55,92 +61,117 @@ def main(
             COLUMNS.fusion_sequence_fasta_id: None,
             COLUMNS.fusion_sequence_fasta_file: None,
             COLUMNS.fusion_splicing_pattern: None
-        }
+        },
+        explicit_strand=True,
+        expand_ns=False
     ))
     log('read {} breakpoint pairs'.format(len(bpps)))
     libraries = set()
 
-    SEQUENCES = dict()
-    sequence_files = set()
+    product_sequences = dict()
+    # get all sequence ids and all files to read from
     for bpp in bpps:
         if bpp.data[COLUMNS.fusion_sequence_fasta_file]:
-            sequence_files.add(bpp.data[COLUMNS.fusion_sequence_fasta_file])
+            product_sequence_files.add(bpp.data[COLUMNS.fusion_sequence_fasta_file])
+        if bpp.data[COLUMNS.fusion_sequence_fasta_id]:
+            product_sequences[bpp.data[COLUMNS.fusion_sequence_fasta_id]] = None
         libraries.add(bpp.data[COLUMNS.library])
-    log('pairing between', len(libraries), 'libraries')
-    for f in sorted(list(sequence_files)):
-        log('loading:', f)
-        with open(f, 'rU') as fh:
-            temp = SeqIO.to_dict(SeqIO.parse(fh, 'fasta'))
-            for k in temp:
-                if k in SEQUENCES:
-                    raise AssertionError('sequence identifiers are not unique', k)
-            SEQUENCES.update(temp)
-
-    TRANSCRIPTS = dict()
-
+    
+    # load sequences from all files detected
+    log('detected', len(libraries), 'libraries')
+    for fname in sorted(list(product_sequence_files)):
+        log('loading:', fname)
+        try:
+            with open(fname, 'rU') as fh:
+                temp = SeqIO.to_dict(SeqIO.parse(fh, 'fasta'))
+                for fid, fseq in temp.items():
+                    if fid in product_sequences and product_sequences[fid] is not None and \
+                            product_sequences[fid] != fseq:
+                        raise AssertionError('sequence identifiers are not unique', fid, fseq, product_sequences[fid])
+                    product_sequences[fid] = fseq
+        except IOError as err:
+            log('failed for open input file', err)
+    
+    # ensure that all sequences have been found
+    for seqid, seq in product_sequences.items():
+        if seq is None:
+            raise KeyError('failed to find sequence for the product', seqid, seq)
+        product_sequences[seqid] = str(seq.seq)
+    
+    # load all transcripts
+    reference_transcripts = dict()
     for chr, genes in annotations.items():
         for gene in genes:
             for t in gene.transcripts:
-                if t.name in TRANSCRIPTS:
-                    raise AssertionError('transcript is not unique', gene, t)
-                TRANSCRIPTS[t.name] = t
+                if t.name in reference_transcripts:
+                    raise KeyError('transcript name is not unique', gene, t)
+                reference_transcripts[t.name] = t
 
+    # map the calls by library and ensure there are no name/key conflicts
     calls_by_lib = dict()
-    pairkey_bpp_mapping = dict()
-    pairing = dict()
-
+    bpp_by_product_key = dict()
+    pairings = dict()
+    
     for bpp in bpps:
-        lib_key = (bpp.data[COLUMNS.library], bpp.data[COLUMNS.protocol])
-        pair_key = [
+        lib = bpp.data[COLUMNS.library]
+        product_key = '_'.join([str(v) for v in [
             bpp.data[COLUMNS.library],
             bpp.data[COLUMNS.protocol],
             bpp.data[COLUMNS.annotation_id],
             bpp.data[COLUMNS.fusion_splicing_pattern],
             bpp.data[COLUMNS.fusion_cdna_coding_start],
             bpp.data[COLUMNS.fusion_cdna_coding_end]
-        ]
-        pair_key = '_'.join([str(k) for k in pair_key if k is not None])
-        bpp.data[COLUMNS.product_id] = pair_key
-        calls_by_lib.setdefault(lib_key, set())
-        calls_by_lib[lib_key].add(pair_key)
-
-        if pair_key in calls_by_lib:
-            raise KeyError('duplicate bpp is not unique within lib', pair_key, bpp, bpp.data)
-        pairkey_bpp_mapping[pair_key] = bpp
-        pairing[pair_key] = set()
-
+        ]])
+        bpp.data[COLUMNS.product_id] = product_key
+        calls_by_lib.setdefault(lib, set())
+        
+        pairings[product_key] = set()
+        
+        if product_key in calls_by_lib[lib]:
+            raise KeyError('duplicate bpp is not unique within lib', lib, product_key, bpp, bpp.data)
+        else:
+            calls_by_lib[lib].add(product_key)
+        bpp_by_product_key[product_key] = bpp
+    
     # pairwise comparison of breakpoints between all libraries
     for lib1, lib2 in itertools.combinations(calls_by_lib.keys(), 2):
         # for each two libraries pair all calls
-        log(len(calls_by_lib[lib1]) * len(calls_by_lib[lib2]), 'comparison(s) between', lib1, 'and', lib2)
-        for pkey1, pkey2 in itertools.product(calls_by_lib[lib1], calls_by_lib[lib2]):
+        calls1 = calls_by_lib[lib1]
+        calls2 = calls_by_lib[lib2]
+
+        log(len(calls1) * len(calls2), 'comparison(s) between', lib1, 'and', lib2)
+        
+        for product_key1, product_key2 in itertools.product(calls1, calls2):
             if equivalent_events(
-                pairkey_bpp_mapping[pkey1],
-                pairkey_bpp_mapping[pkey2],
+                bpp_by_product_key[product_key1],
+                bpp_by_product_key[product_key2],
                 DISTANCES=DISTANCES,
-                TRANSCRIPTS=TRANSCRIPTS,
-                SEQUENCES=SEQUENCES
+                reference_transcripts=reference_transcripts,
+                product_sequences=product_sequences
             ):
-                pairing[pkey1].add(pkey2)
-                pairing[pkey2].add(pkey1)
+                pairings[product_key1].add(product_key2)
+                pairings[product_key2].add(product_key1)
     
-    for pkey, pairs in pairing.items():
-        bpp = pairkey_bpp_mapping[pkey]
+    for product_key, paired_product_keys in pairings.items():
+        bpp = bpp_by_product_key[product_key]
+        
         # filter any matches where genes match but transcripts do not
         filtered = []
-        for pkey2 in pairs:
-            pair_bpp = pairkey_bpp_mapping[pkey2]
-            if bpp.data[COLUMNS.gene1] and bpp.data[COLUMNS.gene1] == pair_bpp.data[COLUMNS.gene1]:
-                if bpp.data[COLUMNS.transcript1] != pair_bpp.data[COLUMNS.transcript1]:
+        for paired_product_key in paired_product_keys:
+            paired_bpp = bpp_by_product_key[paired_product_key]
+            
+            if bpp.data[COLUMNS.gene1] and bpp.data[COLUMNS.gene1] == paired_bpp.data[COLUMNS.gene1]:
+                if bpp.data[COLUMNS.transcript1] != paired_bpp.data[COLUMNS.transcript1]:
                     continue
-            if bpp.data[COLUMNS.gene2] and bpp.data[COLUMNS.gene2] == pair_bpp.data[COLUMNS.gene2]:
-                if bpp.data[COLUMNS.transcript2] != pair_bpp.data[COLUMNS.transcript2]:
+            if bpp.data[COLUMNS.gene2] and bpp.data[COLUMNS.gene2] == paired_bpp.data[COLUMNS.gene2]:
+                if bpp.data[COLUMNS.transcript2] != paired_bpp.data[COLUMNS.transcript2]:
                     continue
-            filtered.append(pkey2)
+            filtered.append(paired_product_key)
         bpp.data[COLUMNS.pairing] = ';'.join(sorted(filtered))
 
     fname = os.path.join(
         output,
-        'mavis_paired_{}.tab'.format('_'.join(sorted([l for l, p in calls_by_lib])))
+        'mavis_paired_{}.tab'.format('_'.join(sorted(list(libraries))))
     )
     output_tabbed_file(bpps, fname)
+    generate_complete_stamp(output, log)

@@ -21,7 +21,8 @@ class TestModule(unittest.TestCase):
 
     def test_assemble(self):
         sequences = ['ABCD', 'BCDE', 'CDEF', 'ABCDE', 'DEFG']
-        c = assemble(sequences, assembly_min_edge_weight=1, assembly_min_exact_match_to_remap=1)
+        c = assemble(
+            sequences, assembly_min_edge_weight=0, assembly_min_nc_edge_weight=1, assembly_min_exact_match_to_remap=1)
         self.assertEqual(1, len(c))
         self.assertEqual('ABCDEFG', c[0].seq)
         self.assertEqual(5, c[0].remap_score())

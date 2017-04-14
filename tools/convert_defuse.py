@@ -1,28 +1,29 @@
-#!/projects/tumour_char/analysis_scripts/python/centos06/anaconda3_v2.3.0/bin/python
 """
 Script for converting defuse output into the MAVIS accepted input format
 """
 
 import argparse
-import TSV
-import sys
 import os
+import sys
 import time
+import TSV
 import warnings
-from mavis.constants import COLUMNS, sort_columns, ORIENT, STRAND, SVTYPE, PROTOCOL
-from mavis.breakpoint import Breakpoint, BreakpointPair
 
-__version__ = '0.0.1'
+from mavis.breakpoint import Breakpoint, BreakpointPair
+from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, PROTOCOL
+from mavis.util import get_version
+
+__version__ = get_version()
 __prog__ = os.path.basename(os.path.realpath(__file__))
 
 
-def make_tsv(patient_id, tsv, library_name, version=None, output_dir=""):
+def make_tsv(tsv, library_name, version, output_file_name, filter_event=True):
     """
     Function to parse the defuse tsv file and output the MAVIS tsv file
     """
     events = []
+    filter_count = 0
     header, rows = TSV.read_file(tsv)
-    output_file_name = output_dir + patient_id + '.defuse_mavis.tsv'
 
     for row in rows:
         output = {}
@@ -35,10 +36,15 @@ def make_tsv(patient_id, tsv, library_name, version=None, output_dir=""):
         output[COLUMNS.break2_chromosome] = row['gene_chromosome2']
         output[COLUMNS.break2_position_start] = output[COLUMNS.break2_position_end] = row['genomic_break_pos2']
 
+        if filter_event and ("GL" in output[COLUMNS.break1_chromosome] + output[COLUMNS.break2_chromosome] or
+                             "MT" in output[COLUMNS.break1_chromosome] + output[COLUMNS.break2_chromosome]):
+            filter_count += 1
+            continue
+
         # use the opposite here since it is based on genes (which act similar to reads) rather than contigs
         output[COLUMNS.opposing_strands] = True if o1 == o2 else False
         output[COLUMNS.library] = library_name
-        output[COLUMNS.tools] = 'deFuse_v{}'.format(version)
+        output[COLUMNS.tools] = 'deFuse_v{0}'.format(version)
         output[COLUMNS.stranded] = False
         output[COLUMNS.protocol] = PROTOCOL.TRANS
         output['defuse_spanning_read_count'] = row['span_count']
@@ -71,57 +77,57 @@ def make_tsv(patient_id, tsv, library_name, version=None, output_dir=""):
                 # ignore insertions as defuse is not expected to report this type of event.
                 if found_event_type == SVTYPE.INS:
                     continue
-                warnings.warn("WARNING: Expected {}, found {}. Will add \"{}\" for the event type".format(
+                warnings.warn("WARNING: Expected {0}, found {1}. Will add \"{2}\" for the event type".format(
                     event_types, event_type, found_event_type))
                 output[COLUMNS.event_type] = found_event_type
                 events.append(output)
         else:
             events.append(output)
 
+    if filter_count > 0:
+        print('{0} events have been filtered'.format(filter_count))
+
     elements = sort_columns(events[0].keys())
     header = "\t".join(elements)
     with open(output_file_name, 'w') as fh:
-        fh.write('## {} v{}\n'.format(__prog__, __version__))
-        fh.write('## inputs: {}\n'.format(" ".join(sys.argv)))
-        fh.write('## file generated on {}\n'.format(time.strftime('%B %d, %Y')))
+        fh.write('## {0} v{1}\n'.format(__prog__, __version__))
+        fh.write('## inputs: {0}\n'.format(" ".join(sys.argv)))
+        fh.write('## file generated on {0}\n'.format(time.strftime('%B %d, %Y')))
         fh.write(header+"\n")
         for event in events:
             line = []
             for element in elements:
                 line.append(str(event[element]))
             fh.write("\t".join(line) + "\n")
-    print("Wrote {} gene fusion events to {}".format(len(events), output_file_name))
+    print("Wrote {0} gene fusion events to {1}".format(len(events), output_file_name))
 
 
-def __main__():
+def main():
     parser = argparse.ArgumentParser(
         description="Pulls gene breakpoint coordinates, strands, and orientations from deFuse result \
 tsv and generates the MAVIS input file",
         add_help=False, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     required = parser.add_argument_group('Required arguments')
-    required.add_argument('-i', '--id', help='The id used in the deFuse run.', type=str, required=True)
-    required.add_argument('-l', '--library_id', help='The library id for the input bam file.', required=True)
-    required.add_argument('path_to_result', type=str,
-                          help='absolute path to results.filtered.tsv from deFuse')
+    required.add_argument('-n', '--input', help='path to the input file to be converted', required=True)
+    required.add_argument('-o', '--output', help='path to the output file', required=True)
+    required.add_argument('-l', '--library', help='The library id for the input bam file.', required=True)
 
     optional = parser.add_argument_group('Optional arguments')
     optional.add_argument('-h', '--help', action='help', help='Show this help message and exit')
-    optional.add_argument('-v', '--version', help='the version of defuse that was used in the analysis',
+    optional.add_argument('-v', '--version', action='version', version='%(prog)s version ' + __version__,
+        help='outputs the version number')
+    optional.add_argument('--tool-version', help='the version of defuse that was used in the analysis',
                           default='0.6.2')
-    optional.add_argument('-o', '--outdir', help='the directory where the output will be placed', default='')
+    optional.add_argument('--no-filter', action='store_true', default=False,
+                          help='turn off filtering of events that are in the "MT" and "GL" chromosomes')
 
     args = parser.parse_args()
 
-    result = args.path_to_result
-    pogid = args.id
-    libraryid = args.library_id
-    outputDir = args.outdir
-    version = args.version
-
-    if os.path.isfile(result):
-        make_tsv(pogid, result, libraryid, version, outputDir)
+    if os.path.isfile(args.input):
+        make_tsv(args.input, args.library, args.tool_version, args.output, not args.no_filter)
     else:
-        print("ERROR: Cannot find file: " + result)
+        print("ERROR: Cannot find file: " + args.input)
+        sys.exit(1)
 
 if __name__ == "__main__":
-    __main__()
+    main()

@@ -1,10 +1,10 @@
 import os
 import itertools
 from .cluster import cluster_breakpoint_pairs
-from ..constants import COLUMNS, STRAND
+from ..constants import COLUMNS
 from ..interval import Interval
 from .constants import DEFAULTS
-from ..util import read_inputs, output_tabbed_file, write_bed_file
+from ..util import read_inputs, output_tabbed_file, write_bed_file, generate_complete_stamp
 from ..util import build_batch_id, filter_on_overlap, log, mkdirp
 
 
@@ -42,25 +42,28 @@ def main(
     UNINFORM_OUTPUT = os.path.join(output, 'uninformative_clusters.txt')
     CLUSTER_ASSIGN_OUTPUT = os.path.join(output, 'cluster_assignment.tab')
     CLUSTER_BED_OUTPUT = os.path.join(output, 'clusters.bed')
+    COMPLETE_STAMP = os.path.join(output, 'CLUSTERING.COMPLETE')
     split_file_name_func = lambda x: os.path.join(output, '{}-{}.tab'.format(cluster_batch_id, x))
     # load the input files
-    temp = read_inputs(
-        inputs, stranded_bam,
+    all_breakpoint_pairs = read_inputs(
+        inputs,
         cast={COLUMNS.tools: lambda x: set(x.split(';')) if x else set()},
-        add={COLUMNS.library: library, COLUMNS.protocol: protocol}
+        add={COLUMNS.library: library, COLUMNS.protocol: protocol},
+        expand_ns=True, explicit_strand=False
     )
-    breakpoint_pairs = []
-    
-    for bpp in temp:
-        if bpp.data[COLUMNS.library] == library and bpp.data[COLUMNS.protocol] == protocol:
-            breakpoint_pairs.append(bpp)
-        if any([
-            not bpp.stranded and bpp.break1.strand != STRAND.NS,
-            not bpp.stranded and bpp.break2.strand != STRAND.NS
-        ]):
-            raise UserWarning('Error in input file. Cannot specify the strand if the pair is not stranded')
+    # ignore other library inputs
+    other_libs = set()
+    unfiltered_breakpoint_pairs = []
+    for bpp in all_breakpoint_pairs:
+        if bpp.library != library:
+            other_libs.add(bpp.library)
+        else:
+            unfiltered_breakpoint_pairs.append(bpp)
+    if len(other_libs) > 0:
+        log('warning: ignoring breakpoints found for other libraries:', sorted([l for l in other_libs]))
+
     # filter by masking file
-    breakpoint_pairs, filtered_bpp = filter_on_overlap(breakpoint_pairs, masking)
+    breakpoint_pairs, filtered_bpp = filter_on_overlap(unfiltered_breakpoint_pairs, masking)
 
     log('computing clusters')
     clusters = cluster_breakpoint_pairs(breakpoint_pairs, r=cluster_radius, k=cluster_clique_size)
@@ -152,5 +155,6 @@ def main(
         filename = split_file_name_func(i + 1)
         output_files.append(filename)
         output_tabbed_file(pass_clusters[jrange[0]:jrange[1]], filename)
-
+    
+    generate_complete_stamp(output, log)
     return output_files
