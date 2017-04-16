@@ -6,20 +6,21 @@ DEFAULTS = MavisNamespace(
     assembly_max_kmer_size=None,
     assembly_max_kmer_strict=True,
     assembly_max_paths=20,
-    assembly_min_nc_edge_weight=4,
     assembly_min_edge_weight=2,
-    assembly_min_remapped_seq=3,
-    assembly_min_remap_coverage=3,
     assembly_min_exact_match_to_remap=4,
+    assembly_min_nc_edge_weight=4,
+    assembly_min_remap_coverage=3,
+    assembly_min_remapped_seq=3,
     assembly_min_tgt_to_exclude_half_map=7,
     assembly_strand_concordance=0.51,
-    blat_min_percent_of_max_score=0.8,
     blat_min_identity=0.9,
-    contig_aln_min_query_consumption=0.7,
-    contig_aln_max_event_size=50,
-    contig_aln_min_anchor_size=50,
+    blat_min_percent_of_max_score=0.8,
     call_error=10,
     consensus_req=3,
+    contig_aln_max_event_size=50,
+    contig_aln_min_anchor_size=50,
+    contig_aln_min_exact_block_event_merge=10,
+    contig_aln_min_query_consumption=0.7,
     fetch_reads_bins=3,
     fetch_reads_limit=3000,
     filter_secondary_alignments=True,
@@ -35,11 +36,12 @@ DEFAULTS = MavisNamespace(
     min_non_target_aligned_split_reads=1,
     min_sample_size_to_apply_percentage=10,
     min_softclipping=6,
+    min_spanning_reads_resolution=3,
     min_splits_reads_resolution=3,
     sc_extension_stop=5,
     stdev_count_abnormal=3,
     strand_determining_read=2,
-    min_spanning_reads_resolution=3
+    outer_window_min_event_size=125
 )
 """:class:`MavisNamespace`: holds the settings for computations with the Evidence objects
 
@@ -155,4 +157,11 @@ DEFAULTS = MavisNamespace(
 
     contig_aln_min_anchor_size
         the minimum number of aligned bases for a contig (M or =) in order to simplify. Do not have to be consecutive.
+
+    contig_aln_min_exact_block_event_merge
+        the minimum number of exact matches in a read cigar string to stop merging on "events". Events meaning 
+        insertions, deletions, and mismatches
+
+    outer_window_min_event_size
+        the minimum size of an event in order for flanking read evidence to be collected
 """
