@@ -506,7 +506,6 @@ def _call_by_flanking_pairs(
             cover2.start, cover2.end, ev.overlapping_transcripts[1]).start
     if first_breakpoint_called is None:
         max_breakpoint_width = ev.max_expected_fragment_size - cover1_length - ev.read_length * 2
-
         if ev.break1.orient == ORIENT.LEFT:
             end = cover1.end + max_breakpoint_width
             try:
@@ -540,7 +539,7 @@ def _call_by_flanking_pairs(
             raise NotSpecifiedError('Cannot call by flanking if orientation was not given')
 
     if second_breakpoint_called is None:
-        max_breakpoint_width = ev.max_expected_fragment_size - len(cover2) - ev.read_length * 2
+        max_breakpoint_width = ev.max_expected_fragment_size - cover2_length - ev.read_length * 2
 
         if ev.break2.orient == ORIENT.LEFT:
             second_breakpoint_called = Breakpoint(
@@ -574,10 +573,11 @@ def _call_by_flanking_pairs(
                     'input breakpoint is incompatible with flanking coverage region', cover2, first_breakpoint_called)
         else:
             raise NotSpecifiedError('Cannot call by flanking if orientation was not given')
-    if first_breakpoint_called > second_breakpoint_called:
+
+    if first_breakpoint_called.chr == second_breakpoint_called.chr and first_breakpoint_called.key > second_breakpoint_called.key:
         raise AssertionError(
-            'input breakpoint is incompatible with flanking coverage region', 
-            second_breakpoint_called, 
+            'input breakpoint is incompatible with flanking coverage region',
+            second_breakpoint_called,
             first_breakpoint_called
         )
     return first_breakpoint_called, second_breakpoint_called

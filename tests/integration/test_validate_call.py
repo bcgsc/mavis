@@ -3,7 +3,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, os.path.dirname(__file__))
 
-from mavis.breakpoint import Breakpoint
+from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.annotate import load_reference_genome, Gene, usTranscript, Transcript
 from mavis.constants import ORIENT, STRAND, CIGAR, PYSAM_READ_FLAGS, SVTYPE, CALL_METHOD
 from mavis.interval import Interval
@@ -917,11 +917,12 @@ class TestCallByFlankingReadsGenome(unittest.TestCase):
             MockRead(reference_start=100, reference_end=120, next_reference_start=200),
             MockRead(reference_start=200, reference_end=220, next_reference_start=100)
         ))
-        b2 = Breakpoint(self.ev_LR.break2.chr, 119, 150, orient=ORIENT.RIGHT)
+        b2 = Breakpoint(self.ev_LR.break2.chr, 121, 150, orient=ORIENT.RIGHT)
         break1, break2 = call._call_by_flanking_pairs(
             self.ev_LR, SVTYPE.INV,
             second_breakpoint_called=b2
         )
+        bpp = BreakpointPair(break1, break2, opposing_strands=False)
         self.assertEqual(b2, break2)
         self.assertEqual(120, break1.start)
         self.assertEqual(149, break1.end)
@@ -950,6 +951,29 @@ class TestCallByFlankingReadsGenome(unittest.TestCase):
         self.assertEqual(b1, break1)
         self.assertEqual(186, break2.start)
         self.assertEqual(201, break2.end)
+
+    def test_call_second__with_first_given_incompatible_error_with_overlap(self):
+        evidence = GenomeEvidence(
+            Breakpoint('1', 2686252, orient=ORIENT.RIGHT),
+            Breakpoint('1', 2686425, 2686667, orient=ORIENT.LEFT),
+            BamCache(MockBamFileHandle()), None,
+            opposing_strands=False,
+            read_length=150,
+            stdev_fragment_size=102,
+            median_fragment_size=431,
+            min_flanking_pairs_resolution=1
+        )
+        evidence.flanking_pairs.add((
+                MockRead(reference_start=2686251, reference_end=2686329, next_reference_start=2686290),
+                MockRead(reference_start=2686290 , reference_end=2686367, next_reference_start=2686251)
+                ))
+        evidence.flanking_pairs.add((
+                MockRead(reference_start=2686218 , reference_end=2686320, next_reference_start=2686240),
+                MockRead(reference_start=2686240 , reference_end=2686345, next_reference_start=2686218 )
+                ))
+        with self.assertRaises(AssertionError):
+            break1, break2 = call._call_by_flanking_pairs(
+                evidence, SVTYPE.DUP, Breakpoint('1',2686471,orient=ORIENT.RIGHT))
 
 
 class TestCallByFlankingReadsTranscriptome(unittest.TestCase):
