@@ -8,4 +8,4 @@ export MAVIS_MIN_CLUSTERS_PER_FILE=30
 export PYTHONUNBUFFERED='True'
 
 #Add paths for samtools, blat and git
-export PATH=/projects/trans_scratch/transabyss/trans-ABySS/v1.4.8:/bin/gsc/software/linux-x86_64-centos6/git-2.12.0/bin/:$PATH
+export PATH=/projects/trans_scratch/transabyss/trans-ABySS/v1.4.10:/gsc/software/linux-x86_64-centos6/git-2.12.0/bin/:$PATH
