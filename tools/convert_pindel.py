@@ -149,7 +149,7 @@ def main():
 
     print("SV length threshold = " + str(args.threshold))
 
-    make_tsv(args.input, args.library, args.output, args.tool_version, args.threshold)
+    make_tsv(args.input, args.library, args.output, args.tool_version, int(args.threshold))
 
 if __name__ == '__main__':
     main()
