@@ -139,8 +139,8 @@ def main(
 
     JOB_SIZE = min_clusters_per_file
     if len(pass_clusters) // min_clusters_per_file > max_files - 1:
-        JOB_SIZE = len(pass_clusters) // max_files
-        assert(len(pass_clusters) // JOB_SIZE == max_files)
+        JOB_SIZE = int(round(len(pass_clusters) / max_files, 0))
+        assert(len(pass_clusters) // JOB_SIZE <= max_files)
 
     bedfile = os.path.join(output, 'clusters.bed')
     write_bed_file(bedfile, itertools.chain.from_iterable([b.get_bed_repesentation() for b in pass_clusters]))
