@@ -2,12 +2,7 @@ import unittest
 from mavis.bam.read import convert_events_to_softclipping
 from mavis.bam.cigar import merge_indels, merge_internal_events
 from mavis.constants import CIGAR, ORIENT
-
-
-class Mock:
-    def __init__(self, **kwargs):
-        for attr, val in kwargs.items():
-            setattr(self, attr, val)
+from .mock import Mock
 
 
 class TestConvertEventsToSoftclipping(unittest.TestCase):
