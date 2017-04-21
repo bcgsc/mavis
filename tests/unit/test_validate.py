@@ -1,45 +1,7 @@
 import unittest
-from mavis.validate.call import _call_by_flanking_pairs, _call_interval_by_flanking_coverage
-from mavis.constants import STRAND, SVTYPE, PROTOCOL, ORIENT
-from .mock import Mock, MockFunction
-from mavis.breakpoint import Breakpoint
-
-# evidence req
-#   compute_fragment_size
-#   max_expected_fragment_size
-#   min_flanking_pairs_resolution
-#   read_length 
-#   decide_sequenced_strand
-#   compute_exonic_distance
-#   overlapping_transcripts
-#   break1 orient chr
-#   break2 orient chr
-#   interchromosomal
-
-# read req
-#   reference_start
-#   reference_end
-#   next_reference_start
-
-# breakpoint req
-#   chr
-#   orient
-"""
-self.ev = Mock(
-    compute_fragment_size=MockFunction(1),
-    max_expected_fragment_size=500,
-    min_flanking_pairs_resolution=1,
-    read_length=50,
-    decide_sequenced_strand=MockFunction(STRAND.POS),
-    overlapping_transcripts=(None, None),
-    interchromosomal=False,
-    flanking_pairs=[],
-    event_type=SVTYPE.INS,
-    protocol=PROTOCOL.GENOME,
-    break1=None,
-    break2=None
-)
-"""
+from mavis.validate.call import _call_interval_by_flanking_coverage
+from mavis.constants import ORIENT
+from .mock import Mock
 
 
 class CallIntervalByFlankingCoverage(unittest.TestCase):
@@ -64,4 +26,3 @@ class CallIntervalByFlankingCoverage(unittest.TestCase):
         i = _call_interval_by_flanking_coverage(Mock(start=150, end=200), ORIENT.RIGHT, 230, 40)
         self.assertEqual(11, i.start)
         self.assertEqual(150, i.end)
-
