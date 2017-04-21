@@ -48,7 +48,7 @@ def main():
         '-v', '--version', action='version', version='%(prog)s version ' + __version__,
         help='outputs the version number')
     optional.add_argument('--stranded', action='store_true', default=False)
-    optional.add_argument('--tool-version', help='the version of defuse that was used in the analysis',
+    optional.add_argument('--tool-version', help='the version of trans abyss that was used in the analysis',
                           default='1.4.10')
     optional.add_argument('--no-filter', action='store_true', default=False,
                           help='turn off filtering of events that are in the "MT" and "GL" chromosomes')
@@ -59,7 +59,7 @@ def main():
 
     if not os.path.exists(args.input):
         print('error: input file {0} does not exist'.format(args.input))
-        sys.exit()
+        sys.exit(1)
     print('reading:', args.input)
     file_type = None
     try:
@@ -102,7 +102,7 @@ def main():
             file_type = 'indels'
         except KeyError:
             print('error: input file {0} does not have the expected columns'.format(args.input))
-            sys.exit()
+            sys.exit(1)
 
     bpps = set()
     filter_count = 0
@@ -119,7 +119,8 @@ def main():
                 if row['chr_start'] == row['chr_end']:
                     row['chr_end'] += 1
             else:
-                sys.exit("Found an unexpected event type in the indel file {}".format(event_type))
+                print("ERROR: Found an unexpected event type in the indel file {}".format(event_type))
+                sys.exit(1)
 
             pos1, pos2 = (row['chr_start'], row['chr_end'])
 

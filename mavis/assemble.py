@@ -300,7 +300,6 @@ def assemble(
         if len(s) < assembly_max_kmer_size:
             continue
         kmers_list = kmers(s, assembly_max_kmer_size)
-        edges = []
         for kmer in kmers_list:
             assembly.add_edge(kmer[:-1], kmer[1:])
     # use the ab min edge weight to remove all low weight edges first

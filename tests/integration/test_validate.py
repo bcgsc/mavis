@@ -49,7 +49,8 @@ class TestFullEvidenceGathering(unittest.TestCase):
             median_fragment_size=380,
             stdev_count_abnormal=3,
             min_flanking_pairs_resolution=3,
-            max_sc_preceeding_anchor=3
+            max_sc_preceeding_anchor=3,
+            outer_window_min_event_size=0
         )
         print(ge.break1.chr, ge.outer_windows[0])
         print(ge.break1.chr, ge.inner_windows[0])
