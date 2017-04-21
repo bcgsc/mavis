@@ -25,10 +25,11 @@ are below
     >>> source venv/bin/activate
     (venv) >>>
 
-Install the MAVIS python package
+Install the MAVIS python package (currently need to use pip as well due to dependencies stored in svn)
 
 .. code-block:: bash
     
+    (venv) >>> pip install -r requirements.txt
     (venv) >>> python setup.py develop
 
 Run the unit tests and compute code coverage
