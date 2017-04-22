@@ -20,6 +20,7 @@ import os
 import TSV
 from .constants import *
 from .bam import cigar as cigar_tools
+from .bam.cigar import QUERY_ALIGNED_STATES
 from .bam import read as read_tools
 from .interval import Interval
 from .error import InvalidRearrangement
@@ -41,6 +42,12 @@ class BlatAlignedSegment(pysam.AlignedSegment):
         else:
             self._reference_name = reference_name
         self.blat_score = blat_score
+    
+    def __repr__(self):
+        return '{}({}:{}, {}, {})'.format(
+            self.__class__.__name__, self.reference_name, self.reference_start,
+            self.cigar, self.query_sequence
+        )
 
     def __copy__(self):
         cp = BlatAlignedSegment(self.reference_name, self.blat_score)
@@ -239,12 +246,6 @@ class Blat:
         reference_sequence = reference_genome[row['tname']].seq if reference_genome else None
         query_ranges = [Interval(x, x + y - 1) for x, y in zip(row['qstarts'], row['block_sizes'])]
         ref_ranges = [Interval(x, x + y - 1) for x, y in zip(row['tstarts'], row['block_sizes'])]
-        seq = ''
-        cigar = []
-        #print(query_ranges, ref_ranges)
-        #print([query_sequence[q.start:q.end + 1] for q in query_ranges])
-        #print('ref', [str(reference_sequence[r.start:r.end + 1]) for r in ref_ranges])
-        #print('ref 0-20', reference_sequence[0:20])
         # try extending by consuming from the next aligned portion
         if reference_sequence:
             i = 0
@@ -283,6 +284,8 @@ class Blat:
                 i = n
             query_ranges = new_query_ranges
             ref_ranges = new_ref_ranges
+        seq = ''
+        cigar = []
         for i in range(0, len(query_ranges)):
             rcurr = ref_ranges[i]
             qcurr = query_ranges[i]
@@ -334,7 +337,7 @@ class Blat:
         read.mapping_quality = NA_MAPPING_QUALITY
         if row['strand'] == STRAND.NEG:
             read.flag = read.flag | PYSAM_READ_FLAGS.REVERSE
-            #read.cigar = read.cigar[::-1] # DON't REVERSE b/c blat reports on the positive strand already
+            # read.cigar = read.cigar[::-1] # DON't REVERSE b/c blat reports on the positive strand already
         if read.query_sequence != row['qseq_full'] and read.query_sequence != reverse_complement(row['qseq_full']):
             raise AssertionError(
                 'read sequence should reproduce input sequence',
@@ -343,6 +346,13 @@ class Blat:
                 row['qseq_full'],
                 reverse_complement(row['qseq_full'])
             )
+        qcons = sum([v for c, v in read.cigar if c in QUERY_ALIGNED_STATES])
+        assert(len(read.query_sequence) == qcons)
+        try:
+            read.query_coverage_interval()
+        except (AttributeError, ValueError) as err:
+            print(row)
+            raise err
         return read
 
 
@@ -371,6 +381,11 @@ def paired_alignment_score(read1, read2=None):
 def select_paired_alignments(
     bpp, aligned_contigs, min_query_consumption, min_extend_overlap, max_event_size, min_anchor_size
 ):
+    """
+    give a breakpoint pair and a set of alignments for contigs associated with the given pair,
+    alignments are paired (some events cannot be represented with a single bamfile alignment)
+    and the most appropriate alignments supporting the breakpoint pair are selected and returned
+    """
     # now for each bpp assign an alignment to each contig
     putative_alignments = []
     putative_event_types = set(bpp.putative_event_types())
@@ -413,7 +428,6 @@ def select_paired_alignments(
 
         if read1.reference_name != bpp.break1.chr or read2.reference_name != bpp.break2.chr:
             continue
-
         read1 = read_tools.convert_events_to_softclipping(
             read1, bpp.break1.orient, max_event_size=max_event_size, min_anchor_size=min_anchor_size)
         read2 = read_tools.convert_events_to_softclipping(
@@ -526,7 +540,6 @@ def blat_contigs(
         # call the blat subprocess
         # will raise subprocess.CalledProcessError if non-zero exit status
         # parameters from https://genome.ucsc.edu/FAQ/FAQblat.html#blat4
-        # print(["blat", blat_2bit_reference, fasta_name, psl.name, '-out=pslx', '-noHead'] + blat_options)
         log(['blat', blat_2bit_reference,
             blat_fa_input_file, blat_pslx_output_file, '-out=pslx', '-noHead'] + blat_options)
         subprocess.check_output([

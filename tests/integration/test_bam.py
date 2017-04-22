@@ -8,10 +8,12 @@ from mavis.annotate import load_reference_genome, load_reference_genes
 import pysam
 import unittest
 import warnings
+import os
 from . import MockRead, MockBamFileHandle
 from . import REFERENCE_GENOME_FILE, TRANSCRIPTOME_BAM_INPUT, FULL_REFERENCE_ANNOTATIONS_FILE_JSON
 from . import BAM_INPUT, FULL_BAM_INPUT
-import shutil
+from .config import samtools_versions
+
 
 REFERENCE_GENOME = None
 
@@ -26,9 +28,11 @@ def setUpModule():
 
 class TestGetSamtoolsVersion(unittest.TestCase):
     
-    @unittest.skipIf(not shutil.which('samtools'), "missing the samtools command")
     def test_get_samtools_version(self):
-        self.assertEqual(3, len(get_samtools_version()))
+        env = os.environ
+        for version, path in samtools_versions.items():
+            env['PATH'] = os.path.dirname(path) + ':' + env['PATH']
+            self.assertEqual(version, get_samtools_version())
 
 
 class TestBamCache(unittest.TestCase):

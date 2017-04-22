@@ -1,6 +1,6 @@
 import unittest
 from mavis.bam.read import convert_events_to_softclipping
-from mavis.bam.cigar import merge_indels, merge_internal_events
+from mavis.bam.cigar import merge_indels, merge_internal_events, QUERY_ALIGNED_STATES
 from mavis.constants import CIGAR, ORIENT
 from .mock import Mock
 
@@ -57,6 +57,17 @@ class TestConvertEventsToSoftclipping(unittest.TestCase):
         
         converted = convert_events_to_softclipping(read, ORIENT.RIGHT, 50, 100)
         self.assertEqual(read.cigar, converted.cigar)
+
+    def test_multiple_events(self):
+        cigar = [
+            (CIGAR.EQ, 18), (CIGAR.X, 1), (CIGAR.EQ, 30), (CIGAR.D, 8146), (CIGAR.EQ, 10), 
+            (CIGAR.D, 62799), (CIGAR.EQ, 28), (CIGAR.D, 2), (CIGAR.EQ, 27), (CIGAR.S, 77)
+        ]
+        l = sum([v for c, v in cigar if c in QUERY_ALIGNED_STATES])
+        read = Mock(cigar=cigar, query_sequence=('N' * l), reference_start=1000)
+        converted = convert_events_to_softclipping(read, ORIENT.RIGHT, 50, 50)
+        exp = [(CIGAR.S, 59), (CIGAR.EQ, 28), (CIGAR.D, 2), (CIGAR.EQ, 27), (CIGAR.S, 77)]
+        self.assertEqual(exp, converted.cigar)
 
 
 class TestMergeIndels(unittest.TestCase):
@@ -134,3 +145,11 @@ class TestMergeInternalEvents(unittest.TestCase):
         c = [(CIGAR.EQ, 10), (CIGAR.X, 5), (CIGAR.EQ, 10)]
 
         self.assertEqual(c, merge_internal_events(c, 10))
+
+    def multiple_events(self):
+        pass
+        c = [
+            (CIGAR.EQ, 18), (CIGAR.X, 1), (CIGAR.EQ, 30), (CIGAR.D, 8146), (CIGAR.EQ, 10), 
+            (CIGAR.D, 62799), (CIGAR.EQ, 28), (CIGAR.D, 2), (CIGAR.EQ, 27), (CIGAR.S, 77)
+        ]
+        exp = []

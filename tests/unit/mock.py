@@ -21,3 +21,24 @@ class MockFunction:
 
     def __call__(self, *pos, **kwargs):
         return self.return_value
+
+
+class MockLongString:
+    def __init__(self, string, offset):
+        self.string = string
+        self.offset = offset
+
+    def __len__(self):
+        return len(self.string) + self.offset
+
+    def __getitem__(self, index):
+        if not isinstance(index, slice):
+            index = slice(index, index + 1)
+        index = slice(
+            index.start - self.offset,
+            index.stop - self.offset,
+            index.step)
+        if index.start < 0:
+            raise NotImplementedError('string portion not given')
+        return self.string[index]
+
