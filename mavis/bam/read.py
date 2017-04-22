@@ -1,6 +1,6 @@
 from ..constants import ORIENT, CIGAR, DNA_ALPHABET, STRAND, READ_PAIR_TYPE, SVTYPE
 from . import cigar as cigar_tools
-from .cigar import EVENT_STATES, REFERENCE_ALIGNED_STATES, ALIGNED_STATES
+from .cigar import EVENT_STATES, REFERENCE_ALIGNED_STATES, ALIGNED_STATES, QUERY_ALIGNED_STATES
 import pysam
 import subprocess
 import re
@@ -339,7 +339,7 @@ def convert_events_to_softclipping(read, orientation, max_event_size, min_anchor
                 del adjusted_cigar[-1]
             originally_refaligned = sum([y for x, y in read.cigar if x in REFERENCE_ALIGNED_STATES] + [0])
             refaligned = sum([y for x, y in adjusted_cigar if x in REFERENCE_ALIGNED_STATES] + [0])
-            aligned = sum([y for x, y in adjusted_cigar if x in ALIGNED_STATES] + [0])
+            aligned = sum([y for x, y in adjusted_cigar if x in QUERY_ALIGNED_STATES] + [0])
             sc = len(read.query_sequence) - aligned
             adjusted_cigar = [(CIGAR.S, sc)] + adjusted_cigar[::-1]
             read = copy(read)
