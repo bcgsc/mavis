@@ -421,6 +421,22 @@ def hgvs_standardize_cigar(read, reference_seq):
 
 
 def merge_internal_events(cigar, min_exact_align_between_events=10):
+    """
+    merges events (insertions, deletions, mismatches) within a cigar if they are
+    between exact matches on either side (anchors) and separated by less exact 
+    matches than the given parameter
+    
+    Args:
+        cigar (list): a list of tuples of cigar states and counts
+        min_exact_align_between_events (int): minimum number of consecutive exact matches separating events
+
+    Returns:
+        list: new list of cigar tuples with merged events
+
+    Example:
+        >>> merge_internal_events([(CIGAR.EQ, 10), (CIGAR.X, 1), (CIGAR.EQ, 2), (CIGAR.D, 1), (CIGAR.EQ, 10)])
+        [(CIGAR.EQ, 10), (CIGAR.I, 3), (CIGAR.D, 4), (CIGAR.EQ, 10)]
+    """
     read_cigar = join(cigar)
 
     prefix = []
