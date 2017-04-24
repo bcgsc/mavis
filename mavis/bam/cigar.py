@@ -5,6 +5,11 @@ CIGAR value (i.e. 1 for an insertion), and the second value is the frequency
 """
 from ..constants import CIGAR, DNA_ALPHABET, GAP
 
+EVENT_STATES = {CIGAR.D, CIGAR.I, CIGAR.N, CIGAR.X}
+ALIGNED_STATES = {CIGAR.M, CIGAR.X, CIGAR.EQ}
+REFERENCE_ALIGNED_STATES = ALIGNED_STATES | {CIGAR.D, CIGAR.N}
+QUERY_ALIGNED_STATES = ALIGNED_STATES | {CIGAR.I, CIGAR.S}
+
 
 def recompute_cigar_mismatch(read, ref):
     """
@@ -318,6 +323,22 @@ def smallest_nonoverlapping_repeat(s):
     return s
 
 
+def merge_indels(cigar):
+    new_cigar = cigar[:]
+    for i in range(0, len(new_cigar)):
+        t = i - 1  # for bubbling
+        if new_cigar[i][0] == CIGAR.I:
+            while t >= 0:
+                if new_cigar[t][0] != CIGAR.D:
+                    break
+                t -= 1
+            if t < i - 1:
+                t += 1
+                new_cigar[i], new_cigar[t] = new_cigar[t], new_cigar[i]
+    new_cigar = join(new_cigar)
+    return new_cigar
+
+
 def hgvs_standardize_cigar(read, reference_seq):
     """
     extend alignments as long as matches are possible.
@@ -343,18 +364,8 @@ def hgvs_standardize_cigar(read, reference_seq):
             new_cigar.append((CIGAR.D, cigar[i][1]))
         else:
             new_cigar.append(cigar[i])
-    # now sort any consecutive ins/dels so that that insertions come first
-    for i in range(0, len(new_cigar)):
-        t = i - 1  # for bubbling
-        if new_cigar[i][0] == CIGAR.I:
-            while t >= 0:
-                if new_cigar[t][0] != CIGAR.D:
-                    break
-                t -= 1
-            if t < i - 1:
-                t += 1
-                new_cigar[i], new_cigar[t] = new_cigar[t], new_cigar[i]
-    new_cigar = join(new_cigar)
+    
+    new_cigar = merge_indels(new_cigar)
     # now we need to extend any insertions
     rpos = read.reference_start
     qpos = 0
@@ -407,3 +418,68 @@ def hgvs_standardize_cigar(read, reference_seq):
         cigar.append(new_cigar[i])
         i += 1
     return join(cigar)
+
+
+def merge_internal_events(cigar, min_exact_align_between_events=10):
+    """
+    merges events (insertions, deletions, mismatches) within a cigar if they are
+    between exact matches on either side (anchors) and separated by less exact 
+    matches than the given parameter
+    
+    Args:
+        cigar (list): a list of tuples of cigar states and counts
+        min_exact_align_between_events (int): minimum number of consecutive exact matches separating events
+
+    Returns:
+        list: new list of cigar tuples with merged events
+
+    Example:
+        >>> merge_internal_events([(CIGAR.EQ, 10), (CIGAR.X, 1), (CIGAR.EQ, 2), (CIGAR.D, 1), (CIGAR.EQ, 10)])
+        [(CIGAR.EQ, 10), (CIGAR.I, 3), (CIGAR.D, 4), (CIGAR.EQ, 10)]
+    """
+    read_cigar = join(cigar)
+
+    prefix = []
+    # get the initial anchors
+    for tup in read_cigar:
+        prefix.append(tup)
+        if tup[0] == CIGAR.EQ:
+            break
+    suffix = []
+    for tup in read_cigar[::-1]:
+        suffix.append(tup)
+        if tup[0] == CIGAR.EQ:
+            break  
+    if len(prefix) + len(suffix) >= len(read_cigar):
+        return read_cigar
+    read_cigar = read_cigar[len(prefix):len(suffix) * -1]
+
+    new_cigar = prefix
+
+    for state, count in read_cigar:
+        if state == CIGAR.X:
+            if new_cigar[-1][0] in EVENT_STATES:
+                new_cigar.extend([(CIGAR.I, count), (CIGAR.D, count)])
+            else:
+                new_cigar.append((state, count))
+        elif state in EVENT_STATES:
+            if new_cigar[-1][0] == CIGAR.X:
+                new_cigar[-1] = CIGAR.I, new_cigar[-1][1]
+                new_cigar.append((CIGAR.D, new_cigar[-1][1]))
+            new_cigar.append((state, count))
+        elif state == CIGAR.EQ:
+            if count >= min_exact_align_between_events or new_cigar[-1][0] not in EVENT_STATES:
+                new_cigar.append((state, count))
+            else:
+                if new_cigar[-1][0] == CIGAR.X:
+                    new_cigar[-1] = CIGAR.I, new_cigar[-1][1]
+                    new_cigar.append((CIGAR.D, new_cigar[-1][1]))
+                new_cigar.append((CIGAR.I, count))
+                new_cigar.append((CIGAR.D, count))
+        elif state == CIGAR.M:
+            raise NotImplementedError('match v mismatch must be specified')
+        else:
+            new_cigar.append((state, count))
+
+    new_cigar.extend(suffix)
+    return merge_indels(new_cigar)

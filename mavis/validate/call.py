@@ -435,6 +435,43 @@ def call_events(source_evidence):
     return calls
 
 
+def distance(start, end):
+    return Interval(abs(end - start) + 1)
+
+
+def traverse(start, distance, orientation):
+    if orientation == ORIENT.LEFT:
+        return Interval(start - distance)
+    elif orientation == ORIENT.RIGHT:
+        return Interval(start + distance)
+    else:
+        raise ValueError('invalid value for orientation', orientation)
+
+
+def _call_interval_by_flanking_coverage(
+    coverage, orientation, max_expected_fragment_size, read_length,
+    distance=distance, traverse=traverse
+):
+    if max_expected_fragment_size <= 0 or read_length <= 0:
+        raise ValueError(
+            'max_expected_fragment_size and read_length must be positive integers',
+            max_expected_fragment_size, read_length)
+    
+    coverage_d = distance(coverage.start, coverage.end).start  # minimum distance of the coverage
+    max_interval = max_expected_fragment_size - read_length
+    assert(coverage_d <= max_interval)
+    if orientation == ORIENT.LEFT:
+        s = coverage.end
+        t = traverse(coverage.end, max_interval - coverage_d, ORIENT.RIGHT).end
+        return Interval(s, t)
+    elif orientation == ORIENT.RIGHT:
+        t = coverage.start
+        s = max([1, traverse(coverage.start, max_interval - coverage_d, ORIENT.LEFT).start])
+        return Interval(s, t)
+    else:
+        raise ValueError('orientation must be specific', orientation)
+
+
 def _call_by_flanking_pairs(
         ev, event_type, first_breakpoint_called=None, second_breakpoint_called=None, consumed_evidence=None):
     """
@@ -453,8 +490,6 @@ def _call_by_flanking_pairs(
     # the start/end of the read on the breakpoint side
     first_positions = []
     second_positions = []
-    if first_breakpoint_called and second_breakpoint_called:
-        raise ValueError('do not bother calling when both breakpoints have already been called')
 
     flanking_count = 0
     cover1_reads = []
@@ -482,105 +517,130 @@ def _call_by_flanking_pairs(
 
     cover1 = Interval(min(first_positions), max(first_positions))
     cover2 = Interval(min(second_positions), max(second_positions))
-
     if not ev.interchromosomal and Interval.overlaps(cover1, cover2) and event_type != SVTYPE.DUP:
         raise AssertionError('flanking read coverage overlaps. cannot call by flanking reads', cover1, cover2)
-    if len(cover1) + ev.read_length * 2 > ev.max_expected_fragment_size or \
-            len(cover2) + ev.read_length * 2 > ev.max_expected_fragment_size:
-        raise AssertionError(
-            'Cannot resolve by flanking reads. Coverage interval of flanking reads is larger than '
-            'expected for normal variation. It is likely there are flanking reads for multiple events',
-            cover1, cover2, ev.max_expected_fragment_size
-        )
+
     break1_strand = STRAND.NS
     break2_strand = STRAND.NS
     if ev.stranded:
         break1_strand = ev.decide_sequenced_strand(cover1_reads)
         break2_strand = ev.decide_sequenced_strand(cover2_reads)
-    cover1_length = len(cover1)
-    cover2_length = len(cover2)
-    if ev.protocol == PROTOCOL.TRANS:
-        cover1_length = TranscriptomeEvidence.compute_exonic_distance(
-            cover1.start, cover1.end, ev.overlapping_transcripts[0]).start
-        cover2_length = TranscriptomeEvidence.compute_exonic_distance(
-            cover2.start, cover2.end, ev.overlapping_transcripts[1]).start
-    if first_breakpoint_called is None:
-        max_breakpoint_width = ev.max_expected_fragment_size - cover1_length - ev.read_length * 2
+    
+    distance_func = distance
+    traverse_func = traverse
 
-        if ev.break1.orient == ORIENT.LEFT:
-            end = cover1.end + max_breakpoint_width
-            try:
-                end = ev.traverse_exonic_distance(
-                    cover1.end, max_breakpoint_width, ORIENT.RIGHT, ev.overlapping_transcripts[0]).end
-            except AttributeError:
-                pass
-            if not ev.interchromosomal:
-                end = min([end, cover2.start - 1])
-                if second_breakpoint_called:
-                    end = min([end, second_breakpoint_called.end - 1])
-            try:
-                first_breakpoint_called = Breakpoint(
-                    ev.break1.chr,
-                    cover1.end, end,
-                    orient=ORIENT.LEFT,
-                    strand=break1_strand
-                )
-            except AttributeError:
-                raise AssertionError(
-                    'input breakpoint is incompatible with flanking coverage region', cover1, second_breakpoint_called)
-        elif ev.break1.orient == ORIENT.RIGHT:
-            first_breakpoint_called = Breakpoint(
-                ev.break1.chr,
-                max([cover1.start - max_breakpoint_width, 1]),
-                max([cover1.start, 1]),
-                orient=ORIENT.RIGHT,
-                strand=break1_strand
-            )
-        else:
-            raise NotSpecifiedError('Cannot call by flanking if orientation was not given')
-
-    if second_breakpoint_called is None:
-        max_breakpoint_width = ev.max_expected_fragment_size - len(cover2) - ev.read_length * 2
-
-        if ev.break2.orient == ORIENT.LEFT:
-            second_breakpoint_called = Breakpoint(
-                ev.break2.chr,
-                cover2.end,
-                cover2.end + max_breakpoint_width,
-                orient=ORIENT.LEFT,
-                strand=break2_strand
-            )
-        elif ev.break2.orient == ORIENT.RIGHT:
-            start = max([cover2.start - max_breakpoint_width, 1])
-            try:
-                start = ev.traverse_exonic_distance(
-                    cover2.start, max_breakpoint_width, ORIENT.LEFT, ev.overlapping_transcripts[1]).start
-            except AttributeError:
-                pass
-            if not ev.interchromosomal:
-                start = max([start, cover1.end + 1])
-                if first_breakpoint_called:
-                    start = max([start, first_breakpoint_called.start + 1])
-            try:
-                second_breakpoint_called = Breakpoint(
-                    ev.break2.chr,
-                    start,
-                    cover2.start,
-                    orient=ORIENT.RIGHT,
-                    strand=break2_strand
-                )
-            except AttributeError:
-                raise AssertionError(
-                    'input breakpoint is incompatible with flanking coverage region', cover2, first_breakpoint_called)
-        else:
-            raise NotSpecifiedError('Cannot call by flanking if orientation was not given')
-    if first_breakpoint_called > second_breakpoint_called:
-        raise AssertionError(
-            'input breakpoint is incompatible with flanking coverage region', 
-            second_breakpoint_called, 
-            first_breakpoint_called
+    if first_breakpoint_called is None and second_breakpoint_called is None:
+        # call the first breakpoint
+        if ev.protocol == PROTOCOL.TRANS:
+            distance_func = lambda s, t: TranscriptomeEvidence.compute_exonic_distance(
+                s, t, ev.overlapping_transcripts[0])
+            traverse_func = lambda s, d, o: TranscriptomeEvidence.traverse_exonic_distance(
+                s, d, o, ev.overlapping_transcripts[0])
+        
+        window1 = _call_interval_by_flanking_coverage(
+            cover1, ev.break1.orient, ev.max_expected_fragment_size, ev.read_length,
+            distance=distance_func, traverse=traverse_func
         )
-    return first_breakpoint_called, second_breakpoint_called
+
+        # call the second breakpoint
+        if ev.protocol == PROTOCOL.TRANS:
+            distance_func = lambda s, t: TranscriptomeEvidence.compute_exonic_distance(
+                s, t, ev.overlapping_transcripts[1])
+            traverse_func = lambda s, d, o: TranscriptomeEvidence.traverse_exonic_distance(
+                s, d, o, ev.overlapping_transcripts[1])
+        
+        window2 = _call_interval_by_flanking_coverage(
+            cover2, ev.break2.orient, ev.max_expected_fragment_size, ev.read_length,
+            distance=distance_func, traverse=traverse_func
+        )
+
+        if window1.start > window2.end:
+            raise AssertionError('flanking window regions are incompatible', window1, window2)
+        if not ev.interchromosomal:
+            window1.end = min([window1.end, window2.end, cover2.start - 1])
+            window2.start = max([window1.start, window2.start, cover1.end + 1])
+        first_breakpoint_called = Breakpoint(
+            ev.break1.chr, window1.start, window1.end,
+            orient=ev.break1.orient,
+            strand=break1_strand
+        )
+
+        second_breakpoint_called = Breakpoint(
+            ev.break2.chr, window2.start, window2.end,
+            orient=ev.break2.orient,
+            strand=break2_strand
+        ) 
+        return first_breakpoint_called, second_breakpoint_called
+    
+    elif second_breakpoint_called is None:
+        # does the input breakpoint make sense with the coverage?
+        if any([
+            first_breakpoint_called.orient == ORIENT.LEFT and cover1.end > first_breakpoint_called.end,
+            first_breakpoint_called.orient == ORIENT.RIGHT and cover1.start < first_breakpoint_called.start
+        ]):
+            raise AssertionError(
+                'input breakpoint is incompatible with flanking coverage', cover1, first_breakpoint_called)
+        
+        # call the second breakpoint
+        if ev.protocol == PROTOCOL.TRANS:
+            distance_func = lambda s, t: TranscriptomeEvidence.compute_exonic_distance(
+                s, t, ev.overlapping_transcripts[1])
+            traverse_func = lambda s, d, o: TranscriptomeEvidence.traverse_exonic_distance(
+                s, d, o, ev.overlapping_transcripts[1])
+        
+        window = _call_interval_by_flanking_coverage(
+            cover2, ev.break2.orient, ev.max_expected_fragment_size, ev.read_length,
+            distance=distance_func, traverse=traverse_func
+        )
+        # trim the putative window by the input breakpoint location for intrachromosomal events
+        if not ev.interchromosomal and window.end < first_breakpoint_called.start:
+            raise AssertionError('input breakpoint incompatible with call', window, first_breakpoint_called)
+        elif not ev.interchromosomal:
+            window.start = max([
+                window.start, first_breakpoint_called.start + (0 if event_type == SVTYPE.DUP else 1), cover1.end + 1])
+        second_breakpoint_called = Breakpoint(
+            ev.break2.chr, window.start, window.end,
+            orient=ev.break2.orient,
+            strand=break2_strand
+        )
+        return first_breakpoint_called, second_breakpoint_called
+
+    elif first_breakpoint_called is None:
+        # does the input breakpoint make sense with the coverage?
+        if any([
+            second_breakpoint_called.orient == ORIENT.LEFT and cover2.end > second_breakpoint_called.end,
+            second_breakpoint_called.orient == ORIENT.RIGHT and cover2.start < second_breakpoint_called.start
+        ]):
+            raise AssertionError(
+                'input breakpoint is incompatible with flanking coverage', cover2, second_breakpoint_called)
+
+        # call the first breakpoint
+        if ev.protocol == PROTOCOL.TRANS:
+            distance_func = lambda s, t: TranscriptomeEvidence.compute_exonic_distance(
+                s, t, ev.overlapping_transcripts[0])
+            traverse_func = lambda s, d, o: TranscriptomeEvidence.traverse_exonic_distance(
+                s, d, o, ev.overlapping_transcripts[0])
+        
+        window = _call_interval_by_flanking_coverage(
+            cover1, ev.break1.orient, ev.max_expected_fragment_size, ev.read_length,
+            distance=distance_func, traverse=traverse_func
+        )
+        
+        # trim the putative window by the input breakpoint location for intrachromosomal events
+        if not ev.interchromosomal and window.start > second_breakpoint_called.end:
+            raise AssertionError('input breakpoint incompatible with call', window, second_breakpoint_called)
+        elif not ev.interchromosomal:
+            window.end = min([
+                window.end, second_breakpoint_called.end - (0 if event_type == SVTYPE.DUP else 1), cover2.start - 1])
+        
+        first_breakpoint_called = Breakpoint(
+            ev.break1.chr, window.start, window.end,
+            orient=ev.break1.orient,
+            strand=break1_strand
+        )
+        return first_breakpoint_called, second_breakpoint_called
+    else:
+        raise ValueError('cannot input both breakpoints')
 
 
 def _call_by_supporting_reads(ev, event_type, consumed_evidence=None):

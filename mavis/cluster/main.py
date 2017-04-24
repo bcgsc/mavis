@@ -41,8 +41,7 @@ def main(
     cluster_batch_id = build_batch_id(prefix='cluster-')
     UNINFORM_OUTPUT = os.path.join(output, 'uninformative_clusters.txt')
     CLUSTER_ASSIGN_OUTPUT = os.path.join(output, 'cluster_assignment.tab')
-    CLUSTER_BED_OUTPUT = os.path.join(output, 'clusters.bed')
-    COMPLETE_STAMP = os.path.join(output, 'CLUSTERING.COMPLETE')
+    # TODO: CLUSTER_BED_OUTPUT = os.path.join(output, 'clusters.bed')
     split_file_name_func = lambda x: os.path.join(output, '{}-{}.tab'.format(cluster_batch_id, x))
     # load the input files
     all_breakpoint_pairs = read_inputs(
@@ -140,8 +139,8 @@ def main(
 
     JOB_SIZE = min_clusters_per_file
     if len(pass_clusters) // min_clusters_per_file > max_files - 1:
-        JOB_SIZE = len(pass_clusters) // max_files
-        assert(len(pass_clusters) // JOB_SIZE == max_files)
+        JOB_SIZE = int(round(len(pass_clusters) / max_files, 0))
+        assert(len(pass_clusters) // JOB_SIZE <= max_files)
 
     bedfile = os.path.join(output, 'clusters.bed')
     write_bed_file(bedfile, itertools.chain.from_iterable([b.get_bed_repesentation() for b in pass_clusters]))

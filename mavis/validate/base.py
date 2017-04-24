@@ -17,10 +17,13 @@ class Evidence(BreakpointPair):
 
         see :ref:`theory - calculating the evidence window <theory-calculating-the-evidence-window>`
         """
-        try:
-            return self.outer_windows[0]
-        except AttributeError:
-            raise NotImplementedError('abstract property must be overridden')
+        if self.collect_from_outer_window():
+            try:
+                return self.outer_windows[0]
+            except AttributeError:
+                raise NotImplementedError('abstract property must be overridden')
+        else:
+            return self.inner_window1
 
     @property
     def outer_window2(self):
@@ -29,10 +32,13 @@ class Evidence(BreakpointPair):
 
         see :ref:`theory - calculating the evidence window <theory-calculating-the-evidence-window>`
         """
-        try:
-            return self.outer_windows[1]
-        except AttributeError:
-            raise NotImplementedError('abstract property must be overridden')
+        if self.collect_from_outer_window():
+            try:
+                return self.outer_windows[1]
+            except AttributeError:
+                raise NotImplementedError('abstract property must be overridden')
+        else:
+            return self.inner_window2
 
     @property
     def inner_window1(self):
@@ -147,6 +153,21 @@ class Evidence(BreakpointPair):
         except:
             pass
 
+    def collect_from_outer_window(self):
+        """
+        determines if evidence should be collected from the outer window (looking for flanking evidence)
+        or should be limited to the inner window (split/spanning/contig only)
+
+        Returns:
+            bool: True or False
+        """
+        if self.interchromosomal:
+            return True
+        elif len(self.break1 | self.break2) >= self.outer_window_min_event_size:
+            return True
+        else:
+            return False
+    
     def standardize_read(self, read):
         # recomputing to standardize b/c split reads can be used to call breakpoints exactly
         read.set_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR, 1, value_type='i')
@@ -161,10 +182,11 @@ class Evidence(BreakpointPair):
         except AttributeError:
             pass
         read.cigar = cigar_tools.join(c)
+        
+        # makes sure all insertions are called as far 'right' as possible
         read.cigar = cigar_tools.hgvs_standardize_cigar(
             read, self.REFERENCE_GENOME[self.bam_cache.get_read_reference_name(read)].seq)
         read.reference_start = read.reference_start + prefix
-        # now shift any indel portions
 
         return read
 
@@ -189,7 +211,7 @@ class Evidence(BreakpointPair):
         result.update(self.spanning_reads)
         return result
 
-    def collect_spanning_read(self, read):  # TODO
+    def collect_spanning_read(self, read):
         """
         spanning read: a read covering BOTH breakpoints
 

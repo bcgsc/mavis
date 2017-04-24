@@ -239,7 +239,7 @@ def main(
     # now sort the contig bam
     sort = re.sub('.bam$', '.sorted.bam', CONTIG_BAM)
     log('sorting the bam file:', CONTIG_BAM)
-    if samtools_version[0] < 1:
+    if samtools_version <= (1, 2, 0):
         subprocess.call(samtools_v0_sort(CONTIG_BAM, sort), shell=True)
     else:
         subprocess.call(samtools_v1_sort(CONTIG_BAM, sort), shell=True)
@@ -250,7 +250,7 @@ def main(
     # then sort the evidence bam file
     sort = re.sub('.bam$', '.sorted.bam', RAW_EVIDENCE_BAM)
     log('sorting the bam file:', RAW_EVIDENCE_BAM)
-    if samtools_version[0] < 1:
+    if samtools_version <= (1, 2, 0):
         subprocess.call(samtools_v0_sort(RAW_EVIDENCE_BAM, sort), shell=True)
     else:
         subprocess.call(samtools_v1_sort(RAW_EVIDENCE_BAM, sort), shell=True)
@@ -269,4 +269,4 @@ def main(
         fh.write('load {} name="{}"\n'.format(RAW_EVIDENCE_BAM, 'raw evidence'))
         fh.write('load {} name="{} {} input"\n'.format(bam_file, library, protocol))
 
-    generate_complete_stamp(output, log)
+    generate_complete_stamp(output, log, prefix=FILENAME_PREFIX + '.')

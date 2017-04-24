@@ -3,10 +3,9 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, os.path.dirname(__file__))
 
-from mavis.breakpoint import Breakpoint
-from mavis.annotate import load_reference_genome, Gene, usTranscript, Transcript
+from mavis.breakpoint import Breakpoint, BreakpointPair
+from mavis.annotate import load_reference_genome, usTranscript
 from mavis.constants import ORIENT, STRAND, CIGAR, PYSAM_READ_FLAGS, SVTYPE, CALL_METHOD
-from mavis.interval import Interval
 from mavis.bam.cache import BamCache
 from mavis.bam.read import sequenced_strand
 from . import MockRead, mock_read_pair, MockContig
@@ -397,11 +396,11 @@ class TestEvidenceConsumption(unittest.TestCase):
         self.assertEqual(501, events[1].break2.start)
         self.assertEqual(('split reads', 'flanking reads'), events[2].call_method)
         self.assertEqual(120, events[2].break1.start)
-        self.assertEqual(691, events[2].break2.start)
+        self.assertEqual(591, events[2].break2.start)
         self.assertEqual(806, events[2].break2.end)
         self.assertEqual(('flanking reads', 'split reads'), events[3].call_method)
         self.assertEqual(90, events[3].break1.start)
-        self.assertEqual(199, events[3].break1.end)
+        self.assertEqual(299, events[3].break1.end)
         self.assertEqual(501, events[3].break2.start)
         self.assertEqual(('split reads', 'split reads'), events[4].call_method)
         self.assertEqual(120, events[4].break1.start)
@@ -540,7 +539,7 @@ class TestEvidenceConsumption(unittest.TestCase):
         self.assertEqual(170, events[0].break1.start)
         self.assertEqual(170, events[0].break1.end)
         self.assertEqual(('split reads', 'flanking reads'), events[0].call_method)
-        self.assertEqual(756, events[0].break2.start)
+        self.assertEqual(656, events[0].break2.start)
         self.assertEqual(886, events[0].break2.end)
         raise unittest.SkipTest('TODO')
 
@@ -560,9 +559,9 @@ class TestEvidenceConsumption(unittest.TestCase):
             print(ev, ev.event_type, ev.call_method)
         self.assertEqual(1, len(events))
         self.assertEqual(140, events[0].break1.start)
-        self.assertEqual(192, events[0].break1.end)
+        self.assertEqual(292, events[0].break1.end)
         self.assertEqual(('flanking reads', 'flanking reads'), events[0].call_method)
-        self.assertEqual(756, events[0].break2.start)
+        self.assertEqual(656, events[0].break2.start)
         self.assertEqual(886, events[0].break2.end)
 
 
@@ -597,7 +596,7 @@ class TestCallBySupportingReads(unittest.TestCase):
     def test_empty(self):
         with self.assertRaises(UserWarning):
             break1, break2 = call._call_by_supporting_reads(self.ev, SVTYPE.INV)[0]
-    
+
     def test_call_duplication_by_split_reads_error(self):
         self.dup.split_reads[0].add(
             MockRead(query_name='t1', reference_start=30, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 20)])
@@ -661,7 +660,7 @@ class TestCallBySupportingReads(unittest.TestCase):
 
         self.assertEqual(101, break1.start)
         self.assertEqual(101, break1.end)
-        self.assertEqual(451, break2.start)
+        self.assertEqual(411, break2.start)
         self.assertEqual(506, break2.end)
 
     def test_split_flanking_read(self):
@@ -674,7 +673,7 @@ class TestCallBySupportingReads(unittest.TestCase):
         ))
         break1, break2 = call._call_by_supporting_reads(self.ev, SVTYPE.INV)[0]
 
-        self.assertEqual(71, break1.start)
+        self.assertEqual(31, break1.start)
         self.assertEqual(121, break1.end)
         self.assertEqual(501, break2.start)
         self.assertEqual(501, break2.end)
@@ -699,9 +698,9 @@ class TestCallBySupportingReads(unittest.TestCase):
         break1, break2 = call._call_by_supporting_reads(self.ev, SVTYPE.INV)[0]
         # 120-149  ..... 500-519
         # max frag = 150 - 80 = 70
-        self.assertEqual(82, break1.start)
+        self.assertEqual(42, break1.start)
         self.assertEqual(121, break1.end)
-        self.assertEqual(452, break2.start)  # 70 - 21 = 49
+        self.assertEqual(412, break2.start)  # 70 - 21 = 49
         self.assertEqual(501, break2.end)
 
     def test_call_both_by_split_reads_multiple_calls(self):
@@ -803,7 +802,7 @@ class TestCallByFlankingReadsGenome(unittest.TestCase):
         # --LLL-100------------500-RRR-------
         # max fragment size: 100 + 2 * 25 = 150
         # max distance = 150 - read_length = 100
-        # coverage ranges: 40->80    600->700
+        # coverage ranges: 20->80 (61)   600->675 (76)
         self.assertEqual(150, self.ev_LR.max_expected_fragment_size)
         self.ev_LR.flanking_pairs.add((
             MockRead(reference_start=19, reference_end=60, next_reference_start=599),
@@ -820,8 +819,8 @@ class TestCallByFlankingReadsGenome(unittest.TestCase):
         ))
         break1, break2 = call._call_by_flanking_pairs(self.ev_LR, SVTYPE.DEL)
         self.assertEqual(80, break1.start)
-        self.assertEqual(80 + 39, break1.end)
-        self.assertEqual(600 - 24, break2.start)
+        self.assertEqual(80 + 64, break1.end)
+        self.assertEqual(600 - 49, break2.start)
         self.assertEqual(600, break2.end)
 
     def test_call_both_intrachromosomal_LR_coverage_overlaps_range(self):
@@ -917,11 +916,12 @@ class TestCallByFlankingReadsGenome(unittest.TestCase):
             MockRead(reference_start=100, reference_end=120, next_reference_start=200),
             MockRead(reference_start=200, reference_end=220, next_reference_start=100)
         ))
-        b2 = Breakpoint(self.ev_LR.break2.chr, 119, 150, orient=ORIENT.RIGHT)
+        b2 = Breakpoint(self.ev_LR.break2.chr, 121, 150, orient=ORIENT.RIGHT)
         break1, break2 = call._call_by_flanking_pairs(
             self.ev_LR, SVTYPE.INV,
             second_breakpoint_called=b2
         )
+        bpp = BreakpointPair(break1, break2, opposing_strands=False)
         self.assertEqual(b2, break2)
         self.assertEqual(120, break1.start)
         self.assertEqual(149, break1.end)
@@ -950,6 +950,29 @@ class TestCallByFlankingReadsGenome(unittest.TestCase):
         self.assertEqual(b1, break1)
         self.assertEqual(186, break2.start)
         self.assertEqual(201, break2.end)
+
+    def test_call_second_with_first_given_incompatible_error_with_overlap(self):
+        evidence = GenomeEvidence(
+            Breakpoint('1', 2686252, orient=ORIENT.RIGHT),
+            Breakpoint('1', 2686425, 2686667, orient=ORIENT.LEFT),
+            BamCache(MockBamFileHandle()), None,
+            opposing_strands=False,
+            read_length=150,
+            stdev_fragment_size=102,
+            median_fragment_size=431,
+            min_flanking_pairs_resolution=1
+        )
+        evidence.flanking_pairs.add((
+            MockRead(reference_start=2686251, reference_end=2686329, next_reference_start=2686290),
+            MockRead(reference_start=2686290, reference_end=2686367, next_reference_start=2686251)
+        ))
+        evidence.flanking_pairs.add((
+            MockRead(reference_start=2686218, reference_end=2686320, next_reference_start=2686240),
+            MockRead(reference_start=2686240, reference_end=2686345, next_reference_start=2686218)
+        ))
+        with self.assertRaises(AssertionError):
+            break1, break2 = call._call_by_flanking_pairs(
+                evidence, SVTYPE.DUP, Breakpoint('1', 2686471, orient=ORIENT.RIGHT))
 
 
 class TestCallByFlankingReadsTranscriptome(unittest.TestCase):
@@ -1010,8 +1033,8 @@ class TestCallByFlankingReadsTranscriptome(unittest.TestCase):
         print('mock read pair', *pair)
         evidence.flanking_pairs.add(pair)
         b1, b2 = call._call_by_flanking_pairs(evidence, SVTYPE.DEL)
-        self.assertEqual(Breakpoint('1', 1051, 1250, 'L', '+'), b1)
-        self.assertEqual(Breakpoint('1', 2101, 2300, 'R', '+'), b2)
+        self.assertEqual(Breakpoint('1', 1051, 1300, 'L', '+'), b1)
+        self.assertEqual(Breakpoint('1', 2051, 2300, 'R', '+'), b2)
 
         evidence.flanking_pairs.update({
             mock_read_pair(

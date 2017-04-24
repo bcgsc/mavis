@@ -3,11 +3,12 @@ from mavis.constants import COLUMNS, STRAND, ORIENT, SVTYPE
 from mavis.breakpoint import Breakpoint, BreakpointPair, read_bpp_from_input_file
 from mavis.error import InvalidRearrangement, NotSpecifiedError
 from mavis.interval import Interval
+from .mock import Mock
 
 
-class MockFileHandle:
+class MockFileHandle(Mock):
     def __init__(self, lines):
-        self.lines = lines
+        Mock.__init__(self, lines=lines)
 
     def readlines(self):
         return self.lines

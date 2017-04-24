@@ -1,5 +1,6 @@
 from ..constants import ORIENT, CIGAR, DNA_ALPHABET, STRAND, READ_PAIR_TYPE, SVTYPE
 from . import cigar as cigar_tools
+from .cigar import EVENT_STATES, REFERENCE_ALIGNED_STATES, ALIGNED_STATES, QUERY_ALIGNED_STATES
 import pysam
 import subprocess
 import re
@@ -284,24 +285,23 @@ def orientation_supports_type(read, event_type):
 def convert_events_to_softclipping(read, orientation, max_event_size, min_anchor_size=None):
     """
     given an alignment, simplifies the alignment by grouping everything past the first anchor and including the
-    first event considered too large and un-aligning them turning them into softclipping
+    first event considered too large and unaligning them turning them into softclipping
     
     """
     if min_anchor_size is None:
         min_anchor_size = max_event_size
-    event_states = [CIGAR.D, CIGAR.I, CIGAR.N, CIGAR.X]
-    aligned_states = [CIGAR.M, CIGAR.X, CIGAR.EQ]
-    reference_aligned_states = aligned_states + [CIGAR.D, CIGAR.N]
     
     if orientation == ORIENT.LEFT:
         event_size = 0
         adjusted_cigar = []
         anchor = 0
         for state, count in read.cigar:
-            if anchor < min_anchor_size:
-                if state == CIGAR.EQ or state == CIGAR.M:
+            if state == CIGAR.M:
+                raise NotImplementedError('match v mismatch must be specified')
+            elif anchor < min_anchor_size:
+                if state == CIGAR.EQ:
                     anchor += count
-            elif state in event_states:
+            elif state in EVENT_STATES:
                 event_size += count
                 if event_size > max_event_size:
                     break
@@ -309,9 +309,9 @@ def convert_events_to_softclipping(read, orientation, max_event_size, min_anchor
                 event_size = 0
             adjusted_cigar.append((state, count))
         if event_size > max_event_size:
-            while adjusted_cigar[-1][0] in event_states:
+            while adjusted_cigar[-1][0] in EVENT_STATES:
                 del adjusted_cigar[-1]
-            aligned = sum([y for x, y in adjusted_cigar if x in aligned_states] + [0])
+            aligned = sum([y for x, y in adjusted_cigar if x in ALIGNED_STATES] + [0])
             sc = len(read.query_sequence) - aligned
             adjusted_cigar.append((CIGAR.S, sc))
             read = copy(read)
@@ -322,10 +322,12 @@ def convert_events_to_softclipping(read, orientation, max_event_size, min_anchor
         anchor = 0
         adjusted_cigar = []
         for state, count in read.cigar[::-1]:  # first event from the right
-            if anchor < min_anchor_size:
-                if state == CIGAR.EQ or state == CIGAR.M:
+            if state == CIGAR.M:
+                raise NotImplementedError('match v mismatch must be specified')
+            elif anchor < min_anchor_size:
+                if state == CIGAR.EQ:
                     anchor += count
-            elif state in event_states:
+            elif state in EVENT_STATES:
                 event_size += count
                 if event_size > max_event_size:
                     break
@@ -333,11 +335,11 @@ def convert_events_to_softclipping(read, orientation, max_event_size, min_anchor
                 event_size = 0
             adjusted_cigar.append((state, count))
         if event_size > max_event_size:
-            while adjusted_cigar[-1][0] in event_states:
+            while adjusted_cigar[-1][0] in EVENT_STATES:
                 del adjusted_cigar[-1]
-            originally_refaligned = sum([y for x, y in read.cigar if x in reference_aligned_states] + [0])
-            refaligned = sum([y for x, y in adjusted_cigar if x in reference_aligned_states] + [0])
-            aligned = sum([y for x, y in adjusted_cigar if x in aligned_states] + [0])
+            originally_refaligned = sum([y for x, y in read.cigar if x in REFERENCE_ALIGNED_STATES] + [0])
+            refaligned = sum([y for x, y in adjusted_cigar if x in REFERENCE_ALIGNED_STATES] + [0])
+            aligned = sum([y for x, y in adjusted_cigar if x in QUERY_ALIGNED_STATES] + [0])
             sc = len(read.query_sequence) - aligned
             adjusted_cigar = [(CIGAR.S, sc)] + adjusted_cigar[::-1]
             read = copy(read)
@@ -346,4 +348,5 @@ def convert_events_to_softclipping(read, orientation, max_event_size, min_anchor
     else:
         raise ValueError('orientation must be specified', orientation)
     return read
+
 
