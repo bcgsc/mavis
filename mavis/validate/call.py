@@ -562,13 +562,13 @@ def _call_by_flanking_pairs(
         first_breakpoint_called = Breakpoint(
             ev.break1.chr, window1.start, window1.end,
             orient=ev.break1.orient,
-            strand=ev.break1.strand
+            strand=break1_strand
         )
 
         second_breakpoint_called = Breakpoint(
             ev.break2.chr, window2.start, window2.end,
             orient=ev.break2.orient,
-            strand=ev.break2.strand
+            strand=break2_strand
         ) 
         return first_breakpoint_called, second_breakpoint_called
     
@@ -601,7 +601,7 @@ def _call_by_flanking_pairs(
         second_breakpoint_called = Breakpoint(
             ev.break2.chr, window.start, window.end,
             orient=ev.break2.orient,
-            strand=ev.break2.strand
+            strand=break2_strand
         )
         return first_breakpoint_called, second_breakpoint_called
 
@@ -636,7 +636,7 @@ def _call_by_flanking_pairs(
         first_breakpoint_called = Breakpoint(
             ev.break1.chr, window.start, window.end,
             orient=ev.break1.orient,
-            strand=ev.break1.strand
+            strand=break1_strand
         )
         return first_breakpoint_called, second_breakpoint_called
     else:
