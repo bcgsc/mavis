@@ -18,6 +18,8 @@ DEFAULTS = MavisNamespace(
     call_error=10,
     consensus_req=3,
     contig_aln_max_event_size=50,
+    contig_aln_merge_inner_anchor=20,
+    contig_aln_merge_outer_anchor=15,
     contig_aln_min_anchor_size=50,
     contig_aln_min_exact_block_event_merge=10,
     contig_aln_min_query_consumption=0.7,
@@ -164,4 +166,7 @@ DEFAULTS = MavisNamespace(
 
     outer_window_min_event_size
         the minimum size of an event in order for flanking read evidence to be collected
+
+    contig_aln_merge_inner_anchor
+        the minimum number of consecutive exact match base pairs to not merge events within a contig alignment
 """

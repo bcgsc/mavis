@@ -3,6 +3,8 @@ from ..error import DrawingFitError
 from colour import Color
 import svgwrite
 
+MIN_PIXEL_ACCURACY = 1
+
 
 def dynamic_label_color(color):
     """
@@ -88,7 +90,8 @@ def split_intervals_into_tracks(intervals):
 
 def generate_interval_mapping(
     input_intervals, target_width, ratio, min_width,
-    buffer_length=None, start=None, end=None, min_inter_width=None
+    buffer_length=None, start=None, end=None, min_inter_width=None,
+    MIN_PIXEL_ACCURACY=MIN_PIXEL_ACCURACY
 ):
     min_inter_width = min_width if min_inter_width is None else min_inter_width
     if all([x is not None for x in [start, end, buffer_length]]):
@@ -172,34 +175,32 @@ def generate_interval_mapping(
     genic_width = width - intergenic_width
     intergenic_unit = lambda x: x * intergenic_width / intergenic_length
     genic_unit = lambda x: x * genic_width / genic_length
-
-    assert(
-        genic_width + intergenic_width + len(intervals) * min_width + intermediate_intervals * min_inter_width ==
-        target_width)
     mapping = []
 
-    pos = 1
+    pos = 0
     # do the intergenic region prior to the first genic region
     if start < intervals[0].start:
         ifrom = Interval(start, intervals[0].start - 1)
         s = max(intergenic_unit(len(ifrom)), 0)
         ito = Interval(pos, pos + min_inter_width + s)
         mapping.append((ifrom, ito))
-        pos += ito.length()
+        pos = ito.end
 
     for i, curr in enumerate(intervals):
         if i > 0 and intervals[i - 1].end + 1 < curr.start:  # add between the intervals
+            
             prev = intervals[i - 1]
             ifrom = Interval(prev.end + 1, curr.start - 1)
             s = max(intergenic_unit(len(ifrom)), 0)
             ito = Interval(pos, pos + min_inter_width + s)
             mapping.append((ifrom, ito))
-            pos += ito.length()
+            pos = ito.end
 
         s = max(genic_unit(len(curr)), 0)
+        assert(s >= 0)
         ito = Interval(pos, pos + min_width + s)
         mapping.append((curr, ito))
-        pos += ito.length()
+        pos = ito.end
 
     # now the last intergenic region will make up for the rounding error
     if end > intervals[-1].end:
@@ -207,13 +208,16 @@ def generate_interval_mapping(
         s = max(intergenic_unit(len(ifrom)), 0)
         ito = Interval(pos, pos + min_inter_width + s)
         mapping.append((ifrom, ito))
-        pos += ito.length()
-    mapping[-1][1].end = target_width  # min(int(target_width), mapping[-1][1].end)
+        pos = ito.end
+    #mapping[-1][1].end = target_width  # min(int(target_width), mapping[-1][1].end)
+    if abs(mapping[-1][1].end - target_width) > MIN_PIXEL_ACCURACY:
+        raise AssertionError(
+            'end is off by more than the expected pixel allowable error',
+            mapping[-1][1].end, target_width, MIN_PIXEL_ACCURACY)
     temp = mapping
     mapping = dict()
     for ifrom, ito in temp:
         mapping[ifrom] = ito
-
     # assert that that mapping is correct
     for ifrom in input_intervals:
         ifrom = Interval(ifrom.start, ifrom.end)
@@ -222,12 +226,13 @@ def generate_interval_mapping(
         if ifrom in mapping and ito.end == target_width:
             continue
         n = p1 | p2
-        if n.length() < min_width and abs(n.length() - min_width) > 0.01:  # precision error allowable
+        if n.length() < min_width and abs(n.length() - min_width) > MIN_PIXEL_ACCURACY:  # precision error allowable
             raise AssertionError(
                 'interval mapping should not map any intervals to less than the minimum required width. Interval {}'
                 ' was mapped to a pixel interval of length {} but the minimum width is {}'.format(
                     ifrom, n.length(), min_width),
-                p1, p2, mapping, input_intervals, target_width, ratio, min_inter_width)
+                p1, p2, mapping,
+                input_intervals, target_width, ratio, min_width, buffer_length, start, end, min_inter_width)
     return mapping
 
 

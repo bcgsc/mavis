@@ -379,7 +379,13 @@ def paired_alignment_score(read1, read2=None):
 
 
 def select_paired_alignments(
-    bpp, aligned_contigs, min_query_consumption, min_extend_overlap, max_event_size, min_anchor_size
+    bpp, aligned_contigs, 
+    min_query_consumption, 
+    min_extend_overlap, 
+    max_event_size, 
+    min_anchor_size, 
+    merge_inner_anchor,
+    merge_outer_anchor
 ):
     """
     give a breakpoint pair and a set of alignments for contigs associated with the given pair,
@@ -406,6 +412,7 @@ def select_paired_alignments(
                 ins = sum([v for c, v in read.cigar if c == CIGAR.I] + [0])
                 dln = sum([v for c, v in read.cigar if c in [CIGAR.D, CIGAR.N]] + [0])
                 consume = len(BlatAlignedSegment.query_coverage_interval(read)) / len(read.query_sequence)
+                read.cigar = cigar_tools.merge_internal_events(read.cigar, merge_inner_anchor, merge_outer_anchor)
                 if consume < min_query_consumption:
                     continue
                 
@@ -486,6 +493,8 @@ def blat_contigs(
         contig_aln_min_query_consumption=0.5,
         contig_aln_max_event_size=50,
         contig_aln_min_anchor_size=50,
+        contig_aln_merge_inner_anchor=20,
+        contig_aln_merge_outer_anchor=20,
         is_protein=False,
         min_extend_overlap=10,
         pair_scoring_function=paired_alignment_score,
@@ -591,7 +600,9 @@ def blat_contigs(
                     min_extend_overlap=min_extend_overlap,
                     min_query_consumption=contig_aln_min_query_consumption,
                     min_anchor_size=contig_aln_min_anchor_size,
-                    max_event_size=contig_aln_max_event_size
+                    max_event_size=contig_aln_max_event_size,
+                    merge_inner_anchor=contig_aln_merge_inner_anchor,
+                    merge_outer_anchor=contig_aln_merge_outer_anchor
                 )
                 if len(putative_alignments) == 0:
                     continue

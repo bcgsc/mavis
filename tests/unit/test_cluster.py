@@ -55,6 +55,7 @@ class TestIntervalPair(unittest.TestCase):
         self.assertEqual(4, len(G.edges()))
         cliques = IntervalPair._redundant_maximal_kcliques(G)
         cliques = sorted([sorted(list(c)) for c in cliques])
+        print(cliques)
         self.assertEqual([[a, b], [c, d], [e]], cliques)
         self.assertEqual(3, len(cliques))
 

@@ -86,7 +86,8 @@ def main(
                 tabbed_fh.write('\t'.join([str(c) for c in header]) + '\n')
             log(
                 '({} of {}) current annotation'.format(i + 1, total),
-                ann.data[COLUMNS.annotation_id], ann.transcript1, ann.transcript2, ann.event_type)
+                ann.data[COLUMNS.annotation_id], ann.transcript1, ann.transcript2, ann.event_type,
+                ann.cluster_id)
 
             # try building the fusion product
             rows = []
@@ -191,3 +192,5 @@ def main(
             generate_complete_stamp(output, log)
         else:
             log('Error. Annotation is incomplete', errored_out)
+            raise errored_out
+

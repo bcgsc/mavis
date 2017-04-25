@@ -23,48 +23,6 @@ class TestDraw(unittest.TestCase):
     def setUp(self):
         self.canvas = Drawing(height=100, width=1000)
 
-    def test_generate_interval_mapping(self):
-        x = Interval(150, 1000)
-        y = Interval(1500, 1950)
-        z = Interval(5000, 7500)
-        genic_length = 3803
-        intergenic_length = 6197
-        genic_intervals = 3
-        intergenic_intervals = 5
-        min_inter_width = 10
-        min_width = 20
-
-        temp = generate_interval_mapping(
-            [x, y, z], target_width=1000, ratio=5, min_width=min_width, start=1, end=10000, min_inter_width=min_inter_width)
-        self.assertEqual(7, len(temp.keys()))
-        expt = []
-        st = 1
-        end = st + min_inter_width + 4 - 1
-        expt.append((Interval(1, 149), Interval(st, end)))
-        st = end + 1
-        end = st + min_width  + 168 - 1
-        expt.append((Interval(150, 1000), Interval(st, end)))
-        st = end + 1
-        end  = st + min_inter_width + 12 - 1
-        expt.append((Interval(1001, 1499), Interval(st, end)))
-        st = end + 1
-        end = st + min_width + 89 - 1
-        expt.append((Interval(1500, 1950), Interval(st, end)))
-        st = end + 1
-        end = st + min_inter_width + 74 - 1
-        expt.append((Interval(1951, 4999), Interval(st, end)))
-        st = end + 1
-        end = st + min_width + 493 - 1
-        expt.append((Interval(5000, 7500), Interval(st, end)))
-        st = end + 1
-        end = st + min_inter_width + 61 - 1
-        expt.append((Interval(7501, 10000), Interval(st, 1000)))
-        actual = sorted(temp.items())
-        for e, a in zip(expt, actual):
-            self.assertEqual(e[0], a[0])
-        self.assertAlmostEqual(1, actual[0][1].start)
-        self.assertAlmostEqual(1000, actual[-1][1].end)
-
     def test_generate_interval_mapping_outside_range_error(self):
         temp = [
             Interval(48556470, 48556646),
