@@ -17,6 +17,7 @@ import subprocess
 import warnings
 import re
 import os
+from copy import copy
 import TSV
 from .constants import *
 from .bam import cigar as cigar_tools
@@ -246,6 +247,12 @@ class Blat:
         reference_sequence = reference_genome[row['tname']].seq if reference_genome else None
         query_ranges = [Interval(x, x + y - 1) for x, y in zip(row['qstarts'], row['block_sizes'])]
         ref_ranges = [Interval(x, x + y - 1) for x, y in zip(row['tstarts'], row['block_sizes'])]
+
+        for i in range(1, len(query_ranges)):
+            # first check for blat errors
+            if query_ranges[i].start <= query_ranges[i - 1].end or ref_ranges[i].start <= ref_ranges[i - 1].end:
+                raise AssertionError('block ranges overlap in row', row)
+
         # try extending by consuming from the next aligned portion
         if reference_sequence:
             i = 0
@@ -296,7 +303,6 @@ class Blat:
                 qprev = query_ranges[i - 1]
                 qjump = qcurr[0] - qprev[1]
                 rjump = rcurr[0] - rprev[1]
-
                 if rjump == 1:  # reference is consecutive
                     if qjump > 1:  # query range skipped. insertion to the reference sequence
                         cigar.append((CIGAR.I, qjump - 1))
@@ -379,7 +385,13 @@ def paired_alignment_score(read1, read2=None):
 
 
 def select_paired_alignments(
-    bpp, aligned_contigs, min_query_consumption, min_extend_overlap, max_event_size, min_anchor_size
+    bpp, aligned_contigs, 
+    min_query_consumption, 
+    min_extend_overlap, 
+    max_event_size, 
+    min_anchor_size, 
+    merge_inner_anchor,
+    merge_outer_anchor
 ):
     """
     give a breakpoint pair and a set of alignments for contigs associated with the given pair,
@@ -406,6 +418,16 @@ def select_paired_alignments(
                 ins = sum([v for c, v in read.cigar if c == CIGAR.I] + [0])
                 dln = sum([v for c, v in read.cigar if c in [CIGAR.D, CIGAR.N]] + [0])
                 consume = len(BlatAlignedSegment.query_coverage_interval(read)) / len(read.query_sequence)
+                if read.query_sequence == 'ATAATAACATTTAATTTTAAAGCATGTTTCTACACATAGTTATATGTGTATATGTATTATATATGTATAATTATACGTATATGTATTATATATACGTATAATTATACGTATATTATATATACGTATAATTATACGTATATATGTATTATATATGTATAATTGTATATATTATATATACAATTATATACAAAATGTATATATGTATATATACATATAATATGTATATATACATATAATTATATGTATATATGTATTATACA':
+                    print('select_paired_alignments: single read', merge_inner_anchor, merge_outer_anchor)
+                    print(read)
+                    print(read.cigar)
+                read = copy(read)
+                read.cigar = cigar_tools.merge_internal_events(read.cigar, merge_inner_anchor, merge_outer_anchor)
+                if read.query_sequence == 'ATAATAACATTTAATTTTAAAGCATGTTTCTACACATAGTTATATGTGTATATGTATTATATATGTATAATTATACGTATATGTATTATATATACGTATAATTATACGTATATTATATATACGTATAATTATACGTATATATGTATTATATATGTATAATTGTATATATTATATATACAATTATATACAAAATGTATATATGTATATATACATATAATATGTATATATACATATAATTATATGTATATATGTATTATACA':
+                    print('select_paired_alignments: single read after')
+                    print(read)
+                    print(read.cigar)
                 if consume < min_query_consumption:
                     continue
                 
@@ -425,9 +447,13 @@ def select_paired_alignments(
             read1.reference_name == read2.reference_name and read1.reference_start > read2.reference_start
         ]):
             read1, read2 = read2, read1
-
+        
         if read1.reference_name != bpp.break1.chr or read2.reference_name != bpp.break2.chr:
             continue
+        if read1.query_sequence == 'ATAATAACATTTAATTTTAAAGCATGTTTCTACACATAGTTATATGTGTATATGTATTATATATGTATAATTATACGTATATGTATTATATATACGTATAATTATACGTATATTATATATACGTATAATTATACGTATATATGTATTATATATGTATAATTGTATATATTATATATACAATTATATACAAAATGTATATATGTATATATACATATAATATGTATATATACATATAATTATATGTATATATGTATTATACA':
+            print('select_paired_alignments: paired read1 before', max_event_size, min_anchor_size, bpp.break1.orient)
+            print(read1)
+            print(read1.cigar)
         read1 = read_tools.convert_events_to_softclipping(
             read1, bpp.break1.orient, max_event_size=max_event_size, min_anchor_size=min_anchor_size)
         read2 = read_tools.convert_events_to_softclipping(
@@ -441,6 +467,10 @@ def select_paired_alignments(
         # reads should have unique reference overlap
         if not bpp.interchromosomal and read1.reference_end > read2.reference_end:
             continue
+        if read1.query_sequence == 'ATAATAACATTTAATTTTAAAGCATGTTTCTACACATAGTTATATGTGTATATGTATTATATATGTATAATTATACGTATATGTATTATATATACGTATAATTATACGTATATTATATATACGTATAATTATACGTATATATGTATTATATATGTATAATTGTATATATTATATATACAATTATATACAAAATGTATATATGTATATATACATATAATATGTATATATACATATAATTATATGTATATATGTATTATACA':
+            print('select_paired_alignments: paired read1 after')
+            print(read1)
+            print(read1.cigar)
         # check that the combination extends the amount of the initial query sequence we consume
         query_cover1 = BlatAlignedSegment.query_coverage_interval(read1)
         query_cover2 = BlatAlignedSegment.query_coverage_interval(read2)
@@ -486,6 +516,8 @@ def blat_contigs(
         contig_aln_min_query_consumption=0.5,
         contig_aln_max_event_size=50,
         contig_aln_min_anchor_size=50,
+        contig_aln_merge_inner_anchor=20,
+        contig_aln_merge_outer_anchor=20,
         is_protein=False,
         min_extend_overlap=10,
         pair_scoring_function=paired_alignment_score,
@@ -580,6 +612,8 @@ def blat_contigs(
                 except KeyError as e:
                     warnings.warn(
                         'warning: reference template name not recognized {0}'.format(e))
+                except AssertionError as e:
+                    warnings.warn('warning: invalid blat alignment: {}'.format(e))
             reads_by_query[query_seq] = reads
 
         # now for each evidence assign an alignment to each contig
@@ -591,7 +625,9 @@ def blat_contigs(
                     min_extend_overlap=min_extend_overlap,
                     min_query_consumption=contig_aln_min_query_consumption,
                     min_anchor_size=contig_aln_min_anchor_size,
-                    max_event_size=contig_aln_max_event_size
+                    max_event_size=contig_aln_max_event_size,
+                    merge_inner_anchor=contig_aln_merge_inner_anchor,
+                    merge_outer_anchor=contig_aln_merge_outer_anchor
                 )
                 if len(putative_alignments) == 0:
                     continue

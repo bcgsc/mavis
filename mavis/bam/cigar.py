@@ -420,7 +420,7 @@ def hgvs_standardize_cigar(read, reference_seq):
     return join(cigar)
 
 
-def merge_internal_events(cigar, min_exact_align_between_events=10):
+def merge_internal_events(cigar, inner_anchor=10, outer_anchor=10):
     """
     merges events (insertions, deletions, mismatches) within a cigar if they are
     between exact matches on either side (anchors) and separated by less exact 
@@ -428,7 +428,8 @@ def merge_internal_events(cigar, min_exact_align_between_events=10):
     
     Args:
         cigar (list): a list of tuples of cigar states and counts
-        min_exact_align_between_events (int): minimum number of consecutive exact matches separating events
+        inner_anchor (int): minimum number of consecutive exact matches separating events
+        outer_anchor (int): minimum consecutively aligned exact matches to anchor an end for merging
 
     Returns:
         list: new list of cigar tuples with merged events
@@ -438,22 +439,24 @@ def merge_internal_events(cigar, min_exact_align_between_events=10):
         [(CIGAR.EQ, 10), (CIGAR.I, 3), (CIGAR.D, 4), (CIGAR.EQ, 10)]
     """
     read_cigar = join(cigar)
-
     prefix = []
-    # get the initial anchors
-    for tup in read_cigar:
-        prefix.append(tup)
-        if tup[0] == CIGAR.EQ:
-            break
-    suffix = []
-    for tup in read_cigar[::-1]:
-        suffix.append(tup)
-        if tup[0] == CIGAR.EQ:
-            break  
-    if len(prefix) + len(suffix) >= len(read_cigar):
-        return read_cigar
-    read_cigar = read_cigar[len(prefix):len(suffix) * -1]
+    # get the initial anchors. largest two exact alignments
+    exact_match_pos = []
+    for i, tup in enumerate(read_cigar):
+        if tup[0] == CIGAR.EQ and tup[1] >= outer_anchor:
+            exact_match_pos.append((i, tup[1]))
 
+    if len(exact_match_pos) < 2:
+        return read_cigar
+    
+    exact_match_pos = sorted(exact_match_pos, key=lambda x: (x[1] * -1, x[0]))
+    ppos = exact_match_pos[0][0]
+    prefix = read_cigar[0: ppos + 1]
+    
+    exact_match_pos = sorted(exact_match_pos, key=lambda x: (x[1] * -1, x[0] * -1))
+    spos = exact_match_pos[0][0] if exact_match_pos[0][0] != ppos else exact_match_pos[1][0]
+    suffix = read_cigar[spos:None]
+    read_cigar = read_cigar[len(prefix):len(suffix) * -1]
     new_cigar = prefix
 
     for state, count in read_cigar:
@@ -468,7 +471,7 @@ def merge_internal_events(cigar, min_exact_align_between_events=10):
                 new_cigar.append((CIGAR.D, new_cigar[-1][1]))
             new_cigar.append((state, count))
         elif state == CIGAR.EQ:
-            if count >= min_exact_align_between_events or new_cigar[-1][0] not in EVENT_STATES:
+            if count >= inner_anchor or new_cigar[-1][0] not in EVENT_STATES:
                 new_cigar.append((state, count))
             else:
                 if new_cigar[-1][0] == CIGAR.X:

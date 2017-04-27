@@ -127,14 +127,17 @@ class IntervalPair:
             warnings.warn('k >= 20 is not recommended as the number of combinations increases exponentially')
 
         cliques = []
+        grouped = set()
         for component in nx.connected_components(G):
             comp_cliques = []
             # take an exhaustive approach to finding the possible cliques
-            for ktemp in range(1, k + 1):
-                for putative_kclique in itertools.combinations(component, ktemp):
+            for ktemp in range(2, k + 1):
+                # limit the component to vertices with degree >= k
+                filtered_component = [n for n in component if G.degree(n) >= ktemp - 1]
+                for putative_kclique in itertools.combinations(filtered_component, ktemp):
                     if is_complete(G, putative_kclique):
                         cliques.append(set(putative_kclique))
-
+                        grouped.update(putative_kclique)
         # remove subsets to ensure cliques are maximal (up to k)
         refined_cliques = []
         for i in range(0, len(cliques)):
@@ -145,7 +148,8 @@ class IntervalPair:
                     break
             if not is_subset:
                 refined_cliques.append(cliques[i])
-
+        single_nodes = [{n} for n in G.nodes() if n not in grouped]
+        refined_cliques.extend(single_nodes)
         # calculate the number of cliques any give node is part of
         participation = {}
         for cluster in refined_cliques:
@@ -169,7 +173,6 @@ class IntervalPair:
             for score, cluster in distances:
                 if score > lowest:
                     cluster.remove(node)
-
         for node in G.nodes():
             found = False
             for clique in refined_cliques:

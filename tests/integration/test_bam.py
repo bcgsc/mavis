@@ -134,7 +134,7 @@ class TestModule(unittest.TestCase):
         # GATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG
 
 
-class Testcigar_tools(unittest.TestCase):
+class TestCigarTools(unittest.TestCase):
 
     def test_recompute_cigar_mismatch(self):
         r = MockRead(

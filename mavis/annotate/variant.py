@@ -746,20 +746,19 @@ def annotate_events(
                 proximity=max_proximity
             )
             results.extend(ann)
+            for a in ann:
+                # try building the fusion product
+                try:
+                    ft = FusionTranscript.build(
+                        a, reference_genome,
+                        min_orf_size=min_orf_size,
+                        max_orf_cap=max_orf_cap,
+                        min_domain_mapping_match=min_domain_mapping_match
+                    )
+                    a.fusion = ft
+                except (NotSpecifiedError, AttributeError, NotImplementedError):
+                    pass
             log('generated', len(ann), 'annotations', time_stamp=False)
         except KeyError as err:
             log('generated', 0, 'annotations', repr(err), time_stamp=False)
-
-    for i, ann in enumerate(results):
-        # try building the fusion product
-        try:
-            ft = FusionTranscript.build(
-                ann, reference_genome,
-                min_orf_size=min_orf_size,
-                max_orf_cap=max_orf_cap,
-                min_domain_mapping_match=min_domain_mapping_match
-            )
-            ann.fusion = ft
-        except (NotSpecifiedError, AttributeError, NotImplementedError):
-            pass
     return results
