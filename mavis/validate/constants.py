@@ -21,7 +21,6 @@ DEFAULTS = MavisNamespace(
     contig_aln_merge_inner_anchor=20,
     contig_aln_merge_outer_anchor=15,
     contig_aln_min_anchor_size=50,
-    contig_aln_min_exact_block_event_merge=10,
     contig_aln_min_query_consumption=0.7,
     fetch_reads_bins=3,
     fetch_reads_limit=3000,

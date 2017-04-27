@@ -311,7 +311,7 @@ def convert_events_to_softclipping(read, orientation, max_event_size, min_anchor
         if event_size > max_event_size:
             while adjusted_cigar[-1][0] in EVENT_STATES:
                 del adjusted_cigar[-1]
-            aligned = sum([y for x, y in adjusted_cigar if x in ALIGNED_STATES] + [0])
+            aligned = sum([y for x, y in adjusted_cigar if x in QUERY_ALIGNED_STATES] + [0])
             sc = len(read.query_sequence) - aligned
             adjusted_cigar.append((CIGAR.S, sc))
             read = copy(read)
