@@ -612,6 +612,8 @@ def blat_contigs(
                 except KeyError as e:
                     warnings.warn(
                         'warning: reference template name not recognized {0}'.format(e))
+                except AssertionError as e:
+                    warnings.warn('warning: invalid blat alignment: {}'.format(e))
             reads_by_query[query_seq] = reads
 
         # now for each evidence assign an alignment to each contig
