@@ -69,6 +69,21 @@ class TestConvertEventsToSoftclipping(unittest.TestCase):
         exp = [(CIGAR.S, 59), (CIGAR.EQ, 28), (CIGAR.D, 2), (CIGAR.EQ, 27), (CIGAR.S, 77)]
         self.assertEqual(exp, converted.cigar)
 
+    def test_multiple_left_with_ins(self):
+        cigar = [
+            (4, 94), (7, 1), (8, 1), (7, 10), (8, 1), (7, 4), (1, 2), (7, 40),
+            (1, 1), (2, 714), (7, 7), (1, 38), (7, 1), (8, 1), 
+            (7, 17), (2, 1), (7, 1), (8, 1), (7, 26), (2, 17), (7, 10), (4, 4)
+        ]
+        exp = [
+            (4, 94), (7, 1), (8, 1), (7, 10), (8, 1), (7, 4), (1, 2), (7, 40),
+            (4, 38 + 8 + 20 + 1 + 26 + 10 + 4)
+        ]
+        l = sum([v for c, v in cigar if c in QUERY_ALIGNED_STATES])
+        read = Mock(cigar=cigar, query_sequence=('N' * l), reference_start=1000)
+        converted = convert_events_to_softclipping(read, ORIENT.LEFT, 50, 50)
+        self.assertEqual(exp, converted.cigar)
+
 
 class TestMergeIndels(unittest.TestCase):
     
@@ -146,10 +161,21 @@ class TestMergeInternalEvents(unittest.TestCase):
 
         self.assertEqual(c, merge_internal_events(c, 10))
 
-    def multiple_events(self):
-        pass
+    def test_long_suffix_and_prefix(self):
         c = [
-            (CIGAR.EQ, 18), (CIGAR.X, 1), (CIGAR.EQ, 30), (CIGAR.D, 8146), (CIGAR.EQ, 10), 
-            (CIGAR.D, 62799), (CIGAR.EQ, 28), (CIGAR.D, 2), (CIGAR.EQ, 27), (CIGAR.S, 77)
-        ]
-        exp = []
+            (CIGAR.S, 94), (CIGAR.EQ, 1), (CIGAR.X, 1), (CIGAR.EQ, 10), (CIGAR.X, 1), (CIGAR.EQ, 4), (CIGAR.I, 2),
+            (CIGAR.EQ, 40), 
+            (CIGAR.I, 1), (CIGAR.D, 714), (CIGAR.EQ, 7), (CIGAR.I, 38), (CIGAR.EQ, 1), (CIGAR.X, 1),
+            (CIGAR.EQ, 17), (CIGAR.D, 1), (CIGAR.EQ, 1), (CIGAR.X, 1), 
+            (CIGAR.EQ, 26), (CIGAR.D, 17), (CIGAR.EQ, 10), (CIGAR.S, 4)
+        ] 
+        exp = [
+            (CIGAR.S, 94), (CIGAR.EQ, 1), (CIGAR.X, 1), (CIGAR.EQ, 10), (CIGAR.X, 1), (CIGAR.EQ, 4), (CIGAR.I, 2),
+            (CIGAR.EQ, 40), 
+            (CIGAR.I, 1 + 7 + 38 + 1 + 1 + 17 + 1 + 1), (CIGAR.D, 714 + 7 + 1 + 1 + 17 + 1 + 1 + 1),
+            (CIGAR.EQ, 26), (CIGAR.D, 17), (CIGAR.EQ, 10), (CIGAR.S, 4)
+        ] 
+        actual = merge_internal_events(c, 20, 15)
+        print(c)
+        print(actual)
+        self.assertEqual(exp, actual)

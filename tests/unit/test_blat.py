@@ -47,3 +47,22 @@ class TestConvertPslxToPysam(unittest.TestCase):
         self.assertEqual('17', read.reference_name)
         self.assertEqual(row['qseq_full'], reverse_complement(read.query_sequence))
         self.assertEqual([(CIGAR.S, 62), (CIGAR.EQ, 142)], read.cigar)
+
+    def test_overlapping_blat_blocks_error(self):
+        row = {
+            'strand': '+',
+            'qname': 'seq23',
+            'tname': '7',
+            'block_sizes': [54, 53, 36, 80, 29],
+            'qstarts': [0, 55, 108, 143, 223],
+            'tstarts': [61279112, 61279166, 61397315, 61990208, 62366144],
+            'score': 207,
+            'percent_ident': 91.3,
+            'qseq_full': (
+                'CAAAAGGAAATACCTTCACATAAATTCTAGACGGAAGCAATCTGAGAAACTTTTATTGTGATTTGTGCATTCACTTCACAGAGTTAAAACTTTCTTTTGATT'
+                'GAGCAGTTTGAAACTCTGTTTTTGTAGAATCTGCAAGTGGACATTTGGAGCGCTTTGAGGCCTATGGTGGAAAAGGAAATATCTTCACAGGAAAACTAGATA'
+                'GAAGTATTCTGAGAAACTTCTTTGTGATGTATGCAGTCATATCTCAGA')
+        }
+        cache = Mock(reference_id=MockFunction(6))
+        with self.assertRaises(AssertionError):
+            Blat.pslx_row_to_pysam(row, cache, None)

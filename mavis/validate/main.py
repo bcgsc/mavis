@@ -157,7 +157,11 @@ def main(
         contig_aln_max_event_size=kwargs.get(
             'contig_aln_max_event_size', DEFAULTS.contig_aln_max_event_size),
         contig_aln_min_anchor_size=kwargs.get(
-            'contig_aln_min_anchor_size', DEFAULTS.contig_aln_min_anchor_size)
+            'contig_aln_min_anchor_size', DEFAULTS.contig_aln_min_anchor_size),
+        contig_aln_merge_inner_anchor=kwargs.get(
+            'contig_aln_merge_inner_anchor', DEFAULTS.contig_aln_merge_inner_anchor),
+        contig_aln_merge_outer_anchor=kwargs.get(
+            'contig_aln_merge_outer_anchor', DEFAULTS.contig_aln_merge_outer_anchor)
     )
     log('alignment complete')
     event_calls = []
