@@ -12,6 +12,8 @@ from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from .annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
 from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
+from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
+
 from .bam.stats import compute_genome_bam_stats, compute_transcriptome_bam_stats
 
 ENV_VAR_PREFIX = 'MAVIS_'
@@ -173,6 +175,27 @@ class PairingConfig:
         return result
 
 
+class SummaryConfig:
+    def __init__(
+        self,
+        min_contig_alignment_score=SUMMARY_DEFAULTS.min_contig_alignment_score,
+        min_flanking_pairs=SUMMARY_DEFAULTS.min_flanking_pairs,
+        min_linking_split_reads=SUMMARY_DEFAULTS.min_linking_split_reads,
+        min_spanning_reads=SUMMARY_DEFAULTS.min_spanning_reads,
+        min_split_reads=SUMMARY_DEFAULTS.min_split_reads
+    ):
+        self.min_contig_alignment_score = int(min_contig_alignment_score)
+        self.min_flanking_pairs = int(min_flanking_pairs)
+        self.min_spanning_reads = int(min_spanning_reads)
+        self.min_linking_split_reads = int(min_linking_split_reads)
+        self.min_split_reads = int(min_split_reads)
+
+    def flatten(self):
+        result = {}
+        result.update(self.__dict__)
+        return result
+
+
 def write_config(filename, include_defaults=False, libraries=[], log=devnull):
     config = {}
  
@@ -247,12 +270,13 @@ def read_config(filepath):
     job_sched = JobSchedulingConfig(**(parser['qsub'] if 'qsub' in parser else {}))
     ref = ReferenceFilesConfig(**(parser['reference'] if 'reference' in parser else {}))
     pairing = PairingConfig(**(parser['pairing'] if 'pairing' in parser else {}))
-    
+    summary = SummaryConfig(**(parser['summary'] if 'summary' in parser else {}))
     global_args = {}
     global_args.update(job_sched.flatten())
     global_args.update(ref.flatten())
     global_args.update(ILLUSTRATION_DEFAULTS.__dict__)
     global_args.update(pairing.flatten())
+    global_args.update(summary.flatten())
     global_args.update(ANNOTATION_DEFAULTS.__dict__)
     global_args.update(CLUSTER_DEFAULTS.__dict__)
     try:
@@ -422,6 +446,11 @@ def augment_parser(parser, optparser, arguments):
                 '--{}'.format(arg), default=get_env_variable(arg, value), type=vtype, help='see user manual for desc')
         elif arg in ILLUSTRATION_DEFAULTS:
             value = ILLUSTRATION_DEFAULTS[arg]
+            vtype = type(value) if type(value) != bool else TSV.tsv_boolean
+            optparser.add_argument(
+                '--{}'.format(arg), default=get_env_variable(arg, value), type=vtype, help='see user manual for desc')
+        elif arg in SUMMARY_DEFAULTS:
+            value = SUMMARY_DEFAULTS[arg]
             vtype = type(value) if type(value) != bool else TSV.tsv_boolean
             optparser.add_argument(
                 '--{}'.format(arg), default=get_env_variable(arg, value), type=vtype, help='see user manual for desc')

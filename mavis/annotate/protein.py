@@ -3,6 +3,7 @@ from .base import BioInterval
 from ..constants import translate, START_AA, STOP_AA, CODON_SIZE
 import itertools
 from ..error import NotSpecifiedError
+import operator, functools
 
 
 def calculate_ORF(spliced_cdna_sequence, min_orf_size=None):
@@ -183,6 +184,9 @@ class Domain:
             UserWarning: if a valid alignment could not be found or no best alignment was found
         """
         seq_list = self.get_seqs(REFERENCE_GENOME)
+
+        dr_by_seq = {s: d for s, d in zip(seq_list, self.regions)}
+        seq_list = sorted(seq_list, key=lambda x: dr_by_seq[x].start)
         total = sum([len(s) for s in seq_list])
         
         if total > len(input_sequence):
@@ -202,24 +206,29 @@ class Domain:
             if len(scores) == 0:
                 raise UserWarning('could not align a given region')
             results.setdefault(seq, []).extend(scores)
-
         # take the best score for each region and see if they work in sequence
         best = []
         for seq in seq_list:
             temp = max([s for i, s in results[seq]])
             curr = [(i, s) for i, s in results[seq] if s == temp]
             best.append(curr)
-
+        
+        # only keep valid combinations
         combinations = []
-        for combo in itertools.product(*best):
-            total_score = sum([s for i, s in combo])
-            valid = True
-            for i in range(1, len(combo)):
-                if combo[i][0].start <= combo[i - 1][0].end:
-                    valid = False
-                    break
-            if valid:
-                combinations.append((total_score, [i for i, s in combo]))
+        for opt in best[0]:
+            combinations.append([opt])
+        for blist in best[1:]:
+            new_combos = []
+            for curr in combinations:
+                for b in blist:
+                    if b[0][0] > curr[-1][0][1]:
+                        new_combos.append(curr + [b])
+            combinations = new_combos
+        
+        # compute cumulative scores for the final valid combinations
+        for i, combo in enumerate(combinations):
+            score = sum([s for i, s in combo])
+            combinations[i] = (score, [i for i, s in combo])
 
         if len(combinations) == 0:
             raise UserWarning('could not map the sequences to the input')
