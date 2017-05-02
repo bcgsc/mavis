@@ -9,6 +9,7 @@ from mavis.validate.main import main as validate_main
 from mavis.cluster.main import main as cluster_main
 from mavis.pairing.main import main as pairing_main
 from mavis.annotate.main import main as annotate_main
+from mavis.summary.main import main as summary_main
 from mavis import __version__
 
 from mavis.validate.constants import DEFAULTS as VALIDATION_DEFAULTS
@@ -16,6 +17,7 @@ from mavis.cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from mavis.annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
 from mavis.pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from mavis.illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
+from mavis.summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 
 from mavis.config import augment_parser, write_config, LibraryConfig, read_config, get_env_variable
 from mavis.util import log, mkdirp, devnull
@@ -327,6 +329,13 @@ use the -h/--help option
                 ['annotations', 'max_proximity'] +
                 [k for k in vars(PAIRING_DEFAULTS)]
             )
+        elif pstep == PIPELINE_STEP.SUMMARY:
+            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
+            augment_parser(
+                required, optional,
+                ['annotations'] +
+                [k for k in vars(SUMMARY_DEFAULTS)]
+            )
         else:
             raise NotImplementedError('invalid value for <pipeline step>', pstep)
     args = parser.parse_args()
@@ -355,7 +364,7 @@ use the -h/--help option
         pstep == PIPELINE_STEP.PIPELINE and args.uninformative_filter,
         pstep == PIPELINE_STEP.VALIDATE and args.protocol == PROTOCOL.TRANS,
         pstep == PIPELINE_STEP.PIPELINE and any([sec.protocol == PROTOCOL.TRANS for sec in config]),
-        pstep == PIPELINE_STEP.PAIR or pstep == PIPELINE_STEP.ANNOTATE
+        pstep == PIPELINE_STEP.PAIR or pstep == PIPELINE_STEP.ANNOTATE or pstep == PIPELINE_STEP.SUMMARY
     ]):
         log('loading:', args.annotations)
         args.annotations_filename = args.annotations
@@ -410,7 +419,7 @@ use the -h/--help option
     elif pstep == PIPELINE_STEP.PAIR:
         pairing_main(**args.__dict__)
     elif pstep == PIPELINE_STEP.SUMMARY:
-        pass    # main_summary(args)
+        summary_main(**args.__dict__)    # main_summary(args)
     else:  # PIPELINE
         main_pipeline(args, config)
 
