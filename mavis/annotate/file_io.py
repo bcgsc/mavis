@@ -8,8 +8,10 @@ from .base import BioInterval, ReferenceName
 from .protein import Domain, Translation
 from ..interval import Interval
 from ..constants import STRAND, GIESMA_STAIN, CODON_SIZE, translate, START_AA, STOP_AA
+from ..util import devnull
 from Bio import SeqIO
 import json
+import warnings
 
 
 def load_masking_regions(filepath):
@@ -51,7 +53,12 @@ def load_masking_regions(filepath):
     return regions
 
 
-def load_reference_genes(filepath, verbose=True, REFERENCE_GENOME=None, filetype=None, best_transcripts_only=False):
+def load_reference_genes(*pos, **kwargs):
+    warnings.warn('this function has been replaced by load_annotations', DeprecationWarning)
+    return load_annotations(*pos, **kwargs)
+
+
+def load_annotations(filepath, warn=devnull, REFERENCE_GENOME=None, filetype=None, best_transcripts_only=False):
     """
     loads gene models from an input file. Expects a tabbed or json file.
 
@@ -69,91 +76,115 @@ def load_reference_genes(filepath, verbose=True, REFERENCE_GENOME=None, filetype
         m = re.match('.*\.(?P<ext>tsv|tab|json)$', filepath)
         if m:
             filetype = m.group('ext')
+    data = None
 
     if filetype == 'json':
-        return _load_reference_genes_json(filepath, verbose, REFERENCE_GENOME, best_transcripts_only)
+        with open(filepath) as fh:
+            data = json.load(fh)
     elif filetype == 'tab' or filetype == 'tsv':
-        return _load_reference_genes_tabbed(filepath, verbose, REFERENCE_GENOME, best_transcripts_only)
+        data = convert_tab_to_json(filepath, warn)
     else:
         raise NotImplementedError('unsupported filetype:', filetype, filepath)
+    
+    return parse_annotations_json(
+        data, REFERENCE_GENOME=REFERENCE_GENOME, best_transcripts_only=best_transcripts_only, warn=warn)
 
 
-def _load_reference_genes_json(filepath, verbose=True, REFERENCE_GENOME=None, best_transcripts_only=False):
-    genes_by_chr = dict()
-    with open(filepath) as fh:
-        data = json.load(fh)
-        for gene in data['genes']:
-            if gene['strand'] == '1':
-                gene['strand'] = STRAND.POS
-            elif gene['strand'] == '-1':
-                gene['strand'] = STRAND.NEG
-            else:
-                raise AssertionError('input has unexpected form. strand must be 1 or -1 but found', gene['strand'])
+def parse_annotations_json(data, REFERENCE_GENOME=None, best_transcripts_only=False, warn=devnull):
+    """
+    parses a json of annotation information into annotation objects
+    """
+    genes_by_chr = {}
+    for gene in data['genes']:
+        if gene['strand'] == '1':
+            gene['strand'] = STRAND.POS
+        elif gene['strand'] == '-1':
+            gene['strand'] = STRAND.NEG
+        else:
+            raise AssertionError('input has unexpected form. strand must be 1 or -1 but found', gene['strand'])
 
-            g = Gene(
-                chr=gene['chr'],
-                start=gene['start'],
-                end=gene['end'],
-                name=gene['name'],
-                aliases=gene['aliases'],
-                strand=gene['strand']
+        g = Gene(
+            chr=gene['chr'],
+            start=gene['start'],
+            end=gene['end'],
+            name=gene['name'],
+            aliases=gene['aliases'],
+            strand=gene['strand']
+        )
+
+        has_best = False
+        for transcript in gene['transcripts']:
+            transcript['is_best_transcript'] = TSV.tsv_boolean(transcript['is_best_transcript'])
+
+            exons = [Exon(**ex) for ex in transcript['exons']]
+            if len(exons) == 0:
+                exons[(transcript['start'], transcript['end'])]
+            ust = usTranscript(
+                name=transcript['name'],
+                gene=g,
+                exons=exons,
+                is_best_transcript=transcript['is_best_transcript']
             )
+            if ust.is_best_transcript:
+                has_best = True
+            if best_transcripts_only and not ust.is_best_transcript:
+                continue
+            g.transcripts.append(ust)
 
-            has_best = False
-            for transcript in gene['transcripts']:
-                transcript['is_best_transcript'] = TSV.tsv_boolean(transcript['is_best_transcript'])
-
-                exons = [Exon(**ex) for ex in transcript['exons']]
-                if len(exons) == 0:
-                    exons[(transcript['start'], transcript['end'])]
-                ust = usTranscript(
-                    name=transcript['name'],
-                    gene=g,
-                    exons=exons,
-                    is_best_transcript=transcript['is_best_transcript']
-                )
-                if ust.is_best_transcript:
-                    has_best = True
-                if best_transcripts_only and not ust.is_best_transcript:
+            if transcript['cdna_coding_end'] is None or transcript['cdna_coding_start'] is None:
+                continue
+            
+            for spl_patt in ust.generate_splicing_patterns():
+                # make splice transcripts and translations
+                t = Transcript(ust, spl_patt)
+                ust.spliced_transcripts.append(t)
+                tx_length = transcript['cdna_coding_end'] - transcript['cdna_coding_start'] + 1
+                # check that the translation makes sense before including it
+                if tx_length % CODON_SIZE != 0:
+                    warn('Ignoring translation. The translated region is not a multiple of three')
                     continue
-                g.transcripts.append(ust)
-
-                if transcript['cdna_coding_end'] is None or transcript['cdna_coding_start'] is None:
-                    continue
-
-                for spl_patt in ust.generate_splicing_patterns():
-                    # make splice transcripts and translations
-                    t = Transcript(ust, spl_patt)
-                    ust.spliced_transcripts.append(t)
-
-                    domains = []
-                    for dom in transcript['domains']:
+                domains = []
+                for dom in transcript['domains']:
+                    try:
                         regions = [Interval(r['start'], r['end']) for r in dom['regions']]
                         regions = Interval.min_nonoverlapping(*regions)
+                        for region in regions:
+                            if region.start < 1 or region.end > tx_length:
+                                raise AssertionError('region cannot be outside the translated length')
                         domains.append(
-                            Domain(name=dom['name'], data={'desc': dom['desc']}, regions=regions)
+                            Domain(name=dom['name'], data={'desc': dom.get('desc', None)}, regions=regions)
                         )
-                    tx = Translation(
-                        transcript['cdna_coding_start'], transcript['cdna_coding_end'], transcript=t, domains=domains
-                    )
-                    # check that the translation makes sense before including it
-                    if len(tx) % CODON_SIZE != 0:
+                    except AssertionError as e:
+                        warn(repr(e))
+                tx = Translation(
+                    transcript['cdna_coding_start'], transcript['cdna_coding_end'], transcript=t, domains=domains
+                )
+                if REFERENCE_GENOME and g.chr in REFERENCE_GENOME:
+                    # get the sequence near here to see why these are wrong?
+                    s = ust.get_cdna_seq(t.splicing_pattern, REFERENCE_GENOME)
+                    m = s[tx.start - 1:tx.start + 2]
+                    stop = s[tx.end - CODON_SIZE: tx.end]
+                    if translate(m) != START_AA or translate(stop) != STOP_AA:
+                        warn(
+                            'Sequence error. The sequence computed from the reference does look like '
+                            'a valid translation'
+                        )
                         continue
-                    if REFERENCE_GENOME and g['chr'] in REFERENCE_GENOME:
-                        # get the sequence near here to see why these are wrong?
-                        s = ust.get_cdna_seq(t.splicing_pattern, REFERENCE_GENOME)
-                        m = s[tx.start - 1:tx.start + 2]
-                        stop = s[tx.end - CODON_SIZE: tx.end]
-                        if translate(m) != START_AA or translate(stop) != STOP_AA:
-                            continue
-                    t.translations.append(tx)
-            if not best_transcripts_only or has_best:
-                genes_by_chr.setdefault(g.chr, []).append(g)
-
+                t.translations.append(tx)
+        if not best_transcripts_only or has_best:
+            genes_by_chr.setdefault(g.chr, []).append(g)
     return genes_by_chr
 
 
-def _load_reference_genes_tabbed(filepath, verbose=True, REFERENCE_GENOME=None, best_transcripts_only=False):
+def _load_reference_genes_json(filepath, REFERENCE_GENOME=None, best_transcripts_only=False, warn=devnull):
+    genes_by_chr = dict()
+    with open(filepath) as fh:
+        data = json.load(fh)
+        return parse_annotations_json(
+            data, REFERENCE_GENOME=REFERENCE_GENOME, best_transcripts_only=best_transcripts_only, warn=warn)
+
+
+def convert_tab_to_json(filepath, warn=devnull):
     """
     given a file in the std input format (see below) reads and return a list of genes (and sub-objects)
 
@@ -199,10 +230,9 @@ def _load_reference_genes_tabbed(filepath, verbose=True, REFERENCE_GENOME=None, 
         for temp in re.split('[; ]', row):
             try:
                 s, t = temp.split('-')
-                exons.append(Exon(int(s), int(t)))
+                exons.append({'start': int(s), 'end': int(t)})
             except Exception as err:
-                if verbose:
-                    print('exon error:', repr(temp), repr(err))
+                warn('exon error:', repr(temp), repr(err))
         return exons
 
     def parse_domain_list(row):
@@ -214,13 +244,10 @@ def _load_reference_genes_tabbed(filepath, verbose=True, REFERENCE_GENOME=None, 
                 name, temp = d.rsplit(':')
                 temp = temp.split(',')
                 temp = [x.split('-') for x in temp]
-                temp = [(int(x), int(y)) for x, y in temp]
-                temp = Interval.min_nonoverlapping(*temp)
-                d = Domain(name, temp)
-                domains.append(d)
+                regions = [{'start': int(x), 'end': int(y)} for x, y in temp]
+                domains.append({'name': name, 'regions': regions})
             except Exception as err:
-                if verbose:
-                    print('error in domain:', d, row, repr(err))
+                warn('error in domain:', d, row, repr(err))
         return domains
 
     def nullable_int(row):
@@ -229,13 +256,6 @@ def _load_reference_genes_tabbed(filepath, verbose=True, REFERENCE_GENOME=None, 
         except ValueError:
             row = TSV.null(row)
         return row
-
-    def parse_strand(row):
-        if row in ['-1', '-']:
-            return STRAND.NEG
-        elif row in ['1', '+', '+1']:
-            return STRAND.POS
-        raise ValueError('cast to strand failed')
 
     header, rows = TSV.read_file(
         filepath,
@@ -261,7 +281,6 @@ def _load_reference_genes_tabbed(filepath, verbose=True, REFERENCE_GENOME=None, 
             'cdna_coding_start': nullable_int,
             'transcript_genomic_end': nullable_int,
             'transcript_genomic_start': nullable_int,
-            'strand': parse_strand,
             'gene_start': int,
             'gene_end': int
         }
@@ -269,67 +288,34 @@ def _load_reference_genes_tabbed(filepath, verbose=True, REFERENCE_GENOME=None, 
     failures = 0
     genes = {}
     for row in rows:
-        g = Gene(
-            row['chr'],
-            row['gene_start'],
-            row['gene_end'],
-            name=row['ensembl_gene_id'],
-            strand=row['strand'],
-            aliases=row['hugo_names'].split(';') if row['hugo_names'] else []
-        )
-        if best_transcripts_only and row['best_ensembl_transcript_id'] != row['ensembl_transcript_id']:
-            continue
-        if g.name in genes:
-            g = genes[g.name]
+        g = {
+            'chr': row['chr'],
+            'start': row['gene_start'],
+            'end': row['gene_end'],
+            'name': row['ensembl_gene_id'],
+            'strand': row['strand'],
+            'aliases': row['hugo_names'].split(';') if row['hugo_names'] else [],
+            'transcripts': []
+        }
+        if g['name'] not in genes:
+            genes[g['name']] = g
         else:
-            genes[g.name] = g
-        try:
-            exons = row['genomic_exon_ranges']
-            if len(exons) == 0:
-                exons = [(row['transcript_genomic_start'], row['transcript_genomic_end'])]
-            ust = usTranscript(
-                name=row['ensembl_transcript_id'],
-                gene=g,
-                exons=exons
-            )
-            if row['best_ensembl_transcript_id'] == row['ensembl_transcript_id']:
-                ust.is_best_transcript = True
-            assert(ust.start >= g.start)
-            assert(ust.end <= g.end)
-            spl_patts = ust.generate_splicing_patterns()
-            if 1 != len(spl_patts):
-                raise AssertionError('expected 1 splicing pattern for reference loaded transcripts but found', len(spl_patts))
-            t = Transcript(ust, spl_patts[0])
-            ust.spliced_transcripts.append(t)
-            try:
-                if row['cdna_coding_start'] is not None:
-                    tx = Translation(
-                        row['cdna_coding_start'], row['cdna_coding_end'], transcript=t, domains=row['AA_domain_ranges'])
-
-                    if len(tx) % CODON_SIZE != 0:
-                        raise AssertionError('the length of the coding sequence is not a multiple of {}. This violates the input assumption.'.format(CODON_SIZE), len(tx) % CODON_SIZE)
-
-                    if REFERENCE_GENOME and row['chr'] in REFERENCE_GENOME:
-                        # get the sequence near here to see why these are wrong?
-                        s = ust.get_cdna_seq(t.splicing_pattern, REFERENCE_GENOME)
-                        m = s[tx.start - 1:tx.start + 2]
-                        stop = s[tx.end - CODON_SIZE: tx.end]
-                        if translate(m) != START_AA or translate(stop) != STOP_AA:
-                            raise AssertionError('translation sequence check failure: M={}, *={}'.format(translate(m), translate(stop)))
-
-                    t.translations.append(tx)
-            except AssertionError:
-                pass
-            g.transcripts.append(ust)
-        except Exception as err:
-            print('failed loading', row['ensembl_transcript_id'], row['hugo_names'].split(';'), repr(err))
-
-    ref = {}
-    for g in genes.values():
-        if g.chr not in ref:
-            ref[g.chr] = []
-        ref[g.chr].append(g)
-    return ref
+            g = genes[g['name']]
+        
+        t = {
+            'is_best_transcript': row['best_ensembl_transcript_id'] == row['ensembl_transcript_id'],
+            'name': row['ensembl_transcript_id'],
+            'exons': row['genomic_exon_ranges'],
+            'domains': row['AA_domain_ranges'],
+            'start': row['transcript_genomic_start'],
+            'end': row['transcript_genomic_end'],
+            'cdna_coding_start': row['cdna_coding_start'],
+            'cdna_coding_end': row['cdna_coding_end'],
+            'aliases': []
+        }
+        g['transcripts'].append(t)
+    
+    return {'genes': genes.values()}
 
 
 def load_reference_genome(filename, low_mem=False):
