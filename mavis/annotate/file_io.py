@@ -143,6 +143,7 @@ def parse_annotations_json(data, REFERENCE_GENOME=None, best_transcripts_only=Fa
                 if tx_length % CODON_SIZE != 0:
                     warn('Ignoring translation. The translated region is not a multiple of three')
                     continue
+                tx_length = tx_length // CODON_SIZE
                 domains = []
                 for dom in transcript['domains']:
                     try:
