@@ -318,6 +318,7 @@ def convert_tab_to_json(filepath, warn=devnull):
     return {'genes': genes.values()}
 
 
+
 def load_reference_genome(filename, low_mem=False):
     """
     Args:
@@ -333,6 +334,14 @@ def load_reference_genome(filename, low_mem=False):
             HUMAN_REFERENCE_GENOME = SeqIO.to_dict(SeqIO.parse(fh, 'fasta'))
     else:
         HUMAN_REFERENCE_GENOME = SeqIO.index(filename, "fasta")
+
+    for chr in range(1, 24):
+        chr = str(chr)
+        other_chr = 'chr' + chr
+        if chr in HUMAN_REFERENCE_GENOME and other_chr not in HUMAN_REFERENCE_GENOME:
+            HUMAN_REFERENCE_GENOME[other_chr] = HUMAN_REFERENCE_GENOME[chr]
+        elif other_chr in HUMAN_REFERENCE_GENOME and chr not in HUMAN_REFERENCE_GENOME:
+            HUMAN_REFERENCE_GENOME[chr] = HUMAN_REFERENCE_GENOME[other_chr]
     return HUMAN_REFERENCE_GENOME
 
 

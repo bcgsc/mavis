@@ -648,7 +648,6 @@ def _gather_annotations(ref, bp, event_type=None, proximity=None):
         :class:`list` of :class:`Annotation`: The annotations
     """
     annotations = dict()
-
     break1_pos, break1_neg = _gather_breakpoint_annotations(ref, bp.break1)
     break2_pos, break2_neg = _gather_breakpoint_annotations(ref, bp.break2)
 
@@ -656,12 +655,12 @@ def _gather_annotations(ref, bp, event_type=None, proximity=None):
 
     if bp.stranded:
         if bp.break1.strand == STRAND.POS:
-            if bp.break1.strand == STRAND.POS:
+            if bp.break2.strand == STRAND.POS:
                 combinations.extend(itertools.product(break1_pos, break2_pos))
             else:
                 combinations.extend(itertools.product(break1_pos, break2_neg))
         else:
-            if bp.break1.strand == STRAND.POS:
+            if bp.break2.strand == STRAND.POS:
                 combinations.extend(itertools.product(break1_neg, break2_pos))
             else:
                 combinations.extend(itertools.product(break1_neg, break2_neg))
@@ -738,27 +737,26 @@ def annotate_events(
     total = len(bpps)
     for i, bpp in enumerate(bpps):
         log('({} of {}) gathering annotations for'.format(i + 1, total), bpp)
-        try:
-            ann = _gather_annotations(
-                annotations,
-                bpp,
-                event_type=bpp.data[COLUMNS.event_type],
-                proximity=max_proximity
-            )
-            results.extend(ann)
-            for a in ann:
-                # try building the fusion product
-                try:
-                    ft = FusionTranscript.build(
-                        a, reference_genome,
-                        min_orf_size=min_orf_size,
-                        max_orf_cap=max_orf_cap,
-                        min_domain_mapping_match=min_domain_mapping_match
-                    )
-                    a.fusion = ft
-                except (NotSpecifiedError, AttributeError, NotImplementedError):
-                    pass
-            log('generated', len(ann), 'annotations', time_stamp=False)
-        except KeyError as err:
-            log('generated', 0, 'annotations', repr(err), time_stamp=False)
+        ann = _gather_annotations(
+            annotations,
+            bpp,
+            event_type=bpp.data[COLUMNS.event_type],
+            proximity=max_proximity
+        )
+        results.extend(ann)
+        for a in ann:
+            # try building the fusion product
+            try:
+                ft = FusionTranscript.build(
+                    a, reference_genome,
+                    min_orf_size=min_orf_size,
+                    max_orf_cap=max_orf_cap,
+                    min_domain_mapping_match=min_domain_mapping_match
+                )
+                a.fusion = ft
+            except (NotSpecifiedError, AttributeError, NotImplementedError):
+                pass
+            except KeyError as e:
+                log('warning. could not build fusion product', repr(e))
+        log('generated', len(ann), 'annotations', time_stamp=False)
     return results
