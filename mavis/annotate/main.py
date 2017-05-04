@@ -174,7 +174,7 @@ def main(
                     log('extending width:', DS.width, DS.width + 500, time_stamp=False)
                     DS.width += 500
                     retry_count += 1
-                    if retry_count > 10:
+                    if retry_count > 20:
                         raise err
             if len(rows) == 0:
                 rows = [row]

@@ -21,7 +21,7 @@ def setUpModule():
     REFERENCE_ANNOTATIONS = load_reference_genes(REFERENCE_ANNOTATIONS_FILE)
     count = sum([len(l) for l in REFERENCE_ANNOTATIONS.values()])
     print('loaded annotations', count)
-    assert(count == 6)  # make sure this is the file we expect
+    assert(count >= 6)  # make sure this is the file we expect
     REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
     assert(REF_CHR in REFERENCE_GENOME)
     print('loaded the reference genome', REFERENCE_GENOME_FILE)
