@@ -96,9 +96,9 @@ def parse_annotations_json(data, REFERENCE_GENOME=None, best_transcripts_only=Fa
     """
     genes_by_chr = {}
     for gene in data['genes']:
-        if gene['strand'] == '1':
+        if gene['strand'] in ['1', '+']:
             gene['strand'] = STRAND.POS
-        elif gene['strand'] == '-1':
+        elif gene['strand'] in ['-1', '-']:
             gene['strand'] = STRAND.NEG
         else:
             raise AssertionError('input has unexpected form. strand must be 1 or -1 but found', gene['strand'])
@@ -115,10 +115,10 @@ def parse_annotations_json(data, REFERENCE_GENOME=None, best_transcripts_only=Fa
         has_best = False
         for transcript in gene['transcripts']:
             transcript['is_best_transcript'] = TSV.tsv_boolean(transcript['is_best_transcript'])
-
+            transcript.setdefault('exons', [])
             exons = [Exon(**ex) for ex in transcript['exons']]
             if len(exons) == 0:
-                exons[(transcript['start'], transcript['end'])]
+                exons = [(transcript['start'], transcript['end'])]
             ust = usTranscript(
                 name=transcript['name'],
                 gene=g,
@@ -334,14 +334,25 @@ def load_reference_genome(filename, low_mem=False):
             HUMAN_REFERENCE_GENOME = SeqIO.to_dict(SeqIO.parse(fh, 'fasta'))
     else:
         HUMAN_REFERENCE_GENOME = SeqIO.index(filename, "fasta")
+    
+    names = list(HUMAN_REFERENCE_GENOME.keys())
 
-    for chr in range(1, 24):
-        chr = str(chr)
-        other_chr = 'chr' + chr
-        if chr in HUMAN_REFERENCE_GENOME and other_chr not in HUMAN_REFERENCE_GENOME:
-            HUMAN_REFERENCE_GENOME[other_chr] = HUMAN_REFERENCE_GENOME[chr]
-        elif other_chr in HUMAN_REFERENCE_GENOME and chr not in HUMAN_REFERENCE_GENOME:
-            HUMAN_REFERENCE_GENOME[chr] = HUMAN_REFERENCE_GENOME[other_chr]
+    # to fix hg38 issues
+    for template_name in names:
+        if template_name.startswith('chr'):
+            truncated = re.sub('^chr', '', template_name)
+            if truncated in HUMAN_REFERENCE_GENOME:
+                raise KeyError(
+                    'template names {} and {} are considered equal but both have been defined in the reference'
+                    'loaded'.format(template_name, truncated))
+            HUMAN_REFERENCE_GENOME.setdefault(truncated, HUMAN_REFERENCE_GENOME[template_name])
+        else:
+            prefixed = 'chr' + template_name
+            if prefixed in HUMAN_REFERENCE_GENOME:
+                raise KeyError(
+                    'template names {} and {} are considered equal but both have been defined in the reference'
+                    'loaded'.format(template_name, prefixed))
+            HUMAN_REFERENCE_GENOME.setdefault(prefixed, HUMAN_REFERENCE_GENOME[template_name])
     return HUMAN_REFERENCE_GENOME
 
 

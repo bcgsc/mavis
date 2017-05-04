@@ -1,7 +1,7 @@
 import unittest
 import os
 from mavis.annotate.file_io import load_annotations, convert_tab_to_json
-from . import DATA_DIR
+from . import DATA_DIR, REFERENCE_ANNOTATIONS_FILE
 
 
 class TestAnnotationLoading(unittest.TestCase):
@@ -21,6 +21,10 @@ class TestAnnotationLoading(unittest.TestCase):
     def test_load_tab(self):
         result = load_annotations(self.tab, print)
         self.assertEqual(12, len(result.keys()))
+        
+        result = load_annotations(REFERENCE_ANNOTATIONS_FILE, print)
+        self.assertEqual(1, len(result.keys()))
+
 
     def test_load_json(self):
         result = load_annotations(self.json, print)
