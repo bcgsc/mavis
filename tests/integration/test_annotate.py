@@ -1,13 +1,17 @@
 import unittest
+import os
 from mavis.annotate.variant import _gather_annotations, FusionTranscript, determine_prime
 from mavis.annotate.variant import _gather_breakpoint_annotations, overlapping_transcripts
 from mavis.annotate.genomic import *
 from mavis.annotate.protein import *
 from mavis.annotate import *
+from mavis.constants import *
+from mavis.annotate.variant import annotate_events
+from mavis.util import read_inputs
 from mavis.error import NotSpecifiedError
 from mavis.constants import STRAND, ORIENT, reverse_complement, SVTYPE, PRIME
 from mavis.breakpoint import Breakpoint, BreakpointPair
-from . import REFERENCE_ANNOTATIONS_FILE, REFERENCE_GENOME_FILE, MockSeq, REFERENCE_ANNOTATIONS_FILE_JSON
+from . import REFERENCE_ANNOTATIONS_FILE, REFERENCE_GENOME_FILE, MockSeq, REFERENCE_ANNOTATIONS_FILE_JSON, REFERENCE_ANNOTATIONS_FILE2
 
 
 REFERENCE_ANNOTATIONS = None
@@ -1437,3 +1441,16 @@ class TestAnnotate(unittest.TestCase):
         orfs = calculate_ORF(seq)
         for orf in orfs:
             self.assertEqual('ATG', seq[orf.start - 1:orf.start + 2])
+
+class TestAnnotateEvents(unittest.TestCase):
+    def test_annotate_events(self):
+        reference_annotations = load_reference_genes(REFERENCE_ANNOTATIONS_FILE2)
+        b1 = Breakpoint('fakereference9',658, orient=ORIENT.RIGHT, strand=STRAND.POS)
+        b2 = Breakpoint('fakereference9',10237, orient=ORIENT.RIGHT,strand=STRAND.NEG)
+        bpp = BreakpointPair(b1, b2, stranded=True, opposing_strands=True, data={COLUMNS.event_type:SVTYPE.INV})
+        annotations = annotate_events([bpp], reference_genome=REFERENCE_GENOME, annotations=reference_annotations)
+        self.assertEqual(4, len(annotations))
+        self.assertEqual(STRAND.POS, annotations[0].transcript1.get_strand())
+        self.assertEqual(STRAND.NEG, annotations[0].transcript2.get_strand())
+        self.assertEqual('ENST00000375851', annotations[0].transcript1.name)
+        self.assertEqual(None, annotations[0].transcript2.name)
