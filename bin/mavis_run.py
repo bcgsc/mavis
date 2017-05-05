@@ -246,7 +246,7 @@ def log_arguments(args):
 def main():
     def usage(err=None, detail=False):
         name = os.path.basename(__file__)
-        u = '\nusage: {} {{cluster,validate,annotate,pairing,pipeline,config}} [-h] [-v]'.format(name)
+        u = '\nusage: {} {{cluster,validate,annotate,pairing,summary,pipeline,config}} [-h] [-v]'.format(name)
         helpmenu = """
 required arguments:
 
@@ -419,7 +419,7 @@ use the -h/--help option
     elif pstep == PIPELINE_STEP.PAIR:
         pairing_main(**args.__dict__)
     elif pstep == PIPELINE_STEP.SUMMARY:
-        summary_main(**args.__dict__)    # main_summary(args)
+        summary_main(**args.__dict__)
     else:  # PIPELINE
         main_pipeline(args, config)
 

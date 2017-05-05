@@ -16,6 +16,10 @@ def alphanumeric_choice(bpp1, bpp2):
 
 def compare_bpp_annotations(bpp1, bpp2, best_transcripts):
     """
+    Args:
+        bpp1 (BreakPointPair): 
+        bpp2 (BreakpointPair):
+        best_transcripts (dict):
     """
     # By priority
     # Case 1 an event has 2 genes and transcripts and a fusion cdna (orf)

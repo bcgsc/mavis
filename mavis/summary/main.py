@@ -27,7 +27,7 @@ def main(
     spanning_call_distance=PAIRING_DEFAULTS.spanning_call_distance,
     **kwargs
 ):
-    # threshold parameters to be defined in config file
+    # pairing threshold parameters to be defined in config file
     DISTANCES = {
         CALL_METHOD.FLANK: flanking_call_distance,
         CALL_METHOD.SPLIT: split_call_distance,
@@ -55,6 +55,8 @@ def main(
         CALL_METHOD.SPLIT: (COLUMNS.break1_split_reads, COLUMNS.break2_split_reads),
         CALL_METHOD.CONTIG: (COLUMNS.contig_alignment_score, COLUMNS.contig_alignment_score),
         CALL_METHOD.SPAN: (COLUMNS.spanning_reads, COLUMNS.spanning_reads)
+
+        #check on linking_split_reads, # contigs assembled
     }
 
     bpps = []
@@ -133,7 +135,7 @@ def main(
                 if t.is_best_transcript:
                     best_transcripts[t.name] = t
 
-    # filter low evidence and give a evidence score?
+    # TODO: give an evidence score to the events based on call method and evidence levels
     filtered_out_bpps = []
     bpps_to_keep = dict()
     bpp_by_product_key = dict()
@@ -146,6 +148,7 @@ def main(
         break1_call_method = bpp.data[COLUMNS.break1_call_method]
         break2_call_method = bpp.data[COLUMNS.break2_call_method]
 
+        # filter low evidence
         if int(bpp.data[SUPPORT[break1_call_method][0]]) < THRESHOLDS[break1_call_method] or \
                 int(bpp.data[SUPPORT[break2_call_method][1]]) < THRESHOLDS[break2_call_method]:
             filtered_out_bpps.append(bpp)
@@ -169,9 +172,10 @@ def main(
                    bpp.break2.end)
 
             bpp = annotate_aliases(bpp, reference_transcripts)
-            if lib not in bpps_to_keep:
 
+            if lib not in bpps_to_keep:
                 bpps_to_keep[lib] = dict()
+
             if pos in bpps_to_keep[lib]:
                 bpp_call_score = RANKING[bpp.data[COLUMNS.break1_call_method]] + \
                     RANKING[bpp.data[COLUMNS.break2_call_method]]
@@ -224,7 +228,7 @@ def main(
                 pairings[lib][bpp1.data[COLUMNS.product_id]].add(bpp2.data[COLUMNS.product_id])
                 pairings[lib][bpp2.data[COLUMNS.product_id]].add(bpp1.data[COLUMNS.product_id])
 
-            # todo: add actual pairing information
+    # todo: add actual pairing information
     for lib in pairings:
         for product_key, paired_product_keys in pairings[lib].items():
             bpp = bpp_by_product_key[product_key]

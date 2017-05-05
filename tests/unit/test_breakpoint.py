@@ -130,11 +130,47 @@ class TestReadBreakpointPairsFromFile(unittest.TestCase):
         self.assertEqual(ORIENT.LEFT, bpps[0].break1.orient)
 
     def test_break2_orient_ns(self):
+        fh = self.build_filehandle({
+            COLUMNS.break1_chromosome: '1',
+            COLUMNS.break1_position_start: 1,
+            COLUMNS.break1_position_end: 1,
+            COLUMNS.break1_strand: STRAND.POS,
+            COLUMNS.break1_orientation: ORIENT.NS,
+            COLUMNS.break2_chromosome: '1',
+            COLUMNS.break2_position_start: 10,
+            COLUMNS.break2_position_end: 10,
+            COLUMNS.break2_strand: STRAND.POS,
+            COLUMNS.break2_orientation: ORIENT.RIGHT,
+            COLUMNS.stranded: False,
+            COLUMNS.opposing_strands: False
+        })
+        bpps = read_bpp_from_input_file(fh, explicit_strand=False, expand_ns=True)
+        self.assertEqual(1, len(bpps))
+        self.assertEqual(ORIENT.LEFT, bpps[0].break1.orient)
         raise unittest.SkipTest('TODO')
 
     def test_both_break_orient_ns(self):
         raise unittest.SkipTest('TODO')
 
+    def test_base_case(self):
+        fh = self.build_filehandle({
+            COLUMNS.break1_chromosome: '1',
+            COLUMNS.break1_position_start: 1,
+            COLUMNS.break1_position_end: 1,
+            COLUMNS.break1_strand: STRAND.POS,
+            COLUMNS.break1_orientation: ORIENT.RIGHT,
+            COLUMNS.break2_chromosome: '1',
+            COLUMNS.break2_position_start: 10,
+            COLUMNS.break2_position_end: 10,
+            COLUMNS.break2_strand: STRAND.NEG,
+            COLUMNS.break2_orientation: ORIENT.RIGHT,
+            COLUMNS.stranded: True,
+            COLUMNS.opposing_strands: True
+        })
+        bpps = read_bpp_from_input_file(fh, explicit_strand=False, expand_ns=False)
+        self.assertEqual(1, len(bpps))
+        self.assertEqual(ORIENT.RIGHT, bpps[0].break1.orient)
+        self.assertEqual(True, bpps[0].opposing_strands)
 
 class TestBreakpoint(unittest.TestCase):
 
