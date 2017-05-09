@@ -499,7 +499,7 @@ class usTranscript(BioInterval):
                 else:
                     c = Interval.convert_pos(mapping, ex2.start, True if self.get_strand() == STRAND.NEG else False)
                     return c, pos - ex2.start if self.get_strand() == STRAND.POS else ex2.start - pos
-        raise IndexError('position does not fall within the current transcript')
+        raise IndexError('position does not fall within the current transcript', pos, mapping)
 
     def convert_cdna_to_genomic(self, pos, splicing_pattern):
         """
