@@ -314,10 +314,10 @@ class TestPairing(unittest.TestCase):
         trans_ev.data[COLUMNS.transcript1] = None
         self.assertTrue(equivalent_events(genome_ev, trans_ev, self.TRANSCRIPTS))
         self.assertTrue(equivalent_events(trans_ev, genome_ev, self.TRANSCRIPTS))
-        
+
 
     def test_mixed_protocol_both_predicted(self):
-        
+
         raise unittest.SkipTest('TODO')
 
     def test_mixed_protocol_neither_predicted_one_match(self):
@@ -381,16 +381,47 @@ class TestBreakpointPrediction(unittest.TestCase):
         with self.assertRaises(AssertionError):
             breaks = predict_transcriptome_breakpoint(b, self.ust)
 
-    def test_exonic_five_prime_neg(self):
+    # for neg transcripts
+    def test_exonic_three_prime_neg(self):
         b = Breakpoint('1', 350, orient=ORIENT.LEFT, strand=STRAND.NEG)
         breaks = predict_transcriptome_breakpoint(b, self.n_ust)
-        print(breaks)
         self.assertEqual(2, len(breaks))
         self.assertEqual(200, breaks[0].start)
         self.assertEqual(b, breaks[1])
 
-    def test_intronic_five_prime_neg(self):
+    def test_intronic_three_prime_neg(self):
         b = Breakpoint('1', 450, orient=ORIENT.LEFT, strand=STRAND.NEG)
         breaks = predict_transcriptome_breakpoint(b, self.n_ust)
         self.assertEqual(1, len(breaks))
         self.assertEqual(400, breaks[0].start)
+
+    def test_exonic_five_prime_neg_first_exon(self):
+        b = Breakpoint('1', 150, orient=ORIENT.LEFT)
+        breaks = predict_transcriptome_breakpoint(b, self.n_ust)
+        self.assertEqual(1, len(breaks))
+        self.assertEqual(b, breaks[0])
+
+    def test_exonic_three_prime_neg_first_exon(self):
+        b = Breakpoint('1', 150, orient=ORIENT.LEFT)
+        breaks = predict_transcriptome_breakpoint(b, self.n_ust)
+        self.assertEqual(1, len(breaks))
+        self.assertEqual(b, breaks[0])
+
+    def test_exonic_five_prime_neg(self):
+        b = Breakpoint('1', 350, orient=ORIENT.RIGHT)
+        breaks = predict_transcriptome_breakpoint(b, self.n_ust)
+        self.assertEqual(2, len(breaks))
+        self.assertEqual(501, breaks[1].start)
+        self.assertEqual(b, breaks[0])
+
+    def test_exonic_five_prime_neg_last_exon(self):
+        b = Breakpoint('1', 550, orient=ORIENT.RIGHT)
+        breaks = predict_transcriptome_breakpoint(b, self.n_ust)
+        self.assertEqual(1, len(breaks))
+        self.assertEqual(b, breaks[0])
+
+    def test_intronic_five_prime_neg(self):
+        b = Breakpoint('1', 250, orient=ORIENT.RIGHT)
+        breaks = predict_transcriptome_breakpoint(b, self.n_ust)
+        self.assertEqual(1, len(breaks))
+        self.assertEqual(301, breaks[0].start)
