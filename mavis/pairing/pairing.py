@@ -24,7 +24,7 @@ def predict_transcriptome_breakpoint(breakpoint, transcript):
         exons.reverse()
 
     tbreaks = []
-
+    
     for i, curr in enumerate(exons):
         temp = curr.acceptor_splice_site | curr.donor_splice_site
 
@@ -60,7 +60,8 @@ def predict_transcriptome_breakpoint(breakpoint, transcript):
         elif i > 0:  # look at the previous intron
             prev = exons[i - 1]
             try:
-                intron = Interval(prev.donor_splice_site.end + 1, curr.acceptor_splice_site.start - 1)
+                s, t = sorted([prev.donor_splice_site.end, curr.acceptor_splice_site.start])
+                intron = Interval(s + 1, t - 1)
                 if Interval.overlaps(breakpoint, intron):
                     if prime == PRIME.FIVE:
                         tbreaks.append(
