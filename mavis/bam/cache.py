@@ -33,6 +33,12 @@ class BamCache:
             read (pysam.AlignedSegment): the read to add to the cache
         """
         self.cache.setdefault(read.query_name, set()).add(read)
+    
+    def has_read(self, read):
+        if read.query_name in self.cache:
+            return True
+        else:
+            return False
 
     def reference_id(self, chrom):
         """
@@ -60,27 +66,34 @@ class BamCache:
         return ReferenceName(self.fh.get_reference_name(read.reference_id))
 
     @classmethod
-    def _generate_fetch_bins(cls, start, stop, sample_bins, bin_gap_size):
+    def _generate_fetch_bins(cls, start, stop, sample_bins, min_bin_size):
         """
         Args:
             start (int): the start if the area to fetch reads from
             stop (int): the end of the region
             sample_bins (int): the number of bins to split the region into
-            bin_gap_size (int): the space to skip between bins
+            min_bin_size (int): the minimum bin size
         """
-        bin_size = int(((stop - start + 1) - bin_gap_size * (sample_bins - 1)) / sample_bins)
-
-        fetch_regions = [(start, start + bin_size - 1)]  # exclusive ranges for fetch
-        for i in range(0, sample_bins - 1):
-            st = fetch_regions[-1][1] + bin_gap_size + 1
-            end = st + bin_size
-            fetch_regions.append((st, end))
-        fetch_regions[-1] = fetch_regions[-1][0], stop
+        length = stop - start + 1
+        bin_sizes = []
+        if sample_bins * min_bin_size > length:
+            sample_bins = length // min_bin_size
+        s = length // sample_bins  # base size
+        bin_sizes = [s for i in range(0, sample_bins)]
+        remainder = (length - sum(bin_sizes)) // sample_bins
+        bin_sizes = [b + remainder for b in bin_sizes]
+        unsplittable_remainder = length - sum(bin_sizes)
+        for i in range(0, unsplittable_remainder):
+            bin_sizes[i] += 1
+        fetch_regions = [(start, start + bin_sizes[0] - 1)]
+        for b in bin_sizes[1:]:
+            last_end = fetch_regions[-1][1]
+            fetch_regions.append((last_end + 1, last_end + b))
         return fetch_regions
 
     def fetch(
         self, input_chrom, start, stop, read_limit=10000, cache=False, sample_bins=3,
-        cache_if=lambda x: True, bin_gap_size=0, filter_if=lambda x: False
+        cache_if=lambda x: True, min_bin_size=10, filter_if=lambda x: False
     ):
         """
         wrapper around the fetch method, returns a list to avoid errors with changing the file pointer
@@ -110,18 +123,25 @@ class BamCache:
                 chrom = 'chr' + chrom
             if chrom not in self.fh.references:
                 raise KeyError('bam file does not contain the expected reference', input_chrom)
-        for fstart, fend in self.__class__._generate_fetch_bins(start, stop, sample_bins, bin_gap_size):
+        bins = self.__class__._generate_fetch_bins(start, stop, sample_bins, min_bin_size)
+        reread = 0
+        running_surplus = 0
+        temp_cache = set()
+        for fstart, fend in bins:
             count = 0
+            running_surplus += bin_limit
+            
             for read in self.fh.fetch(chrom, fstart, fend):
-                if bin_limit is not None and count >= bin_limit:
-                    warnings.warn(
-                        'hit read limit. Fetch will not cache all reads for this bin: {}-{}'.format(fstart, fend))
+                if bin_limit is not None and count >= running_surplus:
                     break
                 if not filter_if(read):
                     result.append(read)
+                if read.query_name not in temp_cache:
+                    count += 1
+                    temp_cache.add(read.query_name)
                 if cache and cache_if(read):
                     self.add_read(read)
-                count += 1
+            running_surplus -= count
         return set(result)
 
     def get_mate(self, read, primary_only=True, allow_file_access=True):
