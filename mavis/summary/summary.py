@@ -1,4 +1,6 @@
 from ..constants import COLUMNS, STRAND
+from ..breakpoint import Breakpoint, BreakpointPair
+
 
 def alphanumeric_choice(bpp1, bpp2):
     """
@@ -17,7 +19,7 @@ def alphanumeric_choice(bpp1, bpp2):
 def compare_bpp_annotations(bpp1, bpp2, best_transcripts):
     """
     Args:
-        bpp1 (BreakPointPair): 
+        bpp1 (BreakPointPair):
         bpp2 (BreakpointPair):
         best_transcripts (dict):
     """
@@ -102,20 +104,45 @@ def combine_evidence(bpp_to_keep, bpp_to_add):
             ';'.join(sorted(list(set(bpp_to_add.data[COLUMNS.contig_seq],
                                      bpp_to_keep.data[COLUMNS.contig_seq]))))
 
-
     return bpp_to_keep
 
-def group_events(bpp1, bpp2):
-    pass
 
-def filter_events(bpp1, bpp2, THRESHOLDS):
-    pass
+def group_events(bpp1, bpp2):
+    # todo: decide whether to also aggregate the contig, untemplated and annotation information?
+    # take the outer regions of the breakpoints
+    new_bpp = BreakpointPair(
+        Breakpoint(bpp1.break1.chr,
+                   min(bpp1.break1.start, bpp2.break1.start),
+                   max(bpp1.break1.end, bpp2.break1.end),
+                   orient=bpp1.break1.orient,
+                   strand=bpp1.break1.strand),
+        Breakpoint(bpp1.break2.chr,
+                   min(bpp1.break2.start, bpp2.break2.start),
+                   max(bpp1.break2.end, bpp2.break2.end),
+                   orient=bpp1.break2.orient,
+                   strand=bpp1.break2.strand),
+        opposing_strands=bpp1.opposing_strands,
+        stranded=bpp1.stranded)
+
+    # remove any attributes that aren't the same in both breakpoints
+    if bpp1.data.keys() != bpp2.data.keys():
+        raise NotImplementedError("Could not group events that have different data attributes")
+    for i in bpp1.data.keys():
+        if bpp1.data[i] != bpp2.data[i]:
+            # new_bpp.data[i] = None
+            new_bpp.data[i] = ";".join([str(bpp1.data[i]), str(bpp2.data[i])])
+        else:
+            new_bpp.data[i] = bpp1.data[i]
+    if bpp1.untemplated_seq == bpp2.untemplated_seq:
+        new_bpp.untemplated_seq = bpp1.untemplated_seq
+
+    return new_bpp
 
 
 def annotate_aliases(bpp, reference_transcripts):
     # Should add the getting the alias to annotate instead of here?
     if bpp.data[COLUMNS.transcript1] in reference_transcripts:
-        bpp.data['gene1_aliases'] = ",".join(reference_transcripts[bpp.data[COLUMNS.transcript1]].gene.aliases)
+        bpp.data[COLUMNS.gene1_aliases] = ",".join(reference_transcripts[bpp.data[COLUMNS.transcript1]].gene.aliases)
     if bpp.data[COLUMNS.transcript2] in reference_transcripts:
-        bpp.data['gene2_aliases'] = ",".join(reference_transcripts[bpp.data[COLUMNS.transcript2]].gene.aliases)
+        bpp.data[COLUMNS.gene2_aliases] = ",".join(reference_transcripts[bpp.data[COLUMNS.transcript2]].gene.aliases)
     return(bpp)

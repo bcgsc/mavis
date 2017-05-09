@@ -24,7 +24,7 @@ def predict_transcriptome_breakpoint(breakpoint, transcript):
         exons.reverse()
 
     tbreaks = []
-    
+
     for i, curr in enumerate(exons):
         temp = curr.acceptor_splice_site | curr.donor_splice_site
 
@@ -115,18 +115,18 @@ def equivalent_events(ev1, ev2, reference_transcripts, DISTANCES=None, product_s
         ev2.data[COLUMNS.break2_call_method]
     ])
     max_distance = max([DISTANCES[m] for m in methods])
-        
+
     if ev1.data[COLUMNS.fusion_sequence_fasta_id] and ev2.data[COLUMNS.fusion_sequence_fasta_id]:
         fusion1 = product_sequences[ev1.data[COLUMNS.fusion_sequence_fasta_id]]
         fusion2 = product_sequences[ev2.data[COLUMNS.fusion_sequence_fasta_id]]
-    
+
         if fusion1 != fusion2:
             return False
         for col in [COLUMNS.fusion_cdna_coding_start, COLUMNS.fusion_cdna_coding_end]:
             if ev1.data[col] != ev2.data[col]:
                 return False
         return True
-    
+
     break1_match = False
     break2_match = False
 
