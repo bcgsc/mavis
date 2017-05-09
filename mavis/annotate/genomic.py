@@ -463,7 +463,7 @@ class usTranscript(BioInterval):
         """
         c, shift = self.convert_genomic_to_nearest_cdna(pos, splicing_pattern)
         if shift != 0:
-            raise IndexError('outside of exonic regions')
+            raise IndexError('outside of exonic regions', pos, splicing_pattern, c, shift)
         return c
 
     def convert_genomic_to_nearest_cdna(self, pos, splicing_pattern):
