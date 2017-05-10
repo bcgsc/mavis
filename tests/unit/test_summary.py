@@ -1,9 +1,8 @@
 import unittest
 
-from mavis.summary.summary import alphanumeric_choice
+from mavis.summary.summary import alphanumeric_choice, compare_bpp_annotations
 from mavis.breakpoint import BreakpointPair, Breakpoint
-from mavis.constants import SVTYPE, COLUMNS, CALL_METHOD, ORIENT, STRAND, PROTOCOL
-from mavis.annotate.genomic import usTranscript, Transcript, Exon, Gene
+from mavis.constants import SVTYPE, COLUMNS, CALL_METHOD, STRAND, PROTOCOL
 
 
 class TestSummary(unittest.TestCase):
@@ -69,86 +68,114 @@ class TestCompareBppAnnotations(unittest.TestCase):
                 COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
                 COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
-                COLUMNS.protocol: PROTOCOL.GENOME
+                COLUMNS.protocol: PROTOCOL.GENOME,
+                COLUMNS.fusion_cdna_coding_end: None,
+                COLUMNS.fusion_cdna_coding_start: None
             }
         )
         self.gev2 = BreakpointPair(
             Breakpoint('1', 1),
-            Breakpoint('1', 10),
+            Breakpoint('1', 100),
             opposing_strands=True,
             data={
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
                 COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
-                COLUMNS.protocol: PROTOCOL.GENOME
+                COLUMNS.protocol: PROTOCOL.GENOME,
+                COLUMNS.fusion_cdna_coding_start: None,
+                COLUMNS.fusion_cdna_coding_end: None
             }
         )
+        self.best_transcripts = {'ABCA': True, 'ABCD': True}
 
-        self.annotations = {}
-        gene = Gene('1', 1, 9999, name='KRAS', strand=STRAND.POS)
-        gene2 = Gene('1', 10000, 12000, name='ABCA', strand=STRAND.POS)
-        self.a_ust = usTranscript(name='ENST00000248690', gene=gene2, exons=[(10101, 10200), (10301, 10400), (10501, 10600)])
-        self.c_ust = usTranscript(name='ENST00000248797', gene=gene2, exons=[(10101, 10200), (10301, 10400), (10501, 10600), (11050, 11500)], is_best_transcript=True)
+    def test_compare_bpp_annotations_two_best_transcripts(self):
+        self.gev1.data[COLUMNS.gene1] = 'ABC'
+        self.gev1.data[COLUMNS.gene2] = 'ABC'
+        self.gev1.data[COLUMNS.transcript1] = 'ABCA'
+        self.gev1.data[COLUMNS.transcript2] = 'ABCA'
+        self.gev2.data[COLUMNS.gene1] = 'ABC'
+        self.gev2.data[COLUMNS.gene2] = 'ABC'
+        self.gev2.data[COLUMNS.transcript1] = 'ABCD'
+        self.gev2.data[COLUMNS.transcript2] = 'ABCD'
+        bpp = compare_bpp_annotations(self.gev1, self.gev2, self.best_transcripts)
+        self.assertEqual(self.gev1, bpp)
+        self.assertEqual('ABCA', bpp.data[COLUMNS.transcript1])
 
-        self.ust = usTranscript(name='ENST00000367580', gene=gene, exons=[(1001, 1100), (1401, 1500), (3001, 3999)])
-        self.b_ust = usTranscript(name='ENST00000367579', gene=gene, exons=[(1001, 1100), (1401, 1500), (1701, 1750), (3001, 4000)], is_best_transcript=True)
-        gene.unspliced_transcripts.append(self.ust)
-        gene.unspliced_transcripts.append(self.b_ust)
-        gene2.unspliced_transcripts.append(self.a_ust)
-        gene2.unspliced_transcripts.append(self.c_ust)
-        for trans in (self.a_ust, self.ust, self.b_ust, self.c_ust):
-            for spl in trans.generate_splicing_patterns():
-                t = Transcript(trans, spl)
-                trans.transcripts.append(t)
-        # for spl in self.a_ust.generate_splicing_patterns():
-        #     t = Transcript(self.a_ust, spl)
-        #     self.a_ust.transcripts.append(t)
-        # for spl in self.c_ust.generate_splicing_patterns():
-        #     t = Transcript(self.c_ust, spl)
-        #     self.c_ust.transcripts.append(t)
-        # for spl in self.b_ust.generate_splicing_patterns():
-        #     t = Transcript(self.b_ust, spl)
-        #     self.b_ust.transcripts.append(t)
-        self.annotations[gene.chr] = [gene, gene2]
+    def test_compare_bpp_annotations_two_transcripts(self):
+        self.gev1.data[COLUMNS.gene1] = 'XYZ'
+        self.gev1.data[COLUMNS.gene2] = 'XYS'
+        self.gev1.data[COLUMNS.transcript1] = 'XYZB'
+        self.gev1.data[COLUMNS.transcript2] = 'XYSZ'
+        self.gev2.data[COLUMNS.gene1] = 'XYZ'
+        self.gev2.data[COLUMNS.gene2] = 'XYS'
+        self.gev2.data[COLUMNS.transcript1] = 'XYZA'
+        self.gev2.data[COLUMNS.transcript2] = 'XYSB'
+        bpp = compare_bpp_annotations(self.gev1, self.gev2, self.best_transcripts)
+        self.assertEqual(self.gev2, bpp)
+        self.assertEqual('XYZA', bpp.data[COLUMNS.transcript1])
 
+    def test_compare_bbp_annotations_two_fusion_cdna(self):
+        self.gev1.data[COLUMNS.fusion_cdna_coding_start] = 1
+        self.gev1.data[COLUMNS.fusion_cdna_coding_end] = 20
+        self.gev2.data[COLUMNS.fusion_cdna_coding_start] = 1
+        self.gev2.data[COLUMNS.fusion_cdna_coding_end] = 40
+        bpp = compare_bpp_annotations(self.gev1, self.gev2, self.best_transcripts)
+        self.assertEqual(self.gev2, bpp)
 
-    def test_compare_bbp_annotations_two_best_transcripts(self):
-        print(self.annotations['1'][0].transcripts[1].exons)
-        self.assertTrue(False)
+    def test_compare_bpp_annotations_one_transcript(self):
+        self.gev1.data[COLUMNS.gene1] = None
+        self.gev1.data[COLUMNS.gene2] = 'XYS'
+        self.gev1.data[COLUMNS.transcript1] = None
+        self.gev1.data[COLUMNS.transcript2] = 'XYSZ'
+        self.gev2.data[COLUMNS.gene1] = 'XYZ'
+        self.gev2.data[COLUMNS.gene2] = 'XYS'
+        self.gev2.data[COLUMNS.transcript1] = 'XYZA'
+        self.gev2.data[COLUMNS.transcript2] = 'XYSB'
+        bpp = compare_bpp_annotations(self.gev1, self.gev2, self.best_transcripts)
+        self.assertEqual(self.gev2, bpp)
 
-        self.ust = usTranscript([Exon(101, 200), Exon(301, 400), Exon(501, 600)], strand=STRAND.POS)
+    def test_compare_bpp_annotations_one_best_transcripts(self):
+        self.gev1.data[COLUMNS.gene1] = 'XYZ'
+        self.gev1.data[COLUMNS.gene2] = 'ABC'
+        self.gev1.data[COLUMNS.transcript1] = 'XYZB'
+        self.gev1.data[COLUMNS.transcript2] = 'ABCA'
+        self.gev2.data[COLUMNS.gene1] = 'XYZ'
+        self.gev2.data[COLUMNS.gene2] = 'ABC'
+        self.gev2.data[COLUMNS.transcript1] = 'XYZA'
+        self.gev2.data[COLUMNS.transcript2] = 'ABCB'
+        bpp = compare_bpp_annotations(self.gev1, self.gev2, self.best_transcripts)
+        self.assertEqual(self.gev1, bpp)
+        self.assertEqual('XYZB', bpp.data[COLUMNS.transcript1])
+
+    def test_compare_bpp_annotations_no_transcripts(self):
+        self.gev1.data[COLUMNS.gene1] = None
+        self.gev1.data[COLUMNS.gene2] = None
+        self.gev1.data[COLUMNS.transcript1] = None
+        self.gev1.data[COLUMNS.transcript2] = None
+        self.gev2.data[COLUMNS.gene1] = None
+        self.gev2.data[COLUMNS.gene2] = None
+        self.gev2.data[COLUMNS.transcript1] = None
+        self.gev2.data[COLUMNS.transcript2] = None
+        self.gev1.break1.strand = STRAND.POS
+        bpp = compare_bpp_annotations(self.gev1, self.gev2, self.best_transcripts)
+        self.assertEqual(self.gev1, bpp)
+        self.assertEqual(None, bpp.data[COLUMNS.transcript1])
+
+    def test_combine_events(self):
         raise unittest.SkipTest('TODO')
 
-    # def test_compare_bpp_annotations_two_transcripts(self):
-    #     raise unittest.SkipTest('TODO')
+    def test_filtering_events_contigs(self):
+        raise unittest.SkipTest('TODO')
 
-    # def test_compare_bbp_annotations_two_fusion_cdna(self):
-    #     raise unittest.SkipTest('TODO')
+    def test_filtering_events_none(self):
+        raise unittest.SkipTest('TODO')
 
-    # def test_compare_bbp_annotations_one_transcripts(self):
-    #     raise unittest.SkipTest('TODO')
+    def test_filtering_events_flanking(self):
+        raise unittest.SkipTest('TODO')
 
-    # def test_compare_bbp_annotations_one_best_transcripts(self):
-    #     raise unittest.SkipTest('TODO')
+    def test_filtering_events_spanning(self):
+        raise unittest.SkipTest('TODO')
 
-    # def test_compare_bbp_annotations_no_transcripts(self):
-    #     raise unittest.SkipTest('TODO')
-
-    # def test_aggregate_events(self):
-    #     raise unittest.SkipTest('TODO')
-
-    # def test_filtering_events_contigs(self):
-    #     raise unittest.SkipTest('TODO')
-
-    # def test_filtering_events_none(self):
-    #     raise unittest.SkipTest('TODO')
-
-    # def test_filtering_events_flanking(self):
-    #     raise unittest.SkipTest('TODO')
-
-    # def test_filtering_events_spanning(self):
-    #     raise unittest.SkipTest('TODO')
-
-    # def test_filtering_events_split(self):
-    #     raise unittest.SkipTest('TODO')
+    def test_filtering_events_split(self):
+        raise unittest.SkipTest('TODO')

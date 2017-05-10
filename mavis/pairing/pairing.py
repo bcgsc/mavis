@@ -30,7 +30,7 @@ def predict_transcriptome_breakpoint(breakpoint, transcript):
 
         if Interval.overlaps(breakpoint, temp):  # overlaps a splice site or exon
             if len(breakpoint) > 1:
-                raise NotSpecifiedError('breakpoint overlaps an exon or splice site and is not specific')
+                raise NotSpecifiedError('breakpoint overlaps an exon or splice site and is not specific', breakpoint, transcript)
             elif prime == PRIME.FIVE:
                 if i > 0:
                     prev = exons[i - 1]
@@ -83,7 +83,7 @@ def predict_transcriptome_breakpoint(breakpoint, transcript):
                 pass
 
     if len(tbreaks) == 0:
-        raise AssertionError('could not predict breakpoint')
+        raise AssertionError('could not predict breakpoint', breakpoint, transcript)
     return sorted(tbreaks)
 
 
