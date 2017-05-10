@@ -178,7 +178,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1.load_evidence()
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         self.assertEqual(20, self.count_original_reads(ev1.split_reads[0]))
-        self.assertEqual(17, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(18, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(40, len(ev1.flanking_pairs))
 
     def test_load_evidence_small_deletion1(self):
@@ -243,7 +243,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         )
         ev1.load_evidence()
         self.assertEqual(20, self.count_original_reads(ev1.split_reads[0]))
-        self.assertEqual(17, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(18, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(0, len(ev1.spanning_reads))
         self.assertEqual(40, len(set(ev1.flanking_pairs)))
 

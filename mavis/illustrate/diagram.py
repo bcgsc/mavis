@@ -3,17 +3,11 @@ This is the primary module responsible for generating svg visualizations
 
 """
 from ..annotate.genomic import IntergenicRegion
-from ..annotate.variant import FusionTranscript
-from ..constants import STRAND, ORIENT, CODON_SIZE, GIESMA_STAIN
-from ..error import DrawingFitError, NotSpecifiedError
 from ..interval import Interval
 from .elements import *
-from .scatter import ScatterPlot, draw_scatter
+from .scatter import draw_scatter
 from .util import *
-from colour import Color
 from svgwrite import Drawing
-import re
-import svgwrite
 
 # draw gene level view
 # draw gene box
@@ -22,7 +16,7 @@ HEX_BLACK = '#000000'
 
 
 def draw_sv_summary_diagram(
-    DS, ann, fusion_transcript=None, reference_genome=None, templates=None, ignore_absent_templates=True,
+    DS, ann, reference_genome=None, templates=None, ignore_absent_templates=True,
     show_template=True, user_friendly_labels=True, template_display_label_prefix='c'
 ):
     """
@@ -39,7 +33,6 @@ def draw_sv_summary_diagram(
 
     Args:
         ann (Annotation): the annotation object to be illustrated
-        fusion_transcript (FusionTranscript): the fusion transcript built from this annotation
         reference_genome (dict of str by str): reference sequences
         templates (list of Template): list of templates, used in drawing the template-level view
         ignore_absent_templates (bool):
@@ -51,6 +44,7 @@ def draw_sv_summary_diagram(
             names (where possible)
         template_display_label_prefix (str): the character to precede the template label
     """
+    fusion_transcript = ann.fusion
     templates = dict() if templates is None else templates
     canvas = Drawing(size=(DS.width, 1000))  # just set the height for now and change later
     labels = LabelMapping()  # keep labels consistent within the drawing
@@ -183,8 +177,8 @@ def draw_sv_summary_diagram(
         canvas.add(g)
         gheights.append(g.height)
     else:
-        g = draw_genes(DS,
-            canvas, genes1 | genes2, drawing_width, [ann.break1, ann.break2], colors=colors, labels=labels)
+        g = draw_genes(
+            DS, canvas, genes1 | genes2, drawing_width, [ann.break1, ann.break2], colors=colors, labels=labels)
         g.translate(x, y)
         canvas.add(g)
         gheights.append(g.height)
@@ -196,7 +190,8 @@ def draw_sv_summary_diagram(
     if ann.transcript1 == ann.transcript2:
         try:
             g = canvas.g(class_='transcript')
-            g = draw_ustranscript(DS,
+            g = draw_ustranscript(
+                DS,
                 canvas, ann.transcript1, drawing_width,
                 breakpoints=[ann.break1, ann.break2],
                 labels=labels,
@@ -211,7 +206,8 @@ def draw_sv_summary_diagram(
     else:  # separate drawings
         try:
             g = canvas.g(class_='transcript')
-            g = draw_ustranscript(DS,
+            g = draw_ustranscript(
+                DS,
                 canvas, ann.transcript1, half_drawing_width,
                 breakpoints=[ann.break1],
                 labels=labels,
@@ -226,7 +222,8 @@ def draw_sv_summary_diagram(
 
         try:
             g = canvas.g(class_='transcript')
-            g = draw_ustranscript(DS,
+            g = draw_ustranscript(
+                DS,
                 canvas, ann.transcript2, half_drawing_width,
                 breakpoints=[ann.break2],
                 labels=labels,
@@ -251,7 +248,8 @@ def draw_sv_summary_diagram(
             if old_ex in colors:
                 colors[exon] = colors[old_ex]
         g = canvas.g(class_='transcript')
-        g = draw_ustranscript(DS,
+        g = draw_ustranscript(
+            DS,
             canvas, fusion_transcript, drawing_width,
             colors=colors,
             labels=labels,
@@ -352,8 +350,8 @@ def draw_multi_transcript_overlay(DS, gene, vmarkers=None, window_buffer=0, plot
         s = Interval.convert_ratioed_pos(mapping, m.start)
         t = Interval.convert_ratioed_pos(mapping, m.end)
         px_itvl = Interval(s.start, t.end)
-        bg = draw_vmarker(DS,
-            canvas, m, px_itvl.length(), y, label=labels.add(m, DS.marker_label_prefix))
+        bg = draw_vmarker(
+            DS, canvas, m, px_itvl.length(), y, label=labels.add(m, DS.marker_label_prefix))
         bg.translate(x + px_itvl.start, 0)
         main_group.add(bg)
 

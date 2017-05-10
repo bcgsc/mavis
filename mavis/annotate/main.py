@@ -71,7 +71,6 @@ def main(
     log('opening for write:', FA_OUTPUT_FILE)
     fasta_fh = open(FA_OUTPUT_FILE, 'w')
     
-    errored_out = None
     try:
         total = len(annotations)
         for i, ann in enumerate(annotations):
@@ -87,7 +86,7 @@ def main(
             log(
                 '({} of {}) current annotation'.format(i + 1, total),
                 ann.data[COLUMNS.annotation_id], ann.transcript1, ann.transcript2, ann.event_type,
-                ann.cluster_id)
+                ann.data.get('cluster_id', None))
 
             # try building the fusion product
             rows = []
@@ -181,16 +180,9 @@ def main(
 
             for row in rows:
                 tabbed_fh.write('\t'.join([str(row.get(k, None)) for k in header]) + '\n')
-    except Exception as err:
-        errored_out = err
+        generate_complete_stamp(output, log)
     finally:
         log('closing:', TABBED_OUTPUT_FILE)
         tabbed_fh.close()
         log('closing:', FA_OUTPUT_FILE)
         fasta_fh.close()
-        if errored_out is None:
-            generate_complete_stamp(output, log)
-        else:
-            log('Error. Annotation is incomplete', errored_out)
-            raise errored_out
-
