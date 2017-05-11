@@ -1,7 +1,7 @@
 import os
 import itertools
 from Bio import SeqIO
-from ..constants import PROTOCOL, COLUMNS, CALL_METHOD, SVTYPE, SPLICE_TYPE
+from ..constants import PROTOCOL, COLUMNS, CALL_METHOD, SVTYPE, SPLICE_TYPE, STRAND
 from .constants import DEFAULTS
 from ..util import read_inputs, output_tabbed_file, log, generate_complete_stamp
 from . import equivalent_events
@@ -108,47 +108,57 @@ def main(
     calls_by_lib = dict()
     bpp_by_product_key = dict()
     pairings = dict()
+    categories = set()
     
-    for bpp in bpps:
+    for i, bpp in enumerate(bpps):
         lib = bpp.data[COLUMNS.library]
         product_key = '_'.join([str(v) for v in [
-            bpp.data[COLUMNS.library],
-            bpp.data[COLUMNS.protocol],
-            bpp.data[COLUMNS.annotation_id],
-            bpp.data[COLUMNS.fusion_splicing_pattern],
-            bpp.data[COLUMNS.fusion_cdna_coding_start],
-            bpp.data[COLUMNS.fusion_cdna_coding_end]
+            bpp.library,
+            bpp.protocol,
+            bpp.data.get(COLUMNS.cluster_id, i),
+            bpp.data.get(COLUMNS.validation_id, i),
+            bpp.data.get(COLUMNS.annotation_id, i),
+            bpp.fusion_splicing_pattern,
+            bpp.fusion_cdna_coding_start,
+            bpp.fusion_cdna_coding_end
         ]])
+        category = (bpp.break1.chr, bpp.break2.chr, bpp.break1.strand, bpp.break2.strand)
+        categories.add(category)
+        assert(bpp.break1.strand != STRAND.NS and bpp.break2.strand != STRAND.NS)
         bpp.data[COLUMNS.product_id] = product_key
-        calls_by_lib.setdefault(lib, set())
+        calls_by_lib.setdefault(lib, {})
+        calls_by_lib[lib].setdefault(category, set())
+        calls_by_lib[lib][category].add(product_key)
         
         pairings[product_key] = set()
-        
-        if product_key in calls_by_lib[lib]:
+        if product_key in bpp_by_product_key:
             raise KeyError('duplicate bpp is not unique within lib', lib, product_key, bpp, bpp.data)
-        else:
-            calls_by_lib[lib].add(product_key)
-        bpp_by_product_key[product_key] = bpp
-    
-    # pairwise comparison of breakpoints between all libraries
-    for lib1, lib2 in itertools.combinations(calls_by_lib.keys(), 2):
-        # for each two libraries pair all calls
-        calls1 = calls_by_lib[lib1]
-        calls2 = calls_by_lib[lib2]
-
-        log(len(calls1) * len(calls2), 'comparison(s) between', lib1, 'and', lib2)
         
-        for product_key1, product_key2 in itertools.product(calls1, calls2):
-            if equivalent_events(
-                bpp_by_product_key[product_key1],
-                bpp_by_product_key[product_key2],
-                DISTANCES=DISTANCES,
-                reference_transcripts=reference_transcripts,
-                product_sequences=product_sequences
-            ):
-                pairings[product_key1].add(product_key2)
-                pairings[product_key2].add(product_key1)
-    
+        bpp_by_product_key[product_key] = bpp
+    total_comparisons = 0
+    # pairwise comparison of breakpoints between all libraries
+    for category in sorted(list(categories)):
+        for lib, other_lib in itertools.combinations(calls_by_lib.keys(), 2):
+            # create combinations from other libraries in the same category
+            pairs = calls_by_lib[lib].get(category, set())
+            other_pairs = calls_by_lib[other_lib].get(category, set())
+            c = len(pairs) * len(other_pairs)
+            total_comparisons += c
+            # for each two libraries pair all calls
+            if c > 10000:
+                log(c, 'comparison(s) between', lib, 'and', other_lib, 'for', category)
+            
+            for product_key1, product_key2 in itertools.product(pairs, other_pairs):
+                if equivalent_events(
+                    bpp_by_product_key[product_key1],
+                    bpp_by_product_key[product_key2],
+                    DISTANCES=DISTANCES,
+                    reference_transcripts=reference_transcripts,
+                    product_sequences=product_sequences
+                ):
+                    pairings[product_key1].add(product_key2)
+                    pairings[product_key2].add(product_key1)
+    log('checked', total_comparisons, 'total comparisons')
     for product_key, paired_product_keys in pairings.items():
         bpp = bpp_by_product_key[product_key]
         
