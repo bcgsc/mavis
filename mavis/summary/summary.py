@@ -4,6 +4,11 @@ from ..breakpoint import Breakpoint, BreakpointPair
 
 def alphanumeric_choice(bpp1, bpp2):
     """
+    Args:
+        bpp1 (BreakpointPair)
+        bpp2 (BreakpointPair)
+
+    returns the one with transcript with alphanumeric priority, with transcript1 chosen for ties
     """
     chosen1 = sorted([bpp1.data[COLUMNS.transcript1], bpp2.data[COLUMNS.transcript1]])[0]
     chosen2 = sorted([bpp1.data[COLUMNS.transcript2], bpp2.data[COLUMNS.transcript2]])[0]

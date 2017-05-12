@@ -1,13 +1,9 @@
 from Bio import SeqIO
 from ..constants import COLUMNS, STRAND, sort_columns, CALL_METHOD
-from ..annotate import load_reference_genes
 from ..util import read_inputs, log
 from ..pairing import equivalent_events
 from ..pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from .constants import DEFAULTS
-import os
-import sys
-import argparse
 import itertools
 
 from .summary import group_events, compare_bpp_annotations, annotate_aliases
