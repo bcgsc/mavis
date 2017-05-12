@@ -112,7 +112,7 @@ def main(
     
     for i, bpp in enumerate(bpps):
         lib = bpp.data[COLUMNS.library]
-        product_key = '_'.join([str(v) for v in [
+        product_key = (
             bpp.library,
             bpp.protocol,
             bpp.data.get(COLUMNS.cluster_id, i),
@@ -121,7 +121,7 @@ def main(
             bpp.fusion_splicing_pattern,
             bpp.fusion_cdna_coding_start,
             bpp.fusion_cdna_coding_end
-        ]])
+        )
         category = (bpp.break1.chr, bpp.break2.chr, bpp.break1.strand, bpp.break2.strand)
         categories.add(category)
         assert(bpp.break1.strand != STRAND.NS and bpp.break2.strand != STRAND.NS)
@@ -149,6 +149,8 @@ def main(
                 log(c, 'comparison(s) between', lib, 'and', other_lib, 'for', category)
             
             for product_key1, product_key2 in itertools.product(pairs, other_pairs):
+                if product_key1[:-3] == product_key2[:-3]:
+                    continue
                 if equivalent_events(
                     bpp_by_product_key[product_key1],
                     bpp_by_product_key[product_key2],
@@ -174,7 +176,7 @@ def main(
                 if bpp.data[COLUMNS.transcript2] != paired_bpp.data[COLUMNS.transcript2]:
                     continue
             filtered.append(paired_product_key)
-        bpp.data[COLUMNS.pairing] = ';'.join(sorted(filtered))
+        bpp.data[COLUMNS.pairing] = ';'.join(['_'.join([str(v) for v in key]) for key in sorted(filtered)])
 
     fname = os.path.join(
         output,
