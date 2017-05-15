@@ -30,7 +30,9 @@ def predict_transcriptome_breakpoint(breakpoint, transcript):
 
         if Interval.overlaps(breakpoint, temp):  # overlaps a splice site or exon
             if len(breakpoint) > 1:
-                raise NotSpecifiedError('breakpoint overlaps an exon or splice site and is not specific')
+                raise NotSpecifiedError(
+                    'breakpoint overlaps an exon or splice site and is not specific (i.e. has '
+                    'an interval greater than 1)')
             elif prime == PRIME.FIVE:
                 if i > 0:
                     prev = exons[i - 1]
@@ -60,7 +62,8 @@ def predict_transcriptome_breakpoint(breakpoint, transcript):
         elif i > 0:  # look at the previous intron
             prev = exons[i - 1]
             try:
-                intron = Interval(prev.donor_splice_site.end + 1, curr.acceptor_splice_site.start - 1)
+                s, t = sorted([prev.donor_splice_site.end, curr.acceptor_splice_site.start])
+                intron = Interval(s + 1, t - 1)
                 if Interval.overlaps(breakpoint, intron):
                     if prime == PRIME.FIVE:
                         tbreaks.append(
@@ -114,18 +117,18 @@ def equivalent_events(ev1, ev2, reference_transcripts, DISTANCES=None, product_s
         ev2.data[COLUMNS.break2_call_method]
     ])
     max_distance = max([DISTANCES[m] for m in methods])
-        
+
     if ev1.data[COLUMNS.fusion_sequence_fasta_id] and ev2.data[COLUMNS.fusion_sequence_fasta_id]:
         fusion1 = product_sequences[ev1.data[COLUMNS.fusion_sequence_fasta_id]]
         fusion2 = product_sequences[ev2.data[COLUMNS.fusion_sequence_fasta_id]]
-    
+
         if fusion1 != fusion2:
             return False
         for col in [COLUMNS.fusion_cdna_coding_start, COLUMNS.fusion_cdna_coding_end]:
             if ev1.data[col] != ev2.data[col]:
                 return False
         return True
-    
+
     break1_match = False
     break2_match = False
 
@@ -133,19 +136,24 @@ def equivalent_events(ev1, ev2, reference_transcripts, DISTANCES=None, product_s
         # predict genome breakpoints to compare by location
         t1 = reference_transcripts.get(ev1.data[COLUMNS.transcript1], None)
         if t1:
-            pbreaks = predict_transcriptome_breakpoint(ev1.break1, t1)
-            for b in pbreaks:
-                if abs(Interval.dist(b, ev2.break1)) <= max_distance:
-                    break1_match = True
-                    break
+            try:
+                pbreaks = predict_transcriptome_breakpoint(ev1.break1, t1)
+                for b in pbreaks:
+                    if abs(Interval.dist(b, ev2.break1)) <= max_distance:
+                        break1_match = True
+                        break
+            except NotSpecifiedError:
+                pass
         t2 = reference_transcripts.get(ev1.data[COLUMNS.transcript2], None)
         if t2:
-            pbreaks = predict_transcriptome_breakpoint(ev1.break2, t2)
-            for b in pbreaks:
-                if abs(Interval.dist(b, ev2.break2)) <= max_distance:
-                    break2_match = True
-                    break
-
+            try:
+                pbreaks = predict_transcriptome_breakpoint(ev1.break2, t2)
+                for b in pbreaks:
+                    if abs(Interval.dist(b, ev2.break2)) <= max_distance:
+                        break2_match = True
+                        break
+            except NotSpecifiedError:
+                pass
     elif ev1.data[COLUMNS.event_type] != ev2.data[COLUMNS.event_type]:
         return False
     # location comparison

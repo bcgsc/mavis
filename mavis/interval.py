@@ -285,6 +285,7 @@ class Interval:
 
     @classmethod
     def convert_pos(cls, mapping, pos, forward_to_reverse=None):
+#        print("convert_ratioed_pos(" + str((mapping, pos, forward_to_reverse)))
         i = cls.convert_ratioed_pos(mapping, pos, forward_to_reverse)
         if i.forward_to_reverse:
             return i.end

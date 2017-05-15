@@ -178,7 +178,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1.load_evidence()
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         self.assertEqual(20, self.count_original_reads(ev1.split_reads[0]))
-        self.assertEqual(17, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(18, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(40, len(ev1.flanking_pairs))
 
     def test_load_evidence_small_deletion1(self):
@@ -243,7 +243,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         )
         ev1.load_evidence()
         self.assertEqual(20, self.count_original_reads(ev1.split_reads[0]))
-        self.assertEqual(17, self.count_original_reads(ev1.split_reads[1]))
+        self.assertEqual(18, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(0, len(ev1.spanning_reads))
         self.assertEqual(40, len(set(ev1.flanking_pairs)))
 
@@ -352,7 +352,6 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(8, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(59, len(ev1.flanking_pairs))
 
-
     @unittest.skip('skip because too complex')
     def test_load_evidence_complex_deletion(self):
         ev1 = self.genome_evidence(
@@ -448,7 +447,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(0, len(ev1.spanning_reads))
         self.assertEqual(0, len(ev1.flanking_pairs))
 
-        #Example 2
+        # Example 2
         ev1 = self.genome_evidence(
             Breakpoint('reference17', 1974, orient=ORIENT.RIGHT),
             Breakpoint('reference17', 2020, orient=ORIENT.LEFT),
@@ -480,9 +479,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         self.assertEqual(0, len(ev1.flanking_pairs))
 
 
-
 class TestEvidenceGathering(unittest.TestCase):
-
     def setUp(self):
         # test loading of evidence for event found on reference3 1114 2187
         self.ev1 = GenomeEvidence(
@@ -599,7 +596,6 @@ class MockEvidence:
 
     def __init__(self, ref=None):
         self.HUMAN_REFERENCE_GENOME = ref
-
 
 
 if __name__ == "__main__":

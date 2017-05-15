@@ -24,13 +24,14 @@ class Breakpoint(Interval):
             chr (str): the chromosome
             start (int): the genomic position of the breakpoint
             end (int): if the breakpoint is uncertain (a range) then specify the end of the range here
-            strand (STRAND): the strand
             orient (ORIENT): the orientation (which side is retained at the break)
+            strand (STRAND): the strand
+            seq (str): the seq
 
         Examples:
             >>> Breakpoint('1', 1, 2)
             >>> Breakpoint('1', 1)
-            >>> Breakpoint('1', 1, 2, '+', 'R')
+            >>> Breakpoint('1', 1, 2, 'R', )
             >>> Breakpoint('1', 1, orient='R')
         """
         from .annotate.base import ReferenceName
@@ -372,11 +373,9 @@ class BreakpointPair:
                 first_breakpoint - len(untemplated_seq) + 1:first_breakpoint + 1]
             refseq = str(refseq)
             midpoint = len(untemplated_seq) // 2 + 1  # more than the untemplated
-            match = None
             for dup_len in range(len(untemplated_seq), midpoint - 1, -1):
                 subseq = untemplated_seq[0:dup_len]
                 if subseq == refseq[-1 * dup_len:]:
-                    match = subseq
                     pos = first_breakpoint - len(subseq) + 1
                     break1 = Breakpoint(
                         read.reference_name,
@@ -707,7 +706,7 @@ def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, **
                         ' ^[A-Za-z0-9-]+$ ')
         stranded = row[COLUMNS.stranded] or explicit_strand
         opp = row[COLUMNS.opposing_strands]
-        
+
         strand1 = row[COLUMNS.break1_strand] if stranded else STRAND.NS
         strand2 = row[COLUMNS.break2_strand] if stranded else STRAND.NS
 
@@ -716,7 +715,6 @@ def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, **
 
         row[COLUMNS.stranded] = stranded
         temp = []
-        errors = []
         for o1, o2, opp, s1, s2 in itertools.product(
             ORIENT.expand(row[COLUMNS.break1_orientation]) if expand_ns else [row[COLUMNS.break1_orientation]],
             ORIENT.expand(row[COLUMNS.break2_orientation]) if expand_ns else [row[COLUMNS.break2_orientation]],

@@ -1,16 +1,12 @@
 from Bio import SeqIO
 from ..constants import COLUMNS, STRAND, sort_columns, CALL_METHOD
-from ..annotate import load_reference_genes
 from ..util import read_inputs, log
 from ..pairing import equivalent_events
 from ..pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from .constants import DEFAULTS
-import os
-import sys
-import argparse
 import itertools
 
-from . import compare_bpp_annotations, annotate_aliases
+from .summary import group_events, compare_bpp_annotations, annotate_aliases
 
 
 def main(
@@ -27,7 +23,7 @@ def main(
     spanning_call_distance=PAIRING_DEFAULTS.spanning_call_distance,
     **kwargs
 ):
-    # threshold parameters to be defined in config file
+    # pairing threshold parameters to be defined in config file
     DISTANCES = {
         CALL_METHOD.FLANK: flanking_call_distance,
         CALL_METHOD.SPLIT: split_call_distance,
@@ -55,6 +51,8 @@ def main(
         CALL_METHOD.SPLIT: (COLUMNS.break1_split_reads, COLUMNS.break2_split_reads),
         CALL_METHOD.CONTIG: (COLUMNS.contig_alignment_score, COLUMNS.contig_alignment_score),
         CALL_METHOD.SPAN: (COLUMNS.spanning_reads, COLUMNS.spanning_reads)
+
+        # check on linking_split_reads, # contigs assembled
     }
 
     bpps = []
@@ -133,7 +131,7 @@ def main(
                 if t.is_best_transcript:
                     best_transcripts[t.name] = t
 
-    # filter low evidence and give a evidence score?
+    # TODO: give an evidence score to the events based on call method and evidence levels
     filtered_out_bpps = []
     bpps_to_keep = dict()
     bpp_by_product_key = dict()
@@ -142,24 +140,22 @@ def main(
     product_sequence_files = set()
 
     for bpp in bpps:
-#        event_id = '_'.join([bpp.data[COLUMNS.product_id], bpp.data[COLUMNS.annotation_id]])
         break1_call_method = bpp.data[COLUMNS.break1_call_method]
         break2_call_method = bpp.data[COLUMNS.break2_call_method]
 
+        # filter low evidence
         if int(bpp.data[SUPPORT[break1_call_method][0]]) < THRESHOLDS[break1_call_method] or \
                 int(bpp.data[SUPPORT[break2_call_method][1]]) < THRESHOLDS[break2_call_method]:
             filtered_out_bpps.append(bpp)
         else:
             lib = bpp.data[COLUMNS.library]
             # info needed for pairing
-            bpp_by_product_key[bpp.data[COLUMNS.product_id]] = bpp
             if bpp.data[COLUMNS.fusion_sequence_fasta_id]:
                 product_sequences[bpp.data[COLUMNS.fusion_sequence_fasta_id]] = None
             if bpp.data[COLUMNS.fusion_sequence_fasta_file]:
                 product_sequence_files.add(bpp.data[COLUMNS.fusion_sequence_fasta_file])
             if lib not in pairings:
                 pairings[lib] = dict()
-            pairings[bpp.data[COLUMNS.library]][bpp.data[COLUMNS.product_id]] = set()
 
             pos = (bpp.break1.chr,
                    bpp.break1.start,
@@ -169,9 +165,10 @@ def main(
                    bpp.break2.end)
 
             bpp = annotate_aliases(bpp, reference_transcripts)
-            if lib not in bpps_to_keep:
 
+            if lib not in bpps_to_keep:
                 bpps_to_keep[lib] = dict()
+
             if pos in bpps_to_keep[lib]:
                 bpp_call_score = RANKING[bpp.data[COLUMNS.break1_call_method]] + \
                     RANKING[bpp.data[COLUMNS.break2_call_method]]
@@ -185,12 +182,10 @@ def main(
                     bpps_to_keep[lib][pos] = bpp
                 else:
                     # Filter based on the annotations
-                    # todo: Also aggregate the contig, untemplated and annotation information?
                     better_bpp = compare_bpp_annotations(bpp, bpps_to_keep[lib][pos], best_transcripts)
                     bpps_to_keep[lib][pos] = better_bpp
             else:
                 bpps_to_keep[lib][pos] = bpp
-            # todo: group events that are close together. Either with clustering, pairing or add new code
 
     # info needed for pairing
     for fname in sorted(list(product_sequence_files)):
@@ -213,6 +208,10 @@ def main(
         product_sequences[seqid] = str(seq.seq)
 
     for lib in bpps_to_keep.keys():
+        for bpp in bpps_to_keep[lib].values():
+            pairings[bpp.data[COLUMNS.library]][bpp.data[COLUMNS.product_id]] = set()
+            bpp_by_product_key[bpp.data[COLUMNS.product_id]] = bpp
+
         for bpp1, bpp2 in itertools.product(bpps_to_keep[lib].values(), bpps_to_keep[lib].values()):
             if equivalent_events(
                 bpp1,
@@ -224,7 +223,8 @@ def main(
                 pairings[lib][bpp1.data[COLUMNS.product_id]].add(bpp2.data[COLUMNS.product_id])
                 pairings[lib][bpp2.data[COLUMNS.product_id]].add(bpp1.data[COLUMNS.product_id])
 
-            # todo: add actual pairing information
+    # todo: add actual pairing information (i.e somatic, germline)
+    bpp_to_keep = set()
     for lib in pairings:
         for product_key, paired_product_keys in pairings[lib].items():
             bpp = bpp_by_product_key[product_key]
@@ -241,75 +241,59 @@ def main(
                     if bpp.data[COLUMNS.transcript2] != paired_bpp.data[COLUMNS.transcript2]:
                         continue
                 filtered.append(paired_product_key)
+                bpp = group_events(bpp, paired_bpp)
             bpp.data['summary_pairing'] = ';'.join(sorted(filtered))
-
-    fname = output
-#    output_tabbed_file(bpps_to_keep.values(), fname)
+            bpp_by_product_key[product_key] = bpp
+            bpp_to_keep.add(bpp)
 
     full_output_columns = [COLUMNS.break1_chromosome,
-                    COLUMNS.break1_homologous_seq,
-                    COLUMNS.break1_orientation,
-                    COLUMNS.break1_position_end,
-                    COLUMNS.break1_position_start,
-                    COLUMNS.break2_chromosome,
-                    COLUMNS.break2_homologous_seq,
-                    COLUMNS.break2_orientation,
-                    COLUMNS.break2_position_end,
-                    COLUMNS.break2_position_start,
-                    COLUMNS.break1_call_method,
-                    COLUMNS.break2_call_method,
-                    COLUMNS.contig_seq,
-                    COLUMNS.event_type,
-                    COLUMNS.fusion_cdna_coding_end,
-                    COLUMNS.fusion_cdna_coding_start,
-                    COLUMNS.fusion_mapped_domains,
-                    COLUMNS.gene1,
-                    COLUMNS.gene1_direction,
-                    COLUMNS.gene2,
-                    COLUMNS.gene2_direction,
-                    COLUMNS.gene_product_type,
-                    COLUMNS.genes_encompassed,
-                    COLUMNS.genes_overlapping_break1,
-                    COLUMNS.genes_overlapping_break2,
-                    COLUMNS.genes_proximal_to_break1,
-                    COLUMNS.genes_proximal_to_break2,
-                    COLUMNS.library,
-                    COLUMNS.protocol,
-                    COLUMNS.transcript1,
-                    COLUMNS.transcript2,
-                    COLUMNS.untemplated_seq,
-                    COLUMNS.tools,
-                    'gene1_aliases',
-                    'gene2_aliases']
-    columns = [COLUMNS.product_id,
-               'summary_pairing',
-               COLUMNS.break1_chromosome,
-               COLUMNS.break1_position_start,
-               COLUMNS.break1_position_end,
-               COLUMNS.break2_chromosome,
-               COLUMNS.break2_position_start,
-               COLUMNS.break2_position_end,
-               COLUMNS.break1_call_method,
-               COLUMNS.break2_call_method,
-               COLUMNS.contig_seq,
-               COLUMNS.gene1,
-               COLUMNS.gene2,
-               COLUMNS.transcript1,
-               COLUMNS.transcript2
-               ]
-    rows = []
-    for lib in bpps_to_keep.keys():
-        for row in bpps_to_keep[lib].values():
-            try:
-                row = row.flatten()
-            except AttributeError:
-                pass
-            rows.append(row)
+                           COLUMNS.break1_homologous_seq,
+                           COLUMNS.break1_orientation,
+                           COLUMNS.break1_position_end,
+                           COLUMNS.break1_position_start,
+                           COLUMNS.break2_chromosome,
+                           COLUMNS.break2_homologous_seq,
+                           COLUMNS.break2_orientation,
+                           COLUMNS.break2_position_end,
+                           COLUMNS.break2_position_start,
+                           COLUMNS.break1_call_method,
+                           COLUMNS.break2_call_method,
+                           COLUMNS.contig_seq,
+                           COLUMNS.event_type,
+                           COLUMNS.fusion_cdna_coding_end,
+                           COLUMNS.fusion_cdna_coding_start,
+                           COLUMNS.fusion_mapped_domains,
+                           COLUMNS.gene1,
+                           COLUMNS.gene1_direction,
+                           COLUMNS.gene2,
+                           COLUMNS.gene2_direction,
+                           COLUMNS.gene_product_type,
+                           COLUMNS.genes_encompassed,
+                           COLUMNS.genes_overlapping_break1,
+                           COLUMNS.genes_overlapping_break2,
+                           COLUMNS.genes_proximal_to_break1,
+                           COLUMNS.genes_proximal_to_break2,
+                           COLUMNS.library,
+                           COLUMNS.protocol,
+                           COLUMNS.transcript1,
+                           COLUMNS.transcript2,
+                           COLUMNS.untemplated_seq,
+                           COLUMNS.tools,
+                           COLUMNS.gene1_aliases,
+                           COLUMNS.gene2_aliases,
+                           'summary_pairing']
 
-#    header = sort_columns(columns)
-    header = columns
-    with open(fname, 'w') as fh:
-        log('writing', fname)
+    rows = []
+    for row in list(bpp_to_keep):
+        try:
+            row = row.flatten()
+        except AttributeError:
+            pass
+        rows.append(row)
+
+    header = sort_columns(full_output_columns)
+    with open(output, 'w') as fh:
+        log('writing', output)
         fh.write('#' + '\t'.join(header) + '\n')
         for row in rows:
             fh.write('\t'.join([str(row.get(c, None)) for c in header]) + '\n')

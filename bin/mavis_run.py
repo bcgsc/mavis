@@ -4,7 +4,7 @@ import sys
 import random
 import argparse
 import TSV
-from mavis.annotate import load_reference_genes, load_reference_genome, load_masking_regions, load_templates
+from mavis.annotate import load_annotations, load_reference_genome, load_masking_regions, load_templates
 from mavis.validate.main import main as validate_main
 from mavis.cluster.main import main as cluster_main
 from mavis.pairing.main import main as pairing_main
@@ -215,7 +215,7 @@ def generate_config(parser, required, optional):
     if any([p == 'transcriptome' for l, p, b, s in args.library]):
         log('loading the reference annotations file', args.annotations)
         args.annotations_filename = args.annotations
-        args.annotations = load_reference_genes(args.annotations, best_transcripts_only=args.best_transcripts_only)
+        args.annotations = load_annotations(args.annotations, best_transcripts_only=args.best_transcripts_only)
 
     for lib, protocol, bam, stranded in args.library:
         if lib not in inputs_by_lib:
@@ -246,7 +246,7 @@ def log_arguments(args):
 def main():
     def usage(err=None, detail=False):
         name = os.path.basename(__file__)
-        u = '\nusage: {} {{cluster,validate,annotate,pairing,pipeline,config}} [-h] [-v]'.format(name)
+        u = '\nusage: {} {{cluster,validate,annotate,pairing,summary,pipeline,config}} [-h] [-v]'.format(name)
         helpmenu = """
 required arguments:
 
@@ -368,7 +368,7 @@ use the -h/--help option
     ]):
         log('loading:', args.annotations)
         args.annotations_filename = args.annotations
-        args.annotations = load_reference_genes(args.annotations)
+        args.annotations = load_annotations(args.annotations)
     else:
         args.annotations_filename = args.annotations
         args.annotations = None
@@ -419,7 +419,7 @@ use the -h/--help option
     elif pstep == PIPELINE_STEP.PAIR:
         pairing_main(**args.__dict__)
     elif pstep == PIPELINE_STEP.SUMMARY:
-        summary_main(**args.__dict__)    # main_summary(args)
+        summary_main(**args.__dict__)
     else:  # PIPELINE
         main_pipeline(args, config)
 

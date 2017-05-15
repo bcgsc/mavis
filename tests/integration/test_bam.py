@@ -63,14 +63,16 @@ class TestBamCache(unittest.TestCase):
         r = MockRead('name', 0)
         self.assertEqual('1', b.get_read_reference_name(r))
 
-    def test__generate_fetch_bins_single(self):
-        self.assertEqual([(1, 100)], BamCache._generate_fetch_bins(1, 100, 1, 0))
+    def test_generate_fetch_bins_single(self):
+        self.assertEqual([(1, 100)], BamCache._generate_fetch_bins(1, 100, 1, 1))
 
-    def test__generate_fetch_bins_multi(self):
-        self.assertEqual([(1, 50), (51, 100)], BamCache._generate_fetch_bins(1, 100, 2, 0))
+    def test_generate_fetch_bins_multi(self):
+        self.assertEqual([(1, 50), (51, 100)], BamCache._generate_fetch_bins(1, 100, 2, 1))
+        self.assertEqual(
+            [(1, 20), (21, 40), (41, 60), (61, 80), (81, 100)], BamCache._generate_fetch_bins(1, 100, 5, 1))
 
-    def test__generate_fetch_bins_multi_gapped(self):
-        self.assertEqual([(1, 45), (56, 100)], BamCache._generate_fetch_bins(1, 100, 2, 10))
+    def test_generate_fetch_bins_large_min_size(self):
+        self.assertEqual([(1, 50), (51, 100)], BamCache._generate_fetch_bins(1, 100, 5, 50))
 
     def test_fetch_single_read(self):
         b = BamCache(BAM_INPUT)

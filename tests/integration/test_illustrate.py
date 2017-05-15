@@ -206,8 +206,8 @@ class TestDraw(unittest.TestCase):
 
         reference_genome = {'1': MockSeq(MockString('A'))}
         ft = FusionTranscript.build(ann, reference_genome)
-
-        canvas, legend = draw_sv_summary_diagram(d, ann, ft)
+        ann.fusion = ft
+        canvas, legend = draw_sv_summary_diagram(d, ann)
         self.assertEqual(4, len(canvas.elements))  # defs counts as element
         expected_height = d.top_margin + d.bottom_margin + \
             d.track_height + d.breakpoint_bottom_margin + d.breakpoint_top_margin + \
@@ -251,11 +251,12 @@ class TestDraw(unittest.TestCase):
         reference_genome = {'1': MockSeq(MockString('A'))}
 
         ft = FusionTranscript.build(ann, reference_genome)
+        ann.fusion = ft
         self.assertEqual(t1.exons[0], ft.exon_mapping[ft.exons[0].position])
         self.assertEqual(t2.exons[2], ft.exon_mapping[ft.exons[1].position])
         self.assertEqual(t2.exons[3], ft.exon_mapping[ft.exons[2].position])
 
-        canvas, legend = draw_sv_summary_diagram(d, ann, ft)
+        canvas, legend = draw_sv_summary_diagram(d, ann)
         self.assertEqual(5, len(canvas.elements))  # defs counts as element
 
         expected_height = d.top_margin + d.bottom_margin + \
@@ -305,8 +306,8 @@ class TestDraw(unittest.TestCase):
         reference_genome = {'1': MockSeq(MockString('A')), '2': MockSeq(MockString('A'))}
 
         ft = FusionTranscript.build(ann, reference_genome)
-
-        canvas, legend = draw_sv_summary_diagram(d, ann, ft)
+        ann.fusion = ft
+        canvas, legend = draw_sv_summary_diagram(d, ann)
         self.assertEqual(6, len(canvas.elements))  # defs counts as element
         expected_height = d.top_margin + d.bottom_margin + \
             d.track_height * 2 + d.padding + d.breakpoint_bottom_margin + d.breakpoint_top_margin + \
@@ -375,8 +376,8 @@ class TestDraw(unittest.TestCase):
         reference_genome = {'1': MockSeq(MockString('A')), '2': MockSeq(MockString('A'))}
 
         ft = FusionTranscript.build(ann, reference_genome)
-
-        canvas, legend = draw_sv_summary_diagram(d, ann, ft, show_template=True, templates=TEMPLATE_METADATA)
+        ann.fusion = ft
+        canvas, legend = draw_sv_summary_diagram(d, ann, show_template=True, templates=TEMPLATE_METADATA)
         # canvas.saveas('test_draw_translocation_with_template.svg')
         self.assertEqual(8, len(canvas.elements))  # defs counts as element
         expected_height = d.top_margin + d.bottom_margin + \
@@ -389,7 +390,7 @@ class TestDraw(unittest.TestCase):
             d.track_height + d.breakpoint_bottom_margin + d.breakpoint_top_margin + d.splice_height + \
             d.template_track_height
         self.assertAlmostEqual(expected_height, canvas.attribs['height'])
-
+    
     def test_draw_overlay(self):
         gene = Gene('12', 25357723, 25403870, strand=STRAND.NEG, name='KRAS')
         marker = BioInterval('12', 25403865, name='splice site mutation')
