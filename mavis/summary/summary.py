@@ -1,4 +1,4 @@
-from ..constants import COLUMNS, STRAND
+from ..constants import COLUMNS, STRAND, CALL_METHOD
 from ..breakpoint import Breakpoint, BreakpointPair
 
 
@@ -157,3 +157,44 @@ def annotate_aliases(bpp, reference_transcripts):
     if bpp.data[COLUMNS.transcript2] in reference_transcripts:
         bpp.data[COLUMNS.gene2_aliases] = ";".join(reference_transcripts[bpp.data[COLUMNS.transcript2]].gene.aliases)
     return(bpp)
+
+
+def filter_by_evidence(
+    bpps, 
+    filter_min_remapped_reads=5, 
+    filter_min_spanning_reads=5, 
+    filter_min_flanking_reads=5, 
+    filter_min_flanking_only_reads=10,
+    filter_min_split_reads=5,
+    filter_min_linking_split_reads=1
+):
+    filtered = []
+    for bpp in bpps:
+        if bpp.break1_call_method == CALL_METHOD.CONTIG and bpp.break2_call_method == CALL_METHOD.CONTIG:
+            # inherently the breakpoints have been linked
+            if bpp.contig_remapped_reads < filter_min_remapped_reads:
+                continue
+        elif bpp.break1_call_method == CALL_METHOD.SPAN and bpp.break2_call_method == CALL_METHOD.SPAN:
+            if bpp.spanning_reads < filter_min_spanning_reads:
+                continue
+        elif bpp.break1_call_method == CALL_METHOD.SPLIT and bpp.break2_call_method == CALL_METHOD.SPLIT:
+            if any([
+                bpp.break1_split_reads < filter_min_split_reads,
+                bpp.break2_split_reads < filter_min_split_reads,
+                bpp.break2_split_reads_forced + bpp.break1_split_reads_forced < filter_min_linking_split_reads
+            ]):
+                continue
+        elif bpp.break1_call_method == CALL_METHOD.SPLIT and bpp.break2_call_method == CALL_METHOD.FLANK:
+            if bpp.break1_split_reads < filter_min_split_reads or bpp.flanking_pairs < filter_min_flanking_reads:
+                continue
+        elif bpp.break1_call_method == CALL_METHOD.FLANK and bpp.break2_call_method == CALL_METHOD.SPLIT:
+            if bpp.break1_split_reads < filter_min_split_reads or bpp.flanking_pairs < filter_min_flanking_reads:
+                continue
+        elif bpp.break1_call_method == CALL_METHOD.FLANK and bpp.break2_call_method == CALL_METHOD.FLANK:
+            if bpp.flanking_pairs < filter_min_flanking_only_reads:
+                continue
+        else:
+            raise AssertionError('unexpected value for break1_call_method or break2_call_method: {}, {}'.format(
+                bpp.break1_call_method, bpp.break2_call_method))
+        filtered.append(bpp)
+    return bpp
