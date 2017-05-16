@@ -178,17 +178,17 @@ class PairingConfig:
 class SummaryConfig:
     def __init__(
         self,
-        min_contig_alignment_score=SUMMARY_DEFAULTS.min_contig_alignment_score,
-        min_flanking_pairs=SUMMARY_DEFAULTS.min_flanking_pairs,
-        min_linking_split_reads=SUMMARY_DEFAULTS.min_linking_split_reads,
-        min_spanning_reads=SUMMARY_DEFAULTS.min_spanning_reads,
-        min_split_reads=SUMMARY_DEFAULTS.min_split_reads
+        filter_min_contig_alignment_score=SUMMARY_DEFAULTS.filter_min_contig_alignment_score,
+        filter_min_flanking_pairs=SUMMARY_DEFAULTS.filter_min_flanking_pairs,
+        filter_min_linking_split_reads=SUMMARY_DEFAULTS.filter_min_linking_split_reads,
+        filter_min_spanning_reads=SUMMARY_DEFAULTS.filter_min_spanning_reads,
+        filter_min_split_reads=SUMMARY_DEFAULTS.filter_min_split_reads
     ):
-        self.min_contig_alignment_score = int(min_contig_alignment_score)
-        self.min_flanking_pairs = int(min_flanking_pairs)
-        self.min_spanning_reads = int(min_spanning_reads)
-        self.min_linking_split_reads = int(min_linking_split_reads)
-        self.min_split_reads = int(min_split_reads)
+        self.filter_min_contig_alignment_score = int(filter_min_contig_alignment_score)
+        self.filter_min_flanking_pairs = int(filter_min_flanking_pairs)
+        self.filter_min_spanning_reads = int(filter_min_spanning_reads)
+        self.filter_min_linking_split_reads = int(filter_min_linking_split_reads)
+        self.filter_min_split_reads = int(filter_min_split_reads)
 
     def flatten(self):
         result = {}

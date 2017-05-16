@@ -12,11 +12,11 @@ from .summary import group_events, compare_bpp_annotations, annotate_aliases
 def main(
     inputs, output, annotations,
     product_sequence_files=None,
-    min_contig_alignment_score=DEFAULTS.min_contig_alignment_score,
-    min_flanking_pairs=DEFAULTS.min_flanking_pairs,
-    min_linking_split_reads=DEFAULTS.min_linking_split_reads,
-    min_spanning_reads=DEFAULTS.min_spanning_reads,
-    min_split_reads=DEFAULTS.min_split_reads,
+    filter_min_contig_alignment_score=DEFAULTS.filter_min_contig_alignment_score,
+    filter_min_flanking_pairs=DEFAULTS.filter_min_flanking_pairs,
+    filter_min_linking_split_reads=DEFAULTS.filter_min_linking_split_reads,
+    filter_min_spanning_reads=DEFAULTS.filter_min_spanning_reads,
+    filter_min_split_reads=DEFAULTS.filter_min_split_reads,
     flanking_call_distance=PAIRING_DEFAULTS.flanking_call_distance,
     split_call_distance=PAIRING_DEFAULTS.split_call_distance,
     contig_call_distance=PAIRING_DEFAULTS.contig_call_distance,
@@ -40,10 +40,10 @@ def main(
     }
 
     THRESHOLDS = {
-        CALL_METHOD.FLANK: min_flanking_pairs,
-        CALL_METHOD.SPLIT: min_split_reads,
-        CALL_METHOD.CONTIG: min_contig_alignment_score,
-        CALL_METHOD.SPAN: min_spanning_reads,
+        CALL_METHOD.FLANK: filter_min_flanking_pairs,
+        CALL_METHOD.SPLIT: filter_min_split_reads,
+        CALL_METHOD.CONTIG: filter_min_contig_alignment_score,
+        CALL_METHOD.SPAN: filter_min_spanning_reads,
     }
 
     SUPPORT = {
@@ -150,8 +150,8 @@ def main(
         else:
             lib = bpp.data[COLUMNS.library]
             # info needed for pairing
-            if bpp.data[COLUMNS.fusion_sequence_fasta_id]:
-                product_sequences[bpp.data[COLUMNS.fusion_sequence_fasta_id]] = None
+            if bpp.fusion_sequence_fasta_id:
+                product_sequences[bpp.fusion_sequence_fasta_id] = None
             if bpp.data[COLUMNS.fusion_sequence_fasta_file]:
                 product_sequence_files.add(bpp.data[COLUMNS.fusion_sequence_fasta_file])
             if lib not in pairings:
@@ -208,6 +208,7 @@ def main(
         product_sequences[seqid] = str(seq.seq)
 
     for lib in bpps_to_keep.keys():
+        log("pairing", len(bpps_to_keep[lib].values())*len(bpps_to_keep[lib].values()), ' events for lib ', lib)
         for bpp in bpps_to_keep[lib].values():
             pairings[bpp.data[COLUMNS.library]][bpp.data[COLUMNS.product_id]] = set()
             bpp_by_product_key[bpp.data[COLUMNS.product_id]] = bpp
@@ -223,9 +224,11 @@ def main(
                 pairings[lib][bpp1.data[COLUMNS.product_id]].add(bpp2.data[COLUMNS.product_id])
                 pairings[lib][bpp2.data[COLUMNS.product_id]].add(bpp1.data[COLUMNS.product_id])
 
+    log('filtering based on transcript')
     # todo: add actual pairing information (i.e somatic, germline)
     bpp_to_keep = set()
     for lib in pairings:
+        log(len(pairings[lib].items()), ' pairings found for lib ', lib)
         for product_key, paired_product_keys in pairings[lib].items():
             bpp = bpp_by_product_key[product_key]
 
@@ -264,23 +267,31 @@ def main(
                            COLUMNS.fusion_cdna_coding_start,
                            COLUMNS.fusion_mapped_domains,
                            COLUMNS.gene1,
-                           COLUMNS.gene1_direction,
+#                           COLUMNS.gene1_direction,
                            COLUMNS.gene2,
-                           COLUMNS.gene2_direction,
+#                           COLUMNS.gene2_direction,
                            COLUMNS.gene_product_type,
-                           COLUMNS.genes_encompassed,
-                           COLUMNS.genes_overlapping_break1,
-                           COLUMNS.genes_overlapping_break2,
-                           COLUMNS.genes_proximal_to_break1,
-                           COLUMNS.genes_proximal_to_break2,
+#                           COLUMNS.genes_encompassed,
+#                           COLUMNS.genes_overlapping_break1,
+#                           COLUMNS.genes_overlapping_break2,
+#                           COLUMNS.genes_proximal_to_break1,
+#                           COLUMNS.genes_proximal_to_break2,
                            COLUMNS.library,
                            COLUMNS.protocol,
                            COLUMNS.transcript1,
                            COLUMNS.transcript2,
                            COLUMNS.untemplated_seq,
                            COLUMNS.tools,
-                           COLUMNS.gene1_aliases,
-                           COLUMNS.gene2_aliases,
+#                           COLUMNS.gene1_aliases,
+#                           COLUMNS.gene2_aliases,
+
+                           # For debugging
+                           COLUMNS.pairing,
+                           COLUMNS.flanking_pairs,
+                           COLUMNS.break1_split_reads,
+                           COLUMNS.break2_split_reads,
+                           COLUMNS.contig_alignment_score,
+                           COLUMNS.spanning_reads,
                            'summary_pairing']
 
     rows = []
@@ -297,7 +308,7 @@ def main(
         fh.write('#' + '\t'.join(header) + '\n')
         for row in rows:
             fh.write('\t'.join([str(row.get(c, None)) for c in header]) + '\n')
-    log("Wrote {} gene fusion events to {}".format(len(rows), fname))
+    log("Wrote {} gene fusion events to {}".format(len(rows), output))
 
 
 if __name__ == '__main__':

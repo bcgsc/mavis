@@ -10,23 +10,19 @@ def alphanumeric_choice(bpp1, bpp2):
 
     returns the one with transcript with alphanumeric priority, with transcript1 chosen for ties
     """
-    chosen1 = sorted([bpp1.data[COLUMNS.transcript1], bpp2.data[COLUMNS.transcript1]])[0]
-    chosen2 = sorted([bpp1.data[COLUMNS.transcript2], bpp2.data[COLUMNS.transcript2]])[0]
-    if bpp1.data[COLUMNS.transcript1] == chosen1 and \
-            bpp1.data[COLUMNS.transcript1] != bpp2.data[COLUMNS.transcript1]:
-        return bpp1
-    elif bpp1.data[COLUMNS.transcript2] == chosen2:
+    if (bpp1.transcript1, bpp1.transcript2) <= (bpp2.transcript1, bpp2.transcript2):
         return bpp1
     else:
         return bpp2
-
 
 def compare_bpp_annotations(bpp1, bpp2, best_transcripts):
     """
     Args:
         bpp1 (BreakPointPair):
         bpp2 (BreakpointPair):
-        best_transcripts (dict):
+        best_transcripts (:class `dict` of :any:`Transcript` by :class:`str`): the best transcripts of the annotations
+          based on their names
+
     """
     # By priority
     # Case 1 an event has 2 genes and transcripts and a fusion cdna (orf)
@@ -99,15 +95,15 @@ def combine_evidence(bpp_to_keep, bpp_to_add):
     if bpp_to_add.data[COLUMNS.untemplated_seq] is not None:
         bpp_to_keep.data[COLUMNS.untemplated_seq] = bpp_to_add.data[COLUMNS.untemplated_seq] if \
             bpp_to_keep.data[COLUMNS.untemplated_seq] is None else \
-            ';'.join(sorted(list(set(bpp_to_add.data[COLUMNS.untemplated_seq],
-                                     bpp_to_keep.data[COLUMNS.untemplated_seq]))))
+            ';'.join(sorted(list(set((bpp_to_add.data[COLUMNS.untemplated_seq],
+                                     bpp_to_keep.data[COLUMNS.untemplated_seq])))))
 
     # combine the contig sequences
     if bpp_to_add.data[COLUMNS.contig_seq] is not None:
         bpp_to_keep.data[COLUMNS.contig_seq] = bpp_to_add.data[COLUMNS.contig_seq] if \
             bpp_to_keep.data[COLUMNS.contig_seq] is None else \
-            ';'.join(sorted(list(set(bpp_to_add.data[COLUMNS.contig_seq],
-                                     bpp_to_keep.data[COLUMNS.contig_seq]))))
+            ';'.join(sorted(list(set((bpp_to_add.data[COLUMNS.contig_seq],
+                                     bpp_to_keep.data[COLUMNS.contig_seq])))))
 
     return bpp_to_keep
 
@@ -132,10 +128,20 @@ def group_events(bpp1, bpp2):
     # remove any attributes that aren't the same in both breakpoints
     if bpp1.data.keys() != bpp2.data.keys():
         raise NotImplementedError("Could not group events that have different data attributes")
+    #Note: There are some attributes that shouldn't be completely filtered out
+    # call_methods
+    # evidence columns
+    # contig
+    # untemplated_seq
+    # pairing
+    # ids
+    columns_to_keep = [COLUMNS.contig_seq, COLUMNS.break1_call_method, COLUMNS.break2_call_method, COLUMNS.break1_split_reads, COLUMNS.break2_split_reads, COLUMNS.contig_alignment_score, COLUMNS.spanning_reads, COLUMNS.flanking_pairs, COLUMNS.tools]
+
     for i in bpp1.data.keys():
         if bpp1.data[i] != bpp2.data[i]:
-            # new_bpp.data[i] = None
-            new_bpp.data[i] = ";".join([str(bpp1.data[i]), str(bpp2.data[i])])
+            new_bpp.data[i] = None
+            if i in columns_to_keep:
+                new_bpp.data[i] = ";".join(sorted(list(set(str(bpp1.data[i]).split(';')+ str(bpp2.data[i]).split(';')))))
         else:
             new_bpp.data[i] = bpp1.data[i]
     if bpp1.untemplated_seq == bpp2.untemplated_seq:
@@ -147,7 +153,7 @@ def group_events(bpp1, bpp2):
 def annotate_aliases(bpp, reference_transcripts):
     # Should add the getting the alias to annotate instead of here?
     if bpp.data[COLUMNS.transcript1] in reference_transcripts:
-        bpp.data[COLUMNS.gene1_aliases] = ",".join(reference_transcripts[bpp.data[COLUMNS.transcript1]].gene.aliases)
+        bpp.data[COLUMNS.gene1_aliases] = ";".join(reference_transcripts[bpp.data[COLUMNS.transcript1]].gene.aliases)
     if bpp.data[COLUMNS.transcript2] in reference_transcripts:
-        bpp.data[COLUMNS.gene2_aliases] = ",".join(reference_transcripts[bpp.data[COLUMNS.transcript2]].gene.aliases)
+        bpp.data[COLUMNS.gene2_aliases] = ";".join(reference_transcripts[bpp.data[COLUMNS.transcript2]].gene.aliases)
     return(bpp)
