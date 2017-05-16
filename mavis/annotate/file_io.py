@@ -178,7 +178,6 @@ def parse_annotations_json(data, REFERENCE_GENOME=None, best_transcripts_only=Fa
 
 
 def _load_reference_genes_json(filepath, REFERENCE_GENOME=None, best_transcripts_only=False, warn=devnull):
-    genes_by_chr = dict()
     with open(filepath) as fh:
         data = json.load(fh)
         return parse_annotations_json(
@@ -286,7 +285,6 @@ def convert_tab_to_json(filepath, warn=devnull):
             'gene_end': int
         }
     )
-    failures = 0
     genes = {}
     for row in rows:
         g = {
