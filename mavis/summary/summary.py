@@ -1,4 +1,4 @@
-from ..constants import COLUMNS, STRAND, CALL_METHOD
+from ..constants import COLUMNS, STRAND, CALL_METHOD, SVTYPE
 from ..breakpoint import Breakpoint, BreakpointPair
 
 
@@ -10,12 +10,15 @@ def alphanumeric_choice(bpp1, bpp2):
 
     returns the one with transcript with alphanumeric priority, with transcript1 chosen for ties
     """
-    if (bpp1.transcript1, bpp1.transcript2) <= (bpp2.transcript1, bpp2.transcript2):
+    if (bpp1.transcript1, bpp1.transcript2) < (bpp2.transcript1, bpp2.transcript2):
         return bpp1
-    else:
+    elif (bpp1.transcript1, bpp1.transcript2) > (bpp2.transcript1, bpp2.transcript2):
         return bpp2
+    else:
+        raise AssertionError("Both transcripts are equal")
 
-def compare_bpp_annotations(bpp1, bpp2, best_transcripts):
+
+def filter_by_annotations(bpp1, bpp2, best_transcripts):
     """
     Args:
         bpp1 (BreakPointPair):
@@ -24,6 +27,11 @@ def compare_bpp_annotations(bpp1, bpp2, best_transcripts):
           based on their names
 
     """
+    try:
+        alpha = alphanumeric_choice(bpp1, bpp2)
+    except AssertionError: #both transcripts are the same
+        alpha = group_events(bpp1, bpp2)
+
     # By priority
     # Case 1 an event has 2 genes and transcripts and a fusion cdna (orf)
     if bpp1.data[COLUMNS.fusion_cdna_coding_start] or bpp2.data[COLUMNS.fusion_cdna_coding_start]:
@@ -52,7 +60,7 @@ def compare_bpp_annotations(bpp1, bpp2, best_transcripts):
             # both in best transcripts
             if bpp1_t1 in best_transcripts and bpp1_t2 in best_transcripts and bpp2_t1 in best_transcripts \
                     and bpp2_t2 in best_transcripts:
-                return alphanumeric_choice(bpp1, bpp2)
+                return alpha
             elif bpp1_t1 in best_transcripts and bpp1_t2 in best_transcripts:
                 return bpp1
             elif bpp2_t1 in best_transcripts and bpp2_t2 in best_transcripts:
@@ -62,7 +70,7 @@ def compare_bpp_annotations(bpp1, bpp2, best_transcripts):
             elif bpp2_t1 in best_transcripts or bpp2_t2 in best_transcripts:
                 return bpp2
             else:
-                return alphanumeric_choice(bpp1, bpp2)
+                return alpha
 
     # Case 3 an event has 1 gene and transcript
     elif bpp1.data[COLUMNS.gene1] or bpp1.data[COLUMNS.gene2] or bpp2.data[COLUMNS.gene1] or bpp2.data[COLUMNS.gene2]:
@@ -80,7 +88,7 @@ def compare_bpp_annotations(bpp1, bpp2, best_transcripts):
             elif bpp2_t1 in best_transcripts or bpp2_t2 in best_transcripts:
                 return bpp2
             else:
-                return alphanumeric_choice(bpp1, bpp2)
+                return alpha
 
     # Case 4 both have no genes present - will keep the positive strand event
     else:
@@ -90,26 +98,29 @@ def compare_bpp_annotations(bpp1, bpp2, best_transcripts):
             return bpp2
 
 
-def combine_evidence(bpp_to_keep, bpp_to_add):
-    # combine the untemplated sequences
-    if bpp_to_add.data[COLUMNS.untemplated_seq] is not None:
-        bpp_to_keep.data[COLUMNS.untemplated_seq] = bpp_to_add.data[COLUMNS.untemplated_seq] if \
-            bpp_to_keep.data[COLUMNS.untemplated_seq] is None else \
-            ';'.join(sorted(list(set((bpp_to_add.data[COLUMNS.untemplated_seq],
-                                     bpp_to_keep.data[COLUMNS.untemplated_seq])))))
+def filter_by_call_method(bpp1, bpp2):
+    # ranking scores of the methods (more is better)
+    RANKING = {
+        CALL_METHOD.CONTIG: 4,
+        CALL_METHOD.SPLIT: 3,
+        CALL_METHOD.SPAN: 2,
+        CALL_METHOD.FLANK: 1
+    }
+    # This treats split flank the same as flank split
+    bpp_call_score = RANKING[bpp1.break1_call_method] + \
+        RANKING[bpp1.break2_call_method]
+    existing_call_score = RANKING[bpp2.break1_call_method] + \
+        RANKING[bpp2.break2_call_method]
 
-    # combine the contig sequences
-    if bpp_to_add.data[COLUMNS.contig_seq] is not None:
-        bpp_to_keep.data[COLUMNS.contig_seq] = bpp_to_add.data[COLUMNS.contig_seq] if \
-            bpp_to_keep.data[COLUMNS.contig_seq] is None else \
-            ';'.join(sorted(list(set((bpp_to_add.data[COLUMNS.contig_seq],
-                                     bpp_to_keep.data[COLUMNS.contig_seq])))))
-
-    return bpp_to_keep
+    if bpp_call_score < existing_call_score:
+        return bpp1
+    elif bpp_call_score > existing_call_score:
+        return bpp2
+    else:
+        raise AssertionError("Both call methods are equal")
 
 
 def group_events(bpp1, bpp2):
-    # todo: decide whether to also aggregate the contig, untemplated and annotation information?
     # take the outer regions of the breakpoints
     new_bpp = BreakpointPair(
         Breakpoint(bpp1.break1.chr,
@@ -125,23 +136,20 @@ def group_events(bpp1, bpp2):
         opposing_strands=bpp1.opposing_strands,
         stranded=bpp1.stranded)
 
-    # remove any attributes that aren't the same in both breakpoints
-    if bpp1.data.keys() != bpp2.data.keys():
-        raise NotImplementedError("Could not group events that have different data attributes")
-    #Note: There are some attributes that shouldn't be completely filtered out
-    # call_methods
-    # evidence columns
-    # contig
-    # untemplated_seq
-    # pairing
-    # ids
-    columns_to_keep = [COLUMNS.contig_seq, COLUMNS.break1_call_method, COLUMNS.break2_call_method, COLUMNS.break1_split_reads, COLUMNS.break2_split_reads, COLUMNS.contig_alignment_score, COLUMNS.spanning_reads, COLUMNS.flanking_pairs, COLUMNS.tools]
+    #Note: There are some attributes that shouldn't be lost if different, currently appending the information
+    # The evidence could be better off as a max instead of a join
+    columns_to_keep = [COLUMNS.contig_seq, COLUMNS.break1_call_method, COLUMNS.break2_call_method,
+                       COLUMNS.break1_split_reads, COLUMNS.break2_split_reads, COLUMNS.contig_alignment_score,
+                       COLUMNS.spanning_reads, COLUMNS.flanking_pairs, COLUMNS.tools,
+                       COLUMNS.product_id, COLUMNS.event_type,
+                       COLUMNS.contig_remapped_reads]
 
     for i in bpp1.data.keys():
         if bpp1.data[i] != bpp2.data[i]:
             new_bpp.data[i] = None
             if i in columns_to_keep:
-                new_bpp.data[i] = ";".join(sorted(list(set(str(bpp1.data[i]).split(';')+ str(bpp2.data[i]).split(';')))))
+                new_bpp.data[i] = ";".join(sorted(list(set(str(bpp1.data[i]).split(';') +
+                                                           str(bpp2.data[i]).split(';')))))
         else:
             new_bpp.data[i] = bpp1.data[i]
     if bpp1.untemplated_seq == bpp2.untemplated_seq:
@@ -160,10 +168,10 @@ def annotate_aliases(bpp, reference_transcripts):
 
 
 def filter_by_evidence(
-    bpps, 
-    filter_min_remapped_reads=5, 
-    filter_min_spanning_reads=5, 
-    filter_min_flanking_reads=5, 
+    bpps,
+    filter_min_remapped_reads=5,
+    filter_min_spanning_reads=5,
+    filter_min_flanking_reads=5,
     filter_min_flanking_only_reads=10,
     filter_min_split_reads=5,
     filter_min_linking_split_reads=1
@@ -172,7 +180,7 @@ def filter_by_evidence(
     for bpp in bpps:
         if bpp.break1_call_method == CALL_METHOD.CONTIG and bpp.break2_call_method == CALL_METHOD.CONTIG:
             # inherently the breakpoints have been linked
-            if bpp.contig_remapped_reads < filter_min_remapped_reads:
+            if int(bpp.contig_remapped_reads) < filter_min_remapped_reads:
                 continue
         elif bpp.break1_call_method == CALL_METHOD.SPAN and bpp.break2_call_method == CALL_METHOD.SPAN:
             if bpp.spanning_reads < filter_min_spanning_reads:
@@ -181,7 +189,12 @@ def filter_by_evidence(
             if any([
                 bpp.break1_split_reads < filter_min_split_reads,
                 bpp.break2_split_reads < filter_min_split_reads,
-                bpp.break2_split_reads_forced + bpp.break1_split_reads_forced < filter_min_linking_split_reads
+                bpp.event_type != SVTYPE.INS and bpp.break2_split_reads_forced + bpp.break1_split_reads_forced <
+                    filter_min_linking_split_reads,
+                bpp.event_type == SVTYPE.INS and bpp.flanking_pairs < filter_min_linking_split_reads and
+                    bpp.break2_split_reads_forced + bpp.break1_split_reads_forced < filter_min_linking_split_reads,
+                bpp.break1_split_reads + bpp.break2_split_reads -
+                (bpp.break2_split_reads_forced + bpp.break1_split_reads_forced) < 1
             ]):
                 continue
         elif bpp.break1_call_method == CALL_METHOD.SPLIT and bpp.break2_call_method == CALL_METHOD.FLANK:
@@ -197,4 +210,4 @@ def filter_by_evidence(
             raise AssertionError('unexpected value for break1_call_method or break2_call_method: {}, {}'.format(
                 bpp.break1_call_method, bpp.break2_call_method))
         filtered.append(bpp)
-    return bpp
+    return filtered
