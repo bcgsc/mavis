@@ -101,7 +101,7 @@ def main(
                 if t.is_best_transcript:
                     best_transcripts[t.name] = t
 
-    bpps = filter_by_evidence(bpps, filter_min_remapped_reads=filter_min_remapped_reads,
+    bpps, removed = filter_by_evidence(bpps, filter_min_remapped_reads=filter_min_remapped_reads,
                               filter_min_spanning_reads=filter_min_spanning_reads,
                               filter_min_flanking_reads=filter_min_flanking_reads,
                               filter_min_flanking_only_reads=filter_min_flanking_only_reads,
@@ -278,9 +278,7 @@ def main(
         COLUMNS.break2_split_reads,
         COLUMNS.contig_alignment_score,
         COLUMNS.spanning_reads,
-        COLUMNS.flanking_pairs_read_names,
         COLUMNS.contig_remapped_reads,
-        COLUMNS.contig_remapped_read_names,
         'summary_pairing']
 
     rows = []

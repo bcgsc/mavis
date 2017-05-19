@@ -27,11 +27,6 @@ def filter_by_annotations(bpp1, bpp2, best_transcripts):
           based on their names
 
     """
-    try:
-        alpha = alphanumeric_choice(bpp1, bpp2)
-    except AssertionError: #both transcripts are the same
-        alpha = group_events(bpp1, bpp2)
-
     # By priority
     # Case 1 an event has 2 genes and transcripts and a fusion cdna (orf)
     if bpp1.data[COLUMNS.fusion_cdna_coding_start] or bpp2.data[COLUMNS.fusion_cdna_coding_start]:
@@ -60,6 +55,10 @@ def filter_by_annotations(bpp1, bpp2, best_transcripts):
             # both in best transcripts
             if bpp1_t1 in best_transcripts and bpp1_t2 in best_transcripts and bpp2_t1 in best_transcripts \
                     and bpp2_t2 in best_transcripts:
+                try:
+                    alpha = alphanumeric_choice(bpp1, bpp2)
+                except AssertionError: #both transcripts are the same
+                    alpha = group_events(bpp1, bpp2)
                 return alpha
             elif bpp1_t1 in best_transcripts and bpp1_t2 in best_transcripts:
                 return bpp1
@@ -70,6 +69,10 @@ def filter_by_annotations(bpp1, bpp2, best_transcripts):
             elif bpp2_t1 in best_transcripts or bpp2_t2 in best_transcripts:
                 return bpp2
             else:
+                try:
+                    alpha = alphanumeric_choice(bpp1, bpp2)
+                except AssertionError: #both transcripts are the same
+                    alpha = group_events(bpp1, bpp2)
                 return alpha
 
     # Case 3 an event has 1 gene and transcript
@@ -88,6 +91,10 @@ def filter_by_annotations(bpp1, bpp2, best_transcripts):
             elif bpp2_t1 in best_transcripts or bpp2_t2 in best_transcripts:
                 return bpp2
             else:
+                try:
+                    alpha = alphanumeric_choice(bpp1, bpp2)
+                except AssertionError: #both transcripts are the same
+                    alpha = group_events(bpp1, bpp2)
                 return alpha
 
     # Case 4 both have no genes present - will keep the positive strand event
@@ -177,13 +184,16 @@ def filter_by_evidence(
     filter_min_linking_split_reads=1
 ):
     filtered = []
+    removed = []
     for bpp in bpps:
         if bpp.break1_call_method == CALL_METHOD.CONTIG and bpp.break2_call_method == CALL_METHOD.CONTIG:
             # inherently the breakpoints have been linked
             if int(bpp.contig_remapped_reads) < filter_min_remapped_reads:
+                removed.append(bpp)
                 continue
         elif bpp.break1_call_method == CALL_METHOD.SPAN and bpp.break2_call_method == CALL_METHOD.SPAN:
             if bpp.spanning_reads < filter_min_spanning_reads:
+                removed.append(bpp)
                 continue
         elif bpp.break1_call_method == CALL_METHOD.SPLIT and bpp.break2_call_method == CALL_METHOD.SPLIT:
             if any([
@@ -196,18 +206,22 @@ def filter_by_evidence(
                 bpp.break1_split_reads + bpp.break2_split_reads -
                 (bpp.break2_split_reads_forced + bpp.break1_split_reads_forced) < 1
             ]):
+                removed.append(bpp)
                 continue
         elif bpp.break1_call_method == CALL_METHOD.SPLIT and bpp.break2_call_method == CALL_METHOD.FLANK:
             if bpp.break1_split_reads < filter_min_split_reads or bpp.flanking_pairs < filter_min_flanking_reads:
+                removed.append(bpp)
                 continue
         elif bpp.break1_call_method == CALL_METHOD.FLANK and bpp.break2_call_method == CALL_METHOD.SPLIT:
             if bpp.break1_split_reads < filter_min_split_reads or bpp.flanking_pairs < filter_min_flanking_reads:
+                removed.append(bpp)
                 continue
         elif bpp.break1_call_method == CALL_METHOD.FLANK and bpp.break2_call_method == CALL_METHOD.FLANK:
             if bpp.flanking_pairs < filter_min_flanking_only_reads:
+                removed.append(bpp)
                 continue
         else:
             raise AssertionError('unexpected value for break1_call_method or break2_call_method: {}, {}'.format(
                 bpp.break1_call_method, bpp.break2_call_method))
         filtered.append(bpp)
-    return filtered
+    return filtered, removed
