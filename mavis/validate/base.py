@@ -641,10 +641,12 @@ class Evidence(BreakpointPair):
                     for read in assembly_sequences[read_seq.query_sequence]:
                         if read.is_unmapped:
                             continue
+                        strand = STRAND.NEG if read.is_reverse else STRAND.POS
                         if read_seq.query_sequence == read.query_sequence:
-                            build_strand[STRAND.POS] += 1
+                            build_strand[strand] += 1
                         else:
-                            build_strand[STRAND.NEG] += 1
+                            strand = STRAND.NEG if strand == STRAND.POS else STRAND.POS
+                            build_strand[strand] += 1
                 det_build_strand = None
                 if sum(build_strand.values()) == 0:
                     continue
@@ -653,7 +655,14 @@ class Evidence(BreakpointPair):
                 elif build_strand[STRAND.NEG] == 0:
                     det_build_strand = STRAND.POS
                 else:
-                    raise AssertionError('mixed population should not be possible for the build strand', build_strand)
+                    ratio = build_strand[STRAND.POS] / (build_strand[STRAND.NEG] + build_strand[STRAND.POS])
+                    neg_ratio = 1 - ratio
+                    if ratio >= self.assembly_strand_concordance:
+                        det_build_strand = STRAND.POS
+                    elif neg_ratio >= self.assembly_strand_concordance:
+                        det_build_strand = STRAND.NEG
+                    else:
+                        continue
                 try:
                     strand = self.decide_sequenced_strand(contig.input_reads)
                     if strand != det_build_strand:

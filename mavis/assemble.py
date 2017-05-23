@@ -12,7 +12,7 @@ class Contig:
     """
     def __init__(self, sequence, score):
         self.seq = sequence
-        self.remapped_sequences = {}
+        self.remapped_sequences = {}  # alignment score contribution on the contig by read
         self.score = score
         self.alignments = []
         self.input_reads = set()
@@ -22,11 +22,7 @@ class Contig:
         return hash(self.seq)
 
     def add_mapped_sequence(self, read, multimap=1):
-        rc = reverse_complement(read)
-        if rc in self.remapped_sequences:
-            self.remapped_sequences[rc] = min(self.remapped_sequences.get(rc, 1), 1 / multimap)
-        else:
-            self.remapped_sequences[read] = min(self.remapped_sequences.get(read, 1), 1 / multimap)
+        self.remapped_sequences[read] = 1 / multimap
 
     def remap_score(self):
         return sum(self.remapped_sequences.values())

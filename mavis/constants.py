@@ -6,6 +6,7 @@ from Bio.Alphabet import Gapped
 from Bio.Data.IUPACData import ambiguous_dna_values
 from Bio.Alphabet.IUPAC import ambiguous_dna
 from Bio.Seq import Seq
+import re
 
 
 PIPELINE_STEP = Vocab(
@@ -39,7 +40,10 @@ def reverse_complement(s):
         >>> reverse_complement('ATCCGGT')
         'ACCGGAT'
     """
-    temp = Seq(str(s), DNA_ALPHABET)
+    temp = str(s)
+    if not re.match('^[A-Za-z]*', temp):
+        raise ValueError('unexpected sequence format. cannot reverse complement', temp)
+    temp = Seq(temp, DNA_ALPHABET)
     return str(temp.reverse_complement())
 
 

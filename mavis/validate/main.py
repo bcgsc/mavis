@@ -138,6 +138,8 @@ def main(
         )
         e.assemble_contig(log=log)
         log('assembled {} contigs'.format(len(e.contigs)), time_stamp=False)
+        for contig in e.contigs:
+            log('>', contig.seq, time_stamp=False)
 
     log('will output:', CONTIG_BLAT_FA, CONTIG_BLAT_OUTPUT)
     blat_contigs(
