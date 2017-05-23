@@ -103,7 +103,7 @@ class FusionTranscript(usTranscript):
                     ft.exons.append(ex)
                     ex.reference_object = ft
                     ft.exon_mapping[ex.position] = old_ex
-                offset = len(ft.seq) + 1
+                offset = len(ft.seq)
                 for ex, old_ex in ex1:
                     e = Exon(
                         ex.start + offset, ex.end + offset, ft,
