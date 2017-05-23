@@ -283,7 +283,10 @@ class TestFusionTranscript(unittest.TestCase):
         expt = 'C' * len(self.x) + 'A' * (499 - 200 + 1) + 'G' * len(self.y) + 'A' * (1199 - 600 + 1)
         expt += 'ATCGTC' + 'A' * len(self.z)
         expt += 'A' * (1499 - 1300 + 1) + 'C' * len(self.w) + 'A' * (1699 - 1600 + 1) + 'G' * len(self.s)
-
+        exons = [Exon(1, 100), Exon(401, 500), Exon(1407, 1506), Exon(1607, 1706)]
+        for i in range(len(exons)):
+            self.assertEqual(exons[i].start, ft.exons[i].start)
+            self.assertEqual(exons[i].end, ft.exons[i].end)
         self.assertEqual(expt, ft.seq)
         self.assertEqual(4, len(ft.exons))
 
@@ -302,6 +305,11 @@ class TestFusionTranscript(unittest.TestCase):
         expt += 'T' * len(self.z) + 'GACGAT' + 'T' * (1199 - 600 + 1) + 'C' * len(self.y)
         expt += 'T' * (499 - 200 + 1) + 'G' * len(self.x)
 
+        exons = [Exon(1, 100), Exon(201, 300), Exon(1207, 1306), Exon(1607, 1706)]
+
+        for i in range(len(exons)):
+            self.assertEqual(exons[i].start, ft.exons[i].start)
+            self.assertEqual(exons[i].end,ft.exons[i].end)
         self.assertEqual(expt, ft.seq)
         self.assertEqual(4, len(ft.exons))
 
@@ -321,6 +329,11 @@ class TestFusionTranscript(unittest.TestCase):
         expt += 'T' * len(self.z) + 'ATCGATCG' + 'T' * len(self.z)
         expt += 'A' * (1499 - 1300 + 1) + 'C' * len(self.w) + 'A' * (1699 - 1600 + 1) + 'G' * len(self.s)
         self.assertEqual(expt, ft.seq)
+        exons = [Exon(1, 100), Exon(401, 500), Exon(1101, 1200), Exon(1209, 1308), Exon(1509, 1608), Exon(1709, 1808)]
+        for i in range(len(exons)):
+            self.assertEqual(exons[i].start, ft.exons[i].start)
+            self.assertEqual(exons[i].end,ft.exons[i].end)
+
         self.assertEqual(6, len(ft.exons))
         self.assertTrue(ft.exons[2].intact_start_splice)
         self.assertTrue(ft.exons[3].intact_end_splice)
@@ -343,6 +356,13 @@ class TestFusionTranscript(unittest.TestCase):
         expt += 'A' * (1499 - 1300 + 1) + 'C' * len(self.w) + 'A' * (1699 - 1600 + 1) + 'G' * len(self.s)
         expt = reverse_complement(expt)
         self.assertEqual(expt, ft.seq)
+
+        exons = [Exon(1, 100), Exon(201, 300), Exon(501, 600), Exon(609, 708), Exon(1309, 1408), Exon(1709, 1808)]
+
+        for i in range(len(exons)):
+            self.assertEqual(exons[i].start, ft.exons[i].start)
+            self.assertEqual(exons[i].end, ft.exons[i].end)
+
         self.assertEqual(6, len(ft.exons))
         self.assertTrue(ft.exons[2].intact_start_splice)
         self.assertTrue(ft.exons[3].intact_end_splice)
