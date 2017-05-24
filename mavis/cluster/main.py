@@ -6,6 +6,7 @@ from ..interval import Interval
 from .constants import DEFAULTS
 from ..util import read_inputs, output_tabbed_file, write_bed_file, generate_complete_stamp
 from ..util import build_batch_id, filter_on_overlap, log, mkdirp
+import uuid
 
 
 def main(
@@ -76,7 +77,7 @@ def main(
         c2 = round(len(cluster[1]), -2)
         length_hist[c1] = length_hist.get(c1, 0) + 1
         length_hist[c2] = length_hist.get(c2, 0) + 1
-        cluster.data[COLUMNS.cluster_id] = '{}-{}'.format(cluster_batch_id, index + 1)
+        cluster.data[COLUMNS.cluster_id] = str(uuid.uuid4())
         cluster.data[COLUMNS.cluster_size] = len(input_pairs)
         temp = set()
         for p in input_pairs:

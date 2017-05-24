@@ -177,11 +177,12 @@ def main(
         calls = []
         failure_comment = None
         try:
-            calls.extend(call_events(e))
+            calls = call_events(e)
             event_calls.extend(calls)
         except UserWarning as err:
             log('warning: error in calling events', repr(err), time_stamp=False)
             failure_comment = str(err)
+        
         if len(calls) == 0:
             failure_comment = ['zero events were called'] if failure_comment is None else failure_comment
             e.data[COLUMNS.filter_comment] = failure_comment
@@ -190,9 +191,10 @@ def main(
             passes += 1
 
         log('called {} event(s)'.format(len(calls)))
-        for ev in calls:
+        for i, ev in enumerate(calls):
             log(ev, time_stamp=False)
             log(ev.event_type, ev.call_method, time_stamp=False)
+            ev.data[COLUMNS.validation_id] = str(i + 1)
             log('remapped reads: {}; spanning reads: {}; split reads: [{}, {}], flanking pairs: {}'.format(
                 0 if not ev.contig else len(ev.contig.input_reads),
                 len(ev.spanning_reads),
@@ -204,7 +206,6 @@ def main(
             'totals do not match pass + fails == total',
             passes, len(filtered_evidence_clusters), len(evidence_clusters))
     # write the output validated clusters (split by type and contig)
-    validation_batch_id = build_batch_id(prefix='validation-')
     for i, ec in enumerate(event_calls):
         b1_homseq = None
         b2_homseq = None
@@ -213,7 +214,6 @@ def main(
         except AttributeError:
             pass
         ec.data.update({
-            COLUMNS.validation_id: '{}-{}'.format(validation_batch_id, i + 1),
             COLUMNS.break1_homologous_seq: b1_homseq,
             COLUMNS.break2_homologous_seq: b2_homseq,
         })

@@ -744,7 +744,8 @@ def annotate_events(
             proximity=max_proximity
         )
         results.extend(ann)
-        for a in ann:
+        for j, a in enumerate(ann):
+            a.data[COLUMNS.annotation_id] = str(j + 1)
             # try building the fusion product
             try:
                 ft = FusionTranscript.build(

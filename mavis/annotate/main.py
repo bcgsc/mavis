@@ -74,7 +74,6 @@ def main(
     try:
         total = len(annotations)
         for i, ann in enumerate(annotations):
-            ann.data[COLUMNS.annotation_id] = id_prefix + str(i + 1)
             row = ann.flatten()
             row[COLUMNS.break1_strand] = ann.transcript1.get_strand()
             row[COLUMNS.break2_strand] = ann.transcript2.get_strand()
