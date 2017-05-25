@@ -13,6 +13,7 @@ from . import MockRead, MockBamFileHandle
 from . import REFERENCE_GENOME_FILE, TRANSCRIPTOME_BAM_INPUT, FULL_REFERENCE_ANNOTATIONS_FILE_JSON
 from . import BAM_INPUT, FULL_BAM_INPUT
 from .config import samtools_versions
+import timeout_decorator
 
 
 REFERENCE_GENOME = None
@@ -134,6 +135,34 @@ class TestModule(unittest.TestCase):
               'TGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAAC'
         alignment = read_tools.nsb_align(ref, seq)
         # GATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG
+
+
+class TestNsbAlign(unittest.TestCase):
+
+    def test_length_seq_le_ref(self):
+        ref = 'GATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAG' \
+              'TTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG'
+        seq = 'TGTAGGAAGCCATTATCTGAAGTGTAAGCAACTGCATAGTGCTATTTTAATTATGCATTGCAGGGAAACTGTGAGCAGAGCTATATATTTAGGTAGAC' \
+              'TGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAAC'
+        alignment = read_tools.nsb_align(ref, seq)
+        self.assertEqual(1, len(alignment))
+        alignment = read_tools.nsb_align(ref, seq, min_consecutive_match=20)
+        self.assertEqual(0, len(alignment))
+
+    def test_length_ref_le_seq(self):
+        pass
+
+    def test_length_ref_eq_seq(self):
+        pass
+    
+    @timeout_decorator.timeout(5)
+    def test_long_ref_seq(self):
+        ref = str(REFERENCE_GENOME['test_bam_long_ref'].seq)
+        seq = 'TGAGGTCAGGAGTTTGAGACCAGCCTGGACAACATGGTGAAACCCCATCTCTACTAAAAATACAAAAAAATTAGCCAGGCATGGTGGTGGATGCCTGTAAT' \
+            'CGCAGCTACTCAGGAGATCGGAAG'
+        alignment = read_tools.nsb_align(ref, seq, min_consecutive_match=6)
+        self.assertEqual(1, len(alignment))
+
 
 
 class TestCigarTools(unittest.TestCase):

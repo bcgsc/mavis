@@ -468,7 +468,8 @@ class Evidence(BreakpointPair):
         putative_alignments = None
 
         if not self.opposing_strands:  # same strand
-            sc_align = read_tools.nsb_align(opposite_breakpoint_ref, read.query_sequence)
+            sc_align = read_tools.nsb_align(
+                opposite_breakpoint_ref, read.query_sequence, min_consecutive_match=self.min_anchor_exact)
 
             for a in sc_align:
                 a.flag = read.flag
@@ -476,7 +477,8 @@ class Evidence(BreakpointPair):
         else:
             # should align opposite the current read
             revcomp_sc_align = reverse_complement(read.query_sequence)
-            revcomp_sc_align = read_tools.nsb_align(opposite_breakpoint_ref, revcomp_sc_align)
+            revcomp_sc_align = read_tools.nsb_align(
+                opposite_breakpoint_ref, revcomp_sc_align, min_consecutive_match=self.min_anchor_exact)
 
             for a in revcomp_sc_align:
                 a.flag = read.flag ^ PYSAM_READ_FLAGS.REVERSE  # EXOR
