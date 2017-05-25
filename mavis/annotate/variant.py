@@ -605,12 +605,13 @@ def _gather_breakpoint_annotations(ref_ann, breakpoint):
 
     temp = []
     # before the first?
+    print(neg_intervals)
     if len(neg_intervals) > 0:
         first = neg_intervals[0]
         last = neg_intervals[-1]
-        if breakpoint < first:
+        if breakpoint.start < first.start:
             temp.append(IntergenicRegion(breakpoint.chr, breakpoint[0], first[0] - 1, STRAND.NEG))
-        if breakpoint[1] > last[1]:
+        if breakpoint.end > last.end:
             temp.append(IntergenicRegion(breakpoint.chr, last[1] + 1, breakpoint[1], STRAND.NEG))
 
         for i, curr in enumerate(neg_intervals):
