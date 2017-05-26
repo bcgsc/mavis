@@ -167,7 +167,6 @@ def main(
     )
     log('alignment complete')
     event_calls = []
-    passes = 0
     write_bed_file(EVIDENCE_BED, itertools.chain.from_iterable([e.get_bed_repesentation() for e in evidence_clusters]))
     for index, e in enumerate(evidence_clusters):
         print()
@@ -187,8 +186,6 @@ def main(
             failure_comment = ['zero events were called'] if failure_comment is None else failure_comment
             e.data[COLUMNS.filter_comment] = failure_comment
             filtered_evidence_clusters.append(e)
-        else:
-            passes += 1
 
         log('called {} event(s)'.format(len(calls)))
         for i, ev in enumerate(calls):
@@ -201,10 +198,6 @@ def main(
                 len(ev.break1_split_reads), len(ev.break2_split_reads),
                 len(ev.flanking_pairs)), time_stamp=False)
 
-    if len(filtered_evidence_clusters) + passes != len(evidence_clusters):
-        raise AssertionError(
-            'totals do not match pass + fails == total',
-            passes, len(filtered_evidence_clusters), len(evidence_clusters))
     # write the output validated clusters (split by type and contig)
     for i, ec in enumerate(event_calls):
         b1_homseq = None
