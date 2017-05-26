@@ -13,7 +13,7 @@ from .constants import DEFAULTS
 from ..annotate.base import BioInterval
 from ..bam.read import get_samtools_version, samtools_v0_sort, samtools_v1_sort
 from ..bam import cigar as cigar_tools
-from ..util import read_inputs, log, output_tabbed_file, filter_on_overlap, write_bed_file, build_batch_id
+from ..util import read_inputs, log, output_tabbed_file, filter_on_overlap, write_bed_file
 from ..util import generate_complete_stamp
 
 VALIDATION_PASS_SUFFIX = '.validation-passed.tab'

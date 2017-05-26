@@ -35,13 +35,6 @@ def get_version():
     return v
 
 
-def build_batch_id(prefix='', suffix='', size=6):
-    date = datetime.now()
-    m = int(math.pow(10, size) - 1)
-    return '{prefix}batch{date.year}{date.month:02d}{date.day:02d}r{r:06d}{suffix}'.format(
-        prefix=prefix, suffix=suffix, date=date, r=random.randint(1, m))
-
-
 def log(*pos, time_stamp=True):
     if time_stamp:
         print('[{}]'.format(datetime.now()), *pos)
@@ -66,7 +59,7 @@ def mkdirp(dirname):
 
 
 def filter_on_overlap(bpps, regions_by_reference_name):
-    log('filtering', len(bpps), 'on overlaps with regions')
+    log('filtering from', len(bpps), 'using overlaps with regions filter')
     failed = []
     passed = []
     for bpp in bpps:
@@ -86,7 +79,7 @@ def filter_on_overlap(bpps, regions_by_reference_name):
             failed.append(bpp)
         else:
             passed.append(bpp)
-    log('filtered', len(bpps), 'to', len(passed))
+    log('filtered from', len(bpps), 'down to', len(passed), '(removed {})'.format(len(failed)))
     return passed, failed
 
 

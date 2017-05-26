@@ -605,7 +605,6 @@ def _gather_breakpoint_annotations(ref_ann, breakpoint):
 
     temp = []
     # before the first?
-    print(neg_intervals)
     if len(neg_intervals) > 0:
         first = neg_intervals[0]
         last = neg_intervals[-1]

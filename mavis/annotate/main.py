@@ -8,7 +8,7 @@ from ..illustrate.constants import DiagramSettings
 from ..illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from ..illustrate.diagram import draw_sv_summary_diagram
 from .constants import DEFAULTS
-from ..util import log, build_batch_id, mkdirp, read_inputs, generate_complete_stamp
+from ..util import log, mkdirp, read_inputs, generate_complete_stamp
 
 
 def main(
@@ -47,7 +47,6 @@ def main(
         log=log
     )
 
-    id_prefix = build_batch_id(prefix='annotation-', suffix='-')
     fa_sequence_names = set()
     # now try generating the svg
     DS = DiagramSettings(**{k: v for k, v in kwargs.items() if k in ILLUSTRATION_DEFAULTS.__dict__})
