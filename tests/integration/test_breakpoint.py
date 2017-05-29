@@ -1,7 +1,7 @@
 import unittest
-from mavis.constants import *
-from mavis.breakpoint import *
-from mavis.error import *
+from mavis.constants import CIGAR, ORIENT, STRAND, reverse_complement
+from mavis.breakpoint import BreakpointPair, Breakpoint
+#from mavis.error import *
 from mavis.annotate import load_reference_genome
 from . import MockRead
 from . import REFERENCE_GENOME_FILE
@@ -15,8 +15,6 @@ def setUpModule():
     REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
     if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME[REF_CHR].seq[0:50].upper():
         raise AssertionError('fake genome file does not have the expected contents')
-
-
 
 class TestCallBreakpointPair(unittest.TestCase):
 
@@ -37,10 +35,36 @@ class TestCallBreakpointPair(unittest.TestCase):
         self.assertEqual('GGG', bpp.untemplated_seq)
 
     def test_single_delins(self):
-        raise unittest.SkipTest('TODO')
+        r = MockRead(
+            reference_id=0,
+            reference_name='1',
+            reference_start=0,
+            cigar=[(CIGAR.M, 10), (CIGAR.I, 3), (CIGAR.M, 5), (CIGAR.D, 7), (CIGAR.M, 5)],
+            query_sequence='ACTGAATCGTGGGTAGCTGCTAG'
+        )
+        # only report the major del event for now
+        bpp = BreakpointPair.call_breakpoint_pair(r)
+        self.assertEqual(False, bpp.opposing_strands)
+        self.assertEqual(15, bpp.break1.start)
+        self.assertEqual(15, bpp.break1.end)
+        self.assertEqual(23, bpp.break2.start)
+        self.assertEqual(23, bpp.break2.end)
 
     def test_single_insertion(self):
-        raise unittest.SkipTest('TODO')
+        r = MockRead(
+            reference_id=0,
+            reference_name='1',
+            reference_start=0,
+            cigar=[(CIGAR.M, 10), (CIGAR.I, 8), (CIGAR.M, 5)],
+            query_sequence='ACTGAATCGTGGGTAGCTGCTAG'
+        )
+        bpp = BreakpointPair.call_breakpoint_pair(r)
+        self.assertEqual(False, bpp.opposing_strands)
+        self.assertEqual(10, bpp.break1.start)
+        self.assertEqual(10, bpp.break1.end)
+        self.assertEqual(11, bpp.break2.start)
+        self.assertEqual(11, bpp.break2.end)
+        self.assertEqual('GGGTAGCT', bpp.untemplated_seq)
 
     def test_single_duplication(self):
         r = MockRead(

@@ -273,6 +273,8 @@ COLUMNS = Vocab(
     gene1_direction='gene1_direction',
     gene2='gene2',
     gene2_direction='gene2_direction',
+    gene1_aliases='gene1_aliases',
+    gene2_aliases='gene2_aliases',
     gene_product_type='gene_product_type',
     transcript1='transcript1',
     transcript2='transcript2',
@@ -393,6 +395,12 @@ COLUMNS = Vocab(
 
     gene2_direction
         :class:`PRIME` - The direction/prime of the gene. Has the following possible values
+
+    gene1_aliases
+        Other gene names associated with the current annotation at the first breakpoint
+
+    gene2_aliases
+        Other gene names associated with the current annotation at the second breakpoint
 
     gene_product_type
         :class:`GENE_PRODUCT_TYPE` - Describes if the putative fusion product will be sense or anti-sense

@@ -683,7 +683,7 @@ class Evidence(BreakpointPair):
         .. todo::
             support gathering evidence for small structural variants
         """
-        bin_gap_size = self.read_length // 2
+        min_bin_size = 10
 
         max_dist = max(
             len(Interval.union(self.break1, self.break2)),
@@ -718,7 +718,7 @@ class Evidence(BreakpointPair):
                 self.outer_window1[1],
                 read_limit=self.fetch_reads_limit,
                 sample_bins=self.fetch_reads_bins,
-                bin_gap_size=bin_gap_size,
+                min_bin_size=min_bin_size,
                 cache=True,
                 cache_if=cache_if_true,
                 filter_if=filter_if_true):
@@ -741,7 +741,7 @@ class Evidence(BreakpointPair):
                 self.outer_window2[1],
                 read_limit=self.fetch_reads_limit,
                 sample_bins=self.fetch_reads_bins,
-                bin_gap_size=bin_gap_size,
+                min_bin_size=min_bin_size,
                 cache=True,
                 cache_if=cache_if_true,
                 filter_if=filter_if_true):
@@ -759,7 +759,7 @@ class Evidence(BreakpointPair):
             elif any([read_tools.orientation_supports_type(read, et) for et in self.putative_event_types()]) and \
                     (read.reference_id != read.next_reference_id) == self.interchromosomal:
                 flanking_pairs.append(read)
-        for fl in flanking_pairs:
+        for fl in sorted(flanking_pairs, key=lambda x: (x.query_name, x.reference_start)):
             # try and get the mate from the cache
             try:
                 mates = self.bam_cache.get_mate(fl, allow_file_access=False)
@@ -780,7 +780,7 @@ class Evidence(BreakpointPair):
                     self.compatible_windows[0][1],
                     read_limit=self.fetch_reads_limit,
                     sample_bins=self.fetch_reads_bins,
-                    bin_gap_size=bin_gap_size,
+                    min_bin_size=min_bin_size,
                     cache=True,
                     cache_if=cache_if_true,
                     filter_if=filter_if_true):
@@ -793,7 +793,7 @@ class Evidence(BreakpointPair):
                     self.compatible_windows[1][1],
                     read_limit=self.fetch_reads_limit,
                     sample_bins=self.fetch_reads_bins,
-                    bin_gap_size=bin_gap_size,
+                    min_bin_size=min_bin_size,
                     cache=True,
                     cache_if=cache_if_true,
                     filter_if=filter_if_true):

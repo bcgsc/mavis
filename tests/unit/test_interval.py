@@ -123,13 +123,13 @@ class TestInterval(unittest.TestCase):
         self.assertEqual(101, Interval.convert_pos(mapping, 1))
         self.assertEqual(310, Interval.convert_pos(mapping, 50))
 
-        with self.assertRaises(IndexError) as e:
+        with self.assertRaises(IndexError):
             Interval.convert_pos(mapping, 15)
 
-        with self.assertRaises(IndexError) as e:
+        with self.assertRaises(IndexError):
             Interval.convert_pos(mapping, 0)
 
-        with self.assertRaises(IndexError) as e:
+        with self.assertRaises(IndexError):
             Interval.convert_pos(mapping, 80)
 
     def test_convert_pos_forward_to_reverse(self):
@@ -141,8 +141,18 @@ class TestInterval(unittest.TestCase):
         self.assertEqual(310, Interval.convert_pos(mapping, 1))
         self.assertEqual(309, Interval.convert_pos(mapping, 2))
 
-        with self.assertRaises(IndexError) as e:
+        with self.assertRaises(IndexError):
             Interval.convert_pos(mapping, 15)
+
+        with self.assertRaises(IndexError):
+            Interval.convert_pos(mapping, 51)
+
+        with self.assertRaises(IndexError):
+            Interval.convert_pos(mapping, 0)
+
+        with self.assertRaises(IndexError):
+            Interval.convert_pos(mapping, 31)
+
 
     def test_convert_pos_input_errors(self):
         # test input errors
@@ -193,24 +203,6 @@ class TestInterval(unittest.TestCase):
 
         with self.assertRaises(AttributeError):
             Interval.union()
-
-    # def test_weighted_mean_ci(self):
-    #     m = Interval.weighted_mean_ci((1, 2), (1, 9), (2, 10))
-    #     self.assertEqual(Interval(1, 4), m)
-    #     m = Interval.weighted_mean_ci((1, 1), (10, 10))
-    #     self.assertEqual(Interval(6), m)
-
-    # def test_weighted_mean_ci_empty_list_error(self):
-    #     with self.assertRaises(AttributeError):
-    #         Interval.weighted_mean_ci()
-
-    # def test_weighted_mean_ci_identical_even_length(self):
-    #     m = Interval.weighted_mean_ci((1, 2), (1, 2), (1, 2))
-    #     self.assertEqual(Interval(1, 2), m)
-
-    # def test_weighted_mean_ci_identical_odd_length(self):
-    #     m = Interval.weighted_mean_ci((1, 3), (1, 3), (1, 3))
-    #     self.assertEqual(Interval(1, 3), m)
 
     def test_intersection(self):
         l = [Interval(1, 10), Interval(5, 7), Interval(7)]

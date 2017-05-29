@@ -4,10 +4,12 @@ from mavis.annotate.variant import _gather_breakpoint_annotations, overlapping_t
 from mavis.annotate.genomic import *
 from mavis.annotate.protein import *
 from mavis.annotate import *
+from mavis.constants import *
+from mavis.annotate.variant import annotate_events
 from mavis.error import NotSpecifiedError
 from mavis.constants import STRAND, ORIENT, reverse_complement, SVTYPE, PRIME
 from mavis.breakpoint import Breakpoint, BreakpointPair
-from . import REFERENCE_ANNOTATIONS_FILE, REFERENCE_GENOME_FILE, MockSeq, REFERENCE_ANNOTATIONS_FILE_JSON
+from . import REFERENCE_ANNOTATIONS_FILE, REFERENCE_GENOME_FILE, MockSeq, REFERENCE_ANNOTATIONS_FILE_JSON, REFERENCE_ANNOTATIONS_FILE2
 
 
 REFERENCE_ANNOTATIONS = None
@@ -21,7 +23,7 @@ def setUpModule():
     REFERENCE_ANNOTATIONS = load_reference_genes(REFERENCE_ANNOTATIONS_FILE)
     count = sum([len(l) for l in REFERENCE_ANNOTATIONS.values()])
     print('loaded annotations', count)
-    assert(count == 6)  # make sure this is the file we expect
+    assert(count >= 6)  # make sure this is the file we expect
     REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
     assert(REF_CHR in REFERENCE_GENOME)
     print('loaded the reference genome', REFERENCE_GENOME_FILE)
@@ -296,7 +298,7 @@ class TestFusionTranscript(unittest.TestCase):
         ann = Annotation(bpp, transcript1=t, transcript2=t, event_type=SVTYPE.INV)
         ft = FusionTranscript.build(ann, ref)
 
-        expt = 'C' * len(self.s) + 'T' * (1699 - 1600 + 1) + 'G' * len(self.w) +'T' * (1499 - 1300 +1)
+        expt = 'C' * len(self.s) + 'T' * (1699 - 1600 + 1) + 'G' * len(self.w) + 'T' * (1499 - 1300 + 1)
         expt += 'T' * len(self.z) + 'GACGAT' + 'T' * (1199 - 600 + 1) + 'C' * len(self.y)
         expt += 'T' * (499 - 200 + 1) + 'G' * len(self.x)
 
@@ -369,9 +371,8 @@ class TestFusionTranscript(unittest.TestCase):
         self.assertTrue(ft.exons[3].intact_end_splice)
         self.assertFalse(ft.exons[2].intact_start_splice)
         self.assertTrue(ft.exons[2].intact_end_splice)
-        self.assertEqual(2,ft.exon_number(ft.exons[1]))
-        self.assertEqual(3,ft.exon_number(ft.exons[2]))
-
+        self.assertEqual(2, ft.exon_number(ft.exons[1]))
+        self.assertEqual(3, ft.exon_number(ft.exons[2]))
 
     def test_build_two_transcript_inversion_5prime_neg(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
@@ -386,8 +387,8 @@ class TestFusionTranscript(unittest.TestCase):
         ref = {REF_CHR: MockSeq(self.reference_sequence)}
         ann = Annotation(bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.INV)
         ft = FusionTranscript.build(ann, ref)
-        expt = 'T' * len(self.a) + 'A' * (2599 - 2100 +1) + 'C' * len(self.b) + 'ATCGACTC'
-        expt += 'T' * (1199 - 600 + 1) + 'C' * len(self.y) + 'T' *(499-200+1) + 'G' * len(self.x)
+        expt = 'T' * len(self.a) + 'A' * (2599 - 2100 + 1) + 'C' * len(self.b) + 'ATCGACTC'
+        expt += 'T' * (1199 - 600 + 1) + 'C' * len(self.y) + 'T' * (499 - 200 + 1) + 'G' * len(self.x)
 
         self.assertEqual(4, len(ft.exons))
         self.assertEqual(2, ft.exon_number(ft.exons[1]))
@@ -483,7 +484,6 @@ class TestFusionTranscript(unittest.TestCase):
         self.assertEqual(3, ft.exon_number(ft.exons[2]))
         self.assertEqual(3, ft.exon_number(ft.exons[3]))
 
-
     def test_build_two_transcript_translocation(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
@@ -524,15 +524,14 @@ class TestFusionTranscript(unittest.TestCase):
         self.assertEqual(b2, ann.break2)
         ft = FusionTranscript.build(ann, ref)
 
-        expt = 'C' * len(self.s) + 'T' * (1699 - 1600 + 1) + 'G' * len(self.w) +  'T' * (1499 - 1300 + 1)
-        expt += 'A' * len(self.z) +  'ATATGTAGA' + 'A' * len(self.b3) + 'G' * (1099 - 900 + 1)
+        expt = 'C' * len(self.s) + 'T' * (1699 - 1600 + 1) + 'G' * len(self.w) + 'T' * (1499 - 1300 + 1)
+        expt += 'A' * len(self.z) + 'ATATGTAGA' + 'A' * len(self.b3) + 'G' * (1099 - 900 + 1)
         expt += 'C' * len(self.b2) + 'G' * (799 - 700 + 1) + 'T' * len(self.b1)
 
         self.assertEqual(expt, ft.seq)
         self.assertEqual(6, len(ft.exons))
         self.assertTrue(3, ft.exon_number(ft.exons[2]))
         self.assertTrue(3, ft.exon_number(ft.exons[3]))
-
 
     def test_build_two_transcript_inverted_translocation(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
@@ -550,14 +549,15 @@ class TestFusionTranscript(unittest.TestCase):
         self.assertEqual(b2, ann.break2)
         ft = FusionTranscript.build(ann, ref)
 
-        expt = 'C' * len(self.s) + 'T' * (1699 - 1600 + 1) + 'G' * len(self.w) +  'T' * (1499 - 1300 + 1)
-        expt += 'A' * len(self.z) +  'ATATGTATC' + 'C' * (1399 - 1200 + 1) + 'A' * len(self.b4)
+        expt = 'C' * len(self.s) + 'T' * (1699 - 1600 + 1) + 'G' * len(self.w) + 'T' * (1499 - 1300 + 1)
+        expt += 'A' * len(self.z) + 'ATATGTATC' + 'C' * (1399 - 1200 + 1) + 'A' * len(self.b4)
         expt += 'C' * (1699 - 1500 + 1) + 'G' * len(self.b5) + 'C' * (2099 - 1800 + 1) + 'A' * len(self.b6)
 
         self.assertEqual(expt, ft.seq)
         self.assertEqual(6, len(ft.exons))
         self.assertTrue(3, ft.exon_number(ft.exons[2]))
         self.assertTrue(4, ft.exon_number(ft.exons[3]))
+
 
 class TestSequenceFetching(unittest.TestCase):
 
@@ -1328,7 +1328,6 @@ class TestAnnotationGathering(unittest.TestCase):
 
 
 class TestAnnotate(unittest.TestCase):
-    
     def test_reference_name_eq(self):
         first, second = ReferenceName('chr1'), ReferenceName('1')
         self.assertEqual(first, second)
@@ -1437,3 +1436,17 @@ class TestAnnotate(unittest.TestCase):
         orfs = calculate_ORF(seq)
         for orf in orfs:
             self.assertEqual('ATG', seq[orf.start - 1:orf.start + 2])
+
+
+class TestAnnotateEvents(unittest.TestCase):
+    def test_annotate_events(self):
+        reference_annotations = load_reference_genes(REFERENCE_ANNOTATIONS_FILE2)
+        b1 = Breakpoint('fakereference9', 658, orient=ORIENT.RIGHT, strand=STRAND.POS)
+        b2 = Breakpoint('fakereference9', 10237, orient=ORIENT.RIGHT, strand=STRAND.NEG)
+        bpp = BreakpointPair(b1, b2, stranded=True, opposing_strands=True, data={COLUMNS.event_type: SVTYPE.INV})
+        annotations = annotate_events([bpp], reference_genome=REFERENCE_GENOME, annotations=reference_annotations)
+        self.assertEqual(4, len(annotations))
+        self.assertEqual(STRAND.POS, annotations[0].transcript1.get_strand())
+        self.assertEqual(STRAND.NEG, annotations[0].transcript2.get_strand())
+        self.assertEqual('ENST00000375851', annotations[0].transcript1.name)
+        self.assertEqual(None, annotations[0].transcript2.name)

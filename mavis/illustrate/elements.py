@@ -599,11 +599,14 @@ def draw_exon(DS, canvas, exon, width, height, fill, label='', translation=None)
         if exon.get_strand() == STRAND.NEG:
             cds_start, cds_end = cds_end, cds_start
         title += '  c.{}_{}'.format(cds_start, cds_end)
-        cdna_start = translation.transcript.convert_genomic_to_cdna(exon.start)
-        cdna_end = translation.transcript.convert_genomic_to_cdna(exon.end)
-        if cdna_end < cdna_start:
-            cdna_start, cdna_end = cdna_end, cdna_start
-        title += '  cdna({}_{})'.format(cdna_start, cdna_end)
+        try:
+            cdna_start = translation.transcript.convert_genomic_to_cdna(exon.start)
+            cdna_end = translation.transcript.convert_genomic_to_cdna(exon.end)
+            if cdna_end < cdna_start:
+                cdna_start, cdna_end = cdna_end, cdna_start
+            title += '  cdna({}_{})'.format(cdna_start, cdna_end)
+        except IndexError:
+            title += '  cdna(N/A)'
     title += '  length({})'.format(len(exon))
     g.add(Tag('title', title))
     return g

@@ -14,7 +14,7 @@ class Interval:
         """
         self.start = start
         self.end = end if end is not None else start
-        
+
         if number_type is None:
             if int(self.start) != float(self.start) or int(self.end) != float(self.end) \
                     or type(self.start) == float or type(self.end) == float:
@@ -347,25 +347,8 @@ class Interval:
 
         i, previous_flag = Interval.position_in_range(
             input_intervals, (pos, pos))  # get the input position
-        if i == len(input_intervals):
-            curr = input_intervals[i - 1]
-            if not forward_to_reverse:
+        if i == len(input_intervals) or previous_flag:
                 raise IndexError(pos, 'is outside mapped range', mapping)
-            else:
-                raise IndexError(pos, 'is outside mapped range', mapping)
-        elif previous_flag:
-            curr = input_intervals[i]
-            if i == 0:
-                if not forward_to_reverse:
-                    raise IndexError(pos, 'is outside mapped range', mapping)
-                else:
-                    raise IndexError(pos, 'is outside mapped range', mapping)
-            else:  # between two segments
-                prev = input_intervals[i - 1]
-                if not forward_to_reverse:
-                    raise IndexError(pos, 'is outside mapped range', mapping)
-                else:
-                    raise IndexError(pos, 'is outside mapped range', mapping)
         else:
             # fell into a mapped region
             curr = input_intervals[i]
