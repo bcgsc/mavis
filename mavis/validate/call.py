@@ -200,6 +200,31 @@ class EventCall(BreakpointPair):
             err /= len(fragment_sizes)
             stdev = math.sqrt(err)
         return median, stdev
+    
+    def break1_tgt_align_split_read_names(self):
+        reads = set()
+        for r in self.break1_split_reads:
+            if r.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT) and r.get_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT):
+                reads.add(r.query_name)
+        return reads
+    
+    def break2_tgt_align_split_read_names(self):
+        reads = set()
+        for r in self.break2_split_reads:
+            if r.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT) and r.get_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT):
+                reads.add(r.query_name)
+        return reads
+
+    def linking_split_read_names(self):
+        reads1 = set()
+        for r in self.break1_split_reads:
+            reads1.add(r.query_name)
+
+        reads2 = set()
+        for r in self.break2_split_reads:
+            reads2.add(r.query_name)
+
+        return reads1 & reads2
 
     def flatten(self):
         row = self.source_evidence.flatten()
@@ -728,81 +753,20 @@ def _call_by_supporting_reads(ev, event_type, consumed_evidence=None):
         linked_pairings.append(call)
 
     for call in linked_pairings:
-        if call.break1.start in pos1:
-            del pos1[call.break1.start]
-        if call.break2.start in pos2:
-            del pos2[call.break2.start]
-
-    for first, second in itertools.product(pos1, pos2):
-        if ev.break1.chr == ev.break2.chr:
-            if first >= second:  # illegal combination, first breakpoint has to be before the second if intrachromosomal
-                continue
-        first_breakpoint = Breakpoint(ev.break1.chr, first, strand=ev.break1.strand, orient=ev.break1.orient)
-        second_breakpoint = Breakpoint(ev.break2.chr, second, strand=ev.break2.strand, orient=ev.break2.orient)
-        call = EventCall(
-            first_breakpoint, second_breakpoint, ev, event_type,
-            call_method=CALL_METHOD.SPLIT
-        )
-        call.add_flanking_support(available_flanking_pairs)
-        call.break1_split_reads.update(pos1[first])
-        call.break2_split_reads.update(pos2[second])
-        linked_pairings.append(call)
-
-    for call in linked_pairings:
         consumed_evidence.update(call.flanking_pairs)
 
-    available_flanking_pairs = available_flanking_pairs - consumed_evidence
-
     error_messages = set()
-    # if can call the first breakpoint by split
-    for pos in pos1:
-        bp = sys_copy(ev.break1)
-        bp.start = pos
-        bp.end = pos
-        try:
-            f, s = _call_by_flanking_pairs(
-                ev, event_type, first_breakpoint_called=bp, consumed_evidence=consumed_evidence)
-            call = EventCall(
-                f, s, ev, event_type,
-                call_method=CALL_METHOD.SPLIT,
-                break2_call_method=CALL_METHOD.FLANK
-            )
-            call.break1_split_reads.update(pos1[pos])
-            call.add_flanking_support(available_flanking_pairs)
-            linked_pairings.append(call)
 
-        except (AssertionError, UserWarning) as err:
-            error_messages.add(str(err))
-
-    for pos in pos2:
-        bp = sys_copy(ev.break2)
-        bp.start = pos
-        bp.end = pos
-        try:
-            f, s = _call_by_flanking_pairs(
-                ev, event_type, second_breakpoint_called=bp, consumed_evidence=consumed_evidence)
-            call = EventCall(
-                f, s, ev, event_type,
-                call_method=CALL_METHOD.FLANK,
-                break2_call_method=CALL_METHOD.SPLIT
-            )
-            call.break2_split_reads.update(pos2[pos])
-            call.add_flanking_support(available_flanking_pairs)
-            linked_pairings.append(call)
-        except (AssertionError, UserWarning) as err:
-            error_messages.add(str(err))
-
-    if len(linked_pairings) == 0:  # call by flanking only
-        try:
-            f, s = _call_by_flanking_pairs(ev, event_type, consumed_evidence=consumed_evidence)
-            call = EventCall(
-                f, s, ev, event_type,
-                call_method=CALL_METHOD.FLANK
-            )
-            call.add_flanking_support(available_flanking_pairs)
-            linked_pairings.append(call)
-        except (AssertionError, UserWarning) as err:
-            error_messages.add(str(err))
+    try:
+        f, s = _call_by_flanking_pairs(ev, event_type, consumed_evidence=consumed_evidence)
+        call = EventCall(
+            f, s, ev, event_type,
+            call_method=CALL_METHOD.FLANK
+        )
+        call.add_flanking_support(available_flanking_pairs)
+        linked_pairings.append(call)
+    except (AssertionError, UserWarning) as err:
+        error_messages.add(str(err))
 
     if len(linked_pairings) == 0:
         raise UserWarning(';'.join(list(error_messages)))
