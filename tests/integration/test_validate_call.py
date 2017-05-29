@@ -974,6 +974,25 @@ class TestCallByFlankingReadsGenome(unittest.TestCase):
             break1, break2 = call._call_by_flanking_pairs(
                 evidence, SVTYPE.DUP, Breakpoint('1', 2686471, orient=ORIENT.RIGHT))
 
+    def test_call_with_overlapping_coverage_intervals(self):
+        evidence = GenomeEvidence(
+            Breakpoint('1', 76185710, 76186159, orient=ORIENT.RIGHT),
+            Breakpoint('1', 76186430, 76186879, orient=ORIENT.LEFT),
+            BamCache(MockBamFileHandle()), None,
+            opposing_strands=False,
+            read_length=150,
+            stdev_fragment_size=98,
+            median_fragment_size=433,
+            min_flanking_pairs_resolution=1
+        )
+        evidence.flanking_pairs.add((
+            MockRead(reference_start=76186159, reference_end=76186309, next_reference_start=76186000),
+            MockRead(reference_start=76186000, reference_end=76186150, next_reference_start=76186159)
+        ))
+        with self.assertRaises(AssertionError):
+            break1, break2 = call._call_by_flanking_pairs(
+                evidence, SVTYPE.DUP, Breakpoint('1', 76185557, orient=ORIENT.RIGHT))
+
 
 class TestCallByFlankingReadsTranscriptome(unittest.TestCase):
 
