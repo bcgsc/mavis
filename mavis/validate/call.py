@@ -517,8 +517,11 @@ def _call_by_flanking_pairs(
 
     cover1 = Interval(min(first_positions), max(first_positions))
     cover2 = Interval(min(second_positions), max(second_positions))
-    if not ev.interchromosomal and Interval.overlaps(cover1, cover2) and event_type != SVTYPE.DUP:
-        raise AssertionError('flanking read coverage overlaps. cannot call by flanking reads', cover1, cover2)
+    if not ev.interchromosomal:
+        if Interval.overlaps(cover1, cover2) and event_type != SVTYPE.DUP:
+            raise AssertionError('flanking read coverage overlaps. cannot call by flanking reads', cover1, cover2)
+        elif event_type == SVTYPE.DUP and (cover1.start > cover2.start or cover2.end < cover1.end):
+            raise AssertionError('flanking coverage for duplications must have some distinct positions', cover1, cover2)
 
     break1_strand = STRAND.NS
     break2_strand = STRAND.NS
