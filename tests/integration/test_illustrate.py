@@ -217,7 +217,7 @@ class TestDraw(unittest.TestCase):
             d.padding * 2 + d.domain_track_height * 2 + \
             d.inner_margin + \
             d.track_height + d.breakpoint_bottom_margin + d.breakpoint_top_margin + d.splice_height
-        # canvas.saveas('test_draw_layout_single_transcript.svg')
+        canvas.saveas('test_draw_layout_single_transcript.svg')
         self.assertEqual(expected_height, canvas.attribs['height'])
 
     def test_draw_layout_single_genomic(self):
@@ -268,7 +268,7 @@ class TestDraw(unittest.TestCase):
             d.inner_margin + \
             d.track_height + d.splice_height
         self.assertEqual(expected_height, canvas.attribs['height'])
-        # canvas.saveas('test_draw_layout_single_genomic.svg')
+        canvas.saveas('test_draw_layout_single_genomic.svg')
 
     def test_draw_layout_translocation(self):
         d = DiagramSettings()
@@ -377,8 +377,8 @@ class TestDraw(unittest.TestCase):
 
         ft = FusionTranscript.build(ann, reference_genome)
         ann.fusion = ft
-        canvas, legend = draw_sv_summary_diagram(d, ann, show_template=True, templates=TEMPLATE_METADATA)
-        # canvas.saveas('test_draw_translocation_with_template.svg')
+        canvas, legend = draw_sv_summary_diagram(d, ann, draw_reference_templates=True, templates=TEMPLATE_METADATA)
+        canvas.saveas('test_draw_translocation_with_template.svg')
         self.assertEqual(8, len(canvas.elements))  # defs counts as element
         expected_height = d.top_margin + d.bottom_margin + \
             d.track_height * 2 + d.padding + d.breakpoint_bottom_margin + d.breakpoint_top_margin + \
@@ -386,7 +386,7 @@ class TestDraw(unittest.TestCase):
             d.track_height + d.splice_height + d.breakpoint_bottom_margin + d.breakpoint_top_margin + \
             d.padding + d.translation_track_height + \
             d.padding * 2 + d.domain_track_height * 2 + \
-            d.inner_margin + \
+            d.inner_margin * 2 + \
             d.track_height + d.breakpoint_bottom_margin + d.breakpoint_top_margin + d.splice_height + \
             d.template_track_height
         self.assertAlmostEqual(expected_height, canvas.attribs['height'])

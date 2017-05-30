@@ -1,5 +1,6 @@
 import os
 import json
+import uuid
 import re
 from .variant import annotate_events, determine_prime
 from ..constants import PROTOCOL, COLUMNS, PRIME, sort_columns
@@ -38,6 +39,10 @@ def main(
     # test that the sequence makes sense for a random transcript
     bpps = read_inputs(inputs, in_={COLUMNS.protocol: PROTOCOL}, expand_ns=False, explicit_strand=False)
     log('read {} breakpoint pairs'.format(len(bpps)))
+    # add cluster ids if not already given
+    for bpp in bpps:
+        if COLUMNS.cluster_id not in bpp.data:
+            bpp.data[COLUMNS.cluster_id] = str(uuid.uuid4())
 
     annotations = annotate_events(
         bpps,
@@ -81,17 +86,18 @@ def main(
                 header_req.update(row.keys())
                 header = sort_columns(header_req)
                 tabbed_fh.write('\t'.join([str(c) for c in header]) + '\n')
+            product_id = '{}-{}-{}'.format(ann.cluster_id, ann.data.get(COLUMNS.validation_id, None), ann.annotation_id)
+            row[COLUMNS.product_id] = product_id
             log(
                 '({} of {}) current annotation'.format(i + 1, total),
-                ann.data[COLUMNS.annotation_id], ann.transcript1, ann.transcript2, ann.event_type,
-                ann.data.get('cluster_id', None))
-
+                row[COLUMNS.product_id], ann.transcript1, ann.transcript2, ann.event_type)
+            
             # try building the fusion product
             rows = []
             # add fusion information to the current row
             transcripts = [] if not ann.fusion else ann.fusion.transcripts
             for t in transcripts:
-                fusion_fa_id = '{}_{}'.format(ann.data[COLUMNS.annotation_id], t.splicing_pattern.splice_type)
+                fusion_fa_id = '{}_{}'.format(product_id, t.splicing_pattern.splice_type)
                 fusion_fa_id = re.sub('\s', '-', fusion_fa_id)
                 if fusion_fa_id in fa_sequence_names:
                     raise AssertionError('should not be duplicate fa sequence ids', fusion_fa_id)
@@ -106,6 +112,11 @@ def main(
                     nrow[COLUMNS.fusion_cdna_coding_start] = tl.start
                     nrow[COLUMNS.fusion_cdna_coding_end] = tl.end
                     nrow[COLUMNS.fusion_sequence_fasta_id] = fusion_fa_id
+                    nrow[COLUMNS.product_id] = product_id + '-{}-{}-{}'.format(
+                        nrow[COLUMNS.fusion_splicing_pattern],
+                        nrow[COLUMNS.fusion_cdna_coding_start],
+                        nrow[COLUMNS.fusion_cdna_coding_end]
+                    )
 
                     domains = []
                     for dom in tl.domains:
@@ -125,10 +136,17 @@ def main(
 
             drawing = None
             retry_count = 0
+            draw_fusion_transcript = True
+            draw_reference_transcripts = True
+            initial_width = DS.width
             while drawing is None:  # continue if drawing error and increase width
                 try:
                     canvas, legend = draw_sv_summary_diagram(
-                        DS, ann, reference_genome=reference_genome, templates=template_metadata)
+                        DS, ann, reference_genome=reference_genome,
+                        templates=template_metadata,
+                        draw_fusion_transcript=draw_fusion_transcript,
+                        draw_reference_transcripts=draw_reference_transcripts
+                    )
 
                     gene_aliases1 = 'NA'
                     gene_aliases2 = 'NA'
@@ -152,8 +170,12 @@ def main(
                     except NotSpecifiedError:
                         pass
 
-                    name = 'mavis_{}_{}.{}_{}.{}'.format(
-                        ann.break1.chr, ann.break2.chr, gene_aliases1, gene_aliases2, ann.data[COLUMNS.annotation_id])
+                    name = 'mavis_{}-{}-{}-chr{}_chr{}-{}_{}'.format(
+                        ann.cluster_id,
+                        ann.data.get(COLUMNS.validation_id, None),
+                        ann.data.get(COLUMNS.annotation_id, None),
+                        ann.break1.chr, ann.break2.chr, gene_aliases1, gene_aliases2
+                    )
 
                     drawing = os.path.join(DRAWINGS_DIRECTORY, name + '.svg')
                     l = os.path.join(DRAWINGS_DIRECTORY, name + '.legend.json')
@@ -168,11 +190,18 @@ def main(
                         json.dump(legend, fh)
                     break
                 except DrawingFitError as err:
-                    log('extending width:', DS.width, DS.width + 500, time_stamp=False)
-                    DS.width += 500
+                    DS.width += DS.drawing_width_iter_increase
+                    log('extending width by', DS.drawing_width_iter_increase, 'to', DS.width, time_stamp=False)
                     retry_count += 1
-                    if retry_count > 20:
-                        raise err
+                    if retry_count > DS.max_drawing_retries:
+                        if draw_fusion_transcript and draw_reference_transcripts:
+                            log('restricting to gene-level only', time_stamp=False)
+                            draw_fusion_transcript = False
+                            draw_reference_transcripts = False
+                            DS.width = initial_width
+                        else:
+                            raise err
+            DS.width = initial_width  # reset the width
             if len(rows) == 0:
                 rows = [row]
 

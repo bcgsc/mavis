@@ -17,7 +17,11 @@ HEX_BLACK = '#000000'
 
 def draw_sv_summary_diagram(
     DS, ann, reference_genome=None, templates=None, ignore_absent_templates=True,
-    show_template=True, user_friendly_labels=True, template_display_label_prefix='c'
+    user_friendly_labels=True, template_display_label_prefix='',
+    draw_reference_transcripts=True,
+    draw_reference_genes=True,
+    draw_reference_templates=True,
+    draw_fusion_transcript=True
 ):
     """
     this is the main drawing function. It decides between layouts
@@ -44,6 +48,8 @@ def draw_sv_summary_diagram(
             names (where possible)
         template_display_label_prefix (str): the character to precede the template label
     """
+    if not any([draw_reference_templates, draw_reference_genes, draw_reference_transcripts, draw_fusion_transcript]):
+        raise AssertionError('nothing to draw')
     fusion_transcript = ann.fusion
     templates = dict() if templates is None else templates
     canvas = Drawing(size=(DS.width, 1000))  # just set the height for now and change later
@@ -59,7 +65,7 @@ def draw_sv_summary_diagram(
     half_drawing_width = (drawing_width - DS.inner_margin - dx_label_shift) / 2
     second_drawing_shift = x + half_drawing_width + DS.inner_margin + dx_label_shift
 
-    if show_template:
+    if draw_reference_templates:
         try:
             template1 = templates[ann.transcript1.get_chr()]
             template2 = templates[ann.transcript2.get_chr()]
@@ -85,7 +91,7 @@ def draw_sv_summary_diagram(
                 canvas.add(g)
                 g.translate(second_drawing_shift, y)
                 h.append(g.height)
-            y += max(h)
+            y += max(h) + DS.inner_margin
         except KeyError as err:
             if not ignore_absent_templates:
                 raise err
@@ -132,117 +138,129 @@ def draw_sv_summary_diagram(
             genes2.add(ann.transcript2)
             colors[ann.transcript2] = DS.gene2_color_selected
 
-    # set all the labels so that they are re-used correctly
-    aliases = {}
-    alias_failure = False
-    for gene in sorted(genes1 | genes2, key=lambda x: (str(x.get_chr()), x.start)):
-        if alias_failure:
-            break
-        try:
-            for alias in gene.aliases:
-                if alias in aliases and aliases[alias] != gene:
-                    alias_failure = True
-                    break
-            if len(gene.aliases) == 1:
-                aliases[gene.aliases[0]] = gene
+    if draw_reference_genes:
+        # set all the labels so that they are re-used correctly
+        aliases = {}
+        alias_failure = False
+        for gene in sorted(genes1 | genes2, key=lambda x: (str(x.get_chr()), x.start)):
+            if alias_failure:
+                break
+            try:
+                for alias in gene.aliases:
+                    if alias in aliases and aliases[alias] != gene:
+                        alias_failure = True
+                        break
+                if len(gene.aliases) == 1:
+                    aliases[gene.aliases[0]] = gene
+                else:
+                    for alias in gene.aliases:  # can't label when multiple
+                        aliases[alias] = None
+            except AttributeError:
+                pass
+        alias_by_gene = {}
+        for k, v in aliases.items():
+            alias_by_gene[v] = k
+
+        for gene in sorted(genes1 | genes2, key=lambda x: (str(x.get_chr()), x.start)):
+            if isinstance(gene, IntergenicRegion):
+                l = labels.add(gene, DS.region_label_prefix)
+            elif user_friendly_labels and not alias_failure and gene in alias_by_gene:
+                labels[alias_by_gene[gene]] = gene
             else:
-                for alias in gene.aliases:  # can't label when multiple
-                    aliases[alias] = None
-        except AttributeError:
-            pass
+                l = labels.add(gene, DS.gene_label_prefix)
+        gheights = [0]
 
-    alias_by_gene = {}
-    for k, v in aliases.items():
-        alias_by_gene[v] = k
-
-    for gene in sorted(genes1 | genes2, key=lambda x: (str(x.get_chr()), x.start)):
-        if isinstance(gene, IntergenicRegion):
-            l = labels.add(gene, DS.region_label_prefix)
-        elif user_friendly_labels and not alias_failure and gene in alias_by_gene:
-            labels[alias_by_gene[gene]] = gene
-        else:
-            l = labels.add(gene, DS.gene_label_prefix)
-
-    gheights = [0]
-
-    if ann.interchromosomal:
-        g = draw_genes(DS, canvas, genes1, half_drawing_width, [ann.break1], colors=colors, labels=labels)
-        g.translate(x, y)
-        canvas.add(g)
-        gheights.append(g.height)
-
-        # second gene view
-        g = draw_genes(DS, canvas, genes2, half_drawing_width, [ann.break2], colors=colors, labels=labels)
-        g.translate(second_drawing_shift, y)
-        canvas.add(g)
-        gheights.append(g.height)
-    else:
-        g = draw_genes(
-            DS, canvas, genes1 | genes2, drawing_width, [ann.break1, ann.break2], colors=colors, labels=labels)
-        g.translate(x, y)
-        canvas.add(g)
-        gheights.append(g.height)
-
-    y += max(gheights) + DS.inner_margin
-
-    theights = [0]
-    # now the transcript level drawings
-    if ann.transcript1 == ann.transcript2:
-        try:
-            g = canvas.g(class_='transcript')
-            g = draw_ustranscript(
-                DS,
-                canvas, ann.transcript1, drawing_width,
-                breakpoints=[ann.break1, ann.break2],
-                labels=labels,
-                colors=colors,
-                reference_genome=reference_genome
-            )
-            theights.append(g.height)
+        if ann.interchromosomal:
+            g = draw_genes(DS, canvas, genes1, half_drawing_width, [ann.break1], colors=colors, labels=labels)
             g.translate(x, y)
             canvas.add(g)
-        except AttributeError:
-            pass  # Intergenic region or None
-    else:  # separate drawings
-        try:
-            g = canvas.g(class_='transcript')
-            g = draw_ustranscript(
-                DS,
-                canvas, ann.transcript1, half_drawing_width,
-                breakpoints=[ann.break1],
-                labels=labels,
-                colors=colors,
-                reference_genome=reference_genome
-            )
-            theights.append(g.height)
-            g.translate(x, y)
-            canvas.add(g)
-        except AttributeError:
-            pass  # Intergenic region or None
+            gheights.append(g.height)
 
-        try:
-            g = canvas.g(class_='transcript')
-            g = draw_ustranscript(
-                DS,
-                canvas, ann.transcript2, half_drawing_width,
-                breakpoints=[ann.break2],
-                labels=labels,
-                colors=colors,
-                reference_genome=reference_genome
-            )
-            theights.append(g.height)
+            # second gene view
+            g = draw_genes(DS, canvas, genes2, half_drawing_width, [ann.break2], colors=colors, labels=labels)
             g.translate(second_drawing_shift, y)
             canvas.add(g)
-        except AttributeError:
-            pass  # Intergenic region or None
+            gheights.append(g.height)
+        else:
+            g = draw_genes(
+                DS, canvas, genes1 | genes2, drawing_width, [ann.break1, ann.break2], colors=colors, labels=labels)
+            g.translate(x, y)
+            canvas.add(g)
+            gheights.append(g.height)
 
-    y += max(theights)
-    if max(theights) == 0:
-        y -= DS.inner_margin
+        y += max(gheights) + DS.inner_margin
+    
+    if draw_reference_transcripts:
+        theights = []
+        # now the transcript level drawings
+        if any([
+            ann.transcript1 == ann.transcript2,
+            ann.transcript1 is None,
+            ann.transcript2 is None,
+            isinstance(ann.transcript1, IntergenicRegion),
+            isinstance(ann.transcript2, IntergenicRegion)
+        ]):
+            breaks = [ann.break1, ann.break2]
+            transcript = ann.transcript1
+            if ann.transcript1 is None or isinstance(ann.transcript1, IntergenicRegion):
+                transcript = ann.transcript2
+                breaks = [ann.break2]
+            elif ann.transcript2 is None or isinstance(ann.transcript2, IntergenicRegion):
+                breaks = [ann.break1]
+
+            try:
+                g = canvas.g(class_='transcript')
+                g = draw_ustranscript(
+                    DS,
+                    canvas, transcript, drawing_width,
+                    breakpoints=breaks,
+                    labels=labels,
+                    colors=colors,
+                    reference_genome=reference_genome
+                )
+                theights.append(g.height)
+                g.translate(x, y)
+                canvas.add(g)
+            except AttributeError:
+                pass  # Intergenic region or None
+        else:  # separate drawings
+            try:
+                g = canvas.g(class_='transcript')
+                g = draw_ustranscript(
+                    DS,
+                    canvas, ann.transcript1, half_drawing_width,
+                    breakpoints=[ann.break1],
+                    labels=labels,
+                    colors=colors,
+                    reference_genome=reference_genome
+                )
+                theights.append(g.height)
+                g.translate(x, y)
+                canvas.add(g)
+            except AttributeError:
+                pass  # Intergenic region or None
+
+            try:
+                g = canvas.g(class_='transcript')
+                g = draw_ustranscript(
+                    DS,
+                    canvas, ann.transcript2, half_drawing_width,
+                    breakpoints=[ann.break2],
+                    labels=labels,
+                    colors=colors,
+                    reference_genome=reference_genome
+                )
+                theights.append(g.height)
+                g.translate(second_drawing_shift, y)
+                canvas.add(g)
+            except AttributeError:
+                pass  # Intergenic region or None
+
+        if len(theights) > 0:
+            y += max(theights) + DS.inner_margin
 
     # finally the fusion transcript level drawing
-    if fusion_transcript:
-        y += DS.inner_margin
+    if fusion_transcript and draw_fusion_transcript:
         for exon in fusion_transcript.exons:
             old_ex = fusion_transcript.exon_mapping[exon.position]
             if old_ex in colors:
@@ -257,9 +275,9 @@ def draw_sv_summary_diagram(
         )
         g.translate(x, y)
         canvas.add(g)
-        y += g.height
+        y += g.height + DS.inner_margin
 
-    y += DS.bottom_margin
+    y += DS.bottom_margin - DS.inner_margin
     canvas.attribs['height'] = y
     for label, obj in labels.items():
         if label in legend:

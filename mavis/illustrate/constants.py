@@ -17,7 +17,9 @@ DEFAULTS = MavisNamespace(
     mask_fill='#ffffff',
     mask_opacity=0.7,
     domain_name_regex_filter='.*',
-    domain_scaffold_color='#000000'
+    domain_scaffold_color='#000000',
+    max_drawing_retries=3,
+    drawing_width_iter_increase=500
 )
 
 
