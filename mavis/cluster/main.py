@@ -48,7 +48,7 @@ def main(
     breakpoint_pairs = read_inputs(
         inputs,
         cast={COLUMNS.tools: lambda x: set(x.split(';')) if x else set()},
-        add={COLUMNS.library: library, COLUMNS.protocol: protocol},
+        add={COLUMNS.library: library, COLUMNS.protocol: protocol, COLUMNS.tools: ''},
         expand_ns=True, explicit_strand=False
     )
     # ignore other library inputs
