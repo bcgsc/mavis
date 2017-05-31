@@ -199,6 +199,7 @@ def main(
                             draw_fusion_transcript = False
                             draw_reference_transcripts = False
                             DS.width = initial_width
+                            retry_count = 0
                         else:
                             raise err
             DS.width = initial_width  # reset the width
