@@ -84,7 +84,8 @@ def draw_exon_track(DS, canvas, transcript, mapping, colors=None, x_start=None, 
         t = Interval.convert_ratioed_pos(mapping, exon.end).end
         pxi = Interval(s, t)
         c = colors.get(exon, DS.exon1_color)
-        group = draw_exon(DS,
+        group = draw_exon(
+            DS,
             canvas, exon, pxi.length(), DS.track_height, c,
             label=transcript.exon_number(exon),
             translation=translation
@@ -243,10 +244,11 @@ def draw_transcript_with_translation(
 
         f = DS.label_color if not DS.dynamic_labels else dynamic_label_color(DS.domain_color)
         label_group = None
-        if re.match(DS.pfam_domain, d.name):
-            label_group = canvas.a(
-                DS.pfam_link.format(d), target='_blank')
-        else:
+        for patt, link in DS.domain_links.items():
+            if re.match(patt, d.name):
+                label_group = canvas.a(link.format(d), target='_blank')
+                break
+        if label_group is None:
             label_group = canvas.g()
         gd.add(label_group)
         label_group.add(canvas.text(
@@ -703,7 +705,7 @@ def draw_gene(DS, canvas, gene, width, height, fill, label='', reference_genome=
     group = canvas.g(class_='gene')
     if width < DS.gene_min_width:
         raise DrawingFitError('width of {} is not sufficient to draw a gene of minimum width {}'.format(
-            width, DS.gene_min_width))
+            width, DS.gene_min_width), gene)
     wrect = width - DS.gene_arrow_width
     if wrect < 1:
         raise DrawingFitError('width is not sufficient to draw gene')

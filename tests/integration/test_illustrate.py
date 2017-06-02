@@ -5,10 +5,10 @@ from mavis.illustrate.diagram import *
 from mavis.illustrate.elements import draw_template, draw_ustranscript, draw_genes
 from mavis.annotate import *
 from svgwrite import Drawing
-from mavis.constants import STRAND, ORIENT, SVTYPE
+from mavis.constants import STRAND, ORIENT, SVTYPE, PROTOCOL
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.interval import Interval
-from . import MockSeq, MockString, build_transcript, TEMPLATE_METADATA_FILE
+from . import MockSeq, MockString, build_transcript, TEMPLATE_METADATA_FILE, OUTPUT_SVG
 import random
 
 TEMPLATE_METADATA = None
@@ -201,7 +201,7 @@ class TestDraw(unittest.TestCase):
         b1 = Breakpoint('1', 350, orient=ORIENT.RIGHT)
         b2 = Breakpoint('1', 600, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='')
-        ann = Annotation(bpp, transcript1=t, transcript2=t, event_type=SVTYPE.DUP)
+        ann = Annotation(bpp, transcript1=t, transcript2=t, event_type=SVTYPE.DUP, protocol=PROTOCOL.GENOME)
         ann.add_gene(Gene('1', 1500, 1950, strand=STRAND.POS))
 
         reference_genome = {'1': MockSeq(MockString('A'))}
@@ -217,7 +217,8 @@ class TestDraw(unittest.TestCase):
             d.padding * 2 + d.domain_track_height * 2 + \
             d.inner_margin + \
             d.track_height + d.breakpoint_bottom_margin + d.breakpoint_top_margin + d.splice_height
-        canvas.saveas('test_draw_layout_single_transcript.svg')
+        if OUTPUT_SVG:
+            canvas.saveas('test_draw_layout_single_transcript.svg')
         self.assertEqual(expected_height, canvas.attribs['height'])
 
     def test_draw_layout_single_genomic(self):
@@ -243,7 +244,7 @@ class TestDraw(unittest.TestCase):
         b1 = Breakpoint('1', 350, orient=ORIENT.LEFT)
         b2 = Breakpoint('1', 6500, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='')
-        ann = Annotation(bpp, transcript1=t1, transcript2=t2)
+        ann = Annotation(bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.DEL, protocol=PROTOCOL.GENOME)
         ann.add_gene(Gene('1', 1500, 1950, strand=STRAND.POS))
         ann.add_gene(Gene('1', 3000, 3980, strand=STRAND.POS))
         ann.add_gene(Gene('1', 3700, 4400, strand=STRAND.NEG))
@@ -268,7 +269,8 @@ class TestDraw(unittest.TestCase):
             d.inner_margin + \
             d.track_height + d.splice_height
         self.assertEqual(expected_height, canvas.attribs['height'])
-        canvas.saveas('test_draw_layout_single_genomic.svg')
+        if OUTPUT_SVG:
+            canvas.saveas('test_draw_layout_single_genomic.svg')
 
     def test_draw_layout_translocation(self):
         d = DiagramSettings()
@@ -293,7 +295,7 @@ class TestDraw(unittest.TestCase):
         b1 = Breakpoint('1', 350, orient=ORIENT.LEFT)
         b2 = Breakpoint('2', 6520, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_seq='')
-        ann = Annotation(bpp, transcript1=t1, transcript2=t2)
+        ann = Annotation(bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.ITRANS, protocol=PROTOCOL.GENOME)
         # genes 1
         ann.add_gene(Gene('1', 1500, 1950, strand=STRAND.POS))
         ann.add_gene(Gene('1', 3000, 3980, strand=STRAND.POS))
@@ -363,7 +365,7 @@ class TestDraw(unittest.TestCase):
         b1 = Breakpoint('1', 350, orient=ORIENT.LEFT)
         b2 = Breakpoint('2', 6520, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_seq='')
-        ann = Annotation(bpp, transcript1=t1, transcript2=t2)
+        ann = Annotation(bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.ITRANS, protocol=PROTOCOL.GENOME)
         # genes 1
         ann.add_gene(Gene('1', 1500, 1950, strand=STRAND.POS, aliases=['HUGO5']))
         ann.add_gene(Gene('1', 3000, 3980, strand=STRAND.POS))
@@ -378,7 +380,8 @@ class TestDraw(unittest.TestCase):
         ft = FusionTranscript.build(ann, reference_genome)
         ann.fusion = ft
         canvas, legend = draw_sv_summary_diagram(d, ann, draw_reference_templates=True, templates=TEMPLATE_METADATA)
-        canvas.saveas('test_draw_translocation_with_template.svg')
+        if OUTPUT_SVG:
+            canvas.saveas('test_draw_translocation_with_template.svg')
         self.assertEqual(8, len(canvas.elements))  # defs counts as element
         expected_height = d.top_margin + d.bottom_margin + \
             d.track_height * 2 + d.padding + d.breakpoint_bottom_margin + d.breakpoint_top_margin + \
@@ -432,11 +435,11 @@ class TestDraw(unittest.TestCase):
             'cna',
             ymin=-1,
             ymax=1,
-            #hmarkers=[-1, 1],
             yticks=[-1, 0, 1]
         )
 
         d.gene_min_buffer = 0
         canvas = draw_multi_transcript_overlay(d, gene, vmarkers=[marker], plots=[s, s])
         self.assertEqual(2, len(canvas.elements))  # defs counts as element
-        # canvas.saveas('test_draw_overlay.svg')
+        if OUTPUT_SVG:
+            canvas.saveas('test_draw_overlay.svg')

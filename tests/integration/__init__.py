@@ -22,6 +22,7 @@ BLAT_INPUT = os.path.join(DATA_DIR, 'blat_input.fa')
 BLAT_OUTPUT = os.path.join(DATA_DIR, 'blat_output.pslx')
 
 RUN_FULL = int(os.environ.get('RUN_FULL', 1))
+OUTPUT_SVG = int(os.environ.get('OUTPUT_SVG', 0))
 
 
 class MockRead:

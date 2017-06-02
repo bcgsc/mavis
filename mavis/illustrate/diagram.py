@@ -262,9 +262,12 @@ def draw_sv_summary_diagram(
     # finally the fusion transcript level drawing
     if fusion_transcript and draw_fusion_transcript:
         for exon in fusion_transcript.exons:
-            old_ex = fusion_transcript.exon_mapping[exon.position]
-            if old_ex in colors:
+            colors[exon] = DS.novel_exon_color
+            try:
+                old_ex = fusion_transcript.exon_mapping[exon.position]
                 colors[exon] = colors[old_ex]
+            except KeyError:
+                pass
         g = canvas.g(class_='transcript')
         g = draw_ustranscript(
             DS,

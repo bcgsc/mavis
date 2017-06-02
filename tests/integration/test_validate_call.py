@@ -387,21 +387,17 @@ class TestEvidenceConsumption(unittest.TestCase):
         events = call.call_events(evidence)
         for ev in events:
             print(ev, ev.event_type, ev.call_method)
-        self.assertEqual(5, len(events))
+        self.assertEqual(4, len(events))
         self.assertEqual(('contig', 'contig'), events[0].call_method)
         self.assertEqual(100, events[0].break1.start)
         self.assertEqual(481, events[0].break2.start)
         self.assertEqual(('split reads', 'split reads'), events[1].call_method)
         self.assertEqual(120, events[1].break1.start)
         self.assertEqual(501, events[1].break2.start)
-        self.assertEqual(('split reads', 'flanking reads'), events[2].call_method)
+        self.assertEqual(('flanking reads', 'flanking reads'), events[2].call_method)
         self.assertEqual(120, events[2].break1.start)
         self.assertEqual(591, events[2].break2.start)
         self.assertEqual(806, events[2].break2.end)
-        self.assertEqual(('flanking reads', 'split reads'), events[3].call_method)
-        self.assertEqual(90, events[3].break1.start)
-        self.assertEqual(299, events[3].break1.end)
-        self.assertEqual(501, events[3].break2.start)
         self.assertEqual(('split reads', 'split reads'), events[4].call_method)
         self.assertEqual(120, events[4].break1.start)
         self.assertEqual(501, events[4].break2.start)
@@ -518,31 +514,6 @@ class TestEvidenceConsumption(unittest.TestCase):
         self.assertEqual(871, events[1].break2.start)
         self.assertEqual('insertion', events[1].event_type)
 
-    def test_call_split_and_flanking(self):
-        evidence = self.build_genome_evidence(
-            Breakpoint('1', 50, 150, orient=ORIENT.LEFT),
-            Breakpoint('1', 850, 900, orient=ORIENT.RIGHT),
-            opposing_strands=False
-        )
-        evidence.split_reads[0].add(
-            MockRead(query_name='t1', reference_start=140, cigar=[(CIGAR.EQ, 30), (CIGAR.S, 70)])
-        )
-        evidence.flanking_pairs.add(
-            mock_read_pair(
-                MockRead(query_name='t1', reference_id=0, reference_start=42, reference_end=140, is_reverse=False),
-                MockRead(query_name='t1', reference_id=0, reference_start=885, reference_end=905, is_reverse=True)
-            ))
-        events = call.call_events(evidence)
-        for ev in events:
-            print(ev, ev.event_type, ev.call_method)
-        self.assertEqual(1, len(events))
-        self.assertEqual(170, events[0].break1.start)
-        self.assertEqual(170, events[0].break1.end)
-        self.assertEqual(('split reads', 'flanking reads'), events[0].call_method)
-        self.assertEqual(656, events[0].break2.start)
-        self.assertEqual(886, events[0].break2.end)
-        raise unittest.SkipTest('TODO')
-
     def test_call_flanking_only(self):
         evidence = self.build_genome_evidence(
             Breakpoint('1', 50, 150, orient=ORIENT.LEFT),
@@ -646,38 +617,6 @@ class TestCallBySupportingReads(unittest.TestCase):
         self.assertEqual(501, break2.start)
         self.assertEqual(501, break2.end)
 
-    def test_mixed_split_then_flanking(self):
-        self.ev.split_reads[0].add(
-            MockRead(
-                query_name='t1', reference_start=100, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)]
-            )
-        )
-        self.ev.flanking_pairs.add(mock_read_pair(
-            MockRead(query_name='t2', reference_id=0, reference_start=150, reference_end=150),
-            MockRead(query_name='t2', reference_id=0, reference_start=505, reference_end=520)
-        ))
-        break1, break2 = call._call_by_supporting_reads(self.ev, SVTYPE.INV)[0]
-
-        self.assertEqual(101, break1.start)
-        self.assertEqual(101, break1.end)
-        self.assertEqual(411, break2.start)
-        self.assertEqual(506, break2.end)
-
-    def test_split_flanking_read(self):
-        self.ev.split_reads[1].add(
-            MockRead(query_name='t1', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
-        )
-        self.ev.flanking_pairs.add(mock_read_pair(
-            MockRead(query_name='t2', reference_id=0, reference_start=120, reference_end=140),
-            MockRead(query_name='t2', reference_id=0, reference_start=520, reference_end=520)
-        ))
-        break1, break2 = call._call_by_supporting_reads(self.ev, SVTYPE.INV)[0]
-
-        self.assertEqual(31, break1.start)
-        self.assertEqual(121, break1.end)
-        self.assertEqual(501, break2.start)
-        self.assertEqual(501, break2.end)
-
     def test_both_by_flanking_pairs(self):
         self.ev.flanking_pairs.add(mock_read_pair(
             MockRead(
@@ -718,7 +657,7 @@ class TestCallBySupportingReads(unittest.TestCase):
         )
 
         evs = call._call_by_supporting_reads(self.ev, SVTYPE.INV)
-        self.assertEqual(4, len(evs))
+        self.assertEqual(2, len(evs))
 
     def test_call_by_split_reads_consume_flanking(self):
         evidence = GenomeEvidence(

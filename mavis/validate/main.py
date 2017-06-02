@@ -2,6 +2,7 @@ import os
 import pysam
 import re
 import subprocess
+import uuid
 import itertools
 from ..bam.cache import BamCache
 from ..blat import blat_contigs
@@ -62,8 +63,9 @@ def main(
     split_read_contigs = set()
     chr_to_index = {}
     bpps = read_inputs(
-        [input], add={COLUMNS.protocol: protocol, COLUMNS.library: library},
-        expand_ns=False, explicit_strand=False
+        [input], add={COLUMNS.protocol: protocol, COLUMNS.library: library, COLUMNS.cluster_id: None},
+        expand_ns=False, explicit_strand=False,
+        cast={COLUMNS.cluster_id: lambda x: str(uuid.uuid4()) if not x else x}
     )
     evidence_clusters = []
     for bpp in bpps:
@@ -116,8 +118,7 @@ def main(
         print()
         log(
             '({} of {})'.format(i + 1, len(evidence_clusters)),
-            'gathering evidence for:',
-            e.data['cluster_id']
+            'gathering evidence for:', e.cluster_id
         )
         log(e, time_stamp=False)
         log('possible event type(s):', BreakpointPair.classify(e), time_stamp=False)
@@ -171,7 +172,7 @@ def main(
     for index, e in enumerate(evidence_clusters):
         print()
         log('({} of {}) calling events for:'.format
-            (index + 1, len(evidence_clusters)), e.data[COLUMNS.cluster_id], e.putative_event_types())
+            (index + 1, len(evidence_clusters)), e.cluster_id, e.putative_event_types())
         log('source:', e, time_stamp=False)
         calls = []
         failure_comment = None
@@ -181,7 +182,7 @@ def main(
         except UserWarning as err:
             log('warning: error in calling events', repr(err), time_stamp=False)
             failure_comment = str(err)
-        
+
         if len(calls) == 0:
             failure_comment = ['zero events were called'] if failure_comment is None else failure_comment
             e.data[COLUMNS.filter_comment] = failure_comment
@@ -191,7 +192,7 @@ def main(
         for i, ev in enumerate(calls):
             log(ev, time_stamp=False)
             log(ev.event_type, ev.call_method, time_stamp=False)
-            ev.data[COLUMNS.validation_id] = str(i + 1)
+            ev.data[COLUMNS.validation_id] = '{}-v{}'.format(ev.cluster_id, i + 1)
             log('remapped reads: {}; spanning reads: {}; split reads: [{} ({}), {} ({}), {}], flanking pairs: {}'.format(
                 0 if not ev.contig else len(ev.contig.input_reads),
                 len(ev.spanning_reads),

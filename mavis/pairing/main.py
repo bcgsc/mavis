@@ -36,8 +36,6 @@ def main(
     bpps.extend(read_inputs(
         inputs,
         require=[
-            COLUMNS.cluster_id,
-            COLUMNS.validation_id,
             COLUMNS.annotation_id,
             COLUMNS.library,
             COLUMNS.fusion_cdna_coding_start,
@@ -68,12 +66,12 @@ def main(
     product_sequences = dict()
     # get all sequence ids and all files to read from
     for bpp in bpps:
-        if bpp.data[COLUMNS.fusion_sequence_fasta_file]:
-            product_sequence_files.add(bpp.data[COLUMNS.fusion_sequence_fasta_file])
-        if bpp.data[COLUMNS.fusion_sequence_fasta_id]:
-            product_sequences[bpp.data[COLUMNS.fusion_sequence_fasta_id]] = None
-        libraries.add(bpp.data[COLUMNS.library])
-    
+        if bpp.fusion_sequence_fasta_file:
+            product_sequence_files.add(bpp.fusion_sequence_fasta_file)
+        if bpp.fusion_sequence_fasta_id:
+            product_sequences[bpp.fusion_sequence_fasta_id] = None
+        libraries.add(bpp.library)
+
     # load sequences from all files detected
     log('detected', len(libraries), 'libraries')
     for fname in sorted(list(product_sequence_files)):
@@ -88,13 +86,13 @@ def main(
                     product_sequences[fid] = fseq
         except IOError as err:
             log('failed for open input file', err)
-    
+
     # ensure that all sequences have been found
     for seqid, seq in product_sequences.items():
         if seq is None:
             raise KeyError('failed to find sequence for the product', seqid, seq)
         product_sequences[seqid] = str(seq.seq)
-    
+
     # load all transcripts
     reference_transcripts = dict()
     for chr, genes in annotations.items():
@@ -109,15 +107,12 @@ def main(
     bpp_by_product_key = dict()
     pairings = dict()
     categories = set()
-    
-    for i, bpp in enumerate(bpps):
-        lib = bpp.data[COLUMNS.library]
+
+    for bpp in bpps:
         product_key = (
             bpp.library,
             bpp.protocol,
-            bpp.data.get(COLUMNS.cluster_id, i),
-            bpp.data.get(COLUMNS.validation_id, i),
-            bpp.data.get(COLUMNS.annotation_id, i),
+            bpp.annotation_id,
             bpp.fusion_splicing_pattern,
             bpp.fusion_cdna_coding_start,
             bpp.fusion_cdna_coding_end
@@ -126,14 +121,14 @@ def main(
         categories.add(category)
         assert(bpp.break1.strand != STRAND.NS and bpp.break2.strand != STRAND.NS)
         bpp.data[COLUMNS.product_id] = product_key
-        calls_by_lib.setdefault(lib, {})
-        calls_by_lib[lib].setdefault(category, set())
-        calls_by_lib[lib][category].add(product_key)
-        
+        calls_by_lib.setdefault(bpp.library, {})
+        calls_by_lib[bpp.library].setdefault(category, set())
+        calls_by_lib[bpp.library][category].add(product_key)
+
         pairings[product_key] = set()
         if product_key in bpp_by_product_key:
-            raise KeyError('duplicate bpp is not unique within lib', lib, product_key, bpp, bpp.data)
-        
+            raise KeyError('duplicate bpp is not unique within lib', bpp.library, product_key, bpp, bpp.data)
+
         bpp_by_product_key[product_key] = bpp
     total_comparisons = 0
     # pairwise comparison of breakpoints between all libraries
@@ -147,7 +142,7 @@ def main(
             # for each two libraries pair all calls
             if c > 10000:
                 log(c, 'comparison(s) between', lib, 'and', other_lib, 'for', category)
-            
+
             for product_key1, product_key2 in itertools.product(pairs, other_pairs):
                 if product_key1[:-3] == product_key2[:-3]:
                     continue
@@ -163,17 +158,17 @@ def main(
     log('checked', total_comparisons, 'total comparisons')
     for product_key, paired_product_keys in pairings.items():
         bpp = bpp_by_product_key[product_key]
-        
+
         # filter any matches where genes match but transcripts do not
         filtered = []
         for paired_product_key in paired_product_keys:
             paired_bpp = bpp_by_product_key[paired_product_key]
-            
-            if bpp.data[COLUMNS.gene1] and bpp.data[COLUMNS.gene1] == paired_bpp.data[COLUMNS.gene1]:
-                if bpp.data[COLUMNS.transcript1] != paired_bpp.data[COLUMNS.transcript1]:
+
+            if bpp.gene1 and bpp.gene1 == paired_bpp.gene1:
+                if bpp.transcript1 != paired_bpp.transcript1:
                     continue
-            if bpp.data[COLUMNS.gene2] and bpp.data[COLUMNS.gene2] == paired_bpp.data[COLUMNS.gene2]:
-                if bpp.data[COLUMNS.transcript2] != paired_bpp.data[COLUMNS.transcript2]:
+            if bpp.gene2 and bpp.gene2 == paired_bpp.gene2:
+                if bpp.transcript2 != paired_bpp.transcript2:
                     continue
             filtered.append(paired_product_key)
         bpp.data[COLUMNS.pairing] = ';'.join(['_'.join([str(v) for v in key]) for key in sorted(filtered)])

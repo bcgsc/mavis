@@ -1,10 +1,11 @@
 from .genomic import usTranscript, Transcript, Exon, IntergenicRegion
-from ..constants import STRAND, SVTYPE, reverse_complement, ORIENT, PRIME, COLUMNS, GENE_PRODUCT_TYPE
+from ..constants import STRAND, SVTYPE, reverse_complement, ORIENT, PRIME, COLUMNS, GENE_PRODUCT_TYPE, PROTOCOL
 from ..breakpoint import Breakpoint, BreakpointPair
 from ..interval import Interval
 from .protein import Translation, Domain, calculate_ORF
 from ..error import NotSpecifiedError
 import itertools
+import uuid
 
 
 def determine_prime(transcript, breakpoint):
@@ -104,6 +105,19 @@ class FusionTranscript(usTranscript):
                     ex.reference_object = ft
                     ft.exon_mapping[ex.position] = old_ex
                 offset = len(ft.seq)
+                if ann.protocol == PROTOCOL.TRANS:
+                    ft.exons[-1].intact_end_splice = False
+                    ex1[0][0].intact_start_splice = False
+                    novel_exon_start = ft.exons[-1].end + 1
+                    novel_exon_end = offset + ex1[0][0].start - 1
+                    if novel_exon_end >= novel_exon_start:  # create a novel exon
+                        e = Exon(
+                            novel_exon_start, novel_exon_end, ft,
+                            intact_start_splice=False,
+                            intact_end_splice=False
+                        )
+                        ft.exons.append(e)
+
                 for ex, old_ex in ex1:
                     e = Exon(
                         ex.start + offset, ex.end + offset, ft,
@@ -147,6 +161,19 @@ class FusionTranscript(usTranscript):
                     ft.exon_mapping[ex.position] = old_ex
 
                 offset = len(ft.seq)
+                
+                if ann.protocol == PROTOCOL.TRANS:
+                    ft.exons[-1].intact_end_splice = False
+                    ex2[0][0].intact_start_splice = False
+                    novel_exon_start = ft.exons[-1].end + 1
+                    novel_exon_end = offset + ex2[0][0].start - 1
+                    if novel_exon_end >= novel_exon_start:  # create a novel exon
+                        e = Exon(
+                            novel_exon_start, novel_exon_end, ft,
+                            intact_start_splice=False,
+                            intact_end_splice=False
+                        )
+                        ft.exons.append(e)
                 ft.seq += seq2
                 for ex, old_ex in ex2:
                     e = Exon(
@@ -184,6 +211,19 @@ class FusionTranscript(usTranscript):
                 ex.reference_object = ft
                 ft.exon_mapping[ex.position] = old_ex
             offset = len(ft.seq)
+
+            if ann.protocol == PROTOCOL.TRANS:
+                ft.exons[-1].intact_end_splice = False
+                ex2[0][0].intact_start_splice = False
+                novel_exon_start = ft.exons[-1].end + 1
+                novel_exon_end = offset + ex2[0][0].start - 1
+                if novel_exon_end >= novel_exon_start:  # create a novel exon
+                    e = Exon(
+                        novel_exon_start, novel_exon_end, ft,
+                        intact_start_splice=False,
+                        intact_end_splice=False
+                    )
+                    ft.exons.append(e)
             for ex, old_ex in ex2:
                 e = Exon(
                     ex.start + offset, ex.end + offset, ft,
@@ -357,9 +397,9 @@ class Annotation(BreakpointPair):
         self, bpp,
         transcript1=None,
         transcript2=None,
-        data={},
-        event_type=None,
-        proximity=5000
+        proximity=5000,
+        data=None,
+        **kwargs
     ):
         """
         Holds a breakpoint call and a set of transcripts, other information is gathered relative to these
@@ -377,20 +417,24 @@ class Annotation(BreakpointPair):
 
         temp = bpp.break2 if transcript2 is None else bpp.break2 & transcript2
         b2 = Breakpoint(bpp.break2.chr, temp[0], temp[1], strand=bpp.break2.strand, orient=bpp.break2.orient)
-
         BreakpointPair.__init__(
             self,
             b1,
             b2,
             opposing_strands=bpp.opposing_strands,
             stranded=bpp.stranded,
-            data=bpp.data,
             untemplated_seq=bpp.untemplated_seq
         )
+        self.data.update(bpp.data)
+        if data is not None:
+            conflicts = set(kwargs.keys()) & set(data.keys())
+            self.data.update(data)
+            if len(conflicts) > 0:
+                raise TypeError('got multiple values for data elements:', conflicts)
+        self.data.update(kwargs)
 
         self.transcript1 = transcript1
         self.transcript2 = transcript2
-        self.data.update(data)
 
         self.encompassed_genes = set()
         self.genes_proximal_to_break1 = set()
@@ -398,7 +442,8 @@ class Annotation(BreakpointPair):
         self.genes_overlapping_break1 = set()
         self.genes_overlapping_break2 = set()
 
-        self.event_type = event_type if event_type is None else SVTYPE.enforce(event_type)
+        SVTYPE.enforce(self.event_type)
+        PROTOCOL.enforce(self.protocol)
         self.proximity = proximity
         self.fusion = None
 
@@ -509,6 +554,8 @@ class Annotation(BreakpointPair):
         if hasattr(self.transcript1, 'gene'):
             row[COLUMNS.gene1] = self.transcript1.gene.name
             row[COLUMNS.transcript1] = self.transcript1.name
+            if self.transcript1.gene.aliases:
+                row[COLUMNS.gene1_aliases] = ';'.join(sorted(self.transcript1.gene.aliases))
             try:
                 row[COLUMNS.gene1_direction] = str(determine_prime(self.transcript1, self.break1))
             except NotSpecifiedError:
@@ -516,6 +563,8 @@ class Annotation(BreakpointPair):
         if hasattr(self.transcript2, 'gene'):
             row[COLUMNS.gene2] = self.transcript2.gene.name
             row[COLUMNS.transcript2] = self.transcript2.name
+            if self.transcript2.gene.aliases:
+                row[COLUMNS.gene2_aliases] = ';'.join(sorted(self.transcript2.gene.aliases))
             try:
                 row[COLUMNS.gene2_direction] = str(determine_prime(self.transcript2, self.break2))
                 if row[COLUMNS.gene1_direction] is not None:
@@ -633,7 +682,7 @@ def _gather_breakpoint_annotations(ref_ann, breakpoint):
         sorted(neg_overlapping_transcripts, key=lambda x: x.position))
 
 
-def _gather_annotations(ref, bp, event_type=None, proximity=None):
+def _gather_annotations(ref, bp, proximity=None):
     """
     each annotation is defined by the annotations selected at the breakpoints
     the other annotations are given relative to this
@@ -705,7 +754,7 @@ def _gather_annotations(ref, bp, event_type=None, proximity=None):
         bpp.break2.start = b2_itvl[0]
         bpp.break2.end = b2_itvl[1]
 
-        a = Annotation(bpp, a1, a2, event_type=event_type, proximity=proximity)
+        a = Annotation(bpp, a1, a2, proximity=proximity)
 
         for gene in ref.get(bp.break1.chr, []):
             a.add_gene(gene)
@@ -737,15 +786,15 @@ def annotate_events(
     total = len(bpps)
     for i, bpp in enumerate(bpps):
         log('({} of {}) gathering annotations for'.format(i + 1, total), bpp)
+        bpp.data[COLUMNS.validation_id] = bpp.data.get(COLUMNS.validation_id, str(uuid.uuid4()))
         ann = _gather_annotations(
             annotations,
             bpp,
-            event_type=bpp.data[COLUMNS.event_type],
             proximity=max_proximity
         )
         results.extend(ann)
         for j, a in enumerate(ann):
-            a.data[COLUMNS.annotation_id] = str(j + 1)
+            a.data[COLUMNS.annotation_id] = '{}-a{}'.format(a.validation_id, j + 1)
             # try building the fusion product
             try:
                 ft = FusionTranscript.build(

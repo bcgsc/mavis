@@ -124,7 +124,7 @@ class BreakpointPair:
         temp.break2 = sys_copy(self.break2)
         return temp
 
-    def __init__(self, b1, b2, stranded=False, opposing_strands=None, untemplated_seq=None, data={}):
+    def __init__(self, b1, b2, stranded=False, opposing_strands=None, untemplated_seq=None, data=None, **kwargs):
         """
         Args:
             b1 (Breakpoint): the first breakpoint
@@ -153,7 +153,12 @@ class BreakpointPair:
         # between break1 and break2 not in either
         self.untemplated_seq = untemplated_seq
         self.data = {}
-        self.data.update(data)
+        if data is not None:
+            self.data.update(data)
+            conflicts = set(data.keys()) & set(kwargs.keys())
+            if len(conflicts) > 0:
+                raise TypeError('data got multiple values for data elements:', conflicts)
+        self.data.update(kwargs)
 
         if self.break1.strand != STRAND.NS and self.break2.strand != STRAND.NS:
             opposing = self.break1.strand != self.break2.strand
@@ -744,9 +749,9 @@ def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, **
                     b2,
                     opposing_strands=opp,
                     untemplated_seq=row[COLUMNS.untemplated_seq],
-                    stranded=row[COLUMNS.stranded],
-                    data=data
+                    stranded=row[COLUMNS.stranded]
                 )
+                bpp.data.update(data)
                 event_type = bpp.data.get(COLUMNS.event_type, None)
                 if event_type and event_type not in BreakpointPair.classify(bpp):
                     raise InvalidRearrangement(

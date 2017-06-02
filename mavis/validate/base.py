@@ -105,7 +105,7 @@ class Evidence(BreakpointPair):
             stranded=stranded,
             opposing_strands=opposing_strands,
             untemplated_seq=untemplated_seq,
-            data=data
+            **data
         )
         d = dict()
         for arg in kwargs:
