@@ -1,5 +1,6 @@
 from ..constants import COLUMNS, STRAND, CALL_METHOD, SVTYPE
 from ..breakpoint import Breakpoint, BreakpointPair
+from ..interval import Interval
 
 
 def alphanumeric_choice(bpp1, bpp2):
@@ -148,7 +149,7 @@ def group_events(bpp1, bpp2):
     columns_to_keep = [COLUMNS.contig_seq, COLUMNS.break1_call_method, COLUMNS.break2_call_method,
                        COLUMNS.break1_split_reads, COLUMNS.break2_split_reads, COLUMNS.contig_alignment_score,
                        COLUMNS.spanning_reads, COLUMNS.flanking_pairs, COLUMNS.tools,
-                       COLUMNS.product_id, COLUMNS.event_type,
+                       COLUMNS.product_id, COLUMNS.event_type, COLUMNS.annotation_id,
                        COLUMNS.contig_remapped_reads]
 
     for i in bpp1.data.keys():
@@ -172,6 +173,17 @@ def annotate_aliases(bpp, reference_transcripts):
     if bpp.data[COLUMNS.transcript2] in reference_transcripts:
         bpp.data[COLUMNS.gene2_aliases] = ";".join(reference_transcripts[bpp.data[COLUMNS.transcript2]].gene.aliases)
     return(bpp)
+
+
+def annotate_dgv(bpps, dgv_regions_by_reference_name, distance=0):
+    for bpp in bpps:
+        if bpp.break1.chr != bpp.break2.chr:
+            continue # assume the dgv does not have translocations
+        for r in dgv_regions_by_reference_name.get(bpp.break1.chr, []):
+            if abs(Interval.dist((r.start, r.start), bpp.break1)) <= distance and \
+                    abs(Interval.dist((r.end, r.end), bpp.break2)) <= distance:
+                bpp.data['dgv'] = str(r)
+    return bpps
 
 
 def filter_by_evidence(

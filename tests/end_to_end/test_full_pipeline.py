@@ -114,6 +114,18 @@ class TestFullPipeline(unittest.TestCase):
         self.assertTrue(glob_exists(temp_output, 'pairing', 'mavis_paired*.tab'))
         self.assertTrue(glob_exists(temp_output, 'pairing', '*.COMPLETE'))
 
+        # now run the summary
+        self.assertTrue(glob_exists(temp_output, 'summary'))
+        qsub = os.path.join(temp_output, 'summary', 'qsub.sh')
+        self.assertTrue(glob_exists(qsub))
+        command = 'export SGE_TASK_ID=1; bash {}'.format(qsub)
+        print(command)
+        output = subprocess.check_output(command, shell=True)
+        tail(output)
+
+        self.assertTrue(glob_exists(temp_output, 'summary', 'mavis_summary*.tab'))
+        self.assertTrue(glob_exists(temp_output, 'summary', '*.COMPLETE'))
+
 
 def tearDownModule():
     # remove the temp directory and outputs

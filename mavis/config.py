@@ -29,7 +29,7 @@ def cast(value, cast_func):
 
 class LibraryConfig:
     def __init__(
-        self, library, protocol, bam_file, inputs, read_length, median_fragment_size, stdev_fragment_size, stranded_bam, 
+        self, library, protocol, bam_file, inputs, read_length, median_fragment_size, stdev_fragment_size, stranded_bam,
         **kwargs
     ):
         self.library = library
@@ -58,13 +58,13 @@ class LibraryConfig:
         result.update(self.__dict__)
         result['inputs'] = '\n'.join(result['inputs'])
         return result
-    
+
     @classmethod
     def build(
-        self, library, protocol, bam_file, inputs, 
-        annotations=None, 
-        log=devnull, 
-        distribution_fraction=0.98, 
+        self, library, protocol, bam_file, inputs,
+        annotations=None,
+        log=devnull,
+        distribution_fraction=0.98,
         sample_cap=3000,
         sample_bin_size=1000,
         sample_size=500,
@@ -72,7 +72,7 @@ class LibraryConfig:
         **kwargs
     ):
         PROTOCOL.enforce(protocol)
-        
+
         if protocol == PROTOCOL.TRANS and annotations is None:
             raise AttributeError(
                 'missing required attribute: annotations. Annotations must be given for transcriptomes')
@@ -81,19 +81,19 @@ class LibraryConfig:
             bamstats = None
             if protocol == PROTOCOL.TRANS:
                 bamstats = compute_transcriptome_bam_stats(
-                    bam, 
-                    annotations=annotations, 
+                    bam,
+                    annotations=annotations,
                     sample_size=sample_size,
-                    sample_cap=sample_cap, 
+                    sample_cap=sample_cap,
                     distribution_fraction=distribution_fraction,
                     log=log
                 )
             elif protocol == PROTOCOL.GENOME:
                 bamstats = compute_genome_bam_stats(
-                    bam, 
+                    bam,
                     sample_size=sample_size,
-                    sample_bin_size=sample_bin_size, 
-                    sample_cap=sample_cap, 
+                    sample_bin_size=sample_bin_size,
+                    sample_cap=sample_cap,
                     distribution_fraction=distribution_fraction,
                     log=log
                 )
@@ -101,12 +101,12 @@ class LibraryConfig:
                 raise ValueError('unrecognized value for protocol', protocol)
             log(
                 'library:', library, protocol,
-                'median', bamstats.median_fragment_size, 
-                'stdev', bamstats.stdev_fragment_size, 
+                'median', bamstats.median_fragment_size,
+                'stdev', bamstats.stdev_fragment_size,
                 'read length', bamstats.read_length)
 
             return LibraryConfig(
-                library=library, protocol=protocol, bam_file=bam_file, inputs=inputs, 
+                library=library, protocol=protocol, bam_file=bam_file, inputs=inputs,
                 median_fragment_size=bamstats.median_fragment_size,
                 stdev_fragment_size=bamstats.stdev_fragment_size,
                 read_length=bamstats.read_length,
@@ -124,7 +124,7 @@ class JobSchedulingConfig:
         self.validate_memory_gb = validate_memory_gb
         self.default_memory_gb = default_memory_gb
         self.queue = queue
-    
+
     def flatten(self):
         result = {}
         result.update(self.__dict__)
@@ -134,18 +134,20 @@ class JobSchedulingConfig:
 class ReferenceFilesConfig:
 
     def __init__(
-        self, 
-        annotations=None, 
-        reference_genome=None, 
-        template_metadata=None, 
-        masking=None, 
-        blat_2bit_reference=None, 
+        self,
+        annotations=None,
+        reference_genome=None,
+        template_metadata=None,
+        masking=None,
+        blat_2bit_reference=None,
+        dgv_annotation=None,
         low_memory=False
     ):
         self.annotations = annotations or os.environ.get(ENV_VAR_PREFIX + 'ANNOTATIONS', None)
         self.reference_genome = reference_genome or os.environ.get(ENV_VAR_PREFIX + 'REFERENCE_GENOME', None)
         self.template_metadata = template_metadata or os.environ.get(ENV_VAR_PREFIX + 'TEMPLATE_METADATA', None)
         self.masking = masking or os.environ.get(ENV_VAR_PREFIX + 'MASKING', None)
+        self.dgv_annotation = dgv_annotation or os.environ.get(ENV_VAR_PREFIX + 'DGV_ANNOTATION', None)
         self.low_memory = low_memory or os.environ.get(ENV_VAR_PREFIX + 'LOW_MEMORY', None)
         self.blat_2bit_reference = blat_2bit_reference or os.environ.get(ENV_VAR_PREFIX + 'BLAT_2BIT_REFERENCE', None)
 
@@ -158,16 +160,18 @@ class ReferenceFilesConfig:
 class PairingConfig:
 
     def __init__(
-        self, 
-        split_call_distance=PAIRING_DEFAULTS.split_call_distance, 
+        self,
+        split_call_distance=PAIRING_DEFAULTS.split_call_distance,
         contig_call_distance=PAIRING_DEFAULTS.contig_call_distance,
         flanking_call_distance=PAIRING_DEFAULTS.flanking_call_distance,
+        spanning_call_distance=PAIRING_DEFAULTS.spanning_call_distance,
         max_proximity=CLUSTER_DEFAULTS.max_proximity,
         low_memory=False
     ):
         self.split_call_distance = int(split_call_distance)
         self.contig_call_distance = int(contig_call_distance)
         self.flanking_call_distance = int(flanking_call_distance)
+        self.spanning_call_distance = int(spanning_call_distance)
 
     def flatten(self):
         result = {}
@@ -183,7 +187,11 @@ class SummaryConfig:
         filter_min_flanking_reads=SUMMARY_DEFAULTS.filter_min_flanking_reads,
         filter_min_flanking_only_reads=SUMMARY_DEFAULTS.filter_min_flanking_only_reads,
         filter_min_split_reads=SUMMARY_DEFAULTS.filter_min_split_reads,
-        filter_min_linking_split_reads=SUMMARY_DEFAULTS.filter_min_linking_split_reads
+        filter_min_linking_split_reads=SUMMARY_DEFAULTS.filter_min_linking_split_reads,
+        flanking_call_distance=PAIRING_DEFAULTS.flanking_call_distance,
+        split_call_distance=PAIRING_DEFAULTS.split_call_distance,
+        contig_call_distance=PAIRING_DEFAULTS.contig_call_distance,
+        spanning_call_distance=PAIRING_DEFAULTS.spanning_call_distance,
     ):
         self.filter_min_remapped_reads = int(filter_min_remapped_reads)
         self.filter_min_spanning_reads = int(filter_min_spanning_reads)
@@ -291,7 +299,7 @@ def read_config(filepath):
         global_args.update(validate_and_cast_section(parser['annotation'], ANNOTATION_DEFAULTS))
     except KeyError:
         pass
-    
+
     try:
         global_args.update(validate_and_cast_section(parser['cluster'], CLUSTER_DEFAULTS))
     except KeyError:
@@ -305,13 +313,13 @@ def read_config(filepath):
         args.update(parser['validation'] if 'validation' in parser else {})
     except KeyError:
         pass
-    
+
     # check that the reference files all exist
     for attr, fname in parser['reference'].items():
         if not os.path.exists(fname) and attr != 'low_memory':
             raise KeyError(attr, 'file at', fname, 'does not exist')
         global_args[attr] = fname
-    
+
     sections = []
     for sec in library_sections:
         d = {}
@@ -372,7 +380,7 @@ def augment_parser(parser, optparser, arguments):
             help='Outputs the version number')
     except ArgumentError:
         pass
-    
+
     for arg in arguments:
         if arg == 'annotations':
             add_semi_optional_argument(
@@ -389,11 +397,13 @@ def augment_parser(parser, optparser, arguments):
         elif arg == 'blat_2bit_reference':
             add_semi_optional_argument(
                 arg, optparser, parser, 'path to the 2bit reference file used for blatting contig sequences.')
+        elif arg == 'dgv_annotation':
+            add_semi_optional_argument(arg, optparser, parser, 'Path to the dgv reference processed to look like the cytoband file.')
         elif arg == 'config':
             parser.add_argument('config', 'path to the config file')
         elif arg == 'stranded_bam':
             optparser.add_argument(
-                '--stranded_bam', required=True, type=TSV.tsv_boolean, 
+                '--stranded_bam', required=True, type=TSV.tsv_boolean,
                 help='indicates that the input bam file is strand specific')
         elif arg == 'force_overwrite':
             optparser.add_argument(
@@ -459,7 +469,7 @@ def augment_parser(parser, optparser, arguments):
                 '--{}'.format(arg), default=get_env_variable(arg, value), type=vtype, help='see user manual for desc')
         elif arg == 'max_proximity':
             optparser.add_argument(
-                '--{}'.format(arg), default=get_env_variable(arg, CLUSTER_DEFAULTS[arg]), type=int, 
+                '--{}'.format(arg), default=get_env_variable(arg, CLUSTER_DEFAULTS[arg]), type=int,
                 help='maximum distance away from an annotation before the uninformative filter is applied or the'
                 'annotation is not considered for a given event')
         elif arg == 'bam_file':
