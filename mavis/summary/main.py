@@ -7,7 +7,7 @@ from .constants import DEFAULTS
 import os
 import itertools
 
-from .summary import filter_by_evidence, group_events, filter_by_annotations, annotate_aliases,  filter_by_call_method, annotate_dgv
+from .summary import filter_by_evidence, group_events, filter_by_annotations,  filter_by_call_method, annotate_dgv
 
 def main(
     inputs, output, annotations, dgv_annotation,
@@ -73,10 +73,11 @@ def main(
                  COLUMNS.contigs_assembled,
                  COLUMNS.contig_alignment_score,
                  COLUMNS.contig_remap_score,
+                 COLUMNS.annotation_figure,
+                 COLUMNS.gene1_aliases,
+                 COLUMNS.gene2_aliases
                  ],
-        add={
-            COLUMNS.gene1_aliases: None,
-            COLUMNS.gene2_aliases: None,
+        add={'dgv': None,
             'summary_pairing': None},
         explicit_strand=True,
         expand_ns=False,
@@ -135,8 +136,6 @@ def main(
                bpp.break2.start,
                bpp.break2.end,
                bpp.event_type)
-
-        bpp = annotate_aliases(bpp, reference_transcripts)
 
         if lib not in bpps_to_keep:
             bpps_to_keep[lib] = dict()
@@ -274,6 +273,7 @@ def main(
         COLUMNS.break2_strand,
         COLUMNS.gene1_aliases,
         COLUMNS.gene2_aliases,
+        COLUMNS.annotation_figure,
 
         # For debugging
         COLUMNS.break1_call_method,
