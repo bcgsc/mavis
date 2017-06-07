@@ -372,7 +372,7 @@ def draw_multi_transcript_overlay(DS, gene, vmarkers=None, window_buffer=0, plot
         t = Interval.convert_ratioed_pos(mapping, m.end)
         px_itvl = Interval(s.start, t.end)
         bg = draw_vmarker(
-            DS, canvas, m, px_itvl.length(), y, label=labels.add(m, DS.marker_label_prefix))
+            DS, canvas, m, px_itvl.length(), y, label=m.name)
         bg.translate(x + px_itvl.start, 0)
         main_group.add(bg)
 
