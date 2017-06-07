@@ -2,22 +2,18 @@
 This is the primary module responsible for generating svg visualizations
 
 """
-from ..annotate.genomic import IntergenicRegion
 from ..annotate.variant import FusionTranscript
 from ..constants import STRAND, ORIENT, CODON_SIZE, GIESMA_STAIN
 from ..error import DrawingFitError, NotSpecifiedError
 from ..interval import Interval
-from .scatter import ScatterPlot, draw_scatter
 from .util import *
-from colour import Color
-from svgwrite import Drawing
 import re
-import svgwrite
 
 # draw gene level view
 # draw gene box
 HEX_WHITE = '#FFFFFF'
 HEX_BLACK = '#000000'
+
 
 def draw_legend(DS, canvas, swatches, border=True):
     main_group = canvas.g(class_='legend')
@@ -84,10 +80,15 @@ def draw_exon_track(DS, canvas, transcript, mapping, colors=None, x_start=None, 
         t = Interval.convert_ratioed_pos(mapping, exon.end).end
         pxi = Interval(s, t)
         c = colors.get(exon, DS.exon1_color)
+        exon_number = 'n'
+        try:
+            exon_number = transcript.exon_number(exon)
+        except KeyError as e:
+            pass
         group = draw_exon(
             DS,
             canvas, exon, pxi.length(), DS.track_height, c,
-            label=transcript.exon_number(exon),
+            label=exon_number,
             translation=translation
         )
         group.translate(pxi.start, y - DS.track_height / 2)
@@ -291,7 +292,6 @@ def draw_ustranscript(
                 Has the added parameters of labels, height, and mapping
     """
 
-
     if ust.get_strand() not in [STRAND.POS, STRAND.NEG]:
         raise NotSpecifiedError('strand must be positive or negative to draw the ust')
     if (mapping is None and target_width is None) or (mapping is not None and target_width is not None):
@@ -352,8 +352,8 @@ def draw_ustranscript(
     else:
         # draw the protein features if there are any
         for i, tl in enumerate(ust.translations):
-            gp = draw_transcript_with_translation(DS,
-                canvas, tl, labels, colors, mapping, x_start=x_start, x_end=x_end
+            gp = draw_transcript_with_translation(
+                DS, canvas, tl, labels, colors, mapping, x_start=x_start, x_end=x_end
             )
             gp.translate(0, y)
             if i < len(ust.translations) - 1:
@@ -458,8 +458,8 @@ def draw_genes(DS, canvas, genes, target_width, breakpoints=None, colors=None, l
         for genepx in track:
             # draw the gene
             gene = gene_px_intervals[genepx]
-            group = draw_gene(DS,
-                canvas, gene, genepx.length(),
+            group = draw_gene(
+                DS, canvas, gene, genepx.length(),
                 DS.track_height,
                 colors.get(gene, DS.gene1_color),
                 labels.get_key(gene)
@@ -678,8 +678,8 @@ def draw_template(DS, canvas, template, target_width, labels=None, colors=None, 
     for i, b in enumerate(sorted(breakpoints)):
         s = Interval.convert_pos(mapping, b.start)
         t = Interval.convert_pos(mapping, b.end)
-        bg = draw_breakpoint(DS,
-            canvas, b, abs(t - s) + 1, total_height, label=labels.add(b, DS.breakpoint_label_prefix))
+        bg = draw_breakpoint(
+            DS, canvas, b, abs(t - s) + 1, total_height, label=labels.add(b, DS.breakpoint_label_prefix))
         bg.translate(s, 0)
         group.add(bg)
     setattr(
