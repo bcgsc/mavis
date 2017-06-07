@@ -298,7 +298,7 @@ class usTranscript(BioInterval):
 
         Returns:
             :class:`list` of :class:`SplicingPattern`: List of positions to be spliced together
-        
+
         see :ref:`theory - predicting splicing patterns <theory-predicting-splicing-patterns>`
         """
         exons = sorted(self.exons, key=lambda x: x[0])

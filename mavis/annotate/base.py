@@ -160,6 +160,20 @@ class BioInterval:
                 break
         raise AttributeError('chr has not been defined')
 
+
+    def name_output(self):
+        """
+        outputs the output string for the dgv name
+
+        """
+        refname = self.reference_object
+        try:
+            refname = self.reference_object.name
+        except AttributeError:
+            pass
+        return '{}({}:{}-{})'.format(self.name, refname, self.start, self.end)
+
+
     def to_dict(self):
         """
         creates a dictionary representing the current object

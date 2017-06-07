@@ -67,7 +67,7 @@ def filter_on_overlap(bpps, regions_by_reference_name):
         for r in regions_by_reference_name.get(bpp.break1.chr, []):
             if Interval.overlaps(r, bpp.break1):
                 overlaps = True
-                bpp.data['failure_comment'] = 'overlapped masked region: ' + str(r)
+                bpp.data[COLUMNS.filter_comment] = 'overlapped masked region: ' + str(r)
                 break
         for r in regions_by_reference_name.get(bpp.break2.chr, []):
             if overlaps:
