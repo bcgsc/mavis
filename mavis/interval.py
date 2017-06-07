@@ -181,8 +181,12 @@ class Interval:
         return True
 
     def __contains__(self, other):
-        if other[0] >= self[0] and other[1] <= self[1]:
-            return True
+        try:
+            if other[0] >= self[0] and other[1] <= self[1]:
+                return True
+        except TypeError:
+            if other >= self[0] and other <= self[1]:
+                return True
         return False
 
     @classmethod
@@ -419,3 +423,70 @@ class Interval:
             else:
                 new_intervals.append(Interval(i[0], i[1]))
         return new_intervals
+
+
+class IntervalMapping:
+    """
+    mapping between coordinate systems using intervals.
+    source intervals cannot overlap but no such assertion is enforced on the target intervals
+    """
+
+    def __init__(self, mapping=None, opposing=None):
+        if mapping is None:
+            mapping = dict()
+        if opposing is None:
+            opposing = []
+        self.mapping = {Interval(k[0], k[1]): Interval(v[0], v[1]) for k, v in mapping.items()}
+        self.opposing_directions = {Interval(k[0], k[1]): True for k in opposing}
+        for i in self.opposing_directions:
+            if i not in self.mapping:
+                raise ValueError('cannot defined an opposing direction for an interval that in not mapped', i)
+        for i in self.mapping:
+            self.opposing_directions.setdefault(i, False)
+    
+    def add(self, src_interval, tgt_interval, opposing_directions=True):
+        src_interval = Interval(src_interval[0], src_interval[1])
+        tgt_interval = Interval(tgt_interval[0], tgt_interval[1])
+        for curr in self.mapping:
+            if Interval.overlaps(curr, src_interval):
+                raise ValueError('source intervals in mapping must not overlap')
+        self.mapping[src_interval] = tgt_interval
+        self.opposing_directions[src_interval] = opposing_directions
+
+    def convert_pos(self, pos, simplify=True):
+        """ convert any given position given a mapping of intervals to another range
+
+        Args:
+            pos (int): a position in the first coordinate system
+
+        Returns:
+            the position in the alternate coordinate system given the input mapping
+            - int: if simplify is True
+            - Interval: if simplify is False
+
+        Raises:
+            IndexError: if the input position is not in any of the mapped intervals 
+
+        Example:
+            >>> mapping = IntervalMapping(mapping={(1, 10): (101, 110), (11, 20): (555, 564)})
+            >>> mapping.convert_pos(5)
+            5
+            >>> mapping.convert_pos(15)
+            559
+        """
+        for src_interval, tgt_interval in self.mapping.items():
+            if pos in src_interval:
+                forward_to_reverse = self.opposing_directions[src_interval]
+                # minus 1 because we start at the start pos
+                result = tgt_interval.start
+                if src_interval.length() > 0:
+                    ratio = tgt_interval.length() / src_interval.length()
+                    shift = (pos - src_interval.start) * ratio
+                    shift = (pos - src_interval.start) * ratio
+                    result = tgt_interval[1] - shift if forward_to_reverse else tgt_interval[0] + shift
+                elif tgt_interval.length() > 0:
+                    shift = tgt_interval.length() / 2
+                    result = tgt_interval[1] - shift if forward_to_reverse else tgt_interval[0] + shift
+                return int(round(result, 0)) if simplify else result
+        raise IndexError(pos, 'position not found in mapping', self.mapping.keys())
+
