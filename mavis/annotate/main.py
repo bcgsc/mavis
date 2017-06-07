@@ -7,9 +7,67 @@ from ..error import DrawingFitError, NotSpecifiedError
 from ..illustrate.constants import DiagramSettings
 from ..illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from ..illustrate.diagram import draw_sv_summary_diagram
+from ..interval import Interval
 from .constants import DEFAULTS
 from ..util import log, mkdirp, read_inputs, generate_complete_stamp
 import warnings
+
+
+def get_exon_annotations(translation):
+    row = dict()
+    row[COLUMNS.fusion_splicing_pattern] = translation.transcript.splicing_pattern.splice_type
+    row[COLUMNS.fusion_cdna_coding_start] = translation.start
+    row[COLUMNS.fusion_cdna_coding_end] = translation.end
+
+    # select the exon that has changed
+    five_prime_exons = []
+    three_prime_exons = []
+    spliced_fusion_transcript = translation.transcript
+    fusion_transcript = spliced_fusion_transcript.unspliced_transcript
+
+    for ex in spliced_fusion_transcript.exons:
+        try:
+            src_exon = fusion_transcript.exon_mapping[ex.position]
+            number = src_exon.transcript.exon_number(src_exon)
+            if ex.end <= fusion_transcript.break1:
+                five_prime_exons.append(number)
+            elif ex.start >= fusion_transcript.break2:
+                three_prime_exons.append(number)
+            else:
+                raise AssertionError(
+                    'exon should not be mapped if not within a break region',
+                    ex, fusion_transcript.break1. fusion_transcript.break2
+                )
+        except KeyError:  # novel exon
+            for us_exon, src_exon in sorted(fusion_transcript.exon_mapping.items()):
+                if Interval.overlaps(ex, us_exon):
+                    number = src_exon.transcript.exon_number(src_exon)
+                    if us_exon.end <= fusion_transcript.break1:
+                        five_prime_exons.append(number)
+                    elif us_exon.start >= fusion_transcript.break2:
+                        three_prime_exons.append(number)
+                    else:
+                        raise AssertionError(
+                            'exon should not be mapped if not within a break region',
+                            us_exon, fusion_transcript.break1. fusion_transcript.break2
+                        )
+    row[COLUMNS.exon_last_5prime] = five_prime_exons[-1]
+    row[COLUMNS.exon_first_3prime] = three_prime_exons[0]
+    domains = []
+    for dom in translation.domains:
+        m, t = dom.score_region_mapping()
+        temp = {
+            "name": dom.name,
+            "sequences": dom.get_seqs(),
+            "regions": [
+                {"start": dr.start, "end": dr.end} for dr in sorted(dom.regions, key=lambda x: x.start)
+            ],
+            "mapping_quality": round(m * 100 / t, 0),
+            "matches": m
+        }
+        domains.append(temp)
+    row[COLUMNS.fusion_mapped_domains] = json.dumps(domains)
+    return row
 
 
 def main(
@@ -105,27 +163,10 @@ def main(
                 for tl in t.translations:
                     nrow = dict()
                     nrow.update(row)
-                    nrow[COLUMNS.fusion_splicing_pattern] = tl.transcript.splicing_pattern.splice_type
-                    nrow[COLUMNS.fusion_cdna_coding_start] = tl.start
-                    nrow[COLUMNS.fusion_cdna_coding_end] = tl.end
                     nrow[COLUMNS.fusion_sequence_fasta_id] = fusion_fa_id
-
-                    domains = []
-                    for dom in tl.domains:
-                        m, t = dom.score_region_mapping()
-                        temp = {
-                            "name": dom.name,
-                            "sequences": dom.get_seqs(),
-                            "regions": [
-                                {"start": dr.start, "end": dr.end} for dr in sorted(dom.regions, key=lambda x: x.start)
-                            ],
-                            "mapping_quality": round(m * 100 / t, 0),
-                            "matches": m
-                        }
-                        domains.append(temp)
-                    nrow[COLUMNS.fusion_mapped_domains] = json.dumps(domains)
+                    # select the exon
+                    nrow.update(get_exon_annotations(tl))
                     rows.append(nrow)
-
             drawing = None
             retry_count = 0
             draw_fusion_transcript = True
