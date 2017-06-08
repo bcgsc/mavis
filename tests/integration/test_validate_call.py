@@ -346,7 +346,11 @@ class TestEvidenceConsumption(unittest.TestCase):
         return evidence
 
     def test_call_all_methods(self):
-        # DEL on 100 - 481 with contig and possible del from 30 - 501,
+        # DEL on 100 - 481 with contig
+        # DEL from 120 - 501 with split
+        # DEL from 90-299 - 591-806 with flanking
+        #
+        # and possible del from 30 - 501,
         # 30 - (691,806), (90,199) - 501 and ins 120 - 501
         evidence = self.build_genome_evidence(
             Breakpoint('1', 50, 150, orient=ORIENT.LEFT),
@@ -391,17 +395,21 @@ class TestEvidenceConsumption(unittest.TestCase):
         self.assertEqual(('contig', 'contig'), events[0].call_method)
         self.assertEqual(100, events[0].break1.start)
         self.assertEqual(481, events[0].break2.start)
+        self.assertEqual('deletion', events[0].event_type)
         self.assertEqual(('split reads', 'split reads'), events[1].call_method)
         self.assertEqual(120, events[1].break1.start)
         self.assertEqual(501, events[1].break2.start)
+        self.assertEqual('deletion', events[1].event_type)
         self.assertEqual(('flanking reads', 'flanking reads'), events[2].call_method)
-        self.assertEqual(120, events[2].break1.start)
+        self.assertEqual(90, events[2].break1.start)
+        self.assertEqual(299, events[2].break1.end)
         self.assertEqual(591, events[2].break2.start)
         self.assertEqual(806, events[2].break2.end)
-        self.assertEqual(('split reads', 'split reads'), events[4].call_method)
-        self.assertEqual(120, events[4].break1.start)
-        self.assertEqual(501, events[4].break2.start)
-
+        self.assertEqual('deletion', events[2].event_type)
+        self.assertEqual(('split reads', 'split reads'), events[3].call_method)
+        self.assertEqual(120, events[3].break1.start)
+        self.assertEqual(501, events[3].break2.start)
+        self.assertEqual('insertion', events[3].event_type)
     def test_call_contig_only(self):
         # event should only be 100L+, 501R+ deletion
         evidence = self.build_genome_evidence(
