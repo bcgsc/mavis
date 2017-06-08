@@ -183,7 +183,8 @@ def main_pipeline(args, configs):
         split_call_distance=args.split_call_distance,
         contig_call_distance=args.contig_call_distance,
         spanning_call_distance=args.spanning_call_distance,
-        dgv_annotation=args.dgv_annotation_filename
+        dgv_annotation=args.dgv_annotation_filename,
+        annotations=args.annotations_filename
     )
     temp = ['--{} {}'.format(k, v) for k, v in summary_args.items() if not isinstance(v, str) and v is not None]
     temp.extend(['--{} "{}"'.format(k, v) for k, v in summary_args.items() if isinstance(v, str) and v is not None])
