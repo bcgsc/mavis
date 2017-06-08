@@ -7,7 +7,7 @@ from .constants import DEFAULTS
 import os
 import itertools
 
-from .summary import filter_by_evidence, group_events, filter_by_annotations,  filter_by_call_method, annotate_dgv
+from .summary import filter_by_evidence, group_events, filter_by_annotations, filter_by_call_method, annotate_dgv
 
 def main(
     inputs, output, annotations, dgv_annotation,
@@ -60,6 +60,8 @@ def main(
                  COLUMNS.transcript2,
                  COLUMNS.untemplated_seq,
                  COLUMNS.tools,
+                 COLUMNS.exon_last_5prime,
+                 COLUMNS.exon_first_3prime,
                  # evidence_columns
                  COLUMNS.break1_call_method,
                  COLUMNS.break1_split_reads,
@@ -274,6 +276,8 @@ def main(
         COLUMNS.gene1_aliases,
         COLUMNS.gene2_aliases,
         COLUMNS.annotation_figure,
+        COLUMNS.exon_last_5prime,
+        COLUMNS.exon_first_3prime,
 
         # For debugging
         COLUMNS.break1_call_method,
