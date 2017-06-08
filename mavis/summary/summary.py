@@ -174,7 +174,12 @@ def annotate_dgv(bpps, dgv_regions_by_reference_name, distance=0):
         for r in dgv_regions_by_reference_name.get(bpp.break1.chr, []):
             if abs(Interval.dist((r.start, r.start), bpp.break1)) <= distance and \
                     abs(Interval.dist((r.end, r.end), bpp.break2)) <= distance:
-                bpp.data['dgv'] = r.name_output()
+                refname = r.reference_object
+                try:
+                    refname = r.reference_object.name
+                except AttributeError:
+                    pass
+                bpp.data['dgv'] = '{}({}:{}-{})'.format(r.name, refname, r.start, r.end)
     return bpps
 
 
