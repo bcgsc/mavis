@@ -81,6 +81,25 @@ class Gene(BioInterval):
         self.strand = STRAND.enforce(strand)
         self.aliases = aliases
 
+    def transcript_priority(self, transcript):
+        """
+        prioritizes transcripts from 0 to n-1 based on best transcript flag
+        and then alphanumeric name sort
+
+        Warning:
+            Lower number means higher priority. This is to make sort work by default
+        """
+        def sort_key(t):
+            return (
+                0 if t.is_best_transcript else 1,
+                t.name, t.start - t.end, t.start, t.end
+            )
+        priority = sorted(self.transcripts, key=sort_key)
+        for i, curr_transcript in enumerate(priority):
+            if curr_transcript == transcript:
+                return i
+        raise ValueError('input transcript is not associated with this gene', transcript)
+
     @property
     def transcripts(self):
         """:any:`list` of :class:`usTranscript`: list of unspliced transcripts"""

@@ -8,7 +8,7 @@ from ..illustrate.constants import DiagramSettings
 from ..illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from ..illustrate.diagram import draw_sv_summary_diagram
 from ..interval import Interval
-from .constants import DEFAULTS
+from .constants import DEFAULTS, ACCEPTED_FILTERS
 from ..util import log, mkdirp, read_inputs, generate_complete_stamp
 import warnings
 
@@ -76,6 +76,7 @@ def main(
     min_domain_mapping_match=DEFAULTS.min_domain_mapping_match,
     min_orf_size=DEFAULTS.min_orf_size,
     max_orf_cap=DEFAULTS.max_orf_cap,
+    annotation_filters=DEFAULTS.annotation_filters,
     **kwargs
 ):
     """
@@ -93,6 +94,9 @@ def main(
     TABBED_OUTPUT_FILE = os.path.join(output, 'annotations.tab')
     FA_OUTPUT_FILE = os.path.join(output, 'annotations.fusion-cdna.fa')
 
+    annotation_filters = [] if not annotation_filters else annotation_filters.split(',')
+    annotation_filters = [ACCEPTED_FILTERS[a] for a in annotation_filters]
+
     mkdirp(DRAWINGS_DIRECTORY)
     # test that the sequence makes sense for a random transcript
     bpps = read_inputs(
@@ -106,7 +110,8 @@ def main(
         reference_genome=reference_genome, annotations=annotations,
         min_orf_size=min_orf_size, min_domain_mapping_match=min_domain_mapping_match,
         max_orf_cap=max_orf_cap,
-        log=log
+        log=log,
+        filters=annotation_filters
     )
 
     fa_sequence_names = set()

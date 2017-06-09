@@ -218,14 +218,15 @@ def write_config(filename, include_defaults=False, libraries=[], log=devnull):
 
     if include_defaults:
         config['qsub'] = JobSchedulingConfig().flatten()
-        config['illustrate'] = {}
-        config['illustrate'].update(ILLUSTRATION_DEFAULTS.__dict__)
         config['validation'] = {}
         config['validation'].update(VALIDATION_DEFAULTS.__dict__)
         config['cluster'] = {}
         config['cluster'].update(CLUSTER_DEFAULTS.__dict__)
-        
-        for sec in ['qsub', 'illustrate', 'validation', 'cluster']:
+        config['annotation'] = {}
+        config['annotation'].update(ANNOTATION_DEFAULTS.__dict__)
+        config['illustrate'] = {}
+        config['illustrate'].update(ILLUSTRATION_DEFAULTS.__dict__)
+        for sec in ['qsub', 'illustrate', 'validation', 'cluster', 'annotation']:
             for tag, val in config[sec].items():
                 env = ENV_VAR_PREFIX + tag.upper()
                 config[sec][tag] = os.environ.get(env, None) or val
@@ -274,7 +275,7 @@ def read_config(filepath):
     # get the library sections and add the default settings
     library_sections = []
     for sec in parser.sections():
-        if sec not in ['validation', 'reference', 'qsub', 'illustrate', 'annotation', 'cluster']:
+        if sec not in ['validation', 'reference', 'qsub', 'illustrate', 'annotation', 'cluster', 'annotation']:
             library_sections.append(sec)
             parser[sec]['library'] = sec
 
@@ -304,8 +305,6 @@ def read_config(filepath):
         global_args.update(validate_and_cast_section(parser['cluster'], CLUSTER_DEFAULTS))
     except KeyError:
         pass
-
-
 
     args = {}
     args.update(VALIDATION_DEFAULTS.__dict__)
@@ -413,19 +412,6 @@ def augment_parser(parser, optparser, arguments):
             optparser.add_argument(
                 '--output_svgs', default=get_env_variable(arg, True), type=TSV.tsv_boolean,
                 help='set flag to suppress svg drawings of putative annotations')
-        elif arg == 'min_orf_size':
-            optparser.add_argument(
-                '--min_orf_size', default=get_env_variable(arg, ANNOTATION_DEFAULTS.min_orf_size), type=int,
-                help='minimum sfize for putative ORFs')
-        elif arg == 'max_orf_cap':
-            optparser.add_argument(
-                '--max_orf_cap', default=get_env_variable(arg, ANNOTATION_DEFAULTS.max_orf_cap), type=int,
-                help='keep the n longest orfs')
-        elif arg == 'min_domain_mapping_match':
-            optparser.add_argument(
-                '--min_domain_mapping_match',
-                default=get_env_variable(arg, ANNOTATION_DEFAULTS.min_domain_mapping_match), type=float,
-                help='minimum percent match for the domain to be considered aligned')
         elif arg == 'max_files':
             optparser.add_argument(
                 '--max_files', default=get_env_variable(arg, CLUSTER_DEFAULTS.max_files), type=int, dest='max_files',
@@ -459,6 +445,11 @@ def augment_parser(parser, optparser, arguments):
                 '--{}'.format(arg), default=get_env_variable(arg, value), type=vtype, help='see user manual for desc')
         elif arg in ILLUSTRATION_DEFAULTS:
             value = ILLUSTRATION_DEFAULTS[arg]
+            vtype = type(value) if type(value) != bool else TSV.tsv_boolean
+            optparser.add_argument(
+                '--{}'.format(arg), default=get_env_variable(arg, value), type=vtype, help='see user manual for desc')
+        elif arg in ANNOTATION_DEFAULTS:
+            value = ANNOTATION_DEFAULTS[arg]
             vtype = type(value) if type(value) != bool else TSV.tsv_boolean
             optparser.add_argument(
                 '--{}'.format(arg), default=get_env_variable(arg, value), type=vtype, help='see user manual for desc')

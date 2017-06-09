@@ -4,6 +4,7 @@ from ..breakpoint import Breakpoint, BreakpointPair
 from ..interval import Interval, IntervalMapping
 from .protein import Translation, Domain, calculate_ORF
 from ..error import NotSpecifiedError
+from ..util import devnull
 import itertools
 import uuid
 
@@ -95,7 +96,7 @@ class FusionTranscript(usTranscript):
         useq = ann.untemplated_seq
         ft.break1 = len(seq1)
         ft.break2 = len(seq1) + len(useq) + len(window_seq) + 1
-        
+
         if ann.transcript1.get_strand() == STRAND.POS:
             window_seq = reverse_complement(window_seq)  # b/c inversion should be opposite
             ft.map_region_to_genome(b1.chr, (1, len(seq1)), (ann.transcript1.start, b1.start))
@@ -894,6 +895,100 @@ def _gather_annotations(ref, bp, proximity=None):
     return filtered
 
 
+def choose_more_annotated(ann_list):
+    """
+    for a given set of annotations if there are annotations which contain transcripts and
+    annotations that are simply intergenic regions, discard the intergenic region annotations
+
+    similarly if there are annotations where both breakpoints fall in a transcript and
+    annotations where one or more breakpoints lands in an intergenic region, discard those
+    that land in the intergenic region
+
+    Args:
+        ann_list (list of Annotation): list of input annotations
+
+    Warning:
+        input annotations are assumed to be the same event (the same validation_id)
+        the logic used would not apply to different events
+
+    Returns:
+        (list of Annotation): the filtered list
+    """
+    two_transcript = []
+    one_transcript = []
+    intergenic = []
+
+    for ann in ann_list:
+        if isinstance(ann.transcript1, IntergenicRegion) and isinstance(ann.transcript2, IntergenicRegion):
+            intergenic.append(ann)
+        elif isinstance(ann.transcript1, IntergenicRegion) or isinstance(ann.transcript2, IntergenicRegion):
+            one_transcript.append(ann)
+        else:
+            two_transcript.append(ann)
+
+    if len(two_transcript) > 0:
+        return two_transcript
+    elif len(one_transcript) > 0:
+        return one_transcript
+    else:
+        return intergenic
+
+
+def choose_transcripts_by_priority(ann_list):
+    """
+    for each set of annotations with the same combinations of genes, choose the
+    annotation with the most "best_transcripts" or most "alphanumeric" choices
+    of transcript. Throw an error if they are identical
+
+    Args:
+        ann_list (list of Annotation): input annotations
+
+    Warning:
+        input annotations are assumed to be the same event (the same validation_id)
+        the logic used would not apply to different events
+
+     Returns:
+        (list of Annotation): the filtered list
+    """
+    annotations_by_gene_combination = {}
+    genes = set()
+
+    for ann in ann_list:
+        gene1 = None
+        gene2 = None
+        try:
+            gene1 = ann.transcript1.gene
+            genes.add(gene1)
+        except AttributeError:
+            pass
+        try:
+            gene2 = ann.transcript2.gene
+            genes.add(gene2)
+        except AttributeError:
+            pass
+        annotations_by_gene_combination.setdefault((gene1, gene2), []).append(ann)
+
+    filtered_annotations = []
+    for g, sublist in annotations_by_gene_combination.items():
+        gene1, gene2 = g
+        if gene1 is None and gene2 is None:
+            filtered_annotations.extend(sublist)
+        elif gene2 is None:
+            ann = min(sublist, key=lambda a: gene1.transcript_priority(a.transcript1))
+            filtered_annotations.append(ann)
+        elif gene1 is None:
+            ann = min(sublist, key=lambda a: gene2.transcript_priority(a.transcript2))
+            filtered_annotations.append(ann)
+        else:
+            ann = min(sublist, key=lambda a: (
+                gene1.transcript_priority(a.transcript1) + gene2.transcript_priority(a.transcript2),
+                gene1.transcript_priority(a.transcript1),
+                gene2.transcript_priority(a.transcript2)
+            ))
+            filtered_annotations.append(ann)
+    return filtered_annotations
+
+
 def annotate_events(
     bpps,
     annotations,
@@ -902,8 +997,26 @@ def annotate_events(
     min_orf_size=200,
     min_domain_mapping_match=0.95,
     max_orf_cap=3,
-    log=lambda *pos, **kwargs: None
+    log=devnull,
+    filters=None
 ):
+    """
+    Args:
+        bpps (list of BreakpointPair): list of events
+        annotations: reference annotations
+        reference_genome (dict of string by string): dictionary of reference sequences by name
+        max_proximity (int): see :term:`max_proximity`
+        min_orf_size (int): see :term:`min_orf_size`
+        min_domain_mapping_match (float): see :term:`min_domain_mapping_match`
+        max_orf_cap (int): see :term:`max_orf_cap`
+        log (callable): callable function to take in strings and time_stamp args
+        filters (list of callable): list of functions taking in a list and returning a list for filtering
+
+    Returns:
+        (list of Annotation): list of the putative annotations
+    """
+    if filters is None:
+        filters = [choose_more_annotated, choose_transcripts_by_priority]
     results = []
     total = len(bpps)
     for i, bpp in enumerate(bpps):
@@ -914,6 +1027,8 @@ def annotate_events(
             bpp,
             proximity=max_proximity
         )
+        for f in filters:
+            ann = f(ann)  # apply the filter
         results.extend(ann)
         for j, a in enumerate(ann):
             a.data[COLUMNS.annotation_id] = '{}-a{}'.format(a.validation_id, j + 1)

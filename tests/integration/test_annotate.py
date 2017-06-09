@@ -1545,9 +1545,15 @@ class TestAnnotateEvents(unittest.TestCase):
         b2 = Breakpoint('fakereference9', 10237, orient=ORIENT.RIGHT, strand=STRAND.NEG)
         bpp = BreakpointPair(
             b1, b2, stranded=True, opposing_strands=True, event_type=SVTYPE.INV, protocol=PROTOCOL.GENOME)
-        annotations = annotate_events([bpp], reference_genome=REFERENCE_GENOME, annotations=reference_annotations)
+        annotations = annotate_events(
+            [bpp], reference_genome=REFERENCE_GENOME, annotations=reference_annotations, filters=[])
         self.assertEqual(4, len(annotations))
         self.assertEqual(STRAND.POS, annotations[0].transcript1.get_strand())
         self.assertEqual(STRAND.NEG, annotations[0].transcript2.get_strand())
         self.assertEqual('ENST00000375851', annotations[0].transcript1.name)
         self.assertEqual(None, annotations[0].transcript2.name)
+        for ann in annotations:
+            print(ann.transcript1, ann.transcript2)
+        annotations = annotate_events(
+            [bpp], reference_genome=REFERENCE_GENOME, annotations=reference_annotations)
+        self.assertEqual(2, len(annotations))
