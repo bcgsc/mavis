@@ -122,6 +122,8 @@ def main(
         COLUMNS.fusion_cdna_coding_end,
         COLUMNS.fusion_sequence_fasta_id,
         COLUMNS.fusion_mapped_domains,
+        COLUMNS.exon_first_3prime,
+        COLUMNS.exon_last_5prime,
         COLUMNS.annotation_id,
         COLUMNS.annotation_figure,
         COLUMNS.annotation_figure_legend
