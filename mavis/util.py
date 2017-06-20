@@ -7,7 +7,6 @@ from .breakpoint import read_bpp_from_input_file
 from .constants import PROTOCOL, COLUMNS, sort_columns
 from .interval import Interval
 from argparse import Namespace
-import subprocess
 from TSV.TSV import EmptyFileError
 
 
@@ -26,13 +25,6 @@ class MavisNamespace(Namespace):
 
     def __getitem__(self, key):
         return getattr(self, key)
-
-
-def get_version():
-    v = subprocess.check_output('cd {}; git describe'.format(os.path.dirname(__file__)), shell=True)
-    v = v.decode('UTF8')
-    v = v.strip()
-    return v
 
 
 def log(*pos, time_stamp=True):

@@ -8,9 +8,8 @@ import argparse
 import TSV
 from mavis.constants import COLUMNS, sort_columns, ORIENT, STRAND, SVTYPE, PROTOCOL
 
-from mavis.util import get_version
+from mavis import __version__
 
-__version__ = get_version()
 __prog__ = os.path.basename(os.path.realpath(__file__))
 default_version = '0.2.5b9'
 
