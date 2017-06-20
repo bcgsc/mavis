@@ -7,6 +7,8 @@ from ..interval import Interval
 from ..breakpoint import BreakpointPair
 from ..bam import read as read_tools
 from ..bam import cigar as cigar_tools
+from ..bam.cache import BamCache
+from ..util import devnull
 
 
 class Evidence(BreakpointPair):
@@ -39,6 +41,14 @@ class Evidence(BreakpointPair):
                 raise NotImplementedError('abstract property must be overridden')
         else:
             return self.inner_window2
+    
+    @property
+    def compatible_window1(self):
+        return self.compatible_windows[0]
+
+    @property
+    def compatible_window2(self):
+        return self.compatible_windows[1]
 
     @property
     def inner_window1(self):
@@ -388,6 +398,19 @@ class Evidence(BreakpointPair):
                 return True
 
         return False
+    
+    def collect_half_mapped(self, read, mate):
+        if not mate.is_unmapped:
+            raise AssertionError('expected the mate to be unmapped')
+        read_itvl = Interval(read.reference_start + 1, read.reference_end)
+        added = False
+        if self.break1.chr == read.reference_name and Interval.overlaps(self.break1, read_itvl):
+            self.half_mapped[0].add(mate)
+            added = True
+        if self.break2.chr == read.reference_name and Interval.overlaps(self.break2, read_itvl):
+            self.half_mapped[1].add(mate)
+            added = True
+        return added
 
     def collect_split_read(self, read, first_breakpoint):
         """
@@ -685,8 +708,178 @@ class Evidence(BreakpointPair):
                 if c.seq not in filtered_contigs and rseq not in filtered_contigs:
                     filtered_contigs[c.seq] = c
         self.contigs = list(filtered_contigs.values())
+    
+    @classmethod
+    def load_multiple(cls, evidence, log=devnull):
+        log('gathering evidence for {} events'.format(len(evidence)))
+        cache = evidence[0].bam_cache
+        filter_secondary_alignments = evidence[0].filter_secondary_alignments
+        min_mapping_quality = evidence[0].min_mapping_quality
+        max_expected_fragment_size = evidence[0].max_expected_fragment_size
+        min_expected_fragment_size = evidence[0].min_expected_fragment_size
+        read_length = evidence[0].read_length
+        protocol = evidence[0].protocol
+        
+        # check the inputs make sense
+        for ev in evidence:
+            if cache is not ev.bam_cache:
+                raise UserWarning('cannot load_multiple when bam_cache is not the same object')
+            if filter_secondary_alignments != ev.filter_secondary_alignments:
+                raise UserWarning('cannot load_multiple when filter_secondary_alignments differs')
+            if min_mapping_quality != ev.min_mapping_quality:
+                raise UserWarning('cannot load_multiple when the min_mapping_quality differs')
+            if read_length != ev.read_length:
+                raise UserWarning('cannot load_multiple when the read_length differs')
+            max_expected_fragment_size = min([ev.max_expected_fragment_size, max_expected_fragment_size])
+            min_expected_fragment_size = max([ev.min_expected_fragment_size, min_expected_fragment_size])
+            if ev.protocol == PROTOCOL.TRANS:
+                protocol = PROTOCOL.TRANS
 
-    def load_evidence(self, log=lambda *pos, **kwargs: None):
+        def cache_if_true(read):
+            if any([
+                filter_secondary_alignments and read.is_secondary,
+                read.mapping_quality < min_mapping_quality
+            ]):
+                return False
+            elif read.is_proper_pair and protocol != PROTOCOL.TRANS:
+                frag_est = abs(read.reference_start - read.next_reference_start)
+                if frag_est >= min_expected_fragment_size and frag_est + read_length <= max_expected_fragment_size:
+                    return False
+            return True
+        
+        def filter_if_true(read):
+            if not cache_if_true(read):
+                return True
+            elif read.is_unmapped:
+                return True
+            return False
+
+        min_bin_size = 10
+        # create the intervals to investigate
+        read_limits = {}  # chr => interval => cap
+        for ev in evidence:
+            # first breakpoint window
+            bins = BamCache._generate_fetch_bins(
+                ev.outer_window1[0], ev.outer_window1[1], ev.fetch_reads_bins, min_bin_size)
+            read_cap = ev.fetch_reads_limit // len(bins)
+            for b in bins:
+                read_limits.setdefault(ev.break1.chr, {})
+                read_limits[ev.break1.chr][b] = max([read_limits[ev.break1.chr].get(b, 0), read_cap])
+            # second breakpoint window
+            bins = BamCache._generate_fetch_bins(
+                ev.outer_window2[0], ev.outer_window2[1], ev.fetch_reads_bins, min_bin_size)
+            read_cap = ev.fetch_reads_limit // len(bins)
+            for b in bins:
+                read_limits.setdefault(ev.break2.chr, {})
+                read_limits[ev.break2.chr][b] = max([read_limits[ev.break2.chr].get(b, 0), read_cap])
+            # compatible_windows
+            if ev.compatible_windows and ev.collect_from_outer_window():
+                # first compatible breakpoint window
+                bins = BamCache._generate_fetch_bins(
+                    ev.compatible_window1[0], ev.compatible_window1[1], ev.fetch_reads_bins, min_bin_size)
+                read_cap = ev.fetch_reads_limit // len(bins)
+                for b in bins:
+                    read_limits.setdefault(ev.break1.chr, {})
+                    read_limits[ev.break1.chr][b] = max([read_limits[ev.break1.chr].get(b, 0), read_cap])
+                # second compatible breakpoint window
+                bins = BamCache._generate_fetch_bins(
+                    ev.compatible_window2[0], ev.compatible_window2[1], ev.fetch_reads_bins, min_bin_size)
+                read_cap = ev.fetch_reads_limit // len(bins)
+                for b in bins:
+                    read_limits.setdefault(ev.break2.chr, {})
+                    read_limits[ev.break2.chr][b] = max([read_limits[ev.break2.chr].get(b, 0), read_cap])
+        # get the reads for any given interval, map over each applicable evidence
+        fetch_regions = []
+
+        for chr in read_limits:
+            weighted_intervals = Interval.split_overlap(*read_limits[chr], weight_mapping=read_limits[chr])
+            # Merge any intervals that are < min size?
+            temp = {}
+            intervals = sorted(weighted_intervals)
+            i = 0
+            while i < len(intervals):
+                curr = intervals[i]
+                if len(curr) < min_bin_size:
+                    # merge with the following interval
+                    merge_itvl = curr
+                    merge_weight = weighted_intervals[curr]
+                    i += 1
+                    while len(merge_itvl) < min_bin_size and i < len(intervals):
+                        merge_itvl = intervals[i] | merge_itvl
+                        merge_weight += weighted_intervals[intervals[i]]
+                        i += 1
+                    temp[merge_itvl] = merge_weight
+                else:
+                    temp[curr] = weighted_intervals[curr]
+                    i += 1
+            weighted_intervals = temp
+            for bin, limit in weighted_intervals.items():
+                fetch_regions.append((chr, bin.start, bin.end, limit))
+        
+        putative_half_maps = set()
+        putative_flanking = set()
+        
+        for i in range(0, len(fetch_regions)):
+            chr, start, end, limit = fetch_regions[i]
+            log('({} of {}) loading the bin {}:{}-{} (limit {})'.format(
+                i + 1, len(fetch_regions), chr, start, end, limit))
+            for read in cache.fetch(
+                chr, start, end,
+                limit=limit,
+                cache_if=cache_if_true,
+                filter_if=filter_if_true
+            ):
+                read_itvl = Interval(read.reference_start + 1, read.reference_end)
+                if read.mate_is_unmapped:
+                    putative_half_maps.add(read)
+                    continue
+                # breakpoint region 1
+                for ev in [e for e in evidence if e.break1.chr == chr]:
+                    compatible_type = SVTYPE.INS if SVTYPE.DUP in ev.putative_event_types() else SVTYPE.DUP
+                    if not Interval.overlaps(read_itvl, ev.outer_window1):
+                        continue
+                    ev.counts[0] += 1
+                    if not ev.collect_split_read(read, first_breakpoint=True):
+                        ev.collect_spanning_read(read)
+                    try:
+                        mates = cache.get_mate(read, allow_file_access=False)
+                        for mate in mates:
+                            ev.collect_flanking_pair(read, mate)
+                            if ev.compatible_windows:
+                                ev.collect_compatible_flanking_pair(read, mate, compatible_type)
+                    except KeyError:
+                        putative_flanking.add(read)
+                # breakpoint region 2
+                for ev in [e for e in evidence if e.break2.chr == chr]:
+                    compatible_type = SVTYPE.INS if SVTYPE.DUP in ev.putative_event_types() else SVTYPE.DUP
+                    if not Interval.overlaps(read_itvl, ev.outer_window2):
+                        continue
+                    ev.counts[1] += 1
+                    ev.collect_split_read(read, first_breakpoint=False)
+                    try:
+                        mates = cache.get_mate(read, allow_file_access=False)
+                        for mate in mates:
+                            ev.collect_flanking_pair(read, mate)
+                            if ev.compatible_windows:
+                                ev.collect_compatible_flanking_pair(read, mate, compatible_type)
+                    except KeyError:
+                        putative_flanking.add(read)
+        # go over the flanking /half-mapped that have uncached mates previously
+        # if we didn't go over them yet, then they are outside the target region and should be ignored
+        log('gathering cached flanking pairs')
+        for read in putative_flanking:
+            try:
+                mates = cache.get_mate(read, allow_file_access=False)
+                for mate in mates:
+                    for ev in evidence:
+                        ev.collect_flanking_pair(read, mate)
+                        if ev.compatible_windows:
+                            compatible_type = SVTYPE.INS if SVTYPE.DUP in ev.putative_event_types() else SVTYPE.DUP
+                            ev.collect_compatible_flanking_pair(read, mate, compatible_type)
+            except KeyError:
+                pass
+
+    def load_evidence(self, log=devnull):
         """
         open the associated bam file and read and store the evidence
         does some preliminary read-quality filtering
@@ -723,7 +916,7 @@ class Evidence(BreakpointPair):
         half_mapped_partners1 = []
         half_mapped_partners2 = []
 
-        for read in self.bam_cache.fetch(
+        for read in self.bam_cache.fetch_from_bins(
                 '{0}'.format(self.break1.chr),
                 self.outer_window1[0],
                 self.outer_window1[1],
@@ -746,7 +939,7 @@ class Evidence(BreakpointPair):
                     (read.reference_id != read.next_reference_id) == self.interchromosomal:
                 flanking_pairs.append(read)
 
-        for read in self.bam_cache.fetch(
+        for read in self.bam_cache.fetch_from_bins(
                 '{0}'.format(self.break2.chr),
                 self.outer_window2[0],
                 self.outer_window2[1],
@@ -785,7 +978,7 @@ class Evidence(BreakpointPair):
                 compatible_type = SVTYPE.INS
 
             compt_flanking = set()
-            for read in self.bam_cache.fetch(
+            for read in self.bam_cache.fetch_from_bins(
                     '{0}'.format(self.break1.chr),
                     self.compatible_windows[0][0],
                     self.compatible_windows[0][1],
@@ -798,7 +991,7 @@ class Evidence(BreakpointPair):
                 if read_tools.orientation_supports_type(read, compatible_type):
                     compt_flanking.add(read)
 
-            for read in self.bam_cache.fetch(
+            for read in self.bam_cache.fetch_from_bins(
                     '{0}'.format(self.break2.chr),
                     self.compatible_windows[1][0],
                     self.compatible_windows[1][1],

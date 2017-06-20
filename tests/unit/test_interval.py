@@ -242,6 +242,53 @@ class TestInterval(unittest.TestCase):
         self.assertEqual([Interval(1, 4)], r)
         self.assertEqual([], Interval.min_nonoverlapping())
 
+    def test_split_overlapping_no_weight(self):
+        input_intervals = [
+            Interval(1, 10),
+            Interval(2, 11),
+            Interval(4, 5),
+            Interval(4, 8)
+        ]
+        exp = [
+            Interval(1, 1),
+            Interval(2, 3),
+            Interval(4, 4),
+            Interval(5, 7),
+            Interval(8, 9),
+            Interval(10, 11)
+        ]
+        print('expected', exp)
+        result = Interval.split_overlap(*input_intervals)
+        result = sorted(result)
+        print('found', result)
+        self.assertEqual(exp, result)
+
+    def test_split_overlapping_weighted(self):
+        input_intervals = [
+            Interval(1, 10),
+            Interval(2, 11),
+            Interval(4, 5),
+            Interval(4, 8)
+        ]
+        weights = {
+            Interval(1, 10): 10,
+            Interval(2, 11): 20,
+            Interval(4, 5): 10,
+            Interval(4, 8): 10
+        }
+        exp = {
+            Interval(1, 1): 1,
+            Interval(2, 3): 4,
+            Interval(4, 4): 5,
+            Interval(5, 7): 6,
+            Interval(8, 9): 4,
+            Interval(10, 11): 4
+        }
+        result = Interval.split_overlap(*input_intervals, weight_mapping=weights)
+        self.assertEqual(sorted(exp), sorted(result))
+        for itvl in exp:
+            self.assertEqual(exp[itvl], result[itvl])
+
 
 class TestIntervalMapping(unittest.TestCase):
 

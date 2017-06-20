@@ -424,6 +424,49 @@ class Interval:
                 new_intervals.append(Interval(i[0], i[1]))
         return new_intervals
 
+    @classmethod
+    def split_overlap(cls, *intervals, weight_mapping={}):
+        """
+        for a given set of intervals splits any overlap so that the result is a new list of
+        intervals with a single bp overlap
+
+        Warning:
+            this method is meant for integer intervals only
+        """
+        intervals = sorted(intervals)
+        split_intervals = {}
+        set_start = 0
+        while set_start < len(intervals):
+            merge_itvl = intervals[set_start]
+            breaks = {intervals[set_start].start, intervals[set_start].end}
+            set_end = set_start
+            for j in range(set_start + 1, len(intervals)):
+                if Interval.overlaps(intervals[j], merge_itvl):
+                    merge_itvl = merge_itvl | intervals[j]
+                    breaks.add(intervals[j].start)
+                    breaks.add(intervals[j].end)
+                    set_end = j
+                else:
+                    break
+            breaks = sorted(breaks)
+            new_intervals = [Interval(x[0], x[1] - 1) for x in zip(breaks[0:], breaks[1:])]
+            new_intervals[-1] = Interval(breaks[-2], breaks[-1])
+            if not weight_mapping:
+                split_intervals.update({Interval(*x): None for x in new_intervals})
+            elif set_start == set_end:
+                split_intervals[merge_itvl] = weight_mapping[merge_itvl]
+            else:
+                for itvl in new_intervals:
+                    weight = 0
+                    for input_itvl in intervals[set_start:set_end + 1]:
+                        intersection = input_itvl & itvl
+                        if intersection:
+                            l = (len(intersection) / len(input_itvl)) * weight_mapping[input_itvl]
+                            weight = max([l, weight])
+                    split_intervals[itvl] = int(round(weight, 0))
+            set_start = set_end + 1
+        return split_intervals
+
 
 class IntervalMapping:
     """

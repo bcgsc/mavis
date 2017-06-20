@@ -10,6 +10,7 @@ from ..breakpoint import BreakpointPair
 from ..constants import PROTOCOL, COLUMNS
 from .call import call_events
 from .evidence import GenomeEvidence, TranscriptomeEvidence
+from .base import Evidence
 from .constants import DEFAULTS
 from ..annotate.base import BioInterval
 from ..bam.read import get_samtools_version, samtools_v0_sort, samtools_v1_sort
@@ -56,8 +57,10 @@ def main(
 
     if samtools_version is None:
         samtools_version = get_samtools_version()
-
-    validation_settings = {k: v for k, v in kwargs.items() if k in DEFAULTS.__dict__}
+    
+    validation_settings = {}
+    validation_settings.update(DEFAULTS.__dict__)
+    validation_settings.update({k: v for k, v in kwargs.items() if k in DEFAULTS.__dict__})
     evidence_reads = set()  # keep track of collected reads to use for ouput
 
     split_read_contigs = set()
@@ -113,12 +116,13 @@ def main(
             ))
 
     evidence_clusters, filtered_evidence_clusters = filter_on_overlap(evidence_clusters, extended_masks)
-
+    if not validation_settings['fetch_method_individual']:
+        Evidence.load_multiple(evidence_clusters, log)
     for i, e in enumerate(evidence_clusters):
         print()
         log(
             '({} of {})'.format(i + 1, len(evidence_clusters)),
-            'gathering evidence for:', e.cluster_id
+            'gathered evidence for:', e.cluster_id
         )
         log(e, time_stamp=False)
         log('possible event type(s):', BreakpointPair.classify(e), time_stamp=False)
@@ -128,7 +132,8 @@ def main(
         log('inner window regions:  {}:{}-{}  {}:{}-{}'.format(
             e.break1.chr, e.inner_window1[0], e.inner_window1[1],
             e.break2.chr, e.inner_window2[0], e.inner_window2[1]), time_stamp=False)
-        e.load_evidence(log=log)
+        if validation_settings['fetch_method_individual']:
+            e.load_evidence(log=log)
         log(
             'flanking pairs: {};'.format(len(e.flanking_pairs)),
             'split reads: {}, {};'.format(*[len(a) for a in e.split_reads]),
