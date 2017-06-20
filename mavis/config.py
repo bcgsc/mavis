@@ -5,7 +5,7 @@ import TSV
 import re
 import pysam
 from . import __version__
-from .constants import PROTOCOL
+from .constants import PROTOCOL, DISEASE_STATUS
 from .util import devnull
 from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
@@ -29,7 +29,8 @@ def cast(value, cast_func):
 
 class LibraryConfig:
     def __init__(
-        self, library, protocol, bam_file, inputs, read_length, median_fragment_size, stdev_fragment_size, stranded_bam,
+        self, library, protocol, disease_status, bam_file, inputs, read_length, median_fragment_size,
+        stdev_fragment_size, stranded_bam,
         **kwargs
     ):
         self.library = library
@@ -39,6 +40,7 @@ class LibraryConfig:
         self.median_fragment_size = int(median_fragment_size)
         self.stdev_fragment_size = int(stdev_fragment_size)
         self.stranded_bam = cast(stranded_bam, bool)
+        self.disease_status = DISEASE_STATUS.enforce(disease_status)
         try:
             self.inputs = [f for f in re.split('[;\s]+', inputs) if f]
         except TypeError:
@@ -209,9 +211,9 @@ class SummaryConfig:
 
 def write_config(filename, include_defaults=False, libraries=[], log=devnull):
     config = {}
- 
+
     config['reference'] = ReferenceFilesConfig().flatten()
-    
+
     if libraries:
         for lib in libraries:
             config[lib.library] = lib.flatten()

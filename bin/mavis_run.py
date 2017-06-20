@@ -211,7 +211,8 @@ def generate_config(parser, required, optional):
     # the config sub  program is used for writing pipeline configuration files
     required.add_argument('-w', '--write', help='path to the new configuration file', required=True)
     optional.add_argument(
-        '--library', metavar=('<name>', '(genome|transcriptome)', '</path/to/bam/file>', '<stranded_bam>'), nargs=4,
+        '--library', nargs=5,
+        metavar=('<name>', '(genome|transcriptome)', '<diseased|normal>', '</path/to/bam/file>', '<stranded_bam>'),
         action='append', help='configuration for libraries to be analyzed by mavis', default=[])
     optional.add_argument(
         '--input', help='path to an input file for mavis followed by the library names it should be used for',
@@ -245,18 +246,18 @@ def generate_config(parser, required, optional):
 
     libs = []
     # load the annotations if we need them
-    if any([p == 'transcriptome' for l, p, b, s in args.library]):
+    if any([p == 'transcriptome' for l, p, d, b, s in args.library]):
         log('loading the reference annotations file', args.annotations)
         args.annotations_filename = args.annotations
         args.annotations = load_annotations(args.annotations, best_transcripts_only=args.best_transcripts_only)
 
-    for lib, protocol, bam, stranded in args.library:
+    for lib, protocol, diseased, bam, stranded in args.library:
         if lib not in inputs_by_lib:
             raise KeyError('not input was given for the library', lib)
         log('generating the config section for:', lib)
         l = LibraryConfig.build(
             library=lib, protocol=protocol, bam_file=bam, inputs=inputs_by_lib[lib], stranded_bam=stranded,
-            annotations=args.annotations, log=log if args.verbose else devnull,
+            disease_status=diseased, annotations=args.annotations, log=log if args.verbose else devnull,
             sample_size=args.genome_bins if protocol == PROTOCOL.GENOME else args.transcriptome_bins
         )
         libs.append(l)

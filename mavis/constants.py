@@ -87,6 +87,13 @@ PROTOCOL = Vocab(GENOME='genome', TRANS='transcriptome')
 - ``TRANS``: transcriptome
 """
 
+DISEASE_STATUS = Vocab(DISEASED='diseased', NORMAL='normal')
+""":class:`Vocab`: holds controlled vocabulary for allowed disease status
+
+- ``DISEASED``: diseased
+- ``NORMAL``: normal
+"""
+
 STRAND = Vocab(POS='+', NEG='-', NS='?')
 """:class:`Vocab`: holds controlled vocabulary for allowed strand values
 
