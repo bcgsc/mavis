@@ -3,10 +3,15 @@ from mavis import __version__
 import pip
 import sys
 
+tsv_version = '3.1.3'
+tsv_link = 'svn+https://svn.bcgsc.ca/svn/SVIA/TSV/tags/v{0}#egg=TSV-{0}'.format(tsv_version)
+vocab_version = '1.0.0'
+vocab_link = 'svn+https://svn.bcgsc.ca/svn/SVIA/vocab/tags/v{0}#egg=vocab-{0}'.format(vocab_version)
+
 if any([x in sys.argv for x in ['install', 'develop']]):
     # install the svn dependencies. setuptools has tunnel error but pip can do this
-    pip.main(['install', '-e', 'svn+https://svn.bcgsc.ca/svn/SVIA/TSV/tags/v3.1.3#egg=TSV-3.1.3'])
-    pip.main(['install', '-e', 'svn+https://svn.bcgsc.ca/svn/SVIA/vocab/tags/v1.0.0#egg=vocab-1.0.0'])
+    pip.main(['install', '-e', vocab_link])
+    pip.main(['install', '-e', tsv_link])
 
 setup(
     name='MAVIS',
@@ -23,16 +28,16 @@ setup(
         'Sphinx',  # for building the documentation only
         'sphinx-rtd-theme',  # for building the documentation only
         'pysam==0.9.1.4',
-        'TSV==3.1.3',
-        'vocab==1.0.0',
+        'TSV=={}'.format(tsv_version),
+        'vocab=={}'.format(vocab_version),
         'numpy==1.11.2',
         'pyvcf==0.6.8'
     ],
     author_email='creisle@bcgsc.ca',
     dependency_links=[
-        'svn+https://svn.bcgsc.ca/svn/SVIA/TSV/tags/v3.1.3#egg=TSV-3.1.3',
-        'svn+https://svn.bcgsc.ca/svn/SVIA/vocab/tags/v1.0.0#egg=vocab-1.0.0'
+        vocab_link,
+        tsv_version
     ],
     test_suite='nose.collector',
-    tests_require=['nose', 'timeout-decorator==0.3.3']
+    tests_require=['nose', 'timeout-decorator==0.3.3', 'coverage==4.2']
 )
