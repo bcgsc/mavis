@@ -55,6 +55,8 @@ def main(
     other_libs = set()
     unfiltered_breakpoint_pairs = []
     for bpp in breakpoint_pairs:
+        if bpp.library is None:
+            bpp.library = library
         if bpp.library != library:
             other_libs.add(bpp.library)
         else:
