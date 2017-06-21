@@ -5,6 +5,7 @@ from .error import *
 class Interval:
     """
     """
+
     def __init__(self, start, end=None, freq=1, number_type=None):
         """
         Args:
@@ -17,7 +18,7 @@ class Interval:
 
         if number_type is None:
             if int(self.start) != float(self.start) or int(self.end) != float(self.end) \
-                    or type(self.start) == float or type(self.end) == float:
+                    or isinstance(self.start, float) or isinstance(self.end, float):
                 number_type = float
             else:
                 number_type = int
@@ -54,7 +55,6 @@ class Interval:
                 return [Interval(self[0], other[0] - 1), Interval(other[1] + 1, self[1])]
         else:
             return [Interval(self[0], self[1])]
-
 
     def __and__(self, other):  # intersection
         """the intersection of two intervals
@@ -215,7 +215,7 @@ class Interval:
     # def weighted_mean_ci(cls, *intervals):
     #     """
     #     Calculates the weighted mean of a set of intervals. The weighting is inversely proportional to
-    #     the size of the input interval. The length of the final interval is the weight mean length of 
+    #     the size of the input interval. The length of the final interval is the weight mean length of
     #     the input intervals also weighted by length
 
     #     Args:
@@ -352,7 +352,7 @@ class Interval:
         i, previous_flag = Interval.position_in_range(
             input_intervals, (pos, pos))  # get the input position
         if i == len(input_intervals) or previous_flag:
-                raise IndexError(pos, 'is outside mapped range', mapping)
+            raise IndexError(pos, 'is outside mapped range', mapping)
         else:
             # fell into a mapped region
             curr = input_intervals[i]
@@ -486,7 +486,7 @@ class IntervalMapping:
                 raise ValueError('cannot defined an opposing direction for an interval that in not mapped', i)
         for i in self.mapping:
             self.opposing_directions.setdefault(i, False)
-    
+
     def add(self, src_interval, tgt_interval, opposing_directions=True):
         src_interval = Interval(src_interval[0], src_interval[1])
         tgt_interval = Interval(tgt_interval[0], tgt_interval[1])
@@ -508,7 +508,7 @@ class IntervalMapping:
             - Interval: if simplify is False
 
         Raises:
-            IndexError: if the input position is not in any of the mapped intervals 
+            IndexError: if the input position is not in any of the mapped intervals
 
         Example:
             >>> mapping = IntervalMapping(mapping={(1, 10): (101, 110), (11, 20): (555, 564)})
@@ -532,4 +532,3 @@ class IntervalMapping:
                     result = tgt_interval[1] - shift if forward_to_reverse else tgt_interval[0] + shift
                 return int(round(result, 0)) if simplify else result
         raise IndexError(pos, 'position not found in mapping', self.mapping.keys())
-

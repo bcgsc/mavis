@@ -31,7 +31,7 @@ def main(
         cluster_radius (int): distance (in breakpoint pairs) used in deciding to join bpps in a cluster
         uninformative_filter (bool): if True then clusters should be filtered out if they are not
           within a specified (max_proximity) distance to any annotation
-        max_proximity (int): the maximum distance away an annotation can be before the uninformative_filter 
+        max_proximity (int): the maximum distance away an annotation can be before the uninformative_filter
           is applied
         annotations (object): see :func:`~mavis.annotate.file_io.load_reference_genes`
         min_clusters_per_file (int): the minimum number of clusters to output to a file
@@ -43,7 +43,9 @@ def main(
     UNINFORM_OUTPUT = os.path.join(output, 'uninformative_clusters.txt')
     CLUSTER_ASSIGN_OUTPUT = os.path.join(output, 'cluster_assignment.tab')
     # TODO: CLUSTER_BED_OUTPUT = os.path.join(output, 'clusters.bed')
-    split_file_name_func = lambda x: os.path.join(output, '{}-{}.tab'.format(cluster_batch_id, x))
+
+    def split_file_name_func(x):
+        return os.path.join(output, '{}-{}.tab'.format(cluster_batch_id, x))
     # load the input files
     breakpoint_pairs = read_inputs(
         inputs,
@@ -75,14 +77,14 @@ def main(
         for bpp in breakpoint_pairs:
             # loop over the annotations
             overlaps_gene = False
-            w1 = Interval(bpp.break1.start - max_proximity, bpp.break1.end + max_proximity)
-            w2 = Interval(bpp.break2.start - max_proximity, bpp.break2.end + max_proximity)
+            window1 = Interval(bpp.break1.start - max_proximity, bpp.break1.end + max_proximity)
+            window2 = Interval(bpp.break2.start - max_proximity, bpp.break2.end + max_proximity)
             for gene in annotations.get(bpp.break1.chr, []):
-                if Interval.overlaps(gene, w1):
+                if Interval.overlaps(gene, window1):
                     overlaps_gene = True
                     break
             for gene in annotations.get(bpp.break2.chr, []):
-                if Interval.overlaps(gene, w2):
+                if Interval.overlaps(gene, window2):
                     overlaps_gene = True
                     break
             if overlaps_gene:
@@ -90,8 +92,8 @@ def main(
             else:
                 uninformative_clusters.append(bpp)
         log(
-            'filtered from', len(breakpoint_pairs), 
-            'down to', len(pass_clusters), 
+            'filtered from', len(breakpoint_pairs),
+            'down to', len(pass_clusters),
             '(removed {})'.format(len(uninformative_clusters))
         )
         breakpoint_pairs = pass_clusters
@@ -161,6 +163,6 @@ def main(
         filename = split_file_name_func(i + 1)
         output_files.append(filename)
         output_tabbed_file(clusters[jrange[0]:jrange[1]], filename)
-    
+
     generate_complete_stamp(output, log)
     return output_files

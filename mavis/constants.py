@@ -40,11 +40,11 @@ def reverse_complement(s):
         >>> reverse_complement('ATCCGGT')
         'ACCGGAT'
     """
-    temp = str(s)
-    if not re.match('^[A-Za-z]*', temp):
-        raise ValueError('unexpected sequence format. cannot reverse complement', temp)
-    temp = Seq(temp, DNA_ALPHABET)
-    return str(temp.reverse_complement())
+    input_string = str(s)
+    if not re.match('^[A-Za-z]*$', input_string):
+        raise ValueError('unexpected sequence format. cannot reverse complement', input_string)
+    input_string = Seq(input_string, DNA_ALPHABET)
+    return str(input_string.reverse_complement())
 
 
 def translate(s, reading_frame=0):
@@ -67,6 +67,7 @@ def translate(s, reading_frame=0):
         temp = temp[:-2]
     temp = Seq(temp, DNA_ALPHABET)
     return str(temp.translate())
+
 
 GAP = '-'
 
@@ -194,6 +195,7 @@ def _match_ambiguous_dna(x, y):
     if len(xset.intersection(yset)) == 0:
         return False
     return True
+
 
 DNA_ALPHABET = alphabet = Gapped(ambiguous_dna, '-')
 DNA_ALPHABET.match = lambda x, y: _match_ambiguous_dna(x, y)
@@ -645,6 +647,7 @@ COLUMNS = Vocab(
         :class:`int` - Number of split reads before calling the breakpoint
 
 """
+
 
 def sort_columns(input_columns):
     order = {}

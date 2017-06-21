@@ -50,6 +50,7 @@ def merge_integer_intervals(*intervals):
 class IntervalPair:
     """
     """
+
     def __init__(self, start, end, **kwargs):
         """
         Args:

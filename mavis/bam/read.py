@@ -88,11 +88,11 @@ def calculate_alignment_score(read):
 
 
 def nsb_align(
-        ref, seq, 
-        weight_of_score=0.5, 
-        min_overlap_percent=1, 
-        min_match=0, 
-        min_consecutive_match=1, 
+        ref, seq,
+        weight_of_score=0.5,
+        min_overlap_percent=1,
+        min_match=0,
+        min_consecutive_match=1,
         scoring_function=calculate_alignment_score):
     """
     given some reference string and a smaller sequence string computes the best non-space-breaking alignment
@@ -304,11 +304,11 @@ def convert_events_to_softclipping(read, orientation, max_event_size, min_anchor
     """
     given an alignment, simplifies the alignment by grouping everything past the first anchor and including the
     first event considered too large and unaligning them turning them into softclipping
-    
+
     """
     if min_anchor_size is None:
         min_anchor_size = max_event_size
-    
+
     if orientation == ORIENT.LEFT:
         event_size = 0
         adjusted_cigar = []
@@ -366,5 +366,3 @@ def convert_events_to_softclipping(read, orientation, max_event_size, min_anchor
     else:
         raise ValueError('orientation must be specified', orientation)
     return read
-
-

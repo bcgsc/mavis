@@ -69,6 +69,7 @@ class LabelMapping:
             i += 1
         return self._reverse_mapping[value]
 
+
 def split_intervals_into_tracks(intervals):
     tracks = [[]]
     for i in sorted(intervals, key=lambda x: x[0]):
@@ -89,10 +90,9 @@ def split_intervals_into_tracks(intervals):
 
 
 def generate_interval_mapping(
-    input_intervals, target_width, ratio, min_width,
-    buffer_length=None, start=None, end=None, min_inter_width=None,
-    MIN_PIXEL_ACCURACY=MIN_PIXEL_ACCURACY
-):
+        input_intervals, target_width, ratio, min_width,
+        buffer_length=None, start=None, end=None, min_inter_width=None,
+        MIN_PIXEL_ACCURACY=MIN_PIXEL_ACCURACY):
     min_inter_width = min_width if min_inter_width is None else min_inter_width
     if all([x is not None for x in [start, end, buffer_length]]):
         raise AttributeError('buffer_length is a mutually exclusive argument with start/end')
@@ -173,8 +173,12 @@ def generate_interval_mapping(
 
     intergenic_width = width // (ratio + 1) if intergenic_length > 0 else 0
     genic_width = width - intergenic_width
-    intergenic_unit = lambda x: x * intergenic_width / intergenic_length
-    genic_unit = lambda x: x * genic_width / genic_length
+
+    def intergenic_unit(x):
+        return x * intergenic_width / intergenic_length
+
+    def genic_unit(x):
+        return x * genic_width / genic_length
     mapping = []
 
     pos = 0
@@ -188,7 +192,7 @@ def generate_interval_mapping(
 
     for i, curr in enumerate(intervals):
         if i > 0 and intervals[i - 1].end + 1 < curr.start:  # add between the intervals
-            
+
             prev = intervals[i - 1]
             ifrom = Interval(prev.end + 1, curr.start - 1)
             s = max(intergenic_unit(len(ifrom)), 0)
@@ -209,7 +213,7 @@ def generate_interval_mapping(
         ito = Interval(pos, pos + min_inter_width + s)
         mapping.append((ifrom, ito))
         pos = ito.end
-    #mapping[-1][1].end = target_width  # min(int(target_width), mapping[-1][1].end)
+    # mapping[-1][1].end = target_width  # min(int(target_width), mapping[-1][1].end)
     if abs(mapping[-1][1].end - target_width) > MIN_PIXEL_ACCURACY:
         raise AssertionError(
             'end is off by more than the expected pixel allowable error',

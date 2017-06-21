@@ -51,26 +51,25 @@ class TestFusionTranscript(unittest.TestCase):
         reference_sequence += 'A' * 600 + 'T' * 100 + 'A' * 200 + 'C' * 100
         reference_sequence += 'A' * 100 + 'G' * 100 + 'A' * 200 + 'T' * 100
 
-        self.a = Exon(2000, 2099) # T
-        self.b = Exon(2600, 2699) # C
-        self.c = Exon(3000, 3099) # G
-        self.d = Exon(3300, 3399) # T
+        self.a = Exon(2000, 2099)  # T
+        self.b = Exon(2600, 2699)  # C
+        self.c = Exon(3000, 3099)  # G
+        self.d = Exon(3300, 3399)  # T
         reference_sequence += 'A' * 500 + 'C' * 100 + 'A' * 300 + 'G' * 100
         reference_sequence += 'A' * 200 + 'T' * 100 + 'A' * 200
         self.reference_sequence = reference_sequence
 
-        self.b1 = Exon(600, 699) # A
-        self.b2 = Exon(800, 899) # G
-        self.b3 = Exon(1100, 1199) # T
-        self.b4 = Exon(1400, 1499) # A
-        self.b5 = Exon(1700, 1799) # G
-        self.b6 = Exon(2100, 2199) # A
+        self.b1 = Exon(600, 699)  # A
+        self.b2 = Exon(800, 899)  # G
+        self.b3 = Exon(1100, 1199)  # T
+        self.b4 = Exon(1400, 1499)  # A
+        self.b5 = Exon(1700, 1799)  # G
+        self.b6 = Exon(2100, 2199)  # A
         alternate_sequence = 'C' * 599 + 'A' * 100 + 'C' * 100 + 'G' * 100
         alternate_sequence += 'C' * 200 + 'T' * 100 + 'C' * 200 + 'A' * 100
-        alternate_sequence += 'C' * 200 + 'G' * 100 + 'C' * 300 + 'A' *100
+        alternate_sequence += 'C' * 200 + 'G' * 100 + 'C' * 300 + 'A' * 100
         alternate_sequence += 'C' * 200
         self.alternate_sequence = alternate_sequence
-
 
     def test__pull_exons_left_pos_intronic(self):
         # 100-199, 500-599, 1200-1299, 1500-1599, 1700-1799
@@ -289,7 +288,7 @@ class TestFusionTranscript(unittest.TestCase):
             self.assertEqual(exons[i].end, ft.exons[i].end)
         self.assertEqual(expt, ft.seq)
         self.assertEqual(4, len(ft.exons))
-    
+
     def test_build_single_transcript_inversion_transcriptome(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
@@ -304,10 +303,10 @@ class TestFusionTranscript(unittest.TestCase):
         expt += 'ATCGTC' + 'A' * len(self.z)
         expt += 'A' * (1499 - 1300 + 1) + 'C' * len(self.w) + 'A' * (1699 - 1600 + 1) + 'G' * len(self.s)
         exons = [
-            Exon(1, 100), 
-            Exon(401, 500, intact_end_splice=False), 
+            Exon(1, 100),
+            Exon(401, 500, intact_end_splice=False),
             Exon(501, 1406, intact_start_splice=False, intact_end_splice=False),
-            Exon(1407, 1506, intact_start_splice=False), 
+            Exon(1407, 1506, intact_start_splice=False),
             Exon(1607, 1706)
         ]
         print(ft.exons)
@@ -318,7 +317,7 @@ class TestFusionTranscript(unittest.TestCase):
             self.assertEqual(exons[i].intact_end_splice, ft.exons[i].intact_end_splice)
         self.assertEqual(expt, ft.seq)
         self.assertEqual(5, len(ft.exons))
-    
+
     def test_build_single_transcript_inversion_neg(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
@@ -368,7 +367,7 @@ class TestFusionTranscript(unittest.TestCase):
         self.assertTrue(ft.exons[3].intact_end_splice)
         self.assertFalse(ft.exons[2].intact_end_splice)
         self.assertFalse(ft.exons[3].intact_start_splice)
-    
+
     def test_build_single_transcript_duplication_pos_transcriptome(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
@@ -386,10 +385,10 @@ class TestFusionTranscript(unittest.TestCase):
         expt += 'A' * (1499 - 1300 + 1) + 'C' * len(self.w) + 'A' * (1699 - 1600 + 1) + 'G' * len(self.s)
         self.assertEqual(expt, ft.seq)
         exons = [
-            Exon(1, 100), Exon(401, 500), 
+            Exon(1, 100), Exon(401, 500),
             Exon(1101, 1200, intact_end_splice=False),
             Exon(1201, 1208, intact_start_splice=False, intact_end_splice=False),
-            Exon(1209, 1308, intact_start_splice=False), 
+            Exon(1209, 1308, intact_start_splice=False),
             Exon(1509, 1608), Exon(1709, 1808)]
         print(ft.exons)
         for i in range(len(exons)):
@@ -573,7 +572,6 @@ class TestFusionTranscript(unittest.TestCase):
         ref = {REF_CHR: MockSeq(self.reference_sequence)}
         ann = Annotation(bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.DEL, protocol=PROTOCOL.GENOME)
         ft = FusionTranscript.build(ann, ref)
-
 
         expt = 'C' * len(self.s) + 'T' * (1699 - 1600 + 1) + 'G' * len(self.w) + 'T' * (1499 - 1300 + 1)
         expt += 'A' * len(self.z) + 'ACACTCGTT' + 'G' * len(self.b) + 'T' * (2599 - 2100 + 1)

@@ -202,7 +202,6 @@ class SummaryConfig:
         self.filter_min_split_reads = int(filter_min_split_reads)
         self.filter_min_linking_split_reads = int(filter_min_linking_split_reads)
 
-
     def flatten(self):
         result = {}
         result.update(self.__dict__)
@@ -442,22 +441,22 @@ def augment_parser(parser, optparser, arguments):
                 help='distance allowed between breakpoint calls when pairing breakpoints of this call method')
         elif arg in VALIDATION_DEFAULTS:
             value = VALIDATION_DEFAULTS[arg]
-            vtype = type(value) if type(value) != bool else TSV.tsv_boolean
+            vtype = type(value) if not isinstance(value, bool) else TSV.tsv_boolean
             optparser.add_argument(
                 '--{}'.format(arg), default=get_env_variable(arg, value), type=vtype, help='see user manual for desc')
         elif arg in ILLUSTRATION_DEFAULTS:
             value = ILLUSTRATION_DEFAULTS[arg]
-            vtype = type(value) if type(value) != bool else TSV.tsv_boolean
+            vtype = type(value) if not isinstance(value, bool) else TSV.tsv_boolean
             optparser.add_argument(
                 '--{}'.format(arg), default=get_env_variable(arg, value), type=vtype, help='see user manual for desc')
         elif arg in ANNOTATION_DEFAULTS:
             value = ANNOTATION_DEFAULTS[arg]
-            vtype = type(value) if type(value) != bool else TSV.tsv_boolean
+            vtype = type(value) if not isinstance(value, bool) else TSV.tsv_boolean
             optparser.add_argument(
                 '--{}'.format(arg), default=get_env_variable(arg, value), type=vtype, help='see user manual for desc')
         elif arg in SUMMARY_DEFAULTS:
             value = SUMMARY_DEFAULTS[arg]
-            vtype = type(value) if type(value) != bool else TSV.tsv_boolean
+            vtype = type(value) if not isinstance(value, bool) else TSV.tsv_boolean
             optparser.add_argument(
                 '--{}'.format(arg), default=get_env_variable(arg, value), type=vtype, help='see user manual for desc')
         elif arg == 'max_proximity':

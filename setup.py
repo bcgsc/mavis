@@ -3,6 +3,7 @@ from mavis import __version__
 import pip
 import sys
 
+
 tsv_version = '3.1.3'
 tsv_link = 'svn+https://svn.bcgsc.ca/svn/SVIA/TSV/tags/v{0}#egg=TSV-{0}'.format(tsv_version)
 vocab_version = '1.0.0'

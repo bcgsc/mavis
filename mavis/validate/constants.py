@@ -24,7 +24,7 @@ DEFAULTS = MavisNamespace(
     contig_aln_min_query_consumption=0.7,
     fetch_reads_bins=5,
     fetch_reads_limit=10000,
-    fetch_method_individual=True,
+    fetch_method_individual=False,
     filter_secondary_alignments=True,
     fuzzy_mismatch_number=1,
     max_sc_preceeding_anchor=6,
@@ -111,7 +111,7 @@ DEFAULTS = MavisNamespace(
         if set to True then any sequences input to the assembly algorithm that cannot create a kmer of this size will
         be discard. However, if this is set to False, then the kmer size will be reduced accordingly and all input
         sequences will be used in the assembly algorithm
-    
+
     assembly_min_nc_edge_weight
         Discards all non-cutting edges with a weight/frequency less than this from the DeBruijn graph
 
@@ -122,9 +122,9 @@ DEFAULTS = MavisNamespace(
         The minimum input sequences that must remap for an assembled contig to be used
 
     assembly_min_remap_coverage
-        Metric measuring the sum of the lengths of the remapped sequences over the length of the contig. Required to be 
+        Metric measuring the sum of the lengths of the remapped sequences over the length of the contig. Required to be
         greater than or equal to this
-    
+
     assembly_strand_concordance
         when the number of remapped reads from each strand are compared, the ratio must be above this number to decide
         on the strand
@@ -153,7 +153,7 @@ DEFAULTS = MavisNamespace(
         minimum fraction of the original query sequence that must be used by the read(s) of the alignment
 
     contig_aln_max_event_size
-        relates to determining breakpoints when pairing contig alignments. For any given read in a putative pair the 
+        relates to determining breakpoints when pairing contig alignments. For any given read in a putative pair the
         soft clipping is extended to include any events of greater than this size. The softclipping is added to the
         side of the alignment as indicated by the breakpoint we are assigning pairs to
 
@@ -161,7 +161,7 @@ DEFAULTS = MavisNamespace(
         the minimum number of aligned bases for a contig (M or =) in order to simplify. Do not have to be consecutive.
 
     contig_aln_min_exact_block_event_merge
-        the minimum number of exact matches in a read cigar string to stop merging on "events". Events meaning 
+        the minimum number of exact matches in a read cigar string to stop merging on "events". Events meaning
         insertions, deletions, and mismatches
 
     outer_window_min_event_size

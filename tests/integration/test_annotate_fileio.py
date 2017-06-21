@@ -37,7 +37,6 @@ class TestAnnotationLoading(unittest.TestCase):
         result = load_annotations(REFERENCE_ANNOTATIONS_FILE, print)
         self.assertEqual(1, len(result.keys()))
 
-
     def test_load_json(self):
         result = load_annotations(self.json, print)
         self.assertEqual(12, len(result.keys()))

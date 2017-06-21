@@ -83,9 +83,10 @@ class FusionTranscript(usTranscript):
         assert(ann.transcript1 == ann.transcript2)
         ft = FusionTranscript()
         # pull the exons from either size of the breakpoints window
-        window = Interval(ann.break1.end + 1, ann.break2.end)
         if ann.break1.orient == ORIENT.RIGHT:
             window = Interval(ann.break1.end, ann.break2.start - 1)
+        else:
+            window = Interval(ann.break1.end + 1, ann.break2.end)
         window_seq = REFERENCE_GENOME[ann.break1.chr].seq[window.start - 1:window.end]
         # now create 'pseudo-deletion' breakpoints
         b1 = Breakpoint(ann.break1.chr, window.start - 1, orient=ORIENT.LEFT)
@@ -358,7 +359,6 @@ class FusionTranscript(usTranscript):
             ft.seq += seq2
 
         ft.position = Interval(1, len(ft.seq))
-
         # add all splice variants
         for spl_patt in ft.generate_splicing_patterns():
             t = Transcript(ft, spl_patt)
@@ -508,7 +508,7 @@ class FusionTranscript(usTranscript):
         elif transcript.get_strand() != STRAND.POS:
             raise NotSpecifiedError('transcript strand must be specified to pull exons')
 
-        return s, new_exons
+        return str(s), new_exons
 
 
 class Annotation(BreakpointPair):
@@ -516,6 +516,7 @@ class Annotation(BreakpointPair):
     a fusion of two transcripts created by the associated breakpoint_pair
     will also hold the other annotations for overlapping and encompassed and nearest genes
     """
+
     def __init__(
         self, bpp,
         transcript1=None,

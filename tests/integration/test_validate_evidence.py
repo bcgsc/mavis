@@ -17,6 +17,7 @@ from mavis.validate.call import EventCall
 
 REFERENCE_GENOME = None
 
+
 class TestComputeExonicDistance(unittest.TestCase):
     def setUp(self):
         self.t1 = usTranscript([(1001, 1100), (1501, 1600), (2001, 2100), (2201, 2300)], strand='+')
@@ -49,7 +50,7 @@ class TestComputeFragmentSizes(unittest.TestCase):
         b2 = Breakpoint('1', 1551, 1551, 'R')
         self.read_length = 50
         self.trans_ev = TranscriptomeEvidence(
-            {}, # fake the annotations
+            {},  # fake the annotations
             b1, b2,
             None, None,  # bam_cache and reference_genome
             opposing_strands=False,

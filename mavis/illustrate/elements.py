@@ -772,5 +772,5 @@ def draw_gene(DS, canvas, gene, width, height, fill, label='', reference_genome=
         pass
     group.add(
         Tag('title', 'Gene {} {}:g.{}_{}{}{}'.format(gene.name if gene.name else '',
-            gene.chr, gene.start, gene.end, gene.get_strand(), aliases)))
+                                                     gene.chr, gene.start, gene.end, gene.get_strand(), aliases)))
     return group

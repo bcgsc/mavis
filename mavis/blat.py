@@ -32,6 +32,7 @@ from .util import devnull
 class BlatAlignedSegment(pysam.AlignedSegment):
     """
     """
+
     def __init__(self, reference_name=None, blat_score=None):
         """
         Args:
@@ -43,7 +44,7 @@ class BlatAlignedSegment(pysam.AlignedSegment):
         else:
             self._reference_name = reference_name
         self.blat_score = blat_score
-    
+
     def __repr__(self):
         return '{}({}:{}, {}, {})'.format(
             self.__class__.__name__, self.reference_name, self.reference_start,
@@ -63,7 +64,7 @@ class BlatAlignedSegment(pysam.AlignedSegment):
         cp.next_reference_id = self.next_reference_id
         cp.next_reference_start = self.next_reference_start
         return cp
-    
+
     def query_coverage_interval(self):
         """
         Returns:
@@ -167,8 +168,11 @@ class Blat:
             'qseqs', 'tseqs'
         ]
 
-        split_csv_trailing_seq = lambda x: [s.upper() for s in re.sub(',$', '', x).split(',')]
-        split_csv_trailing_ints = lambda x: [int(s) for s in re.sub(',$', '', x).split(',')]
+        def split_csv_trailing_seq(x):
+            return [s.upper() for s in re.sub(',$', '', x).split(',')]
+
+        def split_csv_trailing_ints(x):
+            return [int(s) for s in re.sub(',$', '', x).split(',')]
 
         header, rows = TSV.read_file(
             filename,
@@ -200,7 +204,7 @@ class Blat:
                 'strand': '^[\+-]$'
             }
         )
-        
+
         final_rows = []
         for row in rows:
             try:
@@ -385,11 +389,11 @@ def paired_alignment_score(read1, read2=None):
 
 
 def select_paired_alignments(
-    bpp, aligned_contigs, 
-    min_query_consumption, 
-    min_extend_overlap, 
-    max_event_size, 
-    min_anchor_size, 
+    bpp, aligned_contigs,
+    min_query_consumption,
+    min_extend_overlap,
+    max_event_size,
+    min_anchor_size,
     merge_inner_anchor,
     merge_outer_anchor
 ):
@@ -403,7 +407,7 @@ def select_paired_alignments(
     putative_event_types = set(bpp.putative_event_types())
     if {SVTYPE.INS, SVTYPE.DUP} & putative_event_types:
         putative_event_types = putative_event_types | {SVTYPE.INS, SVTYPE.DUP}
-    
+
     # for events on the same template and strand we expect to find a single contig alignment
     if not bpp.interchromosomal and not bpp.opposing_strands:
         for read in aligned_contigs:
@@ -422,16 +426,16 @@ def select_paired_alignments(
                 read.cigar = cigar_tools.merge_internal_events(read.cigar, merge_inner_anchor, merge_outer_anchor)
                 if consume < min_query_consumption:
                     continue
-                
+
                 for event_type in putative_event_types:
                     if event_type in {SVTYPE.INS, SVTYPE.DUP} and ins > 0 and ins > dln:
                         putative_alignments.append((read, None))
                     elif event_type in {SVTYPE.DEL, SVTYPE.INV} and dln > 0 and dln > ins:
                         putative_alignments.append((read, None))
-    
+
     # don't use reads in combined alignments if they have already been assigned in a single alignment
     combo_prohibited = [x for x, y in putative_alignments]
-    
+
     for read1, read2 in itertools.combinations([x for x in aligned_contigs if x not in combo_prohibited], 2):
         # do they overlap both breakpoints
         if any([
@@ -439,7 +443,7 @@ def select_paired_alignments(
             read1.reference_name == read2.reference_name and read1.reference_start > read2.reference_start
         ]):
             read1, read2 = read2, read1
-        
+
         if read1.reference_name != bpp.break1.chr or read2.reference_name != bpp.break2.chr:
             continue
         read1 = read_tools.convert_events_to_softclipping(
@@ -468,16 +472,16 @@ def select_paired_alignments(
             query_cover2 = Interval(l - query_cover2.end, l - query_cover2.start)
         elif bpp.opposing_strands:
             continue
-        
+
         consume = len(query_cover1 | query_cover2)
         if not Interval.overlaps(query_cover1, query_cover2):
             consume = len(query_cover1) + len(query_cover2)
-        
+
         if consume / len(read1.query_sequence) < min_query_consumption:
             continue
         if consume - len(query_cover1) < min_extend_overlap or consume - len(query_cover2) < min_extend_overlap:
             continue
-        
+
         try:
             call = BreakpointPair.call_breakpoint_pair(read1, read2)
             if not set(BreakpointPair.classify(call)) & putative_event_types:
@@ -557,7 +561,7 @@ def blat_contigs(
         # will raise subprocess.CalledProcessError if non-zero exit status
         # parameters from https://genome.ucsc.edu/FAQ/FAQblat.html#blat4
         log(['blat', blat_2bit_reference,
-            blat_fa_input_file, blat_pslx_output_file, '-out=pslx', '-noHead'] + blat_options)
+             blat_fa_input_file, blat_pslx_output_file, '-out=pslx', '-noHead'] + blat_options)
         subprocess.check_output([
             'blat', blat_2bit_reference,
             blat_fa_input_file, blat_pslx_output_file, '-out=pslx', '-noHead'] + blat_options)

@@ -393,7 +393,7 @@ class TestDraw(unittest.TestCase):
             d.track_height + d.breakpoint_bottom_margin + d.breakpoint_top_margin + d.splice_height + \
             d.template_track_height
         self.assertAlmostEqual(expected_height, canvas.attribs['height'])
-    
+
     def test_draw_overlay(self):
         gene = Gene('12', 25357723, 25403870, strand=STRAND.NEG, name='KRAS')
         marker = BioInterval('12', 25403865, name='splice site mutation')

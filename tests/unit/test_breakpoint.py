@@ -15,7 +15,7 @@ class MockFileHandle(Mock):
 
 
 class TestReadBreakpointPairsFromFile(unittest.TestCase):
-    
+
     def build_filehandle(self, row):
         header = [c for c in row]
         line = [row[c] for c in header]
@@ -78,7 +78,7 @@ class TestReadBreakpointPairsFromFile(unittest.TestCase):
         self.assertEqual(1, len(bpps))
         self.assertEqual(STRAND.NS, bpps[0].break1.strand)
         self.assertEqual(STRAND.NS, bpps[0].break2.strand)
-    
+
     def test_both_break_strand_ns(self):
         fh = self.build_filehandle({
             COLUMNS.break1_chromosome: '1',
@@ -171,6 +171,7 @@ class TestReadBreakpointPairsFromFile(unittest.TestCase):
         self.assertEqual(1, len(bpps))
         self.assertEqual(ORIENT.RIGHT, bpps[0].break1.orient)
         self.assertEqual(True, bpps[0].opposing_strands)
+
 
 class TestBreakpoint(unittest.TestCase):
 

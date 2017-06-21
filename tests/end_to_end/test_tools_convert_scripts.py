@@ -26,7 +26,6 @@ class TestConvertScripts(unittest.TestCase):
         subprocess.check_output('python {0} -n {1} -o {2}'.format(script, input_file, output), shell=True)
         subprocess.check_output(['python', output_checker, output])
 
-
     def test_delly(self):
         input_file = os.path.join(data_prefix, 'delly_events.vcf')
         script = os.path.join(script_prefix, 'convert_delly.py')

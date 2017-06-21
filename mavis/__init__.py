@@ -11,4 +11,5 @@ def get_version():
     v = v.strip()
     return v
 
+
 __version__ = get_version()

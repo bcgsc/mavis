@@ -2,7 +2,7 @@ from ..util import MavisNamespace
 from .variant import choose_more_annotated, choose_transcripts_by_priority
 
 ACCEPTED_FILTERS = {
-    'choose_more_annotated': choose_more_annotated, 
+    'choose_more_annotated': choose_more_annotated,
     'choose_transcripts_by_priority': choose_transcripts_by_priority
 }
 

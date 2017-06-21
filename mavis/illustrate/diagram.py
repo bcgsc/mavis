@@ -189,7 +189,7 @@ def draw_sv_summary_diagram(
             gheights.append(g.height)
 
         y += max(gheights) + DS.inner_margin
-    
+
     if draw_reference_transcripts:
         theights = []
         # now the transcript level drawings

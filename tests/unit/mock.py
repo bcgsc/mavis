@@ -41,4 +41,3 @@ class MockLongString:
         if index.start < 0:
             raise NotImplementedError('string portion not given')
         return self.string[index]
-

@@ -57,7 +57,7 @@ def main(
 
     if samtools_version is None:
         samtools_version = get_samtools_version()
-    
+
     validation_settings = {}
     validation_settings.update(DEFAULTS.__dict__)
     validation_settings.update({k: v for k, v in kwargs.items() if k in DEFAULTS.__dict__})

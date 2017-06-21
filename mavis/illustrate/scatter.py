@@ -5,6 +5,7 @@ class ScatterPlot:
     """
     holds settings that will go into matplotlib after conversion using the mapping system
     """
+
     def __init__(
         self, points, y_axis_label,
         ymax=None, ymin=None, xmin=None, xmax=None, hmarkers=None, height=100, point_radius=2,

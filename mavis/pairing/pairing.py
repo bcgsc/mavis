@@ -24,14 +24,14 @@ def get_pairing_state(current_protocol, current_disease_state, other_protocol, o
     PROTOCOL.enforce(other_protocol)
     DISEASE_STATUS.enforce(current_disease_state)
     DISEASE_STATUS.enforce(other_disease_state)
-    
+
     curr = (current_protocol, current_disease_state)
     other = (other_protocol, other_disease_state)
 
     DG = (PROTOCOL.GENOME, DISEASE_STATUS.DISEASED)
     DT = (PROTOCOL.TRANS, DISEASE_STATUS.DISEASED)
     NG = (PROTOCOL.GENOME, DISEASE_STATUS.NORMAL)
-    
+
     if curr == DG and other == NG:
         return PAIRING_STATE.GERMLINE if is_matched else PAIRING_STATE.SOMATIC
     elif curr == DG and other == DT:

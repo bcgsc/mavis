@@ -28,7 +28,7 @@ def setUpModule():
 
 
 class TestGetSamtoolsVersion(unittest.TestCase):
-    
+
     def test_get_samtools_version(self):
         env = os.environ
         for version, path in samtools_versions.items():
@@ -84,7 +84,7 @@ class TestBamCache(unittest.TestCase):
         b.close()
 
     def test_get_mate(self):
-        #dependant on fetch working
+        # dependant on fetch working
         b = BamCache(BAM_INPUT)
         s = b.fetch_from_bins('reference3', 1382, 1383, read_limit=1, sample_bins=1)
         self.assertEqual(1, len(s))
@@ -154,7 +154,7 @@ class TestNsbAlign(unittest.TestCase):
 
     def test_length_ref_eq_seq(self):
         pass
-    
+
     @timeout_decorator.timeout(5)
     def test_long_ref_seq(self):
         ref = str(REFERENCE_GENOME['test_bam_long_ref'].seq)
@@ -162,7 +162,6 @@ class TestNsbAlign(unittest.TestCase):
             'CGCAGCTACTCAGGAGATCGGAAG'
         alignment = read_tools.nsb_align(ref, seq, min_consecutive_match=6)
         self.assertEqual(1, len(alignment))
-
 
 
 class TestCigarTools(unittest.TestCase):
@@ -447,7 +446,6 @@ class TestHgvsStandardizeCigars(unittest.TestCase):
             [(CIGAR.S, 2), (CIGAR.EQ, 96 + 15), (CIGAR.I, 2), (CIGAR.EQ, 50 - 15)],
             cigar_tools.hgvs_standardize_cigar(read, ref))
 
-
     def test_smallest_nonoverlapping_repeat(self):
         s = 'ATATATATAA'
         self.assertEqual(s, cigar_tools.smallest_nonoverlapping_repeat(s))
@@ -678,5 +676,3 @@ class TestBamStats(unittest.TestCase):
                 bamfh.close()
             except AttributeError:
                 pass
-
-

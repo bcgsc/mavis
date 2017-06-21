@@ -23,7 +23,7 @@ Algorithm Overview
     - fail if orientations do not match
     - fail if template/chromosomes do not match
     - if the protocols are mixed
-   
+
         - pass if the fusion products match at the sequence level
         - pass if the breakpoint predicted from the genome matches the transcriptome breakpoint
 

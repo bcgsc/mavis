@@ -41,7 +41,7 @@ class Evidence(BreakpointPair):
                 raise NotImplementedError('abstract property must be overridden')
         else:
             return self.inner_window2
-    
+
     @property
     def compatible_window1(self):
         return self.compatible_windows[0]
@@ -160,7 +160,7 @@ class Evidence(BreakpointPair):
             self.compute_fragment_size(None)
         except NotImplementedError:
             raise NotImplementedError('abstract class cannot be initialized')
-        except:
+        except BaseException:
             pass
 
     def collect_from_outer_window(self):
@@ -177,7 +177,7 @@ class Evidence(BreakpointPair):
             return True
         else:
             return False
-    
+
     def standardize_read(self, read):
         # recomputing to standardize b/c split reads can be used to call breakpoints exactly
         read.set_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR, 1, value_type='i')
@@ -192,7 +192,7 @@ class Evidence(BreakpointPair):
         except AttributeError:
             pass
         read.cigar = cigar_tools.join(c)
-        
+
         # makes sure all insertions are called as far 'right' as possible
         read.cigar = cigar_tools.hgvs_standardize_cigar(
             read, self.REFERENCE_GENOME[self.bam_cache.get_read_reference_name(read)].seq)
@@ -398,7 +398,7 @@ class Evidence(BreakpointPair):
                 return True
 
         return False
-    
+
     def collect_half_mapped(self, read, mate):
         if not mate.is_unmapped:
             raise AssertionError('expected the mate to be unmapped')
@@ -708,7 +708,7 @@ class Evidence(BreakpointPair):
                 if c.seq not in filtered_contigs and rseq not in filtered_contigs:
                     filtered_contigs[c.seq] = c
         self.contigs = list(filtered_contigs.values())
-    
+
     @classmethod
     def load_multiple(cls, evidence, log=devnull):
         """
@@ -727,7 +727,7 @@ class Evidence(BreakpointPair):
         min_expected_fragment_size = evidence[0].min_expected_fragment_size
         read_length = evidence[0].read_length
         protocol = evidence[0].protocol
-        
+
         # check the inputs make sense
         for ev in evidence:
             if cache is not ev.bam_cache:
@@ -756,7 +756,7 @@ class Evidence(BreakpointPair):
                 if frag_est >= min_expected_fragment_size and frag_est + read_length <= max_expected_fragment_size:
                     return False
             return True
-        
+
         def filter_if_true(read):
             if not cache_if_true(read):
                 return True
@@ -825,10 +825,10 @@ class Evidence(BreakpointPair):
             weighted_intervals = temp
             for bin, limit in weighted_intervals.items():
                 fetch_regions.append((chr, bin.start, bin.end, limit))
-        
+
         putative_half_maps = set()
         putative_flanking = set()
-        
+
         for i in range(0, len(fetch_regions)):
             chr, start, end, limit = fetch_regions[i]
             log('({} of {}) loading the bin {}:{}-{} (limit {})'.format(
@@ -922,7 +922,12 @@ class Evidence(BreakpointPair):
             return False
 
         def cache_if_true(read):
-            if self.filter_secondary_alignments and read.is_secondary:
+            if read.is_unmapped or read.mate_is_unmapped:
+                return True
+            elif any([
+                self.filter_secondary_alignments and read.is_secondary,
+                read.mapping_quality < self.min_mapping_quality
+            ]):
                 return False
             elif any([
                 not self.interchromosomal and not read.is_proper_pair,

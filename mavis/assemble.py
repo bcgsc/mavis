@@ -10,6 +10,7 @@ from .util import devnull
 class Contig:
     """
     """
+
     def __init__(self, sequence, score):
         self.seq = sequence
         self.remapped_sequences = {}  # alignment score contribution on the contig by read
@@ -33,6 +34,7 @@ class DeBruijnGraph(nx.DiGraph):
     wrapper for a basic digraph
     enforces edge weights
     """
+
     def get_edge_freq(self, n1, n2):
         """
         returns the freq from the data attribute for a specified edge
@@ -88,7 +90,7 @@ class DeBruijnGraph(nx.DiGraph):
 
     def trim_forks_by_freq(self, min_weight):
         """
-        for all nodes in the graph, if the node has an out-degree > 1 and one of the outgoing 
+        for all nodes in the graph, if the node has an out-degree > 1 and one of the outgoing
         edges has freq < min_weight. then that outgoing edge is deleted
         """
         nodes = list(self.nodes())
@@ -98,8 +100,6 @@ class DeBruijnGraph(nx.DiGraph):
                 for src, tgt, data in outgoing_edges:
                     if data['freq'] < min_weight:
                         self.remove_edge(src, tgt)
-
-
 
     def trim_noncutting_paths_by_freq(self, min_weight):
         """
@@ -217,14 +217,13 @@ def pull_contigs_from_component(
     path_scores = {}  # path_str => score_int
     w = assembly_min_nc_edge_weight
     unresolved_components = [component]
-    
 
     while len(unresolved_components) > 0:
         # since now we know it's a tree, the assemblies will all be ltd to
         # simple paths
         component = unresolved_components.pop(0)
         paths_est = len(assembly.get_sinks(component)) * len(assembly.get_sources(component))
-        
+
         if paths_est > assembly_max_paths:
             min_edge_weight = min([e[2]['freq'] for e in assembly.edges(
                 assembly.get_sources(component) | assembly.get_sinks(component), data=True)])

@@ -4,7 +4,7 @@ from mavis.annotate import load_reference_genome
 from mavis.constants import ORIENT, CIGAR
 from mavis.bam.cache import BamCache
 from mavis.assemble import Contig
-from mavis.breakpoint import Breakpoint, BreakpointPair
+from mavis.breakpoint import Breakpoint
 from mavis.validate.evidence import GenomeEvidence
 
 import unittest
@@ -249,17 +249,13 @@ class TestBlat(unittest.TestCase):
         self.assertTrue(read2 is None)
         self.assertEqual(0, read1.reference_id)
         self.assertTrue(not read1.is_reverse)
-        #self.assertEqual(Interval(0, 101), read1.query_coverage_interval())
-        #self.assertEqual(Interval(102, 175), read2.query_coverage_interval())
         self.assertEqual(Interval(0, 175), read1.query_coverage_interval())
         self.assertEqual(1612, read1.reference_start)
-        #self.assertEqual(2966, read2.reference_start)
         self.assertEqual([(CIGAR.EQ, 102), (CIGAR.D, 1253), (CIGAR.EQ, 74)], read1.cigar)
-        #self.assertEqual([(CIGAR.EQ, 128), (CIGAR.S, 117)], read2.cigar)
-    
+
     @unittest.skipIf(not shutil.which('blat'), "missing the blat command")
     def test_blat_contigs_inversion(self):
-        raise unittest.SkipTest('TODO') 
+        raise unittest.SkipTest('TODO')
 
     @unittest.skipIf(not shutil.which('blat'), "missing the blat command")
     def test_blat_contigs_deletion_revcomp(self):
@@ -282,13 +278,9 @@ class TestBlat(unittest.TestCase):
         self.assertEqual(0, read1.reference_id)
         self.assertTrue(read1.is_reverse)
         self.assertEqual(seq, read1.query_sequence)
-        #self.assertEqual(Interval(0, 101), read1.query_coverage_interval())
-        #self.assertEqual(Interval(102, 175), read2.query_coverage_interval())
         self.assertEqual(Interval(0, 175), read1.query_coverage_interval())
         self.assertEqual(1612, read1.reference_start)
-        #self.assertEqual(2966, read2.reference_start)
         self.assertEqual([(CIGAR.EQ, 102), (CIGAR.D, 1253), (CIGAR.EQ, 74)], read1.cigar)
-        #self.assertEqual([(CIGAR.EQ, 128), (CIGAR.S, 117)], read2.cigar)
 
     def test_pslx_row_to_pysam_revcomp_deletion(self):
         pslx_row = {

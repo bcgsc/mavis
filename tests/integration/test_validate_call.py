@@ -410,6 +410,7 @@ class TestEvidenceConsumption(unittest.TestCase):
         self.assertEqual(120, events[3].break1.start)
         self.assertEqual(501, events[3].break2.start)
         self.assertEqual('insertion', events[3].event_type)
+
     def test_call_contig_only(self):
         # event should only be 100L+, 501R+ deletion
         evidence = self.build_genome_evidence(

@@ -9,6 +9,7 @@ import itertools
 
 from .summary import filter_by_evidence, group_events, filter_by_annotations, filter_by_call_method, annotate_dgv
 
+
 def main(
     inputs, output, annotations, dgv_annotation,
     product_sequence_files=None,
@@ -80,7 +81,7 @@ def main(
                  COLUMNS.gene2_aliases
                  ],
         add={'dgv': None,
-            'summary_pairing': None},
+             'summary_pairing': None},
         explicit_strand=True,
         expand_ns=False,
         cast={COLUMNS.break1_split_reads: int,
@@ -100,18 +101,18 @@ def main(
         for gene in genes:
             for t in gene.transcripts:
                 if t.name in reference_transcripts:
-#                    raise KeyError('transcript name is not unique', gene, t)
+                    #                    raise KeyError('transcript name is not unique', gene, t)
                     pass
                 reference_transcripts[t.name] = t
                 if t.is_best_transcript:
                     best_transcripts[t.name] = t
 
     bpps, removed = filter_by_evidence(bpps, filter_min_remapped_reads=filter_min_remapped_reads,
-                              filter_min_spanning_reads=filter_min_spanning_reads,
-                              filter_min_flanking_reads=filter_min_flanking_reads,
-                              filter_min_flanking_only_reads=filter_min_flanking_only_reads,
-                              filter_min_split_reads=filter_min_split_reads,
-                              filter_min_linking_split_reads=filter_min_linking_split_reads)
+                                       filter_min_spanning_reads=filter_min_spanning_reads,
+                                       filter_min_flanking_reads=filter_min_flanking_reads,
+                                       filter_min_flanking_only_reads=filter_min_flanking_only_reads,
+                                       filter_min_split_reads=filter_min_split_reads,
+                                       filter_min_linking_split_reads=filter_min_linking_split_reads)
 
     bpps_to_keep = dict()
     bpp_by_product_key = dict()
@@ -148,7 +149,7 @@ def main(
                 bpps_to_keep[lib][pos] = filter_by_call_method(bpp, bpps_to_keep[lib][pos])
             except AssertionError:
                 # Filter based on the annotations
-                 bpps_to_keep[lib][pos] = filter_by_annotations(bpp, bpps_to_keep[lib][pos], best_transcripts)
+                bpps_to_keep[lib][pos] = filter_by_annotations(bpp, bpps_to_keep[lib][pos], best_transcripts)
         else:
             bpps_to_keep[lib][pos] = bpp
 
@@ -187,10 +188,10 @@ def main(
             calls_by_lib[lib][category].add(bpp)
         for category in sorted(list(categories)):
 
-            c = len(calls_by_lib[lib][category])*len(calls_by_lib[lib][category])
+            c = len(calls_by_lib[lib][category]) * len(calls_by_lib[lib][category])
             total_comparisons += c
             if c > 10000:
-                log(c,'comparisons for lib ', lib,'for', category)
+                log(c, 'comparisons for lib ', lib, 'for', category)
 
             for bpp1, bpp2 in itertools.product(calls_by_lib[lib][category], calls_by_lib[lib][category]):
                 if bpp1 is not None and equivalent_events(
@@ -199,7 +200,7 @@ def main(
                     DISTANCES=DISTANCES,
                     reference_transcripts=reference_transcripts,
                     product_sequences=product_sequences
-                    ):
+                ):
                     pairings[lib][bpp1.data[COLUMNS.product_id]].add(bpp2.data[COLUMNS.product_id])
                     pairings[lib][bpp2.data[COLUMNS.product_id]].add(bpp1.data[COLUMNS.product_id])
     log('checked', total_comparisons, 'total comparisons')
@@ -295,7 +296,7 @@ def main(
 
     for lib in bpp_to_keep:
         log('annotating dgv for', lib)
-        annotated = annotate_dgv(list(bpp_to_keep[lib]), dgv_annotation, distance=10) #TODO make distance a parameter
+        annotated = annotate_dgv(list(bpp_to_keep[lib]), dgv_annotation, distance=10)  # TODO make distance a parameter
         for row in annotated:
             # filter pairing ids based on what is still kept
             try:
@@ -312,13 +313,14 @@ def main(
     with open(fname, 'w') as fh:
         log('writing', fname)
         fh.write('#' + '\t'.join(header) + '\n')
-        for row in sorted(rows, key= lambda k: (k[COLUMNS.break1_chromosome],
-                                                int(k[COLUMNS.break1_position_start]),
-                                                k[COLUMNS.break2_chromosome],
-                                                int(k[COLUMNS.break2_position_start]))):
+        for row in sorted(rows, key=lambda k: (k[COLUMNS.break1_chromosome],
+                                               int(k[COLUMNS.break1_position_start]),
+                                               k[COLUMNS.break2_chromosome],
+                                               int(k[COLUMNS.break2_position_start]))):
             fh.write('\t'.join([str(row.get(c, None)) for c in header]) + '\n')
     log("Wrote {} gene fusion events to {}".format(len(rows), fname))
     generate_complete_stamp(output, log)
+
 
 if __name__ == '__main__':
     main()

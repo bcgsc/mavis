@@ -90,7 +90,7 @@ def compute_transcriptome_bam_stats(
         stranded (bool): if True then reads must match the gene strand
         sample_cap (int): maximum number of reads to collect for any given sample region
         distribution_fraction (float): the proportion of the distribution to use in computing stdev
-    
+
     Returns:
         BamStats: the fragment size median, stdev and the read length in a object
     """
@@ -98,7 +98,7 @@ def compute_transcriptome_bam_stats(
     for chr, anns_list in annotations.items():
         if chr in bam_file_handle.references:
             total_annotations.extend(anns_list)
-    
+
     genes = total_annotations
     if len(total_annotations) > sample_size:
         randoms = [int(n * len(total_annotations)) for n in np.random.rand(sample_size)]

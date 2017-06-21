@@ -40,7 +40,7 @@ class BioInterval:
         self.reference_object = reference_object
         self.name = name
         self.position = Interval(start, end, number_type=int)
-        self.seq = seq if not seq else seq.upper()
+        self.seq = seq if not seq else str(seq.upper())
         self.data = {}
         self.data.update(data)
 
@@ -159,7 +159,6 @@ class BioInterval:
             except AttributeError:
                 break
         raise AttributeError('chr has not been defined')
-
 
     def to_dict(self):
         """

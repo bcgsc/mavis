@@ -3,7 +3,7 @@ from mavis.annotate.protein import Domain, DomainRegion
 
 
 class TestDomainAlignSeq(unittest.TestCase):
-    
+
     def test_large_combinations_finishes_with_error(self):
         input_seq = (
             'MADDEDYEEVVEYYTEEVVYEEVPGETITKIYETTTTRTSDYEQSETSKPALAQPALAQPASAKPVERRKVIRKKVDPSK'
