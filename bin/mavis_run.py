@@ -74,7 +74,6 @@ def main_pipeline(args, configs):
 
         # now set up the qsub script for the validation and the held job for the annotation
         validation_args = {
-            'output': validation_output,
             'masking': args.masking_filename,
             'reference_genome': args.reference_genome_filename,
             'blat_2bit_reference': args.blat_2bit_reference,
@@ -105,7 +104,10 @@ def main_pipeline(args, configs):
                 ['--{} "{}"'.format(k, v) for k, v in validation_args.items() if isinstance(v, str) and v is not None])
             validation_args = temp
             validation_args.append('-n {}$SGE_TASK_ID.tab'.format(merge_file_prefix))
-            fh.write('{} validate {}\n'.format(PROGNAME, ' \\\n\t'.join(validation_args)))
+            fh.write('{} validate {}'.format(PROGNAME, ' \\\n\t'.join(validation_args)))
+            fh.write(
+                ' \\\n\t--output {}\n'.format(
+                    os.path.join(validation_output, os.path.basename(merge_file_prefix) + '$SGE_TASK_ID')))
 
         # set up the annotations job
         # for all files with the right suffix
@@ -125,7 +127,7 @@ def main_pipeline(args, configs):
         temp.extend(
             ['--{} "{}"'.format(k, v) for k, v in annotation_args.items() if isinstance(v, str) and v is not None])
         annotation_args = temp
-        annotation_args.append('--inputs {}/{}$SGE_TASK_ID{}'.format(
+        annotation_args.append('--inputs {}/{}$SGE_TASK_ID/*{}'.format(
             validation_output, os.path.basename(merge_file_prefix), VALIDATION_PASS_SUFFIX))
         qsub = os.path.join(annotation_output, 'qsub.sh')
         annotation_jobname = 'annotation_{}_{}_{}'.format(sec.library, sec.protocol, rand)

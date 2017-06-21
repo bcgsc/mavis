@@ -84,8 +84,8 @@ class TestFullPipeline(unittest.TestCase):
                 'validation-failed.tab',
                 'validation-passed.tab'
             ]:
-                self.assertTrue(glob_exists(temp_output, lib, 'validation', '*.' + suffix))
-            self.assertTrue(glob_exists(temp_output, lib, 'validation', '*.COMPLETE'))
+                self.assertTrue(glob_exists(temp_output, lib, 'validation/*-1', '*.' + suffix))
+            self.assertTrue(glob_exists(temp_output, lib, 'validation/*-1', '*.COMPLETE'))
 
             # run annotation
             self.assertTrue(glob_exists(temp_output, lib, 'annotation'))
@@ -96,12 +96,12 @@ class TestFullPipeline(unittest.TestCase):
             output = subprocess.check_output(command, shell=True)
             tail(output)
             # check the generated files
-            self.assertTrue(glob_exists(temp_output, lib, 'annotation/*', 'annotations.tab'))
-            self.assertTrue(glob_exists(temp_output, lib, 'annotation/*', 'annotations.fusion-cdna.fa'))
-            self.assertTrue(glob_exists(temp_output, lib, 'annotation/*', 'drawings'))
-            self.assertTrue(glob_exists(temp_output, lib, 'annotation/*', 'drawings', '*svg', strict=False))
-            self.assertTrue(glob_exists(temp_output, lib, 'annotation/*', 'drawings', '*json', strict=False))
-            self.assertTrue(glob_exists(temp_output, lib, 'annotation/*', '*.COMPLETE'))
+            self.assertTrue(glob_exists(temp_output, lib, 'annotation/*-1', 'annotations.tab'))
+            self.assertTrue(glob_exists(temp_output, lib, 'annotation/*-1', 'annotations.fusion-cdna.fa'))
+            self.assertTrue(glob_exists(temp_output, lib, 'annotation/*-1', 'drawings'))
+            self.assertTrue(glob_exists(temp_output, lib, 'annotation/*-1', 'drawings', '*svg', strict=False))
+            self.assertTrue(glob_exists(temp_output, lib, 'annotation/*-1', 'drawings', '*json', strict=False))
+            self.assertTrue(glob_exists(temp_output, lib, 'annotation/*-1', '*.COMPLETE'))
         # now run the pairing
         self.assertTrue(glob_exists(temp_output, 'pairing'))
         qsub = os.path.join(temp_output, 'pairing', 'qsub.sh')
