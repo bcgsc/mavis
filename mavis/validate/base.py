@@ -404,10 +404,10 @@ class Evidence(BreakpointPair):
             raise AssertionError('expected the mate to be unmapped')
         read_itvl = Interval(read.reference_start + 1, read.reference_end)
         added = False
-        if self.break1.chr == read.reference_name and Interval.overlaps(self.break1, read_itvl):
+        if self.break1.chr == read.reference_name and Interval.overlaps(self.outer_window1, read_itvl):
             self.half_mapped[0].add(mate)
             added = True
-        if self.break2.chr == read.reference_name and Interval.overlaps(self.break2, read_itvl):
+        if self.break2.chr == read.reference_name and Interval.overlaps(self.outer_window2, read_itvl):
             self.half_mapped[1].add(mate)
             added = True
         return added
@@ -711,6 +711,14 @@ class Evidence(BreakpointPair):
     
     @classmethod
     def load_multiple(cls, evidence, log=devnull):
+        """
+        loads evidence from the bam file for multiple evidence objects at once
+
+        Warning:
+            this is not exactly equivalent to multiple calls of load_evidence because it
+            does not keep a running total of reads between bins and cannot adjust dynamically.
+            Effectively this means load_evidence may potentially collect more evidence
+        """
         log('gathering evidence for {} events'.format(len(evidence)))
         cache = evidence[0].bam_cache
         filter_secondary_alignments = evidence[0].filter_secondary_alignments
@@ -736,7 +744,9 @@ class Evidence(BreakpointPair):
                 protocol = PROTOCOL.TRANS
 
         def cache_if_true(read):
-            if any([
+            if read.is_unmapped or read.mate_is_unmapped:
+                return True
+            elif any([
                 filter_secondary_alignments and read.is_secondary,
                 read.mapping_quality < min_mapping_quality
             ]):
@@ -866,7 +876,7 @@ class Evidence(BreakpointPair):
                         putative_flanking.add(read)
         # go over the flanking /half-mapped that have uncached mates previously
         # if we didn't go over them yet, then they are outside the target region and should be ignored
-        log('gathering cached flanking pairs')
+        log('gathering cached flanking pairs', len(putative_flanking))
         for read in putative_flanking:
             try:
                 mates = cache.get_mate(read, allow_file_access=False)
@@ -878,6 +888,18 @@ class Evidence(BreakpointPair):
                             ev.collect_compatible_flanking_pair(read, mate, compatible_type)
             except KeyError:
                 pass
+        log('gathering cached half-mapped reads', len(putative_half_maps))
+        mates_found = 0
+        for read in putative_half_maps:
+            try:
+                mates = cache.get_mate(read, allow_file_access=False)
+                mates_found += 1
+                for mate in mates:
+                    for ev in evidence:
+                        ev.collect_half_mapped(read, mate)
+            except KeyError:
+                pass
+        log(mates_found, 'half-mapped mates found')
 
     def load_evidence(self, log=devnull):
         """
@@ -912,9 +934,9 @@ class Evidence(BreakpointPair):
                 return True
             return False
 
-        flanking_pairs = []  # collect putative pairs
-        half_mapped_partners1 = []
-        half_mapped_partners2 = []
+        flanking_pairs = set()  # collect putative pairs
+        half_mapped_partners1 = set()
+        half_mapped_partners2 = set()
 
         for read in self.bam_cache.fetch_from_bins(
                 '{0}'.format(self.break1.chr),
@@ -934,10 +956,10 @@ class Evidence(BreakpointPair):
             if not self.collect_split_read(read, True):
                 self.collect_spanning_read(read)
             if read.mate_is_unmapped:
-                half_mapped_partners1.append(read)
+                half_mapped_partners1.add(read)
             elif any([read_tools.orientation_supports_type(read, et) for et in self.putative_event_types()]) and \
                     (read.reference_id != read.next_reference_id) == self.interchromosomal:
-                flanking_pairs.append(read)
+                flanking_pairs.add(read)
 
         for read in self.bam_cache.fetch_from_bins(
                 '{0}'.format(self.break2.chr),
@@ -959,10 +981,10 @@ class Evidence(BreakpointPair):
             if not self.collect_split_read(read, False):
                 self.collect_spanning_read(read)
             if read.mate_is_unmapped:
-                half_mapped_partners2.append(read)
+                half_mapped_partners2.add(read)
             elif any([read_tools.orientation_supports_type(read, et) for et in self.putative_event_types()]) and \
                     (read.reference_id != read.next_reference_id) == self.interchromosomal:
-                flanking_pairs.append(read)
+                flanking_pairs.add(read)
         for fl in sorted(flanking_pairs, key=lambda x: (x.query_name, x.reference_start)):
             # try and get the mate from the cache
             try:
@@ -1018,28 +1040,19 @@ class Evidence(BreakpointPair):
 
         # now collect the half mapped reads
         log(
-            'collected',
-            [
-                len(set([r.query_name for r in half_mapped_partners1])),
-                len(set([r.query_name for r in half_mapped_partners2]))
-            ],
-            'half mapped reads', time_stamp=False)
-        for read in half_mapped_partners1:
+            'collected', len(half_mapped_partners1 | half_mapped_partners2),
+            'putative half mapped reads', time_stamp=False)
+        mates_found = 0
+        for read in half_mapped_partners1 | half_mapped_partners2:
             # try and get the mate from the cache
             try:
                 mates = self.bam_cache.get_mate(read, allow_file_access=False)
+                mates_found += 1
                 for mate in mates:
-                    self.half_mapped[0].add(mate)
+                    self.collect_half_mapped(read, mate)
             except KeyError:
                 pass
-        for read in half_mapped_partners2:
-            # try and get the mate from the cache
-            try:
-                mates = self.bam_cache.get_mate(read, allow_file_access=False)
-                for mate in mates:
-                    self.half_mapped[1].add(mate)
-            except KeyError:
-                pass
+        log(mates_found, 'half-mapped mates found')
 
     def copy(self):
         raise NotImplementedError('not appropriate for copy of evidence')

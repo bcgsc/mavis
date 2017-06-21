@@ -70,7 +70,9 @@ class EventCall(BreakpointPair):
     def support(self):
         support = set()
         support.update(self.spanning_reads)
-        support.update(self.flanking_pairs)
+        for read, mate in self.flanking_pairs:
+            support.add(read)
+            support.add(mate)
         support.update(self.break1_split_reads)
         support.update(self.break2_split_reads)
         if self.contig:
@@ -382,11 +384,19 @@ def _call_by_contigs(source_evidence):
     return contig_calls
 
 
+def filter_consumed_pairs(pairs, consumed_reads):
+    temp = set()
+    for read, mate in pairs:
+        if read not in consumed_reads and mate not in consumed_reads:
+            temp.add((read, mate))
+    return temp
+
+
 def _call_by_spanning_reads(source_evidence, consumed_evidence):
     spanning_calls = {}
-    for read in source_evidence.spanning_reads:
-        if read in consumed_evidence:
-            continue
+    available_flanking_pairs = filter_consumed_pairs(source_evidence.flanking_pairs, consumed_evidence)
+
+    for read in source_evidence.spanning_reads - consumed_evidence:
         bpp, event_types = _call_by_reads(source_evidence, read)
         for event_type in event_types:
             spanning_calls.setdefault((bpp, event_type), set()).add(read)
@@ -408,11 +418,11 @@ def _call_by_spanning_reads(source_evidence, consumed_evidence):
         new_event.spanning_reads.update(reads)
         # add any supporting split reads
         # add the flanking support
-        new_event.add_flanking_support(source_evidence.flanking_pairs)
+        new_event.add_flanking_support(available_flanking_pairs)
         # add any split read support (this will be consumed for non-contig calls)
-        for read in source_evidence.split_reads[0]:
+        for read in source_evidence.split_reads[0] - consumed_evidence:
             new_event.add_break1_split_read(read)
-        for read in source_evidence.split_reads[1]:
+        for read in source_evidence.split_reads[1] - consumed_evidence:
             new_event.add_break2_split_read(read)
         result.append(new_event)
     return result
@@ -519,10 +529,9 @@ def _call_by_flanking_pairs(
     flanking_count = 0
     cover1_reads = []
     cover2_reads = []
+    available_flanking_pairs = filter_consumed_pairs(ev.flanking_pairs, consumed_evidence)
 
-    for read, mate in ev.flanking_pairs:
-        if (read, mate) in consumed_evidence:
-            continue
+    for read, mate in available_flanking_pairs:
         # check that the fragment size is reasonable
         fragment_size = ev.compute_fragment_size(read, mate)
         if event_type == SVTYPE.DEL:
@@ -581,10 +590,10 @@ def _call_by_flanking_pairs(
             cover2, ev.break2.orient, ev.max_expected_fragment_size, ev.read_length,
             distance=distance_func, traverse=traverse_func
         )
-
-        if window1.start > window2.end:
-            raise AssertionError('flanking window regions are incompatible', window1, window2)
+        
         if not ev.interchromosomal:
+            if window1.start > window2.end:
+                raise AssertionError('flanking window regions are incompatible', window1, window2)
             window1.end = min([window1.end, window2.end, cover2.start - 1])
             window2.start = max([window1.start, window2.start, cover1.end + 1])
         first_breakpoint_called = Breakpoint(
@@ -683,22 +692,17 @@ def _call_by_supporting_reads(ev, event_type, consumed_evidence=None):
     pos1 = {}
     pos2 = {}
 
-    available_flanking_pairs = set()
-    for pair in ev.flanking_pairs:
-        if pair in consumed_evidence:
-            continue
-        available_flanking_pairs.add(pair)
+    available_flanking_pairs = filter_consumed_pairs(ev.flanking_pairs, consumed_evidence)
 
     for i, breakpoint, d in [(0, ev.break1, pos1), (1, ev.break2, pos2)]:
-        for read in ev.split_reads[i]:
-            if read not in consumed_evidence:
-                try:
-                    pos = read_tools.breakpoint_pos(read, breakpoint.orient) + 1
-                    if pos not in d:
-                        d[pos] = set()
-                    d[pos].add(read)
-                except AttributeError:
-                    pass
+        for read in ev.split_reads[i] - consumed_evidence:
+            try:
+                pos = read_tools.breakpoint_pos(read, breakpoint.orient) + 1
+                if pos not in d:
+                    d[pos] = set()
+                d[pos].add(read)
+            except AttributeError:
+                pass
         putative_positions = list(d.keys())
         for pos in putative_positions:
             if len(d[pos]) < ev.min_splits_reads_resolution:
@@ -753,9 +757,10 @@ def _call_by_supporting_reads(ev, event_type, consumed_evidence=None):
         linked_pairings.append(call)
 
     for call in linked_pairings:
-        consumed_evidence.update(call.flanking_pairs)
+        consumed_evidence.update(call.support())
 
     error_messages = set()
+    available_flanking_pairs = filter_consumed_pairs(available_flanking_pairs, consumed_evidence)
 
     try:
         f, s = _call_by_flanking_pairs(ev, event_type, consumed_evidence=consumed_evidence)
