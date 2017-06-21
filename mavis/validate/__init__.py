@@ -54,13 +54,13 @@ Algorithm Overview
     - if fails, then call by :term:`spanning read`
     - if fails, then call by :term:`split read`
     - if fails, then call by mixed :term:`split read` / :term:`flanking read pair`
-    - if fails, then call by :term:`flanking read pair`. see 
+    - if fails, then call by :term:`flanking read pair`. see
       :ref:`theory - calling breakpoints by flanking evidence <theory-calling-breakpoints-by-flanking-evidence>`
     - if fails, then the event is failed
 
 - (For each breakpoint pair)
 
-    - determine the amount of support for the more specific call. see 
+    - determine the amount of support for the more specific call. see
       :ref:`theory - determining flanking support <theory-determining-flanking-support>`
 
 - Output new calls, evidence, contigs, etc

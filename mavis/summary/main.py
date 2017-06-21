@@ -1,15 +1,17 @@
 from Bio import SeqIO
 from ..constants import COLUMNS, sort_columns, CALL_METHOD
-from ..util import read_inputs, log
+from ..util import read_inputs, log, generate_complete_stamp
 from ..pairing import equivalent_events
 from ..pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from .constants import DEFAULTS
+import os
 import itertools
 
-from .summary import filter_by_evidence, group_events, filter_by_annotations, annotate_aliases,  filter_by_call_method
+from .summary import filter_by_evidence, group_events, filter_by_annotations, filter_by_call_method, annotate_dgv
+
 
 def main(
-    inputs, output, annotations,
+    inputs, output, annotations, dgv_annotation,
     product_sequence_files=None,
     filter_min_remapped_reads=DEFAULTS.filter_min_remapped_reads,
     filter_min_spanning_reads=DEFAULTS.filter_min_spanning_reads,
@@ -59,6 +61,8 @@ def main(
                  COLUMNS.transcript2,
                  COLUMNS.untemplated_seq,
                  COLUMNS.tools,
+                 COLUMNS.exon_last_5prime,
+                 COLUMNS.exon_first_3prime,
                  # evidence_columns
                  COLUMNS.break1_call_method,
                  COLUMNS.break1_split_reads,
@@ -72,11 +76,12 @@ def main(
                  COLUMNS.contigs_assembled,
                  COLUMNS.contig_alignment_score,
                  COLUMNS.contig_remap_score,
+                 COLUMNS.annotation_figure,
+                 COLUMNS.gene1_aliases,
+                 COLUMNS.gene2_aliases
                  ],
-        add={
-            COLUMNS.gene1_aliases: None,
-            COLUMNS.gene2_aliases: None,
-            'summary_pairing': None},
+        add={'dgv': None,
+             'summary_pairing': None},
         explicit_strand=True,
         expand_ns=False,
         cast={COLUMNS.break1_split_reads: int,
@@ -96,26 +101,29 @@ def main(
         for gene in genes:
             for t in gene.transcripts:
                 if t.name in reference_transcripts:
-                    raise KeyError('transcript name is not unique', gene, t)
+                    #                    raise KeyError('transcript name is not unique', gene, t)
+                    pass
                 reference_transcripts[t.name] = t
                 if t.is_best_transcript:
                     best_transcripts[t.name] = t
 
     bpps, removed = filter_by_evidence(bpps, filter_min_remapped_reads=filter_min_remapped_reads,
-                              filter_min_spanning_reads=filter_min_spanning_reads,
-                              filter_min_flanking_reads=filter_min_flanking_reads,
-                              filter_min_flanking_only_reads=filter_min_flanking_only_reads,
-                              filter_min_split_reads=filter_min_split_reads,
-                              filter_min_linking_split_reads=filter_min_linking_split_reads)
+                                       filter_min_spanning_reads=filter_min_spanning_reads,
+                                       filter_min_flanking_reads=filter_min_flanking_reads,
+                                       filter_min_flanking_only_reads=filter_min_flanking_only_reads,
+                                       filter_min_split_reads=filter_min_split_reads,
+                                       filter_min_linking_split_reads=filter_min_linking_split_reads)
 
     bpps_to_keep = dict()
     bpp_by_product_key = dict()
     product_sequences = dict()
     pairings = dict()
     product_sequence_files = set()
+    libraries = set()
 
     for bpp in bpps:
         lib = bpp.data[COLUMNS.library]
+        libraries.add(lib)
         # info needed for pairing
         if bpp.fusion_sequence_fasta_id:
             product_sequences[bpp.fusion_sequence_fasta_id] = None
@@ -131,10 +139,6 @@ def main(
                bpp.break2.start,
                bpp.break2.end,
                bpp.event_type)
-#               bpp.break1.strand,
-#               bpp.break2.strand)
-
-        bpp = annotate_aliases(bpp, reference_transcripts)
 
         if lib not in bpps_to_keep:
             bpps_to_keep[lib] = dict()
@@ -145,7 +149,7 @@ def main(
                 bpps_to_keep[lib][pos] = filter_by_call_method(bpp, bpps_to_keep[lib][pos])
             except AssertionError:
                 # Filter based on the annotations
-                 bpps_to_keep[lib][pos] = filter_by_annotations(bpp, bpps_to_keep[lib][pos], best_transcripts)
+                bpps_to_keep[lib][pos] = filter_by_annotations(bpp, bpps_to_keep[lib][pos], best_transcripts)
         else:
             bpps_to_keep[lib][pos] = bpp
 
@@ -184,10 +188,10 @@ def main(
             calls_by_lib[lib][category].add(bpp)
         for category in sorted(list(categories)):
 
-            c = len(calls_by_lib[lib][category])*len(calls_by_lib[lib][category])
+            c = len(calls_by_lib[lib][category]) * len(calls_by_lib[lib][category])
             total_comparisons += c
             if c > 10000:
-                log(c,'comparisons for lib ', lib,'for', category)
+                log(c, 'comparisons for lib ', lib, 'for', category)
 
             for bpp1, bpp2 in itertools.product(calls_by_lib[lib][category], calls_by_lib[lib][category]):
                 if bpp1 is not None and equivalent_events(
@@ -196,17 +200,18 @@ def main(
                     DISTANCES=DISTANCES,
                     reference_transcripts=reference_transcripts,
                     product_sequences=product_sequences
-                    ):
+                ):
                     pairings[lib][bpp1.data[COLUMNS.product_id]].add(bpp2.data[COLUMNS.product_id])
                     pairings[lib][bpp2.data[COLUMNS.product_id]].add(bpp1.data[COLUMNS.product_id])
     log('checked', total_comparisons, 'total comparisons')
 
     log('filtering pairings based on transcript')
     bpp_to_keep = dict()
+    annotation_ids_to_keep = []
     for lib in pairings:
         if lib not in bpp_to_keep:
             bpp_to_keep[lib] = set()
-        log(len(pairings[lib].items()), ' pairings found for lib ', lib)
+        log(len(pairings[lib].items()), 'pairings found for lib ', lib)
         for product_key, paired_product_keys in pairings[lib].items():
             bpp = bpp_by_product_key[product_key]
 
@@ -233,10 +238,12 @@ def main(
             bpp.data['summary_pairing'] = ';'.join(sorted(filtered))
             bpp_by_product_key[product_key] = bpp
             bpp_to_keep[lib].add(bpp)
+            annotation_ids_to_keep.extend(bpp.data[COLUMNS.annotation_id].split(';'))
 
     # TODO: give an evidence score to the events based on call method and evidence levels
     # TODO: report the pairings so that germline and somatic etc can be determined properly
     output_columns = [
+        COLUMNS.annotation_id,
         COLUMNS.pairing,
         COLUMNS.break1_chromosome,
         COLUMNS.break1_homologous_seq,
@@ -269,6 +276,9 @@ def main(
         COLUMNS.break2_strand,
         COLUMNS.gene1_aliases,
         COLUMNS.gene2_aliases,
+        COLUMNS.annotation_figure,
+        COLUMNS.exon_last_5prime,
+        COLUMNS.exon_first_3prime,
 
         # For debugging
         COLUMNS.break1_call_method,
@@ -279,11 +289,16 @@ def main(
         COLUMNS.contig_alignment_score,
         COLUMNS.spanning_reads,
         COLUMNS.contig_remapped_reads,
-        'summary_pairing']
+        'summary_pairing',
+        'dgv']
 
     rows = []
+
     for lib in bpp_to_keep:
-        for row in list(bpp_to_keep[lib]):
+        log('annotating dgv for', lib)
+        annotated = annotate_dgv(list(bpp_to_keep[lib]), dgv_annotation, distance=10)  # TODO make distance a parameter
+        for row in annotated:
+            # filter pairing ids based on what is still kept
             try:
                 row = row.flatten()
             except AttributeError:
@@ -291,15 +306,20 @@ def main(
             rows.append(row)
 
     header = sort_columns(output_columns)
-    with open(output, 'w') as fh:
-        log('writing', output)
+    fname = os.path.join(
+        output,
+        'mavis_summary_{}.tab'.format('_'.join(sorted(list(libraries))))
+    )
+    with open(fname, 'w') as fh:
+        log('writing', fname)
         fh.write('#' + '\t'.join(header) + '\n')
-        for row in sorted(rows, key= lambda k: (k[COLUMNS.break1_chromosome],
-                                                int(k[COLUMNS.break1_position_start]),
-                                                k[COLUMNS.break2_chromosome],
-                                                int(k[COLUMNS.break2_position_start]))):
+        for row in sorted(rows, key=lambda k: (k[COLUMNS.break1_chromosome],
+                                               int(k[COLUMNS.break1_position_start]),
+                                               k[COLUMNS.break2_chromosome],
+                                               int(k[COLUMNS.break2_position_start]))):
             fh.write('\t'.join([str(row.get(c, None)) for c in header]) + '\n')
-    log("Wrote {} gene fusion events to {}".format(len(rows), output))
+    log("Wrote {} gene fusion events to {}".format(len(rows), fname))
+    generate_complete_stamp(output, log)
 
 
 if __name__ == '__main__':

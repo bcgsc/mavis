@@ -1,5 +1,6 @@
 from ..constants import COLUMNS, STRAND, CALL_METHOD, SVTYPE
 from ..breakpoint import Breakpoint, BreakpointPair
+from ..interval import Interval
 
 
 def alphanumeric_choice(bpp1, bpp2):
@@ -57,7 +58,7 @@ def filter_by_annotations(bpp1, bpp2, best_transcripts):
                     and bpp2_t2 in best_transcripts:
                 try:
                     alpha = alphanumeric_choice(bpp1, bpp2)
-                except AssertionError: #both transcripts are the same
+                except AssertionError:  # both transcripts are the same
                     alpha = group_events(bpp1, bpp2)
                 return alpha
             elif bpp1_t1 in best_transcripts and bpp1_t2 in best_transcripts:
@@ -71,7 +72,7 @@ def filter_by_annotations(bpp1, bpp2, best_transcripts):
             else:
                 try:
                     alpha = alphanumeric_choice(bpp1, bpp2)
-                except AssertionError: #both transcripts are the same
+                except AssertionError:  # both transcripts are the same
                     alpha = group_events(bpp1, bpp2)
                 return alpha
 
@@ -93,7 +94,7 @@ def filter_by_annotations(bpp1, bpp2, best_transcripts):
             else:
                 try:
                     alpha = alphanumeric_choice(bpp1, bpp2)
-                except AssertionError: #both transcripts are the same
+                except AssertionError:  # both transcripts are the same
                     alpha = group_events(bpp1, bpp2)
                 return alpha
 
@@ -143,17 +144,18 @@ def group_events(bpp1, bpp2):
         opposing_strands=bpp1.opposing_strands,
         stranded=bpp1.stranded)
 
-    #Note: There are some attributes that shouldn't be lost if different, currently appending the information
+    # Note: There are some attributes that shouldn't be lost if different, currently appending the information
     # The evidence could be better off as a max instead of a join
     columns_to_keep = [COLUMNS.contig_seq, COLUMNS.break1_call_method, COLUMNS.break2_call_method,
                        COLUMNS.break1_split_reads, COLUMNS.break2_split_reads, COLUMNS.contig_alignment_score,
                        COLUMNS.spanning_reads, COLUMNS.flanking_pairs, COLUMNS.tools,
-                       COLUMNS.product_id, COLUMNS.event_type,
+                       COLUMNS.product_id, COLUMNS.event_type, COLUMNS.annotation_id,
+                       COLUMNS.pairing, COLUMNS.annotation_figure,
                        COLUMNS.contig_remapped_reads]
 
     for i in bpp1.data.keys():
         if bpp1.data[i] != bpp2.data[i]:
-            new_bpp.data[i] = None
+            new_bpp.data[i] = ''
             if i in columns_to_keep:
                 new_bpp.data[i] = ";".join(sorted(list(set(str(bpp1.data[i]).split(';') +
                                                            str(bpp2.data[i]).split(';')))))
@@ -165,13 +167,20 @@ def group_events(bpp1, bpp2):
     return new_bpp
 
 
-def annotate_aliases(bpp, reference_transcripts):
-    # Should add the getting the alias to annotate instead of here?
-    if bpp.data[COLUMNS.transcript1] in reference_transcripts:
-        bpp.data[COLUMNS.gene1_aliases] = ";".join(reference_transcripts[bpp.data[COLUMNS.transcript1]].gene.aliases)
-    if bpp.data[COLUMNS.transcript2] in reference_transcripts:
-        bpp.data[COLUMNS.gene2_aliases] = ";".join(reference_transcripts[bpp.data[COLUMNS.transcript2]].gene.aliases)
-    return(bpp)
+def annotate_dgv(bpps, dgv_regions_by_reference_name, distance=0):
+    for bpp in bpps:
+        if bpp.break1.chr != bpp.break2.chr:
+            continue  # assume the dgv does not have translocations
+        for r in dgv_regions_by_reference_name.get(bpp.break1.chr, []):
+            if abs(Interval.dist((r.start, r.start), bpp.break1)) <= distance and \
+                    abs(Interval.dist((r.end, r.end), bpp.break2)) <= distance:
+                refname = r.reference_object
+                try:
+                    refname = r.reference_object.name
+                except AttributeError:
+                    pass
+                bpp.data['dgv'] = '{}({}:{}-{})'.format(r.name, refname, r.start, r.end)
+    return bpps
 
 
 def filter_by_evidence(

@@ -85,7 +85,7 @@ def load_annotations(filepath, warn=devnull, REFERENCE_GENOME=None, filetype=Non
         data = convert_tab_to_json(filepath, warn)
     else:
         raise NotImplementedError('unsupported filetype:', filetype, filepath)
-    
+
     return parse_annotations_json(
         data, REFERENCE_GENOME=REFERENCE_GENOME, best_transcripts_only=best_transcripts_only, warn=warn)
 
@@ -133,7 +133,7 @@ def parse_annotations_json(data, REFERENCE_GENOME=None, best_transcripts_only=Fa
 
             if transcript['cdna_coding_end'] is None or transcript['cdna_coding_start'] is None:
                 continue
-            
+
             for spl_patt in ust.generate_splicing_patterns():
                 # make splice transcripts and translations
                 t = Transcript(ust, spl_patt)
@@ -300,7 +300,7 @@ def convert_tab_to_json(filepath, warn=devnull):
             genes[g['name']] = g
         else:
             g = genes[g['name']]
-        
+
         t = {
             'is_best_transcript': row['best_ensembl_transcript_id'] == row['ensembl_transcript_id'],
             'name': row['ensembl_transcript_id'],
@@ -313,9 +313,8 @@ def convert_tab_to_json(filepath, warn=devnull):
             'aliases': []
         }
         g['transcripts'].append(t)
-    
-    return {'genes': genes.values()}
 
+    return {'genes': genes.values()}
 
 
 def load_reference_genome(filename, low_mem=False):
@@ -333,7 +332,7 @@ def load_reference_genome(filename, low_mem=False):
             HUMAN_REFERENCE_GENOME = SeqIO.to_dict(SeqIO.parse(fh, 'fasta'))
     else:
         HUMAN_REFERENCE_GENOME = SeqIO.index(filename, "fasta")
-    
+
     names = list(HUMAN_REFERENCE_GENOME.keys())
 
     # to fix hg38 issues

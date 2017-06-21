@@ -2,6 +2,7 @@ import os
 import pysam
 import re
 import subprocess
+import uuid
 import itertools
 from ..bam.cache import BamCache
 from ..blat import blat_contigs
@@ -9,11 +10,12 @@ from ..breakpoint import BreakpointPair
 from ..constants import PROTOCOL, COLUMNS
 from .call import call_events
 from .evidence import GenomeEvidence, TranscriptomeEvidence
+from .base import Evidence
 from .constants import DEFAULTS
 from ..annotate.base import BioInterval
 from ..bam.read import get_samtools_version, samtools_v0_sort, samtools_v1_sort
 from ..bam import cigar as cigar_tools
-from ..util import read_inputs, log, output_tabbed_file, filter_on_overlap, write_bed_file, build_batch_id
+from ..util import read_inputs, log, output_tabbed_file, filter_on_overlap, write_bed_file
 from ..util import generate_complete_stamp
 
 VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
@@ -56,14 +58,17 @@ def main(
     if samtools_version is None:
         samtools_version = get_samtools_version()
 
-    validation_settings = {k: v for k, v in kwargs.items() if k in DEFAULTS.__dict__}
+    validation_settings = {}
+    validation_settings.update(DEFAULTS.__dict__)
+    validation_settings.update({k: v for k, v in kwargs.items() if k in DEFAULTS.__dict__})
     evidence_reads = set()  # keep track of collected reads to use for ouput
 
     split_read_contigs = set()
     chr_to_index = {}
     bpps = read_inputs(
-        [input], add={COLUMNS.protocol: protocol, COLUMNS.library: library},
-        expand_ns=False, explicit_strand=False
+        [input], add={COLUMNS.protocol: protocol, COLUMNS.library: library, COLUMNS.cluster_id: None},
+        expand_ns=False, explicit_strand=False,
+        cast={COLUMNS.cluster_id: lambda x: str(uuid.uuid4()) if not x else x}
     )
     evidence_clusters = []
     for bpp in bpps:
@@ -111,13 +116,13 @@ def main(
             ))
 
     evidence_clusters, filtered_evidence_clusters = filter_on_overlap(evidence_clusters, extended_masks)
-
+    if not validation_settings['fetch_method_individual']:
+        Evidence.load_multiple(evidence_clusters, log)
     for i, e in enumerate(evidence_clusters):
         print()
         log(
             '({} of {})'.format(i + 1, len(evidence_clusters)),
-            'gathering evidence for:',
-            e.data['cluster_id']
+            'gathered evidence for:', e.cluster_id
         )
         log(e, time_stamp=False)
         log('possible event type(s):', BreakpointPair.classify(e), time_stamp=False)
@@ -127,7 +132,8 @@ def main(
         log('inner window regions:  {}:{}-{}  {}:{}-{}'.format(
             e.break1.chr, e.inner_window1[0], e.inner_window1[1],
             e.break2.chr, e.inner_window2[0], e.inner_window2[1]), time_stamp=False)
-        e.load_evidence(log=log)
+        if validation_settings['fetch_method_individual']:
+            e.load_evidence(log=log)
         log(
             'flanking pairs: {};'.format(len(e.flanking_pairs)),
             'split reads: {}, {};'.format(*[len(a) for a in e.split_reads]),
@@ -138,6 +144,8 @@ def main(
         )
         e.assemble_contig(log=log)
         log('assembled {} contigs'.format(len(e.contigs)), time_stamp=False)
+        for contig in e.contigs:
+            log('>', contig.seq, time_stamp=False)
 
     log('will output:', CONTIG_BLAT_FA, CONTIG_BLAT_OUTPUT)
     blat_contigs(
@@ -165,44 +173,40 @@ def main(
     )
     log('alignment complete')
     event_calls = []
-    passes = 0
     write_bed_file(EVIDENCE_BED, itertools.chain.from_iterable([e.get_bed_repesentation() for e in evidence_clusters]))
     for index, e in enumerate(evidence_clusters):
         print()
         log('({} of {}) calling events for:'.format
-            (index + 1, len(evidence_clusters)), e.data[COLUMNS.cluster_id], e.putative_event_types())
+            (index + 1, len(evidence_clusters)), e.cluster_id, e.putative_event_types())
         log('source:', e, time_stamp=False)
         calls = []
         failure_comment = None
         try:
-            calls.extend(call_events(e))
+            calls = call_events(e)
             event_calls.extend(calls)
         except UserWarning as err:
             log('warning: error in calling events', repr(err), time_stamp=False)
             failure_comment = str(err)
+
         if len(calls) == 0:
             failure_comment = ['zero events were called'] if failure_comment is None else failure_comment
             e.data[COLUMNS.filter_comment] = failure_comment
             filtered_evidence_clusters.append(e)
-        else:
-            passes += 1
 
         log('called {} event(s)'.format(len(calls)))
-        for ev in calls:
+        for i, ev in enumerate(calls):
             log(ev, time_stamp=False)
             log(ev.event_type, ev.call_method, time_stamp=False)
-            log('remapped reads: {}; spanning reads: {}; split reads: [{}, {}], flanking pairs: {}'.format(
+            ev.data[COLUMNS.validation_id] = '{}-v{}'.format(ev.cluster_id, i + 1)
+            log('remapped reads: {}; spanning reads: {}; split reads: [{} ({}), {} ({}), {}], flanking pairs: {}'.format(
                 0 if not ev.contig else len(ev.contig.input_reads),
                 len(ev.spanning_reads),
-                len(ev.break1_split_reads), len(ev.break2_split_reads),
+                len(ev.break1_split_reads), len(ev.break1_tgt_align_split_read_names()),
+                len(ev.break2_split_reads), len(ev.break2_tgt_align_split_read_names()),
+                len(ev.linking_split_read_names()),
                 len(ev.flanking_pairs)), time_stamp=False)
 
-    if len(filtered_evidence_clusters) + passes != len(evidence_clusters):
-        raise AssertionError(
-            'totals do not match pass + fails == total',
-            passes, len(filtered_evidence_clusters), len(evidence_clusters))
     # write the output validated clusters (split by type and contig)
-    validation_batch_id = build_batch_id(prefix='validation-')
     for i, ec in enumerate(event_calls):
         b1_homseq = None
         b2_homseq = None
@@ -211,7 +215,6 @@ def main(
         except AttributeError:
             pass
         ec.data.update({
-            COLUMNS.validation_id: '{}-{}'.format(validation_batch_id, i + 1),
             COLUMNS.break1_homologous_seq: b1_homseq,
             COLUMNS.break2_homologous_seq: b2_homseq,
         })

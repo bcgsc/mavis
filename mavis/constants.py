@@ -6,6 +6,7 @@ from Bio.Alphabet import Gapped
 from Bio.Data.IUPACData import ambiguous_dna_values
 from Bio.Alphabet.IUPAC import ambiguous_dna
 from Bio.Seq import Seq
+import re
 
 
 PIPELINE_STEP = Vocab(
@@ -39,8 +40,11 @@ def reverse_complement(s):
         >>> reverse_complement('ATCCGGT')
         'ACCGGAT'
     """
-    temp = Seq(str(s), DNA_ALPHABET)
-    return str(temp.reverse_complement())
+    input_string = str(s)
+    if not re.match('^[A-Za-z]*$', input_string):
+        raise ValueError('unexpected sequence format. cannot reverse complement', input_string)
+    input_string = Seq(input_string, DNA_ALPHABET)
+    return str(input_string.reverse_complement())
 
 
 def translate(s, reading_frame=0):
@@ -64,6 +68,7 @@ def translate(s, reading_frame=0):
     temp = Seq(temp, DNA_ALPHABET)
     return str(temp.translate())
 
+
 GAP = '-'
 
 ORIENT = Vocab(LEFT='L', RIGHT='R', NS='?')
@@ -81,6 +86,13 @@ PROTOCOL = Vocab(GENOME='genome', TRANS='transcriptome')
 
 - ``GENOME``: genome
 - ``TRANS``: transcriptome
+"""
+
+DISEASE_STATUS = Vocab(DISEASED='diseased', NORMAL='normal')
+""":class:`Vocab`: holds controlled vocabulary for allowed disease status
+
+- ``DISEASED``: diseased
+- ``NORMAL``: normal
 """
 
 STRAND = Vocab(POS='+', NEG='-', NS='?')
@@ -183,6 +195,7 @@ def _match_ambiguous_dna(x, y):
     if len(xset.intersection(yset)) == 0:
         return False
     return True
+
 
 DNA_ALPHABET = alphabet = Gapped(ambiguous_dna, '-')
 DNA_ALPHABET.match = lambda x, y: _match_ambiguous_dna(x, y)
@@ -295,6 +308,8 @@ COLUMNS = Vocab(
     break1_position_start='break1_position_start',
     break1_position_end='break1_position_end',
     break1_orientation='break1_orientation',
+    exon_last_5prime='exon_last_5prime',
+    exon_first_3prime='exon_first_3prime',
     break1_strand='break1_strand',
     break1_seq='break1_seq',
     break2_chromosome='break2_chromosome',
@@ -632,6 +647,7 @@ COLUMNS = Vocab(
         :class:`int` - Number of split reads before calling the breakpoint
 
 """
+
 
 def sort_columns(input_columns):
     order = {}

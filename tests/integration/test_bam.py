@@ -13,6 +13,7 @@ from . import MockRead, MockBamFileHandle
 from . import REFERENCE_GENOME_FILE, TRANSCRIPTOME_BAM_INPUT, FULL_REFERENCE_ANNOTATIONS_FILE_JSON
 from . import BAM_INPUT, FULL_BAM_INPUT
 from .config import samtools_versions
+import timeout_decorator
 
 
 REFERENCE_GENOME = None
@@ -27,7 +28,7 @@ def setUpModule():
 
 
 class TestGetSamtoolsVersion(unittest.TestCase):
-    
+
     def test_get_samtools_version(self):
         env = os.environ
         for version, path in samtools_versions.items():
@@ -76,20 +77,20 @@ class TestBamCache(unittest.TestCase):
 
     def test_fetch_single_read(self):
         b = BamCache(BAM_INPUT)
-        s = b.fetch('reference3', 1382, 1383, read_limit=1, sample_bins=1)
+        s = b.fetch_from_bins('reference3', 1382, 1383, read_limit=1, sample_bins=1)
         self.assertEqual(1, len(s))
         r = list(s)[0]
         self.assertEqual('HISEQX1_11:4:2122:14275:37717:split', r.qname)
         b.close()
 
     def test_get_mate(self):
-        #dependant on fetch working
+        # dependant on fetch working
         b = BamCache(BAM_INPUT)
-        s = b.fetch('reference3', 1382, 1383, read_limit=1, sample_bins=1)
+        s = b.fetch_from_bins('reference3', 1382, 1383, read_limit=1, sample_bins=1)
         self.assertEqual(1, len(s))
         r = list(s)[0]
         self.assertEqual('HISEQX1_11:4:2122:14275:37717:split', r.qname)
-        o = b.get_mate(r)
+        o = b.get_mate(r, allow_file_access=True)
         self.assertEqual(1, len(o))
         self.assertEqual('HISEQX1_11:4:2122:14275:37717:split', o[0].qname)
 
@@ -134,6 +135,33 @@ class TestModule(unittest.TestCase):
               'TGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAAC'
         alignment = read_tools.nsb_align(ref, seq)
         # GATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG
+
+
+class TestNsbAlign(unittest.TestCase):
+
+    def test_length_seq_le_ref(self):
+        ref = 'GATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAG' \
+              'TTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG'
+        seq = 'TGTAGGAAGCCATTATCTGAAGTGTAAGCAACTGCATAGTGCTATTTTAATTATGCATTGCAGGGAAACTGTGAGCAGAGCTATATATTTAGGTAGAC' \
+              'TGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAAC'
+        alignment = read_tools.nsb_align(ref, seq)
+        self.assertEqual(1, len(alignment))
+        alignment = read_tools.nsb_align(ref, seq, min_consecutive_match=20)
+        self.assertEqual(0, len(alignment))
+
+    def test_length_ref_le_seq(self):
+        pass
+
+    def test_length_ref_eq_seq(self):
+        pass
+
+    @timeout_decorator.timeout(5)
+    def test_long_ref_seq(self):
+        ref = str(REFERENCE_GENOME['test_bam_long_ref'].seq)
+        seq = 'TGAGGTCAGGAGTTTGAGACCAGCCTGGACAACATGGTGAAACCCCATCTCTACTAAAAATACAAAAAAATTAGCCAGGCATGGTGGTGGATGCCTGTAAT' \
+            'CGCAGCTACTCAGGAGATCGGAAG'
+        alignment = read_tools.nsb_align(ref, seq, min_consecutive_match=6)
+        self.assertEqual(1, len(alignment))
 
 
 class TestCigarTools(unittest.TestCase):
@@ -418,7 +446,6 @@ class TestHgvsStandardizeCigars(unittest.TestCase):
             [(CIGAR.S, 2), (CIGAR.EQ, 96 + 15), (CIGAR.I, 2), (CIGAR.EQ, 50 - 15)],
             cigar_tools.hgvs_standardize_cigar(read, ref))
 
-
     def test_smallest_nonoverlapping_repeat(self):
         s = 'ATATATATAA'
         self.assertEqual(s, cigar_tools.smallest_nonoverlapping_repeat(s))
@@ -649,5 +676,3 @@ class TestBamStats(unittest.TestCase):
                 bamfh.close()
             except AttributeError:
                 pass
-
-

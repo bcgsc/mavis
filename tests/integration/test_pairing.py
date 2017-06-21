@@ -52,7 +52,6 @@ class TestPairing(unittest.TestCase):
         self.gev2.break1.chr = '2'
         self.assertFalse(equivalent_events(self.gev1, self.gev2, self.TRANSCRIPTS))
 
-
     def test_genome_protocol_diff_orient(self):
         self.gev2.break1.orient = ORIENT.LEFT
         self.gev1.break1.orient = ORIENT.RIGHT
@@ -314,7 +313,6 @@ class TestPairing(unittest.TestCase):
         trans_ev.data[COLUMNS.transcript1] = None
         self.assertTrue(equivalent_events(genome_ev, trans_ev, self.TRANSCRIPTS))
         self.assertTrue(equivalent_events(trans_ev, genome_ev, self.TRANSCRIPTS))
-
 
     def test_mixed_protocol_both_predicted(self):
 

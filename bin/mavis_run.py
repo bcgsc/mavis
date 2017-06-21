@@ -40,7 +40,7 @@ QSUB_HEADER = """#!/bin/bash
 
 def main_pipeline(args, configs):
     # read the config
-    # set up the directory structure and run svmerge
+    # set up the directory structure and run mavis
     annotation_jobs = []
     rand = int(random.random() * math.pow(10, 10))
     for sec in configs:
@@ -56,7 +56,7 @@ def main_pipeline(args, configs):
         merge_args = {}
         merge_args.update(args.__dict__)
         merge_args.update(sec.__dict__)
-        merge_args['output'] = os.path.join(base, 'clustering')
+        merge_args['output'] = cluster_output
         output_files = cluster_main(**merge_args)
 
         if len(output_files) == 0:
@@ -150,6 +150,7 @@ def main_pipeline(args, configs):
         split_call_distance=args.split_call_distance,
         contig_call_distance=args.contig_call_distance,
         flanking_call_distance=args.flanking_call_distance,
+        spanning_call_distance=args.spanning_call_distance,
         max_proximity=args.max_proximity,
         annotations=args.annotations_filename
     )
@@ -158,14 +159,46 @@ def main_pipeline(args, configs):
     temp.append('--inputs {}'.format(os.path.join(args.output, '*/annotation/*/annotations.tab')))
     pairing_args = temp
     qsub = os.path.join(pairing_output, 'qsub.sh')
+    pairing_jobname = 'mavis_pairing_{}'.format(rand)
     with open(qsub, 'w') as fh:
         log('writing:', qsub)
         fh.write(
             QSUB_HEADER.format(
-                queue=args.queue, memory=args.default_memory_gb, name='mavis_pairing', output=pairing_output
+                queue=args.queue, memory=args.default_memory_gb, name=pairing_jobname, output=pairing_output
             ) + '\n')
         fh.write('#$ -hold_jid {}\n'.format(','.join(annotation_jobs)))
         fh.write('{} pairing {}\n'.format(PROGNAME, ' \\\n\t'.join(pairing_args)))
+
+    # set up scripts for the summary held on the pairing job
+    summary_output = mkdirp(os.path.join(args.output, 'summary'))
+    summary_args = dict(
+        output=summary_output,
+        filter_min_remapped_reads=args.filter_min_remapped_reads,
+        filter_min_spanning_reads=args.filter_min_spanning_reads,
+        filter_min_flanking_reads=args.filter_min_flanking_reads,
+        filter_min_flanking_only_reads=args.filter_min_flanking_only_reads,
+        filter_min_split_reads=args.filter_min_split_reads,
+        filter_min_linking_split_reads=args.filter_min_linking_split_reads,
+        flanking_call_distance=args.flanking_call_distance,
+        split_call_distance=args.split_call_distance,
+        contig_call_distance=args.contig_call_distance,
+        spanning_call_distance=args.spanning_call_distance,
+        dgv_annotation=args.dgv_annotation_filename,
+        annotations=args.annotations_filename
+    )
+    temp = ['--{} {}'.format(k, v) for k, v in summary_args.items() if not isinstance(v, str) and v is not None]
+    temp.extend(['--{} "{}"'.format(k, v) for k, v in summary_args.items() if isinstance(v, str) and v is not None])
+    temp.append('--inputs {}'.format(os.path.join(args.output, 'pairing/mavis_paired*.tab')))
+    summary_args = temp
+    qsub = os.path.join(summary_output, 'qsub.sh')
+    with open(qsub, 'w') as fh:
+        log('writing:', qsub)
+        fh.write(
+            QSUB_HEADER.format(
+                queue=args.queue, memory=args.default_memory_gb, name='mavis_summary', output=summary_output
+            ) + '\n')
+        fh.write('#$ -hold_jid {}\n'.format(pairing_jobname))
+        fh.write('{} summary {}\n'.format(PROGNAME, ' \\\n\t'.join(summary_args)))
 
 
 def generate_config(parser, required, optional):
@@ -178,7 +211,8 @@ def generate_config(parser, required, optional):
     # the config sub  program is used for writing pipeline configuration files
     required.add_argument('-w', '--write', help='path to the new configuration file', required=True)
     optional.add_argument(
-        '--library', metavar=('<name>', '(genome|transcriptome)', '</path/to/bam/file>', '<stranded_bam>'), nargs=4,
+        '--library', nargs=5,
+        metavar=('<name>', '(genome|transcriptome)', '<diseased|normal>', '</path/to/bam/file>', '<stranded_bam>'),
         action='append', help='configuration for libraries to be analyzed by mavis', default=[])
     optional.add_argument(
         '--input', help='path to an input file for mavis followed by the library names it should be used for',
@@ -212,18 +246,18 @@ def generate_config(parser, required, optional):
 
     libs = []
     # load the annotations if we need them
-    if any([p == 'transcriptome' for l, p, b, s in args.library]):
+    if any([p == 'transcriptome' for l, p, d, b, s in args.library]):
         log('loading the reference annotations file', args.annotations)
         args.annotations_filename = args.annotations
         args.annotations = load_annotations(args.annotations, best_transcripts_only=args.best_transcripts_only)
 
-    for lib, protocol, bam, stranded in args.library:
+    for lib, protocol, diseased, bam, stranded in args.library:
         if lib not in inputs_by_lib:
             raise KeyError('not input was given for the library', lib)
         log('generating the config section for:', lib)
         l = LibraryConfig.build(
             library=lib, protocol=protocol, bam_file=bam, inputs=inputs_by_lib[lib], stranded_bam=stranded,
-            annotations=args.annotations, log=log if args.verbose else devnull,
+            disease_status=diseased, annotations=args.annotations, log=log if args.verbose else devnull,
             sample_size=args.genome_bins if protocol == PROTOCOL.GENOME else args.transcriptome_bins
         )
         libs.append(l)
@@ -333,7 +367,8 @@ use the -h/--help option
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
             augment_parser(
                 required, optional,
-                ['annotations'] +
+                ['annotations', 'dgv_annotation', 'flanking_call_distance', 'split_call_distance', 'contig_call_distance',
+                 'spanning_call_distance'] +
                 [k for k in vars(SUMMARY_DEFAULTS)]
             )
         else:
@@ -343,7 +378,8 @@ use the -h/--help option
     args.blat_version = get_blat_version()
 
     # set all reference files to their absolute paths to make tracking them down later easier
-    for arg in ['output', 'reference_genome', 'template_metadata', 'annotations', 'masking', 'blat_2bit_reference']:
+    for arg in ['output', 'reference_genome', 'template_metadata', 'annotations', 'masking', 'blat_2bit_reference',
+                'dgv_annotation']:
         try:
             args.__dict__[arg] = os.path.abspath(args.__dict__[arg])
         except (KeyError, TypeError):
@@ -392,8 +428,20 @@ use the -h/--help option
             args.masking_filename = args.masking
             args.masking = load_masking_regions(args.masking)
         else:
-            args.masking_filename = args.maksing
+            args.masking_filename = args.masking
             args.masking = None
+    except AttributeError as err:
+        pass
+
+    # dgv annotation
+    try:
+        if pstep == PIPELINE_STEP.SUMMARY:
+            log('loading:', args.dgv_annotation)
+            args.dgv_annotation_filename = args.dgv_annotation
+            args.dgv_annotation = load_masking_regions(args.dgv_annotation)
+        else:
+            args.dgv_annotation_filename = args.dgv_annotation
+            args.dgv_annotation = None
     except AttributeError as err:
         pass
 

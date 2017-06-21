@@ -22,6 +22,7 @@ BLAT_INPUT = os.path.join(DATA_DIR, 'blat_input.fa')
 BLAT_OUTPUT = os.path.join(DATA_DIR, 'blat_output.pslx')
 
 RUN_FULL = int(os.environ.get('RUN_FULL', 1))
+OUTPUT_SVG = int(os.environ.get('OUTPUT_SVG', 0))
 
 
 class MockRead:
@@ -80,7 +81,7 @@ class MockRead:
             self.query_alignment_sequence = query_sequence[s:t]
         if cigar and query_sequence:
             if len(query_sequence) != sum([f for v, f in cigar if v not in [CIGAR.H, CIGAR.N, CIGAR.D]]):
-                raise AssertionError('length of sequence does not match cigar', len(query_sequence),sum([f for v, f in cigar if v not in [CIGAR.H, CIGAR.N, CIGAR.D]]) )
+                raise AssertionError('length of sequence does not match cigar', len(query_sequence), sum([f for v, f in cigar if v not in [CIGAR.H, CIGAR.N, CIGAR.D]]))
         if template_length is None and reference_end and next_reference_start:
             self.template_length = next_reference_start - reference_end
         else:
@@ -126,10 +127,12 @@ class MockRead:
         return '{}(ref_id={}, start={}, end={})'.format(
             self.__class__.__name__, self.reference_id, self.reference_start, self.reference_end)
 
+
 class MockContig:
     def __init__(self, seq, alignments=None):
-        self.seq=seq,
-        self.alignments=alignments
+        self.seq = seq,
+        self.alignments = alignments
+
 
 class MockBamFileHandle:
     def __init__(self, chrom_to_tid={}):

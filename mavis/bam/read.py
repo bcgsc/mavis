@@ -88,7 +88,12 @@ def calculate_alignment_score(read):
 
 
 def nsb_align(
-        ref, seq, weight_of_score=0.5, min_overlap_percent=1, min_match=0, scoring_function=calculate_alignment_score):
+        ref, seq,
+        weight_of_score=0.5,
+        min_overlap_percent=1,
+        min_match=0,
+        min_consecutive_match=1,
+        scoring_function=calculate_alignment_score):
     """
     given some reference string and a smaller sequence string computes the best non-space-breaking alignment
     i.e. an alignment that does not allow for indels (straight-match). Positions in the aligned segments are
@@ -112,6 +117,7 @@ def nsb_align(
         using a higher min_match may improve performance as low quality alignments are rejected more quickly. However
         this may also result in no match being returned when there is no high quality match to be found.
     """
+    ref = str(ref)
     if len(ref) < 1 or len(seq) < 1:
         raise AttributeError('cannot overlap on an empty sequence')
     if min_match < 0 or min_match > 1:
@@ -126,7 +132,19 @@ def nsb_align(
     best_score = (0, 0)
     results = []
 
-    for ref_start in range(min_overlap - len(seq), len(ref) + len(seq) - min_overlap):
+    putative_start_positions = range(min_overlap - len(seq), len(ref) + len(seq) - min_overlap)
+    if min_consecutive_match > 1:
+        putative_start_positions = set()
+        kmers_checked = {}
+        for i in range(0, len(seq) - min_consecutive_match):
+            current_kmer = seq[i:i + min_consecutive_match]
+            if current_kmer in kmers_checked:
+                putative_start_positions.update([p - i for p in kmers_checked[current_kmer]])
+                continue
+            rp = [m.start() for m in re.finditer(current_kmer, ref)]
+            kmers_checked[current_kmer] = rp
+            putative_start_positions.update([p - i for p in rp])
+    for ref_start in putative_start_positions:
         score = 0
         cigar = []
         mismatches = 0
@@ -286,11 +304,11 @@ def convert_events_to_softclipping(read, orientation, max_event_size, min_anchor
     """
     given an alignment, simplifies the alignment by grouping everything past the first anchor and including the
     first event considered too large and unaligning them turning them into softclipping
-    
+
     """
     if min_anchor_size is None:
         min_anchor_size = max_event_size
-    
+
     if orientation == ORIENT.LEFT:
         event_size = 0
         adjusted_cigar = []
@@ -348,5 +366,3 @@ def convert_events_to_softclipping(read, orientation, max_event_size, min_anchor
     else:
         raise ValueError('orientation must be specified', orientation)
     return read
-
-

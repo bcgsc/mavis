@@ -5,7 +5,8 @@ from ..constants import COLUMNS
 from ..interval import Interval
 from .constants import DEFAULTS
 from ..util import read_inputs, output_tabbed_file, write_bed_file, generate_complete_stamp
-from ..util import build_batch_id, filter_on_overlap, log, mkdirp
+from ..util import filter_on_overlap, log, mkdirp
+import uuid
 
 
 def main(
@@ -30,7 +31,7 @@ def main(
         cluster_radius (int): distance (in breakpoint pairs) used in deciding to join bpps in a cluster
         uninformative_filter (bool): if True then clusters should be filtered out if they are not
           within a specified (max_proximity) distance to any annotation
-        max_proximity (int): the maximum distance away an annotation can be before the uninformative_filter 
+        max_proximity (int): the maximum distance away an annotation can be before the uninformative_filter
           is applied
         annotations (object): see :func:`~mavis.annotate.file_io.load_reference_genes`
         min_clusters_per_file (int): the minimum number of clusters to output to a file
@@ -38,32 +39,67 @@ def main(
     """
 
     # output files
-    cluster_batch_id = build_batch_id(prefix='cluster-')
+    cluster_batch_id = 'batch-' + str(uuid.uuid4())
     UNINFORM_OUTPUT = os.path.join(output, 'uninformative_clusters.txt')
     CLUSTER_ASSIGN_OUTPUT = os.path.join(output, 'cluster_assignment.tab')
     # TODO: CLUSTER_BED_OUTPUT = os.path.join(output, 'clusters.bed')
-    split_file_name_func = lambda x: os.path.join(output, '{}-{}.tab'.format(cluster_batch_id, x))
+
+    def split_file_name_func(x):
+        return os.path.join(output, '{}-{}.tab'.format(cluster_batch_id, x))
     # load the input files
-    all_breakpoint_pairs = read_inputs(
+    breakpoint_pairs = read_inputs(
         inputs,
         cast={COLUMNS.tools: lambda x: set(x.split(';')) if x else set()},
-        add={COLUMNS.library: library, COLUMNS.protocol: protocol},
+        add={COLUMNS.library: library, COLUMNS.protocol: protocol, COLUMNS.tools: ''},
         expand_ns=True, explicit_strand=False
     )
     # ignore other library inputs
     other_libs = set()
     unfiltered_breakpoint_pairs = []
-    for bpp in all_breakpoint_pairs:
+    for bpp in breakpoint_pairs:
+        if bpp.library is None:
+            bpp.library = library
         if bpp.library != library:
             other_libs.add(bpp.library)
         else:
             unfiltered_breakpoint_pairs.append(bpp)
+    breakpoint_pairs = unfiltered_breakpoint_pairs
     if len(other_libs) > 0:
         log('warning: ignoring breakpoints found for other libraries:', sorted([l for l in other_libs]))
 
     # filter by masking file
-    breakpoint_pairs, filtered_bpp = filter_on_overlap(unfiltered_breakpoint_pairs, masking)
-
+    breakpoint_pairs, filtered_bpp = filter_on_overlap(breakpoint_pairs, masking)
+    # filter by informative
+    if uninformative_filter:
+        log('filtering from', len(breakpoint_pairs), 'breakpoint pairs using informative filter')
+        pass_clusters = []
+        uninformative_clusters = []
+        for bpp in breakpoint_pairs:
+            # loop over the annotations
+            overlaps_gene = False
+            window1 = Interval(bpp.break1.start - max_proximity, bpp.break1.end + max_proximity)
+            window2 = Interval(bpp.break2.start - max_proximity, bpp.break2.end + max_proximity)
+            for gene in annotations.get(bpp.break1.chr, []):
+                if Interval.overlaps(gene, window1):
+                    overlaps_gene = True
+                    break
+            for gene in annotations.get(bpp.break2.chr, []):
+                if Interval.overlaps(gene, window2):
+                    overlaps_gene = True
+                    break
+            if overlaps_gene:
+                pass_clusters.append(bpp)
+            else:
+                uninformative_clusters.append(bpp)
+        log(
+            'filtered from', len(breakpoint_pairs),
+            'down to', len(pass_clusters),
+            '(removed {})'.format(len(uninformative_clusters))
+        )
+        breakpoint_pairs = pass_clusters
+        output_tabbed_file(uninformative_clusters, UNINFORM_OUTPUT)
+    else:
+        log('did not apply uninformative filter')
     log('computing clusters')
     clusters = cluster_breakpoint_pairs(breakpoint_pairs, r=cluster_radius, k=cluster_clique_size)
 
@@ -76,7 +112,7 @@ def main(
         c2 = round(len(cluster[1]), -2)
         length_hist[c1] = length_hist.get(c1, 0) + 1
         length_hist[c2] = length_hist.get(c2, 0) + 1
-        cluster.data[COLUMNS.cluster_id] = '{}-{}'.format(cluster_batch_id, index + 1)
+        cluster.data[COLUMNS.cluster_id] = str(uuid.uuid4())
         cluster.data[COLUMNS.cluster_size] = len(input_pairs)
         temp = set()
         for p in input_pairs:
@@ -109,51 +145,24 @@ def main(
     output_files = []
     # filter clusters based on annotations
     # decide on the number of clusters to validate per job
-    pass_clusters = list(clusters)
-    fail_clusters = []
-
-    if uninformative_filter:
-        pass_clusters = []
-        for cluster in clusters:
-            # loop over the annotations
-            overlaps_gene = False
-            w1 = Interval(cluster.break1.start - max_proximity, cluster.break1.end + max_proximity)
-            w2 = Interval(cluster.break2.start - max_proximity, cluster.break2.end + max_proximity)
-            for gene in annotations.get(cluster.break1.chr, []):
-                if Interval.overlaps(gene, w1):
-                    overlaps_gene = True
-                    break
-            for gene in annotations.get(cluster.break2.chr, []):
-                if Interval.overlaps(gene, w2):
-                    overlaps_gene = True
-                    break
-            if overlaps_gene:
-                pass_clusters.append(cluster)
-            else:
-                fail_clusters.append(cluster)
-    if len(fail_clusters) + len(pass_clusters) != len(clusters):
-        raise AssertionError(
-            'totals do not add up', len(fail_clusters), len(pass_clusters), 'does not total to', len(clusters))
-    log('filtered', len(fail_clusters), 'clusters as not informative')
-    output_tabbed_file(fail_clusters, UNINFORM_OUTPUT)
-
+    clusters = list(clusters.keys())
     JOB_SIZE = min_clusters_per_file
-    if len(pass_clusters) // min_clusters_per_file > max_files - 1:
-        JOB_SIZE = int(round(len(pass_clusters) / max_files, 0))
-        assert(len(pass_clusters) // JOB_SIZE <= max_files)
+    if len(clusters) // min_clusters_per_file > max_files - 1:
+        JOB_SIZE = int(round(len(clusters) / max_files, 0))
+        assert(len(clusters) // JOB_SIZE <= max_files)
 
     bedfile = os.path.join(output, 'clusters.bed')
-    write_bed_file(bedfile, itertools.chain.from_iterable([b.get_bed_repesentation() for b in pass_clusters]))
-    job_ranges = list(range(0, len(pass_clusters), JOB_SIZE))
-    if len(job_ranges) == 0 or job_ranges[-1] != len(pass_clusters):
-        job_ranges.append(len(pass_clusters))
+    write_bed_file(bedfile, itertools.chain.from_iterable([b.get_bed_repesentation() for b in clusters]))
+    job_ranges = list(range(0, len(clusters), JOB_SIZE))
+    if len(job_ranges) == 0 or job_ranges[-1] != len(clusters):
+        job_ranges.append(len(clusters))
     job_ranges = zip(job_ranges, job_ranges[1::])
 
     for i, jrange in enumerate(job_ranges):
         # generate an output file
         filename = split_file_name_func(i + 1)
         output_files.append(filename)
-        output_tabbed_file(pass_clusters[jrange[0]:jrange[1]], filename)
-    
+        output_tabbed_file(clusters[jrange[0]:jrange[1]], filename)
+
     generate_complete_stamp(output, log)
     return output_files

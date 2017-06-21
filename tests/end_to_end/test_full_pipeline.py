@@ -45,22 +45,22 @@ def tail(output, count=10):
     not int(os.environ.get('RUN_FULL', 1)),
     'slower tests will not be run unless the environment variable RUN_FULL is given')
 class TestFullPipeline(unittest.TestCase):
-    
+
     def test_mocked(self):
         command = 'python {} pipeline {} -o {}'.format(main_run_script, config, temp_output)
         print(command)
         output = subprocess.check_output(command, shell=True)
         tail(output)
-        
+
         # check that the subdirectories were built
         for lib in[mock_genome + '_' + PROTOCOL.GENOME, mock_trans + '_' + PROTOCOL.TRANS]:
             self.assertTrue(glob_exists(temp_output, lib, 'clustering'))
-            self.assertTrue(glob_exists(temp_output, lib, 'clustering', 'cluster-*-1.tab'))
+            self.assertTrue(glob_exists(temp_output, lib, 'clustering', 'batch-*-1.tab'))
             self.assertTrue(glob_exists(temp_output, lib, 'clustering', 'uninformative_clusters.txt'))
             self.assertTrue(glob_exists(temp_output, lib, 'clustering', 'clusters.bed'))
             self.assertTrue(glob_exists(temp_output, lib, 'clustering', 'cluster_assignment.tab'))
             self.assertTrue(glob_exists(temp_output, lib, 'clustering', '*.COMPLETE'))
-            
+
             # run validation
             self.assertTrue(glob_exists(temp_output, lib, 'validation'))
             qsub = os.path.join(temp_output, lib, 'validation', 'qsub.sh')
@@ -90,7 +90,7 @@ class TestFullPipeline(unittest.TestCase):
             # run annotation
             self.assertTrue(glob_exists(temp_output, lib, 'annotation'))
             qsub = os.path.join(temp_output, lib, 'annotation', 'qsub.sh')
-            self.assertTrue(glob_exists(qsub)) 
+            self.assertTrue(glob_exists(qsub))
             command = 'export SGE_TASK_ID=1; bash {}'.format(qsub)
             print(command)
             output = subprocess.check_output(command, shell=True)
@@ -113,6 +113,18 @@ class TestFullPipeline(unittest.TestCase):
 
         self.assertTrue(glob_exists(temp_output, 'pairing', 'mavis_paired*.tab'))
         self.assertTrue(glob_exists(temp_output, 'pairing', '*.COMPLETE'))
+
+        # now run the summary
+        self.assertTrue(glob_exists(temp_output, 'summary'))
+        qsub = os.path.join(temp_output, 'summary', 'qsub.sh')
+        self.assertTrue(glob_exists(qsub))
+        command = 'export SGE_TASK_ID=1; bash {}'.format(qsub)
+        print(command)
+        output = subprocess.check_output(command, shell=True)
+        tail(output)
+
+        self.assertTrue(glob_exists(temp_output, 'summary', 'mavis_summary*.tab'))
+        self.assertTrue(glob_exists(temp_output, 'summary', '*.COMPLETE'))
 
 
 def tearDownModule():

@@ -5,6 +5,7 @@ from .error import *
 class Interval:
     """
     """
+
     def __init__(self, start, end=None, freq=1, number_type=None):
         """
         Args:
@@ -17,7 +18,7 @@ class Interval:
 
         if number_type is None:
             if int(self.start) != float(self.start) or int(self.end) != float(self.end) \
-                    or type(self.start) == float or type(self.end) == float:
+                    or isinstance(self.start, float) or isinstance(self.end, float):
                 number_type = float
             else:
                 number_type = int
@@ -54,7 +55,6 @@ class Interval:
                 return [Interval(self[0], other[0] - 1), Interval(other[1] + 1, self[1])]
         else:
             return [Interval(self[0], self[1])]
-
 
     def __and__(self, other):  # intersection
         """the intersection of two intervals
@@ -181,8 +181,12 @@ class Interval:
         return True
 
     def __contains__(self, other):
-        if other[0] >= self[0] and other[1] <= self[1]:
-            return True
+        try:
+            if other[0] >= self[0] and other[1] <= self[1]:
+                return True
+        except TypeError:
+            if other >= self[0] and other <= self[1]:
+                return True
         return False
 
     @classmethod
@@ -211,7 +215,7 @@ class Interval:
     # def weighted_mean_ci(cls, *intervals):
     #     """
     #     Calculates the weighted mean of a set of intervals. The weighting is inversely proportional to
-    #     the size of the input interval. The length of the final interval is the weight mean length of 
+    #     the size of the input interval. The length of the final interval is the weight mean length of
     #     the input intervals also weighted by length
 
     #     Args:
@@ -348,7 +352,7 @@ class Interval:
         i, previous_flag = Interval.position_in_range(
             input_intervals, (pos, pos))  # get the input position
         if i == len(input_intervals) or previous_flag:
-                raise IndexError(pos, 'is outside mapped range', mapping)
+            raise IndexError(pos, 'is outside mapped range', mapping)
         else:
             # fell into a mapped region
             curr = input_intervals[i]
@@ -419,3 +423,112 @@ class Interval:
             else:
                 new_intervals.append(Interval(i[0], i[1]))
         return new_intervals
+
+    @classmethod
+    def split_overlap(cls, *intervals, weight_mapping={}):
+        """
+        for a given set of intervals splits any overlap so that the result is a new list of
+        intervals with a single bp overlap
+
+        Warning:
+            this method is meant for integer intervals only
+        """
+        intervals = sorted(intervals)
+        split_intervals = {}
+        set_start = 0
+        while set_start < len(intervals):
+            merge_itvl = intervals[set_start]
+            breaks = {intervals[set_start].start, intervals[set_start].end}
+            set_end = set_start
+            for j in range(set_start + 1, len(intervals)):
+                if Interval.overlaps(intervals[j], merge_itvl):
+                    merge_itvl = merge_itvl | intervals[j]
+                    breaks.add(intervals[j].start)
+                    breaks.add(intervals[j].end)
+                    set_end = j
+                else:
+                    break
+            breaks = sorted(breaks)
+            new_intervals = [Interval(x[0], x[1] - 1) for x in zip(breaks[0:], breaks[1:])]
+            new_intervals[-1] = Interval(breaks[-2], breaks[-1])
+            if not weight_mapping:
+                split_intervals.update({Interval(*x): None for x in new_intervals})
+            elif set_start == set_end:
+                split_intervals[merge_itvl] = weight_mapping[merge_itvl]
+            else:
+                for itvl in new_intervals:
+                    weight = 0
+                    for input_itvl in intervals[set_start:set_end + 1]:
+                        intersection = input_itvl & itvl
+                        if intersection:
+                            l = (len(intersection) / len(input_itvl)) * weight_mapping[input_itvl]
+                            weight = max([l, weight])
+                    split_intervals[itvl] = int(round(weight, 0))
+            set_start = set_end + 1
+        return split_intervals
+
+
+class IntervalMapping:
+    """
+    mapping between coordinate systems using intervals.
+    source intervals cannot overlap but no such assertion is enforced on the target intervals
+    """
+
+    def __init__(self, mapping=None, opposing=None):
+        if mapping is None:
+            mapping = dict()
+        if opposing is None:
+            opposing = []
+        self.mapping = {Interval(k[0], k[1]): Interval(v[0], v[1]) for k, v in mapping.items()}
+        self.opposing_directions = {Interval(k[0], k[1]): True for k in opposing}
+        for i in self.opposing_directions:
+            if i not in self.mapping:
+                raise ValueError('cannot defined an opposing direction for an interval that in not mapped', i)
+        for i in self.mapping:
+            self.opposing_directions.setdefault(i, False)
+
+    def add(self, src_interval, tgt_interval, opposing_directions=True):
+        src_interval = Interval(src_interval[0], src_interval[1])
+        tgt_interval = Interval(tgt_interval[0], tgt_interval[1])
+        for curr in self.mapping:
+            if Interval.overlaps(curr, src_interval):
+                raise ValueError('source intervals in mapping must not overlap')
+        self.mapping[src_interval] = tgt_interval
+        self.opposing_directions[src_interval] = opposing_directions
+
+    def convert_pos(self, pos, simplify=True):
+        """ convert any given position given a mapping of intervals to another range
+
+        Args:
+            pos (int): a position in the first coordinate system
+
+        Returns:
+            the position in the alternate coordinate system given the input mapping
+            - int: if simplify is True
+            - Interval: if simplify is False
+
+        Raises:
+            IndexError: if the input position is not in any of the mapped intervals
+
+        Example:
+            >>> mapping = IntervalMapping(mapping={(1, 10): (101, 110), (11, 20): (555, 564)})
+            >>> mapping.convert_pos(5)
+            5
+            >>> mapping.convert_pos(15)
+            559
+        """
+        for src_interval, tgt_interval in self.mapping.items():
+            if pos in src_interval:
+                forward_to_reverse = self.opposing_directions[src_interval]
+                # minus 1 because we start at the start pos
+                result = tgt_interval.start
+                if src_interval.length() > 0:
+                    ratio = tgt_interval.length() / src_interval.length()
+                    shift = (pos - src_interval.start) * ratio
+                    shift = (pos - src_interval.start) * ratio
+                    result = tgt_interval[1] - shift if forward_to_reverse else tgt_interval[0] + shift
+                elif tgt_interval.length() > 0:
+                    shift = tgt_interval.length() / 2
+                    result = tgt_interval[1] - shift if forward_to_reverse else tgt_interval[0] + shift
+                return int(round(result, 0)) if simplify else result
+        raise IndexError(pos, 'position not found in mapping', self.mapping.keys())

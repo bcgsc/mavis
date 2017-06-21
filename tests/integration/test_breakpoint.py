@@ -1,7 +1,6 @@
 import unittest
 from mavis.constants import CIGAR, ORIENT, STRAND, reverse_complement
 from mavis.breakpoint import BreakpointPair, Breakpoint
-#from mavis.error import *
 from mavis.annotate import load_reference_genome
 from . import MockRead
 from . import REFERENCE_GENOME_FILE
@@ -15,6 +14,7 @@ def setUpModule():
     REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
     if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME[REF_CHR].seq[0:50].upper():
         raise AssertionError('fake genome file does not have the expected contents')
+
 
 class TestCallBreakpointPair(unittest.TestCase):
 

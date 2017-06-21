@@ -12,9 +12,8 @@ import warnings
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, STRAND, PROTOCOL
 from mavis.error import InvalidRearrangement
-from mavis.util import get_version
+from mavis import __version__
 
-__version__ = get_version()
 __prog__ = os.path.basename(os.path.realpath(__file__))
 
 TSV._verbose = True
@@ -39,7 +38,7 @@ def main():
     required.add_argument('-n', '--input', help='path to the input file to be converted', required=True)
     required.add_argument('-o', '--output', help='path to the output file', required=True)
     required.add_argument('-p', '--protocol', choices=[PROTOCOL.GENOME, PROTOCOL.TRANS], required=True)
-    required.add_argument('-l', '--library', required=True,
+    required.add_argument('-l', '--library', default=None,
                           help="the library id of that was used as input")
 
     optional = parser.add_argument_group('Optional arguments')
@@ -131,7 +130,7 @@ def main():
             chr1, chr2 = (row['chr1'], row['chr2'])
             event_type = SVTYPES[row['rearrangement']]
 
-        if not args.no_filter and ("GL" in chr1+chr2 or 'M' in chr1+chr2):
+        if not args.no_filter and ("GL" in chr1 + chr2 or 'M' in chr1 + chr2):
             filter_count += 1
             continue
 
@@ -180,7 +179,7 @@ def main():
         fh.write('## file generated on {0}\n'.format(time.strftime('%B %d, %Y')))
         fh.write('#' + '\t'.join([str(c) for c in header]) + '\n')
         for row in rows:
-            fh.write('\t'.join([row[c] for c in header]) + '\n')
+            fh.write('\t'.join([str(row[c]) for c in header]) + '\n')
         print("Wrote {0} gene {1} events to {2}".format(len(rows), file_type, args.output))
 
 if __name__ == '__main__':

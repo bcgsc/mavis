@@ -3,7 +3,8 @@ from .base import BioInterval
 from ..constants import translate, START_AA, STOP_AA, CODON_SIZE
 import itertools
 from ..error import NotSpecifiedError
-import operator, functools
+import operator
+import functools
 
 
 def calculate_ORF(spliced_cdna_sequence, min_orf_size=None):
@@ -61,6 +62,7 @@ class DomainRegion(BioInterval):
 class Domain:
     """
     """
+
     def __init__(self, name, regions, translation=None, data=None):
         """
         Args:
@@ -188,7 +190,7 @@ class Domain:
         dr_by_seq = {s: d for s, d in zip(seq_list, self.regions)}
         seq_list = sorted(seq_list, key=lambda x: dr_by_seq[x].start)
         total = sum([len(s) for s in seq_list])
-        
+
         if total > len(input_sequence):
             raise UserWarning('could not map the sequences to the input')
 
@@ -212,7 +214,7 @@ class Domain:
             temp = max([s for i, s in results[seq]])
             curr = [(i, s) for i, s in results[seq] if s == temp]
             best.append(curr)
-        
+
         # only keep valid combinations
         combinations = []
         for opt in best[0]:
@@ -224,7 +226,7 @@ class Domain:
                     if b[0][0] > curr[-1][0][1]:
                         new_combos.append(curr + [b])
             combinations = new_combos
-        
+
         # compute cumulative scores for the final valid combinations
         for i, combo in enumerate(combinations):
             score = sum([s for i, s in combo])

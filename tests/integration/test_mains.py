@@ -44,11 +44,11 @@ class TestPipeline(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.output)
-    
+
     @unittest.skipIf(not shutil.which('blat'), "missing the blat command")
     def test_mains(self):
         # test the clustering
-        cluster_files =cluster_main(
+        cluster_files = cluster_main(
             [FULL_BASE_EVENTS], self.output, False, 'mock-A36971', 'genome',
             masking=masking, cluster_clique_size=15, cluster_radius=20,
             uninformative_filter=True, max_proximity=5000,
@@ -66,9 +66,9 @@ class TestPipeline(unittest.TestCase):
         )
         prefix = re.sub('\.tab$', '', cluster_files[0])
         for suffix in [
-            '.validation-passed.tab', 
-            '.validation-failed.tab', 
-            '.raw_evidence.bam', 
+            '.validation-passed.tab',
+            '.validation-failed.tab',
+            '.raw_evidence.bam',
             '.raw_evidence.sorted.bam',
             '.raw_evidence.sorted.bam.bai',
             '.contigs.sorted.bam',
@@ -77,7 +77,7 @@ class TestPipeline(unittest.TestCase):
             '.igv.batch'
         ]:
             self.assertTrue(os.path.exists(prefix + suffix))
-        
+
         # test the annotation
         annotate_main(
             [prefix + '.validation-passed.tab'], self.output,
@@ -90,4 +90,3 @@ class TestPipeline(unittest.TestCase):
         self.assertTrue(os.path.exists(drawings_dir))
         self.assertLessEqual(1, len(glob.glob(os.path.join(drawings_dir, '*.svg'))))
         self.assertLessEqual(1, len(glob.glob(os.path.join(drawings_dir, '*.legend.json'))))
-

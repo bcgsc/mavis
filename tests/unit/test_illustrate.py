@@ -4,11 +4,11 @@ from mavis.interval import Interval
 
 
 class TestGenerateIntervalMapping(unittest.TestCase):
-    
+
     def test_single_bp_window(self):
         regions = [Interval(4222347, 4222347), Interval(4221673, 4221903), Interval(2792992, 4852494)]
         target = 911.9921875
-        ratio = 5 
+        ratio = 5
         min_width = 60
         buffer_ = None
         start = 2791992

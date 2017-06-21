@@ -29,14 +29,13 @@ Install the MAVIS python package (currently need to use pip as well due to depen
 
 .. code-block:: bash
     
-    (venv) >>> pip install -r requirements.txt
     (venv) >>> python setup.py develop
 
 Run the unit tests and compute code coverage
 
 .. code-block:: bash
     
-    (venv) >>> nosetests --with-coverage --cover-html --cover-html-dir=coverage --cover-package=mavis --cover-erase
+    (venv) >>> python setup.py nosetests 
 
 Make the user manual
 

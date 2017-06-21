@@ -317,7 +317,7 @@ def smallest_nonoverlapping_repeat(s):
     """
     for repsize in range(1, len(s) + 1):
         if len(s) % repsize == 0:
-            substrings = [s[i:i + repsize] for i in range(0, len(s), repsize)]
+            substrings = [str(s[i:i + repsize]) for i in range(0, len(s), repsize)]
             if len(set(substrings)) == 1:
                 return substrings[0]
     return s
@@ -364,7 +364,7 @@ def hgvs_standardize_cigar(read, reference_seq):
             new_cigar.append((CIGAR.D, cigar[i][1]))
         else:
             new_cigar.append(cigar[i])
-    
+
     new_cigar = merge_indels(new_cigar)
     # now we need to extend any insertions
     rpos = read.reference_start
@@ -423,9 +423,9 @@ def hgvs_standardize_cigar(read, reference_seq):
 def merge_internal_events(cigar, inner_anchor=10, outer_anchor=10):
     """
     merges events (insertions, deletions, mismatches) within a cigar if they are
-    between exact matches on either side (anchors) and separated by less exact 
+    between exact matches on either side (anchors) and separated by less exact
     matches than the given parameter
-    
+
     Args:
         cigar (list): a list of tuples of cigar states and counts
         inner_anchor (int): minimum number of consecutive exact matches separating events
@@ -448,11 +448,11 @@ def merge_internal_events(cigar, inner_anchor=10, outer_anchor=10):
 
     if len(exact_match_pos) < 2:
         return read_cigar
-    
+
     exact_match_pos = sorted(exact_match_pos, key=lambda x: (x[1] * -1, x[0]))
     ppos = exact_match_pos[0][0]
     prefix = read_cigar[0: ppos + 1]
-    
+
     exact_match_pos = sorted(exact_match_pos, key=lambda x: (x[1] * -1, x[0] * -1))
     spos = exact_match_pos[0][0] if exact_match_pos[0][0] != ppos else exact_match_pos[1][0]
     suffix = read_cigar[spos:None]

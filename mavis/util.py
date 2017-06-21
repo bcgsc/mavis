@@ -7,7 +7,6 @@ from .breakpoint import read_bpp_from_input_file
 from .constants import PROTOCOL, COLUMNS, sort_columns
 from .interval import Interval
 from argparse import Namespace
-import subprocess
 from TSV.TSV import EmptyFileError
 
 
@@ -26,20 +25,6 @@ class MavisNamespace(Namespace):
 
     def __getitem__(self, key):
         return getattr(self, key)
-
-
-def get_version():
-    v = subprocess.check_output('cd {}; git describe'.format(os.path.dirname(__file__)), shell=True)
-    v = v.decode('UTF8')
-    v = v.strip()
-    return v
-
-
-def build_batch_id(prefix='', suffix='', size=6):
-    date = datetime.now()
-    m = int(math.pow(10, size) - 1)
-    return '{prefix}batch{date.year}{date.month:02d}{date.day:02d}r{r:06d}{suffix}'.format(
-        prefix=prefix, suffix=suffix, date=date, r=random.randint(1, m))
 
 
 def log(*pos, time_stamp=True):
@@ -66,7 +51,7 @@ def mkdirp(dirname):
 
 
 def filter_on_overlap(bpps, regions_by_reference_name):
-    log('filtering', len(bpps), 'on overlaps with regions')
+    log('filtering from', len(bpps), 'using overlaps with regions filter')
     failed = []
     passed = []
     for bpp in bpps:
@@ -74,7 +59,7 @@ def filter_on_overlap(bpps, regions_by_reference_name):
         for r in regions_by_reference_name.get(bpp.break1.chr, []):
             if Interval.overlaps(r, bpp.break1):
                 overlaps = True
-                bpp.data['failure_comment'] = 'overlapped masked region: ' + str(r)
+                bpp.data[COLUMNS.filter_comment] = 'overlapped masked region: ' + str(r)
                 break
         for r in regions_by_reference_name.get(bpp.break2.chr, []):
             if overlaps:
@@ -86,7 +71,7 @@ def filter_on_overlap(bpps, regions_by_reference_name):
             failed.append(bpp)
         else:
             passed.append(bpp)
-    log('filtered', len(bpps), 'to', len(passed))
+    log('filtered from', len(bpps), 'down to', len(passed), '(removed {})'.format(len(failed)))
     return passed, failed
 
 

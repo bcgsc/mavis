@@ -1,5 +1,6 @@
-from mavis.interval import Interval
+from mavis.interval import Interval, IntervalMapping
 import unittest
+
 
 class TestInterval(unittest.TestCase):
 
@@ -14,6 +15,8 @@ class TestInterval(unittest.TestCase):
         self.assertFalse(Interval(1, 7) in Interval(1, 2))
         self.assertTrue(Interval(1.0, 2) in Interval(1.0, 7))
         self.assertFalse(Interval(1, 7) in Interval(1, 2))
+        self.assertTrue(1 in Interval(1, 7))
+        self.assertFalse(0 in Interval(1, 7))
 
     def test_eq(self):
         self.assertEqual(Interval(1, 2), Interval(1, 2))
@@ -153,7 +156,6 @@ class TestInterval(unittest.TestCase):
         with self.assertRaises(IndexError):
             Interval.convert_pos(mapping, 31)
 
-
     def test_convert_pos_input_errors(self):
         # test input errors
         with self.assertRaises(AttributeError):  # unequal length
@@ -178,13 +180,17 @@ class TestInterval(unittest.TestCase):
         for pos in range(1, 101):
             self.assertEqual(pos, Interval.convert_pos(mapping, pos))
 
-
     def test_convert_pos_ratioed_intervals(self):
-        mapping = {(1.0, 100): (1, 20.0), (101.0, 500): (21.0, 30), (501.0, 600): (31.0, 51), (601.0, 900): (52, 57.0), (901.0, 1100): (58.0, 100)}
+        mapping = {
+            (1.0, 100): (1, 20.0),
+            (101.0, 500): (21.0, 30),
+            (501.0, 600): (31.0, 51),
+            (601.0, 900): (52, 57.0),
+            (901.0, 1100): (58.0, 100)
+        }
         self.assertEqual(Interval(1), Interval.convert_ratioed_pos(mapping, 1))
         self.assertEqual(Interval(20), Interval.convert_ratioed_pos(mapping, 100))
         self.assertEqual(Interval(100, 100), Interval.convert_ratioed_pos(mapping, 1100))
-        #self.assertEqual(Interval(10, 10), Interval.convert_ratioed_pos(mapping, 50))
 
         mapping = {(1, 100): (1, 1), (101, 500): (21, 30)}
         self.assertEqual(Interval(1, 1), Interval.convert_ratioed_pos(mapping, 1))
@@ -235,3 +241,126 @@ class TestInterval(unittest.TestCase):
         r = Interval.min_nonoverlapping((1, 2), (2, 4))
         self.assertEqual([Interval(1, 4)], r)
         self.assertEqual([], Interval.min_nonoverlapping())
+
+    def test_split_overlapping_no_weight(self):
+        input_intervals = [
+            Interval(1, 10),
+            Interval(2, 11),
+            Interval(4, 5),
+            Interval(4, 8)
+        ]
+        exp = [
+            Interval(1, 1),
+            Interval(2, 3),
+            Interval(4, 4),
+            Interval(5, 7),
+            Interval(8, 9),
+            Interval(10, 11)
+        ]
+        print('expected', exp)
+        result = Interval.split_overlap(*input_intervals)
+        result = sorted(result)
+        print('found', result)
+        self.assertEqual(exp, result)
+
+    def test_split_overlapping_weighted(self):
+        input_intervals = [
+            Interval(1, 10),
+            Interval(2, 11),
+            Interval(4, 5),
+            Interval(4, 8)
+        ]
+        weights = {
+            Interval(1, 10): 10,
+            Interval(2, 11): 20,
+            Interval(4, 5): 10,
+            Interval(4, 8): 10
+        }
+        exp = {
+            Interval(1, 1): 1,
+            Interval(2, 3): 4,
+            Interval(4, 4): 5,
+            Interval(5, 7): 6,
+            Interval(8, 9): 4,
+            Interval(10, 11): 4
+        }
+        result = Interval.split_overlap(*input_intervals, weight_mapping=weights)
+        self.assertEqual(sorted(exp), sorted(result))
+        for itvl in exp:
+            self.assertEqual(exp[itvl], result[itvl])
+
+
+class TestIntervalMapping(unittest.TestCase):
+
+    def test_convert_pos_ratioed(self):
+        mapping = IntervalMapping({
+            (1.0, 100): (1, 20.0),
+            (101.0, 500): (21.0, 30),
+            (501.0, 600): (31.0, 51),
+            (601.0, 900): (52, 57.0),
+            (901.0, 1100): (58.0, 100)
+        })
+        self.assertEqual(1, mapping.convert_pos(1))
+        self.assertEqual(1, mapping.convert_pos(1, simplify=False))
+        self.assertEqual(20, mapping.convert_pos(100))
+        self.assertEqual(20, mapping.convert_pos(100, simplify=False))
+        self.assertEqual(100, mapping.convert_pos(1100))
+        self.assertEqual(100, mapping.convert_pos(1100, simplify=False))
+
+        mapping = IntervalMapping({(1, 100): (1, 1.0), (101, 500): (21.0, 30)})
+        self.assertEqual(1, mapping.convert_pos(1))
+        self.assertEqual(1, mapping.convert_pos(100))
+
+        mapping = IntervalMapping({(1, 100.0): (20.0, 30), (100.1, 500): (1.0, 1.0)})
+        self.assertEqual(1, mapping.convert_pos(101))
+        self.assertEqual(1, mapping.convert_pos(500))
+        self.assertEqual(25, mapping.convert_pos(50))
+
+    def test_convert_pos(self):
+        mapping = IntervalMapping({(1, 10): (101, 110), (21, 30): (201, 210), (41, 50): (301, 310)})
+
+        self.assertEqual(105, mapping.convert_pos(5))
+        self.assertEqual(101, mapping.convert_pos(1))
+        self.assertEqual(310, mapping.convert_pos(50))
+
+        with self.assertRaises(IndexError):
+            mapping.convert_pos(15)
+
+        with self.assertRaises(IndexError):
+            mapping.convert_pos(0)
+
+        with self.assertRaises(IndexError):
+            mapping.convert_pos(80)
+
+    def test_convert_pos_forward_to_reverse(self):
+        mapping = IntervalMapping(
+            {(41, 50): (101, 110), (21, 30): (201, 210), (1, 10): (301, 310)},
+            opposing=[(41, 50), (21, 30), (1, 10)]
+        )
+
+        self.assertEqual(306, mapping.convert_pos(5))
+        self.assertEqual(110, mapping.convert_pos(41))
+        self.assertEqual(210, mapping.convert_pos(21))
+        self.assertEqual(310, mapping.convert_pos(1))
+        self.assertEqual(309, mapping.convert_pos(2))
+
+        with self.assertRaises(IndexError):
+            mapping.convert_pos(15)
+
+        with self.assertRaises(IndexError):
+            mapping.convert_pos(51)
+
+        with self.assertRaises(IndexError):
+            mapping.convert_pos(0)
+
+        with self.assertRaises(IndexError):
+            mapping.convert_pos(31)
+
+    def test_convert_pos_one_to_one(self):
+        mapping = {}
+        for x in range(0, 10):
+            s = x * 10 + 1
+            mapping[Interval(s, s + 9)] = Interval(s, s + 9)
+        mapping = IntervalMapping(mapping)
+        for pos in range(1, 101):
+            self.assertEqual(pos, mapping.convert_pos(pos))

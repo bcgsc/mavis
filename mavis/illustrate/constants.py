@@ -12,12 +12,15 @@ DEFAULTS = MavisNamespace(
     label_color='#000000',
     domain_color='#ccccb3',
     domain_mismatch_color='#b2182b',
+    novel_exon_color='#000000',
     splice_color='#000000',
     breakpoint_color='#000000',
     mask_fill='#ffffff',
     mask_opacity=0.7,
     domain_name_regex_filter='.*',
-    domain_scaffold_color='#000000'
+    domain_scaffold_color='#000000',
+    max_drawing_retries=3,
+    drawing_width_iter_increase=500
 )
 
 
@@ -67,8 +70,9 @@ class DiagramSettings:
         self.domain_label_font_size = 20
         self.domain_fill_gradient = [
             c.hex for c in Color(self.domain_mismatch_color).range_to(Color(self.domain_color), 10)]
-        self.pfam_domain = '^PF\d+$'
-        self.pfam_link = 'http://pfam.xfam.org/family/{.name}'
+        self.domain_links = {
+            '^PF\d+$': 'http://pfam.xfam.org/family/{.name}'
+        }
 
         self.splice_height = self.track_height / 2
         self.splice_stroke_dasharray = [2, 2]

@@ -10,9 +10,10 @@ from .util import devnull
 class Contig:
     """
     """
+
     def __init__(self, sequence, score):
         self.seq = sequence
-        self.remapped_sequences = {}
+        self.remapped_sequences = {}  # alignment score contribution on the contig by read
         self.score = score
         self.alignments = []
         self.input_reads = set()
@@ -22,11 +23,7 @@ class Contig:
         return hash(self.seq)
 
     def add_mapped_sequence(self, read, multimap=1):
-        rc = reverse_complement(read)
-        if rc in self.remapped_sequences:
-            self.remapped_sequences[rc] = min(self.remapped_sequences.get(rc, 1), 1 / multimap)
-        else:
-            self.remapped_sequences[read] = min(self.remapped_sequences.get(read, 1), 1 / multimap)
+        self.remapped_sequences[read] = 1 / multimap
 
     def remap_score(self):
         return sum(self.remapped_sequences.values())
@@ -37,6 +34,7 @@ class DeBruijnGraph(nx.DiGraph):
     wrapper for a basic digraph
     enforces edge weights
     """
+
     def get_edge_freq(self, n1, n2):
         """
         returns the freq from the data attribute for a specified edge
@@ -89,6 +87,19 @@ class DeBruijnGraph(nx.DiGraph):
                 continue
             if self.degree(n) == 0:
                 self.remove_node(n)
+
+    def trim_forks_by_freq(self, min_weight):
+        """
+        for all nodes in the graph, if the node has an out-degree > 1 and one of the outgoing
+        edges has freq < min_weight. then that outgoing edge is deleted
+        """
+        nodes = list(self.nodes())
+        for node in nodes:
+            outgoing_edges = self.out_edges(node, data=True)
+            if len(outgoing_edges) > 1:
+                for src, tgt, data in outgoing_edges:
+                    if data['freq'] < min_weight:
+                        self.remove_edge(src, tgt)
 
     def trim_noncutting_paths_by_freq(self, min_weight):
         """
@@ -212,21 +223,15 @@ def pull_contigs_from_component(
         # simple paths
         component = unresolved_components.pop(0)
         paths_est = len(assembly.get_sinks(component)) * len(assembly.get_sources(component))
-        # if the assembly has too many sinks/sources we'll need to clean it
-        # we can do this by removing all current sources/sinks
-        all_paths = []
-        if paths_est <= assembly_max_paths:
-            for source, sink in itertools.product(assembly.get_sources(component), assembly.get_sinks(component)):
-                all_paths.extend(list(nx.all_simple_paths(assembly, source, sink)))
-                if len(all_paths) > assembly_max_paths:
-                    break
-        paths_est = max([paths_est, len(all_paths)])
 
         if paths_est > assembly_max_paths:
+            min_edge_weight = min([e[2]['freq'] for e in assembly.edges(
+                assembly.get_sources(component) | assembly.get_sinks(component), data=True)])
+            w = max([w + 1, min_edge_weight])
             log(
                 'reducing estimated paths. Current estimate is {}+ from'.format(paths_est),
-                len(component), 'nodes', 'filter increase', w + 1, time_stamp=False)
-            w += 1
+                len(component), 'nodes', 'filter increase', w)
+            assembly.trim_forks_by_freq(w)
             assembly.trim_noncutting_paths_by_freq(w)
             assembly.trim_tails_by_freq(w)
 
@@ -322,6 +327,7 @@ def assemble(
                 assembly.remove_node(node)
 
     # initial data cleaning
+    assembly.trim_forks_by_freq(assembly_min_nc_edge_weight)
     assembly.trim_noncutting_paths_by_freq(assembly_min_nc_edge_weight)
     assembly.trim_tails_by_freq(assembly_min_nc_edge_weight)
 
@@ -351,25 +357,17 @@ def assemble(
 
     contigs = list(filtered_contigs.values())
 
-    input_seq_kmers = {}
-    for seq in sequences:
-        input_seq_kmers[seq] = set(kmers(seq, assembly_min_exact_match_to_remap))
-    contig_kmers = {}
-    for contig in contigs:
-        contig_kmers[contig.seq] = set(kmers(contig.seq, assembly_min_exact_match_to_remap))
-
     log('remapping reads to {} contigs'.format(len(contigs)))
 
     for input_seq in sequences:
         maps_to = {}  # contig, score
         for contig in contigs:
-            if len(input_seq_kmers[input_seq] & contig_kmers[contig.seq]) == 0:
-                continue
             a = nsb_align(
                 contig.seq,
                 input_seq,
                 min_overlap_percent=assembly_min_read_mapping_overlap / len(contig.seq),
-                min_match=assembly_min_match_quality
+                min_match=assembly_min_match_quality,
+                min_consecutive_match=assembly_min_exact_match_to_remap
             )
             if len(a) != 1:
                 continue
@@ -389,7 +387,7 @@ def assemble(
             assert(len(best_alignments) >= 1)
             for contig, read in best_alignments:
                 contig.add_mapped_sequence(read, len(best_alignments))
-    log('assemblies complete. scores (build, remap):', [(c.score, c.remap_score()) for c in contigs])
+    log('assemblies complete. scores (build, remap):', [(c.score, round(c.remap_score(), 1)) for c in contigs])
     return contigs
 
 

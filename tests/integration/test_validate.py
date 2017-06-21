@@ -7,7 +7,6 @@ import unittest
 from . import REFERENCE_GENOME_FILE, BAM_INPUT, FULL_BAM_INPUT, RUN_FULL
 import os
 import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from mavis.validate.evidence import GenomeEvidence
 
 REFERENCE_GENOME = None

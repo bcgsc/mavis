@@ -5,7 +5,7 @@ from .mock import Mock
 
 
 class CallIntervalByFlankingCoverage(unittest.TestCase):
-    
+
     def test_invalid_input_attr(self):
         pass
 

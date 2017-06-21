@@ -21,12 +21,11 @@ are below
 
 Install the MAVIS python package (currently need to use pip as well due to dependencies stored in svn)
 
-    (venv) >>> pip install -r requirements.txt
     (venv) >>> python setup.py develop
 
-Run the unit tests and compute code coverage
+Run the unit tests and compute code coverage. This will output html into ./coverage
 
-    (venv) >>> nosetests --with-coverage --cover-html --cover-html-dir=coverage --cover-package=mavis --cover-erase
+    (venv) >>> python setup.py nosetests 
 
 Make the user manual
 

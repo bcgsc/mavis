@@ -1,8 +1,49 @@
 from ..annotate.variant import determine_prime
 from ..interval import Interval
-from ..constants import STRAND, PRIME, CALL_METHOD, COLUMNS, ORIENT, PROTOCOL
+from ..constants import STRAND, PRIME, CALL_METHOD, COLUMNS, ORIENT, PROTOCOL, DISEASE_STATUS
 from ..error import NotSpecifiedError
 from ..breakpoint import Breakpoint
+from .constants import PAIRING_STATE
+
+
+def get_pairing_state(current_protocol, current_disease_state, other_protocol, other_disease_state, is_matched=False):
+    """
+    given two libraries, returns the appropriate descriptor for their matched state
+
+    Args:
+        current_protocol (PROTOCOL): the protocol of the current library
+        current_disease_state (DISEASE_STATUS): the disease status of the current library
+        other_protocol (PROTOCOL): protocol of the library being comparing to
+        other_disease_state (DISEASE_STATUS): disease status of the library being compared to
+        is_matched (bool): True if the libraries are paired
+
+    Returns:
+        (PAIRING_STATE): descriptor of the pairing of the two libraries
+    """
+    PROTOCOL.enforce(current_protocol)
+    PROTOCOL.enforce(other_protocol)
+    DISEASE_STATUS.enforce(current_disease_state)
+    DISEASE_STATUS.enforce(other_disease_state)
+
+    curr = (current_protocol, current_disease_state)
+    other = (other_protocol, other_disease_state)
+
+    DG = (PROTOCOL.GENOME, DISEASE_STATUS.DISEASED)
+    DT = (PROTOCOL.TRANS, DISEASE_STATUS.DISEASED)
+    NG = (PROTOCOL.GENOME, DISEASE_STATUS.NORMAL)
+
+    if curr == DG and other == NG:
+        return PAIRING_STATE.GERMLINE if is_matched else PAIRING_STATE.SOMATIC
+    elif curr == DG and other == DT:
+        return PAIRING_STATE.EXP if is_matched else PAIRING_STATE.NO_EXP
+    elif curr == DT and other == DG:
+        return PAIRING_STATE.GENOMIC if is_matched else PAIRING_STATE.NO_GENOMIC
+    elif curr == DT and other == NG:
+        return PAIRING_STATE.GERMLINE if is_matched else PAIRING_STATE.SOMATIC
+    elif curr == NG and other == DT:
+        return PAIRING_STATE.EXP if is_matched else PAIRING_STATE.NO_EXP
+    else:
+        return PAIRING_STATE.MATCH if is_matched else PAIRING_STATE.NO_MATCH
 
 
 def predict_transcriptome_breakpoint(breakpoint, transcript):

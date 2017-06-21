@@ -63,6 +63,7 @@ class IntergenicRegion(BioInterval):
 class Gene(BioInterval):
     """
     """
+
     def __init__(self, chr, start, end, name=None, strand=STRAND.NS, aliases=None, seq=None):
         """
         Args:
@@ -80,6 +81,25 @@ class Gene(BioInterval):
         self.unspliced_transcripts = []
         self.strand = STRAND.enforce(strand)
         self.aliases = aliases
+
+    def transcript_priority(self, transcript):
+        """
+        prioritizes transcripts from 0 to n-1 based on best transcript flag
+        and then alphanumeric name sort
+
+        Warning:
+            Lower number means higher priority. This is to make sort work by default
+        """
+        def sort_key(t):
+            return (
+                0 if t.is_best_transcript else 1,
+                t.name, t.start - t.end, t.start, t.end
+            )
+        priority = sorted(self.transcripts, key=sort_key)
+        for i, curr_transcript in enumerate(priority):
+            if curr_transcript == transcript:
+                return i
+        raise ValueError('input transcript is not associated with this gene', transcript)
 
     @property
     def transcripts(self):
@@ -142,6 +162,7 @@ class Gene(BioInterval):
 class Exon(BioInterval):
     """
     """
+
     def __init__(
             self, start, end,
             transcript=None,
@@ -234,6 +255,7 @@ class SplicingPattern(list):
 class usTranscript(BioInterval):
     """
     """
+
     def __init__(
         self,
         exons,
@@ -298,7 +320,7 @@ class usTranscript(BioInterval):
 
         Returns:
             :class:`list` of :class:`SplicingPattern`: List of positions to be spliced together
-        
+
         see :ref:`theory - predicting splicing patterns <theory-predicting-splicing-patterns>`
         """
         exons = sorted(self.exons, key=lambda x: x[0])

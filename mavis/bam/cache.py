@@ -3,6 +3,7 @@ import warnings
 import atexit
 import re
 from ..annotate.base import ReferenceName
+from ..interval import Interval
 
 
 class BamCache:
@@ -10,6 +11,7 @@ class BamCache:
     caches reads by name to facilitate getting read mates without jumping around
     the file if we've already read that section
     """
+
     def __init__(self, bamfile, stranded=False):
         """
         Args:
@@ -33,7 +35,7 @@ class BamCache:
             read (pysam.AlignedSegment): the read to add to the cache
         """
         self.cache.setdefault(read.query_name, set()).add(read)
-    
+
     def has_read(self, read):
         if read.query_name in self.cache:
             return True
@@ -90,9 +92,37 @@ class BamCache:
         for b in bin_sizes[1:]:
             last_end = fetch_regions[-1][1]
             fetch_regions.append((last_end + 1, last_end + b))
-        return fetch_regions
+        return [Interval(s, t) for s, t in fetch_regions]
 
     def fetch(
+        self, input_chrom, start, stop, limit=10000, cache_if=lambda x: True, filter_if=lambda x: False
+    ):
+        # try using the cache to avoid fetching regions more than once
+        result = []
+        chrom = input_chrom
+        # split into multiple fetches based on the 'sample_bins'
+        if str(chrom) not in self.fh.references:
+            chrom = re.sub('^chr', '', chrom)
+            if chrom not in self.fh.references:
+                chrom = 'chr' + chrom
+            if chrom not in self.fh.references:
+                raise KeyError('bam file does not contain the expected reference', input_chrom)
+        temp_cache = set()
+        count = 0
+
+        for read in self.fh.fetch(chrom, start, stop):
+            if limit is not None and count >= limit:
+                break
+            if not filter_if(read):
+                result.append(read)
+            if cache_if(read):
+                self.add_read(read)
+            if read.query_name not in temp_cache:
+                count += 1
+                temp_cache.add(read.query_name)
+        return set(result)
+
+    def fetch_from_bins(
         self, input_chrom, start, stop, read_limit=10000, cache=False, sample_bins=3,
         cache_if=lambda x: True, min_bin_size=10, filter_if=lambda x: False
     ):
@@ -130,7 +160,7 @@ class BamCache:
         for fstart, fend in bins:
             count = 0
             running_surplus += bin_limit
-            
+
             for read in self.fh.fetch(chrom, fstart, fend):
                 if bin_limit is not None and count >= running_surplus:
                     break
@@ -144,7 +174,7 @@ class BamCache:
             running_surplus -= count
         return set(result)
 
-    def get_mate(self, read, primary_only=True, allow_file_access=True):
+    def get_mate(self, read, primary_only=True, allow_file_access=False):
         """
         Args:
             read (pysam.AlignedSegment): the read

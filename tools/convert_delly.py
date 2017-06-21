@@ -10,9 +10,8 @@ import time
 import vcf
 
 from mavis.constants import COLUMNS, sort_columns, ORIENT, SVTYPE, PROTOCOL
-from mavis.util import get_version
+from mavis import __version__
 
-__version__ = get_version()
 __prog__ = os.path.basename(os.path.realpath(__file__))
 
 SVTYPES = {'DEL': SVTYPE.DEL,
