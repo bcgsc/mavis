@@ -47,21 +47,15 @@ Algorithm Overview
 
 - Generate a :term:`fasta` file containing all the contig sequences
 - Align contigs to the reference genome (currently :term:`blat` is used to perform this step)
-- Make the final event calls
+- Make the final event calls. Each level of calls consumes all supporting reads so they are not re-used in subsequent
+  levels of calls.
 - (For each breakpoint pair)
 
     - call by contig
-    - if fails, then call by :term:`spanning read`
-    - if fails, then call by :term:`split read`
-    - if fails, then call by mixed :term:`split read` / :term:`flanking read pair`
-    - if fails, then call by :term:`flanking read pair`. see
+    - call by :term:`spanning read`
+    - call by :term:`split read`
+    - call by :term:`flanking read pair`. see
       :ref:`theory - calling breakpoints by flanking evidence <theory-calling-breakpoints-by-flanking-evidence>`
-    - if fails, then the event is failed
-
-- (For each breakpoint pair)
-
-    - determine the amount of support for the more specific call. see
-      :ref:`theory - determining flanking support <theory-determining-flanking-support>`
 
 - Output new calls, evidence, contigs, etc
 

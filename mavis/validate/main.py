@@ -16,7 +16,7 @@ from ..annotate.base import BioInterval
 from ..bam.read import get_samtools_version, samtools_v0_sort, samtools_v1_sort
 from ..bam import cigar as cigar_tools
 from ..util import read_inputs, log, output_tabbed_file, filter_on_overlap, write_bed_file
-from ..util import generate_complete_stamp
+from ..util import generate_complete_stamp, mkdirp
 
 VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
 
@@ -42,6 +42,7 @@ def main(
         masking (object): see :func:`~mavis.annotate.file_io.load_masking_regions`
         blat_2bit_reference (str): path to the 2bit reference file
     """
+    mkdirp(output)
     FILENAME_PREFIX = re.sub('\.(txt|tsv|tab)$', '', os.path.basename(input))
     RAW_EVIDENCE_BAM = os.path.join(output, FILENAME_PREFIX + '.raw_evidence.bam')
     CONTIG_BAM = os.path.join(output, FILENAME_PREFIX + '.contigs.bam')

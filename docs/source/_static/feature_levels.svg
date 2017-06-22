@@ -1,0 +1,658 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="651.59003" height="662.90997" id="svg19669" version="1.1" inkscape:version="0.47 r22583" sodipodi:docname="feature_levels.svg">
+  <defs id="defs19671">
+    <inkscape:perspective sodipodi:type="inkscape:persp3d" inkscape:vp_x="0 : 526.18109 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_z="744.09448 : 526.18109 : 1" inkscape:persp3d-origin="372.04724 : 350.78739 : 1" id="perspective19677" />
+    <inkscape:perspective id="perspective19537" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective19950" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective21394" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective22981" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective23464" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective23464-2" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective23464-20" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective23511" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+  </defs>
+  <sodipodi:namedview id="base" pagecolor="#ffffff" bordercolor="#666666" borderopacity="1.0" inkscape:pageopacity="0.0" inkscape:pageshadow="2" inkscape:zoom="0.98994949" inkscape:cx="288.8033" inkscape:cy="352.48371" inkscape:document-units="px" inkscape:current-layer="layer1" showgrid="false" inkscape:window-width="1920" inkscape:window-height="1000" inkscape:window-x="1280" inkscape:window-y="24" inkscape:window-maximized="1" />
+  <metadata id="metadata19674">
+    <rdf:RDF>
+      <cc:Work rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g inkscape:label="Layer 1" inkscape:groupmode="layer" id="layer1" transform="translate(-70.210678,-9.2896382)">
+    <g class="template" transform="translate(185.48623,14.083633)" id="g4941-9">
+      <rect style="fill:#000000" height="3" transform="translate(0,56.833333)" width="402.78906" x="0" y="0" id="rect4943-0" />
+      <g class="cytoband" transform="translate(1,50)" id="g4947-8">
+        <rect style="fill:#ffffff;stroke:#000000;stroke-width:0.5" height="16.666666" width="10" x="0" y="0" id="rect4949-1" />
+        <title id="title4951-0">template X: band p22.33 1-4300000 L=4.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(9.7790892,50)" id="g4953-4">
+        <rect style="fill:#7f7f7f;stroke:#000000;stroke-width:0.5" height="16.666666" width="8.0000019" x="0" y="0" id="rect4955-8" />
+        <title id="title4957-3">template X: band p22.32 4300001-6000000 L=2.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(16.459194,50)" id="g4959-0">
+        <rect style="fill:#ffffff;stroke:#000000;stroke-width:0.5" height="16.666666" width="11.000002" x="0" y="0" id="rect4961-3" />
+        <title id="title4963-1">template X: band p22.31 6000001-9500000 L=4.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(25.977057,50)" id="g4965-2">
+        <rect style="fill:#7f7f7f;stroke:#000000;stroke-width:0.5" height="16.666666" width="17.000002" x="0" y="0" id="rect4967-5" />
+        <title id="title4969-2">template X: band p22.2 9500001-17100000 L=8.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(41.958703,50)" id="g4971-6">
+        <rect style="fill:#ffffff;stroke:#000000;stroke-width:0.5" height="16.666666" width="8.0000019" x="0" y="0" id="rect4973-0" />
+        <title id="title4975-4">template X: band p22.13 17100001-19300000 L=2.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(49.427075,50)" id="g4977-8">
+        <rect style="fill:#7f7f7f;stroke:#000000;stroke-width:0.5" height="16.666666" width="9.0000019" x="0" y="0" id="rect4979-8" />
+        <title id="title4981-1">template X: band p22.12 19300001-21900000 L=3.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(57.526059,50)" id="g4983-3">
+        <rect style="fill:#ffffff;stroke:#000000;stroke-width:0.5" height="16.666666" width="10.000002" x="0" y="0" id="rect4985-2" />
+        <title id="title4987-0">template X: band p22.11 21900001-24900000 L=3.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(66.255656,50)" id="g4989-4">
+        <rect style="fill:#000000;stroke:#000000;stroke-width:0.5" height="16.666666" width="12.000002" x="0" y="0" id="rect4991-0" />
+        <title id="title4993-4">template X: band p21.3 24900001-29300000 L=4.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(77.192398,50)" id="g4995-2">
+        <rect style="fill:#ffffff;stroke:#000000;stroke-width:0.5" height="16.666666" width="8.0000019" x="0" y="0" id="rect4997-1" />
+        <title id="title4999-0">template X: band p21.2 29300001-31500000 L=2.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(84.660769,50)" id="g5001-1">
+        <rect style="fill:#000000;stroke:#000000;stroke-width:0.5" height="16.666666" width="15.000002" x="0" y="0" id="rect5003-0" />
+        <title id="title5005-1">template X: band p21.1 31500001-37600000 L=6.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(98.277617,50)" id="g5007-2">
+        <rect style="fill:#ffffff;stroke:#000000;stroke-width:0.5" height="16.666666" width="13.000002" x="0" y="0" id="rect5009-0" />
+        <title id="title5011-2">template X: band p11.4 37600001-42400000 L=5.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(109.84497,50)" id="g5013-2">
+        <rect style="fill:#404040;stroke:#000000;stroke-width:0.5" height="16.666666" width="11.000002" x="0" y="0" id="rect5015-7" />
+        <title id="title5017-2">template X: band p11.3 42400001-46400000 L=4.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(120.1511,50)" id="g5019-5">
+        <rect style="fill:#ffffff;stroke:#000000;stroke-width:0.5" height="16.666666" width="10.000002" x="0" y="0" id="rect5021-7" />
+        <title id="title5023-7">template X: band p11.23 46400001-49800000 L=3.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(129.51131,50)" id="g5025-6">
+        <rect style="fill:#bfbfbf;stroke:#000000;stroke-width:0.5" height="16.666666" width="13.000002" x="0" y="0" id="rect5027-1" />
+        <title id="title5029-4">template X: band p11.22 49800001-54800000 L=5.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(141.39397,50)" id="g5031-1">
+        <rect style="fill:#ffffff;stroke:#000000;stroke-width:0.5" height="16.666666" width="10.000002" x="0" y="0" id="rect5033-7" />
+        <title id="title5035-5">template X: band p11.21 54800001-58100000 L=3.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(150.59653,50)" id="g5037-5">
+        <polyline style="fill:#800000;stroke:#000000;stroke-width:0.5" points="0,0 9.000001576532355,8.333333333333334 0,16.666666666666668" id="polyline5039-7" />
+        <title id="title5041-5">template X: band p11.1 58100001-60600000 L=2.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(158.53786,50)" id="g5043-7">
+        <polyline style="fill:#800000;stroke:#000000;stroke-width:0.5" points="9.000001576532355,0 0,8.333333333333334 9.000001576532355,16.666666666666668" id="polyline5045-1" />
+        <title id="title5047-7">template X: band q11.1 60600001-63000000 L=2.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(166.32154,50)" id="g5049-7">
+        <rect style="fill:#ffffff;stroke:#000000;stroke-width:0.5" height="16.666666" width="8.0000019" x="0" y="0" id="rect5051-7" />
+        <title id="title5053-7">template X: band q11.2 63000001-64600000 L=2.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(172.84399,50)" id="g5055-1">
+        <rect style="fill:#7f7f7f;stroke:#000000;stroke-width:0.5" height="16.666666" width="10.000002" x="0" y="0" id="rect5057-2" />
+        <title id="title5059-1">template X: band q12 64600001-67800000 L=3.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(181.88889,50)" id="g5061-3">
+        <rect style="fill:#ffffff;stroke:#000000;stroke-width:0.5" height="16.666666" width="11.000002" x="0" y="0" id="rect5063-3" />
+        <title id="title5065-1">template X: band q13.1 67800001-71800000 L=4.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(192.19502,50)" id="g5067-4">
+        <rect style="fill:#7f7f7f;stroke:#000000;stroke-width:0.5" height="16.666666" width="8.0000019" x="0" y="0" id="rect5069-5" />
+        <title id="title5071-4">template X: band q13.2 71800001-73900000 L=2.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(199.50574,50)" id="g5073-8">
+        <rect style="fill:#ffffff;stroke:#000000;stroke-width:0.5" height="16.666666" width="8.0000019" x="0" y="0" id="rect5075-7" />
+        <title id="title5077-1">template X: band q13.3 73900001-76000000 L=2.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(206.81646,50)" id="g5079-3">
+        <rect style="fill:#000000;stroke:#000000;stroke-width:0.5" height="16.666666" width="19.000002" x="0" y="0" id="rect5081-4" />
+        <title id="title5083-0">template X: band q21.1 76000001-84600000 L=9.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(224.37464,50)" id="g5085-2">
+        <rect style="fill:#ffffff;stroke:#000000;stroke-width:0.5" height="16.666666" width="8.0000019" x="0" y="0" id="rect5087-3" />
+        <title id="title5089-1">template X: band q21.2 84600001-86200000 L=2.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(230.89709,50)" id="g5091-7">
+        <rect style="fill:#000000;stroke:#000000;stroke-width:0.5" height="16.666666" width="14.000002" x="0" y="0" id="rect5093-4" />
+        <title id="title5095-0">template X: band q21.31 86200001-91800000 L=6.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(243.72567,50)" id="g5097-4">
+        <rect style="fill:#ffffff;stroke:#000000;stroke-width:0.5" height="16.666666" width="8.0000019" x="0" y="0" id="rect5099-1" />
+        <title id="title5101-9">template X: band q21.32 91800001-93500000 L=2.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(250.40578,50)" id="g5103-9">
+        <rect style="fill:#404040;stroke:#000000;stroke-width:0.5" height="16.666666" width="13.000002" x="0" y="0" id="rect5105-0" />
+        <title id="title5107-0">template X: band q21.33 93500001-98300000 L=5.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(261.97313,50)" id="g5109-8">
+        <rect style="fill:#ffffff;stroke:#000000;stroke-width:0.5" height="16.666666" width="12.000002" x="0" y="0" id="rect5111-7" />
+        <title id="title5113-0">template X: band q22.1 98300001-102600000 L=4.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(272.75222,50)" id="g5115-5">
+        <rect style="fill:#7f7f7f;stroke:#000000;stroke-width:0.5" height="16.666666" width="7.0000014" x="0" y="0" id="rect5117-0" />
+        <title id="title5119-2">template X: band q22.2 102600001-103700000 L=1.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(278.48641,50)" id="g5121-6">
+        <rect style="fill:#ffffff;stroke:#000000;stroke-width:0.5" height="16.666666" width="13.000002" x="0" y="0" id="rect5123-4" />
+        <title id="title5125-5">template X: band q22.3 103700001-108700000 L=5.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(290.36907,50)" id="g5127-0">
+        <rect style="fill:#404040;stroke:#000000;stroke-width:0.5" height="16.666666" width="17.000002" x="0" y="0" id="rect5129-0" />
+        <title id="title5131-3">template X: band q23 108700001-116500000 L=8.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(306.66602,50)" id="g5133-6">
+        <rect style="fill:#ffffff;stroke:#000000;stroke-width:0.5" height="16.666666" width="12.000002" x="0" y="0" id="rect5135-1" />
+        <title id="title5137-2">template X: band q24 116500001-120900000 L=4.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(317.60276,50)" id="g5139-7">
+        <rect style="fill:#000000;stroke:#000000;stroke-width:0.5" height="16.666666" width="17.000002" x="0" y="0" id="rect5141-6" />
+        <title id="title5143-7">template X: band q25 120900001-128700000 L=8.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(333.89971,50)" id="g5145-9">
+        <rect style="fill:#ffffff;stroke:#000000;stroke-width:0.5" height="16.666666" width="8.0000019" x="0" y="0" id="rect5147-8" />
+        <title id="title5149-0">template X: band q26.1 128700001-130400000 L=2.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(340.57982,50)" id="g5151-2">
+        <rect style="fill:#bfbfbf;stroke:#000000;stroke-width:0.5" height="16.666666" width="10.000002" x="0" y="0" id="rect5153-7" />
+        <title id="title5155-6">template X: band q26.2 130400001-133600000 L=3.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(349.62472,50)" id="g5157-4">
+        <rect style="fill:#ffffff;stroke:#000000;stroke-width:0.5" height="16.666666" width="12.000002" x="0" y="0" id="rect5159-1" />
+        <title id="title5161-7">template X: band q26.3 133600001-138000000 L=4.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(360.56147,50)" id="g5163-3">
+        <rect style="fill:#404040;stroke:#000000;stroke-width:0.5" height="16.666666" width="9.0000019" x="0" y="0" id="rect5165-2" />
+        <title id="title5167-8">template X: band q27.1 138000001-140300000 L=2.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(368.18749,50)" id="g5169-6">
+        <rect style="fill:#ffffff;stroke:#000000;stroke-width:0.5" height="16.666666" width="8.0000019" x="0" y="0" id="rect5171-0" />
+        <title id="title5173-7">template X: band q27.2 140300001-142100000 L=2.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(375.02525,50)" id="g5175-6">
+        <rect style="fill:#000000;stroke:#000000;stroke-width:0.5" height="16.666666" width="13.000002" x="0" y="0" id="rect5177-8" />
+        <title id="title5179-0">template X: band q27.3 142100001-147100000 L=5.0M</title>
+      </g>
+      <g class="cytoband" transform="translate(386.90791,50)" id="g5181-8">
+        <rect style="fill:#ffffff;stroke:#000000;stroke-width:0.5" height="16.666666" width="17.000002" x="0" y="0" id="rect5183-6" />
+        <title id="title5185-6">template X: band q28 147100001-155270560 L=8.0M</title>
+      </g>
+    </g>
+    <g class="genes" transform="translate(186.17065,124.83904)" id="g5197-1">
+      <rect style="fill:#000000" class="scaffold" height="3" width="402.78906" x="0" y="73.5" id="rect5199-3" />
+      <g class="gene" transform="translate(14.79733,50)" id="g5201-5">
+        <rect style="fill:#518dc5" height="50" width="178" x="0" y="0" id="rect5203-7" />
+        <polyline style="fill:#518dc5" points="178.0,0 198.0,25.0 178.0,50" id="polyline5205-0" />
+        <text class="label" style="font-size:28px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="89" y="33.400002" id="text5207-4" />
+        <title id="title5209-8">Gene  1:150_1000+ aka HUGO2</title>
+      </g>
+      <g class="gene" transform="translate(235.28837,50)" id="g5211-2" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="113" x="0" y="0" id="rect5213-6" />
+        <polyline style="fill:#000000" points="113.0,0 133.0,25.0 113.0,50" id="polyline5215-5" />
+        <title id="title5219-0">Gene  1:1500_1950+ aka HUGO5</title>
+      </g>
+    </g>
+    <g class="exon_track" transform="matrix(0.64,0,0,0.64,99.898253,306.21692)" id="g20306" style="fill:#000000">
+      <rect style="fill:#000000" class="scaffold" height="3" width="805.46356" x="24.131969" y="23.5" id="rect20308" />
+      <g class="exon" transform="translate(24.13197,0)" id="g20310" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="73.690819" x="0" y="0" id="rect20312" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="36.845409" y="31" id="text20314">1</text>
+        <title id="title20316">Exon   g.112043219_112043579  length(361)</title>
+      </g>
+      <g class="exon" transform="translate(284.72979,0)" id="g20318" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20320" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20322">2</text>
+        <title id="title20324">Exon   g.112102023_112102107  length(85)</title>
+      </g>
+      <g class="exon" transform="translate(319.19947,0)" id="g20326" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="49.718929" x="0" y="0" id="rect20328" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="24.859465" y="31" id="text20330">3</text>
+        <title id="title20332">Exon   g.112102886_112103087  length(202)</title>
+      </g>
+      <g class="exon" transform="translate(378.41454,0)" id="g20334" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20336" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20338">4</text>
+        <title id="title20340">Exon   g.112111326_112111434  length(109)</title>
+      </g>
+      <g class="exon" transform="translate(413.07942,0)" id="g20342" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20344" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20346">5</text>
+        <title id="title20348">Exon   g.112116487_112116600  length(114)</title>
+      </g>
+      <g class="exon" transform="translate(482.46245,0)" id="g20350" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20352" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20354">6</text>
+        <title id="title20356">Exon   g.112136976_112137080  length(105)</title>
+      </g>
+      <g class="exon" transform="translate(552.24174,0)" id="g20358" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20360" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20362">7</text>
+        <title id="title20364">Exon   g.112151192_112151290  length(99)</title>
+      </g>
+      <g class="exon" transform="translate(586.82687,0)" id="g20366" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="26" x="0" y="0" id="rect20368" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="13" y="31" id="text20370">8</text>
+        <title id="title20372">Exon   g.112154663_112155041  length(379)</title>
+      </g>
+      <g class="exon" transform="translate(622.89318,0)" id="g20374" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20376" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20378">9</text>
+        <title id="title20380">Exon   g.112157593_112157688  length(96)</title>
+      </g>
+      <g class="exon" transform="translate(657.4897,0)" id="g20382" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20384" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20386">10</text>
+        <title id="title20388">Exon   g.112162805_112162944  length(140)</title>
+      </g>
+      <g class="exon" transform="translate(692.25134,0)" id="g20390" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20392" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20394">11</text>
+        <title id="title20396">Exon   g.112163626_112163703  length(78)</title>
+      </g>
+      <g class="exon" transform="translate(726.68478,0)" id="g20398" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20400" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20402">12</text>
+        <title id="title20404">Exon   g.112164553_112164669  length(117)</title>
+      </g>
+      <g class="exon" transform="translate(761.40689,0)" id="g20406" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20408" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20410">13</text>
+        <title id="title20412">Exon   g.112170648_112170862  length(215)</title>
+      </g>
+      <g class="exon" transform="translate(796.59553,0)" id="g20414" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="32" x="0" y="0" id="rect20416" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="16" y="31" id="text20418">14</text>
+        <title id="title20420">Exon   g.112173250_112174751  length(1502)</title>
+      </g>
+    </g>
+    <g class="exon_track" transform="matrix(0.64,0,0,0.64,99.898253,341.41692)" id="g20424" style="fill:#000000">
+      <rect style="fill:#000000" class="scaffold" height="3" width="782.80389" x="156.56645" y="23.5" id="rect20426" />
+      <g class="exon" transform="translate(156.56645,0)" id="g20428" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25.041258" x="0" y="0" id="rect20430" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.520629" y="31" id="text20432">1</text>
+        <title id="title20434">Exon   g.112073592_112073622  length(31)</title>
+      </g>
+      <g class="exon" transform="translate(214.77807,0)" id="g20436" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25.121298" x="0" y="0" id="rect20438" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.560649" y="31" id="text20440">2</text>
+        <title id="title20442">Exon   g.112074050_112074157  length(108)</title>
+      </g>
+      <g class="exon" transform="translate(249.73199,0)" id="g20444" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20446" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20448">3</text>
+        <title id="title20450">Exon   g.112090570_112090722  length(153)</title>
+      </g>
+      <g class="exon" transform="translate(284.72979,0)" id="g20452" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20454" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20456">4</text>
+        <title id="title20458">Exon   g.112102023_112102107  length(85)</title>
+      </g>
+      <g class="exon" transform="translate(319.19947,0)" id="g20460" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="49.718929" x="0" y="0" id="rect20462" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="24.859465" y="31" id="text20464">5</text>
+        <title id="title20466">Exon   g.112102886_112103087  length(202)</title>
+      </g>
+      <g class="exon" transform="translate(378.41454,0)" id="g20468" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20470" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20472">6</text>
+        <title id="title20474">Exon   g.112111326_112111434  length(109)</title>
+      </g>
+      <g class="exon" transform="translate(413.07942,0)" id="g20476" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20478" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20480">7</text>
+        <title id="title20482">Exon   g.112116487_112116600  length(114)</title>
+      </g>
+      <g class="exon" transform="translate(447.87291,0)" id="g20484" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20486" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20488">8</text>
+        <title id="title20490">Exon   g.112128143_112128226  length(84)</title>
+      </g>
+      <g class="exon" transform="translate(482.46245,0)" id="g20492" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20494" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20496">9</text>
+        <title id="title20498">Exon   g.112136976_112137080  length(105)</title>
+      </g>
+      <g class="exon" transform="translate(552.24174,0)" id="g20500" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20502" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20504">10</text>
+        <title id="title20506">Exon   g.112151192_112151290  length(99)</title>
+      </g>
+      <g class="exon" transform="translate(586.82687,0)" id="g20508" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="26" x="0" y="0" id="rect20510" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="13" y="31" id="text20512">11</text>
+        <title id="title20514">Exon   g.112154663_112155041  length(379)</title>
+      </g>
+      <g class="exon" transform="translate(622.89318,0)" id="g20516" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20518" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20520">12</text>
+        <title id="title20522">Exon   g.112157593_112157688  length(96)</title>
+      </g>
+      <g class="exon" transform="translate(657.4897,0)" id="g20524" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20526" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20528">13</text>
+        <title id="title20530">Exon   g.112162805_112162944  length(140)</title>
+      </g>
+      <g class="exon" transform="translate(692.25134,0)" id="g20532" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20534" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20536">14</text>
+        <title id="title20538">Exon   g.112163626_112163703  length(78)</title>
+      </g>
+      <g class="exon" transform="translate(726.68478,0)" id="g20540" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20542" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20544">15</text>
+        <title id="title20546">Exon   g.112164553_112164669  length(117)</title>
+      </g>
+      <g class="exon" transform="translate(761.40689,0)" id="g20548" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20550" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20552">16</text>
+        <title id="title20554">Exon   g.112170648_112170862  length(215)</title>
+      </g>
+      <g class="exon" transform="translate(796.59553,0)" id="g20556" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="141.77484" x="0" y="0" id="rect20558" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="70.887421" y="31" id="text20560">17</text>
+        <title id="title20562">Exon   g.112173250_112181753  length(8504)</title>
+      </g>
+    </g>
+    <g class="exon_track" transform="matrix(0.64,0,0,0.64,99.898253,376.61692)" id="g20566" style="fill:#000000">
+      <rect style="fill:#000000" class="scaffold" height="3" width="788.49933" x="108.5412" y="23.5" id="rect20568" />
+      <g class="exon" transform="translate(108.5412,0)" id="g20570" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="73.066505" x="0" y="0" id="rect20572" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="36.533253" y="31" id="text20574">1</text>
+        <title id="title20576">Exon   g.112073582_112073622  length(41)</title>
+      </g>
+      <g class="exon" transform="translate(249.73199,0)" id="g20578" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20580" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20582">2</text>
+        <title id="title20584">Exon   g.112090570_112090722  length(153)</title>
+      </g>
+      <g class="exon" transform="translate(284.72979,0)" id="g20586" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20588" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20590">3</text>
+        <title id="title20592">Exon   g.112102023_112102107  length(85)</title>
+      </g>
+      <g class="exon" transform="translate(319.19947,0)" id="g20594" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="49.718929" x="0" y="0" id="rect20596" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="24.859465" y="31" id="text20598">4</text>
+        <title id="title20600">Exon   g.112102886_112103087  length(202)</title>
+      </g>
+      <g class="exon" transform="translate(378.41454,0)" id="g20602" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20604" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20606">5</text>
+        <title id="title20608">Exon   g.112111326_112111434  length(109)</title>
+      </g>
+      <g class="exon" transform="translate(413.07942,0)" id="g20610" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20612" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20614">6</text>
+        <title id="title20616">Exon   g.112116487_112116600  length(114)</title>
+      </g>
+      <g class="exon" transform="translate(447.87291,0)" id="g20618" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20620" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20622">7</text>
+        <title id="title20624">Exon   g.112128143_112128226  length(84)</title>
+      </g>
+      <g class="exon" transform="translate(482.46245,0)" id="g20626" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20628" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20630">8</text>
+        <title id="title20632">Exon   g.112136976_112137080  length(105)</title>
+      </g>
+      <g class="exon" transform="translate(517.16394,0)" id="g20634" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20636" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20638">9</text>
+        <title id="title20640">Exon   g.112145823_112146008  length(186)</title>
+      </g>
+      <g class="exon" transform="translate(552.24174,0)" id="g20642" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20644" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20646">10</text>
+        <title id="title20648">Exon   g.112151192_112151290  length(99)</title>
+      </g>
+      <g class="exon" transform="translate(586.82687,0)" id="g20650" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="26" x="0" y="0" id="rect20652" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="13" y="31" id="text20654">11</text>
+        <title id="title20656">Exon   g.112154663_112155041  length(379)</title>
+      </g>
+      <g class="exon" transform="translate(622.89318,0)" id="g20658" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20660" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20662">12</text>
+        <title id="title20664">Exon   g.112157593_112157688  length(96)</title>
+      </g>
+      <g class="exon" transform="translate(657.4897,0)" id="g20666" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20668" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20670">13</text>
+        <title id="title20672">Exon   g.112162805_112162944  length(140)</title>
+      </g>
+      <g class="exon" transform="translate(692.25134,0)" id="g20674" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20676" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20678">14</text>
+        <title id="title20680">Exon   g.112163626_112163703  length(78)</title>
+      </g>
+      <g class="exon" transform="translate(726.68478,0)" id="g20682" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20684" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20686">15</text>
+        <title id="title20688">Exon   g.112164553_112164669  length(117)</title>
+      </g>
+      <g class="exon" transform="translate(761.40689,0)" id="g20690" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20692" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20694">16</text>
+        <title id="title20696">Exon   g.112170648_112170862  length(215)</title>
+      </g>
+      <g class="exon" transform="translate(796.59553,0)" id="g20698" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="99.445" x="0" y="0" id="rect20700" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="49.7225" y="31" id="text20702">17</text>
+        <title id="title20704">Exon   g.112173250_112178452  length(5203)</title>
+      </g>
+    </g>
+    <g class="exon_track" transform="matrix(0.64,0,0,0.64,99.898253,411.81692)" id="g20708" style="fill:#000000">
+      <rect style="fill:#000000" class="scaffold" height="3" width="345.19946" x="0" y="23.5" id="rect20710" />
+      <g class="exon" id="g20712" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="73.141212" x="0" y="0" id="rect20714" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="36.570606" y="31" id="text20716">1</text>
+        <title id="title20718">Exon   g.112043195_112043346  length(152)</title>
+      </g>
+      <g class="exon" transform="translate(249.73199,0)" id="g20720" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20722" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20724">2</text>
+        <title id="title20726">Exon   g.112090570_112090722  length(153)</title>
+      </g>
+      <g class="exon" transform="translate(284.72979,0)" id="g20728" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20730" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20732">3</text>
+        <title id="title20734">Exon   g.112102023_112102107  length(85)</title>
+      </g>
+      <g class="exon" transform="translate(319.19947,0)" id="g20736" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20738" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20740">4</text>
+        <title id="title20742">Exon   g.112102886_112103019  length(134)</title>
+      </g>
+    </g>
+    <g class="exon_track" transform="matrix(0.64,0,0,0.64,99.898253,447.01692)" id="g20746" style="fill:#000000">
+      <rect style="fill:#000000" class="scaffold" height="3" width="664.836" x="190.77806" y="23.5" id="rect20748" />
+      <g class="exon" transform="translate(190.77807,0)" id="g20750" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="49.1213" x="0" y="0" id="rect20752" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="24.56065" y="31" id="text20754">1</text>
+        <title id="title20756">Exon   g.112074029_112074157  length(129)</title>
+      </g>
+      <g class="exon" transform="translate(249.73199,0)" id="g20758" style="fill:#518dc5">
+        <rect style="fill:#518dc5" height="50" width="25" x="0" y="0" id="rect20760" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#518dc5;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20762">2</text>
+        <title id="title20764">Exon   g.112090570_112090722  length(153)</title>
+      </g>
+      <g class="exon" transform="translate(284.72979,0)" id="g20766" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20768" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20770">3</text>
+        <title id="title20772">Exon   g.112102023_112102107  length(85)</title>
+      </g>
+      <g class="exon" transform="translate(319.19947,0)" id="g20774" style="fill:#518dc5">
+        <rect style="fill:#518dc5" height="50" width="49.718929" x="0" y="0" id="rect20776" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#518dc5;font-family:'consolas, courier new, monospace'" x="24.859465" y="31" id="text20778">4</text>
+        <title id="title20780">Exon   g.112102886_112103087  length(202)</title>
+      </g>
+      <g class="exon" transform="translate(378.41454,0)" id="g20782" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20784" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20786">5</text>
+        <title id="title20788">Exon   g.112111326_112111434  length(109)</title>
+      </g>
+      <g class="exon" transform="translate(413.07942,0)" id="g20790" style="fill:#518dc5">
+        <rect style="fill:#518dc5" height="50" width="25" x="0" y="0" id="rect20792" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#518dc5;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20794">6</text>
+        <title id="title20796">Exon   g.112116487_112116600  length(114)</title>
+      </g>
+      <g class="exon" transform="translate(447.87291,0)" id="g20798" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20800" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20802">7</text>
+        <title id="title20804">Exon   g.112128143_112128226  length(84)</title>
+      </g>
+      <g class="exon" transform="translate(482.46245,0)" id="g20806" style="fill:#518dc5">
+        <rect style="fill:#518dc5" height="50" width="25" x="0" y="0" id="rect20808" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#518dc5;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20810">8</text>
+        <title id="title20812">Exon   g.112136976_112137080  length(105)</title>
+      </g>
+      <g class="exon" transform="translate(552.24174,0)" id="g20814" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20816" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20818">9</text>
+        <title id="title20820">Exon   g.112151192_112151290  length(99)</title>
+      </g>
+      <g class="exon" transform="translate(586.82687,0)" id="g20822" style="fill:#518dc5">
+        <rect style="fill:#518dc5" height="50" width="26" x="0" y="0" id="rect20824" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#518dc5;font-family:'consolas, courier new, monospace'" x="13" y="31" id="text20826">10</text>
+        <title id="title20828">Exon   g.112154663_112155041  length(379)</title>
+      </g>
+      <g class="exon" transform="translate(622.89318,0)" id="g20830" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20832" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20834">11</text>
+        <title id="title20836">Exon   g.112157593_112157688  length(96)</title>
+      </g>
+      <g class="exon" transform="translate(657.4897,0)" id="g20838" style="fill:#518dc5">
+        <rect style="fill:#518dc5" height="50" width="25" x="0" y="0" id="rect20840" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#518dc5;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20842">12</text>
+        <title id="title20844">Exon   g.112162805_112162944  length(140)</title>
+      </g>
+      <g class="exon" transform="translate(692.25134,0)" id="g20846" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20848" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20850">13</text>
+        <title id="title20852">Exon   g.112163626_112163703  length(78)</title>
+      </g>
+      <g class="exon" transform="translate(726.68478,0)" id="g20854" style="fill:#518dc5">
+        <rect style="fill:#518dc5" height="50" width="25" x="0" y="0" id="rect20856" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#518dc5;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20858">14</text>
+        <title id="title20860">Exon   g.112164553_112164669  length(117)</title>
+      </g>
+      <g class="exon" transform="translate(761.40689,0)" id="g20862" style="fill:#000000">
+        <rect style="fill:#000000" height="50" width="25" x="0" y="0" id="rect20864" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="12.5" y="31" id="text20866">15</text>
+        <title id="title20868">Exon   g.112170648_112170862  length(215)</title>
+      </g>
+      <g class="exon" transform="translate(796.59553,0)" id="g20870" style="fill:#518dc5">
+        <rect style="fill:#518dc5" height="50" width="58.018555" x="0" y="0" id="rect20872" />
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#518dc5;font-family:'consolas, courier new, monospace'" x="29.009277" y="31" id="text20874">16</text>
+        <title id="title20876">Exon   g.112173250_112175205  length(1956)</title>
+      </g>
+    </g>
+    <rect style="fill:none;stroke:#000000;stroke-width:0.977;stroke-miterlimit:4;stroke-dasharray:3.908, 3.908;stroke-dashoffset:0" id="rect22453" width="600.02344" height="232.88062" x="99.996979" y="277.14737" />
+    <path style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:4, 4;stroke-dashoffset:0" d="M 100.0051,277.0701 202.03051,224.54217" id="path22965" />
+    <path style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:4, 4;stroke-dashoffset:0" d="M 378.30212,225.04725 699.53063,277.0701" id="path22969" />
+    <path style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:4, 4;stroke-dashoffset:0" d="M 201.43728,174.65913 201.43728,174.65913 300.36585,80.730559 378.93728,175.01627" id="path22971" />
+    <g class="exon_track" transform="matrix(0.64,0,0,0.64,99.898253,559.57018)" id="g20746-5" style="fill:#000000">
+      <g id="g23190" transform="translate(-80.613632,0)">
+        <g style="fill:#000000" id="g20750-8" transform="translate(362.3803,0)" class="exon">
+          <rect id="rect20752-6" y="0" x="0" width="49.1213" height="50" style="fill:#000000" />
+          <text id="text20754-0" y="31" x="24.56065" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" class="label">1</text>
+          <title id="title20756-7">Exon   g.112074029_112074157  length(129)</title>
+        </g>
+        <g style="fill:#518dc5" id="g20758-4" transform="translate(411.5016,0)" class="exon">
+          <rect id="rect20760-4" y="0" x="0" width="25" height="50" style="fill:#518dc5" />
+          <text id="text20762-6" y="31" x="12.5" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#518dc5;font-family:'consolas, courier new, monospace'" class="label">2</text>
+          <title id="title20764-5">Exon   g.112090570_112090722  length(153)</title>
+        </g>
+        <g style="fill:#000000" id="g20766-1" transform="translate(436.5016,0)" class="exon">
+          <rect id="rect20768-0" y="0" x="0" width="25" height="50" style="fill:#000000" />
+          <text id="text20770-7" y="31" x="12.5" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" class="label">3</text>
+          <title id="title20772-0">Exon   g.112102023_112102107  length(85)</title>
+        </g>
+        <g style="fill:#518dc5" id="g20774-2" transform="translate(461.5016,0)" class="exon">
+          <rect id="rect20776-1" y="0" x="0" width="49.718929" height="50" style="fill:#518dc5" />
+          <text id="text20778-8" y="31" x="24.859465" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#518dc5;font-family:'consolas, courier new, monospace'" class="label">4</text>
+          <title id="title20780-7">Exon   g.112102886_112103087  length(202)</title>
+        </g>
+        <g style="fill:#000000" id="g20782-1" transform="translate(511.22053,0)" class="exon">
+          <rect id="rect20784-8" y="0" x="0" width="25" height="50" style="fill:#000000" />
+          <text id="text20786-1" y="31" x="12.5" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" class="label">5</text>
+          <title id="title20788-4">Exon   g.112111326_112111434  length(109)</title>
+        </g>
+        <g style="fill:#518dc5" id="g20790-1" transform="translate(536.22053,0)" class="exon">
+          <rect id="rect20792-6" y="0" x="0" width="25" height="50" style="fill:#518dc5" />
+          <text id="text20794-7" y="31" x="12.5" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#518dc5;font-family:'consolas, courier new, monospace'" class="label">6</text>
+          <title id="title20796-1">Exon   g.112116487_112116600  length(114)</title>
+        </g>
+        <g style="fill:#000000" id="g20798-1" transform="translate(561.22053,0)" class="exon">
+          <rect id="rect20800-2" y="0" x="0" width="25" height="50" style="fill:#000000" />
+          <text id="text20802-9" y="31" x="12.5" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" class="label">7</text>
+          <title id="title20804-8">Exon   g.112128143_112128226  length(84)</title>
+        </g>
+        <g style="fill:#518dc5" id="g20806-1" transform="translate(586.22053,0)" class="exon">
+          <rect id="rect20808-6" y="0" x="0" width="25" height="50" style="fill:#518dc5" />
+          <text id="text20810-8" y="31" x="12.5" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#518dc5;font-family:'consolas, courier new, monospace'" class="label">8</text>
+          <title id="title20812-1">Exon   g.112136976_112137080  length(105)</title>
+        </g>
+        <g style="fill:#000000" id="g20814-5" transform="translate(611.22053,0)" class="exon">
+          <rect id="rect20816-8" y="0" x="0" width="25" height="50" style="fill:#000000" />
+          <text id="text20818-0" y="31" x="12.5" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" class="label">9</text>
+          <title id="title20820-9">Exon   g.112151192_112151290  length(99)</title>
+        </g>
+        <g style="fill:#518dc5" id="g20822-2" transform="translate(636.22053,0)" class="exon">
+          <rect id="rect20824-6" y="0" x="0" width="26" height="50" style="fill:#518dc5" />
+          <text id="text20826-6" y="31" x="13" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#518dc5;font-family:'consolas, courier new, monospace'" class="label">10</text>
+          <title id="title20828-6">Exon   g.112154663_112155041  length(379)</title>
+        </g>
+        <g style="fill:#000000" id="g20830-6" transform="translate(662.22053,0)" class="exon">
+          <rect id="rect20832-5" y="0" x="0" width="25" height="50" style="fill:#000000" />
+          <text id="text20834-6" y="31" x="12.5" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" class="label">11</text>
+          <title id="title20836-1">Exon   g.112157593_112157688  length(96)</title>
+        </g>
+        <g style="fill:#518dc5" id="g20838-7" transform="translate(687.22053,0)" class="exon">
+          <rect id="rect20840-7" y="0" x="0" width="25" height="50" style="fill:#518dc5" />
+          <text id="text20842-8" y="31" x="12.5" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#518dc5;font-family:'consolas, courier new, monospace'" class="label">12</text>
+          <title id="title20844-0">Exon   g.112162805_112162944  length(140)</title>
+        </g>
+        <g style="fill:#000000" id="g20846-7" transform="translate(712.22053,0)" class="exon">
+          <rect id="rect20848-0" y="0" x="0" width="25" height="50" style="fill:#000000" />
+          <text id="text20850-5" y="31" x="12.5" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" class="label">13</text>
+          <title id="title20852-8">Exon   g.112163626_112163703  length(78)</title>
+        </g>
+        <g style="fill:#518dc5" id="g20854-8" transform="translate(737.22053,0)" class="exon">
+          <rect id="rect20856-4" y="0" x="0" width="25" height="50" style="fill:#518dc5" />
+          <text id="text20858-1" y="31" x="12.5" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#518dc5;font-family:'consolas, courier new, monospace'" class="label">14</text>
+          <title id="title20860-9">Exon   g.112164553_112164669  length(117)</title>
+        </g>
+        <g style="fill:#000000" id="g20862-8" transform="translate(762.22053,0)" class="exon">
+          <rect id="rect20864-3" y="0" x="0" width="25" height="50" style="fill:#000000" />
+          <text id="text20866-0" y="31" x="12.5" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" class="label">15</text>
+          <title id="title20868-9">Exon   g.112170648_112170862  length(215)</title>
+        </g>
+        <g style="fill:#518dc5" id="g20870-9" transform="translate(787.22053,0)" class="exon">
+          <rect id="rect20872-8" y="0" x="0" width="58.018555" height="50" style="fill:#518dc5" />
+          <text id="text20874-2" y="31" x="29.009277" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#518dc5;font-family:'consolas, courier new, monospace'" class="label">16</text>
+          <title id="title20876-4">Exon   g.112173250_112175205  length(1956)</title>
+        </g>
+      </g>
+      <path style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:4, 4;stroke-dashoffset:0" d="M 192.43406,499.30366 250.51783,580.11587" id="path23256" transform="matrix(1.5625,0,0,1.5625,-110.31848,-905.89567)" />
+      <path style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:4, 4;stroke-dashoffset:0" d="M 616.69813,499.30366 559.11943,580.62094" id="path23258" transform="matrix(1.5625,0,0,1.5625,-110.31848,-905.89567)" />
+    </g>
+    <rect style="fill:#000000;fill-opacity:1;stroke:none" id="rect23260" width="246.47722" height="8.0812206" x="297.99503" y="643.91534" />
+    <path style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:4, 4;stroke-dashoffset:0;marker-start:none" d="M 299.58986,642.64538 299.89506,587.28688" id="path23266" />
+    <path style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:4, 4;stroke-dashoffset:0;marker-start:none" d="M 542.37353,643.15171 542.06583,587.28563" id="path23268" />
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="231.32492" y="49.280704" id="text23452"><tspan sodipodi:role="line" id="tspan23454" x="231.32492" y="49.280704" style="font-size:14px;font-weight:bold;text-align:center;text-anchor:middle;font-family:Arial;-inkscape-font-specification:Arial Bold">chromosome/template</tspan></text>
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="188.28741" y="161.08235" id="text23452-8"><tspan sodipodi:role="line" id="tspan23454-9" x="188.28741" y="161.08235" style="font-size:14px;font-weight:bold;text-align:center;text-anchor:middle;font-family:Arial;-inkscape-font-specification:Arial Bold">genes</tspan></text>
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="192.91179" y="291.39203" id="text23452-84"><tspan sodipodi:role="line" id="tspan23454-0" x="192.91179" y="291.39203" style="font-size:14px;font-weight:bold;text-align:center;text-anchor:middle;font-family:Arial;-inkscape-font-specification:Arial Bold">unspliced transcripts</tspan></text>
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="360.59714" y="546.96063" id="text23452-0"><tspan sodipodi:role="line" id="tspan23454-1" x="360.59714" y="546.96063" style="font-size:14px;font-weight:bold;text-align:center;text-anchor:middle;font-family:Arial;-inkscape-font-specification:Arial Bold">spliced transcript/cDNA</tspan></text>
+    <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="384.73483" y="633.83374" id="text23452-0-7"><tspan sodipodi:role="line" id="tspan23454-1-3" x="384.73483" y="633.83374" style="font-size:14px;font-weight:bold;text-align:center;text-anchor:middle;font-family:Arial;-inkscape-font-specification:Arial Bold">coding sequence (cds)</tspan></text>
+  </g>
+</svg>

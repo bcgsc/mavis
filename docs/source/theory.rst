@@ -120,6 +120,28 @@ Inverted Translocation
 
     Flanking read pair evidence for an inverted translocation. Both breakpoints have right orientation.
 
+|
+
+------
+
+|
+
+.. _theory-compatible-flanking-pairs:
+
+Compatible Flanking Pairs
+......................................
+
+For insertion and duplication events compatible flanking pairs are collected. This means that flanking pairs that
+support an duplication may be used as compatible flanking evidence for an insertion (in the same region) and similarly
+flanking pairs which support an insertion may be compatible flanking evidence for a duplication
+
+.. figure:: _static/compatible_flanking_pairs.svg
+    :width: 100%
+
+    The event depicted above may be called as either a duplication or an insertion (depending on the input call). If 
+    the even were called as a duplication the reads in green would be the flanking supoprt and the reads in blue 
+    would be given as compatible flanking support. If the event were called as an insertion the reverse would apply.
+
 
 |
 
