@@ -14,7 +14,7 @@ from ..util import devnull
 class Evidence(BreakpointPair):
     @property
     def outer_window1(self):
-        """:class:`~structural_variant.interval.Interval`: the window where evidence will be gathered for the first
+        """:class:`~mavis.interval.Interval`: the window where evidence will be gathered for the first
         breakpoint
 
         see :ref:`theory - calculating the evidence window <theory-calculating-the-evidence-window>`
@@ -29,7 +29,7 @@ class Evidence(BreakpointPair):
 
     @property
     def outer_window2(self):
-        """:class:`~structural_variant.interval.Interval`: the window where evidence will be gathered for the second
+        """:class:`~mavis.interval.Interval`: the window where evidence will be gathered for the second
         breakpoint
 
         see :ref:`theory - calculating the evidence window <theory-calculating-the-evidence-window>`
@@ -44,15 +44,25 @@ class Evidence(BreakpointPair):
 
     @property
     def compatible_window1(self):
+        """:class:`~mavis.interval.Interval`: the window/region where it is expected to 
+        find reads in a compatible flanking pair (mate must be in compatible_window2)
+
+        see :ref:`theory - calculating the evidence window <theory-calculating-the-evidence-window>`
+        """
         return self.compatible_windows[0]
 
     @property
     def compatible_window2(self):
+        """:class:`~mavis.interval.Interval`: the window/region where it is expected to 
+        find reads in a compatible flanking pair (mate must be in compatible_window1)
+
+        see :ref:`theory - calculating the evidence window <theory-calculating-the-evidence-window>`
+        """
         return self.compatible_windows[1]
 
     @property
     def inner_window1(self):
-        """:class:`~structural_variant.interval.Interval`: the window where evidence will be gathered for the first
+        """:class:`~mavis.interval.Interval`: the window where evidence will be gathered for the first
         breakpoint
         """
         try:
@@ -62,7 +72,7 @@ class Evidence(BreakpointPair):
 
     @property
     def inner_window2(self):
-        """:class:`~structural_variant.interval.Interval`: the window where evidence will be gathered for the second
+        """:class:`~mavis.interval.Interval`: the window where evidence will be gathered for the second
         breakpoint
         """
         try:
@@ -201,12 +211,23 @@ class Evidence(BreakpointPair):
         return read
 
     def putative_event_types(self):
+        """
+        Returns:
+            list of :class:`~mavis.constants.SVTYPE`: list of the possible classifications
+        """
         if self.classification:
             return [self.classification]
         else:
             return BreakpointPair.classify(self)
 
     def compute_fragment_size(self, read, mate):
+        """
+        Args:
+            read (pysam.AlignedSegment): 
+            mate (pysam.AlignedSegment):
+        Returns:
+            Interval: interval representing the range of possible fragment sizes for this read pair
+        """
         raise NotImplementedError('abstract method must be overridden')
 
     def supporting_reads(self):
@@ -227,7 +248,14 @@ class Evidence(BreakpointPair):
 
         This is only applicable to small events. Do not need to look for soft clipped reads
         here since they will be collected already
+        
+        Args:
+            read (pysam.AlignedSegment): the putative spanning read
 
+        Returns:
+            bool:
+                - True: the read was collected and stored in the current evidence object
+                - False: the read was not collected
         """
         if self.interchromosomal:
             return False
@@ -260,6 +288,24 @@ class Evidence(BreakpointPair):
         return False
 
     def collect_compatible_flanking_pair(self, read, mate, compatible_type):
+        """
+        checks if a given read meets the minimum quality criteria to be counted as evidence as stored as support for
+        this event
+
+        Args:
+            read (pysam.AlignedSegment): the read to add
+            mate (pysam.AlignedSegment): the mate
+            compatible_type (SVTYPE): the type we are collecting for
+        
+        Returns:
+            bool:
+                - True: the pair was collected and stored in the current evidence object
+                - False: the pair was not collected
+        Raises:
+            ValueError: if the input reads are not a valid pair
+
+        see :ref:`theory - types of flanking evidence <theory-compatible-flanking-pairs>`
+        """
         if read.is_unmapped or mate.is_unmapped or read.query_name != mate.query_name or read.is_read1 == mate.is_read1:
             raise ValueError('input reads must be a mapped and mated pair')
         if not self.compatible_windows:
@@ -322,8 +368,14 @@ class Evidence(BreakpointPair):
 
         Args:
             read (pysam.AlignedSegment): the read to add
+            mate (pysam.AlignedSegment): the mate
+        
+        Returns:
+            bool:
+                - True: the pair was collected and stored in the current evidence object
+                - False: the pair was not collected
         Raises:
-            UserWarning: the read does not support this event or does not pass quality filters
+            ValueError: if the input reads are not a valid pair
 
         see :ref:`theory - types of flanking evidence <theory-types-of-flanking-evidence>`
         """
@@ -400,6 +452,18 @@ class Evidence(BreakpointPair):
         return False
 
     def collect_half_mapped(self, read, mate):
+        """
+        Args:
+            read (pysam.AlignedSegment): the read to add
+            mate (pysam.AlignedSegment): the unmapped mate
+
+        Returns:
+            bool:
+                - True: the read was collected and stored in the current evidence object
+                - False: the read was not collected
+        Raises:
+            AssertionError: if the mate is not unmapped
+        """
         if not mate.is_unmapped:
             raise AssertionError('expected the mate to be unmapped')
         read_itvl = Interval(read.reference_start + 1, read.reference_end)
@@ -419,9 +483,12 @@ class Evidence(BreakpointPair):
         Args:
             read (pysam.AlignedSegment): the read to add
             first_breakpoint (bool): add to the first breakpoint (or second if false)
+        Returns:
+            bool:
+                - True: the read was collected and stored in the current evidence object
+                - False: the read was not collected
         Raises:
-            UserWarning: the read does not support this breakpoint or does not pass quality filters
-            AttributeError: orientation wasn't specified for the breakpoint
+            NotSpecifiedError: if the breakpoint orientation is not specified
         """
         breakpoint = self.break1 if first_breakpoint else self.break2
         window = self.inner_window1 if first_breakpoint else self.inner_window2
@@ -661,40 +728,39 @@ class Evidence(BreakpointPair):
         # now determine the strand from the remapped reads if possible
         if self.stranded and self.bam_cache.stranded:  # strand specific
             for contig in contigs:
-                build_strand = {STRAND.POS: 0, STRAND.NEG: 0}
+                build_strand = {STRAND.POS: 0, STRAND.NEG: 0}  # if neg will have to flip
                 for read_seq in contig.remapped_sequences:
                     for read in assembly_sequences[read_seq.query_sequence]:
                         if read.is_unmapped:
                             continue
-                        strand = STRAND.NEG if read.is_reverse else STRAND.POS
-                        if read_seq.query_sequence == read.query_sequence:
-                            build_strand[strand] += 1
-                        else:
-                            strand = STRAND.NEG if strand == STRAND.POS else STRAND.POS
-                            build_strand[strand] += 1
-                det_build_strand = None
+                        flip = False
+                        if read.query_sequence != read_seq.query_sequence:
+                            flip = not flip
+                        try:
+                            seq_strand = read_tools.sequenced_strand(read, self.strand_determining_read)
+                            if seq_strand == STRAND.NEG:
+                                flip = not flip
+                            build_strand[STRAND.NEG if flip else STRAND.POS] += 1
+                        except ValueError as err:
+                            pass
                 if sum(build_strand.values()) == 0:
                     continue
                 elif build_strand[STRAND.POS] == 0:
-                    det_build_strand = STRAND.NEG
+                    flipped_build = True
                 elif build_strand[STRAND.NEG] == 0:
-                    det_build_strand = STRAND.POS
+                    flipped_build = False
                 else:
                     ratio = build_strand[STRAND.POS] / (build_strand[STRAND.NEG] + build_strand[STRAND.POS])
                     neg_ratio = 1 - ratio
                     if ratio >= self.assembly_strand_concordance:
-                        det_build_strand = STRAND.POS
+                        flipped_build = False
                     elif neg_ratio >= self.assembly_strand_concordance:
-                        det_build_strand = STRAND.NEG
+                        flipped_build = True
                     else:
                         continue
-                try:
-                    strand = self.decide_sequenced_strand(contig.input_reads)
-                    if strand != det_build_strand:
-                        contig.seq = reverse_complement(contig.seq)
-                    contig.strand_specific = True
-                except ValueError as err:
-                    pass
+                if flipped_build:
+                    contig.seq = reverse_complement(contig.seq)
+                contig.strand_specific = True
 
         filtered_contigs = {}
         # sort so that the function is deterministic

@@ -2,12 +2,10 @@ from ..breakpoint import BreakpointPair, Breakpoint
 from ..constants import CALL_METHOD, SVTYPE, PYSAM_READ_FLAGS, ORIENT, PROTOCOL, COLUMNS, STRAND
 from ..bam import read as read_tools
 from ..interval import Interval
-from ..error import NotSpecifiedError
-from .evidence import GenomeEvidence, TranscriptomeEvidence
+from .evidence import TranscriptomeEvidence
 import itertools
 import statistics
 import math
-from copy import copy as sys_copy
 
 
 class EventCall(BreakpointPair):
@@ -16,6 +14,14 @@ class EventCall(BreakpointPair):
     directly without a lot of copying. Instead we use call objects which are basically
     just a reference to the evidence object and decisions on class, exact breakpoints, etc
     """
+    
+    @property
+    def has_compatible(self):
+        try:
+            self.compatible_type
+            return True
+        except AttributeError:
+            return False
 
     def __init__(
         self,
@@ -59,6 +65,10 @@ class EventCall(BreakpointPair):
         self.compatible_flanking_pairs = set()
         # check that the event type is compatible
         self.event_type = SVTYPE.enforce(event_type)
+        if event_type == SVTYPE.DUP:
+            self.compatible_type = SVTYPE.INS
+        elif event_type == SVTYPE.INS:
+            self.compatible_type = SVTYPE.DUP
         if event_type not in BreakpointPair.classify(self):
             raise ValueError(
                 'event_type is not compatible with the breakpoint call', event_type, BreakpointPair.classify(self))
@@ -71,7 +81,7 @@ class EventCall(BreakpointPair):
     def support(self):
         support = set()
         support.update(self.spanning_reads)
-        for read, mate in self.flanking_pairs:
+        for read, mate in self.flanking_pairs | self.compatible_flanking_pairs:
             support.add(read)
             support.add(mate)
         support.update(self.break1_split_reads)
@@ -80,7 +90,7 @@ class EventCall(BreakpointPair):
             support.update(self.contig.input_reads)
         return support
 
-    def add_flanking_support(self, flanking_pairs):
+    def add_flanking_support(self, flanking_pairs, is_compatible=False):
         """
         counts the flanking read-pair support for the event called. The original source evidence may
         have contained evidence for multiple events and uses a larger range so flanking pairs here
@@ -117,11 +127,13 @@ class EventCall(BreakpointPair):
             if self.interchromosomal != (read.reference_id != mate.reference_id):
                 continue
             # check that the flanking reads work with the current call
-            if not read_tools.orientation_supports_type(read, self.event_type):
+            if not read_tools.orientation_supports_type(
+                    read, self.event_type if not is_compatible else self.compatible_type):
                 continue
             # check that the positions make sense
-            if self.break1.orient == ORIENT.LEFT:
-                if self.break2.orient == ORIENT.LEFT:  # L L
+            LEFT = ORIENT.LEFT if not is_compatible else ORIENT.RIGHT
+            if self.break1.orient == LEFT:
+                if self.break2.orient == LEFT:  # L L
                     if not all([
                         read.reference_start + 1 <= self.break1.end,
                         mate.reference_start + 1 <= self.break2.end,
@@ -135,7 +147,7 @@ class EventCall(BreakpointPair):
                     ]):
                         continue
             else:
-                if self.break2.orient == ORIENT.LEFT:  # R L
+                if self.break2.orient == LEFT:  # R L
                     if not all([
                         read.reference_end >= self.break1.start,
                         mate.reference_start + 1 <= self.break2.end
@@ -148,7 +160,10 @@ class EventCall(BreakpointPair):
                         read.reference_end < self.break2.end
                     ]):
                         continue
-            self.flanking_pairs.add((read, mate))
+            if is_compatible:
+                self.compatible_flanking_pairs.add((read, mate))
+            else:
+                self.flanking_pairs.add((read, mate))
 
     def add_break1_split_read(self, read):
         try:
@@ -357,7 +372,6 @@ def _call_by_contigs(source_evidence):
     for ctg in source_evidence.contigs:
         for read1, read2 in ctg.alignments:
             bpp, event_types = _call_by_reads(source_evidence, read1, read2)
-
             for event_type in event_types:
                 new_event = EventCall(
                     bpp.break1,
@@ -371,6 +385,8 @@ def _call_by_contigs(source_evidence):
                 )
                 # add the flanking support
                 new_event.add_flanking_support(source_evidence.flanking_pairs)
+                if new_event.has_compatible:
+                    new_event.add_flanking_support(source_evidence.compatible_flanking_pairs, is_compatible=True)
 
                 # add any spanning reads that call the same event
                 for read in source_evidence.spanning_reads:
@@ -420,6 +436,8 @@ def _call_by_spanning_reads(source_evidence, consumed_evidence):
         # add any supporting split reads
         # add the flanking support
         new_event.add_flanking_support(available_flanking_pairs)
+        if new_event.has_compatible:
+            new_event.add_flanking_support(available_flanking_pairs, is_compatible=True)
         # add any split read support (this will be consumed for non-contig calls)
         for read in source_evidence.split_reads[0] - consumed_evidence:
             new_event.add_break1_split_read(read)
@@ -765,6 +783,8 @@ def _call_by_supporting_reads(ev, event_type, consumed_evidence=None):
             call_method=CALL_METHOD.SPLIT
         )
         call.add_flanking_support(available_flanking_pairs)
+        if call.has_compatible:
+            call.add_flanking_support(available_flanking_pairs, is_compatible=True)
         call.break1_split_reads.update(pos1[first])
         call.break2_split_reads.update(pos2[second])
         linked_pairings.append(call)
@@ -782,6 +802,8 @@ def _call_by_supporting_reads(ev, event_type, consumed_evidence=None):
             call_method=CALL_METHOD.FLANK
         )
         call.add_flanking_support(available_flanking_pairs)
+        if call.has_compatible:
+            call.add_flanking_support(available_flanking_pairs, is_compatible=True)
         linked_pairings.append(call)
     except (AssertionError, UserWarning) as err:
         error_messages.add(str(err))

@@ -70,7 +70,7 @@ def load_annotations(filepath, warn=devnull, REFERENCE_GENOME=None, filetype=Non
         filetype (str): json or tab/tsv. only required if the file type can't be interpolated from the path extenstion
 
     Returns:
-        :class:`dict` of :class:`list` of :class:`~structural_variant.annotate.genomic.Gene` by :class:`str`: lists of genes keyed by chromosome name
+        :class:`dict` of :class:`list` of :class:`~mavis.annotate.genomic.Gene` by :class:`str`: lists of genes keyed by chromosome name
     """
     if filetype is None:
         m = re.match('.*\.(?P<ext>tsv|tab|json)$', filepath)

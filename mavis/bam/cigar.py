@@ -99,7 +99,7 @@ def score(cigar, **kwargs):
     """scoring based on sw alignment properties with gap extension penalties
 
     Args:
-        cigar (:class:`list` of :class:`~structural_variant.constants.CIGAR` and :class:`int`):
+        cigar (:class:`list` of :class:`~mavis.constants.CIGAR` and :class:`int`):
           list of cigar tuple values
         MISMATCH (int): mismatch penalty
         MATCH (int): match penalty
@@ -176,12 +176,12 @@ def extend_softclipping(cigar, min_exact_to_stop_softclipping):
     exact match aligned portion to signal stop
 
     Args:
-        original_cigar (:class:`list` of :class:`~structural_variant.constants.CIGAR` and :class:`int`): the input cigar
+        original_cigar (:class:`list` of :class:`~mavis.constants.CIGAR` and :class:`int`): the input cigar
         min_exact_to_stop_softclipping (int): number of exact matches to terminate extension
 
     Returns:
         tuple:
-            - :class:`list` of :class:`~structural_variant.constants.CIGAR` and :class:`int` - new cigar list
+            - :class:`list` of :class:`~mavis.constants.CIGAR` and :class:`int` - new cigar list
             - :class:`int` - shift from the original start position
     """
     ref_start_shift = 0
