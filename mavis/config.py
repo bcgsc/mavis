@@ -30,7 +30,7 @@ def cast(value, cast_func):
 class LibraryConfig:
     def __init__(
         self, library, protocol, disease_status, bam_file, inputs, read_length, median_fragment_size,
-        stdev_fragment_size, stranded_bam,
+        stdev_fragment_size, stranded_bam, strand_determining_read=2,
         **kwargs
     ):
         self.library = library
@@ -40,6 +40,7 @@ class LibraryConfig:
         self.median_fragment_size = int(median_fragment_size)
         self.stdev_fragment_size = int(stdev_fragment_size)
         self.stranded_bam = cast(stranded_bam, bool)
+        self.strand_determining_read = int(strand_determining_read)
         self.disease_status = DISEASE_STATUS.enforce(disease_status)
         try:
             self.inputs = [f for f in re.split('[;\s]+', inputs) if f]
@@ -107,6 +108,7 @@ class LibraryConfig:
                 median_fragment_size=bamstats.median_fragment_size,
                 stdev_fragment_size=bamstats.stdev_fragment_size,
                 read_length=bamstats.read_length,
+                strand_determining_read=bamstats.strand_determining_read,
                 **kwargs
             )
         finally:
