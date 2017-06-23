@@ -651,10 +651,8 @@ def _call_by_flanking_pairs(
         if not ev.interchromosomal:
             if window1.start > window2.end:
                 raise AssertionError('flanking window regions are incompatible', window1, window2)
-            print('654:', window1, window2, cover1, cover2)
             window1.end = min([window1.end, window2.end, cover2.start - (0 if event_type == SVTYPE.DUP else 1)])
             window2.start = max([window1.start, window2.start, cover1.end + (0 if event_type == SVTYPE.DUP else 1)])
-            print('window:', window1, window2)
         first_breakpoint_called = Breakpoint(
             ev.break1.chr, window1.start, window1.end,
             orient=ev.break1.orient,
