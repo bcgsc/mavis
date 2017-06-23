@@ -93,7 +93,7 @@ class Domain:
 
     @property
     def translation(self):
-        """:class:`~structural_variant.annotate.Translation`: the Translation this domain belongs to"""
+        """:class:`~mavis.annotate.Translation`: the Translation this domain belongs to"""
         return self.reference_object
 
     def key(self):
@@ -275,7 +275,7 @@ class Translation(BioInterval):
 
     @property
     def transcript(self):
-        """:class:`~structural_variant.annotate.genomic.Transcript`: the spliced transcript this translation belongs to
+        """:class:`~mavis.annotate.genomic.Transcript`: the spliced transcript this translation belongs to
         """
         return self.reference_object
 

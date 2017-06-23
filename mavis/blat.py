@@ -68,7 +68,7 @@ class BlatAlignedSegment(pysam.AlignedSegment):
     def query_coverage_interval(self):
         """
         Returns:
-            :class:`~structural_variant.interval.Interval`: The portion of the original query sequence that is aligned by this read
+            :class:`~mavis.interval.Interval`: The portion of the original query sequence that is aligned by this read
         """
         seq = self.query_sequence
         s = 0

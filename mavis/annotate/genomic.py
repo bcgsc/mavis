@@ -108,7 +108,7 @@ class Gene(BioInterval):
 
     @property
     def translations(self):
-        """:any:`list` of :class:`~structural_variant.annotate.protein.Translation`: list of translations"""
+        """:any:`list` of :class:`~mavis.annotate.protein.Translation`: list of translations"""
         translations = []
         for ust in self.unspliced_transcripts:
             for tx in ust.transcripts:
@@ -194,17 +194,17 @@ class Exon(BioInterval):
 
     @property
     def start_splice_site(self):
-        """:class:`~structural_variant.interval.Interval`: the genomic range describing the splice site"""
+        """:class:`~mavis.interval.Interval`: the genomic range describing the splice site"""
         return Interval(self.start - SPLICE_SITE_RADIUS, self.start + SPLICE_SITE_RADIUS - 1)
 
     @property
     def end_splice_site(self):
-        """:class:`~structural_variant.interval.Interval`: the genomic range describing the splice site"""
+        """:class:`~mavis.interval.Interval`: the genomic range describing the splice site"""
         return Interval(self.end - SPLICE_SITE_RADIUS + 1, self.end + SPLICE_SITE_RADIUS)
 
     @property
     def donor_splice_site(self):
-        """:class:`~structural_variant.interval.Interval`: the genomic range describing the splice site"""
+        """:class:`~mavis.interval.Interval`: the genomic range describing the splice site"""
         if self.get_strand() == STRAND.NEG:
             return self.start_splice_site
         elif self.get_strand() == STRAND.POS:
@@ -214,7 +214,7 @@ class Exon(BioInterval):
 
     @property
     def acceptor_splice_site(self):
-        """:class:`~structural_variant.interval.Interval`: the genomic range describing the splice site"""
+        """:class:`~mavis.interval.Interval`: the genomic range describing the splice site"""
         if self.get_strand() == STRAND.NEG:
             return self.end_splice_site
         elif self.get_strand() == STRAND.POS:
@@ -480,7 +480,7 @@ class usTranscript(BioInterval):
             int: the cdna equivalent
 
         Raises:
-            :class:`~structural_variant.error.IndexError`: when a genomic position not present in the
+            :class:`~mavis.error.IndexError`: when a genomic position not present in the
                 cdna is attempted to be converted
         """
         c, shift = self.convert_genomic_to_nearest_cdna(pos, splicing_pattern)
@@ -613,7 +613,7 @@ class usTranscript(BioInterval):
 
     @property
     def translations(self):
-        """:class:`list` of :class:`~structural_variant.annotate.protein.Translation`: list of translations associated with this transcript"""
+        """:class:`list` of :class:`~mavis.annotate.protein.Translation`: list of translations associated with this transcript"""
         tx = []
         for t in self.spliced_transcripts:
             for tl in t.translations:
@@ -635,7 +635,7 @@ class Transcript(BioInterval):
             us_transcript (usTranscript): the unspliced transcript
             splicing_patt (:class:`list` of :class:`int`): the list of splicing positions
             seq (str): the cdna sequence
-            translations (:class:`list` of :class:`~structural_variant.annotate.protein.Translation`):
+            translations (:class:`list` of :class:`~mavis.annotate.protein.Translation`):
              the list of translations of this transcript
         """
         pos = sorted([ust.start, ust.end] + splicing_patt)

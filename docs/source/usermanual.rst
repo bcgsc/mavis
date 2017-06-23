@@ -264,16 +264,21 @@ A simple example with a single library would look like this (see below)
 .. code-block:: bash
 
     >>> mavis_run.py config --write output.cfg \
-        --library Library1 genome /path/to/bam/file/library1.bam False
+        --library Library1 genome diseased /path/to/bam/file/library1.bam False
 
 This creates a configuration file but is still missing some information before it can be run by the pipeline, the input
-files containing the breakpoint pairs. So a more complete example is shown below
+files containing the breakpoint pairs. So a more complete example is shown below 
 
 .. code-block:: bash
 
     >>> mavis_run.py config --write output.cfg \
-        --library Library1 genome /path/to/bam/file/library1.bam False \
-        --input /path/to/bpp/file Library1
+        --library Library1 genome diseased /path/to/bam/file/library1.bam False \
+        --library Library2 genome normal /path/to/bam/file/library2.bam False \
+        --input /path/to/bpp/file Library1 Library2 \
+        --input /path/to/other/bpp/file Library1 Library2
+
+In the above example Library1 is the tumour genome and Library2 is the normal genome. The same input files are 
+used for both
 
 Manually creating the configuration File
 ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
@@ -284,7 +289,7 @@ following attributes given (see below).
 
 .. code-block:: python
 
-    [library1]
+    [Library1]
     protocol = genome
     bam_file = /path/to/bam/file/library1.bam
     read_length = 125
