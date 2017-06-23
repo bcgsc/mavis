@@ -25,6 +25,8 @@ DEFAULTS = MavisNamespace(
     fetch_reads_bins=5,
     fetch_reads_limit=10000,
     fetch_method_individual=False,
+    fetch_min_bin_size=50,
+    #fetch_reads_min_bin_limit=50,
     filter_secondary_alignments=True,
     fuzzy_mismatch_number=1,
     max_sc_preceeding_anchor=6,
@@ -80,6 +82,10 @@ DEFAULTS = MavisNamespace(
 
     fetch_reads_bins
         number of bins to split an evidence window into to ensure more even sampling of high coverage regions
+
+    fetch_min_bin_size
+        the minimum size of any bin for reading from a bam file. Increasing this number will result in smaller bins 
+        being merged or less bins being created (depending on the fetch method)
 
     filter_secondary_alignments
         filter secondary alignments when gathering read evidence

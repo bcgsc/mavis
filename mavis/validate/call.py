@@ -17,6 +17,7 @@ class EventCall(BreakpointPair):
     
     @property
     def has_compatible(self):
+        """bool: True if compatible flanking pairs are appropriate to collect"""
         try:
             self.compatible_type
             return True
@@ -166,6 +167,10 @@ class EventCall(BreakpointPair):
                 self.flanking_pairs.add((read, mate))
 
     def add_break1_split_read(self, read):
+        """
+        Args:
+            read (pysam.AlignedSegment): putative split read supporting the first breakpoint
+        """
         try:
             p = read_tools.breakpoint_pos(read, self.break1.orient) + 1
             if Interval.overlaps((p, p), self.break1):
@@ -174,6 +179,10 @@ class EventCall(BreakpointPair):
             pass
 
     def add_break2_split_read(self, read):
+        """
+        Args:
+            read (pysam.AlignedSegment): putative split read supporting the second breakpoint
+        """
         try:
             p = read_tools.breakpoint_pos(read, self.break2.orient) + 1
             if Interval.overlaps((p, p), self.break2):
@@ -182,6 +191,10 @@ class EventCall(BreakpointPair):
             pass
 
     def add_spanning_read(self, read):
+        """
+        Args:
+            read (pysam.AlignedSegment): putative spanning read
+        """
         bpp, event_types = _call_by_reads(self.source_evidence, read)
         if self.event_type in event_types:
             if bpp == self:
@@ -402,6 +415,25 @@ def _call_by_contigs(source_evidence):
 
 
 def filter_consumed_pairs(pairs, consumed_reads):
+    """
+    given a set of read tuples, returns all tuples where neither read in the tuple is in the consumed set
+
+    Args:
+        pairs (set of tuples of :class:`pysam.AlignedSegment` and :class:`pysam.AlignedSegment`): pairs to be filtered
+        consumed_reads: (set of :class:`pysam.AlignedSegment`): set of reads that have been used/consumed
+
+    Returns:
+        set of tuples of :class:`pysam.AlignedSegment` and :class:`pysam.AlignedSegment`: set of filtered tuples
+    
+    Note:
+        this will work with any hash-able object
+
+    Example:
+        >>> pairs = {(1, 2), (3, 4), (5, 6)}
+        >>> consumed_reads = {1, 2, 4}
+        >>> filter_consumed_pairs(pairs, consumed_reads)
+        {(5, 6)}
+    """
     temp = set()
     for read, mate in pairs:
         if read not in consumed_reads and mate not in consumed_reads:
@@ -562,8 +594,8 @@ def _call_by_flanking_pairs(
         flanking_count += 1
         cover1_reads.append(read)
         cover2_reads.append(mate)
-        first_positions.extend([read.reference_start + 1, read.reference_end, mate.next_reference_start + 1])
-        second_positions.extend([mate.reference_start + 1, mate.reference_end, read.next_reference_start + 1])
+        first_positions.extend([read.reference_start + 1, read.reference_end])
+        second_positions.extend([mate.reference_start + 1, mate.reference_end])
 
     if flanking_count < ev.min_flanking_pairs_resolution:
         raise AssertionError('insufficient coverage to call by flanking reads')
@@ -619,8 +651,10 @@ def _call_by_flanking_pairs(
         if not ev.interchromosomal:
             if window1.start > window2.end:
                 raise AssertionError('flanking window regions are incompatible', window1, window2)
-            window1.end = min([window1.end, window2.end, cover2.start - 1])
-            window2.start = max([window1.start, window2.start, cover1.end + 1])
+            print('654:', window1, window2, cover1, cover2)
+            window1.end = min([window1.end, window2.end, cover2.start - (0 if event_type == SVTYPE.DUP else 1)])
+            window2.start = max([window1.start, window2.start, cover1.end + (0 if event_type == SVTYPE.DUP else 1)])
+            print('window:', window1, window2)
         first_breakpoint_called = Breakpoint(
             ev.break1.chr, window1.start, window1.end,
             orient=ev.break1.orient,
@@ -658,11 +692,11 @@ def _call_by_flanking_pairs(
             distance=distance_func, traverse=traverse_func
         )
         # trim the putative window by the input breakpoint location for intrachromosomal events
-        if not ev.interchromosomal and window.end < first_breakpoint_called.start:
-            raise AssertionError('input breakpoint incompatible with call', window, first_breakpoint_called)
-        elif not ev.interchromosomal:
+        if not ev.interchromosomal:
             window.start = max([
                 window.start, first_breakpoint_called.start + (0 if event_type == SVTYPE.DUP else 1), cover1.end + 1])
+            if window.start > window.end or window.end < first_breakpoint_called.start:
+                raise AssertionError('input breakpoint incompatible with call', window, first_breakpoint_called)
         second_breakpoint_called = Breakpoint(
             ev.break2.chr, window.start, window.end,
             orient=ev.break2.orient,
@@ -695,12 +729,11 @@ def _call_by_flanking_pairs(
         )
 
         # trim the putative window by the input breakpoint location for intrachromosomal events
-        if not ev.interchromosomal and window.start > second_breakpoint_called.end:
-            raise AssertionError('input breakpoint incompatible with call', window, second_breakpoint_called)
-        elif not ev.interchromosomal:
+        if not ev.interchromosomal:
             window.end = min([
                 window.end, second_breakpoint_called.end - (0 if event_type == SVTYPE.DUP else 1), cover2.start - 1])
-
+            if window.end < window.start or window.start > second_breakpoint_called.end:
+                raise AssertionError('input breakpoint incompatible with call', window, second_breakpoint_called)
         first_breakpoint_called = Breakpoint(
             ev.break1.chr, window.start, window.end,
             orient=ev.break1.orient,
