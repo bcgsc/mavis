@@ -70,7 +70,6 @@ class LibraryConfig:
         sample_cap=3000,
         sample_bin_size=1000,
         sample_size=500,
-        best_transcripts_only=True,
         **kwargs
     ):
         PROTOCOL.enforce(protocol)
@@ -101,11 +100,7 @@ class LibraryConfig:
                 )
             else:
                 raise ValueError('unrecognized value for protocol', protocol)
-            log(
-                'library:', library, protocol,
-                'median', bamstats.median_fragment_size,
-                'stdev', bamstats.stdev_fragment_size,
-                'read length', bamstats.read_length)
+            log(bamstats)
 
             return LibraryConfig(
                 library=library, protocol=protocol, bam_file=bam_file, inputs=inputs,
@@ -398,7 +393,8 @@ def augment_parser(parser, optparser, arguments):
             add_semi_optional_argument(
                 arg, optparser, parser, 'path to the 2bit reference file used for blatting contig sequences.')
         elif arg == 'dgv_annotation':
-            add_semi_optional_argument(arg, optparser, parser, 'Path to the dgv reference processed to look like the cytoband file.')
+            add_semi_optional_argument(
+                arg, optparser, parser, 'Path to the dgv reference processed to look like the cytoband file.')
         elif arg == 'config':
             parser.add_argument('config', 'path to the config file')
         elif arg == 'stranded_bam':
