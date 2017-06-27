@@ -79,6 +79,16 @@ class EventCall(BreakpointPair):
             raise ValueError('if a contig is given the call method must be by contig')
         self.contig_alignment = contig_alignment
 
+    def get_bed_repesentation(self):
+        bed = []
+        name = self.data.get(COLUMNS.cluster_id, None) + '-' + self.event_type
+        if self.interchromosomal:
+            bed.append((self.break1.chr, self.break1.start, self.break1.end, name))
+            bed.append((self.break2.chr, self.break2.start, self.break2.end, name))
+        else:
+            bed.append((self.break1.chr, self.break1.start, self.break2.end, name))
+        return bed
+
     def support(self):
         support = set()
         support.update(self.spanning_reads)

@@ -229,6 +229,7 @@ def main(
     log('{} putative calls resulted in {} events with 1 or more event call'.format(len(evidence_clusters), total_pass))
     output_tabbed_file(event_calls, PASSED_OUTPUT_FILE)
     output_tabbed_file(filtered_evidence_clusters, FAILED_OUTPUT_FILE)
+    write_bed_file(PASSED_BED_FILE, itertools.chain.from_iterable([e.get_bed_repesentation() for e in event_calls]))
 
     with pysam.AlignmentFile(CONTIG_BAM, 'wb', template=INPUT_BAM_CACHE.fh) as fh:
         log('writing:', CONTIG_BAM)
