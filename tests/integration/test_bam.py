@@ -662,7 +662,6 @@ class TestBamStats(unittest.TestCase):
                 bamfh,
                 annotations,
                 100,
-                best_transcripts_only=False,
                 min_mapping_quality=1,
                 stranded=True,
                 sample_cap=10000,
