@@ -174,6 +174,7 @@ def main(
     )
     log('alignment complete')
     event_calls = []
+    total_pass = 0
     write_bed_file(EVIDENCE_BED, itertools.chain.from_iterable([e.get_bed_repesentation() for e in evidence_clusters]))
     for index, e in enumerate(evidence_clusters):
         print()
@@ -193,19 +194,25 @@ def main(
             failure_comment = ['zero events were called'] if failure_comment is None else failure_comment
             e.data[COLUMNS.filter_comment] = failure_comment
             filtered_evidence_clusters.append(e)
+        else:
+            total_pass += 1
 
         log('called {} event(s)'.format(len(calls)))
         for i, ev in enumerate(calls):
             log(ev, time_stamp=False)
             log(ev.event_type, ev.call_method, time_stamp=False)
             ev.data[COLUMNS.validation_id] = '{}-v{}'.format(ev.cluster_id, i + 1)
-            log('remapped reads: {}; spanning reads: {}; split reads: [{} ({}), {} ({}), {}], flanking pairs: {}'.format(
-                0 if not ev.contig else len(ev.contig.input_reads),
-                len(ev.spanning_reads),
-                len(ev.break1_split_reads), len(ev.break1_tgt_align_split_read_names()),
-                len(ev.break2_split_reads), len(ev.break2_tgt_align_split_read_names()),
-                len(ev.linking_split_read_names()),
-                len(ev.flanking_pairs)), time_stamp=False)
+            log(
+                'remapped reads: {}; spanning reads: {}; split reads: [{} ({}), {} ({}), {}]'
+                ', flanking pairs: {}{}'.format(
+                    0 if not ev.contig else len(ev.contig.input_reads),
+                    len(ev.spanning_reads),
+                    len(ev.break1_split_reads), len(ev.break1_tgt_align_split_read_names()),
+                    len(ev.break2_split_reads), len(ev.break2_tgt_align_split_read_names()),
+                    len(ev.linking_split_read_names()),
+                    len(ev.flanking_pairs),
+                    '' if not ev.has_compatible else '(' + str(len(ev.compatible_flanking_pairs)) + ')'
+                ), time_stamp=False)
 
     # write the output validated clusters (split by type and contig)
     for i, ec in enumerate(event_calls):
@@ -219,7 +226,7 @@ def main(
             COLUMNS.break1_homologous_seq: b1_homseq,
             COLUMNS.break2_homologous_seq: b2_homseq,
         })
-
+    log('{} putative calls resulted in {} events with 1 or more event call'.format(len(evidence_clusters), total_pass))
     output_tabbed_file(event_calls, PASSED_OUTPUT_FILE)
     output_tabbed_file(filtered_evidence_clusters, FAILED_OUTPUT_FILE)
 
