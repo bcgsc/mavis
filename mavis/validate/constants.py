@@ -26,7 +26,6 @@ DEFAULTS = MavisNamespace(
     fetch_reads_limit=10000,
     fetch_method_individual=False,
     fetch_min_bin_size=50,
-    #fetch_reads_min_bin_limit=50,
     filter_secondary_alignments=True,
     fuzzy_mismatch_number=1,
     max_sc_preceeding_anchor=6,
@@ -43,7 +42,7 @@ DEFAULTS = MavisNamespace(
     min_spanning_reads_resolution=3,
     min_splits_reads_resolution=3,
     sc_extension_stop=5,
-    stdev_count_abnormal=3,
+    stdev_count_abnormal=3.0,
     strand_determining_read=2,
     outer_window_min_event_size=125
 )

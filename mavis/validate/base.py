@@ -83,11 +83,11 @@ class Evidence(BreakpointPair):
     @property
     def min_expected_fragment_size(self):
         # cannot be negative
-        return max([self.median_fragment_size - self.stdev_fragment_size * self.stdev_count_abnormal, 0])
+        return int(round(max([self.median_fragment_size - self.stdev_fragment_size * self.stdev_count_abnormal, 0]), 0))
 
     @property
     def max_expected_fragment_size(self):
-        return self.median_fragment_size + self.stdev_fragment_size * self.stdev_count_abnormal
+        return int(round(self.median_fragment_size + self.stdev_fragment_size * self.stdev_count_abnormal, 0))
 
     def __init__(
             self,
@@ -835,6 +835,8 @@ class Evidence(BreakpointPair):
                 read.mapping_quality < min_mapping_quality
             ]):
                 return False
+            elif CIGAR.S in [read.cigar[0][0], read.cigar[-1][0]]:
+                return True
             elif read.is_proper_pair and protocol != PROTOCOL.TRANS:
                 frag_est = abs(read.reference_start - read.next_reference_start)
                 if frag_est >= min_expected_fragment_size and frag_est + read_length <= max_expected_fragment_size:
@@ -998,12 +1000,7 @@ class Evidence(BreakpointPair):
             len(Interval.union(self.break1, self.break2)),
             len(self.untemplated_seq if self.untemplated_seq else '')
         )
-
-        def filter_if_true(read):
-            if self.filter_secondary_alignments and read.is_secondary:
-                return True
-            return False
-
+        
         def cache_if_true(read):
             if read.is_unmapped or read.mate_is_unmapped:
                 return True
@@ -1012,13 +1009,19 @@ class Evidence(BreakpointPair):
                 read.mapping_quality < self.min_mapping_quality
             ]):
                 return False
-            elif any([
-                not self.interchromosomal and not read.is_proper_pair,
-                read.is_unmapped, read.mate_is_unmapped,
-                self.interchromosomal and read.reference_id != read.next_reference_id
-            ]):
+            elif CIGAR.S in [read.cigar[0][0], read.cigar[-1][0]]:
                 return True
-            elif any([read_tools.orientation_supports_type(read, t) for t in self.putative_event_types()]):
+            elif read.is_proper_pair and self.protocol != PROTOCOL.TRANS:
+                frag_est = abs(read.reference_start - read.next_reference_start)
+                if frag_est >= self.min_expected_fragment_size and \
+                        frag_est + self.read_length <= self.max_expected_fragment_size:
+                    return False
+            return True
+
+        def filter_if_true(read):
+            if not cache_if_true(read):
+                return True
+            elif read.is_unmapped:
                 return True
             return False
 
