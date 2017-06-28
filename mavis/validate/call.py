@@ -6,6 +6,7 @@ from .evidence import TranscriptomeEvidence
 import itertools
 import statistics
 import math
+import warnings
 
 
 class EventCall(BreakpointPair):
@@ -555,7 +556,11 @@ def _call_interval_by_flanking_coverage(
 
     coverage_d = distance(coverage.start, coverage.end).start  # minimum distance of the coverage
     max_interval = max_expected_fragment_size - read_length
-    assert(coverage_d <= max_interval)
+    if coverage_d > max_interval:
+        msg = 'length of the coverage interval ({}) is greater than the maximum expected ({})'.format(
+            coverage_d, max_interval)
+        warnings.warn(msg)
+        raise AssertionError(msg)
     if orientation == ORIENT.LEFT:
         s = coverage.end
         t = traverse(coverage.end, max_interval - coverage_d, ORIENT.RIGHT).end
@@ -606,9 +611,8 @@ def _call_by_flanking_pairs(
         cover2_reads.append(mate)
         first_positions.extend([read.reference_start + 1, read.reference_end])
         second_positions.extend([mate.reference_start + 1, mate.reference_end])
-
     if flanking_count < ev.min_flanking_pairs_resolution:
-        raise AssertionError('insufficient coverage to call by flanking reads')
+        raise AssertionError('insufficient coverage to call {} by flanking reads'.format(event_type))
 
     cover1 = Interval(min(first_positions), max(first_positions))
     cover2 = Interval(min(second_positions), max(second_positions))
