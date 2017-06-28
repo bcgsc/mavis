@@ -78,7 +78,7 @@ def filter_on_overlap(bpps, regions_by_reference_name):
 def read_inputs(inputs, **kwargs):
     bpps = []
     kwargs.setdefault('require', [])
-    kwargs['require'] = list(set(kwargs['require'] + [COLUMNS.library, COLUMNS.protocol]))
+    kwargs['require'] = list(set(kwargs['require'] + [COLUMNS.protocol]))
     kwargs.setdefault('in_', {})
     kwargs['in_'][COLUMNS.protocol] = PROTOCOL
     for finput in inputs:
@@ -127,3 +127,26 @@ def generate_complete_stamp(output_dir, log=devnull, prefix='MAVIS.'):
     with open(stamp, 'w') as fh:
         pass
     return stamp
+
+
+def filter_uninformative(annotations_by_chr, breakpoint_pairs, max_proximity=5000):
+    result = []
+    filtered = []
+    for bpp in breakpoint_pairs:
+        # loop over the annotations
+        overlaps_gene = False
+        window1 = Interval(bpp.break1.start - max_proximity, bpp.break1.end + max_proximity)
+        window2 = Interval(bpp.break2.start - max_proximity, bpp.break2.end + max_proximity)
+        for gene in annotations_by_chr.get(bpp.break1.chr, []):
+            if Interval.overlaps(gene, window1):
+                overlaps_gene = True
+                break
+        for gene in annotations_by_chr.get(bpp.break2.chr, []):
+            if Interval.overlaps(gene, window2):
+                overlaps_gene = True
+                break
+        if overlaps_gene:
+            result.append(bpp)
+        else:
+            filtered.append(bpp)
+    return result, filtered
