@@ -835,11 +835,12 @@ class Evidence(BreakpointPair):
                 read.mapping_quality < min_mapping_quality
             ]):
                 return False
-            elif CIGAR.S in [read.cigar[0][0], read.cigar[-1][0]]:
+            elif set([x[0] for x in read.cigar]) & {CIGAR.D, CIGAR.N, CIGAR.S, CIGAR.I}:
                 return True
             elif read.is_proper_pair and protocol != PROTOCOL.TRANS:
-                frag_est = abs(read.reference_start - read.next_reference_start)
-                if frag_est >= min_expected_fragment_size and frag_est + read_length <= max_expected_fragment_size:
+                min_frag_est = abs(read.reference_start - read.next_reference_start)
+                max_frag_est = min_frag_est + 2 * read_length
+                if min_frag_est >= min_expected_fragment_size and max_frag_est <= max_expected_fragment_size:
                     return False
             return True
 
@@ -1009,12 +1010,12 @@ class Evidence(BreakpointPair):
                 read.mapping_quality < self.min_mapping_quality
             ]):
                 return False
-            elif CIGAR.S in [read.cigar[0][0], read.cigar[-1][0]]:
+            elif set([x[0] for x in read.cigar]) & {CIGAR.D, CIGAR.N, CIGAR.S, CIGAR.I}:
                 return True
             elif read.is_proper_pair and self.protocol != PROTOCOL.TRANS:
-                frag_est = abs(read.reference_start - read.next_reference_start)
-                if frag_est >= self.min_expected_fragment_size and \
-                        frag_est + self.read_length <= self.max_expected_fragment_size:
+                min_frag_est = abs(read.reference_start - read.next_reference_start)
+                max_frag_est = min_frag_est + 2 * self.read_length
+                if min_frag_est >= self.min_expected_fragment_size and max_frag_est <= self.max_expected_fragment_size:
                     return False
             return True
 
