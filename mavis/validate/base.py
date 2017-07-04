@@ -8,7 +8,7 @@ from ..breakpoint import BreakpointPair
 from ..bam import read as read_tools
 from ..bam import cigar as cigar_tools
 from ..bam.cache import BamCache
-from ..util import devnull
+from ..util import devnull, log
 
 
 class Evidence(BreakpointPair):
@@ -199,7 +199,7 @@ class Evidence(BreakpointPair):
         prefix = 0
         try:
             c, prefix = cigar_tools.extend_softclipping(c, self.sc_extension_stop)
-        except AttributeError:
+        except AttributeError as err:
             pass
         read.cigar = cigar_tools.join(c)
 
@@ -207,7 +207,6 @@ class Evidence(BreakpointPair):
         read.cigar = cigar_tools.hgvs_standardize_cigar(
             read, self.REFERENCE_GENOME[self.bam_cache.get_read_reference_name(read)].seq)
         read.reference_start = read.reference_start + prefix
-
         return read
 
     def putative_event_types(self):
@@ -267,11 +266,14 @@ class Evidence(BreakpointPair):
             strand = read_tools.sequenced_strand(read, self.strand_determining_read)
             if strand != self.break1.strand and strand != self.break2.strand:
                 return False
-
+        
         combined = self.inner_window1 & self.inner_window2
         read_interval = Interval(read.reference_start + 1, read.reference_end)
 
         if Interval.overlaps(combined, read_interval):
+            
+            if not read.has_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR) or not read.get_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR):
+                read = self.standardize_read(read)
             # in the correct position, now determine if it can support the event types
             for event_type in self.putative_event_types():
                 if event_type in [SVTYPE.DUP, SVTYPE.INS]:
@@ -838,8 +840,8 @@ class Evidence(BreakpointPair):
             elif set([x[0] for x in read.cigar]) & {CIGAR.D, CIGAR.N, CIGAR.S, CIGAR.I}:
                 return True
             elif read.is_proper_pair and protocol != PROTOCOL.TRANS:
-                min_frag_est = abs(read.reference_start - read.next_reference_start)
-                max_frag_est = min_frag_est + 2 * read_length
+                min_frag_est = abs(read.reference_start - read.next_reference_start) - read_length
+                max_frag_est = min_frag_est + 3 * read_length
                 if min_frag_est >= min_expected_fragment_size and max_frag_est <= max_expected_fragment_size:
                     return False
             return True
@@ -993,9 +995,6 @@ class Evidence(BreakpointPair):
         """
         open the associated bam file and read and store the evidence
         does some preliminary read-quality filtering
-
-        .. todo::
-            support gathering evidence for small structural variants
         """
         max_dist = max(
             len(Interval.union(self.break1, self.break2)),
@@ -1013,8 +1012,8 @@ class Evidence(BreakpointPair):
             elif set([x[0] for x in read.cigar]) & {CIGAR.D, CIGAR.N, CIGAR.S, CIGAR.I}:
                 return True
             elif read.is_proper_pair and self.protocol != PROTOCOL.TRANS:
-                min_frag_est = abs(read.reference_start - read.next_reference_start)
-                max_frag_est = min_frag_est + 2 * self.read_length
+                min_frag_est = abs(read.reference_start - read.next_reference_start) - self.read_length
+                max_frag_est = min_frag_est + 3 * self.read_length
                 if min_frag_est >= self.min_expected_fragment_size and max_frag_est <= self.max_expected_fragment_size:
                     return False
             return True

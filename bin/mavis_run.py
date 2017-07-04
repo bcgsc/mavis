@@ -44,9 +44,8 @@ def main_pipeline(args, configs):
     annotation_jobs = []
     rand = int(random.random() * math.pow(10, 10))
     for sec in configs:
-        base = os.path.join(args.output, '{}_{}'.format(sec.library, sec.protocol))
+        base = os.path.join(args.output, '{}_{}_{}'.format(sec.library, sec.disease_status, sec.protocol))
         log('setting up the directory structure for', sec.library, 'as', base)
-        base = os.path.join(args.output, '{}_{}'.format(sec.library, sec.protocol))
         cluster_output = mkdirp(os.path.join(base, 'clustering'))
         validation_output = mkdirp(os.path.join(base, 'validation'))
         annotation_output = mkdirp(os.path.join(base, 'annotation'))
