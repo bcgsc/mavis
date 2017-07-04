@@ -356,3 +356,28 @@ class TestHgvsStandardizeCigars(unittest.TestCase):
         self.assertEqual('A', smallest_nonoverlapping_repeat(s))
         s = 'ATGGCATGGCATGGC'
         self.assertEqual('ATGGC', smallest_nonoverlapping_repeat(s))
+
+    def test_deletion_repeat(self):
+        qseq = (
+            'GAGT'
+            'GAGACTCTGT'
+            'GAA'
+            'AAAGAAAAAAAAAAAATATATATATATATAAATATACATATTATGTATCAAATATATATTATGTGTAATATACATCATGTATC' 
+            'AAATATATATTATGTATAATATACATCATATATCAAATATATATTATGTG'
+        )
+
+        read = MockRead(
+            'name', reference_name='11_86018001-86018500',
+            reference_start=28,
+            cigar=[
+                (CIGAR.S, 4), (CIGAR.EQ, 10), (CIGAR.X, 3), (CIGAR.EQ, 14), (CIGAR.X, 1),
+                (CIGAR.EQ, 21), (CIGAR.X, 1), (CIGAR.EQ, 22), (CIGAR.D, 27), (CIGAR.EQ, 74)
+            ],
+            query_sequence=qseq
+        )
+        expected_cigar = [
+            (CIGAR.S, 4), (CIGAR.EQ, 10), (CIGAR.X, 3), (CIGAR.EQ, 14), (CIGAR.X, 1),
+            (CIGAR.EQ, 21), (CIGAR.X, 1), (CIGAR.EQ, 22 + 27), (CIGAR.D, 27), (CIGAR.EQ, 74 - 27)
+        ]
+        std_cigar = hgvs_standardize_cigar(read, REFERENCE_GENOME[read.reference_name].seq)
+        self.assertEqual(expected_cigar, std_cigar)

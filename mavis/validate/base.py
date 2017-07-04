@@ -202,11 +202,11 @@ class Evidence(BreakpointPair):
         except AttributeError as err:
             pass
         read.cigar = cigar_tools.join(c)
-
+        read.reference_start = read.reference_start + prefix
+        
         # makes sure all insertions are called as far 'right' as possible
         read.cigar = cigar_tools.hgvs_standardize_cigar(
             read, self.REFERENCE_GENOME[self.bam_cache.get_read_reference_name(read)].seq)
-        read.reference_start = read.reference_start + prefix
         return read
 
     def putative_event_types(self):
@@ -273,6 +273,7 @@ class Evidence(BreakpointPair):
         if Interval.overlaps(combined, read_interval):
             
             if not read.has_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR) or not read.get_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR):
+                
                 read = self.standardize_read(read)
             # in the correct position, now determine if it can support the event types
             for event_type in self.putative_event_types():
