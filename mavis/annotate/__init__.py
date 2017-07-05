@@ -53,11 +53,6 @@ Overview of Class Relationships
     :class:`~mavis.annotate.protein.Translation`: is the translation of the spliced transcript. Start and
     end are cdna positions wrt the 5' end of the spliced transcript. The start and end here describe the start and end
     of the coding sequence
-
-
-
-
-
 """
 
 from .file_io import *

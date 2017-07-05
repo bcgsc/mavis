@@ -37,10 +37,13 @@ class BamCache:
         self.cache.setdefault(read.query_name, set()).add(read)
 
     def has_read(self, read):
-        if read.query_name in self.cache:
+        if read.query_name not in self.cache:
+            return False
+        elif read in self.cache[read.query_name]:
             return True
         else:
             return False
+
 
     def reference_id(self, chrom):
         """
@@ -95,8 +98,24 @@ class BamCache:
         return [Interval(s, t) for s, t in fetch_regions]
 
     def fetch(
-        self, input_chrom, start, stop, limit=10000, cache_if=lambda x: True, filter_if=lambda x: False
+        self, input_chrom, start, stop, limit=10000, cache_if=lambda x: True, filter_if=lambda x: False,
+        stop_on_cached_read=False
     ):
+        """
+        Args:
+            input_chrom (str): chromosome name
+            start (int): start position
+            end (int): end position
+            limit (int): maximum number of reads to fetch
+            cache_if (function):  if returns True then the read is added to the cache
+            filter_if (function): if returns True then the read is not returned as part of the result
+            stop_on_cached_read (bool): stop reading at the first read found that is already in the cache
+        Note:
+            the cache_if and filter_if functions must be any function that takes a read as input and returns a boolean
+
+        Returns:
+            set of :class:`pysam.AlignedSegment`: a set of reads which overlap the input region
+        """
         # try using the cache to avoid fetching regions more than once
         result = []
         chrom = input_chrom
@@ -112,6 +131,8 @@ class BamCache:
 
         for read in self.fh.fetch(chrom, start, stop):
             if limit is not None and count >= limit:
+                break
+            if stop_on_cached_read and self.has_read(read):
                 break
             if not filter_if(read):
                 result.append(read)

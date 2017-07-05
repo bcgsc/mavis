@@ -906,14 +906,14 @@ def choose_more_annotated(ann_list):
     that land in the intergenic region
 
     Args:
-        ann_list (list of Annotation): list of input annotations
+        ann_list (list of :class:`Annotation`): list of input annotations
 
     Warning:
         input annotations are assumed to be the same event (the same validation_id)
         the logic used would not apply to different events
 
     Returns:
-        (list of Annotation): the filtered list
+        list of :class:`Annotation`: the filtered list
     """
     two_transcript = []
     one_transcript = []
@@ -942,14 +942,14 @@ def choose_transcripts_by_priority(ann_list):
     of transcript. Throw an error if they are identical
 
     Args:
-        ann_list (list of Annotation): input annotations
+        ann_list (list of :class:`Annotation`): input annotations
 
     Warning:
         input annotations are assumed to be the same event (the same validation_id)
         the logic used would not apply to different events
 
-     Returns:
-        (list of Annotation): the filtered list
+    Returns:
+        list of :class:`Annotation`: the filtered list
     """
     annotations_by_gene_combination = {}
     genes = set()
@@ -1003,7 +1003,7 @@ def annotate_events(
 ):
     """
     Args:
-        bpps (list of BreakpointPair): list of events
+        bpps (list of :class:`~mavis.breakpoint.BreakpointPair`): list of events
         annotations: reference annotations
         reference_genome (dict of string by string): dictionary of reference sequences by name
         max_proximity (int): see :term:`max_proximity`
@@ -1014,7 +1014,7 @@ def annotate_events(
         filters (list of callable): list of functions taking in a list and returning a list for filtering
 
     Returns:
-        (list of Annotation): list of the putative annotations
+        list of :class:`Annotation`: list of the putative annotations
     """
     if filters is None:
         filters = [choose_more_annotated, choose_transcripts_by_priority]

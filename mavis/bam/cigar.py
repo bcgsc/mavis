@@ -33,6 +33,8 @@ def recompute_cigar_mismatch(read, ref):
         if cigar_value in [CIGAR.S, CIGAR.I]:
             result.append((cigar_value, freq))
             seq_pos += freq
+        elif cigar_value == CIGAR.H:
+            result.append((cigar_value, freq))
         elif cigar_value in [CIGAR.D, CIGAR.N]:
             result.append((cigar_value, freq))
             ref_pos += freq
@@ -211,6 +213,8 @@ def extend_softclipping(cigar, min_exact_to_stop_softclipping):
                 pass
             elif v in [CIGAR.I, CIGAR.S]:
                 new_cigar.append((CIGAR.S, f))
+            elif v == CIGAR.H:
+                new_cigar.append((v, f))
             else:
                 new_cigar.append((CIGAR.S, f))
                 ref_start_shift += f
@@ -364,7 +368,7 @@ def hgvs_standardize_cigar(read, reference_seq):
             new_cigar.append((CIGAR.D, cigar[i][1]))
         else:
             new_cigar.append(cigar[i])
-
+    
     new_cigar = merge_indels(new_cigar)
     # now we need to extend any insertions
     rpos = read.reference_start

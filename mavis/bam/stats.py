@@ -1,6 +1,7 @@
 #!/projects/tumour_char/analysis_scripts/python/centos06/anaconda3_v2.3.0/bin/python
 from ..constants import STRAND
 from ..util import devnull
+from .read import sequenced_strand
 import math
 import numpy as np
 import statistics as stats
@@ -12,6 +13,30 @@ class BamStats:
         self.median_fragment_size = median_fragment_size
         self.stdev_fragment_size = stdev_fragment_size
         self.read_length = read_length
+        self.stranded = False
+        self.strand_determining_read = 2
+        self.sdr_percent_support = None
+
+    def add_stranded_information(self, strand_hist):
+        self.stranded = True
+        if strand_hist[1] > strand_hist[2]:
+            self.strand_determining_read = 1
+            self.sdr_percent_support = strand_hist[1] * 100 / (strand_hist[1] + strand_hist[2])
+        elif strand_hist[1] < strand_hist[2]:
+            self.strand_determining_read = 2
+            self.sdr_percent_support = strand_hist[2] * 100 / (strand_hist[1] + strand_hist[2])
+        else:
+            raise AssertionError(
+                'stranded values are equal. either this information was not collected or is not deterministic',
+                strand_hist.items())
+
+    def __str__(self):
+        result = 'BamStats(fragment_size={0.median_fragment_size}+/-' \
+                 '{0.stdev_fragment_size:.4}, read_length={0.read_length}'.format(self)
+        if self.stranded:
+            result += ', strand_determining_read={0.strand_determining_read}[{0.sdr_percent_support:.4}]'.format(self)
+        result += ')'
+        return result
 
 
 class Histogram(dict):
@@ -71,11 +96,10 @@ def compute_transcriptome_bam_stats(
     annotations,
     sample_size,
     log=devnull,
-    best_transcripts_only=False,
     min_mapping_quality=1,
     stranded=True,
     sample_cap=10000,
-    distribution_fraction=0.99
+    distribution_fraction=0.97
 ):
     """
     computes various statistical measures relating the input bam file
@@ -85,7 +109,6 @@ def compute_transcriptome_bam_stats(
         annotations (object): see :func:`~mavis.annotate.load_reference_genes`
         sample_size (int): the number of genes to compute stats over
         log (callable): outputs logging information
-        best_transcripts_only (bool): limit transcripts to those flagged best only
         min_mapping_quality (int): the minimum mapping quality for a read to be used
         stranded (bool): if True then reads must match the gene strand
         sample_cap (int): maximum number of reads to collect for any given sample region
@@ -109,15 +132,27 @@ def compute_transcriptome_bam_stats(
                 sample_size, len(total_annotations)))
 
     fragment_hist = Histogram()
+    read_strand_verification = Histogram()
+    read_strand_verification[1] = 0
+    read_strand_verification[2] = 0
+
     read_lengths = []
     for gene in genes:
         count = 0
-        log('current bin (gene)', gene.name, gene.chr, gene.start, gene.end)
         for read in bam_file_handle.fetch(gene.chr, gene.start, gene.end):
             if read.is_unmapped or read.mate_is_unmapped or read.mapping_quality < min_mapping_quality \
                     or read.next_reference_id != read.reference_id or read.is_secondary \
                     or not read.is_proper_pair:
                 continue
+            if stranded:
+                try:
+                    strand = sequenced_strand(read, 1)
+                    if strand == gene.get_strand():
+                        read_strand_verification.add(1)
+                    else:
+                        read_strand_verification.add(2)
+                except ValueError:
+                    pass
             if stranded:
                 if read.is_read1:
                     if read.is_reverse:
@@ -153,7 +188,10 @@ def compute_transcriptome_bam_stats(
         result.add(k + read_length, v)
     median = result.median()
     err = result.distribution_stderr(median, distribution_fraction)
-    return BamStats(median, math.sqrt(err), read_length)
+    bamstats = BamStats(median, math.sqrt(err), read_length)
+    if stranded:
+        bamstats.add_stranded_information(read_strand_verification)
+    return bamstats
 
 
 def compute_genome_bam_stats(

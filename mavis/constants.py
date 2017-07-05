@@ -140,7 +140,7 @@ note: descriptions are taken from the `samfile documentation <https://samtools.g
 """
 
 NA_MAPPING_QUALITY = 255
-""":class:`int`: mapping qaulity value to indicate mapping was not performed/calculated"""
+""":class:`int`: mapping quality value to indicate mapping was not performed/calculated"""
 
 PYSAM_READ_FLAGS = Vocab(
     REVERSE=16,

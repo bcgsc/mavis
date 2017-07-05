@@ -53,7 +53,7 @@ class TestFullPipeline(unittest.TestCase):
         tail(output)
 
         # check that the subdirectories were built
-        for lib in[mock_genome + '_' + PROTOCOL.GENOME, mock_trans + '_' + PROTOCOL.TRANS]:
+        for lib in[mock_genome + '_*', mock_trans + '_*']:
             self.assertTrue(glob_exists(temp_output, lib, 'clustering'))
             self.assertTrue(glob_exists(temp_output, lib, 'clustering', 'batch-*-1.tab'))
             self.assertTrue(glob_exists(temp_output, lib, 'clustering', 'uninformative_clusters.txt'))

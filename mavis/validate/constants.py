@@ -24,7 +24,8 @@ DEFAULTS = MavisNamespace(
     contig_aln_min_query_consumption=0.7,
     fetch_reads_bins=5,
     fetch_reads_limit=10000,
-    fetch_method_individual=False,
+    fetch_method_individual=True,
+    fetch_min_bin_size=50,
     filter_secondary_alignments=True,
     fuzzy_mismatch_number=1,
     max_sc_preceeding_anchor=6,
@@ -32,16 +33,16 @@ DEFAULTS = MavisNamespace(
     min_anchor_fuzzy=10,
     min_anchor_match=0.9,
     min_double_aligned_to_estimate_insertion_size=2,
-    min_flanking_pairs_resolution=3,
+    min_flanking_pairs_resolution=10,
     min_linking_split_reads=1,
-    min_mapping_quality=20,
+    min_mapping_quality=5,
     min_non_target_aligned_split_reads=1,
     min_sample_size_to_apply_percentage=10,
     min_softclipping=6,
     min_spanning_reads_resolution=3,
     min_splits_reads_resolution=3,
     sc_extension_stop=5,
-    stdev_count_abnormal=3,
+    stdev_count_abnormal=3.0,
     strand_determining_read=2,
     outer_window_min_event_size=125
 )
@@ -80,6 +81,10 @@ DEFAULTS = MavisNamespace(
 
     fetch_reads_bins
         number of bins to split an evidence window into to ensure more even sampling of high coverage regions
+
+    fetch_min_bin_size
+        the minimum size of any bin for reading from a bam file. Increasing this number will result in smaller bins 
+        being merged or less bins being created (depending on the fetch method)
 
     filter_secondary_alignments
         filter secondary alignments when gathering read evidence

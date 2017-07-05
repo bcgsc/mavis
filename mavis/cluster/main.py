@@ -2,10 +2,9 @@ import os
 import itertools
 from .cluster import cluster_breakpoint_pairs
 from ..constants import COLUMNS
-from ..interval import Interval
 from .constants import DEFAULTS
 from ..util import read_inputs, output_tabbed_file, write_bed_file, generate_complete_stamp
-from ..util import filter_on_overlap, log, mkdirp
+from ..util import filter_on_overlap, log, mkdirp, filter_uninformative
 import uuid
 
 
@@ -72,25 +71,7 @@ def main(
     # filter by informative
     if uninformative_filter:
         log('filtering from', len(breakpoint_pairs), 'breakpoint pairs using informative filter')
-        pass_clusters = []
-        uninformative_clusters = []
-        for bpp in breakpoint_pairs:
-            # loop over the annotations
-            overlaps_gene = False
-            window1 = Interval(bpp.break1.start - max_proximity, bpp.break1.end + max_proximity)
-            window2 = Interval(bpp.break2.start - max_proximity, bpp.break2.end + max_proximity)
-            for gene in annotations.get(bpp.break1.chr, []):
-                if Interval.overlaps(gene, window1):
-                    overlaps_gene = True
-                    break
-            for gene in annotations.get(bpp.break2.chr, []):
-                if Interval.overlaps(gene, window2):
-                    overlaps_gene = True
-                    break
-            if overlaps_gene:
-                pass_clusters.append(bpp)
-            else:
-                uninformative_clusters.append(bpp)
+        pass_clusters, uninformative_clusters = filter_uninformative(annotations, breakpoint_pairs)
         log(
             'filtered from', len(breakpoint_pairs),
             'down to', len(pass_clusters),
