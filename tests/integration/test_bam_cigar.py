@@ -1,7 +1,5 @@
 from mavis.constants import CIGAR
-from mavis.bam.cigar import recompute_cigar_mismatch, hgvs_standardize_cigar, extend_softclipping
-from mavis.bam.cigar import alignment_matches, longest_fuzzy_match, join, score, match_percent, compute
-from mavis.bam.cigar import smallest_nonoverlapping_repeat, convert_for_igv
+from mavis.bam.cigar import *
 from mavis.annotate import load_reference_genome
 import unittest
 import warnings
@@ -381,3 +379,38 @@ class TestHgvsStandardizeCigars(unittest.TestCase):
         ]
         std_cigar = hgvs_standardize_cigar(read, REFERENCE_GENOME[read.reference_name].seq)
         self.assertEqual(expected_cigar, std_cigar)
+
+
+class TestMergeInternalEvents(unittest.TestCase):
+    
+    def test_small_exact_match(self):
+        cigar = convert_string_to_cigar('283M17506D5M21275D596M17506D5M21275D313M')
+        # [(0, 283), (2, 17506), (0, 5), (2, 21275), (0, 596), (2, 17506), (0, 5), (2, 21275), (0, 313)]
+        new_cigar = merge_internal_events(cigar, 20, 15)
+        exp = [
+            (CIGAR.M, 283),
+            (CIGAR.I, 5),
+            (CIGAR.D, 17506 + 21275 + 5),
+            (CIGAR.M, 596),
+            (CIGAR.I, 5),
+            (CIGAR.D, 17506 + 21275 + 5),
+            (CIGAR.M, 313)
+        ]
+        self.assertEqual(exp, new_cigar)
+
+
+class TestConvertStringToCigar(unittest.TestCase):
+    def test(self):
+        string = '283M' '17506D' '5M' '21275D' '596M' '17506D' '5M' '21275D' '313M'
+        exp = [
+            (CIGAR.M, 283),
+            (CIGAR.D, 17506),
+            (CIGAR.M, 5),
+            (CIGAR.D, 21275),
+            (CIGAR.M, 596),
+            (CIGAR.D, 17506),
+            (CIGAR.M, 5),
+            (CIGAR.D, 21275),
+            (CIGAR.M, 313)
+        ]
+        self.assertEqual(exp, convert_string_to_cigar(string))
