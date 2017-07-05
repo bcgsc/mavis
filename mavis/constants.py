@@ -15,7 +15,8 @@ PIPELINE_STEP = Vocab(
     PIPELINE='pipeline',
     CLUSTER='cluster',
     PAIR='pairing',
-    SUMMARY='summary'
+    SUMMARY='summary',
+    CHECKER='checker'
 )
 
 

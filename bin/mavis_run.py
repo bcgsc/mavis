@@ -4,6 +4,7 @@ import sys
 import random
 import argparse
 import TSV
+import glob
 from mavis.annotate import load_annotations, load_reference_genome, load_masking_regions, load_templates
 from mavis.validate.main import main as validate_main
 from mavis.cluster.main import main as cluster_main
@@ -20,7 +21,7 @@ from mavis.illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from mavis.summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 
 from mavis.config import augment_parser, write_config, LibraryConfig, read_config, get_env_variable
-from mavis.util import log, mkdirp, devnull
+from mavis.util import log, mkdirp
 from mavis.constants import PROTOCOL, PIPELINE_STEP
 from mavis.bam.read import get_samtools_version
 from mavis.blat import get_blat_version
@@ -284,10 +285,35 @@ def log_arguments(args):
             log(arg, '=', repr(val), time_stamp=False)
 
 
+def unique_exists(pattern):
+    result = glob.glob(pattern)
+    if len(result) == 1:
+        return result[0]
+    elif len(result) > 0:
+        raise OSError('duplicate results:', result)
+    else:
+        raise OSError('no file found to match pattern:', pattern)
+
+
+def check_completion(target_dir):
+    stamps = []
+    subdirs = []
+    for d in os.listdir(target_dir):
+        d = os.path.join(target_dir, d)
+        if os.path.isdir(d):
+            subdirs.append(d)
+    if len(subdirs) == 0:
+        stamps.append(unique_exists(os.path.join(target_dir, '*.COMPLETE')))
+    else:
+        for d in subdirs:
+            stamps.append(unique_exists(os.path.join(d, '*.COMPLETE')))
+    return stamps
+
+
 def main():
     def usage(err=None, detail=False):
         name = os.path.basename(__file__)
-        u = '\nusage: {} {{cluster,validate,annotate,pairing,summary,pipeline,config}} [-h] [-v]'.format(name)
+        u = '\nusage: {} {{cluster,validate,annotate,pairing,summary,pipeline,config,checker}} [-h] [-v]'.format(name)
         helpmenu = """
 required arguments:
 
@@ -374,10 +400,16 @@ use the -h/--help option
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
             augment_parser(
                 required, optional,
-                ['annotations', 'dgv_annotation', 'flanking_call_distance', 'split_call_distance', 'contig_call_distance',
-                 'spanning_call_distance'] +
+                ['annotations', 'dgv_annotation', 'flanking_call_distance', 'split_call_distance',
+                 'contig_call_distance', 'spanning_call_distance'] +
                 [k for k in vars(SUMMARY_DEFAULTS)]
             )
+        elif pstep == PIPELINE_STEP.CHECKER:
+            args = parser.parse_args()
+            stamps = check_completion(args.output)
+            for stamp in stamps:
+                log('completion stamp found:', stamp)
+            exit(0)
         else:
             raise NotImplementedError('invalid value for <pipeline step>', pstep)
     args = parser.parse_args()
