@@ -358,7 +358,7 @@ use the -h/--help option
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
             augment_parser(
                 required, optional,
-                ['library', 'protocol', 'stranded_bam'] +
+                ['library', 'protocol', 'stranded_bam', 'disease_status'] +
                 ['annotations', 'masking'] + [k for k in vars(CLUSTER_DEFAULTS)]
             )
         elif pstep == PIPELINE_STEP.VALIDATE:
