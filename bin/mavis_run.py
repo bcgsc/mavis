@@ -324,57 +324,73 @@ def check_multiple_jobs(directory):
     """
     checks the completion of directory with the split jobs
     """
+    log_time = 0
     log("Checking {} ".format(directory))
     cluster_files = glob.glob(os.path.join(directory, 'clustering','batch*.tab'))
     if len(cluster_files) == 0:
         raise OSError('cluster directory is empty, MAVIS has not completed succesffully or input was not a MAVIS output directory')
     for subdir in ['validation', 'annotation']:
+        stamps = []
         fail_count = 0
         missing = []
         for count in range(1, len(cluster_files) + 1):
             count = str(count)
-            stamps = unique_exists(os.path.join(directory, subdir, '*-' + count, '*.COMPLETE'))
-            if stamps == 0:
+            stamp = unique_exists(os.path.join(directory, subdir, '*-' + count, '*.COMPLETE'))
+            if stamp == 0:
                 fail_count += 1
                 log_files = glob.glob(os.path.join(directory, subdir,'*.o*.' + count))
                 if len(log_files) == 0:
                     missing.append(count)
                 else:
                     check_log(max(log_files, key=os.path.getctime))
+            else:
+                stamps.append(stamp)
         if len(missing) == len(cluster_files):
             log("{} has not started.".format(subdir), time_stamp=False)
         elif len(missing) > 0:
             log("the following jobs in {} have not started {}".format(subdir, ','.join(missing)), time_stamp=False)
         elif fail_count == 0:
             log("{} was successful".format(subdir), time_stamp=False)
+            if os.path.getctime(max(stamps, key=os.path.getctime)) < log_time:
+                log("ERROR: A complete stamp for validation is after a complete stamp for annotation")
+            log_time = os.path.getctime(max(stamps, key=os.path.getctime))
+        return log_time
 
 
 def check_single_job(directory):
     """
     """
     log("Checking {} ".format(directory))
-    stamps = unique_exists(os.path.join(directory, '*.COMPLETE'))
-    if stamps == 0:
+    stamp = unique_exists(os.path.join(directory, '*.COMPLETE'))
+    if stamp == 0:
         log_files = glob.glob(os.path.join(directory,'*.o*'))
         if len(log_files) == 0:
             log("{} has not started.".format(os.path.basename(directory)), time_stamp=False)
         else:
             check_log(max(log_files, key=os.path.getctime))
+        return 0
     else:
         log("{} was successful".format(os.path.basename(directory)), time_stamp=False)
+        return os.path.getctime(stamp)
 
 
 def check_completion(target_dir):
     if not os.path.isdir(target_dir):
         raise TypeError('expected a directory as input')
     directories = sorted(glob.glob(os.path.join(target_dir, '*')))
-    simple_dirs = ['summary', 'pairing']
+    simple_dirs = ['pairing', 'summary']
+    log_time = 0
     for d in directories:
         name = os.path.basename(d)
         if name not in simple_dirs:
-            check_multiple_jobs(d)
-        else:
-            check_single_job(d)
+            cur_time = check_multiple_jobs(d)
+            log_time = max(cur_time, log_time)
+    for d in simple_dirs:
+        d = os.path.join(target_dir, d)
+        cur_time = check_single_job(d)
+        if cur_time < log_time and cur_time != 0:
+            log("ERROR: A complete stamp from annotation was created after pairing/summary was run")
+
 
 def main():
     def usage(err=None, detail=False):
