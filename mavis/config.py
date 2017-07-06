@@ -56,6 +56,12 @@ class LibraryConfig:
             else:
                 setattr(self, attr, cast(value, type(acceptable[attr])))
 
+        if 'MAVIS_FETCH_METHOD_INDIVIDUAL' not in os.environ and 'fetch_method_individual' not in kwargs:
+            if self.protocol == PROTOCOL.TRANS:
+                self.fetch_method_individual = False
+            else:
+                self.fetch_method_individual = True
+
     def flatten(self):
         result = {}
         result.update(self.__dict__)
@@ -320,8 +326,8 @@ def read_config(filepath):
     sections = []
     for sec in library_sections:
         d = {}
-        d.update(parser[sec])
         d.update(args)
+        d.update(parser[sec])
 
         # now try building the LibraryConfig object
         try:
@@ -477,5 +483,8 @@ def augment_parser(parser, optparser, arguments):
             parser.add_argument('--library', help='library name', required=True)
         elif arg == 'protocol':
             parser.add_argument('--protocol', choices=PROTOCOL.values(), help='library protocol', required=True)
+        elif arg == 'disease_status':
+            parser.add_argument(
+                '--disease_status', choices=DISEASE_STATUS.values(), help='library disease status', required=True)
         else:
             raise KeyError('invalid argument', arg)
