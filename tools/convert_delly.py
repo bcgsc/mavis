@@ -129,7 +129,6 @@ def delly_vcf_to_tsv(delly_vcf_list, output_filename=None, filter_event=True):
                 if flanking_pairs_variant or split_read_variants:
                     new_row = {}
                     new_row.update(call)
-                    new_row[COLUMNS.library] = lib
                     # TODO Check if start and end evidence can be different.
                     new_row['delly_split_reads'] = split_read_variants
                     new_row['delly_flanking_reads'] = flanking_pairs_variant

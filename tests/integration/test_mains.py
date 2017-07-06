@@ -12,6 +12,7 @@ from mavis.annotate.file_io import load_templates, load_reference_genes, load_re
 from mavis.cluster.main import main as cluster_main
 from mavis.validate.main import main as validate_main
 from mavis.annotate.main import main as annotate_main
+from mavis.constants import DISEASE_STATUS, PROTOCOL
 
 annotations = None
 reference_genome = None
@@ -49,7 +50,7 @@ class TestPipeline(unittest.TestCase):
     def test_mains(self):
         # test the clustering
         cluster_files = cluster_main(
-            [FULL_BASE_EVENTS], self.output, False, 'mock-A36971', 'genome',
+            [FULL_BASE_EVENTS], self.output, False, 'mock-A36971', PROTOCOL.GENOME, DISEASE_STATUS.DISEASED,
             masking=masking, cluster_clique_size=15, cluster_radius=20,
             uninformative_filter=True, max_proximity=5000,
             annotations=annotations, min_clusters_per_file=5, max_files=1
@@ -58,7 +59,7 @@ class TestPipeline(unittest.TestCase):
         self.assertLessEqual(1, len(cluster_files))
         # next test the validate runs without errors
         validate_main(
-            cluster_files[0], self.output, genome_bam_fh, False, 'mock-A36971', 'genome',
+            cluster_files[0], self.output, genome_bam_fh, False, 'mock-A36971', PROTOCOL.GENOME,
             median_fragment_size=427, stdev_fragment_size=106, read_length=150,
             reference_genome=reference_genome, annotations=annotations, masking=masking,
             blat_2bit_reference=REFERENCE_GENOME_FILE_2BIT, samtools_version=None,
