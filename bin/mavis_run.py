@@ -5,6 +5,7 @@ import random
 import argparse
 import TSV
 import glob
+import time
 from mavis.annotate import load_annotations, load_reference_genome, load_masking_regions, load_templates
 from mavis.validate.main import main as validate_main
 from mavis.cluster.main import main as cluster_main
@@ -21,7 +22,7 @@ from mavis.illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from mavis.summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 
 from mavis.config import augment_parser, write_config, LibraryConfig, read_config, get_env_variable
-from mavis.util import log, mkdirp
+from mavis.util import log, mkdirp, log_arguments
 from mavis.constants import PROTOCOL, PIPELINE_STEP
 from mavis.bam.read import get_samtools_version
 from mavis.blat import get_blat_version
@@ -57,7 +58,7 @@ def main_pipeline(args, configs):
         merge_args.update(args.__dict__)
         merge_args.update(sec.__dict__)
         merge_args['output'] = cluster_output
-        output_files = cluster_main(**merge_args)
+        output_files = cluster_main(log_args=True, **merge_args)
 
         if len(output_files) == 0:
             log('warning: no inputs after clustering. Will not set up other pipeline steps')
@@ -239,6 +240,7 @@ def generate_config(parser, required, optional):
     args = parser.parse_args()
     if args.distribution_fraction < 0 or args.distribution_fraction > 1:
         raise ValueError('distribution_fraction must be a value between 0-1')
+    log('MAVIS: {}'.format(__version__))
     log_arguments(args)
 
     # now write the config file
@@ -270,19 +272,6 @@ def generate_config(parser, required, optional):
         )
         libs.append(l)
     write_config(args.write, include_defaults=True, libraries=libs, log=log)
-
-
-def log_arguments(args):
-    log('MAVIS: {}'.format(__version__))
-    log('input arguments')
-    for arg, val in sorted(args.__dict__.items()):
-        if isinstance(val, list):
-            log(arg, '= [', time_stamp=False)
-            for v in val:
-                log('\t', repr(v), time_stamp=False)
-            log(']', time_stamp=False)
-        else:
-            log(arg, '=', repr(val), time_stamp=False)
 
 
 def unique_exists(pattern):
@@ -339,6 +328,8 @@ use the -h/--help option
             print('{}: error:'.format(name), err, '\n')
             exit(1)
         exit(0)
+
+    start_time = int(time.time())
 
     if len(sys.argv) < 2:
         usage('the <pipeline step> argument is required')
@@ -424,7 +415,8 @@ use the -h/--help option
         except (KeyError, TypeError):
             pass
 
-    log_arguments(args)
+    log('MAVIS: {}'.format(__version__))
+    log_arguments(args.__dict__)
 
     config = []
 
@@ -509,6 +501,15 @@ use the -h/--help option
         summary_main(**args.__dict__)
     else:  # PIPELINE
         main_pipeline(args, config)
+
+    duration = int(time.time()) - start_time
+    hours = duration - duration % 3600
+    minutes = duration - hours - (duration - hours) % 60
+    seconds = duration - hours - minutes
+    log(
+        'run time (hh/mm/ss): {}:{:02d}:{:02d}'.format(hours // 3600, minutes // 60, seconds),
+        time_stamp=False)
+    log('run time (s): {}'.format(duration), time_stamp=False)
 
 if __name__ == '__main__':
     main()

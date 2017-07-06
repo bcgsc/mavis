@@ -1,8 +1,6 @@
 from datetime import datetime
 import errno
-import math
 import os
-import random
 from .breakpoint import read_bpp_from_input_file
 from .constants import PROTOCOL, COLUMNS, sort_columns
 from .interval import Interval
@@ -25,6 +23,20 @@ class MavisNamespace(Namespace):
 
     def __getitem__(self, key):
         return getattr(self, key)
+
+
+def log_arguments(args):
+    log('arguments')
+    for arg, val in sorted(args.items()):
+        if isinstance(val, list):
+            log(arg, '= [', time_stamp=False)
+            for v in val:
+                log('\t', repr(v), time_stamp=False)
+            log(']', time_stamp=False)
+        elif any([isinstance(val, typ) for typ in [str, int, float, bool, tuple]]) or val is None:
+            log(arg, '=', repr(val), time_stamp=False)
+        else:
+            log(arg, '=', object.__repr__(val), time_stamp=False)
 
 
 def log(*pos, time_stamp=True):
