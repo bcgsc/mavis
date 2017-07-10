@@ -8,6 +8,7 @@ import os
 import itertools
 
 from .summary import filter_by_evidence, group_events, filter_by_annotations, filter_by_call_method, annotate_dgv
+from .summary import get_pairing_state
 
 
 def main(
@@ -63,6 +64,7 @@ def main(
                  COLUMNS.tools,
                  COLUMNS.exon_last_5prime,
                  COLUMNS.exon_first_3prime,
+                 COLUMNS.disease_status,
                  # evidence_columns
                  COLUMNS.break1_call_method,
                  COLUMNS.break1_split_reads,
@@ -293,12 +295,19 @@ def main(
         'dgv']
 
     rows = []
-
     for lib in bpp_to_keep:
         log('annotating dgv for', lib)
         annotated = annotate_dgv(list(bpp_to_keep[lib]), dgv_annotation, distance=10)  # TODO make distance a parameter
         for row in annotated:
-            # filter pairing ids based on what is still kept
+            # filter pairing ids based on what is still kept?
+            # for column in itertools.combinations(libraries,2):
+            #     for pair in row.data[COLUMNS.pairing].split(';'):
+                #     lib2 = pair.split['_'][0]
+                #     if lib1 in column and lib2 in column:
+                #         found = True
+                #         break
+                # pairing_state = get_pairing_state(protocol[lib], disease_state[lib], protocol[lib2], disease_state[lib2], is_matched=found)
+
             try:
                 row = row.flatten()
             except AttributeError:
