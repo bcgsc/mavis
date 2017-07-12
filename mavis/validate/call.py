@@ -16,7 +16,7 @@ class EventCall(BreakpointPair):
     directly without a lot of copying. Instead we use call objects which are basically
     just a reference to the evidence object and decisions on class, exact breakpoints, etc
     """
-    
+
     @property
     def has_compatible(self):
         """bool: True if compatible flanking pairs are appropriate to collect"""
@@ -440,7 +440,7 @@ def filter_consumed_pairs(pairs, consumed_reads):
 
     Returns:
         set of tuples of :class:`pysam.AlignedSegment` and :class:`pysam.AlignedSegment`: set of filtered tuples
-    
+
     Note:
         this will work with any hash-able object
 
