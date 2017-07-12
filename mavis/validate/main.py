@@ -5,7 +5,6 @@ import subprocess
 import uuid
 import itertools
 from ..bam.cache import BamCache
-from ..blat import blat_contigs
 from ..align import align_contigs
 from ..breakpoint import BreakpointPair
 from ..constants import PROTOCOL, COLUMNS
@@ -26,7 +25,7 @@ def main(
     input, output,
     bam_file, stranded_bam,
     library, protocol, median_fragment_size, stdev_fragment_size, read_length,
-    reference_genome, reference_genome_filename, annotations, masking, blat_2bit_reference,
+    reference_genome, reference_genome_filename, annotations, masking, aligner_reference,
     samtools_version, **kwargs
 ):
     """
@@ -41,7 +40,7 @@ def main(
         reference_genome (Object): see :func:`~mavis.annotate.file_io.load_reference_genome`
         annotations (object): see :func:`~mavis.annotate.file_io.load_reference_genes`
         masking (object): see :func:`~mavis.annotate.file_io.load_masking_regions`
-        blat_2bit_reference (str): path to the 2bit reference file
+        aligner_reference (str): path to the aligner reference file (e.g 2bit file for blat)
     """
     mkdirp(output)
     FILENAME_PREFIX = re.sub('\.(txt|tsv|tab)$', '', os.path.basename(input))
@@ -52,8 +51,8 @@ def main(
     PASSED_OUTPUT_FILE = os.path.join(output, FILENAME_PREFIX + VALIDATION_PASS_SUFFIX)
     PASSED_BED_FILE = os.path.join(output, FILENAME_PREFIX + '.validation-passed.bed')
     FAILED_OUTPUT_FILE = os.path.join(output, FILENAME_PREFIX + '.validation-failed.tab')
-    CONTIG_BLAT_FA = os.path.join(output, FILENAME_PREFIX + '.contigs.fa')
-    CONTIG_BLAT_OUTPUT = os.path.join(output, FILENAME_PREFIX + '.contigs.blat_out.pslx')
+    CONTIG_ALIGNER_FA = os.path.join(output, FILENAME_PREFIX + '.contigs.fa')
+    CONTIG_ALIGNER_OUTPUT = os.path.join(output, FILENAME_PREFIX + '.contigs.blat_out.pslx')
     IGV_BATCH_FILE = os.path.join(output, FILENAME_PREFIX + '.igv.batch')
     INPUT_BAM_CACHE = BamCache(bam_file, stranded_bam)
 
@@ -63,10 +62,7 @@ def main(
     validation_settings = {}
     validation_settings.update(DEFAULTS.__dict__)
     validation_settings.update({k: v for k, v in kwargs.items() if k in DEFAULTS.__dict__})
-    evidence_reads = set()  # keep track of collected reads to use for ouput
 
-    split_read_contigs = set()
-    chr_to_index = {}
     bpps = read_inputs(
         [input], add={COLUMNS.protocol: protocol, COLUMNS.library: library, COLUMNS.cluster_id: None},
         expand_ns=False, explicit_strand=False,
@@ -149,38 +145,17 @@ def main(
         for contig in e.contigs:
             log('>', contig.seq, time_stamp=False)
 
-    log('will output:', CONTIG_BLAT_FA, CONTIG_BLAT_OUTPUT)
-    # blat_contigs(
-    #     evidence_clusters,
-    #     INPUT_BAM_CACHE,
-    #     reference_genome=reference_genome,
-    #     blat_2bit_reference=blat_2bit_reference,
-    #     blat_fa_input_file=CONTIG_BLAT_FA,
-    #     blat_pslx_output_file=CONTIG_BLAT_OUTPUT,
-    #     clean_files=False,
-    #     blat_min_percent_of_max_score=kwargs.get(
-    #         'blat_min_percent_of_max_score', DEFAULTS.blat_min_percent_of_max_score),
-    #     blat_min_identity=kwargs.get(
-    #         'blat_min_identity', DEFAULTS.blat_min_identity),
-    #     contig_aln_min_query_consumption=kwargs.get(
-    #         'contig_aln_min_query_consumption', DEFAULTS.contig_aln_min_query_consumption),
-    #     contig_aln_max_event_size=kwargs.get(
-    #         'contig_aln_max_event_size', DEFAULTS.contig_aln_max_event_size),
-    #     contig_aln_min_anchor_size=kwargs.get(
-    #         'contig_aln_min_anchor_size', DEFAULTS.contig_aln_min_anchor_size),
-    #     contig_aln_merge_inner_anchor=kwargs.get(
-    #         'contig_aln_merge_inner_anchor', DEFAULTS.contig_aln_merge_inner_anchor),
-    #     contig_aln_merge_outer_anchor=kwargs.get(
-    #         'contig_aln_merge_outer_anchor', DEFAULTS.contig_aln_merge_outer_anchor)
-    # )
+    log('will output:', CONTIG_ALIGNER_FA, CONTIG_ALIGNER_OUTPUT)
     align_contigs(
         evidence_clusters,
         INPUT_BAM_CACHE,
         reference_genome=reference_genome,
-        blat_2bit_reference=blat_2bit_reference,
-        aligner_fa_input_file=CONTIG_BLAT_FA,
-        aligner_output_file=CONTIG_BLAT_OUTPUT,
+        aligner_fa_input_file=CONTIG_ALIGNER_FA,
+        aligner_output_file=CONTIG_ALIGNER_OUTPUT,
         clean_files=False,
+        aligner=kwargs.get(
+            'aligner', DEFAULTS.aligner),
+        aligner_reference=aligner_reference,
         blat_min_percent_of_max_score=kwargs.get(
             'blat_min_percent_of_max_score', DEFAULTS.blat_min_percent_of_max_score),
         blat_min_identity=kwargs.get(
@@ -194,7 +169,7 @@ def main(
         contig_aln_merge_inner_anchor=kwargs.get(
             'contig_aln_merge_inner_anchor', DEFAULTS.contig_aln_merge_inner_anchor),
         contig_aln_merge_outer_anchor=kwargs.get(
-            'contig_aln_merge_outer_anchor', DEFAULTS.contig_aln_merge_outer_anchor)
+            'contig_aln_merge_outer_anchor', DEFAULTS.contig_aln_merge_outer_anchor),
     )
     log('alignment complete')
     event_calls = []

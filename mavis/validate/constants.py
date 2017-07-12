@@ -1,6 +1,7 @@
 from ..util import MavisNamespace
 
 DEFAULTS = MavisNamespace(
+    aligner='blat',
     assembly_include_flanking_pairs=True,
     assembly_include_half_mapped_reads=True,
     assembly_max_kmer_size=None,
@@ -50,6 +51,9 @@ DEFAULTS = MavisNamespace(
 
 .. glossary::
     :sorted:
+
+    aligner
+        the aligner to use to map the contigs/reads back to the reference e.g blat or bwa
 
     read_length
         length of reads in the bam file

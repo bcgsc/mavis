@@ -78,7 +78,7 @@ def main_pipeline(args, configs):
         validation_args = {
             'masking': args.masking_filename,
             'reference_genome': args.reference_genome_filename,
-            'blat_2bit_reference': args.blat_2bit_reference,
+            'aligner_reference': args.aligner_reference,
             'annotations': args.annotations_filename,
             'library': sec.library,
             'bam_file': sec.bam_file,
@@ -457,7 +457,7 @@ use the -h/--help option
             augment_parser(
                 required, optional,
                 ['library', 'protocol', 'bam_file', 'read_length', 'stdev_fragment_size', 'median_fragment_size'] +
-                ['stranded_bam', 'annotations', 'reference_genome', 'blat_2bit_reference', 'masking'] +
+                ['stranded_bam', 'annotations', 'reference_genome', 'aligner_reference', 'masking'] +
                 [k for k in vars(VALIDATION_DEFAULTS)]
             )
         elif pstep == PIPELINE_STEP.ANNOTATE:
@@ -497,7 +497,7 @@ use the -h/--help option
     args.blat_version = get_blat_version()
 
     # set all reference files to their absolute paths to make tracking them down later easier
-    for arg in ['output', 'reference_genome', 'template_metadata', 'annotations', 'masking', 'blat_2bit_reference',
+    for arg in ['output', 'reference_genome', 'template_metadata', 'annotations', 'masking', 'aligner_reference',
                 'dgv_annotation']:
         try:
             args.__dict__[arg] = os.path.abspath(args.__dict__[arg])

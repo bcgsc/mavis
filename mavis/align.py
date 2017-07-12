@@ -153,14 +153,12 @@ def align_contigs(
         evidence,
         INPUT_BAM_CACHE,
         reference_genome,
-        blat_2bit_reference='/home/pubseq/genomes/Homo_sapiens/GRCh37/blat/hg19.2bit',
         blat_min_percent_of_max_score=0.8,
         blat_min_identity=0.7,
         aligner='blat',
-        aligner_options='mem',
         aligner_output_file='blat_out.pslx',
         aligner_fa_input_file='blat_in.fa',
-        aligner_reference='/projects/trans_scratch/references/genomes/transabyss/bwamem-0.7.10/hg19a.fa',
+        aligner_reference='/home/pubseq/genomes/Homo_sapiens/GRCh37/blat/hg19.2bit',
         contig_aln_min_query_consumption=0.5,
         contig_aln_max_event_size=50,
         contig_aln_min_anchor_size=50,
@@ -179,7 +177,6 @@ def align_contigs(
     """
     if is_protein:
         raise NotImplementedError('currently does not support aligning protein sequences')
-#    aligner_options = kwargs.pop(        'align_options')
 
     try:
         # write the input sequences to a fasta file
@@ -213,10 +210,10 @@ def align_contigs(
             # call the blat subprocess
             # will raise subprocess.CalledProcessError if non-zero exit status
             # parameters from https://genome.ucsc.edu/FAQ/FAQblat.html#blat4
-            log(['blat', blat_2bit_reference,
+            log(['blat', aligner_reference,
                  aligner_fa_input_file, aligner_output_file, '-out=pslx', '-noHead'] + blat_options)
             subprocess.check_output([
-                    'blat', blat_2bit_reference,
+                    'blat', aligner_reference,
                     aligner_fa_input_file, aligner_output_file, '-out=pslx', '-noHead'] + blat_options)
 
             header, rows = Blat.read_pslx(aligner_output_file, query_id_mapping, is_protein=is_protein)
@@ -258,11 +255,13 @@ def align_contigs(
                 reads_by_query[query_seq] = reads
 
         else:
-            log([aligner, aligner_options, aligner_reference, aligner_fa_input_file]) #for bwa
+            command = aligner.split('-')
+            command.extend([aligner_reference, aligner_fa_input_file])
+            log(command) #for bwa
             with open(aligner_output_file, 'w') as f:
-                subprocess.call([
-                        aligner, aligner_options, aligner_reference, aligner_fa_input_file],
-                                stdout=f)
+                subprocess.call(
+                        command,
+                        stdout=f)
 
             samfile = pysam.AlignmentFile(aligner_output_file, 'r')
 

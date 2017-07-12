@@ -138,7 +138,7 @@ class ReferenceFilesConfig:
         reference_genome=None,
         template_metadata=None,
         masking=None,
-        blat_2bit_reference=None,
+        aligner_reference=None,
         dgv_annotation=None,
         low_memory=False
     ):
@@ -148,7 +148,7 @@ class ReferenceFilesConfig:
         self.masking = masking or os.environ.get(ENV_VAR_PREFIX + 'MASKING', None)
         self.dgv_annotation = dgv_annotation or os.environ.get(ENV_VAR_PREFIX + 'DGV_ANNOTATION', None)
         self.low_memory = low_memory or os.environ.get(ENV_VAR_PREFIX + 'LOW_MEMORY', None)
-        self.blat_2bit_reference = blat_2bit_reference or os.environ.get(ENV_VAR_PREFIX + 'BLAT_2BIT_REFERENCE', None)
+        self.aligner_reference = aligner_reference or os.environ.get(ENV_VAR_PREFIX + 'ALIGNER_REFERENCE', None)
 
     def flatten(self):
         result = {}
@@ -391,9 +391,9 @@ def augment_parser(parser, optparser, arguments):
             add_semi_optional_argument(arg, optparser, parser, 'File containing the cytoband template information.')
         elif arg == 'masking':
             add_semi_optional_argument(arg, optparser, parser)
-        elif arg == 'blat_2bit_reference':
+        elif arg == 'aligner_reference':
             add_semi_optional_argument(
-                arg, optparser, parser, 'path to the 2bit reference file used for blatting contig sequences.')
+                arg, optparser, parser, 'path to the aligner reference file used for aligning the contig sequences.')
         elif arg == 'dgv_annotation':
             add_semi_optional_argument(
                 arg, optparser, parser, 'Path to the dgv reference processed to look like the cytoband file.')
