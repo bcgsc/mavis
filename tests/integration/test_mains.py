@@ -62,7 +62,7 @@ class TestPipeline(unittest.TestCase):
             cluster_files[0], self.output, genome_bam_fh, False, 'mock-A36971', PROTOCOL.GENOME,
             median_fragment_size=427, stdev_fragment_size=106, read_length=150,
             reference_genome=reference_genome, annotations=annotations, masking=masking,
-            blat_2bit_reference=REFERENCE_GENOME_FILE_2BIT, samtools_version=None,
+            aligner_reference=REFERENCE_GENOME_FILE_2BIT, samtools_version=None,
             reference_genome_filename=REFERENCE_GENOME_FILE
         )
         prefix = re.sub('\.tab$', '', cluster_files[0])

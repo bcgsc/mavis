@@ -53,7 +53,7 @@ class TestAlign(unittest.TestCase):
                 "TTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT", 0)
         ]
         print(ev.contigs[0].seq)
-        align_contigs([ev], BAM_CACHE, REFERENCE_GENOME, blat_2bit_reference=REFERENCE_GENOME_FILE_2BIT,
+        align_contigs([ev], BAM_CACHE, REFERENCE_GENOME, aligner_reference=REFERENCE_GENOME_FILE_2BIT,
                       aligner='blat')
         read1, read2 = ev.contigs[0].alignments[0]
         self.assertEqual(reverse_complement(read1.query_sequence), read2.query_sequence)
@@ -83,7 +83,7 @@ class TestAlign(unittest.TestCase):
                 'GGTATATATTTCTCAGATAAAAGATATTTTCCCTTTTATCTTTCCCTAAGCTCACACTACATATATTGCATTTATCTTATATCTGCTTTAAAACCTATTTAT'
                 'TATGTCATTTAAATATCTAGAAAAGTTATGACTTCACCAGGTATGAAAAATATAAAAAGAACTCTGTCAAGAAT', 0)
         ]
-        align_contigs([ev], BAM_CACHE, REFERENCE_GENOME, blat_2bit_reference=REFERENCE_GENOME_FILE_2BIT, aligner='blat')
+        align_contigs([ev], BAM_CACHE, REFERENCE_GENOME, aligner_reference=REFERENCE_GENOME_FILE_2BIT, aligner='blat')
         read1, read2 = ev.contigs[0].alignments[0]
         self.assertTrue(read2 is None)
         self.assertEqual(0, read1.reference_id)
@@ -111,7 +111,7 @@ class TestAlign(unittest.TestCase):
         seq = 'GGTATATATTTCTCAGATAAAAGATATTTTCCCTTTTATCTTTCCCTAAGCTCACACTACATATATTGCATTTATCTTATATCTGCTTTAAAACCTATTTAT' \
               'TATGTCATTTAAATATCTAGAAAAGTTATGACTTCACCAGGTATGAAAAATATAAAAAGAACTCTGTCAAGAAT'
         ev.contigs = [Contig(reverse_complement(seq), 0)]
-        align_contigs([ev], BAM_CACHE, REFERENCE_GENOME, blat_2bit_reference=REFERENCE_GENOME_FILE_2BIT, aligner='blat')
+        align_contigs([ev], BAM_CACHE, REFERENCE_GENOME, aligner_reference=REFERENCE_GENOME_FILE_2BIT, aligner='blat')
         read1, read2 = ev.contigs[0].alignments[0]
         self.assertTrue(read2 is None)
         self.assertEqual(0, read1.reference_id)
