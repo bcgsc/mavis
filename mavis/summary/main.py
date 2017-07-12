@@ -64,7 +64,7 @@ def main(
                  COLUMNS.tools,
                  COLUMNS.exon_last_5prime,
                  COLUMNS.exon_first_3prime,
-                 COLUMNS.disease_status,
+                 # COLUMNS.disease_status,
                  # evidence_columns
                  COLUMNS.break1_call_method,
                  COLUMNS.break1_split_reads,

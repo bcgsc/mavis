@@ -1,8 +1,6 @@
 from datetime import datetime
 import errno
-import math
 import os
-import random
 from .breakpoint import read_bpp_from_input_file
 from .constants import PROTOCOL, COLUMNS, sort_columns
 from .interval import Interval

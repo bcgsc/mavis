@@ -6,6 +6,7 @@ import uuid
 import itertools
 from ..bam.cache import BamCache
 from ..blat import blat_contigs
+from ..align import align_contigs
 from ..breakpoint import BreakpointPair
 from ..constants import PROTOCOL, COLUMNS
 from .call import call_events
@@ -149,13 +150,36 @@ def main(
             log('>', contig.seq, time_stamp=False)
 
     log('will output:', CONTIG_BLAT_FA, CONTIG_BLAT_OUTPUT)
-    blat_contigs(
+    # blat_contigs(
+    #     evidence_clusters,
+    #     INPUT_BAM_CACHE,
+    #     reference_genome=reference_genome,
+    #     blat_2bit_reference=blat_2bit_reference,
+    #     blat_fa_input_file=CONTIG_BLAT_FA,
+    #     blat_pslx_output_file=CONTIG_BLAT_OUTPUT,
+    #     clean_files=False,
+    #     blat_min_percent_of_max_score=kwargs.get(
+    #         'blat_min_percent_of_max_score', DEFAULTS.blat_min_percent_of_max_score),
+    #     blat_min_identity=kwargs.get(
+    #         'blat_min_identity', DEFAULTS.blat_min_identity),
+    #     contig_aln_min_query_consumption=kwargs.get(
+    #         'contig_aln_min_query_consumption', DEFAULTS.contig_aln_min_query_consumption),
+    #     contig_aln_max_event_size=kwargs.get(
+    #         'contig_aln_max_event_size', DEFAULTS.contig_aln_max_event_size),
+    #     contig_aln_min_anchor_size=kwargs.get(
+    #         'contig_aln_min_anchor_size', DEFAULTS.contig_aln_min_anchor_size),
+    #     contig_aln_merge_inner_anchor=kwargs.get(
+    #         'contig_aln_merge_inner_anchor', DEFAULTS.contig_aln_merge_inner_anchor),
+    #     contig_aln_merge_outer_anchor=kwargs.get(
+    #         'contig_aln_merge_outer_anchor', DEFAULTS.contig_aln_merge_outer_anchor)
+    # )
+    align_contigs(
         evidence_clusters,
         INPUT_BAM_CACHE,
         reference_genome=reference_genome,
         blat_2bit_reference=blat_2bit_reference,
-        blat_fa_input_file=CONTIG_BLAT_FA,
-        blat_pslx_output_file=CONTIG_BLAT_OUTPUT,
+        aligner_fa_input_file=CONTIG_BLAT_FA,
+        aligner_output_file=CONTIG_BLAT_OUTPUT,
         clean_files=False,
         blat_min_percent_of_max_score=kwargs.get(
             'blat_min_percent_of_max_score', DEFAULTS.blat_min_percent_of_max_score),

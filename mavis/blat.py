@@ -11,21 +11,17 @@ strand (even when the match is on the reverse strand). However on the qStarts[] 
 
 """
 import pysam
-import itertools
 import math
 import subprocess
 import warnings
 import re
 import os
-from copy import copy
 import TSV
-from .constants import *
+from .constants import CIGAR, DNA_ALPHABET, STRAND, reverse_complement, NA_MAPPING_QUALITY, COLUMNS, PYSAM_READ_FLAGS
 from .bam import cigar as cigar_tools
 from .bam.cigar import QUERY_ALIGNED_STATES
-from .bam import read as read_tools
 from .interval import Interval
-from .error import InvalidRearrangement
-from .breakpoint import BreakpointPair
+from .align import select_paired_alignments, query_coverage_interval
 from .util import devnull
 
 
@@ -64,20 +60,6 @@ class BlatAlignedSegment(pysam.AlignedSegment):
         cp.next_reference_id = self.next_reference_id
         cp.next_reference_start = self.next_reference_start
         return cp
-
-    def query_coverage_interval(self):
-        """
-        Returns:
-            :class:`~mavis.interval.Interval`: The portion of the original query sequence that is aligned by this read
-        """
-        seq = self.query_sequence
-        s = 0
-        t = len(seq) - 1
-        if self.cigar[0][0] == CIGAR.S:
-            s += self.cigar[0][1]
-        if self.cigar[-1][0] == CIGAR.S:
-            t -= self.cigar[-1][1]
-        return Interval(s, t)
 
     @property
     def reference_name(self):
@@ -359,7 +341,7 @@ class Blat:
         qcons = sum([v for c, v in read.cigar if c in QUERY_ALIGNED_STATES])
         assert(len(read.query_sequence) == qcons)
         try:
-            read.query_coverage_interval()
+            query_coverage_interval(read)
         except (AttributeError, ValueError) as err:
             print(row)
             raise err
@@ -373,123 +355,6 @@ def get_blat_version():
         if m:
             return m.group(1)
     raise ValueError("unable to parse blat version number from:'{}'".format(proc))
-
-
-def paired_alignment_score(read1, read2=None):
-    score = read_tools.calculate_alignment_score(read1) * BlatAlignedSegment.query_coverage_interval(read1).length()
-    if read2 is not None:
-        qci1 = BlatAlignedSegment.query_coverage_interval(read1)
-        qci2 = BlatAlignedSegment.query_coverage_interval(read2)
-        total_len = qci1.length() + qci2.length()
-        s1 = read_tools.calculate_alignment_score(read1)
-        s2 = read_tools.calculate_alignment_score(read2)
-        avg = s1 * qci1.length() / total_len + s2 * qci2.length() / total_len
-        score = avg * len(qci1 | qci2)
-    return score
-
-
-def select_paired_alignments(
-    bpp, aligned_contigs,
-    min_query_consumption,
-    min_extend_overlap,
-    max_event_size,
-    min_anchor_size,
-    merge_inner_anchor,
-    merge_outer_anchor
-):
-    """
-    give a breakpoint pair and a set of alignments for contigs associated with the given pair,
-    alignments are paired (some events cannot be represented with a single bamfile alignment)
-    and the most appropriate alignments supporting the breakpoint pair are selected and returned
-    """
-    # now for each bpp assign an alignment to each contig
-    putative_alignments = []
-    putative_event_types = set(bpp.putative_event_types())
-    if {SVTYPE.INS, SVTYPE.DUP} & putative_event_types:
-        putative_event_types = putative_event_types | {SVTYPE.INS, SVTYPE.DUP}
-
-    # for events on the same template and strand we expect to find a single contig alignment
-    if not bpp.interchromosomal and not bpp.opposing_strands:
-        for read in aligned_contigs:
-            # if it covers both breakpoints add to putative alignments
-            read_cover = Interval(read.reference_start, read.reference_end - 1)
-            if all([
-                read.reference_name == bpp.break1.chr,
-                Interval.overlaps(bpp.outer_window1, read_cover),
-                Interval.overlaps(bpp.outer_window2, read_cover)
-            ]):
-                # split the continuous alignment, assume ins/dup or indel
-                ins = sum([v for c, v in read.cigar if c == CIGAR.I] + [0])
-                dln = sum([v for c, v in read.cigar if c in [CIGAR.D, CIGAR.N]] + [0])
-                consume = len(BlatAlignedSegment.query_coverage_interval(read)) / len(read.query_sequence)
-                read = copy(read)
-                read.cigar = cigar_tools.merge_internal_events(read.cigar, merge_inner_anchor, merge_outer_anchor)
-                if consume < min_query_consumption:
-                    continue
-
-                for event_type in putative_event_types:
-                    if event_type in {SVTYPE.INS, SVTYPE.DUP} and ins > 0 and ins > dln:
-                        putative_alignments.append((read, None))
-                    elif event_type in {SVTYPE.DEL, SVTYPE.INV} and dln > 0 and dln > ins:
-                        putative_alignments.append((read, None))
-
-    # don't use reads in combined alignments if they have already been assigned in a single alignment
-    combo_prohibited = [x for x, y in putative_alignments]
-
-    for read1, read2 in itertools.combinations([x for x in aligned_contigs if x not in combo_prohibited], 2):
-        # do they overlap both breakpoints
-        if any([
-            read1.reference_name > read2.reference_name,
-            read1.reference_name == read2.reference_name and read1.reference_start > read2.reference_start
-        ]):
-            read1, read2 = read2, read1
-
-        if read1.reference_name != bpp.break1.chr or read2.reference_name != bpp.break2.chr:
-            continue
-        read1 = read_tools.convert_events_to_softclipping(
-            read1, bpp.break1.orient, max_event_size=max_event_size, min_anchor_size=min_anchor_size)
-        read2 = read_tools.convert_events_to_softclipping(
-            read2, bpp.break2.orient, max_event_size=max_event_size, min_anchor_size=min_anchor_size)
-        # check that the coverage intervals overlap
-        if any([
-            not Interval.overlaps((read1.reference_start + 1, read1.reference_end), bpp.outer_window1),
-            not Interval.overlaps((read2.reference_start + 1, read2.reference_end), bpp.outer_window2)
-        ]):
-            continue
-        # reads should have unique reference overlap
-        if not bpp.interchromosomal and read1.reference_end > read2.reference_end:
-            continue
-        # check that the combination extends the amount of the initial query sequence we consume
-        query_cover1 = BlatAlignedSegment.query_coverage_interval(read1)
-        query_cover2 = BlatAlignedSegment.query_coverage_interval(read2)
-
-        if read2.query_sequence != read1.query_sequence:  # alignments aligned to opposite strands
-            if not bpp.opposing_strands:
-                continue
-            if read2.query_sequence != reverse_complement(read1.query_sequence):
-                continue
-            l = len(read1.query_sequence) - 1
-            query_cover2 = Interval(l - query_cover2.end, l - query_cover2.start)
-        elif bpp.opposing_strands:
-            continue
-
-        consume = len(query_cover1 | query_cover2)
-        if not Interval.overlaps(query_cover1, query_cover2):
-            consume = len(query_cover1) + len(query_cover2)
-
-        if consume / len(read1.query_sequence) < min_query_consumption:
-            continue
-        if consume - len(query_cover1) < min_extend_overlap or consume - len(query_cover2) < min_extend_overlap:
-            continue
-
-        try:
-            call = BreakpointPair.call_breakpoint_pair(read1, read2)
-            if not set(BreakpointPair.classify(call)) & putative_event_types:
-                continue
-        except (InvalidRearrangement, AssertionError) as err:
-            continue
-        putative_alignments.append((read1, read2))
-    return putative_alignments
 
 
 def blat_contigs(
@@ -508,7 +373,7 @@ def blat_contigs(
         contig_aln_merge_outer_anchor=20,
         is_protein=False,
         min_extend_overlap=10,
-        pair_scoring_function=paired_alignment_score,
+        pair_scoring_function=None,
         clean_files=True,
         log=devnull,
         **kwargs):

@@ -1,6 +1,6 @@
 from ..annotate.variant import determine_prime
 from ..interval import Interval
-from ..constants import STRAND, PRIME, CALL_METHOD, COLUMNS, ORIENT
+from ..constants import STRAND, PRIME, CALL_METHOD, COLUMNS, ORIENT, PROTOCOL
 from ..error import NotSpecifiedError
 from ..breakpoint import Breakpoint
 
