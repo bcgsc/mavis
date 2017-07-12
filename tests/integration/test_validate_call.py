@@ -341,7 +341,9 @@ class TestEvidenceConsumption(unittest.TestCase):
             opposing_strands=opposing_strands,
             read_length=100, median_fragment_size=200, stdev_fragment_size=50,
             stdev_count_abnormal=3, min_flanking_pairs_resolution=1,
-            min_splits_reads_resolution=1
+            min_splits_reads_resolution=1,
+            min_spanning_reads_resolution=3,
+            min_linking_split_reads=1
         )
         return evidence
 
@@ -558,7 +560,9 @@ class TestCallBySupportingReads(unittest.TestCase):
             median_fragment_size=100,
             stdev_count_abnormal=2,
             min_splits_reads_resolution=1,
-            min_flanking_pairs_resolution=1
+            min_flanking_pairs_resolution=1,
+            min_linking_split_reads=1,
+            min_spanning_reads_resolution=3
         )
         self.dup = GenomeEvidence(
             Breakpoint('fake', 50, orient=ORIENT.RIGHT),
@@ -570,7 +574,9 @@ class TestCallBySupportingReads(unittest.TestCase):
             median_fragment_size=100,
             stdev_count_abnormal=2,
             min_splits_reads_resolution=1,
-            min_flanking_pairs_resolution=1
+            min_flanking_pairs_resolution=1,
+            min_linking_split_reads=1,
+            min_spanning_reads_resolution=3
         )
 
     def test_empty(self):

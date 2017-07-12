@@ -235,7 +235,6 @@ def compute_genome_bam_stats(
     hist = Histogram()
     read_lengths = []
     for bin_chr, bin_start, bin_end in bins:
-        log('current bin', bin_chr, bin_start, bin_end)
         count = 0
         for read in bam_file_handle.fetch(bin_chr, bin_start, bin_end):
             if read.is_unmapped or read.mate_is_unmapped or read.mapping_quality < min_mapping_quality \

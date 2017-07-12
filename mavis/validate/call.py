@@ -318,7 +318,11 @@ class EventCall(BreakpointPair):
             COLUMNS.spanning_reads: len(self.spanning_reads),
             COLUMNS.spanning_read_names: ';'.join(sorted([r.query_name for r in self.spanning_reads]))
         })
-
+        if self.has_compatible:
+            row[COLUMNS.flanking_pairs_compatible] = len(self.compatible_flanking_pairs)
+            c = {f[0].query_name for f in self.compatible_flanking_pairs}
+            c.update({f[1].query_name for f in self.compatible_flanking_pairs})
+            row[COLUMNS.flanking_pairs_compatible_read_names] = ';'.join(sorted(c))
         if self.contig:
             r1, r2 = self.contig_alignment
             ascore = r1.get_tag('br')

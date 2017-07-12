@@ -25,6 +25,20 @@ class MavisNamespace(Namespace):
         return getattr(self, key)
 
 
+def log_arguments(args):
+    log('arguments')
+    for arg, val in sorted(args.items()):
+        if isinstance(val, list):
+            log(arg, '= [', time_stamp=False)
+            for v in val:
+                log('\t', repr(v), time_stamp=False)
+            log(']', time_stamp=False)
+        elif any([isinstance(val, typ) for typ in [str, int, float, bool, tuple]]) or val is None:
+            log(arg, '=', repr(val), time_stamp=False)
+        else:
+            log(arg, '=', object.__repr__(val), time_stamp=False)
+
+
 def log(*pos, time_stamp=True):
     if time_stamp:
         print('[{}]'.format(datetime.now()), *pos)

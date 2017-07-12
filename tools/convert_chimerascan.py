@@ -26,8 +26,6 @@ def parse_arguments():
     required.add_argument('-n', '--input', required=True,
                           help="the path to the input ChimeraScan bedpe file")
     required.add_argument('-o', '--output', help='path to the output file', required=True)
-    required.add_argument('-l', '--library', required=True,
-                          help="The library id of that was used as input")
 
     optional = parser.add_argument_group('Optional arguemts')
     optional.add_argument('-h', '--help', action='help', help='Show this help message and exit')
@@ -53,7 +51,7 @@ def chromosome_str(chr_repr):
     return ret_val
 
 
-def load_bedpe(input_bedpe, library_name, version, filter_event=True):
+def load_bedpe(input_bedpe, version, filter_event=True):
     """
     Function to parse the bedpe file.
     """
@@ -90,7 +88,6 @@ def load_bedpe(input_bedpe, library_name, version, filter_event=True):
             output[COLUMNS.break2_orientation] else False
 
         output[COLUMNS.protocol] = PROTOCOL.TRANS  # Chimerascan is assumed to only be run on transcriptomes
-        output[COLUMNS.library] = library_name
         output[COLUMNS.tools] = 'ChimeraScan_v{0}'.format(version)
         evidence = "total_spanning_frags:{0}".format(row['spanning_frags'])
         output['chimerascan_evidence'] = evidence
@@ -139,7 +136,7 @@ def main():
     args = parse_arguments()
 
     if os.path.isfile(args.input):
-        output = load_bedpe(args.input, args.library, args.tool_version, not args.no_filter)
+        output = load_bedpe(args.input, args.tool_version, not args.no_filter)
         write_output(output, args.output)
     else:
         print("ERROR: Cannot find file: " + args.input)
