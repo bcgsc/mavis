@@ -2,6 +2,7 @@ from ..breakpoint import BreakpointPair, Breakpoint
 from ..constants import CALL_METHOD, SVTYPE, PYSAM_READ_FLAGS, ORIENT, PROTOCOL, COLUMNS, STRAND
 from ..bam import read as read_tools
 from ..interval import Interval
+from ..align import query_coverage_interval
 from .evidence import TranscriptomeEvidence
 import itertools
 import statistics
@@ -328,10 +329,10 @@ class EventCall(BreakpointPair):
             if r2:
                 ascore = int(round((r1.get_tag('br') + r2.get_tag('br')) / 2, 0))
             cseq = self.contig_alignment[0].query_sequence
-            qc1 = r1.query_coverage_interval()
+            qc1 = query_coverage_interval(r1)
             qc2 = qc1
             if r2:
-                qc2 = r2.query_coverage_interval()
+                qc2 = query_coverage_interval(r2)
                 if r2.is_reverse != r1.is_reverse:
                     qc2 = Interval(len(self.contig.seq) - qc2.end, len(self.contig.seq) - qc2.start)
             caqc = len(qc1 | qc2) if not Interval.overlaps(qc1, qc2) else len(qc1) + len(qc2)
