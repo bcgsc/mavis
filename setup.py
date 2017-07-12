@@ -11,8 +11,8 @@ vocab_link = 'svn+https://svn.bcgsc.ca/svn/SVIA/vocab/tags/v{0}#egg=vocab-{0}'.f
 
 if any([x in sys.argv for x in ['install', 'develop']]):
     # install the svn dependencies. setuptools has tunnel error but pip can do this
-    pip.main(['install', '-e', vocab_link])
-    pip.main(['install', '-e', tsv_link])
+    pip.main(['install', '-e', vocab_link, '--trusted-host', '*.bcgsc.ca'])
+    pip.main(['install', '-e', tsv_link, '--trusted-host', '*.bcgsc.ca'])
 
 setup(
     name='MAVIS',
