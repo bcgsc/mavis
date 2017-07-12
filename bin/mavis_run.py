@@ -339,7 +339,7 @@ def time_diff(start, end):
     t1 = datetime.strptime(start, '%Y-%m-%d %H:%M:%S.%f')
     t2 = datetime.strptime(end, '%Y-%m-%d %H:%M:%S.%f')
     td = t1 - t2
-    return td.seconds/3600
+    return td.seconds / 3600
 
 
 def unique_exists(pattern):
@@ -368,7 +368,7 @@ def check_multiple_jobs(directory):
     """
     log_time = 0
     log("Checking {} ".format(directory))
-    cluster_files = glob.glob(os.path.join(directory, 'clustering','batch*.tab'))
+    cluster_files = glob.glob(os.path.join(directory, 'clustering', 'batch*.tab'))
     if len(cluster_files) == 0:
         raise OSError('cluster directory is empty, MAVIS has not completed succesffully or input was not a MAVIS output directory')
     for subdir in ['validation', 'annotation']:
@@ -380,7 +380,7 @@ def check_multiple_jobs(directory):
             stamp = unique_exists(os.path.join(directory, subdir, '*-' + count, '*.COMPLETE'))
             if stamp == 0:
                 fail_count += 1
-                log_files = glob.glob(os.path.join(directory, subdir,'*.o*.' + count))
+                log_files = glob.glob(os.path.join(directory, subdir, '*.o*.' + count))
                 if len(log_files) == 0:
                     missing.append(count)
                 else:
@@ -405,7 +405,7 @@ def check_single_job(directory):
     log("Checking {} ".format(directory))
     stamp = unique_exists(os.path.join(directory, '*.COMPLETE'))
     if stamp == 0:
-        log_files = glob.glob(os.path.join(directory,'*.o*'))
+        log_files = glob.glob(os.path.join(directory, '*.o*'))
         if len(log_files) == 0:
             log("{} has not started.".format(os.path.basename(directory)), time_stamp=False)
         else:
@@ -643,6 +643,7 @@ use the -h/--help option
         'run time (hh/mm/ss): {}:{:02d}:{:02d}'.format(hours // 3600, minutes // 60, seconds),
         time_stamp=False)
     log('run time (s): {}'.format(duration), time_stamp=False)
+
 
 if __name__ == '__main__':
     main()

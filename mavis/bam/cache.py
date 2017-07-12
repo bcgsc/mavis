@@ -44,7 +44,6 @@ class BamCache:
         else:
             return False
 
-
     def reference_id(self, chrom):
         """
         Args:

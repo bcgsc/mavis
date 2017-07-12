@@ -83,7 +83,7 @@ DEFAULTS = MavisNamespace(
         number of bins to split an evidence window into to ensure more even sampling of high coverage regions
 
     fetch_min_bin_size
-        the minimum size of any bin for reading from a bam file. Increasing this number will result in smaller bins 
+        the minimum size of any bin for reading from a bam file. Increasing this number will result in smaller bins
         being merged or less bins being created (depending on the fetch method)
 
     filter_secondary_alignments

@@ -708,7 +708,7 @@ def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, **
             if attr in [COLUMNS.cluster_id, COLUMNS.annotation_id, COLUMNS.validation_id]:
                 if not re.match('^([A-Za-z0-9-]+|)$', row[attr]):
                     raise AssertionError(
-                        'error in column', attr, 'All mavis pipeline step ids must satisfy the regex:', 
+                        'error in column', attr, 'All mavis pipeline step ids must satisfy the regex:',
                         '^([A-Za-z0-9-]+|)$', row[attr])
         stranded = row[COLUMNS.stranded] or explicit_strand
         opp = row[COLUMNS.opposing_strands]

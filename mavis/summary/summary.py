@@ -3,6 +3,7 @@ from ..breakpoint import Breakpoint, BreakpointPair
 from ..interval import Interval
 from .constants import PAIRING_STATE
 
+
 def alphanumeric_choice(bpp1, bpp2):
     """
     Args:
@@ -221,6 +222,7 @@ def get_pairing_state(current_protocol, current_disease_state, other_protocol, o
         return PAIRING_STATE.EXP if is_matched else PAIRING_STATE.NO_EXP
     else:
         return PAIRING_STATE.MATCH if is_matched else PAIRING_STATE.NO_MATCH
+
 
 def filter_by_evidence(
     bpps,

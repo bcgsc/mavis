@@ -369,7 +369,7 @@ def hgvs_standardize_cigar(read, reference_seq):
             new_cigar.append((CIGAR.D, cigar[i][1]))
         else:
             new_cigar.append(cigar[i])
-    
+
     new_cigar = merge_indels(new_cigar)
     # now we need to extend any insertions
     rpos = read.reference_start
