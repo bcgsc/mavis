@@ -41,6 +41,7 @@ setup(
         vocab_link,
         tsv_version
     ],
+    setup_requires=['nose>=1.0'],
     test_suite='nose.collector',
     tests_require=['nose', 'timeout-decorator==0.3.3', 'coverage==4.2']
 )

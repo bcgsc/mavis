@@ -163,7 +163,6 @@ MAVIS Package Documentation
     mavis.illustrate
     auto/mavis.interval
     mavis.pairing
-    mavis.pipeline
     mavis.validate
 
 
