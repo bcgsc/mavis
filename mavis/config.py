@@ -6,13 +6,14 @@ import re
 import pysam
 from . import __version__
 from .constants import PROTOCOL, DISEASE_STATUS
-from .util import devnull
+from .util import devnull, MavisNamespace
 from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from .annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
 from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
+from .tools import SUPPORTED_TOOL
 
 from .bam.stats import compute_genome_bam_stats, compute_transcriptome_bam_stats
 
@@ -211,7 +212,15 @@ class SummaryConfig:
         return result
 
 
-def write_config(filename, include_defaults=False, libraries=[], log=devnull):
+def write_config(filename, include_defaults=False, libraries=[], conversions={}, log=devnull):
+    """
+    Args:
+        filename (str): path to the output file
+        include_defaults (bool): True if default parameters should be written to the config, False otherwise
+        libraries (list of LibraryConfig): library configuration sections
+        conversions (dict of list by str): conversion commands by alias name
+        log (function): function to pass output logging to
+    """
     config = {}
 
     config['reference'] = ReferenceFilesConfig().flatten()
@@ -234,6 +243,9 @@ def write_config(filename, include_defaults=False, libraries=[], log=devnull):
             for tag, val in config[sec].items():
                 env = ENV_VAR_PREFIX + tag.upper()
                 config[sec][tag] = os.environ.get(env, None) or val
+    config['convert'] = {}
+    for alias, command in conversions.items():
+        config['convert'][alias] = '\n'.join(command)
 
     for sec in config:
         for tag, value in config[sec].items():
@@ -279,7 +291,10 @@ def read_config(filepath):
     # get the library sections and add the default settings
     library_sections = []
     for sec in parser.sections():
-        if sec not in ['validation', 'reference', 'qsub', 'illustrate', 'annotation', 'cluster', 'annotation']:
+        if sec not in [
+            'validation', 'reference', 'qsub', 'illustrate',
+            'annotation', 'cluster', 'annotation', 'convert'
+        ]:
             library_sections.append(sec)
             parser[sec]['library'] = sec
 
@@ -323,6 +338,22 @@ def read_config(filepath):
             raise KeyError(attr, 'file at', fname, 'does not exist')
         global_args[attr] = fname
 
+    convert = {}
+    if 'convert' in parser:
+        for attr, val in parser['convert'].items():
+            val = [v for v in re.split('[;\s]+', val) if v]
+            if val[0] == 'convert_tool_output':
+                if len(val) < 3 or val[2] not in SUPPORTED_TOOL:
+                    raise UserWarning(
+                        'conversion using the built-in convert_tool_output requires specifying the input file and '
+                        'tool name currently supported tools include:', SUPPORTED_TOOL.values())
+                elif len(val) == 4:
+                    val[3] = TSV.tsv_boolean(val[3])
+                else:
+                    raise UserWarning(
+                        'conversion using the built-in convert_tool_output takes at most 3 arguments')
+            convert[attr] = val
+
     sections = []
     for sec in library_sections:
         d = {}
@@ -340,10 +371,14 @@ def read_config(filepath):
                 sections.append(lc)
             except Exception as err:
                 raise UserWarning('could not build configuration file', terr, err)
+    for sec in sections:
+        for infile in sec.inputs:
+            if not os.path.exists(infile) and infile not in convert:
+                raise UserWarning('input file does not exist and is not a conversion', infile)
     if len(library_sections) < 1:
         raise UserWarning('configuration file must have 1 or more library sections')
 
-    return Namespace(**global_args), sections
+    return MavisNamespace(**global_args), sections, MavisNamespace(**convert)
 
 
 def add_semi_optional_argument(argname, success_parser, failure_parser, help_msg=''):
