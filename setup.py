@@ -11,10 +11,26 @@ vocab_link = 'svn+https://svn.bcgsc.ca/svn/SVIA/vocab/tags/v{0}#egg=vocab-{0}'.f
 
 if any([x in sys.argv for x in ['install', 'develop']]):
     # install the svn dependencies. setuptools has tunnel error but pip can do this
-    print(['install', '-e', vocab_link, '--trusted-host', '*.bcgsc.ca', '--exists-action', 's'])
-    pip.main(['install', '-e', vocab_link, '--trusted-host', '*.bcgsc.ca', '--exists-action', 's'])
-    print(['install', '-e', tsv_link, '--trusted-host', '*.bcgsc.ca', '--exists-action', 's'])
-    pip.main(['install', '-e', tsv_link, '--trusted-host', '*.bcgsc.ca', '--exists-action', 's'])
+    try:
+        import vocab
+        if vocab.__version__ != vocab_version:
+            raise ImportError('wrong version', vocab.__version__)
+        print('Using', vocab.__path__[0])
+        print(vocab.__package__ + '==' + vocab.__version__)
+        print()
+    except ImportError:
+        print(['install', '-e', vocab_link, '--trusted-host', '*.bcgsc.ca', '--exists-action', 's'])
+        pip.main(['install', '-e', vocab_link, '--trusted-host', '*.bcgsc.ca', '--exists-action', 's'])
+    try:
+        import TSV
+        if TSV.__version__ != tsv_version:
+            raise ImportError('wrong version', TSV.__version__)
+        print('Using', TSV.__path__[0])
+        print(TSV.__package__ + '==' + TSV.__version__)
+        print()
+    except ImportError:
+        print(['install', '-e', tsv_link, '--trusted-host', '*.bcgsc.ca', '--exists-action', 's'])
+        pip.main(['install', '-e', tsv_link, '--trusted-host', '*.bcgsc.ca', '--exists-action', 's'])
 
 setup(
     name='MAVIS',
