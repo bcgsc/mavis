@@ -13,6 +13,7 @@ from mavis.cluster.main import main as cluster_main
 from mavis.validate.main import main as validate_main
 from mavis.annotate.main import main as annotate_main
 from mavis.constants import DISEASE_STATUS, PROTOCOL
+from mavis.util import ChrListString
 
 annotations = None
 reference_genome = None
@@ -51,6 +52,7 @@ class TestPipeline(unittest.TestCase):
         # test the clustering
         cluster_files = cluster_main(
             [FULL_BASE_EVENTS], self.output, False, 'mock-A36971', PROTOCOL.GENOME, DISEASE_STATUS.DISEASED,
+            limit_to_chr=ChrListString([]), log_args=True,
             masking=masking, cluster_clique_size=15, cluster_radius=20,
             uninformative_filter=True, max_proximity=5000,
             annotations=annotations, min_clusters_per_file=5, max_files=1
