@@ -249,10 +249,15 @@ def filter_by_evidence(
             if any([
                 bpp.break1_split_reads < filter_min_split_reads,
                 bpp.break2_split_reads < filter_min_split_reads,
-                bpp.event_type != SVTYPE.INS and bpp.break2_split_reads_forced + bpp.break1_split_reads_forced <
-                    filter_min_linking_split_reads,
-                bpp.event_type == SVTYPE.INS and bpp.flanking_pairs < filter_min_linking_split_reads and
-                    bpp.break2_split_reads_forced + bpp.break1_split_reads_forced < filter_min_linking_split_reads,
+                all([
+                    bpp.event_type != SVTYPE.INS,
+                    bpp.break2_split_reads_forced + bpp.break1_split_reads_forced < filter_min_linking_split_reads
+                ]),
+                all([
+                    bpp.event_type == SVTYPE.INS,
+                    bpp.flanking_pairs < filter_min_linking_split_reads,
+                    bpp.break2_split_reads_forced + bpp.break1_split_reads_forced < filter_min_linking_split_reads
+                ]),
                 bpp.break1_split_reads + bpp.break2_split_reads -
                 (bpp.break2_split_reads_forced + bpp.break1_split_reads_forced) < 1
             ]):

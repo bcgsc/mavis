@@ -140,7 +140,7 @@ def _convert_tool_row(row, file_type, stranded):
     else:
         strand1 = [strand1]
         strand2 = [strand2]
-    
+
     combinations = list(itertools.product(
         ORIENT.expand(orient1), ORIENT.expand(orient2),
         strand1, strand2, TOOL_SVTYPE_MAPPING[std_row['event_type']] if 'event_type' in std_row else SVTYPE.values(),

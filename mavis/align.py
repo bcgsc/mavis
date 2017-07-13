@@ -206,15 +206,15 @@ def align_contigs(
             from .blat import Blat
             blat_min_identity *= 100
             blat_options = kwargs.pop(
-                 'blat_options', ["-stepSize=5", "-repMatch=2253", "-minScore=0", "-minIdentity={0}".format(blat_min_identity)])
+                'blat_options', ["-stepSize=5", "-repMatch=2253", "-minScore=0", "-minIdentity={0}".format(blat_min_identity)])
             # call the blat subprocess
             # will raise subprocess.CalledProcessError if non-zero exit status
             # parameters from https://genome.ucsc.edu/FAQ/FAQblat.html#blat4
             log(['blat', aligner_reference,
                  aligner_fa_input_file, aligner_output_file, '-out=pslx', '-noHead'] + blat_options)
             subprocess.check_output([
-                    'blat', aligner_reference,
-                    aligner_fa_input_file, aligner_output_file, '-out=pslx', '-noHead'] + blat_options)
+                'blat', aligner_reference,
+                aligner_fa_input_file, aligner_output_file, '-out=pslx', '-noHead'] + blat_options)
 
             header, rows = Blat.read_pslx(aligner_output_file, query_id_mapping, is_protein=is_protein)
 
@@ -257,11 +257,9 @@ def align_contigs(
         else:
             command = aligner.split('-')
             command.extend([aligner_reference, aligner_fa_input_file])
-            log(command) #for bwa
+            log(command)  # for bwa
             with open(aligner_output_file, 'w') as f:
-                subprocess.call(
-                        command,
-                        stdout=f)
+                subprocess.call(command, stdout=f)
 
             samfile = pysam.AlignmentFile(aligner_output_file, 'r')
 

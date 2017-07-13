@@ -532,7 +532,7 @@ use the -h/--help option
                 [k for k in vars(SUMMARY_DEFAULTS)]
             )
         elif pstep == PIPELINE_STEP.CHECKER:
-            
+
             args = parser.parse_args()
             check_completion(args.output)
             exit(0)
