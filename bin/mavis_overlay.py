@@ -53,6 +53,7 @@ def parse_arguments():
     args = parser.parse_args()
     return args
 
+
 args = parse_arguments()
 
 print('load the reference genes')

@@ -38,8 +38,6 @@ def main():
     required.add_argument('-n', '--input', help='path to the input file to be converted', required=True)
     required.add_argument('-o', '--output', help='path to the output file', required=True)
     required.add_argument('-p', '--protocol', choices=[PROTOCOL.GENOME, PROTOCOL.TRANS], required=True)
-    required.add_argument('-l', '--library', default=None,
-                          help="the library id of that was used as input")
 
     optional = parser.add_argument_group('Optional arguments')
     optional.add_argument('-h', '--help', action='help', help='Show this help message and exit')
@@ -138,7 +136,6 @@ def main():
             Breakpoint(chr1, pos1, strand=strand1, orient=orient1),
             Breakpoint(chr2, pos2, strand=strand2, orient=orient2),
             data={
-                COLUMNS.library: args.library,
                 COLUMNS.protocol: args.protocol,
                 COLUMNS.tools: 'TransABySS_v{0}'.format(args.tool_version),
                 COLUMNS.event_type: event_type
@@ -174,7 +171,6 @@ def main():
         fh.write('## inputs {0}\n'.format(" ".join(sys.argv)))
         # fh.write('## input: {0}\n'.format(args.input))
         # fh.write('## output: {0}\n'.format(args.output))
-        # fh.write('## library: {0}\n'.format(args.library))
         # fh.write('## protocol: {0}\n'.format(args.protocol))
         fh.write('## file generated on {0}\n'.format(time.strftime('%B %d, %Y')))
         fh.write('#' + '\t'.join([str(c) for c in header]) + '\n')

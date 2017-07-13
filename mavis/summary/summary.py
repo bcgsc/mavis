@@ -1,6 +1,7 @@
-from ..constants import COLUMNS, STRAND, CALL_METHOD, SVTYPE
+from ..constants import COLUMNS, STRAND, CALL_METHOD, SVTYPE, PROTOCOL, DISEASE_STATUS
 from ..breakpoint import Breakpoint, BreakpointPair
 from ..interval import Interval
+from .constants import PAIRING_STATE
 
 
 def alphanumeric_choice(bpp1, bpp2):
@@ -183,6 +184,46 @@ def annotate_dgv(bpps, dgv_regions_by_reference_name, distance=0):
     return bpps
 
 
+def get_pairing_state(current_protocol, current_disease_state, other_protocol, other_disease_state, is_matched=False):
+    """
+    given two libraries, returns the appropriate descriptor for their matched state
+
+    Args:
+        current_protocol (PROTOCOL): the protocol of the current library
+        current_disease_state (DISEASE_STATUS): the disease status of the current library
+        other_protocol (PROTOCOL): protocol of the library being comparing to
+        other_disease_state (DISEASE_STATUS): disease status of the library being compared to
+        is_matched (bool): True if the libraries are paired
+
+    Returns:
+        (PAIRING_STATE): descriptor of the pairing of the two libraries
+    """
+    PROTOCOL.enforce(current_protocol)
+    PROTOCOL.enforce(other_protocol)
+    DISEASE_STATUS.enforce(current_disease_state)
+    DISEASE_STATUS.enforce(other_disease_state)
+
+    curr = (current_protocol, current_disease_state)
+    other = (other_protocol, other_disease_state)
+
+    DG = (PROTOCOL.GENOME, DISEASE_STATUS.DISEASED)
+    DT = (PROTOCOL.TRANS, DISEASE_STATUS.DISEASED)
+    NG = (PROTOCOL.GENOME, DISEASE_STATUS.NORMAL)
+
+    if curr == DG and other == NG:
+        return PAIRING_STATE.GERMLINE if is_matched else PAIRING_STATE.SOMATIC
+    elif curr == DG and other == DT:
+        return PAIRING_STATE.EXP if is_matched else PAIRING_STATE.NO_EXP
+    elif curr == DT and other == DG:
+        return PAIRING_STATE.GENOMIC if is_matched else PAIRING_STATE.NO_GENOMIC
+    elif curr == DT and other == NG:
+        return PAIRING_STATE.GERMLINE if is_matched else PAIRING_STATE.SOMATIC
+    elif curr == NG and other == DT:
+        return PAIRING_STATE.EXP if is_matched else PAIRING_STATE.NO_EXP
+    else:
+        return PAIRING_STATE.MATCH if is_matched else PAIRING_STATE.NO_MATCH
+
+
 def filter_by_evidence(
     bpps,
     filter_min_remapped_reads=5,
@@ -208,10 +249,15 @@ def filter_by_evidence(
             if any([
                 bpp.break1_split_reads < filter_min_split_reads,
                 bpp.break2_split_reads < filter_min_split_reads,
-                bpp.event_type != SVTYPE.INS and bpp.break2_split_reads_forced + bpp.break1_split_reads_forced <
-                    filter_min_linking_split_reads,
-                bpp.event_type == SVTYPE.INS and bpp.flanking_pairs < filter_min_linking_split_reads and
-                    bpp.break2_split_reads_forced + bpp.break1_split_reads_forced < filter_min_linking_split_reads,
+                all([
+                    bpp.event_type != SVTYPE.INS,
+                    bpp.break2_split_reads_forced + bpp.break1_split_reads_forced < filter_min_linking_split_reads
+                ]),
+                all([
+                    bpp.event_type == SVTYPE.INS,
+                    bpp.flanking_pairs < filter_min_linking_split_reads,
+                    bpp.break2_split_reads_forced + bpp.break1_split_reads_forced < filter_min_linking_split_reads
+                ]),
                 bpp.break1_split_reads + bpp.break2_split_reads -
                 (bpp.break2_split_reads_forced + bpp.break1_split_reads_forced) < 1
             ]):

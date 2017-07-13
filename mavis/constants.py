@@ -15,7 +15,8 @@ PIPELINE_STEP = Vocab(
     PIPELINE='pipeline',
     CLUSTER='cluster',
     PAIR='pairing',
-    SUMMARY='summary'
+    SUMMARY='summary',
+    CHECKER='checker'
 )
 
 
@@ -321,6 +322,7 @@ COLUMNS = Vocab(
     opposing_strands='opposing_strands',
     stranded='stranded',
     protocol='protocol',
+    disease_status='disease_status',
     tools='tools',
     break1_call_method='break1_call_method',
     break1_ewindow='break1_ewindow',

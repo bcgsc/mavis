@@ -1,6 +1,7 @@
 from ..util import MavisNamespace
 
 DEFAULTS = MavisNamespace(
+    aligner='blat',
     assembly_include_flanking_pairs=True,
     assembly_include_half_mapped_reads=True,
     assembly_max_kmer_size=None,
@@ -34,12 +35,12 @@ DEFAULTS = MavisNamespace(
     min_anchor_match=0.9,
     min_double_aligned_to_estimate_insertion_size=2,
     min_flanking_pairs_resolution=10,
-    min_linking_split_reads=1,
+    min_linking_split_reads=2,
     min_mapping_quality=5,
     min_non_target_aligned_split_reads=1,
     min_sample_size_to_apply_percentage=10,
     min_softclipping=6,
-    min_spanning_reads_resolution=3,
+    min_spanning_reads_resolution=5,
     min_splits_reads_resolution=3,
     sc_extension_stop=5,
     stdev_count_abnormal=3.0,
@@ -50,6 +51,9 @@ DEFAULTS = MavisNamespace(
 
 .. glossary::
     :sorted:
+
+    aligner
+        the aligner to use to map the contigs/reads back to the reference e.g blat or bwa
 
     read_length
         length of reads in the bam file
@@ -83,7 +87,7 @@ DEFAULTS = MavisNamespace(
         number of bins to split an evidence window into to ensure more even sampling of high coverage regions
 
     fetch_min_bin_size
-        the minimum size of any bin for reading from a bam file. Increasing this number will result in smaller bins 
+        the minimum size of any bin for reading from a bam file. Increasing this number will result in smaller bins
         being merged or less bins being created (depending on the fetch method)
 
     filter_secondary_alignments

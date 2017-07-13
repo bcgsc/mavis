@@ -38,14 +38,14 @@ class TestConvertScripts(unittest.TestCase):
         script = os.path.join(script_prefix, 'convert_transabyss.py')
         output = os.path.join(temp_output, 'transabyss_out.tab')
         subprocess.check_output(
-            'python {0} -n {1} -o {2} -l testlibrary -p genome'.format(script, input_file, output), shell=True)
+            'python {0} -n {1} -o {2} -p genome'.format(script, input_file, output), shell=True)
         subprocess.check_output(['python', output_checker, output])
 
     def test_manta(self):
         input_file = os.path.join(data_prefix, 'manta_events.vcf')
         script = os.path.join(script_prefix, 'convert_manta.py')
         output = os.path.join(temp_output, 'manta_out.tab')
-        subprocess.check_output('python {0} -n {1} -o {2} -l testlibrary'.format(script, input_file, output), shell=True)
+        subprocess.check_output('python {0} -n {1} -o {2}'.format(script, input_file, output), shell=True)
         subprocess.check_output(['python', output_checker, output])
 
     def test_pindel(self):
@@ -56,7 +56,7 @@ class TestConvertScripts(unittest.TestCase):
         input_file = os.path.join(data_prefix, '')
         script = os.path.join(script_prefix, 'convert_defuse.py')
         output = os.path.join(temp_output, 'defuse_out.tab')
-        subprocess.check_output('python {0} -n {1} -o {2} -l testlibrary'.format(script, input_file, output), shell=True)
+        subprocess.check_output('python {0} -n {1} -o {2}'.format(script, input_file, output), shell=True)
         subprocess.check_output(['python', output_checker, output])
 
     def test_breakdancer(self):

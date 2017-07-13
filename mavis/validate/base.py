@@ -44,7 +44,7 @@ class Evidence(BreakpointPair):
 
     @property
     def compatible_window1(self):
-        """:class:`~mavis.interval.Interval`: the window/region where it is expected to 
+        """:class:`~mavis.interval.Interval`: the window/region where it is expected to
         find reads in a compatible flanking pair (mate must be in compatible_window2)
 
         see :ref:`theory - calculating the evidence window <theory-calculating-the-evidence-window>`
@@ -53,7 +53,7 @@ class Evidence(BreakpointPair):
 
     @property
     def compatible_window2(self):
-        """:class:`~mavis.interval.Interval`: the window/region where it is expected to 
+        """:class:`~mavis.interval.Interval`: the window/region where it is expected to
         find reads in a compatible flanking pair (mate must be in compatible_window1)
 
         see :ref:`theory - calculating the evidence window <theory-calculating-the-evidence-window>`
@@ -203,7 +203,7 @@ class Evidence(BreakpointPair):
             pass
         read.cigar = cigar_tools.join(c)
         read.reference_start = read.reference_start + prefix
-        
+
         # makes sure all insertions are called as far 'right' as possible
         read.cigar = cigar_tools.hgvs_standardize_cigar(
             read, self.REFERENCE_GENOME[self.bam_cache.get_read_reference_name(read)].seq)
@@ -222,7 +222,7 @@ class Evidence(BreakpointPair):
     def compute_fragment_size(self, read, mate):
         """
         Args:
-            read (pysam.AlignedSegment): 
+            read (pysam.AlignedSegment):
             mate (pysam.AlignedSegment):
         Returns:
             Interval: interval representing the range of possible fragment sizes for this read pair
@@ -247,7 +247,7 @@ class Evidence(BreakpointPair):
 
         This is only applicable to small events. Do not need to look for soft clipped reads
         here since they will be collected already
-        
+
         Args:
             read (pysam.AlignedSegment): the putative spanning read
 
@@ -266,14 +266,14 @@ class Evidence(BreakpointPair):
             strand = read_tools.sequenced_strand(read, self.strand_determining_read)
             if strand != self.break1.strand and strand != self.break2.strand:
                 return False
-        
+
         combined = self.inner_window1 & self.inner_window2
         read_interval = Interval(read.reference_start + 1, read.reference_end)
 
         if Interval.overlaps(combined, read_interval):
-            
+
             if not read.has_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR) or not read.get_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR):
-                
+
                 read = self.standardize_read(read)
             # in the correct position, now determine if it can support the event types
             for event_type in self.putative_event_types():
@@ -299,7 +299,7 @@ class Evidence(BreakpointPair):
             read (pysam.AlignedSegment): the read to add
             mate (pysam.AlignedSegment): the mate
             compatible_type (SVTYPE): the type we are collecting for
-        
+
         Returns:
             bool:
                 - True: the pair was collected and stored in the current evidence object
@@ -372,7 +372,7 @@ class Evidence(BreakpointPair):
         Args:
             read (pysam.AlignedSegment): the read to add
             mate (pysam.AlignedSegment): the mate
-        
+
         Returns:
             bool:
                 - True: the pair was collected and stored in the current evidence object
@@ -643,7 +643,7 @@ class Evidence(BreakpointPair):
 
     def decide_sequenced_strand(self, reads):
         """
-        given a set of reads, determines the sequenced strand (if possible) and then returns the majority 
+        given a set of reads, determines the sequenced strand (if possible) and then returns the majority
         strand found
 
         Args:
@@ -795,7 +795,7 @@ class Evidence(BreakpointPair):
     def load_multiple(cls, evidence, log=devnull):
         """
         loads evidence from the bam file for multiple evidence objects at once
-        
+
         Args:
             evidence (list of :class:`Evidence`): list of evidence objects to collect evidence for
 
@@ -1001,7 +1001,7 @@ class Evidence(BreakpointPair):
             len(Interval.union(self.break1, self.break2)),
             len(self.untemplated_seq if self.untemplated_seq else '')
         )
-        
+
         def cache_if_true(read):
             if read.is_unmapped or read.mate_is_unmapped:
                 return True

@@ -1,8 +1,7 @@
 from datetime import datetime
 import errno
-import math
 import os
-import random
+import re
 from .breakpoint import read_bpp_from_input_file
 from .constants import PROTOCOL, COLUMNS, sort_columns
 from .interval import Interval
@@ -25,6 +24,38 @@ class MavisNamespace(Namespace):
 
     def __getitem__(self, key):
         return getattr(self, key)
+
+
+class ChrListString(list):
+    def __init__(self, string):
+        if not isinstance(string, str):
+            for item in string:
+                self.append(item)
+        else:
+            delim = '\s+' if ';' not in string else ';'
+            items = [i for i in re.split(delim, string) if i]
+            for item in items:
+                self.append(item)
+
+    def __contains__(self, item):
+        if list.__len__(self) == 0:
+            return True
+        else:
+            return list.__contains__(self, item)
+
+
+def log_arguments(args):
+    log('arguments')
+    for arg, val in sorted(args.items()):
+        if isinstance(val, list):
+            log(arg, '= [', time_stamp=False)
+            for v in val:
+                log('\t', repr(v), time_stamp=False)
+            log(']', time_stamp=False)
+        elif any([isinstance(val, typ) for typ in [str, int, float, bool, tuple]]) or val is None:
+            log(arg, '=', repr(val), time_stamp=False)
+        else:
+            log(arg, '=', object.__repr__(val), time_stamp=False)
 
 
 def log(*pos, time_stamp=True):

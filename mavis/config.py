@@ -6,13 +6,14 @@ import re
 import pysam
 from . import __version__
 from .constants import PROTOCOL, DISEASE_STATUS
-from .util import devnull
+from .util import devnull, MavisNamespace
 from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from .annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
 from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
+from .tools import SUPPORTED_TOOL
 
 from .bam.stats import compute_genome_bam_stats, compute_transcriptome_bam_stats
 
@@ -55,6 +56,12 @@ class LibraryConfig:
                 setattr(self, attr, None)
             else:
                 setattr(self, attr, cast(value, type(acceptable[attr])))
+
+        if 'MAVIS_FETCH_METHOD_INDIVIDUAL' not in os.environ and 'fetch_method_individual' not in kwargs:
+            if self.protocol == PROTOCOL.TRANS:
+                self.fetch_method_individual = False
+            else:
+                self.fetch_method_individual = True
 
     def flatten(self):
         result = {}
@@ -138,7 +145,7 @@ class ReferenceFilesConfig:
         reference_genome=None,
         template_metadata=None,
         masking=None,
-        blat_2bit_reference=None,
+        aligner_reference=None,
         dgv_annotation=None,
         low_memory=False
     ):
@@ -148,7 +155,7 @@ class ReferenceFilesConfig:
         self.masking = masking or os.environ.get(ENV_VAR_PREFIX + 'MASKING', None)
         self.dgv_annotation = dgv_annotation or os.environ.get(ENV_VAR_PREFIX + 'DGV_ANNOTATION', None)
         self.low_memory = low_memory or os.environ.get(ENV_VAR_PREFIX + 'LOW_MEMORY', None)
-        self.blat_2bit_reference = blat_2bit_reference or os.environ.get(ENV_VAR_PREFIX + 'BLAT_2BIT_REFERENCE', None)
+        self.aligner_reference = aligner_reference or os.environ.get(ENV_VAR_PREFIX + 'ALIGNER_REFERENCE', None)
 
     def flatten(self):
         result = {}
@@ -205,7 +212,15 @@ class SummaryConfig:
         return result
 
 
-def write_config(filename, include_defaults=False, libraries=[], log=devnull):
+def write_config(filename, include_defaults=False, libraries=[], conversions={}, log=devnull):
+    """
+    Args:
+        filename (str): path to the output file
+        include_defaults (bool): True if default parameters should be written to the config, False otherwise
+        libraries (list of LibraryConfig): library configuration sections
+        conversions (dict of list by str): conversion commands by alias name
+        log (function): function to pass output logging to
+    """
     config = {}
 
     config['reference'] = ReferenceFilesConfig().flatten()
@@ -228,11 +243,16 @@ def write_config(filename, include_defaults=False, libraries=[], log=devnull):
             for tag, val in config[sec].items():
                 env = ENV_VAR_PREFIX + tag.upper()
                 config[sec][tag] = os.environ.get(env, None) or val
+    config['convert'] = {}
+    for alias, command in conversions.items():
+        config['convert'][alias] = '\n'.join(command)
 
     for sec in config:
         for tag, value in config[sec].items():
             if '_regex_' in tag:
                 config[sec][tag] = re.sub('\$', '$$', config[sec][tag])
+            elif isinstance(value, list):
+                config[sec][tag] = '\n'.join([str(v) for v in value])
             else:
                 config[sec][tag] = str(value)
 
@@ -273,7 +293,10 @@ def read_config(filepath):
     # get the library sections and add the default settings
     library_sections = []
     for sec in parser.sections():
-        if sec not in ['validation', 'reference', 'qsub', 'illustrate', 'annotation', 'cluster', 'annotation']:
+        if sec not in [
+            'validation', 'reference', 'qsub', 'illustrate',
+            'annotation', 'cluster', 'annotation', 'convert'
+        ]:
             library_sections.append(sec)
             parser[sec]['library'] = sec
 
@@ -317,11 +340,27 @@ def read_config(filepath):
             raise KeyError(attr, 'file at', fname, 'does not exist')
         global_args[attr] = fname
 
+    convert = {}
+    if 'convert' in parser:
+        for attr, val in parser['convert'].items():
+            val = [v for v in re.split('[;\s]+', val) if v]
+            if val[0] == 'convert_tool_output':
+                if len(val) < 3 or val[2] not in SUPPORTED_TOOL:
+                    raise UserWarning(
+                        'conversion using the built-in convert_tool_output requires specifying the input file and '
+                        'tool name currently supported tools include:', SUPPORTED_TOOL.values())
+                elif len(val) == 4:
+                    val[3] = TSV.tsv_boolean(val[3])
+                else:
+                    raise UserWarning(
+                        'conversion using the built-in convert_tool_output takes at most 3 arguments')
+            convert[attr] = val
+
     sections = []
     for sec in library_sections:
         d = {}
-        d.update(parser[sec])
         d.update(args)
+        d.update(parser[sec])
 
         # now try building the LibraryConfig object
         try:
@@ -334,10 +373,13 @@ def read_config(filepath):
                 sections.append(lc)
             except Exception as err:
                 raise UserWarning('could not build configuration file', terr, err)
+    for sec in sections:
+        for infile in sec.inputs:
+            if not os.path.exists(infile) and infile not in convert:
+                raise UserWarning('input file does not exist and is not a conversion', infile)
     if len(library_sections) < 1:
         raise UserWarning('configuration file must have 1 or more library sections')
-
-    return Namespace(**global_args), sections
+    return MavisNamespace(**global_args), sections, MavisNamespace(**convert)
 
 
 def add_semi_optional_argument(argname, success_parser, failure_parser, help_msg=''):
@@ -370,16 +412,14 @@ def get_env_variable(arg, default, cast_type=None):
 
 
 def augment_parser(parser, optparser, arguments):
-    try:
-        optparser.add_argument('-h', '--help', action='help', help='show this help message and exit')
-        optparser.add_argument(
-            '-v', '--version', action='version', version='%(prog)s version ' + __version__,
-            help='Outputs the version number')
-    except ArgumentError:
-        pass
-
     for arg in arguments:
-        if arg == 'annotations':
+        if arg == 'help':
+            optparser.add_argument('-h', '--help', action='help', help='show this help message and exit')
+        elif arg == 'version':
+            optparser.add_argument(
+                '-v', '--version', action='version', version='%(prog)s version ' + __version__,
+                help='Outputs the version number')
+        elif arg == 'annotations':
             add_semi_optional_argument(
                 arg, optparser, parser, 'Path to the reference annotations of genes, transcript, exons, domains, etc.')
         elif arg == 'reference_genome':
@@ -391,9 +431,9 @@ def augment_parser(parser, optparser, arguments):
             add_semi_optional_argument(arg, optparser, parser, 'File containing the cytoband template information.')
         elif arg == 'masking':
             add_semi_optional_argument(arg, optparser, parser)
-        elif arg == 'blat_2bit_reference':
+        elif arg == 'aligner_reference':
             add_semi_optional_argument(
-                arg, optparser, parser, 'path to the 2bit reference file used for blatting contig sequences.')
+                arg, optparser, parser, 'path to the aligner reference file used for aligning the contig sequences.')
         elif arg == 'dgv_annotation':
             add_semi_optional_argument(
                 arg, optparser, parser, 'Path to the dgv reference processed to look like the cytoband file.')
@@ -477,5 +517,8 @@ def augment_parser(parser, optparser, arguments):
             parser.add_argument('--library', help='library name', required=True)
         elif arg == 'protocol':
             parser.add_argument('--protocol', choices=PROTOCOL.values(), help='library protocol', required=True)
+        elif arg == 'disease_status':
+            parser.add_argument(
+                '--disease_status', choices=DISEASE_STATUS.values(), help='library disease status', required=True)
         else:
             raise KeyError('invalid argument', arg)

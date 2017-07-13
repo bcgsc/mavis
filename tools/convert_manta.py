@@ -22,7 +22,7 @@ SVTYPES = {'DEL': SVTYPE.DEL,
            }
 
 
-def load_vcf(vcf_filename, library, version, filter_evidence=None, filter_event=True):
+def load_vcf(vcf_filename, version, filter_evidence=None, filter_event=True):
     """
     Function to parse the manta vcf file.
     """
@@ -90,7 +90,6 @@ def load_vcf(vcf_filename, library, version, filter_evidence=None, filter_event=
             event[COLUMNS.event_type] = SVTYPES[event_type]
             event['manta_evidence'] = str(record.ID) + " " + str(record.INFO) + " " + str(record.samples)
             event[COLUMNS.stranded] = 'False'
-            event[COLUMNS.library] = library
             event[COLUMNS.tools] = "Manta_v{0}".format(version)
 
             if event_type == 'DEL' or event_type == 'INS':
@@ -126,13 +125,12 @@ Note this has the option to filter the results for diploid.tsv based on if an ev
 required = parser.add_argument_group('Required arguments')
 required.add_argument('-n', '--input', required=True, help='Manta/DeFuse vcf file to process')
 required.add_argument('-o', '--output', required=True, help='output file name')
-required.add_argument('-l', '--library', required=True, help='libary name of the tumor bam')
 
 optional = parser.add_argument_group('Optional arguments')
 # optional.add_argument('-b', '--bam', help = 'path to the evidence bam file for the tumour library')
 optional.add_argument('-h', '--help', action='help', help='Show this help message and exit')
 optional.add_argument('--filter-evidence', action='store_true',
-                      help='turn on addtional filtering of events based on flanking and split read evidence')
+                      help='turn on additional filtering of events based on flanking and split read evidence')
 optional.add_argument('-v', '--version', action='version', version='%(prog)s version ' + __version__,
                       help='outputs the version number')
 optional.add_argument('--tool-version', default='1.0.0', help='the version of Manta that was used in the analysis')
@@ -143,7 +141,7 @@ args = parser.parse_args()
 vcf_filename = args.input
 output_filename = args.output
 
-events = load_vcf(vcf_filename, args.library, args.tool_version, args.filter_evidence, not args.no_filter)
+events = load_vcf(vcf_filename, args.tool_version, args.filter_evidence, not args.no_filter)
 elements = sort_columns(events[0].keys())
 header = "\t".join(elements)
 

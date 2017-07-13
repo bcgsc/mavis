@@ -27,9 +27,6 @@ def main():
     required = parser.add_argument_group('Required arguments')
     required.add_argument('-n', '--input', required=True, help='Breakdancer *.max output', nargs='+')
     required.add_argument('-o', '--output', required=True, help='Full name of the converted output file')
-    required.add_argument(
-        '-l', '--library', help='The library id for the input bam file.',
-        required=False, default=None)
 
     optional = parser.add_argument_group('Optional arguments')
     optional.add_argument('-h', '--help', action='help', help='Show this help message and exit')
@@ -56,8 +53,6 @@ def main():
 
         for row in rows:
             data = {}
-            if args.library:
-                data[COLUMNS.library] = args.library
             data[COLUMNS.protocol] = PROTOCOL.GENOME
             data[COLUMNS.tools] = 'breakdancer_v' + args.tool_version
             data[COLUMNS.event_type] = row['Type']
