@@ -44,9 +44,8 @@ def main_pipeline(args, configs):
     annotation_jobs = []
     rand = int(random.random() * math.pow(10, 10))
     for sec in configs:
-        base = os.path.join(args.output, '{}_{}'.format(sec.library, sec.protocol))
+        base = os.path.join(args.output, '{}_{}_{}'.format(sec.library, sec.disease_status, sec.protocol))
         log('setting up the directory structure for', sec.library, 'as', base)
-        base = os.path.join(args.output, '{}_{}'.format(sec.library, sec.protocol))
         cluster_output = mkdirp(os.path.join(base, 'clustering'))
         validation_output = mkdirp(os.path.join(base, 'validation'))
         annotation_output = mkdirp(os.path.join(base, 'annotation'))
@@ -227,13 +226,18 @@ def generate_config(parser, required, optional):
         '--genome_bins', default=get_env_variable('genome_bins', 100), type=int,
         help='number of bins/samples to use in calculating the fragment size stats for genomes')
     optional.add_argument(
-        '--transcriptome_bins', default=get_env_variable('transcriptome_bins', 500), type=int,
+        '--transcriptome_bins', default=get_env_variable('transcriptome_bins', 5000), type=int,
         help='number of genes to use in calculating the fragment size stats for genomes')
+    optional.add_argument(
+        '--distribution_fraction', default=get_env_variable('distribution_fraction', 0.97), type=float,
+        help='the proportion of the distribution of calculated fragment sizes to use in determining the stdev')
     optional.add_argument(
         '--verbose', default=get_env_variable('verbose', False), type=TSV.tsv_boolean,
         help='verbosely output logging information')
     augment_parser(required, optional, ['annotations'])
     args = parser.parse_args()
+    if args.distribution_fraction < 0 or args.distribution_fraction > 1:
+        raise ValueError('distribution_fraction must be a value between 0-1')
     log_arguments(args)
 
     # now write the config file
@@ -259,8 +263,9 @@ def generate_config(parser, required, optional):
         log('generating the config section for:', lib)
         l = LibraryConfig.build(
             library=lib, protocol=protocol, bam_file=bam, inputs=inputs_by_lib[lib], stranded_bam=stranded,
-            disease_status=diseased, annotations=args.annotations, log=log if args.verbose else devnull,
-            sample_size=args.genome_bins if protocol == PROTOCOL.GENOME else args.transcriptome_bins
+            disease_status=diseased, annotations=args.annotations, log=log,
+            sample_size=args.genome_bins if protocol == PROTOCOL.GENOME else args.transcriptome_bins,
+            distribution_fraction=args.distribution_fraction
         )
         libs.append(l)
     write_config(args.write, include_defaults=True, libraries=libs, log=log)

@@ -30,7 +30,7 @@ def cast(value, cast_func):
 class LibraryConfig:
     def __init__(
         self, library, protocol, disease_status, bam_file, inputs, read_length, median_fragment_size,
-        stdev_fragment_size, stranded_bam,
+        stdev_fragment_size, stranded_bam, strand_determining_read=2,
         **kwargs
     ):
         self.library = library
@@ -40,6 +40,7 @@ class LibraryConfig:
         self.median_fragment_size = int(median_fragment_size)
         self.stdev_fragment_size = int(stdev_fragment_size)
         self.stranded_bam = cast(stranded_bam, bool)
+        self.strand_determining_read = int(strand_determining_read)
         self.disease_status = DISEASE_STATUS.enforce(disease_status)
         try:
             self.inputs = [f for f in re.split('[;\s]+', inputs) if f]
@@ -70,7 +71,6 @@ class LibraryConfig:
         sample_cap=3000,
         sample_bin_size=1000,
         sample_size=500,
-        best_transcripts_only=True,
         **kwargs
     ):
         PROTOCOL.enforce(protocol)
@@ -101,17 +101,14 @@ class LibraryConfig:
                 )
             else:
                 raise ValueError('unrecognized value for protocol', protocol)
-            log(
-                'library:', library, protocol,
-                'median', bamstats.median_fragment_size,
-                'stdev', bamstats.stdev_fragment_size,
-                'read length', bamstats.read_length)
+            log(bamstats)
 
             return LibraryConfig(
                 library=library, protocol=protocol, bam_file=bam_file, inputs=inputs,
                 median_fragment_size=bamstats.median_fragment_size,
                 stdev_fragment_size=bamstats.stdev_fragment_size,
                 read_length=bamstats.read_length,
+                strand_determining_read=bamstats.strand_determining_read,
                 **kwargs
             )
         finally:
@@ -398,7 +395,8 @@ def augment_parser(parser, optparser, arguments):
             add_semi_optional_argument(
                 arg, optparser, parser, 'path to the 2bit reference file used for blatting contig sequences.')
         elif arg == 'dgv_annotation':
-            add_semi_optional_argument(arg, optparser, parser, 'Path to the dgv reference processed to look like the cytoband file.')
+            add_semi_optional_argument(
+                arg, optparser, parser, 'Path to the dgv reference processed to look like the cytoband file.')
         elif arg == 'config':
             parser.add_argument('config', 'path to the config file')
         elif arg == 'stranded_bam':

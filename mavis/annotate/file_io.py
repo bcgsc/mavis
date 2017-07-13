@@ -351,6 +351,7 @@ def load_reference_genome(filename, low_mem=False):
                     'template names {} and {} are considered equal but both have been defined in the reference'
                     'loaded'.format(template_name, prefixed))
             HUMAN_REFERENCE_GENOME.setdefault(prefixed, HUMAN_REFERENCE_GENOME[template_name])
+        HUMAN_REFERENCE_GENOME[template_name] = HUMAN_REFERENCE_GENOME[template_name].upper()
     return HUMAN_REFERENCE_GENOME
 
 

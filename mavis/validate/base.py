@@ -8,7 +8,7 @@ from ..breakpoint import BreakpointPair
 from ..bam import read as read_tools
 from ..bam import cigar as cigar_tools
 from ..bam.cache import BamCache
-from ..util import devnull
+from ..util import devnull, log
 
 
 class Evidence(BreakpointPair):
@@ -83,11 +83,11 @@ class Evidence(BreakpointPair):
     @property
     def min_expected_fragment_size(self):
         # cannot be negative
-        return max([self.median_fragment_size - self.stdev_fragment_size * self.stdev_count_abnormal, 0])
+        return int(round(max([self.median_fragment_size - self.stdev_fragment_size * self.stdev_count_abnormal, 0]), 0))
 
     @property
     def max_expected_fragment_size(self):
-        return self.median_fragment_size + self.stdev_fragment_size * self.stdev_count_abnormal
+        return int(round(self.median_fragment_size + self.stdev_fragment_size * self.stdev_count_abnormal, 0))
 
     def __init__(
             self,
@@ -199,15 +199,14 @@ class Evidence(BreakpointPair):
         prefix = 0
         try:
             c, prefix = cigar_tools.extend_softclipping(c, self.sc_extension_stop)
-        except AttributeError:
+        except AttributeError as err:
             pass
         read.cigar = cigar_tools.join(c)
-
+        read.reference_start = read.reference_start + prefix
+        
         # makes sure all insertions are called as far 'right' as possible
         read.cigar = cigar_tools.hgvs_standardize_cigar(
             read, self.REFERENCE_GENOME[self.bam_cache.get_read_reference_name(read)].seq)
-        read.reference_start = read.reference_start + prefix
-
         return read
 
     def putative_event_types(self):
@@ -267,11 +266,15 @@ class Evidence(BreakpointPair):
             strand = read_tools.sequenced_strand(read, self.strand_determining_read)
             if strand != self.break1.strand and strand != self.break2.strand:
                 return False
-
+        
         combined = self.inner_window1 & self.inner_window2
         read_interval = Interval(read.reference_start + 1, read.reference_end)
 
         if Interval.overlaps(combined, read_interval):
+            
+            if not read.has_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR) or not read.get_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR):
+                
+                read = self.standardize_read(read)
             # in the correct position, now determine if it can support the event types
             for event_type in self.putative_event_types():
                 if event_type in [SVTYPE.DUP, SVTYPE.INS]:
@@ -639,6 +642,19 @@ class Evidence(BreakpointPair):
         return True
 
     def decide_sequenced_strand(self, reads):
+        """
+        given a set of reads, determines the sequenced strand (if possible) and then returns the majority 
+        strand found
+
+        Args:
+            reads (set of :class:`pysam.AlignedSegment`): set of reads
+
+        Returns:
+            STRAND: the sequenced strand
+
+        Raises:
+            ValueError: input was an empty set or the ratio was not sufficient to decide on a strand
+        """
         if len(reads) == 0:
             raise ValueError('cannot determine the strand of a set of reads if the set is empty')
 
@@ -664,7 +680,7 @@ class Evidence(BreakpointPair):
                 return STRAND.NEG
             raise ValueError('Could not determine the strand. Equivocal POS/(NEG + POS) ratio', ratio, strand_calls)
 
-    def assemble_contig(self, log=lambda *pos, **kwargs: None):
+    def assemble_contig(self, log=devnull):
         """
         uses the split reads and the partners of the half mapped reads to create a contig
         representing the sequence across the breakpoints
@@ -779,6 +795,9 @@ class Evidence(BreakpointPair):
     def load_multiple(cls, evidence, log=devnull):
         """
         loads evidence from the bam file for multiple evidence objects at once
+        
+        Args:
+            evidence (list of :class:`Evidence`): list of evidence objects to collect evidence for
 
         Warning:
             this is not exactly equivalent to multiple calls of load_evidence because it
@@ -792,6 +811,7 @@ class Evidence(BreakpointPair):
         max_expected_fragment_size = evidence[0].max_expected_fragment_size
         min_expected_fragment_size = evidence[0].min_expected_fragment_size
         read_length = evidence[0].read_length
+        fetch_min_bin_size = evidence[0].fetch_min_bin_size
         protocol = evidence[0].protocol
 
         # check the inputs make sense
@@ -806,6 +826,7 @@ class Evidence(BreakpointPair):
                 raise UserWarning('cannot load_multiple when the read_length differs')
             max_expected_fragment_size = min([ev.max_expected_fragment_size, max_expected_fragment_size])
             min_expected_fragment_size = max([ev.min_expected_fragment_size, min_expected_fragment_size])
+            fetch_min_bin_size = max([ev.fetch_min_bin_size, fetch_min_bin_size])
             if ev.protocol == PROTOCOL.TRANS:
                 protocol = PROTOCOL.TRANS
 
@@ -817,9 +838,12 @@ class Evidence(BreakpointPair):
                 read.mapping_quality < min_mapping_quality
             ]):
                 return False
+            elif set([x[0] for x in read.cigar]) & {CIGAR.D, CIGAR.N, CIGAR.S, CIGAR.I}:
+                return True
             elif read.is_proper_pair and protocol != PROTOCOL.TRANS:
-                frag_est = abs(read.reference_start - read.next_reference_start)
-                if frag_est >= min_expected_fragment_size and frag_est + read_length <= max_expected_fragment_size:
+                min_frag_est = abs(read.reference_start - read.next_reference_start) - read_length
+                max_frag_est = min_frag_est + 3 * read_length
+                if min_frag_est >= min_expected_fragment_size and max_frag_est <= max_expected_fragment_size:
                     return False
             return True
 
@@ -830,20 +854,19 @@ class Evidence(BreakpointPair):
                 return True
             return False
 
-        min_bin_size = 10
         # create the intervals to investigate
         read_limits = {}  # chr => interval => cap
         for ev in evidence:
             # first breakpoint window
             bins = BamCache._generate_fetch_bins(
-                ev.outer_window1[0], ev.outer_window1[1], ev.fetch_reads_bins, min_bin_size)
+                ev.outer_window1[0], ev.outer_window1[1], ev.fetch_reads_bins, fetch_min_bin_size)
             read_cap = ev.fetch_reads_limit // len(bins)
             for b in bins:
                 read_limits.setdefault(ev.break1.chr, {})
                 read_limits[ev.break1.chr][b] = max([read_limits[ev.break1.chr].get(b, 0), read_cap])
             # second breakpoint window
             bins = BamCache._generate_fetch_bins(
-                ev.outer_window2[0], ev.outer_window2[1], ev.fetch_reads_bins, min_bin_size)
+                ev.outer_window2[0], ev.outer_window2[1], ev.fetch_reads_bins, fetch_min_bin_size)
             read_cap = ev.fetch_reads_limit // len(bins)
             for b in bins:
                 read_limits.setdefault(ev.break2.chr, {})
@@ -852,14 +875,14 @@ class Evidence(BreakpointPair):
             if ev.compatible_windows and ev.collect_from_outer_window():
                 # first compatible breakpoint window
                 bins = BamCache._generate_fetch_bins(
-                    ev.compatible_window1[0], ev.compatible_window1[1], ev.fetch_reads_bins, min_bin_size)
+                    ev.compatible_window1[0], ev.compatible_window1[1], ev.fetch_reads_bins, fetch_min_bin_size)
                 read_cap = ev.fetch_reads_limit // len(bins)
                 for b in bins:
                     read_limits.setdefault(ev.break1.chr, {})
                     read_limits[ev.break1.chr][b] = max([read_limits[ev.break1.chr].get(b, 0), read_cap])
                 # second compatible breakpoint window
                 bins = BamCache._generate_fetch_bins(
-                    ev.compatible_window2[0], ev.compatible_window2[1], ev.fetch_reads_bins, min_bin_size)
+                    ev.compatible_window2[0], ev.compatible_window2[1], ev.fetch_reads_bins, fetch_min_bin_size)
                 read_cap = ev.fetch_reads_limit // len(bins)
                 for b in bins:
                     read_limits.setdefault(ev.break2.chr, {})
@@ -875,12 +898,12 @@ class Evidence(BreakpointPair):
             i = 0
             while i < len(intervals):
                 curr = intervals[i]
-                if len(curr) < min_bin_size:
+                if len(curr) < fetch_min_bin_size:
                     # merge with the following interval
                     merge_itvl = curr
                     merge_weight = weighted_intervals[curr]
                     i += 1
-                    while len(merge_itvl) < min_bin_size and i < len(intervals):
+                    while len(merge_itvl) < fetch_min_bin_size and i < len(intervals):
                         merge_itvl = intervals[i] | merge_itvl
                         merge_weight += weighted_intervals[intervals[i]]
                         i += 1
@@ -894,16 +917,18 @@ class Evidence(BreakpointPair):
 
         putative_half_maps = set()
         putative_flanking = set()
+        fetch_regions = sorted(fetch_regions, reverse=True)
 
         for i in range(0, len(fetch_regions)):
             chr, start, end, limit = fetch_regions[i]
-            log('({} of {}) loading the bin {}:{}-{} (limit {})'.format(
-                i + 1, len(fetch_regions), chr, start, end, limit))
+            log('({} of {}) loading the bin {}:{}-{} (limit {}; size {})'.format(
+                i + 1, len(fetch_regions), chr, start, end, limit, end - start + 1))
             for read in cache.fetch(
                 chr, start, end,
                 limit=limit,
                 cache_if=cache_if_true,
-                filter_if=filter_if_true
+                filter_if=filter_if_true,
+                stop_on_cached_read=True
             ):
                 read_itvl = Interval(read.reference_start + 1, read.reference_end)
                 if read.mate_is_unmapped:
@@ -971,22 +996,12 @@ class Evidence(BreakpointPair):
         """
         open the associated bam file and read and store the evidence
         does some preliminary read-quality filtering
-
-        .. todo::
-            support gathering evidence for small structural variants
         """
-        min_bin_size = 10
-
         max_dist = max(
             len(Interval.union(self.break1, self.break2)),
             len(self.untemplated_seq if self.untemplated_seq else '')
         )
-
-        def filter_if_true(read):
-            if self.filter_secondary_alignments and read.is_secondary:
-                return True
-            return False
-
+        
         def cache_if_true(read):
             if read.is_unmapped or read.mate_is_unmapped:
                 return True
@@ -995,13 +1010,19 @@ class Evidence(BreakpointPair):
                 read.mapping_quality < self.min_mapping_quality
             ]):
                 return False
-            elif any([
-                not self.interchromosomal and not read.is_proper_pair,
-                read.is_unmapped, read.mate_is_unmapped,
-                self.interchromosomal and read.reference_id != read.next_reference_id
-            ]):
+            elif set([x[0] for x in read.cigar]) & {CIGAR.D, CIGAR.N, CIGAR.S, CIGAR.I}:
                 return True
-            elif any([read_tools.orientation_supports_type(read, t) for t in self.putative_event_types()]):
+            elif read.is_proper_pair and self.protocol != PROTOCOL.TRANS:
+                min_frag_est = abs(read.reference_start - read.next_reference_start) - self.read_length
+                max_frag_est = min_frag_est + 3 * self.read_length
+                if min_frag_est >= self.min_expected_fragment_size and max_frag_est <= self.max_expected_fragment_size:
+                    return False
+            return True
+
+        def filter_if_true(read):
+            if not cache_if_true(read):
+                return True
+            elif read.is_unmapped:
                 return True
             return False
 
@@ -1015,7 +1036,7 @@ class Evidence(BreakpointPair):
                 self.outer_window1[1],
                 read_limit=self.fetch_reads_limit,
                 sample_bins=self.fetch_reads_bins,
-                min_bin_size=min_bin_size,
+                min_bin_size=self.fetch_min_bin_size,
                 cache=True,
                 cache_if=cache_if_true,
                 filter_if=filter_if_true):
@@ -1038,7 +1059,7 @@ class Evidence(BreakpointPair):
                 self.outer_window2[1],
                 read_limit=self.fetch_reads_limit,
                 sample_bins=self.fetch_reads_bins,
-                min_bin_size=min_bin_size,
+                min_bin_size=self.fetch_min_bin_size,
                 cache=True,
                 cache_if=cache_if_true,
                 filter_if=filter_if_true):
@@ -1077,7 +1098,7 @@ class Evidence(BreakpointPair):
                     self.compatible_windows[0][1],
                     read_limit=self.fetch_reads_limit,
                     sample_bins=self.fetch_reads_bins,
-                    min_bin_size=min_bin_size,
+                    min_bin_size=self.fetch_min_bin_size,
                     cache=True,
                     cache_if=cache_if_true,
                     filter_if=filter_if_true):
@@ -1090,7 +1111,7 @@ class Evidence(BreakpointPair):
                     self.compatible_windows[1][1],
                     read_limit=self.fetch_reads_limit,
                     sample_bins=self.fetch_reads_bins,
-                    min_bin_size=min_bin_size,
+                    min_bin_size=self.fetch_min_bin_size,
                     cache=True,
                     cache_if=cache_if_true,
                     filter_if=filter_if_true):
@@ -1152,8 +1173,8 @@ class Evidence(BreakpointPair):
     def get_bed_repesentation(self):
         bed = []
         name = self.data.get(COLUMNS.cluster_id, None)
-        bed.append((self.break1.chr, self.outer_window1[0], self.outer_window1[1], name))
-        bed.append((self.break1.chr, self.inner_window1[0], self.inner_window1[1], name))
-        bed.append((self.break2.chr, self.outer_window2[0], self.outer_window2[1], name))
-        bed.append((self.break2.chr, self.inner_window2[0], self.inner_window2[1], name))
+        bed.append((self.break1.chr, self.outer_window1[0] - 1, self.outer_window1[1], name))
+        bed.append((self.break1.chr, self.inner_window1[0] - 1, self.inner_window1[1], name))
+        bed.append((self.break2.chr, self.outer_window2[0] - 1, self.outer_window2[1], name))
+        bed.append((self.break2.chr, self.inner_window2[0] - 1, self.inner_window2[1], name))
         return bed

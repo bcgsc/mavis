@@ -132,7 +132,7 @@ Compatible Flanking Pairs
 ......................................
 
 For insertion and duplication events compatible flanking pairs are collected. This means that flanking pairs that
-support an duplication may be used as compatible flanking evidence for an insertion (in the same region) and similarly
+support a duplication may be used as compatible flanking evidence for an insertion (in the same region) and similarly
 flanking pairs which support an insertion may be compatible flanking evidence for a duplication
 
 .. figure:: _static/compatible_flanking_pairs.svg
