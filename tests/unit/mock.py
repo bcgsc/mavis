@@ -14,6 +14,11 @@ class Mock:
     def add_attr(self, attr, val):
         setattr(self, attr, val)
 
+    def __contains__(self, item):
+        if hasattr(self, item):
+            return True
+        return False
+
 
 class MockFunction:
     def __init__(self, return_value):

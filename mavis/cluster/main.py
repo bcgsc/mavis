@@ -11,6 +11,7 @@ import inspect
 
 def main(
     inputs, output, stranded_bam, library, protocol, disease_status, masking, annotations,
+    limit_to_chr=DEFAULTS.limit_to_chr,
     cluster_clique_size=DEFAULTS.cluster_clique_size,
     cluster_radius=DEFAULTS.cluster_radius,
     uninformative_filter=DEFAULTS.uninformative_filter,
@@ -65,20 +66,26 @@ def main(
         },
         expand_ns=True, explicit_strand=False
     )
-    # ignore other library inputs
+    # filter against chr and ignore other library inputs
     other_libs = set()
+    other_chr = set()
     unfiltered_breakpoint_pairs = []
+    log('filtering by library and chr name')
     for bpp in breakpoint_pairs:
         if bpp.library is None:
             bpp.library = library
         if bpp.library != library:
             other_libs.add(bpp.library)
-        else:
+        if bpp.break1.chr in limit_to_chr and bpp.break2.chr in limit_to_chr:
             unfiltered_breakpoint_pairs.append(bpp)
+        else:
+            other_chr.update({bpp.break1.chr, bpp.break2.chr})
+    other_chr -= set(limit_to_chr)
     breakpoint_pairs = unfiltered_breakpoint_pairs
     if len(other_libs) > 0:
         log('warning: ignoring breakpoints found for other libraries:', sorted([l for l in other_libs]))
-
+    if len(other_chr) > 0:
+        log('warning: filtered events on chromosomes not found in "limit_to_chr"', other_chr)
     # filter by masking file
     breakpoint_pairs, filtered_bpp = filter_on_overlap(breakpoint_pairs, masking)
     # filter by informative

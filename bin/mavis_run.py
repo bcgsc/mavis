@@ -325,7 +325,7 @@ def generate_config(parser, required, optional):
             raise KeyError('duplicate alias names are not allowed', alias)
         stranded = str(TSV.tsv_boolean(stranded))
         SUPPORTED_TOOL.enforce(toolname)
-        convert[alias] = [inputfile, toolname, stranded]
+        convert[alias] = ['convert_tool_output', inputfile, toolname, stranded]
     write_config(args.write, include_defaults=True, libraries=libs, conversions=convert, log=log)
 
 
@@ -480,6 +480,7 @@ use the -h/--help option
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, add_help=False)
     required = parser.add_argument_group('required arguments')
     optional = parser.add_argument_group('optional arguments')
+    augment_parser(required, optional, ['help', 'version'])
 
     if pstep == 'config':
         generate_config(parser, required, optional)
@@ -531,6 +532,7 @@ use the -h/--help option
                 [k for k in vars(SUMMARY_DEFAULTS)]
             )
         elif pstep == PIPELINE_STEP.CHECKER:
+            
             args = parser.parse_args()
             check_completion(args.output)
             exit(0)

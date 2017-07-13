@@ -34,7 +34,8 @@ setup(
         'TSV=={}'.format(tsv_version),
         'vocab=={}'.format(vocab_version),
         'numpy==1.11.2',
-        'pyvcf==0.6.8'
+        'pyvcf==0.6.8',
+        'braceexpand==0.1.2'
     ],
     author_email='creisle@bcgsc.ca',
     dependency_links=[

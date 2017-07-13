@@ -251,6 +251,8 @@ def write_config(filename, include_defaults=False, libraries=[], conversions={},
         for tag, value in config[sec].items():
             if '_regex_' in tag:
                 config[sec][tag] = re.sub('\$', '$$', config[sec][tag])
+            elif isinstance(value, list):
+                config[sec][tag] = '\n'.join([str(v) for v in value])
             else:
                 config[sec][tag] = str(value)
 
@@ -377,7 +379,6 @@ def read_config(filepath):
                 raise UserWarning('input file does not exist and is not a conversion', infile)
     if len(library_sections) < 1:
         raise UserWarning('configuration file must have 1 or more library sections')
-
     return MavisNamespace(**global_args), sections, MavisNamespace(**convert)
 
 
@@ -411,16 +412,14 @@ def get_env_variable(arg, default, cast_type=None):
 
 
 def augment_parser(parser, optparser, arguments):
-    try:
-        optparser.add_argument('-h', '--help', action='help', help='show this help message and exit')
-        optparser.add_argument(
-            '-v', '--version', action='version', version='%(prog)s version ' + __version__,
-            help='Outputs the version number')
-    except ArgumentError:
-        pass
-
     for arg in arguments:
-        if arg == 'annotations':
+        if arg == 'help':
+            optparser.add_argument('-h', '--help', action='help', help='show this help message and exit')
+        elif arg == 'version':
+            optparser.add_argument(
+                '-v', '--version', action='version', version='%(prog)s version ' + __version__,
+                help='Outputs the version number')
+        elif arg == 'annotations':
             add_semi_optional_argument(
                 arg, optparser, parser, 'Path to the reference annotations of genes, transcript, exons, domains, etc.')
         elif arg == 'reference_genome':
