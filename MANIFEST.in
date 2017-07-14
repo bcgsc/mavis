@@ -3,3 +3,4 @@ recursive-include tests *.py
 recursive-include tests/files *
 recursive-include bin *
 recursive-include mavis *
+recursive-include tools *

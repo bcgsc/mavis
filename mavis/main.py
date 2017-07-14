@@ -34,7 +34,7 @@ from datetime import datetime
 
 
 VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
-PROGNAME = os.path.basename(__file__)
+PROGNAME = 'mavis'
 
 QSUB_HEADER = """#!/bin/bash
 #$ -V
@@ -441,8 +441,7 @@ def check_completion(target_dir):
 
 def main():
     def usage(err=None, detail=False):
-        name = os.path.basename(__file__)
-        u = '\nusage: {} {{cluster,validate,annotate,pairing,summary,pipeline,config,checker}} [-h] [-v]'.format(name)
+        u = '\nusage: {} {{cluster,validate,annotate,pairing,summary,pipeline,config,checker}} [-h] [-v]'.format(PROGNAME)
         helpmenu = """
 required arguments:
 
@@ -460,12 +459,12 @@ To bring up individual help menus for a given pipeline step
 use the -h/--help option
 
     >>> {} <pipeline step> -h
-    """.format(name)
+    """.format(PROGNAME)
         print(u)
         if detail:
             print(helpmenu)
         if err:
-            print('{}: error:'.format(name), err, '\n')
+            print('{}: error:'.format(PROGNAME), err, '\n')
             exit(1)
         exit(0)
 

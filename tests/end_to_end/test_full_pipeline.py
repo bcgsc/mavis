@@ -48,7 +48,7 @@ def tail(output, count=50):
 class TestFullPipeline(unittest.TestCase):
 
     def test_mocked(self):
-        command = 'which python; python {} pipeline {} -o {}'.format(main_run_script, config, temp_output)
+        command = 'mavis pipeline {} -o {}'.format(config, temp_output)
         print(command)
         print(os.environ)
         output = subprocess.check_output(command, shell=True, env=os.environ)

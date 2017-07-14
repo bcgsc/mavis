@@ -37,7 +37,6 @@ setup(
     version=__version__,
     url='https://svn.bcgsc.ca/svn/SVIA/mavis',
     packages=find_packages(),
-    scripts=['bin/mavis_run.py', 'bin/mavis_overlay.py'],
     install_requires=[
         'docutils <0.13.1',
         'colour',
@@ -60,5 +59,6 @@ setup(
     ],
     setup_requires=['nose>=1.0'],
     test_suite='nose.collector',
-    tests_require=['nose', 'timeout-decorator==0.3.3', 'coverage==4.2']
+    tests_require=['nose', 'timeout-decorator==0.3.3', 'coverage==4.2'],
+    entry_points={'console_scripts': ['mavis = mavis.main:main']}
 )
