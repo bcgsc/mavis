@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 from mavis import __version__
 import pip
 import sys
@@ -33,10 +33,10 @@ if any([x in sys.argv for x in ['install', 'develop']]):
         pip.main(['install', '-e', tsv_link, '--trusted-host', '*.bcgsc.ca', '--exists-action', 's'])
 
 setup(
-    name='MAVIS',
+    name='mavis',
     version=__version__,
     url='https://svn.bcgsc.ca/svn/SVIA/mavis',
-    packages=['mavis'],
+    packages=find_packages(),
     scripts=['bin/mavis_run.py', 'bin/mavis_overlay.py'],
     install_requires=[
         'docutils <0.13.1',
