@@ -34,7 +34,9 @@ class TestGetSamtoolsVersion(unittest.TestCase):
         for version, path in samtools_versions.items():
             env['PATH'] = os.path.dirname(path) + ':' + env['PATH']
             try:
-                os.path.exists(path)
+                if not os.path.exists(path):
+                    raise PermissionError(path)
+                print(path)
                 self.assertEqual(version, get_samtools_version())
             except PermissionError:
                 pass
