@@ -354,12 +354,13 @@ def unique_exists(pattern):
 
 def check_log(log_file):
     with open(log_file) as job_out:
-        lines = job_out.readlines()
+        lines = job_out.read().splitlines()
         if 'error' in lines[-1].lower():
             log(" * CRASH: {}".format(lines[-1]), time_stamp=False)
         else:
-            log(" * Still running:", time_stamp=False)
+            log(" * Incomplete: {}".format(log_file), time_stamp=False)
             log(" ** last out: '{}'".format(lines[-1]), time_stamp=False)
+            log(" ** last modified on: {}".format(time.ctime(os.path.getmtime(log_file))), time_stamp=False)
 
 
 def check_multiple_jobs(directory):
@@ -368,9 +369,11 @@ def check_multiple_jobs(directory):
     """
     log_time = 0
     log("Checking {} ".format(directory))
+    if not set(['validation', 'annotation', 'clustering']).issubset(os.listdir(directory)):
+        return 0
     cluster_files = glob.glob(os.path.join(directory, 'clustering', 'batch*.tab'))
     if len(cluster_files) == 0:
-        raise OSError('cluster directory is empty, MAVIS has not completed succesffully or input was not a MAVIS output directory')
+        raise OSError('cluster directory is empty, MAVIS has not completed successfully or input was not a MAVIS output directory')
     for subdir in ['validation', 'annotation']:
         stamps = []
         fail_count = 0
@@ -390,13 +393,13 @@ def check_multiple_jobs(directory):
         if len(missing) == len(cluster_files):
             log("{} has not started.".format(subdir), time_stamp=False)
         elif len(missing) > 0:
-            log("the following jobs in {} have not started {}".format(subdir, ','.join(missing)), time_stamp=False)
+            log("{} jobs have not started {}".format(subdir, ','.join(missing)), time_stamp=False)
         elif fail_count == 0:
             log("{} was successful".format(subdir), time_stamp=False)
             if os.path.getctime(max(stamps, key=os.path.getctime)) < log_time:
                 log("ERROR: A complete stamp for validation is after a complete stamp for annotation")
-            log_time = os.path.getctime(max(stamps, key=os.path.getctime))
-        return log_time
+            log_time = max(log_time, os.path.getctime(max(stamps, key=os.path.getctime)))
+    return log_time
 
 
 def check_single_job(directory):
@@ -425,8 +428,9 @@ def check_completion(target_dir):
     for d in directories:
         name = os.path.basename(d)
         if name not in simple_dirs:
-            cur_time = check_multiple_jobs(d)
-            log_time = max(cur_time, log_time)
+            if re.match('.+_.+_.+', name):
+                cur_time = check_multiple_jobs(d)
+                log_time = max(cur_time, log_time)
     for d in simple_dirs:
         d = os.path.join(target_dir, d)
         cur_time = check_single_job(d)
