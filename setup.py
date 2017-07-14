@@ -46,10 +46,10 @@ setup(
         'svgwrite',
         'Sphinx',  # for building the documentation only
         'sphinx-rtd-theme',  # for building the documentation only
-        'pysam==0.9.1.4',
+        'pysam>=0.9',
         'TSV=={}'.format(tsv_version),
         'vocab=={}'.format(vocab_version),
-        'numpy==1.11.2',
+        'numpy>=1.11.2',
         'pyvcf==0.6.8',
         'braceexpand==0.1.2'
     ],
