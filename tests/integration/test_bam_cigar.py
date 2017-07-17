@@ -361,7 +361,7 @@ class TestHgvsStandardizeCigars(unittest.TestCase):
             'GAGT'
             'GAGACTCTGT'
             'GAA'
-            'AAAGAAAAAAAAAAAATATATATATATATAAATATACATATTATGTATCAAATATATATTATGTGTAATATACATCATGTATC' 
+            'AAAGAAAAAAAAAAAATATATATATATATAAATATACATATTATGTATCAAATATATATTATGTGTAATATACATCATGTATC'
             'AAATATATATTATGTATAATATACATCATATATCAAATATATATTATGTG'
         )
 
@@ -380,21 +380,21 @@ class TestHgvsStandardizeCigars(unittest.TestCase):
         ]
         std_cigar = hgvs_standardize_cigar(read, REFERENCE_GENOME[read.reference_name].seq)
         self.assertEqual(expected_cigar, std_cigar)
- 
+
     @timeout_decorator.timeout(0.01)
     def test_complex(self):
         qseq = (
-            'TATTTGGAAATATTTGTAAGATAGATGTCTCTG' 'C' 
-            'CTCCTTCTGTTTCTGTCTCTGTCTCTTGCACTCTCTCTCTCCCTCTCTT' 
-            'TCTCTCTCTCTCTCTCTCTCTCTCTC' 
-            'TCTATATATATATATATA' 
-            'T' 'A' 'T' 'C' 'T' 
+            'TATTTGGAAATATTTGTAAGATAGATGTCTCTG' 'C'
+            'CTCCTTCTGTTTCTGTCTCTGTCTCTTGCACTCTCTCTCTCCCTCTCTT'
+            'TCTCTCTCTCTCTCTCTCTCTCTCTC'
+            'TCTATATATATATATATA'
+            'T' 'A' 'T' 'C' 'T'
             'ACACACACACACACACAC')
         rseq = (
-            'TATTTGGAAATATTTGTAAGATAGATGTCTCTG' 'T' 
-            'CTCCTTCTGTTTCTGTCTCTGTCTCTTGCACTCTCTCTCTCCCTCTCTT' 
-            'TCTATATATATATATATA' 
-            'C' 'A' 'C' 
+            'TATTTGGAAATATTTGTAAGATAGATGTCTCTG' 'T'
+            'CTCCTTCTGTTTCTGTCTCTGTCTCTTGCACTCTCTCTCTCCCTCTCTT'
+            'TCTATATATATATATATA'
+            'C' 'A' 'C'
             'ACACACACACACACACAC')
         read = MockRead(
             'name', reference_name='mock', reference_start=0, query_sequence=qseq,
@@ -406,7 +406,7 @@ class TestHgvsStandardizeCigars(unittest.TestCase):
 
 
 class TestMergeInternalEvents(unittest.TestCase):
-    
+
     def test_small_exact_match(self):
         cigar = convert_string_to_cigar('283M17506D5M21275D596M17506D5M21275D313M')
         # [(0, 283), (2, 17506), (0, 5), (2, 21275), (0, 596), (2, 17506), (0, 5), (2, 21275), (0, 313)]
