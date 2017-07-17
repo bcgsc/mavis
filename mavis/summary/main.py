@@ -64,7 +64,7 @@ def main(
                  COLUMNS.tools,
                  COLUMNS.exon_last_5prime,
                  COLUMNS.exon_first_3prime,
-                 # COLUMNS.disease_status,
+                 COLUMNS.disease_status,
                  # evidence_columns
                  COLUMNS.break1_call_method,
                  COLUMNS.break1_split_reads,
@@ -121,11 +121,13 @@ def main(
     product_sequences = dict()
     pairings = dict()
     product_sequence_files = set()
-    libraries = set()
+    libraries = dict()
 
     for bpp in bpps:
         lib = bpp.data[COLUMNS.library]
-        libraries.add(lib)
+        if lib not in libraries:
+            # get library info, (disease status, protocol)
+            libraries[lib] = (bpp.data[COLUMNS.disease_status], bpp.data[COLUMNS.protocol])
         # info needed for pairing
         if bpp.fusion_sequence_fasta_id:
             product_sequences[bpp.fusion_sequence_fasta_id] = None
@@ -294,30 +296,46 @@ def main(
         'summary_pairing',
         'dgv']
 
+    names = []
     rows = []
     for lib in bpp_to_keep:
         log('annotating dgv for', lib)
         annotated = annotate_dgv(list(bpp_to_keep[lib]), dgv_annotation, distance=10)  # TODO make distance a parameter
+        log('adding pairing states for', lib)
         for row in annotated:
             # filter pairing ids based on what is still kept?
-            # for column in itertools.combinations(libraries,2):
-            #     for pair in row.data[COLUMNS.pairing].split(';'):
-                #     lib2 = pair.split['_'][0]
-                #     if lib1 in column and lib2 in column:
-                #         found = True
-                #         break
-                # pairing_state = get_pairing_state(protocol[lib], disease_state[lib], protocol[lib2], disease_state[lib2], is_matched=found)
+            for column in itertools.combinations(libraries.keys(), 2):
+                found = False
+                lib1 = row.data[COLUMNS.library]
+                for pair in row.data[COLUMNS.pairing].split(';'):
+                    lib2 = pair.split('_')[0]
+                    if lib1 in column and lib2 in column:
+                        found = True
+                        break
+                if lib1 in column:
+                    if lib1 == column[0]:
+                        pairing_state = get_pairing_state(libraries[column[0]][1], libraries[column[0]][0],
+                                                          libraries[column[1]][1], libraries[column[1]][0], is_matched=found)
+                    else:
+                        pairing_state = get_pairing_state(libraries[column[1]][1], libraries[column[1]][0],
+                                                          libraries[column[0]][1], libraries[column[0]][0], is_matched=found)
+                else:
+                    pairing_state = "Not Applicable"
+                name = '{}_{}'.format(column[0], column[1])
+                row.data[name] = pairing_state
+                if name not in names:
+                    names.append(name)
 
             try:
                 row = row.flatten()
             except AttributeError:
                 pass
             rows.append(row)
-
+    output_columns.extend(names)
     header = sort_columns(output_columns)
     fname = os.path.join(
         output,
-        'mavis_summary_{}.tab'.format('_'.join(sorted(list(libraries))))
+        'mavis_summary_{}.tab'.format('_'.join(sorted(list(libraries.keys()))))
     )
     with open(fname, 'w') as fh:
         log('writing', fname)
