@@ -30,7 +30,6 @@ class TestAlign(unittest.TestCase):
     def setUp(self):
         self.cache = BamCache(MockBamFileHandle({'Y': 23, 'fake': 0, 'reference3': 3}))
 
-
     @unittest.skipIf(not shutil.which('blat'), "missing the blat command")
     def test_blat_contigs(self):
         ev = GenomeEvidence(
@@ -120,4 +119,3 @@ class TestAlign(unittest.TestCase):
         self.assertEqual(Interval(0, 175), query_coverage_interval(read1))
         self.assertEqual(1612, read1.reference_start)
         self.assertEqual([(CIGAR.EQ, 102), (CIGAR.D, 1253), (CIGAR.EQ, 74)], read1.cigar)
-
