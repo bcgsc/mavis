@@ -5,6 +5,7 @@ import unittest
 import warnings
 from . import REFERENCE_GENOME_FILE
 from . import MockRead
+import timeout_decorator
 
 
 REFERENCE_GENOME = None
@@ -379,6 +380,29 @@ class TestHgvsStandardizeCigars(unittest.TestCase):
         ]
         std_cigar = hgvs_standardize_cigar(read, REFERENCE_GENOME[read.reference_name].seq)
         self.assertEqual(expected_cigar, std_cigar)
+ 
+    @timeout_decorator.timeout(0.01)
+    def test_complex(self):
+        qseq = (
+            'TATTTGGAAATATTTGTAAGATAGATGTCTCTG' 'C' 
+            'CTCCTTCTGTTTCTGTCTCTGTCTCTTGCACTCTCTCTCTCCCTCTCTT' 
+            'TCTCTCTCTCTCTCTCTCTCTCTCTC' 
+            'TCTATATATATATATATA' 
+            'T' 'A' 'T' 'C' 'T' 
+            'ACACACACACACACACAC')
+        rseq = (
+            'TATTTGGAAATATTTGTAAGATAGATGTCTCTG' 'T' 
+            'CTCCTTCTGTTTCTGTCTCTGTCTCTTGCACTCTCTCTCTCCCTCTCTT' 
+            'TCTATATATATATATATA' 
+            'C' 'A' 'C' 
+            'ACACACACACACACACAC')
+        read = MockRead(
+            'name', reference_name='mock', reference_start=0, query_sequence=qseq,
+            cigar=[(7, 33), (8, 1), (7, 49), (1, 26), (7, 18), (8, 1), (7, 1), (1, 1), (7, 1), (1, 1), (7, 18)]
+        )
+        new_cigar = [(7, 33), (8, 1), (7, 51), (1, 26), (7, 16), (8, 1), (7, 1), (1, 1), (7, 1), (1, 1), (7, 18)]
+        std_cigar = hgvs_standardize_cigar(read, rseq)
+        self.assertEqual(new_cigar, std_cigar)
 
 
 class TestMergeInternalEvents(unittest.TestCase):
