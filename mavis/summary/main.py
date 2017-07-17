@@ -304,7 +304,7 @@ def main(
         log('adding pairing states for', lib)
         for row in annotated:
             # filter pairing ids based on what is still kept?
-            for column in itertools.combinations(libraries.keys(),2):
+            for column in itertools.combinations(libraries.keys(), 2):
                 found = False
                 lib1 = row.data[COLUMNS.library]
                 for pair in row.data[COLUMNS.pairing].split(';'):
