@@ -20,7 +20,7 @@ from .bam import cigar as cigar_tools
 from .bam.read import SamRead
 from .bam.cigar import QUERY_ALIGNED_STATES
 from .interval import Interval
-from .align import query_coverage_interval
+from .align import query_coverage_interval, SUPPORTED_ALIGNER
 
 
 class Blat:
@@ -306,7 +306,7 @@ class Blat:
 
 
 def get_blat_version():
-    proc = subprocess.getoutput(['blat'])
+    proc = subprocess.getoutput([SUPPORTED_ALIGNER.BLAT])
     for line in proc.split('\n'):
         m = re.search('blat - Standalone BLAT v. (\d+(x\d+)?)', line)
         if m:
