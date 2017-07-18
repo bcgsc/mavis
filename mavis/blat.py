@@ -10,60 +10,17 @@ strand (even when the match is on the reverse strand). However on the qStarts[] 
 
 
 """
-import pysam
 import math
 import subprocess
 import warnings
 import re
-import os
 import TSV
-from .constants import CIGAR, DNA_ALPHABET, STRAND, reverse_complement, NA_MAPPING_QUALITY, COLUMNS, PYSAM_READ_FLAGS
+from .constants import CIGAR, DNA_ALPHABET, STRAND, reverse_complement, NA_MAPPING_QUALITY, PYSAM_READ_FLAGS
 from .bam import cigar as cigar_tools
+from .bam.read import SamRead
 from .bam.cigar import QUERY_ALIGNED_STATES
 from .interval import Interval
-from .align import select_paired_alignments, query_coverage_interval
-from .util import devnull
-
-
-class BlatAlignedSegment(pysam.AlignedSegment):
-    """
-    """
-
-    def __init__(self, reference_name=None, blat_score=None):
-        """
-        Args:
-            row (:class:`dict` by :class:`str`): a row dictionary from the Blat.read_pslx method
-        """
-        pysam.AlignedSegment.__init__(self)
-        if reference_name is None:
-            self._reference_name = pysam.AlignedSegment.reference_name(self)
-        else:
-            self._reference_name = reference_name
-        self.blat_score = blat_score
-
-    def __repr__(self):
-        return '{}({}:{}, {}, {})'.format(
-            self.__class__.__name__, self.reference_name, self.reference_start,
-            self.cigar, self.query_sequence
-        )
-
-    def __copy__(self):
-        cp = BlatAlignedSegment(self.reference_name, self.blat_score)
-        cp.query_sequence = self.query_sequence
-        cp.reference_start = self.reference_start
-        cp.reference_id = self.reference_id
-        cp.cigar = self.cigar
-        cp.query_name = self.query_name
-        cp.mapping_quality = self.mapping_quality
-        cp.set_tags(self.get_tags())
-        cp.flag = self.flag
-        cp.next_reference_id = self.next_reference_id
-        cp.next_reference_start = self.next_reference_start
-        return cp
-
-    @property
-    def reference_name(self):
-        return self._reference_name
+from .align import query_coverage_interval
 
 
 class Blat:
@@ -320,7 +277,7 @@ class Blat:
             temp = query_sequence[query_ranges[-1][1] + 1:]
             seq += temp
             cigar.append((CIGAR.S, len(temp)))
-        read = BlatAlignedSegment(row['tname'], row['score'])
+        read = SamRead(reference_name=row['tname'], alignment_score=row['score'])
         read.query_sequence = seq
         read.reference_start = row['tstarts'][0]
         read.reference_id = chrom
@@ -355,3 +312,65 @@ def get_blat_version():
         if m:
             return m.group(1)
     raise ValueError("unable to parse blat version number from:'{}'".format(proc))
+
+
+# def execute_blat(
+#     aligner_reference,
+#     aligner_output_file,
+#     aligner_fa_input_file,
+#     query_id_mapping,
+#     blat_min_percent_of_max_score=0.8,
+#     blat_min_identity=0.7,
+#     log=devnull,
+#     **kwargs
+# ):
+#     blat_min_identity *= 100
+#     blat_options = kwargs.pop(
+#         'blat_options', ["-stepSize=5", "-repMatch=2253", "-minScore=0", "-minIdentity={0}".format(blat_min_identity)])
+#     # call the blat subprocess
+#     # will raise subprocess.CalledProcessError if non-zero exit status
+#     # parameters from https://genome.ucsc.edu/FAQ/FAQblat.html#blat4
+#     log(['blat', aligner_reference,
+#          aligner_fa_input_file, aligner_output_file, '-out=pslx', '-noHead'] + blat_options)
+#     subprocess.check_output([
+#         'blat', aligner_reference,
+#         aligner_fa_input_file, aligner_output_file, '-out=pslx', '-noHead'] + blat_options)
+# 
+#     header, rows = Blat.read_pslx(aligner_output_file, query_id_mapping, is_protein=is_protein)
+# 
+#     # split the rows by query id
+#     rows_by_query = {}
+#     for row in rows:
+#         if row['qname'] not in rows_by_query:
+#             rows_by_query[row['qname']] = []
+#         rows_by_query[row['qname']].append(row)
+# 
+#     reads_by_query = {}
+#     for s in sequences:
+#         reads_by_query[s] = []
+#     for query_id, rows in rows_by_query.items():
+#         query_seq = query_id_mapping[query_id]
+#         # filter on percent id
+#         filtered_rows = [row for row in rows if round(row['percent_ident'], 0) >= blat_min_identity]
+# 
+#         # filter on score
+#         scores = sorted([r['score'] for r in rows])
+#         max_score = scores[-1]
+#         filtered_rows.sort(key=lambda x: x['score'], reverse=True)
+#         reads = []
+#         for rank, row in enumerate(filtered_rows):
+#             try:
+#                 read = Blat.pslx_row_to_pysam(row, INPUT_BAM_CACHE, reference_genome)
+#                 read.set_tag(PYSAM_READ_FLAGS.BLAT_SCORE, row['score'], value_type='i')
+#                 read.set_tag(PYSAM_READ_FLAGS.BLAT_ALIGNMENTS, len(filtered_rows), value_type='i')
+#                 read.set_tag(PYSAM_READ_FLAGS.BLAT_PMS, blat_min_percent_of_max_score, value_type='f')
+#                 read.set_tag(PYSAM_READ_FLAGS.BLAT_RANK, rank, value_type='i')
+#                 read.set_tag(PYSAM_READ_FLAGS.BLAT_PERCENT_IDENTITY, row['percent_ident'], value_type='f')
+#                 reads.append(read)
+#             except KeyError as e:
+#                 warnings.warn(
+#                     'warning: reference template name not recognized {0}'.format(e))
+#             except AssertionError as e:
+#                 warnings.warn('warning: invalid blat alignment: {}'.format(e))
+#         reads_by_query[query_seq] = reads
+#     return reads_by_query

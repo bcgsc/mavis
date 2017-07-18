@@ -1,5 +1,5 @@
 from mavis.constants import CIGAR, NA_MAPPING_QUALITY
-from mavis.blat import BlatAlignedSegment
+from mavis.align import query_coverage_interval
 from mavis.annotate.genomic import usTranscript, Transcript
 from mavis.annotate.protein import Translation
 import os
@@ -108,7 +108,7 @@ class MockRead:
             self.is_supplementary = bool(self.flag & int(0x400))
 
     def query_coverage_interval(self):
-        return BlatAlignedSegment.query_coverage_interval(self)
+        return query_coverage_interval(self)
 
     def set_tag(self, tag, value, value_type=None, replace=True):
         new_tag = (tag, value)

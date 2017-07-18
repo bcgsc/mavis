@@ -65,7 +65,7 @@ class TestAlign(unittest.TestCase):
         self.assertEqual([(CIGAR.S, 125), (CIGAR.EQ, 120)], read1.cigar)
         self.assertEqual([(CIGAR.S, 117), (CIGAR.EQ, 128)], read2.cigar)
 
-    @unittest.skipIf(not shutil.which('bwa'), "missing the blat command")
+    @unittest.skipIf(not shutil.which('bwa'), "missing the command")
     def test_bwa_contigs(self):
         ev = GenomeEvidence(
             Breakpoint('reference3', 1114, orient=ORIENT.RIGHT),
@@ -87,11 +87,18 @@ class TestAlign(unittest.TestCase):
                 "TTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT", 0)
         ]
         print(ev.contigs[0].seq)
-        align_contigs([ev], BAM_CACHE, REFERENCE_GENOME, aligner_reference=REFERENCE_GENOME_FILE,
-                      aligner='bwa-mem')
+        align_contigs(
+            [ev], BAM_CACHE, REFERENCE_GENOME,
+            aligner_reference=REFERENCE_GENOME_FILE,
+            aligner='bwa mem',
+            aligner_output_file='mem.out',
+            aligner_fa_input_file='mem.in.fa'
+        )
         print(ev.contigs[0].alignments)
         read1, read2 = ev.contigs[0].alignments[0]
         self.assertEqual(reverse_complement(read1.query_sequence), read2.query_sequence)
+        self.assertEqual('reference3', read1.reference_name)
+        self.assertEqual('reference3', read2.reference_name)
         self.assertEqual(1, read1.reference_id)
         self.assertEqual(1, read2.reference_id)
         self.assertEqual(Interval(125, 244), query_coverage_interval(read1))
