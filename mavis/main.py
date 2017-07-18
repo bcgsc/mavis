@@ -369,17 +369,30 @@ def check_multiple_jobs(directory):
     checks the completion of directory with the split jobs
     """
     log_time = 0
+    issue_found = False
     log("Checking {} ".format(directory))
     if not set(['validation', 'annotation', 'clustering']).issubset(os.listdir(directory)):
         return 0
     cluster_files = glob.glob(os.path.join(directory, 'clustering', 'batch*.tab'))
     if len(cluster_files) == 0:
         raise OSError('cluster directory is empty, MAVIS has not completed successfully or input was not a MAVIS output directory')
+    else:
+        base = re.match('(batch.+)-\d+.tab', os.path.basename(cluster_files[0])).group(1)
+        num_files = 0
+        for path in cluster_files:
+            if base in path:
+                num_files += 1
+            else:
+                issue_found = True
+
+        if issue_found:
+            log('WARNING: Multiple clustering runs were found in the clustering directory')
+
     for subdir in ['validation', 'annotation']:
         stamps = []
         fail_count = 0
         missing = []
-        for count in range(1, len(cluster_files) + 1):
+        for count in range(1, num_files + 1):
             count = str(count)
             stamp = unique_exists(os.path.join(directory, subdir, '*-' + count, '*.COMPLETE'))
             if stamp == 0:
