@@ -44,15 +44,21 @@ def check_nonpython_dependencies():
 
     aligner = get_env_variable('aligner', DEFAULTS.aligner, str)
     exe = shutil.which(aligner)
-    print('\nUsing', exe)
-    if aligner == 'blat':
-        version = get_blat_version()
-        print('Current version:', aligner, version)
+    if not exe:
+        raise UserWarning('missing dependency', aligner)
+    else:
+        print('\nUsing', exe)
+        if aligner == 'blat':
+            version = get_blat_version()
+            print('Current version:', aligner, version)
 
     tool = 'samtools'
     exe = shutil.which(tool)
-    print('\nUsing', exe)
-    print('Current version:', tool, 'v{}.{}.{}'.format(*get_samtools_version()))
+    if not exe:
+        raise UserWarning('missing dependency', aligner)
+    else:
+        print('\nUsing', exe)
+        print('Current version:', tool, 'v{}.{}.{}'.format(*get_samtools_version()))
 
 
 setup(
