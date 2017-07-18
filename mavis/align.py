@@ -60,6 +60,7 @@ def select_paired_alignments(
     and the most appropriate alignments supporting the breakpoint pair are selected and returned
     """
     # now for each bpp assign an alignment to each contig
+    print(bpp, aligned_contigs)
     putative_alignments = []
     putative_event_types = set(bpp.putative_event_types())
     if {SVTYPE.INS, SVTYPE.DUP} & putative_event_types:
@@ -92,7 +93,7 @@ def select_paired_alignments(
 
     # don't use reads in combined alignments if they have already been assigned in a single alignment
     combo_prohibited = [x for x, y in putative_alignments]
-
+    print(combo_prohibited)
     for read1, read2 in itertools.combinations([x for x in aligned_contigs if x not in combo_prohibited], 2):
         # do they overlap both breakpoints
         if any([
@@ -102,6 +103,7 @@ def select_paired_alignments(
             read1, read2 = read2, read1
 
         if read1.reference_name != bpp.break1.chr or read2.reference_name != bpp.break2.chr:
+            print("t7")
             continue
         read1 = read_tools.convert_events_to_softclipping(
             read1, bpp.break1.orient, max_event_size=max_event_size, min_anchor_size=min_anchor_size)
@@ -112,6 +114,7 @@ def select_paired_alignments(
             not Interval.overlaps((read1.reference_start + 1, read1.reference_end), bpp.outer_window1),
             not Interval.overlaps((read2.reference_start + 1, read2.reference_end), bpp.outer_window2)
         ]):
+            print("t1")
             continue
         # reads should have unique reference overlap
         if not bpp.interchromosomal and read1.reference_end > read2.reference_end:
@@ -122,12 +125,15 @@ def select_paired_alignments(
 
         if read2.query_sequence != read1.query_sequence:  # alignments aligned to opposite strands
             if not bpp.opposing_strands:
+                print("t2")
                 continue
             if read2.query_sequence != reverse_complement(read1.query_sequence):
+                print("t3")
                 continue
             l = len(read1.query_sequence) - 1
             query_cover2 = Interval(l - query_cover2.end, l - query_cover2.start)
         elif bpp.opposing_strands:
+            print("t4")
             continue
 
         consume = len(query_cover1 | query_cover2)
@@ -135,15 +141,19 @@ def select_paired_alignments(
             consume = len(query_cover1) + len(query_cover2)
 
         if consume / len(read1.query_sequence) < min_query_consumption:
+            print("t5")
             continue
         if consume - len(query_cover1) < min_extend_overlap or consume - len(query_cover2) < min_extend_overlap:
+            print("t6")
             continue
 
         try:
             call = BreakpointPair.call_breakpoint_pair(read1, read2)
             if not set(BreakpointPair.classify(call)) & putative_event_types:
+                print("t8")
                 continue
         except (InvalidRearrangement, AssertionError) as err:
+            print("t9")
             continue
         putative_alignments.append((read1, read2))
     return putative_alignments
@@ -254,22 +264,27 @@ def align_contigs(
                         warnings.warn('warning: invalid blat alignment: {}'.format(e))
                 reads_by_query[query_seq] = reads
 
-        else:
+        elif aligner == 'bwa-mem':
             command = aligner.split('-')
-            command.extend([aligner_reference, aligner_fa_input_file])
+            command.extend([aligner_reference, aligner_fa_input_file, '-Y'])
             log(command)  # for bwa
             with open(aligner_output_file, 'w') as f:
                 subprocess.call(command, stdout=f)
-
             samfile = pysam.AlignmentFile(aligner_output_file, 'r')
 
             reads_by_query = {}
             for read in samfile.fetch():
-                reads_by_query.setdefault(read.query_name, []).append(read)
+                print(dir(read))
+                query_seq = query_id_mapping[read.query_name]
+                reads_by_query.setdefault(query_seq, []).append(read)
+#            samfile.close()
+            print(reads_by_query)
 
         for e in evidence:
             for contig in e.contigs:
+                print(contig)
                 aln = reads_by_query.get(contig.seq, [])
+                print("test", aln)
                 putative_alignments = select_paired_alignments(
                     e, aln,
                     min_extend_overlap=min_extend_overlap,
@@ -279,6 +294,7 @@ def align_contigs(
                     merge_inner_anchor=contig_aln_merge_inner_anchor,
                     merge_outer_anchor=contig_aln_merge_outer_anchor
                 )
+                print(putative_alignments)
                 if len(putative_alignments) == 0:
                     continue
                 score_by_alignments = {}
