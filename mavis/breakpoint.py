@@ -710,23 +710,23 @@ def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, **
                     raise AssertionError(
                         'error in column', attr, 'All mavis pipeline step ids must satisfy the regex:',
                         '^([A-Za-z0-9-]+|)$', row[attr])
-        stranded = row[COLUMNS.stranded] or explicit_strand
+        stranded = row[COLUMNS.stranded]
         opp = row[COLUMNS.opposing_strands]
 
-        strand1 = row[COLUMNS.break1_strand] if stranded else STRAND.NS
-        strand2 = row[COLUMNS.break2_strand] if stranded else STRAND.NS
+        strand1 = row[COLUMNS.break1_strand] if (stranded or explicit_strand) else STRAND.NS
+        strand2 = row[COLUMNS.break2_strand] if (stranded or explicit_strand) else STRAND.NS
 
         if explicit_strand and not expand_ns and {strand1, strand2} & {STRAND.NS}:
             raise AssertionError('cannot use explicit strand and not expand unknowns unless the strand is given')
 
-        row[COLUMNS.stranded] = stranded
         temp = []
+        expand_strand = (stranded or explicit_strand) and expand_ns
         for o1, o2, opp, s1, s2 in itertools.product(
             ORIENT.expand(row[COLUMNS.break1_orientation]) if expand_ns else [row[COLUMNS.break1_orientation]],
             ORIENT.expand(row[COLUMNS.break2_orientation]) if expand_ns else [row[COLUMNS.break2_orientation]],
             [True, False] if opp is None and expand_ns else [opp],
-            STRAND.expand(strand1) if (stranded and expand_ns) else [strand1],
-            STRAND.expand(strand2) if (stranded and expand_ns) else [strand2]
+            STRAND.expand(strand1) if expand_strand else [strand1],
+            STRAND.expand(strand2) if expand_strand else [strand2]
         ):
             try:
                 b1 = Breakpoint(
