@@ -197,7 +197,7 @@ class TestReadBreakpointPairsFromFile(unittest.TestCase):
         self.assertEqual(1, len(bpps))
         self.assertEqual(STRAND.NS, bpps[0].break1.strand)
         self.assertEqual(STRAND.NS, bpps[0].break2.strand)
-        
+
         bpps = read_bpp_from_input_file(fh, explicit_strand=True, expand_ns=False)
         self.assertEqual(1, len(bpps))
         self.assertEqual(STRAND.POS, bpps[0].break1.strand)
