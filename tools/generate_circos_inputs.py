@@ -15,6 +15,7 @@ def write_output(file_name, rows):
         for row in rows:
             fh.write(row)
 
+
 def main():
     parser = argparse.ArgumentParser(
         description='Takes mavis summary files and generates custom circos input files',
@@ -48,19 +49,19 @@ def main():
                 et = SVTYPE.TRANS
             events_by_library.setdefault(bpp.library, []).append(
                 '\t'.join([str(c) for c in [
-                            bpp.library,
-                            SVTYPE.enforce(et),
-                            bpp.gene1_aliases if bpp.gene1_aliases else 'NA',
-                            bpp.break1.chr,
-                            int(bpp.break1.center),
-                            bpp.gene2_aliases if bpp.gene2_aliases else 'NA',
-                            bpp.break2.chr,
-                            int(bpp.break2.center),
-                            'NA', 'NA'
-                            ]]) + '\n')
+                          bpp.library,
+                          SVTYPE.enforce(et),
+                          bpp.gene1_aliases if bpp.gene1_aliases else 'NA',
+                          bpp.break1.chr,
+                          int(bpp.break1.center),
+                          bpp.gene2_aliases if bpp.gene2_aliases else 'NA',
+                          bpp.break2.chr,
+                          int(bpp.break2.center),
+                          'NA', 'NA'
+                          ]]) + '\n')
     for lib in events_by_library.keys():
-        file_name="{}_circos_data".format(lib)
-        write_output(os.path.join(args.output,file_name), events_by_library[lib])
+        file_name = "{}_circos_data".format(lib)
+        write_output(os.path.join(args.output, file_name), events_by_library[lib])
 
 if __name__ == '__main__':
     main()
