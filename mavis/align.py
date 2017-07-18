@@ -15,6 +15,10 @@ from .interval import Interval
 from .util import devnull
 from .breakpoint import BreakpointPair
 from .error import InvalidRearrangement
+from vocab import Vocab
+
+
+SUPPORTED_ALIGNER = Vocab(BWA_MEM='bwa mem', BLAT='blat')
 
 
 def query_coverage_interval(read):
@@ -201,7 +205,7 @@ def align_contigs(
         log('will use', aligner, 'to align', len(sequences), 'unique sequences', time_stamp=False)
 
         # call the aligner using subprocess
-        if aligner == "blat":
+        if aligner == SUPPORTED_ALIGNER.BLAT:
             from .blat import Blat
             blat_min_identity *= 100
             blat_options = kwargs.pop(
@@ -209,10 +213,10 @@ def align_contigs(
             # call the blat subprocess
             # will raise subprocess.CalledProcessError if non-zero exit status
             # parameters from https://genome.ucsc.edu/FAQ/FAQblat.html#blat4
-            log(['blat', aligner_reference,
+            log([aligner, aligner_reference,
                  aligner_fa_input_file, aligner_output_file, '-out=pslx', '-noHead'] + blat_options)
             subprocess.check_output([
-                'blat', aligner_reference,
+                aligner, aligner_reference,
                 aligner_fa_input_file, aligner_output_file, '-out=pslx', '-noHead'] + blat_options)
 
             header, rows = Blat.read_pslx(aligner_output_file, query_id_mapping, is_protein=is_protein)
@@ -253,7 +257,7 @@ def align_contigs(
                         warnings.warn('warning: invalid blat alignment: {}'.format(e))
                 reads_by_query[query_seq] = reads
 
-        elif aligner == 'bwa mem':
+        elif aligner == SUPPORTED_ALIGNER.BWA_MEM:
             command = '{} {} {} -Y'.format(aligner, aligner_reference, aligner_fa_input_file)
             log(command)  # for bwa
             with open(aligner_output_file, 'w') as f:

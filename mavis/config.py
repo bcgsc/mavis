@@ -1,4 +1,3 @@
-from argparse import Namespace, ArgumentError
 from configparser import ConfigParser, ExtendedInterpolation
 import os
 import TSV
@@ -14,6 +13,7 @@ from .annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
 from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 from .tools import SUPPORTED_TOOL
+from .align import SUPPORTED_ALIGNER
 
 from .bam.stats import compute_genome_bam_stats, compute_transcriptome_bam_stats
 
@@ -331,6 +331,7 @@ def read_config(filepath):
     args.update(VALIDATION_DEFAULTS.__dict__)
     try:
         args.update(parser['validation'] if 'validation' in parser else {})
+        SUPPORTED_ALIGNER.enforce(args['aligner'])
     except KeyError:
         pass
 
@@ -431,6 +432,10 @@ def augment_parser(parser, optparser, arguments):
             add_semi_optional_argument(arg, optparser, parser, 'File containing the cytoband template information.')
         elif arg == 'masking':
             add_semi_optional_argument(arg, optparser, parser)
+        elif arg == 'aligner':
+            optparser.add_argument(
+                '--' + arg, default=get_env_variable(arg, VALIDATION_DEFAULTS[arg]),
+                choices=SUPPORTED_ALIGNER.values(), help='aligner to use for aligning contigs')
         elif arg == 'aligner_reference':
             add_semi_optional_argument(
                 arg, optparser, parser, 'path to the aligner reference file used for aligning the contig sequences.')
