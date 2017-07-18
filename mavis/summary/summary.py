@@ -152,7 +152,7 @@ def group_events(bpp1, bpp2):
                        COLUMNS.spanning_reads, COLUMNS.flanking_pairs, COLUMNS.tools,
                        COLUMNS.product_id, COLUMNS.event_type, COLUMNS.annotation_id,
                        COLUMNS.pairing, COLUMNS.annotation_figure,
-                       COLUMNS.contig_remapped_reads]
+                       COLUMNS.contig_remapped_reads, COLUMNS.tools]
 
     for i in bpp1.data.keys():
         if bpp1.data[i] != bpp2.data[i]:
