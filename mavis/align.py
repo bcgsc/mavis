@@ -258,7 +258,7 @@ def align_contigs(
             log(command)  # for bwa
             with open(aligner_output_file, 'w') as f:
                 subprocess.call(command, stdout=f, shell=True)
-            
+
             with pysam.AlignmentFile(aligner_output_file, 'r') as samfile:
                 reads_by_query = {}
                 for read in samfile.fetch():

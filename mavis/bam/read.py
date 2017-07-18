@@ -22,7 +22,7 @@ class SamRead(pysam.AlignedSegment):
             self.__class__.__name__, self.reference_name, self.reference_start,
             self.cigar, self.query_sequence
         )
-    
+
     @classmethod
     def copy(cls, pysamRead):
         return cls.copyOnto(pysamRead)
@@ -48,14 +48,14 @@ class SamRead(pysam.AlignedSegment):
         except AttributeError:
             pass
         return cp
-    
+
     def __copy__(self):
         return self.__class__.copy(self)
 
     @property
     def reference_name(self):
         return self._reference_name
-    
+
     @property
     def next_reference_name(self):
         return self._next_reference_name
