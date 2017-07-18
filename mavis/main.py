@@ -51,6 +51,7 @@ def main_pipeline(args, configs, convert_config):
     annotation_jobs = []
     rand = int(random.random() * math.pow(10, 10))
     conversion_dir = mkdirp(os.path.join(args.output, 'converted_inputs'))
+    pairing_inputs = []
 
     for sec in configs:
         base = os.path.join(args.output, '{}_{}_{}'.format(sec.library, sec.disease_status, sec.protocol))
@@ -170,6 +171,9 @@ def main_pipeline(args, configs, convert_config):
             fh.write(
                 ' \\\n\t--output {}\n'.format(
                     os.path.join(annotation_output, os.path.basename(merge_file_prefix) + '$SGE_TASK_ID')))
+            for sge_task_id in range(1, len(output_files) + 1):
+                pairing_inputs.append(os.path.join(
+                    annotation_output, os.path.basename(merge_file_prefix) + str(sge_task_id), 'annotations.tab'))
 
     # set up scripts for the pairing held on all of the annotation jobs
     pairing_output = mkdirp(os.path.join(args.output, 'pairing'))
@@ -184,7 +188,7 @@ def main_pipeline(args, configs, convert_config):
     )
     temp = ['--{} {}'.format(k, v) for k, v in pairing_args.items() if not isinstance(v, str) and v is not None]
     temp.extend(['--{} "{}"'.format(k, v) for k, v in pairing_args.items() if isinstance(v, str) and v is not None])
-    temp.append('--inputs {}'.format(os.path.join(args.output, '*/annotation/*/annotations.tab')))
+    temp.append('--inputs {}'.format(' \\\n\t'.join(pairing_inputs)))
     pairing_args = temp
     qsub = os.path.join(pairing_output, 'qsub.sh')
     pairing_jobname = 'mavis_pairing_{}'.format(rand)
