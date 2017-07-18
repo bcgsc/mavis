@@ -4,6 +4,8 @@ import pip
 import sys
 
 
+# install local svn dependencies
+
 tsv_version = '3.1.3'
 tsv_link = 'svn+https://svn.bcgsc.ca/svn/SVIA/TSV/tags/v{0}#egg=TSV-{0}'.format(tsv_version)
 vocab_version = '1.0.0'
@@ -31,6 +33,27 @@ if any([x in sys.argv for x in ['install', 'develop']]):
     except ImportError:
         print(['install', '-e', tsv_link, '--trusted-host', '*.bcgsc.ca', '--exists-action', 's'])
         pip.main(['install', '-e', tsv_link, '--trusted-host', '*.bcgsc.ca', '--exists-action', 's'])
+
+
+def check_nonpython_dependencies():
+    from mavis.validate.constants import DEFAULTS
+    from mavis.config import get_env_variable
+    import shutil
+    from mavis.blat import get_blat_version
+    from mavis.bam.read import get_samtools_version
+
+    aligner = get_env_variable('aligner', DEFAULTS.aligner, str)
+    exe = shutil.which(aligner)
+    print('\nUsing', exe)
+    if aligner == 'blat':
+        version = get_blat_version()
+        print('Current version:', aligner, version)
+
+    tool = 'samtools'
+    exe = shutil.which(tool)
+    print('\nUsing', exe)
+    print('Current version:', tool, 'v{}.{}.{}'.format(*get_samtools_version()))
+
 
 setup(
     name='mavis',
@@ -62,3 +85,5 @@ setup(
     tests_require=['nose', 'timeout-decorator==0.3.3', 'coverage==4.2'],
     entry_points={'console_scripts': ['mavis = mavis.main:main']}
 )
+
+check_nonpython_dependencies()
