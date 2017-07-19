@@ -78,7 +78,7 @@ version = pull_version_from_git()
 print('version:', version)
 vfile = os.path.join(cwd, 'mavis', 'version.py')
 
-if any([x in sys.argv for x in ['install', 'develop']]):
+if any([x in sys.argv for x in ['install', 'develop', 'build']]):
     with open(vfile, 'w') as fh:
         print('writing version to:', vfile, version)
         fh.write('__version__ = \'{}\'\n'.format(version))
