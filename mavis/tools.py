@@ -15,8 +15,8 @@ SUPPORTED_TOOL = Vocab(
     MANTA='manta',
     DELLY='delly',
     TA='transabyss',
-    BREAKDANCER='breakdancer',
-    PINDEL='pindel',
+    # BREAKDANCER='breakdancer',
+    # PINDEL='pindel',
     CHIMERASCAN='chimerascan',
     MAVIS='mavis',
     DEFUSE='defuse'
@@ -91,12 +91,12 @@ def _convert_tool_row(row, file_type, stranded):
         except KeyError:
             pass
 
-    elif file_type == SUPPORTED_TOOL.BREAKDANCER:
-        std_row.update({
-            'chr1': row['Chr1'], 'chr2': row['Chr2'],
-            'pos1_start': row['Pos1'], 'pos2_start': row['Pos2'],
-            'event_type': row['Type']
-        })
+    # elif file_type == SUPPORTED_TOOL.BREAKDANCER:
+    #     std_row.update({
+    #         'chr1': row['Chr1'], 'chr2': row['Chr2'],
+    #         'pos1_start': row['Pos1'], 'pos2_start': row['Pos2'],
+    #         'event_type': row['Type']
+    #     })
 
     # elif file_type == SUPPORTED_TOOL.PINDEL:
     #     info = {k: v for k, v in ['='.split(x) for x in ';'.split(row['info'])]}

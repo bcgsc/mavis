@@ -156,11 +156,11 @@ class TestDraw(unittest.TestCase):
             self.assertEqual(cls, el.attribs.get('class', ''))
 
         self.assertEqual(
-            d.track_height + d.splice_height
-            + 2 * d.padding + d.domain_track_height * 2
-            + d.translation_track_height + d.padding
-            + d.breakpoint_top_margin
-            + d.breakpoint_bottom_margin,
+            d.track_height + d.splice_height +
+            2 * d.padding + d.domain_track_height * 2 +
+            d.translation_track_height + d.padding +
+            d.breakpoint_top_margin +
+            d.breakpoint_bottom_margin,
             g.height)
         self.assertEqual(d1.name, g.labels['D1'])
         self.assertEqual(d2.name, g.labels['D2'])

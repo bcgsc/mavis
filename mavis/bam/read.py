@@ -1,10 +1,64 @@
 from ..constants import ORIENT, CIGAR, DNA_ALPHABET, STRAND, READ_PAIR_TYPE, SVTYPE
 from . import cigar as cigar_tools
-from .cigar import EVENT_STATES, REFERENCE_ALIGNED_STATES, ALIGNED_STATES, QUERY_ALIGNED_STATES
+from .cigar import EVENT_STATES, REFERENCE_ALIGNED_STATES, QUERY_ALIGNED_STATES
 import pysam
 import subprocess
 import re
 from copy import copy
+
+
+class SamRead(pysam.AlignedSegment):
+    """
+    """
+
+    def __init__(self, reference_name=None, next_reference_name=None, alignment_score=None):
+        pysam.AlignedSegment.__init__(self)
+        self._reference_name = reference_name
+        self._next_reference_name = next_reference_name
+        self.alignment_score = alignment_score
+
+    def __repr__(self):
+        return '{}({}:{}, {}, {})'.format(
+            self.__class__.__name__, self.reference_name, self.reference_start,
+            self.cigar, self.query_sequence
+        )
+
+    @classmethod
+    def copy(cls, pysamRead):
+        return cls.copyOnto(pysamRead)
+
+    @classmethod
+    def copyOnto(cls, pysamRead, copyRead=None):
+        cp = cls() if copyRead is None else copyRead
+        cp._reference_name = pysamRead.reference_name
+        cp.query_sequence = pysamRead.query_sequence
+        cp.reference_start = pysamRead.reference_start
+        cp.reference_id = pysamRead.reference_id
+        cp.cigar = pysamRead.cigar[:]
+        cp.query_name = pysamRead.query_name
+        cp.mapping_quality = pysamRead.mapping_quality
+        cp.set_tags(pysamRead.get_tags())
+        cp.flag = pysamRead.flag
+        if pysamRead.is_paired:
+            cp.next_reference_id = pysamRead.next_reference_id
+            cp.next_reference_start = pysamRead.next_reference_start
+            cp._next_reference_name = pysamRead.next_reference_name
+        try:
+            cp.alignment_score = pysamRead.alignment_score
+        except AttributeError:
+            pass
+        return cp
+
+    def __copy__(self):
+        return self.__class__.copy(self)
+
+    @property
+    def reference_name(self):
+        return self._reference_name
+
+    @property
+    def next_reference_name(self):
+        return self._next_reference_name
 
 
 def get_samtools_version():

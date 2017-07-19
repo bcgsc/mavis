@@ -15,6 +15,10 @@ from .interval import Interval
 from .util import devnull
 from .breakpoint import BreakpointPair
 from .error import InvalidRearrangement
+from vocab import Vocab
+
+
+SUPPORTED_ALIGNER = Vocab(BWA_MEM='bwa mem', BLAT='blat')
 
 
 def query_coverage_interval(read):
@@ -92,7 +96,6 @@ def select_paired_alignments(
 
     # don't use reads in combined alignments if they have already been assigned in a single alignment
     combo_prohibited = [x for x, y in putative_alignments]
-
     for read1, read2 in itertools.combinations([x for x in aligned_contigs if x not in combo_prohibited], 2):
         # do they overlap both breakpoints
         if any([
@@ -143,7 +146,7 @@ def select_paired_alignments(
             call = BreakpointPair.call_breakpoint_pair(read1, read2)
             if not set(BreakpointPair.classify(call)) & putative_event_types:
                 continue
-        except (InvalidRearrangement, AssertionError) as err:
+        except (InvalidRearrangement, AssertionError):
             continue
         putative_alignments.append((read1, read2))
     return putative_alignments
@@ -153,12 +156,12 @@ def align_contigs(
         evidence,
         INPUT_BAM_CACHE,
         reference_genome,
+        aligner,
+        aligner_reference,
+        aligner_output_file='aligner_out.temp',
+        aligner_fa_input_file='aligner_in.fa',
         blat_min_percent_of_max_score=0.8,
         blat_min_identity=0.7,
-        aligner='blat',
-        aligner_output_file='blat_out.pslx',
-        aligner_fa_input_file='blat_in.fa',
-        aligner_reference='/home/pubseq/genomes/Homo_sapiens/GRCh37/blat/hg19.2bit',
         contig_aln_min_query_consumption=0.5,
         contig_aln_max_event_size=50,
         contig_aln_min_anchor_size=50,
@@ -202,7 +205,7 @@ def align_contigs(
         log('will use', aligner, 'to align', len(sequences), 'unique sequences', time_stamp=False)
 
         # call the aligner using subprocess
-        if aligner == "blat":
+        if aligner == SUPPORTED_ALIGNER.BLAT:
             from .blat import Blat
             blat_min_identity *= 100
             blat_options = kwargs.pop(
@@ -210,10 +213,10 @@ def align_contigs(
             # call the blat subprocess
             # will raise subprocess.CalledProcessError if non-zero exit status
             # parameters from https://genome.ucsc.edu/FAQ/FAQblat.html#blat4
-            log(['blat', aligner_reference,
+            log([aligner, aligner_reference,
                  aligner_fa_input_file, aligner_output_file, '-out=pslx', '-noHead'] + blat_options)
             subprocess.check_output([
-                'blat', aligner_reference,
+                aligner, aligner_reference,
                 aligner_fa_input_file, aligner_output_file, '-out=pslx', '-noHead'] + blat_options)
 
             header, rows = Blat.read_pslx(aligner_output_file, query_id_mapping, is_protein=is_protein)
@@ -254,18 +257,22 @@ def align_contigs(
                         warnings.warn('warning: invalid blat alignment: {}'.format(e))
                 reads_by_query[query_seq] = reads
 
-        else:
-            command = aligner.split('-')
-            command.extend([aligner_reference, aligner_fa_input_file])
+        elif aligner == SUPPORTED_ALIGNER.BWA_MEM:
+            command = '{} {} {} -Y'.format(aligner, aligner_reference, aligner_fa_input_file)
             log(command)  # for bwa
             with open(aligner_output_file, 'w') as f:
-                subprocess.call(command, stdout=f)
+                subprocess.call(command, stdout=f, shell=True)
 
-            samfile = pysam.AlignmentFile(aligner_output_file, 'r')
-
-            reads_by_query = {}
-            for read in samfile.fetch():
-                reads_by_query.setdefault(read.query_name, []).append(read)
+            with pysam.AlignmentFile(aligner_output_file, 'r') as samfile:
+                reads_by_query = {}
+                for read in samfile.fetch():
+                    read = read_tools.SamRead.copy(read)
+                    read.reference_id = INPUT_BAM_CACHE.reference_id(read.reference_name)
+                    if read.is_paired:
+                        read.next_reference_id = INPUT_BAM_CACHE.reference_id(read.next_reference_name)
+                    read.cigar = cigar_tools.recompute_cigar_mismatch(read, reference_genome[read.reference_name])
+                    query_seq = query_id_mapping[read.query_name]
+                    reads_by_query.setdefault(query_seq, []).append(read)
 
         for e in evidence:
             for contig in e.contigs:

@@ -9,7 +9,6 @@ from mavis.breakpoint import read_bpp_from_input_file
 
 data_prefix = os.path.join(os.path.dirname(__file__), 'data')
 temp_output = None
-main_run_script = os.path.join(os.path.dirname(__file__), './../../bin/mavis_run.py')
 
 
 def setUpModule():
@@ -20,8 +19,8 @@ def setUpModule():
 
 class TestPairing(unittest.TestCase):
     def test_pairing(self):
-        command = 'python {2} pairing -n {0}/pairing_annotations.tab -f {0}/pairing_sequences.fa -o {1} --annotations' \
-            ' {0}/pairing_reference_annotations_file.tab'.format(data_prefix, temp_output, main_run_script)
+        command = 'mavis pairing -n {0}/pairing_annotations.tab -f {0}/pairing_sequences.fa -o {1} --annotations' \
+            ' {0}/pairing_reference_annotations_file.tab'.format(data_prefix, temp_output)
         print(command)
         subprocess.check_output(command, shell=True)
         # make sure the output file exists

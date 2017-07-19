@@ -76,7 +76,7 @@ def main(
             bpp.library = library
         if bpp.library != library:
             other_libs.add(bpp.library)
-        if bpp.break1.chr in limit_to_chr and bpp.break2.chr in limit_to_chr:
+        elif bpp.break1.chr in limit_to_chr and bpp.break2.chr in limit_to_chr:
             unfiltered_breakpoint_pairs.append(bpp)
         else:
             other_chr.update({bpp.break1.chr, bpp.break2.chr})
@@ -116,9 +116,18 @@ def main(
         cluster.data[COLUMNS.cluster_id] = str(uuid.uuid4())
         cluster.data[COLUMNS.cluster_size] = len(input_pairs)
         temp = set()
+        data_items = set()
         for p in input_pairs:
             temp.update(p.data[COLUMNS.tools])
+            data_items.update(p.data.keys())
         cluster.data[COLUMNS.tools] = ';'.join(sorted(list(temp)))
+        data_items -= {COLUMNS.tools}
+        # retain all data where data is consistent between the input pairs
+        for item in data_items:
+            s = [p.data.get(item, None) for p in input_pairs]
+            s = set(s)
+            if len(s) == 1:
+                cluster.data[item] = list(s)[0]
     log('computed', len(clusters), 'clusters', time_stamp=False)
     log('cluster input pairs distribution', sorted(hist.items()), time_stamp=False)
     log('cluster intervals lengths', sorted(length_hist.items()), time_stamp=False)
@@ -126,23 +135,17 @@ def main(
     # now create the mapping from the original input files to the cluster(s)
     mkdirp(output)
 
-    with open(CLUSTER_ASSIGN_OUTPUT, 'w') as fh:
-        header = set()
-        rows = {}
-
-        for cluster, input_pairs in clusters.items():
-            for p in input_pairs:
-                if p not in rows:
-                    rows[p] = p.flatten()
-                rows[p][COLUMNS.tools].update(p.data[COLUMNS.tools])
-                rows[p].setdefault('clusters', set()).add(cluster.data[COLUMNS.cluster_id])
-        for row in rows.values():
-            row['clusters'] = ';'.join([str(c) for c in sorted(list(row['clusters']))])
-            row[COLUMNS.tools] = ';'.join(sorted(list(row[COLUMNS.tools])))
-            row[COLUMNS.library] = library
-            row[COLUMNS.protocol] = protocol
-            row[COLUMNS.disease_status] = disease_status
-        output_tabbed_file(rows.values(), CLUSTER_ASSIGN_OUTPUT)
+    rows = {}
+    for cluster, input_pairs in clusters.items():
+        for p in input_pairs:
+            if p not in rows:
+                rows[p] = p.flatten()
+            rows[p][COLUMNS.tools].update(p.data[COLUMNS.tools])
+            rows[p].setdefault('clusters', set()).add(cluster.data[COLUMNS.cluster_id])
+    for row in rows.values():
+        row['clusters'] = ';'.join([str(c) for c in sorted(list(row['clusters']))])
+        row[COLUMNS.tools] = ';'.join(sorted(list(row[COLUMNS.tools])))
+    output_tabbed_file(rows.values(), CLUSTER_ASSIGN_OUTPUT)
 
     output_files = []
     # filter clusters based on annotations

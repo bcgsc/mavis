@@ -369,7 +369,6 @@ def hgvs_standardize_cigar(read, reference_seq):
             new_cigar.append((CIGAR.D, cigar[i][1]))
         else:
             new_cigar.append(cigar[i])
-
     new_cigar = merge_indels(new_cigar)
     # now we need to extend any insertions
     rpos = read.reference_start
@@ -382,8 +381,7 @@ def hgvs_standardize_cigar(read, reference_seq):
             next_c, next_v = new_cigar[i + 1]
 
             if c == CIGAR.I:
-                qpos += v
-                qseq = read.query_sequence[qpos - v:qpos]
+                qseq = read.query_sequence[qpos:qpos + v]
                 qrep = smallest_nonoverlapping_repeat(qseq)
                 if next_c == CIGAR.EQ and next_v >= len(qrep):
                     rseq = reference_seq[rpos:rpos + next_v]
@@ -393,14 +391,16 @@ def hgvs_standardize_cigar(read, reference_seq):
                     if t > 0:
                         cigar.append((CIGAR.EQ, t))
                         rpos += t
+                        qpos += t
                         if t == next_v:
                             del new_cigar[i + 1]
                         else:
                             new_cigar[i + 1] = next_c, next_v - t
                         continue
+                qpos += v
+
             elif c == CIGAR.D:
-                rpos += v
-                rseq = reference_seq[rpos - v:rpos]
+                rseq = reference_seq[rpos:rpos + v]
                 rrep = smallest_nonoverlapping_repeat(rseq)
                 if next_c == CIGAR.EQ and next_v >= len(rrep):
                     qseq = read.query_sequence[qpos:qpos + next_v]
@@ -410,11 +410,13 @@ def hgvs_standardize_cigar(read, reference_seq):
                     if t > 0:
                         cigar.append((CIGAR.EQ, t))
                         qpos += t
+                        rpos += t
                         if t == next_v:
                             del new_cigar[i + 1]
                         else:
                             new_cigar[i + 1] = next_c, next_v - t
                         continue
+                rpos += v
             elif c == CIGAR.S:
                 qpos += v
             elif c != CIGAR.H:

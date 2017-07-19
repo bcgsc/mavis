@@ -5,7 +5,7 @@ from .mock import Mock
 
 
 class TestConvertToolRow(unittest.TestCase):
-    
+
     def test_delly_insertion(self):
         row = Mock(
             CHROM='1', POS=247760043,
@@ -26,16 +26,16 @@ class TestConvertToolRow(unittest.TestCase):
         self.assertEqual(STRAND.NS, bpp_list[0].break2.strand)
         self.assertEqual('1', bpp_list[0].break2.chr)
         self.assertEqual(SVTYPE.INS, bpp_list[0].event_type)
-    
+
     def test_delly_translocation(self):
         row = Mock(
             CHROM='7', POS=21673582,
             INFO={
-                'SVTYPE': 'TRA', 
-                'CT': '5to5', 
-                'CIEND': [-700, 700], 
-                'CIPOS': [-700, 700], 
-                'CHR2': '2', 
+                'SVTYPE': 'TRA',
+                'CT': '5to5',
+                'CIEND': [-700, 700],
+                'CIPOS': [-700, 700],
+                'CHR2': '2',
                 'END': 58921502
             }
         )
@@ -50,13 +50,19 @@ class TestConvertToolRow(unittest.TestCase):
         self.assertEqual(4, len(bpp_list))
 
     def test_ta_indel_insertion(self):
-        raise unittest.SkipTest('TODO') 
+        raise unittest.SkipTest('TODO')
 
     def test_ta_indel_deletion(self):
         raise unittest.SkipTest('TODO')
-    
+
     def test_ta_indel_duplication(self):
         raise unittest.SkipTest('TODO')
 
     def test_ta_translocation(self):
+        raise unittest.SkipTest('TODO')
+
+    def test_ta_stranded(self):
+        raise unittest.SkipTest('TODO')
+
+    def test_manta_deletion(self):
         raise unittest.SkipTest('TODO')
