@@ -64,7 +64,7 @@ def check_nonpython_dependencies():
 
 
 def pull_version_from_git():
-    command = 'cd {}; git describe --long --all'.format(cwd)
+    command = 'cd {}; git describe --long'.format(cwd)
     v = subprocess.check_output(command, shell=True)
     v = v.decode('UTF8')
     v = v.strip()
