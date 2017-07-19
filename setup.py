@@ -1,11 +1,13 @@
 from setuptools import setup, find_packages
-from mavis import __version__
 import pip
 import sys
+import subprocess
+import os
+import re
 
 
 # install local svn dependencies
-
+cwd = os.path.dirname(os.path.abspath(__file__))
 tsv_version = '3.1.3'
 tsv_link = 'svn+https://svn.bcgsc.ca/svn/SVIA/TSV/tags/v{0}#egg=TSV-{0}'.format(tsv_version)
 vocab_version = '1.0.0'
@@ -61,9 +63,29 @@ def check_nonpython_dependencies():
         print('Current version:', tool, 'v{}.{}.{}'.format(*get_samtools_version()))
 
 
+def pull_version_from_git():
+    command = 'cd {}; git describe --long --all'.format(cwd)
+    v = subprocess.check_output(command, shell=True)
+    v = v.decode('UTF8')
+    v = v.strip()
+    m = re.match('^v?(\d+)\.(\d+)\.(\d+)-(\d+)-g\w+$', v)
+    if not m:
+        raise OSError('could not parse version number from git', v, '^v?(\d+)\.(\d+)\.(\d+)-\d+-g\d+$')
+    return '{}.{}.{}'.format(m.group(1), m.group(2), int(m.group(3)) + int(m.group(4)))
+
+
+version = pull_version_from_git()
+print('version:', version)
+vfile = os.path.join(cwd, 'mavis', 'version.py')
+
+if any([x in sys.argv for x in ['install', 'develop']]):
+    with open(vfile, 'w') as fh:
+        print('writing version to:', vfile, version)
+        fh.write('__version__ = \'{}\'\n'.format(version))
+
 setup(
     name='mavis',
-    version=__version__,
+    version=version,
     url='https://svn.bcgsc.ca/svn/SVIA/mavis',
     packages=find_packages(),
     install_requires=[
