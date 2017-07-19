@@ -2,6 +2,7 @@ from ..breakpoint import BreakpointPair, Breakpoint
 from ..constants import CALL_METHOD, SVTYPE, PYSAM_READ_FLAGS, ORIENT, PROTOCOL, COLUMNS, STRAND
 from ..bam import read as read_tools
 from ..interval import Interval
+from ..align import query_coverage_interval
 from .evidence import TranscriptomeEvidence
 import itertools
 import statistics
@@ -15,7 +16,7 @@ class EventCall(BreakpointPair):
     directly without a lot of copying. Instead we use call objects which are basically
     just a reference to the evidence object and decisions on class, exact breakpoints, etc
     """
-    
+
     @property
     def has_compatible(self):
         """bool: True if compatible flanking pairs are appropriate to collect"""
@@ -317,17 +318,21 @@ class EventCall(BreakpointPair):
             COLUMNS.spanning_reads: len(self.spanning_reads),
             COLUMNS.spanning_read_names: ';'.join(sorted([r.query_name for r in self.spanning_reads]))
         })
-
+        if self.has_compatible:
+            row[COLUMNS.flanking_pairs_compatible] = len(self.compatible_flanking_pairs)
+            c = {f[0].query_name for f in self.compatible_flanking_pairs}
+            c.update({f[1].query_name for f in self.compatible_flanking_pairs})
+            row[COLUMNS.flanking_pairs_compatible_read_names] = ';'.join(sorted(c))
         if self.contig:
             r1, r2 = self.contig_alignment
             ascore = r1.get_tag('br')
             if r2:
                 ascore = int(round((r1.get_tag('br') + r2.get_tag('br')) / 2, 0))
             cseq = self.contig_alignment[0].query_sequence
-            qc1 = r1.query_coverage_interval()
+            qc1 = query_coverage_interval(r1)
             qc2 = qc1
             if r2:
-                qc2 = r2.query_coverage_interval()
+                qc2 = query_coverage_interval(r2)
                 if r2.is_reverse != r1.is_reverse:
                     qc2 = Interval(len(self.contig.seq) - qc2.end, len(self.contig.seq) - qc2.start)
             caqc = len(qc1 | qc2) if not Interval.overlaps(qc1, qc2) else len(qc1) + len(qc2)
@@ -435,7 +440,7 @@ def filter_consumed_pairs(pairs, consumed_reads):
 
     Returns:
         set of tuples of :class:`pysam.AlignedSegment` and :class:`pysam.AlignedSegment`: set of filtered tuples
-    
+
     Note:
         this will work with any hash-able object
 

@@ -413,14 +413,14 @@ class BreakpointPair:
         .. todo::
             return multiple events not just the major event
         """
-        from .blat import BlatAlignedSegment
+        from .align import query_coverage_interval
         if read1.reference_id > read2.reference_id:
             read1, read2 = (read2, read1)
         elif read1.reference_id == read2.reference_id and read1.reference_start > read2.reference_start:
             read1, read2 = (read2, read1)
 
-        r1_qci = BlatAlignedSegment.query_coverage_interval(read1)
-        r2_qci = BlatAlignedSegment.query_coverage_interval(read2)
+        r1_qci = query_coverage_interval(read1)
+        r2_qci = query_coverage_interval(read2)
 
         if read1.is_reverse == read2.is_reverse:
             assert(read1.query_sequence == read2.query_sequence)
@@ -708,7 +708,7 @@ def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, **
             if attr in [COLUMNS.cluster_id, COLUMNS.annotation_id, COLUMNS.validation_id]:
                 if not re.match('^([A-Za-z0-9-]+|)$', row[attr]):
                     raise AssertionError(
-                        'error in column', attr, 'All mavis pipeline step ids must satisfy the regex:', 
+                        'error in column', attr, 'All mavis pipeline step ids must satisfy the regex:',
                         '^([A-Za-z0-9-]+|)$', row[attr])
         stranded = row[COLUMNS.stranded] or explicit_strand
         opp = row[COLUMNS.opposing_strands]

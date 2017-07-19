@@ -18,7 +18,8 @@ def check_input_file(filename):
         },
         in_={
             COLUMNS.protocol: PROTOCOL
-        }
+        },
+        add={COLUMNS.library: 'None'}
     )
     for bpp in bpps:
         if any([

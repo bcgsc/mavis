@@ -4,18 +4,22 @@ from .cluster import cluster_breakpoint_pairs
 from ..constants import COLUMNS
 from .constants import DEFAULTS
 from ..util import read_inputs, output_tabbed_file, write_bed_file, generate_complete_stamp
-from ..util import filter_on_overlap, log, mkdirp, filter_uninformative
+from ..util import filter_on_overlap, log, mkdirp, filter_uninformative, log_arguments
 import uuid
+import inspect
 
 
 def main(
-    inputs, output, stranded_bam, library, protocol, masking, annotations,
+    inputs, output, stranded_bam, library, protocol, disease_status, masking, annotations,
+    limit_to_chr=DEFAULTS.limit_to_chr,
     cluster_clique_size=DEFAULTS.cluster_clique_size,
     cluster_radius=DEFAULTS.cluster_radius,
     uninformative_filter=DEFAULTS.uninformative_filter,
     max_proximity=DEFAULTS.max_proximity,
     min_clusters_per_file=DEFAULTS.min_clusters_per_file,
     max_files=DEFAULTS.max_files,
+    fetch_method_individual=True,
+    log_args=False,
     **kwargs
 ):
     """
@@ -36,6 +40,11 @@ def main(
         min_clusters_per_file (int): the minimum number of clusters to output to a file
         max_files (int): the maximum number of files to split clusters into
     """
+    if log_args:
+        frame = inspect.currentframe()
+        args, _, _, values = inspect.getargvalues(frame)
+        args = {arg: values[arg] for arg in args if arg != 'log_args'}
+        log_arguments(args)
 
     # output files
     cluster_batch_id = 'batch-' + str(uuid.uuid4())
@@ -49,23 +58,34 @@ def main(
     breakpoint_pairs = read_inputs(
         inputs,
         cast={COLUMNS.tools: lambda x: set(x.split(';')) if x else set()},
-        add={COLUMNS.library: library, COLUMNS.protocol: protocol, COLUMNS.tools: ''},
+        add={
+            COLUMNS.library: library,
+            COLUMNS.protocol: protocol,
+            COLUMNS.tools: '',
+            COLUMNS.disease_status: disease_status
+        },
         expand_ns=True, explicit_strand=False
     )
-    # ignore other library inputs
+    # filter against chr and ignore other library inputs
     other_libs = set()
+    other_chr = set()
     unfiltered_breakpoint_pairs = []
+    log('filtering by library and chr name')
     for bpp in breakpoint_pairs:
         if bpp.library is None:
             bpp.library = library
         if bpp.library != library:
             other_libs.add(bpp.library)
-        else:
+        if bpp.break1.chr in limit_to_chr and bpp.break2.chr in limit_to_chr:
             unfiltered_breakpoint_pairs.append(bpp)
+        else:
+            other_chr.update({bpp.break1.chr, bpp.break2.chr})
+    other_chr -= set(limit_to_chr)
     breakpoint_pairs = unfiltered_breakpoint_pairs
     if len(other_libs) > 0:
         log('warning: ignoring breakpoints found for other libraries:', sorted([l for l in other_libs]))
-
+    if len(other_chr) > 0:
+        log('warning: filtered events on chromosomes not found in "limit_to_chr"', other_chr)
     # filter by masking file
     breakpoint_pairs, filtered_bpp = filter_on_overlap(breakpoint_pairs, masking)
     # filter by informative
@@ -121,6 +141,7 @@ def main(
             row[COLUMNS.tools] = ';'.join(sorted(list(row[COLUMNS.tools])))
             row[COLUMNS.library] = library
             row[COLUMNS.protocol] = protocol
+            row[COLUMNS.disease_status] = disease_status
         output_tabbed_file(rows.values(), CLUSTER_ASSIGN_OUTPUT)
 
     output_files = []
@@ -134,16 +155,34 @@ def main(
 
     bedfile = os.path.join(output, 'clusters.bed')
     write_bed_file(bedfile, itertools.chain.from_iterable([b.get_bed_repesentation() for b in clusters]))
-    job_ranges = list(range(0, len(clusters), JOB_SIZE))
-    if len(job_ranges) == 0 or job_ranges[-1] != len(clusters):
-        job_ranges.append(len(clusters))
-    job_ranges = zip(job_ranges, job_ranges[1::])
+    number_of_jobs = len(clusters) // min_clusters_per_file
+    if number_of_jobs >= max_files:
+        number_of_jobs = max_files
+    elif number_of_jobs == 0:
+        number_of_jobs = 1
 
-    for i, jrange in enumerate(job_ranges):
+    jobs = [[] for j in range(0, number_of_jobs)]
+    clusters = sorted(clusters, key=lambda x: (x.break1.chr, x.break1.start, x.break2.chr, x.break2.start))
+
+    if fetch_method_individual:
+        # split up consecutive clusters
+        for i, cluster in enumerate(clusters):
+            jid = i % len(jobs)
+            jobs[jid].append(cluster)
+    else:  # group consecutive clusters
+        extras = len(clusters) % number_of_jobs
+        cluster_per_job = len(clusters) // number_of_jobs
+        i = 0
+        for job in jobs:
+            job.extend(clusters[i:i + cluster_per_job + (1 if extras > 0 else 0)])
+            extras -= 1
+            i += len(job)
+    assert(sum([len(j) for j in jobs]) == len(clusters))
+    for i, job in enumerate(jobs):
         # generate an output file
         filename = split_file_name_func(i + 1)
         output_files.append(filename)
-        output_tabbed_file(clusters[jrange[0]:jrange[1]], filename)
+        output_tabbed_file(job, filename)
 
     generate_complete_stamp(output, log)
     return output_files

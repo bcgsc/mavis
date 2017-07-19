@@ -16,7 +16,7 @@ from mavis import __version__
 __prog__ = os.path.basename(os.path.realpath(__file__))
 
 
-def make_tsv(tsv, library_name, version, output_file_name, filter_event=True):
+def make_tsv(tsv, version, output_file_name, filter_event=True):
     """
     Function to parse the defuse tsv file and output the MAVIS tsv file
     """
@@ -42,7 +42,6 @@ def make_tsv(tsv, library_name, version, output_file_name, filter_event=True):
 
         # use the opposite here since it is based on genes (which act similar to reads) rather than contigs
         output[COLUMNS.opposing_strands] = True if o1 == o2 else False
-        output[COLUMNS.library] = library_name
         output[COLUMNS.tools] = 'deFuse_v{0}'.format(version)
         output[COLUMNS.stranded] = False
         output[COLUMNS.protocol] = PROTOCOL.TRANS
@@ -109,7 +108,6 @@ tsv and generates the MAVIS input file",
     required = parser.add_argument_group('Required arguments')
     required.add_argument('-n', '--input', help='path to the input file to be converted', required=True)
     required.add_argument('-o', '--output', help='path to the output file', required=True)
-    required.add_argument('-l', '--library', help='The library id for the input bam file.', required=True)
 
     optional = parser.add_argument_group('Optional arguments')
     optional.add_argument('-h', '--help', action='help', help='Show this help message and exit')
@@ -123,7 +121,7 @@ tsv and generates the MAVIS input file",
     args = parser.parse_args()
 
     if os.path.isfile(args.input):
-        make_tsv(args.input, args.library, args.tool_version, args.output, not args.no_filter)
+        make_tsv(args.input, args.tool_version, args.output, not args.no_filter)
     else:
         print("ERROR: Cannot find file: " + args.input)
         sys.exit(1)

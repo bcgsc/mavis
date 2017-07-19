@@ -4,6 +4,9 @@ import sys
 import random
 import argparse
 import TSV
+import glob
+import time
+import subprocess
 from mavis.annotate import load_annotations, load_reference_genome, load_masking_regions, load_templates
 from mavis.validate.main import main as validate_main
 from mavis.cluster.main import main as cluster_main
@@ -20,11 +23,14 @@ from mavis.illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from mavis.summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 
 from mavis.config import augment_parser, write_config, LibraryConfig, read_config, get_env_variable
-from mavis.util import log, mkdirp, devnull
+from mavis.util import log, mkdirp, log_arguments, output_tabbed_file
 from mavis.constants import PROTOCOL, PIPELINE_STEP
 from mavis.bam.read import get_samtools_version
 from mavis.blat import get_blat_version
+from mavis.tools import convert_tool_output, SUPPORTED_TOOL
 import math
+from datetime import datetime
+
 
 VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
 PROGNAME = os.path.basename(__file__)
@@ -38,25 +44,45 @@ QSUB_HEADER = """#!/bin/bash
 #$ -j y"""
 
 
-def main_pipeline(args, configs):
+def main_pipeline(args, configs, convert_config):
     # read the config
     # set up the directory structure and run mavis
     annotation_jobs = []
     rand = int(random.random() * math.pow(10, 10))
+    conversion_dir = mkdirp(os.path.join(args.output, 'converted_inputs'))
+
     for sec in configs:
         base = os.path.join(args.output, '{}_{}_{}'.format(sec.library, sec.disease_status, sec.protocol))
         log('setting up the directory structure for', sec.library, 'as', base)
         cluster_output = mkdirp(os.path.join(base, 'clustering'))
         validation_output = mkdirp(os.path.join(base, 'validation'))
         annotation_output = mkdirp(os.path.join(base, 'annotation'))
-
+        inputs = []
+        # run the conversions
+        for input_file in sec.inputs:
+            output_filename = os.path.join(conversion_dir, input_file + '.tab')
+            if input_file in convert_config:
+                if not os.path.exists(output_filename):
+                    command = convert_config[input_file]
+                    if command[0] == 'convert_tool_output':
+                        log('converting input command:', command)
+                        output_tabbed_file(convert_tool_output(*command[1:], log=log), output_filename)
+                    else:
+                        command = ' '.join(command) + ' -o {}'.format(output_filename)
+                        log('converting input command:')
+                        log('>>>', command, time_stamp=False)
+                        subprocess.check_output(command, shell=True)
+                inputs.append(output_filename)
+            else:
+                inputs.append(input_file)
+        sec.inputs = inputs
         # run the merge
         log('clustering')
         merge_args = {}
         merge_args.update(args.__dict__)
         merge_args.update(sec.__dict__)
         merge_args['output'] = cluster_output
-        output_files = cluster_main(**merge_args)
+        output_files = cluster_main(log_args=True, **merge_args)
 
         if len(output_files) == 0:
             log('warning: no inputs after clustering. Will not set up other pipeline steps')
@@ -75,7 +101,7 @@ def main_pipeline(args, configs):
         validation_args = {
             'masking': args.masking_filename,
             'reference_genome': args.reference_genome_filename,
-            'blat_2bit_reference': args.blat_2bit_reference,
+            'aligner_reference': args.aligner_reference,
             'annotations': args.annotations_filename,
             'library': sec.library,
             'bam_file': sec.bam_file,
@@ -216,7 +242,7 @@ def generate_config(parser, required, optional):
         metavar=('<name>', '(genome|transcriptome)', '<diseased|normal>', '</path/to/bam/file>', '<stranded_bam>'),
         action='append', help='configuration for libraries to be analyzed by mavis', default=[])
     optional.add_argument(
-        '--input', help='path to an input file for mavis followed by the library names it should be used for',
+        '--input', help='path to an input file or filter for mavis followed by the library names it should be used for',
         nargs='+', action='append', default=[]
     )
     optional.add_argument(
@@ -234,11 +260,19 @@ def generate_config(parser, required, optional):
     optional.add_argument(
         '--verbose', default=get_env_variable('verbose', False), type=TSV.tsv_boolean,
         help='verbosely output logging information')
+    optional.add_argument(
+        '--convert', nargs=4, default=[],
+        metavar=('<alias>', '</path/to/input/file>', '({})'.format('|'.join(SUPPORTED_TOOL.values())), '<stranded>'),
+        help='input file conversion for internally supported tools', action='append')
+    optional.add_argument(
+        '--external_conversion', metavar=('<alias>', '<command>'), nargs=2, default=[],
+        help='alias for use in inputs and full command (quote options)', action='append')
     augment_parser(required, optional, ['annotations'])
     args = parser.parse_args()
     if args.distribution_fraction < 0 or args.distribution_fraction > 1:
         raise ValueError('distribution_fraction must be a value between 0-1')
-    log_arguments(args)
+    log('MAVIS: {}'.format(__version__))
+    log_arguments(args.__dict__)
 
     # now write the config file
     inputs_by_lib = {k[0]: [] for k in args.library}
@@ -268,26 +302,142 @@ def generate_config(parser, required, optional):
             distribution_fraction=args.distribution_fraction
         )
         libs.append(l)
-    write_config(args.write, include_defaults=True, libraries=libs, log=log)
+    convert = {}
+    for alias, command in args.external_conversion:
+        if alias in convert:
+            raise KeyError('duplicate alias names are not allowed', alias)
+        convert[alias] = []
+        open_option = False
+        for item in re.split('\s+', command):
+            if len(convert[alias]) > 0:
+                if open_option:
+                    convert[alias][-1] += ' ' + item
+                    open_option = False
+                else:
+                    convert[alias].append(item)
+                    if item[0] == '-':
+                        open_option = True
+            else:
+                convert[alias].append(item)
+
+    for alias, inputfile, toolname, stranded in args.convert:
+        if alias in convert:
+            raise KeyError('duplicate alias names are not allowed', alias)
+        stranded = str(TSV.tsv_boolean(stranded))
+        SUPPORTED_TOOL.enforce(toolname)
+        convert[alias] = ['convert_tool_output', inputfile, toolname, stranded]
+    write_config(args.write, include_defaults=True, libraries=libs, conversions=convert, log=log)
 
 
-def log_arguments(args):
-    log('MAVIS: {}'.format(__version__))
-    log('input arguments')
-    for arg, val in sorted(args.__dict__.items()):
-        if isinstance(val, list):
-            log(arg, '= [', time_stamp=False)
-            for v in val:
-                log('\t', repr(v), time_stamp=False)
-            log(']', time_stamp=False)
+def time_diff(start, end):
+    """
+    >>> time_diff('2017-04-02 15:10:48.607195', '2017-04-03 17:00:32.671809')
+    25.83
+    >>> time_diff('2017-04-03 15:10:48.607195', '2017-04-03 17:00:32.671809')
+    1.83
+    """
+    t1 = datetime.strptime(start, '%Y-%m-%d %H:%M:%S.%f')
+    t2 = datetime.strptime(end, '%Y-%m-%d %H:%M:%S.%f')
+    td = t1 - t2
+    return td.seconds / 3600
+
+
+def unique_exists(pattern):
+    result = glob.glob(pattern)
+    if len(result) == 1:
+        return result[0]
+    elif len(result) > 0:
+        raise OSError('duplicate results:', result)
+    else:
+        return 0
+
+
+def check_log(log_file):
+    with open(log_file) as job_out:
+        lines = job_out.readlines()
+        if 'error' in lines[-1].lower():
+            log(" * CRASH: {}".format(lines[-1]), time_stamp=False)
         else:
-            log(arg, '=', repr(val), time_stamp=False)
+            log(" * Still running:", time_stamp=False)
+            log(" ** last out: '{}'".format(lines[-1]), time_stamp=False)
+
+
+def check_multiple_jobs(directory):
+    """
+    checks the completion of directory with the split jobs
+    """
+    log_time = 0
+    log("Checking {} ".format(directory))
+    cluster_files = glob.glob(os.path.join(directory, 'clustering', 'batch*.tab'))
+    if len(cluster_files) == 0:
+        raise OSError('cluster directory is empty, MAVIS has not completed succesffully or input was not a MAVIS output directory')
+    for subdir in ['validation', 'annotation']:
+        stamps = []
+        fail_count = 0
+        missing = []
+        for count in range(1, len(cluster_files) + 1):
+            count = str(count)
+            stamp = unique_exists(os.path.join(directory, subdir, '*-' + count, '*.COMPLETE'))
+            if stamp == 0:
+                fail_count += 1
+                log_files = glob.glob(os.path.join(directory, subdir, '*.o*.' + count))
+                if len(log_files) == 0:
+                    missing.append(count)
+                else:
+                    check_log(max(log_files, key=os.path.getctime))
+            else:
+                stamps.append(stamp)
+        if len(missing) == len(cluster_files):
+            log("{} has not started.".format(subdir), time_stamp=False)
+        elif len(missing) > 0:
+            log("the following jobs in {} have not started {}".format(subdir, ','.join(missing)), time_stamp=False)
+        elif fail_count == 0:
+            log("{} was successful".format(subdir), time_stamp=False)
+            if os.path.getctime(max(stamps, key=os.path.getctime)) < log_time:
+                log("ERROR: A complete stamp for validation is after a complete stamp for annotation")
+            log_time = os.path.getctime(max(stamps, key=os.path.getctime))
+        return log_time
+
+
+def check_single_job(directory):
+    """
+    """
+    log("Checking {} ".format(directory))
+    stamp = unique_exists(os.path.join(directory, '*.COMPLETE'))
+    if stamp == 0:
+        log_files = glob.glob(os.path.join(directory, '*.o*'))
+        if len(log_files) == 0:
+            log("{} has not started.".format(os.path.basename(directory)), time_stamp=False)
+        else:
+            check_log(max(log_files, key=os.path.getctime))
+        return 0
+    else:
+        log("{} was successful".format(os.path.basename(directory)), time_stamp=False)
+        return os.path.getctime(stamp)
+
+
+def check_completion(target_dir):
+    if not os.path.isdir(target_dir):
+        raise TypeError('expected a directory as input')
+    directories = sorted(glob.glob(os.path.join(target_dir, '*')))
+    simple_dirs = ['pairing', 'summary']
+    log_time = 0
+    for d in directories:
+        name = os.path.basename(d)
+        if name not in simple_dirs:
+            cur_time = check_multiple_jobs(d)
+            log_time = max(cur_time, log_time)
+    for d in simple_dirs:
+        d = os.path.join(target_dir, d)
+        cur_time = check_single_job(d)
+        if cur_time < log_time and cur_time != 0:
+            log("ERROR: A complete stamp from annotation was created after pairing/summary was run")
 
 
 def main():
     def usage(err=None, detail=False):
         name = os.path.basename(__file__)
-        u = '\nusage: {} {{cluster,validate,annotate,pairing,summary,pipeline,config}} [-h] [-v]'.format(name)
+        u = '\nusage: {} {{cluster,validate,annotate,pairing,summary,pipeline,config,checker}} [-h] [-v]'.format(name)
         helpmenu = """
 required arguments:
 
@@ -314,6 +464,8 @@ use the -h/--help option
             exit(1)
         exit(0)
 
+    start_time = int(time.time())
+
     if len(sys.argv) < 2:
         usage('the <pipeline step> argument is required')
     elif sys.argv[1] in ['-h', '--help']:
@@ -328,6 +480,7 @@ use the -h/--help option
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, add_help=False)
     required = parser.add_argument_group('required arguments')
     optional = parser.add_argument_group('optional arguments')
+    augment_parser(required, optional, ['help', 'version'])
 
     if pstep == 'config':
         generate_config(parser, required, optional)
@@ -341,7 +494,7 @@ use the -h/--help option
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
             augment_parser(
                 required, optional,
-                ['library', 'protocol', 'stranded_bam'] +
+                ['library', 'protocol', 'stranded_bam', 'disease_status'] +
                 ['annotations', 'masking'] + [k for k in vars(CLUSTER_DEFAULTS)]
             )
         elif pstep == PIPELINE_STEP.VALIDATE:
@@ -349,7 +502,7 @@ use the -h/--help option
             augment_parser(
                 required, optional,
                 ['library', 'protocol', 'bam_file', 'read_length', 'stdev_fragment_size', 'median_fragment_size'] +
-                ['stranded_bam', 'annotations', 'reference_genome', 'blat_2bit_reference', 'masking'] +
+                ['stranded_bam', 'annotations', 'reference_genome', 'aligner_reference', 'masking'] +
                 [k for k in vars(VALIDATION_DEFAULTS)]
             )
         elif pstep == PIPELINE_STEP.ANNOTATE:
@@ -374,10 +527,15 @@ use the -h/--help option
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
             augment_parser(
                 required, optional,
-                ['annotations', 'dgv_annotation', 'flanking_call_distance', 'split_call_distance', 'contig_call_distance',
-                 'spanning_call_distance'] +
+                ['annotations', 'dgv_annotation', 'flanking_call_distance', 'split_call_distance',
+                 'contig_call_distance', 'spanning_call_distance'] +
                 [k for k in vars(SUMMARY_DEFAULTS)]
             )
+        elif pstep == PIPELINE_STEP.CHECKER:
+
+            args = parser.parse_args()
+            check_completion(args.output)
+            exit(0)
         else:
             raise NotImplementedError('invalid value for <pipeline step>', pstep)
     args = parser.parse_args()
@@ -385,19 +543,20 @@ use the -h/--help option
     args.blat_version = get_blat_version()
 
     # set all reference files to their absolute paths to make tracking them down later easier
-    for arg in ['output', 'reference_genome', 'template_metadata', 'annotations', 'masking', 'blat_2bit_reference',
+    for arg in ['output', 'reference_genome', 'template_metadata', 'annotations', 'masking', 'aligner_reference',
                 'dgv_annotation']:
         try:
             args.__dict__[arg] = os.path.abspath(args.__dict__[arg])
         except (KeyError, TypeError):
             pass
 
-    log_arguments(args)
+    log('MAVIS: {}'.format(__version__))
+    log_arguments(args.__dict__)
 
     config = []
 
     if pstep == PIPELINE_STEP.PIPELINE:  # load the configuration file
-        temp, config = read_config(args.config)
+        temp, config, convert_config = read_config(args.config)
         args.__dict__.update(temp.__dict__)
 
     # load the reference files if they have been given and reset the arguments to hold the original file name and the
@@ -476,7 +635,17 @@ use the -h/--help option
     elif pstep == PIPELINE_STEP.SUMMARY:
         summary_main(**args.__dict__)
     else:  # PIPELINE
-        main_pipeline(args, config)
+        main_pipeline(args, config, convert_config)
+
+    duration = int(time.time()) - start_time
+    hours = duration - duration % 3600
+    minutes = duration - hours - (duration - hours) % 60
+    seconds = duration - hours - minutes
+    log(
+        'run time (hh/mm/ss): {}:{:02d}:{:02d}'.format(hours // 3600, minutes // 60, seconds),
+        time_stamp=False)
+    log('run time (s): {}'.format(duration), time_stamp=False)
+
 
 if __name__ == '__main__':
     main()
