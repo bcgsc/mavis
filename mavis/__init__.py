@@ -12,4 +12,4 @@ def get_version():
     return v
 
 
-__version__ = get_version()
+__version__ = '1.0.0'

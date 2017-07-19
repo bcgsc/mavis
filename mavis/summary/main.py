@@ -314,11 +314,13 @@ def main(
                         break
                 if lib1 in column:
                     if lib1 == column[0]:
-                        pairing_state = get_pairing_state(libraries[column[0]][1], libraries[column[0]][0],
-                                                          libraries[column[1]][1], libraries[column[1]][0], is_matched=found)
+                        pairing_state = get_pairing_state(
+                            libraries[column[0]][1], libraries[column[0]][0],
+                            libraries[column[1]][1], libraries[column[1]][0], is_matched=found)
                     else:
-                        pairing_state = get_pairing_state(libraries[column[1]][1], libraries[column[1]][0],
-                                                          libraries[column[0]][1], libraries[column[0]][0], is_matched=found)
+                        pairing_state = get_pairing_state(
+                            libraries[column[1]][1], libraries[column[1]][0],
+                            libraries[column[0]][1], libraries[column[0]][0], is_matched=found)
                 else:
                     pairing_state = "Not Applicable"
                 name = '{}_{}'.format(column[0], column[1])
