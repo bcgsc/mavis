@@ -605,7 +605,7 @@ use the -h/--help option
         else:
             args.reference_genome_filename = args.reference_genome
             args.reference_genome = None
-    except AttributeError as err:
+    except AttributeError:
         pass
 
     # masking file
@@ -617,7 +617,7 @@ use the -h/--help option
         else:
             args.masking_filename = args.masking
             args.masking = None
-    except AttributeError as err:
+    except AttributeError:
         pass
 
     # dgv annotation
@@ -629,7 +629,7 @@ use the -h/--help option
         else:
             args.dgv_annotation_filename = args.dgv_annotation
             args.dgv_annotation = None
-    except AttributeError as err:
+    except AttributeError:
         pass
 
     # template metadata

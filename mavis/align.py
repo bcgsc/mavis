@@ -146,7 +146,7 @@ def select_paired_alignments(
             call = BreakpointPair.call_breakpoint_pair(read1, read2)
             if not set(BreakpointPair.classify(call)) & putative_event_types:
                 continue
-        except (InvalidRearrangement, AssertionError) as err:
+        except (InvalidRearrangement, AssertionError):
             continue
         putative_alignments.append((read1, read2))
     return putative_alignments

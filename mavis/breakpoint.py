@@ -706,10 +706,10 @@ def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, **
             row[attr] = soft_null_cast(val)
         for attr in row:
             if attr in [COLUMNS.cluster_id, COLUMNS.annotation_id, COLUMNS.validation_id]:
-                if not re.match('^([A-Za-z0-9-]+|)$', row[attr]):
+                if not re.match('^([A-Za-z0-9-]+|)(;[A-Za-z0-9-]+)*$', row[attr]):
                     raise AssertionError(
                         'error in column', attr, 'All mavis pipeline step ids must satisfy the regex:',
-                        '^([A-Za-z0-9-]+|)$', row[attr])
+                        '^([A-Za-z0-9-]+|)(;[A-Za-z0-9-]+)*$', row[attr])
         stranded = row[COLUMNS.stranded]
         opp = row[COLUMNS.opposing_strands]
 
@@ -721,12 +721,22 @@ def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, **
 
         temp = []
         expand_strand = (stranded or explicit_strand) and expand_ns
-        for o1, o2, opp, s1, s2 in itertools.product(
+        event_type = [None]
+        try:
+            event_type = row[COLUMNS.event_type].split(';')
+            for et in event_type:
+                if et is not None:
+                    SVTYPE.enforce(event_type)
+        except KeyError:
+            pass
+
+        for o1, o2, opp, s1, s2, et in itertools.product(
             ORIENT.expand(row[COLUMNS.break1_orientation]) if expand_ns else [row[COLUMNS.break1_orientation]],
             ORIENT.expand(row[COLUMNS.break2_orientation]) if expand_ns else [row[COLUMNS.break2_orientation]],
             [True, False] if opp is None and expand_ns else [opp],
             STRAND.expand(strand1) if expand_strand else [strand1],
-            STRAND.expand(strand2) if expand_strand else [strand2]
+            STRAND.expand(strand2) if expand_strand else [strand2],
+            event_type
         ):
             try:
                 b1 = Breakpoint(
@@ -750,13 +760,14 @@ def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, **
                     b2,
                     opposing_strands=opp,
                     untemplated_seq=row[COLUMNS.untemplated_seq],
-                    stranded=row[COLUMNS.stranded]
+                    stranded=row[COLUMNS.stranded],
                 )
                 bpp.data.update(data)
-                event_type = bpp.data.get(COLUMNS.event_type, None)
-                if event_type and event_type not in BreakpointPair.classify(bpp):
-                    raise InvalidRearrangement(
-                        'error: expected one of', BreakpointPair.classify(bpp), 'but found', event_type)
+                if et:
+                    bpp.data[COLUMNS.event_type] = et
+                    if et not in BreakpointPair.classify(bpp):
+                        raise InvalidRearrangement(
+                            'error: expected one of', BreakpointPair.classify(bpp), 'but found', et)
                 temp.append(bpp)
             except InvalidRearrangement as err:
                 if not expand_ns:
