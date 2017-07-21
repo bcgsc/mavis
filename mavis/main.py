@@ -574,7 +574,7 @@ use the -h/--help option
     elif sys.argv[1] in ['-h', '--help']:
         usage(detail=True)
     elif sys.argv[1] in ['-v', '--version']:
-        print('{} version {}'.format(os.path.basename(__file__), __version__))
+        print('{} version {}'.format('mavis', __version__))
         exit(0)
 
     pstep = sys.argv.pop(1)
