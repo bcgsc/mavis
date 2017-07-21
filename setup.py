@@ -4,7 +4,6 @@ import sys
 import subprocess
 import os
 import re
-import glob
 
 # install local svn dependencies
 cwd = os.path.dirname(os.path.abspath(__file__))
@@ -14,24 +13,16 @@ vocab_version = '1.0.0'
 vocab_link = 'svn+https://svn.bcgsc.ca/svn/SVIA/vocab/tags/v{0}#egg=vocab-{0}'.format(vocab_version)
 
 
-def reload_path_for_pip():
-    for d in glob.glob(os.path.join(pip.locations.src_prefix, '*')):
-        if d not in sys.path:
-            sys.path.append(d)
-
-
 def install_vocab():
     try:
         import vocab
         if vocab.__version__ != vocab_version:
             raise ImportError('wrong version', vocab.__version__)
+        print('Using', vocab.__path__[0])
+        print(vocab.__package__ + '==' + vocab.__version__)
+        print()
     except ImportError:
         pip.main(['install', '-e', vocab_link, '--trusted-host', '*.bcgsc.ca', '--exists-action', 's'])
-        reload_path_for_pip()
-        import vocab
-    print('Using', vocab.__path__[0])
-    print(vocab.__package__ + '==' + vocab.__version__)
-    print()
 
 
 def install_TSV():
@@ -39,39 +30,29 @@ def install_TSV():
         import TSV
         if TSV.__version__ != tsv_version:
             raise ImportError('wrong version', TSV.__version__)
+        print('Using', TSV.__path__[0])
+        print(TSV.__package__ + '==' + TSV.__version__)
+        print()
     except ImportError:
         pip.main(['install', '-e', tsv_link, '--trusted-host', '*.bcgsc.ca', '--exists-action', 's'])
-        reload_path_for_pip()
-        import TSV
-    print('Using', TSV.__path__[0])
-    print(TSV.__package__ + '==' + TSV.__version__)
-    print()
 
 
 def check_nonpython_dependencies():
-    from mavis.validate.constants import DEFAULTS
-    from mavis.config import get_env_variable
     import shutil
-    from mavis.blat import get_blat_version
-    from mavis.bam.read import get_samtools_version
-
-    aligner = get_env_variable('aligner', DEFAULTS.aligner, str)
-    exe = shutil.which(aligner)
-    if not exe:
-        raise UserWarning('missing dependency', aligner)
+    pth = shutil.which('samtools')
+    if not pth:
+        raise OSError('samtools is required')
     else:
-        print('\nUsing', exe)
-        if aligner == 'blat':
-            version = get_blat_version()
-            print('Current version:', aligner, version)
-
-    tool = 'samtools'
-    exe = shutil.which(tool)
-    if not exe:
-        raise UserWarning('missing dependency', aligner)
+        print('FOUND: samtools at', pth)
+    pth = shutil.which('blat')
+    if not pth:
+        print('WARNING: missing blat executable. Blat is the default aligner')
+        pth = shutil.which('bwa')
+        if pth:
+            print('FOUND: bwa at', pth)
+            print('please use the MAVIS_ALIGNER environment variable or set the aligner in the config to change the default aligner')
     else:
-        print('\nUsing', exe)
-        print('Current version:', tool, 'v{}.{}.{}'.format(*get_samtools_version()))
+        print('FOUND: blat at', pth)
 
 
 def pull_version_from_git():
@@ -135,9 +116,7 @@ setup(
     ],
     setup_requires=[
         'nose>=1.0',
-        'numpy>=1.13.1',  # because biopython requires numpy to build but doesn't list it in setup_requires
-        'TSV=={}'.format(tsv_version),
-        'vocab=={}'.format(vocab_version)
+        'numpy>=1.13.1'  # put here b/c biopython doesn't declare this as a setup dependency properly
     ],
     test_suite='nose.collector',
     tests_require=['nose', 'timeout-decorator==0.3.3', 'coverage==4.2'],
