@@ -15,7 +15,7 @@ SUPPORTED_TOOL = Vocab(
     MANTA='manta',
     DELLY='delly',
     TA='transabyss',
-    # BREAKDANCER='breakdancer',
+    # BREAKDANCER='breakdancer',  # TODO: later versions will include support for these tools
     # PINDEL='pindel',
     CHIMERASCAN='chimerascan',
     MAVIS='mavis',
@@ -91,6 +91,7 @@ def _convert_tool_row(row, file_type, stranded):
         except KeyError:
             pass
 
+    # TODO: later versions will include support for these tools
     # elif file_type == SUPPORTED_TOOL.BREAKDANCER:
     #     std_row.update({
     #         'chr1': row['Chr1'], 'chr2': row['Chr2'],
@@ -167,7 +168,7 @@ def _convert_tool_row(row, file_type, stranded):
             )
             if event_type in BreakpointPair.classify(bpp):
                 result.append(bpp)
-        except (InvalidRearrangement, AssertionError) as err:
+        except (InvalidRearrangement, AssertionError):
             pass
     if len(result) == 0:
         raise UserWarning(
