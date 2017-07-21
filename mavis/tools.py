@@ -10,6 +10,7 @@ from vocab import Vocab
 from .breakpoint import read_bpp_from_input_file, Breakpoint, BreakpointPair
 from .error import InvalidRearrangement
 from .util import devnull
+from .constants import COLUMNS
 
 SUPPORTED_TOOL = Vocab(
     MANTA='manta',
@@ -164,7 +165,10 @@ def _convert_tool_row(row, file_type, stranded):
                     orient=orient2, strand=strand2
                 ),
                 opposing_strands=oppose,
-                event_type=event_type
+                event_type=event_type,
+                data={
+                    COLUMNS.tools: file_type
+                }
             )
             if event_type in BreakpointPair.classify(bpp):
                 result.append(bpp)
