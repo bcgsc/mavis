@@ -722,7 +722,7 @@ def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, **
         temp = []
         expand_strand = (stranded or explicit_strand) and expand_ns
         event_type = [None]
-        if row[COLUMNS.event_type] not in [None, 'None']:
+        if row.get(COLUMNS.event_type, None) not in [None, 'None']:
             try:
                 event_type = row[COLUMNS.event_type].split(';')
                 for et in event_type:
