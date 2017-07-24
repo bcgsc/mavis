@@ -50,7 +50,21 @@ class TestConvertToolRow(unittest.TestCase):
         self.assertEqual(4, len(bpp_list))
 
     def test_ta_indel_insertion(self):
-        raise unittest.SkipTest('TODO')
+        row = {
+            'chr': '1', 'chr_start': '10015', 'chr_end': '10015', 'ctg_strand': '-', 'type': 'ins'
+        }
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.TA, True)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('1', bpp.break1.chr)
+        self.assertEqual('1', bpp.break2.chr)
+        self.assertEqual(10015, bpp.break1.start)
+        self.assertEqual(10016, bpp.break2.start)
+        self.assertEqual(SVTYPE.INS, bpp.event_type)
+        self.assertEqual(False, bpp.opposing_strands)
+        self.assertEqual(STRAND.POS, bpp.break1.strand)
+        self.assertEqual(STRAND.POS, bpp.break2.strand)
+        self.assertEqual(True, bpp.stranded)
 
     def test_ta_indel_deletion(self):
         raise unittest.SkipTest('TODO')
@@ -66,3 +80,187 @@ class TestConvertToolRow(unittest.TestCase):
 
     def test_manta_deletion(self):
         raise unittest.SkipTest('TODO')
+
+    def test_defuse_inverted_translocation(self):
+        row = {
+            'gene_chromosome1': 'X',
+            'gene_chromosome2': '3',
+            'genomic_break_pos1': '153063989',
+            'genomic_break_pos2': '50294136',
+            'genomic_strand1': '+',
+            'genomic_strand2': '-'
+        }
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DEFUSE, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('3', bpp.break1.chr)
+        self.assertEqual('X', bpp.break2.chr)
+        self.assertEqual(50294136, bpp.break1.start)
+        self.assertEqual(153063989, bpp.break2.start)
+        self.assertEqual(None, bpp.event_type)
+        self.assertEqual(False, bpp.opposing_strands)
+        self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
+        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
+        self.assertEqual(False, bpp.stranded)
+
+    def test_defuse_translocation(self):
+        row = {
+            'gene_chromosome1': 'X',
+            'gene_chromosome2': '3',
+            'genomic_break_pos1': '153063989',
+            'genomic_break_pos2': '50294136',
+            'genomic_strand1': '+',
+            'genomic_strand2': '+'
+        }
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DEFUSE, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('3', bpp.break1.chr)
+        self.assertEqual('X', bpp.break2.chr)
+        self.assertEqual(50294136, bpp.break1.start)
+        self.assertEqual(153063989, bpp.break2.start)
+        self.assertEqual(None, bpp.event_type)
+        self.assertEqual(True, bpp.opposing_strands)
+        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
+        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
+        self.assertEqual(False, bpp.stranded)
+
+    def test_defuse_indel(self):
+        row = {
+            'gene_chromosome1': '1',
+            'gene_chromosome2': '1',
+            'genomic_break_pos1': '151732089',
+            'genomic_break_pos2': '1663681',
+            'genomic_strand1': '-',
+            'genomic_strand2': '+'
+        }
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DEFUSE, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('1', bpp.break1.chr)
+        self.assertEqual('1', bpp.break2.chr)
+        self.assertEqual(1663681, bpp.break1.start)
+        self.assertEqual(151732089, bpp.break2.start)
+        self.assertEqual(None, bpp.event_type)
+        self.assertEqual(False, bpp.opposing_strands)
+        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
+        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
+        self.assertEqual(False, bpp.stranded)
+
+    def test_defuse_inversion(self):
+        row = {
+            'gene_chromosome1': '1',
+            'gene_chromosome2': '1',
+            'genomic_break_pos1': '235294748',
+            'genomic_break_pos2': '144898348',
+            'genomic_strand1': '+',
+            'genomic_strand2': '+'
+        }
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DEFUSE, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('1', bpp.break1.chr)
+        self.assertEqual('1', bpp.break2.chr)
+        self.assertEqual(144898348, bpp.break1.start)
+        self.assertEqual(235294748, bpp.break2.start)
+        self.assertEqual(None, bpp.event_type)
+        self.assertEqual(True, bpp.opposing_strands)
+        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
+        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
+        self.assertEqual(False, bpp.stranded)
+
+    def test_chimerascan_pos_pos(self):
+        row = {
+            'chrom5p': 'chr3',
+            'start5p': '48599150',
+            'end5p': '48601200',
+            'chrom3p': 'chr3',
+            'start3p': '49555116',
+            'end3p': '49587666',
+            'strand5p': '+',
+            'strand3p': '+'
+        }
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.CHIMERASCAN, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('3', bpp.break1.chr)
+        self.assertEqual('3', bpp.break2.chr)
+        print(bpp)
+        self.assertEqual(int(row['end5p']), bpp.break1.start)
+        self.assertEqual(int(row['start3p']), bpp.break2.start)
+        self.assertEqual(False, bpp.opposing_strands)
+        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
+        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
+        self.assertEqual(False, bpp.stranded)
+
+    def test_chimerascan_pos_neg(self):
+        row = {
+            'chrom5p': 'chr3',
+            'start5p': '48599150',
+            'end5p': '48601200',
+            'chrom3p': 'chr3',
+            'start3p': '49555116',
+            'end3p': '49587666',
+            'strand5p': '+',
+            'strand3p': '-'
+        }
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.CHIMERASCAN, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('3', bpp.break1.chr)
+        self.assertEqual('3', bpp.break2.chr)
+        print(bpp)
+        self.assertEqual(int(row['end5p']), bpp.break1.start)
+        self.assertEqual(int(row['end3p']), bpp.break2.start)
+        self.assertEqual(True, bpp.opposing_strands)
+        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
+        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
+        self.assertEqual(False, bpp.stranded)
+
+    def test_chimerascan_neg_pos(self):
+        row = {
+            'chrom5p': 'chr3',
+            'start5p': '48599150',
+            'end5p': '48601200',
+            'chrom3p': 'chr3',
+            'start3p': '49555116',
+            'end3p': '49587666',
+            'strand5p': '-',
+            'strand3p': '+'
+        }
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.CHIMERASCAN, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('3', bpp.break1.chr)
+        self.assertEqual('3', bpp.break2.chr)
+        print(bpp)
+        self.assertEqual(int(row['start5p']), bpp.break1.start)
+        self.assertEqual(int(row['start3p']), bpp.break2.start)
+        self.assertEqual(True, bpp.opposing_strands)
+        self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
+        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
+        self.assertEqual(False, bpp.stranded)
+
+    def test_chimerascan_neg_neg(self):
+        row = {
+            'chrom5p': 'chr3',
+            'start5p': '48599150',
+            'end5p': '48601200',
+            'chrom3p': 'chr3',
+            'start3p': '49555116',
+            'end3p': '49587666',
+            'strand5p': '-',
+            'strand3p': '-'
+        }
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.CHIMERASCAN, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('3', bpp.break1.chr)
+        self.assertEqual('3', bpp.break2.chr)
+        print(bpp)
+        self.assertEqual(int(row['start5p']), bpp.break1.start)
+        self.assertEqual(int(row['end3p']), bpp.break2.start)
+        self.assertEqual(False, bpp.opposing_strands)
+        self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
+        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
+        self.assertEqual(False, bpp.stranded)

@@ -79,10 +79,10 @@ def load_bedpe(input_bedpe, version, filter_event=True):
             output[COLUMNS.break1_orientation] = ORIENT.RIGHT
         if row['strand3p'] == '+':
             output[COLUMNS.break2_position_start] = output[COLUMNS.break2_position_end] = row['start3p']
-            output[COLUMNS.break2_orientation] = ORIENT.LEFT
+            output[COLUMNS.break2_orientation] = ORIENT.RIGHT
         else:
             output[COLUMNS.break2_position_start] = output[COLUMNS.break2_position_end] = row['end3p']
-            output[COLUMNS.break2_orientation] = ORIENT.RIGHT
+            output[COLUMNS.break2_orientation] = ORIENT.LEFT
 
         output[COLUMNS.opposing_strands] = True if output[COLUMNS.break1_orientation] == \
             output[COLUMNS.break2_orientation] else False

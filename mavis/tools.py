@@ -38,7 +38,11 @@ TOOL_SVTYPE_MAPPING.update({
     'DUP': [SVTYPE.DUP],
     'interchromosomal': [SVTYPE.TRANS, SVTYPE.ITRANS],
     'eversion': [SVTYPE.DUP],
-    'translocation': [SVTYPE.TRANS, SVTYPE.ITRANS]
+    'translocation': [SVTYPE.TRANS, SVTYPE.ITRANS],
+    'ins': [SVTYPE.INS],
+    'del': [SVTYPE.DEL],
+    'dup': [SVTYPE.DUP],
+    'ITD': [SVTYPE.DUP]
 })
 
 
@@ -92,6 +96,23 @@ def _convert_tool_row(row, file_type, stranded):
         except KeyError:
             pass
 
+    elif file_type == SUPPORTED_TOOL.CHIMERASCAN:
+
+        std_row.update({'chr1': row['chrom5p'], 'chr2': row['chrom3p']})
+        if row['strand5p'] == '+':
+            std_row['pos1_start'] = row['end5p']
+            orient1 = ORIENT.LEFT
+        else:
+            std_row['pos1_start'] = row['start5p']
+            orient1 = ORIENT.RIGHT
+        if row['strand3p'] == '+':
+            std_row['pos2_start'] = row['start3p']
+            orient2 = ORIENT.RIGHT
+        else:
+            std_row['pos2_start'] = row['end3p']
+            orient2 = ORIENT.LEFT
+        std_row['opposing_strands'] = row['strand5p'] != row['strand3p']
+
     # TODO: later versions will include support for these tools
     # elif file_type == SUPPORTED_TOOL.BREAKDANCER:
     #     std_row.update({
@@ -105,6 +126,7 @@ def _convert_tool_row(row, file_type, stranded):
     #     std_row.update({'chr1': row['CHROM'], 'pos1_start': row['POS'], 'pos2_start': info['END']})
 
     elif file_type == SUPPORTED_TOOL.DEFUSE:
+
         orient1 = ORIENT.LEFT if row['genomic_strand1'] == STRAND.POS else ORIENT.RIGHT
         orient2 = ORIENT.LEFT if row['genomic_strand2'] == STRAND.POS else ORIENT.RIGHT
         std_row.update({
@@ -113,7 +135,8 @@ def _convert_tool_row(row, file_type, stranded):
         })
 
     elif file_type == SUPPORTED_TOOL.TA:
-        std_row['event_type'] = row['rearrangement']
+
+        std_row['event_type'] = row.get('rearrangement', row['type'])
         if row.get('type', None) == 'LSR':
             del std_row['event_type']
         if 'breakpoint' in row:
@@ -130,9 +153,10 @@ def _convert_tool_row(row, file_type, stranded):
             std_row.update({k: m[k] for k in ['chr1', 'pos1_start', 'chr2', 'pos2_start']})
         else:
             std_row.update({
-                'chr1': row['chr'], 'pos1_start': row['chr_start'], 'pos2_start': row['chr_end'] + 1})
+                'chr1': row['chr'], 'pos1_start': row['chr_start'], 'pos2_start': int(row['chr_end']) + 1
+            })
             if stranded:
-                strand1 = strand2 = row['ctg_strand']
+                strand1 = strand2 = (STRAND.POS if row['ctg_strand'] == STRAND.NEG else STRAND.NEG)
     else:
         raise NotImplementedError('unsupported file type', file_type)
 
@@ -145,12 +169,13 @@ def _convert_tool_row(row, file_type, stranded):
 
     combinations = list(itertools.product(
         ORIENT.expand(orient1), ORIENT.expand(orient2),
-        strand1, strand2, TOOL_SVTYPE_MAPPING[std_row['event_type']] if 'event_type' in std_row else SVTYPE.values(),
-        [True, False]
+        strand1, strand2, TOOL_SVTYPE_MAPPING[std_row['event_type']] if 'event_type' in std_row else [None],
+        [True, False] if 'opposing_strands' not in std_row else [std_row['opposing_strands']]
     ))
     # add the product of all uncertainties as breakpoint pairs
     for orient1, orient2, strand1, strand2, event_type, oppose in combinations:
         try:
+
             bpp = BreakpointPair(
                 Breakpoint(
                     std_row['chr1'],
@@ -159,7 +184,7 @@ def _convert_tool_row(row, file_type, stranded):
                     orient=orient1, strand=strand1
                 ),
                 Breakpoint(
-                    std_row['chr2'],
+                    std_row.get('chr2', std_row['chr1']),
                     std_row['pos2_start'],
                     std_row.get('pos2_end', std_row['pos2_start']),
                     orient=orient2, strand=strand2
@@ -168,10 +193,12 @@ def _convert_tool_row(row, file_type, stranded):
                 event_type=event_type,
                 data={
                     COLUMNS.tools: file_type
-                }
+                },
+                stranded=stranded
             )
-            if event_type in BreakpointPair.classify(bpp):
+            if not event_type or event_type in BreakpointPair.classify(bpp):
                 result.append(bpp)
+
         except (InvalidRearrangement, AssertionError):
             pass
     if len(result) == 0:
