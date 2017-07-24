@@ -478,6 +478,11 @@ def augment_parser(parser, optparser, arguments):
                 type=TSV.tsv_boolean,
                 help='If flag is False then the clusters will not be filtered based on lack of annotation'
             )
+        elif arg in CLUSTER_DEFAULTS:
+            value = CLUSTER_DEFAULTS[arg]
+            vtype = type(value) if not isinstance(value, bool) else TSV.tsv_boolean
+            optparser.add_argument(
+                '--{}'.format(arg), default=get_env_variable(arg, value), type=vtype, help='see user manual for desc')
         elif arg in PAIRING_DEFAULTS:
             optparser.add_argument(
                 '--{}'.format(arg), default=get_env_variable(arg, PAIRING_DEFAULTS[arg]), type=int,
