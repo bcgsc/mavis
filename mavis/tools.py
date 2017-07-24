@@ -175,7 +175,7 @@ def _convert_tool_row(row, file_type, stranded):
     # add the product of all uncertainties as breakpoint pairs
     for orient1, orient2, strand1, strand2, event_type, oppose in combinations:
         try:
-            
+
             bpp = BreakpointPair(
                 Breakpoint(
                     std_row['chr1'],

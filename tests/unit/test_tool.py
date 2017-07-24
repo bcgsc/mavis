@@ -102,7 +102,7 @@ class TestConvertToolRow(unittest.TestCase):
         self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
         self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
         self.assertEqual(False, bpp.stranded)
-    
+
     def test_defuse_translocation(self):
         row = {
             'gene_chromosome1': 'X',
