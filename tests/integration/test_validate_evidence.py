@@ -1,19 +1,12 @@
-import os
-import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, os.path.dirname(__file__))
-
 from mavis.breakpoint import Breakpoint
-from mavis.annotate import load_reference_genome, Gene, usTranscript, Transcript
-from mavis.constants import ORIENT, STRAND, CIGAR, PYSAM_READ_FLAGS, SVTYPE, CALL_METHOD
+from mavis.annotate import Gene, usTranscript, Transcript
+from mavis.constants import ORIENT, STRAND
 from mavis.interval import Interval
 from mavis.bam.cache import BamCache
 from . import MockRead, mock_read_pair
 import unittest
-from . import REFERENCE_GENOME_FILE, BAM_INPUT, FULL_BAM_INPUT, MockBamFileHandle
+from . import MockBamFileHandle
 from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
-import mavis.validate.call as call
-from mavis.validate.call import EventCall
 
 REFERENCE_GENOME = None
 

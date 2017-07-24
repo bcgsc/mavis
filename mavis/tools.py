@@ -10,13 +10,14 @@ from vocab import Vocab
 from .breakpoint import read_bpp_from_input_file, Breakpoint, BreakpointPair
 from .error import InvalidRearrangement
 from .util import devnull
+from .constants import COLUMNS
 
 SUPPORTED_TOOL = Vocab(
     MANTA='manta',
     DELLY='delly',
     TA='transabyss',
-    BREAKDANCER='breakdancer',
-    PINDEL='pindel',
+    # BREAKDANCER='breakdancer',  # TODO: later versions will include support for these tools
+    # PINDEL='pindel',
     CHIMERASCAN='chimerascan',
     MAVIS='mavis',
     DEFUSE='defuse'
@@ -91,12 +92,13 @@ def _convert_tool_row(row, file_type, stranded):
         except KeyError:
             pass
 
-    elif file_type == SUPPORTED_TOOL.BREAKDANCER:
-        std_row.update({
-            'chr1': row['Chr1'], 'chr2': row['Chr2'],
-            'pos1_start': row['Pos1'], 'pos2_start': row['Pos2'],
-            'event_type': row['Type']
-        })
+    # TODO: later versions will include support for these tools
+    # elif file_type == SUPPORTED_TOOL.BREAKDANCER:
+    #     std_row.update({
+    #         'chr1': row['Chr1'], 'chr2': row['Chr2'],
+    #         'pos1_start': row['Pos1'], 'pos2_start': row['Pos2'],
+    #         'event_type': row['Type']
+    #     })
 
     # elif file_type == SUPPORTED_TOOL.PINDEL:
     #     info = {k: v for k, v in ['='.split(x) for x in ';'.split(row['info'])]}
@@ -163,11 +165,14 @@ def _convert_tool_row(row, file_type, stranded):
                     orient=orient2, strand=strand2
                 ),
                 opposing_strands=oppose,
-                event_type=event_type
+                event_type=event_type,
+                data={
+                    COLUMNS.tools: file_type
+                }
             )
             if event_type in BreakpointPair.classify(bpp):
                 result.append(bpp)
-        except (InvalidRearrangement, AssertionError) as err:
+        except (InvalidRearrangement, AssertionError):
             pass
     if len(result) == 0:
         raise UserWarning(

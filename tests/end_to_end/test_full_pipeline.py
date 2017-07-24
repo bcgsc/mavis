@@ -36,8 +36,9 @@ def glob_exists(*pos, strict=True):
         return False
 
 
-def tail(output, count=10):
-    for l in output.decode('UTF8').split('\n')[-1 * count:]:
+def tail(output, count=50):
+    output = output.decode('UTF8').split('\n')
+    for l in output[max(len(output) - count, 0):]:
         print(l)
 
 
@@ -47,13 +48,15 @@ def tail(output, count=10):
 class TestFullPipeline(unittest.TestCase):
 
     def test_mocked(self):
-        command = 'python {} pipeline {} -o {}'.format(main_run_script, config, temp_output)
+        command = 'mavis pipeline {} -o {}'.format(config, temp_output)
         print(command)
-        output = subprocess.check_output(command, shell=True)
+        print(os.environ)
+        output = subprocess.check_output(command, shell=True, env=os.environ)
         tail(output)
 
         # check that the subdirectories were built
         for lib in[mock_genome + '_*', mock_trans + '_*']:
+            print('lib', lib)
             self.assertTrue(glob_exists(temp_output, lib, 'clustering'))
             self.assertTrue(glob_exists(temp_output, lib, 'clustering', 'batch-*-1.tab'))
             self.assertTrue(glob_exists(temp_output, lib, 'clustering', 'uninformative_clusters.txt'))
@@ -67,7 +70,7 @@ class TestFullPipeline(unittest.TestCase):
             self.assertTrue(glob_exists(qsub))
             command = 'export SGE_TASK_ID=1; bash {}'.format(qsub)
             print(command)
-            output = subprocess.check_output(command, shell=True)
+            output = subprocess.check_output(command, shell=True, env=os.environ)
             tail(output)
 
             for suffix in [
@@ -93,7 +96,7 @@ class TestFullPipeline(unittest.TestCase):
             self.assertTrue(glob_exists(qsub))
             command = 'export SGE_TASK_ID=1; bash {}'.format(qsub)
             print(command)
-            output = subprocess.check_output(command, shell=True)
+            output = subprocess.check_output(command, shell=True, env=os.environ)
             tail(output)
             # check the generated files
             self.assertTrue(glob_exists(temp_output, lib, 'annotation/*-1', 'annotations.tab'))
@@ -108,7 +111,7 @@ class TestFullPipeline(unittest.TestCase):
         self.assertTrue(glob_exists(qsub))
         command = 'export SGE_TASK_ID=1; bash {}'.format(qsub)
         print(command)
-        output = subprocess.check_output(command, shell=True)
+        output = subprocess.check_output(command, shell=True, env=os.environ)
         tail(output)
 
         self.assertTrue(glob_exists(temp_output, 'pairing', 'mavis_paired*.tab'))
@@ -120,7 +123,7 @@ class TestFullPipeline(unittest.TestCase):
         self.assertTrue(glob_exists(qsub))
         command = 'export SGE_TASK_ID=1; bash {}'.format(qsub)
         print(command)
-        output = subprocess.check_output(command, shell=True)
+        output = subprocess.check_output(command, shell=True, env=os.environ)
         tail(output)
 
         self.assertTrue(glob_exists(temp_output, 'summary', 'mavis_summary*.tab'))

@@ -1,3 +1,4 @@
+#!python
 import os
 import re
 import sys
@@ -24,7 +25,7 @@ from mavis.summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 
 from mavis.config import augment_parser, write_config, LibraryConfig, read_config, get_env_variable
 from mavis.util import log, mkdirp, log_arguments, output_tabbed_file
-from mavis.constants import PROTOCOL, PIPELINE_STEP
+from mavis.constants import PROTOCOL, PIPELINE_STEP, DISEASE_STATUS
 from mavis.bam.read import get_samtools_version
 from mavis.blat import get_blat_version
 from mavis.tools import convert_tool_output, SUPPORTED_TOOL
@@ -33,7 +34,7 @@ from datetime import datetime
 
 
 VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
-PROGNAME = os.path.basename(__file__)
+PROGNAME = 'mavis'
 
 QSUB_HEADER = """#!/bin/bash
 #$ -V
@@ -50,6 +51,7 @@ def main_pipeline(args, configs, convert_config):
     annotation_jobs = []
     rand = int(random.random() * math.pow(10, 10))
     conversion_dir = mkdirp(os.path.join(args.output, 'converted_inputs'))
+    pairing_inputs = []
 
     for sec in configs:
         base = os.path.join(args.output, '{}_{}_{}'.format(sec.library, sec.disease_status, sec.protocol))
@@ -169,6 +171,9 @@ def main_pipeline(args, configs, convert_config):
             fh.write(
                 ' \\\n\t--output {}\n'.format(
                     os.path.join(annotation_output, os.path.basename(merge_file_prefix) + '$SGE_TASK_ID')))
+            for sge_task_id in range(1, len(output_files) + 1):
+                pairing_inputs.append(os.path.join(
+                    annotation_output, os.path.basename(merge_file_prefix) + str(sge_task_id), 'annotations.tab'))
 
     # set up scripts for the pairing held on all of the annotation jobs
     pairing_output = mkdirp(os.path.join(args.output, 'pairing'))
@@ -183,7 +188,7 @@ def main_pipeline(args, configs, convert_config):
     )
     temp = ['--{} {}'.format(k, v) for k, v in pairing_args.items() if not isinstance(v, str) and v is not None]
     temp.extend(['--{} "{}"'.format(k, v) for k, v in pairing_args.items() if isinstance(v, str) and v is not None])
-    temp.append('--inputs {}'.format(os.path.join(args.output, '*/annotation/*/annotations.tab')))
+    temp.append('--inputs {}'.format(' \\\n\t'.join(pairing_inputs)))
     pairing_args = temp
     qsub = os.path.join(pairing_output, 'qsub.sh')
     pairing_jobname = 'mavis_pairing_{}'.format(rand)
@@ -342,102 +347,200 @@ def time_diff(start, end):
     return td.seconds / 3600
 
 
-def unique_exists(pattern):
+def unique_exists(pattern, allow_none=False):
     result = glob.glob(pattern)
     if len(result) == 1:
         return result[0]
     elif len(result) > 0:
         raise OSError('duplicate results:', result)
+    elif allow_none:
+        return None
     else:
-        return 0
+        raise OSError('no result found', pattern)
 
 
-def check_log(log_file):
+def print_incomplete_log_details(log_file):
     with open(log_file) as job_out:
         lines = job_out.readlines()
-        if 'error' in lines[-1].lower():
-            log(" * CRASH: {}".format(lines[-1]), time_stamp=False)
+        if len(lines) == 0:
+            log('** ERROR: log file is empty', log_file)
+        elif 'error' in lines[-1].lower():
+            log('** CRASH: {}'.format(lines[-1]), time_stamp=False)
         else:
-            log(" * Still running:", time_stamp=False)
-            log(" ** last out: '{}'".format(lines[-1]), time_stamp=False)
+            log('** Incomplete: {}'.format(log_file), time_stamp=False)
+            log('last \'n\' lines output', time_stamp=False)
+            for line in lines[-10:]:
+                print(line.strip())
+            log('last modified on: {}'.format(time.ctime(os.path.getmtime(log_file))), time_stamp=False)
 
 
-def check_multiple_jobs(directory):
+def parse_runtime_from_log(log_file):
+
+    with open(log_file) as job_out:
+        lines = job_out.readlines()
+        if len(lines) > 0:
+            for line in lines[-10:]:
+                m = re.match('^\s*run time \(s\): (\d+)\s*$', line)
+                if m:
+                    return int(m.group(1))
+    raise OSError('error in parsing the log file for run times', log_file, '^\s*run time (s): (\d+)\s*$')
+
+
+def check_library_dir(library_dir, verbose=False):
     """
-    checks the completion of directory with the split jobs
+    checks the completion of library directory and its clustering, validation and annotation subdirectories
     """
-    log_time = 0
-    log("Checking {} ".format(directory))
-    cluster_files = glob.glob(os.path.join(directory, 'clustering', 'batch*.tab'))
-    if len(cluster_files) == 0:
-        raise OSError('cluster directory is empty, MAVIS has not completed succesffully or input was not a MAVIS output directory')
-    for subdir in ['validation', 'annotation']:
-        stamps = []
-        fail_count = 0
-        missing = []
-        for count in range(1, len(cluster_files) + 1):
-            count = str(count)
-            stamp = unique_exists(os.path.join(directory, subdir, '*-' + count, '*.COMPLETE'))
-            if stamp == 0:
-                fail_count += 1
-                log_files = glob.glob(os.path.join(directory, subdir, '*.o*.' + count))
-                if len(log_files) == 0:
-                    missing.append(count)
-                else:
-                    check_log(max(log_files, key=os.path.getctime))
-            else:
-                stamps.append(stamp)
-        if len(missing) == len(cluster_files):
-            log("{} has not started.".format(subdir), time_stamp=False)
-        elif len(missing) > 0:
-            log("the following jobs in {} have not started {}".format(subdir, ','.join(missing)), time_stamp=False)
-        elif fail_count == 0:
-            log("{} was successful".format(subdir), time_stamp=False)
-            if os.path.getctime(max(stamps, key=os.path.getctime)) < log_time:
-                log("ERROR: A complete stamp for validation is after a complete stamp for annotation")
-            log_time = os.path.getctime(max(stamps, key=os.path.getctime))
-        return log_time
+    log('Checking {} '.format(os.path.basename(library_dir)))
+
+    clustering_dir = os.path.join(library_dir, 'clustering')
+    if not os.path.isdir(clustering_dir):
+        raise OSError('missing clustering directory', clustering_dir)
+
+    clustering_complete_stamp = os.path.join(clustering_dir, 'MAVIS.COMPLETE')
+    if not os.path.exists(clustering_complete_stamp):
+        raise OSError('missing completion stamp', clustering_complete_stamp)
+    log('clustering OK', time_stamp=False)
+    # check for multiple batches as well as number of jobs run per batch
+    batches = {}
+    for job in [os.path.basename(p) for p in glob.glob(os.path.join(clustering_dir, 'batch*.tab'))]:
+        batch = re.sub('-\d+.tab$', '', job)
+        batches[batch] = batches.get(batch, 0) + 1
+    if len(batches) > 1:
+        raise OSError('Multiple clustering runs were found in the clustering directory', clustering_dir, list(batches.keys()))
+    elif len(batches) == 0:
+        raise OSError('No clustering output files were created', clustering_dir)
+
+    batch_id, job_count = list(batches.items())[0]
+    stamps = {'validation': {}, 'annotation': {}}
+    run_times = {'validation': {}, 'annotation': {}}
+    for stage_subdir in ['validation', 'annotation']:
+        incomplete = 0
+        missing_logs = 0
+        curr_run_times = []
+        for job_task_id in [str(c) for c in range(1, job_count + 1)]:
+            stamp_pattern = os.path.join(library_dir, stage_subdir, batch_id + '-' + job_task_id, '*.COMPLETE')
+            log_pattern = os.path.join(library_dir, stage_subdir, '*.' + job_task_id)
+            try:
+                stamp = unique_exists(stamp_pattern)
+                stamps[stage_subdir][job_task_id] = os.path.getctime(stamp)
+            except OSError as err:
+                if verbose:
+                    log('missing complete stamp:', err, time_stamp=False)
+                incomplete += 1
+            try:
+                logfile = unique_exists(log_pattern)
+            except OSError as err:
+                if verbose:
+                    log('missing log file', err)
+                missing_logs += 1
+
+            if not stamp and logfile:
+                print_incomplete_log_details(logfile)
+            elif stamp and logfile:
+                rt = parse_runtime_from_log(logfile)
+                curr_run_times.append(rt)
+                run_times[stage_subdir][job_task_id] = rt
+
+        if incomplete > 0:
+            log(incomplete, 'jobs are incomplete', stage_subdir, time_stamp=False)
+        if missing_logs > 0:
+            log(missing_logs, 'log files are missing', stage_subdir, time_stamp=False)
+        if incomplete + missing_logs == 0:
+            log(stage_subdir, 'OK', time_stamp=False)
+            log('\trun time (s): {} (max), {} (total)'.format(max(curr_run_times), sum(curr_run_times)), time_stamp=False)
+
+    max_rt = []
+    for job, create_time in stamps['validation'].items():
+        if create_time < os.path.getctime(clustering_complete_stamp):
+            log('** ERROR: the clustering complete stamp must precede validation complete stamps')
+        if job in stamps['annotation'] and stamps['annotation'][job] < create_time:
+            log('** ERROR: A complete stamp for validation is after a complete stamp for annotation')
+        if job in run_times['validation'] and job in run_times['annotation']:
+            max_rt.append(run_times['validation'][job] + run_times['annotation'][job])
+
+    return (
+        max(list(stamps['validation'].values()) + list(stamps['annotation'].values())),
+        max(max_rt) if len(max_rt) else None,
+        sum(max_rt) if len(max_rt) else None
+    )
 
 
 def check_single_job(directory):
-    """
-    """
-    log("Checking {} ".format(directory))
-    stamp = unique_exists(os.path.join(directory, '*.COMPLETE'))
-    if stamp == 0:
-        log_files = glob.glob(os.path.join(directory, '*.o*'))
-        if len(log_files) == 0:
-            log("{} has not started.".format(os.path.basename(directory)), time_stamp=False)
-        else:
-            check_log(max(log_files, key=os.path.getctime))
-        return 0
-    else:
-        log("{} was successful".format(os.path.basename(directory)), time_stamp=False)
-        return os.path.getctime(stamp)
+    name = os.path.basename(directory)
+    stamp_pattern = os.path.join(directory, '*.COMPLETE')
+    log_pattern = os.path.join(directory, '*.o*')
+    try:
+        stamp = unique_exists(stamp_pattern)
+    except OSError as err:
+        log('** INCOMPLETE: missing the complete stamp', stamp_pattern)
+        return
+    try:
+        logfile = unique_exists(log_pattern, allow_none=True)
+    except OSError as err:
+        log('** ERROR', err)
+
+    rt = None
+    if not stamp and not logfile:
+        log(name, 'has not started', time_stamp=False)
+    elif not stamp:
+        print_incomplete_log_details(logfile)
+    elif stamp:
+        log(name, 'OK')
+        rt = parse_runtime_from_log(logfile)
+        log('\trun time (s):', rt)
+
+    return (os.path.getctime(stamp) if stamp else None, rt)
 
 
 def check_completion(target_dir):
+    """
+    Args:
+        target_dir (str): path to the main pipeline output directory
+    """
     if not os.path.isdir(target_dir):
         raise TypeError('expected a directory as input')
-    directories = sorted(glob.glob(os.path.join(target_dir, '*')))
-    simple_dirs = ['pairing', 'summary']
-    log_time = 0
-    for d in directories:
-        name = os.path.basename(d)
-        if name not in simple_dirs:
-            cur_time = check_multiple_jobs(d)
-            log_time = max(cur_time, log_time)
-    for d in simple_dirs:
-        d = os.path.join(target_dir, d)
-        cur_time = check_single_job(d)
-        if cur_time < log_time and cur_time != 0:
-            log("ERROR: A complete stamp from annotation was created after pairing/summary was run")
+    library_dir_regex = '^[\w-]+_({})_({})$'.format('|'.join(DISEASE_STATUS.values()), '|'.join(PROTOCOL.values()))
+    summary_stamp = None
+    pairing_stamp = None
+    library_stamps = []
+    pipeline_total_rt = 0
+    pipeline_max_rt = 0
+    for subdir in sorted(glob.glob(os.path.join(target_dir, '*'))):
+        name = os.path.basename(subdir)
+        if name == 'summary':
+            summary_stamp, rt = check_single_job(subdir)
+            if rt:
+                pipeline_total_rt += rt
+                pipeline_max_rt += rt
+        elif name == 'pairing':
+            pairing_stamp, rt = check_single_job(subdir)
+            if rt:
+                pipeline_max_rt += rt
+                pipeline_total_rt += rt
+        elif re.match(library_dir_regex, name):
+            last_timestamp, max_rt, total_rt = check_library_dir(subdir)
+            if max_rt:
+                pipeline_total_rt += total_rt
+                pipeline_max_rt += max_rt
+            library_stamps.append(last_timestamp)
+        else:
+            log('ignoring dir', subdir)
+    library_stamp = max(library_stamps)
+
+    if pairing_stamp and pairing_stamp < library_stamp:
+        log('** ERROR: pairing completion stamp is older than library stamps')
+    if summary_stamp and summary_stamp < pairing_stamp:
+        log('** ERROR: summary stamp is older than pairing stamp')
+
+    if pipeline_total_rt:
+        log('pipeline total run time (s):', pipeline_total_rt)
+    if pipeline_max_rt:
+        log('pipeline max parallel run time (s):', pipeline_max_rt)
 
 
 def main():
     def usage(err=None, detail=False):
-        name = os.path.basename(__file__)
-        u = '\nusage: {} {{cluster,validate,annotate,pairing,summary,pipeline,config,checker}} [-h] [-v]'.format(name)
+        u = '\nusage: {} {{cluster,validate,annotate,pairing,summary,pipeline,config,checker}} [-h] [-v]'.format(PROGNAME)
         helpmenu = """
 required arguments:
 
@@ -455,12 +558,12 @@ To bring up individual help menus for a given pipeline step
 use the -h/--help option
 
     >>> {} <pipeline step> -h
-    """.format(name)
+    """.format(PROGNAME)
         print(u)
         if detail:
             print(helpmenu)
         if err:
-            print('{}: error:'.format(name), err, '\n')
+            print('{}: error:'.format(PROGNAME), err, '\n')
             exit(1)
         exit(0)
 
@@ -471,7 +574,7 @@ use the -h/--help option
     elif sys.argv[1] in ['-h', '--help']:
         usage(detail=True)
     elif sys.argv[1] in ['-v', '--version']:
-        print('{} version {}'.format(os.path.basename(__file__), __version__))
+        print('{} version {}'.format('mavis', __version__))
         exit(0)
 
     pstep = sys.argv.pop(1)
@@ -584,7 +687,7 @@ use the -h/--help option
         else:
             args.reference_genome_filename = args.reference_genome
             args.reference_genome = None
-    except AttributeError as err:
+    except AttributeError:
         pass
 
     # masking file
@@ -596,7 +699,7 @@ use the -h/--help option
         else:
             args.masking_filename = args.masking
             args.masking = None
-    except AttributeError as err:
+    except AttributeError:
         pass
 
     # dgv annotation
@@ -608,7 +711,7 @@ use the -h/--help option
         else:
             args.dgv_annotation_filename = args.dgv_annotation
             args.dgv_annotation = None
-    except AttributeError as err:
+    except AttributeError:
         pass
 
     # template metadata

@@ -10,60 +10,17 @@ strand (even when the match is on the reverse strand). However on the qStarts[] 
 
 
 """
-import pysam
 import math
 import subprocess
 import warnings
 import re
-import os
 import TSV
-from .constants import CIGAR, DNA_ALPHABET, STRAND, reverse_complement, NA_MAPPING_QUALITY, COLUMNS, PYSAM_READ_FLAGS
+from .constants import CIGAR, DNA_ALPHABET, STRAND, reverse_complement, NA_MAPPING_QUALITY, PYSAM_READ_FLAGS
 from .bam import cigar as cigar_tools
+from .bam.read import SamRead
 from .bam.cigar import QUERY_ALIGNED_STATES
 from .interval import Interval
-from .align import select_paired_alignments, query_coverage_interval
-from .util import devnull
-
-
-class BlatAlignedSegment(pysam.AlignedSegment):
-    """
-    """
-
-    def __init__(self, reference_name=None, blat_score=None):
-        """
-        Args:
-            row (:class:`dict` by :class:`str`): a row dictionary from the Blat.read_pslx method
-        """
-        pysam.AlignedSegment.__init__(self)
-        if reference_name is None:
-            self._reference_name = pysam.AlignedSegment.reference_name(self)
-        else:
-            self._reference_name = reference_name
-        self.blat_score = blat_score
-
-    def __repr__(self):
-        return '{}({}:{}, {}, {})'.format(
-            self.__class__.__name__, self.reference_name, self.reference_start,
-            self.cigar, self.query_sequence
-        )
-
-    def __copy__(self):
-        cp = BlatAlignedSegment(self.reference_name, self.blat_score)
-        cp.query_sequence = self.query_sequence
-        cp.reference_start = self.reference_start
-        cp.reference_id = self.reference_id
-        cp.cigar = self.cigar
-        cp.query_name = self.query_name
-        cp.mapping_quality = self.mapping_quality
-        cp.set_tags(self.get_tags())
-        cp.flag = self.flag
-        cp.next_reference_id = self.next_reference_id
-        cp.next_reference_start = self.next_reference_start
-        return cp
-
-    @property
-    def reference_name(self):
-        return self._reference_name
+from .align import query_coverage_interval, SUPPORTED_ALIGNER
 
 
 class Blat:
@@ -320,7 +277,7 @@ class Blat:
             temp = query_sequence[query_ranges[-1][1] + 1:]
             seq += temp
             cigar.append((CIGAR.S, len(temp)))
-        read = BlatAlignedSegment(row['tname'], row['score'])
+        read = SamRead(reference_name=row['tname'], alignment_score=row['score'])
         read.query_sequence = seq
         read.reference_start = row['tstarts'][0]
         read.reference_id = chrom
@@ -349,7 +306,7 @@ class Blat:
 
 
 def get_blat_version():
-    proc = subprocess.getoutput(['blat'])
+    proc = subprocess.getoutput([SUPPORTED_ALIGNER.BLAT])
     for line in proc.split('\n'):
         m = re.search('blat - Standalone BLAT v. (\d+(x\d+)?)', line)
         if m:

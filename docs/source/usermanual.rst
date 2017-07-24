@@ -234,14 +234,14 @@ by running the without any arguments, or by giving the -h/--help option
 
 .. code-block:: bash
 
-    >>> mavis_run.py
+    >>> mavis
 
 
 Help sub-menus can be found by giving the pipeline step followed by no arguments or the -h options
 
 .. code-block:: bash
 
-    >>> mavis_run.py cluster -h
+    >>> mavis cluster -h
 
 
 Generating a config file automatically
@@ -253,7 +253,7 @@ can be output as shown below
 
 .. code-block:: bash
 
-    >>> mavis_run.py config --write template.cfg
+    >>> mavis config --write template.cfg
 
 This will create a template config file called template.cfg which can then be edited by the user. However this will be 
 a simple config with no library information. To generate a configuration file with the library information as well as 
@@ -263,7 +263,7 @@ A simple example with a single library would look like this (see below)
 
 .. code-block:: bash
 
-    >>> mavis_run.py config --write output.cfg \
+    >>> mavis config --write output.cfg \
         --library Library1 genome diseased /path/to/bam/file/library1.bam False
 
 This creates a configuration file but is still missing some information before it can be run by the pipeline, the input
@@ -271,7 +271,7 @@ files containing the breakpoint pairs. So a more complete example is shown below
 
 .. code-block:: bash
 
-    >>> mavis_run.py config --write output.cfg \
+    >>> mavis config --write output.cfg \
         --library Library1 genome diseased /path/to/bam/file/library1.bam False \
         --library Library2 genome normal /path/to/bam/file/library2.bam False \
         --input /path/to/bpp/file Library1 Library2 \
@@ -297,6 +297,7 @@ following attributes given (see below).
     stdev_fragment_size = 100
     stranded_bam = False
     inputs = /path/to/bpp/file
+    disease_status = diseased
 
 
 .. |TOOLNAME| replace:: **MAVIS**

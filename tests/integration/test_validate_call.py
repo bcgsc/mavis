@@ -1,8 +1,3 @@
-import os
-import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, os.path.dirname(__file__))
-
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.annotate import load_reference_genome, usTranscript
 from mavis.constants import ORIENT, STRAND, CIGAR, PYSAM_READ_FLAGS, SVTYPE, CALL_METHOD
