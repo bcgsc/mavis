@@ -153,7 +153,8 @@ def _convert_tool_row(row, file_type, stranded):
             std_row.update({k: m[k] for k in ['chr1', 'pos1_start', 'chr2', 'pos2_start']})
         else:
             std_row.update({
-                'chr1': row['chr'], 'pos1_start': row['chr_start'], 'pos2_start': int(row['chr_end']) + 1})
+                'chr1': row['chr'], 'pos1_start': row['chr_start'], 'pos2_start': int(row['chr_end']) + 1
+            })
             if stranded:
                 strand1 = strand2 = (STRAND.POS if row['ctg_strand'] == STRAND.NEG else STRAND.NEG)
     else:
@@ -197,7 +198,6 @@ def _convert_tool_row(row, file_type, stranded):
             )
             if not event_type or event_type in BreakpointPair.classify(bpp):
                 result.append(bpp)
-                print(orient1, orient2, strand1, strand2, event_type, oppose)
 
         except (InvalidRearrangement, AssertionError):
             pass
