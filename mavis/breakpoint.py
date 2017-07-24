@@ -722,13 +722,13 @@ def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, **
         temp = []
         expand_strand = (stranded or explicit_strand) and expand_ns
         event_type = [None]
-        try:
-            event_type = row[COLUMNS.event_type].split(';')
-            for et in event_type:
-                if et is not None:
+        if row.get(COLUMNS.event_type, None) not in [None, 'None']:
+            try:
+                event_type = row[COLUMNS.event_type].split(';')
+                for et in event_type:
                     SVTYPE.enforce(event_type)
-        except KeyError:
-            pass
+            except KeyError:
+                pass
 
         for o1, o2, opp, s1, s2, et in itertools.product(
             ORIENT.expand(row[COLUMNS.break1_orientation]) if expand_ns else [row[COLUMNS.break1_orientation]],
@@ -763,7 +763,7 @@ def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, **
                     stranded=row[COLUMNS.stranded],
                 )
                 bpp.data.update(data)
-                if et:
+                if et is not None:
                     bpp.data[COLUMNS.event_type] = et
                     if et not in BreakpointPair.classify(bpp):
                         raise InvalidRearrangement(
