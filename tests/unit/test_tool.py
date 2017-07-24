@@ -49,7 +49,7 @@ class TestConvertToolRow(unittest.TestCase):
             print(b)
         self.assertEqual(4, len(bpp_list))
 
-    def test_ta_indel_insertion(self):
+    def test_ta_stranded_indel_insertion(self):
         row = {
             'chr': '1', 'chr_start': '10015', 'chr_end': '10015', 'ctg_strand': '-', 'type': 'ins'
         }
@@ -75,8 +75,17 @@ class TestConvertToolRow(unittest.TestCase):
     def test_ta_translocation(self):
         raise unittest.SkipTest('TODO')
 
-    def test_ta_stranded(self):
-        raise unittest.SkipTest('TODO')
+    def test_ta_stranded_translocation(self):
+        row = {
+            'strands': '+,-',
+            'rearrangement': 'translocation',
+            'breakpoint': '17:16342728|17:39766281',
+            'orientations': 'L,L',
+            'type': 'sense_fusion',
+            '_index': 5261
+        }
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.TA, True)
+        self.assertEqual(1, len(bpp_list))
 
     def test_manta_deletion(self):
         raise unittest.SkipTest('TODO')

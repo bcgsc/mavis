@@ -137,7 +137,7 @@ def _convert_tool_row(row, file_type, stranded):
     elif file_type == SUPPORTED_TOOL.TA:
 
         std_row['event_type'] = row.get('rearrangement', row['type'])
-        if row.get('type', None) == 'LSR':
+        if std_row['event_type'] in ['LSR', 'translocation']:
             del std_row['event_type']
         if 'breakpoint' in row:
             orient1, orient2 = row['orientations'].split(',')
