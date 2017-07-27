@@ -290,6 +290,7 @@ def main(
         COLUMNS.flanking_pairs,
         COLUMNS.break1_split_reads,
         COLUMNS.break2_split_reads,
+        COLUMNS.linking_split_reads,
         COLUMNS.contig_alignment_score,
         COLUMNS.spanning_reads,
         COLUMNS.contig_remapped_reads,

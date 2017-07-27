@@ -113,10 +113,16 @@ class TestIntervalPair(unittest.TestCase):
         self.assertEqual([a, b, c], groups[0])
         self.assertEqual([c, d, e], groups[1])
 
+    def test_merge_retains_break_order(self):
+        pairs = [IntervalPair((25, 25), (26, 26)), IntervalPair((38, 38), (38, 39))]
+        m = IntervalPair.merge(*pairs, weight_adjustment=100)
+        self.assertEqual(Interval(32, 32), m[0])
+        self.assertEqual(Interval(32, 33), m[1])
+
 
 class TestMergeIntegerIntervals(unittest.TestCase):
     def test_varying_lengths(self):
-        m = merge_integer_intervals((1, 2), (1, 9), (2, 10))
+        m = merge_integer_intervals((1, 2), (1, 9), (2, 10), weight_adjustment=0)
         self.assertEqual(Interval(1, 4), m)
 
     def test_same_length(self):
