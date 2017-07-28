@@ -368,9 +368,9 @@ def print_incomplete_log_details(log_file):
             log('** CRASH: {}'.format(lines[-1]), time_stamp=False)
         else:
             log('** Incomplete: {}'.format(log_file), time_stamp=False)
-            log('last \'n\' lines output', time_stamp=False)
-            for line in lines[-10:]:
-                print(line.strip())
+            # log('last \'n\' lines output', time_stamp=False)
+            # for line in lines[-10:]:
+            #     print(line.strip())
             log('last modified on: {}'.format(time.ctime(os.path.getmtime(log_file))), time_stamp=False)
 
 
@@ -424,12 +424,14 @@ def check_library_dir(library_dir, verbose=False):
                 stamp = unique_exists(stamp_pattern)
                 stamps[stage_subdir][job_task_id] = os.path.getctime(stamp)
             except OSError as err:
+                stamp = None
                 if verbose:
                     log('missing complete stamp:', err, time_stamp=False)
                 incomplete += 1
             try:
                 logfile = unique_exists(log_pattern)
             except OSError as err:
+                logfile = None
                 if verbose:
                     log('missing log file', err)
                 missing_logs += 1
@@ -457,9 +459,10 @@ def check_library_dir(library_dir, verbose=False):
             log('** ERROR: A complete stamp for validation is after a complete stamp for annotation')
         if job in run_times['validation'] and job in run_times['annotation']:
             max_rt.append(run_times['validation'][job] + run_times['annotation'][job])
-
+    
+    stamp_times = list(stamps['validation'].values()) + list(stamps['annotation'].values())
     return (
-        max(list(stamps['validation'].values()) + list(stamps['annotation'].values())),
+        max(stamp_times) if stamp_times else None,
         max(max_rt) if len(max_rt) else None,
         sum(max_rt) if len(max_rt) else None
     )
@@ -473,7 +476,7 @@ def check_single_job(directory):
         stamp = unique_exists(stamp_pattern)
     except OSError as err:
         log('** INCOMPLETE: missing the complete stamp', stamp_pattern)
-        return
+        return None, None
     try:
         logfile = unique_exists(log_pattern, allow_none=True)
     except OSError as err:
@@ -522,10 +525,11 @@ def check_completion(target_dir):
             if max_rt:
                 pipeline_total_rt += total_rt
                 pipeline_max_rt += max_rt
-            library_stamps.append(last_timestamp)
+            if last_timestamp:
+                library_stamps.append(last_timestamp)
         else:
             log('ignoring dir', subdir)
-    library_stamp = max(library_stamps)
+    library_stamp = max(library_stamps) if library_stamps else None
 
     if pairing_stamp and pairing_stamp < library_stamp:
         log('** ERROR: pairing completion stamp is older than library stamps')
