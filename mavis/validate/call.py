@@ -379,19 +379,20 @@ def _call_by_reads(source_evidence, read1, read2=None):
             bpp.break2.strand = STRAND.NS
 
         calls = []
+        del_size = abs(Interval.dist(bpp.break1, bpp.break2)) - 1
         for event_type in putative_event_types:
             if event_type == SVTYPE.INS:
                 if len(bpp.untemplated_seq) == 0 or \
-                        len(bpp.untemplated_seq) <= abs(Interval.dist(bpp.break1, bpp.break2)):
+                        len(bpp.untemplated_seq) <= del_size:
                     continue
             elif event_type == SVTYPE.DEL:
-                if len(bpp.untemplated_seq) > abs(Interval.dist(bpp.break1, bpp.break2)):
+                if len(bpp.untemplated_seq) > del_size:
                     continue
             if event_type not in BreakpointPair.classify(bpp):
                 continue
             calls.append(event_type)
         return bpp, calls
-    except UserWarning as err:
+    except UserWarning:
         return None, []
 
 

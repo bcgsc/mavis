@@ -767,7 +767,7 @@ def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, **
                     bpp.data[COLUMNS.event_type] = et
                     if et not in BreakpointPair.classify(bpp):
                         raise InvalidRearrangement(
-                            'error: expected one of', BreakpointPair.classify(bpp), 'but found', et)
+                            'error: expected one of', BreakpointPair.classify(bpp), 'but found', et, str(bpp), row)
                 temp.append(bpp)
             except InvalidRearrangement as err:
                 if not expand_ns:

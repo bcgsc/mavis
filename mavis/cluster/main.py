@@ -102,7 +102,8 @@ def main(
     else:
         log('did not apply uninformative filter')
     log('computing clusters')
-    clusters = cluster_breakpoint_pairs(breakpoint_pairs, r=cluster_radius, k=cluster_clique_size)
+    clusters = cluster_breakpoint_pairs(
+        breakpoint_pairs, r=cluster_radius, k=cluster_clique_size, weight_adjustment=cluster_radius)
 
     hist = {}
     length_hist = {}
