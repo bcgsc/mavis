@@ -443,11 +443,13 @@ def check_library_dir(library_dir, verbose=False):
                 curr_run_times.append(rt)
                 run_times[stage_subdir][job_task_id] = rt
 
-        if incomplete > 0:
-            log(incomplete, 'jobs are incomplete', stage_subdir, time_stamp=False)
-        if missing_logs > 0:
-            log(missing_logs, 'log files are missing', stage_subdir, time_stamp=False)
-        if incomplete + missing_logs == 0:
+        if incomplete or missing_logs:
+            log(stage_subdir, 'FAIL', time_stamp=False)
+            if incomplete > 0:
+                log('\t', incomplete, 'jobs are incomplete', time_stamp=False)
+            if missing_logs > 0:
+                log('\t', missing_logs, 'log files are missing', time_stamp=False)
+        else:
             log(stage_subdir, 'OK', time_stamp=False)
             log('\trun time (s): {} (max), {} (total)'.format(max(curr_run_times), sum(curr_run_times)), time_stamp=False)
 
@@ -459,7 +461,7 @@ def check_library_dir(library_dir, verbose=False):
             log('** ERROR: A complete stamp for validation is after a complete stamp for annotation')
         if job in run_times['validation'] and job in run_times['annotation']:
             max_rt.append(run_times['validation'][job] + run_times['annotation'][job])
-    
+
     stamp_times = list(stamps['validation'].values()) + list(stamps['annotation'].values())
     return (
         max(stamp_times) if stamp_times else None,
