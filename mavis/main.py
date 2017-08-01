@@ -24,7 +24,7 @@ from mavis.illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from mavis.summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 
 from mavis.config import augment_parser, write_config, LibraryConfig, read_config, get_env_variable
-from mavis.util import log, mkdirp, log_arguments, output_tabbed_file
+from mavis.util import log, mkdirp, log_arguments, output_tabbed_file, bash_expands
 from mavis.constants import PROTOCOL, PIPELINE_STEP, DISEASE_STATUS
 from mavis.bam.read import get_samtools_version
 from mavis.blat import get_blat_version
@@ -667,6 +667,19 @@ use the -h/--help option
     if pstep == PIPELINE_STEP.PIPELINE:  # load the configuration file
         temp, config, convert_config = read_config(args.config)
         args.__dict__.update(temp.__dict__)
+
+    # try checking the input files exist
+    try:
+        for fname in args.inputs:
+            if len(bash_expands(fname)) < 1:
+                raise OSError('input file does not exist', fname)
+    except AttributeError:
+        pass
+    try:
+        if len(bash_expands(args.input)) < 1:
+            raise OSError('input file does not exist', args.input)
+    except AttributeError:
+        pass
 
     # load the reference files if they have been given and reset the arguments to hold the original file name and the
     # loaded data
