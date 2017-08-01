@@ -7,6 +7,8 @@ from .constants import PROTOCOL, COLUMNS, sort_columns
 from .interval import Interval
 from argparse import Namespace
 from TSV.TSV import EmptyFileError
+from braceexpand import braceexpand
+from glob import glob
 
 
 class MavisNamespace(Namespace):
@@ -42,6 +44,14 @@ class ChrListString(list):
             return True
         else:
             return list.__contains__(self, item)
+
+
+def bash_expands(expression):
+    result = []
+    for name in braceexpand(expression):
+        for fname in glob(expression):
+            result.append(fname)
+    return result
 
 
 def log_arguments(args):
@@ -112,15 +122,16 @@ def read_inputs(inputs, **kwargs):
     kwargs['require'] = list(set(kwargs['require'] + [COLUMNS.protocol]))
     kwargs.setdefault('in_', {})
     kwargs['in_'][COLUMNS.protocol] = PROTOCOL
-    for finput in inputs:
-        try:
-            log('loading:', finput)
-            bpps.extend(read_bpp_from_input_file(
-                finput,
-                **kwargs
-            ))
-        except EmptyFileError:
-            log('ignoring empty file:', finput)
+    for expr in inputs:
+        for finput in bash_expands(expr):
+            try:
+                log('loading:', finput)
+                bpps.extend(read_bpp_from_input_file(
+                    finput,
+                    **kwargs
+                ))
+            except EmptyFileError:
+                log('ignoring empty file:', finput)
     log('loaded', len(bpps), 'breakpoint pairs')
     return bpps
 
@@ -155,7 +166,7 @@ def write_bed_file(filename, bed_rows):
 def generate_complete_stamp(output_dir, log=devnull, prefix='MAVIS.'):
     stamp = os.path.join(output_dir, str(prefix) + 'COMPLETE')
     log('complete:', stamp)
-    with open(stamp, 'w') as fh:
+    with open(stamp, 'w'):
         pass
     return stamp
 
