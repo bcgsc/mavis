@@ -656,6 +656,8 @@ use the -h/--help option
                 'dgv_annotation']:
         try:
             args.__dict__[arg] = os.path.abspath(args.__dict__[arg])
+            if arg != 'output' and not os.path.isfile(args.__dict__[arg]):
+                raise OSError('input reference file does not exist', arg, args.__dict__[arg])
         except (KeyError, TypeError):
             pass
 
