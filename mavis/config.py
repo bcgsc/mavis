@@ -5,7 +5,7 @@ import re
 import pysam
 from . import __version__
 from .constants import PROTOCOL, DISEASE_STATUS
-from .util import devnull, MavisNamespace
+from .util import devnull, MavisNamespace, bash_expands
 from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
@@ -350,9 +350,12 @@ def read_config(filepath):
                     raise UserWarning(
                         'conversion using the built-in convert_tool_output requires specifying the input file and '
                         'tool name currently supported tools include:', SUPPORTED_TOOL.values())
-                elif len(val) == 4:
+                inputs = bash_expands(val[1])
+                if len(inputs) < 1:
+                    raise OSError('input file(s) do not exist', val[1])
+                if len(val) == 4:
                     val[3] = TSV.tsv_boolean(val[3])
-                else:
+                elif len(val) > 4:
                     raise UserWarning(
                         'conversion using the built-in convert_tool_output takes at most 3 arguments')
             convert[attr] = val
