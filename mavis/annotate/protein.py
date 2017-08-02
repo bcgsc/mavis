@@ -149,7 +149,7 @@ class Domain:
                 raise NotSpecifiedError('insufficient sequence information')
         return [sequences[r] for r in self.regions]
 
-    def align_seq(self, input_sequence, REFERENCE_GENOME=None, min_region_match=0.2):
+    def align_seq(self, input_sequence, REFERENCE_GENOME=None, min_region_match=0.5):
         """
         align each region to the input sequence starting with the last one.
         then take the subset of sequence that remains to align the second last and so on
@@ -160,6 +160,7 @@ class Domain:
             input_sequence (str): the sequence to be aligned to
             REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
                 by template/chr name
+            min_region_match (float): percent between 0 and 1. Each region must have a score len(seq) * min_region_match
 
         Returns:
             tuple: tuple contains
@@ -186,12 +187,13 @@ class Domain:
         for i, seq in enumerate(seq_list):
             # align the current sequence to find the best matches
             scores = []
+            min_match = max(1, int(round(len(seq) * min_region_match, 0)))
             for p in range(last_min_end, len(input_sequence) - len(seq) + 1):
                 score = 0
                 for i in range(0, len(seq)):
                     if input_sequence[p + i].upper() == seq[i].upper():
                         score += 1
-                if score > 0:
+                if score > min_match:
                     scores.append((Interval(p + 1, p + len(seq)), score))
             if len(scores) == 0:
                 raise UserWarning('could not align a given region', seq)
