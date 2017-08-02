@@ -33,7 +33,8 @@ def calculate_ORF(spliced_cdna_sequence, min_orf_size=None):
                 if current_start is not None:  # close the current interval
                     itvl = Interval(current_start, p)
                     if min_orf_size is None or len(itvl) >= min_orf_size:
-                        orf_intervals.append(Interval(current_start, p))
+                        orf_intervals.append(itvl)
+                    current_start = None
         cds_orfs.extend(orf_intervals)
     return cds_orfs
 
