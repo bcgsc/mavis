@@ -3,8 +3,6 @@ from .base import BioInterval
 from ..constants import translate, START_AA, STOP_AA, CODON_SIZE
 import itertools
 from ..error import NotSpecifiedError
-import operator
-import functools
 
 
 def calculate_ORF(spliced_cdna_sequence, min_orf_size=None):
@@ -23,32 +21,21 @@ def calculate_ORF(spliced_cdna_sequence, min_orf_size=None):
     for offset in range(0, CODON_SIZE):
         aa_sequence = translate(spliced_cdna_sequence, offset)
         # now calc the open reading frames
-        starts = []
-        stops = []
+        orf_intervals = []
+        current_start = None
         for i, aa in enumerate(aa_sequence):
             if aa == START_AA:
-                starts.append(i * CODON_SIZE + 1 + offset)
+                p = i * CODON_SIZE + 1 + offset
+                if current_start is None:
+                    current_start = p
             elif aa == STOP_AA:
-                stops.append((i + 1) * CODON_SIZE + offset)
-
-        orfs = []
-
-        for s in starts:
-            for t in sorted(stops):
-                if t > s:
-                    i = Interval(s, t)
-                    if not min_orf_size or len(i) >= min_orf_size:
-                        orfs.append(Interval(s, t))
-                    break
-
-        temp = {}
-        for orf in orfs:
-            if orf.end not in temp:
-                temp[orf.end] = orf
-            elif len(orf) > len(temp[orf.end]):
-                temp[orf.end] = orf
-
-        cds_orfs.extend(temp.values())
+                p = (i + 1) * CODON_SIZE + offset
+                if current_start is not None:  # close the current interval
+                    itvl = Interval(current_start, p)
+                    if min_orf_size is None or len(itvl) >= min_orf_size:
+                        orf_intervals.append(itvl)
+                    current_start = None
+        cds_orfs.extend(orf_intervals)
     return cds_orfs
 
 
@@ -162,7 +149,7 @@ class Domain:
                 raise NotSpecifiedError('insufficient sequence information')
         return [sequences[r] for r in self.regions]
 
-    def align_seq(self, input_sequence, REFERENCE_GENOME=None):
+    def align_seq(self, input_sequence, REFERENCE_GENOME=None, min_region_match=0.5):
         """
         align each region to the input sequence starting with the last one.
         then take the subset of sequence that remains to align the second last and so on
@@ -173,6 +160,7 @@ class Domain:
             input_sequence (str): the sequence to be aligned to
             REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
                 by template/chr name
+            min_region_match (float): percent between 0 and 1. Each region must have a score len(seq) * min_region_match
 
         Returns:
             tuple: tuple contains
@@ -194,59 +182,58 @@ class Domain:
         if total > len(input_sequence):
             raise UserWarning('could not map the sequences to the input')
 
-        results = {}
-        for seq in set(seq_list):
+        results = []
+        last_min_end = 0
+        for i, seq in enumerate(seq_list):
             # align the current sequence to find the best matches
             scores = []
-            for p in range(0, len(input_sequence) - len(seq) + 1):
+            min_match = max(1, int(round(len(seq) * min_region_match, 0)))
+            for p in range(last_min_end, len(input_sequence) - len(seq) + 1):
                 score = 0
                 for i in range(0, len(seq)):
                     if input_sequence[p + i].upper() == seq[i].upper():
                         score += 1
-                if score > 0:
+                if score > min_match:
                     scores.append((Interval(p + 1, p + len(seq)), score))
             if len(scores) == 0:
-                raise UserWarning('could not align a given region')
-            results.setdefault(seq, []).extend(scores)
+                raise UserWarning('could not align a given region', seq)
+            best_score = max([s[1] for s in scores])
+            best = [s for s in scores if s[1] == best_score]
+            results.append(best)
+            last_min_end = min([s[0].end for s in best])
         # take the best score for each region and see if they work in sequence
-        best = []
-        for seq in seq_list:
-            temp = max([s for i, s in results[seq]])
-            curr = [(i, s) for i, s in results[seq] if s == temp]
-            best.append(curr)
+        combinations = [[p] for p in results[0]]
+        for scores in results[1:]:
+            temp_combos = []
+            for pos, score in scores:
+                for curr in combinations:
+                    if pos.start > curr[-1][0].end:
+                        temp_combos.append(curr[:] + [(pos, score)])
+            combinations = temp_combos
+            if len(combinations) == 0:
+                break
 
-        # only keep valid combinations
-        combinations = []
-        for opt in best[0]:
-            combinations.append([opt])
-        for blist in best[1:]:
-            new_combos = []
-            for curr in combinations:
-                for b in blist:
-                    if b[0][0] > curr[-1][0][1]:
-                        new_combos.append(curr + [b])
-            combinations = new_combos
+        # compute the cumulative scores for the putative alignments
+        best_score = None
+        best_scoring_alignments = []
+        for alignment in combinations:
+            cumu_score = sum([s[1] for s in alignment])
+            if len(best_scoring_alignments) == 0 or cumu_score > best_score:
+                best_scoring_alignments = [alignment]
+                best_score = cumu_score
+            elif cumu_score == best_score:
+                best_scoring_alignments.append(alignment)
 
-        # compute cumulative scores for the final valid combinations
-        for i, combo in enumerate(combinations):
-            score = sum([s for i, s in combo])
-            combinations[i] = (score, [i for i, s in combo])
-
-        if len(combinations) == 0:
+        if len(best_scoring_alignments) == 0:
             raise UserWarning('could not map the sequences to the input')
+        elif len(best_scoring_alignments) > 1:
+            raise UserWarning('multiple mappings of equal score')
         else:
-            high = max([s for s, pl in combinations])
-            temp = []
-            for score, pl in combinations:
-                if score == high:
-                    temp.append(pl)
-            if len(temp) > 1:
-                raise UserWarning('multiple mappings of equal score')
-            else:
-                regions = []
-                for pos, seq in zip(temp[0], seq_list):
-                    regions.append(DomainRegion(pos.start, pos.end, seq))
-                return high, total, regions
+            alignment = [s[0] for s in best_scoring_alignments[0]]
+            regions = []
+            for itvl, seq in zip(alignment, seq_list):
+                regions.append(DomainRegion(itvl.start, itvl.end, seq))
+            return best_score, total, regions
 
 
 class Translation(BioInterval):
