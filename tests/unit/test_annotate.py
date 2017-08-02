@@ -1,5 +1,9 @@
 import unittest
-from mavis.annotate.protein import Domain, DomainRegion
+from mavis.annotate.protein import Domain, DomainRegion, calculate_ORF
+import os
+import timeout_decorator
+
+DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 
 
 class TestDomainAlignSeq(unittest.TestCase):
@@ -265,4 +269,15 @@ class TestDomainAlignSeq(unittest.TestCase):
             p += len(seq)
         d = Domain('name', regions=regions)
         with self.assertRaises(UserWarning):
-            alignment = d.align_seq(input_seq)
+            d.align_seq(input_seq)
+
+
+class TestCalculateORF(unittest.TestCase):
+
+    @timeout_decorator.timeout(5)
+    def test_very_long(self):
+        # load the sequence
+        with open(os.path.join(DATA_DIR, 'calc_orf_test_sequence.fa'), 'r') as fh:
+            seq = fh.readlines()[0].strip()
+
+        calculate_ORF(seq, 300)

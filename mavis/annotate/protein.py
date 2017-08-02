@@ -3,8 +3,6 @@ from .base import BioInterval
 from ..constants import translate, START_AA, STOP_AA, CODON_SIZE
 import itertools
 from ..error import NotSpecifiedError
-import operator
-import functools
 
 
 def calculate_ORF(spliced_cdna_sequence, min_orf_size=None):
@@ -23,32 +21,20 @@ def calculate_ORF(spliced_cdna_sequence, min_orf_size=None):
     for offset in range(0, CODON_SIZE):
         aa_sequence = translate(spliced_cdna_sequence, offset)
         # now calc the open reading frames
-        starts = []
-        stops = []
+        orf_intervals = []
+        current_start = None
         for i, aa in enumerate(aa_sequence):
             if aa == START_AA:
-                starts.append(i * CODON_SIZE + 1 + offset)
+                p = i * CODON_SIZE + 1 + offset
+                if current_start is None:
+                    current_start = p
             elif aa == STOP_AA:
-                stops.append((i + 1) * CODON_SIZE + offset)
-
-        orfs = []
-
-        for s in starts:
-            for t in sorted(stops):
-                if t > s:
-                    i = Interval(s, t)
-                    if not min_orf_size or len(i) >= min_orf_size:
-                        orfs.append(Interval(s, t))
-                    break
-
-        temp = {}
-        for orf in orfs:
-            if orf.end not in temp:
-                temp[orf.end] = orf
-            elif len(orf) > len(temp[orf.end]):
-                temp[orf.end] = orf
-
-        cds_orfs.extend(temp.values())
+                p = (i + 1) * CODON_SIZE + offset
+                if current_start is not None:  # close the current interval
+                    itvl = Interval(current_start, p)
+                    if min_orf_size is None or len(itvl) >= min_orf_size:
+                        orf_intervals.append(Interval(current_start, p))
+        cds_orfs.extend(orf_intervals)
     return cds_orfs
 
 
