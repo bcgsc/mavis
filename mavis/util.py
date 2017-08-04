@@ -49,7 +49,7 @@ class ChrListString(list):
 def bash_expands(expression):
     result = []
     for name in braceexpand(expression):
-        for fname in glob(expression):
+        for fname in glob(name):
             result.append(fname)
     return result
 
