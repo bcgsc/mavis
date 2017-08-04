@@ -1,6 +1,6 @@
 import os
 import itertools
-from .cluster import cluster_breakpoint_pairs
+from .cluster import merge_breakpoint_pairs
 from ..constants import COLUMNS
 from .constants import DEFAULTS
 from ..util import read_inputs, output_tabbed_file, write_bed_file, generate_complete_stamp
@@ -12,7 +12,7 @@ import inspect
 def main(
     inputs, output, stranded_bam, library, protocol, disease_status, masking, annotations,
     limit_to_chr=DEFAULTS.limit_to_chr,
-    cluster_clique_size=DEFAULTS.cluster_clique_size,
+    cluster_initial_size_limit=DEFAULTS.cluster_initial_size_limit,
     cluster_radius=DEFAULTS.cluster_radius,
     uninformative_filter=DEFAULTS.uninformative_filter,
     max_proximity=DEFAULTS.max_proximity,
@@ -102,8 +102,8 @@ def main(
     else:
         log('did not apply uninformative filter')
     log('computing clusters')
-    clusters = cluster_breakpoint_pairs(
-        breakpoint_pairs, r=cluster_radius, k=cluster_clique_size, weight_adjustment=cluster_radius)
+    clusters = merge_breakpoint_pairs(
+        breakpoint_pairs, cluster_radius=cluster_radius, cluster_initial_size_limit=cluster_initial_size_limit)
 
     hist = {}
     length_hist = {}
