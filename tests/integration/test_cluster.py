@@ -19,7 +19,7 @@ class TestFullClustering(unittest.TestCase):
                 print(bpp)
         self.assertEqual(28, len(bpps))
         clusters = merge_breakpoint_pairs(bpps, 10, 10)
-        
+
         for cluster, input_pairs in sorted(clusters.items(), key=lambda x: (x[1][0].break1.chr, x[1][0].break2.chr)):
             print(cluster)
             self.assertEqual(1, len(input_pairs))

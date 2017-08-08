@@ -118,7 +118,7 @@ def merge_by_union(input_pairs, group_key, weight_adjustment=10, cluster_radius=
     pairs_by_end = sorted(input_pairs, key=lambda x: x.break2.start)
     edges = {pair_key(p): set() for p in input_pairs}
     pairs_by_key = {}
-    
+
     for i in range(0, len(input_pairs)):
         # try all combinations until start distance alone is too far
         curr = pairs_by_start[i]
