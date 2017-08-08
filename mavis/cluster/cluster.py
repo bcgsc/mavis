@@ -3,6 +3,7 @@ from __future__ import division
 from ..interval import Interval
 from ..constants import STRAND, ORIENT
 from ..breakpoint import BreakpointPair, Breakpoint
+from ..util import log
 from collections import namedtuple
 
 from copy import copy
@@ -30,9 +31,6 @@ class BreakpointPairGroupKey(namedtuple('BreakpointPairGroupKey', [
         self = super(BreakpointPairGroupKey, cls).__new__(
             cls, chr1, chr2, orient1, orient2, strand1, strand2, opposing_strands, explicit_strand)
         return self
-
-    def __hash__(self):
-        return hash(tuple([x for x in self]))
 
 
 def weighted_mean(values, weights=None):
@@ -120,7 +118,7 @@ def merge_by_union(input_pairs, group_key, weight_adjustment=10, cluster_radius=
     pairs_by_end = sorted(input_pairs, key=lambda x: x.break2.start)
     edges = {pair_key(p): set() for p in input_pairs}
     pairs_by_key = {}
-
+    
     for i in range(0, len(input_pairs)):
         # try all combinations until start distance alone is too far
         curr = pairs_by_start[i]
@@ -132,6 +130,8 @@ def merge_by_union(input_pairs, group_key, weight_adjustment=10, cluster_radius=
             other = pairs_by_start[j]
             okey = pair_key(other)
             d = abs(Interval.dist(curr.break1, other.break1))
+            if d > cluster_radius:
+                break
             d += abs(Interval.dist(curr.break2, other.break2))
             if d <= cluster_radius:
                 edges[ckey].add(okey)
@@ -144,6 +144,8 @@ def merge_by_union(input_pairs, group_key, weight_adjustment=10, cluster_radius=
             other = pairs_by_end[j]
             okey = pair_key(other)
             d = abs(Interval.dist(curr.break2, other.break2))
+            if d > cluster_radius:
+                break
             d += abs(Interval.dist(curr.break1, other.break1))
             if d <= cluster_radius:
                 edges[okey].add(ckey)
@@ -178,7 +180,7 @@ def merge_by_union(input_pairs, group_key, weight_adjustment=10, cluster_radius=
     return nodes
 
 
-def merge_breakpoint_pairs(input_pairs, cluster_radius=200, cluster_initial_size_limit=25):
+def merge_breakpoint_pairs(input_pairs, cluster_radius=200, cluster_initial_size_limit=25, verbose=False):
     """
     two-step merging process
 
@@ -226,6 +228,9 @@ def merge_breakpoint_pairs(input_pairs, cluster_radius=200, cluster_initial_size
                 groups.setdefault(key, []).append(pair)
     # now try all pairwise combinations within groups
     for group_key in sorted(set(list(groups) + list(phase2_groups))):
+        count = len(groups.get(group_key, [])) + len(phase2_groups.get(group_key, []))
+        if verbose:
+            log(group_key, 'pairs:', count)
         nodes = merge_by_union(
             groups.get(group_key, []), group_key,
             weight_adjustment=cluster_initial_size_limit, cluster_radius=cluster_radius)
@@ -272,7 +277,8 @@ def merge_breakpoint_pairs(input_pairs, cluster_radius=200, cluster_initial_size
                 new_bpp = BreakpointPair(
                     b1, b2, opposing_strands=group_key.opposing_strands, stranded=explicit_strand)
                 nodes.setdefault(new_bpp, []).append(pair)
-        
+        if verbose:
+            log('merged', count, 'down to', len(nodes))
         for node, pairs in nodes.items():
             if node in mapping:
                 raise KeyError('duplicate merge node', str(node), node, pair_key(node))
