@@ -278,6 +278,6 @@ class TestCalculateORF(unittest.TestCase):
         with open(os.path.join(DATA_DIR, 'calc_orf_test_sequence.fa'), 'r') as fh:
             self.seq = fh.readlines()[0].strip()
 
-    @timeout_decorator.timeout(10)
+    @timeout_decorator.timeout(20)
     def test_very_long(self):
         calculate_ORF(self.seq, 300)
