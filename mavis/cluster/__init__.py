@@ -34,4 +34,4 @@ Algorithm Overview
 - Output the clusters and the mapping to the input pairs
 
 """
-from .cluster import cluster_breakpoint_pairs
+from .cluster import merge_breakpoint_pairs

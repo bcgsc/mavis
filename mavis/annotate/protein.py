@@ -184,7 +184,7 @@ class Domain:
 
         results = []
         last_min_end = 0
-        for i, seq in enumerate(seq_list):
+        for seq in seq_list:
             # align the current sequence to find the best matches
             scores = []
             min_match = max(1, int(round(len(seq) * min_region_match, 0)))

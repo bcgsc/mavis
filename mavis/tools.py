@@ -17,7 +17,7 @@ SUPPORTED_TOOL = Vocab(
     DELLY='delly',
     TA='transabyss',
     # BREAKDANCER='breakdancer',  # TODO: later versions will include support for these tools
-    # PINDEL='pindel',
+    PINDEL='pindel',
     CHIMERASCAN='chimerascan',
     MAVIS='mavis',
     DEFUSE='defuse'
@@ -71,7 +71,7 @@ def _convert_tool_row(row, file_type, stranded):
     strand1 = strand2 = STRAND.NS
     result = []
     # convert the specified file type to a standard format
-    if file_type == SUPPORTED_TOOL.DELLY or file_type == SUPPORTED_TOOL.MANTA:
+    if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL]:
 
         if row.INFO['SVTYPE'] == 'BND':
             chr2 = row.ALT[0].chr
@@ -120,10 +120,6 @@ def _convert_tool_row(row, file_type, stranded):
     #         'pos1_start': row['Pos1'], 'pos2_start': row['Pos2'],
     #         'event_type': row['Type']
     #     })
-
-    # elif file_type == SUPPORTED_TOOL.PINDEL:
-    #     info = {k: v for k, v in ['='.split(x) for x in ';'.split(row['info'])]}
-    #     std_row.update({'chr1': row['CHROM'], 'pos1_start': row['POS'], 'pos2_start': info['END']})
 
     elif file_type == SUPPORTED_TOOL.DEFUSE:
 
@@ -216,7 +212,7 @@ def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fa
     if file_type == SUPPORTED_TOOL.MAVIS:
         result = read_bpp_from_input_file(input_file)
     else:
-        if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA]:
+        if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL]:
             rows = list(vcf.Reader(filename=input_file))
         else:
             header, rows = TSV.read_file(input_file)

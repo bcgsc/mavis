@@ -273,3 +273,78 @@ class TestConvertToolRow(unittest.TestCase):
         self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
         self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
         self.assertEqual(False, bpp.stranded)
+
+    def test_pindel_deletion(self):
+        row = Mock(
+            CHROM='21', POS=9412306,
+            INFO={
+                'SVTYPE': 'DEL',
+                'END': 9412400
+            }
+        )
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.PINDEL, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('21', bpp.break1.chr)
+        self.assertEqual('21', bpp.break2.chr)
+        self.assertEqual(SVTYPE.DEL, bpp.event_type)
+        self.assertEqual(row.POS, bpp.break1.start)
+        self.assertEqual(row.POS, bpp.break1.end)
+        self.assertEqual(row.INFO['END'], bpp.break2.start)
+        self.assertEqual(row.INFO['END'], bpp.break2.end)
+        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
+        self.assertEqual(STRAND.NS, bpp.break1.strand)
+        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
+        self.assertEqual(STRAND.NS, bpp.break2.strand)
+        self.assertEqual(False, bpp.stranded)
+        self.assertEqual(False, bpp.opposing_strands)
+
+    def test_pindel_insertion(self):
+        row = Mock(
+            CHROM='21', POS=9412306,
+            INFO={
+                'SVTYPE': 'INS',
+                'END': 9412400
+            }
+        )
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.PINDEL, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('21', bpp.break1.chr)
+        self.assertEqual('21', bpp.break2.chr)
+        self.assertEqual(SVTYPE.INS, bpp.event_type)
+        self.assertEqual(row.POS, bpp.break1.start)
+        self.assertEqual(row.POS, bpp.break1.end)
+        self.assertEqual(row.INFO['END'], bpp.break2.start)
+        self.assertEqual(row.INFO['END'], bpp.break2.end)
+        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
+        self.assertEqual(STRAND.NS, bpp.break1.strand)
+        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
+        self.assertEqual(STRAND.NS, bpp.break2.strand)
+        self.assertEqual(False, bpp.stranded)
+        self.assertEqual(False, bpp.opposing_strands)
+
+    def test_pindel_inversion(self):
+        row = Mock(
+            CHROM='21', POS=9412306,
+            INFO={
+                'SVTYPE': 'INV',
+                'END': 9412400
+            }
+        )
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.PINDEL, False)
+        self.assertEqual(2, len(bpp_list))
+        bpp = sorted(bpp_list, key=lambda x: x.break1)[0]
+        self.assertEqual('21', bpp.break1.chr)
+        self.assertEqual('21', bpp.break2.chr)
+        self.assertEqual(SVTYPE.INV, bpp.event_type)
+        self.assertEqual(row.POS, bpp.break1.start)
+        self.assertEqual(row.POS, bpp.break1.end)
+        self.assertEqual(row.INFO['END'], bpp.break2.start)
+        self.assertEqual(row.INFO['END'], bpp.break2.end)
+        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
+        self.assertEqual(STRAND.NS, bpp.break1.strand)
+        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
+        self.assertEqual(STRAND.NS, bpp.break2.strand)
+        self.assertEqual(False, bpp.stranded)
+        self.assertEqual(True, bpp.opposing_strands)
