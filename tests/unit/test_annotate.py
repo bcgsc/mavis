@@ -273,11 +273,11 @@ class TestDomainAlignSeq(unittest.TestCase):
 
 
 class TestCalculateORF(unittest.TestCase):
+    def setUp(self):
+        # load the sequence
+        with open(os.path.join(DATA_DIR, 'calc_orf_test_sequence.fa'), 'r') as fh:
+            self.seq = fh.readlines()[0].strip()
 
     @timeout_decorator.timeout(10)
     def test_very_long(self):
-        # load the sequence
-        with open(os.path.join(DATA_DIR, 'calc_orf_test_sequence.fa'), 'r') as fh:
-            seq = fh.readlines()[0].strip()
-
-        calculate_ORF(seq, 300)
+        calculate_ORF(self.seq, 300)
