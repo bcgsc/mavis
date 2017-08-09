@@ -136,8 +136,12 @@ def read_inputs(inputs, **kwargs):
     return bpps
 
 
-def output_tabbed_file(bpps, filename):
-    header = set()
+def output_tabbed_file(bpps, filename, header=None):
+    if header is None:
+        custom_header = False
+        header = set()
+    else:
+        custom_header = True
     rows = []
     for row in bpps:
         try:
@@ -145,7 +149,8 @@ def output_tabbed_file(bpps, filename):
         except AttributeError:
             pass
         rows.append(row)
-        header.update(row)
+        if not custom_header:
+            header.update(row)
 
     header = sort_columns(header)
 

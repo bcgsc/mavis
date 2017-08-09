@@ -1,6 +1,6 @@
 from Bio import SeqIO
-from ..constants import COLUMNS, sort_columns, CALL_METHOD
-from ..util import read_inputs, log, generate_complete_stamp
+from ..constants import COLUMNS, CALL_METHOD
+from ..util import read_inputs, log, generate_complete_stamp, output_tabbed_file
 from ..pairing import equivalent_events
 from ..pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from .constants import DEFAULTS
@@ -124,15 +124,15 @@ def main(
     libraries = dict()
 
     for bpp in bpps:
-        lib = bpp.data[COLUMNS.library]
+        lib = bpp.library
         if lib not in libraries:
             # get library info, (disease status, protocol)
-            libraries[lib] = (bpp.data[COLUMNS.disease_status], bpp.data[COLUMNS.protocol])
+            libraries[lib] = (bpp.protocol, bpp.disease_status)
         # info needed for pairing
         if bpp.fusion_sequence_fasta_id:
             product_sequences[bpp.fusion_sequence_fasta_id] = None
-        if bpp.data[COLUMNS.fusion_sequence_fasta_file]:
-            product_sequence_files.add(bpp.data[COLUMNS.fusion_sequence_fasta_file])
+        if bpp.fusion_sequence_fasta_file:
+            product_sequence_files.add(bpp.fusion_sequence_fasta_file)
         if lib not in pairings:
             pairings[lib] = dict()
 
@@ -185,8 +185,8 @@ def main(
         for bpp in bpps_to_keep[lib].values():
             category = (bpp.break1.chr, bpp.break2.chr, bpp.break1.strand, bpp.break2.strand)
             categories.add(category)
-            pairings[bpp.data[COLUMNS.library]][bpp.data[COLUMNS.product_id]] = set()
-            bpp_by_product_key[bpp.data[COLUMNS.product_id]] = bpp
+            pairings[bpp.library][bpp.product_id] = set()
+            bpp_by_product_key[bpp.product_id] = bpp
             calls_by_lib.setdefault(lib, {})
             calls_by_lib[lib].setdefault(category, set())
             calls_by_lib[lib][category].add(bpp)
@@ -205,8 +205,8 @@ def main(
                     reference_transcripts=reference_transcripts,
                     product_sequences=product_sequences
                 ):
-                    pairings[lib][bpp1.data[COLUMNS.product_id]].add(bpp2.data[COLUMNS.product_id])
-                    pairings[lib][bpp2.data[COLUMNS.product_id]].add(bpp1.data[COLUMNS.product_id])
+                    pairings[lib][bpp1.product_id].add(bpp2.product_id)
+                    pairings[lib][bpp2.product_id].add(bpp1.product_id)
     log('checked', total_comparisons, 'total comparisons')
 
     log('filtering pairings based on transcript')
@@ -224,11 +224,11 @@ def main(
             for paired_product_key in paired_product_keys:
                 paired_bpp = bpp_by_product_key[paired_product_key]
 
-                if bpp.data[COLUMNS.gene1] and bpp.data[COLUMNS.gene1] == paired_bpp.data[COLUMNS.gene1]:
-                    if bpp.data[COLUMNS.transcript1] != paired_bpp.data[COLUMNS.transcript1]:
+                if bpp.gene1 and bpp.gene1 == paired_bpp.gene1:
+                    if bpp.transcript1 != paired_bpp.transcript1:
                         continue
-                if bpp.data[COLUMNS.gene2] and bpp.data[COLUMNS.gene2] == paired_bpp.data[COLUMNS.gene2]:
-                    if bpp.data[COLUMNS.transcript2] != paired_bpp.data[COLUMNS.transcript2]:
+                if bpp.gene2 and bpp.gene2 == paired_bpp.gene2:
+                    if bpp.transcript2 != paired_bpp.transcript2:
                         continue
                 filtered.append(paired_product_key)
 
@@ -242,11 +242,11 @@ def main(
             bpp.data['summary_pairing'] = ';'.join(sorted(filtered))
             bpp_by_product_key[product_key] = bpp
             bpp_to_keep[lib].add(bpp)
-            annotation_ids_to_keep.extend(bpp.data[COLUMNS.annotation_id].split(';'))
+            annotation_ids_to_keep.extend(bpp.annotation_id.split(';'))
 
     # TODO: give an evidence score to the events based on call method and evidence levels
     # TODO: report the pairings so that germline and somatic etc can be determined properly
-    output_columns = [
+    output_columns = {
         COLUMNS.annotation_id,
         COLUMNS.pairing,
         COLUMNS.break1_chromosome,
@@ -295,9 +295,8 @@ def main(
         COLUMNS.spanning_reads,
         COLUMNS.contig_remapped_reads,
         'summary_pairing',
-        'dgv']
+        'dgv'}
 
-    names = []
     rows = []
     for lib in bpp_to_keep:
         log('annotating dgv for', lib)
@@ -305,49 +304,27 @@ def main(
         log('adding pairing states for', lib)
         for row in annotated:
             # filter pairing ids based on what is still kept?
-            for column in itertools.combinations(libraries.keys(), 2):
-                found = False
-                lib1 = row.data[COLUMNS.library]
-                for pair in row.data[COLUMNS.pairing].split(';'):
-                    lib2 = pair.split('_')[0]
-                    if lib1 in column and lib2 in column:
-                        found = True
-                        break
-                if lib1 in column:
-                    if lib1 == column[0]:
-                        pairing_state = get_pairing_state(
-                            libraries[column[0]][1], libraries[column[0]][0],
-                            libraries[column[1]][1], libraries[column[1]][0], is_matched=found)
-                    else:
-                        pairing_state = get_pairing_state(
-                            libraries[column[1]][1], libraries[column[1]][0],
-                            libraries[column[0]][1], libraries[column[0]][0], is_matched=found)
+            paired_libraries = set([p.split('_')[0] for p in row.pairing.split(';')])
+            for other_lib in libraries:
+                other_protocol, other_disease_state = libraries[other_lib]
+                column_name = '{}_{}_{}'.format(other_lib, other_disease_state, other_protocol)
+                if other_lib != row.library:
+                    pairing_state = get_pairing_state(
+                        *libraries[row.library],
+                        other_protocol=other_protocol, other_disease_state=other_disease_state,
+                        is_matched=other_lib in paired_libraries)
                 else:
                     pairing_state = "Not Applicable"
-                name = '{}_{}'.format(column[0], column[1])
-                row.data[name] = pairing_state
-                if name not in names:
-                    names.append(name)
+                row.data[column_name] = pairing_state
+                output_columns.add(column_name)
 
-            try:
-                row = row.flatten()
-            except AttributeError:
-                pass
             rows.append(row)
-    output_columns.extend(names)
-    header = sort_columns(output_columns)
     fname = os.path.join(
         output,
         'mavis_summary_{}.tab'.format('_'.join(sorted(list(libraries.keys()))))
     )
-    with open(fname, 'w') as fh:
-        log('writing', fname)
-        fh.write('#' + '\t'.join(header) + '\n')
-        for row in sorted(rows, key=lambda k: (k[COLUMNS.break1_chromosome],
-                                               int(k[COLUMNS.break1_position_start]),
-                                               k[COLUMNS.break2_chromosome],
-                                               int(k[COLUMNS.break2_position_start]))):
-            fh.write('\t'.join([str(row.get(c, None)) for c in header]) + '\n')
+    rows = sorted(rows, key=lambda bpp: (bpp.break1, bpp.break2))
+    output_tabbed_file(rows, fname, header=output_columns)
     log("Wrote {} gene fusion events to {}".format(len(rows), fname))
     generate_complete_stamp(output, log)
 
