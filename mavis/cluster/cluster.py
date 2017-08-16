@@ -210,6 +210,8 @@ def merge_breakpoint_pairs(input_pairs, cluster_radius=200, cluster_initial_size
     for pair in input_pairs:
         if pair.stranded:
             explicit_strand = True
+            break
+
     doubled = 0
     for i, old_pair in enumerate(input_pairs):
         pair = copy(old_pair)
