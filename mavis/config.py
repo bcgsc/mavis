@@ -459,22 +459,6 @@ def augment_parser(parser, optparser, arguments):
             optparser.add_argument(
                 '--output_svgs', default=get_env_variable(arg, True), type=TSV.tsv_boolean,
                 help='set flag to suppress svg drawings of putative annotations')
-        elif arg == 'max_files':
-            optparser.add_argument(
-                '--max_files', default=get_env_variable(arg, CLUSTER_DEFAULTS.max_files), type=int, dest='max_files',
-                help='defines the maximum number of files that can be created')
-        elif arg == 'min_clusters_per_file':
-            optparser.add_argument(
-                '--min_clusters_per_file', default=get_env_variable(arg, CLUSTER_DEFAULTS.min_clusters_per_file),
-                type=int, help='defines the minimum number of clusters per file')
-        elif arg == 'cluster_radius':
-            optparser.add_argument(
-                '-r', '--cluster_radius', help='radius to use in clustering',
-                default=get_env_variable(arg, CLUSTER_DEFAULTS.cluster_radius), type=int)
-        elif arg == 'cluster_clique_size':
-            optparser.add_argument(
-                '-k', '--cluster_clique_size', default=get_env_variable(arg, CLUSTER_DEFAULTS.cluster_clique_size),
-                type=int, help='parameter used for computing cliques, smaller is faster, above 20 will be slow')
         elif arg == 'uninformative_filter':
             optparser.add_argument(
                 '--uninformative_filter', default=get_env_variable(arg, CLUSTER_DEFAULTS.uninformative_filter),
