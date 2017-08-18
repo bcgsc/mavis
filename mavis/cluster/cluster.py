@@ -169,10 +169,15 @@ def merge_by_union(input_pairs, group_key, weight_adjustment=10, cluster_radius=
         pairs = []
         for pkey in node_keys:
             pairs.extend(pairs_by_key[pkey])
-        itvl = merge_integer_intervals(*[p.break1 for p in pairs], weight_adjustment=weight_adjustment)
-        b1 = Breakpoint(group_key.chr1, itvl.start, itvl.end, orient=group_key.orient1, strand=group_key.strand1)
-        itvl = merge_integer_intervals(*[p.break2 for p in pairs], weight_adjustment=weight_adjustment)
-        b2 = Breakpoint(group_key.chr2, itvl.start, itvl.end, orient=group_key.orient2, strand=group_key.strand2)
+        itvl1 = merge_integer_intervals(*[p.break1 for p in pairs], weight_adjustment=weight_adjustment)
+        itvl2 = merge_integer_intervals(*[p.break2 for p in pairs], weight_adjustment=weight_adjustment)
+        if group_key.chr1 == group_key.chr2:
+            itvl1.end = min(itvl2.end, itvl1.end)
+            itvl2.start = max(itvl2.start, itvl1.start)
+            itvl1.start = min(itvl1.start, itvl1.end)
+            itvl2.end = max(itvl2.end, itvl2.start)
+        b1 = Breakpoint(group_key.chr1, itvl1.start, itvl1.end, orient=group_key.orient1, strand=group_key.strand1)
+        b2 = Breakpoint(group_key.chr2, itvl2.start, itvl2.end, orient=group_key.orient2, strand=group_key.strand2)
         # create the new bpp representing the merge of the input pairs
         new_bpp = BreakpointPair(
             b1, b2, opposing_strands=group_key.opposing_strands, stranded=group_key.explicit_strand)
@@ -252,15 +257,21 @@ def merge_breakpoint_pairs(input_pairs, cluster_radius=200, cluster_initial_size
                     if dist > best[0] or dist > cluster_radius:
                         break
                     pairs = nodes[node] + [pair]
-                    itvl = merge_integer_intervals(
-                        *[p.break1 for p in pairs], weight_adjustment=cluster_initial_size_limit)
-                    b1 = Breakpoint(
-                        group_key.chr1, itvl.start, itvl.end, orient=group_key.orient1, strand=group_key.strand1)
 
-                    itvl = merge_integer_intervals(
+                    itvl1 = merge_integer_intervals(
+                        *[p.break1 for p in pairs], weight_adjustment=cluster_initial_size_limit)
+                    itvl2 = merge_integer_intervals(
                         *[p.break2 for p in pairs], weight_adjustment=cluster_initial_size_limit)
+                    if group_key.chr1 == group_key.chr2:
+                        itvl1.end = min(itvl2.end, itvl1.end)
+                        itvl2.start = max(itvl2.start, itvl1.start)
+                        itvl1.start = min(itvl1.start, itvl1.end)
+                        itvl2.end = max(itvl2.end, itvl2.start)
+
+                    b1 = Breakpoint(
+                        group_key.chr1, itvl1.start, itvl1.end, orient=group_key.orient1, strand=group_key.strand1)
                     b2 = Breakpoint(
-                        group_key.chr2, itvl.start, itvl.end, orient=group_key.orient2, strand=group_key.strand2)
+                        group_key.chr2, itvl2.start, itvl2.end, orient=group_key.orient2, strand=group_key.strand2)
 
                     new_bpp = BreakpointPair(
                         b1, b2, opposing_strands=group_key.opposing_strands, stranded=explicit_strand)

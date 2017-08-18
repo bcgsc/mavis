@@ -1,5 +1,5 @@
 from mavis.cluster.cluster import merge_breakpoint_pairs
-from mavis.breakpoint import read_bpp_from_input_file
+from mavis.breakpoint import read_bpp_from_input_file, Breakpoint, BreakpointPair
 from mavis.constants import PROTOCOL, COLUMNS
 from . import FULL_BASE_EVENTS
 
@@ -25,6 +25,33 @@ class TestFullClustering(unittest.TestCase):
             self.assertEqual(1, len(input_pairs))
         self.assertEqual(len(bpps), len(clusters))
 
+
+class TestMergeBreakpointPairs(unittest.TestCase):
+
+    def test_order_is_retained(self):
+        # BPP(Breakpoint(1:1925143-1925155R), Breakpoint(1:1925144L), opposing=False)
+        # >>  BPP(Breakpoint(1:1925144L), Breakpoint(1:1925144-1925158R), opposing=False)
+        # >>  BPP(Breakpoint(1:1925143L), Breakpoint(1:1925143-1925158R), opposing=False)
+        pairs = [
+            BreakpointPair(
+                Breakpoint('2', 1925144, 1925144, 'L'),
+                Breakpoint('2', 1925144, 1925158, 'R'),
+                event_type='deletion',
+                opposing_strands=False),
+            BreakpointPair(
+                Breakpoint('2', 1925143, 1925143, 'L'),
+                Breakpoint('2', 1925143, 1925158, 'R'),
+                event_type='deletion',
+                opposing_strands=False)
+        ]
+        mapping = merge_breakpoint_pairs(pairs, 100, 25)
+        for merge, inputs in mapping.items():
+            print(merge)
+            print(inputs)
+        self.assertEqual(1, len(mapping))
+        merge = list(mapping)[0]
+        self.assertEqual('L', merge.break1.orient)
+        self.assertEqual('R', merge.break2.orient)
 
 if __name__ == "__main__":
     unittest.main()
