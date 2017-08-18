@@ -77,7 +77,7 @@ def pull_version_from_git():
         raise OSError('could not parse version number from git', v, '^v?(\d+)\.(\d+)\.(\d+)-\d+-g\d+$')
     commit_number = int(m.group(4))
     branch = pull_branch_from_git()
-    flag = branch[0:3].lower() if branch != 'master' else ''
+    flag = 'dev' if branch != 'master' else ''
     if commit_number != 0:
         return '{}.{}.{}.{}{}'.format(m.group(1), m.group(2), m.group(3), flag, commit_number)
     else:
