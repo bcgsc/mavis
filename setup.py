@@ -55,6 +55,18 @@ def check_nonpython_dependencies():
         print('FOUND: blat at', pth)
 
 
+def pull_branch_from_git():
+    command = 'cd {}; git branch'.format(cwd)
+    v = subprocess.check_output(command, shell=True)
+    v = v.decode('UTF8')
+    for l in v.split('\n'):
+        l = l.strip()
+        if l.startswith('*'):
+            l = re.sub('^\*\s*', '', l)
+            return l
+    raise OSError('could not parse branch name from git')
+
+
 def pull_version_from_git():
     command = 'cd {}; git describe --long'.format(cwd)
     v = subprocess.check_output(command, shell=True)
@@ -64,8 +76,10 @@ def pull_version_from_git():
     if not m:
         raise OSError('could not parse version number from git', v, '^v?(\d+)\.(\d+)\.(\d+)-\d+-g\d+$')
     commit_number = int(m.group(4))
+    branch = pull_branch_from_git()
+    flag = 'dev' if branch != 'master' else ''
     if commit_number != 0:
-        return '{}.{}.{}.{}'.format(m.group(1), m.group(2), m.group(3), commit_number)
+        return '{}.{}.{}.{}{}'.format(m.group(1), m.group(2), m.group(3), flag, commit_number)
     else:
         return '{}.{}.{}'.format(m.group(1), m.group(2), m.group(3))
 
@@ -76,7 +90,18 @@ def write_version_file(version):
         print('writing version to:', vfile, version)
         fh.write('__version__ = \'{}\'\n'.format(version))
 
-version = pull_version_from_git()
+try:
+    version = pull_version_from_git()
+except OSError as err:
+    version = None
+    while version is None:
+        print('failed to auto-detect the version number (requires a git repository)')
+        inv = input('please enter the mavis version number that will be used for setup: ')
+        if re.match('^\d+\.\d+.\d+(\.(\w\w\w)?\d+)?$', inv):
+            version = inv
+        else:
+            print('error: version is not a valid format. Please follow pep8 versioning i.e. 1.1.1, 1.1.1.dev1, 1.1.1.0, etc.')
+
 print('version:', version)
 
 
