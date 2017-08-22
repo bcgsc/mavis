@@ -121,7 +121,7 @@ setup(
     install_requires=[
         'docutils <0.13.1',
         'colour',
-        'networkx',
+        'networkx==1.11.0',
         'svgwrite',
         'sphinx',  # for building the documentation only
         'sphinx-rtd-theme',  # for building the documentation only

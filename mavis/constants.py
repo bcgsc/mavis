@@ -368,7 +368,9 @@ COLUMNS = Vocab(
     raw_flanking_pairs='raw_flanking_pairs',
     raw_spanning_reads='raw_spanning_reads',
     untemplated_seq='untemplated_seq',
-    filter_comment='filter_comment'
+    filter_comment='filter_comment',
+    cdna_synon='cdna_synon',
+    protein_synon='protein_synon'
 )
 """:class:`Vocab`: Column names for i/o files used throughout the pipeline
 
@@ -648,6 +650,13 @@ COLUMNS = Vocab(
     raw_break2_split_reads
         :class:`int` - Number of split reads before calling the breakpoint
 
+    cdna_synon
+        semi-colon delimited list of transcript ids which have an identical cdna sequence to the cdna sequence of the
+        current fusion product
+
+    protein_synon
+        semi-colon delimited list of transcript ids which produce a translation with an identical amino-acid sequence
+        to the current fusion product
 """
 
 
