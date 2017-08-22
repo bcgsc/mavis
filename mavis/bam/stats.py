@@ -92,7 +92,7 @@ class Histogram(dict):
 
 
 def compute_transcriptome_bam_stats(
-    bam_file_handle,
+    bam_cache,
     annotations,
     sample_size,
     log=devnull,
@@ -105,7 +105,7 @@ def compute_transcriptome_bam_stats(
     computes various statistical measures relating the input bam file
 
     Args:
-        bam_file_handle (pysam.AlignmentFile): the input bam file handle
+        bam_file_handle (BamCache): the input bam file handle
         annotations (object): see :func:`~mavis.annotate.load_reference_genes`
         sample_size (int): the number of genes to compute stats over
         log (callable): outputs logging information
@@ -119,7 +119,7 @@ def compute_transcriptome_bam_stats(
     """
     total_annotations = []
     for chr, anns_list in annotations.items():
-        if chr in bam_file_handle.references:
+        if bam_cache.valid_chr(chr):
             total_annotations.extend(anns_list)
 
     genes = total_annotations
@@ -138,8 +138,7 @@ def compute_transcriptome_bam_stats(
 
     read_lengths = []
     for gene in genes:
-        count = 0
-        for read in bam_file_handle.fetch(gene.chr, gene.start, gene.end):
+        for read in bam_cache.fetch(gene.chr, gene.start, gene.end, cache_if=lambda x: False, limit=sample_cap):
             if read.is_unmapped or read.mate_is_unmapped or read.mapping_quality < min_mapping_quality \
                     or read.next_reference_id != read.reference_id or read.is_secondary \
                     or not read.is_proper_pair:
@@ -175,13 +174,9 @@ def compute_transcriptome_bam_stats(
                 try:
                     c1 = t.convert_genomic_to_cdna(read.reference_start)
                     c2 = t.convert_genomic_to_cdna(read.next_reference_start)
-                    f = abs(c1 - c2) - 2
                     fragment_hist.add(abs(c1 - c2) - 2)
                 except IndexError:
                     pass
-            count += 1
-            if count >= sample_cap:
-                break
     read_length = stats.median(read_lengths)
     result = Histogram()
     for k, v in fragment_hist.items():
@@ -218,32 +213,27 @@ def compute_genome_bam_stats(
     Returns:
         BamStats: the fragment size median, stdev and the read length in a object
     """
-    lengths = {r: l for r, l in zip(bam_file_handle.references, bam_file_handle.lengths)}
-    total = sum([l - sample_bin_size for l in bam_file_handle.lengths])
+    total = sum([l - sample_bin_size for l in bam_file_handle.fh.lengths])
     bins = []
     randoms = [int(n * (total - 1) + 1) for n in np.random.rand(sample_size)]
     for pos in randoms:
         template_index = 0
-        for c, l in zip(bam_file_handle.references, bam_file_handle.lengths):
+        for c, l in zip(bam_file_handle.fh.references, bam_file_handle.fh.lengths):
             if pos > l - sample_bin_size:
                 pos -= (l - sample_bin_size)
                 template_index += 1
             else:
                 break
-        bins.append((bam_file_handle.references[template_index], pos, pos + sample_bin_size))
+        bins.append((bam_file_handle.fh.references[template_index], pos, pos + sample_bin_size))
 
     hist = Histogram()
     read_lengths = []
     for bin_chr, bin_start, bin_end in bins:
-        count = 0
-        for read in bam_file_handle.fetch(bin_chr, bin_start, bin_end):
+        for read in bam_file_handle.fetch(bin_chr, bin_start, bin_end, limit=sample_cap, cache_if=lambda x: False):
             if read.is_unmapped or read.mate_is_unmapped or read.mapping_quality < min_mapping_quality \
                     or read.next_reference_id != read.reference_id or read.is_secondary \
                     or not read.is_proper_pair:
                 continue
-            elif count > sample_cap:
-                break
-            count += 1
             hist[abs(read.template_length)] = hist.get(abs(read.template_length), 0) + 1
             read_lengths.append(len(read.query_sequence))
     median = hist.median()

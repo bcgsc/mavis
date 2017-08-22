@@ -29,6 +29,13 @@ class BamCache:
                 pass
         atexit.register(self.close)  # makes the file 'auto close' on normal python exit
 
+    def valid_chr(self, chr):
+        try:
+            self.reference_id(chr)
+            return True
+        except KeyError:
+            return False
+
     def add_read(self, read):
         """
         Args:
