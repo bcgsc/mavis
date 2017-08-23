@@ -167,6 +167,7 @@ def align_contigs(
         contig_aln_min_anchor_size=50,
         contig_aln_merge_inner_anchor=20,
         contig_aln_merge_outer_anchor=20,
+        blat_limit_top_aln=25,
         is_protein=False,
         min_extend_overlap=10,
         pair_scoring_function=paired_alignment_score,
@@ -242,6 +243,8 @@ def align_contigs(
                 filtered_rows.sort(key=lambda x: x['score'], reverse=True)
                 reads = []
                 for rank, row in enumerate(filtered_rows):
+                    if rank >= blat_limit_top_aln:
+                        break
                     try:
                         read = Blat.pslx_row_to_pysam(row, INPUT_BAM_CACHE, reference_genome)
                         read.set_tag(PYSAM_READ_FLAGS.BLAT_SCORE, row['score'], value_type='i')
@@ -255,6 +258,7 @@ def align_contigs(
                             'warning: reference template name not recognized {0}'.format(e))
                     except AssertionError as e:
                         warnings.warn('warning: invalid blat alignment: {}'.format(e))
+
                 reads_by_query[query_seq] = reads
 
         elif aligner == SUPPORTED_ALIGNER.BWA_MEM:
@@ -273,6 +277,8 @@ def align_contigs(
                     read.cigar = cigar_tools.recompute_cigar_mismatch(read, reference_genome[read.reference_name])
                     query_seq = query_id_mapping[read.query_name]
                     reads_by_query.setdefault(query_seq, []).append(read)
+        else:
+            raise NotImplementedError('unsupported aligner', aligner)
 
         for e in evidence:
             for contig in e.contigs:
