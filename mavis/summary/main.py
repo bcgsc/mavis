@@ -14,6 +14,8 @@ from .summary import get_pairing_state
 def main(
     inputs, output, annotations, dgv_annotation,
     product_sequence_files=None,
+    filter_cdna_synon=DEFAULTS.filter_cdna_synon,
+    filter_protein_synon=DEFAULTS.filter_protein_synon,
     filter_min_remapped_reads=DEFAULTS.filter_min_remapped_reads,
     filter_min_spanning_reads=DEFAULTS.filter_min_spanning_reads,
     filter_min_flanking_reads=DEFAULTS.filter_min_flanking_reads,
@@ -37,63 +39,67 @@ def main(
     bpps = []
     bpps.extend(read_inputs(
         inputs,
-        require=[COLUMNS.break1_chromosome,
-                 COLUMNS.break1_orientation,
-                 COLUMNS.break1_position_end,
-                 COLUMNS.break1_position_start,
-                 COLUMNS.break2_chromosome,
-                 COLUMNS.break2_orientation,
-                 COLUMNS.break2_position_end,
-                 COLUMNS.break2_position_start,
-                 COLUMNS.contig_seq,
-                 COLUMNS.event_type,
-                 COLUMNS.fusion_cdna_coding_end,
-                 COLUMNS.fusion_cdna_coding_start,
-                 COLUMNS.fusion_mapped_domains,
-                 COLUMNS.gene1,
-                 COLUMNS.gene1_direction,
-                 COLUMNS.gene2,
-                 COLUMNS.gene2_direction,
-                 COLUMNS.gene_product_type,
-                 COLUMNS.genes_encompassed,
-                 COLUMNS.library,
-                 COLUMNS.protocol,
-                 COLUMNS.transcript1,
-                 COLUMNS.transcript2,
-                 COLUMNS.untemplated_seq,
-                 COLUMNS.tools,
-                 COLUMNS.exon_last_5prime,
-                 COLUMNS.exon_first_3prime,
-                 COLUMNS.disease_status,
-                 # evidence_columns
-                 COLUMNS.break1_call_method,
-                 COLUMNS.break1_split_reads,
-                 COLUMNS.break1_split_reads_forced,
-                 COLUMNS.break2_call_method,
-                 COLUMNS.break2_split_reads,
-                 COLUMNS.break2_split_reads_forced,
-                 COLUMNS.linking_split_reads,
-                 COLUMNS.flanking_pairs,
-                 COLUMNS.contigs_aligned,
-                 COLUMNS.contigs_assembled,
-                 COLUMNS.contig_alignment_score,
-                 COLUMNS.contig_remap_score,
-                 COLUMNS.annotation_figure,
-                 COLUMNS.gene1_aliases,
-                 COLUMNS.gene2_aliases
-                 ],
-        add={'dgv': None,
-             'summary_pairing': None},
+        require=[
+            COLUMNS.break1_chromosome,
+            COLUMNS.break1_orientation,
+            COLUMNS.break1_position_end,
+            COLUMNS.break1_position_start,
+            COLUMNS.break2_chromosome,
+            COLUMNS.break2_orientation,
+            COLUMNS.break2_position_end,
+            COLUMNS.break2_position_start,
+            COLUMNS.contig_seq,
+            COLUMNS.event_type,
+            COLUMNS.fusion_cdna_coding_end,
+            COLUMNS.fusion_cdna_coding_start,
+            COLUMNS.fusion_mapped_domains,
+            COLUMNS.gene1,
+            COLUMNS.gene1_direction,
+            COLUMNS.gene2,
+            COLUMNS.gene2_direction,
+            COLUMNS.gene_product_type,
+            COLUMNS.genes_encompassed,
+            COLUMNS.library,
+            COLUMNS.protocol,
+            COLUMNS.transcript1,
+            COLUMNS.transcript2,
+            COLUMNS.untemplated_seq,
+            COLUMNS.tools,
+            COLUMNS.exon_last_5prime,
+            COLUMNS.exon_first_3prime,
+            COLUMNS.disease_status,
+            # evidence_columns
+            COLUMNS.break1_call_method,
+            COLUMNS.break1_split_reads,
+            COLUMNS.break1_split_reads_forced,
+            COLUMNS.break2_call_method,
+            COLUMNS.break2_split_reads,
+            COLUMNS.break2_split_reads_forced,
+            COLUMNS.linking_split_reads,
+            COLUMNS.flanking_pairs,
+            COLUMNS.contigs_aligned,
+            COLUMNS.contigs_assembled,
+            COLUMNS.contig_alignment_score,
+            COLUMNS.contig_remap_score,
+            COLUMNS.annotation_figure,
+            COLUMNS.gene1_aliases,
+            COLUMNS.gene2_aliases,
+            COLUMNS.protein_synon,
+            COLUMNS.cdna_synon],
+        add={
+            'dgv': None,
+            'summary_pairing': None},
         explicit_strand=True,
         expand_ns=False,
-        cast={COLUMNS.break1_split_reads: int,
-              COLUMNS.break2_split_reads: int,
-              COLUMNS.contig_remapped_reads: lambda x: 0 if x == 'None' or x is None else int(x),
-              COLUMNS.spanning_reads: int,
-              COLUMNS.break1_split_reads_forced: int,
-              COLUMNS.break2_split_reads_forced: int,
-              COLUMNS.flanking_pairs: int,
-              COLUMNS.linking_split_reads: int}
+        cast={
+            COLUMNS.break1_split_reads: int,
+            COLUMNS.break2_split_reads: int,
+            COLUMNS.contig_remapped_reads: lambda x: 0 if x == 'None' or x is None else int(x),
+            COLUMNS.spanning_reads: int,
+            COLUMNS.break1_split_reads_forced: int,
+            COLUMNS.break2_split_reads_forced: int,
+            COLUMNS.flanking_pairs: int,
+            COLUMNS.linking_split_reads: int}
     ))
 
     # load all transcripts
@@ -102,19 +108,28 @@ def main(
     for chr, genes in annotations.items():
         for gene in genes:
             for t in gene.transcripts:
-                if t.name in reference_transcripts:
-                    #                    raise KeyError('transcript name is not unique', gene, t)
-                    pass
                 reference_transcripts[t.name] = t
                 if t.is_best_transcript:
                     best_transcripts[t.name] = t
 
-    bpps, removed = filter_by_evidence(bpps, filter_min_remapped_reads=filter_min_remapped_reads,
-                                       filter_min_spanning_reads=filter_min_spanning_reads,
-                                       filter_min_flanking_reads=filter_min_flanking_reads,
-                                       filter_min_flanking_only_reads=filter_min_flanking_only_reads,
-                                       filter_min_split_reads=filter_min_split_reads,
-                                       filter_min_linking_split_reads=filter_min_linking_split_reads)
+    # filter by synonymous
+    if filter_cdna_synon or filter_protein_synon:
+        temp = []
+        for bpp in bpps:
+            if filter_protein_synon and bpp.protein_synon:
+                continue
+            elif filter_cdna_synon and bpp.cdna_synon:
+                continue
+            temp.append(bpp)
+        bpps = temp
+
+    bpps, removed = filter_by_evidence(
+        bpps, filter_min_remapped_reads=filter_min_remapped_reads,
+        filter_min_spanning_reads=filter_min_spanning_reads,
+        filter_min_flanking_reads=filter_min_flanking_reads,
+        filter_min_flanking_only_reads=filter_min_flanking_only_reads,
+        filter_min_split_reads=filter_min_split_reads,
+        filter_min_linking_split_reads=filter_min_linking_split_reads)
 
     bpps_to_keep = dict()
     bpp_by_product_key = dict()

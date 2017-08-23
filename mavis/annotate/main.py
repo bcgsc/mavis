@@ -1,73 +1,16 @@
 import os
 import json
 import re
-from .variant import annotate_events, determine_prime
+from .variant import annotate_events, determine_prime, flatten_fusion_translation
+from .genomic import usTranscript
 from ..constants import PROTOCOL, COLUMNS, PRIME, sort_columns
 from ..error import DrawingFitError, NotSpecifiedError
 from ..illustrate.constants import DiagramSettings
 from ..illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from ..illustrate.diagram import draw_sv_summary_diagram
-from ..interval import Interval
 from .constants import DEFAULTS, ACCEPTED_FILTERS
 from ..util import log, mkdirp, read_inputs, generate_complete_stamp
 import warnings
-
-
-def get_exon_annotations(translation):
-    row = dict()
-    row[COLUMNS.fusion_splicing_pattern] = translation.transcript.splicing_pattern.splice_type
-    row[COLUMNS.fusion_cdna_coding_start] = translation.start
-    row[COLUMNS.fusion_cdna_coding_end] = translation.end
-
-    # select the exon that has changed
-    five_prime_exons = []
-    three_prime_exons = []
-    spliced_fusion_transcript = translation.transcript
-    fusion_transcript = spliced_fusion_transcript.unspliced_transcript
-
-    for ex in spliced_fusion_transcript.exons:
-        try:
-            src_exon = fusion_transcript.exon_mapping[ex.position]
-            number = src_exon.transcript.exon_number(src_exon)
-            if ex.end <= fusion_transcript.break1:
-                five_prime_exons.append(number)
-            elif ex.start >= fusion_transcript.break2:
-                three_prime_exons.append(number)
-            else:
-                raise AssertionError(
-                    'exon should not be mapped if not within a break region',
-                    ex, fusion_transcript.break1. fusion_transcript.break2
-                )
-        except KeyError:  # novel exon
-            for us_exon, src_exon in sorted(fusion_transcript.exon_mapping.items()):
-                if Interval.overlaps(ex, us_exon):
-                    number = src_exon.transcript.exon_number(src_exon)
-                    if us_exon.end <= fusion_transcript.break1:
-                        five_prime_exons.append(number)
-                    elif us_exon.start >= fusion_transcript.break2:
-                        three_prime_exons.append(number)
-                    else:
-                        raise AssertionError(
-                            'exon should not be mapped if not within a break region',
-                            us_exon, fusion_transcript.break1. fusion_transcript.break2
-                        )
-    row[COLUMNS.exon_last_5prime] = five_prime_exons[-1]
-    row[COLUMNS.exon_first_3prime] = three_prime_exons[0]
-    domains = []
-    for dom in translation.domains:
-        m, t = dom.score_region_mapping()
-        temp = {
-            "name": dom.name,
-            "sequences": dom.get_seqs(),
-            "regions": [
-                {"start": dr.start, "end": dr.end} for dr in sorted(dom.regions, key=lambda x: x.start)
-            ],
-            "mapping_quality": round(m * 100 / t, 0),
-            "matches": m
-        }
-        domains.append(temp)
-    row[COLUMNS.fusion_mapped_domains] = json.dumps(domains)
-    return row
 
 
 def main(
@@ -131,7 +74,9 @@ def main(
         COLUMNS.exon_last_5prime,
         COLUMNS.annotation_id,
         COLUMNS.annotation_figure,
-        COLUMNS.annotation_figure_legend
+        COLUMNS.annotation_figure_legend,
+        COLUMNS.cdna_synon,
+        COLUMNS.protein_synon
     }
     header = None
     log('opening for write:', TABBED_OUTPUT_FILE)
@@ -154,6 +99,17 @@ def main(
                 '({} of {}) current annotation'.format(i + 1, total),
                 ann.annotation_id, ann.transcript1, ann.transcript2, ann.event_type)
 
+            # get the reference sequences for either transcript
+            ref_cdna_seq = {}
+            ref_protein_seq = {}
+
+            for ust in [x for x in [ann.transcript1, ann.transcript2] if isinstance(x, usTranscript)]:
+                name = ust.name
+                for tr in ust.spliced_transcripts:
+                    ref_cdna_seq.setdefault(tr.get_seq(reference_genome), set()).add(name)
+                    for tx in tr.translations:
+                        ref_protein_seq.setdefault(tx.get_AA_seq(reference_genome), set()).add(name)
+
             # try building the fusion product
             rows = []
             # add fusion information to the current row
@@ -165,14 +121,19 @@ def main(
                     raise AssertionError('should not be duplicate fa sequence ids', fusion_fa_id)
                 seq = ann.fusion.get_cdna_seq(t.splicing_pattern)
                 fasta_fh.write('> {}\n{}\n'.format(fusion_fa_id, seq))
+                cdna_synon = ';'.join(sorted(list(ref_cdna_seq.get(seq, set()))))
 
                 # duplicate the row for each translation
                 for tl in t.translations:
                     nrow = dict()
                     nrow.update(row)
                     nrow[COLUMNS.fusion_sequence_fasta_id] = fusion_fa_id
+                    nrow[COLUMNS.cdna_synon] = cdna_synon
+                    aa = tl.get_AA_seq()
+                    protein_synon = ';'.join(sorted(list(ref_protein_seq.get(aa, set()))))
+                    nrow[COLUMNS.protein_synon] = protein_synon
                     # select the exon
-                    nrow.update(get_exon_annotations(tl))
+                    nrow.update(flatten_fusion_translation(tl))
                     rows.append(nrow)
             drawing = None
             retry_count = 0

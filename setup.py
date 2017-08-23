@@ -121,10 +121,10 @@ setup(
     install_requires=[
         'docutils <0.13.1',
         'colour',
-        'networkx',
+        'networkx==1.11.0',
         'svgwrite',
-        'sphinx',  # for building the documentation only
-        'sphinx-rtd-theme',  # for building the documentation only
+        'sphinx==1.6.3',  # for building the documentation only
+        'sphinx-rtd-theme==0.2.5b1',  # for building the documentation only
         'pysam>=0.9',
         'TSV=={}'.format(tsv_version),
         'vocab=={}'.format(vocab_version),

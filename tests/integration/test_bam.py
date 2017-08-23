@@ -347,44 +347,32 @@ class TestHistogram(unittest.TestCase):
 
 class TestBamStats(unittest.TestCase):
     def test_genome_bam_stats(self):
-        bamfh = None
-        try:
-            bamfh = pysam.AlignmentFile(FULL_BAM_INPUT, 'rb')
-            stats = compute_genome_bam_stats(
-                bamfh,
-                1000,
-                100,
-                min_mapping_quality=1,
-                sample_cap=10000,
-                distribution_fraction=0.99
-            )
-            self.assertGreaterEqual(50, abs(stats.median_fragment_size - 420))
-            self.assertEqual(150, stats.read_length)
-        finally:
-            try:
-                bamfh.close()
-            except AttributeError:
-                pass
+        bamfh = BamCache(FULL_BAM_INPUT)
+        stats = compute_genome_bam_stats(
+            bamfh,
+            1000,
+            100,
+            min_mapping_quality=1,
+            sample_cap=10000,
+            distribution_fraction=0.99
+        )
+        self.assertGreaterEqual(50, abs(stats.median_fragment_size - 420))
+        self.assertEqual(150, stats.read_length)
+        bamfh.close()
 
     def test_trans_bam_stats(self):
-        bamfh = None
-        try:
-            bamfh = pysam.AlignmentFile(TRANSCRIPTOME_BAM_INPUT, 'rb')
-            annotations = load_reference_genes(FULL_REFERENCE_ANNOTATIONS_FILE_JSON)
-            stats = compute_transcriptome_bam_stats(
-                bamfh,
-                annotations,
-                100,
-                min_mapping_quality=1,
-                stranded=True,
-                sample_cap=10000,
-                distribution_fraction=0.99
-            )
-            self.assertTrue(abs(stats.median_fragment_size - 185) < 5)
-            self.assertEqual(75, stats.read_length)
-            self.assertTrue(stats.stdev_fragment_size < 50)
-        finally:
-            try:
-                bamfh.close()
-            except AttributeError:
-                pass
+        bamfh = BamCache(TRANSCRIPTOME_BAM_INPUT)
+        annotations = load_reference_genes(FULL_REFERENCE_ANNOTATIONS_FILE_JSON)
+        stats = compute_transcriptome_bam_stats(
+            bamfh,
+            annotations,
+            100,
+            min_mapping_quality=1,
+            stranded=True,
+            sample_cap=10000,
+            distribution_fraction=0.99
+        )
+        self.assertTrue(abs(stats.median_fragment_size - 185) < 5)
+        self.assertEqual(75, stats.read_length)
+        self.assertTrue(stats.stdev_fragment_size < 50)
+        bamfh.close()
