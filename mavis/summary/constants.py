@@ -7,7 +7,9 @@ DEFAULTS = MavisNamespace(
     filter_min_flanking_reads=5,
     filter_min_flanking_only_reads=10,
     filter_min_split_reads=5,
-    filter_min_linking_split_reads=1
+    filter_min_linking_split_reads=1,
+    filter_cdna_synon=True,
+    filter_protein_synon=True
 )
 
 PAIRING_STATE = Vocab(

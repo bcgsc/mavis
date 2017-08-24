@@ -2,7 +2,6 @@ from configparser import ConfigParser, ExtendedInterpolation
 import os
 import TSV
 import re
-import pysam
 from . import __version__
 from .constants import PROTOCOL, DISEASE_STATUS
 from .util import devnull, MavisNamespace, bash_expands
@@ -16,6 +15,7 @@ from .tools import SUPPORTED_TOOL
 from .align import SUPPORTED_ALIGNER
 
 from .bam.stats import compute_genome_bam_stats, compute_transcriptome_bam_stats
+from .bam.cache import BamCache
 
 ENV_VAR_PREFIX = 'MAVIS_'
 
@@ -85,44 +85,37 @@ class LibraryConfig:
         if protocol == PROTOCOL.TRANS and annotations is None:
             raise AttributeError(
                 'missing required attribute: annotations. Annotations must be given for transcriptomes')
-        try:
-            bam = pysam.AlignmentFile(bam_file, 'rb')
-            bamstats = None
-            if protocol == PROTOCOL.TRANS:
-                bamstats = compute_transcriptome_bam_stats(
-                    bam,
-                    annotations=annotations,
-                    sample_size=sample_size,
-                    sample_cap=sample_cap,
-                    distribution_fraction=distribution_fraction,
-                    log=log
-                )
-            elif protocol == PROTOCOL.GENOME:
-                bamstats = compute_genome_bam_stats(
-                    bam,
-                    sample_size=sample_size,
-                    sample_bin_size=sample_bin_size,
-                    sample_cap=sample_cap,
-                    distribution_fraction=distribution_fraction,
-                    log=log
-                )
-            else:
-                raise ValueError('unrecognized value for protocol', protocol)
-            log(bamstats)
-
-            return LibraryConfig(
-                library=library, protocol=protocol, bam_file=bam_file, inputs=inputs,
-                median_fragment_size=bamstats.median_fragment_size,
-                stdev_fragment_size=bamstats.stdev_fragment_size,
-                read_length=bamstats.read_length,
-                strand_determining_read=bamstats.strand_determining_read,
-                **kwargs
+        bam = BamCache(bam_file)
+        if protocol == PROTOCOL.TRANS:
+            bamstats = compute_transcriptome_bam_stats(
+                bam,
+                annotations=annotations,
+                sample_size=sample_size,
+                sample_cap=sample_cap,
+                distribution_fraction=distribution_fraction,
+                log=log
             )
-        finally:
-            try:
-                bam.close()
-            except AttributeError:
-                pass
+        elif protocol == PROTOCOL.GENOME:
+            bamstats = compute_genome_bam_stats(
+                bam,
+                sample_size=sample_size,
+                sample_bin_size=sample_bin_size,
+                sample_cap=sample_cap,
+                distribution_fraction=distribution_fraction,
+                log=log
+            )
+        else:
+            raise ValueError('unrecognized value for protocol', protocol)
+        log(bamstats)
+
+        return LibraryConfig(
+            library=library, protocol=protocol, bam_file=bam_file, inputs=inputs,
+            median_fragment_size=bamstats.median_fragment_size,
+            stdev_fragment_size=bamstats.stdev_fragment_size,
+            read_length=bamstats.read_length,
+            strand_determining_read=bamstats.strand_determining_read,
+            **kwargs
+        )
 
 
 class JobSchedulingConfig:

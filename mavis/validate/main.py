@@ -160,6 +160,8 @@ def main(
             'blat_min_percent_of_max_score', DEFAULTS.blat_min_percent_of_max_score),
         blat_min_identity=kwargs.get(
             'blat_min_identity', DEFAULTS.blat_min_identity),
+        blat_limit_top_aln=kwargs.get(
+            'blat_limit_top_aln', DEFAULTS.blat_limit_top_aln),
         contig_aln_min_query_consumption=kwargs.get(
             'contig_aln_min_query_consumption', DEFAULTS.contig_aln_min_query_consumption),
         contig_aln_max_event_size=kwargs.get(

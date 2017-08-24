@@ -16,6 +16,7 @@ DEFAULTS = MavisNamespace(
     assembly_strand_concordance=0.51,
     blat_min_identity=0.9,
     blat_min_percent_of_max_score=0.8,
+    blat_limit_top_aln=25,
     call_error=10,
     consensus_req=3,
     contig_aln_max_event_size=50,
