@@ -1,10 +1,23 @@
 #!/projects/trans_scratch/software/perl/perl-5.20.3/bin/perl
 
-package FusionProcessing;
+$|++;
 
-#** @file
-# Main file for processing Trans-ABySS results and connecting to ensembl
-#*
+=pod
+
+this script is for pull annotation information from an ensembl api
+and outputting a json annotations file which can be read by mavis
+
+optionally takes two additional tab delimited files
+
+HUGO_ENSEMBL_MAPPING: this is a tab delimited file which must have two columns
+1. ensid: the ensembl id
+2. hugo: a semi-colon delimited list of hugo gene symbols
+
+BEST_TRANSCRIPTS: this is a mapping of gene ids to the preferred transcript for annotations. It must have the following two columns
+1. gene_id: the ensembl gene id
+2. transcript_id: the ensembl transcript id
+
+=cut
 
 use strict;
 use warnings;
@@ -22,7 +35,7 @@ use JSON;
 
 
 my $registry;
-my $_version = '2.1.4';
+my $_version = '1.0.0';
 my $_program = basename(__FILE__);
 my $_install = dirname(abs_path(__FILE__));
 
@@ -31,60 +44,86 @@ main();
 sub main
 {
     my $outputfile;
-    my $drug_target_file = '/projects/tumour_char/analysis_scripts/databases/processed_files/drug_target_tables/compiled_gene_drug_pathway.v1_2_4.tsv'; 
-    my $best_transcript_file = '/home/creisle/svn/ensembl_flatfiles/ens69_best_transcript.txt';
+    my $drug_target_file = $ENV{'HUGO_ENSEMBL_MAPPING'}; 
+    if (! defined $drug_target_file) {
+        $drug_target_file = "";
+    }
+    my $best_transcript_file = $ENV{'BEST_TRANSCRIPTS'};
+    if (! defined $best_transcript_file) {
+        $best_transcript_file = "";
+    }
     my $option_check = GetOptions(
         "output=s" => \$outputfile,
         "best_transcript_file" => \$best_transcript_file,
         "hugo_mapping_file" => \$drug_target_file
     );
     
-    my $database_information =  {   -host => 'ensembl01.bcgsc.ca',
-                                    -user => 'ensembl',
-                                    -port => 3399,
-                                    -pass => 'ensembl' };
+    my $database_information =  {
+        -host => $ENV{'ENSEMBL_HOST'},
+        -user => $ENV{'ENSEMBL_USER'},
+        -port => $ENV{'ENSEMBL_PORT'},
+        -pass => $ENV{'ENSEMBL_PASS'}
+    };
+    
+    my $help_message = <<"END_MESSAGE";
+usage: 
+    $_program --output OUTPUT_FILE [--best_transcript_file BEST_TRANSCRIPT_FILE] [--hugo_mapping_file HUGO_MAPPING_FILE]
+
+required arguments:
+
+    output:
+        path to the output json file where results will be written
+
+optional arguments:
+    
+    best_transcript_mapping:
+        path to the best transcripts file (default: $best_transcript_file)
+
+    hugo_mapping_file:
+        path to the hugo mapping file (default: $drug_target_file)
+END_MESSAGE
 
     # set up the default filenames
-    die "error: required argument --output not provided" if !defined $outputfile;
+    die "$help_message\n\nerror: required argument --output not provided" if ! defined $outputfile;
 
     $registry = 'Bio::EnsEMBL::Registry';
     $registry->load_registry_from_db(%$database_information);
     
-    # read in the drug target file and generate a mapping for the ensembl gene id's
-    my @required_column_names = ('ensid', 'hugo');
-    print "loading: $drug_target_file\n";
-    my ($header, $rows) = TSV::parse_input($drug_target_file, \@required_column_names);
     my %hugo_mapping = ();
-
-    while (my $row = shift @$rows)
-    {
-        my $ensid = $row->{'ensid'};
-        my $hugo = $row->{'hugo'};
-        my @fields = split /;/, $hugo;
-        $hugo_mapping{$ensid} = \@fields; 
-    }
     
-    @required_column_names = ('gene_id', 'transcript_id');
-    print "loading: $best_transcript_file\n";
-    ($header, $rows) = TSV::parse_input($best_transcript_file, \@required_column_names);
+    # read in the drug target file and generate a mapping for the ensembl gene id's
+    if ("$drug_target_file" ne "") {
+        my @required_column_names = ('ensid', 'hugo');
+        print "loading: $drug_target_file\n";
+        my ($header, $rows) = TSV::parse_input($drug_target_file, \@required_column_names);
+        while (my $row = shift @$rows)
+        {
+            my $ensid = $row->{'ensid'};
+            my $hugo = $row->{'hugo'};
+            my @fields = split /;/, $hugo;
+            $hugo_mapping{$ensid} = \@fields; 
+        }
+    }
     my %best_transcript_mapping = ();
-
-    while (my $row = shift @$rows)
-    {
-        my $ensid = $row->{'gene_id'};
-        my $transcript = $row->{'transcript_id'};
-        $best_transcript_mapping{$ensid} = $transcript;
+    if ("$best_transcript_file" ne "") {
+        my @required_column_names = ('gene_id', 'transcript_id');
+        print "loading: $best_transcript_file\n";
+        my ($header, $rows) = TSV::parse_input($best_transcript_file, \@required_column_names);
+        
+        while (my $row = shift @$rows)
+        {
+            my $ensid = $row->{'gene_id'};
+            my $transcript = $row->{'transcript_id'};
+            $best_transcript_mapping{$ensid} = $transcript;
+        }
     }
-    
-    
-    
     # load all the different transcripts
     my $transcript_adaptor = $registry->get_adaptor('human', 'core', 'gene'); 
     my @glist = @{$transcript_adaptor->fetch_all()};
     my $counter = 1;
     my $total = scalar @glist;
     my $interval = $total / 100;
-    print "loading $total genes\n";
+    
     my %all_domains = ();
     my $time = localtime();
     my $jsons = {
@@ -96,14 +135,10 @@ sub main
         "script_version" => $_version,
         "genes" => []
     };
-
+    print "loading $total genes\n";
     while ( my $gene = shift @glist )
     {
-        if ($counter % $interval == 0){
-            my $percent = $counter * 100 / $total;
-            print "$percent % complete\n";
-        }
-        
+        print ".";
         my @tlist = @{$gene->get_all_Transcripts()};
         my $gid = $gene->stable_id();
         
@@ -206,7 +241,7 @@ sub main
         }
     }
     open(my $fh, ">", $outputfile) or die "[ERROR] Could not open outputfile $outputfile\n";
-    print "writeing: $outputfile\n";
+    print "\nwriting: $outputfile\n";
     print $fh encode_json $jsons;
     close $fh;
     print "[$_program] [COMPLETE] status: Complete!\n";

@@ -164,6 +164,7 @@ MAVIS Package Documentation
     auto/mavis.interval
     mavis.pairing
     mavis.validate
+    mavis.summary
 
 
 |
