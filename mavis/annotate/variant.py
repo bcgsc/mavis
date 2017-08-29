@@ -6,8 +6,8 @@ from .protein import Translation, Domain, calculate_ORF
 from ..error import NotSpecifiedError
 from ..util import devnull
 import itertools
-import json
 import uuid
+import json
 
 
 def determine_prime(transcript, breakpoint):
@@ -674,7 +674,9 @@ class Annotation(BreakpointPair):
                 sorted(['{}({})'.format(x[0].name, x[1]) for x in self.genes_proximal_to_break1])),
             COLUMNS.genes_proximal_to_break2: ';'.join(
                 sorted(['{}({})'.format(x[0].name, x[1]) for x in self.genes_proximal_to_break2])),
-            COLUMNS.event_type: self.event_type
+            COLUMNS.event_type: self.event_type,
+            COLUMNS.gene1_aliases: None,
+            COLUMNS.gene2_aliases: None
         })
         if hasattr(self.transcript1, 'gene'):
             row[COLUMNS.gene1] = self.transcript1.gene.name
@@ -699,7 +701,6 @@ class Annotation(BreakpointPair):
                         row[COLUMNS.gene_product_type] = GENE_PRODUCT_TYPE.SENSE
             except NotSpecifiedError:
                 pass
-
         return row
 
 
