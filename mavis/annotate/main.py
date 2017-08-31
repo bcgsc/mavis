@@ -1,7 +1,7 @@
 import os
 import json
 import re
-from .variant import annotate_events, determine_prime, flatten_fusion_translation
+from .variant import annotate_events, determine_prime, flatten_fusion_translation, flatten_fusion_transcript
 from .genomic import usTranscript
 from ..constants import PROTOCOL, COLUMNS, PRIME, sort_columns
 from ..error import DrawingFitError, NotSpecifiedError
@@ -123,18 +123,27 @@ def main(
                 fasta_fh.write('> {}\n{}\n'.format(fusion_fa_id, seq))
                 cdna_synon = ';'.join(sorted(list(ref_cdna_seq.get(seq, set()))))
 
-                # duplicate the row for each translation
-                for tl in t.translations:
-                    nrow = dict()
-                    nrow.update(row)
-                    nrow[COLUMNS.fusion_sequence_fasta_id] = fusion_fa_id
-                    nrow[COLUMNS.cdna_synon] = cdna_synon
-                    aa = tl.get_AA_seq()
-                    protein_synon = ';'.join(sorted(list(ref_protein_seq.get(aa, set()))))
-                    nrow[COLUMNS.protein_synon] = protein_synon
-                    # select the exon
-                    nrow.update(flatten_fusion_translation(tl))
-                    rows.append(nrow)
+                temp_row = {}
+                temp_row.update(row)
+                temp_row.update(flatten_fusion_transcript(t))
+                temp_row[COLUMNS.fusion_sequence_fasta_id] = fusion_fa_id
+                temp_row[COLUMNS.cdna_synon] = cdna_synon
+                if len(t.translations):
+                    # duplicate the row for each translation
+                    for tl in t.translations:
+                        nrow = dict()
+                        nrow.update(row)
+                        nrow.update(temp_row)
+                        aa = tl.get_AA_seq()
+                        protein_synon = ';'.join(sorted(list(ref_protein_seq.get(aa, set()))))
+                        nrow[COLUMNS.protein_synon] = protein_synon
+                        # select the exon
+                        nrow.update(flatten_fusion_translation(tl))
+                        rows.append(nrow)
+                else:
+                    temp_row.update(row)
+                    rows.append(temp_row)
+
             drawing = None
             retry_count = 0
             draw_fusion_transcript = True

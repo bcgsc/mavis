@@ -1,4 +1,5 @@
 import unittest
+import os
 from mavis.annotate.variant import _gather_annotations, FusionTranscript, determine_prime
 from mavis.annotate.variant import _gather_breakpoint_annotations, overlapping_transcripts
 from mavis.annotate.genomic import *
@@ -10,12 +11,14 @@ from mavis.error import NotSpecifiedError
 from mavis.constants import STRAND, ORIENT, reverse_complement, SVTYPE, PRIME
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from . import REFERENCE_ANNOTATIONS_FILE, REFERENCE_GENOME_FILE, MockSeq, REFERENCE_ANNOTATIONS_FILE_JSON, REFERENCE_ANNOTATIONS_FILE2
+from mavis.util import log
 
 
 REFERENCE_ANNOTATIONS = None
 REFERENCE_GENOME = None
 REF_CHR = 'fake'
 ALT_REF_CHR = 'ref2'
+DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 
 
 def setUpModule():
@@ -1556,3 +1559,25 @@ class TestAnnotateEvents(unittest.TestCase):
         annotations = annotate_events(
             [bpp], reference_genome=REFERENCE_GENOME, annotations=reference_annotations)
         self.assertEqual(2, len(annotations))
+
+    def test_NDUFA12(self):
+        reference_annotations = load_reference_genes(os.path.join(DATA_DIR, 'NDUFA12_annotations.tab'), warn=log)
+        print(reference_annotations)
+        for gene_list in reference_annotations.values():
+            for gene in gene_list:
+                for t in gene.transcripts:
+                    print(t)
+        reference_genome = load_reference_genome(os.path.join(DATA_DIR, 'NDUFA12_hg19.fa'))
+        offset = 95290830 * 'N'
+        genome = {'12': MockSeq(offset + str(reference_genome['NDUFA12'].seq))}
+        b1 = Breakpoint('12', 95344068, orient=ORIENT.LEFT, strand=STRAND.NS)
+        b2 = Breakpoint('12', 95344379, orient=ORIENT.RIGHT, strand=STRAND.NS)
+        bpp = BreakpointPair(
+            b1, b2, stranded=False, opposing_strands=False, event_type=SVTYPE.DEL, protocol=PROTOCOL.GENOME,
+            untemplated_seq='')
+        annotations = annotate_events([bpp], reference_genome=genome, annotations=reference_annotations)
+        ann = annotations[0]
+        fseq = ann.fusion.transcripts[0].get_seq()
+        refseq = ann.transcript1.transcripts[0].get_seq(genome)
+        self.assertEqual(refseq, fseq)
+        self.assertEqual(1, len(annotations))
