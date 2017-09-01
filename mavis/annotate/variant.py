@@ -148,8 +148,8 @@ class FusionTranscript(usTranscript):
         offset = len(ft.seq)
 
         if ann.protocol == PROTOCOL.TRANS:
-            ft.exons[-1].intact_end_splice = False
-            ex2[0][0].intact_start_splice = False
+            ft.exons[-1].end_splice_site.intact = False
+            ex2[0][0].start_splice_site.intact = False
             novel_exon_start = ft.exons[-1].end + 1
             novel_exon_end = offset + ex2[0][0].start - 1
             if novel_exon_end >= novel_exon_start:  # create a novel exon
@@ -163,8 +163,8 @@ class FusionTranscript(usTranscript):
         for ex, old_ex in ex2:
             e = Exon(
                 ex.start + offset, ex.end + offset, ft,
-                intact_start_splice=ex.intact_start_splice,
-                intact_end_splice=ex.intact_end_splice
+                intact_start_splice=ex.start_splice_site.intact,
+                intact_end_splice=ex.end_splice_site.intact
             )
             ft.exons.append(e)
             ft.exon_mapping[e.position] = old_ex
@@ -209,8 +209,8 @@ class FusionTranscript(usTranscript):
         ft.first_three_prime_exon = ex1[0][0]
         offset = len(ft.seq)
         if ann.protocol == PROTOCOL.TRANS:
-            ft.exons[-1].intact_end_splice = False
-            ex1[0][0].intact_start_splice = False
+            ft.exons[-1].end_splice_site.intact = False
+            ex1[0][0].start_splice_site.intact = False
             novel_exon_start = ft.exons[-1].end + 1
             novel_exon_end = offset + ex1[0][0].start - 1
             if novel_exon_end >= novel_exon_start:  # create a novel exon
@@ -224,8 +224,8 @@ class FusionTranscript(usTranscript):
         for ex, old_ex in ex1:
             e = Exon(
                 ex.start + offset, ex.end + offset, ft,
-                intact_start_splice=ex.intact_start_splice,
-                intact_end_splice=ex.intact_end_splice
+                intact_start_splice=ex.start_splice_site.intact,
+                intact_end_splice=ex.end_splice_site.intact
             )
             ft.exons.append(e)
             ft.exon_mapping[e.position] = old_ex
@@ -336,8 +336,8 @@ class FusionTranscript(usTranscript):
             offset = len(ft.seq)
 
             if ann.protocol == PROTOCOL.TRANS:
-                ft.exons[-1].intact_end_splice = False
-                ex2[0][0].intact_start_splice = False
+                ft.exons[-1].end_splice_site.intact = False
+                ex2[0][0].start_splice_site.intact = False
                 novel_exon_start = ft.exons[-1].end + 1
                 novel_exon_end = offset + ex2[0][0].start - 1
                 if novel_exon_end >= novel_exon_start:  # create a novel exon
@@ -350,8 +350,8 @@ class FusionTranscript(usTranscript):
             for ex, old_ex in ex2:
                 e = Exon(
                     ex.start + offset, ex.end + offset, ft,
-                    intact_start_splice=ex.intact_start_splice,
-                    intact_end_splice=ex.intact_end_splice
+                    intact_start_splice=ex.start_splice_site.intact,
+                    intact_end_splice=ex.end_splice_site.intact
                 )
                 ft.exons.append(e)
                 ft.exon_mapping[e.position] = old_ex
@@ -427,6 +427,7 @@ class FusionTranscript(usTranscript):
         new_exons = []
         s = ''
         exons = sorted(transcript.exons, key=lambda x: x.start)
+        print(exons)
         if breakpoint.orient == ORIENT.LEFT:  # five prime
             for i, exon in enumerate(exons):
                 intact_start_splice = True
@@ -448,7 +449,8 @@ class FusionTranscript(usTranscript):
                     e = Exon(
                         len(s) + 1, len(s) + t - exon.start + 1,
                         intact_start_splice=intact_start_splice,
-                        intact_end_splice=intact_end_splice
+                        intact_end_splice=intact_end_splice,
+                        strand=STRAND.POS
                     )
                     temp = reference_sequence[exon.start - 1:t]
                     s += temp
@@ -469,7 +471,8 @@ class FusionTranscript(usTranscript):
                     e = Exon(
                         len(s) + 1, len(s) + len(exon),
                         intact_start_splice=intact_start_splice,
-                        intact_end_splice=intact_end_splice
+                        intact_end_splice=intact_end_splice,
+                        strand=STRAND.POS
                     )
                     temp = reference_sequence[exon.start - 1:exon.end]
                     assert(len(temp) == len(e))
@@ -484,7 +487,8 @@ class FusionTranscript(usTranscript):
                     e = Exon(
                         len(s) + 1, len(s) + len(temp),
                         intact_start_splice=intact_start_splice,
-                        intact_end_splice=intact_end_splice
+                        intact_end_splice=intact_end_splice,
+                        strand=STRAND.POS
                     )
                     s += temp
                     new_exons.append((e, exon))
@@ -499,8 +503,9 @@ class FusionTranscript(usTranscript):
                 e = Exon(
                     len(s) - ex.end + 1,
                     len(s) - ex.start + 1,
-                    intact_start_splice=ex.intact_end_splice,
-                    intact_end_splice=ex.intact_start_splice
+                    intact_start_splice=ex.end_splice_site.intact,
+                    intact_end_splice=ex.start_splice_site.intact,
+                    strand=STRAND.POS
                 )
                 new_exons.append((e, old_exon))
             s = reverse_complement(s)

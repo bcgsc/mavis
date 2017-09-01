@@ -239,6 +239,11 @@ SPLICE_TYPE = Vocab(
 - ``COMPLEX``: some combination of exon skipping and intron retention
 """
 
+SPLICE_SITE_TYPE = Vocab(
+    DONOR=3,
+    ACCEPTOR=5
+)
+
 SPLICE_SITE_RADIUS = 2
 """:class:`int`: number of bases away from an exon boundary considered to be part of the splice site such that if it were altered
         the splice site would be considered to be abrogated.
