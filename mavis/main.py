@@ -482,6 +482,8 @@ def check_single_job(directory):
     stamp_pattern = os.path.join(directory, '*.COMPLETE')
     log_pattern = os.path.join(directory, '*.o*')
     logged_fail = False
+    logfile = None
+    stamp = None
     try:
         stamp = unique_exists(stamp_pattern)
     except OSError as err:
