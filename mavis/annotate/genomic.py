@@ -329,6 +329,7 @@ class usTranscript(BioInterval):
         pattern = [(p, t) for p, s, t in pattern if s]  # filter out abrogated splice sites
         if reverse:
             pattern.reverse()
+
         def get_cons_sites(index, splice_type):
             # get the next 'n' of any given type
             temp = []
