@@ -1,7 +1,9 @@
-from ..constants import STRAND, SPLICE_SITE_RADIUS, reverse_complement, SPLICE_TYPE, SPLICE_SITE_TYPE
+from ..constants import STRAND, reverse_complement
 from ..interval import Interval
 from ..error import NotSpecifiedError
 from .base import BioInterval, ReferenceName
+from .splicing import SplicingPattern, SpliceSite
+from .constants import SPLICE_SITE_TYPE
 import itertools
 from copy import copy
 
@@ -240,106 +242,6 @@ class Exon(BioInterval):
         return 'Exon({}, {})'.format(self.start, self.end)
 
 
-class SplicingPattern(list):
-
-    def __init__(self, *args, splice_type=SPLICE_TYPE.NORMAL):
-        list.__init__(self, *args)
-        self.splice_type = splice_type
-
-    @staticmethod
-    def classify(pattern, original_sites):
-        # now need to decide the type for each set
-        pattern.sort()
-        r_introns = 0
-        s_exons = 0
-        assert(len(pattern) % 2 == 0)
-
-        for d, a in zip(pattern[0::2], pattern[1::2]):
-            # check if any original splice positions are between this donor and acceptor
-            temp = 0
-            for s in original_sites:
-                if s > d and s < a:
-                    temp += 1
-            assert(temp % 2 == 0)
-            s_exons += temp // 2
-
-        for a, d in zip(pattern[1::2], pattern[2::2]):
-            temp = 0
-            for s in original_sites:
-                if s > a and s < d:
-                    temp += 1
-            assert(temp % 2 == 0)
-            r_introns += temp // 2
-
-        if len(pattern) > 0:
-            # any skipped positions before the first donor or after the last acceptor
-            temp = 0
-            for s in original_sites:
-                if s < pattern[0]:
-                    temp += 1
-            assert(temp % 2 == 0)
-            r_introns += temp // 2
-            temp = 0
-            for s in original_sites:
-                if s > pattern[-1]:
-                    temp += 1
-            r_introns += temp // 2
-            assert(temp % 2 == 0)
-
-        # now classifying the pattern
-        if r_introns + s_exons == 0:
-            return SPLICE_TYPE.NORMAL
-        elif r_introns == 0:
-            if s_exons > 1:
-                return SPLICE_TYPE.MULTI_SKIP
-            else:
-                return SPLICE_TYPE.SKIP
-        elif s_exons == 0:
-            if r_introns > 1:
-                return SPLICE_TYPE.MULTI_RETAIN
-            else:
-                return SPLICE_TYPE.RETAIN
-        else:
-            return SPLICE_TYPE.COMPLEX
-
-
-class SpliceSite(BioInterval):
-
-    def __init__(self, ref, pos, site_type, intact=True, start=None, end=None, strand=None):
-        self.strand = strand if strand else ref.get_strand()
-
-        if self.strand == STRAND.NEG:
-            if site_type == SPLICE_SITE_TYPE.DONOR:
-                if start is None:
-                    start = pos - SPLICE_SITE_RADIUS
-                if end is None:
-                    end = pos + SPLICE_SITE_RADIUS - 1
-            else:
-                if start is None:
-                    start = pos - SPLICE_SITE_RADIUS + 1
-                if end is None:
-                    end = pos + SPLICE_SITE_RADIUS
-        else:
-            if site_type == SPLICE_SITE_TYPE.ACCEPTOR:
-                if start is None:
-                    start = pos - SPLICE_SITE_RADIUS
-                if end is None:
-                    end = pos + SPLICE_SITE_RADIUS - 1
-            else:
-                if start is None:
-                    start = pos - SPLICE_SITE_RADIUS + 1
-                if end is None:
-                    end = pos + SPLICE_SITE_RADIUS
-        BioInterval.__init__(self, ref, start, end)
-        assert(pos <= self.end and pos >= self.start)
-        self.pos = pos
-        self.intact = intact
-        self.type = SPLICE_SITE_TYPE.enforce(site_type)
-
-    def __or__(self, other):
-        return Interval.__or__(self, other)
-
-
 class usTranscript(BioInterval):
     """
     """
@@ -423,13 +325,10 @@ class usTranscript(BioInterval):
             pattern.append((exons[i].start, exons[i].start_splice_site.intact, DONOR if reverse else ACCEPTOR))
             pattern.append((exons[i].end, exons[i].end_splice_site.intact, ACCEPTOR if reverse else DONOR))
         pattern.append((exons[-1].start, exons[-1].start_splice_site.intact, DONOR if reverse else ACCEPTOR))  # always end with acceptor
-
         original_sites = [p for p, s, t in pattern]
         pattern = [(p, t) for p, s, t in pattern if s]  # filter out abrogated splice sites
-
         if reverse:
             pattern.reverse()
-
         def get_cons_sites(index, splice_type):
             # get the next 'n' of any given type
             temp = []
@@ -466,6 +365,8 @@ class usTranscript(BioInterval):
         for splss in splice_site_sets:
             classification = SplicingPattern.classify(splss, original_sites)
             splss.splice_type = classification
+            if reverse:
+                splss.reverse()
 
         return splice_site_sets
 

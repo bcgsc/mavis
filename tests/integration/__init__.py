@@ -170,6 +170,20 @@ class MockString:
             return self.char
 
 
+class MockLongString(str):
+    def __new__(cls, *args, offset=0, **kw):
+        s = str.__new__(cls, *args, **kw)
+        setattr(s, 'offset', offset)
+        return s
+
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            index = slice(index.start - self.offset, index.stop - self.offset, index.step)
+        else:
+            index -= self.offset
+        return str.__getitem__(self, index)
+
+
 def mock_read_pair(mock1, mock2):
     if mock1.reference_id != mock2.reference_id:
         mock1.template_length = 0

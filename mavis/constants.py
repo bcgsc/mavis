@@ -221,34 +221,6 @@ GENE_PRODUCT_TYPE = Vocab(SENSE='sense', ANTI_SENSE='anti-sense')
 - ``ANTI_SENSE``: the gene product is anti-sense
 """
 
-SPLICE_TYPE = Vocab(
-    RETAIN='retained intron',
-    SKIP='skipped exon',
-    NORMAL='normal',
-    MULTI_RETAIN='retained multiple introns',
-    MULTI_SKIP='skipped multiple exons',
-    COMPLEX='complex'
-)
-""":class:`Vocab`: holds controlled vocabulary for allowed splice type classification values
-
-- ``RETAIN``: an intron was retained
-- ``SKIP``: an exon was skipped
-- ``NORMAL``: no exons were skipped and no introns were retained. the normal/expected splicing pattern was followed
-- ``MULTI_RETAIN``: multiple introns were retained
-- ``MULTI_SKIP``: multiple exons were skipped
-- ``COMPLEX``: some combination of exon skipping and intron retention
-"""
-
-SPLICE_SITE_TYPE = Vocab(
-    DONOR=3,
-    ACCEPTOR=5
-)
-
-SPLICE_SITE_RADIUS = 2
-""":class:`int`: number of bases away from an exon boundary considered to be part of the splice site such that if it were altered
-        the splice site would be considered to be abrogated.
-"""
-
 PRIME = Vocab(FIVE=5, THREE=3)
 """:class:`Vocab`: holds controlled vocabulary
 

@@ -1,7 +1,8 @@
 import os
 import itertools
 from Bio import SeqIO
-from ..constants import PROTOCOL, COLUMNS, CALL_METHOD, SVTYPE, SPLICE_TYPE, STRAND
+from ..constants import PROTOCOL, COLUMNS, CALL_METHOD, SVTYPE, STRAND
+from ..annotate.constants import SPLICE_TYPE
 from .constants import DEFAULTS
 from ..util import read_inputs, output_tabbed_file, log, generate_complete_stamp
 from . import equivalent_events
