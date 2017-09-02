@@ -363,18 +363,21 @@ class FusionTranscript(usTranscript):
             t = Transcript(ft, spl_patt)
             ft.spliced_transcripts.append(t)
 
-            # now add the possible translations
+            # calculate the putataive open reading frams
             orfs = calculate_ORF(t.get_seq(), min_orf_size=min_orf_size)
+            # limit the length to either only the longest ORF or anything longer than the input translations
+            min_orf_length = max([len(o) for o in orfs] + [min_orf_size if min_orf_size else 0])
+            for ref_tx in [ann.transcript1, ann.transcript2]:
+                for tlx in ref_tx.translations:
+                    min_orf_length = min(min_orf_length, len(tlx))
+
+            # filter the orfs based on size
+            orfs = [o for o in orfs if len(o) >= min_orf_length]
+
+            # if there are still too many filter to reasonable number
             if max_orf_cap and len(orfs) > max_orf_cap:  # limit the number of orfs returned
                 orfs = sorted(orfs, key=lambda x: len(x), reverse=True)
-                l = len(orfs[max_orf_cap - 1])
-                temp = []
-                for i, orf in enumerate(orfs):
-                    if len(orf) < l:
-                        break
-                    else:
-                        temp.append(orf)
-                orfs = temp
+                orfs = orfs[0:max_orf_cap]
             # create the translations
             for orf in orfs:
                 tl = Translation(orf.start - t.start + 1, orf.end - t.start + 1, t)
@@ -427,7 +430,6 @@ class FusionTranscript(usTranscript):
         new_exons = []
         s = ''
         exons = sorted(transcript.exons, key=lambda x: x.start)
-        print(exons)
         if breakpoint.orient == ORIENT.LEFT:  # five prime
             for i, exon in enumerate(exons):
                 intact_start_splice = True
