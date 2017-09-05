@@ -14,6 +14,7 @@ REF_GENOME = {}
 HUGO_GENES = {}
 ANNOTATIONS = None
 
+
 def setUpModule():
     global ANNOTATIONS
     temp = load_reference_genome(os.path.join(DATA_DIR, 'novel_exon_test_reference.fa'))
@@ -296,6 +297,7 @@ class TestPredictSpliceSites(unittest.TestCase):
         self.assertEqual(5, len(donors))
 
     def test_fusion_with_novel_splice_site(self):
+        raise unittest.SkipTest('TODO: dependent functionality not yet implemented')
         bpp = BreakpointPair(
             Breakpoint('7', 150268089, 150268089, 'L', '+'),
             Breakpoint('8', 79715940, 79715940, 'L', '-'),

@@ -289,3 +289,6 @@ class TestBlat(unittest.TestCase):
         }
         # 136	0	0	0	1	19	1	1	+	contig2	175	0	155	reference17	4000	1882	2019	2	126,10,	0,145,	1882,2009,	ctcccaccaggagctcgtcctcaccacgtcctgcaccagcacctccagctcccgcagcagcgcctcgcccccacggtgcgcgctccgcgccggttccatgggctccgtaggttccatgggctccgt,ggttccatgg,	ctcccaccaggagctcgtcctcaccacgtcctgcaccagcacctccagctcccgcagcagcgcctcgcccccacggtgcgcgctccgcgccggttccatgggctccgtaggttccatgggctccgt,ggttccatgg,
         """
+
+    def test_ranking_alignments(self):
+        pass

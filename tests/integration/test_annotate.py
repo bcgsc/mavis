@@ -5,11 +5,10 @@ from mavis.annotate.genomic import *
 from mavis.annotate.protein import *
 from mavis.annotate.file_io import load_reference_genes, load_reference_genome
 from mavis.annotate.variant import annotate_events
-from mavis.annotate.constants import SPLICE_TYPE
 from mavis.error import NotSpecifiedError
 from mavis.constants import STRAND, ORIENT, reverse_complement, SVTYPE, PRIME, PROTOCOL
 from mavis.breakpoint import Breakpoint, BreakpointPair
-from . import REFERENCE_ANNOTATIONS_FILE, REFERENCE_GENOME_FILE, MockSeq, REFERENCE_ANNOTATIONS_FILE_JSON, REFERENCE_ANNOTATIONS_FILE2, DATA_DIR
+from . import REFERENCE_ANNOTATIONS_FILE, REFERENCE_GENOME_FILE, MockSeq, MockLongString, REFERENCE_ANNOTATIONS_FILE_JSON, REFERENCE_ANNOTATIONS_FILE2, DATA_DIR
 from mavis.util import log
 
 
@@ -1356,24 +1355,84 @@ class TestAnnotateEvents(unittest.TestCase):
             [bpp], reference_genome=REFERENCE_GENOME, annotations=reference_annotations)
         self.assertEqual(2, len(annotations))
 
-    def test_NDUFA12(self):
-        reference_annotations = load_reference_genes(os.path.join(DATA_DIR, 'NDUFA12_annotations.tab'), warn=log)
-        print(reference_annotations)
-        for gene_list in reference_annotations.values():
+
+class TestNDUFA12(unittest.TestCase):
+    def setUp(self):
+        self.reference_annotations = load_reference_genes(os.path.join(DATA_DIR, 'NDUFA12_annotations.tab'), warn=log)
+        reference_genome = load_reference_genome(os.path.join(DATA_DIR, 'NDUFA12_hg19.fa'))
+        self.reference_genome = {'12': MockSeq(
+            MockLongString(str(reference_genome['NDUFA12'].seq), offset=95290830)
+        )}
+
+    def test_annotate_events_synonymous(self):
+        for gene_list in self.reference_annotations.values():
             for gene in gene_list:
                 for t in gene.transcripts:
                     print(t)
-        reference_genome = load_reference_genome(os.path.join(DATA_DIR, 'NDUFA12_hg19.fa'))
-        offset = 95290830 * 'N'
-        genome = {'12': MockSeq(offset + str(reference_genome['NDUFA12'].seq))}
         b1 = Breakpoint('12', 95344068, orient=ORIENT.LEFT, strand=STRAND.NS)
         b2 = Breakpoint('12', 95344379, orient=ORIENT.RIGHT, strand=STRAND.NS)
         bpp = BreakpointPair(
             b1, b2, stranded=False, opposing_strands=False, event_type=SVTYPE.DEL, protocol=PROTOCOL.GENOME,
             untemplated_seq='')
-        annotations = annotate_events([bpp], reference_genome=genome, annotations=reference_annotations)
+        annotations = annotate_events([bpp], reference_genome=self.reference_genome, annotations=self.reference_annotations)
         ann = annotations[0]
         fseq = ann.fusion.transcripts[0].get_seq()
-        refseq = ann.transcript1.transcripts[0].get_seq(genome)
+        refseq = ann.transcript1.transcripts[0].get_seq(self.reference_genome)
         self.assertEqual(refseq, fseq)
         self.assertEqual(1, len(annotations))
+
+
+class TestSVEP1(unittest.TestCase):
+    def setUp(self):
+        self.reference_annotations = load_reference_genes(os.path.join(DATA_DIR, 'SVEP1_annotations.tab'), warn=log)
+        reference_genome = load_reference_genome(os.path.join(DATA_DIR, 'SVEP1_hg19.fa'))
+        self.reference_genome = {'9': MockSeq(
+            MockLongString(reference_genome['SVEP1'].seq, offset=113127530)
+        )}
+        self.best = None
+        for chr, gene_list in self.reference_annotations.items():
+            for gene in gene_list:
+                for tx in gene.unspliced_transcripts:
+                    if tx.name == 'ENST00000401783':
+                        self.best = tx
+                        break
+
+    def test_annotate_small_intronic_inversion(self):
+        bpp = BreakpointPair(
+            Breakpoint('9', 113152627, 113152627, orient='L'),
+            Breakpoint('9', 113152635, 113152635, orient='L'),
+            opposing_strands=True,
+            stranded=False,
+            event_type=SVTYPE.INV,
+            protocol=PROTOCOL.GENOME,
+            untemplated_seq=''
+        )
+        annotations = annotate_events([bpp], reference_genome=self.reference_genome, annotations=self.reference_annotations)
+        for a in annotations:
+            print(a, a.transcript1, a.transcript2)
+        self.assertEqual(1, len(annotations))
+        ann = annotations[0]
+        self.assertEqual(self.best, ann.transcript1)
+        self.assertEqual(self.best, ann.transcript2)
+        refseq = self.best.transcripts[0].get_seq(self.reference_genome)
+        self.assertEqual(1, len(ann.fusion.transcripts))
+        self.assertEqual(refseq, ann.fusion.transcripts[0].get_seq())
+
+    def test_build_single_transcript_inversion(self):
+        bpp = BreakpointPair(
+            Breakpoint('9', 113152627, 113152627, orient='L'),
+            Breakpoint('9', 113152635, 113152635, orient='L'),
+            opposing_strands=True,
+            stranded=False,
+            event_type=SVTYPE.INV,
+            protocol=PROTOCOL.GENOME,
+            untemplated_seq=''
+        )
+        ann = Annotation(bpp, transcript1=self.best, transcript2=self.best)
+        ft = FusionTranscript.build(
+            ann, self.reference_genome,
+            min_orf_size=300, max_orf_cap=10, min_domain_mapping_match=0.9
+        )
+        refseq = self.best.transcripts[0].get_seq(self.reference_genome)
+        self.assertEqual(1, len(ft.transcripts))
+        self.assertEqual(refseq, ft.transcripts[0].get_seq())

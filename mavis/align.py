@@ -176,7 +176,7 @@ def align_contigs(
         **kwargs):
     """
     given a set of contigs, call the aligner from the command line and adds the results to the contigs
-    asscoated with each Evidence object
+    associated with each Evidence object
 
     """
     if is_protein:

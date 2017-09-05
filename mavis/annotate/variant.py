@@ -915,6 +915,14 @@ def _gather_annotations(ref, bp, proximity=None):
             else:
                 combinations.extend(itertools.product(break1_neg, break2_neg))
     else:
+        # single transcript starts ....
+        for t in (set(break1_pos) | set(break1_neg)) & (set(break2_pos) | set(break2_neg)):
+            try:
+                t.gene
+            except AttributeError:
+                pass
+            else:
+                combinations.append((t, t))
         if bp.opposing_strands:
             combinations.extend(itertools.product(break1_pos, break2_neg))
             combinations.extend(itertools.product(break1_neg, break2_pos))
