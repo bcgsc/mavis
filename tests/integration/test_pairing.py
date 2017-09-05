@@ -2,10 +2,11 @@ import unittest
 from mavis.pairing.pairing import *
 from mavis.constants import SVTYPE, COLUMNS, CALL_METHOD, ORIENT, STRAND, PROTOCOL
 from mavis.breakpoint import BreakpointPair, Breakpoint
-from mavis.annotate.genomic import usTranscript, Exon
+from mavis.annotate.genomic import usTranscript
 
 
 class TestPairing(unittest.TestCase):
+
     def setUp(self):
         self.gev1 = BreakpointPair(
             Breakpoint('1', 1),
@@ -332,9 +333,10 @@ class TestPairing(unittest.TestCase):
 
 
 class TestBreakpointPrediction(unittest.TestCase):
+
     def setUp(self):
-        self.ust = usTranscript([Exon(101, 200), Exon(301, 400), Exon(501, 600)], strand=STRAND.POS)
-        self.n_ust = usTranscript([Exon(101, 200), Exon(301, 400), Exon(501, 600)], strand=STRAND.NEG)
+        self.ust = usTranscript([(101, 200), (301, 400), (501, 600)], strand=STRAND.POS)
+        self.n_ust = usTranscript([(101, 200), (301, 400), (501, 600)], strand=STRAND.NEG)
 
     def test_exonic_five_prime(self):
         b = Breakpoint('1', 350, orient=ORIENT.LEFT)

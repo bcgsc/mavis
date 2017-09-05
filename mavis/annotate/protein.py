@@ -253,7 +253,7 @@ class Translation(BioInterval):
         self.domains = [d for d in domains]
 
         if start <= 0:
-            raise AttributeError('start must be a positive integer')
+            raise AttributeError('start must be a positive integer', start)
         if transcript and end > len(transcript):
             raise AttributeError('translation cannot be outside of related transcript range', end, len(transcript))
 

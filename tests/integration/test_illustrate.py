@@ -400,30 +400,30 @@ class TestDraw(unittest.TestCase):
         t = build_transcript(
             cds_start=193, cds_end=759,
             exons=[
-                Exon(25403685, 25403865),
-                Exon(25398208, 25398329),
-                Exon(25380168, 25380346),
-                Exon(25378548, 25378707),
-                Exon(25357723, 25362845)],
+                (25403685, 25403865),
+                (25398208, 25398329),
+                (25380168, 25380346),
+                (25378548, 25378707),
+                (25357723, 25362845)],
             gene=gene, domains=[])
         build_transcript(
             cds_start=198, cds_end=425,
-            exons=[Exon(25403685, 25403870), Exon(25398208, 25398329), Exon(25362102, 25362845)],
+            exons=[(25403685, 25403870), (25398208, 25398329), (25362102, 25362845)],
             gene=gene, domains=[])
         build_transcript(
             cds_start=65, cds_end=634,
             exons=[
-                Exon(25403685, 25403737),
-                Exon(25398208, 25398329),
-                Exon(25380168, 25380346),
-                Exon(25378548, 25378707),
-                Exon(25368371, 25368494),
-                Exon(25362365, 25362845)],
+                (25403685, 25403737),
+                (25398208, 25398329),
+                (25380168, 25380346),
+                (25378548, 25378707),
+                (25368371, 25368494),
+                (25362365, 25362845)],
             gene=gene, domains=[Domain('domain1', [(1, 10)]), Domain('domain1', [(4, 10)])],
             is_best_transcript=True)
         build_transcript(
             cds_start=65, cds_end=634,
-            exons=[Exon(25403698, 25403863), Exon(25398208, 25398329), Exon(25386753, 25388160)],
+            exons=[(25403698, 25403863), (25398208, 25398329), (25386753, 25388160)],
             gene=gene, domains=[])
         d = DiagramSettings()
         for i, t in enumerate(gene.transcripts):
