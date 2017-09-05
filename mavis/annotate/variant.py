@@ -359,18 +359,6 @@ class FusionTranscript(usTranscript):
             ft.seq += seq2
 
         ft.position = Interval(1, len(ft.seq))
-        # look for novel splice sites
-        sites = predict_splice_sites(ft.seq)
-        original = set()
-        for ex in ft.exons:
-            original.update({ex.start, ex.end})
-            print(ex, len(ft.seq), ft.seq[ex.start - 1 - 10:ex.start + 9], ft.seq[ex.end - 10:ex.end + 10])
-        print('predicted sites')
-        for s in sorted(sites, key=lambda x: x.pos):
-            if s.pos in original:
-                print('*******', s)
-            else:
-                print(s)
         # add all splice variants
         for spl_patt in ft.generate_splicing_patterns():
             t = Transcript(ft, spl_patt)
