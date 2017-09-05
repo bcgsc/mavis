@@ -137,8 +137,8 @@ def predict_splice_sites(input_sequence, is_reverse=False):
         prefix = match.group(1)
         suffix = match.group(2)
         return SpliceSite(
-            None, start=match.start(), end=match.end() - 1,
-            pos=match.start() + len(prefix) - 1,
+            None, start=match.start() + 1, end=match.end(),
+            pos=match.start() + len(prefix),
             seq=prefix + suffix,
             site_type=splice_type,
             strand=STRAND.POS)
@@ -164,9 +164,9 @@ def predict_splice_sites(input_sequence, is_reverse=False):
         # flip all the sites
         for site in sites:
             offset = site.end - site.pos
-            start = l - site.end
+            start = l - site.end + 1
             new_site = SpliceSite(
-                None, start=start, end=l - site.start,
+                None, start=start, end=l - site.start + 1,
                 seq=reverse_complement(site.seq),
                 strand=STRAND.NEG,
                 pos=start + offset,

@@ -1,18 +1,21 @@
 from mavis.annotate.constants import SPLICE_SITE_RADIUS, SPLICE_TYPE
 from mavis.annotate.splicing import predict_splice_sites
 from mavis.annotate.genomic import usTranscript, Exon
+from mavis.annotate.variant import annotate_events
 from mavis.annotate.file_io import load_reference_genome, load_annotations
-from mavis.constants import STRAND, reverse_complement
+from mavis.constants import STRAND, reverse_complement, SVTYPE, PROTOCOL
 from mavis.interval import Interval
+from mavis.breakpoint import Breakpoint, BreakpointPair
 import unittest
 import os
 from . import DATA_DIR, MockLongString, MockSeq
 
 REF_GENOME = {}
 HUGO_GENES = {}
-
+ANNOTATIONS = None
 
 def setUpModule():
+    global ANNOTATIONS
     temp = load_reference_genome(os.path.join(DATA_DIR, 'novel_exon_test_reference.fa'))
     ANNOTATIONS = load_annotations(os.path.join(DATA_DIR, 'novel_exon_test_annotations.tab'))
     for chr, gene_list in ANNOTATIONS.items():
@@ -291,3 +294,21 @@ class TestPredictSpliceSites(unittest.TestCase):
         for d in donors:
             self.assertEqual(d.seq, gimap4_seq[d.start - 1:d.end])
         self.assertEqual(5, len(donors))
+
+    def test_fusion_with_novel_splice_site(self):
+        bpp = BreakpointPair(
+            Breakpoint('7', 150268089, 150268089, 'L', '+'),
+            Breakpoint('8', 79715940, 79715940, 'L', '-'),
+            event_type=SVTYPE.ITRANS,
+            protocol=PROTOCOL.GENOME,
+            untemplated_seq=''
+        )
+        annotations = annotate_events([bpp], ANNOTATIONS, REF_GENOME)
+        self.assertEqual(1, len(annotations))
+        ann = annotations[0]
+        print(ann, ann.transcript1, ann.transcript2)
+        print(ann.fusion)
+        print(ann.fusion.transcripts[0].splicing_pattern, ann.fusion.transcripts[0].splicing_pattern.splice_type)
+        for ex in ann.fusion.transcripts[0].exons:
+            print(ex, len(ex))
+        self.assertTrue(False)
