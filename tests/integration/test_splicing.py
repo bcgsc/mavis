@@ -14,6 +14,7 @@ REF_GENOME = {}
 HUGO_GENES = {}
 ANNOTATIONS = None
 
+
 def setUpModule():
     global ANNOTATIONS
     temp = load_reference_genome(os.path.join(DATA_DIR, 'novel_exon_test_reference.fa'))
