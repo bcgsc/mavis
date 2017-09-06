@@ -1393,7 +1393,7 @@ class TestSVEP1(unittest.TestCase):
         for chr, gene_list in self.reference_annotations.items():
             for gene in gene_list:
                 for tx in gene.unspliced_transcripts:
-                    if tx.name == 'ENST00000401783':
+                    if tx.is_best_transcript:
                         self.best = tx
                         break
 
@@ -1436,3 +1436,4 @@ class TestSVEP1(unittest.TestCase):
         refseq = self.best.transcripts[0].get_seq(self.reference_genome)
         self.assertEqual(1, len(ft.transcripts))
         self.assertEqual(refseq, ft.transcripts[0].get_seq())
+

@@ -89,7 +89,7 @@ def main(
         add={
             'dgv': None,
             'summary_pairing': None},
-        explicit_strand=True,
+        explicit_strand=False,
         expand_ns=False,
         cast={
             COLUMNS.break1_split_reads: int,

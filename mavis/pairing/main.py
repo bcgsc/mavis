@@ -58,7 +58,7 @@ def main(
             COLUMNS.fusion_sequence_fasta_file: None,
             COLUMNS.fusion_splicing_pattern: None
         },
-        explicit_strand=True,
+        explicit_strand=False,
         expand_ns=False
     ))
     log('read {} breakpoint pairs'.format(len(bpps)))
@@ -118,9 +118,8 @@ def main(
             bpp.fusion_cdna_coding_start,
             bpp.fusion_cdna_coding_end
         )
-        category = (bpp.break1.chr, bpp.break2.chr, bpp.break1.strand, bpp.break2.strand)
+        category = (bpp.break1.chr, bpp.break2.chr, bpp.opposing_strands)
         categories.add(category)
-        assert(bpp.break1.strand != STRAND.NS and bpp.break2.strand != STRAND.NS)
         bpp.data[COLUMNS.product_id] = product_key
         calls_by_lib.setdefault(bpp.library, {})
         calls_by_lib[bpp.library].setdefault(category, set())
