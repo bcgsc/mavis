@@ -1357,6 +1357,7 @@ class TestAnnotateEvents(unittest.TestCase):
 
 
 class TestNDUFA12(unittest.TestCase):
+
     def setUp(self):
         self.reference_annotations = load_reference_genes(os.path.join(DATA_DIR, 'NDUFA12_annotations.tab'), warn=log)
         reference_genome = load_reference_genome(os.path.join(DATA_DIR, 'NDUFA12_hg19.fa'))
@@ -1383,6 +1384,7 @@ class TestNDUFA12(unittest.TestCase):
 
 
 class TestSVEP1(unittest.TestCase):
+
     def setUp(self):
         self.reference_annotations = load_reference_genes(os.path.join(DATA_DIR, 'SVEP1_annotations.tab'), warn=log)
         reference_genome = load_reference_genome(os.path.join(DATA_DIR, 'SVEP1_hg19.fa'))
@@ -1436,4 +1438,3 @@ class TestSVEP1(unittest.TestCase):
         refseq = self.best.transcripts[0].get_seq(self.reference_genome)
         self.assertEqual(1, len(ft.transcripts))
         self.assertEqual(refseq, ft.transcripts[0].get_seq())
-

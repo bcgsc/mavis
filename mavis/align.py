@@ -207,59 +207,27 @@ def align_contigs(
 
         # call the aligner using subprocess
         if aligner == SUPPORTED_ALIGNER.BLAT:
-            from .blat import Blat
+            from .blat import process_blat_output
+            # call the aligner using subprocess
             blat_min_identity *= 100
             blat_options = kwargs.pop(
                 'blat_options', ["-stepSize=5", "-repMatch=2253", "-minScore=0", "-minIdentity={0}".format(blat_min_identity)])
             # call the blat subprocess
             # will raise subprocess.CalledProcessError if non-zero exit status
             # parameters from https://genome.ucsc.edu/FAQ/FAQblat.html#blat4
-            log([aligner, aligner_reference,
+            log([SUPPORTED_ALIGNER.BLAT, aligner_reference,
                  aligner_fa_input_file, aligner_output_file, '-out=pslx', '-noHead'] + blat_options)
             subprocess.check_output([
-                aligner, aligner_reference,
+                SUPPORTED_ALIGNER.BLAT, aligner_reference,
                 aligner_fa_input_file, aligner_output_file, '-out=pslx', '-noHead'] + blat_options)
-
-            header, rows = Blat.read_pslx(aligner_output_file, query_id_mapping, is_protein=is_protein)
-
-            # split the rows by query id
-            rows_by_query = {}
-            for row in rows:
-                if row['qname'] not in rows_by_query:
-                    rows_by_query[row['qname']] = []
-                rows_by_query[row['qname']].append(row)
-
-            reads_by_query = {}
-            for s in sequences:
-                reads_by_query[s] = []
-            for query_id, rows in rows_by_query.items():
-                query_seq = query_id_mapping[query_id]
-                # filter on percent id
-                filtered_rows = [row for row in rows if round(row['percent_ident'], 0) >= blat_min_identity]
-
-                # filter on score
-                scores = sorted([r['score'] for r in rows])
-                max_score = scores[-1]
-                filtered_rows.sort(key=lambda x: x['score'], reverse=True)
-                reads = []
-                for rank, row in enumerate(filtered_rows):
-                    if rank >= blat_limit_top_aln:
-                        break
-                    try:
-                        read = Blat.pslx_row_to_pysam(row, INPUT_BAM_CACHE, reference_genome)
-                        read.set_tag(PYSAM_READ_FLAGS.BLAT_SCORE, row['score'], value_type='i')
-                        read.set_tag(PYSAM_READ_FLAGS.BLAT_ALIGNMENTS, len(filtered_rows), value_type='i')
-                        read.set_tag(PYSAM_READ_FLAGS.BLAT_PMS, blat_min_percent_of_max_score, value_type='f')
-                        read.set_tag(PYSAM_READ_FLAGS.BLAT_RANK, rank, value_type='i')
-                        read.set_tag(PYSAM_READ_FLAGS.BLAT_PERCENT_IDENTITY, row['percent_ident'], value_type='f')
-                        reads.append(read)
-                    except KeyError as e:
-                        warnings.warn(
-                            'warning: reference template name not recognized {0}'.format(e))
-                    except AssertionError as e:
-                        warnings.warn('warning: invalid blat alignment: {}'.format(e))
-
-                reads_by_query[query_seq] = reads
+            reads_by_query = process_blat_output(
+                INPUT_BAM_CACHE=INPUT_BAM_CACHE,
+                query_id_mapping=query_id_mapping,
+                reference_genome=reference_genome,
+                aligner_output_file=aligner_output_file,
+                blat_limit_top_aln=blat_limit_top_aln,
+                is_protein=is_protein
+            )
 
         elif aligner == SUPPORTED_ALIGNER.BWA_MEM:
             command = '{} {} {} -Y'.format(aligner, aligner_reference, aligner_fa_input_file)
