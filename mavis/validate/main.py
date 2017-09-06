@@ -156,8 +156,6 @@ def main(
         aligner=kwargs.get(
             'aligner', DEFAULTS.aligner),
         aligner_reference=aligner_reference,
-        blat_min_percent_of_max_score=kwargs.get(
-            'blat_min_percent_of_max_score', DEFAULTS.blat_min_percent_of_max_score),
         blat_min_identity=kwargs.get(
             'blat_min_identity', DEFAULTS.blat_min_identity),
         blat_limit_top_aln=kwargs.get(

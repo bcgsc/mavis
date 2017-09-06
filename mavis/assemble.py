@@ -353,7 +353,6 @@ def assemble(
     for seq, score in list(path_scores.items()):
         if seq not in sequences and len(seq) >= assembly_min_contig_length:
             contigs[seq] = Contig(seq, score)
-
     # remap the input reads
     filtered_contigs = {}
     for seq, contig in sorted(contigs.items()):
@@ -393,7 +392,9 @@ def assemble(
             assert(len(best_alignments) >= 1)
             for contig, read in best_alignments:
                 contig.add_mapped_sequence(read, len(best_alignments))
-    log('assemblies complete. scores (build, remap):', [(c.score, round(c.remap_score(), 1)) for c in contigs])
+    log(
+        'assemblies complete. scores (build, remap, covg):',
+        [(c.score, round(c.remap_score(), 1), round(c.remap_coverage(), 2)) for c in contigs])
     return contigs
 
 

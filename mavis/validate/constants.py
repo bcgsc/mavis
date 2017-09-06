@@ -15,7 +15,6 @@ DEFAULTS = MavisNamespace(
     assembly_min_tgt_to_exclude_half_map=7,
     assembly_strand_concordance=0.51,
     blat_min_identity=0.9,
-    blat_min_percent_of_max_score=0.8,
     blat_limit_top_aln=25,
     call_error=10,
     consensus_req=3,
