@@ -322,6 +322,7 @@ COLUMNS = Vocab(
     contig_alignment_query_name='contig_alignment_query_name',
     contig_build_score='contig_build_score',
     contig_remap_score='contig_remap_score',
+    contig_remap_coverage='contig_remap_coverage',
     contig_remapped_read_names='contig_remapped_read_names',
     contig_remapped_reads='contig_remapped_reads',
     contig_seq='contig_seq',
@@ -534,6 +535,9 @@ COLUMNS = Vocab(
 
     contig_alignment_cigar
         The cigar string(s) representing the contig alignment. Semi-colon delimited
+
+    contig_remap_coverage
+        :class:`float` - Fraction of the contig sequence which is covered by the remapped reads
 
     contig_build_score
         :class:`int` - Score representing the edge weights of all edges used in building the sequence

@@ -346,7 +346,8 @@ class EventCall(BreakpointPair):
                 COLUMNS.contig_strand_specific: self.contig.strand_specific,
                 COLUMNS.contig_alignment_query_coverage: caqc,
                 COLUMNS.contig_build_score: self.contig.score,
-                COLUMNS.contig_alignment_query_name: self.contig_alignment[0].query_name
+                COLUMNS.contig_alignment_query_name: self.contig_alignment[0].query_name,
+                COLUMNS.contig_remap_coverage: self.contig.remap_coverage()
             })
         return row
 

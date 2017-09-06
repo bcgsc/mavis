@@ -5,6 +5,7 @@ from .bam import cigar as cigar_tools
 from .bam.read import nsb_align, calculate_alignment_score
 from .constants import reverse_complement
 from .util import devnull
+from .interval import Interval
 
 
 class Contig:
@@ -27,6 +28,11 @@ class Contig:
 
     def remap_score(self):
         return sum(self.remapped_sequences.values())
+
+    def remap_coverage(self):
+        itvls = Interval.min_nonoverlapping(*[(x.reference_start, x.reference_end - 1) for x in self.remapped_sequences])
+        cov = sum([len(i) for i in itvls])
+        return cov / len(self.seq)
 
 
 class DeBruijnGraph(nx.DiGraph):
