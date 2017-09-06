@@ -301,7 +301,7 @@ COLUMNS = Vocab(
     protocol='protocol',
     disease_status='disease_status',
     tools='tools',
-    break1_call_method='break1_call_method',
+    call_method='call_method',
     break1_ewindow='break1_ewindow',
     break1_ewindow_count='break1_ewindow_count',
     break1_ewindow_practical_coverage='break1_ewindow_practical_coverage',
@@ -309,7 +309,6 @@ COLUMNS = Vocab(
     break1_split_read_names='break1_split_read_names',
     break1_split_reads='break1_split_reads',
     break1_split_reads_forced='break1_split_reads_forced',
-    break2_call_method='break2_call_method',
     break2_ewindow='break2_ewindow',
     break2_ewindow_count='break2_ewindow_count',
     break2_ewindow_practical_coverage='break2_ewindow_practical_coverage',
@@ -551,11 +550,8 @@ COLUMNS = Vocab(
     spanning_read_names
         read query names of the spanning reads which support the current event
 
-    break1_call_method
-        :class:`CALL_METHOD` - The method used to call the first breakpoint
-
-    break2_call_method
-        :class:`CALL_METHOD` - The method used to call the second breakpoint
+    call_method
+        :class:`CALL_METHOD` - The method used to call the breakpoints
 
     flanking_pairs
         :class:`int` - Number of read-pairs where one read aligns to the first breakpoint window and the second read

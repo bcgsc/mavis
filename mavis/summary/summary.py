@@ -116,10 +116,8 @@ def filter_by_call_method(bpp1, bpp2):
         CALL_METHOD.FLANK: 1
     }
     # This treats split flank the same as flank split
-    bpp_call_score = RANKING[bpp1.break1_call_method] + \
-        RANKING[bpp1.break2_call_method]
-    existing_call_score = RANKING[bpp2.break1_call_method] + \
-        RANKING[bpp2.break2_call_method]
+    bpp_call_score = RANKING[bpp1.call_method]
+    existing_call_score = RANKING[bpp2.call_method]
 
     if bpp_call_score < existing_call_score:
         return bpp1
@@ -147,7 +145,7 @@ def group_events(bpp1, bpp2):
 
     # Note: There are some attributes that shouldn't be lost if different, currently appending the information
     # The evidence could be better off as a max instead of a join
-    columns_to_keep = [COLUMNS.contig_seq, COLUMNS.break1_call_method, COLUMNS.break2_call_method,
+    columns_to_keep = [COLUMNS.contig_seq, COLUMNS.call_method,
                        COLUMNS.break1_split_reads, COLUMNS.break2_split_reads, COLUMNS.contig_alignment_score,
                        COLUMNS.spanning_reads, COLUMNS.flanking_pairs, COLUMNS.tools,
                        COLUMNS.product_id, COLUMNS.event_type, COLUMNS.annotation_id,
@@ -236,16 +234,16 @@ def filter_by_evidence(
     filtered = []
     removed = []
     for bpp in bpps:
-        if bpp.break1_call_method == CALL_METHOD.CONTIG and bpp.break2_call_method == CALL_METHOD.CONTIG:
+        if bpp.call_method == CALL_METHOD.CONTIG:
             # inherently the breakpoints have been linked
             if int(bpp.contig_remapped_reads) < filter_min_remapped_reads:
                 removed.append(bpp)
                 continue
-        elif bpp.break1_call_method == CALL_METHOD.SPAN and bpp.break2_call_method == CALL_METHOD.SPAN:
+        elif bpp.call_method == CALL_METHOD.SPAN:
             if bpp.spanning_reads < filter_min_spanning_reads:
                 removed.append(bpp)
                 continue
-        elif bpp.break1_call_method == CALL_METHOD.SPLIT and bpp.break2_call_method == CALL_METHOD.SPLIT:
+        elif bpp.call_method == CALL_METHOD.SPLIT:
             if any([
                 bpp.break1_split_reads < filter_min_split_reads,
                 bpp.break2_split_reads < filter_min_split_reads,
@@ -263,20 +261,12 @@ def filter_by_evidence(
             ]):
                 removed.append(bpp)
                 continue
-        elif bpp.break1_call_method == CALL_METHOD.SPLIT and bpp.break2_call_method == CALL_METHOD.FLANK:
-            if bpp.break1_split_reads < filter_min_split_reads or bpp.flanking_pairs < filter_min_flanking_reads:
-                removed.append(bpp)
-                continue
-        elif bpp.break1_call_method == CALL_METHOD.FLANK and bpp.break2_call_method == CALL_METHOD.SPLIT:
-            if bpp.break1_split_reads < filter_min_split_reads or bpp.flanking_pairs < filter_min_flanking_reads:
-                removed.append(bpp)
-                continue
-        elif bpp.break1_call_method == CALL_METHOD.FLANK and bpp.break2_call_method == CALL_METHOD.FLANK:
+        elif bpp.call_method == CALL_METHOD.FLANK:
             if bpp.flanking_pairs < filter_min_flanking_only_reads:
                 removed.append(bpp)
                 continue
         else:
-            raise AssertionError('unexpected value for break1_call_method or break2_call_method: {}, {}'.format(
-                bpp.break1_call_method, bpp.break2_call_method))
+            raise AssertionError('unexpected value for call_method: {}'.format(
+                bpp.call_method))
         filtered.append(bpp)
     return filtered, removed

@@ -69,10 +69,9 @@ def main(
             COLUMNS.exon_first_3prime,
             COLUMNS.disease_status,
             # evidence_columns
-            COLUMNS.break1_call_method,
+            COLUMNS.call_method,
             COLUMNS.break1_split_reads,
             COLUMNS.break1_split_reads_forced,
-            COLUMNS.break2_call_method,
             COLUMNS.break2_split_reads,
             COLUMNS.break2_split_reads_forced,
             COLUMNS.linking_split_reads,
@@ -300,8 +299,7 @@ def main(
         COLUMNS.exon_first_3prime,
 
         # For debugging
-        COLUMNS.break1_call_method,
-        COLUMNS.break2_call_method,
+        COLUMNS.call_method,
         COLUMNS.flanking_pairs,
         COLUMNS.break1_split_reads,
         COLUMNS.break2_split_reads,

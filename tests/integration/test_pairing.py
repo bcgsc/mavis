@@ -14,8 +14,7 @@ class TestPairing(unittest.TestCase):
             opposing_strands=True,
             data={
                 COLUMNS.event_type: SVTYPE.DEL,
-                COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
-                COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
                 COLUMNS.protocol: PROTOCOL.GENOME
             }
@@ -26,8 +25,7 @@ class TestPairing(unittest.TestCase):
             opposing_strands=True,
             data={
                 COLUMNS.event_type: SVTYPE.DEL,
-                COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
-                COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
                 COLUMNS.protocol: PROTOCOL.GENOME
             }
@@ -74,8 +72,8 @@ class TestPairing(unittest.TestCase):
         self.assertTrue(equivalent_events(self.gev1, self.gev2, self.TRANSCRIPTS))
 
     def test_genome_protocol_by_contig(self):
-        self.gev1.break1_call_method = CALL_METHOD.CONTIG
-        self.gev2.break1_call_method = CALL_METHOD.CONTIG
+        self.gev1.call_method = CALL_METHOD.CONTIG
+        self.gev2.call_method = CALL_METHOD.CONTIG
         self.DISTANCES[CALL_METHOD.CONTIG] = 0
         self.DISTANCES[CALL_METHOD.SPLIT] = 10
         self.assertTrue(equivalent_events(self.gev1, self.gev2, self.TRANSCRIPTS, DISTANCES=self.DISTANCES))
@@ -85,8 +83,8 @@ class TestPairing(unittest.TestCase):
         self.assertFalse(equivalent_events(self.gev1, self.gev2, self.TRANSCRIPTS, DISTANCES=self.DISTANCES))
 
     def test_genome_protocol_by_split(self):
-        self.gev1.break1_call_method = CALL_METHOD.SPLIT
-        self.gev2.break1_call_method = CALL_METHOD.SPLIT
+        self.gev1.call_method = CALL_METHOD.SPLIT
+        self.gev2.call_method = CALL_METHOD.SPLIT
         self.assertTrue(equivalent_events(self.gev1, self.gev2, self.TRANSCRIPTS, DISTANCES=self.DISTANCES))
         self.DISTANCES[CALL_METHOD.FLANK] = 100
         self.DISTANCES[CALL_METHOD.SPLIT] = 10
@@ -95,36 +93,14 @@ class TestPairing(unittest.TestCase):
         self.assertFalse(equivalent_events(self.gev1, self.gev2, self.TRANSCRIPTS, DISTANCES=self.DISTANCES))
 
     def test_genome_protocol_by_flanking(self):
-        self.gev1.break1_call_method = CALL_METHOD.FLANK
-        self.gev2.break1_call_method = CALL_METHOD.FLANK
+        self.gev1.call_method = CALL_METHOD.FLANK
+        self.gev2.call_method = CALL_METHOD.FLANK
         self.assertTrue(equivalent_events(self.gev1, self.gev2, self.TRANSCRIPTS, DISTANCES=self.DISTANCES))
         self.DISTANCES[CALL_METHOD.FLANK] = 10
         self.DISTANCES[CALL_METHOD.SPLIT] = 100
         self.gev1.break1.start = 11
         self.gev1.break1.end = 20
         self.assertFalse(equivalent_events(self.gev1, self.gev2, self.TRANSCRIPTS, DISTANCES=self.DISTANCES))
-
-    def test_genome_protocol_by_mixed_call_methods(self):
-        self.gev1.break1_call_method = CALL_METHOD.CONTIG
-        self.gev2.break1_call_method = CALL_METHOD.CONTIG
-        self.gev1.break2_call_method = CALL_METHOD.FLANK
-        self.gev2.break2_call_method = CALL_METHOD.SPLIT
-        self.DISTANCES[CALL_METHOD.CONTIG] = 0
-        self.DISTANCES[CALL_METHOD.SPLIT] = 10
-        self.assertTrue(equivalent_events(self.gev1, self.gev2, self.TRANSCRIPTS, DISTANCES=self.DISTANCES))
-
-        self.gev1.break2.start = 3
-        self.gev1.break2.end = 20
-        self.assertTrue(equivalent_events(self.gev1, self.gev2, self.TRANSCRIPTS, DISTANCES=self.DISTANCES))
-
-        self.gev1.break1_call_method = CALL_METHOD.CONTIG
-        self.gev2.break1_call_method = CALL_METHOD.SPLIT
-        self.gev2.break2_call_method = CALL_METHOD.CONTIG
-        self.gev1.break2_call_method = CALL_METHOD.SPLIT
-
-        self.DISTANCES[CALL_METHOD.CONTIG] = 0
-        self.DISTANCES[CALL_METHOD.SPLIT] = 2
-        self.assertTrue(equivalent_events(self.gev1, self.gev2, self.TRANSCRIPTS, DISTANCES=self.DISTANCES))
 
     def test_mixed_protocol_fusions_same_sequence(self):
         product_sequences = {'a': 'AATG', 'b': 'AATG'}
@@ -134,8 +110,7 @@ class TestPairing(unittest.TestCase):
             opposing_strands=True,
             data={
                 COLUMNS.event_type: SVTYPE.DEL,
-                COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
-                COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
                 COLUMNS.protocol: PROTOCOL.GENOME,
                 COLUMNS.transcript1: None,
@@ -150,8 +125,7 @@ class TestPairing(unittest.TestCase):
             opposing_strands=True,
             data={
                 COLUMNS.event_type: SVTYPE.DEL,
-                COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
-                COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
                 COLUMNS.protocol: PROTOCOL.TRANS,
                 COLUMNS.transcript1: None,
@@ -173,8 +147,7 @@ class TestPairing(unittest.TestCase):
             opposing_strands=True,
             data={
                 COLUMNS.event_type: SVTYPE.DEL,
-                COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
-                COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: 'a',
                 COLUMNS.protocol: PROTOCOL.GENOME,
                 COLUMNS.transcript1: None,
@@ -189,8 +162,7 @@ class TestPairing(unittest.TestCase):
             opposing_strands=True,
             data={
                 COLUMNS.event_type: SVTYPE.DEL,
-                COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
-                COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: 'b',
                 COLUMNS.protocol: PROTOCOL.TRANS,
                 COLUMNS.transcript1: None,
@@ -209,8 +181,7 @@ class TestPairing(unittest.TestCase):
             opposing_strands=True,
             data={
                 COLUMNS.event_type: SVTYPE.DEL,
-                COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
-                COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: 'a',
                 COLUMNS.protocol: PROTOCOL.GENOME,
                 COLUMNS.transcript1: None,
@@ -225,8 +196,7 @@ class TestPairing(unittest.TestCase):
             opposing_strands=True,
             data={
                 COLUMNS.event_type: SVTYPE.DEL,
-                COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
-                COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: 'b',
                 COLUMNS.protocol: PROTOCOL.TRANS,
                 COLUMNS.transcript1: None,
@@ -244,8 +214,7 @@ class TestPairing(unittest.TestCase):
             opposing_strands=False,
             data={
                 COLUMNS.event_type: SVTYPE.DEL,
-                COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
-                COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
                 COLUMNS.protocol: PROTOCOL.GENOME,
                 COLUMNS.transcript1: self.ust1.name,
@@ -258,8 +227,7 @@ class TestPairing(unittest.TestCase):
             opposing_strands=False,
             data={
                 COLUMNS.event_type: SVTYPE.DEL,
-                COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
-                COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
                 COLUMNS.protocol: PROTOCOL.TRANS,
                 COLUMNS.transcript1: self.ust1.name,
@@ -283,8 +251,7 @@ class TestPairing(unittest.TestCase):
             opposing_strands=False,
             data={
                 COLUMNS.event_type: SVTYPE.DEL,
-                COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
-                COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
                 COLUMNS.protocol: PROTOCOL.GENOME,
                 COLUMNS.transcript1: self.ust1.name,
@@ -297,8 +264,7 @@ class TestPairing(unittest.TestCase):
             opposing_strands=False,
             data={
                 COLUMNS.event_type: SVTYPE.DEL,
-                COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
-                COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
                 COLUMNS.protocol: PROTOCOL.TRANS,
                 COLUMNS.transcript1: self.ust1.name,

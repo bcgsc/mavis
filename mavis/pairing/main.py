@@ -1,7 +1,7 @@
 import os
 import itertools
 from Bio import SeqIO
-from ..constants import PROTOCOL, COLUMNS, CALL_METHOD, SVTYPE, STRAND
+from ..constants import PROTOCOL, COLUMNS, CALL_METHOD, SVTYPE
 from ..annotate.constants import SPLICE_TYPE
 from .constants import DEFAULTS
 from ..util import read_inputs, output_tabbed_file, log, generate_complete_stamp
@@ -47,8 +47,7 @@ def main(
         in_={
             COLUMNS.protocol: PROTOCOL,
             COLUMNS.event_type: SVTYPE,
-            COLUMNS.break1_call_method: CALL_METHOD,
-            COLUMNS.break2_call_method: CALL_METHOD,
+            COLUMNS.call_method: CALL_METHOD,
             COLUMNS.fusion_splicing_pattern: SPLICE_TYPE.values() + [None, 'None']
         },
         add={

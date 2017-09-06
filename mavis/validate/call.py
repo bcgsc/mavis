@@ -32,7 +32,6 @@ class EventCall(BreakpointPair):
         source_evidence,
         event_type,
         call_method,
-        break2_call_method=None,
         contig=None,
         contig_alignment=None,
         untemplated_seq=None
@@ -47,8 +46,6 @@ class EventCall(BreakpointPair):
         """
         if untemplated_seq is None:
             untemplated_seq = source_evidence.untemplated_seq
-        if break2_call_method is None:
-            break2_call_method = call_method
 
         BreakpointPair.__init__(
             self, b1, b2,
@@ -76,8 +73,8 @@ class EventCall(BreakpointPair):
             raise ValueError(
                 'event_type is not compatible with the breakpoint call', event_type, BreakpointPair.classify(self))
         self.contig = contig
-        self.call_method = (CALL_METHOD.enforce(call_method), CALL_METHOD.enforce(break2_call_method))
-        if contig and self.call_method != (CALL_METHOD.CONTIG, CALL_METHOD.CONTIG):
+        self.call_method = CALL_METHOD.enforce(call_method)
+        if contig and self.call_method != CALL_METHOD.CONTIG:
             raise ValueError('if a contig is given the call method must be by contig')
         self.contig_alignment = contig_alignment
 
@@ -273,8 +270,7 @@ class EventCall(BreakpointPair):
         row = self.source_evidence.flatten()
         row.update(BreakpointPair.flatten(self))  # this will overwrite the evidence breakpoint which is what we want
         row.update({
-            COLUMNS.break1_call_method: self.call_method[0],
-            COLUMNS.break2_call_method: self.call_method[1],
+            COLUMNS.call_method: self.call_method,
             COLUMNS.event_type: self.event_type
         })
         median, stdev = self.flanking_metrics()
@@ -479,7 +475,6 @@ def _call_by_spanning_reads(source_evidence, consumed_evidence):
             source_evidence,
             event_type,
             CALL_METHOD.SPAN,
-            break2_call_method=CALL_METHOD.SPAN,
             untemplated_seq=bpp.untemplated_seq
         )
         new_event.spanning_reads.update(reads)

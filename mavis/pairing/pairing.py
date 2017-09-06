@@ -111,10 +111,8 @@ def equivalent_events(ev1, ev2, reference_transcripts, DISTANCES=None, product_s
         ev1, ev2 = ev2, ev1
 
     methods = set([
-        ev1.data[COLUMNS.break1_call_method],
-        ev1.data[COLUMNS.break2_call_method],
-        ev2.data[COLUMNS.break1_call_method],
-        ev2.data[COLUMNS.break2_call_method]
+        ev1.data[COLUMNS.call_method],
+        ev2.data[COLUMNS.call_method],
     ])
     max_distance = max([DISTANCES[m] for m in methods])
 
