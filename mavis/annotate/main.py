@@ -1,16 +1,22 @@
 import os
 import json
 import re
-from .variant import annotate_events, determine_prime, flatten_fusion_translation, flatten_fusion_transcript
+from .variant import annotate_events, determine_prime, flatten_fusion_translation, flatten_fusion_transcript, choose_more_annotated, choose_transcripts_by_priority
 from .genomic import usTranscript
 from ..constants import PROTOCOL, COLUMNS, PRIME, sort_columns
 from ..error import DrawingFitError, NotSpecifiedError
 from ..illustrate.constants import DiagramSettings
 from ..illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from ..illustrate.diagram import draw_sv_summary_diagram
-from .constants import DEFAULTS, ACCEPTED_FILTERS
+from .constants import DEFAULTS
 from ..util import log, mkdirp, read_inputs, generate_complete_stamp
 import warnings
+
+
+ACCEPTED_FILTERS = {
+    'choose_more_annotated': choose_more_annotated,
+    'choose_transcripts_by_priority': choose_transcripts_by_priority
+}
 
 
 def main(

@@ -211,7 +211,7 @@ class TestTranscriptomeEvidenceWindow(unittest.TestCase):
         self.assertEqual(Interval(990, 3411), self.transcriptome_window(b, [self.ust, t2]))
 
     def test_many_small_exons(self):
-        g = Gene('fake', 17271277, 17279592)
+        g = Gene('fake', 17271277, 17279592, strand='+')
         ust = usTranscript(
             gene=g,
             exons=[
@@ -226,7 +226,6 @@ class TestTranscriptomeEvidenceWindow(unittest.TestCase):
                 (17279229, 17279592)
             ])
         g.transcripts.append(ust)
-        ref = {'fake': [g]}
         b = Breakpoint(chr='fake', start=17279591, orient=ORIENT.LEFT)
         self.assertEqual(Interval(17277321, 17279701), self.transcriptome_window(b, [ust]))
 

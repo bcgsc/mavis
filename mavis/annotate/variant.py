@@ -5,6 +5,7 @@ from ..interval import Interval, IntervalMapping
 from .protein import Translation, Domain, calculate_ORF
 from ..error import NotSpecifiedError
 from ..util import devnull
+from .splicing import predict_splice_sites
 import itertools
 import uuid
 import json
@@ -148,8 +149,8 @@ class FusionTranscript(usTranscript):
         offset = len(ft.seq)
 
         if ann.protocol == PROTOCOL.TRANS:
-            ft.exons[-1].intact_end_splice = False
-            ex2[0][0].intact_start_splice = False
+            ft.exons[-1].end_splice_site.intact = False
+            ex2[0][0].start_splice_site.intact = False
             novel_exon_start = ft.exons[-1].end + 1
             novel_exon_end = offset + ex2[0][0].start - 1
             if novel_exon_end >= novel_exon_start:  # create a novel exon
@@ -163,8 +164,8 @@ class FusionTranscript(usTranscript):
         for ex, old_ex in ex2:
             e = Exon(
                 ex.start + offset, ex.end + offset, ft,
-                intact_start_splice=ex.intact_start_splice,
-                intact_end_splice=ex.intact_end_splice
+                intact_start_splice=ex.start_splice_site.intact,
+                intact_end_splice=ex.end_splice_site.intact
             )
             ft.exons.append(e)
             ft.exon_mapping[e.position] = old_ex
@@ -209,8 +210,8 @@ class FusionTranscript(usTranscript):
         ft.first_three_prime_exon = ex1[0][0]
         offset = len(ft.seq)
         if ann.protocol == PROTOCOL.TRANS:
-            ft.exons[-1].intact_end_splice = False
-            ex1[0][0].intact_start_splice = False
+            ft.exons[-1].end_splice_site.intact = False
+            ex1[0][0].start_splice_site.intact = False
             novel_exon_start = ft.exons[-1].end + 1
             novel_exon_end = offset + ex1[0][0].start - 1
             if novel_exon_end >= novel_exon_start:  # create a novel exon
@@ -224,8 +225,8 @@ class FusionTranscript(usTranscript):
         for ex, old_ex in ex1:
             e = Exon(
                 ex.start + offset, ex.end + offset, ft,
-                intact_start_splice=ex.intact_start_splice,
-                intact_end_splice=ex.intact_end_splice
+                intact_start_splice=ex.start_splice_site.intact,
+                intact_end_splice=ex.end_splice_site.intact
             )
             ft.exons.append(e)
             ft.exon_mapping[e.position] = old_ex
@@ -336,8 +337,8 @@ class FusionTranscript(usTranscript):
             offset = len(ft.seq)
 
             if ann.protocol == PROTOCOL.TRANS:
-                ft.exons[-1].intact_end_splice = False
-                ex2[0][0].intact_start_splice = False
+                ft.exons[-1].end_splice_site.intact = False
+                ex2[0][0].start_splice_site.intact = False
                 novel_exon_start = ft.exons[-1].end + 1
                 novel_exon_end = offset + ex2[0][0].start - 1
                 if novel_exon_end >= novel_exon_start:  # create a novel exon
@@ -350,8 +351,8 @@ class FusionTranscript(usTranscript):
             for ex, old_ex in ex2:
                 e = Exon(
                     ex.start + offset, ex.end + offset, ft,
-                    intact_start_splice=ex.intact_start_splice,
-                    intact_end_splice=ex.intact_end_splice
+                    intact_start_splice=ex.start_splice_site.intact,
+                    intact_end_splice=ex.end_splice_site.intact
                 )
                 ft.exons.append(e)
                 ft.exon_mapping[e.position] = old_ex
@@ -363,18 +364,21 @@ class FusionTranscript(usTranscript):
             t = Transcript(ft, spl_patt)
             ft.spliced_transcripts.append(t)
 
-            # now add the possible translations
+            # calculate the putataive open reading frams
             orfs = calculate_ORF(t.get_seq(), min_orf_size=min_orf_size)
+            # limit the length to either only the longest ORF or anything longer than the input translations
+            min_orf_length = max([len(o) for o in orfs] + [min_orf_size if min_orf_size else 0])
+            for ref_tx in [ann.transcript1, ann.transcript2]:
+                for tlx in ref_tx.translations:
+                    min_orf_length = min(min_orf_length, len(tlx))
+
+            # filter the orfs based on size
+            orfs = [o for o in orfs if len(o) >= min_orf_length]
+
+            # if there are still too many filter to reasonable number
             if max_orf_cap and len(orfs) > max_orf_cap:  # limit the number of orfs returned
                 orfs = sorted(orfs, key=lambda x: len(x), reverse=True)
-                l = len(orfs[max_orf_cap - 1])
-                temp = []
-                for i, orf in enumerate(orfs):
-                    if len(orf) < l:
-                        break
-                    else:
-                        temp.append(orf)
-                orfs = temp
+                orfs = orfs[0:max_orf_cap]
             # create the translations
             for orf in orfs:
                 tl = Translation(orf.start - t.start + 1, orf.end - t.start + 1, t)
@@ -448,7 +452,8 @@ class FusionTranscript(usTranscript):
                     e = Exon(
                         len(s) + 1, len(s) + t - exon.start + 1,
                         intact_start_splice=intact_start_splice,
-                        intact_end_splice=intact_end_splice
+                        intact_end_splice=intact_end_splice,
+                        strand=STRAND.POS
                     )
                     temp = reference_sequence[exon.start - 1:t]
                     s += temp
@@ -469,7 +474,8 @@ class FusionTranscript(usTranscript):
                     e = Exon(
                         len(s) + 1, len(s) + len(exon),
                         intact_start_splice=intact_start_splice,
-                        intact_end_splice=intact_end_splice
+                        intact_end_splice=intact_end_splice,
+                        strand=STRAND.POS
                     )
                     temp = reference_sequence[exon.start - 1:exon.end]
                     assert(len(temp) == len(e))
@@ -484,7 +490,8 @@ class FusionTranscript(usTranscript):
                     e = Exon(
                         len(s) + 1, len(s) + len(temp),
                         intact_start_splice=intact_start_splice,
-                        intact_end_splice=intact_end_splice
+                        intact_end_splice=intact_end_splice,
+                        strand=STRAND.POS
                     )
                     s += temp
                     new_exons.append((e, exon))
@@ -499,8 +506,9 @@ class FusionTranscript(usTranscript):
                 e = Exon(
                     len(s) - ex.end + 1,
                     len(s) - ex.start + 1,
-                    intact_start_splice=ex.intact_end_splice,
-                    intact_end_splice=ex.intact_start_splice
+                    intact_start_splice=ex.end_splice_site.intact,
+                    intact_end_splice=ex.start_splice_site.intact,
+                    strand=STRAND.POS
                 )
                 new_exons.append((e, old_exon))
             s = reverse_complement(s)
@@ -907,6 +915,14 @@ def _gather_annotations(ref, bp, proximity=None):
             else:
                 combinations.extend(itertools.product(break1_neg, break2_neg))
     else:
+        # single transcript starts ....
+        for t in (set(break1_pos) | set(break1_neg)) & (set(break2_pos) | set(break2_neg)):
+            try:
+                t.gene
+            except AttributeError:
+                pass
+            else:
+                combinations.append((t, t))
         if bp.opposing_strands:
             combinations.extend(itertools.product(break1_pos, break2_neg))
             combinations.extend(itertools.product(break1_neg, break2_pos))

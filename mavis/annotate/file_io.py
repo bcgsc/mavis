@@ -116,7 +116,7 @@ def parse_annotations_json(data, REFERENCE_GENOME=None, best_transcripts_only=Fa
         for transcript in gene['transcripts']:
             transcript['is_best_transcript'] = TSV.tsv_boolean(transcript['is_best_transcript'])
             transcript.setdefault('exons', [])
-            exons = [Exon(**ex) for ex in transcript['exons']]
+            exons = [Exon(strand=gene['strand'], **ex) for ex in transcript['exons']]
             if len(exons) == 0:
                 exons = [(transcript['start'], transcript['end'])]
             ust = usTranscript(

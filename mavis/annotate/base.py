@@ -1,4 +1,5 @@
 from ..interval import Interval
+from ..constants import STRAND
 import re
 import itertools
 
@@ -18,7 +19,7 @@ class ReferenceName(str):
 
 
 class BioInterval:
-    def __init__(self, reference_object, start, end=None, name=None, seq=None, data=None):
+    def __init__(self, reference_object, start, end=None, name=None, seq=None, data=None, strand=None):
         """
         Args:
             reference_object: the object this interval is on
@@ -43,6 +44,7 @@ class BioInterval:
         self.seq = seq if not seq else str(seq.upper())
         self.data = {}
         self.data.update(data)
+        self.strand = strand
 
     @property
     def start(self):
@@ -124,7 +126,16 @@ class BioInterval:
                 parent = parent.reference_object
             except AttributeError:
                 break
-        raise AttributeError('strand has not been defined', self)
+        raise AttributeError('strand has not been defined', self, self.strand, tried)
+
+    @property
+    def is_reverse(self):
+        if self.get_strand() == STRAND.NEG:
+            return True
+        elif self.get_strand() == STRAND.POS:
+            return False
+        else:
+            raise AttributeError('strand has not been defined', self)
 
     def get_chr(self):
         """

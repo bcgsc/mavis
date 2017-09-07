@@ -347,12 +347,22 @@ def time_diff(start, end):
     return td.seconds / 3600
 
 
-def unique_exists(pattern, allow_none=False):
+def unique_exists(pattern, allow_none=False, get_newest=False):
     result = glob.glob(pattern)
     if len(result) == 1:
         return result[0]
     elif len(result) > 0:
-        raise OSError('duplicate results:', result)
+        if get_newest:
+            current_file = result[0]
+            for f in result[1:]:
+                stats1 = os.stat(current_file)
+                stats2 = os.stat(f)
+                if stats1.st_mtime < stats2.st_mtime:
+                    current_file = f
+            return current_file
+
+        else:
+            raise OSError('duplicate results:', result)
     elif allow_none:
         return None
     else:
@@ -432,7 +442,7 @@ def check_library_dir(library_dir, verbose=False):
                 log('\tmissing complete stamp:', err, time_stamp=False)
                 incomplete += 1
             try:
-                logfile = unique_exists(log_pattern)
+                logfile = unique_exists(log_pattern, get_newest=True)
             except OSError as err:
                 logfile = None
                 if not printed_stage:
@@ -482,6 +492,8 @@ def check_single_job(directory):
     stamp_pattern = os.path.join(directory, '*.COMPLETE')
     log_pattern = os.path.join(directory, '*.o*')
     logged_fail = False
+    logfile = None
+    stamp = None
     try:
         stamp = unique_exists(stamp_pattern)
     except OSError as err:
@@ -490,7 +502,7 @@ def check_single_job(directory):
         log('\tINCOMPLETE: missing the complete stamp', stamp_pattern, time_stamp=False)
         return None, None
     try:
-        logfile = unique_exists(log_pattern, allow_none=True)
+        logfile = unique_exists(log_pattern, allow_none=True, get_newest=True)
     except OSError as err:
         if not logged_fail:
             log(name, 'FAIL')

@@ -1,16 +1,14 @@
 import unittest
 import os
-from mavis.annotate.variant import _gather_annotations, FusionTranscript, determine_prime
-from mavis.annotate.variant import _gather_breakpoint_annotations, overlapping_transcripts
+from mavis.annotate.variant import _gather_annotations, FusionTranscript, determine_prime, _gather_breakpoint_annotations, overlapping_transcripts, Annotation
 from mavis.annotate.genomic import *
 from mavis.annotate.protein import *
-from mavis.annotate import *
-from mavis.constants import *
+from mavis.annotate.file_io import load_reference_genes, load_reference_genome
 from mavis.annotate.variant import annotate_events
 from mavis.error import NotSpecifiedError
-from mavis.constants import STRAND, ORIENT, reverse_complement, SVTYPE, PRIME
+from mavis.constants import STRAND, ORIENT, reverse_complement, SVTYPE, PRIME, PROTOCOL
 from mavis.breakpoint import Breakpoint, BreakpointPair
-from . import REFERENCE_ANNOTATIONS_FILE, REFERENCE_GENOME_FILE, MockSeq, REFERENCE_ANNOTATIONS_FILE_JSON, REFERENCE_ANNOTATIONS_FILE2
+from . import REFERENCE_ANNOTATIONS_FILE, REFERENCE_GENOME_FILE, MockSeq, MockLongString, REFERENCE_ANNOTATIONS_FILE_JSON, REFERENCE_ANNOTATIONS_FILE2, DATA_DIR
 from mavis.util import log
 
 
@@ -18,7 +16,6 @@ REFERENCE_ANNOTATIONS = None
 REFERENCE_GENOME = None
 REF_CHR = 'fake'
 ALT_REF_CHR = 'ref2'
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 
 
 def setUpModule():
@@ -33,6 +30,7 @@ def setUpModule():
 
 
 class TestTemplate(unittest.TestCase):
+
     def test_template_hashing(self):
         t = Template('1', 1, 10)
         d = {'1': 1, '2': 2, 1: '5'}
@@ -44,30 +42,30 @@ class TestTemplate(unittest.TestCase):
 class TestFusionTranscript(unittest.TestCase):
 
     def setUp(self):
-        self.x = Exon(100, 199)  # C
-        self.y = Exon(500, 599)  # G
-        self.z = Exon(1200, 1299)  # T
-        self.w = Exon(1500, 1599)  # C
-        self.s = Exon(1700, 1799)  # G
+        self.x = Interval(100, 199)  # C
+        self.y = Interval(500, 599)  # G
+        self.z = Interval(1200, 1299)  # T
+        self.w = Interval(1500, 1599)  # C
+        self.s = Interval(1700, 1799)  # G
         # introns: 99, 300, 600, 200, 100, ...
         reference_sequence = 'A' * 99 + 'C' * 100 + 'A' * 300 + 'G' * 100
         reference_sequence += 'A' * 600 + 'T' * 100 + 'A' * 200 + 'C' * 100
         reference_sequence += 'A' * 100 + 'G' * 100 + 'A' * 200 + 'T' * 100
 
-        self.a = Exon(2000, 2099)  # T
-        self.b = Exon(2600, 2699)  # C
-        self.c = Exon(3000, 3099)  # G
-        self.d = Exon(3300, 3399)  # T
+        self.a = Interval(2000, 2099)  # T
+        self.b = Interval(2600, 2699)  # C
+        self.c = Interval(3000, 3099)  # G
+        self.d = Interval(3300, 3399)  # T
         reference_sequence += 'A' * 500 + 'C' * 100 + 'A' * 300 + 'G' * 100
         reference_sequence += 'A' * 200 + 'T' * 100 + 'A' * 200
         self.reference_sequence = reference_sequence
 
-        self.b1 = Exon(600, 699)  # A
-        self.b2 = Exon(800, 899)  # G
-        self.b3 = Exon(1100, 1199)  # T
-        self.b4 = Exon(1400, 1499)  # A
-        self.b5 = Exon(1700, 1799)  # G
-        self.b6 = Exon(2100, 2199)  # A
+        self.b1 = Interval(600, 699)  # A
+        self.b2 = Interval(800, 899)  # G
+        self.b3 = Interval(1100, 1199)  # T
+        self.b4 = Interval(1400, 1499)  # A
+        self.b5 = Interval(1700, 1799)  # G
+        self.b6 = Interval(2100, 2199)  # A
         alternate_sequence = 'C' * 599 + 'A' * 100 + 'C' * 100 + 'G' * 100
         alternate_sequence += 'C' * 200 + 'T' * 100 + 'C' * 200 + 'A' * 100
         alternate_sequence += 'C' * 200 + 'G' * 100 + 'C' * 300 + 'A' * 100
@@ -85,8 +83,8 @@ class TestFusionTranscript(unittest.TestCase):
         e = new_exons[0][0]
         self.assertEqual(1, e.start)
         self.assertEqual(100, e.end)
-        self.assertEqual(True, e.intact_start_splice)
-        self.assertEqual(True, e.intact_end_splice)
+        self.assertEqual(True, e.start_splice_site.intact)
+        self.assertEqual(True, e.end_splice_site.intact)
 
     def test__pull_exons_left_pos_intronic_splice(self):
         t = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
@@ -98,11 +96,12 @@ class TestFusionTranscript(unittest.TestCase):
         e = new_exons[0][0]
         self.assertEqual(1, e.start)
         self.assertEqual(100, e.end)
-        self.assertEqual(True, e.intact_start_splice)
-        self.assertEqual(False, e.intact_end_splice)
+        self.assertEqual(True, e.start_splice_site.intact)
+        self.assertEqual(False, e.end_splice_site.intact)
 
     def test__pull_exons_left_pos_exonic(self):
         t = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        print('transcriptt exons:', t.exons)
         b = Breakpoint(REF_CHR, 199, orient=ORIENT.LEFT)
         seq, new_exons = FusionTranscript._pull_exons(t, b, self.reference_sequence)
         expt = 'C' * 100
@@ -111,8 +110,8 @@ class TestFusionTranscript(unittest.TestCase):
         e = new_exons[0][0]
         self.assertEqual(1, e.start)
         self.assertEqual(100, e.end)
-        self.assertEqual(True, e.intact_start_splice)
-        self.assertEqual(False, e.intact_end_splice)
+        self.assertEqual(True, e.start_splice_site.intact)
+        self.assertEqual(False, e.end_splice_site.intact)
 
     def test__pull_exons_left_pos_exonic_splice(self):
         # 100-199, 500-599, 1200-1299, 1500-1599, 1700-1799
@@ -125,8 +124,8 @@ class TestFusionTranscript(unittest.TestCase):
         e = new_exons[0][0]
         self.assertEqual(1, e.start)
         self.assertEqual(2, e.end)
-        self.assertEqual(False, e.intact_start_splice)
-        self.assertEqual(False, e.intact_end_splice)
+        self.assertEqual(False, e.start_splice_site.intact)
+        self.assertEqual(False, e.end_splice_site.intact)
 
     def test__pull_exons_right_pos_intronic(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
@@ -147,8 +146,8 @@ class TestFusionTranscript(unittest.TestCase):
         e = new_exons[0][0]
         self.assertEqual(201, e.start)
         self.assertEqual(300, e.end)
-        self.assertEqual(True, e.intact_start_splice)
-        self.assertEqual(True, e.intact_end_splice)
+        self.assertEqual(True, e.start_splice_site.intact)
+        self.assertEqual(True, e.end_splice_site.intact)
 
     def test__pull_exons_right_pos_intronic_splice(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
@@ -159,8 +158,8 @@ class TestFusionTranscript(unittest.TestCase):
         self.assertEqual(expt, seq)
         self.assertEqual(3, len(new_exons))
         e = new_exons[0][0]
-        self.assertEqual(False, e.intact_start_splice)
-        self.assertEqual(True, e.intact_end_splice)
+        self.assertEqual(False, e.start_splice_site.intact)
+        self.assertEqual(True, e.end_splice_site.intact)
 
     def test__pull_exons_right_pos_exonic(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
@@ -171,8 +170,8 @@ class TestFusionTranscript(unittest.TestCase):
         self.assertEqual(expt, seq)
         self.assertEqual(3, len(new_exons))
         e = new_exons[0][0]
-        self.assertEqual(False, e.intact_start_splice)
-        self.assertEqual(True, e.intact_end_splice)
+        self.assertEqual(False, e.start_splice_site.intact)
+        self.assertEqual(True, e.end_splice_site.intact)
 
     def test__pull_exons_right_pos_exonic_splice(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
@@ -183,8 +182,8 @@ class TestFusionTranscript(unittest.TestCase):
         self.assertEqual(expt, seq)
         self.assertEqual(3, len(new_exons))
         e = new_exons[0][0]
-        self.assertEqual(False, e.intact_start_splice)
-        self.assertEqual(False, e.intact_end_splice)
+        self.assertEqual(False, e.start_splice_site.intact)
+        self.assertEqual(False, e.end_splice_site.intact)
 
     def test__pull_exons_right_neg_intronic(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
@@ -197,14 +196,14 @@ class TestFusionTranscript(unittest.TestCase):
         self.assertEqual(expt, seq)
         self.assertEqual(3, len(new_exons))
         e = new_exons[0][0]
-        self.assertEqual(True, e.intact_start_splice)
-        self.assertEqual(True, e.intact_end_splice)
+        self.assertEqual(True, e.start_splice_site.intact)
+        self.assertEqual(True, e.end_splice_site.intact)
         self.assertEqual(1, e.start)
         self.assertEqual(100, e.end)
         self.assertEqual('C' * 100, seq[e.start - 1:e.end])
         e = new_exons[1][0]
-        self.assertEqual(True, e.intact_start_splice)
-        self.assertEqual(True, e.intact_end_splice)
+        self.assertEqual(True, e.start_splice_site.intact)
+        self.assertEqual(True, e.end_splice_site.intact)
         self.assertEqual(201, e.start)
         self.assertEqual(300, e.end)
         self.assertEqual('G' * 100, seq[e.start - 1:e.end])
@@ -219,20 +218,20 @@ class TestFusionTranscript(unittest.TestCase):
         self.assertEqual(expt, seq)
         self.assertEqual(3, len(new_exons))
         e = new_exons[0][0]
-        self.assertEqual(True, e.intact_start_splice)
-        self.assertEqual(True, e.intact_end_splice)
+        self.assertEqual(True, e.start_splice_site.intact)
+        self.assertEqual(True, e.end_splice_site.intact)
         self.assertEqual(1, e.start)
         self.assertEqual(100, e.end)
         self.assertEqual('C' * 100, seq[e.start - 1:e.end])
         e = new_exons[1][0]
-        self.assertEqual(True, e.intact_start_splice)
-        self.assertEqual(True, e.intact_end_splice)
+        self.assertEqual(True, e.start_splice_site.intact)
+        self.assertEqual(True, e.end_splice_site.intact)
         self.assertEqual(201, e.start)
         self.assertEqual(300, e.end)
         self.assertEqual('G' * 100, seq[e.start - 1:e.end])
         e = new_exons[2][0]
-        self.assertEqual(True, e.intact_start_splice)
-        self.assertEqual(False, e.intact_end_splice)
+        self.assertEqual(True, e.start_splice_site.intact)
+        self.assertEqual(False, e.end_splice_site.intact)
         self.assertEqual(501, e.start)
         self.assertEqual(600, e.end)
         self.assertEqual('A' * 100, seq[e.start - 1:e.end])
@@ -267,8 +266,8 @@ class TestFusionTranscript(unittest.TestCase):
         for i in range(0, len(splice_pattern)):
             s, t = splice_pattern[i]
             ex = ft.exons[i]
-            self.assertEqual(s, ex.intact_start_splice)
-            self.assertEqual(t, ex.intact_end_splice)
+            self.assertEqual(s, ex.start_splice_site.intact)
+            self.assertEqual(t, ex.end_splice_site.intact)
             temp = ft.seq[ex.start - 1:ex.end]
             self.assertEqual(char_pattern[i], ft.seq[ex.start - 1:ex.end])
 
@@ -285,10 +284,10 @@ class TestFusionTranscript(unittest.TestCase):
         expt = 'C' * len(self.x) + 'A' * (499 - 200 + 1) + 'G' * len(self.y) + 'A' * (1199 - 600 + 1)
         expt += 'ATCGTC' + 'A' * len(self.z)
         expt += 'A' * (1499 - 1300 + 1) + 'C' * len(self.w) + 'A' * (1699 - 1600 + 1) + 'G' * len(self.s)
-        exons = [Exon(1, 100), Exon(401, 500), Exon(1407, 1506), Exon(1607, 1706)]
+        exons = [(1, 100), (401, 500), (1407, 1506), (1607, 1706)]
         for i in range(len(exons)):
-            self.assertEqual(exons[i].start, ft.exons[i].start)
-            self.assertEqual(exons[i].end, ft.exons[i].end)
+            self.assertEqual(exons[i][0], ft.exons[i].start)
+            self.assertEqual(exons[i][1], ft.exons[i].end)
         self.assertEqual(expt, ft.seq)
         self.assertEqual(4, len(ft.exons))
 
@@ -306,18 +305,18 @@ class TestFusionTranscript(unittest.TestCase):
         expt += 'ATCGTC' + 'A' * len(self.z)
         expt += 'A' * (1499 - 1300 + 1) + 'C' * len(self.w) + 'A' * (1699 - 1600 + 1) + 'G' * len(self.s)
         exons = [
-            Exon(1, 100),
-            Exon(401, 500, intact_end_splice=False),
-            Exon(501, 1406, intact_start_splice=False, intact_end_splice=False),
-            Exon(1407, 1506, intact_start_splice=False),
-            Exon(1607, 1706)
+            Exon(1, 100, strand=STRAND.POS),
+            Exon(401, 500, intact_end_splice=False, strand=STRAND.POS),
+            Exon(501, 1406, intact_start_splice=False, intact_end_splice=False, strand=STRAND.POS),
+            Exon(1407, 1506, intact_start_splice=False, strand=STRAND.POS),
+            Exon(1607, 1706, strand=STRAND.POS)
         ]
         print(ft.exons)
         for i in range(len(exons)):
             self.assertEqual(exons[i].start, ft.exons[i].start)
             self.assertEqual(exons[i].end, ft.exons[i].end)
-            self.assertEqual(exons[i].intact_start_splice, ft.exons[i].intact_start_splice)
-            self.assertEqual(exons[i].intact_end_splice, ft.exons[i].intact_end_splice)
+            self.assertEqual(exons[i].start_splice_site.intact, ft.exons[i].start_splice_site.intact)
+            self.assertEqual(exons[i].end_splice_site.intact, ft.exons[i].end_splice_site.intact)
         self.assertEqual(expt, ft.seq)
         self.assertEqual(5, len(ft.exons))
 
@@ -336,11 +335,11 @@ class TestFusionTranscript(unittest.TestCase):
         expt += 'T' * len(self.z) + 'GACGAT' + 'T' * (1199 - 600 + 1) + 'C' * len(self.y)
         expt += 'T' * (499 - 200 + 1) + 'G' * len(self.x)
 
-        exons = [Exon(1, 100), Exon(201, 300), Exon(1207, 1306), Exon(1607, 1706)]
+        exons = [(1, 100), (201, 300), (1207, 1306), (1607, 1706)]
 
         for i in range(len(exons)):
-            self.assertEqual(exons[i].start, ft.exons[i].start)
-            self.assertEqual(exons[i].end, ft.exons[i].end)
+            self.assertEqual(exons[i][0], ft.exons[i].start)
+            self.assertEqual(exons[i][1], ft.exons[i].end)
         self.assertEqual(expt, ft.seq)
         self.assertEqual(4, len(ft.exons))
 
@@ -360,16 +359,16 @@ class TestFusionTranscript(unittest.TestCase):
         expt += 'T' * len(self.z) + 'ATCGATCG' + 'T' * len(self.z)
         expt += 'A' * (1499 - 1300 + 1) + 'C' * len(self.w) + 'A' * (1699 - 1600 + 1) + 'G' * len(self.s)
         self.assertEqual(expt, ft.seq)
-        exons = [Exon(1, 100), Exon(401, 500), Exon(1101, 1200), Exon(1209, 1308), Exon(1509, 1608), Exon(1709, 1808)]
+        exons = [(1, 100), (401, 500), (1101, 1200), (1209, 1308), (1509, 1608), (1709, 1808)]
         for i in range(len(exons)):
-            self.assertEqual(exons[i].start, ft.exons[i].start)
-            self.assertEqual(exons[i].end, ft.exons[i].end)
+            self.assertEqual(exons[i][0], ft.exons[i].start)
+            self.assertEqual(exons[i][1], ft.exons[i].end)
 
         self.assertEqual(6, len(ft.exons))
-        self.assertTrue(ft.exons[2].intact_start_splice)
-        self.assertTrue(ft.exons[3].intact_end_splice)
-        self.assertFalse(ft.exons[2].intact_end_splice)
-        self.assertFalse(ft.exons[3].intact_start_splice)
+        self.assertTrue(ft.exons[2].start_splice_site.intact)
+        self.assertTrue(ft.exons[3].end_splice_site.intact)
+        self.assertFalse(ft.exons[2].end_splice_site.intact)
+        self.assertFalse(ft.exons[3].start_splice_site.intact)
 
     def test_build_single_transcript_duplication_pos_transcriptome(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
@@ -388,17 +387,19 @@ class TestFusionTranscript(unittest.TestCase):
         expt += 'A' * (1499 - 1300 + 1) + 'C' * len(self.w) + 'A' * (1699 - 1600 + 1) + 'G' * len(self.s)
         self.assertEqual(expt, ft.seq)
         exons = [
-            Exon(1, 100), Exon(401, 500),
-            Exon(1101, 1200, intact_end_splice=False),
-            Exon(1201, 1208, intact_start_splice=False, intact_end_splice=False),
-            Exon(1209, 1308, intact_start_splice=False),
-            Exon(1509, 1608), Exon(1709, 1808)]
+            Exon(1, 100, strand=STRAND.POS),
+            Exon(401, 500, strand=STRAND.POS),
+            Exon(1101, 1200, intact_end_splice=False, strand=STRAND.POS),
+            Exon(1201, 1208, intact_start_splice=False, intact_end_splice=False, strand=STRAND.POS),
+            Exon(1209, 1308, intact_start_splice=False, strand=STRAND.POS),
+            Exon(1509, 1608, strand=STRAND.POS),
+            Exon(1709, 1808, strand=STRAND.POS)]
         print(ft.exons)
         for i in range(len(exons)):
             self.assertEqual(exons[i].start, ft.exons[i].start)
             self.assertEqual(exons[i].end, ft.exons[i].end)
-            self.assertEqual(exons[i].intact_start_splice, ft.exons[i].intact_start_splice)
-            self.assertEqual(exons[i].intact_end_splice, ft.exons[i].intact_end_splice)
+            self.assertEqual(exons[i].start_splice_site.intact, ft.exons[i].start_splice_site.intact)
+            self.assertEqual(exons[i].end_splice_site.intact, ft.exons[i].end_splice_site.intact)
 
         self.assertEqual(7, len(ft.exons))
 
@@ -419,17 +420,17 @@ class TestFusionTranscript(unittest.TestCase):
         expt = reverse_complement(expt)
         self.assertEqual(expt, ft.seq)
 
-        exons = [Exon(1, 100), Exon(201, 300), Exon(501, 600), Exon(609, 708), Exon(1309, 1408), Exon(1709, 1808)]
+        exons = [(1, 100), (201, 300), (501, 600), (609, 708), (1309, 1408), (1709, 1808)]
 
         for i in range(len(exons)):
-            self.assertEqual(exons[i].start, ft.exons[i].start)
-            self.assertEqual(exons[i].end, ft.exons[i].end)
+            self.assertEqual(exons[i][0], ft.exons[i].start)
+            self.assertEqual(exons[i][1], ft.exons[i].end)
 
         self.assertEqual(6, len(ft.exons))
-        self.assertTrue(ft.exons[2].intact_start_splice)
-        self.assertTrue(ft.exons[3].intact_end_splice)
-        self.assertFalse(ft.exons[2].intact_end_splice)
-        self.assertFalse(ft.exons[3].intact_start_splice)
+        self.assertTrue(ft.exons[2].start_splice_site.intact)
+        self.assertTrue(ft.exons[3].end_splice_site.intact)
+        self.assertFalse(ft.exons[2].end_splice_site.intact)
+        self.assertFalse(ft.exons[3].start_splice_site.intact)
         self.assertEqual(3, ft.exon_number(ft.exons[2]))
         self.assertEqual(3, ft.exon_number(ft.exons[3]))
 
@@ -450,9 +451,9 @@ class TestFusionTranscript(unittest.TestCase):
         expt += 'ATCGACTC' + 'G' * len(self.b) + 'T' * (2599 - 2100 + 1) + 'A' * len(self.a)
         self.assertEqual(expt, ft.seq)
         self.assertEqual(4, len(ft.exons))
-        self.assertTrue(ft.exons[3].intact_end_splice)
-        self.assertFalse(ft.exons[2].intact_start_splice)
-        self.assertTrue(ft.exons[2].intact_end_splice)
+        self.assertTrue(ft.exons[3].end_splice_site.intact)
+        self.assertFalse(ft.exons[2].start_splice_site.intact)
+        self.assertTrue(ft.exons[2].end_splice_site.intact)
         self.assertEqual(2, ft.exon_number(ft.exons[1]))
         self.assertEqual(3, ft.exon_number(ft.exons[2]))
 
@@ -568,12 +569,16 @@ class TestFusionTranscript(unittest.TestCase):
         # a:2000-2099, b:2600-2699, c:3000-3099, d:3300-3399
         #   TTTTTTTTT    CCCCCCCCC    GGGGGGGGG    TTTTTTTTT
         t1 = usTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
+
         t2 = usTranscript(exons=[self.a, self.b, self.c, self.d], strand=STRAND.NEG)
+        print('t1 exons', t1.exons)
+        print('t2 exons', t2.exons)
         b1 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
         b2 = Breakpoint(REF_CHR, 2699, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='AACGAGTGT')
         ref = {REF_CHR: MockSeq(self.reference_sequence)}
         ann = Annotation(bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.DEL, protocol=PROTOCOL.GENOME)
+
         ft = FusionTranscript.build(ann, ref)
 
         expt = 'C' * len(self.s) + 'T' * (1699 - 1600 + 1) + 'G' * len(self.w) + 'T' * (1499 - 1300 + 1)
@@ -795,6 +800,7 @@ class TestSequenceFetching(unittest.TestCase):
 
 
 class TestStrandInheritance(unittest.TestCase):
+
     def setUp(self):
         self.gene = Gene('1', 1, 500, strand=STRAND.POS)
         ust = usTranscript(gene=self.gene, exons=[(1, 100), (200, 300), (400, 500)])
@@ -819,6 +825,7 @@ class TestStrandInheritance(unittest.TestCase):
 
 
 class TestCoordinateCoversion(unittest.TestCase):
+
     def setUp(self):
         self.gene = Gene('1', 15, 700, strand=STRAND.POS)
 
@@ -929,7 +936,7 @@ class TestCoordinateCoversion(unittest.TestCase):
 class TestUSTranscript(unittest.TestCase):
 
     def test___init__implicit_start(self):
-        t = usTranscript(gene=None, exons=[(1, 100), (200, 300), (400, 500)])
+        t = usTranscript(gene=None, exons=[(1, 100), (200, 300), (400, 500)], strand=STRAND.POS)
         self.assertEqual(1, t.start)
         self.assertEqual(t.start, t.start)
         self.assertEqual(500, t.end)
@@ -958,208 +965,6 @@ class TestUSTranscript(unittest.TestCase):
         t = usTranscript(gene=None, exons=[(1, 99), (200, 299), (400, 499)], strand=STRAND.NEG)
         for i, e in enumerate(sorted(t.exons, key=lambda x: x.start, reverse=True)):
             self.assertEqual(i + 1, t.exon_number(e))
-
-
-class TestSplicingPatterns(unittest.TestCase):
-
-    def setUp(self):
-        self.ex1 = Exon(100, 199)  # C
-        self.ex2 = Exon(500, 599)  # G
-        self.ex3 = Exon(1200, 1299)  # T
-        self.ex4 = Exon(1500, 1599)  # C
-        self.ex5 = Exon(1700, 1799)  # G
-        self.ex6 = Exon(2000, 2099)  # C
-        # introns: 99, 300, 600, 200, 100, ...
-        reference_sequence = 'A' * 99 + 'C' * 100 + 'A' * 300 + 'G' * 100
-        reference_sequence += 'A' * 600 + 'T' * 100 + 'A' * 200 + 'C' * 100
-        reference_sequence += 'A' * 100 + 'G' * 100 + 'A' * 200 + 'C' * 100
-        self.reference_sequence = reference_sequence
-        self.ust = usTranscript(exons=[self.ex1, self.ex2, self.ex3, self.ex4, self.ex5, self.ex6], strand=STRAND.POS)
-
-    def test_single_exon(self):
-        t = usTranscript([(3, 4)])
-        patt = t.generate_splicing_patterns()
-        self.assertEqual(1, len(patt))
-        self.assertEqual(0, len(patt[0]))
-        self.assertEqual(SPLICE_TYPE.NORMAL, patt[0].splice_type)
-
-    def test_normal_pattern(self):
-        for strand in [STRAND.POS, STRAND.NEG]:
-            self.ust.strand = strand
-            patt = self.ust.generate_splicing_patterns()
-            self.assertEqual(1, len(patt))
-            self.assertEqual(
-                [
-                    self.ex1.end, self.ex2.start,
-                    self.ex2.end, self.ex3.start,
-                    self.ex3.end, self.ex4.start,
-                    self.ex4.end, self.ex5.start,
-                    self.ex5.end, self.ex6.start
-                ],
-                patt[0]
-            )
-            self.assertEqual(SPLICE_TYPE.NORMAL, patt[0].splice_type)
-
-    def test_abrogate_A(self):
-        for strand in [STRAND.POS, STRAND.NEG]:
-            self.ust.strand = strand
-            self.ex2.intact_start_splice = False
-            patt = self.ust.generate_splicing_patterns()
-            self.assertEqual(2, len(patt))
-            self.assertEqual(
-                [
-                    self.ex1.end, self.ex3.start,
-                    self.ex3.end, self.ex4.start,
-                    self.ex4.end, self.ex5.start,
-                    self.ex5.end, self.ex6.start
-                ],
-                patt[0]
-            )
-            self.assertEqual(SPLICE_TYPE.SKIP, patt[0].splice_type)
-
-            self.assertEqual(
-                [
-                    self.ex2.end, self.ex3.start,
-                    self.ex3.end, self.ex4.start,
-                    self.ex4.end, self.ex5.start,
-                    self.ex5.end, self.ex6.start
-                ],
-                patt[1]
-            )
-            self.assertEqual(SPLICE_TYPE.RETAIN, patt[1].splice_type)
-
-    def test_abrogate_A_last_exon(self):
-        self.ex6.intact_start_splice = False
-        patt = self.ust.generate_splicing_patterns()
-        self.assertEqual(1, len(patt))
-        self.assertEqual(
-            [
-                self.ex1.end, self.ex2.start,
-                self.ex2.end, self.ex3.start,
-                self.ex3.end, self.ex4.start,
-                self.ex4.end, self.ex5.start
-            ],
-            patt[0]
-        )
-        self.assertEqual(SPLICE_TYPE.RETAIN, patt[0].splice_type)
-
-    def test_abrogate_D_first_exon(self):
-        self.ex1.intact_end_splice = False
-        patt = self.ust.generate_splicing_patterns()
-        self.assertEqual(1, len(patt))
-        self.assertEqual(
-            [
-                self.ex2.end, self.ex3.start,
-                self.ex3.end, self.ex4.start,
-                self.ex4.end, self.ex5.start,
-                self.ex5.end, self.ex6.start
-            ],
-            patt[0]
-        )
-        self.assertEqual(SPLICE_TYPE.RETAIN, patt[0].splice_type)
-
-    def test_abrogate_AD(self):
-        self.ex2.intact_start_splice = False
-        patt = self.ust.generate_splicing_patterns()
-        self.assertEqual(2, len(patt))
-        self.assertEqual(
-            [
-                self.ex1.end, self.ex3.start,
-                self.ex3.end, self.ex4.start,
-                self.ex4.end, self.ex5.start,
-                self.ex5.end, self.ex6.start
-            ],
-            patt[0]
-        )
-        self.assertEqual(SPLICE_TYPE.SKIP, patt[0].splice_type)
-
-        self.assertEqual(
-            [
-                self.ex2.end, self.ex3.start,
-                self.ex3.end, self.ex4.start,
-                self.ex4.end, self.ex5.start,
-                self.ex5.end, self.ex6.start
-            ],
-            patt[1]
-        )
-        self.assertEqual(SPLICE_TYPE.RETAIN, patt[1].splice_type)
-
-    def test_abrogate_DA(self):
-        self.ex2.intact_end_splice = False
-        self.ex3.intact_start_splice = False
-        patt = self.ust.generate_splicing_patterns()
-        self.assertEqual(1, len(patt))
-        self.assertEqual(
-            [
-                self.ex1.end, self.ex2.start,
-                self.ex3.end, self.ex4.start,
-                self.ex4.end, self.ex5.start,
-                self.ex5.end, self.ex6.start
-            ],
-            patt[0]
-        )
-        self.assertEqual(SPLICE_TYPE.RETAIN, patt[0].splice_type)
-
-    def test_multiple_exons_or_multiple_introns_abrogate_ADA(self):
-        self.ex2.intact_start_splice = False
-        self.ex2.intact_end_splice = False
-        self.ex3.intact_start_splice = False
-        patt = self.ust.generate_splicing_patterns()
-        self.assertEqual(2, len(patt))
-
-        self.assertEqual(
-            [
-                self.ex1.end, self.ex4.start,
-                self.ex4.end, self.ex5.start,
-                self.ex5.end, self.ex6.start
-            ],
-            patt[0]
-        )
-        self.assertEqual(SPLICE_TYPE.MULTI_SKIP, patt[0].splice_type)
-
-        self.assertEqual(
-            [
-                self.ex3.end, self.ex4.start,
-                self.ex4.end, self.ex5.start,
-                self.ex5.end, self.ex6.start
-            ],
-            patt[1]
-        )
-        self.assertEqual(SPLICE_TYPE.MULTI_RETAIN, patt[1].splice_type)
-
-    def test_multiple_exons_or_multiple_introns_abrogate_DAD(self):
-        self.ex2.intact_end_splice = False
-        self.ex3.intact_start_splice = False
-        self.ex3.intact_end_splice = False
-        patt = self.ust.generate_splicing_patterns()
-        self.assertEqual(2, len(patt))
-
-        self.assertEqual(
-            [
-                self.ex1.end, self.ex2.start,
-                self.ex4.end, self.ex5.start,
-                self.ex5.end, self.ex6.start
-            ],
-            patt[0]
-        )
-        self.assertEqual(SPLICE_TYPE.MULTI_RETAIN, patt[0].splice_type)
-
-        self.assertEqual(
-            [
-                self.ex1.end, self.ex4.start,
-                self.ex4.end, self.ex5.start,
-                self.ex5.end, self.ex6.start
-            ],
-            patt[1]
-        )
-        self.assertEqual(SPLICE_TYPE.MULTI_SKIP, patt[1].splice_type)
-
-    def test_complex(self):
-        self.ex2.intact_end_splice = False
-        self.ex4.intact_end_splice = False
-        patt = self.ust.generate_splicing_patterns()
-        self.assertEqual(4, len(patt))
-        self.assertTrue(SPLICE_TYPE.COMPLEX in [p.splice_type for p in patt])
 
 
 class TestDomain(unittest.TestCase):
@@ -1297,20 +1102,8 @@ class TestGene(unittest.TestCase):
         self.assertEqual(seq, g.get_seq(REFERENCE_GENOME))
 
 
-class TestExon(unittest.TestCase):
-
-    def test_end_splice_site(self):
-        e = Exon(100, 199)
-        self.assertEqual(2, SPLICE_SITE_RADIUS)
-        self.assertEqual(Interval(198, 201), e.end_splice_site)
-
-    def test_start_splice_site(self):
-        e = Exon(100, 199)
-        self.assertEqual(2, SPLICE_SITE_RADIUS)
-        self.assertEqual(Interval(98, 101), e.start_splice_site)
-
-
 class TestAnnotationGathering(unittest.TestCase):
+
     def test_overlapping_transcripts(self):
         b = Breakpoint('C', 1000, strand=STRAND.POS)
         g = Gene('C', 1, 9999, 'gene1', STRAND.POS)
@@ -1430,6 +1223,7 @@ class TestAnnotationGathering(unittest.TestCase):
 
 
 class TestAnnotate(unittest.TestCase):
+
     def test_reference_name_eq(self):
         first, second = ReferenceName('chr1'), ReferenceName('1')
         self.assertEqual(first, second)
@@ -1541,6 +1335,7 @@ class TestAnnotate(unittest.TestCase):
 
 
 class TestAnnotateEvents(unittest.TestCase):
+
     def test_annotate_events(self):
         reference_annotations = load_reference_genes(REFERENCE_ANNOTATIONS_FILE2)
         b1 = Breakpoint('fakereference9', 658, orient=ORIENT.RIGHT, strand=STRAND.POS)
@@ -1560,24 +1355,84 @@ class TestAnnotateEvents(unittest.TestCase):
             [bpp], reference_genome=REFERENCE_GENOME, annotations=reference_annotations)
         self.assertEqual(2, len(annotations))
 
-    def test_NDUFA12(self):
-        reference_annotations = load_reference_genes(os.path.join(DATA_DIR, 'NDUFA12_annotations.tab'), warn=log)
-        print(reference_annotations)
-        for gene_list in reference_annotations.values():
+
+class TestNDUFA12(unittest.TestCase):
+    def setUp(self):
+        self.reference_annotations = load_reference_genes(os.path.join(DATA_DIR, 'NDUFA12_annotations.tab'), warn=log)
+        reference_genome = load_reference_genome(os.path.join(DATA_DIR, 'NDUFA12_hg19.fa'))
+        self.reference_genome = {'12': MockSeq(
+            MockLongString(str(reference_genome['NDUFA12'].seq), offset=95290830)
+        )}
+
+    def test_annotate_events_synonymous(self):
+        for gene_list in self.reference_annotations.values():
             for gene in gene_list:
                 for t in gene.transcripts:
                     print(t)
-        reference_genome = load_reference_genome(os.path.join(DATA_DIR, 'NDUFA12_hg19.fa'))
-        offset = 95290830 * 'N'
-        genome = {'12': MockSeq(offset + str(reference_genome['NDUFA12'].seq))}
         b1 = Breakpoint('12', 95344068, orient=ORIENT.LEFT, strand=STRAND.NS)
         b2 = Breakpoint('12', 95344379, orient=ORIENT.RIGHT, strand=STRAND.NS)
         bpp = BreakpointPair(
             b1, b2, stranded=False, opposing_strands=False, event_type=SVTYPE.DEL, protocol=PROTOCOL.GENOME,
             untemplated_seq='')
-        annotations = annotate_events([bpp], reference_genome=genome, annotations=reference_annotations)
+        annotations = annotate_events([bpp], reference_genome=self.reference_genome, annotations=self.reference_annotations)
         ann = annotations[0]
         fseq = ann.fusion.transcripts[0].get_seq()
-        refseq = ann.transcript1.transcripts[0].get_seq(genome)
+        refseq = ann.transcript1.transcripts[0].get_seq(self.reference_genome)
         self.assertEqual(refseq, fseq)
         self.assertEqual(1, len(annotations))
+
+
+class TestSVEP1(unittest.TestCase):
+    def setUp(self):
+        self.reference_annotations = load_reference_genes(os.path.join(DATA_DIR, 'SVEP1_annotations.tab'), warn=log)
+        reference_genome = load_reference_genome(os.path.join(DATA_DIR, 'SVEP1_hg19.fa'))
+        self.reference_genome = {'9': MockSeq(
+            MockLongString(reference_genome['SVEP1'].seq, offset=113127530)
+        )}
+        self.best = None
+        for chr, gene_list in self.reference_annotations.items():
+            for gene in gene_list:
+                for tx in gene.unspliced_transcripts:
+                    if tx.name == 'ENST00000401783':
+                        self.best = tx
+                        break
+
+    def test_annotate_small_intronic_inversion(self):
+        bpp = BreakpointPair(
+            Breakpoint('9', 113152627, 113152627, orient='L'),
+            Breakpoint('9', 113152635, 113152635, orient='L'),
+            opposing_strands=True,
+            stranded=False,
+            event_type=SVTYPE.INV,
+            protocol=PROTOCOL.GENOME,
+            untemplated_seq=''
+        )
+        annotations = annotate_events([bpp], reference_genome=self.reference_genome, annotations=self.reference_annotations)
+        for a in annotations:
+            print(a, a.transcript1, a.transcript2)
+        self.assertEqual(1, len(annotations))
+        ann = annotations[0]
+        self.assertEqual(self.best, ann.transcript1)
+        self.assertEqual(self.best, ann.transcript2)
+        refseq = self.best.transcripts[0].get_seq(self.reference_genome)
+        self.assertEqual(1, len(ann.fusion.transcripts))
+        self.assertEqual(refseq, ann.fusion.transcripts[0].get_seq())
+
+    def test_build_single_transcript_inversion(self):
+        bpp = BreakpointPair(
+            Breakpoint('9', 113152627, 113152627, orient='L'),
+            Breakpoint('9', 113152635, 113152635, orient='L'),
+            opposing_strands=True,
+            stranded=False,
+            event_type=SVTYPE.INV,
+            protocol=PROTOCOL.GENOME,
+            untemplated_seq=''
+        )
+        ann = Annotation(bpp, transcript1=self.best, transcript2=self.best)
+        ft = FusionTranscript.build(
+            ann, self.reference_genome,
+            min_orf_size=300, max_orf_cap=10, min_domain_mapping_match=0.9
+        )
+        refseq = self.best.transcripts[0].get_seq(self.reference_genome)
+        self.assertEqual(1, len(ft.transcripts))
+        self.assertEqual(refseq, ft.transcripts[0].get_seq())
