@@ -25,6 +25,12 @@ RUN_FULL = int(os.environ.get('RUN_FULL', 1))
 OUTPUT_SVG = int(os.environ.get('OUTPUT_SVG', 0))
 
 
+class MockObject:
+    def __init__(self, **kwargs):
+        for arg, val in kwargs.items():
+            setattr(self, arg, val)
+
+
 class MockRead:
     def __init__(
         self,
@@ -128,12 +134,6 @@ class MockRead:
             self.__class__.__name__, self.reference_id, self.reference_start, self.reference_end)
 
 
-class MockContig:
-    def __init__(self, seq, alignments=None):
-        self.seq = seq,
-        self.alignments = alignments
-
-
 class MockBamFileHandle:
     def __init__(self, chrom_to_tid={}):
         self.chrom_to_tid = chrom_to_tid
@@ -152,11 +152,6 @@ class MockBamFileHandle:
             if input_tid == tid:
                 return chrom
         raise KeyError('invalid id')
-
-
-class MockSeq:
-    def __init__(self, seq=None):
-        self.seq = seq
 
 
 class MockString:

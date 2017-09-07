@@ -3,7 +3,7 @@ from mavis.annotate import load_reference_genome, usTranscript
 from mavis.constants import ORIENT, STRAND, CIGAR, PYSAM_READ_FLAGS, SVTYPE, CALL_METHOD
 from mavis.bam.cache import BamCache
 from mavis.bam.read import sequenced_strand
-from . import MockRead, mock_read_pair, MockContig
+from . import MockRead, mock_read_pair, MockObject
 import unittest
 from . import REFERENCE_GENOME_FILE, BAM_INPUT, FULL_BAM_INPUT, MockBamFileHandle
 from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
@@ -229,7 +229,7 @@ class TestPullFlankingSupport(unittest.TestCase):
         )
         flanking_pairs = [
             mock_read_pair(
-                MockRead('r1', 0, 1100, 1150, is_reverse=True),
+                MockRead('r1MockSeq, ', 0, 1100, 1150, is_reverse=True),
                 MockRead('r1', 1, 1200, 1250, is_reverse=True)
             )]
         event = EventCall(
@@ -354,16 +354,17 @@ class TestEvidenceConsumption(unittest.TestCase):
             Breakpoint('1', 450, 500, orient=ORIENT.RIGHT),
             opposing_strands=False
         )
-        contig = MockContig(
-            '',
-            [
-                mock_read_pair(
-                    MockRead(
-                        query_name='t1', reference_id=0, reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
-                        query_sequence='A' * 100),
-                    MockRead(
-                        query_name='t1', reference_id=0, reference_start=460, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
-                        query_sequence='A' * 100))
+        r1, r2 = mock_read_pair(
+            MockRead(
+                query_name='t1', reference_id=0, reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
+                query_sequence='A' * 100),
+            MockRead(
+                query_name='t1', reference_id=0, reference_start=460, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
+                query_sequence='A' * 100))
+        contig = MockObject(
+            seq='',
+            alignments=[
+                MockObject(read1=r1, read2=r2)
             ])
         contig.input_reads = {MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])}
         evidence.contigs.append(contig)
@@ -415,13 +416,14 @@ class TestEvidenceConsumption(unittest.TestCase):
             Breakpoint('1', 450, 500, orient=ORIENT.RIGHT),
             opposing_strands=False
         )
-        contig = MockContig(
-            '',
-            [mock_read_pair(
-                MockRead(query_name='t1', reference_id=0, reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
-                         query_sequence='A' * 100),
-                MockRead(query_name='t1', reference_id=0, reference_start=480, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
-                         query_sequence='A' * 100))])
+        r1, r2 = mock_read_pair(
+            MockRead(query_name='t1', reference_id=0, reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
+                     query_sequence='A' * 100),
+            MockRead(query_name='t1', reference_id=0, reference_start=480, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
+                     query_sequence='A' * 100))
+        contig = MockObject(
+            seq='',
+            alignments=[MockObject(read1=r1, read2=r2)])
         contig.input_reads = {MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])}
         evidence.contigs.append(contig)
 
@@ -455,13 +457,14 @@ class TestEvidenceConsumption(unittest.TestCase):
             Breakpoint('1', 450, 500, orient=ORIENT.RIGHT),
             opposing_strands=False
         )
-        contig = MockContig(
-            '',
-            [mock_read_pair(
-                MockRead(query_name='t1', reference_id=0, reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
-                         query_sequence='A' * 100),
-                MockRead(query_name='t1', reference_id=0, reference_start=480, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
-                         query_sequence='A' * 100))])
+        r1, r2 = mock_read_pair(
+            MockRead(query_name='t1', reference_id=0, reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
+                     query_sequence='A' * 100),
+            MockRead(query_name='t1', reference_id=0, reference_start=480, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
+                     query_sequence='A' * 100))
+        contig = MockObject(
+            seq='',
+            alignments=[MockObject(read1=r1, read2=r2)])
         contig.input_reads = {MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])}
         evidence.contigs.append(contig)
 
@@ -870,7 +873,7 @@ class TestCallByFlankingReadsGenome(unittest.TestCase):
             self.ev_LR, SVTYPE.INV,
             second_breakpoint_called=b2
         )
-        bpp = BreakpointPair(break1, break2, opposing_strands=False)
+        BreakpointPair(break1, break2, opposing_strands=False)
         self.assertEqual(b2, break2)
         self.assertEqual(120, break1.start)
         self.assertEqual(149, break1.end)
@@ -975,7 +978,7 @@ class TestCallByFlankingReadsTranscriptome(unittest.TestCase):
 
     def test_call_deletion_evidence_spans_exons(self):
         # transcriptome test will use exonic coordinates for the associated transcripts
-        t1 = usTranscript([(1001, 1100), (1501, 1700), (2001, 2100), (2201, 2300)], strand='+')
+        usTranscript([(1001, 1100), (1501, 1700), (2001, 2100), (2201, 2300)], strand='+')
         evidence = self.build_transcriptome_evidence(
             Breakpoint('1', 1051, 1051, 'L', '+'),
             Breakpoint('1', 1551, 1551, 'R', '+')

@@ -2,7 +2,7 @@ from datetime import datetime
 import errno
 import os
 import re
-from .breakpoint import read_bpp_from_input_file
+from .breakpoint import read_bpp_from_input_file, BreakpointPair
 from .constants import PROTOCOL, COLUMNS, sort_columns
 from .interval import Interval
 from argparse import Namespace
@@ -144,13 +144,11 @@ def output_tabbed_file(bpps, filename, header=None):
         custom_header = True
     rows = []
     for row in bpps:
-        try:
+        if not isinstance(row, dict):
             row = row.flatten()
-        except AttributeError:
-            pass
         rows.append(row)
         if not custom_header:
-            header.update(row)
+            header.update(row.keys())
 
     header = sort_columns(header)
 

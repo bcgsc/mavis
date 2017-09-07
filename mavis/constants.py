@@ -316,9 +316,10 @@ COLUMNS = Vocab(
     break2_split_read_names='break2_split_read_names',
     break2_split_reads='break2_split_reads',
     break2_split_reads_forced='break2_split_reads_forced',
-    contig_alignment_query_coverage='contig_alignment_query_coverage',
+    contig_alignment_query_consumption='contig_alignment_query_consumption',
     contig_alignment_score='contig_alignment_score',
     contig_alignment_query_name='contig_alignment_query_name',
+    contig_blat_score='contig_blat_score',
     contig_build_score='contig_build_score',
     contig_remap_score='contig_remap_score',
     contig_remap_coverage='contig_remap_coverage',
@@ -641,7 +642,6 @@ def sort_columns(input_columns):
     order = {}
     for i, col in enumerate(COLUMNS.values()):
         order[col] = i
-
     temp = sorted([c for c in input_columns if c in order], key=lambda x: order[x])
     temp = temp + sorted([c for c in input_columns if c not in order])
     return temp
