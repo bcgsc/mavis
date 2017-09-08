@@ -404,37 +404,3 @@ class TestMapRefRangeToQueryRange(unittest.TestCase):
         self.assertEqual(10, len(qrange))
         self.assertEqual(6, qrange.start)
         self.assertEqual(15, qrange.end)
-
-
-class TestCalculateAlignmentScore(unittest.TestCase):
-    def test_same_score_different_deletions(self):
-        read1 = MockObject(query_sequence='N' * 20, cigar=[(CIGAR.EQ, 10), (CIGAR.D, 5), (CIGAR.EQ, 10)])
-        read2 = MockObject(query_sequence='N' * 20, cigar=[(CIGAR.EQ, 10), (CIGAR.D, 10), (CIGAR.EQ, 10)])
-        self.assertEqual(
-            read_tools.calculate_alignment_score(read1),
-            read_tools.calculate_alignment_score(read2)
-        )
-
-    def test_more_events_lower_score(self):
-        read1 = MockObject(query_sequence='N' * 20, cigar=[(CIGAR.EQ, 10), (CIGAR.D, 5), (CIGAR.EQ, 10)])
-        read2 = MockObject(
-            query_sequence='N' * 20, cigar=[(CIGAR.EQ, 5), (CIGAR.D, 1), (CIGAR.EQ, 5), (CIGAR.D, 1), (CIGAR.EQ, 10)])
-        read3 = MockObject(
-            query_sequence='N' * 20,
-            cigar=[
-                (CIGAR.EQ, 5),
-                (CIGAR.D, 1),
-                (CIGAR.EQ, 5),
-                (CIGAR.D, 1),
-                (CIGAR.EQ, 5),
-                (CIGAR.D, 1),
-                (CIGAR.EQ, 5)
-            ])
-        self.assertLess(
-            read_tools.calculate_alignment_score(read2),
-            read_tools.calculate_alignment_score(read1)
-        )
-        self.assertLess(
-            read_tools.calculate_alignment_score(read3),
-            read_tools.calculate_alignment_score(read2)
-        )
