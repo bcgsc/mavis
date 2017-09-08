@@ -348,22 +348,21 @@ def process_blat_output(
     for query_id, rows in rows_by_query.items():
         query_seq = query_id_mapping[query_id]
         # filter on percent id
+        score_ranks = {}
+        for count, s in enumerate(sorted([r['score'] for r in rows], reverse=True)):
+            score_ranks[s] = count
+
         filtered_rows = [row for row in rows if round(row['percent_ident'], 0) >= blat_min_identity]
 
         # filter on score
         filtered_rows.sort(key=lambda x: x['score'], reverse=True)
         reads = []
-        last_score = -1
-        last_rank = -1
+        # compute ranks first
+
         for count, row in enumerate(filtered_rows):
             if count >= blat_limit_top_aln:
                 break
-            if last_score != row['score']:
-                last_score = row['score']
-                last_rank += 1
-                row['rank'] = last_rank
-            else:
-                row['rank'] = last_rank
+            row['rank'] = score_ranks[row['score']]
             try:
                 read = Blat.pslx_row_to_pysam(row, INPUT_BAM_CACHE, reference_genome)
             except KeyError as e:

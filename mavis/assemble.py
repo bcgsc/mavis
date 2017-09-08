@@ -34,6 +34,24 @@ class Contig:
         cov = sum([len(i) for i in itvls])
         return cov / len(self.seq)
 
+    def remap_depth(self, query_range=None):
+        """
+        the average depth of remapped reads over a give range of the contig sequence
+
+        Args:
+            query_range (Interval): 1-based inclusive range
+        """
+        if query_range is None:
+            query_range = Interval(1, len(self.seq))
+        if query_range.start < 1 or query_range.end > len(self.seq):
+            raise ValueError('query range must be within contig seq', query_range, len(self.seq))
+        result = 0
+        for read, weight in self.remapped_sequences.items():
+            read_qrange = Interval(read.reference_start + 1, read.reference_end)
+            if Interval.overlaps(query_range, read_qrange):
+                result += len(query_range & read_qrange) * weight
+        return result / len(query_range)
+
 
 class DeBruijnGraph(nx.DiGraph):
     """

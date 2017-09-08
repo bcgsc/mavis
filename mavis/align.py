@@ -8,7 +8,7 @@ import subprocess
 import warnings
 import os
 from copy import copy
-from .constants import COLUMNS, SVTYPE, CIGAR, reverse_complement
+from .constants import COLUMNS, SVTYPE, CIGAR, reverse_complement, ORIENT
 from .bam import cigar as cigar_tools
 from .bam import read as read_tools
 from .interval import Interval
@@ -36,6 +36,8 @@ class SplitAlignment:
             if read1.query_sequence != read2_seq:
                 raise ValueError('valid split alignments must share the same (or reverse complement) sequence')
         self.query_sequence = self.read1.query_sequence
+
+        # TODO: if the reads 'share' query sequence overlap, remove this from the second alignment
 
     def __getitem__(self, index):
         if isinstance(index, int):
@@ -95,16 +97,16 @@ class SplitAlignment:
         else:
             return 0
 
-    def score(self):
-        score = read_tools.calculate_alignment_score(self.read1) * len(self.query_coverage_read1())
+    def score(self, consec_bonus=10):
+        def score_matches(cigar):
+            return sum([v + (v - 1) * consec_bonus for s, v in cigar if s == CIGAR.EQ])
+        score = score_matches(self.read1.cigar)
+        qlen = len(self.query_coverage())
         if self.read2 is not None:
-            s1 = read_tools.calculate_alignment_score(self.read1)
-            s2 = read_tools.calculate_alignment_score(self.read2)
-            qi1 = len(self.query_coverage_read1())
-            qi2 = len(self.query_coverage_read2())
-            score = (s1 * qi1 + s2 * qi2) / (qi1 + qi2)
-            score *= len(self.query_coverage())
-        return score / len(self.query_sequence)
+            score += score_matches(self.read2.cigar)
+            if Interval.overlaps(self.query_coverage_read1(), self.query_coverage_read2()):
+                qlen += len(self.query_coverage_read1() & self.query_coverage_read2())
+        return score / (qlen + (qlen - 1) * consec_bonus)
 
     def select_supporting_alignments(
         bpp, alignments,
@@ -195,6 +197,28 @@ class SplitAlignment:
                 continue
             putative_alignments.append(aln)
         return putative_alignments
+
+    @staticmethod
+    def breakpoint_contig_remapped_depth(breakpoint, contig, read):
+        if breakpoint.chr != read.reference_name:
+            raise AssertionError('breakpoint chromosome does not match read reference', breakpoint, read.reference_name)
+        if len(breakpoint) > 1:
+            raise NotImplementedError('only applies to exact breakpoint calls')
+        # get the reference positions for each breakpoint interval from the breakpointpair
+        # convert this to the query intervals using the alignment
+        # for each query interval calculate the read coverage as a pileup over the distance
+        s = read.reference_start + 1
+        t = read.reference_end
+        if breakpoint.orient == ORIENT.LEFT:
+            if breakpoint.start < s:
+                return 0
+            t = min(breakpoint.start, t)
+        elif breakpoint.orient == ORIENT.RIGHT:
+            if breakpoint.start > t:
+                return 0
+            s = max(s, breakpoint.start)
+        qrange = read_tools.map_ref_range_to_query_range(read, Interval(s, t))
+        return contig.remap_depth(qrange)
 
 
 def query_coverage_interval(read):

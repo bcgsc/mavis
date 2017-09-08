@@ -2,7 +2,7 @@ from ..breakpoint import BreakpointPair, Breakpoint
 from ..constants import CALL_METHOD, SVTYPE, PYSAM_READ_FLAGS, ORIENT, PROTOCOL, COLUMNS, STRAND
 from ..bam import read as read_tools
 from ..interval import Interval
-from ..align import query_coverage_interval
+from ..align import SplitAlignment
 from .evidence import TranscriptomeEvidence
 import itertools
 import statistics
@@ -271,7 +271,21 @@ class EventCall(BreakpointPair):
         row.update(BreakpointPair.flatten(self))  # this will overwrite the evidence breakpoint which is what we want
         row.update({
             COLUMNS.call_method: self.call_method,
-            COLUMNS.event_type: self.event_type
+            COLUMNS.event_type: self.event_type,
+            COLUMNS.contig_seq: None,
+            COLUMNS.contig_remap_score: None,
+            COLUMNS.contig_alignment_score: None,
+            COLUMNS.contig_blat_rank: None,
+            COLUMNS.contig_remapped_reads: None,
+            COLUMNS.contig_remapped_read_names: None,
+            COLUMNS.contig_strand_specific: None,
+            COLUMNS.contig_alignment_query_consumption: None,
+            COLUMNS.contig_build_score: None,
+            COLUMNS.contig_alignment_query_name: None,
+            COLUMNS.contig_remap_coverage: None,
+            COLUMNS.contig_read_depth: None,
+            COLUMNS.contig_break1_read_depth: None,
+            COLUMNS.contig_break2_read_depth: None
         })
         median, stdev = self.flanking_metrics()
         flank = set()
@@ -328,11 +342,18 @@ class EventCall(BreakpointPair):
                     blat_score += self.contig_alignment.read2.get_tag('br')
                     blat_score = round(blat_score / 2, 1)
             cseq = self.contig_alignment.query_sequence
+            break1_read_depth = SplitAlignment.breakpoint_contig_remapped_depth(
+                self.break1, self.contig, self.contig_alignment.read1
+            )
+            break2_read_depth = SplitAlignment.breakpoint_contig_remapped_depth(
+                self.break2, self.contig,
+                self.contig_alignment.read1 if self.contig_alignment.read2 is None else self.contig_alignment.read2
+            )
             row.update({
                 COLUMNS.contig_seq: cseq,  # don't output sequence directly from contig b/c must always be wrt to the positive strand
                 COLUMNS.contig_remap_score: self.contig.remap_score(),
                 COLUMNS.contig_alignment_score: self.contig_alignment.score(),
-                COLUMNS.contig_blat_score: blat_score,
+                COLUMNS.contig_blat_rank: blat_score,
                 COLUMNS.contig_remapped_reads: len(self.contig.input_reads),
                 COLUMNS.contig_remapped_read_names:
                     ';'.join(sorted(set([r.query_name for r in self.contig.input_reads]))),
@@ -340,7 +361,10 @@ class EventCall(BreakpointPair):
                 COLUMNS.contig_alignment_query_consumption: self.contig_alignment.query_consumption(),
                 COLUMNS.contig_build_score: self.contig.score,
                 COLUMNS.contig_alignment_query_name: self.contig_alignment[0].query_name,
-                COLUMNS.contig_remap_coverage: self.contig.remap_coverage()
+                COLUMNS.contig_remap_coverage: self.contig.remap_coverage(),
+                COLUMNS.contig_read_depth: self.contig.remap_depth(),
+                COLUMNS.contig_break1_read_depth: break1_read_depth,
+                COLUMNS.contig_break2_read_depth: break2_read_depth
             })
         return row
 

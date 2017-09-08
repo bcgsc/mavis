@@ -120,7 +120,8 @@ def main(
         print()
         log(
             '({} of {})'.format(i + 1, len(evidence_clusters)),
-            'gathered evidence for:', e.cluster_id
+            'gathered evidence for:', e.cluster_id,
+            '' if 'input_id' not in e.data else '(input_id: {})'.format(e.data['input_id'])
         )
         log(e, time_stamp=False)
         log('possible event type(s):', BreakpointPair.classify(e), time_stamp=False)

@@ -1,17 +1,17 @@
-from mavis.align import *
+from mavis.align import SplitAlignment, align_contigs, query_coverage_interval
 from mavis.interval import Interval
 from mavis.annotate import load_reference_genome
-from mavis.constants import ORIENT, CIGAR
+from mavis.constants import ORIENT, CIGAR, reverse_complement
 from mavis.bam.cache import BamCache
 from mavis.assemble import Contig
 from mavis.breakpoint import Breakpoint
 from mavis.validate.evidence import GenomeEvidence
-from mavis.align import query_coverage_interval
+import mavis.bam.cigar as cigar_tools
 
 import unittest
 import shutil
 from . import REFERENCE_GENOME_FILE, REFERENCE_GENOME_FILE_2BIT
-from . import BAM_INPUT, MockBamFileHandle
+from . import BAM_INPUT, MockBamFileHandle, MockRead, MockObject
 
 
 REFERENCE_GENOME = None
@@ -162,3 +162,20 @@ class TestAlign(unittest.TestCase):
         self.assertEqual(Interval(0, 175), query_coverage_interval(read1))
         self.assertEqual(1612, read1.reference_start)
         self.assertEqual([(CIGAR.EQ, 102), (CIGAR.D, 1253), (CIGAR.EQ, 74)], read1.cigar)
+
+
+class TestBreakpointContigRemappedDepth(unittest.TestCase):
+    def setUp(self):
+        self.contig = Contig(' ' * 60, None)
+        self.contig.add_mapped_sequence(MockObject(reference_start=0, reference_end=10))
+        self.contig.add_mapped_sequence(MockObject(reference_start=0, reference_end=20))
+        self.contig.add_mapped_sequence(MockObject(reference_start=50, reference_end=60))
+
+    def test_break_left_deletion(self):
+        b = Breakpoint('10', 1030, 1030, orient=ORIENT.LEFT)
+        read = MockRead(
+            cigar=cigar_tools.convert_string_to_cigar('35M10D5I20M'),
+            reference_start=999,
+            reference_name='10'
+        )
+        SplitAlignment.breakpoint_contig_remapped_depth(b, self.contig, read)

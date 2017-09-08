@@ -1,19 +1,19 @@
-from mavis.constants import *
 from mavis.bam import read as read_tools
 from mavis.bam import cigar as cigar_tools
 from mavis.bam.read import sequenced_strand, read_pair_type, breakpoint_pos, orientation_supports_type, get_samtools_version
 from mavis.bam.cache import BamCache
 from mavis.bam.stats import Histogram, compute_transcriptome_bam_stats, compute_genome_bam_stats
 from mavis.annotate import load_reference_genome, load_reference_genes
-import pysam
 import unittest
 import warnings
 import os
-from . import MockRead, MockBamFileHandle
+from mavis.constants import DNA_ALPHABET, CIGAR, ORIENT, STRAND, READ_PAIR_TYPE, SVTYPE
+from . import MockRead, MockBamFileHandle, MockObject
 from . import REFERENCE_GENOME_FILE, TRANSCRIPTOME_BAM_INPUT, FULL_REFERENCE_ANNOTATIONS_FILE_JSON
 from . import BAM_INPUT, FULL_BAM_INPUT
 from .config import samtools_versions
 import timeout_decorator
+from mavis.interval import Interval
 
 
 REFERENCE_GENOME = None
@@ -376,3 +376,65 @@ class TestBamStats(unittest.TestCase):
         self.assertEqual(75, stats.read_length)
         self.assertTrue(stats.stdev_fragment_size < 50)
         bamfh.close()
+
+
+class TestMapRefRangeToQueryRange(unittest.TestCase):
+    def setUp(self):
+        self.contig_read = MockRead(
+            cigar=cigar_tools.convert_string_to_cigar('275M18I12041D278M'),
+            reference_start=89700025,
+            reference_name='10'
+        )
+
+    def test_full_aligned_portion(self):
+        ref_range = Interval(89700026, 89712619)
+        qrange = read_tools.map_ref_range_to_query_range(self.contig_read, ref_range)
+        self.assertEqual(571, len(qrange))
+        self.assertEqual(1, qrange.start)
+        self.assertEqual(571, qrange.end)
+
+    def test_multiple_events(self):
+        ref_range = Interval(89700067, 89712347)
+        qrange = read_tools.map_ref_range_to_query_range(self.contig_read, ref_range)
+        self.assertEqual(len(ref_range) - 12041 + 18, len(qrange))
+
+    def test_no_events(self):
+        ref_range = Interval(89700031, 89700040)
+        qrange = read_tools.map_ref_range_to_query_range(self.contig_read, ref_range)
+        self.assertEqual(10, len(qrange))
+        self.assertEqual(6, qrange.start)
+        self.assertEqual(15, qrange.end)
+
+
+class TestCalculateAlignmentScore(unittest.TestCase):
+    def test_same_score_different_deletions(self):
+        read1 = MockObject(query_sequence='N' * 20, cigar=[(CIGAR.EQ, 10), (CIGAR.D, 5), (CIGAR.EQ, 10)])
+        read2 = MockObject(query_sequence='N' * 20, cigar=[(CIGAR.EQ, 10), (CIGAR.D, 10), (CIGAR.EQ, 10)])
+        self.assertEqual(
+            read_tools.calculate_alignment_score(read1),
+            read_tools.calculate_alignment_score(read2)
+        )
+
+    def test_more_events_lower_score(self):
+        read1 = MockObject(query_sequence='N' * 20, cigar=[(CIGAR.EQ, 10), (CIGAR.D, 5), (CIGAR.EQ, 10)])
+        read2 = MockObject(
+            query_sequence='N' * 20, cigar=[(CIGAR.EQ, 5), (CIGAR.D, 1), (CIGAR.EQ, 5), (CIGAR.D, 1), (CIGAR.EQ, 10)])
+        read3 = MockObject(
+            query_sequence='N' * 20,
+            cigar=[
+                (CIGAR.EQ, 5),
+                (CIGAR.D, 1),
+                (CIGAR.EQ, 5),
+                (CIGAR.D, 1),
+                (CIGAR.EQ, 5),
+                (CIGAR.D, 1),
+                (CIGAR.EQ, 5)
+            ])
+        self.assertLess(
+            read_tools.calculate_alignment_score(read2),
+            read_tools.calculate_alignment_score(read1)
+        )
+        self.assertLess(
+            read_tools.calculate_alignment_score(read3),
+            read_tools.calculate_alignment_score(read2)
+        )
