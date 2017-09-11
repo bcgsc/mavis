@@ -1,4 +1,5 @@
 import unittest
+import itertools
 from mavis.annotate.protein import Domain, DomainRegion, calculate_ORF
 from mavis.annotate.base import ReferenceName
 import os
@@ -324,3 +325,29 @@ class TestReferenceName(unittest.TestCase):
         self.assertTrue(r == rprefix)
         self.assertTrue(r != r2prefix)
         self.assertFalse(r != rprefix)
+
+    def test_lt(self):
+        r = ReferenceName('1')
+        rprefix = ReferenceName('chr1')
+        r2 = ReferenceName('2')
+        r2prefix = ReferenceName('chr2')
+        self.assertTrue(r <= rprefix)
+        self.assertFalse(r < rprefix)
+        self.assertFalse(rprefix < r)
+        self.assertTrue(rprefix <= r)
+        for chr1, chr2 in itertools.product([r, rprefix], [r2, r2prefix]):
+            self.assertTrue(chr1 < chr2)
+            self.assertTrue(chr1 <= chr2)
+
+    def test_gt(self):
+        r = ReferenceName('1')
+        rprefix = ReferenceName('chr1')
+        r2 = ReferenceName('2')
+        r2prefix = ReferenceName('chr2')
+        self.assertTrue(rprefix >= r)
+        self.assertTrue(r >= rprefix)
+        self.assertFalse(r > rprefix)
+        self.assertFalse(rprefix > r)
+        for chr1, chr2 in itertools.product([r, rprefix], [r2, r2prefix]):
+            self.assertTrue(chr2 > chr1)
+            self.assertTrue(chr2 >= chr1)

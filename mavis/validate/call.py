@@ -80,7 +80,7 @@ class EventCall(BreakpointPair):
 
     def get_bed_repesentation(self):
         bed = []
-        name = self.data.get(COLUMNS.cluster_id, None) + '-' + self.event_type
+        name = self.data.get(COLUMNS.validation_id, None) + '-' + self.event_type
         if self.interchromosomal:
             bed.append((self.break1.chr, self.break1.start - 1, self.break1.end, name))
             bed.append((self.break2.chr, self.break2.start - 1, self.break2.end, name))
