@@ -1,4 +1,5 @@
 from configparser import ConfigParser, ExtendedInterpolation
+import argparse
 import os
 import TSV
 import re
@@ -408,6 +409,13 @@ def get_env_variable(arg, default, cast_type=None):
         return default
 
 
+def float_fraction(f):
+    f = float(f)
+    if f < 0 or f > 1:
+        raise argparse.ArgumentTypeError('Argument must be a value between 0 and 1')
+    return f
+
+
 def augment_parser(parser, optparser, arguments):
     for arg in arguments:
         if arg == 'help':
@@ -469,17 +477,33 @@ def augment_parser(parser, optparser, arguments):
                 help='distance allowed between breakpoint calls when pairing breakpoints of this call method')
         elif arg in VALIDATION_DEFAULTS:
             value = VALIDATION_DEFAULTS[arg]
-            vtype = type(value) if not isinstance(value, bool) else TSV.tsv_boolean
+            if arg in [
+                'assembly_min_remap_coverage',
+                'assembly_min_remap_coverage',
+                'assembly_strand_concordance',
+                'blat_min_identity',
+                'contig_aln_min_query_consumption',
+                'min_anchor_match'
+            ]:
+                vtype = float_fraction
+            else:
+                vtype = type(value) if not isinstance(value, bool) else TSV.tsv_boolean
             optparser.add_argument(
                 '--{}'.format(arg), default=get_env_variable(arg, value), type=vtype, help='see user manual for desc')
         elif arg in ILLUSTRATION_DEFAULTS:
             value = ILLUSTRATION_DEFAULTS[arg]
-            vtype = type(value) if not isinstance(value, bool) else TSV.tsv_boolean
+            if arg == 'mask_opacity':
+                vtype = float_fraction
+            else:
+                vtype = type(value) if not isinstance(value, bool) else TSV.tsv_boolean
             optparser.add_argument(
                 '--{}'.format(arg), default=get_env_variable(arg, value), type=vtype, help='see user manual for desc')
         elif arg in ANNOTATION_DEFAULTS:
             value = ANNOTATION_DEFAULTS[arg]
-            vtype = type(value) if not isinstance(value, bool) else TSV.tsv_boolean
+            if arg == 'min_domain_mapping_match':
+                vtype = float_fraction
+            else:
+                vtype = type(value) if not isinstance(value, bool) else TSV.tsv_boolean
             optparser.add_argument(
                 '--{}'.format(arg), default=get_env_variable(arg, value), type=vtype, help='see user manual for desc')
         elif arg in SUMMARY_DEFAULTS:
