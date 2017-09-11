@@ -5,7 +5,6 @@ from ..interval import Interval, IntervalMapping
 from .protein import Translation, Domain, calculate_ORF
 from ..error import NotSpecifiedError
 from ..util import devnull
-from .splicing import predict_splice_sites
 import itertools
 import uuid
 import json
@@ -757,7 +756,7 @@ def flatten_fusion_transcript(spliced_fusion_transcript):
             else:
                 raise AssertionError(
                     'exon should not be mapped if not within a break region',
-                    ex, fusion_transcript.break1. fusion_transcript.break2
+                    ex, fusion_transcript.break1, fusion_transcript.break2
                 )
         except KeyError:  # novel exon
             for us_exon, src_exon in sorted(fusion_transcript.exon_mapping.items()):
