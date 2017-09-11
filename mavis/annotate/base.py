@@ -18,6 +18,26 @@ class ReferenceName(str):
     def __hash__(self):
         return hash(re.sub('^chr', '', str(self)))
 
+    def __lt__(self, other):
+        s = self if not self.startswith('chr') else self[3:]
+        o = other if not other.startswith('chr') else other[3:]
+        return str.__lt__(s, o)
+
+    def __gt__(self, other):
+        s = self if not self.startswith('chr') else self[3:]
+        o = other if not other.startswith('chr') else other[3:]
+        return str.__gt__(s, o)
+
+    def __ge__(self, other):
+        if self == other:
+            return True
+        return self.__gt__(other)
+
+    def __le__(self, other):
+        if self == other:
+            return True
+        return self.__lt__(other)
+
 
 class BioInterval:
     def __init__(self, reference_object, start, end=None, name=None, seq=None, data=None, strand=None):
