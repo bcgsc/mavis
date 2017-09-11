@@ -161,16 +161,22 @@ class SplitAlignment:
         combo_prohibited = [x for x, y in putative_alignments]
         for read1, read2 in itertools.combinations([x for x in alignments if x not in combo_prohibited], 2):
             # do they overlap both breakpoints
+            if read2 is not None and any([
+                read1.reference_name > read2.reference_name,
+                read1.reference_name == read2.reference_name and read1.reference_start > read2.reference_start
+            ]):
+                read1, read2 = read2, read1
+
+            if read1.reference_name != bpp.break1.chr or read2.reference_name != bpp.break2.chr:
+                continue
+            read1 = read_tools.convert_events_to_softclipping(
+                read1, bpp.break1.orient, max_event_size=max_event_size, min_anchor_size=min_anchor_size)
+            read2 = read_tools.convert_events_to_softclipping(
+                read2, bpp.break2.orient, max_event_size=max_event_size, min_anchor_size=min_anchor_size)
             try:
                 aln = SplitAlignment(read1, read2)
             except ValueError:
                 continue
-            if aln.read1.reference_name != bpp.break1.chr or aln.read2.reference_name != bpp.break2.chr:
-                continue
-            aln.read1 = read_tools.convert_events_to_softclipping(
-                aln.read1, bpp.break1.orient, max_event_size=max_event_size, min_anchor_size=min_anchor_size)
-            aln.read2 = read_tools.convert_events_to_softclipping(
-                aln.read2, bpp.break2.orient, max_event_size=max_event_size, min_anchor_size=min_anchor_size)
             # check that the coverage intervals overlap the event windows
             if any([
                 not Interval.overlaps((aln.read1.reference_start + 1, aln.read1.reference_end), bpp.outer_window1),
