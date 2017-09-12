@@ -1,6 +1,6 @@
 import unittest
 import os
-from mavis.annotate.variant import _gather_annotations, FusionTranscript, determine_prime, _gather_breakpoint_annotations, overlapping_transcripts, Annotation
+from mavis.annotate.variant import _gather_annotations, FusionTranscript, determine_prime, _gather_breakpoint_annotations, overlapping_transcripts, Annotation, flatten_fusion_transcript
 from mavis.annotate.genomic import *
 from mavis.annotate.protein import *
 from mavis.annotate.file_io import load_reference_genes, load_reference_genome
@@ -1438,3 +1438,45 @@ class TestSVEP1(unittest.TestCase):
         refseq = self.best.transcripts[0].get_seq(self.reference_genome)
         self.assertEqual(1, len(ft.transcripts))
         self.assertEqual(refseq, ft.transcripts[0].get_seq())
+
+
+class TestDSTYK(unittest.TestCase):
+    def setUp(self):
+        self.reference_annotations = load_reference_genes(os.path.join(DATA_DIR, 'DSTYK_annotations.tab'), warn=log)
+        reference_genome = load_reference_genome(os.path.join(DATA_DIR, 'DSTYK_hg19.fa'))
+        self.reference_genome = {'1': MockObject(
+            seq=MockLongString(reference_genome['DSTYK'].seq, offset=205111631)
+        )}
+        self.best = None
+        for chr, gene_list in self.reference_annotations.items():
+            for gene in gene_list:
+                for tx in gene.unspliced_transcripts:
+                    if tx.is_best_transcript:
+                        self.best = tx
+                        break
+
+    def test_build_single_transcript_inversion_reverse_strand(self):
+        # 1:205178631R 1:205178835R inversion
+        bpp = BreakpointPair(
+            Breakpoint('1', 205178631, orient='R'),
+            Breakpoint('1', 205178835, orient='R'),
+            opposing_strands=True,
+            stranded=False,
+            event_type=SVTYPE.INV,
+            protocol=PROTOCOL.GENOME,
+            untemplated_seq=''
+        )
+        ann = Annotation(bpp, transcript1=self.best, transcript2=self.best)
+        ft = FusionTranscript.build(
+            ann, self.reference_genome,
+            min_orf_size=300, max_orf_cap=10, min_domain_mapping_match=0.9
+        )
+        print(ft.exons)
+        print(ft.break1, ft.break2)
+        for ex in ft.exons:
+            print(ex, len(ex), '==>', ft.exon_mapping.get(ex.position, None), len(ft.exon_mapping.get(ex.position, None)), ft.exon_number(ex))
+        # refseq = self.best.transcripts[0].get_seq(self.reference_genome)
+        self.assertEqual(1, len(ft.transcripts))
+        self.assertEqual(1860, ft.break1)
+        self.assertEqual(2065, ft.break2)
+        row = flatten_fusion_transcript(ft.transcripts[0])  # test no error
