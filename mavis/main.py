@@ -466,17 +466,24 @@ def check_library_dir(library_dir, verbose=False):
                     printed_stage = True
                 missing_logs.add(job_task_id)
 
-            if not stamp and logfile:
+            if stamp and logfile:
+                try:
+                    rt = parse_runtime_from_log(logfile)
+                except OSError as err:
+                    incomplete.add(job_task_id)
+                    crashes.setdefault(str(err), set()).add(job_task_id)
+                else:
+                    curr_run_times.append(rt)
+                    run_times[stage_subdir][job_task_id] = rt
+                    continue
+            if logfile:
                 if not printed_stage:
                     log(stage_subdir, 'FAIL', time_stamp=False)
                     printed_stage = True
                 details = parse_log_details(logfile)
                 if details.status == 'crash':
                     crashes.setdefault(details.message, set()).add(job_task_id)
-            elif stamp and logfile:
-                rt = parse_runtime_from_log(logfile)
-                curr_run_times.append(rt)
-                run_times[stage_subdir][job_task_id] = rt
+
         if incomplete or missing_logs or crashes:
             if incomplete:
                 log(
