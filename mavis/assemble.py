@@ -1,6 +1,7 @@
 import networkx as nx
 import itertools
 import warnings
+import distance
 from .bam import cigar as cigar_tools
 from .bam.read import nsb_align, calculate_alignment_score
 from .constants import reverse_complement
@@ -282,6 +283,7 @@ def assemble(
     assembly_min_contig_length=None,
     assembly_min_exact_match_to_remap=6,
     assembly_max_paths=20,
+    assembly_min_uniq=0.01,
     assembly_max_kmer_strict=False,
     log=lambda *pos, **kwargs: None
 ):
@@ -371,15 +373,31 @@ def assemble(
     for seq, score in list(path_scores.items()):
         if seq not in sequences and len(seq) >= assembly_min_contig_length:
             contigs[seq] = Contig(seq, score)
+    log('filtering similar contigs', len(contigs))
     # remap the input reads
     filtered_contigs = {}
-    for seq, contig in sorted(contigs.items()):
+    for seq, contig in sorted(contigs.items(), key=lambda x: (x[1].score, x[0]), reverse=True):
         rseq = reverse_complement(seq)
-        if seq not in filtered_contigs and rseq not in filtered_contigs:
+        if seq in filtered_contigs or rseq in filtered_contigs:
+            continue
+        drop = False
+        # drop all contigs that are more than 'x' percent similar to existing contigs
+        for other_seq in filtered_contigs:
+            if len(other_seq) == len(seq):
+                dist = min(distance.nhammming(seq, other_seq), distance.nhammming(rseq, other_seq))
+                if dist < assembly_min_uniq:
+                    drop = True
+                    break
+            else:
+                dist = min(distance.nlevenshtein(seq, other_seq), distance.nlevenshtein(rseq, other_seq))
+                if dist < assembly_min_uniq:
+                    drop = True
+                    break
+        if not drop:
             filtered_contigs[seq] = contig
+            break
 
     contigs = list(filtered_contigs.values())
-
     log('remapping reads to {} contigs'.format(len(contigs)))
 
     for input_seq in sequences:
