@@ -120,7 +120,8 @@ def main(
         print()
         log(
             '({} of {})'.format(i + 1, len(evidence_clusters)),
-            'gathered evidence for:', e.cluster_id
+            'gathered evidence for:', e.cluster_id,
+            '' if 'input_id' not in e.data else '(input_id: {})'.format(e.data['input_id'])
         )
         log(e, time_stamp=False)
         log('possible event type(s):', BreakpointPair.classify(e), time_stamp=False)
@@ -156,8 +157,6 @@ def main(
         aligner=kwargs.get(
             'aligner', DEFAULTS.aligner),
         aligner_reference=aligner_reference,
-        blat_min_percent_of_max_score=kwargs.get(
-            'blat_min_percent_of_max_score', DEFAULTS.blat_min_percent_of_max_score),
         blat_min_identity=kwargs.get(
             'blat_min_identity', DEFAULTS.blat_min_identity),
         blat_limit_top_aln=kwargs.get(

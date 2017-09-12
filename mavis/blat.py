@@ -21,6 +21,7 @@ from .bam.read import SamRead
 from .bam.cigar import QUERY_ALIGNED_STATES
 from .interval import Interval
 from .align import query_coverage_interval, SUPPORTED_ALIGNER
+from .util import devnull
 
 
 class Blat:
@@ -312,3 +313,69 @@ def get_blat_version():
         if m:
             return m.group(1)
     raise ValueError("unable to parse blat version number from:'{}'".format(proc))
+
+
+def process_blat_output(
+        INPUT_BAM_CACHE,
+        query_id_mapping,
+        reference_genome,
+        aligner_output_file='aligner_out.temp',
+        blat_min_percent_of_max_score=0.8,
+        blat_min_identity=0.7,
+        blat_limit_top_aln=25,
+        is_protein=False,
+        log=devnull,
+        **kwargs):
+    """
+    converts the blat output pslx (unheadered file) to bam reads
+    """
+    if is_protein:
+        raise NotImplementedError('currently does not support aligning protein sequences')
+
+    header, rows = Blat.read_pslx(aligner_output_file, query_id_mapping, is_protein=is_protein)
+
+    # split the rows by query id
+    rows_by_query = {}
+    for row in rows:
+        if row['qname'] not in rows_by_query:
+            rows_by_query[row['qname']] = []
+        rows_by_query[row['qname']].append(row)
+
+    reads_by_query = {}
+    sequences = set(query_id_mapping.values())
+    for s in sequences:
+        reads_by_query[s] = []
+    for query_id, rows in rows_by_query.items():
+        query_seq = query_id_mapping[query_id]
+        # filter on percent id
+        score_ranks = {}
+        for count, s in enumerate(sorted([r['score'] for r in rows], reverse=True)):
+            score_ranks[s] = count
+
+        filtered_rows = [row for row in rows if round(row['percent_ident'], 0) >= blat_min_identity]
+
+        # filter on score
+        filtered_rows.sort(key=lambda x: x['score'], reverse=True)
+        reads = []
+        # compute ranks first
+
+        for count, row in enumerate(filtered_rows):
+            if count >= blat_limit_top_aln:
+                break
+            row['rank'] = score_ranks[row['score']]
+            try:
+                read = Blat.pslx_row_to_pysam(row, INPUT_BAM_CACHE, reference_genome)
+            except KeyError as e:
+                warnings.warn(
+                    'warning: reference template name not recognized {0}'.format(e))
+            except AssertionError as e:
+                warnings.warn('warning: invalid blat alignment: {}'.format(e))
+            else:
+                read.set_tag(PYSAM_READ_FLAGS.BLAT_SCORE, row['score'], value_type='i')
+                read.set_tag(PYSAM_READ_FLAGS.BLAT_ALIGNMENTS, len(filtered_rows), value_type='i')
+                read.set_tag(PYSAM_READ_FLAGS.BLAT_PMS, blat_min_percent_of_max_score, value_type='f')
+                read.set_tag(PYSAM_READ_FLAGS.BLAT_RANK, row['rank'], value_type='i')
+                read.set_tag(PYSAM_READ_FLAGS.BLAT_PERCENT_IDENTITY, row['percent_ident'], value_type='f')
+                reads.append(read)
+        reads_by_query[query_seq] = reads
+    return reads_by_query

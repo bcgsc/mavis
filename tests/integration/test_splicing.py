@@ -8,7 +8,7 @@ from mavis.interval import Interval
 from mavis.breakpoint import Breakpoint, BreakpointPair
 import unittest
 import os
-from . import DATA_DIR, MockLongString, MockSeq
+from . import DATA_DIR, MockLongString, MockObject
 
 REF_GENOME = {}
 HUGO_GENES = {}
@@ -27,7 +27,7 @@ def setUpModule():
             offset = gene.start - 1
             if gene.chr in REF_GENOME:
                 raise AssertionError('conflicting sequences')
-            REF_GENOME[gene.chr] = MockSeq(MockLongString(str(temp[hugo].seq), offset=offset))
+            REF_GENOME[gene.chr] = MockObject(seq=MockLongString(str(temp[hugo].seq), offset=offset))
 
 
 class TestSplicingPatterns(unittest.TestCase):

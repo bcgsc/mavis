@@ -8,7 +8,7 @@ from svgwrite import Drawing
 from mavis.constants import STRAND, ORIENT, SVTYPE, PROTOCOL
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.interval import Interval
-from . import MockSeq, MockString, build_transcript, TEMPLATE_METADATA_FILE, OUTPUT_SVG
+from . import MockString, MockObject, build_transcript, TEMPLATE_METADATA_FILE, OUTPUT_SVG
 import random
 
 TEMPLATE_METADATA = None
@@ -204,7 +204,7 @@ class TestDraw(unittest.TestCase):
         ann = Annotation(bpp, transcript1=t, transcript2=t, event_type=SVTYPE.DUP, protocol=PROTOCOL.GENOME)
         ann.add_gene(Gene('1', 1500, 1950, strand=STRAND.POS))
 
-        reference_genome = {'1': MockSeq(MockString('A'))}
+        reference_genome = {'1': MockObject(seq=MockString('A'))}
         ft = FusionTranscript.build(ann, reference_genome)
         ann.fusion = ft
         canvas, legend = draw_sv_summary_diagram(d, ann)
@@ -249,7 +249,7 @@ class TestDraw(unittest.TestCase):
         ann.add_gene(Gene('1', 3000, 3980, strand=STRAND.POS))
         ann.add_gene(Gene('1', 3700, 4400, strand=STRAND.NEG))
 
-        reference_genome = {'1': MockSeq(MockString('A'))}
+        reference_genome = {'1': MockObject(seq=MockString('A'))}
 
         ft = FusionTranscript.build(ann, reference_genome)
         ann.fusion = ft
@@ -305,7 +305,7 @@ class TestDraw(unittest.TestCase):
         ann.add_gene(Gene('2', 5500, 9000, strand=STRAND.POS))
         ann.add_gene(Gene('2', 3700, 4400, strand=STRAND.NEG))
 
-        reference_genome = {'1': MockSeq(MockString('A')), '2': MockSeq(MockString('A'))}
+        reference_genome = {'1': MockObject(seq=MockString('A')), '2': MockObject(seq=MockString('A'))}
 
         ft = FusionTranscript.build(ann, reference_genome)
         ann.fusion = ft
@@ -375,7 +375,7 @@ class TestDraw(unittest.TestCase):
         ann.add_gene(Gene('2', 5500, 9000, strand=STRAND.POS))
         ann.add_gene(Gene('2', 3700, 4400, strand=STRAND.NEG))
 
-        reference_genome = {'1': MockSeq(MockString('A')), '2': MockSeq(MockString('A'))}
+        reference_genome = {'1': MockObject(seq=MockString('A')), '2': MockObject(seq=MockString('A'))}
 
         ft = FusionTranscript.build(ann, reference_genome)
         ann.fusion = ft

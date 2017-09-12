@@ -3,7 +3,7 @@ from mavis.annotate import load_reference_genome, usTranscript
 from mavis.constants import ORIENT, STRAND, CIGAR, PYSAM_READ_FLAGS, SVTYPE, CALL_METHOD
 from mavis.bam.cache import BamCache
 from mavis.bam.read import sequenced_strand
-from . import MockRead, mock_read_pair, MockContig
+from . import MockRead, mock_read_pair, MockObject
 import unittest
 from . import REFERENCE_GENOME_FILE, BAM_INPUT, FULL_BAM_INPUT, MockBamFileHandle
 from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
@@ -229,7 +229,7 @@ class TestPullFlankingSupport(unittest.TestCase):
         )
         flanking_pairs = [
             mock_read_pair(
-                MockRead('r1', 0, 1100, 1150, is_reverse=True),
+                MockRead('r1MockSeq, ', 0, 1100, 1150, is_reverse=True),
                 MockRead('r1', 1, 1200, 1250, is_reverse=True)
             )]
         event = EventCall(
@@ -354,16 +354,17 @@ class TestEvidenceConsumption(unittest.TestCase):
             Breakpoint('1', 450, 500, orient=ORIENT.RIGHT),
             opposing_strands=False
         )
-        contig = MockContig(
-            '',
-            [
-                mock_read_pair(
-                    MockRead(
-                        query_name='t1', reference_id=0, reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
-                        query_sequence='A' * 100),
-                    MockRead(
-                        query_name='t1', reference_id=0, reference_start=460, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
-                        query_sequence='A' * 100))
+        r1, r2 = mock_read_pair(
+            MockRead(
+                query_name='t1', reference_id=0, reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
+                query_sequence='A' * 100),
+            MockRead(
+                query_name='t1', reference_id=0, reference_start=460, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
+                query_sequence='A' * 100))
+        contig = MockObject(
+            seq='',
+            alignments=[
+                MockObject(read1=r1, read2=r2)
             ])
         contig.input_reads = {MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])}
         evidence.contigs.append(contig)
@@ -389,21 +390,21 @@ class TestEvidenceConsumption(unittest.TestCase):
         for ev in events:
             print(ev, ev.event_type, ev.call_method)
         self.assertEqual(4, len(events))
-        self.assertEqual(('contig', 'contig'), events[0].call_method)
+        self.assertEqual('contig', events[0].call_method)
         self.assertEqual(100, events[0].break1.start)
         self.assertEqual(481, events[0].break2.start)
         self.assertEqual('deletion', events[0].event_type)
-        self.assertEqual(('split reads', 'split reads'), events[1].call_method)
+        self.assertEqual('split reads', events[1].call_method)
         self.assertEqual(120, events[1].break1.start)
         self.assertEqual(501, events[1].break2.start)
         self.assertEqual('deletion', events[1].event_type)
-        self.assertEqual(('flanking reads', 'flanking reads'), events[2].call_method)
+        self.assertEqual('flanking reads', events[2].call_method)
         self.assertEqual(90, events[2].break1.start)
         self.assertEqual(299, events[2].break1.end)
         self.assertEqual(591, events[2].break2.start)
         self.assertEqual(806, events[2].break2.end)
         self.assertEqual('deletion', events[2].event_type)
-        self.assertEqual(('split reads', 'split reads'), events[3].call_method)
+        self.assertEqual('split reads', events[3].call_method)
         self.assertEqual(120, events[3].break1.start)
         self.assertEqual(501, events[3].break2.start)
         self.assertEqual('insertion', events[3].event_type)
@@ -415,13 +416,14 @@ class TestEvidenceConsumption(unittest.TestCase):
             Breakpoint('1', 450, 500, orient=ORIENT.RIGHT),
             opposing_strands=False
         )
-        contig = MockContig(
-            '',
-            [mock_read_pair(
-                MockRead(query_name='t1', reference_id=0, reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
-                         query_sequence='A' * 100),
-                MockRead(query_name='t1', reference_id=0, reference_start=480, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
-                         query_sequence='A' * 100))])
+        r1, r2 = mock_read_pair(
+            MockRead(query_name='t1', reference_id=0, reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
+                     query_sequence='A' * 100),
+            MockRead(query_name='t1', reference_id=0, reference_start=480, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
+                     query_sequence='A' * 100))
+        contig = MockObject(
+            seq='',
+            alignments=[MockObject(read1=r1, read2=r2)])
         contig.input_reads = {MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])}
         evidence.contigs.append(contig)
 
@@ -446,7 +448,7 @@ class TestEvidenceConsumption(unittest.TestCase):
         self.assertEqual(1, len(events))
         self.assertEqual(100, events[0].break1.start)
         self.assertEqual(501, events[0].break2.start)
-        self.assertEqual(('contig', 'contig'), events[0].call_method)
+        self.assertEqual('contig', events[0].call_method)
 
     def test_call_contig_and_split(self):
         # contig breakpoint is 100L 501R, split reads is 120L 521R
@@ -455,13 +457,14 @@ class TestEvidenceConsumption(unittest.TestCase):
             Breakpoint('1', 450, 500, orient=ORIENT.RIGHT),
             opposing_strands=False
         )
-        contig = MockContig(
-            '',
-            [mock_read_pair(
-                MockRead(query_name='t1', reference_id=0, reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
-                         query_sequence='A' * 100),
-                MockRead(query_name='t1', reference_id=0, reference_start=480, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
-                         query_sequence='A' * 100))])
+        r1, r2 = mock_read_pair(
+            MockRead(query_name='t1', reference_id=0, reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
+                     query_sequence='A' * 100),
+            MockRead(query_name='t1', reference_id=0, reference_start=480, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
+                     query_sequence='A' * 100))
+        contig = MockObject(
+            seq='',
+            alignments=[MockObject(read1=r1, read2=r2)])
         contig.input_reads = {MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])}
         evidence.contigs.append(contig)
 
@@ -482,12 +485,12 @@ class TestEvidenceConsumption(unittest.TestCase):
         self.assertEqual(3, len(events))
         self.assertEqual(100, events[0].break1.start)
         self.assertEqual(501, events[0].break2.start)
-        self.assertEqual(('contig', 'contig'), events[0].call_method)
-        self.assertEqual(('split reads', 'split reads'), events[1].call_method)
+        self.assertEqual('contig', events[0].call_method)
+        self.assertEqual('split reads', events[1].call_method)
         self.assertEqual(120, events[1].break1.start)
         self.assertEqual(521, events[1].break2.start)
         self.assertEqual('insertion', events[2].event_type)
-        self.assertEqual(('split reads', 'split reads'), events[2].call_method)
+        self.assertEqual('split reads', events[2].call_method)
         self.assertEqual(120, events[2].break1.start)
         self.assertEqual(521, events[2].break2.start)
 
@@ -514,8 +517,8 @@ class TestEvidenceConsumption(unittest.TestCase):
         self.assertEqual(2, len(events))
         self.assertEqual(170, events[0].break1.start)
         self.assertEqual(871, events[0].break2.start)
-        self.assertEqual(('split reads', 'split reads'), events[0].call_method)
-        self.assertEqual(('split reads', 'split reads'), events[1].call_method)
+        self.assertEqual('split reads', events[0].call_method)
+        self.assertEqual('split reads', events[1].call_method)
         self.assertEqual(170, events[1].break1.start)
         self.assertEqual(871, events[1].break2.start)
         self.assertEqual('insertion', events[1].event_type)
@@ -537,7 +540,7 @@ class TestEvidenceConsumption(unittest.TestCase):
         self.assertEqual(1, len(events))
         self.assertEqual(140, events[0].break1.start)
         self.assertEqual(292, events[0].break1.end)
-        self.assertEqual(('flanking reads', 'flanking reads'), events[0].call_method)
+        self.assertEqual('flanking reads', events[0].call_method)
         self.assertEqual(656, events[0].break2.start)
         self.assertEqual(886, events[0].break2.end)
 
@@ -870,7 +873,7 @@ class TestCallByFlankingReadsGenome(unittest.TestCase):
             self.ev_LR, SVTYPE.INV,
             second_breakpoint_called=b2
         )
-        bpp = BreakpointPair(break1, break2, opposing_strands=False)
+        BreakpointPair(break1, break2, opposing_strands=False)
         self.assertEqual(b2, break2)
         self.assertEqual(120, break1.start)
         self.assertEqual(149, break1.end)
@@ -975,7 +978,7 @@ class TestCallByFlankingReadsTranscriptome(unittest.TestCase):
 
     def test_call_deletion_evidence_spans_exons(self):
         # transcriptome test will use exonic coordinates for the associated transcripts
-        t1 = usTranscript([(1001, 1100), (1501, 1700), (2001, 2100), (2201, 2300)], strand='+')
+        usTranscript([(1001, 1100), (1501, 1700), (2001, 2100), (2201, 2300)], strand='+')
         evidence = self.build_transcriptome_evidence(
             Breakpoint('1', 1051, 1051, 'L', '+'),
             Breakpoint('1', 1551, 1551, 'R', '+')

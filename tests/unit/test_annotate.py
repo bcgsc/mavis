@@ -1,5 +1,7 @@
 import unittest
+import itertools
 from mavis.annotate.protein import Domain, DomainRegion, calculate_ORF
+from mavis.annotate.base import ReferenceName
 import os
 import timeout_decorator
 
@@ -281,3 +283,71 @@ class TestCalculateORF(unittest.TestCase):
     @timeout_decorator.timeout(20)
     def test_very_long(self):
         calculate_ORF(self.seq, 300)
+
+
+class TestReferenceName(unittest.TestCase):
+    def test_naked_vs_naked_str(self):
+        self.assertEqual('1', ReferenceName('1'))
+        self.assertNotEqual('2', ReferenceName('1'))
+        self.assertTrue(ReferenceName('1') == '1')
+        self.assertTrue(ReferenceName('1') != '2')
+
+    def test_naked_vs_prefixed_str(self):
+        self.assertEqual('chr1', ReferenceName('1'))
+        self.assertNotEqual('chr2', ReferenceName('1'))
+        self.assertTrue(ReferenceName('1') == 'chr1')
+        self.assertTrue(ReferenceName('1') != 'chr2')
+
+    def test_prefixed_vs_prefixed_str(self):
+        self.assertEqual('chr1', ReferenceName('chr1'))
+        self.assertNotEqual('chr2', ReferenceName('chr1'))
+        self.assertTrue(ReferenceName('chr1') == 'chr1')
+        self.assertTrue(ReferenceName('chr1') != 'chr2')
+
+    def test_prefixed_vs_naked_str(self):
+        self.assertEqual('1', ReferenceName('chr1'))
+        self.assertNotEqual('2', ReferenceName('chr1'))
+        self.assertTrue(ReferenceName('chr1') == '1')
+
+    def test_obj_comparison(self):
+        r = ReferenceName('1')
+        rprefix = ReferenceName('chr1')
+        r2 = ReferenceName('2')
+        r2prefix = ReferenceName('chr2')
+        self.assertEqual(r, rprefix)
+        self.assertEqual(rprefix, r)
+        self.assertEqual(rprefix, ReferenceName('chr1'))
+        self.assertEqual(r, ReferenceName('1'))
+        self.assertNotEqual(r2, rprefix)
+        self.assertNotEqual(r2prefix, rprefix)
+        self.assertNotEqual(r2, r)
+        self.assertNotEqual(r2prefix, r)
+        self.assertTrue(r == rprefix)
+        self.assertTrue(r != r2prefix)
+        self.assertFalse(r != rprefix)
+
+    def test_lt(self):
+        r = ReferenceName('1')
+        rprefix = ReferenceName('chr1')
+        r2 = ReferenceName('2')
+        r2prefix = ReferenceName('chr2')
+        self.assertTrue(r <= rprefix)
+        self.assertFalse(r < rprefix)
+        self.assertFalse(rprefix < r)
+        self.assertTrue(rprefix <= r)
+        for chr1, chr2 in itertools.product([r, rprefix], [r2, r2prefix]):
+            self.assertTrue(chr1 < chr2)
+            self.assertTrue(chr1 <= chr2)
+
+    def test_gt(self):
+        r = ReferenceName('1')
+        rprefix = ReferenceName('chr1')
+        r2 = ReferenceName('2')
+        r2prefix = ReferenceName('chr2')
+        self.assertTrue(rprefix >= r)
+        self.assertTrue(r >= rprefix)
+        self.assertFalse(r > rprefix)
+        self.assertFalse(rprefix > r)
+        for chr1, chr2 in itertools.product([r, rprefix], [r2, r2prefix]):
+            self.assertTrue(chr2 > chr1)
+            self.assertTrue(chr2 >= chr1)

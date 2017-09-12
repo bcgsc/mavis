@@ -301,7 +301,7 @@ COLUMNS = Vocab(
     protocol='protocol',
     disease_status='disease_status',
     tools='tools',
-    break1_call_method='break1_call_method',
+    call_method='call_method',
     break1_ewindow='break1_ewindow',
     break1_ewindow_count='break1_ewindow_count',
     break1_ewindow_practical_coverage='break1_ewindow_practical_coverage',
@@ -309,7 +309,6 @@ COLUMNS = Vocab(
     break1_split_read_names='break1_split_read_names',
     break1_split_reads='break1_split_reads',
     break1_split_reads_forced='break1_split_reads_forced',
-    break2_call_method='break2_call_method',
     break2_ewindow='break2_ewindow',
     break2_ewindow_count='break2_ewindow_count',
     break2_ewindow_practical_coverage='break2_ewindow_practical_coverage',
@@ -317,11 +316,16 @@ COLUMNS = Vocab(
     break2_split_read_names='break2_split_read_names',
     break2_split_reads='break2_split_reads',
     break2_split_reads_forced='break2_split_reads_forced',
-    contig_alignment_query_coverage='contig_alignment_query_coverage',
+    contig_alignment_query_consumption='contig_alignment_query_consumption',
     contig_alignment_score='contig_alignment_score',
-    contig_alignment_query_name='contig_alignment_query_coverage',
+    contig_alignment_query_name='contig_alignment_query_name',
+    contig_read_depth='contig_read_depth',
+    contig_break1_read_depth='contig_break1_read_depth',
+    contig_break2_read_depth='contig_break2_read_depth',
+    contig_blat_rank='contig_blat_rank',
     contig_build_score='contig_build_score',
     contig_remap_score='contig_remap_score',
+    contig_remap_coverage='contig_remap_coverage',
     contig_remapped_read_names='contig_remapped_read_names',
     contig_remapped_reads='contig_remapped_reads',
     contig_seq='contig_seq',
@@ -535,6 +539,9 @@ COLUMNS = Vocab(
     contig_alignment_cigar
         The cigar string(s) representing the contig alignment. Semi-colon delimited
 
+    contig_remap_coverage
+        :class:`float` - Fraction of the contig sequence which is covered by the remapped reads
+
     contig_build_score
         :class:`int` - Score representing the edge weights of all edges used in building the sequence
 
@@ -547,11 +554,8 @@ COLUMNS = Vocab(
     spanning_read_names
         read query names of the spanning reads which support the current event
 
-    break1_call_method
-        :class:`CALL_METHOD` - The method used to call the first breakpoint
-
-    break2_call_method
-        :class:`CALL_METHOD` - The method used to call the second breakpoint
+    call_method
+        :class:`CALL_METHOD` - The method used to call the breakpoints
 
     flanking_pairs
         :class:`int` - Number of read-pairs where one read aligns to the first breakpoint window and the second read
@@ -641,7 +645,6 @@ def sort_columns(input_columns):
     order = {}
     for i, col in enumerate(COLUMNS.values()):
         order[col] = i
-
     temp = sorted([c for c in input_columns if c in order], key=lambda x: order[x])
     temp = temp + sorted([c for c in input_columns if c not in order])
     return temp

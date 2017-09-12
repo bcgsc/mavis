@@ -10,20 +10,19 @@ DEFAULTS = MavisNamespace(
     assembly_min_edge_weight=2,
     assembly_min_exact_match_to_remap=4,
     assembly_min_nc_edge_weight=4,
-    assembly_min_remap_coverage=3,
+    assembly_min_remap_coverage=0.9,
     assembly_min_remapped_seq=3,
     assembly_min_tgt_to_exclude_half_map=7,
     assembly_strand_concordance=0.51,
     blat_min_identity=0.9,
-    blat_min_percent_of_max_score=0.8,
-    blat_limit_top_aln=25,
+    blat_limit_top_aln=10,
     call_error=10,
     consensus_req=3,
     contig_aln_max_event_size=50,
     contig_aln_merge_inner_anchor=20,
     contig_aln_merge_outer_anchor=15,
     contig_aln_min_anchor_size=50,
-    contig_aln_min_query_consumption=0.7,
+    contig_aln_min_query_consumption=0.9,
     fetch_reads_bins=5,
     fetch_reads_limit=10000,
     fetch_method_individual=True,
@@ -132,8 +131,7 @@ DEFAULTS = MavisNamespace(
         The minimum input sequences that must remap for an assembled contig to be used
 
     assembly_min_remap_coverage
-        Metric measuring the sum of the lengths of the remapped sequences over the length of the contig. Required to be
-        greater than or equal to this
+        minimum fraction of the contig sequence which the remapped sequences must align over
 
     assembly_strand_concordance
         when the number of remapped reads from each strand are compared, the ratio must be above this number to decide

@@ -369,19 +369,18 @@ def unique_exists(pattern, allow_none=False, get_newest=False):
         raise OSError('no result found', pattern)
 
 
-def print_incomplete_log_details(log_file):
+def parse_log_details(log_file):
+    details = None
     with open(log_file) as job_out:
         lines = job_out.readlines()
         if len(lines) == 0:
-            log('\tERROR: log file is empty', log_file)
+            details = argparse.Namespace(status='empty', message='empty log file', filename=log_file)
         elif 'error' in lines[-1].lower():
-            log('\tCRASH: {}'.format(lines[-1].strip()), log_file, time_stamp=False)
+            details = argparse.Namespace(status='crash', message=lines[-1].strip(), filename=log_file)
         else:
-            log('\tIncomplete: {}'.format(log_file), time_stamp=False)
-            # log('last \'n\' lines output', time_stamp=False)
-            # for line in lines[-10:]:
-            #     print(line.strip())
-            log('\tlast modified on: {}'.format(time.ctime(os.path.getmtime(log_file))), time_stamp=False)
+            details = argparse.Namespace(
+                status='incomplete', message=lines[-1].strip(), filename=log_file, last_modified=time.ctime(os.path.getmtime(log_file)))
+    return details
 
 
 def parse_runtime_from_log(log_file):
@@ -394,6 +393,23 @@ def parse_runtime_from_log(log_file):
                 if m:
                     return int(m.group(1))
     raise OSError('error in parsing the log file for run times', log_file, '^\s*run time (s): (\d+)\s*$')
+
+
+def convert_set_to_ranges(input_set):
+    ranges = []
+    for curr in sorted(list(input_set)):
+        if ranges:
+            if ranges[-1][1] + 1 == curr:
+                ranges[-1] = (ranges[-1][0], curr)
+                continue
+        ranges.append((curr, curr))
+    result = []
+    for s, t in ranges:
+        if s == t:
+            result.append(str(s))
+        else:
+            result.append(str(s) + '-' + str(t))
+    return ', '.join(result)
 
 
 def check_library_dir(library_dir, verbose=False):
@@ -424,48 +440,60 @@ def check_library_dir(library_dir, verbose=False):
     stamps = {'validation': {}, 'annotation': {}}
     run_times = {'validation': {}, 'annotation': {}}
     for stage_subdir in ['validation', 'annotation']:
-        incomplete = 0
-        missing_logs = 0
+        incomplete = set()
+        missing_logs = set()
+        crashes = {}
         curr_run_times = []
         printed_stage = False
-        for job_task_id in [str(c) for c in range(1, job_count + 1)]:
-            stamp_pattern = os.path.join(library_dir, stage_subdir, batch_id + '-' + job_task_id, '*.COMPLETE')
-            log_pattern = os.path.join(library_dir, stage_subdir, '*.' + job_task_id)
+        for job_task_id in [c for c in range(1, job_count + 1)]:
+            stamp_pattern = os.path.join(library_dir, stage_subdir, batch_id + '-' + str(job_task_id), '*.COMPLETE')
+            log_pattern = os.path.join(library_dir, stage_subdir, '*.' + str(job_task_id))
             try:
                 stamp = unique_exists(stamp_pattern)
                 stamps[stage_subdir][job_task_id] = os.path.getctime(stamp)
-            except OSError as err:
+            except OSError:
                 stamp = None
                 if not printed_stage:
                     log(stage_subdir, 'FAIL', time_stamp=False)
                     printed_stage = True
-                log('\tmissing complete stamp:', err, time_stamp=False)
-                incomplete += 1
+                incomplete.add(job_task_id)
             try:
                 logfile = unique_exists(log_pattern, get_newest=True)
-            except OSError as err:
+            except OSError:
                 logfile = None
                 if not printed_stage:
                     log(stage_subdir, 'FAIL', time_stamp=False)
                     printed_stage = True
-                log('\tmissing log file', err)
-                missing_logs += 1
+                missing_logs.add(job_task_id)
 
-            if not stamp and logfile:
+            if stamp and logfile:
+                try:
+                    rt = parse_runtime_from_log(logfile)
+                except OSError as err:
+                    incomplete.add(job_task_id)
+                    crashes.setdefault(str(err), set()).add(job_task_id)
+                else:
+                    curr_run_times.append(rt)
+                    run_times[stage_subdir][job_task_id] = rt
+                    continue
+            if logfile:
                 if not printed_stage:
                     log(stage_subdir, 'FAIL', time_stamp=False)
                     printed_stage = True
-                print_incomplete_log_details(logfile)
-            elif stamp and logfile:
-                rt = parse_runtime_from_log(logfile)
-                curr_run_times.append(rt)
-                run_times[stage_subdir][job_task_id] = rt
+                details = parse_log_details(logfile)
+                if details.status == 'crash':
+                    crashes.setdefault(details.message, set()).add(job_task_id)
 
-        if incomplete or missing_logs:
-            if incomplete > 0:
-                log('\t' + str(incomplete), 'jobs are incomplete', time_stamp=False)
-            if missing_logs > 0:
-                log('\t' + str(missing_logs), 'log files are missing', time_stamp=False)
+        if incomplete or missing_logs or crashes:
+            if incomplete:
+                log(
+                    '\t' + str(len(incomplete)), 'incomplete (jobs:', convert_set_to_ranges(incomplete) + ')', time_stamp=False)
+            if missing_logs:
+                log(
+                    '\t' + str(len(missing_logs)), 'missing logs (jobs:', convert_set_to_ranges(missing_logs) + ')', time_stamp=False)
+            if crashes:
+                for msg, task_ids in crashes.items():
+                    log('\t' + msg, '(jobs:', convert_set_to_ranges(task_ids) + ')', time_stamp=False)
         else:
             log(stage_subdir, 'OK', time_stamp=False)
             log('\trun time (s): {} (max), {} (total)'.format(max(curr_run_times), sum(curr_run_times)), time_stamp=False)
@@ -513,7 +541,7 @@ def check_single_job(directory):
     if not stamp and not logfile:
         log('\t' + name, 'has not started', time_stamp=False)
     elif not stamp:
-        print_incomplete_log_details(logfile)
+        log(parse_log_details(logfile), time_stamp=False)
     elif stamp:
         log(name, 'OK')
         rt = parse_runtime_from_log(logfile)
