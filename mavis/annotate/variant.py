@@ -5,7 +5,6 @@ from ..interval import Interval, IntervalMapping
 from .protein import Translation, Domain, calculate_ORF
 from ..error import NotSpecifiedError
 from ..util import devnull
-from .splicing import predict_splice_sites
 import itertools
 import uuid
 import json
@@ -86,7 +85,7 @@ class FusionTranscript(usTranscript):
         ft = FusionTranscript()
         # pull the exons from either size of the breakpoints window
         if ann.break1.orient == ORIENT.RIGHT:
-            window = Interval(ann.break1.end, ann.break2.start - 1)
+            window = Interval(ann.break1.end, ann.break2.end - 1)
         else:
             window = Interval(ann.break1.end + 1, ann.break2.end)
         window_seq = REFERENCE_GENOME[ann.break1.chr].seq[window.start - 1:window.end]
@@ -97,8 +96,6 @@ class FusionTranscript(usTranscript):
         seq1, ex1 = cls._pull_exons(ann.transcript1, b1, REFERENCE_GENOME[b1.chr].seq)
         seq2, ex2 = cls._pull_exons(ann.transcript2, b2, REFERENCE_GENOME[b2.chr].seq)
         useq = ann.untemplated_seq
-        ft.break1 = len(seq1)
-        ft.break2 = len(seq1) + len(useq) + len(window_seq) + 1
 
         if ann.transcript1.get_strand() == STRAND.POS:
             window_seq = reverse_complement(window_seq)  # b/c inversion should be opposite
@@ -120,6 +117,8 @@ class FusionTranscript(usTranscript):
             )
 
         ft.seq = seq1
+        ft.break1 = len(seq1)
+        ft.break2 = len(seq1) + len(useq) + len(window_seq) + 1
 
         if ann.break1.orient == ORIENT.LEFT:
             ft.seq += useq + window_seq
@@ -757,7 +756,7 @@ def flatten_fusion_transcript(spliced_fusion_transcript):
             else:
                 raise AssertionError(
                     'exon should not be mapped if not within a break region',
-                    ex, fusion_transcript.break1. fusion_transcript.break2
+                    ex, fusion_transcript.break1, fusion_transcript.break2
                 )
         except KeyError:  # novel exon
             for us_exon, src_exon in sorted(fusion_transcript.exon_mapping.items()):

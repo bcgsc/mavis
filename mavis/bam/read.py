@@ -1,4 +1,5 @@
 from ..constants import ORIENT, CIGAR, DNA_ALPHABET, STRAND, READ_PAIR_TYPE, SVTYPE
+from ..interval import Interval
 from . import cigar as cigar_tools
 from .cigar import EVENT_STATES, REFERENCE_ALIGNED_STATES, QUERY_ALIGNED_STATES
 import pysam
@@ -61,6 +62,33 @@ class SamRead(pysam.AlignedSegment):
         return self._next_reference_name
 
 
+def map_ref_range_to_query_range(read, ref_range):
+    """
+    Args:
+        ref_range (Interval): 1-based inclusive
+        read (pysam.AlignedSegment): read used for the mapping
+    Returns:
+        Interval: 1-based inclusive range
+    """
+    rpos = read.reference_start
+    qpos = 0
+    qstart = None
+    qend = None
+    for state, value in read.cigar:
+        for i in range(0, value):
+            if state in QUERY_ALIGNED_STATES:
+                qpos += 1
+            if state in REFERENCE_ALIGNED_STATES:
+                rpos += 1
+            if qstart is None and ref_range.start <= rpos:
+                qstart = qpos
+            if ref_range.end >= rpos:
+                qend = qpos
+    if qstart is None or qend is None:
+        raise ValueError('reference range is not mapped by input read', ref_range, read.reference_start, read.cigar)
+    return Interval(qstart, qend)
+
+
 def get_samtools_version():
     proc = subprocess.getoutput(['samtools'])
     for line in proc.split('\n'):
@@ -120,7 +148,7 @@ def breakpoint_pos(read, orient=ORIENT.NS):
         return read.reference_end - 1
 
 
-def calculate_alignment_score(read):
+def calculate_alignment_score(read, consec_bonus=1):
     """
     calculates a score for comparing alignments
 
@@ -132,12 +160,12 @@ def calculate_alignment_score(read):
     """
     score = 0
     qlen = read.reference_end - read.reference_start
-    max_score = 2 * qlen - 1
+    max_score = qlen + (qlen - 1) * consec_bonus
     for c, v in read.cigar:
         if c == CIGAR.M:
             raise ValueError('cannot calculate the alignment score if mismatch v match has not been specified')
         elif c == CIGAR.EQ:
-            score += 2 * v - 1
+            score += v + (v - 1) * consec_bonus
     return score / max_score
 
 

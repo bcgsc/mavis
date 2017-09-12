@@ -701,7 +701,10 @@ def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, **
         COLUMNS.untemplated_seq
     ]
     pairs = []
-    for row in rows:
+    for line_index, row in enumerate(rows):
+        row['line_no'] = line_index + 1
+        if '_index' in row:
+            del row['_index']
         for attr, val in row.items():
             row[attr] = soft_null_cast(val)
         for attr in row:

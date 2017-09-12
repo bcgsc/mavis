@@ -2,7 +2,7 @@ from ..breakpoint import BreakpointPair, Breakpoint
 from ..constants import CALL_METHOD, SVTYPE, PYSAM_READ_FLAGS, ORIENT, PROTOCOL, COLUMNS, STRAND
 from ..bam import read as read_tools
 from ..interval import Interval
-from ..align import query_coverage_interval
+from ..align import SplitAlignment
 from .evidence import TranscriptomeEvidence
 import itertools
 import statistics
@@ -32,7 +32,6 @@ class EventCall(BreakpointPair):
         source_evidence,
         event_type,
         call_method,
-        break2_call_method=None,
         contig=None,
         contig_alignment=None,
         untemplated_seq=None
@@ -47,8 +46,6 @@ class EventCall(BreakpointPair):
         """
         if untemplated_seq is None:
             untemplated_seq = source_evidence.untemplated_seq
-        if break2_call_method is None:
-            break2_call_method = call_method
 
         BreakpointPair.__init__(
             self, b1, b2,
@@ -76,14 +73,14 @@ class EventCall(BreakpointPair):
             raise ValueError(
                 'event_type is not compatible with the breakpoint call', event_type, BreakpointPair.classify(self))
         self.contig = contig
-        self.call_method = (CALL_METHOD.enforce(call_method), CALL_METHOD.enforce(break2_call_method))
-        if contig and self.call_method != (CALL_METHOD.CONTIG, CALL_METHOD.CONTIG):
+        self.call_method = CALL_METHOD.enforce(call_method)
+        if contig and self.call_method != CALL_METHOD.CONTIG:
             raise ValueError('if a contig is given the call method must be by contig')
         self.contig_alignment = contig_alignment
 
     def get_bed_repesentation(self):
         bed = []
-        name = self.data.get(COLUMNS.cluster_id, None) + '-' + self.event_type
+        name = self.data.get(COLUMNS.validation_id, None) + '-' + self.event_type
         if self.interchromosomal:
             bed.append((self.break1.chr, self.break1.start - 1, self.break1.end, name))
             bed.append((self.break2.chr, self.break2.start - 1, self.break2.end, name))
@@ -273,9 +270,22 @@ class EventCall(BreakpointPair):
         row = self.source_evidence.flatten()
         row.update(BreakpointPair.flatten(self))  # this will overwrite the evidence breakpoint which is what we want
         row.update({
-            COLUMNS.break1_call_method: self.call_method[0],
-            COLUMNS.break2_call_method: self.call_method[1],
-            COLUMNS.event_type: self.event_type
+            COLUMNS.call_method: self.call_method,
+            COLUMNS.event_type: self.event_type,
+            COLUMNS.contig_seq: None,
+            COLUMNS.contig_remap_score: None,
+            COLUMNS.contig_alignment_score: None,
+            COLUMNS.contig_blat_rank: None,
+            COLUMNS.contig_remapped_reads: None,
+            COLUMNS.contig_remapped_read_names: None,
+            COLUMNS.contig_strand_specific: None,
+            COLUMNS.contig_alignment_query_consumption: None,
+            COLUMNS.contig_build_score: None,
+            COLUMNS.contig_alignment_query_name: None,
+            COLUMNS.contig_remap_coverage: None,
+            COLUMNS.contig_read_depth: None,
+            COLUMNS.contig_break1_read_depth: None,
+            COLUMNS.contig_break2_read_depth: None
         })
         median, stdev = self.flanking_metrics()
         flank = set()
@@ -323,30 +333,38 @@ class EventCall(BreakpointPair):
             c = {f[0].query_name for f in self.compatible_flanking_pairs}
             c.update({f[1].query_name for f in self.compatible_flanking_pairs})
             row[COLUMNS.flanking_pairs_compatible_read_names] = ';'.join(sorted(c))
+        # add contig specific metrics and columns
         if self.contig:
-            r1, r2 = self.contig_alignment
-            ascore = r1.get_tag('br')
-            if r2:
-                ascore = int(round((r1.get_tag('br') + r2.get_tag('br')) / 2, 0))
-            cseq = self.contig_alignment[0].query_sequence
-            qc1 = query_coverage_interval(r1)
-            qc2 = qc1
-            if r2:
-                qc2 = query_coverage_interval(r2)
-                if r2.is_reverse != r1.is_reverse:
-                    qc2 = Interval(len(self.contig.seq) - qc2.end, len(self.contig.seq) - qc2.start)
-            caqc = len(qc1 | qc2) if not Interval.overlaps(qc1, qc2) else len(qc1) + len(qc2)
+            blat_score = None
+            if self.contig_alignment.read1.has_tag('br'):
+                blat_score = self.contig_alignment.read1.get_tag('br')
+                if self.contig_alignment.read2:
+                    blat_score += self.contig_alignment.read2.get_tag('br')
+                    blat_score = round(blat_score / 2, 1)
+            cseq = self.contig_alignment.query_sequence
+            break1_read_depth = SplitAlignment.breakpoint_contig_remapped_depth(
+                self.break1, self.contig, self.contig_alignment.read1
+            )
+            break2_read_depth = SplitAlignment.breakpoint_contig_remapped_depth(
+                self.break2, self.contig,
+                self.contig_alignment.read1 if self.contig_alignment.read2 is None else self.contig_alignment.read2
+            )
             row.update({
                 COLUMNS.contig_seq: cseq,  # don't output sequence directly from contig b/c must always be wrt to the positive strand
                 COLUMNS.contig_remap_score: self.contig.remap_score(),
-                COLUMNS.contig_alignment_score: ascore,
+                COLUMNS.contig_alignment_score: self.contig_alignment.score(),
+                COLUMNS.contig_blat_rank: blat_score,
                 COLUMNS.contig_remapped_reads: len(self.contig.input_reads),
                 COLUMNS.contig_remapped_read_names:
                     ';'.join(sorted(set([r.query_name for r in self.contig.input_reads]))),
                 COLUMNS.contig_strand_specific: self.contig.strand_specific,
-                COLUMNS.contig_alignment_query_coverage: caqc,
+                COLUMNS.contig_alignment_query_consumption: self.contig_alignment.query_consumption(),
                 COLUMNS.contig_build_score: self.contig.score,
-                COLUMNS.contig_alignment_query_name: self.contig_alignment[0].query_name
+                COLUMNS.contig_alignment_query_name: self.contig_alignment[0].query_name,
+                COLUMNS.contig_remap_coverage: self.contig.remap_coverage(),
+                COLUMNS.contig_read_depth: self.contig.remap_depth(),
+                COLUMNS.contig_break1_read_depth: break1_read_depth,
+                COLUMNS.contig_break2_read_depth: break2_read_depth
             })
         return row
 
@@ -400,8 +418,8 @@ def _call_by_contigs(source_evidence):
     # try calling by contigs
     contig_calls = []
     for ctg in source_evidence.contigs:
-        for read1, read2 in ctg.alignments:
-            bpp, event_types = _call_by_reads(source_evidence, read1, read2)
+        for aln in ctg.alignments:
+            bpp, event_types = _call_by_reads(source_evidence, aln.read1, aln.read2)
             for event_type in event_types:
                 new_event = EventCall(
                     bpp.break1,
@@ -409,7 +427,7 @@ def _call_by_contigs(source_evidence):
                     source_evidence,
                     event_type,
                     contig=ctg,
-                    contig_alignment=(read1, read2),
+                    contig_alignment=aln,
                     untemplated_seq=bpp.untemplated_seq,
                     call_method=CALL_METHOD.CONTIG
                 )
@@ -478,7 +496,6 @@ def _call_by_spanning_reads(source_evidence, consumed_evidence):
             source_evidence,
             event_type,
             CALL_METHOD.SPAN,
-            break2_call_method=CALL_METHOD.SPAN,
             untemplated_seq=bpp.untemplated_seq
         )
         new_event.spanning_reads.update(reads)

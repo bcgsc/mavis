@@ -1,21 +1,42 @@
 from ..interval import Interval
 from ..constants import STRAND
 import re
-import itertools
 
 
 class ReferenceName(str):
     def __eq__(self, other):
-        putative_other = [other, 'chr' + str(other), re.sub('^chr', '', str(other))]
-        putative_self = [self, 'chr' + str(self), re.sub('^chr', '', str(self))]
+        options = {str(self)}
+        if self.startswith('chr'):
+            options.add(str(self[3:]))
+        else:
+            options.add('chr' + str(self))
+        return other in options
 
-        for s, o in itertools.product(putative_self, putative_other):
-            if str.__eq__(s, o):
-                return True
-        return False
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def __hash__(self):
         return hash(re.sub('^chr', '', str(self)))
+
+    def __lt__(self, other):
+        s = self if not self.startswith('chr') else self[3:]
+        o = other if not other.startswith('chr') else other[3:]
+        return str.__lt__(s, o)
+
+    def __gt__(self, other):
+        s = self if not self.startswith('chr') else self[3:]
+        o = other if not other.startswith('chr') else other[3:]
+        return str.__gt__(s, o)
+
+    def __ge__(self, other):
+        if self == other:
+            return True
+        return self.__gt__(other)
+
+    def __le__(self, other):
+        if self == other:
+            return True
+        return self.__lt__(other)
 
 
 class BioInterval:

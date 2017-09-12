@@ -94,8 +94,6 @@ def main(
         total = len(annotations)
         for i, ann in enumerate(annotations):
             row = ann.flatten()
-            row[COLUMNS.break1_strand] = ann.transcript1.get_strand()
-            row[COLUMNS.break2_strand] = ann.transcript2.get_strand()
             row[COLUMNS.fusion_sequence_fasta_file] = FA_OUTPUT_FILE
             if header is None:
                 header_req.update(row.keys())

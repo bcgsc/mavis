@@ -400,14 +400,14 @@ class TestBreakpointPair(unittest.TestCase):
             bpp.random_attr
 
         with self.assertRaises(AttributeError):
-            bpp.break1_call_method
+            bpp.call_method
 
-        bpp.data[COLUMNS.break1_call_method] = 1
-        self.assertEqual(1, bpp.break1_call_method)
+        bpp.data[COLUMNS.call_method] = 1
+        self.assertEqual(1, bpp.call_method)
 
-        COLUMNS.break2_call_method = 'bbreak2_call_method'
-        bpp.data[COLUMNS.break2_call_method] = 2
-        self.assertEqual(2, bpp.break2_call_method)
+        COLUMNS.call_method = 'bbreak2_call_method'
+        bpp.data[COLUMNS.call_method] = 2
+        self.assertEqual(2, bpp.call_method)
 
 
 class TestClassifyBreakpointPair(unittest.TestCase):

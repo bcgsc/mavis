@@ -1,6 +1,7 @@
 import itertools
-from ..constants import *
-from ..error import *
+from ..constants import STRAND, ORIENT, PYSAM_READ_FLAGS, CIGAR, SVTYPE, \
+    reverse_complement, NA_MAPPING_QUALITY, COLUMNS, PROTOCOL
+from ..error import NotSpecifiedError
 from .constants import DEFAULTS
 from ..assemble import assemble
 from ..interval import Interval
@@ -8,7 +9,7 @@ from ..breakpoint import BreakpointPair
 from ..bam import read as read_tools
 from ..bam import cigar as cigar_tools
 from ..bam.cache import BamCache
-from ..util import devnull, log
+from ..util import devnull
 
 
 class Evidence(BreakpointPair):
@@ -113,7 +114,6 @@ class Evidence(BreakpointPair):
             classification (SVTYPE): the event type
             protocol (PROTOCOL): genome or transcriptome
         """
-        cls = self.__class__
         # initialize the breakpoint pair
         self.bam_cache = bam_cache
         if stranded and bam_cache.stranded:
@@ -199,7 +199,7 @@ class Evidence(BreakpointPair):
         prefix = 0
         try:
             c, prefix = cigar_tools.extend_softclipping(c, self.sc_extension_stop)
-        except AttributeError as err:
+        except AttributeError:
             pass
         read.cigar = cigar_tools.join(c)
         read.reference_start = read.reference_start + prefix
@@ -663,7 +663,7 @@ class Evidence(BreakpointPair):
             try:
                 strand = read_tools.sequenced_strand(read, self.strand_determining_read)
                 strand_calls[strand] = strand_calls.get(strand, 0) + 1
-            except ValueError as err:
+            except ValueError:
                 pass
         if sum(strand_calls.values()) == 0:
             raise ValueError('Could not determine strand. Insufficient mapped reads')
@@ -688,7 +688,6 @@ class Evidence(BreakpointPair):
         if it is not strand specific then sequences are sorted alphanumerically and only the
         first of a pair is kept (paired by sequence)
         """
-        strand_specific = self.stranded and self.bam_cache.stranded
         # gather reads for the putative assembly
         assembly_sequences = {}
         targeted = 0
@@ -757,7 +756,7 @@ class Evidence(BreakpointPair):
                             if seq_strand == STRAND.NEG:
                                 flip = not flip
                             build_strand[STRAND.NEG if flip else STRAND.POS] += 1
-                        except ValueError as err:
+                        except ValueError:
                             pass
                 if sum(build_strand.values()) == 0:
                     continue
@@ -781,7 +780,9 @@ class Evidence(BreakpointPair):
         filtered_contigs = {}
         # sort so that the function is deterministic
         for c in sorted(contigs, key=lambda x: (x.remap_score() * -1, x.seq)):
-            if c.remap_score() < self.assembly_min_remapped_seq:  # filter on evidence level
+            # filter on evidence level
+            if c.remap_score() < self.assembly_min_remapped_seq or \
+                    c.remap_coverage() < self.assembly_min_remap_coverage:
                 continue
             if self.stranded and self.bam_cache.stranded:
                 filtered_contigs.setdefault(c.seq, c)
@@ -997,10 +998,6 @@ class Evidence(BreakpointPair):
         open the associated bam file and read and store the evidence
         does some preliminary read-quality filtering
         """
-        max_dist = max(
-            len(Interval.union(self.break1, self.break2)),
-            len(self.untemplated_seq if self.untemplated_seq else '')
-        )
 
         def cache_if_true(read):
             if read.is_unmapped or read.mate_is_unmapped:

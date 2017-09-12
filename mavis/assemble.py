@@ -5,6 +5,7 @@ from .bam import cigar as cigar_tools
 from .bam.read import nsb_align, calculate_alignment_score
 from .constants import reverse_complement
 from .util import devnull
+from .interval import Interval
 
 
 class Contig:
@@ -27,6 +28,29 @@ class Contig:
 
     def remap_score(self):
         return sum(self.remapped_sequences.values())
+
+    def remap_coverage(self):
+        itvls = Interval.min_nonoverlapping(*[(x.reference_start, x.reference_end - 1) for x in self.remapped_sequences])
+        cov = sum([len(i) for i in itvls])
+        return cov / len(self.seq)
+
+    def remap_depth(self, query_range=None):
+        """
+        the average depth of remapped reads over a give range of the contig sequence
+
+        Args:
+            query_range (Interval): 1-based inclusive range
+        """
+        if query_range is None:
+            query_range = Interval(1, len(self.seq))
+        if query_range.start < 1 or query_range.end > len(self.seq):
+            raise ValueError('query range must be within contig seq', query_range, len(self.seq))
+        result = 0
+        for read, weight in self.remapped_sequences.items():
+            read_qrange = Interval(read.reference_start + 1, read.reference_end)
+            if Interval.overlaps(query_range, read_qrange):
+                result += len(query_range & read_qrange) * weight
+        return result / len(query_range)
 
 
 class DeBruijnGraph(nx.DiGraph):
@@ -347,7 +371,6 @@ def assemble(
     for seq, score in list(path_scores.items()):
         if seq not in sequences and len(seq) >= assembly_min_contig_length:
             contigs[seq] = Contig(seq, score)
-
     # remap the input reads
     filtered_contigs = {}
     for seq, contig in sorted(contigs.items()):
@@ -387,7 +410,9 @@ def assemble(
             assert(len(best_alignments) >= 1)
             for contig, read in best_alignments:
                 contig.add_mapped_sequence(read, len(best_alignments))
-    log('assemblies complete. scores (build, remap):', [(c.score, round(c.remap_score(), 1)) for c in contigs])
+    log(
+        'assemblies complete. scores (build, remap, covg):',
+        [(c.score, round(c.remap_score(), 1), round(c.remap_coverage(), 2)) for c in contigs])
     return contigs
 
 

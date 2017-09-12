@@ -13,8 +13,7 @@ class TestSummary(unittest.TestCase):
             opposing_strands=True,
             data={
                 COLUMNS.event_type: SVTYPE.DEL,
-                COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
-                COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
                 COLUMNS.protocol: PROTOCOL.GENOME
             }
@@ -25,8 +24,7 @@ class TestSummary(unittest.TestCase):
             opposing_strands=True,
             data={
                 COLUMNS.event_type: SVTYPE.DEL,
-                COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
-                COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
                 COLUMNS.protocol: PROTOCOL.GENOME
             }
@@ -65,8 +63,7 @@ class TestFilterByAnnotations(unittest.TestCase):
             opposing_strands=True,
             data={
                 COLUMNS.event_type: SVTYPE.DEL,
-                COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
-                COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
                 COLUMNS.protocol: PROTOCOL.GENOME,
                 COLUMNS.fusion_cdna_coding_end: None,
@@ -79,8 +76,7 @@ class TestFilterByAnnotations(unittest.TestCase):
             opposing_strands=True,
             data={
                 COLUMNS.event_type: SVTYPE.DEL,
-                COLUMNS.break1_call_method: CALL_METHOD.CONTIG,
-                COLUMNS.break2_call_method: CALL_METHOD.CONTIG,
+                COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
                 COLUMNS.protocol: PROTOCOL.GENOME,
                 COLUMNS.fusion_cdna_coding_start: None,
