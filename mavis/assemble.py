@@ -273,6 +273,36 @@ def pull_contigs_from_component(
     return path_scores
 
 
+def filter_contigs(contigs, assembly_min_uniq=0.01):
+    """
+    given a list of contigs, removes similar contigs to leave the highest (of the similar) scoring contig only
+    """
+    filtered_contigs = {}
+    for contig in sorted(contigs, key=lambda x: (-1 * x.score, x.seq)):
+        print(contig)
+        rseq = reverse_complement(contig.seq)
+        if contig.seq in filtered_contigs or rseq in filtered_contigs:
+            continue
+        drop = False
+        # drop all contigs that are more than 'x' percent similar to existing contigs
+        for other_seq in filtered_contigs:
+            print(other_seq)
+            if len(other_seq) == len(contig.seq):
+                dist = min(distance.hamming(contig.seq, other_seq, normalized=True), distance.hamming(rseq, other_seq, normalized=True))
+                if dist < assembly_min_uniq:
+                    drop = True
+                    break
+            else:
+                dist = min(distance.nlevenshtein(contig.seq, other_seq), distance.nlevenshtein(rseq, other_seq))
+                if dist < assembly_min_uniq:
+                    drop = True
+                    break
+        if not drop:
+            filtered_contigs[contig.seq] = contig
+
+    return list(filtered_contigs.values())
+
+
 def assemble(
     sequences,
     assembly_max_kmer_size=None,
@@ -369,35 +399,13 @@ def assemble(
         ))
 
     # now map the contigs to the possible input sequences
-    contigs = {}
+    contigs = []
     for seq, score in list(path_scores.items()):
         if seq not in sequences and len(seq) >= assembly_min_contig_length:
-            contigs[seq] = Contig(seq, score)
+            contigs.append(Contig(seq, score))
     log('filtering similar contigs', len(contigs))
     # remap the input reads
-    filtered_contigs = {}
-    for seq, contig in sorted(contigs.items(), key=lambda x: (x[1].score, x[0]), reverse=True):
-        rseq = reverse_complement(seq)
-        if seq in filtered_contigs or rseq in filtered_contigs:
-            continue
-        drop = False
-        # drop all contigs that are more than 'x' percent similar to existing contigs
-        for other_seq in filtered_contigs:
-            if len(other_seq) == len(seq):
-                dist = min(distance.nhammming(seq, other_seq), distance.nhammming(rseq, other_seq))
-                if dist < assembly_min_uniq:
-                    drop = True
-                    break
-            else:
-                dist = min(distance.nlevenshtein(seq, other_seq), distance.nlevenshtein(rseq, other_seq))
-                if dist < assembly_min_uniq:
-                    drop = True
-                    break
-        if not drop:
-            filtered_contigs[seq] = contig
-            break
-
-    contigs = list(filtered_contigs.values())
+    contigs = filter_contigs(contigs, assembly_min_uniq)
     log('remapping reads to {} contigs'.format(len(contigs)))
 
     for input_seq in sequences:
