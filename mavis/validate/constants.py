@@ -7,6 +7,7 @@ DEFAULTS = MavisNamespace(
     assembly_max_kmer_size=None,
     assembly_max_kmer_strict=True,
     assembly_max_paths=4,
+    assembly_min_uniq=0.01,
     assembly_min_edge_weight=2,
     assembly_min_exact_match_to_remap=4,
     assembly_min_nc_edge_weight=4,

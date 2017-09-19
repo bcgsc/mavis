@@ -483,7 +483,8 @@ def augment_parser(parser, optparser, arguments):
                 'assembly_strand_concordance',
                 'blat_min_identity',
                 'contig_aln_min_query_consumption',
-                'min_anchor_match'
+                'min_anchor_match',
+                'assembly_min_uniq'
             ]:
                 vtype = float_fraction
             else:
