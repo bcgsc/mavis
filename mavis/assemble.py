@@ -279,14 +279,12 @@ def filter_contigs(contigs, assembly_min_uniq=0.01):
     """
     filtered_contigs = {}
     for contig in sorted(contigs, key=lambda x: (-1 * x.score, x.seq)):
-        print(contig)
         rseq = reverse_complement(contig.seq)
         if contig.seq in filtered_contigs or rseq in filtered_contigs:
             continue
         drop = False
         # drop all contigs that are more than 'x' percent similar to existing contigs
         for other_seq in filtered_contigs:
-            print(other_seq)
             if len(other_seq) == len(contig.seq):
                 dist = min(distance.hamming(contig.seq, other_seq, normalized=True), distance.hamming(rseq, other_seq, normalized=True))
                 if dist < assembly_min_uniq:
