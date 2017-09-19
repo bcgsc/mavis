@@ -247,9 +247,12 @@ def generate_config(parser, required, optional):
         metavar=('<name>', '(genome|transcriptome)', '<diseased|normal>', '</path/to/bam/file>', '<stranded_bam>'),
         action='append', help='configuration for libraries to be analyzed by mavis', default=[])
     optional.add_argument(
-        '--input', help='path to an input file or filter for mavis followed by the library names it should be used for',
-        nargs='+', action='append', default=[]
+        '--input', help='path to an input file or filter for mavis followed by the library names it '
+        'should be used for', nargs='+', action='append', default=[]
     )
+    optional.add_argument(
+        '--assign', help='library name followed by path(s) to input file(s) or filter names. This represents the list'
+        ' of inputs that should be used for the library', nargs='+', default=[], action='append')
     optional.add_argument(
         '--best_transcripts_only', default=get_env_variable('best_transcripts_only', True),
         type=TSV.tsv_boolean, help='compute from best transcript models only')
@@ -270,8 +273,8 @@ def generate_config(parser, required, optional):
         metavar=('<alias>', '</path/to/input/file>', '({})'.format('|'.join(SUPPORTED_TOOL.values())), '<stranded>'),
         help='input file conversion for internally supported tools', action='append')
     optional.add_argument(
-        '--external_conversion', metavar=('<alias>', '<command>'), nargs=2, default=[],
-        help='alias for use in inputs and full command (quote options)', action='append')
+        '--external_conversion', metavar=('<alias>', '<"command">'), nargs=2, default=[],
+        help='alias for use in inputs and full command (quoted)', action='append')
     augment_parser(required, optional, ['annotations'])
     args = parser.parse_args()
     if args.distribution_fraction < 0 or args.distribution_fraction > 1:
@@ -279,15 +282,28 @@ def generate_config(parser, required, optional):
     log('MAVIS: {}'.format(__version__))
     log_arguments(args.__dict__)
 
-    # now write the config file
-    inputs_by_lib = {k[0]: [] for k in args.library}
-    for temp in args.input:
-        if len(temp) < 2:
-            raise ValueError('--input requires 2+ arguments', temp)
-        for lib in temp[1:]:
+    # process the libraries by input argument (--input)
+    inputs_by_lib = {k[0]: set() for k in args.library}
+    for arg_list in args.input:
+        if len(arg_list) < 2:
+            raise ValueError('--input requires 2+ arguments', arg_list)
+        inputfile = arg_list[0]
+        for lib in arg_list[1:]:
             if lib not in inputs_by_lib:
-                raise KeyError('--input specified a library that was not configured with --library', lib)
-            inputs_by_lib[lib].append(temp[0])
+                raise KeyError(
+                    '--input specified a library that was not configured. Please input all libraries using '
+                    'the --library flag', lib)
+            inputs_by_lib[lib].add(inputfile)
+    # process the inputs by library argument (--assign)
+    for arg_list in args.assign:
+        if len(arg_list) < 2:
+            raise ValueError('--assign requires 2+ arguments', arg_list)
+        lib = arg_list[0]
+        if lib not in inputs_by_lib:
+            raise KeyError(
+                '--assign specified a library that was not configured. Please input all libraries using '
+                'the --library flag', lib)
+        inputs_by_lib[lib].update(arg_list[1:])
 
     libs = []
     # load the annotations if we need them
