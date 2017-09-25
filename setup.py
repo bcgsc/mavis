@@ -131,7 +131,8 @@ setup(
         'numpy>=1.13.1',
         'pyvcf==0.6.8',
         'braceexpand==0.1.2',
-        'biopython>=1.70'
+        'biopython>=1.70',
+        'Distance>=0.1.3'
     ],
     python_requires='>=3',
     author_email='creisle@bcgsc.ca',
