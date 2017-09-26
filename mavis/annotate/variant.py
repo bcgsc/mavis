@@ -363,7 +363,7 @@ class FusionTranscript(usTranscript):
             t = Transcript(ft, spl_patt)
             ft.spliced_transcripts.append(t)
 
-            # calculate the putataive open reading frams
+            # calculate the putative open reading frames
             orfs = calculate_ORF(t.get_seq(), min_orf_size=min_orf_size)
             # limit the length to either only the longest ORF or anything longer than the input translations
             min_orf_length = max([len(o) for o in orfs] + [min_orf_size if min_orf_size else 0])
