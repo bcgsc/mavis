@@ -192,6 +192,8 @@ class SummaryConfig:
         split_call_distance=PAIRING_DEFAULTS.split_call_distance,
         contig_call_distance=PAIRING_DEFAULTS.contig_call_distance,
         spanning_call_distance=PAIRING_DEFAULTS.spanning_call_distance,
+        filter_cdna_synon=SUMMARY_DEFAULTS.filter_cdna_synon,
+        filter_protein_synon=SUMMARY_DEFAULTS.filter_protein_synon
     ):
         self.filter_min_remapped_reads = int(filter_min_remapped_reads)
         self.filter_min_spanning_reads = int(filter_min_spanning_reads)
@@ -199,6 +201,8 @@ class SummaryConfig:
         self.filter_min_flanking_only_reads = int(filter_min_flanking_only_reads)
         self.filter_min_split_reads = int(filter_min_split_reads)
         self.filter_min_linking_split_reads = int(filter_min_linking_split_reads)
+        self.filter_cdna_synon = TSV.tsv_boolean(filter_cdna_synon)
+        self.filter_protein_synon = TSV.tsv_boolean(filter_protein_synon)
 
     def flatten(self):
         result = {}
@@ -233,6 +237,8 @@ def write_config(filename, include_defaults=False, libraries=[], conversions={},
         config['annotation'].update(ANNOTATION_DEFAULTS.__dict__)
         config['illustrate'] = {}
         config['illustrate'].update(ILLUSTRATION_DEFAULTS.__dict__)
+        config['summary'] = {}
+        config['summary'].update(SUMMARY_DEFAULTS.__dict__)
         for sec in ['qsub', 'illustrate', 'validation', 'cluster', 'annotation']:
             for tag, val in config[sec].items():
                 env = ENV_VAR_PREFIX + tag.upper()
@@ -289,7 +295,8 @@ def read_config(filepath):
     for sec in parser.sections():
         if sec not in [
             'validation', 'reference', 'qsub', 'illustrate',
-            'annotation', 'cluster', 'annotation', 'convert'
+            'annotation', 'cluster', 'annotation', 'convert',
+            'summary'
         ]:
             library_sections.append(sec)
             parser[sec]['library'] = sec
