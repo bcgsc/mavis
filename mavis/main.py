@@ -275,6 +275,8 @@ def generate_config(parser, required, optional):
     optional.add_argument(
         '--external_conversion', metavar=('<alias>', '<"command">'), nargs=2, default=[],
         help='alias for use in inputs and full command (quoted)', action='append')
+    optional.add_argument(
+        '--no_defaults', default=False, action='store_true', help='do not write current defaults to the config output')
     augment_parser(required, optional, ['annotations'])
     args = parser.parse_args()
     if args.distribution_fraction < 0 or args.distribution_fraction > 1:
@@ -347,7 +349,7 @@ def generate_config(parser, required, optional):
         stranded = str(TSV.tsv_boolean(stranded))
         SUPPORTED_TOOL.enforce(toolname)
         convert[alias] = ['convert_tool_output', inputfile, toolname, stranded]
-    write_config(args.write, include_defaults=True, libraries=libs, conversions=convert, log=log)
+    write_config(args.write, include_defaults=not args.no_defaults, libraries=libs, conversions=convert, log=log)
 
 
 def time_diff(start, end):

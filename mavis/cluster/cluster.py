@@ -54,11 +54,12 @@ def merge_integer_intervals(*intervals, weight_adjustment=0):
     centers = []
     weights = []
     lengths = []
+    FLOAT_OFFSET = 0.99999999
     if len(intervals) == 0:
         raise AttributeError('cannot compute the weighted mean interval of an empty set of intervals')
     for i in range(0, len(intervals)):
         curr = intervals[i]
-        intervals[i] = Interval(curr[0], curr[1] + 0.9)
+        intervals[i] = Interval(curr[0], curr[1] + FLOAT_OFFSET)
         for temp in range(0, intervals[i].freq):
             centers.append(intervals[i].center)
             weights.append((weight_adjustment + 1) / (intervals[i].length() + weight_adjustment))
@@ -69,7 +70,7 @@ def merge_integer_intervals(*intervals, weight_adjustment=0):
     start = max([round(center - size / 2, 0), min([i[0] for i in intervals])])
     end = min([round(center + size / 2, 0), max([i[1] for i in intervals])])
     offset = min([center - start, end - center])
-    result = Interval(int(round(center - offset, 0)), int(round(center + offset / 2, 0)))
+    result = Interval(int(round(center - offset, 0)), int(round(center + max(0, offset - FLOAT_OFFSET), 0)))
     return result
 
 
@@ -237,7 +238,7 @@ def merge_breakpoint_pairs(input_pairs, cluster_radius=200, cluster_initial_size
     for group_key in sorted(set(list(groups) + list(phase2_groups))):
         count = len(groups.get(group_key, [])) + len(phase2_groups.get(group_key, []))
         if verbose:
-            log(group_key, 'pairs:', count)
+            log(group_key, 'pairs:', count, groups.get(group_key, []), phase2_groups.get(group_key, []))
         nodes = merge_by_union(
             groups.get(group_key, []), group_key,
             weight_adjustment=cluster_initial_size_limit, cluster_radius=cluster_radius)

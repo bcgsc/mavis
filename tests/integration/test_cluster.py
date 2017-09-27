@@ -1,6 +1,7 @@
-from mavis.cluster.cluster import merge_breakpoint_pairs
+from mavis.cluster.cluster import merge_breakpoint_pairs, merge_integer_intervals
 from mavis.breakpoint import read_bpp_from_input_file, Breakpoint, BreakpointPair
 from mavis.constants import PROTOCOL, COLUMNS
+from mavis.interval import Interval
 from . import FULL_BASE_EVENTS
 
 import unittest
@@ -52,6 +53,45 @@ class TestMergeBreakpointPairs(unittest.TestCase):
         merge = list(mapping)[0]
         self.assertEqual('L', merge.break1.orient)
         self.assertEqual('R', merge.break2.orient)
+
+    def test_merging_identical_large_inputs(self):
+        b1 = BreakpointPair(Breakpoint(11, 12856838, 12897006, 'L'), Breakpoint(11, 12856838, 12897006, 'R'), opposing_strands=False)
+        b2 = BreakpointPair(Breakpoint(11, 12856838, 12897006, 'L'), Breakpoint(11, 12856838, 12897006, 'R'), opposing_strands=False)
+        mapping = merge_breakpoint_pairs([b1, b2], 100, 25, verbose=True)
+        self.assertEqual(1, len(mapping))
+        merge = list(mapping)[0]
+        self.assertEqual(2, len(mapping[merge]))
+        self.assertEqual('L', merge.break1.orient)
+        self.assertEqual('R', merge.break2.orient)
+        self.assertEqual('11', merge.break1.chr)
+        self.assertEqual('11', merge.break2.chr)
+        self.assertEqual(12856838, merge.break1.start)
+        self.assertEqual(12856838, merge.break2.start)
+        self.assertEqual(12897006, merge.break1.end)
+        self.assertEqual(12897006, merge.break2.end)
+
+
+class TestMergeIntervals(unittest.TestCase):
+
+    def test_merge_even_length(self):
+        i1 = Interval(1001, 1002)
+        result = merge_integer_intervals(i1, i1, weight_adjustment=25)
+        self.assertEqual(i1, result)
+
+    def test_merge_odd_length(self):
+        i1 = Interval(1001, 1003)
+        result = merge_integer_intervals(i1, i1, weight_adjustment=25)
+        self.assertEqual(i1, result)
+
+    def test_merge_large_length(self):
+        i1 = Interval(1001, 5003)
+        result = merge_integer_intervals(i1, i1, weight_adjustment=25)
+        self.assertEqual(i1, result)
+
+        i1 = Interval(12856838, 12897006)
+        result = merge_integer_intervals(i1, i1, weight_adjustment=25)
+        self.assertEqual(i1, result)
+
 
 if __name__ == "__main__":
     unittest.main()
