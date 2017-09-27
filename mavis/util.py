@@ -41,7 +41,7 @@ def get_env_variable(arg, default, cast_type=None):
 
 class MavisNamespace(Namespace):
     def items(self):
-        return self.__dict__.items()
+        return [(k, self[k]) for k in self.keys()]
 
     def __add__(self, other):
         d = {}
