@@ -353,7 +353,6 @@ def generate_config(parser, required, optional):
         stranded = str(TSV.tsv_boolean(stranded))
         SUPPORTED_TOOL.enforce(toolname)
         convert[alias] = ['convert_tool_output', inputfile, toolname, stranded]
-    print(args)
     write_config(args.write, include_defaults=not args.no_defaults, libraries=libs, conversions=convert, log=log)
 
 
@@ -786,7 +785,6 @@ use the -h/--help option
             rargs.reference_genome_filename = rargs.reference_genome
             rargs.reference_genome = None
     except AttributeError as err:
-        print(repr(err))
         pass
 
     # masking file
@@ -824,7 +822,6 @@ use the -h/--help option
             rargs.template_metadata = None
     except AttributeError:
         pass
-    print('rargs', rargs, 'args', args)
     # decide which main function to execute
     if pstep == PIPELINE_STEP.CLUSTER:
         cluster_main(**args)
