@@ -151,7 +151,7 @@ def write_config(filename, include_defaults=False, libraries=[], conversions={},
             config[lib.library] = lib.flatten()
 
     if include_defaults:
-        config['qsub'] = SCHEDULE_DEFAULTS.flatten()
+        config['schedule'] = SCHEDULE_DEFAULTS.flatten()
         config['validation'] = VALIDATION_DEFAULTS.flatten()
         config['cluster'] = CLUSTER_DEFAULTS.flatten()
         config['annotation'] = ANNOTATION_DEFAULTS.flatten()
