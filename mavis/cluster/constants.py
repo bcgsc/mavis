@@ -1,7 +1,7 @@
-from ..util import MavisNamespace, ChrListString
+from ..util import WeakMavisNamespace, ChrListString
 
 
-DEFAULTS = MavisNamespace(
+DEFAULTS = WeakMavisNamespace(
     min_clusters_per_file=50,
     max_files=100,
     cluster_initial_size_limit=25,

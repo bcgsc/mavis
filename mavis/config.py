@@ -1,11 +1,12 @@
 from configparser import ConfigParser, ExtendedInterpolation
+import warnings
 import argparse
 import os
 import TSV
 import re
 from . import __version__
 from .constants import PROTOCOL, DISEASE_STATUS
-from .util import devnull, MavisNamespace, bash_expands
+from .util import devnull, MavisNamespace, bash_expands, cast, get_env_variable, ENV_VAR_PREFIX, WeakMavisNamespace
 from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
@@ -18,18 +19,26 @@ from .align import SUPPORTED_ALIGNER
 from .bam.stats import compute_genome_bam_stats, compute_transcriptome_bam_stats
 from .bam.cache import BamCache
 
-ENV_VAR_PREFIX = 'MAVIS_'
+
+SCHEDULE_DEFAULTS = WeakMavisNamespace(
+    queue='transabyss.q',
+    validation_memory=16,
+    trans_validation_memory=18,
+    annotation_memory=12,
+    memory=12)
 
 
-def cast(value, cast_func):
-    if cast_func == bool:
-        value = TSV.tsv_boolean(value)
-    else:
-        value = cast_func(value)
-    return value
+REFERENCE_DEFAULTS = WeakMavisNamespace(
+    annotations='',
+    reference_genome='',
+    template_metadata='',
+    masking='',
+    aligner_reference='',
+    dgv_annotation=''
+)
 
 
-class LibraryConfig:
+class LibraryConfig(MavisNamespace):
     def __init__(
         self, library, protocol, disease_status, bam_file, inputs, read_length, median_fragment_size,
         stdev_fragment_size, stranded_bam, strand_determining_read=2,
@@ -50,13 +59,12 @@ class LibraryConfig:
             self.inputs = inputs
 
         acceptable = {}
+        acceptable.update(CLUSTER_DEFAULTS.__dict__)
         acceptable.update(VALIDATION_DEFAULTS.__dict__)
+        acceptable.update(ANNOTATION_DEFAULTS.__dict__)
 
         for attr, value in kwargs.items():
-            if attr == 'assembly_max_kmer_size' and value in [None, 'None', '']:  # special case
-                setattr(self, attr, None)
-            else:
-                setattr(self, attr, cast(value, type(acceptable[attr])))
+            setattr(self, attr, cast(value, type(acceptable[attr])))
 
         if 'MAVIS_FETCH_METHOD_INDIVIDUAL' not in os.environ and 'fetch_method_individual' not in kwargs:
             if self.protocol == PROTOCOL.TRANS:
@@ -69,6 +77,9 @@ class LibraryConfig:
         result.update(self.__dict__)
         result['inputs'] = '\n'.join(result['inputs'])
         return result
+
+    def is_trans(self):
+        return True if self.protocol == PROTOCOL.TRANS else False
 
     @classmethod
     def build(
@@ -119,97 +130,6 @@ class LibraryConfig:
         )
 
 
-class JobSchedulingConfig:
-    def __init__(self, validate_memory_gb=12, default_memory_gb=10, queue='transabyss.q'):
-        self.validate_memory_gb = validate_memory_gb
-        self.default_memory_gb = default_memory_gb
-        self.queue = queue
-
-    def flatten(self):
-        result = {}
-        result.update(self.__dict__)
-        return result
-
-
-class ReferenceFilesConfig:
-
-    def __init__(
-        self,
-        annotations=None,
-        reference_genome=None,
-        template_metadata=None,
-        masking=None,
-        aligner_reference=None,
-        dgv_annotation=None,
-        low_memory=False
-    ):
-        self.annotations = annotations or os.environ.get(ENV_VAR_PREFIX + 'ANNOTATIONS', None)
-        self.reference_genome = reference_genome or os.environ.get(ENV_VAR_PREFIX + 'REFERENCE_GENOME', None)
-        self.template_metadata = template_metadata or os.environ.get(ENV_VAR_PREFIX + 'TEMPLATE_METADATA', None)
-        self.masking = masking or os.environ.get(ENV_VAR_PREFIX + 'MASKING', None)
-        self.dgv_annotation = dgv_annotation or os.environ.get(ENV_VAR_PREFIX + 'DGV_ANNOTATION', None)
-        self.low_memory = low_memory or os.environ.get(ENV_VAR_PREFIX + 'LOW_MEMORY', None)
-        self.aligner_reference = aligner_reference or os.environ.get(ENV_VAR_PREFIX + 'ALIGNER_REFERENCE', None)
-
-    def flatten(self):
-        result = {}
-        result.update(self.__dict__)
-        return result
-
-
-class PairingConfig:
-
-    def __init__(
-        self,
-        split_call_distance=PAIRING_DEFAULTS.split_call_distance,
-        contig_call_distance=PAIRING_DEFAULTS.contig_call_distance,
-        flanking_call_distance=PAIRING_DEFAULTS.flanking_call_distance,
-        spanning_call_distance=PAIRING_DEFAULTS.spanning_call_distance,
-        max_proximity=CLUSTER_DEFAULTS.max_proximity,
-        low_memory=False
-    ):
-        self.split_call_distance = int(split_call_distance)
-        self.contig_call_distance = int(contig_call_distance)
-        self.flanking_call_distance = int(flanking_call_distance)
-        self.spanning_call_distance = int(spanning_call_distance)
-
-    def flatten(self):
-        result = {}
-        result.update(self.__dict__)
-        return result
-
-
-class SummaryConfig:
-    def __init__(
-        self,
-        filter_min_remapped_reads=SUMMARY_DEFAULTS.filter_min_remapped_reads,
-        filter_min_spanning_reads=SUMMARY_DEFAULTS.filter_min_spanning_reads,
-        filter_min_flanking_reads=SUMMARY_DEFAULTS.filter_min_flanking_reads,
-        filter_min_flanking_only_reads=SUMMARY_DEFAULTS.filter_min_flanking_only_reads,
-        filter_min_split_reads=SUMMARY_DEFAULTS.filter_min_split_reads,
-        filter_min_linking_split_reads=SUMMARY_DEFAULTS.filter_min_linking_split_reads,
-        flanking_call_distance=PAIRING_DEFAULTS.flanking_call_distance,
-        split_call_distance=PAIRING_DEFAULTS.split_call_distance,
-        contig_call_distance=PAIRING_DEFAULTS.contig_call_distance,
-        spanning_call_distance=PAIRING_DEFAULTS.spanning_call_distance,
-        filter_cdna_synon=SUMMARY_DEFAULTS.filter_cdna_synon,
-        filter_protein_synon=SUMMARY_DEFAULTS.filter_protein_synon
-    ):
-        self.filter_min_remapped_reads = int(filter_min_remapped_reads)
-        self.filter_min_spanning_reads = int(filter_min_spanning_reads)
-        self.filter_min_flanking_reads = int(filter_min_flanking_reads)
-        self.filter_min_flanking_only_reads = int(filter_min_flanking_only_reads)
-        self.filter_min_split_reads = int(filter_min_split_reads)
-        self.filter_min_linking_split_reads = int(filter_min_linking_split_reads)
-        self.filter_cdna_synon = TSV.tsv_boolean(filter_cdna_synon)
-        self.filter_protein_synon = TSV.tsv_boolean(filter_protein_synon)
-
-    def flatten(self):
-        result = {}
-        result.update(self.__dict__)
-        return result
-
-
 def write_config(filename, include_defaults=False, libraries=[], conversions={}, log=devnull):
     """
     Args:
@@ -221,28 +141,23 @@ def write_config(filename, include_defaults=False, libraries=[], conversions={},
     """
     config = {}
 
-    config['reference'] = ReferenceFilesConfig().flatten()
+    config['reference'] = REFERENCE_DEFAULTS.flatten()
+    for filetype, fname in REFERENCE_DEFAULTS.items():
+        if fname is None:
+            warnings.warn('filetype {} has not been set. This must be done manually before the configuration file is used'.format(filetype))
 
     if libraries:
         for lib in libraries:
             config[lib.library] = lib.flatten()
 
     if include_defaults:
-        config['qsub'] = JobSchedulingConfig().flatten()
-        config['validation'] = {}
-        config['validation'].update(VALIDATION_DEFAULTS.__dict__)
-        config['cluster'] = {}
-        config['cluster'].update(CLUSTER_DEFAULTS.__dict__)
-        config['annotation'] = {}
-        config['annotation'].update(ANNOTATION_DEFAULTS.__dict__)
-        config['illustrate'] = {}
-        config['illustrate'].update(ILLUSTRATION_DEFAULTS.__dict__)
-        config['summary'] = {}
-        config['summary'].update(SUMMARY_DEFAULTS.__dict__)
-        for sec in ['qsub', 'illustrate', 'validation', 'cluster', 'annotation']:
-            for tag, val in config[sec].items():
-                env = ENV_VAR_PREFIX + tag.upper()
-                config[sec][tag] = os.environ.get(env, None) or val
+        config['qsub'] = SCHEDULE_DEFAULTS.flatten()
+        config['validation'] = VALIDATION_DEFAULTS.flatten()
+        config['cluster'] = CLUSTER_DEFAULTS.flatten()
+        config['annotation'] = ANNOTATION_DEFAULTS.flatten()
+        config['illustrate'] = ILLUSTRATION_DEFAULTS.flatten()
+        config['summary'] = SUMMARY_DEFAULTS.flatten()
+
     config['convert'] = {}
     for alias, command in conversions.items():
         config['convert'][alias] = '\n'.join(command)
@@ -261,14 +176,19 @@ def write_config(filename, include_defaults=False, libraries=[], conversions={},
         conf[sec] = {}
         for tag, val in config[sec].items():
             conf[sec][tag] = val
-
+    log('writing:', filename)
     with open(filename, 'w') as configfile:
-        log('writing:', filename)
         conf.write(configfile)
 
 
-def validate_and_cast_section(section, defaults):
+def validate_and_cast_section(section, defaults, use_defaults=False):
+    """
+    given a dictionary of values, returns a new dict with the values casted to their appropriate type or set
+    to a default if the value was not given
+    """
     d = {}
+    if use_defaults:
+        d.update(defaults.items())
     for attr, value in section.items():
         if attr not in defaults:
             raise KeyError('tag not recognized', attr)
@@ -277,74 +197,36 @@ def validate_and_cast_section(section, defaults):
     return d
 
 
-def read_config(filepath):
-    """
-    reads the configuration settings from the configuration file
+class MavisConfig:
+    def __init__(self, **kwargs):
 
-    Args:
-        filepath (str): path to the input configuration file
+        # section can be named schedule or qsub to support older versions
+        self.schedule = MavisNamespace(**validate_and_cast_section(
+            kwargs.pop('schedule', kwargs.pop('qsub', {})), SCHEDULE_DEFAULTS, True
+        ))
 
-    Returns:
-        class:`list` of :class:`Namespace`: namespace arguments for each library
-    """
-    parser = ConfigParser(interpolation=ExtendedInterpolation())
-    parser.read(filepath)
-
-    # get the library sections and add the default settings
-    library_sections = []
-    for sec in parser.sections():
-        if sec not in [
-            'validation', 'reference', 'qsub', 'illustrate',
-            'annotation', 'cluster', 'annotation', 'convert',
-            'summary'
+        # set the global defaults
+        for sec, defaults in [
+            ('pairing', PAIRING_DEFAULTS),
+            ('summary', SUMMARY_DEFAULTS),
+            ('validation', VALIDATION_DEFAULTS),
+            ('annotation', ANNOTATION_DEFAULTS),
+            ('illustrate', ILLUSTRATION_DEFAULTS),
+            ('cluster', CLUSTER_DEFAULTS),
+            ('reference', REFERENCE_DEFAULTS)
         ]:
-            library_sections.append(sec)
-            parser[sec]['library'] = sec
+            v = MavisNamespace(**validate_and_cast_section(kwargs.pop(sec, {}), defaults, True))
+            setattr(self, sec, v)
 
-    job_sched = JobSchedulingConfig(**(parser['qsub'] if 'qsub' in parser else {}))
-    ref = ReferenceFilesConfig(**(parser['reference'] if 'reference' in parser else {}))
-    pairing = PairingConfig(**(parser['pairing'] if 'pairing' in parser else {}))
-    summary = SummaryConfig(**(parser['summary'] if 'summary' in parser else {}))
-    global_args = {}
-    global_args.update(job_sched.flatten())
-    global_args.update(ref.flatten())
-    global_args.update(ILLUSTRATION_DEFAULTS.__dict__)
-    global_args.update(pairing.flatten())
-    global_args.update(summary.flatten())
-    global_args.update(ANNOTATION_DEFAULTS.__dict__)
-    global_args.update(CLUSTER_DEFAULTS.__dict__)
-    try:
-        global_args.update(validate_and_cast_section(parser['illustrate'], ILLUSTRATION_DEFAULTS))
-    except KeyError:
-        pass
+        SUPPORTED_ALIGNER.enforce(self.validation.aligner)
 
-    try:
-        global_args.update(validate_and_cast_section(parser['annotation'], ANNOTATION_DEFAULTS))
-    except KeyError:
-        pass
+        for attr, fname in self.reference.items():
+            if not os.path.exists(fname):
+                raise KeyError(attr, 'file at', fname, 'does not exist')
 
-    try:
-        global_args.update(validate_and_cast_section(parser['cluster'], CLUSTER_DEFAULTS))
-    except KeyError:
-        pass
-
-    args = {}
-    args.update(VALIDATION_DEFAULTS.__dict__)
-    try:
-        args.update(parser['validation'] if 'validation' in parser else {})
-        SUPPORTED_ALIGNER.enforce(args['aligner'])
-    except KeyError:
-        pass
-
-    # check that the reference files all exist
-    for attr, fname in parser['reference'].items():
-        if not os.path.exists(fname) and attr != 'low_memory':
-            raise KeyError(attr, 'file at', fname, 'does not exist')
-        global_args[attr] = fname
-
-    convert = {}
-    if 'convert' in parser:
-        for attr, val in parser['convert'].items():
+        # set the conversion section
+        self.convert = kwargs.pop('convert', {})
+        for attr, val in self.convert.items():
             val = [v for v in re.split('[;\s]+', val) if v]
             if val[0] == 'convert_tool_output':
                 if len(val) < 3 or val[2] not in SUPPORTED_TOOL:
@@ -359,32 +241,54 @@ def read_config(filepath):
                 elif len(val) > 4:
                     raise UserWarning(
                         'conversion using the built-in convert_tool_output takes at most 3 arguments')
-            convert[attr] = val
+            self.convert[attr] = val
+        self.convert = MavisNamespace(**self.convert)
 
-    sections = []
-    for sec in library_sections:
-        d = {}
-        d.update(args)
-        d.update(parser[sec])
+        # now add the library specific sections
+        self.libraries = {}
 
-        # now try building the LibraryConfig object
-        try:
-            lc = LibraryConfig(**d)
-            sections.append(lc)
-            continue
-        except TypeError as terr:  # missing required argument
+        for libname, val in kwargs.items():  # all other sections already popped
+            d = {}
+            d.update(self.cluster.items())
+            d.update(self.validation.items())
+            d.update(self.annotation.items())
+            d.update(val)
+            d['library'] = libname
+            val['library'] = libname
+            self.libraries[libname] = LibraryConfig(**val)
+            # now try building the LibraryConfig object
             try:
-                lc = LibraryConfig.build(**d)
-                sections.append(lc)
-            except Exception as err:
-                raise UserWarning('could not build configuration file', terr, err)
-    for sec in sections:
-        for infile in sec.inputs:
-            if not os.path.exists(infile) and infile not in convert:
-                raise UserWarning('input file does not exist and is not a conversion', infile)
-    if len(library_sections) < 1:
-        raise UserWarning('configuration file must have 1 or more library sections')
-    return MavisNamespace(**global_args), sections, MavisNamespace(**convert)
+                lc = LibraryConfig(**d)
+                self.libraries[libname] = lc
+            except TypeError as terr:  # missing required argument
+                try:
+                    lc = LibraryConfig.build(**d)
+                    self.libraries[libname] = lc
+                except Exception as err:
+                    raise UserWarning('could not build configuration section for library', libname, err, terr)
+
+    def has_transcriptome(self):
+        return any([l.is_trans() for l in self.libraries.values()])
+
+    @staticmethod
+    def read(filepath):
+        """
+        reads the configuration settings from the configuration file
+
+        Args:
+            filepath (str): path to the input configuration file
+
+        Returns:
+            class:`list` of :class:`Namespace`: namespace arguments for each library
+        """
+        parser = ConfigParser(interpolation=ExtendedInterpolation())
+        parser.read(filepath)
+        config_dict = {}
+
+        # get the library sections and add the default settings
+        for sec in parser.sections():
+            config_dict.setdefault(sec, {}).update(parser[sec].items())
+        return MavisConfig(**config_dict)
 
 
 def add_semi_optional_argument(argname, success_parser, failure_parser, help_msg=''):
@@ -397,23 +301,6 @@ def add_semi_optional_argument(argname, success_parser, failure_parser, help_msg
         success_parser.add_argument('--{}'.format(argname), required=False, default=os.environ[env_name], help=help_msg)
     else:
         failure_parser.add_argument('--{}'.format(argname), required=True, help=help_msg)
-
-
-def get_env_variable(arg, default, cast_type=None):
-    """
-    Args:
-        arg (str): the argument/variable name
-    Returns:
-        the setting from the environment variable if given, otherwise the default value
-    """
-    if cast_type is None:
-        cast_type = type(default)
-    name = ENV_VAR_PREFIX + arg.upper()
-    result = os.environ.get(name, None)
-    if result is not None:
-        return cast(result, cast_type)
-    else:
-        return default
 
 
 def float_fraction(f):
@@ -436,16 +323,13 @@ def augment_parser(parser, optparser, arguments):
                 arg, optparser, parser, 'Path to the reference annotations of genes, transcript, exons, domains, etc.')
         elif arg == 'reference_genome':
             add_semi_optional_argument(arg, optparser, parser, 'Path to the human reference genome fasta file.')
-            optparser.add_argument(
-                '--low_memory', default=get_env_variable('low_memory', False), type=TSV.tsv_boolean,
-                help='if true defaults to indexing vs loading the reference genome')
         elif arg == 'template_metadata':
             add_semi_optional_argument(arg, optparser, parser, 'File containing the cytoband template information.')
         elif arg == 'masking':
             add_semi_optional_argument(arg, optparser, parser)
         elif arg == 'aligner':
             optparser.add_argument(
-                '--' + arg, default=get_env_variable(arg, VALIDATION_DEFAULTS[arg]),
+                '--' + arg, default=VALIDATION_DEFAULTS[arg],
                 choices=SUPPORTED_ALIGNER.values(), help='aligner to use for aligning contigs')
         elif arg == 'aligner_reference':
             add_semi_optional_argument(
@@ -477,10 +361,10 @@ def augment_parser(parser, optparser, arguments):
             value = CLUSTER_DEFAULTS[arg]
             vtype = type(value) if not isinstance(value, bool) else TSV.tsv_boolean
             optparser.add_argument(
-                '--{}'.format(arg), default=get_env_variable(arg, value), type=vtype, help='see user manual for desc')
+                '--{}'.format(arg), default=value, type=vtype, help='see user manual for desc')
         elif arg in PAIRING_DEFAULTS:
             optparser.add_argument(
-                '--{}'.format(arg), default=get_env_variable(arg, PAIRING_DEFAULTS[arg]), type=int,
+                '--{}'.format(arg), default=PAIRING_DEFAULTS[arg], type=int,
                 help='distance allowed between breakpoint calls when pairing breakpoints of this call method')
         elif arg in VALIDATION_DEFAULTS:
             value = VALIDATION_DEFAULTS[arg]
@@ -497,7 +381,7 @@ def augment_parser(parser, optparser, arguments):
             else:
                 vtype = type(value) if not isinstance(value, bool) else TSV.tsv_boolean
             optparser.add_argument(
-                '--{}'.format(arg), default=get_env_variable(arg, value), type=vtype, help='see user manual for desc')
+                '--{}'.format(arg), default=value, type=vtype, help='see user manual for desc')
         elif arg in ILLUSTRATION_DEFAULTS:
             value = ILLUSTRATION_DEFAULTS[arg]
             if arg == 'mask_opacity':
@@ -505,7 +389,7 @@ def augment_parser(parser, optparser, arguments):
             else:
                 vtype = type(value) if not isinstance(value, bool) else TSV.tsv_boolean
             optparser.add_argument(
-                '--{}'.format(arg), default=get_env_variable(arg, value), type=vtype, help='see user manual for desc')
+                '--{}'.format(arg), default=value, type=vtype, help='see user manual for desc')
         elif arg in ANNOTATION_DEFAULTS:
             value = ANNOTATION_DEFAULTS[arg]
             if arg == 'min_domain_mapping_match':
@@ -513,15 +397,15 @@ def augment_parser(parser, optparser, arguments):
             else:
                 vtype = type(value) if not isinstance(value, bool) else TSV.tsv_boolean
             optparser.add_argument(
-                '--{}'.format(arg), default=get_env_variable(arg, value), type=vtype, help='see user manual for desc')
+                '--{}'.format(arg), default=value, type=vtype, help='see user manual for desc')
         elif arg in SUMMARY_DEFAULTS:
             value = SUMMARY_DEFAULTS[arg]
             vtype = type(value) if not isinstance(value, bool) else TSV.tsv_boolean
             optparser.add_argument(
-                '--{}'.format(arg), default=get_env_variable(arg, value), type=vtype, help='see user manual for desc')
+                '--{}'.format(arg), default=value, type=vtype, help='see user manual for desc')
         elif arg == 'max_proximity':
             optparser.add_argument(
-                '--{}'.format(arg), default=get_env_variable(arg, CLUSTER_DEFAULTS[arg]), type=int,
+                '--{}'.format(arg), default=CLUSTER_DEFAULTS[arg], type=int,
                 help='maximum distance away from an annotation before the uninformative filter is applied or the'
                 'annotation is not considered for a given event')
         elif arg == 'bam_file':

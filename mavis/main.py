@@ -8,27 +8,27 @@ import TSV
 import glob
 import time
 import subprocess
-from mavis.annotate import load_annotations, load_reference_genome, load_masking_regions, load_templates
-from mavis.validate.main import main as validate_main
-from mavis.cluster.main import main as cluster_main
-from mavis.pairing.main import main as pairing_main
-from mavis.annotate.main import main as annotate_main
-from mavis.summary.main import main as summary_main
-from mavis import __version__
+from .annotate import load_annotations, load_reference_genome, load_masking_regions, load_templates
+from .validate.main import main as validate_main
+from .cluster.main import main as cluster_main
+from .pairing.main import main as pairing_main
+from .annotate.main import main as annotate_main
+from .summary.main import main as summary_main
+from . import __version__
 
-from mavis.validate.constants import DEFAULTS as VALIDATION_DEFAULTS
-from mavis.cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
-from mavis.annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
-from mavis.pairing.constants import DEFAULTS as PAIRING_DEFAULTS
-from mavis.illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
-from mavis.summary.constants import DEFAULTS as SUMMARY_DEFAULTS
+from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
+from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
+from .annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
+from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
+from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
+from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 
-from mavis.config import augment_parser, write_config, LibraryConfig, read_config, get_env_variable
-from mavis.util import log, mkdirp, log_arguments, output_tabbed_file, bash_expands
-from mavis.constants import PROTOCOL, PIPELINE_STEP, DISEASE_STATUS
-from mavis.bam.read import get_samtools_version
-from mavis.blat import get_blat_version
-from mavis.tools import convert_tool_output, SUPPORTED_TOOL
+from .config import augment_parser, write_config, LibraryConfig, MavisConfig, get_env_variable
+from .util import log, mkdirp, log_arguments, output_tabbed_file, bash_expands, MavisNamespace
+from .constants import PROTOCOL, PIPELINE_STEP, DISEASE_STATUS
+from .bam.read import get_samtools_version
+from .blat import get_blat_version
+from .tools import convert_tool_output, SUPPORTED_TOOL
 import math
 from datetime import datetime
 
@@ -45,27 +45,26 @@ QSUB_HEADER = """#!/bin/bash
 #$ -j y"""
 
 
-def main_pipeline(args, configs, convert_config):
+def main_pipeline(config):
     # read the config
     # set up the directory structure and run mavis
     annotation_jobs = []
     rand = int(random.random() * math.pow(10, 10))
-    conversion_dir = mkdirp(os.path.join(args.output, 'converted_inputs'))
+    conversion_dir = mkdirp(os.path.join(config.output, 'converted_inputs'))
     pairing_inputs = []
-
-    for sec in configs:
-        base = os.path.join(args.output, '{}_{}_{}'.format(sec.library, sec.disease_status, sec.protocol))
-        log('setting up the directory structure for', sec.library, 'as', base)
+    for libconf in config.libraries.values():
+        base = os.path.join(config.output, '{}_{}_{}'.format(libconf.library, libconf.disease_status, libconf.protocol))
+        log('setting up the directory structure for', libconf.library, 'as', base)
         cluster_output = mkdirp(os.path.join(base, 'clustering'))
         validation_output = mkdirp(os.path.join(base, 'validation'))
         annotation_output = mkdirp(os.path.join(base, 'annotation'))
         inputs = []
         # run the conversions
-        for input_file in sec.inputs:
+        for input_file in libconf.inputs:
             output_filename = os.path.join(conversion_dir, input_file + '.tab')
-            if input_file in convert_config:
+            if input_file in config.convert:
                 if not os.path.exists(output_filename):
-                    command = convert_config[input_file]
+                    command = config.convert[input_file]
                     if command[0] == 'convert_tool_output':
                         log('converting input command:', command)
                         output_tabbed_file(convert_tool_output(*command[1:], log=log), output_filename)
@@ -77,12 +76,13 @@ def main_pipeline(args, configs, convert_config):
                 inputs.append(output_filename)
             else:
                 inputs.append(input_file)
-        sec.inputs = inputs
+        libconf.inputs = inputs
         # run the merge
         log('clustering')
         merge_args = {}
-        merge_args.update(args.__dict__)
-        merge_args.update(sec.__dict__)
+        merge_args.update(config.reference.items())
+        merge_args.update(config.cluster.items())
+        merge_args.update(libconf.items())
         merge_args['output'] = cluster_output
         output_files = cluster_main(log_args=True, **merge_args)
 
@@ -101,28 +101,32 @@ def main_pipeline(args, configs, convert_config):
 
         # now set up the qsub script for the validation and the held job for the annotation
         validation_args = {
-            'masking': args.masking_filename,
-            'reference_genome': args.reference_genome_filename,
-            'aligner_reference': args.aligner_reference,
-            'annotations': args.annotations_filename,
-            'library': sec.library,
-            'bam_file': sec.bam_file,
-            'protocol': sec.protocol,
-            'read_length': sec.read_length,
-            'stdev_fragment_size': sec.stdev_fragment_size,
-            'median_fragment_size': sec.median_fragment_size,
-            'stranded_bam': sec.stranded_bam
+            'masking': config.reference.masking_filename,
+            'reference_genome': config.reference.reference_genome_filename,
+            'aligner_reference': config.reference.aligner_reference,
+            'annotations': config.reference.annotations_filename,
+            'library': libconf.library,
+            'bam_file': libconf.bam_file,
+            'protocol': libconf.protocol,
+            'read_length': libconf.read_length,
+            'stdev_fragment_size': libconf.stdev_fragment_size,
+            'median_fragment_size': libconf.median_fragment_size,
+            'stranded_bam': libconf.stranded_bam
         }
-        for attr in sorted(VALIDATION_DEFAULTS.__dict__.keys()):
-            validation_args[attr] = getattr(sec, attr)
+        validation_args.update(config.validation.items())
+        validation_args.update({k: v for k, v in libconf.items() if k in validation_args})
 
         qsub = os.path.join(validation_output, 'qsub.sh')
-        validation_jobname = 'validation_{}_{}_{}'.format(sec.library, sec.protocol, rand)
+        validation_jobname = 'validation_{}_{}_{}'.format(libconf.library, libconf.protocol, rand)
+
         with open(qsub, 'w') as fh:
             log('writing:', qsub)
             fh.write(
                 QSUB_HEADER.format(
-                    queue=args.queue, memory=args.validate_memory_gb, name=validation_jobname, output=validation_output
+                    queue=config.schedule.queue,
+                    memory=config.schedule.trans_validation_memory if libconf.is_trans() else config.schedule.validation_memory,
+                    name=validation_jobname,
+                    output=validation_output
                 ) + '\n')
             fh.write('#$ -t {}-{}\n'.format(1, len(output_files)))
             temp = [
@@ -139,16 +143,17 @@ def main_pipeline(args, configs, convert_config):
         # set up the annotations job
         # for all files with the right suffix
         annotation_args = {
-            'reference_genome': args.reference_genome_filename,
-            'annotations': args.annotations_filename,
-            'template_metadata': args.template_metadata_filename,
-            'masking': args.masking_filename,
-            'min_orf_size': args.min_orf_size,
-            'max_orf_cap': args.max_orf_cap,
-            'min_domain_mapping_match': args.min_domain_mapping_match,
-            'domain_name_regex_filter': args.domain_name_regex_filter,
-            'max_proximity': args.max_proximity
+            'reference_genome': config.reference.reference_genome_filename,
+            'annotations': config.reference.annotations_filename,
+            'template_metadata': config.reference.template_metadata_filename,
+            'masking': config.reference.masking_filename,
+            'min_orf_size': config.annotation.min_orf_size,
+            'max_orf_cap': config.annotation.max_orf_cap,
+            'min_domain_mapping_match': config.annotation.min_domain_mapping_match,
+            'domain_name_regex_filter': config.illustrate.domain_name_regex_filter,
+            'max_proximity': config.cluster.max_proximity
         }
+        annotation_args.update({k: v for k, v in libconf.items() if k in annotation_args})
         temp = [
             '--{} {}'.format(k, v) for k, v in annotation_args.items() if not isinstance(v, str) and v is not None]
         temp.extend(
@@ -157,13 +162,16 @@ def main_pipeline(args, configs, convert_config):
         annotation_args.append('--inputs {}/{}$SGE_TASK_ID/*{}'.format(
             validation_output, os.path.basename(merge_file_prefix), VALIDATION_PASS_SUFFIX))
         qsub = os.path.join(annotation_output, 'qsub.sh')
-        annotation_jobname = 'annotation_{}_{}_{}'.format(sec.library, sec.protocol, rand)
+        annotation_jobname = 'annotation_{}_{}_{}'.format(libconf.library, libconf.protocol, rand)
         annotation_jobs.append(annotation_jobname)
         with open(qsub, 'w') as fh:
             log('writing:', qsub)
             fh.write(
                 QSUB_HEADER.format(
-                    queue=args.queue, memory=args.default_memory_gb, name=annotation_jobname, output=annotation_output
+                    queue=config.schedule.queue,
+                    memory=libconf.get('annotation_memory', config.schedule.annotation_memory),
+                    name=annotation_jobname,
+                    output=annotation_output
                 ) + '\n')
             fh.write('#$ -t {}-{}\n'.format(1, len(output_files)))
             fh.write('#$ -hold_jid {}\n'.format(validation_jobname))
@@ -176,16 +184,12 @@ def main_pipeline(args, configs, convert_config):
                     annotation_output, os.path.basename(merge_file_prefix) + str(sge_task_id), 'annotations.tab'))
 
     # set up scripts for the pairing held on all of the annotation jobs
-    pairing_output = mkdirp(os.path.join(args.output, 'pairing'))
-    pairing_args = dict(
-        output=pairing_output,
-        split_call_distance=args.split_call_distance,
-        contig_call_distance=args.contig_call_distance,
-        flanking_call_distance=args.flanking_call_distance,
-        spanning_call_distance=args.spanning_call_distance,
-        max_proximity=args.max_proximity,
-        annotations=args.annotations_filename
-    )
+    pairing_output = mkdirp(os.path.join(config.output, 'pairing'))
+    pairing_args = config.pairing.flatten()
+    pairing_args.update({
+        'output': pairing_output,
+        'annotations': config.reference.annotations_filename
+    })
     temp = ['--{} {}'.format(k, v) for k, v in pairing_args.items() if not isinstance(v, str) and v is not None]
     temp.extend(['--{} "{}"'.format(k, v) for k, v in pairing_args.items() if isinstance(v, str) and v is not None])
     temp.append('--inputs {}'.format(' \\\n\t'.join(pairing_inputs)))
@@ -196,38 +200,38 @@ def main_pipeline(args, configs, convert_config):
         log('writing:', qsub)
         fh.write(
             QSUB_HEADER.format(
-                queue=args.queue, memory=args.default_memory_gb, name=pairing_jobname, output=pairing_output
+                queue=config.schedule.queue, memory=config.schedule.memory, name=pairing_jobname, output=pairing_output
             ) + '\n')
         fh.write('#$ -hold_jid {}\n'.format(','.join(annotation_jobs)))
         fh.write('{} pairing {}\n'.format(PROGNAME, ' \\\n\t'.join(pairing_args)))
 
     # set up scripts for the summary held on the pairing job
-    summary_output = mkdirp(os.path.join(args.output, 'summary'))
+    summary_output = mkdirp(os.path.join(config.output, 'summary'))
     summary_args = dict(
         output=summary_output,
-        filter_min_remapped_reads=args.filter_min_remapped_reads,
-        filter_min_spanning_reads=args.filter_min_spanning_reads,
-        filter_min_flanking_reads=args.filter_min_flanking_reads,
-        filter_min_flanking_only_reads=args.filter_min_flanking_only_reads,
-        filter_min_split_reads=args.filter_min_split_reads,
-        filter_min_linking_split_reads=args.filter_min_linking_split_reads,
-        flanking_call_distance=args.flanking_call_distance,
-        split_call_distance=args.split_call_distance,
-        contig_call_distance=args.contig_call_distance,
-        spanning_call_distance=args.spanning_call_distance,
-        dgv_annotation=args.dgv_annotation_filename,
-        annotations=args.annotations_filename
+        filter_min_remapped_reads=config.summary.filter_min_remapped_reads,
+        filter_min_spanning_reads=config.summary.filter_min_spanning_reads,
+        filter_min_flanking_reads=config.summary.filter_min_flanking_reads,
+        filter_min_flanking_only_reads=config.summary.filter_min_flanking_only_reads,
+        filter_min_split_reads=config.summary.filter_min_split_reads,
+        filter_min_linking_split_reads=config.summary.filter_min_linking_split_reads,
+        flanking_call_distance=config.pairing.flanking_call_distance,
+        split_call_distance=config.pairing.split_call_distance,
+        contig_call_distance=config.pairing.contig_call_distance,
+        spanning_call_distance=config.pairing.spanning_call_distance,
+        dgv_annotation=config.reference.dgv_annotation_filename,
+        annotations=config.reference.annotations_filename
     )
     temp = ['--{} {}'.format(k, v) for k, v in summary_args.items() if not isinstance(v, str) and v is not None]
     temp.extend(['--{} "{}"'.format(k, v) for k, v in summary_args.items() if isinstance(v, str) and v is not None])
-    temp.append('--inputs {}'.format(os.path.join(args.output, 'pairing/mavis_paired*.tab')))
+    temp.append('--inputs {}'.format(os.path.join(config.output, 'pairing/mavis_paired*.tab')))
     summary_args = temp
     qsub = os.path.join(summary_output, 'qsub.sh')
     with open(qsub, 'w') as fh:
         log('writing:', qsub)
         fh.write(
             QSUB_HEADER.format(
-                queue=args.queue, memory=args.default_memory_gb, name='mavis_summary', output=summary_output
+                queue=config.schedule.queue, memory=config.schedule.memory, name='mavis_summary', output=summary_output
             ) + '\n')
         fh.write('#$ -hold_jid {}\n'.format(pairing_jobname))
         fh.write('{} summary {}\n'.format(PROGNAME, ' \\\n\t'.join(summary_args)))
@@ -349,6 +353,7 @@ def generate_config(parser, required, optional):
         stranded = str(TSV.tsv_boolean(stranded))
         SUPPORTED_TOOL.enforce(toolname)
         convert[alias] = ['convert_tool_output', inputfile, toolname, stranded]
+    print(args)
     write_config(args.write, include_defaults=not args.no_defaults, libraries=libs, conversions=convert, log=log)
 
 
@@ -718,28 +723,29 @@ use the -h/--help option
             exit(0)
         else:
             raise NotImplementedError('invalid value for <pipeline step>', pstep)
-    args = parser.parse_args()
+    args = MavisNamespace(**parser.parse_args().__dict__)
     args.samtools_version = get_samtools_version()
     args.blat_version = get_blat_version()
+
+    log('MAVIS: {}'.format(__version__))
+    log_arguments(args.__dict__)
+    rargs = args
+
+    if pstep == PIPELINE_STEP.PIPELINE:  # load the configuration file
+        config = MavisConfig.read(args.config)
+        config.output = args.output
+        rargs = config.reference
+        args = config
 
     # set all reference files to their absolute paths to make tracking them down later easier
     for arg in ['output', 'reference_genome', 'template_metadata', 'annotations', 'masking', 'aligner_reference',
                 'dgv_annotation']:
         try:
-            args.__dict__[arg] = os.path.abspath(args.__dict__[arg])
-            if arg != 'output' and not os.path.isfile(args.__dict__[arg]):
-                raise OSError('input reference file does not exist', arg, args.__dict__[arg])
-        except (KeyError, TypeError):
+            rargs[arg] = os.path.abspath(rargs[arg])
+            if arg != 'output' and not os.path.isfile(rargs[arg]):
+                raise OSError('input reference file does not exist', arg, rargs[arg])
+        except AttributeError:
             pass
-
-    log('MAVIS: {}'.format(__version__))
-    log_arguments(args.__dict__)
-
-    config = []
-
-    if pstep == PIPELINE_STEP.PIPELINE:  # load the configuration file
-        temp, config, convert_config = read_config(args.config)
-        args.__dict__.update(temp.__dict__)
 
     # try checking the input files exist
     try:
@@ -758,79 +764,80 @@ use the -h/--help option
     # loaded data
     if any([
         pstep == PIPELINE_STEP.CLUSTER and args.uninformative_filter,
-        pstep == PIPELINE_STEP.PIPELINE and args.uninformative_filter,
+        pstep == PIPELINE_STEP.PIPELINE and config.cluster.uninformative_filter,
         pstep == PIPELINE_STEP.VALIDATE and args.protocol == PROTOCOL.TRANS,
-        pstep == PIPELINE_STEP.PIPELINE and any([sec.protocol == PROTOCOL.TRANS for sec in config]),
+        pstep == PIPELINE_STEP.PIPELINE and config.has_transcriptome(),
         pstep == PIPELINE_STEP.PAIR or pstep == PIPELINE_STEP.ANNOTATE or pstep == PIPELINE_STEP.SUMMARY
     ]):
-        log('loading:', args.annotations)
-        args.annotations_filename = args.annotations
-        args.annotations = load_annotations(args.annotations)
+        log('loading:', rargs.annotations)
+        rargs.annotations_filename = rargs.annotations
+        rargs.annotations = load_annotations(rargs.annotations)
     else:
-        args.annotations_filename = args.annotations
-        args.annotations = None
+        rargs.annotations_filename = rargs.annotations
+        rargs.annotations = None
 
     # reference genome
     try:
         if pstep in [PIPELINE_STEP.VALIDATE, PIPELINE_STEP.ANNOTATE]:
-            log('loading:' if not args.low_memory else 'indexing:', args.reference_genome)
-            args.reference_genome_filename = args.reference_genome
-            args.reference_genome = load_reference_genome(args.reference_genome, args.low_memory)
+            log('loading:', rargs.reference_genome)
+            rargs.reference_genome_filename = rargs.reference_genome
+            rargs.reference_genome = load_reference_genome(rargs.reference_genome)
         else:
-            args.reference_genome_filename = args.reference_genome
-            args.reference_genome = None
-    except AttributeError:
+            rargs.reference_genome_filename = rargs.reference_genome
+            rargs.reference_genome = None
+    except AttributeError as err:
+        print(repr(err))
         pass
 
     # masking file
     try:
         if pstep in [PIPELINE_STEP.VALIDATE, PIPELINE_STEP.CLUSTER, PIPELINE_STEP.PIPELINE]:
-            log('loading:', args.masking)
-            args.masking_filename = args.masking
-            args.masking = load_masking_regions(args.masking)
+            log('loading:', rargs.masking)
+            rargs.masking_filename = rargs.masking
+            rargs.masking = load_masking_regions(rargs.masking)
         else:
-            args.masking_filename = args.masking
-            args.masking = None
+            rargs.masking_filename = rargs.masking
+            rargs.masking = None
     except AttributeError:
         pass
 
     # dgv annotation
     try:
         if pstep == PIPELINE_STEP.SUMMARY:
-            log('loading:', args.dgv_annotation)
-            args.dgv_annotation_filename = args.dgv_annotation
-            args.dgv_annotation = load_masking_regions(args.dgv_annotation)
+            log('loading:', rargs.dgv_annotation)
+            rargs.dgv_annotation_filename = rargs.dgv_annotation
+            rargs.dgv_annotation = load_masking_regions(rargs.dgv_annotation)
         else:
-            args.dgv_annotation_filename = args.dgv_annotation
-            args.dgv_annotation = None
+            rargs.dgv_annotation_filename = rargs.dgv_annotation
+            rargs.dgv_annotation = None
     except AttributeError:
         pass
 
     # template metadata
     try:
         if pstep == PIPELINE_STEP.ANNOTATE:
-            log('loading:', args.template_metadata)
-            args.template_metadata_filename = args.template_metadata
-            args.template_metadata = load_templates(args.template_metadata)
+            log('loading:', rargs.template_metadata)
+            rargs.template_metadata_filename = rargs.template_metadata
+            rargs.template_metadata = load_templates(rargs.template_metadata)
         else:
-            args.template_metadata_filename = args.template_metadata
-            args.template_metadata = None
+            rargs.template_metadata_filename = rargs.template_metadata
+            rargs.template_metadata = None
     except AttributeError:
         pass
-
+    print('rargs', rargs, 'args', args)
     # decide which main function to execute
     if pstep == PIPELINE_STEP.CLUSTER:
-        cluster_main(**args.__dict__)
+        cluster_main(**args)
     elif pstep == PIPELINE_STEP.VALIDATE:
-        validate_main(**args.__dict__)
+        validate_main(**args)
     elif pstep == PIPELINE_STEP.ANNOTATE:
-        annotate_main(**args.__dict__)
+        annotate_main(**args)
     elif pstep == PIPELINE_STEP.PAIR:
-        pairing_main(**args.__dict__)
+        pairing_main(**args)
     elif pstep == PIPELINE_STEP.SUMMARY:
-        summary_main(**args.__dict__)
+        summary_main(**args)
     else:  # PIPELINE
-        main_pipeline(args, config, convert_config)
+        main_pipeline(args)
 
     duration = int(time.time()) - start_time
     hours = duration - duration % 3600

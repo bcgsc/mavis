@@ -1,10 +1,10 @@
-from ..util import MavisNamespace
+from ..util import WeakMavisNamespace
 
-DEFAULTS = MavisNamespace(
+DEFAULTS = WeakMavisNamespace(
     aligner='blat',
     assembly_include_flanking_pairs=True,
     assembly_include_half_mapped_reads=True,
-    assembly_max_kmer_size=None,
+    assembly_max_kmer_size=-1,
     assembly_max_kmer_strict=True,
     assembly_max_paths=4,
     assembly_min_uniq=0.01,
@@ -48,7 +48,7 @@ DEFAULTS = MavisNamespace(
     strand_determining_read=2,
     outer_window_min_event_size=125
 )
-""":class:`MavisNamespace`: holds the settings for computations with the Evidence objects
+""":class:`WeakMavisNamespace`: holds the settings for computations with the Evidence objects
 
 .. glossary::
     :sorted:
@@ -115,7 +115,8 @@ DEFAULTS = MavisNamespace(
 
     assembly_max_kmer_size
         the minimum between this and the smallest length input sequence is used as the kmer size for assembling
-        the DeBruijn Graph. If this is not set the default is the 75% of the minimum length input sequence
+        the DeBruijn Graph. If this is not set (any value less than 0 is considered not set) the default is the
+        75% of the minimum length input sequence
 
     assembly_max_kmer_strict
         if set to True then any sequences input to the assembly algorithm that cannot create a kmer of this size will
