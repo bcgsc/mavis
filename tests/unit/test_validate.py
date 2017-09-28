@@ -1,6 +1,8 @@
 import unittest
-from mavis.validate.call import _call_interval_by_flanking_coverage
+
 from mavis.constants import ORIENT
+from mavis.validate.call import _call_interval_by_flanking_coverage
+
 from .mock import Mock
 
 

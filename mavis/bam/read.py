@@ -1,11 +1,13 @@
-from ..constants import ORIENT, CIGAR, DNA_ALPHABET, STRAND, READ_PAIR_TYPE, SVTYPE
-from ..interval import Interval
-from . import cigar as cigar_tools
-from .cigar import EVENT_STATES, REFERENCE_ALIGNED_STATES, QUERY_ALIGNED_STATES
-import pysam
-import subprocess
-import re
 from copy import copy
+import re
+import subprocess
+
+import pysam
+
+from . import cigar as cigar_tools
+from .cigar import EVENT_STATES, QUERY_ALIGNED_STATES, REFERENCE_ALIGNED_STATES
+from ..constants import CIGAR, DNA_ALPHABET, ORIENT, READ_PAIR_TYPE, STRAND, SVTYPE
+from ..interval import Interval
 
 
 class SamRead(pysam.AlignedSegment):
@@ -25,27 +27,27 @@ class SamRead(pysam.AlignedSegment):
         )
 
     @classmethod
-    def copy(cls, pysamRead):
-        return cls.copyOnto(pysamRead)
+    def copy(cls, pysamread):
+        return cls.copy_onto(pysamread)
 
     @classmethod
-    def copyOnto(cls, pysamRead, copyRead=None):
-        cp = cls() if copyRead is None else copyRead
-        cp._reference_name = pysamRead.reference_name
-        cp.query_sequence = pysamRead.query_sequence
-        cp.reference_start = pysamRead.reference_start
-        cp.reference_id = pysamRead.reference_id
-        cp.cigar = pysamRead.cigar[:]
-        cp.query_name = pysamRead.query_name
-        cp.mapping_quality = pysamRead.mapping_quality
-        cp.set_tags(pysamRead.get_tags())
-        cp.flag = pysamRead.flag
-        if pysamRead.is_paired:
-            cp.next_reference_id = pysamRead.next_reference_id
-            cp.next_reference_start = pysamRead.next_reference_start
-            cp._next_reference_name = pysamRead.next_reference_name
+    def copy_onto(cls, pysamread, copyread=None):
+        cp = cls() if copyread is None else copyread
+        cp._reference_name = pysamread.reference_name
+        cp.query_sequence = pysamread.query_sequence
+        cp.reference_start = pysamread.reference_start
+        cp.reference_id = pysamread.reference_id
+        cp.cigar = pysamread.cigar[:]
+        cp.query_name = pysamread.query_name
+        cp.mapping_quality = pysamread.mapping_quality
+        cp.set_tags(pysamread.get_tags())
+        cp.flag = pysamread.flag
+        if pysamread.is_paired:
+            cp.next_reference_id = pysamread.next_reference_id
+            cp.next_reference_start = pysamread.next_reference_start
+            cp._next_reference_name = pysamread.next_reference_name
         try:
-            cp.alignment_score = pysamRead.alignment_score
+            cp.alignment_score = pysamread.alignment_score
         except AttributeError:
             pass
         return cp

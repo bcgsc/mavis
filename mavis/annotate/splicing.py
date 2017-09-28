@@ -1,7 +1,7 @@
-from ..constants import STRAND, reverse_complement
-from .constants import SPLICE_SITE_RADIUS, SPLICE_TYPE, SPLICE_SITE_TYPE, DONOR_SEQ, ACCEPTOR_SEQ
-from ..interval import Interval
 from .base import BioInterval
+from .constants import ACCEPTOR_SEQ, DONOR_SEQ, SPLICE_SITE_RADIUS, SPLICE_SITE_TYPE, SPLICE_TYPE
+from ..constants import reverse_complement, STRAND
+from ..interval import Interval
 
 
 class SplicingPattern(list):

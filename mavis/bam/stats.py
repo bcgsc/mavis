@@ -1,11 +1,13 @@
 #!/projects/tumour_char/analysis_scripts/python/centos06/anaconda3_v2.3.0/bin/python
-from ..constants import STRAND
-from ..util import devnull
-from .read import sequenced_strand
 import math
-import numpy as np
 import statistics as stats
 import warnings
+
+import numpy as np
+
+from .read import sequenced_strand
+from ..constants import STRAND
+from ..util import devnull
 
 
 class BamStats:

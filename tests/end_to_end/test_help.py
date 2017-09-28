@@ -1,6 +1,6 @@
-import unittest
 import os
 import subprocess
+import unittest
 
 
 class TestHelpMenu(unittest.TestCase):

@@ -1,7 +1,9 @@
-import pysam
-import warnings
 import atexit
 import re
+import warnings
+
+import pysam
+
 from ..annotate.base import ReferenceName
 from ..interval import Interval
 

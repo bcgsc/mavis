@@ -1,6 +1,7 @@
-from mavis.interval import Interval
-from mavis.cluster.cluster import merge_integer_intervals
 import unittest
+
+from mavis.cluster.cluster import merge_integer_intervals
+from mavis.interval import Interval
 
 
 class TestMergeIntegerIntervals(unittest.TestCase):
@@ -25,5 +26,5 @@ class TestMergeIntegerIntervals(unittest.TestCase):
         self.assertEqual(Interval(1, 3), m)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

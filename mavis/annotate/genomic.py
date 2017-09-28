@@ -1,11 +1,12 @@
-from ..constants import STRAND, reverse_complement
-from ..interval import Interval
-from ..error import NotSpecifiedError
-from .base import BioInterval, ReferenceName
-from .splicing import SplicingPattern, SpliceSite
-from .constants import SPLICE_SITE_TYPE
-import itertools
 from copy import copy
+import itertools
+
+from .base import BioInterval, ReferenceName
+from .constants import SPLICE_SITE_TYPE
+from .splicing import SpliceSite, SplicingPattern
+from ..constants import reverse_complement, STRAND
+from ..error import NotSpecifiedError
+from ..interval import Interval
 
 
 class Template(BioInterval):
@@ -107,7 +108,7 @@ class Gene(BioInterval):
 
     @property
     def transcripts(self):
-        """:any:`list` of :class:`usTranscript`: list of unspliced transcripts"""
+        """:any:`list` of :class:`UsTranscript`: list of unspliced transcripts"""
         return self.unspliced_transcripts
 
     @property
@@ -129,24 +130,24 @@ class Gene(BioInterval):
         """see :func:`structural_variant.annotate.base.BioInterval.key`"""
         return BioInterval.key(self), self.strand
 
-    def get_seq(self, REFERENCE_GENOME, ignore_cache=False):
+    def get_seq(self, reference_genome, ignore_cache=False):
         """
         gene sequence is always given wrt to the positive forward strand regardless of gene strand
 
         Args:
-            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by
+            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by
                 template/chr name
-            ignore_cache (bool): if True then stored sequences will be ignored and the function will attempt to retrieve the sequence using the positions and the input REFERENCE_GENOME
+            ignore_cache (bool): if True then stored sequences will be ignored and the function will attempt to retrieve the sequence using the positions and the input reference_genome
 
         Returns:
             str: the sequence of the gene
         """
         if self.seq and not ignore_cache:
             return self.seq
-        elif REFERENCE_GENOME is None:
+        elif reference_genome is None:
             raise NotSpecifiedError('reference genome is required to retrieve the gene sequence')
         else:
-            return str(REFERENCE_GENOME[self.chr].seq[self.start - 1:self.end]).upper()
+            return str(reference_genome[self.chr].seq[self.start - 1:self.end]).upper()
 
     @property
     def spliced_transcripts(self):
@@ -180,7 +181,7 @@ class Exon(BioInterval):
             start (int): the genomic start position
             end (int): the genomic end position
             name (str): the name of the exon
-            transcript (usTranscript): the 'parent' transcript this exon belongs to
+            transcript (UsTranscript): the 'parent' transcript this exon belongs to
             intact_start_splice (bool): if the starting splice site has been abrogated
             intact_end_splice (bool): if the end splice site has been abrogated
         Raises:
@@ -203,7 +204,7 @@ class Exon(BioInterval):
 
     @property
     def transcript(self):
-        """:class:`usTranscript`: the transcript this exon belongs to"""
+        """:class:`UsTranscript`: the transcript this exon belongs to"""
         return self.reference_object
 
     @property
@@ -242,7 +243,7 @@ class Exon(BioInterval):
         return 'Exon({}, {})'.format(self.start, self.end)
 
 
-class usTranscript(BioInterval):
+class UsTranscript(BioInterval):
     """
     """
 
@@ -315,16 +316,16 @@ class usTranscript(BioInterval):
         if len(exons) < 2:
             return [SplicingPattern()]
 
-        DONOR = 3
-        ACCEPTOR = 5
+        donor = 3
+        acceptor = 5
 
         reverse = True if self.get_strand() == STRAND.NEG else False
 
-        pattern = [(exons[0].end, exons[0].end_splice_site.intact, ACCEPTOR if reverse else DONOR)]  # always start with a donor
+        pattern = [(exons[0].end, exons[0].end_splice_site.intact, acceptor if reverse else donor)]  # always start with a donor
         for i in range(1, len(exons) - 1):
-            pattern.append((exons[i].start, exons[i].start_splice_site.intact, DONOR if reverse else ACCEPTOR))
-            pattern.append((exons[i].end, exons[i].end_splice_site.intact, ACCEPTOR if reverse else DONOR))
-        pattern.append((exons[-1].start, exons[-1].start_splice_site.intact, DONOR if reverse else ACCEPTOR))  # always end with acceptor
+            pattern.append((exons[i].start, exons[i].start_splice_site.intact, donor if reverse else acceptor))
+            pattern.append((exons[i].end, exons[i].end_splice_site.intact, acceptor if reverse else donor))
+        pattern.append((exons[-1].start, exons[-1].start_splice_site.intact, donor if reverse else acceptor))  # always end with acceptor
         original_sites = [p for p, s, t in pattern]
         pattern = [(p, t) for p, s, t in pattern if s]  # filter out abrogated splice sites
         if reverse:
@@ -343,12 +344,12 @@ class usTranscript(BioInterval):
         splice_site_sets = [SplicingPattern()]
 
         # i should start at the first donor site
-        i = len(get_cons_sites(0, ACCEPTOR))
+        i = len(get_cons_sites(0, acceptor))
 
         while i < len(pattern):
-            if pattern[i][1] == DONOR:
-                donors = get_cons_sites(i, DONOR)
-                acceptors = get_cons_sites(i + len(donors), ACCEPTOR)
+            if pattern[i][1] == donor:
+                donors = get_cons_sites(i, donor)
+                acceptors = get_cons_sites(i + len(donors), acceptor)
 
                 temp = []
                 for d, a in sorted(itertools.product(donors, acceptors)):
@@ -497,12 +498,12 @@ class usTranscript(BioInterval):
                 raise NotSpecifiedError('strand must be pos or neg to calculate the exon number')
         raise AttributeError('can only calculate phase on associated exons')
 
-    def get_seq(self, REFERENCE_GENOME=None, ignore_cache=False):
+    def get_seq(self, reference_genome=None, ignore_cache=False):
         """
         Args:
-            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
+            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
                 by template/chr name
-            ignore_cache (bool): if True then stored sequences will be ignored and the function will attempt to retrieve the sequence using the positions and the input REFERENCE_GENOME
+            ignore_cache (bool): if True then stored sequences will be ignored and the function will attempt to retrieve the sequence using the positions and the input reference_genome
 
         Returns:
             str: the sequence of the transcript including introns (but relative to strand)
@@ -517,21 +518,21 @@ class usTranscript(BioInterval):
                 return reverse_complement(self.gene.seq[start:end])
             else:
                 return self.gene.seq[start:end]
-        elif REFERENCE_GENOME is None:
+        elif reference_genome is None:
             raise NotSpecifiedError('reference genome is required to retrieve the gene sequence')
         else:
             if self.get_strand() == STRAND.NEG:
-                return reverse_complement(REFERENCE_GENOME[self.gene.chr].seq[self.start - 1:self.end]).upper()
+                return reverse_complement(reference_genome[self.gene.chr].seq[self.start - 1:self.end]).upper()
             else:
-                return str(REFERENCE_GENOME[self.gene.chr].seq[self.start - 1:self.end]).upper()
+                return str(reference_genome[self.gene.chr].seq[self.start - 1:self.end]).upper()
 
-    def get_cdna_seq(self, splicing_pattern, REFERENCE_GENOME=None, ignore_cache=False):
+    def get_cdna_seq(self, splicing_pattern, reference_genome=None, ignore_cache=False):
         """
         Args:
             splicing_pattern (SplicingPattern): the list of splicing positions
-            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
+            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
                 by template/chr name
-            ignore_cache (bool): if True then stored sequences will be ignored and the function will attempt to retrieve the sequence using the positions and the input REFERENCE_GENOME
+            ignore_cache (bool): if True then stored sequences will be ignored and the function will attempt to retrieve the sequence using the positions and the input reference_genome
 
         Returns:
             str: the spliced cDNA sequence
@@ -541,7 +542,7 @@ class usTranscript(BioInterval):
         conti = []
         for i in range(0, len(temp) - 1, 2):
             conti.append(Interval(temp[i] - m, temp[i + 1] - m))
-        seq = self.get_seq(REFERENCE_GENOME, ignore_cache)
+        seq = self.get_seq(reference_genome, ignore_cache)
         if self.get_strand() == STRAND.NEG:
             # adjust the continuous intervals for the min and flip if revcomp
             seq = reverse_complement(seq)
@@ -571,7 +572,7 @@ class Transcript(BioInterval):
         splicing pattern is given in genomic coordinates
 
         Args:
-            us_transcript (usTranscript): the unspliced transcript
+            us_transcript (UsTranscript): the unspliced transcript
             splicing_patt (:class:`list` of :class:`int`): the list of splicing positions
             seq (str): the cdna sequence
             translations (:class:`list` of :class:`~mavis.annotate.protein.Translation`):
@@ -618,12 +619,12 @@ class Transcript(BioInterval):
         """
         return self.unspliced_transcript.convert_cdna_to_genomic(pos, self.splicing_pattern)
 
-    def get_seq(self, REFERENCE_GENOME=None, ignore_cache=False):
+    def get_seq(self, reference_genome=None, ignore_cache=False):
         """
         Args:
-            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by
+            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by
                 template/chr name
-            ignore_cache (bool): if True then stored sequences will be ignored and the function will attempt to retrieve the sequence using the positions and the input REFERENCE_GENOME
+            ignore_cache (bool): if True then stored sequences will be ignored and the function will attempt to retrieve the sequence using the positions and the input reference_genome
 
         Returns:
             str: the sequence corresponding to the spliced cdna
@@ -631,10 +632,10 @@ class Transcript(BioInterval):
         if self.seq and not ignore_cache:
             return self.seq
         else:
-            s = self.unspliced_transcript.get_cdna_seq(self.splicing_pattern, REFERENCE_GENOME, ignore_cache)
+            s = self.unspliced_transcript.get_cdna_seq(self.splicing_pattern, reference_genome, ignore_cache)
             return s[self.start - 1:self.end]
 
     @property
     def unspliced_transcript(self):
-        """:class:`usTranscript`: the unspliced transcript this splice variant belongs to"""
+        """:class:`UsTranscript`: the unspliced transcript this splice variant belongs to"""
         return self.reference_object

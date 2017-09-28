@@ -1,6 +1,8 @@
-from mavis.tools import _convert_tool_row, SUPPORTED_TOOL
 import unittest
+
 from mavis.constants import ORIENT, STRAND, SVTYPE
+from mavis.tools import _convert_tool_row, SUPPORTED_TOOL
+
 from .mock import Mock
 
 

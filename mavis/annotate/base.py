@@ -1,6 +1,7 @@
-from ..interval import Interval
-from ..constants import STRAND
 import re
+
+from ..constants import STRAND
+from ..interval import Interval
 
 
 class ReferenceName(str):
@@ -113,7 +114,7 @@ class BioInterval:
     def __hash__(self):
         return hash(self.key())
 
-    def get_seq(self, REFERENCE_GENOME=None, ignore_cache=False):
+    def get_seq(self, reference_genome=None, ignore_cache=False):
         raise NotImplementedError('abstract method must be overidden')
 
     def get_strand(self):

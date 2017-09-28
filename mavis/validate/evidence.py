@@ -1,8 +1,8 @@
 from .base import Evidence
-from ..interval import Interval
-from ..constants import ORIENT, PROTOCOL, SVTYPE
 from ..annotate.variant import overlapping_transcripts
 from ..breakpoint import Breakpoint
+from ..constants import ORIENT, PROTOCOL, SVTYPE
+from ..interval import Interval
 
 
 class GenomeEvidence(Evidence):
@@ -107,13 +107,13 @@ class GenomeEvidence(Evidence):
 
 
 class TranscriptomeEvidence(Evidence):
-    def __init__(self, ANNOTATIONS, *pos, **kwargs):
+    def __init__(self, annotations, *pos, **kwargs):
         Evidence.__init__(self, *pos, **kwargs)
         self.protocol = PROTOCOL.TRANS
         # get the list of overlapping transcripts
         self.overlapping_transcripts = (
-            overlapping_transcripts(ANNOTATIONS, self.break1),
-            overlapping_transcripts(ANNOTATIONS, self.break2)
+            overlapping_transcripts(annotations, self.break1),
+            overlapping_transcripts(annotations, self.break2)
         )
 
         self.outer_windows = (
@@ -205,7 +205,7 @@ class TranscriptomeEvidence(Evidence):
             start (int): the genomic start position
             distance (int): the amount of exonic/intergenic units to traverse
             direction (ORIENT): the direction wrt to the positive/forward reference strand to traverse
-            transcripts (:class:`list` of :class:`usTranscript`): list of transcripts to use
+            transcripts (:class:`list` of :class:`UsTranscript`): list of transcripts to use
         """
         is_left = True if direction == ORIENT.LEFT else False
         input_distance = distance

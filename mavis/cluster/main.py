@@ -1,12 +1,12 @@
-import os
-import itertools
-from .cluster import merge_breakpoint_pairs
-from ..constants import COLUMNS
-from .constants import DEFAULTS
-from ..util import read_inputs, output_tabbed_file, write_bed_file, generate_complete_stamp
-from ..util import filter_on_overlap, log, mkdirp, filter_uninformative, log_arguments
-import uuid
 import inspect
+import itertools
+import os
+import uuid
+
+from .cluster import merge_breakpoint_pairs
+from .constants import DEFAULTS
+from ..constants import COLUMNS
+from ..util import filter_on_overlap, filter_uninformative, generate_complete_stamp, log, log_arguments, mkdirp, output_tabbed_file, read_inputs, write_bed_file
 
 
 def main(
@@ -48,8 +48,8 @@ def main(
 
     # output files
     cluster_batch_id = 'batch-' + str(uuid.uuid4())
-    UNINFORM_OUTPUT = os.path.join(output, 'uninformative_clusters.txt')
-    CLUSTER_ASSIGN_OUTPUT = os.path.join(output, 'cluster_assignment.tab')
+    uninform_output = os.path.join(output, 'uninformative_clusters.txt')
+    cluster_assign_output = os.path.join(output, 'cluster_assignment.tab')
     # TODO: CLUSTER_BED_OUTPUT = os.path.join(output, 'clusters.bed')
 
     def split_file_name_func(x):
@@ -98,7 +98,7 @@ def main(
             '(removed {})'.format(len(uninformative_clusters))
         )
         breakpoint_pairs = pass_clusters
-        output_tabbed_file(uninformative_clusters, UNINFORM_OUTPUT)
+        output_tabbed_file(uninformative_clusters, uninform_output)
     else:
         log('did not apply uninformative filter')
     log('computing clusters')
@@ -146,16 +146,16 @@ def main(
     for row in rows.values():
         row['clusters'] = ';'.join([str(c) for c in sorted(list(row['clusters']))])
         row[COLUMNS.tools] = ';'.join(sorted(list(row[COLUMNS.tools])))
-    output_tabbed_file(rows.values(), CLUSTER_ASSIGN_OUTPUT)
+    output_tabbed_file(rows.values(), cluster_assign_output)
 
     output_files = []
     # filter clusters based on annotations
     # decide on the number of clusters to validate per job
     clusters = list(clusters.keys())
-    JOB_SIZE = min_clusters_per_file
+    job_size = min_clusters_per_file
     if len(clusters) // min_clusters_per_file > max_files - 1:
-        JOB_SIZE = int(round(len(clusters) / max_files, 0))
-        assert(len(clusters) // JOB_SIZE <= max_files)
+        job_size = int(round(len(clusters) / max_files, 0))
+        assert(len(clusters) // job_size <= max_files)
 
     bedfile = os.path.join(output, 'clusters.bed')
     write_bed_file(bedfile, itertools.chain.from_iterable([b.get_bed_repesentation() for b in clusters]))

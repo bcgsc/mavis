@@ -1,18 +1,19 @@
-from mavis.constants import CIGAR
-from mavis.bam.cigar import *
-from mavis.annotate import load_reference_genome
 import unittest
 import warnings
-from . import REFERENCE_GENOME_FILE
-from . import MockRead
+
+from mavis.annotate.file_io import load_reference_genome
+from mavis.bam.cigar import alignment_matches, compute, convert_for_igv, convert_string_to_cigar, extend_softclipping, hgvs_standardize_cigar, join, longest_fuzzy_match, match_percent, merge_internal_events, recompute_cigar_mismatch, score, smallest_nonoverlapping_repeat
+from mavis.constants import CIGAR
 import timeout_decorator
+
+from . import MockRead, REFERENCE_GENOME_FILE
 
 
 REFERENCE_GENOME = None
 
 
 def setUpModule():
-    warnings.simplefilter("ignore")
+    warnings.simplefilter('ignore')
     global REFERENCE_GENOME
     REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
     if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():

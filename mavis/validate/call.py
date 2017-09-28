@@ -1,13 +1,14 @@
-from ..breakpoint import BreakpointPair, Breakpoint
-from ..constants import CALL_METHOD, SVTYPE, PYSAM_READ_FLAGS, ORIENT, PROTOCOL, COLUMNS, STRAND
-from ..bam import read as read_tools
-from ..interval import Interval
-from ..align import SplitAlignment
-from .evidence import TranscriptomeEvidence
 import itertools
-import statistics
 import math
+import statistics
 import warnings
+
+from .evidence import TranscriptomeEvidence
+from ..align import SplitAlignment
+from ..bam import read as read_tools
+from ..breakpoint import Breakpoint, BreakpointPair
+from ..constants import CALL_METHOD, COLUMNS, ORIENT, PROTOCOL, PYSAM_READ_FLAGS, STRAND, SVTYPE
+from ..interval import Interval
 
 
 class EventCall(BreakpointPair):
@@ -114,16 +115,10 @@ class EventCall(BreakpointPair):
 
         see :ref:`theory - determining flanking support <theory-determining-flanking-support>`
         """
-        support = set()
-
-        fragment_sizes = []
-
         min_frag = max([
             self.source_evidence.min_expected_fragment_size + Interval.dist(self.break1, self.break2),
             self.source_evidence.max_expected_fragment_size])
         max_frag = len(self.break1 | self.break2) + self.source_evidence.max_expected_fragment_size
-
-        encompass = len(self.break1 | self.break2)
 
         for read, mate in flanking_pairs:
             # check that the fragment size is reasonable
@@ -141,9 +136,9 @@ class EventCall(BreakpointPair):
                     read, self.event_type if not is_compatible else self.compatible_type):
                 continue
             # check that the positions make sense
-            LEFT = ORIENT.LEFT if not is_compatible else ORIENT.RIGHT
-            if self.break1.orient == LEFT:
-                if self.break2.orient == LEFT:  # L L
+            left = ORIENT.LEFT if not is_compatible else ORIENT.RIGHT
+            if self.break1.orient == left:
+                if self.break2.orient == left:  # L L
                     if not all([
                         read.reference_start + 1 <= self.break1.end,
                         mate.reference_start + 1 <= self.break2.end,
@@ -157,7 +152,7 @@ class EventCall(BreakpointPair):
                     ]):
                         continue
             else:
-                if self.break2.orient == LEFT:  # R L
+                if self.break2.orient == left:  # R L
                     if not all([
                         read.reference_end >= self.break1.start,
                         mate.reference_start + 1 <= self.break2.end

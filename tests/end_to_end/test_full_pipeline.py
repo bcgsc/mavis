@@ -1,10 +1,9 @@
-import tempfile
-import re
-import shutil
-import unittest
-import os
-import subprocess
 import glob
+import os
+import shutil
+import subprocess
+import tempfile
+import unittest
 
 
 data_prefix = os.path.join(os.path.dirname(__file__), 'data')
@@ -51,7 +50,7 @@ class TestFullPipeline(unittest.TestCase):
         command = 'mavis pipeline {} -o {}'.format(config, temp_output)
         print(command)
         try:
-            output = subprocess.check_output(command, shell=True, env=os.environ)
+            subprocess.check_output(command, shell=True, env=os.environ)
         except subprocess.CalledProcessError as err:
             print('failed command', command)
             print(err.output.decode('UTF-8'))
@@ -72,7 +71,7 @@ class TestFullPipeline(unittest.TestCase):
             self.assertTrue(glob_exists(qsub))
             command = 'export SGE_TASK_ID=1; bash {}'.format(qsub)
             try:
-                output = subprocess.check_output(command, shell=True, env=os.environ)
+                subprocess.check_output(command, shell=True, env=os.environ)
             except subprocess.CalledProcessError as err:
                 print('failed command', command)
                 print(err.output.decode('UTF-8'))
@@ -101,7 +100,7 @@ class TestFullPipeline(unittest.TestCase):
             self.assertTrue(glob_exists(qsub))
             command = 'export SGE_TASK_ID=1; bash {}'.format(qsub)
             try:
-                output = subprocess.check_output(command, shell=True, env=os.environ)
+                subprocess.check_output(command, shell=True, env=os.environ)
             except subprocess.CalledProcessError as err:
                 print('failed command', command)
                 print(err.output.decode('UTF-8'))
@@ -119,7 +118,7 @@ class TestFullPipeline(unittest.TestCase):
         self.assertTrue(glob_exists(qsub))
         command = 'export SGE_TASK_ID=1; bash {}'.format(qsub)
         try:
-            output = subprocess.check_output(command, shell=True, env=os.environ)
+            subprocess.check_output(command, shell=True, env=os.environ)
         except subprocess.CalledProcessError as err:
             print('failed command', command)
             print(err.output.decode('UTF-8'))
@@ -134,7 +133,7 @@ class TestFullPipeline(unittest.TestCase):
         self.assertTrue(glob_exists(qsub))
         command = 'export SGE_TASK_ID=1; bash {}'.format(qsub)
         try:
-            output = subprocess.check_output(command, shell=True, env=os.environ)
+            subprocess.check_output(command, shell=True, env=os.environ)
         except subprocess.CalledProcessError as err:
             print('failed command', command)
             print(err.output.decode('UTF-8'))
@@ -149,5 +148,6 @@ def tearDownModule():
     shutil.rmtree(temp_output)
     pass
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     unittest.main()

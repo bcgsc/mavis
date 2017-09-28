@@ -1,12 +1,13 @@
 from __future__ import division
-
 from copy import copy as sys_copy
-from .constants import ORIENT, STRAND, COLUMNS, CIGAR, SVTYPE, reverse_complement, DNA_ALPHABET
-from .error import *
-from .interval import Interval
-import TSV
-import re
 import itertools
+import re
+
+import TSV
+
+from .constants import CIGAR, COLUMNS, DNA_ALPHABET, ORIENT, reverse_complement, STRAND, SVTYPE
+from .error import InvalidRearrangement, NotSpecifiedError
+from .interval import Interval
 
 
 class Breakpoint(Interval):
@@ -270,7 +271,7 @@ class BreakpointPair:
                 return [SVTYPE.TRANS]
 
     @classmethod
-    def call_breakpoint_pair(cls, read1, read2=None, REFERENCE_GENOME=None):
+    def call_breakpoint_pair(cls, read1, read2=None, reference_genome=None):
         """
         calls a set of breakpoints from a single or a pair of pysam style read(s)
 
@@ -286,11 +287,11 @@ class BreakpointPair:
             return multiple events not just the major event
         """
         if read2 is None:
-            return cls._call_from_single_contig(read1, REFERENCE_GENOME=REFERENCE_GENOME)
-        return cls._call_from_paired_contig(read1, read2, REFERENCE_GENOME=REFERENCE_GENOME)
+            return cls._call_from_single_contig(read1, reference_genome=reference_genome)
+        return cls._call_from_paired_contig(read1, read2, reference_genome=reference_genome)
 
     @classmethod
-    def _call_from_single_contig(cls, read, REFERENCE_GENOME=None):
+    def _call_from_single_contig(cls, read, reference_genome=None):
         """
         calls a set of breakpoints from a pysam style read using the cigar values
 
@@ -374,8 +375,8 @@ class BreakpointPair:
         )
         # determine if the inserted sequence is a repeat of the aligned portion
         # assume that events with deletions cannot be duplications
-        if first_breakpoint == second_breakpoint and REFERENCE_GENOME:  # insertion or duplication
-            refseq = REFERENCE_GENOME[read.reference_name].seq[
+        if first_breakpoint == second_breakpoint and reference_genome:  # insertion or duplication
+            refseq = reference_genome[read.reference_name].seq[
                 first_breakpoint - len(untemplated_seq) + 1:first_breakpoint + 1]
             refseq = str(refseq)
             midpoint = len(untemplated_seq) // 2 + 1  # more than the untemplated
@@ -403,7 +404,7 @@ class BreakpointPair:
         return BreakpointPair(break1, break2, opposing_strands=False, untemplated_seq=untemplated_seq)
 
     @classmethod
-    def _call_from_paired_contig(cls, read1, read2, REFERENCE_GENOME=None):
+    def _call_from_paired_contig(cls, read1, read2, reference_genome=None):
         """
         calls a set of breakpoints from a pair of pysam style reads using their softclipping to
         find the breakpoints and orientations
@@ -511,7 +512,7 @@ class BreakpointPair:
 
         return BreakpointPair(b1, b2, untemplated_seq=untemplated_seq)
 
-    def breakpoint_sequence_homology(self, REFERENCE_GENOME):
+    def breakpoint_sequence_homology(self, reference_genome):
         """
         for a given set of breakpoints matches the sequence opposite the partner breakpoint
         this sequence comparison is done with reference to a reference genome and does not
@@ -529,7 +530,7 @@ class BreakpointPair:
             -------TT-TT-------- second break homology
 
         Args:
-            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by template/chr name
+            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by template/chr name
 
         Returns:
             tuple:
@@ -540,8 +541,8 @@ class BreakpointPair:
             AttributeError: for non specific breakpoints
         """
 
-        b1_refseq = REFERENCE_GENOME[self.break1.chr].seq
-        b2_refseq = REFERENCE_GENOME[self.break2.chr].seq
+        b1_refseq = reference_genome[self.break1.chr].seq
+        b2_refseq = reference_genome[self.break2.chr].seq
         if len(self.break1) > 1 or len(self.break2) > 1:
             raise AttributeError('cannot call shared sequence for non-specific breakpoints')
 

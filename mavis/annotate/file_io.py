@@ -1,17 +1,19 @@
 """
 module which holds all functions relating to loading reference files
 """
-import TSV
-import re
-from .genomic import Gene, Transcript, usTranscript, Exon, Template
-from .base import BioInterval, ReferenceName
-from .protein import Domain, Translation
-from ..interval import Interval
-from ..constants import STRAND, GIESMA_STAIN, CODON_SIZE, translate, START_AA, STOP_AA
-from ..util import devnull
-from Bio import SeqIO
 import json
+import re
 import warnings
+
+from Bio import SeqIO
+import TSV
+
+from .base import BioInterval, ReferenceName
+from .genomic import Exon, Gene, Template, Transcript, UsTranscript
+from .protein import Domain, Translation
+from ..constants import CODON_SIZE, GIESMA_STAIN, START_AA, STOP_AA, STRAND, translate
+from ..interval import Interval
+from ..util import devnull
 
 
 def load_masking_regions(filepath):
@@ -58,14 +60,14 @@ def load_reference_genes(*pos, **kwargs):
     return load_annotations(*pos, **kwargs)
 
 
-def load_annotations(filepath, warn=devnull, REFERENCE_GENOME=None, filetype=None, best_transcripts_only=False):
+def load_annotations(filepath, warn=devnull, reference_genome=None, filetype=None, best_transcripts_only=False):
     """
     loads gene models from an input file. Expects a tabbed or json file.
 
     Args:
         filepath (str): path to the input file
         verbose (bool): output extra information to stdout
-        REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by
+        reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by
             template/chr name
         filetype (str): json or tab/tsv. only required if the file type can't be interpolated from the path extenstion
 
@@ -87,10 +89,10 @@ def load_annotations(filepath, warn=devnull, REFERENCE_GENOME=None, filetype=Non
         raise NotImplementedError('unsupported filetype:', filetype, filepath)
 
     return parse_annotations_json(
-        data, REFERENCE_GENOME=REFERENCE_GENOME, best_transcripts_only=best_transcripts_only, warn=warn)
+        data, reference_genome=reference_genome, best_transcripts_only=best_transcripts_only, warn=warn)
 
 
-def parse_annotations_json(data, REFERENCE_GENOME=None, best_transcripts_only=False, warn=devnull):
+def parse_annotations_json(data, reference_genome=None, best_transcripts_only=False, warn=devnull):
     """
     parses a json of annotation information into annotation objects
     """
@@ -119,7 +121,7 @@ def parse_annotations_json(data, REFERENCE_GENOME=None, best_transcripts_only=Fa
             exons = [Exon(strand=gene['strand'], **ex) for ex in transcript['exons']]
             if len(exons) == 0:
                 exons = [(transcript['start'], transcript['end'])]
-            ust = usTranscript(
+            ust = UsTranscript(
                 name=transcript['name'],
                 gene=g,
                 exons=exons,
@@ -160,9 +162,9 @@ def parse_annotations_json(data, REFERENCE_GENOME=None, best_transcripts_only=Fa
                 tx = Translation(
                     transcript['cdna_coding_start'], transcript['cdna_coding_end'], transcript=t, domains=domains
                 )
-                if REFERENCE_GENOME and g.chr in REFERENCE_GENOME:
+                if reference_genome and g.chr in reference_genome:
                     # get the sequence near here to see why these are wrong?
-                    s = ust.get_cdna_seq(t.splicing_pattern, REFERENCE_GENOME)
+                    s = ust.get_cdna_seq(t.splicing_pattern, reference_genome)
                     m = s[tx.start - 1:tx.start + 2]
                     stop = s[tx.end - CODON_SIZE: tx.end]
                     if translate(m) != START_AA or translate(stop) != STOP_AA:
@@ -177,11 +179,11 @@ def parse_annotations_json(data, REFERENCE_GENOME=None, best_transcripts_only=Fa
     return genes_by_chr
 
 
-def _load_reference_genes_json(filepath, REFERENCE_GENOME=None, best_transcripts_only=False, warn=devnull):
+def _load_reference_genes_json(filepath, reference_genome=None, best_transcripts_only=False, warn=devnull):
     with open(filepath) as fh:
         data = json.load(fh)
         return parse_annotations_json(
-            data, REFERENCE_GENOME=REFERENCE_GENOME, best_transcripts_only=best_transcripts_only, warn=warn)
+            data, reference_genome=reference_genome, best_transcripts_only=best_transcripts_only, warn=warn)
 
 
 def convert_tab_to_json(filepath, warn=devnull):
@@ -326,33 +328,33 @@ def load_reference_genome(filename, low_mem=False):
         :class:`dict` of :class:`Bio.SeqRecord` by :class:`str`: a dictionary representing the sequences in the
             fasta file
     """
-    HUMAN_REFERENCE_GENOME = None
+    reference_genome = None
     if not low_mem:
         with open(filename, 'rU') as fh:
-            HUMAN_REFERENCE_GENOME = SeqIO.to_dict(SeqIO.parse(fh, 'fasta'))
+            reference_genome = SeqIO.to_dict(SeqIO.parse(fh, 'fasta'))
     else:
-        HUMAN_REFERENCE_GENOME = SeqIO.index(filename, "fasta")
+        reference_genome = SeqIO.index(filename, 'fasta')
 
-    names = list(HUMAN_REFERENCE_GENOME.keys())
+    names = list(reference_genome.keys())
 
     # to fix hg38 issues
     for template_name in names:
         if template_name.startswith('chr'):
             truncated = re.sub('^chr', '', template_name)
-            if truncated in HUMAN_REFERENCE_GENOME:
+            if truncated in reference_genome:
                 raise KeyError(
                     'template names {} and {} are considered equal but both have been defined in the reference'
                     'loaded'.format(template_name, truncated))
-            HUMAN_REFERENCE_GENOME.setdefault(truncated, HUMAN_REFERENCE_GENOME[template_name])
+            reference_genome.setdefault(truncated, reference_genome[template_name])
         else:
             prefixed = 'chr' + template_name
-            if prefixed in HUMAN_REFERENCE_GENOME:
+            if prefixed in reference_genome:
                 raise KeyError(
                     'template names {} and {} are considered equal but both have been defined in the reference'
                     'loaded'.format(template_name, prefixed))
-            HUMAN_REFERENCE_GENOME.setdefault(prefixed, HUMAN_REFERENCE_GENOME[template_name])
-        HUMAN_REFERENCE_GENOME[template_name] = HUMAN_REFERENCE_GENOME[template_name].upper()
-    return HUMAN_REFERENCE_GENOME
+            reference_genome.setdefault(prefixed, reference_genome[template_name])
+        reference_genome[template_name] = reference_genome[template_name].upper()
+    return reference_genome
 
 
 def load_templates(filename):

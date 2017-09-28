@@ -1,12 +1,13 @@
 """
 module responsible for small utility functions and constants used throughout the structural_variant package
 """
-from vocab import Vocab
-from Bio.Alphabet import Gapped
-from Bio.Data.IUPACData import ambiguous_dna_values
-from Bio.Alphabet.IUPAC import ambiguous_dna
-from Bio.Seq import Seq
 import re
+
+from Bio.Alphabet import Gapped
+from Bio.Alphabet.IUPAC import ambiguous_dna
+from Bio.Data.IUPACData import ambiguous_dna_values
+from Bio.Seq import Seq
+from vocab import Vocab
 
 
 PIPELINE_STEP = Vocab(

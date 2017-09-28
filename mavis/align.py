@@ -1,21 +1,22 @@
 """
 Should take in a sam file from a aligner like bwa aln or bwa mem and convert it into a
-
 """
+from copy import copy
 import itertools
-import pysam
+import os
 import subprocess
 import warnings
-import os
-from copy import copy
-from .constants import COLUMNS, SVTYPE, CIGAR, reverse_complement, ORIENT
+
+import pysam
+from vocab import Vocab
+
 from .bam import cigar as cigar_tools
 from .bam import read as read_tools
+from .breakpoint import BreakpointPair
+from .constants import CIGAR, COLUMNS, ORIENT, reverse_complement, SVTYPE
+from .error import InvalidRearrangement
 from .interval import Interval
 from .util import devnull
-from .breakpoint import BreakpointPair
-from .error import InvalidRearrangement
-from vocab import Vocab
 
 
 SUPPORTED_ALIGNER = Vocab(BWA_MEM='bwa mem', BLAT='blat')
@@ -108,6 +109,7 @@ class SplitAlignment:
                 qlen += len(self.query_coverage_read1() & self.query_coverage_read2())
         return score / (qlen + (qlen - 1) * consec_bonus)
 
+    @staticmethod
     def select_supporting_alignments(
         bpp, alignments,
         min_query_consumption,
@@ -244,7 +246,7 @@ def query_coverage_interval(read):
 
 def align_contigs(
         evidence,
-        INPUT_BAM_CACHE,
+        input_bam_cache,
         reference_genome,
         aligner,
         aligner_reference,
@@ -299,7 +301,7 @@ def align_contigs(
             # call the aligner using subprocess
             blat_min_identity *= 100
             blat_options = kwargs.pop(
-                'blat_options', ["-stepSize=5", "-repMatch=2253", "-minScore=0", "-minIdentity={0}".format(blat_min_identity)])
+                'blat_options', ['-stepSize=5', '-repMatch=2253', '-minScore=0', '-minIdentity={0}'.format(blat_min_identity)])
             # call the blat subprocess
             # will raise subprocess.CalledProcessError if non-zero exit status
             # parameters from https://genome.ucsc.edu/FAQ/FAQblat.html#blat4
@@ -309,7 +311,7 @@ def align_contigs(
                 SUPPORTED_ALIGNER.BLAT, aligner_reference,
                 aligner_fa_input_file, aligner_output_file, '-out=pslx', '-noHead'] + blat_options)
             reads_by_query = process_blat_output(
-                INPUT_BAM_CACHE=INPUT_BAM_CACHE,
+                input_bam_cache=input_bam_cache,
                 query_id_mapping=query_id_mapping,
                 reference_genome=reference_genome,
                 aligner_output_file=aligner_output_file,
@@ -327,9 +329,9 @@ def align_contigs(
                 reads_by_query = {}
                 for read in samfile.fetch():
                     read = read_tools.SamRead.copy(read)
-                    read.reference_id = INPUT_BAM_CACHE.reference_id(read.reference_name)
+                    read.reference_id = input_bam_cache.reference_id(read.reference_name)
                     if read.is_paired:
-                        read.next_reference_id = INPUT_BAM_CACHE.reference_id(read.next_reference_name)
+                        read.next_reference_id = input_bam_cache.reference_id(read.next_reference_name)
                     read.cigar = cigar_tools.recompute_cigar_mismatch(read, reference_genome[read.reference_name])
                     query_seq = query_id_mapping[read.query_name]
                     reads_by_query.setdefault(query_seq, []).append(read)

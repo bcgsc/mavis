@@ -1,6 +1,7 @@
-from mavis.util import ChrListString, cast, get_env_variable, MavisNamespace, WeakMavisNamespace, ENV_VAR_PREFIX
-import unittest
 import os
+import unittest
+
+from mavis.util import cast, ChrListString, ENV_VAR_PREFIX, get_env_variable, MavisNamespace, WeakMavisNamespace
 
 
 class TestChrListString(unittest.TestCase):

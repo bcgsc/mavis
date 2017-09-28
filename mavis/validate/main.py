@@ -1,22 +1,23 @@
+import itertools
 import os
-import pysam
 import re
 import subprocess
 import uuid
-import itertools
-from ..bam.cache import BamCache
-from ..align import align_contigs
-from ..breakpoint import BreakpointPair
-from ..constants import PROTOCOL, COLUMNS
-from .call import call_events
-from .evidence import GenomeEvidence, TranscriptomeEvidence
+
+import pysam
+
 from .base import Evidence
+from .call import call_events
 from .constants import DEFAULTS
+from .evidence import GenomeEvidence, TranscriptomeEvidence
+from ..align import align_contigs
 from ..annotate.base import BioInterval
-from ..bam.read import get_samtools_version, samtools_v0_sort, samtools_v1_sort
 from ..bam import cigar as cigar_tools
-from ..util import read_inputs, log, output_tabbed_file, filter_on_overlap, write_bed_file
-from ..util import generate_complete_stamp, mkdirp
+from ..bam.cache import BamCache
+from ..bam.read import get_samtools_version, samtools_v0_sort, samtools_v1_sort
+from ..breakpoint import BreakpointPair
+from ..constants import COLUMNS, PROTOCOL
+from ..util import filter_on_overlap, generate_complete_stamp, log, mkdirp, output_tabbed_file, read_inputs, write_bed_file
 
 VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
 
@@ -43,18 +44,18 @@ def main(
         aligner_reference (str): path to the aligner reference file (e.g 2bit file for blat)
     """
     mkdirp(output)
-    FILENAME_PREFIX = re.sub('\.(txt|tsv|tab)$', '', os.path.basename(input))
-    RAW_EVIDENCE_BAM = os.path.join(output, FILENAME_PREFIX + '.raw_evidence.bam')
-    CONTIG_BAM = os.path.join(output, FILENAME_PREFIX + '.contigs.bam')
-    EVIDENCE_BED = os.path.join(output, FILENAME_PREFIX + '.evidence.bed')
+    filename_prefix = re.sub('\.(txt|tsv|tab)$', '', os.path.basename(input))
+    raw_evidence_bam = os.path.join(output, filename_prefix + '.raw_evidence.bam')
+    contig_bam = os.path.join(output, filename_prefix + '.contigs.bam')
+    evidence_bed = os.path.join(output, filename_prefix + '.evidence.bed')
 
-    PASSED_OUTPUT_FILE = os.path.join(output, FILENAME_PREFIX + VALIDATION_PASS_SUFFIX)
-    PASSED_BED_FILE = os.path.join(output, FILENAME_PREFIX + '.validation-passed.bed')
-    FAILED_OUTPUT_FILE = os.path.join(output, FILENAME_PREFIX + '.validation-failed.tab')
-    CONTIG_ALIGNER_FA = os.path.join(output, FILENAME_PREFIX + '.contigs.fa')
-    CONTIG_ALIGNER_OUTPUT = os.path.join(output, FILENAME_PREFIX + '.contigs.blat_out.pslx')
-    IGV_BATCH_FILE = os.path.join(output, FILENAME_PREFIX + '.igv.batch')
-    INPUT_BAM_CACHE = BamCache(bam_file, stranded_bam)
+    passed_output_file = os.path.join(output, filename_prefix + VALIDATION_PASS_SUFFIX)
+    passed_bed_file = os.path.join(output, filename_prefix + '.validation-passed.bed')
+    failed_output_file = os.path.join(output, filename_prefix + '.validation-failed.tab')
+    contig_aligner_fa = os.path.join(output, filename_prefix + '.contigs.fa')
+    contig_aligner_output = os.path.join(output, filename_prefix + '.contigs.blat_out.pslx')
+    igv_batch_file = os.path.join(output, filename_prefix + '.igv.batch')
+    input_bam_cache = BamCache(bam_file, stranded_bam)
 
     if samtools_version is None:
         samtools_version = get_samtools_version()
@@ -73,7 +74,7 @@ def main(
         if bpp.data[COLUMNS.protocol] == PROTOCOL.GENOME:
             e = GenomeEvidence(
                 bpp.break1, bpp.break2,
-                INPUT_BAM_CACHE,
+                input_bam_cache,
                 reference_genome,
                 opposing_strands=bpp.opposing_strands,
                 stranded=bpp.stranded,
@@ -89,7 +90,7 @@ def main(
             e = TranscriptomeEvidence(
                 annotations,
                 bpp.break1, bpp.break2,
-                INPUT_BAM_CACHE,
+                input_bam_cache,
                 reference_genome,
                 opposing_strands=bpp.opposing_strands,
                 stranded=bpp.stranded,
@@ -146,13 +147,13 @@ def main(
         for contig in e.contigs:
             log('>', contig.seq, time_stamp=False)
 
-    log('will output:', CONTIG_ALIGNER_FA, CONTIG_ALIGNER_OUTPUT)
+    log('will output:', contig_aligner_fa, contig_aligner_output)
     align_contigs(
         evidence_clusters,
-        INPUT_BAM_CACHE,
+        input_bam_cache,
         reference_genome=reference_genome,
-        aligner_fa_input_file=CONTIG_ALIGNER_FA,
-        aligner_output_file=CONTIG_ALIGNER_OUTPUT,
+        aligner_fa_input_file=contig_aligner_fa,
+        aligner_output_file=contig_aligner_output,
         clean_files=False,
         aligner=kwargs.get(
             'aligner', DEFAULTS.aligner),
@@ -175,7 +176,7 @@ def main(
     log('alignment complete')
     event_calls = []
     total_pass = 0
-    write_bed_file(EVIDENCE_BED, itertools.chain.from_iterable([e.get_bed_repesentation() for e in evidence_clusters]))
+    write_bed_file(evidence_bed, itertools.chain.from_iterable([e.get_bed_repesentation() for e in evidence_clusters]))
     for index, e in enumerate(evidence_clusters):
         print()
         log('({} of {}) calling events for:'.format
@@ -227,12 +228,12 @@ def main(
             COLUMNS.break2_homologous_seq: b2_homseq,
         })
     log('{} putative calls resulted in {} events with 1 or more event call'.format(len(evidence_clusters), total_pass))
-    output_tabbed_file(event_calls, PASSED_OUTPUT_FILE)
-    output_tabbed_file(filtered_evidence_clusters, FAILED_OUTPUT_FILE)
-    write_bed_file(PASSED_BED_FILE, itertools.chain.from_iterable([e.get_bed_repesentation() for e in event_calls]))
+    output_tabbed_file(event_calls, passed_output_file)
+    output_tabbed_file(filtered_evidence_clusters, failed_output_file)
+    write_bed_file(passed_bed_file, itertools.chain.from_iterable([e.get_bed_repesentation() for e in event_calls]))
 
-    with pysam.AlignmentFile(CONTIG_BAM, 'wb', template=INPUT_BAM_CACHE.fh) as fh:
-        log('writing:', CONTIG_BAM)
+    with pysam.AlignmentFile(contig_bam, 'wb', template=input_bam_cache.fh) as fh:
+        log('writing:', contig_bam)
         for ev in evidence_clusters:
             for c in ev.contigs:
                 for read1, read2 in c.alignments:
@@ -243,8 +244,8 @@ def main(
                         fh.write(read2)
 
     # write the evidence
-    with pysam.AlignmentFile(RAW_EVIDENCE_BAM, 'wb', template=INPUT_BAM_CACHE.fh) as fh:
-        log('writing:', RAW_EVIDENCE_BAM)
+    with pysam.AlignmentFile(raw_evidence_bam, 'wb', template=input_bam_cache.fh) as fh:
+        log('writing:', raw_evidence_bam)
         reads = set()
         for ev in evidence_clusters:
             temp = ev.supporting_reads()
@@ -253,36 +254,36 @@ def main(
             read.cigar = cigar_tools.convert_for_igv(read.cigar)
             fh.write(read)
     # now sort the contig bam
-    sort = re.sub('.bam$', '.sorted.bam', CONTIG_BAM)
-    log('sorting the bam file:', CONTIG_BAM)
+    sort = re.sub('.bam$', '.sorted.bam', contig_bam)
+    log('sorting the bam file:', contig_bam)
     if samtools_version <= (1, 2, 0):
-        subprocess.call(samtools_v0_sort(CONTIG_BAM, sort), shell=True)
+        subprocess.call(samtools_v0_sort(contig_bam, sort), shell=True)
     else:
-        subprocess.call(samtools_v1_sort(CONTIG_BAM, sort), shell=True)
-    CONTIG_BAM = sort
-    log('indexing the sorted bam:', CONTIG_BAM)
-    subprocess.call(['samtools', 'index', CONTIG_BAM])
+        subprocess.call(samtools_v1_sort(contig_bam, sort), shell=True)
+    contig_bam = sort
+    log('indexing the sorted bam:', contig_bam)
+    subprocess.call(['samtools', 'index', contig_bam])
 
     # then sort the evidence bam file
-    sort = re.sub('.bam$', '.sorted.bam', RAW_EVIDENCE_BAM)
-    log('sorting the bam file:', RAW_EVIDENCE_BAM)
+    sort = re.sub('.bam$', '.sorted.bam', raw_evidence_bam)
+    log('sorting the bam file:', raw_evidence_bam)
     if samtools_version <= (1, 2, 0):
-        subprocess.call(samtools_v0_sort(RAW_EVIDENCE_BAM, sort), shell=True)
+        subprocess.call(samtools_v0_sort(raw_evidence_bam, sort), shell=True)
     else:
-        subprocess.call(samtools_v1_sort(RAW_EVIDENCE_BAM, sort), shell=True)
-    RAW_EVIDENCE_BAM = sort
-    log('indexing the sorted bam:', RAW_EVIDENCE_BAM)
-    subprocess.call(['samtools', 'index', RAW_EVIDENCE_BAM])
+        subprocess.call(samtools_v1_sort(raw_evidence_bam, sort), shell=True)
+    raw_evidence_bam = sort
+    log('indexing the sorted bam:', raw_evidence_bam)
+    subprocess.call(['samtools', 'index', raw_evidence_bam])
 
     # write the igv batch file
-    with open(IGV_BATCH_FILE, 'w') as fh:
-        log('writing:', IGV_BATCH_FILE)
+    with open(igv_batch_file, 'w') as fh:
+        log('writing:', igv_batch_file)
         fh.write('new\ngenome {}\n'.format(reference_genome_filename))
 
-        fh.write('load {} name="{}"\n'.format(PASSED_BED_FILE, 'passed events'))
-        fh.write('load {} name="{}"\n'.format(CONTIG_BAM, 'aligned contigs'))
-        fh.write('load {} name="{}"\n'.format(EVIDENCE_BED, 'evidence windows'))
-        fh.write('load {} name="{}"\n'.format(RAW_EVIDENCE_BAM, 'raw evidence'))
+        fh.write('load {} name="{}"\n'.format(passed_bed_file, 'passed events'))
+        fh.write('load {} name="{}"\n'.format(contig_bam, 'aligned contigs'))
+        fh.write('load {} name="{}"\n'.format(evidence_bed, 'evidence windows'))
+        fh.write('load {} name="{}"\n'.format(raw_evidence_bam, 'raw evidence'))
         fh.write('load {} name="{} {} input"\n'.format(bam_file, library, protocol))
 
-    generate_complete_stamp(output, log, prefix=FILENAME_PREFIX + '.')
+    generate_complete_stamp(output, log, prefix=filename_prefix + '.')

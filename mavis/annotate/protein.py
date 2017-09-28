@@ -1,11 +1,12 @@
-from ..interval import Interval
-from .base import BioInterval
-from ..constants import translate, START_AA, STOP_AA, CODON_SIZE
 import itertools
+
+from .base import BioInterval
+from ..constants import CODON_SIZE, START_AA, STOP_AA, translate
 from ..error import NotSpecifiedError
+from ..interval import Interval
 
 
-def calculate_ORF(spliced_cdna_sequence, min_orf_size=None):
+def calculate_orf(spliced_cdna_sequence, min_orf_size=None):
     """
     calculate all possible open reading frames given a spliced cdna sequence (no introns)
 
@@ -87,13 +88,13 @@ class Domain:
         """:class:`tuple`: a tuple representing the items expected to be unique. for hashing and comparing"""
         return tuple([self.name, self.translation])
 
-    def score_region_mapping(self, REFERENCE_GENOME=None):
+    def score_region_mapping(self, reference_genome=None):
         """
         compares the sequence in each DomainRegion to the sequence collected for that domain region from the
         translation object
 
         Args:
-            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
+            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
                 by template/chr name
 
         Returns:
@@ -103,7 +104,7 @@ class Domain:
                 - int: the total number of amino acids
         """
         if self.translation:
-            aa = self.translation.get_AA_seq(REFERENCE_GENOME)
+            aa = self.translation.get_aa_seq(reference_genome)
             total = 0
             matches = 0
             for region in self.regions:
@@ -118,13 +119,13 @@ class Domain:
         else:
             raise NotSpecifiedError('insufficient sequence information')
 
-    def get_seqs(self, REFERENCE_GENOME=None, ignore_cache=False):
+    def get_seqs(self, reference_genome=None, ignore_cache=False):
         """
         returns the amino acid sequences for each of the domain regions associated with
         this domain in the order of the regions (sorted by start)
 
         Args:
-            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
+            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
                 by template/chr name
 
         Returns:
@@ -140,7 +141,7 @@ class Domain:
                     sequences[region] = region.seq
         if any([r not in sequences for r in self.regions]):
             if self.translation:
-                aa = self.translation.get_AA_seq(REFERENCE_GENOME)
+                aa = self.translation.get_aa_seq(reference_genome)
                 for region in self.regions:
                     s = aa[region.start - 1:region.end]
                     if region not in sequences:
@@ -149,7 +150,7 @@ class Domain:
                 raise NotSpecifiedError('insufficient sequence information')
         return [sequences[r] for r in self.regions]
 
-    def align_seq(self, input_sequence, REFERENCE_GENOME=None, min_region_match=0.5):
+    def align_seq(self, input_sequence, reference_genome=None, min_region_match=0.5):
         """
         align each region to the input sequence starting with the last one.
         then take the subset of sequence that remains to align the second last and so on
@@ -158,7 +159,7 @@ class Domain:
 
         Args:
             input_sequence (str): the sequence to be aligned to
-            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
+            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
                 by template/chr name
             min_region_match (float): percent between 0 and 1. Each region must have a score len(seq) * min_region_match
 
@@ -173,7 +174,7 @@ class Domain:
             AttributeError: if sequence information is not available
             UserWarning: if a valid alignment could not be found or no best alignment was found
         """
-        seq_list = self.get_seqs(REFERENCE_GENOME)
+        seq_list = self.get_seqs(reference_genome)
 
         dr_by_seq = {s: d for s, d in zip(seq_list, self.regions)}
         seq_list = sorted(seq_list, key=lambda x: dr_by_seq[x].start)
@@ -366,10 +367,10 @@ class Translation(BioInterval):
             return '*{}{}'.format(c - len(self), sc)
         return '{}{}'.format(c, sc)
 
-    def get_cds_seq(self, REFERENCE_GENOME=None, ignore_cache=False):
+    def get_cds_seq(self, reference_genome=None, ignore_cache=False):
         """
         Args:
-            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
+            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
                 by template/chr name
 
         Returns:
@@ -381,24 +382,24 @@ class Translation(BioInterval):
         if self.seq and not ignore_cache:
             return self.seq
         elif self.transcript and self.transcript.get_strand():
-            seq = self.transcript.get_seq(REFERENCE_GENOME, ignore_cache)
+            seq = self.transcript.get_seq(reference_genome, ignore_cache)
             return seq[self.start - 1:self.end]
         raise NotSpecifiedError('insufficient seq information')
 
-    def get_seq(self, REFERENCE_GENOME=None, ignore_cache=False):
+    def get_seq(self, reference_genome=None, ignore_cache=False):
         """
         wrapper for the sequence method
 
         Args:
-            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
+            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
                 by template/chr name
         """
-        return self.get_cds_seq(REFERENCE_GENOME, ignore_cache)
+        return self.get_cds_seq(reference_genome, ignore_cache)
 
-    def get_AA_seq(self, REFERENCE_GENOME=None, ignore_cache=False):
+    def get_aa_seq(self, reference_genome=None, ignore_cache=False):
         """
         Args:
-            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
+            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
                 by template/chr name
 
         Returns:
@@ -407,7 +408,7 @@ class Translation(BioInterval):
         Raises:
             AttributeError: if the reference sequence has not been given and is not set
         """
-        cds = self.get_cds_seq(REFERENCE_GENOME, ignore_cache)
+        cds = self.get_cds_seq(reference_genome, ignore_cache)
         return translate(cds)
 
     def key(self):

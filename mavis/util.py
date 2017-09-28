@@ -1,15 +1,16 @@
+from argparse import Namespace
 from datetime import datetime
 import errno
+from glob import glob
 import os
 import re
-from .breakpoint import read_bpp_from_input_file
-from .constants import PROTOCOL, COLUMNS, sort_columns
-from .interval import Interval
-from argparse import Namespace
-from TSV.TSV import EmptyFileError, tsv_boolean
-from braceexpand import braceexpand
-from glob import glob
 
+from braceexpand import braceexpand
+from TSV.TSV import EmptyFileError, tsv_boolean
+
+from .breakpoint import read_bpp_from_input_file
+from .constants import COLUMNS, PROTOCOL, sort_columns
+from .interval import Interval
 
 ENV_VAR_PREFIX = 'MAVIS_'
 

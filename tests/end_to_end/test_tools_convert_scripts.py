@@ -1,8 +1,8 @@
-import tempfile
-import shutil
-import unittest
 import os
+import shutil
 import subprocess
+import tempfile
+import unittest
 
 
 script_prefix = os.path.join(os.path.dirname(__file__), './../../tools')
@@ -67,5 +67,6 @@ def tearDownModule():
     # remove the temp directory and outputs
     shutil.rmtree(temp_output)
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     unittest.main()

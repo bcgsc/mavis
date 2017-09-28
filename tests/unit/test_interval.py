@@ -1,5 +1,5 @@
-from mavis.interval import Interval, IntervalMapping
 import unittest
+from mavis.interval import Interval, IntervalMapping
 
 
 class TestInterval(unittest.TestCase):

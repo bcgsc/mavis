@@ -20,4 +20,4 @@ Algorithm Overview
 TODO
 
 """
-from .summary import filter_by_evidence, group_events, filter_by_annotations, annotate_dgv, filter_by_call_method
+from .summary import annotate_dgv, filter_by_annotations, filter_by_call_method, filter_by_evidence, group_events

@@ -1,18 +1,15 @@
-from mavis.blat import *
-from mavis.interval import Interval
-from mavis.annotate import load_reference_genome
-from mavis.constants import ORIENT, CIGAR
-from mavis.bam.cache import BamCache
-from mavis.assemble import Contig
-from mavis.breakpoint import Breakpoint
-from mavis.validate.evidence import GenomeEvidence
-from mavis.align import query_coverage_interval
-
-import unittest
 import shutil
+import unittest
+
 from Bio import SeqIO
-from . import REFERENCE_GENOME_FILE, REFERENCE_GENOME_FILE_2BIT
-from . import BLAT_INPUT, BLAT_OUTPUT, BAM_INPUT, MockBamFileHandle
+from mavis.align import query_coverage_interval
+from mavis.annotate.file_io import load_reference_genome
+from mavis.bam.cache import BamCache
+from mavis.blat import Blat
+from mavis.constants import CIGAR, reverse_complement
+from mavis.interval import Interval
+
+from . import BAM_INPUT, BLAT_INPUT, BLAT_OUTPUT, MockBamFileHandle, REFERENCE_GENOME_FILE
 
 
 REFERENCE_GENOME = None
@@ -267,7 +264,7 @@ class TestBlat(unittest.TestCase):
         self.assertEqual(Interval(117, 244), query_coverage_interval(read2))
         self.assertEqual(read1.query_sequence, reverse_complement(read2.query_sequence))
 
-    @unittest.skipIf(not shutil.which('blat'), "missing the blat command")
+    @unittest.skipIf(not shutil.which('blat'), 'missing the blat command')
     def test_pslx_row_to_pysam_duplication(self):
         raise unittest.SkipTest('TODO')
         """

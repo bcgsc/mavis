@@ -1,19 +1,19 @@
+import glob
+import os
+import re
+import shutil
 from tempfile import mkdtemp
 import unittest
-import shutil
-import pysam
-import re
-import os
-import glob
-from . import REFERENCE_GENOME_FILE, FULL_REFERENCE_ANNOTATIONS_FILE_JSON, TEMPLATE_METADATA_FILE
-from . import FULL_BAM_INPUT, TRANSCRIPTOME_BAM_INPUT, FULL_BASE_EVENTS, REFERENCE_GENOME_FILE_2BIT
-from . import RUN_FULL
-from mavis.annotate.file_io import load_templates, load_reference_genes, load_reference_genome
-from mavis.cluster.main import main as cluster_main
-from mavis.validate.main import main as validate_main
+
+from mavis.annotate.file_io import load_reference_genes, load_reference_genome, load_templates
 from mavis.annotate.main import main as annotate_main
+from mavis.cluster.main import main as cluster_main
 from mavis.constants import DISEASE_STATUS, PROTOCOL
 from mavis.util import ChrListString
+from mavis.validate.main import main as validate_main
+import pysam
+
+from . import FULL_BAM_INPUT, FULL_BASE_EVENTS, FULL_REFERENCE_ANNOTATIONS_FILE_JSON, REFERENCE_GENOME_FILE, REFERENCE_GENOME_FILE_2BIT, RUN_FULL, TEMPLATE_METADATA_FILE, TRANSCRIPTOME_BAM_INPUT
 
 annotations = None
 reference_genome = None
@@ -47,7 +47,7 @@ class TestPipeline(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.output)
 
-    @unittest.skipIf(not shutil.which('blat'), "missing the blat command")
+    @unittest.skipIf(not shutil.which('blat'), 'missing the blat command')
     def test_mains(self):
         # test the clustering
         cluster_files = cluster_main(

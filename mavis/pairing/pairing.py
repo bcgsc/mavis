@@ -1,8 +1,8 @@
 from ..annotate.variant import determine_prime
-from ..interval import Interval
-from ..constants import STRAND, PRIME, CALL_METHOD, COLUMNS, ORIENT, PROTOCOL
-from ..error import NotSpecifiedError
 from ..breakpoint import Breakpoint
+from ..constants import CALL_METHOD, COLUMNS, ORIENT, PRIME, PROTOCOL, STRAND
+from ..error import NotSpecifiedError
+from ..interval import Interval
 
 
 def predict_transcriptome_breakpoint(breakpoint, transcript):
@@ -12,7 +12,7 @@ def predict_transcriptome_breakpoint(breakpoint, transcript):
 
     Args:
         breakpoint (Breakpoint): the genomic breakpoint
-        transcript (usTranscript): the transcript
+        transcript (UsTranscript): the transcript
 
     see :ref:`theory - pairing similar events <theory-pairing-similar-events>`
     """
@@ -89,10 +89,10 @@ def predict_transcriptome_breakpoint(breakpoint, transcript):
     return sorted(tbreaks)
 
 
-def equivalent_events(ev1, ev2, reference_transcripts, DISTANCES=None, product_sequences=None):
+def equivalent_events(ev1, ev2, reference_transcripts, distances=None, product_sequences=None):
     temp = {CALL_METHOD.CONTIG: 0, CALL_METHOD.SPLIT: 10, CALL_METHOD.FLANK: 0}
-    temp.update(DISTANCES if DISTANCES else {})
-    DISTANCES = temp
+    temp.update(distances if distances else {})
+    distances = temp
 
     product_sequences = dict() if product_sequences is None else product_sequences
     # basic checks
@@ -114,7 +114,7 @@ def equivalent_events(ev1, ev2, reference_transcripts, DISTANCES=None, product_s
         ev1.data[COLUMNS.call_method],
         ev2.data[COLUMNS.call_method],
     ])
-    max_distance = max([DISTANCES[m] for m in methods])
+    max_distance = max([distances[m] for m in methods])
 
     if ev1.data[COLUMNS.fusion_sequence_fasta_id] and ev2.data[COLUMNS.fusion_sequence_fasta_id]:
         fusion1 = product_sequences[ev1.data[COLUMNS.fusion_sequence_fasta_id]]

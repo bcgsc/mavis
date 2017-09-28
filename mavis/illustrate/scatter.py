@@ -33,12 +33,12 @@ class ScatterPlot:
         self.title = title
 
 
-def draw_scatter(DS, canvas, plot, xmapping):
+def draw_scatter(ds, canvas, plot, xmapping):
     """
     given a xmapping, draw the scatter plot svg group
 
     Args:
-        DS (DiagramSettings): the settings/constants to use for building the svg
+        ds (DiagramSettings): the settings/constants to use for building the svg
         canvas (svgwrite.canvas): the svgwrite object used to create new svg elements
         plot (ScatterPlot): the plot to be drawn
         xmapping (:class:`dict` of :class:`Interval` by :class:`Interval`):
@@ -65,24 +65,24 @@ def draw_scatter(DS, canvas, plot, xmapping):
     for x, y in zip(xpx, ypx):
         xp, xpo = x
         yp, ypo = y
-        if xp.length() > DS.scatter_marker_radius:
+        if xp.length() > ds.scatter_marker_radius:
             plot_group.add(canvas.line(
                 (xp.start, yp.center),
                 (xp.end, yp.center),
                 stroke='#000000',
-                stroke_width=DS.scatter_error_bar_stroke_width
+                stroke_width=ds.scatter_error_bar_stroke_width
             ))
-        if yp.length() > DS.scatter_marker_radius:
+        if yp.length() > ds.scatter_marker_radius:
             plot_group.add(canvas.line(
                 (xp.center, yp.start),
                 (xp.center, yp.end),
                 stroke='#000000',
-                stroke_width=DS.scatter_error_bar_stroke_width
+                stroke_width=ds.scatter_error_bar_stroke_width
             ))
         plot_group.add(canvas.circle(
             center=(xp.center, yp.center),
             fill=plot.colors.get((xpo, ypo), '#000000'),
-            r=DS.scatter_marker_radius
+            r=ds.scatter_marker_radius
         ))
 
     xmax = Interval.convert_ratioed_pos(xmapping, plot.xmax).end
@@ -106,7 +106,7 @@ def draw_scatter(DS, canvas, plot, xmapping):
         py = plot.height - abs(y - plot.ymin) * yratio
         plot_group.add(
             canvas.line(
-                start=(0 - DS.scatter_yaxis_tick_size, py),
+                start=(0 - ds.scatter_yaxis_tick_size, py),
                 end=(0, py),
                 stroke='#000000'
             ))
@@ -114,25 +114,25 @@ def draw_scatter(DS, canvas, plot, xmapping):
             canvas.text(
                 str(y),
                 insert=(
-                    0 - DS.scatter_yaxis_tick_size - DS.padding,
-                    py + DS.scatter_ytick_font_size * DS.font_central_shift_ratio),
-                fill=DS.label_color,
-                style=DS.font_style.format(font_size=DS.scatter_ytick_font_size, text_anchor='end')
+                    0 - ds.scatter_yaxis_tick_size - ds.padding,
+                    py + ds.scatter_ytick_font_size * ds.font_central_shift_ratio),
+                fill=ds.label_color,
+                style=ds.font_style.format(font_size=ds.scatter_ytick_font_size, text_anchor='end')
             ))
 
     shift = max(ytick_labels)
-    x = 0 - DS.padding * 2 - DS.scatter_axis_font_size - DS.scatter_yaxis_tick_size - \
-        DS.scatter_ytick_font_size * DS.font_width_height_ratio * shift
+    x = 0 - ds.padding * 2 - ds.scatter_axis_font_size - ds.scatter_yaxis_tick_size - \
+        ds.scatter_ytick_font_size * ds.font_width_height_ratio * shift
     y = plot.height / 2
     yaxis = canvas.text(
         plot.y_axis_label,
         insert=(x, y),
-        fill=DS.label_color,
-        style=DS.font_style.format(font_size=DS.scatter_axis_font_size, text_anchor='start'),
+        fill=ds.label_color,
+        style=ds.font_style.format(font_size=ds.scatter_axis_font_size, text_anchor='start'),
         class_='y_axis_label'
     )
     plot_group.add(yaxis)
-    cx = len(plot.y_axis_label) * DS.font_width_height_ratio * DS.scatter_axis_font_size / 2
+    cx = len(plot.y_axis_label) * ds.font_width_height_ratio * ds.scatter_axis_font_size / 2
     yaxis.rotate(270, (x + cx, y))
     yaxis.translate(0, 0)
 

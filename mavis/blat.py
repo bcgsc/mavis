@@ -11,16 +11,18 @@ strand (even when the match is on the reverse strand). However on the qStarts[] 
 
 """
 import math
+import re
 import subprocess
 import warnings
-import re
+
 import TSV
-from .constants import CIGAR, DNA_ALPHABET, STRAND, reverse_complement, NA_MAPPING_QUALITY, PYSAM_READ_FLAGS
-from .bam import cigar as cigar_tools
-from .bam.read import SamRead
-from .bam.cigar import QUERY_ALIGNED_STATES
-from .interval import Interval
+
 from .align import query_coverage_interval, SUPPORTED_ALIGNER
+from .bam import cigar as cigar_tools
+from .bam.cigar import QUERY_ALIGNED_STATES
+from .bam.read import SamRead
+from .constants import CIGAR, DNA_ALPHABET, NA_MAPPING_QUALITY, PYSAM_READ_FLAGS, reverse_complement, STRAND
+from .interval import Interval
 from .util import devnull
 
 
@@ -316,7 +318,7 @@ def get_blat_version():
 
 
 def process_blat_output(
-        INPUT_BAM_CACHE,
+        input_bam_cache,
         query_id_mapping,
         reference_genome,
         aligner_output_file='aligner_out.temp',
@@ -364,7 +366,7 @@ def process_blat_output(
                 break
             row['rank'] = score_ranks[row['score']]
             try:
-                read = Blat.pslx_row_to_pysam(row, INPUT_BAM_CACHE, reference_genome)
+                read = Blat.pslx_row_to_pysam(row, input_bam_cache, reference_genome)
             except KeyError as e:
                 warnings.warn(
                     'warning: reference template name not recognized {0}'.format(e))

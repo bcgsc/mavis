@@ -1,36 +1,36 @@
 #!python
-import os
-import re
-import sys
-import random
 import argparse
-import TSV
+from datetime import datetime
 import glob
-import time
+import math
+import os
+import random
+import re
 import subprocess
-from .annotate import load_annotations, load_reference_genome, load_masking_regions, load_templates
-from .validate.main import main as validate_main
-from .cluster.main import main as cluster_main
-from .pairing.main import main as pairing_main
-from .annotate.main import main as annotate_main
-from .summary.main import main as summary_main
+import sys
+import time
+
+import TSV
+
 from . import __version__
-
-from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
-from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from .annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
-from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
-from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
-from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
-
-from .config import augment_parser, write_config, LibraryConfig, MavisConfig, get_env_variable
-from .util import log, mkdirp, log_arguments, output_tabbed_file, bash_expands, MavisNamespace
-from .constants import PROTOCOL, PIPELINE_STEP, DISEASE_STATUS
+from .annotate.file_io import load_annotations, load_masking_regions, load_reference_genome, load_templates
+from .annotate.main import main as annotate_main
 from .bam.read import get_samtools_version
 from .blat import get_blat_version
+from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
+from .cluster.main import main as cluster_main
+from .config import augment_parser, get_env_variable, LibraryConfig, MavisConfig, write_config
+from .constants import DISEASE_STATUS, PIPELINE_STEP, PROTOCOL
+from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
+from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
+from .pairing.main import main as pairing_main
+from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
+from .summary.main import main as summary_main
 from .tools import convert_tool_output, SUPPORTED_TOOL
-import math
-from datetime import datetime
+from .util import bash_expands, log, log_arguments, MavisNamespace, mkdirp, output_tabbed_file
+from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
+from .validate.main import main as validate_main
 
 
 VALIDATION_PASS_SUFFIX = '.validation-passed.tab'

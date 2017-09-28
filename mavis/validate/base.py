@@ -1,14 +1,14 @@
 import itertools
-from ..constants import STRAND, ORIENT, PYSAM_READ_FLAGS, CIGAR, SVTYPE, \
-    reverse_complement, NA_MAPPING_QUALITY, COLUMNS, PROTOCOL
-from ..error import NotSpecifiedError
+
 from .constants import DEFAULTS
 from ..assemble import assemble
-from ..interval import Interval
-from ..breakpoint import BreakpointPair
-from ..bam import read as read_tools
 from ..bam import cigar as cigar_tools
+from ..bam import read as read_tools
 from ..bam.cache import BamCache
+from ..breakpoint import BreakpointPair
+from ..constants import CIGAR, COLUMNS, NA_MAPPING_QUALITY, ORIENT, PROTOCOL, PYSAM_READ_FLAGS, reverse_complement, STRAND, SVTYPE
+from ..error import NotSpecifiedError
+from ..interval import Interval
 from ..util import devnull
 
 
@@ -94,7 +94,7 @@ class Evidence(BreakpointPair):
             self,
             break1, break2,
             bam_cache,
-            REFERENCE_GENOME,
+            reference_genome,
             read_length,
             stdev_fragment_size,
             median_fragment_size,
@@ -108,7 +108,7 @@ class Evidence(BreakpointPair):
         Args:
             breakpoint_pair (BreakpointPair): the breakpoint pair to collect evidence for
             bam_cache (BamCache): the bam cache (and assc file) to collect evidence from
-            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`):
+            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`):
               dict of reference sequence by template/chr name
             data (dict): a dictionary of data to associate with the evidence object
             classification (SVTYPE): the event type
@@ -140,7 +140,7 @@ class Evidence(BreakpointPair):
 
         self.bam_cache = bam_cache
         self.classification = classification
-        self.REFERENCE_GENOME = REFERENCE_GENOME
+        self.reference_genome = reference_genome
         self.read_length = read_length
         self.stdev_fragment_size = stdev_fragment_size
         self.median_fragment_size = median_fragment_size
@@ -194,7 +194,7 @@ class Evidence(BreakpointPair):
         # recalculate the read cigar string to ensure M is replaced with = or X
         c = cigar_tools.recompute_cigar_mismatch(
             read,
-            self.REFERENCE_GENOME[self.bam_cache.get_read_reference_name(read)].seq
+            self.reference_genome[self.bam_cache.get_read_reference_name(read)].seq
         )
         prefix = 0
         try:
@@ -206,7 +206,7 @@ class Evidence(BreakpointPair):
 
         # makes sure all insertions are called as far 'right' as possible
         read.cigar = cigar_tools.hgvs_standardize_cigar(
-            read, self.REFERENCE_GENOME[self.bam_cache.get_read_reference_name(read)].seq)
+            read, self.reference_genome[self.bam_cache.get_read_reference_name(read)].seq)
         return read
 
     def putative_event_types(self):
@@ -556,7 +556,7 @@ class Evidence(BreakpointPair):
 
         # try mapping the soft-clipped portion to the other breakpoint
         w = (opposite_window[0], opposite_window[1])
-        opposite_breakpoint_ref = self.REFERENCE_GENOME[opposite_breakpoint.chr].seq[w[0] - 1: w[1]]
+        opposite_breakpoint_ref = self.reference_genome[opposite_breakpoint.chr].seq[w[0] - 1: w[1]]
 
         putative_alignments = None
 

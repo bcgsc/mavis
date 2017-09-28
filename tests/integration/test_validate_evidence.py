@@ -1,19 +1,21 @@
+import unittest
+
+from mavis.annotate.genomic import Gene, Transcript, UsTranscript
+from mavis.bam.cache import BamCache
 from mavis.breakpoint import Breakpoint
-from mavis.annotate import Gene, usTranscript, Transcript
 from mavis.constants import ORIENT, STRAND
 from mavis.interval import Interval
-from mavis.bam.cache import BamCache
-from . import MockRead, mock_read_pair
-import unittest
-from . import MockBamFileHandle
 from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
+
+from . import mock_read_pair, MockBamFileHandle, MockRead
+
 
 REFERENCE_GENOME = None
 
 
 class TestComputeExonicDistance(unittest.TestCase):
     def setUp(self):
-        self.t1 = usTranscript([(1001, 1100), (1501, 1600), (2001, 2100), (2201, 2300)], strand='+')
+        self.t1 = UsTranscript([(1001, 1100), (1501, 1600), (2001, 2100), (2201, 2300)], strand='+')
 
     def test_intergenic_exonic(self):
         d = TranscriptomeEvidence.compute_exonic_distance(101, 1550, [self.t1])
@@ -32,7 +34,7 @@ class TestComputeExonicDistance(unittest.TestCase):
         self.assertEqual(Interval(1000, 1300), d)
 
     def test_empty_intron(self):
-        t2 = usTranscript([(1001, 1100), (1501, 1600), (2001, 2200), (2201, 2300)], strand='+')
+        t2 = UsTranscript([(1001, 1100), (1501, 1600), (2001, 2200), (2201, 2300)], strand='+')
         d = TranscriptomeEvidence.compute_exonic_distance(1001, 2300, [self.t1, t2])
         self.assertEqual(Interval(400, 1300), d)
 
@@ -87,7 +89,7 @@ class TestComputeFragmentSizes(unittest.TestCase):
 class TestTraverseExonicDistance(unittest.TestCase):
 
     def setUp(self):
-        self.ust1 = usTranscript([(1001, 1100), (1301, 1400), (1701, 1800)], strand=STRAND.POS)
+        self.ust1 = UsTranscript([(1001, 1100), (1301, 1400), (1701, 1800)], strand=STRAND.POS)
 
     def test_left_before_transcript(self):
         gpos = TranscriptomeEvidence.traverse_exonic_distance(900, 500, ORIENT.LEFT, [self.ust1])
@@ -143,7 +145,7 @@ class TestTranscriptomeEvidenceWindow(unittest.TestCase):
     def setUp(self):
         self.annotations = {}
         gene = Gene('1', 1, 9999, name='KRAS', strand=STRAND.POS)
-        self.ust = usTranscript(gene=gene, exons=[(1001, 1100), (1401, 1500), (1701, 1750), (3001, 4000)])
+        self.ust = UsTranscript(gene=gene, exons=[(1001, 1100), (1401, 1500), (1701, 1750), (3001, 4000)])
         gene.unspliced_transcripts.append(self.ust)
         for spl in self.ust.generate_splicing_patterns():
             t = Transcript(self.ust, spl)
@@ -204,7 +206,7 @@ class TestTranscriptomeEvidenceWindow(unittest.TestCase):
         #  [(1001, 1100), (1401, 1500), (1701, 1750), (3001, 4000)])
         b = Breakpoint(chr='1', start=1150, orient=ORIENT.RIGHT)
         gene = self.annotations['1'][0]
-        t2 = usTranscript(gene=gene, exons=[(1001, 1100), (1200, 1300), (2100, 2200)])
+        t2 = UsTranscript(gene=gene, exons=[(1001, 1100), (1200, 1300), (2100, 2200)])
         gene.transcripts.append(t2)
         # 989 - 2561
         # 989 - 3411
@@ -212,7 +214,7 @@ class TestTranscriptomeEvidenceWindow(unittest.TestCase):
 
     def test_many_small_exons(self):
         g = Gene('fake', 17271277, 17279592, strand='+')
-        ust = usTranscript(
+        ust = UsTranscript(
             gene=g,
             exons=[
                 (17271277, 17271984),

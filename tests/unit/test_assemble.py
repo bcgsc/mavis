@@ -1,6 +1,8 @@
-from mavis.constants import *
-from mavis.assemble import *
+import itertools
 import unittest
+
+from mavis.assemble import assemble, Contig, DeBruijnGraph, filter_contigs, kmers
+from mavis.constants import DNA_ALPHABET
 
 
 class TestModule(unittest.TestCase):
@@ -83,45 +85,45 @@ class TestFilterContigs(unittest.TestCase):
 class TestDeBruijnGraph(unittest.TestCase):
 
     def test_trim_tails_by_freq_forks(self):
-        G = DeBruijnGraph()
+        g = DeBruijnGraph()
         for s, t in itertools.combinations([1, 2, 3, 4, 5, 6], 2):
-            G.add_edge(s, t)
-        G.add_node(10)  # singlet
-        G.add_edge(7, 6)
-        G.add_edge(8, 7)
-        G.add_edge(9, 8)
-        G.trim_tails_by_freq(2)
-        self.assertEqual([1, 2, 3, 4, 5, 6], sorted(G.nodes()))
+            g.add_edge(s, t)
+        g.add_node(10)  # singlet
+        g.add_edge(7, 6)
+        g.add_edge(8, 7)
+        g.add_edge(9, 8)
+        g.trim_tails_by_freq(2)
+        self.assertEqual([1, 2, 3, 4, 5, 6], sorted(g.nodes()))
 
-        G = DeBruijnGraph()
+        g = DeBruijnGraph()
         for s, t in itertools.combinations([1, 2, 3, 4, 5, 6], 2):
-            G.add_edge(s, t)
-        G.add_node(10)  # singlet
-        G.add_edge(7, 6)
-        G.add_edge(7, 8)
-        G.add_edge(8, 7)
-        G.add_edge(9, 8)
-        G.trim_tails_by_freq(2)
-        self.assertEqual([1, 2, 3, 4, 5, 6, 7, 8], sorted(G.nodes()))
+            g.add_edge(s, t)
+        g.add_node(10)  # singlet
+        g.add_edge(7, 6)
+        g.add_edge(7, 8)
+        g.add_edge(8, 7)
+        g.add_edge(9, 8)
+        g.trim_tails_by_freq(2)
+        self.assertEqual([1, 2, 3, 4, 5, 6, 7, 8], sorted(g.nodes()))
 
-        G = DeBruijnGraph()
+        g = DeBruijnGraph()
         for s, t in itertools.combinations([1, 2, 3, 4, 5, 6], 2):
-            G.add_edge(s, t)
-        G.add_node(10)  # singlet
-        G.add_edge(7, 6)
-        G.add_edge(7, 8)
-        G.add_edge(9, 8)
-        G.trim_tails_by_freq(2)
-        self.assertEqual([1, 2, 3, 4, 5, 6], sorted(G.nodes()))
+            g.add_edge(s, t)
+        g.add_node(10)  # singlet
+        g.add_edge(7, 6)
+        g.add_edge(7, 8)
+        g.add_edge(9, 8)
+        g.trim_tails_by_freq(2)
+        self.assertEqual([1, 2, 3, 4, 5, 6], sorted(g.nodes()))
 
     def test_add_edge(self):
-        G = DeBruijnGraph()
-        G.add_edge(1, 2)
-        self.assertEqual(1, G.get_edge_freq(1, 2))
-        G.add_edge(1, 2)
-        self.assertEqual(2, G.get_edge_freq(1, 2))
-        G.add_edge(1, 2, 5)
-        self.assertEqual(7, G.get_edge_freq(1, 2))
+        g = DeBruijnGraph()
+        g.add_edge(1, 2)
+        self.assertEqual(1, g.get_edge_freq(1, 2))
+        g.add_edge(1, 2)
+        self.assertEqual(2, g.get_edge_freq(1, 2))
+        g.add_edge(1, 2, 5)
+        self.assertEqual(7, g.get_edge_freq(1, 2))
 
     def test_trim_noncutting_paths_by_freq_degree_stop(self):
         g = DeBruijnGraph()

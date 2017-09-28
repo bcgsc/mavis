@@ -1,8 +1,8 @@
-import tempfile
-import shutil
-import unittest
 import os
+import shutil
 import subprocess
+import tempfile
+import unittest
 from mavis.breakpoint import read_bpp_from_input_file
 
 
@@ -35,5 +35,5 @@ def tearDownModule():
     shutil.rmtree(temp_output)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()
