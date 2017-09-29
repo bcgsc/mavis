@@ -143,7 +143,7 @@ class Blat:
                 'tseqs': split_csv_trailing_seq
             },
             validate={
-                'strand': '^[\+-]$'
+                'strand': r'^[\+-]$'
             }
         )
 
@@ -299,7 +299,7 @@ class Blat:
                 reverse_complement(row['qseq_full'])
             )
         qcons = sum([v for c, v in read.cigar if c in QUERY_ALIGNED_STATES])
-        assert(len(read.query_sequence) == qcons)
+        assert len(read.query_sequence) == qcons
         try:
             query_coverage_interval(read)
         except (AttributeError, ValueError) as err:
@@ -311,7 +311,7 @@ class Blat:
 def get_blat_version():
     proc = subprocess.getoutput([SUPPORTED_ALIGNER.BLAT])
     for line in proc.split('\n'):
-        m = re.search('blat - Standalone BLAT v. (\d+(x\d+)?)', line)
+        m = re.search(r'blat - Standalone BLAT v. (\d+(x\d+)?)', line)
         if m:
             return m.group(1)
     raise ValueError("unable to parse blat version number from:'{}'".format(proc))
@@ -371,7 +371,7 @@ def process_blat_output(
                 warnings.warn(
                     'warning: reference template name not recognized {0}'.format(e))
             except AssertionError as e:
-                warnings.warn('warning: invalid blat alignment: {}'.format(e))
+                warnings.warn('warning: invalid blat alignment: {}'.format(repr(e)))
             else:
                 read.set_tag(PYSAM_READ_FLAGS.BLAT_SCORE, row['score'], value_type='i')
                 read.set_tag(PYSAM_READ_FLAGS.BLAT_ALIGNMENTS, len(filtered_rows), value_type='i')

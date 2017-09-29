@@ -17,22 +17,22 @@ def calculate_orf(spliced_cdna_sequence, min_orf_size=None):
         :any:`list` of :any:`Interval`: list of open reading frame positions on the input sequence
     """
     # do not revcomp
-    assert(START_AA != STOP_AA)
+    assert START_AA != STOP_AA
     cds_orfs = []  # (cds_start, cds_end)
     for offset in range(0, CODON_SIZE):
         aa_sequence = translate(spliced_cdna_sequence, offset)
         # now calc the open reading frames
         orf_intervals = []
         current_start = None
-        for i, aa in enumerate(aa_sequence):
-            if aa == START_AA:
-                p = i * CODON_SIZE + 1 + offset
+        for i, curr_amino_acid in enumerate(aa_sequence):
+            if curr_amino_acid == START_AA:
+                pos = i * CODON_SIZE + 1 + offset
                 if current_start is None:
-                    current_start = p
-            elif aa == STOP_AA:
-                p = (i + 1) * CODON_SIZE + offset
+                    current_start = pos
+            elif curr_amino_acid == STOP_AA:
+                pos = (i + 1) * CODON_SIZE + offset
                 if current_start is not None:  # close the current interval
-                    itvl = Interval(current_start, p)
+                    itvl = Interval(current_start, pos)
                     if min_orf_size is None or len(itvl) >= min_orf_size:
                         orf_intervals.append(itvl)
                     current_start = None
@@ -68,10 +68,10 @@ class Domain:
         self.data = dict()
         if data is not None:
             self.data.update(data)
-        if len(regions) == 0:
+        if not regions:
             raise AttributeError('at least one region must be given')
-        for r1, r2 in itertools.combinations(self.regions, 2):
-            if Interval.overlaps(r1, r2):
+        for region1, region2 in itertools.combinations(self.regions, 2):
+            if Interval.overlaps(region1, region2):
                 raise AttributeError('regions cannot overlap')
 
         for i in range(0, len(self.regions)):
@@ -104,15 +104,15 @@ class Domain:
                 - int: the total number of amino acids
         """
         if self.translation:
-            aa = self.translation.get_aa_seq(reference_genome)
+            aa_seq = self.translation.get_aa_seq(reference_genome)
             total = 0
             matches = 0
             for region in self.regions:
                 if not region.seq:
                     raise NotSpecifiedError('insufficient sequence information')
-                ref = aa[region.start - 1:region.end]
-                for c1, c2 in zip(ref, region.seq):
-                    if c1 == c2:
+                ref = aa_seq[region.start - 1:region.end]
+                for aa1, aa2 in zip(ref, region.seq):
+                    if aa1 == aa2:
                         matches += 1
                     total += 1
             return matches, total
@@ -141,11 +141,11 @@ class Domain:
                     sequences[region] = region.seq
         if any([r not in sequences for r in self.regions]):
             if self.translation:
-                aa = self.translation.get_aa_seq(reference_genome)
+                aa_seq = self.translation.get_aa_seq(reference_genome)
                 for region in self.regions:
-                    s = aa[region.start - 1:region.end]
+                    region_seq = aa_seq[region.start - 1:region.end]
                     if region not in sequences:
-                        sequences[region] = s
+                        sequences[region] = region_seq
             else:
                 raise NotSpecifiedError('insufficient sequence information')
         return [sequences[r] for r in self.regions]
@@ -189,14 +189,14 @@ class Domain:
             # align the current sequence to find the best matches
             scores = []
             min_match = max(1, int(round(len(seq) * min_region_match, 0)))
-            for p in range(last_min_end, len(input_sequence) - len(seq) + 1):
+            for pos in range(last_min_end, len(input_sequence) - len(seq) + 1):
                 score = 0
                 for i in range(0, len(seq)):
-                    if input_sequence[p + i].upper() == seq[i].upper():
+                    if input_sequence[pos + i].upper() == seq[i].upper():
                         score += 1
                 if score > min_match:
-                    scores.append((Interval(p + 1, p + len(seq)), score))
-            if len(scores) == 0:
+                    scores.append((Interval(pos + 1, pos + len(seq)), score))
+            if not scores:
                 raise UserWarning('could not align a given region', seq)
             best_score = max([s[1] for s in scores])
             best = [s for s in scores if s[1] == best_score]
@@ -211,7 +211,7 @@ class Domain:
                     if pos.start > curr[-1][0].end:
                         temp_combos.append(curr[:] + [(pos, score)])
             combinations = temp_combos
-            if len(combinations) == 0:
+            if not combinations:
                 break
 
         # compute the cumulative scores for the putative alignments
@@ -219,13 +219,13 @@ class Domain:
         best_scoring_alignments = []
         for alignment in combinations:
             cumu_score = sum([s[1] for s in alignment])
-            if len(best_scoring_alignments) == 0 or cumu_score > best_score:
+            if not best_scoring_alignments or cumu_score > best_score:
                 best_scoring_alignments = [alignment]
                 best_score = cumu_score
             elif cumu_score == best_score:
                 best_scoring_alignments.append(alignment)
 
-        if len(best_scoring_alignments) == 0:
+        if not best_scoring_alignments:
             raise UserWarning('could not map the sequences to the input')
         elif len(best_scoring_alignments) > 1:
             raise UserWarning('multiple mappings of equal score')
@@ -258,8 +258,8 @@ class Translation(BioInterval):
         if transcript and end > len(transcript):
             raise AttributeError('translation cannot be outside of related transcript range', end, len(transcript))
 
-        for d in domains:
-            d.reference_object = self
+        for domain in domains:
+            domain.reference_object = self
 
     @property
     def transcript(self):
@@ -291,10 +291,10 @@ class Translation(BioInterval):
         if pos < self.start or pos > self.end:
             raise IndexError('position is out of bounds')
         pos = pos - self.start + 1
-        aa = pos // CODON_SIZE
+        aa_pos = pos // CODON_SIZE
         if pos % CODON_SIZE != 0:
-            aa += 1
-        return aa
+            aa_pos += 1
+        return aa_pos
 
     def convert_genomic_to_cds(self, pos):
         """
@@ -324,12 +324,12 @@ class Translation(BioInterval):
                 * *int* - the intronic shift
 
         """
-        c, shift = self.transcript.convert_genomic_to_nearest_cdna(pos)
-        if c >= self.start:
-            c = c - self.start + 1
+        cds_pos, shift = self.transcript.convert_genomic_to_nearest_cdna(pos)
+        if cds_pos >= self.start:
+            cds_pos = cds_pos - self.start + 1
         else:
-            c -= self.start
-        return c, shift
+            cds_pos -= self.start
+        return cds_pos, shift
 
     def convert_genomic_to_cds_notation(self, pos):
         """
@@ -356,16 +356,16 @@ class Translation(BioInterval):
             >>> tl.convert_genomic_to_cds_notation(1589)
             '51-14'
         """
-        c, shift = self.convert_genomic_to_nearest_cds(pos)
-        sc = ''
+        cds_pos, shift = self.convert_genomic_to_nearest_cds(pos)
+        offset_suffix = ''
         if shift > 0:
-            sc = '+{}'.format(shift)
+            offset_suffix = '+{}'.format(shift)
         elif shift < 0:
-            sc = str(shift)
+            offset_suffix = str(shift)
 
-        if c > len(self):
-            return '*{}{}'.format(c - len(self), sc)
-        return '{}{}'.format(c, sc)
+        if cds_pos > len(self):
+            return '*{}{}'.format(cds_pos - len(self), offset_suffix)
+        return '{}{}'.format(cds_pos, offset_suffix)
 
     def get_cds_seq(self, reference_genome=None, ignore_cache=False):
         """

@@ -203,7 +203,7 @@ def generate_interval_mapping(
             pos = ito.end
 
         s = max(genic_unit(len(curr)), 0)
-        assert(s >= 0)
+        assert s >= 0
         ito = Interval(pos, pos + min_width + s)
         mapping.append((curr, ito))
         pos = ito.end

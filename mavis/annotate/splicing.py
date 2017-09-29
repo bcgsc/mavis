@@ -16,39 +16,39 @@ class SplicingPattern(list):
         pattern = sorted(pattern)
         r_introns = 0
         s_exons = 0
-        assert(len(pattern) % 2 == 0)
+        assert len(pattern) % 2 == 0
 
-        for d, a in zip(pattern[0::2], pattern[1::2]):
+        for donor, acceptor in zip(pattern[0::2], pattern[1::2]):
             # check if any original splice positions are between this donor and acceptor
             temp = 0
-            for s in original_sites:
-                if s > d and s < a:
+            for site in original_sites:
+                if site > donor and site < acceptor:
                     temp += 1
-            assert(temp % 2 == 0)
+            assert temp % 2 == 0
             s_exons += temp // 2
 
-        for a, d in zip(pattern[1::2], pattern[2::2]):
+        for acceptor, donor in zip(pattern[1::2], pattern[2::2]):
             temp = 0
-            for s in original_sites:
-                if s > a and s < d:
+            for site in original_sites:
+                if site > acceptor and site < donor:
                     temp += 1
-            assert(temp % 2 == 0)
+            assert temp % 2 == 0
             r_introns += temp // 2
 
-        if len(pattern) > 0:
+        if pattern:
             # any skipped positions before the first donor or after the last acceptor
             temp = 0
-            for s in original_sites:
-                if s < pattern[0]:
+            for site in original_sites:
+                if site < pattern[0]:
                     temp += 1
-            assert(temp % 2 == 0)
+            assert temp % 2 == 0
             r_introns += temp // 2
             temp = 0
-            for s in original_sites:
-                if s > pattern[-1]:
+            for site in original_sites:
+                if site > pattern[-1]:
                     temp += 1
             r_introns += temp // 2
-            assert(temp % 2 == 0)
+            assert temp % 2 == 0
 
         # now classifying the pattern
         if r_introns + s_exons == 0:
@@ -56,15 +56,12 @@ class SplicingPattern(list):
         elif r_introns == 0:
             if s_exons > 1:
                 return SPLICE_TYPE.MULTI_SKIP
-            else:
-                return SPLICE_TYPE.SKIP
+            return SPLICE_TYPE.SKIP
         elif s_exons == 0:
             if r_introns > 1:
                 return SPLICE_TYPE.MULTI_RETAIN
-            else:
-                return SPLICE_TYPE.RETAIN
-        else:
-            return SPLICE_TYPE.COMPLEX
+            return SPLICE_TYPE.RETAIN
+        return SPLICE_TYPE.COMPLEX
 
 
 class SpliceSite(BioInterval):
@@ -95,7 +92,7 @@ class SpliceSite(BioInterval):
                     if end is None:
                         end = pos + SPLICE_SITE_RADIUS
         BioInterval.__init__(self, ref, start, end, seq=seq, strand=strand)
-        assert(pos <= self.end and pos >= self.start)
+        assert pos <= self.end and pos >= self.start
         self.pos = pos
         self.intact = intact
         self.type = SPLICE_SITE_TYPE.enforce(site_type)
@@ -147,26 +144,25 @@ def predict_splice_sites(input_sequence, is_reverse=False):
     positions = set()
     for regex in DONOR_SEQ:
         for match in regex.finditer(sequence):
-            d = convert_match_to_ss(match, SPLICE_SITE_TYPE.DONOR)
-            if d.pos not in positions:
-                sites.append(d)
-                positions.add(d.pos)
+            donor_site = convert_match_to_ss(match, SPLICE_SITE_TYPE.DONOR)
+            if donor_site.pos not in positions:
+                sites.append(donor_site)
+                positions.add(donor_site.pos)
     positions = set()
     for regex in ACCEPTOR_SEQ:
         for match in regex.finditer(sequence):
-            d = convert_match_to_ss(match, SPLICE_SITE_TYPE.ACCEPTOR)
-            if d.pos not in positions:
-                sites.append(d)
-                positions.add(d.pos)
+            acceptor_site = convert_match_to_ss(match, SPLICE_SITE_TYPE.ACCEPTOR)
+            if acceptor_site.pos not in positions:
+                sites.append(acceptor_site)
+                positions.add(acceptor_site.pos)
     if is_reverse:
         temp = []
-        l = len(sequence)
         # flip all the sites
         for site in sites:
             offset = site.end - site.pos
-            start = l - site.end + 1
+            start = len(sequence) - site.end + 1
             new_site = SpliceSite(
-                None, start=start, end=l - site.start + 1,
+                None, start=start, end=len(sequence) - site.start + 1,
                 seq=reverse_complement(site.seq),
                 strand=STRAND.NEG,
                 pos=start + offset,

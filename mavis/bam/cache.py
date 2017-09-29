@@ -87,7 +87,7 @@ class BamCache:
             sample_bins (int): the number of bins to split the region into
             min_bin_size (int): the minimum bin size
         """
-        assert(min_bin_size > 0)
+        assert min_bin_size > 0
         length = stop - start + 1
         bin_sizes = []
         if sample_bins * min_bin_size > length:

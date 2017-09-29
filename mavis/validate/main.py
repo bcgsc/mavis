@@ -44,7 +44,7 @@ def main(
         aligner_reference (str): path to the aligner reference file (e.g 2bit file for blat)
     """
     mkdirp(output)
-    filename_prefix = re.sub('\.(txt|tsv|tab)$', '', os.path.basename(input))
+    filename_prefix = re.sub(r'\.(txt|tsv|tab)$', '', os.path.basename(input))
     raw_evidence_bam = os.path.join(output, filename_prefix + '.raw_evidence.bam')
     contig_bam = os.path.join(output, filename_prefix + '.contigs.bam')
     evidence_bed = os.path.join(output, filename_prefix + '.evidence.bed')
@@ -72,7 +72,7 @@ def main(
     evidence_clusters = []
     for bpp in bpps:
         if bpp.data[COLUMNS.protocol] == PROTOCOL.GENOME:
-            e = GenomeEvidence(
+            evidence = GenomeEvidence(
                 bpp.break1, bpp.break2,
                 input_bam_cache,
                 reference_genome,
@@ -85,9 +85,9 @@ def main(
                 median_fragment_size=median_fragment_size,
                 **validation_settings
             )
-            evidence_clusters.append(e)
+            evidence_clusters.append(evidence)
         elif bpp.data[COLUMNS.protocol] == PROTOCOL.TRANS:
-            e = TranscriptomeEvidence(
+            evidence = TranscriptomeEvidence(
                 annotations,
                 bpp.break1, bpp.break2,
                 input_bam_cache,
@@ -101,50 +101,50 @@ def main(
                 median_fragment_size=median_fragment_size,
                 **validation_settings
             )
-            evidence_clusters.append(e)
+            evidence_clusters.append(evidence)
         else:
             raise ValueError('protocol not recognized', bpp.data[COLUMNS.protocol])
 
     extended_masks = {}
-    for chr, masks in masking.items():  # extend masking by read length
-        extended_masks[chr] = []
+    for chrom, masks in masking.items():  # extend masking by read length
+        extended_masks[chrom] = []
         for mask in masks:
-            extended_masks[chr].append(BioInterval(
-                chr, mask.start - read_length, mask.end + read_length,
+            extended_masks[chrom].append(BioInterval(
+                chrom, mask.start - read_length, mask.end + read_length,
                 name=mask.name
             ))
 
     evidence_clusters, filtered_evidence_clusters = filter_on_overlap(evidence_clusters, extended_masks)
     if not validation_settings['fetch_method_individual']:
         Evidence.load_multiple(evidence_clusters, log)
-    for i, e in enumerate(evidence_clusters):
+    for i, evidence in enumerate(evidence_clusters):
         print()
         log(
             '({} of {})'.format(i + 1, len(evidence_clusters)),
-            'gathered evidence for:', e.cluster_id,
-            '' if 'input_id' not in e.data else '(input_id: {})'.format(e.data['input_id'])
+            'gathered evidence for:', evidence.cluster_id,
+            '' if 'input_id' not in evidence.data else '(input_id: {})'.format(evidence.data['input_id'])
         )
-        log(e, time_stamp=False)
-        log('possible event type(s):', BreakpointPair.classify(e), time_stamp=False)
+        log(evidence, time_stamp=False)
+        log('possible event type(s):', BreakpointPair.classify(evidence), time_stamp=False)
         log('outer window regions:  {}:{}-{}  {}:{}-{}'.format(
-            e.break1.chr, e.outer_window1[0], e.outer_window1[1],
-            e.break2.chr, e.outer_window2[0], e.outer_window2[1]), time_stamp=False)
+            evidence.break1.chr, evidence.outer_window1[0], evidence.outer_window1[1],
+            evidence.break2.chr, evidence.outer_window2[0], evidence.outer_window2[1]), time_stamp=False)
         log('inner window regions:  {}:{}-{}  {}:{}-{}'.format(
-            e.break1.chr, e.inner_window1[0], e.inner_window1[1],
-            e.break2.chr, e.inner_window2[0], e.inner_window2[1]), time_stamp=False)
+            evidence.break1.chr, evidence.inner_window1[0], evidence.inner_window1[1],
+            evidence.break2.chr, evidence.inner_window2[0], evidence.inner_window2[1]), time_stamp=False)
         if validation_settings['fetch_method_individual']:
-            e.load_evidence(log=log)
+            evidence.load_evidence(log=log)
         log(
-            'flanking pairs: {};'.format(len(e.flanking_pairs)),
-            'split reads: {}, {};'.format(*[len(a) for a in e.split_reads]),
-            'half-mapped reads: {}, {};'.format(*[len(a) for a in e.half_mapped]),
-            'spanning-reads: {};'.format(len(e.spanning_reads)),
-            'compatible flanking pairs:', len(e.compatible_flanking_pairs),
+            'flanking pairs: {};'.format(len(evidence.flanking_pairs)),
+            'split reads: {}, {};'.format(*[len(a) for a in evidence.split_reads]),
+            'half-mapped reads: {}, {};'.format(*[len(a) for a in evidence.half_mapped]),
+            'spanning-reads: {};'.format(len(evidence.spanning_reads)),
+            'compatible flanking pairs:', len(evidence.compatible_flanking_pairs),
             time_stamp=False
         )
-        e.assemble_contig(log=log)
-        log('assembled {} contigs'.format(len(e.contigs)), time_stamp=False)
-        for contig in e.contigs:
+        evidence.assemble_contig(log=log)
+        log('assembled {} contigs'.format(len(evidence.contigs)), time_stamp=False)
+        for contig in evidence.contigs:
             log('>', contig.seq, time_stamp=False)
 
     log('will output:', contig_aligner_fa, contig_aligner_output)
@@ -177,53 +177,53 @@ def main(
     event_calls = []
     total_pass = 0
     write_bed_file(evidence_bed, itertools.chain.from_iterable([e.get_bed_repesentation() for e in evidence_clusters]))
-    for index, e in enumerate(evidence_clusters):
+    for index, evidence in enumerate(evidence_clusters):
         print()
         log('({} of {}) calling events for:'.format
-            (index + 1, len(evidence_clusters)), e.cluster_id, e.putative_event_types())
-        log('source:', e, time_stamp=False)
+            (index + 1, len(evidence_clusters)), evidence.cluster_id, evidence.putative_event_types())
+        log('source:', evidence, time_stamp=False)
         calls = []
         failure_comment = None
         try:
-            calls = call_events(e)
+            calls = call_events(evidence)
             event_calls.extend(calls)
         except UserWarning as err:
             log('warning: error in calling events', repr(err), time_stamp=False)
             failure_comment = str(err)
 
-        if len(calls) == 0:
+        if not calls:
             failure_comment = ['zero events were called'] if failure_comment is None else failure_comment
-            e.data[COLUMNS.filter_comment] = failure_comment
-            filtered_evidence_clusters.append(e)
+            evidence.data[COLUMNS.filter_comment] = failure_comment
+            filtered_evidence_clusters.append(evidence)
         else:
             total_pass += 1
 
         log('called {} event(s)'.format(len(calls)))
-        for i, ev in enumerate(calls):
-            log(ev, time_stamp=False)
-            log(ev.event_type, ev.call_method, time_stamp=False)
-            ev.data[COLUMNS.validation_id] = '{}-v{}'.format(ev.cluster_id, i + 1)
+        for i, call in enumerate(calls):
+            log(call, time_stamp=False)
+            log(call.event_type, call.call_method, time_stamp=False)
+            call.data[COLUMNS.validation_id] = '{}-v{}'.format(call.cluster_id, i + 1)
             log(
                 'remapped reads: {}; spanning reads: {}; split reads: [{} ({}), {} ({}), {}]'
                 ', flanking pairs: {}{}'.format(
-                    0 if not ev.contig else len(ev.contig.input_reads),
-                    len(ev.spanning_reads),
-                    len(ev.break1_split_reads), len(ev.break1_tgt_align_split_read_names()),
-                    len(ev.break2_split_reads), len(ev.break2_tgt_align_split_read_names()),
-                    len(ev.linking_split_read_names()),
-                    len(ev.flanking_pairs),
-                    '' if not ev.has_compatible else '(' + str(len(ev.compatible_flanking_pairs)) + ')'
+                    0 if not call.contig else len(call.contig.input_reads),
+                    len(call.spanning_reads),
+                    len(call.break1_split_reads), len(call.break1_tgt_align_split_read_names()),
+                    len(call.break2_split_reads), len(call.break2_tgt_align_split_read_names()),
+                    len(call.linking_split_read_names()),
+                    len(call.flanking_pairs),
+                    '' if not call.has_compatible else '(' + str(len(call.compatible_flanking_pairs)) + ')'
                 ), time_stamp=False)
 
     # write the output validated clusters (split by type and contig)
-    for i, ec in enumerate(event_calls):
+    for i, call in enumerate(event_calls):
         b1_homseq = None
         b2_homseq = None
         try:
-            b1_homseq, b2_homseq = ec.breakpoint_sequence_homology(reference_genome)
+            b1_homseq, b2_homseq = call.breakpoint_sequence_homology(reference_genome)
         except AttributeError:
             pass
-        ec.data.update({
+        call.data.update({
             COLUMNS.break1_homologous_seq: b1_homseq,
             COLUMNS.break2_homologous_seq: b2_homseq,
         })
@@ -234,9 +234,9 @@ def main(
 
     with pysam.AlignmentFile(contig_bam, 'wb', template=input_bam_cache.fh) as fh:
         log('writing:', contig_bam)
-        for ev in evidence_clusters:
-            for c in ev.contigs:
-                for read1, read2 in c.alignments:
+        for evidence in evidence_clusters:
+            for contig in evidence.contigs:
+                for read1, read2 in contig.alignments:
                     read1.cigar = cigar_tools.convert_for_igv(read1.cigar)
                     fh.write(read1)
                     if read2:
@@ -247,9 +247,8 @@ def main(
     with pysam.AlignmentFile(raw_evidence_bam, 'wb', template=input_bam_cache.fh) as fh:
         log('writing:', raw_evidence_bam)
         reads = set()
-        for ev in evidence_clusters:
-            temp = ev.supporting_reads()
-            reads.update(temp)
+        for evidence in evidence_clusters:
+            reads.update(evidence.supporting_reads())
         for read in reads:
             read.cigar = cigar_tools.convert_for_igv(read.cigar)
             fh.write(read)

@@ -55,7 +55,7 @@ def recompute_cigar_mismatch(read, ref):
                 seq_pos += 1
         else:
             raise NotImplementedError('unexpected CIGAR value {0} is not supported currently'.format(cigar_value))
-    assert(sum([x[1] for x in result]) == sum(x[1] for x in read.cigar))
+    assert sum([x[1] for x in result]) == sum(x[1] for x in read.cigar)
     return result
 
 

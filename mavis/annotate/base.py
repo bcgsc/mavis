@@ -20,14 +20,14 @@ class ReferenceName(str):
         return hash(re.sub('^chr', '', str(self)))
 
     def __lt__(self, other):
-        s = self if not self.startswith('chr') else self[3:]
-        o = other if not other.startswith('chr') else other[3:]
-        return str.__lt__(s, o)
+        self_std_repr = self if not self.startswith('chr') else self[3:]
+        other_std_repr = other if not other.startswith('chr') else other[3:]
+        return str.__lt__(self_std_repr, other_std_repr)
 
     def __gt__(self, other):
-        s = self if not self.startswith('chr') else self[3:]
-        o = other if not other.startswith('chr') else other[3:]
-        return str.__gt__(s, o)
+        self_std_repr = self if not self.startswith('chr') else self[3:]
+        other_std_repr = other if not other.startswith('chr') else other[3:]
+        return str.__gt__(self_std_repr, other_std_repr)
 
     def __ge__(self, other):
         if self == other:
@@ -97,19 +97,16 @@ class BioInterval:
     def __eq__(self, other):
         if not hasattr(other, 'key'):
             return False
-        else:
-            return self.key() == other.key()
+        return self.key() == other.key()
 
     def __lt__(self, other):
         if other.reference_object != self.reference_object:
             if self.reference_object < other.reference_object:
                 return True
-            else:
-                return False
+            return False
         elif self.position < other.position:
             return True
-        else:
-            return False
+        return False
 
     def __hash__(self):
         return hash(self.key())
@@ -200,7 +197,7 @@ class BioInterval:
         Returns:
             :class:`dict` by :class:`str`: the dictionary of attribute values
         """
-        d = {
+        dict_result = {
             'name': self.name,
             'start': self.start,
             'end': self.end,
@@ -209,10 +206,10 @@ class BioInterval:
             'data': self.data
         }
         try:
-            d['reference_object'] = self.reference_object.name
+            dict_result['reference_object'] = self.reference_object.name
         except AttributeError:
-            d['reference_object'] = str(self.reference_object)
-        return d
+            dict_result['reference_object'] = str(self.reference_object)
+        return dict_result
 
     def __repr__(self):
         cls = self.__class__.__name__

@@ -352,12 +352,12 @@ class UsTranscript(BioInterval):
                 acceptors = get_cons_sites(i + len(donors), acceptor)
 
                 temp = []
-                for d, a in sorted(itertools.product(donors, acceptors)):
+                for donor_site, acceptor_site in sorted(itertools.product(donors, acceptors)):
                     for curr_splss in splice_site_sets:
                         splss = copy(curr_splss)
-                        splss.extend([d[0], a[0]])
+                        splss.extend([donor_site[0], acceptor_site[0]])
                         temp.append(splss)
-                if len(temp) > 0:
+                if temp:
                     splice_site_sets = temp
                 i += len(donors) + len(acceptors)
             else:
@@ -383,7 +383,7 @@ class UsTranscript(BioInterval):
             splicing_pattern (SplicingPattern): list of genomic splice sites 3'5' repeating
         """
         mapping = {}
-        l = 1
+        length = 1
         pos = sorted(splicing_pattern + [self.start, self.end])
         genome_intervals = [Interval(s, t) for s, t in zip(pos[::2], pos[1::2])]
 
@@ -394,9 +394,9 @@ class UsTranscript(BioInterval):
         else:
             raise NotSpecifiedError('cannot convert without strand information')
 
-        for e in genome_intervals:
-            mapping[e] = Interval(l, l + len(e) - 1)
-            l += len(e)
+        for exon in genome_intervals:
+            mapping[exon] = Interval(length, length + len(exon) - 1)
+            length += len(exon)
         return mapping
 
     def _cdna_to_genomic_mapping(self, splicing_pattern):
@@ -404,9 +404,7 @@ class UsTranscript(BioInterval):
         Args:
             splicing_pattern (SplicingPattern): list of genomic splice sites 3'5' repeating
         """
-        mapping = {}
-        for k, v in self._genomic_to_cdna_mapping(splicing_pattern).items():
-            mapping[v] = k
+        mapping = {v: k for k, v in self._genomic_to_cdna_mapping(splicing_pattern).items()}
         return mapping
 
     def convert_genomic_to_cdna(self, pos, splicing_pattern):
@@ -422,10 +420,10 @@ class UsTranscript(BioInterval):
             :class:`~mavis.error.IndexError`: when a genomic position not present in the
                 cdna is attempted to be converted
         """
-        c, shift = self.convert_genomic_to_nearest_cdna(pos, splicing_pattern)
+        cdna_pos, shift = self.convert_genomic_to_nearest_cdna(pos, splicing_pattern)
         if shift != 0:
-            raise IndexError('outside of exonic regions', pos, splicing_pattern, c, shift)
-        return c
+            raise IndexError('outside of exonic regions', pos, splicing_pattern, cdna_pos, shift)
+        return cdna_pos
 
     def convert_genomic_to_nearest_cdna(self, pos, splicing_pattern):
         """
@@ -447,19 +445,18 @@ class UsTranscript(BioInterval):
         for ex in exons:
             if pos <= ex.end and pos >= ex.start:
                 # in the current exon
-                c = Interval.convert_pos(mapping, pos, True if self.get_strand() == STRAND.NEG else False)
-                return c, 0
+                cdna_pos = Interval.convert_pos(mapping, pos, True if self.get_strand() == STRAND.NEG else False)
+                return cdna_pos, 0
         # intronic
         for ex1, ex2 in zip(exons, exons[1::]):
             if pos > ex1.end and pos < ex2.start:
                 # in the current intron
                 if abs(pos - ex1.end) <= abs(pos - ex2.start):
                     # closest to the first exon
-                    c = Interval.convert_pos(mapping, ex1.end, True if self.get_strand() == STRAND.NEG else False)
-                    return c, pos - ex1.end if self.get_strand() == STRAND.POS else ex1.end - pos
-                else:
-                    c = Interval.convert_pos(mapping, ex2.start, True if self.get_strand() == STRAND.NEG else False)
-                    return c, pos - ex2.start if self.get_strand() == STRAND.POS else ex2.start - pos
+                    cdna_pos = Interval.convert_pos(mapping, ex1.end, True if self.get_strand() == STRAND.NEG else False)
+                    return cdna_pos, pos - ex1.end if self.get_strand() == STRAND.POS else ex1.end - pos
+                cdna_pos = Interval.convert_pos(mapping, ex2.start, True if self.get_strand() == STRAND.NEG else False)
+                return cdna_pos, pos - ex2.start if self.get_strand() == STRAND.POS else ex2.start - pos
         raise IndexError('position does not fall within the current transcript', pos, mapping)
 
     def convert_cdna_to_genomic(self, pos, splicing_pattern):
@@ -487,8 +484,8 @@ class UsTranscript(BioInterval):
         Raises:
             AttributeError: if the strand is not given or the exon does not belong to the transcript
         """
-        for i, e in enumerate(self.exons):
-            if exon != e:
+        for i, current_exon in enumerate(self.exons):
+            if exon != current_exon:
                 continue
             if self.get_strand() == STRAND.POS:
                 return i + 1
@@ -516,15 +513,12 @@ class UsTranscript(BioInterval):
             end = self.end - self.gene.end + len(self.gene.seq)
             if self.get_strand() == STRAND.NEG:
                 return reverse_complement(self.gene.seq[start:end])
-            else:
-                return self.gene.seq[start:end]
+            return self.gene.seq[start:end]
         elif reference_genome is None:
             raise NotSpecifiedError('reference genome is required to retrieve the gene sequence')
-        else:
-            if self.get_strand() == STRAND.NEG:
-                return reverse_complement(reference_genome[self.gene.chr].seq[self.start - 1:self.end]).upper()
-            else:
-                return str(reference_genome[self.gene.chr].seq[self.start - 1:self.end]).upper()
+        if self.get_strand() == STRAND.NEG:
+            return reverse_complement(reference_genome[self.gene.chr].seq[self.start - 1:self.end]).upper()
+        return str(reference_genome[self.gene.chr].seq[self.start - 1:self.end]).upper()
 
     def get_cdna_seq(self, splicing_pattern, reference_genome=None, ignore_cache=False):
         """
@@ -538,10 +532,10 @@ class UsTranscript(BioInterval):
             str: the spliced cDNA sequence
         """
         temp = sorted([self.start] + splicing_pattern + [self.end])
-        m = min(temp)
+        cdna_start = min(temp)
         conti = []
         for i in range(0, len(temp) - 1, 2):
-            conti.append(Interval(temp[i] - m, temp[i + 1] - m))
+            conti.append(Interval(temp[i] - cdna_start, temp[i + 1] - cdna_start))
         seq = self.get_seq(reference_genome, ignore_cache)
         if self.get_strand() == STRAND.NEG:
             # adjust the continuous intervals for the min and flip if revcomp
@@ -553,11 +547,11 @@ class UsTranscript(BioInterval):
     @property
     def translations(self):
         """:class:`list` of :class:`~mavis.annotate.protein.Translation`: list of translations associated with this transcript"""
-        tx = []
-        for t in self.spliced_transcripts:
-            for tl in t.translations:
-                tx.append(tl)
-        return tx
+        translations = []
+        for spl_tx in self.spliced_transcripts:
+            for translation in spl_tx.translations:
+                translations.append(translation)
+        return translations
 
     @property
     def transcripts(self):
@@ -581,14 +575,14 @@ class Transcript(BioInterval):
         pos = sorted([ust.start, ust.end] + splicing_patt)
         splicing_patt.sort()
         self.splicing_pattern = splicing_patt
-        l = sum([t - s + 1 for s, t in zip(pos[::2], pos[1::2])])
-        BioInterval.__init__(self, ust, 1, l, seq=None)
+        length = sum([t - s + 1 for s, t in zip(pos[::2], pos[1::2])])
+        BioInterval.__init__(self, ust, 1, length, seq=None)
         self.exons = [Exon(s, t, self) for s, t in zip(pos[::2], pos[1::2])]
         self.translations = [] if translations is None else [tx for tx in translations]
 
-        for tx in self.translations:
-            tx.reference_object = self
-        if len(splicing_patt) > 0 and (min(splicing_patt) < ust.start or max(splicing_patt) > ust.end):
+        for translation in self.translations:
+            translation.reference_object = self
+        if splicing_patt and (min(splicing_patt) < ust.start or max(splicing_patt) > ust.end):
             raise AssertionError('splicing pattern must be contained within the unspliced transcript')
         elif len(splicing_patt) % 2 != 0:
             raise AssertionError('splicing pattern must be a list of 3\'5\' splicing positions')
@@ -631,9 +625,8 @@ class Transcript(BioInterval):
         """
         if self.seq and not ignore_cache:
             return self.seq
-        else:
-            s = self.unspliced_transcript.get_cdna_seq(self.splicing_pattern, reference_genome, ignore_cache)
-            return s[self.start - 1:self.end]
+        seq = self.unspliced_transcript.get_cdna_seq(self.splicing_pattern, reference_genome, ignore_cache)
+        return seq[self.start - 1:self.end]
 
     @property
     def unspliced_transcript(self):

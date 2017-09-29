@@ -155,7 +155,7 @@ def main(
     job_size = min_clusters_per_file
     if len(clusters) // min_clusters_per_file > max_files - 1:
         job_size = int(round(len(clusters) / max_files, 0))
-        assert(len(clusters) // job_size <= max_files)
+        assert len(clusters) // job_size <= max_files
 
     bedfile = os.path.join(output, 'clusters.bed')
     write_bed_file(bedfile, itertools.chain.from_iterable([b.get_bed_repesentation() for b in clusters]))
@@ -181,7 +181,7 @@ def main(
             job.extend(clusters[i:i + cluster_per_job + (1 if extras > 0 else 0)])
             extras -= 1
             i += len(job)
-    assert(sum([len(j) for j in jobs]) == len(clusters))
+    assert sum([len(j) for j in jobs]) == len(clusters)
     for i, job in enumerate(jobs):
         # generate an output file
         filename = split_file_name_func(i + 1)

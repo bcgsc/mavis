@@ -424,9 +424,9 @@ class BreakpointPair:
         r2_qci = query_coverage_interval(read2)
 
         if read1.is_reverse == read2.is_reverse:
-            assert(read1.query_sequence == read2.query_sequence)
+            assert read1.query_sequence == read2.query_sequence
         else:
-            assert(read1.query_sequence == reverse_complement(read2.query_sequence))
+            assert read1.query_sequence == reverse_complement(read2.query_sequence)
             l = len(read1.query_sequence) - 1
             r2_qci = Interval(l - r2_qci.end, l - r2_qci.start)
         b1 = None
