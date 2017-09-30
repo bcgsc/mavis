@@ -2,18 +2,46 @@ from datetime import datetime
 import errno
 import os
 import re
-from .breakpoint import read_bpp_from_input_file, BreakpointPair
+from .breakpoint import read_bpp_from_input_file
 from .constants import PROTOCOL, COLUMNS, sort_columns
 from .interval import Interval
 from argparse import Namespace
-from TSV.TSV import EmptyFileError
+from TSV.TSV import EmptyFileError, tsv_boolean
 from braceexpand import braceexpand
 from glob import glob
 
 
+ENV_VAR_PREFIX = 'MAVIS_'
+
+
+def cast(value, cast_func):
+    if cast_func == bool:
+        value = tsv_boolean(value)
+    else:
+        value = cast_func(value)
+    return value
+
+
+def get_env_variable(arg, default, cast_type=None):
+    """
+    Args:
+        arg (str): the argument/variable name
+    Returns:
+        the setting from the environment variable if given, otherwise the default value
+    """
+    if cast_type is None:
+        cast_type = type(default)
+    name = ENV_VAR_PREFIX + str(arg).upper()
+    result = os.environ.get(name, None)
+    if result is not None:
+        return cast(result, cast_type)
+    else:
+        return default
+
+
 class MavisNamespace(Namespace):
     def items(self):
-        return self.__dict__.items()
+        return [(k, self[k]) for k in self.keys()]
 
     def __add__(self, other):
         d = {}
@@ -26,6 +54,28 @@ class MavisNamespace(Namespace):
 
     def __getitem__(self, key):
         return getattr(self, key)
+
+    def __setitem__(self, key, val):
+        self.__dict__[key] = val
+
+    def flatten(self):
+        d = {}
+        d.update(self.items())
+        return d
+
+    def get(self, key, default):
+        try:
+            return self[key]
+        except AttributeError:
+            return default
+
+    def keys(self):
+        return self.__dict__.keys()
+
+
+class WeakMavisNamespace(MavisNamespace):
+    def __getattribute__(self, attr):
+        return get_env_variable(attr, object.__getattribute__(self, attr))
 
 
 class ChrListString(list):

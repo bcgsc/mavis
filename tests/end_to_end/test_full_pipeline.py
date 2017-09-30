@@ -1,10 +1,10 @@
 import tempfile
+import re
 import shutil
 import unittest
 import os
 import subprocess
 import glob
-from mavis.constants import PROTOCOL
 
 
 data_prefix = os.path.join(os.path.dirname(__file__), 'data')
@@ -25,11 +25,11 @@ def setUpModule():
 
 def glob_exists(*pos, strict=True):
     globexpr = os.path.join(*pos)
-    l = len(glob.glob(globexpr))
-    if strict and l == 1:
-        return True
-    elif not strict and l > 0:
-        return True
+    l = glob.glob(globexpr)
+    if strict and len(l) == 1:
+        return l[0]
+    elif not strict and len(l) > 0:
+        return l
     else:
         print(globexpr)
         print(l)
@@ -50,13 +50,15 @@ class TestFullPipeline(unittest.TestCase):
     def test_mocked(self):
         command = 'mavis pipeline {} -o {}'.format(config, temp_output)
         print(command)
-        print(os.environ)
-        output = subprocess.check_output(command, shell=True, env=os.environ)
-        tail(output)
+        try:
+            output = subprocess.check_output(command, shell=True, env=os.environ)
+        except subprocess.CalledProcessError as err:
+            print('failed command', command)
+            print(err.output.decode('UTF-8'))
+            raise err
 
         # check that the subdirectories were built
         for lib in[mock_genome + '_*', mock_trans + '_*']:
-            print('lib', lib)
             self.assertTrue(glob_exists(temp_output, lib, 'clustering'))
             self.assertTrue(glob_exists(temp_output, lib, 'clustering', 'batch-*-1.tab'))
             self.assertTrue(glob_exists(temp_output, lib, 'clustering', 'uninformative_clusters.txt'))
@@ -69,9 +71,12 @@ class TestFullPipeline(unittest.TestCase):
             qsub = os.path.join(temp_output, lib, 'validation', 'qsub.sh')
             self.assertTrue(glob_exists(qsub))
             command = 'export SGE_TASK_ID=1; bash {}'.format(qsub)
-            print(command)
-            output = subprocess.check_output(command, shell=True, env=os.environ)
-            tail(output)
+            try:
+                output = subprocess.check_output(command, shell=True, env=os.environ)
+            except subprocess.CalledProcessError as err:
+                print('failed command', command)
+                print(err.output.decode('UTF-8'))
+                raise err
 
             for suffix in [
                 'contigs.bam',
@@ -95,9 +100,12 @@ class TestFullPipeline(unittest.TestCase):
             qsub = os.path.join(temp_output, lib, 'annotation', 'qsub.sh')
             self.assertTrue(glob_exists(qsub))
             command = 'export SGE_TASK_ID=1; bash {}'.format(qsub)
-            print(command)
-            output = subprocess.check_output(command, shell=True, env=os.environ)
-            tail(output)
+            try:
+                output = subprocess.check_output(command, shell=True, env=os.environ)
+            except subprocess.CalledProcessError as err:
+                print('failed command', command)
+                print(err.output.decode('UTF-8'))
+                raise err
             # check the generated files
             self.assertTrue(glob_exists(temp_output, lib, 'annotation/*-1', 'annotations.tab'))
             self.assertTrue(glob_exists(temp_output, lib, 'annotation/*-1', 'annotations.fusion-cdna.fa'))
@@ -110,9 +118,12 @@ class TestFullPipeline(unittest.TestCase):
         qsub = os.path.join(temp_output, 'pairing', 'qsub.sh')
         self.assertTrue(glob_exists(qsub))
         command = 'export SGE_TASK_ID=1; bash {}'.format(qsub)
-        print(command)
-        output = subprocess.check_output(command, shell=True, env=os.environ)
-        tail(output)
+        try:
+            output = subprocess.check_output(command, shell=True, env=os.environ)
+        except subprocess.CalledProcessError as err:
+            print('failed command', command)
+            print(err.output.decode('UTF-8'))
+            raise err
 
         self.assertTrue(glob_exists(temp_output, 'pairing', 'mavis_paired*.tab'))
         self.assertTrue(glob_exists(temp_output, 'pairing', '*.COMPLETE'))
@@ -122,9 +133,12 @@ class TestFullPipeline(unittest.TestCase):
         qsub = os.path.join(temp_output, 'summary', 'qsub.sh')
         self.assertTrue(glob_exists(qsub))
         command = 'export SGE_TASK_ID=1; bash {}'.format(qsub)
-        print(command)
-        output = subprocess.check_output(command, shell=True, env=os.environ)
-        tail(output)
+        try:
+            output = subprocess.check_output(command, shell=True, env=os.environ)
+        except subprocess.CalledProcessError as err:
+            print('failed command', command)
+            print(err.output.decode('UTF-8'))
+            raise err
 
         self.assertTrue(glob_exists(temp_output, 'summary', 'mavis_summary*.tab'))
         self.assertTrue(glob_exists(temp_output, 'summary', '*.COMPLETE'))
