@@ -144,7 +144,7 @@ def _convert_tool_row(row, file_type, stranded):
                 strand1 = STRAND.POS if strand1 == STRAND.NEG else STRAND.NEG
                 strand2 = STRAND.POS if strand2 == STRAND.NEG else STRAND.NEG
             m = re.match(
-                '^(?P<chr1>[^:]+):(?P<pos1_start>\d+)\|(?P<chr2>[^:]+):(?P<pos2_start>\d+)$', row['breakpoint'])
+                r'^(?P<chr1>[^:]+):(?P<pos1_start>\d+)\|(?P<chr2>[^:]+):(?P<pos2_start>\d+)$', row['breakpoint'])
             if not m:
                 raise OSError(
                     'file format error: the breakpoint column did not satisfy the expected pattern', row)
@@ -155,6 +155,16 @@ def _convert_tool_row(row, file_type, stranded):
             })
             if stranded:
                 strand1 = strand2 = (STRAND.POS if row['ctg_strand'] == STRAND.NEG else STRAND.NEG)
+            # add the untemplated sequence where appropriate
+            if row['event_type'] == 'del':
+                assert row['alt'] == 'na'
+                std_row[COLUMNS.untemplated_seq] = ''
+            elif row['event_type'] in ['dup', 'ITD']:
+                assert len(row['alt']) == row['pos1_end'] - row['pos2_start'] + 1
+                std_row[COLUMNS.untemplated_seq] = row['alt']
+            elif row['event_type'] == 'ins':
+                row[COLUMNS.untemplated_seq] = row['alt']
+
     else:
         raise NotImplementedError('unsupported file type', file_type)
 
@@ -199,7 +209,7 @@ def _convert_tool_row(row, file_type, stranded):
 
         except (InvalidRearrangement, AssertionError):
             pass
-    if len(result) == 0:
+    if not result:
         raise UserWarning(
             'row failed to create any breakpoint pairs. This generally indicates an input formatting error',
             row, std_row, combinations)
@@ -217,7 +227,7 @@ def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fa
         if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL]:
             rows = list(vcf.Reader(filename=input_file))
         else:
-            header, rows = TSV.read_file(input_file)
+            dummy, rows = TSV.read_file(input_file)
         log('found', len(rows), 'rows')
         for row in rows:
             std_rows = _convert_tool_row(row, file_type, stranded)
