@@ -209,12 +209,6 @@ def main_pipeline(config):
     summary_output = mkdirp(os.path.join(config.output, 'summary'))
     summary_args = dict(
         output=summary_output,
-        filter_min_remapped_reads=config.summary.filter_min_remapped_reads,
-        filter_min_spanning_reads=config.summary.filter_min_spanning_reads,
-        filter_min_flanking_reads=config.summary.filter_min_flanking_reads,
-        filter_min_flanking_only_reads=config.summary.filter_min_flanking_only_reads,
-        filter_min_split_reads=config.summary.filter_min_split_reads,
-        filter_min_linking_split_reads=config.summary.filter_min_linking_split_reads,
         flanking_call_distance=config.pairing.flanking_call_distance,
         split_call_distance=config.pairing.split_call_distance,
         contig_call_distance=config.pairing.contig_call_distance,
@@ -222,6 +216,7 @@ def main_pipeline(config):
         dgv_annotation=config.reference.dgv_annotation_filename,
         annotations=config.reference.annotations_filename
     )
+    summary_args.update(config.summary.items())
     temp = ['--{} {}'.format(k, v) for k, v in summary_args.items() if not isinstance(v, str) and v is not None]
     temp.extend(['--{} "{}"'.format(k, v) for k, v in summary_args.items() if isinstance(v, str) and v is not None])
     temp.append('--inputs {}'.format(os.path.join(config.output, 'pairing/mavis_paired*.tab')))
