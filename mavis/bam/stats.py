@@ -53,23 +53,23 @@ class Histogram(dict):
         flattens the histogram to compute the median value
         """
         values = []
-        for v, f in self.items():
-            for i in range(0, f):
-                values.append(v)
+        for val, freq in self.items():
+            for i in range(0, freq):
+                values.append(val)
         values.sort()
         if len(values) % 2 == 0:
-            m = len(values) // 2
-            n = len(values) // 2 + 1
-            return (values[m - 1] + values[n - 1]) / 2
+            low_center = len(values) // 2
+            high_center = len(values) // 2 + 1
+            return (values[low_center - 1] + values[high_center - 1]) / 2
         else:
-            m = len(values) // 2 + 1
-            return values[m - 1]
+            center = len(values) // 2 + 1
+            return values[center - 1]
 
     def distribution_stderr(self, median, fraction, error_function=lambda x, y: math.pow(x - y, 2)):
         values = []
-        for v, f in self.items():
-            err = error_function(v, median)
-            values.extend([err for i in range(0, f)])
+        for val, freq in self.items():
+            err = error_function(val, median)
+            values.extend([err for i in range(0, freq)])
         values.sort()
 
         end = int(len(values) * fraction)
@@ -88,8 +88,8 @@ class Histogram(dict):
         """
         result = Histogram()
         result.update(self)
-        for k, v in other.items():
-            result.add(k, v)
+        for val, freq in other.items():
+            result.add(val, freq)
         return result
 
 
@@ -97,7 +97,6 @@ def compute_transcriptome_bam_stats(
     bam_cache,
     annotations,
     sample_size,
-    log=devnull,
     min_mapping_quality=1,
     stranded=True,
     sample_cap=10000,
@@ -141,9 +140,14 @@ def compute_transcriptome_bam_stats(
     read_lengths = []
     for gene in genes:
         for read in bam_cache.fetch(gene.chr, gene.start, gene.end, cache_if=lambda x: False, limit=sample_cap):
-            if read.is_unmapped or read.mate_is_unmapped or read.mapping_quality < min_mapping_quality \
-                    or read.next_reference_id != read.reference_id or read.is_secondary \
-                    or not read.is_proper_pair:
+            if any([
+                read.is_unmapped,
+                read.mate_is_unmapped,
+                read.mapping_quality < min_mapping_quality,
+                read.next_reference_id != read.reference_id,
+                read.is_secondary,
+                not read.is_proper_pair
+            ]):
                 continue
             if stranded:
                 try:
@@ -172,17 +176,17 @@ def compute_transcriptome_bam_stats(
             if read.reference_end > read.next_reference_start:
                 continue
 
-            for t in gene.spliced_transcripts:
+            for spl_tx in gene.spliced_transcripts:
                 try:
-                    c1 = t.convert_genomic_to_cdna(read.reference_start)
-                    c2 = t.convert_genomic_to_cdna(read.next_reference_start)
-                    fragment_hist.add(abs(c1 - c2) - 2)
+                    cdna_pos1 = spl_tx.convert_genomic_to_cdna(read.reference_start)
+                    cdna_pos2 = spl_tx.convert_genomic_to_cdna(read.next_reference_start)
+                    fragment_hist.add(abs(cdna_pos1 - cdna_pos2) - 2)
                 except IndexError:
                     pass
     read_length = stats.median(read_lengths)
     result = Histogram()
-    for k, v in fragment_hist.items():
-        result.add(k + read_length, v)
+    for val, freq in fragment_hist.items():
+        result.add(val + read_length, freq)
     median = result.median()
     err = result.distribution_stderr(median, distribution_fraction)
     bamstats = BamStats(median, math.sqrt(err), read_length)
@@ -195,7 +199,6 @@ def compute_genome_bam_stats(
     bam_file_handle,
     sample_bin_size,
     sample_size,
-    log=devnull,
     min_mapping_quality=1,
     sample_cap=10000,
     distribution_fraction=0.99
@@ -220,9 +223,9 @@ def compute_genome_bam_stats(
     randoms = [int(n * (total - 1) + 1) for n in np.random.rand(sample_size)]
     for pos in randoms:
         template_index = 0
-        for c, l in zip(bam_file_handle.fh.references, bam_file_handle.fh.lengths):
-            if pos > l - sample_bin_size:
-                pos -= (l - sample_bin_size)
+        for template_length in bam_file_handle.fh.lengths:
+            if pos > template_length - sample_bin_size:
+                pos -= (template_length - sample_bin_size)
                 template_index += 1
             else:
                 break
@@ -232,9 +235,14 @@ def compute_genome_bam_stats(
     read_lengths = []
     for bin_chr, bin_start, bin_end in bins:
         for read in bam_file_handle.fetch(bin_chr, bin_start, bin_end, limit=sample_cap, cache_if=lambda x: False):
-            if read.is_unmapped or read.mate_is_unmapped or read.mapping_quality < min_mapping_quality \
-                    or read.next_reference_id != read.reference_id or read.is_secondary \
-                    or not read.is_proper_pair:
+            if any([
+                read.is_unmapped,
+                read.mate_is_unmapped,
+                read.mapping_quality < min_mapping_quality,
+                read.next_reference_id != read.reference_id,
+                read.is_secondary,
+                not read.is_proper_pair
+            ]):
                 continue
             hist[abs(read.template_length)] = hist.get(abs(read.template_length), 0) + 1
             read_lengths.append(len(read.query_sequence))

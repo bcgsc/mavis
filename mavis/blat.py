@@ -224,17 +224,17 @@ class Blat:
                 new_query_ranges.append((query_ranges[i][0], query_ranges[i][1] + shift))
                 new_ref_ranges.append((ref_ranges[i][0], ref_ranges[i][1] + shift))
 
-                n = i + 1
-                while shift > 0 and n < len(query_ranges):
-                    size = query_ranges[n][1] - query_ranges[n][0] + 1
+                next_index = i + 1
+                while shift > 0 and next_index < len(query_ranges):
+                    size = query_ranges[next_index][1] - query_ranges[next_index][0] + 1
                     if size > shift:
-                        new_query_ranges.append((query_ranges[n][0] + shift, query_ranges[n][1]))
-                        new_ref_ranges.append((ref_ranges[n][0] + shift, ref_ranges[n][1]))
+                        new_query_ranges.append((query_ranges[next_index][0] + shift, query_ranges[next_index][1]))
+                        new_ref_ranges.append((ref_ranges[next_index][0] + shift, ref_ranges[next_index][1]))
                         shift = 0
                     else:
                         shift -= size
-                    n += 1
-                i = n
+                    next_index += 1
+                i = next_index
             query_ranges = new_query_ranges
             ref_ranges = new_ref_ranges
         seq = ''
@@ -265,8 +265,8 @@ class Blat:
             if not reference_sequence:
                 cigar.append((CIGAR.M, size))
             else:
-                for r, q in zip(reference_sequence[rcurr[0]:rcurr[1] + 1], query_sequence[qcurr[0]:qcurr[1] + 1]):
-                    if DNA_ALPHABET.match(r, q):
+                for ref_seq, query_seq in zip(reference_sequence[rcurr[0]:rcurr[1] + 1], query_sequence[qcurr[0]:qcurr[1] + 1]):
+                    if DNA_ALPHABET.match(ref_seq, query_seq):
                         cigar.append((CIGAR.EQ, 1))
                     else:
                         cigar.append((CIGAR.X, 1))
@@ -325,16 +325,14 @@ def process_blat_output(
         blat_min_percent_of_max_score=0.8,
         blat_min_identity=0.7,
         blat_limit_top_aln=25,
-        is_protein=False,
-        log=devnull,
-        **kwargs):
+        is_protein=False):
     """
     converts the blat output pslx (unheadered file) to bam reads
     """
     if is_protein:
         raise NotImplementedError('currently does not support aligning protein sequences')
 
-    header, rows = Blat.read_pslx(aligner_output_file, query_id_mapping, is_protein=is_protein)
+    dummy, rows = Blat.read_pslx(aligner_output_file, query_id_mapping, is_protein=is_protein)
 
     # split the rows by query id
     rows_by_query = {}
@@ -345,14 +343,14 @@ def process_blat_output(
 
     reads_by_query = {}
     sequences = set(query_id_mapping.values())
-    for s in sequences:
-        reads_by_query[s] = []
+    for seq in sequences:
+        reads_by_query[seq] = []
     for query_id, rows in rows_by_query.items():
         query_seq = query_id_mapping[query_id]
         # filter on percent id
         score_ranks = {}
-        for count, s in enumerate(sorted([r['score'] for r in rows], reverse=True)):
-            score_ranks[s] = count
+        for count, score in enumerate(sorted([r['score'] for r in rows], reverse=True)):
+            score_ranks[score] = count
 
         filtered_rows = [row for row in rows if round(row['percent_ident'], 0) >= blat_min_identity]
 
@@ -367,11 +365,11 @@ def process_blat_output(
             row['rank'] = score_ranks[row['score']]
             try:
                 read = Blat.pslx_row_to_pysam(row, input_bam_cache, reference_genome)
-            except KeyError as e:
+            except KeyError as err:
                 warnings.warn(
-                    'warning: reference template name not recognized {0}'.format(e))
-            except AssertionError as e:
-                warnings.warn('warning: invalid blat alignment: {}'.format(repr(e)))
+                    'warning: reference template name not recognized {0}'.format(err))
+            except AssertionError as err:
+                warnings.warn('warning: invalid blat alignment: {}'.format(repr(err)))
             else:
                 read.set_tag(PYSAM_READ_FLAGS.BLAT_SCORE, row['score'], value_type='i')
                 read.set_tag(PYSAM_READ_FLAGS.BLAT_ALIGNMENTS, len(filtered_rows), value_type='i')

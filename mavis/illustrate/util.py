@@ -12,19 +12,18 @@ def dynamic_label_color(color):
     """
     calculates the luminance of a color and determines if a black or white label will be more contrasting
     """
-    f = Color(color)
-    if f.get_luminance() < 0.5:
+    color = Color(color)
+    if color.get_luminance() < 0.5:
         return '#FFFFFF'
-    else:
-        return '#000000'
+    return '#000000'
 
 
 class LabelMapping:
     def __init__(self, **kwargs):
         self._mapping = dict()
         self._reverse_mapping = dict()
-        for k, v in kwargs.items():
-            self[k] = v
+        for attr, val in kwargs.items():
+            self[attr] = val
 
     def __setitem__(self, key, value):
         if key in self._mapping:
@@ -74,20 +73,20 @@ class LabelMapping:
 
 def split_intervals_into_tracks(intervals):
     tracks = [[]]
-    for i in sorted(intervals, key=lambda x: x[0]):
+    for itvl in sorted(intervals, key=lambda x: x[0]):
         added = False
-        for t in tracks:
+        for track in tracks:
             overlaps = False
-            for og in t:
-                if Interval.overlaps(i, og):
+            for track_itvl in track:
+                if Interval.overlaps(itvl, track_itvl):
                     overlaps = True
                     break
             if not overlaps:
                 added = True
-                t.append(i)
+                track.append(itvl)
                 break
         if not added:
-            tracks.append([i])
+            tracks.append([itvl])
     return tracks
 
 
@@ -101,7 +100,7 @@ def generate_interval_mapping(
 
     intervals = []
     for i in Interval.min_nonoverlapping(*input_intervals):
-        if len(intervals) == 0 or abs(Interval.dist(intervals[-1], i)) > 1:
+        if not intervals or abs(Interval.dist(intervals[-1], i)) > 1:
             intervals.append(i)
         else:
             intervals[-1] = intervals[-1] | i
