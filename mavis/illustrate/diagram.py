@@ -194,12 +194,12 @@ def draw_sv_summary_diagram(
         theights = []
         # now the transcript level drawings
         if any([
-                ann.transcript1 == ann.transcript2,
-                ann.transcript1 is None,
-                ann.transcript2 is None,
-                isinstance(ann.transcript1, IntergenicRegion),
-                isinstance(ann.transcript2, IntergenicRegion)
-            ]):
+            ann.transcript1 == ann.transcript2,
+            ann.transcript1 is None,
+            ann.transcript2 is None,
+            isinstance(ann.transcript1, IntergenicRegion),
+            isinstance(ann.transcript2, IntergenicRegion)
+        ]):
             breaks = [ann.break1, ann.break2]
             transcript = ann.transcript1
             if ann.transcript1 is None or isinstance(ann.transcript1, IntergenicRegion):

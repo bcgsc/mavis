@@ -5,6 +5,7 @@ from ..interval import Interval
 
 
 class ReferenceName(str):
+
     def __eq__(self, other):
         options = {str(self)}
         if self.startswith('chr'):
@@ -41,6 +42,7 @@ class ReferenceName(str):
 
 
 class BioInterval:
+
     def __init__(self, reference_object, start, end=None, name=None, seq=None, data=None, strand=None):
         """
         Args:

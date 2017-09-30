@@ -13,6 +13,7 @@ from ..util import devnull
 
 
 class Evidence(BreakpointPair):
+
     @property
     def outer_window1(self):
         """:class:`~mavis.interval.Interval`: the window where evidence will be gathered for the first
@@ -786,7 +787,7 @@ class Evidence(BreakpointPair):
                 if contig.seq not in filtered_contigs and rseq not in filtered_contigs:
                     filtered_contigs[contig.seq] = contig
         self.contigs = list(filtered_contigs.values())
-    
+
     @classmethod
     def _generate_merged_fetch_windows(cls, evidence_list, fetch_min_bin_size):
         """
@@ -827,7 +828,7 @@ class Evidence(BreakpointPair):
                 for fbin in fetch_bins:
                     read_limits.setdefault(evidence.break2.chr, {})
                     read_limits[evidence.break2.chr][fbin] = max([read_limits[evidence.break2.chr].get(fbin, 0), read_cap])
-        
+
         # get the reads for any given interval, map over each applicable evidence
         fetch_regions = []
 
@@ -856,7 +857,7 @@ class Evidence(BreakpointPair):
             for fbin, limit in weighted_intervals.items():
                 fetch_regions.append((chrom, fbin.start, fbin.end, limit))
         return fetch_regions
-    
+
     @classmethod
     def load_multiple(cls, evidence_list, log=devnull):
         """
@@ -920,7 +921,7 @@ class Evidence(BreakpointPair):
                 return True
             return False
 
-        fetch_regions = cls._generate_fetch_windows(evidence_list, fetch_min_bin_size) 
+        fetch_regions = cls._generate_fetch_windows(evidence_list, fetch_min_bin_size)
 
         putative_half_maps = set()
         putative_flanking = set()

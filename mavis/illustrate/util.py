@@ -19,6 +19,7 @@ def dynamic_label_color(color):
 
 
 class LabelMapping:
+
     def __init__(self, **kwargs):
         self._mapping = dict()
         self._reverse_mapping = dict()
@@ -242,6 +243,7 @@ def generate_interval_mapping(
 
 
 class Tag(svgwrite.base.BaseElement):
+
     def __init__(self, elementname, content='', **kwargs):
         self.elementname = elementname
         super(Tag, self).__init__(**kwargs)

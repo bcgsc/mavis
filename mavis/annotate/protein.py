@@ -41,6 +41,7 @@ def calculate_orf(spliced_cdna_sequence, min_orf_size=None):
 
 
 class DomainRegion(BioInterval):
+
     def __init__(self, start, end, seq=None, domain=None, name=None):
         BioInterval.__init__(self, domain, start, end, seq=seq, name=name)
         if seq and len(seq) != len(self):
@@ -238,6 +239,7 @@ class Domain:
 
 
 class Translation(BioInterval):
+
     def __init__(self, start, end, transcript=None, domains=None, seq=None, name=None):
         """
         describes the splicing pattern and cds start and end with reference to a particular transcript

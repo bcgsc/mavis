@@ -25,6 +25,7 @@ DEFAULTS = MavisNamespace(
 
 
 class DiagramSettings:
+
     def __init__(
         self, **kwargs
     ):

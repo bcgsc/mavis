@@ -15,6 +15,7 @@ FLOAT_OFFSET = 0.99999999
 class BreakpointPairGroupKey(namedtuple('BreakpointPairGroupKey', [
     'chr1', 'chr2', 'orient1', 'orient2', 'strand1', 'strand2', 'opposing_strands', 'explicit_strand'
 ])):
+
     def __new__(cls, chr1, chr2, orient1, orient2, strand1, strand2, opposing_strands=None, explicit_strand=False):
         if STRAND.NS in [strand1, strand2] and explicit_strand:
             raise ValueError('cannot have unspecified strand when explicit_strand is set')

@@ -104,7 +104,7 @@ def parse_annotations_json(data, reference_genome=None, best_transcripts_only=Fa
             gene_dict['strand'] = STRAND.NEG
         else:
             raise AssertionError('input has unexpected form. strand must be 1 or -1 but found', gene_dict['strand'])
-        
+
         gene = Gene(
             chr=gene_dict['chr'],
             start=gene_dict['start'],

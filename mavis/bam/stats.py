@@ -11,6 +11,7 @@ from ..util import devnull
 
 
 class BamStats:
+
     def __init__(self, median_fragment_size, stdev_fragment_size, read_length):
         self.median_fragment_size = median_fragment_size
         self.stdev_fragment_size = stdev_fragment_size
@@ -42,6 +43,7 @@ class BamStats:
 
 
 class Histogram(dict):
+
     def add(self, item, freq=1):
         """
         add a key to the histogram with a default frequency of 1

@@ -107,6 +107,7 @@ class GenomeEvidence(Evidence):
 
 
 class TranscriptomeEvidence(Evidence):
+
     def __init__(self, annotations, *pos, **kwargs):
         Evidence.__init__(self, *pos, **kwargs)
         self.protocol = PROTOCOL.TRANS

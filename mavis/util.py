@@ -41,6 +41,7 @@ def get_env_variable(arg, default, cast_type=None):
 
 
 class MavisNamespace(Namespace):
+
     def items(self):
         return [(k, self[k]) for k in self.keys()]
 
@@ -75,11 +76,13 @@ class MavisNamespace(Namespace):
 
 
 class WeakMavisNamespace(MavisNamespace):
+
     def __getattribute__(self, attr):
         return get_env_variable(attr, object.__getattribute__(self, attr))
 
 
 class ChrListString(list):
+
     def __init__(self, string):
         if not isinstance(string, str):
             for item in string:

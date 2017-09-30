@@ -40,6 +40,7 @@ REFERENCE_DEFAULTS = WeakMavisNamespace(
 
 
 class LibraryConfig(MavisNamespace):
+
     def __init__(
         self, library, protocol, disease_status, bam_file, inputs, read_length, median_fragment_size,
         stdev_fragment_size, stranded_bam, strand_determining_read=2,
@@ -199,6 +200,7 @@ def validate_and_cast_section(section, defaults, use_defaults=False):
 
 
 class MavisConfig:
+
     def __init__(self, **kwargs):
 
         # section can be named schedule or qsub to support older versions

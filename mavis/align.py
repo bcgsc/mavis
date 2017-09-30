@@ -23,11 +23,12 @@ SUPPORTED_ALIGNER = Vocab(BWA_MEM='bwa mem', BLAT='blat')
 
 
 class SplitAlignment:
+
     def __init__(self, read1, read2=None):
         if read2 is not None and any([
-                read1.reference_name > read2.reference_name,
-                read1.reference_name == read2.reference_name and read1.reference_start > read2.reference_start
-            ]):
+            read1.reference_name > read2.reference_name,
+            read1.reference_name == read2.reference_name and read1.reference_start > read2.reference_start
+        ]):
             read1, read2 = read2, read1
 
         self.read1 = read1
