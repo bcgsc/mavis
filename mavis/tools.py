@@ -18,7 +18,7 @@ SUPPORTED_TOOL = Vocab(
     MANTA='manta',
     DELLY='delly',
     TA='transabyss',
-    # BREAKDANCER='breakdancer',  # TODO: later versions will include support for these tools
+    # TODO: later versions will include support for these tools
     PINDEL='pindel',
     CHIMERASCAN='chimerascan',
     MAVIS='mavis',
@@ -67,6 +67,72 @@ def convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fal
     return result
 
 
+def parse_breakdancer(row):
+    pass
+
+
+def parse_transabyss(row, is_stranded=False):
+    """
+    transforms the transbyss output into the common format for expansion. Maps the input column
+    names to column names which MAVIS can read
+    """
+    std_row = {}
+    std_row['event_type'] = row.get('rearrangement', row['type'])
+    if std_row['event_type'] in ['LSR', 'translocation']:
+        del std_row['event_type']
+    if 'breakpoint' in row:
+        orient1, orient2 = row['orientations'].split(',')
+        if is_stranded:
+            strand1, strand2 = row['strands'].split(',')
+            strand1 = STRAND.POS if strand1 == STRAND.NEG else STRAND.NEG
+            strand2 = STRAND.POS if strand2 == STRAND.NEG else STRAND.NEG
+        m = re.match(
+            r'^(?P<chr1>[^:]+):(?P<pos1_start>\d+)\|(?P<chr2>[^:]+):(?P<pos2_start>\d+)$', row['breakpoint'])
+        if not m:
+            raise OSError(
+                'file format error: the breakpoint column did not satisfy the expected pattern', row)
+        std_row.update({k: m[k] for k in ['chr1', 'pos1_start', 'chr2', 'pos2_start']})
+    else:
+        std_row.update({
+            'chr1': row['chr'], 'pos1_start': row['chr_start'], 'pos2_start': int(row['chr_end']) + 1
+        })
+        if is_stranded:
+            std_row['strand1'] = std_row['strand2'] = (STRAND.POS if row['ctg_strand'] == STRAND.NEG else STRAND.NEG)
+        # add the untemplated sequence where appropriate
+        if std_row['event_type'] == 'del':
+            assert row['alt'] == 'na'
+            std_row[COLUMNS.untemplated_seq] = ''
+        elif std_row['event_type'] in ['dup', 'ITD']:
+            assert len(row['alt']) == row['pos1_end'] - row['pos2_start'] + 1
+            std_row[COLUMNS.untemplated_seq] = row['alt']
+        elif std_row['event_type'] == 'ins':
+            std_row[COLUMNS.untemplated_seq] = row['alt']
+    return std_row
+
+
+def parse_chimerascan(row):
+    """
+    transforms the chimerscan output into the common format for expansion. Maps the input column
+    names to column names which MAVIS can read
+    """
+    std_row = {}
+    std_row.update({'chr1': row['chrom5p'], 'chr2': row['chrom3p']})
+    if row['strand5p'] == '+':
+        std_row['pos1_start'] = row['end5p']
+        orient1 = ORIENT.LEFT
+    else:
+        std_row['pos1_start'] = row['start5p']
+        orient1 = ORIENT.RIGHT
+    if row['strand3p'] == '+':
+        std_row['pos2_start'] = row['start3p']
+        orient2 = ORIENT.RIGHT
+    else:
+        std_row['pos2_start'] = row['end3p']
+        orient2 = ORIENT.LEFT
+    std_row['opposing_strands'] = row['strand5p'] != row['strand3p']
+    return std_row
+
+
 def _convert_tool_row(row, file_type, stranded):
     std_row = {}
     orient1 = orient2 = ORIENT.NS
@@ -100,28 +166,11 @@ def _convert_tool_row(row, file_type, stranded):
 
     elif file_type == SUPPORTED_TOOL.CHIMERASCAN:
 
-        std_row.update({'chr1': row['chrom5p'], 'chr2': row['chrom3p']})
-        if row['strand5p'] == '+':
-            std_row['pos1_start'] = row['end5p']
-            orient1 = ORIENT.LEFT
-        else:
-            std_row['pos1_start'] = row['start5p']
-            orient1 = ORIENT.RIGHT
-        if row['strand3p'] == '+':
-            std_row['pos2_start'] = row['start3p']
-            orient2 = ORIENT.RIGHT
-        else:
-            std_row['pos2_start'] = row['end3p']
-            orient2 = ORIENT.LEFT
-        std_row['opposing_strands'] = row['strand5p'] != row['strand3p']
+        std_row.update(parse_chimerascan(row))
 
     # TODO: later versions will include support for these tools
-    # elif file_type == SUPPORTED_TOOL.BREAKDANCER:
-    #     std_row.update({
-    #         'chr1': row['Chr1'], 'chr2': row['Chr2'],
-    #         'pos1_start': row['Pos1'], 'pos2_start': row['Pos2'],
-    #         'event_type': row['Type']
-    #     })
+    #elif file_type == SUPPORTED_TOOL.BREAKDANCER:
+        #std_row.update(parse_breakdancer(row))
 
     elif file_type == SUPPORTED_TOOL.DEFUSE:
 
@@ -134,36 +183,7 @@ def _convert_tool_row(row, file_type, stranded):
 
     elif file_type == SUPPORTED_TOOL.TA:
 
-        std_row['event_type'] = row.get('rearrangement', row['type'])
-        if std_row['event_type'] in ['LSR', 'translocation']:
-            del std_row['event_type']
-        if 'breakpoint' in row:
-            orient1, orient2 = row['orientations'].split(',')
-            if stranded:
-                strand1, strand2 = row['strands'].split(',')
-                strand1 = STRAND.POS if strand1 == STRAND.NEG else STRAND.NEG
-                strand2 = STRAND.POS if strand2 == STRAND.NEG else STRAND.NEG
-            m = re.match(
-                r'^(?P<chr1>[^:]+):(?P<pos1_start>\d+)\|(?P<chr2>[^:]+):(?P<pos2_start>\d+)$', row['breakpoint'])
-            if not m:
-                raise OSError(
-                    'file format error: the breakpoint column did not satisfy the expected pattern', row)
-            std_row.update({k: m[k] for k in ['chr1', 'pos1_start', 'chr2', 'pos2_start']})
-        else:
-            std_row.update({
-                'chr1': row['chr'], 'pos1_start': row['chr_start'], 'pos2_start': int(row['chr_end']) + 1
-            })
-            if stranded:
-                strand1 = strand2 = (STRAND.POS if row['ctg_strand'] == STRAND.NEG else STRAND.NEG)
-            # add the untemplated sequence where appropriate
-            if row['event_type'] == 'del':
-                assert row['alt'] == 'na'
-                std_row[COLUMNS.untemplated_seq] = ''
-            elif row['event_type'] in ['dup', 'ITD']:
-                assert len(row['alt']) == row['pos1_end'] - row['pos2_start'] + 1
-                std_row[COLUMNS.untemplated_seq] = row['alt']
-            elif row['event_type'] == 'ins':
-                row[COLUMNS.untemplated_seq] = row['alt']
+        std_row.update(parse_transabyss(row, stranded))
 
     else:
         raise NotImplementedError('unsupported file type', file_type)

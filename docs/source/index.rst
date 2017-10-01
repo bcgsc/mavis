@@ -10,7 +10,10 @@ MAVIS User Manual
    :maxdepth: -1
 
    usermanual.rst
+   mavis_input.rst
    reference_inputs.rst
+   tools_supported.rst
+   faqs.rst
    theory.rst
    development.rst
 
