@@ -106,7 +106,7 @@ def draw_sv_summary_diagram(
         genes1.add(gene)
         colors[gene] = config.gene1_color
 
-    for gene, dummy in ann.genes_proximal_to_break1:
+    for gene, _ in ann.genes_proximal_to_break1:
         genes1.add(gene)
         colors[gene] = config.gene1_color
 
@@ -114,7 +114,7 @@ def draw_sv_summary_diagram(
         genes2.add(gene)
         colors.setdefault(gene, config.gene2_color)
 
-    for gene, dummy in ann.genes_proximal_to_break2:
+    for gene, _ in ann.genes_proximal_to_break2:
         genes2.add(gene)
         colors.setdefault(gene, config.gene2_color)
 

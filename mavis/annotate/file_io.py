@@ -43,7 +43,7 @@ def load_masking_regions(filepath):
         >>> m['1']
         [BioInterval(), BioInterval(), ...]
     """
-    dummy, rows = tab.read_file(
+    _, rows = tab.read_file(
         filepath,
         require=['chr', 'start', 'end', 'name'],
         cast={'start': int, 'end': int, 'chr': ReferenceName}
@@ -259,7 +259,11 @@ def convert_tab_to_json(filepath, warn=devnull):
             row = tab.cast_null(row)
         return row
 
+<<<<<<< HEAD
     dummy, rows = tab.read_file(
+=======
+    _, rows = TSV.read_file(
+>>>>>>> style_updates
         filepath,
         require=[
             'ensembl_gene_id',
