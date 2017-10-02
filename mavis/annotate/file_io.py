@@ -43,7 +43,7 @@ def load_masking_regions(filepath):
         >>> m['1']
         [BioInterval(), BioInterval(), ...]
     """
-    dummy, rows = TSV.read_file(
+    _, rows = TSV.read_file(
         filepath,
         require=['chr', 'start', 'end', 'name'],
         cast={'start': int, 'end': int, 'chr': ReferenceName}
@@ -259,7 +259,7 @@ def convert_tab_to_json(filepath, warn=devnull):
             row = TSV.null(row)
         return row
 
-    dummy, rows = TSV.read_file(
+    _, rows = TSV.read_file(
         filepath,
         require=[
             'ensembl_gene_id',

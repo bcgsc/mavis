@@ -312,7 +312,7 @@ class BreakpointPair:
             if state not in [CIGAR.I, CIGAR.D, CIGAR.N]:
                 continue
             if i > 0 and read.cigar[i - 1][0] in [CIGAR.I, CIGAR.D, CIGAR.N]:
-                start, dummy, size = read_events[-1]
+                start, _, size = read_events[-1]
                 read_events[-1] = (start, i, size + freq)
             else:
                 read_events.append((i, i, freq))
@@ -679,7 +679,7 @@ def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, **
             COLUMNS.break2_orientation: ORIENT,
             COLUMNS.break2_strand: STRAND
         })
-    dummy, rows = TSV.read_file(
+    _, rows = TSV.read_file(
         filename, suppress_index=True,
         **kwargs
     )
