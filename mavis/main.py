@@ -35,6 +35,7 @@ from .validate.main import main as validate_main
 
 VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
 PROGNAME = 'mavis'
+JOB_TASK = "$SGE_TASK_ID"
 
 QSUB_HEADER = """#!/bin/bash
 #$ -V
@@ -85,7 +86,7 @@ def main_pipeline(config):
         merge_args.update(libconf.items())
         merge_args['output'] = cluster_output
         output_files = cluster_main(log_args=True, **merge_args)
-
+        job_task = '1' if len(output_files) == 1 else JOB_TASK
         if not output_files:
             log('warning: no inputs after clustering. Will not set up other pipeline steps')
             continue
@@ -128,17 +129,18 @@ def main_pipeline(config):
                     name=validation_jobname,
                     output=validation_output
                 ) + '\n')
-            fh.write('#$ -t {}-{}\n'.format(1, len(output_files)))
+            if job_task != '1':
+                fh.write('#$ -t {}-{}\n'.format(1, len(output_files)))
             temp = [
                 '--{} {}'.format(k, v) for k, v in validation_args.items() if not isinstance(v, str) and v is not None]
             temp.extend(
                 ['--{} "{}"'.format(k, v) for k, v in validation_args.items() if isinstance(v, str) and v is not None])
             validation_args = temp
-            validation_args.append('-n {}$SGE_TASK_ID.tab'.format(merge_file_prefix))
+            validation_args.append('-n {}{}.tab'.format(merge_file_prefix, job_task))
             fh.write('{} validate {}'.format(PROGNAME, ' \\\n\t'.join(validation_args)))
             fh.write(
                 ' \\\n\t--output {}\n'.format(
-                    os.path.join(validation_output, os.path.basename(merge_file_prefix) + '$SGE_TASK_ID')))
+                    os.path.join(validation_output, os.path.basename(merge_file_prefix) + job_task)))
 
         # set up the annotations job
         # for all files with the right suffix
@@ -161,8 +163,8 @@ def main_pipeline(config):
         temp.extend(
             ['--{} "{}"'.format(k, v) for k, v in annotation_args.items() if isinstance(v, str) and v is not None])
         annotation_args = temp
-        annotation_args.append('--inputs {}/{}$SGE_TASK_ID/*{}'.format(
-            validation_output, os.path.basename(merge_file_prefix), VALIDATION_PASS_SUFFIX))
+        annotation_args.append('--inputs {}/{}{}/*{}'.format(
+            validation_output, os.path.basename(merge_file_prefix), job_task, VALIDATION_PASS_SUFFIX))
         qsub = os.path.join(annotation_output, 'qsub.sh')
         annotation_jobname = 'annotation_{}_{}_{}'.format(libconf.library, libconf.protocol, rand)
         annotation_jobs.append(annotation_jobname)
@@ -175,12 +177,13 @@ def main_pipeline(config):
                     name=annotation_jobname,
                     output=annotation_output
                 ) + '\n')
-            fh.write('#$ -t {}-{}\n'.format(1, len(output_files)))
+            if job_task != '1':
+                fh.write('#$ -t {}-{}\n'.format(1, len(output_files)))
             fh.write('#$ -hold_jid {}\n'.format(validation_jobname))
             fh.write('{} annotate {}'.format(PROGNAME, ' \\\n\t'.join(annotation_args)))
             fh.write(
                 ' \\\n\t--output {}\n'.format(
-                    os.path.join(annotation_output, os.path.basename(merge_file_prefix) + '$SGE_TASK_ID')))
+                    os.path.join(annotation_output, os.path.basename(merge_file_prefix) + job_task)))
             for sge_task_id in range(1, len(output_files) + 1):
                 pairing_inputs.append(os.path.join(
                     annotation_output, os.path.basename(merge_file_prefix) + str(sge_task_id), 'annotations.tab'))

@@ -83,7 +83,7 @@ class TestPipeline(unittest.TestCase):
 
         # test the annotation
         annotate_main(
-            [prefix + '.validation-passed.tab'], self.output,
+            [prefix + '.validation-passed.tab'], self.output, 'mock-A36971', PROTOCOL.GENOME,
             reference_genome, annotations, template_metadata,
             min_domain_mapping_match=0.95, min_orf_size=300, max_orf_cap=3,
         )

@@ -307,7 +307,10 @@ def add_semi_optional_argument(argname, success_parser, failure_parser, help_msg
 
 
 def float_fraction(f):
-    f = float(f)
+    try:
+        f = float(f)
+    except ValueError:
+        raise argparse.ArgumentTypeError('Argument must be a value between 0 and 1')
     if f < 0 or f > 1:
         raise argparse.ArgumentTypeError('Argument must be a value between 0 and 1')
     return f

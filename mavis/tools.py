@@ -68,7 +68,7 @@ def convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fal
 
 
 def _parse_breakdancer(row):
-    pass
+    pass  # TODO: add breakdancer support
 
 
 def _parse_transabyss(row, is_stranded=False):
@@ -94,8 +94,14 @@ def _parse_transabyss(row, is_stranded=False):
         std_row.update({k: m[k] for k in ['chr1', 'pos1_start', 'chr2', 'pos2_start']})
     else:
         std_row.update({
-            'chr1': row['chr'], 'pos1_start': int(row['chr_start']), 'pos2_start': int(row['chr_end']) + 1
+            'chr1': row['chr'], 'pos1_start': int(row['chr_start']), 'pos2_start': int(row['chr_end'])
         })
+        if std_row['event_type'] == 'del':
+            std_row['pos1_start'] -= 1
+            std_row['pos2_start'] += 1
+        elif std_row['event_type'] == 'ins':
+            std_row['pos2_start'] += 1
+
         if is_stranded:
             std_row['strand1'] = std_row['strand2'] = (STRAND.POS if row['ctg_strand'] == STRAND.NEG else STRAND.NEG)
         # add the untemplated sequence where appropriate
@@ -103,13 +109,16 @@ def _parse_transabyss(row, is_stranded=False):
             assert row['alt'] == 'na'
             std_row[COLUMNS.untemplated_seq] = ''
         elif std_row['event_type'] in ['dup', 'ITD']:
-            if len(row['alt']) != std_row['pos2_start'] - std_row['pos1_start'] + 1:
+            length = std_row['pos2_start'] - std_row['pos1_start'] + 1
+            if len(row['alt']) != length:
                 raise AssertionError(
                     'expected alternate sequence to be equal to the length of the event',
-                    len(row['alt']), std_row['pos2_start'] - std_row['pos1_start'] + 1)
-            std_row[COLUMNS.untemplated_seq] = row['alt'].upper()
+                    len(row['alt']), length, row, std_row)
+            std_row[COLUMNS.untemplated_seq] = ''
         elif std_row['event_type'] == 'ins':
             std_row[COLUMNS.untemplated_seq] = row['alt'].upper()
+        else:
+            raise NotImplementedError('unexpected indel type', std_row['event_type'])
     return std_row
 
 

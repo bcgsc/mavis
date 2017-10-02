@@ -92,7 +92,6 @@ print('version:', version)
 
 
 if any([x in sys.argv for x in ['install', 'develop', 'build']]):
-    install_TSV()
     install_vocab()
     write_version_file(version)
 

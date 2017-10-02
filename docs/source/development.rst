@@ -158,6 +158,7 @@ MAVIS Package Documentation
     auto/mavis.blat
     auto/mavis.breakpoint
     mavis.cluster
+    auto/mavis.config
     auto/mavis.constants
     auto/mavis.error
     mavis.illustrate
@@ -165,6 +166,7 @@ MAVIS Package Documentation
     mavis.pairing
     mavis.validate
     mavis.summary
+    auto/mavis.tools
 
 
 |

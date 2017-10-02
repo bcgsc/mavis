@@ -56,7 +56,7 @@ def main(
             COLUMNS.library: library,
             COLUMNS.stranded: False
         },
-        required=[COLUMNS.protocol, COLUMNS.library],
+        require=[COLUMNS.protocol, COLUMNS.library],
         expand_ns=False, explicit_strand=False
     )
     log('read {} breakpoint pairs'.format(len(bpps)))
