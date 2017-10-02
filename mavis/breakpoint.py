@@ -3,7 +3,7 @@ from copy import copy as sys_copy
 import itertools
 import re
 
-import TSV
+import tab
 
 from .constants import CIGAR, COLUMNS, DNA_ALPHABET, ORIENT, reverse_complement, STRAND, SVTYPE
 from .error import InvalidRearrangement, NotSpecifiedError
@@ -196,7 +196,7 @@ class BreakpointPair:
     def flatten(self):
         """
         returns the key-value self for the breakpoint self information as
-        can be written directly as a TSV row
+        can be written directly as a tab row
         """
         row = {}
         row.update(self.data)
@@ -612,7 +612,7 @@ class BreakpointPair:
 
 def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, **kwargs):
     """
-    reads a file using the TSV module. Each row is converted to a breakpoint pair and
+    reads a file using the tab module. Each row is converted to a breakpoint pair and
     other column data is stored in the data attribute
 
     Args:
@@ -628,7 +628,7 @@ def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, **
         [BreakpointPair(), BreakpointPair(), ...]
 
     One can also validate other expected columns that will go in the data attribute using the usual arguments
-    to the TSV.read_file function
+    to the tab.read_file function
 
     .. code-block:: python
 
@@ -638,18 +638,18 @@ def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, **
 
     def soft_null_cast(value):
         try:
-            value = TSV.null(value)
+            value = tab.cast_null(value)
         except TypeError:
             pass
         return value
 
     def soft_boolean_cast(value):
         try:
-            return TSV.tsv_boolean(value)
+            return tab.cast_boolean(value)
         except TypeError:
             if value == '?':
                 value = 'null'
-        return TSV.null(value)
+        return tab.cast_null(value)
 
     kwargs.setdefault('cast', {}).update(
         {
@@ -658,13 +658,13 @@ def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, **
             COLUMNS.break2_position_start: int,
             COLUMNS.break2_position_end: int,
             COLUMNS.opposing_strands: soft_boolean_cast,
-            COLUMNS.stranded: TSV.tsv_boolean,
+            COLUMNS.stranded: tab.cast_boolean,
             COLUMNS.untemplated_seq: soft_null_cast,
             COLUMNS.break1_chromosome: lambda x: re.sub('^chr', '', x),
             COLUMNS.break2_chromosome: lambda x: re.sub('^chr', '', x)
         })
     kwargs.setdefault('require', [])
-    kwargs.setdefault('add', {}).update({
+    kwargs.setdefault('add_default', {}).update({
         COLUMNS.untemplated_seq: None,
         COLUMNS.break1_orientation: ORIENT.NS,
         COLUMNS.break1_strand: STRAND.NS,
@@ -679,7 +679,7 @@ def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, **
             COLUMNS.break2_orientation: ORIENT,
             COLUMNS.break2_strand: STRAND
         })
-    dummy, rows = TSV.read_file(
+    dummy, rows = tab.read_file(
         filename, suppress_index=True,
         **kwargs
     )

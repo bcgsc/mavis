@@ -10,7 +10,7 @@ import subprocess
 import sys
 import time
 
-import TSV
+import tab
 
 from . import __version__
 from .annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
@@ -149,6 +149,8 @@ def main_pipeline(config):
             'masking': config.reference.masking_filename,
             'min_orf_size': config.annotation.min_orf_size,
             'max_orf_cap': config.annotation.max_orf_cap,
+            'library': libconf.library,
+            'protocol': libconf.protocol,
             'min_domain_mapping_match': config.annotation.min_domain_mapping_match,
             'domain_name_regex_filter': config.illustrate.domain_name_regex_filter,
             'max_proximity': config.cluster.max_proximity
@@ -254,7 +256,7 @@ def generate_config(parser, required, optional):
         ' of inputs that should be used for the library', nargs='+', default=[], action='append')
     optional.add_argument(
         '--best_transcripts_only', default=get_env_variable('best_transcripts_only', True),
-        type=TSV.tsv_boolean, help='compute from best transcript models only')
+        type=tab.cast_boolean, help='compute from best transcript models only')
     optional.add_argument(
         '--genome_bins', default=get_env_variable('genome_bins', 100), type=int,
         help='number of bins/samples to use in calculating the fragment size stats for genomes')
@@ -265,7 +267,7 @@ def generate_config(parser, required, optional):
         '--distribution_fraction', default=get_env_variable('distribution_fraction', 0.97), type=float,
         help='the proportion of the distribution of calculated fragment sizes to use in determining the stdev')
     optional.add_argument(
-        '--verbose', default=get_env_variable('verbose', False), type=TSV.tsv_boolean,
+        '--verbose', default=get_env_variable('verbose', False), type=tab.cast_boolean,
         help='verbosely output logging information')
     optional.add_argument(
         '--convert', nargs=4, default=[],
@@ -276,7 +278,7 @@ def generate_config(parser, required, optional):
         help='alias for use in inputs and full command (quoted)', action='append')
     optional.add_argument(
         '--no_defaults', default=False, action='store_true', help='do not write current defaults to the config output')
-    augment_parser(required, optional, ['annotations'])
+    augment_parser(['annotations'], required, optional)
     args = parser.parse_args()
     if args.distribution_fraction < 0 or args.distribution_fraction > 1:
         raise ValueError('distribution_fraction must be a value between 0-1')
@@ -345,7 +347,7 @@ def generate_config(parser, required, optional):
     for alias, inputfile, toolname, stranded in args.convert:
         if alias in convert:
             raise KeyError('duplicate alias names are not allowed', alias)
-        stranded = str(TSV.tsv_boolean(stranded))
+        stranded = str(tab.cast_boolean(stranded))
         SUPPORTED_TOOL.enforce(toolname)
         convert[alias] = ['convert_tool_output', inputfile, toolname, stranded]
     write_config(args.write, include_defaults=not args.no_defaults, libraries=libs, conversions=convert, log=log)
@@ -659,7 +661,7 @@ use the -h/--help option
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, add_help=False)
     required = parser.add_argument_group('required arguments')
     optional = parser.add_argument_group('optional arguments')
-    augment_parser(required, optional, ['help', 'version'])
+    augment_parser(['help', 'version'], optional)
 
     if pstep == 'config':
         generate_config(parser, required, optional)
@@ -668,48 +670,39 @@ use the -h/--help option
         required.add_argument('-o', '--output', help='path to the output directory', required=True)
         if pstep == PIPELINE_STEP.PIPELINE:
             required.add_argument('config', help='path to the input pipeline configuration file')
-            augment_parser(required, optional, [])
         elif pstep == PIPELINE_STEP.CLUSTER:
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
-            augment_parser(
-                required, optional,
-                ['library', 'protocol', 'stranded_bam', 'disease_status'] +
-                ['annotations', 'masking'] + [k for k in vars(CLUSTER_DEFAULTS)]
-            )
+            augment_parser(['library', 'protocol', 'stranded_bam', 'disease_status', 'annotations', 'masking'], required, optional)
+            augment_parser(CLUSTER_DEFAULTS.keys(), optional)
         elif pstep == PIPELINE_STEP.VALIDATE:
             required.add_argument('-n', '--input', help='path to the input file', required=True)
             augment_parser(
-                required, optional,
                 ['library', 'protocol', 'bam_file', 'read_length', 'stdev_fragment_size', 'median_fragment_size'] +
-                ['stranded_bam', 'annotations', 'reference_genome', 'aligner_reference', 'masking'] +
-                [k for k in vars(VALIDATION_DEFAULTS)]
+                ['stranded_bam', 'annotations', 'reference_genome', 'aligner_reference', 'masking'],
+                required, optional
             )
+            augment_parser(VALIDATION_DEFAULTS.keys(), optional)
         elif pstep == PIPELINE_STEP.ANNOTATE:
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
             augment_parser(
-                required, optional,
-                ['annotations', 'reference_genome', 'masking', 'max_proximity', 'template_metadata'] +
-                [k for k in vars(ANNOTATION_DEFAULTS)] +
-                [k for k in vars(ILLUSTRATION_DEFAULTS)]
+                ['library', 'protocol', 'annotations', 'reference_genome', 'masking', 'max_proximity', 'template_metadata'],
+                required, optional
             )
+            augment_parser(list(ANNOTATION_DEFAULTS.keys()) + list(ILLUSTRATION_DEFAULTS.keys()), optional)
         elif pstep == PIPELINE_STEP.PAIR:
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
             optional.add_argument(
                 '-f', '--product_sequence_files', nargs='+', help='paths to fasta files with product sequences',
                 required=False, default=[])
-            augment_parser(
-                required, optional,
-                ['annotations', 'max_proximity'] +
-                [k for k in vars(PAIRING_DEFAULTS)]
-            )
+            augment_parser(['annotations'], required, optional)
+            augment_parser(['max_proximity'] + list(PAIRING_DEFAULTS.keys()), optional)
         elif pstep == PIPELINE_STEP.SUMMARY:
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
             augment_parser(
-                required, optional,
-                ['annotations', 'dgv_annotation', 'flanking_call_distance', 'split_call_distance',
-                 'contig_call_distance', 'spanning_call_distance'] +
-                [k for k in vars(SUMMARY_DEFAULTS)]
+                ['annotations', 'dgv_annotation', 'flanking_call_distance', 'split_call_distance', 'contig_call_distance', 'spanning_call_distance'],
+                required, optional
             )
+            augment_parser(SUMMARY_DEFAULTS.keys(), optional)
         elif pstep == PIPELINE_STEP.CHECKER:
 
             args = parser.parse_args()

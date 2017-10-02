@@ -6,7 +6,7 @@ import os
 import re
 
 from braceexpand import braceexpand
-from TSV.TSV import EmptyFileError, tsv_boolean
+from tab.tab import EmptyFileError, cast_boolean
 
 from .breakpoint import read_bpp_from_input_file
 from .constants import COLUMNS, PROTOCOL, sort_columns
@@ -17,7 +17,7 @@ ENV_VAR_PREFIX = 'MAVIS_'
 
 def cast(value, cast_func):
     if cast_func == bool:
-        value = tsv_boolean(value)
+        value = cast_boolean(value)
     else:
         value = cast_func(value)
     return value

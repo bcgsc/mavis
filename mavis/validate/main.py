@@ -65,7 +65,13 @@ def main(
     validation_settings.update({k: v for k, v in kwargs.items() if k in DEFAULTS.__dict__})
 
     bpps = read_inputs(
-        [input], add={COLUMNS.protocol: protocol, COLUMNS.library: library, COLUMNS.cluster_id: None},
+        [input],
+        add_default={
+            COLUMNS.protocol: protocol,
+            COLUMNS.library: library,
+            COLUMNS.cluster_id: None,
+            COLUMNS.stranded: stranded_bam
+        },
         expand_ns=False, explicit_strand=False,
         cast={COLUMNS.cluster_id: lambda x: str(uuid.uuid4()) if not x else x}
     )

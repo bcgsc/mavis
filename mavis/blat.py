@@ -15,7 +15,7 @@ import re
 import subprocess
 import warnings
 
-import TSV
+import tab
 
 from .align import query_coverage_interval, SUPPORTED_ALIGNER
 from .bam import cigar as cigar_tools
@@ -116,7 +116,7 @@ class Blat:
         def split_csv_trailing_ints(x):
             return [int(s) for s in re.sub(',$', '', x).split(',')]
 
-        header, rows = TSV.read_file(
+        header, rows = tab.read_file(
             filename,
             header=pslx_header,
             cast={

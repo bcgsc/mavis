@@ -4,7 +4,7 @@ import re
 import warnings
 
 from braceexpand import braceexpand
-import TSV
+import tab
 import vcf
 from vocab import Vocab
 
@@ -67,11 +67,11 @@ def convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fal
     return result
 
 
-def parse_breakdancer(row):
+def _parse_breakdancer(row):
     pass
 
 
-def parse_transabyss(row, is_stranded=False):
+def _parse_transabyss(row, is_stranded=False):
     """
     transforms the transbyss output into the common format for expansion. Maps the input column
     names to column names which MAVIS can read
@@ -81,11 +81,11 @@ def parse_transabyss(row, is_stranded=False):
     if std_row['event_type'] in ['LSR', 'translocation']:
         del std_row['event_type']
     if 'breakpoint' in row:
-        orient1, orient2 = row['orientations'].split(',')
+        std_row['orient1'], std_row['orient2'] = row['orientations'].split(',')
         if is_stranded:
-            strand1, strand2 = row['strands'].split(',')
-            strand1 = STRAND.POS if strand1 == STRAND.NEG else STRAND.NEG
-            strand2 = STRAND.POS if strand2 == STRAND.NEG else STRAND.NEG
+            std_row['strand1'], std_row['strand2'] = row['strands'].split(',')
+            std_row['strand1'] = STRAND.POS if std_row['strand1'] == STRAND.NEG else STRAND.NEG
+            std_row['strand2'] = STRAND.POS if std_row['strand2'] == STRAND.NEG else STRAND.NEG
         m = re.match(
             r'^(?P<chr1>[^:]+):(?P<pos1_start>\d+)\|(?P<chr2>[^:]+):(?P<pos2_start>\d+)$', row['breakpoint'])
         if not m:
@@ -94,7 +94,7 @@ def parse_transabyss(row, is_stranded=False):
         std_row.update({k: m[k] for k in ['chr1', 'pos1_start', 'chr2', 'pos2_start']})
     else:
         std_row.update({
-            'chr1': row['chr'], 'pos1_start': row['chr_start'], 'pos2_start': int(row['chr_end']) + 1
+            'chr1': row['chr'], 'pos1_start': int(row['chr_start']), 'pos2_start': int(row['chr_end']) + 1
         })
         if is_stranded:
             std_row['strand1'] = std_row['strand2'] = (STRAND.POS if row['ctg_strand'] == STRAND.NEG else STRAND.NEG)
@@ -103,14 +103,17 @@ def parse_transabyss(row, is_stranded=False):
             assert row['alt'] == 'na'
             std_row[COLUMNS.untemplated_seq] = ''
         elif std_row['event_type'] in ['dup', 'ITD']:
-            assert len(row['alt']) == row['pos1_end'] - row['pos2_start'] + 1
-            std_row[COLUMNS.untemplated_seq] = row['alt']
+            if len(row['alt']) != std_row['pos2_start'] - std_row['pos1_start'] + 1:
+                raise AssertionError(
+                    'expected alternate sequence to be equal to the length of the event',
+                    len(row['alt']), std_row['pos2_start'] - std_row['pos1_start'] + 1)
+            std_row[COLUMNS.untemplated_seq] = row['alt'].upper()
         elif std_row['event_type'] == 'ins':
-            std_row[COLUMNS.untemplated_seq] = row['alt']
+            std_row[COLUMNS.untemplated_seq] = row['alt'].upper()
     return std_row
 
 
-def parse_chimerascan(row):
+def _parse_chimerascan(row):
     """
     transforms the chimerscan output into the common format for expansion. Maps the input column
     names to column names which MAVIS can read
@@ -119,24 +122,27 @@ def parse_chimerascan(row):
     std_row.update({'chr1': row['chrom5p'], 'chr2': row['chrom3p']})
     if row['strand5p'] == '+':
         std_row['pos1_start'] = row['end5p']
-        orient1 = ORIENT.LEFT
+        std_row['orient1'] = ORIENT.LEFT
     else:
         std_row['pos1_start'] = row['start5p']
-        orient1 = ORIENT.RIGHT
+        std_row['orient1'] = ORIENT.RIGHT
     if row['strand3p'] == '+':
         std_row['pos2_start'] = row['start3p']
-        orient2 = ORIENT.RIGHT
+        std_row['orient2'] = ORIENT.RIGHT
     else:
         std_row['pos2_start'] = row['end3p']
-        orient2 = ORIENT.LEFT
+        std_row['orient2'] = ORIENT.LEFT
     std_row['opposing_strands'] = row['strand5p'] != row['strand3p']
     return std_row
 
 
 def _convert_tool_row(row, file_type, stranded):
+    """
+    converts a row parsed from an input file to the appropriate column names for it to be converted to MAVIS style row
+    """
     std_row = {}
-    orient1 = orient2 = ORIENT.NS
-    strand1 = strand2 = STRAND.NS
+    std_row['orient1'] = std_row['orient2'] = ORIENT.NS
+    std_row['strand1'] = std_row['strand2'] = STRAND.NS
     result = []
     # convert the specified file type to a standard format
     if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL]:
@@ -159,14 +165,14 @@ def _convert_tool_row(row, file_type, stranded):
         try:
             o1, o2 = row.INFO['CT'].split('to')
             ct = {'3': ORIENT.LEFT, '5': ORIENT.RIGHT, 'N': ORIENT.NS}
-            orient1 = ct[o1]
-            orient2 = ct[o2]
+            std_row['orient1'] = ct[o1]
+            std_row['orient2'] = ct[o2]
         except KeyError:
             pass
 
     elif file_type == SUPPORTED_TOOL.CHIMERASCAN:
 
-        std_row.update(parse_chimerascan(row))
+        std_row.update(_parse_chimerascan(row))
 
     # TODO: later versions will include support for these tools
     #elif file_type == SUPPORTED_TOOL.BREAKDANCER:
@@ -174,8 +180,8 @@ def _convert_tool_row(row, file_type, stranded):
 
     elif file_type == SUPPORTED_TOOL.DEFUSE:
 
-        orient1 = ORIENT.LEFT if row['genomic_strand1'] == STRAND.POS else ORIENT.RIGHT
-        orient2 = ORIENT.LEFT if row['genomic_strand2'] == STRAND.POS else ORIENT.RIGHT
+        std_row['orient1'] = ORIENT.LEFT if row['genomic_strand1'] == STRAND.POS else ORIENT.RIGHT
+        std_row['orient2'] = ORIENT.LEFT if row['genomic_strand2'] == STRAND.POS else ORIENT.RIGHT
         std_row.update({
             'chr1': row['gene_chromosome1'], 'chr2': row['gene_chromosome2'],
             'pos1_start': row['genomic_break_pos1'], 'pos2_start': row['genomic_break_pos2']
@@ -183,21 +189,21 @@ def _convert_tool_row(row, file_type, stranded):
 
     elif file_type == SUPPORTED_TOOL.TA:
 
-        std_row.update(parse_transabyss(row, stranded))
+        std_row.update(_parse_transabyss(row, stranded))
 
     else:
         raise NotImplementedError('unsupported file type', file_type)
 
     if stranded:
-        strand1 = STRAND.expand(strand1)
-        strand2 = STRAND.expand(strand2)
+        std_row['strand1'] = STRAND.expand(std_row['strand1'])
+        std_row['strand2'] = STRAND.expand(std_row['strand2'])
     else:
-        strand1 = [strand1]
-        strand2 = [strand2]
+        std_row['strand1'] = [STRAND.NS]
+        std_row['strand2'] = [STRAND.NS]
 
     combinations = list(itertools.product(
-        ORIENT.expand(orient1), ORIENT.expand(orient2),
-        strand1, strand2, TOOL_SVTYPE_MAPPING[std_row['event_type']] if 'event_type' in std_row else [None],
+        ORIENT.expand(std_row['orient1']), ORIENT.expand(std_row['orient2']),
+        std_row['strand1'], std_row['strand2'], TOOL_SVTYPE_MAPPING[std_row['event_type']] if 'event_type' in std_row else [None],
         [True, False] if 'opposing_strands' not in std_row else [std_row['opposing_strands']]
     ))
     # add the product of all uncertainties as breakpoint pairs
@@ -218,6 +224,7 @@ def _convert_tool_row(row, file_type, stranded):
                     orient=orient2, strand=strand2
                 ),
                 opposing_strands=oppose,
+                untemplated_seq=std_row.get('untemplated_seq', None),
                 event_type=event_type,
                 data={
                     COLUMNS.tools: file_type
@@ -247,7 +254,7 @@ def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fa
         if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL]:
             rows = list(vcf.Reader(filename=input_file))
         else:
-            dummy, rows = TSV.read_file(input_file)
+            dummy, rows = tab.read_file(input_file)
         log('found', len(rows), 'rows')
         for row in rows:
             std_rows = _convert_tool_row(row, file_type, stranded)

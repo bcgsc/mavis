@@ -58,15 +58,16 @@ def main(
     breakpoint_pairs = read_inputs(
         inputs,
         cast={COLUMNS.tools: lambda x: set(x.split(';')) if x else set()},
-        add={
+        add_default={
             COLUMNS.library: library,
             COLUMNS.protocol: protocol,
             COLUMNS.tools: '',
-            COLUMNS.disease_status: disease_status
+            COLUMNS.disease_status: disease_status,
+            COLUMNS.stranded: False
         },
         expand_ns=True, explicit_strand=False
     )
-    # filter against chr and ignore other library inputs
+    # filter any breakpoint pairs where the library and protocol don't match
     other_libs = set()
     other_chr = set()
     unfiltered_breakpoint_pairs = []

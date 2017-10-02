@@ -52,7 +52,7 @@ def main(
             COLUMNS.call_method: CALL_METHOD,
             COLUMNS.fusion_splicing_pattern: SPLICE_TYPE.values() + [None, 'None']
         },
-        add={
+        add_default={
             COLUMNS.fusion_cdna_coding_start: None,
             COLUMNS.fusion_cdna_coding_end: None,
             COLUMNS.fusion_sequence_fasta_id: None,

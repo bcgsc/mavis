@@ -85,7 +85,7 @@ def main(
             COLUMNS.gene2_aliases,
             COLUMNS.protein_synon,
             COLUMNS.cdna_synon],
-        add={
+        add_default={
             'dgv': None,
             'summary_pairing': None},
         explicit_strand=False,
