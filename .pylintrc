@@ -248,7 +248,7 @@ docstring-min-length=15
 function-name-hint=(([a-z][a-z0-9_]{2,30})|(_[a-z0-9_]*))$
 
 # Regular expression matching correct function names
-function-rgx=(([a-z][a-z0-9_]{2,30})|(_[a-z0-9_]*))$
+function-rgx=(([a-z][a-z0-9_]{2,30})|(_[a-z0-9_]*)|setUp(Module)?|tearDown(Module)?)$
 
 # Good variable names which should always be accepted, separated by a comma
 good-names=i,j,k,ex,Run,_,x,y,st,fh
@@ -280,7 +280,7 @@ name-group=
 
 # Regular expression which should only match function or class names that do
 # not require a docstring.
-no-docstring-rgx=^_,@property
+no-docstring-rgx=^(_|test_)
 
 # List of decorators that produce properties, such as abc.abstractproperty. Add
 # to this list to register other decorators that produce valid properties.
