@@ -20,7 +20,7 @@ from .blat import get_blat_version
 from .checker import check_completion
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from .cluster.main import main as cluster_main
-from .config import augment_parser, get_env_variable, LibraryConfig, MavisConfig, write_config
+from .config import augment_parser, get_env_variable, get_metavar, LibraryConfig, MavisConfig, write_config
 from .constants import PIPELINE_STEP, PROTOCOL
 from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
@@ -250,32 +250,32 @@ def generate_config(parser, required, optional):
         optional: the argparse optional arguments group
     """
     # the config sub  program is used for writing pipeline configuration files
-    required.add_argument('-w', '--write', help='path to the new configuration file', required=True)
+    required.add_argument('-w', '--write', help='path to the new configuration file', required=True, metavar='FILEPATH')
     optional.add_argument(
         '--library', nargs=5,
         metavar=('<name>', '(genome|transcriptome)', '<diseased|normal>', '</path/to/bam/file>', '<strand_specific>'),
         action='append', help='configuration for libraries to be analyzed by mavis', default=[])
     optional.add_argument(
         '--input', help='path to an input file or filter for mavis followed by the library names it '
-        'should be used for', nargs='+', action='append', default=[]
+        'should be used for', nargs='+', action='append', default=[], metavar='FILEPATH'
     )
     optional.add_argument(
         '--assign', help='library name followed by path(s) to input file(s) or filter names. This represents the list'
         ' of inputs that should be used for the library', nargs='+', default=[], action='append')
     optional.add_argument(
-        '--best_transcripts_only', default=get_env_variable('best_transcripts_only', True),
+        '--best_transcripts_only', default=get_env_variable('best_transcripts_only', True), metavar=get_metavar(bool),
         type=tab.cast_boolean, help='compute from best transcript models only')
     optional.add_argument(
-        '--genome_bins', default=get_env_variable('genome_bins', 100), type=int,
+        '--genome_bins', default=get_env_variable('genome_bins', 100), type=int, metavar=get_metavar(int),
         help='number of bins/samples to use in calculating the fragment size stats for genomes')
     optional.add_argument(
-        '--transcriptome_bins', default=get_env_variable('transcriptome_bins', 5000), type=int,
+        '--transcriptome_bins', default=get_env_variable('transcriptome_bins', 5000), type=int, metavar=get_metavar(int),
         help='number of genes to use in calculating the fragment size stats for genomes')
     optional.add_argument(
-        '--distribution_fraction', default=get_env_variable('distribution_fraction', 0.97), type=float,
+        '--distribution_fraction', default=get_env_variable('distribution_fraction', 0.97), type=float, metavar=get_metavar(float),
         help='the proportion of the distribution of calculated fragment sizes to use in determining the stdev')
     optional.add_argument(
-        '--verbose', default=get_env_variable('verbose', False), type=tab.cast_boolean,
+        '--verbose', default=get_env_variable('verbose', False), type=tab.cast_boolean, metavar=get_metavar(bool),
         help='verbosely output logging information')
     optional.add_argument(
         '--convert', nargs=4, default=[],
@@ -423,22 +423,22 @@ use the -h/--help option
         required.add_argument('-o', '--output', help='path to the output directory', required=True)
 
         if pstep == PIPELINE_STEP.PIPELINE:
-            required.add_argument('config', help='path to the input pipeline configuration file')
+            required.add_argument('config', help='path to the input pipeline configuration file', metavar='FILEPATH')
 
         elif pstep == PIPELINE_STEP.CONVERT:
-            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
+            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
             required.add_argument(
                 '--file_type', choices=sorted([t for t in SUPPORTED_TOOL.values() if t != 'mavis']),
                 required=True, help='Indicates the input file type to be parsed')
             augment_parser(['strand_specific'], optional)
 
         elif pstep == PIPELINE_STEP.CLUSTER:
-            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
+            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
             augment_parser(['library', 'protocol', 'strand_specific', 'disease_status', 'annotations', 'masking'], required, optional)
             augment_parser(CLUSTER_DEFAULTS.keys(), optional)
 
         elif pstep == PIPELINE_STEP.VALIDATE:
-            required.add_argument('-n', '--input', help='path to the input file', required=True)
+            required.add_argument('-n', '--input', help='path to the input file', required=True, metavar='FILEPATH')
             augment_parser(
                 ['library', 'protocol', 'bam_file', 'read_length', 'stdev_fragment_size', 'median_fragment_size'] +
                 ['strand_specific', 'annotations', 'reference_genome', 'aligner_reference', 'masking'],
@@ -447,7 +447,7 @@ use the -h/--help option
             augment_parser(VALIDATION_DEFAULTS.keys(), optional)
 
         elif pstep == PIPELINE_STEP.ANNOTATE:
-            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
+            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
             augment_parser(
                 ['library', 'protocol', 'annotations', 'reference_genome', 'masking', 'max_proximity', 'template_metadata'],
                 required, optional
@@ -455,15 +455,15 @@ use the -h/--help option
             augment_parser(list(ANNOTATION_DEFAULTS.keys()) + list(ILLUSTRATION_DEFAULTS.keys()), optional)
 
         elif pstep == PIPELINE_STEP.PAIR:
-            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
+            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
             optional.add_argument(
-                '-f', '--product_sequence_files', nargs='+', help='paths to fasta files with product sequences',
+                '-f', '--product_sequence_files', nargs='+', help='paths to fasta files with product sequences', metavar='FILEPATH',
                 required=False, default=[])
             augment_parser(['annotations'], required, optional)
             augment_parser(['max_proximity'] + list(PAIRING_DEFAULTS.keys()), optional)
 
         elif pstep == PIPELINE_STEP.SUMMARY:
-            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
+            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
             augment_parser(
                 ['annotations', 'dgv_annotation', 'flanking_call_distance', 'split_call_distance', 'contig_call_distance', 'spanning_call_distance'],
                 required, optional
