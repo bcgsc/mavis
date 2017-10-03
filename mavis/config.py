@@ -394,11 +394,11 @@ def augment_parser(arguments, parser, semi_opt_parser=None, required=None):
 
             # get default values
             for nspace in [
-                    CLUSTER_DEFAULTS, 
-                    VALIDATION_DEFAULTS, 
-                    ANNOTATION_DEFAULTS, 
-                    ILLUSTRATION_DEFAULTS, 
-                    PAIRING_DEFAULTS, 
+                    CLUSTER_DEFAULTS,
+                    VALIDATION_DEFAULTS,
+                    ANNOTATION_DEFAULTS,
+                    ILLUSTRATION_DEFAULTS,
+                    PAIRING_DEFAULTS,
                     SUMMARY_DEFAULTS]:
                 if arg in nspace:
                     default_value = nspace[arg]
