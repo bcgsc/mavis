@@ -1,30 +1,93 @@
 import os
 import subprocess
+import sys
 import unittest
+
+
+from mavis.constants import PIPELINE_STEP
+from mavis.main import main
+from mock import patch
 
 
 class TestHelpMenu(unittest.TestCase):
 
     def test_main(self):
-        subprocess.check_output(['mavis', '-h'], env=os.environ)
+        with patch.object(sys, 'argv', ['mavis', '-h']):
+            try:
+                returncode = main()
+            except SystemExit as err:
+                self.assertEqual(0, err.code)
+            else:
+                self.assertEqual(0, returncode)
 
     def test_pipeline(self):
-        subprocess.check_output(['mavis', 'pipeline', '-h'], env=os.environ)
+        with patch.object(sys, 'argv', ['mavis', PIPELINE_STEP.PIPELINE, '-h']):
+            try:
+                returncode = main()
+            except SystemExit as err:
+                self.assertEqual(0, err.code)
+            else:
+                self.assertEqual(0, returncode)
 
     def test_config(self):
-        subprocess.check_output(['mavis', 'config', '-h'], env=os.environ)
+        with patch.object(sys, 'argv', ['mavis', PIPELINE_STEP.CONFIG, '-h']):
+            try:
+                returncode = main()
+            except SystemExit as err:
+                self.assertEqual(0, err.code)
+            else:
+                self.assertEqual(0, returncode)
 
     def test_cluster(self):
-        subprocess.check_output(['mavis', 'cluster', '-h'], env=os.environ)
+        with patch.object(sys, 'argv', ['mavis', PIPELINE_STEP.CLUSTER, '-h']):
+            try:
+                returncode = main()
+            except SystemExit as err:
+                self.assertEqual(0, err.code)
+            else:
+                self.assertEqual(0, returncode)
 
     def test_validate(self):
-        subprocess.check_output(['mavis', 'validate', '-h'], env=os.environ)
+        with patch.object(sys, 'argv', ['mavis', PIPELINE_STEP.VALIDATE, '-h']):
+            try:
+                returncode = main()
+            except SystemExit as err:
+                self.assertEqual(0, err.code)
+            else:
+                self.assertEqual(0, returncode)
 
     def test_annotate(self):
-        subprocess.check_output(['mavis', 'annotate', '-h'], env=os.environ)
+        with patch.object(sys, 'argv', ['mavis', PIPELINE_STEP.ANNOTATE, '-h']):
+            try:
+                returncode = main()
+            except SystemExit as err:
+                self.assertEqual(0, err.code)
+            else:
+                self.assertEqual(0, returncode)
 
     def test_pairing(self):
-        subprocess.check_output(['mavis', 'pairing', '-h'], env=os.environ)
+        with patch.object(sys, 'argv', ['mavis', PIPELINE_STEP.PAIR, '-h']):
+            try:
+                returncode = main()
+            except SystemExit as err:
+                self.assertEqual(0, err.code)
+            else:
+                self.assertEqual(0, returncode)
 
     def test_summary(self):
-        subprocess.check_output(['mavis', 'summary', '-h'], env=os.environ)
+        with patch.object(sys, 'argv', ['mavis', PIPELINE_STEP.SUMMARY, '-h']):
+            try:
+                returncode = main()
+            except SystemExit as err:
+                self.assertEqual(0, err.code)
+            else:
+                self.assertEqual(0, returncode)
+
+    def test_bad_option(self):
+        with patch.object(sys, 'argv', ['mavis', PIPELINE_STEP.PIPELINE, '--blargh']):
+            try:
+                returncode = main()
+            except SystemExit as err:
+                self.assertNotEqual(0, err.code)
+            else:
+                self.assertNotEqual(0, returncode)

@@ -249,3 +249,25 @@ def filter_uninformative(annotations_by_chr, breakpoint_pairs, max_proximity=500
         else:
             filtered.append(bpp)
     return result, filtered
+
+
+def unique_exists(pattern, allow_none=False, get_newest=False):
+    result = bash_expands(pattern)
+    if len(result) == 1:
+        return result[0]
+    elif result:
+        if get_newest:
+            current_file = result[0]
+            for filename in result[1:]:
+                stats1 = os.stat(current_file)
+                stats2 = os.stat(filename)
+                if stats1.st_mtime < stats2.st_mtime:
+                    current_file = filename
+            return current_file
+
+        else:
+            raise OSError('duplicate results:', result)
+    elif allow_none:
+        return None
+    else:
+        raise OSError('no result found', pattern)

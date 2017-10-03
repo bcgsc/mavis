@@ -111,7 +111,6 @@ class TestTransAbyss(unittest.TestCase):
         self.assertEqual(False, bpp.opposing_strands)
         self.assertEqual('TT', bpp.untemplated_seq)
 
-
     def test_convert_indel_duplication(self):
         row = {
             'id': '1185',

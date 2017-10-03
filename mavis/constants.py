@@ -10,6 +10,8 @@ from Bio.Seq import Seq
 from vocab import Vocab
 
 
+COMPLETE_STAMP = 'MAVIS.COMPLETE'
+
 PIPELINE_STEP = Vocab(
     ANNOTATE='annotate',
     VALIDATE='validate',
@@ -17,7 +19,8 @@ PIPELINE_STEP = Vocab(
     CLUSTER='cluster',
     PAIR='pairing',
     SUMMARY='summary',
-    CHECKER='checker'
+    CHECKER='checker',
+    CONFIG='config'
 )
 
 

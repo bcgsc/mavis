@@ -259,11 +259,7 @@ def convert_tab_to_json(filepath, warn=devnull):
             row = tab.cast_null(row)
         return row
 
-<<<<<<< HEAD
-    dummy, rows = tab.read_file(
-=======
-    _, rows = TSV.read_file(
->>>>>>> style_updates
+    _, rows = tab.read_file(
         filepath,
         require=[
             'ensembl_gene_id',

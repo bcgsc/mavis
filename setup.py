@@ -130,7 +130,7 @@ setup(
         'numpy>=1.13.1'  # put here b/c biopython doesn't declare this as a setup dependency properly
     ],
     test_suite='nose.collector',
-    tests_require=['nose', 'timeout-decorator==0.3.3', 'coverage==4.2'],
+    tests_require=['nose', 'timeout-decorator==0.3.3', 'coverage==4.2', 'mock>=2.0.0'],
     entry_points={'console_scripts': ['mavis = mavis.main:main']}
 )
 check_nonpython_dependencies()

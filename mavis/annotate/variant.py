@@ -580,50 +580,50 @@ class Annotation(BreakpointPair):
         self.proximity = proximity
         self.fusion = None
 
-    def add_gene(self, gene):
+    def add_gene(self, input_gene):
         """
-        adds a gene to the current set of annotations. Checks which set it should be added to
+        adds a input_gene to the current set of annotations. Checks which set it should be added to
 
         Args:
-            gene (Gene): the gene being added
+            input_gene (input_gene): the input_gene being added
         """
-        if gene.chr not in [self.break1.chr, self.break2.chr]:
-            raise AttributeError('cannot add gene not on the same chromosome as either breakpoint')
+        if input_gene.chr not in [self.break1.chr, self.break2.chr]:
+            raise AttributeError('cannot add input_gene not on the same chromosome as either breakpoint')
 
         if not self.interchromosomal:
             try:
                 encompassment = Interval(self.break1.end + 1, self.break2.start - 1)
-                if gene in encompassment:
-                    self.encompassed_genes.add(gene)
+                if input_gene in encompassment:
+                    self.encompassed_genes.add(input_gene)
             except AttributeError:
                 pass
-        if Interval.overlaps(gene, self.break1) and gene.chr == self.break1.chr \
-                and gene != self.transcript1.reference_object:
-            self.genes_overlapping_break1.add(gene)
-        if Interval.overlaps(gene, self.break2) and gene.chr == self.break2.chr \
-                and gene != self.transcript2.reference_object:
-            self.genes_overlapping_break2.add(gene)
+        if Interval.overlaps(input_gene, self.break1) and input_gene.chr == self.break1.chr \
+                and input_gene != self.transcript1.reference_object:
+            self.genes_overlapping_break1.add(input_gene)
+        if Interval.overlaps(input_gene, self.break2) and input_gene.chr == self.break2.chr \
+                and input_gene != self.transcript2.reference_object:
+            self.genes_overlapping_break2.add(input_gene)
 
-        if gene in self.genes_overlapping_break1 or gene in self.genes_overlapping_break2 or \
-                gene in self.encompassed_genes or gene == self.transcript1.reference_object or \
-                gene == self.transcript2.reference_object:
+        if input_gene in self.genes_overlapping_break1 or input_gene in self.genes_overlapping_break2 or \
+                input_gene in self.encompassed_genes or input_gene == self.transcript1.reference_object or \
+                input_gene == self.transcript2.reference_object:
             return
 
-        d1 = Interval.dist(gene, self.break1)
-        d2 = Interval.dist(gene, self.break2)
+        dist1 = Interval.dist(input_gene, self.break1)
+        dist2 = Interval.dist(input_gene, self.break2)
 
         if self.interchromosomal:
-            if gene.chr == self.break1.chr:
-                self.genes_proximal_to_break1.add((gene, d1))
-            elif gene.chr == self.break2.chr:
-                self.genes_proximal_to_break2.add((gene, d2))
+            if input_gene.chr == self.break1.chr:
+                self.genes_proximal_to_break1.add((input_gene, dist1))
+            elif input_gene.chr == self.break2.chr:
+                self.genes_proximal_to_break2.add((input_gene, dist2))
         else:
-            if d1 < 0:
-                self.genes_proximal_to_break1.add((gene, d1))
-            if d2 > 0:
-                self.genes_proximal_to_break2.add((gene, d2))
+            if dist1 < 0:
+                self.genes_proximal_to_break1.add((input_gene, dist1))
+            if dist2 > 0:
+                self.genes_proximal_to_break2.add((input_gene, dist2))
 
-        if len(self.genes_proximal_to_break1) > 0:
+        if self.genes_proximal_to_break1:
             temp = set()
             tgt = min([abs(d) for g, d in self.genes_proximal_to_break1])
 
@@ -636,7 +636,7 @@ class Annotation(BreakpointPair):
 
             self.genes_proximal_to_break1 = temp
 
-        if len(self.genes_proximal_to_break2) > 0:
+        if self.genes_proximal_to_break2:
             temp = set()
             tgt = min([abs(d) for g, d in self.genes_proximal_to_break2])
 

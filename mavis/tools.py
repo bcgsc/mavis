@@ -183,10 +183,6 @@ def _convert_tool_row(row, file_type, stranded):
 
         std_row.update(_parse_chimerascan(row))
 
-    # TODO: later versions will include support for these tools
-    #elif file_type == SUPPORTED_TOOL.BREAKDANCER:
-        #std_row.update(parse_breakdancer(row))
-
     elif file_type == SUPPORTED_TOOL.DEFUSE:
 
         std_row['orient1'] = ORIENT.LEFT if row['genomic_strand1'] == STRAND.POS else ORIENT.RIGHT

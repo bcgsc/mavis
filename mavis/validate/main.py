@@ -291,4 +291,4 @@ def main(
         fh.write('load {} name="{}"\n'.format(raw_evidence_bam, 'raw evidence'))
         fh.write('load {} name="{} {} input"\n'.format(bam_file, library, protocol))
 
-    generate_complete_stamp(output, log, prefix=filename_prefix + '.')
+    generate_complete_stamp(output, log)
