@@ -2,12 +2,13 @@
 This is the primary module responsible for generating svg visualizations
 
 """
+import re
+
+from .util import dynamic_label_color, generate_interval_mapping, LabelMapping, split_intervals_into_tracks, Tag
 from ..annotate.variant import FusionTranscript
-from ..constants import STRAND, ORIENT, CODON_SIZE, GIESMA_STAIN
+from ..constants import CODON_SIZE, GIESMA_STAIN, ORIENT, STRAND
 from ..error import DrawingFitError, NotSpecifiedError
 from ..interval import Interval
-from .util import *
-import re
 
 # draw gene level view
 # draw gene box
@@ -15,153 +16,155 @@ HEX_WHITE = '#FFFFFF'
 HEX_BLACK = '#000000'
 
 
-def draw_legend(DS, canvas, swatches, border=True):
+def draw_legend(config, canvas, swatches, border=True):
+    """
+    generates an svg group object representing the legend
+    """
     main_group = canvas.g(class_='legend')
-    y = DS.padding if border else 0
-    x = DS.padding if border else 0
+    y = config.padding if border else 0
+    x = config.padding if border else 0
     for swatch, label in swatches:
-        g = canvas.g()
-        g.add(canvas.rect(
+        svg_group = canvas.g()
+        svg_group.add(canvas.rect(
             (0, 0),
-            (DS.legend_swatch_size, DS.legend_swatch_size),
+            (config.legend_swatch_size, config.legend_swatch_size),
             fill=swatch,
-            stroke=DS.legend_swatch_stroke
+            stroke=config.legend_swatch_stroke
         ))
 
-        g.add(canvas.text(
+        svg_group.add(canvas.text(
             label,
-            insert=(DS.legend_swatch_size + DS.padding, DS.legend_swatch_size / 2),
-            fill=DS.legend_font_color,
-            style=DS.font_style.format(text_anchor='start', font_size=DS.legend_font_size),
+            insert=(config.legend_swatch_size + config.padding, config.legend_swatch_size / 2),
+            fill=config.legend_font_color,
+            style=config.font_style.format(text_anchor='start', font_size=config.legend_font_size),
             class_='label'
         ))
-        g.translate(x, y)
-        main_group.add(g)
-        y += DS.legend_swatch_size + DS.padding
+        svg_group.translate(x, y)
+        main_group.add(svg_group)
+        y += config.legend_swatch_size + config.padding
 
-    w = max([len(l) for c, l in swatches]) * DS.legend_font_size * DS.font_width_height_ratio + \
-        DS.padding * (3 if border else 1) + DS.legend_swatch_size
+    width = max([len(l) for c, l in swatches]) * config.legend_font_size * config.font_width_height_ratio + \
+        config.padding * (3 if border else 1) + config.legend_swatch_size
 
     if border:
         main_group.add(canvas.rect(
-            (0, 0), (w, y), fill='none', stroke=DS.legend_border_stroke,
-            stroke_width=DS.legend_border_stroke_width
+            (0, 0), (width, y), fill='none', stroke=config.legend_border_stroke,
+            stroke_width=config.legend_border_stroke_width
         ))
     else:
-        y -= DS.padding
+        y -= config.padding
     setattr(main_group, 'height', y)
-    setattr(main_group, 'width', w)
+    setattr(main_group, 'width', width)
     setattr(main_group, 'labels', None)
     setattr(main_group, 'mapping', None)
     return main_group
 
 
-def draw_exon_track(DS, canvas, transcript, mapping, colors=None, x_start=None, x_end=None, translation=None):
+def draw_exon_track(config, canvas, transcript, mapping, colors=None, x_start=None, x_end=None, translation=None):
     """
     """
     colors = {} if colors is None else colors
     main_group = canvas.g(class_='exon_track')
 
-    y = DS.track_height / 2
+    y = config.track_height / 2
     exons = sorted(transcript.exons, key=lambda x: x.start)
 
-    s = Interval.convert_ratioed_pos(mapping, exons[0].start).start if x_start is None else x_start
-    t = Interval.convert_ratioed_pos(mapping, exons[-1].end).end if x_end is None else x_end
+    start = Interval.convert_ratioed_pos(mapping, exons[0].start).start if x_start is None else x_start
+    end = Interval.convert_ratioed_pos(mapping, exons[-1].end).end if x_end is None else x_end
 
     main_group.add(
         canvas.rect(
-            (s, y - DS.scaffold_height / 2), (t - s + 1, DS.scaffold_height),
-            fill=DS.scaffold_color, class_='scaffold'
+            (start, y - config.scaffold_height / 2), (end - start + 1, config.scaffold_height),
+            fill=config.scaffold_color, class_='scaffold'
         ))
 
     # draw the exons
     for exon in exons:
-        s = Interval.convert_ratioed_pos(mapping, exon.start).start
-        t = Interval.convert_ratioed_pos(mapping, exon.end).end
-        pxi = Interval(s, t)
-        c = colors.get(exon, DS.exon1_color)
+        start = Interval.convert_ratioed_pos(mapping, exon.start).start
+        end = Interval.convert_ratioed_pos(mapping, exon.end).end
+        pxi = Interval(start, end)
         exon_number = 'n'
         try:
             exon_number = transcript.exon_number(exon)
-        except KeyError as e:
+        except KeyError:
             pass
         group = draw_exon(
-            DS,
-            canvas, exon, pxi.length(), DS.track_height, c,
+            config,
+            canvas, exon, pxi.length(), config.track_height, colors.get(exon, config.exon1_color),
             label=exon_number,
             translation=translation
         )
-        group.translate(pxi.start, y - DS.track_height / 2)
+        group.translate(pxi.start, y - config.track_height / 2)
         main_group.add(group)
 
-    setattr(main_group, 'height', y + DS.track_height / 2)
-    setattr(main_group, 'width', t - s + 1)
+    setattr(main_group, 'height', y + config.track_height / 2)
+    setattr(main_group, 'width', end - start + 1)
     return main_group
 
 
 def draw_transcript_with_translation(
-    DS, canvas, translation, labels, colors, mapping, reference_genome=None, x_start=None, x_end=None
+    config, canvas, translation, labels, colors, mapping, reference_genome=None, x_start=None, x_end=None
 ):
     main_group = canvas.g()
     ust = translation.transcript.reference_object
-    tr = translation.transcript
+    spl_tx = translation.transcript
 
     if x_start is None:
         x_start = Interval.convert_ratioed_pos(mapping, ust.start).start
     if x_end is None:
         x_end = Interval.convert_ratioed_pos(mapping, ust.end).end
 
-    LABEL_PREFIX = DS.transcript_label_prefix
+    label_prefix = config.transcript_label_prefix
     if isinstance(ust, FusionTranscript):
-        LABEL_PREFIX = DS.fusion_label_prefix
+        label_prefix = config.fusion_label_prefix
 
     # if the splicing takes up more room than the track we need to adjust for it
-    y = DS.splice_height
+    y = config.splice_height
 
-    exon_track_group = draw_exon_track(DS, canvas, ust, mapping, colors, translation=translation)
+    exon_track_group = draw_exon_track(config, canvas, ust, mapping, colors, translation=translation)
     exon_track_group.translate(0, y)
     exon_track_group.add(canvas.text(
-        labels.add(tr, LABEL_PREFIX),
+        labels.add(spl_tx, label_prefix),
         insert=(
-            0 - DS.padding,
-            DS.track_height / 2 + DS.font_central_shift_ratio * DS.label_font_size
+            0 - config.padding,
+            config.track_height / 2 + config.font_central_shift_ratio * config.label_font_size
         ),
-        fill=DS.label_color,
-        style=DS.font_style.format(font_size=DS.label_font_size, text_anchor='end'),
+        fill=config.label_color,
+        style=config.font_style.format(font_size=config.label_font_size, text_anchor='end'),
         class_='label'
     ))
 
     # draw the splicing pattern
     splice_group = canvas.g(class_='splicing')
-    for p1, p2 in zip(tr.splicing_pattern[::2], tr.splicing_pattern[1::2]):
+    for p1, p2 in zip(spl_tx.splicing_pattern[::2], spl_tx.splicing_pattern[1::2]):
         a = Interval.convert_pos(mapping, p1)
         b = Interval.convert_pos(mapping, p2)
-        polyline = [(a, y), (a + (b - a) / 2, y - DS.splice_height), (b, y)]
+        polyline = [(a, y), (a + (b - a) / 2, y - config.splice_height), (b, y)]
         p = canvas.polyline(polyline, fill='none')
-        p.dasharray(DS.splice_stroke_dasharray)
-        p.stroke(DS.splice_color, width=DS.splice_stroke_width)
+        p.dasharray(config.splice_stroke_dasharray)
+        p.stroke(config.splice_color, width=config.splice_stroke_width)
         splice_group.add(p)
 
-    y += DS.track_height / 2
+    y += config.track_height / 2
 
     main_group.add(splice_group)
     main_group.add(exon_track_group)
-    y += DS.track_height / 2
+    y += config.track_height / 2
 
-    gp = canvas.g(class_='protein')
-    y += DS.padding
-    gp.translate(0, y)
+    protein_group = canvas.g(class_='protein')
+    y += config.padding
+    protein_group.translate(0, y)
     # translation track
 
     # convert the AA position to cdna position, then convert the cdna to genomic, etc
     # ==================== adding the translation track ============
     translated_genomic_regions = [
-        tr.convert_cdna_to_genomic(translation.start),
-        tr.convert_cdna_to_genomic(translation.end)
+        spl_tx.convert_cdna_to_genomic(translation.start),
+        spl_tx.convert_cdna_to_genomic(translation.end)
     ]
     translated_genomic_regions = [Interval(*sorted(translated_genomic_regions))]
 
-    for p1, p2 in zip(tr.splicing_pattern[::2], tr.splicing_pattern[1::2]):
+    for p1, p2 in zip(spl_tx.splicing_pattern[::2], spl_tx.splicing_pattern[1::2]):
         try:
             spliced_out_interval = Interval(p1 + 1, p2 - 1)
             temp = []
@@ -175,34 +178,34 @@ def draw_transcript_with_translation(
     t = Interval.convert_pos(mapping, translated_genomic_regions[-1].end)
 
     gt = canvas.g(class_='translation')
-    gp.add(gt)
-    h = DS.translation_track_height
+    protein_group.add(gt)
+    h = config.translation_track_height
 
     for sec in translated_genomic_regions:
         start = Interval.convert_pos(mapping, sec.start)
         end = Interval.convert_pos(mapping, sec.end)
         gt.add(
             canvas.rect(
-                (start, h / 2 - DS.translation_track_height / 2), (end - start + 1, DS.translation_track_height),
-                fill=DS.translation_scaffold_color,
+                (start, h / 2 - config.translation_track_height / 2), (end - start + 1, config.translation_track_height),
+                fill=config.translation_scaffold_color,
                 class_='scaffold'
             ))
     gt.add(canvas.text(
-        DS.translation_end_marker if tr.get_strand() == STRAND.NEG else DS.translation_start_marker,
+        config.translation_end_marker if spl_tx.get_strand() == STRAND.NEG else config.translation_start_marker,
         insert=(
-            s - DS.translation_marker_padding, h / 2 + DS.font_central_shift_ratio * DS.translation_font_size
+            s - config.translation_marker_padding, h / 2 + config.font_central_shift_ratio * config.translation_font_size
         ),
-        fill=DS.label_color,
-        style=DS.font_style.format(font_size=DS.translation_font_size, text_anchor='end'),
+        fill=config.label_color,
+        style=config.font_style.format(font_size=config.translation_font_size, text_anchor='end'),
         class_='label'
     ))
     gt.add(canvas.text(
-        DS.translation_start_marker if tr.get_strand() == STRAND.NEG else DS.translation_end_marker,
+        config.translation_start_marker if spl_tx.get_strand() == STRAND.NEG else config.translation_end_marker,
         insert=(
-            t + DS.translation_marker_padding, h / 2 + DS.font_central_shift_ratio * DS.translation_font_size
+            t + config.translation_marker_padding, h / 2 + config.font_central_shift_ratio * config.translation_font_size
         ),
-        fill=DS.label_color,
-        style=DS.font_style.format(font_size=DS.translation_font_size, text_anchor='start'),
+        fill=config.label_color,
+        style=config.font_style.format(font_size=config.translation_font_size, text_anchor='start'),
         class_='label'
     ))
     gt.add(Tag('title', 'translation  cdna({}_{})  c.{}_{}  p.{}_{}'.format(
@@ -211,65 +214,65 @@ def draw_transcript_with_translation(
     # now draw the domain tracks
     # need to convert the domain AA positions to cds positions to genomic
     for i, d in enumerate(sorted(translation.domains, key=lambda x: x.name)):
-        if not re.match(DS.domain_name_regex_filter, str(d.name)):
+        if not re.match(config.domain_name_regex_filter, str(d.name)):
             continue
-        py += DS.padding
-        gd = canvas.g(class_='domain')
-        gd.add(canvas.rect(
-            (x_start, DS.domain_track_height / 2), (x_end - x_start, DS.domain_scaffold_height),
-            fill=DS.domain_scaffold_color, class_='scaffold'
+        py += config.padding
+        domain_group = canvas.g(class_='domain')
+        domain_group.add(canvas.rect(
+            (x_start, config.domain_track_height / 2), (x_end - x_start, config.domain_scaffold_height),
+            fill=config.domain_scaffold_color, class_='scaffold'
         ))
-        fill = DS.domain_color
+        fill = config.domain_color
         percent_match = None
         try:
             match, total = d.score_region_mapping(reference_genome)
             percent_match = int(round(match * 100 / total, 0))
-            fill = DS.domain_fill_gradient[percent_match % len(DS.domain_fill_gradient) - 1]
+            fill = config.domain_fill_gradient[percent_match % len(config.domain_fill_gradient) - 1]
         except (NotSpecifiedError, AttributeError):
             pass
         for region in d.regions:
             # convert the AA position to cdna position, then convert the cdna to genomic, etc
             s = translation.convert_aa_to_cdna(region.start)
             t = translation.convert_aa_to_cdna(region.end)
-            s = Interval.convert_pos(mapping, tr.convert_cdna_to_genomic(s.start))
-            t = Interval.convert_pos(mapping, tr.convert_cdna_to_genomic(t.end))
+            s = Interval.convert_pos(mapping, spl_tx.convert_cdna_to_genomic(s.start))
+            t = Interval.convert_pos(mapping, spl_tx.convert_cdna_to_genomic(t.end))
             if s > t:
                 t, s = (s, t)
-            gdr = canvas.g(class_='domain_region')
-            gdr.add(canvas.rect((s, 0), (t - s + 1, DS.domain_track_height), fill=fill, class_='region'))
-            gdr.add(Tag('title', 'domain {} region p.{}_{}{}'.format(
+            domain_region_group = canvas.g(class_='domain_region')
+            domain_region_group.add(canvas.rect((s, 0), (t - s + 1, config.domain_track_height), fill=fill, class_='region'))
+            domain_region_group.add(Tag('title', 'domain {} region p.{}_{}{}'.format(
                 d.name if d.name else '', region.start, region.end,
                 '  matched({}%)'.format(percent_match) if percent_match is not None else '')))
-            gd.add(gdr)
-        gd.translate(0, py)
+            domain_group.add(domain_region_group)
+        domain_group.translate(0, py)
 
-        f = DS.label_color if not DS.dynamic_labels else dynamic_label_color(DS.domain_color)
+        f = config.label_color if not config.dynamic_labels else dynamic_label_color(config.domain_color)
         label_group = None
-        for patt, link in DS.domain_links.items():
+        for patt, link in config.domain_links.items():
             if re.match(patt, d.name):
                 label_group = canvas.a(link.format(d), target='_blank')
                 break
         if label_group is None:
             label_group = canvas.g()
-        gd.add(label_group)
+        domain_group.add(label_group)
         label_group.add(canvas.text(
-            labels.add(d.name, DS.domain_label_prefix),
+            labels.add(d.name, config.domain_label_prefix),
             insert=(
-                0 - DS.padding,
-                DS.domain_track_height / 2 + DS.font_central_shift_ratio * DS.domain_label_font_size),
+                0 - config.padding,
+                config.domain_track_height / 2 + config.font_central_shift_ratio * config.domain_label_font_size),
             fill=f, class_='label',
-            style=DS.font_style.format(font_size=DS.domain_label_font_size, text_anchor='end')
+            style=config.font_style.format(font_size=config.domain_label_font_size, text_anchor='end')
         ))
-        gp.add(gd)
-        py += DS.domain_track_height
+        protein_group.add(domain_group)
+        py += config.domain_track_height
     y += py
-    main_group.add(gp)
+    main_group.add(protein_group)
     setattr(main_group, 'height', y)
     return main_group
 
 
 def draw_ustranscript(
-    DS, canvas, ust, target_width=None, breakpoints=[], labels=LabelMapping(), colors={},
+    config, canvas, ust, target_width=None, breakpoints=[], labels=LabelMapping(), colors={},
     mapping=None, reference_genome=None, masks=None
 ):
     """
@@ -301,14 +304,14 @@ def draw_ustranscript(
         mapping = generate_interval_mapping(
             ust.exons,
             target_width,
-            DS.exon_intron_ratio,
-            DS.exon_min_width,
-            min_inter_width=DS.min_width
+            config.exon_intron_ratio,
+            config.exon_min_width,
+            min_inter_width=config.min_width
         )
 
     main_group = canvas.g(class_='ust')
 
-    y = DS.breakpoint_top_margin if len(breakpoints) > 0 else 0
+    y = config.breakpoint_top_margin if len(breakpoints) > 0 else 0
     x_start = Interval.convert_ratioed_pos(mapping, ust.start).start
     x_end = Interval.convert_ratioed_pos(mapping, ust.end).end
 
@@ -332,49 +335,49 @@ def draw_ustranscript(
         except AttributeError:
             pass
 
-    LABEL_PREFIX = DS.transcript_label_prefix
+    label_prefix = config.transcript_label_prefix
     if isinstance(ust, FusionTranscript):
-        LABEL_PREFIX = DS.fusion_label_prefix
+        label_prefix = config.fusion_label_prefix
 
     if len(ust.translations) == 0:
-        y += DS.splice_height
-        exon_track_group = draw_exon_track(DS, canvas, ust, mapping, colors)
+        y += config.splice_height
+        exon_track_group = draw_exon_track(config, canvas, ust, mapping, colors)
         exon_track_group.translate(0, y)
         exon_track_group.add(canvas.text(
-            labels.add(ust, LABEL_PREFIX),
-            insert=(0 - DS.padding, DS.track_height / 2 + DS.font_central_shift_ratio * DS.label_font_size),
-            fill=DS.label_color,
-            style=DS.font_style.format(font_size=DS.label_font_size, text_anchor='end'),
+            labels.add(ust, label_prefix),
+            insert=(0 - config.padding, config.track_height / 2 + config.font_central_shift_ratio * config.label_font_size),
+            fill=config.label_color,
+            style=config.font_style.format(font_size=config.label_font_size, text_anchor='end'),
             class_='label'
         ))
         main_group.add(exon_track_group)
-        y += DS.track_height
+        y += config.track_height
     else:
         # draw the protein features if there are any
         for i, tl in enumerate(ust.translations):
             gp = draw_transcript_with_translation(
-                DS, canvas, tl, labels, colors, mapping, x_start=x_start, x_end=x_end
+                config, canvas, tl, labels, colors, mapping, x_start=x_start, x_end=x_end
             )
             gp.translate(0, y)
             if i < len(ust.translations) - 1:
-                y += DS.inner_margin
+                y += config.inner_margin
             y += gp.height
             main_group.add(gp)
 
-    y += DS.breakpoint_bottom_margin if len(breakpoints) > 0 else 0
+    y += config.breakpoint_bottom_margin if len(breakpoints) > 0 else 0
     # add masks
     for mask in masks:
         pixel = Interval.convert_ratioed_pos(mapping, mask.start) | Interval.convert_ratioed_pos(mapping, mask.end)
         m = canvas.rect(
             (pixel.start, 0), (pixel.length(), y),
-            class_='mask', fill=DS.mask_fill, opacity=DS.mask_opacity, pointer_events='none'
+            class_='mask', fill=config.mask_fill, opacity=config.mask_opacity, pointer_events='none'
         )
         main_group.add(m)
 
     # now overlay the breakpoints on top of everything
     for i, b in enumerate(breakpoints):
         pixel = Interval.convert_ratioed_pos(mapping, b.start) | Interval.convert_ratioed_pos(mapping, b.end)
-        bg = draw_breakpoint(DS, canvas, b, pixel.length(), y, label=labels.add(b, DS.breakpoint_label_prefix))
+        bg = draw_breakpoint(config, canvas, b, pixel.length(), y, label=labels.add(b, config.breakpoint_label_prefix))
         bg.translate(pixel.start, 0)
         main_group.add(bg)
 
@@ -385,7 +388,7 @@ def draw_ustranscript(
     return main_group
 
 
-def draw_genes(DS, canvas, genes, target_width, breakpoints=None, colors=None, labels=None, plots=None, masks=None):
+def draw_genes(config, canvas, genes, target_width, breakpoints=None, colors=None, labels=None, plots=None, masks=None):
     """
     draws the genes given in order of their start position trying to minimize
     the number of tracks required to avoid overlap
@@ -408,16 +411,16 @@ def draw_genes(DS, canvas, genes, target_width, breakpoints=None, colors=None, l
     labels = LabelMapping() if labels is None else labels
     plots = plots if plots else []
 
-    st = max(min([g.start for g in genes] + [b.start for b in breakpoints]) - DS.gene_min_buffer, 1)
-    end = max([g.end for g in genes] + [b.end for b in breakpoints]) + DS.gene_min_buffer
+    st = max(min([g.start for g in genes] + [b.start for b in breakpoints]) - config.gene_min_buffer, 1)
+    end = max([g.end for g in genes] + [b.end for b in breakpoints]) + config.gene_min_buffer
     main_group = canvas.g(class_='genes')
     mapping = generate_interval_mapping(
         [g for g in genes],
         target_width,
-        DS.gene_intergenic_ratio,
-        DS.gene_min_width,
+        config.gene_intergenic_ratio,
+        config.gene_min_width,
         start=st, end=end,
-        min_inter_width=DS.min_width
+        min_inter_width=config.min_width
     )
     if masks is None:
         masks = []
@@ -440,17 +443,17 @@ def draw_genes(DS, canvas, genes, target_width, breakpoints=None, colors=None, l
         s = Interval.convert_ratioed_pos(mapping, gene.start)
         t = Interval.convert_ratioed_pos(mapping, gene.end)
         gene_px_intervals[Interval(s.start, t.end)] = gene
-        l = labels.add(gene, DS.gene_label_prefix)
+        labels.add(gene, config.gene_label_prefix)
     tracks = split_intervals_into_tracks(gene_px_intervals)
 
-    y = DS.breakpoint_top_margin
+    y = config.breakpoint_top_margin
 
     main_group.add(
         canvas.rect(
-            (0, y + DS.track_height / 2 - DS.scaffold_height / 2 +
-                (len(tracks) - 1) * (DS.track_height + DS.padding)),
-            (target_width, DS.scaffold_height),
-            fill=DS.scaffold_color,
+            (0, y + config.track_height / 2 - config.scaffold_height / 2 +
+                (len(tracks) - 1) * (config.track_height + config.padding)),
+            (target_width, config.scaffold_height),
+            fill=config.scaffold_color,
             class_='scaffold'
         ))
     tracks.reverse()
@@ -459,23 +462,23 @@ def draw_genes(DS, canvas, genes, target_width, breakpoints=None, colors=None, l
             # draw the gene
             gene = gene_px_intervals[genepx]
             group = draw_gene(
-                DS, canvas, gene, genepx.length(),
-                DS.track_height,
-                colors.get(gene, DS.gene1_color),
+                config, canvas, gene, genepx.length(),
+                config.track_height,
+                colors.get(gene, config.gene1_color),
                 labels.get_key(gene)
             )
             group.translate(genepx.start, y)
             main_group.add(group)
-        y += DS.track_height + DS.padding
+        y += config.track_height + config.padding
 
-    y += DS.breakpoint_bottom_margin - DS.padding
+    y += config.breakpoint_bottom_margin - config.padding
 
     # adding the masks is the final step
     for mask in masks:
         pixel = Interval.convert_ratioed_pos(mapping, mask.start) | Interval.convert_ratioed_pos(mapping, mask.end)
         m = canvas.rect(
             (pixel.start, 0), (pixel.length(), y),
-            class_='mask', fill=DS.mask_fill, pointer_events='none', opacity=DS.mask_opacity
+            class_='mask', fill=config.mask_fill, pointer_events='none', opacity=config.mask_opacity
         )
         main_group.add(m)
 
@@ -483,7 +486,7 @@ def draw_genes(DS, canvas, genes, target_width, breakpoints=None, colors=None, l
     for i, b in enumerate(sorted(breakpoints)):
         s = Interval.convert_ratioed_pos(mapping, b.start).start
         t = Interval.convert_ratioed_pos(mapping, b.end).end
-        bg = draw_breakpoint(DS, canvas, b, abs(t - s) + 1, y, label=labels.add(b, DS.breakpoint_label_prefix))
+        bg = draw_breakpoint(config, canvas, b, abs(t - s) + 1, y, label=labels.add(b, config.breakpoint_label_prefix))
         bg.translate(s, 0)
         main_group.add(bg)
 
@@ -495,7 +498,7 @@ def draw_genes(DS, canvas, genes, target_width, breakpoints=None, colors=None, l
     return main_group
 
 
-def draw_vmarker(DS, canvas, marker, width, height, label='', color=None):
+def draw_vmarker(config, canvas, marker, width, height, label='', color=None):
     """
     Args:
         canvas (svgwrite.drawing.Drawing): the main svgwrite object used to create new svg elements
@@ -505,18 +508,18 @@ def draw_vmarker(DS, canvas, marker, width, height, label='', color=None):
     Return:
         svgwrite.container.Group: the group element for the diagram
     """
-    color = DS.marker_color if color is None else color
-    width = max([DS.abs_min_width, width])
+    color = config.marker_color if color is None else color
+    width = max([config.abs_min_width, width])
     g = canvas.g(class_='marker')
-    y = DS.padding + DS.marker_label_font_size / 2
+    y = config.padding + config.marker_label_font_size / 2
     t = canvas.text(
         label,
-        insert=(width / 2, y + DS.font_central_shift_ratio * DS.marker_label_font_size),
+        insert=(width / 2, y + config.font_central_shift_ratio * config.marker_label_font_size),
         fill=color,
-        style=DS.font_style.format(text_anchor='middle', font_size=DS.marker_label_font_size),
+        style=config.font_style.format(text_anchor='middle', font_size=config.marker_label_font_size),
         class_='label'
     )
-    y += DS.marker_label_font_size / 2 + DS.padding
+    y += config.marker_label_font_size / 2 + config.padding
 
     g.add(t)
     g.add(canvas.rect((0, y), (width, height - y), stroke=color, fill='none'))
@@ -525,7 +528,7 @@ def draw_vmarker(DS, canvas, marker, width, height, label='', color=None):
     return g
 
 
-def draw_breakpoint(DS, canvas, breakpoint, width, height, label=''):
+def draw_breakpoint(config, canvas, breakpoint, width, height, label=''):
     """
     Args:
         canvas (svgwrite.drawing.Drawing): the main svgwrite object used to create new svg elements
@@ -536,36 +539,36 @@ def draw_breakpoint(DS, canvas, breakpoint, width, height, label=''):
         svgwrite.container.Group: the group element for the diagram
     """
     g = canvas.g(class_='breakpoint')
-    y = DS.padding + DS.breakpoint_label_font_size / 2
+    y = config.padding + config.breakpoint_label_font_size / 2
     t = canvas.text(
         label,
-        insert=(width / 2, y + DS.font_central_shift_ratio * DS.breakpoint_label_font_size),
+        insert=(width / 2, y + config.font_central_shift_ratio * config.breakpoint_label_font_size),
         fill=HEX_BLACK,
-        style=DS.font_style.format(text_anchor='middle', font_size=DS.breakpoint_label_font_size),
+        style=config.font_style.format(text_anchor='middle', font_size=config.breakpoint_label_font_size),
         class_='label'
     )
-    y += DS.breakpoint_label_font_size / 2 + DS.padding
+    y += config.breakpoint_label_font_size / 2 + config.padding
 
     g.add(t)
 
-    r = canvas.rect((0, y), (width, height - y), stroke=DS.breakpoint_color, fill='none')
-    r.dasharray(DS.breakpoint_stroke_dasharray)
+    r = canvas.rect((0, y), (width, height - y), stroke=config.breakpoint_color, fill='none')
+    r.dasharray(config.breakpoint_stroke_dasharray)
     g.add(r)
 
     if breakpoint.orient == ORIENT.LEFT:
         l = canvas.line((0, y), (0, height))
-        l.stroke(DS.breakpoint_color, width=DS.breakpoint_orient_stroke_width)
+        l.stroke(config.breakpoint_color, width=config.breakpoint_orient_stroke_width)
         g.add(l)
     elif breakpoint.orient == ORIENT.RIGHT:
         l = canvas.line((width, y), (width, height))
-        l.stroke(DS.breakpoint_color, width=DS.breakpoint_orient_stroke_width)
+        l.stroke(config.breakpoint_color, width=config.breakpoint_orient_stroke_width)
         g.add(l)
     g.add(Tag('title', 'Breakpoint {}:g.{}_{}{} {}'.format(
         breakpoint.chr, breakpoint.start, breakpoint.end, breakpoint.strand, breakpoint.orient)))
     return g
 
 
-def draw_exon(DS, canvas, exon, width, height, fill, label='', translation=None):
+def draw_exon(config, canvas, exon, width, height, fill, label='', translation=None):
     """
     generates the svg object representing an exon
 
@@ -587,9 +590,9 @@ def draw_exon(DS, canvas, exon, width, height, fill, label='', translation=None)
     g.add(canvas.rect((0, 0), (width, height), fill=fill))
     t = canvas.text(
         label,
-        insert=(width / 2, height / 2 + DS.font_central_shift_ratio * DS.exon_font_size),
-        fill=DS.label_color if not DS.dynamic_labels else dynamic_label_color(fill),
-        style=DS.font_style.format(font_size=DS.exon_font_size, text_anchor='middle'),
+        insert=(width / 2, height / 2 + config.font_central_shift_ratio * config.exon_font_size),
+        fill=config.label_color if not config.dynamic_labels else dynamic_label_color(fill),
+        style=config.font_style.format(font_size=config.exon_font_size, text_anchor='middle'),
         class_='label'
     )
     g.add(t)
@@ -614,31 +617,31 @@ def draw_exon(DS, canvas, exon, width, height, fill, label='', translation=None)
     return g
 
 
-def draw_template(DS, canvas, template, target_width, labels=None, colors=None, breakpoints=None):
+def draw_template(config, canvas, template, target_width, labels=None, colors=None, breakpoints=None):
     labels = LabelMapping() if labels is None else labels
     colors = {} if colors is None else colors
     breakpoints = [] if not breakpoints else breakpoints
-    total_height = DS.template_track_height + DS.breakpoint_top_margin + DS.breakpoint_bottom_margin
+    total_height = config.template_track_height + config.breakpoint_top_margin + config.breakpoint_bottom_margin
     group = canvas.g(class_='template')
     # 1 as input since we don't want to change the ratio here
     mapping = generate_interval_mapping(
-        template.bands, target_width, 1, DS.template_band_min_width,
+        template.bands, target_width, 1, config.template_band_min_width,
         start=template.start, end=template.end
     )
     scaffold = canvas.rect(
-        (0, 0), (target_width, DS.scaffold_height),
-        fill=DS.scaffold_color
+        (0, 0), (target_width, config.scaffold_height),
+        fill=config.scaffold_color
     )
     group.add(scaffold)
-    scaffold.translate((0, DS.breakpoint_top_margin + DS.template_track_height / 2 - DS.scaffold_height / 2))
+    scaffold.translate((0, config.breakpoint_top_margin + config.template_track_height / 2 - config.scaffold_height / 2))
     label_group = canvas.g()
     label_group.add(canvas.text(
-        labels.add(template, DS.template_label_prefix),
+        labels.add(template, config.template_label_prefix),
         insert=(
-            0 - DS.padding, DS.breakpoint_top_margin + DS.template_track_height / 2 +
-            DS.font_central_shift_ratio * DS.label_font_size),
-        fill=DS.label_color,
-        style=DS.font_style.format(font_size=DS.label_font_size, text_anchor='end'),
+            0 - config.padding, config.breakpoint_top_margin + config.template_track_height / 2 +
+            config.font_central_shift_ratio * config.label_font_size),
+        fill=config.label_color,
+        style=config.font_style.format(font_size=config.label_font_size, text_anchor='end'),
         class_='label'
     ))
     label_group.add(Tag('title', 'template {}'.format(template.name)))
@@ -649,37 +652,37 @@ def draw_template(DS, canvas, template, target_width, labels=None, colors=None, 
         t = Interval.convert_pos(mapping, band[1])
 
         bgroup = canvas.g(class_='cytoband')
-        f = DS.template_band_fill.get(band.data.get('giesma_stain', None), DS.template_default_fill)
+        f = config.template_band_fill.get(band.data.get('giesma_stain', None), config.template_default_fill)
         r = None
         w = t - s + 1
         if band.data.get('giesma_stain', None) == GIESMA_STAIN.ACEN:
             if band.name[0] == 'p':
                 r = canvas.polyline(
-                    [(0, 0), (w, DS.template_track_height / 2), (0, DS.template_track_height)],
-                    fill=f, stroke=DS.template_band_stroke, stroke_width=DS.template_band_stroke_width
+                    [(0, 0), (w, config.template_track_height / 2), (0, config.template_track_height)],
+                    fill=f, stroke=config.template_band_stroke, stroke_width=config.template_band_stroke_width
                 )
             else:
                 r = canvas.polyline(
-                    [(w, 0), (0, DS.template_track_height / 2), (w, DS.template_track_height)],
-                    fill=f, stroke=DS.template_band_stroke, stroke_width=DS.template_band_stroke_width
+                    [(w, 0), (0, config.template_track_height / 2), (w, config.template_track_height)],
+                    fill=f, stroke=config.template_band_stroke, stroke_width=config.template_band_stroke_width
                 )
         else:
             r = canvas.rect(
-                (0, 0), (w, DS.template_track_height),
-                fill=f, stroke=DS.template_band_stroke, stroke_width=DS.template_band_stroke_width
+                (0, 0), (w, config.template_track_height),
+                fill=f, stroke=config.template_band_stroke, stroke_width=config.template_band_stroke_width
             )
         bgroup.add(r)
         bgroup.add(
             Tag('title', 'cytoband  {0}:y.{1}  {0}:g.{2}_{3}'.format(
                 template.name, band.name, band.start, band.end)))
-        bgroup.translate((s, DS.breakpoint_top_margin))
+        bgroup.translate((s, config.breakpoint_top_margin))
         group.add(bgroup)
     # now draw the breakpoints overtop
     for i, b in enumerate(sorted(breakpoints)):
         s = Interval.convert_pos(mapping, b.start)
         t = Interval.convert_pos(mapping, b.end)
         bg = draw_breakpoint(
-            DS, canvas, b, abs(t - s) + 1, total_height, label=labels.add(b, DS.breakpoint_label_prefix))
+            config, canvas, b, abs(t - s) + 1, total_height, label=labels.add(b, config.breakpoint_label_prefix))
         bg.translate(s, 0)
         group.add(bg)
     setattr(
@@ -687,7 +690,7 @@ def draw_template(DS, canvas, template, target_width, labels=None, colors=None, 
     return group
 
 
-def draw_gene(DS, canvas, gene, width, height, fill, label='', reference_genome=None):
+def draw_gene(config, canvas, gene, width, height, fill, label='', reference_genome=None):
     """
     generates the svg object representing a gene
 
@@ -703,14 +706,14 @@ def draw_gene(DS, canvas, gene, width, height, fill, label='', reference_genome=
     """
 
     group = canvas.g(class_='gene')
-    if width < DS.gene_min_width:
+    if width < config.gene_min_width:
         raise DrawingFitError('width of {} is not sufficient to draw a gene of minimum width {}'.format(
-            width, DS.gene_min_width), gene)
-    wrect = width - DS.gene_arrow_width
+            width, config.gene_min_width), gene)
+    wrect = width - config.gene_arrow_width
     if wrect < 1:
         raise DrawingFitError('width is not sufficient to draw gene')
 
-    label_color = DS.label_color if not DS.dynamic_labels else dynamic_label_color(fill)
+    label_color = config.label_color if not config.dynamic_labels else dynamic_label_color(fill)
 
     if gene.get_strand() == STRAND.POS:
         group.add(
@@ -719,36 +722,36 @@ def draw_gene(DS, canvas, gene, width, height, fill, label='', reference_genome=
             ))
         group.add(
             canvas.polyline(
-                [(wrect, 0), (wrect + DS.gene_arrow_width, height / 2), (wrect, height)],
+                [(wrect, 0), (wrect + config.gene_arrow_width, height / 2), (wrect, height)],
                 fill=fill
             ))
         group.add(
             canvas.text(
                 label,
-                insert=(wrect / 2, height / 2 + DS.font_central_shift_ratio * DS.label_font_size),
+                insert=(wrect / 2, height / 2 + config.font_central_shift_ratio * config.label_font_size),
                 fill=label_color,
-                style=DS.font_style.format(font_size=DS.label_font_size, text_anchor='middle'),
+                style=config.font_style.format(font_size=config.label_font_size, text_anchor='middle'),
                 class_='label'
             ))
     elif gene.get_strand() == STRAND.NEG:
         group.add(
             canvas.rect(
-                (DS.gene_arrow_width, 0), (wrect, height), fill=fill
+                (config.gene_arrow_width, 0), (wrect, height), fill=fill
             ))
         group.add(
             canvas.polyline(
-                [(DS.gene_arrow_width, 0), (0, height / 2), (DS.gene_arrow_width, height)],
+                [(config.gene_arrow_width, 0), (0, height / 2), (config.gene_arrow_width, height)],
                 fill=fill
             ))
         group.add(
             canvas.text(
                 label,
                 insert=(
-                    wrect / 2 + DS.gene_arrow_width,
-                    height / 2 + DS.font_central_shift_ratio * DS.label_font_size
+                    wrect / 2 + config.gene_arrow_width,
+                    height / 2 + config.font_central_shift_ratio * config.label_font_size
                 ),
                 fill=label_color,
-                style=DS.font_style.format(font_size=DS.label_font_size, text_anchor='middle'),
+                style=config.font_style.format(font_size=config.label_font_size, text_anchor='middle'),
                 class_='label'
             ))
     else:
@@ -759,14 +762,14 @@ def draw_gene(DS, canvas, gene, width, height, fill, label='', reference_genome=
         group.add(
             canvas.text(
                 label,
-                insert=(width / 2, height / 2 + DS.font_central_shift_ratio * DS.label_font_size),
+                insert=(width / 2, height / 2 + config.font_central_shift_ratio * config.label_font_size),
                 fill=label_color,
-                style=DS.font_style.format(font_size=DS.label_font_size, text_anchor='middle'),
+                style=config.font_style.format(font_size=config.label_font_size, text_anchor='middle'),
                 class_='label'
             ))
     aliases = ''
     try:
-        if len(gene.aliases) > 0:
+        if gene.aliases:
             aliases = ' aka {}'.format(';'.join(sorted(gene.aliases)))
     except AttributeError:
         pass

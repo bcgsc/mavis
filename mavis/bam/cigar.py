@@ -55,7 +55,7 @@ def recompute_cigar_mismatch(read, ref):
                 seq_pos += 1
         else:
             raise NotImplementedError('unexpected CIGAR value {0} is not supported currently'.format(cigar_value))
-    assert(sum([x[1] for x in result]) == sum(x[1] for x in read.cigar))
+    assert sum([x[1] for x in result]) == sum(x[1] for x in read.cigar)
     return result
 
 
@@ -113,19 +113,19 @@ def score(cigar, **kwargs):
         int: the score value
     """
 
-    MISMATCH = kwargs.pop('MISMATCH', -1)
-    MATCH = kwargs.pop('MATCH', 2)
-    GAP = kwargs.pop('GAP', -4)
-    GAP_EXTEND = kwargs.pop('GAP_EXTEND', -1)
+    mismatch = kwargs.pop('MISMATCH', -1)
+    match = kwargs.pop('MATCH', 2)
+    gap = kwargs.pop('GAP', -4)
+    gap_extend = kwargs.pop('GAP_EXTEND', -1)
 
     score = 0
     for v, freq in cigar:
         if v == CIGAR.EQ:
-            score += MATCH * freq
+            score += match * freq
         elif v == CIGAR.X:
-            score += MISMATCH * freq
+            score += mismatch * freq
         elif v in [CIGAR.I, CIGAR.D]:
-            score += GAP + GAP_EXTEND * (freq - 1)
+            score += gap + gap_extend * (freq - 1)
         elif v in [CIGAR.S, CIGAR.N]:
             pass
         else:
@@ -349,7 +349,6 @@ def hgvs_standardize_cigar(read, reference_seq):
     extend alignments as long as matches are possible.
     call insertions before deletions
     """
-    ci = 0
     cigar = join(read.cigar)
     new_cigar = []
     # ensure that any del ins become ins del

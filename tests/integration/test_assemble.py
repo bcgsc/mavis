@@ -1,7 +1,9 @@
 import unittest
-from . import MockObject
+
 from mavis.assemble import Contig
 from mavis.interval import Interval
+
+from . import MockObject
 
 
 class TestContigRemap(unittest.TestCase):

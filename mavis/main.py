@@ -1,36 +1,36 @@
 #!python
-import os
-import re
-import sys
-import random
 import argparse
-import TSV
+from datetime import datetime
 import glob
-import time
+import math
+import os
+import random
+import re
 import subprocess
-from .annotate import load_annotations, load_reference_genome, load_masking_regions, load_templates
-from .validate.main import main as validate_main
-from .cluster.main import main as cluster_main
-from .pairing.main import main as pairing_main
-from .annotate.main import main as annotate_main
-from .summary.main import main as summary_main
+import sys
+import time
+
+import TSV
+
 from . import __version__
-
-from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
-from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from .annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
-from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
-from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
-from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
-
-from .config import augment_parser, write_config, LibraryConfig, MavisConfig, get_env_variable
-from .util import log, mkdirp, log_arguments, output_tabbed_file, bash_expands, MavisNamespace
-from .constants import PROTOCOL, PIPELINE_STEP, DISEASE_STATUS
+from .annotate.file_io import load_annotations, load_masking_regions, load_reference_genome, load_templates
+from .annotate.main import main as annotate_main
 from .bam.read import get_samtools_version
 from .blat import get_blat_version
+from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
+from .cluster.main import main as cluster_main
+from .config import augment_parser, get_env_variable, LibraryConfig, MavisConfig, write_config
+from .constants import DISEASE_STATUS, PIPELINE_STEP, PROTOCOL
+from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
+from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
+from .pairing.main import main as pairing_main
+from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
+from .summary.main import main as summary_main
 from .tools import convert_tool_output, SUPPORTED_TOOL
-import math
-from datetime import datetime
+from .util import bash_expands, log, log_arguments, MavisNamespace, mkdirp, output_tabbed_file
+from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
+from .validate.main import main as validate_main
 
 
 VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
@@ -86,14 +86,14 @@ def main_pipeline(config):
         merge_args['output'] = cluster_output
         output_files = cluster_main(log_args=True, **merge_args)
 
-        if len(output_files) == 0:
+        if not output_files:
             log('warning: no inputs after clustering. Will not set up other pipeline steps')
             continue
         merge_file_prefix = None
-        for f in output_files:
-            m = re.match('^(?P<prefix>.*\D)\d+.tab$', f)
+        for filename in output_files:
+            m = re.match(r'^(?P<prefix>.*\D)\d+.tab$', filename)
             if not m:
-                raise UserWarning('cluster file did not match expected format', f)
+                raise UserWarning('cluster file did not match expected format', filename)
             if merge_file_prefix is None:
                 merge_file_prefix = m.group('prefix')
             elif merge_file_prefix != m.group('prefix'):
@@ -322,21 +322,21 @@ def generate_config(parser, required, optional):
         if lib not in inputs_by_lib:
             raise KeyError('not input was given for the library', lib)
         log('generating the config section for:', lib)
-        l = LibraryConfig.build(
+        temp = LibraryConfig.build(
             library=lib, protocol=protocol, bam_file=bam, inputs=inputs_by_lib[lib], stranded_bam=stranded,
             disease_status=diseased, annotations=args.annotations, log=log,
             sample_size=args.genome_bins if protocol == PROTOCOL.GENOME else args.transcriptome_bins,
             distribution_fraction=args.distribution_fraction
         )
-        libs.append(l)
+        libs.append(temp)
     convert = {}
     for alias, command in args.external_conversion:
         if alias in convert:
             raise KeyError('duplicate alias names are not allowed', alias)
         convert[alias] = []
         open_option = False
-        for item in re.split('\s+', command):
-            if len(convert[alias]) > 0:
+        for item in re.split(r'\s+', command):
+            if convert[alias]:
                 if open_option:
                     convert[alias][-1] += ' ' + item
                     open_option = False
@@ -363,24 +363,24 @@ def time_diff(start, end):
     >>> time_diff('2017-04-03 15:10:48.607195', '2017-04-03 17:00:32.671809')
     1.83
     """
-    t1 = datetime.strptime(start, '%Y-%m-%d %H:%M:%S.%f')
-    t2 = datetime.strptime(end, '%Y-%m-%d %H:%M:%S.%f')
-    td = t1 - t2
-    return td.seconds / 3600
+    start_time = datetime.strptime(start, '%Y-%m-%d %H:%M:%S.%f')
+    end_time = datetime.strptime(end, '%Y-%m-%d %H:%M:%S.%f')
+    elapsed_time = end_time - start_time
+    return elapsed_time.seconds / 3600
 
 
 def unique_exists(pattern, allow_none=False, get_newest=False):
     result = glob.glob(pattern)
     if len(result) == 1:
         return result[0]
-    elif len(result) > 0:
+    elif result:
         if get_newest:
             current_file = result[0]
-            for f in result[1:]:
+            for filename in result[1:]:
                 stats1 = os.stat(current_file)
-                stats2 = os.stat(f)
+                stats2 = os.stat(filename)
                 if stats1.st_mtime < stats2.st_mtime:
-                    current_file = f
+                    current_file = filename
             return current_file
 
         else:
@@ -395,7 +395,7 @@ def parse_log_details(log_file):
     details = None
     with open(log_file) as job_out:
         lines = job_out.readlines()
-        if len(lines) == 0:
+        if not lines:
             details = argparse.Namespace(status='empty', message='empty log file', filename=log_file)
         elif 'error' in lines[-1].lower():
             details = argparse.Namespace(status='crash', message=lines[-1].strip(), filename=log_file)
@@ -409,12 +409,12 @@ def parse_runtime_from_log(log_file):
 
     with open(log_file) as job_out:
         lines = job_out.readlines()
-        if len(lines) > 0:
+        if not lines:
             for line in lines[-10:]:
-                m = re.match('^\s*run time \(s\): (\d+)\s*$', line)
+                m = re.match(r'^\s*run time \(s\): (\d+)\s*$', line)
                 if m:
                     return int(m.group(1))
-    raise OSError('error in parsing the log file for run times', log_file, '^\s*run time (s): (\d+)\s*$')
+    raise OSError('error in parsing the log file for run times', log_file, r'^\s*run time (s): (\d+)\s*$')
 
 
 def convert_set_to_ranges(input_set):
@@ -426,15 +426,15 @@ def convert_set_to_ranges(input_set):
                 continue
         ranges.append((curr, curr))
     result = []
-    for s, t in ranges:
-        if s == t:
-            result.append(str(s))
+    for start, end in ranges:
+        if start == end:
+            result.append(str(start))
         else:
-            result.append(str(s) + '-' + str(t))
+            result.append(str(start) + '-' + str(end))
     return ', '.join(result)
 
 
-def check_library_dir(library_dir, verbose=False):
+def check_library_dir(library_dir):
     """
     checks the completion of library directory and its clustering, validation and annotation subdirectories
     """
@@ -451,7 +451,7 @@ def check_library_dir(library_dir, verbose=False):
     # check for multiple batches as well as number of jobs run per batch
     batches = {}
     for job in [os.path.basename(p) for p in glob.glob(os.path.join(clustering_dir, 'batch*.tab'))]:
-        batch = re.sub('-\d+.tab$', '', job)
+        batch = re.sub(r'-\d+.tab$', '', job)
         batches[batch] = batches.get(batch, 0) + 1
     if len(batches) > 1:
         raise OSError('Multiple clustering runs were found in the clustering directory', clustering_dir, list(batches.keys()))
@@ -490,13 +490,13 @@ def check_library_dir(library_dir, verbose=False):
 
             if stamp and logfile:
                 try:
-                    rt = parse_runtime_from_log(logfile)
+                    run_time = parse_runtime_from_log(logfile)
                 except OSError as err:
                     incomplete.add(job_task_id)
                     crashes.setdefault(str(err), set()).add(job_task_id)
                 else:
-                    curr_run_times.append(rt)
-                    run_times[stage_subdir][job_task_id] = rt
+                    curr_run_times.append(run_time)
+                    run_times[stage_subdir][job_task_id] = run_time
                     continue
             if logfile:
                 if not printed_stage:
@@ -532,8 +532,8 @@ def check_library_dir(library_dir, verbose=False):
     stamp_times = list(stamps['validation'].values()) + list(stamps['annotation'].values())
     return (
         max(stamp_times) if stamp_times else None,
-        max(max_rt) if len(max_rt) else None,
-        sum(max_rt) if len(max_rt) else None
+        max(max_rt) if max_rt else None,
+        sum(max_rt) if max_rt else None
     )
 
 
@@ -559,17 +559,17 @@ def check_single_job(directory):
             logged_fail = True
         log('\tERROR:', err, time_stamp=False)
 
-    rt = None
+    run_time = None
     if not stamp and not logfile:
         log('\t' + name, 'has not started', time_stamp=False)
     elif not stamp:
         log(parse_log_details(logfile), time_stamp=False)
     elif stamp:
         log(name, 'OK')
-        rt = parse_runtime_from_log(logfile)
-        log('\trun time (s):', rt, time_stamp=False)
+        run_time = parse_runtime_from_log(logfile)
+        log('\trun time (s):', run_time, time_stamp=False)
 
-    return (os.path.getctime(stamp) if stamp else None, rt)
+    return (os.path.getctime(stamp) if stamp else None, run_time)
 
 
 def check_completion(target_dir):
@@ -579,7 +579,7 @@ def check_completion(target_dir):
     """
     if not os.path.isdir(target_dir):
         raise TypeError('expected a directory as input')
-    library_dir_regex = '^[\w-]+_({})_({})$'.format('|'.join(DISEASE_STATUS.values()), '|'.join(PROTOCOL.values()))
+    library_dir_regex = r'^[\w-]+_({})_({})$'.format('|'.join(DISEASE_STATUS.values()), '|'.join(PROTOCOL.values()))
     summary_stamp = None
     pairing_stamp = None
     library_stamps = []
@@ -588,15 +588,15 @@ def check_completion(target_dir):
     for subdir in sorted(glob.glob(os.path.join(target_dir, '*'))):
         name = os.path.basename(subdir)
         if name == 'summary':
-            summary_stamp, rt = check_single_job(subdir)
-            if rt:
-                pipeline_total_rt += rt
-                pipeline_max_rt += rt
+            summary_stamp, run_time = check_single_job(subdir)
+            if run_time:
+                pipeline_total_rt += run_time
+                pipeline_max_rt += run_time
         elif name == 'pairing':
-            pairing_stamp, rt = check_single_job(subdir)
-            if rt:
-                pipeline_max_rt += rt
-                pipeline_total_rt += rt
+            pairing_stamp, run_time = check_single_job(subdir)
+            if run_time:
+                pipeline_max_rt += run_time
+                pipeline_total_rt += run_time
         elif re.match(library_dir_regex, name):
             last_timestamp, max_rt, total_rt = check_library_dir(subdir)
             if max_rt:
@@ -621,7 +621,7 @@ def check_completion(target_dir):
 
 def main():
     def usage(err=None, detail=False):
-        u = '\nusage: {} {{cluster,validate,annotate,pairing,summary,pipeline,config,checker}} [-h] [-v]'.format(PROGNAME)
+        umsg = '\nusage: {} {{cluster,validate,annotate,pairing,summary,pipeline,config,checker}} [-h] [-v]'.format(PROGNAME)
         helpmenu = """
 required arguments:
 
@@ -640,7 +640,7 @@ use the -h/--help option
 
     >>> {} <pipeline step> -h
     """.format(PROGNAME)
-        print(u)
+        print(umsg)
         if detail:
             print(helpmenu)
         if err:

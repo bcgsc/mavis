@@ -1,4 +1,4 @@
-from ..util import WeakMavisNamespace, ChrListString
+from ..util import ChrListString, WeakMavisNamespace
 
 
 DEFAULTS = WeakMavisNamespace(

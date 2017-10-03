@@ -1,12 +1,14 @@
-import networkx as nx
 import itertools
 import warnings
+
 import distance
+import networkx as nx
+
 from .bam import cigar as cigar_tools
-from .bam.read import nsb_align, calculate_alignment_score
+from .bam.read import calculate_alignment_score, nsb_align
 from .constants import reverse_complement
-from .util import devnull
 from .interval import Interval
+from .util import devnull
 
 
 class Contig:
@@ -431,7 +433,7 @@ def assemble(
             for contig, read, score1, score2 in scores:
                 if max_score == (score1, score2):
                     best_alignments.append((contig, read))
-            assert(len(best_alignments) >= 1)
+            assert len(best_alignments) >= 1
             for contig, read in best_alignments:
                 contig.add_mapped_sequence(read, len(best_alignments))
     log(

@@ -1,7 +1,7 @@
-from ..constants import COLUMNS, STRAND, CALL_METHOD, SVTYPE, PROTOCOL, DISEASE_STATUS
-from ..breakpoint import Breakpoint, BreakpointPair
-from ..interval import Interval
 from .constants import PAIRING_STATE
+from ..breakpoint import Breakpoint, BreakpointPair
+from ..constants import CALL_METHOD, COLUMNS, DISEASE_STATUS, PROTOCOL, STRAND, SVTYPE
+from ..interval import Interval
 
 
 def alphanumeric_choice(bpp1, bpp2):
@@ -17,7 +17,7 @@ def alphanumeric_choice(bpp1, bpp2):
     elif (bpp1.transcript1, bpp1.transcript2) > (bpp2.transcript1, bpp2.transcript2):
         return bpp2
     else:
-        raise AssertionError("Both transcripts are equal")
+        raise AssertionError('Both transcripts are equal')
 
 
 def filter_by_annotations(bpp1, bpp2, best_transcripts):
@@ -109,22 +109,22 @@ def filter_by_annotations(bpp1, bpp2, best_transcripts):
 
 def filter_by_call_method(bpp1, bpp2):
     # ranking scores of the methods (more is better)
-    RANKING = {
+    ranking = {
         CALL_METHOD.CONTIG: 4,
         CALL_METHOD.SPLIT: 3,
         CALL_METHOD.SPAN: 2,
         CALL_METHOD.FLANK: 1
     }
     # This treats split flank the same as flank split
-    bpp_call_score = RANKING[bpp1.call_method]
-    existing_call_score = RANKING[bpp2.call_method]
+    bpp_call_score = ranking[bpp1.call_method]
+    existing_call_score = ranking[bpp2.call_method]
 
     if bpp_call_score < existing_call_score:
         return bpp1
     elif bpp_call_score > existing_call_score:
         return bpp2
     else:
-        raise AssertionError("Both call methods are equal")
+        raise AssertionError('Both call methods are equal')
 
 
 def group_events(bpp1, bpp2):
@@ -156,7 +156,7 @@ def group_events(bpp1, bpp2):
         if bpp1.data[i] != bpp2.data[i]:
             new_bpp.data[i] = ''
             if i in columns_to_keep:
-                new_bpp.data[i] = ";".join(sorted(list(set(str(bpp1.data[i]).split(';') +
+                new_bpp.data[i] = ';'.join(sorted(list(set(str(bpp1.data[i]).split(';') +
                                                            str(bpp2.data[i]).split(';')))))
         else:
             new_bpp.data[i] = bpp1.data[i]
@@ -204,19 +204,19 @@ def get_pairing_state(current_protocol, current_disease_state, other_protocol, o
     curr = (current_protocol, current_disease_state)
     other = (other_protocol, other_disease_state)
 
-    DG = (PROTOCOL.GENOME, DISEASE_STATUS.DISEASED)
-    DT = (PROTOCOL.TRANS, DISEASE_STATUS.DISEASED)
-    NG = (PROTOCOL.GENOME, DISEASE_STATUS.NORMAL)
+    dg = (PROTOCOL.GENOME, DISEASE_STATUS.DISEASED)
+    dt = (PROTOCOL.TRANS, DISEASE_STATUS.DISEASED)
+    ng = (PROTOCOL.GENOME, DISEASE_STATUS.NORMAL)
 
-    if curr == DG and other == NG:
+    if curr == dg and other == ng:
         return PAIRING_STATE.GERMLINE if is_matched else PAIRING_STATE.SOMATIC
-    elif curr == DG and other == DT:
+    elif curr == dg and other == dt:
         return PAIRING_STATE.EXP if is_matched else PAIRING_STATE.NO_EXP
-    elif curr == DT and other == DG:
+    elif curr == dt and other == dg:
         return PAIRING_STATE.GENOMIC if is_matched else PAIRING_STATE.NO_GENOMIC
-    elif curr == DT and other == NG:
+    elif curr == dt and other == ng:
         return PAIRING_STATE.GERMLINE if is_matched else PAIRING_STATE.SOMATIC
-    elif curr == NG and other == DT:
+    elif curr == ng and other == dt:
         return PAIRING_STATE.EXP if is_matched else PAIRING_STATE.NO_EXP
     else:
         return PAIRING_STATE.MATCH if is_matched else PAIRING_STATE.NO_MATCH

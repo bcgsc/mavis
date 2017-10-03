@@ -1,15 +1,22 @@
-import unittest
-from mavis.illustrate.constants import DiagramSettings
-from mavis.illustrate.scatter import ScatterPlot
-from mavis.illustrate.diagram import *
-from mavis.illustrate.elements import draw_template, draw_ustranscript, draw_genes
-from mavis.annotate import *
-from svgwrite import Drawing
-from mavis.constants import STRAND, ORIENT, SVTYPE, PROTOCOL
-from mavis.breakpoint import Breakpoint, BreakpointPair
-from mavis.interval import Interval
-from . import MockString, MockObject, build_transcript, TEMPLATE_METADATA_FILE, OUTPUT_SVG
 import random
+import unittest
+
+from mavis.annotate.base import BioInterval
+from mavis.annotate.file_io import load_templates
+from mavis.annotate.genomic import Gene, IntergenicRegion, Template
+from mavis.annotate.protein import Domain
+from mavis.annotate.variant import Annotation, FusionTranscript
+from mavis.breakpoint import Breakpoint, BreakpointPair
+from mavis.constants import ORIENT, PROTOCOL, STRAND, SVTYPE
+from mavis.illustrate.constants import DiagramSettings
+from mavis.illustrate.diagram import draw_multi_transcript_overlay, draw_sv_summary_diagram, generate_interval_mapping, HEX_BLACK, HEX_WHITE
+from mavis.illustrate.elements import draw_genes, draw_legend, draw_template, draw_ustranscript
+from mavis.illustrate.scatter import ScatterPlot
+from mavis.illustrate.util import dynamic_label_color, split_intervals_into_tracks
+from mavis.interval import Interval
+from svgwrite import Drawing
+
+from . import build_transcript, MockObject, MockString, OUTPUT_SVG, TEMPLATE_METADATA_FILE
 
 TEMPLATE_METADATA = None
 
@@ -44,39 +51,19 @@ class TestDraw(unittest.TestCase):
         Interval.convert_pos(mapping, st)
         Interval.convert_pos(mapping, end)
 
-    def test_generate_gene_mapping(self):
-        d = DiagramSettings()
-        a = Gene('1', 1000, 2000)
-        b = Gene('1', 5000, 7000)
-        c = Gene('1', 1500, 2500)
-        genes = [a, b, c]
-        """return self.generate_interval_mapping(
-            target_width,
-            genes,
-            self.GENE_INTERGENIC_RATIO,
-            self.MIN_WIDTH + self.GENE_ARROW_WIDTH,
-            buffer=self.GENE_MIN_BUFFER
-        )
-        with self.assertRaises(AttributeError):
-            m = d._generate_gene_mapping(100, genes)
-        m = d._generate_gene_mapping(500, genes)
-        u = Interval.union(*m.values())
-        self.assertLessEqual(1, u.start)
-        self.assertGreaterEqual(500, u.end)"""
-
     def test_generate_gene_mapping_err(self):
         #  _generate_interval_mapping [IntergenicRegion(11:77361962_77361962+)] 1181.39453125 5 30 None 77356962 77366962)
         ir = IntergenicRegion('11', 5000, 5000, STRAND.POS)
         tgt_width = 1000
         d = DiagramSettings()
         d.gene_min_buffer = 10
-        # (self, canvas, gene, width, height, fill, label='', REFERENCE_GENOME=None)
+        # (self, canvas, gene, width, height, fill, label='', reference_genome=None)
         draw_genes(d, self.canvas, [ir], tgt_width, [])
 
         # _generate_interval_mapping ['Interval(29684391, 29684391)', 'Interval(29663998, 29696515)'] 1181.39453125 5 60 None 29662998 29697515
         # def generate_interval_mapping(cls, input_intervals, target_width, ratio, min_width, buffer_length=None, start=None, end=None, min_inter_width=None)
         itvls = [Interval(29684391, 29684391), Interval(29663998, 29696515)]
-        mapping = generate_interval_mapping(itvls, 1181.39, 5, 60, None, 29662998, 29697515)
+        generate_interval_mapping(itvls, 1181.39, 5, 60, None, 29662998, 29697515)
 
     def test_split_intervals_into_tracks(self):
         # ----======---------

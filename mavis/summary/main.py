@@ -1,14 +1,14 @@
+import itertools
+import os
+
 from Bio import SeqIO
-from ..constants import COLUMNS, CALL_METHOD
-from ..util import read_inputs, log, generate_complete_stamp, output_tabbed_file
+
+from .constants import DEFAULTS
+from .summary import annotate_dgv, filter_by_annotations, filter_by_call_method, filter_by_evidence, get_pairing_state, group_events
+from ..constants import CALL_METHOD, COLUMNS
 from ..pairing import equivalent_events
 from ..pairing.constants import DEFAULTS as PAIRING_DEFAULTS
-from .constants import DEFAULTS
-import os
-import itertools
-
-from .summary import filter_by_evidence, group_events, filter_by_annotations, filter_by_call_method, annotate_dgv
-from .summary import get_pairing_state
+from ..util import generate_complete_stamp, log, output_tabbed_file, read_inputs
 
 
 def main(
@@ -29,7 +29,7 @@ def main(
     **kwargs
 ):
     # pairing threshold parameters to be defined in config file
-    DISTANCES = {
+    distances = {
         CALL_METHOD.FLANK: flanking_call_distance,
         CALL_METHOD.SPLIT: split_call_distance,
         CALL_METHOD.CONTIG: contig_call_distance,
@@ -215,7 +215,7 @@ def main(
                 if bpp1 is not None and equivalent_events(
                     bpp1,
                     bpp2,
-                    DISTANCES=DISTANCES,
+                    distances=distances,
                     reference_transcripts=reference_transcripts,
                     product_sequences=product_sequences
                 ):
@@ -327,7 +327,7 @@ def main(
                         other_protocol=other_protocol, other_disease_state=other_disease_state,
                         is_matched=other_lib in paired_libraries)
                 else:
-                    pairing_state = "Not Applicable"
+                    pairing_state = 'Not Applicable'
                 row.data[column_name] = pairing_state
                 output_columns.add(column_name)
 
@@ -338,7 +338,7 @@ def main(
     )
     rows = sorted(rows, key=lambda bpp: (bpp.break1, bpp.break2))
     output_tabbed_file(rows, fname, header=output_columns)
-    log("Wrote {} gene fusion events to {}".format(len(rows), fname))
+    log('Wrote {} gene fusion events to {}'.format(len(rows), fname))
     generate_complete_stamp(output, log)
 
 

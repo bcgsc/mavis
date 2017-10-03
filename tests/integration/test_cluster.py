@@ -1,10 +1,11 @@
-from mavis.cluster.cluster import merge_breakpoint_pairs, merge_integer_intervals
-from mavis.breakpoint import read_bpp_from_input_file, Breakpoint, BreakpointPair
-from mavis.constants import PROTOCOL, COLUMNS
-from mavis.interval import Interval
-from . import FULL_BASE_EVENTS
-
 import unittest
+
+from mavis.breakpoint import Breakpoint, BreakpointPair, read_bpp_from_input_file
+from mavis.cluster.cluster import merge_breakpoint_pairs, merge_integer_intervals
+from mavis.constants import COLUMNS, PROTOCOL
+from mavis.interval import Interval
+
+from . import FULL_BASE_EVENTS
 
 REF_CHR = 'fake'
 
@@ -93,5 +94,5 @@ class TestMergeIntervals(unittest.TestCase):
         self.assertEqual(i1, result)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

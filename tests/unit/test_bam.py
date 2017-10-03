@@ -1,7 +1,9 @@
 import unittest
-from mavis.bam.read import convert_events_to_softclipping
+
 from mavis.bam.cigar import merge_indels, merge_internal_events, QUERY_ALIGNED_STATES
+from mavis.bam.read import convert_events_to_softclipping
 from mavis.constants import CIGAR, ORIENT
+
 from .mock import Mock
 
 

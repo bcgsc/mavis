@@ -1,5 +1,7 @@
-from ..util import MavisNamespace
 from vocab import Vocab
+
+from ..util import MavisNamespace
+
 
 DEFAULTS = MavisNamespace(
     filter_min_remapped_reads=5,

@@ -1,8 +1,8 @@
 from .base import Evidence
-from ..interval import Interval
-from ..constants import ORIENT, PROTOCOL, SVTYPE
 from ..annotate.variant import overlapping_transcripts
 from ..breakpoint import Breakpoint
+from ..constants import ORIENT, PROTOCOL, SVTYPE
+from ..interval import Interval
 
 
 class GenomeEvidence(Evidence):
@@ -107,13 +107,14 @@ class GenomeEvidence(Evidence):
 
 
 class TranscriptomeEvidence(Evidence):
-    def __init__(self, ANNOTATIONS, *pos, **kwargs):
+
+    def __init__(self, annotations, *pos, **kwargs):
         Evidence.__init__(self, *pos, **kwargs)
         self.protocol = PROTOCOL.TRANS
         # get the list of overlapping transcripts
         self.overlapping_transcripts = (
-            overlapping_transcripts(ANNOTATIONS, self.break1),
-            overlapping_transcripts(ANNOTATIONS, self.break2)
+            overlapping_transcripts(annotations, self.break1),
+            overlapping_transcripts(annotations, self.break2)
         )
 
         self.outer_windows = (
@@ -135,17 +136,17 @@ class TranscriptomeEvidence(Evidence):
         tgt = self.call_error + self.read_length - 1
         temp = TranscriptomeEvidence.traverse_exonic_distance(
             self.break1.start, tgt, ORIENT.LEFT, self.overlapping_transcripts[0])
-        w1 = TranscriptomeEvidence.traverse_exonic_distance(
+        window1 = TranscriptomeEvidence.traverse_exonic_distance(
             self.break1.end, tgt, ORIENT.RIGHT, self.overlapping_transcripts[0])
-        w1 = w1 | temp
+        window1 = window1 | temp
 
         temp = TranscriptomeEvidence.traverse_exonic_distance(
             self.break2.start, tgt, ORIENT.LEFT, self.overlapping_transcripts[1])
-        w2 = TranscriptomeEvidence.traverse_exonic_distance(
+        window2 = TranscriptomeEvidence.traverse_exonic_distance(
             self.break2.end, tgt, ORIENT.RIGHT, self.overlapping_transcripts[1])
-        w2 = w2 | temp
+        window2 = window2 | temp
 
-        self.inner_windows = (w1, w2)
+        self.inner_windows = (window1, window2)
 
         if SVTYPE.INS in self.putative_event_types():
             comb = len(self.break1 | self.break2)
@@ -205,7 +206,7 @@ class TranscriptomeEvidence(Evidence):
             start (int): the genomic start position
             distance (int): the amount of exonic/intergenic units to traverse
             direction (ORIENT): the direction wrt to the positive/forward reference strand to traverse
-            transcripts (:class:`list` of :class:`usTranscript`): list of transcripts to use
+            transcripts (:class:`list` of :class:`UsTranscript`): list of transcripts to use
         """
         is_left = True if direction == ORIENT.LEFT else False
         input_distance = distance
@@ -227,7 +228,7 @@ class TranscriptomeEvidence(Evidence):
                     pos = start - distance + 1
                     distance = 0
 
-                for i, ex in enumerate(ust.exons[::-1]):
+                for ex in ust.exons[::-1]:
                     if distance == 0:
                         break
                     if start >= ex.start and start <= ex.end:  # within this exon
@@ -262,7 +263,7 @@ class TranscriptomeEvidence(Evidence):
                     else:
                         pos = start + distance - 1
                         distance = 0
-                for i, ex in enumerate(ust.exons):
+                for ex in ust.exons:
                     if distance == 0:
                         break
                     if start >= ex.start and start <= ex.end:  # within this exon
@@ -287,14 +288,13 @@ class TranscriptomeEvidence(Evidence):
                     pos = ust.end + distance
             positions.append(pos)
 
-        d = Interval(min(positions), max(positions))
-        return d
+        return Interval(min(positions), max(positions))
 
     def compute_fragment_size(self, read, mate):
         if read.reference_start > mate.reference_start:
             read, mate = mate, read
-        t = self.overlapping_transcripts[0] | self.overlapping_transcripts[1]
-        return TranscriptomeEvidence.compute_exonic_distance(read.reference_start + 1, mate.reference_end, t)
+        transcripts = self.overlapping_transcripts[0] | self.overlapping_transcripts[1]
+        return TranscriptomeEvidence.compute_exonic_distance(read.reference_start + 1, mate.reference_end, transcripts)
 
     @staticmethod
     def compute_exonic_distance(start, end, transcripts):
@@ -345,9 +345,9 @@ class TranscriptomeEvidence(Evidence):
 
         tgt_left = breakpoint.start - window.start + 1  # amount to expand to the left
         tgt_right = window.end - breakpoint.end + 1  # amount to expand to the right
-        if len(transcripts) == 0:  # case 1. no overlapping transcripts
+        if not transcripts:  # case 1. no overlapping transcripts
             return window
 
-        w1 = TranscriptomeEvidence.traverse_exonic_distance(breakpoint.start, tgt_left, ORIENT.LEFT, transcripts)
-        w2 = TranscriptomeEvidence.traverse_exonic_distance(breakpoint.end, tgt_right, ORIENT.RIGHT, transcripts)
-        return w1 | w2
+        window1 = TranscriptomeEvidence.traverse_exonic_distance(breakpoint.start, tgt_left, ORIENT.LEFT, transcripts)
+        window2 = TranscriptomeEvidence.traverse_exonic_distance(breakpoint.end, tgt_right, ORIENT.RIGHT, transcripts)
+        return window1 | window2

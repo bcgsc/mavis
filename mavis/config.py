@@ -1,23 +1,24 @@
-from configparser import ConfigParser, ExtendedInterpolation
-import warnings
 import argparse
+from configparser import ConfigParser, ExtendedInterpolation
 import os
-import TSV
 import re
+import warnings
+
+import TSV
+
 from . import __version__
-from .constants import PROTOCOL, DISEASE_STATUS
-from .util import devnull, MavisNamespace, bash_expands, cast, get_env_variable, ENV_VAR_PREFIX, WeakMavisNamespace
-from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
-from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
-from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
+from .align import SUPPORTED_ALIGNER
 from .annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
+from .bam.cache import BamCache
+from .bam.stats import compute_genome_bam_stats, compute_transcriptome_bam_stats
+from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
+from .constants import DISEASE_STATUS, PROTOCOL
 from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
+from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 from .tools import SUPPORTED_TOOL
-from .align import SUPPORTED_ALIGNER
-
-from .bam.stats import compute_genome_bam_stats, compute_transcriptome_bam_stats
-from .bam.cache import BamCache
+from .util import bash_expands, cast, devnull, ENV_VAR_PREFIX, get_env_variable, MavisNamespace, WeakMavisNamespace
+from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 
 
 SCHEDULE_DEFAULTS = WeakMavisNamespace(
@@ -39,6 +40,7 @@ REFERENCE_DEFAULTS = WeakMavisNamespace(
 
 
 class LibraryConfig(MavisNamespace):
+
     def __init__(
         self, library, protocol, disease_status, bam_file, inputs, read_length, median_fragment_size,
         stdev_fragment_size, stranded_bam, strand_determining_read=2,
@@ -81,9 +83,9 @@ class LibraryConfig(MavisNamespace):
     def is_trans(self):
         return True if self.protocol == PROTOCOL.TRANS else False
 
-    @classmethod
+    @staticmethod
     def build(
-        self, library, protocol, bam_file, inputs,
+        library, protocol, bam_file, inputs,
         annotations=None,
         log=devnull,
         distribution_fraction=0.98,
@@ -104,8 +106,7 @@ class LibraryConfig(MavisNamespace):
                 annotations=annotations,
                 sample_size=sample_size,
                 sample_cap=sample_cap,
-                distribution_fraction=distribution_fraction,
-                log=log
+                distribution_fraction=distribution_fraction
             )
         elif protocol == PROTOCOL.GENOME:
             bamstats = compute_genome_bam_stats(
@@ -113,8 +114,7 @@ class LibraryConfig(MavisNamespace):
                 sample_size=sample_size,
                 sample_bin_size=sample_bin_size,
                 sample_cap=sample_cap,
-                distribution_fraction=distribution_fraction,
-                log=log
+                distribution_fraction=distribution_fraction
             )
         else:
             raise ValueError('unrecognized value for protocol', protocol)
@@ -198,6 +198,7 @@ def validate_and_cast_section(section, defaults, use_defaults=False):
 
 
 class MavisConfig:
+
     def __init__(self, **kwargs):
 
         # section can be named schedule or qsub to support older versions

@@ -1,16 +1,18 @@
-import TSV
-import re
-import vcf
-import itertools
-import warnings
 import glob
+import itertools
+import re
+import warnings
+
 from braceexpand import braceexpand
-from .constants import STRAND, SVTYPE, ORIENT
+import TSV
+import vcf
 from vocab import Vocab
-from .breakpoint import read_bpp_from_input_file, Breakpoint, BreakpointPair
+
+from .breakpoint import Breakpoint, BreakpointPair, read_bpp_from_input_file
+from .constants import COLUMNS
+from .constants import ORIENT, STRAND, SVTYPE
 from .error import InvalidRearrangement
 from .util import devnull
-from .constants import COLUMNS
 
 SUPPORTED_TOOL = Vocab(
     MANTA='manta',
@@ -90,9 +92,9 @@ def _convert_tool_row(row, file_type, stranded):
         std_row['event_type'] = row.INFO['SVTYPE']
         try:
             o1, o2 = row.INFO['CT'].split('to')
-            CT = {'3': ORIENT.LEFT, '5': ORIENT.RIGHT, 'N': ORIENT.NS}
-            orient1 = CT[o1]
-            orient2 = CT[o2]
+            ct = {'3': ORIENT.LEFT, '5': ORIENT.RIGHT, 'N': ORIENT.NS}
+            orient1 = ct[o1]
+            orient2 = ct[o2]
         except KeyError:
             pass
 

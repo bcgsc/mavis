@@ -1,11 +1,13 @@
-import os
 import itertools
+import os
+
 from Bio import SeqIO
-from ..constants import PROTOCOL, COLUMNS, CALL_METHOD, SVTYPE
-from ..annotate.constants import SPLICE_TYPE
-from .constants import DEFAULTS
-from ..util import read_inputs, output_tabbed_file, log, generate_complete_stamp
+
 from . import equivalent_events
+from .constants import DEFAULTS
+from ..annotate.constants import SPLICE_TYPE
+from ..constants import CALL_METHOD, COLUMNS, PROTOCOL, SVTYPE
+from ..util import generate_complete_stamp, log, output_tabbed_file, read_inputs
 
 
 def main(
@@ -26,7 +28,7 @@ def main(
     """
     product_sequence_files = set() if product_sequence_files is None else set(product_sequence_files)
     # load the file
-    DISTANCES = {
+    distances = {
         CALL_METHOD.FLANK: flanking_call_distance,
         CALL_METHOD.SPLIT: split_call_distance,
         CALL_METHOD.CONTIG: contig_call_distance,
@@ -148,7 +150,7 @@ def main(
                 if equivalent_events(
                     bpp_by_product_key[product_key1],
                     bpp_by_product_key[product_key2],
-                    DISTANCES=DISTANCES,
+                    distances=distances,
                     reference_transcripts=reference_transcripts,
                     product_sequences=product_sequences
                 ):

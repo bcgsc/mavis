@@ -1,18 +1,21 @@
 from __future__ import division
 
-from ..interval import Interval
-from ..constants import STRAND, ORIENT
-from ..breakpoint import BreakpointPair, Breakpoint
-from ..util import log
 from collections import namedtuple
-
 from copy import copy
 import itertools
+
+from ..breakpoint import Breakpoint, BreakpointPair
+from ..constants import ORIENT, STRAND
+from ..interval import Interval
+from ..util import log
+
+FLOAT_OFFSET = 0.99999999
 
 
 class BreakpointPairGroupKey(namedtuple('BreakpointPairGroupKey', [
     'chr1', 'chr2', 'orient1', 'orient2', 'strand1', 'strand2', 'opposing_strands', 'explicit_strand'
 ])):
+
     def __new__(cls, chr1, chr2, orient1, orient2, strand1, strand2, opposing_strands=None, explicit_strand=False):
         if STRAND.NS in [strand1, strand2] and explicit_strand:
             raise ValueError('cannot have unspecified strand when explicit_strand is set')
@@ -54,7 +57,7 @@ def merge_integer_intervals(*intervals, weight_adjustment=0):
     centers = []
     weights = []
     lengths = []
-    FLOAT_OFFSET = 0.99999999
+
     if len(intervals) == 0:
         raise AttributeError('cannot compute the weighted mean interval of an empty set of intervals')
     for i in range(0, len(intervals)):

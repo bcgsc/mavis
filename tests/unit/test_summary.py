@@ -1,8 +1,8 @@
 import unittest
 
+from mavis.breakpoint import Breakpoint, BreakpointPair
+from mavis.constants import CALL_METHOD, COLUMNS, PROTOCOL, STRAND, SVTYPE
 from mavis.summary.summary import alphanumeric_choice, filter_by_annotations
-from mavis.breakpoint import BreakpointPair, Breakpoint
-from mavis.constants import SVTYPE, COLUMNS, CALL_METHOD, STRAND, PROTOCOL
 
 
 class TestSummary(unittest.TestCase):

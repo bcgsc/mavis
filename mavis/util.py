@@ -1,15 +1,16 @@
+from argparse import Namespace
 from datetime import datetime
 import errno
+from glob import glob
 import os
 import re
-from .breakpoint import read_bpp_from_input_file
-from .constants import PROTOCOL, COLUMNS, sort_columns
-from .interval import Interval
-from argparse import Namespace
-from TSV.TSV import EmptyFileError, tsv_boolean
-from braceexpand import braceexpand
-from glob import glob
 
+from braceexpand import braceexpand
+from TSV.TSV import EmptyFileError, tsv_boolean
+
+from .breakpoint import read_bpp_from_input_file
+from .constants import COLUMNS, PROTOCOL, sort_columns
+from .interval import Interval
 
 ENV_VAR_PREFIX = 'MAVIS_'
 
@@ -40,6 +41,7 @@ def get_env_variable(arg, default, cast_type=None):
 
 
 class MavisNamespace(Namespace):
+
     def items(self):
         return [(k, self[k]) for k in self.keys()]
 
@@ -74,11 +76,13 @@ class MavisNamespace(Namespace):
 
 
 class WeakMavisNamespace(MavisNamespace):
+
     def __getattribute__(self, attr):
         return get_env_variable(attr, object.__getattribute__(self, attr))
 
 
 class ChrListString(list):
+
     def __init__(self, string):
         if not isinstance(string, str):
             for item in string:

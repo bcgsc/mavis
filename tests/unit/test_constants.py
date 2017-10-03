@@ -1,5 +1,5 @@
 import unittest
-from mavis.constants import *
+from mavis.constants import COLUMNS, ORIENT, reverse_complement, sort_columns, STRAND, translate
 
 
 class TestConstants(unittest.TestCase):

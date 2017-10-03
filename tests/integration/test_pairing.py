@@ -1,8 +1,9 @@
 import unittest
-from mavis.pairing.pairing import *
-from mavis.constants import SVTYPE, COLUMNS, CALL_METHOD, ORIENT, STRAND, PROTOCOL
-from mavis.breakpoint import BreakpointPair, Breakpoint
-from mavis.annotate.genomic import usTranscript
+
+from mavis.annotate.genomic import UsTranscript
+from mavis.breakpoint import Breakpoint, BreakpointPair
+from mavis.constants import CALL_METHOD, COLUMNS, ORIENT, PROTOCOL, STRAND, SVTYPE
+from mavis.pairing.pairing import equivalent_events, predict_transcriptome_breakpoint
 
 
 class TestPairing(unittest.TestCase):
@@ -31,17 +32,17 @@ class TestPairing(unittest.TestCase):
             }
         )
 
-        self.ust1 = usTranscript(
+        self.ust1 = UsTranscript(
             exons=[(1, 100), (301, 400), (501, 600)],
             strand=STRAND.POS,
             name='t1'
         )
-        self.ust2 = usTranscript(
+        self.ust2 = UsTranscript(
             exons=[(1001, 1100), (1301, 1400), (1501, 1600)],
             strand=STRAND.POS,
             name='t2'
         )
-        self.DISTANCES = {CALL_METHOD.CONTIG: 0, CALL_METHOD.FLANK: 0, CALL_METHOD.SPLIT: 10}
+        self.distances = {CALL_METHOD.CONTIG: 0, CALL_METHOD.FLANK: 0, CALL_METHOD.SPLIT: 10}
         self.TRANSCRIPTS = {
             self.ust1.name: self.ust1,
             self.ust2.name: self.ust2
@@ -74,33 +75,33 @@ class TestPairing(unittest.TestCase):
     def test_genome_protocol_by_contig(self):
         self.gev1.call_method = CALL_METHOD.CONTIG
         self.gev2.call_method = CALL_METHOD.CONTIG
-        self.DISTANCES[CALL_METHOD.CONTIG] = 0
-        self.DISTANCES[CALL_METHOD.SPLIT] = 10
-        self.assertTrue(equivalent_events(self.gev1, self.gev2, self.TRANSCRIPTS, DISTANCES=self.DISTANCES))
+        self.distances[CALL_METHOD.CONTIG] = 0
+        self.distances[CALL_METHOD.SPLIT] = 10
+        self.assertTrue(equivalent_events(self.gev1, self.gev2, self.TRANSCRIPTS, distances=self.distances))
 
         self.gev1.break1.start = 2
         self.gev1.break1.end = 20
-        self.assertFalse(equivalent_events(self.gev1, self.gev2, self.TRANSCRIPTS, DISTANCES=self.DISTANCES))
+        self.assertFalse(equivalent_events(self.gev1, self.gev2, self.TRANSCRIPTS, distances=self.distances))
 
     def test_genome_protocol_by_split(self):
         self.gev1.call_method = CALL_METHOD.SPLIT
         self.gev2.call_method = CALL_METHOD.SPLIT
-        self.assertTrue(equivalent_events(self.gev1, self.gev2, self.TRANSCRIPTS, DISTANCES=self.DISTANCES))
-        self.DISTANCES[CALL_METHOD.FLANK] = 100
-        self.DISTANCES[CALL_METHOD.SPLIT] = 10
+        self.assertTrue(equivalent_events(self.gev1, self.gev2, self.TRANSCRIPTS, distances=self.distances))
+        self.distances[CALL_METHOD.FLANK] = 100
+        self.distances[CALL_METHOD.SPLIT] = 10
         self.gev1.break1.start = 11
         self.gev1.break1.end = 20
-        self.assertFalse(equivalent_events(self.gev1, self.gev2, self.TRANSCRIPTS, DISTANCES=self.DISTANCES))
+        self.assertFalse(equivalent_events(self.gev1, self.gev2, self.TRANSCRIPTS, distances=self.distances))
 
     def test_genome_protocol_by_flanking(self):
         self.gev1.call_method = CALL_METHOD.FLANK
         self.gev2.call_method = CALL_METHOD.FLANK
-        self.assertTrue(equivalent_events(self.gev1, self.gev2, self.TRANSCRIPTS, DISTANCES=self.DISTANCES))
-        self.DISTANCES[CALL_METHOD.FLANK] = 10
-        self.DISTANCES[CALL_METHOD.SPLIT] = 100
+        self.assertTrue(equivalent_events(self.gev1, self.gev2, self.TRANSCRIPTS, distances=self.distances))
+        self.distances[CALL_METHOD.FLANK] = 10
+        self.distances[CALL_METHOD.SPLIT] = 100
         self.gev1.break1.start = 11
         self.gev1.break1.end = 20
-        self.assertFalse(equivalent_events(self.gev1, self.gev2, self.TRANSCRIPTS, DISTANCES=self.DISTANCES))
+        self.assertFalse(equivalent_events(self.gev1, self.gev2, self.TRANSCRIPTS, distances=self.distances))
 
     def test_mixed_protocol_fusions_same_sequence(self):
         product_sequences = {'a': 'AATG', 'b': 'AATG'}
@@ -301,8 +302,8 @@ class TestPairing(unittest.TestCase):
 class TestBreakpointPrediction(unittest.TestCase):
 
     def setUp(self):
-        self.ust = usTranscript([(101, 200), (301, 400), (501, 600)], strand=STRAND.POS)
-        self.n_ust = usTranscript([(101, 200), (301, 400), (501, 600)], strand=STRAND.NEG)
+        self.ust = UsTranscript([(101, 200), (301, 400), (501, 600)], strand=STRAND.POS)
+        self.n_ust = UsTranscript([(101, 200), (301, 400), (501, 600)], strand=STRAND.NEG)
 
     def test_exonic_five_prime(self):
         b = Breakpoint('1', 350, orient=ORIENT.LEFT)
@@ -345,7 +346,7 @@ class TestBreakpointPrediction(unittest.TestCase):
     def test_outside_transcript(self):
         b = Breakpoint('1', 100, orient=ORIENT.RIGHT)
         with self.assertRaises(AssertionError):
-            breaks = predict_transcriptome_breakpoint(b, self.ust)
+            predict_transcriptome_breakpoint(b, self.ust)
 
     # for neg transcripts
     def test_exonic_three_prime_neg(self):

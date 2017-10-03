@@ -1,7 +1,9 @@
-from ..interval import Interval
-from ..error import DrawingFitError
 from colour import Color
 import svgwrite
+
+from ..error import DrawingFitError
+from ..interval import Interval
+
 
 MIN_PIXEL_ACCURACY = 1
 
@@ -10,19 +12,19 @@ def dynamic_label_color(color):
     """
     calculates the luminance of a color and determines if a black or white label will be more contrasting
     """
-    f = Color(color)
-    if f.get_luminance() < 0.5:
+    color = Color(color)
+    if color.get_luminance() < 0.5:
         return '#FFFFFF'
-    else:
-        return '#000000'
+    return '#000000'
 
 
 class LabelMapping:
+
     def __init__(self, **kwargs):
         self._mapping = dict()
         self._reverse_mapping = dict()
-        for k, v in kwargs.items():
-            self[k] = v
+        for attr, val in kwargs.items():
+            self[attr] = val
 
     def __setitem__(self, key, value):
         if key in self._mapping:
@@ -72,34 +74,34 @@ class LabelMapping:
 
 def split_intervals_into_tracks(intervals):
     tracks = [[]]
-    for i in sorted(intervals, key=lambda x: x[0]):
+    for itvl in sorted(intervals, key=lambda x: x[0]):
         added = False
-        for t in tracks:
+        for track in tracks:
             overlaps = False
-            for og in t:
-                if Interval.overlaps(i, og):
+            for track_itvl in track:
+                if Interval.overlaps(itvl, track_itvl):
                     overlaps = True
                     break
             if not overlaps:
                 added = True
-                t.append(i)
+                track.append(itvl)
                 break
         if not added:
-            tracks.append([i])
+            tracks.append([itvl])
     return tracks
 
 
 def generate_interval_mapping(
         input_intervals, target_width, ratio, min_width,
         buffer_length=None, start=None, end=None, min_inter_width=None,
-        MIN_PIXEL_ACCURACY=MIN_PIXEL_ACCURACY):
+        min_pixel_accuracy=MIN_PIXEL_ACCURACY):
     min_inter_width = min_width if min_inter_width is None else min_inter_width
     if all([x is not None for x in [start, end, buffer_length]]):
         raise AttributeError('buffer_length is a mutually exclusive argument with start/end')
 
     intervals = []
     for i in Interval.min_nonoverlapping(*input_intervals):
-        if len(intervals) == 0 or abs(Interval.dist(intervals[-1], i)) > 1:
+        if not intervals or abs(Interval.dist(intervals[-1], i)) > 1:
             intervals.append(i)
         else:
             intervals[-1] = intervals[-1] | i
@@ -201,7 +203,7 @@ def generate_interval_mapping(
             pos = ito.end
 
         s = max(genic_unit(len(curr)), 0)
-        assert(s >= 0)
+        assert s >= 0
         ito = Interval(pos, pos + min_width + s)
         mapping.append((curr, ito))
         pos = ito.end
@@ -214,10 +216,10 @@ def generate_interval_mapping(
         mapping.append((ifrom, ito))
         pos = ito.end
     # mapping[-1][1].end = target_width  # min(int(target_width), mapping[-1][1].end)
-    if abs(mapping[-1][1].end - target_width) > MIN_PIXEL_ACCURACY:
+    if abs(mapping[-1][1].end - target_width) > min_pixel_accuracy:
         raise AssertionError(
             'end is off by more than the expected pixel allowable error',
-            mapping[-1][1].end, target_width, MIN_PIXEL_ACCURACY)
+            mapping[-1][1].end, target_width, min_pixel_accuracy)
     temp = mapping
     mapping = dict()
     for ifrom, ito in temp:
@@ -230,7 +232,7 @@ def generate_interval_mapping(
         if ifrom in mapping and ito.end == target_width:
             continue
         n = p1 | p2
-        if n.length() < min_width and abs(n.length() - min_width) > MIN_PIXEL_ACCURACY:  # precision error allowable
+        if n.length() < min_width and abs(n.length() - min_width) > min_pixel_accuracy:  # precision error allowable
             raise AssertionError(
                 'interval mapping should not map any intervals to less than the minimum required width. Interval {}'
                 ' was mapped to a pixel interval of length {} but the minimum width is {}'.format(
@@ -241,12 +243,13 @@ def generate_interval_mapping(
 
 
 class Tag(svgwrite.base.BaseElement):
-    def __init__(DS, elementname, content='', **kwargs):
-        DS.elementname = elementname
-        super(Tag, DS).__init__(**kwargs)
-        DS.content = content
 
-    def get_xml(DS):
-        xml = super(Tag, DS).get_xml()
-        xml.text = DS.content
+    def __init__(self, elementname, content='', **kwargs):
+        self.elementname = elementname
+        super(Tag, self).__init__(**kwargs)
+        self.content = content
+
+    def get_xml(self):
+        xml = super(Tag, self).get_xml()
+        xml.text = self.content
         return xml

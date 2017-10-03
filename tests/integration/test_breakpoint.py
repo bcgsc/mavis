@@ -1,9 +1,10 @@
 import unittest
-from mavis.constants import CIGAR, ORIENT, STRAND, reverse_complement
-from mavis.breakpoint import BreakpointPair, Breakpoint
-from mavis.annotate import load_reference_genome
-from . import MockRead
-from . import REFERENCE_GENOME_FILE
+
+from mavis.annotate.file_io import load_reference_genome
+from mavis.breakpoint import Breakpoint, BreakpointPair
+from mavis.constants import CIGAR, ORIENT, reverse_complement, STRAND
+
+from . import MockRead, REFERENCE_GENOME_FILE
 
 REFERENCE_GENOME = None
 REF_CHR = 'fake'
@@ -75,7 +76,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             query_sequence='TAGTTGGATCTCTGTGCTGACTGACTGACAGACAGACTTTAGTGTCTGTGTGCTGACTGACAGACAGACTTTAGTGTCTGTGTGCTGACT'
                            'GACAGACTCTAGTAGTGTC'
         )
-        bpp = BreakpointPair.call_breakpoint_pair(r, REFERENCE_GENOME=REFERENCE_GENOME)
+        bpp = BreakpointPair.call_breakpoint_pair(r, reference_genome=REFERENCE_GENOME)
         self.assertEqual(27220, bpp.break1.start)
         self.assertEqual(27316, bpp.break2.start)
         self.assertEqual('AGACTT', bpp.untemplated_seq)
@@ -92,7 +93,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             reference_start=1882,
             cigar=[(CIGAR.EQ, 126), (CIGAR.I, 54), (CIGAR.EQ, 93)],
             is_reverse=False)
-        bpp = BreakpointPair.call_breakpoint_pair(r, REFERENCE_GENOME=REFERENCE_GENOME)
+        bpp = BreakpointPair.call_breakpoint_pair(r, reference_genome=REFERENCE_GENOME)
         self.assertEqual('AGGTTCCATGGGCTCCGTAGGTTCCATGGGCTCCGTAGGTTCCATCGGCTCCGT', bpp.untemplated_seq)
         self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
         self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
@@ -109,7 +110,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             cigar=[(CIGAR.EQ, 51), (CIGAR.I, 22), (CIGAR.EQ, 52)],
             is_reverse=False)
         # repeat: GATTTTGCTGTTGTTTTTGTTC
-        bpp = BreakpointPair.call_breakpoint_pair(r, REFERENCE_GENOME=REFERENCE_GENOME)
+        bpp = BreakpointPair.call_breakpoint_pair(r, reference_genome=REFERENCE_GENOME)
         self.assertEqual('', bpp.untemplated_seq)
         self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
         self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
@@ -129,7 +130,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             cigar=[(CIGAR.EQ, 51), (CIGAR.I, 27), (CIGAR.EQ, 52)],
             is_reverse=False)
         # repeat: GATTTTGCTGTTGTTTTTGTTC
-        bpp = BreakpointPair.call_breakpoint_pair(r, REFERENCE_GENOME=REFERENCE_GENOME)
+        bpp = BreakpointPair.call_breakpoint_pair(r, reference_genome=REFERENCE_GENOME)
         self.assertEqual('GTCAA', bpp.untemplated_seq)
         self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
         self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
@@ -328,24 +329,7 @@ class TestCallBreakpointPair(unittest.TestCase):
 
     def test_read_pair_large_inversion_overlapping_query_coverage(self):
         s = 'CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT'
-        # first part of the inversion
-        pslx_row = {
-            'block_count': 1,
-            'tstarts': [1114],
-            'block_sizes': [120],
-            'qname': 'seq1',
-            'tname': 'reference3',
-            'qstarts': [125],
-            'strand': '+',
-            'qseq_full': s,
-            'score': 1,
-            'qseqs': [
-                'TCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGG'
-                'TTTTCATTTCTGTATGTTAAT'],
-            'tseqs': [
-                'TCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGG'
-                'TTTTCATTTCTGTATGTTAAT']
-        }
+
         read1 = MockRead(
             reference_id=3, reference_start=1114, cigar=[(CIGAR.S, 125), (CIGAR.EQ, 120)], query_sequence=s,
             is_reverse=False
