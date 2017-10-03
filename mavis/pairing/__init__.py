@@ -36,4 +36,3 @@ Algorithm Overview
     - if both breakpoints have the same gene annotation, they must also both have the same transcript annotation
 
 """
-from .pairing import equivalent_events
