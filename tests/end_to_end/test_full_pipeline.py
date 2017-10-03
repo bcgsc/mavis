@@ -60,18 +60,16 @@ def convert_qsub_to_args(filename, sub=None):
         return [a.strip() for a in lex]
 
 
-
 @unittest.skipIf(
     not int(os.environ.get('RUN_FULL', 1)),
     'slower tests will not be run unless the environment variable RUN_FULL is given')
-
 class TestFullPipeline(unittest.TestCase):
 
     def test_full_pipeline(self):
         args = ['mavis', PIPELINE_STEP.PIPELINE, config, '-o', temp_output]
         with patch.object(sys, 'argv', args):
             self.assertEqual(0, main())
-        
+
         # check that the subdirectories were built
         for lib in[mock_genome + '_*', mock_trans + '_*']:
             self.assertTrue(glob_exists(temp_output, lib, PIPELINE_STEP.CLUSTER))
