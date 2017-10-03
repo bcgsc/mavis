@@ -24,7 +24,7 @@ VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
 
 def main(
     input, output,
-    bam_file, stranded_bam,
+    bam_file, strand_specific,
     library, protocol, median_fragment_size, stdev_fragment_size, read_length,
     reference_genome, reference_genome_filename, annotations, masking, aligner_reference,
     samtools_version, **kwargs
@@ -34,7 +34,7 @@ def main(
         input (str): the input file containing the breakpoint pairs
         output (str): path to the output directory
         bam_file (str): path the bam file
-        stranded_bam (bool): flag to indicate the input bam is using a strand specific protocol
+        strand_specific (bool): flag to indicate the input bam is using a strand specific protocol
         median_fragment_size (int): the median fragment size
         stdev_fragment_size (int): the standard deviation in fragment size
         read_length (int): read length
@@ -55,7 +55,7 @@ def main(
     contig_aligner_fa = os.path.join(output, filename_prefix + '.contigs.fa')
     contig_aligner_output = os.path.join(output, filename_prefix + '.contigs.blat_out.pslx')
     igv_batch_file = os.path.join(output, filename_prefix + '.igv.batch')
-    input_bam_cache = BamCache(bam_file, stranded_bam)
+    input_bam_cache = BamCache(bam_file, strand_specific)
 
     if samtools_version is None:
         samtools_version = get_samtools_version()
@@ -70,7 +70,7 @@ def main(
             COLUMNS.protocol: protocol,
             COLUMNS.library: library,
             COLUMNS.cluster_id: None,
-            COLUMNS.stranded: stranded_bam
+            COLUMNS.stranded: strand_specific
         },
         expand_ns=False, explicit_strand=False,
         cast={COLUMNS.cluster_id: lambda x: str(uuid.uuid4()) if not x else x}

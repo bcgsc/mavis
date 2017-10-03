@@ -20,7 +20,8 @@ PIPELINE_STEP = Vocab(
     PAIR='pairing',
     SUMMARY='summary',
     CHECKER='checker',
-    CONFIG='config'
+    CONFIG='config',
+    CONVERT='convert'
 )
 
 

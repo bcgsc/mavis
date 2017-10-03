@@ -43,7 +43,7 @@ class LibraryConfig(MavisNamespace):
 
     def __init__(
         self, library, protocol, disease_status, bam_file, inputs, read_length, median_fragment_size,
-        stdev_fragment_size, stranded_bam, strand_determining_read=2,
+        stdev_fragment_size, strand_specific, strand_determining_read=2,
         **kwargs
     ):
         self.library = library
@@ -52,7 +52,7 @@ class LibraryConfig(MavisNamespace):
         self.read_length = int(read_length)
         self.median_fragment_size = int(median_fragment_size)
         self.stdev_fragment_size = int(stdev_fragment_size)
-        self.stranded_bam = cast(stranded_bam, bool)
+        self.strand_specific = cast(strand_specific, bool)
         self.strand_determining_read = int(strand_determining_read)
         self.disease_status = DISEASE_STATUS.enforce(disease_status)
         try:
@@ -348,10 +348,10 @@ def augment_parser(arguments, parser, semi_opt_parser=None, required=None):
                 arg, semi_opt_parser, parser, 'Path to the dgv reference processed to look like the cytoband file.')
         elif arg == 'config':
             parser.add_argument('config', 'path to the config file')
-        elif arg == 'stranded_bam':
+        elif arg == 'strand_specific':
             parser.add_argument(
-                '--stranded_bam', required=required, type=tab.cast_boolean,
-                help='indicates that the input bam file is strand specific')
+                '--strand_specific', required=required, type=tab.cast_boolean, default=False,
+                help='indicates that the input is strand specific')
         elif arg == 'force_overwrite':
             parser.add_argument(
                 '-f', '--force_overwrite', default=get_env_variable(arg, False), type=tab.cast_boolean,

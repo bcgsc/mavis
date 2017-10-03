@@ -10,7 +10,7 @@ from ..util import filter_on_overlap, filter_uninformative, generate_complete_st
 
 
 def main(
-    inputs, output, stranded_bam, library, protocol, disease_status, masking, annotations,
+    inputs, output, strand_specific, library, protocol, disease_status, masking, annotations,
     limit_to_chr=DEFAULTS.limit_to_chr,
     cluster_initial_size_limit=DEFAULTS.cluster_initial_size_limit,
     cluster_radius=DEFAULTS.cluster_radius,
@@ -26,7 +26,7 @@ def main(
     Args:
         inputs (:class:`List` of :class:`str`): list of input files to read
         output (str): path to the output directory
-        stranded_bam (bool): is the bam using a strand specific protocol
+        strand_specific (bool): is the bam using a strand specific protocol
         library (str): the library to look for in each of the input files
         protocol (PROTOCOL): the sequence protocol (genome or transcriptome)
         masking (object): see :func:`~mavis.annotate.file_io.load_masking_regions`
