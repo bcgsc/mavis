@@ -126,7 +126,7 @@ setup(
         'git+https://creisle@svn.bcgsc.ca/bitbucket/scm/prod/tab.git#egg=tab-0.0.1'
     ],
     setup_requires=[
-        'nose>=1.0',
+        'nose==1.3.7',
         'numpy>=1.13.1'  # put here b/c biopython doesn't declare this as a setup dependency properly
     ],
     test_suite='nose.collector',
