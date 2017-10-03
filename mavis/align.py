@@ -8,18 +8,17 @@ import subprocess
 import warnings
 
 import pysam
-from vocab import Vocab
 
 from .bam import cigar as cigar_tools
 from .bam import read as read_tools
 from .breakpoint import BreakpointPair
-from .constants import CIGAR, COLUMNS, ORIENT, reverse_complement, SVTYPE
+from .constants import CIGAR, COLUMNS, MavisNamespace, ORIENT, reverse_complement, SVTYPE
 from .error import InvalidRearrangement
 from .interval import Interval
 from .util import devnull
 
 
-SUPPORTED_ALIGNER = Vocab(BWA_MEM='bwa mem', BLAT='blat')
+SUPPORTED_ALIGNER = MavisNamespace(BWA_MEM='bwa mem', BLAT='blat')
 
 
 class SplitAlignment:

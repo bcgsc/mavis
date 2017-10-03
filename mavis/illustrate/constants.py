@@ -1,6 +1,5 @@
 from colour import Color
-from ..constants import GIESMA_STAIN
-from ..util import MavisNamespace
+from ..constants import GIESMA_STAIN, MavisNamespace
 
 DEFAULTS = MavisNamespace(
     width=1000,

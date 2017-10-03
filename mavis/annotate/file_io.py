@@ -388,7 +388,7 @@ def load_templates(filename):
         filename,
         header=header,
         cast={'start': int, 'end': int},
-        in_={'giesma_stain': GIESMA_STAIN}
+        in_={'giesma_stain': GIESMA_STAIN.values()}
     )
 
     bands_by_template = {}

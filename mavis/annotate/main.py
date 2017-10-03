@@ -50,7 +50,7 @@ def main(
     mkdirp(drawings_directory)
     # test that the sequence makes sense for a random transcript
     bpps = read_inputs(
-        inputs, in_={COLUMNS.protocol: PROTOCOL},
+        inputs, in_={COLUMNS.protocol: PROTOCOL.values()},
         add_default={
             COLUMNS.protocol: protocol,
             COLUMNS.library: library,
