@@ -1,7 +1,6 @@
 #!python
 import argparse
 from datetime import datetime
-import glob
 import math
 import os
 import random
@@ -10,7 +9,7 @@ import subprocess
 import sys
 import time
 
-import TSV
+import tab
 
 from . import __version__
 from .annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
@@ -18,10 +17,11 @@ from .annotate.file_io import load_annotations, load_masking_regions, load_refer
 from .annotate.main import main as annotate_main
 from .bam.read import get_samtools_version
 from .blat import get_blat_version
+from .checker import check_completion
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from .cluster.main import main as cluster_main
 from .config import augment_parser, get_env_variable, LibraryConfig, MavisConfig, write_config
-from .constants import DISEASE_STATUS, PIPELINE_STEP, PROTOCOL
+from .constants import PIPELINE_STEP, PROTOCOL
 from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from .pairing.main import main as pairing_main
@@ -35,6 +35,9 @@ from .validate.main import main as validate_main
 
 VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
 PROGNAME = 'mavis'
+JOB_TASK = "$SGE_TASK_ID"
+EXIT_OK = 0
+EXIT_ERROR = 1
 
 QSUB_HEADER = """#!/bin/bash
 #$ -V
@@ -55,9 +58,9 @@ def main_pipeline(config):
     for libconf in config.libraries.values():
         base = os.path.join(config.output, '{}_{}_{}'.format(libconf.library, libconf.disease_status, libconf.protocol))
         log('setting up the directory structure for', libconf.library, 'as', base)
-        cluster_output = mkdirp(os.path.join(base, 'clustering'))
-        validation_output = mkdirp(os.path.join(base, 'validation'))
-        annotation_output = mkdirp(os.path.join(base, 'annotation'))
+        cluster_output = mkdirp(os.path.join(base, PIPELINE_STEP.CLUSTER))
+        validation_output = mkdirp(os.path.join(base, PIPELINE_STEP.VALIDATE))
+        annotation_output = mkdirp(os.path.join(base, PIPELINE_STEP.ANNOTATE))
         inputs = []
         # run the conversions
         for input_file in libconf.inputs:
@@ -85,7 +88,7 @@ def main_pipeline(config):
         merge_args.update(libconf.items())
         merge_args['output'] = cluster_output
         output_files = cluster_main(log_args=True, **merge_args)
-
+        job_task = '1' if len(output_files) == 1 else JOB_TASK
         if not output_files:
             log('warning: no inputs after clustering. Will not set up other pipeline steps')
             continue
@@ -117,7 +120,7 @@ def main_pipeline(config):
         validation_args.update({k: v for k, v in libconf.items() if k in validation_args})
 
         qsub = os.path.join(validation_output, 'qsub.sh')
-        validation_jobname = 'validation_{}_{}_{}'.format(libconf.library, libconf.protocol, rand)
+        validation_jobname = '{}_{}_{}_{}'.format(PIPELINE_STEP.VALIDATE, libconf.library, libconf.protocol, rand)
 
         with open(qsub, 'w') as fh:
             log('writing:', qsub)
@@ -128,17 +131,18 @@ def main_pipeline(config):
                     name=validation_jobname,
                     output=validation_output
                 ) + '\n')
-            fh.write('#$ -t {}-{}\n'.format(1, len(output_files)))
+            if job_task != '1':
+                fh.write('#$ -t {}-{}\n'.format(1, len(output_files)))
             temp = [
                 '--{} {}'.format(k, v) for k, v in validation_args.items() if not isinstance(v, str) and v is not None]
             temp.extend(
                 ['--{} "{}"'.format(k, v) for k, v in validation_args.items() if isinstance(v, str) and v is not None])
             validation_args = temp
-            validation_args.append('-n {}$SGE_TASK_ID.tab'.format(merge_file_prefix))
-            fh.write('{} validate {}'.format(PROGNAME, ' \\\n\t'.join(validation_args)))
+            validation_args.append('-n {}{}.tab'.format(merge_file_prefix, job_task))
+            fh.write('{} {} {}'.format(PROGNAME, PIPELINE_STEP.VALIDATE, ' \\\n\t'.join(validation_args)))
             fh.write(
                 ' \\\n\t--output {}\n'.format(
-                    os.path.join(validation_output, os.path.basename(merge_file_prefix) + '$SGE_TASK_ID')))
+                    os.path.join(validation_output, os.path.basename(merge_file_prefix) + job_task)))
 
         # set up the annotations job
         # for all files with the right suffix
@@ -149,6 +153,8 @@ def main_pipeline(config):
             'masking': config.reference.masking_filename,
             'min_orf_size': config.annotation.min_orf_size,
             'max_orf_cap': config.annotation.max_orf_cap,
+            'library': libconf.library,
+            'protocol': libconf.protocol,
             'min_domain_mapping_match': config.annotation.min_domain_mapping_match,
             'domain_name_regex_filter': config.illustrate.domain_name_regex_filter,
             'max_proximity': config.cluster.max_proximity
@@ -159,10 +165,10 @@ def main_pipeline(config):
         temp.extend(
             ['--{} "{}"'.format(k, v) for k, v in annotation_args.items() if isinstance(v, str) and v is not None])
         annotation_args = temp
-        annotation_args.append('--inputs {}/{}$SGE_TASK_ID/*{}'.format(
-            validation_output, os.path.basename(merge_file_prefix), VALIDATION_PASS_SUFFIX))
+        annotation_args.append('--inputs {}/{}{}/*{}'.format(
+            validation_output, os.path.basename(merge_file_prefix), job_task, VALIDATION_PASS_SUFFIX))
         qsub = os.path.join(annotation_output, 'qsub.sh')
-        annotation_jobname = 'annotation_{}_{}_{}'.format(libconf.library, libconf.protocol, rand)
+        annotation_jobname = '{}_{}_{}_{}'.format(PIPELINE_STEP.ANNOTATE, libconf.library, libconf.protocol, rand)
         annotation_jobs.append(annotation_jobname)
         with open(qsub, 'w') as fh:
             log('writing:', qsub)
@@ -173,18 +179,19 @@ def main_pipeline(config):
                     name=annotation_jobname,
                     output=annotation_output
                 ) + '\n')
-            fh.write('#$ -t {}-{}\n'.format(1, len(output_files)))
+            if job_task != '1':
+                fh.write('#$ -t {}-{}\n'.format(1, len(output_files)))
             fh.write('#$ -hold_jid {}\n'.format(validation_jobname))
-            fh.write('{} annotate {}'.format(PROGNAME, ' \\\n\t'.join(annotation_args)))
+            fh.write('{} {} {}'.format(PROGNAME, PIPELINE_STEP.ANNOTATE, ' \\\n\t'.join(annotation_args)))
             fh.write(
                 ' \\\n\t--output {}\n'.format(
-                    os.path.join(annotation_output, os.path.basename(merge_file_prefix) + '$SGE_TASK_ID')))
+                    os.path.join(annotation_output, os.path.basename(merge_file_prefix) + job_task)))
             for sge_task_id in range(1, len(output_files) + 1):
                 pairing_inputs.append(os.path.join(
                     annotation_output, os.path.basename(merge_file_prefix) + str(sge_task_id), 'annotations.tab'))
 
     # set up scripts for the pairing held on all of the annotation jobs
-    pairing_output = mkdirp(os.path.join(config.output, 'pairing'))
+    pairing_output = mkdirp(os.path.join(config.output, PIPELINE_STEP.PAIR))
     pairing_args = config.pairing.flatten()
     pairing_args.update({
         'output': pairing_output,
@@ -195,7 +202,7 @@ def main_pipeline(config):
     temp.append('--inputs {}'.format(' \\\n\t'.join(pairing_inputs)))
     pairing_args = temp
     qsub = os.path.join(pairing_output, 'qsub.sh')
-    pairing_jobname = 'mavis_pairing_{}'.format(rand)
+    pairing_jobname = 'mavis_{}_{}'.format(PIPELINE_STEP.PAIR, rand)
     with open(qsub, 'w') as fh:
         log('writing:', qsub)
         fh.write(
@@ -203,10 +210,10 @@ def main_pipeline(config):
                 queue=config.schedule.queue, memory=config.schedule.memory, name=pairing_jobname, output=pairing_output
             ) + '\n')
         fh.write('#$ -hold_jid {}\n'.format(','.join(annotation_jobs)))
-        fh.write('{} pairing {}\n'.format(PROGNAME, ' \\\n\t'.join(pairing_args)))
+        fh.write('{} {} {}\n'.format(PROGNAME, PIPELINE_STEP.PAIR, ' \\\n\t'.join(pairing_args)))
 
     # set up scripts for the summary held on the pairing job
-    summary_output = mkdirp(os.path.join(config.output, 'summary'))
+    summary_output = mkdirp(os.path.join(config.output, PIPELINE_STEP.SUMMARY))
     summary_args = dict(
         output=summary_output,
         flanking_call_distance=config.pairing.flanking_call_distance,
@@ -226,10 +233,13 @@ def main_pipeline(config):
         log('writing:', qsub)
         fh.write(
             QSUB_HEADER.format(
-                queue=config.schedule.queue, memory=config.schedule.memory, name='mavis_summary', output=summary_output
+                queue=config.schedule.queue,
+                memory=config.schedule.memory,
+                name='mavis_{}'.format(PIPELINE_STEP.SUMMARY),
+                output=summary_output
             ) + '\n')
         fh.write('#$ -hold_jid {}\n'.format(pairing_jobname))
-        fh.write('{} summary {}\n'.format(PROGNAME, ' \\\n\t'.join(summary_args)))
+        fh.write('{} {} {}\n'.format(PROGNAME, PIPELINE_STEP.SUMMARY, ' \\\n\t'.join(summary_args)))
 
 
 def generate_config(parser, required, optional):
@@ -254,7 +264,7 @@ def generate_config(parser, required, optional):
         ' of inputs that should be used for the library', nargs='+', default=[], action='append')
     optional.add_argument(
         '--best_transcripts_only', default=get_env_variable('best_transcripts_only', True),
-        type=TSV.tsv_boolean, help='compute from best transcript models only')
+        type=tab.cast_boolean, help='compute from best transcript models only')
     optional.add_argument(
         '--genome_bins', default=get_env_variable('genome_bins', 100), type=int,
         help='number of bins/samples to use in calculating the fragment size stats for genomes')
@@ -265,7 +275,7 @@ def generate_config(parser, required, optional):
         '--distribution_fraction', default=get_env_variable('distribution_fraction', 0.97), type=float,
         help='the proportion of the distribution of calculated fragment sizes to use in determining the stdev')
     optional.add_argument(
-        '--verbose', default=get_env_variable('verbose', False), type=TSV.tsv_boolean,
+        '--verbose', default=get_env_variable('verbose', False), type=tab.cast_boolean,
         help='verbosely output logging information')
     optional.add_argument(
         '--convert', nargs=4, default=[],
@@ -276,7 +286,7 @@ def generate_config(parser, required, optional):
         help='alias for use in inputs and full command (quoted)', action='append')
     optional.add_argument(
         '--no_defaults', default=False, action='store_true', help='do not write current defaults to the config output')
-    augment_parser(required, optional, ['annotations'])
+    augment_parser(['annotations'], required, optional)
     args = parser.parse_args()
     if args.distribution_fraction < 0 or args.distribution_fraction > 1:
         raise ValueError('distribution_fraction must be a value between 0-1')
@@ -345,7 +355,7 @@ def generate_config(parser, required, optional):
     for alias, inputfile, toolname, stranded in args.convert:
         if alias in convert:
             raise KeyError('duplicate alias names are not allowed', alias)
-        stranded = str(TSV.tsv_boolean(stranded))
+        stranded = str(tab.cast_boolean(stranded))
         SUPPORTED_TOOL.enforce(toolname)
         convert[alias] = ['convert_tool_output', inputfile, toolname, stranded]
     write_config(args.write, include_defaults=not args.no_defaults, libraries=libs, conversions=convert, log=log)
@@ -362,256 +372,6 @@ def time_diff(start, end):
     end_time = datetime.strptime(end, '%Y-%m-%d %H:%M:%S.%f')
     elapsed_time = end_time - start_time
     return elapsed_time.seconds / 3600
-
-
-def unique_exists(pattern, allow_none=False, get_newest=False):
-    result = glob.glob(pattern)
-    if len(result) == 1:
-        return result[0]
-    elif result:
-        if get_newest:
-            current_file = result[0]
-            for filename in result[1:]:
-                stats1 = os.stat(current_file)
-                stats2 = os.stat(filename)
-                if stats1.st_mtime < stats2.st_mtime:
-                    current_file = filename
-            return current_file
-
-        else:
-            raise OSError('duplicate results:', result)
-    elif allow_none:
-        return None
-    else:
-        raise OSError('no result found', pattern)
-
-
-def parse_log_details(log_file):
-    details = None
-    with open(log_file) as job_out:
-        lines = job_out.readlines()
-        if not lines:
-            details = argparse.Namespace(status='empty', message='empty log file', filename=log_file)
-        elif 'error' in lines[-1].lower():
-            details = argparse.Namespace(status='crash', message=lines[-1].strip(), filename=log_file)
-        else:
-            details = argparse.Namespace(
-                status='incomplete', message=lines[-1].strip(), filename=log_file, last_modified=time.ctime(os.path.getmtime(log_file)))
-    return details
-
-
-def parse_runtime_from_log(log_file):
-
-    with open(log_file) as job_out:
-        lines = job_out.readlines()
-        if not lines:
-            for line in lines[-10:]:
-                m = re.match(r'^\s*run time \(s\): (\d+)\s*$', line)
-                if m:
-                    return int(m.group(1))
-    raise OSError('error in parsing the log file for run times', log_file, r'^\s*run time (s): (\d+)\s*$')
-
-
-def convert_set_to_ranges(input_set):
-    ranges = []
-    for curr in sorted(list(input_set)):
-        if ranges:
-            if ranges[-1][1] + 1 == curr:
-                ranges[-1] = (ranges[-1][0], curr)
-                continue
-        ranges.append((curr, curr))
-    result = []
-    for start, end in ranges:
-        if start == end:
-            result.append(str(start))
-        else:
-            result.append(str(start) + '-' + str(end))
-    return ', '.join(result)
-
-
-def check_library_dir(library_dir):
-    """
-    checks the completion of library directory and its clustering, validation and annotation subdirectories
-    """
-    log('Checking {} '.format(os.path.basename(library_dir)))
-
-    clustering_dir = os.path.join(library_dir, 'clustering')
-    if not os.path.isdir(clustering_dir):
-        raise OSError('missing clustering directory', clustering_dir)
-
-    clustering_complete_stamp = os.path.join(clustering_dir, 'MAVIS.COMPLETE')
-    if not os.path.exists(clustering_complete_stamp):
-        raise OSError('missing completion stamp', clustering_complete_stamp)
-    log('clustering OK', time_stamp=False)
-    # check for multiple batches as well as number of jobs run per batch
-    batches = {}
-    for job in [os.path.basename(p) for p in glob.glob(os.path.join(clustering_dir, 'batch*.tab'))]:
-        batch = re.sub(r'-\d+.tab$', '', job)
-        batches[batch] = batches.get(batch, 0) + 1
-    if len(batches) > 1:
-        raise OSError('Multiple clustering runs were found in the clustering directory', clustering_dir, list(batches.keys()))
-    elif len(batches) == 0:
-        raise OSError('No clustering output files were created', clustering_dir)
-
-    batch_id, job_count = list(batches.items())[0]
-    stamps = {'validation': {}, 'annotation': {}}
-    run_times = {'validation': {}, 'annotation': {}}
-    for stage_subdir in ['validation', 'annotation']:
-        incomplete = set()
-        missing_logs = set()
-        crashes = {}
-        curr_run_times = []
-        printed_stage = False
-        for job_task_id in [c for c in range(1, job_count + 1)]:
-            stamp_pattern = os.path.join(library_dir, stage_subdir, batch_id + '-' + str(job_task_id), '*.COMPLETE')
-            log_pattern = os.path.join(library_dir, stage_subdir, '*.' + str(job_task_id))
-            try:
-                stamp = unique_exists(stamp_pattern)
-                stamps[stage_subdir][job_task_id] = os.path.getctime(stamp)
-            except OSError:
-                stamp = None
-                if not printed_stage:
-                    log(stage_subdir, 'FAIL', time_stamp=False)
-                    printed_stage = True
-                incomplete.add(job_task_id)
-            try:
-                logfile = unique_exists(log_pattern, get_newest=True)
-            except OSError:
-                logfile = None
-                if not printed_stage:
-                    log(stage_subdir, 'FAIL', time_stamp=False)
-                    printed_stage = True
-                missing_logs.add(job_task_id)
-
-            if stamp and logfile:
-                try:
-                    run_time = parse_runtime_from_log(logfile)
-                except OSError as err:
-                    incomplete.add(job_task_id)
-                    crashes.setdefault(str(err), set()).add(job_task_id)
-                else:
-                    curr_run_times.append(run_time)
-                    run_times[stage_subdir][job_task_id] = run_time
-                    continue
-            if logfile:
-                if not printed_stage:
-                    log(stage_subdir, 'FAIL', time_stamp=False)
-                    printed_stage = True
-                details = parse_log_details(logfile)
-                if details.status == 'crash':
-                    crashes.setdefault(details.message, set()).add(job_task_id)
-
-        if incomplete or missing_logs or crashes:
-            if incomplete:
-                log(
-                    '\t' + str(len(incomplete)), 'incomplete (jobs:', convert_set_to_ranges(incomplete) + ')', time_stamp=False)
-            if missing_logs:
-                log(
-                    '\t' + str(len(missing_logs)), 'missing logs (jobs:', convert_set_to_ranges(missing_logs) + ')', time_stamp=False)
-            if crashes:
-                for msg, task_ids in crashes.items():
-                    log('\t' + msg, '(jobs:', convert_set_to_ranges(task_ids) + ')', time_stamp=False)
-        else:
-            log(stage_subdir, 'OK', time_stamp=False)
-            log('\trun time (s): {} (max), {} (total)'.format(max(curr_run_times), sum(curr_run_times)), time_stamp=False)
-
-    max_rt = []
-    for job, create_time in stamps['validation'].items():
-        if create_time < os.path.getctime(clustering_complete_stamp):
-            log('** ERROR: the clustering complete stamp must precede validation complete stamps')
-        if job in stamps['annotation'] and stamps['annotation'][job] < create_time:
-            log('** ERROR: A complete stamp for validation is after a complete stamp for annotation')
-        if job in run_times['validation'] and job in run_times['annotation']:
-            max_rt.append(run_times['validation'][job] + run_times['annotation'][job])
-
-    stamp_times = list(stamps['validation'].values()) + list(stamps['annotation'].values())
-    return (
-        max(stamp_times) if stamp_times else None,
-        max(max_rt) if max_rt else None,
-        sum(max_rt) if max_rt else None
-    )
-
-
-def check_single_job(directory):
-    name = os.path.basename(directory)
-    stamp_pattern = os.path.join(directory, '*.COMPLETE')
-    log_pattern = os.path.join(directory, '*.o*')
-    logged_fail = False
-    logfile = None
-    stamp = None
-    try:
-        stamp = unique_exists(stamp_pattern)
-    except OSError as err:
-        log(name, 'FAIL')
-        logged_fail = True
-        log('\tINCOMPLETE: missing the complete stamp', stamp_pattern, time_stamp=False)
-        return None, None
-    try:
-        logfile = unique_exists(log_pattern, allow_none=True, get_newest=True)
-    except OSError as err:
-        if not logged_fail:
-            log(name, 'FAIL')
-            logged_fail = True
-        log('\tERROR:', err, time_stamp=False)
-
-    run_time = None
-    if not stamp and not logfile:
-        log('\t' + name, 'has not started', time_stamp=False)
-    elif not stamp:
-        log(parse_log_details(logfile), time_stamp=False)
-    elif stamp:
-        log(name, 'OK')
-        run_time = parse_runtime_from_log(logfile)
-        log('\trun time (s):', run_time, time_stamp=False)
-
-    return (os.path.getctime(stamp) if stamp else None, run_time)
-
-
-def check_completion(target_dir):
-    """
-    Args:
-        target_dir (str): path to the main pipeline output directory
-    """
-    if not os.path.isdir(target_dir):
-        raise TypeError('expected a directory as input')
-    library_dir_regex = r'^[\w-]+_({})_({})$'.format('|'.join(DISEASE_STATUS.values()), '|'.join(PROTOCOL.values()))
-    summary_stamp = None
-    pairing_stamp = None
-    library_stamps = []
-    pipeline_total_rt = 0
-    pipeline_max_rt = 0
-    for subdir in sorted(glob.glob(os.path.join(target_dir, '*'))):
-        name = os.path.basename(subdir)
-        if name == 'summary':
-            summary_stamp, run_time = check_single_job(subdir)
-            if run_time:
-                pipeline_total_rt += run_time
-                pipeline_max_rt += run_time
-        elif name == 'pairing':
-            pairing_stamp, run_time = check_single_job(subdir)
-            if run_time:
-                pipeline_max_rt += run_time
-                pipeline_total_rt += run_time
-        elif re.match(library_dir_regex, name):
-            last_timestamp, max_rt, total_rt = check_library_dir(subdir)
-            if max_rt:
-                pipeline_total_rt += total_rt
-                pipeline_max_rt += max_rt
-            if last_timestamp:
-                library_stamps.append(last_timestamp)
-        else:
-            log('ignoring dir', subdir)
-    library_stamp = max(library_stamps) if library_stamps else None
-
-    if pairing_stamp and pairing_stamp < library_stamp:
-        log('** ERROR: pairing completion stamp is older than library stamps')
-    if summary_stamp and summary_stamp < pairing_stamp:
-        log('** ERROR: summary stamp is older than pairing stamp')
-
-    if pipeline_total_rt:
-        log('pipeline total run time (s):', pipeline_total_rt)
-    if pipeline_max_rt:
-        log('pipeline max parallel run time (s):', pipeline_max_rt)
 
 
 def main():
@@ -640,18 +400,18 @@ use the -h/--help option
             print(helpmenu)
         if err:
             print('{}: error:'.format(PROGNAME), err, '\n')
-            exit(1)
-        exit(0)
+            return EXIT_ERROR
+        return EXIT_OK
 
     start_time = int(time.time())
 
     if len(sys.argv) < 2:
-        usage('the <pipeline step> argument is required')
+        return usage('the <pipeline step> argument is required')
     elif sys.argv[1] in ['-h', '--help']:
-        usage(detail=True)
+        return usage(detail=True)
     elif sys.argv[1] in ['-v', '--version']:
         print('{} version {}'.format('mavis', __version__))
-        exit(0)
+        return EXIT_OK
 
     pstep = sys.argv.pop(1)
     sys.argv[0] = '{} {}'.format(sys.argv[0], pstep)
@@ -659,62 +419,53 @@ use the -h/--help option
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, add_help=False)
     required = parser.add_argument_group('required arguments')
     optional = parser.add_argument_group('optional arguments')
-    augment_parser(required, optional, ['help', 'version'])
+    augment_parser(['help', 'version'], optional)
 
-    if pstep == 'config':
+    if pstep == PIPELINE_STEP.CONFIG:
         generate_config(parser, required, optional)
-        exit(0)
+        return EXIT_OK
     else:
         required.add_argument('-o', '--output', help='path to the output directory', required=True)
         if pstep == PIPELINE_STEP.PIPELINE:
             required.add_argument('config', help='path to the input pipeline configuration file')
-            augment_parser(required, optional, [])
         elif pstep == PIPELINE_STEP.CLUSTER:
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
-            augment_parser(
-                required, optional,
-                ['library', 'protocol', 'stranded_bam', 'disease_status'] +
-                ['annotations', 'masking'] + [k for k in vars(CLUSTER_DEFAULTS)]
-            )
+            augment_parser(['library', 'protocol', 'stranded_bam', 'disease_status', 'annotations', 'masking'], required, optional)
+            augment_parser(CLUSTER_DEFAULTS.keys(), optional)
         elif pstep == PIPELINE_STEP.VALIDATE:
             required.add_argument('-n', '--input', help='path to the input file', required=True)
             augment_parser(
-                required, optional,
                 ['library', 'protocol', 'bam_file', 'read_length', 'stdev_fragment_size', 'median_fragment_size'] +
-                ['stranded_bam', 'annotations', 'reference_genome', 'aligner_reference', 'masking'] +
-                [k for k in vars(VALIDATION_DEFAULTS)]
+                ['stranded_bam', 'annotations', 'reference_genome', 'aligner_reference', 'masking'],
+                required, optional
             )
+            augment_parser(VALIDATION_DEFAULTS.keys(), optional)
         elif pstep == PIPELINE_STEP.ANNOTATE:
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
             augment_parser(
-                required, optional,
-                ['annotations', 'reference_genome', 'masking', 'max_proximity', 'template_metadata'] +
-                [k for k in vars(ANNOTATION_DEFAULTS)] +
-                [k for k in vars(ILLUSTRATION_DEFAULTS)]
+                ['library', 'protocol', 'annotations', 'reference_genome', 'masking', 'max_proximity', 'template_metadata'],
+                required, optional
             )
+            augment_parser(list(ANNOTATION_DEFAULTS.keys()) + list(ILLUSTRATION_DEFAULTS.keys()), optional)
         elif pstep == PIPELINE_STEP.PAIR:
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
             optional.add_argument(
                 '-f', '--product_sequence_files', nargs='+', help='paths to fasta files with product sequences',
                 required=False, default=[])
-            augment_parser(
-                required, optional,
-                ['annotations', 'max_proximity'] +
-                [k for k in vars(PAIRING_DEFAULTS)]
-            )
+            augment_parser(['annotations'], required, optional)
+            augment_parser(['max_proximity'] + list(PAIRING_DEFAULTS.keys()), optional)
         elif pstep == PIPELINE_STEP.SUMMARY:
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
             augment_parser(
-                required, optional,
-                ['annotations', 'dgv_annotation', 'flanking_call_distance', 'split_call_distance',
-                 'contig_call_distance', 'spanning_call_distance'] +
-                [k for k in vars(SUMMARY_DEFAULTS)]
+                ['annotations', 'dgv_annotation', 'flanking_call_distance', 'split_call_distance', 'contig_call_distance', 'spanning_call_distance'],
+                required, optional
             )
+            augment_parser(SUMMARY_DEFAULTS.keys(), optional)
         elif pstep == PIPELINE_STEP.CHECKER:
 
             args = parser.parse_args()
-            check_completion(args.output)
-            exit(0)
+            success_flag = check_completion(args.output)
+            return EXIT_OK if success_flag else EXIT_ERROR
         else:
             raise NotImplementedError('invalid value for <pipeline step>', pstep)
     args = MavisNamespace(**parser.parse_args().__dict__)
@@ -839,7 +590,8 @@ use the -h/--help option
         'run time (hh/mm/ss): {}:{:02d}:{:02d}'.format(hours // 3600, minutes // 60, seconds),
         time_stamp=False)
     log('run time (s): {}'.format(duration), time_stamp=False)
+    return EXIT_OK
 
 
 if __name__ == '__main__':
-    main()
+    exit(main())

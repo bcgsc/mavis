@@ -1,14 +1,14 @@
 import unittest
 
 from mavis.constants import ORIENT, STRAND, SVTYPE
-from mavis.tools import _convert_tool_row, SUPPORTED_TOOL
+from mavis.tools import _convert_tool_row, SUPPORTED_TOOL, _parse_transabyss, _parse_chimerascan
 
 from .mock import Mock
 
 
-class TestConvertToolRow(unittest.TestCase):
+class TestDelly(unittest.TestCase):
 
-    def test_delly_insertion(self):
+    def test_convert_insertion(self):
         row = Mock(
             CHROM='1', POS=247760043,
             INFO={'SVTYPE': 'INS', 'CT': 'NtoN', 'END': 247760044, 'CHR2': '1', 'CIEND': [-10, 10], 'CIPOS': [-10, 10]}
@@ -29,7 +29,7 @@ class TestConvertToolRow(unittest.TestCase):
         self.assertEqual('1', bpp_list[0].break2.chr)
         self.assertEqual(SVTYPE.INS, bpp_list[0].event_type)
 
-    def test_delly_translocation(self):
+    def test_convert_convert_translocation(self):
         row = Mock(
             CHROM='7', POS=21673582,
             INFO={
@@ -51,9 +51,12 @@ class TestConvertToolRow(unittest.TestCase):
             print(b)
         self.assertEqual(4, len(bpp_list))
 
-    def test_ta_stranded_indel_insertion(self):
+
+class TestTransAbyss(unittest.TestCase):
+
+    def test_convert_stranded_indel_insertion(self):
         row = {
-            'chr': '1', 'chr_start': '10015', 'chr_end': '10015', 'ctg_strand': '-', 'type': 'ins'
+            'chr': '1', 'chr_start': '10015', 'chr_end': '10015', 'ctg_strand': '-', 'type': 'ins', 'alt': 'aat'
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.TA, True)
         self.assertEqual(1, len(bpp_list))
@@ -67,17 +70,74 @@ class TestConvertToolRow(unittest.TestCase):
         self.assertEqual(STRAND.POS, bpp.break1.strand)
         self.assertEqual(STRAND.POS, bpp.break2.strand)
         self.assertEqual(True, bpp.stranded)
+        self.assertEqual('AAT', bpp.untemplated_seq)
 
-    def test_ta_indel_deletion(self):
+    def test_convert_indel_deletion(self):
+        row = {
+            'id': '1177',
+            'type': 'del',
+            'chr': 'X',
+            'chr_start': '153523769',
+            'chr_end': '153523790',
+            'alt': 'na',
+            'ctg_strand': '+',
+            '_index': 9
+        }
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.TA, True)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('', bpp.untemplated_seq)
+
+    def test_convert_indel_unstranded_insertion(self):
+        row = {
+            'id': '1',
+            'type': 'ins',
+            'chr': '1',
+            'chr_start': '8877520',
+            'chr_end': '8877520',
+            'alt': 'tt',
+            'ctg_strand': '+',
+            '_index': 1
+        }
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.TA, False)
+        print([str(b) for b in bpp_list])
+        self.assertEqual(1, len(bpp_list))
+
+        bpp = bpp_list[0]
+        self.assertEqual(SVTYPE.INS, bpp.event_type)
+        self.assertEqual(STRAND.NS, bpp.break1.strand)
+        self.assertEqual(STRAND.NS, bpp.break2.strand)
+        self.assertEqual(False, bpp.stranded)
+        self.assertEqual(False, bpp.opposing_strands)
+        self.assertEqual('TT', bpp.untemplated_seq)
+
+    def test_convert_indel_duplication(self):
+        row = {
+            'id': '1185',
+            'type': 'dup',
+            'chr': 'GL000211.1',
+            'chr_start': '108677',
+            'chr_end': '108683',
+            'alt': 'aaaaaaa',
+            'ctg_strand': '+',
+            '_index': 15
+        }
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.TA, False)
+        print([str(b) for b in bpp_list])
+        self.assertEqual(1, len(bpp_list))
+
+        bpp = bpp_list[0]
+        self.assertEqual(SVTYPE.DUP, bpp.event_type)
+        self.assertEqual(STRAND.NS, bpp.break1.strand)
+        self.assertEqual(STRAND.NS, bpp.break2.strand)
+        self.assertEqual(False, bpp.stranded)
+        self.assertEqual(False, bpp.opposing_strands)
+        self.assertEqual('', bpp.untemplated_seq)
+
+    def test_convert_translocation(self):
         raise unittest.SkipTest('TODO')
 
-    def test_ta_indel_duplication(self):
-        raise unittest.SkipTest('TODO')
-
-    def test_ta_translocation(self):
-        raise unittest.SkipTest('TODO')
-
-    def test_ta_stranded_translocation(self):
+    def test_convert_stranded_translocation(self):
         row = {
             'strands': '+,-',
             'rearrangement': 'translocation',
@@ -89,10 +149,29 @@ class TestConvertToolRow(unittest.TestCase):
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.TA, True)
         self.assertEqual(1, len(bpp_list))
 
-    def test_manta_deletion(self):
+    def test_parse_stranded_translocation(self):
+        row = {
+            'strands': '+,-',
+            'rearrangement': 'translocation',
+            'breakpoint': '17:16342728|17:39766281',
+            'orientations': 'L,L',
+            'type': 'sense_fusion',
+            '_index': 5261
+        }
+        std = _parse_transabyss(row)
+        print(std)
+        self.assertTrue('event_type' not in std)
+
+
+class TestManta(unittest.TestCase):
+
+    def test_convert_deletion(self):
         raise unittest.SkipTest('TODO')
 
-    def test_defuse_inverted_translocation(self):
+
+class TestDefuse(unittest.TestCase):
+
+    def test_convert_inverted_translocation(self):
         row = {
             'gene_chromosome1': 'X',
             'gene_chromosome2': '3',
@@ -114,7 +193,7 @@ class TestConvertToolRow(unittest.TestCase):
         self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
         self.assertEqual(False, bpp.stranded)
 
-    def test_defuse_translocation(self):
+    def test_convert_translocation(self):
         row = {
             'gene_chromosome1': 'X',
             'gene_chromosome2': '3',
@@ -136,7 +215,7 @@ class TestConvertToolRow(unittest.TestCase):
         self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
         self.assertEqual(False, bpp.stranded)
 
-    def test_defuse_indel(self):
+    def test_convert_indel(self):
         row = {
             'gene_chromosome1': '1',
             'gene_chromosome2': '1',
@@ -158,7 +237,7 @@ class TestConvertToolRow(unittest.TestCase):
         self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
         self.assertEqual(False, bpp.stranded)
 
-    def test_defuse_inversion(self):
+    def test_convert_inversion(self):
         row = {
             'gene_chromosome1': '1',
             'gene_chromosome2': '1',
@@ -180,7 +259,10 @@ class TestConvertToolRow(unittest.TestCase):
         self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
         self.assertEqual(False, bpp.stranded)
 
-    def test_chimerascan_pos_pos(self):
+
+class TestChimerascan(unittest.TestCase):
+
+    def test_convert_pos_pos(self):
         row = {
             'chrom5p': 'chr3',
             'start5p': '48599150',
@@ -204,7 +286,7 @@ class TestConvertToolRow(unittest.TestCase):
         self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
         self.assertEqual(False, bpp.stranded)
 
-    def test_chimerascan_pos_neg(self):
+    def test_convert_pos_neg(self):
         row = {
             'chrom5p': 'chr3',
             'start5p': '48599150',
@@ -228,7 +310,7 @@ class TestConvertToolRow(unittest.TestCase):
         self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
         self.assertEqual(False, bpp.stranded)
 
-    def test_chimerascan_neg_pos(self):
+    def test_convert_neg_pos(self):
         row = {
             'chrom5p': 'chr3',
             'start5p': '48599150',
@@ -252,7 +334,7 @@ class TestConvertToolRow(unittest.TestCase):
         self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
         self.assertEqual(False, bpp.stranded)
 
-    def test_chimerascan_neg_neg(self):
+    def test_convert_neg_neg(self):
         row = {
             'chrom5p': 'chr3',
             'start5p': '48599150',
@@ -276,7 +358,10 @@ class TestConvertToolRow(unittest.TestCase):
         self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
         self.assertEqual(False, bpp.stranded)
 
-    def test_pindel_deletion(self):
+
+class TestPindel(unittest.TestCase):
+
+    def test_convert_deletion(self):
         row = Mock(
             CHROM='21', POS=9412306,
             INFO={
@@ -301,7 +386,7 @@ class TestConvertToolRow(unittest.TestCase):
         self.assertEqual(False, bpp.stranded)
         self.assertEqual(False, bpp.opposing_strands)
 
-    def test_pindel_insertion(self):
+    def test_convert_insertion(self):
         row = Mock(
             CHROM='21', POS=9412306,
             INFO={
@@ -326,7 +411,7 @@ class TestConvertToolRow(unittest.TestCase):
         self.assertEqual(False, bpp.stranded)
         self.assertEqual(False, bpp.opposing_strands)
 
-    def test_pindel_inversion(self):
+    def test_convert_inversion(self):
         row = Mock(
             CHROM='21', POS=9412306,
             INFO={

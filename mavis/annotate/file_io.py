@@ -6,7 +6,7 @@ import re
 import warnings
 
 from Bio import SeqIO
-import TSV
+import tab
 
 from .base import BioInterval, ReferenceName
 from .genomic import Exon, Gene, Template, Transcript, UsTranscript
@@ -43,7 +43,7 @@ def load_masking_regions(filepath):
         >>> m['1']
         [BioInterval(), BioInterval(), ...]
     """
-    _, rows = TSV.read_file(
+    _, rows = tab.read_file(
         filepath,
         require=['chr', 'start', 'end', 'name'],
         cast={'start': int, 'end': int, 'chr': ReferenceName}
@@ -116,7 +116,7 @@ def parse_annotations_json(data, reference_genome=None, best_transcripts_only=Fa
 
         has_best = False
         for transcript in gene_dict['transcripts']:
-            transcript['is_best_transcript'] = TSV.tsv_boolean(transcript['is_best_transcript'])
+            transcript['is_best_transcript'] = tab.cast_boolean(transcript['is_best_transcript'])
             transcript.setdefault('exons', [])
             exons = [Exon(strand=gene.strand, **ex) for ex in transcript['exons']]
             if not exons:
@@ -256,17 +256,17 @@ def convert_tab_to_json(filepath, warn=devnull):
         try:
             row = int(row)
         except ValueError:
-            row = TSV.null(row)
+            row = tab.cast_null(row)
         return row
 
-    _, rows = TSV.read_file(
+    _, rows = tab.read_file(
         filepath,
         require=[
             'ensembl_gene_id',
             'chr',
             'ensembl_transcript_id'
         ],
-        add={
+        add_default={
             'cdna_coding_start': 'null',
             'cdna_coding_end': 'null',
             'AA_domain_ranges': '',
@@ -384,7 +384,7 @@ def load_templates(filename):
 
     """
     header = ['name', 'start', 'end', 'band_name', 'giesma_stain']
-    header, rows = TSV.read_file(
+    header, rows = tab.read_file(
         filename,
         header=header,
         cast={'start': int, 'end': int},

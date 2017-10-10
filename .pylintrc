@@ -117,7 +117,7 @@ ignore-on-opaque-inference=yes
 # List of class names for which member attributes should not be checked (useful
 # for classes with dynamically set attributes). This supports the use of
 # qualified names.
-ignored-classes=optparse.Values,thread._local,_thread._local,Vocab,DiagramSettings,pysam,Namespace,MavisNamespace,WeakMavisNamespace,MavisConfig,numpy
+ignored-classes=optparse.Values,thread._local,_thread._local,Vocab,DiagramSettings,pysam,Namespace,MavisNamespace,WeakMavisNamespace,MavisConfig,numpy,svgwrite
 
 # List of module names for which member attributes should not be checked
 # (useful for modules/projects where namespaces are manipulated during runtime
@@ -242,7 +242,7 @@ const-rgx=(([A-Z_][A-Z0-9_]*)|(__.*__))$
 
 # Minimum line length for functions/classes that require docstrings, shorter
 # ones are exempt.
-docstring-min-length=10
+docstring-min-length=15
 
 # Naming hint for function names
 function-name-hint=(([a-z][a-z0-9_]{2,30})|(_[a-z0-9_]*))$
@@ -355,7 +355,7 @@ valid-metaclass-classmethod-first-arg=mcs
 [DESIGN]
 
 # Maximum number of arguments for function / method
-max-args=5
+max-args=10
 
 # Maximum number of attributes for a class (see R0902).
 max-attributes=7

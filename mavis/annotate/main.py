@@ -21,7 +21,7 @@ ACCEPTED_FILTERS = {
 
 
 def main(
-    inputs, output,
+    inputs, output, library, protocol,
     reference_genome, annotations, template_metadata,
     min_domain_mapping_match=DEFAULTS.min_domain_mapping_match,
     min_orf_size=DEFAULTS.min_orf_size,
@@ -51,6 +51,12 @@ def main(
     # test that the sequence makes sense for a random transcript
     bpps = read_inputs(
         inputs, in_={COLUMNS.protocol: PROTOCOL},
+        add_default={
+            COLUMNS.protocol: protocol,
+            COLUMNS.library: library,
+            COLUMNS.stranded: False
+        },
+        require=[COLUMNS.protocol, COLUMNS.library],
         expand_ns=False, explicit_strand=False
     )
     log('read {} breakpoint pairs'.format(len(bpps)))

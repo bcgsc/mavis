@@ -124,6 +124,8 @@ Example of the :term:`JSON` file structure can be seen below
 
 This reference file can be generated from any database with the necessary information.
 
+.. _generate-reference-annotations:
+
 Generating the Annotations from Ensembl
 -----------------------------------------
 

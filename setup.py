@@ -7,8 +7,6 @@ import re
 
 # install local svn dependencies
 cwd = os.path.dirname(os.path.abspath(__file__))
-tsv_version = '3.1.3'
-tsv_link = 'svn+https://svn.bcgsc.ca/svn/SVIA/TSV/tags/v{0}#egg=TSV-{0}'.format(tsv_version)
 vocab_version = '1.0.0'
 vocab_link = 'svn+https://svn.bcgsc.ca/svn/SVIA/vocab/tags/v{0}#egg=vocab-{0}'.format(vocab_version)
 
@@ -23,18 +21,6 @@ def install_vocab():
         print()
     except ImportError:
         pip.main(['install', '-e', vocab_link, '--trusted-host', '*.bcgsc.ca', '--exists-action', 's'])
-
-
-def install_TSV():
-    try:
-        import TSV
-        if TSV.__version__ != tsv_version:
-            raise ImportError('wrong version', TSV.__version__)
-        print('Using', TSV.__path__[0])
-        print(TSV.__package__ + '==' + TSV.__version__)
-        print()
-    except ImportError:
-        pip.main(['install', '-e', tsv_link, '--trusted-host', '*.bcgsc.ca', '--exists-action', 's'])
 
 
 def check_nonpython_dependencies():
@@ -106,7 +92,6 @@ print('version:', version)
 
 
 if any([x in sys.argv for x in ['install', 'develop', 'build']]):
-    install_TSV()
     install_vocab()
     write_version_file(version)
 
@@ -126,7 +111,7 @@ setup(
         'sphinx==1.6.3',  # for building the documentation only
         'sphinx-rtd-theme==0.2.5b1',  # for building the documentation only
         'pysam>=0.9',
-        'TSV=={}'.format(tsv_version),
+        'tab>=0.0.1',
         'vocab=={}'.format(vocab_version),
         'numpy>=1.13.1',
         'pyvcf==0.6.8',
@@ -138,14 +123,14 @@ setup(
     author_email='creisle@bcgsc.ca',
     dependency_links=[
         vocab_link,
-        tsv_version
+        'git+https://creisle@svn.bcgsc.ca/bitbucket/scm/prod/tab.git#egg=tab-0.0.1'
     ],
     setup_requires=[
         'nose>=1.0',
         'numpy>=1.13.1'  # put here b/c biopython doesn't declare this as a setup dependency properly
     ],
     test_suite='nose.collector',
-    tests_require=['nose', 'timeout-decorator==0.3.3', 'coverage==4.2'],
+    tests_require=['nose', 'timeout-decorator==0.3.3', 'coverage==4.2', 'mock>=2.0.0'],
     entry_points={'console_scripts': ['mavis = mavis.main:main']}
 )
 check_nonpython_dependencies()

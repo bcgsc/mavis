@@ -1,0 +1,12 @@
+#Software: 1.4.5
+#Command: /gsc/software/linux-x86_64-centos6/breakdancer-1.4.5/bin/breakdancer-max -t /projects/trans_scratch/validations/workspace/creisle/MAV228/breakdancer.cfg 
+#Library Statistics:
+#/projects/analysis/analysis24/A36971/merge_bwa-mem-0.7.6a/150nt/hg19a/A36971_2_lanes_dupsFlagged.bam	mean:441	std:116.54	uppercutoff:959.41	lowercutoff:22.39	readlen:149.65	library:A36971	reflen:3046874375	seqcov:69.8209	phycov:102.877	32:31637251
+#/projects/analysis/analysis24/A36973/HMTGGCCXX_5/A36973/150nt/hg19a/bwa-mem-0.7.6a/A36973_1_lane_dupsFlagged.bam	mean:437.99	std:124.28	uppercutoff:955.49	lowercutoff:0	readlen:147.17	library:A36973	reflen:3046874375	seqcov:33.1399	phycov:49.3136	32:27980009
+#Chr1	Pos1	Orientation1	Chr2	Pos2	Orientation2	Type	Size	Score	num_Reads	num_Reads_lib	A36971_2_lanes_dupsFlagged.bam	A36973_1_lane_dupsFlagged.bam
+1	200067631	23+27-	2	23697874	17+6-	CTX	-439	38	14	/projects/analysis/analysis24/A36971/merge_bwa-mem-0.7.6a/150nt/hg19a/A36971_2_lanes_dupsFlagged.bam|11:/projects/analysis/analysis24/A36973/HMTGGCCXX_5/A36973/150nt/hg19a/bwa-mem-0.7.6a/A36973_1_lane_dupsFlagged.bam|3
+1	10001	83+126-	1	10546	83+126-	ITX	-352	99	43	/projects/analysis/analysis24/A36971/merge_bwa-mem-0.7.6a/150nt/hg19a/A36971_2_lanes_dupsFlagged.bam|23:/projects/analysis/analysis24/A36973/HMTGGCCXX_5/A36973/150nt/hg19a/bwa-mem-0.7.6a/A36973_1_lane_dupsFlagged.bam|20	NA	NA
+1	808410	11+11-	1	808574	11+11-	ITX	-338	99	9	/projects/analysis/analysis24/A36971/merge_bwa-mem-0.7.6a/150nt/hg19a/A36971_2_lanes_dupsFlagged.bam|6:/projects/analysis/analysis24/A36973/HMTGGCCXX_5/A36973/150nt/hg19a/bwa-mem-0.7.6a/A36973_1_lane_dupsFlagged.bam|3	NA	NA
+1	869445	89+21-	1	870225	5+93-	DEL	892	99	67	/projects/analysis/analysis24/A36971/merge_bwa-mem-0.7.6a/150nt/hg19a/A36971_2_lanes_dupsFlagged.bam|40:/projects/analysis/analysis24/A36973/HMTGGCCXX_5/A36973/150nt/hg19a/bwa-mem-0.7.6a/A36973_1_lane_dupsFlagged.bam|27	0.06	0.08
+1	54687282	6+9-	1	54687479	6+9-	INS	-421	99	3	/projects/analysis/analysis24/A36971/merge_bwa-mem-0.7.6a/150nt/hg19a/A36971_2_lanes_dupsFlagged.bam|3	NA	NA
+1	6508246	10+17-	1	17028869	57+50-	INV	10520288	31	4	/projects/analysis/analysis24/A36971/merge_bwa-mem-0.7.6a/150nt/hg19a/A36971_2_lanes_dupsFlagged.bam|4	1.77	2.21

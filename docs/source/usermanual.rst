@@ -23,45 +23,6 @@ Getting started
 
 see :ref:`Installation for developers <development-install>`
 
-|
-
-------
-
-|
-
-
-
-Input Files
-....................
-
-The requirements are described in `JIRA <https://www.bcgsc.ca/jira/browse/APA-618>`_ and are listed below.
-These pertain to the input files from the various tools you want to merge. The expected input columns are given
-below. All columns must be given except: individual breakpoint strand columns do not need to be given if
-the input is not stranded and opposing_strands has been specified
-
-Required Columns
-,,,,,,,,,,,,,,,,,
-
-- :term:`break1_chromosome`
-- :term:`break1_position_start`
-- :term:`break1_position_end`
-- :term:`break1_strand`
-- :term:`break1_orientation`
-- :term:`break2_chromosome`
-- :term:`break2_position_start`
-- :term:`break2_position_end`
-- :term:`break2_strand`
-- :term:`break2_orientation`
-- :term:`opposing_strands`
-- :term:`stranded`
-- :term:`library`
-- :term:`protocol`
-- :term:`tools`
-
-
-Some native tool outputs are supported and have built in methods to convert to the above format. Any unsupported
-tools can be used as long as the user converts the tools native output to match the above format.
-
 
 |
 
@@ -91,10 +52,10 @@ Help sub-menus can be found by giving the pipeline step followed by no arguments
     >>> mavis cluster -h
 
 The most common use case is auto-generating a configuration file and then running the pipeline setup step.
-The pipeline setup step will run clustering and create scripts for running the other steps. 
+The pipeline setup step will run clustering and create scripts for running the other steps.
 
 .. code-block:: bash
-    
+
     >>> mavis config .... -w config.cfg
     >>> mavis pipeline config.cfg -o /path/to/top/output_dir
 
@@ -112,9 +73,9 @@ This will create submission scripts as follows
     |-- pairing/qsub.sh
     `-- summary/qsub.sh
 
-The qsub scripts are bash scripts meant for submission to an `SGE <http://star.mit.edu/cluster/docs/0.93.3/guides/sge.html>`_ 
-cluster. The summary job is held on the pairing job, the pairing job is held on all the annotation jobs, 
-and the annotation jobs are held on their validation jobs. This means that the scripts should be submitted in 
+The qsub scripts are bash scripts meant for submission to an `SGE <http://star.mit.edu/cluster/docs/0.93.3/guides/sge.html>`_
+cluster. The summary job is held on the pairing job, the pairing job is held on all the annotation jobs,
+and the annotation jobs are held on their validation jobs. This means that the scripts should be submitted in
 the following order: (validation => annotation => pairing => summary)
 
 .. code-block:: bash
@@ -149,8 +110,8 @@ can be output as shown below
 
     >>> mavis config --write template.cfg
 
-This will create a template config file called template.cfg which can then be edited by the user. However this will be 
-a simple config with no library information. To generate a configuration file with the library information as well as 
+This will create a template config file called template.cfg which can then be edited by the user. However this will be
+a simple config with no library information. To generate a configuration file with the library information as well as
 estimates for the fragment size parameters more inputs are required.
 
 A simple example with a single library would look like this (see below)
@@ -161,7 +122,7 @@ A simple example with a single library would look like this (see below)
         --library Library1 genome diseased /path/to/bam/file/library1.bam False
 
 This creates a configuration file but is still missing some information before it can be run by the pipeline, the input
-files containing the breakpoint pairs. So a more complete example is shown below 
+files containing the breakpoint pairs. So a more complete example is shown below
 
 .. code-block:: bash
 
@@ -171,15 +132,15 @@ files containing the breakpoint pairs. So a more complete example is shown below
         --input /path/to/bpp/file Library1 Library2 \
         --input /path/to/other/bpp/file Library1 Library2
 
-In the above example Library1 is the tumour genome and Library2 is the normal genome. The same input files are 
+In the above example Library1 is the tumour genome and Library2 is the normal genome. The same input files are
 used for both
 
 Manually creating the configuration File
 ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-While not recommended, the configuration file can also be built manually. The minimum required inputs are the library 
-configuration sections. There must be at least one library section and the library section must at minimum have the 
-following attributes given (see below). 
+While not recommended, the configuration file can also be built manually. The minimum required inputs are the library
+configuration sections. There must be at least one library section and the library section must at minimum have the
+following attributes given (see below).
 
 .. code-block:: python
 
@@ -206,7 +167,7 @@ as that used for the command line parameter or config setting (uppercased). For 
 quality used during the validate stage
 
 .. code-block:: bash
-    
+
     >>> export MAVIS_MIN_MAPPING_QUALITY=10
 
 

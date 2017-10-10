@@ -6,7 +6,7 @@ import argparse
 import os
 import sys
 import time
-import TSV
+import tab
 import warnings
 
 from mavis.breakpoint import Breakpoint, BreakpointPair
@@ -16,7 +16,7 @@ from mavis import __version__
 
 __prog__ = os.path.basename(os.path.realpath(__file__))
 
-TSV._verbose = True
+tab._verbose = True
 
 SVTYPES = {'ins': SVTYPE.INS,
            'del': SVTYPE.DEL,
@@ -50,7 +50,7 @@ def main():
     optional.add_argument('--no-filter', action='store_true', default=False,
                           help='turn off filtering of events that are in the "MT" and "GL" chromosomes')
 
-    # /projects/POG/POG_data/POG098/wgs/GV2/POG098_POG098-OCT-1-unique-14-filters/POG098-OCT-1_genome_fusions_concat.tsv
+    # /projects/POG/POG_data/POG098/wgs/GV2/POG098_POG098-OCT-1-unique-14-filters/POG098-OCT-1_genome_fusions_concat.tab
     warnings.warn('currently assuming that trans-abyss is calling the strand exactly opposite and swapping them')
     args = parser.parse_args()
 
@@ -60,7 +60,7 @@ def main():
     print('reading:', args.input)
     file_type = None
     try:
-        header, rows = TSV.read_file(
+        header, rows = tab.read_file(
             args.input,
             require=['id'],
             rename={'rearrangement': [COLUMNS.event_type]},
@@ -88,7 +88,7 @@ def main():
         pass
     if not file_type:
         try:
-            header, rows = TSV.read_file(
+            header, rows = tab.read_file(
                 args.input,
                 require=['id', 'type'],
                 cast={
