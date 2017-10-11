@@ -106,7 +106,7 @@ def _equivalent_events(event1, event2):
     return True
 
 
-def compairson_distance(event1, event2, input_distances=None):
+def comparison_distance(event1, event2, input_distances=None):
     distances = {}
     distances.update(PAIRING_DISTANCES.items())
     if input_distances is not None:
@@ -122,7 +122,7 @@ def equivalent(event1, event2, distances=None):
     compares two events by breakpoint position to see if they are equivalent
     """
 
-    max_distance = compairson_distance(event1, event2, distances)
+    max_distance = comparison_distance(event1, event2, distances)
 
     if not _equivalent_events(event1, event2):
         return False
@@ -149,7 +149,7 @@ def inferred_equivalent(event1, event2, reference_transcripts, distances=None, p
     if event1.data[COLUMNS.protocol] != PROTOCOL.GENOME:
         event1, event2 = event2, event1
 
-    max_distance = compairson_distance(event1, event2, distances)
+    max_distance = comparison_distance(event1, event2, distances)
 
     if event1.data[COLUMNS.fusion_sequence_fasta_id] and event2.data[COLUMNS.fusion_sequence_fasta_id]:
         fusion1 = product_sequences[event1.data[COLUMNS.fusion_sequence_fasta_id]]
