@@ -295,7 +295,7 @@ STOP_AA = '*'
 """:class:`str`: The amino acid expected to end translation
 """
 
-GIESMA_STAIN = MavisNamespace(
+GIEMSA_STAIN = MavisNamespace(
     GNEG='gneg',
     GPOS50='gpos50',
     GPOS75='gpos75',
@@ -473,7 +473,7 @@ COLUMNS = MavisNamespace(
 
     fusion_cdna_coding_end
         Position wrt the 5' end of the fusion transcript where coding ends last base of the stop codon
- of the vocabulary object
+
     transcript1
         Transcript for the current annotation at the first breakpoint
 
@@ -488,7 +488,7 @@ COLUMNS = MavisNamespace(
 
     fusion_cdna_coding_end
         Position wrt the 5' end of the fusion transcript where coding ends last base of the stop codon
- of the vocabulary object
+
     fusion_mapped_domains
         ``JSON`` - List of domains in :term:`JSON` format where each domain start and end positions are given wrt to the fusion
         transcript and the mapping quality is the number of matching amino acid positions over the total
@@ -503,7 +503,7 @@ COLUMNS = MavisNamespace(
 
     annotation_figure
         File path to the svg drawing representing the annotation
- of the vocabulary object
+
     annotation_figure_legend
         ``JSON`` - :term:`JSON` data for the figure legend
 
