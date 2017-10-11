@@ -1,8 +1,6 @@
 import re
 
-from vocab import Vocab
-
-from ..util import MavisNamespace
+from ..constants import MavisNamespace
 
 
 DEFAULTS = MavisNamespace(
@@ -13,7 +11,7 @@ DEFAULTS = MavisNamespace(
 )
 
 
-SPLICE_TYPE = Vocab(
+SPLICE_TYPE = MavisNamespace(
     RETAIN='retained intron',
     SKIP='skipped exon',
     NORMAL='normal',
@@ -21,7 +19,7 @@ SPLICE_TYPE = Vocab(
     MULTI_SKIP='skipped multiple exons',
     COMPLEX='complex'
 )
-""":class:`Vocab`: holds controlled vocabulary for allowed splice type classification values
+""":class:`MavisNamespace`: holds controlled vocabulary for allowed splice type classification values
 
 - ``RETAIN``: an intron was retained
 - ``SKIP``: an exon was skipped
@@ -31,7 +29,7 @@ SPLICE_TYPE = Vocab(
 - ``COMPLEX``: some combination of exon skipping and intron retention
 """
 
-SPLICE_SITE_TYPE = Vocab(
+SPLICE_SITE_TYPE = MavisNamespace(
     DONOR=3,
     ACCEPTOR=5
 )

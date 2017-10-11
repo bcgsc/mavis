@@ -9,7 +9,7 @@ from braceexpand import braceexpand
 from tab.tab import EmptyFileError, cast_boolean
 
 from .breakpoint import read_bpp_from_input_file
-from .constants import COLUMNS, PROTOCOL, sort_columns
+from .constants import COLUMNS, PROTOCOL, sort_columns, MavisNamespace
 from .interval import Interval
 
 ENV_VAR_PREFIX = 'MAVIS_'
@@ -38,41 +38,6 @@ def get_env_variable(arg, default, cast_type=None):
         return cast(result, cast_type)
     else:
         return default
-
-
-class MavisNamespace(Namespace):
-
-    def items(self):
-        return [(k, self[k]) for k in self.keys()]
-
-    def __add__(self, other):
-        d = {}
-        d.update(self.__dict__)
-        d.update(other.__dict__)
-        return MavisNamespace(**d)
-
-    def update(self, other):
-        self.__dict__.update(other.__dict__)
-
-    def __getitem__(self, key):
-        return getattr(self, key)
-
-    def __setitem__(self, key, val):
-        self.__dict__[key] = val
-
-    def flatten(self):
-        d = {}
-        d.update(self.items())
-        return d
-
-    def get(self, key, default):
-        try:
-            return self[key]
-        except AttributeError:
-            return default
-
-    def keys(self):
-        return self.__dict__.keys()
 
 
 class WeakMavisNamespace(MavisNamespace):
@@ -175,7 +140,7 @@ def read_inputs(inputs, **kwargs):
     kwargs.setdefault('require', [])
     kwargs['require'] = list(set(kwargs['require'] + [COLUMNS.protocol]))
     kwargs.setdefault('in_', {})
-    kwargs['in_'][COLUMNS.protocol] = PROTOCOL
+    kwargs['in_'][COLUMNS.protocol] = PROTOCOL.values()
     for expr in inputs:
         for finput in bash_expands(expr):
             try:

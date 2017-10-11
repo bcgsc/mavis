@@ -47,9 +47,9 @@ def main(
             COLUMNS.fusion_sequence_fasta_file
         ],
         in_={
-            COLUMNS.protocol: PROTOCOL,
-            COLUMNS.event_type: SVTYPE,
-            COLUMNS.call_method: CALL_METHOD,
+            COLUMNS.protocol: PROTOCOL.values(),
+            COLUMNS.event_type: SVTYPE.values(),
+            COLUMNS.call_method: CALL_METHOD.values(),
             COLUMNS.fusion_splicing_pattern: SPLICE_TYPE.values() + [None, 'None']
         },
         add_default={

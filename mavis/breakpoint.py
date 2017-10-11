@@ -83,7 +83,7 @@ class BreakpointPair:
         data = object.__getattribute__(self, 'data')
         try:
             return data[COLUMNS[attr]]
-        except KeyError:
+        except (KeyError, AttributeError):
             try:
                 return data[attr]
             except KeyError:
@@ -674,10 +674,10 @@ def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, **
     })
     kwargs.setdefault('in_', {}).update(
         {
-            COLUMNS.break1_orientation: ORIENT,
-            COLUMNS.break1_strand: STRAND,
-            COLUMNS.break2_orientation: ORIENT,
-            COLUMNS.break2_strand: STRAND
+            COLUMNS.break1_orientation: ORIENT.values(),
+            COLUMNS.break1_strand: STRAND.values(),
+            COLUMNS.break2_orientation: ORIENT.values(),
+            COLUMNS.break2_strand: STRAND.values()
         })
     _, rows = tab.read_file(
         filename, suppress_index=True,

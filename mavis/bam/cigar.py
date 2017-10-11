@@ -427,7 +427,7 @@ def hgvs_standardize_cigar(read, reference_seq):
 
 
 def convert_string_to_cigar(string):
-    patt = '(\d+({}))'.format('|'.join(CIGAR.fields))
+    patt = '(\d+({}))'.format('|'.join(CIGAR.keys()))
     cigar = [m[0] for m in re.findall(patt, string)]
     cigar = [(CIGAR[match[-1]], int(match[:-1])) for match in cigar]
     return cigar

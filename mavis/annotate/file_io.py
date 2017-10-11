@@ -11,7 +11,7 @@ import tab
 from .base import BioInterval, ReferenceName
 from .genomic import Exon, Gene, Template, Transcript, UsTranscript
 from .protein import Domain, Translation
-from ..constants import CODON_SIZE, GIESMA_STAIN, START_AA, STOP_AA, STRAND, translate
+from ..constants import CODON_SIZE, GIEMSA_STAIN, START_AA, STOP_AA, STRAND, translate
 from ..interval import Interval
 from ..util import devnull
 
@@ -367,7 +367,7 @@ def load_templates(filename):
     2. start
     3. end
     4. band_name
-    5. giesma_stain
+    5. giemsa_stain
 
     for example
 
@@ -383,12 +383,12 @@ def load_templates(filename):
         :class:`list` of :class:`Template`: list of the templates loaded
 
     """
-    header = ['name', 'start', 'end', 'band_name', 'giesma_stain']
+    header = ['name', 'start', 'end', 'band_name', 'giemsa_stain']
     header, rows = tab.read_file(
         filename,
         header=header,
         cast={'start': int, 'end': int},
-        in_={'giesma_stain': GIESMA_STAIN}
+        in_={'giemsa_stain': GIEMSA_STAIN.values()}
     )
 
     bands_by_template = {}

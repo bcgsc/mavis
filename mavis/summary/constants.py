@@ -1,6 +1,4 @@
-from vocab import Vocab
-
-from ..util import MavisNamespace
+from ..constants import MavisNamespace
 
 
 DEFAULTS = MavisNamespace(
@@ -14,7 +12,7 @@ DEFAULTS = MavisNamespace(
     filter_protein_synon=True
 )
 
-PAIRING_STATE = Vocab(
+PAIRING_STATE = MavisNamespace(
     EXP='expressed',
     NO_EXP='not expressed',
     SOMATIC='somatic',

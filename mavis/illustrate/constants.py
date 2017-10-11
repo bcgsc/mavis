@@ -1,6 +1,5 @@
 from colour import Color
-from ..constants import GIESMA_STAIN
-from ..util import MavisNamespace
+from ..constants import GIEMSA_STAIN, MavisNamespace
 
 DEFAULTS = MavisNamespace(
     width=1000,
@@ -125,12 +124,12 @@ class DiagramSettings:
         self.template_band_stroke_width = 0.5
         temp = [c.hex for c in Color('#ffffff').range_to(Color('#000000'), 5)]
         self.template_band_fill = {
-            GIESMA_STAIN.ACEN: '#800000',
-            GIESMA_STAIN.GPOS25: temp[1],
-            GIESMA_STAIN.GPOS50: temp[2],
-            GIESMA_STAIN.GPOS75: temp[3],
-            GIESMA_STAIN.GPOS100: temp[4],
-            GIESMA_STAIN.GNEG: '#ffffff'
+            GIEMSA_STAIN.ACEN: '#800000',
+            GIEMSA_STAIN.GPOS25: temp[1],
+            GIEMSA_STAIN.GPOS50: temp[2],
+            GIEMSA_STAIN.GPOS75: temp[3],
+            GIEMSA_STAIN.GPOS100: temp[4],
+            GIEMSA_STAIN.GNEG: '#ffffff'
         }
         self.template_band_stroke = '#000000'
         self.template_track_height = max([

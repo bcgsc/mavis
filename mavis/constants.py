@@ -1,18 +1,73 @@
 """
 module responsible for small utility functions and constants used throughout the structural_variant package
 """
+from argparse import Namespace
 import re
 
 from Bio.Alphabet import Gapped
 from Bio.Alphabet.IUPAC import ambiguous_dna
 from Bio.Data.IUPACData import ambiguous_dna_values
 from Bio.Seq import Seq
-from vocab import Vocab
+
+
+class MavisNamespace(Namespace):
+
+    def items(self):
+        return [(k, self[k]) for k in self.keys()]
+
+    def __add__(self, other):
+        d = {}
+        d.update(self.__dict__)
+        d.update(other.__dict__)
+        return MavisNamespace(**d)
+
+    def update(self, other):
+        self.__dict__.update(other.__dict__)
+
+    def __getitem__(self, key):
+        return getattr(self, key)
+
+    def __setitem__(self, key, val):
+        self.__dict__[key] = val
+
+    def flatten(self):
+        d = {}
+        d.update(self.items())
+        return d
+
+    def get(self, key, default):
+        try:
+            return self[key]
+        except AttributeError:
+            return default
+
+    def keys(self):
+        return self.__dict__.keys()
+
+    def values(self):
+        return [self[k] for k in self.keys()]
+
+    def enforce(self, value):
+        if value not in self.values():
+            raise KeyError('value {0} is not a valid member'.format(value), self.values())
+        return value
+
+    def reverse(self, value):
+        """for a given value, return the associated key"""
+        result = []
+        for key in self.keys():
+            if self[key] == value:
+                result.append(key)
+        if len(result) > 1:
+            raise KeyError('could not reverse, the mapping is not unique', value, result)
+        elif not result:
+            raise KeyError('input value is not assigned to a key', value)
+        return result[0]
 
 
 COMPLETE_STAMP = 'MAVIS.COMPLETE'
 
-PIPELINE_STEP = Vocab(
+PIPELINE_STEP = MavisNamespace(
     ANNOTATE='annotate',
     VALIDATE='validate',
     PIPELINE='pipeline',
@@ -20,7 +75,8 @@ PIPELINE_STEP = Vocab(
     PAIR='pairing',
     SUMMARY='summary',
     CHECKER='checker',
-    CONFIG='config'
+    CONFIG='config',
+    CONVERT='convert'
 )
 
 
@@ -76,8 +132,8 @@ def translate(s, reading_frame=0):
 
 GAP = '-'
 
-ORIENT = Vocab(LEFT='L', RIGHT='R', NS='?')
-""":class:`Vocab`: holds controlled vocabulary for allowed orientation values
+ORIENT = MavisNamespace(LEFT='L', RIGHT='R', NS='?')
+""":class:`MavisNamespace`: holds controlled vocabulary for allowed orientation values
 
 - ``LEFT``: left wrt to the positive/forward strand
 - ``RIGHT``: right wrt to the positive/forward strand
@@ -86,22 +142,22 @@ ORIENT = Vocab(LEFT='L', RIGHT='R', NS='?')
 setattr(ORIENT, 'expand', lambda x: [ORIENT.LEFT, ORIENT.RIGHT] if x == ORIENT.NS else [x])
 setattr(ORIENT, 'compare', lambda x, y: True if ORIENT.NS in [x, y] else (x == y))
 
-PROTOCOL = Vocab(GENOME='genome', TRANS='transcriptome')
-""":class:`Vocab`: holds controlled vocabulary for allowed protocol values
+PROTOCOL = MavisNamespace(GENOME='genome', TRANS='transcriptome')
+""":class:`MavisNamespace`: holds controlled vocabulary for allowed protocol values
 
 - ``GENOME``: genome
 - ``TRANS``: transcriptome
 """
 
-DISEASE_STATUS = Vocab(DISEASED='diseased', NORMAL='normal')
-""":class:`Vocab`: holds controlled vocabulary for allowed disease status
+DISEASE_STATUS = MavisNamespace(DISEASED='diseased', NORMAL='normal')
+""":class:`MavisNamespace`: holds controlled vocabulary for allowed disease status
 
 - ``DISEASED``: diseased
 - ``NORMAL``: normal
 """
 
-STRAND = Vocab(POS='+', NEG='-', NS='?')
-""":class:`Vocab`: holds controlled vocabulary for allowed strand values
+STRAND = MavisNamespace(POS='+', NEG='-', NS='?')
+""":class:`MavisNamespace`: holds controlled vocabulary for allowed strand values
 
 - ``POS``: the positive/forward strand
 - ``NEG``: the negative/reverse strand
@@ -110,7 +166,7 @@ STRAND = Vocab(POS='+', NEG='-', NS='?')
 setattr(STRAND, 'expand', lambda x: [STRAND.POS, STRAND.NEG] if x == STRAND.NS else [x])
 setattr(STRAND, 'compare', lambda x, y: True if STRAND.NS in [x, y] else (x == y))
 
-SVTYPE = Vocab(
+SVTYPE = MavisNamespace(
     DEL='deletion',
     TRANS='translocation',
     ITRANS='inverted translocation',
@@ -118,7 +174,7 @@ SVTYPE = Vocab(
     INS='insertion',
     DUP='duplication'
 )
-""":class:`Vocab`: holds controlled vocabulary for acceptable structural variant classifications
+""":class:`MavisNamespace`: holds controlled vocabulary for acceptable structural variant classifications
 
 - ``DEL``: deletion
 - ``TRANS``: translocation
@@ -128,8 +184,8 @@ SVTYPE = Vocab(
 - ``DUP``: duplication
 """
 
-CIGAR = Vocab(M=0, I=1, D=2, N=3, S=4, H=5, P=6, X=8, EQ=7)
-""":class:`Vocab`: Enum-like. For readable cigar values
+CIGAR = MavisNamespace(M=0, I=1, D=2, N=3, S=4, H=5, P=6, X=8, EQ=7)
+""":class:`MavisNamespace`: Enum-like. For readable cigar values
 
 - ``M``: alignment match (can be a sequence match or mismatch)
 - ``I``: insertion to the reference
@@ -147,7 +203,7 @@ note: descriptions are taken from the `samfile documentation <https://samtools.g
 NA_MAPPING_QUALITY = 255
 """:class:`int`: mapping quality value to indicate mapping was not performed/calculated"""
 
-PYSAM_READ_FLAGS = Vocab(
+PYSAM_READ_FLAGS = MavisNamespace(
     REVERSE=16,
     MATE_REVERSE=32,
     UNMAPPED=4,
@@ -166,7 +222,7 @@ PYSAM_READ_FLAGS = Vocab(
     BLAT_PMS='bp'
 )
 
-""":class:`Vocab`: Enum-like. For readable PYSAM flag constants
+""":class:`MavisNamespace`: Enum-like. For readable PYSAM flag constants
 
 - ``MULTIMAP``: template having multiple segments in sequencing
 - ``UNMAPPED``: segment unmapped
@@ -205,12 +261,12 @@ def _match_ambiguous_dna(x, y):
 DNA_ALPHABET = alphabet = Gapped(ambiguous_dna, '-')
 DNA_ALPHABET.match = lambda x, y: _match_ambiguous_dna(x, y)
 
-FLAGS = Vocab(LQ='LOWQUAL')
+FLAGS = MavisNamespace(LQ='LOWQUAL')
 
-READ_PAIR_TYPE = Vocab(RR='RR', LL='LL', RL='RL', LR='LR')
+READ_PAIR_TYPE = MavisNamespace(RR='RR', LL='LL', RL='RL', LR='LR')
 
-CALL_METHOD = Vocab(CONTIG='contig', SPLIT='split reads', FLANK='flanking reads', SPAN='spanning reads')
-""":class:`Vocab`: holds controlled vocabulary for allowed call methods
+CALL_METHOD = MavisNamespace(CONTIG='contig', SPLIT='split reads', FLANK='flanking reads', SPAN='spanning reads')
+""":class:`MavisNamespace`: holds controlled vocabulary for allowed call methods
 
 - ``CONTIG``: a contig was assembled and aligned across the breakpoints
 - ``SPLIT``: the event was called by :term:`split read`
@@ -218,15 +274,15 @@ CALL_METHOD = Vocab(CONTIG='contig', SPLIT='split reads', FLANK='flanking reads'
 - ``SPAN``: the event was called by :term:`spanning read`
 """
 
-GENE_PRODUCT_TYPE = Vocab(SENSE='sense', ANTI_SENSE='anti-sense')
-""":class:`Vocab`: controlled vocabulary for gene products
+GENE_PRODUCT_TYPE = MavisNamespace(SENSE='sense', ANTI_SENSE='anti-sense')
+""":class:`MavisNamespace`: controlled vocabulary for gene products
 
 - ``SENSE``: the gene product is a sense fusion
 - ``ANTI_SENSE``: the gene product is anti-sense
 """
 
-PRIME = Vocab(FIVE=5, THREE=3)
-""":class:`Vocab`: holds controlled vocabulary
+PRIME = MavisNamespace(FIVE=5, THREE=3)
+""":class:`MavisNamespace`: holds controlled vocabulary
 
 - ``FIVE``: five prime
 - ``THREE``: three prime
@@ -239,7 +295,7 @@ STOP_AA = '*'
 """:class:`str`: The amino acid expected to end translation
 """
 
-GIESMA_STAIN = Vocab(
+GIEMSA_STAIN = MavisNamespace(
     GNEG='gneg',
     GPOS50='gpos50',
     GPOS75='gpos75',
@@ -249,13 +305,13 @@ GIESMA_STAIN = Vocab(
     GVAR='gvar',
     STALK='stalk'
 )
-""":class:`Vocab`: holds controlled vocabulary relating to stains of chromosome bands"""
+""":class:`MavisNamespace`: holds controlled vocabulary relating to stains of chromosome bands"""
 
 # content related to tabbed files for input/output
 # ensure that we don't have to change ALL the code when we update column names
 
 
-COLUMNS = Vocab(
+COLUMNS = MavisNamespace(
     library='library',
     cluster_id='cluster_id',
     cluster_size='cluster_size',
@@ -358,7 +414,7 @@ COLUMNS = Vocab(
     cdna_synon='cdna_synon',
     protein_synon='protein_synon'
 )
-""":class:`Vocab`: Column names for i/o files used throughout the pipeline
+""":class:`MavisNamespace`: Column names for i/o files used throughout the pipeline
 
 
 
@@ -414,6 +470,9 @@ COLUMNS = Vocab(
 
     gene_product_type
         :class:`GENE_PRODUCT_TYPE` - Describes if the putative fusion product will be sense or anti-sense
+
+    fusion_cdna_coding_end
+        Position wrt the 5' end of the fusion transcript where coding ends last base of the stop codon
 
     transcript1
         Transcript for the current annotation at the first breakpoint

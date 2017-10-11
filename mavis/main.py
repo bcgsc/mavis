@@ -20,7 +20,7 @@ from .blat import get_blat_version
 from .checker import check_completion
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from .cluster.main import main as cluster_main
-from .config import augment_parser, get_env_variable, LibraryConfig, MavisConfig, write_config
+from .config import augment_parser, get_env_variable, get_metavar, LibraryConfig, MavisConfig, write_config
 from .constants import PIPELINE_STEP, PROTOCOL
 from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
@@ -114,7 +114,7 @@ def main_pipeline(config):
             'read_length': libconf.read_length,
             'stdev_fragment_size': libconf.stdev_fragment_size,
             'median_fragment_size': libconf.median_fragment_size,
-            'stranded_bam': libconf.stranded_bam
+            'strand_specific': libconf.strand_specific
         }
         validation_args.update(config.validation.items())
         validation_args.update({k: v for k, v in libconf.items() if k in validation_args})
@@ -250,32 +250,32 @@ def generate_config(parser, required, optional):
         optional: the argparse optional arguments group
     """
     # the config sub  program is used for writing pipeline configuration files
-    required.add_argument('-w', '--write', help='path to the new configuration file', required=True)
+    required.add_argument('-w', '--write', help='path to the new configuration file', required=True, metavar='FILEPATH')
     optional.add_argument(
         '--library', nargs=5,
-        metavar=('<name>', '(genome|transcriptome)', '<diseased|normal>', '</path/to/bam/file>', '<stranded_bam>'),
+        metavar=('<name>', '(genome|transcriptome)', '<diseased|normal>', '</path/to/bam/file>', '<strand_specific>'),
         action='append', help='configuration for libraries to be analyzed by mavis', default=[])
     optional.add_argument(
         '--input', help='path to an input file or filter for mavis followed by the library names it '
-        'should be used for', nargs='+', action='append', default=[]
+        'should be used for', nargs='+', action='append', default=[], metavar='FILEPATH'
     )
     optional.add_argument(
         '--assign', help='library name followed by path(s) to input file(s) or filter names. This represents the list'
         ' of inputs that should be used for the library', nargs='+', default=[], action='append')
     optional.add_argument(
-        '--best_transcripts_only', default=get_env_variable('best_transcripts_only', True),
+        '--best_transcripts_only', default=get_env_variable('best_transcripts_only', True), metavar=get_metavar(bool),
         type=tab.cast_boolean, help='compute from best transcript models only')
     optional.add_argument(
-        '--genome_bins', default=get_env_variable('genome_bins', 100), type=int,
+        '--genome_bins', default=get_env_variable('genome_bins', 100), type=int, metavar=get_metavar(int),
         help='number of bins/samples to use in calculating the fragment size stats for genomes')
     optional.add_argument(
-        '--transcriptome_bins', default=get_env_variable('transcriptome_bins', 5000), type=int,
+        '--transcriptome_bins', default=get_env_variable('transcriptome_bins', 5000), type=int, metavar=get_metavar(int),
         help='number of genes to use in calculating the fragment size stats for genomes')
     optional.add_argument(
-        '--distribution_fraction', default=get_env_variable('distribution_fraction', 0.97), type=float,
+        '--distribution_fraction', default=get_env_variable('distribution_fraction', 0.97), type=float, metavar=get_metavar(float),
         help='the proportion of the distribution of calculated fragment sizes to use in determining the stdev')
     optional.add_argument(
-        '--verbose', default=get_env_variable('verbose', False), type=tab.cast_boolean,
+        '--verbose', default=get_env_variable('verbose', False), type=tab.cast_boolean, metavar=get_metavar(bool),
         help='verbosely output logging information')
     optional.add_argument(
         '--convert', nargs=4, default=[],
@@ -328,7 +328,7 @@ def generate_config(parser, required, optional):
             raise KeyError('not input was given for the library', lib)
         log('generating the config section for:', lib)
         temp = LibraryConfig.build(
-            library=lib, protocol=protocol, bam_file=bam, inputs=inputs_by_lib[lib], stranded_bam=stranded,
+            library=lib, protocol=protocol, bam_file=bam, inputs=inputs_by_lib[lib], strand_specific=stranded,
             disease_status=diseased, annotations=args.annotations, log=log,
             sample_size=args.genome_bins if protocol == PROTOCOL.GENOME else args.transcriptome_bins,
             distribution_fraction=args.distribution_fraction
@@ -361,22 +361,17 @@ def generate_config(parser, required, optional):
     write_config(args.write, include_defaults=not args.no_defaults, libraries=libs, conversions=convert, log=log)
 
 
-def time_diff(start, end):
-    """
-    >>> time_diff('2017-04-02 15:10:48.607195', '2017-04-03 17:00:32.671809')
-    25.83
-    >>> time_diff('2017-04-03 15:10:48.607195', '2017-04-03 17:00:32.671809')
-    1.83
-    """
-    start_time = datetime.strptime(start, '%Y-%m-%d %H:%M:%S.%f')
-    end_time = datetime.strptime(end, '%Y-%m-%d %H:%M:%S.%f')
-    elapsed_time = end_time - start_time
-    return elapsed_time.seconds / 3600
+def convert_main(inputs, output, file_type, strand_specific=False):
+    bpp_results = []
+    for filename in inputs:
+        bpp_results.extend(convert_tool_output(filename, file_type, strand_specific, log, True))
+    output_filename = 'mavis_{}_converted.tab'.format(file_type)
+    output_tabbed_file(bpp_results, os.path.join(output, output_filename))
 
 
 def main():
     def usage(err=None, detail=False):
-        umsg = '\nusage: {} {{cluster,validate,annotate,pairing,summary,pipeline,config,checker}} [-h] [-v]'.format(PROGNAME)
+        umsg = '\nusage: {} {{{}}} [-h] [-v]'.format(PROGNAME, ','.join(sorted(PIPELINE_STEP.values())))
         helpmenu = """
 required arguments:
 
@@ -426,36 +421,49 @@ use the -h/--help option
         return EXIT_OK
     else:
         required.add_argument('-o', '--output', help='path to the output directory', required=True)
+
         if pstep == PIPELINE_STEP.PIPELINE:
-            required.add_argument('config', help='path to the input pipeline configuration file')
+            required.add_argument('config', help='path to the input pipeline configuration file', metavar='FILEPATH')
+
+        elif pstep == PIPELINE_STEP.CONVERT:
+            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
+            required.add_argument(
+                '--file_type', choices=sorted([t for t in SUPPORTED_TOOL.values() if t != 'mavis']),
+                required=True, help='Indicates the input file type to be parsed')
+            augment_parser(['strand_specific'], optional)
+
         elif pstep == PIPELINE_STEP.CLUSTER:
-            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
-            augment_parser(['library', 'protocol', 'stranded_bam', 'disease_status', 'annotations', 'masking'], required, optional)
+            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
+            augment_parser(['library', 'protocol', 'strand_specific', 'disease_status', 'annotations', 'masking'], required, optional)
             augment_parser(CLUSTER_DEFAULTS.keys(), optional)
+
         elif pstep == PIPELINE_STEP.VALIDATE:
-            required.add_argument('-n', '--input', help='path to the input file', required=True)
+            required.add_argument('-n', '--input', help='path to the input file', required=True, metavar='FILEPATH')
             augment_parser(
                 ['library', 'protocol', 'bam_file', 'read_length', 'stdev_fragment_size', 'median_fragment_size'] +
-                ['stranded_bam', 'annotations', 'reference_genome', 'aligner_reference', 'masking'],
+                ['strand_specific', 'annotations', 'reference_genome', 'aligner_reference', 'masking'],
                 required, optional
             )
             augment_parser(VALIDATION_DEFAULTS.keys(), optional)
+
         elif pstep == PIPELINE_STEP.ANNOTATE:
-            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
+            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
             augment_parser(
                 ['library', 'protocol', 'annotations', 'reference_genome', 'masking', 'max_proximity', 'template_metadata'],
                 required, optional
             )
             augment_parser(list(ANNOTATION_DEFAULTS.keys()) + list(ILLUSTRATION_DEFAULTS.keys()), optional)
+
         elif pstep == PIPELINE_STEP.PAIR:
-            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
+            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
             optional.add_argument(
-                '-f', '--product_sequence_files', nargs='+', help='paths to fasta files with product sequences',
+                '-f', '--product_sequence_files', nargs='+', help='paths to fasta files with product sequences', metavar='FILEPATH',
                 required=False, default=[])
             augment_parser(['annotations'], required, optional)
             augment_parser(['max_proximity'] + list(PAIRING_DEFAULTS.keys()), optional)
+
         elif pstep == PIPELINE_STEP.SUMMARY:
-            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True)
+            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
             augment_parser(
                 ['annotations', 'dgv_annotation', 'flanking_call_distance', 'split_call_distance', 'contig_call_distance', 'spanning_call_distance'],
                 required, optional
@@ -466,6 +474,7 @@ use the -h/--help option
             args = parser.parse_args()
             success_flag = check_completion(args.output)
             return EXIT_OK if success_flag else EXIT_ERROR
+
         else:
             raise NotImplementedError('invalid value for <pipeline step>', pstep)
     args = MavisNamespace(**parser.parse_args().__dict__)
@@ -507,20 +516,22 @@ use the -h/--help option
 
     # load the reference files if they have been given and reset the arguments to hold the original file name and the
     # loaded data
-    if any([
-        pstep == PIPELINE_STEP.CLUSTER and args.uninformative_filter,
-        pstep == PIPELINE_STEP.PIPELINE and config.cluster.uninformative_filter,
-        pstep == PIPELINE_STEP.VALIDATE and args.protocol == PROTOCOL.TRANS,
-        pstep == PIPELINE_STEP.PIPELINE and config.has_transcriptome(),
-        pstep == PIPELINE_STEP.PAIR or pstep == PIPELINE_STEP.ANNOTATE or pstep == PIPELINE_STEP.SUMMARY
-    ]):
-        log('loading:', rargs.annotations)
-        rargs.annotations_filename = rargs.annotations
-        rargs.annotations = load_annotations(rargs.annotations)
-    else:
-        rargs.annotations_filename = rargs.annotations
-        rargs.annotations = None
-
+    try:
+        if any([
+            pstep == PIPELINE_STEP.CLUSTER and args.uninformative_filter,
+            pstep == PIPELINE_STEP.PIPELINE and config.cluster.uninformative_filter,
+            pstep == PIPELINE_STEP.VALIDATE and args.protocol == PROTOCOL.TRANS,
+            pstep == PIPELINE_STEP.PIPELINE and config.has_transcriptome(),
+            pstep == PIPELINE_STEP.PAIR or pstep == PIPELINE_STEP.ANNOTATE or pstep == PIPELINE_STEP.SUMMARY
+        ]):
+            log('loading:', rargs.annotations)
+            rargs.annotations_filename = rargs.annotations
+            rargs.annotations = load_annotations(rargs.annotations)
+        else:
+            rargs.annotations_filename = rargs.annotations
+            rargs.annotations = None
+    except AttributeError:
+        pass
     # reference genome
     try:
         if pstep in [PIPELINE_STEP.VALIDATE, PIPELINE_STEP.ANNOTATE]:
@@ -530,7 +541,7 @@ use the -h/--help option
         else:
             rargs.reference_genome_filename = rargs.reference_genome
             rargs.reference_genome = None
-    except AttributeError as err:
+    except AttributeError:
         pass
 
     # masking file
@@ -579,6 +590,8 @@ use the -h/--help option
         pairing_main(**args)
     elif pstep == PIPELINE_STEP.SUMMARY:
         summary_main(**args)
+    elif pstep == PIPELINE_STEP.CONVERT:
+        convert_main(args.inputs, args.output, args.file_type, args.strand_specific)
     else:  # PIPELINE
         main_pipeline(args)
 

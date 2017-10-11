@@ -6,7 +6,7 @@ import re
 
 from .util import dynamic_label_color, generate_interval_mapping, LabelMapping, split_intervals_into_tracks, Tag
 from ..annotate.variant import FusionTranscript
-from ..constants import CODON_SIZE, GIESMA_STAIN, ORIENT, STRAND
+from ..constants import CODON_SIZE, GIEMSA_STAIN, ORIENT, STRAND
 from ..error import DrawingFitError, NotSpecifiedError
 from ..interval import Interval
 
@@ -652,10 +652,10 @@ def draw_template(config, canvas, template, target_width, labels=None, colors=No
         t = Interval.convert_pos(mapping, band[1])
 
         bgroup = canvas.g(class_='cytoband')
-        f = config.template_band_fill.get(band.data.get('giesma_stain', None), config.template_default_fill)
+        f = config.template_band_fill.get(band.data.get('giemsa_stain', None), config.template_default_fill)
         r = None
         w = t - s + 1
-        if band.data.get('giesma_stain', None) == GIESMA_STAIN.ACEN:
+        if band.data.get('giemsa_stain', None) == GIEMSA_STAIN.ACEN:
             if band.name[0] == 'p':
                 r = canvas.polyline(
                     [(0, 0), (w, config.template_track_height / 2), (0, config.template_track_height)],

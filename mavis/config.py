@@ -43,7 +43,7 @@ class LibraryConfig(MavisNamespace):
 
     def __init__(
         self, library, protocol, disease_status, bam_file, inputs, read_length, median_fragment_size,
-        stdev_fragment_size, stranded_bam, strand_determining_read=2,
+        stdev_fragment_size, strand_specific, strand_determining_read=2,
         **kwargs
     ):
         self.library = library
@@ -52,7 +52,7 @@ class LibraryConfig(MavisNamespace):
         self.read_length = int(read_length)
         self.median_fragment_size = int(median_fragment_size)
         self.stdev_fragment_size = int(stdev_fragment_size)
-        self.stranded_bam = cast(stranded_bam, bool)
+        self.strand_specific = cast(strand_specific, bool)
         self.strand_determining_read = int(strand_determining_read)
         self.disease_status = DISEASE_STATUS.enforce(disease_status)
         try:
@@ -292,16 +292,16 @@ class MavisConfig:
         return MavisConfig(**config_dict)
 
 
-def add_semi_optional_argument(argname, success_parser, failure_parser, help_msg=''):
+def add_semi_optional_argument(argname, success_parser, failure_parser, help_msg='', metavar=None):
     """
     for an argument tries to get the argument default from the environment variable
     """
     env_name = ENV_VAR_PREFIX + argname.upper()
     help_msg += ' The default for this argument is configured by setting the environment variable {}'.format(env_name)
     if os.environ.get(env_name, None):
-        success_parser.add_argument('--{}'.format(argname), required=False, default=os.environ[env_name], help=help_msg)
+        success_parser.add_argument('--{}'.format(argname), required=False, default=os.environ[env_name], help=help_msg, metavar=metavar)
     else:
-        failure_parser.add_argument('--{}'.format(argname), required=True, help=help_msg)
+        failure_parser.add_argument('--{}'.format(argname), required=True, help=help_msg, metavar=metavar)
 
 
 def float_fraction(f):
@@ -314,13 +314,26 @@ def float_fraction(f):
     return f
 
 
+def get_metavar(arg_type):
+    if arg_type in [bool, tab.cast_boolean]:
+        return '{True,False}'
+    elif arg_type in [float_fraction, float]:
+        return 'FLOAT'
+    elif arg_type == int:
+        return 'INT'
+    return None
+
+
 def augment_parser(arguments, parser, semi_opt_parser=None, required=None):
+    """
+    Adds options to the argument parser. Separate function to facilitate the pipeline steps
+    all having a similar look/feel
+    """
     if required is None:
-        if parser.title.startswith('required'):
-            required = True
-        else:
-            required = False
+        required = bool(parser.title.startswith('required'))
+
     for arg in arguments:
+
         if arg == 'help':
             parser.add_argument('-h', '--help', action='help', help='show this help message and exit')
         elif arg == 'version':
@@ -329,105 +342,35 @@ def augment_parser(arguments, parser, semi_opt_parser=None, required=None):
                 help='Outputs the version number')
         elif arg == 'annotations':
             add_semi_optional_argument(
-                arg, semi_opt_parser, parser, 'Path to the reference annotations of genes, transcript, exons, domains, etc.')
+                arg, semi_opt_parser, parser, 'Path to the reference annotations of genes, transcript, exons, domains, etc.', 'FILEPATH')
         elif arg == 'reference_genome':
-            add_semi_optional_argument(arg, semi_opt_parser, parser, 'Path to the human reference genome fasta file.')
+            add_semi_optional_argument(arg, semi_opt_parser, parser, 'Path to the human reference genome fasta file.', 'FILEPATH')
         elif arg == 'template_metadata':
-            add_semi_optional_argument(arg, semi_opt_parser, parser, 'File containing the cytoband template information.')
+            add_semi_optional_argument(arg, semi_opt_parser, parser, 'File containing the cytoband template information.', 'FILEPATH')
         elif arg == 'masking':
-            add_semi_optional_argument(arg, semi_opt_parser, parser)
-        elif arg == 'aligner':
-            parser.add_argument(
-                '--' + arg, default=VALIDATION_DEFAULTS[arg], required=required,
-                choices=SUPPORTED_ALIGNER.values(), help='aligner to use for aligning contigs')
+            add_semi_optional_argument(arg, semi_opt_parser, parser, metavar='FILEPATH')
         elif arg == 'aligner_reference':
             add_semi_optional_argument(
-                arg, semi_opt_parser, parser, 'path to the aligner reference file used for aligning the contig sequences.')
+                arg, semi_opt_parser, parser, 'path to the aligner reference file used for aligning the contig sequences.', 'FILEPATH')
         elif arg == 'dgv_annotation':
             add_semi_optional_argument(
-                arg, semi_opt_parser, parser, 'Path to the dgv reference processed to look like the cytoband file.')
+                arg, semi_opt_parser, parser, 'Path to the dgv reference processed to look like the cytoband file.', 'FILEPATH')
         elif arg == 'config':
-            parser.add_argument('config', 'path to the config file')
-        elif arg == 'stranded_bam':
-            parser.add_argument(
-                '--stranded_bam', required=required, type=tab.cast_boolean,
-                help='indicates that the input bam file is strand specific')
-        elif arg == 'force_overwrite':
-            parser.add_argument(
-                '-f', '--force_overwrite', default=get_env_variable(arg, False), type=tab.cast_boolean,
-                help='set flag to overwrite existing reviewed files')
-        elif arg == 'output_svgs':
-            parser.add_argument(
-                '--output_svgs', default=get_env_variable(arg, True), type=tab.cast_boolean,
-                help='set flag to suppress svg drawings of putative annotations', required=required)
-        elif arg == 'uninformative_filter':
-            parser.add_argument(
-                '--uninformative_filter', default=get_env_variable(arg, CLUSTER_DEFAULTS.uninformative_filter),
-                type=tab.cast_boolean, required=required,
-                help='If flag is False then the clusters will not be filtered based on lack of annotation'
-            )
-        elif arg in CLUSTER_DEFAULTS:
-            value = CLUSTER_DEFAULTS[arg]
-            vtype = type(value) if not isinstance(value, bool) else tab.cast_boolean
-            parser.add_argument(
-                '--{}'.format(arg), default=value, type=vtype, help='see user manual for desc', required=required)
-        elif arg in PAIRING_DEFAULTS:
-            parser.add_argument(
-                '--{}'.format(arg), default=PAIRING_DEFAULTS[arg], type=int, required=required,
-                help='distance allowed between breakpoint calls when pairing breakpoints of this call method')
-        elif arg in VALIDATION_DEFAULTS:
-            value = VALIDATION_DEFAULTS[arg]
-            if arg in [
-                'assembly_min_remap_coverage',
-                'assembly_min_remap_coverage',
-                'assembly_strand_concordance',
-                'blat_min_identity',
-                'contig_aln_min_query_consumption',
-                'min_anchor_match',
-                'assembly_min_uniq'
-            ]:
-                vtype = float_fraction
-            else:
-                vtype = type(value) if not isinstance(value, bool) else tab.cast_boolean
-            parser.add_argument(
-                '--{}'.format(arg), default=value, type=vtype, help='see user manual for desc', required=required)
-        elif arg in ILLUSTRATION_DEFAULTS:
-            value = ILLUSTRATION_DEFAULTS[arg]
-            if arg == 'mask_opacity':
-                vtype = float_fraction
-            else:
-                vtype = type(value) if not isinstance(value, bool) else tab.cast_boolean
-            parser.add_argument(
-                '--{}'.format(arg), default=value, type=vtype, help='see user manual for desc', required=required)
-        elif arg in ANNOTATION_DEFAULTS:
-            value = ANNOTATION_DEFAULTS[arg]
-            if arg == 'min_domain_mapping_match':
-                vtype = float_fraction
-            else:
-                vtype = type(value) if not isinstance(value, bool) else tab.cast_boolean
-            parser.add_argument(
-                '--{}'.format(arg), default=value, type=vtype, help='see user manual for desc', required=required)
-        elif arg in SUMMARY_DEFAULTS:
-            value = SUMMARY_DEFAULTS[arg]
-            vtype = type(value) if not isinstance(value, bool) else tab.cast_boolean
-            parser.add_argument(
-                '--{}'.format(arg), default=value, type=vtype, help='see user manual for desc', required=required)
-        elif arg == 'max_proximity':
-            parser.add_argument(
-                '--{}'.format(arg), default=CLUSTER_DEFAULTS[arg], type=int,
-                help='maximum distance away from an annotation before the uninformative filter is applied or the'
-                'annotation is not considered for a given event', required=required)
+            parser.add_argument('config', 'path to the config file', metavar='FILEPATH')
         elif arg == 'bam_file':
-            parser.add_argument('--bam_file', help='path to the input bam file', required=required)
+            parser.add_argument('--bam_file', help='path to the input bam file', required=required, metavar='FILEPATH')
         elif arg == 'read_length':
             parser.add_argument(
-                '--read_length', type=int, help='the length of the reads in the bam file', required=required)
+                '--read_length', type=int, help='the length of the reads in the bam file',
+                required=required, metavar=get_metavar(int))
         elif arg == 'stdev_fragment_size':
             parser.add_argument(
-                '--stdev_fragment_size', type=int, help='expected standard deviation in insert sizes', required=required)
+                '--stdev_fragment_size', type=int, help='expected standard deviation in insert sizes',
+                required=required, metavar=get_metavar(int))
         elif arg == 'median_fragment_size':
             parser.add_argument(
-                '--median_fragment_size', type=int, help='median inset size for pairs in the bam file', required=required)
+                '--median_fragment_size', type=int, help='median inset size for pairs in the bam file', required=required,
+                metavar=get_metavar(int))
         elif arg == 'library':
             parser.add_argument('--library', help='library name', required=required)
         elif arg == 'protocol':
@@ -436,4 +379,51 @@ def augment_parser(arguments, parser, semi_opt_parser=None, required=None):
             parser.add_argument(
                 '--disease_status', choices=DISEASE_STATUS.values(), help='library disease status', required=required)
         else:
-            raise KeyError('invalid argument', arg)
+            value_type = None
+            help_msg = None
+            default_value = None
+            choices = None
+            if arg == 'aligner':
+                choices = SUPPORTED_ALIGNER.values()
+                help_msg = 'aligner to use for aligning contigs'
+            if arg == 'strand_specific':
+                value_type = tab.cast_boolean
+                help_msg = 'indicates that the input is strand specific'
+            if arg == 'uninformative_filter':
+                help_msg = 'If flag is False then the clusters will not be filtered based on lack of annotation'
+
+            # get default values
+            for nspace in [
+                    CLUSTER_DEFAULTS,
+                    VALIDATION_DEFAULTS,
+                    ANNOTATION_DEFAULTS,
+                    ILLUSTRATION_DEFAULTS,
+                    PAIRING_DEFAULTS,
+                    SUMMARY_DEFAULTS]:
+                if arg in nspace:
+                    default_value = nspace[arg]
+                    value_type = type(default_value) if not isinstance(default_value, bool) else tab.cast_boolean
+                    if not help_msg:
+                        help_msg = 'see user manual for desc'
+                    break
+
+            if arg in [
+                'assembly_min_remap_coverage',
+                'assembly_min_remap_coverage',
+                'assembly_strand_concordance',
+                'blat_min_identity',
+                'contig_aln_min_query_consumption',
+                'min_anchor_match',
+                'assembly_min_uniq',
+                'mask_opacity',
+                'min_domain_mapping_match'
+            ]:
+                value_type = float_fraction
+
+            if help_msg is None:
+                raise KeyError('invalid argument', arg)
+
+            parser.add_argument(
+                '--{}'.format(arg), choices=choices, metavar=get_metavar(value_type),
+                help=help_msg, required=required, default=default_value, type=value_type
+            )

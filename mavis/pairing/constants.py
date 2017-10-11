@@ -1,5 +1,4 @@
-from ..util import MavisNamespace
-from ..constants import CALL_METHOD
+from ..constants import CALL_METHOD, MavisNamespace
 
 
 DEFAULTS = MavisNamespace(
