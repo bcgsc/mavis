@@ -264,6 +264,7 @@ COLUMNS = Vocab(
     product_id='product_id',
     event_type='event_type',
     pairing='pairing',
+    inferred_pairing='inferred_pairing',
     gene1='gene1',
     gene1_direction='gene1_direction',
     gene2='gene2',
@@ -385,8 +386,13 @@ COLUMNS = Vocab(
     event_type
         :class:`SVTYPE` - The classification of the event
 
+    inferred_pairing
+        A semi colon delimited of event identifiers i.e. <annotation_id>_<splicing pattern>_<cds start>_<cds end>
+        which were paired to the current event based on predicted products
+
     pairing
         A semi colon delimited of event identifiers i.e. <annotation_id>_<splicing pattern>_<cds start>_<cds end>
+        which were paired to the current event based on breakpoint positions
 
     gene1
         Gene for the current annotation at the first breakpoint

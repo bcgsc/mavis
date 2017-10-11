@@ -6,7 +6,7 @@ from Bio import SeqIO
 from .constants import DEFAULTS
 from .summary import annotate_dgv, filter_by_annotations, filter_by_call_method, filter_by_evidence, get_pairing_state, group_events
 from ..constants import CALL_METHOD, COLUMNS
-from ..pairing import equivalent_events
+from ..pairing.pairing import equivalent
 from ..pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from ..util import generate_complete_stamp, log, output_tabbed_file, read_inputs
 
@@ -212,12 +212,10 @@ def main(
                 log(c, 'comparisons for lib ', lib, 'for', category)
 
             for bpp1, bpp2 in itertools.product(calls_by_lib[lib][category], calls_by_lib[lib][category]):
-                if bpp1 is not None and equivalent_events(
+                if bpp1 is not None and equivalent(
                     bpp1,
                     bpp2,
-                    distances=distances,
-                    reference_transcripts=reference_transcripts,
-                    product_sequences=product_sequences
+                    distances=distances
                 ):
                     pairings[lib][bpp1.product_id].add(bpp2.product_id)
                     pairings[lib][bpp2.product_id].add(bpp1.product_id)

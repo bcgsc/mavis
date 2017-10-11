@@ -1,4 +1,6 @@
 from ..util import MavisNamespace
+from ..constants import CALL_METHOD
+
 
 DEFAULTS = MavisNamespace(
     flanking_call_distance=0,
@@ -23,3 +25,11 @@ DEFAULTS = MavisNamespace(
     spanning_call_distance:
         the maximum distance allowed between breakpoint pairs (called by spanning reads) in order for them to pair
 """
+
+
+PAIRING_DISTANCES = MavisNamespace(**{
+    CALL_METHOD.FLANK: DEFAULTS.flanking_call_distance,
+    CALL_METHOD.SPAN: DEFAULTS.spanning_call_distance,
+    CALL_METHOD.SPLIT: DEFAULTS.split_call_distance,
+    CALL_METHOD.CONTIG: DEFAULTS.contig_call_distance
+})
