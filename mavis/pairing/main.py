@@ -99,10 +99,10 @@ def main(
     reference_transcripts = dict()
     for genes in annotations.values():
         for gene in genes:
-            for ust in gene.transcripts:
-                if ust.name in reference_transcripts:
-                    raise KeyError('transcript name is not unique', gene, ust)
-                reference_transcripts[ust.name] = ust
+            for unspliced_t in gene.transcripts:
+                if unspliced_t.name in reference_transcripts:
+                    raise KeyError('transcript name is not unique', gene, unspliced_t)
+                reference_transcripts[unspliced_t.name] = unspliced_t
 
     # map the calls by library and ensure there are no name/key conflicts
     calls_by_lib = dict()
