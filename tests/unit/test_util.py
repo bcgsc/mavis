@@ -82,3 +82,7 @@ class TestWeakMavisNamespace(unittest.TestCase):
     def test_error_on_invalid_attr(self):
         with self.assertRaises(AttributeError):
             self.namespace.other
+
+    def test_iterate_keys(self):
+        self.assertEqual(['a', 'b', 'c'], list(self.namespace.keys()))
+        self.assertEqual(['a', 'b', 'c'], [k for k in self.namespace])

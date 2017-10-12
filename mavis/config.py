@@ -15,18 +15,18 @@ from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from .constants import DISEASE_STATUS, PROTOCOL
 from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
+from .submit import OPTIONS
 from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 from .tools import SUPPORTED_TOOL
-from .util import bash_expands, cast, devnull, ENV_VAR_PREFIX, get_env_variable, MavisNamespace, WeakMavisNamespace
+from .util import bash_expands, cast, devnull, ENV_VAR_PREFIX, MavisNamespace, WeakMavisNamespace
 from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 
 
-SCHEDULE_DEFAULTS = WeakMavisNamespace(
-    queue='transabyss.q',
-    validation_memory=16,
-    trans_validation_memory=18,
-    annotation_memory=12,
-    memory=12)
+SCHEDULE_DEFAULTS = WeakMavisNamespace(**OPTIONS.flatten())
+SCHEDULE_DEFAULTS.validation_memory = 16000
+SCHEDULE_DEFAULTS.trans_validation_memory = 18000
+SCHEDULE_DEFAULTS.annotation_memory = 12000
+SCHEDULE_DEFAULTS.scheduler = 'SGE'
 
 
 REFERENCE_DEFAULTS = WeakMavisNamespace(
@@ -46,6 +46,7 @@ class LibraryConfig(MavisNamespace):
         stdev_fragment_size, strand_specific, strand_determining_read=2,
         **kwargs
     ):
+        MavisNamespace.__init__(self)
         self.library = library
         self.protocol = PROTOCOL.enforce(protocol)
         self.bam_file = bam_file
@@ -56,7 +57,7 @@ class LibraryConfig(MavisNamespace):
         self.strand_determining_read = int(strand_determining_read)
         self.disease_status = DISEASE_STATUS.enforce(disease_status)
         try:
-            self.inputs = [f for f in re.split('[;\s]+', inputs) if f]
+            self.inputs = [f for f in re.split(r'[;\s]+', inputs) if f]
         except TypeError:
             self.inputs = inputs
 
@@ -228,7 +229,7 @@ class MavisConfig:
         # set the conversion section
         self.convert = kwargs.pop('convert', {})
         for attr, val in self.convert.items():
-            val = [v for v in re.split('[;\s]+', val) if v]
+            val = [v for v in re.split(r'[;\s]+', val) if v]
             if val[0] == 'convert_tool_output':
                 if len(val) < 3 or val[2] not in SUPPORTED_TOOL:
                     raise UserWarning(
@@ -304,14 +305,14 @@ def add_semi_optional_argument(argname, success_parser, failure_parser, help_msg
         failure_parser.add_argument('--{}'.format(argname), required=True, help=help_msg, metavar=metavar)
 
 
-def float_fraction(f):
+def float_fraction(num):
     try:
-        f = float(f)
+        num = float(num)
     except ValueError:
         raise argparse.ArgumentTypeError('Argument must be a value between 0 and 1')
-    if f < 0 or f > 1:
+    if num < 0 or num > 1:
         raise argparse.ArgumentTypeError('Argument must be a value between 0 and 1')
-    return f
+    return num
 
 
 def get_metavar(arg_type):
