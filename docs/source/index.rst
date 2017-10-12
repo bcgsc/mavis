@@ -10,9 +10,10 @@ MAVIS User Manual
    :maxdepth: -1
 
    about.rst
-   getting_started.rst
+   pipeline.rst
    mavis_input.rst
    reference_inputs.rst
+   configuration.rst
    tools_supported.rst
    faqs.rst
    theory.rst
