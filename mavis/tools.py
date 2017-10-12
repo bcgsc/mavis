@@ -16,7 +16,6 @@ SUPPORTED_TOOL = MavisNamespace(
     MANTA='manta',
     DELLY='delly',
     TA='transabyss',
-    # TODO: later versions will include support for these tools
     PINDEL='pindel',
     CHIMERASCAN='chimerascan',
     MAVIS='mavis',

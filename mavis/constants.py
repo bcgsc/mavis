@@ -295,7 +295,7 @@ STOP_AA = '*'
 """:class:`str`: The amino acid expected to end translation
 """
 
-GIESMA_STAIN = MavisNamespace(
+GIEMSA_STAIN = MavisNamespace(
     GNEG='gneg',
     GPOS50='gpos50',
     GPOS75='gpos75',
