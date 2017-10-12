@@ -2,22 +2,40 @@
 Theory and Models
 --------------------
 
-Structural Variants in this tool are defined as a pair of breakpoints. A breakpoint is a genomic position
-(interval) on some reference/template/chromosome which has a :term:`strand` and :term:`orientation`.
-The orientation describes the portion of the reference that is retained.
+Introduction
+++++++++++++++
 
-.. figure:: _static/example_figure.svg
+In MAVIS structural variants (SVs) are defined by a pair of breakpoints
+
+And a breakpoint is defined by
+
+1. chromosome
+2. base-pair range (start, end). This has a length of 1 for exact calls and more for uncertain/non-specific calls
+3. :term:`orientation`\ . This is Left or Right with respect to the positive/forward strand. This defines which portion of the genome is ‘retained’
+4. :term:`strand`\ . (only applicable to stranded transcriptome libraries)
+
+So then a breakpoint pair is any two intervals on the reference genome which are adjacent in the mutant genome
+
+|
+
+-----------------
+
+|
+
+Evidence
+++++++++++++
+
+There are many ways that single reads or paired-end reads can act as support for an SV call.
+
+.. figure:: _static/read_evidence.svg
     :width: 100%
 
-    Example output from the tool visulaizing an inverted translocation. (c1) The first template, chromosome 1. (cX) The second template
-    chromosome X. (B1) The first breakpoint has a left orientation and retains the five prime portions of the gene, HUGO2. (B2) The
-    second breakpoint also has a left orientation but retains the three prime portion of the gene, HUGO3. (T1) The original transcript
-    for the first gene. (T2) The original transcript for the second gene. (F1) The fusion transcript.
-|
+    In the figure above
+    the red rectangle represents a deletion structural variant. The arrows are types of single or paired-end reads supporting
+    the event: :term:`flanking read pair`\ s (F), :term:`split read`\ s (S), :term:`half-mapped read`\ s (H),
+    and :term:`spanning read`\ s (N).
 
-------
 
-|
 
 .. _theory-types-of-flanking-evidence:
 
@@ -138,8 +156,8 @@ flanking pairs which support an insertion may be compatible flanking evidence fo
 .. figure:: _static/compatible_flanking_pairs.svg
     :width: 100%
 
-    The event depicted above may be called as either a duplication or an insertion (depending on the input call). If 
-    the even were called as a duplication the reads in green would be the flanking supoprt and the reads in blue 
+    The event depicted above may be called as either a duplication or an insertion (depending on the input call). If
+    the even were called as a duplication the reads in green would be the flanking supoprt and the reads in blue
     would be given as compatible flanking support. If the event were called as an insertion the reverse would apply.
 
 
@@ -224,46 +242,6 @@ possible annotations when calculating the evidence window. see
 -----------------
 
 |
-
-.. _theory-classifying-events:
-
-Classifying Events
-.....................
-
-The following decision tree is used in classifying events based on their breakpoints. Only valid combinations have
-been shown. see :py:func:`~mavis.breakpoint.BreakpointPair.classify`
-
-.. figure:: _static/classification_tree.svg
-    :width: 100%
-
-    Classification Decision Tree. The above  diagram details the decsion logic for classifying events based on the
-    orientation, strand and chromosomes or their respective breakpoints
-
-|
-
------------------
-
-|
-
-.. _theory-assembling-contigs:
-
-Assembling Contigs
-......................
-
-During validation, for each breakpoint pair, we attempt to assemble a contig to represent the sequence across
-the breakpoints. This is assembled from the supporting reads (:term:`split read`, :term:`half-mapped read`,
-:term:`flanking read pair`, and :term:`spanning read`) which have already been collected for the given
-event. The sequence from each read and its reverse complement are assembled into contigs using a :term:`DeBruijn graph`.
-For strand specific events, we then attempt to resolve the sequence strand of the contig.
-
-Breakpoints can be called by multiple different :attr:`~mavis.constants.CALL_METHOD`.
-
-|
-
-------
-
-|
-
 .. _theory-calling-breakpoints-by-flanking-evidence:
 
 Calling Breakpoints by Flanking Evidence
@@ -311,10 +289,48 @@ Determining Flanking support
 
 |
 
+.. _theory-classifying-events:
+
+Classifying Events
+++++++++++++++++++++
+
+The following decision tree is used in classifying events based on their breakpoints. Only valid combinations have
+been shown. see :py:func:`~mavis.breakpoint.BreakpointPair.classify`
+
+.. figure:: _static/classification_tree.svg
+    :width: 100%
+
+    Classification Decision Tree. The above  diagram details the decsion logic for classifying events based on the
+    orientation, strand and chromosomes or their respective breakpoints
+
+|
+
+-----------------
+
+|
+
+.. _theory-assembling-contigs:
+
+Assembling Contigs
+++++++++++++++++++++
+
+During validation, for each breakpoint pair, we attempt to assemble a contig to represent the sequence across
+the breakpoints. This is assembled from the supporting reads (:term:`split read`, :term:`half-mapped read`,
+:term:`flanking read pair`, and :term:`spanning read`) which have already been collected for the given
+event. The sequence from each read and its reverse complement are assembled into contigs using a :term:`DeBruijn graph`.
+For strand specific events, we then attempt to resolve the sequence strand of the contig.
+
+|
+
+------
+
+|
+
+
 .. _theory-annotating-events:
 
 Annotating Events
-....................
++++++++++++++++++++
 
 We make the following assumptions when determining the annotations for each event
 
@@ -357,7 +373,7 @@ ORFs and domain sequences can be computed.
 .. _theory-predicting-splicing-patterns:
 
 Predicting Splicing Patterns
-............................
+++++++++++++++++++++++++++++++
 
 After the events have been called and an annotation has been attached, we often want to predict information about the
 putative fusion protein, which may be a product. In some cases, when a fusion transcript disrupts a splice-site, it is
@@ -408,7 +424,7 @@ More complex examples are drawn below. There are five classifications (:class:`~
 .. _theory-pairing-similar-events:
 
 Pairing Similar Events
-.......................
+++++++++++++++++++++++++
 
 After breakpoints have been called and annotated we often need to see if the same event was found in different samples. To do this we will need to compare events between genome and transcriptome libraries. For this, the following model is proposed. To compare events between different protocol (genome vs transcriptome) we use the annotation overlying the genome breakpoint and the splicing model we defined above to predict where we would expect to find the transcriptomic breakpoints. This gives rise to the following basic cases.
 
@@ -435,7 +451,7 @@ After breakpoints have been called and annotated we often need to see if the sam
 
 
 Glossary
-.............
+++++++++++++
 
 
 .. glossary::
@@ -472,18 +488,18 @@ Glossary
         see `UCSC <https://genome.ucsc.edu/FAQ/FAQformat#format1>`_
 
     IGV batch file
-        This is a file format type defined by :term:`IGV` see 
+        This is a file format type defined by :term:`IGV` see
         `running IGV with a batch file <https://software.broadinstitute.org/software/igv/batch>`_
-    
+
     bam
         see `UCSC <https://genome.ucsc.edu/FAQ/FAQformat#format5.1>`_
 
     2bit
         see `UCSC <https://genome.ucsc.edu/FAQ/FAQformat#format7>`_
-    
+
     fasta
         see `UCSC <https://genome.ucsc.edu/FAQ/FAQformat#format18>`_
-    
+
     psl
         see `UCSC <https://genome.ucsc.edu/FAQ/FAQformat#format2>`_
 

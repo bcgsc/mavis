@@ -9,7 +9,8 @@ MAVIS User Manual
 .. toctree::
    :maxdepth: -1
 
-   usermanual.rst
+   about.rst
+   getting_started.rst
    mavis_input.rst
    reference_inputs.rst
    tools_supported.rst

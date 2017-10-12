@@ -1,23 +1,4 @@
 
-.. figure:: _static/acronym.svg
-
-About
----------
-
-|TOOLNAME| is a pipeline to merge and validate input from different structural variant callers into a single report.
-The pipeline consists four of main steps
-
-- :ref:`cluster <mavis-cluster>`
-- :ref:`validate <mavis-validate>`
-- :ref:`annotate <mavis-annotate>`
-- :ref:`pairing <mavis-pairing>`
-
-|
-
---------------
-
-|
-
 Getting started
 --------------------
 
