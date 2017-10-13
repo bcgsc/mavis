@@ -51,7 +51,7 @@ class TestBuildHeader(unittest.TestCase):
     def test_stdout(self):
         script = SubmissionScript('', stdout='thing')
         header = script.build_header()
-        exp = '#$ -o thing'
+        exp = '#$ -o thing/sge-$JOB_NAME-$JOB_ID.log'
         self.assertTrue(exp in header)
 
     def test_import_env(self):

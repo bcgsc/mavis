@@ -5,28 +5,33 @@ from .util import log, WeakMavisNamespace
 
 
 OPTIONS = WeakMavisNamespace(
-    jobname=None,
-    dependency=None,
-    queue=None,
+    jobname='',
+    queue='',
     memory_limit=16000,  # 16 GB
     import_env=True,
-    stdout=None,
+    stdout='',
     time_limit=20 * 60 * 60  # 20 hours
 )
+
+
+def build_dependency_string(command, delim, jobs):
+    if isinstance(jobs, str):
+        return command.format(jobs)
+    return command.format(delim.join([str(j) for j in jobs]))
 
 
 SCHEDULER = MavisNamespace(
     SGE=MavisNamespace(
         shebang='#!/bin/bash',
-        submit='qsub',
+        submit='qsub -terse',
         option_prefix='#$',
         jobname='-N {}'.format,
-        dependency='-Wdepend=afterok:{}'.format,
+        dependency=lambda x: build_dependency_string('-hold_jid {}', ',', x),
         queue='-q {}'.format,
         memory_limit=lambda x: '-l mem_free={0}G,mem_token={0}G,h_vmem={0}G'.format(x // 1000),
         join_output=lambda x: '-j {}'.format('y' if x else 'n'),
         import_env=lambda x: '-V',
-        stdout='-o {}'.format,
+        stdout='-o {}/sge-$JOB_NAME-$JOB_ID.log'.format,
         time_limit=lambda x: '-l h_rt={}'.format(str(timedelta(seconds=x)))
     ),
     SLURM=MavisNamespace(
@@ -36,8 +41,8 @@ SCHEDULER = MavisNamespace(
         jobname='-J {}'.format,
         memory_limit='--mem {}M'.format,
         time_limit=lambda x: '-t {}'.format(str(timedelta(seconds=x))),
-        stdout='-o {}'.format,
-        dependency='--dependency=afterok:{}'.format,
+        stdout='-o {}/slurm-%x-%j.log'.format,
+        dependency=lambda x: build_dependency_string('--dependency=afterok:{}', ':', x),
         import_env=lambda x: '--export=ALL',
         queue='--partition={}'.format
     )
@@ -58,7 +63,7 @@ class SubmissionScript:
         if scheduler not in SCHEDULER:
             raise ValueError('invalid scheduler', scheduler, 'expected', SCHEDULER.keys())
         for option, value in self.options.items():
-            if value is not None and value != OPTIONS[option] and option not in SCHEDULER[self.scheduler]:
+            if value and option not in SCHEDULER[self.scheduler]:
                 raise ValueError('scheduler', scheduler, 'does not support the option', option)
         self.content = content
 
@@ -74,7 +79,7 @@ class SubmissionScript:
         if self.scheduler == 'SGE':
             header.append(config.option_prefix + ' ' + config['join_output'](True))
         for option, value in sorted(self.options.items()):
-            if value is not None and option in config:
+            if value is not None and value != '' and option in config:
                 line = config.option_prefix + ' ' + config[option](value)
                 header.append(line)
         return header
