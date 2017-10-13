@@ -10,6 +10,7 @@ import sys
 import time
 
 import tab
+import uuid
 
 from . import __version__
 from .annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
@@ -20,226 +21,240 @@ from .blat import get_blat_version
 from .checker import check_completion
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from .cluster.main import main as cluster_main
-from .config import augment_parser, get_env_variable, get_metavar, LibraryConfig, MavisConfig, write_config
+from .cluster.main import split_clusters
+from .config import augment_parser, get_metavar, LibraryConfig, MavisConfig, write_config
 from .constants import PIPELINE_STEP, PROTOCOL
 from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from .pairing.main import main as pairing_main
+from .submit import SubmissionScript, SCHEDULER
+from .submit import OPTIONS as SUBMIT_OPTIONS
 from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 from .summary.main import main as summary_main
 from .tools import convert_tool_output, SUPPORTED_TOOL
-from .util import bash_expands, log, log_arguments, MavisNamespace, mkdirp, output_tabbed_file
+from .util import bash_expands, log, log_arguments, MavisNamespace, mkdirp, output_tabbed_file, get_env_variable
 from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 from .validate.main import main as validate_main
 
 
-VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
+VALIDATION_PASS_PATTERN = '*.validation-passed.tab'
+ANNOTATION_PASS_PATTERN = 'annotations.tab'
 PROGNAME = 'mavis'
-JOB_TASK = "$SGE_TASK_ID"
 EXIT_OK = 0
 EXIT_ERROR = 1
 
-QSUB_HEADER = """#!/bin/bash
-#$ -V
-#$ -N {name}
-#$ -q {queue}
-#$ -o {output}
-#$ -l mem_free={memory}G,mem_token={memory}G,h_vmem={memory}G
-#$ -j y"""
+
+def build_validate_command(config, libconf, inputfile, outputdir):
+    """
+    returns the mavis command for running the validate step
+    """
+    args = {
+        'masking': config.reference.masking_filename,
+        'reference_genome': config.reference.reference_genome_filename,
+        'aligner_reference': config.reference.aligner_reference,
+        'annotations': config.reference.annotations_filename,
+        'library': libconf.library,
+        'bam_file': libconf.bam_file,
+        'protocol': libconf.protocol,
+        'read_length': libconf.read_length,
+        'stdev_fragment_size': libconf.stdev_fragment_size,
+        'median_fragment_size': libconf.median_fragment_size,
+        'strand_specific': libconf.strand_specific
+    }
+    args.update(config.validation.items())
+    args.update({k: v for k, v in libconf.items() if k in args})
+
+    command = ['{} {}'.format(PROGNAME, PIPELINE_STEP.VALIDATE)]
+    for argname, value in args.items():
+        if isinstance(value, str):
+            command.append('--{} "{}"'.format(argname, value))
+        else:
+            command.append('--{} {}'.format(argname, value))
+    command.append('--input {}'.format(inputfile))
+    command.append('--output {}'.format(outputdir))
+    return ' \\\n\t'.join(command) + '\n'
+
+
+def build_annotate_command(config, libconf, inputfile, outputdir):
+    """
+    returns the mavis command for running the annotate step
+    """
+    args = {
+        'reference_genome': config.reference.reference_genome_filename,
+        'annotations': config.reference.annotations_filename,
+        'template_metadata': config.reference.template_metadata_filename,
+        'masking': config.reference.masking_filename,
+        'min_orf_size': config.annotation.min_orf_size,
+        'max_orf_cap': config.annotation.max_orf_cap,
+        'library': libconf.library,
+        'protocol': libconf.protocol,
+        'min_domain_mapping_match': config.annotation.min_domain_mapping_match,
+        'domain_name_regex_filter': config.illustrate.domain_name_regex_filter,
+        'max_proximity': config.cluster.max_proximity
+    }
+    args.update({k: v for k, v in libconf.items() if k in args})
+    command = ['{} {}'.format(PROGNAME, PIPELINE_STEP.ANNOTATE)]
+    for argname, value in args.items():
+        if isinstance(value, str):
+            command.append('--{} "{}"'.format(argname, value))
+        else:
+            command.append('--{} {}'.format(argname, value))
+    command.append('--inputs {}'.format(inputfile))
+    command.append('--output {}'.format(outputdir))
+    return ' \\\n\t'.join(command) + '\n'
+
+
+def run_conversion(config, libconf, conversion_dir):
+    """
+    Converts files if not already converted. Returns a list of filenames
+    """
+    inputs = []
+    # run the conversions
+    for input_file in libconf.inputs:
+        output_filename = os.path.join(conversion_dir, input_file + '.tab')
+        if input_file in config.convert:
+            if not os.path.exists(output_filename):
+                command = config.convert[input_file]
+                if command[0] == 'convert_tool_output':
+                    log('converting input command:', command)
+                    output_tabbed_file(convert_tool_output(*command[1:], log=log), output_filename)
+                else:
+                    command = ' '.join(command) + ' -o {}'.format(output_filename)
+                    log('converting input command:')
+                    log('>>>', command, time_stamp=False)
+                    subprocess.check_output(command, shell=True)
+            inputs.append(output_filename)
+        else:
+            inputs.append(input_file)
+    return inputs
 
 
 def main_pipeline(config):
     # read the config
     # set up the directory structure and run mavis
-    annotation_jobs = []
-    rand = int(random.random() * math.pow(10, 10))
+    batch_id = 'batch-' + str(uuid.uuid4())
     conversion_dir = mkdirp(os.path.join(config.output, 'converted_inputs'))
     pairing_inputs = []
+    submission_scripts = []
+
+    def get_prefix(filename):
+        return re.sub(r'\.[^\.]+$', '', os.path.basename(filename))
+
+    job_name_by_output = {}
+
     for libconf in config.libraries.values():
         base = os.path.join(config.output, '{}_{}_{}'.format(libconf.library, libconf.disease_status, libconf.protocol))
         log('setting up the directory structure for', libconf.library, 'as', base)
-        cluster_output = mkdirp(os.path.join(base, PIPELINE_STEP.CLUSTER))
-        validation_output = mkdirp(os.path.join(base, PIPELINE_STEP.VALIDATE))
-        annotation_output = mkdirp(os.path.join(base, PIPELINE_STEP.ANNOTATE))
-        inputs = []
-        # run the conversions
-        for input_file in libconf.inputs:
-            output_filename = os.path.join(conversion_dir, input_file + '.tab')
-            if input_file in config.convert:
-                if not os.path.exists(output_filename):
-                    command = config.convert[input_file]
-                    if command[0] == 'convert_tool_output':
-                        log('converting input command:', command)
-                        output_tabbed_file(convert_tool_output(*command[1:], log=log), output_filename)
-                    else:
-                        command = ' '.join(command) + ' -o {}'.format(output_filename)
-                        log('converting input command:')
-                        log('>>>', command, time_stamp=False)
-                        subprocess.check_output(command, shell=True)
-                inputs.append(output_filename)
-            else:
-                inputs.append(input_file)
-        libconf.inputs = inputs
-        # run the merge
-        log('clustering')
-        merge_args = {}
+        libconf.inputs = run_conversion(config, libconf, conversion_dir)
+
+        # run the cluster stage
+        cluster_output = mkdirp(os.path.join(base, PIPELINE_STEP.CLUSTER))  # creates the output dir
+        merge_args = {'batch_id': batch_id, 'output': cluster_output}
+        merge_args['split_only'] = PIPELINE_STEP.CLUSTER in config.skip_stage
         merge_args.update(config.reference.items())
         merge_args.update(config.cluster.items())
         merge_args.update(libconf.items())
-        merge_args['output'] = cluster_output
-        output_files = cluster_main(log_args=True, **merge_args)
-        job_task = '1' if len(output_files) == 1 else JOB_TASK
-        if not output_files:
-            log('warning: no inputs after clustering. Will not set up other pipeline steps')
-            continue
-        merge_file_prefix = None
-        for filename in output_files:
-            m = re.match(r'^(?P<prefix>.*\D)\d+.tab$', filename)
-            if not m:
-                raise UserWarning('cluster file did not match expected format', filename)
-            if merge_file_prefix is None:
-                merge_file_prefix = m.group('prefix')
-            elif merge_file_prefix != m.group('prefix'):
-                raise UserWarning('merge file prefixes are not consistent', output_files)
+        log('clustering', '(split only)' if merge_args['split_only'] else '')
+        inputs = cluster_main(log_args=True, **merge_args)
 
-        # now set up the qsub script for the validation and the held job for the annotation
-        validation_args = {
-            'masking': config.reference.masking_filename,
-            'reference_genome': config.reference.reference_genome_filename,
-            'aligner_reference': config.reference.aligner_reference,
-            'annotations': config.reference.annotations_filename,
-            'library': libconf.library,
-            'bam_file': libconf.bam_file,
-            'protocol': libconf.protocol,
-            'read_length': libconf.read_length,
-            'stdev_fragment_size': libconf.stdev_fragment_size,
-            'median_fragment_size': libconf.median_fragment_size,
-            'strand_specific': libconf.strand_specific
-        }
-        validation_args.update(config.validation.items())
-        validation_args.update({k: v for k, v in libconf.items() if k in validation_args})
+        for inputfile in inputs:
+            prefix = get_prefix(inputfile)  # will be batch id + job number
 
-        qsub = os.path.join(validation_output, 'qsub.sh')
-        validation_jobname = '{}_{}_{}_{}'.format(PIPELINE_STEP.VALIDATE, libconf.library, libconf.protocol, rand)
+            if PIPELINE_STEP.VALIDATE not in config.skip_stage:
+                outputdir = mkdirp(os.path.join(base, PIPELINE_STEP.VALIDATE, prefix))
+                command = build_validate_command(config, libconf, inputfile, outputdir)
+                # build the submission script
+                options = {k: config.schedule[k] for k in SUBMIT_OPTIONS}
+                options['stdout'] = outputdir
+                options['jobname'] = 'MV_{}_{}'.format(libconf.library, prefix)
 
-        with open(qsub, 'w') as fh:
-            log('writing:', qsub)
-            fh.write(
-                QSUB_HEADER.format(
-                    queue=config.schedule.queue,
-                    memory=config.schedule.trans_validation_memory if libconf.is_trans() else config.schedule.validation_memory,
-                    name=validation_jobname,
-                    output=validation_output
-                ) + '\n')
-            if job_task != '1':
-                fh.write('#$ -t {}-{}\n'.format(1, len(output_files)))
-            temp = [
-                '--{} {}'.format(k, v) for k, v in validation_args.items() if not isinstance(v, str) and v is not None]
-            temp.extend(
-                ['--{} "{}"'.format(k, v) for k, v in validation_args.items() if isinstance(v, str) and v is not None])
-            validation_args = temp
-            validation_args.append('-n {}{}.tab'.format(merge_file_prefix, job_task))
-            fh.write('{} {} {}'.format(PROGNAME, PIPELINE_STEP.VALIDATE, ' \\\n\t'.join(validation_args)))
-            fh.write(
-                ' \\\n\t--output {}\n'.format(
-                    os.path.join(validation_output, os.path.basename(merge_file_prefix) + job_task)))
+                if libconf.is_trans():
+                    options['memory_limit'] = config.schedule.trans_validation_memory
+                else:
+                    options['memory_limit'] = config.schedule.validation_memory
+                script = SubmissionScript(command, config.schedule.scheduler, **options)
+                submission_scripts.append(script.write(os.path.join(outputdir, 'submit.sh')))
 
-        # set up the annotations job
-        # for all files with the right suffix
-        annotation_args = {
-            'reference_genome': config.reference.reference_genome_filename,
-            'annotations': config.reference.annotations_filename,
-            'template_metadata': config.reference.template_metadata_filename,
-            'masking': config.reference.masking_filename,
-            'min_orf_size': config.annotation.min_orf_size,
-            'max_orf_cap': config.annotation.max_orf_cap,
-            'library': libconf.library,
-            'protocol': libconf.protocol,
-            'min_domain_mapping_match': config.annotation.min_domain_mapping_match,
-            'domain_name_regex_filter': config.illustrate.domain_name_regex_filter,
-            'max_proximity': config.cluster.max_proximity
-        }
-        annotation_args.update({k: v for k, v in libconf.items() if k in annotation_args})
-        temp = [
-            '--{} {}'.format(k, v) for k, v in annotation_args.items() if not isinstance(v, str) and v is not None]
-        temp.extend(
-            ['--{} "{}"'.format(k, v) for k, v in annotation_args.items() if isinstance(v, str) and v is not None])
-        annotation_args = temp
-        annotation_args.append('--inputs {}/{}{}/*{}'.format(
-            validation_output, os.path.basename(merge_file_prefix), job_task, VALIDATION_PASS_SUFFIX))
-        qsub = os.path.join(annotation_output, 'qsub.sh')
-        annotation_jobname = '{}_{}_{}_{}'.format(PIPELINE_STEP.ANNOTATE, libconf.library, libconf.protocol, rand)
-        annotation_jobs.append(annotation_jobname)
-        with open(qsub, 'w') as fh:
-            log('writing:', qsub)
-            fh.write(
-                QSUB_HEADER.format(
-                    queue=config.schedule.queue,
-                    memory=libconf.get('annotation_memory', config.schedule.annotation_memory),
-                    name=annotation_jobname,
-                    output=annotation_output
-                ) + '\n')
-            if job_task != '1':
-                fh.write('#$ -t {}-{}\n'.format(1, len(output_files)))
-            fh.write('#$ -hold_jid {}\n'.format(validation_jobname))
-            fh.write('{} {} {}'.format(PROGNAME, PIPELINE_STEP.ANNOTATE, ' \\\n\t'.join(annotation_args)))
-            fh.write(
-                ' \\\n\t--output {}\n'.format(
-                    os.path.join(annotation_output, os.path.basename(merge_file_prefix) + job_task)))
-            for sge_task_id in range(1, len(output_files) + 1):
-                pairing_inputs.append(os.path.join(
-                    annotation_output, os.path.basename(merge_file_prefix) + str(sge_task_id), 'annotations.tab'))
+                # for setting up subsequent jobs and holds
+                outputfile = os.path.join(outputdir, VALIDATION_PASS_PATTERN)
+                job_name_by_output[outputfile] = options['jobname']
+                inputfile = outputfile
+
+            # annotation cannot be skipped
+            outputdir = mkdirp(os.path.join(base, PIPELINE_STEP.ANNOTATE, prefix))
+            command = build_annotate_command(config, libconf, inputfile, outputdir)
+
+            options = {k: config.schedule[k] for k in SUBMIT_OPTIONS}
+            options['stdout'] = outputdir
+            options['jobname'] = 'MA_{}_{}'.format(libconf.library, prefix)
+            options['memory_limit'] = config.schedule.annotation_memory
+            if inputfile in job_name_by_output:
+                options['dependency'] = job_name_by_output[inputfile]
+            script = SubmissionScript(command, config.schedule.scheduler, **options)
+            submission_scripts.append(script.write(os.path.join(outputdir, 'submit.sh')))
+
+            outputfile = os.path.join(outputdir, ANNOTATION_PASS_PATTERN)
+            pairing_inputs.append(outputfile)
+            job_name_by_output[outputfile] = options['jobname']
 
     # set up scripts for the pairing held on all of the annotation jobs
-    pairing_output = mkdirp(os.path.join(config.output, PIPELINE_STEP.PAIR))
-    pairing_args = config.pairing.flatten()
-    pairing_args.update({
-        'output': pairing_output,
+    outputdir = mkdirp(os.path.join(config.output, PIPELINE_STEP.PAIR))
+    args = config.pairing.flatten()
+    args.update({
+        'output': outputdir,
         'annotations': config.reference.annotations_filename
     })
-    temp = ['--{} {}'.format(k, v) for k, v in pairing_args.items() if not isinstance(v, str) and v is not None]
-    temp.extend(['--{} "{}"'.format(k, v) for k, v in pairing_args.items() if isinstance(v, str) and v is not None])
-    temp.append('--inputs {}'.format(' \\\n\t'.join(pairing_inputs)))
-    pairing_args = temp
-    qsub = os.path.join(pairing_output, 'qsub.sh')
-    pairing_jobname = 'mavis_{}_{}'.format(PIPELINE_STEP.PAIR, rand)
-    with open(qsub, 'w') as fh:
-        log('writing:', qsub)
-        fh.write(
-            QSUB_HEADER.format(
-                queue=config.schedule.queue, memory=config.schedule.memory, name=pairing_jobname, output=pairing_output
-            ) + '\n')
-        fh.write('#$ -hold_jid {}\n'.format(','.join(annotation_jobs)))
-        fh.write('{} {} {}\n'.format(PROGNAME, PIPELINE_STEP.PAIR, ' \\\n\t'.join(pairing_args)))
+    command = ['{} {}'.format(PROGNAME, PIPELINE_STEP.PAIR)]
+    for arg, value in sorted(args.items()):
+        if isinstance(value, str):
+            command.append('--{} "{}"'.format(arg, value))
+        else:
+            command.append('--{} {}'.format(arg, value))
+    command.append('--inputs {}'.format(' \\\n\t'.join(pairing_inputs)))
+    command = ' \\\n\t'.join(command)
+
+    options = {k: config.schedule[k] for k in SUBMIT_OPTIONS}
+    options['stdout'] = outputdir
+    options['jobname'] = 'MP_{}'.format(batch_id)
+    options['dependency'] = ','.join(job_name_by_output[o] for o in pairing_inputs)
+    script = SubmissionScript(command, config.schedule.scheduler, **options)
+    submission_scripts.append(script.write(os.path.join(outputdir, 'submit.sh')))
 
     # set up scripts for the summary held on the pairing job
-    summary_output = mkdirp(os.path.join(config.output, PIPELINE_STEP.SUMMARY))
-    summary_args = dict(
-        output=summary_output,
+    pairing_jobname = script.jobname
+    outputdir = mkdirp(os.path.join(config.output, PIPELINE_STEP.SUMMARY))
+    args = dict(
+        output=outputdir,
         flanking_call_distance=config.pairing.flanking_call_distance,
         split_call_distance=config.pairing.split_call_distance,
         contig_call_distance=config.pairing.contig_call_distance,
         spanning_call_distance=config.pairing.spanning_call_distance,
         dgv_annotation=config.reference.dgv_annotation_filename,
-        annotations=config.reference.annotations_filename
+        annotations=config.reference.annotations_filename,
+        inputs=os.path.join(config.output, 'pairing/mavis_paired*.tab')
     )
-    summary_args.update(config.summary.items())
-    temp = ['--{} {}'.format(k, v) for k, v in summary_args.items() if not isinstance(v, str) and v is not None]
-    temp.extend(['--{} "{}"'.format(k, v) for k, v in summary_args.items() if isinstance(v, str) and v is not None])
-    temp.append('--inputs {}'.format(os.path.join(config.output, 'pairing/mavis_paired*.tab')))
-    summary_args = temp
-    qsub = os.path.join(summary_output, 'qsub.sh')
-    with open(qsub, 'w') as fh:
-        log('writing:', qsub)
-        fh.write(
-            QSUB_HEADER.format(
-                queue=config.schedule.queue,
-                memory=config.schedule.memory,
-                name='mavis_{}'.format(PIPELINE_STEP.SUMMARY),
-                output=summary_output
-            ) + '\n')
-        fh.write('#$ -hold_jid {}\n'.format(pairing_jobname))
-        fh.write('{} {} {}\n'.format(PROGNAME, PIPELINE_STEP.SUMMARY, ' \\\n\t'.join(summary_args)))
+    args.update(config.summary.items())
+    command = ['{} {}'.format(PROGNAME, PIPELINE_STEP.SUMMARY)]
+    for arg, value in sorted(args.items()):
+        if isinstance(value, str):
+            command.append('--{} "{}"'.format(arg, value))
+        else:
+            command.append('--{} {}'.format(arg, value))
+    command = ' \\\n\t'.join(command)
+
+    options = {k: config.schedule[k] for k in SUBMIT_OPTIONS}
+    options['stdout'] = outputdir
+    options['jobname'] = 'MS_{}'.format(batch_id)
+    options['dependency'] = pairing_jobname
+    script = SubmissionScript(command, config.schedule.scheduler, **options)
+    submission_scripts.append(script.write(os.path.join(outputdir, 'submit.sh')))
+
+    # now write a script at the top level to submit all
+    submitall = os.path.join(config.output, 'submit_pipeline_{}.sh'.format(batch_id))
+    log('writing:', submitall)
+    with open(submitall, 'w') as fh:
+        for script in submission_scripts:
+            fh.write('{} {}\n'.format(SCHEDULER[config.schedule.scheduler].submit, script))
 
 
 def generate_config(parser, required, optional):
@@ -424,6 +439,9 @@ use the -h/--help option
 
         if pstep == PIPELINE_STEP.PIPELINE:
             required.add_argument('config', help='path to the input pipeline configuration file', metavar='FILEPATH')
+            optional.add_argument(
+                '--skip_stage', choices=[PIPELINE_STEP.CLUSTER, PIPELINE_STEP.VALIDATE], action='append', default=[],
+                help='Use flag once per stage to skip. Can skip clustering or validation or both')
 
         elif pstep == PIPELINE_STEP.CONVERT:
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
@@ -449,9 +467,10 @@ use the -h/--help option
         elif pstep == PIPELINE_STEP.ANNOTATE:
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
             augment_parser(
-                ['library', 'protocol', 'annotations', 'reference_genome', 'masking', 'max_proximity', 'template_metadata'],
+                ['library', 'protocol', 'annotations', 'reference_genome', 'masking', 'template_metadata'],
                 required, optional
             )
+            augment_parser(['max_proximity'], optional)
             augment_parser(list(ANNOTATION_DEFAULTS.keys()) + list(ILLUSTRATION_DEFAULTS.keys()), optional)
 
         elif pstep == PIPELINE_STEP.PAIR:
@@ -488,6 +507,7 @@ use the -h/--help option
     if pstep == PIPELINE_STEP.PIPELINE:  # load the configuration file
         config = MavisConfig.read(args.config)
         config.output = args.output
+        config.skip_stage = args.skip_stage
         rargs = config.reference
         args = config
 

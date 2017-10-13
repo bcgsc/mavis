@@ -64,6 +64,9 @@ class MavisNamespace(Namespace):
             raise KeyError('input value is not assigned to a key', value)
         return result[0]
 
+    def __iter__(self):
+        return iter(self.keys())
+
 
 COMPLETE_STAMP = 'MAVIS.COMPLETE'
 
