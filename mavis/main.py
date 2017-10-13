@@ -135,7 +135,9 @@ def main_pipeline(config):
     batch_id = 'batch-' + str(uuid.uuid4())
     conversion_dir = mkdirp(os.path.join(config.output, 'converted_inputs'))
     pairing_inputs = []
-    submission_scripts = []
+    submitall = []
+    jobid_var_index = 0
+    config.output = os.path.abspath(config.output)
 
     def get_prefix(filename):
         return re.sub(r'\.[^\.]+$', '', os.path.basename(filename))
@@ -173,8 +175,9 @@ def main_pipeline(config):
                 else:
                     options['memory_limit'] = config.schedule.validation_memory
                 script = SubmissionScript(command, config.schedule.scheduler, **options)
-                submission_scripts.append(script.write(os.path.join(outputdir, 'submit.sh')))
+                scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
 
+                submitall.append('vjob{}=$({} {})'.format(jobid_var_index, SCHEDULER[config.schedule.scheduler].submit, scriptname))
                 # for setting up subsequent jobs and holds
                 outputfile = os.path.join(outputdir, VALIDATION_PASS_PATTERN)
                 job_name_by_output[outputfile] = options['jobname']
@@ -189,13 +192,17 @@ def main_pipeline(config):
             options['jobname'] = 'MA_{}_{}'.format(libconf.library, prefix)
             options['memory_limit'] = config.schedule.annotation_memory
             if inputfile in job_name_by_output:
-                options['dependency'] = job_name_by_output[inputfile]
+                if config.schedule.scheduler == 'SLURM':
+                    options['dependency'] = '$vjob{}'.format(jobid_var_index)
+                else:
+                    options['dependency'] = job_name_by_output[inputfile]
             script = SubmissionScript(command, config.schedule.scheduler, **options)
-            submission_scripts.append(script.write(os.path.join(outputdir, 'submit.sh')))
-
+            scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
+            submitall.append('ajob{}=$({} {})'.format(jobid_var_index, SCHEDULER[config.schedule.scheduler].submit, scriptname))
             outputfile = os.path.join(outputdir, ANNOTATION_PASS_PATTERN)
             pairing_inputs.append(outputfile)
             job_name_by_output[outputfile] = options['jobname']
+            jobid_var_index += 1
 
     # set up scripts for the pairing held on all of the annotation jobs
     outputdir = mkdirp(os.path.join(config.output, PIPELINE_STEP.PAIR))
@@ -216,9 +223,13 @@ def main_pipeline(config):
     options = {k: config.schedule[k] for k in SUBMIT_OPTIONS}
     options['stdout'] = outputdir
     options['jobname'] = 'MP_{}'.format(batch_id)
-    options['dependency'] = ','.join(job_name_by_output[o] for o in pairing_inputs)
+    if config.schedule.scheduler == 'SLURM':
+        options['dependency'] = ':'.join(['$ajob{}'.format(i) for i in range(0, jobid_var_index)])
+    else:
+        options['dependency'] = ','.join(job_name_by_output[o] for o in pairing_inputs)
     script = SubmissionScript(command, config.schedule.scheduler, **options)
-    submission_scripts.append(script.write(os.path.join(outputdir, 'submit.sh')))
+    scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
+    submitall.append('jobid=$({} {})'.format(SCHEDULER[config.schedule.scheduler].submit, scriptname))
 
     # set up scripts for the summary held on the pairing job
     pairing_jobname = script.jobname
@@ -245,16 +256,20 @@ def main_pipeline(config):
     options = {k: config.schedule[k] for k in SUBMIT_OPTIONS}
     options['stdout'] = outputdir
     options['jobname'] = 'MS_{}'.format(batch_id)
-    options['dependency'] = pairing_jobname
+    if config.schedule.scheduler == 'SLURM':
+        options['dependency'] = '$jobid'
+    else:
+        options['dependency'] = pairing_jobname
     script = SubmissionScript(command, config.schedule.scheduler, **options)
-    submission_scripts.append(script.write(os.path.join(outputdir, 'submit.sh')))
+    scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
+    submitall.append('{} {}'.format(SCHEDULER[config.schedule.scheduler].submit, scriptname))
 
     # now write a script at the top level to submit all
-    submitall = os.path.join(config.output, 'submit_pipeline_{}.sh'.format(batch_id))
-    log('writing:', submitall)
-    with open(submitall, 'w') as fh:
-        for script in submission_scripts:
-            fh.write('{} {}\n'.format(SCHEDULER[config.schedule.scheduler].submit, script))
+    submitallfile = os.path.join(config.output, 'submit_pipeline_{}.sh'.format(batch_id))
+    log('writing:', submitallfile)
+    with open(submitallfile, 'w') as fh:
+        for line in submitall:
+            fh.write(line + '\n')
 
 
 def generate_config(parser, required, optional):

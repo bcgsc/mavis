@@ -11,9 +11,7 @@ OPTIONS = WeakMavisNamespace(
     memory_limit=16000,  # 16 GB
     import_env=True,
     stdout=None,
-    stderr=None,
-    time_limit=20 * 60 * 60,  # 20 hours
-    join_output=False
+    time_limit=20 * 60 * 60  # 20 hours
 )
 
 
@@ -28,7 +26,6 @@ SCHEDULER = MavisNamespace(
         memory_limit=lambda x: '-l mem_free={0}G,mem_token={0}G,h_vmem={0}G'.format(x // 1000),
         join_output=lambda x: '-j {}'.format('y' if x else 'n'),
         import_env=lambda x: '-V',
-        stderr='-e {}'.format,
         stdout='-o {}'.format,
         time_limit=lambda x: '-l h_rt={}'.format(str(timedelta(seconds=x)))
     ),
@@ -37,12 +34,12 @@ SCHEDULER = MavisNamespace(
         submit='sbatch',
         option_prefix='#SBATCH',
         jobname='-J {}'.format,
-        memory_limit='--mem {}'.format,
+        memory_limit='--mem {}M'.format,
         time_limit=lambda x: '-t {}'.format(str(timedelta(seconds=x))),
         stdout='-o {}'.format,
-        stderr='-e {}'.format,
         dependency='--dependency=afterok:{}'.format,
-        import_env=lambda x: '--export=ALL'
+        import_env=lambda x: '--export=ALL',
+        queue='--partition={}'.format
     )
 )
 
@@ -53,8 +50,6 @@ class SubmissionScript:
     """
     def __init__(self, content, scheduler='SGE', **kwargs):
         self.options = {k: kwargs.pop(k, OPTIONS[k]) for k in OPTIONS}
-        if not self.options['join_output']:
-            self.options['join_output'] = None
         if not self.options['import_env']:
             self.options['import_env'] = None
         if kwargs:
@@ -65,8 +60,6 @@ class SubmissionScript:
         for option, value in self.options.items():
             if value is not None and value != OPTIONS[option] and option not in SCHEDULER[self.scheduler]:
                 raise ValueError('scheduler', scheduler, 'does not support the option', option)
-        if self.stderr and self.join_output:
-            raise ValueError('stderr cannot be specified since join_output is set')
         self.content = content
 
     def __getattribute__(self, key):
@@ -78,6 +71,8 @@ class SubmissionScript:
         """returns the header line detailing the scheduler-specific submission options"""
         config = SCHEDULER[self.scheduler]
         header = [config.shebang]
+        if self.scheduler == 'SGE':
+            header.append(config.option_prefix + ' ' + config['join_output'](True))
         for option, value in sorted(self.options.items()):
             if value is not None and option in config:
                 line = config.option_prefix + ' ' + config[option](value)

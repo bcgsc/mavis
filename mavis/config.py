@@ -194,7 +194,7 @@ def validate_and_cast_section(section, defaults, use_defaults=False):
         if attr not in defaults:
             raise KeyError('tag not recognized', attr)
         else:
-            d[attr] = cast(value, type(defaults[attr]))
+            d[attr] = cast(value, type(defaults[attr]) if defaults[attr] is not None else str)
     return d
 
 
@@ -231,10 +231,10 @@ class MavisConfig:
         for attr, val in self.convert.items():
             val = [v for v in re.split(r'[;\s]+', val) if v]
             if val[0] == 'convert_tool_output':
-                if len(val) < 3 or val[2] not in SUPPORTED_TOOL:
+                if len(val) < 3 or val[2] not in SUPPORTED_TOOL.values():
                     raise UserWarning(
                         'conversion using the built-in convert_tool_output requires specifying the input file and '
-                        'tool name currently supported tools include:', SUPPORTED_TOOL.values())
+                        'tool name currently supported tools include:', SUPPORTED_TOOL.values(), 'given', val)
                 inputs = bash_expands(val[1])
                 if len(inputs) < 1:
                     raise OSError('input file(s) do not exist', val[1])
