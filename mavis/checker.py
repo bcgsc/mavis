@@ -259,13 +259,15 @@ class LibraryRun:
 
     def report(self):
         result = True
-        collective_job_ids = self.cluster.job_ids | self.validation.job_ids | self.annotation.job_ids
+        collective_job_ids = self.cluster.job_ids | self.annotation.job_ids
+        if self.validation:
+            collective_job_ids.update(self.validation.job_ids)
+            self.validation.job_ids.update(collective_job_ids)
         self.cluster.job_ids.update(collective_job_ids)
-        self.validation.job_ids.update(collective_job_ids)
         self.annotation.job_ids.update(collective_job_ids)
         if not self.cluster or not self.cluster.report(indent_level=1):
             result = False
-        if not self.validation or not self.validation.report(indent_level=1):
+        if self.validation and not self.validation.report(indent_level=1):
             result = False
         if not self.annotation or not self.annotation.report(indent_level=1):
             result = False
@@ -276,12 +278,13 @@ class LibraryRun:
         else:
             self.log_parse_error = True
         for stage in [self.validation, self.annotation]:
-            if stage.max_run_time is not None:
-                self.max_run_time += stage.max_run_time
-                self.total_run_time += stage.total_run_time
-                self.avg_run_time += stage.avg_run_time
-            else:
-                self.log_parse_error = True
+            if stage:
+                if stage.max_run_time is not None:
+                    self.max_run_time += stage.max_run_time
+                    self.total_run_time += stage.total_run_time
+                    self.avg_run_time += stage.avg_run_time
+                else:
+                    self.log_parse_error = True
         return result
 
 

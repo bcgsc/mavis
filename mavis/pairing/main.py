@@ -49,7 +49,6 @@ def main(
         in_={
             COLUMNS.protocol: PROTOCOL.values(),
             COLUMNS.event_type: SVTYPE.values(),
-            COLUMNS.call_method: CALL_METHOD.values(),
             COLUMNS.fusion_splicing_pattern: SPLICE_TYPE.values() + [None, 'None']
         },
         add_default={
@@ -72,6 +71,8 @@ def main(
             product_sequence_files.add(bpp.fusion_sequence_fasta_file)
         if bpp.fusion_sequence_fasta_id:
             product_sequences[bpp.fusion_sequence_fasta_id] = None
+        if COLUMNS.call_method in bpp.data:
+            CALL_METHOD.enforce(bpp.call_method)
         libraries.add(bpp.library)
 
     # load sequences from all files detected
