@@ -10,7 +10,7 @@ OPTIONS = WeakMavisNamespace(
     memory_limit=16000,  # 16 GB
     import_env=True,
     stdout='',
-    time_limit=20 * 60 * 60  # 20 hours
+    time_limit=10 * 60 * 60  # 10 hours
 )
 
 
@@ -55,8 +55,6 @@ class SubmissionScript:
     """
     def __init__(self, content, scheduler='SGE', **kwargs):
         self.options = {k: kwargs.pop(k, OPTIONS[k]) for k in OPTIONS}
-        if not self.options['import_env']:
-            self.options['import_env'] = None
         if kwargs:
             raise TypeError('unexpected argument(s):', list(kwargs.keys()))
         self.scheduler = scheduler
