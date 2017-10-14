@@ -28,7 +28,7 @@ def split_clusters(clusters, outputdir, batch_id, min_clusters_per_file=0, max_f
         write_bed_file(bedfile, itertools.chain.from_iterable([b.get_bed_repesentation() for b in clusters]))
 
     number_of_jobs = len(clusters) // min_clusters_per_file
-    if number_of_jobs >= max_files:
+    if number_of_jobs > max_files:
         number_of_jobs = max_files
     elif number_of_jobs == 0:
         number_of_jobs = 1
