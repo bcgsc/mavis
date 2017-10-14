@@ -22,8 +22,12 @@ Help sub-menus can be found by giving the pipeline step followed by no arguments
     >>> mavis cluster -h
 
 
-Pipeline Use Cases
-.......................
+Running MAVIS using a Job Scheduler
+.........................................
+
+The default setup and main 'pipeline' step of MAVIS is set up to use a job scheduler on a compute cluster. Two schedulers are currently
+supported: `SGE <http://star.mit.edu/cluster/docs/0.93.3/guides/sge.html>`_, and `SLURM <https://slurm.schedmd.com>`_. Using the pipeline step
+will generate submission scripts and a wrapper bash script for the user to execute on their cluster head node.
 
 .. figure:: _static/pipeline_options.svg
     :width: 100%
@@ -58,10 +62,7 @@ This will create submission scripts as follows
     |-- summary/submit.sh
     `-- submit_pipeline_<batchid>.sh
 
-The scripts are meant for submission to an `SGE <http://star.mit.edu/cluster/docs/0.93.3/guides/sge.html>`_
-or `SLURM <https://slurm.schedmd.com>`_ cluster. The summary job is held on the pairing job, the pairing job is held on all the annotation jobs,
-and the annotation jobs are held on their validation jobs. To submit all jobs simply bash the submit pipeline script in the top-level
-directory
+The submit_pipeline_<batchid>.sh is the wrapper script which can be executed on the head node
 
 .. code-block:: bash
 
@@ -93,4 +94,9 @@ Or to skip both clustering and validation, simply call the option twice.
 
     skipping clustering will still produce and output directory and files, but no merging will be done
 
+Configuring Scheduler Settings
++++++++++++++++++++++++++++++++
+
+There are two ways to configure the scheduler settings: using :ref:`environment variables <config-environment>` to adjust the defaults, or 
+specifying them in the 'schedule' section on the pipeline config file. They can also be given as options when generating the config file.
 
