@@ -101,7 +101,8 @@ setup(
         'pyvcf==0.6.8',
         'braceexpand==0.1.2',
         'biopython>=1.70',
-        'Distance>=0.1.3'
+        'Distance>=0.1.3',
+        'setuptools>=36.6.0'
     ],
     python_requires='>=3',
     author_email='creisle@bcgsc.ca',
