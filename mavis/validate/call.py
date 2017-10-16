@@ -45,9 +45,6 @@ class EventCall(BreakpointPair):
             call_method (CALL_METHOD): the way the breakpoints were called
             contig (Contig): the contig used to call the breakpoints (if applicable)
         """
-        if untemplated_seq is None:
-            untemplated_seq = source_evidence.untemplated_seq
-
         BreakpointPair.__init__(
             self, b1, b2,
             stranded=source_evidence.stranded and source_evidence.bam_cache.stranded,
