@@ -2,6 +2,7 @@
 Configuration and Settings
 ---------------------------
 
+.. _pipeline-config:
 
 Pipeline Configuration File
 ...............................

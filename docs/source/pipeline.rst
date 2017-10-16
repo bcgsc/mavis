@@ -10,14 +10,14 @@ by running without any arguments, or by giving the -h/--help option
 
 **Example:**
 
-.. code-block:: bash
+.. code:: bash
 
     >>> mavis -h
 
 
 Help sub-menus can be found by giving the pipeline step followed by no arguments or the -h options
 
-.. code-block:: bash
+.. code:: bash
 
     >>> mavis cluster -h
 
@@ -32,17 +32,17 @@ will generate submission scripts and a wrapper bash script for the user to execu
 .. figure:: _static/pipeline_options.svg
     :width: 100%
 
-    The MAVIS pipeline is highly configurable. Some pipeline steps (cluster, validate) are optional and can be automatically skipped. 
+    The MAVIS pipeline is highly configurable. Some pipeline steps (cluster, validate) are optional and can be automatically skipped.
     The standard pipeline is far-left.
 
 
 Standard
 +++++++++++
 
-The most common use case is auto-generating a configuration file and then running the pipeline setup step.
+The most common use case is :ref:`auto-generating a configuration file <pipeline-config>` and then running the pipeline setup step.
 The pipeline setup step will run clustering and create scripts for running the other steps.
 
-.. code-block:: bash
+.. code:: bash
 
     >>> mavis config .... -w config.cfg
     >>> mavis pipeline config.cfg -o /path/to/top/output_dir
@@ -64,7 +64,7 @@ This will create submission scripts as follows
 
 The submit_pipeline_<batchid>.sh is the wrapper script which can be executed on the head node
 
-.. code-block:: bash
+.. code:: bash
 
     >>> ssh cluster_head_node
     >>> cd /path/to/output_dir
@@ -97,6 +97,28 @@ Or to skip both clustering and validation, simply call the option twice.
 Configuring Scheduler Settings
 +++++++++++++++++++++++++++++++
 
-There are two ways to configure the scheduler settings: using :ref:`environment variables <config-environment>` to adjust the defaults, or 
-specifying them in the 'schedule' section on the pipeline config file. They can also be given as options when generating the config file.
+There are mutiple ways to configure the scheduler settings. Some of the configurable options are listed below
 
+- :term:`queue` ``MAVIS_QUEUE``
+- :term:`memory_limit` ``MAVIS_MEMORY_LIMIT``
+- :term:`time_limit` ``MAVIS_TIME_LIMIT``
+- :term:`import_env` ``MAVIS_IMPORT_ENV``
+
+For example to set the job queue default using an :ref:`environment variable <config-environment>`
+
+.. code:: bash
+
+    export MAVIS_QUEUE=QUEUENAME
+
+Or to give it as an argument during config generation
+
+.. code:: bash
+
+    mavis config -w /path/to/config --queue QUEUENAME
+
+Finally it can also be added to the config file manually
+
+.. code:: text
+
+    [schedule]
+    queue = QUEUENAME

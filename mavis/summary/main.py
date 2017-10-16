@@ -19,7 +19,6 @@ def main(
     filter_min_remapped_reads=DEFAULTS.filter_min_remapped_reads,
     filter_min_spanning_reads=DEFAULTS.filter_min_spanning_reads,
     filter_min_flanking_reads=DEFAULTS.filter_min_flanking_reads,
-    filter_min_flanking_only_reads=DEFAULTS.filter_min_flanking_only_reads,
     filter_min_split_reads=DEFAULTS.filter_min_split_reads,
     filter_min_linking_split_reads=DEFAULTS.filter_min_linking_split_reads,
     flanking_call_distance=PAIRING_DEFAULTS.flanking_call_distance,
@@ -122,11 +121,10 @@ def main(
             temp.append(bpp)
         bpps = temp
 
-    bpps, removed = filter_by_evidence(
+    bpps, _ = filter_by_evidence(
         bpps, filter_min_remapped_reads=filter_min_remapped_reads,
         filter_min_spanning_reads=filter_min_spanning_reads,
         filter_min_flanking_reads=filter_min_flanking_reads,
-        filter_min_flanking_only_reads=filter_min_flanking_only_reads,
         filter_min_split_reads=filter_min_split_reads,
         filter_min_linking_split_reads=filter_min_linking_split_reads)
 

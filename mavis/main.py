@@ -26,7 +26,7 @@ from .constants import PIPELINE_STEP, PROTOCOL
 from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from .pairing.main import main as pairing_main
-from .submit import SubmissionScript, SCHEDULER
+from .submit import SubmissionScript, SCHEDULER, STD_OPTIONS
 from .submit import OPTIONS as SUBMIT_OPTIONS
 from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 from .summary.main import main as summary_main
@@ -165,7 +165,7 @@ def main_pipeline(config):
                 outputdir = mkdirp(os.path.join(base, PIPELINE_STEP.VALIDATE, prefix))
                 command = build_validate_command(config, libconf, inputfile, outputdir)
                 # build the submission script
-                options = {k: config.schedule[k] for k in SUBMIT_OPTIONS}
+                options = {k: config.schedule[k] for k in STD_OPTIONS}
                 options['stdout'] = outputdir
                 options['jobname'] = 'MV_{}_{}'.format(libconf.library, prefix)
 
@@ -186,7 +186,7 @@ def main_pipeline(config):
             outputdir = mkdirp(os.path.join(base, PIPELINE_STEP.ANNOTATE, prefix))
             command = build_annotate_command(config, libconf, inputfile, outputdir)
 
-            options = {k: config.schedule[k] for k in SUBMIT_OPTIONS}
+            options = {k: config.schedule[k] for k in STD_OPTIONS}
             options['stdout'] = outputdir
             options['jobname'] = 'MA_{}_{}'.format(libconf.library, prefix)
             options['memory_limit'] = config.schedule.annotation_memory
@@ -218,7 +218,7 @@ def main_pipeline(config):
     command.append('--inputs {}'.format(' \\\n\t'.join(pairing_inputs)))
     command = ' \\\n\t'.join(command)
 
-    options = {k: config.schedule[k] for k in SUBMIT_OPTIONS}
+    options = {k: config.schedule[k] for k in STD_OPTIONS}
     options['stdout'] = outputdir
     options['jobname'] = 'MP_{}'.format(batch_id)
     script = SubmissionScript(command, config.schedule.scheduler, **options)
@@ -251,7 +251,7 @@ def main_pipeline(config):
             command.append('--{} {}'.format(arg, value))
     command = ' \\\n\t'.join(command)
 
-    options = {k: config.schedule[k] for k in SUBMIT_OPTIONS}
+    options = {k: config.schedule[k] for k in STD_OPTIONS}
     options['stdout'] = outputdir
     options['jobname'] = 'MS_{}'.format(batch_id)
     script = SubmissionScript(command, config.schedule.scheduler, **options)
@@ -387,7 +387,7 @@ use the -h/--help option
             return EXIT_OK if success_flag else EXIT_ERROR
 
         else:
-            raise NotImplementedError('invalid value for <pipeline step>', pstep)
+            return usage('invalid value \'{}\' for pipeline step/stage'.format(pstep), detail=False)
     args = MavisNamespace(**parser.parse_args().__dict__)
     args.samtools_version = get_samtools_version()
     args.blat_version = get_blat_version()

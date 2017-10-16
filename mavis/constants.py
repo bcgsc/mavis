@@ -1,48 +1,60 @@
 """
 module responsible for small utility functions and constants used throughout the structural_variant package
 """
-from argparse import Namespace
+import argparse
 import re
 
 from Bio.Alphabet import Gapped
 from Bio.Alphabet.IUPAC import ambiguous_dna
 from Bio.Data.IUPACData import ambiguous_dna_values
 from Bio.Seq import Seq
+from tab import cast_boolean
 
 
-class MavisNamespace(Namespace):
+class MavisNamespace(argparse.Namespace):
+    """
+    Namespace to hold module constants
+    """
+    reserved_attr = ['_types', '_defns']
+
+    def __init__(self, **kwargs):
+        for k in kwargs:
+            if k in MavisNamespace.reserved_attr:
+                raise AttributeError('reserved attribute {} cannot be used'.format(k))
+        self._defns = {}
+        self._types = {}
+        argparse.Namespace.__init__(self, **kwargs)
+        for attr, value in kwargs.items():
+            self._set_type(attr, type(value))
 
     def items(self):
         return [(k, self[k]) for k in self.keys()]
-
-    def __add__(self, other):
-        d = {}
-        d.update(self.__dict__)
-        d.update(other.__dict__)
-        return MavisNamespace(**d)
-
-    def update(self, other):
-        self.__dict__.update(other.__dict__)
 
     def __getitem__(self, key):
         return getattr(self, key)
 
     def __setitem__(self, key, val):
+        if key in MavisNamespace.reserved_attr:
+            raise AttributeError('reserved attribute {} cannot be used'.format(key))
         self.__dict__[key] = val
 
     def flatten(self):
-        d = {}
-        d.update(self.items())
-        return d
+        items = {}
+        items.update(self.items())
+        return items
 
-    def get(self, key, default):
+    def get(self, key, *pos):
+        if len(pos) > 1:
+            raise TypeError('too many arguments. get takes a single \'default\' value argument')
         try:
             return self[key]
-        except AttributeError:
-            return default
+        except AttributeError as err:
+            if len(pos) == 1:
+                return pos[0]
+            raise err
 
     def keys(self):
-        return self.__dict__.keys()
+        return [k for k in self.__dict__ if k not in MavisNamespace.reserved_attr]
 
     def values(self):
         return [self[k] for k in self.keys()]
@@ -66,6 +78,68 @@ class MavisNamespace(Namespace):
 
     def __iter__(self):
         return iter(self.keys())
+
+    def _set_type(self, attr, cast_type):
+        if cast_type == bool:
+            self._types[attr] = cast_boolean
+        else:
+            self._types[attr] = cast_type
+
+    def type(self, attr):
+        return self._types[attr]
+
+    def define(self, attr, *pos):
+        if len(pos) > 1:
+            raise TypeError('too many arguments. define takes a single \'default\' value argument')
+        try:
+            return self._defns[attr]
+        except KeyError as err:
+            if len(pos) == 1:
+                return pos[0]
+            raise err
+
+    def add(self, attr, *pos, **kwargs):
+        """
+        Add an attribute to the name space. Optionally include cast_type and definition
+        """
+        if len(pos) > 1:
+            raise TypeError('add() takes 3 positional arguments but more were given')
+        elif len(pos) == 1:
+            if 'value' in kwargs:
+                raise TypeError('add() got multiple values for argument \'value\'')
+            kwargs['value'] = pos[0]
+        value = kwargs.pop('value', attr)
+        self[attr] = value
+        if 'cast_type' not in kwargs:
+            self._set_type(attr, type(value))
+        else:
+            self._types[attr] = kwargs.pop('cast_type')
+        if 'defn' in kwargs:
+            self._defns[attr] = kwargs.pop('defn')
+        if kwargs:
+            raise TypeError('invalid arguments: {}'.format(kwargs.keys()))
+
+
+def float_fraction(num):
+    """
+    cast input to a float
+
+    Args:
+        num: input to cast
+
+    Returns:
+        float
+
+    Raises:
+        TypeError: if the input cannot be cast to a float or the number is not between 0 and 1
+    """
+    try:
+        num = float(num)
+    except ValueError:
+        raise argparse.ArgumentTypeError('Must be a value between 0 and 1')
+    if num < 0 or num > 1:
+        raise argparse.ArgumentTypeError('Must be a value between 0 and 1')
+    return num
 
 
 COMPLETE_STAMP = 'MAVIS.COMPLETE'
@@ -256,7 +330,7 @@ def _match_ambiguous_dna(x, y):
     y = y.upper()
     xset = set(ambiguous_dna_values.get(x, x))
     yset = set(ambiguous_dna_values.get(y, y))
-    if len(xset.intersection(yset)) == 0:
+    if not xset.intersection(yset):
         return False
     return True
 

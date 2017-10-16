@@ -18,6 +18,7 @@ MAVIS User Manual
    faqs.rst
    theory.rst
    development.rst
+   glossary.rst
 
 
 Indices and tables

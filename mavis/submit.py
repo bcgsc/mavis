@@ -3,15 +3,17 @@ from datetime import timedelta
 from .constants import MavisNamespace
 from .util import log, WeakMavisNamespace
 
+STD_OPTIONS = ['memory_limit', 'queue', 'time_limit', 'import_env']
 
-OPTIONS = WeakMavisNamespace(
-    jobname='',
-    queue='',
-    memory_limit=16000,  # 16 GB
-    import_env=True,
-    stdout='',
-    time_limit=10 * 60 * 60  # 10 hours
-)
+OPTIONS = WeakMavisNamespace()
+OPTIONS.add('queue', '', cast_type=str, defn='the queue jobs are to be submitted to')
+OPTIONS.add('memory_limit', 16000, defn='the maximum number of megabytes (MB) any given job is allowed')  # 16 GB
+OPTIONS.add('import_env', True, defn='flag to import environment variables')
+OPTIONS.add('time_limit', 10 * 60 * 60, defn='the time in seconds any given jobs is allowed')  # 10 hours
+OPTIONS.add('validation_memory', 16000, defn='default memory limit (MB) for the validation stage')
+OPTIONS.add('trans_validation_memory', 18000, defn='default memory limit (MB) for the validation stage (for transcriptomes)')
+OPTIONS.add('annotation_memory', 12000, defn='default memory limit (MB) for the annotation stage')
+OPTIONS.add('scheduler', 'SLURM', defn='The scheduler being used')
 
 
 def build_dependency_string(command, delim, jobs):
@@ -54,7 +56,7 @@ class SubmissionScript:
     holds scheduler options and build submissions scripts
     """
     def __init__(self, content, scheduler='SGE', **kwargs):
-        self.options = {k: kwargs.pop(k, OPTIONS[k]) for k in OPTIONS}
+        self.options = {k: kwargs.pop(k, OPTIONS.get(k, None)) for k in ['jobname', 'stdout'] + STD_OPTIONS}
         if kwargs:
             raise TypeError('unexpected argument(s):', list(kwargs.keys()))
         self.scheduler = scheduler
