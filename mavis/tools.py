@@ -21,6 +21,16 @@ SUPPORTED_TOOL = MavisNamespace(
     MAVIS='mavis',
     DEFUSE='defuse'
 )
+"""
+Supported Tools used to call SVs and then used as input into MAVIS
+
+- chimerascan [Iyer-2011]_
+- defuse [McPherson-2011]_
+- delly [Rausch-2012]_
+- manta [Chen-2016]_
+- pindel [Ye-2009]_
+- transabyss [Robertson-2010]_
+"""
 
 TOOL_SVTYPE_MAPPING = {v: [v] for v in SVTYPE.values()}
 TOOL_SVTYPE_MAPPING.update({
@@ -46,12 +56,15 @@ TOOL_SVTYPE_MAPPING.update({
 
 
 def convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=False, log=devnull, collapse=True):
+    """
+    Reads output from a given SV caller and converts to a set of MAVIS breakpoint pairs. Also collapses duplicates
+    """
     result = []
     fnames = []
     for name in braceexpand(input_file):
         for subname in glob.glob(name):
             fnames.append(subname)
-    if len(fnames) == 0:
+    if not fnames:
         raise OSError('no such file', input_file)
     for fname in fnames:
         result.extend(_convert_tool_output(fname, file_type, stranded, log))
@@ -83,12 +96,12 @@ def _parse_transabyss(row, is_stranded=False):
             std_row['strand1'], std_row['strand2'] = row['strands'].split(',')
             std_row['strand1'] = STRAND.POS if std_row['strand1'] == STRAND.NEG else STRAND.NEG
             std_row['strand2'] = STRAND.POS if std_row['strand2'] == STRAND.NEG else STRAND.NEG
-        m = re.match(
+        match = re.match(
             r'^(?P<chr1>[^:]+):(?P<pos1_start>\d+)\|(?P<chr2>[^:]+):(?P<pos2_start>\d+)$', row['breakpoint'])
-        if not m:
+        if not match:
             raise OSError(
                 'file format error: the breakpoint column did not satisfy the expected pattern', row)
-        std_row.update({k: m[k] for k in ['chr1', 'pos1_start', 'chr2', 'pos2_start']})
+        std_row.update({k: match[k] for k in ['chr1', 'pos1_start', 'chr2', 'pos2_start']})
     else:
         std_row.update({
             'chr1': row['chr'], 'pos1_start': int(row['chr_start']), 'pos2_start': int(row['chr_end'])
