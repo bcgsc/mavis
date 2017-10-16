@@ -1,9 +1,58 @@
 from ..constants import float_fraction
+from ..align import SUPPORTED_ALIGNER
 from ..util import WeakMavisNamespace
 
 DEFAULTS = WeakMavisNamespace()
+"""
+- :term:`aligner`
+- :term:`assembly_include_flanking_pairs`
+- :term:`assembly_include_half_mapped_reads`
+- :term:`assembly_max_kmer_size`
+- :term:`assembly_max_kmer_strict`
+- :term:`assembly_max_paths`
+- :term:`assembly_min_edge_weight`
+- :term:`assembly_min_exact_match_to_remap`
+- :term:`assembly_min_nc_edge_weight`
+- :term:`assembly_min_remap_coverage`
+- :term:`assembly_min_remapped_seq`
+- :term:`assembly_min_tgt_to_exclude_half_map`
+- :term:`assembly_min_uniq`
+- :term:`assembly_strand_concordance`
+- :term:`blat_limit_top_aln`
+- :term:`blat_min_identity`
+- :term:`call_error`
+- :term:`contig_aln_max_event_size`
+- :term:`contig_aln_merge_inner_anchor`
+- :term:`contig_aln_merge_outer_anchor`
+- :term:`contig_aln_min_anchor_size`
+- :term:`contig_aln_min_query_consumption`
+- :term:`fetch_method_individual`
+- :term:`fetch_min_bin_size`
+- :term:`fetch_reads_bins`
+- :term:`fetch_reads_limit`
+- :term:`filter_secondary_alignments`
+- :term:`fuzzy_mismatch_number`
+- :term:`max_sc_preceeding_anchor`
+- :term:`min_anchor_exact`
+- :term:`min_anchor_fuzzy`
+- :term:`min_anchor_match`
+- :term:`min_double_aligned_to_estimate_insertion_size`
+- :term:`min_flanking_pairs_resolution`
+- :term:`min_linking_split_reads`
+- :term:`min_mapping_quality`
+- :term:`min_non_target_aligned_split_reads`
+- :term:`min_sample_size_to_apply_percentage`
+- :term:`min_softclipping`
+- :term:`min_spanning_reads_resolution`
+- :term:`min_splits_reads_resolution`
+- :term:`outer_window_min_event_size`
+- :term:`sc_extension_stop`
+- :term:`stdev_count_abnormal`
+- :term:`strand_determining_read`
+
+"""
 DEFAULTS.add(
-    'aligner', 'blat',
+    'aligner', SUPPORTED_ALIGNER.BLAT, cast_type=SUPPORTED_ALIGNER,
     defn='the aligner to use to map the contigs/reads back to the reference e.g blat or bwa')
 DEFAULTS.add(
     'assembly_include_flanking_pairs', True,

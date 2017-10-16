@@ -377,7 +377,7 @@ Predicting Splicing Patterns
 
 After the events have been called and an annotation has been attached, we often want to predict information about the
 putative fusion protein, which may be a product. In some cases, when a fusion transcript disrupts a splice-site, it is
-not clear what the processed fusion transcript may be. |TOOLNAME| will calculate all possibilities according to the
+not clear what the processed fusion transcript may be. MAVIS will calculate all possibilities according to the
 following model.
 
 
@@ -443,79 +443,3 @@ After breakpoints have been called and annotated we often need to see if the sam
     splice site prior to the breakpoint is an acceptor and the first acceptor is used. (G) The first splice site prior to the
     breakpoint is an acceptor and the second acceptor is used. (H) The first splice site prior to the breakpoint is a donor
 
-|
-
-------
-
-|
-
-
-Glossary
-++++++++++++
-
-
-.. glossary::
-    :sorted:
-
-    flanking read pair
-        a pair of reads where one read maps to one side of a set of breakpoints and its mate maps to the other
-
-    split read
-        a read which aligns next to a breakpoint and is softclipped at one or more sides
-
-    spanning read
-        applies primarily to small structural variants. Reads which span both breakpoints
-
-    half-mapped read
-        a read whose mate is unaligned. Generally this refers to reads in the evidence stage that are mapped next to a breakpoint.
-
-    breakpoint
-         A breakpoint is a genomic position (interval) on some reference/template/chromosome which has a strand and orientation. The orientation describes the portion of the reference that is retained.
-
-    event
-        used interchangeably with :term:`structural variant`
-
-    event type
-        classification for a structural variant. see :term:`event_type`
-
-    structural variant
-        a genomic alteration that can be described by a pair of breakpoints and an :term:`event type`. The two breakpoints represent regions in the genome that are broken apart and reattached together.
-
-    breakpoint pair
-        :term:`structural variant` which has not been classified/given a type
-
-    bed
-        see `UCSC <https://genome.ucsc.edu/FAQ/FAQformat#format1>`_
-
-    IGV batch file
-        This is a file format type defined by :term:`IGV` see
-        `running IGV with a batch file <https://software.broadinstitute.org/software/igv/batch>`_
-
-    bam
-        see `UCSC <https://genome.ucsc.edu/FAQ/FAQformat#format5.1>`_
-
-    2bit
-        see `UCSC <https://genome.ucsc.edu/FAQ/FAQformat#format7>`_
-
-    fasta
-        see `UCSC <https://genome.ucsc.edu/FAQ/FAQformat#format18>`_
-
-    psl
-        see `UCSC <https://genome.ucsc.edu/FAQ/FAQformat#format2>`_
-
-    pslx
-        extended format of a :term:`psl`
-
-    SVG
-        SVG (Scalable vector graph) is an image format. see `w3 schools <https://www.w3schools.com/graphics/svg_intro.asp>`_
-
-    JSON
-        JSON (JavaScript Object Notation) is a data file format. see `w3 schools <https://www.w3schools.com/js/js_json_intro.asp>`_
-
-    blat
-        Alignment tool. see https://genome.ucsc.edu/FAQ/FAQblat.html
-
-    IGV
-        Visualization tool. see http://software.broadinstitute.org/software/igv/
-
-.. |TOOLNAME| replace:: **MAVIS**

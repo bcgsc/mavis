@@ -3,6 +3,15 @@ from ..util import WeakMavisNamespace
 
 
 DEFAULTS = WeakMavisNamespace()
+"""
+- :term:`filter_cdna_synon`
+- :term:`filter_min_flanking_reads`
+- :term:`filter_min_linking_split_reads`
+- :term:`filter_min_remapped_reads`
+- :term:`filter_min_spanning_reads`
+- :term:`filter_min_split_reads`
+- :term:`filter_protein_synon`
+"""
 DEFAULTS.add('filter_min_remapped_reads', 5, defn='Minimum number of remapped reads for a call by contig')
 DEFAULTS.add('filter_min_spanning_reads', 5, defn='Minimum number of spanning reads for a call by spanning reads')
 DEFAULTS.add('filter_min_flanking_reads', 10, defn='Minimum number of flanking pairs for a call by flanking pairs')

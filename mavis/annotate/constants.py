@@ -5,6 +5,12 @@ from ..util import WeakMavisNamespace
 
 
 DEFAULTS = WeakMavisNamespace()
+"""
+- :term:`annotation_filters`
+- :term:`max_orf_cap`
+- :term:`min_domain_mapping_match`
+- :term:`min_orf_size`
+"""
 DEFAULTS.add(
     'min_domain_mapping_match', 0.9, cast_type=float_fraction,
     defn='a number between 0 and 1 representing the minimum percent match a domain must map to the fusion transcript '
@@ -13,7 +19,7 @@ DEFAULTS.add('min_orf_size', 300, defn='the minimum length (in amino acids) to r
 DEFAULTS.add('max_orf_cap', 3, defn='the maximum number of ORFs to return (best putative ORFs will be retained)')
 DEFAULTS.add(
     'annotation_filters', 'choose_more_annotated,choose_transcripts_by_priority',
-    defn='a semi-colon delimated list of filters to apply to putative annotations'
+    defn='a comma separated list of filters to apply to putative annotations'
 )
 
 

@@ -3,9 +3,29 @@ from datetime import timedelta
 from .constants import MavisNamespace
 from .util import log, WeakMavisNamespace
 
+
+SCHEDULER = MavisNamespace(SGE='SGE', SLURM='SLURM', __name__='~mavis.submit.SCHEDULER')
+""":class:`~mavis.constants.MavisNamespace`: scheduler types
+
+- :term:`SGE`
+- :term:`SLURM`
+"""
+
 STD_OPTIONS = ['memory_limit', 'queue', 'time_limit', 'import_env']
 
-OPTIONS = WeakMavisNamespace()
+OPTIONS = WeakMavisNamespace(__name__='~mavis.submit.options')
+""":class:`~mavis.constants.MavisNamespace`: submission options
+
+- :term:`queue`
+- :term:`memory_limit`
+- :term:`import_env`
+- :term:`time_limit`
+- :term:`validation_memory`
+- :term:`trans_validation_memory`
+- :term:`annotation_memory`
+- :term:`scheduler`
+
+"""
 OPTIONS.add('queue', '', cast_type=str, defn='the queue jobs are to be submitted to')
 OPTIONS.add('memory_limit', 16000, defn='the maximum number of megabytes (MB) any given job is allowed')  # 16 GB
 OPTIONS.add('import_env', True, defn='flag to import environment variables')
@@ -13,7 +33,7 @@ OPTIONS.add('time_limit', 10 * 60 * 60, defn='the time in seconds any given jobs
 OPTIONS.add('validation_memory', 16000, defn='default memory limit (MB) for the validation stage')
 OPTIONS.add('trans_validation_memory', 18000, defn='default memory limit (MB) for the validation stage (for transcriptomes)')
 OPTIONS.add('annotation_memory', 12000, defn='default memory limit (MB) for the annotation stage')
-OPTIONS.add('scheduler', 'SLURM', defn='The scheduler being used')
+OPTIONS.add('scheduler', SCHEDULER.SLURM, defn='The scheduler being used', cast_type=SCHEDULER)
 
 
 def build_dependency_string(command, delim, jobs):
@@ -22,7 +42,7 @@ def build_dependency_string(command, delim, jobs):
     return command.format(delim.join([str(j) for j in jobs]))
 
 
-SCHEDULER = MavisNamespace(
+SCHEDULER_CONF = MavisNamespace(
     SGE=MavisNamespace(
         shebang='#!/bin/bash',
         submit='qsub -terse',
@@ -60,10 +80,10 @@ class SubmissionScript:
         if kwargs:
             raise TypeError('unexpected argument(s):', list(kwargs.keys()))
         self.scheduler = scheduler
-        if scheduler not in SCHEDULER:
-            raise ValueError('invalid scheduler', scheduler, 'expected', SCHEDULER.keys())
+        if scheduler not in SCHEDULER_CONF:
+            raise ValueError('invalid scheduler', scheduler, 'expected', SCHEDULER_CONF.keys())
         for option, value in self.options.items():
-            if value and option not in SCHEDULER[self.scheduler]:
+            if value and option not in SCHEDULER_CONF[self.scheduler]:
                 raise ValueError('scheduler', scheduler, 'does not support the option', option)
         self.content = content
 
@@ -74,7 +94,7 @@ class SubmissionScript:
 
     def build_header(self):
         """returns the header line detailing the scheduler-specific submission options"""
-        config = SCHEDULER[self.scheduler]
+        config = SCHEDULER_CONF[self.scheduler]
         header = [config.shebang]
         if self.scheduler == 'SGE':
             header.append(config.option_prefix + ' ' + config['join_output'](True))
@@ -85,6 +105,9 @@ class SubmissionScript:
         return header
 
     def write(self, filepath):
+        """
+        write a submission script to the input path
+        """
         log('writing:', filepath)
         with open(filepath, 'w') as fh:
             for line in self.build_header():

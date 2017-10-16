@@ -3,6 +3,12 @@ from ..util import WeakMavisNamespace
 
 
 DEFAULTS = WeakMavisNamespace()
+"""
+- :term:`contig_call_distance`
+- :term:`flanking_call_distance`
+- :term:`spanning_call_distance`
+- :term:`split_call_distance`
+"""
 DEFAULTS.add(
     'flanking_call_distance', 0,
     defn='the maximum distance allowed between breakpoint pairs (called by flanking pairs) in order for them to pair')

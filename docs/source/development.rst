@@ -151,7 +151,8 @@ MAVIS Package Documentation
 
 .. toctree::
     :maxdepth: -1
-
+    
+    auto/mavis.align
     mavis.annotate
     auto/mavis.assemble
     mavis.bam

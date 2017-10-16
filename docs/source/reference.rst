@@ -1,18 +1,205 @@
-Reference
-===========
+Reference Input Files
+======================
 
-.. [Abyzov-2011] Abyzov,A. et al. (2011) CNVnator: an approach to discover, genotype, and characterize typical and atypical CNVs from family and population genome sequencing. Genome Res., 21, 974–984.
-.. [Bartenhagen-2013] Bartenhagen,C. and Dugas,M. (2013) RSVSim: an R/Bioconductor package for the simulation of structural variations. Bioinformatics, 29, 1679–1681.
-.. [Chen-2009] Chen,K. et al. (2009) BreakDancer: an algorithm for high-resolution mapping of genomic structural variation. Nat. Methods, 6, 677–681.
-.. [Chen-2016] Chen,X. et al. (2016) Manta: rapid detection of structural variants and indels for germline and cancer sequencing applications. Bioinformatics, 32, 1220–1222.
-.. [Ewing-2015] Ewing,A.D. et al. (2015) Combining tumor genome simulation with crowdsourcing to benchmark somatic single-nucleotide-variant detection. Nat. Methods, 12, 623–630.
-.. [Iyer-2011] Iyer,M.K. et al. (2011) ChimeraScan: a tool for identifying chimeric transcription in sequencing data. Bioinformatics, 27, 2903–2904.
-.. [Lam-2010] Lam,H.Y.K. et al. (2010) Nucleotide-resolution analysis of structural variants using BreakSeq and a breakpoint library. Nat. Biotechnol., 28, 47–55.
-.. [McPherson-2011] McPherson,A. et al. (2011) deFuse: an algorithm for gene fusion discovery in tumor RNA-Seq data. PLoS Comput. Biol., 7, e1001138.
-.. [Mohiyuddin-2015] Mohiyuddin,M. et al. (2015) MetaSV: an accurate and integrative structural-variant caller for next generation sequencing. Bioinformatics, 31, 2741–2744.
-.. [Rausch-2012] Rausch,T. et al. (2012) DELLY: structural variant discovery by integrated paired-end and split-read analysis. Bioinformatics, 28, i333–i339.
-.. [Robertson-2010] Robertson,G. et al. (2010) De novo assembly and analysis of RNA-seq data. Nat. Methods, 7, 909–912.
-.. [Wong-2010] Wong,K. et al. (2010) Enhanced structural variant and breakpoint detection using SVMerge by integration of multiple detection methods and local assembly. Genome Biol., 11, R128.
-.. [Xia-2017] Xia,Y. et al. (2017) SVmine improves structural variation detection by integrative mining of predictions from multiple algorithms. Bioinformatics.
-.. [Ye-2009] Ye,K. et al. (2009) Pindel: a pattern growth approach to detect break points of large deletions and medium sized insertions from paired-end short reads. Bioinformatics, 25, 2865–2871.
-.. [Yoon-2009] Yoon,S. et al. (2009) Sensitive and accurate detection of copy number variants using read depth of coverage. Genome Res., 19, 1586–1592.
+There are several reference files that are required for full functionality of the MAVIS pipeline. If the same
+reference file will be reused often then the user may find it helpful to set reasonable defaults. Default values
+for any of the reference file arguments can be configured through :ref:`environment variables <config-environment>`.
+
++--------------------------------------------------------------+-----------------------------+-----------------------------+
+| file                                                         | file type/format            | environment variable        |
++==============================================================+=============================+=============================+
+| :ref:`reference genome <reference-files-reference-genome>`   | :term:`fasta`               | ``MAVIS_REFERENCE_GENOME``  |
++--------------------------------------------------------------+-----------------------------+-----------------------------+
+| :ref:`annotations <reference-files-annotations>`             | :term:`JSON` or text/tabbed | ``MAVIS_ANNOTATIONS``       |
++--------------------------------------------------------------+-----------------------------+-----------------------------+
+| :ref:`masking <reference-files-masking>`                     | text/tabbed                 | ``MAVIS_MASKING``           |
++--------------------------------------------------------------+-----------------------------+-----------------------------+
+| :ref:`template metadata <reference-files-template-metadata>` | text/tabbed                 | ``MAVIS_TEMPLATE_METADATA`` |
++--------------------------------------------------------------+-----------------------------+-----------------------------+
+| :ref:`DGV annotations <reference-files-dgv-annotations>`     | text/tabbed                 | ``MAVIS_DGV_ANNOTATIONS``   |
++--------------------------------------------------------------+-----------------------------+-----------------------------+
+| :ref:`aligner reference <reference-files-aligner-reference>` | dependant on aligner        | ``MAVIS_ALIGNER_REFERENCE`` |
++--------------------------------------------------------------+-----------------------------+-----------------------------+
+
+
+If the environment variables above are set they will be used as the default values when any step of the pipeline
+script is called (including generating the template config file)
+
+
+.. _reference-files-reference-genome:
+
+Reference Genome
+,,,,,,,,,,,,,,,,,,,,,,,
+
+These are the sequence files in fasta format that are used in aligning and generating the fusion sequences.
+
+**Examples:**
+
+- `UCSC hg19 chromosome fasta sequences <http://hgdownload.cse.ucsc.edu/goldenPath/hg19/chromosomes/>`_
+
+.. _reference-files-template-metadata:
+
+Template Metadata
+,,,,,,,,,,,,,,,,,,,,,,,,
+
+This is the file which contains the band information for the chromosomes. This is only used during visualization.
+
+**Examples:**
+
+- `UCSC hg19 cytoband file <http://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/cytoBand.txt.gz>`_.
+
+.. code-block:: text
+
+    chr1    0       2300000 p36.33  gneg
+    chr1    2300000 5400000 p36.32  gpos25
+    chr1    5400000 7200000 p36.31  gneg
+    chr1    7200000 9200000 p36.23  gpos25
+    chr1    9200000 12700000        p36.22  gneg
+
+.. _reference-files-masking:
+
+Masking File
+,,,,,,,,,,,,,,,,,,,,,,,
+
+File which contains regions that we should ignore calls in. This can be used to filter out
+regions with known false positives, bad mapping, centromeres, telomeres etc. An example is
+shown below
+
+.. code-block:: text
+
+    #chr    start   end     name
+    chr1    0       2300000 centromere
+    chr1    9200000 12700000        telomere
+
+
+.. _reference-files-annotations:
+
+Annotations
+,,,,,,,,,,,,,,,,,,,,,,,
+
+This is a custom file format. Essentially just a tabbed or :term:`JSON` file which contains the gene, transcript, exon,
+translation and protein domain positional information
+
+.. warning::
+
+    the :func:`~mavis.annotate.file_io.load_reference_genes` will
+    only load valid translations. If the cds sequence in the annotation is not
+    a multiple of :attr:`~mavis.constants.CODON_SIZE` or if a
+    reference genome (sequences) is given and the cds start and end are not
+    M and * amino acids as expected the translation is not loaded
+
+Example of the :term:`JSON` file structure can be seen below
+
+.. code-block:: javascript
+
+    [
+        {
+            "name": string,
+            "start": int,
+            "end": int
+            "aliases": [string, string, ...],
+            "transcripts": [
+                {
+                    "name": string,
+                    "start": int,
+                    "end": int,
+                    "exons": [
+                        {"start": int, "end": int, "name": string},
+                        ...
+                    ],
+                    "cdna_coding_start": int,
+                    "cdna_coding_end": int,
+                    "domains": [
+                        {
+                            "name": string,
+                            "regions": [
+                                {"start" aa_start, "end": aa_end}
+                            ],
+                            "desc": string
+                        },
+                        ...
+                    ]
+                },
+                ...
+            ]
+        },
+        ...
+    }
+
+This reference file can be generated from any database with the necessary information.
+
+.. _generate-reference-annotations:
+
+Generating the Annotations from Ensembl
+-----------------------------------------
+
+There is a helper script included with mavis to facilitate generating the custom annotations
+file from an instance of the ensembl database. This uses the Ensembl perl api to connect and
+pull information from the database. This has been tested with both Ensembl69 and Ensembl79.
+
+Instructions for downloading and installing the perl api can be found on the `ensembl site <http://www.ensembl.org/info/docs/api/api_installation.html>`_
+
+1. **Make sure the ensembl perl api modules are added to the PERL5LIB environment variable**
+
+.. code-block:: bash
+
+   PERL5LIB=${PERL5LIB}:$HOME/ensembl_79/bioperl-live
+   PERL5LIB=${PERL5LIB}:$HOME/ensembl_79/ensembl/modules
+   PERL5LIB=${PERL5LIB}:$HOME/ensembl_79/ensembl-compara/modules
+   PERL5LIB=${PERL5LIB}:$HOME/ensembl_79/ensembl-variation/modules
+   PERL5LIB=${PERL5LIB}:$HOME/ensembl_79/ensembl-funcgen/modules
+   export PERL5LIB
+
+2. **Configure the environment variables to set defaults for the perl script**
+
+.. code-block:: bash
+
+   # required data files
+   export HUGO_ENSEMBL_MAPPING=/path/to/mapping/file
+   export BEST_TRANSCRIPTS=/path/to/transcripts/file
+
+   # connection information for the ensembl local (or external) server
+   export ENSEMBL_HOST=HOSTNAME
+   export ENSEMBL_PASS=PASSWORD
+   export ENSEMBL_USER=USERNAME
+   export ENSEMBL_PORT=PORT_NUMBER
+
+3. **Run the perl script**
+
+you can view the help menu by running
+
+.. code-block:: bash
+
+    perl generate_ensembl_json.pl
+
+you can override the default input file parameters (configured in the above step) by providing arguments
+to the script itself
+
+.. code-block:: bash
+
+    perl generate_ensembl_json.pl --best_transcript_file /path/to/best/transcripts/file --output /path/to/output/json/file.json
+
+or if you have configured the environment variables as given in step 2, then simply provide the output path
+
+.. code-block:: bash
+
+    perl generate_ensembl_json.pl --output /path/to/output/json/file.json
+
+
+.. _reference-files-dgv-annotations:
+
+DGV Annotations
+,,,,,,,,,,,,,,,,,,,,,,,
+
+.. todo:: document dgv annotations
+
+
+
+.. _reference-files-aligner-reference:
+
+Aligner Reference
+,,,,,,,,,,,,,,,,,,,,,,,
+
+The aligner reference file is the reference genome file used by the aligner during the validate stage. For example, 
+if :term:`blat` is the aligner then this will be a :term:`2bit` file.
+

@@ -112,7 +112,11 @@ class LibraryConfig(MavisNamespace):
         acceptable.update(ANNOTATION_DEFAULTS.__dict__)
 
         for attr, value in kwargs.items():
-            setattr(self, attr, cast(value, type(acceptable[attr])))
+            for namespace in [CLUSTER_DEFAULTS, VALIDATION_DEFAULTS, ANNOTATION_DEFAULTS]:
+                if attr not in namespace:
+                    continue
+                setattr(self, attr, namespace.type(attr)(value))
+                break
 
         if 'MAVIS_FETCH_METHOD_INDIVIDUAL' not in os.environ and 'fetch_method_individual' not in kwargs:
             if self.protocol == PROTOCOL.TRANS:

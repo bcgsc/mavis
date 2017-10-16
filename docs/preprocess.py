@@ -10,6 +10,7 @@ from mavis.validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 from mavis.annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
 from mavis.cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from mavis.illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
+from mavis.util import ENV_VAR_PREFIX
 
 d = os.path.dirname(os.path.abspath(__file__))
 
@@ -46,11 +47,11 @@ for f in glob.glob(os.path.join(d, 'source/auto/*.rst')):
             else:
                 fh.write(line)
 
-fname = os.path.join(d, 'source', 'glossary.rst')
+fname = os.path.join(d, 'source', 'config_settings_glossary.rst')
 print('writing:', fname)
 with open(fname, 'w') as fh:
-    fh.write('Glossary of Configurable Settings\n')
-    fh.write('-' * 50)
+    fh.write('Configurable Settings\n')
+    fh.write('+' * 50)
     tab = ' ' * 4
     fh.write('\n\n.. glossary::\n{}:sorted:\n\n'.format(tab))
     glossary = {}
@@ -71,11 +72,13 @@ with open(fname, 'w') as fh:
         for term, value in namespace.items():
             typ = namespace.type(term).__name__
             typ = CUSTOM_TYPES.get(typ, typ)
-            glossary[term] = ':class:`{}` - '.format(typ) + namespace.define(term, '')
+            defn = ':class:`{}` - {}. The corresponding environment variable is ``{}{}`` and the default value is ``{}``'.format(
+                typ, re.sub(r'\.?$', '', namespace.define(term, '')).capitalize(), ENV_VAR_PREFIX, term.upper(), repr(value))
+            try:
+                defn += '. Accepted values include: {}'.format(', '.join(['``{}``'.format(repr(v)) for v in namespace.type(term).values()]))
+            except AttributeError:
+                pass
+            glossary[term] = defn
     for term, defn in sorted(glossary.items()):
         fh.write('\n{}{}\n'.format(tab, term))
         fh.write('{}{}{}\n'.format(tab, tab, defn))
-
-
-# copy the README file to the source directory
-# subprocess.check_call('cp {} {}'.format(os.path.join(d, './../README.rst'), os.path.join(d, 'source')), shell=True)

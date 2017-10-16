@@ -26,7 +26,7 @@ Running MAVIS using a Job Scheduler
 .........................................
 
 The default setup and main 'pipeline' step of MAVIS is set up to use a job scheduler on a compute cluster. Two schedulers are currently
-supported: `SGE <http://star.mit.edu/cluster/docs/0.93.3/guides/sge.html>`_, and `SLURM <https://slurm.schedmd.com>`_. Using the pipeline step
+supported: :term:`SLURM` and :term:`SGE`. Using the pipeline step
 will generate submission scripts and a wrapper bash script for the user to execute on their cluster head node.
 
 .. figure:: _static/pipeline_options.svg

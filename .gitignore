@@ -25,4 +25,4 @@ build
 dist
 src
 mavis/version.py
-/docs/source/glossary.rst
+/docs/source/config_settings_glossary.rst

@@ -3,6 +3,26 @@ from ..constants import GIEMSA_STAIN, float_fraction
 from ..util import WeakMavisNamespace
 
 DEFAULTS = WeakMavisNamespace()
+"""
+- :term:`breakpoint_color`
+- :term:`domain_color`
+- :term:`domain_mismatch_color`
+- :term:`domain_name_regex_filter`
+- :term:`domain_scaffold_color`
+- :term:`drawing_width_iter_increase`
+- :term:`gene1_color_selected`
+- :term:`gene1_color`
+- :term:`gene2_color_selected`
+- :term:`gene2_color`
+- :term:`label_color`
+- :term:`mask_fill`
+- :term:`mask_opacity`
+- :term:`max_drawing_retries`
+- :term:`novel_exon_color`
+- :term:`scaffold_color`
+- :term:`splice_color`
+- :term:`width`
+"""
 DEFAULTS.add(
     'width', 1000, defn='The drawing width in pixels')
 DEFAULTS.add(
@@ -12,7 +32,7 @@ DEFAULTS.add(
     'max_drawing_retries', 3,
     defn='The maximum number of retries for attempting a drawing. Each iteration the width is extended. If it '
     'is still insufficient after this number a gene-level only drawing will be output')
-DEFAULTS.add('scaffold_color', '#000000', defn='The color used for the gene/transncripts scaffolds')
+DEFAULTS.add('scaffold_color', '#000000', defn='The color used for the gene/transcripts scaffolds')
 DEFAULTS.add('gene1_color_selected', '#518dc5', defn='The color of the first gene')
 DEFAULTS.add('gene2_color_selected', '#4c9677', defn='The color of the second gene')
 DEFAULTS.add('gene1_color', '#657e91', defn='The color of genes near the first gene')
