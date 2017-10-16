@@ -183,3 +183,6 @@ class TestFilterByAnnotations(unittest.TestCase):
 
     def test_filtering_events_split(self):
         raise unittest.SkipTest('TODO')
+
+    def test_get_pairing_state(self):
+        raise unittest.SkipTest('TODO')

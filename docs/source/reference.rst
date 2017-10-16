@@ -194,7 +194,14 @@ DGV Annotations
 File which contains regions corresonding to what is found in the database of genomic variants. This is
 used to annotate events that are found in healthy control samples and therefore may not be of interest
 if looking for somatic events. This can be downloaded from the `dgv site <http://dgv.tcag.ca/dgv/app/download>`_
-It will need to be reformatted to have 4 columns after download. An example is shown below
+It will need to be reformatted to have 4 columns after download. We used awk to convert the file like so
+
+.. code-block:: bash
+
+    awk '{print $2"\t"$3"\t"$4"\t"$1} GRCh37_hg19_variants_2016-05-15.txt > GRCh37_hg19_variants_2016-05-15.input.txt
+
+Note in hg19 the column is called "name" and in hg38 the column is called "variantaccession".
+An example is shown below
 
 .. code-block:: text
 
