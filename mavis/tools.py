@@ -4,6 +4,7 @@ import re
 import warnings
 
 from braceexpand import braceexpand
+from shortuuid import uuid
 import tab
 import vcf
 
@@ -234,6 +235,8 @@ def _convert_tool_row(row, file_type, stranded):
         std_row['strand1'] = [STRAND.NS]
         std_row['strand2'] = [STRAND.NS]
 
+    if not std_row.get(TRACKING_COLUMN, None):
+        std_row[TRACKING_COLUMN] = '{}-{}'.format(file_type, uuid())
     combinations = list(itertools.product(
         ORIENT.expand(std_row['orient1']), ORIENT.expand(std_row['orient2']),
         std_row['strand1'], std_row['strand2'], TOOL_SVTYPE_MAPPING[std_row['event_type']] if 'event_type' in std_row else [None],

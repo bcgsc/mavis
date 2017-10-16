@@ -2,7 +2,7 @@ import itertools
 import os
 import re
 import subprocess
-import uuid
+from shortuuid import uuid
 
 import pysam
 
@@ -73,7 +73,7 @@ def main(
             COLUMNS.stranded: strand_specific
         },
         expand_ns=False, explicit_strand=False,
-        cast={COLUMNS.cluster_id: lambda x: str(uuid.uuid4()) if not x else x}
+        cast={COLUMNS.cluster_id: lambda x: str(uuid()) if not x else x}
     )
     evidence_clusters = []
     for bpp in bpps:
