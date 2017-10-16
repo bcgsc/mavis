@@ -19,7 +19,7 @@ from .util import devnull
 
 
 SUPPORTED_ALIGNER = MavisNamespace(BWA_MEM='bwa mem', BLAT='blat', __name__='~mavis.align.SUPPORTED_ALIGNER')
-""":class:`~mavis.constants.MavisNamespace`: supported aligners 
+""":class:`~mavis.constants.MavisNamespace`: supported aligners
 
 - :term:`blat`
 - :term:`bwa mem`
