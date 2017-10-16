@@ -397,6 +397,7 @@ GIEMSA_STAIN = MavisNamespace(
 
 
 COLUMNS = MavisNamespace(
+    tracking_id='tracking_id',
     library='library',
     cluster_id='cluster_id',
     cluster_size='cluster_size',
@@ -585,6 +586,7 @@ COLUMNS = MavisNamespace(
 - :term:`spanning_reads`
 - :term:`stranded`
 - :term:`tools`
+- :term:`tracking_id`
 - :term:`transcript1`
 - :term:`transcript2`
 - :term:`untemplated_seq`

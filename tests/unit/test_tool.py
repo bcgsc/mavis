@@ -10,7 +10,7 @@ class TestDelly(unittest.TestCase):
 
     def test_convert_insertion(self):
         row = Mock(
-            CHROM='1', POS=247760043,
+            CHROM='1', POS=247760043, ID='1DEL00000330',
             INFO={'SVTYPE': 'INS', 'CT': 'NtoN', 'END': 247760044, 'CHR2': '1', 'CIEND': [-10, 10], 'CIPOS': [-10, 10]}
         )
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DELLY, False)
@@ -31,7 +31,7 @@ class TestDelly(unittest.TestCase):
 
     def test_convert_convert_translocation(self):
         row = Mock(
-            CHROM='7', POS=21673582,
+            CHROM='7', POS=21673582, ID='TRA00016056',
             INFO={
                 'SVTYPE': 'TRA',
                 'CT': '5to5',
@@ -56,7 +56,7 @@ class TestTransAbyss(unittest.TestCase):
 
     def test_convert_stranded_indel_insertion(self):
         row = {
-            'chr': '1', 'chr_start': '10015', 'chr_end': '10015', 'ctg_strand': '-', 'type': 'ins', 'alt': 'aat'
+            'chr': '1', 'chr_start': '10015', 'chr_end': '10015', 'ctg_strand': '-', 'type': 'ins', 'alt': 'aat', 'id': 1
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.TA, True)
         self.assertEqual(1, len(bpp_list))
@@ -144,7 +144,8 @@ class TestTransAbyss(unittest.TestCase):
             'breakpoint': '17:16342728|17:39766281',
             'orientations': 'L,L',
             'type': 'sense_fusion',
-            '_index': 5261
+            '_index': 5261,
+            'id': 1
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.TA, True)
         self.assertEqual(1, len(bpp_list))
@@ -156,7 +157,8 @@ class TestTransAbyss(unittest.TestCase):
             'breakpoint': '17:16342728|17:39766281',
             'orientations': 'L,L',
             'type': 'sense_fusion',
-            '_index': 5261
+            '_index': 5261,
+            'id': 1
         }
         std = _parse_transabyss(row)
         print(std)
@@ -166,7 +168,42 @@ class TestTransAbyss(unittest.TestCase):
 class TestManta(unittest.TestCase):
 
     def test_convert_deletion(self):
-        raise unittest.SkipTest('TODO')
+        row = Mock(
+            CHROM='21', POS=9412306, ID='MantaDEL:20644:0:2:0:0:0',
+            INFO={
+                'SVTYPE': 'DEL',
+                'END': 9412400,
+                'CIPOS': [0, 4],
+                'CIEND': [0, 4]
+            }
+        )
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.MANTA, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('21', bpp.break1.chr)
+        self.assertEqual(9412306, bpp.break1.start)
+        self.assertEqual(9412310, bpp.break1.end)
+        self.assertEqual(9412400, bpp.break2.start)
+        self.assertEqual(9412404, bpp.break2.end)
+        self.assertEqual('21', bpp.break2.chr)
+        print(bpp, bpp.tracking_id)
+        self.assertEqual('manta-MantaDEL:20644:0:2:0:0:0', bpp.tracking_id)
+
+    def test_convert_duplication(self):
+        row = Mock(
+            CHROM='1', POS=224646602, ID='MantaDUP:TANDEM:22477:0:1:0:9:0',
+            INFO={
+                'SVTYPE': 'DUP',
+                'END': 224800120,
+                'SVINSSEQ': 'CAAAACTTACTATAGCAGTTCTGTGAGCTGCTCTAGC'
+            }
+        )
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.MANTA, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('1', bpp.break1.chr)
+        self.assertEqual('1', bpp.break2.chr)
+        self.assertEqual('manta-MantaDUP:TANDEM:22477:0:1:0:9:0', bpp.tracking_id)
 
 
 class TestDefuse(unittest.TestCase):
@@ -178,7 +215,8 @@ class TestDefuse(unittest.TestCase):
             'genomic_break_pos1': '153063989',
             'genomic_break_pos2': '50294136',
             'genomic_strand1': '+',
-            'genomic_strand2': '-'
+            'genomic_strand2': '-',
+            'cluster_id': 1
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DEFUSE, False)
         self.assertEqual(1, len(bpp_list))
@@ -192,6 +230,7 @@ class TestDefuse(unittest.TestCase):
         self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
         self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
         self.assertEqual(False, bpp.stranded)
+        self.assertEqual('defuse-1', bpp.tracking_id)
 
     def test_convert_translocation(self):
         row = {
@@ -200,7 +239,8 @@ class TestDefuse(unittest.TestCase):
             'genomic_break_pos1': '153063989',
             'genomic_break_pos2': '50294136',
             'genomic_strand1': '+',
-            'genomic_strand2': '+'
+            'genomic_strand2': '+',
+            'cluster_id': 1
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DEFUSE, False)
         self.assertEqual(1, len(bpp_list))
@@ -214,6 +254,7 @@ class TestDefuse(unittest.TestCase):
         self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
         self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
         self.assertEqual(False, bpp.stranded)
+        self.assertEqual('defuse-1', bpp.tracking_id)
 
     def test_convert_indel(self):
         row = {
@@ -222,7 +263,8 @@ class TestDefuse(unittest.TestCase):
             'genomic_break_pos1': '151732089',
             'genomic_break_pos2': '1663681',
             'genomic_strand1': '-',
-            'genomic_strand2': '+'
+            'genomic_strand2': '+',
+            'cluster_id': 1
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DEFUSE, False)
         self.assertEqual(1, len(bpp_list))
@@ -236,6 +278,7 @@ class TestDefuse(unittest.TestCase):
         self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
         self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
         self.assertEqual(False, bpp.stranded)
+        self.assertEqual('defuse-1', bpp.tracking_id)
 
     def test_convert_inversion(self):
         row = {
@@ -244,7 +287,8 @@ class TestDefuse(unittest.TestCase):
             'genomic_break_pos1': '235294748',
             'genomic_break_pos2': '144898348',
             'genomic_strand1': '+',
-            'genomic_strand2': '+'
+            'genomic_strand2': '+',
+            'cluster_id': 1
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DEFUSE, False)
         self.assertEqual(1, len(bpp_list))
@@ -258,6 +302,7 @@ class TestDefuse(unittest.TestCase):
         self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
         self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
         self.assertEqual(False, bpp.stranded)
+        self.assertEqual('defuse-1', bpp.tracking_id)
 
 
 class TestChimerascan(unittest.TestCase):
@@ -271,7 +316,8 @@ class TestChimerascan(unittest.TestCase):
             'start3p': '49555116',
             'end3p': '49587666',
             'strand5p': '+',
-            'strand3p': '+'
+            'strand3p': '+',
+            'chimera_cluster_id': 'CLUSTER30'
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.CHIMERASCAN, False)
         self.assertEqual(1, len(bpp_list))
@@ -295,7 +341,8 @@ class TestChimerascan(unittest.TestCase):
             'start3p': '49555116',
             'end3p': '49587666',
             'strand5p': '+',
-            'strand3p': '-'
+            'strand3p': '-',
+            'chimera_cluster_id': 'CLUSTER30'
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.CHIMERASCAN, False)
         self.assertEqual(1, len(bpp_list))
@@ -319,7 +366,8 @@ class TestChimerascan(unittest.TestCase):
             'start3p': '49555116',
             'end3p': '49587666',
             'strand5p': '-',
-            'strand3p': '+'
+            'strand3p': '+',
+            'chimera_cluster_id': 'CLUSTER30'
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.CHIMERASCAN, False)
         self.assertEqual(1, len(bpp_list))
@@ -343,7 +391,8 @@ class TestChimerascan(unittest.TestCase):
             'start3p': '49555116',
             'end3p': '49587666',
             'strand5p': '-',
-            'strand3p': '-'
+            'strand3p': '-',
+            'chimera_cluster_id': 'CLUSTER30'
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.CHIMERASCAN, False)
         self.assertEqual(1, len(bpp_list))
@@ -363,7 +412,7 @@ class TestPindel(unittest.TestCase):
 
     def test_convert_deletion(self):
         row = Mock(
-            CHROM='21', POS=9412306,
+            CHROM='21', POS=9412306, ID='.',
             INFO={
                 'SVTYPE': 'DEL',
                 'END': 9412400
@@ -388,7 +437,7 @@ class TestPindel(unittest.TestCase):
 
     def test_convert_insertion(self):
         row = Mock(
-            CHROM='21', POS=9412306,
+            CHROM='21', POS=9412306, ID='.',
             INFO={
                 'SVTYPE': 'INS',
                 'END': 9412400
@@ -413,7 +462,7 @@ class TestPindel(unittest.TestCase):
 
     def test_convert_inversion(self):
         row = Mock(
-            CHROM='21', POS=9412306,
+            CHROM='21', POS=9412306, ID='.',
             INFO={
                 'SVTYPE': 'INV',
                 'END': 9412400

@@ -54,6 +54,8 @@ TOOL_SVTYPE_MAPPING.update({
     'ITD': [SVTYPE.DUP]
 })
 
+TRACKING_COLUMN = 'tracking_id'
+
 
 def convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=False, log=devnull, collapse=True):
     """
@@ -83,10 +85,13 @@ def _parse_breakdancer(row):
 
 def _parse_transabyss(row, is_stranded=False):
     """
-    transforms the transbyss output into the common format for expansion. Maps the input column
+    transforms the transabyss output into the common format for expansion. Maps the input column
     names to column names which MAVIS can read
     """
     std_row = {}
+    if TRACKING_COLUMN not in row:
+        std_row[TRACKING_COLUMN] = '{}-{}'.format(SUPPORTED_TOOL.TA, row['id'])
+
     std_row['event_type'] = row.get('rearrangement', row['type'])
     if std_row['event_type'] in ['LSR', 'translocation']:
         del std_row['event_type']
@@ -138,6 +143,9 @@ def _parse_chimerascan(row):
     names to column names which MAVIS can read
     """
     std_row = {}
+    if TRACKING_COLUMN not in row:
+        std_row[TRACKING_COLUMN] = '{}-{}'.format(SUPPORTED_TOOL.CHIMERASCAN, row['chimera_cluster_id'])
+
     std_row.update({'chr1': row['chrom5p'], 'chr2': row['chrom3p']})
     if row['strand5p'] == '+':
         std_row['pos1_start'] = row['end5p']
@@ -160,6 +168,10 @@ def _convert_tool_row(row, file_type, stranded):
     converts a row parsed from an input file to the appropriate column names for it to be converted to MAVIS style row
     """
     std_row = {}
+    try:
+        std_row[TRACKING_COLUMN] = row.get(TRACKING_COLUMN, '')
+    except AttributeError:
+        std_row[TRACKING_COLUMN] = row.INFO.get(TRACKING_COLUMN, '')
     std_row['orient1'] = std_row['orient2'] = ORIENT.NS
     std_row['strand1'] = std_row['strand2'] = STRAND.NS
     result = []
@@ -188,6 +200,8 @@ def _convert_tool_row(row, file_type, stranded):
             std_row['orient2'] = ct[o2]
         except KeyError:
             pass
+        if TRACKING_COLUMN not in row and row.ID is not None:
+            std_row[TRACKING_COLUMN] = '{}-{}'.format(file_type, row.ID)
 
     elif file_type == SUPPORTED_TOOL.CHIMERASCAN:
 
@@ -201,6 +215,10 @@ def _convert_tool_row(row, file_type, stranded):
             'chr1': row['gene_chromosome1'], 'chr2': row['gene_chromosome2'],
             'pos1_start': row['genomic_break_pos1'], 'pos2_start': row['genomic_break_pos2']
         })
+        if TRACKING_COLUMN in row:
+            std_row[TRACKING_COLUMN] = row[TRACKING_COLUMN]
+        else:
+            std_row[TRACKING_COLUMN] = '{}-{}'.format(file_type, row['cluster_id'])
 
     elif file_type == SUPPORTED_TOOL.TA:
 
@@ -242,7 +260,8 @@ def _convert_tool_row(row, file_type, stranded):
                 untemplated_seq=std_row.get('untemplated_seq', None),
                 event_type=event_type,
                 data={
-                    COLUMNS.tools: file_type
+                    COLUMNS.tools: file_type,
+                    COLUMNS.tracking_id: std_row['tracking_id']
                 },
                 stranded=stranded
             )

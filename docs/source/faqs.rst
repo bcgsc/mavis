@@ -14,7 +14,7 @@ the MAVIS codebase to do so.
 
 Don't worry, this is the case for a lot of tools. MAVIS accepts unknowns for this reason for some of the required
 columns. These unknown or not-specified values are then expanded to all possible combinations during the clustering
-step. For this reason it is sometimes helpful to use the 'input_id' column to track your calls through the MAVIS
+step. For this reason it is sometimes helpful to use the :term:`tracking_id` column to track your calls through the MAVIS
 pipeline.
 
 

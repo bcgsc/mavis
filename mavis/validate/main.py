@@ -128,7 +128,7 @@ def main(
         log(
             '({} of {})'.format(i + 1, len(evidence_clusters)),
             'gathered evidence for:', evidence.cluster_id,
-            '' if 'input_id' not in evidence.data else '(input_id: {})'.format(evidence.data['input_id'])
+            '' if COLUMNS.tracking_id not in evidence.data else '(tracking_id: {})'.format(evidence.tracking_id)
         )
         log(evidence, time_stamp=False)
         log('possible event type(s):', BreakpointPair.classify(evidence), time_stamp=False)
