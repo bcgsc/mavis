@@ -252,7 +252,7 @@ def validate_section(section, namespace, use_defaults=False):
     if use_defaults:
         for attr, value in namespace.items():
             new_namespace.add(attr, value, cast_type=namespace.type(attr))
-    
+
     for attr, value in section.items():
         if attr not in namespace:
             raise KeyError('tag not recognized', attr)
