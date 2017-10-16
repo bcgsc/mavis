@@ -122,7 +122,7 @@ class MavisNamespace(argparse.Namespace):
 
     def __call__(self, value):
         try:
-            self.enforce(value)
+            return self.enforce(value)
         except KeyError:
             raise TypeError('Invalid value {}. Cannot cast to type {}. Must be a valid member: {}'.format(
                 repr(value), self.__class__.__name__, self.values()))

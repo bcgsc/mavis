@@ -243,20 +243,22 @@ def write_config(filename, include_defaults=False, libraries=[], conversions={},
         conf.write(configfile)
 
 
-def validate_and_cast_section(section, defaults, use_defaults=False):
+def validate_section(section, namespace, use_defaults=False):
     """
     given a dictionary of values, returns a new dict with the values casted to their appropriate type or set
     to a default if the value was not given
     """
-    d = {}
+    new_namespace = MavisNamespace()
     if use_defaults:
-        d.update(defaults.items())
+        for attr, value in namespace.items():
+            new_namespace.add(attr, value, cast_type=namespace.type(attr))
+    
     for attr, value in section.items():
-        if attr not in defaults:
+        if attr not in namespace:
             raise KeyError('tag not recognized', attr)
         else:
-            d[attr] = cast(value, type(defaults[attr]) if defaults[attr] is not None else str)
-    return d
+            new_namespace.add(attr, namespace.type(attr)(value), cast_type=namespace.type(attr))
+    return new_namespace
 
 
 class MavisConfig:
@@ -264,9 +266,7 @@ class MavisConfig:
     def __init__(self, **kwargs):
 
         # section can be named schedule or qsub to support older versions
-        self.schedule = MavisNamespace(**validate_and_cast_section(
-            kwargs.pop('schedule', kwargs.pop('qsub', {})), SUBMIT_OPTIONS, True
-        ))
+        self.schedule = validate_section(kwargs.pop('schedule', kwargs.pop('qsub', {})), SUBMIT_OPTIONS, True)
 
         # set the global defaults
         for sec, defaults in [
@@ -278,7 +278,7 @@ class MavisConfig:
             ('cluster', CLUSTER_DEFAULTS),
             ('reference', REFERENCE_DEFAULTS)
         ]:
-            v = MavisNamespace(**validate_and_cast_section(kwargs.pop(sec, {}), defaults, True))
+            v = validate_section(kwargs.pop(sec, {}), defaults, True)
             setattr(self, sec, v)
 
         SUPPORTED_ALIGNER.enforce(self.validation.aligner)

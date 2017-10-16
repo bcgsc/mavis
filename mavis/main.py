@@ -26,7 +26,7 @@ from .constants import PIPELINE_STEP, PROTOCOL
 from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from .pairing.main import main as pairing_main
-from .submit import SubmissionScript, SCHEDULER, STD_OPTIONS
+from .submit import SubmissionScript, SCHEDULER_CONFIG, STD_OPTIONS
 from .submit import OPTIONS as SUBMIT_OPTIONS
 from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 from .summary.main import main as summary_main
@@ -176,7 +176,7 @@ def main_pipeline(config):
                 script = SubmissionScript(command, config.schedule.scheduler, **options)
                 scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
 
-                submitall.append('vjob{}=$({} {})'.format(jobid_var_index, SCHEDULER[config.schedule.scheduler].submit, scriptname))
+                submitall.append('vjob{}=$({} {})'.format(jobid_var_index, SCHEDULER_CONFIG[config.schedule.scheduler].submit, scriptname))
                 # for setting up subsequent jobs and holds
                 outputfile = os.path.join(outputdir, VALIDATION_PASS_PATTERN)
                 job_name_by_output[outputfile] = options['jobname']
@@ -194,8 +194,8 @@ def main_pipeline(config):
             scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
             prevjob = '${{vjob{}##* }}'.format(jobid_var_index)
             submitall.append('ajob{}=$({} {} {})'.format(
-                jobid_var_index, SCHEDULER[config.schedule.scheduler].submit,
-                SCHEDULER[config.schedule.scheduler].dependency(prevjob),
+                jobid_var_index, SCHEDULER_CONFIG[config.schedule.scheduler].submit,
+                SCHEDULER_CONFIG[config.schedule.scheduler].dependency(prevjob),
                 scriptname))
             outputfile = os.path.join(outputdir, ANNOTATION_PASS_PATTERN)
             pairing_inputs.append(outputfile)
@@ -225,8 +225,8 @@ def main_pipeline(config):
     scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
 
     submitall.append('jobid=$({} {} {})'.format(
-        SCHEDULER[config.schedule.scheduler].submit,
-        SCHEDULER[config.schedule.scheduler].dependency(
+        SCHEDULER_CONFIG[config.schedule.scheduler].submit,
+        SCHEDULER_CONFIG[config.schedule.scheduler].dependency(
             ':'.join(['${{ajob{}##* }}'.format(i) for i in range(0, jobid_var_index)])),
         scriptname))
 
@@ -258,8 +258,8 @@ def main_pipeline(config):
     scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
 
     submitall.append('{} {} {}'.format(
-        SCHEDULER[config.schedule.scheduler].submit,
-        SCHEDULER[config.schedule.scheduler].dependency('${jobid##* }'),
+        SCHEDULER_CONFIG[config.schedule.scheduler].submit,
+        SCHEDULER_CONFIG[config.schedule.scheduler].dependency('${jobid##* }'),
         scriptname))
 
     # now write a script at the top level to submit all

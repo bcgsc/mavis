@@ -42,7 +42,7 @@ def build_dependency_string(command, delim, jobs):
     return command.format(delim.join([str(j) for j in jobs]))
 
 
-SCHEDULER_CONF = MavisNamespace(
+SCHEDULER_CONFIG = MavisNamespace(
     SGE=MavisNamespace(
         shebang='#!/bin/bash',
         submit='qsub -terse',
@@ -80,10 +80,10 @@ class SubmissionScript:
         if kwargs:
             raise TypeError('unexpected argument(s):', list(kwargs.keys()))
         self.scheduler = scheduler
-        if scheduler not in SCHEDULER_CONF:
-            raise ValueError('invalid scheduler', scheduler, 'expected', SCHEDULER_CONF.keys())
+        if scheduler not in SCHEDULER_CONFIG:
+            raise ValueError('invalid scheduler', scheduler, 'expected', SCHEDULER_CONFIG.keys())
         for option, value in self.options.items():
-            if value and option not in SCHEDULER_CONF[self.scheduler]:
+            if value and option not in SCHEDULER_CONFIG[self.scheduler]:
                 raise ValueError('scheduler', scheduler, 'does not support the option', option)
         self.content = content
 
@@ -94,7 +94,7 @@ class SubmissionScript:
 
     def build_header(self):
         """returns the header line detailing the scheduler-specific submission options"""
-        config = SCHEDULER_CONF[self.scheduler]
+        config = SCHEDULER_CONFIG[self.scheduler]
         header = [config.shebang]
         if self.scheduler == 'SGE':
             header.append(config.option_prefix + ' ' + config['join_output'](True))
