@@ -226,8 +226,7 @@ def filter_by_evidence(
     bpps,
     filter_min_remapped_reads=5,
     filter_min_spanning_reads=5,
-    filter_min_flanking_reads=5,
-    filter_min_flanking_only_reads=10,
+    filter_min_flanking_reads=10,
     filter_min_split_reads=5,
     filter_min_linking_split_reads=1
 ):
@@ -262,7 +261,7 @@ def filter_by_evidence(
                 removed.append(bpp)
                 continue
         elif bpp.call_method == CALL_METHOD.FLANK:
-            if bpp.flanking_pairs < filter_min_flanking_only_reads:
+            if bpp.flanking_pairs < filter_min_flanking_reads:
                 removed.append(bpp)
                 continue
         else:

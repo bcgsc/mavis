@@ -68,6 +68,9 @@ html_theme = "sphinx_rtd_theme"
 html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 max_depth = -1
 
+html_context = {
+    'css_files': ['_static/custom.css'],
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['source/_templates']

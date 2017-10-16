@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from mavis.submit import SCHEDULER, SubmissionScript, OPTIONS
+from mavis.submit import SCHEDULER_CONFIG, SubmissionScript, OPTIONS
 
 
 class TestConstructor(unittest.TestCase):
@@ -39,7 +39,7 @@ class TestBuildHeader(unittest.TestCase):
     def test_no_options(self):
         script = SubmissionScript('')
         header = script.build_header()
-        exp = SCHEDULER.SGE.shebang
+        exp = SCHEDULER_CONFIG.SGE.shebang
         self.assertTrue(exp in header)
 
     def test_memory_limit(self):

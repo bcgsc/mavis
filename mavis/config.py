@@ -3,7 +3,6 @@ from configparser import ConfigParser, ExtendedInterpolation
 from copy import copy as _copy
 import os
 import re
-import sys
 import warnings
 
 import tab
@@ -15,21 +14,15 @@ from .annotate.file_io import load_annotations
 from .bam.cache import BamCache
 from .bam.stats import compute_genome_bam_stats, compute_transcriptome_bam_stats
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
-from .constants import DISEASE_STATUS, PIPELINE_STEP, PROTOCOL
+from .constants import DISEASE_STATUS, PIPELINE_STEP, PROTOCOL, float_fraction
 from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
-from .submit import OPTIONS
+from .submit import OPTIONS as SUBMIT_OPTIONS
+from .submit import SCHEDULER
 from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 from .tools import SUPPORTED_TOOL
 from .util import bash_expands, cast, devnull, ENV_VAR_PREFIX, MavisNamespace, WeakMavisNamespace, get_env_variable, log_arguments
 from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
-
-
-SUBMIT_OPTIONS = WeakMavisNamespace(**OPTIONS.flatten())
-SUBMIT_OPTIONS.validation_memory = 16000
-SUBMIT_OPTIONS.trans_validation_memory = 18000
-SUBMIT_OPTIONS.annotation_memory = 12000
-SUBMIT_OPTIONS.scheduler = 'SLURM'
 
 
 REFERENCE_DEFAULTS = WeakMavisNamespace(
@@ -119,7 +112,11 @@ class LibraryConfig(MavisNamespace):
         acceptable.update(ANNOTATION_DEFAULTS.__dict__)
 
         for attr, value in kwargs.items():
-            setattr(self, attr, cast(value, type(acceptable[attr])))
+            for namespace in [CLUSTER_DEFAULTS, VALIDATION_DEFAULTS, ANNOTATION_DEFAULTS]:
+                if attr not in namespace:
+                    continue
+                setattr(self, attr, namespace.type(attr)(value))
+                break
 
         if 'MAVIS_FETCH_METHOD_INDIVIDUAL' not in os.environ and 'fetch_method_individual' not in kwargs:
             if self.protocol == PROTOCOL.TRANS:
@@ -246,20 +243,22 @@ def write_config(filename, include_defaults=False, libraries=[], conversions={},
         conf.write(configfile)
 
 
-def validate_and_cast_section(section, defaults, use_defaults=False):
+def validate_section(section, namespace, use_defaults=False):
     """
     given a dictionary of values, returns a new dict with the values casted to their appropriate type or set
     to a default if the value was not given
     """
-    d = {}
+    new_namespace = MavisNamespace()
     if use_defaults:
-        d.update(defaults.items())
+        for attr, value in namespace.items():
+            new_namespace.add(attr, value, cast_type=namespace.type(attr))
+
     for attr, value in section.items():
-        if attr not in defaults:
+        if attr not in namespace:
             raise KeyError('tag not recognized', attr)
         else:
-            d[attr] = cast(value, type(defaults[attr]) if defaults[attr] is not None else str)
-    return d
+            new_namespace.add(attr, namespace.type(attr)(value), cast_type=namespace.type(attr))
+    return new_namespace
 
 
 class MavisConfig:
@@ -267,9 +266,7 @@ class MavisConfig:
     def __init__(self, **kwargs):
 
         # section can be named schedule or qsub to support older versions
-        self.schedule = MavisNamespace(**validate_and_cast_section(
-            kwargs.pop('schedule', kwargs.pop('qsub', {})), SUBMIT_OPTIONS, True
-        ))
+        self.schedule = validate_section(kwargs.pop('schedule', kwargs.pop('qsub', {})), SUBMIT_OPTIONS, True)
 
         # set the global defaults
         for sec, defaults in [
@@ -281,7 +278,7 @@ class MavisConfig:
             ('cluster', CLUSTER_DEFAULTS),
             ('reference', REFERENCE_DEFAULTS)
         ]:
-            v = MavisNamespace(**validate_and_cast_section(kwargs.pop(sec, {}), defaults, True))
+            v = validate_section(kwargs.pop(sec, {}), defaults, True)
             setattr(self, sec, v)
 
         SUPPORTED_ALIGNER.enforce(self.validation.aligner)
@@ -369,16 +366,6 @@ def add_semi_optional_argument(argname, success_parser, failure_parser, help_msg
         failure_parser.add_argument('--{}'.format(argname), required=True, help=help_msg, metavar=metavar)
 
 
-def float_fraction(num):
-    try:
-        num = float(num)
-    except ValueError:
-        raise argparse.ArgumentTypeError('Argument must be a value between 0 and 1')
-    if num < 0 or num > 1:
-        raise argparse.ArgumentTypeError('Argument must be a value between 0 and 1')
-    return num
-
-
 def get_metavar(arg_type):
     if arg_type in [bool, tab.cast_boolean]:
         return '{True,False}'
@@ -460,6 +447,8 @@ def augment_parser(arguments, parser, semi_opt_parser=None, required=None):
                 help_msg = 'indicates that the input is strand specific'
             if arg == 'uninformative_filter':
                 help_msg = 'If flag is False then the clusters will not be filtered based on lack of annotation'
+            if arg == 'scheduler':
+                choices = SCHEDULER.keys()
 
             # get default values
             for nspace in [
@@ -474,21 +463,8 @@ def augment_parser(arguments, parser, semi_opt_parser=None, required=None):
                     default_value = nspace[arg]
                     value_type = type(default_value) if not isinstance(default_value, bool) else tab.cast_boolean
                     if not help_msg:
-                        help_msg = 'see user manual for desc'
+                        help_msg = nspace.define(arg)
                     break
-
-            if arg in [
-                'assembly_min_remap_coverage',
-                'assembly_min_remap_coverage',
-                'assembly_strand_concordance',
-                'blat_min_identity',
-                'contig_aln_min_query_consumption',
-                'min_anchor_match',
-                'assembly_min_uniq',
-                'mask_opacity',
-                'min_domain_mapping_match'
-            ]:
-                value_type = float_fraction
 
             if help_msg is None:
                 raise KeyError('invalid argument', arg)
@@ -538,7 +514,7 @@ def generate_config(parser, required, optional, log=devnull):
         help='verbosely output logging information')
     optional.add_argument(
         '--convert', nargs=4, default=[],
-        metavar=('<alias>', 'FILEPATH', '({})'.format('|'.join(SUPPORTED_TOOL.values())), '<stranded>'),
+        metavar=('<alias>', 'FILEPATH', '{{{}}}'.format(','.join(SUPPORTED_TOOL.values())), '<stranded>'),
         help='input file conversion for internally supported tools', action='append')
     optional.add_argument(
         '--external_conversion', metavar=('<alias>', '<"command">'), nargs=2, default=[],
@@ -546,7 +522,7 @@ def generate_config(parser, required, optional, log=devnull):
     optional.add_argument(
         '--no_defaults', default=False, action='store_true', help='do not write current defaults to the config output')
     augment_parser(['annotations'], required, optional)
-    augment_parser(sorted(set(SUBMIT_OPTIONS) - {'jobname'}) + ['skip_stage'], optional)
+    augment_parser(sorted(set(SUBMIT_OPTIONS) - {'jobname', 'stdout'}) + ['skip_stage'], optional)
     args = parser.parse_args()
     try:
         # process the libraries by input argument (--input)

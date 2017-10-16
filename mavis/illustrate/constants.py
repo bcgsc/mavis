@@ -1,30 +1,58 @@
 from colour import Color
-from ..constants import GIEMSA_STAIN, MavisNamespace
+from ..constants import GIEMSA_STAIN, float_fraction
+from ..util import WeakMavisNamespace
 
-DEFAULTS = MavisNamespace(
-    width=1000,
-    scaffold_color='#000000',
-    gene1_color_selected='#518dc5',
-    gene2_color_selected='#4c9677',
-    gene1_color='#657e91',
-    gene2_color='#325556',
-    label_color='#000000',
-    domain_color='#ccccb3',
-    domain_mismatch_color='#b2182b',
-    novel_exon_color='#000000',
-    splice_color='#000000',
-    breakpoint_color='#000000',
-    mask_fill='#ffffff',
-    mask_opacity=0.7,
-    domain_name_regex_filter='.*',
-    domain_scaffold_color='#000000',
-    max_drawing_retries=3,
-    drawing_width_iter_increase=500
-)
+DEFAULTS = WeakMavisNamespace()
+"""
+- :term:`breakpoint_color`
+- :term:`domain_color`
+- :term:`domain_mismatch_color`
+- :term:`domain_name_regex_filter`
+- :term:`domain_scaffold_color`
+- :term:`drawing_width_iter_increase`
+- :term:`gene1_color_selected`
+- :term:`gene1_color`
+- :term:`gene2_color_selected`
+- :term:`gene2_color`
+- :term:`label_color`
+- :term:`mask_fill`
+- :term:`mask_opacity`
+- :term:`max_drawing_retries`
+- :term:`novel_exon_color`
+- :term:`scaffold_color`
+- :term:`splice_color`
+- :term:`width`
+"""
+DEFAULTS.add(
+    'width', 1000, defn='The drawing width in pixels')
+DEFAULTS.add(
+    'domain_name_regex_filter', r'.*',
+    defn='The regular expression used to select domains to be displayed (filtered by name)')
+DEFAULTS.add(
+    'max_drawing_retries', 3,
+    defn='The maximum number of retries for attempting a drawing. Each iteration the width is extended. If it '
+    'is still insufficient after this number a gene-level only drawing will be output')
+DEFAULTS.add('scaffold_color', '#000000', defn='The color used for the gene/transcripts scaffolds')
+DEFAULTS.add('gene1_color_selected', '#518dc5', defn='The color of the first gene')
+DEFAULTS.add('gene2_color_selected', '#4c9677', defn='The color of the second gene')
+DEFAULTS.add('gene1_color', '#657e91', defn='The color of genes near the first gene')
+DEFAULTS.add('gene2_color', '#325556', defn='The color of genes near the second gene')
+DEFAULTS.add('label_color', '#000000', defn='The label color')
+DEFAULTS.add('domain_color', '#ccccb3', defn='Domain fill color')
+DEFAULTS.add('domain_mismatch_color', '#b2182b', defn='Domain fill color on 0%% match')
+DEFAULTS.add('novel_exon_color', '#000000', defn='Novel Exon fill color')
+DEFAULTS.add('splice_color', '#000000', defn='Splicing lines color')
+DEFAULTS.add('breakpoint_color', '#000000', defn='Breakpoint outline color')
+DEFAULTS.add('mask_fill', '#ffffff', defn='Color of mask (for deleted region etc.)')
+DEFAULTS.add('mask_opacity', 0.7, defn='opacity of the mask layer', cast_type=float_fraction)
+DEFAULTS.add('domain_scaffold_color', '#000000', defn='The color of the domain scaffold')
+DEFAULTS.add('drawing_width_iter_increase', 500, defn='The amount (in  pixels) by which to increase the drawing width upon failure to fit')
 
 
 class DiagramSettings:
-
+    """
+    holds settings related to colors/sizes for the drawing
+    """
     def __init__(
         self, **kwargs
     ):
@@ -71,7 +99,7 @@ class DiagramSettings:
         self.domain_fill_gradient = [
             c.hex for c in Color(self.domain_mismatch_color).range_to(Color(self.domain_color), 10)]
         self.domain_links = {
-            '^PF\d+$': 'http://pfam.xfam.org/family/{.name}'
+            r'^PF\d+$': 'http://pfam.xfam.org/family/{.name}'
         }
 
         self.splice_height = self.track_height / 2
