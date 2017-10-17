@@ -107,7 +107,7 @@ setup(
     python_requires='>=3',
     author_email='creisle@bcgsc.ca',
     dependency_links=[
-        'git+https://creisle@svn.bcgsc.ca/bitbucket/scm/prod/tab.git#egg=tab-0.0.1'
+        'git+https://svn.bcgsc.ca/bitbucket/scm/prod/tab.git#egg=tab-0.0.1'
     ],
     setup_requires=[
         'nose==1.3.7',

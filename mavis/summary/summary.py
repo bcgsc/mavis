@@ -167,6 +167,14 @@ def group_events(bpp1, bpp2):
 
 
 def annotate_dgv(bpps, dgv_regions_by_reference_name, distance=0):
+    """
+    given a list of bpps and a dgv reference, annotate the events that are within the set distance of both breakpoints
+
+    Args:
+        bpps (list) : the list of BreakpointPair objects
+        dgv_regions_by_reference_name (dict) : the dgv reference regions file loaded by load_masking_regions
+        distance (int) : the minimum distance required to match a dgv event with a breakpoint
+    """
     for bpp in bpps:
         if bpp.break1.chr != bpp.break2.chr:
             continue  # assume the dgv does not have translocations
@@ -182,7 +190,7 @@ def annotate_dgv(bpps, dgv_regions_by_reference_name, distance=0):
     return bpps
 
 
-def get_pairing_state(current_protocol, current_disease_state, other_protocol, other_disease_state, is_matched=False):
+def get_pairing_state(current_protocol, current_disease_state, other_protocol, other_disease_state, is_matched=False, inferred_is_matched=False):
     """
     given two libraries, returns the appropriate descriptor for their matched state
 
@@ -211,23 +219,25 @@ def get_pairing_state(current_protocol, current_disease_state, other_protocol, o
     if curr == dg and other == ng:
         return PAIRING_STATE.GERMLINE if is_matched else PAIRING_STATE.SOMATIC
     elif curr == dg and other == dt:
-        return PAIRING_STATE.EXP if is_matched else PAIRING_STATE.NO_EXP
+        return PAIRING_STATE.EXP if inferred_is_matched else PAIRING_STATE.NO_EXP
     elif curr == dt and other == dg:
-        return PAIRING_STATE.GENOMIC if is_matched else PAIRING_STATE.NO_GENOMIC
+        return PAIRING_STATE.GENOMIC if inferred_is_matched else PAIRING_STATE.NO_GENOMIC
     elif curr == dt and other == ng:
-        return PAIRING_STATE.GERMLINE if is_matched else PAIRING_STATE.SOMATIC
+        return PAIRING_STATE.GERMLINE if inferred_is_matched else PAIRING_STATE.SOMATIC
     elif curr == ng and other == dt:
-        return PAIRING_STATE.EXP if is_matched else PAIRING_STATE.NO_EXP
+        return PAIRING_STATE.EXP if inferred_is_matched else PAIRING_STATE.NO_EXP
     else:
-        return PAIRING_STATE.MATCH if is_matched else PAIRING_STATE.NO_MATCH
+        if current_protocol == other_protocol:
+            return PAIRING_STATE.MATCH if is_matched else PAIRING_STATE.NO_MATCH
+        else:
+            return PAIRING_STATE.MATCH if inferred_is_matched else PAIRING_STATE.NO_MATCH
 
 
 def filter_by_evidence(
     bpps,
     filter_min_remapped_reads=5,
     filter_min_spanning_reads=5,
-    filter_min_flanking_reads=5,
-    filter_min_flanking_only_reads=10,
+    filter_min_flanking_reads=10,
     filter_min_split_reads=5,
     filter_min_linking_split_reads=1
 ):
@@ -262,7 +272,7 @@ def filter_by_evidence(
                 removed.append(bpp)
                 continue
         elif bpp.call_method == CALL_METHOD.FLANK:
-            if bpp.flanking_pairs < filter_min_flanking_only_reads:
+            if bpp.flanking_pairs < filter_min_flanking_reads:
                 removed.append(bpp)
                 continue
         else:

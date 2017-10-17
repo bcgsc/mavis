@@ -12,14 +12,14 @@ from ..util import generate_complete_stamp, log, output_tabbed_file, read_inputs
 
 
 def main(
-    inputs, output, annotations, dgv_annotation,
+    inputs, output, annotations,
+    dgv_annotation=None,
     product_sequence_files=None,
     filter_cdna_synon=DEFAULTS.filter_cdna_synon,
     filter_protein_synon=DEFAULTS.filter_protein_synon,
     filter_min_remapped_reads=DEFAULTS.filter_min_remapped_reads,
     filter_min_spanning_reads=DEFAULTS.filter_min_spanning_reads,
     filter_min_flanking_reads=DEFAULTS.filter_min_flanking_reads,
-    filter_min_flanking_only_reads=DEFAULTS.filter_min_flanking_only_reads,
     filter_min_split_reads=DEFAULTS.filter_min_split_reads,
     filter_min_linking_split_reads=DEFAULTS.filter_min_linking_split_reads,
     flanking_call_distance=PAIRING_DEFAULTS.flanking_call_distance,
@@ -122,11 +122,10 @@ def main(
             temp.append(bpp)
         bpps = temp
 
-    bpps, removed = filter_by_evidence(
+    bpps, _ = filter_by_evidence(
         bpps, filter_min_remapped_reads=filter_min_remapped_reads,
         filter_min_spanning_reads=filter_min_spanning_reads,
         filter_min_flanking_reads=filter_min_flanking_reads,
-        filter_min_flanking_only_reads=filter_min_flanking_only_reads,
         filter_min_split_reads=filter_min_split_reads,
         filter_min_linking_split_reads=filter_min_linking_split_reads)
 
@@ -261,6 +260,7 @@ def main(
     output_columns = {
         COLUMNS.annotation_id,
         COLUMNS.pairing,
+        COLUMNS.inferred_pairing,
         COLUMNS.break1_chromosome,
         COLUMNS.break1_homologous_seq,
         COLUMNS.break1_orientation,
@@ -311,19 +311,22 @@ def main(
     rows = []
     for lib in bpp_to_keep:
         log('annotating dgv for', lib)
-        annotated = annotate_dgv(list(bpp_to_keep[lib]), dgv_annotation, distance=10)  # TODO make distance a parameter
+        if dgv_annotation:
+            annotated = annotate_dgv(list(bpp_to_keep[lib]), dgv_annotation, distance=10)  # TODO make distance a parameter
         log('adding pairing states for', lib)
         for row in annotated:
             # filter pairing ids based on what is still kept?
             paired_libraries = set([p.split('_')[0] for p in row.pairing.split(';')])
+            inferred_paired_libraries = set([p.split('_')[0] for p in row.inferred_pairing.split(';')])
             for other_lib in libraries:
                 other_protocol, other_disease_state = libraries[other_lib]
                 column_name = '{}_{}_{}'.format(other_lib, other_disease_state, other_protocol)
                 if other_lib != row.library:
                     pairing_state = get_pairing_state(
                         *libraries[row.library],
-                        other_protocol=other_protocol, other_disease_state=other_disease_state,
-                        is_matched=other_lib in paired_libraries)
+                         other_protocol=other_protocol, other_disease_state=other_disease_state,
+                         is_matched=other_lib in paired_libraries,
+                         inferred_is_matched=other_lib in inferred_paired_libraries)
                 else:
                     pairing_state = 'Not Applicable'
                 row.data[column_name] = pairing_state

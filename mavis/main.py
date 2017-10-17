@@ -1,9 +1,6 @@
 #!python
 import argparse
-from datetime import datetime
-import math
 import os
-import random
 import re
 import subprocess
 import sys
@@ -21,7 +18,6 @@ from .blat import get_blat_version
 from .checker import check_completion
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from .cluster.main import main as cluster_main
-from .cluster.main import split_clusters
 from .config import augment_parser, get_metavar, LibraryConfig, MavisConfig, write_config
 from .constants import PIPELINE_STEP, PROTOCOL
 from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
