@@ -1,3 +1,6 @@
+"""
+module for pre-processing code into rst files which are then built into html/latex/etc.
+"""
 import os
 import sys
 import subprocess

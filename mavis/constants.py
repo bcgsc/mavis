@@ -163,6 +163,18 @@ PIPELINE_STEP = MavisNamespace(
     CONFIG='config',
     CONVERT='convert'
 )
+""":class:`MavisNamespace`: holds controlled vocabulary for allowed pipeline stage values
+
+- annotate
+- validate
+- pipeline
+- cluster
+- pairing
+- summary
+- checker
+- config
+- convert
+"""
 
 
 CODON_SIZE = 3

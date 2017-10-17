@@ -21,7 +21,7 @@ from .blat import get_blat_version
 from .checker import check_completion
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from .cluster.main import main as cluster_main
-from .config import augment_parser, MavisConfig, generate_config, CustomHelpFormatter
+from .config import augment_parser, MavisConfig, generate_config, CustomHelpFormatter, CONVERT_OPTIONS
 from .constants import PIPELINE_STEP, PROTOCOL
 from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
@@ -103,7 +103,7 @@ def build_annotate_command(config, libconf, inputfile, outputdir):
     return ' \\\n\t'.join(command) + '\n'
 
 
-def run_conversion(config, libconf, conversion_dir):
+def run_conversion(config, libconf, conversion_dir, assume_no_untemplated=True):
     """
     Converts files if not already converted. Returns a list of filenames
     """
@@ -116,7 +116,7 @@ def run_conversion(config, libconf, conversion_dir):
                 command = config.convert[input_file]
                 if command[0] == 'convert_tool_output':
                     log('converting input command:', command)
-                    output_tabbed_file(convert_tool_output(*command[1:], log=log), output_filename)
+                    output_tabbed_file(convert_tool_output(*command[1:], log=log, assume_no_untemplated=assume_no_untemplated), output_filename)
                 else:
                     command = ' '.join(command) + ' -o {}'.format(output_filename)
                     log('converting input command:')
@@ -270,10 +270,10 @@ def main_pipeline(config):
             fh.write(line + '\n')
 
 
-def convert_main(inputs, output, file_type, strand_specific=False):
+def convert_main(inputs, output, file_type, strand_specific=False, assume_no_untemplated=True):
     bpp_results = []
     for filename in inputs:
-        bpp_results.extend(convert_tool_output(filename, file_type, strand_specific, log, True))
+        bpp_results.extend(convert_tool_output(filename, file_type, strand_specific, log, True, assume_no_untemplated=assume_no_untemplated))
     output_filename = 'mavis_{}_converted.tab'.format(file_type)
     output_tabbed_file(bpp_results, os.path.join(output, output_filename))
 
@@ -340,7 +340,7 @@ use the -h/--help option
             required.add_argument(
                 '--file_type', choices=sorted([t for t in SUPPORTED_TOOL.values() if t != 'mavis']),
                 required=True, help='Indicates the input file type to be parsed')
-            augment_parser(['strand_specific'], optional)
+            augment_parser(['strand_specific', 'assume_no_untemplated'], optional)
 
         elif pstep == PIPELINE_STEP.CLUSTER:
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
@@ -503,7 +503,7 @@ use the -h/--help option
     elif pstep == PIPELINE_STEP.SUMMARY:
         summary_main(**args)
     elif pstep == PIPELINE_STEP.CONVERT:
-        convert_main(args.inputs, args.output, args.file_type, args.strand_specific)
+        convert_main(args.inputs, args.output, args.file_type, args.strand_specific, assume_no_untemplated=args.assume_no_untemplated)
     else:  # PIPELINE
         main_pipeline(args)
 

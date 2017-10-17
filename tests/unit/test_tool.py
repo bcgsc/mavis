@@ -14,20 +14,26 @@ class TestDelly(unittest.TestCase):
             INFO={'SVTYPE': 'INS', 'CT': 'NtoN', 'END': 247760044, 'CHR2': '1', 'CIEND': [-10, 10], 'CIPOS': [-10, 10]}
         )
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DELLY, False)
-        for b in bpp_list:
-            print(b)
         self.assertEqual(1, len(bpp_list))
-        self.assertEqual('1', bpp_list[0].break1.chr)
-        self.assertEqual(247760043 - 10, bpp_list[0].break1.start)
-        self.assertEqual(247760043 + 10, bpp_list[0].break1.end)
-        self.assertEqual(ORIENT.LEFT, bpp_list[0].break1.orient)
-        self.assertEqual(STRAND.NS, bpp_list[0].break1.strand)
-        self.assertEqual(247760044 - 10, bpp_list[0].break2.start)
-        self.assertEqual(247760044 + 10, bpp_list[0].break2.end)
-        self.assertEqual(ORIENT.RIGHT, bpp_list[0].break2.orient)
-        self.assertEqual(STRAND.NS, bpp_list[0].break2.strand)
-        self.assertEqual('1', bpp_list[0].break2.chr)
-        self.assertEqual(SVTYPE.INS, bpp_list[0].event_type)
+        bpp = bpp_list[0]
+        self.assertEqual('1', bpp.break1.chr)
+        self.assertEqual(247760043 - 10, bpp.break1.start)
+        self.assertEqual(247760043 + 10, bpp.break1.end)
+        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
+        self.assertEqual(STRAND.NS, bpp.break1.strand)
+        self.assertEqual(247760044 - 10, bpp.break2.start)
+        self.assertEqual(247760044 + 10, bpp.break2.end)
+        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
+        self.assertEqual(STRAND.NS, bpp.break2.strand)
+        self.assertEqual('1', bpp.break2.chr)
+        self.assertEqual(SVTYPE.INS, bpp.event_type)
+        self.assertEqual('', bpp.untemplated_seq)
+
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DELLY, False, assume_no_untemplated=False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual(None, bpp.untemplated_seq)
+        self.assertNotEqual('', bpp.untemplated_seq)
 
     def test_convert_convert_translocation(self):
         row = Mock(

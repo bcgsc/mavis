@@ -58,7 +58,7 @@ TOOL_SVTYPE_MAPPING.update({
 TRACKING_COLUMN = 'tracking_id'
 
 
-def convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=False, log=devnull, collapse=True):
+def convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=False, log=devnull, collapse=True, assume_no_untemplated=True):
     """
     Reads output from a given SV caller and converts to a set of MAVIS breakpoint pairs. Also collapses duplicates
     """
@@ -70,7 +70,7 @@ def convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fal
     if not fnames:
         raise OSError('no such file', input_file)
     for fname in fnames:
-        result.extend(_convert_tool_output(fname, file_type, stranded, log))
+        result.extend(_convert_tool_output(fname, file_type, stranded, log, assume_no_untemplated=assume_no_untemplated))
     if collapse:
         collapse_mapping = {}
         for bpp in result:
@@ -164,7 +164,7 @@ def _parse_chimerascan(row):
     return std_row
 
 
-def _convert_tool_row(row, file_type, stranded):
+def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
     """
     converts a row parsed from an input file to the appropriate column names for it to be converted to MAVIS style row
     """
@@ -237,6 +237,9 @@ def _convert_tool_row(row, file_type, stranded):
 
     if not std_row.get(TRACKING_COLUMN, None):
         std_row[TRACKING_COLUMN] = '{}-{}'.format(file_type, uuid())
+    if assume_no_untemplated and not std_row.get(COLUMNS.untemplated_seq, None):
+        std_row[COLUMNS.untemplated_seq] = ''
+
     combinations = list(itertools.product(
         ORIENT.expand(std_row['orient1']), ORIENT.expand(std_row['orient2']),
         std_row['strand1'], std_row['strand2'], TOOL_SVTYPE_MAPPING[std_row['event_type']] if 'event_type' in std_row else [None],
@@ -280,7 +283,7 @@ def _convert_tool_row(row, file_type, stranded):
     return result
 
 
-def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=False, log=devnull):
+def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=False, log=devnull, assume_no_untemplated=True):
     log('reading:', input_file)
     result = []
     if file_type == SUPPORTED_TOOL.TA:
@@ -294,7 +297,7 @@ def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fa
             dummy, rows = tab.read_file(input_file)
         log('found', len(rows), 'rows')
         for row in rows:
-            std_rows = _convert_tool_row(row, file_type, stranded)
+            std_rows = _convert_tool_row(row, file_type, stranded, assume_no_untemplated=assume_no_untemplated)
             result.extend(std_rows)
     log('generated', len(result), 'breakpoint pairs')
     return result

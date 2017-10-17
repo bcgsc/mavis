@@ -34,6 +34,9 @@ REFERENCE_DEFAULTS = WeakMavisNamespace(
     dgv_annotation=''
 )
 
+CONVERT_OPTIONS = WeakMavisNamespace()
+CONVERT_OPTIONS.add('assume_no_untemplated', True, defn='assume that if not given there is no untemplated sequence between the breakpoints')
+
 
 class CustomHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
     """
@@ -220,8 +223,10 @@ def write_config(filename, include_defaults=False, libraries=[], conversions={},
         config['illustrate'] = ILLUSTRATION_DEFAULTS.flatten()
         config['summary'] = SUMMARY_DEFAULTS.flatten()
 
-    config['convert'] = {}
+    config['convert'] = dict(**CONVERT_OPTIONS.items())
     for alias, command in conversions.items():
+        if alias in CONVERT_OPTIONS:
+            raise UserWarning('error in writing config. Alias for conversion product cannot be a setting', alias, CONVERT_OPTIONS.keys())
         config['convert'][alias] = '\n'.join(command)
 
     for sec in config:
@@ -278,8 +283,7 @@ class MavisConfig:
             ('cluster', CLUSTER_DEFAULTS),
             ('reference', REFERENCE_DEFAULTS)
         ]:
-            v = validate_section(kwargs.pop(sec, {}), defaults, True)
-            setattr(self, sec, v)
+            setattr(self, sec, validate_section(kwargs.pop(sec, {}), defaults, True))
 
         SUPPORTED_ALIGNER.enforce(self.validation.aligner)
 
@@ -290,6 +294,9 @@ class MavisConfig:
         # set the conversion section
         self.convert = kwargs.pop('convert', {})
         for attr, val in self.convert.items():
+            if attr in CONVERT_OPTIONS:
+                self.convert[attr] = CONVERT_OPTIONS.type(attr)(val)
+                continue
             val = [v for v in re.split(r'[;\s]+', val) if v]
             if val[0] == 'convert_tool_output':
                 if len(val) < 3 or val[2] not in SUPPORTED_TOOL.values():
@@ -458,7 +465,8 @@ def augment_parser(arguments, parser, semi_opt_parser=None, required=None):
                     ILLUSTRATION_DEFAULTS,
                     PAIRING_DEFAULTS,
                     SUMMARY_DEFAULTS,
-                    SUBMIT_OPTIONS]:
+                    SUBMIT_OPTIONS,
+                    CONVERT_OPTIONS]:
                 if arg in nspace:
                     default_value = nspace[arg]
                     value_type = type(default_value) if not isinstance(default_value, bool) else tab.cast_boolean
