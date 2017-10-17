@@ -1,9 +1,9 @@
-Development
+Guidelines for Contributors
 ===================================
 
 .. _development-install:
 
-Install
+Install for Development
 -------------------------------
 
 Clone the repository and switch to the development branch
@@ -84,7 +84,7 @@ accomplished through :term:`pysam` only.
 |
 
 
-Guidelines for Contributors
+Formatting
 -------------------------------
 
 - In general, follow `pep8 <https://www.python.org/dev/peps/pep-0008/>`_ style guides using a maximum line width of 120 characters
@@ -92,7 +92,7 @@ Guidelines for Contributors
 - any column name which may appear in any of the intermediate or final output files must be defined in :class:`~mavis.constants.COLUMNS`
 
 
-Formatting Types in docstrings
+Types in docstrings
 .................................
 
 if you want to be more explicit with nested types, the following conventions are used throughout the code
@@ -104,14 +104,14 @@ if you want to be more explicit with nested types, the following conventions are
 
 
 Unit Tests
-.................................
+-------------
 
 - all new code must have unit tests in the tests subdirectory
 - in general for assertEqual statements, the expected value is given first
 
 
 Major Assumptions
-...................
+------------------
 
 Some assumptions have been made when developing this project. The major ones have been listed here to
 facilitate debugging/development if any of these are violated in the future.
@@ -122,7 +122,7 @@ facilitate debugging/development if any of these are violated in the future.
 
 
 Current Limitations
-.....................
+---------------------
 
 - Assembling contigs will always fail for repeat sequences as we do not resolve this. Unlike traditional assemblies
   we cannot assume even input coverage as we are taking a select portion of the reads to assemble.
@@ -132,50 +132,6 @@ Current Limitations
   future releases.
 
 
-
-|
-
--------------
-
-|
-
-
-MAVIS Package Documentation
-----------------------------
-
-.. automodule:: mavis
-    :special-members: __and__, __or__, __xor__, __len__, __sub__, __add__
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-.. toctree::
-    :maxdepth: -1
-    
-    auto/mavis.align
-    mavis.annotate
-    auto/mavis.assemble
-    mavis.bam
-    auto/mavis.blat
-    auto/mavis.breakpoint
-    mavis.cluster
-    auto/mavis.config
-    auto/mavis.constants
-    auto/mavis.error
-    mavis.illustrate
-    auto/mavis.interval
-    mavis.pairing
-    mavis.validate
-    mavis.summary
-    auto/mavis.tools
-
-
-|
-
--------------
-
-|
-
 Development Goals
 -------------------------------
 
@@ -183,4 +139,3 @@ Features to be implemented
 
 .. todolist::
 
-.. |TOOLNAME| replace:: **MAVIS**
