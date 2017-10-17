@@ -23,8 +23,8 @@ from .constants import PIPELINE_STEP, PROTOCOL
 from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from .pairing.main import main as pairing_main
-from .submit import SubmissionScript, SCHEDULER
-from .submit import OPTIONS as SUBMIT_OPTIONS
+from .submit import SubmissionScript, SCHEDULER_CONFIG
+from .submit import STD_OPTIONS as STD_SUBMIT_OPTIONS
 from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 from .summary.main import main as summary_main
 from .tools import convert_tool_output, SUPPORTED_TOOL
@@ -162,7 +162,7 @@ def main_pipeline(config):
                 outputdir = mkdirp(os.path.join(base, PIPELINE_STEP.VALIDATE, prefix))
                 command = build_validate_command(config, libconf, inputfile, outputdir)
                 # build the submission script
-                options = {k: config.schedule[k] for k in SUBMIT_OPTIONS}
+                options = {k: config.schedule[k] for k in STD_SUBMIT_OPTIONS}
                 options['stdout'] = outputdir
                 options['jobname'] = 'MV_{}_{}'.format(libconf.library, prefix)
 
@@ -170,10 +170,10 @@ def main_pipeline(config):
                     options['memory_limit'] = config.schedule.trans_validation_memory
                 else:
                     options['memory_limit'] = config.schedule.validation_memory
-                script = SubmissionScript(command, config.schedule.scheduler, **options)
+                script = SubmissionScript(command, **options)
                 scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
 
-                submitall.append('vjob{}=$({} {})'.format(jobid_var_index, SCHEDULER[config.schedule.scheduler].submit, scriptname))
+                submitall.append('vjob{}=$({} {})'.format(jobid_var_index, SCHEDULER_CONFIG[config.schedule.scheduler].submit, scriptname))
                 # for setting up subsequent jobs and holds
                 outputfile = os.path.join(outputdir, VALIDATION_PASS_PATTERN)
                 job_name_by_output[outputfile] = options['jobname']
@@ -183,16 +183,16 @@ def main_pipeline(config):
             outputdir = mkdirp(os.path.join(base, PIPELINE_STEP.ANNOTATE, prefix))
             command = build_annotate_command(config, libconf, inputfile, outputdir)
 
-            options = {k: config.schedule[k] for k in SUBMIT_OPTIONS}
+            options = {k: config.schedule[k] for k in STD_SUBMIT_OPTIONS}
             options['stdout'] = outputdir
             options['jobname'] = 'MA_{}_{}'.format(libconf.library, prefix)
             options['memory_limit'] = config.schedule.annotation_memory
-            script = SubmissionScript(command, config.schedule.scheduler, **options)
+            script = SubmissionScript(command, **options)
             scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
             prevjob = '${{vjob{}##* }}'.format(jobid_var_index)
             submitall.append('ajob{}=$({} {} {})'.format(
-                jobid_var_index, SCHEDULER[config.schedule.scheduler].submit,
-                SCHEDULER[config.schedule.scheduler].dependency(prevjob),
+                jobid_var_index, SCHEDULER_CONFIG[config.schedule.scheduler].submit,
+                SCHEDULER_CONFIG[config.schedule.scheduler].dependency(prevjob),
                 scriptname))
             outputfile = os.path.join(outputdir, ANNOTATION_PASS_PATTERN)
             pairing_inputs.append(outputfile)
@@ -215,15 +215,15 @@ def main_pipeline(config):
     command.append('--inputs {}'.format(' \\\n\t'.join(pairing_inputs)))
     command = ' \\\n\t'.join(command)
 
-    options = {k: config.schedule[k] for k in SUBMIT_OPTIONS}
+    options = {k: config.schedule[k] for k in STD_SUBMIT_OPTIONS}
     options['stdout'] = outputdir
     options['jobname'] = 'MP_{}'.format(batch_id)
-    script = SubmissionScript(command, config.schedule.scheduler, **options)
+    script = SubmissionScript(command, **options)
     scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
 
     submitall.append('jobid=$({} {} {})'.format(
-        SCHEDULER[config.schedule.scheduler].submit,
-        SCHEDULER[config.schedule.scheduler].dependency(
+        SCHEDULER_CONFIG[config.schedule.scheduler].submit,
+        SCHEDULER_CONFIG[config.schedule.scheduler].dependency(
             ':'.join(['${{ajob{}##* }}'.format(i) for i in range(0, jobid_var_index)])),
         scriptname))
 
@@ -248,15 +248,15 @@ def main_pipeline(config):
             command.append('--{} {}'.format(arg, value))
     command = ' \\\n\t'.join(command)
 
-    options = {k: config.schedule[k] for k in SUBMIT_OPTIONS}
+    options = {k: config.schedule[k] for k in STD_SUBMIT_OPTIONS}
     options['stdout'] = outputdir
     options['jobname'] = 'MS_{}'.format(batch_id)
-    script = SubmissionScript(command, config.schedule.scheduler, **options)
+    script = SubmissionScript(command, **options)
     scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
 
     submitall.append('{} {} {}'.format(
-        SCHEDULER[config.schedule.scheduler].submit,
-        SCHEDULER[config.schedule.scheduler].dependency('${jobid##* }'),
+        SCHEDULER_CONFIG[config.schedule.scheduler].submit,
+        SCHEDULER_CONFIG[config.schedule.scheduler].dependency('${jobid##* }'),
         scriptname))
 
     # now write a script at the top level to submit all

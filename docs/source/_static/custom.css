@@ -3,6 +3,6 @@ em.property {
     overflow-y: auto;
 }
 
-.glossary :target {
+.glossary :target, .citation:target * {
     color: red;
 }
