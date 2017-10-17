@@ -1,9 +1,6 @@
 #!python
 import argparse
-from datetime import datetime
-import math
 import os
-import random
 import re
 import subprocess
 import sys
@@ -26,12 +23,12 @@ from .constants import PIPELINE_STEP, PROTOCOL
 from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from .pairing.main import main as pairing_main
-from .submit import SubmissionScript, SCHEDULER_CONFIG, STD_OPTIONS
+from .submit import SubmissionScript, SCHEDULER
 from .submit import OPTIONS as SUBMIT_OPTIONS
 from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 from .summary.main import main as summary_main
 from .tools import convert_tool_output, SUPPORTED_TOOL
-from .util import bash_expands, log, log_arguments, MavisNamespace, mkdirp, output_tabbed_file
+from .util import bash_expands, log, log_arguments, MavisNamespace, mkdirp, output_tabbed_file, get_env_variable
 from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 from .validate.main import main as validate_main
 
@@ -165,7 +162,7 @@ def main_pipeline(config):
                 outputdir = mkdirp(os.path.join(base, PIPELINE_STEP.VALIDATE, prefix))
                 command = build_validate_command(config, libconf, inputfile, outputdir)
                 # build the submission script
-                options = {k: config.schedule[k] for k in STD_OPTIONS}
+                options = {k: config.schedule[k] for k in SUBMIT_OPTIONS}
                 options['stdout'] = outputdir
                 options['jobname'] = 'MV_{}_{}'.format(libconf.library, prefix)
 
@@ -176,7 +173,7 @@ def main_pipeline(config):
                 script = SubmissionScript(command, config.schedule.scheduler, **options)
                 scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
 
-                submitall.append('vjob{}=$({} {})'.format(jobid_var_index, SCHEDULER_CONFIG[config.schedule.scheduler].submit, scriptname))
+                submitall.append('vjob{}=$({} {})'.format(jobid_var_index, SCHEDULER[config.schedule.scheduler].submit, scriptname))
                 # for setting up subsequent jobs and holds
                 outputfile = os.path.join(outputdir, VALIDATION_PASS_PATTERN)
                 job_name_by_output[outputfile] = options['jobname']
@@ -186,7 +183,7 @@ def main_pipeline(config):
             outputdir = mkdirp(os.path.join(base, PIPELINE_STEP.ANNOTATE, prefix))
             command = build_annotate_command(config, libconf, inputfile, outputdir)
 
-            options = {k: config.schedule[k] for k in STD_OPTIONS}
+            options = {k: config.schedule[k] for k in SUBMIT_OPTIONS}
             options['stdout'] = outputdir
             options['jobname'] = 'MA_{}_{}'.format(libconf.library, prefix)
             options['memory_limit'] = config.schedule.annotation_memory
@@ -194,8 +191,8 @@ def main_pipeline(config):
             scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
             prevjob = '${{vjob{}##* }}'.format(jobid_var_index)
             submitall.append('ajob{}=$({} {} {})'.format(
-                jobid_var_index, SCHEDULER_CONFIG[config.schedule.scheduler].submit,
-                SCHEDULER_CONFIG[config.schedule.scheduler].dependency(prevjob),
+                jobid_var_index, SCHEDULER[config.schedule.scheduler].submit,
+                SCHEDULER[config.schedule.scheduler].dependency(prevjob),
                 scriptname))
             outputfile = os.path.join(outputdir, ANNOTATION_PASS_PATTERN)
             pairing_inputs.append(outputfile)
@@ -218,15 +215,15 @@ def main_pipeline(config):
     command.append('--inputs {}'.format(' \\\n\t'.join(pairing_inputs)))
     command = ' \\\n\t'.join(command)
 
-    options = {k: config.schedule[k] for k in STD_OPTIONS}
+    options = {k: config.schedule[k] for k in SUBMIT_OPTIONS}
     options['stdout'] = outputdir
     options['jobname'] = 'MP_{}'.format(batch_id)
     script = SubmissionScript(command, config.schedule.scheduler, **options)
     scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
 
     submitall.append('jobid=$({} {} {})'.format(
-        SCHEDULER_CONFIG[config.schedule.scheduler].submit,
-        SCHEDULER_CONFIG[config.schedule.scheduler].dependency(
+        SCHEDULER[config.schedule.scheduler].submit,
+        SCHEDULER[config.schedule.scheduler].dependency(
             ':'.join(['${{ajob{}##* }}'.format(i) for i in range(0, jobid_var_index)])),
         scriptname))
 
@@ -251,15 +248,15 @@ def main_pipeline(config):
             command.append('--{} {}'.format(arg, value))
     command = ' \\\n\t'.join(command)
 
-    options = {k: config.schedule[k] for k in STD_OPTIONS}
+    options = {k: config.schedule[k] for k in SUBMIT_OPTIONS}
     options['stdout'] = outputdir
     options['jobname'] = 'MS_{}'.format(batch_id)
     script = SubmissionScript(command, config.schedule.scheduler, **options)
     scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
 
     submitall.append('{} {} {}'.format(
-        SCHEDULER_CONFIG[config.schedule.scheduler].submit,
-        SCHEDULER_CONFIG[config.schedule.scheduler].dependency('${jobid##* }'),
+        SCHEDULER[config.schedule.scheduler].submit,
+        SCHEDULER[config.schedule.scheduler].dependency('${jobid##* }'),
         scriptname))
 
     # now write a script at the top level to submit all
@@ -320,20 +317,22 @@ use the -h/--help option
     pstep = sys.argv.pop(1)
     sys.argv[0] = '{} {}'.format(sys.argv[0], pstep)
 
-    parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter, add_help=False)
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, add_help=False)
     required = parser.add_argument_group('required arguments')
     optional = parser.add_argument_group('optional arguments')
     augment_parser(['help', 'version'], optional)
 
     if pstep == PIPELINE_STEP.CONFIG:
-        generate_config(parser, required, optional, log)
+        generate_config(parser, required, optional)
         return EXIT_OK
     else:
         required.add_argument('-o', '--output', help='path to the output directory', required=True)
 
         if pstep == PIPELINE_STEP.PIPELINE:
             required.add_argument('config', help='path to the input pipeline configuration file', metavar='FILEPATH')
-            augment_parser(['skip_stage'], optional)
+            optional.add_argument(
+                '--skip_stage', choices=[PIPELINE_STEP.CLUSTER, PIPELINE_STEP.VALIDATE], action='append', default=[],
+                help='Use flag once per stage to skip. Can skip clustering or validation or both')
 
         elif pstep == PIPELINE_STEP.CONVERT:
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
@@ -387,7 +386,7 @@ use the -h/--help option
             return EXIT_OK if success_flag else EXIT_ERROR
 
         else:
-            return usage('invalid value \'{}\' for pipeline step/stage'.format(pstep), detail=False)
+            raise NotImplementedError('invalid value for <pipeline step>', pstep)
     args = MavisNamespace(**parser.parse_args().__dict__)
     args.samtools_version = get_samtools_version()
     args.blat_version = get_blat_version()

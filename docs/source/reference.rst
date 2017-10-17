@@ -191,15 +191,30 @@ or if you have configured the environment variables as given in step 2, then sim
 DGV Annotations
 ,,,,,,,,,,,,,,,,,,,,,,,
 
-.. todo:: document dgv annotations
+File which contains regions corresonding to what is found in the database of genomic variants. This is
+used to annotate events that are found in healthy control samples and therefore may not be of interest
+if looking for somatic events. This can be downloaded from the `dgv site <http://dgv.tcag.ca/dgv/app/download>`_
+It will need to be reformatted to have 4 columns after download. We used awk to convert the file like so
 
+.. code-block:: bash
 
+    awk '{print $2"\t"$3"\t"$4"\t"$1} GRCh37_hg19_variants_2016-05-15.txt > GRCh37_hg19_variants_2016-05-15.input.txt
+
+Note in hg19 the column is called "name" and in hg38 the column is called "variantaccession".
+An example is shown below
+
+.. code-block:: text
+
+    #chr     start   end     name
+    1       1       2300000 nsv482937
+    1       10001   22118   dgv1n82
+    1       10001   127330  nsv7879
 
 .. _reference-files-aligner-reference:
 
 Aligner Reference
 ,,,,,,,,,,,,,,,,,,,,,,,
 
-The aligner reference file is the reference genome file used by the aligner during the validate stage. For example, 
+The aligner reference file is the reference genome file used by the aligner during the validate stage. For example,
 if :term:`blat` is the aligner then this will be a :term:`2bit` file.
 
