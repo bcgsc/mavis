@@ -152,7 +152,7 @@ def float_fraction(num):
 
 COMPLETE_STAMP = 'MAVIS.COMPLETE'
 
-PIPELINE_STEP = MavisNamespace(
+SUBCOMMAND = MavisNamespace(
     ANNOTATE='annotate',
     VALIDATE='validate',
     PIPELINE='pipeline',
@@ -161,7 +161,8 @@ PIPELINE_STEP = MavisNamespace(
     SUMMARY='summary',
     CHECKER='checker',
     CONFIG='config',
-    CONVERT='convert'
+    CONVERT='convert',
+    OVERLAY='overlay'
 )
 """:class:`MavisNamespace`: holds controlled vocabulary for allowed pipeline stage values
 

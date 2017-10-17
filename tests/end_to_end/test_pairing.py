@@ -5,7 +5,7 @@ import tempfile
 import unittest
 
 from mavis.breakpoint import read_bpp_from_input_file
-from mavis.constants import PIPELINE_STEP
+from mavis.constants import SUBCOMMAND
 from mavis.main import main
 from mock import patch
 
@@ -24,7 +24,7 @@ class TestPairing(unittest.TestCase):
 
     def test_pairing(self):
         args = [
-            'mavis', PIPELINE_STEP.PAIR,
+            'mavis', SUBCOMMAND.PAIR,
             '-n', os.path.join(DATA_PREFIX, 'pairing_annotations.tab'),
             '-f', os.path.join(DATA_PREFIX, 'pairing_sequences.fa'),
             '-o', TEMP_OUTPUT,

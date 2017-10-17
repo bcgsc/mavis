@@ -4,7 +4,7 @@ import sys
 import unittest
 
 
-from mavis.constants import PIPELINE_STEP
+from mavis.constants import SUBCOMMAND
 from mavis.main import main
 from mock import patch
 
@@ -21,7 +21,7 @@ class TestHelpMenu(unittest.TestCase):
                 self.assertEqual(0, returncode)
 
     def test_pipeline(self):
-        with patch.object(sys, 'argv', ['mavis', PIPELINE_STEP.PIPELINE, '-h']):
+        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.PIPELINE, '-h']):
             try:
                 returncode = main()
             except SystemExit as err:
@@ -30,7 +30,7 @@ class TestHelpMenu(unittest.TestCase):
                 self.assertEqual(0, returncode)
 
     def test_config(self):
-        with patch.object(sys, 'argv', ['mavis', PIPELINE_STEP.CONFIG, '-h']):
+        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CONFIG, '-h']):
             try:
                 returncode = main()
             except SystemExit as err:
@@ -39,7 +39,7 @@ class TestHelpMenu(unittest.TestCase):
                 self.assertEqual(0, returncode)
 
     def test_cluster(self):
-        with patch.object(sys, 'argv', ['mavis', PIPELINE_STEP.CLUSTER, '-h']):
+        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CLUSTER, '-h']):
             try:
                 returncode = main()
             except SystemExit as err:
@@ -48,7 +48,7 @@ class TestHelpMenu(unittest.TestCase):
                 self.assertEqual(0, returncode)
 
     def test_validate(self):
-        with patch.object(sys, 'argv', ['mavis', PIPELINE_STEP.VALIDATE, '-h']):
+        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.VALIDATE, '-h']):
             try:
                 returncode = main()
             except SystemExit as err:
@@ -57,7 +57,7 @@ class TestHelpMenu(unittest.TestCase):
                 self.assertEqual(0, returncode)
 
     def test_annotate(self):
-        with patch.object(sys, 'argv', ['mavis', PIPELINE_STEP.ANNOTATE, '-h']):
+        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.ANNOTATE, '-h']):
             try:
                 returncode = main()
             except SystemExit as err:
@@ -66,7 +66,7 @@ class TestHelpMenu(unittest.TestCase):
                 self.assertEqual(0, returncode)
 
     def test_pairing(self):
-        with patch.object(sys, 'argv', ['mavis', PIPELINE_STEP.PAIR, '-h']):
+        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.PAIR, '-h']):
             try:
                 returncode = main()
             except SystemExit as err:
@@ -75,7 +75,7 @@ class TestHelpMenu(unittest.TestCase):
                 self.assertEqual(0, returncode)
 
     def test_summary(self):
-        with patch.object(sys, 'argv', ['mavis', PIPELINE_STEP.SUMMARY, '-h']):
+        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.SUMMARY, '-h']):
             try:
                 returncode = main()
             except SystemExit as err:
@@ -84,7 +84,16 @@ class TestHelpMenu(unittest.TestCase):
                 self.assertEqual(0, returncode)
 
     def test_convert(self):
-        with patch.object(sys, 'argv', ['mavis', PIPELINE_STEP.CONVERT, '-h']):
+        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CONVERT, '-h']):
+            try:
+                returncode = main()
+            except SystemExit as err:
+                self.assertEqual(0, err.code)
+            else:
+                self.assertEqual(0, returncode)
+
+    def test_overlay(self):
+        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.OVERLAY, '-h']):
             try:
                 returncode = main()
             except SystemExit as err:
@@ -93,7 +102,7 @@ class TestHelpMenu(unittest.TestCase):
                 self.assertEqual(0, returncode)
 
     def test_bad_option(self):
-        with patch.object(sys, 'argv', ['mavis', PIPELINE_STEP.PIPELINE, '--blargh']):
+        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.PIPELINE, '--blargh']):
             try:
                 returncode = main()
             except SystemExit as err:

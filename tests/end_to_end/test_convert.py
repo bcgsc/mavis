@@ -6,7 +6,7 @@ import tempfile
 import unittest
 
 
-from mavis.constants import PIPELINE_STEP
+from mavis.constants import SUBCOMMAND
 from mavis.main import main
 from mavis.tools import SUPPORTED_TOOL
 from mavis.util import unique_exists
@@ -28,7 +28,7 @@ class TestConvert(unittest.TestCase):
 
     def run_main(self, inputfile, file_type, strand_specific=False):
         args = [
-            'mavis', PIPELINE_STEP.CONVERT,
+            'mavis', SUBCOMMAND.CONVERT,
             '-o', TEMP_OUTPUT,
             '-n', inputfile,
             '--file_type', file_type,
