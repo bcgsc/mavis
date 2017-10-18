@@ -371,7 +371,7 @@ def overlay_main(
     attempts = 1
     while True:
         try:
-            canvas = draw_multi_transcript_overlay(settings, gene_to_draw, vmarkers=markers, plots=read_depth_plots)
+            canvas = draw_multi_transcript_overlay(settings, gene_to_draw, vmarkers=markers, plots=plots)
             break
         except DrawingFitError as err:
             if attempts > max_drawing_retries:
