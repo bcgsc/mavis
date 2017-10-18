@@ -1,9 +1,10 @@
 import unittest
 
-from mavis.breakpoint import Breakpoint, BreakpointPair, read_bpp_from_input_file
+from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import COLUMNS, ORIENT, STRAND, SVTYPE
 from mavis.error import InvalidRearrangement, NotSpecifiedError
 from mavis.interval import Interval
+from mavis.util import read_bpp_from_input_file
 
 from .mock import Mock
 

@@ -26,7 +26,7 @@ DEFAULTS = WeakMavisNamespace()
 DEFAULTS.add(
     'width', 1000, defn='The drawing width in pixels')
 DEFAULTS.add(
-    'domain_name_regex_filter', r'.*',
+    'domain_name_regex_filter', r'^PF\d+$',
     defn='The regular expression used to select domains to be displayed (filtered by name)')
 DEFAULTS.add(
     'max_drawing_retries', 3,

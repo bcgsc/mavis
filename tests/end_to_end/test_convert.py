@@ -27,19 +27,18 @@ def setUpModule():
 class TestConvert(unittest.TestCase):
 
     def run_main(self, inputfile, file_type, strand_specific=False):
+        outputfile = os.path.join(TEMP_OUTPUT, file_type + '.tab')
         args = [
             'mavis', SUBCOMMAND.CONVERT,
-            '-o', TEMP_OUTPUT,
+            '-o', outputfile,
             '-n', inputfile,
             '--file_type', file_type,
             '--strand_specific', strand_specific
         ]
         with patch.object(sys, 'argv', args):
             self.assertEqual(0, main())
-            filename = os.path.join(TEMP_OUTPUT, 'mavis_{}_converted.tab'.format(file_type))
-            print('output', filename)
-            self.assertTrue(unique_exists(filename))
-            return filename
+            print('output', outputfile)
+            self.assertTrue(unique_exists(outputfile))
 
     def test_chimerascan(self):
         self.run_main(os.path.join(DATA_PREFIX, 'chimerascan_output.bedpe'), SUPPORTED_TOOL.CHIMERASCAN, False)

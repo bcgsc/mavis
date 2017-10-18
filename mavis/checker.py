@@ -12,7 +12,7 @@ from .util import bash_expands, log, MavisNamespace, unique_exists
 
 LIBRARY_DIR_REGEX = r'^[\w-]+_({})_({})$'.format('|'.join(DISEASE_STATUS.values()), '|'.join(PROTOCOL.values()))
 SGE_LOG_PATTERN = r'*.o*'
-MANUAL_LOG_PATTERN = r'*.log'
+LOG_PATTERN = r'*.log'
 BATCH_ID_PATTERN = 'batch-[0-9a-f-]+'
 
 LOGFILE_STATUS = MavisNamespace(
@@ -197,8 +197,8 @@ class PipelineStageRun:
         # collect the log and complete stamp files
         try:
             self.stamps[job_task_id] = unique_exists(stamp_pattern)
-        except OSError as err:
-            return
+        except OSError:
+            pass
 
     def collect_log(self, job_task_id=None):
         """
@@ -206,11 +206,10 @@ class PipelineStageRun:
         """
         if self.name in [SUBCOMMAND.ANNOTATE, SUBCOMMAND.VALIDATE]:
             # annotation and validation are setup in subdirectories each with their own complete stamp
-            subdir = '*-{}'.format(job_task_id)
             patterns = [
-                os.path.join(self.output_dir, '{}.{}'.format(SGE_LOG_PATTERN, job_task_id)),  # by task-id
-                os.path.join(self.output_dir, SGE_LOG_PATTERN),  # single job
-                os.path.join(self.output_dir, MANUAL_LOG_PATTERN)  # manual run
+                os.path.join(self.output_dir, '{}.{}'.format(SGE_LOG_PATTERN, job_task_id)),  # old log pattern
+                os.path.join(self.output_dir, '*-{}'.format(job_task_id), LOG_PATTERN),  # single job
+                os.path.join(self.output_dir, LOG_PATTERN)  # old log pattern manual run
             ]
             for log_pattern in patterns:
                 try:
@@ -222,7 +221,7 @@ class PipelineStageRun:
         else:
             patterns = [
                 os.path.join(self.output_dir, SGE_LOG_PATTERN),  # single job
-                os.path.join(self.output_dir, MANUAL_LOG_PATTERN)  # manual run
+                os.path.join(self.output_dir, LOG_PATTERN)  # manual run
             ]
             for log_pattern in patterns:
                 try:

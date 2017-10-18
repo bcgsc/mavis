@@ -1,9 +1,10 @@
 import unittest
 
-from mavis.breakpoint import Breakpoint, BreakpointPair, read_bpp_from_input_file
+from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.cluster.cluster import merge_breakpoint_pairs, merge_integer_intervals
 from mavis.constants import COLUMNS, PROTOCOL
 from mavis.interval import Interval
+from mavis.util import read_bpp_from_input_file
 
 from . import FULL_BASE_EVENTS
 

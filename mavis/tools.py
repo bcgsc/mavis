@@ -8,10 +8,10 @@ from shortuuid import uuid
 import tab
 import vcf
 
-from .breakpoint import Breakpoint, BreakpointPair, read_bpp_from_input_file
+from .breakpoint import Breakpoint, BreakpointPair
 from .constants import COLUMNS, MavisNamespace, ORIENT, STRAND, SVTYPE
 from .error import InvalidRearrangement
-from .util import devnull
+from .util import devnull, read_bpp_from_input_file
 
 SUPPORTED_TOOL = MavisNamespace(
     MANTA='manta',

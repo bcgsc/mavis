@@ -164,7 +164,7 @@ def main_pipeline(config):
 
         for inputfile in inputs:
             prefix = get_prefix(inputfile)  # will be batch id + job number
-
+            dependency = ''
             if SUBCOMMAND.VALIDATE not in config.skip_stage:
                 outputdir = mkdirp(os.path.join(base, SUBCOMMAND.VALIDATE, prefix))
                 command = build_validate_command(config, libconf, inputfile, outputdir)
@@ -185,7 +185,7 @@ def main_pipeline(config):
                 outputfile = os.path.join(outputdir, VALIDATION_PASS_PATTERN)
                 job_name_by_output[outputfile] = options['jobname']
                 inputfile = outputfile
-
+                dependency = SCHEDULER_CONFIG[config.schedule.scheduler].dependency('${{vjob{}##* }}'.format(jobid_var_index))
             # annotation cannot be skipped
             outputdir = mkdirp(os.path.join(base, SUBCOMMAND.ANNOTATE, prefix))
             command = build_annotate_command(config, libconf, inputfile, outputdir)
@@ -196,11 +196,8 @@ def main_pipeline(config):
             options['memory_limit'] = config.schedule.annotation_memory
             script = SubmissionScript(command, config.schedule.scheduler, **options)
             scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
-            prevjob = '${{vjob{}##* }}'.format(jobid_var_index)
             submitall.append('ajob{}=$({} {} {})'.format(
-                jobid_var_index, SCHEDULER_CONFIG[config.schedule.scheduler].submit,
-                SCHEDULER_CONFIG[config.schedule.scheduler].dependency(prevjob),
-                scriptname))
+                jobid_var_index, SCHEDULER_CONFIG[config.schedule.scheduler].submit, dependency, scriptname))
             outputfile = os.path.join(outputdir, ANNOTATION_PASS_PATTERN)
             pairing_inputs.append(outputfile)
             job_name_by_output[outputfile] = options['jobname']
@@ -561,7 +558,7 @@ use the -h/--help option
             pstep == SUBCOMMAND.CLUSTER and args.uninformative_filter,
             pstep == SUBCOMMAND.PIPELINE and config.cluster.uninformative_filter,
             pstep == SUBCOMMAND.VALIDATE and args.protocol == PROTOCOL.TRANS,
-            pstep == SUBCOMMAND.PIPELINE and config.has_transcriptome() and SUBCOMMAND.CLUSTER not in config.skip_stage,
+            pstep == SUBCOMMAND.PIPELINE and config.has_transcriptome() and SUBCOMMAND.VALIDATE not in config.skip_stage,
             pstep == SUBCOMMAND.PAIR or pstep == SUBCOMMAND.ANNOTATE or pstep == SUBCOMMAND.SUMMARY,
             pstep == SUBCOMMAND.OVERLAY
         ]):

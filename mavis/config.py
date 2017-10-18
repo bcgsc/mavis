@@ -81,7 +81,7 @@ class RangeAppendAction(argparse.Action):
 
 
 def cast_if_not_none(value, cast_type):
-    if value is None or value.lower() in ['none', 'null', '']:
+    if value is None or str(value).lower() in ['none', 'null', '']:
         return None
     return cast(value, cast_type)
 
@@ -284,7 +284,7 @@ class MavisConfig:
 
         for attr, fname in self.reference.items():
             if not os.path.exists(fname):
-                raise KeyError(attr, 'file at', fname, 'does not exist')
+                raise OSError(attr, 'file at', fname, 'does not exist')
 
         # set the conversion section
         self.convert = kwargs.pop('convert', {})
@@ -363,9 +363,11 @@ def add_semi_optional_argument(argname, success_parser, failure_parser, help_msg
     env_name = ENV_VAR_PREFIX + argname.upper()
     help_msg += ' The default for this argument is configured by setting the environment variable {}'.format(env_name)
     if os.environ.get(env_name, None):
-        success_parser.add_argument('--{}'.format(argname), required=False, default=os.environ[env_name], help=help_msg, metavar=metavar)
+        required = required = bool(success_parser.title.startswith('required'))
+        success_parser.add_argument('--{}'.format(argname), required=required, default=os.environ[env_name], help=help_msg, metavar=metavar)
     else:
-        failure_parser.add_argument('--{}'.format(argname), required=True, help=help_msg, metavar=metavar)
+        required = required = bool(failure_parser.title.startswith('required'))
+        failure_parser.add_argument('--{}'.format(argname), required=required, help=help_msg, metavar=metavar)
 
 
 def get_metavar(arg_type):
@@ -525,9 +527,11 @@ def generate_config(parser, required, optional, log=devnull):
         help='alias for use in inputs and full command (quoted)', action='append')
     optional.add_argument(
         '--no_defaults', default=False, action='store_true', help='do not write current defaults to the config output')
-    augment_parser(['annotations'], required, optional)
+    augment_parser(['annotations'], optional, optional)
+    # add the optional annotations file (only need this is auto generating bam stats for the transcriptome)
     augment_parser(sorted(set(SUBMIT_OPTIONS) - {'jobname', 'stdout'}) + ['skip_stage'], optional)
-    args = parser.parse_args()
+    args = MavisNamespace(**parser.parse_args().__dict__)
+
     try:
         # process the libraries by input argument (--input)
         libs = []
@@ -564,11 +568,13 @@ def generate_config(parser, required, optional, log=devnull):
         parser.error(' '.join(err.args))
 
     log('MAVIS: {}'.format(__version__))
-    log_arguments(args.__dict__)
+    log_arguments(args)
 
     if SUBCOMMAND.VALIDATE not in args.skip_stage:
         # load the annotations if we need them
         if any([l.is_trans() for l in libs]):
+            if not args.get('annotations'):
+                parser.error('argument --annotations: is required to gather bam stats for transcriptome libraries')
             log('loading the reference annotations file', args.annotations)
             args.annotations_filename = args.annotations
             args.annotations = load_annotations(args.annotations, best_transcripts_only=args.best_transcripts_only)

@@ -8,7 +8,7 @@ from mavis.annotate.protein import Domain
 from mavis.annotate.variant import Annotation, FusionTranscript
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import ORIENT, PROTOCOL, STRAND, SVTYPE
-from mavis.illustrate.constants import DiagramSettings
+from mavis.illustrate.constants import DiagramSettings, DEFAULTS
 from mavis.illustrate.diagram import draw_multi_transcript_overlay, draw_sv_summary_diagram, generate_interval_mapping, HEX_BLACK, HEX_WHITE
 from mavis.illustrate.elements import draw_genes, draw_legend, draw_template, draw_ustranscript
 from mavis.illustrate.scatter import ScatterPlot
@@ -19,6 +19,7 @@ from svgwrite import Drawing
 from . import build_transcript, MockObject, MockString, OUTPUT_SVG, TEMPLATE_METADATA_FILE
 
 TEMPLATE_METADATA = None
+DEFAULTS.domain_name_regex_filter = r'.*'
 
 
 def setUpModule():

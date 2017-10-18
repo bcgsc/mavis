@@ -4,9 +4,9 @@ import sys
 import tempfile
 import unittest
 
-from mavis.breakpoint import read_bpp_from_input_file
 from mavis.constants import SUBCOMMAND
 from mavis.main import main
+from mavis.util import read_bpp_from_input_file
 from mock import patch
 
 
