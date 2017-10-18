@@ -112,6 +112,8 @@ setup(
     ],
     setup_requires=[
         'nose==1.3.7',
+        'nose-exclude==0.5.0',
+        'nose-capturestderr==1.2',
         'numpy>=1.13.1'  # put here b/c biopython doesn't declare this as a setup dependency properly
     ],
     test_suite='nose.collector',
