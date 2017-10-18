@@ -436,6 +436,10 @@ def augment_parser(arguments, parser, semi_opt_parser=None, required=None):
             parser.add_argument(
                 '--skip_stage', choices=[SUBCOMMAND.CLUSTER, SUBCOMMAND.VALIDATE], action='append', default=[],
                 help='Use flag once per stage to skip. Can skip clustering or validation or both')
+        elif arg == 'strand_specific':
+            parser.add_argument(
+                '--strand_specific', type=tab.cast_boolean, metavar=get_metavar(bool),
+                default=False, help='indicates that the input is strand specific')
         else:
             value_type = None
             help_msg = None
@@ -444,9 +448,6 @@ def augment_parser(arguments, parser, semi_opt_parser=None, required=None):
             if arg == 'aligner':
                 choices = SUPPORTED_ALIGNER.values()
                 help_msg = 'aligner to use for aligning contigs'
-            if arg == 'strand_specific':
-                value_type = tab.cast_boolean
-                help_msg = 'indicates that the input is strand specific'
             if arg == 'uninformative_filter':
                 help_msg = 'If flag is False then the clusters will not be filtered based on lack of annotation'
             if arg == 'scheduler':

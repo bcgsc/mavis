@@ -389,12 +389,12 @@ def overlay_main(
     canvas.saveas(svg_output_file)
 
 
-def convert_main(inputs, output, file_type, strand_specific=False, assume_no_untemplated=True):
+def convert_main(inputs, outputfile, file_type, strand_specific=False, assume_no_untemplated=True):
     bpp_results = []
     for filename in inputs:
         bpp_results.extend(convert_tool_output(filename, file_type, strand_specific, log, True, assume_no_untemplated=assume_no_untemplated))
-    output_filename = 'mavis_{}_converted.tab'.format(file_type)
-    output_tabbed_file(bpp_results, os.path.join(output, output_filename))
+    mkdirp(os.path.dirname(outputfile))
+    output_tabbed_file(bpp_results, outputfile)
 
 
 def main():
@@ -447,6 +447,13 @@ use the -h/--help option
     if pstep == SUBCOMMAND.CONFIG:
         generate_config(parser, required, optional)
         return EXIT_OK
+    elif pstep == SUBCOMMAND.CONVERT:
+        required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
+        required.add_argument(
+            '--file_type', choices=sorted([t for t in SUPPORTED_TOOL.values() if t != 'mavis']),
+            required=True, help='Indicates the input file type to be parsed')
+        augment_parser(['strand_specific', 'assume_no_untemplated'], optional)
+        required.add_argument('--outputfile', '-o', required=True, help='path to the outputfile', metavar='FILEPATH')
     else:
         required.add_argument('-o', '--output', help='path to the output directory', required=True)
 
@@ -455,13 +462,6 @@ use the -h/--help option
             optional.add_argument(
                 '--skip_stage', choices=[SUBCOMMAND.CLUSTER, SUBCOMMAND.VALIDATE], action='append', default=[],
                 help='Use flag once per stage to skip. Can skip clustering or validation or both')
-
-        elif pstep == SUBCOMMAND.CONVERT:
-            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
-            required.add_argument(
-                '--file_type', choices=sorted([t for t in SUPPORTED_TOOL.values() if t != 'mavis']),
-                required=True, help='Indicates the input file type to be parsed')
-            augment_parser(['strand_specific', 'assume_no_untemplated'], optional)
 
         elif pstep == SUBCOMMAND.CLUSTER:
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
