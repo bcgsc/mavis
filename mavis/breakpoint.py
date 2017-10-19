@@ -149,6 +149,15 @@ class BreakpointPair:
             self.break2 = b2
         self.stranded = stranded
         self.opposing_strands = opposing_strands
+
+        if self.break1.orient != ORIENT.NS and self.break2.orient != ORIENT.NS:
+            if self.opposing_strands is not None:
+                if (self.break1.orient == self.break2.orient and not self.opposing_strands) \
+                        or (self.break1.orient != self.break2.orient and self.opposing_strands):
+                    raise InvalidRearrangement(
+                        'invalid breakpoint pair cannot form a valid combination', b1, b2, self.opposing_strands)
+            else:
+                self.opposing_strands = self.break1.orient == self.break2.orient
         # between break1 and break2 not in either
         self.untemplated_seq = untemplated_seq
         self.data = {}
@@ -168,12 +177,6 @@ class BreakpointPair:
                     'conflict in input arguments, opposing_strands must agree with input breakpoints'
                     ' when the strand has been specified'
                 )
-        if self.break1.orient != ORIENT.NS and self.break2.orient != ORIENT.NS:
-            if self.opposing_strands is not None:
-                if (self.break1.orient == self.break2.orient and not self.opposing_strands) \
-                        or (self.break1.orient != self.break2.orient and self.opposing_strands):
-                    raise InvalidRearrangement(
-                        'invalid breakpoint pair cannot form a valid combination', b1, b2, self.opposing_strands)
 
         if self.opposing_strands is None:
             raise NotSpecifiedError('must specify if opposing_strands')
