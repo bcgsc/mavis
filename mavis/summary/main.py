@@ -61,10 +61,9 @@ def main(
             COLUMNS.exon_first_3prime,
             COLUMNS.disease_status
         ],
-        add_default={k: None for k in [
+        add_default={**{k: None for k in [
             COLUMNS.contig_remapped_reads,
             COLUMNS.contig_seq,
-            COLUMNS.call_method,
             COLUMNS.break1_split_reads,
             COLUMNS.break1_split_reads_forced,
             COLUMNS.break2_split_reads,
@@ -83,7 +82,7 @@ def main(
             COLUMNS.cdna_synon,
             'dgv',
             'summary_pairing']
-        },
+        }, COLUMNS.call_method: CALL_METHOD.INPUT},
         explicit_strand=False,
         expand_ns=False,
         cast={
@@ -339,7 +338,3 @@ def main(
     output_tabbed_file(rows, fname, header=output_columns)
     log('Wrote {} gene fusion events to {}'.format(len(rows), fname))
     generate_complete_stamp(output, log)
-
-
-if __name__ == '__main__':
-    main()
