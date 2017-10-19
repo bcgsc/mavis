@@ -54,7 +54,7 @@ class TestConvert(unittest.TestCase):
         self.run_main(os.path.join(DATA_PREFIX, 'manta_events.vcf'), SUPPORTED_TOOL.MANTA, False)
 
     def test_pindel(self):
-        raise unittest.SkipTest('TODO')
+        self.run_main(os.path.join(DATA_PREFIX, 'pindel_events.vcf'), SUPPORTED_TOOL.PINDEL, False)
 
     def test_transabyss(self):
         self.run_main(os.path.join(DATA_PREFIX, 'transabyss_indels_output.tab'), SUPPORTED_TOOL.TA, False)

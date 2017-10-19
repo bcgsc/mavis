@@ -103,6 +103,7 @@ There are mutiple ways to configure the scheduler settings. Some of the configur
 - :term:`memory_limit` ``MAVIS_MEMORY_LIMIT``
 - :term:`time_limit` ``MAVIS_TIME_LIMIT``
 - :term:`import_env` ``MAVIS_IMPORT_ENV``
+- :term:`scheduler` ``MAVIS_SCHEDULER``
 
 For example to set the job queue default using an :ref:`environment variable <config-environment>`
 
@@ -110,7 +111,7 @@ For example to set the job queue default using an :ref:`environment variable <co
 
     export MAVIS_QUEUE=QUEUENAME
 
-Or to give it as an argument during config generation
+Or to give it as an argument during :ref:`config generation <pipeline-config>`
 
 .. code:: bash
 

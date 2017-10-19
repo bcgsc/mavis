@@ -102,7 +102,8 @@ setup(
         'braceexpand==0.1.2',
         'biopython>=1.70',
         'Distance>=0.1.3',
-        'setuptools>=36.6.0'
+        'setuptools>=36.6.0',
+        'shortuuid>=0.5.0'
     ],
     python_requires='>=3',
     author_email='creisle@bcgsc.ca',

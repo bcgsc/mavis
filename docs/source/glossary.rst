@@ -75,6 +75,9 @@ General Terms
     SLURM
         SLURM is a job scheduling system for cluster management see https://slurm.schedmd.com/quickstart.html.
 
+    BWA
+        BWA is an alignement tool. See https://github.com/lh3/bwa
+
 
 .. include:: config_settings_glossary.rst
 
@@ -373,3 +376,7 @@ List of column names and their definitions. The types indicated here are the exp
     protein_synon
         semi-colon delimited list of transcript ids which produce a translation with an identical amino-acid sequence
         to the current fusion product
+
+    tracking_id
+        column used to store input identifiers from the original SV calls. Used to track calls from the input files to
+        the final outputs.

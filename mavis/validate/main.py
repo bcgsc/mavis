@@ -2,7 +2,7 @@ import itertools
 import os
 import re
 import subprocess
-import uuid
+from shortuuid import uuid
 
 import pysam
 
@@ -73,7 +73,7 @@ def main(
             COLUMNS.stranded: strand_specific
         },
         expand_ns=False, explicit_strand=False,
-        cast={COLUMNS.cluster_id: lambda x: str(uuid.uuid4()) if not x else x}
+        cast={COLUMNS.cluster_id: lambda x: str(uuid()) if not x else x}
     )
     evidence_clusters = []
     for bpp in bpps:
@@ -128,7 +128,7 @@ def main(
         log(
             '({} of {})'.format(i + 1, len(evidence_clusters)),
             'gathered evidence for:', evidence.cluster_id,
-            '' if 'input_id' not in evidence.data else '(input_id: {})'.format(evidence.data['input_id'])
+            '' if COLUMNS.tracking_id not in evidence.data else '(tracking_id: {})'.format(evidence.tracking_id)
         )
         log(evidence, time_stamp=False)
         log('possible event type(s):', BreakpointPair.classify(evidence), time_stamp=False)

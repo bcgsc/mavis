@@ -324,9 +324,9 @@ def main(
                 if other_lib != row.library:
                     pairing_state = get_pairing_state(
                         *libraries[row.library],
-                         other_protocol=other_protocol, other_disease_state=other_disease_state,
-                         is_matched=other_lib in paired_libraries,
-                         inferred_is_matched=other_lib in inferred_paired_libraries)
+                        other_protocol=other_protocol, other_disease_state=other_disease_state,
+                        is_matched=other_lib in paired_libraries,
+                        inferred_is_matched=other_lib in inferred_paired_libraries)
                 else:
                     pairing_state = 'Not Applicable'
                 row.data[column_name] = pairing_state

@@ -83,6 +83,15 @@ class TestHelpMenu(unittest.TestCase):
             else:
                 self.assertEqual(0, returncode)
 
+    def test_convert(self):
+        with patch.object(sys, 'argv', ['mavis', PIPELINE_STEP.CONVERT, '-h']):
+            try:
+                returncode = main()
+            except SystemExit as err:
+                self.assertEqual(0, err.code)
+            else:
+                self.assertEqual(0, returncode)
+
     def test_bad_option(self):
         with patch.object(sys, 'argv', ['mavis', PIPELINE_STEP.PIPELINE, '--blargh']):
             try:

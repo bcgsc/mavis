@@ -1,6 +1,6 @@
 import itertools
 import json
-import uuid
+from shortuuid import uuid
 
 from .genomic import Exon, IntergenicRegion, Transcript, UsTranscript
 from .protein import calculate_orf, Domain, Translation
@@ -1109,7 +1109,7 @@ def annotate_events(
     total = len(bpps)
     for i, bpp in enumerate(bpps):
         log('({} of {}) gathering annotations for'.format(i + 1, total), bpp)
-        bpp.data[COLUMNS.validation_id] = bpp.data.get(COLUMNS.validation_id, str(uuid.uuid4()))
+        bpp.data[COLUMNS.validation_id] = bpp.data.get(COLUMNS.validation_id, str(uuid()))
         ann = _gather_annotations(
             annotations,
             bpp,

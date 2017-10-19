@@ -22,7 +22,7 @@ SUPPORTED_ALIGNER = MavisNamespace(BWA_MEM='bwa mem', BLAT='blat', __name__='~ma
 """:class:`~mavis.constants.MavisNamespace`: supported aligners
 
 - :term:`blat`
-- :term:`bwa mem`
+- :term:`bwa mem<BWA>`
 """
 
 

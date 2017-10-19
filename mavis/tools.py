@@ -4,6 +4,7 @@ import re
 import warnings
 
 from braceexpand import braceexpand
+from shortuuid import uuid
 import tab
 import vcf
 
@@ -54,8 +55,10 @@ TOOL_SVTYPE_MAPPING.update({
     'ITD': [SVTYPE.DUP]
 })
 
+TRACKING_COLUMN = 'tracking_id'
 
-def convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=False, log=devnull, collapse=True):
+
+def convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=False, log=devnull, collapse=True, assume_no_untemplated=True):
     """
     Reads output from a given SV caller and converts to a set of MAVIS breakpoint pairs. Also collapses duplicates
     """
@@ -67,7 +70,7 @@ def convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fal
     if not fnames:
         raise OSError('no such file', input_file)
     for fname in fnames:
-        result.extend(_convert_tool_output(fname, file_type, stranded, log))
+        result.extend(_convert_tool_output(fname, file_type, stranded, log, assume_no_untemplated=assume_no_untemplated))
     if collapse:
         collapse_mapping = {}
         for bpp in result:
@@ -83,10 +86,13 @@ def _parse_breakdancer(row):
 
 def _parse_transabyss(row, is_stranded=False):
     """
-    transforms the transbyss output into the common format for expansion. Maps the input column
+    transforms the transabyss output into the common format for expansion. Maps the input column
     names to column names which MAVIS can read
     """
     std_row = {}
+    if TRACKING_COLUMN not in row:
+        std_row[TRACKING_COLUMN] = '{}-{}'.format(SUPPORTED_TOOL.TA, row['id'])
+
     std_row['event_type'] = row.get('rearrangement', row['type'])
     if std_row['event_type'] in ['LSR', 'translocation']:
         del std_row['event_type']
@@ -138,6 +144,9 @@ def _parse_chimerascan(row):
     names to column names which MAVIS can read
     """
     std_row = {}
+    if TRACKING_COLUMN not in row:
+        std_row[TRACKING_COLUMN] = '{}-{}'.format(SUPPORTED_TOOL.CHIMERASCAN, row['chimera_cluster_id'])
+
     std_row.update({'chr1': row['chrom5p'], 'chr2': row['chrom3p']})
     if row['strand5p'] == '+':
         std_row['pos1_start'] = row['end5p']
@@ -155,11 +164,15 @@ def _parse_chimerascan(row):
     return std_row
 
 
-def _convert_tool_row(row, file_type, stranded):
+def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
     """
     converts a row parsed from an input file to the appropriate column names for it to be converted to MAVIS style row
     """
     std_row = {}
+    try:
+        std_row[TRACKING_COLUMN] = row.get(TRACKING_COLUMN, '')
+    except AttributeError:
+        std_row[TRACKING_COLUMN] = row.INFO.get(TRACKING_COLUMN, '')
     std_row['orient1'] = std_row['orient2'] = ORIENT.NS
     std_row['strand1'] = std_row['strand2'] = STRAND.NS
     result = []
@@ -188,6 +201,8 @@ def _convert_tool_row(row, file_type, stranded):
             std_row['orient2'] = ct[o2]
         except KeyError:
             pass
+        if TRACKING_COLUMN not in row and row.ID is not None:
+            std_row[TRACKING_COLUMN] = '{}-{}'.format(file_type, row.ID)
 
     elif file_type == SUPPORTED_TOOL.CHIMERASCAN:
 
@@ -201,6 +216,10 @@ def _convert_tool_row(row, file_type, stranded):
             'chr1': row['gene_chromosome1'], 'chr2': row['gene_chromosome2'],
             'pos1_start': row['genomic_break_pos1'], 'pos2_start': row['genomic_break_pos2']
         })
+        if TRACKING_COLUMN in row:
+            std_row[TRACKING_COLUMN] = row[TRACKING_COLUMN]
+        else:
+            std_row[TRACKING_COLUMN] = '{}-{}'.format(file_type, row['cluster_id'])
 
     elif file_type == SUPPORTED_TOOL.TA:
 
@@ -215,6 +234,11 @@ def _convert_tool_row(row, file_type, stranded):
     else:
         std_row['strand1'] = [STRAND.NS]
         std_row['strand2'] = [STRAND.NS]
+
+    if not std_row.get(TRACKING_COLUMN, None):
+        std_row[TRACKING_COLUMN] = '{}-{}'.format(file_type, uuid())
+    if assume_no_untemplated and not std_row.get(COLUMNS.untemplated_seq, None):
+        std_row[COLUMNS.untemplated_seq] = ''
 
     combinations = list(itertools.product(
         ORIENT.expand(std_row['orient1']), ORIENT.expand(std_row['orient2']),
@@ -242,7 +266,8 @@ def _convert_tool_row(row, file_type, stranded):
                 untemplated_seq=std_row.get('untemplated_seq', None),
                 event_type=event_type,
                 data={
-                    COLUMNS.tools: file_type
+                    COLUMNS.tools: file_type,
+                    COLUMNS.tracking_id: std_row['tracking_id']
                 },
                 stranded=stranded
             )
@@ -258,7 +283,7 @@ def _convert_tool_row(row, file_type, stranded):
     return result
 
 
-def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=False, log=devnull):
+def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=False, log=devnull, assume_no_untemplated=True):
     log('reading:', input_file)
     result = []
     if file_type == SUPPORTED_TOOL.TA:
@@ -272,7 +297,7 @@ def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fa
             dummy, rows = tab.read_file(input_file)
         log('found', len(rows), 'rows')
         for row in rows:
-            std_rows = _convert_tool_row(row, file_type, stranded)
+            std_rows = _convert_tool_row(row, file_type, stranded, assume_no_untemplated=assume_no_untemplated)
             result.extend(std_rows)
     log('generated', len(result), 'breakpoint pairs')
     return result

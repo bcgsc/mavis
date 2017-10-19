@@ -1,7 +1,7 @@
 import inspect
 import itertools
 import os
-import uuid
+from shortuuid import uuid
 
 from .cluster import merge_breakpoint_pairs
 from .constants import DEFAULTS
@@ -98,7 +98,7 @@ def main(
         log_arguments(args)
 
     # output files
-    batch_id = 'batch-' + str(uuid.uuid4()) if batch_id is None else batch_id
+    batch_id = 'batch-' + str(uuid()) if batch_id is None else batch_id
     uninform_output = os.path.join(output, 'uninformative_clusters.txt')
     cluster_assign_output = os.path.join(output, 'cluster_assignment.tab')
 
@@ -167,7 +167,7 @@ def main(
             cluster2 = round(len(cluster[1]), -2)
             length_hist[cluster1] = length_hist.get(cluster1, 0) + 1
             length_hist[cluster2] = length_hist.get(cluster2, 0) + 1
-            cluster.data[COLUMNS.cluster_id] = str(uuid.uuid4())
+            cluster.data[COLUMNS.cluster_id] = str(uuid())
             cluster.data[COLUMNS.cluster_size] = len(input_pairs)
             temp = set()
             data_items = set()

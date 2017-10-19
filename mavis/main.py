@@ -18,13 +18,13 @@ from .blat import get_blat_version
 from .checker import check_completion
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from .cluster.main import main as cluster_main
-from .config import augment_parser, get_metavar, LibraryConfig, MavisConfig, write_config
+from .config import augment_parser, MavisConfig, generate_config, CustomHelpFormatter, CONVERT_OPTIONS
 from .constants import PIPELINE_STEP, PROTOCOL
 from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from .pairing.main import main as pairing_main
-from .submit import SubmissionScript, SCHEDULER
-from .submit import OPTIONS as SUBMIT_OPTIONS
+from .submit import SubmissionScript, SCHEDULER_CONFIG
+from .submit import STD_OPTIONS as STD_SUBMIT_OPTIONS
 from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 from .summary.main import main as summary_main
 from .tools import convert_tool_output, SUPPORTED_TOOL
@@ -100,7 +100,7 @@ def build_annotate_command(config, libconf, inputfile, outputdir):
     return ' \\\n\t'.join(command) + '\n'
 
 
-def run_conversion(config, libconf, conversion_dir):
+def run_conversion(config, libconf, conversion_dir, assume_no_untemplated=True):
     """
     Converts files if not already converted. Returns a list of filenames
     """
@@ -113,7 +113,7 @@ def run_conversion(config, libconf, conversion_dir):
                 command = config.convert[input_file]
                 if command[0] == 'convert_tool_output':
                     log('converting input command:', command)
-                    output_tabbed_file(convert_tool_output(*command[1:], log=log), output_filename)
+                    output_tabbed_file(convert_tool_output(*command[1:], log=log, assume_no_untemplated=assume_no_untemplated), output_filename)
                 else:
                     command = ' '.join(command) + ' -o {}'.format(output_filename)
                     log('converting input command:')
@@ -162,7 +162,7 @@ def main_pipeline(config):
                 outputdir = mkdirp(os.path.join(base, PIPELINE_STEP.VALIDATE, prefix))
                 command = build_validate_command(config, libconf, inputfile, outputdir)
                 # build the submission script
-                options = {k: config.schedule[k] for k in SUBMIT_OPTIONS}
+                options = {k: config.schedule[k] for k in STD_SUBMIT_OPTIONS}
                 options['stdout'] = outputdir
                 options['jobname'] = 'MV_{}_{}'.format(libconf.library, prefix)
 
@@ -170,10 +170,10 @@ def main_pipeline(config):
                     options['memory_limit'] = config.schedule.trans_validation_memory
                 else:
                     options['memory_limit'] = config.schedule.validation_memory
-                script = SubmissionScript(command, config.schedule.scheduler, **options)
+                script = SubmissionScript(command, **options)
                 scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
 
-                submitall.append('vjob{}=$({} {})'.format(jobid_var_index, SCHEDULER[config.schedule.scheduler].submit, scriptname))
+                submitall.append('vjob{}=$({} {})'.format(jobid_var_index, SCHEDULER_CONFIG[config.schedule.scheduler].submit, scriptname))
                 # for setting up subsequent jobs and holds
                 outputfile = os.path.join(outputdir, VALIDATION_PASS_PATTERN)
                 job_name_by_output[outputfile] = options['jobname']
@@ -183,16 +183,16 @@ def main_pipeline(config):
             outputdir = mkdirp(os.path.join(base, PIPELINE_STEP.ANNOTATE, prefix))
             command = build_annotate_command(config, libconf, inputfile, outputdir)
 
-            options = {k: config.schedule[k] for k in SUBMIT_OPTIONS}
+            options = {k: config.schedule[k] for k in STD_SUBMIT_OPTIONS}
             options['stdout'] = outputdir
             options['jobname'] = 'MA_{}_{}'.format(libconf.library, prefix)
             options['memory_limit'] = config.schedule.annotation_memory
-            script = SubmissionScript(command, config.schedule.scheduler, **options)
+            script = SubmissionScript(command, **options)
             scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
             prevjob = '${{vjob{}##* }}'.format(jobid_var_index)
             submitall.append('ajob{}=$({} {} {})'.format(
-                jobid_var_index, SCHEDULER[config.schedule.scheduler].submit,
-                SCHEDULER[config.schedule.scheduler].dependency(prevjob),
+                jobid_var_index, SCHEDULER_CONFIG[config.schedule.scheduler].submit,
+                SCHEDULER_CONFIG[config.schedule.scheduler].dependency(prevjob),
                 scriptname))
             outputfile = os.path.join(outputdir, ANNOTATION_PASS_PATTERN)
             pairing_inputs.append(outputfile)
@@ -215,15 +215,15 @@ def main_pipeline(config):
     command.append('--inputs {}'.format(' \\\n\t'.join(pairing_inputs)))
     command = ' \\\n\t'.join(command)
 
-    options = {k: config.schedule[k] for k in SUBMIT_OPTIONS}
+    options = {k: config.schedule[k] for k in STD_SUBMIT_OPTIONS}
     options['stdout'] = outputdir
     options['jobname'] = 'MP_{}'.format(batch_id)
-    script = SubmissionScript(command, config.schedule.scheduler, **options)
+    script = SubmissionScript(command, **options)
     scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
 
     submitall.append('jobid=$({} {} {})'.format(
-        SCHEDULER[config.schedule.scheduler].submit,
-        SCHEDULER[config.schedule.scheduler].dependency(
+        SCHEDULER_CONFIG[config.schedule.scheduler].submit,
+        SCHEDULER_CONFIG[config.schedule.scheduler].dependency(
             ':'.join(['${{ajob{}##* }}'.format(i) for i in range(0, jobid_var_index)])),
         scriptname))
 
@@ -248,15 +248,15 @@ def main_pipeline(config):
             command.append('--{} {}'.format(arg, value))
     command = ' \\\n\t'.join(command)
 
-    options = {k: config.schedule[k] for k in SUBMIT_OPTIONS}
+    options = {k: config.schedule[k] for k in STD_SUBMIT_OPTIONS}
     options['stdout'] = outputdir
     options['jobname'] = 'MS_{}'.format(batch_id)
-    script = SubmissionScript(command, config.schedule.scheduler, **options)
+    script = SubmissionScript(command, **options)
     scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
 
     submitall.append('{} {} {}'.format(
-        SCHEDULER[config.schedule.scheduler].submit,
-        SCHEDULER[config.schedule.scheduler].dependency('${jobid##* }'),
+        SCHEDULER_CONFIG[config.schedule.scheduler].submit,
+        SCHEDULER_CONFIG[config.schedule.scheduler].dependency('${jobid##* }'),
         scriptname))
 
     # now write a script at the top level to submit all
@@ -267,129 +267,10 @@ def main_pipeline(config):
             fh.write(line + '\n')
 
 
-def generate_config(parser, required, optional):
-    """
-    Args:
-        parser (argparse.ArgumentParser): the main parser
-        required: the argparse required arguments group
-        optional: the argparse optional arguments group
-    """
-    # the config sub  program is used for writing pipeline configuration files
-    required.add_argument('-w', '--write', help='path to the new configuration file', required=True, metavar='FILEPATH')
-    optional.add_argument(
-        '--library', nargs=5,
-        metavar=('<name>', '(genome|transcriptome)', '<diseased|normal>', '</path/to/bam/file>', '<strand_specific>'),
-        action='append', help='configuration for libraries to be analyzed by mavis', default=[])
-    optional.add_argument(
-        '--input', help='path to an input file or filter for mavis followed by the library names it '
-        'should be used for', nargs='+', action='append', default=[], metavar='FILEPATH'
-    )
-    optional.add_argument(
-        '--assign', help='library name followed by path(s) to input file(s) or filter names. This represents the list'
-        ' of inputs that should be used for the library', nargs='+', default=[], action='append')
-    optional.add_argument(
-        '--best_transcripts_only', default=get_env_variable('best_transcripts_only', True), metavar=get_metavar(bool),
-        type=tab.cast_boolean, help='compute from best transcript models only')
-    optional.add_argument(
-        '--genome_bins', default=get_env_variable('genome_bins', 100), type=int, metavar=get_metavar(int),
-        help='number of bins/samples to use in calculating the fragment size stats for genomes')
-    optional.add_argument(
-        '--transcriptome_bins', default=get_env_variable('transcriptome_bins', 5000), type=int, metavar=get_metavar(int),
-        help='number of genes to use in calculating the fragment size stats for genomes')
-    optional.add_argument(
-        '--distribution_fraction', default=get_env_variable('distribution_fraction', 0.97), type=float, metavar=get_metavar(float),
-        help='the proportion of the distribution of calculated fragment sizes to use in determining the stdev')
-    optional.add_argument(
-        '--verbose', default=get_env_variable('verbose', False), type=tab.cast_boolean, metavar=get_metavar(bool),
-        help='verbosely output logging information')
-    optional.add_argument(
-        '--convert', nargs=4, default=[],
-        metavar=('<alias>', '</path/to/input/file>', '({})'.format('|'.join(SUPPORTED_TOOL.values())), '<stranded>'),
-        help='input file conversion for internally supported tools', action='append')
-    optional.add_argument(
-        '--external_conversion', metavar=('<alias>', '<"command">'), nargs=2, default=[],
-        help='alias for use in inputs and full command (quoted)', action='append')
-    optional.add_argument(
-        '--no_defaults', default=False, action='store_true', help='do not write current defaults to the config output')
-    augment_parser(['annotations'], required, optional)
-    args = parser.parse_args()
-    if args.distribution_fraction < 0 or args.distribution_fraction > 1:
-        raise ValueError('distribution_fraction must be a value between 0-1')
-    log('MAVIS: {}'.format(__version__))
-    log_arguments(args.__dict__)
-
-    # process the libraries by input argument (--input)
-    inputs_by_lib = {k[0]: set() for k in args.library}
-    for arg_list in args.input:
-        if len(arg_list) < 2:
-            raise ValueError('--input requires 2+ arguments', arg_list)
-        inputfile = arg_list[0]
-        for lib in arg_list[1:]:
-            if lib not in inputs_by_lib:
-                raise KeyError(
-                    '--input specified a library that was not configured. Please input all libraries using '
-                    'the --library flag', lib)
-            inputs_by_lib[lib].add(inputfile)
-    # process the inputs by library argument (--assign)
-    for arg_list in args.assign:
-        if len(arg_list) < 2:
-            raise ValueError('--assign requires 2+ arguments', arg_list)
-        lib = arg_list[0]
-        if lib not in inputs_by_lib:
-            raise KeyError(
-                '--assign specified a library that was not configured. Please input all libraries using '
-                'the --library flag', lib)
-        inputs_by_lib[lib].update(arg_list[1:])
-
-    libs = []
-    # load the annotations if we need them
-    if any([p == 'transcriptome' for l, p, d, b, s in args.library]):
-        log('loading the reference annotations file', args.annotations)
-        args.annotations_filename = args.annotations
-        args.annotations = load_annotations(args.annotations, best_transcripts_only=args.best_transcripts_only)
-
-    for lib, protocol, diseased, bam, stranded in args.library:
-        if lib not in inputs_by_lib:
-            raise KeyError('not input was given for the library', lib)
-        log('generating the config section for:', lib)
-        temp = LibraryConfig.build(
-            library=lib, protocol=protocol, bam_file=bam, inputs=inputs_by_lib[lib], strand_specific=stranded,
-            disease_status=diseased, annotations=args.annotations, log=log,
-            sample_size=args.genome_bins if protocol == PROTOCOL.GENOME else args.transcriptome_bins,
-            distribution_fraction=args.distribution_fraction
-        )
-        libs.append(temp)
-    convert = {}
-    for alias, command in args.external_conversion:
-        if alias in convert:
-            raise KeyError('duplicate alias names are not allowed', alias)
-        convert[alias] = []
-        open_option = False
-        for item in re.split(r'\s+', command):
-            if convert[alias]:
-                if open_option:
-                    convert[alias][-1] += ' ' + item
-                    open_option = False
-                else:
-                    convert[alias].append(item)
-                    if item[0] == '-':
-                        open_option = True
-            else:
-                convert[alias].append(item)
-
-    for alias, inputfile, toolname, stranded in args.convert:
-        if alias in convert:
-            raise KeyError('duplicate alias names are not allowed', alias)
-        stranded = str(tab.cast_boolean(stranded))
-        SUPPORTED_TOOL.enforce(toolname)
-        convert[alias] = ['convert_tool_output', inputfile, toolname, stranded]
-    write_config(args.write, include_defaults=not args.no_defaults, libraries=libs, conversions=convert, log=log)
-
-
-def convert_main(inputs, output, file_type, strand_specific=False):
+def convert_main(inputs, output, file_type, strand_specific=False, assume_no_untemplated=True):
     bpp_results = []
     for filename in inputs:
-        bpp_results.extend(convert_tool_output(filename, file_type, strand_specific, log, True))
+        bpp_results.extend(convert_tool_output(filename, file_type, strand_specific, log, True, assume_no_untemplated=assume_no_untemplated))
     output_filename = 'mavis_{}_converted.tab'.format(file_type)
     output_tabbed_file(bpp_results, os.path.join(output, output_filename))
 
@@ -458,7 +339,7 @@ use the -h/--help option
             required.add_argument(
                 '--file_type', choices=sorted([t for t in SUPPORTED_TOOL.values() if t != 'mavis']),
                 required=True, help='Indicates the input file type to be parsed')
-            augment_parser(['strand_specific'], optional)
+            augment_parser(['strand_specific', 'assume_no_untemplated'], optional)
 
         elif pstep == PIPELINE_STEP.CLUSTER:
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
@@ -621,7 +502,7 @@ use the -h/--help option
     elif pstep == PIPELINE_STEP.SUMMARY:
         summary_main(**args)
     elif pstep == PIPELINE_STEP.CONVERT:
-        convert_main(args.inputs, args.output, args.file_type, args.strand_specific)
+        convert_main(args.inputs, args.output, args.file_type, args.strand_specific, assume_no_untemplated=args.assume_no_untemplated)
     else:  # PIPELINE
         main_pipeline(args)
 
