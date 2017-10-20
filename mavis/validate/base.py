@@ -921,7 +921,7 @@ class Evidence(BreakpointPair):
                 return True
             return False
 
-        fetch_regions = cls._generate_fetch_windows(evidence_list, fetch_min_bin_size)
+        fetch_regions = cls._generate_merged_fetch_windows(evidence_list, fetch_min_bin_size)
 
         putative_half_maps = set()
         putative_flanking = set()
