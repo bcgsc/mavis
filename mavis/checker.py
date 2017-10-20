@@ -6,13 +6,13 @@ import glob
 import os
 import re
 
-from .constants import COMPLETE_STAMP, DISEASE_STATUS, PIPELINE_STEP, PROTOCOL
+from .constants import COMPLETE_STAMP, DISEASE_STATUS, SUBCOMMAND, PROTOCOL
 from .util import bash_expands, log, MavisNamespace, unique_exists
 
 
 LIBRARY_DIR_REGEX = r'^[\w-]+_({})_({})$'.format('|'.join(DISEASE_STATUS.values()), '|'.join(PROTOCOL.values()))
 SGE_LOG_PATTERN = r'*.o*'
-MANUAL_LOG_PATTERN = r'*.log'
+LOG_PATTERN = r'*.log'
 BATCH_ID_PATTERN = 'batch-[0-9a-f-]+'
 
 LOGFILE_STATUS = MavisNamespace(
@@ -73,7 +73,7 @@ class PipelineStageRun:
         self.total_run_time = None
         self.avg_run_time = None
 
-        if self.name in [PIPELINE_STEP.ANNOTATE, PIPELINE_STEP.VALIDATE, PIPELINE_STEP.CLUSTER]:
+        if self.name in [SUBCOMMAND.ANNOTATE, SUBCOMMAND.VALIDATE, SUBCOMMAND.CLUSTER]:
             self.single = False
             for dirname in glob.glob(os.path.join(output_dir, '*')):
                 match = re.match(r'^' + BATCH_ID_PATTERN + r'-(\d+)(\.tab)?$', os.path.basename(dirname))
@@ -171,7 +171,7 @@ class PipelineStageRun:
                 self.max_run_time = max(run_times)
                 self.total_run_time = sum(run_times)
                 self.avg_run_time = int(round(self.total_run_time / len(run_times), 0))
-                if self.name in [PIPELINE_STEP.ANNOTATE, PIPELINE_STEP.VALIDATE]:
+                if self.name in [SUBCOMMAND.ANNOTATE, SUBCOMMAND.VALIDATE]:
                     log(indent * (indent_level + 1) + 'run time (s): {} (max), {} (total), {} (average)'.format(
                         self.max_run_time, self.total_run_time, self.avg_run_time), time_stamp=False)
                 else:
@@ -184,12 +184,12 @@ class PipelineStageRun:
         """
         finds and stores the job complete stamp
         """
-        if self.name in [PIPELINE_STEP.ANNOTATE, PIPELINE_STEP.VALIDATE]:
+        if self.name in [SUBCOMMAND.ANNOTATE, SUBCOMMAND.VALIDATE]:
             # annotation and validation are setup in subdirectories each with their own complete stamp
             stamp_pattern = os.path.join(self.output_dir, '*-' + str(job_task_id), COMPLETE_STAMP)
-        elif self.name == PIPELINE_STEP.CLUSTER:
+        elif self.name == SUBCOMMAND.CLUSTER:
             stamp_pattern = os.path.join(self.output_dir, COMPLETE_STAMP)  # single stamp for top-level directory
-        elif self.name in [PIPELINE_STEP.SUMMARY, PIPELINE_STEP.PAIR]:
+        elif self.name in [SUBCOMMAND.SUMMARY, SUBCOMMAND.PAIR]:
             stamp_pattern = os.path.join(self.output_dir, COMPLETE_STAMP)  # single stamp for top-level directory
         else:
             raise NotImplementedError('checker has not been implemented for pipeline stage', self.name)
@@ -197,20 +197,19 @@ class PipelineStageRun:
         # collect the log and complete stamp files
         try:
             self.stamps[job_task_id] = unique_exists(stamp_pattern)
-        except OSError as err:
-            return
+        except OSError:
+            pass
 
     def collect_log(self, job_task_id=None):
         """
         finds and stores the job log file
         """
-        if self.name in [PIPELINE_STEP.ANNOTATE, PIPELINE_STEP.VALIDATE]:
+        if self.name in [SUBCOMMAND.ANNOTATE, SUBCOMMAND.VALIDATE]:
             # annotation and validation are setup in subdirectories each with their own complete stamp
-            subdir = '*-{}'.format(job_task_id)
             patterns = [
-                os.path.join(self.output_dir, '{}.{}'.format(SGE_LOG_PATTERN, job_task_id)),  # by task-id
-                os.path.join(self.output_dir, SGE_LOG_PATTERN),  # single job
-                os.path.join(self.output_dir, MANUAL_LOG_PATTERN)  # manual run
+                os.path.join(self.output_dir, '{}.{}'.format(SGE_LOG_PATTERN, job_task_id)),  # old log pattern
+                os.path.join(self.output_dir, '*-{}'.format(job_task_id), LOG_PATTERN),  # single job
+                os.path.join(self.output_dir, LOG_PATTERN)  # old log pattern manual run
             ]
             for log_pattern in patterns:
                 try:
@@ -222,7 +221,7 @@ class PipelineStageRun:
         else:
             patterns = [
                 os.path.join(self.output_dir, SGE_LOG_PATTERN),  # single job
-                os.path.join(self.output_dir, MANUAL_LOG_PATTERN)  # manual run
+                os.path.join(self.output_dir, LOG_PATTERN)  # manual run
             ]
             for log_pattern in patterns:
                 try:
@@ -245,15 +244,15 @@ class LibraryRun:
         self.avg_run_time = 0
         self.log_parse_error = False
         try:
-            self.cluster = PipelineStageRun(PIPELINE_STEP.CLUSTER, os.path.join(output_dir, PIPELINE_STEP.CLUSTER))
+            self.cluster = PipelineStageRun(SUBCOMMAND.CLUSTER, os.path.join(output_dir, SUBCOMMAND.CLUSTER))
         except OSError:
             self.cluster = None
         try:
-            self.validation = PipelineStageRun(PIPELINE_STEP.VALIDATE, os.path.join(output_dir, PIPELINE_STEP.VALIDATE))
+            self.validation = PipelineStageRun(SUBCOMMAND.VALIDATE, os.path.join(output_dir, SUBCOMMAND.VALIDATE))
         except OSError:
             self.validation = None
         try:
-            self.annotation = PipelineStageRun(PIPELINE_STEP.ANNOTATE, os.path.join(output_dir, PIPELINE_STEP.ANNOTATE))
+            self.annotation = PipelineStageRun(SUBCOMMAND.ANNOTATE, os.path.join(output_dir, SUBCOMMAND.ANNOTATE))
         except OSError:
             self.annotation = None
 
@@ -326,9 +325,9 @@ def check_completion(target_dir, skipped_stages=None):
     # check the library steps first
     for subdir in sorted(glob.glob(os.path.join(target_dir, '*'))):
         stage_name = os.path.basename(subdir)
-        if stage_name == PIPELINE_STEP.PAIR:
+        if stage_name == SUBCOMMAND.PAIR:
             pairing = PipelineStageRun(stage_name, subdir)
-        elif stage_name == PIPELINE_STEP.SUMMARY:
+        elif stage_name == SUBCOMMAND.SUMMARY:
             summary = PipelineStageRun(stage_name, subdir)
         elif re.match(LIBRARY_DIR_REGEX, stage_name):
             libraries.append(LibraryRun(stage_name, subdir))

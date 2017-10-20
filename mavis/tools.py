@@ -8,10 +8,10 @@ from shortuuid import uuid
 import tab
 import vcf
 
-from .breakpoint import Breakpoint, BreakpointPair, read_bpp_from_input_file
+from .breakpoint import Breakpoint, BreakpointPair
 from .constants import COLUMNS, MavisNamespace, ORIENT, STRAND, SVTYPE
 from .error import InvalidRearrangement
-from .util import devnull
+from .util import devnull, read_bpp_from_input_file
 
 SUPPORTED_TOOL = MavisNamespace(
     MANTA='manta',
@@ -94,6 +94,8 @@ def _parse_transabyss(row, is_stranded=False):
         std_row[TRACKING_COLUMN] = '{}-{}'.format(SUPPORTED_TOOL.TA, row['id'])
 
     std_row['event_type'] = row.get('rearrangement', row['type'])
+    if 'genes' in row:
+        std_row['{}_genes'.format(SUPPORTED_TOOL.TA)] = row['genes']
     if std_row['event_type'] in ['LSR', 'translocation']:
         del std_row['event_type']
     if 'breakpoint' in row:
@@ -271,6 +273,7 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
                 },
                 stranded=stranded
             )
+            bpp.data.update({k: std_row[k] for k in std_row if k.startswith(file_type)})
             if not event_type or event_type in BreakpointPair.classify(bpp):
                 result.append(bpp)
 

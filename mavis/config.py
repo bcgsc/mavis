@@ -14,7 +14,7 @@ from .annotate.file_io import load_annotations
 from .bam.cache import BamCache
 from .bam.stats import compute_genome_bam_stats, compute_transcriptome_bam_stats
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
-from .constants import DISEASE_STATUS, PIPELINE_STEP, PROTOCOL, float_fraction
+from .constants import DISEASE_STATUS, SUBCOMMAND, PROTOCOL, float_fraction
 from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from .submit import OPTIONS as SUBMIT_OPTIONS
@@ -43,7 +43,7 @@ class CustomHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
     subclass the default help formatter to stop default printing for required arguments
     """
     def _format_args(self, action, default_metavar):
-        if isinstance(action, _NargsRangeAppendAction):
+        if isinstance(action, RangeAppendAction):
             return '%s' % self._metavar_formatter(action, default_metavar)(1)
         return super(CustomHelpFormatter, self)._format_args(action, default_metavar)
 
@@ -53,7 +53,7 @@ class CustomHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
         return super(CustomHelpFormatter, self)._get_help_string(action)
 
 
-class _NargsRangeAppendAction(argparse.Action):
+class RangeAppendAction(argparse.Action):
     """
     allows an argument to accept a range of arguments
     """
@@ -70,9 +70,10 @@ class _NargsRangeAppendAction(argparse.Action):
             setattr(namespace, self.dest, [])
         items = _copy(getattr(namespace, self.dest))
         items.append(values)
-        if self.nmax is None and len(values) < self.nmin:
-            raise argparse.ArgumentError(
-                self, 'must have at least {} arguments. Given: {}'.format(self.nmin, values))
+        if self.nmax is None:
+            if len(values) < self.nmin:
+                raise argparse.ArgumentError(
+                    self, 'must have at least {} arguments. Given: {}'.format(self.nmin, values))
         elif not self.nmin <= len(values) <= self.nmax:
             raise argparse.ArgumentError(
                 self, 'requires {}-{} arguments. Given: {}'.format(self.nmin, self.nmax, values))
@@ -80,8 +81,8 @@ class _NargsRangeAppendAction(argparse.Action):
 
 
 def cast_if_not_none(value, cast_type):
-    if value is None:
-        return value
+    if value is None or str(value).lower() in ['none', 'null', '']:
+        return None
     return cast(value, cast_type)
 
 
@@ -109,11 +110,6 @@ class LibraryConfig(MavisNamespace):
         except TypeError:
             self.inputs = inputs if inputs is not None else []
 
-        acceptable = {}
-        acceptable.update(CLUSTER_DEFAULTS.__dict__)
-        acceptable.update(VALIDATION_DEFAULTS.__dict__)
-        acceptable.update(ANNOTATION_DEFAULTS.__dict__)
-
         for attr, value in kwargs.items():
             for namespace in [CLUSTER_DEFAULTS, VALIDATION_DEFAULTS, ANNOTATION_DEFAULTS]:
                 if attr not in namespace:
@@ -128,8 +124,7 @@ class LibraryConfig(MavisNamespace):
                 self.fetch_method_individual = True
 
     def flatten(self):
-        result = {}
-        result.update(self.__dict__)
+        result = MavisNamespace.flatten(self)
         result['inputs'] = '\n'.join(result['inputs'])
         return result
 
@@ -223,7 +218,7 @@ def write_config(filename, include_defaults=False, libraries=[], conversions={},
         config['illustrate'] = ILLUSTRATION_DEFAULTS.flatten()
         config['summary'] = SUMMARY_DEFAULTS.flatten()
 
-    config['convert'] = dict(**CONVERT_OPTIONS.items())
+    config['convert'] = CONVERT_OPTIONS.flatten()
     for alias, command in conversions.items():
         if alias in CONVERT_OPTIONS:
             raise UserWarning('error in writing config. Alias for conversion product cannot be a setting', alias, CONVERT_OPTIONS.keys())
@@ -289,7 +284,7 @@ class MavisConfig:
 
         for attr, fname in self.reference.items():
             if not os.path.exists(fname):
-                raise KeyError(attr, 'file at', fname, 'does not exist')
+                raise OSError(attr, 'file at', fname, 'does not exist')
 
         # set the conversion section
         self.convert = kwargs.pop('convert', {})
@@ -368,9 +363,11 @@ def add_semi_optional_argument(argname, success_parser, failure_parser, help_msg
     env_name = ENV_VAR_PREFIX + argname.upper()
     help_msg += ' The default for this argument is configured by setting the environment variable {}'.format(env_name)
     if os.environ.get(env_name, None):
-        success_parser.add_argument('--{}'.format(argname), required=False, default=os.environ[env_name], help=help_msg, metavar=metavar)
+        required = required = bool(success_parser.title.startswith('required'))
+        success_parser.add_argument('--{}'.format(argname), required=required, default=os.environ[env_name], help=help_msg, metavar=metavar)
     else:
-        failure_parser.add_argument('--{}'.format(argname), required=True, help=help_msg, metavar=metavar)
+        required = required = bool(failure_parser.title.startswith('required'))
+        failure_parser.add_argument('--{}'.format(argname), required=required, help=help_msg, metavar=metavar)
 
 
 def get_metavar(arg_type):
@@ -439,8 +436,12 @@ def augment_parser(arguments, parser, semi_opt_parser=None, required=None):
                 '--disease_status', choices=DISEASE_STATUS.values(), help='library disease status', required=required)
         elif arg == 'skip_stage':
             parser.add_argument(
-                '--skip_stage', choices=[PIPELINE_STEP.CLUSTER, PIPELINE_STEP.VALIDATE], action='append', default=[],
+                '--skip_stage', choices=[SUBCOMMAND.CLUSTER, SUBCOMMAND.VALIDATE], action='append', default=[],
                 help='Use flag once per stage to skip. Can skip clustering or validation or both')
+        elif arg == 'strand_specific':
+            parser.add_argument(
+                '--strand_specific', type=tab.cast_boolean, metavar=get_metavar(bool),
+                default=False, help='indicates that the input is strand specific')
         else:
             value_type = None
             help_msg = None
@@ -449,9 +450,6 @@ def augment_parser(arguments, parser, semi_opt_parser=None, required=None):
             if arg == 'aligner':
                 choices = SUPPORTED_ALIGNER.values()
                 help_msg = 'aligner to use for aligning contigs'
-            if arg == 'strand_specific':
-                value_type = tab.cast_boolean
-                help_msg = 'indicates that the input is strand specific'
             if arg == 'uninformative_filter':
                 help_msg = 'If flag is False then the clusters will not be filtered based on lack of annotation'
             if arg == 'scheduler':
@@ -495,15 +493,15 @@ def generate_config(parser, required, optional, log=devnull):
     optional.add_argument(
         '--library',
         metavar='<name> {genome,transcriptome} {diseased,normal} [strand_specific] [/path/to/bam/file]',
-        action=_NargsRangeAppendAction, help='configuration for libraries to be analyzed by mavis', nmin=3, nmax=5
+        action=RangeAppendAction, help='configuration for libraries to be analyzed by mavis', nmin=3, nmax=5
     )
     optional.add_argument(
         '--input', help='path to an input file or filter for mavis followed by the library names it '
-        'should be used for', nmin=2, action=_NargsRangeAppendAction, metavar='FILEPATH <name> [<name> ...]'
+        'should be used for', nmin=2, action=RangeAppendAction, metavar='FILEPATH <name> [<name> ...]'
     )
     optional.add_argument(
         '--assign', help='library name followed by path(s) to input file(s) or filter names. This represents the list'
-        ' of inputs that should be used for the library', action=_NargsRangeAppendAction, nmin=2,
+        ' of inputs that should be used for the library', action=RangeAppendAction, nmin=2,
         metavar='<name> FILEPATH [FILEPATH ...]')
     optional.add_argument(
         '--best_transcripts_only', default=get_env_variable('best_transcripts_only', True), metavar=get_metavar(bool),
@@ -529,12 +527,21 @@ def generate_config(parser, required, optional, log=devnull):
         help='alias for use in inputs and full command (quoted)', action='append')
     optional.add_argument(
         '--no_defaults', default=False, action='store_true', help='do not write current defaults to the config output')
-    augment_parser(['annotations'], required, optional)
+    augment_parser(['annotations'], optional, optional)
+    # add the optional annotations file (only need this is auto generating bam stats for the transcriptome)
     augment_parser(sorted(set(SUBMIT_OPTIONS) - {'jobname', 'stdout'}) + ['skip_stage'], optional)
-    args = parser.parse_args()
+    args = MavisNamespace(**parser.parse_args().__dict__)
+
     try:
         # process the libraries by input argument (--input)
+        libs = []
         inputs_by_lib = {}
+        for libconf in [LibraryConfig.parse_args(*a) for a in args.library]:
+            if not libconf.bam_file and SUBCOMMAND.VALIDATE not in args.skip_stage:
+                raise KeyError('argument --library: bam file must be given if validation is not being skipped')
+            libs.append(libconf)
+            inputs_by_lib[libconf.library] = set()
+
         for arg_list in args.input:
             inputfile = arg_list[0]
             for lib in arg_list[1:]:
@@ -542,7 +549,7 @@ def generate_config(parser, required, optional, log=devnull):
                     raise KeyError(
                         'argument --input: specified a library that was not configured. Please input all libraries using '
                         'the --library flag', lib)
-                inputs_by_lib.setdefault(lib, set()).add(inputfile)
+                inputs_by_lib[lib].add(inputfile)
         # process the inputs by library argument (--assign)
         for arg_list in args.assign:
             lib = arg_list[0]
@@ -550,24 +557,24 @@ def generate_config(parser, required, optional, log=devnull):
                 raise KeyError(
                     'argument --assign: specified a library that was not configured. Please input all libraries using '
                     'the --library flag', lib)
-            inputs_by_lib.setdefault(lib, set()).update(arg_list[1:])
+            inputs_by_lib[lib].update(arg_list[1:])
 
-        libs = []
-        for libconf in [LibraryConfig.parse_args(*a) for a in args.library]:
-            if libconf.library not in inputs_by_lib:
+        for libconf in libs:
+            if not inputs_by_lib[libconf.library]:
                 raise KeyError('argument --input: no input was given for the library', libconf.library)
-            if not libconf.bam_file and PIPELINE_STEP.VALIDATE not in args.skip_stage:
-                raise KeyError('argument --library: bam file must be given if validation is not being skipped')
-            libs.append(libconf)
+            libconf.inputs = inputs_by_lib[libconf.library]
+
     except KeyError as err:
         parser.error(' '.join(err.args))
 
     log('MAVIS: {}'.format(__version__))
-    log_arguments(args.__dict__)
+    log_arguments(args)
 
-    if PIPELINE_STEP.VALIDATE not in args.skip_stage:
+    if SUBCOMMAND.VALIDATE not in args.skip_stage:
         # load the annotations if we need them
         if any([l.is_trans() for l in libs]):
+            if not args.get('annotations'):
+                parser.error('argument --annotations: is required to gather bam stats for transcriptome libraries')
             log('loading the reference annotations file', args.annotations)
             args.annotations_filename = args.annotations
             args.annotations = load_annotations(args.annotations, best_transcripts_only=args.best_transcripts_only)

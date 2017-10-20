@@ -6,10 +6,11 @@ import subprocess
 import sys
 import time
 
-import tab
-import uuid
+import pysam
+from shortuuid import uuid
 
 from . import __version__
+from .annotate.base import BioInterval
 from .annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
 from .annotate.file_io import load_annotations, load_masking_regions, load_reference_genome, load_templates
 from .annotate.main import main as annotate_main
@@ -18,9 +19,13 @@ from .blat import get_blat_version
 from .checker import check_completion
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from .cluster.main import main as cluster_main
-from .config import augment_parser, MavisConfig, generate_config, CustomHelpFormatter, CONVERT_OPTIONS
-from .constants import PIPELINE_STEP, PROTOCOL
-from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
+from .config import augment_parser, MavisConfig, generate_config, CustomHelpFormatter, RangeAppendAction
+from .constants import SUBCOMMAND, PROTOCOL
+from .error import DrawingFitError
+from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS, DiagramSettings
+from .illustrate.diagram import draw_multi_transcript_overlay
+from .illustrate.scatter import ScatterPlot
+from .interval import Interval
 from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from .pairing.main import main as pairing_main
 from .submit import SubmissionScript, SCHEDULER_CONFIG
@@ -28,7 +33,7 @@ from .submit import STD_OPTIONS as STD_SUBMIT_OPTIONS
 from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 from .summary.main import main as summary_main
 from .tools import convert_tool_output, SUPPORTED_TOOL
-from .util import bash_expands, log, log_arguments, MavisNamespace, mkdirp, output_tabbed_file, get_env_variable
+from .util import bash_expands, log, log_arguments, MavisNamespace, mkdirp, output_tabbed_file
 from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 from .validate.main import main as validate_main
 
@@ -60,7 +65,7 @@ def build_validate_command(config, libconf, inputfile, outputdir):
     args.update(config.validation.items())
     args.update({k: v for k, v in libconf.items() if k in args})
 
-    command = ['{} {}'.format(PROGNAME, PIPELINE_STEP.VALIDATE)]
+    command = ['{} {}'.format(PROGNAME, SUBCOMMAND.VALIDATE)]
     for argname, value in args.items():
         if isinstance(value, str):
             command.append('--{} "{}"'.format(argname, value))
@@ -89,7 +94,7 @@ def build_annotate_command(config, libconf, inputfile, outputdir):
         'max_proximity': config.cluster.max_proximity
     }
     args.update({k: v for k, v in libconf.items() if k in args})
-    command = ['{} {}'.format(PROGNAME, PIPELINE_STEP.ANNOTATE)]
+    command = ['{} {}'.format(PROGNAME, SUBCOMMAND.ANNOTATE)]
     for argname, value in args.items():
         if isinstance(value, str):
             command.append('--{} "{}"'.format(argname, value))
@@ -126,9 +131,11 @@ def run_conversion(config, libconf, conversion_dir, assume_no_untemplated=True):
 
 
 def main_pipeline(config):
-    # read the config
-    # set up the directory structure and run mavis
-    batch_id = 'batch-' + str(uuid.uuid4())
+    """
+    runs the pipeline subcommand. Runs clustering (or just splitting if clustering is skipped) and sets up
+    submission scripts for the other pipeline stages/steps
+    """
+    batch_id = 'batch-' + str(uuid())
     conversion_dir = mkdirp(os.path.join(config.output, 'converted_inputs'))
     pairing_inputs = []
     submitall = []
@@ -146,9 +153,9 @@ def main_pipeline(config):
         libconf.inputs = run_conversion(config, libconf, conversion_dir)
 
         # run the cluster stage
-        cluster_output = mkdirp(os.path.join(base, PIPELINE_STEP.CLUSTER))  # creates the output dir
+        cluster_output = mkdirp(os.path.join(base, SUBCOMMAND.CLUSTER))  # creates the output dir
         merge_args = {'batch_id': batch_id, 'output': cluster_output}
-        merge_args['split_only'] = PIPELINE_STEP.CLUSTER in config.skip_stage
+        merge_args['split_only'] = SUBCOMMAND.CLUSTER in config.skip_stage
         merge_args.update(config.reference.items())
         merge_args.update(config.cluster.items())
         merge_args.update(libconf.items())
@@ -157,9 +164,9 @@ def main_pipeline(config):
 
         for inputfile in inputs:
             prefix = get_prefix(inputfile)  # will be batch id + job number
-
-            if PIPELINE_STEP.VALIDATE not in config.skip_stage:
-                outputdir = mkdirp(os.path.join(base, PIPELINE_STEP.VALIDATE, prefix))
+            dependency = ''
+            if SUBCOMMAND.VALIDATE not in config.skip_stage:
+                outputdir = mkdirp(os.path.join(base, SUBCOMMAND.VALIDATE, prefix))
                 command = build_validate_command(config, libconf, inputfile, outputdir)
                 # build the submission script
                 options = {k: config.schedule[k] for k in STD_SUBMIT_OPTIONS}
@@ -170,7 +177,7 @@ def main_pipeline(config):
                     options['memory_limit'] = config.schedule.trans_validation_memory
                 else:
                     options['memory_limit'] = config.schedule.validation_memory
-                script = SubmissionScript(command, **options)
+                script = SubmissionScript(command, config.schedule.scheduler, **options)
                 scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
 
                 submitall.append('vjob{}=$({} {})'.format(jobid_var_index, SCHEDULER_CONFIG[config.schedule.scheduler].submit, scriptname))
@@ -178,35 +185,32 @@ def main_pipeline(config):
                 outputfile = os.path.join(outputdir, VALIDATION_PASS_PATTERN)
                 job_name_by_output[outputfile] = options['jobname']
                 inputfile = outputfile
-
+                dependency = SCHEDULER_CONFIG[config.schedule.scheduler].dependency('${{vjob{}##* }}'.format(jobid_var_index))
             # annotation cannot be skipped
-            outputdir = mkdirp(os.path.join(base, PIPELINE_STEP.ANNOTATE, prefix))
+            outputdir = mkdirp(os.path.join(base, SUBCOMMAND.ANNOTATE, prefix))
             command = build_annotate_command(config, libconf, inputfile, outputdir)
 
             options = {k: config.schedule[k] for k in STD_SUBMIT_OPTIONS}
             options['stdout'] = outputdir
             options['jobname'] = 'MA_{}_{}'.format(libconf.library, prefix)
             options['memory_limit'] = config.schedule.annotation_memory
-            script = SubmissionScript(command, **options)
+            script = SubmissionScript(command, config.schedule.scheduler, **options)
             scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
-            prevjob = '${{vjob{}##* }}'.format(jobid_var_index)
             submitall.append('ajob{}=$({} {} {})'.format(
-                jobid_var_index, SCHEDULER_CONFIG[config.schedule.scheduler].submit,
-                SCHEDULER_CONFIG[config.schedule.scheduler].dependency(prevjob),
-                scriptname))
+                jobid_var_index, SCHEDULER_CONFIG[config.schedule.scheduler].submit, dependency, scriptname))
             outputfile = os.path.join(outputdir, ANNOTATION_PASS_PATTERN)
             pairing_inputs.append(outputfile)
             job_name_by_output[outputfile] = options['jobname']
             jobid_var_index += 1
 
     # set up scripts for the pairing held on all of the annotation jobs
-    outputdir = mkdirp(os.path.join(config.output, PIPELINE_STEP.PAIR))
+    outputdir = mkdirp(os.path.join(config.output, SUBCOMMAND.PAIR))
     args = config.pairing.flatten()
     args.update({
         'output': outputdir,
         'annotations': config.reference.annotations_filename
     })
-    command = ['{} {}'.format(PROGNAME, PIPELINE_STEP.PAIR)]
+    command = ['{} {}'.format(PROGNAME, SUBCOMMAND.PAIR)]
     for arg, value in sorted(args.items()):
         if isinstance(value, str):
             command.append('--{} "{}"'.format(arg, value))
@@ -218,7 +222,7 @@ def main_pipeline(config):
     options = {k: config.schedule[k] for k in STD_SUBMIT_OPTIONS}
     options['stdout'] = outputdir
     options['jobname'] = 'MP_{}'.format(batch_id)
-    script = SubmissionScript(command, **options)
+    script = SubmissionScript(command, config.schedule.scheduler, **options)
     scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
 
     submitall.append('jobid=$({} {} {})'.format(
@@ -228,7 +232,7 @@ def main_pipeline(config):
         scriptname))
 
     # set up scripts for the summary held on the pairing job
-    outputdir = mkdirp(os.path.join(config.output, PIPELINE_STEP.SUMMARY))
+    outputdir = mkdirp(os.path.join(config.output, SUBCOMMAND.SUMMARY))
     args = dict(
         output=outputdir,
         flanking_call_distance=config.pairing.flanking_call_distance,
@@ -240,7 +244,7 @@ def main_pipeline(config):
         inputs=os.path.join(config.output, 'pairing/mavis_paired*.tab')
     )
     args.update(config.summary.items())
-    command = ['{} {}'.format(PROGNAME, PIPELINE_STEP.SUMMARY)]
+    command = ['{} {}'.format(PROGNAME, SUBCOMMAND.SUMMARY)]
     for arg, value in sorted(args.items()):
         if isinstance(value, str):
             command.append('--{} "{}"'.format(arg, value))
@@ -251,7 +255,7 @@ def main_pipeline(config):
     options = {k: config.schedule[k] for k in STD_SUBMIT_OPTIONS}
     options['stdout'] = outputdir
     options['jobname'] = 'MS_{}'.format(batch_id)
-    script = SubmissionScript(command, **options)
+    script = SubmissionScript(command, config.schedule.scheduler, **options)
     scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
 
     submitall.append('{} {} {}'.format(
@@ -267,17 +271,132 @@ def main_pipeline(config):
             fh.write(line + '\n')
 
 
-def convert_main(inputs, output, file_type, strand_specific=False, assume_no_untemplated=True):
+def parse_overlay_args(parser, required, optional):
+    """
+    parse the overlay options and check the formatting
+    """
+    required.add_argument('gene_name', help='Gene ID or gene alias to be drawn')
+    augment_parser(['annotations'], required, optional)
+    augment_parser(['drawing_width_iter_increase', 'max_drawing_retries', 'width'], optional)
+    optional.add_argument(
+        '--buffer_length', default=0, type=int, help='minimum genomic length to plot on either side of the target gene')
+    optional.add_argument(
+        '--read_depth_plot', dest='read_depth_plots', metavar='<axis name STR> <bam FILEPATH> [bin size INT]',
+        nmin=2, nmax=3, help='bam file to use as data for plotting read_depth', action=RangeAppendAction)
+    optional.add_argument(
+        '--marker', dest='markers', metavar='<label STR> <start INT> [end INT]', nmin=2, nmax=3,
+        help='Marker on the diagram given by genomic position, May be a single position or a range. '
+        'The label should be a short descriptor to avoid overlapping labels on the diagram',
+        action=RangeAppendAction)
+    args = MavisNamespace(**parser.parse_args().__dict__)
+
+    # check complex options
+    for marker in args.markers:
+        if len(marker) < 3:
+            marker.append(marker[-1])
+        try:
+            marker[1] = int(marker[1])
+            marker[2] = int(marker[2])
+        except ValueError:
+            parser.error('argument --marker: start and end must be integers: {}'.format(marker))
+
+    for plot in args.read_depth_plots:
+        if len(plot) < 3:
+            plot.append(1)
+        if not os.path.exists(plot[1]):
+            parser.error('argument --read_depth_plots: the bam file given does not exist: {}'.format(plot[1]))
+        try:
+            plot[2] = int(plot[2])
+        except ValueError:
+            parser.error('argument --read_depth_plots: bin size must be an integer: {}'.format(plot[2]))
+    return args
+
+
+def overlay_main(
+    gene_name, output, buffer_length, read_depth_plots, markers,
+    annotations, annotations_filename,
+    drawing_width_iter_increase, max_drawing_retries,
+    **kwargs
+):
+    """
+    generates an overlay diagram
+    """
+    # check options formatting
+    gene_to_draw = None
+
+    for chrom in annotations:
+        for gene in annotations[chrom]:
+            if gene_name in gene.aliases or gene_name == gene.name:
+                gene_to_draw = gene
+                log('Found target gene: {}(aka. {}) {}:{}-{}'.format(gene.name, gene.aliases, gene.chr, gene.start, gene.end))
+                break
+    if gene_to_draw is None:
+        raise KeyError('Could not find gene alias or id in annotations file', gene_name)
+
+    settings = DiagramSettings(**kwargs)
+
+    x_start = max(gene_to_draw.start - buffer_length, 1)
+    x_end = gene_to_draw.end + buffer_length
+
+    plots = []
+    for axis_name, bam_file, bin_size in read_depth_plots:
+        # one plot per bam
+        log('reading:', bam_file)
+        samfile = pysam.AlignmentFile(bam_file, 'rb')
+        try:
+            points = []
+            for pileupcolumn in samfile.pileup(gene_to_draw.chr, x_start, x_end):
+                points.append((pileupcolumn.pos, pileupcolumn.n))
+
+            temp = [x for x in range(0, len(points), bin_size)]
+            temp.append(None)
+            avg_points = []
+            for st, end in zip(temp[0::], temp[1::]):
+                pos = [x for x, y in points[st:end]]
+                pos = Interval(min(pos), max(pos))
+                cov = [y for x, y in points[st:end]]
+                cov = Interval(sum(cov) / len(cov))
+                avg_points.append((pos, cov))
+            log('scatter plot {} has {} points'.format(axis_name, len(avg_points)))
+            plots.append(ScatterPlot(
+                avg_points, axis_name, ymin=0, ymax=max([y.start for x, y in avg_points] + [100])
+            ))
+        finally:
+            samfile.close()
+
+    for i, (marker_name, marker_start, marker_end) in enumerate(markers):
+        markers[i] = BioInterval(gene_to_draw.chr, marker_start, marker_end, name=marker_name)
+
+    canvas = None
+    attempts = 1
+    while True:
+        try:
+            canvas = draw_multi_transcript_overlay(settings, gene_to_draw, vmarkers=markers, plots=plots)
+            break
+        except DrawingFitError as err:
+            if attempts > max_drawing_retries:
+                raise err
+            log('Drawing fit: extending window', drawing_width_iter_increase)
+            settings.width += drawing_width_iter_increase
+            attempts += 1
+
+    svg_output_file = os.path.join(output, '{}_{}_overlay.svg'.format(gene_to_draw.name, gene_name))
+    log('writing:', svg_output_file)
+
+    canvas.saveas(svg_output_file)
+
+
+def convert_main(inputs, outputfile, file_type, strand_specific=False, assume_no_untemplated=True):
     bpp_results = []
     for filename in inputs:
         bpp_results.extend(convert_tool_output(filename, file_type, strand_specific, log, True, assume_no_untemplated=assume_no_untemplated))
-    output_filename = 'mavis_{}_converted.tab'.format(file_type)
-    output_tabbed_file(bpp_results, os.path.join(output, output_filename))
+    mkdirp(os.path.dirname(outputfile))
+    output_tabbed_file(bpp_results, outputfile)
 
 
 def main():
     def usage(err=None, detail=False):
-        umsg = '\nusage: {} {{{}}} [-h] [-v]'.format(PROGNAME, ','.join(sorted(PIPELINE_STEP.values())))
+        umsg = '\nusage: {} {{{}}} [-h] [-v]'.format(PROGNAME, ','.join(sorted(SUBCOMMAND.values())))
         helpmenu = """
 required arguments:
 
@@ -317,36 +436,36 @@ use the -h/--help option
     pstep = sys.argv.pop(1)
     sys.argv[0] = '{} {}'.format(sys.argv[0], pstep)
 
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, add_help=False)
+    parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter, add_help=False)
     required = parser.add_argument_group('required arguments')
     optional = parser.add_argument_group('optional arguments')
     augment_parser(['help', 'version'], optional)
 
-    if pstep == PIPELINE_STEP.CONFIG:
+    if pstep == SUBCOMMAND.CONFIG:
         generate_config(parser, required, optional)
         return EXIT_OK
+    elif pstep == SUBCOMMAND.CONVERT:
+        required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
+        required.add_argument(
+            '--file_type', choices=sorted([t for t in SUPPORTED_TOOL.values() if t != 'mavis']),
+            required=True, help='Indicates the input file type to be parsed')
+        augment_parser(['strand_specific', 'assume_no_untemplated'], optional)
+        required.add_argument('--outputfile', '-o', required=True, help='path to the outputfile', metavar='FILEPATH')
     else:
         required.add_argument('-o', '--output', help='path to the output directory', required=True)
 
-        if pstep == PIPELINE_STEP.PIPELINE:
+        if pstep == SUBCOMMAND.PIPELINE:
             required.add_argument('config', help='path to the input pipeline configuration file', metavar='FILEPATH')
             optional.add_argument(
-                '--skip_stage', choices=[PIPELINE_STEP.CLUSTER, PIPELINE_STEP.VALIDATE], action='append', default=[],
+                '--skip_stage', choices=[SUBCOMMAND.CLUSTER, SUBCOMMAND.VALIDATE], action='append', default=[],
                 help='Use flag once per stage to skip. Can skip clustering or validation or both')
 
-        elif pstep == PIPELINE_STEP.CONVERT:
-            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
-            required.add_argument(
-                '--file_type', choices=sorted([t for t in SUPPORTED_TOOL.values() if t != 'mavis']),
-                required=True, help='Indicates the input file type to be parsed')
-            augment_parser(['strand_specific', 'assume_no_untemplated'], optional)
-
-        elif pstep == PIPELINE_STEP.CLUSTER:
+        elif pstep == SUBCOMMAND.CLUSTER:
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
             augment_parser(['library', 'protocol', 'strand_specific', 'disease_status', 'annotations', 'masking'], required, optional)
             augment_parser(CLUSTER_DEFAULTS.keys(), optional)
 
-        elif pstep == PIPELINE_STEP.VALIDATE:
+        elif pstep == SUBCOMMAND.VALIDATE:
             required.add_argument('-n', '--input', help='path to the input file', required=True, metavar='FILEPATH')
             augment_parser(
                 ['library', 'protocol', 'bam_file', 'read_length', 'stdev_fragment_size', 'median_fragment_size'] +
@@ -355,7 +474,7 @@ use the -h/--help option
             )
             augment_parser(VALIDATION_DEFAULTS.keys(), optional)
 
-        elif pstep == PIPELINE_STEP.ANNOTATE:
+        elif pstep == SUBCOMMAND.ANNOTATE:
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
             augment_parser(
                 ['library', 'protocol', 'annotations', 'reference_genome', 'masking', 'template_metadata'],
@@ -364,7 +483,7 @@ use the -h/--help option
             augment_parser(['max_proximity'], optional)
             augment_parser(list(ANNOTATION_DEFAULTS.keys()) + list(ILLUSTRATION_DEFAULTS.keys()), optional)
 
-        elif pstep == PIPELINE_STEP.PAIR:
+        elif pstep == SUBCOMMAND.PAIR:
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
             optional.add_argument(
                 '-f', '--product_sequence_files', nargs='+', help='paths to fasta files with product sequences', metavar='FILEPATH',
@@ -372,30 +491,37 @@ use the -h/--help option
             augment_parser(['annotations'], required, optional)
             augment_parser(['max_proximity'] + list(PAIRING_DEFAULTS.keys()), optional)
 
-        elif pstep == PIPELINE_STEP.SUMMARY:
+        elif pstep == SUBCOMMAND.SUMMARY:
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
             augment_parser(
                 ['annotations', 'dgv_annotation', 'flanking_call_distance', 'split_call_distance', 'contig_call_distance', 'spanning_call_distance'],
                 required, optional
             )
             augment_parser(SUMMARY_DEFAULTS.keys(), optional)
-        elif pstep == PIPELINE_STEP.CHECKER:
+
+        elif pstep == SUBCOMMAND.CHECKER:
 
             args = parser.parse_args()
             success_flag = check_completion(args.output)
             return EXIT_OK if success_flag else EXIT_ERROR
 
-        else:
+        elif pstep != SUBCOMMAND.OVERLAY:
+
             raise NotImplementedError('invalid value for <pipeline step>', pstep)
-    args = MavisNamespace(**parser.parse_args().__dict__)
-    args.samtools_version = get_samtools_version()
-    args.blat_version = get_blat_version()
+    if pstep == SUBCOMMAND.OVERLAY:
+        args = parse_overlay_args(parser, required, optional)
+    else:
+        args = MavisNamespace(**parser.parse_args().__dict__)
+
+    if pstep == SUBCOMMAND.VALIDATE:
+        args.samtools_version = get_samtools_version()
+        args.blat_version = get_blat_version()
 
     log('MAVIS: {}'.format(__version__))
-    log_arguments(args.__dict__)
+    log_arguments(args)
     rargs = args
 
-    if pstep == PIPELINE_STEP.PIPELINE:  # load the configuration file
+    if pstep == SUBCOMMAND.PIPELINE:  # load the configuration file
         config = MavisConfig.read(args.config)
         config.output = args.output
         config.skip_stage = args.skip_stage
@@ -429,11 +555,12 @@ use the -h/--help option
     # loaded data
     try:
         if any([
-            pstep == PIPELINE_STEP.CLUSTER and args.uninformative_filter,
-            pstep == PIPELINE_STEP.PIPELINE and config.cluster.uninformative_filter,
-            pstep == PIPELINE_STEP.VALIDATE and args.protocol == PROTOCOL.TRANS,
-            pstep == PIPELINE_STEP.PIPELINE and config.has_transcriptome(),
-            pstep == PIPELINE_STEP.PAIR or pstep == PIPELINE_STEP.ANNOTATE or pstep == PIPELINE_STEP.SUMMARY
+            pstep == SUBCOMMAND.CLUSTER and args.uninformative_filter,
+            pstep == SUBCOMMAND.PIPELINE and config.cluster.uninformative_filter,
+            pstep == SUBCOMMAND.VALIDATE and args.protocol == PROTOCOL.TRANS,
+            pstep == SUBCOMMAND.PIPELINE and config.has_transcriptome() and SUBCOMMAND.VALIDATE not in config.skip_stage,
+            pstep == SUBCOMMAND.PAIR or pstep == SUBCOMMAND.ANNOTATE or pstep == SUBCOMMAND.SUMMARY,
+            pstep == SUBCOMMAND.OVERLAY
         ]):
             log('loading:', rargs.annotations)
             rargs.annotations_filename = rargs.annotations
@@ -441,11 +568,11 @@ use the -h/--help option
         else:
             rargs.annotations_filename = rargs.annotations
             rargs.annotations = None
-    except AttributeError:
-        pass
+    except AttributeError as err:
+        print(repr(err))
     # reference genome
     try:
-        if pstep in [PIPELINE_STEP.VALIDATE, PIPELINE_STEP.ANNOTATE]:
+        if pstep in [SUBCOMMAND.VALIDATE, SUBCOMMAND.ANNOTATE]:
             log('loading:', rargs.reference_genome)
             rargs.reference_genome_filename = rargs.reference_genome
             rargs.reference_genome = load_reference_genome(rargs.reference_genome)
@@ -457,7 +584,7 @@ use the -h/--help option
 
     # masking file
     try:
-        if pstep in [PIPELINE_STEP.VALIDATE, PIPELINE_STEP.CLUSTER, PIPELINE_STEP.PIPELINE]:
+        if pstep in [SUBCOMMAND.VALIDATE, SUBCOMMAND.CLUSTER, SUBCOMMAND.PIPELINE]:
             log('loading:', rargs.masking)
             rargs.masking_filename = rargs.masking
             rargs.masking = load_masking_regions(rargs.masking)
@@ -469,7 +596,7 @@ use the -h/--help option
 
     # dgv annotation
     try:
-        if pstep == PIPELINE_STEP.SUMMARY:
+        if pstep == SUBCOMMAND.SUMMARY:
             log('loading:', rargs.dgv_annotation)
             rargs.dgv_annotation_filename = rargs.dgv_annotation
             rargs.dgv_annotation = load_masking_regions(rargs.dgv_annotation)
@@ -481,7 +608,7 @@ use the -h/--help option
 
     # template metadata
     try:
-        if pstep == PIPELINE_STEP.ANNOTATE:
+        if pstep == SUBCOMMAND.ANNOTATE:
             log('loading:', rargs.template_metadata)
             rargs.template_metadata_filename = rargs.template_metadata
             rargs.template_metadata = load_templates(rargs.template_metadata)
@@ -491,18 +618,20 @@ use the -h/--help option
     except AttributeError:
         pass
     # decide which main function to execute
-    if pstep == PIPELINE_STEP.CLUSTER:
+    if pstep == SUBCOMMAND.CLUSTER:
         cluster_main(**args)
-    elif pstep == PIPELINE_STEP.VALIDATE:
+    elif pstep == SUBCOMMAND.VALIDATE:
         validate_main(**args)
-    elif pstep == PIPELINE_STEP.ANNOTATE:
+    elif pstep == SUBCOMMAND.ANNOTATE:
         annotate_main(**args)
-    elif pstep == PIPELINE_STEP.PAIR:
+    elif pstep == SUBCOMMAND.PAIR:
         pairing_main(**args)
-    elif pstep == PIPELINE_STEP.SUMMARY:
+    elif pstep == SUBCOMMAND.SUMMARY:
         summary_main(**args)
-    elif pstep == PIPELINE_STEP.CONVERT:
-        convert_main(args.inputs, args.output, args.file_type, args.strand_specific, assume_no_untemplated=args.assume_no_untemplated)
+    elif pstep == SUBCOMMAND.CONVERT:
+        convert_main(**args)
+    elif pstep == SUBCOMMAND.OVERLAY:
+        overlay_main(**args)
     else:  # PIPELINE
         main_pipeline(args)
 

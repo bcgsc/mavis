@@ -1,9 +1,10 @@
 import unittest
 
-from mavis.breakpoint import Breakpoint, BreakpointPair, read_bpp_from_input_file
+from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import COLUMNS, ORIENT, STRAND, SVTYPE
 from mavis.error import InvalidRearrangement, NotSpecifiedError
 from mavis.interval import Interval
+from mavis.util import read_bpp_from_input_file
 
 from .mock import Mock
 
@@ -338,42 +339,48 @@ class TestBreakpointPair(unittest.TestCase):
         with self.assertRaises(InvalidRearrangement):
             BreakpointPair(
                 Breakpoint(1, 1, 2, strand=STRAND.POS, orient=ORIENT.RIGHT),
-                Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.RIGHT)
+                Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.RIGHT),
+                opposing_strands=False
             )
 
     def test___init__invalid_intra_rnrn(self):
         with self.assertRaises(InvalidRearrangement):
             BreakpointPair(
                 Breakpoint(1, 1, 2, strand=STRAND.NEG, orient=ORIENT.RIGHT),
-                Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.RIGHT)
+                Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.RIGHT),
+                opposing_strands=False
             )
 
     def test___init__invalid_intra_rpln(self):
         with self.assertRaises(InvalidRearrangement):
             BreakpointPair(
                 Breakpoint(1, 1, 2, strand=STRAND.POS, orient=ORIENT.RIGHT),
-                Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.LEFT)
+                Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.LEFT),
+                opposing_strands=True
             )
 
     def test___init__invalid_intra_lprn(self):
         with self.assertRaises(InvalidRearrangement):
             BreakpointPair(
                 Breakpoint(1, 1, 2, strand=STRAND.POS, orient=ORIENT.LEFT),
-                Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.RIGHT)
+                Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.RIGHT),
+                opposing_strands=True
             )
 
     def test___init__invalid_intra_rnlp(self):
         with self.assertRaises(InvalidRearrangement):
             BreakpointPair(
                 Breakpoint(1, 1, 2, strand=STRAND.NEG, orient=ORIENT.RIGHT),
-                Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.LEFT)
+                Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.LEFT),
+                opposing_strands=True
             )
 
     def test___init__invalid_intra_lnrp(self):
         with self.assertRaises(InvalidRearrangement):
             BreakpointPair(
                 Breakpoint(1, 1, 2, strand=STRAND.NEG, orient=ORIENT.LEFT),
-                Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.RIGHT)
+                Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.RIGHT),
+                opposing_strands=True
             )
 
     def test___init__invalid_inter_rl_opp(self):

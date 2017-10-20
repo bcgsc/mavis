@@ -1,3 +1,4 @@
+from functools import partial
 import itertools
 import os
 
@@ -8,7 +9,7 @@ from .summary import annotate_dgv, filter_by_annotations, filter_by_call_method,
 from ..constants import CALL_METHOD, COLUMNS
 from ..pairing.pairing import equivalent
 from ..pairing.constants import DEFAULTS as PAIRING_DEFAULTS
-from ..util import generate_complete_stamp, log, output_tabbed_file, read_inputs
+from ..util import generate_complete_stamp, log, output_tabbed_file, read_inputs, soft_cast
 
 
 def main(
@@ -40,15 +41,6 @@ def main(
     bpps.extend(read_inputs(
         inputs,
         require=[
-            COLUMNS.break1_chromosome,
-            COLUMNS.break1_orientation,
-            COLUMNS.break1_position_end,
-            COLUMNS.break1_position_start,
-            COLUMNS.break2_chromosome,
-            COLUMNS.break2_orientation,
-            COLUMNS.break2_position_end,
-            COLUMNS.break2_position_start,
-            COLUMNS.contig_seq,
             COLUMNS.event_type,
             COLUMNS.fusion_cdna_coding_end,
             COLUMNS.fusion_cdna_coding_start,
@@ -67,9 +59,11 @@ def main(
             COLUMNS.tools,
             COLUMNS.exon_last_5prime,
             COLUMNS.exon_first_3prime,
-            COLUMNS.disease_status,
-            # evidence_columns
-            COLUMNS.call_method,
+            COLUMNS.disease_status
+        ],
+        add_default={**{k: None for k in [
+            COLUMNS.contig_remapped_reads,
+            COLUMNS.contig_seq,
             COLUMNS.break1_split_reads,
             COLUMNS.break1_split_reads_forced,
             COLUMNS.break2_split_reads,
@@ -80,25 +74,28 @@ def main(
             COLUMNS.contigs_assembled,
             COLUMNS.contig_alignment_score,
             COLUMNS.contig_remap_score,
+            COLUMNS.spanning_reads,
             COLUMNS.annotation_figure,
             COLUMNS.gene1_aliases,
             COLUMNS.gene2_aliases,
             COLUMNS.protein_synon,
-            COLUMNS.cdna_synon],
-        add_default={
-            'dgv': None,
-            'summary_pairing': None},
+            COLUMNS.cdna_synon,
+            'dgv',
+            'summary_pairing']
+        }, COLUMNS.call_method: CALL_METHOD.INPUT},
         explicit_strand=False,
         expand_ns=False,
         cast={
-            COLUMNS.break1_split_reads: int,
-            COLUMNS.break2_split_reads: int,
-            COLUMNS.contig_remapped_reads: lambda x: 0 if x == 'None' or x is None else int(x),
-            COLUMNS.spanning_reads: int,
-            COLUMNS.break1_split_reads_forced: int,
-            COLUMNS.break2_split_reads_forced: int,
-            COLUMNS.flanking_pairs: int,
-            COLUMNS.linking_split_reads: int}
+            COLUMNS.break1_split_reads: partial(soft_cast, cast_type=int),
+            COLUMNS.break2_split_reads: partial(soft_cast, cast_type=int),
+            COLUMNS.contig_remapped_reads: partial(soft_cast, cast_type=int),
+            COLUMNS.spanning_reads: partial(soft_cast, cast_type=int),
+            COLUMNS.break1_split_reads_forced: partial(soft_cast, cast_type=int),
+            COLUMNS.break2_split_reads_forced: partial(soft_cast, cast_type=int),
+            COLUMNS.flanking_pairs: partial(soft_cast, cast_type=int),
+            COLUMNS.linking_split_reads: partial(soft_cast, cast_type=int),
+            COLUMNS.protein_synon: partial(soft_cast, cast_type=bool)
+        }
     ))
 
     # load all transcripts
@@ -341,7 +338,3 @@ def main(
     output_tabbed_file(rows, fname, header=output_columns)
     log('Wrote {} gene fusion events to {}'.format(len(rows), fname))
     generate_complete_stamp(output, log)
-
-
-if __name__ == '__main__':
-    main()

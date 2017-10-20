@@ -113,7 +113,8 @@ def filter_by_call_method(bpp1, bpp2):
         CALL_METHOD.CONTIG: 4,
         CALL_METHOD.SPLIT: 3,
         CALL_METHOD.SPAN: 2,
-        CALL_METHOD.FLANK: 1
+        CALL_METHOD.FLANK: 1,
+        CALL_METHOD.INPUT: 0
     }
     # This treats split flank the same as flank split
     bpp_call_score = ranking[bpp1.call_method]
@@ -275,7 +276,7 @@ def filter_by_evidence(
             if bpp.flanking_pairs < filter_min_flanking_reads:
                 removed.append(bpp)
                 continue
-        else:
+        elif bpp.call_method != CALL_METHOD.INPUT:
             raise AssertionError('unexpected value for call_method: {}'.format(
                 bpp.call_method))
         filtered.append(bpp)

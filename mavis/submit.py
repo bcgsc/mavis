@@ -75,16 +75,16 @@ class SubmissionScript:
     """
     holds scheduler options and build submissions scripts
     """
-    def __init__(self, content, scheduler='SGE', **kwargs):
+    def __init__(self, content, scheduler, **kwargs):
+        self.scheduler = scheduler
         self.options = {k: kwargs.pop(k, OPTIONS.get(k, None)) for k in ['jobname', 'stdout'] + STD_OPTIONS}
         if kwargs:
             raise TypeError('unexpected argument(s):', list(kwargs.keys()))
-        self.scheduler = scheduler
-        if scheduler not in SCHEDULER_CONFIG:
-            raise ValueError('invalid scheduler', scheduler, 'expected', SCHEDULER_CONFIG.keys())
+        if self.scheduler not in SCHEDULER_CONFIG:
+            raise ValueError('invalid scheduler', self.scheduler, 'expected', SCHEDULER_CONFIG.keys())
         for option, value in self.options.items():
             if value and option not in SCHEDULER_CONFIG[self.scheduler]:
-                raise ValueError('scheduler', scheduler, 'does not support the option', option)
+                raise ValueError('scheduler', self.scheduler, 'does not support the option', option)
         self.content = content
 
     def __getattribute__(self, key):
