@@ -13,7 +13,7 @@ from .util import bash_expands, log, MavisNamespace, unique_exists
 LIBRARY_DIR_REGEX = r'^[\w-]+_({})_({})$'.format('|'.join(DISEASE_STATUS.values()), '|'.join(PROTOCOL.values()))
 SGE_LOG_PATTERN = r'*.o*'
 LOG_PATTERN = r'*.log'
-BATCH_ID_PATTERN = 'batch-[0-9a-f-]+'
+BATCH_ID_PATTERN = 'batch-[0-9a-zA-Z-]+'
 
 LOGFILE_STATUS = MavisNamespace(
     EMPTY='empty',
@@ -76,7 +76,8 @@ class PipelineStageRun:
         if self.name in [SUBCOMMAND.ANNOTATE, SUBCOMMAND.VALIDATE, SUBCOMMAND.CLUSTER]:
             self.single = False
             for dirname in glob.glob(os.path.join(output_dir, '*')):
-                match = re.match(r'^' + BATCH_ID_PATTERN + r'-(\d+)(\.tab)?$', os.path.basename(dirname))
+                name = os.path.basename(dirname)
+                match = re.match(r'^' + BATCH_ID_PATTERN + r'-(\d+)(\.tab)?$', name)
                 if match:
                     self.job_ids.add(int(match.group(1)))
             if not self.job_ids:
