@@ -1,7 +1,7 @@
 import unittest
 
 from mavis.constants import ORIENT, STRAND, SVTYPE
-from mavis.tools import _convert_tool_row, SUPPORTED_TOOL, _parse_transabyss, _parse_chimerascan
+from mavis.tools import _convert_tool_row, SUPPORTED_TOOL, _parse_transabyss, _parse_chimerascan, _parse_bnd_alt
 
 from .mock import Mock
 
@@ -10,8 +10,9 @@ class TestDelly(unittest.TestCase):
 
     def test_convert_insertion(self):
         row = Mock(
-            CHROM='1', POS=247760043, ID='1DEL00000330',
-            INFO={'SVTYPE': 'INS', 'CT': 'NtoN', 'END': 247760044, 'CHR2': '1', 'CIEND': [-10, 10], 'CIPOS': [-10, 10]}
+            chrom='1', pos=247760043, id='1DEL00000330',
+            info={'SVTYPE': 'INS', 'CT': 'NtoN', 'CHR2': '1', 'CIEND': [-10, 10], 'CIPOS': [-10, 10]},
+            stop=247760044
         )
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DELLY, False)
         self.assertEqual(1, len(bpp_list))
@@ -37,21 +38,21 @@ class TestDelly(unittest.TestCase):
 
     def test_convert_convert_translocation(self):
         row = Mock(
-            CHROM='7', POS=21673582, ID='TRA00016056',
-            INFO={
+            chrom='7', pos=21673582, id='TRA00016056',
+            info={
                 'SVTYPE': 'TRA',
                 'CT': '5to5',
                 'CIEND': [-700, 700],
                 'CIPOS': [-700, 700],
-                'CHR2': '2',
-                'END': 58921502
-            }
+                'CHR2': '2'
+            },
+            stop=58921502
         )
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DELLY, False)
         for b in bpp_list:
             print(b)
         self.assertEqual(1, len(bpp_list))
-        row.INFO['CT'] = 'NtoN'
+        row.info['CT'] = 'NtoN'
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DELLY, False)
         for b in bpp_list:
             print(b)
@@ -175,13 +176,12 @@ class TestManta(unittest.TestCase):
 
     def test_convert_deletion(self):
         row = Mock(
-            CHROM='21', POS=9412306, ID='MantaDEL:20644:0:2:0:0:0',
-            INFO={
+            chrom='21', pos=9412306, id='MantaDEL:20644:0:2:0:0:0',
+            info={
                 'SVTYPE': 'DEL',
-                'END': 9412400,
                 'CIPOS': [0, 4],
                 'CIEND': [0, 4]
-            }
+            }, stop=9412400
         )
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.MANTA, False)
         self.assertEqual(1, len(bpp_list))
@@ -197,12 +197,11 @@ class TestManta(unittest.TestCase):
 
     def test_convert_duplication(self):
         row = Mock(
-            CHROM='1', POS=224646602, ID='MantaDUP:TANDEM:22477:0:1:0:9:0',
-            INFO={
+            chrom='1', pos=224646602, id='MantaDUP:TANDEM:22477:0:1:0:9:0',
+            info={
                 'SVTYPE': 'DUP',
-                'END': 224800120,
                 'SVINSSEQ': 'CAAAACTTACTATAGCAGTTCTGTGAGCTGCTCTAGC'
-            }
+            }, stop=224800120
         )
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.MANTA, False)
         self.assertEqual(1, len(bpp_list))
@@ -418,11 +417,11 @@ class TestPindel(unittest.TestCase):
 
     def test_convert_deletion(self):
         row = Mock(
-            CHROM='21', POS=9412306, ID='.',
-            INFO={
-                'SVTYPE': 'DEL',
-                'END': 9412400
-            }
+            chrom='21', pos=9412306,
+            info={
+                'SVTYPE': 'DEL'
+            },
+            stop=9412400, id=None
         )
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.PINDEL, False)
         self.assertEqual(1, len(bpp_list))
@@ -430,10 +429,10 @@ class TestPindel(unittest.TestCase):
         self.assertEqual('21', bpp.break1.chr)
         self.assertEqual('21', bpp.break2.chr)
         self.assertEqual(SVTYPE.DEL, bpp.event_type)
-        self.assertEqual(row.POS, bpp.break1.start)
-        self.assertEqual(row.POS, bpp.break1.end)
-        self.assertEqual(row.INFO['END'], bpp.break2.start)
-        self.assertEqual(row.INFO['END'], bpp.break2.end)
+        self.assertEqual(row.pos, bpp.break1.start)
+        self.assertEqual(row.pos, bpp.break1.end)
+        self.assertEqual(row.stop, bpp.break2.start)
+        self.assertEqual(row.stop, bpp.break2.end)
         self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
         self.assertEqual(STRAND.NS, bpp.break1.strand)
         self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
@@ -443,11 +442,10 @@ class TestPindel(unittest.TestCase):
 
     def test_convert_insertion(self):
         row = Mock(
-            CHROM='21', POS=9412306, ID='.',
-            INFO={
-                'SVTYPE': 'INS',
-                'END': 9412400
-            }
+            chrom='21', pos=9412306,
+            info={
+                'SVTYPE': 'INS'
+            }, stop=9412400, id=None
         )
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.PINDEL, False)
         self.assertEqual(1, len(bpp_list))
@@ -455,10 +453,10 @@ class TestPindel(unittest.TestCase):
         self.assertEqual('21', bpp.break1.chr)
         self.assertEqual('21', bpp.break2.chr)
         self.assertEqual(SVTYPE.INS, bpp.event_type)
-        self.assertEqual(row.POS, bpp.break1.start)
-        self.assertEqual(row.POS, bpp.break1.end)
-        self.assertEqual(row.INFO['END'], bpp.break2.start)
-        self.assertEqual(row.INFO['END'], bpp.break2.end)
+        self.assertEqual(row.pos, bpp.break1.start)
+        self.assertEqual(row.pos, bpp.break1.end)
+        self.assertEqual(row.stop, bpp.break2.start)
+        self.assertEqual(row.stop, bpp.break2.end)
         self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
         self.assertEqual(STRAND.NS, bpp.break1.strand)
         self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
@@ -468,11 +466,10 @@ class TestPindel(unittest.TestCase):
 
     def test_convert_inversion(self):
         row = Mock(
-            CHROM='21', POS=9412306, ID='.',
-            INFO={
-                'SVTYPE': 'INV',
-                'END': 9412400
-            }
+            chrom='21', pos=9412306,
+            info={
+                'SVTYPE': 'INV'
+            }, stop=9412400, id=None
         )
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.PINDEL, False)
         self.assertEqual(2, len(bpp_list))
@@ -480,13 +477,83 @@ class TestPindel(unittest.TestCase):
         self.assertEqual('21', bpp.break1.chr)
         self.assertEqual('21', bpp.break2.chr)
         self.assertEqual(SVTYPE.INV, bpp.event_type)
-        self.assertEqual(row.POS, bpp.break1.start)
-        self.assertEqual(row.POS, bpp.break1.end)
-        self.assertEqual(row.INFO['END'], bpp.break2.start)
-        self.assertEqual(row.INFO['END'], bpp.break2.end)
+        self.assertEqual(row.pos, bpp.break1.start)
+        self.assertEqual(row.pos, bpp.break1.end)
+        self.assertEqual(row.stop, bpp.break2.start)
+        self.assertEqual(row.stop, bpp.break2.end)
         self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
         self.assertEqual(STRAND.NS, bpp.break1.strand)
         self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
         self.assertEqual(STRAND.NS, bpp.break2.strand)
         self.assertEqual(False, bpp.stranded)
         self.assertEqual(True, bpp.opposing_strands)
+
+
+class TestParseBndAlt(unittest.TestCase):
+    def test_right(self):
+        # '[4:190898243[AGGT'
+        chrom, pos, orient, ref, seq = _parse_bnd_alt('[4:190898243[A')
+        self.assertEqual('4', chrom)
+        self.assertEqual(190898243, pos)
+        self.assertEqual(ORIENT.RIGHT, orient)
+        self.assertEqual('', seq)
+        self.assertEqual('A', ref)
+
+    def test_right_untemp_seq(self):
+        chrom, pos, orient, ref, seq = _parse_bnd_alt('[5:190898243[AGGT')
+        self.assertEqual('5', chrom)
+        self.assertEqual(190898243, pos)
+        self.assertEqual(ORIENT.RIGHT, orient)
+        self.assertEqual('AGG', seq)
+        self.assertEqual('T', ref)
+
+        chrom, pos, orient, ref, seq = _parse_bnd_alt('CAGTNNNCA[5:190898243[')
+        self.assertEqual('5', chrom)
+        self.assertEqual(190898243, pos)
+        self.assertEqual(ORIENT.RIGHT, orient)
+        self.assertEqual('AGTNNNCA', seq)
+        self.assertEqual('C', ref)
+
+        chrom, pos, orient, ref, seq = _parse_bnd_alt('CTG[21:47575965[')
+        self.assertEqual('21', chrom)
+        self.assertEqual(47575965, pos)
+        self.assertEqual(ORIENT.RIGHT, orient)
+        self.assertEqual('TG', seq)
+        self.assertEqual('C', ref)
+
+    def test_left(self):
+        chrom, pos, orient, ref, seq = _parse_bnd_alt('G]10:198982]')
+        self.assertEqual('10', chrom)
+        self.assertEqual(198982, pos)
+        self.assertEqual(ORIENT.LEFT, orient)
+        self.assertEqual('', seq)
+        self.assertEqual('G', ref)
+
+        chrom, pos, orient, ref, seq = _parse_bnd_alt(']10:198982]G')
+        self.assertEqual('10', chrom)
+        self.assertEqual(198982, pos)
+        self.assertEqual(ORIENT.LEFT, orient)
+        self.assertEqual('', seq)
+        self.assertEqual('G', ref)
+
+    def test_left_untemp_seq(self):
+        chrom, pos, orient, ref, seq = _parse_bnd_alt(']11:123456]AGTNNNCAT')
+        self.assertEqual('11', chrom)
+        self.assertEqual(123456, pos)
+        self.assertEqual(ORIENT.LEFT, orient)
+        self.assertEqual('AGTNNNCA', seq)
+        self.assertEqual('T', ref)
+
+        chrom, pos, orient, ref, seq = _parse_bnd_alt(']8:1682443]TGC')
+        self.assertEqual('8', chrom)
+        self.assertEqual(1682443, pos)
+        self.assertEqual(ORIENT.LEFT, orient)
+        self.assertEqual('TG', seq)
+        self.assertEqual('C', ref)
+
+        chrom, pos, orient, ref, seq = _parse_bnd_alt('AAGTG]11:66289601]')
+        self.assertEqual('11', chrom)
+        self.assertEqual(66289601, pos)
+        self.assertEqual(ORIENT.LEFT, orient)
+        self.assertEqual('AGTG', seq)
+        self.assertEqual('A', ref)

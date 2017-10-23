@@ -167,12 +167,24 @@ def _parse_chimerascan(row):
 
 
 def _parse_bnd_alt(alt):
-    match = re.match(r'^\w\[(?P<chr>\w+):(?P<pos>\d+)\[$', alt)
+    """
+    parses the alt statement from vcf files using the specification in vcf 4.2/4.2.
+
+    Assumes that the reference base is always the outermost base (this is based on the spec and also manta results as
+    the spec was missing some cases)
+    """
+    match = re.match(r'^(?P<ref>\w)(?P<useq>\w*)\[(?P<chr>\w+):(?P<pos>\d+)\[$', alt)
     if match:
-        return (match.group('chr'), int(match.group('pos')), ORIENT.RIGHT)
-    match = re.match(r'^\](?P<chr>\w+):(?P<pos>\d+)\]\w$', alt)
+        return (match.group('chr'), int(match.group('pos')), ORIENT.RIGHT, match.group('ref'), match.group('useq'))
+    match = re.match(r'^\[(?P<chr>\w+):(?P<pos>\d+)\[(?P<useq>\w*)(?P<ref>\w)$', alt)
     if match:
-        return (match.group('chr'), int(match.group('pos')), ORIENT.LEFT)
+        return (match.group('chr'), int(match.group('pos')), ORIENT.RIGHT, match.group('ref'), match.group('useq'))
+    match = re.match(r'^\](?P<chr>\w+):(?P<pos>\d+)\](?P<useq>\w*)(?P<ref>\w)$', alt)
+    if match:
+        return (match.group('chr'), int(match.group('pos')), ORIENT.LEFT, match.group('ref'), match.group('useq'))
+    match = re.match(r'^(?P<ref>\w)(?P<useq>\w*)](?P<chr>\w+):(?P<pos>\d+)\]$', alt)
+    if match:
+        return (match.group('chr'), int(match.group('pos')), ORIENT.LEFT, match.group('ref'), match.group('useq'))
     else:
         raise NotImplementedError('alt specification in unexpected format', alt)
 
@@ -185,11 +197,17 @@ def _parse_vcf_record(row):
     for entry in row.info.items():
         info[entry[0]] = entry[1:] if len(entry[1:]) > 1 else entry[1]
     std_row = {}
+
     if info['SVTYPE'] == 'BND':
         if len(row.alts) > 1:
             raise NotImplementedError('multiple alternates unsupported', row.alts)
-        chr2, end, orient2 = _parse_bnd_alt(row.alts[0])
+        chr2, end, orient2, ref, alt = _parse_bnd_alt(row.alts[0])
         std_row['orient2'] = orient2
+        std_row[COLUMNS.untemplated_seq] = alt
+        if row.ref != ref:
+            raise AssertionError(
+                'Expected the ref specification int he vcf row to match the sequence '
+                'in the alt string: {} vs {}'.format(row.ref, ref))
     else:
         chr2 = info.get('CHR2', row.chrom)
         end = row.stop
@@ -202,8 +220,7 @@ def _parse_vcf_record(row):
         'pos2_end': end + info.get('CIEND', (0, 0))[1]
     })
     std_row['event_type'] = info['SVTYPE']
-    if 'SVINSSEQ' in info and info['SVTYPE'] == 'DEL':
-        std_row[COLUMNS.untemplated_seq] = info['SVINSSEQ']
+
     try:
         orient1, orient2 = info['CT'].split('to')
         connection_type = {'3': ORIENT.LEFT, '5': ORIENT.RIGHT, 'N': ORIENT.NS}
