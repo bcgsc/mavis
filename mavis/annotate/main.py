@@ -138,7 +138,7 @@ def main(
                 temp_row.update(row)
                 temp_row.update(flatten_fusion_transcript(spl_fusion_tx))
                 temp_row[COLUMNS.fusion_sequence_fasta_id] = fusion_fa_id
-                temp_row[COLUMNS.cdna_synon] = cdna_synon
+                temp_row[COLUMNS.cdna_synon] = cdna_synon if cdna_synon else None
                 if spl_fusion_tx.translations:
                     # duplicate the row for each translation
                     for fusion_translation in spl_fusion_tx.translations:
@@ -147,7 +147,7 @@ def main(
                         nrow.update(temp_row)
                         aa_seq = fusion_translation.get_aa_seq()
                         protein_synon = ';'.join(sorted(list(ref_protein_seq.get(aa_seq, set()))))
-                        nrow[COLUMNS.protein_synon] = protein_synon
+                        nrow[COLUMNS.protein_synon] = protein_synon if protein_synon else None
                         # select the exon
                         nrow.update(flatten_fusion_translation(fusion_translation))
                         rows.append(nrow)
