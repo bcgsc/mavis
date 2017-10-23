@@ -212,9 +212,9 @@ def write_config(filename, include_defaults=False, libraries=[], conversions={},
 
     if include_defaults:
         config['schedule'] = SUBMIT_OPTIONS.flatten()
-        config['validation'] = VALIDATION_DEFAULTS.flatten()
+        config['validate'] = VALIDATION_DEFAULTS.flatten()
         config['cluster'] = CLUSTER_DEFAULTS.flatten()
-        config['annotation'] = ANNOTATION_DEFAULTS.flatten()
+        config['annotate'] = ANNOTATION_DEFAULTS.flatten()
         config['illustrate'] = ILLUSTRATION_DEFAULTS.flatten()
         config['summary'] = SUMMARY_DEFAULTS.flatten()
 
@@ -272,15 +272,15 @@ class MavisConfig:
         for sec, defaults in [
             ('pairing', PAIRING_DEFAULTS),
             ('summary', SUMMARY_DEFAULTS),
-            ('validation', VALIDATION_DEFAULTS),
-            ('annotation', ANNOTATION_DEFAULTS),
+            ('validate', VALIDATION_DEFAULTS),
+            ('annotate', ANNOTATION_DEFAULTS),
             ('illustrate', ILLUSTRATION_DEFAULTS),
             ('cluster', CLUSTER_DEFAULTS),
             ('reference', REFERENCE_DEFAULTS)
         ]:
             setattr(self, sec, validate_section(kwargs.pop(sec, {}), defaults, True))
 
-        SUPPORTED_ALIGNER.enforce(self.validation.aligner)
+        SUPPORTED_ALIGNER.enforce(self.validate.aligner)
 
         for attr, fname in self.reference.items():
             if not os.path.exists(fname):
@@ -315,8 +315,8 @@ class MavisConfig:
         for libname, val in kwargs.items():  # all other sections already popped
             d = {}
             d.update(self.cluster.items())
-            d.update(self.validation.items())
-            d.update(self.annotation.items())
+            d.update(self.validate.items())
+            d.update(self.annotate.items())
             d.update(val)
             d['library'] = libname
             val['library'] = libname
