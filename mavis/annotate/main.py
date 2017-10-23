@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import time
 import warnings
 
 from .constants import DEFAULTS
@@ -27,6 +28,7 @@ def main(
     min_orf_size=DEFAULTS.min_orf_size,
     max_orf_cap=DEFAULTS.max_orf_cap,
     annotation_filters=DEFAULTS.annotation_filters,
+    start_time=int(time.time()),
     **kwargs
 ):
     """
@@ -57,8 +59,7 @@ def main(
             COLUMNS.stranded: False
         },
         require=[COLUMNS.protocol, COLUMNS.library],
-        expand_ns=False, explicit_strand=False,
-        force_svtype=True
+        expand_strand=False, expand_orient=True, expand_svtype=True
     )
     log('read {} breakpoint pairs'.format(len(bpps)))
 
@@ -227,7 +228,7 @@ def main(
 
             for row in rows:
                 tabbed_fh.write('\t'.join([str(row.get(k, None)) for k in header]) + '\n')
-        generate_complete_stamp(output, log)
+        generate_complete_stamp(output, log, start_time=start_time)
     finally:
         log('closing:', tabbed_output_file)
         tabbed_fh.close()

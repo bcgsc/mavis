@@ -36,7 +36,7 @@ class TestPairing(unittest.TestCase):
         output = os.path.join(TEMP_OUTPUT, 'mavis_paired_A36971_A36973.tab')
         self.assertTrue(os.path.exists(output))
         # check that the expected pairings are present
-        bpps = read_bpp_from_input_file(output, explicit_strand=False, expand_ns=False)
+        bpps = read_bpp_from_input_file(output, expand_strand=False, expand_orient=False)
         self.assertEqual(6, len(bpps))
 
 

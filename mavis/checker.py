@@ -99,6 +99,7 @@ class PipelineStageRun:
         if self.single:
             self.collect_log()
             self.collect_stamp()
+            self.job_ids = {None}
 
         incomplete_jobs = set()
         missing_logs = set()

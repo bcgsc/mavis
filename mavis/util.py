@@ -6,6 +6,7 @@ from glob import glob
 import itertools
 import os
 import re
+import time
 
 from braceexpand import braceexpand
 from tab import tab
@@ -29,7 +30,7 @@ def cast(value, cast_func):
 def soft_cast(value, cast_type):
     try:
         return cast(value, cast_type)
-    except TypeError:
+    except (TypeError, ValueError):
         pass
     return tab.cast_null(value)
 
@@ -196,11 +197,17 @@ def write_bed_file(filename, bed_rows):
             fh.write('\t'.join([str(c) for c in bed]) + '\n')
 
 
-def generate_complete_stamp(output_dir, log=devnull, prefix='MAVIS.'):
+def generate_complete_stamp(output_dir, log=devnull, prefix='MAVIS.', start_time=None):
     stamp = os.path.join(output_dir, str(prefix) + 'COMPLETE')
     log('complete:', stamp)
-    with open(stamp, 'w'):
-        pass
+    with open(stamp, 'w') as fh:
+        if start_time is not None:
+            duration = int(time.time()) - start_time
+            hours = duration - duration % 3600
+            minutes = duration - hours - (duration - hours) % 60
+            seconds = duration - hours - minutes
+            fh.write('run time (hh/mm/ss): {}:{:02d}:{:02d}\n'.format(hours // 3600, minutes // 60, seconds))
+            fh.write('run time (s): {}\n'.format(duration))
     return stamp
 
 
@@ -249,7 +256,7 @@ def unique_exists(pattern, allow_none=False, get_newest=False):
         raise OSError('no result found', pattern)
 
 
-def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, force_svtype=False, **kwargs):
+def read_bpp_from_input_file(filename, expand_orient=False, expand_strand=False, expand_svtype=False, **kwargs):
     """
     reads a file using the tab module. Each row is converted to a breakpoint pair and
     other column data is stored in the data attribute
@@ -341,16 +348,12 @@ def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, fo
                         'error in column', attr, 'All mavis pipeline step ids must satisfy the regex:',
                         '^([A-Za-z0-9-]+|)(;[A-Za-z0-9-]+)*$', row[attr])
         stranded = row[COLUMNS.stranded]
-        opp = row[COLUMNS.opposing_strands]
 
-        strand1 = row[COLUMNS.break1_strand] if (stranded or explicit_strand) else STRAND.NS
-        strand2 = row[COLUMNS.break2_strand] if (stranded or explicit_strand) else STRAND.NS
-
-        if explicit_strand and not expand_ns and {strand1, strand2} & {STRAND.NS}:
-            raise AssertionError('cannot use explicit strand and not expand unknowns unless the strand is given')
+        strand1 = row[COLUMNS.break1_strand] if stranded else STRAND.NS
+        strand2 = row[COLUMNS.break2_strand] if stranded else STRAND.NS
 
         temp = []
-        expand_strand = (stranded or explicit_strand) and expand_ns
+        expand_strand = stranded and expand_strand
         event_type = [None]
         if row.get(COLUMNS.event_type, None) not in [None, 'None']:
             try:
@@ -360,12 +363,11 @@ def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, fo
             except KeyError:
                 pass
 
-        for orient1, orient2, opp, strand1, strand2, putative_event_type in itertools.product(
-            ORIENT.expand(row[COLUMNS.break1_orientation]) if expand_ns else [row[COLUMNS.break1_orientation]],
-            ORIENT.expand(row[COLUMNS.break2_orientation]) if expand_ns else [row[COLUMNS.break2_orientation]],
-            [True, False] if opp is None and expand_ns else [opp],
-            STRAND.expand(strand1) if expand_strand else [strand1],
-            STRAND.expand(strand2) if expand_strand else [strand2],
+        for orient1, orient2, strand1, strand2, putative_event_type in itertools.product(
+            ORIENT.expand(row[COLUMNS.break1_orientation]) if expand_orient else [row[COLUMNS.break1_orientation]],
+            ORIENT.expand(row[COLUMNS.break2_orientation]) if expand_orient else [row[COLUMNS.break2_orientation]],
+            STRAND.expand(strand1) if expand_strand and stranded else [strand1],
+            STRAND.expand(strand2) if expand_strand and stranded else [strand2],
             event_type
         ):
             try:
@@ -388,7 +390,7 @@ def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, fo
                 bpp = BreakpointPair(
                     break1,
                     break2,
-                    opposing_strands=opp,
+                    opposing_strands=row[COLUMNS.opposing_strands],
                     untemplated_seq=row[COLUMNS.untemplated_seq],
                     stranded=row[COLUMNS.stranded],
                 )
@@ -399,7 +401,7 @@ def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, fo
                         raise InvalidRearrangement(
                             'error: expected one of', BreakpointPair.classify(bpp),
                             'but found', putative_event_type, str(bpp), row)
-                if force_svtype and putative_event_type is None:
+                if expand_svtype and putative_event_type is None:
                     for svtype in BreakpointPair.classify(bpp, discriminate=True):
                         new_bpp = bpp.copy()
                         new_bpp.data[COLUMNS.event_type] = svtype
@@ -407,10 +409,10 @@ def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, fo
                 else:
                     temp.append(bpp)
             except InvalidRearrangement as err:
-                if not expand_ns:
+                if not any([expand_strand, expand_svtype, expand_orient]):
                     raise err
             except AssertionError as err:
-                if not expand_ns and not explicit_strand:
+                if not expand_strand:
                     raise err
         if not temp:
             raise InvalidRearrangement('could not produce a valid rearrangement', row)

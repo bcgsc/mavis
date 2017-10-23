@@ -2,6 +2,7 @@ import inspect
 import itertools
 import os
 from shortuuid import uuid
+import time
 
 from .cluster import merge_breakpoint_pairs
 from .constants import DEFAULTS
@@ -71,6 +72,7 @@ def main(
     log_args=False,
     batch_id=None,
     split_only=False,
+    start_time=int(time.time()),
     **kwargs
 ):
     """
@@ -113,7 +115,7 @@ def main(
             COLUMNS.disease_status: disease_status,
             COLUMNS.stranded: False
         },
-        expand_ns=True, explicit_strand=False
+        expand_strand=False, expand_orient=True, expand_svtype=True
     )
     # filter any breakpoint pairs where the library and protocol don't match
     other_libs = set()
@@ -211,5 +213,5 @@ def main(
         fetch_method_individual=fetch_method_individual
     )
 
-    generate_complete_stamp(output, log)
+    generate_complete_stamp(output, log, start_time=start_time)
     return output_files

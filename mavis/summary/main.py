@@ -1,6 +1,7 @@
 from functools import partial
 import itertools
 import os
+import time
 
 from Bio import SeqIO
 
@@ -27,6 +28,7 @@ def main(
     split_call_distance=PAIRING_DEFAULTS.split_call_distance,
     contig_call_distance=PAIRING_DEFAULTS.contig_call_distance,
     spanning_call_distance=PAIRING_DEFAULTS.spanning_call_distance,
+    start_time=int(time.time()),
     **kwargs
 ):
     # pairing threshold parameters to be defined in config file
@@ -83,8 +85,7 @@ def main(
             'dgv',
             'summary_pairing']
         }, COLUMNS.call_method: CALL_METHOD.INPUT},
-        explicit_strand=False,
-        expand_ns=False,
+        expand_strand=False, expand_orient=False, expand_svtype=False,
         cast={
             COLUMNS.break1_split_reads: partial(soft_cast, cast_type=int),
             COLUMNS.break2_split_reads: partial(soft_cast, cast_type=int),
@@ -337,4 +338,4 @@ def main(
     rows = sorted(rows, key=lambda bpp: (bpp.break1, bpp.break2))
     output_tabbed_file(rows, fname, header=output_columns)
     log('Wrote {} gene fusion events to {}'.format(len(rows), fname))
-    generate_complete_stamp(output, log)
+    generate_complete_stamp(output, log, start_time=start_time)
