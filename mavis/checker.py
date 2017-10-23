@@ -38,7 +38,7 @@ class LogDetails:
             lines = fh.readlines()
             if not lines:
                 self.status = LOGFILE_STATUS.EMPTY
-            elif 'error' in lines[-1].lower():
+            elif any([msg in lines[-1].lower() for msg in ['error', 'fault']]):
                 self.status = LOGFILE_STATUS.CRASH
                 self.message = lines[-1].strip()
             else:
@@ -112,6 +112,10 @@ class PipelineStageRun:
                 if job_task_id not in self.logs:
                     # complete but unlogged?
                     missing_logs.add(job_task_id)
+                else:
+                    logfile = self.logs[job_task_id]
+                    if logfile.status == LOGFILE_STATUS.CRASH:
+                        errors.add(job_task_id)
             else:
                 if job_task_id in self.logs:
                     logfile = self.logs[job_task_id]
@@ -153,6 +157,8 @@ class PipelineStageRun:
                         logfile = self.logs[job_task_id]
                         details.setdefault(logfile.message, set()).add(job_task_id)
                     for msg, jobs in details.items():
+                        if len(msg) > 80:
+                            msg = msg[:80] + ' ...'
                         log('{}{} (jobs: {})'.format(indent * (indent_level + 2), msg, convert_set_to_ranges(jobs)), time_stamp=False)
             else:
                 if missing_logs:
