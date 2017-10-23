@@ -111,7 +111,6 @@ def main(
             log(
                 '({} of {}) current annotation'.format(i + 1, total),
                 ann.annotation_id, ann.transcript1, ann.transcript2, ann.event_type)
-
             # get the reference sequences for either transcript
             ref_cdna_seq = {}
             ref_protein_seq = {}
@@ -223,7 +222,7 @@ def main(
                             warnings.warn(str(err))
                             drawing = True
             ds.width = initial_width  # reset the width
-            if rows:
+            if not rows:
                 rows = [row]
 
             for row in rows:
