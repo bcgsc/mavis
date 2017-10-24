@@ -57,6 +57,15 @@ class LogDetails:
                     self.status = LOGFILE_STATUS.COMPLETE
 
 
+def parse_run_time(filename):
+    with open(filename, 'r') as fh:
+        for line in fh.readlines()[::-1]:
+            match = re.match(r'^\s*run time \(s\): (\d+)\s*$', line)
+            if match:
+                return int(match.group(1))
+    return None
+
+
 class PipelineStageRun:
 
     def __init__(self, name, output_dir):
@@ -106,9 +115,13 @@ class PipelineStageRun:
         missing_stamp = set()
         missing_both = set()
         errors = set()
+        run_times = {}
 
         for job_task_id in sorted(self.job_ids):
             if job_task_id in self.stamps:
+                runtime = parse_run_time(self.stamps[job_task_id])
+                if runtime is not None:
+                    run_times[job_task_id] = runtime
                 if job_task_id not in self.logs:
                     # complete but unlogged?
                     missing_logs.add(job_task_id)
@@ -116,6 +129,8 @@ class PipelineStageRun:
                     logfile = self.logs[job_task_id]
                     if logfile.status == LOGFILE_STATUS.CRASH:
                         errors.add(job_task_id)
+                    if logfile.run_time is not None:
+                        run_times[job_task_id] = logfile.run_time
             else:
                 if job_task_id in self.logs:
                     logfile = self.logs[job_task_id]
@@ -133,7 +148,7 @@ class PipelineStageRun:
             log(indent * indent_level + self.name, 'FAIL', time_stamp=time_stamp)
             log(indent * indent_level + '  no files found: stage not started, or skipped', time_stamp=False)
             return False
-        elif any([incomplete_jobs, missing_both, missing_logs, missing_stamp, errors]):
+        elif any([incomplete_jobs, missing_both, missing_stamp, errors]):
             log(indent * indent_level + self.name, 'FAIL', time_stamp=time_stamp)
             # summarize the errors
             if None not in self.job_ids or len(self.job_ids) > 1:
@@ -174,19 +189,49 @@ class PipelineStageRun:
             return False if any([incomplete_jobs, missing_both, missing_stamp, errors]) else True
         else:
             log(indent * indent_level + self.name, 'OK', time_stamp=time_stamp)
-            run_times = [j.run_time for j in self.logs.values() if j.run_time is not None]
+            run_times, all_times = self.estimate_run_time()
+
             if run_times:
                 self.max_run_time = max(run_times)
                 self.total_run_time = sum(run_times)
-                self.avg_run_time = int(round(self.total_run_time / len(run_times), 0))
+                self.avg_run_time = int(round(self.total_run_time / len(self.job_ids), 0))
+                prefix = indent * (indent_level + 1) + ('' if all_times else 'min ')
                 if self.name in [SUBCOMMAND.ANNOTATE, SUBCOMMAND.VALIDATE]:
-                    log(indent * (indent_level + 1) + 'run time (s): {} (max), {} (total), {} (average)'.format(
+                    log(prefix + 'run time (s): {} (max), {} (total), {} (average)'.format(
                         self.max_run_time, self.total_run_time, self.avg_run_time), time_stamp=False)
                 else:
-                    log(indent * (indent_level + 1) + 'run time (s):', self.max_run_time, time_stamp=False)
+                    log(prefix + 'run time (s):', self.max_run_time, time_stamp=False)
             else:
                 log(indent * (indent_level + 1) + 'error parsing run-times from the log files', time_stamp=False)
             return True
+
+    def estimate_run_time(self):
+        """
+        pull the run time information from the logs/stamps
+        """
+        run_time = {}
+        files_used = set()
+        all_times = True
+        for job_task_id in self.job_ids:
+            if job_task_id in self.stamps:
+                if self.stamps[job_task_id] not in files_used:
+                    files_used.add(self.stamps[job_task_id])
+                    job_run_time = parse_run_time(self.stamps[job_task_id])
+                    if job_run_time is not None:
+                        run_time[job_task_id] = job_run_time
+                        continue
+                else:
+                    continue
+            if job_task_id in self.logs:
+                if self.logs[job_task_id] not in files_used:
+                    files_used.add(self.logs[job_task_id].filename)
+                    if self.logs[job_task_id].run_time is not None:
+                        run_time[job_task_id] = self.logs[job_task_id].run_time
+                else:
+                    continue
+            if job_task_id not in run_time:
+                all_times = False
+        return run_time.values(), all_times
 
     def collect_stamp(self, job_task_id=None):
         """

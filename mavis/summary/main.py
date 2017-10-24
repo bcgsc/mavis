@@ -4,6 +4,7 @@ import os
 import time
 
 from Bio import SeqIO
+import tab
 
 from .constants import DEFAULTS
 from .summary import annotate_dgv, filter_by_annotations, filter_by_call_method, filter_by_evidence, get_pairing_state, group_events
@@ -11,6 +12,13 @@ from ..constants import CALL_METHOD, COLUMNS
 from ..pairing.pairing import equivalent
 from ..pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from ..util import generate_complete_stamp, log, output_tabbed_file, read_inputs, soft_cast
+
+
+def soft_cast_null(value):
+    try:
+        return tab.cast_null(value)
+    except TypeError:
+        return value
 
 
 def main(
@@ -95,7 +103,8 @@ def main(
             COLUMNS.break2_split_reads_forced: partial(soft_cast, cast_type=int),
             COLUMNS.flanking_pairs: partial(soft_cast, cast_type=int),
             COLUMNS.linking_split_reads: partial(soft_cast, cast_type=int),
-            COLUMNS.protein_synon: partial(soft_cast, cast_type=bool)
+            COLUMNS.protein_synon: soft_cast_null,
+            COLUMNS.cdna_synon: soft_cast_null
         }
     ))
 
