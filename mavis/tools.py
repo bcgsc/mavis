@@ -173,16 +173,16 @@ def _parse_bnd_alt(alt):
     Assumes that the reference base is always the outermost base (this is based on the spec and also manta results as
     the spec was missing some cases)
     """
-    match = re.match(r'^(?P<ref>\w)(?P<useq>\w*)\[(?P<chr>\w+):(?P<pos>\d+)\[$', alt)
+    match = re.match(r'^(?P<ref>\w)(?P<useq>\w*)\[(?P<chr>[^:]+):(?P<pos>\d+)\[$', alt)
     if match:
         return (match.group('chr'), int(match.group('pos')), ORIENT.RIGHT, match.group('ref'), match.group('useq'))
-    match = re.match(r'^\[(?P<chr>\w+):(?P<pos>\d+)\[(?P<useq>\w*)(?P<ref>\w)$', alt)
+    match = re.match(r'^\[(?P<chr>[^:]+):(?P<pos>\d+)\[(?P<useq>\w*)(?P<ref>\w)$', alt)
     if match:
         return (match.group('chr'), int(match.group('pos')), ORIENT.RIGHT, match.group('ref'), match.group('useq'))
-    match = re.match(r'^\](?P<chr>\w+):(?P<pos>\d+)\](?P<useq>\w*)(?P<ref>\w)$', alt)
+    match = re.match(r'^\](?P<chr>[^:]+):(?P<pos>\d+)\](?P<useq>\w*)(?P<ref>\w)$', alt)
     if match:
         return (match.group('chr'), int(match.group('pos')), ORIENT.LEFT, match.group('ref'), match.group('useq'))
-    match = re.match(r'^(?P<ref>\w)(?P<useq>\w*)](?P<chr>\w+):(?P<pos>\d+)\]$', alt)
+    match = re.match(r'^(?P<ref>\w)(?P<useq>\w*)](?P<chr>[^:]+):(?P<pos>\d+)\]$', alt)
     if match:
         return (match.group('chr'), int(match.group('pos')), ORIENT.LEFT, match.group('ref'), match.group('useq'))
     else:
