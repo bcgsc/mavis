@@ -620,15 +620,15 @@ use the -h/--help option
         pass
     # decide which main function to execute
     if pstep == SUBCOMMAND.CLUSTER:
-        cluster_main(**args)
+        cluster_main(**args, start_time=start_time)
     elif pstep == SUBCOMMAND.VALIDATE:
-        validate_main(**args)
+        validate_main(**args, start_time=start_time)
     elif pstep == SUBCOMMAND.ANNOTATE:
-        annotate_main(**args)
+        annotate_main(**args, start_time=start_time)
     elif pstep == SUBCOMMAND.PAIR:
-        pairing_main(**args)
+        pairing_main(**args, start_time=start_time)
     elif pstep == SUBCOMMAND.SUMMARY:
-        summary_main(**args)
+        summary_main(**args, start_time=start_time)
     elif pstep == SUBCOMMAND.CONVERT:
         convert_main(**args)
     elif pstep == SUBCOMMAND.OVERLAY:

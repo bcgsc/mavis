@@ -32,3 +32,31 @@ How to build the reference annotations input file?
 Instructions on generating annotations from ensembl can be found on the :ref:`reference annotations page <generate-reference-annotations>`.
 It is also possible to use other sources/databases for the annotations but is left up to the user to convert them to the expected
 format. See :ref:`an example here <reference-files-annotations>`.
+
+Can I run mavis locally?
+----------------------------
+
+Although the default pipeline builds scripts to submit to a compute cluster, The same scripts can also be run locally. They should be executed
+in the same order as the main submit script would submit them: validation, annotation, pairing, then summary. For example if your MAVIS
+output looked something like this
+
+.. code:: text
+
+    .
+    |-- lib/
+    |   |-- validate/.../submit.sh
+    |   `-- annotate/.../submit.sh
+    |-- pairing/submit.sh
+    `-- summary/submit.sh
+
+you would run them in the following order
+
+.. code:: bash
+
+    bash ./lib/validate/.../submit.sh; \
+        bash ./lib/annotate/.../submit.sh; \
+        bash ./pairing/submit.sh; \
+        bash ./summary/submit.sh
+
+As MAVIS splits clusters into multiple jobs by default there may be many scripts to bash. If want to avoid this (an your machine has sufficient memory)
+then set ``MAVIS_MAX_FILES=1`` to restrict the number of jobs/cluster files to 1.

@@ -4,7 +4,15 @@ Illustrations
 Fusion Diagrams
 ----------------------
 
-These are diagrams produced during the annotate step. 
+These are diagrams produced during the annotate step. These represent the putative fusion events of a 
+single breakpoint pair.
+
+.. figure:: _static/GIMAP4_IL7_fusion.svg
+    :width: 100%
+
+    Fusion from transcriptome data. Intronic breakpoints here indicate retained intron sequence and
+    a novel exon is predicted.
+
 
 Transcript Overlays
 ----------------------
