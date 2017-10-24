@@ -536,6 +536,14 @@ class TestParseBndAlt(unittest.TestCase):
         self.assertEqual('', seq)
         self.assertEqual('G', ref)
 
+    def test_alternate_chrom(self):
+        chrom, pos, orient, ref, seq = _parse_bnd_alt('G]GL000.01:198982]')
+        self.assertEqual('GL000.01', chrom)
+        self.assertEqual(198982, pos)
+        self.assertEqual(ORIENT.LEFT, orient)
+        self.assertEqual('', seq)
+        self.assertEqual('G', ref)
+
     def test_left_untemp_seq(self):
         chrom, pos, orient, ref, seq = _parse_bnd_alt(']11:123456]AGTNNNCAT')
         self.assertEqual('11', chrom)
