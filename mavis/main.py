@@ -443,7 +443,7 @@ use the -h/--help option
     augment_parser(['help', 'version'], optional)
 
     if pstep == SUBCOMMAND.CONFIG:
-        generate_config(parser, required, optional)
+        generate_config(parser, required, optional, log=log)
         return EXIT_OK
     elif pstep == SUBCOMMAND.CONVERT:
         required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
@@ -620,15 +620,15 @@ use the -h/--help option
         pass
     # decide which main function to execute
     if pstep == SUBCOMMAND.CLUSTER:
-        cluster_main(**args)
+        cluster_main(**args, start_time=start_time)
     elif pstep == SUBCOMMAND.VALIDATE:
-        validate_main(**args)
+        validate_main(**args, start_time=start_time)
     elif pstep == SUBCOMMAND.ANNOTATE:
-        annotate_main(**args)
+        annotate_main(**args, start_time=start_time)
     elif pstep == SUBCOMMAND.PAIR:
-        pairing_main(**args)
+        pairing_main(**args, start_time=start_time)
     elif pstep == SUBCOMMAND.SUMMARY:
-        summary_main(**args)
+        summary_main(**args, start_time=start_time)
     elif pstep == SUBCOMMAND.CONVERT:
         convert_main(**args)
     elif pstep == SUBCOMMAND.OVERLAY:

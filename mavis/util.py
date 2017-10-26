@@ -89,6 +89,9 @@ def log_arguments(args):
     log('arguments')
     for arg, val in sorted(args.items()):
         if isinstance(val, list):
+            if not val:
+                log(arg, '= []', time_stamp=False)
+                continue
             log(arg, '= [', time_stamp=False)
             for v in val:
                 log('\t', repr(v), time_stamp=False)

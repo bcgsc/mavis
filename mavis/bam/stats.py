@@ -177,14 +177,16 @@ def compute_transcriptome_bam_stats(
 
             if read.reference_end > read.next_reference_start:
                 continue
-
+            current_frags = set()
             for spl_tx in gene.spliced_transcripts:
                 try:
                     cdna_pos1 = spl_tx.convert_genomic_to_cdna(read.reference_start)
                     cdna_pos2 = spl_tx.convert_genomic_to_cdna(read.next_reference_start)
-                    fragment_hist.add(abs(cdna_pos1 - cdna_pos2) - 2)
+                    current_frags.add(abs(cdna_pos1 - cdna_pos2) - 2)
                 except IndexError:
                     pass
+            if current_frags:
+                fragment_hist.add(sum(current_frags) / len(current_frags))
     read_length = stats.median(read_lengths)
     result = Histogram()
     for val, freq in fragment_hist.items():
