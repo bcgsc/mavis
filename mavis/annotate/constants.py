@@ -1,5 +1,7 @@
 import re
 
+import tab
+
 from ..constants import MavisNamespace, float_fraction
 from ..util import WeakMavisNamespace
 
@@ -21,6 +23,9 @@ DEFAULTS.add(
     'annotation_filters', 'choose_more_annotated,choose_transcripts_by_priority',
     defn='a comma separated list of filters to apply to putative annotations'
 )
+DEFAULTS.add(
+    'draw_fusions_only', True, cast_type=tab.cast_boolean,
+    defn='flag to indicate if events which do not produce a fusion transcript should produce illustrations')
 
 
 SPLICE_TYPE = MavisNamespace(

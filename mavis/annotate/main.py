@@ -21,6 +21,78 @@ ACCEPTED_FILTERS = {
 }
 
 
+def draw(drawing_config, ann, reference_genome, template_metadata, drawings_directory):
+    """
+    produces the svg diagram and json legend for a given annotation
+    """
+    drawing = None
+    legend = None
+    retry_count = 0
+    draw_fusion_transcript = True
+    draw_reference_transcripts = True
+    initial_width = drawing_config.width
+    while drawing is None:  # continue if drawing error and increase width
+        try:
+            canvas, legend_json = draw_sv_summary_diagram(
+                drawing_config, ann, reference_genome=reference_genome,
+                templates=template_metadata,
+                draw_fusion_transcript=draw_fusion_transcript,
+                draw_reference_transcripts=draw_reference_transcripts
+            )
+
+            gene_aliases1 = 'NA'
+            gene_aliases2 = 'NA'
+            try:
+                if ann.transcript1.gene.aliases:
+                    gene_aliases1 = '-'.join(ann.transcript1.gene.aliases)
+                if ann.transcript1.is_best_transcript:
+                    gene_aliases1 = 'b-' + gene_aliases1
+            except AttributeError:
+                pass
+            try:
+                if ann.transcript2.gene.aliases:
+                    gene_aliases2 = '-'.join(ann.transcript2.gene.aliases)
+                if ann.transcript2.is_best_transcript:
+                    gene_aliases2 = 'b-' + gene_aliases2
+            except AttributeError:
+                pass
+            try:
+                if determine_prime(ann.transcript1, ann.break1) == PRIME.THREE:
+                    gene_aliases1, gene_aliases2 = gene_aliases2, gene_aliases1
+            except NotSpecifiedError:
+                pass
+
+            name = 'mavis_{}-chr{}_chr{}-{}_{}'.format(
+                ann.annotation_id, ann.break1.chr, ann.break2.chr, gene_aliases1, gene_aliases2
+            )
+
+            drawing = os.path.join(drawings_directory, name + '.svg')
+            legend = os.path.join(drawings_directory, name + '.legend.json')
+            log('generating svg:', drawing, time_stamp=False)
+            canvas.saveas(drawing)
+
+            log('generating legend:', legend, time_stamp=False)
+            with open(legend, 'w') as fh:
+                json.dump(legend_json, fh)
+            break
+        except DrawingFitError as err:
+            drawing_config.width += drawing_config.drawing_width_iter_increase
+            log('extending width by', drawing_config.drawing_width_iter_increase, 'to', drawing_config.width, time_stamp=False)
+            retry_count += 1
+            if retry_count > drawing_config.max_drawing_retries:
+                if draw_fusion_transcript and draw_reference_transcripts:
+                    log('restricting to gene-level only', time_stamp=False)
+                    draw_fusion_transcript = False
+                    draw_reference_transcripts = False
+                    drawing_config.width = initial_width
+                    retry_count = 0
+                else:
+                    warnings.warn(str(err))
+                    drawing = True
+    drawing_config.width = initial_width  # reset the width
+    return drawing, legend
+
+
 def main(
     inputs, output, library, protocol,
     reference_genome, annotations, template_metadata,
@@ -29,6 +101,7 @@ def main(
     max_orf_cap=DEFAULTS.max_orf_cap,
     annotation_filters=DEFAULTS.annotation_filters,
     start_time=int(time.time()),
+    draw_fusions_only=DEFAULTS.draw_fusions_only,
     **kwargs
 ):
     """
@@ -74,7 +147,7 @@ def main(
 
     fa_sequence_names = set()
     # now try generating the svg
-    ds = DiagramSettings(**{k: v for k, v in kwargs.items() if k in ILLUSTRATION_DEFAULTS.__dict__})
+    drawing_config = DiagramSettings(**{k: v for k, v in kwargs.items() if k in ILLUSTRATION_DEFAULTS})
 
     header_req = {
         COLUMNS.break1_strand,
@@ -102,10 +175,10 @@ def main(
     try:
         total = len(annotations)
         for i, ann in enumerate(annotations):
-            row = ann.flatten()
-            row[COLUMNS.fusion_sequence_fasta_file] = fa_output_file
+            ann_row = ann.flatten()
+            ann_row[COLUMNS.fusion_sequence_fasta_file] = fa_output_file
             if header is None:
-                header_req.update(row.keys())
+                header_req.update(ann_row.keys())
                 header = sort_columns(header_req)
                 tabbed_fh.write('\t'.join([str(c) for c in header]) + '\n')
             log(
@@ -124,7 +197,7 @@ def main(
 
             # try building the fusion product
             rows = []
-            # add fusion information to the current row
+            # add fusion information to the current ann_row
             for spl_fusion_tx in [] if not ann.fusion else ann.fusion.transcripts:
                 fusion_fa_id = '{}_{}'.format(ann.annotation_id, spl_fusion_tx.splicing_pattern.splice_type)
                 fusion_fa_id = re.sub(r'\s', '-', fusion_fa_id)
@@ -135,15 +208,15 @@ def main(
                 cdna_synon = ';'.join(sorted(list(ref_cdna_seq.get(seq, set()))))
 
                 temp_row = {}
-                temp_row.update(row)
+                temp_row.update(ann_row)
                 temp_row.update(flatten_fusion_transcript(spl_fusion_tx))
                 temp_row[COLUMNS.fusion_sequence_fasta_id] = fusion_fa_id
                 temp_row[COLUMNS.cdna_synon] = cdna_synon if cdna_synon else None
                 if spl_fusion_tx.translations:
-                    # duplicate the row for each translation
+                    # duplicate the ann_row for each translation
                     for fusion_translation in spl_fusion_tx.translations:
                         nrow = dict()
-                        nrow.update(row)
+                        nrow.update(ann_row)
                         nrow.update(temp_row)
                         aa_seq = fusion_translation.get_aa_seq()
                         protein_synon = ';'.join(sorted(list(ref_protein_seq.get(aa_seq, set()))))
@@ -152,81 +225,18 @@ def main(
                         nrow.update(flatten_fusion_translation(fusion_translation))
                         rows.append(nrow)
                 else:
-                    temp_row.update(row)
+                    temp_row.update(ann_row)
                     rows.append(temp_row)
-
-            drawing = None
-            retry_count = 0
-            draw_fusion_transcript = True
-            draw_reference_transcripts = True
-            initial_width = ds.width
-            while drawing is None:  # continue if drawing error and increase width
-                try:
-                    canvas, legend = draw_sv_summary_diagram(
-                        ds, ann, reference_genome=reference_genome,
-                        templates=template_metadata,
-                        draw_fusion_transcript=draw_fusion_transcript,
-                        draw_reference_transcripts=draw_reference_transcripts
-                    )
-
-                    gene_aliases1 = 'NA'
-                    gene_aliases2 = 'NA'
-                    try:
-                        if ann.transcript1.gene.aliases:
-                            gene_aliases1 = '-'.join(ann.transcript1.gene.aliases)
-                        if ann.transcript1.is_best_transcript:
-                            gene_aliases1 = 'b-' + gene_aliases1
-                    except AttributeError:
-                        pass
-                    try:
-                        if ann.transcript2.gene.aliases:
-                            gene_aliases2 = '-'.join(ann.transcript2.gene.aliases)
-                        if ann.transcript2.is_best_transcript:
-                            gene_aliases2 = 'b-' + gene_aliases2
-                    except AttributeError:
-                        pass
-                    try:
-                        if determine_prime(ann.transcript1, ann.break1) == PRIME.THREE:
-                            gene_aliases1, gene_aliases2 = gene_aliases2, gene_aliases1
-                    except NotSpecifiedError:
-                        pass
-
-                    name = 'mavis_{}-chr{}_chr{}-{}_{}'.format(
-                        ann.annotation_id, ann.break1.chr, ann.break2.chr, gene_aliases1, gene_aliases2
-                    )
-
-                    drawing = os.path.join(drawings_directory, name + '.svg')
-                    legend_filename = os.path.join(drawings_directory, name + '.legend.json')
-                    for r in rows + [row]:
-                        r[COLUMNS.annotation_figure] = drawing
-                        r[COLUMNS.annotation_figure_legend] = legend_filename
-                    log('generating svg:', drawing, time_stamp=False)
-                    canvas.saveas(drawing)
-
-                    log('generating legend:', legend_filename, time_stamp=False)
-                    with open(legend_filename, 'w') as fh:
-                        json.dump(legend, fh)
-                    break
-                except DrawingFitError as err:
-                    ds.width += ds.drawing_width_iter_increase
-                    log('extending width by', ds.drawing_width_iter_increase, 'to', ds.width, time_stamp=False)
-                    retry_count += 1
-                    if retry_count > ds.max_drawing_retries:
-                        if draw_fusion_transcript and draw_reference_transcripts:
-                            log('restricting to gene-level only', time_stamp=False)
-                            draw_fusion_transcript = False
-                            draw_reference_transcripts = False
-                            ds.width = initial_width
-                            retry_count = 0
-                        else:
-                            warnings.warn(str(err))
-                            drawing = True
-            ds.width = initial_width  # reset the width
+            # draw the annotation and add the path to all applicable rows (one drawing for multiple annotations)
+            if ann.fusion or not draw_fusions_only:
+                drawing, legend = draw(drawing_config, ann, reference_genome, template_metadata, drawings_directory)
+                for row in rows + [ann_row]:
+                    row[COLUMNS.annotation_figure] = drawing
+                    row[COLUMNS.annotation_figure_legend] = legend
             if not rows:
-                rows = [row]
-
+                rows = [ann_row]
             for row in rows:
-                tabbed_fh.write('\t'.join([str(row.get(k, None)) for k in header]) + '\n')
+                tabbed_fh.write('\t'.join([str(ann_row.get(k, None)) for k in header]) + '\n')
         generate_complete_stamp(output, log, start_time=start_time)
     finally:
         log('closing:', tabbed_output_file)
