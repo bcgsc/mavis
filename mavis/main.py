@@ -62,7 +62,7 @@ def build_validate_command(config, libconf, inputfile, outputdir):
         'median_fragment_size': libconf.median_fragment_size,
         'strand_specific': libconf.strand_specific
     }
-    args.update(config.validation.items())
+    args.update(config.validate.items())
     args.update({k: v for k, v in libconf.items() if k in args})
 
     command = ['{} {}'.format(PROGNAME, SUBCOMMAND.VALIDATE)]
@@ -85,14 +85,15 @@ def build_annotate_command(config, libconf, inputfile, outputdir):
         'annotations': config.reference.annotations_filename,
         'template_metadata': config.reference.template_metadata_filename,
         'masking': config.reference.masking_filename,
-        'min_orf_size': config.annotation.min_orf_size,
-        'max_orf_cap': config.annotation.max_orf_cap,
+        'min_orf_size': config.annotate.min_orf_size,
+        'max_orf_cap': config.annotate.max_orf_cap,
         'library': libconf.library,
         'protocol': libconf.protocol,
-        'min_domain_mapping_match': config.annotation.min_domain_mapping_match,
+        'min_domain_mapping_match': config.annotate.min_domain_mapping_match,
         'domain_name_regex_filter': config.illustrate.domain_name_regex_filter,
         'max_proximity': config.cluster.max_proximity
     }
+    args.update(config.annotate.items())
     args.update({k: v for k, v in libconf.items() if k in args})
     command = ['{} {}'.format(PROGNAME, SUBCOMMAND.ANNOTATE)]
     for argname, value in args.items():
@@ -619,15 +620,15 @@ use the -h/--help option
         pass
     # decide which main function to execute
     if pstep == SUBCOMMAND.CLUSTER:
-        cluster_main(**args)
+        cluster_main(**args, start_time=start_time)
     elif pstep == SUBCOMMAND.VALIDATE:
-        validate_main(**args)
+        validate_main(**args, start_time=start_time)
     elif pstep == SUBCOMMAND.ANNOTATE:
-        annotate_main(**args)
+        annotate_main(**args, start_time=start_time)
     elif pstep == SUBCOMMAND.PAIR:
-        pairing_main(**args)
+        pairing_main(**args, start_time=start_time)
     elif pstep == SUBCOMMAND.SUMMARY:
-        summary_main(**args)
+        summary_main(**args, start_time=start_time)
     elif pstep == SUBCOMMAND.CONVERT:
         convert_main(**args)
     elif pstep == SUBCOMMAND.OVERLAY:

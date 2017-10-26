@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import time
 import warnings
 
 from .constants import DEFAULTS
@@ -27,6 +28,7 @@ def main(
     min_orf_size=DEFAULTS.min_orf_size,
     max_orf_cap=DEFAULTS.max_orf_cap,
     annotation_filters=DEFAULTS.annotation_filters,
+    start_time=int(time.time()),
     **kwargs
 ):
     """
@@ -57,8 +59,7 @@ def main(
             COLUMNS.stranded: False
         },
         require=[COLUMNS.protocol, COLUMNS.library],
-        expand_ns=False, explicit_strand=False,
-        force_svtype=True
+        expand_strand=False, expand_orient=True, expand_svtype=True
     )
     log('read {} breakpoint pairs'.format(len(bpps)))
 
@@ -110,7 +111,6 @@ def main(
             log(
                 '({} of {}) current annotation'.format(i + 1, total),
                 ann.annotation_id, ann.transcript1, ann.transcript2, ann.event_type)
-
             # get the reference sequences for either transcript
             ref_cdna_seq = {}
             ref_protein_seq = {}
@@ -138,7 +138,7 @@ def main(
                 temp_row.update(row)
                 temp_row.update(flatten_fusion_transcript(spl_fusion_tx))
                 temp_row[COLUMNS.fusion_sequence_fasta_id] = fusion_fa_id
-                temp_row[COLUMNS.cdna_synon] = cdna_synon
+                temp_row[COLUMNS.cdna_synon] = cdna_synon if cdna_synon else None
                 if spl_fusion_tx.translations:
                     # duplicate the row for each translation
                     for fusion_translation in spl_fusion_tx.translations:
@@ -147,7 +147,7 @@ def main(
                         nrow.update(temp_row)
                         aa_seq = fusion_translation.get_aa_seq()
                         protein_synon = ';'.join(sorted(list(ref_protein_seq.get(aa_seq, set()))))
-                        nrow[COLUMNS.protein_synon] = protein_synon
+                        nrow[COLUMNS.protein_synon] = protein_synon if protein_synon else None
                         # select the exon
                         nrow.update(flatten_fusion_translation(fusion_translation))
                         rows.append(nrow)
@@ -222,12 +222,12 @@ def main(
                             warnings.warn(str(err))
                             drawing = True
             ds.width = initial_width  # reset the width
-            if rows:
+            if not rows:
                 rows = [row]
 
             for row in rows:
                 tabbed_fh.write('\t'.join([str(row.get(k, None)) for k in header]) + '\n')
-        generate_complete_stamp(output, log)
+        generate_complete_stamp(output, log, start_time=start_time)
     finally:
         log('closing:', tabbed_output_file)
         tabbed_fh.close()

@@ -15,6 +15,7 @@ MAVIS User Manual
    reference.rst
    configuration.rst
    tools_supported.rst
+   illustrations.rst
    faqs.rst
    theory.rst
    development.rst

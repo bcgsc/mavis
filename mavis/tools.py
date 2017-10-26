@@ -6,7 +6,7 @@ import warnings
 from braceexpand import braceexpand
 from shortuuid import uuid
 import tab
-import vcf
+from pysam import VariantFile
 
 from .breakpoint import Breakpoint, BreakpointPair
 from .constants import COLUMNS, MavisNamespace, ORIENT, STRAND, SVTYPE
@@ -40,7 +40,7 @@ TOOL_SVTYPE_MAPPING.update({
     'ITX': [SVTYPE.DUP],
     'CTX': [SVTYPE.TRANS, SVTYPE.ITRANS],
     'INV': [SVTYPE.INV],
-    'BND': [SVTYPE.TRANS],
+    'BND': [SVTYPE.TRANS, SVTYPE.ITRANS],
     'TRA': [SVTYPE.TRANS, SVTYPE.ITRANS],
     'CNV': [SVTYPE.DUP],
     'RPL': [SVTYPE.INS],
@@ -166,6 +166,71 @@ def _parse_chimerascan(row):
     return std_row
 
 
+def _parse_bnd_alt(alt):
+    """
+    parses the alt statement from vcf files using the specification in vcf 4.2/4.2.
+
+    Assumes that the reference base is always the outermost base (this is based on the spec and also manta results as
+    the spec was missing some cases)
+    """
+    match = re.match(r'^(?P<ref>\w)(?P<useq>\w*)\[(?P<chr>[^:]+):(?P<pos>\d+)\[$', alt)
+    if match:
+        return (match.group('chr'), int(match.group('pos')), ORIENT.RIGHT, match.group('ref'), match.group('useq'))
+    match = re.match(r'^\[(?P<chr>[^:]+):(?P<pos>\d+)\[(?P<useq>\w*)(?P<ref>\w)$', alt)
+    if match:
+        return (match.group('chr'), int(match.group('pos')), ORIENT.RIGHT, match.group('ref'), match.group('useq'))
+    match = re.match(r'^\](?P<chr>[^:]+):(?P<pos>\d+)\](?P<useq>\w*)(?P<ref>\w)$', alt)
+    if match:
+        return (match.group('chr'), int(match.group('pos')), ORIENT.LEFT, match.group('ref'), match.group('useq'))
+    match = re.match(r'^(?P<ref>\w)(?P<useq>\w*)](?P<chr>[^:]+):(?P<pos>\d+)\]$', alt)
+    if match:
+        return (match.group('chr'), int(match.group('pos')), ORIENT.LEFT, match.group('ref'), match.group('useq'))
+    else:
+        raise NotImplementedError('alt specification in unexpected format', alt)
+
+
+def _parse_vcf_record(row):
+    """
+    converts a vcf record
+    """
+    info = {}
+    for entry in row.info.items():
+        info[entry[0]] = entry[1:] if len(entry[1:]) > 1 else entry[1]
+    std_row = {}
+
+    if info['SVTYPE'] == 'BND':
+        if len(row.alts) > 1:
+            raise NotImplementedError('multiple alternates unsupported', row.alts)
+        chr2, end, orient2, ref, alt = _parse_bnd_alt(row.alts[0])
+        std_row['orient2'] = orient2
+        std_row[COLUMNS.untemplated_seq] = alt
+        if row.ref != ref:
+            raise AssertionError(
+                'Expected the ref specification in the vcf row to match the sequence '
+                'in the alt string: {} vs {}'.format(row.ref, ref))
+    else:
+        chr2 = info.get('CHR2', row.chrom)
+        end = row.stop
+
+    std_row.update({
+        'chr1': row.chrom, 'chr2': chr2,
+        'pos1_start': max(1, row.pos + info.get('CIPOS', (0, 0))[0]),
+        'pos1_end': row.pos + info.get('CIPOS', (0, 0))[1],
+        'pos2_start': max(1, end + info.get('CIEND', (0, 0))[0]),
+        'pos2_end': end + info.get('CIEND', (0, 0))[1]
+    })
+    std_row['event_type'] = info['SVTYPE']
+
+    try:
+        orient1, orient2 = info['CT'].split('to')
+        connection_type = {'3': ORIENT.LEFT, '5': ORIENT.RIGHT, 'N': ORIENT.NS}
+        std_row['orient1'] = connection_type[orient1]
+        std_row['orient2'] = connection_type[orient2]
+    except KeyError:
+        pass
+    return std_row
+
+
 def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
     """
     converts a row parsed from an input file to the appropriate column names for it to be converted to MAVIS style row
@@ -174,37 +239,19 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
     try:
         std_row[TRACKING_COLUMN] = row.get(TRACKING_COLUMN, '')
     except AttributeError:
-        std_row[TRACKING_COLUMN] = row.INFO.get(TRACKING_COLUMN, '')
+        try:
+            std_row[TRACKING_COLUMN] = getattr(row, TRACKING_COLUMN)
+        except AttributeError:
+            pass
     std_row['orient1'] = std_row['orient2'] = ORIENT.NS
     std_row['strand1'] = std_row['strand2'] = STRAND.NS
     result = []
     # convert the specified file type to a standard format
     if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL]:
 
-        if row.INFO['SVTYPE'] == 'BND':
-            chr2 = row.ALT[0].chr
-            end = row.ALT[0].pos
-        else:
-            chr2 = row.INFO.get('CHR2', row.CHROM)
-            end = row.INFO.get('END', row.POS)
-
-        std_row.update({
-            'chr1': row.CHROM, 'chr2': chr2,
-            'pos1_start': max(1, row.POS + row.INFO.get('CIPOS', (0, 0))[0]),
-            'pos1_end': row.POS + row.INFO.get('CIPOS', (0, 0))[1],
-            'pos2_start': max(1, end + row.INFO.get('CIEND', (0, 0))[0]),
-            'pos2_end': end + row.INFO.get('CIEND', (0, 0))[1]
-        })
-        std_row['event_type'] = row.INFO['SVTYPE']
-        try:
-            o1, o2 = row.INFO['CT'].split('to')
-            ct = {'3': ORIENT.LEFT, '5': ORIENT.RIGHT, 'N': ORIENT.NS}
-            std_row['orient1'] = ct[o1]
-            std_row['orient2'] = ct[o2]
-        except KeyError:
-            pass
-        if TRACKING_COLUMN not in row and row.ID is not None:
-            std_row[TRACKING_COLUMN] = '{}-{}'.format(file_type, row.ID)
+        std_row.update(_parse_vcf_record(row))
+        if row.id is not None and TRACKING_COLUMN not in std_row:
+            std_row[TRACKING_COLUMN] = '{}-{}'.format(file_type, row.id)
 
     elif file_type == SUPPORTED_TOOL.CHIMERASCAN:
 
@@ -295,7 +342,7 @@ def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fa
         result = read_bpp_from_input_file(input_file)
     else:
         if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL]:
-            rows = list(vcf.Reader(filename=input_file))
+            rows = list(VariantFile(input_file).fetch())
         else:
             dummy, rows = tab.read_file(input_file)
         log('found', len(rows), 'rows')

@@ -3,6 +3,7 @@ import os
 import re
 import subprocess
 from shortuuid import uuid
+import time
 
 import pysam
 
@@ -27,7 +28,7 @@ def main(
     bam_file, strand_specific,
     library, protocol, median_fragment_size, stdev_fragment_size, read_length,
     reference_genome, reference_genome_filename, annotations, masking, aligner_reference,
-    samtools_version, **kwargs
+    samtools_version, start_time=int(time.time()), **kwargs
 ):
     """
     Args:
@@ -72,7 +73,7 @@ def main(
             COLUMNS.cluster_id: None,
             COLUMNS.stranded: strand_specific
         },
-        expand_ns=False, explicit_strand=False,
+        expand_strand=False, expand_orient=True,
         cast={COLUMNS.cluster_id: lambda x: str(uuid()) if not x else x}
     )
     evidence_clusters = []
@@ -291,4 +292,4 @@ def main(
         fh.write('load {} name="{}"\n'.format(raw_evidence_bam, 'raw evidence'))
         fh.write('load {} name="{} {} input"\n'.format(bam_file, library, protocol))
 
-    generate_complete_stamp(output, log)
+    generate_complete_stamp(output, log, start_time=start_time)

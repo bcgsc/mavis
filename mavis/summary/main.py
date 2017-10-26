@@ -1,8 +1,10 @@
 from functools import partial
 import itertools
 import os
+import time
 
 from Bio import SeqIO
+import tab
 
 from .constants import DEFAULTS
 from .summary import annotate_dgv, filter_by_annotations, filter_by_call_method, filter_by_evidence, get_pairing_state, group_events
@@ -10,6 +12,13 @@ from ..constants import CALL_METHOD, COLUMNS
 from ..pairing.pairing import equivalent
 from ..pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from ..util import generate_complete_stamp, log, output_tabbed_file, read_inputs, soft_cast
+
+
+def soft_cast_null(value):
+    try:
+        return tab.cast_null(value)
+    except TypeError:
+        return value
 
 
 def main(
@@ -27,6 +36,7 @@ def main(
     split_call_distance=PAIRING_DEFAULTS.split_call_distance,
     contig_call_distance=PAIRING_DEFAULTS.contig_call_distance,
     spanning_call_distance=PAIRING_DEFAULTS.spanning_call_distance,
+    start_time=int(time.time()),
     **kwargs
 ):
     # pairing threshold parameters to be defined in config file
@@ -83,8 +93,7 @@ def main(
             'dgv',
             'summary_pairing']
         }, COLUMNS.call_method: CALL_METHOD.INPUT},
-        explicit_strand=False,
-        expand_ns=False,
+        expand_strand=False, expand_orient=False, expand_svtype=False,
         cast={
             COLUMNS.break1_split_reads: partial(soft_cast, cast_type=int),
             COLUMNS.break2_split_reads: partial(soft_cast, cast_type=int),
@@ -94,7 +103,8 @@ def main(
             COLUMNS.break2_split_reads_forced: partial(soft_cast, cast_type=int),
             COLUMNS.flanking_pairs: partial(soft_cast, cast_type=int),
             COLUMNS.linking_split_reads: partial(soft_cast, cast_type=int),
-            COLUMNS.protein_synon: partial(soft_cast, cast_type=bool)
+            COLUMNS.protein_synon: soft_cast_null,
+            COLUMNS.cdna_synon: soft_cast_null
         }
     ))
 
@@ -337,4 +347,4 @@ def main(
     rows = sorted(rows, key=lambda bpp: (bpp.break1, bpp.break2))
     output_tabbed_file(rows, fname, header=output_columns)
     log('Wrote {} gene fusion events to {}'.format(len(rows), fname))
-    generate_complete_stamp(output, log)
+    generate_complete_stamp(output, log, start_time=start_time)

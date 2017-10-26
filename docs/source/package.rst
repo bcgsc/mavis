@@ -16,6 +16,7 @@ Package Documentation
     mavis.bam
     auto/mavis.blat
     auto/mavis.breakpoint
+    auto/mavis.checker
     mavis.cluster
     auto/mavis.config
     auto/mavis.constants

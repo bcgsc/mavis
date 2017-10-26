@@ -1,5 +1,6 @@
 import itertools
 import os
+import time
 
 from Bio import SeqIO
 
@@ -16,6 +17,7 @@ def main(
     split_call_distance=DEFAULTS.split_call_distance,
     contig_call_distance=DEFAULTS.contig_call_distance,
     spanning_call_distance=DEFAULTS.spanning_call_distance,
+    start_time=int(time.time()),
     **kwargs
 ):
     """
@@ -58,8 +60,7 @@ def main(
             COLUMNS.fusion_sequence_fasta_file: None,
             COLUMNS.fusion_splicing_pattern: None
         },
-        explicit_strand=False,
-        expand_ns=False
+        expand_strand=False, expand_orient=False, expand_svtype=False
     ))
     log('read {} breakpoint pairs'.format(len(bpps)))
     libraries = set()
@@ -194,4 +195,4 @@ def main(
         'mavis_paired_{}.tab'.format('_'.join(sorted(list(libraries))))
     )
     output_tabbed_file(bpps, fname)
-    generate_complete_stamp(output, log)
+    generate_complete_stamp(output, log, start_time=start_time)

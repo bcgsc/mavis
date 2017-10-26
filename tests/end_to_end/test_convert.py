@@ -6,10 +6,10 @@ import tempfile
 import unittest
 
 
-from mavis.constants import SUBCOMMAND
+from mavis.constants import ORIENT, SUBCOMMAND, SVTYPE
 from mavis.main import main
 from mavis.tools import SUPPORTED_TOOL
-from mavis.util import unique_exists
+from mavis.util import unique_exists, read_bpp_from_input_file
 from mock import patch
 
 
@@ -39,6 +39,10 @@ class TestConvert(unittest.TestCase):
             self.assertEqual(0, main())
             print('output', outputfile)
             self.assertTrue(unique_exists(outputfile))
+        result = {}
+        for pair in read_bpp_from_input_file(outputfile):
+            result.setdefault(pair.tracking_id, []).append(pair)
+        return result
 
     def test_chimerascan(self):
         self.run_main(os.path.join(DATA_PREFIX, 'chimerascan_output.bedpe'), SUPPORTED_TOOL.CHIMERASCAN, False)
@@ -47,10 +51,46 @@ class TestConvert(unittest.TestCase):
         self.run_main(os.path.join(DATA_PREFIX, 'defuse_output.tsv'), SUPPORTED_TOOL.DEFUSE, False)
 
     def test_delly(self):
-        self.run_main(os.path.join(DATA_PREFIX, 'delly_events.vcf'), SUPPORTED_TOOL.DELLY, False)
+        result = self.run_main(os.path.join(DATA_PREFIX, 'delly_events.vcf'), SUPPORTED_TOOL.DELLY, False)
+        # test the contents were converted successfully
+        self.assertEqual(1, len(result['delly-DUP00000424']))
+        bpp = result['delly-DUP00000424'][0]
+        self.assertEqual(SVTYPE.DUP, bpp.event_type)
+        self.assertEqual('1', bpp.break1.chr)
+        self.assertEqual('1', bpp.break2.chr)
+        self.assertEqual(224646569 - 195, bpp.break1.start)
+        self.assertEqual(224646569 + 195, bpp.break1.end)
+        self.assertEqual(224800120 - 195, bpp.break2.start)
+        self.assertEqual(224800120 + 195, bpp.break2.end)
+        self.assertEqual(1, len(result['delly-TRA00020624']))
+        bpp = result['delly-TRA00020624'][0]
+        self.assertEqual(SVTYPE.TRANS, bpp.event_type)
+        self.assertEqual('10', bpp.break1.chr)
+        self.assertEqual('19', bpp.break2.chr)
+        self.assertEqual(7059510 - 670, bpp.break1.start)
+        self.assertEqual(7059510 + 670, bpp.break1.end)
+        self.assertEqual(17396810 - 670, bpp.break2.start)
+        self.assertEqual(17396810 + 670, bpp.break2.end)
+        self.assertEqual(len(result), 31)
 
     def test_manta(self):
-        self.run_main(os.path.join(DATA_PREFIX, 'manta_events.vcf'), SUPPORTED_TOOL.MANTA, False)
+        result = self.run_main(os.path.join(DATA_PREFIX, 'manta_events.vcf'), SUPPORTED_TOOL.MANTA, False)
+        # ensure weird bnd type is converted correctly
+        bnd_id = 'manta-MantaBND:173633:0:1:0:0:0:0'
+        self.assertEqual(2, len(result[bnd_id]))
+        bpp1, bpp2 = result[bnd_id]
+        if bpp1.event_type == SVTYPE.ITRANS:
+            bpp2, bpp1 = bpp1, bpp2
+        self.assertEqual(SVTYPE.TRANS, bpp1.event_type)
+        self.assertEqual(SVTYPE.ITRANS, bpp2.event_type)
+        for bpp in [bpp1, bpp2]:
+            self.assertEqual('10', bpp.break1.chr)
+            self.assertEqual('19', bpp.break2.chr)
+            self.assertEqual(7059511 - 0, bpp.break1.start)
+            self.assertEqual(7059511 + 1, bpp.break1.end)
+            self.assertEqual(17396810, bpp.break2.start)
+            self.assertEqual(17396810, bpp.break2.end)
+            self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
 
     def test_pindel(self):
         self.run_main(os.path.join(DATA_PREFIX, 'pindel_events.vcf'), SUPPORTED_TOOL.PINDEL, False)
