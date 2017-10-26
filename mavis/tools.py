@@ -206,7 +206,7 @@ def _parse_vcf_record(row):
         std_row[COLUMNS.untemplated_seq] = alt
         if row.ref != ref:
             raise AssertionError(
-                'Expected the ref specification int he vcf row to match the sequence '
+                'Expected the ref specification in the vcf row to match the sequence '
                 'in the alt string: {} vs {}'.format(row.ref, ref))
     else:
         chr2 = info.get('CHR2', row.chrom)
