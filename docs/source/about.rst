@@ -16,6 +16,46 @@ The pipeline consists four of main steps
 Getting started
 ...................
 
-see :ref:`Installation for developers <development-install>`
+There are 3 major steps to setting up and installing MAVIS
 
-see the next section Running the Pipeline
+1. **Install non-python dependencies**
+
+Before MAVIS can be installed, the :ref:`non-python dependencies <non-python-dependencies>` will need to be installed.
+After these have been installed MAVIS itself can be installed through pip
+
+2. **Install MAVIS**
+
+.. code:: bash
+
+    pip install mavis
+
+This will install mavis and its python dependencies.
+
+3. **Build reference files**
+
+After MAVIS is installed the :ref:`reference files <reference-input>` must be generated before it can be run.
+
+Once the above 3 steps are complete MAVIS is ready to be run. See :ref:`running the pipeline <pipeline>`.
+
+
+.. _non-python-dependencies:
+
+Non-python dependencies
+.........................
+
+Aligner (:term:`blat`)
++++++++++++++++++++++++++
+
+In addition to the python package dependencies, MAVIS also requires an aligner to be installed. Currently the only
+aligner supported is :term:`blat`. For MAVIS to run successfully :term:`blat` must be installed and accessible on the 
+path. If you have a non-std install of :term:`blat` you may find it useful to edit the PATH environment variable
+
+.. code-block:: bash
+    
+    >>> export PATH=/path/to/directory/containing/blat/binary:$PATH
+
+Samtools
+++++++++++++++++++
+
+Samtools is only used in sorting and indexing the intermediary output bams. Eventually this will hopefully be 
+accomplished through :term:`pysam` only.

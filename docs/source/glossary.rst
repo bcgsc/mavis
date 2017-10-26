@@ -7,7 +7,7 @@ General Terms
 
 .. glossary::
     :sorted:
-
+    
     flanking read pair
         A pair of reads where one read maps to one side of a set of breakpoints and its mate maps to the other.
 

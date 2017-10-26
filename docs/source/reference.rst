@@ -1,3 +1,5 @@
+.. _reference-input:
+
 Reference Input Files
 ======================
 
@@ -130,11 +132,11 @@ This reference file can be generated from any database with the necessary inform
 
 .. _generate-reference-annotations:
 
-Generating the Annotations from Ensembl
------------------------------------------
+Generating the Annotations from :ref:`Ensembl <Yates-2016>`
+------------------------------------------------------------
 
 There is a helper script included with mavis to facilitate generating the custom annotations
-file from an instance of the ensembl database. This uses the Ensembl perl api to connect and
+file from an instance of the :ref:`Ensembl <Yates-2016>` database. This uses the :ref:`Ensembl <Yates-2016>` perl api to connect and
 pull information from the database. This has been tested with both Ensembl69 and Ensembl79.
 
 Instructions for downloading and installing the perl api can be found on the `ensembl site <http://www.ensembl.org/info/docs/api/api_installation.html>`_
@@ -188,12 +190,12 @@ or if you have configured the environment variables as given in step 2, then sim
 
 .. _reference-files-dgv-annotations:
 
-DGV Annotations
-,,,,,,,,,,,,,,,,,,,,,,,
+:ref:`DGV (Database of Genomic Variants) <Macdonald-2014>` Annotations
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-File which contains regions corresonding to what is found in the database of genomic variants. This is
+File which contains regions corresponding to what is found in the database of genomic variants. This is
 used to annotate events that are found in healthy control samples and therefore may not be of interest
-if looking for somatic events. This can be downloaded from the `dgv site <http://dgv.tcag.ca/dgv/app/download>`_
+if looking for somatic events. This can be downloaded from `DGV <http://dgv.tcag.ca/dgv/app/download>`_
 It will need to be reformatted to have 4 columns after download. We used awk to convert the file like so
 
 .. code-block:: bash
