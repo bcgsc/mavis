@@ -1,4 +1,5 @@
 """
 holds submodules related to structural variants
 """
-from .version import __version__
+import pkg_resources
+__version__ = pkg_resources.require('mavis')[0].version

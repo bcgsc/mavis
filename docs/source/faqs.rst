@@ -17,6 +17,8 @@ columns. These unknown or not-specified values are then expanded to all possible
 step. For this reason it is sometimes helpful to use the :term:`tracking_id` column to track your calls through the MAVIS
 pipeline.
 
+See :ref:`Writing A Custom Conversion Script <custom-conversion>` for more details 
+
 
 How can I track my SV calls?
 ------------------------------

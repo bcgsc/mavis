@@ -5,12 +5,13 @@ About
 ---------
 
 MAVIS is a pipeline to merge and validate input from different structural variant callers into a single report.
-The pipeline consists four of main steps
+The pipeline consists five of main steps
 
 - :ref:`cluster <mavis-cluster>`
 - :ref:`validate <mavis-validate>`
 - :ref:`annotate <mavis-annotate>`
 - :ref:`pairing <mavis-pairing>`
+- :ref:`summary <mavis-summary>`
 
 
 Getting started
@@ -47,14 +48,14 @@ Aligner (:term:`blat`)
 +++++++++++++++++++++++++
 
 In addition to the python package dependencies, MAVIS also requires an aligner to be installed. Currently the only
-aligners supported are :term:`blat` and :term:`bwa mem`. For MAVIS to run successfully the aligner must be installed and accessible on the 
+aligners supported are :term:`blat` and :term:`bwa mem <bwa>`. For MAVIS to run successfully the aligner must be installed and accessible on the 
 path. If you have a non-std install you may find it useful to edit the PATH environment variable. For example
 
 .. code:: bash
     
     export PATH=/path/to/directory/containing/blat/binary:$PATH
 
-:term:`Blat <blat>` is the default aligner. To configure MAVIS to use :term:`bwa mem` as a default instead, use the
+:term:`Blat <blat>` is the default aligner. To configure MAVIS to use :term:`bwa mem <bwa>` as a default instead, use the
 :ref:`MAVIS environment variables <config-environment>`. Both the :term:`aligner` and :ref:`aligner reference <reference-files-aligner-reference>` settings
 should be specified
 
