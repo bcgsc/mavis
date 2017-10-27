@@ -236,7 +236,7 @@ def main(
             if not rows:
                 rows = [ann_row]
             for row in rows:
-                tabbed_fh.write('\t'.join([str(ann_row.get(k, None)) for k in header]) + '\n')
+                tabbed_fh.write('\t'.join([str(row.get(k, None)) for k in header]) + '\n')
         generate_complete_stamp(output, log, start_time=start_time)
     finally:
         log('closing:', tabbed_output_file)
