@@ -504,20 +504,14 @@ def generate_config(parser, required, optional, log=devnull):
         ' of inputs that should be used for the library', action=RangeAppendAction, nmin=2,
         metavar='<name> FILEPATH [FILEPATH ...]')
     optional.add_argument(
-        '--best_transcripts_only', default=get_env_variable('best_transcripts_only', True), metavar=get_metavar(bool),
-        type=tab.cast_boolean, help='compute from best transcript models only')
-    optional.add_argument(
         '--genome_bins', default=get_env_variable('genome_bins', 100), type=int, metavar=get_metavar(int),
         help='number of bins/samples to use in calculating the fragment size stats for genomes')
     optional.add_argument(
-        '--transcriptome_bins', default=get_env_variable('transcriptome_bins', 5000), type=int, metavar=get_metavar(int),
+        '--transcriptome_bins', default=get_env_variable('transcriptome_bins', 500), type=int, metavar=get_metavar(int),
         help='number of genes to use in calculating the fragment size stats for genomes')
     optional.add_argument(
         '--distribution_fraction', default=get_env_variable('distribution_fraction', 0.97), type=float_fraction, metavar=get_metavar(float),
         help='the proportion of the distribution of calculated fragment sizes to use in determining the stdev')
-    optional.add_argument(
-        '--verbose', default=get_env_variable('verbose', False), type=tab.cast_boolean, metavar=get_metavar(bool),
-        help='verbosely output logging information')
     optional.add_argument(
         '--convert', nargs=4, default=[],
         metavar=('<alias>', 'FILEPATH', '{{{}}}'.format(','.join(SUPPORTED_TOOL.values())), '<stranded>'),
@@ -529,7 +523,7 @@ def generate_config(parser, required, optional, log=devnull):
         '--no_defaults', default=False, action='store_true', help='do not write current defaults to the config output')
     augment_parser(['annotations'], optional, optional)
     # add the optional annotations file (only need this is auto generating bam stats for the transcriptome)
-    augment_parser(sorted(set(SUBMIT_OPTIONS) - {'jobname', 'stdout'}) + ['skip_stage'], optional)
+    augment_parser(['skip_stage'], optional)
     args = MavisNamespace(**parser.parse_args().__dict__)
 
     try:
@@ -577,7 +571,7 @@ def generate_config(parser, required, optional, log=devnull):
                 parser.error('argument --annotations: is required to gather bam stats for transcriptome libraries')
             log('loading the reference annotations file', args.annotations)
             args.annotations_filename = args.annotations
-            args.annotations = load_annotations(args.annotations, best_transcripts_only=args.best_transcripts_only)
+            args.annotations = load_annotations(args.annotations)
         for i, libconf in enumerate(libs):
             log('generating the config section for:', libconf.library)
             libs[i] = LibraryConfig.build(

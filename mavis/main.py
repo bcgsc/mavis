@@ -443,7 +443,7 @@ use the -h/--help option
     augment_parser(['help', 'version'], optional)
 
     if pstep == SUBCOMMAND.CONFIG:
-        generate_config(parser, required, optional)
+        generate_config(parser, required, optional, log=log)
         return EXIT_OK
     elif pstep == SUBCOMMAND.CONVERT:
         required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
