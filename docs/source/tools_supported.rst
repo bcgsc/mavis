@@ -35,6 +35,7 @@ indicate the version of the tool for which output files have been tested as inpu
 
 Some post-processing on the delly output files is generally done prior to input to filter the calls. 
 
+.. _custom-conversion:
 
 Writing A Custom Conversion Script
 -----------------------------------

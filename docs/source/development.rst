@@ -48,35 +48,6 @@ The contents of the user manual can then be viewed by opening the build/html/ind
 web browser (i.e. google-chrome, firefox, etc.)
 
 
-
-|
-
--------------
-
-|
-
-
-Non-python dependencies
--------------------------
-
-Aligner (:term:`blat`)
-........................
-
-In addition to the python package dependencies, MAVIS also requires an aligner to be installed. Currently the only
-aligner supported is :term:`blat`. For MAVIS to run successfully :term:`blat` must be installed and accessible on the 
-path. If you have a non-std install of :term:`blat` you may find it useful to edit the PATH environment variable
-
-.. code-block:: bash
-    
-    >>> export PATH=/path/to/directory/containing/blat/binary:$PATH
-
-Samtools
-...............
-
-Samtools is only used in sorting and indexing the intermediary output bams. Eventually this will hopefully be 
-accomplished through :term:`pysam` only.
-
-
 |
 
 -------------

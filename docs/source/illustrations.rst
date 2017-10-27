@@ -14,6 +14,21 @@ single breakpoint pair.
     a novel exon is predicted.
 
 
+.. figure:: _static/GIMAP4_IL7_fusion.svg
+    :width: 100%
+
+    Transcriptome breakpoints in the intron result in retained intron and predicts a
+    novel exon.
+
+If the :term:`draw_fusions_only` flag is set to False then all events will produce
+a diagram, even anti-sense fusions
+
+.. figure:: _static/UBE2V2_GIMAP4_disruptive_fusion.svg
+    :width: 100%
+
+    Disruptive Anti-sense Fusion
+
+
 Transcript Overlays
 ----------------------
 

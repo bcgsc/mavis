@@ -173,11 +173,16 @@ def main(
             cluster.data[COLUMNS.cluster_size] = len(input_pairs)
             temp = set()
             data_items = set()
+            combined_tracking_id = set()  # group the tracking ids
             for pair in input_pairs:
                 temp.update(pair.data[COLUMNS.tools])
                 data_items.update(pair.data.keys())
+                if COLUMNS.tracking_id in pair.data and pair.tracking_id:
+                    combined_tracking_id.update(pair.tracking_id.split(';'))
             cluster.data[COLUMNS.tools] = ';'.join(sorted(list(temp)))
-            data_items -= {COLUMNS.tools}
+            cluster.data[COLUMNS.tracking_id] = ';'.join(sorted(list(combined_tracking_id)))
+
+            data_items -= {COLUMNS.tools, COLUMNS.tracking_id}
             # retain all data where data is consistent between the input pairs
             for item in data_items:
                 common_data = [p.data.get(item, None) for p in input_pairs]
