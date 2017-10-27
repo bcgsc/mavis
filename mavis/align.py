@@ -306,7 +306,7 @@ def align_contigs(
             # parameters from https://genome.ucsc.edu/FAQ/FAQblat.html#blat4
             log([SUPPORTED_ALIGNER.BLAT, aligner_reference,
                  aligner_fa_input_file, aligner_output_file, '-out=pslx', '-noHead'] + blat_options)
-            subprocess.check_output([
+            subprocess.check_call([
                 SUPPORTED_ALIGNER.BLAT, aligner_reference,
                 aligner_fa_input_file, aligner_output_file, '-out=pslx', '-noHead'] + blat_options)
             reads_by_query = process_blat_output(
@@ -322,9 +322,9 @@ def align_contigs(
             command = '{} {} {} -Y'.format(aligner, aligner_reference, aligner_fa_input_file)
             log(command)  # for bwa
             with open(aligner_output_file, 'w') as aligner_output_fh:
-                subprocess.call(command, stdout=aligner_output_fh, shell=True)
+                subprocess.check_call(command, stdout=aligner_output_fh, shell=True)
 
-            with pysam.AlignmentFile(aligner_output_file, 'r') as samfile:
+            with pysam.AlignmentFile(aligner_output_file, 'r', check_sq=bool(len(sequences))) as samfile:
                 reads_by_query = {}
                 for read in samfile.fetch():
                     read = read_tools.SamRead.copy(read)
