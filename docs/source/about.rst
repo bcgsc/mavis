@@ -47,12 +47,22 @@ Aligner (:term:`blat`)
 +++++++++++++++++++++++++
 
 In addition to the python package dependencies, MAVIS also requires an aligner to be installed. Currently the only
-aligner supported is :term:`blat`. For MAVIS to run successfully :term:`blat` must be installed and accessible on the 
-path. If you have a non-std install of :term:`blat` you may find it useful to edit the PATH environment variable
+aligners supported are :term:`blat` and :term:`bwa mem`. For MAVIS to run successfully the aligner must be installed and accessible on the 
+path. If you have a non-std install you may find it useful to edit the PATH environment variable. For example
 
-.. code-block:: bash
+.. code:: bash
     
-    >>> export PATH=/path/to/directory/containing/blat/binary:$PATH
+    export PATH=/path/to/directory/containing/blat/binary:$PATH
+
+:term:`Blat <blat>` is the default aligner. To configure MAVIS to use :term:`bwa mem` as a default instead, use the
+:ref:`MAVIS environment variables <config-environment>`. Both the :term:`aligner` and :ref:`aligner reference <reference-files-aligner-reference>` settings
+should be specified
+
+.. code:: bash
+
+    export MAVIS_ALIGNER='bwa mem'
+    export MAVIS_ALIGNER_REFERENCE=/path/to/mem/fasta/ref/file
+
 
 Samtools
 ++++++++++++++++++

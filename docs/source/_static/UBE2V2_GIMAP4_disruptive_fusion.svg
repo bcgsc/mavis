@@ -17,7 +17,7 @@
   <g class="template" transform="translate(51.855468,-8.0410156)" id="g12770">
     <rect height="3" transform="translate(0,56.833333)" width="421.99219" x="0" y="0" id="rect12772" style="fill:#000000" />
     <g id="g12774">
-      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family:'consolas, courier new, monospace'" x="-5" y="64.333336" id="text12776">chr7</text>
+      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family: consolas, courier new, monospace" x="-5" y="64.333336" id="text12776">chr7</text>
       <title id="title12778">template chr7</title>
     </g>
     <g class="cytoband" transform="translate(0,50)" id="g12780">
@@ -197,7 +197,7 @@
       <title id="title13042">cytoband  chr7:y.q36.3  chr7:g.155100001_159138663</title>
     </g>
     <g class="breakpoint" transform="translate(399.47853,0)" id="g13044">
-      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="0.5" y="21" id="text13046">B1</text>
+      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family: consolas, courier new, monospace" x="0.5" y="21" id="text13046">B1</text>
       <rect height="56.666668" width="1" x="0" y="30" id="rect13048" style="fill:none;stroke:#000000;stroke-dasharray:3, 3" />
       <line x1="1" x2="1" y1="30" y2="86.666664" id="line13050" style="stroke:#000000;stroke-width:2" />
       <title id="title13052">Breakpoint 7:g.150268145_150268155? R</title>
@@ -206,7 +206,7 @@
   <g class="template" transform="translate(541.85547,-8.0410156)" id="g13054">
     <rect height="3" transform="translate(0,56.833333)" width="421.99219" x="0" y="0" id="rect13056" style="fill:#000000" />
     <g id="g13058">
-      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family:'consolas, courier new, monospace'" x="-5" y="64.333336" id="text13060">chr8</text>
+      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family: consolas, courier new, monospace" x="-5" y="64.333336" id="text13060">chr8</text>
       <title id="title13062">template chr8</title>
     </g>
     <g class="cytoband" transform="translate(0,50)" id="g13064">
@@ -370,7 +370,7 @@
       <title id="title13302">cytoband  chr8:y.q24.3  chr8:g.139900001_146364022</title>
     </g>
     <g class="breakpoint" transform="translate(140.75646,0)" id="g13304">
-      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="0.5" y="21" id="text13306">B2</text>
+      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family: consolas, courier new, monospace" x="0.5" y="21" id="text13306">B2</text>
       <rect height="56.666668" width="1" x="0" y="30" id="rect13308" style="fill:none;stroke:#000000;stroke-dasharray:3, 3" />
       <line x1="1" x2="1" y1="30" y2="86.666664" id="line13310" style="stroke:#000000;stroke-width:2" />
       <title id="title13312">Breakpoint 8:g.48968229_48968366? R</title>
@@ -381,12 +381,12 @@
     <g class="gene" transform="translate(28,105)" id="g13328">
       <rect height="50" width="345.60077" x="0" y="0" id="rect13330" style="fill:#518dc5;fill-opacity:1" />
       <polyline points="345.600776218736,0 365.600776218736,25.0 345.600776218736,50" id="polyline13332" style="fill:#518dc5;fill-opacity:1" />
-      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#ffffff;font-family:'consolas, courier new, monospace'" x="172.80038" y="31" id="text13334">GIMAP4</text>
+      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#ffffff;font-family: consolas, courier new, monospace" x="172.80038" y="31" id="text13334">GIMAP4</text>
       <title id="title13336">Gene ENSG00000133574 7:g.150264365_150271041+ aka GIMAP4</title>
     </g>
     <rect class="mask" height="175" pointer-events="none" width="261.39688" x="0" y="0" id="rect13338" style="opacity:0.7;fill:#ffffff" />
     <g class="breakpoint" transform="translate(193,0)" id="g13340">
-      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="66.16111" y="21" id="text13342">B1</text>
+      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family: consolas, courier new, monospace" x="66.16111" y="21" id="text13342">B1</text>
       <rect height="145.92628" width="0.36889806" x="-69.227974" y="29.536858" id="rect13344" style="fill:none;stroke:#000000;stroke-width:0.07371484;stroke-dasharray:0.22114454, 0.22114454" transform="scale(-1,1)" />
       <line x1="68.32222" x2="68.32222" y1="30" y2="175" id="line13346" style="stroke:#000000;stroke-width:2" />
       <title id="title13348">Breakpoint 7:g.150268145_150268155? R</title>
@@ -397,12 +397,12 @@
     <g class="gene" transform="translate(38,50)" id="g13354">
       <rect height="50" width="326" x="0" y="0" id="rect13356" style="fill:#4c9677" />
       <polyline points="326.0,0 346.0,25.0 326.0,50" id="polyline13358" style="fill:#4c9677" />
-      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#ffffff;font-family:'consolas, courier new, monospace'" x="163" y="31" id="text13360">UBE2V2</text>
+      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#ffffff;font-family: consolas, courier new, monospace" x="163" y="31" id="text13360">UBE2V2</text>
       <title id="title13362">Gene ENSG00000169139 8:g.48920960_48976511+ aka UBE2V2</title>
     </g>
     <rect class="mask" height="120" pointer-events="none" width="332" x="0" y="0" id="rect13364" style="opacity:0.7;fill:#ffffff" />
     <g class="breakpoint" transform="translate(332,0)" id="g13366">
-      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="1" y="21" id="text13368">B2</text>
+      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family: consolas, courier new, monospace" x="1" y="21" id="text13368">B2</text>
       <rect height="90" width="2" x="0" y="30" id="rect13370" style="fill:none;stroke:#000000;stroke-dasharray:3, 3" />
       <line x1="2" x2="2" y1="30" y2="120" id="line13372" style="stroke:#000000;stroke-width:2" />
       <title id="title13374">Breakpoint 8:g.48968229_48968366? R</title>
@@ -419,25 +419,25 @@
         <rect class="scaffold" height="3" width="913.67816" x="0" y="23.5" id="rect13390" style="fill:#000000" />
         <g class="exon" id="g13392">
           <rect height="50" width="39" x="0" y="0" id="rect13394" style="fill:#4c9677" />
-          <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#ffffff;font-family:'consolas, courier new, monospace'" x="19.5" y="31" id="text13396">1</text>
+          <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#ffffff;font-family: consolas, courier new, monospace" x="19.5" y="31" id="text13396">1</text>
           <title id="title13398">Exon   g.48920960_48921030  c.-55_16  cdna(1_71)  length(71)</title>
         </g>
         <g class="exon" transform="translate(73.332525,0)" id="g13400">
           <rect height="50" width="55" x="0" y="0" id="rect13402" style="fill:#4c9677" />
-          <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#ffffff;font-family:'consolas, courier new, monospace'" x="27.5" y="31" id="text13404">2</text>
+          <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#ffffff;font-family: consolas, courier new, monospace" x="27.5" y="31" id="text13404">2</text>
           <title id="title13406">Exon   g.48955593_48955741  c.17_165  cdna(72_220)  length(149)</title>
         </g>
         <g class="exon" transform="translate(142.9511,0)" id="g13408">
           <rect height="50" width="51" x="0" y="0" id="rect13410" style="fill:#4c9677" />
-          <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#ffffff;font-family:'consolas, courier new, monospace'" x="25.5" y="31" id="text13412">3</text>
+          <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#ffffff;font-family: consolas, courier new, monospace" x="25.5" y="31" id="text13412">3</text>
           <title id="title13414">Exon   g.48962413_48962538  c.166_291  cdna(221_346)  length(126)</title>
         </g>
         <g class="exon" transform="translate(210.67817,0)" id="g13416">
           <rect height="50" width="702" x="0" y="0" id="rect13418" style="fill:#4c9677" />
-          <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#ffffff;font-family:'consolas, courier new, monospace'" x="351" y="31" id="text13420">4</text>
+          <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#ffffff;font-family: consolas, courier new, monospace" x="351" y="31" id="text13420">4</text>
           <title id="title13422">Exon   g.48973242_48976511  c.292_*3123  cdna(347_3616)  length(3270)</title>
         </g>
-        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family:'consolas, courier new, monospace'" x="-5" y="31" id="text13424">T1</text>
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family: consolas, courier new, monospace" x="-5" y="31" id="text13424">T1</text>
       </g>
       <g class="protein" transform="translate(0,80)" id="g13426">
         <g class="translation" id="g13428">
@@ -445,8 +445,8 @@
           <rect class="scaffold" height="14" width="56" x="73.332527" y="0" id="rect13432" style="fill:#000000" />
           <rect class="scaffold" height="14" width="51" x="142.9511" y="0" id="rect13434" style="fill:#000000" />
           <rect class="scaffold" height="14" width="32" x="210.67818" y="0" id="rect13436" style="fill:#000000" />
-          <text class="label" style="font-size:14px;font-weight:bold;text-anchor:end;fill:#000000;font-family:'consolas, courier new, monospace'" x="26" y="11.2" id="text13438">M</text>
-          <text class="label" style="font-size:14px;font-weight:bold;text-anchor:start;fill:#000000;font-family:'consolas, courier new, monospace'" x="245.67818" y="11.2" id="text13440">*</text>
+          <text class="label" style="font-size:14px;font-weight:bold;text-anchor:end;fill:#000000;font-family: consolas, courier new, monospace" x="26" y="11.2" id="text13438">M</text>
+          <text class="label" style="font-size:14px;font-weight:bold;text-anchor:start;fill:#000000;font-family: consolas, courier new, monospace" x="245.67818" y="11.2" id="text13440">*</text>
           <title id="title13442">translation  cdna(56_493)  c.1_438  p.1_146</title>
         </g>
         <g class="domain" transform="translate(0,19)" id="g13444">
@@ -456,7 +456,7 @@
             <title id="title13452">domain PF00179 region p.36_131</title>
           </g>
           <a target="_blank" xlink:href="http://pfam.xfam.org/family/PF00179" id="a13454">
-            <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family:'consolas, courier new, monospace'" x="-5" y="21" id="text13456">D1</text>
+            <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family: consolas, courier new, monospace" x="-5" y="21" id="text13456">D1</text>
           </a>
         </g>
         <g class="domain" transform="translate(0,54)" id="g13458">
@@ -466,7 +466,7 @@
             <title id="title13466">domain PS50127 region p.13_138</title>
           </g>
           <g id="g13468">
-            <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family:'consolas, courier new, monospace'" x="-5" y="21" id="text13470">D2</text>
+            <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family: consolas, courier new, monospace" x="-5" y="21" id="text13470">D2</text>
           </g>
         </g>
         <g class="domain" transform="translate(0,89)" id="g13472">
@@ -476,7 +476,7 @@
             <title id="title13480">domain SM00212 region p.13_145</title>
           </g>
           <g id="g13482">
-            <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family:'consolas, courier new, monospace'" x="-5" y="21" id="text13484">D3</text>
+            <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family: consolas, courier new, monospace" x="-5" y="21" id="text13484">D3</text>
           </g>
         </g>
         <g class="domain" transform="translate(0,124)" id="g13486">
@@ -486,14 +486,14 @@
             <title id="title13494">domain SSF54495 region p.6_145</title>
           </g>
           <g id="g13496">
-            <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family:'consolas, courier new, monospace'" x="-5" y="21" id="text13498">D4</text>
+            <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family: consolas, courier new, monospace" x="-5" y="21" id="text13498">D4</text>
           </g>
         </g>
       </g>
     </g>
     <rect class="mask" height="304" pointer-events="none" width="202.05319" x="0" y="0" id="rect13500" style="opacity:0.7;fill:#ffffff" />
     <g class="breakpoint" transform="translate(202.05319,0)" id="g13502">
-      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="0.5" y="21" id="text13504">B2</text>
+      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family: consolas, courier new, monospace" x="0.5" y="21" id="text13504">B2</text>
       <rect height="274" width="1" x="0" y="30" id="rect13506" style="fill:none;stroke:#000000;stroke-dasharray:3, 3" />
       <line x1="1" x2="1" y1="30" y2="304" id="line13508" style="stroke:#000000;stroke-width:2" />
       <title id="title13510">Breakpoint 8:g.48968229_48968366? R</title>
@@ -509,27 +509,27 @@
         <rect style="fill:#000000" class="scaffold" height="3" width="913.42786" x="0" y="23.5" id="rect17453" />
         <g class="exon" id="g17455">
           <rect style="fill:#518dc5" height="50" width="86" x="0" y="0" id="rect17457" />
-          <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="43" y="31" id="text17459">1</text>
+          <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family: consolas, courier new, monospace" x="43" y="31" id="text17459">1</text>
           <title id="title17461">Exon   g.150264365_150264525  c.-175_-15  cdna(1_161)  length(161)</title>
         </g>
         <g class="exon" transform="translate(115.78731,0)" id="g17463">
           <rect style="fill:#518dc5" height="50" width="52" x="0" y="0" id="rect17465" />
-          <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="26" y="31" id="text17467">2</text>
+          <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family: consolas, courier new, monospace" x="26" y="31" id="text17467">2</text>
           <title id="title17469">Exon   g.150266976_150267047  c.-14_58  cdna(162_233)  length(72)</title>
         </g>
         <g class="exon" transform="translate(195.42786,0)" id="g17471">
           <rect style="fill:#518dc5" height="50" width="717" x="0" y="0" id="rect17473" />
-          <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="358.5" y="31" id="text17475">3</text>
+          <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family: consolas, courier new, monospace" x="358.5" y="31" id="text17475">3</text>
           <title id="title17477">Exon   g.150269217_150271041  c.59_*893  cdna(234_2058)  length(1825)</title>
         </g>
-        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family:'consolas, courier new, monospace'" x="-5" y="31" id="text17479">T1</text>
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family: consolas, courier new, monospace" x="-5" y="31" id="text17479">T1</text>
       </g>
       <g class="protein" transform="translate(0,80)" id="g17481">
         <g class="translation" id="g17483">
           <rect style="fill:#000000" class="scaffold" height="14" width="42" x="125.78732" y="0" id="rect17485" />
           <rect style="fill:#000000" class="scaffold" height="14" width="367" x="195.42786" y="0" id="rect17487" />
-          <text class="label" style="font-size:14px;font-weight:bold;text-anchor:end;fill:#000000;font-family:'consolas, courier new, monospace'" x="121.78732" y="11.2" id="text17489">M</text>
-          <text class="label" style="font-size:14px;font-weight:bold;text-anchor:start;fill:#000000;font-family:'consolas, courier new, monospace'" x="565.42786" y="11.2" id="text17491">*</text>
+          <text class="label" style="font-size:14px;font-weight:bold;text-anchor:end;fill:#000000;font-family: consolas, courier new, monospace" x="121.78732" y="11.2" id="text17489">M</text>
+          <text class="label" style="font-size:14px;font-weight:bold;text-anchor:start;fill:#000000;font-family: consolas, courier new, monospace" x="565.42786" y="11.2" id="text17491">*</text>
           <title id="title17493">translation  cdna(176_1165)  c.1_990  p.1_330</title>
         </g>
         <g class="domain" transform="translate(0,19)" id="g17495">
@@ -539,7 +539,7 @@
             <title id="title17503">domain PF04548 region p.31_238</title>
           </g>
           <a target="_blank" xlink:href="http://pfam.xfam.org/family/PF04548" id="a17505">
-            <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family:'consolas, courier new, monospace'" x="-5" y="21" id="text17507">D1</text>
+            <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family: consolas, courier new, monospace" x="-5" y="21" id="text17507">D1</text>
           </a>
         </g>
         <g class="domain" transform="translate(0,54)" id="g17509">
@@ -549,14 +549,14 @@
             <title id="title17517">domain SSF52540 region p.24_288</title>
           </g>
           <g id="g17519">
-            <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family:'consolas, courier new, monospace'" x="-5" y="21" id="text17521">D2</text>
+            <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family: consolas, courier new, monospace" x="-5" y="21" id="text17521">D2</text>
           </g>
         </g>
       </g>
     </g>
     <rect style="opacity:0.7;fill:#ffffff" class="mask" height="234" pointer-events="none" width="181.11415" x="0" y="0" id="rect17523" />
     <g class="breakpoint" transform="translate(181.11415,0)" id="g17525">
-      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family:'consolas, courier new, monospace'" x="0" y="21" id="text17527">B1</text>
+      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family: consolas, courier new, monospace" x="0" y="21" id="text17527">B1</text>
       <rect style="fill:none;stroke:#000000;stroke-dasharray:3, 3" height="204" width="0" x="0" y="30" id="rect17529" />
       <line style="stroke:#000000;stroke-width:2" x1="0" x2="0" y1="30" y2="234" id="line17531" />
       <title id="title17533">Breakpoint 7:g.150268145_150268155? R</title>
