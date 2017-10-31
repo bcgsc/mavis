@@ -9,13 +9,13 @@
     <inkscape:perspective id="perspective6083-8" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
     <inkscape:perspective id="perspective6083-82" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
   </defs>
-  <sodipodi:namedview id="base" pagecolor="#ffffff" bordercolor="#666666" borderopacity="1.0" inkscape:pageopacity="0.0" inkscape:pageshadow="2" inkscape:zoom="0.7" inkscape:cx="82.214301" inkscape:cy="174.35717" inkscape:document-units="px" inkscape:current-layer="layer1" showgrid="false" inkscape:window-width="1920" inkscape:window-height="1000" inkscape:window-x="1280" inkscape:window-y="24" inkscape:window-maximized="1" />
+  <sodipodi:namedview id="base" pagecolor="#ffffff" bordercolor="#666666" borderopacity="1.0" inkscape:pageopacity="0.0" inkscape:pageshadow="2" inkscape:zoom="0.7" inkscape:cx="82.214301" inkscape:cy="170.78574" inkscape:document-units="px" inkscape:current-layer="g6280" showgrid="false" inkscape:window-width="1920" inkscape:window-height="1000" inkscape:window-x="1280" inkscape:window-y="24" inkscape:window-maximized="1" />
   <metadata id="metadata6036">
     <rdf:RDF>
       <cc:Work rdf:about="">
         <dc:format>image/svg+xml</dc:format>
         <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -36,7 +36,7 @@
       <text id="text6159" y="282.93372" x="115.7813" style="font-size:21.89024353px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:monospace,sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan y="282.93372" x="115.7813" id="tspan6161" sodipodi:role="line">erging,</tspan></text>
       <text id="text6163" y="340.81396" x="115.7813" style="font-size:21.89024353px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:monospace,sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan y="340.81396" x="115.7813" id="tspan6165" sodipodi:role="line">nnotation,</tspan></text>
       <text id="text6167" y="397.68951" x="115.7813" style="font-size:21.89024353px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:monospace,sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan y="397.68951" x="115.7813" id="tspan6169" sodipodi:role="line">alidation, and</tspan></text>
-      <text id="text6171" y="455.68204" x="115.7813" style="font-size:21.89024353px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:monospace,sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan y="455.68204" x="115.7813" id="tspan6173" sodipodi:role="line">illustration</tspan></text>
+      <text id="text6171" y="455.68204" x="115.7813" style="font-size:21.89024353px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:monospace,sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan y="455.68204" x="115.7813" id="tspan6173" sodipodi:role="line">llustration</tspan></text>
       <text id="text6175" y="512.55756" x="115.7813" style="font-size:21.89024353px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:monospace,sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan y="512.55756" x="115.7813" id="tspan6177" sodipodi:role="line">tructural Variants</tspan></text>
     </g>
   </g>
