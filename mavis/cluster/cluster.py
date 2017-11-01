@@ -9,8 +9,6 @@ from ..constants import ORIENT, STRAND
 from ..interval import Interval
 from ..util import log
 
-FLOAT_OFFSET = 0.99999999
-
 
 class BreakpointPairGroupKey(namedtuple('BreakpointPairGroupKey', [
     'chr1', 'chr2', 'orient1', 'orient2', 'strand1', 'strand2', 'opposing_strands', 'explicit_strand'
@@ -53,17 +51,18 @@ def merge_integer_intervals(*intervals, weight_adjustment=0):
     Args:
         weight_adjustment (int): add to length to lower weighting differences between small intervals
     """
+    float_offset = 0.99999999
     intervals = list(intervals)
     centers = []
     weights = []
     lengths = []
 
-    if len(intervals) == 0:
+    if not intervals:
         raise AttributeError('cannot compute the weighted mean interval of an empty set of intervals')
     for i in range(0, len(intervals)):
         curr = intervals[i]
-        intervals[i] = Interval(curr[0], curr[1] + FLOAT_OFFSET)
-        for temp in range(0, intervals[i].freq):
+        intervals[i] = Interval(curr[0], curr[1] + float_offset)
+        for _ in range(0, intervals[i].freq):
             centers.append(intervals[i].center)
             weights.append((weight_adjustment + 1) / (intervals[i].length() + weight_adjustment))
             lengths.append(intervals[i].length())
@@ -73,7 +72,7 @@ def merge_integer_intervals(*intervals, weight_adjustment=0):
     start = max([round(center - size / 2, 0), min([i[0] for i in intervals])])
     end = min([round(center + size / 2, 0), max([i[1] for i in intervals])])
     offset = min([center - start, end - center])
-    result = Interval(int(round(center - offset, 0)), int(round(center + max(0, offset - FLOAT_OFFSET), 0)))
+    result = Interval(int(round(center - offset, 0)), int(round(center + max(0, offset - float_offset), 0)))
     return result
 
 

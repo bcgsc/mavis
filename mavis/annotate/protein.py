@@ -49,8 +49,6 @@ class DomainRegion(BioInterval):
 
 
 class Domain:
-    """
-    """
 
     def __init__(self, name, regions, translation=None, data=None):
         """
