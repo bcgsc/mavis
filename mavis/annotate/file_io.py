@@ -136,13 +136,13 @@ def parse_annotations_json(data, reference_genome=None, best_transcripts_only=Fa
                 continue
             gene.transcripts.append(ust)
 
-            if transcript['cdna_coding_end'] is None or transcript['cdna_coding_start'] is None:
-                continue
-
             for spl_patt in ust.generate_splicing_patterns():
                 # make splice transcripts and translations
                 spl_tx = Transcript(ust, spl_patt)
                 ust.spliced_transcripts.append(spl_tx)
+
+                if transcript.get('cdna_coding_end', None) is None or transcript.get('cdna_coding_start', None) is None:
+                    continue
                 tx_length = transcript['cdna_coding_end'] - transcript['cdna_coding_start'] + 1
                 # check that the translation makes sense before including it
                 if tx_length % CODON_SIZE != 0:

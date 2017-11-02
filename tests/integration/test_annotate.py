@@ -12,7 +12,8 @@ from mavis.error import NotSpecifiedError
 from mavis.interval import Interval
 from mavis.util import log
 
-from . import DATA_DIR, MockLongString, MockObject, REFERENCE_ANNOTATIONS_FILE, REFERENCE_ANNOTATIONS_FILE2, REFERENCE_ANNOTATIONS_FILE_JSON, REFERENCE_GENOME_FILE
+from . import DATA_DIR, MockLongString, MockObject, REFERENCE_ANNOTATIONS_FILE, REFERENCE_ANNOTATIONS_FILE2, REFERENCE_ANNOTATIONS_FILE_JSON, REFERENCE_GENOME_FILE, EXAMPLE_GENES
+
 
 REFERENCE_ANNOTATIONS = None
 REFERENCE_GENOME = None
@@ -1359,24 +1360,35 @@ class TestAnnotateEvents(unittest.TestCase):
 class TestNDUFA12(unittest.TestCase):
 
     def setUp(self):
-        self.reference_annotations = load_reference_genes(os.path.join(DATA_DIR, 'NDUFA12_annotations.tab'), warn=log)
-        reference_genome = load_reference_genome(os.path.join(DATA_DIR, 'NDUFA12_hg19.fa'))
-        self.reference_genome = {'12': MockObject(
-            seq=MockLongString(str(reference_genome['NDUFA12'].seq), offset=95290830)
+        print(EXAMPLE_GENES.keys())
+        self.gene = EXAMPLE_GENES['NDUFA12']
+        self.reference_annotations = {self.gene.chr: [self.gene]}
+        self.reference_genome = {self.gene.chr: MockObject(
+            seq=MockLongString(self.gene.seq, offset=self.gene.start - 1)
         )}
+        self.best = None
+        for chr, gene_list in self.reference_annotations.items():
+            for gene in gene_list:
+                for tx in gene.unspliced_transcripts:
+                    if tx.is_best_transcript:
+                        self.best = tx
+                        break
 
     def test_annotate_events_synonymous(self):
         for gene_list in self.reference_annotations.values():
             for gene in gene_list:
                 for t in gene.transcripts:
                     print(t)
-        b1 = Breakpoint('12', 95344068, orient=ORIENT.LEFT, strand=STRAND.NS)
-        b2 = Breakpoint('12', 95344379, orient=ORIENT.RIGHT, strand=STRAND.NS)
+        b1 = Breakpoint(self.gene.chr, 95344068, orient=ORIENT.LEFT, strand=STRAND.NS)
+        b2 = Breakpoint(self.gene.chr, 95344379, orient=ORIENT.RIGHT, strand=STRAND.NS)
         bpp = BreakpointPair(
             b1, b2, stranded=False, opposing_strands=False, event_type=SVTYPE.DEL, protocol=PROTOCOL.GENOME,
             untemplated_seq='')
         annotations = annotate_events([bpp], reference_genome=self.reference_genome, annotations=self.reference_annotations)
         ann = annotations[0]
+        for a in annotations:
+            print(a, a.fusion, a.fusion.transcripts)
+            print(a.transcript1, a.transcript1.transcripts)
         fseq = ann.fusion.transcripts[0].get_seq()
         refseq = ann.transcript1.transcripts[0].get_seq(self.reference_genome)
         self.assertEqual(refseq, fseq)
@@ -1386,10 +1398,10 @@ class TestNDUFA12(unittest.TestCase):
 class TestSVEP1(unittest.TestCase):
 
     def setUp(self):
-        self.reference_annotations = load_reference_genes(os.path.join(DATA_DIR, 'SVEP1_annotations.tab'), warn=log)
-        reference_genome = load_reference_genome(os.path.join(DATA_DIR, 'SVEP1_hg19.fa'))
-        self.reference_genome = {'9': MockObject(
-            seq=MockLongString(reference_genome['SVEP1'].seq, offset=113127530)
+        self.gene = EXAMPLE_GENES['SVEP1']
+        self.reference_annotations = {self.gene.chr: [self.gene]}
+        self.reference_genome = {self.gene.chr: MockObject(
+            seq=MockLongString(self.gene.seq, offset=self.gene.start - 1)
         )}
         self.best = None
         for chr, gene_list in self.reference_annotations.items():
@@ -1442,10 +1454,11 @@ class TestSVEP1(unittest.TestCase):
 
 class TestDSTYK(unittest.TestCase):
     def setUp(self):
-        self.reference_annotations = load_reference_genes(os.path.join(DATA_DIR, 'DSTYK_annotations.tab'), warn=log)
-        reference_genome = load_reference_genome(os.path.join(DATA_DIR, 'DSTYK_hg19.fa'))
-        self.reference_genome = {'1': MockObject(
-            seq=MockLongString(reference_genome['DSTYK'].seq, offset=205111631)
+        print(EXAMPLE_GENES.keys())
+        self.gene = EXAMPLE_GENES['DSTYK']
+        self.reference_annotations = {self.gene.chr: [self.gene]}
+        self.reference_genome = {self.gene.chr: MockObject(
+            seq=MockLongString(self.gene.seq, offset=self.gene.start - 1)
         )}
         self.best = None
         for chr, gene_list in self.reference_annotations.items():

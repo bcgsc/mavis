@@ -10,26 +10,7 @@ from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import PROTOCOL, reverse_complement, STRAND, SVTYPE
 from mavis.interval import Interval
 
-from . import DATA_DIR, MockLongString, MockObject
-
-REF_GENOME = {}
-HUGO_GENES = {}
-ANNOTATIONS = None
-
-
-def setUpModule():
-    global ANNOTATIONS
-    temp = load_reference_genome(os.path.join(DATA_DIR, 'novel_exon_test_reference.fa'))
-    ANNOTATIONS = load_annotations(os.path.join(DATA_DIR, 'novel_exon_test_annotations.tab'))
-    for chr, gene_list in ANNOTATIONS.items():
-        for gene in gene_list:
-            assert(len(gene.aliases) == 1)
-            hugo = gene.aliases[0].lower()
-            HUGO_GENES[hugo] = gene
-            offset = gene.start - 1
-            if gene.chr in REF_GENOME:
-                raise AssertionError('conflicting sequences')
-            REF_GENOME[gene.chr] = MockObject(seq=MockLongString(str(temp[hugo].seq), offset=offset))
+from . import DATA_DIR, MockLongString, MockObject, EXAMPLE_GENES
 
 
 class TestSplicingPatterns(unittest.TestCase):
@@ -280,19 +261,15 @@ class TestExonSpliceSites(unittest.TestCase):
 class TestPredictSpliceSites(unittest.TestCase):
 
     def test_gimap4(self):
-        gimap4 = HUGO_GENES['gimap4']
-        gimap4_seq = gimap4.get_seq(REF_GENOME)
-        print(gimap4_seq[:100])
-        donors = predict_splice_sites(gimap4_seq)
+        gimap4 = EXAMPLE_GENES['GIMAP4']
+        donors = predict_splice_sites(gimap4.seq)
         for d in donors:
             print(d)
         self.assertEqual(5, len(donors))
 
     def test_gimap4_reverse(self):
-        gimap4 = HUGO_GENES['gimap4']
-        gimap4_seq = gimap4.get_seq(REF_GENOME)
-        gimap4_seq = reverse_complement(gimap4_seq)
-        print(gimap4_seq[:100])
+        gimap4 = EXAMPLE_GENES['GIMAP4']
+        gimap4_seq = reverse_complement(gimap4.seq)
         donors = predict_splice_sites(gimap4_seq, True)
         for d in donors:
             self.assertEqual(d.seq, gimap4_seq[d.start - 1:d.end])
@@ -307,7 +284,13 @@ class TestPredictSpliceSites(unittest.TestCase):
             protocol=PROTOCOL.GENOME,
             untemplated_seq=''
         )
-        annotations = annotate_events([bpp], ANNOTATIONS, REF_GENOME)
+        gimap4 = EXAMPLE_GENES['GIMAP4']
+        il7 = EXAMPLE_GENES['IL7']
+        ref_genome = {
+            gimap4.chr: MockObject(seq=MockLongString(gimap4.seq, offset=gimap4.start - 1)),
+            il7.chr: MockObject(seq=MockLongString(il7.seq, offset=il7.start - 1))
+        }
+        annotations = annotate_events([bpp], {gimap4.chr: [gimap4], il7.chr: [il7]}, ref_genome)
         self.assertEqual(1, len(annotations))
         ann = annotations[0]
         print(ann, ann.transcript1, ann.transcript2)
