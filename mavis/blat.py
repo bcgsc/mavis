@@ -1,13 +1,16 @@
 """
 
-"In general the coordinates in psl files are “zero based half open.” The first base in a sequence is numbered
-zero rather than one. When representing a range the end coordinate is not included in the range. Thus the first
-100 bases of a sequence are represented as 0-100, and the second 100 bases are represented as 100-200. There is
-another little unusual feature in the .psl format. It has to do with how coordinates are handled on the
-negative strand. In the qStart/qEnd fields the coordinates are where it matches from the point of view of the forward
-strand (even when the match is on the reverse strand). However on the qStarts[] list, the coordinates are reversed."
---- http://wiki.bits.vib.be/index.php/Blat
 
+::
+
+    In general the coordinates in psl files are “zero based half open.” The first base in a sequence is numbered
+    zero rather than one. When representing a range the end coordinate is not included in the range. Thus the first
+    100 bases of a sequence are represented as 0-100, and the second 100 bases are represented as 100-200. There is
+    another little unusual feature in the .psl format. It has to do with how coordinates are handled on the
+    negative strand. In the qStart/qEnd fields the coordinates are where it matches from the point of view of the forward
+    strand (even when the match is on the reverse strand). However on the qStarts[] list, the coordinates are reversed.
+
+-- http://wiki.bits.vib.be/index.php/Blat
 
 """
 import math

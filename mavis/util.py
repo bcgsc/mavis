@@ -20,6 +20,13 @@ ENV_VAR_PREFIX = 'MAVIS_'
 
 
 def cast(value, cast_func):
+    """
+    cast a value to a given type
+
+    Example:
+        >>> cast('1', int)
+        1
+    """
     if cast_func == bool:
         value = tab.cast_boolean(value)
     else:
@@ -28,6 +35,15 @@ def cast(value, cast_func):
 
 
 def soft_cast(value, cast_type):
+    """
+    cast a value to a given type, if the cast fails, cast to null
+
+    Example:
+        >>> cast(None, int)
+        None
+        >>> cast('', int)
+        None
+    """
     try:
         return cast(value, cast_type)
     except (TypeError, ValueError):
@@ -48,8 +64,7 @@ def get_env_variable(arg, default, cast_type=None):
     result = os.environ.get(name, None)
     if result is not None:
         return cast(result, cast_type)
-    else:
-        return default
+    return default
 
 
 class WeakMavisNamespace(MavisNamespace):
@@ -78,6 +93,16 @@ class ChrListString(list):
 
 
 def bash_expands(expression):
+    """
+    expand a file glob expression, allowing bash-style brackets.
+
+    Returns:
+        list: a list of files
+
+    Example:
+        >>> bash_expands('./{test,doc}/*py')
+        [...]
+    """
     result = []
     for name in braceexpand(expression):
         for fname in glob(name):
@@ -86,6 +111,12 @@ def bash_expands(expression):
 
 
 def log_arguments(args):
+    """
+    output the arguments to the console
+
+    Args:
+        args (Namespace): the namespace to print arguments for
+    """
     log('arguments')
     for arg, val in sorted(args.items()):
         if isinstance(val, list):
@@ -110,10 +141,16 @@ def log(*pos, time_stamp=True):
 
 
 def devnull(*pos, **kwargs):
+    """
+    Takes any number of arguments and does nothing
+    """
     pass
 
 
 def mkdirp(dirname):
+    """
+    Make a directory or path of directories. Suppresses the error that is normally raised when the directory already exists
+    """
     log("creating output directory: '{}'".format(dirname))
     try:
         os.makedirs(dirname)
@@ -126,6 +163,13 @@ def mkdirp(dirname):
 
 
 def filter_on_overlap(bpps, regions_by_reference_name):
+    """
+    filter a set of breakpoint pairs based on overlap with a set of genomic regions
+
+    Args:
+        bpps (:class:`list` of :class:`~mavis.breakpoint.BreakpointPair`): list of breakpoint pairs to be filtered
+        regions_by_reference_name (:class:`dict` of :class:`list` of :class:`~mavis.annotate.base.BioInterval` by :class:`str`): regions to filter against
+    """
     log('filtering from', len(bpps), 'using overlaps with regions filter')
     failed = []
     passed = []
@@ -201,6 +245,22 @@ def write_bed_file(filename, bed_rows):
 
 
 def generate_complete_stamp(output_dir, log=devnull, prefix='MAVIS.', start_time=None):
+    """
+    writes a complete stamp, optionally including the run time if start_time is given
+
+    Args:
+        output_dir (str): path to the output dir the stamp should be written in
+        log (function): function to print logging messages to
+        prefix (str): prefix for the stamp name
+        start_time (int): the start time
+
+    Return:
+        str: path to the complete stamp
+
+    Example:
+        >>> generate_complete_stamp('some_output_dir')
+        'some_output_dir/MAVIS.COMPLETE'
+    """
     stamp = os.path.join(output_dir, str(prefix) + 'COMPLETE')
     log('complete:', stamp)
     with open(stamp, 'w') as fh:
