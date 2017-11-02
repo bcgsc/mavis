@@ -1,35 +1,46 @@
-from Bio import SeqIO
-from ..constants import COLUMNS, CALL_METHOD
-from ..util import read_inputs, log, generate_complete_stamp, output_tabbed_file
-from ..pairing import equivalent_events
-from ..pairing.constants import DEFAULTS as PAIRING_DEFAULTS
-from .constants import DEFAULTS
-import os
+from functools import partial
 import itertools
+import os
+import time
 
-from .summary import filter_by_evidence, group_events, filter_by_annotations, filter_by_call_method, annotate_dgv
-from .summary import get_pairing_state
+from Bio import SeqIO
+import tab
+
+from .constants import DEFAULTS
+from .summary import annotate_dgv, filter_by_annotations, filter_by_call_method, filter_by_evidence, get_pairing_state, group_events
+from ..constants import CALL_METHOD, COLUMNS
+from ..pairing.pairing import equivalent
+from ..pairing.constants import DEFAULTS as PAIRING_DEFAULTS
+from ..util import generate_complete_stamp, log, output_tabbed_file, read_inputs, soft_cast
+
+
+def soft_cast_null(value):
+    try:
+        return tab.cast_null(value)
+    except TypeError:
+        return value
 
 
 def main(
-    inputs, output, annotations, dgv_annotation,
+    inputs, output, annotations,
+    dgv_annotation=None,
     product_sequence_files=None,
     filter_cdna_synon=DEFAULTS.filter_cdna_synon,
     filter_protein_synon=DEFAULTS.filter_protein_synon,
     filter_min_remapped_reads=DEFAULTS.filter_min_remapped_reads,
     filter_min_spanning_reads=DEFAULTS.filter_min_spanning_reads,
     filter_min_flanking_reads=DEFAULTS.filter_min_flanking_reads,
-    filter_min_flanking_only_reads=DEFAULTS.filter_min_flanking_only_reads,
     filter_min_split_reads=DEFAULTS.filter_min_split_reads,
     filter_min_linking_split_reads=DEFAULTS.filter_min_linking_split_reads,
     flanking_call_distance=PAIRING_DEFAULTS.flanking_call_distance,
     split_call_distance=PAIRING_DEFAULTS.split_call_distance,
     contig_call_distance=PAIRING_DEFAULTS.contig_call_distance,
     spanning_call_distance=PAIRING_DEFAULTS.spanning_call_distance,
+    start_time=int(time.time()),
     **kwargs
 ):
     # pairing threshold parameters to be defined in config file
-    DISTANCES = {
+    distances = {
         CALL_METHOD.FLANK: flanking_call_distance,
         CALL_METHOD.SPLIT: split_call_distance,
         CALL_METHOD.CONTIG: contig_call_distance,
@@ -40,15 +51,6 @@ def main(
     bpps.extend(read_inputs(
         inputs,
         require=[
-            COLUMNS.break1_chromosome,
-            COLUMNS.break1_orientation,
-            COLUMNS.break1_position_end,
-            COLUMNS.break1_position_start,
-            COLUMNS.break2_chromosome,
-            COLUMNS.break2_orientation,
-            COLUMNS.break2_position_end,
-            COLUMNS.break2_position_start,
-            COLUMNS.contig_seq,
             COLUMNS.event_type,
             COLUMNS.fusion_cdna_coding_end,
             COLUMNS.fusion_cdna_coding_start,
@@ -67,9 +69,11 @@ def main(
             COLUMNS.tools,
             COLUMNS.exon_last_5prime,
             COLUMNS.exon_first_3prime,
-            COLUMNS.disease_status,
-            # evidence_columns
-            COLUMNS.call_method,
+            COLUMNS.disease_status
+        ],
+        add_default={**{k: None for k in [
+            COLUMNS.contig_remapped_reads,
+            COLUMNS.contig_seq,
             COLUMNS.break1_split_reads,
             COLUMNS.break1_split_reads_forced,
             COLUMNS.break2_split_reads,
@@ -80,25 +84,28 @@ def main(
             COLUMNS.contigs_assembled,
             COLUMNS.contig_alignment_score,
             COLUMNS.contig_remap_score,
+            COLUMNS.spanning_reads,
             COLUMNS.annotation_figure,
             COLUMNS.gene1_aliases,
             COLUMNS.gene2_aliases,
             COLUMNS.protein_synon,
-            COLUMNS.cdna_synon],
-        add={
-            'dgv': None,
-            'summary_pairing': None},
-        explicit_strand=False,
-        expand_ns=False,
+            COLUMNS.cdna_synon,
+            'dgv',
+            'summary_pairing']
+        }, COLUMNS.call_method: CALL_METHOD.INPUT},
+        expand_strand=False, expand_orient=False, expand_svtype=False,
         cast={
-            COLUMNS.break1_split_reads: int,
-            COLUMNS.break2_split_reads: int,
-            COLUMNS.contig_remapped_reads: lambda x: 0 if x == 'None' or x is None else int(x),
-            COLUMNS.spanning_reads: int,
-            COLUMNS.break1_split_reads_forced: int,
-            COLUMNS.break2_split_reads_forced: int,
-            COLUMNS.flanking_pairs: int,
-            COLUMNS.linking_split_reads: int}
+            COLUMNS.break1_split_reads: partial(soft_cast, cast_type=int),
+            COLUMNS.break2_split_reads: partial(soft_cast, cast_type=int),
+            COLUMNS.contig_remapped_reads: partial(soft_cast, cast_type=int),
+            COLUMNS.spanning_reads: partial(soft_cast, cast_type=int),
+            COLUMNS.break1_split_reads_forced: partial(soft_cast, cast_type=int),
+            COLUMNS.break2_split_reads_forced: partial(soft_cast, cast_type=int),
+            COLUMNS.flanking_pairs: partial(soft_cast, cast_type=int),
+            COLUMNS.linking_split_reads: partial(soft_cast, cast_type=int),
+            COLUMNS.protein_synon: soft_cast_null,
+            COLUMNS.cdna_synon: soft_cast_null
+        }
     ))
 
     # load all transcripts
@@ -122,11 +129,10 @@ def main(
             temp.append(bpp)
         bpps = temp
 
-    bpps, removed = filter_by_evidence(
+    bpps, _ = filter_by_evidence(
         bpps, filter_min_remapped_reads=filter_min_remapped_reads,
         filter_min_spanning_reads=filter_min_spanning_reads,
         filter_min_flanking_reads=filter_min_flanking_reads,
-        filter_min_flanking_only_reads=filter_min_flanking_only_reads,
         filter_min_split_reads=filter_min_split_reads,
         filter_min_linking_split_reads=filter_min_linking_split_reads)
 
@@ -212,12 +218,10 @@ def main(
                 log(c, 'comparisons for lib ', lib, 'for', category)
 
             for bpp1, bpp2 in itertools.product(calls_by_lib[lib][category], calls_by_lib[lib][category]):
-                if bpp1 is not None and equivalent_events(
+                if bpp1 is not None and equivalent(
                     bpp1,
                     bpp2,
-                    DISTANCES=DISTANCES,
-                    reference_transcripts=reference_transcripts,
-                    product_sequences=product_sequences
+                    distances=distances
                 ):
                     pairings[lib][bpp1.product_id].add(bpp2.product_id)
                     pairings[lib][bpp2.product_id].add(bpp1.product_id)
@@ -263,6 +267,7 @@ def main(
     output_columns = {
         COLUMNS.annotation_id,
         COLUMNS.pairing,
+        COLUMNS.inferred_pairing,
         COLUMNS.break1_chromosome,
         COLUMNS.break1_homologous_seq,
         COLUMNS.break1_orientation,
@@ -313,11 +318,13 @@ def main(
     rows = []
     for lib in bpp_to_keep:
         log('annotating dgv for', lib)
-        annotated = annotate_dgv(list(bpp_to_keep[lib]), dgv_annotation, distance=10)  # TODO make distance a parameter
+        if dgv_annotation:
+            annotated = annotate_dgv(list(bpp_to_keep[lib]), dgv_annotation, distance=10)  # TODO make distance a parameter
         log('adding pairing states for', lib)
         for row in annotated:
             # filter pairing ids based on what is still kept?
             paired_libraries = set([p.split('_')[0] for p in row.pairing.split(';')])
+            inferred_paired_libraries = set([p.split('_')[0] for p in row.inferred_pairing.split(';')])
             for other_lib in libraries:
                 other_protocol, other_disease_state = libraries[other_lib]
                 column_name = '{}_{}_{}'.format(other_lib, other_disease_state, other_protocol)
@@ -325,9 +332,10 @@ def main(
                     pairing_state = get_pairing_state(
                         *libraries[row.library],
                         other_protocol=other_protocol, other_disease_state=other_disease_state,
-                        is_matched=other_lib in paired_libraries)
+                        is_matched=other_lib in paired_libraries,
+                        inferred_is_matched=other_lib in inferred_paired_libraries)
                 else:
-                    pairing_state = "Not Applicable"
+                    pairing_state = 'Not Applicable'
                 row.data[column_name] = pairing_state
                 output_columns.add(column_name)
 
@@ -338,9 +346,5 @@ def main(
     )
     rows = sorted(rows, key=lambda bpp: (bpp.break1, bpp.break2))
     output_tabbed_file(rows, fname, header=output_columns)
-    log("Wrote {} gene fusion events to {}".format(len(rows), fname))
-    generate_complete_stamp(output, log)
-
-
-if __name__ == '__main__':
-    main()
+    log('Wrote {} gene fusion events to {}'.format(len(rows), fname))
+    generate_complete_stamp(output, log, start_time=start_time)

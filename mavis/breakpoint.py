@@ -1,12 +1,9 @@
 from __future__ import division
-
 from copy import copy as sys_copy
-from .constants import ORIENT, STRAND, COLUMNS, CIGAR, SVTYPE, reverse_complement, DNA_ALPHABET
-from .error import *
+
+from .constants import CIGAR, COLUMNS, DNA_ALPHABET, ORIENT, reverse_complement, STRAND, SVTYPE
+from .error import InvalidRearrangement, NotSpecifiedError
 from .interval import Interval
-import TSV
-import re
-import itertools
 
 
 class Breakpoint(Interval):
@@ -63,7 +60,7 @@ class Breakpoint(Interval):
         return hash(self.key)
 
     def to_dict(self):
-        d = {
+        return {
             'chr': self.chr,
             'start': self.start,
             'end': self.end,
@@ -72,7 +69,6 @@ class Breakpoint(Interval):
             'orientation': self.orient,
             'type': self.__class__.__name__
         }
-        return d
 
 
 class BreakpointPair:
@@ -83,7 +79,7 @@ class BreakpointPair:
         data = object.__getattribute__(self, 'data')
         try:
             return data[COLUMNS[attr]]
-        except KeyError:
+        except (KeyError, AttributeError):
             try:
                 return data[attr]
             except KeyError:
@@ -121,6 +117,8 @@ class BreakpointPair:
 
     def copy(self):
         temp = sys_copy(self)
+        temp.data = {}
+        temp.data.update(self.data)
         temp.break1 = sys_copy(self.break1)
         temp.break2 = sys_copy(self.break2)
         return temp
@@ -151,13 +149,22 @@ class BreakpointPair:
             self.break2 = b2
         self.stranded = stranded
         self.opposing_strands = opposing_strands
+
+        if self.break1.orient != ORIENT.NS and self.break2.orient != ORIENT.NS:
+            if self.opposing_strands is not None:
+                if (self.break1.orient == self.break2.orient and not self.opposing_strands) \
+                        or (self.break1.orient != self.break2.orient and self.opposing_strands):
+                    raise InvalidRearrangement(
+                        'invalid breakpoint pair cannot form a valid combination', b1, b2, self.opposing_strands)
+            else:
+                self.opposing_strands = self.break1.orient == self.break2.orient
         # between break1 and break2 not in either
         self.untemplated_seq = untemplated_seq
         self.data = {}
         if data is not None:
             self.data.update(data)
             conflicts = set(data.keys()) & set(kwargs.keys())
-            if len(conflicts) > 0:
+            if conflicts:
                 raise TypeError('data got multiple values for data elements:', conflicts)
         self.data.update(kwargs)
 
@@ -170,12 +177,6 @@ class BreakpointPair:
                     'conflict in input arguments, opposing_strands must agree with input breakpoints'
                     ' when the strand has been specified'
                 )
-        if self.break1.orient != ORIENT.NS and self.break2.orient != ORIENT.NS:
-            if self.opposing_strands is not None:
-                if (self.break1.orient == self.break2.orient and not self.opposing_strands) \
-                        or (self.break1.orient != self.break2.orient and self.opposing_strands):
-                    raise InvalidRearrangement(
-                        'invalid breakpoint pair cannot form a valid combination', b1, b2, self.opposing_strands)
 
         if self.opposing_strands is None:
             raise NotSpecifiedError('must specify if opposing_strands')
@@ -196,7 +197,7 @@ class BreakpointPair:
     def flatten(self):
         """
         returns the key-value self for the breakpoint self information as
-        can be written directly as a TSV row
+        can be written directly as a tab row
         """
         row = {}
         row.update(self.data)
@@ -217,19 +218,20 @@ class BreakpointPair:
             COLUMNS.break1_seq: self.break1.seq,
             COLUMNS.break2_seq: self.break2.seq
         }
-        for c in temp:
-            temp[c] = str(temp[c])
+        for col in temp:
+            temp[col] = str(temp[col])
         row.update(temp)
         return row
 
     @classmethod
-    def classify(cls, pair):
+    def classify(cls, pair, discriminate=False):
         """
         uses the chr, orientations and strands to determine the
         possible structural_variant types that this pair could support
 
         Args:
             pair (BreakpointPair): the pair to classify
+            discriminate (bool): flag if true will use untemplated sequence to discriminate between insertion/deletion classifications
         Returns:
             :class:`list` of :any:`SVTYPE`: a list of possible SVTYPE
 
@@ -254,6 +256,13 @@ class BreakpointPair:
                         or (pair.break1.orient == ORIENT.RIGHT and pair.break2.orient == ORIENT.RIGHT):
                     raise InvalidRearrangement(pair)
                 elif pair.break1.orient == ORIENT.LEFT or pair.break2.orient == ORIENT.RIGHT:
+                    if pair.untemplated_seq is not None and discriminate:
+                        min_del_dist = max(pair.break2.start - pair.break1.end - 1, 0)
+                        max_del_dist = pair.break2.end - pair.break1.start - 1
+                        if len(pair.untemplated_seq) > max_del_dist:
+                            return [SVTYPE.INS]
+                        elif len(pair.untemplated_seq) < min_del_dist:
+                            return [SVTYPE.DEL]
                     return [SVTYPE.DEL, SVTYPE.INS]
                 elif pair.break1.orient == ORIENT.RIGHT or pair.break2.orient == ORIENT.LEFT:
                     return [SVTYPE.DUP]
@@ -270,7 +279,7 @@ class BreakpointPair:
                 return [SVTYPE.TRANS]
 
     @classmethod
-    def call_breakpoint_pair(cls, read1, read2=None, REFERENCE_GENOME=None):
+    def call_breakpoint_pair(cls, read1, read2=None, reference_genome=None):
         """
         calls a set of breakpoints from a single or a pair of pysam style read(s)
 
@@ -286,11 +295,11 @@ class BreakpointPair:
             return multiple events not just the major event
         """
         if read2 is None:
-            return cls._call_from_single_contig(read1, REFERENCE_GENOME=REFERENCE_GENOME)
-        return cls._call_from_paired_contig(read1, read2, REFERENCE_GENOME=REFERENCE_GENOME)
+            return cls._call_from_single_contig(read1, reference_genome=reference_genome)
+        return cls._call_from_paired_contig(read1, read2, reference_genome=reference_genome)
 
     @classmethod
-    def _call_from_single_contig(cls, read, REFERENCE_GENOME=None):
+    def _call_from_single_contig(cls, read, reference_genome=None):
         """
         calls a set of breakpoints from a pysam style read using the cigar values
 
@@ -308,17 +317,16 @@ class BreakpointPair:
         be called as a duplication and not an insertion
         """
         read_events = []
-        for i, t in enumerate(read.cigar):
-            v, f = t
-            if v not in [CIGAR.I, CIGAR.D, CIGAR.N]:
+        for i, (state, freq) in enumerate(read.cigar):
+            if state not in [CIGAR.I, CIGAR.D, CIGAR.N]:
                 continue
             if i > 0 and read.cigar[i - 1][0] in [CIGAR.I, CIGAR.D, CIGAR.N]:
-                start, last, size = read_events[-1]
-                read_events[-1] = (start, i, size + f)
+                start, _, size = read_events[-1]
+                read_events[-1] = (start, i, size + freq)
             else:
-                read_events.append((i, i, f))
+                read_events.append((i, i, freq))
 
-        if len(read_events) == 0:
+        if not read_events:
             raise UserWarning(
                 'Cannot call event breakpoints from single contig. Contig does not contain any ins/del events')
         biggest = max(read_events, key=lambda x: x[2])
@@ -331,29 +339,28 @@ class BreakpointPair:
         seq_first_stop = -1
         seq_second_start = -1
 
-        for i, t in enumerate(read.cigar):
-            v, f = t
+        for i, (state, freq) in enumerate(read.cigar):
             if i < biggest[0]:  # before the event
-                if v in [CIGAR.I, CIGAR.S]:
-                    seq_pos += f
-                elif v in [CIGAR.D, CIGAR.N]:
-                    first_breakpoint += f
-                    second_breakpoint += f
+                if state in [CIGAR.I, CIGAR.S]:
+                    seq_pos += freq
+                elif state in [CIGAR.D, CIGAR.N]:
+                    first_breakpoint += freq
+                    second_breakpoint += freq
                 else:
-                    first_breakpoint += f
-                    second_breakpoint += f
-                    seq_pos += f
+                    first_breakpoint += freq
+                    second_breakpoint += freq
+                    seq_pos += freq
                 seq_first_stop = seq_pos
             elif i >= biggest[0] and i <= biggest[1]:  # inside the event
-                if v in [CIGAR.I, CIGAR.S]:
-                    if v == CIGAR.I:
-                        untemplated_seq += read.query_sequence[seq_pos:seq_pos + f]
-                    seq_pos += f
-                elif v in [CIGAR.D, CIGAR.N]:
-                    second_breakpoint += f
+                if state in [CIGAR.I, CIGAR.S]:
+                    if state == CIGAR.I:
+                        untemplated_seq += read.query_sequence[seq_pos:seq_pos + freq]
+                    seq_pos += freq
+                elif state in [CIGAR.D, CIGAR.N]:
+                    second_breakpoint += freq
                 else:
-                    second_breakpoint += f
-                    seq_pos += f
+                    second_breakpoint += freq
+                    seq_pos += freq
             else:   # after the event
                 seq_second_start = seq_pos
                 break
@@ -374,8 +381,8 @@ class BreakpointPair:
         )
         # determine if the inserted sequence is a repeat of the aligned portion
         # assume that events with deletions cannot be duplications
-        if first_breakpoint == second_breakpoint and REFERENCE_GENOME:  # insertion or duplication
-            refseq = REFERENCE_GENOME[read.reference_name].seq[
+        if first_breakpoint == second_breakpoint and reference_genome:  # insertion or duplication
+            refseq = reference_genome[read.reference_name].seq[
                 first_breakpoint - len(untemplated_seq) + 1:first_breakpoint + 1]
             refseq = str(refseq)
             midpoint = len(untemplated_seq) // 2 + 1  # more than the untemplated
@@ -403,7 +410,7 @@ class BreakpointPair:
         return BreakpointPair(break1, break2, opposing_strands=False, untemplated_seq=untemplated_seq)
 
     @classmethod
-    def _call_from_paired_contig(cls, read1, read2, REFERENCE_GENOME=None):
+    def _call_from_paired_contig(cls, read1, read2, reference_genome=None):
         """
         calls a set of breakpoints from a pair of pysam style reads using their softclipping to
         find the breakpoints and orientations
@@ -423,55 +430,55 @@ class BreakpointPair:
         r2_qci = query_coverage_interval(read2)
 
         if read1.is_reverse == read2.is_reverse:
-            assert(read1.query_sequence == read2.query_sequence)
+            assert read1.query_sequence == read2.query_sequence
         else:
-            assert(read1.query_sequence == reverse_complement(read2.query_sequence))
-            l = len(read1.query_sequence) - 1
-            r2_qci = Interval(l - r2_qci.end, l - r2_qci.start)
-        b1 = None
-        b2 = None
+            assert read1.query_sequence == reverse_complement(read2.query_sequence)
+            length = len(read1.query_sequence) - 1
+            r2_qci = Interval(length - r2_qci.end, length - r2_qci.start)
+        break1 = None
+        break2 = None
 
-        o1 = ORIENT.NS
-        o2 = ORIENT.NS
-        s1 = STRAND.NEG if read1.is_reverse else STRAND.POS
-        s2 = STRAND.NEG if read2.is_reverse else STRAND.POS
+        orient1 = ORIENT.NS
+        orient2 = ORIENT.NS
+        strand1 = STRAND.NEG if read1.is_reverse else STRAND.POS
+        strand2 = STRAND.NEG if read2.is_reverse else STRAND.POS
 
         # <==============
         r1_st = read1.cigar[0][1] if read1.cigar[0][0] == CIGAR.S else 0
         r1_end = read1.cigar[-1][1] if read1.cigar[-1][0] == CIGAR.S else 0
 
         if r1_st > r1_end:
-            o1 = ORIENT.RIGHT
+            orient1 = ORIENT.RIGHT
         elif r1_end > r1_st:
-            o1 = ORIENT.LEFT
+            orient1 = ORIENT.LEFT
 
         r2_st = read2.cigar[0][1] if read2.cigar[0][0] == CIGAR.S else 0
         r2_end = read2.cigar[-1][1] if read2.cigar[-1][0] == CIGAR.S else 0
 
         if r2_st > r2_end:
-            o2 = ORIENT.RIGHT
+            orient2 = ORIENT.RIGHT
         elif r2_end > r2_st:
-            o2 = ORIENT.LEFT
+            orient2 = ORIENT.LEFT
 
-        if o1 == ORIENT.NS or o2 == ORIENT.NS:
+        if orient1 == ORIENT.NS or orient2 == ORIENT.NS:
             raise AssertionError(
                 'read does not have softclipping on either end and cannot therefore determine orientation',
                 read1.cigar, read2.cigar)
 
-        if o1 == ORIENT.LEFT:  # ========++++
-            b1 = Breakpoint(
+        if orient1 == ORIENT.LEFT:  # ========++++
+            break1 = Breakpoint(
                 read1.reference_name,
                 read1.reference_end,  # 1-based from 0-based exclusive end so don't need to -1
-                strand=s1,
-                orient=o1,
+                strand=strand1,
+                orient=orient1,
                 seq=read1.query_alignment_sequence
             )
         else:
-            b1 = Breakpoint(
+            break1 = Breakpoint(
                 read1.reference_name,
                 read1.reference_start + 1,  # 1-based from 0-based
-                strand=s1,
-                orient=o1,
+                strand=strand1,
+                orient=orient1,
                 seq=read1.query_alignment_sequence
             )
 
@@ -480,38 +487,38 @@ class BreakpointPair:
             # adjust the second read to remove the overlapping query region
             overlap = len(r1_qci & r2_qci)
 
-        if o2 == ORIENT.RIGHT:
-            b2 = Breakpoint(
+        if orient2 == ORIENT.RIGHT:
+            break2 = Breakpoint(
                 read2.reference_name,
                 read2.reference_start + overlap + 1,  # 1-based from 0-based
-                strand=s2,
-                orient=o2,
+                strand=strand2,
+                orient=orient2,
                 seq=read2.query_alignment_sequence[overlap:]
             )
         else:
-            s = read2.query_alignment_sequence
+            seq = read2.query_alignment_sequence
             if overlap > 0:
-                s = read2.query_alignment_sequence[:-1 * overlap]
-            b2 = Breakpoint(
+                seq = read2.query_alignment_sequence[:-1 * overlap]
+            break2 = Breakpoint(
                 read2.reference_name,
                 read2.reference_end - overlap,  # 1-based from 0-based exclusive end so don't need to -1
-                strand=s2,
-                orient=o2,
-                seq=s
+                strand=strand2,
+                orient=orient2,
+                seq=seq
             )
         # now check for untemplated sequence
         untemplated_seq = ''
-        d = Interval.dist(r1_qci, r2_qci)
-        if d > 0:  # query coverage for read1 is after query coverage for read2
+        dist = Interval.dist(r1_qci, r2_qci)
+        if dist > 0:  # query coverage for read1 is after query coverage for read2
             untemplated_seq = read1.query_sequence[r2_qci[1] + 1:r1_qci[0]]
-        elif d < 0:  # query coverage for read2 is after query coverage for read1
+        elif dist < 0:  # query coverage for read2 is after query coverage for read1
             untemplated_seq = read1.query_sequence[r1_qci[1] + 1:r2_qci[0]]
         else:  # query coverage overlaps
             pass
 
-        return BreakpointPair(b1, b2, untemplated_seq=untemplated_seq)
+        return BreakpointPair(break1, break2, untemplated_seq=untemplated_seq)
 
-    def breakpoint_sequence_homology(self, REFERENCE_GENOME):
+    def breakpoint_sequence_homology(self, reference_genome):
         """
         for a given set of breakpoints matches the sequence opposite the partner breakpoint
         this sequence comparison is done with reference to a reference genome and does not
@@ -529,7 +536,7 @@ class BreakpointPair:
             -------TT-TT-------- second break homology
 
         Args:
-            REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by template/chr name
+            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by template/chr name
 
         Returns:
             tuple:
@@ -540,62 +547,62 @@ class BreakpointPair:
             AttributeError: for non specific breakpoints
         """
 
-        b1_refseq = REFERENCE_GENOME[self.break1.chr].seq
-        b2_refseq = REFERENCE_GENOME[self.break2.chr].seq
+        b1_refseq = reference_genome[self.break1.chr].seq
+        b2_refseq = reference_genome[self.break2.chr].seq
         if len(self.break1) > 1 or len(self.break2) > 1:
             raise AttributeError('cannot call shared sequence for non-specific breakpoints')
 
         # find for the first breakpoint
-        p1 = self.break1.start - 1
-        p2 = self.break2.start - 1
+        pos1 = self.break1.start - 1
+        pos2 = self.break2.start - 1
         shift1 = -1 if self.break1.orient == ORIENT.LEFT else 1
         shift2 = -1 if self.break2.orient == ORIENT.RIGHT else 1
-        p2 += shift2
+        pos2 += shift2
 
         first_seq = []
         while all([
-            p1 >= 0,
-            p1 < len(b1_refseq),
-            p2 >= 0,
-            p2 < len(b2_refseq),
-            self.interchromosomal or p2 > self.break1.start - 1,
-            self.interchromosomal or p1 < self.break2.start - 1
+            pos1 >= 0,
+            pos1 < len(b1_refseq),
+            pos2 >= 0,
+            pos2 < len(b2_refseq),
+            self.interchromosomal or pos2 > self.break1.start - 1,
+            self.interchromosomal or pos1 < self.break2.start - 1
         ]):
-            b1 = b1_refseq[p1] if self.break1.strand == STRAND.POS else reverse_complement(b1_refseq[p1])
-            b2 = b2_refseq[p2] if self.break2.strand == STRAND.POS else reverse_complement(b2_refseq[p2])
-            if DNA_ALPHABET.match(b1, b2):
-                first_seq.append(b1_refseq[p1])
+            break1_bp = b1_refseq[pos1] if self.break1.strand == STRAND.POS else reverse_complement(b1_refseq[pos1])
+            break2_bp = b2_refseq[pos2] if self.break2.strand == STRAND.POS else reverse_complement(b2_refseq[pos2])
+            if DNA_ALPHABET.match(break1_bp, break2_bp):
+                first_seq.append(b1_refseq[pos1])
             else:
                 break
-            p1 += shift1
-            p2 += shift2
+            pos1 += shift1
+            pos2 += shift2
 
         if shift1 < 0:
             first_seq.reverse()
         # now go over the second breakpoint
-        p1 = self.break1.start - 1  # reset the start points
-        p2 = self.break2.start - 1
+        pos1 = self.break1.start - 1  # reset the start points
+        pos2 = self.break2.start - 1
         shift1 *= -1  # flip the directions
         shift2 *= -1
-        p1 += shift1
+        pos1 += shift1
 
         second_seq = []
         while all([
-            p1 >= 0,
-            p1 < len(b1_refseq),
-            p2 >= 0,
-            p2 < len(b2_refseq),
-            self.interchromosomal or p2 > self.break1.start - 1,
-            self.interchromosomal or p1 < self.break2.start - 1
+            pos1 >= 0,
+            pos1 < len(b1_refseq),
+            pos2 >= 0,
+            pos2 < len(b2_refseq),
+            self.interchromosomal or pos2 > self.break1.start - 1,
+            self.interchromosomal or pos1 < self.break2.start - 1
         ]):
-            b1 = b1_refseq[p1] if self.break1.strand == STRAND.POS else reverse_complement(b1_refseq[p1])
-            b2 = b2_refseq[p2] if self.break2.strand == STRAND.POS else reverse_complement(b2_refseq[p2])
-            if DNA_ALPHABET.match(b1, b2):
-                second_seq.append(b2_refseq[p2])
+            break1_bp = b1_refseq[pos1] if self.break1.strand == STRAND.POS else reverse_complement(b1_refseq[pos1])
+            break2_bp = b2_refseq[pos2] if self.break2.strand == STRAND.POS else reverse_complement(b2_refseq[pos2])
+            if DNA_ALPHABET.match(break1_bp, break2_bp):
+                second_seq.append(b2_refseq[pos2])
             else:
                 break
-            p1 += shift1
-            p2 += shift2
+            pos1 += shift1
+            pos2 += shift2
 
         if shift1 < 0:
             second_seq.reverse()
@@ -610,176 +617,3 @@ class BreakpointPair:
         else:
             bed.append((self.break1.chr, self.break1.start, self.break2.end, self.data.get(COLUMNS.cluster_id, None)))
         return bed
-
-
-def read_bpp_from_input_file(filename, expand_ns=True, explicit_strand=False, **kwargs):
-    """
-    reads a file using the TSV module. Each row is converted to a breakpoint pair and
-    other column data is stored in the data attribute
-
-    Args:
-        filename (str): path to the input file
-        expand_ns (bool): expand not specified orient/strand settings to all specific version
-            (for strand this is only applied if the bam itself is stranded)
-        explicit_strand (bool): used to stop unstranded breakpoint pairs from losing input strand information
-    Returns:
-        :class:`list` of :any:`BreakpointPair`: a list of pairs
-
-    Example:
-        >>> read_bpp_from_input_file('filename')
-        [BreakpointPair(), BreakpointPair(), ...]
-
-    One can also validate other expected columns that will go in the data attribute using the usual arguments
-    to the TSV.read_file function
-
-    .. code-block:: python
-
-        >>> read_bpp_from_input_file('filename', cast={'index': int})
-        [BreakpointPair(), BreakpointPair(), ...]
-    """
-
-    def soft_null_cast(value):
-        try:
-            value = TSV.null(value)
-        except TypeError:
-            pass
-        return value
-
-    def soft_boolean_cast(value):
-        try:
-            return TSV.tsv_boolean(value)
-        except TypeError:
-            if value == '?':
-                value = 'null'
-        return TSV.null(value)
-
-    kwargs.setdefault('cast', {}).update(
-        {
-            COLUMNS.break1_position_start: int,
-            COLUMNS.break1_position_end: int,
-            COLUMNS.break2_position_start: int,
-            COLUMNS.break2_position_end: int,
-            COLUMNS.opposing_strands: soft_boolean_cast,
-            COLUMNS.stranded: TSV.tsv_boolean,
-            COLUMNS.untemplated_seq: soft_null_cast,
-            COLUMNS.break1_chromosome: lambda x: re.sub('^chr', '', x),
-            COLUMNS.break2_chromosome: lambda x: re.sub('^chr', '', x)
-        })
-    kwargs.setdefault('require', [])
-    kwargs.setdefault('add', {}).update({
-        COLUMNS.untemplated_seq: None,
-        COLUMNS.break1_orientation: ORIENT.NS,
-        COLUMNS.break1_strand: STRAND.NS,
-        COLUMNS.break2_orientation: ORIENT.NS,
-        COLUMNS.break2_strand: STRAND.NS,
-        COLUMNS.opposing_strands: None
-    })
-    kwargs.setdefault('in_', {}).update(
-        {
-            COLUMNS.break1_orientation: ORIENT,
-            COLUMNS.break1_strand: STRAND,
-            COLUMNS.break2_orientation: ORIENT,
-            COLUMNS.break2_strand: STRAND
-        })
-    header, rows = TSV.read_file(
-        filename, suppress_index=True,
-        **kwargs
-    )
-    restricted = [
-        COLUMNS.break1_chromosome,
-        COLUMNS.break1_position_start,
-        COLUMNS.break1_position_end,
-        COLUMNS.break1_strand,
-        COLUMNS.break1_orientation,
-        COLUMNS.break2_chromosome,
-        COLUMNS.break2_position_start,
-        COLUMNS.break2_position_end,
-        COLUMNS.break2_strand,
-        COLUMNS.break2_orientation,
-        COLUMNS.stranded,
-        COLUMNS.opposing_strands,
-        COLUMNS.untemplated_seq
-    ]
-    pairs = []
-    for line_index, row in enumerate(rows):
-        row['line_no'] = line_index + 1
-        if '_index' in row:
-            del row['_index']
-        for attr, val in row.items():
-            row[attr] = soft_null_cast(val)
-        for attr in row:
-            if attr in [COLUMNS.cluster_id, COLUMNS.annotation_id, COLUMNS.validation_id]:
-                if not re.match('^([A-Za-z0-9-]+|)(;[A-Za-z0-9-]+)*$', row[attr]):
-                    raise AssertionError(
-                        'error in column', attr, 'All mavis pipeline step ids must satisfy the regex:',
-                        '^([A-Za-z0-9-]+|)(;[A-Za-z0-9-]+)*$', row[attr])
-        stranded = row[COLUMNS.stranded]
-        opp = row[COLUMNS.opposing_strands]
-
-        strand1 = row[COLUMNS.break1_strand] if (stranded or explicit_strand) else STRAND.NS
-        strand2 = row[COLUMNS.break2_strand] if (stranded or explicit_strand) else STRAND.NS
-
-        if explicit_strand and not expand_ns and {strand1, strand2} & {STRAND.NS}:
-            raise AssertionError('cannot use explicit strand and not expand unknowns unless the strand is given')
-
-        temp = []
-        expand_strand = (stranded or explicit_strand) and expand_ns
-        event_type = [None]
-        if row.get(COLUMNS.event_type, None) not in [None, 'None']:
-            try:
-                event_type = row[COLUMNS.event_type].split(';')
-                for et in event_type:
-                    SVTYPE.enforce(event_type)
-            except KeyError:
-                pass
-
-        for o1, o2, opp, s1, s2, et in itertools.product(
-            ORIENT.expand(row[COLUMNS.break1_orientation]) if expand_ns else [row[COLUMNS.break1_orientation]],
-            ORIENT.expand(row[COLUMNS.break2_orientation]) if expand_ns else [row[COLUMNS.break2_orientation]],
-            [True, False] if opp is None and expand_ns else [opp],
-            STRAND.expand(strand1) if expand_strand else [strand1],
-            STRAND.expand(strand2) if expand_strand else [strand2],
-            event_type
-        ):
-            try:
-                b1 = Breakpoint(
-                    row[COLUMNS.break1_chromosome],
-                    row[COLUMNS.break1_position_start],
-                    row[COLUMNS.break1_position_end],
-                    strand=s1,
-                    orient=o1
-                )
-                b2 = Breakpoint(
-                    row[COLUMNS.break2_chromosome],
-                    row[COLUMNS.break2_position_start],
-                    row[COLUMNS.break2_position_end],
-                    strand=s2,
-                    orient=o2
-                )
-
-                data = {k: v for k, v in row.items() if k not in restricted}
-                bpp = BreakpointPair(
-                    b1,
-                    b2,
-                    opposing_strands=opp,
-                    untemplated_seq=row[COLUMNS.untemplated_seq],
-                    stranded=row[COLUMNS.stranded],
-                )
-                bpp.data.update(data)
-                if et is not None:
-                    bpp.data[COLUMNS.event_type] = et
-                    if et not in BreakpointPair.classify(bpp):
-                        raise InvalidRearrangement(
-                            'error: expected one of', BreakpointPair.classify(bpp), 'but found', et, str(bpp), row)
-                temp.append(bpp)
-            except InvalidRearrangement as err:
-                if not expand_ns:
-                    raise err
-            except AssertionError as err:
-                if not expand_ns and not explicit_strand:
-                    raise err
-        if len(temp) == 0:
-            raise InvalidRearrangement('could not produce a valid rearrangement', row)
-        else:
-            pairs.extend(temp)
-    return pairs

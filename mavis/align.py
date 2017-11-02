@@ -1,27 +1,33 @@
 """
 Should take in a sam file from a aligner like bwa aln or bwa mem and convert it into a
-
 """
+from copy import copy
 import itertools
-import pysam
+import os
 import subprocess
 import warnings
-import os
-from copy import copy
-from .constants import COLUMNS, SVTYPE, CIGAR, reverse_complement, ORIENT
+
+import pysam
+
 from .bam import cigar as cigar_tools
 from .bam import read as read_tools
+from .breakpoint import BreakpointPair
+from .constants import CIGAR, COLUMNS, MavisNamespace, ORIENT, reverse_complement, SVTYPE
+from .error import InvalidRearrangement
 from .interval import Interval
 from .util import devnull
-from .breakpoint import BreakpointPair
-from .error import InvalidRearrangement
-from vocab import Vocab
 
 
-SUPPORTED_ALIGNER = Vocab(BWA_MEM='bwa mem', BLAT='blat')
+SUPPORTED_ALIGNER = MavisNamespace(BWA_MEM='bwa mem', BLAT='blat', __name__='~mavis.align.SUPPORTED_ALIGNER')
+""":class:`~mavis.constants.MavisNamespace`: supported aligners
+
+- :term:`blat`
+- :term:`bwa mem<BWA>`
+"""
 
 
 class SplitAlignment:
+
     def __init__(self, read1, read2=None):
         if read2 is not None and any([
             read1.reference_name > read2.reference_name,
@@ -54,12 +60,10 @@ class SplitAlignment:
     def opposing_strands(self):
         if self.read2 is None:
             return False
-        else:
-            return self.read1.is_reverse != self.read2.is_reverse
+        return self.read1.is_reverse != self.read2.is_reverse
 
     def query_coverage_read1(self):
-        qc1 = query_coverage_interval(self.read1)
-        return qc1
+        return query_coverage_interval(self.read1)
 
     def query_coverage_read2(self):
         seqlen = len(self.read1.query_sequence)
@@ -77,8 +81,7 @@ class SplitAlignment:
         """
         if self.read2 is None:
             return self.query_coverage_read1()
-        else:
-            return self.query_coverage_read1() | self.query_coverage_read2()
+        return self.query_coverage_read1() | self.query_coverage_read2()
 
     def query_consumption(self):
         """
@@ -86,16 +89,14 @@ class SplitAlignment:
         """
         if self.read2 is None or Interval.overlaps(self.query_coverage_read1(), self.query_coverage_read2()):
             return len(self.query_coverage()) / len(self.query_sequence)
-        else:
-            return (len(self.query_coverage_read1()) + len(self.query_coverage_read2())) / len(self.query_sequence)
+        return (len(self.query_coverage_read1()) + len(self.query_coverage_read2())) / len(self.query_sequence)
 
     def query_overlap_extension(self):
         if self.read2 is not None:
             max_init_overlap = max(len(self.query_coverage_read1()), len(self.query_coverage_read2()))
             total_overlap = len(self.query_coverage()) - max_init_overlap
             return total_overlap
-        else:
-            return 0
+        return 0
 
     def score(self, consec_bonus=10):
         def score_matches(cigar):
@@ -108,15 +109,15 @@ class SplitAlignment:
                 qlen += len(self.query_coverage_read1() & self.query_coverage_read2())
         return score / (qlen + (qlen - 1) * consec_bonus)
 
+    @staticmethod
     def select_supporting_alignments(
-        bpp, alignments,
-        min_query_consumption,
-        min_extend_overlap,
-        max_event_size,
-        min_anchor_size,
-        merge_inner_anchor,
-        merge_outer_anchor
-    ):
+            bpp, alignments,
+            min_query_consumption,
+            min_extend_overlap,
+            max_event_size,
+            min_anchor_size,
+            merge_inner_anchor,
+            merge_outer_anchor):
         """
         give a breakpoint pair and a set of alignments for contigs associated with the given pair,
         alignments are paired (some events cannot be represented with a single bamfile alignment)
@@ -187,9 +188,9 @@ class SplitAlignment:
             if not bpp.interchromosomal and aln.read1.reference_end > aln.read2.reference_end:
                 continue
             # check that the combination extends the amount of the initial query sequence we consume
-            qc = len(aln.query_coverage())
+            query_covg = len(aln.query_coverage())
             if any([
-                len(aln.query_coverage_read1()) >= qc or len(aln.query_coverage_read2()) >= qc,
+                len(aln.query_coverage_read1()) >= query_covg or len(aln.query_coverage_read2()) >= query_covg,
                 aln.query_consumption() < min_query_consumption,
                 aln.read2 is not None and aln.query_overlap_extension() < min_extend_overlap
             ]):
@@ -213,17 +214,17 @@ class SplitAlignment:
         # get the reference positions for each breakpoint interval from the breakpointpair
         # convert this to the query intervals using the alignment
         # for each query interval calculate the read coverage as a pileup over the distance
-        s = read.reference_start + 1
-        t = read.reference_end
+        st = read.reference_start + 1
+        end = read.reference_end
         if breakpoint.orient == ORIENT.LEFT:
-            if breakpoint.start < s:
+            if breakpoint.start < st:
                 return 0
-            t = min(breakpoint.start, t)
+            end = min(breakpoint.start, end)
         elif breakpoint.orient == ORIENT.RIGHT:
-            if breakpoint.start > t:
+            if breakpoint.start > end:
                 return 0
-            s = max(s, breakpoint.start)
-        qrange = read_tools.map_ref_range_to_query_range(read, Interval(s, t))
+            st = max(st, breakpoint.start)
+        qrange = read_tools.map_ref_range_to_query_range(read, Interval(st, end))
         return contig.remap_depth(qrange)
 
 
@@ -233,18 +234,18 @@ def query_coverage_interval(read):
         :class:`~mavis.interval.Interval`: The portion of the original query sequence that is aligned by this read
     """
     seq = read.query_sequence
-    s = 0
-    t = len(seq) - 1
+    st = 0
+    end = len(seq) - 1
     if read.cigar[0][0] == CIGAR.S:
-        s += read.cigar[0][1]
+        st += read.cigar[0][1]
     if read.cigar[-1][0] == CIGAR.S:
-        t -= read.cigar[-1][1]
-    return Interval(s, t)
+        end -= read.cigar[-1][1]
+    return Interval(st, end)
 
 
 def align_contigs(
         evidence,
-        INPUT_BAM_CACHE,
+        input_bam_cache,
         reference_genome,
         aligner,
         aligner_reference,
@@ -276,17 +277,17 @@ def align_contigs(
         sequences = set()
         count = 1
         ev_by_seq = {}
-        for e in evidence:
-            for c in e.contigs:
-                sequences.add(c.seq)
-                ev_by_seq.setdefault(c.seq, []).append(e.data.get(COLUMNS.cluster_id, None))
+        for curr_ev in evidence:
+            for contig in curr_ev.contigs:
+                sequences.add(contig.seq)
+                ev_by_seq.setdefault(contig.seq, []).append(curr_ev.data.get(COLUMNS.cluster_id, None))
 
         with open(aligner_fa_input_file, 'w') as fh:
             for seq in sequences:
-                n = 'seq{}'.format(count)
-                log(n, [x for x in ev_by_seq[seq] if x is not None])
-                query_id_mapping[n] = seq
-                fh.write('>' + n + '\n' + seq + '\n')
+                name = 'seq{}'.format(count)
+                log(name, [x for x in ev_by_seq[seq] if x is not None])
+                query_id_mapping[name] = seq
+                fh.write('>' + name + '\n' + seq + '\n')
                 count += 1
         if len(sequences) == 0:
             return
@@ -299,17 +300,17 @@ def align_contigs(
             # call the aligner using subprocess
             blat_min_identity *= 100
             blat_options = kwargs.pop(
-                'blat_options', ["-stepSize=5", "-repMatch=2253", "-minScore=0", "-minIdentity={0}".format(blat_min_identity)])
+                'blat_options', ['-stepSize=5', '-repMatch=2253', '-minScore=0', '-minIdentity={0}'.format(blat_min_identity)])
             # call the blat subprocess
             # will raise subprocess.CalledProcessError if non-zero exit status
             # parameters from https://genome.ucsc.edu/FAQ/FAQblat.html#blat4
             log([SUPPORTED_ALIGNER.BLAT, aligner_reference,
                  aligner_fa_input_file, aligner_output_file, '-out=pslx', '-noHead'] + blat_options)
-            subprocess.check_output([
+            subprocess.check_call([
                 SUPPORTED_ALIGNER.BLAT, aligner_reference,
                 aligner_fa_input_file, aligner_output_file, '-out=pslx', '-noHead'] + blat_options)
             reads_by_query = process_blat_output(
-                INPUT_BAM_CACHE=INPUT_BAM_CACHE,
+                input_bam_cache=input_bam_cache,
                 query_id_mapping=query_id_mapping,
                 reference_genome=reference_genome,
                 aligner_output_file=aligner_output_file,
@@ -320,27 +321,27 @@ def align_contigs(
         elif aligner == SUPPORTED_ALIGNER.BWA_MEM:
             command = '{} {} {} -Y'.format(aligner, aligner_reference, aligner_fa_input_file)
             log(command)  # for bwa
-            with open(aligner_output_file, 'w') as f:
-                subprocess.call(command, stdout=f, shell=True)
+            with open(aligner_output_file, 'w') as aligner_output_fh:
+                subprocess.check_call(command, stdout=aligner_output_fh, shell=True)
 
-            with pysam.AlignmentFile(aligner_output_file, 'r') as samfile:
+            with pysam.AlignmentFile(aligner_output_file, 'r', check_sq=bool(len(sequences))) as samfile:
                 reads_by_query = {}
                 for read in samfile.fetch():
                     read = read_tools.SamRead.copy(read)
-                    read.reference_id = INPUT_BAM_CACHE.reference_id(read.reference_name)
+                    read.reference_id = input_bam_cache.reference_id(read.reference_name)
                     if read.is_paired:
-                        read.next_reference_id = INPUT_BAM_CACHE.reference_id(read.next_reference_name)
+                        read.next_reference_id = input_bam_cache.reference_id(read.next_reference_name)
                     read.cigar = cigar_tools.recompute_cigar_mismatch(read, reference_genome[read.reference_name])
                     query_seq = query_id_mapping[read.query_name]
                     reads_by_query.setdefault(query_seq, []).append(read)
         else:
             raise NotImplementedError('unsupported aligner', aligner)
 
-        for e in evidence:
-            for contig in e.contigs:
+        for curr_ev in evidence:
+            for contig in curr_ev.contigs:
                 aln = reads_by_query.get(contig.seq, [])
                 putative_alignments = SplitAlignment.select_supporting_alignments(
-                    e, aln,
+                    curr_ev, aln,
                     min_extend_overlap=min_extend_overlap,
                     min_query_consumption=contig_aln_min_query_consumption,
                     min_anchor_size=contig_aln_min_anchor_size,
@@ -352,9 +353,9 @@ def align_contigs(
     finally:
         # clean up
         if clean_files:
-            for f in [aligner_output_file, aligner_fa_input_file]:
-                if os.path.exists(f):
+            for outputfile in [aligner_output_file, aligner_fa_input_file]:
+                if os.path.exists(outputfile):
                     try:
-                        os.remove(f)
-                    except OSError as e:
-                        warnings.warn(repr(e))
+                        os.remove(outputfile)
+                    except OSError as err:
+                        warnings.warn(repr(err))

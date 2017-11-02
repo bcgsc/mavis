@@ -1,6 +1,8 @@
-import unittest
 import os
-from mavis.annotate.file_io import load_annotations, convert_tab_to_json
+import unittest
+
+from mavis.annotate.file_io import convert_tab_to_json, load_annotations
+
 from . import DATA_DIR, REFERENCE_ANNOTATIONS_FILE
 
 

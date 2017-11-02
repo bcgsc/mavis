@@ -1,7 +1,9 @@
 import unittest
-from .mock import MockLongString, Mock, MockFunction
+
 from mavis.blat import Blat
-from mavis.constants import reverse_complement, CIGAR
+from mavis.constants import CIGAR, reverse_complement
+
+from .mock import Mock, MockFunction, MockLongString
 
 
 class TestConvertPslxToPysam(unittest.TestCase):

@@ -1,17 +1,34 @@
-from ..util import MavisNamespace
-from vocab import Vocab
 import re
 
+import tab
 
-DEFAULTS = MavisNamespace(
-    min_domain_mapping_match=0.9,
-    min_orf_size=300,
-    max_orf_cap=3,
-    annotation_filters='choose_more_annotated,choose_transcripts_by_priority'
+from ..constants import MavisNamespace, float_fraction
+from ..util import WeakMavisNamespace
+
+
+DEFAULTS = WeakMavisNamespace()
+"""
+- :term:`annotation_filters`
+- :term:`max_orf_cap`
+- :term:`min_domain_mapping_match`
+- :term:`min_orf_size`
+"""
+DEFAULTS.add(
+    'min_domain_mapping_match', 0.9, cast_type=float_fraction,
+    defn='a number between 0 and 1 representing the minimum percent match a domain must map to the fusion transcript '
+    'to be displayed')
+DEFAULTS.add('min_orf_size', 300, defn='the minimum length (in amino acids) to retain a putative open reading frame (ORF)')
+DEFAULTS.add('max_orf_cap', 3, defn='the maximum number of ORFs to return (best putative ORFs will be retained)')
+DEFAULTS.add(
+    'annotation_filters', 'choose_more_annotated,choose_transcripts_by_priority',
+    defn='a comma separated list of filters to apply to putative annotations'
 )
+DEFAULTS.add(
+    'draw_fusions_only', True, cast_type=tab.cast_boolean,
+    defn='flag to indicate if events which do not produce a fusion transcript should produce illustrations')
 
 
-SPLICE_TYPE = Vocab(
+SPLICE_TYPE = MavisNamespace(
     RETAIN='retained intron',
     SKIP='skipped exon',
     NORMAL='normal',
@@ -19,7 +36,7 @@ SPLICE_TYPE = Vocab(
     MULTI_SKIP='skipped multiple exons',
     COMPLEX='complex'
 )
-""":class:`Vocab`: holds controlled vocabulary for allowed splice type classification values
+""":class:`MavisNamespace`: holds controlled vocabulary for allowed splice type classification values
 
 - ``RETAIN``: an intron was retained
 - ``SKIP``: an exon was skipped
@@ -29,7 +46,7 @@ SPLICE_TYPE = Vocab(
 - ``COMPLEX``: some combination of exon skipping and intron retention
 """
 
-SPLICE_SITE_TYPE = Vocab(
+SPLICE_SITE_TYPE = MavisNamespace(
     DONOR=3,
     ACCEPTOR=5
 )

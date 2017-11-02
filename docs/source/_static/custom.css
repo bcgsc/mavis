@@ -1,0 +1,8 @@
+em.property {
+    max-height: 6rem;
+    overflow-y: auto;
+}
+
+.glossary :target, .citation:target * {
+    color: red;
+}

@@ -1,39 +1,49 @@
-import tempfile
-import shutil
-import unittest
 import os
-import subprocess
-from mavis.breakpoint import read_bpp_from_input_file
+import shutil
+import sys
+import tempfile
+import unittest
+
+from mavis.constants import SUBCOMMAND
+from mavis.main import main
+from mavis.util import read_bpp_from_input_file
+from mock import patch
 
 
-data_prefix = os.path.join(os.path.dirname(__file__), 'data')
-temp_output = None
+DATA_PREFIX = os.path.join(os.path.dirname(__file__), 'data')
+TEMP_OUTPUT = None
 
 
 def setUpModule():
-    global temp_output
+    global TEMP_OUTPUT
     # create the temp output directory to store file outputs
-    temp_output = tempfile.mkdtemp()
+    TEMP_OUTPUT = tempfile.mkdtemp()
 
 
 class TestPairing(unittest.TestCase):
+
     def test_pairing(self):
-        command = 'mavis pairing -n {0}/pairing_annotations.tab -f {0}/pairing_sequences.fa -o {1} --annotations' \
-            ' {0}/pairing_reference_annotations_file.tab'.format(data_prefix, temp_output)
-        print(command)
-        subprocess.check_output(command, shell=True)
+        args = [
+            'mavis', SUBCOMMAND.PAIR,
+            '-n', os.path.join(DATA_PREFIX, 'pairing_annotations.tab'),
+            '-f', os.path.join(DATA_PREFIX, 'pairing_sequences.fa'),
+            '-o', TEMP_OUTPUT,
+            '--annotations', os.path.join(DATA_PREFIX, 'pairing_reference_annotations_file.tab')
+        ]
+        with patch.object(sys, 'argv', args):
+            self.assertEqual(0, main())
         # make sure the output file exists
-        output = os.path.join(temp_output, 'mavis_paired_A36971_A36973.tab')
+        output = os.path.join(TEMP_OUTPUT, 'mavis_paired_A36971_A36973.tab')
         self.assertTrue(os.path.exists(output))
         # check that the expected pairings are present
-        bpps = read_bpp_from_input_file(output, explicit_strand=False, expand_ns=False)
+        bpps = read_bpp_from_input_file(output, expand_strand=False, expand_orient=False)
         self.assertEqual(6, len(bpps))
 
 
 def tearDownModule():
     # remove the temp directory and outputs
-    shutil.rmtree(temp_output)
+    shutil.rmtree(TEMP_OUTPUT)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

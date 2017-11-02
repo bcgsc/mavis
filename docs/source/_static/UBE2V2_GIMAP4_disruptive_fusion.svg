@@ -1,0 +1,565 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" height="885.59882" version="1.1" width="966.52094" id="svg12766" inkscape:version="0.47 r22583" sodipodi:docname="UBE2V2_GIMAP4_disruptive_fusion.svg" inkscape:export-filename="/home/creisle/presentations/POG892/plots/UBE2V2_GIMAP4_disruptive_fusion.png" inkscape:export-xdpi="600" inkscape:export-ydpi="600">
+  <metadata id="metadata13514">
+    <rdf:RDF>
+      <cc:Work rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <sodipodi:namedview pagecolor="#ffffff" bordercolor="#666666" borderopacity="1" objecttolerance="10" gridtolerance="10" guidetolerance="10" inkscape:pageopacity="0" inkscape:pageshadow="2" inkscape:window-width="1280" inkscape:window-height="968" id="namedview13512" showgrid="false" showborder="false" inkscape:zoom="0.73102734" inkscape:cx="483.84766" inkscape:cy="426.65397" inkscape:window-x="0" inkscape:window-y="0" inkscape:window-maximized="1" inkscape:current-layer="svg12766" />
+  <defs id="defs12768">
+    <inkscape:perspective sodipodi:type="inkscape:persp3d" inkscape:vp_x="0 : 322.83334 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_z="1000 : 322.83334 : 1" inkscape:persp3d-origin="500 : 215.22223 : 1" id="perspective13516" />
+    <inkscape:perspective id="perspective17549" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+  </defs>
+  <g class="template" transform="translate(51.855468,-8.0410156)" id="g12770">
+    <rect height="3" transform="translate(0,56.833333)" width="421.99219" x="0" y="0" id="rect12772" style="fill:#000000" />
+    <g id="g12774">
+      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family: consolas, courier new, monospace" x="-5" y="64.333336" id="text12776">chr7</text>
+      <title id="title12778">template chr7</title>
+    </g>
+    <g class="cytoband" transform="translate(0,50)" id="g12780">
+      <rect height="16.666666" width="7" x="0" y="0" id="rect12782" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title12784">cytoband  chr7:y.p22.3  chr7:g.1_2800000</title>
+    </g>
+    <g class="cytoband" transform="translate(6.3633528,50)" id="g12786">
+      <rect height="16.666666" width="8.0000019" x="0" y="0" id="rect12788" style="fill:#bfbfbf;stroke:#000000;stroke-width:0.5" />
+      <title id="title12790">cytoband  chr7:y.p22.2  chr7:g.2800001_4500000</title>
+    </g>
+    <g class="cytoband" transform="translate(13.012531,50)" id="g12792">
+      <rect height="16.666666" width="9.0000019" x="0" y="0" id="rect12794" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title12796">cytoband  chr7:y.p22.1  chr7:g.4500001_7300000</title>
+    </g>
+    <g class="cytoband" transform="translate(21.375884,50)" id="g12798">
+      <rect height="16.666666" width="15.000002" x="0" y="0" id="rect12800" style="fill:#000000;stroke:#000000;stroke-width:0.5" />
+      <title id="title12802">cytoband  chr7:y.p21.3  chr7:g.7300001_13800000</title>
+    </g>
+    <g class="cytoband" transform="translate(35.505096,50)" id="g12804">
+      <rect height="16.666666" width="9.0000019" x="0" y="0" id="rect12806" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title12808">cytoband  chr7:y.p21.2  chr7:g.13800001_16500000</title>
+    </g>
+    <g class="cytoband" transform="translate(43.712614,50)" id="g12810">
+      <rect height="16.666666" width="12.000002" x="0" y="0" id="rect12812" style="fill:#000000;stroke:#000000;stroke-width:0.5" />
+      <title id="title12814">cytoband  chr7:y.p21.1  chr7:g.16500001_20900000</title>
+    </g>
+    <g class="cytoband" transform="translate(54.569312,50)" id="g12816">
+      <rect height="16.666666" width="12.000002" x="0" y="0" id="rect12818" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title12820">cytoband  chr7:y.p15.3  chr7:g.20900001_25500000</title>
+    </g>
+    <g class="cytoband" transform="translate(65.737677,50)" id="g12822">
+      <rect height="16.666666" width="9.0000019" x="0" y="0" id="rect12824" style="fill:#7f7f7f;stroke:#000000;stroke-width:0.5" />
+      <title id="title12826">cytoband  chr7:y.p15.2  chr7:g.25500001_28000000</title>
+    </g>
+    <g class="cytoband" transform="translate(73.633528,50)" id="g12828">
+      <rect height="16.666666" width="6.0000014" x="0" y="0" id="rect12830" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title12832">cytoband  chr7:y.p15.1  chr7:g.28000001_28800000</title>
+    </g>
+    <g class="cytoband" transform="translate(78.8802,50)" id="g12834">
+      <rect height="16.666666" width="15.000002" x="0" y="0" id="rect12836" style="fill:#404040;stroke:#000000;stroke-width:0.5" />
+      <title id="title12838">cytoband  chr7:y.p14.3  chr7:g.28800001_35000000</title>
+    </g>
+    <g class="cytoband" transform="translate(92.54191,50)" id="g12840">
+      <rect height="16.666666" width="8.0000019" x="0" y="0" id="rect12842" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title12844">cytoband  chr7:y.p14.2  chr7:g.35000001_37200000</title>
+    </g>
+    <g class="cytoband" transform="translate(99.970258,50)" id="g12846">
+      <rect height="16.666666" width="15.000002" x="0" y="0" id="rect12848" style="fill:#404040;stroke:#000000;stroke-width:0.5" />
+      <title id="title12850">cytoband  chr7:y.p14.1  chr7:g.37200001_43300000</title>
+    </g>
+    <g class="cytoband" transform="translate(113.47613,50)" id="g12852">
+      <rect height="16.666666" width="8.0000019" x="0" y="0" id="rect12854" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title12856">cytoband  chr7:y.p13  chr7:g.43300001_45400000</title>
+    </g>
+    <g class="cytoband" transform="translate(120.74865,50)" id="g12858">
+      <rect height="16.666666" width="11.000002" x="0" y="0" id="rect12860" style="fill:#404040;stroke:#000000;stroke-width:0.5" />
+      <title id="title12862">cytoband  chr7:y.p12.3  chr7:g.45400001_49000000</title>
+    </g>
+    <g class="cytoband" transform="translate(130.35867,50)" id="g12864">
+      <rect height="16.666666" width="7.0000014" x="0" y="0" id="rect12866" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title12868">cytoband  chr7:y.p12.2  chr7:g.49000001_50500000</title>
+    </g>
+    <g class="cytoband" transform="translate(136.69618,50)" id="g12870">
+      <rect height="16.666666" width="10.000002" x="0" y="0" id="rect12872" style="fill:#404040;stroke:#000000;stroke-width:0.5" />
+      <title id="title12874">cytoband  chr7:y.p12.1  chr7:g.50500001_54000000</title>
+    </g>
+    <g class="cytoband" transform="translate(146.15037,50)" id="g12876">
+      <rect height="16.666666" width="11.000002" x="0" y="0" id="rect12878" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title12880">cytoband  chr7:y.p11.2  chr7:g.54000001_58000000</title>
+    </g>
+    <g class="cytoband" transform="translate(156.38374,50)" id="g12882">
+      <polyline points="0,0 8.000001558340273,8.333333333333334 0,16.666666666666668" id="polyline12884" style="fill:#800000;stroke:#000000;stroke-width:0.5" />
+      <title id="title12886">cytoband  chr7:y.p11.1  chr7:g.58000001_59900000</title>
+    </g>
+    <g class="cytoband" transform="translate(163.34458,50)" id="g12888">
+      <polyline points="8.000001558340273,0 0,8.333333333333334 8.000001558340273,16.666666666666668" id="polyline12890" style="fill:#800000;stroke:#000000;stroke-width:0.5" />
+      <title id="title12892">cytoband  chr7:y.q11.1  chr7:g.59900001_61700000</title>
+    </g>
+    <g class="cytoband" transform="translate(170.14959,50)" id="g12894">
+      <rect height="16.666666" width="13.000002" x="0" y="0" id="rect12896" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title12898">cytoband  chr7:y.q11.21  chr7:g.61700001_67000000</title>
+    </g>
+    <g class="cytoband" transform="translate(182.4088,50)" id="g12900">
+      <rect height="16.666666" width="13.000002" x="0" y="0" id="rect12902" style="fill:#7f7f7f;stroke:#000000;stroke-width:0.5" />
+      <title id="title12904">cytoband  chr7:y.q11.22  chr7:g.67000001_72200000</title>
+    </g>
+    <g class="cytoband" transform="translate(194.51217,50)" id="g12906">
+      <rect height="16.666666" width="13.000002" x="0" y="0" id="rect12908" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title12910">cytoband  chr7:y.q11.23  chr7:g.72200001_77500000</title>
+    </g>
+    <g class="cytoband" transform="translate(206.77137,50)" id="g12912">
+      <rect height="16.666666" width="19.000002" x="0" y="0" id="rect12914" style="fill:#000000;stroke:#000000;stroke-width:0.5" />
+      <title id="title12916">cytoband  chr7:y.q21.11  chr7:g.77500001_86400000</title>
+    </g>
+    <g class="cytoband" transform="translate(224.6406,50)" id="g12918">
+      <rect height="16.666666" width="8.0000019" x="0" y="0" id="rect12920" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title12922">cytoband  chr7:y.q21.12  chr7:g.86400001_88200000</title>
+    </g>
+    <g class="cytoband" transform="translate(231.44561,50)" id="g12924">
+      <rect height="16.666666" width="10.000002" x="0" y="0" id="rect12926" style="fill:#404040;stroke:#000000;stroke-width:0.5" />
+      <title id="title12928">cytoband  chr7:y.q21.13  chr7:g.88200001_91100000</title>
+    </g>
+    <g class="cytoband" transform="translate(239.9648,50)" id="g12930">
+      <rect height="16.666666" width="8.0000019" x="0" y="0" id="rect12932" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title12934">cytoband  chr7:y.q21.2  chr7:g.91100001_92800000</title>
+    </g>
+    <g class="cytoband" transform="translate(246.61398,50)" id="g12936">
+      <rect height="16.666666" width="13.000002" x="0" y="0" id="rect12938" style="fill:#404040;stroke:#000000;stroke-width:0.5" />
+      <title id="title12940">cytoband  chr7:y.q21.3  chr7:g.92800001_98000000</title>
+    </g>
+    <g class="cytoband" transform="translate(258.71735,50)" id="g12942">
+      <rect height="16.666666" width="14.000002" x="0" y="0" id="rect12944" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title12946">cytoband  chr7:y.q22.1  chr7:g.98000001_103800000</title>
+    </g>
+    <g class="cytoband" transform="translate(271.75572,50)" id="g12948">
+      <rect height="16.666666" width="6.0000014" x="0" y="0" id="rect12950" style="fill:#7f7f7f;stroke:#000000;stroke-width:0.5" />
+      <title id="title12952">cytoband  chr7:y.q22.2  chr7:g.103800001_104500000</title>
+    </g>
+    <g class="cytoband" transform="translate(276.84656,50)" id="g12954">
+      <rect height="16.666666" width="10.000002" x="0" y="0" id="rect12956" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title12958">cytoband  chr7:y.q22.3  chr7:g.104500001_107400000</title>
+    </g>
+    <g class="cytoband" transform="translate(285.36575,50)" id="g12960">
+      <rect height="16.666666" width="16.000002" x="0" y="0" id="rect12962" style="fill:#404040;stroke:#000000;stroke-width:0.5" />
+      <title id="title12964">cytoband  chr7:y.q31.1  chr7:g.107400001_114600000</title>
+    </g>
+    <g class="cytoband" transform="translate(300.5858,50)" id="g12966">
+      <rect height="16.666666" width="9.0000019" x="0" y="0" id="rect12968" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title12970">cytoband  chr7:y.q31.2  chr7:g.114600001_117400000</title>
+    </g>
+    <g class="cytoband" transform="translate(308.94915,50)" id="g12972">
+      <rect height="16.666666" width="11.000002" x="0" y="0" id="rect12974" style="fill:#404040;stroke:#000000;stroke-width:0.5" />
+      <title id="title12976">cytoband  chr7:y.q31.31  chr7:g.117400001_121100000</title>
+    </g>
+    <g class="cytoband" transform="translate(318.71501,50)" id="g12978">
+      <rect height="16.666666" width="9.0000019" x="0" y="0" id="rect12980" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title12982">cytoband  chr7:y.q31.32  chr7:g.121100001_123800000</title>
+    </g>
+    <g class="cytoband" transform="translate(326.92253,50)" id="g12984">
+      <rect height="16.666666" width="10.000002" x="0" y="0" id="rect12986" style="fill:#404040;stroke:#000000;stroke-width:0.5" />
+      <title id="title12988">cytoband  chr7:y.q31.33  chr7:g.123800001_127100000</title>
+    </g>
+    <g class="cytoband" transform="translate(336.06505,50)" id="g12990">
+      <rect height="16.666666" width="8.0000019" x="0" y="0" id="rect12992" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title12994">cytoband  chr7:y.q32.1  chr7:g.127100001_129200000</title>
+    </g>
+    <g class="cytoband" transform="translate(343.33756,50)" id="g12996">
+      <rect height="16.666666" width="7.0000014" x="0" y="0" id="rect12998" style="fill:#bfbfbf;stroke:#000000;stroke-width:0.5" />
+      <title id="title13000">cytoband  chr7:y.q32.2  chr7:g.129200001_130400000</title>
+    </g>
+    <g class="cytoband" transform="translate(349.20757,50)" id="g13002">
+      <rect height="16.666666" width="8.0000019" x="0" y="0" id="rect13004" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title13006">cytoband  chr7:y.q32.3  chr7:g.130400001_132600000</title>
+    </g>
+    <g class="cytoband" transform="translate(356.63592,50)" id="g13008">
+      <rect height="16.666666" width="14.000002" x="0" y="0" id="rect13010" style="fill:#7f7f7f;stroke:#000000;stroke-width:0.5" />
+      <title id="title13012">cytoband  chr7:y.q33  chr7:g.132600001_138200000</title>
+    </g>
+    <g class="cytoband" transform="translate(369.36263,50)" id="g13014">
+      <rect height="16.666666" width="13.000002" x="0" y="0" id="rect13016" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title13018">cytoband  chr7:y.q34  chr7:g.138200001_143100000</title>
+    </g>
+    <g class="cytoband" transform="translate(380.99849,50)" id="g13020">
+      <rect height="16.666666" width="12.000002" x="0" y="0" id="rect13022" style="fill:#404040;stroke:#000000;stroke-width:0.5" />
+      <title id="title13024">cytoband  chr7:y.q35  chr7:g.143100001_147900000</title>
+    </g>
+    <g class="cytoband" transform="translate(392.47853,50)" id="g13026">
+      <rect height="16.666666" width="12.000002" x="0" y="0" id="rect13028" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title13030">cytoband  chr7:y.q36.1  chr7:g.147900001_152600000</title>
+    </g>
+    <g class="cytoband" transform="translate(403.80273,50)" id="g13032">
+      <rect height="16.666666" width="9.0000019" x="0" y="0" id="rect13034" style="fill:#bfbfbf;stroke:#000000;stroke-width:0.5" />
+      <title id="title13036">cytoband  chr7:y.q36.2  chr7:g.152600001_155100000</title>
+    </g>
+    <g class="cytoband" transform="translate(411.69858,50)" id="g13038">
+      <rect height="16.666666" width="11.000002" x="0" y="0" id="rect13040" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title13042">cytoband  chr7:y.q36.3  chr7:g.155100001_159138663</title>
+    </g>
+    <g class="breakpoint" transform="translate(399.47853,0)" id="g13044">
+      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family: consolas, courier new, monospace" x="0.5" y="21" id="text13046">B1</text>
+      <rect height="56.666668" width="1" x="0" y="30" id="rect13048" style="fill:none;stroke:#000000;stroke-dasharray:3, 3" />
+      <line x1="1" x2="1" y1="30" y2="86.666664" id="line13050" style="stroke:#000000;stroke-width:2" />
+      <title id="title13052">Breakpoint 7:g.150268145_150268155? R</title>
+    </g>
+  </g>
+  <g class="template" transform="translate(541.85547,-8.0410156)" id="g13054">
+    <rect height="3" transform="translate(0,56.833333)" width="421.99219" x="0" y="0" id="rect13056" style="fill:#000000" />
+    <g id="g13058">
+      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family: consolas, courier new, monospace" x="-5" y="64.333336" id="text13060">chr8</text>
+      <title id="title13062">template chr8</title>
+    </g>
+    <g class="cytoband" transform="translate(0,50)" id="g13064">
+      <rect height="16.666666" width="7" x="0" y="0" id="rect13066" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title13068">cytoband  chr8:y.p23.3  chr8:g.1_2200000</title>
+    </g>
+    <g class="cytoband" transform="translate(5.9680709,50)" id="g13070">
+      <rect height="16.666666" width="12.000002" x="0" y="0" id="rect13072" style="fill:#404040;stroke:#000000;stroke-width:0.5" />
+      <title id="title13074">cytoband  chr8:y.p23.2  chr8:g.2200001_6200000</title>
+    </g>
+    <g class="cytoband" transform="translate(17.182745,50)" id="g13076">
+      <rect height="16.666666" width="17.000002" x="0" y="0" id="rect13078" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title13080">cytoband  chr8:y.p23.1  chr8:g.6200001_12700000</title>
+    </g>
+    <g class="cytoband" transform="translate(32.906591,50)" id="g13082">
+      <rect height="16.666666" width="16.000002" x="0" y="0" id="rect13084" style="fill:#000000;stroke:#000000;stroke-width:0.5" />
+      <title id="title13086">cytoband  chr8:y.p22  chr8:g.12700001_19000000</title>
+    </g>
+    <g class="cytoband" transform="translate(48.269703,50)" id="g13088">
+      <rect height="16.666666" width="13.000002" x="0" y="0" id="rect13090" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title13092">cytoband  chr8:y.p21.3  chr8:g.19000001_23300000</title>
+    </g>
+    <g class="cytoband" transform="translate(60.025478,50)" id="g13094">
+      <rect height="16.666666" width="12.000002" x="0" y="0" id="rect13096" style="fill:#7f7f7f;stroke:#000000;stroke-width:0.5" />
+      <title id="title13098">cytoband  chr8:y.p21.2  chr8:g.23300001_27400000</title>
+    </g>
+    <g class="cytoband" transform="translate(71.420519,50)" id="g13100">
+      <rect height="16.666666" width="8.0000019" x="0" y="0" id="rect13102" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title13104">cytoband  chr8:y.p21.1  chr8:g.27400001_28800000</title>
+    </g>
+    <g class="cytoband" transform="translate(77.945655,50)" id="g13106">
+      <rect height="16.666666" width="19.000002" x="0" y="0" id="rect13108" style="fill:#404040;stroke:#000000;stroke-width:0.5" />
+      <title id="title13110">cytoband  chr8:y.p12  chr8:g.28800001_36500000</title>
+    </g>
+    <g class="cytoband" transform="translate(95.833903,50)" id="g13112">
+      <rect height="16.666666" width="8.0000019" x="0" y="0" id="rect13114" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title13116">cytoband  chr8:y.p11.23  chr8:g.36500001_38300000</title>
+    </g>
+    <g class="cytoband" transform="translate(103.08051,50)" id="g13118">
+      <rect height="16.666666" width="8.0000019" x="0" y="0" id="rect13120" style="fill:#bfbfbf;stroke:#000000;stroke-width:0.5" />
+      <title id="title13122">cytoband  chr8:y.p11.22  chr8:g.38300001_39700000</title>
+    </g>
+    <g class="cytoband" transform="translate(109.60564,50)" id="g13124">
+      <rect height="16.666666" width="11.000002" x="0" y="0" id="rect13126" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title13128">cytoband  chr8:y.p11.21  chr8:g.39700001_43100000</title>
+    </g>
+    <g class="cytoband" transform="translate(119.73812,50)" id="g13130">
+      <polyline points="0,0 10.000001803668567,8.333333333333334 0,16.666666666666668" id="polyline13132" style="fill:#800000;stroke:#000000;stroke-width:0.5" />
+      <title id="title13134">cytoband  chr8:y.p11.1  chr8:g.43100001_45600000</title>
+    </g>
+    <g class="cytoband" transform="translate(128.24729,50)" id="g13136">
+      <polyline points="10.000001803668567,0 0,8.333333333333334 10.000001803668567,16.666666666666668" id="polyline13138" style="fill:#800000;stroke:#000000;stroke-width:0.5" />
+      <title id="title13140">cytoband  chr8:y.q11.1  chr8:g.45600001_48100000</title>
+    </g>
+    <g class="cytoband" transform="translate(136.75646,50)" id="g13142">
+      <rect height="16.666666" width="12.000002" x="0" y="0" id="rect13144" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title13146">cytoband  chr8:y.q11.21  chr8:g.48100001_52200000</title>
+    </g>
+    <g class="cytoband" transform="translate(148.1515,50)" id="g13148">
+      <rect height="16.666666" width="6.0000019" x="0" y="0" id="rect13150" style="fill:#404040;stroke:#000000;stroke-width:0.5" />
+      <title id="title13152">cytoband  chr8:y.q11.22  chr8:g.52200001_52600000</title>
+    </g>
+    <g class="cytoband" transform="translate(152.87297,50)" id="g13154">
+      <rect height="16.666666" width="10.000002" x="0" y="0" id="rect13156" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title13158">cytoband  chr8:y.q11.23  chr8:g.52600001_55500000</title>
+    </g>
+    <g class="cytoband" transform="translate(162.10361,50)" id="g13160">
+      <rect height="16.666666" width="16.000002" x="0" y="0" id="rect13162" style="fill:#7f7f7f;stroke:#000000;stroke-width:0.5" />
+      <title id="title13164">cytoband  chr8:y.q12.1  chr8:g.55500001_61600000</title>
+    </g>
+    <g class="cytoband" transform="translate(177.10598,50)" id="g13166">
+      <rect height="16.666666" width="6.0000019" x="0" y="0" id="rect13168" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title13170">cytoband  chr8:y.q12.2  chr8:g.61600001_62200000</title>
+    </g>
+    <g class="cytoband" transform="translate(182.18819,50)" id="g13172">
+      <rect height="16.666666" width="12.000002" x="0" y="0" id="rect13174" style="fill:#7f7f7f;stroke:#000000;stroke-width:0.5" />
+      <title id="title13176">cytoband  chr8:y.q12.3  chr8:g.62200001_66000000</title>
+    </g>
+    <g class="cytoband" transform="translate(193.04213,50)" id="g13178">
+      <rect height="16.666666" width="9.0000019" x="0" y="0" id="rect13180" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title13182">cytoband  chr8:y.q13.1  chr8:g.66000001_68000000</title>
+    </g>
+    <g class="cytoband" transform="translate(200.64946,50)" id="g13184">
+      <rect height="16.666666" width="10.000002" x="0" y="0" id="rect13186" style="fill:#7f7f7f;stroke:#000000;stroke-width:0.5" />
+      <title id="title13188">cytoband  chr8:y.q13.2  chr8:g.68000001_70500000</title>
+    </g>
+    <g class="cytoband" transform="translate(209.15863,50)" id="g13190">
+      <rect height="16.666666" width="11.000002" x="0" y="0" id="rect13192" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title13194">cytoband  chr8:y.q13.3  chr8:g.70500001_73900000</title>
+    </g>
+    <g class="cytoband" transform="translate(219.29111,50)" id="g13196">
+      <rect height="16.666666" width="13.000002" x="0" y="0" id="rect13198" style="fill:#000000;stroke:#000000;stroke-width:0.5" />
+      <title id="title13200">cytoband  chr8:y.q21.11  chr8:g.73900001_78300000</title>
+    </g>
+    <g class="cytoband" transform="translate(231.22725,50)" id="g13202">
+      <rect height="16.666666" width="8.0000019" x="0" y="0" id="rect13204" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title13206">cytoband  chr8:y.q21.12  chr8:g.78300001_80100000</title>
+    </g>
+    <g class="cytoband" transform="translate(238.47385,50)" id="g13208">
+      <rect height="16.666666" width="13.000002" x="0" y="0" id="rect13210" style="fill:#404040;stroke:#000000;stroke-width:0.5" />
+      <title id="title13212">cytoband  chr8:y.q21.13  chr8:g.80100001_84600000</title>
+    </g>
+    <g class="cytoband" transform="translate(250.59036,50)" id="g13214">
+      <rect height="16.666666" width="9.0000019" x="0" y="0" id="rect13216" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title13218">cytoband  chr8:y.q21.2  chr8:g.84600001_86900000</title>
+    </g>
+    <g class="cytoband" transform="translate(258.7388,50)" id="g13220">
+      <rect height="16.666666" width="17.000002" x="0" y="0" id="rect13222" style="fill:#000000;stroke:#000000;stroke-width:0.5" />
+      <title id="title13224">cytoband  chr8:y.q21.3  chr8:g.86900001_93300000</title>
+    </g>
+    <g class="cytoband" transform="translate(274.28228,50)" id="g13226">
+      <rect height="16.666666" width="15.000002" x="0" y="0" id="rect13228" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title13230">cytoband  chr8:y.q22.1  chr8:g.93300001_99000000</title>
+    </g>
+    <g class="cytoband" transform="translate(288.56319,50)" id="g13232">
+      <rect height="16.666666" width="10.000002" x="0" y="0" id="rect13234" style="fill:#bfbfbf;stroke:#000000;stroke-width:0.5" />
+      <title id="title13236">cytoband  chr8:y.q22.2  chr8:g.99000001_101600000</title>
+    </g>
+    <g class="cytoband" transform="translate(297.25273,50)" id="g13238">
+      <rect height="16.666666" width="13.000002" x="0" y="0" id="rect13240" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title13242">cytoband  chr8:y.q22.3  chr8:g.101600001_106200000</title>
+    </g>
+    <g class="cytoband" transform="translate(309.5496,50)" id="g13244">
+      <rect height="16.666666" width="13.000002" x="0" y="0" id="rect13246" style="fill:#404040;stroke:#000000;stroke-width:0.5" />
+      <title id="title13248">cytoband  chr8:y.q23.1  chr8:g.106200001_110500000</title>
+    </g>
+    <g class="cytoband" transform="translate(321.30538,50)" id="g13250">
+      <rect height="16.666666" width="8.0000019" x="0" y="0" id="rect13252" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title13254">cytoband  chr8:y.q23.2  chr8:g.110500001_112100000</title>
+    </g>
+    <g class="cytoband" transform="translate(328.19125,50)" id="g13256">
+      <rect height="16.666666" width="15.000002" x="0" y="0" id="rect13258" style="fill:#000000;stroke:#000000;stroke-width:0.5" />
+      <title id="title13260">cytoband  chr8:y.q23.3  chr8:g.112100001_117700000</title>
+    </g>
+    <g class="cytoband" transform="translate(342.29179,50)" id="g13262">
+      <rect height="16.666666" width="8.0000019" x="0" y="0" id="rect13264" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title13266">cytoband  chr8:y.q24.11  chr8:g.117700001_119200000</title>
+    </g>
+    <g class="cytoband" transform="translate(348.99729,50)" id="g13268">
+      <rect height="16.666666" width="11.000002" x="0" y="0" id="rect13270" style="fill:#7f7f7f;stroke:#000000;stroke-width:0.5" />
+      <title id="title13272">cytoband  chr8:y.q24.12  chr8:g.119200001_122500000</title>
+    </g>
+    <g class="cytoband" transform="translate(358.9494,50)" id="g13274">
+      <rect height="16.666666" width="14.000002" x="0" y="0" id="rect13276" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title13278">cytoband  chr8:y.q24.13  chr8:g.122500001_127300000</title>
+    </g>
+    <g class="cytoband" transform="translate(371.60701,50)" id="g13280">
+      <rect height="16.666666" width="13.000002" x="0" y="0" id="rect13282" style="fill:#7f7f7f;stroke:#000000;stroke-width:0.5" />
+      <title id="title13284">cytoband  chr8:y.q24.21  chr8:g.127300001_131500000</title>
+    </g>
+    <g class="cytoband" transform="translate(383.18242,50)" id="g13286">
+      <rect height="16.666666" width="14.000002" x="0" y="0" id="rect13288" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title13290">cytoband  chr8:y.q24.22  chr8:g.131500001_136400000</title>
+    </g>
+    <g class="cytoband" transform="translate(396.02039,50)" id="g13292">
+      <rect height="16.666666" width="11.000002" x="0" y="0" id="rect13294" style="fill:#404040;stroke:#000000;stroke-width:0.5" />
+      <title id="title13296">cytoband  chr8:y.q24.23  chr8:g.136400001_139900000</title>
+    </g>
+    <g class="cytoband" transform="translate(406.33323,50)" id="g13298">
+      <rect height="16.666666" width="17.000002" x="0" y="0" id="rect13300" style="fill:#ffffff;stroke:#000000;stroke-width:0.5" />
+      <title id="title13302">cytoband  chr8:y.q24.3  chr8:g.139900001_146364022</title>
+    </g>
+    <g class="breakpoint" transform="translate(140.75646,0)" id="g13304">
+      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family: consolas, courier new, monospace" x="0.5" y="21" id="text13306">B2</text>
+      <rect height="56.666668" width="1" x="0" y="30" id="rect13308" style="fill:none;stroke:#000000;stroke-dasharray:3, 3" />
+      <line x1="1" x2="1" y1="30" y2="86.666664" id="line13310" style="stroke:#000000;stroke-width:2" />
+      <title id="title13312">Breakpoint 8:g.48968229_48968366? R</title>
+    </g>
+  </g>
+  <g class="genes" transform="translate(51.855468,98.625654)" id="g13314">
+    <rect class="scaffold" height="3" width="421.99219" x="0" y="128.5" id="rect13316" style="fill:#000000" />
+    <g class="gene" transform="translate(28,105)" id="g13328">
+      <rect height="50" width="345.60077" x="0" y="0" id="rect13330" style="fill:#518dc5;fill-opacity:1" />
+      <polyline points="345.600776218736,0 365.600776218736,25.0 345.600776218736,50" id="polyline13332" style="fill:#518dc5;fill-opacity:1" />
+      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#ffffff;font-family: consolas, courier new, monospace" x="172.80038" y="31" id="text13334">GIMAP4</text>
+      <title id="title13336">Gene ENSG00000133574 7:g.150264365_150271041+ aka GIMAP4</title>
+    </g>
+    <rect class="mask" height="175" pointer-events="none" width="261.39688" x="0" y="0" id="rect13338" style="opacity:0.7;fill:#ffffff" />
+    <g class="breakpoint" transform="translate(193,0)" id="g13340">
+      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family: consolas, courier new, monospace" x="66.16111" y="21" id="text13342">B1</text>
+      <rect height="145.92628" width="0.36889806" x="-69.227974" y="29.536858" id="rect13344" style="fill:none;stroke:#000000;stroke-width:0.07371484;stroke-dasharray:0.22114454, 0.22114454" transform="scale(-1,1)" />
+      <line x1="68.32222" x2="68.32222" y1="30" y2="175" id="line13346" style="stroke:#000000;stroke-width:2" />
+      <title id="title13348">Breakpoint 7:g.150268145_150268155? R</title>
+    </g>
+  </g>
+  <g class="genes" transform="translate(541.85547,98.625654)" id="g13350">
+    <rect class="scaffold" height="3" width="421.99219" x="0" y="73.5" id="rect13352" style="fill:#000000" />
+    <g class="gene" transform="translate(38,50)" id="g13354">
+      <rect height="50" width="326" x="0" y="0" id="rect13356" style="fill:#4c9677" />
+      <polyline points="326.0,0 346.0,25.0 326.0,50" id="polyline13358" style="fill:#4c9677" />
+      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#ffffff;font-family: consolas, courier new, monospace" x="163" y="31" id="text13360">UBE2V2</text>
+      <title id="title13362">Gene ENSG00000169139 8:g.48920960_48976511+ aka UBE2V2</title>
+    </g>
+    <rect class="mask" height="120" pointer-events="none" width="332" x="0" y="0" id="rect13364" style="opacity:0.7;fill:#ffffff" />
+    <g class="breakpoint" transform="translate(332,0)" id="g13366">
+      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family: consolas, courier new, monospace" x="1" y="21" id="text13368">B2</text>
+      <rect height="90" width="2" x="0" y="30" id="rect13370" style="fill:none;stroke:#000000;stroke-dasharray:3, 3" />
+      <line x1="2" x2="2" y1="30" y2="120" id="line13372" style="stroke:#000000;stroke-width:2" />
+      <title id="title13374">Breakpoint 8:g.48968229_48968366? R</title>
+    </g>
+  </g>
+  <g class="ust" transform="translate(51.855468,293.62565)" id="g13376">
+    <g transform="translate(0,50)" id="g13378">
+      <g class="splicing" id="g13380">
+        <polyline points="39.0,25.0 56.166262416708456,0.0 73.33252483341691,25.0" id="polyline13382" style="fill:none;stroke:#000000;stroke-width:2;stroke-dasharray:2, 2" />
+        <polyline points="128.33252483341693,25.0 135.64181044963888,0.0 142.95109606586084,25.0" id="polyline13384" style="fill:none;stroke:#000000;stroke-width:2;stroke-dasharray:2, 2" />
+        <polyline points="192.95109606586084,25.0 201.81463343461735,0.0 210.6781708033739,25.0" id="polyline13386" style="fill:none;stroke:#000000;stroke-width:2;stroke-dasharray:2, 2" />
+      </g>
+      <g class="exon_track" transform="translate(0,25)" id="g13388">
+        <rect class="scaffold" height="3" width="913.67816" x="0" y="23.5" id="rect13390" style="fill:#000000" />
+        <g class="exon" id="g13392">
+          <rect height="50" width="39" x="0" y="0" id="rect13394" style="fill:#4c9677" />
+          <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#ffffff;font-family: consolas, courier new, monospace" x="19.5" y="31" id="text13396">1</text>
+          <title id="title13398">Exon   g.48920960_48921030  c.-55_16  cdna(1_71)  length(71)</title>
+        </g>
+        <g class="exon" transform="translate(73.332525,0)" id="g13400">
+          <rect height="50" width="55" x="0" y="0" id="rect13402" style="fill:#4c9677" />
+          <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#ffffff;font-family: consolas, courier new, monospace" x="27.5" y="31" id="text13404">2</text>
+          <title id="title13406">Exon   g.48955593_48955741  c.17_165  cdna(72_220)  length(149)</title>
+        </g>
+        <g class="exon" transform="translate(142.9511,0)" id="g13408">
+          <rect height="50" width="51" x="0" y="0" id="rect13410" style="fill:#4c9677" />
+          <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#ffffff;font-family: consolas, courier new, monospace" x="25.5" y="31" id="text13412">3</text>
+          <title id="title13414">Exon   g.48962413_48962538  c.166_291  cdna(221_346)  length(126)</title>
+        </g>
+        <g class="exon" transform="translate(210.67817,0)" id="g13416">
+          <rect height="50" width="702" x="0" y="0" id="rect13418" style="fill:#4c9677" />
+          <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#ffffff;font-family: consolas, courier new, monospace" x="351" y="31" id="text13420">4</text>
+          <title id="title13422">Exon   g.48973242_48976511  c.292_*3123  cdna(347_3616)  length(3270)</title>
+        </g>
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family: consolas, courier new, monospace" x="-5" y="31" id="text13424">T1</text>
+      </g>
+      <g class="protein" transform="translate(0,80)" id="g13426">
+        <g class="translation" id="g13428">
+          <rect class="scaffold" height="14" width="10" x="30" y="0" id="rect13430" style="fill:#000000" />
+          <rect class="scaffold" height="14" width="56" x="73.332527" y="0" id="rect13432" style="fill:#000000" />
+          <rect class="scaffold" height="14" width="51" x="142.9511" y="0" id="rect13434" style="fill:#000000" />
+          <rect class="scaffold" height="14" width="32" x="210.67818" y="0" id="rect13436" style="fill:#000000" />
+          <text class="label" style="font-size:14px;font-weight:bold;text-anchor:end;fill:#000000;font-family: consolas, courier new, monospace" x="26" y="11.2" id="text13438">M</text>
+          <text class="label" style="font-size:14px;font-weight:bold;text-anchor:start;fill:#000000;font-family: consolas, courier new, monospace" x="245.67818" y="11.2" id="text13440">*</text>
+          <title id="title13442">translation  cdna(56_493)  c.1_438  p.1_146</title>
+        </g>
+        <g class="domain" transform="translate(0,19)" id="g13444">
+          <rect class="scaffold" height="1" width="911.99219" x="0" y="15" id="rect13446" style="fill:#000000" />
+          <g class="domain_region" id="g13448">
+            <rect class="region" height="30" width="127.34565" x="106.33253" y="0" id="rect13450" style="fill:#ccccb3" />
+            <title id="title13452">domain PF00179 region p.36_131</title>
+          </g>
+          <a target="_blank" xlink:href="http://pfam.xfam.org/family/PF00179" id="a13454">
+            <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family: consolas, courier new, monospace" x="-5" y="21" id="text13456">D1</text>
+          </a>
+        </g>
+        <g class="domain" transform="translate(0,54)" id="g13458">
+          <rect class="scaffold" height="1" width="911.99219" x="0" y="15" id="rect13460" style="fill:#000000" />
+          <g class="domain_region" id="g13462">
+            <rect class="region" height="30" width="157.34564" x="80.332527" y="0" id="rect13464" style="fill:#ccccb3" />
+            <title id="title13466">domain PS50127 region p.13_138</title>
+          </g>
+          <g id="g13468">
+            <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family: consolas, courier new, monospace" x="-5" y="21" id="text13470">D2</text>
+          </g>
+        </g>
+        <g class="domain" transform="translate(0,89)" id="g13472">
+          <rect class="scaffold" height="1" width="911.99219" x="0" y="15" id="rect13474" style="fill:#000000" />
+          <g class="domain_region" id="g13476">
+            <rect class="region" height="30" width="162.34564" x="80.332527" y="0" id="rect13478" style="fill:#ccccb3" />
+            <title id="title13480">domain SM00212 region p.13_145</title>
+          </g>
+          <g id="g13482">
+            <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family: consolas, courier new, monospace" x="-5" y="21" id="text13484">D3</text>
+          </g>
+        </g>
+        <g class="domain" transform="translate(0,124)" id="g13486">
+          <rect class="scaffold" height="1" width="911.99219" x="0" y="15" id="rect13488" style="fill:#000000" />
+          <g class="domain_region" id="g13490">
+            <rect class="region" height="30" width="203.67818" x="39" y="0" id="rect13492" style="fill:#ccccb3" />
+            <title id="title13494">domain SSF54495 region p.6_145</title>
+          </g>
+          <g id="g13496">
+            <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family: consolas, courier new, monospace" x="-5" y="21" id="text13498">D4</text>
+          </g>
+        </g>
+      </g>
+    </g>
+    <rect class="mask" height="304" pointer-events="none" width="202.05319" x="0" y="0" id="rect13500" style="opacity:0.7;fill:#ffffff" />
+    <g class="breakpoint" transform="translate(202.05319,0)" id="g13502">
+      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family: consolas, courier new, monospace" x="0.5" y="21" id="text13504">B2</text>
+      <rect height="274" width="1" x="0" y="30" id="rect13506" style="fill:none;stroke:#000000;stroke-dasharray:3, 3" />
+      <line x1="1" x2="1" y1="30" y2="304" id="line13508" style="stroke:#000000;stroke-width:2" />
+      <title id="title13510">Breakpoint 8:g.48968229_48968366? R</title>
+    </g>
+  </g>
+  <g class="ust" transform="translate(53.093092,650.59884)" id="g17441">
+    <g transform="translate(0,50)" id="g17443">
+      <g class="splicing" id="g17445">
+        <polyline style="fill:none;stroke:#000000;stroke-width:2;stroke-dasharray:2, 2" points="85.0,25.0 100.39365674292895,0.0 115.78731348585791,25.0" id="polyline17447" />
+        <polyline style="fill:none;stroke:#000000;stroke-width:2;stroke-dasharray:2, 2" points="166.7873134858579,25.0 181.1075846690101,0.0 195.42785585216228,25.0" id="polyline17449" />
+      </g>
+      <g class="exon_track" transform="translate(0,25)" id="g17451">
+        <rect style="fill:#000000" class="scaffold" height="3" width="913.42786" x="0" y="23.5" id="rect17453" />
+        <g class="exon" id="g17455">
+          <rect style="fill:#518dc5" height="50" width="86" x="0" y="0" id="rect17457" />
+          <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family: consolas, courier new, monospace" x="43" y="31" id="text17459">1</text>
+          <title id="title17461">Exon   g.150264365_150264525  c.-175_-15  cdna(1_161)  length(161)</title>
+        </g>
+        <g class="exon" transform="translate(115.78731,0)" id="g17463">
+          <rect style="fill:#518dc5" height="50" width="52" x="0" y="0" id="rect17465" />
+          <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family: consolas, courier new, monospace" x="26" y="31" id="text17467">2</text>
+          <title id="title17469">Exon   g.150266976_150267047  c.-14_58  cdna(162_233)  length(72)</title>
+        </g>
+        <g class="exon" transform="translate(195.42786,0)" id="g17471">
+          <rect style="fill:#518dc5" height="50" width="717" x="0" y="0" id="rect17473" />
+          <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family: consolas, courier new, monospace" x="358.5" y="31" id="text17475">3</text>
+          <title id="title17477">Exon   g.150269217_150271041  c.59_*893  cdna(234_2058)  length(1825)</title>
+        </g>
+        <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family: consolas, courier new, monospace" x="-5" y="31" id="text17479">T1</text>
+      </g>
+      <g class="protein" transform="translate(0,80)" id="g17481">
+        <g class="translation" id="g17483">
+          <rect style="fill:#000000" class="scaffold" height="14" width="42" x="125.78732" y="0" id="rect17485" />
+          <rect style="fill:#000000" class="scaffold" height="14" width="367" x="195.42786" y="0" id="rect17487" />
+          <text class="label" style="font-size:14px;font-weight:bold;text-anchor:end;fill:#000000;font-family: consolas, courier new, monospace" x="121.78732" y="11.2" id="text17489">M</text>
+          <text class="label" style="font-size:14px;font-weight:bold;text-anchor:start;fill:#000000;font-family: consolas, courier new, monospace" x="565.42786" y="11.2" id="text17491">*</text>
+          <title id="title17493">translation  cdna(176_1165)  c.1_990  p.1_330</title>
+        </g>
+        <g class="domain" transform="translate(0,19)" id="g17495">
+          <rect style="fill:#000000" class="scaffold" height="1" width="911.99219" x="0" y="15" id="rect17497" />
+          <g class="domain_region" id="g17499">
+            <rect style="fill:#ccccb3" class="region" height="30" width="245" x="208.42786" y="0" id="rect17501" />
+            <title id="title17503">domain PF04548 region p.31_238</title>
+          </g>
+          <a target="_blank" xlink:href="http://pfam.xfam.org/family/PF04548" id="a17505">
+            <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family: consolas, courier new, monospace" x="-5" y="21" id="text17507">D1</text>
+          </a>
+        </g>
+        <g class="domain" transform="translate(0,54)" id="g17509">
+          <rect style="fill:#000000" class="scaffold" height="1" width="911.99219" x="0" y="15" id="rect17511" />
+          <g class="domain_region" id="g17513">
+            <rect style="fill:#ccccb3" class="region" height="30" width="313" x="199.42786" y="0" id="rect17515" />
+            <title id="title17517">domain SSF52540 region p.24_288</title>
+          </g>
+          <g id="g17519">
+            <text class="label" style="font-size:20px;font-weight:bold;text-anchor:end;fill:#000000;font-family: consolas, courier new, monospace" x="-5" y="21" id="text17521">D2</text>
+          </g>
+        </g>
+      </g>
+    </g>
+    <rect style="opacity:0.7;fill:#ffffff" class="mask" height="234" pointer-events="none" width="181.11415" x="0" y="0" id="rect17523" />
+    <g class="breakpoint" transform="translate(181.11415,0)" id="g17525">
+      <text class="label" style="font-size:20px;font-weight:bold;text-anchor:middle;fill:#000000;font-family: consolas, courier new, monospace" x="0" y="21" id="text17527">B1</text>
+      <rect style="fill:none;stroke:#000000;stroke-dasharray:3, 3" height="204" width="0" x="0" y="30" id="rect17529" />
+      <line style="stroke:#000000;stroke-width:2" x1="0" x2="0" y1="30" y2="234" id="line17531" />
+      <title id="title17533">Breakpoint 7:g.150268145_150268155? R</title>
+    </g>
+  </g>
+</svg>

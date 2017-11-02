@@ -1,77 +1,80 @@
-import tempfile
-import shutil
-import unittest
-import os
-import subprocess
 import glob
-from mavis.constants import PROTOCOL
+import os
+import shlex
+import shutil
+import sys
+import tempfile
+import unittest
 
 
-data_prefix = os.path.join(os.path.dirname(__file__), 'data')
-temp_output = None
-mavis_home = os.path.join(os.path.dirname(__file__), './../..')
-main_run_script = os.path.join(mavis_home, 'bin/mavis_run.py')
-config = os.path.join(data_prefix, 'pipeline_config.cfg')
-mock_genome = 'mock-A36971'
-mock_trans = 'mock-A47933'
+from mavis.constants import SUBCOMMAND
+from mavis.main import main
+from mavis.util import unique_exists
+from mock import patch
 
 
-def setUpModule():
-    global temp_output
-    # create the temp output directory to store file outputs
-    temp_output = tempfile.mkdtemp()
-    print('output dir', temp_output)
+DATA_PREFIX = os.path.join(os.path.dirname(__file__), 'data')
+CONFIG = os.path.join(DATA_PREFIX, 'pipeline_config.cfg')
+BWA_CONFIG = os.path.join(DATA_PREFIX, 'bwa_pipeline_config.cfg')
+MOCK_GENOME = 'mock-A36971'
+MOCK_TRANS = 'mock-A47933'
 
 
 def glob_exists(*pos, strict=True):
     globexpr = os.path.join(*pos)
-    l = len(glob.glob(globexpr))
-    if strict and l == 1:
-        return True
-    elif not strict and l > 0:
-        return True
+    l = glob.glob(globexpr)
+    if strict and len(l) == 1:
+        return l[0]
+    elif not strict and len(l) > 0:
+        return l
     else:
         print(globexpr)
         print(l)
         return False
 
 
-def tail(output, count=50):
-    output = output.decode('UTF8').split('\n')
-    for l in output[max(len(output) - count, 0):]:
-        print(l)
+def convert_qsub_to_args(filename, sub=None):
+    with open(filename, 'r') as fh:
+        lines = [l.strip() for l in fh.readlines() if not l.startswith('#') and l]
+        lines = ' '.join(lines)
+        if sub:
+            for original, replacement in sub:
+                lines.replace(original, replacement)
+        lex = shlex.split(lines)
+        return [a.strip() for a in lex]
 
 
 @unittest.skipIf(
     not int(os.environ.get('RUN_FULL', 1)),
     'slower tests will not be run unless the environment variable RUN_FULL is given')
-class TestFullPipeline(unittest.TestCase):
+class TestPipeline(unittest.TestCase):
 
-    def test_mocked(self):
-        command = 'mavis pipeline {} -o {}'.format(config, temp_output)
-        print(command)
-        print(os.environ)
-        output = subprocess.check_output(command, shell=True, env=os.environ)
-        tail(output)
+    def setUp(self):
+        # create the temp output directory to store file outputs
+        self.temp_output = tempfile.mkdtemp()
+        print('output dir', self.temp_output)
+
+    def test_pipeline_with_bwa(self):
+        args = ['mavis', SUBCOMMAND.PIPELINE, BWA_CONFIG, '-o', self.temp_output]
+        with patch.object(sys, 'argv', args):
+            self.assertEqual(0, main())
 
         # check that the subdirectories were built
-        for lib in[mock_genome + '_*', mock_trans + '_*']:
-            print('lib', lib)
-            self.assertTrue(glob_exists(temp_output, lib, 'clustering'))
-            self.assertTrue(glob_exists(temp_output, lib, 'clustering', 'batch-*-1.tab'))
-            self.assertTrue(glob_exists(temp_output, lib, 'clustering', 'uninformative_clusters.txt'))
-            self.assertTrue(glob_exists(temp_output, lib, 'clustering', 'clusters.bed'))
-            self.assertTrue(glob_exists(temp_output, lib, 'clustering', 'cluster_assignment.tab'))
-            self.assertTrue(glob_exists(temp_output, lib, 'clustering', '*.COMPLETE'))
+        for lib in[MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'batch-*-1.tab'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'uninformative_clusters.txt'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'clusters.bed'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'cluster_assignment.tab'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, '*.COMPLETE'))
 
             # run validation
-            self.assertTrue(glob_exists(temp_output, lib, 'validation'))
-            qsub = os.path.join(temp_output, lib, 'validation', 'qsub.sh')
-            self.assertTrue(glob_exists(qsub))
-            command = 'export SGE_TASK_ID=1; bash {}'.format(qsub)
-            print(command)
-            output = subprocess.check_output(command, shell=True, env=os.environ)
-            tail(output)
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE))
+            qsub = unique_exists(os.path.join(self.temp_output, lib, SUBCOMMAND.VALIDATE, '*-1/submit.sh'))
+            args = convert_qsub_to_args(qsub)  # read the arguments from the file
+            print(args)
+            with patch.object(sys, 'argv', args):
+                self.assertEqual(0, main())
 
             for suffix in [
                 'contigs.bam',
@@ -87,53 +90,315 @@ class TestFullPipeline(unittest.TestCase):
                 'validation-failed.tab',
                 'validation-passed.tab'
             ]:
-                self.assertTrue(glob_exists(temp_output, lib, 'validation/*-1', '*.' + suffix))
-            self.assertTrue(glob_exists(temp_output, lib, 'validation/*-1', '*.COMPLETE'))
+                self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', '*.' + suffix))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', '*.COMPLETE'))
 
             # run annotation
-            self.assertTrue(glob_exists(temp_output, lib, 'annotation'))
-            qsub = os.path.join(temp_output, lib, 'annotation', 'qsub.sh')
-            self.assertTrue(glob_exists(qsub))
-            command = 'export SGE_TASK_ID=1; bash {}'.format(qsub)
-            print(command)
-            output = subprocess.check_output(command, shell=True, env=os.environ)
-            tail(output)
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE))
+            qsub = unique_exists(os.path.join(self.temp_output, lib, SUBCOMMAND.ANNOTATE, '*-1/submit.sh'))
+            args = convert_qsub_to_args(qsub)
+            with patch.object(sys, 'argv', args):
+                self.assertEqual(0, main())
             # check the generated files
-            self.assertTrue(glob_exists(temp_output, lib, 'annotation/*-1', 'annotations.tab'))
-            self.assertTrue(glob_exists(temp_output, lib, 'annotation/*-1', 'annotations.fusion-cdna.fa'))
-            self.assertTrue(glob_exists(temp_output, lib, 'annotation/*-1', 'drawings'))
-            self.assertTrue(glob_exists(temp_output, lib, 'annotation/*-1', 'drawings', '*svg', strict=False))
-            self.assertTrue(glob_exists(temp_output, lib, 'annotation/*-1', 'drawings', '*json', strict=False))
-            self.assertTrue(glob_exists(temp_output, lib, 'annotation/*-1', '*.COMPLETE'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'annotations.tab'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'annotations.fusion-cdna.fa'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'drawings'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'drawings', '*svg', strict=False))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'drawings', '*json', strict=False))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', '*.COMPLETE'))
         # now run the pairing
-        self.assertTrue(glob_exists(temp_output, 'pairing'))
-        qsub = os.path.join(temp_output, 'pairing', 'qsub.sh')
-        self.assertTrue(glob_exists(qsub))
-        command = 'export SGE_TASK_ID=1; bash {}'.format(qsub)
-        print(command)
-        output = subprocess.check_output(command, shell=True, env=os.environ)
-        tail(output)
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR))
+        qsub = unique_exists(os.path.join(self.temp_output, SUBCOMMAND.PAIR, 'submit.sh'))
+        args = convert_qsub_to_args(qsub, sub=[('SGE_TASK_ID', '1')])
+        with patch.object(sys, 'argv', args):
+            self.assertEqual(0, main())
 
-        self.assertTrue(glob_exists(temp_output, 'pairing', 'mavis_paired*.tab'))
-        self.assertTrue(glob_exists(temp_output, 'pairing', '*.COMPLETE'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR, 'mavis_paired*.tab'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR, '*.COMPLETE'))
 
         # now run the summary
-        self.assertTrue(glob_exists(temp_output, 'summary'))
-        qsub = os.path.join(temp_output, 'summary', 'qsub.sh')
-        self.assertTrue(glob_exists(qsub))
-        command = 'export SGE_TASK_ID=1; bash {}'.format(qsub)
-        print(command)
-        output = subprocess.check_output(command, shell=True, env=os.environ)
-        tail(output)
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY))
+        qsub = unique_exists(os.path.join(self.temp_output, SUBCOMMAND.SUMMARY, 'submit.sh'))
+        args = convert_qsub_to_args(qsub, sub=[('SGE_TASK_ID', '1')])
+        with patch.object(sys, 'argv', args):
+            self.assertEqual(0, main())
 
-        self.assertTrue(glob_exists(temp_output, 'summary', 'mavis_summary*.tab'))
-        self.assertTrue(glob_exists(temp_output, 'summary', '*.COMPLETE'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'mavis_summary*.tab'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, '*.COMPLETE'))
+
+        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):
+            self.assertEqual(0, main())
+        self.assertTrue(glob_exists(self.temp_output, 'submit_pipeline*.sh'))
+
+    def test_full_pipeline(self):
+        args = ['mavis', SUBCOMMAND.PIPELINE, CONFIG, '-o', self.temp_output]
+        with patch.object(sys, 'argv', args):
+            self.assertEqual(0, main())
+
+        # check that the subdirectories were built
+        for lib in[MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'batch-*-1.tab'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'uninformative_clusters.txt'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'clusters.bed'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'cluster_assignment.tab'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, '*.COMPLETE'))
+
+            # run validation
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE))
+            qsub = unique_exists(os.path.join(self.temp_output, lib, SUBCOMMAND.VALIDATE, '*-1/submit.sh'))
+            args = convert_qsub_to_args(qsub)  # read the arguments from the file
+            print(args)
+            with patch.object(sys, 'argv', args):
+                self.assertEqual(0, main())
+
+            for suffix in [
+                'contigs.bam',
+                'contigs.blat_out.pslx',
+                'contigs.fa',
+                'contigs.sorted.bam',
+                'contigs.sorted.bam.bai',
+                'evidence.bed',
+                'igv.batch',
+                'raw_evidence.bam',
+                'raw_evidence.sorted.bam',
+                'raw_evidence.sorted.bam.bai',
+                'validation-failed.tab',
+                'validation-passed.tab'
+            ]:
+                self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', '*.' + suffix))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', '*.COMPLETE'))
+
+            # run annotation
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE))
+            qsub = unique_exists(os.path.join(self.temp_output, lib, SUBCOMMAND.ANNOTATE, '*-1/submit.sh'))
+            args = convert_qsub_to_args(qsub)
+            with patch.object(sys, 'argv', args):
+                self.assertEqual(0, main())
+            # check the generated files
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'annotations.tab'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'annotations.fusion-cdna.fa'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'drawings'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'drawings', '*svg', strict=False))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'drawings', '*json', strict=False))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', '*.COMPLETE'))
+        # now run the pairing
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR))
+        qsub = unique_exists(os.path.join(self.temp_output, SUBCOMMAND.PAIR, 'submit.sh'))
+        args = convert_qsub_to_args(qsub, sub=[('SGE_TASK_ID', '1')])
+        with patch.object(sys, 'argv', args):
+            self.assertEqual(0, main())
+
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR, 'mavis_paired*.tab'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR, '*.COMPLETE'))
+
+        # now run the summary
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY))
+        qsub = unique_exists(os.path.join(self.temp_output, SUBCOMMAND.SUMMARY, 'submit.sh'))
+        args = convert_qsub_to_args(qsub, sub=[('SGE_TASK_ID', '1')])
+        with patch.object(sys, 'argv', args):
+            self.assertEqual(0, main())
+
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'mavis_summary*.tab'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, '*.COMPLETE'))
+
+        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):
+            self.assertEqual(0, main())
+        self.assertTrue(glob_exists(self.temp_output, 'submit_pipeline*.sh'))
+
+    def test_skip_clustering(self):
+        args = ['mavis', SUBCOMMAND.PIPELINE, CONFIG, '-o', self.temp_output, '--skip_stage', SUBCOMMAND.CLUSTER]
+        with patch.object(sys, 'argv', args):
+            self.assertEqual(0, main())
+
+        # check that the subdirectories were built
+        for lib in[MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'batch-*-1.tab'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'uninformative_clusters.txt'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'clusters.bed'))
+            self.assertFalse(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'cluster_assignment.tab'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, '*.COMPLETE'))
+
+            # run validation
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE))
+            qsub = unique_exists(os.path.join(self.temp_output, lib, SUBCOMMAND.VALIDATE, '*-1/submit.sh'))
+            args = convert_qsub_to_args(qsub)  # read the arguments from the file
+            print(args)
+            with patch.object(sys, 'argv', args):
+                self.assertEqual(0, main())
+
+            for suffix in [
+                'contigs.bam',
+                'contigs.blat_out.pslx',
+                'contigs.fa',
+                'contigs.sorted.bam',
+                'contigs.sorted.bam.bai',
+                'evidence.bed',
+                'igv.batch',
+                'raw_evidence.bam',
+                'raw_evidence.sorted.bam',
+                'raw_evidence.sorted.bam.bai',
+                'validation-failed.tab',
+                'validation-passed.tab'
+            ]:
+                self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', '*.' + suffix))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', '*.COMPLETE'))
+
+            # run annotation
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE))
+            qsub = unique_exists(os.path.join(self.temp_output, lib, SUBCOMMAND.ANNOTATE, '*-1/submit.sh'))
+            args = convert_qsub_to_args(qsub)
+            with patch.object(sys, 'argv', args):
+                self.assertEqual(0, main())
+            # check the generated files
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'annotations.tab'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'annotations.fusion-cdna.fa'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'drawings'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'drawings', '*svg', strict=False))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'drawings', '*json', strict=False))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', '*.COMPLETE'))
+        # now run the pairing
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR))
+        qsub = unique_exists(os.path.join(self.temp_output, SUBCOMMAND.PAIR, 'submit.sh'))
+        args = convert_qsub_to_args(qsub, sub=[('SGE_TASK_ID', '1')])
+        with patch.object(sys, 'argv', args):
+            self.assertEqual(0, main())
+
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR, 'mavis_paired*.tab'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR, '*.COMPLETE'))
+
+        # now run the summary
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY))
+        qsub = unique_exists(os.path.join(self.temp_output, SUBCOMMAND.SUMMARY, 'submit.sh'))
+        args = convert_qsub_to_args(qsub, sub=[('SGE_TASK_ID', '1')])
+        with patch.object(sys, 'argv', args):
+            self.assertEqual(0, main())
+
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'mavis_summary*.tab'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, '*.COMPLETE'))
+
+        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):
+            self.assertEqual(0, main())
+        self.assertTrue(glob_exists(self.temp_output, 'submit_pipeline*.sh'))
+
+    def test_skip_validation(self):
+        args = ['mavis', SUBCOMMAND.PIPELINE, CONFIG, '-o', self.temp_output, '--skip_stage', SUBCOMMAND.VALIDATE]
+        with patch.object(sys, 'argv', args):
+            self.assertEqual(0, main())
+
+        # check that the subdirectories were built
+        for lib in[MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'batch-*-1.tab'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'uninformative_clusters.txt'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'clusters.bed'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'cluster_assignment.tab'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, '*.COMPLETE'))
+
+            # validation
+            self.assertFalse(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE))
+
+            # run annotation
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE))
+            qsub = unique_exists(os.path.join(self.temp_output, lib, SUBCOMMAND.ANNOTATE, '*-1/submit.sh'))
+            args = convert_qsub_to_args(qsub)
+            with patch.object(sys, 'argv', args):
+                self.assertEqual(0, main())
+            # check the generated files
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'annotations.tab'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'annotations.fusion-cdna.fa'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'drawings'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'drawings', '*svg', strict=False))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'drawings', '*json', strict=False))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', '*.COMPLETE'))
+        # now run the pairing
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR))
+        qsub = unique_exists(os.path.join(self.temp_output, SUBCOMMAND.PAIR, 'submit.sh'))
+        args = convert_qsub_to_args(qsub, sub=[('SGE_TASK_ID', '1')])
+        with patch.object(sys, 'argv', args):
+            self.assertEqual(0, main())
+
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR, 'mavis_paired*.tab'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR, '*.COMPLETE'))
+
+        # now run the summary
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY))
+        qsub = unique_exists(os.path.join(self.temp_output, SUBCOMMAND.SUMMARY, 'submit.sh'))
+        args = convert_qsub_to_args(qsub, sub=[('SGE_TASK_ID', '1')])
+        with patch.object(sys, 'argv', args):
+            self.assertEqual(0, main())
+
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'mavis_summary*.tab'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, '*.COMPLETE'))
+
+        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):
+            self.assertEqual(0, main())
+        self.assertTrue(glob_exists(self.temp_output, 'submit_pipeline*.sh'))
+
+    def test_skip_cluster_and_validate(self):
+        args = [
+            'mavis', SUBCOMMAND.PIPELINE, CONFIG,
+            '-o', self.temp_output,
+            '--skip_stage', SUBCOMMAND.VALIDATE,
+            '--skip_stage', SUBCOMMAND.CLUSTER
+        ]
+        with patch.object(sys, 'argv', args):
+            self.assertEqual(0, main())
+
+        # check that the subdirectories were built
+        for lib in[MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'batch-*-1.tab'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'uninformative_clusters.txt'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'clusters.bed'))
+            self.assertFalse(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'cluster_assignment.tab'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, '*.COMPLETE'))
+
+            # validation
+            self.assertFalse(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE))
+
+            # run annotation
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE))
+            qsub = unique_exists(os.path.join(self.temp_output, lib, SUBCOMMAND.ANNOTATE, '*-1/submit.sh'))
+            args = convert_qsub_to_args(qsub)
+            with patch.object(sys, 'argv', args):
+                self.assertEqual(0, main())
+            # check the generated files
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'annotations.tab'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'annotations.fusion-cdna.fa'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'drawings'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'drawings', '*svg', strict=False))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'drawings', '*json', strict=False))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', '*.COMPLETE'))
+        # now run the pairing
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR))
+        qsub = unique_exists(os.path.join(self.temp_output, SUBCOMMAND.PAIR, 'submit.sh'))
+        args = convert_qsub_to_args(qsub, sub=[('SGE_TASK_ID', '1')])
+        with patch.object(sys, 'argv', args):
+            self.assertEqual(0, main())
+
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR, 'mavis_paired*.tab'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR, '*.COMPLETE'))
+
+        # now run the summary
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY))
+        qsub = unique_exists(os.path.join(self.temp_output, SUBCOMMAND.SUMMARY, 'submit.sh'))
+        args = convert_qsub_to_args(qsub, sub=[('SGE_TASK_ID', '1')])
+        with patch.object(sys, 'argv', args):
+            self.assertEqual(0, main())
+
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'mavis_summary*.tab'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, '*.COMPLETE'))
+
+        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):
+            self.assertEqual(0, main())
+        self.assertTrue(glob_exists(self.temp_output, 'submit_pipeline*.sh'))
+
+    def tearDown(self):
+        # remove the temp directory and outputs
+        shutil.rmtree(self.temp_output)
 
 
-def tearDownModule():
-    # remove the temp directory and outputs
-    shutil.rmtree(temp_output)
-    pass
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

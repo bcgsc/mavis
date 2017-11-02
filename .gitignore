@@ -24,4 +24,4 @@ POG*
 build
 dist
 src
-mavis/version.py
+/docs/source/config_settings_glossary.rst

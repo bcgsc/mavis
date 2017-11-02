@@ -1,8 +1,9 @@
-import unittest
 import itertools
-from mavis.annotate.protein import Domain, DomainRegion, calculate_ORF
-from mavis.annotate.base import ReferenceName
 import os
+import unittest
+
+from mavis.annotate.base import ReferenceName
+from mavis.annotate.protein import calculate_orf, Domain, DomainRegion
 import timeout_decorator
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
@@ -282,7 +283,7 @@ class TestCalculateORF(unittest.TestCase):
 
     @timeout_decorator.timeout(20)
     def test_very_long(self):
-        calculate_ORF(self.seq, 300)
+        calculate_orf(self.seq, 300)
 
 
 class TestReferenceName(unittest.TestCase):

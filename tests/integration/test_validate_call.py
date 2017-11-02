@@ -1,14 +1,16 @@
-from mavis.breakpoint import Breakpoint, BreakpointPair
-from mavis.annotate import load_reference_genome, usTranscript
-from mavis.constants import ORIENT, STRAND, CIGAR, PYSAM_READ_FLAGS, SVTYPE, CALL_METHOD
+import unittest
+
+from mavis.annotate.file_io import load_reference_genome
+from mavis.annotate.genomic import UsTranscript
 from mavis.bam.cache import BamCache
 from mavis.bam.read import sequenced_strand
-from . import MockRead, mock_read_pair, MockObject
-import unittest
-from . import REFERENCE_GENOME_FILE, BAM_INPUT, FULL_BAM_INPUT, MockBamFileHandle
-from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
+from mavis.breakpoint import Breakpoint, BreakpointPair
+from mavis.constants import CALL_METHOD, CIGAR, ORIENT, PYSAM_READ_FLAGS, STRAND, SVTYPE
 import mavis.validate.call as call
 from mavis.validate.call import EventCall
+from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
+
+from . import BAM_INPUT, FULL_BAM_INPUT, mock_read_pair, MockBamFileHandle, MockObject, MockRead, REFERENCE_GENOME_FILE
 
 REFERENCE_GENOME = None
 
@@ -82,7 +84,7 @@ class TestEventCall(unittest.TestCase):
             ))
         self.ev.flanking_pairs.add(mock_read_pair(
             MockRead(
-                query_name="test2",
+                query_name='test2',
                 reference_id=3,
                 template_length=560,
                 reference_start=1150,
@@ -239,7 +241,7 @@ class TestPullFlankingSupport(unittest.TestCase):
         event.add_flanking_support(flanking_pairs)
         self.assertEqual(1, len(event.flanking_pairs))
 
-    def test_translocation_RL(self):
+    def test_translocation_rl(self):
         b1 = Breakpoint('11', 128675261, orient=ORIENT.RIGHT, strand=STRAND.POS)
         b2 = Breakpoint('22', 29683123, orient=ORIENT.LEFT, strand=STRAND.POS)
         evidence = self.build_genome_evidence(b1, b2)
@@ -273,7 +275,7 @@ class TestPullFlankingSupport(unittest.TestCase):
         event.add_flanking_support(flanking_pairs)
         self.assertEqual(len(flanking_pairs), len(event.flanking_pairs))
 
-    def test_translocation_RL_filter_nonsupporting(self):
+    def test_translocation_rl_filter_nonsupporting(self):
         evidence = self.build_genome_evidence(
             Breakpoint('1', 1200, orient=ORIENT.RIGHT),
             Breakpoint('2', 1250, orient=ORIENT.LEFT)
@@ -688,31 +690,31 @@ class TestCallBySupportingReads(unittest.TestCase):
         )
         evidence.split_reads[0].add(
             MockRead(
-                query_name="test1", cigar=[(CIGAR.S, 110), (CIGAR.EQ, 40)],
+                query_name='test1', cigar=[(CIGAR.S, 110), (CIGAR.EQ, 40)],
                 reference_start=1114, reference_end=1150
             ))
         evidence.split_reads[0].add(
             MockRead(
-                query_name="test2", cigar=[(CIGAR.EQ, 30), (CIGAR.S, 120)],
+                query_name='test2', cigar=[(CIGAR.EQ, 30), (CIGAR.S, 120)],
                 reference_start=1108, reference_end=1115
             ))
         evidence.split_reads[0].add(
             MockRead(
-                query_name="test3", cigar=[(CIGAR.S, 30), (CIGAR.EQ, 120)],
+                query_name='test3', cigar=[(CIGAR.S, 30), (CIGAR.EQ, 120)],
                 reference_start=1114, reference_end=1154,
                 tags=[(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT, 1)]
             ))
         evidence.split_reads[1].add(
             MockRead(
-                query_name="test4", cigar=[(CIGAR.EQ, 30), (CIGAR.S, 120)], reference_start=2187
+                query_name='test4', cigar=[(CIGAR.EQ, 30), (CIGAR.S, 120)], reference_start=2187
             ))
         evidence.split_reads[1].add(
             MockRead(
-                query_name="test5", cigar=[(CIGAR.S, 30), (CIGAR.EQ, 120)], reference_start=2187
+                query_name='test5', cigar=[(CIGAR.S, 30), (CIGAR.EQ, 120)], reference_start=2187
             ))
         evidence.split_reads[1].add(
             MockRead(
-                query_name="test1", cigar=[(CIGAR.S, 30), (CIGAR.EQ, 120)],
+                query_name='test1', cigar=[(CIGAR.S, 30), (CIGAR.EQ, 120)],
                 reference_start=2187, reference_end=2307,
                 tags=[(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT, 1)]
             ))
@@ -750,7 +752,7 @@ class TestCallByFlankingReadsGenome(unittest.TestCase):
             min_flanking_pairs_resolution=1
         )
 
-    def test_call_both_intrachromosomal_LR(self):
+    def test_call_both_intrachromosomal_lr(self):
         # --LLL-100------------500-RRR-------
         # max fragment size: 100 + 2 * 25 = 150
         # max distance = 150 - read_length = 100
@@ -775,7 +777,7 @@ class TestCallByFlankingReadsGenome(unittest.TestCase):
         self.assertEqual(600 - 49, break2.start)
         self.assertEqual(600, break2.end)
 
-    def test_call_both_intrachromosomal_LR_coverage_overlaps_range(self):
+    def test_call_both_intrachromosomal_lr_coverage_overlaps_range(self):
         # this test is for ensuring that if a theoretical window calculated for the
         # first breakpoint overlaps the actual coverage for the second breakpoint (or the reverse)
         # that we adjust the theoretical window accordingly
@@ -978,7 +980,7 @@ class TestCallByFlankingReadsTranscriptome(unittest.TestCase):
 
     def test_call_deletion_evidence_spans_exons(self):
         # transcriptome test will use exonic coordinates for the associated transcripts
-        usTranscript([(1001, 1100), (1501, 1700), (2001, 2100), (2201, 2300)], strand='+')
+        UsTranscript([(1001, 1100), (1501, 1700), (2001, 2100), (2201, 2300)], strand='+')
         evidence = self.build_transcriptome_evidence(
             Breakpoint('1', 1051, 1051, 'L', '+'),
             Breakpoint('1', 1551, 1551, 'R', '+')
@@ -1056,5 +1058,5 @@ class TestCallBySpanningReads(unittest.TestCase):
         pass
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

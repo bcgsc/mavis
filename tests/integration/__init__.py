@@ -1,8 +1,9 @@
-from mavis.constants import CIGAR, NA_MAPPING_QUALITY
-from mavis.align import query_coverage_interval
-from mavis.annotate.genomic import usTranscript, Transcript
-from mavis.annotate.protein import Translation
 import os
+
+from mavis.align import query_coverage_interval
+from mavis.annotate.genomic import Transcript, UsTranscript
+from mavis.annotate.protein import Translation
+from mavis.constants import CIGAR, NA_MAPPING_QUALITY
 
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
@@ -205,7 +206,7 @@ def mock_read_pair(mock1, mock2):
 
 
 def build_transcript(gene, exons, cds_start, cds_end, domains, strand=None, is_best_transcript=False):
-    ust = usTranscript(exons, gene=gene, strand=strand if strand is not None else gene.get_strand(), is_best_transcript=is_best_transcript)
+    ust = UsTranscript(exons, gene=gene, strand=strand if strand is not None else gene.get_strand(), is_best_transcript=is_best_transcript)
     if gene is not None:
         gene.unspliced_transcripts.append(ust)
 

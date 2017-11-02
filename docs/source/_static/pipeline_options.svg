@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="1220" height="749.29999" id="svg2" version="1.1" inkscape:version="0.47 r22583" sodipodi:docname="New document 1">
+  <defs id="defs4">
+    <marker inkscape:stockid="Arrow2Mend" orient="auto" refY="0" refX="0" id="Arrow2Mend" style="overflow:visible">
+      <path id="path4723" style="font-size:12px;fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round" d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 C 6.97309,-1.6296469 6.9831476,1.6157441 8.7185878,4.0337352 z" transform="scale(-0.6,-0.6)" />
+    </marker>
+    <marker inkscape:stockid="Arrow2Lend" orient="auto" refY="0" refX="0" id="Arrow2Lend" style="overflow:visible">
+      <path id="path4717" style="font-size:12px;fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round" d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 C 6.97309,-1.6296469 6.9831476,1.6157441 8.7185878,4.0337352 z" transform="matrix(-1.1,0,0,-1.1,-1.1,0)" />
+    </marker>
+    <marker inkscape:stockid="Arrow1Lend" orient="auto" refY="0" refX="0" id="Arrow1Lend" style="overflow:visible">
+      <path id="path4699" d="M 0,0 5,-5 -12.5,0 5,5 0,0 z" style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt;marker-start:none" transform="matrix(-0.8,0,0,-0.8,-10,0)" />
+    </marker>
+    <inkscape:perspective sodipodi:type="inkscape:persp3d" inkscape:vp_x="0 : 526.18109 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_z="744.09448 : 526.18109 : 1" inkscape:persp3d-origin="372.04724 : 350.78739 : 1" id="perspective10" />
+    <inkscape:perspective id="perspective2830" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective2906" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective2906-9" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective2906-4" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective2906-47" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective3018" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective3018-7" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective3068" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective3099" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective3262" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective3262-2" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective3433" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective4547" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective4547-4" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective4547-1" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective id="perspective5713" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <marker inkscape:stockid="Arrow2Mend" orient="auto" refY="0" refX="0" id="Arrow2Mend-0" style="overflow:visible">
+      <path id="path4723-5" style="font-size:12px;fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round" d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 C 6.97309,-1.6296469 6.9831476,1.6157441 8.7185878,4.0337352 z" transform="scale(-0.6,-0.6)" />
+    </marker>
+    <inkscape:perspective id="perspective5713-4" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <marker inkscape:stockid="Arrow2Mend" orient="auto" refY="0" refX="0" id="Arrow2Mend-03" style="overflow:visible">
+      <path id="path4723-6" style="font-size:12px;fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round" d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 C 6.97309,-1.6296469 6.9831476,1.6157441 8.7185878,4.0337352 z" transform="scale(-0.6,-0.6)" />
+    </marker>
+    <inkscape:perspective id="perspective5713-47" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <marker inkscape:stockid="Arrow2Mend" orient="auto" refY="0" refX="0" id="Arrow2Mend-037" style="overflow:visible">
+      <path id="path4723-65" style="font-size:12px;fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round" d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 C 6.97309,-1.6296469 6.9831476,1.6157441 8.7185878,4.0337352 z" transform="scale(-0.6,-0.6)" />
+    </marker>
+  </defs>
+  <sodipodi:namedview id="base" pagecolor="#ffffff" bordercolor="#666666" borderopacity="1.0" inkscape:pageopacity="0.0" inkscape:pageshadow="2" inkscape:zoom="0.7" inkscape:cx="436.76039" inkscape:cy="263.99497" inkscape:document-units="px" inkscape:current-layer="layer1" showgrid="false" inkscape:window-width="1920" inkscape:window-height="1000" inkscape:window-x="1280" inkscape:window-y="24" inkscape:window-maximized="1" />
+  <metadata id="metadata7">
+    <rdf:RDF>
+      <cc:Work rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g inkscape:label="Layer 1" inkscape:groupmode="layer" id="layer1" transform="translate(79.999994,60.085742)">
+    <g id="g5759" transform="matrix(1,0,0,0.81084276,-28.571472,-44.730629)">
+      <path id="path5141" d="M 147.24882,45.531192 151.52279,836.80922" style="fill:none;stroke:#000000;stroke-width:5.05230618;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Mend)" />
+      <path id="path5141-1" d="M 418.67744,45.531193 422.95141,836.80922" style="fill:none;stroke:#000000;stroke-width:5.05230618;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Mend)" />
+      <path id="path5141-7" d="M 690.10603,45.531206 694.38,836.80921" style="fill:none;stroke:#000000;stroke-width:5.05230618;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Mend)" />
+      <path id="path5141-79" d="M 961.53462,45.531181 965.80859,836.80923" style="fill:none;stroke:#000000;stroke-width:5.05230618;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Mend)" />
+      <g transform="translate(-199.99999,-57.142819)" id="g2865">
+        <rect style="opacity:0.93999999;fill:#000000;fill-opacity:1;stroke:none" id="rect2816" width="205.71428" height="74.285713" x="248.57143" y="123.79076" rx="0.81283271" ry="0.80708694" />
+        <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="351.0184" y="170.96193" id="text2818"><tspan sodipodi:role="line" id="tspan2820" x="351.0184" y="170.96193" style="font-size:28px;text-align:center;text-anchor:middle;fill:#ffffff;stroke:none;font-family:Arial;-inkscape-font-specification:Arial">CONVERT</tspan></text>
+      </g>
+      <g transform="translate(-201.42856,-56.666638)" id="g3005">
+        <rect style="opacity:0.93999999;fill:#000000;fill-opacity:1;stroke:none" id="rect2816-9" width="205.71428" height="74.285713" x="250" y="232.36218" rx="0.81283271" ry="0.80708694" />
+        <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="352.44699" y="279.53336" id="text2818-9"><tspan sodipodi:role="line" id="tspan2820-7" x="352.44699" y="279.53336" style="font-size:28px;text-align:center;text-anchor:middle;fill:#ffffff;stroke:none;font-family:Arial;-inkscape-font-specification:Arial">CLUSTER</tspan></text>
+      </g>
+      <g transform="translate(-204.28571,53.809542)" id="g2985">
+        <rect ry="0.80708694" rx="0.81283271" y="230.93361" x="252.85715" height="74.285713" width="205.71428" id="rect2816-7" style="opacity:0.93999999;fill:#000000;fill-opacity:1;stroke:none" />
+        <text id="text2818-0" y="278.10477" x="355.30411" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:28px;text-align:center;text-anchor:middle;fill:#ffffff;stroke:none;font-family:Arial;-inkscape-font-specification:Arial" y="278.10477" x="355.30411" id="tspan2820-1" sodipodi:role="line">VALIDATE</tspan></text>
+      </g>
+      <g transform="translate(71.42863,-57.142821)" id="g2865-9">
+        <rect style="opacity:0.93999999;fill:#000000;fill-opacity:1;stroke:none" id="rect2816-6" width="205.71428" height="74.285713" x="248.57143" y="123.79076" rx="0.81283271" ry="0.80708694" />
+        <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="351.0184" y="170.96193" id="text2818-7"><tspan sodipodi:role="line" id="tspan2820-0" x="351.0184" y="170.96193" style="font-size:28px;text-align:center;text-anchor:middle;fill:#ffffff;stroke:none;font-family:Arial;-inkscape-font-specification:Arial">CONVERT</tspan></text>
+      </g>
+      <g transform="translate(67.14291,53.809549)" id="g2985-1">
+        <rect ry="0.80708694" rx="0.81283271" y="230.93361" x="252.85715" height="74.285713" width="205.71428" id="rect2816-7-7" style="opacity:0.93999999;fill:#000000;fill-opacity:1;stroke:none" />
+        <text id="text2818-0-1" y="278.10477" x="355.30411" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:28px;text-align:center;text-anchor:middle;fill:#ffffff;stroke:none;font-family:Arial;-inkscape-font-specification:Arial" y="278.10477" x="355.30411" id="tspan2820-1-1" sodipodi:role="line">VALIDATE</tspan></text>
+      </g>
+      <g transform="translate(342.85722,-57.142821)" id="g2865-9-4">
+        <rect style="opacity:0.93999999;fill:#000000;fill-opacity:1;stroke:none" id="rect2816-6-0" width="205.71428" height="74.285713" x="248.57143" y="123.79076" rx="0.81283271" ry="0.80708694" />
+        <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="351.0184" y="170.96193" id="text2818-7-6"><tspan sodipodi:role="line" id="tspan2820-0-3" x="351.0184" y="170.96193" style="font-size:28px;text-align:center;text-anchor:middle;fill:#ffffff;stroke:none;font-family:Arial;-inkscape-font-specification:Arial">CONVERT</tspan></text>
+      </g>
+      <g transform="translate(614.28581,-57.142821)" id="g2865-9-5">
+        <rect style="opacity:0.93999999;fill:#000000;fill-opacity:1;stroke:none" id="rect2816-6-2" width="205.71428" height="74.285713" x="248.57143" y="123.79076" rx="0.81283271" ry="0.80708694" />
+        <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="351.0184" y="170.96193" id="text2818-7-0"><tspan sodipodi:role="line" id="tspan2820-0-0" x="351.0184" y="170.96193" style="font-size:28px;text-align:center;text-anchor:middle;fill:#ffffff;stroke:none;font-family:Arial;-inkscape-font-specification:Arial">CONVERT</tspan></text>
+      </g>
+      <g transform="translate(612.85724,-56.666641)" id="g3005-1-6">
+        <rect style="opacity:0.93999999;fill:#000000;fill-opacity:1;stroke:none" id="rect2816-9-8-02" width="205.71428" height="74.285713" x="250" y="232.36218" rx="0.81283271" ry="0.80708694" />
+        <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" x="352.44699" y="279.53336" id="text2818-9-1-4"><tspan sodipodi:role="line" id="tspan2820-7-8-9" x="352.44699" y="279.53336" style="font-size:28px;text-align:center;text-anchor:middle;fill:#ffffff;stroke:none;font-family:Arial;-inkscape-font-specification:Arial">CLUSTER</tspan></text>
+      </g>
+      <g transform="translate(-814.2858,0)" id="g3643">
+        <g transform="translate(614.28581,270)" id="g2865-5-7-5">
+          <rect ry="0.80708694" rx="0.81283271" y="123.79076" x="248.57143" height="74.285713" width="205.71428" id="rect2816-5-4-53" style="opacity:0.93999999;fill:#000000;fill-opacity:1;stroke:none" />
+          <text id="text2818-6-7-9" y="170.96193" x="351.0184" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:28px;text-align:center;text-anchor:middle;fill:#ffffff;stroke:none;font-family:Arial;-inkscape-font-specification:Arial" y="170.96193" x="351.0184" id="tspan2820-4-3-6" sodipodi:role="line">ANNOTATE</tspan></text>
+        </g>
+        <g transform="translate(614.28581,379.04761)" id="g2865-74-3-6">
+          <rect ry="0.80708694" rx="0.81283271" y="123.79076" x="248.57143" height="74.285713" width="205.71428" id="rect2816-71-0-6" style="opacity:0.93999999;fill:#000000;fill-opacity:1;stroke:none" />
+          <text id="text2818-02-0-8" y="170.96193" x="351.0184" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:28px;text-align:center;text-anchor:middle;fill:#ffffff;stroke:none;font-family:Arial;-inkscape-font-specification:Arial" y="170.96193" x="351.0184" id="tspan2820-9-3-39" sodipodi:role="line">PAIRING</tspan></text>
+        </g>
+        <g transform="translate(614.28581,488.09523)" id="g2865-74-1-5-9">
+          <rect ry="0.80708694" rx="0.81283271" y="123.79076" x="248.57143" height="74.285713" width="205.71428" id="rect2816-71-9-9-1" style="opacity:0.93999999;fill:#000000;fill-opacity:1;stroke:none" />
+          <text id="text2818-02-9-5-0" y="170.96193" x="351.0184" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:28px;text-align:center;text-anchor:middle;fill:#ffffff;stroke:none;font-family:Arial;-inkscape-font-specification:Arial" y="170.96193" x="351.0184" id="tspan2820-9-4-5-7" sodipodi:role="line">SUMMARY</tspan></text>
+        </g>
+        <g transform="translate(614.28581,597.14283)" id="g2865-74-4-9-2">
+          <rect ry="0.80708694" rx="0.81283271" y="123.79076" x="248.57143" height="74.285713" width="205.71428" id="rect2816-71-7-1-2" style="opacity:0.93999999;fill:#000000;fill-opacity:1;stroke:none" />
+          <text id="text2818-02-2-4-09" y="170.96193" x="351.0184" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:28px;text-align:center;text-anchor:middle;fill:#ffffff;stroke:none;font-family:Arial;-inkscape-font-specification:Arial" y="170.96193" x="351.0184" id="tspan2820-9-2-1-7" sodipodi:role="line">CHECKER</tspan></text>
+        </g>
+      </g>
+      <g transform="translate(-542.85718,0)" id="g3643-8">
+        <g transform="translate(614.28581,270)" id="g2865-5-7-5-4">
+          <rect ry="0.80708694" rx="0.81283271" y="123.79076" x="248.57143" height="74.285713" width="205.71428" id="rect2816-5-4-53-9" style="opacity:0.93999999;fill:#000000;fill-opacity:1;stroke:none" />
+          <text id="text2818-6-7-9-3" y="170.96193" x="351.0184" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:28px;text-align:center;text-anchor:middle;fill:#ffffff;stroke:none;font-family:Arial;-inkscape-font-specification:Arial" y="170.96193" x="351.0184" id="tspan2820-4-3-6-7" sodipodi:role="line">ANNOTATE</tspan></text>
+        </g>
+        <g transform="translate(614.28581,379.04761)" id="g2865-74-3-6-5">
+          <rect ry="0.80708694" rx="0.81283271" y="123.79076" x="248.57143" height="74.285713" width="205.71428" id="rect2816-71-0-6-2" style="opacity:0.93999999;fill:#000000;fill-opacity:1;stroke:none" />
+          <text id="text2818-02-0-8-9" y="170.96193" x="351.0184" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:28px;text-align:center;text-anchor:middle;fill:#ffffff;stroke:none;font-family:Arial;-inkscape-font-specification:Arial" y="170.96193" x="351.0184" id="tspan2820-9-3-39-4" sodipodi:role="line">PAIRING</tspan></text>
+        </g>
+        <g transform="translate(614.28581,488.09523)" id="g2865-74-1-5-9-0">
+          <rect ry="0.80708694" rx="0.81283271" y="123.79076" x="248.57143" height="74.285713" width="205.71428" id="rect2816-71-9-9-1-1" style="opacity:0.93999999;fill:#000000;fill-opacity:1;stroke:none" />
+          <text id="text2818-02-9-5-0-0" y="170.96193" x="351.0184" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:28px;text-align:center;text-anchor:middle;fill:#ffffff;stroke:none;font-family:Arial;-inkscape-font-specification:Arial" y="170.96193" x="351.0184" id="tspan2820-9-4-5-7-0" sodipodi:role="line">SUMMARY</tspan></text>
+        </g>
+        <g transform="translate(614.28581,597.14283)" id="g2865-74-4-9-2-0">
+          <rect ry="0.80708694" rx="0.81283271" y="123.79076" x="248.57143" height="74.285713" width="205.71428" id="rect2816-71-7-1-2-8" style="opacity:0.93999999;fill:#000000;fill-opacity:1;stroke:none" />
+          <text id="text2818-02-2-4-09-7" y="170.96193" x="351.0184" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:28px;text-align:center;text-anchor:middle;fill:#ffffff;stroke:none;font-family:Arial;-inkscape-font-specification:Arial" y="170.96193" x="351.0184" id="tspan2820-9-2-1-7-0" sodipodi:role="line">CHECKER</tspan></text>
+        </g>
+      </g>
+      <g transform="translate(3.6083985e-6,0)" id="g3643-5">
+        <g transform="translate(614.28581,270)" id="g2865-5-7-5-6">
+          <rect ry="0.80708694" rx="0.81283271" y="123.79076" x="248.57143" height="74.285713" width="205.71428" id="rect2816-5-4-53-0" style="opacity:0.93999999;fill:#000000;fill-opacity:1;stroke:none" />
+          <text id="text2818-6-7-9-0" y="170.96193" x="351.0184" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:28px;text-align:center;text-anchor:middle;fill:#ffffff;stroke:none;font-family:Arial;-inkscape-font-specification:Arial" y="170.96193" x="351.0184" id="tspan2820-4-3-6-8" sodipodi:role="line">ANNOTATE</tspan></text>
+        </g>
+        <g transform="translate(614.28581,379.04761)" id="g2865-74-3-6-2">
+          <rect ry="0.80708694" rx="0.81283271" y="123.79076" x="248.57143" height="74.285713" width="205.71428" id="rect2816-71-0-6-0" style="opacity:0.93999999;fill:#000000;fill-opacity:1;stroke:none" />
+          <text id="text2818-02-0-8-8" y="170.96193" x="351.0184" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:28px;text-align:center;text-anchor:middle;fill:#ffffff;stroke:none;font-family:Arial;-inkscape-font-specification:Arial" y="170.96193" x="351.0184" id="tspan2820-9-3-39-9" sodipodi:role="line">PAIRING</tspan></text>
+        </g>
+        <g transform="translate(614.28581,488.09523)" id="g2865-74-1-5-9-9">
+          <rect ry="0.80708694" rx="0.81283271" y="123.79076" x="248.57143" height="74.285713" width="205.71428" id="rect2816-71-9-9-1-7" style="opacity:0.93999999;fill:#000000;fill-opacity:1;stroke:none" />
+          <text id="text2818-02-9-5-0-2" y="170.96193" x="351.0184" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:28px;text-align:center;text-anchor:middle;fill:#ffffff;stroke:none;font-family:Arial;-inkscape-font-specification:Arial" y="170.96193" x="351.0184" id="tspan2820-9-4-5-7-2" sodipodi:role="line">SUMMARY</tspan></text>
+        </g>
+        <g transform="translate(614.28581,597.14283)" id="g2865-74-4-9-2-6">
+          <rect ry="0.80708694" rx="0.81283271" y="123.79076" x="248.57143" height="74.285713" width="205.71428" id="rect2816-71-7-1-2-5" style="opacity:0.93999999;fill:#000000;fill-opacity:1;stroke:none" />
+          <text id="text2818-02-2-4-09-1" y="170.96193" x="351.0184" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:28px;text-align:center;text-anchor:middle;fill:#ffffff;stroke:none;font-family:Arial;-inkscape-font-specification:Arial" y="170.96193" x="351.0184" id="tspan2820-9-2-1-7-3" sodipodi:role="line">CHECKER</tspan></text>
+        </g>
+      </g>
+      <g transform="translate(-271.42859,0)" id="g3643-9">
+        <g transform="translate(614.28581,270)" id="g2865-5-7-5-0">
+          <rect ry="0.80708694" rx="0.81283271" y="123.79076" x="248.57143" height="74.285713" width="205.71428" id="rect2816-5-4-53-6" style="opacity:0.93999999;fill:#000000;fill-opacity:1;stroke:none" />
+          <text id="text2818-6-7-9-35" y="170.96193" x="351.0184" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:28px;text-align:center;text-anchor:middle;fill:#ffffff;stroke:none;font-family:Arial;-inkscape-font-specification:Arial" y="170.96193" x="351.0184" id="tspan2820-4-3-6-1" sodipodi:role="line">ANNOTATE</tspan></text>
+        </g>
+        <g transform="translate(614.28581,379.04761)" id="g2865-74-3-6-58">
+          <rect ry="0.80708694" rx="0.81283271" y="123.79076" x="248.57143" height="74.285713" width="205.71428" id="rect2816-71-0-6-7" style="opacity:0.93999999;fill:#000000;fill-opacity:1;stroke:none" />
+          <text id="text2818-02-0-8-0" y="170.96193" x="351.0184" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:28px;text-align:center;text-anchor:middle;fill:#ffffff;stroke:none;font-family:Arial;-inkscape-font-specification:Arial" y="170.96193" x="351.0184" id="tspan2820-9-3-39-0" sodipodi:role="line">PAIRING</tspan></text>
+        </g>
+        <g transform="translate(614.28581,488.09523)" id="g2865-74-1-5-9-6">
+          <rect ry="0.80708694" rx="0.81283271" y="123.79076" x="248.57143" height="74.285713" width="205.71428" id="rect2816-71-9-9-1-10" style="opacity:0.93999999;fill:#000000;fill-opacity:1;stroke:none" />
+          <text id="text2818-02-9-5-0-6" y="170.96193" x="351.0184" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:28px;text-align:center;text-anchor:middle;fill:#ffffff;stroke:none;font-family:Arial;-inkscape-font-specification:Arial" y="170.96193" x="351.0184" id="tspan2820-9-4-5-7-9" sodipodi:role="line">SUMMARY</tspan></text>
+        </g>
+        <g transform="translate(614.28581,597.14283)" id="g2865-74-4-9-2-04">
+          <rect ry="0.80708694" rx="0.81283271" y="123.79076" x="248.57143" height="74.285713" width="205.71428" id="rect2816-71-7-1-2-3" style="opacity:0.93999999;fill:#000000;fill-opacity:1;stroke:none" />
+          <text id="text2818-02-2-4-09-6" y="170.96193" x="351.0184" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:28px;text-align:center;text-anchor:middle;fill:#ffffff;stroke:none;font-family:Arial;-inkscape-font-specification:Arial" y="170.96193" x="351.0184" id="tspan2820-9-2-1-7-9" sodipodi:role="line">CHECKER</tspan></text>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

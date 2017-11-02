@@ -1,8 +1,8 @@
 import unittest
 
+from mavis.breakpoint import Breakpoint, BreakpointPair
+from mavis.constants import CALL_METHOD, COLUMNS, PROTOCOL, STRAND, SVTYPE
 from mavis.summary.summary import alphanumeric_choice, filter_by_annotations
-from mavis.breakpoint import BreakpointPair, Breakpoint
-from mavis.constants import SVTYPE, COLUMNS, CALL_METHOD, STRAND, PROTOCOL
 
 
 class TestSummary(unittest.TestCase):
@@ -182,4 +182,7 @@ class TestFilterByAnnotations(unittest.TestCase):
         raise unittest.SkipTest('TODO')
 
     def test_filtering_events_split(self):
+        raise unittest.SkipTest('TODO')
+
+    def test_get_pairing_state(self):
         raise unittest.SkipTest('TODO')

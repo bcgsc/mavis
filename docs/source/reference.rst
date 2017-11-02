@@ -1,9 +1,11 @@
+.. _reference-input:
+
 Reference Input Files
 ======================
 
-There are several reference files that are required for full functionality of the |TOOLNAME| pipeline. If the same
+There are several reference files that are required for full functionality of the MAVIS pipeline. If the same
 reference file will be reused often then the user may find it helpful to set reasonable defaults. Default values
-for any of the reference file arguments can be configured through ``MAVIS_`` prefixed environment variables.
+for any of the reference file arguments can be configured through :ref:`environment variables <config-environment>`.
 
 +--------------------------------------------------------------+-----------------------------+-----------------------------+
 | file                                                         | file type/format            | environment variable        |
@@ -15,6 +17,10 @@ for any of the reference file arguments can be configured through ``MAVIS_`` pre
 | :ref:`masking <reference-files-masking>`                     | text/tabbed                 | ``MAVIS_MASKING``           |
 +--------------------------------------------------------------+-----------------------------+-----------------------------+
 | :ref:`template metadata <reference-files-template-metadata>` | text/tabbed                 | ``MAVIS_TEMPLATE_METADATA`` |
++--------------------------------------------------------------+-----------------------------+-----------------------------+
+| :ref:`DGV annotations <reference-files-dgv-annotations>`     | text/tabbed                 | ``MAVIS_DGV_ANNOTATIONS``   |
++--------------------------------------------------------------+-----------------------------+-----------------------------+
+| :ref:`aligner reference <reference-files-aligner-reference>` | dependant on aligner        | ``MAVIS_ALIGNER_REFERENCE`` |
 +--------------------------------------------------------------+-----------------------------+-----------------------------+
 
 
@@ -124,11 +130,13 @@ Example of the :term:`JSON` file structure can be seen below
 
 This reference file can be generated from any database with the necessary information.
 
-Generating the Annotations from Ensembl
------------------------------------------
+.. _generate-reference-annotations:
+
+Generating the Annotations from :ref:`Ensembl <Yates-2016>`
+------------------------------------------------------------
 
 There is a helper script included with mavis to facilitate generating the custom annotations
-file from an instance of the ensembl database. This uses the Ensembl perl api to connect and
+file from an instance of the :ref:`Ensembl <Yates-2016>` database. This uses the :ref:`Ensembl <Yates-2016>` perl api to connect and
 pull information from the database. This has been tested with both Ensembl69 and Ensembl79.
 
 Instructions for downloading and installing the perl api can be found on the `ensembl site <http://www.ensembl.org/info/docs/api/api_installation.html>`_
@@ -180,4 +188,35 @@ or if you have configured the environment variables as given in step 2, then sim
     perl generate_ensembl_json.pl --output /path/to/output/json/file.json
 
 
-.. |TOOLNAME| replace:: **MAVIS**
+.. _reference-files-dgv-annotations:
+
+:ref:`DGV (Database of Genomic Variants) <Macdonald-2014>` Annotations
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+File which contains regions corresponding to what is found in the database of genomic variants. This is
+used to annotate events that are found in healthy control samples and therefore may not be of interest
+if looking for somatic events. This can be downloaded from `DGV <http://dgv.tcag.ca/dgv/app/download>`_
+It will need to be reformatted to have 4 columns after download. We used awk to convert the file like so
+
+.. code-block:: bash
+
+    awk '{print $2"\t"$3"\t"$4"\t"$1} GRCh37_hg19_variants_2016-05-15.txt > GRCh37_hg19_variants_2016-05-15.input.txt
+
+Note in hg19 the column is called "name" and in hg38 the column is called "variantaccession".
+An example is shown below
+
+.. code-block:: text
+
+    #chr     start   end     name
+    1       1       2300000 nsv482937
+    1       10001   22118   dgv1n82
+    1       10001   127330  nsv7879
+
+.. _reference-files-aligner-reference:
+
+Aligner Reference
+,,,,,,,,,,,,,,,,,,,,,,,
+
+The aligner reference file is the reference genome file used by the aligner during the validate stage. For example,
+if :term:`blat` is the aligner then this will be a :term:`2bit` file.
+

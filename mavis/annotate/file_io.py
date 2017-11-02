@@ -1,17 +1,19 @@
 """
 module which holds all functions relating to loading reference files
 """
-import TSV
-import re
-from .genomic import Gene, Transcript, usTranscript, Exon, Template
-from .base import BioInterval, ReferenceName
-from .protein import Domain, Translation
-from ..interval import Interval
-from ..constants import STRAND, GIESMA_STAIN, CODON_SIZE, translate, START_AA, STOP_AA
-from ..util import devnull
-from Bio import SeqIO
 import json
+import re
 import warnings
+
+from Bio import SeqIO
+import tab
+
+from .base import BioInterval, ReferenceName
+from .genomic import Exon, Gene, Template, Transcript, UsTranscript
+from .protein import Domain, Translation
+from ..constants import CODON_SIZE, GIEMSA_STAIN, START_AA, STOP_AA, STRAND, translate
+from ..interval import Interval
+from ..util import devnull
 
 
 def load_masking_regions(filepath):
@@ -41,31 +43,34 @@ def load_masking_regions(filepath):
         >>> m['1']
         [BioInterval(), BioInterval(), ...]
     """
-    header, rows = TSV.read_file(
+    _, rows = tab.read_file(
         filepath,
         require=['chr', 'start', 'end', 'name'],
         cast={'start': int, 'end': int, 'chr': ReferenceName}
     )
     regions = {}
     for row in rows:
-        r = BioInterval(reference_object=row['chr'], start=row['start'], end=row['end'], name=row['name'])
-        regions.setdefault(r.reference_object, []).append(r)
+        mask_region = BioInterval(reference_object=row['chr'], start=row['start'], end=row['end'], name=row['name'])
+        regions.setdefault(mask_region.reference_object, []).append(mask_region)
     return regions
 
 
 def load_reference_genes(*pos, **kwargs):
+    """
+    *Deprecated* Use :func:`load_annotations` instead
+    """
     warnings.warn('this function has been replaced by load_annotations', DeprecationWarning)
     return load_annotations(*pos, **kwargs)
 
 
-def load_annotations(filepath, warn=devnull, REFERENCE_GENOME=None, filetype=None, best_transcripts_only=False):
+def load_annotations(filepath, warn=devnull, reference_genome=None, filetype=None, best_transcripts_only=False):
     """
     loads gene models from an input file. Expects a tabbed or json file.
 
     Args:
         filepath (str): path to the input file
         verbose (bool): output extra information to stdout
-        REFERENCE_GENOME (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by
+        reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by
             template/chr name
         filetype (str): json or tab/tsv. only required if the file type can't be interpolated from the path extenstion
 
@@ -87,41 +92,41 @@ def load_annotations(filepath, warn=devnull, REFERENCE_GENOME=None, filetype=Non
         raise NotImplementedError('unsupported filetype:', filetype, filepath)
 
     return parse_annotations_json(
-        data, REFERENCE_GENOME=REFERENCE_GENOME, best_transcripts_only=best_transcripts_only, warn=warn)
+        data, reference_genome=reference_genome, best_transcripts_only=best_transcripts_only, warn=warn)
 
 
-def parse_annotations_json(data, REFERENCE_GENOME=None, best_transcripts_only=False, warn=devnull):
+def parse_annotations_json(data, reference_genome=None, best_transcripts_only=False, warn=devnull):
     """
     parses a json of annotation information into annotation objects
     """
     genes_by_chr = {}
-    for gene in data['genes']:
-        if gene['strand'] in ['1', '+']:
-            gene['strand'] = STRAND.POS
-        elif gene['strand'] in ['-1', '-']:
-            gene['strand'] = STRAND.NEG
+    for gene_dict in data['genes']:
+        if gene_dict['strand'] in ['1', '+']:
+            gene_dict['strand'] = STRAND.POS
+        elif gene_dict['strand'] in ['-1', '-']:
+            gene_dict['strand'] = STRAND.NEG
         else:
-            raise AssertionError('input has unexpected form. strand must be 1 or -1 but found', gene['strand'])
+            raise AssertionError('input has unexpected form. strand must be 1 or -1 but found', gene_dict['strand'])
 
-        g = Gene(
-            chr=gene['chr'],
-            start=gene['start'],
-            end=gene['end'],
-            name=gene['name'],
-            aliases=gene['aliases'],
-            strand=gene['strand']
+        gene = Gene(
+            chr=gene_dict['chr'],
+            start=gene_dict['start'],
+            end=gene_dict['end'],
+            name=gene_dict['name'],
+            aliases=gene_dict['aliases'],
+            strand=gene_dict['strand']
         )
 
         has_best = False
-        for transcript in gene['transcripts']:
-            transcript['is_best_transcript'] = TSV.tsv_boolean(transcript['is_best_transcript'])
+        for transcript in gene_dict['transcripts']:
+            transcript['is_best_transcript'] = tab.cast_boolean(transcript['is_best_transcript'])
             transcript.setdefault('exons', [])
-            exons = [Exon(strand=gene['strand'], **ex) for ex in transcript['exons']]
-            if len(exons) == 0:
+            exons = [Exon(strand=gene.strand, **ex) for ex in transcript['exons']]
+            if not exons:
                 exons = [(transcript['start'], transcript['end'])]
-            ust = usTranscript(
+            ust = UsTranscript(
                 name=transcript['name'],
-                gene=g,
+                gene=gene,
                 exons=exons,
                 is_best_transcript=transcript['is_best_transcript']
             )
@@ -129,15 +134,15 @@ def parse_annotations_json(data, REFERENCE_GENOME=None, best_transcripts_only=Fa
                 has_best = True
             if best_transcripts_only and not ust.is_best_transcript:
                 continue
-            g.transcripts.append(ust)
+            gene.transcripts.append(ust)
 
             if transcript['cdna_coding_end'] is None or transcript['cdna_coding_start'] is None:
                 continue
 
             for spl_patt in ust.generate_splicing_patterns():
                 # make splice transcripts and translations
-                t = Transcript(ust, spl_patt)
-                ust.spliced_transcripts.append(t)
+                spl_tx = Transcript(ust, spl_patt)
+                ust.spliced_transcripts.append(spl_tx)
                 tx_length = transcript['cdna_coding_end'] - transcript['cdna_coding_start'] + 1
                 # check that the translation makes sense before including it
                 if tx_length % CODON_SIZE != 0:
@@ -155,33 +160,33 @@ def parse_annotations_json(data, REFERENCE_GENOME=None, best_transcripts_only=Fa
                         domains.append(
                             Domain(name=dom['name'], data={'desc': dom.get('desc', None)}, regions=regions)
                         )
-                    except AssertionError as e:
-                        warn(repr(e))
-                tx = Translation(
-                    transcript['cdna_coding_start'], transcript['cdna_coding_end'], transcript=t, domains=domains
+                    except AssertionError as err:
+                        warn(repr(err))
+                translation = Translation(
+                    transcript['cdna_coding_start'], transcript['cdna_coding_end'], transcript=spl_tx, domains=domains
                 )
-                if REFERENCE_GENOME and g.chr in REFERENCE_GENOME:
+                if reference_genome and gene.chr in reference_genome:
                     # get the sequence near here to see why these are wrong?
-                    s = ust.get_cdna_seq(t.splicing_pattern, REFERENCE_GENOME)
-                    m = s[tx.start - 1:tx.start + 2]
-                    stop = s[tx.end - CODON_SIZE: tx.end]
-                    if translate(m) != START_AA or translate(stop) != STOP_AA:
+                    seq = ust.get_cdna_seq(spl_tx.splicing_pattern, reference_genome)
+                    met = seq[translation.start - 1:translation.start + 2]
+                    stop = seq[translation.end - CODON_SIZE: translation.end]
+                    if translate(met) != START_AA or translate(stop) != STOP_AA:
                         warn(
                             'Sequence error. The sequence computed from the reference does look like '
                             'a valid translation'
                         )
                         continue
-                t.translations.append(tx)
+                spl_tx.translations.append(translation)
         if not best_transcripts_only or has_best:
-            genes_by_chr.setdefault(g.chr, []).append(g)
+            genes_by_chr.setdefault(gene.chr, []).append(gene)
     return genes_by_chr
 
 
-def _load_reference_genes_json(filepath, REFERENCE_GENOME=None, best_transcripts_only=False, warn=devnull):
+def _load_reference_genes_json(filepath, reference_genome=None, best_transcripts_only=False, warn=devnull):
     with open(filepath) as fh:
         data = json.load(fh)
         return parse_annotations_json(
-            data, REFERENCE_GENOME=REFERENCE_GENOME, best_transcripts_only=best_transcripts_only, warn=warn)
+            data, reference_genome=reference_genome, best_transcripts_only=best_transcripts_only, warn=warn)
 
 
 def convert_tab_to_json(filepath, warn=devnull):
@@ -212,8 +217,7 @@ def convert_tab_to_json(filepath, warn=devnull):
         filepath (str): path to the input tab-delimited file
 
     Returns:
-        :class:`dict` of :class:`list` of :any:`Gene` by :class:`str`: a dictionary keyed by chromosome name with
-            values of list of genes on the chromosome
+        :class:`dict` of :class:`list` of :any:`Gene` by :class:`str`: a dictionary keyed by chromosome name with values of list of genes on the chromosome
 
     Example:
         >>> ref = load_reference_genes('filename')
@@ -229,8 +233,8 @@ def convert_tab_to_json(filepath, warn=devnull):
         exons = []
         for temp in re.split('[; ]', row):
             try:
-                s, t = temp.split('-')
-                exons.append({'start': int(s), 'end': int(t)})
+                start, end = temp.split('-')
+                exons.append({'start': int(start), 'end': int(end)})
             except Exception as err:
                 warn('exon error:', repr(temp), repr(err))
         return exons
@@ -239,32 +243,32 @@ def convert_tab_to_json(filepath, warn=devnull):
         if not row:
             return []
         domains = []
-        for d in row.split(';'):
+        for domain in row.split(';'):
             try:
-                name, temp = d.rsplit(':')
+                name, temp = domain.rsplit(':')
                 temp = temp.split(',')
                 temp = [x.split('-') for x in temp]
                 regions = [{'start': int(x), 'end': int(y)} for x, y in temp]
                 domains.append({'name': name, 'regions': regions})
             except Exception as err:
-                warn('error in domain:', d, row, repr(err))
+                warn('error in domain:', domain, row, repr(err))
         return domains
 
     def nullable_int(row):
         try:
             row = int(row)
         except ValueError:
-            row = TSV.null(row)
+            row = tab.cast_null(row)
         return row
 
-    header, rows = TSV.read_file(
+    _, rows = tab.read_file(
         filepath,
         require=[
             'ensembl_gene_id',
             'chr',
             'ensembl_transcript_id'
         ],
-        add={
+        add_default={
             'cdna_coding_start': 'null',
             'cdna_coding_end': 'null',
             'AA_domain_ranges': '',
@@ -287,7 +291,7 @@ def convert_tab_to_json(filepath, warn=devnull):
     )
     genes = {}
     for row in rows:
-        g = {
+        gene = {
             'chr': row['chr'],
             'start': row['gene_start'],
             'end': row['gene_end'],
@@ -296,12 +300,12 @@ def convert_tab_to_json(filepath, warn=devnull):
             'aliases': row['hugo_names'].split(';') if row['hugo_names'] else [],
             'transcripts': []
         }
-        if g['name'] not in genes:
-            genes[g['name']] = g
+        if gene['name'] not in genes:
+            genes[gene['name']] = gene
         else:
-            g = genes[g['name']]
+            gene = genes[gene['name']]
 
-        t = {
+        transcript = {
             'is_best_transcript': row['best_ensembl_transcript_id'] == row['ensembl_transcript_id'],
             'name': row['ensembl_transcript_id'],
             'exons': row['genomic_exon_ranges'],
@@ -312,7 +316,7 @@ def convert_tab_to_json(filepath, warn=devnull):
             'cdna_coding_end': row['cdna_coding_end'],
             'aliases': []
         }
-        g['transcripts'].append(t)
+        gene['transcripts'].append(transcript)
 
     return {'genes': genes.values()}
 
@@ -323,36 +327,35 @@ def load_reference_genome(filename, low_mem=False):
         filename (str): the path to the file containing the input fasta genome
 
     Returns:
-        :class:`dict` of :class:`Bio.SeqRecord` by :class:`str`: a dictionary representing the sequences in the
-            fasta file
+        :class:`dict` of :class:`Bio.SeqRecord` by :class:`str`: a dictionary representing the sequences in the fasta file
     """
-    HUMAN_REFERENCE_GENOME = None
+    reference_genome = None
     if not low_mem:
         with open(filename, 'rU') as fh:
-            HUMAN_REFERENCE_GENOME = SeqIO.to_dict(SeqIO.parse(fh, 'fasta'))
+            reference_genome = SeqIO.to_dict(SeqIO.parse(fh, 'fasta'))
     else:
-        HUMAN_REFERENCE_GENOME = SeqIO.index(filename, "fasta")
+        reference_genome = SeqIO.index(filename, 'fasta')
 
-    names = list(HUMAN_REFERENCE_GENOME.keys())
+    names = list(reference_genome.keys())
 
     # to fix hg38 issues
     for template_name in names:
         if template_name.startswith('chr'):
             truncated = re.sub('^chr', '', template_name)
-            if truncated in HUMAN_REFERENCE_GENOME:
+            if truncated in reference_genome:
                 raise KeyError(
                     'template names {} and {} are considered equal but both have been defined in the reference'
                     'loaded'.format(template_name, truncated))
-            HUMAN_REFERENCE_GENOME.setdefault(truncated, HUMAN_REFERENCE_GENOME[template_name])
+            reference_genome.setdefault(truncated, reference_genome[template_name])
         else:
             prefixed = 'chr' + template_name
-            if prefixed in HUMAN_REFERENCE_GENOME:
+            if prefixed in reference_genome:
                 raise KeyError(
                     'template names {} and {} are considered equal but both have been defined in the reference'
                     'loaded'.format(template_name, prefixed))
-            HUMAN_REFERENCE_GENOME.setdefault(prefixed, HUMAN_REFERENCE_GENOME[template_name])
-        HUMAN_REFERENCE_GENOME[template_name] = HUMAN_REFERENCE_GENOME[template_name].upper()
-    return HUMAN_REFERENCE_GENOME
+            reference_genome.setdefault(prefixed, reference_genome[template_name])
+        reference_genome[template_name] = reference_genome[template_name].upper()
+    return reference_genome
 
 
 def load_templates(filename):
@@ -365,7 +368,7 @@ def load_templates(filename):
     2. start
     3. end
     4. band_name
-    5. giesma_stain
+    5. giemsa_stain
 
     for example
 
@@ -381,23 +384,23 @@ def load_templates(filename):
         :class:`list` of :class:`Template`: list of the templates loaded
 
     """
-    header = ['name', 'start', 'end', 'band_name', 'giesma_stain']
-    header, rows = TSV.read_file(
+    header = ['name', 'start', 'end', 'band_name', 'giemsa_stain']
+    header, rows = tab.read_file(
         filename,
         header=header,
         cast={'start': int, 'end': int},
-        in_={'giesma_stain': GIESMA_STAIN}
+        in_={'giemsa_stain': GIEMSA_STAIN.values()}
     )
 
     bands_by_template = {}
     for row in rows:
-        b = BioInterval(None, row['start'] + 1, row['end'], name=row['band_name'], data=row)
-        bands_by_template.setdefault(row['name'], []).append(b)
+        band = BioInterval(None, row['start'] + 1, row['end'], name=row['band_name'], data=row)
+        bands_by_template.setdefault(row['name'], []).append(band)
 
     templates = dict()
     for tname, bands in bands_by_template.items():
-        s = min([b.start for b in bands])
-        t = max([b.end for b in bands])
-        t = Template(tname, s, t, bands=bands)
-        templates[t.name] = t
+        start = min([b.start for b in bands])
+        end = max([b.end for b in bands])
+        end = Template(tname, start, end, bands=bands)
+        templates[end.name] = end
     return templates

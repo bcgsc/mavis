@@ -1,212 +1,10 @@
 import unittest
-from mavis.constants import COLUMNS, STRAND, ORIENT, SVTYPE
-from mavis.breakpoint import Breakpoint, BreakpointPair, read_bpp_from_input_file
+
+from mavis.breakpoint import Breakpoint, BreakpointPair
+from mavis.constants import COLUMNS, ORIENT, STRAND, SVTYPE
 from mavis.error import InvalidRearrangement, NotSpecifiedError
 from mavis.interval import Interval
-from .mock import Mock
-
-
-class MockFileHandle(Mock):
-    def __init__(self, lines):
-        Mock.__init__(self, lines=lines)
-
-    def readlines(self):
-        return self.lines
-
-
-class TestReadBreakpointPairsFromFile(unittest.TestCase):
-
-    def build_filehandle(self, row):
-        header = [c for c in row]
-        line = [row[c] for c in header]
-        lines = ['\t'.join(header), '\t'.join([str(v) for v in line])]
-        return MockFileHandle(lines)
-
-    def test_break1_strand_ns(self):
-        fh = self.build_filehandle({
-            COLUMNS.break1_chromosome: '1',
-            COLUMNS.break1_position_start: 1,
-            COLUMNS.break1_position_end: 1,
-            COLUMNS.break1_strand: STRAND.NS,
-            COLUMNS.break1_orientation: ORIENT.LEFT,
-            COLUMNS.break2_chromosome: '1',
-            COLUMNS.break2_position_start: 10,
-            COLUMNS.break2_position_end: 10,
-            COLUMNS.break2_strand: STRAND.POS,
-            COLUMNS.break2_orientation: ORIENT.RIGHT,
-            COLUMNS.stranded: False,
-            COLUMNS.opposing_strands: False
-        })
-        with self.assertRaises(AssertionError) as err:
-            print(err)
-            bpps = read_bpp_from_input_file(fh, explicit_strand=True, expand_ns=False)
-
-        bpps = read_bpp_from_input_file(fh, explicit_strand=True, expand_ns=True)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(STRAND.POS, bpps[0].break1.strand)
-        self.assertEqual(STRAND.POS, bpps[0].break2.strand)
-
-        bpps = read_bpp_from_input_file(fh, explicit_strand=False, expand_ns=True)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(STRAND.NS, bpps[0].break1.strand)
-        self.assertEqual(STRAND.NS, bpps[0].break2.strand)
-
-    def test_break2_strand_ns(self):
-        fh = self.build_filehandle({
-            COLUMNS.break1_chromosome: '1',
-            COLUMNS.break1_position_start: 1,
-            COLUMNS.break1_position_end: 1,
-            COLUMNS.break1_strand: STRAND.POS,
-            COLUMNS.break1_orientation: ORIENT.LEFT,
-            COLUMNS.break2_chromosome: '1',
-            COLUMNS.break2_position_start: 10,
-            COLUMNS.break2_position_end: 10,
-            COLUMNS.break2_strand: STRAND.NS,
-            COLUMNS.break2_orientation: ORIENT.RIGHT,
-            COLUMNS.stranded: False,
-            COLUMNS.opposing_strands: False
-        })
-
-        with self.assertRaises(AssertionError) as err:
-            print(err)
-            bpps = read_bpp_from_input_file(fh, explicit_strand=True, expand_ns=False)
-
-        bpps = read_bpp_from_input_file(fh, explicit_strand=True, expand_ns=True)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(STRAND.POS, bpps[0].break2.strand)
-
-        bpps = read_bpp_from_input_file(fh, explicit_strand=False, expand_ns=True)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(STRAND.NS, bpps[0].break1.strand)
-        self.assertEqual(STRAND.NS, bpps[0].break2.strand)
-
-    def test_both_break_strand_ns(self):
-        fh = self.build_filehandle({
-            COLUMNS.break1_chromosome: '1',
-            COLUMNS.break1_position_start: 1,
-            COLUMNS.break1_position_end: 1,
-            COLUMNS.break1_strand: STRAND.NS,
-            COLUMNS.break1_orientation: ORIENT.LEFT,
-            COLUMNS.break2_chromosome: '1',
-            COLUMNS.break2_position_start: 10,
-            COLUMNS.break2_position_end: 10,
-            COLUMNS.break2_strand: STRAND.NS,
-            COLUMNS.break2_orientation: ORIENT.RIGHT,
-            COLUMNS.stranded: False,
-            COLUMNS.opposing_strands: False
-        })
-        with self.assertRaises(AssertionError) as err:
-            print(err)
-            bpps = read_bpp_from_input_file(fh, explicit_strand=True, expand_ns=False)
-
-        bpps = read_bpp_from_input_file(fh, explicit_strand=True, expand_ns=True)
-        self.assertEqual(2, len(bpps))
-        self.assertEqual(STRAND.POS, bpps[0].break1.strand)
-        self.assertEqual(STRAND.POS, bpps[0].break2.strand)
-        self.assertEqual(STRAND.NEG, bpps[1].break1.strand)
-        self.assertEqual(STRAND.NEG, bpps[1].break2.strand)
-
-        bpps = read_bpp_from_input_file(fh, explicit_strand=False, expand_ns=True)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(STRAND.NS, bpps[0].break1.strand)
-        self.assertEqual(STRAND.NS, bpps[0].break2.strand)
-
-    def test_break1_orient_ns(self):
-        fh = self.build_filehandle({
-            COLUMNS.break1_chromosome: '1',
-            COLUMNS.break1_position_start: 1,
-            COLUMNS.break1_position_end: 1,
-            COLUMNS.break1_strand: STRAND.POS,
-            COLUMNS.break1_orientation: ORIENT.NS,
-            COLUMNS.break2_chromosome: '1',
-            COLUMNS.break2_position_start: 10,
-            COLUMNS.break2_position_end: 10,
-            COLUMNS.break2_strand: STRAND.POS,
-            COLUMNS.break2_orientation: ORIENT.RIGHT,
-            COLUMNS.stranded: False,
-            COLUMNS.opposing_strands: False
-        })
-        bpps = read_bpp_from_input_file(fh, explicit_strand=False, expand_ns=True)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(ORIENT.LEFT, bpps[0].break1.orient)
-
-    def test_break2_orient_ns(self):
-        fh = self.build_filehandle({
-            COLUMNS.break1_chromosome: '1',
-            COLUMNS.break1_position_start: 1,
-            COLUMNS.break1_position_end: 1,
-            COLUMNS.break1_strand: STRAND.POS,
-            COLUMNS.break1_orientation: ORIENT.NS,
-            COLUMNS.break2_chromosome: '1',
-            COLUMNS.break2_position_start: 10,
-            COLUMNS.break2_position_end: 10,
-            COLUMNS.break2_strand: STRAND.POS,
-            COLUMNS.break2_orientation: ORIENT.RIGHT,
-            COLUMNS.stranded: False,
-            COLUMNS.opposing_strands: False
-        })
-        bpps = read_bpp_from_input_file(fh, explicit_strand=False, expand_ns=True)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(ORIENT.LEFT, bpps[0].break1.orient)
-        raise unittest.SkipTest('TODO')
-
-    def test_both_break_orient_ns(self):
-        raise unittest.SkipTest('TODO')
-
-    def test_base_case(self):
-        fh = self.build_filehandle({
-            COLUMNS.break1_chromosome: '1',
-            COLUMNS.break1_position_start: 1,
-            COLUMNS.break1_position_end: 1,
-            COLUMNS.break1_strand: STRAND.POS,
-            COLUMNS.break1_orientation: ORIENT.RIGHT,
-            COLUMNS.break2_chromosome: '1',
-            COLUMNS.break2_position_start: 10,
-            COLUMNS.break2_position_end: 10,
-            COLUMNS.break2_strand: STRAND.NEG,
-            COLUMNS.break2_orientation: ORIENT.RIGHT,
-            COLUMNS.stranded: True,
-            COLUMNS.opposing_strands: True
-        })
-        bpps = read_bpp_from_input_file(fh, explicit_strand=False, expand_ns=False)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(ORIENT.RIGHT, bpps[0].break1.orient)
-        self.assertEqual(True, bpps[0].opposing_strands)
-
-    def test_unstranded_with_strand_calls(self):
-        fh = self.build_filehandle({
-            COLUMNS.break1_chromosome: '1',
-            COLUMNS.break1_position_start: 1,
-            COLUMNS.break1_position_end: 1,
-            COLUMNS.break1_strand: STRAND.POS,
-            COLUMNS.break1_orientation: ORIENT.RIGHT,
-            COLUMNS.break2_chromosome: '1',
-            COLUMNS.break2_position_start: 10,
-            COLUMNS.break2_position_end: 10,
-            COLUMNS.break2_strand: STRAND.NEG,
-            COLUMNS.break2_orientation: ORIENT.RIGHT,
-            COLUMNS.stranded: False,
-            COLUMNS.opposing_strands: True
-        })
-        bpps = read_bpp_from_input_file(fh, explicit_strand=False, expand_ns=False)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(STRAND.NS, bpps[0].break1.strand)
-        self.assertEqual(STRAND.NS, bpps[0].break2.strand)
-
-        bpps = read_bpp_from_input_file(fh, explicit_strand=False, expand_ns=True)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(STRAND.NS, bpps[0].break1.strand)
-        self.assertEqual(STRAND.NS, bpps[0].break2.strand)
-
-        bpps = read_bpp_from_input_file(fh, explicit_strand=True, expand_ns=False)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(STRAND.POS, bpps[0].break1.strand)
-        self.assertEqual(STRAND.NEG, bpps[0].break2.strand)
-
-        bpps = read_bpp_from_input_file(fh, explicit_strand=True, expand_ns=True)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(STRAND.POS, bpps[0].break1.strand)
-        self.assertEqual(STRAND.NEG, bpps[0].break2.strand)
+from mavis.util import read_bpp_from_input_file
 
 
 class TestBreakpoint(unittest.TestCase):
@@ -332,59 +130,65 @@ class TestBreakpointPair(unittest.TestCase):
         bpp = BreakpointPair(bp1, bp2, opposing_strands=True)
         self.assertFalse(bpp.interchromosomal)
 
-    def test___init__invalid_intra_RPRP(self):
+    def test___init__invalid_intra_rprp(self):
         with self.assertRaises(InvalidRearrangement):
-            b = BreakpointPair(
+            BreakpointPair(
                 Breakpoint(1, 1, 2, strand=STRAND.POS, orient=ORIENT.RIGHT),
-                Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.RIGHT)
+                Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.RIGHT),
+                opposing_strands=False
             )
 
-    def test___init__invalid_intra_RNRN(self):
+    def test___init__invalid_intra_rnrn(self):
         with self.assertRaises(InvalidRearrangement):
-            b = BreakpointPair(
+            BreakpointPair(
                 Breakpoint(1, 1, 2, strand=STRAND.NEG, orient=ORIENT.RIGHT),
-                Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.RIGHT)
+                Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.RIGHT),
+                opposing_strands=False
             )
 
-    def test___init__invalid_intra_RPLN(self):
+    def test___init__invalid_intra_rpln(self):
         with self.assertRaises(InvalidRearrangement):
-            b = BreakpointPair(
+            BreakpointPair(
                 Breakpoint(1, 1, 2, strand=STRAND.POS, orient=ORIENT.RIGHT),
-                Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.LEFT)
+                Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.LEFT),
+                opposing_strands=True
             )
 
-    def test___init__invalid_intra_LPRN(self):
+    def test___init__invalid_intra_lprn(self):
         with self.assertRaises(InvalidRearrangement):
-            b = BreakpointPair(
+            BreakpointPair(
                 Breakpoint(1, 1, 2, strand=STRAND.POS, orient=ORIENT.LEFT),
-                Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.RIGHT)
+                Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.RIGHT),
+                opposing_strands=True
             )
 
-    def test___init__invalid_intra_RNLP(self):
+    def test___init__invalid_intra_rnlp(self):
         with self.assertRaises(InvalidRearrangement):
-            b = BreakpointPair(
+            BreakpointPair(
                 Breakpoint(1, 1, 2, strand=STRAND.NEG, orient=ORIENT.RIGHT),
-                Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.LEFT)
+                Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.LEFT),
+                opposing_strands=True
             )
 
-    def test___init__invalid_intra_LNRP(self):
+    def test___init__invalid_intra_lnrp(self):
         with self.assertRaises(InvalidRearrangement):
-            b = BreakpointPair(
+            BreakpointPair(
                 Breakpoint(1, 1, 2, strand=STRAND.NEG, orient=ORIENT.LEFT),
-                Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.RIGHT)
+                Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.RIGHT),
+                opposing_strands=True
             )
 
-    def test___init__invalid_inter_RL_opp(self):
+    def test___init__invalid_inter_rl_opp(self):
         with self.assertRaises(InvalidRearrangement):
-            b = BreakpointPair(
+            BreakpointPair(
                 Breakpoint(1, 1, 2, ORIENT.RIGHT),
                 Breakpoint(2, 1, 2, ORIENT.LEFT),
                 opposing_strands=True
             )
 
-    def test___init__invalid_inter_LR_opp(self):
+    def test___init__invalid_inter_lr_opp(self):
         with self.assertRaises(InvalidRearrangement):
-            b = BreakpointPair(
+            BreakpointPair(
                 Breakpoint(1, 1, 2, ORIENT.LEFT),
                 Breakpoint(2, 1, 2, ORIENT.RIGHT),
                 opposing_strands=True
@@ -395,6 +199,7 @@ class TestBreakpointPair(unittest.TestCase):
         bp2 = Breakpoint(2, 1, 2, ORIENT.LEFT)
         bpp = BreakpointPair(bp1, bp2, opposing_strands=True)
         bpp.data['a'] = 1
+        print(bpp.data)
         self.assertEqual(1, bpp.a)
         with self.assertRaises(AttributeError):
             bpp.random_attr
@@ -403,6 +208,7 @@ class TestBreakpointPair(unittest.TestCase):
             bpp.call_method
 
         bpp.data[COLUMNS.call_method] = 1
+        print(bpp.data)
         self.assertEqual(1, bpp.call_method)
 
         COLUMNS.call_method = 'bbreak2_call_method'

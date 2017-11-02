@@ -1,26 +1,26 @@
-from mavis.bam import read as read_tools
-from mavis.bam import cigar as cigar_tools
-from mavis.bam.read import sequenced_strand, read_pair_type, breakpoint_pos, orientation_supports_type, get_samtools_version
-from mavis.bam.cache import BamCache
-from mavis.bam.stats import Histogram, compute_transcriptome_bam_stats, compute_genome_bam_stats
-from mavis.annotate import load_reference_genome, load_reference_genes
+import os
 import unittest
 import warnings
-import os
-from mavis.constants import DNA_ALPHABET, CIGAR, ORIENT, STRAND, READ_PAIR_TYPE, SVTYPE
-from . import MockRead, MockBamFileHandle, MockObject
-from . import REFERENCE_GENOME_FILE, TRANSCRIPTOME_BAM_INPUT, FULL_REFERENCE_ANNOTATIONS_FILE_JSON
-from . import BAM_INPUT, FULL_BAM_INPUT
-from .config import samtools_versions
-import timeout_decorator
+
+from mavis.annotate.file_io import load_reference_genes, load_reference_genome
+from mavis.bam import cigar as cigar_tools
+from mavis.bam import read as read_tools
+from mavis.bam.cache import BamCache
+from mavis.bam.read import breakpoint_pos, get_samtools_version, orientation_supports_type, read_pair_type, sequenced_strand
+from mavis.bam.stats import compute_genome_bam_stats, compute_transcriptome_bam_stats, Histogram
+from mavis.constants import CIGAR, DNA_ALPHABET, ORIENT, READ_PAIR_TYPE, STRAND, SVTYPE
 from mavis.interval import Interval
+import timeout_decorator
+
+from . import BAM_INPUT, FULL_BAM_INPUT, FULL_REFERENCE_ANNOTATIONS_FILE_JSON, MockBamFileHandle, MockRead, REFERENCE_GENOME_FILE, TRANSCRIPTOME_BAM_INPUT
+from .config import samtools_versions
 
 
 REFERENCE_GENOME = None
 
 
 def setUpModule():
-    warnings.simplefilter("ignore")
+    warnings.simplefilter('ignore')
     global REFERENCE_GENOME
     REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
     if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
@@ -139,7 +139,7 @@ class TestModule(unittest.TestCase):
               'TTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG'
         seq = 'TGTAGGAAGCCATTATCTGAAGTGTAAGCAACTGCATAGTGCTATTTTAATTATGCATTGCAGGGAAACTGTGAGCAGAGCTATATATTTAGGTAGAC' \
               'TGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAAC'
-        alignment = read_tools.nsb_align(ref, seq)
+        read_tools.nsb_align(ref, seq)
         # GATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG
 
 

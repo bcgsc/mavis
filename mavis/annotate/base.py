@@ -1,9 +1,17 @@
-from ..interval import Interval
-from ..constants import STRAND
 import re
+
+from ..constants import STRAND
+from ..interval import Interval
 
 
 class ReferenceName(str):
+    """
+    Class for reference sequence names. Ensures that hg19/hg38 chromosome names match.
+
+    Example:
+        >>> ReferenceName('chr1') == ReferenceName('1')
+        True
+    """
     def __eq__(self, other):
         options = {str(self)}
         if self.startswith('chr'):
@@ -19,14 +27,14 @@ class ReferenceName(str):
         return hash(re.sub('^chr', '', str(self)))
 
     def __lt__(self, other):
-        s = self if not self.startswith('chr') else self[3:]
-        o = other if not other.startswith('chr') else other[3:]
-        return str.__lt__(s, o)
+        self_std_repr = self if not self.startswith('chr') else self[3:]
+        other_std_repr = other if not other.startswith('chr') else other[3:]
+        return str.__lt__(self_std_repr, other_std_repr)
 
     def __gt__(self, other):
-        s = self if not self.startswith('chr') else self[3:]
-        o = other if not other.startswith('chr') else other[3:]
-        return str.__gt__(s, o)
+        self_std_repr = self if not self.startswith('chr') else self[3:]
+        other_std_repr = other if not other.startswith('chr') else other[3:]
+        return str.__gt__(self_std_repr, other_std_repr)
 
     def __ge__(self, other):
         if self == other:
@@ -40,6 +48,7 @@ class ReferenceName(str):
 
 
 class BioInterval:
+
     def __init__(self, reference_object, start, end=None, name=None, seq=None, data=None, strand=None):
         """
         Args:
@@ -96,24 +105,27 @@ class BioInterval:
     def __eq__(self, other):
         if not hasattr(other, 'key'):
             return False
-        else:
-            return self.key() == other.key()
+        return self.key() == other.key()
 
     def __lt__(self, other):
         if other.reference_object != self.reference_object:
             if self.reference_object < other.reference_object:
                 return True
-            else:
-                return False
+            return False
         elif self.position < other.position:
             return True
-        else:
-            return False
+        return False
 
     def __hash__(self):
         return hash(self.key())
 
-    def get_seq(self, REFERENCE_GENOME=None, ignore_cache=False):
+    def get_seq(self, reference_genome=None, ignore_cache=False):
+        """
+        get the sequence for the current annotation object
+
+        Raises:
+            NotImplementedError: abstract method
+        """
         raise NotImplementedError('abstract method must be overidden')
 
     def get_strand(self):
@@ -151,6 +163,11 @@ class BioInterval:
 
     @property
     def is_reverse(self):
+        """True if the gene is on the reverse/negative strand.
+
+        Raises:
+            AttributeError: if the strand is not specified
+        """
         if self.get_strand() == STRAND.NEG:
             return True
         elif self.get_strand() == STRAND.POS:
@@ -199,7 +216,7 @@ class BioInterval:
         Returns:
             :class:`dict` by :class:`str`: the dictionary of attribute values
         """
-        d = {
+        dict_result = {
             'name': self.name,
             'start': self.start,
             'end': self.end,
@@ -208,10 +225,10 @@ class BioInterval:
             'data': self.data
         }
         try:
-            d['reference_object'] = self.reference_object.name
+            dict_result['reference_object'] = self.reference_object.name
         except AttributeError:
-            d['reference_object'] = str(self.reference_object)
-        return d
+            dict_result['reference_object'] = str(self.reference_object)
+        return dict_result
 
     def __repr__(self):
         cls = self.__class__.__name__

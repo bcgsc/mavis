@@ -1,17 +1,17 @@
-from mavis.align import SplitAlignment, align_contigs, query_coverage_interval
-from mavis.interval import Interval
-from mavis.annotate import load_reference_genome
-from mavis.constants import ORIENT, CIGAR, reverse_complement
-from mavis.bam.cache import BamCache
-from mavis.assemble import Contig
-from mavis.breakpoint import Breakpoint
-from mavis.validate.evidence import GenomeEvidence
-import mavis.bam.cigar as cigar_tools
-
-import unittest
 import shutil
-from . import REFERENCE_GENOME_FILE, REFERENCE_GENOME_FILE_2BIT
-from . import BAM_INPUT, MockBamFileHandle, MockRead, MockObject
+import unittest
+
+from mavis.align import align_contigs, query_coverage_interval, SplitAlignment
+from mavis.annotate.file_io import load_reference_genome
+from mavis.assemble import Contig
+from mavis.bam.cache import BamCache
+import mavis.bam.cigar as cigar_tools
+from mavis.breakpoint import Breakpoint
+from mavis.constants import CIGAR, ORIENT, reverse_complement
+from mavis.interval import Interval
+from mavis.validate.evidence import GenomeEvidence
+
+from . import BAM_INPUT, MockBamFileHandle, MockObject, MockRead, REFERENCE_GENOME_FILE, REFERENCE_GENOME_FILE_2BIT
 
 
 REFERENCE_GENOME = None
@@ -30,14 +30,14 @@ class TestAlign(unittest.TestCase):
     def setUp(self):
         self.cache = BamCache(MockBamFileHandle({'Y': 23, 'fake': 0, 'reference3': 3}))
 
-    @unittest.skipIf(not shutil.which('blat'), "missing the blat command")
+    @unittest.skipIf(not shutil.which('blat'), 'missing the blat command')
     def test_blat_contigs(self):
         ev = GenomeEvidence(
             Breakpoint('reference3', 1114, orient=ORIENT.RIGHT),
             Breakpoint('reference3', 2187, orient=ORIENT.RIGHT),
             opposing_strands=True,
             bam_cache=None,
-            REFERENCE_GENOME=None,
+            reference_genome=None,
             read_length=40,
             stdev_fragment_size=25,
             median_fragment_size=100,
@@ -47,9 +47,9 @@ class TestAlign(unittest.TestCase):
         )
         ev.contigs = [
             Contig(
-                "CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAG"
-                "TCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTG"
-                "TTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT", 0)
+                'CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAG'
+                'TCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTG'
+                'TTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT', 0)
         ]
         print(ev.contigs[0].seq)
         align_contigs([ev], BAM_CACHE, REFERENCE_GENOME, aligner_reference=REFERENCE_GENOME_FILE_2BIT,
@@ -65,14 +65,14 @@ class TestAlign(unittest.TestCase):
         self.assertEqual([(CIGAR.S, 125), (CIGAR.EQ, 120)], read1.cigar)
         self.assertEqual([(CIGAR.S, 117), (CIGAR.EQ, 128)], read2.cigar)
 
-    @unittest.skipIf(not shutil.which('bwa'), "missing the command")
+    @unittest.skipIf(not shutil.which('bwa'), 'missing the command')
     def test_bwa_contigs(self):
         ev = GenomeEvidence(
             Breakpoint('reference3', 1114, orient=ORIENT.RIGHT),
             Breakpoint('reference3', 2187, orient=ORIENT.RIGHT),
             opposing_strands=True,
             bam_cache=None,
-            REFERENCE_GENOME=None,
+            reference_genome=None,
             read_length=40,
             stdev_fragment_size=25,
             median_fragment_size=100,
@@ -82,9 +82,9 @@ class TestAlign(unittest.TestCase):
         )
         ev.contigs = [
             Contig(
-                "CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAG"
-                "TCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTG"
-                "TTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT", 0)
+                'CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAG'
+                'TCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTG'
+                'TTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT', 0)
         ]
         print(ev.contigs[0].seq)
         align_contigs(
@@ -108,14 +108,14 @@ class TestAlign(unittest.TestCase):
         self.assertEqual([(CIGAR.S, 125), (CIGAR.EQ, 120)], read1.cigar)
         self.assertEqual([(CIGAR.S, 117), (CIGAR.EQ, 128)], read2.cigar)
 
-    @unittest.skipIf(not shutil.which('blat'), "missing the blat command")
+    @unittest.skipIf(not shutil.which('blat'), 'missing the blat command')
     def test_blat_contigs_deletion(self):
         ev = GenomeEvidence(
             Breakpoint('fake', 1714, orient=ORIENT.LEFT),
             Breakpoint('fake', 2968, orient=ORIENT.RIGHT),
             opposing_strands=False,
             bam_cache=None,
-            REFERENCE_GENOME=None,
+            reference_genome=None,
             read_length=40,
             stdev_fragment_size=25,
             median_fragment_size=100
@@ -134,18 +134,18 @@ class TestAlign(unittest.TestCase):
         self.assertEqual(1612, read1.reference_start)
         self.assertEqual([(CIGAR.EQ, 102), (CIGAR.D, 1253), (CIGAR.EQ, 74)], read1.cigar)
 
-    @unittest.skipIf(not shutil.which('blat'), "missing the blat command")
+    @unittest.skipIf(not shutil.which('blat'), 'missing the blat command')
     def test_blat_contigs_inversion(self):
         raise unittest.SkipTest('TODO')
 
-    @unittest.skipIf(not shutil.which('blat'), "missing the blat command")
+    @unittest.skipIf(not shutil.which('blat'), 'missing the blat command')
     def test_blat_contigs_deletion_revcomp(self):
         ev = GenomeEvidence(
             Breakpoint('fake', 1714, orient=ORIENT.LEFT),
             Breakpoint('fake', 2968, orient=ORIENT.RIGHT),
             opposing_strands=False,
             bam_cache=None,
-            REFERENCE_GENOME=None,
+            reference_genome=None,
             read_length=40,
             stdev_fragment_size=25,
             median_fragment_size=100

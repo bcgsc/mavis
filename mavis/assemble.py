@@ -1,12 +1,14 @@
-import networkx as nx
 import itertools
 import warnings
+
 import distance
+import networkx as nx
+
 from .bam import cigar as cigar_tools
-from .bam.read import nsb_align, calculate_alignment_score
+from .bam.read import calculate_alignment_score, nsb_align
 from .constants import reverse_complement
-from .util import devnull
 from .interval import Interval
+from .util import devnull
 
 
 class Contig:
@@ -303,7 +305,7 @@ def filter_contigs(contigs, assembly_min_uniq=0.01):
 
 def assemble(
     sequences,
-    assembly_max_kmer_size=None,
+    assembly_max_kmer_size=-1,
     assembly_min_nc_edge_weight=3,
     assembly_min_edge_weight=2,
     assembly_min_match_quality=0.95,
@@ -338,7 +340,7 @@ def assemble(
     if len(sequences) == 0:
         return []
     min_seq = min([len(s) for s in sequences])
-    if assembly_max_kmer_size is None:
+    if assembly_max_kmer_size < 0:
         temp = int(min_seq * 0.75)
         if temp < 10:
             assembly_max_kmer_size = min(min_seq, 10)
@@ -431,7 +433,7 @@ def assemble(
             for contig, read, score1, score2 in scores:
                 if max_score == (score1, score2):
                     best_alignments.append((contig, read))
-            assert(len(best_alignments) >= 1)
+            assert len(best_alignments) >= 1
             for contig, read in best_alignments:
                 contig.add_mapped_sequence(read, len(best_alignments))
     log(
