@@ -78,6 +78,9 @@ General Terms
     BWA
         BWA is an alignement tool. See https://github.com/lh3/bwa
 
+    :ref:`HGVS <den-Dunnen-2016>`
+        Community based standard of reccommendations for variant notation. See http://varnomen.hgvs.org/
+
 
 .. include:: config_settings_glossary.rst
 

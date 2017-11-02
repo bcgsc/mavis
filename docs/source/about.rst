@@ -44,8 +44,8 @@ Once the above 3 steps are complete MAVIS is ready to be run. See :ref:`running 
 Non-python dependencies
 .........................
 
-Aligner (:term:`blat`)
-+++++++++++++++++++++++++
+Aligner 
++++++++++
 
 In addition to the python package dependencies, MAVIS also requires an aligner to be installed. Currently the only
 aligners supported are :term:`blat` and :term:`bwa mem <bwa>`. For MAVIS to run successfully the aligner must be installed and accessible on the 

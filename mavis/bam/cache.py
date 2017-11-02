@@ -31,9 +31,12 @@ class BamCache:
                 pass
         atexit.register(self.close)  # makes the file 'auto close' on normal python exit
 
-    def valid_chr(self, chr):
+    def valid_chr(self, chrom):
+        """
+        checks if a reference name exists in the bam file header
+        """
         try:
-            self.reference_id(chr)
+            self.reference_id(chrom)
             return True
         except KeyError:
             return False
@@ -46,12 +49,14 @@ class BamCache:
         self.cache.setdefault(read.query_name, set()).add(read)
 
     def has_read(self, read):
+        """
+        checks if a read query name exists in the current cache
+        """
         if read.query_name not in self.cache:
             return False
         elif read in self.cache[read.query_name]:
             return True
-        else:
-            return False
+        return False
 
     def reference_id(self, chrom):
         """

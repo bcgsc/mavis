@@ -329,6 +329,13 @@ def smallest_nonoverlapping_repeat(s):
 
 
 def merge_indels(cigar):
+    """
+    For a given cigar tuple, merges adjacent insertions/deletions
+
+    Example:
+        >>> merge_indels([(CIGAR.EQ, 10), (CIGAR.I, 3), (CIGAR.D, 4), (CIGAR.I, 2), (CIGAR.D, 2), (CIGAR.EQ, 10)])
+        [(CIGAR.EQ, 10), (CIGAR.I, 5), (CIGAR.D, 6), (CIGAR.EQ, 10)]
+    """
     new_cigar = cigar[:]
     for i in range(0, len(new_cigar)):
         t = i - 1  # for bubbling
@@ -427,7 +434,14 @@ def hgvs_standardize_cigar(read, reference_seq):
 
 
 def convert_string_to_cigar(string):
-    patt = '(\d+({}))'.format('|'.join(CIGAR.keys()))
+    """
+    Given a cigar string, converts it to the appropriate cigar tuple
+
+    Example:
+        >>> convert_string_to_cigar('8M2I1D9X')
+        [(CIGAR.M, 8), (CIGAR.I, 2), (CIGAR.D, 1), (CIGAR.X, 9)]
+    """
+    patt = r'(\d+({}))'.format('|'.join(CIGAR.keys()))
     cigar = [m[0] for m in re.findall(patt, string)]
     cigar = [(CIGAR[match[-1]], int(match[:-1])) for match in cigar]
     return cigar

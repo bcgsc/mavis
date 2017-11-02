@@ -14,6 +14,13 @@ from tab import cast_boolean
 class MavisNamespace(argparse.Namespace):
     """
     Namespace to hold module constants
+
+    Example:
+        >>> nspace = MavisNamespace(thing=1, otherthing=2)
+        >>> nspace.thing
+        1
+        >>> nspace.otherthing
+        2
     """
     reserved_attr = ['_types', '_defns']
 
@@ -29,6 +36,11 @@ class MavisNamespace(argparse.Namespace):
                 self._set_type(attr, type(value))
 
     def items(self):
+        """
+        Example:
+            >>> MavisNamespace(thing=1, otherthing=2).items()
+            [('thing', 1), ('otherthing', 2)]
+        """
         return [(k, self[k]) for k in self.keys()]
 
     def __getitem__(self, key):
@@ -40,33 +52,98 @@ class MavisNamespace(argparse.Namespace):
         self.__dict__[key] = val
 
     def flatten(self):
+        """
+        returns the namespace (minus types and definitions) as a dictionary
+
+        Example:
+            >>> MavisNamespace(thing=1, otherthing=2).flatten()
+            {'thing': 1, 'otherthing': 2}
+        """
         items = {}
         items.update(self.items())
         return items
 
     def get(self, key, *pos):
+        """
+        get an attribute, return a default (if given) if the attribute does not exist
+
+        Example:
+            >>> nspace = MavisNamespace(thing=1, otherthing=2)
+            >>> nspace.get('thing', 2)
+            1
+            >>> nspace.get('nonexistant_thing', 2)
+            2
+            >>> nspace.get('nonexistant_thing')
+            Traceback (most recent call last):
+            ....
+        """
         if len(pos) > 1:
             raise TypeError('too many arguments. get takes a single \'default\' value argument')
         try:
             return self[key]
         except AttributeError as err:
-            if len(pos) == 1:
+            if pos:
                 return pos[0]
             raise err
 
     def keys(self):
+        """
+        get the attribute keys as a list
+
+        Example:
+            >>> MavisNamespace(thing=1, otherthing=2).keys()
+            ['thing', 'otherthing']
+        """
         return [k for k in self.__dict__ if not k.startswith('_')]
 
     def values(self):
+        """
+        get the attribute values as a list
+
+        Example:
+            >>> MavisNamespace(thing=1, otherthing=2).values()
+            [1, 2]
+        """
         return [self[k] for k in self.keys()]
 
     def enforce(self, value):
+        """
+        checks that the current namespace has a given value
+
+        Returns:
+            the input value
+
+        Raises:
+            KeyError: the value did not exist
+
+        Example:
+            >>> nspace = MavisNamespace(thing=1, otherthing=2)
+            >>> nspace.enforce(1)
+            1
+            >>> nspace.enforce(3)
+            Traceback (most recent call last):
+            ....
+        """
         if value not in self.values():
             raise KeyError('value {0} is not a valid member'.format(value), self.values())
         return value
 
     def reverse(self, value):
-        """for a given value, return the associated key"""
+        """
+        for a given value, return the associated key
+
+        Args:
+            value: the value to get the key/attribute name for
+
+        Raises:
+            KeyError: the value is not unique
+            KeyError: the value is not assigned
+
+        Example:
+            >>> nspace = MavisNamespace(thing=1, otherthing=2)
+            >>> nspace.reverse(1)
+            'thing'
+        """
         result = []
         for key in self.keys():
             if self[key] == value:
@@ -87,27 +164,67 @@ class MavisNamespace(argparse.Namespace):
             self._types[attr] = cast_type
 
     def type(self, attr):
+        """
+        returns the type
+
+        Example:
+            >>> nspace = MavisNamespace(thing=1, otherthing=2)
+            >>> nspace.type('thing')
+            <class 'int'>
+        """
         return self._types[attr]
 
     def define(self, attr, *pos):
+        """
+        Get the definition of a given attribute or return a default (when given) if the attribute does not exist
+
+        Returns:
+            str: definition for the attribute
+
+        Raises:
+            KeyError: the attribute does not exist and a default was not given
+
+        Example:
+            >>> nspace = MavisNamespace()
+            >>> nspace.add('thing', 1, defn='I am a thing')
+            >>> nspace.add('otherthing', 2)
+            >>> nspace.define('thing')
+            'I am a thing'
+            >>> nspace.define('otherthing')
+            Traceback (most recent call last):
+            ....
+            >>> nspace.define('otherthing', 'I am some other thing')
+            'I am some other thing'
+        """
         if len(pos) > 1:
             raise TypeError('too many arguments. define takes a single \'default\' value argument')
         try:
             return self._defns[attr]
         except KeyError as err:
-            if len(pos) == 1:
+            if pos:
                 return pos[0]
             raise err
 
     def add(self, attr, *pos, **kwargs):
         """
         Add an attribute to the name space. Optionally include cast_type and definition
+
+        Example:
+            >>> nspace = MavisNamespace()
+            >>> nspace.add('thing', 1, int, 'I am a thing')
+            >>> nspace = MavisNamespace()
+            >>> nspace.add('thing', 1, int)
+            >>> nspace = MavisNamespace()
+            >>> nspace.add('thing', 1)
+            >>> nspace = MavisNamespace()
+            >>> nspace.add('thing', value=1, cast_type=int, defn='I am a thing')
         """
         if len(pos) > 1:
             raise TypeError('add() takes 3 positional arguments but more were given')
-        elif len(pos) == 1:
-            if 'value' in kwargs:
-                raise TypeError('add() got multiple values for argument \'value\'')
+
+        for value, argname in zip(pos, ['value', 'cast_type', 'defn'][:len(pos)]):
+            if argname in kwargs:
+                raise TypeError('add() got multiple values for argument {}'.format(repr(argname)))
             kwargs['value'] = pos[0]
         value = kwargs.pop('value', attr)
         self[attr] = value

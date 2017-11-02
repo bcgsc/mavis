@@ -56,6 +56,9 @@ def load_masking_regions(filepath):
 
 
 def load_reference_genes(*pos, **kwargs):
+    """
+    *Deprecated* Use :func:`load_annotations` instead
+    """
     warnings.warn('this function has been replaced by load_annotations', DeprecationWarning)
     return load_annotations(*pos, **kwargs)
 
@@ -214,8 +217,7 @@ def convert_tab_to_json(filepath, warn=devnull):
         filepath (str): path to the input tab-delimited file
 
     Returns:
-        :class:`dict` of :class:`list` of :any:`Gene` by :class:`str`: a dictionary keyed by chromosome name with
-            values of list of genes on the chromosome
+        :class:`dict` of :class:`list` of :any:`Gene` by :class:`str`: a dictionary keyed by chromosome name with values of list of genes on the chromosome
 
     Example:
         >>> ref = load_reference_genes('filename')
@@ -325,8 +327,7 @@ def load_reference_genome(filename, low_mem=False):
         filename (str): the path to the file containing the input fasta genome
 
     Returns:
-        :class:`dict` of :class:`Bio.SeqRecord` by :class:`str`: a dictionary representing the sequences in the
-            fasta file
+        :class:`dict` of :class:`Bio.SeqRecord` by :class:`str`: a dictionary representing the sequences in the fasta file
     """
     reference_genome = None
     if not low_mem:

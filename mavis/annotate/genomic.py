@@ -52,7 +52,7 @@ class IntergenicRegion(BioInterval):
 
     @property
     def chr(self):
-        """returns the name of the chromosome that this gene resides on"""
+        """returns the name of the chromosome that this region resides on"""
         return self.reference_object
 
     def __repr__(self):

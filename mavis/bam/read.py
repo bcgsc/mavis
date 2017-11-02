@@ -12,6 +12,9 @@ from ..interval import Interval
 
 class SamRead(pysam.AlignedSegment):
     """
+    Subclass to extend the pysam.AlignedSegment class adding some utility methods and convenient representations
+
+    Allows next_reference_name and reference_name to be set directly so that is does not depend on a bam header
     """
 
     def __init__(self, reference_name=None, next_reference_name=None, alignment_score=None):
@@ -92,13 +95,20 @@ def map_ref_range_to_query_range(read, ref_range):
 
 
 def get_samtools_version():
+    """
+    executes a subprocess to try and run samtools and parse the version number from the output
+
+    Example:
+        >>> get_samtools_version()
+        (1, 2, 1)
+    """
     proc = subprocess.getoutput(['samtools'])
     for line in proc.split('\n'):
-        m = re.search('Version: (?P<major>\d+)(\.(?P<mid>\d+)(\.(?P<minor>\d+))?)?', line)
-        if m:
-            major = int(m.group('major'))
-            mid = int(m.group('mid')) if m.group('mid') else 0
-            minor = int(m.group('minor')) if m.group('minor') else 0
+        match = re.search(r'Version: (?P<major>\d+)(\.(?P<mid>\d+)(\.(?P<minor>\d+))?)?', line)
+        if match:
+            major = int(match.group('major'))
+            mid = int(match.group('mid')) if match.group('mid') else 0
+            minor = int(match.group('minor')) if match.group('minor') else 0
             return major, mid, minor
     raise ValueError('unable to parse samtools version number')
 

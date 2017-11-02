@@ -618,6 +618,13 @@ def draw_exon(config, canvas, exon, width, height, fill, label='', translation=N
 
 
 def draw_template(config, canvas, template, target_width, labels=None, colors=None, breakpoints=None):
+    """
+    Creates the template/chromosome illustration
+
+    Return:
+        svgwrite.container.Group: the group element for the diagram
+    """
+
     labels = LabelMapping() if labels is None else labels
     colors = {} if colors is None else colors
     breakpoints = [] if not breakpoints else breakpoints

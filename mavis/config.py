@@ -81,6 +81,21 @@ class RangeAppendAction(argparse.Action):
 
 
 def cast_if_not_none(value, cast_type):
+    """
+    cast a value to a given type unless it is None
+
+    Example:
+        >>> cast_if_not_none('1', int)
+        1
+        >>> cast_if_not_none(None, int)
+        None
+        >>> cast_if_not_none('null', int)
+        None
+        >>> cast_if_not_none('', int)
+        None
+        >>> cast_if_not_none('none', int)
+        None
+    """
     if value is None or str(value).lower() in ['none', 'null', '']:
         return None
     return cast(value, cast_type)
@@ -371,6 +386,13 @@ def add_semi_optional_argument(argname, success_parser, failure_parser, help_msg
 
 
 def get_metavar(arg_type):
+    """
+    For a given argument type, returns the string to be used for the metavar argument in add_argument
+
+    Example:
+        >>> get_metavar(bool)
+        '{True,False}'
+    """
     if arg_type in [bool, tab.cast_boolean]:
         return '{True,False}'
     elif arg_type in [float_fraction, float]:

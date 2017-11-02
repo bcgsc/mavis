@@ -5,7 +5,13 @@ from ..interval import Interval
 
 
 class ReferenceName(str):
+    """
+    Class for reference sequence names. Ensures that hg19/hg38 chromosome names match.
 
+    Example:
+        >>> ReferenceName('chr1') == ReferenceName('1')
+        True
+    """
     def __eq__(self, other):
         options = {str(self)}
         if self.startswith('chr'):
@@ -114,6 +120,12 @@ class BioInterval:
         return hash(self.key())
 
     def get_seq(self, reference_genome=None, ignore_cache=False):
+        """
+        get the sequence for the current annotation object
+
+        Raises:
+            NotImplementedError: abstract method
+        """
         raise NotImplementedError('abstract method must be overidden')
 
     def get_strand(self):
@@ -151,6 +163,11 @@ class BioInterval:
 
     @property
     def is_reverse(self):
+        """True if the gene is on the reverse/negative strand.
+
+        Raises:
+            AttributeError: if the strand is not specified
+        """
         if self.get_strand() == STRAND.NEG:
             return True
         elif self.get_strand() == STRAND.POS:

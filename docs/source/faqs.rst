@@ -62,3 +62,31 @@ you would run them in the following order
 
 As MAVIS splits clusters into multiple jobs by default there may be many scripts to bash. If want to avoid this (an your machine has sufficient memory)
 then set ``MAVIS_MAX_FILES=1`` to restrict the number of jobs/cluster files to 1.
+
+
+Why Does My Event Have 0 Spanning Reads?
+------------------------------------------
+
+When looking at the evidence columns of the MAVIS output files it is important to look first at the :term:`call_method`
+column. Some evidence types do not apply to certain :term:`call methods <call_method>` so they will always be 0 or None.
+For example, if a small indel is called by contig, we would first look at the :term:`contig_remapped_reads` column. This
+is the evidence that was used in determining whether or not to include the call in the output file.
+
+If the :term:`break1_split_reads` column is 0 and the call method is not by :term:`split reads <split read>` it does not mean there is low evidence.
+
+
+I See Split Reads in :term:`IGV`, Why Does MAVIS Call 0 Split Reads?
+--------------------------------------------------------------------
+
+If the event was called by :term:`contig` for example, the breakpoint positions will be based on the alignment of the contig.
+Only split reads which exactly match this breakpoint will be given as evidence by split reads.
+
+If the event is not an exact breakpoint call, only flanking evidence will be given
+
+
+Why is the Breakpoint Called by MAVIS Different From What I See in :term:`IGV`?
+---------------------------------------------------------------------------------
+
+MAVIS normalizes the read alignments before calling events. This is especially important in repeat regions.
+Aligners like :term:`bwa mem <bwa>` align deletions to the start of a repeat span, whereas MAVIS follows the
+:term:`hgvs` standard and aligns deletions to the end of a repeat span.
