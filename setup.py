@@ -54,13 +54,16 @@ setup(
         'git+https://svn.bcgsc.ca/bitbucket/scm/prod/tab.git@v0.0.2#egg=tab-0.0.2'
     ],
     setup_requires=[
-        'nose==1.3.7',
-        'nose-exclude==0.5.0',
+        'numpy>=1.13.1',  # put here b/c biopython doesn't declare this as a setup dependency properly
+        'setuptools>=36.6.0',
+        'nose',
+        'timeout-decorator==0.3.3',
+        'coverage==4.2',
+        'mock>=2.0.0',
         'nose-capturestderr==1.2',
-        'numpy>=1.13.1'  # put here b/c biopython doesn't declare this as a setup dependency properly
+        'nose-exclude>=0.5.0'
     ],
     test_suite='nose.collector',
-    tests_require=['nose', 'timeout-decorator==0.3.3', 'coverage==4.2', 'mock>=2.0.0', 'nose-capturestderr==1.2', 'nose-exclude>=0.5.0'],
     entry_points={'console_scripts': ['mavis = mavis.main:main']}
 )
 check_nonpython_dependencies()
