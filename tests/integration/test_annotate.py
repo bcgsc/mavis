@@ -6,13 +6,14 @@ from mavis.annotate.file_io import load_reference_genes, load_reference_genome
 from mavis.annotate.genomic import Exon, Gene, Template, Transcript, UsTranscript
 from mavis.annotate.protein import calculate_orf, Domain, DomainRegion, translate, Translation
 from mavis.annotate.variant import _gather_annotations, _gather_breakpoint_annotations, annotate_events, Annotation, determine_prime, flatten_fusion_transcript, FusionTranscript, overlapping_transcripts
+from mavis.annotate.constants import SPLICE_TYPE
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import ORIENT, PRIME, PROTOCOL, reverse_complement, STRAND, SVTYPE
 from mavis.error import NotSpecifiedError
 from mavis.interval import Interval
 from mavis.util import log
 
-from . import DATA_DIR, MockLongString, MockObject, REFERENCE_ANNOTATIONS_FILE, REFERENCE_ANNOTATIONS_FILE2, REFERENCE_ANNOTATIONS_FILE_JSON, REFERENCE_GENOME_FILE, EXAMPLE_GENES
+from . import DATA_DIR, MockLongString, MockObject, REFERENCE_ANNOTATIONS_FILE, REFERENCE_ANNOTATIONS_FILE2, REFERENCE_ANNOTATIONS_FILE_JSON, REFERENCE_GENOME_FILE, get_example_genes
 
 
 REFERENCE_ANNOTATIONS = None
@@ -22,7 +23,8 @@ ALT_REF_CHR = 'ref2'
 
 
 def setUpModule():
-    global REFERENCE_ANNOTATIONS, REFERENCE_GENOME, REF_CHR
+    global REFERENCE_ANNOTATIONS, REFERENCE_GENOME, REF_CHR, EXAMPLE_GENES
+    EXAMPLE_GENES = get_example_genes()
     REFERENCE_ANNOTATIONS = load_reference_genes(REFERENCE_ANNOTATIONS_FILE)
     count = sum([len(l) for l in REFERENCE_ANNOTATIONS.values()])
     print('loaded annotations', count)
@@ -1493,3 +1495,45 @@ class TestDSTYK(unittest.TestCase):
         self.assertEqual(1860, ft.break1)
         self.assertEqual(2065, ft.break2)
         flatten_fusion_transcript(ft.transcripts[0])  # test no error
+
+
+class TestFRMD6(unittest.TestCase):
+    def setUp(self):
+        print(EXAMPLE_GENES.keys())
+        self.gene = EXAMPLE_GENES['FRMD6']
+        self.reference_annotations = {self.gene.chr: [self.gene]}
+        self.reference_genome = {self.gene.chr: MockObject(
+            seq=MockLongString(self.gene.seq, offset=self.gene.start - 1)
+        )}
+        self.best = None
+        for chr, gene_list in self.reference_annotations.items():
+            for gene in gene_list:
+                for tx in gene.unspliced_transcripts:
+                    if tx.name == 'ENST00000356218':
+                        self.best = tx
+                        break
+
+    def test_splicing_synonymous_rna_fusion(self):
+        # 1:205178631R 1:205178835R inversion
+        bpp = BreakpointPair(
+            Breakpoint(self.gene.chr, 51956138, orient='L', strand='+'),
+            Breakpoint(self.gene.chr, 52037066, orient='R', strand='+'),
+            stranded=True,
+            event_type=SVTYPE.DEL,
+            protocol=PROTOCOL.TRANS,
+            untemplated_seq=''
+        )
+        print(self.best, bpp)
+        ann = Annotation(bpp, transcript1=self.best, transcript2=self.best)
+        ft = FusionTranscript.build(
+            ann, self.reference_genome,
+            min_orf_size=300, max_orf_cap=10, min_domain_mapping_match=0.9
+        )
+        print(ft.exons)
+        print(ft.break1, ft.break2)
+        for ex in ft.exons:
+            print(ex, len(ex), '==>', ft.exon_mapping.get(ex.position, None), len(ft.exon_mapping.get(ex.position, None)), ft.exon_number(ex))
+        # refseq = self.best.transcripts[0].get_seq(self.reference_genome)
+        self.assertEqual(1, len(ft.transcripts))
+        self.assertEqual(SPLICE_TYPE.NORMAL, ft.transcripts[0].splicing_pattern.splice_type)
+        row = flatten_fusion_transcript(ft.transcripts[0])  # test no error

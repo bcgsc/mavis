@@ -137,8 +137,8 @@ def draw_transcript_with_translation(
     # draw the splicing pattern
     splice_group = canvas.g(class_='splicing')
     for p1, p2 in zip(spl_tx.splicing_pattern[::2], spl_tx.splicing_pattern[1::2]):
-        a = Interval.convert_pos(mapping, p1)
-        b = Interval.convert_pos(mapping, p2)
+        a = Interval.convert_pos(mapping, p1.pos)
+        b = Interval.convert_pos(mapping, p2.pos)
         polyline = [(a, y), (a + (b - a) / 2, y - config.splice_height), (b, y)]
         p = canvas.polyline(polyline, fill='none')
         p.dasharray(config.splice_stroke_dasharray)
@@ -166,7 +166,7 @@ def draw_transcript_with_translation(
 
     for p1, p2 in zip(spl_tx.splicing_pattern[::2], spl_tx.splicing_pattern[1::2]):
         try:
-            spliced_out_interval = Interval(p1 + 1, p2 - 1)
+            spliced_out_interval = Interval(p1.pos + 1, p2.pos - 1)
             temp = []
             for region in translated_genomic_regions:
                 temp.extend(region - spliced_out_interval)

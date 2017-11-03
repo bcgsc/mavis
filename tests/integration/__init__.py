@@ -25,9 +25,14 @@ BLAT_OUTPUT = os.path.join(DATA_DIR, 'blat_output.pslx')
 
 RUN_FULL = int(os.environ.get('RUN_FULL', 1))
 OUTPUT_SVG = int(os.environ.get('OUTPUT_SVG', 0))
+_EXAMPLE_GENES = None
 
 
-def load_example_genes():
+def get_example_genes():
+    return _EXAMPLE_GENES
+
+
+def set_example_genes():
     result = {}
     genes = load_annotations(os.path.join(DATA_DIR, 'example_genes.json'))
     seqs = load_reference_genome(os.path.join(DATA_DIR, 'example_genes.fa'))
@@ -43,7 +48,9 @@ def load_example_genes():
     return result
 
 
-EXAMPLE_GENES = load_example_genes()
+def setUpPackage():
+    global _EXAMPLE_GENES
+    _EXAMPLE_GENES = set_example_genes()
 
 
 class MockObject:

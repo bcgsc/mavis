@@ -108,7 +108,7 @@ class BioInterval:
         return self.key() == other.key()
 
     def __lt__(self, other):
-        if other.reference_object != self.reference_object:
+        if other.reference_object and self.reference_object and other.reference_object != self.reference_object:
             if self.reference_object < other.reference_object:
                 return True
             return False
