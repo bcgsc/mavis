@@ -240,7 +240,9 @@ class Exon(BioInterval):
             return self.start
 
     def __repr__(self):
-        return 'Exon({}, {})'.format(self.start, self.end)
+        return 'Exon({}{}, {}{})'.format(
+            self.start, '' if self.start_splice_site.intact else '*',
+            self.end, '' if self.end_splice_site.intact else '*')
 
 
 class UsTranscript(BioInterval):
@@ -312,65 +314,13 @@ class UsTranscript(BioInterval):
 
         see :ref:`theory - predicting splicing patterns <theory-predicting-splicing-patterns>`
         """
-        exons = sorted(self.exons, key=lambda x: x[0])
-        if len(exons) < 2:
+        if len(self.exons) < 2:
             return [SplicingPattern()]
-
-        donor = 3
-        acceptor = 5
-
-        reverse = True if self.get_strand() == STRAND.NEG else False
-
-        pattern = [(exons[0].end, exons[0].end_splice_site.intact, acceptor if reverse else donor)]  # always start with a donor
-        for i in range(1, len(exons) - 1):
-            pattern.append((exons[i].start, exons[i].start_splice_site.intact, donor if reverse else acceptor))
-            pattern.append((exons[i].end, exons[i].end_splice_site.intact, acceptor if reverse else donor))
-        pattern.append((exons[-1].start, exons[-1].start_splice_site.intact, donor if reverse else acceptor))  # always end with acceptor
-        original_sites = [p for p, s, t in pattern]
-        pattern = [(p, t) for p, s, t in pattern if s]  # filter out abrogated splice sites
-        if reverse:
-            pattern.reverse()
-
-        def get_cons_sites(index, splice_type):
-            # get the next 'n' of any given type
-            temp = []
-            for i in range(index, len(pattern)):
-                if pattern[i][1] == splice_type:
-                    temp.append(pattern[i])
-                else:
-                    break
-            return temp
-
-        splice_site_sets = [SplicingPattern()]
-
-        # i should start at the first donor site
-        i = len(get_cons_sites(0, acceptor))
-
-        while i < len(pattern):
-            if pattern[i][1] == donor:
-                donors = get_cons_sites(i, donor)
-                acceptors = get_cons_sites(i + len(donors), acceptor)
-
-                temp = []
-                for donor_site, acceptor_site in sorted(itertools.product(donors, acceptors)):
-                    for curr_splss in splice_site_sets:
-                        splss = copy(curr_splss)
-                        splss.extend([donor_site[0], acceptor_site[0]])
-                        temp.append(splss)
-                if temp:
-                    splice_site_sets = temp
-                i += len(donors) + len(acceptors)
-            else:
-                raise AssertionError('should always be positioned at a donor splice site')
-
-        # now need to decide the type for each set
-        for splss in splice_site_sets:
-            classification = SplicingPattern.classify(splss, original_sites)
-            splss.splice_type = classification
-            if reverse:
-                splss.reverse()
-
-        return splice_site_sets
+        sites = [self.exons[0].end_splice_site]
+        for exon in self.exons[1:-1]:
+            sites.extend([exon.start_splice_site, exon.end_splice_site])
+        sites.append(self.exons[-1].start_splice_site)
+        return SplicingPattern.generate_patterns(sites, is_reverse=self.is_reverse)
 
     @property
     def gene(self):
@@ -384,7 +334,7 @@ class UsTranscript(BioInterval):
         """
         mapping = {}
         length = 1
-        pos = sorted(splicing_pattern + [self.start, self.end])
+        pos = sorted([s.pos for s in splicing_pattern] + [self.start, self.end])
         genome_intervals = [Interval(s, t) for s, t in zip(pos[::2], pos[1::2])]
 
         if self.get_strand() == STRAND.POS:
@@ -531,7 +481,7 @@ class UsTranscript(BioInterval):
         Returns:
             str: the spliced cDNA sequence
         """
-        temp = sorted([self.start] + splicing_pattern + [self.end])
+        temp = sorted([self.start] + [s.pos for s in splicing_pattern] + [self.end])
         cdna_start = min(temp)
         conti = []
         for i in range(0, len(temp) - 1, 2):
@@ -572,7 +522,7 @@ class Transcript(BioInterval):
             translations (:class:`list` of :class:`~mavis.annotate.protein.Translation`):
              the list of translations of this transcript
         """
-        pos = sorted([ust.start, ust.end] + splicing_patt)
+        pos = sorted([ust.start, ust.end] + [s.pos for s in splicing_patt])
         splicing_patt.sort()
         self.splicing_pattern = splicing_patt
         length = sum([t - s + 1 for s, t in zip(pos[::2], pos[1::2])])
@@ -582,7 +532,7 @@ class Transcript(BioInterval):
 
         for translation in self.translations:
             translation.reference_object = self
-        if splicing_patt and (min(splicing_patt) < ust.start or max(splicing_patt) > ust.end):
+        if splicing_patt and (min(splicing_patt).pos < ust.start or max(splicing_patt).pos > ust.end):
             raise AssertionError('splicing pattern must be contained within the unspliced transcript')
         elif len(splicing_patt) % 2 != 0:
             raise AssertionError('splicing pattern must be a list of 3\'5\' splicing positions')
