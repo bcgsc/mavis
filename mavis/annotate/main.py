@@ -6,7 +6,8 @@ import warnings
 
 from .constants import DEFAULTS
 from .genomic import UsTranscript
-from .variant import annotate_events, choose_more_annotated, choose_transcripts_by_priority, determine_prime, flatten_fusion_transcript, flatten_fusion_translation
+from .variant import annotate_events, choose_more_annotated, choose_transcripts_by_priority, call_protein_indel, flatten_fusion_transcript, flatten_fusion_translation
+from .fusion import determine_prime
 from ..constants import COLUMNS, PRIME, PROTOCOL, sort_columns
 from ..error import DrawingFitError, NotSpecifiedError
 from ..illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
@@ -158,6 +159,7 @@ def main(
         COLUMNS.fusion_cdna_coding_end,
         COLUMNS.fusion_sequence_fasta_id,
         COLUMNS.fusion_mapped_domains,
+        COLUMNS.fusion_protein_hgvs,
         COLUMNS.exon_first_3prime,
         COLUMNS.exon_last_5prime,
         COLUMNS.annotation_id,
@@ -223,6 +225,9 @@ def main(
                         nrow[COLUMNS.protein_synon] = protein_synon if protein_synon else None
                         # select the exon
                         nrow.update(flatten_fusion_translation(fusion_translation))
+                        if ann.single_transcript() and ann.transcript1.translations:
+                            nrow[COLUMNS.fusion_protein_hgvs] = call_protein_indel(
+                                ann.transcript1.translations[0], fusion_translation, reference_genome)
                         rows.append(nrow)
                 else:
                     temp_row.update(ann_row)

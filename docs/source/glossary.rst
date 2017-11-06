@@ -383,3 +383,6 @@ List of column names and their definitions. The types indicated here are the exp
     tracking_id
         column used to store input identifiers from the original SV calls. Used to track calls from the input files to
         the final outputs.
+
+    fusion_protein_hgvs
+        :class:`str` - Describes the fusion protein in HGVS notation. Will be None if the change is not an indel or is synonymous

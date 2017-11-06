@@ -552,6 +552,7 @@ COLUMNS = MavisNamespace(
     fusion_mapped_domains='fusion_mapped_domains',
     fusion_sequence_fasta_id='fusion_sequence_fasta_id',
     fusion_sequence_fasta_file='fusion_sequence_fasta_file',
+    fusion_protein_hgvs='fusion_protein_hgvs',
     annotation_figure='annotation_figure',
     annotation_figure_legend='annotation_figure_legend',
     genes_encompassed='genes_encompassed',
@@ -688,6 +689,7 @@ COLUMNS = MavisNamespace(
 - :term:`fusion_sequence_fasta_file`
 - :term:`fusion_sequence_fasta_id`
 - :term:`fusion_splicing_pattern`
+- :term:`fusion_protein_hgvs`
 - :term:`gene1_aliases`
 - :term:`gene1_direction`
 - :term:`gene1`
