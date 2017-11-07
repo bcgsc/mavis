@@ -282,6 +282,7 @@ def main(
         COLUMNS.event_type,
         COLUMNS.fusion_cdna_coding_end,
         COLUMNS.fusion_cdna_coding_start,
+        COLUMNS.fusion_protein_hgvs,
         COLUMNS.fusion_mapped_domains,
         COLUMNS.gene1,
         COLUMNS.gene1_direction,
@@ -312,6 +313,7 @@ def main(
         COLUMNS.contig_alignment_score,
         COLUMNS.spanning_reads,
         COLUMNS.contig_remapped_reads,
+        COLUMNS.tracking_id,
         'summary_pairing',
         'dgv'}
 
