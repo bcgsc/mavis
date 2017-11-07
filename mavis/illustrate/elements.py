@@ -133,6 +133,7 @@ def draw_transcript_with_translation(
         style=config.font_style.format(font_size=config.label_font_size, text_anchor='end'),
         class_='label'
     ))
+    exon_track_group.add(Tag('title', 'Transcript: {}'.format(ust.name if ust.name else '')))
 
     # draw the splicing pattern
     splice_group = canvas.g(class_='splicing')
@@ -284,7 +285,7 @@ def draw_ustranscript(
     Args:
         canvas (svgwrite.drawing.Drawing): the main svgwrite object used to create new svg elements
         target_width (int): the target width of the diagram
-        t (Transcript): the transcript being drawn
+        ust (Transcript): the transcript being drawn
         exon_color (str): the color being used for the fill of the exons
         utr_color (str): the color for the fill of the UTR regions
         abrogated_splice_sites (:class:`list` of :class:`int`): list of positions to ignore as splice sites
@@ -350,6 +351,7 @@ def draw_ustranscript(
             style=config.font_style.format(font_size=config.label_font_size, text_anchor='end'),
             class_='label'
         ))
+        exon_track_group.add(Tag('title', 'Transcript: {}'.format(ust.name if ust.name else '')))
         main_group.add(exon_track_group)
         y += config.track_height
     else:
