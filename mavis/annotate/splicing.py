@@ -96,12 +96,12 @@ class SplicingPattern(list):
                     patterns[-1].append(site)
                 else:
                     patterns.append([site])
+        if patterns and patterns[0][0].type == SPLICE_SITE_TYPE.ACCEPTOR:
+            patterns = patterns[1:]
+        if patterns and patterns[-1][0].type == SPLICE_SITE_TYPE.DONOR:
+            patterns = patterns[:-1]
         if not patterns:
             return [SplicingPattern()]
-        if patterns[0][0].type == SPLICE_SITE_TYPE.ACCEPTOR:
-            patterns = patterns[1:]
-        if patterns[-1][0].type == SPLICE_SITE_TYPE.DONOR:
-            patterns = patterns[:-1]
         patterns = list(itertools.product(*patterns))
         for i, patt in enumerate(patterns):
             patterns[i] = SplicingPattern(patt, splice_type=cls.classify(patt, sites))
