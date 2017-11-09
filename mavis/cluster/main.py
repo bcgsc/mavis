@@ -18,12 +18,6 @@ def split_clusters(clusters, outputdir, batch_id, min_clusters_per_file=0, max_f
     Returns:
         list: of output file names (not including the bed file)
     """
-    # decide on the number of clusters to validate per job
-    job_size = min_clusters_per_file
-    if len(clusters) // min_clusters_per_file > max_files - 1:
-        job_size = int(round(len(clusters) / max_files, 0))
-        assert len(clusters) // job_size <= max_files
-
     if write_bed_summary:
         bedfile = os.path.join(outputdir, 'clusters.bed')
         write_bed_file(bedfile, itertools.chain.from_iterable([b.get_bed_repesentation() for b in clusters]))
