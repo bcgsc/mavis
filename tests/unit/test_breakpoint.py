@@ -356,3 +356,69 @@ class TestClassifyBreakpointPair(unittest.TestCase):
         )
         self.assertEqual(sorted([SVTYPE.DEL, SVTYPE.INS]),
                          sorted(BreakpointPair.classify(b)))
+
+
+class TestNetSize(unittest.TestCase):
+
+    def test_indel(self):
+        bpp = BreakpointPair(
+            Breakpoint('1', 13, orient=ORIENT.RIGHT),
+            Breakpoint('1', 10, orient=ORIENT.LEFT),
+            untemplated_seq='TTT'
+        )
+        self.assertEqual(Interval(1), bpp.net_size())
+
+    def test_large_indel(self):
+        bpp = BreakpointPair(
+            Breakpoint('1', 10, orient=ORIENT.LEFT),
+            Breakpoint('1', 101, orient=ORIENT.RIGHT),
+            untemplated_seq='TTT'
+        )
+        self.assertEqual(Interval(-87), bpp.net_size())
+
+    def test_insertion(self):
+        bpp = BreakpointPair(
+            Breakpoint('1', 11, orient=ORIENT.RIGHT),
+            Breakpoint('1', 10, orient=ORIENT.LEFT),
+            untemplated_seq='T'
+        )
+        self.assertEqual(Interval(1), bpp.net_size())
+
+        bpp = BreakpointPair(
+            Breakpoint('1', 11, orient=ORIENT.RIGHT),
+            Breakpoint('1', 10, orient=ORIENT.LEFT),
+            untemplated_seq='TT'
+        )
+        self.assertEqual(Interval(2), bpp.net_size())
+
+    def test_duplication_with_insertion(self):
+        bpp = BreakpointPair(
+            Breakpoint('1', 10, orient=ORIENT.RIGHT),
+            Breakpoint('1', 15, orient=ORIENT.LEFT),
+            untemplated_seq='TTT'
+        )
+        self.assertEqual(Interval(9), bpp.net_size())
+
+    def test_deletion(self):
+        bpp = BreakpointPair(
+            Breakpoint('1', 10, orient=ORIENT.LEFT),
+            Breakpoint('1', 15, orient=ORIENT.RIGHT),
+            untemplated_seq=''
+        )
+        self.assertEqual(Interval(-4), bpp.net_size())
+
+    def test_inversion(self):
+        bpp = BreakpointPair(
+            Breakpoint('1', 10, orient=ORIENT.LEFT),
+            Breakpoint('1', 15, orient=ORIENT.LEFT),
+            untemplated_seq=''
+        )
+        self.assertEqual(Interval(0), bpp.net_size())
+
+    def test_inversion_insertion(self):
+        bpp = BreakpointPair(
+            Breakpoint('1', 10, orient=ORIENT.LEFT),
+            Breakpoint('1', 15, orient=ORIENT.LEFT),
+            untemplated_seq='TT'
+        )
+        self.assertEqual(Interval(2), bpp.net_size())

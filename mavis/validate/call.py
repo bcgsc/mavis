@@ -4,10 +4,11 @@ import statistics
 import warnings
 
 from .evidence import TranscriptomeEvidence
-from ..align import SplitAlignment
+from ..align import SplitAlignment, query_coverage_interval
 from ..bam import read as read_tools
+
 from ..breakpoint import Breakpoint, BreakpointPair
-from ..constants import CALL_METHOD, COLUMNS, ORIENT, PROTOCOL, PYSAM_READ_FLAGS, STRAND, SVTYPE
+from ..constants import CALL_METHOD, CIGAR, COLUMNS, ORIENT, PROTOCOL, PYSAM_READ_FLAGS, STRAND, SVTYPE, reverse_complement
 from ..interval import Interval
 
 
@@ -368,43 +369,16 @@ def _call_by_reads(source_evidence, read1, read2=None):
     also ensures that the call is compatible with the source_evidence object
     putative event types
     """
-    try:
-        bpp = BreakpointPair.call_breakpoint_pair(read1, read2)
-        if bpp.opposing_strands != source_evidence.opposing_strands:
-            return None, []
-        putative_event_types = set(source_evidence.putative_event_types())
-        if set([SVTYPE.DUP, SVTYPE.INS]) & putative_event_types:
-            putative_event_types.update([SVTYPE.DUP, SVTYPE.INS])
-
-        if not set(BreakpointPair.classify(bpp)) & putative_event_types:
-            return None, []
-        if source_evidence.stranded:  # strand specific
-            if any([
-                bpp.break1.strand != source_evidence.break1.strand,
-                bpp.break2.strand != source_evidence.break2.strand
-            ]):
-                return None, []
-        else:
+    events = set()
+    for bpp in call_paired_read_events(read1, read2) if read2 else call_read_events(read1):
+        if not source_evidence.stranded:  # strand specific
             bpp.stranded = False
             bpp.break1.strand = STRAND.NS
             bpp.break2.strand = STRAND.NS
-
-        calls = []
-        del_size = abs(Interval.dist(bpp.break1, bpp.break2)) - 1
-        for event_type in putative_event_types:
-            if event_type == SVTYPE.INS:
-                if not bpp.untemplated_seq or \
-                        len(bpp.untemplated_seq) <= del_size:
-                    continue
-            elif event_type == SVTYPE.DEL:
-                if len(bpp.untemplated_seq) > del_size:
-                    continue
-            if event_type not in BreakpointPair.classify(bpp):
-                continue
-            calls.append(event_type)
-        return bpp, calls
-    except UserWarning:
-        return None, []
+        bpp = convert_to_duplication(bpp, source_evidence.reference_genome)
+        # convert the event classification using the distance metric
+        events.add(bpp)
+    return events
 
 
 def _call_by_contigs(source_evidence):
@@ -474,7 +448,7 @@ def _call_by_spanning_reads(source_evidence, consumed_evidence):
     available_flanking_pairs = filter_consumed_pairs(source_evidence.flanking_pairs, consumed_evidence)
 
     for read in source_evidence.spanning_reads - consumed_evidence:
-        bpp, event_types = _call_by_reads(source_evidence, read)
+        bpps = _call_by_reads(source_evidence, read)
         for event_type in event_types:
             spanning_calls.setdefault((bpp, event_type), set()).add(read)
     result = []
@@ -872,3 +846,4 @@ def _call_by_supporting_reads(evidence, event_type, consumed_evidence=None):
     if not linked_pairings:
         raise UserWarning(';'.join(list(error_messages)))
     return linked_pairings
+

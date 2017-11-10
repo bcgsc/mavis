@@ -1,5 +1,1631 @@
 {
     "genes": [
+    	{
+            "aliases": [
+                "EGFR"
+            ],
+            "chr": "7",
+            "end": 55324313,
+            "name": "ENSG00000146648",
+            "start": 55086714,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "cdna_coding_end": 3533,
+                    "cdna_coding_start": 258,
+                    "domains": [
+                        {
+                            "name": "PIRSF000619",
+                            "regions": [
+                                {
+                                    "end": 1090,
+                                    "start": 1
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PF07714",
+                            "regions": [
+                                {
+                                    "end": 920,
+                                    "start": 669
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SSF52058",
+                            "regions": [
+                                {
+                                    "end": 191,
+                                    "start": 28
+                                },
+                                {
+                                    "end": 475,
+                                    "start": 283
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PF00757",
+                            "regions": [
+                                {
+                                    "end": 293,
+                                    "start": 141
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PS50011",
+                            "regions": [
+                                {
+                                    "end": 934,
+                                    "start": 667
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PS50311",
+                            "regions": [
+                                {
+                                    "end": 219,
+                                    "start": 145
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SSF57184",
+                            "regions": [
+                                {
+                                    "end": 290,
+                                    "start": 142
+                                },
+                                {
+                                    "end": 593,
+                                    "start": 460
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PR00109",
+                            "regions": [
+                                {
+                                    "end": 758,
+                                    "start": 745
+                                },
+                                {
+                                    "end": 800,
+                                    "start": 782
+                                },
+                                {
+                                    "end": 841,
+                                    "start": 831
+                                },
+                                {
+                                    "end": 872,
+                                    "start": 850
+                                },
+                                {
+                                    "end": 916,
+                                    "start": 894
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SSF56112",
+                            "regions": [
+                                {
+                                    "end": 975,
+                                    "start": 651
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PF01030",
+                            "regions": [
+                                {
+                                    "end": 141,
+                                    "start": 57
+                                },
+                                {
+                                    "end": 435,
+                                    "start": 316
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SM00220",
+                            "regions": [
+                                {
+                                    "end": 924,
+                                    "start": 667
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SM00261",
+                            "regions": [
+                                {
+                                    "end": 225,
+                                    "start": 183
+                                },
+                                {
+                                    "end": 502,
+                                    "start": 451
+                                },
+                                {
+                                    "end": 556,
+                                    "start": 507
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SM00219",
+                            "regions": [
+                                {
+                                    "end": 923,
+                                    "start": 667
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PF00069",
+                            "regions": [
+                                {
+                                    "end": 919,
+                                    "start": 667
+                                }
+                            ]
+                        }
+                    ],
+                    "end": 55270769,
+                    "exons": [
+                        {
+                            "end": 55087058,
+                            "name": null,
+                            "start": 55086714
+                        },
+                        {
+                            "end": 55210130,
+                            "name": null,
+                            "start": 55209979
+                        },
+                        {
+                            "end": 55211181,
+                            "name": null,
+                            "start": 55210998
+                        },
+                        {
+                            "end": 55219055,
+                            "name": null,
+                            "start": 55218987
+                        },
+                        {
+                            "end": 55220357,
+                            "name": null,
+                            "start": 55220239
+                        },
+                        {
+                            "end": 55221845,
+                            "name": null,
+                            "start": 55221704
+                        },
+                        {
+                            "end": 55223639,
+                            "name": null,
+                            "start": 55223523
+                        },
+                        {
+                            "end": 55224352,
+                            "name": null,
+                            "start": 55224226
+                        },
+                        {
+                            "end": 55224525,
+                            "name": null,
+                            "start": 55224452
+                        },
+                        {
+                            "end": 55225446,
+                            "name": null,
+                            "start": 55225356
+                        },
+                        {
+                            "end": 55228031,
+                            "name": null,
+                            "start": 55227832
+                        },
+                        {
+                            "end": 55229324,
+                            "name": null,
+                            "start": 55229192
+                        },
+                        {
+                            "end": 55231516,
+                            "name": null,
+                            "start": 55231426
+                        },
+                        {
+                            "end": 55233130,
+                            "name": null,
+                            "start": 55232973
+                        },
+                        {
+                            "end": 55238906,
+                            "name": null,
+                            "start": 55238868
+                        },
+                        {
+                            "end": 55240817,
+                            "name": null,
+                            "start": 55240676
+                        },
+                        {
+                            "end": 55241736,
+                            "name": null,
+                            "start": 55241614
+                        },
+                        {
+                            "end": 55242513,
+                            "name": null,
+                            "start": 55242415
+                        },
+                        {
+                            "end": 55249171,
+                            "name": null,
+                            "start": 55248986
+                        },
+                        {
+                            "end": 55259567,
+                            "name": null,
+                            "start": 55259412
+                        },
+                        {
+                            "end": 55260534,
+                            "name": null,
+                            "start": 55260459
+                        },
+                        {
+                            "end": 55266556,
+                            "name": null,
+                            "start": 55266410
+                        },
+                        {
+                            "end": 55268106,
+                            "name": null,
+                            "start": 55268009
+                        },
+                        {
+                            "end": 55269048,
+                            "name": null,
+                            "start": 55268881
+                        },
+                        {
+                            "end": 55269475,
+                            "name": null,
+                            "start": 55269428
+                        },
+                        {
+                            "end": 55270769,
+                            "name": null,
+                            "start": 55270210
+                        }
+                    ],
+                    "is_best_transcript": false,
+                    "name": "ENST00000455089",
+                    "start": 55086714
+                },
+                {
+                    "cdna_coding_end": 2133,
+                    "cdna_coding_start": 247,
+                    "domains": [
+                        {
+                            "name": "PS50311",
+                            "regions": [
+                                {
+                                    "end": 264,
+                                    "start": 187
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SSF57184",
+                            "regions": [
+                                {
+                                    "end": 339,
+                                    "start": 182
+                                },
+                                {
+                                    "end": 624,
+                                    "start": 505
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SSF52058",
+                            "regions": [
+                                {
+                                    "end": 211,
+                                    "start": 29
+                                },
+                                {
+                                    "end": 520,
+                                    "start": 328
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PF00757",
+                            "regions": [
+                                {
+                                    "end": 338,
+                                    "start": 185
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SM00261",
+                            "regions": [
+                                {
+                                    "end": 270,
+                                    "start": 228
+                                },
+                                {
+                                    "end": 547,
+                                    "start": 496
+                                },
+                                {
+                                    "end": 601,
+                                    "start": 552
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PF01030",
+                            "regions": [
+                                {
+                                    "end": 167,
+                                    "start": 57
+                                },
+                                {
+                                    "end": 480,
+                                    "start": 361
+                                }
+                            ]
+                        }
+                    ],
+                    "end": 55236328,
+                    "exons": [
+                        {
+                            "end": 55087058,
+                            "name": null,
+                            "start": 55086725
+                        },
+                        {
+                            "end": 55210130,
+                            "name": null,
+                            "start": 55209979
+                        },
+                        {
+                            "end": 55211181,
+                            "name": null,
+                            "start": 55210998
+                        },
+                        {
+                            "end": 55214433,
+                            "name": null,
+                            "start": 55214299
+                        },
+                        {
+                            "end": 55219055,
+                            "name": null,
+                            "start": 55218987
+                        },
+                        {
+                            "end": 55220357,
+                            "name": null,
+                            "start": 55220239
+                        },
+                        {
+                            "end": 55221845,
+                            "name": null,
+                            "start": 55221704
+                        },
+                        {
+                            "end": 55223639,
+                            "name": null,
+                            "start": 55223523
+                        },
+                        {
+                            "end": 55224352,
+                            "name": null,
+                            "start": 55224226
+                        },
+                        {
+                            "end": 55224525,
+                            "name": null,
+                            "start": 55224452
+                        },
+                        {
+                            "end": 55225446,
+                            "name": null,
+                            "start": 55225356
+                        },
+                        {
+                            "end": 55228031,
+                            "name": null,
+                            "start": 55227832
+                        },
+                        {
+                            "end": 55229324,
+                            "name": null,
+                            "start": 55229192
+                        },
+                        {
+                            "end": 55231516,
+                            "name": null,
+                            "start": 55231426
+                        },
+                        {
+                            "end": 55233130,
+                            "name": null,
+                            "start": 55232973
+                        },
+                        {
+                            "end": 55236328,
+                            "name": null,
+                            "start": 55236216
+                        }
+                    ],
+                    "is_best_transcript": false,
+                    "name": "ENST00000342916",
+                    "start": 55086725
+                },
+                {
+                    "cdna_coding_end": 2363,
+                    "cdna_coding_start": 246,
+                    "domains": [
+                        {
+                            "name": "SSF57184",
+                            "regions": [
+                                {
+                                    "end": 339,
+                                    "start": 182
+                                },
+                                {
+                                    "end": 624,
+                                    "start": 505
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PS50311",
+                            "regions": [
+                                {
+                                    "end": 264,
+                                    "start": 187
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PF00757",
+                            "regions": [
+                                {
+                                    "end": 338,
+                                    "start": 185
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SSF52058",
+                            "regions": [
+                                {
+                                    "end": 211,
+                                    "start": 29
+                                },
+                                {
+                                    "end": 520,
+                                    "start": 328
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SM00261",
+                            "regions": [
+                                {
+                                    "end": 270,
+                                    "start": 228
+                                },
+                                {
+                                    "end": 547,
+                                    "start": 496
+                                },
+                                {
+                                    "end": 601,
+                                    "start": 552
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PF01030",
+                            "regions": [
+                                {
+                                    "end": 167,
+                                    "start": 57
+                                },
+                                {
+                                    "end": 480,
+                                    "start": 361
+                                }
+                            ]
+                        }
+                    ],
+                    "end": 55238738,
+                    "exons": [
+                        {
+                            "end": 55087058,
+                            "name": null,
+                            "start": 55086726
+                        },
+                        {
+                            "end": 55210130,
+                            "name": null,
+                            "start": 55209979
+                        },
+                        {
+                            "end": 55211181,
+                            "name": null,
+                            "start": 55210998
+                        },
+                        {
+                            "end": 55214433,
+                            "name": null,
+                            "start": 55214299
+                        },
+                        {
+                            "end": 55219055,
+                            "name": null,
+                            "start": 55218987
+                        },
+                        {
+                            "end": 55220357,
+                            "name": null,
+                            "start": 55220239
+                        },
+                        {
+                            "end": 55221845,
+                            "name": null,
+                            "start": 55221704
+                        },
+                        {
+                            "end": 55223639,
+                            "name": null,
+                            "start": 55223523
+                        },
+                        {
+                            "end": 55224352,
+                            "name": null,
+                            "start": 55224226
+                        },
+                        {
+                            "end": 55224525,
+                            "name": null,
+                            "start": 55224452
+                        },
+                        {
+                            "end": 55225446,
+                            "name": null,
+                            "start": 55225356
+                        },
+                        {
+                            "end": 55228031,
+                            "name": null,
+                            "start": 55227832
+                        },
+                        {
+                            "end": 55229324,
+                            "name": null,
+                            "start": 55229192
+                        },
+                        {
+                            "end": 55231516,
+                            "name": null,
+                            "start": 55231426
+                        },
+                        {
+                            "end": 55233130,
+                            "name": null,
+                            "start": 55232973
+                        },
+                        {
+                            "end": 55238738,
+                            "name": null,
+                            "start": 55238000
+                        }
+                    ],
+                    "is_best_transcript": false,
+                    "name": "ENST00000344576",
+                    "start": 55086726
+                },
+                {
+                    "cdna_coding_end": 1462,
+                    "cdna_coding_start": 245,
+                    "domains": [
+                        {
+                            "name": "SSF57184",
+                            "regions": [
+                                {
+                                    "end": 339,
+                                    "start": 182
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PS50311",
+                            "regions": [
+                                {
+                                    "end": 264,
+                                    "start": 187
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PF00757",
+                            "regions": [
+                                {
+                                    "end": 338,
+                                    "start": 185
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SSF52058",
+                            "regions": [
+                                {
+                                    "end": 211,
+                                    "start": 29
+                                },
+                                {
+                                    "end": 403,
+                                    "start": 328
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SM00261",
+                            "regions": [
+                                {
+                                    "end": 270,
+                                    "start": 228
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PF01030",
+                            "regions": [
+                                {
+                                    "end": 167,
+                                    "start": 57
+                                }
+                            ]
+                        }
+                    ],
+                    "end": 55224644,
+                    "exons": [
+                        {
+                            "end": 55087058,
+                            "name": null,
+                            "start": 55086727
+                        },
+                        {
+                            "end": 55210130,
+                            "name": null,
+                            "start": 55209979
+                        },
+                        {
+                            "end": 55211181,
+                            "name": null,
+                            "start": 55210998
+                        },
+                        {
+                            "end": 55214433,
+                            "name": null,
+                            "start": 55214299
+                        },
+                        {
+                            "end": 55219055,
+                            "name": null,
+                            "start": 55218987
+                        },
+                        {
+                            "end": 55220357,
+                            "name": null,
+                            "start": 55220239
+                        },
+                        {
+                            "end": 55221845,
+                            "name": null,
+                            "start": 55221704
+                        },
+                        {
+                            "end": 55223639,
+                            "name": null,
+                            "start": 55223523
+                        },
+                        {
+                            "end": 55224352,
+                            "name": null,
+                            "start": 55224226
+                        },
+                        {
+                            "end": 55224644,
+                            "name": null,
+                            "start": 55224452
+                        }
+                    ],
+                    "is_best_transcript": false,
+                    "name": "ENST00000420316",
+                    "start": 55086727
+                },
+                {
+                    "cdna_coding_end": 3810,
+                    "cdna_coding_start": 178,
+                    "domains": [
+                        {
+                            "name": "SM00220",
+                            "regions": [
+                                {
+                                    "end": 969,
+                                    "start": 712
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PF01030",
+                            "regions": [
+                                {
+                                    "end": 167,
+                                    "start": 57
+                                },
+                                {
+                                    "end": 480,
+                                    "start": 361
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SSF56112",
+                            "regions": [
+                                {
+                                    "end": 1020,
+                                    "start": 696
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PF00069",
+                            "regions": [
+                                {
+                                    "end": 964,
+                                    "start": 712
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SM00219",
+                            "regions": [
+                                {
+                                    "end": 968,
+                                    "start": 712
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SM00261",
+                            "regions": [
+                                {
+                                    "end": 270,
+                                    "start": 228
+                                },
+                                {
+                                    "end": 547,
+                                    "start": 496
+                                },
+                                {
+                                    "end": 601,
+                                    "start": 552
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PF00757",
+                            "regions": [
+                                {
+                                    "end": 338,
+                                    "start": 185
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SSF52058",
+                            "regions": [
+                                {
+                                    "end": 211,
+                                    "start": 29
+                                },
+                                {
+                                    "end": 520,
+                                    "start": 328
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PF07714",
+                            "regions": [
+                                {
+                                    "end": 965,
+                                    "start": 714
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PIRSF000619",
+                            "regions": [
+                                {
+                                    "end": 1210,
+                                    "start": 1
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PR00109",
+                            "regions": [
+                                {
+                                    "end": 803,
+                                    "start": 790
+                                },
+                                {
+                                    "end": 845,
+                                    "start": 827
+                                },
+                                {
+                                    "end": 886,
+                                    "start": 876
+                                },
+                                {
+                                    "end": 917,
+                                    "start": 895
+                                },
+                                {
+                                    "end": 961,
+                                    "start": 939
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SSF57184",
+                            "regions": [
+                                {
+                                    "end": 339,
+                                    "start": 182
+                                },
+                                {
+                                    "end": 638,
+                                    "start": 505
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PS50311",
+                            "regions": [
+                                {
+                                    "end": 264,
+                                    "start": 187
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PS50011",
+                            "regions": [
+                                {
+                                    "end": 979,
+                                    "start": 712
+                                }
+                            ]
+                        }
+                    ],
+                    "end": 55279321,
+                    "exons": [
+                        {
+                            "end": 55087058,
+                            "name": null,
+                            "start": 55086794
+                        },
+                        {
+                            "end": 55210130,
+                            "name": null,
+                            "start": 55209979
+                        },
+                        {
+                            "end": 55211181,
+                            "name": null,
+                            "start": 55210998
+                        },
+                        {
+                            "end": 55214433,
+                            "name": null,
+                            "start": 55214299
+                        },
+                        {
+                            "end": 55219055,
+                            "name": null,
+                            "start": 55218987
+                        },
+                        {
+                            "end": 55220357,
+                            "name": null,
+                            "start": 55220239
+                        },
+                        {
+                            "end": 55221845,
+                            "name": null,
+                            "start": 55221704
+                        },
+                        {
+                            "end": 55223639,
+                            "name": null,
+                            "start": 55223523
+                        },
+                        {
+                            "end": 55224352,
+                            "name": null,
+                            "start": 55224226
+                        },
+                        {
+                            "end": 55224525,
+                            "name": null,
+                            "start": 55224452
+                        },
+                        {
+                            "end": 55225446,
+                            "name": null,
+                            "start": 55225356
+                        },
+                        {
+                            "end": 55228031,
+                            "name": null,
+                            "start": 55227832
+                        },
+                        {
+                            "end": 55229324,
+                            "name": null,
+                            "start": 55229192
+                        },
+                        {
+                            "end": 55231516,
+                            "name": null,
+                            "start": 55231426
+                        },
+                        {
+                            "end": 55233130,
+                            "name": null,
+                            "start": 55232973
+                        },
+                        {
+                            "end": 55238906,
+                            "name": null,
+                            "start": 55238868
+                        },
+                        {
+                            "end": 55240817,
+                            "name": null,
+                            "start": 55240676
+                        },
+                        {
+                            "end": 55241736,
+                            "name": null,
+                            "start": 55241614
+                        },
+                        {
+                            "end": 55242513,
+                            "name": null,
+                            "start": 55242415
+                        },
+                        {
+                            "end": 55249171,
+                            "name": null,
+                            "start": 55248986
+                        },
+                        {
+                            "end": 55259567,
+                            "name": null,
+                            "start": 55259412
+                        },
+                        {
+                            "end": 55260534,
+                            "name": null,
+                            "start": 55260459
+                        },
+                        {
+                            "end": 55266556,
+                            "name": null,
+                            "start": 55266410
+                        },
+                        {
+                            "end": 55268106,
+                            "name": null,
+                            "start": 55268009
+                        },
+                        {
+                            "end": 55269048,
+                            "name": null,
+                            "start": 55268881
+                        },
+                        {
+                            "end": 55269475,
+                            "name": null,
+                            "start": 55269428
+                        },
+                        {
+                            "end": 55270318,
+                            "name": null,
+                            "start": 55270210
+                        },
+                        {
+                            "end": 55279321,
+                            "name": null,
+                            "start": 55272949
+                        }
+                    ],
+                    "is_best_transcript": true,
+                    "name": "ENST00000275493",
+                    "start": 55086794
+                },
+                {
+                    "cdna_coding_end": 2134,
+                    "cdna_coding_start": 161,
+                    "domains": [
+                        {
+                            "name": "PF01030",
+                            "regions": [
+                                {
+                                    "end": 167,
+                                    "start": 57
+                                },
+                                {
+                                    "end": 480,
+                                    "start": 361
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SM00261",
+                            "regions": [
+                                {
+                                    "end": 270,
+                                    "start": 228
+                                },
+                                {
+                                    "end": 547,
+                                    "start": 496
+                                },
+                                {
+                                    "end": 601,
+                                    "start": 552
+                                },
+                                {
+                                    "end": 653,
+                                    "start": 614
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SSF52058",
+                            "regions": [
+                                {
+                                    "end": 211,
+                                    "start": 29
+                                },
+                                {
+                                    "end": 520,
+                                    "start": 328
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PF00757",
+                            "regions": [
+                                {
+                                    "end": 338,
+                                    "start": 185
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PS50311",
+                            "regions": [
+                                {
+                                    "end": 264,
+                                    "start": 187
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SSF57184",
+                            "regions": [
+                                {
+                                    "end": 339,
+                                    "start": 182
+                                },
+                                {
+                                    "end": 638,
+                                    "start": 505
+                                }
+                            ]
+                        }
+                    ],
+                    "end": 55324313,
+                    "exons": [
+                        {
+                            "end": 55087058,
+                            "name": null,
+                            "start": 55086811
+                        },
+                        {
+                            "end": 55210130,
+                            "name": null,
+                            "start": 55209979
+                        },
+                        {
+                            "end": 55211181,
+                            "name": null,
+                            "start": 55210998
+                        },
+                        {
+                            "end": 55214433,
+                            "name": null,
+                            "start": 55214299
+                        },
+                        {
+                            "end": 55219055,
+                            "name": null,
+                            "start": 55218987
+                        },
+                        {
+                            "end": 55220357,
+                            "name": null,
+                            "start": 55220239
+                        },
+                        {
+                            "end": 55221845,
+                            "name": null,
+                            "start": 55221704
+                        },
+                        {
+                            "end": 55223639,
+                            "name": null,
+                            "start": 55223523
+                        },
+                        {
+                            "end": 55224352,
+                            "name": null,
+                            "start": 55224226
+                        },
+                        {
+                            "end": 55224525,
+                            "name": null,
+                            "start": 55224452
+                        },
+                        {
+                            "end": 55225446,
+                            "name": null,
+                            "start": 55225356
+                        },
+                        {
+                            "end": 55228031,
+                            "name": null,
+                            "start": 55227832
+                        },
+                        {
+                            "end": 55229324,
+                            "name": null,
+                            "start": 55229192
+                        },
+                        {
+                            "end": 55231516,
+                            "name": null,
+                            "start": 55231426
+                        },
+                        {
+                            "end": 55233130,
+                            "name": null,
+                            "start": 55232973
+                        },
+                        {
+                            "end": 55238906,
+                            "name": null,
+                            "start": 55238868
+                        },
+                        {
+                            "end": 55240621,
+                            "name": null,
+                            "start": 55240539
+                        },
+                        {
+                            "end": 55324313,
+                            "name": null,
+                            "start": 55323947
+                        }
+                    ],
+                    "is_best_transcript": false,
+                    "name": "ENST00000442591",
+                    "start": 55086811
+                },
+                {
+                    "cdna_coding_end": 691,
+                    "cdna_coding_start": 308,
+                    "domains": [
+                        {
+                            "name": "SSF52058",
+                            "regions": [
+                                {
+                                    "end": 127,
+                                    "start": 1
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PF01030",
+                            "regions": [
+                                {
+                                    "end": 114,
+                                    "start": 4
+                                }
+                            ]
+                        }
+                    ],
+                    "end": 55214417,
+                    "exons": [
+                        {
+                            "end": 55177651,
+                            "name": null,
+                            "start": 55177416
+                        },
+                        {
+                            "end": 55210130,
+                            "name": null,
+                            "start": 55209979
+                        },
+                        {
+                            "end": 55211181,
+                            "name": null,
+                            "start": 55210998
+                        },
+                        {
+                            "end": 55214417,
+                            "name": null,
+                            "start": 55214299
+                        }
+                    ],
+                    "is_best_transcript": false,
+                    "name": "ENST00000450046",
+                    "start": 55177416
+                },
+                {
+                    "cdna_coding_end": 3657,
+                    "cdna_coding_start": 184,
+                    "domains": [
+                        {
+                            "name": "SM00261",
+                            "regions": [
+                                {
+                                    "end": 217,
+                                    "start": 175
+                                },
+                                {
+                                    "end": 494,
+                                    "start": 443
+                                },
+                                {
+                                    "end": 548,
+                                    "start": 499
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PF00069",
+                            "regions": [
+                                {
+                                    "end": 911,
+                                    "start": 659
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SM00219",
+                            "regions": [
+                                {
+                                    "end": 915,
+                                    "start": 659
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SSF56112",
+                            "regions": [
+                                {
+                                    "end": 967,
+                                    "start": 643
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SM00220",
+                            "regions": [
+                                {
+                                    "end": 916,
+                                    "start": 659
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PF01030",
+                            "regions": [
+                                {
+                                    "end": 114,
+                                    "start": 4
+                                },
+                                {
+                                    "end": 427,
+                                    "start": 308
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PS50311",
+                            "regions": [
+                                {
+                                    "end": 211,
+                                    "start": 134
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PS50011",
+                            "regions": [
+                                {
+                                    "end": 926,
+                                    "start": 659
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PR00109",
+                            "regions": [
+                                {
+                                    "end": 750,
+                                    "start": 737
+                                },
+                                {
+                                    "end": 792,
+                                    "start": 774
+                                },
+                                {
+                                    "end": 833,
+                                    "start": 823
+                                },
+                                {
+                                    "end": 864,
+                                    "start": 842
+                                },
+                                {
+                                    "end": 908,
+                                    "start": 886
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SSF57184",
+                            "regions": [
+                                {
+                                    "end": 286,
+                                    "start": 129
+                                },
+                                {
+                                    "end": 585,
+                                    "start": 452
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PIRSF000619",
+                            "regions": [
+                                {
+                                    "end": 1157,
+                                    "start": 1
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PF07714",
+                            "regions": [
+                                {
+                                    "end": 912,
+                                    "start": 661
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SSF52058",
+                            "regions": [
+                                {
+                                    "end": 158,
+                                    "start": 1
+                                },
+                                {
+                                    "end": 467,
+                                    "start": 275
+                                }
+                            ]
+                        },
+                        {
+                            "name": "PF00757",
+                            "regions": [
+                                {
+                                    "end": 285,
+                                    "start": 132
+                                }
+                            ]
+                        }
+                    ],
+                    "end": 55273591,
+                    "exons": [
+                        {
+                            "end": 55177651,
+                            "name": null,
+                            "start": 55177540
+                        },
+                        {
+                            "end": 55210130,
+                            "name": null,
+                            "start": 55209979
+                        },
+                        {
+                            "end": 55211181,
+                            "name": null,
+                            "start": 55210998
+                        },
+                        {
+                            "end": 55214433,
+                            "name": null,
+                            "start": 55214299
+                        },
+                        {
+                            "end": 55219055,
+                            "name": null,
+                            "start": 55218987
+                        },
+                        {
+                            "end": 55220357,
+                            "name": null,
+                            "start": 55220239
+                        },
+                        {
+                            "end": 55221845,
+                            "name": null,
+                            "start": 55221704
+                        },
+                        {
+                            "end": 55223639,
+                            "name": null,
+                            "start": 55223523
+                        },
+                        {
+                            "end": 55224352,
+                            "name": null,
+                            "start": 55224226
+                        },
+                        {
+                            "end": 55224525,
+                            "name": null,
+                            "start": 55224452
+                        },
+                        {
+                            "end": 55225446,
+                            "name": null,
+                            "start": 55225356
+                        },
+                        {
+                            "end": 55228031,
+                            "name": null,
+                            "start": 55227832
+                        },
+                        {
+                            "end": 55229324,
+                            "name": null,
+                            "start": 55229192
+                        },
+                        {
+                            "end": 55231516,
+                            "name": null,
+                            "start": 55231426
+                        },
+                        {
+                            "end": 55233130,
+                            "name": null,
+                            "start": 55232973
+                        },
+                        {
+                            "end": 55238906,
+                            "name": null,
+                            "start": 55238868
+                        },
+                        {
+                            "end": 55240817,
+                            "name": null,
+                            "start": 55240676
+                        },
+                        {
+                            "end": 55241736,
+                            "name": null,
+                            "start": 55241614
+                        },
+                        {
+                            "end": 55242513,
+                            "name": null,
+                            "start": 55242415
+                        },
+                        {
+                            "end": 55249171,
+                            "name": null,
+                            "start": 55248986
+                        },
+                        {
+                            "end": 55259567,
+                            "name": null,
+                            "start": 55259412
+                        },
+                        {
+                            "end": 55260534,
+                            "name": null,
+                            "start": 55260459
+                        },
+                        {
+                            "end": 55266556,
+                            "name": null,
+                            "start": 55266410
+                        },
+                        {
+                            "end": 55268106,
+                            "name": null,
+                            "start": 55268009
+                        },
+                        {
+                            "end": 55269048,
+                            "name": null,
+                            "start": 55268881
+                        },
+                        {
+                            "end": 55269475,
+                            "name": null,
+                            "start": 55269428
+                        },
+                        {
+                            "end": 55270318,
+                            "name": null,
+                            "start": 55270210
+                        },
+                        {
+                            "end": 55273591,
+                            "name": null,
+                            "start": 55272949
+                        }
+                    ],
+                    "is_best_transcript": false,
+                    "name": "ENST00000454757",
+                    "start": 55177540
+                }
+            ]
+        },
         {
             "aliases": [
                 "DSTYK"

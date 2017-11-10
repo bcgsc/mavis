@@ -2,8 +2,8 @@ import itertools
 
 from .constants import DEFAULTS
 from ..assemble import assemble
-from ..bam import cigar as cigar_tools
-from ..bam import read as read_tools
+from ..bam import cigar as _cigar
+from ..bam import read as _read
 from ..bam.cache import BamCache
 from ..breakpoint import BreakpointPair
 from ..constants import CIGAR, COLUMNS, NA_MAPPING_QUALITY, ORIENT, PROTOCOL, PYSAM_READ_FLAGS, reverse_complement, STRAND, SVTYPE
@@ -189,20 +189,20 @@ class Evidence(BreakpointPair):
         # recomputing to standardize b/c split reads can be used to call breakpoints exactly
         read.set_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR, 1, value_type='i')
         # recalculate the read cigar string to ensure M is replaced with = or X
-        cigar = cigar_tools.recompute_cigar_mismatch(
+        cigar = _cigar.recompute_cigar_mismatch(
             read,
             self.reference_genome[self.bam_cache.get_read_reference_name(read)].seq
         )
         prefix = 0
         try:
-            cigar, prefix = cigar_tools.extend_softclipping(cigar, self.sc_extension_stop)
+            cigar, prefix = _cigar.extend_softclipping(cigar, self.sc_extension_stop)
         except AttributeError:
             pass
-        read.cigar = cigar_tools.join(cigar)
+        read.cigar = _cigar.join(cigar)
         read.reference_start = read.reference_start + prefix
 
         # makes sure all insertions are called as far 'right' as possible
-        read.cigar = cigar_tools.hgvs_standardize_cigar(
+        read.cigar = _cigar.hgvs_standardize_cigar(
             read, self.reference_genome[self.bam_cache.get_read_reference_name(read)].seq)
         return read
 
@@ -259,7 +259,7 @@ class Evidence(BreakpointPair):
             return False
 
         if self.stranded:
-            strand = read_tools.sequenced_strand(read, self.strand_determining_read)
+            strand = _read.sequenced_strand(read, self.strand_determining_read)
             if strand != self.break1.strand and strand != self.break2.strand:
                 return False
 
@@ -333,13 +333,13 @@ class Evidence(BreakpointPair):
         imate = Interval(mate.reference_start + 1, mate.reference_end)
 
         if self.stranded:
-            strand1 = read_tools.sequenced_strand(read, self.strand_determining_read)
-            strand2 = read_tools.sequenced_strand(mate, self.strand_determining_read)
+            strand1 = _read.sequenced_strand(read, self.strand_determining_read)
+            strand2 = _read.sequenced_strand(mate, self.strand_determining_read)
             if strand1 != self.break1.strand or strand2 != self.break2.strand:
                 return False
 
         # check that the pair orientation is correct
-        if not read_tools.orientation_supports_type(read, compatible_type):
+        if not _read.orientation_supports_type(read, compatible_type):
             return False
 
         # check that the fragment size is reasonable
@@ -421,8 +421,8 @@ class Evidence(BreakpointPair):
         imate = Interval(mate.reference_start + 1, mate.reference_end)
 
         if self.stranded:
-            strand1 = read_tools.sequenced_strand(read, self.strand_determining_read)
-            strand2 = read_tools.sequenced_strand(mate, self.strand_determining_read)
+            strand1 = _read.sequenced_strand(read, self.strand_determining_read)
+            strand2 = _read.sequenced_strand(mate, self.strand_determining_read)
 
             if strand1 != self.break1.strand or strand2 != self.break2.strand:
                 return False
@@ -430,7 +430,7 @@ class Evidence(BreakpointPair):
         for event_type in self.putative_event_types():
 
             # check that the pair orientation is correct
-            if not read_tools.orientation_supports_type(read, event_type):
+            if not _read.orientation_supports_type(read, event_type):
                 continue
 
             # check that the fragment size is reasonable
@@ -512,7 +512,7 @@ class Evidence(BreakpointPair):
             return False  # read not in breakpoint evidence window
         # can only enforce strand if both the breakpoint and the bam are stranded
         if self.stranded and self.bam_cache.stranded:
-            strand = read_tools.sequenced_strand(read, strand_determining_read=self.strand_determining_read)
+            strand = _read.sequenced_strand(read, strand_determining_read=self.strand_determining_read)
             if strand != breakpoint.strand:
                 return False  # split read not on the appropriate strand
         unused = ''
@@ -541,11 +541,11 @@ class Evidence(BreakpointPair):
         if not read.has_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR) or not read.get_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR):
             read = self.standardize_read(read)
         # data quality filters
-        if cigar_tools.alignment_matches(read.cigar) >= self.min_sample_size_to_apply_percentage \
-                and cigar_tools.match_percent(read.cigar) < self.min_anchor_match:
+        if _cigar.alignment_matches(read.cigar) >= self.min_sample_size_to_apply_percentage \
+                and _cigar.match_percent(read.cigar) < self.min_anchor_match:
             return False  # too poor quality of an alignment
-        if cigar_tools.longest_exact_match(read.cigar) < self.min_anchor_exact \
-                and cigar_tools.longest_fuzzy_match(read.cigar, self.fuzzy_mismatch_number) < self.min_anchor_fuzzy:
+        if _cigar.longest_exact_match(read.cigar) < self.min_anchor_exact \
+                and _cigar.longest_fuzzy_match(read.cigar, self.fuzzy_mismatch_number) < self.min_anchor_fuzzy:
             return False  # too poor quality of an alignment
         else:
             self.split_reads[0 if first_breakpoint else 1].add(read)
@@ -557,7 +557,7 @@ class Evidence(BreakpointPair):
         putative_alignments = None
 
         if not self.opposing_strands:  # same strand
-            sc_align = read_tools.nsb_align(
+            sc_align = _read.nsb_align(
                 opposite_breakpoint_ref, read.query_sequence, min_consecutive_match=self.min_anchor_exact)
 
             for a in sc_align:
@@ -566,7 +566,7 @@ class Evidence(BreakpointPair):
         else:
             # should align opposite the current read
             revcomp_sc_align = reverse_complement(read.query_sequence)
-            revcomp_sc_align = read_tools.nsb_align(
+            revcomp_sc_align = _read.nsb_align(
                 opposite_breakpoint_ref, revcomp_sc_align, min_consecutive_match=self.min_anchor_exact)
 
             for a in revcomp_sc_align:
@@ -588,7 +588,7 @@ class Evidence(BreakpointPair):
             a.next_reference_id = read.next_reference_id
             a.mapping_quality = NA_MAPPING_QUALITY
             try:
-                cigar, offset = cigar_tools.extend_softclipping(
+                cigar, offset = _cigar.extend_softclipping(
                     a.cigar, self.sc_extension_stop)
                 a.cigar = cigar
                 a.reference_start = a.reference_start + offset
@@ -596,8 +596,8 @@ class Evidence(BreakpointPair):
                 # if the matches section is too small you can't extend the
                 # softclipping
                 pass
-            s = cigar_tools.score(a.cigar)
-            a.cigar = cigar_tools.join(a.cigar)
+            s = _cigar.score(a.cigar)
+            a.cigar = _cigar.join(a.cigar)
             if a.reference_id == a.next_reference_id:
                 # https://samtools.github.io/hts-specs/SAMv1.pdf
                 # unsigned observed template length equals the number of bases from the leftmost
@@ -610,11 +610,11 @@ class Evidence(BreakpointPair):
             else:
                 a.template_length = 0
 
-            if cigar_tools.alignment_matches(a.cigar) >= self.min_sample_size_to_apply_percentage \
-                    and cigar_tools.match_percent(a.cigar) < self.min_anchor_match:
+            if _cigar.alignment_matches(a.cigar) >= self.min_sample_size_to_apply_percentage \
+                    and _cigar.match_percent(a.cigar) < self.min_anchor_match:
                 continue
-            if cigar_tools.longest_exact_match(a.cigar) < self.min_anchor_exact \
-                    and cigar_tools.longest_fuzzy_match(a.cigar, self.fuzzy_mismatch_number) < self.min_anchor_fuzzy:
+            if _cigar.longest_exact_match(a.cigar) < self.min_anchor_exact \
+                    and _cigar.longest_fuzzy_match(a.cigar, self.fuzzy_mismatch_number) < self.min_anchor_fuzzy:
                 continue
             if self.max_sc_preceeding_anchor is not None:
                 if opposite_breakpoint.orient == ORIENT.LEFT:
@@ -623,7 +623,7 @@ class Evidence(BreakpointPair):
                 elif opposite_breakpoint.orient == ORIENT.RIGHT:
                     if a.cigar[-1][0] == CIGAR.S and a.cigar[-1][1] > self.max_sc_preceeding_anchor:
                         continue
-            scores.append((s, cigar_tools.match_percent(a.cigar), a))
+            scores.append((s, _cigar.match_percent(a.cigar), a))
 
         scores = sorted(scores, key=lambda x: (x[0], x[1]), reverse=True) if len(scores) > 0 else []
 
@@ -657,7 +657,7 @@ class Evidence(BreakpointPair):
         strand_calls = {STRAND.POS: 0, STRAND.NEG: 0}
         for read in reads:
             try:
-                strand = read_tools.sequenced_strand(read, self.strand_determining_read)
+                strand = _read.sequenced_strand(read, self.strand_determining_read)
                 strand_calls[strand] = strand_calls.get(strand, 0) + 1
             except ValueError:
                 pass
@@ -748,7 +748,7 @@ class Evidence(BreakpointPair):
                         if read.query_sequence != read_seq.query_sequence:
                             flip = not flip
                         try:
-                            seq_strand = read_tools.sequenced_strand(read, self.strand_determining_read)
+                            seq_strand = _read.sequenced_strand(read, self.strand_determining_read)
                             if seq_strand == STRAND.NEG:
                                 flip = not flip
                             build_strand[STRAND.NEG if flip else STRAND.POS] += 1
@@ -1053,7 +1053,7 @@ class Evidence(BreakpointPair):
                 self.collect_spanning_read(read)
             if read.mate_is_unmapped:
                 half_mapped_partners1.add(read)
-            elif any([read_tools.orientation_supports_type(read, et) for et in self.putative_event_types()]) and \
+            elif any([_read.orientation_supports_type(read, et) for et in self.putative_event_types()]) and \
                     (read.reference_id != read.next_reference_id) == self.interchromosomal:
                 flanking_pairs.add(read)
 
@@ -1078,7 +1078,7 @@ class Evidence(BreakpointPair):
                 self.collect_spanning_read(read)
             if read.mate_is_unmapped:
                 half_mapped_partners2.add(read)
-            elif any([read_tools.orientation_supports_type(read, et) for et in self.putative_event_types()]) and \
+            elif any([_read.orientation_supports_type(read, et) for et in self.putative_event_types()]) and \
                     (read.reference_id != read.next_reference_id) == self.interchromosomal:
                 flanking_pairs.add(read)
         for flanking_read in sorted(flanking_pairs, key=lambda x: (x.query_name, x.reference_start)):
@@ -1106,7 +1106,7 @@ class Evidence(BreakpointPair):
                     cache=True,
                     cache_if=cache_if_true,
                     filter_if=filter_if_true):
-                if read_tools.orientation_supports_type(read, compatible_type):
+                if _read.orientation_supports_type(read, compatible_type):
                     compt_flanking.add(read)
 
             for read in self.bam_cache.fetch_from_bins(
@@ -1119,7 +1119,7 @@ class Evidence(BreakpointPair):
                     cache=True,
                     cache_if=cache_if_true,
                     filter_if=filter_if_true):
-                if read_tools.orientation_supports_type(read, compatible_type):
+                if _read.orientation_supports_type(read, compatible_type):
                     compt_flanking.add(read)
 
             for flanking_read in compt_flanking:

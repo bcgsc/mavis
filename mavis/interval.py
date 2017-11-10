@@ -423,6 +423,10 @@ class Interval:
         return new_intervals
 
     @classmethod
+    def from_iterable(cls, iterable):
+        return cls(min(iterable), max(iterable))
+
+    @classmethod
     def split_overlap(cls, *intervals, weight_mapping={}):
         """
         for a given set of intervals splits any overlap so that the result is a new list of

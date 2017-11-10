@@ -4,16 +4,16 @@ from mavis.annotate.file_io import load_reference_genome
 from mavis.annotate.genomic import UsTranscript
 from mavis.bam.cache import BamCache
 from mavis.bam.read import sequenced_strand
+from mavis.bam.cigar import convert_string_to_cigar
 from mavis.breakpoint import Breakpoint, BreakpointPair
-from mavis.constants import CALL_METHOD, CIGAR, ORIENT, PYSAM_READ_FLAGS, STRAND, SVTYPE
+from mavis.constants import CALL_METHOD, CIGAR, ORIENT, PYSAM_READ_FLAGS, STRAND, SVTYPE, reverse_complement
 import mavis.validate.call as call
-from mavis.validate.call import EventCall
+from mavis.validate.call import EventCall, call_read_events, call_paired_read_events, convert_to_duplication
 from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
 
-from . import BAM_INPUT, FULL_BAM_INPUT, mock_read_pair, MockBamFileHandle, MockObject, MockRead, REFERENCE_GENOME_FILE
+from . import BAM_INPUT, FULL_BAM_INPUT, mock_read_pair, MockBamFileHandle, MockObject, MockRead, REFERENCE_GENOME_FILE, get_example_genes, MockLongString
 
 REFERENCE_GENOME = None
-
 
 def setUpModule():
     global REFERENCE_GENOME
@@ -35,7 +35,23 @@ def setUpModule():
             READS[read.qname][0] = read
         else:
             READS[read.qname][1] = read
-    # add a check to determine if it is the expected bam file
+
+
+class TestCallByContig(unittest.TestCase):
+    def test_EGFR_small_del_transcriptome(self):
+        gene = get_example_genes()['EGFR']
+        reference_annotations = {gene.chr: [gene]}
+        reference_genome = {gene.chr: MockObject(
+            seq=MockLongString(gene.seq, offset=gene.start - 1)
+        )}
+
+        contig = MockRead(
+            query_sequence='CTTGAAGGAAACTGAATTCAAAAAGATCAAAGTGCTGGGCTCCGGTGCGTTCGGCACGGTGTATAAGGGACTCTGGATCCCAGAAGGTGAGAAAGTTAAAATTCCCGTCGCTATCAAGGAATTAAGAGAAGCAACATCTCCGAAAGCCAACAAGGAAATCCTCGATGAAGCCTACGTGATGGCCAGCGTGGACAACCCCCACGTGTGCCGCCTGCTGGGCATCTGCCTCACCTCCACCGTGCAGCTCATCATGCAGCTCATGCCCTTCGGCTGCCTCCTGGACTATGTCCGGGAACACAAAGACAATATTGGCTCCCAGTACCTGCTCAACTGGTGTGTGCAGATCGCAAAGGGCATGAACTACTTGGAGGACCGTCGCTTGGTGCACCGCGACCTGGCAGCCAGGAACGTACTGGTGAAAACACCGCAGCATGTCAAGATCACAGATTTTGGGCTGGCCAAACTGCTGGGTGCGGAAGAGAAAGAATACCATGCAGAAGGAGGCAAAGTGCCTATCAAGTGGATGGCATTGGAATCAATTTTACACAGAATCTATACCCACCAGAGTGATGTCTGGAGCTACGGGGTGACCGTTTGGGAGTTGATGACCTTTGGATCCAA',
+            cigar=convert_string_to_cigar('68M678D98M6472D187M10240D155M891D77M7I5882D29M'),
+            reference_name='7',
+            reference_id=6,
+            reference_start=55241670
+        )
 
 
 class TestEventCall(unittest.TestCase):
@@ -1058,5 +1074,357 @@ class TestCallBySpanningReads(unittest.TestCase):
         pass
 
 
+class TestSplitEvents(unittest.TestCase):
+    def test_read_with_exons(self):
+        contig = MockRead(
+            query_sequence='CTTGAAGGAAACTGAATTCAAAAAGATCAAAGTGCTGGGCTCCGGTGCGTTCGGCACGGTGTATAAGGGACTCTGGATCCCAGAAGGTGAGAAAGTTAAAATTCCCGTCGCTATCAAGACATCTCCGAAAGCCAACAAGGAAATCCTCGATGAAGCCTACGTGATGGCCAGCGTGGACAACCCCCACGTGTGCCGCCTGCTGGGCATCTGCCTCACCTCCACCGTGCAGCTCATCATGCAGCTCATGCCCTTCGGCTGCCTCCTGGACTATGTCCGGGAACACAAAGACAATATTGGCTCCCAGTACCTGCTCAACTGGTGTGTGCAGATCGCAAAGGGCATGAACTACTTGGAGGACCGTCGCTTGGTGCACCGCGACCTGGCAGCCAGGAACGTACTGGTGAAAACACCGCAGCATGTCAAGATCACAGATTTTGGGCTGGCCAAACTGCTGGGTGCGGAAGAGAAAGAATACCATGCAGAAGGAGGCAAAGTGCCTATCAAGTGGATGGCATTGGAATCAATTTTACACAGAATCTATACCCACCAGAGTGATGTCTGGAGCTACGGGGTGACCGTTTGGGAGTTGATGACCTTTGGATCCAA',
+            cigar=convert_string_to_cigar('68M678D50M15D34M6472D185M10240D158M891D74M8I5883D29M'),
+            reference_name='7',
+            reference_id=6,
+            reference_start=55241669
+        )
+        self.assertEqual(6, len(call_read_events(contig)))
+
+
+class TestCallBreakpointPair(unittest.TestCase):
+
+    def test_single_one_event(self):
+        r = MockRead(
+            reference_id=0,
+            reference_name='1',
+            reference_start=0,
+            cigar=[(CIGAR.M, 10), (CIGAR.I, 3), (CIGAR.D, 7), (CIGAR.M, 10)],
+            query_sequence='ACTGAATCGTGGGTAGCTGCTAG'
+        )
+        bpps = call_read_events(r)
+        self.assertEqual(1, len(bpps))
+        bpp = bpps[0]
+        self.assertEqual(False, bpp.opposing_strands)
+        self.assertEqual(10, bpp.break1.start)
+        self.assertEqual(10, bpp.break1.end)
+        self.assertEqual(18, bpp.break2.start)
+        self.assertEqual(18, bpp.break2.end)
+        self.assertEqual('GGG', bpp.untemplated_seq)
+
+    def test_ins_and_del(self):
+        r = MockRead(
+            reference_id=0,
+            reference_name='1',
+            reference_start=0,
+            cigar=[(CIGAR.M, 10), (CIGAR.I, 3), (CIGAR.M, 5), (CIGAR.D, 7), (CIGAR.M, 5)],
+            query_sequence='ACTGAATCGTGGGTAGCTGCTAG'
+        )
+        # only report the major del event for now
+        bpps = call_read_events(r)
+        self.assertEqual(2, len(bpps))
+        bpp = bpps[0]
+        self.assertEqual(False, bpp.opposing_strands)
+        self.assertEqual(10, bpp.break1.start)
+        self.assertEqual(10, bpp.break1.end)
+        self.assertEqual(11, bpp.break2.start)
+        self.assertEqual(11, bpp.break2.end)
+        self.assertEqual('GGG', bpp.untemplated_seq)
+        bpp = bpps[1]
+        self.assertEqual(False, bpp.opposing_strands)
+        self.assertEqual(15, bpp.break1.start)
+        self.assertEqual(15, bpp.break1.end)
+        self.assertEqual(23, bpp.break2.start)
+        self.assertEqual(23, bpp.break2.end)
+
+    def test_single_insertion(self):
+        r = MockRead(
+            reference_id=0,
+            reference_name='1',
+            reference_start=0,
+            cigar=[(CIGAR.M, 10), (CIGAR.I, 8), (CIGAR.M, 5)],
+            query_sequence='ACTGAATCGTGGGTAGCTGCTAG'
+        )
+        bpp = call_read_events(r)[0]
+        self.assertEqual(False, bpp.opposing_strands)
+        self.assertEqual(10, bpp.break1.start)
+        self.assertEqual(10, bpp.break1.end)
+        self.assertEqual(11, bpp.break2.start)
+        self.assertEqual(11, bpp.break2.end)
+        self.assertEqual('GGGTAGCT', bpp.untemplated_seq)
+
+    def test_single_duplication(self):
+        r = MockRead(
+            name='seq1',
+            reference_name='gene3',
+            reference_start=27155,
+            cigar=[(CIGAR.M, 65), (CIGAR.I, 6), (CIGAR.D, 95), (CIGAR.M, 21), (CIGAR.S, 17)],
+            query_sequence='TAGTTGGATCTCTGTGCTGACTGACTGACAGACAGACTTTAGTGTCTGTGTGCTGACTGACAGACAGACTTTAGTGTCTGTGTGCTGACT'
+                           'GACAGACTCTAGTAGTGTC'
+        )
+        bpp = call_read_events(r)[0]
+        self.assertEqual(27220, bpp.break1.start)
+        self.assertEqual(27316, bpp.break2.start)
+        self.assertEqual('AGACTT', bpp.untemplated_seq)
+
+    def test_single_duplication_with_leading_untemp(self):
+        r = MockRead(
+            query_sequence=(
+                'CTCCCACCAGGAGCTCGTCCTCACCACGTCCTGCACCAGCACCTCCAGCTCCCGCAGCAGCGCCTCGCCCCCACGGTGCGCGCTCCGCGCCGGTTCC'
+                'ATGGGCTCCGTAGGTTCCATGGGCTCCGTAGGTTCCATGGGCTCCGTAGGTTCCATGGGCTCCGTAGGTTCCATCGGCTCCGTGGGTTCCATGGACT'
+                'CTGTGGGCTCGGGCCCGACGCGCACGGAGGACTGGAGGACTGGGGCGTGTGTCTGCGGTGCAGGCGAGGCGGGGCGGGC'),
+            query_name='duplication_with_untemp',
+            reference_id=16,
+            reference_name='reference17',
+            reference_start=1882,
+            cigar=[(CIGAR.EQ, 126), (CIGAR.I, 54), (CIGAR.EQ, 93)],
+            is_reverse=False)
+        bpp = call_read_events(r)[0]
+        self.assertEqual('AGGTTCCATGGGCTCCGTAGGTTCCATGGGCTCCGTAGGTTCCATCGGCTCCGT', bpp.untemplated_seq)
+        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
+        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
+
+    def test_single_duplication_with_no_untemp(self):
+        r = MockRead(
+            query_sequence=(
+                'GGATGATTTACCTTGGGTAATGAAACTCAGATTTTGCTGTTGTTTTTGTTCGATTTTGCTGTTGTTTTTGTTCCAAAGTGTTTTATACTGATAAAGCAACC'
+                'CCGGTTTAGCATTGCCATTGGTAA'),
+            query_name='duplication_with_untemp',
+            reference_id=2,
+            reference_name='reference3',
+            reference_start=1497,
+            cigar=[(CIGAR.EQ, 51), (CIGAR.I, 22), (CIGAR.EQ, 52)],
+            is_reverse=False)
+        # repeat: GATTTTGCTGTTGTTTTTGTTC
+        bpp = convert_to_duplication(call_read_events(r)[0], REFERENCE_GENOME)
+        self.assertEqual('', bpp.untemplated_seq)
+        self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
+        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
+        self.assertEqual(bpp.break2.start, 1548)
+        self.assertEqual(bpp.break1.start, 1527)
+
+    def test_single_duplication_with_trailing_untemp(self):
+        r = MockRead(
+            query_sequence=(
+                'GGATGATTTACCTTGGGTAATGAAACTCAGATTTTGCTGTTGTTTTTGTTC'
+                'GATTTTGCTGTTGTTTTTGTTC' 'GTCAA'
+                'CAAAGTGTTTTATACTGATAAAGCAACCCCGGTTTAGCATTGCCATTGGTAA'),
+            query_name='duplication_with_untemp',
+            reference_id=2,
+            reference_name='reference3',
+            reference_start=1497,
+            cigar=[(CIGAR.EQ, 51), (CIGAR.I, 27), (CIGAR.EQ, 52)],
+            is_reverse=False)
+        # repeat: GATTTTGCTGTTGTTTTTGTTC
+        bpp = call_read_events(r)[0]
+        print(bpp)
+        bpp = convert_to_duplication(bpp, REFERENCE_GENOME)
+        print(bpp)
+        self.assertEqual('GTCAA', bpp.untemplated_seq)
+        self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
+        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
+        self.assertEqual(bpp.break2.start, 1548)
+        self.assertEqual(bpp.break1.start, 1527)
+
+    def test_read_pair_indel(self):
+        # seq AAATTTCCCGGGAATTCCGGATCGATCGAT 1-30     1-?
+        # r1  AAATTTCCCgggaattccggatcgatcgat 1-9      1-9
+        # r2  aaatttcccgggaattccggaTCGATCGAT 22-30    100-108
+        # i   ---------GGGAATTCCGGA--------- 10-21    n/a
+        seq = 'AAATTTCCCGGGAATTCCGGATCGATCGAT'  # 30
+        r1 = MockRead(
+            reference_id=0,
+            reference_name='1',
+            reference_start=0,
+            cigar=[(CIGAR.M, 9), (CIGAR.S, 21)],
+            query_sequence=seq,
+            is_reverse=False
+        )
+
+        r2 = MockRead(
+            reference_id=0,
+            reference_name='1',
+            reference_start=99,
+            cigar=[(CIGAR.S, 21), (CIGAR.M, 9)],
+            query_sequence=seq,
+            is_reverse=False
+        )
+        bpp = call_paired_read_events(r1, r2)[0]
+        self.assertEqual(STRAND.POS, bpp.break1.strand)
+        self.assertEqual(STRAND.POS, bpp.break2.strand)
+        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
+        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
+        self.assertEqual('GGGAATTCCGGA', bpp.untemplated_seq)
+        self.assertEqual(9, bpp.break1.start)
+        self.assertEqual(100, bpp.break2.start)
+        self.assertEqual('AAATTTCCC', bpp.break1.seq)
+        self.assertEqual('TCGATCGAT', bpp.break2.seq)
+
+    def test_read_pair_deletion(self):
+        # seq AAATTTCCCGGGAATTCCGGATCGATCGAT
+        # r1  AAATTTCCCGGGAATTCCGGAtcgatcgat
+        # r2  aaatttcccgggaattccggaTCGATCGAT
+        seq = 'AAATTTCCCGGGAATTCCGGATCGATCGAT'  # 30
+        r1 = MockRead(
+            reference_id=0,
+            reference_name='1',
+            reference_start=0,
+            cigar=[(CIGAR.M, 21), (CIGAR.S, 9)],
+            query_sequence=seq,
+            is_reverse=False
+        )
+
+        r2 = MockRead(
+            reference_id=0,
+            reference_name='1',
+            reference_start=99,
+            cigar=[(CIGAR.S, 21), (CIGAR.M, 9)],
+            query_sequence=seq,
+            is_reverse=False
+        )
+        bpps = call_paired_read_events(r1, r2)
+        self.assertEqual(1, len(bpps))
+        bpp = bpps[0]
+        self.assertEqual(STRAND.POS, bpp.break1.strand)
+        self.assertEqual(STRAND.POS, bpp.break2.strand)
+        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
+        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
+        self.assertEqual('', bpp.untemplated_seq)
+        self.assertEqual(21, bpp.break1.start)
+        self.assertEqual(100, bpp.break2.start)
+
+    def test_read_pair_deletion_overlapping_query_coverage(self):
+        # seq AAATTTCCCGGGAATTCCGGATCGATCGAT
+        # r1  AAATTTCCCGGGAATTCCGGAtcgatcgat
+        # r2  aaatttcccgggaattccGGATCGATCGAT
+
+        seq = 'AAATTTCCCGGGAATTCCGGATCGATCGAT'  # 30
+        r1 = MockRead(
+            reference_id=0,
+            reference_name='1',
+            reference_start=0,
+            cigar=[(CIGAR.M, 21), (CIGAR.S, 9)],
+            query_sequence=seq,
+            is_reverse=False
+        )
+
+        r2 = MockRead(
+            reference_id=0,
+            reference_name='1',
+            reference_start=99,
+            cigar=[(CIGAR.S, 18), (CIGAR.M, 12)],
+            query_sequence=seq,
+            is_reverse=False
+        )
+        self.assertEqual(21, r1.reference_end)
+        bpp = call_paired_read_events(r1, r2)[0]
+        self.assertEqual(STRAND.POS, bpp.break1.strand)
+        self.assertEqual(STRAND.POS, bpp.break2.strand)
+        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
+        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
+        self.assertEqual('', bpp.untemplated_seq)
+        self.assertEqual(21, bpp.break1.start)
+        self.assertEqual(103, bpp.break2.start)
+        self.assertEqual('AAATTTCCCGGGAATTCCGGA', bpp.break1.seq)
+        self.assertEqual('TCGATCGAT', bpp.break2.seq)
+
+    def test_read_pair_inversion_overlapping_query_coverage(self):
+        # seq AAATTTCCCGGGAATTCCGGATCGATCGAT
+        # r1  AAATTTCCCGGGAATTCCGGAtcgatcgat +
+        # r2c aaatttcccgggaattccGGATCGATCGAT -
+        # i   ------------------GGA---------
+        # r2  ATCTATCGATCCggaattcccgggaaattt 100+12 = 111 - 3 = 108
+        seq = 'AAATTTCCCGGGAATTCCGGATCGATCGAT'  # 30
+        r1 = MockRead(
+            reference_id=0,
+            reference_name='1',
+            reference_start=0,
+            cigar=[(CIGAR.M, 21), (CIGAR.S, 9)],
+            query_sequence=seq,
+            is_reverse=False
+        )
+
+        r2 = MockRead(
+            reference_id=0,
+            reference_name='1',
+            reference_start=99,
+            cigar=[(CIGAR.M, 12), (CIGAR.S, 18)],
+            query_sequence=reverse_complement(seq),
+            is_reverse=True
+        )
+        bpp = call_paired_read_events(r1, r2)[0]
+        self.assertEqual(STRAND.POS, bpp.break1.strand)
+        self.assertEqual(STRAND.NEG, bpp.break2.strand)
+        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
+        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
+        self.assertEqual('', bpp.untemplated_seq)
+        self.assertEqual(21, bpp.break1.start)
+        self.assertEqual(108, bpp.break2.start)
+        self.assertEqual('AAATTTCCCGGGAATTCCGGA', bpp.break1.seq)
+        self.assertEqual(reverse_complement('TCGATCGAT'), bpp.break2.seq)
+
+    def test_read_pair_large_inversion_overlapping_query_coverage(self):
+        s = 'CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT'
+
+        read1 = MockRead(
+            reference_id=3, reference_start=1114, cigar=[(CIGAR.S, 125), (CIGAR.EQ, 120)], query_sequence=s,
+            is_reverse=False
+        )
+        read2 = MockRead(
+            reference_id=3, reference_start=2187, cigar=[(CIGAR.S, 117), (CIGAR.EQ, 8), (CIGAR.D, 1), (CIGAR.M, 120)],
+            query_sequence=reverse_complement(s), is_reverse=True
+        )
+        bpps = call_paired_read_events(read1, read2)
+        self.assertEqual(2, len(bpps))
+        bpp = bpps[0]
+        self.assertEqual(STRAND.POS, bpp.break1.strand)
+        self.assertEqual(STRAND.NEG, bpp.break2.strand)
+        self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
+        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
+        self.assertEqual('', bpp.untemplated_seq)
+        self.assertEqual(1115, bpp.break1.start)
+        self.assertEqual(2188 + 3, bpp.break2.start)
+        print(bpp.break1.seq)
+        print(bpp.break2.seq)
+        self.assertEqual(
+            'TCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAG'
+            'GGTTTTCATTTCTGTATGTTAAT', bpp.break1.seq)
+        self.assertEqual(
+            'GCAGAGCTATATATTTAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAACCAAACAGGAAAGAATCCA'
+            'AATTCTGTGTTTACAGGGCTTTCATGCTCAG', bpp.break2.seq)
+        bpp = bpps[1]
+        self.assertEqual([SVTYPE.DEL], BreakpointPair.classify(bpp, True))
+
+    def test_read_pair_inversion_gap_in_query_coverage(self):
+        # seq AAATTTCCCGGGAATTCCGGATCGATCGAT
+        # r1  AAATTTCCCGGGAATTccggatcgatcgat +
+        # r2c aaatttcccgggaattccGGATCGATCGAT -
+        # i   ----------------CC------------
+        # r2  ATCTATCGATCCggaattcccgggaaattt 100+12 = 111 - 3 = 108
+        seq = 'AAATTTCCCGGGAATTCCGGATCGATCGAT'  # 30
+        r1 = MockRead(
+            reference_id=0,
+            reference_name='1',
+            reference_start=0,
+            cigar=[(CIGAR.M, 16), (CIGAR.S, 14)],
+            query_sequence=seq,
+            is_reverse=False
+        )
+
+        r2 = MockRead(
+            reference_id=0,
+            reference_name='1',
+            reference_start=99,
+            cigar=[(CIGAR.M, 12), (CIGAR.S, 18)],
+            query_sequence=reverse_complement(seq),
+            is_reverse=True
+        )
+        bpp = call_paired_read_events(r1, r2)[0]
+        self.assertEqual(STRAND.POS, bpp.break1.strand)
+        self.assertEqual(STRAND.NEG, bpp.break2.strand)
+        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
+        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
+        self.assertEqual('CC', bpp.untemplated_seq)
+        self.assertEqual(16, bpp.break1.start)
+        self.assertEqual(111, bpp.break2.start)
+        self.assertEqual('AAATTTCCCGGGAATT', bpp.break1.seq)
+        self.assertEqual(reverse_complement('GGATCGATCGAT'), bpp.break2.seq)
+
+
 if __name__ == '__main__':
     unittest.main()
+

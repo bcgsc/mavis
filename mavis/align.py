@@ -9,10 +9,10 @@ import warnings
 
 import pysam
 
-from .bam import cigar as cigar_tools
-from .bam import read as read_tools
-from .breakpoint import BreakpointPair
-from .constants import CIGAR, COLUMNS, MavisNamespace, ORIENT, reverse_complement, SVTYPE
+from .bam import cigar as _cigar
+from .bam import read as _read
+from .breakpoint import BreakpointPair, Breakpoint
+from .constants import CIGAR, COLUMNS, MavisNamespace, ORIENT, reverse_complement, STRAND, SVTYPE
 from .error import InvalidRearrangement
 from .interval import Interval
 from .util import devnull
@@ -26,41 +26,13 @@ SUPPORTED_ALIGNER = MavisNamespace(BWA_MEM='bwa mem', BLAT='blat', __name__='~ma
 """
 
 
-class SplitAlignment:
+class SplitAlignment(BreakpointPair):
 
-    def __init__(self, read1, read2=None):
-        if read2 is not None and any([
-            read1.reference_name > read2.reference_name,
-            read1.reference_name == read2.reference_name and read1.reference_start > read2.reference_start
-        ]):
-            read1, read2 = read2, read1
-
-        self.read1 = read1
-        self.read2 = read2
-        if self.read2 is not None:
-            read2_seq = read2.query_sequence if not self.opposing_strands else reverse_complement(read2.query_sequence)
-            if read1.query_sequence != read2_seq:
-                raise ValueError('valid split alignments must share the same (or reverse complement) sequence')
+    def __init__(self, *pos, **kwargs):
+        self.read1 = kwargs.pop('read1')
+        self.read2 = kwargs.pop('read2', None)
         self.query_sequence = self.read1.query_sequence
-
-        # TODO: if the reads 'share' query sequence overlap, remove this from the second alignment
-
-    def __getitem__(self, index):
-        if isinstance(index, int):
-            if index == 0:
-                return self.read1
-            elif index == 1:
-                return self.read2
-            else:
-                raise IndexError('index out of bounds', index)
-        else:
-            raise ValueError('index must be an integer')
-
-    @property
-    def opposing_strands(self):
-        if self.read2 is None:
-            return False
-        return self.read1.is_reverse != self.read2.is_reverse
+        BreakpointPair.__init__(self, *pos, **kwargs)
 
     def query_coverage_read1(self):
         return query_coverage_interval(self.read1)
@@ -132,10 +104,21 @@ class SplitAlignment:
         # for events on the same template and strand we expect to find a single contig alignment
         if not bpp.interchromosomal and not bpp.opposing_strands:
             for read in alignments:
-                try:
-                    aln = SplitAlignment(read)
-                except ValueError:
+                aln = SplitAlignment(read)
+                if aln.query_consumption() < min_query_consumption:
                     continue
+
+                aln.read1 = copy(read)
+                aln.read1.cigar = _cigar.merge_internal_events(aln.read1.cigar, merge_inner_anchor, merge_outer_anchor)
+
+                for event in call_read_events(read):
+                    if all([
+                        event.break1 & bpp.outer_window1,
+                        event.break2 & bpp.outer_window2,
+                        event.
+                    ]):
+                        pass
+
                 # if it covers both breakpoints add to putative alignments
                 ref_cover = Interval(read.reference_start, read.reference_end - 1)
                 if all([
@@ -150,7 +133,7 @@ class SplitAlignment:
                     dln = sum([v for c, v in read.cigar if c in [CIGAR.D, CIGAR.N]] + [0])
 
                     aln.read1 = copy(read)
-                    aln.read1.cigar = cigar_tools.merge_internal_events(aln.read1.cigar, merge_inner_anchor, merge_outer_anchor)
+                    aln.read1.cigar = _cigar.merge_internal_events(aln.read1.cigar, merge_inner_anchor, merge_outer_anchor)
 
                     for event_type in putative_event_types:
                         if event_type in {SVTYPE.INS, SVTYPE.DUP} and ins > 0 and ins > dln:
@@ -170,9 +153,9 @@ class SplitAlignment:
 
             if read1.reference_name != bpp.break1.chr or read2.reference_name != bpp.break2.chr:
                 continue
-            read1 = read_tools.convert_events_to_softclipping(
+            read1 = _read.convert_events_to_softclipping(
                 read1, bpp.break1.orient, max_event_size=max_event_size, min_anchor_size=min_anchor_size)
-            read2 = read_tools.convert_events_to_softclipping(
+            read2 = _read.convert_events_to_softclipping(
                 read2, bpp.break2.orient, max_event_size=max_event_size, min_anchor_size=min_anchor_size)
             try:
                 aln = SplitAlignment(read1, read2)
@@ -224,7 +207,7 @@ class SplitAlignment:
             if breakpoint.start > end:
                 return 0
             st = max(st, breakpoint.start)
-        qrange = read_tools.map_ref_range_to_query_range(read, Interval(st, end))
+        qrange = _read.map_ref_range_to_query_range(read, Interval(st, end))
         return contig.remap_depth(qrange)
 
 
@@ -241,6 +224,166 @@ def query_coverage_interval(read):
     if read.cigar[-1][0] == CIGAR.S:
         end -= read.cigar[-1][1]
     return Interval(st, end)
+
+
+def convert_to_duplication(bpp, reference_genome):
+    """
+    Given a breakpoint call, tests if the untemplated sequences matches the preceding
+    reference sequence. If it does this is annotated as a duplication and the new
+    breakpoint pair is returned. If not, then the original breakpoint pair is returned
+    """
+    # assumes that events with deletions cannot be duplications
+    if bpp.untemplated_seq and not bpp.interchromosomal and bpp.break1.end == bpp.break2.start - 1:
+        # must be more than half the length or better to call it an insertion
+        for dup_len in reversed(range(len(bpp.untemplated_seq) // 2 + 1, len(bpp.untemplated_seq) + 1)):
+            refseq = reference_genome[bpp.break1.chr].seq[bpp.break1.start - dup_len:bpp.break1.start]
+            refseq = str(refseq)
+            if refseq != bpp.untemplated_seq[:dup_len]:
+                continue
+
+            result = BreakpointPair(
+                Breakpoint(bpp.break1.chr, bpp.break1.start, orient=bpp.break1.orient, strand=bpp.break1.strand),
+                Breakpoint(bpp.break2.chr, bpp.break2.start - dup_len, orient=bpp.break2.orient, strand=bpp.break2.strand),
+                untemplated_seq=bpp.untemplated_seq[dup_len:],
+                opposing_strands=bpp.opposing_strands,
+                data=bpp.data
+            )
+            return result
+    return bpp
+
+
+def call_read_events(read):
+    """
+    Given a read, return breakpoint pairs representing all putative events
+    """
+    events = []
+    reference_pos = read.reference_start
+    query_pos = 0
+    curr_event = None
+    for state, freq in read.cigar:
+        if state in _cigar.QUERY_ALIGNED_STATES & _cigar.REFERENCE_ALIGNED_STATES:
+            query_pos += freq
+            reference_pos += freq
+            if curr_event:
+                events.append(curr_event)
+                curr_event = None
+        elif state == CIGAR.S:
+            query_pos += freq
+            if curr_event:
+                events.append(curr_event)
+                curr_event = None
+        elif state in _cigar.REFERENCE_ALIGNED_STATES:  # del
+            if curr_event:
+                ref_start, delsize, insseq = curr_event
+                curr_event = (ref_start, delsize + freq, insseq)
+            else:
+                curr_event = (reference_pos, freq, '')
+            reference_pos += freq
+        elif state in _cigar.QUERY_ALIGNED_STATES:  # ins
+            if curr_event:
+                ref_start, delsize, insseq = curr_event
+                curr_event = (ref_start, delsize, insseq + read.query_sequence[query_pos: query_pos + freq])
+            else:
+                curr_event = (reference_pos, 0, read.query_sequence[query_pos: query_pos + freq])
+            query_pos += freq
+        else:
+            raise NotImplementedError('Should never happen. Invalid cigar state is not reference or query aligned', state)
+    if curr_event:
+        events.append(curr_event)
+    result = []
+    for ref_start, delsize, insseq in events:
+        bpp = SplitAlignment(
+            Breakpoint(read.reference_name, ref_start, orient=ORIENT.LEFT),
+            Breakpoint(read.reference_name, ref_start + delsize + 1, orient=ORIENT.RIGHT),
+            untemplated_seq=insseq, read1=read
+        )
+        result.append(bpp)
+    return result
+
+
+def read_breakpoint(read):
+    """
+    convert a given read to a single breakpoint
+    """
+    start_softclipping = read.cigar[0][1] if read.cigar[0][0] == CIGAR.S else 0
+    end_softclipping = read.cigar[-1][1] if read.cigar[-1][0] == CIGAR.S else 0
+
+    if start_softclipping == end_softclipping:
+        raise AssertionError('softclipping is equal and therefore orientation cannot be determined')
+    elif start_softclipping + end_softclipping == 0:
+        raise AssertionError('no softclipping, therefore no orientation can be called')
+    elif start_softclipping > end_softclipping:
+        return Breakpoint(
+            read.reference_name, read.reference_start + 1,
+            orient=ORIENT.RIGHT,
+            strand=STRAND.NEG if read.is_reverse else STRAND.POS,
+            seq=read.query_alignment_sequence
+        )
+    else:
+        return Breakpoint(
+            read.reference_name, read.reference_end,
+            orient=ORIENT.LEFT,
+            strand=STRAND.NEG if read.is_reverse else STRAND.POS,
+            seq=read.query_alignment_sequence
+        )
+
+
+def call_paired_read_events(read1, read2):
+    """
+    For a given pair of reads call all applicable events. Assume there is a major
+    event from both reads and then call indels from the individual reads
+    """
+    # sort the reads so that we are calling consistently
+    break1 = read_breakpoint(read1)
+    break2 = read_breakpoint(read2)
+
+    if break2 < break1:
+        break1, break2 = break2, break1
+        read1, read2 = read2, read1
+
+    r1_query_cover = query_coverage_interval(read1)
+    r2_query_cover = query_coverage_interval(read2)
+
+    # if the reads are on the same strand, then the query sequence should match
+    if read1.is_reverse == read2.is_reverse:
+        assert read1.query_sequence == read2.query_sequence
+    else:
+        assert read1.query_sequence == reverse_complement(read2.query_sequence)
+        length = len(read1.query_sequence) - 1
+        r2_query_cover = Interval(length - r2_query_cover.end, length - r2_query_cover.start)
+
+    overlap = 0
+    if Interval.overlaps(r1_query_cover, r2_query_cover):
+        # adjust the second read to remove the overlapping query region
+        overlap = len(r1_query_cover & r2_query_cover)
+
+    if break2.orient == ORIENT.RIGHT:
+        break2.start += overlap
+        break2.end += overlap
+        break2.seq = read2.query_alignment_sequence[overlap:]
+        assert break2.start <= break2.end
+    else:
+        seq = read2.query_alignment_sequence
+        if overlap > 0:
+            seq = read2.query_alignment_sequence[:-1 * overlap]
+        break2.start -= overlap
+        break2.end -= overlap
+        break2.seq = seq
+    assert break2.start <= break2.end
+
+    # now check for untemplated sequence
+    untemplated_seq = ''
+    dist = Interval.dist(r1_query_cover, r2_query_cover)
+    if dist > 0:  # query coverage for read1 is after query coverage for read2
+        untemplated_seq = read1.query_sequence[r2_query_cover[1] + 1:r1_query_cover[0]]
+    elif dist < 0:  # query coverage for read2 is after query coverage for read1
+        untemplated_seq = read1.query_sequence[r1_query_cover[1] + 1:r2_query_cover[0]]
+    else:  # query coverage overlaps
+        pass
+    events = [SplitAlignment(break1, break2, untemplated_seq=untemplated_seq, read1=read1, read2=read2)]
+    for event in call_read_events(read1) + call_read_events(read2):
+        events.append(event)
+    return events
 
 
 def align_contigs(
@@ -327,19 +470,32 @@ def align_contigs(
             with pysam.AlignmentFile(aligner_output_file, 'r', check_sq=bool(len(sequences))) as samfile:
                 reads_by_query = {}
                 for read in samfile.fetch():
-                    read = read_tools.SamRead.copy(read)
+                    read = _read.SamRead.copy(read)
                     read.reference_id = input_bam_cache.reference_id(read.reference_name)
                     if read.is_paired:
                         read.next_reference_id = input_bam_cache.reference_id(read.next_reference_name)
-                    read.cigar = cigar_tools.recompute_cigar_mismatch(read, reference_genome[read.reference_name])
+                    read.cigar = _cigar.recompute_cigar_mismatch(read, reference_genome[read.reference_name])
                     query_seq = query_id_mapping[read.query_name]
                     reads_by_query.setdefault(query_seq, []).append(read)
         else:
             raise NotImplementedError('unsupported aligner', aligner)
 
+        # standardize all reads
+        for query_seq, reads in reads_by_query.items():
+            std_reads = []
+            for read in reads:
+                read = evidence.standardize_read(read)
+                read.cigar = _cigar.merge_internal_events(read.cigar, contig_aln_merge_inner_anchor, contig_aln_merge_outer_anchor)
+
         for curr_ev in evidence:
             for contig in curr_ev.contigs:
-                aln = reads_by_query.get(contig.seq, [])
+                alignment = reads_by_query.get(contig.seq, [])
+                if any([
+                    alignment.query_consumption() < contig_aln_min_query_consumption,
+                    alignment.read2 and alignment.query_overlap_extension() >= min_extend_overlap,
+
+                ]):
+
                 putative_alignments = SplitAlignment.select_supporting_alignments(
                     curr_ev, aln,
                     min_extend_overlap=min_extend_overlap,
@@ -359,3 +515,6 @@ def align_contigs(
                         os.remove(outputfile)
                     except OSError as err:
                         warnings.warn(repr(err))
+
+
+def select_alignments()

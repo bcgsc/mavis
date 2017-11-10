@@ -1,3 +1,5 @@
+import itertools
+
 from .base import Evidence
 from ..annotate.variant import overlapping_transcripts
 from ..breakpoint import Breakpoint
@@ -301,22 +303,36 @@ class TranscriptomeEvidence(Evidence):
         """
         give the current list of transcripts, computes the putative exonic/intergenic distance
         given two genomic positions. Intronic positions are ignored
-        """
-        all_fragments = [end - start + 1]
-        for ust in transcripts:
-            sections = [Interval(start, end)]
-            for intron in [(s.end + 1, t.start - 1) for s, t in zip(ust.exons, ust.exons[1::])]:
-                if intron[1] < intron[0]:
-                    continue
-                intron = Interval(intron[0], intron[1])
 
-                temp = []
-                for curr in sections:
-                    temp.extend(curr - intron)
-                sections = temp
-            dist = sum([len(e) for e in sections])
-            all_fragments.append(dist)
-        return Interval(min(all_fragments), max(all_fragments))
+        Intergenic calculations are only done if exonic only fails
+        """
+        print('compute_exonic_distance', start, end)
+        exonic = []
+        mixed = []
+        inter = []
+        # try to calculate assuming the positions are exonic
+        for transcript in itertools.chain.from_iterable([t.transcripts for t in transcripts]):
+            if not transcript.reference_object.position & Interval(start, end):
+                continue
+            cdna_start, start_shift = transcript.convert_genomic_to_nearest_cdna(start, stick_direction=ORIENT.RIGHT, allow_outside=True)
+            cdna_end, end_shift = transcript.convert_genomic_to_nearest_cdna(end, stick_direction=ORIENT.LEFT, allow_outside=True)
+            dist = abs(cdna_end - cdna_start) + abs(start_shift) + abs(end_shift)
+            print(transcript)
+            print(cdna_start, cdna_end, dist)
+            if start_shift != 0 and end_shift != 0:
+                inter.append(dist)
+            elif start_shift != 0 or end_shift != 0:
+                mixed.append(dist)
+            else:
+                exonic.append(dist)
+        print(exonic, mixed, inter)
+        if exonic:
+            return Interval.from_iterable(exonic)
+        elif mixed:
+            return Interval.from_iterable(mixed)
+        elif inter:
+            return Interval.from_iterable(inter)
+        return Interval(end - start)
 
     @staticmethod
     def _generate_window(breakpoint, transcripts, read_length, call_error, max_expected_fragment_size):
