@@ -98,7 +98,7 @@ class BreakpointPair:
         raise IndexError('index input accessor is out of bounds: 1 or 2 only', index)
 
     def __hash__(self):
-        return hash((self.break1.key, self.break2.key, self.opposing_strands, self.stranded, self.untemplated_seq))
+        return hash((self.break1, self.break2, self.opposing_strands, self.stranded, self.untemplated_seq))
 
     def __eq__(self, other):
         for attr in ['break1', 'break2', 'opposing_strands', 'stranded', 'untemplated_seq']:

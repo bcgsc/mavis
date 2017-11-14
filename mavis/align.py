@@ -115,7 +115,6 @@ class SplitAlignment(BreakpointPair):
                     if all([
                         event.break1 & bpp.outer_window1,
                         event.break2 & bpp.outer_window2,
-                        event.
                     ]):
                         pass
 
@@ -386,8 +385,88 @@ def call_paired_read_events(read1, read2):
     return events
 
 
+def align_sequences(
+    sequences,
+    input_bam_cache,
+    reference_genome,
+    aligner,
+    aligner_reference,
+    aligner_output_file='aligner_out.temp',
+    aligner_fa_input_file='aligner_in.fa',
+    blat_limit_top_aln=25,
+    clean_files=True
+):
+    try:
+        # write the input sequences to a fasta file
+        sequences = set(sequences)
+        query_id_mapping = {}
+        count = 1
+        with open(aligner_fa_input_file, 'w') as fh:
+            for seq in sequences:
+                name = 'seq{}'.format(count)
+                query_id_mapping[name] = seq
+                fh.write('>' + name + '\n' + seq + '\n')
+                count += 1
+        if len(sequences) == 0:
+            return []
+
+        log('will use', aligner, 'to align', len(sequences), 'unique sequences', time_stamp=False)
+
+        # call the aligner using subprocess
+        if aligner == SUPPORTED_ALIGNER.BLAT:
+            from .blat import process_blat_output
+            # call the aligner using subprocess
+            blat_min_identity *= 100
+            blat_options = kwargs.pop(
+                'blat_options', ['-stepSize=5', '-repMatch=2253', '-minScore=0', '-minIdentity={0}'.format(blat_min_identity)])
+            # call the blat subprocess
+            # will raise subprocess.CalledProcessError if non-zero exit status
+            # parameters from https://genome.ucsc.edu/FAQ/FAQblat.html#blat4
+            log([SUPPORTED_ALIGNER.BLAT, aligner_reference,
+                 aligner_fa_input_file, aligner_output_file, '-out=pslx', '-noHead'] + blat_options)
+            subprocess.check_call([
+                SUPPORTED_ALIGNER.BLAT, aligner_reference,
+                aligner_fa_input_file, aligner_output_file, '-out=pslx', '-noHead'] + blat_options)
+            return process_blat_output(
+                input_bam_cache=input_bam_cache,
+                query_id_mapping=query_id_mapping,
+                reference_genome=reference_genome,
+                aligner_output_file=aligner_output_file,
+                blat_limit_top_aln=blat_limit_top_aln
+            )
+
+        elif aligner == SUPPORTED_ALIGNER.BWA_MEM:
+            command = '{} {} {} -Y'.format(aligner, aligner_reference, aligner_fa_input_file)
+            log(command)  # for bwa
+            with open(aligner_output_file, 'w') as aligner_output_fh:
+                subprocess.check_call(command, stdout=aligner_output_fh, shell=True)
+
+            with pysam.AlignmentFile(aligner_output_file, 'r', check_sq=bool(len(sequences))) as samfile:
+                reads_by_query = {}
+                for read in samfile.fetch():
+                    read = _read.SamRead.copy(read)
+                    read.reference_id = input_bam_cache.reference_id(read.reference_name)
+                    if read.is_paired:
+                        read.next_reference_id = input_bam_cache.reference_id(read.next_reference_name)
+                    read.cigar = _cigar.recompute_cigar_mismatch(read, reference_genome[read.reference_name])
+                    query_seq = query_id_mapping[read.query_name]
+                    reads_by_query.setdefault(query_seq, []).append(read)
+            return reads_by_query
+        else:
+            raise NotImplementedError('unsupported aligner', aligner)
+    finally:
+        # clean up
+        if clean_files:
+            for outputfile in [aligner_output_file, aligner_fa_input_file]:
+                if os.path.exists(outputfile):
+                    try:
+                        os.remove(outputfile)
+                    except OSError as err:
+                        warnings.warn(repr(err))
+
+
 def align_contigs(
-        evidence,
+        evidence_list,
         input_bam_cache,
         reference_genome,
         aligner,
@@ -409,8 +488,8 @@ def align_contigs(
     """
     given a set of contigs, call the aligner from the command line and adds the results to the contigs
     associated with each Evidence object
-
     """
+
     if is_protein:
         raise NotImplementedError('currently does not support aligning protein sequences')
 
@@ -420,7 +499,7 @@ def align_contigs(
         sequences = set()
         count = 1
         ev_by_seq = {}
-        for curr_ev in evidence:
+        for curr_ev in evidence_list:
             for contig in curr_ev.contigs:
                 sequences.add(contig.seq)
                 ev_by_seq.setdefault(contig.seq, []).append(curr_ev.data.get(COLUMNS.cluster_id, None))
@@ -481,11 +560,24 @@ def align_contigs(
             raise NotImplementedError('unsupported aligner', aligner)
 
         # standardize all reads
+        for evidence in evidence_list:
+            for contig in evidence.contigs:
+                for alignment in reads_by_query.get(contig.seq, []):
+
         for query_seq, reads in reads_by_query.items():
             std_reads = []
             for read in reads:
                 read = evidence.standardize_read(read)
-                read.cigar = _cigar.merge_internal_events(read.cigar, contig_aln_merge_inner_anchor, contig_aln_merge_outer_anchor)
+                read.cigar = _cigar.merge_internal_events(
+                    read.cigar,
+                    merge_inner_anchor=contig_aln_merge_inner_anchor,
+                    merge_outer_anchor=contig_aln_merge_outer_anchor
+                )
+                read = _read.convert_events_to_softclipping(
+                    read, bpp.break1.orient,
+                    max_event_size=contig_aln_max_event_size,
+                    min_anchor_size=contig_aln_min_anchor_size
+                )
 
         for curr_ev in evidence:
             for contig in curr_ev.contigs:
@@ -495,6 +587,7 @@ def align_contigs(
                     alignment.read2 and alignment.query_overlap_extension() >= min_extend_overlap,
 
                 ]):
+                    pass
 
                 putative_alignments = SplitAlignment.select_supporting_alignments(
                     curr_ev, aln,
@@ -517,4 +610,49 @@ def align_contigs(
                         warnings.warn(repr(err))
 
 
-def select_alignments()
+def select_contig_alignments(evidence, reads_by_query):
+    """
+    standardize/simplify reads and filter bad/irrelevant alignments
+    """
+    result = {}  # split alignments (filtered by best)
+    for contig in evidence.contigs:
+        std_reads = set()
+        alignments = []
+        for read in reads_by_query[contig.seq]:
+            read = evidence.standardize_read(read)
+            read.cigar = _cigar.merge_internal_events(
+                read.cigar,
+                merge_inner_anchor=evidence.contig_aln_merge_inner_anchor,
+                merge_outer_anchor=evidence.contig_aln_merge_outer_anchor
+            )
+            if not evidence.interchromosomal and not evidence.opposing_strands:
+                std_reads.add(read)
+            std_reads.add(_read.convert_events_to_softclipping(
+                read, evidence.break1.orient,
+                max_event_size=evidence.contig_aln_max_event_size,
+                min_anchor_size=evidence.contig_aln_min_anchor_size
+            ))
+            if evidence.break1.orient == evidence.break2.orient:
+                continue
+            std_reads.add(_read.convert_events_to_softclipping(
+                read, evidence.break2.orient,
+                max_event_size=evidence.contig_aln_max_event_size,
+                min_anchor_size=evidence.contig_aln_min_anchor_size
+            ))
+
+        for read in std_reads:
+            alignments.extend(call_read_events(read))
+
+        for read1, read2 in itertools.combinations(std_reads, 2):
+            alignments.extend(call_paired_read_events)
+
+        for alignment in alignments:
+            if any([
+                alignment.query_consumption() < evidence.min_query_consumption,
+                alignment.read2 is None or alignment.query_overlap_extension() < evidence.contig_aln_min_extend_overlap
+            ]):
+                continue
+            if alignment not in result or alignment.score() > result[alignment].score():
+                result[alignment] = alignment
+
+    return result.values()
