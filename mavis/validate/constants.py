@@ -27,7 +27,6 @@ DEFAULTS = WeakMavisNamespace()
 - :term:`contig_aln_min_anchor_size`
 - :term:`contig_aln_min_query_consumption`
 - :term:`contig_aln_min_extend_overlap`
-- :term:`fetch_method_individual`
 - :term:`fetch_min_bin_size`
 - :term:`fetch_reads_bins`
 - :term:`fetch_reads_limit`
@@ -143,10 +142,6 @@ DEFAULTS.add(
 DEFAULTS.add(
     'filter_secondary_alignments', True,
     defn='filter secondary alignments when gathering read evidence')
-DEFAULTS.add(
-    'fetch_method_individual', True,
-    defn='Flag which indicates if the individual or combined fetch method is to be used. The individual will require less'
-    'calls to the file, but the combined will not re-read regions')
 DEFAULTS.add(
     'fuzzy_mismatch_number', 1,
     defn='The number of events/mismatches allowed to be considered a fuzzy match')

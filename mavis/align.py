@@ -391,6 +391,7 @@ def align_sequences(
     aligner_reference,
     aligner_output_file='aligner_out.temp',
     aligner_fa_input_file='aligner_in.fa',
+    aligner_output_log='aligner_out.log',
     blat_limit_top_aln=25,
     blat_min_identity=0.7,
     clean_files=True,
@@ -429,8 +430,10 @@ def align_sequences(
             command = ' '.join([
                 SUPPORTED_ALIGNER.BLAT, aligner_reference, aligner_fa_input_file, aligner_output_file,
                 '-out=pslx', '-noHead', blat_options])
-            log(command)
-            subprocess.check_call(command, shell=True)
+            log('writing aligner logging to:', aligner_output_log, time_stamp=False)
+            with open(aligner_output_log, 'w') as log_fh:
+                log_fh.write('>>> {}\n'.format(command))
+                subprocess.check_call(command, shell=True, stdout=log_fh, stderr=log_fh)
             return process_blat_output(
                 input_bam_cache=input_bam_cache,
                 query_id_mapping=query_id_mapping,
@@ -442,9 +445,10 @@ def align_sequences(
         elif aligner == SUPPORTED_ALIGNER.BWA_MEM:
             align_options = kwargs.get('align_options', '')
             command = '{} {} {} -Y {}'.format(aligner, aligner_reference, aligner_fa_input_file, align_options)
-            log(command)  # for bwa
-            with open(aligner_output_file, 'w') as aligner_output_fh:
-                subprocess.check_call(command, stdout=aligner_output_fh, shell=True)
+            log('writing aligner logging to:', aligner_output_log, time_stamp=False)
+            with open(aligner_output_log, 'w') as log_fh, open(aligner_output_file, 'w') as aligner_output_fh:
+                log_fh.write('>>> {}\n'.format(command))
+                subprocess.check_call(command, stdout=aligner_output_fh, shell=True, stderr=log_fh)
 
             with pysam.AlignmentFile(aligner_output_file, 'r', check_sq=bool(len(sequences))) as samfile:
                 reads_by_query = {}
@@ -462,7 +466,7 @@ def align_sequences(
     finally:
         # clean up
         if clean_files:
-            for outputfile in [aligner_output_file, aligner_fa_input_file]:
+            for outputfile in [aligner_output_file, aligner_fa_input_file, aligner_output_log]:
                 if os.path.exists(outputfile):
                     try:
                         os.remove(outputfile)

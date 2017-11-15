@@ -306,7 +306,6 @@ class Blat:
         try:
             query_coverage_interval(read)
         except (AttributeError, ValueError) as err:
-            print(row)
             raise err
         return read
 

@@ -132,12 +132,6 @@ class LibraryConfig(MavisNamespace):
                 setattr(self, attr, namespace.type(attr)(value))
                 break
 
-        if 'MAVIS_FETCH_METHOD_INDIVIDUAL' not in os.environ and 'fetch_method_individual' not in kwargs:
-            if self.protocol == PROTOCOL.TRANS:
-                self.fetch_method_individual = False
-            else:
-                self.fetch_method_individual = True
-
     def flatten(self):
         result = MavisNamespace.flatten(self)
         result['inputs'] = '\n'.join(result['inputs'])
@@ -272,7 +266,10 @@ def validate_section(section, namespace, use_defaults=False):
         if attr not in namespace:
             raise KeyError('tag not recognized', attr)
         else:
-            new_namespace.add(attr, namespace.type(attr)(value), cast_type=namespace.type(attr))
+            try:
+                new_namespace.add(attr, namespace.type(attr)(value), cast_type=namespace.type(attr))
+            except ValueError:
+                raise ValueError('failed casting {} with value {}'.format(attr, value))
     return new_namespace
 
 

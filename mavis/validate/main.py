@@ -122,8 +122,6 @@ def main(
             ))
 
     evidence_clusters, filtered_evidence_clusters = filter_on_overlap(evidence_clusters, extended_masks)
-    if not validation_settings['fetch_method_individual']:
-        Evidence.load_multiple(evidence_clusters, log)
     contig_sequences = set()
     for i, evidence in enumerate(evidence_clusters):
         print()
@@ -140,8 +138,7 @@ def main(
         log('inner window regions:  {}:{}-{}  {}:{}-{}'.format(
             evidence.break1.chr, evidence.inner_window1[0], evidence.inner_window1[1],
             evidence.break2.chr, evidence.inner_window2[0], evidence.inner_window2[1]), time_stamp=False)
-        if validation_settings['fetch_method_individual']:
-            evidence.load_evidence(log=log)
+        evidence.load_evidence(log=log)
         log(
             'flanking pairs: {};'.format(len(evidence.flanking_pairs)),
             'split reads: {}, {};'.format(*[len(a) for a in evidence.split_reads]),
