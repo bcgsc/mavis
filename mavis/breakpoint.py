@@ -224,7 +224,7 @@ class BreakpointPair:
         return row
 
     @classmethod
-    def classify(cls, pair, discriminate=False):
+    def classify(cls, pair, distance=None):
         """
         uses the chr, orientations and strands to determine the
         possible structural_variant types that this pair could support
@@ -241,7 +241,7 @@ class BreakpointPair:
             ['inversion']
             >>> bpp = BreakpointPair(Breakpoint('1', 1, orient='L'), Breakpoint('1', 9999, orient='R'), opposing_strands=False)
             >>> BreakpointPair.classify(bpp)
-            ['deletion', 'insertion']
+            {'deletion', 'insertion'}
 
         see :ref:`related theory documentation <theory-classifying-events>`
         """
@@ -250,36 +250,36 @@ class BreakpointPair:
                 if (pair.break1.orient == ORIENT.LEFT and pair.break2.orient == ORIENT.RIGHT) \
                         or (pair.break1.orient == ORIENT.RIGHT and pair.break2.orient == ORIENT.LEFT):
                     raise InvalidRearrangement(pair)
-                return [SVTYPE.INV]
+                return {SVTYPE.INV}
             else:
                 if (pair.break1.orient == ORIENT.LEFT and pair.break2.orient == ORIENT.LEFT) \
                         or (pair.break1.orient == ORIENT.RIGHT and pair.break2.orient == ORIENT.RIGHT):
                     raise InvalidRearrangement(pair)
                 elif pair.break1.orient == ORIENT.LEFT or pair.break2.orient == ORIENT.RIGHT:
-                    if discriminate:
+                    if distance:
                         try:
-                            if pair.net_size().start > 0:
-                                return [SVTYPE.INS]
-                            elif pair.net_size().end < 0:
-                                return [SVTYPE.DEL]
+                            if pair.net_size(distance).start > 0:
+                                return {SVTYPE.INS}
+                            elif pair.net_size(distance).end < 0:
+                                return {SVTYPE.DEL}
                         except ValueError:
                             pass
-                    return [SVTYPE.DEL, SVTYPE.INS]
+                    return {SVTYPE.DEL, SVTYPE.INS}
                 elif pair.break1.orient == ORIENT.RIGHT or pair.break2.orient == ORIENT.LEFT:
-                    return [SVTYPE.DUP]
+                    return {SVTYPE.DUP}
         else:  # interchromosomal
             if pair.opposing_strands:
                 if (pair.break1.orient == ORIENT.LEFT and pair.break2.orient == ORIENT.RIGHT) \
                         or (pair.break1.orient == ORIENT.RIGHT and pair.break2.orient == ORIENT.LEFT):
                     raise InvalidRearrangement(pair)
-                return [SVTYPE.ITRANS]
+                return {SVTYPE.ITRANS}
             else:
                 if (pair.break1.orient == ORIENT.LEFT and pair.break2.orient == ORIENT.LEFT) \
                         or (pair.break1.orient == ORIENT.RIGHT and pair.break2.orient == ORIENT.RIGHT):
                     raise InvalidRearrangement(pair)
-                return [SVTYPE.TRANS]
+                return {SVTYPE.TRANS}
 
-    def net_size(self, distance_function=lambda x, y: Interval(abs(x - y))):
+    def net_size(self, distance=lambda x, y: Interval(abs(x - y))):
         """
         Returns the size of the event for a given pair. Mainly applicable to indels
         """
@@ -289,9 +289,7 @@ class BreakpointPair:
             return 0
         size = Interval(len(self.untemplated_seq))
 
-        min_dist, max_dist = distance_function(self.break1.start, self.break2.start)
-        print('dist', min_dist, max_dist, size)
-        print(self)
+        min_dist, max_dist = distance(self.break1.start, self.break2.start)
         # if it is a duplication the net change is the untemplated_seq as well as the duplicated region
         if self.break1.orient == ORIENT.RIGHT and self.break2.orient == ORIENT.LEFT:
             size.start += min_dist + 1
@@ -300,6 +298,12 @@ class BreakpointPair:
             size.start -= (max_dist - 1)
             size.end -= (min_dist - 1)
         return size
+
+    @property
+    def is_putative_indel(self):
+        if self.interchromosomal or self.opposing_strands or self.break1.orient == ORIENT.RIGHT:
+            return False
+        return True
 
     def breakpoint_sequence_homology(self, reference_genome):
         """

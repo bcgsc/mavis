@@ -15,74 +15,6 @@ from ..util import devnull
 class Evidence(BreakpointPair):
 
     @property
-    def outer_window1(self):
-        """:class:`~mavis.interval.Interval`: the window where evidence will be gathered for the first
-        breakpoint
-
-        see :ref:`theory - calculating the evidence window <theory-calculating-the-evidence-window>`
-        """
-        if self.collect_from_outer_window():
-            try:
-                return self.outer_windows[0]
-            except AttributeError:
-                raise NotImplementedError('abstract property must be overridden')
-        else:
-            return self.inner_window1
-
-    @property
-    def outer_window2(self):
-        """:class:`~mavis.interval.Interval`: the window where evidence will be gathered for the second
-        breakpoint
-
-        see :ref:`theory - calculating the evidence window <theory-calculating-the-evidence-window>`
-        """
-        if self.collect_from_outer_window():
-            try:
-                return self.outer_windows[1]
-            except AttributeError:
-                raise NotImplementedError('abstract property must be overridden')
-        else:
-            return self.inner_window2
-
-    @property
-    def compatible_window1(self):
-        """:class:`~mavis.interval.Interval`: the window/region where it is expected to
-        find reads in a compatible flanking pair (mate must be in compatible_window2)
-
-        see :ref:`theory - calculating the evidence window <theory-calculating-the-evidence-window>`
-        """
-        return self.compatible_windows[0]
-
-    @property
-    def compatible_window2(self):
-        """:class:`~mavis.interval.Interval`: the window/region where it is expected to
-        find reads in a compatible flanking pair (mate must be in compatible_window1)
-
-        see :ref:`theory - calculating the evidence window <theory-calculating-the-evidence-window>`
-        """
-        return self.compatible_windows[1]
-
-    @property
-    def inner_window1(self):
-        """:class:`~mavis.interval.Interval`: the window where evidence will be gathered for the first
-        breakpoint
-        """
-        try:
-            return self.inner_windows[0]
-        except AttributeError:
-            raise NotImplementedError('abstract property must be overridden')
-
-    @property
-    def inner_window2(self):
-        """:class:`~mavis.interval.Interval`: the window where evidence will be gathered for the second
-        breakpoint
-        """
-        try:
-            return self.inner_windows[1]
-        except AttributeError:
-            raise NotImplementedError('abstract property must be overridden')
-
-    @property
     def min_expected_fragment_size(self):
         # cannot be negative
         return int(round(max([self.median_fragment_size - self.stdev_fragment_size * self.stdev_count_abnormal, 0]), 0))
@@ -142,7 +74,8 @@ class Evidence(BreakpointPair):
         self.read_length = read_length
         self.stdev_fragment_size = stdev_fragment_size
         self.median_fragment_size = median_fragment_size
-        self.compatible_windows = None
+        self.compatible_window1 = None
+        self.compatible_window2 = None
 
         if self.classification is not None and self.classification not in BreakpointPair.classify(self):
             raise AttributeError(
@@ -170,6 +103,16 @@ class Evidence(BreakpointPair):
             raise NotImplementedError('abstract class cannot be initialized')
         except BaseException:
             pass
+
+    @staticmethod
+    def distance(start, end):
+        return Interval(end - start)
+
+    @staticmethod
+    def traverse(start, distance, direction):
+        if direction == ORIENT.LEFT:
+            return Interval(start - distance)
+        return Interval(start + distance)
 
     def collect_from_outer_window(self):
         """
@@ -307,7 +250,7 @@ class Evidence(BreakpointPair):
         """
         if read.is_unmapped or mate.is_unmapped or read.query_name != mate.query_name or read.is_read1 == mate.is_read1:
             raise ValueError('input reads must be a mapped and mated pair')
-        if not self.compatible_windows:
+        if not self.compatible_window1:
             raise ValueError('compatible windows were not given')
         if self.interchromosomal:
             raise NotImplementedError('interchromosomal events do not have compatible flanking pairs')
@@ -353,8 +296,8 @@ class Evidence(BreakpointPair):
                 return False
 
         # check that the positions of the reads and the strands make sense
-        if Interval.overlaps(iread, self.compatible_windows[0]) and \
-                Interval.overlaps(imate, self.compatible_windows[1]):
+        if Interval.overlaps(iread, self.compatible_window1) and \
+                Interval.overlaps(imate, self.compatible_window2):
             self.compatible_flanking_pairs.add((read, mate))
             return True
 
@@ -813,7 +756,7 @@ class Evidence(BreakpointPair):
                 read_limits.setdefault(evidence.break2.chr, {})
                 read_limits[evidence.break2.chr][fbin] = max([read_limits[evidence.break2.chr].get(fbin, 0), read_cap])
             # compatible_windows
-            if evidence.compatible_windows and evidence.collect_from_outer_window():
+            if evidence.compatible_window1 and evidence.collect_from_outer_window():
                 # first compatible breakpoint window
                 fetch_bins = BamCache._generate_fetch_bins(
                     evidence.compatible_window1[0], evidence.compatible_window1[1], evidence.fetch_reads_bins, fetch_min_bin_size)
@@ -954,7 +897,7 @@ class Evidence(BreakpointPair):
                         mates = cache.get_mate(read, allow_file_access=False)
                         for mate in mates:
                             evidence.collect_flanking_pair(read, mate)
-                            if evidence.compatible_windows:
+                            if evidence.compatible_window1:
                                 evidence.collect_compatible_flanking_pair(read, mate, compatible_type)
                     except KeyError:
                         putative_flanking.add(read)
@@ -969,7 +912,7 @@ class Evidence(BreakpointPair):
                         mates = cache.get_mate(read, allow_file_access=False)
                         for mate in mates:
                             evidence.collect_flanking_pair(read, mate)
-                            if evidence.compatible_windows:
+                            if evidence.compatible_window1:
                                 evidence.collect_compatible_flanking_pair(read, mate, compatible_type)
                     except KeyError:
                         putative_flanking.add(read)
@@ -982,7 +925,7 @@ class Evidence(BreakpointPair):
                 for mate in mates:
                     for evidence in evidence_list:
                         evidence.collect_flanking_pair(read, mate)
-                        if evidence.compatible_windows:
+                        if evidence.compatible_window1:
                             compatible_type = SVTYPE.INS if SVTYPE.DUP in evidence.putative_event_types() else SVTYPE.DUP
                             evidence.collect_compatible_flanking_pair(read, mate, compatible_type)
             except KeyError:
@@ -1090,7 +1033,7 @@ class Evidence(BreakpointPair):
             except KeyError:
                 pass
 
-        if self.compatible_windows:
+        if self.compatible_window1:
             compatible_type = SVTYPE.DUP
             if SVTYPE.DUP in self.putative_event_types():
                 compatible_type = SVTYPE.INS
@@ -1098,8 +1041,8 @@ class Evidence(BreakpointPair):
             compt_flanking = set()
             for read in self.bam_cache.fetch_from_bins(
                     '{0}'.format(self.break1.chr),
-                    self.compatible_windows[0][0],
-                    self.compatible_windows[0][1],
+                    self.compatible_window1[0],
+                    self.compatible_window1[1],
                     read_limit=self.fetch_reads_limit,
                     sample_bins=self.fetch_reads_bins,
                     min_bin_size=self.fetch_min_bin_size,
@@ -1111,8 +1054,8 @@ class Evidence(BreakpointPair):
 
             for read in self.bam_cache.fetch_from_bins(
                     '{0}'.format(self.break2.chr),
-                    self.compatible_windows[1][0],
-                    self.compatible_windows[1][1],
+                    self.compatible_window2[0],
+                    self.compatible_window2[1],
                     read_limit=self.fetch_reads_limit,
                     sample_bins=self.fetch_reads_bins,
                     min_bin_size=self.fetch_min_bin_size,

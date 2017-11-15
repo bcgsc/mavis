@@ -5,7 +5,7 @@ import subprocess
 import pysam
 
 from . import cigar as cigar_tools
-from .cigar import EVENT_STATES, QUERY_ALIGNED_STATES, REFERENCE_ALIGNED_STATES
+from .cigar import EVENT_STATES, QUERY_ALIGNED_STATES, REFERENCE_ALIGNED_STATES, convert_cigar_to_string
 from ..constants import CIGAR, DNA_ALPHABET, ORIENT, READ_PAIR_TYPE, STRAND, SVTYPE
 from ..interval import Interval
 
@@ -24,9 +24,9 @@ class SamRead(pysam.AlignedSegment):
         self.alignment_score = alignment_score
 
     def __repr__(self):
-        return '{}({}:{}, {}, {})'.format(
+        return '{}({}:{}, {}, {}...)'.format(
             self.__class__.__name__, self.reference_name, self.reference_start,
-            self.cigar, self.query_sequence
+            convert_cigar_to_string(self.cigar), self.query_sequence[:10]
         )
 
     @classmethod

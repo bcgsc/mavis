@@ -32,7 +32,7 @@ def assert_equal_attributes(attrs, iterable):
             if value is None:
                 value = getattr(item, attr)
             elif value != getattr(item, attr):
-                raise AssertionError('input items differ on value of attribute {}: {} vs {}'.format(attr, value, getattr(item, attr))
+                raise AssertionError('input items differ on value of attribute {}: {} vs {}'.format(attr, value, getattr(item, attr)))
         result[attr] = value
     return result
 

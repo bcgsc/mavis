@@ -64,7 +64,7 @@ DEFAULTS.add(
 DEFAULTS.add(
     'assembly_max_kmer_size', -1,
     defn='the minimum between this and the smallest length input sequence is used as the kmer size for assembling '
-    'the DeBruijn Graph. If this is not set (any value less than 0 is considered not set) the default is the 75%% of '
+    'the DeBruijn Graph. If this is not set (any value less than 0 is considered not set) the default is the 80%% of '
     'the minimum length input sequence')
 DEFAULTS.add(
     'assembly_max_kmer_strict', True,

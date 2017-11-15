@@ -11,7 +11,7 @@ from .base import Evidence
 from .call import call_events
 from .constants import DEFAULTS
 from .evidence import GenomeEvidence, TranscriptomeEvidence
-from ..align import align_contigs
+from ..align import align_sequences, select_contig_alignments
 from ..annotate.base import BioInterval
 from ..bam import cigar as cigar_tools
 from ..bam.cache import BamCache
@@ -124,6 +124,7 @@ def main(
     evidence_clusters, filtered_evidence_clusters = filter_on_overlap(evidence_clusters, extended_masks)
     if not validation_settings['fetch_method_individual']:
         Evidence.load_multiple(evidence_clusters, log)
+    contig_sequences = set()
     for i, evidence in enumerate(evidence_clusters):
         print()
         log(
@@ -152,34 +153,24 @@ def main(
         evidence.assemble_contig(log=log)
         log('assembled {} contigs'.format(len(evidence.contigs)), time_stamp=False)
         for contig in evidence.contigs:
-            log('>', contig.seq, time_stamp=False)
+            log('>', contig.seq[:40] + '...' if len(contig.seq) > 40 else '', time_stamp=False)
+            contig_sequences.add(contig.seq)
 
     log('will output:', contig_aligner_fa, contig_aligner_output)
-    align_contigs(
-        evidence_clusters,
+    raw_contig_alignments = align_sequences(
+        contig_sequences,
         input_bam_cache,
         reference_genome=reference_genome,
         aligner_fa_input_file=contig_aligner_fa,
         aligner_output_file=contig_aligner_output,
         clean_files=False,
-        aligner=kwargs.get(
-            'aligner', DEFAULTS.aligner),
+        aligner=kwargs.get('aligner', DEFAULTS.aligner),
         aligner_reference=aligner_reference,
-        blat_min_identity=kwargs.get(
-            'blat_min_identity', DEFAULTS.blat_min_identity),
-        blat_limit_top_aln=kwargs.get(
-            'blat_limit_top_aln', DEFAULTS.blat_limit_top_aln),
-        contig_aln_min_query_consumption=kwargs.get(
-            'contig_aln_min_query_consumption', DEFAULTS.contig_aln_min_query_consumption),
-        contig_aln_max_event_size=kwargs.get(
-            'contig_aln_max_event_size', DEFAULTS.contig_aln_max_event_size),
-        contig_aln_min_anchor_size=kwargs.get(
-            'contig_aln_min_anchor_size', DEFAULTS.contig_aln_min_anchor_size),
-        contig_aln_merge_inner_anchor=kwargs.get(
-            'contig_aln_merge_inner_anchor', DEFAULTS.contig_aln_merge_inner_anchor),
-        contig_aln_merge_outer_anchor=kwargs.get(
-            'contig_aln_merge_outer_anchor', DEFAULTS.contig_aln_merge_outer_anchor),
+        blat_min_identity=kwargs.get('blat_min_identity', DEFAULTS.blat_min_identity),
+        blat_limit_top_aln=kwargs.get('blat_limit_top_aln', DEFAULTS.blat_limit_top_aln)
     )
+    for evidence in evidence_clusters:
+        select_contig_alignments(evidence, raw_contig_alignments)
     log('alignment complete')
     event_calls = []
     total_pass = 0
@@ -243,12 +234,12 @@ def main(
         log('writing:', contig_bam)
         for evidence in evidence_clusters:
             for contig in evidence.contigs:
-                for read1, read2 in contig.alignments:
-                    read1.cigar = cigar_tools.convert_for_igv(read1.cigar)
-                    fh.write(read1)
-                    if read2:
-                        read2.cigar = cigar_tools.convert_for_igv(read2.cigar)
-                        fh.write(read2)
+                for aln in contig.alignments:
+                    aln.read1.cigar = cigar_tools.convert_for_igv(aln.read1.cigar)
+                    fh.write(aln.read1)
+                    if aln.read2:
+                        aln.read2.cigar = cigar_tools.convert_for_igv(aln.read2.cigar)
+                        fh.write(aln.read2)
 
     # write the evidence
     with pysam.AlignmentFile(raw_evidence_bam, 'wb', template=input_bam_cache.fh) as fh:

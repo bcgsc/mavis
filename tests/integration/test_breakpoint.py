@@ -5,9 +5,10 @@ from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import CIGAR, ORIENT, reverse_complement, STRAND
 from mavis.interval import Interval
 from mavis.validate.evidence import TranscriptomeEvidence
+from mavis.validate.constants import DEFAULTS
 from functools import partial
 
-from . import MockRead, REFERENCE_GENOME_FILE, get_example_genes
+from . import MockRead, MockObject, REFERENCE_GENOME_FILE, get_example_genes
 
 REFERENCE_GENOME = None
 REF_CHR = 'fake'
@@ -20,12 +21,21 @@ def setUpModule():
         raise AssertionError('fake genome file does not have the expected contents')
 
 
-
 class TestNetSizeTransEGFR(unittest.TestCase):
 
-    def egfr_distance(self, pos1, pos2):
+    def setUp(self):
+        self.evidence = MockObject(
+            annotations={},
+            read_length=100,
+            max_expected_fragment_size=550,
+            call_error=11,
+            overlapping_transcripts=set(get_example_genes()['EGFR'].transcripts)
+        )
+        setattr(self.evidence, '_select_transcripts', lambda *pos: self.evidence.overlapping_transcripts)
+        setattr(self.evidence, 'distance', partial(TranscriptomeEvidence.distance, self.evidence))
 
-        return TranscriptomeEvidence.compute_exonic_distance(pos1, pos2, get_example_genes()['EGFR'].transcripts)
+    def egfr_distance(self, pos1, pos2):
+        return TranscriptomeEvidence.distance(self.evidence, pos1, pos2)
 
     def test_deletion_in_exon(self):
         bpp = BreakpointPair(

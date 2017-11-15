@@ -19,7 +19,7 @@ class Contig:
         self.seq = sequence
         self.remapped_sequences = {}  # alignment score contribution on the contig by read
         self.score = score
-        self.alignments = []
+        self.alignments = set()
         self.input_reads = set()
         self.strand_specific = False
 
@@ -341,7 +341,7 @@ def assemble(
         return []
     min_seq = min([len(s) for s in sequences])
     if assembly_max_kmer_size < 0:
-        temp = int(min_seq * 0.75)
+        temp = int(min_seq * 0.8)
         if temp < 10:
             assembly_max_kmer_size = min(min_seq, 10)
         else:

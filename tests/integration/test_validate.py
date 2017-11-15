@@ -51,10 +51,10 @@ class TestFullEvidenceGathering(unittest.TestCase):
             outer_window_min_event_size=0,
             min_mapping_quality=20
         )
-        print(ge.break1.chr, ge.outer_windows[0])
-        print(ge.break1.chr, ge.inner_windows[0])
-        print(ge.break2.chr, ge.outer_windows[1])
-        print(ge.break2.chr, ge.inner_windows[1])
+        print(ge.break1.chr, ge.outer_window1)
+        print(ge.break1.chr, ge.inner_window1)
+        print(ge.break2.chr, ge.outer_window2)
+        print(ge.break2.chr, ge.inner_window2)
         return ge
 
     def count_original_reads(self, reads):

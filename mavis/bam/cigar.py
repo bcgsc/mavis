@@ -447,6 +447,10 @@ def convert_string_to_cigar(string):
     return cigar
 
 
+def convert_cigar_to_string(cigar):
+    return ''.join(['{}{}'.format(f, CIGAR.reverse(s) if s != CIGAR.EQ else '=') for s, f in cigar])
+
+
 def merge_internal_events(cigar, inner_anchor=10, outer_anchor=10):
     """
     merges events (insertions, deletions, mismatches) within a cigar if they are
