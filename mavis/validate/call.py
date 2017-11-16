@@ -118,7 +118,6 @@ class EventCall(BreakpointPair):
             self.source_evidence.min_expected_fragment_size + Interval.dist(self.break1, self.break2),
             self.source_evidence.max_expected_fragment_size])
         max_frag = len(self.break1 | self.break2) + self.source_evidence.max_expected_fragment_size
-
         for read, mate in flanking_pairs:
             # check that the fragment size is reasonable
             fragment_size = self.source_evidence.compute_fragment_size(read, mate)
@@ -141,7 +140,7 @@ class EventCall(BreakpointPair):
                     if not all([
                         read.reference_start + 1 <= self.break1.end,
                         mate.reference_start + 1 <= self.break2.end,
-                        mate.reference_end > self.break1.start
+                        mate.reference_end > self.break1.start or self.interchromosomal
                     ]):
                         continue
                 else:  # L R
@@ -161,7 +160,7 @@ class EventCall(BreakpointPair):
                     if not all([
                         read.reference_end >= self.break1.start,
                         mate.reference_end >= self.break2.start,
-                        read.reference_end < self.break2.end
+                        read.reference_end < self.break2.end or self.interchromosomal
                     ]):
                         continue
             if is_compatible:
