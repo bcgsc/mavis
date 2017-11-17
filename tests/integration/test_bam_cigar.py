@@ -460,9 +460,9 @@ class TestHgvsStandardizeCigars(unittest.TestCase):
         print(read.query_sequence)
         print(SamRead.insertion_sequences(read))
         new_cigar = [
-                (CIGAR.EQ, 33), (CIGAR.X, 1), (CIGAR.EQ, 52), (CIGAR.I, 26),
-                (CIGAR.EQ, 15), (CIGAR.X, 1), (CIGAR.EQ, 1), (CIGAR.I, 1),
-                (CIGAR.EQ, 1), (CIGAR.I, 1), (CIGAR.EQ, 18)]
+            (CIGAR.EQ, 33), (CIGAR.X, 1), (CIGAR.EQ, 52), (CIGAR.I, 26),
+            (CIGAR.EQ, 15), (CIGAR.X, 1), (CIGAR.EQ, 1), (CIGAR.I, 1),
+            (CIGAR.EQ, 1), (CIGAR.I, 1), (CIGAR.EQ, 18)]
         std_cigar = hgvs_standardize_cigar(read, rseq)
         print(new_cigar)
         print(std_cigar)

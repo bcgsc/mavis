@@ -375,7 +375,7 @@ def hgvs_standardize_cigar(read, reference_seq):
                 if next_c == CIGAR.EQ and prev_c == CIGAR.EQ:
                     rseq = reference_seq[rpos:rpos + next_v]
                     t = 0
-                    while t <= next_v and rseq[t] == read.query_sequence[qpos + t]:
+                    while t < next_v and rseq[t] == read.query_sequence[qpos + t]:
                         t += 1
                     if t > 0:
                         cigar.append((CIGAR.EQ, t))
@@ -393,7 +393,7 @@ def hgvs_standardize_cigar(read, reference_seq):
                 if next_c == CIGAR.EQ and prev_c == CIGAR.EQ:
                     qseq = read.query_sequence[qpos:qpos + next_v]
                     t = 0
-                    while t <= next_v and qseq[t] == reference_seq[rpos + t]:
+                    while t < next_v and qseq[t] == reference_seq[rpos + t]:
                         t += 1
                     if t > 0:
                         cigar.append((CIGAR.EQ, t))
