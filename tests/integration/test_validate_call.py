@@ -2,7 +2,7 @@ import unittest
 
 from mavis.align import call_paired_read_event
 from mavis.annotate.file_io import load_reference_genome
-from mavis.annotate.genomic import UsTranscript
+from mavis.annotate.genomic import UsTranscript, Transcript
 from mavis.bam.cache import BamCache
 from mavis.bam.read import sequenced_strand
 from mavis.bam.cigar import convert_string_to_cigar
@@ -997,15 +997,15 @@ class TestCallByFlankingReadsTranscriptome(unittest.TestCase):
         # transcriptome test will use exonic coordinates for the associated transcripts
         raise unittest.SkipTest('TODO')
 
-    def test_call_deletion_evidence_spans_exons(self):
+    def test_call_deletion(self):
         # transcriptome test will use exonic coordinates for the associated transcripts
-        UsTranscript([(1001, 1100), (1501, 1700), (2001, 2100), (2201, 2300)], strand='+')
+        ust = UsTranscript([(1001, 1100), (1501, 1700), (2001, 2100), (2201, 2300)], strand='+')
+        for patt in ust.generate_splicing_patterns():
+            ust.transcripts.append(Transcript(ust, patt))
         evidence = self.build_transcriptome_evidence(
             Breakpoint('1', 1051, 1051, 'L', '+'),
             Breakpoint('1', 1551, 1551, 'R', '+')
         )
-        # evidence.overlapping_transcripts[0].add(t1)
-        # evidence.overlapping_transcripts[1].add(t1)
         # now add the flanking pairs
         pair = mock_read_pair(
             MockRead('name', '1', 951, 1051, is_reverse=True),
@@ -1022,18 +1022,17 @@ class TestCallByFlankingReadsTranscriptome(unittest.TestCase):
         self.assertEqual(STRAND.POS, evidence.decide_sequenced_strand([pair[0]]))
         self.assertEqual(STRAND.POS, sequenced_strand(pair[1], 2))
         self.assertEqual(STRAND.POS, evidence.decide_sequenced_strand([pair[1]]))
-        print('mock read pair', *pair)
+        print(evidence.max_expected_fragment_size, evidence.read_length)
         evidence.flanking_pairs.add(pair)
-        b1, b2 = call._call_by_flanking_pairs(evidence, SVTYPE.DEL)
-        self.assertEqual(Breakpoint('1', 1051, 1300, 'L', '+'), b1)
-        self.assertEqual(Breakpoint('1', 2051, 2300, 'R', '+'), b2)
+        breakpoint1, breakpoint2 = call._call_by_flanking_pairs(evidence, SVTYPE.DEL)
+        self.assertEqual(Breakpoint('1', 1051, 1301, 'L', '+'), breakpoint1)
+        self.assertEqual(Breakpoint('1', 2050, 2300, 'R', '+'), breakpoint2)
 
-        evidence.flanking_pairs.update({
-            mock_read_pair(
-                MockRead('name', '1', 1051 - evidence.read_length + 1, 1051, is_reverse=True),
-                MockRead('name', '1', 2300, 2300 + evidence.read_length - 1, is_reverse=False)
-            )
-        })
+        # now add the transcript and call again
+        evidence.overlapping_transcripts.add(ust)
+        breakpoint1, breakpoint2 = call._call_by_flanking_pairs(evidence, SVTYPE.DEL)
+        self.assertEqual(Breakpoint('1', 1051, 2001, 'L', '+'), breakpoint1)
+        self.assertEqual(Breakpoint('1', 1650, 2300, 'R', '+'), breakpoint2)
 
 
 class TestCallBySpanningReads(unittest.TestCase):

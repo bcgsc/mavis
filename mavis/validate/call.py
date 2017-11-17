@@ -352,7 +352,7 @@ class EventCall(BreakpointPair):
                 COLUMNS.contig_strand_specific: self.contig.strand_specific,
                 COLUMNS.contig_alignment_query_consumption: self.contig_alignment.query_consumption(),
                 COLUMNS.contig_build_score: self.contig.score,
-                COLUMNS.contig_alignment_query_name: self.contig_alignment.read1.query_name,
+                COLUMNS.contig_alignment_query_name: self.contig_alignment.query_name,
                 COLUMNS.contig_remap_coverage: self.contig.remap_coverage(),
                 COLUMNS.contig_read_depth: self.contig.remap_depth(),
                 COLUMNS.contig_break1_read_depth: break1_read_depth,

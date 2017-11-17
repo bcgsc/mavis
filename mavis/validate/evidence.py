@@ -196,7 +196,7 @@ class TranscriptomeEvidence(Evidence):
             return Interval.from_iterable(mixed)
         elif inter:
             return Interval.from_iterable(inter)
-        return Interval(end - start)
+        return Evidence.distance(start, end)
 
     def generate_window(self, breakpoint):
         """
@@ -216,9 +216,8 @@ class TranscriptomeEvidence(Evidence):
             Interval: the range where reads should be read from the bam looking for evidence for this event
         """
         window = GenomeEvidence.generate_window(self, breakpoint)
-        tgt_left = breakpoint.start - window.start  # amount to expand to the left
-        tgt_right = window.end - breakpoint.end  # amount to expand to the right
-
-        window1 = self.traverse(breakpoint.start, tgt_left, ORIENT.LEFT, strand=breakpoint.strand, chrom=breakpoint.chr)
-        window2 = self.traverse(breakpoint.end, tgt_right, ORIENT.RIGHT, strand=breakpoint.strand, chrom=breakpoint.chr)
+        tgt_left = Evidence.distance(window.start, breakpoint.start)  # amount to expand to the left
+        tgt_right = Evidence.distance(breakpoint.end, window.end)  # amount to expand to the right
+        window1 = self.traverse(breakpoint.start, tgt_left.end, ORIENT.LEFT, strand=breakpoint.strand, chrom=breakpoint.chr)
+        window2 = self.traverse(breakpoint.end, tgt_right.end, ORIENT.RIGHT, strand=breakpoint.strand, chrom=breakpoint.chr)
         return window1 | window2

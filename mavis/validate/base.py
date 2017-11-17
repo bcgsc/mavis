@@ -144,7 +144,7 @@ class Evidence(BreakpointPair):
         read.cigar = _cigar.join(cigar)
         read.reference_start = read.reference_start + prefix
 
-        # makes sure all insertions are called as far 'right' as possible
+        # makes sure all indels are called as far 'right' as possible
         read.cigar = _cigar.hgvs_standardize_cigar(
             read, self.reference_genome[self.bam_cache.get_read_reference_name(read)].seq)
         return read
