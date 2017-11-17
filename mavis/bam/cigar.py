@@ -386,6 +386,43 @@ def hgvs_standardize_cigar(read, reference_seq):
                         else:
                             new_cigar[i + 1] = next_c, next_v - t
                         continue
+                elif next_c == CIGAR.D and prev_c == CIGAR.EQ:
+                    # reduce the insertion and deletion by extending the alignment if possible
+                    delseq = reference_seq[rpos: rpos + next_v]
+                    start = 0
+                    end = 0
+                    shift = True
+                    while max(start, end) < min(len(delseq), len(qseq)) and shift:
+                        shift = False
+                        if qseq[start] == delseq[start]:
+                            start += 1
+                            shift = True
+                        if qseq[-1 - end] == delseq[-1 - end]:
+                            end += 1
+                            shift = True
+                    if start:
+                        cigar.append((CIGAR.EQ, start))
+                        if start < next_v:
+                            new_cigar[i + 1] = (next_c, next_v - start)
+                        else:
+                            del new_cigar[i + 1]
+                        if start < v:
+                            new_cigar[i] = (c, v - start)
+                        else:
+                            del new_cigar[i]
+                        qpos += start
+                        rpos += start
+                        continue
+                    elif end:
+                        if end < v:
+                            cigar.append((c, v - end))
+                        if end < next_v:
+                            cigar.append((next_c, next_v - end))
+                        cigar.append((CIGAR.EQ, end))
+                        qpos += v
+                        rpos += next_v
+                        i += 2
+                        continue
                 qpos += v
 
             elif c == CIGAR.D:
@@ -405,11 +442,11 @@ def hgvs_standardize_cigar(read, reference_seq):
                             new_cigar[i + 1] = next_c, next_v - t
                         continue
                 rpos += v
-            elif c == CIGAR.S:
-                qpos += v
-            elif c != CIGAR.H:
-                qpos += v
-                rpos += v
+            else:
+                if c in QUERY_ALIGNED_STATES:
+                    qpos += v
+                if c in REFERENCE_ALIGNED_STATES:
+                    rpos += v
         cigar.append(new_cigar[i])
         i += 1
     return join(cigar)
