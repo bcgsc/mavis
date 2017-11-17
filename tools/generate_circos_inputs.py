@@ -34,9 +34,7 @@ def main():
     bpps = read_inputs(
         args.input,
         require=[COLUMNS.library, COLUMNS.event_type, COLUMNS.gene1_aliases, COLUMNS.gene2_aliases],
-        add={COLUMNS.stranded: False},
-        explicit_strand=True,
-        expand_ns=False
+        add={COLUMNS.stranded: False}
     )
 
     # output

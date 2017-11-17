@@ -72,7 +72,7 @@ def load_annotations(filepath, warn=devnull, reference_genome=None, filetype=Non
         verbose (bool): output extra information to stdout
         reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by
             template/chr name
-        filetype (str): json or tab/tsv. only required if the file type can't be interpolated from the path extenstion
+        filetype (str): json or tab/tsv. only required if the file type can't be interpolated from the path extension
 
     Returns:
         :class:`dict` of :class:`list` of :class:`~mavis.annotate.genomic.Gene` by :class:`str`: lists of genes keyed by chromosome name

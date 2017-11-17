@@ -56,16 +56,11 @@ class SplicingPattern(list):
                     temp.append(site)
             r_introns.extend(temp)
             assert len(temp) % 2 == 0
-        temp = []
-        for first, second in zip(r_introns[0::2], r_introns[1::2]):
-            # ignore pairs that are essentially 'pre-spliced'
-            if any([
-                first.type != SPLICE_SITE_TYPE.DONOR,
-                second.type != SPLICE_SITE_TYPE.ACCEPTOR,
-                abs(first.pos - second.pos) != 1
-            ]):
-                temp.extend([first, second])
-        r_introns = len(temp) // 2
+        intron_count = 0
+        for i in range(0, len(r_introns) - 1):
+            if abs(r_introns[i].pos - r_introns[i + 1].pos) > 1:
+                intron_count += 1
+        r_introns = intron_count
         s_exons = len(s_exons) // 2
         # now classifying the pattern
         if r_introns + s_exons == 0:
@@ -101,6 +96,8 @@ class SplicingPattern(list):
                     patterns[-1].append(site)
                 else:
                     patterns.append([site])
+        if not patterns:
+            return [SplicingPattern()]
         if patterns[0][0].type == SPLICE_SITE_TYPE.ACCEPTOR:
             patterns = patterns[1:]
         if patterns[-1][0].type == SPLICE_SITE_TYPE.DONOR:

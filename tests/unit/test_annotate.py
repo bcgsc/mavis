@@ -4,7 +4,10 @@ import unittest
 
 from mavis.annotate.base import ReferenceName
 from mavis.annotate.protein import calculate_orf, Domain, DomainRegion
+from mavis.annotate.variant import IndelCall
 import timeout_decorator
+
+from .mock import Mock, MockFunction
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 
