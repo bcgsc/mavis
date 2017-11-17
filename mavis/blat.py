@@ -346,9 +346,7 @@ def process_blat_output(
     # split the rows by query id
     rows_by_query = {}
     for row in rows:
-        if row['qname'] not in rows_by_query:
-            rows_by_query[row['qname']] = []
-        rows_by_query[row['qname']].append(row)
+        rows_by_query.setdefault(row['qname'], []).append(row)
 
     reads_by_query = {}
     sequences = set(query_id_mapping.values())
@@ -380,6 +378,8 @@ def process_blat_output(
             except AssertionError as err:
                 warnings.warn('warning: invalid blat alignment: {}'.format(repr(err)))
             else:
+                if row['rank'] > 0:
+                    read.mapping_quality = 0
                 read.set_tag(PYSAM_READ_FLAGS.BLAT_SCORE, row['score'], value_type='i')
                 read.set_tag(PYSAM_READ_FLAGS.BLAT_ALIGNMENTS, len(filtered_rows), value_type='i')
                 read.set_tag(PYSAM_READ_FLAGS.BLAT_PMS, blat_min_percent_of_max_score, value_type='f')

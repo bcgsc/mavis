@@ -12,7 +12,7 @@ import pysam
 from .bam import cigar as _cigar
 from .bam import read as _read
 from .breakpoint import BreakpointPair, Breakpoint
-from .constants import CIGAR, COLUMNS, MavisNamespace, ORIENT, reverse_complement, STRAND, SVTYPE
+from .constants import CIGAR, COLUMNS, MavisNamespace, ORIENT, reverse_complement, STRAND, SVTYPE, NA_MAPPING_QUALITY
 from .error import InvalidRearrangement
 from .interval import Interval
 from .util import devnull
@@ -32,6 +32,7 @@ class SplitAlignment(BreakpointPair):
         self.read1 = kwargs.pop('read1')
         self.read2 = kwargs.pop('read2', None)
         self.query_sequence = self.read1.query_sequence
+        self.query_name = self.read1.query_name
         BreakpointPair.__init__(self, *pos, **kwargs)
 
     def query_coverage_read1(self):
@@ -71,6 +72,10 @@ class SplitAlignment(BreakpointPair):
         return 0
 
     def score(self, consec_bonus=10):
+        """
+        scores events between 0 and 1 penalizing events interrupting the alignment. Counts a split
+        alignment as a single event
+        """
         def score_matches(cigar):
             return sum([v + (v - 1) * consec_bonus for s, v in cigar if s == CIGAR.EQ])
         score = score_matches(self.read1.cigar)
@@ -80,6 +85,11 @@ class SplitAlignment(BreakpointPair):
             if Interval.overlaps(self.query_coverage_read1(), self.query_coverage_read2()):
                 qlen += len(self.query_coverage_read1() & self.query_coverage_read2())
         return score / (qlen + (qlen - 1) * consec_bonus)
+
+    def mapping_quality(self):
+        if not self.read2:
+            return Interval(self.read1.mapping_quality)
+        return Interval(self.read1.mapping_quality) | Interval(self.read2.mapping_quality)
 
     @staticmethod
     def select_supporting_alignments(
@@ -407,7 +417,7 @@ def align_sequences(
         query_id_mapping = {}
         count = 1
         with open(aligner_fa_input_file, 'w') as fh:
-            for seq in sequences:
+            for seq in sorted(sequences):
                 name = 'seq{}'.format(count)
                 query_id_mapping[name] = seq
                 fh.write('>' + name + '\n' + seq + '\n')
@@ -482,13 +492,16 @@ def select_contig_alignments(evidence, reads_by_query):
     for contig in evidence.contigs:
         std_reads = set()
         alignments = []
-        for read in reads_by_query[contig.seq]:
-            read = evidence.standardize_read(read)
-            read.cigar = _cigar.merge_internal_events(
-                read.cigar,
+        for raw_read in reads_by_query[contig.seq]:
+            if raw_read.reference_name not in {evidence.break1.chr, evidence.break2.chr}:
+                continue
+            raw_read.cigar = _cigar.merge_internal_events(
+                raw_read.cigar,
                 inner_anchor=evidence.contig_aln_merge_inner_anchor,
                 outer_anchor=evidence.contig_aln_merge_outer_anchor
             )
+            read = evidence.standardize_read(raw_read)
+
             for single_alignment in call_read_events(read):
                 if single_alignment.break1.chr in {evidence.break1.chr, evidence.break2.chr}:
                     if any([
@@ -523,12 +536,13 @@ def select_contig_alignments(evidence, reads_by_query):
                 paired_event.break2 & evidence.outer_window2
             ]):
                 alignments.append(paired_event)
-
+        filtered_alignments = set()
         for alignment in sorted(alignments, key=lambda x: (x.read2 is None, x.score()), reverse=True):
             if any([
                 alignment.query_consumption() < evidence.contig_aln_min_query_consumption,
                 alignment.read2 is not None and alignment.query_overlap_extension() < evidence.contig_aln_min_extend_overlap,
-                alignment in contig.alignments
+                alignment in filtered_alignments
             ]):
                 continue
-            contig.alignments.add(alignment)
+            filtered_alignments.add(alignment)
+        contig.alignments.update(filtered_alignments)

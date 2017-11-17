@@ -341,7 +341,7 @@ def assemble(
         return []
     min_seq = min([len(s) for s in sequences])
     if assembly_max_kmer_size < 0:
-        temp = int(min_seq * 0.8)
+        temp = int(min_seq * 0.75)
         if temp < 10:
             assembly_max_kmer_size = min(min_seq, 10)
         else:
@@ -356,7 +356,6 @@ def assemble(
     assembly_min_contig_length = min_seq + 1 if assembly_min_contig_length is None else assembly_min_contig_length
 
     assembly = DeBruijnGraph()
-    log('hashing kmers')
     for s in sequences:
         if len(s) < assembly_max_kmer_size:
             continue

@@ -98,7 +98,8 @@ def main(
             COLUMNS.protocol: protocol,
             COLUMNS.tools: '',
             COLUMNS.disease_status: disease_status,
-            COLUMNS.stranded: False
+            COLUMNS.stranded: False,
+            COLUMNS.tracking_id: ''
         },
         expand_strand=False, expand_orient=True, expand_svtype=True
     )
