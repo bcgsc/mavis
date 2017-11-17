@@ -23,9 +23,13 @@ class SamRead(pysam.AlignedSegment):
         self._next_reference_name = next_reference_name
         self.alignment_score = alignment_score
 
+    @property
+    def alignment_id(self):
+        return '{}:{}[{}]{}'.format(self.reference_name, self.reference_start, self.query_name, convert_cigar_to_string(self.cigar))
+
     def __repr__(self):
-        return '{}({}:{}, {}, {}...)'.format(
-            self.__class__.__name__, self.reference_name, self.reference_start,
+        return '{}({}:{}-{}, {}, {}...)'.format(
+            self.__class__.__name__, self.reference_name, self.reference_start, self.reference_end,
             convert_cigar_to_string(self.cigar), self.query_sequence[:10]
         )
 
@@ -65,6 +69,28 @@ class SamRead(pysam.AlignedSegment):
     @property
     def next_reference_name(self):
         return self._next_reference_name
+
+    def deletion_sequences(self, reference_genome):
+        """returns the reference sequences for all deletions"""
+        rpos = self.reference_start
+        result = []
+        for state, freq in self.cigar:
+            if state in REFERENCE_ALIGNED_STATES:
+                if state not in QUERY_ALIGNED_STATES:
+                    result.append(reference_genome[self.reference_name].seq[rpos:rpos + freq])
+                rpos += freq
+        return result
+
+    def insertion_sequences(self):
+        """returns the inserted sequence for all insertions"""
+        qpos = 0
+        result = []
+        for state, freq in self.cigar:
+            if state in QUERY_ALIGNED_STATES:
+                if state not in REFERENCE_ALIGNED_STATES:
+                    result.append(self.query_sequence[qpos:qpos + freq])
+                qpos += freq
+        return result
 
 
 def map_ref_range_to_query_range(read, ref_range):
