@@ -240,11 +240,9 @@ def call_paired_read_event(read1, read2):
     # sort the reads so that we are calling consistently
     break1 = read_breakpoint(read1)
     break2 = read_breakpoint(read2)
-
-    if break2 < break1:
+    if break2.key < break1.key:
         break1, break2 = break2, break1
         read1, read2 = read2, read1
-
     r1_query_cover = query_coverage_interval(read1)
     r2_query_cover = query_coverage_interval(read2)
 

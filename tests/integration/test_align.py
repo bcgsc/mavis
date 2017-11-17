@@ -407,6 +407,37 @@ class TestCallBreakpointPair(unittest.TestCase):
         self.assertEqual(21, bpp.break1.start)
         self.assertEqual(100, bpp.break2.start)
 
+    def test_read_pair_translocation(self):
+        # seq AAATTTCCCGGGAATTCCGGATCGATCGAT
+        # r1  AAATTTCCCGGGAATTCCGGAtcgatcgat
+        # r2  aaatttcccgggaattccggaTCGATCGAT
+        seq = 'AAATTTCCCGGGAATTCCGGATCGATCGAT'  # 30
+        r1 = MockRead(
+            reference_id=0,
+            reference_name='2',
+            reference_start=0,
+            cigar=[(CIGAR.M, 21), (CIGAR.S, 9)],
+            query_sequence=seq,
+            is_reverse=False
+        )
+
+        r2 = MockRead(
+            reference_id=0,
+            reference_name='1',
+            reference_start=99,
+            cigar=[(CIGAR.S, 21), (CIGAR.M, 9)],
+            query_sequence=seq,
+            is_reverse=False
+        )
+        bpp = call_paired_read_event(r1, r2)
+        self.assertEqual(STRAND.POS, bpp.break1.strand)
+        self.assertEqual(STRAND.POS, bpp.break2.strand)
+        self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
+        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
+        self.assertEqual('1', bpp.break1.chr)
+        self.assertEqual('2', bpp.break2.chr)
+        self.assertEqual('', bpp.untemplated_seq)
+
     def test_read_pair_deletion_overlapping_query_coverage(self):
         # seq AAATTTCCCGGGAATTCCGGATCGATCGAT
         # r1  AAATTTCCCGGGAATTCCGGAtcgatcgat
