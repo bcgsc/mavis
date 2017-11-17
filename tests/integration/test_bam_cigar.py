@@ -425,6 +425,34 @@ class TestHgvsStandardizeCigars(unittest.TestCase):
         new_cigar = hgvs_standardize_cigar(read, rseq)
         self.assertEqual(exp, new_cigar)
 
+    def test_unecessary_indel_end_match(self):
+        rseq = 'qwertyuiopasdfghjklzxcvbnm'
+        qseq = 'qwertyuiopasdfkmkghjklzxcvbnm'
+        read = MockRead(
+            'name', reference_name='1',
+            reference_start=0,
+            cigar=convert_string_to_cigar('14=5I2D10='),
+            query_sequence=qseq
+        )
+        reference_genome = {'1': MockObject(seq=rseq)}
+        exp = convert_string_to_cigar('14=3I12=')
+        new_cigar = hgvs_standardize_cigar(read, rseq)
+        self.assertEqual(exp, new_cigar)
+
+    def test_unecessary_indel_end_match2(self):
+        rseq = 'GGGTGCAGTGGCTTACACCT' 'GTAATCCAAACACCTTGGGAGCCGCCCCCTGAG' 'CCTCCAGGCCCGGGACAGA'
+        qseq = 'GGGTGCAGTGGCTTACACCT' 'CCAGG'                             'CCTCCAGGCCCGGGACAGA'
+        read = MockRead(
+            'name', reference_name='1',
+            reference_start=0,
+            cigar=convert_string_to_cigar('20=5I33D19='),
+            query_sequence=qseq
+        )
+        reference_genome = {'1': MockObject(seq=rseq)}
+        exp = convert_string_to_cigar('20=4I32D20=')
+        new_cigar = hgvs_standardize_cigar(read, rseq)
+        self.assertEqual(exp, new_cigar)
+
     def test_even_insertion_in_repeat(self):
         rseq = 'AAAGAAAAAAAAAAAAT' 'ATATATATATATA'   'AATATACATATTATGTATCAAATATATATTATGTGTAATATACATCATGTATC'
         qseq = 'TTTTAAAAAAAAAAAAT' 'ATATATATATATA' 'TAAATATACATATTATGTATCAAATATATATTATGTGTAATATACATCATGTATC'
