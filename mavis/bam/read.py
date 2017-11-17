@@ -4,7 +4,7 @@ import subprocess
 
 import pysam
 
-from . import cigar as cigar_tools
+from . import cigar as _cigar
 from .cigar import EVENT_STATES, QUERY_ALIGNED_STATES, REFERENCE_ALIGNED_STATES, convert_cigar_to_string
 from ..constants import CIGAR, DNA_ALPHABET, ORIENT, READ_PAIR_TYPE, STRAND, SVTYPE
 from ..interval import Interval
@@ -287,7 +287,7 @@ def nsb_align(
         if length == 0 or mismatches / length > 1 - min_match:
             continue
 
-        cigar = cigar_tools.join(cigar)
+        cigar = _cigar.join(cigar)
         # end mismatches we set as soft-clipped
         if cigar[0][0] == CIGAR.X:
             cigar[0] = (CIGAR.S, cigar[0][1])

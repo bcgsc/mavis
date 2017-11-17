@@ -6,7 +6,7 @@ import warnings
 
 from .evidence import TranscriptomeEvidence
 from ..align import SplitAlignment, query_coverage_interval, call_read_events
-from ..bam import read as read_tools
+from ..bam import read as _read
 
 from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import CALL_METHOD, CIGAR, COLUMNS, ORIENT, PROTOCOL, PYSAM_READ_FLAGS, STRAND, SVTYPE, reverse_complement
@@ -130,7 +130,7 @@ class EventCall(BreakpointPair):
             if self.interchromosomal != (read.reference_id != mate.reference_id):
                 continue
             # check that the flanking reads work with the current call
-            if not read_tools.orientation_supports_type(
+            if not _read.orientation_supports_type(
                     read, self.event_type if not is_compatible else self.compatible_type):
                 continue
             # check that the positions make sense
@@ -174,7 +174,7 @@ class EventCall(BreakpointPair):
             read (pysam.AlignedSegment): putative split read supporting the first breakpoint
         """
         try:
-            pos = read_tools.breakpoint_pos(read, self.break1.orient) + 1
+            pos = _read.breakpoint_pos(read, self.break1.orient) + 1
             if Interval.overlaps((pos, pos), self.break1):
                 self.break1_split_reads.add(read)
         except AttributeError:
@@ -186,7 +186,7 @@ class EventCall(BreakpointPair):
             read (pysam.AlignedSegment): putative split read supporting the second breakpoint
         """
         try:
-            pos = read_tools.breakpoint_pos(read, self.break2.orient) + 1
+            pos = _read.breakpoint_pos(read, self.break2.orient) + 1
             if Interval.overlaps((pos, pos), self.break2):
                 self.break2_split_reads.add(read)
         except AttributeError:
@@ -692,7 +692,7 @@ def _call_by_supporting_reads(evidence, event_type, consumed_evidence=None):
     for i, breakpoint, pos_dict in [(0, evidence.break1, pos1), (1, evidence.break2, pos2)]:
         for read in evidence.split_reads[i] - consumed_evidence:
             try:
-                pos = read_tools.breakpoint_pos(read, breakpoint.orient) + 1
+                pos = _read.breakpoint_pos(read, breakpoint.orient) + 1
                 if pos not in pos_dict:
                     pos_dict[pos] = set()
                 pos_dict[pos].add(read)

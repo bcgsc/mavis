@@ -4,7 +4,7 @@ import warnings
 import distance
 import networkx as nx
 
-from .bam import cigar as cigar_tools
+from .bam import cigar as _cigar
 from .bam.read import calculate_alignment_score, nsb_align
 from .constants import reverse_complement
 from .interval import Interval
@@ -419,7 +419,7 @@ def assemble(
             )
             if len(a) != 1:
                 continue
-            if cigar_tools.match_percent(a[0].cigar) < assembly_min_match_quality:
+            if _cigar.match_percent(a[0].cigar) < assembly_min_match_quality:
                 continue
             maps_to[contig] = a[0]
         if len(maps_to) > 0:

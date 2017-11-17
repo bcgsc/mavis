@@ -13,7 +13,7 @@ from .constants import DEFAULTS
 from .evidence import GenomeEvidence, TranscriptomeEvidence
 from ..align import align_sequences, select_contig_alignments, SUPPORTED_ALIGNER
 from ..annotate.base import BioInterval
-from ..bam import cigar as cigar_tools
+from ..bam import cigar as _cigar
 from ..bam.cache import BamCache
 from ..bam.read import get_samtools_version, samtools_v0_sort, samtools_v1_sort
 from ..breakpoint import BreakpointPair
@@ -250,10 +250,10 @@ def main(
         for evidence in evidence_clusters:
             for contig in evidence.contigs:
                 for aln in contig.alignments:
-                    aln.read1.cigar = cigar_tools.convert_for_igv(aln.read1.cigar)
+                    aln.read1.cigar = _cigar.convert_for_igv(aln.read1.cigar)
                     fh.write(aln.read1)
                     if aln.read2:
-                        aln.read2.cigar = cigar_tools.convert_for_igv(aln.read2.cigar)
+                        aln.read2.cigar = _cigar.convert_for_igv(aln.read2.cigar)
                         fh.write(aln.read2)
 
     # write the evidence
@@ -263,7 +263,7 @@ def main(
         for evidence in evidence_clusters:
             reads.update(evidence.supporting_reads())
         for read in reads:
-            read.cigar = cigar_tools.convert_for_igv(read.cigar)
+            read.cigar = _cigar.convert_for_igv(read.cigar)
             fh.write(read)
     # now sort the contig bam
     sort = re.sub('.bam$', '.sorted.bam', contig_bam)

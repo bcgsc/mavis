@@ -21,7 +21,7 @@ import warnings
 import tab
 
 from .align import query_coverage_interval, SUPPORTED_ALIGNER
-from .bam import cigar as cigar_tools
+from .bam import cigar as _cigar
 from .bam.cigar import QUERY_ALIGNED_STATES
 from .bam.read import SamRead
 from .constants import CIGAR, DNA_ALPHABET, NA_MAPPING_QUALITY, PYSAM_READ_FLAGS, reverse_complement, STRAND
@@ -287,7 +287,7 @@ class Blat:
         read.query_sequence = seq
         read.reference_start = row['tstarts'][0]
         read.reference_id = chrom
-        read.cigar = cigar_tools.join(cigar)
+        read.cigar = _cigar.join(cigar)
         read.query_name = row['qname']
         read.mapping_quality = NA_MAPPING_QUALITY
         if row['strand'] == STRAND.NEG:
