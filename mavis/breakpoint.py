@@ -231,7 +231,7 @@ class BreakpointPair:
 
         Args:
             pair (BreakpointPair): the pair to classify
-            discriminate (bool): flag if true will use untemplated sequence to discriminate between insertion/deletion classifications
+            distance (callable): if defined, will be passed to net size to use in narrowing the list of putative types (del vs ins)
         Returns:
             :class:`list` of :any:`SVTYPE`: a list of possible SVTYPE
 

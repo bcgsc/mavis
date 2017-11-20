@@ -25,8 +25,9 @@ DEFAULTS = WeakMavisNamespace()
 - :term:`contig_aln_merge_inner_anchor`
 - :term:`contig_aln_merge_outer_anchor`
 - :term:`contig_aln_min_anchor_size`
-- :term:`contig_aln_min_query_consumption`
 - :term:`contig_aln_min_extend_overlap`
+- :term:`contig_aln_min_query_consumption`
+- :term:`contig_aln_min_score`
 - :term:`fetch_min_bin_size`
 - :term:`fetch_reads_bins`
 - :term:`fetch_reads_limit`
@@ -129,6 +130,8 @@ DEFAULTS.add(
 DEFAULTS.add(
     'contig_aln_min_extend_overlap', 10,
     defn='minimum number of bases the query coverage interval must be extended by in order to pair alignments as a single split alignment')
+DEFAULTS.add(
+    'contig_aln_min_score', 0.9, cast_type=float_fraction, defn='minimum score for a contig to be used as evidence in a call by contig')
 DEFAULTS.add(
     'fetch_min_bin_size', 50,
     defn='the minimum size of any bin for reading from a bam file. Increasing this number will result in smaller bins '

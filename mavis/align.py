@@ -433,7 +433,9 @@ def select_contig_alignments(evidence, reads_by_query):
             if any([
                 alignment.query_consumption() < evidence.contig_aln_min_query_consumption,
                 alignment.read2 is not None and alignment.query_overlap_extension() < evidence.contig_aln_min_extend_overlap,
-                alignment in filtered_alignments
+                alignment in filtered_alignments,
+                alignment.score() < evidence.contig_aln_min_score,
+                alignment.mapping_quality() == Interval(0)
             ]):
                 continue
             filtered_alignments.add(alignment)

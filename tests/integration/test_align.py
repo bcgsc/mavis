@@ -588,6 +588,7 @@ class TestSelectContigAlignments(unittest.TestCase):
             contig_aln_min_query_consumption=0.5,
             contig_aln_min_extend_overlap=DEFAULTS.contig_aln_min_extend_overlap,
             contig_aln_min_anchor_size=DEFAULTS.contig_aln_min_anchor_size,
+            contig_aln_min_score=DEFAULTS.contig_aln_min_score,
             outer_window1=Interval(1000, 1200),
             outer_window2=Interval(2000, 2200)
         )
