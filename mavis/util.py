@@ -475,7 +475,7 @@ def read_bpp_from_input_file(filename, expand_orient=False, expand_strand=False,
                             'error: expected one of', BreakpointPair.classify(bpp),
                             'but found', putative_event_type, str(bpp), row)
                 if expand_svtype and putative_event_type is None:
-                    for svtype in BreakpointPair.classify(bpp, discriminate=True):
+                    for svtype in BreakpointPair.classify(bpp, distance=lambda x, y: Interval(y - x)):
                         new_bpp = bpp.copy()
                         new_bpp.data[COLUMNS.event_type] = svtype
                         temp.append(new_bpp)
