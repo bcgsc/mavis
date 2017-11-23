@@ -36,7 +36,7 @@ def parse_arguments():
 
 def main():
     args = parse_arguments()
-    repeate_sequences = sorted(list(set([s.lower() for s in args.repeat_seq])))
+    repeat_sequences = sorted(list(set([s.lower() for s in args.repeat_seq])))
     log('loading:', args.input)
     reference_genome = load_reference_genome(args.input)
     comments = [
@@ -60,7 +60,7 @@ def main():
             else:
                 visited.add(seq)
             spans = []
-            for repseq in repeate_sequences:
+            for repseq in repeat_sequences:
                 log('finding {}_repeat (min_length: {}), for chr{} (length: {})'.format(repseq, args.min_length, chrom, len(seq)))
                 index = 0
                 while index < len(seq):
