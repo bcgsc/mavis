@@ -106,7 +106,7 @@ class Evidence(BreakpointPair):
 
     @staticmethod
     def distance(start, end):
-        return Interval(end - start)
+        return Interval(abs(end - start))
 
     @staticmethod
     def traverse(start, distance, direction):
@@ -138,7 +138,7 @@ class Evidence(BreakpointPair):
         )
         prefix = 0
         try:
-            cigar, prefix = _cigar.extend_softclipping(cigar, self.sc_extension_stop)
+            cigar, prefix = _cigar.extend_softclipping(cigar, self.min_anchor_exact)
         except AttributeError:
             pass
         read.cigar = _cigar.join(cigar)
@@ -498,10 +498,13 @@ class Evidence(BreakpointPair):
         opposite_breakpoint_ref = self.reference_genome[opposite_breakpoint.chr].seq[w[0] - 1: w[1]]
 
         putative_alignments = None
-
+        # figure out how much of the read must match when remaped
+        min_match_tgt = read.cigar[-1][1] if breakpoint.orient == ORIENT.LEFT else read.cigar[0][1]
+        min_match_tgt = min(min_match_tgt * self.min_anchor_match, min_match_tgt - 1) / len(read.query_sequence)
         if not self.opposing_strands:  # same strand
             sc_align = _read.nsb_align(
-                opposite_breakpoint_ref, read.query_sequence, min_consecutive_match=self.min_anchor_exact)
+                opposite_breakpoint_ref, read.query_sequence, min_consecutive_match=self.min_anchor_exact,
+                min_match=min_match_tgt, min_overlap_percent=min_match_tgt)  # split half to this side
 
             for a in sc_align:
                 a.flag = read.flag
@@ -510,14 +513,14 @@ class Evidence(BreakpointPair):
             # should align opposite the current read
             revcomp_sc_align = reverse_complement(read.query_sequence)
             revcomp_sc_align = _read.nsb_align(
-                opposite_breakpoint_ref, revcomp_sc_align, min_consecutive_match=self.min_anchor_exact)
+                opposite_breakpoint_ref, revcomp_sc_align, min_consecutive_match=self.min_anchor_exact,
+                min_match=min_match_tgt, min_overlap_percent=min_match_tgt)
 
             for a in revcomp_sc_align:
                 a.flag = read.flag ^ PYSAM_READ_FLAGS.REVERSE  # EXOR
             putative_alignments = revcomp_sc_align
 
         scores = []
-
         for a in putative_alignments:  # loop over the alignments
             a.flag = a.flag | PYSAM_READ_FLAGS.SUPPLEMENTARY
             # set this flag so we don't recompute the cigar multiple
@@ -531,8 +534,7 @@ class Evidence(BreakpointPair):
             a.next_reference_id = read.next_reference_id
             a.mapping_quality = NA_MAPPING_QUALITY
             try:
-                cigar, offset = _cigar.extend_softclipping(
-                    a.cigar, self.sc_extension_stop)
+                cigar, offset = _cigar.extend_softclipping(a.cigar, self.min_anchor_exact)
                 a.cigar = cigar
                 a.reference_start = a.reference_start + offset
             except AttributeError:
@@ -552,7 +554,6 @@ class Evidence(BreakpointPair):
                     a.template_length = -1 * tlen
             else:
                 a.template_length = 0
-
             if _cigar.alignment_matches(a.cigar) >= self.min_sample_size_to_apply_percentage \
                     and _cigar.match_percent(a.cigar) < self.min_anchor_match:
                 continue
