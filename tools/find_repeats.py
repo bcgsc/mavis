@@ -71,7 +71,7 @@ def main():
                     while index + len(repseq) <= len(seq) and seq[index:index + len(repseq)] == repseq:
                         index += len(repseq)
                     span = BioInterval(chrom, next_n + 1, index, name='repeat_{}'.format(repseq))
-                    if len(span) >= args.min_length:
+                    if len(span) >= args.min_length and len(span) >= 2 * len(repseq):
                         spans.append(span)
             log('found', len(spans), 'spans', time_stamp=False)
             for span in spans:
