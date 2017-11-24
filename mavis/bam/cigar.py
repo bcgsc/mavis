@@ -6,10 +6,11 @@ CIGAR value (i.e. 1 for an insertion), and the second value is the frequency
 import re
 from ..constants import CIGAR, DNA_ALPHABET, GAP
 
-EVENT_STATES = {CIGAR.D, CIGAR.I, CIGAR.N, CIGAR.X}
+EVENT_STATES = {CIGAR.D, CIGAR.I, CIGAR.X}
 ALIGNED_STATES = {CIGAR.M, CIGAR.X, CIGAR.EQ}
 REFERENCE_ALIGNED_STATES = ALIGNED_STATES | {CIGAR.D, CIGAR.N}
 QUERY_ALIGNED_STATES = ALIGNED_STATES | {CIGAR.I, CIGAR.S}
+CLIPPING_STATE = {CIGAR.S, CIGAR.H}
 
 
 def recompute_cigar_mismatch(read, ref):
@@ -31,15 +32,7 @@ def recompute_cigar_mismatch(read, ref):
     seq_pos = 0
 
     for cigar_value, freq in read.cigar:
-        if cigar_value in [CIGAR.S, CIGAR.I]:
-            result.append((cigar_value, freq))
-            seq_pos += freq
-        elif cigar_value == CIGAR.H:
-            result.append((cigar_value, freq))
-        elif cigar_value in [CIGAR.D, CIGAR.N]:
-            result.append((cigar_value, freq))
-            ref_pos += freq
-        elif cigar_value in [CIGAR.M, CIGAR.X, CIGAR.EQ]:
+        if cigar_value in [CIGAR.M, CIGAR.X, CIGAR.EQ]:
             for offset in range(0, freq):
                 if DNA_ALPHABET.match(ref[ref_pos], read.query_sequence[seq_pos]):
                     if len(result) == 0 or result[-1][0] != CIGAR.EQ:
@@ -53,8 +46,12 @@ def recompute_cigar_mismatch(read, ref):
                         result[-1] = (CIGAR.X, result[-1][1] + 1)
                 ref_pos += 1
                 seq_pos += 1
-        else:
-            raise NotImplementedError('unexpected CIGAR value {0} is not supported currently'.format(cigar_value))
+            continue
+        if cigar_value in QUERY_ALIGNED_STATES:
+            seq_pos += freq
+        if cigar_value in REFERENCE_ALIGNED_STATES:
+            ref_pos += freq
+        result.append((cigar_value, freq))
     assert sum([x[1] for x in result]) == sum(x[1] for x in read.cigar)
     return result
 
@@ -187,64 +184,26 @@ def extend_softclipping(cigar, min_exact_to_stop_softclipping):
             - :class:`list` of :class:`~mavis.constants.CIGAR` and :class:`int` - new cigar list
             - :class:`int` - shift from the original start position
     """
-    ref_start_shift = 0
-    # determine how far to scoop for the front softclipping
     new_cigar = []
-    temp = [(v, f) for v, f in cigar if (v in [CIGAR.EQ, CIGAR.M] and f >= min_exact_to_stop_softclipping)]
-    if len(temp) == 0:
+    anchors = [i for i, (v, f) in enumerate(cigar) if v in {CIGAR.EQ, CIGAR.M} and f >= min_exact_to_stop_softclipping]
+    if not anchors:
         raise AttributeError('cannot compute on this cigar as there is no stop point')
-
-    match_satisfied = False
-    for v, f in cigar:
-        if v in [CIGAR.M, CIGAR.EQ] and f >= min_exact_to_stop_softclipping:
-            match_satisfied = True
-        if match_satisfied and (len(new_cigar) == 0 or new_cigar[-1][0] != CIGAR.S):
-            new_cigar.append((v, f))
-        elif match_satisfied:  # first after SC
-            if v in [CIGAR.D, CIGAR.X, CIGAR.N]:
-                ref_start_shift += f
-                new_cigar.append((CIGAR.S, f))
-            elif v == CIGAR.I:
-                new_cigar.append((CIGAR.S, f))
-            else:
-                new_cigar.append((v, f))
-        else:
-            if v in [CIGAR.D, CIGAR.N]:
-                ref_start_shift += f
-                pass
-            elif v in [CIGAR.I, CIGAR.S]:
-                new_cigar.append((CIGAR.S, f))
-            elif v == CIGAR.H:
-                new_cigar.append((v, f))
-            else:
-                new_cigar.append((CIGAR.S, f))
-                ref_start_shift += f
-    cigar = new_cigar[::-1]
-
+    start_anchor = min(anchors)
+    end_anchor = max(anchors)
+    if cigar[0][0] == CIGAR.H:
+        start_anchor = 0
+    if cigar[-1][0] == CIGAR.H:
+        end_anchor = -1
+    start_query_aligned = sum([f for v, f in cigar[:start_anchor] if v in QUERY_ALIGNED_STATES] + [0])
+    start_ref_aligned = sum([f for v, f in cigar[:start_anchor] if v in REFERENCE_ALIGNED_STATES] + [0])
+    end_query_aligned = sum([f for v, f in cigar[end_anchor + 1:] if v in QUERY_ALIGNED_STATES] + [0])
     new_cigar = []
-
-    match_satisfied = False
-    for v, f in cigar:
-        if v in [CIGAR.M, CIGAR.EQ] and f >= min_exact_to_stop_softclipping:
-            match_satisfied = True
-        if match_satisfied and (len(new_cigar) == 0 or new_cigar[-1][0] != CIGAR.S):
-            new_cigar.append((v, f))
-        elif match_satisfied:  # first after SC
-            if v in [CIGAR.D, CIGAR.X, CIGAR.N]:
-                new_cigar.append((CIGAR.S, f))
-            elif v == CIGAR.I:
-                new_cigar.append((CIGAR.S, f))
-            else:
-                new_cigar.append((v, f))
-        else:
-            if v in [CIGAR.D, CIGAR.N]:
-                pass
-            elif v in [CIGAR.I, CIGAR.S]:
-                new_cigar.append((CIGAR.S, f))
-            else:
-                new_cigar.append((CIGAR.S, f))
-    new_cigar.reverse()
-    return new_cigar, ref_start_shift
+    if start_query_aligned:
+        new_cigar.append((CIGAR.S, start_query_aligned))
+    new_cigar.extend(cigar[start_anchor:end_anchor + 1])
+    if end_query_aligned:
+        new_cigar.append((CIGAR.S, end_query_aligned))
+    return new_cigar, start_ref_aligned
 
 
 def compute(ref, alt, force_softclipping=True, min_exact_to_stop_softclipping=6):
