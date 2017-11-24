@@ -629,7 +629,8 @@ COLUMNS = MavisNamespace(
     untemplated_seq='untemplated_seq',
     filter_comment='filter_comment',
     cdna_synon='cdna_synon',
-    protein_synon='protein_synon'
+    protein_synon='protein_synon',
+    net_size='net_size'
 )
 """:class:`MavisNamespace`: Column names for i/o files used throughout the pipeline
 
@@ -705,6 +706,7 @@ COLUMNS = MavisNamespace(
 - :term:`inferred_pairing`
 - :term:`library`
 - :term:`linking_split_reads`
+- :term:`net_size`
 - :term:`opposing_strands`
 - :term:`pairing`
 - :term:`product_id`

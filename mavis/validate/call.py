@@ -259,6 +259,9 @@ class EventCall(BreakpointPair):
         return reads1 & reads2
 
     def flatten(self):
+        """
+        converts the current call to a dictionary for a row in a tabbed file
+        """
         row = self.source_evidence.flatten()
         row.update(BreakpointPair.flatten(self))  # this will overwrite the evidence breakpoint which is what we want
         row.update({
@@ -325,6 +328,10 @@ class EventCall(BreakpointPair):
             names = {f[0].query_name for f in self.compatible_flanking_pairs}
             names.update({f[1].query_name for f in self.compatible_flanking_pairs})
             row[COLUMNS.flanking_pairs_compatible_read_names] = ';'.join(sorted(names))
+        try:
+            row[COLUMNS.net_size] = '{}-{}'.format(*self.net_size(self.source_evidence.distance))
+        except ValueError:
+            row[COLUMNS.net_size] = None
         # add contig specific metrics and columns
         if self.contig:
             blat_score = None
