@@ -24,9 +24,8 @@ subprocess.check_call('sphinx-apidoc -f -P -o {} {} --separate'.format(
     os.path.join(d, 'source/auto'),
     os.path.join(d, './../mavis')), shell=True)
 
-subprocess.check_call('sphinx-apidoc -f -P -o {} {}'.format(
-    os.path.join(d, 'source/auto'),
-    os.path.join(d, './../bin')), shell=True)
+subprocess.check_call('sphinx-apidoc -f -P -o {}'.format(
+    os.path.join(d, 'source/auto'), shell=True)
 
 # now we need to add showing only select special members
 for f in glob.glob(os.path.join(d, 'source/auto/*.rst')):
