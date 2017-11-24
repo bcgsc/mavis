@@ -286,7 +286,7 @@ class BreakpointPair:
         if self.untemplated_seq is None or len(self.break1) > 1 or len(self.break2) > 1:
             raise ValueError('cannot determine net size of a non-specific breakpoint pair')
         if self.interchromosomal:
-            return 0
+            return Interval(0)
         size = Interval(len(self.untemplated_seq))
 
         min_dist, max_dist = distance(self.break1.start, self.break2.start)
