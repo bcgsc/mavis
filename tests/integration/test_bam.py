@@ -169,6 +169,16 @@ class TestNsbAlign(unittest.TestCase):
         alignment = _read.nsb_align(ref, seq, min_consecutive_match=6)
         self.assertEqual(1, len(alignment))
 
+    def test_left_softclipping(self):
+        ref = 'TAAGCTTCTTCCTTTTTCTATGCCACCTACATAGGCATTTTGCATGGTCAGATTGGAATTTACATAATGCATACATGCAAAGAAATATATAGAAGCCAGATATATAAGGTAGTACATTGGCAGGCTTCATATATATAGACTCCCCCATATTGTCTATATGCTAAAAAAGTATTTTAAATCCTTAAATTTTATTTTTGTTCTCTGCATTTGAAATCTTTATCAACTAGGTCATGAAAATAGCCAGTCGGTTCTCCTTTTGGTCTATTAGAATAAAATCTGGACTGCAACTGAGAAGCAGAAGGTAATGTCAGAATGTAT'
+        seq = 'GCTAAAAAAGTATTTTAAATCCTTAAATGTTATTTTTGTTCTC'
+        alignments = _read.nsb_align(ref, seq, min_consecutive_match=6)
+        self.assertEqual(1, len(alignments))
+        print(alignments)
+        seq = 'CTTATAAAGCTGGAGTATCTGCTGAGAGCATCAGGAATTGACATCTAGGATAATGAGAGAAGGCTGATCATGGACAACATATAGCCTTTCTAGTAGATGCAGCTGAGGCTAAAAAAGTATTTTAAATCCTTAAATGTTATTTTTGTTCTC'
+        alignments = _read.nsb_align(ref, seq, min_consecutive_match=6, min_overlap_percent=0.5)
+        self.assertEqual(1, len(alignments))
+
 
 class TestReadPairStrand(unittest.TestCase):
     def setUp(self):

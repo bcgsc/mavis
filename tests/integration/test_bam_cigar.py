@@ -95,20 +95,6 @@ class TestRecomputeCigarMismatch(unittest.TestCase):
             recompute_cigar_mismatch(r, REFERENCE_GENOME['fake'])
         )
 
-    def test_invalid_cigar_value(self):
-        r = MockRead(
-            reference_start=1452,
-            query_sequence='CAGC'
-                           'CCCAAACAAC'
-                           'TATAAATTTT'
-                           'GTAATACCTA'
-                           'GAACAATATA'
-                           'AATAT',
-            cigar=[(50, 14), (CIGAR.D, 10), (CIGAR.I, 10), (CIGAR.M, 25)]
-        )
-        with self.assertRaises(NotImplementedError):
-            recompute_cigar_mismatch(r, REFERENCE_GENOME['fake'])
-
 
 class TestExtendSoftclipping(unittest.TestCase):
 
@@ -130,7 +116,7 @@ class TestExtendSoftclipping(unittest.TestCase):
 
     def test_insert(self):
         self.assertEqual(
-            ([(CIGAR.S, 10), (CIGAR.S, 2), (CIGAR.S, 5), (CIGAR.M, 10), (CIGAR.S, 5)], 2),
+            ([(CIGAR.S, 17), (CIGAR.M, 10), (CIGAR.S, 5)], 2),
             extend_softclipping([(CIGAR.S, 10), (CIGAR.M, 2), (CIGAR.I, 5), (CIGAR.M, 10), (CIGAR.I, 5)], 5)
         )
 
@@ -139,6 +125,12 @@ class TestExtendSoftclipping(unittest.TestCase):
         cnew, prefix = extend_softclipping(c, 1)
         self.assertEqual(0, prefix)
         self.assertEqual(c, cnew)
+
+    def test_softclipped_right(self):
+        c = convert_string_to_cigar('70=2X1=8X4=1X1=4X1=6X1=4X1=4X2=5X3=3X1=4X1=3X1=14X1=1X2=1S')
+        cnew, prefix = extend_softclipping(c, 6)
+        self.assertEqual(0, prefix)
+        self.assertEqual(convert_string_to_cigar('70=80S'), cnew)
 
 
 class TestCigarTools(unittest.TestCase):

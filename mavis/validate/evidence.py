@@ -1,9 +1,11 @@
 import itertools
 
 from .base import Evidence
+from ..align import SplitAlignment, call_read_events
+from ..bam import cigar as _cigar
 from ..annotate.variant import overlapping_transcripts
 from ..breakpoint import Breakpoint
-from ..constants import ORIENT, PROTOCOL, STRAND, SVTYPE
+from ..constants import ORIENT, PROTOCOL, STRAND, SVTYPE, CIGAR
 from ..interval import Interval
 
 
@@ -177,16 +179,19 @@ class TranscriptomeEvidence(Evidence):
         mixed = []
         inter = []
         transcripts = self._select_transcripts(chrom, strand)
+        genomic_distance = Evidence.distance(start, end).end
         # try to calculate assuming the positions are exonic
         for transcript in itertools.chain.from_iterable([t.transcripts for t in transcripts]):
             if not transcript.reference_object.position & Interval(start, end):
                 continue
-            cdna_start, start_shift = transcript.convert_genomic_to_nearest_cdna(start, stick_direction=ORIENT.RIGHT)
-            cdna_end, end_shift = transcript.convert_genomic_to_nearest_cdna(end, stick_direction=ORIENT.LEFT)
+            cdna_start, start_shift = transcript.convert_genomic_to_nearest_cdna(start)
+            cdna_end, end_shift = transcript.convert_genomic_to_nearest_cdna(end)
             dist = abs(cdna_end - cdna_start) + abs(start_shift) + abs(end_shift)
-            if start_shift != 0 and end_shift != 0:
+            if cdna_start == cdna_end:
+                dist = abs(start_shift - end_shift)
+            if start_shift and end_shift:
                 inter.append(dist)
-            elif start_shift != 0 or end_shift != 0:
+            elif start_shift or end_shift:
                 mixed.append(dist)
             else:
                 exonic.append(dist)
@@ -221,3 +226,78 @@ class TranscriptomeEvidence(Evidence):
         window1 = self.traverse(breakpoint.start, tgt_left.end, ORIENT.LEFT, strand=breakpoint.strand, chrom=breakpoint.chr)
         window2 = self.traverse(breakpoint.end, tgt_right.end, ORIENT.RIGHT, strand=breakpoint.strand, chrom=breakpoint.chr)
         return window1 | window2
+
+    def min_cds_shift(self, pos, strand=STRAND.NS, chrom=None):
+        exon_boundaries = set()
+        for transcript in self._select_transcripts(chrom, strand):
+            for exon in transcript.exons:
+                exon_boundaries.update({exon.start, exon.end})
+        return min(exon_boundaries, key=lambda x: abs(x - pos))
+
+    def exon_boundary_shift_cigar(self, read):
+        """
+        given an input read, converts deletions to N when the deletion matches the exon boundaries. Also shifts alignments
+        to correspond to the exon boundaries where possible
+        """
+        reference_pos = read.reference_start
+        query_pos = 0
+        new_cigar = []
+
+        # collapsed transcript model
+        exon_ends = set()
+        exon_starts = set()
+        for transcript in self._select_transcripts(read.reference_name):
+            for exon in transcript.exons:
+                exon_starts.add(exon.start)
+                exon_ends.add(exon.end)
+        refseq = self.reference_genome[read.reference_name].seq
+        for i, (state, freq) in enumerate(read.cigar):
+            state, freq = read.cigar[i]
+            # shift to coincide with exon boundaries if possible
+            if new_cigar and i < len(read.cigar) - 1 and exon_ends and exon_starts:
+                next_state, next_freq = read.cigar[i + 1]
+                prev_state, prev_freq = new_cigar[-1]
+                # compare deletions surrounded by exact alignments. Indels at exon boundaries will
+                # be aligned the same as genome indels
+                if state in {CIGAR.D, CIGAR.N} and {next_state} & {prev_state} & {CIGAR.EQ}:
+                    nearest_end_boundary = min(exon_ends, key=lambda x: abs(x - reference_pos - 1))
+                    prev_alignment_seq = refseq[reference_pos - prev_freq:reference_pos]
+                    next_reference_pos = reference_pos + freq
+                    next_alignment_seq = refseq[max(reference_pos, next_reference_pos - prev_freq):next_reference_pos]
+                    shift = 0
+                    for prev_base, next_base in zip(prev_alignment_seq[::-1], next_alignment_seq[::-1]):
+                        if prev_base == next_base:
+                            shift += 1
+                        else:
+                            break
+                    shift = min(shift, reference_pos - nearest_end_boundary)
+                    if shift > 0:
+                        if shift == prev_freq:
+                            del new_cigar[-1]
+                        else:
+                            new_cigar[-1] = (prev_state, prev_freq - shift)
+                        new_cigar.extend([(state, freq), (CIGAR.EQ, shift)])
+                        reference_pos += freq
+                        query_pos += shift
+                        continue
+            if state in _cigar.REFERENCE_ALIGNED_STATES:
+                reference_pos += freq
+            if state in _cigar.QUERY_ALIGNED_STATES:
+                query_pos += freq
+            new_cigar.append((state, freq))
+        # mark intron deletions as N instead of D
+        reference_pos = read.reference_start
+        for i, (state, freq) in enumerate(new_cigar):
+            if state == CIGAR.D:
+                dist = self.distance(reference_pos, reference_pos + freq + 1)
+                if dist.start == 1:
+                    state = CIGAR.N
+            if state in _cigar.REFERENCE_ALIGNED_STATES:
+                reference_pos += freq
+            new_cigar[i] = (state, freq)
+        return _cigar.join(new_cigar)
+
+    def standardize_read(self, read):
+        read = Evidence.standardize_read(self, read)
+        read.cigar = self.exon_boundary_shift_cigar(read)
+        return read

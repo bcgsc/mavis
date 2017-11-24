@@ -47,7 +47,6 @@ DEFAULTS = WeakMavisNamespace()
 - :term:`min_spanning_reads_resolution`
 - :term:`min_splits_reads_resolution`
 - :term:`outer_window_min_event_size`
-- :term:`sc_extension_stop`
 - :term:`stdev_count_abnormal`
 - :term:`strand_determining_read`
 
@@ -83,7 +82,7 @@ DEFAULTS.add(
     'assembly_min_edge_weight', 2,
     defn='Discards all edges with a weight/frequency less than this from the DeBruijn graph')
 DEFAULTS.add(
-    'assembly_min_exact_match_to_remap', 4,
+    'assembly_min_exact_match_to_remap', 15,
     defn='The minimum length of exact matches to initiate remapping a read to a contig')
 DEFAULTS.add(
     'assembly_min_nc_edge_weight', 4,
@@ -140,7 +139,7 @@ DEFAULTS.add(
     'fetch_reads_bins', 5,
     defn='number of bins to split an evidence window into to ensure more even sampling of high coverage regions')
 DEFAULTS.add(
-    'fetch_reads_limit', 10000,
+    'fetch_reads_limit', 3000,
     defn='maximum number of reads, cap, to loop over for any given evidence window')
 DEFAULTS.add(
     'filter_secondary_alignments', True,
@@ -190,9 +189,6 @@ DEFAULTS.add(
 DEFAULTS.add(
     'min_splits_reads_resolution', 3,
     defn='minimum number of split reads required to call a breakpoint by split reads')
-DEFAULTS.add(
-    'sc_extension_stop', 5, defn='Applies to read standardization. The minimum amount of consecutive exact matches to abort'
-    'the extension of softclipping')
 DEFAULTS.add(
     'stdev_count_abnormal', 3.0,
     defn='the number of standard deviations away from the normal considered expected and therefore not qualifying as '

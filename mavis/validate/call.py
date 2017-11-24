@@ -334,13 +334,19 @@ class EventCall(BreakpointPair):
                     blat_score += self.contig_alignment.read2.get_tag('br')
                     blat_score = round(blat_score / 2, 1)
             cseq = self.contig_alignment.query_sequence
-            break1_read_depth = SplitAlignment.breakpoint_contig_remapped_depth(
-                self.break1, self.contig, self.contig_alignment.read1
-            )
-            break2_read_depth = SplitAlignment.breakpoint_contig_remapped_depth(
-                self.break2, self.contig,
-                self.contig_alignment.read1 if self.contig_alignment.read2 is None else self.contig_alignment.read2
-            )
+            try:
+                break1_read_depth = SplitAlignment.breakpoint_contig_remapped_depth(
+                    self.break1, self.contig, self.contig_alignment.read1
+                )
+            except AssertionError:
+                break1_read_depth = None
+            try:
+                break2_read_depth = SplitAlignment.breakpoint_contig_remapped_depth(
+                    self.break2, self.contig,
+                    self.contig_alignment.read1 if self.contig_alignment.read2 is None else self.contig_alignment.read2
+                )
+            except AssertionError:
+                break2_read_depth = None
             row.update({
                 COLUMNS.contig_seq: cseq,  # don't output sequence directly from contig b/c must always be wrt to the positive strand
                 COLUMNS.contig_remap_score: self.contig.remap_score(),
