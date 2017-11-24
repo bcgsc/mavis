@@ -103,6 +103,7 @@ def main(
     annotation_filters=DEFAULTS.annotation_filters,
     start_time=int(time.time()),
     draw_fusions_only=DEFAULTS.draw_fusions_only,
+    draw_non_synonymous_cdna_only=DEFAULTS.draw_non_synonymous_cdna_only,
     **kwargs
 ):
     """
@@ -199,6 +200,7 @@ def main(
 
             # try building the fusion product
             rows = []
+            cdna_synon_all = True
             # add fusion information to the current ann_row
             for spl_fusion_tx in [] if not ann.fusion else ann.fusion.transcripts:
                 fusion_fa_id = '{}_{}'.format(ann.annotation_id, spl_fusion_tx.splicing_pattern.splice_type)
@@ -214,6 +216,8 @@ def main(
                 temp_row.update(flatten_fusion_transcript(spl_fusion_tx))
                 temp_row[COLUMNS.fusion_sequence_fasta_id] = fusion_fa_id
                 temp_row[COLUMNS.cdna_synon] = cdna_synon if cdna_synon else None
+                if not cdna_synon:
+                    cdna_synon_all = False
                 if spl_fusion_tx.translations:
                     # duplicate the ann_row for each translation
                     for fusion_translation in spl_fusion_tx.translations:
@@ -233,7 +237,11 @@ def main(
                     temp_row.update(ann_row)
                     rows.append(temp_row)
             # draw the annotation and add the path to all applicable rows (one drawing for multiple annotations)
-            if ann.fusion or not draw_fusions_only:
+            if any([
+                not ann.fusion and not draw_fusions_only,
+                ann.fusion and not draw_non_synonymous_cdna_only,
+                ann.fusion and draw_non_synonymous_cdna_only and not cdna_synon_all
+            ]):
                 drawing, legend = draw(drawing_config, ann, reference_genome, template_metadata, drawings_directory)
                 for row in rows + [ann_row]:
                     row[COLUMNS.annotation_figure] = drawing

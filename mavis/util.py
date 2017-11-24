@@ -10,6 +10,7 @@ import time
 
 from braceexpand import braceexpand
 from tab import tab
+from shortuuid import uuid
 
 from .breakpoint import Breakpoint, BreakpointPair
 from .constants import COLUMNS, ORIENT, PROTOCOL, sort_columns, STRAND, SVTYPE, MavisNamespace
@@ -371,7 +372,8 @@ def read_bpp_from_input_file(filename, expand_orient=False, expand_strand=False,
             COLUMNS.stranded: tab.cast_boolean,
             COLUMNS.untemplated_seq: soft_null_cast,
             COLUMNS.break1_chromosome: lambda x: re.sub('^chr', '', x),
-            COLUMNS.break2_chromosome: lambda x: re.sub('^chr', '', x)
+            COLUMNS.break2_chromosome: lambda x: re.sub('^chr', '', x),
+            COLUMNS.tracking_id: lambda x: x if x else str(uuid())
         })
     kwargs.setdefault('add_default', {}).update({
         COLUMNS.untemplated_seq: None,
@@ -379,7 +381,8 @@ def read_bpp_from_input_file(filename, expand_orient=False, expand_strand=False,
         COLUMNS.break1_strand: STRAND.NS,
         COLUMNS.break2_orientation: ORIENT.NS,
         COLUMNS.break2_strand: STRAND.NS,
-        COLUMNS.opposing_strands: None
+        COLUMNS.opposing_strands: None,
+        COLUMNS.tracking_id: ''
     })
     kwargs.setdefault('in_', {}).update(
         {
