@@ -47,7 +47,6 @@ class TestCallReadEvents(unittest.TestCase):
         self.assertEqual(expected_bpp.break2, events[0].break2)
 
 
-
 class TestAlign(unittest.TestCase):
     def setUp(self):
         self.cache = BamCache(MockBamFileHandle({'Y': 23, 'fake': 0, 'reference3': 3}))

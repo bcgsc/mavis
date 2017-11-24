@@ -70,7 +70,6 @@ class TestDistance(unittest.TestCase):
         self.assertEqual(Interval(400, 400), dist)
 
 
-
 class TestTransStandardize(unittest.TestCase):
 
     def test_shift_overaligned(self):
