@@ -29,7 +29,7 @@ OPTIONS = WeakMavisNamespace(__name__='~mavis.submit.options')
 OPTIONS.add('queue', '', cast_type=str, defn='the queue jobs are to be submitted to')
 OPTIONS.add('memory_limit', 16000, defn='the maximum number of megabytes (MB) any given job is allowed')  # 16 GB
 OPTIONS.add('import_env', True, defn='flag to import environment variables')
-OPTIONS.add('time_limit', 10 * 60 * 60, defn='the time in seconds any given jobs is allowed')  # 10 hours
+OPTIONS.add('time_limit', 16 * 60 * 60, defn='the time in seconds any given jobs is allowed')  # 16 hours
 OPTIONS.add('validation_memory', 16000, defn='default memory limit (MB) for the validation stage')
 OPTIONS.add('trans_validation_memory', 18000, defn='default memory limit (MB) for the validation stage (for transcriptomes)')
 OPTIONS.add('annotation_memory', 12000, defn='default memory limit (MB) for the annotation stage')
