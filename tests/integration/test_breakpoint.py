@@ -3,8 +3,12 @@ import unittest
 from mavis.annotate.file_io import load_reference_genome
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import CIGAR, ORIENT, reverse_complement, STRAND
+from mavis.interval import Interval
+from mavis.validate.evidence import TranscriptomeEvidence
+from mavis.validate.constants import DEFAULTS
+from functools import partial
 
-from . import MockRead, REFERENCE_GENOME_FILE
+from . import MockRead, MockObject, REFERENCE_GENOME_FILE, get_example_genes
 
 REFERENCE_GENOME = None
 REF_CHR = 'fake'
@@ -17,378 +21,98 @@ def setUpModule():
         raise AssertionError('fake genome file does not have the expected contents')
 
 
-class TestCallBreakpointPair(unittest.TestCase):
+class TestNetSizeTransEGFR(unittest.TestCase):
 
-    def test_single_one_event(self):
-        r = MockRead(
-            reference_id=0,
-            reference_name='1',
-            reference_start=0,
-            cigar=[(CIGAR.M, 10), (CIGAR.I, 3), (CIGAR.D, 7), (CIGAR.M, 10)],
-            query_sequence='ACTGAATCGTGGGTAGCTGCTAG'
+    def setUp(self):
+        self.evidence = MockObject(
+            annotations={},
+            read_length=100,
+            max_expected_fragment_size=550,
+            call_error=11,
+            overlapping_transcripts=set(get_example_genes()['EGFR'].transcripts)
         )
-        bpp = BreakpointPair.call_breakpoint_pair(r)
-        self.assertEqual(False, bpp.opposing_strands)
-        self.assertEqual(10, bpp.break1.start)
-        self.assertEqual(10, bpp.break1.end)
-        self.assertEqual(18, bpp.break2.start)
-        self.assertEqual(18, bpp.break2.end)
-        self.assertEqual('GGG', bpp.untemplated_seq)
+        setattr(self.evidence, '_select_transcripts', lambda *pos: self.evidence.overlapping_transcripts)
+        setattr(self.evidence, 'distance', partial(TranscriptomeEvidence.distance, self.evidence))
 
-    def test_single_delins(self):
-        r = MockRead(
-            reference_id=0,
-            reference_name='1',
-            reference_start=0,
-            cigar=[(CIGAR.M, 10), (CIGAR.I, 3), (CIGAR.M, 5), (CIGAR.D, 7), (CIGAR.M, 5)],
-            query_sequence='ACTGAATCGTGGGTAGCTGCTAG'
+    def egfr_distance(self, pos1, pos2):
+        return TranscriptomeEvidence.distance(self.evidence, pos1, pos2)
+
+    def test_deletion_in_exon(self):
+        bpp = BreakpointPair(
+            Breakpoint('7', 55238890, orient=ORIENT.LEFT), Breakpoint('7', 55238899, orient=ORIENT.RIGHT),
+            untemplated_seq=''
         )
-        # only report the major del event for now
-        bpp = BreakpointPair.call_breakpoint_pair(r)
-        self.assertEqual(False, bpp.opposing_strands)
-        self.assertEqual(15, bpp.break1.start)
-        self.assertEqual(15, bpp.break1.end)
-        self.assertEqual(23, bpp.break2.start)
-        self.assertEqual(23, bpp.break2.end)
+        self.assertEqual(Interval(-8), bpp.net_size(self.egfr_distance))
 
-    def test_single_insertion(self):
-        r = MockRead(
-            reference_id=0,
-            reference_name='1',
-            reference_start=0,
-            cigar=[(CIGAR.M, 10), (CIGAR.I, 8), (CIGAR.M, 5)],
-            query_sequence='ACTGAATCGTGGGTAGCTGCTAG'
+        bpp = BreakpointPair(
+            Breakpoint('7', 55238890, orient=ORIENT.LEFT), Breakpoint('7', 55238899, orient=ORIENT.RIGHT),
+            untemplated_seq='GTAC'
         )
-        bpp = BreakpointPair.call_breakpoint_pair(r)
-        self.assertEqual(False, bpp.opposing_strands)
-        self.assertEqual(10, bpp.break1.start)
-        self.assertEqual(10, bpp.break1.end)
-        self.assertEqual(11, bpp.break2.start)
-        self.assertEqual(11, bpp.break2.end)
-        self.assertEqual('GGGTAGCT', bpp.untemplated_seq)
+        self.assertEqual(Interval(-4), bpp.net_size(self.egfr_distance))
 
-    def test_single_duplication(self):
-        r = MockRead(
-            name='seq1',
-            reference_name='gene3',
-            reference_start=27155,
-            cigar=[(CIGAR.M, 65), (CIGAR.I, 6), (CIGAR.D, 95), (CIGAR.M, 21), (CIGAR.S, 17)],
-            query_sequence='TAGTTGGATCTCTGTGCTGACTGACTGACAGACAGACTTTAGTGTCTGTGTGCTGACTGACAGACAGACTTTAGTGTCTGTGTGCTGACT'
-                           'GACAGACTCTAGTAGTGTC'
+    def test_deletion_across_intron(self):
+        # 55240539_55240621  55323947_55324313
+        bpp = BreakpointPair(
+            Breakpoint('7', 55240610, orient=ORIENT.LEFT), Breakpoint('7', 55323950, orient=ORIENT.RIGHT),
+            untemplated_seq='GTAC'
         )
-        bpp = BreakpointPair.call_breakpoint_pair(r, reference_genome=REFERENCE_GENOME)
-        self.assertEqual(27220, bpp.break1.start)
-        self.assertEqual(27316, bpp.break2.start)
-        self.assertEqual('AGACTT', bpp.untemplated_seq)
-
-    def test_single_duplication_with_leading_untemp(self):
-        r = MockRead(
-            query_sequence=(
-                'CTCCCACCAGGAGCTCGTCCTCACCACGTCCTGCACCAGCACCTCCAGCTCCCGCAGCAGCGCCTCGCCCCCACGGTGCGCGCTCCGCGCCGGTTCC'
-                'ATGGGCTCCGTAGGTTCCATGGGCTCCGTAGGTTCCATGGGCTCCGTAGGTTCCATGGGCTCCGTAGGTTCCATCGGCTCCGTGGGTTCCATGGACT'
-                'CTGTGGGCTCGGGCCCGACGCGCACGGAGGACTGGAGGACTGGGGCGTGTGTCTGCGGTGCAGGCGAGGCGGGGCGGGC'),
-            query_name='duplication_with_untemp',
-            reference_id=16,
-            reference_name='reference17',
-            reference_start=1882,
-            cigar=[(CIGAR.EQ, 126), (CIGAR.I, 54), (CIGAR.EQ, 93)],
-            is_reverse=False)
-        bpp = BreakpointPair.call_breakpoint_pair(r, reference_genome=REFERENCE_GENOME)
-        self.assertEqual('AGGTTCCATGGGCTCCGTAGGTTCCATGGGCTCCGTAGGTTCCATCGGCTCCGT', bpp.untemplated_seq)
-        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
-        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
-
-    def test_single_duplication_with_no_untemp(self):
-        r = MockRead(
-            query_sequence=(
-                'GGATGATTTACCTTGGGTAATGAAACTCAGATTTTGCTGTTGTTTTTGTTCGATTTTGCTGTTGTTTTTGTTCCAAAGTGTTTTATACTGATAAAGCAACC'
-                'CCGGTTTAGCATTGCCATTGGTAA'),
-            query_name='duplication_with_untemp',
-            reference_id=2,
-            reference_name='reference3',
-            reference_start=1497,
-            cigar=[(CIGAR.EQ, 51), (CIGAR.I, 22), (CIGAR.EQ, 52)],
-            is_reverse=False)
-        # repeat: GATTTTGCTGTTGTTTTTGTTC
-        bpp = BreakpointPair.call_breakpoint_pair(r, reference_genome=REFERENCE_GENOME)
-        self.assertEqual('', bpp.untemplated_seq)
-        self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
-        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
-        self.assertEqual(bpp.break2.start, 1548)
-        self.assertEqual(bpp.break1.start, 1527)
-
-    def test_single_duplication_with_trailing_untemp(self):
-        r = MockRead(
-            query_sequence=(
-                'GGATGATTTACCTTGGGTAATGAAACTCAGATTTTGCTGTTGTTTTTGTTC'
-                'GATTTTGCTGTTGTTTTTGTTC' 'GTCAA'
-                'CAAAGTGTTTTATACTGATAAAGCAACCCCGGTTTAGCATTGCCATTGGTAA'),
-            query_name='duplication_with_untemp',
-            reference_id=2,
-            reference_name='reference3',
-            reference_start=1497,
-            cigar=[(CIGAR.EQ, 51), (CIGAR.I, 27), (CIGAR.EQ, 52)],
-            is_reverse=False)
-        # repeat: GATTTTGCTGTTGTTTTTGTTC
-        bpp = BreakpointPair.call_breakpoint_pair(r, reference_genome=REFERENCE_GENOME)
-        self.assertEqual('GTCAA', bpp.untemplated_seq)
-        self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
-        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
-        self.assertEqual(bpp.break2.start, 1548)
-        self.assertEqual(bpp.break1.start, 1527)
-
-    def test_single_multi_events(self):
-        r = MockRead(
-            reference_id=0,
-            reference_name='1',
-            reference_start=0,
-            cigar=[(CIGAR.M, 10), (CIGAR.I, 3), (CIGAR.M, 10), (CIGAR.D, 7), (CIGAR.M, 10)],
-            query_sequence='ACTGAATCGT'
-                           'GGGTAGCTGC'
-                           'TAGGGGCCTG'
-                           'CTC'
+        self.assertEqual(Interval(-10), bpp.net_size(self.egfr_distance))
+        # 55210998_55211181 55218987_55219055
+        bpp = BreakpointPair(
+            Breakpoint('7', 55211180, orient=ORIENT.LEFT), Breakpoint('7', 55218990, orient=ORIENT.RIGHT),
+            untemplated_seq=''
         )
-        bpp = BreakpointPair.call_breakpoint_pair(r)
-        self.assertEqual(False, bpp.opposing_strands)
-        self.assertEqual(20, bpp.break1.start)
-        self.assertEqual(20, bpp.break1.end)
-        self.assertEqual(28, bpp.break2.start)
-        self.assertEqual(28, bpp.break2.end)
-        self.assertEqual('', bpp.untemplated_seq)
-        self.assertEqual('ACTGAATCGTGGGTAGCTGCTAG', bpp.break1.seq)
-        self.assertEqual('GGGCCTGCTC', bpp.break2.seq)
+        self.assertEqual(Interval(-4 + -135, -4), bpp.net_size(self.egfr_distance))
 
-        r = MockRead(
-            reference_id=0,
-            reference_name='1',
-            reference_start=0,
-            cigar=[(CIGAR.M, 10), (CIGAR.D, 3), (CIGAR.M, 10), (CIGAR.D, 7), (CIGAR.M, 10)],
-            query_sequence='ACTGAATCGT'
-                           'GGGTAGCTGC'
-                           'TAGGGGCCTG'
+    def test_insertion_at_exon_start_mixed(self):
+        # EXON 15: 55232973-55233130
+        # EXON 16: 55238868-55238906
+        # EXON 17: 55240676-55240817
+        bpp = BreakpointPair(
+            Breakpoint('7', 55238867, orient=ORIENT.LEFT), Breakpoint('7', 55238868, orient=ORIENT.RIGHT),
+            untemplated_seq='TTATCG'
         )
-        bpp = BreakpointPair.call_breakpoint_pair(r)
-        self.assertEqual(False, bpp.opposing_strands)
-        self.assertEqual(23, bpp.break1.start)
-        self.assertEqual(23, bpp.break1.end)
-        self.assertEqual(31, bpp.break2.start)
-        self.assertEqual(31, bpp.break2.end)
-        self.assertEqual('', bpp.untemplated_seq)
+        self.assertEqual(Interval(6), bpp.net_size(self.egfr_distance))
 
-        r = MockRead(
-            reference_id=0,
-            reference_name='1',
-            reference_start=0,
-            cigar=[(CIGAR.M, 10), (CIGAR.D, 7), (CIGAR.M, 10), (CIGAR.D, 3), (CIGAR.M, 10)],
-            query_sequence='ACTGAATCGT'
-                           'GGGTAGCTGC'
-                           'TAGGGGCCTG'
+    def test_insertion_at_exon_start(self):
+        # 55238868_55238906
+        bpp = BreakpointPair(
+            Breakpoint('7', 55233130, orient=ORIENT.LEFT), Breakpoint('7', 55238868, orient=ORIENT.RIGHT),
+            untemplated_seq='TTATCG'
         )
-        bpp = BreakpointPair.call_breakpoint_pair(r)
-        self.assertEqual(False, bpp.opposing_strands)
-        self.assertEqual(10, bpp.break1.start)
-        self.assertEqual(10, bpp.break1.end)
-        self.assertEqual(18, bpp.break2.start)
-        self.assertEqual(18, bpp.break2.end)
-        self.assertEqual('', bpp.untemplated_seq)
+        self.assertEqual(Interval(6), bpp.net_size(self.egfr_distance))
 
-    def test_read_pair_indel(self):
-        # seq AAATTTCCCGGGAATTCCGGATCGATCGAT 1-30     1-?
-        # r1  AAATTTCCCgggaattccggatcgatcgat 1-9      1-9
-        # r2  aaatttcccgggaattccggaTCGATCGAT 22-30    100-108
-        # i   ---------GGGAATTCCGGA--------- 10-21    n/a
-        seq = 'AAATTTCCCGGGAATTCCGGATCGATCGAT'  # 30
-        r1 = MockRead(
-            reference_id=0,
-            reference_name='1',
-            reference_start=0,
-            cigar=[(CIGAR.M, 9), (CIGAR.S, 21)],
-            query_sequence=seq,
-            is_reverse=False
+    def test_insertion_at_exon_end_mixed(self):
+        # 55238868_55238906
+        bpp = BreakpointPair(
+            Breakpoint('7', 55238905, orient=ORIENT.LEFT), Breakpoint('7', 55238906, orient=ORIENT.RIGHT),
+            untemplated_seq='TTATCG'
         )
+        self.assertEqual(Interval(6), bpp.net_size(self.egfr_distance))
 
-        r2 = MockRead(
-            reference_id=0,
-            reference_name='1',
-            reference_start=99,
-            cigar=[(CIGAR.S, 21), (CIGAR.M, 9)],
-            query_sequence=seq,
-            is_reverse=False
+    def test_insertion_at_exon_end(self):
+        # 55238868_55238906
+        bpp = BreakpointPair(
+            Breakpoint('7', 55238906, orient=ORIENT.LEFT), Breakpoint('7', 55240676, orient=ORIENT.RIGHT),
+            untemplated_seq='TTATCG'
         )
-        bpp = BreakpointPair.call_breakpoint_pair(r1, r2)
-        self.assertEqual(STRAND.POS, bpp.break1.strand)
-        self.assertEqual(STRAND.POS, bpp.break2.strand)
-        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
-        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
-        self.assertEqual('GGGAATTCCGGA', bpp.untemplated_seq)
-        self.assertEqual(9, bpp.break1.start)
-        self.assertEqual(100, bpp.break2.start)
-        self.assertEqual('AAATTTCCC', bpp.break1.seq)
-        self.assertEqual('TCGATCGAT', bpp.break2.seq)
+        self.assertEqual(Interval(6), bpp.net_size(self.egfr_distance))
 
-    def test_read_pair_deletion(self):
-        # seq AAATTTCCCGGGAATTCCGGATCGATCGAT
-        # r1  AAATTTCCCGGGAATTCCGGAtcgatcgat
-        # r2  aaatttcccgggaattccggaTCGATCGAT
-        seq = 'AAATTTCCCGGGAATTCCGGATCGATCGAT'  # 30
-        r1 = MockRead(
-            reference_id=0,
-            reference_name='1',
-            reference_start=0,
-            cigar=[(CIGAR.M, 21), (CIGAR.S, 9)],
-            query_sequence=seq,
-            is_reverse=False
+    def test_insertion_in_intron(self):
+        # 55238868_55238906
+        bpp = BreakpointPair(
+            Breakpoint('7', 5523750, orient=ORIENT.LEFT), Breakpoint('7', 5523751, orient=ORIENT.RIGHT),
+            untemplated_seq='TTATCG'
         )
+        self.assertEqual(Interval(6), bpp.net_size(self.egfr_distance))
 
-        r2 = MockRead(
-            reference_id=0,
-            reference_name='1',
-            reference_start=99,
-            cigar=[(CIGAR.S, 21), (CIGAR.M, 9)],
-            query_sequence=seq,
-            is_reverse=False
+    def test_indel_in_intron(self):
+        # 55238868_55238906
+        bpp = BreakpointPair(
+            Breakpoint('7', 5523700, orient=ORIENT.LEFT), Breakpoint('7', 5523751, orient=ORIENT.RIGHT),
+            untemplated_seq='TTATCG'
         )
-        bpp = BreakpointPair.call_breakpoint_pair(r1, r2)
-        self.assertEqual(STRAND.POS, bpp.break1.strand)
-        self.assertEqual(STRAND.POS, bpp.break2.strand)
-        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
-        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
-        self.assertEqual('', bpp.untemplated_seq)
-        self.assertEqual(21, bpp.break1.start)
-        self.assertEqual(100, bpp.break2.start)
-
-    def test_read_pair_deletion_overlapping_query_coverage(self):
-        # seq AAATTTCCCGGGAATTCCGGATCGATCGAT
-        # r1  AAATTTCCCGGGAATTCCGGAtcgatcgat
-        # r2  aaatttcccgggaattccGGATCGATCGAT
-
-        seq = 'AAATTTCCCGGGAATTCCGGATCGATCGAT'  # 30
-        r1 = MockRead(
-            reference_id=0,
-            reference_name='1',
-            reference_start=0,
-            cigar=[(CIGAR.M, 21), (CIGAR.S, 9)],
-            query_sequence=seq,
-            is_reverse=False
-        )
-
-        r2 = MockRead(
-            reference_id=0,
-            reference_name='1',
-            reference_start=99,
-            cigar=[(CIGAR.S, 18), (CIGAR.M, 12)],
-            query_sequence=seq,
-            is_reverse=False
-        )
-        self.assertEqual(21, r1.reference_end)
-        bpp = BreakpointPair.call_breakpoint_pair(r1, r2)
-        self.assertEqual(STRAND.POS, bpp.break1.strand)
-        self.assertEqual(STRAND.POS, bpp.break2.strand)
-        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
-        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
-        self.assertEqual('', bpp.untemplated_seq)
-        self.assertEqual(21, bpp.break1.start)
-        self.assertEqual(103, bpp.break2.start)
-        self.assertEqual('AAATTTCCCGGGAATTCCGGA', bpp.break1.seq)
-        self.assertEqual('TCGATCGAT', bpp.break2.seq)
-
-    def test_read_pair_inversion_overlapping_query_coverage(self):
-        # seq AAATTTCCCGGGAATTCCGGATCGATCGAT
-        # r1  AAATTTCCCGGGAATTCCGGAtcgatcgat +
-        # r2c aaatttcccgggaattccGGATCGATCGAT -
-        # i   ------------------GGA---------
-        # r2  ATCTATCGATCCggaattcccgggaaattt 100+12 = 111 - 3 = 108
-        seq = 'AAATTTCCCGGGAATTCCGGATCGATCGAT'  # 30
-        r1 = MockRead(
-            reference_id=0,
-            reference_name='1',
-            reference_start=0,
-            cigar=[(CIGAR.M, 21), (CIGAR.S, 9)],
-            query_sequence=seq,
-            is_reverse=False
-        )
-
-        r2 = MockRead(
-            reference_id=0,
-            reference_name='1',
-            reference_start=99,
-            cigar=[(CIGAR.M, 12), (CIGAR.S, 18)],
-            query_sequence=reverse_complement(seq),
-            is_reverse=True
-        )
-        bpp = BreakpointPair.call_breakpoint_pair(r1, r2)
-        self.assertEqual(STRAND.POS, bpp.break1.strand)
-        self.assertEqual(STRAND.NEG, bpp.break2.strand)
-        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
-        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
-        self.assertEqual('', bpp.untemplated_seq)
-        self.assertEqual(21, bpp.break1.start)
-        self.assertEqual(108, bpp.break2.start)
-        self.assertEqual('AAATTTCCCGGGAATTCCGGA', bpp.break1.seq)
-        self.assertEqual(reverse_complement('TCGATCGAT'), bpp.break2.seq)
-
-    def test_read_pair_large_inversion_overlapping_query_coverage(self):
-        s = 'CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT'
-
-        read1 = MockRead(
-            reference_id=3, reference_start=1114, cigar=[(CIGAR.S, 125), (CIGAR.EQ, 120)], query_sequence=s,
-            is_reverse=False
-        )
-        read2 = MockRead(
-            reference_id=3, reference_start=2187, cigar=[(CIGAR.S, 117), (CIGAR.EQ, 128)],
-            query_sequence=reverse_complement(s), is_reverse=True
-        )
-        bpp = BreakpointPair.call_breakpoint_pair(read1, read2)
-        self.assertEqual(STRAND.POS, bpp.break1.strand)
-        self.assertEqual(STRAND.NEG, bpp.break2.strand)
-        self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
-        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
-        self.assertEqual('', bpp.untemplated_seq)
-        self.assertEqual(1115, bpp.break1.start)
-        self.assertEqual(2188 + 3, bpp.break2.start)
-        print(bpp.break1.seq)
-        print(bpp.break2.seq)
-        self.assertEqual(
-            'TCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAG'
-            'GGTTTTCATTTCTGTATGTTAAT', bpp.break1.seq)
-        self.assertEqual(
-            'GCAGAGCTATATATTTAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAACCAAACAGGAAAGAATCCA'
-            'AATTCTGTGTTTACAGGGCTTTCATGCTCAG', bpp.break2.seq)
-
-    def test_read_pair_inversion_gap_in_query_coverage(self):
-        # seq AAATTTCCCGGGAATTCCGGATCGATCGAT
-        # r1  AAATTTCCCGGGAATTccggatcgatcgat +
-        # r2c aaatttcccgggaattccGGATCGATCGAT -
-        # i   ----------------CC------------
-        # r2  ATCTATCGATCCggaattcccgggaaattt 100+12 = 111 - 3 = 108
-        seq = 'AAATTTCCCGGGAATTCCGGATCGATCGAT'  # 30
-        r1 = MockRead(
-            reference_id=0,
-            reference_name='1',
-            reference_start=0,
-            cigar=[(CIGAR.M, 16), (CIGAR.S, 14)],
-            query_sequence=seq,
-            is_reverse=False
-        )
-
-        r2 = MockRead(
-            reference_id=0,
-            reference_name='1',
-            reference_start=99,
-            cigar=[(CIGAR.M, 12), (CIGAR.S, 18)],
-            query_sequence=reverse_complement(seq),
-            is_reverse=True
-        )
-        bpp = BreakpointPair.call_breakpoint_pair(r1, r2)
-        self.assertEqual(STRAND.POS, bpp.break1.strand)
-        self.assertEqual(STRAND.NEG, bpp.break2.strand)
-        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
-        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
-        self.assertEqual('CC', bpp.untemplated_seq)
-        self.assertEqual(16, bpp.break1.start)
-        self.assertEqual(111, bpp.break2.start)
-        self.assertEqual('AAATTTCCCGGGAATT', bpp.break1.seq)
-        self.assertEqual(reverse_complement('GGATCGATCGAT'), bpp.break2.seq)
+        self.assertEqual(Interval(-44), bpp.net_size(self.egfr_distance))
 
 
 class TestBreakpointSequenceHomology(unittest.TestCase):

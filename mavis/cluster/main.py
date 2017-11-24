@@ -10,7 +10,7 @@ from ..constants import COLUMNS
 from ..util import filter_on_overlap, filter_uninformative, generate_complete_stamp, log, log_arguments, mkdirp, output_tabbed_file, read_inputs, write_bed_file
 
 
-def split_clusters(clusters, outputdir, batch_id, min_clusters_per_file=0, max_files=1, write_bed_summary=True, fetch_method_individual=True):
+def split_clusters(clusters, outputdir, batch_id, min_clusters_per_file=0, max_files=1, write_bed_summary=True):
     """
     For a set of clusters creates a bed file representation of all clusters.
     Also splits the clusters evenly into multiple files based on the user parameters (min_clusters_per_file, max_files)
@@ -18,12 +18,6 @@ def split_clusters(clusters, outputdir, batch_id, min_clusters_per_file=0, max_f
     Returns:
         list: of output file names (not including the bed file)
     """
-    # decide on the number of clusters to validate per job
-    job_size = min_clusters_per_file
-    if len(clusters) // min_clusters_per_file > max_files - 1:
-        job_size = int(round(len(clusters) / max_files, 0))
-        assert len(clusters) // job_size <= max_files
-
     if write_bed_summary:
         bedfile = os.path.join(outputdir, 'clusters.bed')
         write_bed_file(bedfile, itertools.chain.from_iterable([b.get_bed_repesentation() for b in clusters]))
@@ -37,18 +31,10 @@ def split_clusters(clusters, outputdir, batch_id, min_clusters_per_file=0, max_f
     jobs = [[] for j in range(0, number_of_jobs)]
     clusters = sorted(clusters, key=lambda x: (x.break1.chr, x.break1.start, x.break2.chr, x.break2.start))
 
-    if fetch_method_individual:
-        # split up consecutive clusters
-        for i, cluster in enumerate(clusters):
-            jobs[i % len(jobs)].append(cluster)
-    else:  # group consecutive clusters
-        extras = len(clusters) % number_of_jobs
-        cluster_per_job = len(clusters) // number_of_jobs
-        i = 0
-        for job in jobs:
-            job.extend(clusters[i:i + cluster_per_job + (1 if extras > 0 else 0)])
-            extras -= 1
-            i += len(job)
+    # split up consecutive clusters
+    for i, cluster in enumerate(clusters):
+        jobs[i % len(jobs)].append(cluster)
+
     assert sum([len(j) for j in jobs]) == len(clusters)
     output_files = []
     for i, job in enumerate(jobs):
@@ -68,7 +54,6 @@ def main(
     max_proximity=DEFAULTS.max_proximity,
     min_clusters_per_file=DEFAULTS.min_clusters_per_file,
     max_files=DEFAULTS.max_files,
-    fetch_method_individual=True,
     log_args=False,
     batch_id=None,
     split_only=False,
@@ -113,7 +98,8 @@ def main(
             COLUMNS.protocol: protocol,
             COLUMNS.tools: '',
             COLUMNS.disease_status: disease_status,
-            COLUMNS.stranded: False
+            COLUMNS.stranded: False,
+            COLUMNS.tracking_id: ''
         },
         expand_strand=False, expand_orient=True, expand_svtype=True
     )
@@ -214,8 +200,7 @@ def main(
         batch_id,
         min_clusters_per_file=min_clusters_per_file,
         max_files=max_files,
-        write_bed_summary=True,
-        fetch_method_individual=fetch_method_individual
+        write_bed_summary=True
     )
 
     generate_complete_stamp(output, log, start_time=start_time)

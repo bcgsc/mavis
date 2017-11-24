@@ -56,21 +56,20 @@ class SplicingPattern(list):
                     temp.append(site)
             r_introns.extend(temp)
             assert len(temp) % 2 == 0
-        intron_count = 0
+        rintron_count = 0
         for i in range(0, len(r_introns) - 1):
             if abs(r_introns[i].pos - r_introns[i + 1].pos) > 1:
-                intron_count += 1
-        r_introns = intron_count
-        s_exons = len(s_exons) // 2
+                rintron_count += 1
+        sexon_count = len(s_exons) // 2
         # now classifying the pattern
-        if r_introns + s_exons == 0:
+        if rintron_count + sexon_count == 0:
             return SPLICE_TYPE.NORMAL
-        elif r_introns == 0:
-            if s_exons > 1:
+        elif rintron_count == 0:
+            if sexon_count > 1:
                 return SPLICE_TYPE.MULTI_SKIP
             return SPLICE_TYPE.SKIP
-        elif s_exons == 0:
-            if r_introns > 1:
+        elif sexon_count == 0:
+            if rintron_count > 1:
                 return SPLICE_TYPE.MULTI_RETAIN
             return SPLICE_TYPE.RETAIN
         return SPLICE_TYPE.COMPLEX
@@ -96,12 +95,12 @@ class SplicingPattern(list):
                     patterns[-1].append(site)
                 else:
                     patterns.append([site])
+        if patterns and patterns[0][0].type == SPLICE_SITE_TYPE.ACCEPTOR:
+            patterns = patterns[1:]
+        if patterns and patterns[-1][0].type == SPLICE_SITE_TYPE.DONOR:
+            patterns = patterns[:-1]
         if not patterns:
             return [SplicingPattern()]
-        if patterns[0][0].type == SPLICE_SITE_TYPE.ACCEPTOR:
-            patterns = patterns[1:]
-        if patterns[-1][0].type == SPLICE_SITE_TYPE.DONOR:
-            patterns = patterns[:-1]
         patterns = list(itertools.product(*patterns))
         for i, patt in enumerate(patterns):
             patterns[i] = SplicingPattern(patt, splice_type=cls.classify(patt, sites))

@@ -307,27 +307,6 @@ def alignment_matches(cigar):
     return result
 
 
-def smallest_nonoverlapping_repeat(s):
-    """
-    for a given string returns the smallest substring that is
-    a repeat consuming the entire string
-
-    Example:
-        >>> smallest_nonoverlapping_repeat('ATATATA')
-        'ATATATA'
-        >>> smallest_nonoverlapping_repeat('ATATAT')
-        'AT'
-        >>> smallest_nonoverlapping_repeat('CCCCCCCC')
-        'C'
-    """
-    for repsize in range(1, len(s) + 1):
-        if len(s) % repsize == 0:
-            substrings = [str(s[i:i + repsize]) for i in range(0, len(s), repsize)]
-            if len(set(substrings)) == 1:
-                return substrings[0]
-    return s
-
-
 def merge_indels(cigar):
     """
     For a given cigar tuple, merges adjacent insertions/deletions
@@ -379,21 +358,25 @@ def hgvs_standardize_cigar(read, reference_seq):
     # now we need to extend any insertions
     rpos = read.reference_start
     qpos = 0
-    cigar = []
-    i = 0
+    cigar = [new_cigar[0]]
+    if cigar[0][0] in REFERENCE_ALIGNED_STATES:
+        rpos += cigar[0][1]
+    if cigar[0][0] in QUERY_ALIGNED_STATES:
+        qpos += cigar[0][1]
+    i = 1
     while i < len(new_cigar):
         if i < len(new_cigar) - 1:
             c, v = new_cigar[i]
             next_c, next_v = new_cigar[i + 1]
+            prev_c, prev_v = new_cigar[i - 1]
 
             if c == CIGAR.I:
                 qseq = read.query_sequence[qpos:qpos + v]
-                qrep = smallest_nonoverlapping_repeat(qseq)
-                if next_c == CIGAR.EQ and next_v >= len(qrep):
+                if next_c == CIGAR.EQ and prev_c == CIGAR.EQ:
                     rseq = reference_seq[rpos:rpos + next_v]
                     t = 0
-                    while t + len(qrep) <= next_v and rseq[t:t + len(qrep)] == qrep:
-                        t += len(qrep)
+                    while t < next_v and rseq[t] == read.query_sequence[qpos + t]:
+                        t += 1
                     if t > 0:
                         cigar.append((CIGAR.EQ, t))
                         rpos += t
@@ -402,17 +385,53 @@ def hgvs_standardize_cigar(read, reference_seq):
                             del new_cigar[i + 1]
                         else:
                             new_cigar[i + 1] = next_c, next_v - t
+                        continue
+                elif next_c == CIGAR.D and prev_c == CIGAR.EQ:
+                    # reduce the insertion and deletion by extending the alignment if possible
+                    delseq = reference_seq[rpos: rpos + next_v]
+                    start = 0
+                    end = 0
+                    shift = True
+                    while max(start, end) < min(len(delseq), len(qseq)) and shift:
+                        shift = False
+                        if qseq[start] == delseq[start]:
+                            start += 1
+                            shift = True
+                        if qseq[-1 - end] == delseq[-1 - end]:
+                            end += 1
+                            shift = True
+                    if start:
+                        cigar.append((CIGAR.EQ, start))
+                        if start < next_v:
+                            new_cigar[i + 1] = (next_c, next_v - start)
+                        else:
+                            del new_cigar[i + 1]
+                        if start < v:
+                            new_cigar[i] = (c, v - start)
+                        else:
+                            del new_cigar[i]
+                        qpos += start
+                        rpos += start
+                        continue
+                    elif end:
+                        if end < v:
+                            cigar.append((c, v - end))
+                        if end < next_v:
+                            cigar.append((next_c, next_v - end))
+                        cigar.append((CIGAR.EQ, end))
+                        qpos += v
+                        rpos += next_v
+                        i += 2
                         continue
                 qpos += v
 
             elif c == CIGAR.D:
                 rseq = reference_seq[rpos:rpos + v]
-                rrep = smallest_nonoverlapping_repeat(rseq)
-                if next_c == CIGAR.EQ and next_v >= len(rrep):
+                if next_c == CIGAR.EQ and prev_c == CIGAR.EQ:
                     qseq = read.query_sequence[qpos:qpos + next_v]
                     t = 0
-                    while t + len(rrep) <= next_v and qseq[t:t + len(rrep)] == rrep:
-                        t += len(rrep)
+                    while t < next_v and qseq[t] == reference_seq[rpos + t]:
+                        t += 1
                     if t > 0:
                         cigar.append((CIGAR.EQ, t))
                         qpos += t
@@ -423,11 +442,11 @@ def hgvs_standardize_cigar(read, reference_seq):
                             new_cigar[i + 1] = next_c, next_v - t
                         continue
                 rpos += v
-            elif c == CIGAR.S:
-                qpos += v
-            elif c != CIGAR.H:
-                qpos += v
-                rpos += v
+            else:
+                if c in QUERY_ALIGNED_STATES:
+                    qpos += v
+                if c in REFERENCE_ALIGNED_STATES:
+                    rpos += v
         cigar.append(new_cigar[i])
         i += 1
     return join(cigar)
@@ -441,10 +460,14 @@ def convert_string_to_cigar(string):
         >>> convert_string_to_cigar('8M2I1D9X')
         [(CIGAR.M, 8), (CIGAR.I, 2), (CIGAR.D, 1), (CIGAR.X, 9)]
     """
-    patt = r'(\d+({}))'.format('|'.join(CIGAR.keys()))
+    patt = r'(\d+(\D))'
     cigar = [m[0] for m in re.findall(patt, string)]
-    cigar = [(CIGAR[match[-1]], int(match[:-1])) for match in cigar]
+    cigar = [(CIGAR[match[-1]] if match[-1] != '=' else CIGAR.EQ, int(match[:-1])) for match in cigar]
     return cigar
+
+
+def convert_cigar_to_string(cigar):
+    return ''.join(['{}{}'.format(f, CIGAR.reverse(s) if s != CIGAR.EQ else '=') for s, f in cigar])
 
 
 def merge_internal_events(cigar, inner_anchor=10, outer_anchor=10):

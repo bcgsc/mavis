@@ -84,7 +84,7 @@ def _parse_breakdancer(row):
     pass  # TODO: add breakdancer support
 
 
-def _parse_transabyss(row, is_stranded=False):
+def _parse_transabyss(row):
     """
     transforms the transabyss output into the common format for expansion. Maps the input column
     names to column names which MAVIS can read
@@ -94,16 +94,13 @@ def _parse_transabyss(row, is_stranded=False):
         std_row[TRACKING_COLUMN] = '{}-{}'.format(SUPPORTED_TOOL.TA, row['id'])
 
     std_row['event_type'] = row.get('rearrangement', row['type'])
-    if 'genes' in row:
-        std_row['{}_genes'.format(SUPPORTED_TOOL.TA)] = row['genes']
+    for retained_column in ['genes', 'gene']:
+        if retained_column in row:
+            std_row['{}_{}'.format(SUPPORTED_TOOL.TA, retained_column)] = row[retained_column]
     if std_row['event_type'] in ['LSR', 'translocation']:
         del std_row['event_type']
     if 'breakpoint' in row:
         std_row['orient1'], std_row['orient2'] = row['orientations'].split(',')
-        if is_stranded:
-            std_row['strand1'], std_row['strand2'] = row['strands'].split(',')
-            std_row['strand1'] = STRAND.POS if std_row['strand1'] == STRAND.NEG else STRAND.NEG
-            std_row['strand2'] = STRAND.POS if std_row['strand2'] == STRAND.NEG else STRAND.NEG
         match = re.match(
             r'^(?P<chr1>[^:]+):(?P<pos1_start>\d+)\|(?P<chr2>[^:]+):(?P<pos2_start>\d+)$', row['breakpoint'])
         if not match:
@@ -120,8 +117,6 @@ def _parse_transabyss(row, is_stranded=False):
         elif std_row['event_type'] == 'ins':
             std_row['pos2_start'] += 1
 
-        if is_stranded:
-            std_row['strand1'] = std_row['strand2'] = (STRAND.POS if row['ctg_strand'] == STRAND.NEG else STRAND.NEG)
         # add the untemplated sequence where appropriate
         if std_row['event_type'] == 'del':
             assert row['alt'] == 'na'
@@ -146,6 +141,9 @@ def _parse_chimerascan(row):
     names to column names which MAVIS can read
     """
     std_row = {}
+    for retained_column in ['genes5p', 'genes3p']:
+        if retained_column in row:
+            std_row['{}_{}'.format(SUPPORTED_TOOL.CHIMERASCAN, retained_column)] = row[retained_column]
     if TRACKING_COLUMN not in row:
         std_row[TRACKING_COLUMN] = '{}-{}'.format(SUPPORTED_TOOL.CHIMERASCAN, row['chimera_cluster_id'])
 
@@ -272,7 +270,7 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
 
     elif file_type == SUPPORTED_TOOL.TA:
 
-        std_row.update(_parse_transabyss(row, stranded))
+        std_row.update(_parse_transabyss(row))
 
     else:
         raise NotImplementedError('unsupported file type', file_type)
@@ -336,8 +334,6 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
 def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=False, log=devnull, assume_no_untemplated=True):
     log('reading:', input_file)
     result = []
-    if file_type == SUPPORTED_TOOL.TA:
-        warnings.warn('currently assuming that trans-abyss is calling the strand exactly opposite and swapping them')
     if file_type == SUPPORTED_TOOL.MAVIS:
         result = read_bpp_from_input_file(input_file)
     else:

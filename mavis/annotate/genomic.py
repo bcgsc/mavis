@@ -4,7 +4,7 @@ import itertools
 from .base import BioInterval, ReferenceName
 from .constants import SPLICE_SITE_TYPE
 from .splicing import SpliceSite, SplicingPattern
-from ..constants import reverse_complement, STRAND
+from ..constants import ORIENT, reverse_complement, STRAND
 from ..error import NotSpecifiedError
 from ..interval import Interval
 
@@ -375,7 +375,7 @@ class UsTranscript(BioInterval):
             raise IndexError('outside of exonic regions', pos, splicing_pattern, cdna_pos, shift)
         return cdna_pos
 
-    def convert_genomic_to_nearest_cdna(self, pos, splicing_pattern):
+    def convert_genomic_to_nearest_cdna(self, pos, splicing_pattern, stick_direction=None, allow_outside=True):
         """
         converts a genomic position to its cdna equivalent or (if intronic) the nearest cdna and shift
 
@@ -401,12 +401,20 @@ class UsTranscript(BioInterval):
         for ex1, ex2 in zip(exons, exons[1::]):
             if pos > ex1.end and pos < ex2.start:
                 # in the current intron
-                if abs(pos - ex1.end) <= abs(pos - ex2.start):
+                if (abs(pos - ex1.end) <= abs(pos - ex2.start) or stick_direction == ORIENT.LEFT) and stick_direction != ORIENT.RIGHT:
                     # closest to the first exon
                     cdna_pos = Interval.convert_pos(mapping, ex1.end, True if self.get_strand() == STRAND.NEG else False)
                     return cdna_pos, pos - ex1.end if self.get_strand() == STRAND.POS else ex1.end - pos
                 cdna_pos = Interval.convert_pos(mapping, ex2.start, True if self.get_strand() == STRAND.NEG else False)
                 return cdna_pos, pos - ex2.start if self.get_strand() == STRAND.POS else ex2.start - pos
+        if allow_outside:
+            cdna_length = sum([len(e) for e in exons])
+            if pos < exons[0].start:  # before the first exon
+                return cdna_length if self.is_reverse else 1, pos - exons[0].start
+            elif pos > exons[-1].end:
+                return 1 if self.is_reverse else cdna_length, pos - exons[-1].end
+            else:
+                raise NotImplementedError('Unexpected error', self.exons, pos)
         raise IndexError('position does not fall within the current transcript', pos, mapping)
 
     def convert_cdna_to_genomic(self, pos, splicing_pattern):
@@ -419,6 +427,17 @@ class UsTranscript(BioInterval):
             int: the genomic equivalent
         """
         mapping = self._cdna_to_genomic_mapping(splicing_pattern)
+        exons = sorted(mapping.values())
+        length = sum([len(e) for e in mapping])
+        if pos < 0:
+            if self.is_reverse:
+                return exons[-1].end + abs(pos)
+            return exons[0].start + pos
+        if pos > length:
+            pos -= length
+            if self.is_reverse:
+                return exons[0].start - pos
+            return exons[-1].end + pos
         return Interval.convert_pos(mapping, pos, True if self.get_strand() == STRAND.NEG else False)
 
     def exon_number(self, exon):
@@ -550,8 +569,8 @@ class Transcript(BioInterval):
         """
         return self.unspliced_transcript.convert_genomic_to_cdna(pos, self.splicing_pattern)
 
-    def convert_genomic_to_nearest_cdna(self, pos):
-        return self.reference_object.convert_genomic_to_nearest_cdna(pos, self.splicing_pattern)
+    def convert_genomic_to_nearest_cdna(self, pos, **kwargs):
+        return self.reference_object.convert_genomic_to_nearest_cdna(pos, self.splicing_pattern, **kwargs)
 
     def convert_cdna_to_genomic(self, pos):
         """

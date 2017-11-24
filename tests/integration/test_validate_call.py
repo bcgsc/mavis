@@ -1,16 +1,18 @@
 import unittest
 
+from mavis.align import call_paired_read_event
 from mavis.annotate.file_io import load_reference_genome
-from mavis.annotate.genomic import UsTranscript
+from mavis.annotate.genomic import UsTranscript, Transcript
 from mavis.bam.cache import BamCache
 from mavis.bam.read import sequenced_strand
+from mavis.bam.cigar import convert_string_to_cigar
 from mavis.breakpoint import Breakpoint, BreakpointPair
-from mavis.constants import CALL_METHOD, CIGAR, ORIENT, PYSAM_READ_FLAGS, STRAND, SVTYPE
+from mavis.constants import CALL_METHOD, CIGAR, ORIENT, PYSAM_READ_FLAGS, STRAND, SVTYPE, reverse_complement
 import mavis.validate.call as call
 from mavis.validate.call import EventCall
 from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
 
-from . import BAM_INPUT, FULL_BAM_INPUT, mock_read_pair, MockBamFileHandle, MockObject, MockRead, REFERENCE_GENOME_FILE
+from . import BAM_INPUT, FULL_BAM_INPUT, mock_read_pair, MockBamFileHandle, MockObject, MockRead, REFERENCE_GENOME_FILE, get_example_genes, MockLongString
 
 REFERENCE_GENOME = None
 
@@ -35,7 +37,23 @@ def setUpModule():
             READS[read.qname][0] = read
         else:
             READS[read.qname][1] = read
-    # add a check to determine if it is the expected bam file
+
+
+class TestCallByContig(unittest.TestCase):
+    def test_EGFR_small_del_transcriptome(self):
+        gene = get_example_genes()['EGFR']
+        reference_annotations = {gene.chr: [gene]}
+        reference_genome = {gene.chr: MockObject(
+            seq=MockLongString(gene.seq, offset=gene.start - 1)
+        )}
+
+        contig = MockRead(
+            query_sequence='CTTGAAGGAAACTGAATTCAAAAAGATCAAAGTGCTGGGCTCCGGTGCGTTCGGCACGGTGTATAAGGGACTCTGGATCCCAGAAGGTGAGAAAGTTAAAATTCCCGTCGCTATCAAGGAATTAAGAGAAGCAACATCTCCGAAAGCCAACAAGGAAATCCTCGATGAAGCCTACGTGATGGCCAGCGTGGACAACCCCCACGTGTGCCGCCTGCTGGGCATCTGCCTCACCTCCACCGTGCAGCTCATCATGCAGCTCATGCCCTTCGGCTGCCTCCTGGACTATGTCCGGGAACACAAAGACAATATTGGCTCCCAGTACCTGCTCAACTGGTGTGTGCAGATCGCAAAGGGCATGAACTACTTGGAGGACCGTCGCTTGGTGCACCGCGACCTGGCAGCCAGGAACGTACTGGTGAAAACACCGCAGCATGTCAAGATCACAGATTTTGGGCTGGCCAAACTGCTGGGTGCGGAAGAGAAAGAATACCATGCAGAAGGAGGCAAAGTGCCTATCAAGTGGATGGCATTGGAATCAATTTTACACAGAATCTATACCCACCAGAGTGATGTCTGGAGCTACGGGGTGACCGTTTGGGAGTTGATGACCTTTGGATCCAA',
+            cigar=convert_string_to_cigar('68M678D98M6472D187M10240D155M891D77M7I5882D29M'),
+            reference_name='7',
+            reference_id=6,
+            reference_start=55241670
+        )
 
 
 class TestEventCall(unittest.TestCase):
@@ -366,7 +384,7 @@ class TestEvidenceConsumption(unittest.TestCase):
         contig = MockObject(
             seq='',
             alignments=[
-                MockObject(read1=r1, read2=r2)
+                call_paired_read_event(r1, r2)
             ])
         contig.input_reads = {MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])}
         evidence.contigs.append(contig)
@@ -423,9 +441,10 @@ class TestEvidenceConsumption(unittest.TestCase):
                      query_sequence='A' * 100),
             MockRead(query_name='t1', reference_id=0, reference_start=480, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
                      query_sequence='A' * 100))
+        bpp = call_paired_read_event(r1, r2)
         contig = MockObject(
             seq='',
-            alignments=[MockObject(read1=r1, read2=r2)])
+            alignments=[bpp])
         contig.input_reads = {MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])}
         evidence.contigs.append(contig)
 
@@ -466,7 +485,7 @@ class TestEvidenceConsumption(unittest.TestCase):
                      query_sequence='A' * 100))
         contig = MockObject(
             seq='',
-            alignments=[MockObject(read1=r1, read2=r2)])
+            alignments=[call_paired_read_event(r1, r2)])
         contig.input_reads = {MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])}
         evidence.contigs.append(contig)
 
@@ -978,15 +997,15 @@ class TestCallByFlankingReadsTranscriptome(unittest.TestCase):
         # transcriptome test will use exonic coordinates for the associated transcripts
         raise unittest.SkipTest('TODO')
 
-    def test_call_deletion_evidence_spans_exons(self):
+    def test_call_deletion(self):
         # transcriptome test will use exonic coordinates for the associated transcripts
-        UsTranscript([(1001, 1100), (1501, 1700), (2001, 2100), (2201, 2300)], strand='+')
+        ust = UsTranscript([(1001, 1100), (1501, 1700), (2001, 2100), (2201, 2300)], strand='+')
+        for patt in ust.generate_splicing_patterns():
+            ust.transcripts.append(Transcript(ust, patt))
         evidence = self.build_transcriptome_evidence(
             Breakpoint('1', 1051, 1051, 'L', '+'),
             Breakpoint('1', 1551, 1551, 'R', '+')
         )
-        # evidence.overlapping_transcripts[0].add(t1)
-        # evidence.overlapping_transcripts[1].add(t1)
         # now add the flanking pairs
         pair = mock_read_pair(
             MockRead('name', '1', 951, 1051, is_reverse=True),
@@ -1003,18 +1022,17 @@ class TestCallByFlankingReadsTranscriptome(unittest.TestCase):
         self.assertEqual(STRAND.POS, evidence.decide_sequenced_strand([pair[0]]))
         self.assertEqual(STRAND.POS, sequenced_strand(pair[1], 2))
         self.assertEqual(STRAND.POS, evidence.decide_sequenced_strand([pair[1]]))
-        print('mock read pair', *pair)
+        print(evidence.max_expected_fragment_size, evidence.read_length)
         evidence.flanking_pairs.add(pair)
-        b1, b2 = call._call_by_flanking_pairs(evidence, SVTYPE.DEL)
-        self.assertEqual(Breakpoint('1', 1051, 1300, 'L', '+'), b1)
-        self.assertEqual(Breakpoint('1', 2051, 2300, 'R', '+'), b2)
+        breakpoint1, breakpoint2 = call._call_by_flanking_pairs(evidence, SVTYPE.DEL)
+        self.assertEqual(Breakpoint('1', 1051, 1301, 'L', '+'), breakpoint1)
+        self.assertEqual(Breakpoint('1', 2050, 2300, 'R', '+'), breakpoint2)
 
-        evidence.flanking_pairs.update({
-            mock_read_pair(
-                MockRead('name', '1', 1051 - evidence.read_length + 1, 1051, is_reverse=True),
-                MockRead('name', '1', 2300, 2300 + evidence.read_length - 1, is_reverse=False)
-            )
-        })
+        # now add the transcript and call again
+        evidence.overlapping_transcripts.add(ust)
+        breakpoint1, breakpoint2 = call._call_by_flanking_pairs(evidence, SVTYPE.DEL)
+        self.assertEqual(Breakpoint('1', 1051, 2001, 'L', '+'), breakpoint1)
+        self.assertEqual(Breakpoint('1', 1650, 2300, 'R', '+'), breakpoint2)
 
 
 class TestCallBySpanningReads(unittest.TestCase):

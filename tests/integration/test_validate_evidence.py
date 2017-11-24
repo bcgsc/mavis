@@ -1,42 +1,64 @@
+from functools import partial
 import unittest
 
 from mavis.annotate.genomic import Gene, Transcript, UsTranscript
 from mavis.bam.cache import BamCache
-from mavis.breakpoint import Breakpoint
+from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import ORIENT, STRAND
 from mavis.interval import Interval
+from mavis.validate.constants import DEFAULTS
+from mavis.validate.base import Evidence
 from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
 
-from . import mock_read_pair, MockBamFileHandle, MockRead
+from . import mock_read_pair, MockBamFileHandle, MockRead, MockObject
 
 
 REFERENCE_GENOME = None
 
 
-class TestComputeExonicDistance(unittest.TestCase):
+class TestDistance(unittest.TestCase):
     def setUp(self):
-        self.t1 = UsTranscript([(1001, 1100), (1501, 1600), (2001, 2100), (2201, 2300)], strand='+')
+        self.transcript = UsTranscript([(1001, 1100), (1501, 1600), (2001, 2100), (2201, 2300)], strand='+')
+        for patt in self.transcript.generate_splicing_patterns():
+            self.transcript.transcripts.append(Transcript(self.transcript, patt))
+        self.trans_evidence = MockObject(
+            annotations={},
+            read_length=100,
+            max_expected_fragment_size=550,
+            call_error=11,
+            overlapping_transcripts={self.transcript}
+        )
+        setattr(self.trans_evidence, '_select_transcripts', lambda *pos: self.trans_evidence.overlapping_transcripts)
+        setattr(self.trans_evidence, 'distance', partial(TranscriptomeEvidence.distance, self.trans_evidence))
+
+    def test_exonic(self):
+        self.assertEqual(Interval(149), self.trans_evidence.distance(1001, 1550))
 
     def test_intergenic_exonic(self):
-        d = TranscriptomeEvidence.compute_exonic_distance(101, 1550, [self.t1])
-        self.assertEqual(Interval(1050, 1450), d)
+        dist = self.trans_evidence.distance(101, 1550)
+        self.assertEqual(Interval(1049, 1049), dist)
 
     def test_intergenic_intergenic(self):
-        d = TranscriptomeEvidence.compute_exonic_distance(101, 300, [self.t1])
-        self.assertEqual(Interval(200), d)
+        dist = self.trans_evidence.distance(101, 300)
+        self.assertEqual(Interval(199), dist)
 
     def test_no_annotations(self):
-        d = TranscriptomeEvidence.compute_exonic_distance(101, 300, [])
-        self.assertEqual(Interval(200), d)
+        dist = self.trans_evidence.distance(101, 300, [])
+        self.assertEqual(Interval(199), dist)
 
     def test_intergenic_intronic(self):
-        d = TranscriptomeEvidence.compute_exonic_distance(101, 1400, [self.t1])
-        self.assertEqual(Interval(1000, 1300), d)
+        dist = self.trans_evidence.distance(101, 1400)
+        self.assertEqual(Interval(1299), dist)
 
     def test_empty_intron(self):
         t2 = UsTranscript([(1001, 1100), (1501, 1600), (2001, 2200), (2201, 2300)], strand='+')
-        d = TranscriptomeEvidence.compute_exonic_distance(1001, 2300, [self.t1, t2])
-        self.assertEqual(Interval(400, 1300), d)
+        for patt in t2.generate_splicing_patterns():
+            t2.transcripts.append(Transcript(t2, patt))
+        print(t2)
+        print(self.trans_evidence.overlapping_transcripts)
+        self.trans_evidence.overlapping_transcripts.add(t2)
+        dist = self.trans_evidence.distance(1001, 2301)
+        self.assertEqual(Interval(400, 400), dist)
 
 
 class TestComputeFragmentSizes(unittest.TestCase):
@@ -86,90 +108,166 @@ class TestComputeFragmentSizes(unittest.TestCase):
         self.assertEqual(Interval(1300), self.trans_ev.compute_fragment_size(mate, read))
 
 
-class TestTraverseExonicDistance(unittest.TestCase):
+class TestTraverse(unittest.TestCase):
 
     def setUp(self):
-        self.ust1 = UsTranscript([(1001, 1100), (1301, 1400), (1701, 1800)], strand=STRAND.POS)
+        self.transcript = UsTranscript([(1001, 1100), (1301, 1400), (1701, 1800)], strand=STRAND.POS)
+        for patt in self.transcript.generate_splicing_patterns():
+            self.transcript.transcripts.append(Transcript(self.transcript, patt))
+
+        self.trans_evidence = MockObject(
+            annotations={},
+            read_length=100,
+            max_expected_fragment_size=550,
+            call_error=11,
+            overlapping_transcripts={self.transcript}
+        )
+        setattr(self.trans_evidence, '_select_transcripts', lambda *pos: self.trans_evidence.overlapping_transcripts)
+        setattr(self.trans_evidence, 'traverse', partial(TranscriptomeEvidence.traverse, self.trans_evidence))
 
     def test_left_before_transcript(self):
-        gpos = TranscriptomeEvidence.traverse_exonic_distance(900, 500, ORIENT.LEFT, [self.ust1])
-        self.assertEqual(401, gpos.start)
-        self.assertEqual(401, gpos.end)
+        exp_pos = Evidence.traverse(900, 500 - 1, ORIENT.LEFT)
+        self.assertEqual(exp_pos, self.trans_evidence.traverse(900, 500 - 1, ORIENT.LEFT))
 
     def test_left_after_transcript(self):
-        gpos = TranscriptomeEvidence.traverse_exonic_distance(2200, 100, ORIENT.LEFT, [self.ust1])
-        self.assertEqual(2101, gpos.start)
-        self.assertEqual(2101, gpos.end)
+        exp_pos = Evidence.traverse(2200, 100, ORIENT.LEFT)
+        self.assertEqual(exp_pos, self.trans_evidence.traverse(2200, 100, ORIENT.LEFT))
 
-        gpos = TranscriptomeEvidence.traverse_exonic_distance(1900, 500, ORIENT.LEFT, [self.ust1])
-        self.assertEqual(901, gpos.start)
-        self.assertEqual(1401, gpos.end)
+    def test_left_at_end(self):
+        gpos = self.trans_evidence.traverse(1900, 500, ORIENT.LEFT)
+        self.assertEqual(Interval(900), gpos)
 
     def test_left_within_transcript_exonic(self):
-        gpos = TranscriptomeEvidence.traverse_exonic_distance(1750, 200, ORIENT.LEFT, [self.ust1])
-        self.assertEqual(1051, gpos.start)
-        self.assertEqual(1551, gpos.end)
+        gpos = self.trans_evidence.traverse(1750, 200 - 1, ORIENT.LEFT)
+        self.assertEqual(Interval(1051), gpos)
 
     def test_left_within_exon(self):
-        gpos = TranscriptomeEvidence.traverse_exonic_distance(1750, 20, ORIENT.LEFT, [self.ust1])
+        gpos = self.trans_evidence.traverse(1750, 20 - 1, ORIENT.LEFT)
         self.assertEqual(1731, gpos.start)
         self.assertEqual(1731, gpos.end)
 
     def test_left_within_transcript_intronic(self):
-        gpos = TranscriptomeEvidence.traverse_exonic_distance(1600, 150, ORIENT.LEFT, [self.ust1])
-        self.assertEqual(1051, gpos.start)
-        self.assertEqual(1451, gpos.end)
+        gpos = self.trans_evidence.traverse(1600, 150 - 1, ORIENT.LEFT)
+        self.assertEqual(Interval(1451), gpos)
 
     def test_right_before_transcript(self):
-        gpos = TranscriptomeEvidence.traverse_exonic_distance(500, 100, ORIENT.RIGHT, [self.ust1])
+        gpos = self.trans_evidence.traverse(500, 100 - 1, ORIENT.RIGHT)
         self.assertEqual(Interval(599), gpos)
 
-        gpos = TranscriptomeEvidence.traverse_exonic_distance(901, 500, ORIENT.RIGHT, [self.ust1])
-        self.assertEqual(Interval(1400, 1900), gpos)
+    def test_right_before_transcript2(self):
+        gpos = self.trans_evidence.traverse(901, 500 - 1, ORIENT.RIGHT)
+        self.assertEqual(Interval(1900), gpos)
 
     def test_right_after_transcript(self):
-        gpos = TranscriptomeEvidence.traverse_exonic_distance(2201, 100, ORIENT.RIGHT, [self.ust1])
+        gpos = self.trans_evidence.traverse(2201, 100 - 1, ORIENT.RIGHT)
         self.assertEqual(Interval(2300), gpos)
 
     def test_right_within_transcript(self):
-        gpos = TranscriptomeEvidence.traverse_exonic_distance(1351, 100, ORIENT.RIGHT, [self.ust1])
-        self.assertEqual(Interval(1450, 1750), gpos)
+        gpos = self.trans_evidence.traverse(1351, 100 - 1, ORIENT.RIGHT)
+        self.assertEqual(Interval(1750), gpos)
 
     def test_right_within_exon(self):
-        gpos = TranscriptomeEvidence.traverse_exonic_distance(1351, 10, ORIENT.RIGHT, [self.ust1])
+        gpos = self.trans_evidence.traverse(1351, 10 - 1, ORIENT.RIGHT)
+        self.assertEqual(Interval(1360), gpos)
+
+
+class TestTraverseTransRev(unittest.TestCase):
+
+    def setUp(self):
+        self.transcript = UsTranscript([(1001, 1100), (1301, 1400), (1701, 1800)], strand=STRAND.NEG)
+        for patt in self.transcript.generate_splicing_patterns():
+            self.transcript.transcripts.append(Transcript(self.transcript, patt))
+
+        self.trans_evidence = MockObject(
+            annotations={},
+            read_length=100,
+            max_expected_fragment_size=550,
+            call_error=11,
+            overlapping_transcripts={self.transcript}
+        )
+        setattr(self.trans_evidence, '_select_transcripts', lambda *pos: self.trans_evidence.overlapping_transcripts)
+        setattr(self.trans_evidence, 'traverse', partial(TranscriptomeEvidence.traverse, self.trans_evidence))
+
+    def test_left_before_transcript(self):
+        gpos = self.trans_evidence.traverse(900, 500 - 1, ORIENT.LEFT)
+        self.assertEqual(Interval(401), gpos)
+        self.assertEqual(gpos, GenomeEvidence.traverse(900, 500 - 1, ORIENT.LEFT))
+
+    def test_left_after_transcript(self):
+        gpos = self.trans_evidence.traverse(2200, 100, ORIENT.LEFT)
+        self.assertEqual(gpos, GenomeEvidence.traverse(2200, 100, ORIENT.LEFT))
+        self.assertEqual(Interval(2100), gpos)
+
+    def test_left_after_transcript2(self):
+        gpos = self.trans_evidence.traverse(1900, 500 - 1, ORIENT.LEFT)
+        self.assertEqual(Interval(901), gpos)
+
+    def test_left_within_transcript_exonic(self):
+        gpos = self.trans_evidence.traverse(1750, 200 - 1, ORIENT.LEFT)
+        self.assertEqual(Interval(1051), gpos)
+
+    def test_left_within_exon(self):
+        gpos = self.trans_evidence.traverse(1750, 20 - 1, ORIENT.LEFT)
+        self.assertEqual(1731, gpos.start)
+        self.assertEqual(1731, gpos.end)
+
+    def test_left_within_transcript_intronic(self):
+        gpos = self.trans_evidence.traverse(1600, 150 - 1, ORIENT.LEFT)
+        self.assertEqual(Interval(1451), gpos)
+
+    def test_right_before_transcript(self):
+        gpos = self.trans_evidence.traverse(500, 100 - 1, ORIENT.RIGHT)
+        self.assertEqual(Interval(599), gpos)
+
+    def test_right_before_transcript2(self):
+        gpos = self.trans_evidence.traverse(901, 500 - 1, ORIENT.RIGHT)
+        self.assertEqual(Interval(1900), gpos)
+
+    def test_right_after_transcript(self):
+        gpos = self.trans_evidence.traverse(2201, 100 - 1, ORIENT.RIGHT)
+        self.assertEqual(Interval(2300), gpos)
+
+    def test_right_within_transcript(self):
+        gpos = self.trans_evidence.traverse(1351, 100 - 1, ORIENT.RIGHT)
+        self.assertEqual(Interval(1750), gpos)
+
+    def test_right_within_exon(self):
+        gpos = self.trans_evidence.traverse(1351, 10 - 1, ORIENT.RIGHT)
         self.assertEqual(Interval(1360), gpos)
 
 
 class TestTranscriptomeEvidenceWindow(unittest.TestCase):
 
     def setUp(self):
-        self.annotations = {}
         gene = Gene('1', 1, 9999, name='KRAS', strand=STRAND.POS)
         self.ust = UsTranscript(gene=gene, exons=[(1001, 1100), (1401, 1500), (1701, 1750), (3001, 4000)])
         gene.unspliced_transcripts.append(self.ust)
         for spl in self.ust.generate_splicing_patterns():
-            t = Transcript(self.ust, spl)
-            self.ust.transcripts.append(t)
-        self.annotations[gene.chr] = [gene]
-        self.read_length = 100
-        self.max_expected_fragment_size = 550
-        self.call_error = 11
-
-    def transcriptome_window(self, breakpoint, annotations=None):
-        return TranscriptomeEvidence._generate_window(
-            breakpoint, [self.ust] if annotations is None else annotations,
-            read_length=self.read_length,
-            call_error=self.call_error,
-            max_expected_fragment_size=self.max_expected_fragment_size
+            self.ust.transcripts.append(Transcript(self.ust, spl))
+        self.annotations = {gene.chr: [gene]}
+        self.genome_evidence = MockObject(
+            annotations={},
+            read_length=100,
+            max_expected_fragment_size=550,
+            call_error=11
         )
+        self.trans_evidence = MockObject(
+            annotations={},
+            read_length=100,
+            max_expected_fragment_size=550,
+            call_error=11,
+            overlapping_transcripts={self.ust}
+        )
+        setattr(self.trans_evidence, '_select_transcripts', lambda *pos: self.trans_evidence.overlapping_transcripts)
+        setattr(self.trans_evidence, 'traverse', partial(TranscriptomeEvidence.traverse, self.trans_evidence))
+
+    def transcriptome_window(self, breakpoint, transcripts=None):
+        if transcripts:
+            self.trans_evidence.overlapping_transcripts.update(transcripts)
+        return TranscriptomeEvidence.generate_window(self.trans_evidence, breakpoint)
 
     def genome_window(self, breakpoint):
-        return GenomeEvidence._generate_window(
-            breakpoint,
-            read_length=self.read_length,
-            call_error=self.call_error,
-            max_expected_fragment_size=self.max_expected_fragment_size
-        )
+        return GenomeEvidence.generate_window(self.genome_evidence, breakpoint)
 
     def test_before_start(self):
         b = Breakpoint(chr='1', start=100, orient=ORIENT.RIGHT)
@@ -179,7 +277,7 @@ class TestTranscriptomeEvidenceWindow(unittest.TestCase):
         self.assertEqual(self.genome_window(b), self.transcriptome_window(b))
 
     def test_after_end(self):
-        b = Breakpoint(chr='1', start=5000, orient=ORIENT.RIGHT)
+        b = Breakpoint(chr='1', start=6000, orient=ORIENT.RIGHT)
         self.assertEqual(self.genome_window(b), self.transcriptome_window(b))
 
     def test_exonic_long_exon(self):
@@ -188,29 +286,33 @@ class TestTranscriptomeEvidenceWindow(unittest.TestCase):
 
     def test_intronic_long_exon(self):
         b = Breakpoint(chr='1', start=2970, orient=ORIENT.RIGHT)
-        self.assertEqual(Interval(1440, 3561), self.transcriptome_window(b))
+        self.assertEqual(self.genome_window(b), self.transcriptome_window(b))
 
     def test_intronic_long_intron(self):
-        b = Breakpoint(chr='1', start=2000, orient=ORIENT.RIGHT)
-        self.assertEqual(Interval(1440, 3561), self.transcriptome_window(b))
+        b = Breakpoint(chr='1', start=1800, orient=ORIENT.RIGHT)
+        print(self.genome_window(b))
+        self.assertEqual(Interval(1490, 2360), self.transcriptome_window(b))
 
     def test_intronic_short_exon_right(self):
         b = Breakpoint(chr='1', start=1690, orient=ORIENT.RIGHT)
-        self.assertEqual(Interval(1090, 3511), self.transcriptome_window(b))
+        print(self.genome_window(b))
+        self.assertEqual(Interval(1580, 3500), self.transcriptome_window(b))
 
     def test_intronic_short_exon_left(self):
         b = Breakpoint(chr='1', start=2200, orient=ORIENT.LEFT)
-        self.assertEqual(Interval(690, 3111), self.transcriptome_window(b))
+        self.assertEqual(Interval(1440, 2310), self.transcriptome_window(b))
 
     def test_multiple_transcripts(self):
         #  [(1001, 1100), (1401, 1500), (1701, 1750), (3001, 4000)])
         b = Breakpoint(chr='1', start=1150, orient=ORIENT.RIGHT)
         gene = self.annotations['1'][0]
         t2 = UsTranscript(gene=gene, exons=[(1001, 1100), (1200, 1300), (2100, 2200)])
+        for patt in t2.generate_splicing_patterns():
+            t2.transcripts.append(Transcript(t2, patt))
         gene.transcripts.append(t2)
         # 989 - 2561
         # 989 - 3411
-        self.assertEqual(Interval(990, 3411), self.transcriptome_window(b, [self.ust, t2]))
+        self.assertEqual(Interval(1040, 3160), self.transcriptome_window(b, [self.ust, t2]))
 
     def test_many_small_exons(self):
         g = Gene('fake', 17271277, 17279592, strand='+')
@@ -222,41 +324,67 @@ class TestTranscriptomeEvidenceWindow(unittest.TestCase):
                 (17275586, 17275681),
                 (17275769, 17275930),
                 (17276692, 17276817),
-                (17277168, 17277388),
-                (17277845, 17277888),
-                (17278293, 17278378),
-                (17279229, 17279592)
+                (17277168, 17277388),  # 220
+                (17277845, 17277888),  # 44
+                (17278293, 17278378),  # 86
+                (17279229, 17279592)  # 364
             ])
         g.transcripts.append(ust)
+        for patt in ust.generate_splicing_patterns():
+            ust.transcripts.append(Transcript(ust, patt))
         b = Breakpoint(chr='fake', start=17279591, orient=ORIENT.LEFT)
         self.assertEqual(Interval(17277321, 17279701), self.transcriptome_window(b, [ust]))
+
+
+class TestNetSizeTrans(unittest.TestCase):
+
+    def setUp(self):
+        self.transcript = UsTranscript([(1001, 1100), (1301, 1400), (1701, 1800)], strand=STRAND.POS)
+        for patt in self.transcript.generate_splicing_patterns():
+            self.transcript.transcripts.append(Transcript(self.transcript, patt))
+        self.trans_evidence = MockObject(
+            annotations={},
+            read_length=100,
+            max_expected_fragment_size=550,
+            call_error=11,
+            overlapping_transcripts={self.transcript}
+        )
+        setattr(self.trans_evidence, '_select_transcripts', lambda *pos: self.trans_evidence.overlapping_transcripts)
+        setattr(self.trans_evidence, 'distance', partial(TranscriptomeEvidence.distance, self.trans_evidence))
+
+    def test_net_zero(self):
+        bpp = BreakpointPair(
+            Breakpoint('1', 1099, orient=ORIENT.LEFT),
+            Breakpoint('1', 1302, orient=ORIENT.RIGHT),
+            untemplated_seq='TT'
+        )
+        dist = partial(TranscriptomeEvidence.distance, self.trans_evidence)
+        self.assertEqual(Interval(-200), bpp.net_size())
+        self.assertEqual(Interval(0), bpp.net_size(dist))
 
 
 class TestGenomeEvidenceWindow(unittest.TestCase):
 
     def test_orient_ns(self):
-        b = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.NS)
-        w = GenomeEvidence._generate_window(
-            b, read_length=100, max_expected_fragment_size=550, call_error=11)
-        self.assertEqual(440, w[0])
-        self.assertEqual(1560, w[1])
-        self.assertEqual(1121, len(w))
+        bpp = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.NS)
+        window = GenomeEvidence.generate_window(MockObject(read_length=100, max_expected_fragment_size=550, call_error=11), bpp)
+        self.assertEqual(440, window.start)
+        self.assertEqual(1560, window.end)
+        self.assertEqual(1121, len(window))
 
     def test_orient_left(self):
-        b = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.LEFT)
-        w = GenomeEvidence._generate_window(
-            b, read_length=100, call_error=11, max_expected_fragment_size=550)
-        self.assertEqual(440, w[0])
-        self.assertEqual(1110, w[1])
-        self.assertEqual(671, len(w))
+        bpp = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.LEFT)
+        window = GenomeEvidence.generate_window(MockObject(read_length=100, call_error=11, max_expected_fragment_size=550), bpp)
+        self.assertEqual(440, window.start)
+        self.assertEqual(1110, window.end)
+        self.assertEqual(671, len(window))
 
     def test_orient_right(self):
-        b = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.RIGHT)
-        w = GenomeEvidence._generate_window(
-            b, read_length=100, call_error=11, max_expected_fragment_size=550)
-        self.assertEqual(890, w[0])
-        self.assertEqual(1560, w[1])
-        self.assertEqual(671, len(w))
+        bpp = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.RIGHT)
+        window = GenomeEvidence.generate_window(MockObject(read_length=100, call_error=11, max_expected_fragment_size=550), bpp)
+        self.assertEqual(890, window.start)
+        self.assertEqual(1560, window.end)
+        self.assertEqual(671, len(window))
 
     def test_window_accessors(self):
         ge = GenomeEvidence(
