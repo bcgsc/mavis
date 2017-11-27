@@ -193,7 +193,7 @@ def extend_softclipping(cigar, min_exact_to_stop_softclipping):
     if cigar[0][0] == CIGAR.H:
         start_anchor = 0
     if cigar[-1][0] == CIGAR.H:
-        end_anchor = -1
+        end_anchor = len(cigar)
     start_query_aligned = sum([f for v, f in cigar[:start_anchor] if v in QUERY_ALIGNED_STATES] + [0])
     start_ref_aligned = sum([f for v, f in cigar[:start_anchor] if v in REFERENCE_ALIGNED_STATES] + [0])
     end_query_aligned = sum([f for v, f in cigar[end_anchor + 1:] if v in QUERY_ALIGNED_STATES] + [0])

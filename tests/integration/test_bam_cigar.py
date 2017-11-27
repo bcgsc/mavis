@@ -98,34 +98,6 @@ class TestRecomputeCigarMismatch(unittest.TestCase):
 
 class TestExtendSoftclipping(unittest.TestCase):
 
-    def test_simple(self):
-        self.assertEqual(
-            ([(CIGAR.S, 10), (CIGAR.M, 10)], 0),
-            extend_softclipping([(CIGAR.S, 10), (CIGAR.M, 10)], 1)
-        )
-
-    def test_deletions(self):
-        self.assertEqual(
-            ([(CIGAR.S, 10), (CIGAR.M, 10)], 1),
-            extend_softclipping([(CIGAR.I, 10), (CIGAR.D, 1), (CIGAR.M, 10)], 1)
-        )
-
-    def test_mismatch(self):
-        with self.assertRaises(AttributeError):
-            extend_softclipping([(CIGAR.X, 10), (CIGAR.M, 20), (CIGAR.X, 10)], 30)
-
-    def test_insert(self):
-        self.assertEqual(
-            ([(CIGAR.S, 17), (CIGAR.M, 10), (CIGAR.S, 5)], 2),
-            extend_softclipping([(CIGAR.S, 10), (CIGAR.M, 2), (CIGAR.I, 5), (CIGAR.M, 10), (CIGAR.I, 5)], 5)
-        )
-
-    def test_hardclipping(self):
-        c = [(CIGAR.H, 10), (CIGAR.EQ, 10)]
-        cnew, prefix = extend_softclipping(c, 1)
-        self.assertEqual(0, prefix)
-        self.assertEqual(c, cnew)
-
     def test_softclipped_right(self):
         c = convert_string_to_cigar('70=2X1=8X4=1X1=4X1=6X1=4X1=4X2=5X3=3X1=4X1=3X1=14X1=1X2=1S')
         cnew, prefix = extend_softclipping(c, 6)
