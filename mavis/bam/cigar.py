@@ -32,7 +32,7 @@ def recompute_cigar_mismatch(read, ref):
     seq_pos = 0
 
     for cigar_value, freq in read.cigar:
-        if cigar_value in [CIGAR.M, CIGAR.X, CIGAR.EQ]:
+        if cigar_value in ALIGNED_STATES:
             for offset in range(0, freq):
                 if DNA_ALPHABET.match(ref[ref_pos], read.query_sequence[seq_pos]):
                     if len(result) == 0 or result[-1][0] != CIGAR.EQ:
@@ -248,7 +248,7 @@ def convert_for_igv(cigar):
     """
     result = []
     for v, f in cigar:
-        if v in [CIGAR.X, CIGAR.EQ]:
+        if v in ALIGNED_STATES:
             v = CIGAR.M
         result.append((v, f))
     return join(result)
@@ -261,7 +261,7 @@ def alignment_matches(cigar):
     """
     result = 0
     for v, f in cigar:
-        if v in [CIGAR.X, CIGAR.EQ, CIGAR.M]:
+        if v in ALIGNED_STATES:
             result += f
     return result
 
