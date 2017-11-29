@@ -336,8 +336,6 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
 def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=False, log=devnull, assume_no_untemplated=True):
     log('reading:', input_file)
     result = []
-    if file_type == SUPPORTED_TOOL.TA:
-        warnings.warn('currently assuming that trans-abyss is calling the strand exactly opposite and swapping them')
     if file_type == SUPPORTED_TOOL.MAVIS:
         result = read_bpp_from_input_file(input_file)
     else:

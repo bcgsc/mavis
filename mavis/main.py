@@ -391,7 +391,8 @@ def convert_main(inputs, outputfile, file_type, strand_specific=False, assume_no
     bpp_results = []
     for filename in inputs:
         bpp_results.extend(convert_tool_output(filename, file_type, strand_specific, log, True, assume_no_untemplated=assume_no_untemplated))
-    mkdirp(os.path.dirname(outputfile))
+    if os.path.dirname(outputfile):
+        mkdirp(os.path.dirname(outputfile))
     output_tabbed_file(bpp_results, outputfile)
 
 
@@ -570,7 +571,7 @@ use the -h/--help option
             rargs.annotations_filename = rargs.annotations
             rargs.annotations = None
     except AttributeError as err:
-        print(repr(err))
+        pass
     # reference genome
     try:
         if pstep in [SUBCOMMAND.VALIDATE, SUBCOMMAND.ANNOTATE]:
