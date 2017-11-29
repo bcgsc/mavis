@@ -15,26 +15,20 @@ from mavis.cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from mavis.illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from mavis.util import ENV_VAR_PREFIX
 
-d = os.path.dirname(os.path.abspath(__file__))
+dirname = os.path.dirname(os.path.abspath(__file__))
 
-sys.path.insert(0, os.path.join(d, '..'))
+sys.path.insert(0, os.path.join(dirname, '..'))
 
 # auto build the other documentation
-subprocess.check_call('sphinx-apidoc -f -P -o {} {} --separate'.format(
-    os.path.join(d, 'source/auto'),
-    os.path.join(d, './../mavis')), shell=True)
-
-subprocess.check_call('sphinx-apidoc -f -P -o {} {}'.format(
-    os.path.join(d, 'source/auto'),
-    os.path.join(d, './../bin')), shell=True)
+subprocess.check_call('sphinx-apidoc -f -P -o {} {} --separate'.format(os.path.join(dirname, 'source', 'auto'), os.path.join(dirname, '..', 'mavis')), shell=True)
 
 # now we need to add showing only select special members
-for f in glob.glob(os.path.join(d, 'source/auto/*.rst')):
+for filename in glob.glob(os.path.join(dirname, 'source', 'auto', '*.rst')):
     # now open and read the file
     lines = []
-    with open(f, 'r') as fh:
+    with open(filename, 'r') as fh:
         lines = fh.readlines()
-    with open(f, 'w') as fh:
+    with open(filename, 'w') as fh:
         saw_automodule = False
         for line in lines:
             if re.match(r'^\.\.\s+automodule::\s+.*$', line):
@@ -50,7 +44,7 @@ for f in glob.glob(os.path.join(d, 'source/auto/*.rst')):
             else:
                 fh.write(line)
 
-fname = os.path.join(d, 'source', 'config_settings_glossary.rst')
+fname = os.path.join(dirname, 'source', 'config_settings_glossary.rst')
 print('writing:', fname)
 with open(fname, 'w') as fh:
     fh.write('Configurable Settings\n')

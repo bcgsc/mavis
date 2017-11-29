@@ -26,7 +26,9 @@ DEFAULTS.add(
 DEFAULTS.add(
     'draw_fusions_only', True, cast_type=tab.cast_boolean,
     defn='flag to indicate if events which do not produce a fusion transcript should produce illustrations')
-
+DEFAULTS.add(
+    'draw_non_synonymous_cdna_only', True, cast_type=tab.cast_boolean,
+    defn='flag to indicate if events which are synonymous at the cdna level should produce illustrations')
 
 SPLICE_TYPE = MavisNamespace(
     RETAIN='retained intron',

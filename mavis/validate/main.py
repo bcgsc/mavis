@@ -11,13 +11,13 @@ from .base import Evidence
 from .call import call_events
 from .constants import DEFAULTS
 from .evidence import GenomeEvidence, TranscriptomeEvidence
-from ..align import align_contigs
+from ..align import align_sequences, select_contig_alignments, SUPPORTED_ALIGNER
 from ..annotate.base import BioInterval
-from ..bam import cigar as cigar_tools
+from ..bam import cigar as _cigar
 from ..bam.cache import BamCache
 from ..bam.read import get_samtools_version, samtools_v0_sort, samtools_v1_sort
 from ..breakpoint import BreakpointPair
-from ..constants import COLUMNS, PROTOCOL
+from ..constants import COLUMNS, MavisNamespace, PROTOCOL
 from ..util import filter_on_overlap, generate_complete_stamp, log, mkdirp, output_tabbed_file, read_inputs, write_bed_file
 
 VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
@@ -45,6 +45,11 @@ def main(
         aligner_reference (str): path to the aligner reference file (e.g 2bit file for blat)
     """
     mkdirp(output)
+    validation_settings = {}
+    validation_settings.update(DEFAULTS.flatten())
+    validation_settings.update({k: v for k, v in kwargs.items() if k in DEFAULTS})
+    validation_settings = MavisNamespace(**validation_settings)
+
     filename_prefix = re.sub(r'\.(txt|tsv|tab)$', '', os.path.basename(input))
     raw_evidence_bam = os.path.join(output, filename_prefix + '.raw_evidence.bam')
     contig_bam = os.path.join(output, filename_prefix + '.contigs.bam')
@@ -54,16 +59,19 @@ def main(
     passed_bed_file = os.path.join(output, filename_prefix + '.validation-passed.bed')
     failed_output_file = os.path.join(output, filename_prefix + '.validation-failed.tab')
     contig_aligner_fa = os.path.join(output, filename_prefix + '.contigs.fa')
-    contig_aligner_output = os.path.join(output, filename_prefix + '.contigs.blat_out.pslx')
+    if validation_settings.aligner == SUPPORTED_ALIGNER.BLAT:
+        contig_aligner_output = os.path.join(output, filename_prefix + '.contigs.blat_out.pslx')
+        contig_aligner_log = os.path.join(output, filename_prefix + '.contigs.blat.log')
+    elif validation_settings.aligner == SUPPORTED_ALIGNER.BWA_MEM:
+        contig_aligner_output = os.path.join(output, filename_prefix + '.contigs.bwa_mem.sam')
+        contig_aligner_log = os.path.join(output, filename_prefix + '.contigs.bwa_mem.log')
+    else:
+        raise NotImplementedError('unsupported aligner', validation_settings.aligner)
     igv_batch_file = os.path.join(output, filename_prefix + '.igv.batch')
     input_bam_cache = BamCache(bam_file, strand_specific)
 
     if samtools_version is None:
         samtools_version = get_samtools_version()
-
-    validation_settings = {}
-    validation_settings.update(DEFAULTS.__dict__)
-    validation_settings.update({k: v for k, v in kwargs.items() if k in DEFAULTS.__dict__})
 
     bpps = read_inputs(
         [input],
@@ -90,7 +98,7 @@ def main(
                 stdev_fragment_size=stdev_fragment_size,
                 read_length=read_length,
                 median_fragment_size=median_fragment_size,
-                **validation_settings
+                **validation_settings.flatten()
             )
             evidence_clusters.append(evidence)
         elif bpp.data[COLUMNS.protocol] == PROTOCOL.TRANS:
@@ -106,7 +114,7 @@ def main(
                 stdev_fragment_size=stdev_fragment_size,
                 read_length=read_length,
                 median_fragment_size=median_fragment_size,
-                **validation_settings
+                **validation_settings.flatten()
             )
             evidence_clusters.append(evidence)
         else:
@@ -122,8 +130,7 @@ def main(
             ))
 
     evidence_clusters, filtered_evidence_clusters = filter_on_overlap(evidence_clusters, extended_masks)
-    if not validation_settings['fetch_method_individual']:
-        Evidence.load_multiple(evidence_clusters, log)
+    contig_sequences = set()
     for i, evidence in enumerate(evidence_clusters):
         print()
         log(
@@ -139,8 +146,7 @@ def main(
         log('inner window regions:  {}:{}-{}  {}:{}-{}'.format(
             evidence.break1.chr, evidence.inner_window1[0], evidence.inner_window1[1],
             evidence.break2.chr, evidence.inner_window2[0], evidence.inner_window2[1]), time_stamp=False)
-        if validation_settings['fetch_method_individual']:
-            evidence.load_evidence(log=log)
+        evidence.load_evidence(log=log)
         log(
             'flanking pairs: {};'.format(len(evidence.flanking_pairs)),
             'split reads: {}, {};'.format(*[len(a) for a in evidence.split_reads]),
@@ -152,42 +158,34 @@ def main(
         evidence.assemble_contig(log=log)
         log('assembled {} contigs'.format(len(evidence.contigs)), time_stamp=False)
         for contig in evidence.contigs:
-            log('>', contig.seq, time_stamp=False)
+            log('>', contig.seq[:100] + '...' if len(contig.seq) > 100 else '', time_stamp=False)
+            contig_sequences.add(contig.seq)
 
     log('will output:', contig_aligner_fa, contig_aligner_output)
-    align_contigs(
-        evidence_clusters,
+    raw_contig_alignments = align_sequences(
+        contig_sequences,
         input_bam_cache,
         reference_genome=reference_genome,
         aligner_fa_input_file=contig_aligner_fa,
         aligner_output_file=contig_aligner_output,
         clean_files=False,
-        aligner=kwargs.get(
-            'aligner', DEFAULTS.aligner),
+        aligner=kwargs.get('aligner', validation_settings.aligner),
         aligner_reference=aligner_reference,
-        blat_min_identity=kwargs.get(
-            'blat_min_identity', DEFAULTS.blat_min_identity),
-        blat_limit_top_aln=kwargs.get(
-            'blat_limit_top_aln', DEFAULTS.blat_limit_top_aln),
-        contig_aln_min_query_consumption=kwargs.get(
-            'contig_aln_min_query_consumption', DEFAULTS.contig_aln_min_query_consumption),
-        contig_aln_max_event_size=kwargs.get(
-            'contig_aln_max_event_size', DEFAULTS.contig_aln_max_event_size),
-        contig_aln_min_anchor_size=kwargs.get(
-            'contig_aln_min_anchor_size', DEFAULTS.contig_aln_min_anchor_size),
-        contig_aln_merge_inner_anchor=kwargs.get(
-            'contig_aln_merge_inner_anchor', DEFAULTS.contig_aln_merge_inner_anchor),
-        contig_aln_merge_outer_anchor=kwargs.get(
-            'contig_aln_merge_outer_anchor', DEFAULTS.contig_aln_merge_outer_anchor),
+        aligner_output_log=contig_aligner_log,
+        blat_min_identity=kwargs.get('blat_min_identity', validation_settings.blat_min_identity),
+        blat_limit_top_aln=kwargs.get('blat_limit_top_aln', validation_settings.blat_limit_top_aln),
+        log=log
     )
+    for evidence in evidence_clusters:
+        select_contig_alignments(evidence, raw_contig_alignments)
     log('alignment complete')
     event_calls = []
     total_pass = 0
     write_bed_file(evidence_bed, itertools.chain.from_iterable([e.get_bed_repesentation() for e in evidence_clusters]))
     for index, evidence in enumerate(evidence_clusters):
         print()
-        log('({} of {}) calling events for:'.format
-            (index + 1, len(evidence_clusters)), evidence.cluster_id, evidence.putative_event_types())
+        log('({} of {}) calling events for: {} {} (tracking_id: {})'.format(
+            index + 1, len(evidence_clusters), evidence.cluster_id, evidence.putative_event_types(), evidence.tracking_id))
         log('source:', evidence, time_stamp=False)
         calls = []
         failure_comment = None
@@ -208,7 +206,15 @@ def main(
         log('called {} event(s)'.format(len(calls)))
         for i, call in enumerate(calls):
             log(call, time_stamp=False)
-            log(call.event_type, call.call_method, time_stamp=False)
+            if call.contig_alignment:
+                log('{} {} [{}] contig_alignment_score: {}, contig_alignment_mq: {} ({}, {})'.format(
+                    call.event_type, call.call_method, call.contig_alignment.query_name,
+                    round(call.contig_alignment.score(), 2), call.contig_alignment.mapping_quality(),
+                    call.contig_alignment.read1.alignment_id,
+                    None if not call.contig_alignment.read2 else call.contig_alignment.read2.alignment_id
+                ), time_stamp=False)
+            else:
+                log(call.event_type, call.call_method, time_stamp=False)
             call.data[COLUMNS.validation_id] = '{}-v{}'.format(call.cluster_id, i + 1)
             log(
                 'remapped reads: {}; spanning reads: {}; split reads: [{} ({}), {} ({}), {}]'
@@ -243,12 +249,12 @@ def main(
         log('writing:', contig_bam)
         for evidence in evidence_clusters:
             for contig in evidence.contigs:
-                for read1, read2 in contig.alignments:
-                    read1.cigar = cigar_tools.convert_for_igv(read1.cigar)
-                    fh.write(read1)
-                    if read2:
-                        read2.cigar = cigar_tools.convert_for_igv(read2.cigar)
-                        fh.write(read2)
+                for aln in contig.alignments:
+                    aln.read1.cigar = _cigar.convert_for_igv(aln.read1.cigar)
+                    fh.write(aln.read1)
+                    if aln.read2:
+                        aln.read2.cigar = _cigar.convert_for_igv(aln.read2.cigar)
+                        fh.write(aln.read2)
 
     # write the evidence
     with pysam.AlignmentFile(raw_evidence_bam, 'wb', template=input_bam_cache.fh) as fh:
@@ -257,7 +263,7 @@ def main(
         for evidence in evidence_clusters:
             reads.update(evidence.supporting_reads())
         for read in reads:
-            read.cigar = cigar_tools.convert_for_igv(read.cigar)
+            read.cigar = _cigar.convert_for_igv(read.cigar)
             fh.write(read)
     # now sort the contig bam
     sort = re.sub('.bam$', '.sorted.bam', contig_bam)

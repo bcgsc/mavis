@@ -64,6 +64,13 @@ should be specified
     export MAVIS_ALIGNER='bwa mem'
     export MAVIS_ALIGNER_REFERENCE=/path/to/mem/fasta/ref/file
 
+.. note:: 
+
+    Although MAVIS does attempt to standardize alignments there will still be some difference in the coordinates of the final
+    call set dependent on the aligner used to align putatative contigs. Additionally the aligner used on the input bam
+    will have a more significant impact as it will affect the reads collected in addition to the coordintates of all non-contig
+    calls.
+
 
 Samtools
 ++++++++++++++++++

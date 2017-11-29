@@ -66,7 +66,7 @@ class TestTransAbyss(unittest.TestCase):
             'chr': '1', 'chr_start': '10015', 'chr_end': '10015', 'ctg_strand': '-', 'type': 'ins', 'alt': 'aat', 'id': 1
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.TA, True)
-        self.assertEqual(1, len(bpp_list))
+        self.assertEqual(2, len(bpp_list))
         bpp = bpp_list[0]
         self.assertEqual('1', bpp.break1.chr)
         self.assertEqual('1', bpp.break2.chr)
@@ -74,8 +74,6 @@ class TestTransAbyss(unittest.TestCase):
         self.assertEqual(10016, bpp.break2.start)
         self.assertEqual(SVTYPE.INS, bpp.event_type)
         self.assertEqual(False, bpp.opposing_strands)
-        self.assertEqual(STRAND.POS, bpp.break1.strand)
-        self.assertEqual(STRAND.POS, bpp.break2.strand)
         self.assertEqual(True, bpp.stranded)
         self.assertEqual('AAT', bpp.untemplated_seq)
 
@@ -91,7 +89,7 @@ class TestTransAbyss(unittest.TestCase):
             '_index': 9
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.TA, True)
-        self.assertEqual(1, len(bpp_list))
+        self.assertEqual(2, len(bpp_list))
         bpp = bpp_list[0]
         self.assertEqual('', bpp.untemplated_seq)
 
@@ -155,7 +153,7 @@ class TestTransAbyss(unittest.TestCase):
             'id': 1
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.TA, True)
-        self.assertEqual(1, len(bpp_list))
+        self.assertEqual(2, len(bpp_list))
 
     def test_parse_stranded_translocation(self):
         row = {

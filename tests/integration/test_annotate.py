@@ -5,14 +5,16 @@ from mavis.annotate.base import BioInterval, ReferenceName
 from mavis.annotate.file_io import load_reference_genes, load_reference_genome
 from mavis.annotate.genomic import Exon, Gene, Template, Transcript, UsTranscript
 from mavis.annotate.protein import calculate_orf, Domain, DomainRegion, translate, Translation
-from mavis.annotate.variant import _gather_annotations, _gather_breakpoint_annotations, annotate_events, Annotation, determine_prime, flatten_fusion_transcript, FusionTranscript, overlapping_transcripts
+from mavis.annotate.variant import _gather_annotations, _gather_breakpoint_annotations, annotate_events, Annotation, flatten_fusion_transcript, overlapping_transcripts
+from mavis.annotate.fusion import determine_prime, FusionTranscript
+from mavis.annotate.constants import SPLICE_TYPE
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import ORIENT, PRIME, PROTOCOL, reverse_complement, STRAND, SVTYPE
 from mavis.error import NotSpecifiedError
 from mavis.interval import Interval
-from mavis.util import log
 
-from . import DATA_DIR, MockLongString, MockObject, REFERENCE_ANNOTATIONS_FILE, REFERENCE_ANNOTATIONS_FILE2, REFERENCE_ANNOTATIONS_FILE_JSON, REFERENCE_GENOME_FILE
+from . import DATA_DIR, MockLongString, MockObject, REFERENCE_ANNOTATIONS_FILE, REFERENCE_ANNOTATIONS_FILE2, REFERENCE_ANNOTATIONS_FILE_JSON, REFERENCE_GENOME_FILE, get_example_genes
+
 
 REFERENCE_ANNOTATIONS = None
 REFERENCE_GENOME = None
@@ -21,7 +23,8 @@ ALT_REF_CHR = 'ref2'
 
 
 def setUpModule():
-    global REFERENCE_ANNOTATIONS, REFERENCE_GENOME, REF_CHR
+    global REFERENCE_ANNOTATIONS, REFERENCE_GENOME, REF_CHR, EXAMPLE_GENES
+    EXAMPLE_GENES = get_example_genes()
     REFERENCE_ANNOTATIONS = load_reference_genes(REFERENCE_ANNOTATIONS_FILE)
     count = sum([len(l) for l in REFERENCE_ANNOTATIONS.values()])
     print('loaded annotations', count)
@@ -853,27 +856,40 @@ class TestCoordinateCoversion(unittest.TestCase):
         self.rev_translation = Translation(51, 251, self.rev_transcript)
         self.rev_transcript.translations.append(self.rev_translation)
 
-    def test_convert_cdna_to_genomic(self):
+    def test_cdna_to_genomic(self):
         self.assertEqual(150, self.transcript.convert_cdna_to_genomic(50))
         self.assertEqual(550, self.transcript.convert_cdna_to_genomic(250))
 
-    def test_convert_cdna_to_genomic_revcomp(self):
+    def test_cdna_to_genomic_before(self):
+        self.assertEqual(100, self.transcript.convert_cdna_to_genomic(-1))
+        self.assertEqual(51, self.transcript.convert_cdna_to_genomic(-50))
+
+    def test_cdna_to_genomic_after(self):
+        self.assertEqual(650, self.transcript.convert_cdna_to_genomic(350))
+
+    def test_cdna_to_genomic_revcomp(self):
         self.assertEqual(551, self.rev_transcript.convert_cdna_to_genomic(50))
         self.assertEqual(151, self.rev_transcript.convert_cdna_to_genomic(250))
 
-    def test_convert_genomic_to_cdna(self):
+    def test_genomic_to_cdna(self):
         self.assertEqual(50, self.transcript.convert_genomic_to_cdna(150))
         self.assertEqual(249, self.transcript.convert_genomic_to_cdna(549))
 
-    def test_convert_genomic_to_cdna_revcomp(self):
+    def test_genomic_to_cdna_before(self):
+        self.assertEqual((1, -1), self.transcript.convert_genomic_to_nearest_cdna(100))
+
+    def test_genomic_to_cdna_after(self):
+        self.assertEqual((300, 1), self.transcript.convert_genomic_to_nearest_cdna(601))
+
+    def test_genomic_to_cdna_revcomp(self):
         self.assertEqual(50, self.rev_transcript.convert_genomic_to_cdna(551))
         self.assertEqual(250, self.rev_transcript.convert_genomic_to_cdna(151))
 
-    def test_convert_aa_to_cdna(self):
+    def test_aa_to_cdna(self):
         self.assertEqual(Interval(51, 53), self.translation.convert_aa_to_cdna(1))
         self.assertEqual(Interval(249, 251), self.translation.convert_aa_to_cdna(67))
 
-    def test_convert_cdna_to_aa(self):
+    def test_cdna_to_aa(self):
         self.assertEqual(1, self.translation.convert_cdna_to_aa(51))
         self.assertEqual(67, self.translation.convert_cdna_to_aa(251))
         with self.assertRaises(IndexError):
@@ -881,57 +897,53 @@ class TestCoordinateCoversion(unittest.TestCase):
         with self.assertRaises(IndexError):
             self.translation.convert_cdna_to_aa(252)
 
-    def test_convert_genomic_to_cds(self):
+    def test_genomic_to_cds(self):
         self.assertEqual(1, self.translation.convert_genomic_to_cds(151))
         self.assertEqual(201, self.translation.convert_genomic_to_cds(551))
 
-    def test_convert_genomic_to_cds_3prime_utr(self):
+    def test_genomic_to_cds_3prime_utr(self):
         self.assertEqual(-1, self.translation.convert_genomic_to_cds(150))
 
-    def test_convert_genomic_to_cds_5prime_utr(self):
+    def test_genomic_to_cds_5prime_utr(self):
         self.assertEqual(202, self.translation.convert_genomic_to_cds(552))
 
-    def test_convert_genomic_to_cds_notation(self):
+    def test_genomic_to_cds_notation(self):
         self.assertEqual('1', self.translation.convert_genomic_to_cds_notation(151))
         self.assertEqual('201', self.translation.convert_genomic_to_cds_notation(551))
 
-    def test_convert_genomic_to_cds_notation_3prime_utr(self):
+    def test_genomic_to_cds_notation_3prime_utr(self):
         self.assertEqual('-1', self.translation.convert_genomic_to_cds_notation(150))
 
-    def test_convert_genomic_to_cds_notation_5prime_utr(self):
+    def test_genomic_to_cds_notation_5prime_utr(self):
         self.assertEqual('*1', self.translation.convert_genomic_to_cds_notation(552))
 
-    def test_convert_genomic_to_cds_notation_intronic_pos(self):
+    def test_genomic_to_cds_notation_intronic_pos(self):
         self.assertEqual('50+2', self.translation.convert_genomic_to_cds_notation(202))
 
-    def test_convert_genomic_to_cds_notation_intronic_neg(self):
+    def test_genomic_to_cds_notation_intronic_neg(self):
         self.assertEqual('51-2', self.translation.convert_genomic_to_cds_notation(299))
 
-    def test_convert_genomic_to_nearest_cdna_exonic(self):
+    def test_genomic_to_nearest_cdna_exonic(self):
         self.assertEqual((1, 0), self.transcript.convert_genomic_to_nearest_cdna(101))
         self.assertEqual((300, 0), self.transcript.convert_genomic_to_nearest_cdna(600))
         self.assertEqual((101, 0), self.transcript.convert_genomic_to_nearest_cdna(301))
 
-    def test_convert_genomic_to_nearest_cdna_intronic_pos(self):
+    def test_genomic_to_nearest_cdna_intronic_pos(self):
         self.assertEqual((100, 10), self.transcript.convert_genomic_to_nearest_cdna(210))
 
-    def test_convert_genomic_to_nearest_cdna_intronic_neg(self):
+    def test_genomic_to_nearest_cdna_intronic_neg(self):
         self.assertEqual((101, -2), self.transcript.convert_genomic_to_nearest_cdna(299))
 
-    def test_convert_genomic_to_nearest_cdna_rev_exonic(self):
+    def test_genomic_to_nearest_cdna_rev_exonic(self):
         self.assertEqual((300, 0), self.rev_transcript.convert_genomic_to_nearest_cdna(101))
         self.assertEqual((1, 0), self.rev_transcript.convert_genomic_to_nearest_cdna(600))
         self.assertEqual((101, 0), self.rev_transcript.convert_genomic_to_nearest_cdna(400))
 
-    def test_convert_genomic_to_nearest_cdna_rev_intronic_pos(self):
+    def test_genomic_to_nearest_cdna_rev_intronic_pos(self):
         self.assertEqual((201, -10), self.rev_transcript.convert_genomic_to_nearest_cdna(210))
 
-    def test_convert_genomic_to_nearest_cdna_rev_intronic_neg(self):
+    def test_genomic_to_nearest_cdna_rev_intronic_neg(self):
         self.assertEqual((200, 2), self.rev_transcript.convert_genomic_to_nearest_cdna(299))
-
-    def test_convert_genomic_to_nearest_cdna_indexerror(self):
-        with self.assertRaises(IndexError):
-            self.transcript.convert_genomic_to_nearest_cdna(1)
 
 
 class TestUSTranscript(unittest.TestCase):
@@ -1354,129 +1366,3 @@ class TestAnnotateEvents(unittest.TestCase):
         annotations = annotate_events(
             [bpp], reference_genome=REFERENCE_GENOME, annotations=reference_annotations)
         self.assertEqual(2, len(annotations))
-
-
-class TestNDUFA12(unittest.TestCase):
-
-    def setUp(self):
-        self.reference_annotations = load_reference_genes(os.path.join(DATA_DIR, 'NDUFA12_annotations.tab'), warn=log)
-        reference_genome = load_reference_genome(os.path.join(DATA_DIR, 'NDUFA12_hg19.fa'))
-        self.reference_genome = {'12': MockObject(
-            seq=MockLongString(str(reference_genome['NDUFA12'].seq), offset=95290830)
-        )}
-
-    def test_annotate_events_synonymous(self):
-        for gene_list in self.reference_annotations.values():
-            for gene in gene_list:
-                for t in gene.transcripts:
-                    print(t)
-        b1 = Breakpoint('12', 95344068, orient=ORIENT.LEFT, strand=STRAND.NS)
-        b2 = Breakpoint('12', 95344379, orient=ORIENT.RIGHT, strand=STRAND.NS)
-        bpp = BreakpointPair(
-            b1, b2, stranded=False, opposing_strands=False, event_type=SVTYPE.DEL, protocol=PROTOCOL.GENOME,
-            untemplated_seq='')
-        annotations = annotate_events([bpp], reference_genome=self.reference_genome, annotations=self.reference_annotations)
-        ann = annotations[0]
-        fseq = ann.fusion.transcripts[0].get_seq()
-        refseq = ann.transcript1.transcripts[0].get_seq(self.reference_genome)
-        self.assertEqual(refseq, fseq)
-        self.assertEqual(1, len(annotations))
-
-
-class TestSVEP1(unittest.TestCase):
-
-    def setUp(self):
-        self.reference_annotations = load_reference_genes(os.path.join(DATA_DIR, 'SVEP1_annotations.tab'), warn=log)
-        reference_genome = load_reference_genome(os.path.join(DATA_DIR, 'SVEP1_hg19.fa'))
-        self.reference_genome = {'9': MockObject(
-            seq=MockLongString(reference_genome['SVEP1'].seq, offset=113127530)
-        )}
-        self.best = None
-        for chr, gene_list in self.reference_annotations.items():
-            for gene in gene_list:
-                for tx in gene.unspliced_transcripts:
-                    if tx.is_best_transcript:
-                        self.best = tx
-                        break
-
-    def test_annotate_small_intronic_inversion(self):
-        bpp = BreakpointPair(
-            Breakpoint('9', 113152627, 113152627, orient='L'),
-            Breakpoint('9', 113152635, 113152635, orient='L'),
-            opposing_strands=True,
-            stranded=False,
-            event_type=SVTYPE.INV,
-            protocol=PROTOCOL.GENOME,
-            untemplated_seq=''
-        )
-        annotations = annotate_events([bpp], reference_genome=self.reference_genome, annotations=self.reference_annotations)
-        for a in annotations:
-            print(a, a.transcript1, a.transcript2)
-        self.assertEqual(1, len(annotations))
-        ann = annotations[0]
-        self.assertEqual(self.best, ann.transcript1)
-        self.assertEqual(self.best, ann.transcript2)
-        refseq = self.best.transcripts[0].get_seq(self.reference_genome)
-        self.assertEqual(1, len(ann.fusion.transcripts))
-        self.assertEqual(refseq, ann.fusion.transcripts[0].get_seq())
-
-    def test_build_single_transcript_inversion(self):
-        bpp = BreakpointPair(
-            Breakpoint('9', 113152627, 113152627, orient='L'),
-            Breakpoint('9', 113152635, 113152635, orient='L'),
-            opposing_strands=True,
-            stranded=False,
-            event_type=SVTYPE.INV,
-            protocol=PROTOCOL.GENOME,
-            untemplated_seq=''
-        )
-        ann = Annotation(bpp, transcript1=self.best, transcript2=self.best)
-        ft = FusionTranscript.build(
-            ann, self.reference_genome,
-            min_orf_size=300, max_orf_cap=10, min_domain_mapping_match=0.9
-        )
-        refseq = self.best.transcripts[0].get_seq(self.reference_genome)
-        self.assertEqual(1, len(ft.transcripts))
-        self.assertEqual(refseq, ft.transcripts[0].get_seq())
-
-
-class TestDSTYK(unittest.TestCase):
-    def setUp(self):
-        self.reference_annotations = load_reference_genes(os.path.join(DATA_DIR, 'DSTYK_annotations.tab'), warn=log)
-        reference_genome = load_reference_genome(os.path.join(DATA_DIR, 'DSTYK_hg19.fa'))
-        self.reference_genome = {'1': MockObject(
-            seq=MockLongString(reference_genome['DSTYK'].seq, offset=205111631)
-        )}
-        self.best = None
-        for chr, gene_list in self.reference_annotations.items():
-            for gene in gene_list:
-                for tx in gene.unspliced_transcripts:
-                    if tx.is_best_transcript:
-                        self.best = tx
-                        break
-
-    def test_build_single_transcript_inversion_reverse_strand(self):
-        # 1:205178631R 1:205178835R inversion
-        bpp = BreakpointPair(
-            Breakpoint('1', 205178631, orient='R'),
-            Breakpoint('1', 205178835, orient='R'),
-            opposing_strands=True,
-            stranded=False,
-            event_type=SVTYPE.INV,
-            protocol=PROTOCOL.GENOME,
-            untemplated_seq=''
-        )
-        ann = Annotation(bpp, transcript1=self.best, transcript2=self.best)
-        ft = FusionTranscript.build(
-            ann, self.reference_genome,
-            min_orf_size=300, max_orf_cap=10, min_domain_mapping_match=0.9
-        )
-        print(ft.exons)
-        print(ft.break1, ft.break2)
-        for ex in ft.exons:
-            print(ex, len(ex), '==>', ft.exon_mapping.get(ex.position, None), len(ft.exon_mapping.get(ex.position, None)), ft.exon_number(ex))
-        # refseq = self.best.transcripts[0].get_seq(self.reference_genome)
-        self.assertEqual(1, len(ft.transcripts))
-        self.assertEqual(1860, ft.break1)
-        self.assertEqual(2065, ft.break2)
-        flatten_fusion_transcript(ft.transcripts[0])  # test no error

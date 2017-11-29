@@ -6,10 +6,11 @@ CIGAR value (i.e. 1 for an insertion), and the second value is the frequency
 import re
 from ..constants import CIGAR, DNA_ALPHABET, GAP
 
-EVENT_STATES = {CIGAR.D, CIGAR.I, CIGAR.N, CIGAR.X}
+EVENT_STATES = {CIGAR.D, CIGAR.I, CIGAR.X}
 ALIGNED_STATES = {CIGAR.M, CIGAR.X, CIGAR.EQ}
 REFERENCE_ALIGNED_STATES = ALIGNED_STATES | {CIGAR.D, CIGAR.N}
 QUERY_ALIGNED_STATES = ALIGNED_STATES | {CIGAR.I, CIGAR.S}
+CLIPPING_STATE = {CIGAR.S, CIGAR.H}
 
 
 def recompute_cigar_mismatch(read, ref):
@@ -31,15 +32,7 @@ def recompute_cigar_mismatch(read, ref):
     seq_pos = 0
 
     for cigar_value, freq in read.cigar:
-        if cigar_value in [CIGAR.S, CIGAR.I]:
-            result.append((cigar_value, freq))
-            seq_pos += freq
-        elif cigar_value == CIGAR.H:
-            result.append((cigar_value, freq))
-        elif cigar_value in [CIGAR.D, CIGAR.N]:
-            result.append((cigar_value, freq))
-            ref_pos += freq
-        elif cigar_value in [CIGAR.M, CIGAR.X, CIGAR.EQ]:
+        if cigar_value in ALIGNED_STATES:
             for offset in range(0, freq):
                 if DNA_ALPHABET.match(ref[ref_pos], read.query_sequence[seq_pos]):
                     if len(result) == 0 or result[-1][0] != CIGAR.EQ:
@@ -53,8 +46,12 @@ def recompute_cigar_mismatch(read, ref):
                         result[-1] = (CIGAR.X, result[-1][1] + 1)
                 ref_pos += 1
                 seq_pos += 1
-        else:
-            raise NotImplementedError('unexpected CIGAR value {0} is not supported currently'.format(cigar_value))
+            continue
+        if cigar_value in QUERY_ALIGNED_STATES:
+            seq_pos += freq
+        if cigar_value in REFERENCE_ALIGNED_STATES:
+            ref_pos += freq
+        result.append((cigar_value, freq))
     assert sum([x[1] for x in result]) == sum(x[1] for x in read.cigar)
     return result
 
@@ -187,64 +184,26 @@ def extend_softclipping(cigar, min_exact_to_stop_softclipping):
             - :class:`list` of :class:`~mavis.constants.CIGAR` and :class:`int` - new cigar list
             - :class:`int` - shift from the original start position
     """
-    ref_start_shift = 0
-    # determine how far to scoop for the front softclipping
     new_cigar = []
-    temp = [(v, f) for v, f in cigar if (v in [CIGAR.EQ, CIGAR.M] and f >= min_exact_to_stop_softclipping)]
-    if len(temp) == 0:
+    anchors = [i for i, (v, f) in enumerate(cigar) if v in {CIGAR.EQ, CIGAR.M} and f >= min_exact_to_stop_softclipping]
+    if not anchors:
         raise AttributeError('cannot compute on this cigar as there is no stop point')
-
-    match_satisfied = False
-    for v, f in cigar:
-        if v in [CIGAR.M, CIGAR.EQ] and f >= min_exact_to_stop_softclipping:
-            match_satisfied = True
-        if match_satisfied and (len(new_cigar) == 0 or new_cigar[-1][0] != CIGAR.S):
-            new_cigar.append((v, f))
-        elif match_satisfied:  # first after SC
-            if v in [CIGAR.D, CIGAR.X, CIGAR.N]:
-                ref_start_shift += f
-                new_cigar.append((CIGAR.S, f))
-            elif v == CIGAR.I:
-                new_cigar.append((CIGAR.S, f))
-            else:
-                new_cigar.append((v, f))
-        else:
-            if v in [CIGAR.D, CIGAR.N]:
-                ref_start_shift += f
-                pass
-            elif v in [CIGAR.I, CIGAR.S]:
-                new_cigar.append((CIGAR.S, f))
-            elif v == CIGAR.H:
-                new_cigar.append((v, f))
-            else:
-                new_cigar.append((CIGAR.S, f))
-                ref_start_shift += f
-    cigar = new_cigar[::-1]
-
+    start_anchor = min(anchors)
+    end_anchor = max(anchors)
+    if cigar[0][0] == CIGAR.H:
+        start_anchor = 0
+    if cigar[-1][0] == CIGAR.H:
+        end_anchor = len(cigar)
+    start_query_aligned = sum([f for v, f in cigar[:start_anchor] if v in QUERY_ALIGNED_STATES] + [0])
+    start_ref_aligned = sum([f for v, f in cigar[:start_anchor] if v in REFERENCE_ALIGNED_STATES] + [0])
+    end_query_aligned = sum([f for v, f in cigar[end_anchor + 1:] if v in QUERY_ALIGNED_STATES] + [0])
     new_cigar = []
-
-    match_satisfied = False
-    for v, f in cigar:
-        if v in [CIGAR.M, CIGAR.EQ] and f >= min_exact_to_stop_softclipping:
-            match_satisfied = True
-        if match_satisfied and (len(new_cigar) == 0 or new_cigar[-1][0] != CIGAR.S):
-            new_cigar.append((v, f))
-        elif match_satisfied:  # first after SC
-            if v in [CIGAR.D, CIGAR.X, CIGAR.N]:
-                new_cigar.append((CIGAR.S, f))
-            elif v == CIGAR.I:
-                new_cigar.append((CIGAR.S, f))
-            else:
-                new_cigar.append((v, f))
-        else:
-            if v in [CIGAR.D, CIGAR.N]:
-                pass
-            elif v in [CIGAR.I, CIGAR.S]:
-                new_cigar.append((CIGAR.S, f))
-            else:
-                new_cigar.append((CIGAR.S, f))
-    new_cigar.reverse()
-    return new_cigar, ref_start_shift
+    if start_query_aligned:
+        new_cigar.append((CIGAR.S, start_query_aligned))
+    new_cigar.extend(cigar[start_anchor:end_anchor + 1])
+    if end_query_aligned:
+        new_cigar.append((CIGAR.S, end_query_aligned))
+    return new_cigar, start_ref_aligned
 
 
 def compute(ref, alt, force_softclipping=True, min_exact_to_stop_softclipping=6):
@@ -289,7 +248,7 @@ def convert_for_igv(cigar):
     """
     result = []
     for v, f in cigar:
-        if v in [CIGAR.X, CIGAR.EQ]:
+        if v in ALIGNED_STATES:
             v = CIGAR.M
         result.append((v, f))
     return join(result)
@@ -302,30 +261,9 @@ def alignment_matches(cigar):
     """
     result = 0
     for v, f in cigar:
-        if v in [CIGAR.X, CIGAR.EQ, CIGAR.M]:
+        if v in ALIGNED_STATES:
             result += f
     return result
-
-
-def smallest_nonoverlapping_repeat(s):
-    """
-    for a given string returns the smallest substring that is
-    a repeat consuming the entire string
-
-    Example:
-        >>> smallest_nonoverlapping_repeat('ATATATA')
-        'ATATATA'
-        >>> smallest_nonoverlapping_repeat('ATATAT')
-        'AT'
-        >>> smallest_nonoverlapping_repeat('CCCCCCCC')
-        'C'
-    """
-    for repsize in range(1, len(s) + 1):
-        if len(s) % repsize == 0:
-            substrings = [str(s[i:i + repsize]) for i in range(0, len(s), repsize)]
-            if len(set(substrings)) == 1:
-                return substrings[0]
-    return s
 
 
 def merge_indels(cigar):
@@ -379,21 +317,25 @@ def hgvs_standardize_cigar(read, reference_seq):
     # now we need to extend any insertions
     rpos = read.reference_start
     qpos = 0
-    cigar = []
-    i = 0
+    cigar = [new_cigar[0]]
+    if cigar[0][0] in REFERENCE_ALIGNED_STATES:
+        rpos += cigar[0][1]
+    if cigar[0][0] in QUERY_ALIGNED_STATES:
+        qpos += cigar[0][1]
+    i = 1
     while i < len(new_cigar):
         if i < len(new_cigar) - 1:
             c, v = new_cigar[i]
             next_c, next_v = new_cigar[i + 1]
+            prev_c, prev_v = new_cigar[i - 1]
 
             if c == CIGAR.I:
                 qseq = read.query_sequence[qpos:qpos + v]
-                qrep = smallest_nonoverlapping_repeat(qseq)
-                if next_c == CIGAR.EQ and next_v >= len(qrep):
+                if next_c == CIGAR.EQ and prev_c == CIGAR.EQ:
                     rseq = reference_seq[rpos:rpos + next_v]
                     t = 0
-                    while t + len(qrep) <= next_v and rseq[t:t + len(qrep)] == qrep:
-                        t += len(qrep)
+                    while t < next_v and rseq[t] == read.query_sequence[qpos + t]:
+                        t += 1
                     if t > 0:
                         cigar.append((CIGAR.EQ, t))
                         rpos += t
@@ -402,17 +344,53 @@ def hgvs_standardize_cigar(read, reference_seq):
                             del new_cigar[i + 1]
                         else:
                             new_cigar[i + 1] = next_c, next_v - t
+                        continue
+                elif next_c == CIGAR.D and prev_c == CIGAR.EQ:
+                    # reduce the insertion and deletion by extending the alignment if possible
+                    delseq = reference_seq[rpos: rpos + next_v]
+                    start = 0
+                    end = 0
+                    shift = True
+                    while max(start, end) < min(len(delseq), len(qseq)) and shift:
+                        shift = False
+                        if qseq[start] == delseq[start]:
+                            start += 1
+                            shift = True
+                        if qseq[-1 - end] == delseq[-1 - end]:
+                            end += 1
+                            shift = True
+                    if start:
+                        cigar.append((CIGAR.EQ, start))
+                        if start < next_v:
+                            new_cigar[i + 1] = (next_c, next_v - start)
+                        else:
+                            del new_cigar[i + 1]
+                        if start < v:
+                            new_cigar[i] = (c, v - start)
+                        else:
+                            del new_cigar[i]
+                        qpos += start
+                        rpos += start
+                        continue
+                    elif end:
+                        if end < v:
+                            cigar.append((c, v - end))
+                        if end < next_v:
+                            cigar.append((next_c, next_v - end))
+                        cigar.append((CIGAR.EQ, end))
+                        qpos += v
+                        rpos += next_v
+                        i += 2
                         continue
                 qpos += v
 
             elif c == CIGAR.D:
                 rseq = reference_seq[rpos:rpos + v]
-                rrep = smallest_nonoverlapping_repeat(rseq)
-                if next_c == CIGAR.EQ and next_v >= len(rrep):
+                if next_c == CIGAR.EQ and prev_c == CIGAR.EQ:
                     qseq = read.query_sequence[qpos:qpos + next_v]
                     t = 0
-                    while t + len(rrep) <= next_v and qseq[t:t + len(rrep)] == rrep:
-                        t += len(rrep)
+                    while t < next_v and qseq[t] == reference_seq[rpos + t]:
+                        t += 1
                     if t > 0:
                         cigar.append((CIGAR.EQ, t))
                         qpos += t
@@ -423,11 +401,11 @@ def hgvs_standardize_cigar(read, reference_seq):
                             new_cigar[i + 1] = next_c, next_v - t
                         continue
                 rpos += v
-            elif c == CIGAR.S:
-                qpos += v
-            elif c != CIGAR.H:
-                qpos += v
-                rpos += v
+            else:
+                if c in QUERY_ALIGNED_STATES:
+                    qpos += v
+                if c in REFERENCE_ALIGNED_STATES:
+                    rpos += v
         cigar.append(new_cigar[i])
         i += 1
     return join(cigar)
@@ -441,10 +419,14 @@ def convert_string_to_cigar(string):
         >>> convert_string_to_cigar('8M2I1D9X')
         [(CIGAR.M, 8), (CIGAR.I, 2), (CIGAR.D, 1), (CIGAR.X, 9)]
     """
-    patt = r'(\d+({}))'.format('|'.join(CIGAR.keys()))
+    patt = r'(\d+(\D))'
     cigar = [m[0] for m in re.findall(patt, string)]
-    cigar = [(CIGAR[match[-1]], int(match[:-1])) for match in cigar]
+    cigar = [(CIGAR[match[-1]] if match[-1] != '=' else CIGAR.EQ, int(match[:-1])) for match in cigar]
     return cigar
+
+
+def convert_cigar_to_string(cigar):
+    return ''.join(['{}{}'.format(f, CIGAR.reverse(s) if s != CIGAR.EQ else '=') for s, f in cigar])
 
 
 def merge_internal_events(cigar, inner_anchor=10, outer_anchor=10):

@@ -6,7 +6,8 @@ import warnings
 
 from .constants import DEFAULTS
 from .genomic import UsTranscript
-from .variant import annotate_events, choose_more_annotated, choose_transcripts_by_priority, determine_prime, flatten_fusion_transcript, flatten_fusion_translation
+from .variant import annotate_events, choose_more_annotated, choose_transcripts_by_priority, call_protein_indel, flatten_fusion_transcript, flatten_fusion_translation
+from .fusion import determine_prime
 from ..constants import COLUMNS, PRIME, PROTOCOL, sort_columns
 from ..error import DrawingFitError, NotSpecifiedError
 from ..illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
@@ -102,6 +103,7 @@ def main(
     annotation_filters=DEFAULTS.annotation_filters,
     start_time=int(time.time()),
     draw_fusions_only=DEFAULTS.draw_fusions_only,
+    draw_non_synonymous_cdna_only=DEFAULTS.draw_non_synonymous_cdna_only,
     **kwargs
 ):
     """
@@ -158,6 +160,7 @@ def main(
         COLUMNS.fusion_cdna_coding_end,
         COLUMNS.fusion_sequence_fasta_id,
         COLUMNS.fusion_mapped_domains,
+        COLUMNS.fusion_protein_hgvs,
         COLUMNS.exon_first_3prime,
         COLUMNS.exon_last_5prime,
         COLUMNS.annotation_id,
@@ -197,6 +200,7 @@ def main(
 
             # try building the fusion product
             rows = []
+            cdna_synon_all = True
             # add fusion information to the current ann_row
             for spl_fusion_tx in [] if not ann.fusion else ann.fusion.transcripts:
                 fusion_fa_id = '{}_{}'.format(ann.annotation_id, spl_fusion_tx.splicing_pattern.splice_type)
@@ -212,6 +216,8 @@ def main(
                 temp_row.update(flatten_fusion_transcript(spl_fusion_tx))
                 temp_row[COLUMNS.fusion_sequence_fasta_id] = fusion_fa_id
                 temp_row[COLUMNS.cdna_synon] = cdna_synon if cdna_synon else None
+                if not cdna_synon:
+                    cdna_synon_all = False
                 if spl_fusion_tx.translations:
                     # duplicate the ann_row for each translation
                     for fusion_translation in spl_fusion_tx.translations:
@@ -223,12 +229,19 @@ def main(
                         nrow[COLUMNS.protein_synon] = protein_synon if protein_synon else None
                         # select the exon
                         nrow.update(flatten_fusion_translation(fusion_translation))
+                        if ann.single_transcript() and ann.transcript1.translations:
+                            nrow[COLUMNS.fusion_protein_hgvs] = call_protein_indel(
+                                ann.transcript1.translations[0], fusion_translation, reference_genome)
                         rows.append(nrow)
                 else:
                     temp_row.update(ann_row)
                     rows.append(temp_row)
             # draw the annotation and add the path to all applicable rows (one drawing for multiple annotations)
-            if ann.fusion or not draw_fusions_only:
+            if any([
+                not ann.fusion and not draw_fusions_only,
+                ann.fusion and not draw_non_synonymous_cdna_only,
+                ann.fusion and draw_non_synonymous_cdna_only and not cdna_synon_all
+            ]):
                 drawing, legend = draw(drawing_config, ann, reference_genome, template_metadata, drawings_directory)
                 for row in rows + [ann_row]:
                     row[COLUMNS.annotation_figure] = drawing

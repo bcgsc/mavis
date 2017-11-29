@@ -78,7 +78,8 @@ class TestPipeline(unittest.TestCase):
 
             for suffix in [
                 'contigs.bam',
-                'contigs.blat_out.pslx',
+                'contigs.bwa_mem.sam',
+                'contigs.bwa_mem.log',
                 'contigs.fa',
                 'contigs.sorted.bam',
                 'contigs.sorted.bam.bai',

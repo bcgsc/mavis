@@ -3,12 +3,12 @@ import unittest
 import warnings
 
 from mavis.annotate.file_io import load_reference_genes, load_reference_genome
-from mavis.bam import cigar as cigar_tools
-from mavis.bam import read as read_tools
+from mavis.bam import cigar as _cigar
+from mavis.bam import read as _read
 from mavis.bam.cache import BamCache
 from mavis.bam.read import breakpoint_pos, get_samtools_version, orientation_supports_type, read_pair_type, sequenced_strand
 from mavis.bam.stats import compute_genome_bam_stats, compute_transcriptome_bam_stats, Histogram
-from mavis.constants import CIGAR, DNA_ALPHABET, ORIENT, READ_PAIR_TYPE, STRAND, SVTYPE
+from mavis.constants import CIGAR, DNA_ALPHABET, ORIENT, READ_PAIR_TYPE, STRAND, SVTYPE, NA_MAPPING_QUALITY
 from mavis.interval import Interval
 import timeout_decorator
 
@@ -114,32 +114,32 @@ class TestModule(unittest.TestCase):
     def test_breakpoint_pos(self):
         # ==========+++++++++>
         r = MockRead(reference_start=10, cigar=[(CIGAR.M, 10), (CIGAR.S, 10)])
-        self.assertEqual(19, read_tools.breakpoint_pos(r))
+        self.assertEqual(19, _read.breakpoint_pos(r))
 
         with self.assertRaises(AttributeError):
             breakpoint_pos(r, ORIENT.RIGHT)
 
-        self.assertEqual(19, read_tools.breakpoint_pos(r, ORIENT.LEFT))
+        self.assertEqual(19, _read.breakpoint_pos(r, ORIENT.LEFT))
 
         # ++++++++++=========>
         r = MockRead(reference_start=10, cigar=[(CIGAR.S, 10), (CIGAR.M, 10)])
-        self.assertEqual(10, read_tools.breakpoint_pos(r))
+        self.assertEqual(10, _read.breakpoint_pos(r))
 
         with self.assertRaises(AttributeError):
             breakpoint_pos(r, ORIENT.LEFT)
 
-        self.assertEqual(10, read_tools.breakpoint_pos(r, ORIENT.RIGHT))
+        self.assertEqual(10, _read.breakpoint_pos(r, ORIENT.RIGHT))
 
         with self.assertRaises(AttributeError):
             r = MockRead(reference_start=10, cigar=[(CIGAR.X, 10), (CIGAR.M, 10)])
-            read_tools.breakpoint_pos(r, ORIENT.LEFT)
+            _read.breakpoint_pos(r, ORIENT.LEFT)
 
     def test_nsb_align(self):
         ref = 'GATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAG' \
               'TTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG'
         seq = 'TGTAGGAAGCCATTATCTGAAGTGTAAGCAACTGCATAGTGCTATTTTAATTATGCATTGCAGGGAAACTGTGAGCAGAGCTATATATTTAGGTAGAC' \
               'TGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAAC'
-        read_tools.nsb_align(ref, seq)
+        _read.nsb_align(ref, seq)
         # GATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG
 
 
@@ -150,9 +150,9 @@ class TestNsbAlign(unittest.TestCase):
               'TTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG'
         seq = 'TGTAGGAAGCCATTATCTGAAGTGTAAGCAACTGCATAGTGCTATTTTAATTATGCATTGCAGGGAAACTGTGAGCAGAGCTATATATTTAGGTAGAC' \
               'TGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAAC'
-        alignment = read_tools.nsb_align(ref, seq)
+        alignment = _read.nsb_align(ref, seq)
         self.assertEqual(1, len(alignment))
-        alignment = read_tools.nsb_align(ref, seq, min_consecutive_match=20)
+        alignment = _read.nsb_align(ref, seq, min_consecutive_match=20)
         self.assertEqual(0, len(alignment))
 
     def test_length_ref_le_seq(self):
@@ -166,8 +166,18 @@ class TestNsbAlign(unittest.TestCase):
         ref = str(REFERENCE_GENOME['test_bam_long_ref'].seq)
         seq = 'TGAGGTCAGGAGTTTGAGACCAGCCTGGACAACATGGTGAAACCCCATCTCTACTAAAAATACAAAAAAATTAGCCAGGCATGGTGGTGGATGCCTGTAAT' \
             'CGCAGCTACTCAGGAGATCGGAAG'
-        alignment = read_tools.nsb_align(ref, seq, min_consecutive_match=6)
+        alignment = _read.nsb_align(ref, seq, min_consecutive_match=6)
         self.assertEqual(1, len(alignment))
+
+    def test_left_softclipping(self):
+        ref = 'TAAGCTTCTTCCTTTTTCTATGCCACCTACATAGGCATTTTGCATGGTCAGATTGGAATTTACATAATGCATACATGCAAAGAAATATATAGAAGCCAGATATATAAGGTAGTACATTGGCAGGCTTCATATATATAGACTCCCCCATATTGTCTATATGCTAAAAAAGTATTTTAAATCCTTAAATTTTATTTTTGTTCTCTGCATTTGAAATCTTTATCAACTAGGTCATGAAAATAGCCAGTCGGTTCTCCTTTTGGTCTATTAGAATAAAATCTGGACTGCAACTGAGAAGCAGAAGGTAATGTCAGAATGTAT'
+        seq = 'GCTAAAAAAGTATTTTAAATCCTTAAATGTTATTTTTGTTCTC'
+        alignments = _read.nsb_align(ref, seq, min_consecutive_match=6)
+        self.assertEqual(1, len(alignments))
+        print(alignments)
+        seq = 'CTTATAAAGCTGGAGTATCTGCTGAGAGCATCAGGAATTGACATCTAGGATAATGAGAGAAGGCTGATCATGGACAACATATAGCCTTTCTAGTAGATGCAGCTGAGGCTAAAAAAGTATTTTAAATCCTTAAATGTTATTTTTGTTCTC'
+        alignments = _read.nsb_align(ref, seq, min_consecutive_match=6, min_overlap_percent=0.5)
+        self.assertEqual(1, len(alignments))
 
 
 class TestReadPairStrand(unittest.TestCase):
@@ -381,26 +391,26 @@ class TestBamStats(unittest.TestCase):
 class TestMapRefRangeToQueryRange(unittest.TestCase):
     def setUp(self):
         self.contig_read = MockRead(
-            cigar=cigar_tools.convert_string_to_cigar('275M18I12041D278M'),
+            cigar=_cigar.convert_string_to_cigar('275M18I12041D278M'),
             reference_start=89700025,
             reference_name='10'
         )
 
     def test_full_aligned_portion(self):
         ref_range = Interval(89700026, 89712619)
-        qrange = read_tools.map_ref_range_to_query_range(self.contig_read, ref_range)
+        qrange = _read.map_ref_range_to_query_range(self.contig_read, ref_range)
         self.assertEqual(571, len(qrange))
         self.assertEqual(1, qrange.start)
         self.assertEqual(571, qrange.end)
 
     def test_multiple_events(self):
         ref_range = Interval(89700067, 89712347)
-        qrange = read_tools.map_ref_range_to_query_range(self.contig_read, ref_range)
+        qrange = _read.map_ref_range_to_query_range(self.contig_read, ref_range)
         self.assertEqual(len(ref_range) - 12041 + 18, len(qrange))
 
     def test_no_events(self):
         ref_range = Interval(89700031, 89700040)
-        qrange = read_tools.map_ref_range_to_query_range(self.contig_read, ref_range)
+        qrange = _read.map_ref_range_to_query_range(self.contig_read, ref_range)
         self.assertEqual(10, len(qrange))
         self.assertEqual(6, qrange.start)
         self.assertEqual(15, qrange.end)

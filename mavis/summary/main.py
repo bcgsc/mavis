@@ -90,6 +90,7 @@ def main(
             COLUMNS.gene2_aliases,
             COLUMNS.protein_synon,
             COLUMNS.cdna_synon,
+            COLUMNS.net_size,
             'dgv',
             'summary_pairing']
         }, COLUMNS.call_method: CALL_METHOD.INPUT},
@@ -266,8 +267,6 @@ def main(
     # TODO: report the pairings so that germline and somatic etc can be determined properly
     output_columns = {
         COLUMNS.annotation_id,
-        COLUMNS.pairing,
-        COLUMNS.inferred_pairing,
         COLUMNS.break1_chromosome,
         COLUMNS.break1_homologous_seq,
         COLUMNS.break1_orientation,
@@ -282,6 +281,7 @@ def main(
         COLUMNS.event_type,
         COLUMNS.fusion_cdna_coding_end,
         COLUMNS.fusion_cdna_coding_start,
+        COLUMNS.fusion_protein_hgvs,
         COLUMNS.fusion_mapped_domains,
         COLUMNS.gene1,
         COLUMNS.gene1_direction,
@@ -312,6 +312,8 @@ def main(
         COLUMNS.contig_alignment_score,
         COLUMNS.spanning_reads,
         COLUMNS.contig_remapped_reads,
+        COLUMNS.tracking_id,
+        COLUMNS.net_size,
         'summary_pairing',
         'dgv'}
 

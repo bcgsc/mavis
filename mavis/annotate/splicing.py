@@ -1,3 +1,5 @@
+import itertools
+
 from .base import BioInterval
 from .constants import ACCEPTOR_SEQ, DONOR_SEQ, SPLICE_SITE_RADIUS, SPLICE_SITE_TYPE, SPLICE_TYPE
 from ..constants import reverse_complement, STRAND
@@ -10,58 +12,99 @@ class SplicingPattern(list):
         list.__init__(self, *args)
         self.splice_type = splice_type
 
-    @staticmethod
-    def classify(pattern, original_sites):
+    def __str__(self):
+        temp = []
+        for site in self:
+            temp.append('{}{}{}'.format('D' if site.type == SPLICE_SITE_TYPE.DONOR else 'A', site.pos, '' if site.intact else '*'))
+        return '[{}]'.format(', '.join(temp))
+
+    @classmethod
+    def classify(cls, pattern, original_sites):
         # now need to decide the type for each set
         pattern = sorted(pattern)
-        r_introns = 0
-        s_exons = 0
+        r_introns = []
+        s_exons = []
         assert len(pattern) % 2 == 0
 
         for donor, acceptor in zip(pattern[0::2], pattern[1::2]):
             # check if any original splice positions are between this donor and acceptor
-            temp = 0
+            temp = []
             for site in original_sites:
                 if site > donor and site < acceptor:
-                    temp += 1
-            assert temp % 2 == 0
-            s_exons += temp // 2
+                    temp.append(site)
+            assert len(temp) % 2 == 0
+            s_exons.extend(temp)
 
         for acceptor, donor in zip(pattern[1::2], pattern[2::2]):
-            temp = 0
+            temp = []
             for site in original_sites:
                 if site > acceptor and site < donor:
-                    temp += 1
-            assert temp % 2 == 0
-            r_introns += temp // 2
-
+                    temp.append(site)
+            assert len(temp) % 2 == 0
+            r_introns.extend(temp)
         if pattern:
             # any skipped positions before the first donor or after the last acceptor
-            temp = 0
+            temp = []
             for site in original_sites:
                 if site < pattern[0]:
-                    temp += 1
-            assert temp % 2 == 0
-            r_introns += temp // 2
-            temp = 0
+                    temp.append(site)
+            assert len(temp) % 2 == 0
+            r_introns.extend(temp)
+            temp = []
             for site in original_sites:
                 if site > pattern[-1]:
-                    temp += 1
-            r_introns += temp // 2
-            assert temp % 2 == 0
-
+                    temp.append(site)
+            r_introns.extend(temp)
+            assert len(temp) % 2 == 0
+        rintron_count = 0
+        for i in range(0, len(r_introns) - 1):
+            if abs(r_introns[i].pos - r_introns[i + 1].pos) > 1:
+                rintron_count += 1
+        sexon_count = len(s_exons) // 2
         # now classifying the pattern
-        if r_introns + s_exons == 0:
+        if rintron_count + sexon_count == 0:
             return SPLICE_TYPE.NORMAL
-        elif r_introns == 0:
-            if s_exons > 1:
+        elif rintron_count == 0:
+            if sexon_count > 1:
                 return SPLICE_TYPE.MULTI_SKIP
             return SPLICE_TYPE.SKIP
-        elif s_exons == 0:
-            if r_introns > 1:
+        elif sexon_count == 0:
+            if rintron_count > 1:
                 return SPLICE_TYPE.MULTI_RETAIN
             return SPLICE_TYPE.RETAIN
         return SPLICE_TYPE.COMPLEX
+
+    @classmethod
+    def generate_patterns(cls, sites, is_reverse=False):
+        """
+        returns a list of splice sites to be connected as a splicing pattern
+
+        Returns:
+            :class:`list` of :class:`SplicingPattern`: List of positions to be spliced together
+
+        see :ref:`theory - predicting splicing patterns <theory-predicting-splicing-patterns>`
+        """
+        if not sites:
+            return [SplicingPattern()]
+        sites = sorted(sites, reverse=is_reverse)
+
+        patterns = []
+        for site in sites:
+            if site.intact:
+                if patterns and patterns[-1][0].type == site.type:
+                    patterns[-1].append(site)
+                else:
+                    patterns.append([site])
+        if patterns and patterns[0][0].type == SPLICE_SITE_TYPE.ACCEPTOR:
+            patterns = patterns[1:]
+        if patterns and patterns[-1][0].type == SPLICE_SITE_TYPE.DONOR:
+            patterns = patterns[:-1]
+        if not patterns:
+            return [SplicingPattern()]
+        patterns = list(itertools.product(*patterns))
+        for i, patt in enumerate(patterns):
+            patterns[i] = SplicingPattern(patt, splice_type=cls.classify(patt, sites))
+        return patterns
 
 
 class SpliceSite(BioInterval):

@@ -2,11 +2,12 @@ import unittest
 import warnings
 
 from mavis.annotate.file_io import load_reference_genome
-from mavis.bam.cigar import alignment_matches, compute, convert_for_igv, convert_string_to_cigar, extend_softclipping, hgvs_standardize_cigar, join, longest_fuzzy_match, match_percent, merge_internal_events, recompute_cigar_mismatch, score, smallest_nonoverlapping_repeat
+from mavis.bam.cigar import alignment_matches, compute, convert_for_igv, convert_string_to_cigar, extend_softclipping, hgvs_standardize_cigar, join, longest_fuzzy_match, match_percent, merge_internal_events, recompute_cigar_mismatch, score
 from mavis.constants import CIGAR
+from mavis.bam.read import SamRead
 import timeout_decorator
 
-from . import MockRead, REFERENCE_GENOME_FILE
+from . import MockRead, REFERENCE_GENOME_FILE, MockObject
 
 
 REFERENCE_GENOME = None
@@ -94,50 +95,14 @@ class TestRecomputeCigarMismatch(unittest.TestCase):
             recompute_cigar_mismatch(r, REFERENCE_GENOME['fake'])
         )
 
-    def test_invalid_cigar_value(self):
-        r = MockRead(
-            reference_start=1452,
-            query_sequence='CAGC'
-                           'CCCAAACAAC'
-                           'TATAAATTTT'
-                           'GTAATACCTA'
-                           'GAACAATATA'
-                           'AATAT',
-            cigar=[(50, 14), (CIGAR.D, 10), (CIGAR.I, 10), (CIGAR.M, 25)]
-        )
-        with self.assertRaises(NotImplementedError):
-            recompute_cigar_mismatch(r, REFERENCE_GENOME['fake'])
-
 
 class TestExtendSoftclipping(unittest.TestCase):
 
-    def test_simple(self):
-        self.assertEqual(
-            ([(CIGAR.S, 10), (CIGAR.M, 10)], 0),
-            extend_softclipping([(CIGAR.S, 10), (CIGAR.M, 10)], 1)
-        )
-
-    def test_deletions(self):
-        self.assertEqual(
-            ([(CIGAR.S, 10), (CIGAR.M, 10)], 1),
-            extend_softclipping([(CIGAR.I, 10), (CIGAR.D, 1), (CIGAR.M, 10)], 1)
-        )
-
-    def test_mismatch(self):
-        with self.assertRaises(AttributeError):
-            extend_softclipping([(CIGAR.X, 10), (CIGAR.M, 20), (CIGAR.X, 10)], 30)
-
-    def test_insert(self):
-        self.assertEqual(
-            ([(CIGAR.S, 10), (CIGAR.S, 2), (CIGAR.S, 5), (CIGAR.M, 10), (CIGAR.S, 5)], 2),
-            extend_softclipping([(CIGAR.S, 10), (CIGAR.M, 2), (CIGAR.I, 5), (CIGAR.M, 10), (CIGAR.I, 5)], 5)
-        )
-
-    def test_hardclipping(self):
-        c = [(CIGAR.H, 10), (CIGAR.EQ, 10)]
-        cnew, prefix = extend_softclipping(c, 1)
+    def test_softclipped_right(self):
+        c = convert_string_to_cigar('70=2X1=8X4=1X1=4X1=6X1=4X1=4X2=5X3=3X1=4X1=3X1=14X1=1X2=1S')
+        cnew, prefix = extend_softclipping(c, 6)
         self.assertEqual(0, prefix)
-        self.assertEqual(c, cnew)
+        self.assertEqual(convert_string_to_cigar('70=80S'), cnew)
 
 
 class TestCigarTools(unittest.TestCase):
@@ -274,40 +239,53 @@ class TestHgvsStandardizeCigars(unittest.TestCase):
         self.assertEqual([(CIGAR.EQ, 12), (CIGAR.D, 4), (CIGAR.EQ, 4)], hgvs_standardize_cigar(read, ref))
 
     def test_bubble_sort_indel_sections(self):
-        ref = 'ATAGGC' 'ATCT' 'ACGA' 'ACGA' 'ACGA' 'GATCGCTACG'
+        rseq = 'ATAGGC' 'ATCT'        'GG'    'GA' 'GCGA' 'GATCGCTACG'
+        qseq = 'ATCT'  'TTT'     'TT'     'GCGA' 'GATC'
         read = MockRead(
             'name',
             1,
             6,
-            query_sequence='ATCT' 'ACGA' 'TTTTT' 'ACGA' 'GATC',
-            cigar=[(CIGAR.EQ, 4), (CIGAR.D, 2), (CIGAR.I, 3), (CIGAR.D, 2), (CIGAR.I, 2), (CIGAR.EQ, 12)]
+            query_sequence=qseq,
+            cigar=[(CIGAR.EQ, 4), (CIGAR.D, 2), (CIGAR.I, 3), (CIGAR.D, 2), (CIGAR.I, 2), (CIGAR.EQ, 8)]
         )
         self.assertEqual(
-            [(CIGAR.EQ, 4), (CIGAR.I, 5), (CIGAR.D, 4), (CIGAR.EQ, 12)], hgvs_standardize_cigar(read, ref))
+            [(CIGAR.EQ, 4), (CIGAR.I, 5), (CIGAR.D, 4), (CIGAR.EQ, 8)], hgvs_standardize_cigar(read, rseq))
 
     def test_bubble_sort_indel_sections_drop_mismatch(self):
-        ref = 'ATAGGC' 'ATCT' 'ACGA' 'ACGA' 'ACGA' 'GATCGCTACG'
+        rseq = 'ATAGGC' 'ATCT' 'A' 'CGA'   'AGCAT'     'ACGA' 'GATCGCTACG'
+        #                ATCT   CTTTT                 TACGA
+        qseq = 'ATCT' 'C'      'TT'     'TTT' 'ACGA' 'GATC'
         read = MockRead(
             'name',
             1,
             6,
-            query_sequence='ATCT' 'ACGAC' 'TTTTT' 'ACGA' 'GATC',
-            cigar=[(CIGAR.EQ, 4), (CIGAR.X, 1), (CIGAR.D, 2), (CIGAR.I, 3), (CIGAR.D, 2), (CIGAR.I, 2), (CIGAR.EQ, 12)]
+            query_sequence=qseq,
+            cigar=[(CIGAR.EQ, 4), (CIGAR.X, 1), (CIGAR.D, 3), (CIGAR.I, 2), (CIGAR.D, 5), (CIGAR.I, 3), (CIGAR.EQ, 8)]
         )
         self.assertEqual(
-            [(CIGAR.EQ, 4), (CIGAR.I, 6), (CIGAR.D, 5), (CIGAR.EQ, 12)], hgvs_standardize_cigar(read, ref))
+            [(CIGAR.EQ, 4), (CIGAR.I, 5), (CIGAR.D, 8), (CIGAR.EQ, 9)], hgvs_standardize_cigar(read, rseq))
 
     def test_bubble_sort_indel_sections_drop_mismatch_with_hardclipping(self):
         ref = 'ATAGGC' 'ATCT' 'ACGA' 'ACGA' 'ACGA' 'GATCGCTACG'
+        # original
+        # ATAGGCATCTACG   AA  CGAACGAGATCGCTACG
+        #       ATCTC  TTT  TTCGAACG
+        # expected
+        # ATAGGCATCT      ACGAACGAACGAGATCGCTACG
+        #       ATCTCTTTTT     CGAACG
         read = MockRead(
             'name',
             1,
             6,
-            query_sequence='ATCT' 'ACGAC' 'TTTTT' 'ACGA' 'GATC',
-            cigar=[(CIGAR.H, 10), (CIGAR.EQ, 4), (CIGAR.X, 1), (CIGAR.D, 2), (CIGAR.I, 3), (CIGAR.D, 2), (CIGAR.I, 2), (CIGAR.EQ, 12)]
+            reference_name='1',
+            query_sequence='ATCTCTTTTTCGAACG',
+            cigar=[(CIGAR.H, 10), (CIGAR.EQ, 4), (CIGAR.X, 1), (CIGAR.D, 2), (CIGAR.I, 3), (CIGAR.D, 2), (CIGAR.I, 2), (CIGAR.EQ, 6)]
         )
+        print(SamRead.deletion_sequences(read, {'1': MockObject(seq=ref)}))
+        print(SamRead.insertion_sequences(read))
+        print(read.query_sequence, len(read.query_sequence))
         self.assertEqual(
-            [(CIGAR.H, 10), (CIGAR.EQ, 4), (CIGAR.I, 6), (CIGAR.D, 5), (CIGAR.EQ, 12)], hgvs_standardize_cigar(read, ref))
+            [(CIGAR.H, 10), (CIGAR.EQ, 4), (CIGAR.I, 6), (CIGAR.D, 5), (CIGAR.EQ, 6)], hgvs_standardize_cigar(read, ref))
 
     def test_homopolymer_even_odd(self):
         ref = 'ATCGAGAT' + 'A' * 15 + 'TCGAGAT'
@@ -347,25 +325,128 @@ class TestHgvsStandardizeCigars(unittest.TestCase):
             [(CIGAR.S, 2), (CIGAR.EQ, 96 + 15), (CIGAR.I, 2), (CIGAR.EQ, 50 - 15)],
             hgvs_standardize_cigar(read, ref))
 
-    def test_smallest_nonoverlapping_repeat(self):
-        s = 'ATATATATAA'
-        self.assertEqual(s, smallest_nonoverlapping_repeat(s))
-        s = 'ATATATATAT'
-        self.assertEqual('AT', smallest_nonoverlapping_repeat(s))
-        s = 'AAAAAA'
-        self.assertEqual('A', smallest_nonoverlapping_repeat(s))
-        s = 'ATGGCATGGCATGGC'
-        self.assertEqual('ATGGC', smallest_nonoverlapping_repeat(s))
+    def test_even_deletion_in_repeat(self):
+        rseq = 'AAAGAAAAAAAAAAAAT' 'ATATATATATA' 'TAAATATACATATTATGTATCAAATATATATTATGTGTAATATACATCATGTATC'
+        qseq = 'TTTTAAAAAAAAAAAAT' 'ATATATATATA'   'AATATACATATTATGTATCAAATATATATTATGTGTAATATACATCATGTATC'
+        print(len(qseq) - 28)
+        read = MockRead(
+            'name', reference_name='1',
+            reference_start=4,
+            cigar=convert_string_to_cigar('4S13=2D64='),
+            query_sequence=qseq
+        )
+        reference_genome = {'1': MockObject(seq=rseq)}
+        exp = convert_string_to_cigar('4S24=2D53=')
+        new_cigar = hgvs_standardize_cigar(read, rseq)
+        print(SamRead.deletion_sequences(read, reference_genome))
+        read.cigar = new_cigar
+        print(SamRead.deletion_sequences(read, reference_genome))
+        self.assertEqual(exp, new_cigar)
+
+    def test_odd_deletion_in_repeat(self):
+        rseq = 'AAAGAAAAAAAAAAAAT' 'ATATATATATA' 'TAAATATACATATTATGTATCAAATATATATTATGTGTAATATACATCATGTATC'
+        qseq = 'TTTTAAAAAAAAAAAAT' 'ATATATATATA'    'ATATACATATTATGTATCAAATATATATTATGTGTAATATACATCATGTATC'
+        print(len(qseq) - 28)
+        read = MockRead(
+            'name', reference_name='1',
+            reference_start=4,
+            cigar=convert_string_to_cigar('4S13=3D63='),
+            query_sequence=qseq
+        )
+        reference_genome = {'1': MockObject(seq=rseq)}
+        exp = convert_string_to_cigar('4S24=3D52=')
+        new_cigar = hgvs_standardize_cigar(read, rseq)
+        print(SamRead.deletion_sequences(read, reference_genome))
+        read.cigar = new_cigar
+        print(SamRead.deletion_sequences(read, reference_genome))
+        self.assertEqual(exp, new_cigar)
+
+    def test_unecessary_indel(self):
+        rseq = 'qwertyuiopasdfghjklzxcvbnm'
+        qseq = 'qwertyuiopasdfghjklzxcvbnm'
+        read = MockRead(
+            'name', reference_name='1',
+            reference_start=0,
+            cigar=convert_string_to_cigar('13=1I1D12='),
+            query_sequence=qseq
+        )
+        reference_genome = {'1': MockObject(seq=rseq)}
+        exp = convert_string_to_cigar('26=')
+        new_cigar = hgvs_standardize_cigar(read, rseq)
+        self.assertEqual(exp, new_cigar)
+
+    def test_unecessary_indel2(self):
+        rseq = 'qwertyuiopasdfghjklzxcvbnm'
+        qseq = 'qwertyuiopasdfkghjklzxcvbnm'
+        read = MockRead(
+            'name', reference_name='1',
+            reference_start=0,
+            cigar=convert_string_to_cigar('13=2I1D12='),
+            query_sequence=qseq
+        )
+        reference_genome = {'1': MockObject(seq=rseq)}
+        exp = convert_string_to_cigar('14=1I12=')
+        new_cigar = hgvs_standardize_cigar(read, rseq)
+        self.assertEqual(exp, new_cigar)
+
+    def test_unecessary_indel_end_match(self):
+        rseq = 'qwertyuiopasdfghjklzxcvbnm'
+        qseq = 'qwertyuiopasdfkmkghjklzxcvbnm'
+        read = MockRead(
+            'name', reference_name='1',
+            reference_start=0,
+            cigar=convert_string_to_cigar('14=5I2D10='),
+            query_sequence=qseq
+        )
+        reference_genome = {'1': MockObject(seq=rseq)}
+        exp = convert_string_to_cigar('14=3I12=')
+        new_cigar = hgvs_standardize_cigar(read, rseq)
+        self.assertEqual(exp, new_cigar)
+
+    def test_unecessary_indel_end_match2(self):
+        rseq = 'GGGTGCAGTGGCTTACACCT' 'GTAATCCAAACACCTTGGGAGCCGCCCCCTGAG' 'CCTCCAGGCCCGGGACAGA'
+        qseq = 'GGGTGCAGTGGCTTACACCT' 'CCAGG'                             'CCTCCAGGCCCGGGACAGA'
+        read = MockRead(
+            'name', reference_name='1',
+            reference_start=0,
+            cigar=convert_string_to_cigar('20=5I33D19='),
+            query_sequence=qseq
+        )
+        reference_genome = {'1': MockObject(seq=rseq)}
+        exp = convert_string_to_cigar('20=4I32D20=')
+        new_cigar = hgvs_standardize_cigar(read, rseq)
+        self.assertEqual(exp, new_cigar)
+
+    def test_even_insertion_in_repeat(self):
+        rseq = 'AAAGAAAAAAAAAAAAT' 'ATATATATATATA'   'AATATACATATTATGTATCAAATATATATTATGTGTAATATACATCATGTATC'
+        qseq = 'TTTTAAAAAAAAAAAAT' 'ATATATATATATA' 'TAAATATACATATTATGTATCAAATATATATTATGTGTAATATACATCATGTATC'
+        print(len(qseq) - 13 - 4)
+        read = MockRead(
+            'name', reference_name='1',
+            reference_start=4,
+            cigar=convert_string_to_cigar('4S13=2I66='),
+            query_sequence=qseq
+        )
+        reference_genome = {'1': MockObject(seq=rseq)}
+        exp = convert_string_to_cigar('4S26=2I53=')
+        new_cigar = hgvs_standardize_cigar(read, rseq)
+        read.cigar = new_cigar
+        self.assertEqual(exp, new_cigar)
 
     def test_deletion_repeat(self):
         qseq = (
             'GAGT'
             'GAGACTCTGT'
             'GAA'
-            'AAAGAAAAAAAAAAAATATATATATATATAAATATACATATTATGTATCAAATATATATTATGTGTAATATACATCATGTATC'
-            'AAATATATATTATGTATAATATACATCATATATCAAATATATATTATGTG'
+            'AAAGAAAAAAAAAA'
+            'A'
+            'ATATATATATATATAAATATA'
+            'C'
+            'ATATTATGTATCAAATATATAT'
+            'TATGTGTAATATACATCATGTATCAAATATATATTATGTATAATATACATCATATATCAAATATATATTATGTG'
         )
-
+        # deleted reference: TATGTGTAATATACATCATGTATCAAA
+        print(qseq[:76], qseq[76:])
         read = MockRead(
             'name', reference_name='11_86018001-86018500',
             reference_start=28,
@@ -377,9 +458,12 @@ class TestHgvsStandardizeCigars(unittest.TestCase):
         )
         expected_cigar = [
             (CIGAR.S, 4), (CIGAR.EQ, 10), (CIGAR.X, 3), (CIGAR.EQ, 14), (CIGAR.X, 1),
-            (CIGAR.EQ, 21), (CIGAR.X, 1), (CIGAR.EQ, 22 + 27), (CIGAR.D, 27), (CIGAR.EQ, 74 - 27)
+            (CIGAR.EQ, 21), (CIGAR.X, 1), (CIGAR.EQ, 22 + 30), (CIGAR.D, 27), (CIGAR.EQ, 74 - 30)
         ]
         std_cigar = hgvs_standardize_cigar(read, REFERENCE_GENOME[read.reference_name].seq)
+        print(SamRead.deletion_sequences(read, REFERENCE_GENOME))
+        read.cigar = std_cigar
+        print(SamRead.deletion_sequences(read, REFERENCE_GENOME))
         self.assertEqual(expected_cigar, std_cigar)
 
     @timeout_decorator.timeout(0.01)
@@ -399,11 +483,43 @@ class TestHgvsStandardizeCigars(unittest.TestCase):
             'ACACACACACACACACAC')
         read = MockRead(
             'name', reference_name='mock', reference_start=0, query_sequence=qseq,
-            cigar=[(7, 33), (8, 1), (7, 49), (1, 26), (7, 18), (8, 1), (7, 1), (1, 1), (7, 1), (1, 1), (7, 18)]
+            cigar=[
+                (CIGAR.EQ, 33), (CIGAR.X, 1), (CIGAR.EQ, 49), (CIGAR.I, 26),
+                (CIGAR.EQ, 18), (CIGAR.X, 1), (CIGAR.EQ, 1), (CIGAR.I, 1),
+                (CIGAR.EQ, 1), (CIGAR.I, 1), (CIGAR.EQ, 18)]
         )
-        new_cigar = [(7, 33), (8, 1), (7, 51), (1, 26), (7, 16), (8, 1), (7, 1), (1, 1), (7, 1), (1, 1), (7, 18)]
+        print(rseq)
+        print(read.query_sequence[:83], read.query_sequence[83 + 26: 83 + 26 + 20], read.query_sequence[83 + 26 + 22:])
+        print(read.query_sequence)
+        print(SamRead.insertion_sequences(read))
+        new_cigar = [
+            (CIGAR.EQ, 33), (CIGAR.X, 1), (CIGAR.EQ, 52), (CIGAR.I, 26),
+            (CIGAR.EQ, 15), (CIGAR.X, 1), (CIGAR.EQ, 1), (CIGAR.I, 1),
+            (CIGAR.EQ, 1), (CIGAR.I, 1), (CIGAR.EQ, 18)]
         std_cigar = hgvs_standardize_cigar(read, rseq)
+        print(new_cigar)
+        print(std_cigar)
         self.assertEqual(new_cigar, std_cigar)
+
+    def test_deletion_partial_repeat(self):
+        qseq = ('ATCTTAGCCAGGT'          'AGTTACATACATATC')
+        rseq = ('ATCTTAGCCAGGT' 'AGCTAT' 'AGTTACATACATATC')
+        read = MockRead(
+            'name', reference_name='mock', reference_start=0, query_sequence=qseq,
+            cigar=convert_string_to_cigar('13=6D15=')
+        )
+        self.assertEqual(convert_string_to_cigar('15=6D13='), hgvs_standardize_cigar(read, rseq))
+
+    def test_indel_repeat(self):
+        qseq = ('ATCTTAGCCAGGT' 'C'      'AGTTACATACATATC')
+        rseq = ('ATCTTAGCCAGGT' 'AGCTAT' 'AGTTACATACATATC')
+        print(qseq)
+        print(rseq)
+        read = MockRead(
+            'name', reference_name='mock', reference_start=0, query_sequence=qseq,
+            cigar=convert_string_to_cigar('13=1I6D15=')
+        )
+        self.assertEqual(convert_string_to_cigar('13=1I6D15='), hgvs_standardize_cigar(read, rseq))
 
 
 class TestMergeInternalEvents(unittest.TestCase):
@@ -439,3 +555,25 @@ class TestConvertStringToCigar(unittest.TestCase):
             (CIGAR.M, 313)
         ]
         self.assertEqual(exp, convert_string_to_cigar(string))
+
+
+class TestGetSequences(unittest.TestCase):
+
+    def setUp(self):
+        self.reference_genome = {'1': MockObject(seq='abcdefghijklmnopqrstuvwxyz')}
+
+    def test_deletions(self):
+        exp = ['cde', 'nopq']
+        read = MockRead(
+            reference_start=0, reference_name='1', query_sequence='',
+            cigar=convert_string_to_cigar('2=3D8=4D9=')
+        )
+        self.assertEqual(exp, SamRead.deletion_sequences(read, self.reference_genome))
+
+    def test_insertions(self):
+        exp = ['kkk', 'kkkk']
+        read = MockRead(
+            reference_start=0, reference_name='1', query_sequence='abcdekkkfghijklmnopqkkkkrstuvwxyz',
+            cigar=convert_string_to_cigar('5=3I12=4I9=')
+        )
+        self.assertEqual(exp, SamRead.insertion_sequences(read))

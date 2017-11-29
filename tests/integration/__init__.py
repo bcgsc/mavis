@@ -2,6 +2,7 @@ import os
 
 from mavis.align import query_coverage_interval
 from mavis.annotate.genomic import Transcript, UsTranscript
+from mavis.annotate.file_io import load_annotations, load_reference_genome
 from mavis.annotate.protein import Translation
 from mavis.constants import CIGAR, NA_MAPPING_QUALITY
 
@@ -24,6 +25,32 @@ BLAT_OUTPUT = os.path.join(DATA_DIR, 'blat_output.pslx')
 
 RUN_FULL = int(os.environ.get('RUN_FULL', 1))
 OUTPUT_SVG = int(os.environ.get('OUTPUT_SVG', 0))
+_EXAMPLE_GENES = None
+
+
+def get_example_genes():
+    return _EXAMPLE_GENES
+
+
+def set_example_genes():
+    result = {}
+    genes = load_annotations(os.path.join(DATA_DIR, 'example_genes.json'))
+    seqs = load_reference_genome(os.path.join(DATA_DIR, 'example_genes.fa'))
+    for chr_genes in genes.values():
+        for gene in chr_genes:
+            if gene.name in seqs:
+                gene.seq = str(seqs[gene.name].seq)
+            result[gene.name] = gene
+            if gene.aliases:
+                for alias in gene.aliases:
+                    result[alias] = gene
+    print(result.keys())
+    return result
+
+
+def setUpPackage():
+    global _EXAMPLE_GENES
+    _EXAMPLE_GENES = set_example_genes()
 
 
 class MockObject:
@@ -205,8 +232,8 @@ def mock_read_pair(mock1, mock2):
     return mock1, mock2
 
 
-def build_transcript(gene, exons, cds_start, cds_end, domains, strand=None, is_best_transcript=False):
-    ust = UsTranscript(exons, gene=gene, strand=strand if strand is not None else gene.get_strand(), is_best_transcript=is_best_transcript)
+def build_transcript(gene, exons, cds_start, cds_end, domains, strand=None, is_best_transcript=False, name=None):
+    ust = UsTranscript(exons, gene=gene, strand=strand if strand is not None else gene.get_strand(), is_best_transcript=is_best_transcript, name=name)
     if gene is not None:
         gene.unspliced_transcripts.append(ust)
 
