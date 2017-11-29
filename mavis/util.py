@@ -10,6 +10,7 @@ import time
 
 from braceexpand import braceexpand
 from tab import tab
+from shortuuid import uuid
 
 from .breakpoint import Breakpoint, BreakpointPair
 from .constants import COLUMNS, ORIENT, PROTOCOL, sort_columns, STRAND, SVTYPE, MavisNamespace
@@ -367,11 +368,12 @@ def read_bpp_from_input_file(filename, expand_orient=False, expand_strand=False,
             COLUMNS.break1_position_end: int,
             COLUMNS.break2_position_start: int,
             COLUMNS.break2_position_end: int,
-            COLUMNS.opposing_strands: partial(soft_cast, cast_type=bool),
+            COLUMNS.opposing_strands: lambda x: None if x == '?' else soft_cast(x, cast_type=bool),
             COLUMNS.stranded: tab.cast_boolean,
             COLUMNS.untemplated_seq: soft_null_cast,
             COLUMNS.break1_chromosome: lambda x: re.sub('^chr', '', x),
-            COLUMNS.break2_chromosome: lambda x: re.sub('^chr', '', x)
+            COLUMNS.break2_chromosome: lambda x: re.sub('^chr', '', x),
+            COLUMNS.tracking_id: lambda x: x if x else str(uuid())
         })
     kwargs.setdefault('add_default', {}).update({
         COLUMNS.untemplated_seq: None,
@@ -379,7 +381,8 @@ def read_bpp_from_input_file(filename, expand_orient=False, expand_strand=False,
         COLUMNS.break1_strand: STRAND.NS,
         COLUMNS.break2_orientation: ORIENT.NS,
         COLUMNS.break2_strand: STRAND.NS,
-        COLUMNS.opposing_strands: None
+        COLUMNS.opposing_strands: None,
+        COLUMNS.tracking_id: ''
     })
     kwargs.setdefault('in_', {}).update(
         {
@@ -475,7 +478,7 @@ def read_bpp_from_input_file(filename, expand_orient=False, expand_strand=False,
                             'error: expected one of', BreakpointPair.classify(bpp),
                             'but found', putative_event_type, str(bpp), row)
                 if expand_svtype and putative_event_type is None:
-                    for svtype in BreakpointPair.classify(bpp, discriminate=True):
+                    for svtype in BreakpointPair.classify(bpp, distance=lambda x, y: Interval(y - x)):
                         new_bpp = bpp.copy()
                         new_bpp.data[COLUMNS.event_type] = svtype
                         temp.append(new_bpp)

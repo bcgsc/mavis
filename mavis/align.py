@@ -61,8 +61,8 @@ class SplitAlignment(BreakpointPair):
         fraction of the query sequence which is aligned (everything not soft-clipped) in either alignment
         """
         if self.read2 is None or Interval.overlaps(self.query_coverage_read1(), self.query_coverage_read2()):
-            return len(self.query_coverage()) / len(self.query_sequence)
-        return (len(self.query_coverage_read1()) + len(self.query_coverage_read2())) / len(self.query_sequence)
+            return len(self.query_coverage()) / self.read1.query_length
+        return (len(self.query_coverage_read1()) + len(self.query_coverage_read2())) / self.read1.query_length
 
     def query_overlap_extension(self):
         if self.read2 is not None:
@@ -78,13 +78,14 @@ class SplitAlignment(BreakpointPair):
         """
         def score_matches(cigar):
             return sum([v + (v - 1) * consec_bonus for s, v in cigar if s == CIGAR.EQ])
-        score = score_matches(self.read1.cigar)
+        score = score_matches(_cigar.join([(s, f) for s, f in self.read1.cigar if s != CIGAR.N]))
+
         qlen = len(self.query_coverage())
         if self.read2 is not None:
-            score += score_matches(self.read2.cigar)
+            score += score_matches([(s, f) for s, f in self.read2.cigar if s != CIGAR.N])
             if Interval.overlaps(self.query_coverage_read1(), self.query_coverage_read2()):
                 qlen += len(self.query_coverage_read1() & self.query_coverage_read2())
-        return score / (qlen + (qlen - 1) * consec_bonus)
+        return score / score_matches([(CIGAR.EQ, qlen)])
 
     def mapping_quality(self):
         if not self.read2:
@@ -155,7 +156,7 @@ def convert_to_duplication(bpp, reference_genome):
     return bpp
 
 
-def call_read_events(read):
+def call_read_events(read, secondary_read=None):
     """
     Given a read, return breakpoint pairs representing all putative events
     """
@@ -189,7 +190,7 @@ def call_read_events(read):
             else:
                 curr_event = (reference_pos, 0, read.query_sequence[query_pos: query_pos + freq])
             query_pos += freq
-        else:
+        elif state != CIGAR.H:
             raise NotImplementedError('Should never happen. Invalid cigar state is not reference or query aligned', state)
     if curr_event:
         events.append(curr_event)
@@ -199,7 +200,7 @@ def call_read_events(read):
         bpp = SplitAlignment(
             Breakpoint(read.reference_name, ref_start, orient=ORIENT.LEFT, strand=strand),
             Breakpoint(read.reference_name, ref_start + delsize + 1, orient=ORIENT.RIGHT, strand=strand),
-            untemplated_seq=insseq, read1=read
+            untemplated_seq=insseq, read1=read, read2=secondary_read
         )
         result.append(bpp)
     return result
@@ -209,8 +210,8 @@ def read_breakpoint(read):
     """
     convert a given read to a single breakpoint
     """
-    start_softclipping = read.cigar[0][1] if read.cigar[0][0] == CIGAR.S else 0
-    end_softclipping = read.cigar[-1][1] if read.cigar[-1][0] == CIGAR.S else 0
+    start_softclipping = read.cigar[0][1] if read.cigar[0][0] in _cigar.CLIPPING_STATE else 0
+    end_softclipping = read.cigar[-1][1] if read.cigar[-1][0] in _cigar.CLIPPING_STATE else 0
 
     if start_softclipping == end_softclipping:
         raise AssertionError('softclipping is equal and therefore orientation cannot be determined')
@@ -387,12 +388,13 @@ def select_contig_alignments(evidence, reads_by_query):
         for raw_read in reads_by_query[contig.seq]:
             if raw_read.reference_name not in {evidence.break1.chr, evidence.break2.chr}:
                 continue
-            raw_read.cigar = _cigar.merge_internal_events(
-                raw_read.cigar,
+            read = evidence.standardize_read(raw_read)
+            read.cigar = _cigar.merge_internal_events(
+                read.cigar,
                 inner_anchor=evidence.contig_aln_merge_inner_anchor,
                 outer_anchor=evidence.contig_aln_merge_outer_anchor
             )
-            read = evidence.standardize_read(raw_read)
+            read = evidence.standardize_read(read)  # genome needs to merge first, trans needs to standard first
 
             for single_alignment in call_read_events(read):
                 if single_alignment.break1.chr in {evidence.break1.chr, evidence.break2.chr}:
@@ -428,12 +430,16 @@ def select_contig_alignments(evidence, reads_by_query):
                 paired_event.break2 & evidence.outer_window2
             ]):
                 alignments.append(paired_event)
+                alignments.extend(call_read_events(read1, read2))
+                alignments.extend(call_read_events(read2, read1))
         filtered_alignments = set()
         for alignment in sorted(alignments, key=lambda x: (x.read2 is None, x.score()), reverse=True):
             if any([
                 alignment.query_consumption() < evidence.contig_aln_min_query_consumption,
                 alignment.read2 is not None and alignment.query_overlap_extension() < evidence.contig_aln_min_extend_overlap,
-                alignment in filtered_alignments
+                alignment in filtered_alignments,
+                alignment.score() < evidence.contig_aln_min_score,
+                alignment.mapping_quality() == Interval(0)
             ]):
                 continue
             filtered_alignments.add(alignment)

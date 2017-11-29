@@ -12,7 +12,7 @@ DEFAULTS = WeakMavisNamespace()
 - :term:`uninformative_filter`
 """
 DEFAULTS.add('min_clusters_per_file', 50, defn='the minimum number of breakpoint pairs to output to a file')
-DEFAULTS.add('max_files', 100, defn='The maximum number of files to output from clustering/splitting')
+DEFAULTS.add('max_files', 200, defn='The maximum number of files to output from clustering/splitting')
 DEFAULTS.add(
     'cluster_initial_size_limit', 25,
     defn='the maximum cumulative size of both breakpoints for breakpoint pairs to be used in the initial clustering '

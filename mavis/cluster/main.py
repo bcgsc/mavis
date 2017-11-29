@@ -92,7 +92,7 @@ def main(
     # load the input files
     breakpoint_pairs = read_inputs(
         inputs,
-        cast={COLUMNS.tools: lambda x: set(x.split(';')) if x else set()},
+        cast={COLUMNS.tools: lambda x: set(x.split(';')) if x else set() if not split_only else x},
         add_default={
             COLUMNS.library: library,
             COLUMNS.protocol: protocol,

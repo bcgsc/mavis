@@ -570,7 +570,7 @@ use the -h/--help option
             rargs.annotations_filename = rargs.annotations
             rargs.annotations = None
     except AttributeError as err:
-        print(repr(err))
+        pass
     # reference genome
     try:
         if pstep in [SUBCOMMAND.VALIDATE, SUBCOMMAND.ANNOTATE]:

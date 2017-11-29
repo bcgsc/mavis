@@ -3,8 +3,10 @@ import unittest
 
 from mavis.annotate.genomic import Gene, Transcript, UsTranscript
 from mavis.bam.cache import BamCache
+from mavis.bam.read import SamRead
+from mavis.bam import cigar as _cigar
 from mavis.breakpoint import Breakpoint, BreakpointPair
-from mavis.constants import ORIENT, STRAND
+from mavis.constants import CIGAR, ORIENT, STRAND
 from mavis.interval import Interval
 from mavis.validate.constants import DEFAULTS
 from mavis.validate.base import Evidence
@@ -42,13 +44,20 @@ class TestDistance(unittest.TestCase):
         dist = self.trans_evidence.distance(101, 300)
         self.assertEqual(Interval(199), dist)
 
+    def test_aligned_intronic(self):
+        dist = self.trans_evidence.distance(1102, 1499)
+        self.assertEqual(Interval(5), dist)
+
+    def test_indel_at_exon_boundary(self):
+        self.assertEqual(Interval(2), self.trans_evidence.distance(1101, 1501))
+
     def test_no_annotations(self):
         dist = self.trans_evidence.distance(101, 300, [])
         self.assertEqual(Interval(199), dist)
 
     def test_intergenic_intronic(self):
         dist = self.trans_evidence.distance(101, 1400)
-        self.assertEqual(Interval(1299), dist)
+        self.assertEqual(Interval(1101), dist)
 
     def test_empty_intron(self):
         t2 = UsTranscript([(1001, 1100), (1501, 1600), (2001, 2200), (2201, 2300)], strand='+')
@@ -59,6 +68,66 @@ class TestDistance(unittest.TestCase):
         self.trans_evidence.overlapping_transcripts.add(t2)
         dist = self.trans_evidence.distance(1001, 2301)
         self.assertEqual(Interval(400, 400), dist)
+
+
+class TestTransStandardize(unittest.TestCase):
+
+    def test_shift_overaligned(self):
+        # qwertyuiopas---kkkkk------dfghjklzxcvbnm
+        # ..........      ................
+        gene = Gene('1', 1, 1000, strand='+')
+        transcript = UsTranscript(exons=[(1, 12), (20, 28)], gene=gene, strand='+')
+        for spl_patt in transcript.generate_splicing_patterns():
+            transcript.transcripts.append(Transcript(transcript, spl_patt))
+        gene.transcripts.append(transcript)
+        read = SamRead(
+            reference_name='1', reference_start=0, cigar=_cigar.convert_string_to_cigar('14=7D12='),
+            query_sequence='qwertyuiopasdfghjklzxcvbnm')
+        evidence = TranscriptomeEvidence(
+            annotations={}, reference_genome={'1': MockObject(seq='qwertyuiopasdfkkkkkdfghjklzxcvbnm')},
+            bam_cache=MockObject(get_read_reference_name=lambda r: r.reference_name),
+            break1=Breakpoint('1', 1, orient='L', strand='+'), break2=Breakpoint('1', 10, orient='R', strand='+'),
+            read_length=75,
+            stdev_fragment_size=75,
+            median_fragment_size=220)
+        evidence.overlapping_transcripts.add(transcript)
+        new_read = evidence.standardize_read(read)
+        self.assertEqual(_cigar.convert_string_to_cigar('12=7N14='), new_read.cigar)
+
+    def test_shift_overaligned_left(self):
+        # qwertyuiopasdf---kkkkkdf------ghjklzxcvbnm
+        # ..........      ................
+        gene = Gene('1', 1, 1000, strand='+')
+        transcript = UsTranscript(exons=[(1, 14), (22, 28)], gene=gene, strand='+')
+        for spl_patt in transcript.generate_splicing_patterns():
+            transcript.transcripts.append(Transcript(transcript, spl_patt))
+        gene.transcripts.append(transcript)
+        read = SamRead(
+            reference_name='1', reference_start=0, cigar=_cigar.convert_string_to_cigar('12=7D14='),
+            query_sequence='qwertyuiopasdfghjklzxcvbnm')
+        evidence = TranscriptomeEvidence(
+            annotations={}, reference_genome={'1': MockObject(seq='qwertyuiopasdfkkkkkdfghjklzxcvbnmsbcdefhi')},
+            bam_cache=MockObject(get_read_reference_name=lambda r: r.reference_name),
+            break1=Breakpoint('1', 1, orient='L', strand='+'), break2=Breakpoint('1', 10, orient='R', strand='+'),
+            read_length=75,
+            stdev_fragment_size=75,
+            median_fragment_size=220)
+        evidence.overlapping_transcripts.add(transcript)
+        new_read = evidence.standardize_read(read)
+        self.assertEqual(_cigar.convert_string_to_cigar('14=7N12='), new_read.cigar)
+
+    def test_shift_no_transcripts(self):
+        read = SamRead(
+            reference_name='1', reference_start=0, cigar=_cigar.convert_string_to_cigar('14=7D18='),
+            query_sequence='qwertyuiopasdfdfghjklzxcvbnm')
+        evidence = TranscriptomeEvidence(
+            annotations={}, reference_genome={'1': MockObject(seq='qwertyuiopasdfkkkkkdfghjklzxcvbnm')},
+            bam_cache=None, break1=Breakpoint('1', 1, orient='L', strand='+'), break2=Breakpoint('1', 10, orient='R', strand='+'),
+            read_length=75,
+            stdev_fragment_size=75,
+            median_fragment_size=220)
+        new_cigar = evidence.exon_boundary_shift_cigar(read)
+        self.assertEqual(_cigar.convert_string_to_cigar('14=7D18='), new_cigar)
 
 
 class TestComputeFragmentSizes(unittest.TestCase):

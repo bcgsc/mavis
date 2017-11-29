@@ -1,15 +1,14 @@
 import unittest
 
-from mavis.align import call_paired_read_event
+from mavis.align import call_paired_read_event, select_contig_alignments
 from mavis.annotate.file_io import load_reference_genome
 from mavis.annotate.genomic import UsTranscript, Transcript
 from mavis.bam.cache import BamCache
-from mavis.bam.read import sequenced_strand
+from mavis.bam.read import sequenced_strand, SamRead
 from mavis.bam.cigar import convert_string_to_cigar
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import CALL_METHOD, CIGAR, ORIENT, PYSAM_READ_FLAGS, STRAND, SVTYPE, reverse_complement
-import mavis.validate.call as call
-from mavis.validate.call import EventCall
+from mavis.validate import call
 from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
 
 from . import BAM_INPUT, FULL_BAM_INPUT, mock_read_pair, MockBamFileHandle, MockObject, MockRead, REFERENCE_GENOME_FILE, get_example_genes, MockLongString
@@ -47,13 +46,32 @@ class TestCallByContig(unittest.TestCase):
             seq=MockLongString(gene.seq, offset=gene.start - 1)
         )}
 
-        contig = MockRead(
-            query_sequence='CTTGAAGGAAACTGAATTCAAAAAGATCAAAGTGCTGGGCTCCGGTGCGTTCGGCACGGTGTATAAGGGACTCTGGATCCCAGAAGGTGAGAAAGTTAAAATTCCCGTCGCTATCAAGGAATTAAGAGAAGCAACATCTCCGAAAGCCAACAAGGAAATCCTCGATGAAGCCTACGTGATGGCCAGCGTGGACAACCCCCACGTGTGCCGCCTGCTGGGCATCTGCCTCACCTCCACCGTGCAGCTCATCATGCAGCTCATGCCCTTCGGCTGCCTCCTGGACTATGTCCGGGAACACAAAGACAATATTGGCTCCCAGTACCTGCTCAACTGGTGTGTGCAGATCGCAAAGGGCATGAACTACTTGGAGGACCGTCGCTTGGTGCACCGCGACCTGGCAGCCAGGAACGTACTGGTGAAAACACCGCAGCATGTCAAGATCACAGATTTTGGGCTGGCCAAACTGCTGGGTGCGGAAGAGAAAGAATACCATGCAGAAGGAGGCAAAGTGCCTATCAAGTGGATGGCATTGGAATCAATTTTACACAGAATCTATACCCACCAGAGTGATGTCTGGAGCTACGGGGTGACCGTTTGGGAGTTGATGACCTTTGGATCCAA',
-            cigar=convert_string_to_cigar('68M678D98M6472D187M10240D155M891D77M7I5882D29M'),
+        read = SamRead(
+            query_sequence='CTTGAAGGAAACTGAATTCAAAAAGATCAAAGTGCTGGGCTCCGGTGCGTTCGGCACGGTGTATAAGGGACTCTGGATCCCAGAAGGTGAGAAAGTTAAAATTCCCGTCGCTATCAAGACATCTCCGAAAGCCAACAAGGAAATCCTCGATGAAGCCTACGTGATGGCCAGCGTGGACAACCCCCACGTGTGCCGCCTGCTGGGCATCTGCCTCACCTCCACCGTGCAGCTCATCATGCAGCTCATGCCCTTCGGCTGCCTCCTGGACTATGTCCGGGAACACAAAGACAATATTGGCTCCCAGTACCTGCTCAACTGGTGTGTGCAGATCGCAAAGGGCATGAACTACTTGGAGGACCGTCGCTTGGTGCACCGCGACCTGGCAGCCAGGAACGTACTGGTGAAAACACCGCAGCATGTCAAGATCACAGATTTTGGGCTGGCCAAACTGCTGGGTGCGGAAGAGAAAGAATACCATGCAGAAGGAGGCAAAGTGCCTATCAAGTGGATGGCATTGGAATCAATTTTACACAGAATCTATACCCACCAGAGTGATGTCTGGAGCTACGGGGTGACCGTTTGGGAGTTGATGACCTTTGGATCCAA',
+            cigar=convert_string_to_cigar('68M678D50M15D34M6472D185M10240D158M891D74M' '5875D' '6M' '1X' '29M'),
             reference_name='7',
             reference_id=6,
-            reference_start=55241670
+            reference_start=55241669
         )
+        print('read.cigar', read.cigar)
+        evidence = TranscriptomeEvidence(
+            reference_annotations,
+            Breakpoint(gene.chr, gene.start, gene.end, orient='L', strand='+'), Breakpoint(gene.chr, gene.start, gene.end, orient='R', strand='+'),
+            reference_genome=reference_genome,
+            read_length=75, stdev_fragment_size=75, median_fragment_size=220,
+            bam_cache=MockObject(get_read_reference_name=lambda x: gene.chr, stranded=True)
+        )
+        evidence.contigs.append(MockObject(seq=read.query_sequence, alignments=set()))
+        select_contig_alignments(evidence, {read.query_sequence: {read}})
+        print('distance', evidence.distance(55219055, 55220239))
+        print('selected contig alignments')
+        print([c.alignments for c in evidence.contigs])
+        events = call._call_by_contigs(evidence)
+        self.assertEqual(1, len(events))
+        self.assertEqual(Breakpoint('7', 55242465, orient='L', strand='+'), events[0].break1)
+        self.assertEqual(Breakpoint('7', 55242481, orient='R', strand='+'), events[0].break2)
+        print(events[0].contig_alignment.score())
+        self.assertTrue(events[0].contig_alignment.score() > 0.99)
 
 
 class TestEventCall(unittest.TestCase):
@@ -70,7 +88,7 @@ class TestEventCall(unittest.TestCase):
             stdev_count_abnormal=3,
             min_flanking_pairs_resolution=3
         )
-        self.ev = EventCall(
+        self.ev = call.EventCall(
             Breakpoint('reference3', 1114, orient=ORIENT.RIGHT),
             Breakpoint('reference3', 2187, orient=ORIENT.RIGHT),
             source_evidence=self.ev1,
@@ -160,7 +178,7 @@ class TestPullFlankingSupport(unittest.TestCase):
                 MockRead('r1', 0, 400, 450, is_reverse=False),
                 MockRead('r1', 0, 1200, 1260, is_reverse=True)
             )]
-        event = EventCall(
+        event = call.EventCall(
             Breakpoint('1', 500, orient=ORIENT.LEFT),
             Breakpoint('1', 1000, orient=ORIENT.RIGHT),
             evidence, SVTYPE.DEL, CALL_METHOD.SPLIT)
@@ -188,7 +206,7 @@ class TestPullFlankingSupport(unittest.TestCase):
                 MockRead('r1', 0, 400, 450, is_reverse=False),
                 MockRead('r1', 0, 1500, 1260, is_reverse=True)
             )]
-        event = EventCall(
+        event = call.EventCall(
             Breakpoint('1', 900, orient=ORIENT.LEFT),
             Breakpoint('1', 1000, orient=ORIENT.RIGHT),
             evidence, SVTYPE.DEL, CALL_METHOD.SPLIT)
@@ -206,7 +224,7 @@ class TestPullFlankingSupport(unittest.TestCase):
                 MockRead('r1', 0, 950, 1049, is_reverse=True)
             )]
         print(evidence.min_expected_fragment_size)
-        event = EventCall(
+        event = call.EventCall(
             Breakpoint('1', 800, orient=ORIENT.LEFT),
             Breakpoint('1', 900, orient=ORIENT.RIGHT),
             evidence, SVTYPE.INS, CALL_METHOD.SPLIT)
@@ -224,7 +242,7 @@ class TestPullFlankingSupport(unittest.TestCase):
                 MockRead('r1', 0, 400, 450, is_reverse=False),
                 MockRead('r1', 0, 900, 950, is_reverse=False)
             )]
-        event = EventCall(
+        event = call.EventCall(
             Breakpoint('1', 500, orient=ORIENT.LEFT),
             Breakpoint('1', 1000, orient=ORIENT.LEFT),
             evidence, SVTYPE.INV, CALL_METHOD.SPLIT)
@@ -252,7 +270,7 @@ class TestPullFlankingSupport(unittest.TestCase):
                 MockRead('r1MockSeq, ', 0, 1100, 1150, is_reverse=True),
                 MockRead('r1', 1, 1200, 1250, is_reverse=True)
             )]
-        event = EventCall(
+        event = call.EventCall(
             Breakpoint('1', 1200, orient=ORIENT.LEFT),
             Breakpoint('2', 1300, orient=ORIENT.LEFT),
             evidence, SVTYPE.ITRANS, CALL_METHOD.SPLIT)
@@ -263,7 +281,7 @@ class TestPullFlankingSupport(unittest.TestCase):
         b1 = Breakpoint('11', 128675261, orient=ORIENT.RIGHT, strand=STRAND.POS)
         b2 = Breakpoint('22', 29683123, orient=ORIENT.LEFT, strand=STRAND.POS)
         evidence = self.build_genome_evidence(b1, b2)
-        event = EventCall(b1, b2, evidence, SVTYPE.TRANS, CALL_METHOD.CONTIG)
+        event = call.EventCall(b1, b2, evidence, SVTYPE.TRANS, CALL_METHOD.CONTIG)
         flanking_pairs = [
             mock_read_pair(
                 MockRead('x', '11', 128675264, 128677087, is_reverse=False),
@@ -303,7 +321,7 @@ class TestPullFlankingSupport(unittest.TestCase):
                 MockRead('r1', 0, 1201, 1249, is_reverse=True),
                 MockRead('r1', 1, 1201, 1249, is_reverse=False)
             )]
-        event = EventCall(
+        event = call.EventCall(
             Breakpoint('1', 1200, orient=ORIENT.RIGHT),
             Breakpoint('2', 1250, orient=ORIENT.LEFT),
             evidence, SVTYPE.TRANS, CALL_METHOD.SPLIT)
@@ -332,7 +350,7 @@ class TestPullFlankingSupport(unittest.TestCase):
                 MockRead('r1', 0, 1205, 1250, is_reverse=True),
                 MockRead('r1', 0, 1260, 1295, is_reverse=False)
             )]
-        event = EventCall(
+        event = call.EventCall(
             Breakpoint('1', 1200, orient=ORIENT.RIGHT),
             Breakpoint('1', 1300, orient=ORIENT.LEFT),
             evidence, SVTYPE.DUP, CALL_METHOD.SPLIT)
@@ -1051,11 +1069,13 @@ class TestCallBySpanningReads(unittest.TestCase):
             min_spanning_reads_resolution=1
         )
         spanning_reads = [
-            MockRead(
-                'name', '1', 50, cigar=[(CIGAR.EQ, 15), (CIGAR.D, 5), (CIGAR.I, 2), (CIGAR.EQ, 10)],
+            SamRead(
+                query_name='name', reference_name='1', reference_start=50,
+                cigar=[(CIGAR.EQ, 15), (CIGAR.D, 5), (CIGAR.I, 2), (CIGAR.EQ, 10)],
                 query_sequence='ATCGATCTAGATCTA' 'GG' 'ATAGTTCTAG'),
-            MockRead(
-                'name', '1', 50, cigar=[(CIGAR.EQ, 15), (CIGAR.I, 2), (CIGAR.D, 5), (CIGAR.EQ, 10)],
+            SamRead(
+                query_name='name', reference_name='1', reference_start=50,
+                cigar=[(CIGAR.EQ, 15), (CIGAR.I, 2), (CIGAR.D, 5), (CIGAR.EQ, 10)],
                 query_sequence='ATCGATCTAGATCTA' 'GG' 'ATAGTTCTAG')
         ]
         ev.spanning_reads = set(spanning_reads)
