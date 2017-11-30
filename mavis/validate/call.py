@@ -528,7 +528,7 @@ def _call_interval_by_flanking_coverage(coverage, orientation, max_expected_frag
             'max_expected_fragment_size and read_length must be positive integers',
             max_expected_fragment_size, read_length)
 
-    coverage_d = distance(coverage.start, coverage.end).start  # minimum distance of the coverage
+    coverage_d = distance(coverage.start, coverage.end).start + 1  # minimum distance of the coverage
     max_interval = max_expected_fragment_size - read_length
     if coverage_d > max_interval:
         msg = 'length of the coverage interval ({}) is greater than the maximum expected ({})'.format(
@@ -537,11 +537,11 @@ def _call_interval_by_flanking_coverage(coverage, orientation, max_expected_frag
         raise AssertionError(msg)
     if orientation == ORIENT.LEFT:
         start = coverage.end
-        end = traverse(coverage.end, max_interval - coverage_d - 1, ORIENT.RIGHT).end
+        end = traverse(coverage.end, max_interval - coverage_d, ORIENT.RIGHT).end
         return Interval(start, end)
     elif orientation == ORIENT.RIGHT:
         end = coverage.start
-        start = max([1, traverse(coverage.start, max_interval - coverage_d - 1, ORIENT.LEFT).start])
+        start = max([1, traverse(coverage.start, max_interval - coverage_d, ORIENT.LEFT).start])
         return Interval(start, end)
     else:
         raise ValueError('orientation must be specific', orientation)
