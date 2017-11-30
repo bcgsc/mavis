@@ -1,4 +1,4 @@
-from .genomic import Exon, Transcript, UsTranscript
+from .genomic import Exon, Transcript, PreTranscript
 from .protein import calculate_orf, Domain, Translation
 from ..breakpoint import Breakpoint
 from ..constants import ORIENT, PRIME, PROTOCOL, reverse_complement, STRAND, SVTYPE
@@ -38,8 +38,16 @@ def determine_prime(transcript, breakpoint):
         raise NotSpecifiedError('cannot determine prime if the strand of the transcript has not been specified')
 
 
-class FusionTranscript(UsTranscript):
+class FusionTranscript(PreTranscript):
+    """
+    FusionTranscript is a PreTranscript built from two parent PreTranscripts. It has most of the
+    same functionality as a regular PreTranscript except that it will not have a parent gene and
+    retains a mapping of the new exons to the exons in the PreTranscript they originated from
 
+    Additionally the FusionTranscript is always constructed on the positive strand.
+
+    The preferred way to construct a FusionTranscript is through the build method.
+    """
     def __init__(self):
         self.exon_mapping = {}
         self.exons = []
@@ -401,7 +409,7 @@ class FusionTranscript(UsTranscript):
         return fusion_ust
 
     def get_seq(self, reference_genome=None, ignore_cache=False):
-        return UsTranscript.get_seq(self)
+        return PreTranscript.get_seq(self)
 
     def get_cdna_seq(self, splicing_pattern, reference_genome=None, ignore_cache=False):
         """
@@ -413,7 +421,7 @@ class FusionTranscript(UsTranscript):
         Returns:
             str: the spliced cDNA seq
         """
-        return UsTranscript.get_cdna_seq(self, splicing_pattern)
+        return PreTranscript.get_cdna_seq(self, splicing_pattern)
 
     @classmethod
     def _pull_exons(cls, transcript, breakpoint, reference_sequence):

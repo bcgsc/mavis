@@ -106,22 +106,22 @@ def draw_transcript_with_translation(
     config, canvas, translation, labels, colors, mapping, reference_genome=None, x_start=None, x_end=None
 ):
     main_group = canvas.g()
-    ust = translation.transcript.reference_object
+    pre_transcript = translation.transcript.reference_object
     spl_tx = translation.transcript
 
     if x_start is None:
-        x_start = Interval.convert_ratioed_pos(mapping, ust.start).start
+        x_start = Interval.convert_ratioed_pos(mapping, pre_transcript.start).start
     if x_end is None:
-        x_end = Interval.convert_ratioed_pos(mapping, ust.end).end
+        x_end = Interval.convert_ratioed_pos(mapping, pre_transcript.end).end
 
     label_prefix = config.transcript_label_prefix
-    if isinstance(ust, FusionTranscript):
+    if isinstance(pre_transcript, FusionTranscript):
         label_prefix = config.fusion_label_prefix
 
     # if the splicing takes up more room than the track we need to adjust for it
     y = config.splice_height
 
-    exon_track_group = draw_exon_track(config, canvas, ust, mapping, colors, translation=translation)
+    exon_track_group = draw_exon_track(config, canvas, pre_transcript, mapping, colors, translation=translation)
     exon_track_group.translate(0, y)
     exon_track_group.add(canvas.text(
         labels.add(spl_tx, label_prefix),
@@ -133,7 +133,7 @@ def draw_transcript_with_translation(
         style=config.font_style.format(font_size=config.label_font_size, text_anchor='end'),
         class_='label'
     ))
-    exon_track_group.add(Tag('title', 'Transcript: {}'.format(ust.name if ust.name else '')))
+    exon_track_group.add(Tag('title', 'Transcript: {}'.format(pre_transcript.name if pre_transcript.name else '')))
 
     # draw the splicing pattern
     splice_group = canvas.g(class_='splicing')
@@ -273,7 +273,7 @@ def draw_transcript_with_translation(
 
 
 def draw_ustranscript(
-    config, canvas, ust, target_width=None, breakpoints=[], labels=LabelMapping(), colors={},
+    config, canvas, pre_transcript, target_width=None, breakpoints=[], labels=LabelMapping(), colors={},
     mapping=None, reference_genome=None, masks=None
 ):
     """
@@ -285,7 +285,7 @@ def draw_ustranscript(
     Args:
         canvas (svgwrite.drawing.Drawing): the main svgwrite object used to create new svg elements
         target_width (int): the target width of the diagram
-        ust (Transcript): the transcript being drawn
+        pre_transcript (Transcript): the transcript being drawn
         exon_color (str): the color being used for the fill of the exons
         utr_color (str): the color for the fill of the UTR regions
         abrogated_splice_sites (:class:`list` of :class:`int`): list of positions to ignore as splice sites
@@ -296,25 +296,25 @@ def draw_ustranscript(
                 Has the added parameters of labels, height, and mapping
     """
 
-    if ust.get_strand() not in [STRAND.POS, STRAND.NEG]:
-        raise NotSpecifiedError('strand must be positive or negative to draw the ust')
+    if pre_transcript.get_strand() not in [STRAND.POS, STRAND.NEG]:
+        raise NotSpecifiedError('strand must be positive or negative to draw the pre_transcript')
     if (mapping is None and target_width is None) or (mapping is not None and target_width is not None):
         raise AttributeError('mapping and target_width arguments are required and mutually exclusive')
 
     if mapping is None:
         mapping = generate_interval_mapping(
-            ust.exons,
+            pre_transcript.exons,
             target_width,
             config.exon_intron_ratio,
             config.exon_min_width,
             min_inter_width=config.min_width
         )
 
-    main_group = canvas.g(class_='ust')
+    main_group = canvas.g(class_='pre_transcript')
 
     y = config.breakpoint_top_margin if len(breakpoints) > 0 else 0
-    x_start = Interval.convert_ratioed_pos(mapping, ust.start).start
-    x_end = Interval.convert_ratioed_pos(mapping, ust.end).end
+    x_start = Interval.convert_ratioed_pos(mapping, pre_transcript.start).start
+    x_end = Interval.convert_ratioed_pos(mapping, pre_transcript.end).end
 
     if target_width:
         x_start = 0
@@ -326,9 +326,9 @@ def draw_ustranscript(
             if len(breakpoints) == 1:
                 b = breakpoints[0]
                 if b.orient == ORIENT.RIGHT:
-                    masks = [Interval(ust.start, b.start - 1)]
+                    masks = [Interval(pre_transcript.start, b.start - 1)]
                 elif b.orient == ORIENT.LEFT:
-                    masks = [Interval(b.end + 1, ust.end)]
+                    masks = [Interval(b.end + 1, pre_transcript.end)]
             elif len(breakpoints) == 2:
                 b1, b2 = sorted(breakpoints)
                 if b1.orient == ORIENT.LEFT and b2.orient == ORIENT.RIGHT:
@@ -337,31 +337,31 @@ def draw_ustranscript(
             pass
 
     label_prefix = config.transcript_label_prefix
-    if isinstance(ust, FusionTranscript):
+    if isinstance(pre_transcript, FusionTranscript):
         label_prefix = config.fusion_label_prefix
 
-    if len(ust.translations) == 0:
+    if len(pre_transcript.translations) == 0:
         y += config.splice_height
-        exon_track_group = draw_exon_track(config, canvas, ust, mapping, colors)
+        exon_track_group = draw_exon_track(config, canvas, pre_transcript, mapping, colors)
         exon_track_group.translate(0, y)
         exon_track_group.add(canvas.text(
-            labels.add(ust, label_prefix),
+            labels.add(pre_transcript, label_prefix),
             insert=(0 - config.padding, config.track_height / 2 + config.font_central_shift_ratio * config.label_font_size),
             fill=config.label_color,
             style=config.font_style.format(font_size=config.label_font_size, text_anchor='end'),
             class_='label'
         ))
-        exon_track_group.add(Tag('title', 'Transcript: {}'.format(ust.name if ust.name else '')))
+        exon_track_group.add(Tag('title', 'Transcript: {}'.format(pre_transcript.name if pre_transcript.name else '')))
         main_group.add(exon_track_group)
         y += config.track_height
     else:
         # draw the protein features if there are any
-        for i, tl in enumerate(ust.translations):
+        for i, tl in enumerate(pre_transcript.translations):
             gp = draw_transcript_with_translation(
                 config, canvas, tl, labels, colors, mapping, x_start=x_start, x_end=x_end
             )
             gp.translate(0, y)
-            if i < len(ust.translations) - 1:
+            if i < len(pre_transcript.translations) - 1:
                 y += config.inner_margin
             y += gp.height
             main_group.add(gp)

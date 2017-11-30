@@ -377,7 +377,7 @@ def overlapping_transcripts(ref_ann, breakpoint):
             by chromosome
         breakpoint (Breakpoint): the breakpoint in question
     Returns:
-        :class:`list` of :any:`UsTranscript`: a list of possible transcripts
+        :class:`list` of :any:`PreTranscript`: a list of possible transcripts
     """
     putative_annotations = set()
     for gene in ref_ann.get(breakpoint.chr, []):
@@ -400,9 +400,9 @@ def _gather_breakpoint_annotations(ref_ann, breakpoint):
     Returns:
         tuple: tuple contains
 
-            - :class:`list` of (:class:`UsTranscript` or :class:`IntergenicRegion`): transcripts or intergenic regions
+            - :class:`list` of (:class:`PreTranscript` or :class:`IntergenicRegion`): transcripts or intergenic regions
               overlapping the breakpoint on the positive strand
-            - :class:`list` of (:class:`UsTranscript` or :class:`IntergenicRegion`): transcripts or intergenic regions
+            - :class:`list` of (:class:`PreTranscript` or :class:`IntergenicRegion`): transcripts or intergenic regions
               overlapping the breakpoint on the negative strand
 
     .. todo::
