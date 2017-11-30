@@ -8,7 +8,9 @@ from mavis.bam.read import sequenced_strand, SamRead
 from mavis.bam.cigar import convert_string_to_cigar
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import CALL_METHOD, CIGAR, ORIENT, PYSAM_READ_FLAGS, STRAND, SVTYPE, reverse_complement
+from mavis.interval import Interval
 from mavis.validate import call
+from mavis.validate.base import Evidence
 from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
 
 from . import BAM_INPUT, FULL_BAM_INPUT, mock_read_pair, MockBamFileHandle, MockObject, MockRead, REFERENCE_GENOME_FILE, get_example_genes, MockLongString
@@ -788,6 +790,10 @@ class TestCallByFlankingReadsGenome(unittest.TestCase):
             stdev_count_abnormal=2,
             min_flanking_pairs_resolution=1
         )
+
+    def test_call_coverage_too_large(self):
+        with self.assertRaises(AssertionError):
+            call._call_interval_by_flanking_coverage(Interval(1901459, 1902200), ORIENT.RIGHT, 725 + 150, 150, Evidence.distance, Evidence.traverse)
 
     def test_call_both_intrachromosomal_lr(self):
         # --LLL-100------------500-RRR-------
