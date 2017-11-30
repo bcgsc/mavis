@@ -5,7 +5,7 @@ import time
 import warnings
 
 from .constants import DEFAULTS
-from .genomic import UsTranscript
+from .genomic import PreTranscript
 from .variant import annotate_events, choose_more_annotated, choose_transcripts_by_priority, call_protein_indel, flatten_fusion_transcript, flatten_fusion_translation
 from .fusion import determine_prime
 from ..constants import COLUMNS, PRIME, PROTOCOL, sort_columns
@@ -191,9 +191,9 @@ def main(
             ref_cdna_seq = {}
             ref_protein_seq = {}
 
-            for ust in [x for x in [ann.transcript1, ann.transcript2] if isinstance(x, UsTranscript)]:
-                name = ust.name
-                for spl_tx in ust.spliced_transcripts:
+            for pre_transcript in [x for x in [ann.transcript1, ann.transcript2] if isinstance(x, PreTranscript)]:
+                name = pre_transcript.name
+                for spl_tx in pre_transcript.spliced_transcripts:
                     ref_cdna_seq.setdefault(spl_tx.get_seq(reference_genome), set()).add(name)
                     for translation in spl_tx.translations:
                         ref_protein_seq.setdefault(translation.get_aa_seq(reference_genome), set()).add(name)

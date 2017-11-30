@@ -3,7 +3,7 @@ import unittest
 
 from mavis.annotate.base import BioInterval, ReferenceName
 from mavis.annotate.file_io import load_reference_genes, load_reference_genome
-from mavis.annotate.genomic import Exon, Gene, Template, Transcript, UsTranscript
+from mavis.annotate.genomic import Exon, Gene, Template, Transcript, PreTranscript
 from mavis.annotate.protein import calculate_orf, Domain, DomainRegion, translate, Translation
 from mavis.annotate.variant import _gather_annotations, _gather_breakpoint_annotations, annotate_events, Annotation, flatten_fusion_transcript, overlapping_transcripts
 from mavis.annotate.fusion import determine_prime, FusionTranscript
@@ -79,7 +79,7 @@ class TestFusionTranscript(unittest.TestCase):
 
     def test__pull_exons_left_pos_intronic(self):
         # 100-199, 500-599, 1200-1299, 1500-1599, 1700-1799
-        t = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b = Breakpoint(REF_CHR, 700, orient=ORIENT.LEFT)
         seq, new_exons = FusionTranscript._pull_exons(t, b, self.reference_sequence)
         expt = 'C' * len(self.x) + 'A' * (499 - 200 + 1) + 'G' * len(self.y) + 'A' * (700 - 600 + 1)
@@ -92,7 +92,7 @@ class TestFusionTranscript(unittest.TestCase):
         self.assertEqual(True, e.end_splice_site.intact)
 
     def test__pull_exons_left_pos_intronic_splice(self):
-        t = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b = Breakpoint(REF_CHR, 201, orient=ORIENT.LEFT)
         seq, new_exons = FusionTranscript._pull_exons(t, b, self.reference_sequence)
         expt = 'C' * 100 + 'A' * 2
@@ -105,7 +105,7 @@ class TestFusionTranscript(unittest.TestCase):
         self.assertEqual(False, e.end_splice_site.intact)
 
     def test__pull_exons_left_pos_exonic(self):
-        t = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         print('transcriptt exons:', t.exons)
         b = Breakpoint(REF_CHR, 199, orient=ORIENT.LEFT)
         seq, new_exons = FusionTranscript._pull_exons(t, b, self.reference_sequence)
@@ -120,7 +120,7 @@ class TestFusionTranscript(unittest.TestCase):
 
     def test__pull_exons_left_pos_exonic_splice(self):
         # 100-199, 500-599, 1200-1299, 1500-1599, 1700-1799
-        t = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b = Breakpoint(REF_CHR, 101, orient=ORIENT.LEFT)
         seq, new_exons = FusionTranscript._pull_exons(t, b, self.reference_sequence)
         expt = 'C' * 2
@@ -134,7 +134,7 @@ class TestFusionTranscript(unittest.TestCase):
 
     def test__pull_exons_right_pos_intronic(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
-        t = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b = Breakpoint(REF_CHR, 1600, orient=ORIENT.RIGHT)
         seq, new_exons = FusionTranscript._pull_exons(t, b, self.reference_sequence)
         expt = 'A' * (1699 - 1600 + 1) + 'G' * len(self.s)
@@ -156,7 +156,7 @@ class TestFusionTranscript(unittest.TestCase):
 
     def test__pull_exons_right_pos_intronic_splice(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
-        t = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b = Breakpoint(REF_CHR, 1198, orient=ORIENT.RIGHT)
         seq, new_exons = FusionTranscript._pull_exons(t, b, self.reference_sequence)
         expt = 'AA' + 'T' * 100 + 'A' * (1499 - 1300 + 1) + 'C' * 100 + 'A' * (1699 - 1600 + 1) + 'G' * 100
@@ -168,7 +168,7 @@ class TestFusionTranscript(unittest.TestCase):
 
     def test__pull_exons_right_pos_exonic(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
-        t = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b = Breakpoint(REF_CHR, 1201, orient=ORIENT.RIGHT)
         seq, new_exons = FusionTranscript._pull_exons(t, b, self.reference_sequence)
         expt = 'T' * 99 + 'A' * (1499 - 1300 + 1) + 'C' * 100 + 'A' * (1699 - 1600 + 1) + 'G' * 100
@@ -180,7 +180,7 @@ class TestFusionTranscript(unittest.TestCase):
 
     def test__pull_exons_right_pos_exonic_splice(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
-        t = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b = Breakpoint(REF_CHR, 1298, orient=ORIENT.RIGHT)
         seq, new_exons = FusionTranscript._pull_exons(t, b, self.reference_sequence)
         expt = 'TT' + 'A' * (1499 - 1300 + 1) + 'C' * 100 + 'A' * (1699 - 1600 + 1) + 'G' * 100
@@ -192,7 +192,7 @@ class TestFusionTranscript(unittest.TestCase):
 
     def test__pull_exons_right_neg_intronic(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
-        t = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
+        t = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
         b = Breakpoint(REF_CHR, 700, orient=ORIENT.RIGHT)
         seq, new_exons = FusionTranscript._pull_exons(t, b, self.reference_sequence)
         expt = 'A' * (1199 - 700 + 1) + 'T' * 100 + 'A' * (1499 - 1300 + 1) + 'C' * 100
@@ -215,7 +215,7 @@ class TestFusionTranscript(unittest.TestCase):
 
     def test__pull_exons_right_neg_intronic_splice(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
-        t = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
+        t = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
         b = Breakpoint(REF_CHR, 1198, orient=ORIENT.RIGHT)
         seq, new_exons = FusionTranscript._pull_exons(t, b, self.reference_sequence)
         expt = 'AA' + 'T' * 100 + 'A' * (1499 - 1300 + 1) + 'C' * 100 + 'A' * (1699 - 1600 + 1) + 'G' * 100
@@ -244,7 +244,7 @@ class TestFusionTranscript(unittest.TestCase):
     def test_build_single_transcript_indel(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
-        t = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b1 = Breakpoint(REF_CHR, 599, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='ATCGATCG')
@@ -278,7 +278,7 @@ class TestFusionTranscript(unittest.TestCase):
     def test_build_single_transcript_inversion(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
-        t = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b1 = Breakpoint(REF_CHR, 1199, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 1299, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_seq='ATCGTC')
@@ -298,7 +298,7 @@ class TestFusionTranscript(unittest.TestCase):
     def test_build_single_transcript_inversion_transcriptome(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
-        t = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b1 = Breakpoint(REF_CHR, 1199, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 1299, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_seq='ATCGTC')
@@ -327,7 +327,7 @@ class TestFusionTranscript(unittest.TestCase):
     def test_build_single_transcript_inversion_neg(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
-        t = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
+        t = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
         b1 = Breakpoint(REF_CHR, 1300, orient=ORIENT.RIGHT)
         b2 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_seq='ATCGTC')
@@ -350,7 +350,7 @@ class TestFusionTranscript(unittest.TestCase):
     def test_build_single_transcript_duplication_pos(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
-        t = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b1 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
         b2 = Breakpoint(REF_CHR, 1299, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='ATCGATCG')
@@ -377,7 +377,7 @@ class TestFusionTranscript(unittest.TestCase):
     def test_build_single_transcript_duplication_pos_transcriptome(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
-        t = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
         b1 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
         b2 = Breakpoint(REF_CHR, 1299, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='ATCGATCG')
@@ -410,7 +410,7 @@ class TestFusionTranscript(unittest.TestCase):
     def test_build_single_transcript_duplication_neg(self):
         # x:100-199, y:500-599, z:1200-1299, w:1500-1599, s:1700-1799
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
-        t = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
+        t = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
         b1 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
         b2 = Breakpoint(REF_CHR, 1299, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='ATCGATCG')
@@ -443,8 +443,8 @@ class TestFusionTranscript(unittest.TestCase):
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
         # a:2000-2099, b:2600-2699, c:3000-3099, d:3300-3399
         #   TTTTTTTTT    CCCCCCCCC    GGGGGGGGG    TTTTTTTTT
-        t1 = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
-        t2 = UsTranscript(exons=[self.a, self.b, self.c, self.d], strand=STRAND.NEG)
+        t1 = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t2 = PreTranscript(exons=[self.a, self.b, self.c, self.d], strand=STRAND.NEG)
         b1 = Breakpoint(REF_CHR, 1199, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 2699, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_seq='ATCGACTC')
@@ -466,8 +466,8 @@ class TestFusionTranscript(unittest.TestCase):
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
         # a:2000-2099, b:2600-2699, c:3000-3099, d:3300-3399
         #   TTTTTTTTT    CCCCCCCCC    GGGGGGGGG    TTTTTTTTT
-        t1 = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
-        t2 = UsTranscript(exons=[self.a, self.b, self.c, self.d], strand=STRAND.POS)
+        t1 = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
+        t2 = PreTranscript(exons=[self.a, self.b, self.c, self.d], strand=STRAND.POS)
         b1 = Breakpoint(REF_CHR, 1199, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 2699, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_seq='ATCGACTC')
@@ -487,8 +487,8 @@ class TestFusionTranscript(unittest.TestCase):
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
         # a:2000-2099, b:2600-2699, c:3000-3099, d:3300-3399
         #   TTTTTTTTT    CCCCCCCCC    GGGGGGGGG    TTTTTTTTT
-        t1 = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
-        t2 = UsTranscript(exons=[self.a, self.b, self.c, self.d], strand=STRAND.POS)
+        t1 = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t2 = PreTranscript(exons=[self.a, self.b, self.c, self.d], strand=STRAND.POS)
         b1 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
         b2 = Breakpoint(REF_CHR, 2699, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='ATCGAC')
@@ -509,8 +509,8 @@ class TestFusionTranscript(unittest.TestCase):
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
         # a:2000-2099, b:2600-2699, c:3000-3099, d:3300-3399
         #   TTTTTTTTT    CCCCCCCCC    GGGGGGGGG    TTTTTTTTT
-        t1 = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
-        t2 = UsTranscript(exons=[self.a, self.b, self.c, self.d], strand=STRAND.NEG)
+        t1 = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
+        t2 = PreTranscript(exons=[self.a, self.b, self.c, self.d], strand=STRAND.NEG)
         b1 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
         b2 = Breakpoint(REF_CHR, 2699, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='ATCGAC')
@@ -532,8 +532,8 @@ class TestFusionTranscript(unittest.TestCase):
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
         # a:2000-2099, b:2600-2699, c:3000-3099, d:3300-3399
         #   TTTTTTTTT    CCCCCCCCC    GGGGGGGGG    TTTTTTTTT
-        t1 = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
-        t2 = UsTranscript(exons=[self.a, self.b, self.c, self.d], strand=STRAND.POS)
+        t1 = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t2 = PreTranscript(exons=[self.a, self.b, self.c, self.d], strand=STRAND.POS)
         b1 = Breakpoint(REF_CHR, 1199, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 2700, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='AACGTGT')
@@ -552,8 +552,8 @@ class TestFusionTranscript(unittest.TestCase):
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
         # a:2000-2099, b:2600-2699, c:3000-3099, d:3300-3399
         #   TTTTTTTTT    CCCCCCCCC    GGGGGGGGG    TTTTTTTTT
-        t1 = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
-        t2 = UsTranscript(exons=[self.a, self.b, self.c, self.d], strand=STRAND.POS)
+        t1 = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t2 = PreTranscript(exons=[self.a, self.b, self.c, self.d], strand=STRAND.POS)
         b1 = Breakpoint(REF_CHR, 1199, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 2700, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='AACGTGT')
@@ -572,9 +572,9 @@ class TestFusionTranscript(unittest.TestCase):
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
         # a:2000-2099, b:2600-2699, c:3000-3099, d:3300-3399
         #   TTTTTTTTT    CCCCCCCCC    GGGGGGGGG    TTTTTTTTT
-        t1 = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
+        t1 = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
 
-        t2 = UsTranscript(exons=[self.a, self.b, self.c, self.d], strand=STRAND.NEG)
+        t2 = PreTranscript(exons=[self.a, self.b, self.c, self.d], strand=STRAND.NEG)
         print('t1 exons', t1.exons)
         print('t2 exons', t2.exons)
         b1 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
@@ -599,8 +599,8 @@ class TestFusionTranscript(unittest.TestCase):
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
         # 1:600-699, 2:800-899, 3:1100-1199, 4:1400-1499, 5:1700-1799 6:2100-2199
         #   AAAAAAA    GGGGGGG,   TTTTTTTTT,   AAAAAAAAA,   GGGGGGGGG   AAAAAAAAA
-        t1 = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
-        t2 = UsTranscript(exons=[self.b1, self.b2, self.b3, self.b4, self.b5, self.b6], strand=STRAND.POS)
+        t1 = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.POS)
+        t2 = PreTranscript(exons=[self.b1, self.b2, self.b3, self.b4, self.b5, self.b6], strand=STRAND.POS)
         b1 = Breakpoint(REF_CHR, 1199, orient=ORIENT.LEFT)
         b2 = Breakpoint('ref2', 1200, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='GCAACATAT')
@@ -623,8 +623,8 @@ class TestFusionTranscript(unittest.TestCase):
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
         # 1:600-699, 2:800-899, 3:1100-1199, 4:1400-1499, 5:1700-1799 6:2100-2199
         #   AAAAAAA    GGGGGGG,   TTTTTTTTT,   AAAAAAAAA,   GGGGGGGGG   AAAAAAAAA
-        t1 = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
-        t2 = UsTranscript(exons=[self.b1, self.b2, self.b3, self.b4, self.b5, self.b6], strand=STRAND.NEG)
+        t1 = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
+        t2 = PreTranscript(exons=[self.b1, self.b2, self.b3, self.b4, self.b5, self.b6], strand=STRAND.NEG)
         b1 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
         b2 = Breakpoint(ALT_REF_CHR, 1199, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='TCTACATAT')
@@ -648,8 +648,8 @@ class TestFusionTranscript(unittest.TestCase):
         #   CCCCCCC    GGGGGGG    TTTTTTTTT    CCCCCCCCC    GGGGGGGGG
         # 1:600-699, 2:800-899, 3:1100-1199, 4:1400-1499, 5:1700-1799 6:2100-2199
         #   AAAAAAA    GGGGGGG,   TTTTTTTTT,   AAAAAAAAA,   GGGGGGGGG   AAAAAAAAA
-        t1 = UsTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
-        t2 = UsTranscript(exons=[self.b1, self.b2, self.b3, self.b4, self.b5, self.b6], strand=STRAND.POS)
+        t1 = PreTranscript(exons=[self.x, self.y, self.z, self.w, self.s], strand=STRAND.NEG)
+        t2 = PreTranscript(exons=[self.b1, self.b2, self.b3, self.b4, self.b5, self.b6], strand=STRAND.POS)
         b1 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
         b2 = Breakpoint(ALT_REF_CHR, 1200, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_seq='GATACATAT')
@@ -674,11 +674,11 @@ class TestSequenceFetching(unittest.TestCase):
     def setUp(self):
         self.gene = Gene(REF_CHR, 1, 900, strand=STRAND.POS)
 
-        self.ust = UsTranscript(exons=[(101, 200), (301, 400), (501, 600), (701, 800)], gene=self.gene)
-        self.gene.transcripts.append(self.ust)
+        self.pre_transcript = PreTranscript(exons=[(101, 200), (301, 400), (501, 600), (701, 800)], gene=self.gene)
+        self.gene.transcripts.append(self.pre_transcript)
 
-        self.transcript = Transcript(self.ust, self.ust.generate_splicing_patterns()[0])
-        self.ust.transcripts.append(self.transcript)
+        self.transcript = Transcript(self.pre_transcript, self.pre_transcript.generate_splicing_patterns()[0])
+        self.pre_transcript.transcripts.append(self.transcript)
 
         self.translation = Translation(51, 350, self.transcript)
         self.transcript.translations.append(self.translation)
@@ -712,31 +712,31 @@ class TestSequenceFetching(unittest.TestCase):
 
     def test_fetch_us_transcript_seq_from_ref(self):
         expt = str(REFERENCE_GENOME[REF_CHR][100:800].seq).upper()
-        self.assertEqual(expt, self.ust.get_seq(REFERENCE_GENOME))
+        self.assertEqual(expt, self.pre_transcript.get_seq(REFERENCE_GENOME))
 
     def test_fetch_us_transcript_seq_from_ref_revcomp(self):
         self.gene.strand = STRAND.NEG
         expt = reverse_complement(str(REFERENCE_GENOME[REF_CHR][100:800].seq).upper())
-        self.assertEqual(expt, self.ust.get_seq(REFERENCE_GENOME))
+        self.assertEqual(expt, self.pre_transcript.get_seq(REFERENCE_GENOME))
 
     def test_fetch_us_transcript_seq_from_stored(self):
         expt = 'AAA'
-        self.ust.seq = expt
-        self.assertEqual(expt, self.ust.get_seq(REFERENCE_GENOME))
+        self.pre_transcript.seq = expt
+        self.assertEqual(expt, self.pre_transcript.get_seq(REFERENCE_GENOME))
 
     def test_fetch_us_transcript_seq_from_parent_gene(self):
         self.gene.seq = 'A' * len(self.gene)
-        self.assertEqual('A' * len(self.ust), self.ust.get_seq())
+        self.assertEqual('A' * len(self.pre_transcript), self.pre_transcript.get_seq())
 
     def test_fetch_us_transcript_seq_from_parent_gene_revcomp(self):
         self.gene.seq = 'A' * len(self.gene)
         self.gene.strand = STRAND.NEG
-        self.assertEqual('T' * len(self.ust), self.ust.get_seq())
+        self.assertEqual('T' * len(self.pre_transcript), self.pre_transcript.get_seq())
 
     def test_fetch_us_transcript_seq_force_uncached(self):
         expt = str(REFERENCE_GENOME[REF_CHR][100:800].seq).upper()
-        self.ust.seq = 'AAA'
-        self.assertEqual(expt, self.ust.get_seq(REFERENCE_GENOME, ignore_cache=True))
+        self.pre_transcript.seq = 'AAA'
+        self.assertEqual(expt, self.pre_transcript.get_seq(REFERENCE_GENOME, ignore_cache=True))
 
     def test_fetch_transcript_seq_from_ref(self):
         self.assertEqual(self.spliced_seq, self.transcript.get_seq(REFERENCE_GENOME))
@@ -751,7 +751,7 @@ class TestSequenceFetching(unittest.TestCase):
         self.assertEqual(expt, self.transcript.get_seq(REFERENCE_GENOME))
 
     def test_fetch_transcript_seq_from_parent_ust(self):
-        self.ust.seq = 'A' * len(self.ust)
+        self.pre_transcript.seq = 'A' * len(self.pre_transcript)
         self.assertEqual('A' * len(self.transcript), self.transcript.get_seq())
 
     def test_fetch_transcript_seq_from_parent_gene(self):
@@ -786,7 +786,7 @@ class TestSequenceFetching(unittest.TestCase):
         self.assertEqual('A' * len(self.translation), self.translation.get_seq(REFERENCE_GENOME))
 
     def test_fetch_translation_cds_seq_from_parent_ust(self):
-        self.ust.seq = 'A' * len(self.ust)
+        self.pre_transcript.seq = 'A' * len(self.pre_transcript)
         self.assertEqual('A' * len(self.translation), self.translation.get_seq(REFERENCE_GENOME))
 
     def test_fetch_translation_cds_seq_from_parent_gene(self):
@@ -807,11 +807,11 @@ class TestStrandInheritance(unittest.TestCase):
 
     def setUp(self):
         self.gene = Gene('1', 1, 500, strand=STRAND.POS)
-        ust = UsTranscript(gene=self.gene, exons=[(1, 100), (200, 300), (400, 500)])
-        self.gene.unspliced_transcripts.append(ust)
-        for spl in ust.generate_splicing_patterns():
-            t = Transcript(ust, spl)
-            ust.spliced_transcripts.append(t)
+        pre_transcript = PreTranscript(gene=self.gene, exons=[(1, 100), (200, 300), (400, 500)])
+        self.gene.unspliced_transcripts.append(pre_transcript)
+        for spl in pre_transcript.generate_splicing_patterns():
+            t = Transcript(pre_transcript, spl)
+            pre_transcript.spliced_transcripts.append(t)
             tl = Translation(51, 250, t)
             t.translations.append(tl)
 
@@ -833,19 +833,19 @@ class TestCoordinateCoversion(unittest.TestCase):
     def setUp(self):
         self.gene = Gene('1', 15, 700, strand=STRAND.POS)
 
-        self.ust = UsTranscript(gene=self.gene, exons=[(101, 200), (301, 400), (501, 600)])
-        self.gene.unspliced_transcripts.append(self.ust)
-        assert(1 == len(self.ust.generate_splicing_patterns()))
+        self.pre_transcript = PreTranscript(gene=self.gene, exons=[(101, 200), (301, 400), (501, 600)])
+        self.gene.unspliced_transcripts.append(self.pre_transcript)
+        assert(1 == len(self.pre_transcript.generate_splicing_patterns()))
 
-        spl = self.ust.generate_splicing_patterns()[0]
-        self.transcript = Transcript(self.ust, spl)
-        self.ust.spliced_transcripts.append(self.transcript)
+        spl = self.pre_transcript.generate_splicing_patterns()[0]
+        self.transcript = Transcript(self.pre_transcript, spl)
+        self.pre_transcript.spliced_transcripts.append(self.transcript)
 
         self.translation = Translation(51, 251, self.transcript)
         self.transcript.translations.append(self.translation)
 
         self.rev_gene = Gene('1', 15, 700, strand=STRAND.NEG)
-        self.rev_ust = UsTranscript(gene=self.rev_gene, exons=[(101, 200), (301, 400), (501, 600)])
+        self.rev_ust = PreTranscript(gene=self.rev_gene, exons=[(101, 200), (301, 400), (501, 600)])
         self.gene.unspliced_transcripts.append(self.rev_ust)
         assert(1 == len(self.rev_ust.generate_splicing_patterns()))
 
@@ -949,7 +949,7 @@ class TestCoordinateCoversion(unittest.TestCase):
 class TestUSTranscript(unittest.TestCase):
 
     def test___init__implicit_start(self):
-        t = UsTranscript(gene=None, exons=[(1, 100), (200, 300), (400, 500)], strand=STRAND.POS)
+        t = PreTranscript(gene=None, exons=[(1, 100), (200, 300), (400, 500)], strand=STRAND.POS)
         self.assertEqual(1, t.start)
         self.assertEqual(t.start, t.start)
         self.assertEqual(500, t.end)
@@ -964,18 +964,18 @@ class TestUSTranscript(unittest.TestCase):
         g = Gene('1', 1, 9999, name='KRAS', strand=STRAND.POS)
 
         with self.assertRaises(AssertionError):
-            UsTranscript([(1, 100)], gene=g, strand=STRAND.NEG)
+            PreTranscript([(1, 100)], gene=g, strand=STRAND.NEG)
 
     def test___init__overlapping_exon_error(self):
         with self.assertRaises(AttributeError):
-            UsTranscript(exons=[Exon(1, 15), Exon(10, 20)])
+            PreTranscript(exons=[Exon(1, 15), Exon(10, 20)])
 
     def test_exon_number(self):
-        t = UsTranscript(gene=None, exons=[(1, 99), (200, 299), (400, 499)], strand=STRAND.POS)
+        t = PreTranscript(gene=None, exons=[(1, 99), (200, 299), (400, 499)], strand=STRAND.POS)
         for i, e in enumerate(t.exons):
             self.assertEqual(i + 1, t.exon_number(e))
 
-        t = UsTranscript(gene=None, exons=[(1, 99), (200, 299), (400, 499)], strand=STRAND.NEG)
+        t = PreTranscript(gene=None, exons=[(1, 99), (200, 299), (400, 499)], strand=STRAND.NEG)
         for i, e in enumerate(sorted(t.exons, key=lambda x: x.start, reverse=True)):
             self.assertEqual(i + 1, t.exon_number(e))
 
@@ -989,13 +989,13 @@ class TestDomain(unittest.TestCase):
     def test_get_seq_from_ref(self):
         ref = {'1': MockObject(seq='CCCTAATCCCCTTT')}
         g = Gene('1', 1, 16, strand=STRAND.NEG)
-        t = UsTranscript(exons=[(2, 5), (7, 15)], gene=g)
+        t = PreTranscript(exons=[(2, 5), (7, 15)], gene=g)
         tl = Translation(4, 11, t, [])
         d = Domain('name', [(1, 2)], translation=tl)
         self.assertEqual([translate('GGGGAT')], d.get_seqs(ref))
 
     def test_get_seq_from_translation_seq(self):
-        t = UsTranscript(exons=[(2, 5), (7, 15)], seq='CCCTAATCCCCTTT', strand=STRAND.NEG)
+        t = PreTranscript(exons=[(2, 5), (7, 15)], seq='CCCTAATCCCCTTT', strand=STRAND.NEG)
         tl = Translation(4, 11, t, [])
         d = Domain('name', [(1, 2)], translation=tl)
         self.assertEqual([translate('TAATCC')], d.get_seqs())
@@ -1119,13 +1119,13 @@ class TestAnnotationGathering(unittest.TestCase):
     def test_overlapping_transcripts(self):
         b = Breakpoint('C', 1000, strand=STRAND.POS)
         g = Gene('C', 1, 9999, 'gene1', STRAND.POS)
-        t = UsTranscript(exons=[(100, 199), (500, 699), (1200, 1300)], gene=g)
+        t = PreTranscript(exons=[(100, 199), (500, 699), (1200, 1300)], gene=g)
         g.transcripts.append(t)
         self.assertTrue(Interval.overlaps(b, t))
-        t = UsTranscript(exons=[(100, 199), (500, 699), (800, 900)], gene=g)
+        t = PreTranscript(exons=[(100, 199), (500, 699), (800, 900)], gene=g)
         g.transcripts.append(t)
         h = Gene('C', 1, 9999, 'gene1', STRAND.NEG)
-        t = UsTranscript(exons=[(100, 199), (500, 699), (1200, 1300)], gene=h, strand=STRAND.NEG)
+        t = PreTranscript(exons=[(100, 199), (500, 699), (1200, 1300)], gene=h, strand=STRAND.NEG)
         h.transcripts.append(t)
         d = {'C': [g, h]}
         tlist = overlapping_transcripts(d, b)
@@ -1220,7 +1220,7 @@ class TestAnnotationGathering(unittest.TestCase):
     def test_intrachromosomal_within_gene_inversion(self):
         raise unittest.SkipTest('TODO')
         g = Gene(REF_CHR, 1000, 3000, strand=STRAND.POS)
-        t = UsTranscript(gene=g, exons=[(1001, 1100), (1501, 1600), (2001, 2100), (2501, 2600)])
+        t = PreTranscript(gene=g, exons=[(1001, 1100), (1501, 1600), (2001, 2100), (2501, 2600)])
         g.transcripts.append(t)
         ref = {
             REF_CHR: [g]
@@ -1264,8 +1264,8 @@ class TestAnnotate(unittest.TestCase):
             load_reference_genes('file.other')
 
     def test_determine_prime(self):
-        tneg = UsTranscript(exons=[(3, 4)], strand=STRAND.NEG)
-        tpos = UsTranscript(exons=[(3, 4)], strand=STRAND.POS)
+        tneg = PreTranscript(exons=[(3, 4)], strand=STRAND.NEG)
+        tpos = PreTranscript(exons=[(3, 4)], strand=STRAND.POS)
         bleft = Breakpoint(REF_CHR, 1, 2, orient=ORIENT.LEFT)
         bright = Breakpoint(REF_CHR, 1, 2, orient=ORIENT.RIGHT)
         # positive left should be five prime

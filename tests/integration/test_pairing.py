@@ -1,6 +1,6 @@
 import unittest
 
-from mavis.annotate.genomic import UsTranscript
+from mavis.annotate.genomic import PreTranscript
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import CALL_METHOD, COLUMNS, ORIENT, PROTOCOL, STRAND, SVTYPE
 from mavis.pairing.pairing import equivalent, predict_transcriptome_breakpoint, inferred_equivalent
@@ -32,12 +32,12 @@ class TestPairing(unittest.TestCase):
             }
         )
 
-        self.ust1 = UsTranscript(
+        self.ust1 = PreTranscript(
             exons=[(1, 100), (301, 400), (501, 600)],
             strand=STRAND.POS,
             name='t1'
         )
-        self.ust2 = UsTranscript(
+        self.ust2 = PreTranscript(
             exons=[(1001, 1100), (1301, 1400), (1501, 1600)],
             strand=STRAND.POS,
             name='t2'
@@ -302,51 +302,51 @@ class TestPairing(unittest.TestCase):
 class TestBreakpointPrediction(unittest.TestCase):
 
     def setUp(self):
-        self.ust = UsTranscript([(101, 200), (301, 400), (501, 600)], strand=STRAND.POS)
-        self.n_ust = UsTranscript([(101, 200), (301, 400), (501, 600)], strand=STRAND.NEG)
+        self.pre_transcript = PreTranscript([(101, 200), (301, 400), (501, 600)], strand=STRAND.POS)
+        self.n_ust = PreTranscript([(101, 200), (301, 400), (501, 600)], strand=STRAND.NEG)
 
     def test_exonic_five_prime(self):
         b = Breakpoint('1', 350, orient=ORIENT.LEFT)
-        breaks = predict_transcriptome_breakpoint(b, self.ust)
+        breaks = predict_transcriptome_breakpoint(b, self.pre_transcript)
         self.assertEqual(2, len(breaks))
         self.assertEqual(200, breaks[0].start)
         self.assertEqual(b, breaks[1])
 
     def test_exonic_five_prime_first_exon(self):
         b = Breakpoint('1', 150, orient=ORIENT.LEFT)
-        breaks = predict_transcriptome_breakpoint(b, self.ust)
+        breaks = predict_transcriptome_breakpoint(b, self.pre_transcript)
         self.assertEqual(1, len(breaks))
         self.assertEqual(b, breaks[0])
 
     def test_exonic_three_prime(self):
         b = Breakpoint('1', 350, orient=ORIENT.RIGHT)
-        breaks = predict_transcriptome_breakpoint(b, self.ust)
+        breaks = predict_transcriptome_breakpoint(b, self.pre_transcript)
         self.assertEqual(2, len(breaks))
         self.assertEqual(501, breaks[1].start)
         self.assertEqual(b, breaks[0])
 
     def test_exonic_three_prime_last_exon(self):
         b = Breakpoint('1', 550, orient=ORIENT.RIGHT)
-        breaks = predict_transcriptome_breakpoint(b, self.ust)
+        breaks = predict_transcriptome_breakpoint(b, self.pre_transcript)
         self.assertEqual(1, len(breaks))
         self.assertEqual(b, breaks[0])
 
     def test_intronic_five_prime(self):
         b = Breakpoint('1', 450, orient=ORIENT.LEFT)
-        breaks = predict_transcriptome_breakpoint(b, self.ust)
+        breaks = predict_transcriptome_breakpoint(b, self.pre_transcript)
         self.assertEqual(1, len(breaks))
         self.assertEqual(400, breaks[0].start)
 
     def test_intronic_three_prime(self):
         b = Breakpoint('1', 250, orient=ORIENT.RIGHT)
-        breaks = predict_transcriptome_breakpoint(b, self.ust)
+        breaks = predict_transcriptome_breakpoint(b, self.pre_transcript)
         self.assertEqual(1, len(breaks))
         self.assertEqual(301, breaks[0].start)
 
     def test_outside_transcript(self):
         b = Breakpoint('1', 100, orient=ORIENT.RIGHT)
         with self.assertRaises(AssertionError):
-            predict_transcriptome_breakpoint(b, self.ust)
+            predict_transcriptome_breakpoint(b, self.pre_transcript)
 
     # for neg transcripts
     def test_exonic_three_prime_neg(self):

@@ -3,7 +3,7 @@ import unittest
 
 from mavis.annotate.constants import SPLICE_SITE_RADIUS, SPLICE_TYPE
 from mavis.annotate.file_io import load_annotations, load_reference_genome
-from mavis.annotate.genomic import Exon, UsTranscript
+from mavis.annotate.genomic import Exon, PreTranscript
 from mavis.annotate.splicing import predict_splice_sites
 from mavis.annotate.variant import annotate_events
 from mavis.breakpoint import Breakpoint, BreakpointPair
@@ -37,17 +37,17 @@ class TestSplicingPatterns(unittest.TestCase):
         reference_sequence += 'a' * 600 + 'T' * 100 + 'a' * 200 + 'C' * 100
         reference_sequence += 'a' * 100 + 'G' * 100 + 'a' * 200 + 'C' * 100
         self.reference_sequence = reference_sequence
-        self.ust = UsTranscript(exons=[self.ex1, self.ex2, self.ex3, self.ex4, self.ex5, self.ex6], strand=strand)
+        self.pre_transcript = PreTranscript(exons=[self.ex1, self.ex2, self.ex3, self.ex4, self.ex5, self.ex6], strand=strand)
 
     def test_single_exon(self):
-        t = UsTranscript([(3, 4)], strand=STRAND.POS)
+        t = PreTranscript([(3, 4)], strand=STRAND.POS)
         patt = t.generate_splicing_patterns()
         self.assertEqual(1, len(patt))
         self.assertEqual(0, len(patt[0]))
         self.assertEqual(SPLICE_TYPE.NORMAL, patt[0].splice_type)
 
     def test_normal_pattern_pos(self):
-        patt = self.ust.generate_splicing_patterns()
+        patt = self.pre_transcript.generate_splicing_patterns()
         self.assertEqual(1, len(patt))
         self.assertEqual(
             [
@@ -63,8 +63,8 @@ class TestSplicingPatterns(unittest.TestCase):
 
     def test_normal_pattern_neg(self):
         self.setup_by_strand(STRAND.NEG)
-        self.assertTrue(self.ust.is_reverse)
-        patt = self.ust.generate_splicing_patterns()
+        self.assertTrue(self.pre_transcript.is_reverse)
+        patt = self.pre_transcript.generate_splicing_patterns()
         self.assertEqual(1, len(patt))
         self.assertEqual(
             [
@@ -80,7 +80,7 @@ class TestSplicingPatterns(unittest.TestCase):
 
     def test_abrogate_a_pos(self):
         self.ex2.start_splice_site.intact = False
-        patt = self.ust.generate_splicing_patterns()
+        patt = self.pre_transcript.generate_splicing_patterns()
         self.assertEqual(2, len(patt))
 
         self.assertEqual(
@@ -108,7 +108,7 @@ class TestSplicingPatterns(unittest.TestCase):
     def test_abrogate_a_neg(self):
         self.setup_by_strand(STRAND.NEG)
         self.ex2.start_splice_site.intact = False
-        patt = sorted(self.ust.generate_splicing_patterns())
+        patt = sorted(self.pre_transcript.generate_splicing_patterns())
         self.assertEqual(2, len(patt))
         self.assertEqual(
             [
@@ -133,7 +133,7 @@ class TestSplicingPatterns(unittest.TestCase):
 
     def test_abrogate_a_last_exon(self):
         self.ex6.start_splice_site.intact = False
-        patt = self.ust.generate_splicing_patterns()
+        patt = self.pre_transcript.generate_splicing_patterns()
         self.assertEqual(1, len(patt))
         self.assertEqual(
             [
@@ -148,7 +148,7 @@ class TestSplicingPatterns(unittest.TestCase):
 
     def test_abrogate_d_first_exon(self):
         self.ex1.end_splice_site.intact = False
-        patt = self.ust.generate_splicing_patterns()
+        patt = self.pre_transcript.generate_splicing_patterns()
         self.assertEqual(1, len(patt))
         self.assertEqual(
             [
@@ -163,7 +163,7 @@ class TestSplicingPatterns(unittest.TestCase):
 
     def test_abrogate_ad(self):
         self.ex2.start_splice_site.intact = False
-        patt = self.ust.generate_splicing_patterns()
+        patt = self.pre_transcript.generate_splicing_patterns()
         self.assertEqual(2, len(patt))
         self.assertEqual(
             [
@@ -190,7 +190,7 @@ class TestSplicingPatterns(unittest.TestCase):
     def test_abrogate_da(self):
         self.ex2.end_splice_site.intact = False
         self.ex3.start_splice_site.intact = False
-        patt = self.ust.generate_splicing_patterns()
+        patt = self.pre_transcript.generate_splicing_patterns()
         self.assertEqual(1, len(patt))
         self.assertEqual(
             [
@@ -207,7 +207,7 @@ class TestSplicingPatterns(unittest.TestCase):
         self.ex2.start_splice_site.intact = False
         self.ex2.end_splice_site.intact = False
         self.ex3.start_splice_site.intact = False
-        patt = self.ust.generate_splicing_patterns()
+        patt = self.pre_transcript.generate_splicing_patterns()
         self.assertEqual(2, len(patt))
 
         self.assertEqual(
@@ -234,7 +234,7 @@ class TestSplicingPatterns(unittest.TestCase):
         self.ex2.end_splice_site.intact = False
         self.ex3.start_splice_site.intact = False
         self.ex3.end_splice_site.intact = False
-        patt = self.ust.generate_splicing_patterns()
+        patt = self.pre_transcript.generate_splicing_patterns()
         self.assertEqual(2, len(patt))
 
         self.assertEqual(
@@ -260,7 +260,7 @@ class TestSplicingPatterns(unittest.TestCase):
     def test_complex(self):
         self.ex2.end_splice_site.intact = False
         self.ex4.end_splice_site.intact = False
-        patt = self.ust.generate_splicing_patterns()
+        patt = self.pre_transcript.generate_splicing_patterns()
         self.assertEqual(4, len(patt))
         self.assertTrue(SPLICE_TYPE.COMPLEX in [p.splice_type for p in patt])
 
