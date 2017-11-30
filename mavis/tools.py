@@ -187,45 +187,53 @@ def _parse_bnd_alt(alt):
         raise NotImplementedError('alt specification in unexpected format', alt)
 
 
-def _parse_vcf_record(row):
+def _parse_vcf_record(record):
     """
     converts a vcf record
     """
     records = []
-    for alt in row.alts if row.alts else [None]:
+    for alt in record.alts if record.alts else [None]:
         info = {}
-        for entry in row.info.items():
+        for entry in record.info.items():
             info[entry[0]] = entry[1:] if len(entry[1:]) > 1 else entry[1]
         std_row = {}
-        if row.id:
-            std_row['id'] = row.id
+        if record.id:
+            std_row['id'] = record.id
 
         if info.get('SVTYPE', None) == 'BND':
             chr2, end, orient2, ref, alt = _parse_bnd_alt(alt)
             std_row['orient2'] = orient2
             std_row[COLUMNS.untemplated_seq] = alt
-            if row.ref != ref:
+            if record.ref != ref:
                 raise AssertionError(
-                    'Expected the ref specification in the vcf row to match the sequence '
-                    'in the alt string: {} vs {}'.format(row.ref, ref))
+                    'Expected the ref specification in the vcf record to match the sequence '
+                    'in the alt string: {} vs {}'.format(record.ref, ref))
         else:
-            chr2 = info.get('CHR2', row.chrom)
-            end = row.stop
-            if alt and row.ref and re.match(r'^[A-Z]+$', alt) and re.match(r'^[A-Z]+', row.ref):
+            chr2 = info.get('CHR2', record.chrom)
+            end = record.stop
+            if alt and record.ref and re.match(r'^[A-Z]+$', alt) and re.match(r'^[A-Z]+', record.ref):
                 std_row[COLUMNS.untemplated_seq] = alt[1:]
-                size = len(alt) - len(row.ref)
+                size = len(alt) - len(record.ref)
                 if size > 0:
                     std_row['event_type'] = SVTYPE.INS
                 elif size < 0:
                     std_row['event_type'] = SVTYPE.DEL
+        std_row.update({'chr1': record.chrom, 'chr2': chr2})
+        if info.get('PRECISE', False):  # DELLY CI only apply when split reads were not used to refine the breakpoint which is then flagged
+            std_row.update({
+                'pos1_start': record.pos,
+                'pos1_end': record.pos,
+                'pos2_start': end,
+                'pos2_end': end
+            })
+        else:
+            std_row.update({
+                'pos1_start': max(1, record.pos + info.get('CIPOS', (0, 0))[0]),
+                'pos1_end': record.pos + info.get('CIPOS', (0, 0))[1],
+                'pos2_start': max(1, end + info.get('CIEND', (0, 0))[0]),
+                'pos2_end': end + info.get('CIEND', (0, 0))[1]
+            })
 
-        std_row.update({
-            'chr1': row.chrom, 'chr2': chr2,
-            'pos1_start': max(1, row.pos + info.get('CIPOS', (0, 0))[0]),
-            'pos1_end': row.pos + info.get('CIPOS', (0, 0))[1],
-            'pos2_start': max(1, end + info.get('CIEND', (0, 0))[0]),
-            'pos2_end': end + info.get('CIEND', (0, 0))[1]
-        })
         if 'SVTYPE' in info:
             std_row['event_type'] = info['SVTYPE']
 
