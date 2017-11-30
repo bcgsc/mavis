@@ -1,7 +1,7 @@
 import os
 
 from mavis.align import query_coverage_interval
-from mavis.annotate.genomic import Transcript, UsTranscript
+from mavis.annotate.genomic import Transcript, PreTranscript
 from mavis.annotate.file_io import load_annotations, load_reference_genome
 from mavis.annotate.protein import Translation
 from mavis.constants import CIGAR, NA_MAPPING_QUALITY
@@ -233,15 +233,15 @@ def mock_read_pair(mock1, mock2):
 
 
 def build_transcript(gene, exons, cds_start, cds_end, domains, strand=None, is_best_transcript=False, name=None):
-    ust = UsTranscript(exons, gene=gene, strand=strand if strand is not None else gene.get_strand(), is_best_transcript=is_best_transcript, name=name)
+    pre_transcript = PreTranscript(exons, gene=gene, strand=strand if strand is not None else gene.get_strand(), is_best_transcript=is_best_transcript, name=name)
     if gene is not None:
-        gene.unspliced_transcripts.append(ust)
+        gene.unspliced_transcripts.append(pre_transcript)
 
-    for spl in ust.generate_splicing_patterns():
-        t = Transcript(ust, spl)
-        ust.spliced_transcripts.append(t)
+    for spl in pre_transcript.generate_splicing_patterns():
+        t = Transcript(pre_transcript, spl)
+        pre_transcript.spliced_transcripts.append(t)
 
         tx = Translation(cds_start, cds_end, t, domains=domains)
         t.translations.append(tx)
 
-    return ust
+    return pre_transcript

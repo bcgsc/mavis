@@ -108,15 +108,15 @@ class Gene(BioInterval):
 
     @property
     def transcripts(self):
-        """:any:`list` of :class:`UsTranscript`: list of unspliced transcripts"""
+        """:any:`list` of :class:`PreTranscript`: list of unspliced transcripts"""
         return self.unspliced_transcripts
 
     @property
     def translations(self):
         """:any:`list` of :class:`~mavis.annotate.protein.Translation`: list of translations"""
         translations = []
-        for ust in self.unspliced_transcripts:
-            for tx in ust.transcripts:
+        for pre_transcript in self.unspliced_transcripts:
+            for tx in pre_transcript.transcripts:
                 for tl in tx.translations:
                     translations.append(tl)
         return translations
@@ -181,7 +181,7 @@ class Exon(BioInterval):
             start (int): the genomic start position
             end (int): the genomic end position
             name (str): the name of the exon
-            transcript (UsTranscript): the 'parent' transcript this exon belongs to
+            transcript (PreTranscript): the 'parent' transcript this exon belongs to
             intact_start_splice (bool): if the starting splice site has been abrogated
             intact_end_splice (bool): if the end splice site has been abrogated
         Raises:
@@ -204,7 +204,7 @@ class Exon(BioInterval):
 
     @property
     def transcript(self):
-        """:class:`UsTranscript`: the transcript this exon belongs to"""
+        """:class:`PreTranscript`: the transcript this exon belongs to"""
         return self.reference_object
 
     @property
@@ -245,7 +245,7 @@ class Exon(BioInterval):
             self.end, '' if self.end_splice_site.intact else '*')
 
 
-class UsTranscript(BioInterval):
+class PreTranscript(BioInterval):
     """
     """
 
@@ -530,28 +530,28 @@ class UsTranscript(BioInterval):
 
 class Transcript(BioInterval):
 
-    def __init__(self, ust, splicing_patt, seq=None, translations=None):
+    def __init__(self, pre_transcript, splicing_patt, seq=None, translations=None):
         """
         splicing pattern is given in genomic coordinates
 
         Args:
-            us_transcript (UsTranscript): the unspliced transcript
+            pre_transcript (PreTranscript): the unspliced transcript
             splicing_patt (:class:`list` of :class:`int`): the list of splicing positions
             seq (str): the cdna sequence
             translations (:class:`list` of :class:`~mavis.annotate.protein.Translation`):
              the list of translations of this transcript
         """
-        pos = sorted([ust.start, ust.end] + [s.pos for s in splicing_patt])
+        pos = sorted([pre_transcript.start, pre_transcript.end] + [s.pos for s in splicing_patt])
         splicing_patt.sort()
         self.splicing_pattern = splicing_patt
         length = sum([t - s + 1 for s, t in zip(pos[::2], pos[1::2])])
-        BioInterval.__init__(self, ust, 1, length, seq=None)
+        BioInterval.__init__(self, pre_transcript, 1, length, seq=None)
         self.exons = [Exon(s, t, self) for s, t in zip(pos[::2], pos[1::2])]
         self.translations = [] if translations is None else [tx for tx in translations]
 
         for translation in self.translations:
             translation.reference_object = self
-        if splicing_patt and (min(splicing_patt).pos < ust.start or max(splicing_patt).pos > ust.end):
+        if splicing_patt and (min(splicing_patt).pos < pre_transcript.start or max(splicing_patt).pos > pre_transcript.end):
             raise AssertionError('splicing pattern must be contained within the unspliced transcript')
         elif len(splicing_patt) % 2 != 0:
             raise AssertionError('splicing pattern must be a list of 3\'5\' splicing positions')
@@ -599,5 +599,5 @@ class Transcript(BioInterval):
 
     @property
     def unspliced_transcript(self):
-        """:class:`UsTranscript`: the unspliced transcript this splice variant belongs to"""
+        """:class:`PreTranscript`: the unspliced transcript this splice variant belongs to"""
         return self.reference_object

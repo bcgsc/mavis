@@ -2,13 +2,15 @@ import unittest
 
 from mavis.align import call_paired_read_event, select_contig_alignments
 from mavis.annotate.file_io import load_reference_genome
-from mavis.annotate.genomic import UsTranscript, Transcript
+from mavis.annotate.genomic import PreTranscript, Transcript
 from mavis.bam.cache import BamCache
 from mavis.bam.read import sequenced_strand, SamRead
 from mavis.bam.cigar import convert_string_to_cigar
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import CALL_METHOD, CIGAR, ORIENT, PYSAM_READ_FLAGS, STRAND, SVTYPE, reverse_complement
+from mavis.interval import Interval
 from mavis.validate import call
+from mavis.validate.base import Evidence
 from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
 
 from . import BAM_INPUT, FULL_BAM_INPUT, mock_read_pair, MockBamFileHandle, MockObject, MockRead, REFERENCE_GENOME_FILE, get_example_genes, MockLongString
@@ -789,6 +791,10 @@ class TestCallByFlankingReadsGenome(unittest.TestCase):
             min_flanking_pairs_resolution=1
         )
 
+    def test_call_coverage_too_large(self):
+        with self.assertRaises(AssertionError):
+            call._call_interval_by_flanking_coverage(Interval(1901459, 1902200), ORIENT.RIGHT, 725 + 150, 150, Evidence.distance, Evidence.traverse)
+
     def test_call_both_intrachromosomal_lr(self):
         # --LLL-100------------500-RRR-------
         # max fragment size: 100 + 2 * 25 = 150
@@ -1017,9 +1023,9 @@ class TestCallByFlankingReadsTranscriptome(unittest.TestCase):
 
     def test_call_deletion(self):
         # transcriptome test will use exonic coordinates for the associated transcripts
-        ust = UsTranscript([(1001, 1100), (1501, 1700), (2001, 2100), (2201, 2300)], strand='+')
-        for patt in ust.generate_splicing_patterns():
-            ust.transcripts.append(Transcript(ust, patt))
+        pre_transcript = PreTranscript([(1001, 1100), (1501, 1700), (2001, 2100), (2201, 2300)], strand='+')
+        for patt in pre_transcript.generate_splicing_patterns():
+            pre_transcript.transcripts.append(Transcript(pre_transcript, patt))
         evidence = self.build_transcriptome_evidence(
             Breakpoint('1', 1051, 1051, 'L', '+'),
             Breakpoint('1', 1551, 1551, 'R', '+')
@@ -1047,7 +1053,7 @@ class TestCallByFlankingReadsTranscriptome(unittest.TestCase):
         self.assertEqual(Breakpoint('1', 2050, 2300, 'R', '+'), breakpoint2)
 
         # now add the transcript and call again
-        evidence.overlapping_transcripts.add(ust)
+        evidence.overlapping_transcripts.add(pre_transcript)
         breakpoint1, breakpoint2 = call._call_by_flanking_pairs(evidence, SVTYPE.DEL)
         self.assertEqual(Breakpoint('1', 1051, 2001, 'L', '+'), breakpoint1)
         self.assertEqual(Breakpoint('1', 1650, 2300, 'R', '+'), breakpoint2)

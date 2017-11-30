@@ -3,8 +3,8 @@ MAVIS
 
 | branch  | status                                                                                      |
 |---------|---------------------------------------------------------------------------------------------|
-| master  | ![Build Status](https://www.bcgsc.ca/bamboo/plugins/servlet/wittified/build-status/MAV-MAV0)|
-| develop | ![Build Status](https://www.bcgsc.ca/bamboo/plugins/servlet/wittified/build-status/MAV-MAV2)|
+| master  | ![Build Status](https://www.bcgsc.ca/bamboo/plugins/servlet/wittified/build-status/MAV-MAV27)|
+| develop | ![Build Status](https://www.bcgsc.ca/bamboo/plugins/servlet/wittified/build-status/MAV-MAV)|
 
 Install Instructions for Developers
 -------------------------------------------

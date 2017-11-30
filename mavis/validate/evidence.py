@@ -113,14 +113,14 @@ class TranscriptomeEvidence(Evidence):
             start (int): the genomic start position
             distance (int): the amount of exonic/intergenic units to traverse
             direction (ORIENT): the direction wrt to the positive/forward reference strand to traverse
-            transcripts (:class:`list` of :class:`UsTranscript`): list of transcripts to use
+            transcripts (:class:`list` of :class:`PreTranscript`): list of transcripts to use
         """
         transcripts = self._select_transcripts(chrom, strand)
         is_left = True if direction == ORIENT.LEFT else False
         genomic_end_positions = set()
         normal_end = GenomeEvidence.traverse(start, distance, direction).start
 
-        for transcript in itertools.chain.from_iterable([ust.transcripts for ust in transcripts]):
+        for transcript in itertools.chain.from_iterable([pre_transcript.transcripts for pre_transcript in transcripts]):
             # convert the start to cdna coordinates
             if any([
                 start < transcript.reference_object.start and is_left,

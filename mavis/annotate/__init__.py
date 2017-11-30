@@ -46,7 +46,7 @@ Overview of Class Relationships
     package is shown above. IS-A relationships are given by the blue arrows. HAS-A relationships are shown in black.
     And reference_object/parent
     type relationships are shown in red. :class:`~mavis.annotate.genomic.Gene` is a gene. Start and end are
-    genomic positions wrt to the template/chr. :class:`~mavis.annotate.genomic.UsTranscript` is the
+    genomic positions wrt to the template/chr. :class:`~mavis.annotate.genomic.PreTranscript` is the
     unspliced transcript. Start and end are genomic positions wrt to the template/chr.
     :class:`~mavis.annotate.genomic.Transcript`: is the spliced transcript. Start and end coordinates are
     1 to the length of the spliced product in base pairs.

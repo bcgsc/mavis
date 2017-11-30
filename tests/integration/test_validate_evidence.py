@@ -1,7 +1,7 @@
 from functools import partial
 import unittest
 
-from mavis.annotate.genomic import Gene, Transcript, UsTranscript
+from mavis.annotate.genomic import Gene, Transcript, PreTranscript
 from mavis.bam.cache import BamCache
 from mavis.bam.read import SamRead
 from mavis.bam import cigar as _cigar
@@ -20,7 +20,7 @@ REFERENCE_GENOME = None
 
 class TestDistance(unittest.TestCase):
     def setUp(self):
-        self.transcript = UsTranscript([(1001, 1100), (1501, 1600), (2001, 2100), (2201, 2300)], strand='+')
+        self.transcript = PreTranscript([(1001, 1100), (1501, 1600), (2001, 2100), (2201, 2300)], strand='+')
         for patt in self.transcript.generate_splicing_patterns():
             self.transcript.transcripts.append(Transcript(self.transcript, patt))
         self.trans_evidence = MockObject(
@@ -60,7 +60,7 @@ class TestDistance(unittest.TestCase):
         self.assertEqual(Interval(1101), dist)
 
     def test_empty_intron(self):
-        t2 = UsTranscript([(1001, 1100), (1501, 1600), (2001, 2200), (2201, 2300)], strand='+')
+        t2 = PreTranscript([(1001, 1100), (1501, 1600), (2001, 2200), (2201, 2300)], strand='+')
         for patt in t2.generate_splicing_patterns():
             t2.transcripts.append(Transcript(t2, patt))
         print(t2)
@@ -76,7 +76,7 @@ class TestTransStandardize(unittest.TestCase):
         # qwertyuiopas---kkkkk------dfghjklzxcvbnm
         # ..........      ................
         gene = Gene('1', 1, 1000, strand='+')
-        transcript = UsTranscript(exons=[(1, 12), (20, 28)], gene=gene, strand='+')
+        transcript = PreTranscript(exons=[(1, 12), (20, 28)], gene=gene, strand='+')
         for spl_patt in transcript.generate_splicing_patterns():
             transcript.transcripts.append(Transcript(transcript, spl_patt))
         gene.transcripts.append(transcript)
@@ -98,7 +98,7 @@ class TestTransStandardize(unittest.TestCase):
         # qwertyuiopasdf---kkkkkdf------ghjklzxcvbnm
         # ..........      ................
         gene = Gene('1', 1, 1000, strand='+')
-        transcript = UsTranscript(exons=[(1, 14), (22, 28)], gene=gene, strand='+')
+        transcript = PreTranscript(exons=[(1, 14), (22, 28)], gene=gene, strand='+')
         for spl_patt in transcript.generate_splicing_patterns():
             transcript.transcripts.append(Transcript(transcript, spl_patt))
         gene.transcripts.append(transcript)
@@ -180,7 +180,7 @@ class TestComputeFragmentSizes(unittest.TestCase):
 class TestTraverse(unittest.TestCase):
 
     def setUp(self):
-        self.transcript = UsTranscript([(1001, 1100), (1301, 1400), (1701, 1800)], strand=STRAND.POS)
+        self.transcript = PreTranscript([(1001, 1100), (1301, 1400), (1701, 1800)], strand=STRAND.POS)
         for patt in self.transcript.generate_splicing_patterns():
             self.transcript.transcripts.append(Transcript(self.transcript, patt))
 
@@ -243,7 +243,7 @@ class TestTraverse(unittest.TestCase):
 class TestTraverseTransRev(unittest.TestCase):
 
     def setUp(self):
-        self.transcript = UsTranscript([(1001, 1100), (1301, 1400), (1701, 1800)], strand=STRAND.NEG)
+        self.transcript = PreTranscript([(1001, 1100), (1301, 1400), (1701, 1800)], strand=STRAND.NEG)
         for patt in self.transcript.generate_splicing_patterns():
             self.transcript.transcripts.append(Transcript(self.transcript, patt))
 
@@ -309,10 +309,10 @@ class TestTranscriptomeEvidenceWindow(unittest.TestCase):
 
     def setUp(self):
         gene = Gene('1', 1, 9999, name='KRAS', strand=STRAND.POS)
-        self.ust = UsTranscript(gene=gene, exons=[(1001, 1100), (1401, 1500), (1701, 1750), (3001, 4000)])
-        gene.unspliced_transcripts.append(self.ust)
-        for spl in self.ust.generate_splicing_patterns():
-            self.ust.transcripts.append(Transcript(self.ust, spl))
+        self.pre_transcript = PreTranscript(gene=gene, exons=[(1001, 1100), (1401, 1500), (1701, 1750), (3001, 4000)])
+        gene.unspliced_transcripts.append(self.pre_transcript)
+        for spl in self.pre_transcript.generate_splicing_patterns():
+            self.pre_transcript.transcripts.append(Transcript(self.pre_transcript, spl))
         self.annotations = {gene.chr: [gene]}
         self.genome_evidence = MockObject(
             annotations={},
@@ -325,7 +325,7 @@ class TestTranscriptomeEvidenceWindow(unittest.TestCase):
             read_length=100,
             max_expected_fragment_size=550,
             call_error=11,
-            overlapping_transcripts={self.ust}
+            overlapping_transcripts={self.pre_transcript}
         )
         setattr(self.trans_evidence, '_select_transcripts', lambda *pos: self.trans_evidence.overlapping_transcripts)
         setattr(self.trans_evidence, 'traverse', partial(TranscriptomeEvidence.traverse, self.trans_evidence))
@@ -375,17 +375,17 @@ class TestTranscriptomeEvidenceWindow(unittest.TestCase):
         #  [(1001, 1100), (1401, 1500), (1701, 1750), (3001, 4000)])
         b = Breakpoint(chr='1', start=1150, orient=ORIENT.RIGHT)
         gene = self.annotations['1'][0]
-        t2 = UsTranscript(gene=gene, exons=[(1001, 1100), (1200, 1300), (2100, 2200)])
+        t2 = PreTranscript(gene=gene, exons=[(1001, 1100), (1200, 1300), (2100, 2200)])
         for patt in t2.generate_splicing_patterns():
             t2.transcripts.append(Transcript(t2, patt))
         gene.transcripts.append(t2)
         # 989 - 2561
         # 989 - 3411
-        self.assertEqual(Interval(1040, 3160), self.transcriptome_window(b, [self.ust, t2]))
+        self.assertEqual(Interval(1040, 3160), self.transcriptome_window(b, [self.pre_transcript, t2]))
 
     def test_many_small_exons(self):
         g = Gene('fake', 17271277, 17279592, strand='+')
-        ust = UsTranscript(
+        pre_transcript = PreTranscript(
             gene=g,
             exons=[
                 (17271277, 17271984),
@@ -398,17 +398,17 @@ class TestTranscriptomeEvidenceWindow(unittest.TestCase):
                 (17278293, 17278378),  # 86
                 (17279229, 17279592)  # 364
             ])
-        g.transcripts.append(ust)
-        for patt in ust.generate_splicing_patterns():
-            ust.transcripts.append(Transcript(ust, patt))
+        g.transcripts.append(pre_transcript)
+        for patt in pre_transcript.generate_splicing_patterns():
+            pre_transcript.transcripts.append(Transcript(pre_transcript, patt))
         b = Breakpoint(chr='fake', start=17279591, orient=ORIENT.LEFT)
-        self.assertEqual(Interval(17277321, 17279701), self.transcriptome_window(b, [ust]))
+        self.assertEqual(Interval(17277321, 17279701), self.transcriptome_window(b, [pre_transcript]))
 
 
 class TestNetSizeTrans(unittest.TestCase):
 
     def setUp(self):
-        self.transcript = UsTranscript([(1001, 1100), (1301, 1400), (1701, 1800)], strand=STRAND.POS)
+        self.transcript = PreTranscript([(1001, 1100), (1301, 1400), (1701, 1800)], strand=STRAND.POS)
         for patt in self.transcript.generate_splicing_patterns():
             self.transcript.transcripts.append(Transcript(self.transcript, patt))
         self.trans_evidence = MockObject(
