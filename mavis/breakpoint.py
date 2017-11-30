@@ -141,7 +141,7 @@ class BreakpointPair:
             >>> BreakpointPair(Breakpoint('1', 1, strand='+'), Breakpoint('1', 9999, strand='-'))
         """
 
-        if b1.key > b2.key:
+        if b1.key[:3] > b2.key[:3]:
             self.break1 = b2
             self.break2 = b1
         else:

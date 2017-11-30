@@ -191,42 +191,53 @@ def _parse_vcf_record(row):
     """
     converts a vcf record
     """
-    info = {}
-    for entry in row.info.items():
-        info[entry[0]] = entry[1:] if len(entry[1:]) > 1 else entry[1]
-    std_row = {}
+    records = []
+    for alt in row.alts if row.alts else [None]:
+        info = {}
+        for entry in row.info.items():
+            info[entry[0]] = entry[1:] if len(entry[1:]) > 1 else entry[1]
+        std_row = {}
+        if row.id:
+            std_row['id'] = row.id
 
-    if info['SVTYPE'] == 'BND':
-        if len(row.alts) > 1:
-            raise NotImplementedError('multiple alternates unsupported', row.alts)
-        chr2, end, orient2, ref, alt = _parse_bnd_alt(row.alts[0])
-        std_row['orient2'] = orient2
-        std_row[COLUMNS.untemplated_seq] = alt
-        if row.ref != ref:
-            raise AssertionError(
-                'Expected the ref specification in the vcf row to match the sequence '
-                'in the alt string: {} vs {}'.format(row.ref, ref))
-    else:
-        chr2 = info.get('CHR2', row.chrom)
-        end = row.stop
+        if info.get('SVTYPE', None) == 'BND':
+            chr2, end, orient2, ref, alt = _parse_bnd_alt(alt)
+            std_row['orient2'] = orient2
+            std_row[COLUMNS.untemplated_seq] = alt
+            if row.ref != ref:
+                raise AssertionError(
+                    'Expected the ref specification in the vcf row to match the sequence '
+                    'in the alt string: {} vs {}'.format(row.ref, ref))
+        else:
+            chr2 = info.get('CHR2', row.chrom)
+            end = row.stop
+            if alt and row.ref and re.match(r'^[A-Z]+$', alt) and re.match(r'^[A-Z]+', row.ref):
+                std_row[COLUMNS.untemplated_seq] = alt[1:]
+                size = len(alt) - len(row.ref)
+                if size > 0:
+                    std_row['event_type'] = SVTYPE.INS
+                elif size < 0:
+                    std_row['event_type'] = SVTYPE.DEL
 
-    std_row.update({
-        'chr1': row.chrom, 'chr2': chr2,
-        'pos1_start': max(1, row.pos + info.get('CIPOS', (0, 0))[0]),
-        'pos1_end': row.pos + info.get('CIPOS', (0, 0))[1],
-        'pos2_start': max(1, end + info.get('CIEND', (0, 0))[0]),
-        'pos2_end': end + info.get('CIEND', (0, 0))[1]
-    })
-    std_row['event_type'] = info['SVTYPE']
+        std_row.update({
+            'chr1': row.chrom, 'chr2': chr2,
+            'pos1_start': max(1, row.pos + info.get('CIPOS', (0, 0))[0]),
+            'pos1_end': row.pos + info.get('CIPOS', (0, 0))[1],
+            'pos2_start': max(1, end + info.get('CIEND', (0, 0))[0]),
+            'pos2_end': end + info.get('CIEND', (0, 0))[1]
+        })
+        if 'SVTYPE' in info:
+            std_row['event_type'] = info['SVTYPE']
 
-    try:
-        orient1, orient2 = info['CT'].split('to')
-        connection_type = {'3': ORIENT.LEFT, '5': ORIENT.RIGHT, 'N': ORIENT.NS}
-        std_row['orient1'] = connection_type[orient1]
-        std_row['orient2'] = connection_type[orient2]
-    except KeyError:
-        pass
-    return std_row
+        try:
+            orient1, orient2 = info['CT'].split('to')
+            connection_type = {'3': ORIENT.LEFT, '5': ORIENT.RIGHT, 'N': ORIENT.NS}
+            std_row['orient1'] = connection_type[orient1]
+            std_row['orient2'] = connection_type[orient2]
+        except KeyError:
+            pass
+        records.append(std_row)
+    return records
 
 
 def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
@@ -247,9 +258,7 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
     # convert the specified file type to a standard format
     if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL]:
 
-        std_row.update(_parse_vcf_record(row))
-        if row.id is not None and TRACKING_COLUMN not in std_row:
-            std_row[TRACKING_COLUMN] = '{}-{}'.format(file_type, row.id)
+        std_row.update(row)
 
     elif file_type == SUPPORTED_TOOL.CHIMERASCAN:
 
@@ -283,7 +292,7 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
         std_row['strand2'] = [STRAND.NS]
 
     if not std_row.get(TRACKING_COLUMN, None):
-        std_row[TRACKING_COLUMN] = '{}-{}'.format(file_type, uuid())
+        std_row[TRACKING_COLUMN] = '{}-{}'.format(file_type, std_row.get('id', uuid()))
     if assume_no_untemplated and not std_row.get(COLUMNS.untemplated_seq, None):
         std_row[COLUMNS.untemplated_seq] = ''
 
@@ -338,7 +347,9 @@ def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fa
         result = read_bpp_from_input_file(input_file)
     else:
         if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL]:
-            rows = list(VariantFile(input_file).fetch())
+            rows = []
+            for vcf_record in VariantFile(input_file).fetch():
+                rows.extend(_parse_vcf_record(vcf_record))
         else:
             dummy, rows = tab.read_file(input_file)
         log('found', len(rows), 'rows')

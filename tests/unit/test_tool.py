@@ -1,7 +1,8 @@
 import unittest
 
 from mavis.constants import ORIENT, STRAND, SVTYPE
-from mavis.tools import _convert_tool_row, SUPPORTED_TOOL, _parse_transabyss, _parse_chimerascan, _parse_bnd_alt
+from mavis.tools import _convert_tool_row, SUPPORTED_TOOL, _parse_transabyss, _parse_chimerascan, _parse_bnd_alt, _parse_vcf_record
+import inspect
 
 from .mock import Mock
 
@@ -12,9 +13,9 @@ class TestDelly(unittest.TestCase):
         row = Mock(
             chrom='1', pos=247760043, id='1DEL00000330',
             info={'SVTYPE': 'INS', 'CT': 'NtoN', 'CHR2': '1', 'CIEND': [-10, 10], 'CIPOS': [-10, 10]},
-            stop=247760044
+            stop=247760044, alts=[]
         )
-        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DELLY, False)
+        bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.DELLY, False)
         self.assertEqual(1, len(bpp_list))
         bpp = bpp_list[0]
         self.assertEqual('1', bpp.break1.chr)
@@ -30,7 +31,7 @@ class TestDelly(unittest.TestCase):
         self.assertEqual(SVTYPE.INS, bpp.event_type)
         self.assertEqual('', bpp.untemplated_seq)
 
-        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DELLY, False, assume_no_untemplated=False)
+        bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.DELLY, False, assume_no_untemplated=False)
         self.assertEqual(1, len(bpp_list))
         bpp = bpp_list[0]
         self.assertEqual(None, bpp.untemplated_seq)
@@ -46,14 +47,14 @@ class TestDelly(unittest.TestCase):
                 'CIPOS': [-700, 700],
                 'CHR2': '2'
             },
-            stop=58921502
+            stop=58921502, alts=[]
         )
-        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DELLY, False)
+        bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.DELLY, False)
         for b in bpp_list:
             print(b)
         self.assertEqual(1, len(bpp_list))
         row.info['CT'] = 'NtoN'
-        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DELLY, False)
+        bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.DELLY, False)
         for b in bpp_list:
             print(b)
         self.assertEqual(4, len(bpp_list))
@@ -89,6 +90,10 @@ class TestTransAbyss(unittest.TestCase):
             '_index': 9
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.TA, True)
+        print('after call')
+        print(_convert_tool_row)
+        for bpp in bpp_list:
+            print(bpp)
         self.assertEqual(2, len(bpp_list))
         bpp = bpp_list[0]
         self.assertEqual('', bpp.untemplated_seq)
@@ -179,9 +184,9 @@ class TestManta(unittest.TestCase):
                 'SVTYPE': 'DEL',
                 'CIPOS': [0, 4],
                 'CIEND': [0, 4]
-            }, stop=9412400
+            }, stop=9412400, alts=[]
         )
-        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.MANTA, False)
+        bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.MANTA, False)
         self.assertEqual(1, len(bpp_list))
         bpp = bpp_list[0]
         self.assertEqual('21', bpp.break1.chr)
@@ -199,9 +204,9 @@ class TestManta(unittest.TestCase):
             info={
                 'SVTYPE': 'DUP',
                 'SVINSSEQ': 'CAAAACTTACTATAGCAGTTCTGTGAGCTGCTCTAGC'
-            }, stop=224800120
+            }, stop=224800120, alts=[]
         )
-        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.MANTA, False)
+        bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.MANTA, False)
         self.assertEqual(1, len(bpp_list))
         bpp = bpp_list[0]
         self.assertEqual('1', bpp.break1.chr)
@@ -419,9 +424,9 @@ class TestPindel(unittest.TestCase):
             info={
                 'SVTYPE': 'DEL'
             },
-            stop=9412400, id=None
+            stop=9412400, id=None, alts=[]
         )
-        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.PINDEL, False)
+        bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.PINDEL, False)
         self.assertEqual(1, len(bpp_list))
         bpp = bpp_list[0]
         self.assertEqual('21', bpp.break1.chr)
@@ -443,9 +448,9 @@ class TestPindel(unittest.TestCase):
             chrom='21', pos=9412306,
             info={
                 'SVTYPE': 'INS'
-            }, stop=9412400, id=None
+            }, stop=9412400, id=None, alts=[]
         )
-        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.PINDEL, False)
+        bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.PINDEL, False)
         self.assertEqual(1, len(bpp_list))
         bpp = bpp_list[0]
         self.assertEqual('21', bpp.break1.chr)
@@ -467,9 +472,9 @@ class TestPindel(unittest.TestCase):
             chrom='21', pos=9412306,
             info={
                 'SVTYPE': 'INV'
-            }, stop=9412400, id=None
+            }, stop=9412400, id=None, alts=[]
         )
-        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.PINDEL, False)
+        bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.PINDEL, False)
         self.assertEqual(2, len(bpp_list))
         bpp = sorted(bpp_list, key=lambda x: x.break1)[0]
         self.assertEqual('21', bpp.break1.chr)
