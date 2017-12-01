@@ -86,7 +86,7 @@ class FusionTranscript(PreTranscript):
         """
         assert ann.event_type == SVTYPE.INV
         assert ann.transcript1 == ann.transcript2
-        fusion_ust = FusionTranscript()
+        fusion_pre_transcript = FusionTranscript()
         # pull the exons from either size of the breakpoints window
         if ann.break1.orient == ORIENT.RIGHT:
             window = Interval(ann.break1.end, ann.break2.end - 1)
@@ -103,8 +103,8 @@ class FusionTranscript(PreTranscript):
 
         if ann.transcript1.get_strand() == STRAND.POS:
             window_seq = reverse_complement(window_seq)  # b/c inversion should be opposite
-            fusion_ust.map_region_to_genome(b1.chr, (1, len(seq1)), (ann.transcript1.start, b1.start))
-            fusion_ust.map_region_to_genome(
+            fusion_pre_transcript.map_region_to_genome(b1.chr, (1, len(seq1)), (ann.transcript1.start, b1.start))
+            fusion_pre_transcript.map_region_to_genome(
                 b1.chr,
                 (len(seq1) + len(useq) + len(window_seq) + 1, len(seq1) + len(useq) + len(window_seq) + len(seq2)),
                 (b2.start, ann.transcript1.end)
@@ -113,66 +113,66 @@ class FusionTranscript(PreTranscript):
             useq = reverse_complement(useq)  # exon sequence will already be revcomp from pull exons method
             seq1, seq2 = seq2, seq1
             ex1, ex2 = ex2, ex1
-            fusion_ust.map_region_to_genome(b1.chr, (1, len(seq1)), (b2.start, ann.transcript1.end), True)
-            fusion_ust.map_region_to_genome(
+            fusion_pre_transcript.map_region_to_genome(b1.chr, (1, len(seq1)), (b2.start, ann.transcript1.end), True)
+            fusion_pre_transcript.map_region_to_genome(
                 b1.chr,
                 (len(seq1) + len(useq) + len(window_seq) + 1, len(seq1) + len(useq) + len(window_seq) + len(seq2)),
                 (ann.transcript1.start, b1.start), True
             )
 
-        fusion_ust.seq = seq1
-        fusion_ust.break1 = len(seq1)
-        fusion_ust.break2 = len(seq1) + len(useq) + len(window_seq) + 1
+        fusion_pre_transcript.seq = seq1
+        fusion_pre_transcript.break1 = len(seq1)
+        fusion_pre_transcript.break2 = len(seq1) + len(useq) + len(window_seq) + 1
 
         if ann.break1.orient == ORIENT.LEFT:
-            fusion_ust.seq += useq + window_seq
-            fusion_ust.map_region_to_genome(
+            fusion_pre_transcript.seq += useq + window_seq
+            fusion_pre_transcript.map_region_to_genome(
                 b1.chr,
                 (len(seq1) + len(useq) + 1, len(seq1) + len(useq) + len(window_seq)),
                 window,
                 True if ann.transcript1.get_strand() == STRAND.POS else False
             )
         else:
-            fusion_ust.seq += window_seq + useq
-            fusion_ust.map_region_to_genome(
+            fusion_pre_transcript.seq += window_seq + useq
+            fusion_pre_transcript.map_region_to_genome(
                 b1.chr,
                 (len(seq1) + 1, len(seq1) + len(window_seq)),
                 window,
                 True if ann.transcript1.get_strand() == STRAND.POS else False
             )
 
-        fusion_ust.last_five_prime_exon = ex1[-1][0]
-        fusion_ust.first_three_prime_exon = ex2[0][0]
+        fusion_pre_transcript.last_five_prime_exon = ex1[-1][0]
+        fusion_pre_transcript.first_three_prime_exon = ex2[0][0]
 
         for ex, old_ex in ex1:
-            fusion_ust.exons.append(ex)
-            ex.reference_object = fusion_ust
-            fusion_ust.exon_mapping[ex.position] = old_ex
+            fusion_pre_transcript.exons.append(ex)
+            ex.reference_object = fusion_pre_transcript
+            fusion_pre_transcript.exon_mapping[ex.position] = old_ex
 
-        offset = len(fusion_ust.seq)
+        offset = len(fusion_pre_transcript.seq)
 
         if ann.protocol == PROTOCOL.TRANS:
-            fusion_ust.exons[-1].end_splice_site.intact = False
+            fusion_pre_transcript.exons[-1].end_splice_site.intact = False
             ex2[0][0].start_splice_site.intact = False
-            novel_exon_start = fusion_ust.exons[-1].end + 1
+            novel_exon_start = fusion_pre_transcript.exons[-1].end + 1
             novel_exon_end = offset + ex2[0][0].start - 1
             if novel_exon_end >= novel_exon_start:  # create a novel exon
                 exon = Exon(
-                    novel_exon_start, novel_exon_end, fusion_ust,
+                    novel_exon_start, novel_exon_end, fusion_pre_transcript,
                     intact_start_splice=False,
                     intact_end_splice=False
                 )
-                fusion_ust.exons.append(exon)
-        fusion_ust.seq += seq2
+                fusion_pre_transcript.exons.append(exon)
+        fusion_pre_transcript.seq += seq2
         for ex, old_ex in ex2:
             exon = Exon(
-                ex.start + offset, ex.end + offset, fusion_ust,
+                ex.start + offset, ex.end + offset, fusion_pre_transcript,
                 intact_start_splice=ex.start_splice_site.intact,
                 intact_end_splice=ex.end_splice_site.intact
             )
-            fusion_ust.exons.append(exon)
-            fusion_ust.exon_mapping[exon.position] = old_ex
-        return fusion_ust
+            fusion_pre_transcript.exons.append(exon)
+            fusion_pre_transcript.exon_mapping[exon.position] = old_ex
+        return fusion_pre_transcript
 
     @classmethod
     def _build_single_gene_duplication(cls, ann, reference_genome, min_orf_size, max_orf_cap, min_domain_mapping_match):
@@ -182,7 +182,7 @@ class FusionTranscript(PreTranscript):
         """
         assert ann.event_type == SVTYPE.DUP
         assert ann.transcript1 == ann.transcript2
-        fusion_ust = FusionTranscript()
+        fusion_pre_transcript = FusionTranscript()
 
         seq1, ex1 = cls._pull_exons(ann.transcript1, ann.break1, reference_genome[ann.break1.chr].seq)
         seq2, ex2 = cls._pull_exons(ann.transcript2, ann.break2, reference_genome[ann.break2.chr].seq)
@@ -196,45 +196,45 @@ class FusionTranscript(PreTranscript):
             front, back = (back, front)
             useq = reverse_complement(useq)
             flipped = True
-        fusion_ust.map_region_to_genome(ann.break1.chr, Interval(1, len(seq2)), front, flipped)
-        fusion_ust.map_region_to_genome(
+        fusion_pre_transcript.map_region_to_genome(ann.break1.chr, Interval(1, len(seq2)), front, flipped)
+        fusion_pre_transcript.map_region_to_genome(
             ann.break1.chr,
             Interval(len(seq2) + len(useq) + 1, len(seq1) + len(seq2) + len(useq)),
             back, flipped
         )
-        fusion_ust.seq = seq2 + useq
-        fusion_ust.break1 = len(seq2)
-        fusion_ust.break2 = len(seq2) + len(useq) + 1
+        fusion_pre_transcript.seq = seq2 + useq
+        fusion_pre_transcript.break1 = len(seq2)
+        fusion_pre_transcript.break2 = len(seq2) + len(useq) + 1
         for ex, old_ex in ex2:
-            fusion_ust.exons.append(ex)
-            ex.reference_object = fusion_ust
-            fusion_ust.exon_mapping[ex.position] = old_ex
-        fusion_ust.last_five_prime_exon = ex2[-1][0]
-        fusion_ust.first_three_prime_exon = ex1[0][0]
-        offset = len(fusion_ust.seq)
+            fusion_pre_transcript.exons.append(ex)
+            ex.reference_object = fusion_pre_transcript
+            fusion_pre_transcript.exon_mapping[ex.position] = old_ex
+        fusion_pre_transcript.last_five_prime_exon = ex2[-1][0]
+        fusion_pre_transcript.first_three_prime_exon = ex1[0][0]
+        offset = len(fusion_pre_transcript.seq)
         if ann.protocol == PROTOCOL.TRANS:
-            fusion_ust.exons[-1].end_splice_site.intact = False
+            fusion_pre_transcript.exons[-1].end_splice_site.intact = False
             ex1[0][0].start_splice_site.intact = False
-            novel_exon_start = fusion_ust.exons[-1].end + 1
+            novel_exon_start = fusion_pre_transcript.exons[-1].end + 1
             novel_exon_end = offset + ex1[0][0].start - 1
             if novel_exon_end >= novel_exon_start:  # create a novel exon
                 e = Exon(
-                    novel_exon_start, novel_exon_end, fusion_ust,
+                    novel_exon_start, novel_exon_end, fusion_pre_transcript,
                     intact_start_splice=False,
                     intact_end_splice=False
                 )
-                fusion_ust.exons.append(e)
+                fusion_pre_transcript.exons.append(e)
 
         for ex, old_ex in ex1:
             e = Exon(
-                ex.start + offset, ex.end + offset, fusion_ust,
+                ex.start + offset, ex.end + offset, fusion_pre_transcript,
                 intact_start_splice=ex.start_splice_site.intact,
                 intact_end_splice=ex.end_splice_site.intact
             )
-            fusion_ust.exons.append(e)
-            fusion_ust.exon_mapping[e.position] = old_ex
-        fusion_ust.seq += seq1
-        return fusion_ust
+            fusion_pre_transcript.exons.append(e)
+            fusion_pre_transcript.exon_mapping[e.position] = old_ex
+        fusion_pre_transcript.seq += seq1
+        return fusion_pre_transcript
 
     @classmethod
     def build(cls, ann, reference_genome, min_orf_size=None, max_orf_cap=None, min_domain_mapping_match=None):
@@ -258,16 +258,16 @@ class FusionTranscript(PreTranscript):
         elif len(ann.break1) > 1 or len(ann.break2) > 1:
             raise NotSpecifiedError('cannot build fusion transcripts for non-specific breakpoints')
 
-        fusion_ust = FusionTranscript()
+        fusion_pre_transcript = FusionTranscript()
 
         if ann.transcript1 == ann.transcript2 and ann.event_type not in [SVTYPE.DEL, SVTYPE.INS]:
             # single transcript events are special cases if the breakpoints face each other
             # as is the case for duplications and inversions
             if ann.event_type == SVTYPE.DUP:
-                fusion_ust = cls._build_single_gene_duplication(
+                fusion_pre_transcript = cls._build_single_gene_duplication(
                     ann, reference_genome, min_orf_size, max_orf_cap, min_domain_mapping_match)
             elif ann.event_type == SVTYPE.INV:
-                fusion_ust = cls._build_single_gene_inversion(
+                fusion_pre_transcript = cls._build_single_gene_inversion(
                     ann, reference_genome, min_orf_size, max_orf_cap, min_domain_mapping_match)
             else:
                 raise AttributeError('unrecognized event type')
@@ -281,49 +281,49 @@ class FusionTranscript(PreTranscript):
             seq2, ex2 = cls._pull_exons(ann.transcript2, ann.break2, reference_genome[ann.break2.chr].seq)
             useq = ann.untemplated_seq
             if t1 == PRIME.FIVE:
-                fusion_ust.break1 = len(seq1)
-                fusion_ust.break2 = len(seq1) + len(useq) + 1
+                fusion_pre_transcript.break1 = len(seq1)
+                fusion_pre_transcript.break2 = len(seq1) + len(useq) + 1
                 if ann.transcript1.strand == STRAND.NEG:
                     useq = reverse_complement(useq)
-                    fusion_ust.map_region_to_genome(
+                    fusion_pre_transcript.map_region_to_genome(
                         ann.break1.chr, (1, len(seq1)), (ann.break1.start, ann.transcript1.end), True
                     )
                 else:
-                    fusion_ust.map_region_to_genome(
+                    fusion_pre_transcript.map_region_to_genome(
                         ann.break1.chr, (1, len(seq1)), (ann.transcript1.start, ann.break1.start)
                     )
                 if ann.transcript2.strand == STRAND.NEG:  # t2 is the 3' transcript
-                    fusion_ust.map_region_to_genome(
+                    fusion_pre_transcript.map_region_to_genome(
                         ann.break2.chr,
                         (len(seq1) + len(useq) + 1, len(seq1) + len(useq) + len(seq2)),
                         (ann.transcript2.start, ann.break2.start), True
                     )
                 else:
-                    fusion_ust.map_region_to_genome(
+                    fusion_pre_transcript.map_region_to_genome(
                         ann.break2.chr,
                         (len(seq1) + len(useq) + 1, len(seq1) + len(useq) + len(seq2)),
                         (ann.break2.start, ann.transcript2.end)
                     )
             else:
-                fusion_ust.break1 = len(seq2)
-                fusion_ust.break2 = len(seq2) + len(useq) + 1
+                fusion_pre_transcript.break1 = len(seq2)
+                fusion_pre_transcript.break2 = len(seq2) + len(useq) + 1
                 if ann.transcript2.strand == STRAND.NEG:
                     useq = reverse_complement(useq)
-                    fusion_ust.map_region_to_genome(
+                    fusion_pre_transcript.map_region_to_genome(
                         ann.break2.chr, (1, len(seq2)), (ann.break2.start, ann.transcript2.end), True
                     )
                 else:
-                    fusion_ust.map_region_to_genome(
+                    fusion_pre_transcript.map_region_to_genome(
                         ann.break2.chr, (1, len(seq2)), (ann.transcript2.start, ann.break2.start)
                     )
                 if ann.transcript1.strand == STRAND.NEG:  # t1 is the 3' transcript
-                    fusion_ust.map_region_to_genome(
+                    fusion_pre_transcript.map_region_to_genome(
                         ann.break1.chr,
                         (len(seq2) + len(useq) + 1, len(seq1) + len(useq) + len(seq2)),
                         (ann.transcript1.start, ann.break1.start)
                     )
                 else:
-                    fusion_ust.map_region_to_genome(
+                    fusion_pre_transcript.map_region_to_genome(
                         ann.break1.chr,
                         (len(seq2) + len(useq) + 1, len(seq1) + len(useq) + len(seq2)),
                         (ann.break1.start, ann.transcript1.end)
@@ -331,41 +331,41 @@ class FusionTranscript(PreTranscript):
                 seq1, seq2 = seq2, seq1
                 ex1, ex2 = ex2, ex1
 
-            fusion_ust.seq = seq1 + useq
+            fusion_pre_transcript.seq = seq1 + useq
 
             for ex, old_ex in ex1:
-                fusion_ust.exons.append(ex)
-                ex.reference_object = fusion_ust
-                fusion_ust.exon_mapping[ex.position] = old_ex
-            offset = len(fusion_ust.seq)
+                fusion_pre_transcript.exons.append(ex)
+                ex.reference_object = fusion_pre_transcript
+                fusion_pre_transcript.exon_mapping[ex.position] = old_ex
+            offset = len(fusion_pre_transcript.seq)
 
             if ann.protocol == PROTOCOL.TRANS:
-                fusion_ust.exons[-1].end_splice_site.intact = False
+                fusion_pre_transcript.exons[-1].end_splice_site.intact = False
                 ex2[0][0].start_splice_site.intact = False
-                novel_exon_start = fusion_ust.exons[-1].end + 1
+                novel_exon_start = fusion_pre_transcript.exons[-1].end + 1
                 novel_exon_end = offset + ex2[0][0].start - 1
                 if novel_exon_end >= novel_exon_start:  # create a novel exon
                     e = Exon(
-                        novel_exon_start, novel_exon_end, fusion_ust,
+                        novel_exon_start, novel_exon_end, fusion_pre_transcript,
                         intact_start_splice=False,
                         intact_end_splice=False
                     )
-                    fusion_ust.exons.append(e)
+                    fusion_pre_transcript.exons.append(e)
             for ex, old_ex in ex2:
                 e = Exon(
-                    ex.start + offset, ex.end + offset, fusion_ust,
+                    ex.start + offset, ex.end + offset, fusion_pre_transcript,
                     intact_start_splice=ex.start_splice_site.intact,
                     intact_end_splice=ex.end_splice_site.intact
                 )
-                fusion_ust.exons.append(e)
-                fusion_ust.exon_mapping[e.position] = old_ex
-            fusion_ust.seq += seq2
+                fusion_pre_transcript.exons.append(e)
+                fusion_pre_transcript.exon_mapping[e.position] = old_ex
+            fusion_pre_transcript.seq += seq2
 
-        fusion_ust.position = Interval(1, len(fusion_ust.seq))
+        fusion_pre_transcript.position = Interval(1, len(fusion_pre_transcript.seq))
         # add all splice variants
-        for spl_patt in fusion_ust.generate_splicing_patterns():
-            fusion_spl_tx = Transcript(fusion_ust, spl_patt)
-            fusion_ust.spliced_transcripts.append(fusion_spl_tx)
+        for spl_patt in fusion_pre_transcript.generate_splicing_patterns():
+            fusion_spl_tx = Transcript(fusion_pre_transcript, spl_patt)
+            fusion_pre_transcript.spliced_transcripts.append(fusion_spl_tx)
 
             # calculate the putative open reading frames
             orfs = calculate_orf(fusion_spl_tx.get_seq(), min_orf_size=min_orf_size)
@@ -390,7 +390,7 @@ class FusionTranscript(PreTranscript):
                 fusion_spl_tx.translations.append(translation)
 
         # remap the domains from the original translations to the current translations
-        for fusion_spl_tx in fusion_ust.spliced_transcripts:
+        for fusion_spl_tx in fusion_pre_transcript.spliced_transcripts:
             for new_tl in fusion_spl_tx.translations:
                 aa_seq = new_tl.get_aa_seq()
                 assert aa_seq[0] == 'M'
@@ -406,7 +406,7 @@ class FusionTranscript(PreTranscript):
                                 new_tl.domains.append(new_dom)
                         except UserWarning:
                             pass
-        return fusion_ust
+        return fusion_pre_transcript
 
     def get_seq(self, reference_genome=None, ignore_cache=False):
         return PreTranscript.get_seq(self)
