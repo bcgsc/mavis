@@ -84,7 +84,7 @@ def _parse_breakdancer(row):
     pass  # TODO: add breakdancer support
 
 
-def _parse_transabyss(row, is_stranded=False):
+def _parse_transabyss(row):
     """
     transforms the transabyss output into the common format for expansion. Maps the input column
     names to column names which MAVIS can read
@@ -94,16 +94,13 @@ def _parse_transabyss(row, is_stranded=False):
         std_row[TRACKING_COLUMN] = '{}-{}'.format(SUPPORTED_TOOL.TA, row['id'])
 
     std_row['event_type'] = row.get('rearrangement', row['type'])
-    if 'genes' in row:
-        std_row['{}_genes'.format(SUPPORTED_TOOL.TA)] = row['genes']
+    for retained_column in ['genes', 'gene']:
+        if retained_column in row:
+            std_row['{}_{}'.format(SUPPORTED_TOOL.TA, retained_column)] = row[retained_column]
     if std_row['event_type'] in ['LSR', 'translocation']:
         del std_row['event_type']
     if 'breakpoint' in row:
         std_row['orient1'], std_row['orient2'] = row['orientations'].split(',')
-        if is_stranded:
-            std_row['strand1'], std_row['strand2'] = row['strands'].split(',')
-            std_row['strand1'] = STRAND.POS if std_row['strand1'] == STRAND.NEG else STRAND.NEG
-            std_row['strand2'] = STRAND.POS if std_row['strand2'] == STRAND.NEG else STRAND.NEG
         match = re.match(
             r'^(?P<chr1>[^:]+):(?P<pos1_start>\d+)\|(?P<chr2>[^:]+):(?P<pos2_start>\d+)$', row['breakpoint'])
         if not match:
@@ -120,8 +117,6 @@ def _parse_transabyss(row, is_stranded=False):
         elif std_row['event_type'] == 'ins':
             std_row['pos2_start'] += 1
 
-        if is_stranded:
-            std_row['strand1'] = std_row['strand2'] = (STRAND.POS if row['ctg_strand'] == STRAND.NEG else STRAND.NEG)
         # add the untemplated sequence where appropriate
         if std_row['event_type'] == 'del':
             assert row['alt'] == 'na'
@@ -146,6 +141,9 @@ def _parse_chimerascan(row):
     names to column names which MAVIS can read
     """
     std_row = {}
+    for retained_column in ['genes5p', 'genes3p']:
+        if retained_column in row:
+            std_row['{}_{}'.format(SUPPORTED_TOOL.CHIMERASCAN, retained_column)] = row[retained_column]
     if TRACKING_COLUMN not in row:
         std_row[TRACKING_COLUMN] = '{}-{}'.format(SUPPORTED_TOOL.CHIMERASCAN, row['chimera_cluster_id'])
 
@@ -189,46 +187,65 @@ def _parse_bnd_alt(alt):
         raise NotImplementedError('alt specification in unexpected format', alt)
 
 
-def _parse_vcf_record(row):
+def _parse_vcf_record(record):
     """
     converts a vcf record
     """
-    info = {}
-    for entry in row.info.items():
-        info[entry[0]] = entry[1:] if len(entry[1:]) > 1 else entry[1]
-    std_row = {}
+    records = []
+    for alt in record.alts if record.alts else [None]:
+        info = {}
+        for entry in record.info.items():
+            info[entry[0]] = entry[1:] if len(entry[1:]) > 1 else entry[1]
+        std_row = {}
+        if record.id:
+            std_row['id'] = record.id
 
-    if info['SVTYPE'] == 'BND':
-        if len(row.alts) > 1:
-            raise NotImplementedError('multiple alternates unsupported', row.alts)
-        chr2, end, orient2, ref, alt = _parse_bnd_alt(row.alts[0])
-        std_row['orient2'] = orient2
-        std_row[COLUMNS.untemplated_seq] = alt
-        if row.ref != ref:
-            raise AssertionError(
-                'Expected the ref specification in the vcf row to match the sequence '
-                'in the alt string: {} vs {}'.format(row.ref, ref))
-    else:
-        chr2 = info.get('CHR2', row.chrom)
-        end = row.stop
+        if info.get('SVTYPE', None) == 'BND':
+            chr2, end, orient2, ref, alt = _parse_bnd_alt(alt)
+            std_row['orient2'] = orient2
+            std_row[COLUMNS.untemplated_seq] = alt
+            if record.ref != ref:
+                raise AssertionError(
+                    'Expected the ref specification in the vcf record to match the sequence '
+                    'in the alt string: {} vs {}'.format(record.ref, ref))
+        else:
+            chr2 = info.get('CHR2', record.chrom)
+            end = record.stop
+            if alt and record.ref and re.match(r'^[A-Z]+$', alt) and re.match(r'^[A-Z]+', record.ref):
+                std_row[COLUMNS.untemplated_seq] = alt[1:]
+                size = len(alt) - len(record.ref)
+                if size > 0:
+                    std_row['event_type'] = SVTYPE.INS
+                elif size < 0:
+                    std_row['event_type'] = SVTYPE.DEL
+        std_row.update({'chr1': record.chrom, 'chr2': chr2})
+        if info.get('PRECISE', False):  # DELLY CI only apply when split reads were not used to refine the breakpoint which is then flagged
+            std_row.update({
+                'pos1_start': record.pos,
+                'pos1_end': record.pos,
+                'pos2_start': end,
+                'pos2_end': end
+            })
+        else:
+            std_row.update({
+                'pos1_start': max(1, record.pos + info.get('CIPOS', (0, 0))[0]),
+                'pos1_end': record.pos + info.get('CIPOS', (0, 0))[1],
+                'pos2_start': max(1, end + info.get('CIEND', (0, 0))[0]),
+                'pos2_end': end + info.get('CIEND', (0, 0))[1]
+            })
 
-    std_row.update({
-        'chr1': row.chrom, 'chr2': chr2,
-        'pos1_start': max(1, row.pos + info.get('CIPOS', (0, 0))[0]),
-        'pos1_end': row.pos + info.get('CIPOS', (0, 0))[1],
-        'pos2_start': max(1, end + info.get('CIEND', (0, 0))[0]),
-        'pos2_end': end + info.get('CIEND', (0, 0))[1]
-    })
-    std_row['event_type'] = info['SVTYPE']
+        if 'SVTYPE' in info:
+            std_row['event_type'] = info['SVTYPE']
 
-    try:
-        orient1, orient2 = info['CT'].split('to')
-        connection_type = {'3': ORIENT.LEFT, '5': ORIENT.RIGHT, 'N': ORIENT.NS}
-        std_row['orient1'] = connection_type[orient1]
-        std_row['orient2'] = connection_type[orient2]
-    except KeyError:
-        pass
-    return std_row
+        try:
+            orient1, orient2 = info['CT'].split('to')
+            connection_type = {'3': ORIENT.LEFT, '5': ORIENT.RIGHT, 'N': ORIENT.NS}
+            std_row['orient1'] = connection_type[orient1]
+            std_row['orient2'] = connection_type[orient2]
+        except KeyError:
+            pass
+        records.append(std_row)
+    return records
 
 
 def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
@@ -249,9 +266,7 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
     # convert the specified file type to a standard format
     if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL]:
 
-        std_row.update(_parse_vcf_record(row))
-        if row.id is not None and TRACKING_COLUMN not in std_row:
-            std_row[TRACKING_COLUMN] = '{}-{}'.format(file_type, row.id)
+        std_row.update(row)
 
     elif file_type == SUPPORTED_TOOL.CHIMERASCAN:
 
@@ -272,7 +287,7 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
 
     elif file_type == SUPPORTED_TOOL.TA:
 
-        std_row.update(_parse_transabyss(row, stranded))
+        std_row.update(_parse_transabyss(row))
 
     else:
         raise NotImplementedError('unsupported file type', file_type)
@@ -285,7 +300,7 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
         std_row['strand2'] = [STRAND.NS]
 
     if not std_row.get(TRACKING_COLUMN, None):
-        std_row[TRACKING_COLUMN] = '{}-{}'.format(file_type, uuid())
+        std_row[TRACKING_COLUMN] = '{}-{}'.format(file_type, std_row.get('id', uuid()))
     if assume_no_untemplated and not std_row.get(COLUMNS.untemplated_seq, None):
         std_row[COLUMNS.untemplated_seq] = ''
 
@@ -336,13 +351,13 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
 def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=False, log=devnull, assume_no_untemplated=True):
     log('reading:', input_file)
     result = []
-    if file_type == SUPPORTED_TOOL.TA:
-        warnings.warn('currently assuming that trans-abyss is calling the strand exactly opposite and swapping them')
     if file_type == SUPPORTED_TOOL.MAVIS:
         result = read_bpp_from_input_file(input_file)
     else:
         if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL]:
-            rows = list(VariantFile(input_file).fetch())
+            rows = []
+            for vcf_record in VariantFile(input_file).fetch():
+                rows.extend(_parse_vcf_record(vcf_record))
         else:
             dummy, rows = tab.read_file(input_file)
         log('found', len(rows), 'rows')

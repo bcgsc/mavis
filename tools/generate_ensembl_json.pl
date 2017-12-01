@@ -159,11 +159,10 @@ END_MESSAGE
         while ( my $t = shift @tlist )
         {
             my $tid = $t->stable_id();
-            my $best = 'false';
-            if ( exists $best_transcript_mapping{$gid} ){
-                my $temp = $best_transcript_mapping{$gid};
-                if ($temp eq $tid){
-                    $best = 'true';
+            my $best = JSON::false;
+            if ( exists $best_transcript_mapping{$gid} and defined $best_transcript_mapping{$gid}){
+                if ($best_transcript_mapping{$gid} eq $tid){
+                    $best = JSON::true;
                 }
             }
             my $tjson = {

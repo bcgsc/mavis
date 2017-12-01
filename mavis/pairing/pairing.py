@@ -14,7 +14,7 @@ def predict_transcriptome_breakpoint(breakpoint, transcript):
 
     Args:
         breakpoint (Breakpoint): the genomic breakpoint
-        transcript (UsTranscript): the transcript
+        transcript (PreTranscript): the transcript
 
     see :ref:`theory - pairing similar events <theory-pairing-similar-events>`
     """

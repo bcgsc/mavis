@@ -9,7 +9,7 @@ from Bio import SeqIO
 import tab
 
 from .base import BioInterval, ReferenceName
-from .genomic import Exon, Gene, Template, Transcript, UsTranscript
+from .genomic import Exon, Gene, Template, Transcript, PreTranscript
 from .protein import Domain, Translation
 from ..constants import CODON_SIZE, GIEMSA_STAIN, START_AA, STOP_AA, STRAND, translate
 from ..interval import Interval
@@ -72,7 +72,7 @@ def load_annotations(filepath, warn=devnull, reference_genome=None, filetype=Non
         verbose (bool): output extra information to stdout
         reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by
             template/chr name
-        filetype (str): json or tab/tsv. only required if the file type can't be interpolated from the path extenstion
+        filetype (str): json or tab/tsv. only required if the file type can't be interpolated from the path extension
 
     Returns:
         :class:`dict` of :class:`list` of :class:`~mavis.annotate.genomic.Gene` by :class:`str`: lists of genes keyed by chromosome name
@@ -124,25 +124,25 @@ def parse_annotations_json(data, reference_genome=None, best_transcripts_only=Fa
             exons = [Exon(strand=gene.strand, **ex) for ex in transcript['exons']]
             if not exons:
                 exons = [(transcript['start'], transcript['end'])]
-            ust = UsTranscript(
+            pre_transcript = PreTranscript(
                 name=transcript['name'],
                 gene=gene,
                 exons=exons,
                 is_best_transcript=transcript['is_best_transcript']
             )
-            if ust.is_best_transcript:
+            if pre_transcript.is_best_transcript:
                 has_best = True
-            if best_transcripts_only and not ust.is_best_transcript:
+            if best_transcripts_only and not pre_transcript.is_best_transcript:
                 continue
-            gene.transcripts.append(ust)
+            gene.transcripts.append(pre_transcript)
 
-            if transcript['cdna_coding_end'] is None or transcript['cdna_coding_start'] is None:
-                continue
-
-            for spl_patt in ust.generate_splicing_patterns():
+            for spl_patt in pre_transcript.generate_splicing_patterns():
                 # make splice transcripts and translations
-                spl_tx = Transcript(ust, spl_patt)
-                ust.spliced_transcripts.append(spl_tx)
+                spl_tx = Transcript(pre_transcript, spl_patt)
+                pre_transcript.spliced_transcripts.append(spl_tx)
+
+                if transcript.get('cdna_coding_end', None) is None or transcript.get('cdna_coding_start', None) is None:
+                    continue
                 tx_length = transcript['cdna_coding_end'] - transcript['cdna_coding_start'] + 1
                 # check that the translation makes sense before including it
                 if tx_length % CODON_SIZE != 0:
@@ -167,7 +167,7 @@ def parse_annotations_json(data, reference_genome=None, best_transcripts_only=Fa
                 )
                 if reference_genome and gene.chr in reference_genome:
                     # get the sequence near here to see why these are wrong?
-                    seq = ust.get_cdna_seq(spl_tx.splicing_pattern, reference_genome)
+                    seq = pre_transcript.get_cdna_seq(spl_tx.splicing_pattern, reference_genome)
                     met = seq[translation.start - 1:translation.start + 2]
                     stop = seq[translation.end - CODON_SIZE: translation.end]
                     if translate(met) != START_AA or translate(stop) != STOP_AA:

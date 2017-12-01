@@ -338,6 +338,7 @@ class TestDraw(unittest.TestCase):
         g2 = Gene(TEMPLATE_METADATA['X'], 5000, 7500, strand=STRAND.NEG, aliases=['HUGO3'])
         t1 = build_transcript(
             gene=g1,
+            name='transcript1',
             cds_start=50,
             cds_end=249,
             exons=[(200, 299), (400, 499), (700, 899)],
@@ -345,6 +346,7 @@ class TestDraw(unittest.TestCase):
         )
         t2 = build_transcript(
             gene=g2,
+            name='transcript2',
             cds_start=120,
             cds_end=700,
             exons=[(5100, 5299), (5800, 6199), (6500, 6549), (6700, 6799)],

@@ -4,7 +4,10 @@ import unittest
 
 from mavis.annotate.base import ReferenceName
 from mavis.annotate.protein import calculate_orf, Domain, DomainRegion
+from mavis.annotate.variant import IndelCall
 import timeout_decorator
+
+from .mock import Mock, MockFunction
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 
@@ -340,6 +343,12 @@ class TestReferenceName(unittest.TestCase):
             self.assertTrue(chr1 < chr2)
             self.assertTrue(chr1 <= chr2)
 
+    def test_alpha_sort(self):
+        self.assertTrue(ReferenceName('10') < ReferenceName('3'))
+        self.assertTrue(ReferenceName('10') < ReferenceName('chr3'))
+        self.assertTrue(ReferenceName('chr10') < ReferenceName('3'))
+        self.assertTrue(ReferenceName('chr10') < ReferenceName('chr3'))
+
     def test_gt(self):
         r = ReferenceName('1')
         rprefix = ReferenceName('chr1')
@@ -352,3 +361,7 @@ class TestReferenceName(unittest.TestCase):
         for chr1, chr2 in itertools.product([r, rprefix], [r2, r2prefix]):
             self.assertTrue(chr2 > chr1)
             self.assertTrue(chr2 >= chr1)
+
+    def test_hash(self):
+        self.assertTrue(ReferenceName('3') in {ReferenceName('3')})
+        self.assertTrue(ReferenceName('3') in {ReferenceName('chr3')})

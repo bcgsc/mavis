@@ -4,9 +4,9 @@ import subprocess
 
 import pysam
 
-from . import cigar as cigar_tools
-from .cigar import EVENT_STATES, QUERY_ALIGNED_STATES, REFERENCE_ALIGNED_STATES
-from ..constants import CIGAR, DNA_ALPHABET, ORIENT, READ_PAIR_TYPE, STRAND, SVTYPE
+from . import cigar as _cigar
+from .cigar import EVENT_STATES, QUERY_ALIGNED_STATES, REFERENCE_ALIGNED_STATES, convert_cigar_to_string
+from ..constants import CIGAR, DNA_ALPHABET, ORIENT, READ_PAIR_TYPE, STRAND, SVTYPE, NA_MAPPING_QUALITY
 from ..interval import Interval
 
 
@@ -17,17 +17,28 @@ class SamRead(pysam.AlignedSegment):
     Allows next_reference_name and reference_name to be set directly so that is does not depend on a bam header
     """
 
-    def __init__(self, reference_name=None, next_reference_name=None, alignment_score=None):
+    def __init__(self, reference_name=None, next_reference_name=None, alignment_score=None, **kwargs):
         pysam.AlignedSegment.__init__(self)
         self._reference_name = reference_name
         self._next_reference_name = next_reference_name
         self.alignment_score = alignment_score
+        self.mapping_quality = NA_MAPPING_QUALITY
+        for attr, val in kwargs.items():
+            setattr(self, attr, val)
+
+    @property
+    def alignment_id(self):
+        return '{}:{}[{}]{}'.format(self.reference_name, self.reference_start, self.query_name, convert_cigar_to_string(self.cigar))
 
     def __repr__(self):
-        return '{}({}:{}, {}, {})'.format(
-            self.__class__.__name__, self.reference_name, self.reference_start,
-            self.cigar, self.query_sequence
+        return '{}({}:{}-{}, {}, {}...)'.format(
+            self.__class__.__name__, self.reference_name, self.reference_start, self.reference_end,
+            convert_cigar_to_string(self.cigar), self.query_sequence[:10]
         )
+
+    @property
+    def query_length(self):
+        return len(self.query_sequence) + sum([f for v, f in self.cigar if v == CIGAR.H] + [0])
 
     @classmethod
     def copy(cls, pysamread):
@@ -65,6 +76,28 @@ class SamRead(pysam.AlignedSegment):
     @property
     def next_reference_name(self):
         return self._next_reference_name
+
+    def deletion_sequences(self, reference_genome):
+        """returns the reference sequences for all deletions"""
+        rpos = self.reference_start
+        result = []
+        for state, freq in self.cigar:
+            if state in REFERENCE_ALIGNED_STATES:
+                if state not in QUERY_ALIGNED_STATES:
+                    result.append(reference_genome[self.reference_name].seq[rpos:rpos + freq])
+                rpos += freq
+        return result
+
+    def insertion_sequences(self):
+        """returns the inserted sequence for all insertions"""
+        qpos = 0
+        result = []
+        for state, freq in self.cigar:
+            if state in QUERY_ALIGNED_STATES:
+                if state not in REFERENCE_ALIGNED_STATES:
+                    result.append(self.query_sequence[qpos:qpos + freq])
+                qpos += freq
+        return result
 
 
 def map_ref_range_to_query_range(read, ref_range):
@@ -221,7 +254,6 @@ def nsb_align(
         raise AttributeError('percent must be greater than 0 and up to 1', min_overlap_percent)
 
     min_overlap = int(round(min_overlap_percent * len(seq), 0))
-
     # store to improve speed and space (don't need to store all alignments)
     best_score = (0, 0)
     results = []
@@ -261,7 +293,7 @@ def nsb_align(
         if length == 0 or mismatches / length > 1 - min_match:
             continue
 
-        cigar = cigar_tools.join(cigar)
+        cigar = _cigar.join(cigar)
         # end mismatches we set as soft-clipped
         if cigar[0][0] == CIGAR.X:
             cigar[0] = (CIGAR.S, cigar[0][1])
@@ -270,21 +302,20 @@ def nsb_align(
 
         qstart = 0 if cigar[0][0] != CIGAR.S else cigar[0][1]
 
-        a = pysam.AlignedSegment()
-        a.query_sequence = str(seq)
-        a.reference_start = ref_start + qstart
-        a.cigar = cigar
+        a = SamRead(
+            query_sequence=str(seq),
+            reference_start=ref_start + qstart,
+            cigar=cigar
+        )
         qlen = a.reference_end - a.reference_start
         score = (scoring_function(a), qlen)  # this way for equal identity matches we take the longer alignment
         if qlen < min_overlap:
             continue
-
         if score >= best_score:
             best_score = score
             results.append((a, score))
 
     filtered = [x for x, y in results if y == best_score]
-
     return filtered
 
 
