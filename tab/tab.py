@@ -51,7 +51,10 @@ class EmptyFileError(Exception):
 
 
 class FileTransform:
-
+    """
+    Holds a set of operations which define the transform_line function.
+    Generally a single FileTransform object is required per file as lines are expected to have the same format
+    """
     def __init__(self, header, **kwargs):
         """
         Args:
@@ -123,11 +126,11 @@ class FileTransform:
         for col, new_names in self.rename.items():
             if col not in current_columns:
                 raise KeyError('cannot rename column. column not found in header', col, current_columns)
-            for n in new_names:
-                if n in current_columns:
-                    raise KeyError('duplicate column name', n, current_columns)
-                current_columns.add(n)
-                cant_simplify.add(n)
+            for new_name in new_names:
+                if new_name in current_columns:
+                    raise KeyError('duplicate column name', new_name, current_columns)
+                current_columns.add(new_name)
+                cant_simplify.add(new_name)
 
         # 5. split: split a column into a set of new columns
         for col, regex in self.split.items():
@@ -135,11 +138,11 @@ class FileTransform:
             new_columns = robj.groupindex.keys()
             if col not in current_columns:
                 raise KeyError('cannot split column. column not found in header', col, current_columns)
-            for nc in new_columns:
-                if nc in current_columns:
-                    raise KeyError('duplicate column name', nc, current_columns)
-                current_columns.add(nc)
-                cant_simplify.add(nc)
+            for new_col in new_columns:
+                if new_col in current_columns:
+                    raise KeyError('duplicate column name', new_col, current_columns)
+                current_columns.add(new_col)
+                cant_simplify.add(new_col)
 
         # 6. combine:
         for ncol, format_string in self.combine.items():
@@ -234,29 +237,29 @@ class FileTransform:
 
         # 4. rename: rename a column to one or more new column names
         for col, new_names in self.rename.items():
-            for n in new_names:
-                row[n] = row[col]
-                cant_simplify.add(n)
+            for new_name in new_names:
+                row[new_name] = row[col]
+                cant_simplify.add(new_name)
 
         # 5. split: split a column into a set of new columns
         for col, regex in self.split.items():
             robj = re.compile(regex)
             new_columns = robj.groupindex.keys()
-            m = robj.match(row[col])
-            if not m:
+            match = robj.match(row[col])
+            if not match:
                 raise UserWarning('split of column failed', col, regex, row[col])
-            for nc in new_columns:
-                row[nc] = m.group(nc)
-                cant_simplify.add(nc)
+            for new_col in new_columns:
+                row[new_col] = match.group(new_col)
+                cant_simplify.add(new_col)
 
         # 6. combine:
         for ncol, format_string in self.combine.items():
             old_column_names = [t[1] for t in list(string.Formatter().parse(format_string))]
             cant_simplify.add(ncol)
-            f = {}
+            substitutions = {}
             for col in old_column_names:
-                f[col] = row[col]
-            row[ncol] = format_string.format(**f)
+                substitutions[col] = row[col]
+            row[ncol] = format_string.format(**substitutions)
 
         # 7. cast: apply some callable
         for col, func in self.cast.items():
@@ -295,7 +298,6 @@ def read_file(inputfile, delimiter='\t', header=None, strict=True, suppress_inde
         suppress_index (bool): do not create an index
     Returns:
         list of str and dict of str: header and the row dictionaries
-
     """
     if VERBOSE:
         print("read_file(", inputfile, ", ", kwargs, ")")
@@ -310,12 +312,12 @@ def read_file(inputfile, delimiter='\t', header=None, strict=True, suppress_inde
 
     # first grab the header and skip comments
     lines = fh.readlines()
-    if len(lines) == 0:
+    if not lines:
         raise EmptyFileError('empty file has no lines to read')
     current_line_index = 0
-    line = re.sub('[\r\n]*$', '', lines[current_line_index])
+    line = re.sub(r'[\r\n]*$', '', lines[current_line_index])
     while current_line_index < len(lines):
-        if not re.match('^\s*##', lines[current_line_index]):  # skip comment lines
+        if not re.match(r'^\s*##', lines[current_line_index]):  # skip comment lines
             break
         current_line_index += 1
 
@@ -323,10 +325,10 @@ def read_file(inputfile, delimiter='\t', header=None, strict=True, suppress_inde
     if not header:
         if current_line_index >= len(lines):
             raise EmptyFileError('no lines beyond comments to read as header')
-        line = re.sub('(^#)|([\r\n\s]*$)', '', lines[current_line_index])  # clean the header
+        line = re.sub(r'(^#)|([\r\n\s]*$)', '', lines[current_line_index])  # clean the header
         current_line_index += 1
         header = line.split(delimiter) if delimiter in line else []
-    if len(header) == 0:
+    if not header:
         raise EmptyFileError('header is empty')
     # create the file transform object
     transform = FileTransform(header, **kwargs)
@@ -338,19 +340,19 @@ def read_file(inputfile, delimiter='\t', header=None, strict=True, suppress_inde
     # now go through the lines in the file
     while current_line_index < len(lines):
         line_count += 1
-        line = re.sub('[\r\n]*$', '', lines[current_line_index])  # clean the line
+        line = re.sub(r'[\r\n]*$', '', lines[current_line_index])  # clean the line
         try:
             row = line.split(delimiter)
             row = transform.transform_line(row)
             if not suppress_index:
                 row[index] = current_line_index
             objects.append(row)
-        except Exception as e:
+        except Exception as error:  # General b/c will be re-raised unless strict mode is off
             if strict:
                 print('error at line', current_line_index)
-                raise type(e)('{0} happens at line {1}'.format(e, current_line_index))
+                raise type(error)('{0} happens at line {1}'.format(error, current_line_index))
             elif VERBOSE:
-                print('[ERROR]', str(e))
+                print('[ERROR]', str(error))
         current_line_index += 1
 
     if not is_file_handle:

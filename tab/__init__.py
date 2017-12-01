@@ -88,7 +88,7 @@ drops any input (not new) column names not specified in the require option
 3. split a column with an expected pattern into multiple columns
 
 ```
->>> header, rows = tab.read_file(filename, split={'colname': '^(?P<chr>\w+):(?P<pos>\d+)$'})
+>>> header, rows = tab.read_file(filename, split={'colname': r'^(?P<chr>\w+):(?P<pos>\d+)$'})
 >>> print(header)
 ['colname', 'chr', 'pos']
 ```
