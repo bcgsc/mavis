@@ -29,7 +29,7 @@ os.environ['HTSLIB_CONFIGURE_OPTIONS'] = '--disable-lzma'  # only required for C
 setup(
     name='mavis',
     version='1.3.0',
-    url='https://svn.bcgsc.ca/bitbucket/scm/prod/mavis.git',
+    url='https://github.com/bcgsc/mavis.git',
     packages=find_packages(),
     install_requires=[
         'docutils <0.13.1',
@@ -39,7 +39,6 @@ setup(
         'sphinx==1.6.3',  # for building the documentation only
         'sphinx-rtd-theme==0.2.5b1',  # for building the documentation only
         'pysam>=0.9',
-        'tab>=0.0.2',
         'numpy>=1.13.1',
         'pyvcf==0.6.8',
         'braceexpand==0.1.2',
@@ -50,9 +49,6 @@ setup(
     ],
     python_requires='>=3',
     author_email='creisle@bcgsc.ca',
-    dependency_links=[
-        'git+https://svn.bcgsc.ca/bitbucket/scm/prod/tab.git@v0.0.2#egg=tab-0.0.2'
-    ],
     setup_requires=[
         'numpy>=1.13.1',  # put here b/c biopython doesn't declare this as a setup dependency properly
         'setuptools>=36.6.0',
