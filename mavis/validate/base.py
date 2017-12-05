@@ -62,7 +62,6 @@ class Evidence(BreakpointPair):
             if arg not in DEFAULTS.__dict__:
                 raise AttributeError('unrecognized attribute', arg)
         defaults.update(DEFAULTS.__dict__)
-        kwargs.setdefault('assembly_min_contig_length', int(read_length * 1.25))
         kwargs.setdefault('assembly_max_kmer_size', int(read_length * 0.7))
         defaults.update(kwargs)  # input arguments should override the defaults
         for arg, val in defaults.items():
@@ -670,7 +669,6 @@ class Evidence(BreakpointPair):
             assembly_max_paths=self.assembly_max_paths,
             log=log,
             assembly_min_exact_match_to_remap=self.assembly_min_exact_match_to_remap,
-            assembly_min_contig_length=self.assembly_min_contig_length,
             assembly_max_kmer_size=self.assembly_max_kmer_size,
             assembly_max_kmer_strict=self.assembly_max_kmer_strict
         )

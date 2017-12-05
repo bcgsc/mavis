@@ -400,7 +400,7 @@ def assemble(
     # now map the contigs to the possible input sequences
     contigs = []
     for seq, score in list(path_scores.items()):
-        if seq not in sequences and len(seq) >= assembly_min_contig_length:
+        if len(seq) >= assembly_min_contig_length:
             contigs.append(Contig(seq, score))
     log('filtering similar contigs', len(contigs))
     # remap the input reads
