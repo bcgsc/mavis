@@ -2,3 +2,4 @@ recursive-include docs *
 recursive-include tests *
 recursive-include mavis *
 recursive-include tools *
+recursive-include tab *
