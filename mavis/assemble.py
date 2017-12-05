@@ -351,9 +351,10 @@ def assemble(
             assembly_max_kmer_size = min_seq
             warnings.warn(
                 'cannot specify a kmer size larger than one of the input sequences. reset to {0}'.format(min_seq))
-    assembly_min_read_mapping_overlap = assembly_max_kmer_size if assembly_min_read_mapping_overlap is None else \
-        assembly_min_read_mapping_overlap
-    assembly_min_contig_length = min_seq + 1 if assembly_min_contig_length is None else assembly_min_contig_length
+    if assembly_min_read_mapping_overlap is None:
+        assembly_min_read_mapping_overlap = assembly_max_kmer_size
+    if assembly_min_contig_length is None:
+        assembly_min_contig_length = min(assembly_min_read_mapping_overlap, min_seq + 1)
 
     assembly = DeBruijnGraph()
     for s in sequences:

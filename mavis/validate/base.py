@@ -667,6 +667,7 @@ class Evidence(BreakpointPair):
             assembly_min_edge_weight=self.assembly_min_edge_weight,
             assembly_min_nc_edge_weight=self.assembly_min_nc_edge_weight,
             assembly_max_paths=self.assembly_max_paths,
+            assembly_min_contig_length=self.read_length,
             log=log,
             assembly_min_exact_match_to_remap=self.assembly_min_exact_match_to_remap,
             assembly_max_kmer_size=self.assembly_max_kmer_size,
