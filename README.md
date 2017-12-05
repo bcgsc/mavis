@@ -1,48 +1,53 @@
-MAVIS
-=======
+<img src='docs/source/_static/acronym.svg' onerror="this.src='_static/acronym.svg'" alt='acronym'>
 
-| branch  | status                                                                                      |
-|---------|---------------------------------------------------------------------------------------------|
-| master  | ![Build Status](https://www.bcgsc.ca/bamboo/plugins/servlet/wittified/build-status/MAV-MAV27)|
-| develop | ![Build Status](https://www.bcgsc.ca/bamboo/plugins/servlet/wittified/build-status/MAV-MAV)|
 
-Install Instructions for Developers
--------------------------------------------
+![master branch build Status](https://www.bcgsc.ca/bamboo/plugins/servlet/wittified/build-status/MAV-MAV27) 
+*(master)* 
 
-Clone the repository and switch to the development branch
 
-    >>> git clone https://svn.bcgsc.ca/bitbucket/scm/svia/mavis.git
-    >>> cd mavis
-    >>> git checkout develop
+![develop branch build status](https://www.bcgsc.ca/bamboo/plugins/servlet/wittified/build-status/MAV-MAV37) 
+*(develop)* 
 
-Set up a python virtual environment. If you are developing in python setting up with a virtual environment can be incredibly helpful. 
-This can be used to generate the requirements.txt file that pip uses for install. Instructions for setting up the environment
-are below
+MAVIS is a pipeline to merge and validate input from different structural variant callers into a single report.
+The pipeline consists five of main steps
 
-    >>> pip install virtualenv
-    >>> virtualenv venv
-    >>> source venv/bin/activate
-    (venv) >>>
+- [cluster](http://mavis.bcgsc.ca/docs/latest/mavis.cluster.html#mavis-cluster)
+- [validate](http://mavis.bcgsc.ca/docs/latest/mavis.validate.html#mavis-validate)
+- [annotate](http://mavis.bcgsc.ca/docs/latest/mavis.annotate.html#mavis-annotate)
+- [pairing](http://mavis.bcgsc.ca/docs/latest/mavis.pairing.html#mavis-pairing)
+- [summary](http://mavis.bcgsc.ca/docs/latest/mavis.summary.html#mavis-summary)
 
-Install the MAVIS python package (currently need to use pip as well due to dependencies stored in svn)
 
-    (venv) >>> python setup.py develop
+## Getting started
 
-Run the unit tests and compute code coverage. This will output html into ./coverage
 
-    (venv) >>> python setup.py nosetests 
+There are 3 major steps to setting up and installing MAVIS
 
-Make the user manual
+1. **Install non-python dependencies**
 
-    (venv) >>> cd docs
-    (venv) >>> make html
+Before MAVIS can be installed, the [non-python dependencies](http://mavis.bcgsc.ca/docs/latest/about.html#non-python-dependencies) will need to be installed.
+After these have been installed MAVIS itself can be installed through pip
 
-The contents of the user manual can then be viewed by opening the build/html/index.html in any available
-web browser (i.e. google-chrome, firefox, etc.)
+These include: an aligner ([blat](http://mavis.bcgsc.ca/docs/latest/glossary.html#term-blat) or [bwa mem](http://mavis.bcgsc.ca/docs/latest/glossary.html#term-bwa)) and [samtools](http://samtools.sourceforge.net).
 
-Dependencies
-----------------
+2. **Install MAVIS**
 
-Other than python3 and the python packages listed in the requirements.txt or setup.py file, the tool also requires samtools (for
-sorting and indexing the output bam files) and an aligner. Currently the only aligner supported is blat. Testing
-was performed using BLAT v.36x2
+The easiest way to install mavis is through the python package manager, pip
+
+```
+pip install git+https://github.com/bcgsc/mavis.git@vX.X.X#egg=mavis-X.X.X
+```
+
+Where X.X.X is the version number (for example 1.3.0). This will install mavis and its python dependencies.
+
+3. **Build reference files**
+
+After MAVIS is installed the [reference files](http://mavis.bcgsc.ca/docs/latest/reference.html) must be generated (or downloaded) before it can be run.
+
+Once the above 3 steps are complete MAVIS is ready to be run. See [running the pipeline](http://mavis.bcgsc.ca/docs/latest/pipeline.html).
+
+
+## Help
+
+If you have a question or issue that is not answered in the [FAQs](http://mavis.bcgsc.ca/docs/latest/faqs.html) please submit
+an issue to our [github page](https://github.com/bcgsc/mavis/issues) or contact us by email at [mavis@bcgsc.ca](mailto:mavis@bcgsc.ca)
