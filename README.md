@@ -1,4 +1,6 @@
-<img src='docs/source/_static/acronym.svg' onerror="this.src='_static/acronym.svg'" alt='acronym'>
+<object type='image/svg+xml' data='docs/source/_static/acronym.svg'>
+    <object type='image/svg+xml' data='_static/acronym.svg'></object><br>
+</object>
 
 
 ![master branch build Status](https://www.bcgsc.ca/bamboo/plugins/servlet/wittified/build-status/MAV-MAV27) 
