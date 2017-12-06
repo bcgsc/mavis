@@ -1,5 +1,7 @@
 <object type='image/svg+xml' data='docs/source/_static/acronym.svg'>
-    <object type='image/svg+xml' data='_static/acronym.svg'></object><br>
+    <object type='image/svg+xml' data='_static/acronym.svg'>
+    	<img src='docs/source/_static/acronym.svg' onerror='this.src="_static/acronym.svg"'>
+    </object><br>
 </object>
 
 
