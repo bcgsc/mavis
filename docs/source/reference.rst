@@ -113,7 +113,7 @@ The structure of the file should look something like this
 Masking File
 ,,,,,,,,,,,,,,,,,,,,,,,
 
-The masking file if a tab delimited file which contains regions that we should ignore calls in. 
+The masking file is a tab delimited file which contains regions that we should ignore calls in. 
 This can be used to filter out regions with known false positives, bad mapping, centromeres, telomeres etc. 
 An example of the expected format is shown below. The file should have four columns: chr, start, end and name.
 
