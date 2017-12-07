@@ -18,7 +18,10 @@ To improve the install experience for the users, different configurations of the
     *   - :ref:`reference genome <reference-files-reference-genome>` (:term:`fasta`)
         - ``MAVIS_REFERENCE_GENOME``
         - .. raw:: html
-    
+            
+            <a class='download-button btn btn-neutral' href='http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/chromFa.tar.gz' download>
+                <img src='_static/Ic_cloud_download_48px.svg'>GRCh37/Hg19
+            </a><br>
             <a class='download-button btn btn-neutral' href='http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz' download>
                 <img src='_static/Ic_cloud_download_48px.svg'>GRCh38
             </a>
