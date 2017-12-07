@@ -15,7 +15,7 @@ indicate the version of the tool for which output files have been tested as inpu
 +-------------------------------+------------------------------------------------------------------------------------------+----------------+----------------------------------+
 | DeFuse [McPherson-2011]_      | `bitbucket.org/dranew/defuse <https://bitbucket.org/dranew/defuse>`_                     | 0.6.2          | ``results/results.classify.tsv`` |
 +-------------------------------+------------------------------------------------------------------------------------------+----------------+----------------------------------+
-| DELLY [Rausch-2012]_          | `github.com/dellytools/delly <https://github.com/dellytools/delly>`_                     | 0.7.3          |                                  |
+| DELLY [Rausch-2012]_          | `github.com/dellytools/delly <https://github.com/dellytools/delly>`_                     | 0.7.3          | ``*.vcf`` (converted from bcf)   |
 +-------------------------------+------------------------------------------------------------------------------------------+----------------+----------------------------------+
 | Manta [Chen-2016]_            | `github.com/Illumina/manta <https://github.com/Illumina/manta>`_                         | 1.0.0          | ``{diploidSV,somaticSV}.vcf``    |
 +-------------------------------+------------------------------------------------------------------------------------------+----------------+----------------------------------+
@@ -33,7 +33,12 @@ indicate the version of the tool for which output files have been tested as inpu
 :ref:`DELLY <Rausch-2012>` Post-processing
 ---------------------------------------------
 
-Some post-processing on the delly output files is generally done prior to input to filter the calls. 
+Some post-processing on the delly output files is generally done prior to input. The output bcf files are converted to a vcf file
+
+.. code:: bash
+    
+    bcftools concat -f /path/to/file/with/vcf/list --allow-overlaps --output-type v --output combined.vcf
+
 
 .. _custom-conversion:
 
