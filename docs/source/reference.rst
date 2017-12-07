@@ -5,23 +5,67 @@ Reference Input Files
 
 There are several reference files that are required for full functionality of the MAVIS pipeline. If the same
 reference file will be reused often then the user may find it helpful to set reasonable defaults. Default values
-for any of the reference file arguments can be configured through :ref:`environment variables <config-environment>`.
+for any of the reference file arguments can be :ref:`configured through environment variables <config-environment>`.
 
-+--------------------------------------------------------------+-----------------------------+-----------------------------+
-| file                                                         | file type/format            | environment variable        |
-+==============================================================+=============================+=============================+
-| :ref:`reference genome <reference-files-reference-genome>`   | :term:`fasta`               | ``MAVIS_REFERENCE_GENOME``  |
-+--------------------------------------------------------------+-----------------------------+-----------------------------+
-| :ref:`annotations <reference-files-annotations>`             | :term:`JSON` or text/tabbed | ``MAVIS_ANNOTATIONS``       |
-+--------------------------------------------------------------+-----------------------------+-----------------------------+
-| :ref:`masking <reference-files-masking>`                     | text/tabbed                 | ``MAVIS_MASKING``           |
-+--------------------------------------------------------------+-----------------------------+-----------------------------+
-| :ref:`template metadata <reference-files-template-metadata>` | text/tabbed                 | ``MAVIS_TEMPLATE_METADATA`` |
-+--------------------------------------------------------------+-----------------------------+-----------------------------+
-| :ref:`DGV annotations <reference-files-dgv-annotations>`     | text/tabbed                 | ``MAVIS_DGV_ANNOTATIONS``   |
-+--------------------------------------------------------------+-----------------------------+-----------------------------+
-| :ref:`aligner reference <reference-files-aligner-reference>` | dependant on aligner        | ``MAVIS_ALIGNER_REFERENCE`` |
-+--------------------------------------------------------------+-----------------------------+-----------------------------+
+To improve the install experience for the users, different configurations of the MAVIS annotations file have been made available. These files can be downloaded below, or if the required configuration is not available, :ref:`instructions on generating the annotations file <generate-reference-annotations>` can be found below.
+
+.. list-table::
+    :header-rows: 1
+    
+    *   - File Name (Type/Format)
+        - Environment Variable
+        - Download
+    *   - :ref:`reference genome <reference-files-reference-genome>` (:term:`fasta`)
+        - ``MAVIS_REFERENCE_GENOME``
+        - .. raw:: html
+    
+            <a class='download-button btn btn-neutral' href='http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz' download>
+                <img src='_static/Ic_cloud_download_48px.svg.png'>GRCh38
+            </a>
+    *   - :ref:`annotations <reference-files-annotations>` (:term:`JSON`)
+        - ``MAVIS_ANNOTATIONS``
+        - .. raw:: html
+    
+            <a class='download-button btn btn-neutral' href='http://www.bcgsc.ca/downloads/mavis/ensembl69_hg19_annotations.json' download>
+                <img src='_static/Ic_cloud_download_48px.svg.png'>GRCh37/Hg19 + Ensembl69
+            </a><br>
+            <a class='download-button btn btn-neutral' href='http://www.bcgsc.ca/downloads/mavis/ensembl79_hg38_annotations.json' download>
+                <img src='_static/Ic_cloud_download_48px.svg.png'>GRCh38 + Ensembl79
+            </a>
+    *   - :ref:`masking <reference-files-masking>` (text/tabbed)
+        - ``MAVIS_MASKING``
+        - 
+    *   - :ref:`template metadata <reference-files-template-metadata>` (text/tabbed)
+        - ``MAVIS_TEMPLATE_METADATA``
+        - .. raw:: html
+    
+            <a class='download-button btn btn-neutral' href='http://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/cytoBand.txt.gz' download>
+                <img src='_static/Ic_cloud_download_48px.svg.png'>GRCh37/Hg19
+            </a><br>
+            <a class='download-button btn btn-neutral' href='http://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/cytoBand.txt.gz' download>
+                <img src='_static/Ic_cloud_download_48px.svg.png'>GRCh38
+            </a>
+    *   - :ref:`DGV annotations <reference-files-dgv-annotations>` (text/tabbed)
+        - ``MAVIS_DGV_ANNOTATIONS``
+        - .. raw:: html
+    
+            <a class='download-button btn btn-neutral' href='http://www.bcgsc.ca/downloads/mavis/dgv_hg19_variants.tab' download>
+                <img src='_static/Ic_cloud_download_48px.svg.png'>GRCh37/Hg19
+            </a><br>
+            <a class='download-button btn btn-neutral' href='http://www.bcgsc.ca/downloads/mavis/dgv_hg38_variants.tab' download>
+                <img src='_static/Ic_cloud_download_48px.svg.png'>GRCh38
+            </a>
+    *   - :ref:`aligner reference <reference-files-aligner-reference>`
+        - ``MAVIS_ALIGNER_REFERENCE``
+        - .. raw:: html
+            
+            <a class='download-button btn btn-neutral' href='http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/hg19.2bit' download>
+                <img src='_static/Ic_cloud_download_48px.svg.png'>GRCh37/Hg19 2bit (blat)
+            </a><br>
+            <a class='download-button btn btn-neutral' href='http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.2bit' download>
+                <img src='_static/Ic_cloud_download_48px.svg.png'>GRCh38 2bit (blat)
+            </a>
+
 
 
 If the environment variables above are set they will be used as the default values when any step of the pipeline
@@ -35,9 +79,6 @@ Reference Genome
 
 These are the sequence files in fasta format that are used in aligning and generating the fusion sequences.
 
-**Examples:**
-
-- `UCSC hg19 chromosome fasta sequences <http://hgdownload.cse.ucsc.edu/goldenPath/hg19/chromosomes/>`_
 
 .. _reference-files-template-metadata:
 
@@ -46,9 +87,8 @@ Template Metadata
 
 This is the file which contains the band information for the chromosomes. This is only used during visualization.
 
-**Examples:**
 
-- `UCSC hg19 cytoband file <http://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/cytoBand.txt.gz>`_.
+The structure of the file should look something like this
 
 .. code-block:: text
 
@@ -81,6 +121,9 @@ Annotations
 
 This is a custom file format. Essentially just a tabbed or :term:`JSON` file which contains the gene, transcript, exon,
 translation and protein domain positional information
+
+Pre-built annotation files can be downloaded above. The 'best transcript' flag is based on an in-house model, as are the
+aliases (custom one-to-one hugo gene name mapping)
 
 .. warning::
 
@@ -128,12 +171,12 @@ Example of the :term:`JSON` file structure can be seen below
         ...
     }
 
-This reference file can be generated from any database with the necessary information.
+This reference file can be generated from any database with the necessary information. 
 
 .. _generate-reference-annotations:
 
 Generating the Annotations from :ref:`Ensembl <Yates-2016>`
-------------------------------------------------------------
+...............................................................
 
 There is a helper script included with mavis to facilitate generating the custom annotations
 file from an instance of the :ref:`Ensembl <Yates-2016>` database. This uses the :ref:`Ensembl <Yates-2016>` perl api to connect and
@@ -195,8 +238,10 @@ or if you have configured the environment variables as given in step 2, then sim
 
 File which contains regions corresponding to what is found in the database of genomic variants. This is
 used to annotate events that are found in healthy control samples and therefore may not be of interest
-if looking for somatic events. This can be downloaded from `DGV <http://dgv.tcag.ca/dgv/app/download>`_
-It will need to be reformatted to have 4 columns after download. We used awk to convert the file like so
+if looking for somatic events. 
+
+The above (downloads table) files were generated from from `DGV <http://dgv.tcag.ca/dgv/app/download>`_
+and reformatted to have 4 columns after download. We used awk to convert the file like so
 
 .. code-block:: bash
 
