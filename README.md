@@ -12,7 +12,7 @@
 ![develop branch build status](https://www.bcgsc.ca/bamboo/plugins/servlet/wittified/build-status/MAV-MAV37) 
 *(develop)* 
 
-MAVIS is a pipeline to merge and validate input from different structural variant callers into a single report.
+[MAVIS](http://mavis.bcgsc.ca) is a pipeline to merge and validate input from different structural variant callers into a single report.
 The pipeline consists five of main steps
 
 - [cluster](http://mavis.bcgsc.ca/docs/latest/mavis.cluster.html#mavis-cluster)
@@ -25,18 +25,18 @@ The pipeline consists five of main steps
 ## Getting started
 
 
-There are 3 major steps to setting up and installing MAVIS
+There are 3 major steps to setting up and installing [MAVIS](http://mavis.bcgsc.ca)
 
 1. **Install non-python dependencies**
 
-Before MAVIS can be installed, the [non-python dependencies](http://mavis.bcgsc.ca/docs/latest/about.html#non-python-dependencies) will need to be installed.
+Before [MAVIS](http://mavis.bcgsc.ca) can be installed, the [non-python dependencies](http://mavis.bcgsc.ca/docs/latest/about.html#non-python-dependencies) will need to be installed.
 After these have been installed MAVIS itself can be installed through pip
 
 These include: an aligner ([blat](http://mavis.bcgsc.ca/docs/latest/glossary.html#term-blat) or [bwa mem](http://mavis.bcgsc.ca/docs/latest/glossary.html#term-bwa)) and [samtools](http://samtools.sourceforge.net).
 
 2. **Install MAVIS**
 
-The easiest way to install mavis is through the python package manager, pip
+The easiest way to install [MAVIS](http://mavis.bcgsc.ca) is through the python package manager, pip
 
 ```
 pip install git+https://github.com/bcgsc/mavis.git@vX.X.X#egg=mavis-X.X.X
@@ -46,9 +46,9 @@ Where X.X.X is the version number (for example 1.3.0). This will install mavis a
 
 3. **Build reference files**
 
-After MAVIS is installed the [reference files](http://mavis.bcgsc.ca/docs/latest/reference.html) must be generated (or downloaded) before it can be run.
+After [MAVIS](http://mavis.bcgsc.ca) is installed the [reference files](http://mavis.bcgsc.ca/docs/latest/reference.html) must be generated (or downloaded) before it can be run.
 
-Once the above 3 steps are complete MAVIS is ready to be run. See [running the pipeline](http://mavis.bcgsc.ca/docs/latest/pipeline.html).
+Once the above 3 steps are complete [MAVIS](http://mavis.bcgsc.ca) is ready to be run. See [running the pipeline](http://mavis.bcgsc.ca/docs/latest/pipeline.html).
 
 
 ## Help
