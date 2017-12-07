@@ -47,7 +47,7 @@ Please make sure to search through the issues before reporting a bug to ensure t
 
 #### Formatting/Style
 
-- In general, follow [pep8](https://www.python.org/dev/peps/pep-0008/) style guides using a maximum line width of 120 characters
+- In general, follow [pep8](https://www.python.org/dev/peps/pep-0008/) style guides (except maximum line width)
 - docstrings should follow [sphinx google code style](http://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html)
 - any column name which may appear in any of the intermediate or final output files must be defined in ``mavis.constants.COLUMNS``
 
