@@ -52,7 +52,8 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.napoleon',
     'sphinx.ext.mathjax',
-    'sphinx.ext.intersphinx'
+    'sphinx.ext.intersphinx',
+    'm2r'
 ]
 
 intersphinx_mapping = {
@@ -80,7 +81,7 @@ templates_path = ['source/_templates']
 #
 numfig = True
 numfig_format = {'figure': 'Figure %s.'}
-source_suffix = ['.rst']
+source_suffix = ['.rst', '.md']
 
 # The encoding of source files.
 #

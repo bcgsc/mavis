@@ -3,12 +3,13 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-MAVIS User Manual
-===================================
+
+Contents
+========
 
 .. toctree::
    :maxdepth: -1
-
+    
    about.rst
    pipeline.rst
    mavis_input.rst

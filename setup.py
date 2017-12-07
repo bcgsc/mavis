@@ -45,7 +45,8 @@ setup(
         'biopython>=1.70',
         'Distance>=0.1.3',
         'setuptools>=36.6.0',
-        'shortuuid>=0.5.0'
+        'shortuuid>=0.5.0',
+        'm2r>=0.1.12'
     ],
     python_requires='>=3',
     author_email='creisle@bcgsc.ca',

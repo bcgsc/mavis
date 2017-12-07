@@ -351,9 +351,10 @@ def assemble(
             assembly_max_kmer_size = min_seq
             warnings.warn(
                 'cannot specify a kmer size larger than one of the input sequences. reset to {0}'.format(min_seq))
-    assembly_min_read_mapping_overlap = assembly_max_kmer_size if assembly_min_read_mapping_overlap is None else \
-        assembly_min_read_mapping_overlap
-    assembly_min_contig_length = min_seq + 1 if assembly_min_contig_length is None else assembly_min_contig_length
+    if assembly_min_read_mapping_overlap is None:
+        assembly_min_read_mapping_overlap = assembly_max_kmer_size
+    if assembly_min_contig_length is None:
+        assembly_min_contig_length = min(assembly_min_read_mapping_overlap, min_seq + 1)
 
     assembly = DeBruijnGraph()
     for s in sequences:
@@ -400,7 +401,7 @@ def assemble(
     # now map the contigs to the possible input sequences
     contigs = []
     for seq, score in list(path_scores.items()):
-        if seq not in sequences and len(seq) >= assembly_min_contig_length:
+        if len(seq) >= assembly_min_contig_length:
             contigs.append(Contig(seq, score))
     log('filtering similar contigs', len(contigs))
     # remap the input reads

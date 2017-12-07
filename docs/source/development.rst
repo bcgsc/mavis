@@ -1,84 +1,7 @@
 Guidelines for Contributors
 ===================================
 
-.. _development-install:
-
-Install for Development
--------------------------------
-
-Clone the repository and switch to the development branch
-
-.. code-block:: bash
-    
-    >>> git clone https://svn.bcgsc.ca/bitbucket/scm/svia/mavis.git
-    >>> cd mavis
-    >>> git checkout develop
-
-Set up a python virtual environment. If you are developing in python setting up with a virtual environment can be incredibly helpful. 
-This can be used to generate the requirements.txt file that pip uses for install. Instructions for setting up the environment
-are below
-
-.. code-block:: bash
-    
-    >>> pip install virtualenv
-    >>> virtualenv venv
-    >>> source venv/bin/activate
-    (venv) >>>
-
-Install the MAVIS python package (currently need to use pip as well due to dependencies stored in svn)
-
-.. code-block:: bash
-    
-    (venv) >>> python setup.py develop
-
-Run the unit tests and compute code coverage
-
-.. code-block:: bash
-    
-    (venv) >>> python setup.py nosetests 
-
-Make the user manual
-
-.. code-block:: bash
-    
-    (venv) >>> cd docs
-    (venv) >>> make html
-
-The contents of the user manual can then be viewed by opening the build/html/index.html in any available
-web browser (i.e. google-chrome, firefox, etc.)
-
-
-|
-
--------------
-
-|
-
-
-Formatting
--------------------------------
-
-- In general, follow `pep8 <https://www.python.org/dev/peps/pep-0008/>`_ style guides using a maximum line width of 120 characters
-- docstrings should follow `sphinx google code style <http://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html>`_
-- any column name which may appear in any of the intermediate or final output files must be defined in :class:`~mavis.constants.COLUMNS`
-
-
-Types in docstrings
-.................................
-
-if you want to be more explicit with nested types, the following conventions are used throughout the code
-
-- dictionary: ``d = {<key>: <value>}`` becomes ``dict of <value> by <key>``
-- list: ``l = [1, 2, 3]`` becomes ``list of int``
-- mixed: ``d = {'a': [1, 2, 3], 'b': [4, 5, 6]}`` becomes ``dict of list of int by str``
-- tuples: ``('a', 1)`` becomes ``tuple of str and int``
-
-
-Unit Tests
--------------
-
-- all new code must have unit tests in the tests subdirectory
-- in general for assertEqual statements, the expected value is given first
+.. mdinclude:: ./../../.github/CONTRIBUTING.md
 
 
 Major Assumptions
@@ -101,12 +24,3 @@ Current Limitations
 - Transcriptome validation uses a collapsed model of all overlapping transcripts and is not isoform specific. Allowing
   for isoform specific validation would be computationally expensive but may be considered as an optional setting for
   future releases.
-
-
-Development Goals
--------------------------------
-
-Features to be implemented
-
-.. todolist::
-

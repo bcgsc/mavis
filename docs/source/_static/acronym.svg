@@ -8,6 +8,56 @@
     <inkscape:perspective id="perspective6083" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
     <inkscape:perspective id="perspective6083-8" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
     <inkscape:perspective id="perspective6083-82" inkscape:persp3d-origin="0.5 : 0.33333333 : 1" inkscape:vp_z="1 : 0.5 : 1" inkscape:vp_y="0 : 1000 : 0" inkscape:vp_x="0 : 0.5 : 1" sodipodi:type="inkscape:persp3d" />
+    <style type="text/css">
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Ubuntu Mono';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Ubuntu Mono'), local('UbuntuMono-Regular'), url(https://fonts.gstatic.com/s/ubuntumono/v7/ViZhet7Ak-LRXZMXzuAfkTTOQ_MqJVwkKsUn0wKzc2I.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+20B4, U+2DE0-2DFF, U+A640-A69F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Ubuntu Mono';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Ubuntu Mono'), local('UbuntuMono-Regular'), url(https://fonts.gstatic.com/s/ubuntumono/v7/ViZhet7Ak-LRXZMXzuAfkTUj_cnvWIuuBMVgbX098Mw.woff2) format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek-ext */
+@font-face {
+  font-family: 'Ubuntu Mono';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Ubuntu Mono'), local('UbuntuMono-Regular'), url(https://fonts.gstatic.com/s/ubuntumono/v7/ViZhet7Ak-LRXZMXzuAfkUbcKLIaa1LC45dFaAfauRA.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+/* greek */
+@font-face {
+  font-family: 'Ubuntu Mono';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Ubuntu Mono'), local('UbuntuMono-Regular'), url(https://fonts.gstatic.com/s/ubuntumono/v7/ViZhet7Ak-LRXZMXzuAfkWo_sUJ8uO4YLWRInS22T3Y.woff2) format('woff2');
+  unicode-range: U+0370-03FF;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Ubuntu Mono';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Ubuntu Mono'), local('UbuntuMono-Regular'), url(https://fonts.gstatic.com/s/ubuntumono/v7/ViZhet7Ak-LRXZMXzuAfkSYE0-AqJ3nfInTTiDXDjU4.woff2) format('woff2');
+  unicode-range: U+0100-024F, U+1E00-1EFF, U+20A0-20AB, U+20AD-20CF, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Ubuntu Mono';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Ubuntu Mono'), local('UbuntuMono-Regular'), url(https://fonts.gstatic.com/s/ubuntumono/v7/ViZhet7Ak-LRXZMXzuAfkY4P5ICox8Kq3LLUNMylGO4.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215;
+}
+    </style>
   </defs>
   <sodipodi:namedview id="base" pagecolor="#ffffff" bordercolor="#666666" borderopacity="1.0" inkscape:pageopacity="0.0" inkscape:pageshadow="2" inkscape:zoom="0.7" inkscape:cx="82.214301" inkscape:cy="167.21431" inkscape:document-units="px" inkscape:current-layer="g6280" showgrid="false" inkscape:window-width="1920" inkscape:window-height="1000" inkscape:window-x="1280" inkscape:window-y="24" inkscape:window-maximized="1" />
   <metadata id="metadata6036">
@@ -22,22 +72,23 @@
   <g inkscape:label="Layer 1" inkscape:groupmode="layer" id="layer1" transform="translate(-36.357128,-150.29079)">
     <g id="g6280" transform="matrix(1.25,0,0,1.25,-33.500124,-138.84056)">
       <rect rx="0" ry="0" y="251.25751" x="65.429054" height="44.707207" width="47.052593" id="rect6041" style="fill:#000000;fill-opacity:1;stroke:none" />
-      <text id="text6043" y="284.78177" x="88.947876" style="font-size:21.89024353px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:monospace,sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:30.64633751px;font-weight:bold;text-align:center;text-anchor:middle;fill:#ffffff;font-family:Sans;-inkscape-font-specification:Sans Bold" y="284.78177" x="88.947876" id="tspan6045" sodipodi:role="line">M</tspan></text>
+      <text id="text6043" y="284.78177" x="88.947876" style="font-size:21.89024353px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:'Ubuntu Mono',monospace;-inkscape-font-specification:sans" xml:space="preserve">
+      <tspan style="font-size:30.64633751px;font-weight:bold;text-align:center;text-anchor:middle;fill:#ffffff;font-family:'Ubuntu Mono',monospace;-inkscape-font-specification:Sans Bold" y="284.78177" x="88.947876" id="tspan6045" sodipodi:role="line">M</tspan></text>
       <rect rx="0" ry="0" y="308.13309" x="65.429054" height="44.707207" width="47.052593" id="rect6041-4" style="fill:#000000;fill-opacity:1;stroke:none" />
-      <text id="text6043-9" y="341.65732" x="88.947876" style="font-size:21.89024353px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:monospace,sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:30.64633751px;font-weight:bold;text-align:center;text-anchor:middle;fill:#ffffff;font-family:Sans;-inkscape-font-specification:Sans Bold" y="341.65732" x="88.947876" id="tspan6045-0" sodipodi:role="line">A</tspan></text>
+      <text id="text6043-9" y="341.65732" x="88.947876" style="font-size:21.89024353px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:'Ubuntu Mono',monospace;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:30.64633751px;font-weight:bold;text-align:center;text-anchor:middle;fill:#ffffff;font-family:'Ubuntu Mono',monospace;-inkscape-font-specification:Sans Bold" y="341.65732" x="88.947876" id="tspan6045-0" sodipodi:role="line">A</tspan></text>
       <rect rx="0" ry="0" y="365.00864" x="65.429054" height="44.707207" width="47.052593" id="rect6041-4-4" style="fill:#000000;fill-opacity:1;stroke:none" />
       <g transform="matrix(0.54725607,0,0,0.54725607,-2.5145969,189.8391)" id="g6139">
-        <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:monospace,sans;-inkscape-font-specification:sans" x="167.12918" y="381.34573" id="text6043-9-2"><tspan sodipodi:role="line" id="tspan6045-0-1" x="167.12918" y="381.34573" style="font-size:56px;font-weight:bold;text-align:center;text-anchor:middle;fill:#ffffff;font-family:Sans;-inkscape-font-specification:Sans Bold">V</tspan></text>
+        <text xml:space="preserve" style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:'Ubuntu Mono',monospace;-inkscape-font-specification:sans" x="167.12918" y="381.34573" id="text6043-9-2"><tspan sodipodi:role="line" id="tspan6045-0-1" x="167.12918" y="381.34573" style="font-size:56px;font-weight:bold;text-align:center;text-anchor:middle;fill:#ffffff;font-family:'Ubuntu Mono',monospace;-inkscape-font-specification:Sans Bold">V</tspan></text>
       </g>
       <rect rx="0" ry="0" y="421.88419" x="65.429054" height="44.707207" width="47.052593" id="rect6041-4-8" style="fill:#000000;fill-opacity:1;stroke:none" />
-      <text id="text6043-9-5" y="455.40845" x="88.947876" style="font-size:21.89024353px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:monospace,sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:30.64633751px;font-weight:bold;text-align:center;text-anchor:middle;fill:#ffffff;font-family:Sans;-inkscape-font-specification:Sans Bold" y="455.40845" x="88.947876" id="tspan6045-0-0" sodipodi:role="line">I</tspan></text>
+      <text id="text6043-9-5" y="455.40845" x="88.947876" style="font-size:21.89024353px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:'Ubuntu Mono',monospace;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:30.64633751px;font-weight:bold;text-align:center;text-anchor:middle;fill:#ffffff;font-family:'Ubuntu Mono',monospace;-inkscape-font-specification:Sans Bold" y="455.40845" x="88.947876" id="tspan6045-0-0" sodipodi:role="line">I</tspan></text>
       <rect rx="0" ry="0" y="478.7597" x="65.429054" height="44.707207" width="47.052593" id="rect6041-4-5" style="fill:#000000;fill-opacity:1;stroke:none" />
-      <text id="text6043-9-9" y="512.28394" x="88.947876" style="font-size:21.89024353px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:monospace,sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:30.64633751px;font-weight:bold;text-align:center;text-anchor:middle;fill:#ffffff;font-family:Sans;-inkscape-font-specification:Sans Bold" y="512.28394" x="88.947876" id="tspan6045-0-00" sodipodi:role="line">S</tspan></text>
-      <text id="text6159" y="282.93372" x="115.7813" style="font-size:21.89024353px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:monospace,sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan y="282.93372" x="115.7813" id="tspan6161" sodipodi:role="line">erging,</tspan></text>
-      <text id="text6163" y="340.81396" x="115.7813" style="font-size:21.89024353px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:monospace,sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan y="340.81396" x="115.7813" id="tspan6165" sodipodi:role="line">nnotation,</tspan></text>
-      <text id="text6167" y="397.68951" x="115.7813" style="font-size:21.89024353px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:monospace,sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan y="397.68951" x="115.7813" id="tspan6169" sodipodi:role="line">alidation, and</tspan></text>
-      <text id="text6171" y="455.68204" x="115.7813" style="font-size:21.89024353px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:monospace, sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan y="455.68204" x="115.7813" id="tspan6173" sodipodi:role="line">llustration of</tspan></text>
-      <text id="text6175" y="512.55756" x="115.7813" style="font-size:21.89024353px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:monospace,sans;-inkscape-font-specification:sans" xml:space="preserve"><tspan y="512.55756" x="115.7813" id="tspan6177" sodipodi:role="line">tructural Variants</tspan></text>
+      <text id="text6043-9-9" y="512.28394" x="88.947876" style="font-size:21.89024353px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:'Ubuntu Mono',monospace;-inkscape-font-specification:sans" xml:space="preserve"><tspan style="font-size:30.64633751px;font-weight:bold;text-align:center;text-anchor:middle;fill:#ffffff;font-family:'Ubuntu Mono',monospace;-inkscape-font-specification:Sans Bold" y="512.28394" x="88.947876" id="tspan6045-0-00" sodipodi:role="line">S</tspan></text>
+      <text id="text6159" y="282.93372" x="115.7813" style="font-size:21.89024353px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:'Ubuntu Mono',monospace;-inkscape-font-specification:sans" xml:space="preserve"><tspan y="282.93372" x="115.7813" id="tspan6161" sodipodi:role="line">erging,</tspan></text>
+      <text id="text6163" y="340.81396" x="115.7813" style="font-size:21.89024353px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:'Ubuntu Mono',monospace;-inkscape-font-specification:sans" xml:space="preserve"><tspan y="340.81396" x="115.7813" id="tspan6165" sodipodi:role="line">nnotation,</tspan></text>
+      <text id="text6167" y="397.68951" x="115.7813" style="font-size:21.89024353px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:'Ubuntu Mono',monospace;-inkscape-font-specification:sans" xml:space="preserve"><tspan y="397.68951" x="115.7813" id="tspan6169" sodipodi:role="line">alidation, and</tspan></text>
+      <text id="text6171" y="455.68204" x="115.7813" style="font-size:21.89024353px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:'Ubuntu Mono',monospace;-inkscape-font-specification:sans" xml:space="preserve"><tspan y="455.68204" x="115.7813" id="tspan6173" sodipodi:role="line">llustration of</tspan></text>
+      <text id="text6175" y="512.55756" x="115.7813" style="font-size:21.89024353px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:'Ubuntu Mono',monospace;-inkscape-font-specification:sans" xml:space="preserve"><tspan y="512.55756" x="115.7813" id="tspan6177" sodipodi:role="line">tructural Variants</tspan></text>
     </g>
   </g>
 </svg>
