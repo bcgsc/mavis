@@ -7,7 +7,7 @@ About
 .. _non-python-dependencies:
 
 Non-python dependencies
-.........................
+-----------------------
 
 Aligner 
 +++++++++

@@ -20,50 +20,57 @@ To improve the install experience for the users, different configurations of the
         - .. raw:: html
     
             <a class='download-button btn btn-neutral' href='http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz' download>
-                <img src='_static/Ic_cloud_download_48px.svg.png'>GRCh38
+                <img src='_static/Ic_cloud_download_48px.svg'>GRCh38
             </a>
     *   - :ref:`annotations <reference-files-annotations>` (:term:`JSON`)
         - ``MAVIS_ANNOTATIONS``
         - .. raw:: html
     
             <a class='download-button btn btn-neutral' href='http://www.bcgsc.ca/downloads/mavis/ensembl69_hg19_annotations.json' download>
-                <img src='_static/Ic_cloud_download_48px.svg.png'>GRCh37/Hg19 + Ensembl69
+                <img src='_static/Ic_cloud_download_48px.svg'>GRCh37/Hg19 + Ensembl69
             </a><br>
             <a class='download-button btn btn-neutral' href='http://www.bcgsc.ca/downloads/mavis/ensembl79_hg38_annotations.json' download>
-                <img src='_static/Ic_cloud_download_48px.svg.png'>GRCh38 + Ensembl79
+                <img src='_static/Ic_cloud_download_48px.svg'>GRCh38 + Ensembl79
             </a>
     *   - :ref:`masking <reference-files-masking>` (text/tabbed)
         - ``MAVIS_MASKING``
-        - 
+        - .. raw:: html
+    
+            <a class='download-button btn btn-neutral' href='http://www.bcgsc.ca/downloads/mavis/hg19_masking.tab' download>
+                <img src='_static/Ic_cloud_download_48px.svg'>GRCh37/Hg19
+            </a><br>
+            <a class='download-button btn btn-neutral' href='http://www.bcgsc.ca/downloads/mavis/GRCh38_masking.tab' download>
+                <img src='_static/Ic_cloud_download_48px.svg'>GRCh38
+            </a>
     *   - :ref:`template metadata <reference-files-template-metadata>` (text/tabbed)
         - ``MAVIS_TEMPLATE_METADATA``
         - .. raw:: html
     
             <a class='download-button btn btn-neutral' href='http://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/cytoBand.txt.gz' download>
-                <img src='_static/Ic_cloud_download_48px.svg.png'>GRCh37/Hg19
+                <img src='_static/Ic_cloud_download_48px.svg'>GRCh37/Hg19
             </a><br>
             <a class='download-button btn btn-neutral' href='http://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/cytoBand.txt.gz' download>
-                <img src='_static/Ic_cloud_download_48px.svg.png'>GRCh38
+                <img src='_static/Ic_cloud_download_48px.svg'>GRCh38
             </a>
     *   - :ref:`DGV annotations <reference-files-dgv-annotations>` (text/tabbed)
         - ``MAVIS_DGV_ANNOTATIONS``
         - .. raw:: html
     
             <a class='download-button btn btn-neutral' href='http://www.bcgsc.ca/downloads/mavis/dgv_hg19_variants.tab' download>
-                <img src='_static/Ic_cloud_download_48px.svg.png'>GRCh37/Hg19
+                <img src='_static/Ic_cloud_download_48px.svg'>GRCh37/Hg19
             </a><br>
             <a class='download-button btn btn-neutral' href='http://www.bcgsc.ca/downloads/mavis/dgv_hg38_variants.tab' download>
-                <img src='_static/Ic_cloud_download_48px.svg.png'>GRCh38
+                <img src='_static/Ic_cloud_download_48px.svg'>GRCh38
             </a>
     *   - :ref:`aligner reference <reference-files-aligner-reference>`
         - ``MAVIS_ALIGNER_REFERENCE``
         - .. raw:: html
             
             <a class='download-button btn btn-neutral' href='http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/hg19.2bit' download>
-                <img src='_static/Ic_cloud_download_48px.svg.png'>GRCh37/Hg19 2bit (blat)
+                <img src='_static/Ic_cloud_download_48px.svg'>GRCh37/Hg19 2bit (blat)
             </a><br>
             <a class='download-button btn btn-neutral' href='http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.2bit' download>
-                <img src='_static/Ic_cloud_download_48px.svg.png'>GRCh38 2bit (blat)
+                <img src='_static/Ic_cloud_download_48px.svg'>GRCh38 2bit (blat)
             </a>
 
 
@@ -103,9 +110,9 @@ The structure of the file should look something like this
 Masking File
 ,,,,,,,,,,,,,,,,,,,,,,,
 
-File which contains regions that we should ignore calls in. This can be used to filter out
-regions with known false positives, bad mapping, centromeres, telomeres etc. An example is
-shown below
+The masking file if a tab delimited file which contains regions that we should ignore calls in. 
+This can be used to filter out regions with known false positives, bad mapping, centromeres, telomeres etc. 
+An example of the expected format is shown below. The file should have four columns: chr, start, end and name.
 
 .. code-block:: text
 
@@ -113,13 +120,17 @@ shown below
     chr1    0       2300000 centromere
     chr1    9200000 12700000        telomere
 
+The pre-built masking files in the downloads table above are telomere regions, centromere regions (based on the cytoband file), 
+and nspan regions (computed with tools/find_repeats.py).
+
+Masking is not required (can provide a header-only file), but is recommended as it will improve performance and specificity.
 
 .. _reference-files-annotations:
 
 Annotations
 ,,,,,,,,,,,,,,,,,,,,,,,
 
-This is a custom file format. Essentially just a tabbed or :term:`JSON` file which contains the gene, transcript, exon,
+This is a custom file format. It is a :term:`JSON` file which contains the gene, transcript, exon,
 translation and protein domain positional information
 
 Pre-built annotation files can be downloaded above. The 'best transcript' flag is based on an in-house model, as are the
@@ -171,7 +182,8 @@ Example of the :term:`JSON` file structure can be seen below
         ...
     }
 
-This reference file can be generated from any database with the necessary information. 
+The provided files were generated with :ref:`Ensembl <Yates-2016>`, however it can be generated from any database with the 
+necessary information so long as the above :term:`JSON` structure is respected.
 
 .. _generate-reference-annotations:
 
@@ -236,16 +248,16 @@ or if you have configured the environment variables as given in step 2, then sim
 :ref:`DGV (Database of Genomic Variants) <Macdonald-2014>` Annotations
 ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-File which contains regions corresponding to what is found in the database of genomic variants. This is
+The DGV annotations file contains regions corresponding to what is found in the database of genomic variants. This is
 used to annotate events that are found in healthy control samples and therefore may not be of interest
 if looking for somatic events. 
 
 The above (downloads table) files were generated from from `DGV <http://dgv.tcag.ca/dgv/app/download>`_
-and reformatted to have 4 columns after download. We used awk to convert the file like so
+and reformatted to have 4 columns after download. We used awk to convert the raw file
 
 .. code-block:: bash
 
-    awk '{print $2"\t"$3"\t"$4"\t"$1} GRCh37_hg19_variants_2016-05-15.txt > GRCh37_hg19_variants_2016-05-15.input.txt
+    awk '{print $2"\t"$3"\t"$4"\t"$1} GRCh37_hg19_variants_2016-05-15.txt > dgv_hg19_variants.tab
 
 Note in hg19 the column is called "name" and in hg38 the column is called "variantaccession".
 An example is shown below
