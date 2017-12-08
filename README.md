@@ -9,7 +9,7 @@
 *(master)* 
 
 
-![develop branch build status](https://www.bcgsc.ca/bamboo/plugins/servlet/wittified/build-status/MAV-MAV0) 
+![develop branch build status](https://www.bcgsc.ca/bamboo/plugins/servlet/wittified/build-status/MAV-TEST0) 
 *(develop)* 
 
 [MAVIS](http://mavis.bcgsc.ca) is a pipeline to merge and validate input from different structural variant callers into a single report.
