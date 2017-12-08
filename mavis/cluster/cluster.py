@@ -133,11 +133,11 @@ def merge_by_union(input_pairs, group_key, weight_adjustment=10, cluster_radius=
             for j in range(i + 1, len(input_pairs)):
                 other = ordering[j]
                 okey = pair_key(other)
-                d = abs(Interval.dist(curr.break1, other.break1))
-                if d > cluster_radius:
+                distance = abs(Interval.dist(curr.break1, other.break1))
+                if distance > cluster_radius:
                     break
-                d += abs(Interval.dist(curr.break2, other.break2))
-                if d <= cluster_radius:
+                distance += abs(Interval.dist(curr.break2, other.break2))
+                if distance <= cluster_radius:
                     edges[ckey].add(okey)
                     edges[okey].add(ckey)
 
