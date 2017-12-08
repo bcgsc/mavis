@@ -22,7 +22,7 @@ import string
 import warnings
 
 
-VERBOSE = False
+VERBOSE = False  # Output extra logging information (useful in debugging)
 
 
 def cast_boolean(input_value):
