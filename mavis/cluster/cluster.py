@@ -149,6 +149,8 @@ def merge_by_union(input_pairs, group_key, weight_adjustment=10, cluster_radius=
         adj = edges[node] | {node}
         merged.add(node)
         unmerged = adj - merged
+        # follow edges to merge all connected nodes until all edges have been visited
+        # extracts the current connected component
         while unmerged:
             for other in unmerged:
                 adj.update(edges[other])
