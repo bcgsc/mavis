@@ -1,48 +1,13 @@
 
-.. figure:: _static/acronym.svg
-
 About
----------
+======
 
-MAVIS is a pipeline to merge and validate input from different structural variant callers into a single report.
-The pipeline consists five of main steps
-
-- :ref:`cluster <mavis-cluster>`
-- :ref:`validate <mavis-validate>`
-- :ref:`annotate <mavis-annotate>`
-- :ref:`pairing <mavis-pairing>`
-- :ref:`summary <mavis-summary>`
-
-
-Getting started
-...................
-
-There are 3 major steps to setting up and installing MAVIS
-
-1. **Install non-python dependencies**
-
-Before MAVIS can be installed, the :ref:`non-python dependencies <non-python-dependencies>` will need to be installed.
-After these have been installed MAVIS itself can be installed through pip
-
-2. **Install MAVIS**
-
-.. code:: bash
-
-    pip install mavis
-
-This will install mavis and its python dependencies.
-
-3. **Build reference files**
-
-After MAVIS is installed the :ref:`reference files <reference-input>` must be generated before it can be run.
-
-Once the above 3 steps are complete MAVIS is ready to be run. See :ref:`running the pipeline <pipeline>`.
-
+.. mdinclude:: ../../README.md
 
 .. _non-python-dependencies:
 
 Non-python dependencies
-.........................
+-----------------------
 
 Aligner 
 +++++++++

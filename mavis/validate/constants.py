@@ -71,7 +71,7 @@ DEFAULTS.add(
     'will be discarded. If False, then the kmer size will be reduced to the minimum input and all input '
     'sequences will be used in the assembly algorithm')
 DEFAULTS.add(
-    'assembly_max_paths', 4,
+    'assembly_max_paths', 8,
     defn='the maximum number of paths to resolve. This is used to limit when there is a messy assembly graph to '
     'resolve. The assembly will pre-calculate the number of paths (or putative assemblies) and stop if it is greater '
     'than the given setting.')
@@ -85,7 +85,7 @@ DEFAULTS.add(
     'assembly_min_exact_match_to_remap', 15,
     defn='The minimum length of exact matches to initiate remapping a read to a contig')
 DEFAULTS.add(
-    'assembly_min_nc_edge_weight', 4,
+    'assembly_min_nc_edge_weight', 3,
     defn='Discards all non-cutting edges with a weight/frequency less than this from the DeBruijn graph')
 DEFAULTS.add(
     'assembly_min_remap_coverage', 0.9, cast_type=float_fraction,

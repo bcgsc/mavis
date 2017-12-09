@@ -6,9 +6,6 @@ import subprocess
 import sys
 import time
 
-import pysam
-from shortuuid import uuid
-
 from . import __version__
 from .annotate.base import BioInterval
 from .annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
@@ -136,6 +133,7 @@ def main_pipeline(config):
     runs the pipeline subcommand. Runs clustering (or just splitting if clustering is skipped) and sets up
     submission scripts for the other pipeline stages/steps
     """
+    from shortuuid import uuid
     batch_id = 'batch-' + str(uuid())
     conversion_dir = mkdirp(os.path.join(config.output, 'converted_inputs'))
     pairing_inputs = []
@@ -322,6 +320,7 @@ def overlay_main(
     """
     generates an overlay diagram
     """
+    import pysam
     # check options formatting
     gene_to_draw = None
 

@@ -7,7 +7,7 @@ import itertools
 from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import ORIENT, STRAND
 from ..interval import Interval
-from ..util import log
+from ..util import log, devnull
 
 
 class BreakpointPairGroupKey(namedtuple('BreakpointPairGroupKey', [
@@ -123,36 +123,24 @@ def merge_by_union(input_pairs, group_key, weight_adjustment=10, cluster_radius=
     pairs_by_key = {}
 
     for i in range(0, len(input_pairs)):
-        # try all combinations until start distance alone is too far
-        curr = pairs_by_start[i]
-        ckey = pair_key(curr)
-        edges.setdefault(ckey, set())
-        pairs_by_key.setdefault(ckey, []).append(curr)
+        pairs_by_key.setdefault(pair_key(pairs_by_start[i]), []).append(pairs_by_start[i])
+        for ordering in [pairs_by_start, pairs_by_end]:
+            # try all combinations until start distance alone is too far
+            curr = ordering[i]
+            ckey = pair_key(curr)
+            edges.setdefault(ckey, set())
 
-        for j in range(i + 1, len(input_pairs)):
-            other = pairs_by_start[j]
-            okey = pair_key(other)
-            d = abs(Interval.dist(curr.break1, other.break1))
-            if d > cluster_radius:
-                break
-            d += abs(Interval.dist(curr.break2, other.break2))
-            if d <= cluster_radius:
-                edges[ckey].add(okey)
-                edges[okey].add(ckey)
+            for j in range(i + 1, len(input_pairs)):
+                other = ordering[j]
+                okey = pair_key(other)
+                distance = abs(Interval.dist(curr.break1, other.break1))
+                if distance > cluster_radius:
+                    break
+                distance += abs(Interval.dist(curr.break2, other.break2))
+                if distance <= cluster_radius:
+                    edges[ckey].add(okey)
+                    edges[okey].add(ckey)
 
-        # now try all until the end distance alone is too great
-        curr = pairs_by_end[i]
-
-        for j in range(i + 1, len(input_pairs)):
-            other = pairs_by_end[j]
-            okey = pair_key(other)
-            d = abs(Interval.dist(curr.break2, other.break2))
-            if d > cluster_radius:
-                break
-            d += abs(Interval.dist(curr.break1, other.break1))
-            if d <= cluster_radius:
-                edges[okey].add(ckey)
-                edges[ckey].add(okey)
     merged = set()
     merge_nodes = []
     for node in edges:
@@ -161,10 +149,12 @@ def merge_by_union(input_pairs, group_key, weight_adjustment=10, cluster_radius=
         adj = edges[node] | {node}
         merged.add(node)
         unmerged = adj - merged
-        while len(unmerged) > 0:
-            for node in unmerged:
-                adj = adj | edges[node]
-                merged.add(node)
+        # follow edges to merge all connected nodes until all edges have been visited
+        # extracts the current connected component
+        while unmerged:
+            for other in unmerged:
+                adj.update(edges[other])
+                merged.add(other)
             unmerged = adj - merged
         merge_nodes.append(adj)
     nodes = {}
@@ -240,7 +230,7 @@ def merge_breakpoint_pairs(input_pairs, cluster_radius=200, cluster_initial_size
     for group_key in sorted(set(list(groups) + list(phase2_groups))):
         count = len(groups.get(group_key, [])) + len(phase2_groups.get(group_key, []))
         if verbose:
-            log(group_key, 'pairs:', count, groups.get(group_key, []), phase2_groups.get(group_key, []))
+            log(group_key, 'pairs:', count)
         nodes = merge_by_union(
             groups.get(group_key, []), group_key,
             weight_adjustment=cluster_initial_size_limit, cluster_radius=cluster_radius)

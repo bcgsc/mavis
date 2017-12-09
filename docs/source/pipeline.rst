@@ -13,14 +13,14 @@ by running without any arguments, or by giving the -h/--help option
 
 .. code:: bash
 
-    >>> mavis -h
+    mavis -h
 
 
 Help sub-menus can be found by giving the pipeline step followed by no arguments or the -h options
 
 .. code:: bash
 
-    >>> mavis cluster -h
+    mavis cluster -h
 
 
 Running MAVIS using a Job Scheduler
@@ -45,8 +45,8 @@ The pipeline setup step will run clustering and create scripts for running the o
 
 .. code:: bash
 
-    >>> mavis config .... -w config.cfg
-    >>> mavis pipeline config.cfg -o /path/to/top/output_dir
+    mavis config .... -w config.cfg
+    mavis pipeline config.cfg -o /path/to/top/output_dir
 
 This will create submission scripts as follows
 
@@ -67,9 +67,9 @@ The submit_pipeline_<batchid>.sh is the wrapper script which can be executed on 
 
 .. code:: bash
 
-    >>> ssh cluster_head_node
-    >>> cd /path/to/output_dir
-    >>> bash submit_pipeline_<batchid>.sh
+    ssh cluster_head_node
+    cd /path/to/output_dir
+    bash submit_pipeline_<batchid>.sh
 
 
 Non-Standard
@@ -79,17 +79,17 @@ To set up a non-standard pipeline and skip steps use the skip stage option.
 
 .. code:: bash
 
-    >>> mavis pipeline /path/to/config -o /path/to/output/dir --skip_stage cluster
+    mavis pipeline /path/to/config -o /path/to/output/dir --skip_stage cluster
 
 .. code:: bash
 
-    >>> mavis pipeline /path/to/config -o /path/to/output/dir --skip_stage validate
+    mavis pipeline /path/to/config -o /path/to/output/dir --skip_stage validate
 
 Or to skip both clustering and validation, simply call the option twice.
 
 .. code:: bash
 
-    >>> mavis pipeline /path/to/config -o /path/to/output/dir --skip_stage cluster --skip_stage validate
+    mavis pipeline /path/to/config -o /path/to/output/dir --skip_stage cluster --skip_stage validate
 
 .. note::
 

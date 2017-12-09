@@ -2,7 +2,7 @@ import unittest
 
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.cluster.cluster import merge_breakpoint_pairs, merge_integer_intervals
-from mavis.constants import COLUMNS, PROTOCOL
+from mavis.constants import COLUMNS, PROTOCOL, SVTYPE
 from mavis.interval import Interval
 from mavis.util import read_bpp_from_input_file
 
@@ -25,6 +25,8 @@ class TestFullClustering(unittest.TestCase):
 
         for cluster, input_pairs in sorted(clusters.items(), key=lambda x: (x[1][0].break1.chr, x[1][0].break2.chr)):
             print(cluster)
+            for ip in input_pairs:
+                print('\t', ip)
             self.assertEqual(1, len(input_pairs))
         self.assertEqual(len(bpps), len(clusters))
 
@@ -71,6 +73,15 @@ class TestMergeBreakpointPairs(unittest.TestCase):
         self.assertEqual(12856838, merge.break2.start)
         self.assertEqual(12897006, merge.break1.end)
         self.assertEqual(12897006, merge.break2.end)
+
+    def test_events_separate(self):
+        bpps = [
+            BreakpointPair(Breakpoint('4', 157002032, 157002046, orient='L'), Breakpoint('4', 157002343, 157002343, orient='R'), event_type=SVTYPE.DEL, untemplated_seq='', protocol='genome', tracking_id='manta-MantaDEL:55718:0:0:1:0:0'),
+            BreakpointPair(Breakpoint('4', 156935061, orient='L'), Breakpoint('4', 156935245, orient='R'), event_type=SVTYPE.DEL, untemplated_seq='', protocol='genome', tracking_id='delly-DEL00011007'),
+            BreakpointPair(Breakpoint('4', 157002046, orient='L'), Breakpoint('4', 157002358, orient='R'), event_type=SVTYPE.DEL, untemplated_seq='', protocol='genome', tracking_id='delly-DEL00011008')
+        ]
+        mapping = merge_breakpoint_pairs(bpps, 100, 25, verbose=True)
+        self.assertEqual(2, len(mapping))
 
 
 class TestMergeIntervals(unittest.TestCase):

@@ -356,13 +356,19 @@ def align_sequences(
             with pysam.AlignmentFile(aligner_output_file, 'r', check_sq=bool(len(sequences))) as samfile:
                 reads_by_query = {}
                 for read in samfile.fetch():
+                    if read.is_unmapped:
+                        continue
                     read = _read.SamRead.copy(read)
-                    read.reference_id = input_bam_cache.reference_id(read.reference_name)
-                    if read.is_paired:
-                        read.next_reference_id = input_bam_cache.reference_id(read.next_reference_name)
-                    read.cigar = _cigar.recompute_cigar_mismatch(read, reference_genome[read.reference_name])
-                    query_seq = query_id_mapping[read.query_name]
-                    reads_by_query.setdefault(query_seq, []).append(read)
+                    try:
+                        read.reference_id = input_bam_cache.reference_id(read.reference_name)
+                    except KeyError:
+                        log('dropping alignment (unknown reference)', read.reference_name, time_stamp=False)
+                    else:
+                        if read.is_paired:
+                            read.next_reference_id = input_bam_cache.reference_id(read.next_reference_name)
+                        read.cigar = _cigar.recompute_cigar_mismatch(read, reference_genome[read.reference_name])
+                        query_seq = query_id_mapping[read.query_name]
+                        reads_by_query.setdefault(query_seq, []).append(read)
             return reads_by_query
         else:
             raise NotImplementedError('unsupported aligner', aligner)
@@ -385,7 +391,7 @@ def select_contig_alignments(evidence, reads_by_query):
     for contig in evidence.contigs:
         std_reads = set()
         alignments = []
-        for raw_read in reads_by_query[contig.seq]:
+        for raw_read in reads_by_query.get(contig.seq, []):
             if raw_read.reference_name not in {evidence.break1.chr, evidence.break2.chr}:
                 continue
             read = evidence.standardize_read(raw_read)
