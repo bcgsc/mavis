@@ -1,170 +1,142 @@
 from .constants import PAIRING_STATE
 from ..breakpoint import Breakpoint, BreakpointPair
-from ..constants import CALL_METHOD, COLUMNS, DISEASE_STATUS, PROTOCOL, STRAND, SVTYPE
+from ..constants import CALL_METHOD, COLUMNS, DISEASE_STATUS, PROTOCOL, SVTYPE
 from ..interval import Interval
+from ..pairing.pairing import pair_by_distance, product_key
+from ..util import get_connected_components
 
 
-def alphanumeric_choice(bpp1, bpp2):
+def filter_by_annotations(bpp_list, best_transcripts):
     """
     Args:
-        bpp1 (BreakpointPair)
-        bpp2 (BreakpointPair)
-
-    returns the one with transcript with alphanumeric priority, with transcript1 chosen for ties
-    """
-    if (bpp1.transcript1, bpp1.transcript2) < (bpp2.transcript1, bpp2.transcript2):
-        return bpp1
-    elif (bpp1.transcript1, bpp1.transcript2) > (bpp2.transcript1, bpp2.transcript2):
-        return bpp2
-    else:
-        raise AssertionError('Both transcripts are equal')
-
-
-def filter_by_annotations(bpp1, bpp2, best_transcripts):
-    """
-    Args:
-        bpp1 (BreakPointPair):
-        bpp2 (BreakpointPair):
+        bpp_list (list of BreakpointPair): list of pairs to filter
         best_transcripts (:class `dict` of :any:`Transcript` by :class:`str`): the best transcripts of the annotations
           based on their names
 
     """
-    # By priority
-    # Case 1 an event has 2 genes and transcripts and a fusion cdna (orf)
-    if bpp1.data[COLUMNS.fusion_cdna_coding_start] or bpp2.data[COLUMNS.fusion_cdna_coding_start]:
-        # take the one with the longest cdna length
-        if bpp1.data[COLUMNS.fusion_cdna_coding_start] is None:
-            return bpp2
-        elif bpp2.data[COLUMNS.fusion_cdna_coding_start] is None:
-            return bpp1
+    strings = []
+    for bpp in bpp_list:
+        for attr in ['gene1', 'gene2', 'transcript1', 'transcript2']:
+            if bpp.data[attr] is not None:
+                strings.append(bpp.data[attr])
+    string_ranks = {s: i for i, s in enumerate(sorted(strings))}
+    string_ranks[None] = len(strings)
+
+    def sort_key(bpp):
+        if bpp.fusion_cdna_coding_start is None:
+            result = [1, 0]
         else:
-            bpp1_cdna_len = int(bpp1.data[COLUMNS.fusion_cdna_coding_end]) - \
-                int(bpp1.data[COLUMNS.fusion_cdna_coding_start])
-            bpp2_cdna_len = int(bpp2.data[COLUMNS.fusion_cdna_coding_end]) - \
-                int(bpp2.data[COLUMNS.fusion_cdna_coding_start])
-            return bpp1 if bpp1_cdna_len >= bpp2_cdna_len else bpp2
+            result = [0, -1 * (int(bpp.fusion_cdna_coding_end) - int(bpp.fusion_cdna_coding_start))]
 
-    # Case 2 an event has 2 genes and transcripts
-    elif bpp1.data[COLUMNS.gene1] and bpp1.data[COLUMNS.gene2] or bpp2.data[COLUMNS.gene1] and bpp2.data[COLUMNS.gene2]:
-        # take the one with transcripts that are in best transcript, or the highest alphanumeric name
-        if bpp1.data[COLUMNS.gene1] is None or bpp1.data[COLUMNS.gene2] is None:
-            return bpp2
-        elif bpp2.data[COLUMNS.gene1] is None or bpp2.data[COLUMNS.gene2] is None:
-            return bpp1
-        else:
-            bpp1_t1, bpp1_t2 = (bpp1.data[COLUMNS.transcript1], bpp1.data[COLUMNS.transcript2])
-            bpp2_t1, bpp2_t2 = (bpp2.data[COLUMNS.transcript1], bpp2.data[COLUMNS.transcript2])
-            # both in best transcripts
-            if bpp1_t1 in best_transcripts and bpp1_t2 in best_transcripts and bpp2_t1 in best_transcripts \
-                    and bpp2_t2 in best_transcripts:
-                try:
-                    alpha = alphanumeric_choice(bpp1, bpp2)
-                except AssertionError:  # both transcripts are the same
-                    alpha = group_events(bpp1, bpp2)
-                return alpha
-            elif bpp1_t1 in best_transcripts and bpp1_t2 in best_transcripts:
-                return bpp1
-            elif bpp2_t1 in best_transcripts and bpp2_t2 in best_transcripts:
-                return bpp2
-            elif bpp1_t1 in best_transcripts or bpp1_t2 in best_transcripts:
-                return bpp1
-            elif bpp2_t1 in best_transcripts or bpp2_t2 in best_transcripts:
-                return bpp2
-            else:
-                try:
-                    alpha = alphanumeric_choice(bpp1, bpp2)
-                except AssertionError:  # both transcripts are the same
-                    alpha = group_events(bpp1, bpp2)
-                return alpha
-
-    # Case 3 an event has 1 gene and transcript
-    elif bpp1.data[COLUMNS.gene1] or bpp1.data[COLUMNS.gene2] or bpp2.data[COLUMNS.gene1] or bpp2.data[COLUMNS.gene2]:
-        # take the one with transcripts that are in best transcript, or the highest alphanumeric name
-        if bpp1.data[COLUMNS.gene1] is None and bpp1.data[COLUMNS.gene2] is None:
-            return bpp2
-        elif bpp2.data[COLUMNS.gene1] is None and bpp2.data[COLUMNS.gene2] is None:
-            return bpp1
-        else:
-            bpp1_t1, bpp1_t2 = (bpp1.data[COLUMNS.transcript1], bpp1.data[COLUMNS.transcript2])
-            bpp2_t1, bpp2_t2 = (bpp2.data[COLUMNS.transcript1], bpp2.data[COLUMNS.transcript2])
-
-            if bpp1_t1 in best_transcripts or bpp1_t2 in best_transcripts:
-                return bpp1
-            elif bpp2_t1 in best_transcripts or bpp2_t2 in best_transcripts:
-                return bpp2
-            else:
-                try:
-                    alpha = alphanumeric_choice(bpp1, bpp2)
-                except AssertionError:  # both transcripts are the same
-                    alpha = group_events(bpp1, bpp2)
-                return alpha
-
-    # Case 4 both have no genes present - will keep the positive strand event
-    else:
-        if bpp1.break1.strand == STRAND.POS:
-            return bpp1
-        else:
-            return bpp2
+        result.extend([
+            0 if bpp.transcript1 in best_transcripts else 1,
+            0 if bpp.transcript2 in best_transcripts else 1,
+            sum([bpp.transcript1 is None, bpp.transcript2 is None]),
+            string_ranks[bpp.gene1], string_ranks[bpp.gene2],
+            string_ranks[bpp.transcript1], string_ranks[bpp.transcript2]
+        ])
+        return tuple(result)
+    bpp_list = sorted(bpp_list, key=sort_key)
+    return [b for b in bpp_list if sort_key(b) == sort_key(bpp_list[0])]
 
 
-def filter_by_call_method(bpp1, bpp2):
+def filter_by_call_method(bpp_list):
+    """
+    Filters a set of breakpoint pairs to returns the call with the most evidence.
+    Prefers contig evidence over spanning over split over flanking, etc.
+    """
     # ranking scores of the methods (more is better)
-    ranking = {
-        CALL_METHOD.CONTIG: 4,
-        CALL_METHOD.SPLIT: 3,
-        CALL_METHOD.SPAN: 2,
-        CALL_METHOD.FLANK: 1,
-        CALL_METHOD.INPUT: 0
-    }
-    # This treats split flank the same as flank split
-    bpp_call_score = ranking[bpp1.call_method]
-    existing_call_score = ranking[bpp2.call_method]
+    def sort_key(bpp):
+        return (
+            bpp.data.get('contig_remapped_reads', 0),
+            bpp.data.get('contig_alignment_score', 0),
+            bpp.data.get('spanning_reads', 0),
+            bpp.data.get('break1_split_reads', 0),
+            bpp.data.get('break2_split_reads', 0),
+            bpp.data.get('linking_split_reads', 0),
+            bpp.data.get('flanking_pairs', 0)
+        )
+    if not bpp_list:
+        return bpp_list
+    bpp_list = sorted(bpp_list, key=sort_key, reverse=True)
 
-    if bpp_call_score < existing_call_score:
-        return bpp1
-    elif bpp_call_score > existing_call_score:
-        return bpp2
-    else:
-        raise AssertionError('Both call methods are equal')
+    # filter to the top ranked method
+    return [bpp for bpp in bpp_list if sort_key(bpp) == sort_key(bpp_list[0])]
 
 
-def group_events(bpp1, bpp2):
+def group_events(events):
+    """
+    group events together and join data attributes
+    """
     # take the outer regions of the breakpoints
+    first = events[0]
     new_bpp = BreakpointPair(
-        Breakpoint(bpp1.break1.chr,
-                   min(bpp1.break1.start, bpp2.break1.start),
-                   max(bpp1.break1.end, bpp2.break1.end),
-                   orient=bpp1.break1.orient,
-                   strand=bpp1.break1.strand),
-        Breakpoint(bpp1.break2.chr,
-                   min(bpp1.break2.start, bpp2.break2.start),
-                   max(bpp1.break2.end, bpp2.break2.end),
-                   orient=bpp1.break2.orient,
-                   strand=bpp1.break2.strand),
-        opposing_strands=bpp1.opposing_strands,
-        stranded=bpp1.stranded)
+        Breakpoint(
+            first.break1.chr,
+            min([b.break1.start for b in events]),
+            max([b.break1.end for b in events]),
+            orient=first.break1.orient,
+            strand=first.break1.strand),
+        Breakpoint(
+            first.break2.chr,
+            min([b.break2.start for b in events]),
+            max([b.break2.end for b in events]),
+            orient=first.break2.orient,
+            strand=first.break2.strand),
+        opposing_strands=first.opposing_strands,
+        stranded=first.stranded
+    )
+    for bpp in events:
+        if any([
+            bpp.break1.chr != new_bpp.break1.chr,
+            bpp.break2.chr != new_bpp.break2.chr,
+            bpp.break1.orient != new_bpp.break1.orient,
+            bpp.break2.orient != new_bpp.break2.orient,
+            bpp.opposing_strands != new_bpp.opposing_strands,
+            bpp.break1.strand != new_bpp.break1.strand,
+            bpp.break2.strand != new_bpp.break2.strand
+        ]):
+            raise AssertionError('cannot group events differing on key elements', bpp, new_bpp)
 
     # Note: There are some attributes that shouldn't be lost if different, currently appending the information
     # The evidence could be better off as a max instead of a join
-    columns_to_keep = [COLUMNS.contig_seq, COLUMNS.call_method,
-                       COLUMNS.break1_split_reads, COLUMNS.break2_split_reads, COLUMNS.contig_alignment_score,
-                       COLUMNS.spanning_reads, COLUMNS.flanking_pairs, COLUMNS.tools,
-                       COLUMNS.product_id, COLUMNS.event_type, COLUMNS.annotation_id,
-                       COLUMNS.pairing, COLUMNS.annotation_figure,
-                       COLUMNS.contig_remapped_reads, COLUMNS.tools]
+    for col in [
+        COLUMNS.contig_seq, COLUMNS.call_method,
+        COLUMNS.break1_split_reads, COLUMNS.break2_split_reads, COLUMNS.contig_alignment_score,
+        COLUMNS.spanning_reads, COLUMNS.flanking_pairs, COLUMNS.tools,
+        COLUMNS.product_id, COLUMNS.event_type, COLUMNS.annotation_id,
+        COLUMNS.pairing, COLUMNS.annotation_figure,
+        COLUMNS.contig_remapped_reads, COLUMNS.tools
+    ]:
+        new_data = sorted(list({bpp.data[col] for bpp in events}))
+        new_bpp.data[col] = new_data[0] if len(new_data) == 1 else ';'.join([str(v) for v in new_data])
 
-    for i in bpp1.data.keys():
-        if bpp1.data[i] != bpp2.data[i]:
-            new_bpp.data[i] = ''
-            if i in columns_to_keep:
-                new_bpp.data[i] = ';'.join(sorted(list(set(str(bpp1.data[i]).split(';') +
-                                                           str(bpp2.data[i]).split(';')))))
-        else:
-            new_bpp.data[i] = bpp1.data[i]
-    if bpp1.untemplated_seq == bpp2.untemplated_seq:
-        new_bpp.untemplated_seq = bpp1.untemplated_seq
+    untemplated_seq = {bpp.untemplated_seq for bpp in events}
+    if len(untemplated_seq) == 1:
+        new_bpp.untemplated_seq = list(untemplated_seq)[0]
 
     return new_bpp
+
+
+def group_by_distance(calls, distances):
+    """
+    groups a set of calls based on their proximity. Returns a new list of calls where close calls have been merged
+    """
+    mapping = {}
+    for call in calls:
+        mapping.setdefault(product_key(call), []).append(call)
+    pairing = pair_by_distance(calls, distances, against_self=True)
+    # merge all the 'close-enough' pairs
+    grouped_calls = []
+    for component in get_connected_components(pairing):
+        if len(component) == 1:
+            grouped_calls.append(mapping[component.pop()])
+        else:
+            pairs = []
+            for key in component:
+                pairs.extend(mapping[key])
+            grouped_calls.append(group_events(pairs))
+    return grouped_calls
 
 
 def annotate_dgv(bpps, dgv_regions_by_reference_name, distance=0):
@@ -188,7 +160,6 @@ def annotate_dgv(bpps, dgv_regions_by_reference_name, distance=0):
                 except AttributeError:
                     pass
                 bpp.data['dgv'] = '{}({}:{}-{})'.format(r.name, refname, r.start, r.end)
-    return bpps
 
 
 def get_pairing_state(current_protocol, current_disease_state, other_protocol, other_disease_state, is_matched=False, inferred_is_matched=False):

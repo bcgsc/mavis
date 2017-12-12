@@ -104,7 +104,6 @@ class TestPairing(unittest.TestCase):
         self.assertFalse(equivalent(self.gev1, self.gev2, distances=self.distances))
 
     def test_mixed_protocol_fusions_same_sequence(self):
-        product_sequences = {'a': 'AATG', 'b': 'AATG'}
         genome_ev = BreakpointPair(
             Breakpoint('1', 1),
             Breakpoint('1', 10),
@@ -137,11 +136,10 @@ class TestPairing(unittest.TestCase):
         )
         self.assertFalse(equivalent(genome_ev, trans_ev, self.TRANSCRIPTS))
         genome_ev.data[COLUMNS.fusion_sequence_fasta_id] = 'a'
-        trans_ev.data[COLUMNS.fusion_sequence_fasta_id] = 'b'
-        self.assertTrue(inferred_equivalent(genome_ev, trans_ev, self.TRANSCRIPTS, product_sequences=product_sequences))
+        trans_ev.data[COLUMNS.fusion_sequence_fasta_id] = 'a'
+        self.assertTrue(inferred_equivalent(genome_ev, trans_ev, self.TRANSCRIPTS))
 
     def test_mixed_protocol_fusions_same_sequence_diff_translation(self):
-        product_sequences = {'a': 'AATG', 'b': 'AATG'}
         genome_ev = BreakpointPair(
             Breakpoint('1', 1),
             Breakpoint('1', 10),
@@ -164,7 +162,7 @@ class TestPairing(unittest.TestCase):
             data={
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
-                COLUMNS.fusion_sequence_fasta_id: 'b',
+                COLUMNS.fusion_sequence_fasta_id: 'a',
                 COLUMNS.protocol: PROTOCOL.TRANS,
                 COLUMNS.transcript1: None,
                 COLUMNS.transcript2: None,
@@ -172,10 +170,9 @@ class TestPairing(unittest.TestCase):
                 COLUMNS.fusion_cdna_coding_end: 50
             }
         )
-        self.assertFalse(inferred_equivalent(genome_ev, trans_ev, self.TRANSCRIPTS, product_sequences=product_sequences))
+        self.assertFalse(inferred_equivalent(genome_ev, trans_ev, self.TRANSCRIPTS))
 
     def test_mixed_protocol_fusions_different_sequence(self):
-        product_sequences = {'a': 'AATT', 'b': 'AATG'}
         genome_ev = BreakpointPair(
             Breakpoint('1', 1),
             Breakpoint('1', 10),
@@ -206,7 +203,7 @@ class TestPairing(unittest.TestCase):
                 COLUMNS.fusion_cdna_coding_end: 10
             }
         )
-        self.assertFalse(inferred_equivalent(genome_ev, trans_ev, self.TRANSCRIPTS, product_sequences=product_sequences))
+        self.assertFalse(inferred_equivalent(genome_ev, trans_ev, self.TRANSCRIPTS))
 
     def test_mixed_protocol_one_predicted_one_match(self):
         genome_ev = BreakpointPair(

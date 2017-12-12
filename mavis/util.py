@@ -263,6 +263,27 @@ def write_bed_file(filename, bed_rows):
             fh.write('\t'.join([str(c) for c in bed]) + '\n')
 
 
+def get_connected_components(adj_matrix):
+    """
+    for a dictionary representing an adjacency matrix of undirected edges returns the connected components
+    """
+    nodes_visited = set()
+    components = []
+    for node in adj_matrix:
+        if node in nodes_visited:
+            continue
+        component = {node}
+        unvisited = adj_matrix[node]
+        while unvisited:
+            curr = unvisited.pop()
+            component.add(curr)
+            nodes_visited.add(curr)
+            unvisited.update(adj_matrix.get(curr, set()))
+            unvisited.difference_update(nodes_visited)
+        components.append(component)
+    return components
+
+
 def generate_complete_stamp(output_dir, log=devnull, prefix='MAVIS.', start_time=None):
     """
     writes a complete stamp, optionally including the run time if start_time is given
