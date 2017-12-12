@@ -47,15 +47,16 @@ def filter_by_call_method(bpp_list):
     """
     # ranking scores of the methods (more is better)
     def sort_key(bpp):
-        return (
-            bpp.data.get('contig_remapped_reads', 0),
-            bpp.data.get('contig_alignment_score', 0),
-            bpp.data.get('spanning_reads', 0),
-            bpp.data.get('break1_split_reads', 0),
-            bpp.data.get('break2_split_reads', 0),
-            bpp.data.get('linking_split_reads', 0),
-            bpp.data.get('flanking_pairs', 0)
-        )
+        key = [bpp.data.get(col, 0) if bpp.data.get(col, 0) is not None else 0 for col in [
+            'contig_remapped_reads',
+            'contig_alignment_score',
+            'spanning_reads',
+            'break1_split_reads',
+            'break2_split_reads',
+            'linking_split_reads',
+            'flanking_pairs'
+        ]]
+        return tuple(key)
     if not bpp_list:
         return bpp_list
     bpp_list = sorted(bpp_list, key=sort_key, reverse=True)
