@@ -246,7 +246,6 @@ def main(
         COLUMNS.contig_remapped_reads,
         COLUMNS.tracking_id,
         COLUMNS.net_size,
-        'summary_pairing',
         'dgv'}
 
     rows = []

@@ -149,18 +149,25 @@ def annotate_dgv(bpps, dgv_regions_by_reference_name, distance=0):
         dgv_regions_by_reference_name (dict) : the dgv reference regions file loaded by load_masking_regions
         distance (int) : the minimum distance required to match a dgv event with a breakpoint
     """
-    for bpp in bpps:
-        if bpp.break1.chr != bpp.break2.chr:
-            continue  # assume the dgv does not have translocations
-        for r in dgv_regions_by_reference_name.get(bpp.break1.chr, []):
-            if abs(Interval.dist((r.start, r.start), bpp.break1)) <= distance and \
-                    abs(Interval.dist((r.end, r.end), bpp.break2)) <= distance:
-                refname = r.reference_object
-                try:
-                    refname = r.reference_object.name
-                except AttributeError:
-                    pass
-                bpp.data['dgv'] = '{}({}:{}-{})'.format(r.name, refname, r.start, r.end)
+    for chrom in dgv_regions_by_reference_name:
+        dgv_regions_by_reference_name[chrom] = sorted(dgv_regions_by_reference_name[chrom], key=lambda x: x.start)
+
+    lowest_resolution = max([len(b.break1) for b in bpps])  # only need start res
+
+    # only look at the bpps that dgv events could pair to, Intrachromosomal
+    for bpp in [b for b in bpps if not b.interchromosomal and b.break1.chr in dgv_regions_by_reference_name]:
+        for dgv_region in dgv_regions_by_reference_name[bpp.break1.chr]:
+            dist = abs(Interval.dist(Interval(dgv_region.start), bpp.break1))
+            if dist > lowest_resolution + distance:
+                break
+            elif dist > distance or abs(Interval.dist(Interval(dgv_region.end), bpp.break2)) > distance:
+                continue
+            refname = dgv_region.reference_object
+            try:
+                refname = dgv_region.reference_object.name
+            except AttributeError:
+                pass
+            bpp.data['dgv'] = '{}({}:{}-{})'.format(dgv_region.name, refname, dgv_region.start, dgv_region.end)
 
 
 def get_pairing_state(current_protocol, current_disease_state, other_protocol, other_disease_state, is_matched=False, inferred_is_matched=False):
