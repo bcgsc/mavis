@@ -568,3 +568,110 @@ class TestParseBndAlt(unittest.TestCase):
         self.assertEqual(ORIENT.LEFT, orient)
         self.assertEqual('AGTG', seq)
         self.assertEqual('A', ref)
+
+
+class TestBreakDancer(unittest.TestCase):
+    def test_itx(self):
+        row = {
+            'Chr1': '1',
+            'Pos1': '10001',
+            'Orientation1': '83+126-',
+            'Chr2': '1',
+            'Pos2': '10546',
+            'Orientation2': '83+126-',
+            'Type': 'ITX',
+            'Size': '-352',
+            'Score': '99',
+            'num_Reads': '43'
+        }
+        bpps = _convert_tool_row(row, SUPPORTED_TOOL.BREAKDANCER, False, True)
+        self.assertEqual(1, len(bpps))
+        self.assertEqual(SVTYPE.DUP, bpps[0].event_type)
+        self.assertEqual(10001, bpps[0].break1.start)
+        self.assertEqual(10001, bpps[0].break1.end)
+        self.assertEqual(ORIENT.RIGHT, bpps[0].break1.orient)
+        self.assertEqual(10546, bpps[0].break2.start)
+        self.assertEqual(10546, bpps[0].break2.end)
+        self.assertEqual(ORIENT.LEFT, bpps[0].break2.orient)
+        self.assertEqual(False, bpps[0].opposing_strands)
+
+    def test_deletion(self):
+        row = {
+            'Chr1': '1',
+            'Pos1': '869445',
+            'Orientation1': '89+21-',
+            'Chr2': '1',
+            'Pos2': '870225',
+            'Orientation2': '5+93-',
+            'Type': 'DEL',
+            'Size': '892',
+            'Score': '99',
+            'num_Reads': '67'
+        }
+        bpps = _convert_tool_row(row, SUPPORTED_TOOL.BREAKDANCER, False, True)
+        self.assertEqual(1, len(bpps))
+        self.assertEqual(SVTYPE.DEL, bpps[0].event_type)
+        self.assertEqual(869445, bpps[0].break1.start)
+        self.assertEqual(869445, bpps[0].break1.end)
+        self.assertEqual(ORIENT.LEFT, bpps[0].break1.orient)
+        self.assertEqual(870225, bpps[0].break2.start)
+        self.assertEqual(870225, bpps[0].break2.end)
+        self.assertEqual(ORIENT.RIGHT, bpps[0].break2.orient)
+        self.assertEqual(False, bpps[0].opposing_strands)
+
+    def test_inversion(self):
+        row = {
+            'Chr1': '1',
+            'Pos1': '13143396',
+            'Orientation1': '18+4-',
+            'Chr2': '1',
+            'Pos2': '13218683',
+            'Orientation2': '10+10-',
+            'Type': 'INV',
+            'Size': '74618',
+            'Score': '31',
+            'num_Reads': '2'
+        }
+        bpps = _convert_tool_row(row, SUPPORTED_TOOL.BREAKDANCER, False, True)
+        self.assertEqual(2, len(bpps))
+        self.assertEqual(SVTYPE.INV, bpps[0].event_type)
+        self.assertEqual(13143396, bpps[0].break1.start)
+        self.assertEqual(13143396, bpps[0].break1.end)
+        self.assertEqual(ORIENT.LEFT, bpps[0].break1.orient)
+        self.assertEqual(13218683, bpps[0].break2.start)
+        self.assertEqual(13218683, bpps[0].break2.end)
+        self.assertEqual(ORIENT.LEFT, bpps[0].break2.orient)
+        self.assertEqual(True, bpps[0].opposing_strands)
+
+        self.assertEqual(SVTYPE.INV, bpps[1].event_type)
+        self.assertEqual(13143396, bpps[1].break1.start)
+        self.assertEqual(13143396, bpps[1].break1.end)
+        self.assertEqual(ORIENT.RIGHT, bpps[1].break1.orient)
+        self.assertEqual(13218683, bpps[1].break2.start)
+        self.assertEqual(13218683, bpps[1].break2.end)
+        self.assertEqual(ORIENT.RIGHT, bpps[1].break2.orient)
+        self.assertEqual(True, bpps[1].opposing_strands)
+
+    def test_insertion(self):
+        row = {
+            'Chr1': '1',
+            'Pos1': '20216146',
+            'Orientation1': '23+26-',
+            'Chr2': '1',
+            'Pos2': '20218060',
+            'Orientation2': '23+26-',
+            'Type': 'INS',
+            'Size': '-421',
+            'Score': '99',
+            'num_Reads': '3'
+        }
+        bpps = _convert_tool_row(row, SUPPORTED_TOOL.BREAKDANCER, False, True)
+        self.assertEqual(1, len(bpps))
+        self.assertEqual(SVTYPE.INS, bpps[0].event_type)
+        self.assertEqual(20216146, bpps[0].break1.start)
+        self.assertEqual(20216146, bpps[0].break1.end)
+        self.assertEqual(ORIENT.LEFT, bpps[0].break1.orient)
+        self.assertEqual(20218060, bpps[0].break2.start)
+        self.assertEqual(20218060, bpps[0].break2.end)
+        self.assertEqual(ORIENT.RIGHT, bpps[0].break2.orient)
+        self.assertEqual(False, bpps[0].opposing_strands)

@@ -20,7 +20,8 @@ SUPPORTED_TOOL = MavisNamespace(
     PINDEL='pindel',
     CHIMERASCAN='chimerascan',
     MAVIS='mavis',
-    DEFUSE='defuse'
+    DEFUSE='defuse',
+    BREAKDANCER='breakdancer'
 )
 """
 Supported Tools used to call SVs and then used as input into MAVIS
@@ -288,6 +289,16 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
     elif file_type == SUPPORTED_TOOL.TA:
 
         std_row.update(_parse_transabyss(row))
+
+    elif file_type == SUPPORTED_TOOL.BREAKDANCER:
+
+        std_row.update({
+            'event_type': row['Type'],
+            'chr1': row['Chr1'],
+            'chr2': row['Chr2'],
+            'pos1_start': row['Pos1'],
+            'pos2_start': row['Pos2'],
+        })
 
     else:
         raise NotImplementedError('unsupported file type', file_type)
