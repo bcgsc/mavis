@@ -81,10 +81,6 @@ def convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fal
     return result
 
 
-def _parse_breakdancer(row):
-    pass  # TODO: add breakdancer support
-
-
 def _parse_transabyss(row):
     """
     transforms the transabyss output into the common format for expansion. Maps the input column
