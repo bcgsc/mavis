@@ -326,7 +326,7 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
         ORIENT.expand(std_row[COLUMNS.break1_orientation]), ORIENT.expand(std_row[COLUMNS.break2_orientation]),
         std_row[COLUMNS.break1_strand], std_row[COLUMNS.break2_strand],
         TOOL_SVTYPE_MAPPING[std_row[COLUMNS.event_type]] if COLUMNS.event_type in std_row else [None],
-        [True, False] if std_row.get(COLUMNS.opposing_strands, None) is None else [std_row[COLUMNS.opposing_strands]]
+        [True, False] if std_row.get(COLUMNS.opposing_strands, None) is None else [tab.cast_boolean(std_row[COLUMNS.opposing_strands])]
     ))
     # add the product of all uncertainties as breakpoint pairs
     for orient1, orient2, strand1, strand2, event_type, oppose in combinations:
