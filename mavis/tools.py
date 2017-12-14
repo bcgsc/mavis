@@ -305,8 +305,6 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
             COLUMNS.break2_position_start: row['Pos2'],
         })
 
-    elif file_type == SUPPORTED_TOOL.MAVIS:
-        std_row = row
     else:
         raise NotImplementedError('unsupported file type', file_type)
 
@@ -326,7 +324,7 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
         ORIENT.expand(std_row[COLUMNS.break1_orientation]), ORIENT.expand(std_row[COLUMNS.break2_orientation]),
         std_row[COLUMNS.break1_strand], std_row[COLUMNS.break2_strand],
         TOOL_SVTYPE_MAPPING[std_row[COLUMNS.event_type]] if COLUMNS.event_type in std_row else [None],
-        [True, False] if std_row.get(COLUMNS.opposing_strands, None) is None else [tab.cast_boolean(std_row[COLUMNS.opposing_strands])]
+        [True, False] if std_row.get(COLUMNS.opposing_strands, None) is None else [std_row[COLUMNS.opposing_strands]]
     ))
     # add the product of all uncertainties as breakpoint pairs
     for orient1, orient2, strand1, strand2, event_type, oppose in combinations:
@@ -370,7 +368,10 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
 def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=False, log=devnull, assume_no_untemplated=True):
     log('reading:', input_file)
     result = []
-    if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL]:
+    rows = None
+    if file_type == SUPPORTED_TOOL.MAVIS:
+        result = read_bpp_from_input_file(input_file, expand_orient=True, expand_svtype=True)
+    elif file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL]:
         rows = []
         for vcf_record in VariantFile(input_file).fetch():
             rows.extend(_parse_vcf_record(vcf_record))
@@ -386,9 +387,10 @@ def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fa
         _, rows = tab.read_file(input_file, allow_short=True)
     else:
         _, rows = tab.read_file(input_file)
-    log('found', len(rows), 'rows')
-    for row in rows:
-        std_rows = _convert_tool_row(row, file_type, stranded, assume_no_untemplated=assume_no_untemplated)
-        result.extend(std_rows)
+    if rows:
+        log('found', len(rows), 'rows')
+        for row in rows:
+            std_rows = _convert_tool_row(row, file_type, stranded, assume_no_untemplated=assume_no_untemplated)
+            result.extend(std_rows)
     log('generated', len(result), 'breakpoint pairs')
     return result
