@@ -206,6 +206,9 @@ class MockLongString(str):
             index -= self.offset
         return str.__getitem__(self, index)
 
+    def __len__(self):
+        return self.offset + str.__len__(self)
+
 
 def mock_read_pair(mock1, mock2):
     if mock1.reference_id != mock2.reference_id:

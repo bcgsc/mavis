@@ -57,6 +57,14 @@ class Evidence(BreakpointPair):
             untemplated_seq=untemplated_seq,
             **data
         )
+        # check that the breakpoints are within the reference length
+        if reference_genome:
+            if self.break1.start < 1 or self.break1.end > len(reference_genome[self.break1.chr].seq):
+                raise ValueError('Breakpoint {}-{} is outside the range of the reference sequence {} (1-{})'.format(
+                    self.break1.start, self.break1.end, self.break1.chr, len(reference_genome[self.break1.chr].seq)))
+            if self.break2.start < 1 or self.break2.end > len(reference_genome[self.break2.chr].seq):
+                raise ValueError('Breakpoint {}-{} is outside the range of the reference sequence {} (1-{})'.format(
+                    self.break2.start, self.break2.end, self.break2.chr, len(reference_genome[self.break2.chr].seq)))
         defaults = dict()
         for arg in kwargs:
             if arg not in DEFAULTS.__dict__:
