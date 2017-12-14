@@ -26,7 +26,6 @@ class TestPairing(unittest.TestCase):
         args = [
             'mavis', SUBCOMMAND.PAIR,
             '-n', os.path.join(DATA_PREFIX, 'pairing_annotations.tab'),
-            '-f', os.path.join(DATA_PREFIX, 'pairing_sequences.fa'),
             '-o', TEMP_OUTPUT,
             '--annotations', os.path.join(DATA_PREFIX, 'pairing_reference_annotations_file.tab')
         ]

@@ -3,7 +3,7 @@ import unittest
 
 from mavis.constants import COLUMNS, ORIENT, STRAND
 from mavis.error import NotSpecifiedError
-from mavis.util import cast, ChrListString, ENV_VAR_PREFIX, get_env_variable, MavisNamespace, WeakMavisNamespace, read_bpp_from_input_file
+from mavis.util import cast, ChrListString, ENV_VAR_PREFIX, get_env_variable, MavisNamespace, WeakMavisNamespace, read_bpp_from_input_file, get_connected_components
 
 from .mock import Mock
 
@@ -14,6 +14,30 @@ class MockFileHandle(Mock):
 
     def readlines(self):
         return self.lines
+
+
+class TestGetConnectedComponents(unittest.TestCase):
+
+    def test_no_nodes(self):
+        self.assertEqual([], get_connected_components({}))
+
+    def test_no_connections(self):
+        graph = {1: {}, 2: {}, 3: {}}
+        components = get_connected_components(graph)
+        self.assertEqual(3, len(components))
+
+    def test_fully_connected(self):
+        graph = {1: {2, 3, 1}, 2: {1, 2, 2}, 3: {3, 2}}
+        components = get_connected_components(graph)
+        self.assertEqual(1, len(components))
+        self.assertEqual([{1, 2, 3}], components)
+
+    def test_multiple_components(self):
+        graph = {1: {2}, 2: {3}, 3: {4}, 6: {7, 8}}
+        components = get_connected_components(graph)
+        self.assertEqual(2, len(components))
+        self.assertEqual({1, 2, 3, 4}, components[0])
+        self.assertEqual({6, 7, 8}, components[1])
 
 
 class TestChrListString(unittest.TestCase):

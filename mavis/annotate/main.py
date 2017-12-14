@@ -3,6 +3,7 @@ import os
 import re
 import time
 import warnings
+import hashlib
 
 from .constants import DEFAULTS
 from .genomic import PreTranscript
@@ -203,11 +204,9 @@ def main(
             cdna_synon_all = True
             # add fusion information to the current ann_row
             for spl_fusion_tx in [] if not ann.fusion else ann.fusion.transcripts:
-                fusion_fa_id = '{}_{}'.format(ann.annotation_id, spl_fusion_tx.splicing_pattern.splice_type)
-                fusion_fa_id = re.sub(r'\s', '-', fusion_fa_id)
-                if fusion_fa_id in fa_sequence_names:
-                    raise AssertionError('should not be duplicate fa sequence ids', fusion_fa_id)
                 seq = ann.fusion.get_cdna_seq(spl_fusion_tx.splicing_pattern)
+                # make the fasta id a hex of the string to avoid having to load the sequences later
+                fusion_fa_id = 'seq-{}'.format(hashlib.md5(seq.encode('utf-8')).hexdigest())
                 fasta_fh.write('> {}\n{}\n'.format(fusion_fa_id, seq))
                 cdna_synon = ';'.join(sorted(list(ref_cdna_seq.get(seq, set()))))
 

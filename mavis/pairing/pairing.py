@@ -5,6 +5,21 @@ from ..breakpoint import Breakpoint
 from ..constants import CALL_METHOD, COLUMNS, ORIENT, PRIME, PROTOCOL, STRAND
 from ..error import NotSpecifiedError
 from ..interval import Interval
+from ..util import devnull
+
+
+def product_key(bpp):
+    """
+    unique id for the product row
+    """
+    return '_'.join([str(v) for v in [
+        bpp.library,
+        bpp.protocol,
+        bpp.annotation_id,
+        bpp.fusion_splicing_pattern,
+        bpp.fusion_cdna_coding_start,
+        bpp.fusion_cdna_coding_end
+    ]])
 
 
 def predict_transcriptome_breakpoint(breakpoint, transcript):
@@ -137,11 +152,51 @@ def equivalent(event1, event2, distances=None):
     return True
 
 
-def inferred_equivalent(event1, event2, reference_transcripts, distances=None, product_sequences=None):
+def pair_by_distance(calls, distances, log=devnull, against_self=False):
+    """
+    for a set of input calls, pair by distance
+    """
+    distance_pairings = {}
+    break1_sorted = sorted(calls, key=lambda b: b.break1.start)
+    break2_sorted = sorted(calls, key=lambda b: b.break2.start)
+    lowest_resolution = max([len(b.break1) for b in calls] + [len(b.break2) for b in calls] + [1])
+    max_distance = max(distances.values())
+    log('lowest_resolution', lowest_resolution, 'max_distance', max_distance, 'possible comparisons', len(break1_sorted) * len(break1_sorted), time_stamp=False)
+    comparisons = 0
+    for i in range(0, len(break1_sorted)):
+        current = break1_sorted[i]
+        for j in range(i + 1, len(break1_sorted)):
+            other = break1_sorted[j]
+            dist = abs(Interval.dist(current.break1, other.break1))
+            if dist > max_distance + lowest_resolution:
+                break
+            comparisons += 1
+            if not against_self or (current.library == other.library and current.protocol == other.protocol):
+                continue  # do not pair within a single library
+            if equivalent(current, other, distances=distances):
+                distance_pairings.setdefault(product_key(current), set()).add(product_key(other))
+                distance_pairings.setdefault(product_key(other), set()).add(product_key(current))
+
+        current = break2_sorted[i]
+        for j in range(i + 1, len(break2_sorted)):
+            other = break2_sorted[j]
+            dist = abs(Interval.dist(current.break2, other.break2))
+            if dist > max_distance + lowest_resolution:
+                break
+            comparisons += 1
+            if not against_self or (current.library == other.library and current.protocol == other.protocol):
+                continue  # do not pair within a single library
+            if equivalent(current, other, distances=distances):
+                distance_pairings.setdefault(product_key(current), set()).add(product_key(other))
+                distance_pairings.setdefault(product_key(other), set()).add(product_key(current))
+    log('computed {} comparisons'.format(comparisons), time_stamp=False)
+    return distance_pairings
+
+
+def inferred_equivalent(event1, event2, reference_transcripts, distances=None):
     """
     comparison of events using product prediction and breakpoint prediction
     """
-    product_sequences = dict() if product_sequences is None else product_sequences
     # basic checks
     if not _equivalent_events(event1, event2):
         return False
@@ -152,10 +207,7 @@ def inferred_equivalent(event1, event2, reference_transcripts, distances=None, p
     max_distance = comparison_distance(event1, event2, distances)
 
     if event1.data[COLUMNS.fusion_sequence_fasta_id] and event2.data[COLUMNS.fusion_sequence_fasta_id]:
-        fusion1 = product_sequences[event1.data[COLUMNS.fusion_sequence_fasta_id]]
-        fusion2 = product_sequences[event2.data[COLUMNS.fusion_sequence_fasta_id]]
-
-        if fusion1 != fusion2:
+        if event1.fusion_sequence_fasta_id != event2.fusion_sequence_fasta_id:
             return False
         for col in [COLUMNS.fusion_cdna_coding_start, COLUMNS.fusion_cdna_coding_end]:
             if event1.data[col] != event2.data[col]:

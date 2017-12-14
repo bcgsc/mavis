@@ -486,9 +486,6 @@ use the -h/--help option
 
         elif pstep == SUBCOMMAND.PAIR:
             required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
-            optional.add_argument(
-                '-f', '--product_sequence_files', nargs='+', help='paths to fasta files with product sequences', metavar='FILEPATH',
-                required=False, default=[])
             augment_parser(['annotations'], required, optional)
             augment_parser(['max_proximity'] + list(PAIRING_DEFAULTS.keys()), optional)
 
