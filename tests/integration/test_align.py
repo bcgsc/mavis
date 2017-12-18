@@ -610,7 +610,8 @@ class TestSelectContigAlignments(unittest.TestCase):
             contig_aln_min_anchor_size=DEFAULTS.contig_aln_min_anchor_size,
             contig_aln_min_score=DEFAULTS.contig_aln_min_score,
             outer_window1=Interval(1000, 1200),
-            outer_window2=Interval(2000, 2200)
+            outer_window2=Interval(2000, 2200),
+            reference_genome=None
         )
         read1 = SamRead(
             reference_id=3, reference_start=1114, cigar=[(CIGAR.S, 125), (CIGAR.EQ, 120)], query_sequence=s,

@@ -80,12 +80,13 @@ class SplitAlignment(BreakpointPair):
             return sum([v + (v - 1) * consec_bonus for s, v in cigar if s == CIGAR.EQ])
         score = score_matches(_cigar.join([(s, f) for s, f in self.read1.cigar if s != CIGAR.N]))
 
-        qlen = len(self.query_coverage())
-        if self.read2 is not None:
+        max_score = sum([v for s, v in self.read1.cigar if s in _cigar.ALIGNED_STATES])
+        if self.read2:
+            max_score += sum([v for s, v in self.read2.cigar if s in _cigar.ALIGNED_STATES])
+        max_score = score_matches([(CIGAR.EQ, max_score)])
+        if self.read2:
             score += score_matches([(s, f) for s, f in self.read2.cigar if s != CIGAR.N])
-            if Interval.overlaps(self.query_coverage_read1(), self.query_coverage_read2()):
-                qlen += len(self.query_coverage_read1() & self.query_coverage_read2())
-        return score / score_matches([(CIGAR.EQ, qlen)])
+        return score / max_score
 
     def mapping_quality(self):
         if not self.read2:
@@ -130,30 +131,32 @@ def query_coverage_interval(read):
     return Interval(st, end)
 
 
-def convert_to_duplication(bpp, reference_genome):
+def convert_to_duplication(alignment, reference_genome):
     """
     Given a breakpoint call, tests if the untemplated sequences matches the preceding
     reference sequence. If it does this is annotated as a duplication and the new
     breakpoint pair is returned. If not, then the original breakpoint pair is returned
     """
     # assumes that events with deletions cannot be duplications
-    if bpp.untemplated_seq and not bpp.interchromosomal and bpp.break1.end == bpp.break2.start - 1:
+    if alignment.untemplated_seq and not alignment.interchromosomal and alignment.break1.end == alignment.break2.start - 1:
         # must be more than half the length or better to call it an insertion
-        for dup_len in reversed(range(len(bpp.untemplated_seq) // 2 + 1, len(bpp.untemplated_seq) + 1)):
-            refseq = reference_genome[bpp.break1.chr].seq[bpp.break1.start - dup_len:bpp.break1.start]
+        for dup_len in reversed(range(len(alignment.untemplated_seq) // 2 + 1, len(alignment.untemplated_seq) + 1)):
+            refseq = reference_genome[alignment.break1.chr].seq[alignment.break1.start - dup_len:alignment.break1.start]
             refseq = str(refseq)
-            if refseq != bpp.untemplated_seq[:dup_len]:
+            if refseq != alignment.untemplated_seq[:dup_len]:
                 continue
 
-            result = BreakpointPair(
-                Breakpoint(bpp.break1.chr, bpp.break1.start, orient=bpp.break1.orient, strand=bpp.break1.strand),
-                Breakpoint(bpp.break2.chr, bpp.break2.start - dup_len, orient=bpp.break2.orient, strand=bpp.break2.strand),
-                untemplated_seq=bpp.untemplated_seq[dup_len:],
-                opposing_strands=bpp.opposing_strands,
-                data=bpp.data
+            result = SplitAlignment(
+                Breakpoint(alignment.break1.chr, alignment.break1.start, orient=alignment.break1.orient, strand=alignment.break1.strand),
+                Breakpoint(alignment.break2.chr, alignment.break2.start - dup_len, orient=alignment.break2.orient, strand=alignment.break2.strand),
+                untemplated_seq=alignment.untemplated_seq[dup_len:],
+                opposing_strands=alignment.opposing_strands,
+                data=alignment.data,
+                read1=alignment.read1,
+                read2=alignment.read2
             )
             return result
-    return bpp
+    return alignment
 
 
 def call_read_events(read, secondary_read=None):
@@ -403,6 +406,8 @@ def select_contig_alignments(evidence, reads_by_query):
             read = evidence.standardize_read(read)  # genome needs to merge first, trans needs to standard first
 
             for single_alignment in call_read_events(read):
+                print('single_alignment', single_alignment)
+                single_alignment = convert_to_duplication(single_alignment, evidence.reference_genome)
                 if single_alignment.break1.chr in {evidence.break1.chr, evidence.break2.chr}:
                     if any([
                         (single_alignment.break1 | single_alignment.break2) & evidence.outer_window1,
@@ -447,6 +452,11 @@ def select_contig_alignments(evidence, reads_by_query):
                 alignment.score() < evidence.contig_aln_min_score,
                 alignment.mapping_quality() == Interval(0)
             ]):
+                print('filtered OUT', alignment)
+                print(alignment.query_consumption(), evidence.contig_aln_min_query_consumption)
+                print(alignment.score(), evidence.contig_aln_min_score)
+                print(alignment.mapping_quality())
                 continue
             filtered_alignments.add(alignment)
+            print('filtered_alignments', alignment)
         contig.alignments.update(filtered_alignments)
