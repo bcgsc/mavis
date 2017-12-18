@@ -406,7 +406,6 @@ def select_contig_alignments(evidence, reads_by_query):
             read = evidence.standardize_read(read)  # genome needs to merge first, trans needs to standard first
 
             for single_alignment in call_read_events(read):
-                print('single_alignment', single_alignment)
                 single_alignment = convert_to_duplication(single_alignment, evidence.reference_genome)
                 if single_alignment.break1.chr in {evidence.break1.chr, evidence.break2.chr}:
                     if any([
@@ -452,11 +451,6 @@ def select_contig_alignments(evidence, reads_by_query):
                 alignment.score() < evidence.contig_aln_min_score,
                 alignment.mapping_quality() == Interval(0)
             ]):
-                print('filtered OUT', alignment)
-                print(alignment.query_consumption(), evidence.contig_aln_min_query_consumption)
-                print(alignment.score(), evidence.contig_aln_min_score)
-                print(alignment.mapping_quality())
                 continue
             filtered_alignments.add(alignment)
-            print('filtered_alignments', alignment)
         contig.alignments.update(filtered_alignments)
