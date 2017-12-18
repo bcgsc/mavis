@@ -23,7 +23,8 @@ def draw_sv_summary_diagram(
         draw_reference_transcripts=True,
         draw_reference_genes=True,
         draw_reference_templates=True,
-        draw_fusion_transcript=True):
+        draw_fusion_transcript=True,
+        stack_reference_transcripts=False):
     """
     this is the main drawing function. It decides between layouts
     where each view-level is split into one or two diagrams (side-by-side)
@@ -225,17 +226,26 @@ def draw_sv_summary_diagram(
                 pass  # Intergenic region or None
         else:  # separate drawings
             try:
+                ratio = max(0.25, min(len(ann.transcript1.exons) / len(ann.transcript2.exons), 0.75))
+            except AttributeError:
+                ratio = 0.5
+
+            try:
                 svg_group = canvas.g(class_='transcript')
                 svg_group = draw_ustranscript(
                     config,
-                    canvas, ann.transcript1, half_drawing_width,
+                    canvas, ann.transcript1,
+                    half_drawing_width * 2 * ratio if not stack_reference_transcripts else drawing_width,
                     breakpoints=[ann.break1],
                     labels=labels,
                     colors=colors,
                     reference_genome=reference_genome
                 )
-                theights.append(svg_group.height)
                 svg_group.translate(x, y)
+                if not stack_reference_transcripts:
+                    theights.append(svg_group.height)
+                else:
+                    y += svg_group.height + config.inner_margin
                 canvas.add(svg_group)
             except AttributeError:
                 pass  # Intergenic region or None
@@ -244,19 +254,21 @@ def draw_sv_summary_diagram(
                 svg_group = canvas.g(class_='transcript')
                 svg_group = draw_ustranscript(
                     config,
-                    canvas, ann.transcript2, half_drawing_width,
+                    canvas, ann.transcript2,
+                    half_drawing_width * 2 * (1 - ratio) if not stack_reference_transcripts else drawing_width,
                     breakpoints=[ann.break2],
                     labels=labels,
                     colors=colors,
                     reference_genome=reference_genome
                 )
                 theights.append(svg_group.height)
-                svg_group.translate(second_drawing_shift, y)
+                shift = second_drawing_shift - half_drawing_width + half_drawing_width * 2 * ratio
+                svg_group.translate(shift if not stack_reference_transcripts else x, y)
                 canvas.add(svg_group)
             except AttributeError:
                 pass  # Intergenic region or None
 
-        if len(theights) > 0:
+        if theights:
             y += max(theights) + config.inner_margin
 
     # finally the fusion transcript level drawing

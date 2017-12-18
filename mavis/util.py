@@ -492,13 +492,13 @@ def read_bpp_from_input_file(filename, expand_orient=False, expand_strand=False,
                     stranded=row[COLUMNS.stranded],
                 )
                 bpp.data.update(data)
-                if putative_event_type is not None:
+                if putative_event_type:
                     bpp.data[COLUMNS.event_type] = putative_event_type
                     if putative_event_type not in BreakpointPair.classify(bpp):
                         raise InvalidRearrangement(
                             'error: expected one of', BreakpointPair.classify(bpp),
                             'but found', putative_event_type, str(bpp), row)
-                if expand_svtype and putative_event_type is None:
+                if expand_svtype and not putative_event_type:
                     for svtype in BreakpointPair.classify(bpp, distance=lambda x, y: Interval(y - x)):
                         new_bpp = bpp.copy()
                         new_bpp.data[COLUMNS.event_type] = svtype

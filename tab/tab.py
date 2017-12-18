@@ -195,7 +195,7 @@ class FileTransform:
         if VERBOSE:
             print('output header:', self.header)
 
-    def transform_line(self, line):
+    def transform_line(self, line, allow_short=False):
         """
         transforms the input line into a hash of the new/final column names with the transform rules applied
 
@@ -207,15 +207,18 @@ class FileTransform:
         Returns:
             dict of str: the hash representation of the new row
         """
-        if len(self.input) != len(line):
+        if any([
+            not allow_short and len(self.input) != len(line),
+            allow_short and len(self.input) < len(line)
+        ]):
             raise AssertionError('length of input list {0} does not match length of the expected header {1}: '.format(
-                len(line), len(self.input)) + re.sub('\n', '\\n', '\\t'.join(line)))
+                len(line), len(self.input)) + re.sub('\n', '\\n', '\\t'.join(line)), self.input)
 
         row = {}
         cant_simplify = set()
 
         for i in range(0, len(self.input)):
-            row[self.input[i]] = line[i]
+            row[self.input[i]] = line[i] if i < len(line) else None
 
         for col, default in self.add.items():
             row[col] = default
@@ -288,7 +291,7 @@ class FileTransform:
         return row
 
 
-def read_file(inputfile, delimiter='\t', header=None, strict=True, suppress_index=False, **kwargs):
+def read_file(inputfile, delimiter='\t', header=None, strict=True, suppress_index=False, allow_short=False, **kwargs):
     """
     Args:
         inputfile (str): the path to the inputfile
@@ -329,7 +332,7 @@ def read_file(inputfile, delimiter='\t', header=None, strict=True, suppress_inde
         current_line_index += 1
         header = line.split(delimiter) if delimiter in line else []
     if not header:
-        raise EmptyFileError('header is empty')
+        raise EmptyFileError('header is empty', inputfile)
     # create the file transform object
     transform = FileTransform(header, **kwargs)
     new_header = transform.header
@@ -343,7 +346,7 @@ def read_file(inputfile, delimiter='\t', header=None, strict=True, suppress_inde
         line = re.sub(r'[\r\n]*$', '', lines[current_line_index])  # clean the line
         try:
             row = line.split(delimiter)
-            row = transform.transform_line(row)
+            row = transform.transform_line(row, allow_short=allow_short)
             if not suppress_index:
                 row[index] = current_line_index
             objects.append(row)

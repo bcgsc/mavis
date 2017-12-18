@@ -29,17 +29,25 @@ def draw(drawing_config, ann, reference_genome, template_metadata, drawings_dire
     """
     drawing = None
     legend = None
-    retry_count = 0
-    draw_fusion_transcript = True
-    draw_reference_transcripts = True
     initial_width = drawing_config.width
-    while drawing is None:  # continue if drawing error and increase width
+
+    drawing_attempts = []
+    for attempt in range(0, drawing_config.max_drawing_retries):
+        drawing_attempts.append((initial_width + attempt * drawing_config.drawing_width_iter_increase, {}))
+        drawing_attempts.append((
+            initial_width + attempt * drawing_config.drawing_width_iter_increase,
+            {'stack_reference_transcripts': True}
+        ))
+    drawing_attempts.append((initial_width, {'draw_fusion_transcript': False, 'draw_reference_transcripts': False}))
+
+    for i, (curr_width, other_settings) in enumerate(drawing_attempts):
+        log('drawing attempt:', i + 1, str(curr_width) + 'px', other_settings if other_settings else '', time_stamp=False)
         try:
+            drawing_config.width = curr_width
             canvas, legend_json = draw_sv_summary_diagram(
                 drawing_config, ann, reference_genome=reference_genome,
                 templates=template_metadata,
-                draw_fusion_transcript=draw_fusion_transcript,
-                draw_reference_transcripts=draw_reference_transcripts
+                **other_settings
             )
 
             gene_aliases1 = 'NA'
@@ -77,20 +85,8 @@ def draw(drawing_config, ann, reference_genome, template_metadata, drawings_dire
             with open(legend, 'w') as fh:
                 json.dump(legend_json, fh)
             break
-        except DrawingFitError as err:
-            drawing_config.width += drawing_config.drawing_width_iter_increase
-            log('extending width by', drawing_config.drawing_width_iter_increase, 'to', drawing_config.width, time_stamp=False)
-            retry_count += 1
-            if retry_count > drawing_config.max_drawing_retries:
-                if draw_fusion_transcript and draw_reference_transcripts:
-                    log('restricting to gene-level only', time_stamp=False)
-                    draw_fusion_transcript = False
-                    draw_reference_transcripts = False
-                    drawing_config.width = initial_width
-                    retry_count = 0
-                else:
-                    warnings.warn(str(err))
-                    drawing = True
+        except DrawingFitError:
+            pass
     drawing_config.width = initial_width  # reset the width
     return drawing, legend
 

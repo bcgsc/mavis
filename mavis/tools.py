@@ -7,6 +7,7 @@ from braceexpand import braceexpand
 from shortuuid import uuid
 import tab
 from pysam import VariantFile
+from argparse import Namespace
 
 from .breakpoint import Breakpoint, BreakpointPair
 from .constants import COLUMNS, MavisNamespace, ORIENT, STRAND, SVTYPE
@@ -20,7 +21,8 @@ SUPPORTED_TOOL = MavisNamespace(
     PINDEL='pindel',
     CHIMERASCAN='chimerascan',
     MAVIS='mavis',
-    DEFUSE='defuse'
+    DEFUSE='defuse',
+    BREAKDANCER='breakdancer'
 )
 """
 Supported Tools used to call SVs and then used as input into MAVIS
@@ -80,10 +82,6 @@ def convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fal
     return result
 
 
-def _parse_breakdancer(row):
-    pass  # TODO: add breakdancer support
-
-
 def _parse_transabyss(row):
     """
     transforms the transabyss output into the common format for expansion. Maps the input column
@@ -93,45 +91,51 @@ def _parse_transabyss(row):
     if TRACKING_COLUMN not in row:
         std_row[TRACKING_COLUMN] = '{}-{}'.format(SUPPORTED_TOOL.TA, row['id'])
 
-    std_row['event_type'] = row.get('rearrangement', row['type'])
+    std_row[COLUMNS.event_type] = row.get('rearrangement', row['type'])
     for retained_column in ['genes', 'gene']:
         if retained_column in row:
             std_row['{}_{}'.format(SUPPORTED_TOOL.TA, retained_column)] = row[retained_column]
-    if std_row['event_type'] in ['LSR', 'translocation']:
-        del std_row['event_type']
+    if std_row[COLUMNS.event_type] in ['LSR', 'translocation']:
+        del std_row[COLUMNS.event_type]
     if 'breakpoint' in row:
-        std_row['orient1'], std_row['orient2'] = row['orientations'].split(',')
+        std_row[COLUMNS.break1_orientation], std_row[COLUMNS.break2_orientation] = row['orientations'].split(',')
         match = re.match(
             r'^(?P<chr1>[^:]+):(?P<pos1_start>\d+)\|(?P<chr2>[^:]+):(?P<pos2_start>\d+)$', row['breakpoint'])
         if not match:
             raise OSError(
                 'file format error: the breakpoint column did not satisfy the expected pattern', row)
-        std_row.update({k: match[k] for k in ['chr1', 'pos1_start', 'chr2', 'pos2_start']})
+        for group, col in zip(
+            ['chr1', 'pos1_start', 'chr2', 'pos2_start'],
+            [COLUMNS.break1_chromosome, COLUMNS.break1_position_start, COLUMNS.break2_chromosome, COLUMNS.break2_position_start]
+        ):
+            std_row[col] = match[group]
     else:
         std_row.update({
-            'chr1': row['chr'], 'pos1_start': int(row['chr_start']), 'pos2_start': int(row['chr_end'])
+            COLUMNS.break1_chromosome: row['chr'],
+            COLUMNS.break1_position_start: int(row['chr_start']),
+            COLUMNS.break2_position_start: int(row['chr_end'])
         })
-        if std_row['event_type'] == 'del':
-            std_row['pos1_start'] -= 1
-            std_row['pos2_start'] += 1
-        elif std_row['event_type'] == 'ins':
-            std_row['pos2_start'] += 1
+        if std_row[COLUMNS.event_type] == 'del':
+            std_row[COLUMNS.break1_position_start] -= 1
+            std_row[COLUMNS.break2_position_start] += 1
+        elif std_row[COLUMNS.event_type] == 'ins':
+            std_row[COLUMNS.break2_position_start] += 1
 
         # add the untemplated sequence where appropriate
-        if std_row['event_type'] == 'del':
+        if std_row[COLUMNS.event_type] == 'del':
             assert row['alt'] == 'na'
             std_row[COLUMNS.untemplated_seq] = ''
-        elif std_row['event_type'] in ['dup', 'ITD']:
-            length = std_row['pos2_start'] - std_row['pos1_start'] + 1
+        elif std_row[COLUMNS.event_type] in ['dup', 'ITD']:
+            length = std_row[COLUMNS.break2_position_start] - std_row[COLUMNS.break1_position_start] + 1
             if len(row['alt']) != length:
                 raise AssertionError(
                     'expected alternate sequence to be equal to the length of the event',
                     len(row['alt']), length, row, std_row)
             std_row[COLUMNS.untemplated_seq] = ''
-        elif std_row['event_type'] == 'ins':
+        elif std_row[COLUMNS.event_type] == 'ins':
             std_row[COLUMNS.untemplated_seq] = row['alt'].upper()
         else:
-            raise NotImplementedError('unexpected indel type', std_row['event_type'])
+            raise NotImplementedError('unexpected indel type', std_row[COLUMNS.event_type])
     return std_row
 
 
@@ -147,20 +151,20 @@ def _parse_chimerascan(row):
     if TRACKING_COLUMN not in row:
         std_row[TRACKING_COLUMN] = '{}-{}'.format(SUPPORTED_TOOL.CHIMERASCAN, row['chimera_cluster_id'])
 
-    std_row.update({'chr1': row['chrom5p'], 'chr2': row['chrom3p']})
+    std_row.update({COLUMNS.break1_chromosome: row['chrom5p'], COLUMNS.break2_chromosome: row['chrom3p']})
     if row['strand5p'] == '+':
-        std_row['pos1_start'] = row['end5p']
-        std_row['orient1'] = ORIENT.LEFT
+        std_row[COLUMNS.break1_position_start] = row['end5p']
+        std_row[COLUMNS.break1_orientation] = ORIENT.LEFT
     else:
-        std_row['pos1_start'] = row['start5p']
-        std_row['orient1'] = ORIENT.RIGHT
+        std_row[COLUMNS.break1_position_start] = row['start5p']
+        std_row[COLUMNS.break1_orientation] = ORIENT.RIGHT
     if row['strand3p'] == '+':
-        std_row['pos2_start'] = row['start3p']
-        std_row['orient2'] = ORIENT.RIGHT
+        std_row[COLUMNS.break2_position_start] = row['start3p']
+        std_row[COLUMNS.break2_orientation] = ORIENT.RIGHT
     else:
-        std_row['pos2_start'] = row['end3p']
-        std_row['orient2'] = ORIENT.LEFT
-    std_row['opposing_strands'] = row['strand5p'] != row['strand3p']
+        std_row[COLUMNS.break2_position_start] = row['end3p']
+        std_row[COLUMNS.break2_orientation] = ORIENT.LEFT
+    std_row[COLUMNS.opposing_strands] = row['strand5p'] != row['strand3p']
     return std_row
 
 
@@ -202,7 +206,7 @@ def _parse_vcf_record(record):
 
         if info.get('SVTYPE', None) == 'BND':
             chr2, end, orient2, ref, alt = _parse_bnd_alt(alt)
-            std_row['orient2'] = orient2
+            std_row[COLUMNS.break2_orientation] = orient2
             std_row[COLUMNS.untemplated_seq] = alt
             if record.ref != ref:
                 raise AssertionError(
@@ -215,33 +219,33 @@ def _parse_vcf_record(record):
                 std_row[COLUMNS.untemplated_seq] = alt[1:]
                 size = len(alt) - len(record.ref)
                 if size > 0:
-                    std_row['event_type'] = SVTYPE.INS
+                    std_row[COLUMNS.event_type] = SVTYPE.INS
                 elif size < 0:
-                    std_row['event_type'] = SVTYPE.DEL
-        std_row.update({'chr1': record.chrom, 'chr2': chr2})
+                    std_row[COLUMNS.event_type] = SVTYPE.DEL
+        std_row.update({COLUMNS.break1_chromosome: record.chrom, COLUMNS.break2_chromosome: chr2})
         if info.get('PRECISE', False):  # DELLY CI only apply when split reads were not used to refine the breakpoint which is then flagged
             std_row.update({
-                'pos1_start': record.pos,
-                'pos1_end': record.pos,
-                'pos2_start': end,
-                'pos2_end': end
+                COLUMNS.break1_position_start: record.pos,
+                COLUMNS.break1_position_end: record.pos,
+                COLUMNS.break2_position_start: end,
+                COLUMNS.break2_position_end: end
             })
         else:
             std_row.update({
-                'pos1_start': max(1, record.pos + info.get('CIPOS', (0, 0))[0]),
-                'pos1_end': record.pos + info.get('CIPOS', (0, 0))[1],
-                'pos2_start': max(1, end + info.get('CIEND', (0, 0))[0]),
-                'pos2_end': end + info.get('CIEND', (0, 0))[1]
+                COLUMNS.break1_position_start: max(1, record.pos + info.get('CIPOS', (0, 0))[0]),
+                COLUMNS.break1_position_end: record.pos + info.get('CIPOS', (0, 0))[1],
+                COLUMNS.break2_position_start: max(1, end + info.get('CIEND', (0, 0))[0]),
+                COLUMNS.break2_position_end: end + info.get('CIEND', (0, 0))[1]
             })
 
         if 'SVTYPE' in info:
-            std_row['event_type'] = info['SVTYPE']
+            std_row[COLUMNS.event_type] = info['SVTYPE']
 
         try:
             orient1, orient2 = info['CT'].split('to')
             connection_type = {'3': ORIENT.LEFT, '5': ORIENT.RIGHT, 'N': ORIENT.NS}
-            std_row['orient1'] = connection_type[orient1]
-            std_row['orient2'] = connection_type[orient2]
+            std_row[COLUMNS.break1_orientation] = connection_type[orient1]
+            std_row[COLUMNS.break2_orientation] = connection_type[orient2]
         except KeyError:
             pass
         records.append(std_row)
@@ -260,8 +264,8 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
             std_row[TRACKING_COLUMN] = getattr(row, TRACKING_COLUMN)
         except AttributeError:
             pass
-    std_row['orient1'] = std_row['orient2'] = ORIENT.NS
-    std_row['strand1'] = std_row['strand2'] = STRAND.NS
+    std_row[COLUMNS.break1_orientation] = std_row[COLUMNS.break2_orientation] = ORIENT.NS
+    std_row[COLUMNS.break1_strand] = std_row[COLUMNS.break2_strand] = STRAND.NS
     result = []
     # convert the specified file type to a standard format
     if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL]:
@@ -274,11 +278,13 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
 
     elif file_type == SUPPORTED_TOOL.DEFUSE:
 
-        std_row['orient1'] = ORIENT.LEFT if row['genomic_strand1'] == STRAND.POS else ORIENT.RIGHT
-        std_row['orient2'] = ORIENT.LEFT if row['genomic_strand2'] == STRAND.POS else ORIENT.RIGHT
+        std_row[COLUMNS.break1_orientation] = ORIENT.LEFT if row['genomic_strand1'] == STRAND.POS else ORIENT.RIGHT
+        std_row[COLUMNS.break2_orientation] = ORIENT.LEFT if row['genomic_strand2'] == STRAND.POS else ORIENT.RIGHT
         std_row.update({
-            'chr1': row['gene_chromosome1'], 'chr2': row['gene_chromosome2'],
-            'pos1_start': row['genomic_break_pos1'], 'pos2_start': row['genomic_break_pos2']
+            COLUMNS.break1_chromosome: row['gene_chromosome1'],
+            COLUMNS.break2_chromosome: row['gene_chromosome2'],
+            COLUMNS.break1_position_start: row['genomic_break_pos1'],
+            COLUMNS.break2_position_start: row['genomic_break_pos2']
         })
         if TRACKING_COLUMN in row:
             std_row[TRACKING_COLUMN] = row[TRACKING_COLUMN]
@@ -289,15 +295,25 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
 
         std_row.update(_parse_transabyss(row))
 
+    elif file_type == SUPPORTED_TOOL.BREAKDANCER:
+
+        std_row.update({
+            COLUMNS.event_type: row['Type'],
+            COLUMNS.break1_chromosome: row['Chr1'],
+            COLUMNS.break2_chromosome: row['Chr2'],
+            COLUMNS.break1_position_start: row['Pos1'],
+            COLUMNS.break2_position_start: row['Pos2'],
+        })
+
     else:
         raise NotImplementedError('unsupported file type', file_type)
 
     if stranded:
-        std_row['strand1'] = STRAND.expand(std_row['strand1'])
-        std_row['strand2'] = STRAND.expand(std_row['strand2'])
+        std_row[COLUMNS.break1_strand] = STRAND.expand(std_row[COLUMNS.break1_strand])
+        std_row[COLUMNS.break2_strand] = STRAND.expand(std_row[COLUMNS.break2_strand])
     else:
-        std_row['strand1'] = [STRAND.NS]
-        std_row['strand2'] = [STRAND.NS]
+        std_row[COLUMNS.break1_strand] = [STRAND.NS]
+        std_row[COLUMNS.break2_strand] = [STRAND.NS]
 
     if not std_row.get(TRACKING_COLUMN, None):
         std_row[TRACKING_COLUMN] = '{}-{}'.format(file_type, std_row.get('id', uuid()))
@@ -305,9 +321,10 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
         std_row[COLUMNS.untemplated_seq] = ''
 
     combinations = list(itertools.product(
-        ORIENT.expand(std_row['orient1']), ORIENT.expand(std_row['orient2']),
-        std_row['strand1'], std_row['strand2'], TOOL_SVTYPE_MAPPING[std_row['event_type']] if 'event_type' in std_row else [None],
-        [True, False] if 'opposing_strands' not in std_row else [std_row['opposing_strands']]
+        ORIENT.expand(std_row[COLUMNS.break1_orientation]), ORIENT.expand(std_row[COLUMNS.break2_orientation]),
+        std_row[COLUMNS.break1_strand], std_row[COLUMNS.break2_strand],
+        TOOL_SVTYPE_MAPPING[std_row[COLUMNS.event_type]] if COLUMNS.event_type in std_row else [None],
+        [True, False] if std_row.get(COLUMNS.opposing_strands, None) is None else [std_row[COLUMNS.opposing_strands]]
     ))
     # add the product of all uncertainties as breakpoint pairs
     for orient1, orient2, strand1, strand2, event_type, oppose in combinations:
@@ -315,23 +332,23 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
 
             bpp = BreakpointPair(
                 Breakpoint(
-                    std_row['chr1'],
-                    std_row['pos1_start'],
-                    std_row.get('pos1_end', std_row['pos1_start']),
+                    std_row[COLUMNS.break1_chromosome],
+                    std_row[COLUMNS.break1_position_start],
+                    std_row.get(COLUMNS.break1_position_end, std_row[COLUMNS.break1_position_start]),
                     orient=orient1, strand=strand1
                 ),
                 Breakpoint(
-                    std_row.get('chr2', std_row['chr1']),
-                    std_row['pos2_start'],
-                    std_row.get('pos2_end', std_row['pos2_start']),
+                    std_row.get(COLUMNS.break2_chromosome, std_row[COLUMNS.break1_chromosome]),
+                    std_row[COLUMNS.break2_position_start],
+                    std_row.get(COLUMNS.break2_position_end, std_row[COLUMNS.break2_position_start]),
                     orient=orient2, strand=strand2
                 ),
                 opposing_strands=oppose,
-                untemplated_seq=std_row.get('untemplated_seq', None),
+                untemplated_seq=std_row.get(COLUMNS.untemplated_seq, None),
                 event_type=event_type,
                 data={
                     COLUMNS.tools: file_type,
-                    COLUMNS.tracking_id: std_row['tracking_id']
+                    COLUMNS.tracking_id: std_row[COLUMNS.tracking_id]
                 },
                 stranded=stranded
             )
@@ -351,15 +368,26 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
 def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=False, log=devnull, assume_no_untemplated=True):
     log('reading:', input_file)
     result = []
+    rows = None
     if file_type == SUPPORTED_TOOL.MAVIS:
-        result = read_bpp_from_input_file(input_file)
+        result = read_bpp_from_input_file(input_file, expand_orient=True, expand_svtype=True)
+    elif file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL]:
+        rows = []
+        for vcf_record in VariantFile(input_file).fetch():
+            rows.extend(_parse_vcf_record(vcf_record))
+    elif file_type == SUPPORTED_TOOL.BREAKDANCER:
+        with open(input_file, 'r') as fh:
+            # comments in breakdancer are marked with a single # so they need to be discarded before reading
+            lines = fh.readlines()
+            header = 0
+            while header < len(lines) and lines[header].startswith('#'):
+                header += 1
+            lines = lines[header - 1:]
+            input_file = Namespace(readlines=lambda: lines)
+        _, rows = tab.read_file(input_file, allow_short=True)
     else:
-        if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL]:
-            rows = []
-            for vcf_record in VariantFile(input_file).fetch():
-                rows.extend(_parse_vcf_record(vcf_record))
-        else:
-            dummy, rows = tab.read_file(input_file)
+        _, rows = tab.read_file(input_file)
+    if rows:
         log('found', len(rows), 'rows')
         for row in rows:
             std_rows = _convert_tool_row(row, file_type, stranded, assume_no_untemplated=assume_no_untemplated)
