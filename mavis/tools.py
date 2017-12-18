@@ -370,7 +370,7 @@ def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fa
     result = []
     rows = None
     if file_type == SUPPORTED_TOOL.MAVIS:
-        result = read_bpp_from_input_file(input_file, expand_orient=True, expand_svtype=True)
+        result = read_bpp_from_input_file(input_file, expand_orient=True, expand_svtype=True, add_default={'stranded': stranded})
     elif file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL]:
         rows = []
         for vcf_record in VariantFile(input_file).fetch():

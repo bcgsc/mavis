@@ -167,16 +167,16 @@ def pair_by_distance(calls, distances, log=devnull, against_self=False):
         current = break1_sorted[i]
         for j in range(i + 1, len(break1_sorted)):
             other = break1_sorted[j]
+
             dist = abs(Interval.dist(current.break1, other.break1))
             if dist > max_distance + lowest_resolution:
                 break
             comparisons += 1
-            if not against_self or (current.library == other.library and current.protocol == other.protocol):
+            if not against_self and current.library == other.library and current.protocol == other.protocol:
                 continue  # do not pair within a single library
             if equivalent(current, other, distances=distances):
                 distance_pairings.setdefault(product_key(current), set()).add(product_key(other))
                 distance_pairings.setdefault(product_key(other), set()).add(product_key(current))
-
         current = break2_sorted[i]
         for j in range(i + 1, len(break2_sorted)):
             other = break2_sorted[j]
@@ -184,7 +184,7 @@ def pair_by_distance(calls, distances, log=devnull, against_self=False):
             if dist > max_distance + lowest_resolution:
                 break
             comparisons += 1
-            if not against_self or (current.library == other.library and current.protocol == other.protocol):
+            if not against_self and current.library == other.library and current.protocol == other.protocol:
                 continue  # do not pair within a single library
             if equivalent(current, other, distances=distances):
                 distance_pairings.setdefault(product_key(current), set()).add(product_key(other))
