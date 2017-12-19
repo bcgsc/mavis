@@ -8,8 +8,9 @@ from mavis.bam.cache import BamCache
 from mavis.blat import Blat
 from mavis.constants import CIGAR, reverse_complement
 from mavis.interval import Interval
+import mavis.bam.cigar as _cigar
 
-from . import BAM_INPUT, BLAT_INPUT, BLAT_OUTPUT, MockBamFileHandle, REFERENCE_GENOME_FILE
+from . import BAM_INPUT, BLAT_INPUT, BLAT_OUTPUT, MockBamFileHandle, REFERENCE_GENOME_FILE, MockObject, MockLongString
 
 
 REFERENCE_GENOME = None
@@ -26,7 +27,7 @@ def setUpModule():
 
 class TestBlat(unittest.TestCase):
     def setUp(self):
-        self.cache = BamCache(MockBamFileHandle({'Y': 23, 'fake': 0, 'reference3': 3}))
+        self.cache = BamCache(MockBamFileHandle({'Y': 23, 'fake': 0, 'reference3': 3, '14': 13}))
 
     def test_read_pslx(self):
         mapping = {}
@@ -263,29 +264,28 @@ class TestBlat(unittest.TestCase):
         self.assertEqual([(CIGAR.S, 117), (CIGAR.EQ, 128)], read2.cigar)
         self.assertEqual(Interval(117, 244), query_coverage_interval(read2))
         self.assertEqual(read1.query_sequence, reverse_complement(read2.query_sequence))
+        # test that this is selected for duplication or insertion evidence
 
-    @unittest.skipIf(not shutil.which('blat'), 'missing the blat command')
     def test_pslx_row_to_pysam_duplication(self):
-        raise unittest.SkipTest('TODO')
-        """
-        s = 'CTCCCACCAGGAGCTCGTCCTCACCACGTCCTGCACCAGCACCTCCAGCTCCCGCAGCAGCGCCTCGCCCCCACGGTGCGC' \
-            'GCTCCGCGCCGGTTCCATGGGCTCCGTAGGTTCCATGGGCTCCGTAGGTTCCATGGGCTCCGTAGGTTCCATGGGCTCCGT' \
-            'AGGTTCCATCGGCTCCGTGGGTTCCATGGACTCTGTGGGCTCGGGCCCGACGCGCACGGAGGACTGGAGGACTGGGGCGTG' \
-            'TGTCTGCGGTGCAGGCGAGGCGGGGCGGGCCGGGGC'
-
+        reference = {'14': MockObject(seq=MockLongString(
+            'TTCTTCCATGCCCCCTAATCATGGCCACATTGTATCAGCCTGAGCATGAGCAACAGCACCATGGCCACATACGGGAATGGGCCTCATTGGTGTAATATTTGGCAGATTCTCTCCACACCCCCCGTGGCGGTCTGGCTTACTGTTAAGAAGGGTAACCTTAAAAAATACATTTCCCACTCCAGAAAATACTCATATGTGGCCTGTTAGCAGCACAAGAAGGGTGAAAGCAATGCCCATTCCTGCCTCCCTCCCCCTGCTCACCTCCACGTCCCTGTTTGCCCCTTTGTAGGTGAAGTGAGTATATTCAGCGTCTTCATGGCAGGGGAGAGGGTGTATTAATCCGTCTATGTCCGCTGGAAAGGCAGTCTCTGAGCGGGCCACAAGGGTTCAGCCATGGCCCATCCAATAACCTTTTTGATGACTTGGATGAAGAGACAAACATTCCAACCACATTCAAAGATCCAGACCTCCAAAGTGTGGCTCATTTGGTAGATAATGGAATTATATTTGGAAAGCATTTCCCGCAGCTGGGATGATGGGTCAAAAACAGATAGCATTTTACCAGATCATATTTGTGTGTGTGTGTGTGCGCGCGTGTGTGTGTGTGTGTGTGTGTGTTTTAAATTCAGTTTCCCAACTACAGGATG', offset=73014463
+        ))}
         pslx_row = {
             'block_count': 2,
-            'tstarts': [2187],
-            'block_sizes': [126,10],
-            'qname': 'seq1',
-            'tname': 'reference17',
-            'qstarts': [117],
+            'tstarts': [73014606, 73014747],
+            'block_sizes': [141, 30],
+            'qname': '',
+            'tname': '14',
+            'qstarts': [0, 239],
             'strand': '+',
-            'qseq_full': s,
+            'qseq_full': 'AAGAAGGGTAACCTTAAAAAATACATTTCCCACTCCAGAAAATACTCATATGTGGCCTGTTAGCAGCACAAGAAGGGTGAAAGCAATGCCCATTCCTGCCTCCCTCCCCCTGCTCACCTCCACGTCCCTGTTTGCCCCTTTACTCATATGTGGCCTGTTAGCAGCACAAGAAGGGTGAAAGCAATGCCCATTCCTGCCTCCCTCCCCCTGCTCACCTCCACGTCCCTGTTTGCCCCTTTGTAGGTGAAGTGAGTATATTCAGCGTCTTC',
             'score': 1
         }
-        # 136	0	0	0	1	19	1	1	+	contig2	175	0	155	reference17	4000	1882	2019	2	126,10,	0,145,	1882,2009,	ctcccaccaggagctcgtcctcaccacgtcctgcaccagcacctccagctcccgcagcagcgcctcgcccccacggtgcgcgctccgcgccggttccatgggctccgtaggttccatgggctccgt,ggttccatgg,	ctcccaccaggagctcgtcctcaccacgtcctgcaccagcacctccagctcccgcagcagcgcctcgcccccacggtgcgcgctccgcgccggttccatgggctccgtaggttccatgggctccgt,ggttccatgg,
-        """
+        read2 = Blat.pslx_row_to_pysam(pslx_row, self.cache, reference)
+        self.assertEqual(13, read2.reference_id)
+        self.assertEqual(73014606, read2.reference_start)
+        self.assertEqual([(CIGAR.M, 141), (CIGAR.I, 98), (CIGAR.M, 30)], _cigar.convert_for_igv(read2.cigar))
+        self.assertEqual(Interval(0, len(pslx_row['qseq_full']) - 1), query_coverage_interval(read2))
 
     def test_ranking_alignments(self):
         # >seq105

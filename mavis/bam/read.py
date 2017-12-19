@@ -246,7 +246,7 @@ def nsb_align(
     """
     ref = str(ref)
     if len(ref) < 1 or len(seq) < 1:
-        raise AttributeError('cannot overlap on an empty sequence')
+        raise AttributeError('cannot overlap on an empty sequence: len(ref)={}, len(seq)={}'.format(len(ref), len(seq)))
     if min_match < 0 or min_match > 1:
         raise AttributeError('min_match must be between 0 and 1')
 
