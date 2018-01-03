@@ -89,6 +89,7 @@ def main(
             COLUMNS.protein_synon,
             COLUMNS.cdna_synon,
             COLUMNS.net_size,
+            COLUMNS.tracking_id,
             'dgv',
             'summary_pairing']
         }, COLUMNS.call_method: CALL_METHOD.INPUT},
@@ -255,6 +256,10 @@ def main(
             annotate_dgv(bpps_by_library[lib], dgv_annotation, distance=10)  # TODO make distance a parameter
         log('adding pairing states for', lib)
         for row in bpps_by_library[lib]:
+            # in case no pairing was done, add default (applicable to single library summaries)
+            row.data.setdefault(COLUMNS.inferred_pairing, '')
+            row.data.setdefault(COLUMNS.pairing, '')
+            row.data.setdefault(COLUMNS.library, lib)
             # filter pairing ids based on what is still kept?
             paired_libraries = set([p.split('_')[0] for p in row.pairing.split(';')])
             inferred_paired_libraries = set([p.split('_')[0] for p in row.inferred_pairing.split(';')])

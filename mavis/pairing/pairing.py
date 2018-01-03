@@ -165,6 +165,7 @@ def pair_by_distance(calls, distances, log=devnull, against_self=False):
     comparisons = 0
     for i in range(0, len(break1_sorted)):
         current = break1_sorted[i]
+        distance_pairings.setdefault(product_key(current), set())
         for j in range(i + 1, len(break1_sorted)):
             other = break1_sorted[j]
 
@@ -175,7 +176,7 @@ def pair_by_distance(calls, distances, log=devnull, against_self=False):
             if not against_self and current.library == other.library and current.protocol == other.protocol:
                 continue  # do not pair within a single library
             if equivalent(current, other, distances=distances):
-                distance_pairings.setdefault(product_key(current), set()).add(product_key(other))
+                distance_pairings[product_key(current)].add(product_key(other))
                 distance_pairings.setdefault(product_key(other), set()).add(product_key(current))
         current = break2_sorted[i]
         for j in range(i + 1, len(break2_sorted)):

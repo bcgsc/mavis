@@ -24,7 +24,7 @@ DEFAULTS.add(
     'max_proximity', 5000,
     defn='the maximum distance away from an annotation before the region in considered to be uninformative')
 DEFAULTS.add(
-    'uninformative_filter', True,
+    'uninformative_filter', False,
     defn='flag that determines if breakpoint pairs which are not within max_proximity to any annotations are filtered '
     'out prior to clustering')
 DEFAULTS.add(
