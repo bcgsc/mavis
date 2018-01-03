@@ -89,6 +89,7 @@ def main(
             COLUMNS.protein_synon,
             COLUMNS.cdna_synon,
             COLUMNS.net_size,
+            COLUMNS.tracking_id,
             'dgv',
             'summary_pairing']
         }, COLUMNS.call_method: CALL_METHOD.INPUT},

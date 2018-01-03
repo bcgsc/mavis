@@ -107,7 +107,8 @@ def group_events(events):
         COLUMNS.spanning_reads, COLUMNS.flanking_pairs, COLUMNS.tools,
         COLUMNS.product_id, COLUMNS.event_type, COLUMNS.annotation_id,
         COLUMNS.pairing, COLUMNS.annotation_figure,
-        COLUMNS.contig_remapped_reads, COLUMNS.tools
+        COLUMNS.contig_remapped_reads, COLUMNS.tools,
+        COLUMNS.tracking_id
     ]:
         new_data = sorted(list({bpp.data[col] for bpp in events}))
         new_bpp.data[col] = new_data[0] if len(new_data) == 1 else ';'.join([str(v) for v in new_data])
@@ -131,7 +132,7 @@ def group_by_distance(calls, distances):
     grouped_calls = []
     for component in get_connected_components(pairing):
         if len(component) == 1:
-            grouped_calls.append(mapping[component.pop()])
+            grouped_calls.extend(mapping[component.pop()])
         else:
             pairs = []
             for key in component:
@@ -239,15 +240,15 @@ def filter_by_evidence(
                 bpp.break2_split_reads < filter_min_split_reads,
                 all([
                     bpp.event_type != SVTYPE.INS,
-                    bpp.break2_split_reads_forced + bpp.break1_split_reads_forced < filter_min_linking_split_reads
+                    bpp.linking_split_reads < filter_min_linking_split_reads
                 ]),
                 all([
                     bpp.event_type == SVTYPE.INS,
                     bpp.flanking_pairs < filter_min_linking_split_reads,
                     bpp.break2_split_reads_forced + bpp.break1_split_reads_forced < filter_min_linking_split_reads
                 ]),
-                bpp.break1_split_reads + bpp.break2_split_reads -
-                (bpp.break2_split_reads_forced + bpp.break1_split_reads_forced) < 1
+                bpp.break1_split_reads - bpp.break1_split_reads_forced < 1,
+                bpp.break2_split_reads - bpp.break2_split_reads_forced < 1
             ]):
                 removed.append(bpp)
                 continue
