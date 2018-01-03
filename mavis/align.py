@@ -451,11 +451,6 @@ def select_contig_alignments(evidence, reads_by_query):
                 alignment.score() < evidence.contig_aln_min_score,
                 alignment.mapping_quality() == Interval(0)
             ]):
-                print('filtered OUT', alignment)
-                print(alignment.query_consumption(), evidence.contig_aln_min_query_consumption)
-                print(alignment.score(), evidence.contig_aln_min_score)
-                print(alignment.mapping_quality())
                 continue
             filtered_alignments.add(alignment)
-            print('filtered_alignments', alignment)
         contig.alignments.update(filtered_alignments)
