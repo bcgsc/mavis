@@ -2,10 +2,11 @@ import itertools
 import os
 import re
 import subprocess
-from shortuuid import uuid
 import time
+import warnings
 
 import pysam
+from shortuuid import uuid
 
 from .base import Evidence
 from .call import call_events
@@ -87,36 +88,42 @@ def main(
     evidence_clusters = []
     for bpp in bpps:
         if bpp.data[COLUMNS.protocol] == PROTOCOL.GENOME:
-            evidence = GenomeEvidence(
-                bpp.break1, bpp.break2,
-                input_bam_cache,
-                reference_genome,
-                opposing_strands=bpp.opposing_strands,
-                stranded=bpp.stranded,
-                untemplated_seq=bpp.untemplated_seq,
-                data=bpp.data,
-                stdev_fragment_size=stdev_fragment_size,
-                read_length=read_length,
-                median_fragment_size=median_fragment_size,
-                **validation_settings.flatten()
-            )
-            evidence_clusters.append(evidence)
+            try:
+                evidence = GenomeEvidence(
+                    bpp.break1, bpp.break2,
+                    input_bam_cache,
+                    reference_genome,
+                    opposing_strands=bpp.opposing_strands,
+                    stranded=bpp.stranded,
+                    untemplated_seq=bpp.untemplated_seq,
+                    data=bpp.data,
+                    stdev_fragment_size=stdev_fragment_size,
+                    read_length=read_length,
+                    median_fragment_size=median_fragment_size,
+                    **validation_settings.flatten()
+                )
+                evidence_clusters.append(evidence)
+            except ValueError as err:
+                warnings.warn('Dropping breakpoint pair ({}) as bad input {}'.format(str(bpp), str(err)))
         elif bpp.data[COLUMNS.protocol] == PROTOCOL.TRANS:
-            evidence = TranscriptomeEvidence(
-                annotations,
-                bpp.break1, bpp.break2,
-                input_bam_cache,
-                reference_genome,
-                opposing_strands=bpp.opposing_strands,
-                stranded=bpp.stranded,
-                untemplated_seq=bpp.untemplated_seq,
-                data=bpp.data,
-                stdev_fragment_size=stdev_fragment_size,
-                read_length=read_length,
-                median_fragment_size=median_fragment_size,
-                **validation_settings.flatten()
-            )
-            evidence_clusters.append(evidence)
+            try:
+                evidence = TranscriptomeEvidence(
+                    annotations,
+                    bpp.break1, bpp.break2,
+                    input_bam_cache,
+                    reference_genome,
+                    opposing_strands=bpp.opposing_strands,
+                    stranded=bpp.stranded,
+                    untemplated_seq=bpp.untemplated_seq,
+                    data=bpp.data,
+                    stdev_fragment_size=stdev_fragment_size,
+                    read_length=read_length,
+                    median_fragment_size=median_fragment_size,
+                    **validation_settings.flatten()
+                )
+                evidence_clusters.append(evidence)
+            except ValueError as err:
+                warnings.warn('Dropping breakpoint pair ({}) as bad input {}'.format(str(bpp), str(err)))
         else:
             raise ValueError('protocol not recognized', bpp.data[COLUMNS.protocol])
 
