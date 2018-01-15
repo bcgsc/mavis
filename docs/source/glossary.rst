@@ -390,3 +390,7 @@ List of column names and their definitions. The types indicated here are the exp
     net_size
         ``int-int`` - The net size of an event. For translocations and inversion this will always be 0. For indels it will be
         negative for deletions and positive for insertions. It is a range to accommodate non-specific events.
+
+    supplementary_call
+        :class:`bool` - Flag to indicate if the current event was a supplementary call, meaning a call that was found as a result of
+        validating another event.

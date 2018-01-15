@@ -100,6 +100,23 @@ class EventCall(BreakpointPair):
             support.update(self.contig.input_reads)
         return support
 
+    def is_supplementary(self):
+        """
+        check if the current event call was the target event given the source evidence object or an off-target call, i.e.
+        something that was called as part of the original target.
+        This is important b/c if the current event was not one of the original target it may not be fully investigated in
+        other libraries
+        """
+        event_types = {self.event_type, self.compatible_type if self.has_compatible else self.event_type}
+        return not all([
+            event_types & BreakpointPair.classify(self.source_evidence),
+            self.break1 & self.source_evidence.outer_window1,
+            self.break2 & self.source_evidence.outer_window2,
+            self.break1.chr == self.source_evidence.break1.chr,
+            self.break2.chr == self.source_evidence.break2.chr,
+            self.opposing_strands == self.source_evidence.opposing_strands
+        ])
+
     def add_flanking_support(self, flanking_pairs, is_compatible=False):
         """
         counts the flanking read-pair support for the event called. The original source evidence may
@@ -280,7 +297,8 @@ class EventCall(BreakpointPair):
             COLUMNS.contig_remap_coverage: None,
             COLUMNS.contig_read_depth: None,
             COLUMNS.contig_break1_read_depth: None,
-            COLUMNS.contig_break2_read_depth: None
+            COLUMNS.contig_break2_read_depth: None,
+            COLUMNS.supplementary_call: self.is_supplementary()
         })
         median, stdev = self.flanking_metrics()
         flank = set()

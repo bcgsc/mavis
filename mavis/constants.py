@@ -630,6 +630,7 @@ COLUMNS = MavisNamespace(
     filter_comment='filter_comment',
     cdna_synon='cdna_synon',
     protein_synon='protein_synon',
+    supplementary_call='supplementary_call',
     net_size='net_size'
 )
 """:class:`MavisNamespace`: Column names for i/o files used throughout the pipeline
@@ -723,6 +724,7 @@ COLUMNS = MavisNamespace(
 - :term:`tracking_id`
 - :term:`transcript1`
 - :term:`transcript2`
+- :term:`supplementary_call`
 - :term:`untemplated_seq`
 - :term:`validation_id`
 """
