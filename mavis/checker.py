@@ -310,6 +310,9 @@ class LibraryRun:
             self.annotation = None
 
     def report(self):
+        self.max_run_time = 0
+        self.total_run_time = 0
+        self.avg_run_time = 0
         result = True
         collective_job_ids = self.cluster.job_ids | self.annotation.job_ids
         if self.validation:
@@ -330,13 +333,14 @@ class LibraryRun:
         else:
             self.log_parse_error = True
         for stage in [self.validation, self.annotation]:
-            if stage:
-                if stage.max_run_time is not None:
-                    self.max_run_time += stage.max_run_time
-                    self.total_run_time += stage.total_run_time
-                    self.avg_run_time += stage.avg_run_time
-                else:
-                    self.log_parse_error = True
+            if not stage:
+                continue
+            if stage.max_run_time is not None:
+                self.max_run_time += stage.max_run_time
+                self.total_run_time += stage.total_run_time
+                self.avg_run_time += stage.avg_run_time
+            else:
+                self.log_parse_error = True
         return result
 
 
@@ -388,7 +392,7 @@ def check_completion(target_dir, skipped_stages=None):
             log('ignoring dir', subdir)
 
     success_flag = True
-    max_run_time = 0
+    max_run_time = []
     total_run_time = 0
     log_parse_error = False
     for lib in sorted(libraries, key=lambda x: x.name):
@@ -396,10 +400,11 @@ def check_completion(target_dir, skipped_stages=None):
         if not lib.report():
             success_flag = False
         if lib.max_run_time:
-            max_run_time += lib.max_run_time
+            max_run_time.append(lib.max_run_time)
             total_run_time += lib.total_run_time
         if lib.log_parse_error:
             log_parse_error = True
+    max_run_time = max(max_run_time + [0])
 
     if not pairing.report(time_stamp=True):
         success_flag = False
