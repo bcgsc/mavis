@@ -142,7 +142,7 @@ def convert_to_duplication(alignment, reference_genome):
         # must be more than half the length or better to call it an insertion
         for dup_len in reversed(range(len(alignment.untemplated_seq) // 2 + 1, len(alignment.untemplated_seq) + 1)):
             refseq = reference_genome[alignment.break1.chr].seq[alignment.break1.start - dup_len:alignment.break1.start]
-            refseq = str(refseq)
+            refseq = str(refseq).upper()
             if refseq != alignment.untemplated_seq[:dup_len]:
                 continue
 
@@ -440,8 +440,9 @@ def select_contig_alignments(evidence, reads_by_query):
                 paired_event.break2 & evidence.outer_window2
             ]):
                 alignments.append(paired_event)
-                alignments.extend(call_read_events(read1, read2))
-                alignments.extend(call_read_events(read2, read1))
+                for event in call_read_events(read1, read2) + call_read_events(read2, read1):
+                    event = convert_to_duplication(event, evidence.reference_genome)
+                    alignments.append(event)
         filtered_alignments = set()
         for alignment in sorted(alignments, key=lambda x: (x.read2 is None, x.score()), reverse=True):
             if any([
