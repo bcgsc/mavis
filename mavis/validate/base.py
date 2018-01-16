@@ -513,8 +513,8 @@ class Evidence(BreakpointPair):
                 opposite_breakpoint_ref, read.query_sequence, min_consecutive_match=self.min_anchor_exact,
                 min_match=min_match_tgt, min_overlap_percent=min_match_tgt)  # split half to this side
 
-            for a in sc_align:
-                a.flag = read.flag
+            for alignment in sc_align:
+                alignment.flag = read.flag
             putative_alignments = sc_align
         else:
             # should align opposite the current read
@@ -523,60 +523,61 @@ class Evidence(BreakpointPair):
                 opposite_breakpoint_ref, revcomp_sc_align, min_consecutive_match=self.min_anchor_exact,
                 min_match=min_match_tgt, min_overlap_percent=min_match_tgt)
 
-            for a in revcomp_sc_align:
-                a.flag = read.flag ^ PYSAM_READ_FLAGS.REVERSE  # EXOR
+            for alignment in revcomp_sc_align:
+                alignment.flag = read.flag ^ PYSAM_READ_FLAGS.REVERSE  # EXOR
             putative_alignments = revcomp_sc_align
 
         scores = []
-        for a in putative_alignments:  # loop over the alignments
-            a.flag = a.flag | PYSAM_READ_FLAGS.SUPPLEMENTARY
+        for alignment in putative_alignments:  # loop over the alignments
+            alignment.flag = alignment.flag | PYSAM_READ_FLAGS.SUPPLEMENTARY
             # set this flag so we don't recompute the cigar multiple
-            a.set_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR, 1, value_type='i')
+            alignment.set_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR, 1, value_type='i')
             # add information from the original read
-            a.reference_start = w[0] - 1 + a.reference_start
-            a.reference_id = self.bam_cache.reference_id(opposite_breakpoint.chr)
-            a.query_name = read.query_name
-            a.set_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT, 1, value_type='i')
-            a.next_reference_start = read.next_reference_start
-            a.next_reference_id = read.next_reference_id
-            a.mapping_quality = NA_MAPPING_QUALITY
+            alignment.reference_start = w[0] - 1 + alignment.reference_start
+            alignment._reference_name = opposite_breakpoint.chr  # must be set since not associated with an alignment file
+            alignment.reference_id = self.bam_cache.reference_id(opposite_breakpoint.chr)
+            alignment.query_name = read.query_name
+            alignment.set_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT, 1, value_type='i')
+            alignment.next_reference_start = read.next_reference_start
+            alignment.next_reference_id = read.next_reference_id
+            alignment.mapping_quality = NA_MAPPING_QUALITY
             try:
-                cigar, offset = _cigar.extend_softclipping(a.cigar, self.min_anchor_exact)
-                a.cigar = cigar
-                a.reference_start = a.reference_start + offset
+                cigar, offset = _cigar.extend_softclipping(alignment.cigar, self.min_anchor_exact)
+                alignment.cigar = cigar
+                alignment.reference_start = alignment.reference_start + offset
             except AttributeError:
                 # if the matches section is too small you can't extend the
                 # softclipping
                 pass
-            s = _cigar.score(a.cigar)
-            a.cigar = _cigar.join(a.cigar)
-            if a.reference_id == a.next_reference_id:
+            s = _cigar.score(alignment.cigar)
+            alignment.cigar = _cigar.join(alignment.cigar)
+            if alignment.reference_id == alignment.next_reference_id:
                 # https://samtools.github.io/hts-specs/SAMv1.pdf
                 # unsigned observed template length equals the number of bases from the leftmost
                 # mapped base to the rightmost mapped base
-                tlen = abs(a.reference_start - a.next_reference_start) + 1
-                if a.reference_start < a.next_reference_start:
-                    a.template_length = tlen
+                tlen = abs(alignment.reference_start - alignment.next_reference_start) + 1
+                if alignment.reference_start < alignment.next_reference_start:
+                    alignment.template_length = tlen
                 else:
-                    a.template_length = -1 * tlen
+                    alignment.template_length = -1 * tlen
             else:
-                a.template_length = 0
-            if _cigar.alignment_matches(a.cigar) >= self.min_sample_size_to_apply_percentage \
-                    and _cigar.match_percent(a.cigar) < self.min_anchor_match:
+                alignment.template_length = 0
+            if _cigar.alignment_matches(alignment.cigar) >= self.min_sample_size_to_apply_percentage \
+                    and _cigar.match_percent(alignment.cigar) < self.min_anchor_match:
                 continue
-            if _cigar.longest_exact_match(a.cigar) < self.min_anchor_exact \
-                    and _cigar.longest_fuzzy_match(a.cigar, self.fuzzy_mismatch_number) < self.min_anchor_fuzzy:
+            if _cigar.longest_exact_match(alignment.cigar) < self.min_anchor_exact \
+                    and _cigar.longest_fuzzy_match(alignment.cigar, self.fuzzy_mismatch_number) < self.min_anchor_fuzzy:
                 continue
             if self.max_sc_preceeding_anchor is not None:
                 if opposite_breakpoint.orient == ORIENT.LEFT:
-                    if a.cigar[0][0] == CIGAR.S and a.cigar[0][1] > self.max_sc_preceeding_anchor:
+                    if alignment.cigar[0][0] == CIGAR.S and alignment.cigar[0][1] > self.max_sc_preceeding_anchor:
                         continue
                 elif opposite_breakpoint.orient == ORIENT.RIGHT:
-                    if a.cigar[-1][0] == CIGAR.S and a.cigar[-1][1] > self.max_sc_preceeding_anchor:
+                    if alignment.cigar[-1][0] == CIGAR.S and alignment.cigar[-1][1] > self.max_sc_preceeding_anchor:
                         continue
-            scores.append((s, _cigar.match_percent(a.cigar), a))
+            scores.append((s, _cigar.match_percent(alignment.cigar), alignment))
 
-        scores = sorted(scores, key=lambda x: (x[0], x[1]), reverse=True) if len(scores) > 0 else []
+        scores = sorted(scores, key=lambda x: (x[0], x[1]), reverse=True) if scores else []
 
         if len(scores) > 1:
             if scores[0][0] != scores[1][0] and scores[0][1] != scores[1][1]:

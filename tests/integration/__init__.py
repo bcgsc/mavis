@@ -158,8 +158,8 @@ class MockRead:
         return dict(self.tags)[tag] if tag in dict(self.tags).keys() else False
 
     def __str__(self):
-        return '{}(ref_id={}, start={}, end={})'.format(
-            self.__class__.__name__, self.reference_id, self.reference_start, self.reference_end)
+        return '{}(ref_id={}, start={}, end={}, seq={})'.format(
+            self.__class__.__name__, self.reference_id, self.reference_start, self.reference_end, self.query_sequence)
 
 
 class MockBamFileHandle:

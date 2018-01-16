@@ -634,18 +634,18 @@ class TestCallBySupportingReads(unittest.TestCase):
             call._call_by_supporting_reads(self.ev, SVTYPE.DUP)
 
     def test_call_both_by_split_read(self):
-        self.ev.split_reads[0].add(
-            MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
-        )
-        self.ev.split_reads[1].add(
-            MockRead(query_name='t1', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
-        )
-        self.ev.split_reads[0].add(
-            MockRead(query_name='t2', reference_start=100, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
-        )
-        self.ev.split_reads[1].add(
-            MockRead(query_name='t2', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
-        )
+        self.ev.split_reads[0].add(MockRead(
+            query_name='t1', reference_start=100, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+            query_sequence='A' * 40))
+        self.ev.split_reads[1].add(MockRead(
+            query_name='t1', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+            query_sequence='G' * 40))
+        self.ev.split_reads[0].add(MockRead(
+            query_name='t2', reference_start=100, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+            query_sequence='C' * 40))
+        self.ev.split_reads[1].add(MockRead(
+            query_name='t2', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+            query_sequence='A' * 40))
 
         events = call._call_by_supporting_reads(self.ev, SVTYPE.INV)
         self.assertEqual(1, len(events))
@@ -656,12 +656,12 @@ class TestCallBySupportingReads(unittest.TestCase):
         self.assertEqual(501, event.break2.start)
         self.assertEqual(501, event.break2.end)
 
-    def test_call_both_by_split_read_low_resolution(self):
+    def test_call_by_split_read_low_resolution(self):
         self.ev.split_reads[0].add(
-            MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
+            MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)], query_sequence='A' * 40)
         )
         self.ev.split_reads[1].add(
-            MockRead(query_name='t1', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
+            MockRead(query_name='t1', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)], query_sequence='N' * 40)
         )
 
         break1, break2 = call._call_by_supporting_reads(self.ev, SVTYPE.INV)[0]
@@ -670,6 +670,54 @@ class TestCallBySupportingReads(unittest.TestCase):
         self.assertEqual(101, break1.end)
         self.assertEqual(501, break2.start)
         self.assertEqual(501, break2.end)
+
+    def test_call_by_split_read_resolve_untemp(self):
+        self.ev.split_reads[0].add(MockRead(
+            query_name='t1', reference_start=100, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+            query_sequence='TCGGCTCCCGTACTTGTGTATAAGGGGCTTCTGATGTTAT'))
+        self.ev.split_reads[1].add(MockRead(
+            query_name='t1', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+            query_sequence='ATAACATCAGAAGCCCCTTATACACAAGTACGGGAGCCGA', is_reverse=True))
+
+        event = call._call_by_supporting_reads(self.ev, SVTYPE.INV)[0]
+
+        self.assertEqual(101, event.break1.start)
+        self.assertEqual(101, event.break1.end)
+        self.assertEqual(501, event.break2.start)
+        self.assertEqual(501, event.break2.end)
+        self.assertEqual('', event.untemplated_seq)
+
+    def test_call_by_split_read_resolve_untemp_exists(self):
+        self.ev.split_reads[0].add(MockRead(
+            query_name='t1', reference_start=100, cigar=[(CIGAR.S, 22), (CIGAR.EQ, 18)],
+            query_sequence='TCGGCTCCCGTACTTGTGTATAAGGGGCTTCTGATGTTAT'))
+        self.ev.split_reads[1].add(MockRead(
+            query_name='t1', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+            query_sequence='ATAACATCAGAAGCCCCTTATACACAAGTACGGGAGCCGA', is_reverse=True))
+
+        event = call._call_by_supporting_reads(self.ev, SVTYPE.INV)[0]
+
+        self.assertEqual(101, event.break1.start)
+        self.assertEqual(101, event.break1.end)
+        self.assertEqual(501, event.break2.start)
+        self.assertEqual(501, event.break2.end)
+        self.assertEqual('TA', event.untemplated_seq)
+
+    def test_call_by_split_read_shift_overlap(self):
+        self.ev.split_reads[0].add(MockRead(
+            query_name='t1', reference_start=100, cigar=[(CIGAR.S, 18), (CIGAR.EQ, 22)],
+            query_sequence='TCGGCTCCCGTACTTGTGTATAAGGGGCTTCTGATGTTAT'))
+        self.ev.split_reads[1].add(MockRead(
+            query_name='t1', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+            query_sequence='ATAACATCAGAAGCCCCTTATACACAAGTACGGGAGCCGA', is_reverse=True))
+
+        event = call._call_by_supporting_reads(self.ev, SVTYPE.INV)[0]
+
+        self.assertEqual(101, event.break1.start)
+        self.assertEqual(101, event.break1.end)
+        self.assertEqual(503, event.break2.start)
+        self.assertEqual(503, event.break2.end)
+        self.assertEqual('', event.untemplated_seq)
 
     def test_both_by_flanking_pairs(self):
         self.ev.flanking_pairs.add(mock_read_pair(
@@ -698,16 +746,16 @@ class TestCallBySupportingReads(unittest.TestCase):
 
     def test_call_both_by_split_reads_multiple_calls(self):
         self.ev.split_reads[0].add(
-            MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
+            MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)], query_sequence='A' * 40)
         )
         self.ev.split_reads[1].add(
-            MockRead(query_name='t1', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
+            MockRead(query_name='t1', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)], query_sequence='T' * 40)
         )
         self.ev.split_reads[0].add(
-            MockRead(query_name='t2', reference_start=110, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
+            MockRead(query_name='t2', reference_start=110, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)], query_sequence='T' * 40)
         )
         self.ev.split_reads[1].add(
-            MockRead(query_name='t2', reference_start=520, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
+            MockRead(query_name='t2', reference_start=520, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)], query_sequence='A' * 40)
         )
 
         evs = call._call_by_supporting_reads(self.ev, SVTYPE.INV)

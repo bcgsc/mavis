@@ -5,7 +5,7 @@ import statistics
 import warnings
 
 from .evidence import TranscriptomeEvidence
-from ..align import SplitAlignment, query_coverage_interval, call_read_events
+from ..align import SplitAlignment, query_coverage_interval, call_read_events, call_paired_read_event
 from ..bam import read as _read
 
 from ..breakpoint import Breakpoint, BreakpointPair
@@ -494,6 +494,7 @@ def _call_by_spanning_reads(source_evidence, consumed_evidence):
                 new_event.add_break1_split_read(read)
             for read in source_evidence.split_reads[1] - consumed_evidence:
                 new_event.add_break2_split_read(read)
+
             result.append(new_event)
     return result
 
@@ -771,12 +772,36 @@ def _call_by_supporting_reads(evidence, event_type, consumed_evidence=None):
             if deletion_size > evidence.max_expected_fragment_size and event_type == SVTYPE.INS:
                 continue
 
-        first_breakpoint = Breakpoint(evidence.break1.chr, first, strand=evidence.break1.strand, orient=evidence.break1.orient)
-        second_breakpoint = Breakpoint(evidence.break2.chr, second, strand=evidence.break2.strand, orient=evidence.break2.orient)
-        call = EventCall(
-            first_breakpoint, second_breakpoint, evidence, event_type,
-            call_method=CALL_METHOD.SPLIT
-        )
+        # check if any of the aligned reads are 'double' aligned
+        double_aligned = {}
+        for read in pos1[first] | pos2[second]:
+            seq_key = tuple(sorted([
+                read.query_name, read.query_sequence, reverse_complement(read.query_sequence)
+            ]))  # seq and revseq are equal
+            double_aligned.setdefault(seq_key, []).append(read)
+
+        # now create calls using the double aligned split read pairs if possible (to resolve untemplated sequence)
+        resolved_calls = set()
+        for reads in [d for d in double_aligned.values() if len(d) > 1]:
+            for read1, read2 in itertools.combinations(reads, 2):
+                try:
+                    call = call_paired_read_event(read1, read2)
+                    resolved_calls.add(call)
+                except AssertionError:
+                    pass  # will be thrown if the reads do not actually belong together
+        if len(resolved_calls) == 1:
+            call = resolved_calls.pop()
+            call = EventCall(
+                call.break1, call.break2, evidence, event_type,
+                call_method=CALL_METHOD.SPLIT, untemplated_seq=call.untemplated_seq
+            )
+        else:
+            first_breakpoint = Breakpoint(evidence.break1.chr, first, strand=evidence.break1.strand, orient=evidence.break1.orient)
+            second_breakpoint = Breakpoint(evidence.break2.chr, second, strand=evidence.break2.strand, orient=evidence.break2.orient)
+            call = EventCall(
+                first_breakpoint, second_breakpoint, evidence, event_type,
+                call_method=CALL_METHOD.SPLIT
+            )
         call.add_flanking_support(available_flanking_pairs)
         if call.has_compatible:
             call.add_flanking_support(available_flanking_pairs, is_compatible=True)
