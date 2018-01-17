@@ -38,7 +38,7 @@ class LogDetails:
             lines = fh.readlines()
             if not lines:
                 self.status = LOGFILE_STATUS.EMPTY
-            elif any([msg in lines[-1].lower() for msg in ['error', 'fault', 'fatal', 'aborted', 'core dumped']]):
+            elif re.match(r'\b(error|fault|fatal|aborted|core dumped)\b', lines[-1].lower()):
                 self.status = LOGFILE_STATUS.CRASH
                 self.message = lines[-1].strip()
             else:
