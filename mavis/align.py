@@ -147,8 +147,8 @@ def convert_to_duplication(alignment, reference_genome):
                 continue
 
             result = SplitAlignment(
-                Breakpoint(alignment.break1.chr, alignment.break1.start, orient=alignment.break1.orient, strand=alignment.break1.strand),
-                Breakpoint(alignment.break2.chr, alignment.break2.start - dup_len, orient=alignment.break2.orient, strand=alignment.break2.strand),
+                Breakpoint(alignment.break2.chr, alignment.break2.start - dup_len, orient=ORIENT.RIGHT, strand=alignment.break2.strand),
+                Breakpoint(alignment.break1.chr, alignment.break1.start, orient=ORIENT.LEFT, strand=alignment.break1.strand),
                 untemplated_seq=alignment.untemplated_seq[dup_len:],
                 opposing_strands=alignment.opposing_strands,
                 data=alignment.data,

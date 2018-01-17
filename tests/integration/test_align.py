@@ -622,6 +622,25 @@ class TestConvertToDuplication(unittest.TestCase):
         # ........................********
         self.assertEqual('CATACATA', event.untemplated_seq)
 
+    def test_single_bp_insertion(self):
+        bpp = BreakpointPair(
+            Breakpoint('3', 121, orient='L'), Breakpoint('3', 122, orient='R'),
+            untemplated_seq='T',
+            opposing_strands=False
+        )
+        reference_genome = {'3': MockObject(
+            seq=MockLongString('ATCGAGCTACGGATCTTTTTTCGATCGATCAATA', offset=100))}
+        print(reference_genome['3'].seq[120 - 10:121])
+        setattr(bpp, 'read1', MockObject(query_sequence='', query_name=None))
+        setattr(bpp, 'read2', None)
+        event = align.convert_to_duplication(bpp, reference_genome)
+        print(event)
+        self.assertEqual(ORIENT.RIGHT, event.break1.orient)
+        self.assertEqual(121, event.break1.start)
+        self.assertEqual(ORIENT.LEFT, event.break2.orient)
+        self.assertEqual(121, event.break2.start)
+        self.assertEqual('', event.untemplated_seq)
+
 
 class TestSelectContigAlignments(unittest.TestCase):
     def test_inversion_and_deletion(self):
