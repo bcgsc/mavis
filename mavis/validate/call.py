@@ -280,6 +280,46 @@ class EventCall(BreakpointPair):
 
         return reads1 & reads2
 
+    @staticmethod
+    def characterize_repeat_region(event, reference_genome):
+        """
+        For a given event, determines the number of repeats the insertion/duplication/deletion is following.
+        This is most useful in flagging homopolymer regions. Will raise a ValueError if the current event is
+        not an expected type or is non-specific.
+        """
+        if len(event.break1) + len(event.break2) > 2:
+            raise ValueError('Cannot characterize a repeat region for a non-specific call')
+        elif not any([
+            event.event_type == SVTYPE.INS and event.untemplated_seq,
+            event.event_type in {SVTYPE.DEL, SVTYPE.DUP} and not event.untemplated_seq
+        ]):
+            raise ValueError(
+                'Characterizing repeat regions does not make sense for the given event type',
+                event.event_type, event.untemplated_seq)
+
+        expected_sequence = None
+        rightmost = None
+        if event.event_type == SVTYPE.DEL:
+            expected_sequence = reference_genome[event.break1.chr].seq[event.break1.start:event.break2.end - 1]
+            rightmost = event.break1.start
+        elif event.event_type == SVTYPE.DUP:
+            expected_sequence = reference_genome[event.break1.chr].seq[event.break1.start - 1:event.break2.end]
+            rightmost = event.break1.start - 1
+        else:
+            expected_sequence = event.untemplated_seq
+            rightmost = event.break1.start
+
+        repeat_count = 0
+        while rightmost - len(expected_sequence) > 0:
+            print(expected_sequence, rightmost)
+            ref = reference_genome[event.break1.chr].seq[rightmost - len(expected_sequence):rightmost].upper()
+            print(ref)
+            if ref != expected_sequence:
+                break
+            repeat_count += 1
+            rightmost -= len(expected_sequence)
+        return repeat_count
+
     def flatten(self):
         """
         converts the current call to a dictionary for a row in a tabbed file
@@ -305,6 +345,11 @@ class EventCall(BreakpointPair):
             COLUMNS.contig_break2_read_depth: None,
             COLUMNS.supplementary_call: self.is_supplementary()
         })
+        try:
+            row[COLUMNS.repeat_count] = EventCall.characterize_repeat_region(self, self.source_evidence.reference_genome)
+        except ValueError:
+            row[COLUMNS.repeat_count] = None
+
         median, stdev = self.flanking_metrics()
         flank = set()
         for read, mate in self.flanking_pairs:

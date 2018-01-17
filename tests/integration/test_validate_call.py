@@ -1150,5 +1150,115 @@ class TestCallBySpanningReads(unittest.TestCase):
         pass
 
 
+class TestCharacterizeRepeatRegion(unittest.TestCase):
+
+    def test_homopolymer_insertion(self):
+        bpp = BreakpointPair(
+            Breakpoint('1', 120, orient=ORIENT.LEFT),
+            Breakpoint('1', 121, orient=ORIENT.RIGHT),
+            untemplated_seq='T',
+            opposing_strands=False,
+            event_type=SVTYPE.INS
+        )
+        reference_genome = {'1': MockObject(seq=MockLongString(
+            'TCGATTCAGGATCAGATTTTGAACAAGTACATACG', offset=100
+        ))}
+        print('upto and including the first breakpoint', reference_genome['1'].seq[bpp.break1.start - 10:bpp.break1.start])
+        self.assertEqual(4, call.EventCall.characterize_repeat_region(bpp, reference_genome))
+
+    def test_homopolymer_deletion(self):
+        bpp = BreakpointPair(
+            Breakpoint('1', 120, orient=ORIENT.LEFT),
+            Breakpoint('1', 122, orient=ORIENT.RIGHT),
+            untemplated_seq='',
+            opposing_strands=False,
+            event_type=SVTYPE.DEL
+        )
+        reference_genome = {'1': MockObject(seq=MockLongString(
+            'TCGATTCAGGATCAGATTTTTGAACAAGTACATACG', offset=100
+        ))}
+        print('upto and including the first breakpoint', reference_genome['1'].seq[bpp.break1.start - 10:bpp.break1.start])
+        self.assertEqual(4, call.EventCall.characterize_repeat_region(bpp, reference_genome))
+
+    def test_homopolymer_duplication(self):
+        bpp = BreakpointPair(
+            Breakpoint('1', 121, orient=ORIENT.RIGHT),
+            Breakpoint('1', 121, orient=ORIENT.LEFT),
+            untemplated_seq='',
+            opposing_strands=False,
+            event_type=SVTYPE.DUP
+        )
+        reference_genome = {'1': MockObject(seq=MockLongString(
+            'TCGATTCAGGATCAGATTTTTGAACAAGTACATACG', offset=100
+        ))}
+        print('upto and including the first breakpoint', reference_genome['1'].seq[bpp.break1.start - 10:bpp.break1.start])
+        self.assertEqual(4, call.EventCall.characterize_repeat_region(bpp, reference_genome))
+
+    def test_repeat_duplication(self):
+        bpp = BreakpointPair(
+            Breakpoint('1', 123, orient=ORIENT.RIGHT),
+            Breakpoint('1', 125, orient=ORIENT.LEFT),
+            untemplated_seq='',
+            opposing_strands=False,
+            event_type=SVTYPE.DUP
+        )
+        reference_genome = {'1': MockObject(seq=MockLongString(
+            'TCGATTCAGGATCAGATAGTAGTAGGAACAAGTACATACG', offset=100
+        ))}
+        print('upto and including the first breakpoint', reference_genome['1'].seq[bpp.break1.start - 10:bpp.break1.start])
+        self.assertEqual(2, call.EventCall.characterize_repeat_region(bpp, reference_genome))
+
+    def test_repeat_insertion(self):
+        bpp = BreakpointPair(
+            Breakpoint('1', 125, orient=ORIENT.LEFT),
+            Breakpoint('1', 126, orient=ORIENT.RIGHT),
+            untemplated_seq='TAG',
+            opposing_strands=False,
+            event_type=SVTYPE.INS
+        )
+        reference_genome = {'1': MockObject(seq=MockLongString(
+            'TCGATTCAGGATCAGATAGTAGTAGGAACAAGTACATACG', offset=100
+        ))}
+        print('upto and including the first breakpoint', reference_genome['1'].seq[bpp.break1.start - 10:bpp.break1.start])
+        self.assertEqual(3, call.EventCall.characterize_repeat_region(bpp, reference_genome))
+
+    def test_repeat_deletion(self):
+        bpp = BreakpointPair(
+            Breakpoint('1', 125, orient=ORIENT.LEFT),
+            Breakpoint('1', 129, orient=ORIENT.RIGHT),
+            untemplated_seq='',
+            opposing_strands=False,
+            event_type=SVTYPE.DEL
+        )
+        reference_genome = {'1': MockObject(seq=MockLongString(
+            'TCGATTCAGGATCAGATAGTAGTAGTAGGAACAAGTACATACG', offset=100
+        ))}
+        print('upto and including the second breakpoint', reference_genome['1'].seq[bpp.break2.start - 10:bpp.break2.start])
+        self.assertEqual(3, call.EventCall.characterize_repeat_region(bpp, reference_genome))
+
+    def test_norepeat_insertion(self):
+        bpp = BreakpointPair(
+            Breakpoint('1', 125, orient=ORIENT.LEFT),
+            Breakpoint('1', 126, orient=ORIENT.RIGHT),
+            untemplated_seq='TTG',
+            opposing_strands=False,
+            event_type=SVTYPE.INS
+        )
+        reference_genome = {'1': MockObject(seq=MockLongString(
+            'TCGATTCAGGATCAGATAGTAGTAGGAACAAGTACATACG', offset=100
+        ))}
+        print('upto and including the first breakpoint', reference_genome['1'].seq[bpp.break1.start - 10:bpp.break1.start])
+        self.assertEqual(0, call.EventCall.characterize_repeat_region(bpp, reference_genome))
+
+    def test_invalid_event_type(self):
+        bpp = BreakpointPair(
+            Breakpoint('1', 125, orient=ORIENT.RIGHT),
+            Breakpoint('1', 126, orient=ORIENT.RIGHT),
+            untemplated_seq='TTG',
+            event_type=SVTYPE.INV
+        )
+        with self.assertRaises(ValueError):
+            call.EventCall.characterize_repeat_region(bpp, None)
+
 if __name__ == '__main__':
     unittest.main()
