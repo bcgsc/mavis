@@ -197,10 +197,10 @@ class PipelineStageRun:
                 self.avg_run_time = int(round(self.total_run_time / len(self.job_ids), 0))
                 prefix = indent * (indent_level + 1) + ('' if all_times else 'min ')
                 if self.name in [SUBCOMMAND.ANNOTATE, SUBCOMMAND.VALIDATE]:
-                    log(prefix + 'run time (s): {} (max), {} (total), {} (average)'.format(
-                        self.max_run_time, self.total_run_time, self.avg_run_time), time_stamp=False)
+                    log(prefix + 'run times ({} jobs): {} (max), {} (total), {} (average)'.format(
+                        len(self.job_ids), self.max_run_time, self.total_run_time, self.avg_run_time), time_stamp=False)
                 else:
-                    log(prefix + 'run time (s):', self.max_run_time, time_stamp=False)
+                    log(prefix + 'run time:', self.max_run_time, time_stamp=False)
             else:
                 log(indent * (indent_level + 1) + 'error parsing run-times from the log files', time_stamp=False)
             return True
