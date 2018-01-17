@@ -63,11 +63,16 @@ class EventCall(BreakpointPair):
         self.break2_split_reads = set()
         self.compatible_flanking_pairs = set()
         # check that the event type is compatible
-        self.event_type = SVTYPE.enforce(event_type)
         if event_type == SVTYPE.DUP:
             self.compatible_type = SVTYPE.INS
         elif event_type == SVTYPE.INS:
             self.compatible_type = SVTYPE.DUP
+        try:
+            if event_type not in BreakpointPair.classify(self) and self.compatible_type in BreakpointPair.classify(self):
+                event_type, self.compatible_type = self.compatible_type, event_type
+        except AttributeError:
+            pass
+        self.event_type = SVTYPE.enforce(event_type)
         if event_type not in BreakpointPair.classify(self):
             raise ValueError(
                 'event_type is not compatible with the breakpoint call', event_type, BreakpointPair.classify(self))

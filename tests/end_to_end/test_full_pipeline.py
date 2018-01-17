@@ -131,6 +131,12 @@ class TestPipeline(unittest.TestCase):
             self.assertEqual(0, main())
         self.assertTrue(glob_exists(self.temp_output, 'submit_pipeline*.sh'))
 
+    def test_error_on_bad_config(self):
+        args = ['mavis', SUBCOMMAND.PIPELINE, 'thing/that/doesnot/exist.cfg', '-o', self.temp_output]
+        with patch.object(sys, 'argv', args):
+            with self.assertRaises(OSError):
+                self.assertEqual(0, main())
+
     def test_full_pipeline(self):
         args = ['mavis', SUBCOMMAND.PIPELINE, CONFIG, '-o', self.temp_output]
         with patch.object(sys, 'argv', args):
