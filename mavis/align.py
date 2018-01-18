@@ -306,16 +306,19 @@ def align_sequences(
 ):
     """
     calls the alignment tool and parses the return output for a set of sequences
+
+    Args:
+        sequences (dict of str to str): dictionary of sequences by name
+        input_bam_cache (BamCache): bam cache to be used as a template for reading the alignments
+        reference_genome: the reference genome
+        aligner (SUPPORTED_ALIGNER): the name of the aligner to be used
+        aligner_reference (str): path to the aligner reference file
     """
     try:
         # write the input sequences to a fasta file
-        sequences = set(sequences)
-        query_id_mapping = {}
         count = 1
         with open(aligner_fa_input_file, 'w') as fh:
-            for seq in sorted(sequences):
-                name = 'seq{}'.format(count)
-                query_id_mapping[name] = seq
+            for name, seq in sorted(sequences.items()):
                 fh.write('>' + name + '\n' + seq + '\n')
                 count += 1
         if not sequences:
@@ -342,7 +345,7 @@ def align_sequences(
                 subprocess.check_call(command, shell=True, stdout=log_fh, stderr=log_fh)
             return process_blat_output(
                 input_bam_cache=input_bam_cache,
-                query_id_mapping=query_id_mapping,
+                query_id_mapping=sequences,
                 reference_genome=reference_genome,
                 aligner_output_file=aligner_output_file,
                 blat_limit_top_aln=blat_limit_top_aln
@@ -370,7 +373,7 @@ def align_sequences(
                         if read.is_paired:
                             read.next_reference_id = input_bam_cache.reference_id(read.next_reference_name)
                         read.cigar = _cigar.recompute_cigar_mismatch(read, reference_genome[read.reference_name])
-                        query_seq = query_id_mapping[read.query_name]
+                        query_seq = sequences[read.query_name]
                         reads_by_query.setdefault(query_seq, []).append(read)
             return reads_by_query
         else:

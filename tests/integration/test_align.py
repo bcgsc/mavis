@@ -73,7 +73,7 @@ class TestAlign(unittest.TestCase):
                 'TTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT', 0)
         ]
         print(ev.contigs[0].seq)
-        seq = align.align_sequences([ev.contigs[0].seq], BAM_CACHE, REFERENCE_GENOME, aligner_reference=REFERENCE_GENOME_FILE_2BIT, aligner='blat')
+        seq = align.align_sequences({'seq': ev.contigs[0].seq}, BAM_CACHE, REFERENCE_GENOME, aligner_reference=REFERENCE_GENOME_FILE_2BIT, aligner='blat')
         print(seq)
         align.select_contig_alignments(ev, seq)
         print(ev.contigs[0].alignments)
@@ -110,7 +110,7 @@ class TestAlign(unittest.TestCase):
         ]
         print(ev.contigs[0].seq)
         seq = align.align_sequences(
-            [ev.contigs[0].seq], BAM_CACHE, REFERENCE_GENOME,
+            {'seq': ev.contigs[0].seq}, BAM_CACHE, REFERENCE_GENOME,
             aligner_reference=REFERENCE_GENOME_FILE,
             aligner='bwa mem',
             aligner_output_file='mem.out',
@@ -148,7 +148,7 @@ class TestAlign(unittest.TestCase):
                 'GGTATATATTTCTCAGATAAAAGATATTTTCCCTTTTATCTTTCCCTAAGCTCACACTACATATATTGCATTTATCTTATATCTGCTTTAAAACCTATTTAT'
                 'TATGTCATTTAAATATCTAGAAAAGTTATGACTTCACCAGGTATGAAAAATATAAAAAGAACTCTGTCAAGAAT', 0)
         ]
-        seq = align.align_sequences([ev.contigs[0].seq], BAM_CACHE, REFERENCE_GENOME, aligner_reference=REFERENCE_GENOME_FILE_2BIT, aligner='blat')
+        seq = align.align_sequences({'seq': ev.contigs[0].seq}, BAM_CACHE, REFERENCE_GENOME, aligner_reference=REFERENCE_GENOME_FILE_2BIT, aligner='blat')
         for query, reads in seq.items():
             print('>>>', query)
             for read in reads:
@@ -186,7 +186,7 @@ class TestAlign(unittest.TestCase):
         seq = 'GGTATATATTTCTCAGATAAAAGATATTTTCCCTTTTATCTTTCCCTAAGCTCACACTACATATATTGCATTTATCTTATATCTGCTTTAAAACCTATTTAT' \
               'TATGTCATTTAAATATCTAGAAAAGTTATGACTTCACCAGGTATGAAAAATATAAAAAGAACTCTGTCAAGAAT'
         ev.contigs = [Contig(reverse_complement(seq), 0)]
-        align.select_contig_alignments(ev, align.align_sequences([ev.contigs[0].seq], BAM_CACHE, REFERENCE_GENOME, aligner_reference=REFERENCE_GENOME_FILE_2BIT, aligner='blat'))
+        align.select_contig_alignments(ev, align.align_sequences({'seq': ev.contigs[0].seq}, BAM_CACHE, REFERENCE_GENOME, aligner_reference=REFERENCE_GENOME_FILE_2BIT, aligner='blat'))
         print('alignments:', ev.contigs[0].alignments)
         alignment = list(ev.contigs[0].alignments)[0]
         print(alignment)
