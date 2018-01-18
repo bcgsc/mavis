@@ -311,9 +311,7 @@ class EventCall(BreakpointPair):
 
         repeat_count = 0
         while rightmost - len(expected_sequence) > 0:
-            print(expected_sequence, rightmost)
             ref = reference_genome[event.break1.chr].seq[rightmost - len(expected_sequence):rightmost].upper()
-            print(ref)
             if ref != expected_sequence:
                 break
             repeat_count += 1
