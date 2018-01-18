@@ -38,23 +38,31 @@ class LogDetails:
             lines = fh.readlines()
             if not lines:
                 self.status = LOGFILE_STATUS.EMPTY
-            elif re.match(r'\b(error|fault|fatal|aborted|core dumped)\b', lines[-1].lower()):
-                self.status = LOGFILE_STATUS.CRASH
-                self.message = lines[-1].strip()
             else:
-                run_time = None
-                for line in lines[-10:]:
-                    match = re.match(r'^\s*run time \(s\): (\d+)\s*$', line)
-                    if match:
-                        run_time = int(match.group(1))
+                for line in lines[::-1]:
+                    line = line.strip()
+                    if line:
+                        non_empty_line = line.lower()
                         break
-                if run_time is None:
-                    self.status = LOGFILE_STATUS.INCOMPLETE
-                    self.message = lines[-1].strip()
-                    self.last_mod = os.path.getmtime(filename)
                 else:
-                    self.run_time = run_time
-                    self.status = LOGFILE_STATUS.COMPLETE
+                    non_empty_line = lines[-1].lower()
+                if re.search(r'\b(error|fault|fatal|aborted|core dumped)\b', non_empty_line):
+                    self.status = LOGFILE_STATUS.CRASH
+                    self.message = non_empty_line.strip()
+                else:
+                    run_time = None
+                    for line in lines[-10:]:
+                        match = re.match(r'^\s*run time \(s\): (\d+)\s*$', line)
+                        if match:
+                            run_time = int(match.group(1))
+                            break
+                    if run_time is None:
+                        self.status = LOGFILE_STATUS.INCOMPLETE
+                        self.message = lines[-1].strip()
+                        self.last_mod = os.path.getmtime(filename)
+                    else:
+                        self.run_time = run_time
+                        self.status = LOGFILE_STATUS.COMPLETE
 
 
 def parse_run_time(filename):
