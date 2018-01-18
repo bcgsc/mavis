@@ -73,6 +73,13 @@ class TranscriptomeEvidence(Evidence):
 
     def __init__(self, annotations, *pos, **kwargs):
         Evidence.__init__(self, *pos, **kwargs)
+
+        # set the transcriptome specific overrides
+        if self.trans_min_mapping_quality is not None:
+            self.min_mapping_quality = self.trans_min_mapping_quality
+        if self.trans_fetch_reads_limit is not None:
+            self.fetch_reads_limit = self.trans_fetch_reads_limit
+
         self.protocol = PROTOCOL.TRANS
         # get the list of overlapping transcripts
         self.overlapping_transcripts = overlapping_transcripts(annotations, self.break1) | overlapping_transcripts(annotations, self.break2)
