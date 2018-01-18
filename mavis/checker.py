@@ -170,7 +170,7 @@ class PipelineStageRun:
                     log('{}{} jobs not started (no log/stamp) (jobs: {})'.format(
                         indent * (indent_level + 1), len(missing_both), convert_set_to_ranges(missing_both)), time_stamp=False)
                 if incomplete_jobs:
-                    log('{}{} jobs running, incomplete without errors (jobs: {})'.format(
+                    log('{}{} jobs incomplete without errors (jobs: {})'.format(
                         indent * (indent_level + 1), len(incomplete_jobs), convert_set_to_ranges(incomplete_jobs)), time_stamp=False)
                 if errors:
                     log('{}{} jobs CRASHED (jobs: {})'.format(
@@ -191,7 +191,7 @@ class PipelineStageRun:
                 if missing_both:
                     log(indent * (indent_level + 1) + 'job not started (no log/stamp)', time_stamp=False)
                 if incomplete_jobs:
-                    log(indent * (indent_level + 1) + 'job running, incomplete without errors', time_stamp=False)
+                    log(indent * (indent_level + 1) + 'job incomplete without errors', time_stamp=False)
                 if errors:
                     log(indent * (indent_level + 1) + 'job CRASHED', self.logs[None].message, time_stamp=False)
             return False if any([incomplete_jobs, missing_both, missing_stamp, errors]) else True
