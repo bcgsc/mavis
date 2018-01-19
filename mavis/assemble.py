@@ -436,9 +436,7 @@ def assemble(
             assert len(best_alignments) >= 1
             for contig, read in best_alignments:
                 contig.add_mapped_sequence(read, len(best_alignments))
-    log(
-        'assemblies complete. scores (build, remap, covg):',
-        [(c.score, round(c.remap_score(), 1), round(c.remap_coverage(), 2)) for c in contigs])
+    log('assemblies complete')
     return contigs
 
 

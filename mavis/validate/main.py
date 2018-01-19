@@ -167,7 +167,9 @@ def main(
         log('assembled {} contigs'.format(len(evidence.contigs)), time_stamp=False)
         for contig in evidence.contigs:
             name = 'seq-{}'.format(hashlib.md5(contig.seq.encode('utf-8')).hexdigest())
-            log('>', name, contig.seq[:100] + '...' if len(contig.seq) > 100 else '', time_stamp=False)
+            log('>', name, '(size={}; reads={:.0f}; coverage={:.2f})'.format(
+                len(contig.seq), contig.remap_score(), contig.remap_coverage()), time_stamp=False)
+            log(contig.seq[:140], time_stamp=False)
             contig_sequences[name] = contig.seq
 
     log('will output:', contig_aligner_fa, contig_aligner_output)
