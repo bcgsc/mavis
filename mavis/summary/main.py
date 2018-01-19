@@ -128,16 +128,17 @@ def main(
                 continue
             elif bpp.protocol == PROTOCOL.TRANS and bpp.data.get(COLUMNS.repeat_count, None):
                 # a transcriptome event in a repeat region
-                match = re.match(r'^(-?\d+)-(-?\d+)$', bpp.net_size)
-                netsize_min = abs(int(match.groups(0)))
-                netsize_max = abs(int(match.groups(1)))
+                match = re.match(r'^(-?\d+)-(-?\d+)$', str(bpp.data[COLUMNS.net_size]))
+                if match:
+                    netsize_min = abs(int(match.group(1)))
+                    netsize_max = abs(int(match.group(2)))
 
-                if all([
-                    int(bpp.repeat_count) >= HOMOPOLYMER_MIN_LENGTH,
-                    netsize_min == netsize_max and netsize_min == 1,
-                    PROTOCOL.GENOME not in bpp.data.get(COLUMNS.pairing, '')
-                ]):
-                    continue
+                    if all([
+                        int(bpp.repeat_count) >= HOMOPOLYMER_MIN_LENGTH,
+                        netsize_min == netsize_max and netsize_min == 1,
+                        PROTOCOL.GENOME not in bpp.data.get(COLUMNS.pairing, '')
+                    ]):
+                        continue
             temp.append(bpp)
         bpps = temp
 
