@@ -1,5 +1,6 @@
 #!python
 import argparse
+import platform
 import os
 import re
 import subprocess
@@ -516,6 +517,7 @@ use the -h/--help option
         args.blat_version = get_blat_version()
 
     log('MAVIS: {}'.format(__version__))
+    log('Hostname:', platform.node(), time_stamp=False)
     log_arguments(args)
     rargs = args
 
