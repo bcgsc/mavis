@@ -19,15 +19,9 @@ class EventCall(BreakpointPair):
     directly without a lot of copying. Instead we use call objects which are basically
     just a reference to the evidence object and decisions on class, exact breakpoints, etc
     """
-
     @property
     def has_compatible(self):
-        """bool: True if compatible flanking pairs are appropriate to collect"""
-        try:
-            self.compatible_type
-            return True
-        except AttributeError:
-            return False
+        return False if self.compatible_type is None else True
 
     def __init__(
         self,
@@ -67,15 +61,15 @@ class EventCall(BreakpointPair):
             self.compatible_type = SVTYPE.INS
         elif event_type == SVTYPE.INS:
             self.compatible_type = SVTYPE.DUP
-        try:
-            if event_type not in BreakpointPair.classify(self) and self.compatible_type in BreakpointPair.classify(self):
-                event_type, self.compatible_type = self.compatible_type, event_type
-        except AttributeError:
-            pass
+        else:
+            self.compatible_type = None
+        if event_type not in BreakpointPair.classify(self) and self.compatible_type in BreakpointPair.classify(self):
+            event_type, self.compatible_type = self.compatible_type, event_type
         self.event_type = SVTYPE.enforce(event_type)
-        if event_type not in BreakpointPair.classify(self):
+        if event_type not in BreakpointPair.classify(self) | {self.compatible_type}:
             raise ValueError(
-                'event_type is not compatible with the breakpoint call', event_type, BreakpointPair.classify(self))
+                'event_type is not compatible with the breakpoint call',
+                event_type, BreakpointPair.classify(self), self.compatible_type)
         self.contig = contig
         self.call_method = CALL_METHOD.enforce(call_method)
         if contig and self.call_method != CALL_METHOD.CONTIG:
@@ -112,9 +106,8 @@ class EventCall(BreakpointPair):
         This is important b/c if the current event was not one of the original target it may not be fully investigated in
         other libraries
         """
-        event_types = {self.event_type, self.compatible_type if self.has_compatible else self.event_type}
         return not all([
-            event_types & BreakpointPair.classify(self.source_evidence),
+            {self.event_type, self.compatible_type} & BreakpointPair.classify(self.source_evidence),
             self.break1 & self.source_evidence.outer_window1,
             self.break2 & self.source_evidence.outer_window2,
             self.break1.chr == self.source_evidence.break1.chr,
@@ -830,11 +823,15 @@ def _call_by_supporting_reads(evidence, event_type, consumed_evidence=None):
 
         # now create calls using the double aligned split read pairs if possible (to resolve untemplated sequence)
         resolved_calls = set()
+        event_types = {event_type}
+        if event_type in {SVTYPE.DUP, SVTYPE.INS}:
+            event_types.update({SVTYPE.DUP, SVTYPE.INS})
         for reads in [d for d in double_aligned.values() if len(d) > 1]:
             for read1, read2 in itertools.combinations(reads, 2):
                 try:
                     call = call_paired_read_event(read1, read2)
-                    resolved_calls.add(call)
+                    if BreakpointPair.classify(call) & event_types:  # ensure we are calling the correct event types
+                        resolved_calls.add(call)
                 except AssertionError:
                     pass  # will be thrown if the reads do not actually belong together
         if len(resolved_calls) == 1:
