@@ -828,12 +828,16 @@ def _call_by_supporting_reads(evidence, event_type, consumed_evidence=None):
             event_types.update({SVTYPE.DUP, SVTYPE.INS})
         for reads in [d for d in double_aligned.values() if len(d) > 1]:
             for read1, read2 in itertools.combinations(reads, 2):
+                if len(resolved_calls) > 1:
+                    break
                 try:
                     call = call_paired_read_event(read1, read2)
                     if BreakpointPair.classify(call) & event_types:  # ensure we are calling the correct event types
                         resolved_calls.add(call)
                 except AssertionError:
                     pass  # will be thrown if the reads do not actually belong together
+            if len(resolved_calls) > 1:
+                break
         if len(resolved_calls) == 1:
             call = resolved_calls.pop()
             call = EventCall(
