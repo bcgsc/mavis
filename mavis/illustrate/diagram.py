@@ -227,7 +227,8 @@ def draw_sv_summary_diagram(
                 pass  # Intergenic region or None
         else:  # separate drawings
             try:
-                ratio = max(0.25, min(len(ann.transcript1.exons) / len(ann.transcript2.exons), 0.75))
+                ratio = len(ann.transcript1.exons) / (len(ann.transcript1.exons) + len(ann.transcript2.exons))
+                ratio = max(0.25, min(ratio, 0.75))  # must be between 0.25 - 0.75
             except AttributeError:
                 ratio = 0.5
 
