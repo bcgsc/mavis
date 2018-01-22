@@ -280,23 +280,29 @@ def filter_contigs(contigs, assembly_min_uniq=0.01):
     given a list of contigs, removes similar contigs to leave the highest (of the similar) scoring contig only
     """
     filtered_contigs = {}
-    for contig in sorted(contigs, key=lambda x: (-1 * x.score, x.seq)):
+    # ordering: highest scoring, then longest, then aphanumeric
+    for contig in sorted(contigs, key=lambda x: (-1 * x.score, -1 * len(x.seq), x.seq)):
         rseq = reverse_complement(contig.seq)
         if contig.seq in filtered_contigs or rseq in filtered_contigs:
             continue
         drop = False
         # drop all contigs that are more than 'x' percent similar to existing contigs
         for other_seq in filtered_contigs:
-            if len(other_seq) == len(contig.seq):
-                dist = min(distance.hamming(contig.seq, other_seq, normalized=True), distance.hamming(rseq, other_seq, normalized=True))
-                if dist < assembly_min_uniq:
+            kmer_length = min(len(other_seq), len(contig.seq))
+            okmer_list = set(kmers(other_seq, kmer_length))
+
+            for okmer, ckmer in itertools.product(okmer_list, set(kmers(contig.seq, kmer_length))):
+                if distance.hamming(okmer, ckmer, normalized=True) < assembly_min_uniq:
                     drop = True
                     break
-            else:
-                dist = min(distance.nlevenshtein(contig.seq, other_seq), distance.nlevenshtein(rseq, other_seq))
-                if dist < assembly_min_uniq:
-                    drop = True
-                    break
+            if not drop:
+                for okmer, ckmer in itertools.product(okmer_list, set(kmers(rseq, kmer_length))):
+                    if distance.hamming(okmer, ckmer, normalized=True) < assembly_min_uniq:
+                        drop = True
+                        break
+            if drop:
+                break
+
         if not drop:
             filtered_contigs[contig.seq] = contig
 
