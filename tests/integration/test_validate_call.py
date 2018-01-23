@@ -396,10 +396,10 @@ class TestEvidenceConsumption(unittest.TestCase):
         )
         r1, r2 = mock_read_pair(
             MockRead(
-                query_name='t1', reference_id=0, reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
+                query_name='t1', reference_id=0, reference_name='1', reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
                 query_sequence='A' * 100),
             MockRead(
-                query_name='t1', reference_id=0, reference_start=460, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
+                query_name='t1', reference_id=0, reference_name='1', reference_start=460, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
                 query_sequence='A' * 100))
         contig = MockObject(
             seq='',
@@ -457,30 +457,30 @@ class TestEvidenceConsumption(unittest.TestCase):
             opposing_strands=False
         )
         r1, r2 = mock_read_pair(
-            MockRead(query_name='t1', reference_id=0, reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
+            MockRead(query_name='t1', reference_id=0, reference_name='1', reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
                      query_sequence='A' * 100),
-            MockRead(query_name='t1', reference_id=0, reference_start=480, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
+            MockRead(query_name='t1', reference_id=0, reference_name='1', reference_start=480, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
                      query_sequence='A' * 100))
         bpp = call_paired_read_event(r1, r2)
         contig = MockObject(
             seq='',
             alignments=[bpp])
-        contig.input_reads = {MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])}
+        contig.input_reads = {MockRead(query_name='t1', reference_start=100, reference_name='1', cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])}
         evidence.contigs.append(contig)
 
         evidence.split_reads[0].add(
-            MockRead(query_name='t1', reference_start=80, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])
+            MockRead(query_name='t1', reference_name='1', reference_start=80, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])
         )
         evidence.split_reads[1].add(
-            MockRead(query_name='t1', reference_start=500, cigar=[(CIGAR.S, 50), (CIGAR.EQ, 50)])
+            MockRead(query_name='t1', reference_name='1', reference_start=500, cigar=[(CIGAR.S, 50), (CIGAR.EQ, 50)])
         )
         evidence.split_reads[0].add(
-            MockRead(query_name='t2', reference_start=40, cigar=[(CIGAR.EQ, 50), (CIGAR.S, 50)])
+            MockRead(query_name='t2', reference_name='1', reference_start=40, cigar=[(CIGAR.EQ, 50), (CIGAR.S, 50)])
         )
         evidence.flanking_pairs.add(
             mock_read_pair(
-                MockRead(query_name='t3', reference_id=0, reference_start=49, reference_end=90, is_reverse=False),
-                MockRead(query_name='t3', reference_id=0, reference_start=505, reference_end=550, is_reverse=True)
+                MockRead(query_name='t3', reference_name='1', reference_id=0, reference_start=49, reference_end=90, is_reverse=False),
+                MockRead(query_name='t3', reference_name='1', reference_id=0, reference_start=505, reference_end=550, is_reverse=True)
             ))
 
         events = call.call_events(evidence)
@@ -499,26 +499,26 @@ class TestEvidenceConsumption(unittest.TestCase):
             opposing_strands=False
         )
         r1, r2 = mock_read_pair(
-            MockRead(query_name='t1', reference_id=0, reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
+            MockRead(query_name='t1', reference_id=0, reference_name='1', reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
                      query_sequence='A' * 100),
-            MockRead(query_name='t1', reference_id=0, reference_start=480, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
+            MockRead(query_name='t1', reference_id=0, reference_name='1', reference_start=480, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
                      query_sequence='A' * 100))
         contig = MockObject(
             seq='',
             alignments=[call_paired_read_event(r1, r2)])
-        contig.input_reads = {MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])}
+        contig.input_reads = {MockRead(query_name='t1', reference_name='1', reference_start=100, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])}
         evidence.contigs.append(contig)
 
         evidence.split_reads[0].add(
-            MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])
+            MockRead(query_name='t1', reference_start=100, reference_name='1', cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])
         )
         evidence.split_reads[1].add(
-            MockRead(query_name='t1', reference_start=520, cigar=[(CIGAR.S, 50), (CIGAR.EQ, 50)])
+            MockRead(query_name='t1', reference_start=520, reference_name='1', cigar=[(CIGAR.S, 50), (CIGAR.EQ, 50)])
         )
         evidence.flanking_pairs.add(
             mock_read_pair(
-                MockRead(query_name='t3', reference_id=0, reference_start=49, reference_end=90, is_reverse=False),
-                MockRead(query_name='t3', reference_id=0, reference_start=505, reference_end=550, is_reverse=True)
+                MockRead(query_name='t3', reference_id=0, reference_start=49, reference_name='1', reference_end=90, is_reverse=False),
+                MockRead(query_name='t3', reference_id=0, reference_start=505, reference_name='1', reference_end=550, is_reverse=True)
             ))
         events = call.call_events(evidence)
         for ev in events:
@@ -1112,8 +1112,8 @@ class TestCallBySpanningReads(unittest.TestCase):
     def test_deletion(self):
         # ATCGATCTAGATCTAGGATAGTTCTAGCAGTCATAGCTAT
         ev = GenomeEvidence(
-            Breakpoint('fake', 100, orient=ORIENT.LEFT),
-            Breakpoint('fake', 500, orient=ORIENT.RIGHT),
+            Breakpoint('fake', 60, orient=ORIENT.LEFT),
+            Breakpoint('fake', 70, orient=ORIENT.RIGHT),
             BamCache(MockBamFileHandle()), None,
             opposing_strands=False,
             read_length=40,
@@ -1122,13 +1122,14 @@ class TestCallBySpanningReads(unittest.TestCase):
             min_flanking_pairs_resolution=1,
             min_spanning_reads_resolution=1
         )
+        print(ev.outer_window1, ev.outer_window2)
         spanning_reads = [
             SamRead(
-                query_name='name', reference_name='1', reference_start=50,
+                query_name='name', reference_name='fake', reference_start=50,
                 cigar=[(CIGAR.EQ, 15), (CIGAR.D, 5), (CIGAR.I, 2), (CIGAR.EQ, 10)],
                 query_sequence='ATCGATCTAGATCTA' 'GG' 'ATAGTTCTAG'),
             SamRead(
-                query_name='name', reference_name='1', reference_start=50,
+                query_name='name', reference_name='fake', reference_start=50,
                 cigar=[(CIGAR.EQ, 15), (CIGAR.I, 2), (CIGAR.D, 5), (CIGAR.EQ, 10)],
                 query_sequence='ATCGATCTAGATCTA' 'GG' 'ATAGTTCTAG')
         ]

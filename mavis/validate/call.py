@@ -435,8 +435,9 @@ class EventCall(BreakpointPair):
 
 def _call_by_contigs(source_evidence):
     # try calling by contigs
-    contig_calls = []
+    all_contig_calls = []
     for ctg in source_evidence.contigs:
+        curr_contig_calls = []
         for aln in ctg.alignments:
             if aln.is_putative_indel and aln.net_size(source_evidence.distance) == Interval(0):
                 continue
@@ -465,8 +466,11 @@ def _call_by_contigs(source_evidence):
                 for read in source_evidence.split_reads[1]:
                     new_event.add_break2_split_read(read)
 
-                contig_calls.append(new_event)
-    return contig_calls
+                curr_contig_calls.append(new_event)
+        # remove any supplementary calls that are not associated with a target cal
+        if not all([c.is_supplementary() for c in curr_contig_calls]):
+            all_contig_calls.extend(curr_contig_calls)
+    return all_contig_calls
 
 
 def filter_consumed_pairs(pairs, consumed_reads):
@@ -537,7 +541,20 @@ def _call_by_spanning_reads(source_evidence, consumed_evidence):
                 new_event.add_break2_split_read(read)
 
             result.append(new_event)
-    return result
+    # remove any supplementary calls that are not associated with a target call
+    target_call_reads = set()
+    for event in result:
+        if not event.is_supplementary():
+            target_call_reads.update(event.spanning_reads)
+    filtered_events = []
+    for event in result:
+        if event.is_supplementary():
+            if event.spanning_reads & target_call_reads:
+                filtered_events.append(event)
+        else:
+            filtered_events.append(event)
+
+    return filtered_events
 
 
 def call_events(source_evidence):

@@ -12,17 +12,20 @@ from . import MockObject, DATA_DIR
 
 
 class TestFilterContigs(unittest.TestCase):
-    @timeout_decorator.timeout(50)
+    @timeout_decorator.timeout(30)
     def test_large_set(self):
         contigs = []
         with open(os.path.join(DATA_DIR, 'similar_contigs.txt'), 'r') as fh:
             for line in fh.readlines():
                 contigs.append(Contig(line.strip(), 1))  # give a dummy score of 1
         start_time = int(time.time())
-        filtered = filter_contigs(contigs)
+        filtered = filter_contigs(contigs, 0.10)
         end_time = int(time.time())
         print('duration:', end_time - start_time)
-        self.assertEqual(33, len(filtered))  # figure out amount later. need to optimize timing
+        print()
+        for c in filtered:
+            print(c.seq)
+        self.assertEqual(3, len(filtered))  # figure out amount later. need to optimize timing
 
 
 class TestContigRemap(unittest.TestCase):
