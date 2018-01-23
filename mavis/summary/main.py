@@ -260,6 +260,7 @@ def main(
         COLUMNS.spanning_reads,
         COLUMNS.contig_remapped_reads,
         COLUMNS.tracking_id,
+        COLUMNS.supplementary_call,
         COLUMNS.net_size,
         'dgv'}
 
