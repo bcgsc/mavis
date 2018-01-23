@@ -684,9 +684,24 @@ class Evidence(BreakpointPair):
         )
 
         # add the input reads
+        # drop any contigs without reads from both breakpoints
+        filtered_contigs = []
         for ctg in contigs:
             for read_seq in ctg.remapped_sequences:
                 ctg.input_reads.update(assembly_sequences[read_seq.query_sequence])
+            break1_reads = {r.query_sequence for r in self.split_reads[0] | self.half_mapped[0] | self.spanning_reads}
+            break2_reads = {r.query_sequence for r in self.split_reads[1] | self.half_mapped[1] | self.spanning_reads}
+            ctg_reads = {r.query_sequence for r in ctg.input_reads}
+            ctg_reads.update({reverse_complement(r) for r in ctg_reads})
+            if ctg_reads & break1_reads and ctg_reads & break2_reads:
+                filtered_contigs.append(ctg)
+            else:
+                for read, mate in self.flanking_pairs:
+                    if read.query_sequence in ctg_reads and mate.query_sequence in ctg.input_reads:
+                        filtered_contigs.append(ctg)
+                        break
+        log('filtered contigs from {} to {} based on remapped reads from both breakpoints'.format(len(contigs), len(filtered_contigs)), time_stamp=False)
+        contigs = filtered_contigs
 
         # now determine the strand from the remapped reads if possible
         if self.stranded and self.bam_cache.stranded:  # strand specific

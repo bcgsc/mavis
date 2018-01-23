@@ -44,40 +44,40 @@ class TestFilterContigs(unittest.TestCase):
     def test_drop_reverse_complement(self):
         c1 = Contig('atcgatcgatcgatcgatcgatcgatatagggcatcagc', 1)
         c2 = Contig('gctgatgccctatatcgatcgatcgatcgatcgatcgat', 1)
-        result = filter_contigs([c2, c1], 0.05)
+        result = filter_contigs([c2, c1], 0.10)
         self.assertEqual(1, len(result))
         self.assertEqual(c1.seq, result[0].seq)
 
     def test_drop_alt_allele_alphabetically(self):
         c1 = Contig('atcgatcgatcgatcgatcgatcgatatagggcatcagc', 1)
         c2 = Contig('atcgatcgatcgatcgatctatcgatatagggcatcagc', 1)
-        result = filter_contigs([c2, c1], 0.05)
+        result = filter_contigs([c2, c1], 0.10)
         self.assertEqual(1, len(result))
         self.assertEqual(c1.seq, result[0].seq)
 
     def test_drop_alt_allele_by_score(self):
         c1 = Contig('atcgatcgatcgatcgatcgatcgatatagggcatcagc', 2)
         c2 = Contig('atcgatcgatcgatcgatctatcgatatagggcatcagc', 1)
-        result = filter_contigs([c2, c1], 0.05)
+        result = filter_contigs([c2, c1], 0.10)
         self.assertEqual(1, len(result))
         self.assertEqual(c1.seq, result[0].seq)
 
     def test_retain_disimilar(self):
         c1 = Contig('atcgatcgatcgatcgatcgatcgatatagggcatcagc', 2)
         c2 = Contig('atcgadatcgatcgatcgatctgtdstcgatatagggca', 1)
-        result = filter_contigs([c2, c1], 0.05)
+        result = filter_contigs([c2, c1], 0.10)
         self.assertEqual(2, len(result))
 
     def test_retain_disimilar_different_lengths(self):
         c1 = Contig('atcgatcgatcgatcgatcgatcgatatagggcatcagc', 2)
         c2 = Contig('atcgatcgatcgatcgatcgatcccgtgatatagggcatcagc', 1)
-        result = filter_contigs([c2, c1], 0.05)
+        result = filter_contigs([c2, c1], 0.10)
         self.assertEqual(2, len(result))
 
     def test_drop_similar_different_lengths(self):
-        c1 = Contig('atcgatcgatcgatcgatcgatcgatatagggcatcagc', 2)
-        c2 = Contig('atcgatcgatcgatcgatcgatcgaatagggcatcagc', 1)
-        result = filter_contigs([c2, c1], 0.05)
+        c1 = Contig('atcgatcgatcgatcgatatcgatcgatcgatcgatatcgatcgatcgatcgatatcgatcgatcgatcgatcgatcgatatgggcatcagc', 2)
+        c2 = Contig('atcgatcgatcgatcgatatcgatcgatcgatcgatatcgatcgatcgatcgatatcgatcgatcgatcgatcgatcgatagggcatcagc', 1)
+        result = filter_contigs([c2, c1], 0.10)
         self.assertEqual(1, len(result))
         self.assertEqual(c1.seq, result[0].seq)
 

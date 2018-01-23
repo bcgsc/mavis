@@ -76,8 +76,8 @@ DEFAULTS.add(
     'resolve. The assembly will pre-calculate the number of paths (or putative assemblies) and stop if it is greater '
     'than the given setting.')
 DEFAULTS.add(
-    'assembly_min_uniq', 0.01, cast_type=float_fraction,
-    defn='Minimum percent uniq required to keep separate assembled contigs. If contigs are more similar then the lower scoring contig is dropped')
+    'assembly_min_uniq', 0.10, cast_type=float_fraction,
+    defn='Minimum percent uniq required to keep separate assembled contigs. If contigs are more similar then the lower scoring, then shorted, contig is dropped')
 DEFAULTS.add(
     'assembly_min_edge_weight', 2,
     defn='Discards all edges with a weight/frequency less than this from the DeBruijn graph')
