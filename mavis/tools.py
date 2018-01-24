@@ -297,6 +297,9 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
 
     elif file_type == SUPPORTED_TOOL.BREAKDANCER:
 
+        if row['Type'] == 'DEL':  # we want the region outside the deletion not just the deletion itself
+            row['Pos1'] = int(row['Pos1']) - 1
+            row['Pos2'] = int(row['Pos2']) + 1
         std_row.update({
             COLUMNS.event_type: row['Type'],
             COLUMNS.break1_chromosome: row['Chr1'],
