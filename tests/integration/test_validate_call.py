@@ -396,10 +396,10 @@ class TestEvidenceConsumption(unittest.TestCase):
         )
         r1, r2 = mock_read_pair(
             MockRead(
-                query_name='t1', reference_id=0, reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
+                query_name='t1', reference_id=0, reference_name='1', reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
                 query_sequence='A' * 100),
             MockRead(
-                query_name='t1', reference_id=0, reference_start=460, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
+                query_name='t1', reference_id=0, reference_name='1', reference_start=460, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
                 query_sequence='A' * 100))
         contig = MockObject(
             seq='',
@@ -457,30 +457,30 @@ class TestEvidenceConsumption(unittest.TestCase):
             opposing_strands=False
         )
         r1, r2 = mock_read_pair(
-            MockRead(query_name='t1', reference_id=0, reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
+            MockRead(query_name='t1', reference_id=0, reference_name='1', reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
                      query_sequence='A' * 100),
-            MockRead(query_name='t1', reference_id=0, reference_start=480, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
+            MockRead(query_name='t1', reference_id=0, reference_name='1', reference_start=480, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
                      query_sequence='A' * 100))
         bpp = call_paired_read_event(r1, r2)
         contig = MockObject(
             seq='',
             alignments=[bpp])
-        contig.input_reads = {MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])}
+        contig.input_reads = {MockRead(query_name='t1', reference_start=100, reference_name='1', cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])}
         evidence.contigs.append(contig)
 
         evidence.split_reads[0].add(
-            MockRead(query_name='t1', reference_start=80, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])
+            MockRead(query_name='t1', reference_name='1', reference_start=80, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])
         )
         evidence.split_reads[1].add(
-            MockRead(query_name='t1', reference_start=500, cigar=[(CIGAR.S, 50), (CIGAR.EQ, 50)])
+            MockRead(query_name='t1', reference_name='1', reference_start=500, cigar=[(CIGAR.S, 50), (CIGAR.EQ, 50)])
         )
         evidence.split_reads[0].add(
-            MockRead(query_name='t2', reference_start=40, cigar=[(CIGAR.EQ, 50), (CIGAR.S, 50)])
+            MockRead(query_name='t2', reference_name='1', reference_start=40, cigar=[(CIGAR.EQ, 50), (CIGAR.S, 50)])
         )
         evidence.flanking_pairs.add(
             mock_read_pair(
-                MockRead(query_name='t3', reference_id=0, reference_start=49, reference_end=90, is_reverse=False),
-                MockRead(query_name='t3', reference_id=0, reference_start=505, reference_end=550, is_reverse=True)
+                MockRead(query_name='t3', reference_name='1', reference_id=0, reference_start=49, reference_end=90, is_reverse=False),
+                MockRead(query_name='t3', reference_name='1', reference_id=0, reference_start=505, reference_end=550, is_reverse=True)
             ))
 
         events = call.call_events(evidence)
@@ -499,26 +499,26 @@ class TestEvidenceConsumption(unittest.TestCase):
             opposing_strands=False
         )
         r1, r2 = mock_read_pair(
-            MockRead(query_name='t1', reference_id=0, reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
+            MockRead(query_name='t1', reference_id=0, reference_name='1', reference_start=40, cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
                      query_sequence='A' * 100),
-            MockRead(query_name='t1', reference_id=0, reference_start=480, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
+            MockRead(query_name='t1', reference_id=0, reference_name='1', reference_start=480, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
                      query_sequence='A' * 100))
         contig = MockObject(
             seq='',
             alignments=[call_paired_read_event(r1, r2)])
-        contig.input_reads = {MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])}
+        contig.input_reads = {MockRead(query_name='t1', reference_name='1', reference_start=100, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])}
         evidence.contigs.append(contig)
 
         evidence.split_reads[0].add(
-            MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])
+            MockRead(query_name='t1', reference_start=100, reference_name='1', cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])
         )
         evidence.split_reads[1].add(
-            MockRead(query_name='t1', reference_start=520, cigar=[(CIGAR.S, 50), (CIGAR.EQ, 50)])
+            MockRead(query_name='t1', reference_start=520, reference_name='1', cigar=[(CIGAR.S, 50), (CIGAR.EQ, 50)])
         )
         evidence.flanking_pairs.add(
             mock_read_pair(
-                MockRead(query_name='t3', reference_id=0, reference_start=49, reference_end=90, is_reverse=False),
-                MockRead(query_name='t3', reference_id=0, reference_start=505, reference_end=550, is_reverse=True)
+                MockRead(query_name='t3', reference_id=0, reference_start=49, reference_name='1', reference_end=90, is_reverse=False),
+                MockRead(query_name='t3', reference_id=0, reference_start=505, reference_name='1', reference_end=550, is_reverse=True)
             ))
         events = call.call_events(evidence)
         for ev in events:
@@ -634,18 +634,18 @@ class TestCallBySupportingReads(unittest.TestCase):
             call._call_by_supporting_reads(self.ev, SVTYPE.DUP)
 
     def test_call_both_by_split_read(self):
-        self.ev.split_reads[0].add(
-            MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
-        )
-        self.ev.split_reads[1].add(
-            MockRead(query_name='t1', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
-        )
-        self.ev.split_reads[0].add(
-            MockRead(query_name='t2', reference_start=100, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
-        )
-        self.ev.split_reads[1].add(
-            MockRead(query_name='t2', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
-        )
+        self.ev.split_reads[0].add(MockRead(
+            query_name='t1', reference_start=100, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+            query_sequence='A' * 40))
+        self.ev.split_reads[1].add(MockRead(
+            query_name='t1', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+            query_sequence='G' * 40))
+        self.ev.split_reads[0].add(MockRead(
+            query_name='t2', reference_start=100, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+            query_sequence='C' * 40))
+        self.ev.split_reads[1].add(MockRead(
+            query_name='t2', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+            query_sequence='A' * 40))
 
         events = call._call_by_supporting_reads(self.ev, SVTYPE.INV)
         self.assertEqual(1, len(events))
@@ -656,12 +656,12 @@ class TestCallBySupportingReads(unittest.TestCase):
         self.assertEqual(501, event.break2.start)
         self.assertEqual(501, event.break2.end)
 
-    def test_call_both_by_split_read_low_resolution(self):
+    def test_call_by_split_read_low_resolution(self):
         self.ev.split_reads[0].add(
-            MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
+            MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)], query_sequence='A' * 40)
         )
         self.ev.split_reads[1].add(
-            MockRead(query_name='t1', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
+            MockRead(query_name='t1', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)], query_sequence='N' * 40)
         )
 
         break1, break2 = call._call_by_supporting_reads(self.ev, SVTYPE.INV)[0]
@@ -670,6 +670,54 @@ class TestCallBySupportingReads(unittest.TestCase):
         self.assertEqual(101, break1.end)
         self.assertEqual(501, break2.start)
         self.assertEqual(501, break2.end)
+
+    def test_call_by_split_read_resolve_untemp(self):
+        self.ev.split_reads[0].add(MockRead(
+            query_name='t1', reference_start=100, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+            query_sequence='TCGGCTCCCGTACTTGTGTATAAGGGGCTTCTGATGTTAT'))
+        self.ev.split_reads[1].add(MockRead(
+            query_name='t1', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+            query_sequence='ATAACATCAGAAGCCCCTTATACACAAGTACGGGAGCCGA', is_reverse=True))
+
+        event = call._call_by_supporting_reads(self.ev, SVTYPE.INV)[0]
+
+        self.assertEqual(101, event.break1.start)
+        self.assertEqual(101, event.break1.end)
+        self.assertEqual(501, event.break2.start)
+        self.assertEqual(501, event.break2.end)
+        self.assertEqual('', event.untemplated_seq)
+
+    def test_call_by_split_read_resolve_untemp_exists(self):
+        self.ev.split_reads[0].add(MockRead(
+            query_name='t1', reference_start=100, cigar=[(CIGAR.S, 22), (CIGAR.EQ, 18)],
+            query_sequence='TCGGCTCCCGTACTTGTGTATAAGGGGCTTCTGATGTTAT'))
+        self.ev.split_reads[1].add(MockRead(
+            query_name='t1', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+            query_sequence='ATAACATCAGAAGCCCCTTATACACAAGTACGGGAGCCGA', is_reverse=True))
+
+        event = call._call_by_supporting_reads(self.ev, SVTYPE.INV)[0]
+
+        self.assertEqual(101, event.break1.start)
+        self.assertEqual(101, event.break1.end)
+        self.assertEqual(501, event.break2.start)
+        self.assertEqual(501, event.break2.end)
+        self.assertEqual('TA', event.untemplated_seq)
+
+    def test_call_by_split_read_shift_overlap(self):
+        self.ev.split_reads[0].add(MockRead(
+            query_name='t1', reference_start=100, cigar=[(CIGAR.S, 18), (CIGAR.EQ, 22)],
+            query_sequence='TCGGCTCCCGTACTTGTGTATAAGGGGCTTCTGATGTTAT'))
+        self.ev.split_reads[1].add(MockRead(
+            query_name='t1', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+            query_sequence='ATAACATCAGAAGCCCCTTATACACAAGTACGGGAGCCGA', is_reverse=True))
+
+        event = call._call_by_supporting_reads(self.ev, SVTYPE.INV)[0]
+
+        self.assertEqual(101, event.break1.start)
+        self.assertEqual(101, event.break1.end)
+        self.assertEqual(503, event.break2.start)
+        self.assertEqual(503, event.break2.end)
+        self.assertEqual('', event.untemplated_seq)
 
     def test_both_by_flanking_pairs(self):
         self.ev.flanking_pairs.add(mock_read_pair(
@@ -698,16 +746,16 @@ class TestCallBySupportingReads(unittest.TestCase):
 
     def test_call_both_by_split_reads_multiple_calls(self):
         self.ev.split_reads[0].add(
-            MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
+            MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)], query_sequence='A' * 40)
         )
         self.ev.split_reads[1].add(
-            MockRead(query_name='t1', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
+            MockRead(query_name='t1', reference_start=500, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)], query_sequence='T' * 40)
         )
         self.ev.split_reads[0].add(
-            MockRead(query_name='t2', reference_start=110, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
+            MockRead(query_name='t2', reference_start=110, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)], query_sequence='T' * 40)
         )
         self.ev.split_reads[1].add(
-            MockRead(query_name='t2', reference_start=520, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
+            MockRead(query_name='t2', reference_start=520, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)], query_sequence='A' * 40)
         )
 
         evs = call._call_by_supporting_reads(self.ev, SVTYPE.INV)
@@ -1064,8 +1112,8 @@ class TestCallBySpanningReads(unittest.TestCase):
     def test_deletion(self):
         # ATCGATCTAGATCTAGGATAGTTCTAGCAGTCATAGCTAT
         ev = GenomeEvidence(
-            Breakpoint('fake', 100, orient=ORIENT.LEFT),
-            Breakpoint('fake', 500, orient=ORIENT.RIGHT),
+            Breakpoint('fake', 60, orient=ORIENT.LEFT),
+            Breakpoint('fake', 70, orient=ORIENT.RIGHT),
             BamCache(MockBamFileHandle()), None,
             opposing_strands=False,
             read_length=40,
@@ -1074,13 +1122,14 @@ class TestCallBySpanningReads(unittest.TestCase):
             min_flanking_pairs_resolution=1,
             min_spanning_reads_resolution=1
         )
+        print(ev.outer_window1, ev.outer_window2)
         spanning_reads = [
             SamRead(
-                query_name='name', reference_name='1', reference_start=50,
+                query_name='name', reference_name='fake', reference_start=50,
                 cigar=[(CIGAR.EQ, 15), (CIGAR.D, 5), (CIGAR.I, 2), (CIGAR.EQ, 10)],
                 query_sequence='ATCGATCTAGATCTA' 'GG' 'ATAGTTCTAG'),
             SamRead(
-                query_name='name', reference_name='1', reference_start=50,
+                query_name='name', reference_name='fake', reference_start=50,
                 cigar=[(CIGAR.EQ, 15), (CIGAR.I, 2), (CIGAR.D, 5), (CIGAR.EQ, 10)],
                 query_sequence='ATCGATCTAGATCTA' 'GG' 'ATAGTTCTAG')
         ]
@@ -1101,6 +1150,134 @@ class TestCallBySpanningReads(unittest.TestCase):
     def test_duplication(self):
         pass
 
+
+class TestCharacterizeRepeatRegion(unittest.TestCase):
+
+    def test_bad_deletion_call(self):
+        reference_genome = {'19': MockObject(seq=MockLongString(
+            'AAATCTTTTTTCCATTATGGCTATACAAAGTGAATACATTTCCACAAGCAAATATGATAGATTAATTGGTGCATTGTATATATTTCTCAAACCATCAGCTCCTCTT'
+            'TTTTTCAAAGTCTAGAATTTGTAATGGTGGATATCTCTGTTCTGTATTCTGTTGTCTAGATATCCAAGTTTAATGCAAAATTTTATGACATGGAACTTGACACTTT'
+            'CTAGAAATGTTCACATATGGTTGTTTATTAAATTATCTCTCATGGAAATATTTAAATGACATGTTTATTGTCTGAAAAGGACAGATATTTAAGCTTTTTTTTTTTT'
+            'TTTTTCTTTTTTTTTGAGAAAGAGTCTCGTTCTTTTGCCCAGGCTGGAGTGCAGTGGTACAATCTTGGCTCACTACAACCTTCACCTCGCAGGTTCAAGCGATTCT'
+            'CCTGCCTCAGCCTCCCTAGTAGCTGGGATTACAGGTACACACCACCAGGCCCATCTAATTTTTCTATATTTAGTAGAGACAGGGTTTCACCATGTTGGCCAGGCTG'
+            'TTCTCAAACTCCTGACCTCAGCCAATCCGCCCGCCTCAACCTCTTAAAGTGATGGGATTACAGGTGTGAGCCATTGTGCTTGGCCCCCTTTAACTATTTTATGTGA'
+            'CTCTTCT', offset=23951075))}
+        bpp = BreakpointPair(
+            Breakpoint('19', 23951407, orient=ORIENT.LEFT),
+            Breakpoint('19', 23951408, orient=ORIENT.RIGHT),
+            opposing_strands=False,
+            untemplated_seq='',
+            event_type=SVTYPE.DEL
+        )
+        self.assertEqual(0, call.EventCall.characterize_repeat_region(bpp, reference_genome))
+
+    def test_homopolymer_insertion(self):
+        bpp = BreakpointPair(
+            Breakpoint('1', 120, orient=ORIENT.LEFT),
+            Breakpoint('1', 121, orient=ORIENT.RIGHT),
+            untemplated_seq='T',
+            opposing_strands=False,
+            event_type=SVTYPE.INS
+        )
+        reference_genome = {'1': MockObject(seq=MockLongString(
+            'TCGATTCAGGATCAGATTTTGAACAAGTACATACG', offset=100
+        ))}
+        print('upto and including the first breakpoint', reference_genome['1'].seq[bpp.break1.start - 10:bpp.break1.start])
+        self.assertEqual(4, call.EventCall.characterize_repeat_region(bpp, reference_genome))
+
+    def test_homopolymer_deletion(self):
+        bpp = BreakpointPair(
+            Breakpoint('1', 120, orient=ORIENT.LEFT),
+            Breakpoint('1', 122, orient=ORIENT.RIGHT),
+            untemplated_seq='',
+            opposing_strands=False,
+            event_type=SVTYPE.DEL
+        )
+        reference_genome = {'1': MockObject(seq=MockLongString(
+            'TCGATTCAGGATCAGATTTTTGAACAAGTACATACG', offset=100
+        ))}
+        print('upto and including the first breakpoint', reference_genome['1'].seq[bpp.break1.start - 10:bpp.break1.start])
+        self.assertEqual(4, call.EventCall.characterize_repeat_region(bpp, reference_genome))
+
+    def test_homopolymer_duplication(self):
+        bpp = BreakpointPair(
+            Breakpoint('1', 121, orient=ORIENT.RIGHT),
+            Breakpoint('1', 121, orient=ORIENT.LEFT),
+            untemplated_seq='',
+            opposing_strands=False,
+            event_type=SVTYPE.DUP
+        )
+        reference_genome = {'1': MockObject(seq=MockLongString(
+            'TCGATTCAGGATCAGATTTTTGAACAAGTACATACG', offset=100
+        ))}
+        print('upto and including the first breakpoint', reference_genome['1'].seq[bpp.break1.start - 10:bpp.break1.start])
+        self.assertEqual(4, call.EventCall.characterize_repeat_region(bpp, reference_genome))
+
+    def test_repeat_duplication(self):
+        bpp = BreakpointPair(
+            Breakpoint('1', 123, orient=ORIENT.RIGHT),
+            Breakpoint('1', 125, orient=ORIENT.LEFT),
+            untemplated_seq='',
+            opposing_strands=False,
+            event_type=SVTYPE.DUP
+        )
+        reference_genome = {'1': MockObject(seq=MockLongString(
+            'TCGATTCAGGATCAGATAGTAGTAGGAACAAGTACATACG', offset=100
+        ))}
+        print('upto and including the first breakpoint', reference_genome['1'].seq[bpp.break1.start - 10:bpp.break1.start])
+        self.assertEqual(2, call.EventCall.characterize_repeat_region(bpp, reference_genome))
+
+    def test_repeat_insertion(self):
+        bpp = BreakpointPair(
+            Breakpoint('1', 125, orient=ORIENT.LEFT),
+            Breakpoint('1', 126, orient=ORIENT.RIGHT),
+            untemplated_seq='TAG',
+            opposing_strands=False,
+            event_type=SVTYPE.INS
+        )
+        reference_genome = {'1': MockObject(seq=MockLongString(
+            'TCGATTCAGGATCAGATAGTAGTAGGAACAAGTACATACG', offset=100
+        ))}
+        print('upto and including the first breakpoint', reference_genome['1'].seq[bpp.break1.start - 10:bpp.break1.start])
+        self.assertEqual(3, call.EventCall.characterize_repeat_region(bpp, reference_genome))
+
+    def test_repeat_deletion(self):
+        bpp = BreakpointPair(
+            Breakpoint('1', 125, orient=ORIENT.LEFT),
+            Breakpoint('1', 129, orient=ORIENT.RIGHT),
+            untemplated_seq='',
+            opposing_strands=False,
+            event_type=SVTYPE.DEL
+        )
+        reference_genome = {'1': MockObject(seq=MockLongString(
+            'TCGATTCAGGATCAGATAGTAGTAGTAGGAACAAGTACATACG', offset=100
+        ))}
+        print('upto and including the second breakpoint', reference_genome['1'].seq[bpp.break2.start - 10:bpp.break2.start])
+        self.assertEqual(3, call.EventCall.characterize_repeat_region(bpp, reference_genome))
+
+    def test_norepeat_insertion(self):
+        bpp = BreakpointPair(
+            Breakpoint('1', 125, orient=ORIENT.LEFT),
+            Breakpoint('1', 126, orient=ORIENT.RIGHT),
+            untemplated_seq='TTG',
+            opposing_strands=False,
+            event_type=SVTYPE.INS
+        )
+        reference_genome = {'1': MockObject(seq=MockLongString(
+            'TCGATTCAGGATCAGATAGTAGTAGGAACAAGTACATACG', offset=100
+        ))}
+        print('upto and including the first breakpoint', reference_genome['1'].seq[bpp.break1.start - 10:bpp.break1.start])
+        self.assertEqual(0, call.EventCall.characterize_repeat_region(bpp, reference_genome))
+
+    def test_invalid_event_type(self):
+        bpp = BreakpointPair(
+            Breakpoint('1', 125, orient=ORIENT.RIGHT),
+            Breakpoint('1', 126, orient=ORIENT.RIGHT),
+            untemplated_seq='TTG',
+            event_type=SVTYPE.INV
+        )
+        with self.assertRaises(ValueError):
+            call.EventCall.characterize_repeat_region(bpp, None)
 
 if __name__ == '__main__':
     unittest.main()

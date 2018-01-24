@@ -5,8 +5,9 @@ import statistics
 import warnings
 
 from .evidence import TranscriptomeEvidence
-from ..align import SplitAlignment, query_coverage_interval, call_read_events
+from ..align import SplitAlignment, query_coverage_interval, call_read_events, call_paired_read_event
 from ..bam import read as _read
+from ..util import log
 
 from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import CALL_METHOD, CIGAR, COLUMNS, ORIENT, PROTOCOL, PYSAM_READ_FLAGS, STRAND, SVTYPE, reverse_complement
@@ -19,15 +20,9 @@ class EventCall(BreakpointPair):
     directly without a lot of copying. Instead we use call objects which are basically
     just a reference to the evidence object and decisions on class, exact breakpoints, etc
     """
-
     @property
     def has_compatible(self):
-        """bool: True if compatible flanking pairs are appropriate to collect"""
-        try:
-            self.compatible_type
-            return True
-        except AttributeError:
-            return False
+        return False if self.compatible_type is None else True
 
     def __init__(
         self,
@@ -63,14 +58,19 @@ class EventCall(BreakpointPair):
         self.break2_split_reads = set()
         self.compatible_flanking_pairs = set()
         # check that the event type is compatible
-        self.event_type = SVTYPE.enforce(event_type)
         if event_type == SVTYPE.DUP:
             self.compatible_type = SVTYPE.INS
         elif event_type == SVTYPE.INS:
             self.compatible_type = SVTYPE.DUP
-        if event_type not in BreakpointPair.classify(self):
+        else:
+            self.compatible_type = None
+        if event_type not in BreakpointPair.classify(self) and self.compatible_type in BreakpointPair.classify(self):
+            event_type, self.compatible_type = self.compatible_type, event_type
+        self.event_type = SVTYPE.enforce(event_type)
+        if event_type not in BreakpointPair.classify(self) | {self.compatible_type}:
             raise ValueError(
-                'event_type is not compatible with the breakpoint call', event_type, BreakpointPair.classify(self))
+                'event_type is not compatible with the breakpoint call',
+                event_type, BreakpointPair.classify(self), self.compatible_type)
         self.contig = contig
         self.call_method = CALL_METHOD.enforce(call_method)
         if contig and self.call_method != CALL_METHOD.CONTIG:
@@ -99,6 +99,22 @@ class EventCall(BreakpointPair):
         if self.contig:
             support.update(self.contig.input_reads)
         return support
+
+    def is_supplementary(self):
+        """
+        check if the current event call was the target event given the source evidence object or an off-target call, i.e.
+        something that was called as part of the original target.
+        This is important b/c if the current event was not one of the original target it may not be fully investigated in
+        other libraries
+        """
+        return not all([
+            {self.event_type, self.compatible_type} & BreakpointPair.classify(self.source_evidence),
+            self.break1 & self.source_evidence.outer_window1,
+            self.break2 & self.source_evidence.outer_window2,
+            self.break1.chr == self.source_evidence.break1.chr,
+            self.break2.chr == self.source_evidence.break2.chr,
+            self.opposing_strands == self.source_evidence.opposing_strands
+        ])
 
     def add_flanking_support(self, flanking_pairs, is_compatible=False):
         """
@@ -258,6 +274,44 @@ class EventCall(BreakpointPair):
 
         return reads1 & reads2
 
+    @staticmethod
+    def characterize_repeat_region(event, reference_genome):
+        """
+        For a given event, determines the number of repeats the insertion/duplication/deletion is following.
+        This is most useful in flagging homopolymer regions. Will raise a ValueError if the current event is
+        not an expected type or is non-specific.
+        """
+        if len(event.break1) + len(event.break2) > 2:
+            raise ValueError('Cannot characterize a repeat region for a non-specific call')
+        elif not any([
+            event.event_type == SVTYPE.INS and event.untemplated_seq,
+            event.event_type in {SVTYPE.DEL, SVTYPE.DUP} and not event.untemplated_seq
+        ]):
+            raise ValueError(
+                'Characterizing repeat regions does not make sense for the given event type',
+                event.event_type, event.untemplated_seq)
+
+        expected_sequence = None
+        rightmost = None
+        if event.event_type == SVTYPE.DEL:
+            expected_sequence = reference_genome[event.break1.chr].seq[event.break1.start:event.break2.end - 1]
+            rightmost = event.break1.start
+        elif event.event_type == SVTYPE.DUP:
+            expected_sequence = reference_genome[event.break1.chr].seq[event.break1.start - 1:event.break2.end]
+            rightmost = event.break1.start - 1
+        else:
+            expected_sequence = event.untemplated_seq
+            rightmost = event.break1.start
+
+        repeat_count = 0
+        while rightmost - len(expected_sequence) > 0 and expected_sequence:
+            ref = reference_genome[event.break1.chr].seq[rightmost - len(expected_sequence):rightmost].upper()
+            if ref != expected_sequence:
+                break
+            repeat_count += 1
+            rightmost -= len(expected_sequence)
+        return repeat_count
+
     def flatten(self):
         """
         converts the current call to a dictionary for a row in a tabbed file
@@ -280,8 +334,14 @@ class EventCall(BreakpointPair):
             COLUMNS.contig_remap_coverage: None,
             COLUMNS.contig_read_depth: None,
             COLUMNS.contig_break1_read_depth: None,
-            COLUMNS.contig_break2_read_depth: None
+            COLUMNS.contig_break2_read_depth: None,
+            COLUMNS.supplementary_call: self.is_supplementary()
         })
+        try:
+            row[COLUMNS.repeat_count] = EventCall.characterize_repeat_region(self, self.source_evidence.reference_genome)
+        except ValueError:
+            row[COLUMNS.repeat_count] = None
+
         median, stdev = self.flanking_metrics()
         flank = set()
         for read, mate in self.flanking_pairs:
@@ -376,22 +436,26 @@ class EventCall(BreakpointPair):
 
 def _call_by_contigs(source_evidence):
     # try calling by contigs
-    contig_calls = []
+    all_contig_calls = []
     for ctg in source_evidence.contigs:
+        curr_contig_calls = []
         for aln in ctg.alignments:
             if aln.is_putative_indel and aln.net_size(source_evidence.distance) == Interval(0):
                 continue
             for event_type in BreakpointPair.classify(aln, distance=source_evidence.distance):
-                new_event = EventCall(
-                    aln.break1,
-                    aln.break2,
-                    source_evidence,
-                    event_type,
-                    contig=ctg,
-                    contig_alignment=aln,
-                    untemplated_seq=aln.untemplated_seq,
-                    call_method=CALL_METHOD.CONTIG
-                )
+                try:
+                    new_event = EventCall(
+                        aln.break1,
+                        aln.break2,
+                        source_evidence,
+                        event_type,
+                        contig=ctg,
+                        contig_alignment=aln,
+                        untemplated_seq=aln.untemplated_seq,
+                        call_method=CALL_METHOD.CONTIG
+                    )
+                except ValueError:
+                    continue
                 # add the flanking support
                 new_event.add_flanking_support(source_evidence.flanking_pairs)
                 if new_event.has_compatible:
@@ -406,8 +470,11 @@ def _call_by_contigs(source_evidence):
                 for read in source_evidence.split_reads[1]:
                     new_event.add_break2_split_read(read)
 
-                contig_calls.append(new_event)
-    return contig_calls
+                curr_contig_calls.append(new_event)
+        # remove any supplementary calls that are not associated with a target call
+        if not all([c.is_supplementary() for c in curr_contig_calls]):
+            all_contig_calls.extend(curr_contig_calls)
+    return all_contig_calls
 
 
 def filter_consumed_pairs(pairs, consumed_reads):
@@ -458,13 +525,16 @@ def _call_by_spanning_reads(source_evidence, consumed_evidence):
             event.break1.strand = STRAND.NS
             event.break2.strand = STRAND.NS
         for event_type in BreakpointPair.classify(source_evidence) & BreakpointPair.classify(event, distance=source_evidence.distance):
-            new_event = EventCall(
-                event.break1, event.break2,
-                source_evidence,
-                event_type,
-                CALL_METHOD.SPAN,
-                untemplated_seq=event.untemplated_seq
-            )
+            try:
+                new_event = EventCall(
+                    event.break1, event.break2,
+                    source_evidence,
+                    event_type,
+                    CALL_METHOD.SPAN,
+                    untemplated_seq=event.untemplated_seq
+                )
+            except ValueError:
+                continue
             new_event.spanning_reads.update(reads)
             # add any supporting split reads
             # add the flanking support
@@ -476,8 +546,22 @@ def _call_by_spanning_reads(source_evidence, consumed_evidence):
                 new_event.add_break1_split_read(read)
             for read in source_evidence.split_reads[1] - consumed_evidence:
                 new_event.add_break2_split_read(read)
+
             result.append(new_event)
-    return result
+    # remove any supplementary calls that are not associated with a target call
+    target_call_reads = set()
+    for event in result:
+        if not event.is_supplementary():
+            target_call_reads.update(event.spanning_reads)
+    filtered_events = []
+    for event in result:
+        if event.is_supplementary():
+            if event.spanning_reads & target_call_reads:
+                filtered_events.append(event)
+        else:
+            filtered_events.append(event)
+
+    return filtered_events
 
 
 def call_events(source_evidence):
@@ -753,18 +837,54 @@ def _call_by_supporting_reads(evidence, event_type, consumed_evidence=None):
             if deletion_size > evidence.max_expected_fragment_size and event_type == SVTYPE.INS:
                 continue
 
-        first_breakpoint = Breakpoint(evidence.break1.chr, first, strand=evidence.break1.strand, orient=evidence.break1.orient)
-        second_breakpoint = Breakpoint(evidence.break2.chr, second, strand=evidence.break2.strand, orient=evidence.break2.orient)
-        call = EventCall(
-            first_breakpoint, second_breakpoint, evidence, event_type,
-            call_method=CALL_METHOD.SPLIT
-        )
-        call.add_flanking_support(available_flanking_pairs)
-        if call.has_compatible:
-            call.add_flanking_support(available_flanking_pairs, is_compatible=True)
-        call.break1_split_reads.update(pos1[first])
-        call.break2_split_reads.update(pos2[second])
-        linked_pairings.append(call)
+        # check if any of the aligned reads are 'double' aligned
+        double_aligned = {}
+        for read in pos1[first] | pos2[second]:
+            seq_key = tuple(sorted([
+                read.query_name, read.query_sequence, reverse_complement(read.query_sequence)
+            ]))  # seq and revseq are equal
+            double_aligned.setdefault(seq_key, []).append(read)
+
+        # now create calls using the double aligned split read pairs if possible (to resolve untemplated sequence)
+        resolved_calls = set()
+        event_types = {event_type}
+        if event_type in {SVTYPE.DUP, SVTYPE.INS}:
+            event_types.update({SVTYPE.DUP, SVTYPE.INS})
+        for reads in [d for d in double_aligned.values() if len(d) > 1]:
+            for read1, read2 in itertools.combinations(reads, 2):
+                if len(resolved_calls) > 1:
+                    break
+                try:
+                    call = call_paired_read_event(read1, read2)
+                    if BreakpointPair.classify(call) & event_types:  # ensure we are calling the correct event types
+                        resolved_calls.add(call)
+                except AssertionError:
+                    pass  # will be thrown if the reads do not actually belong together
+            if len(resolved_calls) > 1:
+                break
+        try:
+            if len(resolved_calls) == 1:
+                call = resolved_calls.pop()
+                call = EventCall(
+                    call.break1, call.break2, evidence, event_type,
+                    call_method=CALL_METHOD.SPLIT, untemplated_seq=call.untemplated_seq
+                )
+            else:
+                first_breakpoint = Breakpoint(evidence.break1.chr, first, strand=evidence.break1.strand, orient=evidence.break1.orient)
+                second_breakpoint = Breakpoint(evidence.break2.chr, second, strand=evidence.break2.strand, orient=evidence.break2.orient)
+                call = EventCall(
+                    first_breakpoint, second_breakpoint, evidence, event_type,
+                    call_method=CALL_METHOD.SPLIT
+                )
+        except ValueError:  # incompatible types
+            continue
+        else:
+            call.add_flanking_support(available_flanking_pairs)
+            if call.has_compatible:
+                call.add_flanking_support(available_flanking_pairs, is_compatible=True)
+            call.break1_split_reads.update(pos1[first])
+            call.break2_split_reads.update(pos2[second])
+            linked_pairings.append(call)
 
     for call in linked_pairings:
         consumed_evidence.update(call.support())

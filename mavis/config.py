@@ -358,6 +358,8 @@ class MavisConfig:
         Returns:
             class:`list` of :class:`Namespace`: namespace arguments for each library
         """
+        if not os.path.exists(filepath):
+            raise OSError('File does not exist: {}'.format(filepath))
         parser = ConfigParser(interpolation=ExtendedInterpolation())
         parser.read(filepath)
         config_dict = {}

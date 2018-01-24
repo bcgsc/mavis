@@ -1,13 +1,13 @@
 from functools import partial
-import itertools
 import os
+import re
 import time
 
 import tab
 
-from .constants import DEFAULTS
+from .constants import DEFAULTS, HOMOPOLYMER_MIN_LENGTH
 from .summary import annotate_dgv, filter_by_annotations, filter_by_call_method, filter_by_evidence, get_pairing_state, group_by_distance
-from ..constants import CALL_METHOD, COLUMNS
+from ..constants import CALL_METHOD, COLUMNS, PROTOCOL
 from ..pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from ..util import generate_complete_stamp, log, output_tabbed_file, read_inputs, soft_cast
 
@@ -28,6 +28,7 @@ def main(
     filter_min_spanning_reads=DEFAULTS.filter_min_spanning_reads,
     filter_min_flanking_reads=DEFAULTS.filter_min_flanking_reads,
     filter_min_split_reads=DEFAULTS.filter_min_split_reads,
+    filter_trans_homopolymers=DEFAULTS.filter_trans_homopolymers,
     filter_min_linking_split_reads=DEFAULTS.filter_min_linking_split_reads,
     flanking_call_distance=PAIRING_DEFAULTS.flanking_call_distance,
     split_call_distance=PAIRING_DEFAULTS.split_call_distance,
@@ -117,14 +118,27 @@ def main(
                 if t.is_best_transcript:
                     best_transcripts[t.name] = t
 
-    # filter by synonymous
-    if filter_cdna_synon or filter_protein_synon:
+    # filter by synonymous and RNA homopolymers
+    if filter_cdna_synon or filter_protein_synon or filter_trans_homopolymers:
         temp = []
         for bpp in bpps:
             if filter_protein_synon and bpp.protein_synon:
                 continue
             elif filter_cdna_synon and bpp.cdna_synon:
                 continue
+            elif bpp.protocol == PROTOCOL.TRANS and bpp.data.get(COLUMNS.repeat_count, None):
+                # a transcriptome event in a repeat region
+                match = re.match(r'^(-?\d+)-(-?\d+)$', str(bpp.data[COLUMNS.net_size]))
+                if match:
+                    netsize_min = abs(int(match.group(1)))
+                    netsize_max = abs(int(match.group(2)))
+
+                    if all([
+                        int(bpp.repeat_count) >= HOMOPOLYMER_MIN_LENGTH,
+                        netsize_min == netsize_max and netsize_min == 1,
+                        PROTOCOL.GENOME not in bpp.data.get(COLUMNS.pairing, '')
+                    ]):
+                        continue
             temp.append(bpp)
         bpps = temp
 
@@ -246,6 +260,7 @@ def main(
         COLUMNS.spanning_reads,
         COLUMNS.contig_remapped_reads,
         COLUMNS.tracking_id,
+        COLUMNS.supplementary_call,
         COLUMNS.net_size,
         'dgv'}
 

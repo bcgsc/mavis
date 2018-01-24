@@ -346,14 +346,14 @@ def load_reference_genome(filename, low_mem=False):
                 raise KeyError(
                     'template names {} and {} are considered equal but both have been defined in the reference'
                     'loaded'.format(template_name, truncated))
-            reference_genome.setdefault(truncated, reference_genome[template_name])
+            reference_genome.setdefault(truncated, reference_genome[template_name].upper())
         else:
             prefixed = 'chr' + template_name
             if prefixed in reference_genome:
                 raise KeyError(
                     'template names {} and {} are considered equal but both have been defined in the reference'
                     'loaded'.format(template_name, prefixed))
-            reference_genome.setdefault(prefixed, reference_genome[template_name])
+            reference_genome.setdefault(prefixed, reference_genome[template_name].upper())
         reference_genome[template_name] = reference_genome[template_name].upper()
     return reference_genome
 

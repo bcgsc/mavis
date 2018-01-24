@@ -8,7 +8,7 @@ from Bio.Alphabet import Gapped
 from Bio.Alphabet.IUPAC import ambiguous_dna
 from Bio.Data.IUPACData import ambiguous_dna_values
 from Bio.Seq import Seq
-from tab import cast_boolean
+from tab import cast_boolean, cast_null
 
 
 class MavisNamespace(argparse.Namespace):
@@ -265,6 +265,17 @@ def float_fraction(num):
     if num < 0 or num > 1:
         raise argparse.ArgumentTypeError('Must be a value between 0 and 1')
     return num
+
+
+def nullable_int(num):
+    """
+    casts input to an int if not an accepted null value. See :func:tab.tab.cast_null
+    """
+    try:
+        return cast_null(num)
+    except TypeError:
+        pass
+    return int(num)
 
 
 COMPLETE_STAMP = 'MAVIS.COMPLETE'
@@ -630,7 +641,9 @@ COLUMNS = MavisNamespace(
     filter_comment='filter_comment',
     cdna_synon='cdna_synon',
     protein_synon='protein_synon',
-    net_size='net_size'
+    supplementary_call='supplementary_call',
+    net_size='net_size',
+    repeat_count='repeat_count'
 )
 """:class:`MavisNamespace`: Column names for i/o files used throughout the pipeline
 
@@ -723,8 +736,10 @@ COLUMNS = MavisNamespace(
 - :term:`tracking_id`
 - :term:`transcript1`
 - :term:`transcript2`
+- :term:`supplementary_call`
 - :term:`untemplated_seq`
 - :term:`validation_id`
+- :term:`repeat_count`
 """
 
 

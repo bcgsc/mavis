@@ -1,3 +1,4 @@
+import hashlib
 import itertools
 import os
 import re
@@ -137,7 +138,7 @@ def main(
             ))
 
     evidence_clusters, filtered_evidence_clusters = filter_on_overlap(evidence_clusters, extended_masks)
-    contig_sequences = set()
+    contig_sequences = {}
     for i, evidence in enumerate(evidence_clusters):
         print()
         log(
@@ -165,8 +166,11 @@ def main(
         evidence.assemble_contig(log=log)
         log('assembled {} contigs'.format(len(evidence.contigs)), time_stamp=False)
         for contig in evidence.contigs:
-            log('>', contig.seq[:100] + '...' if len(contig.seq) > 100 else '', time_stamp=False)
-            contig_sequences.add(contig.seq)
+            name = 'seq-{}'.format(hashlib.md5(contig.seq.encode('utf-8')).hexdigest())
+            log('>', name, '(size={}; reads={:.0f}; coverage={:.2f})'.format(
+                len(contig.seq), contig.remap_score(), contig.remap_coverage()), time_stamp=False)
+            log(contig.seq[:140], time_stamp=False)
+            contig_sequences[name] = contig.seq
 
     log('will output:', contig_aligner_fa, contig_aligner_output)
     raw_contig_alignments = align_sequences(

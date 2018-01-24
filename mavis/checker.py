@@ -38,23 +38,31 @@ class LogDetails:
             lines = fh.readlines()
             if not lines:
                 self.status = LOGFILE_STATUS.EMPTY
-            elif any([msg in lines[-1].lower() for msg in ['error', 'fault']]):
-                self.status = LOGFILE_STATUS.CRASH
-                self.message = lines[-1].strip()
             else:
-                run_time = None
-                for line in lines[-10:]:
-                    match = re.match(r'^\s*run time \(s\): (\d+)\s*$', line)
-                    if match:
-                        run_time = int(match.group(1))
+                for line in lines[::-1]:
+                    line = line.strip()
+                    if line:
+                        non_empty_line = line.lower()
                         break
-                if run_time is None:
-                    self.status = LOGFILE_STATUS.INCOMPLETE
-                    self.message = lines[-1].strip()
-                    self.last_mod = os.path.getmtime(filename)
                 else:
-                    self.run_time = run_time
-                    self.status = LOGFILE_STATUS.COMPLETE
+                    non_empty_line = lines[-1].lower()
+                if re.search(r'\b(error|fault|fatal|aborted|core dumped|killed|died)\b', non_empty_line):
+                    self.status = LOGFILE_STATUS.CRASH
+                    self.message = non_empty_line.strip()
+                else:
+                    run_time = None
+                    for line in lines[-10:]:
+                        match = re.match(r'^\s*run time \(s\): (\d+)\s*$', line)
+                        if match:
+                            run_time = int(match.group(1))
+                            break
+                    if run_time is None:
+                        self.status = LOGFILE_STATUS.INCOMPLETE
+                        self.message = lines[-1].strip()
+                        self.last_mod = os.path.getmtime(filename)
+                    else:
+                        self.run_time = run_time
+                        self.status = LOGFILE_STATUS.COMPLETE
 
 
 def parse_run_time(filename):
@@ -162,7 +170,7 @@ class PipelineStageRun:
                     log('{}{} jobs not started (no log/stamp) (jobs: {})'.format(
                         indent * (indent_level + 1), len(missing_both), convert_set_to_ranges(missing_both)), time_stamp=False)
                 if incomplete_jobs:
-                    log('{}{} jobs running, incomplete without errors (jobs: {})'.format(
+                    log('{}{} jobs incomplete without errors (jobs: {})'.format(
                         indent * (indent_level + 1), len(incomplete_jobs), convert_set_to_ranges(incomplete_jobs)), time_stamp=False)
                 if errors:
                     log('{}{} jobs CRASHED (jobs: {})'.format(
@@ -183,7 +191,7 @@ class PipelineStageRun:
                 if missing_both:
                     log(indent * (indent_level + 1) + 'job not started (no log/stamp)', time_stamp=False)
                 if incomplete_jobs:
-                    log(indent * (indent_level + 1) + 'job running, incomplete without errors', time_stamp=False)
+                    log(indent * (indent_level + 1) + 'job incomplete without errors', time_stamp=False)
                 if errors:
                     log(indent * (indent_level + 1) + 'job CRASHED', self.logs[None].message, time_stamp=False)
             return False if any([incomplete_jobs, missing_both, missing_stamp, errors]) else True
@@ -197,10 +205,10 @@ class PipelineStageRun:
                 self.avg_run_time = int(round(self.total_run_time / len(self.job_ids), 0))
                 prefix = indent * (indent_level + 1) + ('' if all_times else 'min ')
                 if self.name in [SUBCOMMAND.ANNOTATE, SUBCOMMAND.VALIDATE]:
-                    log(prefix + 'run time (s): {} (max), {} (total), {} (average)'.format(
-                        self.max_run_time, self.total_run_time, self.avg_run_time), time_stamp=False)
+                    log(prefix + 'run times ({} jobs): {} (max), {} (total), {} (average)'.format(
+                        len(self.job_ids), self.max_run_time, self.total_run_time, self.avg_run_time), time_stamp=False)
                 else:
-                    log(prefix + 'run time (s):', self.max_run_time, time_stamp=False)
+                    log(prefix + 'run time:', self.max_run_time, time_stamp=False)
             else:
                 log(indent * (indent_level + 1) + 'error parsing run-times from the log files', time_stamp=False)
             return True
@@ -310,6 +318,9 @@ class LibraryRun:
             self.annotation = None
 
     def report(self):
+        self.max_run_time = 0
+        self.total_run_time = 0
+        self.avg_run_time = 0
         result = True
         collective_job_ids = self.cluster.job_ids | self.annotation.job_ids
         if self.validation:
@@ -330,13 +341,14 @@ class LibraryRun:
         else:
             self.log_parse_error = True
         for stage in [self.validation, self.annotation]:
-            if stage:
-                if stage.max_run_time is not None:
-                    self.max_run_time += stage.max_run_time
-                    self.total_run_time += stage.total_run_time
-                    self.avg_run_time += stage.avg_run_time
-                else:
-                    self.log_parse_error = True
+            if not stage:
+                continue
+            if stage.max_run_time is not None:
+                self.max_run_time += stage.max_run_time
+                self.total_run_time += stage.total_run_time
+                self.avg_run_time += stage.avg_run_time
+            else:
+                self.log_parse_error = True
         return result
 
 
@@ -388,7 +400,7 @@ def check_completion(target_dir, skipped_stages=None):
             log('ignoring dir', subdir)
 
     success_flag = True
-    max_run_time = 0
+    max_run_time = []
     total_run_time = 0
     log_parse_error = False
     for lib in sorted(libraries, key=lambda x: x.name):
@@ -396,10 +408,11 @@ def check_completion(target_dir, skipped_stages=None):
         if not lib.report():
             success_flag = False
         if lib.max_run_time:
-            max_run_time += lib.max_run_time
+            max_run_time.append(lib.max_run_time)
             total_run_time += lib.total_run_time
         if lib.log_parse_error:
             log_parse_error = True
+    max_run_time = max(max_run_time + [0])
 
     if not pairing.report(time_stamp=True):
         success_flag = False

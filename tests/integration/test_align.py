@@ -13,7 +13,7 @@ from mavis.validate.evidence import GenomeEvidence
 from mavis.validate.constants import DEFAULTS
 from mavis.bam.read import SamRead
 
-from . import BAM_INPUT, MockBamFileHandle, MockObject, MockRead, REFERENCE_GENOME_FILE, REFERENCE_GENOME_FILE_2BIT
+from . import BAM_INPUT, MockBamFileHandle, MockObject, MockLongString, MockRead, REFERENCE_GENOME_FILE, REFERENCE_GENOME_FILE_2BIT
 
 
 REFERENCE_GENOME = None
@@ -73,7 +73,7 @@ class TestAlign(unittest.TestCase):
                 'TTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT', 0)
         ]
         print(ev.contigs[0].seq)
-        seq = align.align_sequences([ev.contigs[0].seq], BAM_CACHE, REFERENCE_GENOME, aligner_reference=REFERENCE_GENOME_FILE_2BIT, aligner='blat')
+        seq = align.align_sequences({'seq': ev.contigs[0].seq}, BAM_CACHE, REFERENCE_GENOME, aligner_reference=REFERENCE_GENOME_FILE_2BIT, aligner='blat')
         print(seq)
         align.select_contig_alignments(ev, seq)
         print(ev.contigs[0].alignments)
@@ -110,7 +110,7 @@ class TestAlign(unittest.TestCase):
         ]
         print(ev.contigs[0].seq)
         seq = align.align_sequences(
-            [ev.contigs[0].seq], BAM_CACHE, REFERENCE_GENOME,
+            {'seq': ev.contigs[0].seq}, BAM_CACHE, REFERENCE_GENOME,
             aligner_reference=REFERENCE_GENOME_FILE,
             aligner='bwa mem',
             aligner_output_file='mem.out',
@@ -148,7 +148,7 @@ class TestAlign(unittest.TestCase):
                 'GGTATATATTTCTCAGATAAAAGATATTTTCCCTTTTATCTTTCCCTAAGCTCACACTACATATATTGCATTTATCTTATATCTGCTTTAAAACCTATTTAT'
                 'TATGTCATTTAAATATCTAGAAAAGTTATGACTTCACCAGGTATGAAAAATATAAAAAGAACTCTGTCAAGAAT', 0)
         ]
-        seq = align.align_sequences([ev.contigs[0].seq], BAM_CACHE, REFERENCE_GENOME, aligner_reference=REFERENCE_GENOME_FILE_2BIT, aligner='blat')
+        seq = align.align_sequences({'seq': ev.contigs[0].seq}, BAM_CACHE, REFERENCE_GENOME, aligner_reference=REFERENCE_GENOME_FILE_2BIT, aligner='blat')
         for query, reads in seq.items():
             print('>>>', query)
             for read in reads:
@@ -186,7 +186,7 @@ class TestAlign(unittest.TestCase):
         seq = 'GGTATATATTTCTCAGATAAAAGATATTTTCCCTTTTATCTTTCCCTAAGCTCACACTACATATATTGCATTTATCTTATATCTGCTTTAAAACCTATTTAT' \
               'TATGTCATTTAAATATCTAGAAAAGTTATGACTTCACCAGGTATGAAAAATATAAAAAGAACTCTGTCAAGAAT'
         ev.contigs = [Contig(reverse_complement(seq), 0)]
-        align.select_contig_alignments(ev, align.align_sequences([ev.contigs[0].seq], BAM_CACHE, REFERENCE_GENOME, aligner_reference=REFERENCE_GENOME_FILE_2BIT, aligner='blat'))
+        align.select_contig_alignments(ev, align.align_sequences({'seq': ev.contigs[0].seq}, BAM_CACHE, REFERENCE_GENOME, aligner_reference=REFERENCE_GENOME_FILE_2BIT, aligner='blat'))
         print('alignments:', ev.contigs[0].alignments)
         alignment = list(ev.contigs[0].alignments)[0]
         print(alignment)
@@ -342,7 +342,8 @@ class TestCallBreakpointPair(unittest.TestCase):
     def test_single_duplication_with_trailing_untemp(self):
         r = MockRead(
             query_sequence=(
-                'GGATGATTTACCTTGGGTAATGAAACTCAGATTTTGCTGTTGTTTTTGTTC'
+                'GGATGATTTACCTTGGGTAATGAAACTCA'
+                'GATTTTGCTGTTGTTTTTGTTC'
                 'GATTTTGCTGTTGTTTTTGTTC' 'GTCAA'
                 'CAAAGTGTTTTATACTGATAAAGCAACCCCGGTTTAGCATTGCCATTGGTAA'),
             query_name='duplication_with_untemp',
@@ -352,6 +353,9 @@ class TestCallBreakpointPair(unittest.TestCase):
             cigar=[(CIGAR.EQ, 51), (CIGAR.I, 27), (CIGAR.EQ, 52)],
             is_reverse=False)
         # repeat: GATTTTGCTGTTGTTTTTGTTC
+        print(r)
+        print(REFERENCE_GENOME['reference3'][1497:1497 + 51])
+        print(REFERENCE_GENOME['reference3'][1548 - 21:1548 + 1])
         bpp = align.call_read_events(r)[0]
         print(bpp)
         bpp = align.convert_to_duplication(bpp, REFERENCE_GENOME)
@@ -590,6 +594,52 @@ class TestCallBreakpointPair(unittest.TestCase):
         self.assertEqual(111, bpp.break2.start)
         self.assertEqual('AAATTTCCCGGGAATT', bpp.break1.seq)
         self.assertEqual(reverse_complement('GGATCGATCGAT'), bpp.break2.seq)
+
+
+class TestConvertToDuplication(unittest.TestCase):
+
+    def test_insertion_to_duplication(self):
+        # BPP(Breakpoint(3:60204611L), Breakpoint(3:60204612R), opposing=False, seq='CATACATACATACATACATACATACATACATA')
+        # insertion contig [seq2] contig_alignment_score: 0.99, contig_alignment_mq: Interval(255, 255)
+        # (3:60132614[seq2]140=71788D69=32I86=, None))
+        bpp = BreakpointPair(
+            Breakpoint('3', 60204611, orient='L'), Breakpoint('3', 60204612, orient='R'),
+            untemplated_seq='CATACATACATACATACATACATACATACATA',
+            opposing_strands=False
+        )
+        reference_genome = {'3': MockObject(
+            seq=MockLongString('CAGGGTCTGAGCTCTTAACTCTATACTGCCTACATACATACATACATACATACATATATACATACATATATAAATT', offset=60204555))}
+        print(reference_genome['3'].seq[60204588:60204588 + 8], 'CATACATA')
+        setattr(bpp, 'read1', MockObject(query_sequence='', query_name=None))
+        setattr(bpp, 'read2', None)
+        event = align.convert_to_duplication(bpp, reference_genome)
+        print(event)
+        self.assertEqual(ORIENT.RIGHT, event.break1.orient)
+        self.assertEqual(60204588, event.break1.start)
+        self.assertEqual(ORIENT.LEFT, event.break2.orient)
+        self.assertEqual(60204611, event.break2.start)
+        # CATACATACATACATACATACATACATACATA
+        # ........................********
+        self.assertEqual('CATACATA', event.untemplated_seq)
+
+    def test_single_bp_insertion(self):
+        bpp = BreakpointPair(
+            Breakpoint('3', 121, orient='L'), Breakpoint('3', 122, orient='R'),
+            untemplated_seq='T',
+            opposing_strands=False
+        )
+        reference_genome = {'3': MockObject(
+            seq=MockLongString('ATCGAGCTACGGATCTTTTTTCGATCGATCAATA', offset=100))}
+        print(reference_genome['3'].seq[120 - 10:121])
+        setattr(bpp, 'read1', MockObject(query_sequence='', query_name=None))
+        setattr(bpp, 'read2', None)
+        event = align.convert_to_duplication(bpp, reference_genome)
+        print(event)
+        self.assertEqual(ORIENT.RIGHT, event.break1.orient)
+        self.assertEqual(121, event.break1.start)
+        self.assertEqual(ORIENT.LEFT, event.break2.orient)
+        self.assertEqual(121, event.break2.start)
+        self.assertEqual('', event.untemplated_seq)
 
 
 class TestSelectContigAlignments(unittest.TestCase):

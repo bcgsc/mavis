@@ -130,14 +130,15 @@ def draw_sv_summary_diagram(
             colors[ann.transcript1] = config.gene1_color_selected
 
     if ann.transcript2:
+        same = ann.transcript1 == ann.transcript2
         try:
             genes2.add(ann.transcript2.gene)
-            colors.setdefault(ann.transcript2.gene, config.gene2_color_selected)
+            colors[ann.transcript2.gene] = config.gene2_color_selected if not same else config.gene1_color_selected
             for exon in ann.transcript2.exons:
-                colors.setdefault(exon, config.exon2_color)
+                colors[exon] = config.exon2_color if not same else config.exon1_color
         except AttributeError:
             genes2.add(ann.transcript2)
-            colors[ann.transcript2] = config.gene2_color_selected
+            colors[ann.transcript2] = config.gene2_color_selected if not same else config.gene1_color_selected
 
     if draw_reference_genes:
         # set all the labels so that they are re-used correctly
@@ -226,7 +227,8 @@ def draw_sv_summary_diagram(
                 pass  # Intergenic region or None
         else:  # separate drawings
             try:
-                ratio = max(0.25, min(len(ann.transcript1.exons) / len(ann.transcript2.exons), 0.75))
+                ratio = len(ann.transcript1.exons) / (len(ann.transcript1.exons) + len(ann.transcript2.exons))
+                ratio = max(0.25, min(ratio, 0.75))  # must be between 0.25 - 0.75
             except AttributeError:
                 ratio = 0.5
 

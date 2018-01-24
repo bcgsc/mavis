@@ -86,7 +86,7 @@ def main(
 
     # output files
     batch_id = 'batch-' + str(uuid()) if batch_id is None else batch_id
-    uninform_output = os.path.join(output, 'uninformative_clusters.txt')
+    filtered_output = os.path.join(output, 'filtered_pairs.tab')
     cluster_assign_output = os.path.join(output, 'cluster_assignment.tab')
 
     # load the input files
@@ -107,16 +107,21 @@ def main(
     other_libs = set()
     other_chr = set()
     unfiltered_breakpoint_pairs = []
+    filtered_pairs = []
     log('filtering by library and chr name')
     for bpp in breakpoint_pairs:
         if bpp.library is None:
             bpp.library = library
         if bpp.library != library:
             other_libs.add(bpp.library)
+            bpp.data[COLUMNS.filter_comment] = 'Not the target library name'
+            filtered_pairs.append(bpp)
         elif bpp.break1.chr in limit_to_chr and bpp.break2.chr in limit_to_chr:
             unfiltered_breakpoint_pairs.append(bpp)
         else:
             other_chr.update({bpp.break1.chr, bpp.break2.chr})
+            bpp.data[COLUMNS.filter_comment] = 'Non standard chromosome name'
+            filtered_pairs.append(bpp)
     other_chr -= set(limit_to_chr)
     breakpoint_pairs = unfiltered_breakpoint_pairs
     if other_libs:
@@ -124,21 +129,26 @@ def main(
     if other_chr:
         log('warning: filtered events on chromosomes not found in "limit_to_chr"', other_chr)
     # filter by masking file
-    breakpoint_pairs, _ = filter_on_overlap(breakpoint_pairs, masking)
+    breakpoint_pairs, masked_pairs = filter_on_overlap(breakpoint_pairs, masking)
+    for bpp in masked_pairs:
+        filtered_pairs.append(bpp)
     # filter by informative
     if uninformative_filter:
         log('filtering from', len(breakpoint_pairs), 'breakpoint pairs using informative filter')
-        pass_clusters, uninformative_clusters = filter_uninformative(annotations, breakpoint_pairs)
+        pass_clusters, uninformative_clusters = filter_uninformative(annotations, breakpoint_pairs, max_proximity=max_proximity)
         log(
             'filtered from', len(breakpoint_pairs),
             'down to', len(pass_clusters),
             '(removed {})'.format(len(uninformative_clusters))
         )
         breakpoint_pairs = pass_clusters
-        output_tabbed_file(uninformative_clusters, uninform_output)
+        for bpp in uninformative_clusters:
+            bpp.data[COLUMNS.filter_comment] = 'Uninformative'
+            filtered_pairs.append(bpp)
     else:
         log('did not apply uninformative filter')
 
+    output_tabbed_file(filtered_pairs, filtered_output)
     mkdirp(output)
 
     if not split_only:

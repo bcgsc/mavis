@@ -63,7 +63,7 @@ class TestPipeline(unittest.TestCase):
         for lib in[MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER))
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'batch-*-1.tab'))
-            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'uninformative_clusters.txt'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'filtered_pairs.tab'))
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'clusters.bed'))
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'cluster_assignment.tab'))
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, '*.COMPLETE'))
@@ -131,6 +131,12 @@ class TestPipeline(unittest.TestCase):
             self.assertEqual(0, main())
         self.assertTrue(glob_exists(self.temp_output, 'submit_pipeline*.sh'))
 
+    def test_error_on_bad_config(self):
+        args = ['mavis', SUBCOMMAND.PIPELINE, 'thing/that/doesnot/exist.cfg', '-o', self.temp_output]
+        with patch.object(sys, 'argv', args):
+            with self.assertRaises(OSError):
+                self.assertEqual(0, main())
+
     def test_full_pipeline(self):
         args = ['mavis', SUBCOMMAND.PIPELINE, CONFIG, '-o', self.temp_output]
         with patch.object(sys, 'argv', args):
@@ -140,7 +146,7 @@ class TestPipeline(unittest.TestCase):
         for lib in[MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER))
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'batch-*-1.tab'))
-            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'uninformative_clusters.txt'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'filtered_pairs.tab'))
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'clusters.bed'))
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'cluster_assignment.tab'))
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, '*.COMPLETE'))
@@ -216,7 +222,7 @@ class TestPipeline(unittest.TestCase):
         for lib in[MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER))
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'batch-*-1.tab'))
-            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'uninformative_clusters.txt'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'filtered_pairs.tab'))
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'clusters.bed'))
             self.assertFalse(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'cluster_assignment.tab'))
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, '*.COMPLETE'))
@@ -292,7 +298,7 @@ class TestPipeline(unittest.TestCase):
         for lib in[MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER))
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'batch-*-1.tab'))
-            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'uninformative_clusters.txt'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'filtered_pairs.tab'))
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'clusters.bed'))
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'cluster_assignment.tab'))
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, '*.COMPLETE'))
@@ -351,7 +357,7 @@ class TestPipeline(unittest.TestCase):
         for lib in[MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER))
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'batch-*-1.tab'))
-            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'uninformative_clusters.txt'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'filtered_pairs.tab'))
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'clusters.bed'))
             self.assertFalse(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'cluster_assignment.tab'))
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, '*.COMPLETE'))

@@ -9,6 +9,7 @@ from .constants import DEFAULTS
 from .genomic import PreTranscript
 from .variant import annotate_events, choose_more_annotated, choose_transcripts_by_priority, call_protein_indel, flatten_fusion_transcript, flatten_fusion_translation
 from .fusion import determine_prime
+from ..cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from ..constants import COLUMNS, PRIME, PROTOCOL, sort_columns
 from ..error import DrawingFitError, NotSpecifiedError
 from ..illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
@@ -101,6 +102,7 @@ def main(
     start_time=int(time.time()),
     draw_fusions_only=DEFAULTS.draw_fusions_only,
     draw_non_synonymous_cdna_only=DEFAULTS.draw_non_synonymous_cdna_only,
+    max_proximity=CLUSTER_DEFAULTS.max_proximity,
     **kwargs
 ):
     """
@@ -137,8 +139,11 @@ def main(
 
     annotations = annotate_events(
         bpps,
-        reference_genome=reference_genome, annotations=annotations,
-        min_orf_size=min_orf_size, min_domain_mapping_match=min_domain_mapping_match,
+        reference_genome=reference_genome,
+        annotations=annotations,
+        min_orf_size=min_orf_size,
+        min_domain_mapping_match=min_domain_mapping_match,
+        max_proximity=max_proximity,
         max_orf_cap=max_orf_cap,
         log=log,
         filters=annotation_filters

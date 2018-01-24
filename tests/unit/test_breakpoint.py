@@ -357,6 +357,30 @@ class TestClassifyBreakpointPair(unittest.TestCase):
         self.assertEqual(sorted([SVTYPE.DEL, SVTYPE.INS]),
                          sorted(BreakpointPair.classify(b)))
 
+    def test_insertion(self):
+        b = BreakpointPair(
+            Breakpoint(1, 1, 1, strand=STRAND.NS, orient=ORIENT.LEFT),
+            Breakpoint(1, 2, 2, strand=STRAND.NS, orient=ORIENT.RIGHT),
+            opposing_strands=False
+        )
+        self.assertEqual(sorted([SVTYPE.INS]), sorted(BreakpointPair.classify(b)))
+
+    def test_no_type(self):
+        b = BreakpointPair(
+            Breakpoint(1, 1, 1, strand=STRAND.NS, orient=ORIENT.LEFT),
+            Breakpoint(1, 2, 2, strand=STRAND.NS, orient=ORIENT.RIGHT),
+            opposing_strands=False, untemplated_seq=''
+        )
+        self.assertEqual(set(), BreakpointPair.classify(b))
+
+    def test_deletion(self):
+        b = BreakpointPair(
+            Breakpoint(1, 1, 1, strand=STRAND.NS, orient=ORIENT.LEFT),
+            Breakpoint(1, 3, 3, strand=STRAND.NS, orient=ORIENT.RIGHT),
+            opposing_strands=False, untemplated_seq=''
+        )
+        self.assertEqual(sorted([SVTYPE.DEL]), sorted(BreakpointPair.classify(b)))
+
 
 class TestNetSize(unittest.TestCase):
 
