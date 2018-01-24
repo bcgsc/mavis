@@ -246,7 +246,6 @@ def output_tabbed_file(bpps, filename, header=None):
         rows.append(row)
         if not custom_header:
             header.update(row.keys())
-
     header = sort_columns(header)
 
     with open(filename, 'w') as fh:

@@ -264,6 +264,12 @@ class BreakpointPair:
                                 return {SVTYPE.DEL}
                         except ValueError:
                             pass
+                    elif len(pair.break1) == 1 and len(pair.break2) == 1 and abs(pair.break1.start - pair.break2.start) < 2:
+                        if pair.untemplated_seq == '':
+                            return set()
+                        return {SVTYPE.INS}
+                    elif pair.untemplated_seq == '':
+                        return {SVTYPE.DEL}
                     return {SVTYPE.DEL, SVTYPE.INS}
                 elif pair.break1.orient == ORIENT.RIGHT or pair.break2.orient == ORIENT.LEFT:
                     return {SVTYPE.DUP}

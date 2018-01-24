@@ -317,8 +317,6 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
 
     if not std_row.get(TRACKING_COLUMN, None):
         std_row[TRACKING_COLUMN] = '{}-{}'.format(file_type, std_row.get('id', uuid()))
-    if assume_no_untemplated and not std_row.get(COLUMNS.untemplated_seq, None):
-        std_row[COLUMNS.untemplated_seq] = ''
 
     combinations = list(itertools.product(
         ORIENT.expand(std_row[COLUMNS.break1_orientation]), ORIENT.expand(std_row[COLUMNS.break2_orientation]),
@@ -329,7 +327,9 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
     # add the product of all uncertainties as breakpoint pairs
     for orient1, orient2, strand1, strand2, event_type, oppose in combinations:
         try:
-
+            untemplated_seq = std_row.get(COLUMNS.untemplated_seq, None)
+            if assume_no_untemplated and event_type != SVTYPE.INS and not untemplated_seq:
+                untemplated_seq = ''
             bpp = BreakpointPair(
                 Breakpoint(
                     std_row[COLUMNS.break1_chromosome],
@@ -344,7 +344,7 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
                     orient=orient2, strand=strand2
                 ),
                 opposing_strands=oppose,
-                untemplated_seq=std_row.get(COLUMNS.untemplated_seq, None),
+                untemplated_seq=untemplated_seq,
                 event_type=event_type,
                 data={
                     COLUMNS.tools: file_type,
@@ -352,6 +352,7 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
                 },
                 stranded=stranded
             )
+
             bpp.data.update({k: std_row[k] for k in std_row if k.startswith(file_type)})
             if not event_type or event_type in BreakpointPair.classify(bpp):
                 result.append(bpp)

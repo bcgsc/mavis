@@ -29,7 +29,7 @@ class TestDelly(unittest.TestCase):
         self.assertEqual(STRAND.NS, bpp.break2.strand)
         self.assertEqual('1', bpp.break2.chr)
         self.assertEqual(SVTYPE.INS, bpp.event_type)
-        self.assertEqual('', bpp.untemplated_seq)
+        self.assertEqual(None, bpp.untemplated_seq)
 
         bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.DELLY, False, assume_no_untemplated=False)
         self.assertEqual(1, len(bpp_list))
