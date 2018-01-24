@@ -471,7 +471,7 @@ def _call_by_contigs(source_evidence):
                     new_event.add_break2_split_read(read)
 
                 curr_contig_calls.append(new_event)
-        # remove any supplementary calls that are not associated with a target cal
+        # remove any supplementary calls that are not associated with a target call
         if not all([c.is_supplementary() for c in curr_contig_calls]):
             all_contig_calls.extend(curr_contig_calls)
     return all_contig_calls
