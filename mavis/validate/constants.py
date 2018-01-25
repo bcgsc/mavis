@@ -77,7 +77,7 @@ DEFAULTS.add(
     'than the given setting.')
 DEFAULTS.add(
     'assembly_min_uniq', 0.10, cast_type=float_fraction,
-    defn='Minimum percent uniq required to keep separate assembled contigs. If contigs are more similar then the lower scoring, then shorted, contig is dropped')
+    defn='Minimum percent uniq required to keep separate assembled contigs. If contigs are more similar then the lower scoring, then shorter, contig is dropped')
 DEFAULTS.add(
     'assembly_min_edge_weight', 2,
     defn='Discards all edges with a weight/frequency less than this from the DeBruijn graph')
