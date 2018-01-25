@@ -37,7 +37,14 @@ def filter_by_annotations(bpp_list, best_transcripts):
         ])
         return tuple(result)
     bpp_list = sorted(bpp_list, key=sort_key)
-    return [b for b in bpp_list if sort_key(b) == sort_key(bpp_list[0])]
+    result = []
+    removed = []
+    for bpp in bpp_list:
+        if sort_key(bpp) == sort_key(bpp_list[0]):
+            result.append(bpp)
+        else:
+            removed.append(bpp)
+    return result, removed
 
 
 def filter_by_call_method(bpp_list):
@@ -62,7 +69,14 @@ def filter_by_call_method(bpp_list):
     bpp_list = sorted(bpp_list, key=sort_key, reverse=True)
 
     # filter to the top ranked method
-    return [bpp for bpp in bpp_list if sort_key(bpp) == sort_key(bpp_list[0])]
+    result = []
+    removed = []
+    for bpp in bpp_list:
+        if sort_key(bpp) == sort_key(bpp_list[0]):
+            result.append(bpp)
+        else:
+            removed.append(bpp)
+    return result, removed
 
 
 def group_events(events):
@@ -130,6 +144,7 @@ def group_by_distance(calls, distances):
     pairing = pair_by_distance(calls, distances, against_self=True)
     # merge all the 'close-enough' pairs
     grouped_calls = []
+    removed_calls = []
     for component in get_connected_components(pairing):
         if len(component) == 1:
             grouped_calls.extend(mapping[component.pop()])
@@ -138,7 +153,8 @@ def group_by_distance(calls, distances):
             for key in component:
                 pairs.extend(mapping[key])
             grouped_calls.append(group_events(pairs))
-    return grouped_calls
+            removed_calls.extend(pairs)
+    return grouped_calls, removed_calls
 
 
 def annotate_dgv(bpps, dgv_regions_by_reference_name, distance=0):
