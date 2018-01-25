@@ -7,7 +7,7 @@ import tab
 
 from .constants import DEFAULTS, HOMOPOLYMER_MIN_LENGTH
 from .summary import annotate_dgv, filter_by_annotations, filter_by_call_method, filter_by_evidence, get_pairing_state, group_by_distance
-from ..constants import CALL_METHOD, COLUMNS, PROTOCOL
+from ..constants import CALL_METHOD, COLUMNS, PROTOCOL, SVTYPE
 from ..pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from ..util import generate_complete_stamp, log, output_tabbed_file, read_inputs, soft_cast
 
@@ -118,15 +118,20 @@ def main(
                 if t.is_best_transcript:
                     best_transcripts[t.name] = t
 
+    filtered_pairs = []
     # filter by synonymous and RNA homopolymers
     if filter_cdna_synon or filter_protein_synon or filter_trans_homopolymers:
         temp = []
         for bpp in bpps:
             if filter_protein_synon and bpp.protein_synon:
+                bpp.data[COLUMNS.filter_comment] = 'synonymous protein'
+                filtered_pairs.append(bpp)
                 continue
             elif filter_cdna_synon and bpp.cdna_synon:
+                bpp.data[COLUMNS.filter_comment] = 'synonymous cdna'
+                filtered_pairs.append(bpp)
                 continue
-            elif bpp.protocol == PROTOCOL.TRANS and bpp.data.get(COLUMNS.repeat_count, None):
+            elif bpp.protocol == PROTOCOL.TRANS and bpp.data.get(COLUMNS.repeat_count, None) and bpp.event_type in [SVTYPE.DUP, SVTYPE.INS, SVTYPE.DEL]:
                 # a transcriptome event in a repeat region
                 match = re.match(r'^(-?\d+)-(-?\d+)$', str(bpp.data[COLUMNS.net_size]))
                 if match:
@@ -138,18 +143,23 @@ def main(
                         netsize_min == netsize_max and netsize_min == 1,
                         PROTOCOL.GENOME not in bpp.data.get(COLUMNS.pairing, '')
                     ]):
+                        bpp.data[COLUMNS.filter_comment] = 'homopolymer filter'
+                        filtered_pairs.append(bpp)
                         continue
             temp.append(bpp)
         bpps = temp
 
     # filter based on minimum evidence levels
-    bpps, _ = filter_by_evidence(
+    bpps, filtered = filter_by_evidence(
         bpps, filter_min_remapped_reads=filter_min_remapped_reads,
         filter_min_spanning_reads=filter_min_spanning_reads,
         filter_min_flanking_reads=filter_min_flanking_reads,
         filter_min_split_reads=filter_min_split_reads,
         filter_min_linking_split_reads=filter_min_linking_split_reads
     )
+    for pair in filtered:
+        pair.data[COLUMNS.filter_comment] = 'low evidence'
+        filtered_pairs.append(pair)
 
     bpps_by_library = {}  # split the input pairs by library
     libraries = {}
@@ -173,7 +183,11 @@ def main(
             uncollapsed.setdefault(group, []).append(bpp)
         collapsed = []
         for bpp_set in uncollapsed.values():
-            collapsed.extend(filter_by_call_method(bpp_set))
+            result, removed = filter_by_call_method(bpp_set)
+            collapsed.extend(result)
+            for bpp in removed:
+                bpp.data[COLUMNS.filter_comment] = 'collapsed into another call'
+                filtered_pairs.append(bpp)
         bpps_by_library[library] = collapsed
 
     # collapse similar annotations for breakpoints with the same call position
@@ -184,7 +198,11 @@ def main(
 
         collapsed = []
         for bpp_set in uncollapsed.values():
-            collapsed.extend(filter_by_annotations(bpp_set, best_transcripts))
+            result, removed = filter_by_annotations(bpp_set, best_transcripts)
+            collapsed.extend(result)
+            for bpp in removed:
+                bpp.data[COLUMNS.filter_comment] = 'collapsed into another call'
+                filtered_pairs.append(bpp)
         bpps_by_library[library] = collapsed
 
     # group close split read calls with identical annotations
@@ -207,7 +225,11 @@ def main(
         collapsed = []
         for bpp_set in uncollapsed.values():
             collapsed.extend([b for b in bpp_set if b.call_method != CALL_METHOD.SPLIT])
-            collapsed.extend(group_by_distance([b for b in bpp_set if b.call_method == CALL_METHOD.SPLIT], distances))
+            grouped, removed = group_by_distance([b for b in bpp_set if b.call_method == CALL_METHOD.SPLIT], distances)
+            collapsed.extend(grouped)
+            for bpp in removed:
+                bpp.data[COLUMNS.filter_comment] = 'collapsed into another call'
+                filtered_pairs.append(bpp)
         bpps_by_library[library] = collapsed
 
     # TODO: give an evidence score to the events based on call method and evidence levels
@@ -299,4 +321,5 @@ def main(
     rows = sorted(rows, key=lambda bpp: (bpp.break1, bpp.break2))
     output_tabbed_file(rows, fname, header=output_columns)
     log('Wrote {} gene fusion events to {}'.format(len(rows), fname))
+    output_tabbed_file(filtered_pairs, os.path.join(output, 'filtered_pairs.tab'))
     generate_complete_stamp(output, log, start_time=start_time)
