@@ -56,7 +56,7 @@ To improve the install experience for the users, different configurations of the
                 <img src='_static/Ic_cloud_download_48px.svg'>GRCh38
             </a>
     *   - :ref:`DGV annotations <reference-files-dgv-annotations>` (text/tabbed)
-        - ``MAVIS_DGV_ANNOTATIONS``
+        - ``MAVIS_DGV_ANNOTATION``
         - .. raw:: html
     
             <a class='download-button btn btn-neutral' href='http://www.bcgsc.ca/downloads/mavis/dgv_hg19_variants.tab' download>
