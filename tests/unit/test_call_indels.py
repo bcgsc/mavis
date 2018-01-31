@@ -193,3 +193,26 @@ class TestCallProteinIndel(unittest.TestCase):
         mut_translation = Mock(get_aa_seq=MockFunction('ASDFGHJIIIQWERTYUIOP'))
         with self.assertRaises(AttributeError):
             call_protein_indel(ref_translation, mut_translation)
+
+    def test_fs(self):
+        ref_translation = Mock(get_aa_seq=MockFunction('ASDFGHJKL'), name='ref')
+        mut_translation = Mock(get_aa_seq=MockFunction('ASDFGHJMMM'))
+        notation = call_protein_indel(ref_translation, mut_translation)
+        self.assertEqual('ref:p.K8Mfs', notation)
+
+        ref_translation = Mock(get_aa_seq=MockFunction('ASDFGHJKL'), name='ref')
+        mut_translation = Mock(get_aa_seq=MockFunction('ASDFGHJCMMEF'))
+        notation = call_protein_indel(ref_translation, mut_translation)
+        self.assertEqual('ref:p.K8Cfs', notation)
+
+    def test_fs_with_stops(self):
+        ref_translation = Mock(get_aa_seq=MockFunction('ASDFGHJKLT*'), name='ref')
+        mut_translation = Mock(get_aa_seq=MockFunction('ASDFGHJMMMHGFTTSBF*TUHG*'))
+        notation = call_protein_indel(ref_translation, mut_translation)
+        self.assertEqual('ref:p.K8Mfs*12', notation)
+
+    def test_fs_immeadiate_stop(self):
+        ref_translation = Mock(get_aa_seq=MockFunction('ASDFGHJKLT*'), name='ref')
+        mut_translation = Mock(get_aa_seq=MockFunction('ASDFGHJMMMHGFTTSBF*'))
+        notation = call_protein_indel(ref_translation, mut_translation)
+        self.assertEqual('ref:p.K8Mfs*12', notation)

@@ -5,7 +5,7 @@ from shortuuid import uuid
 from .fusion import determine_prime, FusionTranscript
 from .genomic import IntergenicRegion
 from ..breakpoint import Breakpoint, BreakpointPair
-from ..constants import COLUMNS, GENE_PRODUCT_TYPE, PROTOCOL, STRAND, SVTYPE
+from ..constants import COLUMNS, GENE_PRODUCT_TYPE, PROTOCOL, STOP_AA, STRAND, SVTYPE
 from ..error import NotSpecifiedError
 from ..interval import Interval
 from ..util import devnull
@@ -246,6 +246,7 @@ class IndelCall:
         self.last_aligned = 0
         self.next_aligned = len(refseq) + 1
         self.ref_seq = refseq
+        self.mut_seq = mutseq
         self.is_dup = False
         for pos in range(0, min(len(refseq), len(mutseq))):
             if refseq[pos] != mutseq[pos]:
@@ -296,12 +297,18 @@ class IndelCall:
                 self.ref_seq[self.next_aligned - 1], self.next_aligned, self.ref_seq[self.last_aligned - 1], self.last_aligned, self.ins_seq)
         else:
             notation = 'p.{}{}'.format(self.ref_seq[last_align - 1], last_align)
-            if next_align != last_align:
-                notation += '_{}{}'.format(self.ref_seq[next_align - 1], next_align)
-            if self.del_seq:
-                notation += 'del{}'.format(self.del_seq)
-            if self.ins_seq:
-                notation += 'ins{}'.format(self.ins_seq)
+            if (self.next_aligned < 0 or self.next_aligned >= len(self.ref_seq)) and self.last_aligned < len(self.mut_seq):
+                notation += '{}fs'.format(self.mut_seq[self.last_aligned])
+                next_stops = [i for i, c in enumerate(self.mut_seq[self.last_aligned:]) if c == STOP_AA]
+                if next_stops and next_stops[0]:
+                    notation += '*{}'.format(next_stops[0] + 1)
+            else:
+                if next_align != last_align:
+                    notation += '_{}{}'.format(self.ref_seq[next_align - 1], next_align)
+                if self.del_seq:
+                    notation += 'del{}'.format(self.del_seq)
+                if self.ins_seq:
+                    notation += 'ins{}'.format(self.ins_seq)
         return notation
 
     def __str__(self):
