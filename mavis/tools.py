@@ -22,7 +22,8 @@ SUPPORTED_TOOL = MavisNamespace(
     CHIMERASCAN='chimerascan',
     MAVIS='mavis',
     DEFUSE='defuse',
-    BREAKDANCER='breakdancer'
+    BREAKDANCER='breakdancer',
+    VCF='vcf'
 )
 """
 Supported Tools used to call SVs and then used as input into MAVIS
@@ -194,6 +195,15 @@ def _parse_bnd_alt(alt):
 def _parse_vcf_record(record):
     """
     converts a vcf record
+
+    Note:
+        CT = connection type, If given this field will be used in determining the orientation at the breakpoints.
+        From https://groups.google.com/forum/#!topic/delly-users/6Mq2juBraRY, we can expect certain CT types for
+        certain event types
+            - translocation/inverted translocation: 3to3, 3to5, 5to3, 5to5
+            - inversion: 3to3, 5to5
+            - deletion: 3to5
+            - duplication: 5to3
     """
     records = []
     for alt in record.alts if record.alts else [None]:
@@ -201,7 +211,7 @@ def _parse_vcf_record(record):
         for entry in record.info.items():
             info[entry[0]] = entry[1:] if len(entry[1:]) > 1 else entry[1]
         std_row = {}
-        if record.id:
+        if record.id and record.id != 'N':  # to account for NovoBreak N in the ID field
             std_row['id'] = record.id
 
         if info.get('SVTYPE', None) == 'BND':
@@ -268,7 +278,7 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
     std_row[COLUMNS.break1_strand] = std_row[COLUMNS.break2_strand] = STRAND.NS
     result = []
     # convert the specified file type to a standard format
-    if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL]:
+    if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL, SUPPORTED_TOOL.VCF]:
 
         std_row.update(row)
 
