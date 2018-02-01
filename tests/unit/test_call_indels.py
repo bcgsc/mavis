@@ -58,6 +58,16 @@ class TestIndelCall(unittest.TestCase):
         self.assertEqual('', indel.ins_seq)
         self.assertFalse(indel.is_dup)
 
+    def test_delete_start_repetition(self):
+        refseq = 'asdafghjkl'
+        mutseq = 'afghjkl'
+        indel = IndelCall(refseq, mutseq)
+        self.assertEqual(-1, indel.last_aligned)
+        self.assertEqual(4, indel.next_aligned)
+        self.assertEqual('asd', indel.del_seq)
+        self.assertEqual('', indel.ins_seq)
+        self.assertFalse(indel.is_dup)
+
     def test_delete_end(self):
         refseq = 'asdfghjkl'
         mutseq = 'asdfgh'
@@ -216,3 +226,9 @@ class TestCallProteinIndel(unittest.TestCase):
         mut_translation = Mock(get_aa_seq=MockFunction('ASDFGHJMMMHGFTTSBF*'))
         notation = call_protein_indel(ref_translation, mut_translation)
         self.assertEqual('ref:p.K8Mfs*12', notation)
+
+    def test_delete_start_with_rep(self):
+        ref_translation = Mock(get_aa_seq=MockFunction('ASDAFGHJKL'), name='ref')
+        mut_translation = Mock(get_aa_seq=MockFunction('AFGHJKL'))
+        notation = call_protein_indel(ref_translation, mut_translation)
+        self.assertEqual('ref:p.A1_D3delASD', notation)

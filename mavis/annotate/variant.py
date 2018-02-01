@@ -257,6 +257,9 @@ class IndelCall:
             if refseq[-1 - pos] != mutseq[-1 - pos]:
                 break
             self.next_aligned = len(refseq) - pos
+
+        if len(self.ref_seq) - self.next_aligned + 1 == len(self.mut_seq):
+            self.last_aligned = 0
         del_length = max(self.next_aligned - self.last_aligned - 1, 0)
         ins_length = max(len(mutseq) + del_length - len(refseq), 0)
 
