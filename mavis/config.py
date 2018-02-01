@@ -541,7 +541,7 @@ def generate_config(parser, required, optional, log=devnull):
         '--external_conversion', metavar=('<alias>', '<"command">'), nargs=2, default=[],
         help='alias for use in inputs and full command (quoted)', action='append')
     optional.add_argument(
-        '--no_defaults', default=False, action='store_true', help='do not write current defaults to the config output')
+        '--add_defaults', default=False, action='store_true', help='do not write current defaults to the config output')
     augment_parser(['annotations'], optional, optional)
     # add the optional annotations file (only need this is auto generating bam stats for the transcriptome)
     augment_parser(['skip_stage'], optional)
@@ -626,4 +626,4 @@ def generate_config(parser, required, optional, log=devnull):
         stranded = str(tab.cast_boolean(stranded))
         SUPPORTED_TOOL.enforce(toolname)
         convert[alias] = ['convert_tool_output', inputfile, toolname, stranded]
-    write_config(args.write, include_defaults=not args.no_defaults, libraries=libs, conversions=convert, log=log)
+    write_config(args.write, include_defaults=args.add_defaults, libraries=libs, conversions=convert, log=log)
