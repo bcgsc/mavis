@@ -29,7 +29,7 @@ DEFAULTS.add(
     'domain_name_regex_filter', r'^PF\d+$',
     defn='The regular expression used to select domains to be displayed (filtered by name)')
 DEFAULTS.add(
-    'max_drawing_retries', 3,
+    'max_drawing_retries', 5,
     defn='The maximum number of retries for attempting a drawing. Each iteration the width is extended. If it '
     'is still insufficient after this number a gene-level only drawing will be output')
 DEFAULTS.add('scaffold_color', '#000000', defn='The color used for the gene/transcripts scaffolds')

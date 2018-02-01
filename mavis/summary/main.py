@@ -283,6 +283,8 @@ def main(
         COLUMNS.contig_remapped_reads,
         COLUMNS.tracking_id,
         COLUMNS.supplementary_call,
+        COLUMNS.protein_synon,
+        COLUMNS.cdna_synon,
         COLUMNS.net_size,
         'dgv'}
 
@@ -313,13 +315,26 @@ def main(
                 row.data[column_name] = pairing_state
                 output_columns.add(column_name)
 
-            rows.append(row)
+            rows.append(row.flatten())
     fname = os.path.join(
         output,
         'mavis_summary_{}.tab'.format('_'.join(sorted(list(libraries.keys()))))
     )
-    rows = sorted(rows, key=lambda bpp: (bpp.break1, bpp.break2))
     output_tabbed_file(rows, fname, header=output_columns)
-    log('Wrote {} gene fusion events to {}'.format(len(rows), fname))
+    log('wrote {} structural variants to {}'.format(len(rows), fname))
     output_tabbed_file(filtered_pairs, os.path.join(output, 'filtered_pairs.tab'))
+    # output by library non-synon protein-product
+    for lib in bpps_by_library:
+        filename = os.path.join(output, 'mavis_summary_{}_non-synonymous_coding_variants.tab'.format(lib))
+        lib_rows = []
+        for row in rows:
+            if all([
+                not row.get(COLUMNS.protein_synon, ''),
+                not row.get(COLUMNS.cdna_synon, ''),
+                str(row.get(COLUMNS.fusion_cdna_coding_start, None)) != 'None',
+                row[COLUMNS.library] == lib,
+                str(row.get(COLUMNS.supplementary_call, False)) != True
+            ]):
+                lib_rows.append(row)
+        output_tabbed_file(lib_rows, filename, header=output_columns)
     generate_complete_stamp(output, log, start_time=start_time)

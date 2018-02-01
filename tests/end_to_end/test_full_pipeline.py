@@ -20,11 +20,11 @@ MOCK_GENOME = 'mock-A36971'
 MOCK_TRANS = 'mock-A47933'
 
 
-def glob_exists(*pos, strict=True):
+def glob_exists(*pos, strict=True, n=1):
     globexpr = os.path.join(*pos)
     l = glob.glob(globexpr)
-    if strict and len(l) == 1:
-        return l[0]
+    if strict and len(l) == n:
+        return l[0] if len(l) == 1 else l
     elif not strict and len(l) > 0:
         return l
     else:
@@ -124,7 +124,7 @@ class TestPipeline(unittest.TestCase):
         with patch.object(sys, 'argv', args):
             self.assertEqual(0, main())
 
-        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'mavis_summary*.tab'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'mavis_summary*.tab', n=3))
         self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, '*.COMPLETE'))
 
         with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):
@@ -206,7 +206,7 @@ class TestPipeline(unittest.TestCase):
         with patch.object(sys, 'argv', args):
             self.assertEqual(0, main())
 
-        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'mavis_summary*.tab'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'mavis_summary*.tab', n=3))
         self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, '*.COMPLETE'))
 
         with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):
@@ -282,7 +282,7 @@ class TestPipeline(unittest.TestCase):
         with patch.object(sys, 'argv', args):
             self.assertEqual(0, main())
 
-        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'mavis_summary*.tab'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'mavis_summary*.tab', n=3))
         self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, '*.COMPLETE'))
 
         with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):
@@ -336,7 +336,7 @@ class TestPipeline(unittest.TestCase):
         with patch.object(sys, 'argv', args):
             self.assertEqual(0, main())
 
-        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'mavis_summary*.tab'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'mavis_summary*.tab', n=3))
         self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, '*.COMPLETE'))
 
         with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):
@@ -395,7 +395,7 @@ class TestPipeline(unittest.TestCase):
         with patch.object(sys, 'argv', args):
             self.assertEqual(0, main())
 
-        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'mavis_summary*.tab'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'mavis_summary*.tab', n=3))
         self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, '*.COMPLETE'))
 
         with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):

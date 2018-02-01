@@ -517,7 +517,7 @@ use the -h/--help option
         args.blat_version = get_blat_version()
 
     log('MAVIS: {}'.format(__version__))
-    log('Hostname:', platform.node(), time_stamp=False)
+    log('hostname:', platform.node(), time_stamp=False)
     log_arguments(args)
     rargs = args
 
