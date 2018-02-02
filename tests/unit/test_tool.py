@@ -1,6 +1,6 @@
 import unittest
 
-from mavis.constants import ORIENT, STRAND, SVTYPE
+from mavis.constants import COLUMNS, ORIENT, STRAND, SVTYPE
 from mavis.tools import _convert_tool_row, SUPPORTED_TOOL, _parse_transabyss, _parse_chimerascan, _parse_bnd_alt, _parse_vcf_record
 import inspect
 
@@ -31,7 +31,7 @@ class TestDelly(unittest.TestCase):
         self.assertEqual(SVTYPE.INS, bpp.event_type)
         self.assertEqual(None, bpp.untemplated_seq)
 
-        bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.DELLY, False, assume_no_untemplated=False)
+        bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.DELLY, False, assume_no_untemplated=True)
         self.assertEqual(1, len(bpp_list))
         bpp = bpp_list[0]
         self.assertEqual(None, bpp.untemplated_seq)
@@ -675,3 +675,75 @@ class TestBreakDancer(unittest.TestCase):
         self.assertEqual(20218060, bpps[0].break2.end)
         self.assertEqual(ORIENT.RIGHT, bpps[0].break2.orient)
         self.assertEqual(False, bpps[0].opposing_strands)
+
+
+class TestVCF(unittest.TestCase):
+
+    def setUp(self):
+        self.tra = row = Mock(
+            chrom='2', pos=21673582, id=None,
+            info={
+                'SVTYPE': 'TRA',
+                'CT': '5to5',
+                'CHR2': '3'
+            },
+            stop=58921502, alts=[]
+        )
+
+    def test_no_ci(self):
+        bpp_list = _convert_tool_row(_parse_vcf_record(self.tra)[0], SUPPORTED_TOOL.VCF, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual(21673582, bpp.break1.start)
+        self.assertEqual(21673582, bpp.break1.end)
+        self.assertEqual(58921502, bpp.break2.start)
+        self.assertEqual(58921502, bpp.break2.end)
+
+    def test_ci(self):
+        self.tra.info.update({
+            'CIEND': [-700, 700],
+            'CIPOS': [-700, 700]
+        })
+        bpp_list = _convert_tool_row(_parse_vcf_record(self.tra)[0], SUPPORTED_TOOL.VCF, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        print(bpp)
+        self.assertEqual(21673582 - 700, bpp.break1.start)
+        self.assertEqual(21673582 + 700, bpp.break1.end)
+        self.assertEqual(58921502 - 700, bpp.break2.start)
+        self.assertEqual(58921502 + 700, bpp.break2.end)
+
+    def test_precise_flag_ignores_ci(self):
+        self.tra.info.update({
+            'CIEND': [-700, 700],
+            'CIPOS': [-700, 700],
+            'PRECISE': True
+        })
+        bpp_list = _convert_tool_row(_parse_vcf_record(self.tra)[0], SUPPORTED_TOOL.VCF, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual(21673582, bpp.break1.start)
+        self.assertEqual(21673582, bpp.break1.end)
+        self.assertEqual(58921502, bpp.break2.start)
+        self.assertEqual(58921502, bpp.break2.end)
+
+    def test_no_id(self):
+        bpp_list = _convert_tool_row(_parse_vcf_record(self.tra)[0], SUPPORTED_TOOL.VCF, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertTrue(bpp.data[COLUMNS.tracking_id])
+
+    def test_N_id(self):
+        self.tra.id = 'N'
+        bpp_list = _convert_tool_row(_parse_vcf_record(self.tra)[0], SUPPORTED_TOOL.VCF, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertTrue(bpp.data[COLUMNS.tracking_id])
+        self.assertNotEqual('N', bpp.data[COLUMNS.tracking_id])
+
+    def test_id_given(self):
+        self.tra.id = 'thing-1'
+        bpp_list = _convert_tool_row(_parse_vcf_record(self.tra)[0], SUPPORTED_TOOL.VCF, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('vcf-thing-1', bpp.data[COLUMNS.tracking_id])

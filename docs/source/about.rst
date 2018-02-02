@@ -42,3 +42,54 @@ Samtools
 
 Samtools is only used in sorting and indexing the intermediary output bams. Eventually this will hopefully be 
 accomplished through :term:`pysam` only.
+
+
+.. _resource-requirements:
+
+Resource Requirements
+-----------------------
+
+MAVIS has been tested on both unix and linux systems. For the standard pipeline, the validation stage is
+the most computationally expensive. This will vary depending on the size of your input bam file and
+the number of events input to be validated. There are a number of settings that can be adjusted to reduce
+memory and cpu requirements depending on what the user is trying to analyze.  
+
+Uninformative Filter
+++++++++++++++++++++++
+
+For example, if the user is only interested in events in genes, then the :term:`uninformative_filter` can be used. 
+This will drop all events that are not within a certain distance (:term:`max_proximity`) to any annotation in the 
+annotations reference file. These events will be dropped prior to the validation stage which results in 
+significant speed up.
+
+This can be set using the environment variable
+
+.. code::
+
+    export MAVIS_UNINFORMATIVE_FILTER=True
+
+or in the pipeline config file
+
+.. code::
+
+    [cluster]
+    uninformative_filter = True
+
+or as a command line argument to the cluster stage
+
+.. code::
+
+    mavis cluster --uninformative_filter True ....
+
+Splitting Validation into Cluster Jobs
++++++++++++++++++++++++++++++++++++++++
+
+MAVIS chooses the number of jobs to split validate/annotate stages into based on
+two settings: :term:`max_files` and :term:`min_clusters_per_file`.
+
+For example, in the following situation say you have: 1000 clusters, ``max_files=10``, and ``min_clusters_per_file=10``. Then
+MAVIS will set up 10 validation jobs each with 100 events.
+
+However, if ``min_clusters_per_file=500``, then MAVIS would only set up 2 jobs each with 500 events. This is because
+:term:`min_clusters_per_file` takes precedence over :term:`max_files`. 
+

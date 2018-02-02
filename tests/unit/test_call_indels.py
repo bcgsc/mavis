@@ -58,6 +58,16 @@ class TestIndelCall(unittest.TestCase):
         self.assertEqual('', indel.ins_seq)
         self.assertFalse(indel.is_dup)
 
+    def test_delete_start_repetition(self):
+        refseq = 'asdafghjkl'
+        mutseq = 'afghjkl'
+        indel = IndelCall(refseq, mutseq)
+        self.assertEqual(-1, indel.last_aligned)
+        self.assertEqual(4, indel.next_aligned)
+        self.assertEqual('asd', indel.del_seq)
+        self.assertEqual('', indel.ins_seq)
+        self.assertFalse(indel.is_dup)
+
     def test_delete_end(self):
         refseq = 'asdfghjkl'
         mutseq = 'asdfgh'
@@ -121,6 +131,43 @@ class TestHgvsProteinNotation(unittest.TestCase):
 
 
 class TestCallProteinIndel(unittest.TestCase):
+
+    def test_large_start_deletion(self):
+        ref_translation = Mock(get_aa_seq=MockFunction(
+            'MGLKAAQKTLFPLRSIDDVVRLFAAELGREEPDLVLLSLVLGFVEHFLAVNRVIPTNVPE'
+            'LTFQPSPAPDPPGGLTYFPVADLSIIAALYARFTAQIRGAVDLSLYPREGGVSSRELVKK'
+            'VSDVIWNSLSRSYFKDRAHIQSLFSFITGTKLDSSGVAFAVVGACQALGLRDVHLALSED'
+            'HAWVVFGPNGEQTAEVTWHGKGNEDRRGQTVNAGVAERSWLYLKGSYMRCDRKMEVAFMV'
+            'CAINPSIDLHTDSLELLQLQQKLLWLLYDLGHLERYPMALGNLADLEELEPTPGRPDPLT'
+            'LYHKGIASAKTYYRDEHIYPYMYLAGYHCRNRNVREALQAWADTATVIQDYNYCREDEEI'
+            'YKEFFEVANDVIPNLLKEAASLLEAGEERPGEQSQGTQSQGSALQDPECFAHLLRFYDGI'
+            'CKWEEGSPTPVLHVGWATFLVQSLGRFEGQVRQKVRIVSREAEAAEAEEPWGEEAREGRR'
+            'RGPRRESKPEEPPPPKKPALDKGLGTGQGAVSGPPRKPPGTVAGTARGPEGGSTAQVPAP'
+            'TASPPPEGPVLTFQSEKMKGMKELLVATKINSSAIKLQLTAQSQVQMKKQKVSTPSDYTL'
+            'SFLKRQRKGL*'), name='ref')
+        mut_translation = Mock(get_aa_seq=MockFunction(
+            'MRCDRKMEVAFMV'
+            'CAINPSIDLHTDSLELLQLQQKLLWLLYDLGHLERYPMALGNLADLEELEPTPGRPDPLT'
+            'LYHKGIASAKTYYRDEHIYPYMYLAGYHCRNRNVREALQAWADTATVIQDYNYCREDEEI'
+            'YKEFFEVANDVIPNLLKEAASLLEAGEERPGEQSQGTQSQGSALQDPECFAHLLRFYDGI'
+            'CKWEEGSPTPVLHVGWATFLVQSLGRFEGQVRQKVRIVSREAEAAEAEEPWGEEAREGRR'
+            'RGPRRESKPEEPPPPKKPALDKGLGTGQGAVSGPPRKPPGTVAGTARGPEGGSTAQVPAP'
+            'TASPPPEGPVLTFQSEKMKGMKELLVATKINSSAIKLQLTAQSQVQMKKQKVSTPSDYTL'
+            'SFLKRQRKGL*'))
+        notation = call_protein_indel(ref_translation, mut_translation)
+        self.assertEqual(
+            'ref:p.M1_Y227del'
+            'MGLKAAQKTLFPLRSIDDVVRLFAAELGREEPDLVLLSLVLGFVEHFLAVNRVIPTNVPE'
+            'LTFQPSPAPDPPGGLTYFPVADLSIIAALYARFTAQIRGAVDLSLYPREGGVSSRELVKK'
+            'VSDVIWNSLSRSYFKDRAHIQSLFSFITGTKLDSSGVAFAVVGACQALGLRDVHLALSED'
+            'HAWVVFGPNGEQTAEVTWHGKGNEDRRGQTVNAGVAERSWLYLKGSY',
+            notation)
+
+    def test_deletion_rep_at_breaks(self):
+        ref_translation = Mock(get_aa_seq=MockFunction('ABCDEFKJFEDAGFLKJ'), name='ref')
+        mut_translation = Mock(get_aa_seq=MockFunction('ABCDE'    'AGFLKJ'))
+        notation = call_protein_indel(ref_translation, mut_translation)
+        self.assertEqual('ref:p.F6_D11delFKJFED', notation)
 
     def test_insertion(self):
         ref_translation = Mock(get_aa_seq=MockFunction('ASDFGHJKLQWERTYUIOP'), name='ref')
@@ -193,3 +240,32 @@ class TestCallProteinIndel(unittest.TestCase):
         mut_translation = Mock(get_aa_seq=MockFunction('ASDFGHJIIIQWERTYUIOP'))
         with self.assertRaises(AttributeError):
             call_protein_indel(ref_translation, mut_translation)
+
+    def test_fs(self):
+        ref_translation = Mock(get_aa_seq=MockFunction('ASDFGHJKL'), name='ref')
+        mut_translation = Mock(get_aa_seq=MockFunction('ASDFGHJMMM'))
+        notation = call_protein_indel(ref_translation, mut_translation)
+        self.assertEqual('ref:p.K8Mfs', notation)
+
+        ref_translation = Mock(get_aa_seq=MockFunction('ASDFGHJKL'), name='ref')
+        mut_translation = Mock(get_aa_seq=MockFunction('ASDFGHJCMMEF'))
+        notation = call_protein_indel(ref_translation, mut_translation)
+        self.assertEqual('ref:p.K8Cfs', notation)
+
+    def test_fs_with_stops(self):
+        ref_translation = Mock(get_aa_seq=MockFunction('ASDFGHJKLT*'), name='ref')
+        mut_translation = Mock(get_aa_seq=MockFunction('ASDFGHJMMMHGFTTSBF*TUHG*'))
+        notation = call_protein_indel(ref_translation, mut_translation)
+        self.assertEqual('ref:p.K8Mfs*12', notation)
+
+    def test_fs_immeadiate_stop(self):
+        ref_translation = Mock(get_aa_seq=MockFunction('ASDFGHJKLT*'), name='ref')
+        mut_translation = Mock(get_aa_seq=MockFunction('ASDFGHJMMMHGFTTSBF*'))
+        notation = call_protein_indel(ref_translation, mut_translation)
+        self.assertEqual('ref:p.K8Mfs*12', notation)
+
+    def test_delete_start_with_rep(self):
+        ref_translation = Mock(get_aa_seq=MockFunction('ASDAFGHJKL'), name='ref')
+        mut_translation = Mock(get_aa_seq=MockFunction('AFGHJKL'))
+        notation = call_protein_indel(ref_translation, mut_translation)
+        self.assertEqual('ref:p.A1_D3delASD', notation)
