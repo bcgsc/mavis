@@ -177,7 +177,7 @@ class BamCache:
         Returns:
             :class:`set` of :class:`pysam.AlignedSegment`: set of reads gathered from the region
         """
-        # try using the cache to avoid fetching regions more than once
+        # try using the cache to make grabbing mate pairs easier
         result = []
         bin_limit = int(read_limit / sample_bins) if read_limit else None
         chrom = input_chrom

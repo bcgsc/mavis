@@ -100,6 +100,29 @@ class SamRead(pysam.AlignedSegment):
         return result
 
 
+def pileup(reads, filter_func=None):
+    """
+    For a given set of reads generate a pileup of all reads (exlcuding those for which the filter_func returns True)
+
+    Args:
+        reads (iterable of pysam.AlignedSegment): reads to pileup
+        filter_func (callable): function which takes in a  read and returns True if it should be ignored and False otherwise
+
+    Returns:
+        iterable of tuple of int and int: tuples of genomic position and read count at that position
+
+    Note:
+        returns positions using 1-based indexing
+    """
+    hist = {}  # genome position => frequency count
+    for read in reads:
+        if filter_func and filter_func(read):
+            continue
+        for pos in read.get_reference_positions():
+            hist[pos + 1] = hist.get(pos + 1, 0) + 1
+    return sorted(hist.items())
+
+
 def map_ref_range_to_query_range(read, ref_range):
     """
     Args:

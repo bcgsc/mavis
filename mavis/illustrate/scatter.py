@@ -1,4 +1,73 @@
+import os
+
+from ..bam.read import sequenced_strand, pileup
+from ..util import log
 from ..interval import Interval
+from ..validate.constants import DEFAULTS as VALIDATION_DEFAULTS
+
+
+def bam_to_scatter(bam_file, chrom, start, end, bin_size, strand=None, axis_name=None, ymax=None, min_mapping_quality=0):
+    """
+    pull data from a bam file to set up a scatter plot of the pileup
+
+    Args:
+        bam_file (str): path to the bam file
+        chrom (str): chromosome name
+        start (int): genomic start position for the plot
+        end (int): genomic end position for the plot
+        bin_size (int): number of genomic positions to group together and average to reduce data
+        strand (STRAND): expected strand
+        axis_name (str): axis name
+        ymax (int): maximum value to plot the y axis
+        min_mapping_quality (int): minimum mapping quality for reads to be considered in the plot
+
+    Returns:
+        ScatterPlot: the scatter plot representing the bam pileup
+    """
+    import pysam
+    if not axis_name:
+        axis_name = os.path.basename(bam_file)
+    # one plot per bam
+    log('reading:', bam_file)
+    plot = None
+    samfile = pysam.AlignmentFile(bam_file, 'rb')
+
+    def read_filter(read):
+        if read.mapping_quality < min_mapping_quality:
+            return True
+        if strand is None:
+            return False
+        try:
+
+            return sequenced_strand(read, VALIDATION_DEFAULTS.strand_determining_read) != strand
+        except ValueError:
+            return True
+
+    try:
+        points = []
+        avg_points = []
+        try:
+            for refpos, count in pileup(samfile.fetch(chrom, start, end), filter_func=read_filter):
+                if refpos <= end and refpos >= start:
+                    points.append((refpos, count))
+        except ValueError:  # chrom not in bam
+            pass
+        else:
+            grouping_indices = [x for x in range(0, len(points), bin_size)]
+            grouping_indices.append(None)
+            for st_index, end_index in zip(grouping_indices[0::], grouping_indices[1::]):
+                pos = [x for x, y in points[st_index:end_index]]
+                pos = Interval(min(pos), max(pos))
+                cov = [y for x, y in points[st_index:end_index]]
+                cov = Interval(sum(cov) / len(cov))
+                avg_points.append((pos, cov))
+        log('scatter plot {} has {} points'.format(axis_name, len(avg_points)))
+        plot = ScatterPlot(
+            avg_points, axis_name, ymin=0, ymax=max([y.start for x, y in avg_points] + [100]) if ymax is None else ymax
+        )
+    finally:
+        samfile.close()
+    return plot
 
 
 class ScatterPlot:
@@ -17,15 +86,15 @@ class ScatterPlot:
         self.ymin = ymin
         self.ymax = ymax
         self.points = points
-        if self.ymin is None:
+        if self.ymin is None and (yticks or points):
             self.ymin = min([y.start for x, y in points] + yticks)
-        if self.ymax is None:
+        if self.ymax is None and (yticks or points):
             self.ymax = max([y.end for x, y in points] + yticks)
         self.xmin = xmin
         self.xmax = xmax
-        if self.xmin is None:
+        if self.xmin is None and points:
             self.xmin = min([x.start for x, y in points])
-        if self.xmax is None:
+        if self.xmax is None and points:
             self.xmax = max([x.end for x, y in points])
         self.y_axis_label = y_axis_label
         self.height = 100

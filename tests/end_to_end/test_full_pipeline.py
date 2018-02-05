@@ -13,24 +13,13 @@ from mavis.util import unique_exists
 from mock import patch
 
 
+from . import glob_exists
+
 DATA_PREFIX = os.path.join(os.path.dirname(__file__), 'data')
 CONFIG = os.path.join(DATA_PREFIX, 'pipeline_config.cfg')
 BWA_CONFIG = os.path.join(DATA_PREFIX, 'bwa_pipeline_config.cfg')
 MOCK_GENOME = 'mock-A36971'
 MOCK_TRANS = 'mock-A47933'
-
-
-def glob_exists(*pos, strict=True, n=1):
-    globexpr = os.path.join(*pos)
-    l = glob.glob(globexpr)
-    if strict and len(l) == n:
-        return l[0] if len(l) == 1 else l
-    elif not strict and len(l) > 0:
-        return l
-    else:
-        print(globexpr)
-        print(l)
-        return False
 
 
 def convert_qsub_to_args(filename, sub=None):

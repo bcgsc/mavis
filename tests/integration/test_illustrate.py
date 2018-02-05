@@ -433,3 +433,5 @@ class TestDraw(unittest.TestCase):
         self.assertEqual(2, len(canvas.elements))  # defs counts as element
         if OUTPUT_SVG:
             canvas.saveas('test_draw_overlay.svg')
+
+
