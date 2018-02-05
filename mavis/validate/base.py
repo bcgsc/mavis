@@ -162,8 +162,16 @@ class Evidence(BreakpointPair):
             list of :class:`~mavis.constants.SVTYPE`: list of the possible classifications
         """
         if self.classification:
-            return [self.classification]
+            return {self.classification}
         return BreakpointPair.classify(self)
+
+    @property
+    def compatible_type(self):
+        if SVTYPE.INS in self.putative_event_types():
+            return SVTYPE.DUP
+        elif SVTYPE.DUP in self.putative_event_types():
+            return SVTYPE.INS
+        return None
 
     def compute_fragment_size(self, read, mate):
         """
@@ -759,7 +767,6 @@ class Evidence(BreakpointPair):
         open the associated bam file and read and store the evidence
         does some preliminary read-quality filtering
         """
-
         def cache_if_true(read):
             if read.is_unmapped or read.mate_is_unmapped:
                 return True
@@ -768,19 +775,30 @@ class Evidence(BreakpointPair):
                 read.mapping_quality < self.min_mapping_quality
             ]):
                 return False
-            elif set([x[0] for x in read.cigar]) & {CIGAR.D, CIGAR.N, CIGAR.S, CIGAR.I}:
+            elif set([x[0] for x in read.cigar]) & {CIGAR.S, CIGAR.H}:
                 return True
-            elif read.is_proper_pair and self.protocol != PROTOCOL.TRANS:
+            elif not read.is_proper_pair:
+                if any([_read.orientation_supports_type(read, e) for e in self.putative_event_types()]):
+                    return True
+                elif self.compatible_type and _read.orientation_supports_type(read, self.compatible_type):
+                    return True
+            elif not self.interchromosomal and not self.opposing_strands:
                 min_frag_est = abs(read.reference_start - read.next_reference_start) - self.read_length
                 max_frag_est = min_frag_est + 3 * self.read_length
-                if min_frag_est >= self.min_expected_fragment_size and max_frag_est <= self.max_expected_fragment_size:
-                    return False
-            return True
+                if min_frag_est < self.min_expected_fragment_size or max_frag_est > self.max_expected_fragment_size:
+                    return True
+
+            return False
 
         def filter_if_true(read):
             if not cache_if_true(read):
-                return True
-            elif read.is_unmapped:
+                if any([
+                    self.filter_secondary_alignments and read.is_secondary,
+                    read.mapping_quality < self.min_mapping_quality
+                ]):
+                    return True
+                elif not self.interchromosomal and set([x[0] for x in read.cigar]) & {CIGAR.I, CIGAR.D}:
+                    return False
                 return True
             return False
 
