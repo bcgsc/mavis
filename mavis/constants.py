@@ -643,7 +643,8 @@ COLUMNS = MavisNamespace(
     protein_synon='protein_synon',
     supplementary_call='supplementary_call',
     net_size='net_size',
-    repeat_count='repeat_count'
+    repeat_count='repeat_count',
+    assumed_untemplated='assumed_untemplated'
 )
 """:class:`MavisNamespace`: Column names for i/o files used throughout the pipeline
 
@@ -740,6 +741,7 @@ COLUMNS = MavisNamespace(
 - :term:`untemplated_seq`
 - :term:`validation_id`
 - :term:`repeat_count`
+- :term:`assumed_untemplated`
 """
 
 

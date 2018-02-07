@@ -91,6 +91,7 @@ def main(
             COLUMNS.cdna_synon,
             COLUMNS.net_size,
             COLUMNS.tracking_id,
+            COLUMNS.assumed_untemplated,
             'dgv',
             'summary_pairing']
         }, COLUMNS.call_method: CALL_METHOD.INPUT},
@@ -286,6 +287,7 @@ def main(
         COLUMNS.protein_synon,
         COLUMNS.cdna_synon,
         COLUMNS.net_size,
+        COLUMNS.assumed_untemplated,
         'dgv'}
 
     rows = []
