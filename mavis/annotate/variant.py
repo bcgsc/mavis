@@ -710,28 +710,34 @@ def annotate_events(
     for i, bpp in enumerate(bpps):
         log('({} of {}) gathering annotations for'.format(i + 1, total), bpp)
         bpp.data[COLUMNS.validation_id] = bpp.data.get(COLUMNS.validation_id, str(uuid()))
-        ann = _gather_annotations(
+        ann_list = _gather_annotations(
             annotations,
             bpp,
             proximity=max_proximity
         )
         for f in filters:
-            ann = f(ann)  # apply the filter
-        results.extend(ann)
-        for j, a in enumerate(ann):
-            a.data[COLUMNS.annotation_id] = '{}-a{}'.format(a.validation_id, j + 1)
+            ann_list = f(ann_list)  # apply the filter
+        results.extend(ann_list)
+        for j, ann in enumerate(ann_list):
+            ann.data[COLUMNS.annotation_id] = '{}-a{}'.format(ann.validation_id, j + 1)
+            if ann.untemplated_seq is None:
+                if len(ann.break1) == 1 and len(ann.break2) == 1:
+                    ann.untemplated_seq = ''
+                    ann.data[COLUMNS.assumed_untemplated] = True
+            else:
+                ann.data[COLUMNS.assumed_untemplated] = False
             # try building the fusion product
             try:
                 ft = FusionTranscript.build(
-                    a, reference_genome,
+                    ann, reference_genome,
                     min_orf_size=min_orf_size,
                     max_orf_cap=max_orf_cap,
                     min_domain_mapping_match=min_domain_mapping_match
                 )
-                a.fusion = ft
+                ann.fusion = ft
             except (NotSpecifiedError, AttributeError, NotImplementedError):
                 pass
             except KeyError as e:
                 log('warning. could not build fusion product', repr(e))
-        log('generated', len(ann), 'annotations', time_stamp=False)
+        log('generated', len(ann_list), 'annotations', time_stamp=False)
     return results
