@@ -38,7 +38,6 @@ def bam_to_scatter(bam_file, chrom, start, end, bin_size, strand=None, axis_name
         if strand is None:
             return False
         try:
-
             return sequenced_strand(read, VALIDATION_DEFAULTS.strand_determining_read) != strand
         except ValueError:
             return True
