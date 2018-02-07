@@ -142,7 +142,7 @@ DEFAULTS.add(
     'fetch_reads_limit', 3000,
     defn='maximum number of reads, cap, to loop over for any given evidence window')
 DEFAULTS.add(
-    'trans_fetch_reads_limit', 9000, cast_type=nullable_int,
+    'trans_fetch_reads_limit', 12000, cast_type=nullable_int,
     defn='Related to :term:`fetch_reads_limit`. Overrides fetch_reads_limit for transcriptome libraries when set. '
     'If this has a value of None then fetch_reads_limit will be used for transcriptome libraries instead')
 DEFAULTS.add(
@@ -209,3 +209,9 @@ DEFAULTS.add(
 DEFAULTS.add(
     'outer_window_min_event_size', 125,
     defn='the minimum size of an event in order for flanking read evidence to be collected')
+DEFAULTS.add(
+    'write_evidence_files', True, defn='write the intermediate bam and bed files containing the raw evidence collected and '
+    'contigs aligned. Not required for subsequent steps but can be useful in debugging and deep investigation of events')
+DEFAULTS.add(
+    'clean_aligner_files', False, defn='Remove the aligner output files after the validation stage is complete. Not'
+    ' required for subsequent steps but can be useful in debugging and deep investigation of events')
