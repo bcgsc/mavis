@@ -735,8 +735,12 @@ def annotate_events(
                     min_domain_mapping_match=min_domain_mapping_match
                 )
                 ann.fusion = ft
-            except (NotSpecifiedError, AttributeError, NotImplementedError):
-                pass
+            except NotSpecifiedError:
+                pass  # shouldn't build fusions for non-specific calls anyway
+            except AttributeError:
+                pass  # will be thrown when transcript1/2 are intergenic ranges and not actual transcripts
+            except NotImplementedError:
+                pass  # anti-sense fusions will throw this error
             except KeyError as e:
                 log('warning. could not build fusion product', repr(e))
         log('generated', len(ann_list), 'annotations', time_stamp=False)
