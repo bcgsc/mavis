@@ -131,6 +131,7 @@ class TestLt(unittest.TestCase):
         bpp2 = BreakpointPair(Breakpoint('1', 1, 10, orient=ORIENT.LEFT), Breakpoint('2', 1, orient=ORIENT.LEFT), untemplated_seq=None)
         self.assertTrue(bpp2 < bpp1)
 
+
 class TestBreakpointSequenceHomology(unittest.TestCase):
 
     def test_left_pos_right_pos(self):
