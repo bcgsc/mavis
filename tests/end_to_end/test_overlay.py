@@ -126,9 +126,10 @@ class TestOverlayOptions(unittest.TestCase):
                 self.assertTrue(glob_exists(os.path.join(self.temp_output, '*GAGE4*.svg')))
 
     def test_read_depth_plot_not_binned_but_stranded(self):
+        # no ymax
         with patch.object(sys, 'argv', [
             'mavis', SUBCOMMAND.OVERLAY, '--annotations', ANNOTATIONS, 'GAGE4', '--output', self.temp_output,
-            '--read_depth_plot', 'axis', BAM, 'none', 'True'
+            '--read_depth_plot', 'axis', BAM, '1', 'none', 'True'
         ]):
             try:
                 returncode = main()

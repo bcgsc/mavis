@@ -115,6 +115,22 @@ class TestNetSizeTransEGFR(unittest.TestCase):
         self.assertEqual(Interval(-44), bpp.net_size(self.egfr_distance))
 
 
+class TestLt(unittest.TestCase):
+    def test_break1(self):
+        bpp1 = BreakpointPair(Breakpoint('1', 1, 10, orient=ORIENT.LEFT), Breakpoint('2', 1, orient=ORIENT.LEFT), untemplated_seq='')
+        bpp2 = BreakpointPair(Breakpoint('1', 1, 9, orient=ORIENT.LEFT), Breakpoint('2', 1, orient=ORIENT.LEFT), untemplated_seq='')
+        self.assertTrue(bpp2 < bpp1)
+
+    def test_useq(self):
+        bpp1 = BreakpointPair(Breakpoint('1', 1, 10, orient=ORIENT.LEFT), Breakpoint('2', 1, orient=ORIENT.LEFT), untemplated_seq='')
+        bpp2 = BreakpointPair(Breakpoint('1', 1, 10, orient=ORIENT.LEFT), Breakpoint('2', 1, orient=ORIENT.LEFT), untemplated_seq=None)
+        self.assertTrue(bpp2 > bpp1)
+
+    def test_break2(self):
+        bpp1 = BreakpointPair(Breakpoint('1', 1, 10, orient=ORIENT.LEFT), Breakpoint('2', 1, orient=ORIENT.RIGHT), untemplated_seq='')
+        bpp2 = BreakpointPair(Breakpoint('1', 1, 10, orient=ORIENT.LEFT), Breakpoint('2', 1, orient=ORIENT.LEFT), untemplated_seq=None)
+        self.assertTrue(bpp2 < bpp1)
+
 class TestBreakpointSequenceHomology(unittest.TestCase):
 
     def test_left_pos_right_pos(self):

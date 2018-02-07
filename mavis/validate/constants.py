@@ -158,10 +158,10 @@ DEFAULTS.add(
     'amount of softclipping that is allowed on the right. If this is set to None then there is no limit on softclipping')
 DEFAULTS.add(
     'min_anchor_exact', 6, defn='Applies to re-aligning softclipped reads to the opposing breakpoint. The minimum '
-    'number of consecutive exact matches to anchor a read to initiate targetted realignment')
+    'number of consecutive exact matches to anchor a read to initiate targeted realignment')
 DEFAULTS.add(
     'min_anchor_fuzzy', 10, defn='Applies to re-aligning softclipped reads to the opposing breakpoint. The minimum '
-    'length of a fuzzy match to anchor a read to initiate targetted realignment')
+    'length of a fuzzy match to anchor a read to initiate targeted realignment')
 DEFAULTS.add(
     'min_anchor_match', 0.9, cast_type=float_fraction,
     defn='Minimum percent match for a read to be kept as evidence')

@@ -846,45 +846,66 @@ def _call_by_supporting_reads(evidence, event_type, consumed_evidence=None):
             double_aligned.setdefault(seq_key, []).append(read)
 
         # now create calls using the double aligned split read pairs if possible (to resolve untemplated sequence)
-        resolved_calls = set()
+        resolved_calls = {}
         event_types = {event_type}
         if event_type in {SVTYPE.DUP, SVTYPE.INS}:
             event_types.update({SVTYPE.DUP, SVTYPE.INS})
         for reads in [d for d in double_aligned.values() if len(d) > 1]:
             for read1, read2 in itertools.combinations(reads, 2):
-                if len(resolved_calls) > 1:
-                    break
                 try:
                     call = call_paired_read_event(read1, read2)
+                    if not evidence.stranded:
+                        call.break1.strand = STRAND.NS
+                        call.break2.strand = STRAND.NS
                     if BreakpointPair.classify(call) & event_types:  # ensure we are calling the correct event types
-                        resolved_calls.add(call)
+                        resolved_calls.setdefault(call, (set(), set()))
+                        resolved_calls[call][0].add(read1)
+                        resolved_calls[call][1].add(read2)
                 except AssertionError:
                     pass  # will be thrown if the reads do not actually belong together
-            if len(resolved_calls) > 1:
-                break
-        try:
-            if len(resolved_calls) == 1:
-                call = resolved_calls.pop()
+
+        # if no calls were resolved set the untemplated seq to None
+        first_breakpoint = Breakpoint(evidence.break1.chr, first, strand=evidence.break1.strand, orient=evidence.break1.orient)
+        second_breakpoint = Breakpoint(evidence.break2.chr, second, strand=evidence.break2.strand, orient=evidence.break2.orient)
+        bpp = BreakpointPair(first_breakpoint, second_breakpoint, event_type=event_type)
+        resolved_calls.setdefault(bpp, (set(), set()))
+
+        uncons_break1_reads = evidence.split_reads[0] - consumed_evidence
+        uncons_break2_reads = evidence.split_reads[1] - consumed_evidence
+
+        for call, (reads1, reads2) in sorted(
+            resolved_calls.items(),
+            key=lambda x: (len(x[1][0]) + len(x[1][1]), x[0]),
+            reverse=True
+        ):
+            try:
                 call = EventCall(
                     call.break1, call.break2, evidence, event_type,
                     call_method=CALL_METHOD.SPLIT, untemplated_seq=call.untemplated_seq
                 )
-            else:
-                first_breakpoint = Breakpoint(evidence.break1.chr, first, strand=evidence.break1.strand, orient=evidence.break1.orient)
-                second_breakpoint = Breakpoint(evidence.break2.chr, second, strand=evidence.break2.strand, orient=evidence.break2.orient)
-                call = EventCall(
-                    first_breakpoint, second_breakpoint, evidence, event_type,
-                    call_method=CALL_METHOD.SPLIT
-                )
-        except ValueError:  # incompatible types
-            continue
-        else:
-            call.add_flanking_support(available_flanking_pairs)
-            if call.has_compatible:
-                call.add_flanking_support(available_flanking_pairs, is_compatible=True)
-            call.break1_split_reads.update(pos1[first])
-            call.break2_split_reads.update(pos2[second])
-            linked_pairings.append(call)
+                call.break1_split_reads.update(reads1 - consumed_evidence)
+                call.break2_split_reads.update(reads2 - consumed_evidence)
+                call.add_flanking_support(available_flanking_pairs)
+                if call.has_compatible:
+                    call.add_flanking_support(available_flanking_pairs, is_compatible=True)
+                # add the initial reads
+                for read in uncons_break1_reads - consumed_evidence:
+                    call.add_break1_split_read(read)
+                for read in uncons_break2_reads - consumed_evidence:
+                    call.add_break2_split_read(read)
+                # does it pass the requirements?
+                if any([
+                    len(call.break1_split_reads) < evidence.min_splits_reads_resolution,
+                    len(call.break2_split_reads) < evidence.min_splits_reads_resolution,
+                    len(call.linking_split_read_names()) < evidence.min_linking_split_reads
+                ]):
+                    continue
+                linked_pairings.append(call)
+                # consume the evidence
+                consumed_evidence.update(call.break1_split_reads)
+                consumed_evidence.update(call.break2_split_reads)
+            except ValueError:  # incompatible types
+                continue
 
     for call in linked_pairings:
         consumed_evidence.update(call.support())
