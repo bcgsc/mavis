@@ -232,8 +232,8 @@ def main(
                 ', flanking pairs: {}{}'.format(
                     0 if not call.contig else len(call.contig.input_reads),
                     len(call.spanning_reads),
-                    len(call.break1_split_reads), len(call.break1_tgt_align_split_read_names()),
-                    len(call.break2_split_reads), len(call.break2_tgt_align_split_read_names()),
+                    len(call.break1_split_read_names()), len(call.break1_split_read_names(tgt=True)),
+                    len(call.break2_split_read_names()), len(call.break2_split_read_names(tgt=True)),
                     len(call.linking_split_read_names()),
                     len(call.flanking_pairs),
                     '' if not call.has_compatible else '(' + str(len(call.compatible_flanking_pairs)) + ')'

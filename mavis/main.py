@@ -302,27 +302,29 @@ def parse_overlay_args(parser, required, optional):
             parser.error('argument --marker: start and end must be integers: {}'.format(marker))
 
     defaults = [None, None, 1, None, True]
+    bam_file, bin_size, ymax, stranded = range(1, 5)
+
     for plot in args.read_depth_plots:
         for i, d in enumerate(defaults):
             if i >= len(plot):
                 plot.append(d)
-        if not os.path.exists(plot[1]):
-            parser.error('argument --read_depth_plots: the bam file given does not exist: {}'.format(plot[1]))
+        if not os.path.exists(plot[bam_file]):
+            parser.error('argument --read_depth_plots: the bam file given does not exist: {}'.format(plot[bam_file]))
         try:
-            plot[2] = int(plot[2])
+            plot[bin_size] = int(plot[bin_size])
         except ValueError:
-            parser.error('argument --read_depth_plots: bin size must be an integer: {}'.format(plot[2]))
+            parser.error('argument --read_depth_plots: bin size must be an integer: {}'.format(plot[bin_size]))
         try:
-            if str(plot[3]).lower() in ['null', 'none']:
-                plot[3] = None
+            if str(plot[ymax]).lower() in ['null', 'none']:
+                plot[ymax] = None
             else:
-                plot[3] = int(plot[3])
+                plot[ymax] = int(plot[ymax])
         except ValueError:
-            parser.error('argument --read_depth_plots: ymax must be an integer: {}'.format(plot[3]))
+            parser.error('argument --read_depth_plots: ymax must be an integer: {}'.format(plot[ymax]))
         try:
-            plot[4] = tab.cast_boolean(plot[4])
+            plot[stranded] = tab.cast_boolean(plot[stranded])
         except TypeError:
-            parser.error('argument --read_depth_plots: stranded must be an boolean: {}'.format(plot[4]))
+            parser.error('argument --read_depth_plots: stranded must be an boolean: {}'.format(plot[stranded]))
     return args
 
 
