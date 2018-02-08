@@ -251,20 +251,15 @@ def filter_by_evidence(
                 removed.append(bpp)
                 continue
         elif bpp.call_method == CALL_METHOD.SPLIT:
+            linking_split_reads = bpp.linking_split_reads
+            if bpp.event_type == SVTYPE.INS:
+                linking_split_reads += bpp.flanking_pairs
             if any([
-                bpp.break1_split_reads < filter_min_split_reads,
-                bpp.break2_split_reads < filter_min_split_reads,
-                all([
-                    bpp.event_type != SVTYPE.INS,
-                    bpp.linking_split_reads < filter_min_linking_split_reads
-                ]),
-                all([
-                    bpp.event_type == SVTYPE.INS,
-                    bpp.flanking_pairs < filter_min_linking_split_reads,
-                    bpp.break2_split_reads_forced + bpp.break1_split_reads_forced < filter_min_linking_split_reads
-                ]),
-                bpp.break1_split_reads - bpp.break1_split_reads_forced < 1,
-                bpp.break2_split_reads - bpp.break2_split_reads_forced < 1
+                bpp.break1_split_reads + bpp.break1_split_reads_forced < filter_min_split_reads,
+                bpp.break2_split_reads + bpp.break2_split_reads_forced < filter_min_split_reads,
+                linking_split_reads < filter_min_linking_split_reads,
+                bpp.break1_split_reads < 1,
+                bpp.break2_split_reads < 1
             ]):
                 removed.append(bpp)
                 continue

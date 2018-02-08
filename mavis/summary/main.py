@@ -91,6 +91,7 @@ def main(
             COLUMNS.cdna_synon,
             COLUMNS.net_size,
             COLUMNS.tracking_id,
+            COLUMNS.assumed_untemplated,
             'dgv',
             'summary_pairing']
         }, COLUMNS.call_method: CALL_METHOD.INPUT},
@@ -286,6 +287,7 @@ def main(
         COLUMNS.protein_synon,
         COLUMNS.cdna_synon,
         COLUMNS.net_size,
+        COLUMNS.assumed_untemplated,
         'dgv'}
 
     rows = []
@@ -333,7 +335,7 @@ def main(
                 not row.get(COLUMNS.cdna_synon, ''),
                 str(row.get(COLUMNS.fusion_cdna_coding_start, None)) != 'None',
                 row[COLUMNS.library] == lib,
-                str(row.get(COLUMNS.supplementary_call, False)) != True
+                str(row.get(COLUMNS.supplementary_call, False)) != 'True'
             ]):
                 lib_rows.append(row)
         output_tabbed_file(lib_rows, filename, header=output_columns)

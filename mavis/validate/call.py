@@ -249,30 +249,44 @@ class EventCall(BreakpointPair):
             stdev = math.sqrt(err)
         return median, stdev
 
-    def break1_tgt_align_split_read_names(self):
+    def break1_split_read_names(self, tgt=False, both=False):
+        """
+        Args:
+            tgt (bool): return only target re-aligned read names
+            both (bool): return both original alignments and target-realigned
+        """
         reads = set()
         for read in self.break1_split_reads:
             if read.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT) and read.get_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT):
+                if tgt:
+                    reads.add(read.query_name)
+            elif not tgt:
+                reads.add(read.query_name)
+
+            if both:
                 reads.add(read.query_name)
         return reads
 
-    def break2_tgt_align_split_read_names(self):
+    def break2_split_read_names(self, tgt=False, both=False):
+        """
+        Args:
+            tgt (bool): return only target re-aligned read names
+            both (bool): return both original alignments and target-realigned
+        """
         reads = set()
         for read in self.break2_split_reads:
             if read.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT) and read.get_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT):
+                if tgt:
+                    reads.add(read.query_name)
+            elif not tgt:
+                reads.add(read.query_name)
+
+            if both:
                 reads.add(read.query_name)
         return reads
 
     def linking_split_read_names(self):
-        reads1 = set()
-        for read in self.break1_split_reads:
-            reads1.add(read.query_name)
-
-        reads2 = set()
-        for read in self.break2_split_reads:
-            reads2.add(read.query_name)
-
-        return reads1 & reads2
+        return self.break1_split_read_names(both=True) & self.break2_split_read_names(both=True)
 
     @staticmethod
     def characterize_repeat_region(event, reference_genome):
@@ -353,33 +367,15 @@ class EventCall(BreakpointPair):
             COLUMNS.flanking_pairs_read_names: ';'.join(sorted(list(flank)))
         })
 
-        b1 = set()
-        b1_tgt = set()
-        b2 = set()
-        b2_tgt = set()
-
-        for read in self.break1_split_reads:
-            name = read.query_name
-            b1.add(name)
-            if read.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT) and read.get_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT):
-                b1_tgt.add(name)
-        for read in self.break2_split_reads:
-            name = read.query_name
-            b2.add(name)
-            if read.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT) and read.get_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT):
-                b2_tgt.add(name)
-
-        linking = b1 & b2
-
         row.update({
-            COLUMNS.break1_split_reads: len(b1),
-            COLUMNS.break1_split_reads_forced: len(b1_tgt),
-            COLUMNS.break1_split_read_names: ';'.join(sorted(b1)),
-            COLUMNS.break2_split_reads: len(b2),
-            COLUMNS.break2_split_reads_forced: len(b2_tgt),
-            COLUMNS.break2_split_read_names: ';'.join(sorted(b2)),
-            COLUMNS.linking_split_reads: len(linking),
-            COLUMNS.linking_split_read_names: ';'.join(sorted(linking)),
+            COLUMNS.break1_split_reads: len(self.break1_split_read_names()),
+            COLUMNS.break1_split_reads_forced: len(self.break1_split_read_names(tgt=True)),
+            COLUMNS.break1_split_read_names: ';'.join(sorted(self.break1_split_read_names(both=True))),
+            COLUMNS.break2_split_reads: len(self.break2_split_read_names()),
+            COLUMNS.break2_split_reads_forced: len(self.break2_split_read_names(tgt=True)),
+            COLUMNS.break2_split_read_names: ';'.join(sorted(self.break2_split_read_names(both=True))),
+            COLUMNS.linking_split_reads: len(self.linking_split_read_names()),
+            COLUMNS.linking_split_read_names: ';'.join(sorted(self.linking_split_read_names())),
             COLUMNS.spanning_reads: len(self.spanning_reads),
             COLUMNS.spanning_read_names: ';'.join(sorted([r.query_name for r in self.spanning_reads]))
         })
@@ -838,7 +834,7 @@ def _call_by_supporting_reads(evidence, event_type, consumed_evidence=None):
                 continue
 
         # check if any of the aligned reads are 'double' aligned
-        double_aligned = {}
+        double_aligned = dict()
         for read in pos1[first] | pos2[second]:
             seq_key = tuple(sorted([
                 read.query_name, read.query_sequence, reverse_complement(read.query_sequence)
@@ -846,45 +842,70 @@ def _call_by_supporting_reads(evidence, event_type, consumed_evidence=None):
             double_aligned.setdefault(seq_key, []).append(read)
 
         # now create calls using the double aligned split read pairs if possible (to resolve untemplated sequence)
-        resolved_calls = set()
+        resolved_calls = dict()
         event_types = {event_type}
         if event_type in {SVTYPE.DUP, SVTYPE.INS}:
             event_types.update({SVTYPE.DUP, SVTYPE.INS})
         for reads in [d for d in double_aligned.values() if len(d) > 1]:
             for read1, read2 in itertools.combinations(reads, 2):
-                if len(resolved_calls) > 1:
-                    break
                 try:
                     call = call_paired_read_event(read1, read2)
+                    if not evidence.stranded:
+                        call.break1.strand = STRAND.NS
+                        call.break2.strand = STRAND.NS
                     if BreakpointPair.classify(call) & event_types:  # ensure we are calling the correct event types
-                        resolved_calls.add(call)
+                        resolved_calls.setdefault(call, (set(), set()))
+                        resolved_calls[call][0].add(read1)
+                        resolved_calls[call][1].add(read2)
                 except AssertionError:
                     pass  # will be thrown if the reads do not actually belong together
-            if len(resolved_calls) > 1:
-                break
-        try:
-            if len(resolved_calls) == 1:
-                call = resolved_calls.pop()
+
+        # if no calls were resolved set the untemplated seq to None
+        first_breakpoint = Breakpoint(evidence.break1.chr, first, strand=evidence.break1.strand, orient=evidence.break1.orient)
+        second_breakpoint = Breakpoint(evidence.break2.chr, second, strand=evidence.break2.strand, orient=evidence.break2.orient)
+        bpp = BreakpointPair(first_breakpoint, second_breakpoint, event_type=event_type)
+        resolved_calls.setdefault(bpp, (set(), set()))
+
+        uncons_break1_reads = evidence.split_reads[0] - consumed_evidence
+        uncons_break2_reads = evidence.split_reads[1] - consumed_evidence
+
+        for call, (reads1, reads2) in sorted(
+            resolved_calls.items(),
+            key=lambda x: (len(x[1][0]) + len(x[1][1]), x[0]),
+            reverse=True
+        ):
+            try:
                 call = EventCall(
                     call.break1, call.break2, evidence, event_type,
                     call_method=CALL_METHOD.SPLIT, untemplated_seq=call.untemplated_seq
                 )
-            else:
-                first_breakpoint = Breakpoint(evidence.break1.chr, first, strand=evidence.break1.strand, orient=evidence.break1.orient)
-                second_breakpoint = Breakpoint(evidence.break2.chr, second, strand=evidence.break2.strand, orient=evidence.break2.orient)
-                call = EventCall(
-                    first_breakpoint, second_breakpoint, evidence, event_type,
-                    call_method=CALL_METHOD.SPLIT
-                )
-        except ValueError:  # incompatible types
-            continue
-        else:
-            call.add_flanking_support(available_flanking_pairs)
-            if call.has_compatible:
-                call.add_flanking_support(available_flanking_pairs, is_compatible=True)
-            call.break1_split_reads.update(pos1[first])
-            call.break2_split_reads.update(pos2[second])
-            linked_pairings.append(call)
+                call.break1_split_reads.update(reads1 - consumed_evidence)
+                call.break2_split_reads.update(reads2 - consumed_evidence)
+                call.add_flanking_support(available_flanking_pairs)
+                if call.has_compatible:
+                    call.add_flanking_support(available_flanking_pairs, is_compatible=True)
+                # add the initial reads
+                for read in uncons_break1_reads - consumed_evidence:
+                    call.add_break1_split_read(read)
+                for read in uncons_break2_reads - consumed_evidence:
+                    call.add_break2_split_read(read)
+                linking_reads = len(call.linking_split_read_names())
+                if call.event_type == SVTYPE.INS:  # may not expect linking split reads for insertions
+                    linking_reads += len(call.flanking_pairs)
+                # does it pass the requirements?
+                if not any([
+                    len(call.break1_split_read_names(both=True)) < evidence.min_splits_reads_resolution,
+                    len(call.break2_split_read_names(both=True)) < evidence.min_splits_reads_resolution,
+                    len(call.break1_split_read_names()) < 1,
+                    len(call.break2_split_read_names()) < 1,
+                    linking_reads < evidence.min_linking_split_reads,
+                ]):
+                    linked_pairings.append(call)
+                    # consume the evidence
+                    consumed_evidence.update(call.break1_split_reads)
+                    consumed_evidence.update(call.break2_split_reads)
+            except ValueError:  # incompatible types
+                continue
 
     for call in linked_pairings:
         consumed_evidence.update(call.support())

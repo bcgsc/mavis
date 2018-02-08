@@ -7,6 +7,8 @@ import subprocess
 import sys
 import time
 
+import tab
+
 from . import __version__
 from .annotate.base import BioInterval
 from .annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
@@ -22,8 +24,7 @@ from .constants import SUBCOMMAND, PROTOCOL
 from .error import DrawingFitError
 from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS, DiagramSettings
 from .illustrate.diagram import draw_multi_transcript_overlay
-from .illustrate.scatter import ScatterPlot
-from .interval import Interval
+from .illustrate.scatter import bam_to_scatter
 from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from .pairing.main import main as pairing_main
 from .submit import SubmissionScript, SCHEDULER_CONFIG
@@ -277,12 +278,12 @@ def parse_overlay_args(parser, required, optional):
     """
     required.add_argument('gene_name', help='Gene ID or gene alias to be drawn')
     augment_parser(['annotations'], required, optional)
-    augment_parser(['drawing_width_iter_increase', 'max_drawing_retries', 'width'], optional)
+    augment_parser(['drawing_width_iter_increase', 'max_drawing_retries', 'width', 'min_mapping_quality'], optional)
     optional.add_argument(
         '--buffer_length', default=0, type=int, help='minimum genomic length to plot on either side of the target gene')
     optional.add_argument(
-        '--read_depth_plot', dest='read_depth_plots', metavar='<axis name STR> <bam FILEPATH> [bin size INT]',
-        nmin=2, nmax=3, help='bam file to use as data for plotting read_depth', action=RangeAppendAction)
+        '--read_depth_plot', dest='read_depth_plots', metavar='<axis name STR> <bam FILEPATH> [bin size INT] [ymax INT] [stranded BOOL]',
+        nmin=2, nmax=5, help='bam file to use as data for plotting read_depth', action=RangeAppendAction)
     optional.add_argument(
         '--marker', dest='markers', metavar='<label STR> <start INT> [end INT]', nmin=2, nmax=3,
         help='Marker on the diagram given by genomic position, May be a single position or a range. '
@@ -300,28 +301,42 @@ def parse_overlay_args(parser, required, optional):
         except ValueError:
             parser.error('argument --marker: start and end must be integers: {}'.format(marker))
 
+    defaults = [None, None, 1, None, True]
+    bam_file, bin_size, ymax, stranded = range(1, 5)
+
     for plot in args.read_depth_plots:
-        if len(plot) < 3:
-            plot.append(1)
-        if not os.path.exists(plot[1]):
-            parser.error('argument --read_depth_plots: the bam file given does not exist: {}'.format(plot[1]))
+        for i, d in enumerate(defaults):
+            if i >= len(plot):
+                plot.append(d)
+        if not os.path.exists(plot[bam_file]):
+            parser.error('argument --read_depth_plots: the bam file given does not exist: {}'.format(plot[bam_file]))
         try:
-            plot[2] = int(plot[2])
+            plot[bin_size] = int(plot[bin_size])
         except ValueError:
-            parser.error('argument --read_depth_plots: bin size must be an integer: {}'.format(plot[2]))
+            parser.error('argument --read_depth_plots: bin size must be an integer: {}'.format(plot[bin_size]))
+        try:
+            if str(plot[ymax]).lower() in ['null', 'none']:
+                plot[ymax] = None
+            else:
+                plot[ymax] = int(plot[ymax])
+        except ValueError:
+            parser.error('argument --read_depth_plots: ymax must be an integer: {}'.format(plot[ymax]))
+        try:
+            plot[stranded] = tab.cast_boolean(plot[stranded])
+        except TypeError:
+            parser.error('argument --read_depth_plots: stranded must be an boolean: {}'.format(plot[stranded]))
     return args
 
 
 def overlay_main(
     gene_name, output, buffer_length, read_depth_plots, markers,
     annotations, annotations_filename,
-    drawing_width_iter_increase, max_drawing_retries,
+    drawing_width_iter_increase, max_drawing_retries, min_mapping_quality,
     **kwargs
 ):
     """
     generates an overlay diagram
     """
-    import pysam
     # check options formatting
     gene_to_draw = None
 
@@ -340,30 +355,17 @@ def overlay_main(
     x_end = gene_to_draw.end + buffer_length
 
     plots = []
-    for axis_name, bam_file, bin_size in read_depth_plots:
+    for axis_name, bam_file, bin_size, ymax, stranded in read_depth_plots:
         # one plot per bam
+        plots.append(bam_to_scatter(
+            bam_file, gene_to_draw.chr, x_start, x_end,
+            strand=gene.get_strand() if stranded else None,
+            ymax=ymax,
+            bin_size=bin_size,
+            axis_name=axis_name,
+            min_mapping_quality=min_mapping_quality
+        ))
         log('reading:', bam_file)
-        samfile = pysam.AlignmentFile(bam_file, 'rb')
-        try:
-            points = []
-            for pileupcolumn in samfile.pileup(gene_to_draw.chr, x_start, x_end):
-                points.append((pileupcolumn.pos, pileupcolumn.n))
-
-            temp = [x for x in range(0, len(points), bin_size)]
-            temp.append(None)
-            avg_points = []
-            for st, end in zip(temp[0::], temp[1::]):
-                pos = [x for x, y in points[st:end]]
-                pos = Interval(min(pos), max(pos))
-                cov = [y for x, y in points[st:end]]
-                cov = Interval(sum(cov) / len(cov))
-                avg_points.append((pos, cov))
-            log('scatter plot {} has {} points'.format(axis_name, len(avg_points)))
-            plots.append(ScatterPlot(
-                avg_points, axis_name, ymin=0, ymax=max([y.start for x, y in avg_points] + [100])
-            ))
-        finally:
-            samfile.close()
 
     for i, (marker_name, marker_start, marker_end) in enumerate(markers):
         markers[i] = BioInterval(gene_to_draw.chr, marker_start, marker_end, name=marker_name)

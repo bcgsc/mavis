@@ -7,7 +7,7 @@ from mavis.constants import ORIENT, PYSAM_READ_FLAGS, NA_MAPPING_QUALITY
 from mavis.validate.evidence import GenomeEvidence
 from mavis.validate.base import Evidence
 from mavis.bam.read import SamRead
-from mavis.bam.cigar import convert_string_to_cigar, join
+from mavis.bam import cigar as _cigar
 
 from . import BAM_INPUT, FULL_BAM_INPUT, mock_read_pair, MockRead, REFERENCE_GENOME_FILE, RUN_FULL, MockObject, MockLongString
 
@@ -54,11 +54,28 @@ class TestFullEvidenceGathering(unittest.TestCase):
             outer_window_min_event_size=0,
             min_mapping_quality=20
         )
+        print(ge.min_expected_fragment_size, ge.max_expected_fragment_size)
         print(ge.break1.chr, ge.outer_window1)
         print(ge.break1.chr, ge.inner_window1)
         print(ge.break2.chr, ge.outer_window2)
         print(ge.break2.chr, ge.inner_window2)
         return ge
+
+    def print_evidence(self, ev):
+        print('evidence for', ev)
+        print('flanking pairs')
+        for pair, mate in ev.flanking_pairs:
+            print(pair.query_name, pair.reference_name, ':', pair.reference_start, _cigar.convert_cigar_to_string(pair.cigar))
+            print(mate.query_name, mate.reference_name, ':', mate.reference_start, _cigar.convert_cigar_to_string(mate.cigar))
+
+        print('first breakpoint split reads')
+        for read in ev.split_reads[0]:
+            print(read.query_name, read.reference_name, ':', read.reference_start, _cigar.convert_cigar_to_string(read.cigar))
+
+        print('second breakpoint split reads')
+        for read in ev.split_reads[1]:
+            print(read.query_name, read.reference_name, ':', read.reference_start, _cigar.convert_cigar_to_string(read.cigar))
+        print()
 
     def count_original_reads(self, reads):
         count = 0
@@ -127,6 +144,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
             opposing_strands=False
         )
         ev1.load_evidence()
+        self.print_evidence(ev1)
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         self.assertEqual(35, self.count_original_reads(ev1.split_reads[0]))
         self.assertEqual(11, self.count_original_reads(ev1.split_reads[1]))
@@ -140,7 +158,9 @@ class TestFullEvidenceGathering(unittest.TestCase):
             opposing_strands=False
         )
         ev1.load_evidence()
+        self.print_evidence(ev1)
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
+        self.assertEqual(49, len(ev1.flanking_pairs))
         self.assertEqual(22, self.count_original_reads(ev1.split_reads[0]))
         self.assertEqual(14, self.count_original_reads(ev1.split_reads[1]))
 
@@ -152,6 +172,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
             opposing_strands=False
         )
         ev1.load_evidence()
+        self.print_evidence(ev1)
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         self.assertEqual(4, self.count_original_reads(ev1.split_reads[0]))
         self.assertEqual(10, self.count_original_reads(ev1.split_reads[1]))
@@ -165,6 +186,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
             opposing_strands=False
         )
         ev1.load_evidence()
+        self.print_evidence(ev1)
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         self.assertEqual(8, self.count_original_reads(ev1.split_reads[0]))
         self.assertEqual(9, self.count_original_reads(ev1.split_reads[1]))
@@ -178,6 +200,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
             opposing_strands=False
         )
         ev1.load_evidence()
+        self.print_evidence(ev1)
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         self.assertEqual(20, self.count_original_reads(ev1.split_reads[0]))
         self.assertEqual(18, self.count_original_reads(ev1.split_reads[1]))
@@ -191,6 +214,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
             opposing_strands=False
         )
         ev1.load_evidence()
+        self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
         print(len(ev1.spanning_reads))
@@ -208,6 +232,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
             opposing_strands=False
         )
         ev1.load_evidence()
+        self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
         print(len(ev1.spanning_reads))
@@ -226,6 +251,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
             opposing_strands=False
         )
         ev1.load_evidence()
+        self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
         print(len(ev1.spanning_reads))
@@ -244,6 +270,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
             opposing_strands=False
         )
         ev1.load_evidence()
+        self.print_evidence(ev1)
         self.assertEqual(20, self.count_original_reads(ev1.split_reads[0]))
         self.assertEqual(18, self.count_original_reads(ev1.split_reads[1]))
         self.assertEqual(0, len(ev1.spanning_reads))
@@ -256,6 +283,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
             opposing_strands=False
         )
         ev1.load_evidence()
+        self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
         print(len(ev1.spanning_reads))
@@ -274,6 +302,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
             opposing_strands=False
         )
         ev1.load_evidence()
+        self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
         print(len(ev1.spanning_reads))
@@ -292,6 +321,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
             opposing_strands=False
         )
         ev1.load_evidence()
+        self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
         print(len(ev1.spanning_reads))
@@ -327,6 +357,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
             opposing_strands=False
         )
         ev1.load_evidence()
+        self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
         print(len(ev1.spanning_reads))
@@ -344,6 +375,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
             opposing_strands=False
         )
         ev1.load_evidence()
+        self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
         print(len(ev1.spanning_reads))
@@ -362,6 +394,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
             opposing_strands=False
         )
         ev1.load_evidence()
+        self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
         print(len(ev1.spanning_reads))
@@ -384,6 +417,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
             opposing_strands=False
         )
         ev1.load_evidence()
+        self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
         print(len(ev1.spanning_reads))
@@ -403,6 +437,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
             opposing_strands=False
         )
         ev1.load_evidence()
+        self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
         print(len(ev1.spanning_reads))
@@ -420,6 +455,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
             opposing_strands=False
         )
         ev1.load_evidence()
+        self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
         print(len(ev1.spanning_reads))
@@ -438,6 +474,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
             opposing_strands=False
         )
         ev1.load_evidence()
+        self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
         print(len(ev1.spanning_reads))
@@ -456,6 +493,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
             opposing_strands=False
         )
         ev1.load_evidence()
+        self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
         print(len(ev1.spanning_reads))
@@ -474,6 +512,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
             opposing_strands=False
         )
         ev1.load_evidence()
+        self.print_evidence(ev1)
         print(len(ev1.spanning_reads))
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         self.assertEqual(0, len(ev1.split_reads[0]))
@@ -603,14 +642,14 @@ class TestStandardizeRead(unittest.TestCase):
         read.query_sequence = 'TCAGCTCTCTTAGGGCACACCCTCCAAGGTGCCTAAATGCCATCCCAGGATTGGTTCCAGTGTCTATTATCTGTTTGACTCCAAATGGCCAAACACCTGACTTCCTCTCTGGTAGCCTGGCTTTTATCTTCTAGGACATCCAGGGCCCCTCTCTTTGCCTTCCCCTCTTTCTTCCTTCTACTGCTTCAGCAGACATCATGTG'
         read.reference_start = 224646710
         read.reference_id = 0
-        print(convert_string_to_cigar('183=12D19='))
-        read.cigar = join(convert_string_to_cigar('183=12D19='))
+        print(_cigar.convert_string_to_cigar('183=12D19='))
+        read.cigar = _cigar.join(_cigar.convert_string_to_cigar('183=12D19='))
         read.query_name = 'name'
         read.mapping_quality = NA_MAPPING_QUALITY
         std_read = Evidence.standardize_read(self.mock_evidence, read)
         print(SamRead.__repr__(read))
         print(SamRead.__repr__(std_read))
-        self.assertEqual(convert_string_to_cigar('186=12D16='), std_read.cigar)
+        self.assertEqual(_cigar.convert_string_to_cigar('186=12D16='), std_read.cigar)
         self.assertEqual(read.reference_start, std_read.reference_start)
 
 

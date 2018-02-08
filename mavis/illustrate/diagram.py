@@ -327,8 +327,8 @@ def draw_multi_transcript_overlay(config, gene, vmarkers=None, window_buffer=0, 
                 for dom in translation.domains:
                     labels.set_key(dom.name, dom.name)
 
-    st = min([max([gene.start - window_buffer, 1])] + [m.start for m in vmarkers] + [p.xmin for p in plots])
-    end = max([gene.end + window_buffer] + [m.end for m in vmarkers] + [p.xmax for p in plots])
+    st = min([max([gene.start - window_buffer, 1])] + [m.start for m in vmarkers] + [p.xmin for p in plots if p.xmin])
+    end = max([gene.end + window_buffer] + [m.end for m in vmarkers] + [p.xmax for p in plots if p.xmax])
 
     mapping = generate_interval_mapping(
         all_exons,
@@ -344,10 +344,11 @@ def draw_multi_transcript_overlay(config, gene, vmarkers=None, window_buffer=0, 
     y = config.marker_top_margin
 
     for plot in plots:
-        plot_group = draw_scatter(config, canvas, plot, mapping)
-        main_group.add(plot_group)
-        plot_group.translate(x, y)
-        y += plot.height + config.padding * 2
+        if plot.points:
+            plot_group = draw_scatter(config, canvas, plot, mapping)
+            main_group.add(plot_group)
+            plot_group.translate(x, y)
+            y += plot.height + config.padding * 2
 
     regular_transcripts = sorted([us_tx for us_tx in gene.transcripts if not us_tx.is_best_transcript], key=lambda x: x.name)
     for us_tx in regular_transcripts:

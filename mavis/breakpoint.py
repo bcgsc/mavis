@@ -108,6 +108,23 @@ class BreakpointPair:
                 return False
         return True
 
+    def __lt__(self, other):
+        if self.break1.key < other.break1.key:
+            return True
+        elif self.break1.key > other.break1.key:
+            return False
+        elif self.break2.key < other.break2.key:
+            return True
+        elif self.break2.key > other.break2.key:
+            return False
+        elif self.untemplated_seq == other.untemplated_seq:
+            return False
+        elif self.untemplated_seq is None:
+            return False
+        elif other.untemplated_seq is None:
+            return True
+        return self.untemplated_seq < other.untemplated_seq
+
     @property
     def interchromosomal(self):
         """:class:`bool`: True if the breakpoints are on different chromosomes, False otherwise"""
