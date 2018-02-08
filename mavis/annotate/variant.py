@@ -721,7 +721,7 @@ def annotate_events(
         for j, ann in enumerate(ann_list):
             ann.data[COLUMNS.annotation_id] = '{}-a{}'.format(ann.validation_id, j + 1)
             if ann.untemplated_seq is None:
-                if len(ann.break1) == 1 and len(ann.break2) == 1:
+                if len(ann.break1) == 1 and len(ann.break2) == 1 and ann.event_type != SVTYPE.INS:
                     ann.untemplated_seq = ''
                     ann.data[COLUMNS.assumed_untemplated] = True
             else:
