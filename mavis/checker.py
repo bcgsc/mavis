@@ -46,7 +46,7 @@ class LogDetails:
                         break
                 else:
                     non_empty_line = lines[-1].lower()
-                if re.search(r'\b(error|fault|fatal|aborted|core dumped|killed|died)\b', non_empty_line):
+                if re.search(r'\b(error|fault|fatal|aborted|core dumped|killed|died|^\S+error)\b', non_empty_line):
                     self.status = LOGFILE_STATUS.CRASH
                     self.message = non_empty_line.strip()
                 else:

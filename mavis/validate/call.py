@@ -70,7 +70,8 @@ class EventCall(BreakpointPair):
         if event_type not in BreakpointPair.classify(self) | {self.compatible_type}:
             raise ValueError(
                 'event_type is not compatible with the breakpoint call',
-                event_type, BreakpointPair.classify(self), self.compatible_type)
+                'expected event type=', event_type, 'event classified types=', BreakpointPair.classify(self),
+                'compatible type=', self.compatible_type, str(self))
         self.contig = contig
         self.call_method = CALL_METHOD.enforce(call_method)
         if contig and self.call_method != CALL_METHOD.CONTIG:
@@ -925,6 +926,8 @@ def _call_by_supporting_reads(evidence, event_type, consumed_evidence=None):
         linked_pairings.append(call)
     except (AssertionError, UserWarning) as err:
         error_messages.add(str(err))
+    except ValueError:  # incompatible type
+        pass
 
     if not linked_pairings:
         raise UserWarning(';'.join(list(error_messages)))
