@@ -25,7 +25,7 @@ A simple example with a single library would look like this (see below)
 .. code-block:: bash
 
     >>> mavis config --write output.cfg \
-        --library Library1 genome diseased /path/to/bam/file/library1.bam False
+        --library Library1 genome diseased False /path/to/bam/file/library1.bam
 
 This creates a configuration file but is still missing some information before it can be run by the pipeline, the input
 files containing the breakpoint pairs. So a more complete example is shown below
@@ -33,8 +33,8 @@ files containing the breakpoint pairs. So a more complete example is shown below
 .. code-block:: bash
 
     >>> mavis config --write output.cfg \
-        --library Library1 genome diseased /path/to/bam/file/library1.bam False \
-        --library Library2 genome normal /path/to/bam/file/library2.bam False \
+        --library Library1 genome diseased False /path/to/bam/file/library1.bam \
+        --library Library2 genome normal False /path/to/bam/file/library2.bam \
         --input /path/to/bpp/file Library1 Library2 \
         --input /path/to/other/bpp/file Library1 Library2
 
