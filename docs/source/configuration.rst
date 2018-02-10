@@ -35,11 +35,31 @@ files containing the breakpoint pairs. So a more complete example is shown below
     >>> mavis config --write output.cfg \
         --library Library1 genome diseased False /path/to/bam/file/library1.bam \
         --library Library2 genome normal False /path/to/bam/file/library2.bam \
-        --input /path/to/bpp/file Library1 Library2 \
-        --input /path/to/other/bpp/file Library1 Library2
+        --assign Library1 /path/to/bpp/file /path/to/other/bpp/file \
+        --assign Library2 /path/to/bpp/file /path/to/other/bpp/file
 
 In the above example Library1 is the tumour genome and Library2 is the normal genome. The same input files are
 used for both
+
+Conversion During Configuration
+++++++++++++++++++++++++++++++++++
+
+Raw SV caller output files can be set up for conversion during the configuration stage. This will require using
+the ``--convert`` option (for natively supported tools/formats). The alias given to the ``--convert`` option can
+be used in the same way a path for an already converted file would be, and passed as input
+
+For example if the input files in the above example were DELLY output files
+
+.. code-block:: bash
+
+    >>> mavis config --write output.cfg \
+        --library Library1 genome diseased False /path/to/bam/file/library1.bam \
+        --library Library2 genome normal False /path/to/bam/file/library2.bam \
+        --assign Library1 alias1 other_alias \
+        --assign Library2 alias1 other_alias \
+        --convert alias1 /path/to/bpp/file delly False \
+        --convert other_alias /path/to/other/bpp/file delly False
+
 
 
 .. _config-environment:
