@@ -61,17 +61,11 @@ TOOL_SVTYPE_MAPPING.update({
 TRACKING_COLUMN = 'tracking_id'
 
 
-def convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=False, log=devnull, collapse=True, assume_no_untemplated=True):
+def convert_tool_output(fnames, file_type=SUPPORTED_TOOL.MAVIS, stranded=False, log=devnull, collapse=True, assume_no_untemplated=True):
     """
     Reads output from a given SV caller and converts to a set of MAVIS breakpoint pairs. Also collapses duplicates
     """
     result = []
-    fnames = []
-    for name in braceexpand(input_file):
-        for subname in glob.glob(name):
-            fnames.append(subname)
-    if not fnames:
-        raise OSError('no such file', input_file)
     for fname in fnames:
         result.extend(_convert_tool_output(fname, file_type, stranded, log, assume_no_untemplated=assume_no_untemplated))
     if collapse:

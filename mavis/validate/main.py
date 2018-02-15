@@ -26,11 +26,11 @@ VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
 
 
 def main(
-    input, output,
+    inputs, output,
     bam_file, strand_specific,
     library, protocol, median_fragment_size, stdev_fragment_size, read_length,
     reference_genome, reference_genome_filename, annotations, masking, aligner_reference,
-    samtools_version, start_time=int(time.time()), **kwargs
+    samtools_version, start_time=int(time.time()), filename_prefix='validate', **kwargs
 ):
     """
     Args:
@@ -52,7 +52,6 @@ def main(
     validation_settings.update({k: v for k, v in kwargs.items() if k in DEFAULTS})
     validation_settings = MavisNamespace(**validation_settings)
 
-    filename_prefix = re.sub(r'\.(txt|tsv|tab)$', '', os.path.basename(input))
     raw_evidence_bam = os.path.join(output, filename_prefix + '.raw_evidence.bam')
     contig_bam = os.path.join(output, filename_prefix + '.contigs.bam')
     evidence_bed = os.path.join(output, filename_prefix + '.evidence.bed')
@@ -76,7 +75,7 @@ def main(
         samtools_version = get_samtools_version()
 
     bpps = read_inputs(
-        [input],
+        inputs,
         add_default={
             COLUMNS.protocol: protocol,
             COLUMNS.library: library,

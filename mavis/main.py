@@ -19,8 +19,8 @@ from .blat import get_blat_version
 from .checker import check_completion
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from .cluster.main import main as cluster_main
-from .config import augment_parser, MavisConfig, generate_config, CustomHelpFormatter, RangeAppendAction
-from .constants import SUBCOMMAND, PROTOCOL
+from .config import augment_parser, MavisConfig, generate_config, get_metavar, CustomHelpFormatter, RangeAppendAction
+from .constants import SUBCOMMAND, PROTOCOL, float_fraction
 from .error import DrawingFitError
 from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS, DiagramSettings
 from .illustrate.diagram import draw_multi_transcript_overlay
@@ -32,7 +32,7 @@ from .submit import STD_OPTIONS as STD_SUBMIT_OPTIONS
 from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 from .summary.main import main as summary_main
 from .tools import convert_tool_output, SUPPORTED_TOOL
-from .util import bash_expands, log, log_arguments, MavisNamespace, mkdirp, output_tabbed_file
+from .util import bash_expands, get_env_variable, log, log_arguments, MavisNamespace, mkdirp, output_tabbed_file
 from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 from .validate.main import main as validate_main
 
@@ -70,7 +70,7 @@ def build_validate_command(config, libconf, inputfile, outputdir):
             command.append('--{} "{}"'.format(argname, value))
         else:
             command.append('--{} {}'.format(argname, value))
-    command.append('--input {}'.format(inputfile))
+    command.append('--inputs {}'.format(repr(inputfile)))
     command.append('--output {}'.format(outputdir))
     return ' \\\n\t'.join(command) + '\n'
 
@@ -116,9 +116,11 @@ def run_conversion(config, libconf, conversion_dir, assume_no_untemplated=True):
         if input_file in config.convert:
             if not os.path.exists(output_filename):
                 command = config.convert[input_file]
-                if command[0] == 'convert_tool_output':
+                if command[0] == 'convert_tool_output':  # convert_tool_output FILEPATH [FILEPATH...] TOOL stranded
                     log('converting input command:', command)
-                    output_tabbed_file(convert_tool_output(*command[1:], log=log, assume_no_untemplated=assume_no_untemplated), output_filename)
+                    output_tabbed_file(convert_tool_output(
+                        command[1:-2], command[-2], command[-1], log=log, assume_no_untemplated=assume_no_untemplated
+                    ), output_filename)
                 else:
                     command = ' '.join(command) + ' -o {}'.format(output_filename)
                     log('converting input command:')
@@ -272,25 +274,10 @@ def main_pipeline(config):
             fh.write(line + '\n')
 
 
-def parse_overlay_args(parser, required, optional):
+def check_overlay_args(args, parser):
     """
     parse the overlay options and check the formatting
     """
-    required.add_argument('gene_name', help='Gene ID or gene alias to be drawn')
-    augment_parser(['annotations'], required, optional)
-    augment_parser(['drawing_width_iter_increase', 'max_drawing_retries', 'width', 'min_mapping_quality'], optional)
-    optional.add_argument(
-        '--buffer_length', default=0, type=int, help='minimum genomic length to plot on either side of the target gene')
-    optional.add_argument(
-        '--read_depth_plot', dest='read_depth_plots', metavar='<axis name STR> <bam FILEPATH> [bin size INT] [ymax INT] [stranded BOOL]',
-        nmin=2, nmax=5, help='bam file to use as data for plotting read_depth', action=RangeAppendAction)
-    optional.add_argument(
-        '--marker', dest='markers', metavar='<label STR> <start INT> [end INT]', nmin=2, nmax=3,
-        help='Marker on the diagram given by genomic position, May be a single position or a range. '
-        'The label should be a short descriptor to avoid overlapping labels on the diagram',
-        action=RangeAppendAction)
-    args = MavisNamespace(**parser.parse_args().__dict__)
-
     # check complex options
     for marker in args.markers:
         if len(marker) < 3:
@@ -390,131 +377,139 @@ def overlay_main(
 
 
 def convert_main(inputs, outputfile, file_type, strand_specific=False, assume_no_untemplated=True):
-    bpp_results = []
-    for filename in inputs:
-        bpp_results.extend(convert_tool_output(filename, file_type, strand_specific, log, True, assume_no_untemplated=assume_no_untemplated))
+    bpp_results = convert_tool_output(inputs, file_type, strand_specific, log, True, assume_no_untemplated=assume_no_untemplated)
     if os.path.dirname(outputfile):
         mkdirp(os.path.dirname(outputfile))
     output_tabbed_file(bpp_results, outputfile)
 
 
 def main():
-    def usage(err=None, detail=False):
-        umsg = '\nusage: {} {{{}}} [-h] [-v]'.format(PROGNAME, ','.join(sorted(SUBCOMMAND.values())))
-        helpmenu = """
-required arguments:
-
-    pipeline_step
-        specifies which step in the pipeline or which subprogram
-        should be run. See possible input values above
-
-optional arguments:
-    -h, --help
-        bring up this help menu
-    -v, --version
-        output the version number
-
-To bring up individual help menus for a given pipeline step
-use the -h/--help option
-
-    >>> {} <pipeline step> -h
-    """.format(PROGNAME)
-        print(umsg)
-        if detail:
-            print(helpmenu)
-        if err:
-            print('{}: error:'.format(PROGNAME), err, '\n')
-            return EXIT_ERROR
-        return EXIT_OK
-
     start_time = int(time.time())
 
-    if len(sys.argv) < 2:
-        return usage('the <pipeline step> argument is required')
-    elif sys.argv[1] in ['-h', '--help']:
-        return usage(detail=True)
-    elif sys.argv[1] in ['-v', '--version']:
-        print('{} version {}'.format('mavis', __version__))
-        return EXIT_OK
+    parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
+    augment_parser(['version'], parser)
+    subp = parser.add_subparsers(dest='command', help='specifies which step/stage in the pipeline or which subprogram to use')
+    required = {}  # hold required argument group by subparser command name
+    optional = {}  # hold optional argument group by subparser command name
+    for command in SUBCOMMAND.values():
+        subparser = subp.add_parser(command, formatter_class=CustomHelpFormatter, add_help=False)
+        required[command] = subparser.add_argument_group('required arguments')
+        optional[command] = subparser.add_argument_group('optional arguments')
+        augment_parser(['help', 'version'], optional[command])
 
-    pstep = sys.argv.pop(1)
-    sys.argv[0] = '{} {}'.format(sys.argv[0], pstep)
+    # config arguments
+    required[SUBCOMMAND.CONFIG].add_argument('-w', '--write', help='path to the new configuration file', required=True, metavar='FILEPATH')
+    optional[SUBCOMMAND.CONFIG].add_argument(
+        '--library',
+        metavar='<name> {genome,transcriptome} {diseased,normal} [strand_specific] [/path/to/bam/file]',
+        action=RangeAppendAction, help='configuration for libraries to be analyzed by mavis', nmin=3, nmax=5
+    )
+    optional[SUBCOMMAND.CONFIG].add_argument(
+        '--input', help='path to an input file or filter for mavis followed by the library names it '
+        'should be used for', nmin=2, action=RangeAppendAction, metavar='FILEPATH <name> [<name> ...]'
+    )
+    optional[SUBCOMMAND.CONFIG].add_argument(
+        '--assign', help='library name followed by path(s) to input file(s) or filter names. This represents the list'
+        ' of inputs that should be used for the library', action=RangeAppendAction, nmin=2,
+        metavar='<name> FILEPATH [FILEPATH ...]')
+    optional[SUBCOMMAND.CONFIG].add_argument(
+        '--genome_bins', default=get_env_variable('genome_bins', 100), type=int, metavar=get_metavar(int),
+        help='number of bins/samples to use in calculating the fragment size stats for genomes')
+    optional[SUBCOMMAND.CONFIG].add_argument(
+        '--transcriptome_bins', default=get_env_variable('transcriptome_bins', 500), type=int, metavar=get_metavar(int),
+        help='number of genes to use in calculating the fragment size stats for genomes')
+    optional[SUBCOMMAND.CONFIG].add_argument(
+        '--distribution_fraction', default=get_env_variable('distribution_fraction', 0.97), type=float_fraction, metavar=get_metavar(float),
+        help='the proportion of the distribution of calculated fragment sizes to use in determining the stdev')
+    optional[SUBCOMMAND.CONFIG].add_argument(
+        '--convert', nmin=3,
+        metavar='<alias> FILEPATH [FILEPATH ...] {{{}}} [stranded]'.format(','.join(SUPPORTED_TOOL.values())),
+        help='input file conversion for internally supported tools', action=RangeAppendAction)
+    optional[SUBCOMMAND.CONFIG].add_argument(
+        '--external_conversion', metavar=('<alias>', '<"command">'), nargs=2, default=[],
+        help='alias for use in inputs and full command (quoted)', action='append')
+    optional[SUBCOMMAND.CONFIG].add_argument(
+        '--add_defaults', default=False, action='store_true', help='write current defaults for all non-specified options to the config output')
+    augment_parser(['annotations'], optional[SUBCOMMAND.CONFIG], optional[SUBCOMMAND.CONFIG])
+    # add the optional annotations file (only need this is auto generating bam stats for the transcriptome)
+    augment_parser(['skip_stage'], optional[SUBCOMMAND.CONFIG])
 
-    parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter, add_help=False)
-    required = parser.add_argument_group('required arguments')
-    optional = parser.add_argument_group('optional arguments')
-    augment_parser(['help', 'version'], optional)
+    # convert
+    required[SUBCOMMAND.CONVERT].add_argument(
+        '--file_type', choices=sorted(SUPPORTED_TOOL.values()),
+        required=True, help='Indicates the input file type to be parsed')
+    augment_parser(['strand_specific', 'assume_no_untemplated'], optional[SUBCOMMAND.CONVERT])
+    required[SUBCOMMAND.CONVERT].add_argument('--outputfile', '-o', required=True, help='path to the outputfile', metavar='FILEPATH')
 
-    if pstep == SUBCOMMAND.CONFIG:
-        generate_config(parser, required, optional, log=log)
-        return EXIT_OK
-    elif pstep == SUBCOMMAND.CONVERT:
-        required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
-        required.add_argument(
-            '--file_type', choices=sorted([t for t in SUPPORTED_TOOL.values() if t != 'mavis']),
-            required=True, help='Indicates the input file type to be parsed')
-        augment_parser(['strand_specific', 'assume_no_untemplated'], optional)
-        required.add_argument('--outputfile', '-o', required=True, help='path to the outputfile', metavar='FILEPATH')
-    else:
-        required.add_argument('-o', '--output', help='path to the output directory', required=True)
+    for command in set(SUBCOMMAND.values()) - {SUBCOMMAND.CONFIG, SUBCOMMAND.CONVERT}:
+        required[command].add_argument('-o', '--output', help='path to the output directory', required=True)
 
-        if pstep == SUBCOMMAND.PIPELINE:
-            required.add_argument('config', help='path to the input pipeline configuration file', metavar='FILEPATH')
-            optional.add_argument(
-                '--skip_stage', choices=[SUBCOMMAND.CLUSTER, SUBCOMMAND.VALIDATE], action='append', default=[],
-                help='Use flag once per stage to skip. Can skip clustering or validation or both')
+    # pipeline
+    required[SUBCOMMAND.PIPELINE].add_argument('config', help='path to the input pipeline configuration file', metavar='FILEPATH')
+    optional[SUBCOMMAND.PIPELINE].add_argument(
+        '--skip_stage', choices=[SUBCOMMAND.CLUSTER, SUBCOMMAND.VALIDATE], action='append', default=[],
+        help='Use flag once per stage to skip. Can skip clustering or validation or both')
 
-        elif pstep == SUBCOMMAND.CLUSTER:
-            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
-            augment_parser(['library', 'protocol', 'strand_specific', 'disease_status', 'annotations', 'masking'], required, optional)
-            augment_parser(CLUSTER_DEFAULTS.keys(), optional)
+    # add the inputs argument
+    for command in [SUBCOMMAND.CLUSTER, SUBCOMMAND.ANNOTATE, SUBCOMMAND.VALIDATE, SUBCOMMAND.PAIR, SUBCOMMAND.SUMMARY, SUBCOMMAND.CONVERT]:
+        required[command].add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
 
-        elif pstep == SUBCOMMAND.VALIDATE:
-            required.add_argument('-n', '--input', help='path to the input file', required=True, metavar='FILEPATH')
-            augment_parser(
-                ['library', 'protocol', 'bam_file', 'read_length', 'stdev_fragment_size', 'median_fragment_size'] +
-                ['strand_specific', 'annotations', 'reference_genome', 'aligner_reference', 'masking'],
-                required, optional
-            )
-            augment_parser(VALIDATION_DEFAULTS.keys(), optional)
+    # cluster
+    augment_parser(
+        ['library', 'protocol', 'strand_specific', 'disease_status', 'annotations', 'masking'],
+        required[SUBCOMMAND.CLUSTER], optional[SUBCOMMAND.CLUSTER])
+    augment_parser(CLUSTER_DEFAULTS.keys(), optional[SUBCOMMAND.CLUSTER])
 
-        elif pstep == SUBCOMMAND.ANNOTATE:
-            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
-            augment_parser(
-                ['library', 'protocol', 'annotations', 'reference_genome', 'masking', 'template_metadata'],
-                required, optional
-            )
-            augment_parser(['max_proximity'], optional)
-            augment_parser(list(ANNOTATION_DEFAULTS.keys()) + list(ILLUSTRATION_DEFAULTS.keys()), optional)
+    # validate
+    augment_parser(
+        ['library', 'protocol', 'bam_file', 'read_length', 'stdev_fragment_size', 'median_fragment_size'] +
+        ['strand_specific', 'annotations', 'reference_genome', 'aligner_reference', 'masking'],
+        required[SUBCOMMAND.VALIDATE], optional[SUBCOMMAND.VALIDATE]
+    )
+    augment_parser(VALIDATION_DEFAULTS.keys(), optional[SUBCOMMAND.VALIDATE])
 
-        elif pstep == SUBCOMMAND.PAIR:
-            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
-            augment_parser(['annotations'], required, optional)
-            augment_parser(['max_proximity'] + list(PAIRING_DEFAULTS.keys()), optional)
+    # annotate
+    augment_parser(
+        ['library', 'protocol', 'annotations', 'reference_genome', 'masking', 'template_metadata'],
+        required[SUBCOMMAND.ANNOTATE], optional[SUBCOMMAND.ANNOTATE]
+    )
+    augment_parser(['max_proximity'], optional[SUBCOMMAND.ANNOTATE])
+    augment_parser(list(ANNOTATION_DEFAULTS.keys()) + list(ILLUSTRATION_DEFAULTS.keys()), optional[SUBCOMMAND.ANNOTATE])
 
-        elif pstep == SUBCOMMAND.SUMMARY:
-            required.add_argument('-n', '--inputs', nargs='+', help='path to the input files', required=True, metavar='FILEPATH')
-            augment_parser(
-                ['annotations', 'dgv_annotation', 'flanking_call_distance', 'split_call_distance', 'contig_call_distance', 'spanning_call_distance'],
-                required, optional
-            )
-            augment_parser(SUMMARY_DEFAULTS.keys(), optional)
+    # pair
+    augment_parser(['annotations'], required[SUBCOMMAND.PAIR], optional[SUBCOMMAND.PAIR])
+    augment_parser(['max_proximity'] + list(PAIRING_DEFAULTS.keys()), optional[SUBCOMMAND.PAIR])
 
-        elif pstep == SUBCOMMAND.CHECKER:
+    # summary
+    augment_parser(
+        ['annotations', 'dgv_annotation', 'flanking_call_distance', 'split_call_distance', 'contig_call_distance', 'spanning_call_distance'],
+        required[SUBCOMMAND.SUMMARY], optional[SUBCOMMAND.SUMMARY]
+    )
+    augment_parser(SUMMARY_DEFAULTS.keys(), optional[SUBCOMMAND.SUMMARY])
 
-            args = parser.parse_args()
-            success_flag = check_completion(args.output)
-            return EXIT_OK if success_flag else EXIT_ERROR
+    # overlay arguments
+    required[SUBCOMMAND.OVERLAY].add_argument('gene_name', help='Gene ID or gene alias to be drawn')
+    augment_parser(['annotations'], required[SUBCOMMAND.OVERLAY], optional[SUBCOMMAND.OVERLAY])
+    augment_parser(['drawing_width_iter_increase', 'max_drawing_retries', 'width', 'min_mapping_quality'], optional[SUBCOMMAND.OVERLAY])
+    optional[SUBCOMMAND.OVERLAY].add_argument(
+        '--buffer_length', default=0, type=int, help='minimum genomic length to plot on either side of the target gene')
+    optional[SUBCOMMAND.OVERLAY].add_argument(
+        '--read_depth_plot', dest='read_depth_plots', metavar='<axis name STR> <bam FILEPATH> [bin size INT] [ymax INT] [stranded BOOL]',
+        nmin=2, nmax=5, help='bam file to use as data for plotting read_depth', action=RangeAppendAction)
+    optional[SUBCOMMAND.OVERLAY].add_argument(
+        '--marker', dest='markers', metavar='<label STR> <start INT> [end INT]', nmin=2, nmax=3,
+        help='Marker on the diagram given by genomic position, May be a single position or a range. '
+        'The label should be a short descriptor to avoid overlapping labels on the diagram',
+        action=RangeAppendAction)
 
-        elif pstep != SUBCOMMAND.OVERLAY:
+    args = MavisNamespace(**parser.parse_args().__dict__)
+    if not args.command:
+        parser.error('the following arguments are required: command')
 
-            raise NotImplementedError('invalid value for <pipeline step>', pstep)
-    if pstep == SUBCOMMAND.OVERLAY:
-        args = parse_overlay_args(parser, required, optional)
-    else:
-        args = MavisNamespace(**parser.parse_args().__dict__)
+    if args.command == SUBCOMMAND.OVERLAY:
+        args = check_overlay_args(args, parser)
 
-    if pstep == SUBCOMMAND.VALIDATE:
+    if args.command == SUBCOMMAND.VALIDATE:
         args.samtools_version = get_samtools_version()
         args.blat_version = get_blat_version()
 
@@ -523,10 +518,11 @@ use the -h/--help option
     log_arguments(args)
     rargs = args
 
-    if pstep == SUBCOMMAND.PIPELINE:  # load the configuration file
+    if args.command == SUBCOMMAND.PIPELINE:  # load the configuration file
         config = MavisConfig.read(args.config)
         config.output = args.output
         config.skip_stage = args.skip_stage
+        config.command = SUBCOMMAND.PIPELINE
         rargs = config.reference
         args = config
 
@@ -539,17 +535,19 @@ use the -h/--help option
                 raise OSError('input reference file does not exist', arg, rargs[arg])
         except AttributeError:
             pass
+        except TypeError as err:
+            if args.command != SUBCOMMAND.CONFIG or arg != 'annotations':
+                raise err
 
     # try checking the input files exist
     try:
+        inputs = []
         for fname in args.inputs:
-            if len(bash_expands(fname)) < 1:
-                raise OSError('input file does not exist', fname)
-    except AttributeError:
-        pass
-    try:
-        if len(bash_expands(args.input)) < 1:
-            raise OSError('input file does not exist', args.input)
+            expanded = bash_expands(fname)
+            inputs.extend(expanded)
+            if not expanded:
+                parser.error('--inputs file(s) {} do not exist'.format(args.inputs))
+        args.inputs = set([os.path.abspath(f) for f in inputs])
     except AttributeError:
         pass
 
@@ -557,12 +555,11 @@ use the -h/--help option
     # loaded data
     try:
         if any([
-            pstep == SUBCOMMAND.CLUSTER and args.uninformative_filter,
-            pstep == SUBCOMMAND.PIPELINE and config.cluster.uninformative_filter,
-            pstep == SUBCOMMAND.VALIDATE and args.protocol == PROTOCOL.TRANS,
-            pstep == SUBCOMMAND.PIPELINE and config.has_transcriptome() and SUBCOMMAND.VALIDATE not in config.skip_stage,
-            pstep == SUBCOMMAND.PAIR or pstep == SUBCOMMAND.ANNOTATE or pstep == SUBCOMMAND.SUMMARY,
-            pstep == SUBCOMMAND.OVERLAY
+            args.command == SUBCOMMAND.CLUSTER and args.uninformative_filter,
+            args.command == SUBCOMMAND.PIPELINE and config.cluster.uninformative_filter,
+            args.command == SUBCOMMAND.VALIDATE and args.protocol == PROTOCOL.TRANS,
+            args.command == SUBCOMMAND.PIPELINE and config.has_transcriptome() and SUBCOMMAND.VALIDATE not in config.skip_stage,
+            args.command in {SUBCOMMAND.PAIR, SUBCOMMAND.ANNOTATE, SUBCOMMAND.SUMMARY, SUBCOMMAND.OVERLAY}
         ]):
             log('loading:', rargs.annotations)
             rargs.annotations_filename = rargs.annotations
@@ -574,7 +571,7 @@ use the -h/--help option
         pass
     # reference genome
     try:
-        if pstep in [SUBCOMMAND.VALIDATE, SUBCOMMAND.ANNOTATE]:
+        if args.command in [SUBCOMMAND.VALIDATE, SUBCOMMAND.ANNOTATE]:
             log('loading:', rargs.reference_genome)
             rargs.reference_genome_filename = rargs.reference_genome
             rargs.reference_genome = load_reference_genome(rargs.reference_genome)
@@ -586,7 +583,7 @@ use the -h/--help option
 
     # masking file
     try:
-        if pstep in [SUBCOMMAND.VALIDATE, SUBCOMMAND.CLUSTER, SUBCOMMAND.PIPELINE]:
+        if args.command in [SUBCOMMAND.VALIDATE, SUBCOMMAND.CLUSTER, SUBCOMMAND.PIPELINE]:
             log('loading:', rargs.masking)
             rargs.masking_filename = rargs.masking
             rargs.masking = load_masking_regions(rargs.masking)
@@ -598,7 +595,7 @@ use the -h/--help option
 
     # dgv annotation
     try:
-        if pstep == SUBCOMMAND.SUMMARY:
+        if args.command == SUBCOMMAND.SUMMARY:
             log('loading:', rargs.dgv_annotation)
             rargs.dgv_annotation_filename = rargs.dgv_annotation
             rargs.dgv_annotation = load_masking_regions(rargs.dgv_annotation)
@@ -610,7 +607,7 @@ use the -h/--help option
 
     # template metadata
     try:
-        if pstep == SUBCOMMAND.ANNOTATE:
+        if args.command == SUBCOMMAND.ANNOTATE:
             log('loading:', rargs.template_metadata)
             rargs.template_metadata_filename = rargs.template_metadata
             rargs.template_metadata = load_templates(rargs.template_metadata)
@@ -620,20 +617,26 @@ use the -h/--help option
     except AttributeError:
         pass
     # decide which main function to execute
-    if pstep == SUBCOMMAND.CLUSTER:
+    if args.command == SUBCOMMAND.CLUSTER:
         cluster_main(**args, start_time=start_time)
-    elif pstep == SUBCOMMAND.VALIDATE:
+    elif args.command == SUBCOMMAND.VALIDATE:
         validate_main(**args, start_time=start_time)
-    elif pstep == SUBCOMMAND.ANNOTATE:
+    elif args.command == SUBCOMMAND.ANNOTATE:
         annotate_main(**args, start_time=start_time)
-    elif pstep == SUBCOMMAND.PAIR:
+    elif args.command == SUBCOMMAND.PAIR:
         pairing_main(**args, start_time=start_time)
-    elif pstep == SUBCOMMAND.SUMMARY:
+    elif args.command == SUBCOMMAND.SUMMARY:
         summary_main(**args, start_time=start_time)
-    elif pstep == SUBCOMMAND.CONVERT:
+    elif args.command == SUBCOMMAND.CONVERT:
+        del args.command
         convert_main(**args)
-    elif pstep == SUBCOMMAND.OVERLAY:
+    elif args.command == SUBCOMMAND.OVERLAY:
+        del args.command
         overlay_main(**args)
+    elif args.command == SUBCOMMAND.CONFIG:
+        generate_config(args, parser, log=log)
+    elif args.command == SUBCOMMAND.CHECKER:
+        check_completion(args.output)
     else:  # PIPELINE
         main_pipeline(args)
 

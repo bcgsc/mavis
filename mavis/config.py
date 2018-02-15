@@ -306,18 +306,18 @@ class MavisConfig:
                 continue
             val = [v for v in re.split(r'[;\s]+', val) if v]
             if val[0] == 'convert_tool_output':
-                if len(val) < 3 or val[2] not in SUPPORTED_TOOL.values():
+                try:
+                    val[-1] = tab.cast_boolean(val[-1])
+                except TypeError:
+                    val.append(False)
+                if len(val) < 4 or val[-2] not in SUPPORTED_TOOL.values():
                     raise UserWarning(
-                        'conversion using the built-in convert_tool_output requires specifying the input file and '
-                        'tool name currently supported tools include:', SUPPORTED_TOOL.values(), 'given', val)
-                inputs = bash_expands(val[1])
-                if len(inputs) < 1:
-                    raise OSError('input file(s) do not exist', val[1])
-                if len(val) == 4:
-                    val[3] = tab.cast_boolean(val[3])
-                elif len(val) > 4:
-                    raise UserWarning(
-                        'conversion using the built-in convert_tool_output takes at most 3 arguments')
+                        'conversion using the built-in convert_tool_output requires specifying the input file(s) and '
+                        'tool name. currently supported tools include:', SUPPORTED_TOOL.values(), 'given', val)
+                inputs = []
+                for file_expr in val[1:-2]:
+                    if not bash_expands(file_expr):
+                        raise OSError('input file(s) do not exist', val[1:-2])
             self.convert[attr] = val
         self.convert = MavisNamespace(**self.convert)
 
@@ -407,7 +407,10 @@ def augment_parser(arguments, parser, semi_opt_parser=None, required=None):
     all having a similar look/feel
     """
     if required is None:
-        required = bool(parser.title.startswith('required'))
+        try:
+            required = bool(parser.title.startswith('required'))
+        except AttributeError:
+            pass
 
     for arg in arguments:
 
@@ -502,51 +505,13 @@ def augment_parser(arguments, parser, semi_opt_parser=None, required=None):
             )
 
 
-def generate_config(parser, required, optional, log=devnull):
+def generate_config(args, parser, log=devnull):
     """
     Args:
         parser (argparse.ArgumentParser): the main parser
         required: the argparse required arguments group
         optional: the argparse optional arguments group
     """
-    # the config sub  program is used for writing pipeline configuration files
-    required.add_argument('-w', '--write', help='path to the new configuration file', required=True, metavar='FILEPATH')
-    optional.add_argument(
-        '--library',
-        metavar='<name> {genome,transcriptome} {diseased,normal} [strand_specific] [/path/to/bam/file]',
-        action=RangeAppendAction, help='configuration for libraries to be analyzed by mavis', nmin=3, nmax=5
-    )
-    optional.add_argument(
-        '--input', help='path to an input file or filter for mavis followed by the library names it '
-        'should be used for', nmin=2, action=RangeAppendAction, metavar='FILEPATH <name> [<name> ...]'
-    )
-    optional.add_argument(
-        '--assign', help='library name followed by path(s) to input file(s) or filter names. This represents the list'
-        ' of inputs that should be used for the library', action=RangeAppendAction, nmin=2,
-        metavar='<name> FILEPATH [FILEPATH ...]')
-    optional.add_argument(
-        '--genome_bins', default=get_env_variable('genome_bins', 100), type=int, metavar=get_metavar(int),
-        help='number of bins/samples to use in calculating the fragment size stats for genomes')
-    optional.add_argument(
-        '--transcriptome_bins', default=get_env_variable('transcriptome_bins', 500), type=int, metavar=get_metavar(int),
-        help='number of genes to use in calculating the fragment size stats for genomes')
-    optional.add_argument(
-        '--distribution_fraction', default=get_env_variable('distribution_fraction', 0.97), type=float_fraction, metavar=get_metavar(float),
-        help='the proportion of the distribution of calculated fragment sizes to use in determining the stdev')
-    optional.add_argument(
-        '--convert', nargs=4, default=[],
-        metavar=('<alias>', 'FILEPATH', '{{{}}}'.format(','.join(SUPPORTED_TOOL.values())), '<stranded>'),
-        help='input file conversion for internally supported tools', action='append')
-    optional.add_argument(
-        '--external_conversion', metavar=('<alias>', '<"command">'), nargs=2, default=[],
-        help='alias for use in inputs and full command (quoted)', action='append')
-    optional.add_argument(
-        '--add_defaults', default=False, action='store_true', help='write current defaults for all non-specified options to the config output')
-    augment_parser(['annotations'], optional, optional)
-    # add the optional annotations file (only need this is auto generating bam stats for the transcriptome)
-    augment_parser(['skip_stage'], optional)
-    args = MavisNamespace(**parser.parse_args().__dict__)
-
     try:
         # process the libraries by input argument (--input)
         libs = []
