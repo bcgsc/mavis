@@ -34,7 +34,7 @@ def main(
 ):
     """
     Args:
-        input (str): the input file containing the breakpoint pairs
+        inputs (list): list of input files containing the breakpoint pairs
         output (str): path to the output directory
         bam_file (str): path the bam file
         strand_specific (bool): flag to indicate the input bam is using a strand specific protocol
