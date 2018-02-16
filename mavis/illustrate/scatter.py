@@ -1,12 +1,12 @@
 import os
 
 from ..bam.read import sequenced_strand, pileup
-from ..util import log
+from ..util import log, devnull
 from ..interval import Interval
 from ..validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 
 
-def bam_to_scatter(bam_file, chrom, start, end, bin_size, strand=None, axis_name=None, ymax=None, min_mapping_quality=0):
+def bam_to_scatter(bam_file, chrom, start, end, density, strand=None, axis_name=None, ymax=None, min_mapping_quality=0, ymax_color='#FF0000'):
     """
     pull data from a bam file to set up a scatter plot of the pileup
 
@@ -44,25 +44,20 @@ def bam_to_scatter(bam_file, chrom, start, end, bin_size, strand=None, axis_name
 
     try:
         points = []
-        avg_points = []
         try:
             for refpos, count in pileup(samfile.fetch(chrom, start, end), filter_func=read_filter):
                 if refpos <= end and refpos >= start:
                     points.append((refpos, count))
         except ValueError:  # chrom not in bam
             pass
-        else:
-            grouping_indices = [x for x in range(0, len(points), bin_size)]
-            grouping_indices.append(None)
-            for st_index, end_index in zip(grouping_indices[0::], grouping_indices[1::]):
-                pos = [x for x, y in points[st_index:end_index]]
-                pos = Interval(min(pos), max(pos))
-                cov = [y for x, y in points[st_index:end_index]]
-                cov = Interval(sum(cov) / len(cov))
-                avg_points.append((pos, cov))
-        log('scatter plot {} has {} points'.format(axis_name, len(avg_points)))
+
+        log('scatter plot {} has {} points'.format(axis_name, len(points)))
         plot = ScatterPlot(
-            avg_points, axis_name, ymin=0, ymax=max([y.start for x, y in avg_points] + [100]) if ymax is None else ymax
+            points, axis_name,
+            ymin=0,
+            ymax=max([y for x, y in points] + [100]) if ymax is None else ymax,
+            density=density,
+            ymax_color=ymax_color
         )
     finally:
         samfile.close()
@@ -77,7 +72,7 @@ class ScatterPlot:
     def __init__(
         self, points, y_axis_label,
         ymax=None, ymin=None, xmin=None, xmax=None, hmarkers=None, height=100, point_radius=2,
-        title='', yticks=None, colors=None
+        title='', yticks=None, colors=None, density=1, ymax_color='#FF0000'
     ):
         self.hmarkers = hmarkers if hmarkers is not None else []
         self.yticks = yticks if yticks is not None else []
@@ -86,22 +81,24 @@ class ScatterPlot:
         self.ymax = ymax
         self.points = points
         if self.ymin is None and (yticks or points):
-            self.ymin = min([y.start for x, y in points] + yticks)
+            self.ymin = min([y for x, y in points] + yticks)
         if self.ymax is None and (yticks or points):
-            self.ymax = max([y.end for x, y in points] + yticks)
+            self.ymax = max([y for x, y in points] + yticks)
         self.xmin = xmin
         self.xmax = xmax
         if self.xmin is None and points:
-            self.xmin = min([x.start for x, y in points])
+            self.xmin = min([x for x, y in points])
         if self.xmax is None and points:
-            self.xmax = max([x.end for x, y in points])
+            self.xmax = max([x for x, y in points])
         self.y_axis_label = y_axis_label
         self.height = 100
         self.point_radius = 2
         self.title = title
+        self.ymax_color = ymax_color
+        self.density = density
 
 
-def draw_scatter(ds, canvas, plot, xmapping):
+def draw_scatter(ds, canvas, plot, xmapping, log=devnull):
     """
     given a xmapping, draw the scatter plot svg group
 
@@ -112,44 +109,46 @@ def draw_scatter(ds, canvas, plot, xmapping):
         xmapping (:class:`dict` of :class:`Interval` by :class:`Interval`):
             dict used for conversion of coordinates in the xaxis to pixel positions
     """
+    from shapely.geometry import Point as sPoint
     # generate the y coordinate mapping
     plot_group = canvas.g(class_='scatter_plot')
 
     yratio = plot.height / (abs(plot.ymax - plot.ymin))
-    ypx = []
-    xpx = []
-    for xpo, ypo in plot.points:
+    px_points = []
+    circles = []
+    for x_pos, y_pos in plot.points:
         try:
-            temp = Interval.convert_ratioed_pos(xmapping, xpo.start)
-            xp = Interval.convert_ratioed_pos(xmapping, xpo.end)
-            xp = xp | temp
-            xpx.append((xp, xpo))
-            temp = plot.height - abs(ypo.start - plot.ymin) * yratio
-            yp = Interval(plot.height - abs(ypo.end - plot.ymin) * yratio, temp)
-            ypx.append((yp, ypo))
+            x_px = Interval.convert_ratioed_pos(xmapping, x_pos)
+            y_px = Interval(plot.height - abs(min(y_pos, plot.ymax) - plot.ymin) * yratio)
+            current_circle = sPoint(x_px.center, y_px.center).buffer(ds.scatter_marker_radius)
+            if circles:
+                ratio = circles[-1].intersection(current_circle).area / current_circle.area
+                if ratio > plot.density:
+                    continue
+            circles.append(current_circle)
+            px_points.append((x_px, y_px, plot.ymax_color if y_pos > plot.ymax else plot.colors.get((x_pos, y_pos), '#000000')))
         except IndexError:
             pass
+    log('drew {} of {} points (density={})'.format(len(circles), len(plot.points), plot.density), time_stamp=False)
 
-    for x, y in zip(xpx, ypx):
-        xp, xpo = x
-        yp, ypo = y
-        if xp.length() > ds.scatter_marker_radius:
+    for x_px, y_px, color in px_points:
+        if x_px.length() > ds.scatter_marker_radius:
             plot_group.add(canvas.line(
-                (xp.start, yp.center),
-                (xp.end, yp.center),
+                (x_px.start, y_px.center),
+                (x_px.end, y_px.center),
                 stroke='#000000',
                 stroke_width=ds.scatter_error_bar_stroke_width
             ))
-        if yp.length() > ds.scatter_marker_radius:
+        if y_px.length() > ds.scatter_marker_radius:
             plot_group.add(canvas.line(
-                (xp.center, yp.start),
-                (xp.center, yp.end),
+                (x_px.center, y_px.start),
+                (x_px.center, y_px.end),
                 stroke='#000000',
                 stroke_width=ds.scatter_error_bar_stroke_width
             ))
         plot_group.add(canvas.circle(
-            center=(xp.center, yp.center),
-            fill=plot.colors.get((xpo, ypo), '#000000'),
+            center=(x_px.center, y_px.center),
+            fill=color,
             r=ds.scatter_marker_radius
         ))
 
