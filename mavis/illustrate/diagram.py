@@ -10,6 +10,7 @@ from .util import generate_interval_mapping, LabelMapping
 
 from ..annotate.genomic import IntergenicRegion
 from ..interval import Interval
+from ..util import devnull
 
 # draw gene level view
 # draw gene box
@@ -307,7 +308,7 @@ def draw_sv_summary_diagram(
     return canvas, legend
 
 
-def draw_multi_transcript_overlay(config, gene, vmarkers=None, window_buffer=0, plots=None):
+def draw_multi_transcript_overlay(config, gene, vmarkers=None, window_buffer=0, plots=None, log=devnull):
     vmarkers = [] if vmarkers is None else vmarkers
     plots = [] if plots is None else plots
 
@@ -326,9 +327,8 @@ def draw_multi_transcript_overlay(config, gene, vmarkers=None, window_buffer=0, 
             for translation in spl_tx.translations:
                 for dom in translation.domains:
                     labels.set_key(dom.name, dom.name)
-
-    st = min([max([gene.start - window_buffer, 1])] + [m.start for m in vmarkers] + [p.xmin for p in plots if p.xmin])
-    end = max([gene.end + window_buffer] + [m.end for m in vmarkers] + [p.xmax for p in plots if p.xmax])
+    genomic_min = min([max([gene.start - window_buffer, 1])] + [m.start for m in vmarkers] + [p.xmin for p in plots if p.xmin])
+    genomic_max = max([gene.end + window_buffer] + [m.end for m in vmarkers] + [p.xmax for p in plots if p.xmax])
 
     mapping = generate_interval_mapping(
         all_exons,
@@ -336,7 +336,7 @@ def draw_multi_transcript_overlay(config, gene, vmarkers=None, window_buffer=0, 
         config.exon_intron_ratio,
         config.exon_min_width,
         min_inter_width=config.min_width,
-        start=st, end=end
+        start=genomic_min, end=genomic_max
     )
     main_group = canvas.g(class_='overlay')
 
@@ -345,14 +345,19 @@ def draw_multi_transcript_overlay(config, gene, vmarkers=None, window_buffer=0, 
 
     for plot in plots:
         if plot.points:
-            plot_group = draw_scatter(config, canvas, plot, mapping)
+            plot_group = draw_scatter(config, canvas, plot, mapping, log=log)
             main_group.add(plot_group)
             plot_group.translate(x, y)
             y += plot.height + config.padding * 2
 
     regular_transcripts = sorted([us_tx for us_tx in gene.transcripts if not us_tx.is_best_transcript], key=lambda x: x.name)
     for us_tx in regular_transcripts:
-        group_element = draw_exon_track(config, canvas, us_tx, mapping, colors=colors)
+        group_element = draw_exon_track(
+            config, canvas, us_tx, mapping,
+            colors=colors,
+            genomic_min=genomic_min,
+            genomic_max=genomic_max
+        )
         main_group.add(group_element)
         group_element.translate(x, y)
 
