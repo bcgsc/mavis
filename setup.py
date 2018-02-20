@@ -28,7 +28,7 @@ os.environ['HTSLIB_CONFIGURE_OPTIONS'] = '--disable-lzma'  # only required for C
 
 setup(
     name='mavis',
-    version='1.6.4',
+    version='1.6.5',
     url='https://github.com/bcgsc/mavis.git',
     packages=find_packages(),
     install_requires=[
@@ -46,7 +46,8 @@ setup(
         'Distance>=0.1.3',
         'setuptools>=36.6.0',
         'shortuuid>=0.5.0',
-        'm2r>=0.1.12'
+        'm2r>=0.1.12',
+        'Shapely==1.6.4.post1'
     ],
     python_requires='>=3',
     author_email='creisle@bcgsc.ca',

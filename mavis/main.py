@@ -288,8 +288,8 @@ def check_overlay_args(args, parser):
         except ValueError:
             parser.error('argument --marker: start and end must be integers: {}'.format(marker))
 
-    defaults = [None, None, 1, None, True]
-    bam_file, bin_size, ymax, stranded = range(1, 5)
+    defaults = [None, None, 0.5, None, True]
+    bam_file, density, ymax, stranded = range(1, 5)
 
     for plot in args.read_depth_plots:
         for i, d in enumerate(defaults):
@@ -298,9 +298,11 @@ def check_overlay_args(args, parser):
         if not os.path.exists(plot[bam_file]):
             parser.error('argument --read_depth_plots: the bam file given does not exist: {}'.format(plot[bam_file]))
         try:
-            plot[bin_size] = int(plot[bin_size])
+            plot[density] = float(plot[density])
+            if plot[density] < 0 or plot[density] > 1:
+                raise ValueError()
         except ValueError:
-            parser.error('argument --read_depth_plots: bin size must be an integer: {}'.format(plot[bin_size]))
+            parser.error('argument --read_depth_plots: density must be an float between 0 and 1: {}'.format(plot[density]))
         try:
             if str(plot[ymax]).lower() in ['null', 'none']:
                 plot[ymax] = None
@@ -319,6 +321,7 @@ def overlay_main(
     gene_name, output, buffer_length, read_depth_plots, markers,
     annotations, annotations_filename,
     drawing_width_iter_increase, max_drawing_retries, min_mapping_quality,
+    ymax_color='#FF0000',
     **kwargs
 ):
     """
@@ -338,21 +341,21 @@ def overlay_main(
 
     settings = DiagramSettings(**kwargs)
 
-    x_start = max(gene_to_draw.start - buffer_length, 1)
-    x_end = gene_to_draw.end + buffer_length
+    genomic_min = max(gene_to_draw.start - buffer_length, 1)
+    genomic_max = gene_to_draw.end + buffer_length
 
     plots = []
-    for axis_name, bam_file, bin_size, ymax, stranded in read_depth_plots:
+    for axis_name, bam_file, density, ymax, stranded in read_depth_plots:
         # one plot per bam
         plots.append(bam_to_scatter(
-            bam_file, gene_to_draw.chr, x_start, x_end,
-            strand=gene.get_strand() if stranded else None,
+            bam_file, gene_to_draw.chr, genomic_min, genomic_max,
+            strand=gene_to_draw.get_strand() if stranded else None,
             ymax=ymax,
-            bin_size=bin_size,
+            density=density,
             axis_name=axis_name,
-            min_mapping_quality=min_mapping_quality
+            min_mapping_quality=min_mapping_quality,
+            ymax_color=ymax_color
         ))
-        log('reading:', bam_file)
 
     for i, (marker_name, marker_start, marker_end) in enumerate(markers):
         markers[i] = BioInterval(gene_to_draw.chr, marker_start, marker_end, name=marker_name)
@@ -361,7 +364,13 @@ def overlay_main(
     attempts = 1
     while True:
         try:
-            canvas = draw_multi_transcript_overlay(settings, gene_to_draw, vmarkers=markers, plots=plots)
+            canvas = draw_multi_transcript_overlay(
+                settings, gene_to_draw,
+                vmarkers=markers,
+                plots=plots,
+                window_buffer=buffer_length,
+                log=log
+            )
             break
         except DrawingFitError as err:
             if attempts > max_drawing_retries:
@@ -494,7 +503,7 @@ def main():
     optional[SUBCOMMAND.OVERLAY].add_argument(
         '--buffer_length', default=0, type=int, help='minimum genomic length to plot on either side of the target gene')
     optional[SUBCOMMAND.OVERLAY].add_argument(
-        '--read_depth_plot', dest='read_depth_plots', metavar='<axis name STR> <bam FILEPATH> [bin size INT] [ymax INT] [stranded BOOL]',
+        '--read_depth_plot', dest='read_depth_plots', metavar='<axis name STR> <bam FILEPATH> [density FLOAT] [ymax INT] [stranded BOOL]',
         nmin=2, nmax=5, help='bam file to use as data for plotting read_depth', action=RangeAppendAction)
     optional[SUBCOMMAND.OVERLAY].add_argument(
         '--marker', dest='markers', metavar='<label STR> <start INT> [end INT]', nmin=2, nmax=3,
