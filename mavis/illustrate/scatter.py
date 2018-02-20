@@ -91,8 +91,8 @@ class ScatterPlot:
         if self.xmax is None and points:
             self.xmax = max([x for x, y in points])
         self.y_axis_label = y_axis_label
-        self.height = 100
-        self.point_radius = 2
+        self.height = height
+        self.point_radius = point_radius
         self.title = title
         self.ymax_color = ymax_color
         self.density = density
