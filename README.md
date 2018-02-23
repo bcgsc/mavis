@@ -4,7 +4,6 @@
     </object><br>
 </object>
 
-
 ![master branch build Status](https://www.bcgsc.ca/bamboo/plugins/servlet/wittified/build-status/MAV-TEST) 
 *(master)* 
 
@@ -12,9 +11,10 @@
 ![develop branch build status](https://www.bcgsc.ca/bamboo/plugins/servlet/wittified/build-status/MAV-TEST0) 
 *(develop)* 
 
-[MAVIS](http://mavis.bcgsc.ca) is a pipeline to merge and validate input from different structural variant callers into a single report.
-The pipeline consists five of main steps
-
+[MAVIS](http://mavis.bcgsc.ca) is python command-line tool for the post-processing of structural variant calls. 
+The general [MAVIS](http://mavis.bcgsc.ca) pipeline consists of six main stages
+ 
+- convert
 - [cluster](http://mavis.bcgsc.ca/docs/latest/mavis.cluster.html#mavis-cluster)
 - [validate](http://mavis.bcgsc.ca/docs/latest/mavis.validate.html#mavis-validate)
 - [annotate](http://mavis.bcgsc.ca/docs/latest/mavis.annotate.html#mavis-annotate)
@@ -39,10 +39,10 @@ These include: an aligner ([blat](http://mavis.bcgsc.ca/docs/latest/glossary.htm
 The easiest way to install [MAVIS](http://mavis.bcgsc.ca) is through the python package manager, pip
 
 ```
-pip install git+https://github.com/bcgsc/mavis.git@vX.X.X#egg=mavis-X.X.X
+pip install mavis
 ```
 
-Where X.X.X is the version number (for example 1.3.0). This will install mavis and its python dependencies.
+This will install mavis and its python dependencies.
 
 3. **Build reference files**
 
