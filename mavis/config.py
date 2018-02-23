@@ -305,6 +305,8 @@ class MavisConfig:
                 self.convert[attr] = CONVERT_OPTIONS.type(attr)(val)
                 continue
             val = [v for v in re.split(r'[;\s]+', val) if v]
+            if not val:
+                raise UserWarning('conversion tag requires arguments', attr)
             if val[0] == 'convert_tool_output':
                 try:
                     val[-1] = tab.cast_boolean(val[-1])
@@ -314,7 +316,6 @@ class MavisConfig:
                     raise UserWarning(
                         'conversion using the built-in convert_tool_output requires specifying the input file(s) and '
                         'tool name. currently supported tools include:', SUPPORTED_TOOL.values(), 'given', val)
-                inputs = []
                 for file_expr in val[1:-2]:
                     if not bash_expands(file_expr):
                         raise OSError('input file(s) do not exist', val[1:-2])
