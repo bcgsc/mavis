@@ -50,6 +50,7 @@ setup(
         'Shapely==1.6.4.post1'
     ],
     python_requires='>=3',
+    author='Cara Reisle',
     author_email='creisle@bcgsc.ca',
     setup_requires=[
         'numpy>=1.13.1',  # put here b/c biopython doesn't declare this as a setup dependency properly
