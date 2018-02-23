@@ -3,3 +3,5 @@ recursive-include tests *
 recursive-include mavis *
 recursive-include tools *
 recursive-include tab *
+include README.md
+include LICENSE.txt

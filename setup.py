@@ -22,15 +22,15 @@ def check_nonpython_dependencies():
         raise OSError('Aligner is required. Missing executable: {}'.format(aligner))
     print('Found: aligner at', pth)
 
-
 # HSTLIB is a dependency for pysam
 os.environ['HTSLIB_CONFIGURE_OPTIONS'] = '--disable-lzma'  # only required for CRAM files
 
 setup(
     name='mavis',
-    version='1.6.5',
+    version='1.6.6',
     url='https://github.com/bcgsc/mavis.git',
     packages=find_packages(),
+    description='A Structural Variant Post-Processing Package',
     install_requires=[
         'docutils <0.13.1',
         'colour',
