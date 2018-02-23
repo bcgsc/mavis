@@ -8,6 +8,8 @@ MAVIS supports output from a wide-variety of SV callers. Assumptions are made fo
 the output and the publications for each tool. The tools and versions currently supported are given below. Versions listed
 indicate the version of the tool for which output files have been tested as input into MAVIS
 
+MAVIS also supports a :ref:`general VCF input <general-vcf-inputs>`. It should be noted however that the tool tracked will only be listed as 'vcf' then.
+
 .. list-table::
     :header-rows: 1
 
@@ -53,7 +55,7 @@ indicate the version of the tool for which output files have been tested as inpu
 :ref:`DELLY <Rausch-2012>` Post-processing
 ---------------------------------------------
 
-Some post-processing on the delly output files is generally done prior to input. The output bcf files are converted to a vcf file
+Some post-processing on the delly output files is generally done prior to input. The output BCF files are converted to a VCF file
 
 .. code:: bash
 
@@ -128,3 +130,23 @@ You can also re-use the same conversion script if you have multiple inputs to co
     mavis config \
         --external_conversion my_converted_input1 "my_convert_script.py my_input1.txt" \
         --external_conversion my_converted_input2 "my_convert_script.py my_input2.txt"
+
+
+
+.. _general-vcf-inputs:
+
+
+General VCF inputs
+-------------------
+
+Assuming that the tool outputting the VCF file follows standard conventions, then it is possible to use a general VCF 
+conversion that is not tool-specific. Given the wide variety in content for VCF files, MAVIS makes a number of
+assumptions and the VCF conversion may not work for all VCFs. In general MAVIS follows the `VCF 4.2 specification <https://samtools.github.io/hts-specs/VCFv4.2.pdf>`_.
+If the input tool you are using differs, it would be better to use a :ref:`custom conversion script <custom-conversion>`.
+
+**Assumptions on non-standard INFO fields**
+
+- ``PRECISE`` if given, Confidence intervals are ignored if given in favour of exact breakpoint calls using pos and END as the breakpoint positions
+- ``CT`` values if given are representative of the breakpoint orientations.
+- ``CHR2`` is given for all interchromosomal events
+

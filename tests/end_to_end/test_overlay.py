@@ -115,7 +115,7 @@ class TestOverlayOptions(unittest.TestCase):
     def test_read_depth_plot_binned(self):
         with patch.object(sys, 'argv', [
             'mavis', SUBCOMMAND.OVERLAY, '--annotations', ANNOTATIONS, 'GAGE4', '--output', self.temp_output,
-            '--read_depth_plot', 'axis', BAM, '10'
+            '--read_depth_plot', 'axis', BAM, '0.5'
         ]):
             try:
                 returncode = main()

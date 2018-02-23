@@ -2,6 +2,7 @@
 This is the primary module responsible for generating svg visualizations
 
 """
+import itertools
 import re
 
 from .util import dynamic_label_color, generate_interval_mapping, LabelMapping, split_intervals_into_tracks, Tag
@@ -60,7 +61,7 @@ def draw_legend(config, canvas, swatches, border=True):
     return main_group
 
 
-def draw_exon_track(config, canvas, transcript, mapping, colors=None, x_start=None, x_end=None, translation=None):
+def draw_exon_track(config, canvas, transcript, mapping, colors=None, genomic_min=None, genomic_max=None, translation=None):
     """
     """
     colors = {} if colors is None else colors
@@ -68,9 +69,16 @@ def draw_exon_track(config, canvas, transcript, mapping, colors=None, x_start=No
 
     y = config.track_height / 2
     exons = sorted(transcript.exons, key=lambda x: x.start)
+    exonic_min = min([e.start for e in exons])
+    exonic_max = max([e.end for e in exons])
 
-    start = Interval.convert_ratioed_pos(mapping, exons[0].start).start if x_start is None else x_start
-    end = Interval.convert_ratioed_pos(mapping, exons[-1].end).end if x_end is None else x_end
+    genomic_min = exonic_min if genomic_min is None else min(genomic_min, exonic_min)
+    genomic_max = exonic_max if genomic_max is None else max(genomic_max, exonic_max)
+
+    start = Interval.convert_ratioed_pos(mapping, exonic_min)
+    start = start.start if exonic_min == genomic_min else start.end
+    end = Interval.convert_ratioed_pos(mapping, exonic_max)
+    end = end.end if exonic_max == genomic_max else end.start
 
     main_group.add(
         canvas.rect(
@@ -80,8 +88,10 @@ def draw_exon_track(config, canvas, transcript, mapping, colors=None, x_start=No
 
     # draw the exons
     for exon in exons:
-        start = Interval.convert_ratioed_pos(mapping, exon.start).start
-        end = Interval.convert_ratioed_pos(mapping, exon.end).end
+        start = Interval.convert_ratioed_pos(mapping, exon.start)
+        end = Interval.convert_ratioed_pos(mapping, exon.end)
+        start = start.start if exon.start == genomic_min else start.end
+        end = end.end if exon.end == genomic_max else end.start
         pxi = Interval(start, end)
         exon_number = 'n'
         try:
@@ -103,16 +113,14 @@ def draw_exon_track(config, canvas, transcript, mapping, colors=None, x_start=No
 
 
 def draw_transcript_with_translation(
-    config, canvas, translation, labels, colors, mapping, reference_genome=None, x_start=None, x_end=None
+    config, canvas, translation, labels, colors, mapping, reference_genome=None, genomic_min=None, genomic_max=None
 ):
     main_group = canvas.g()
     pre_transcript = translation.transcript.reference_object
     spl_tx = translation.transcript
 
-    if x_start is None:
-        x_start = Interval.convert_ratioed_pos(mapping, pre_transcript.start).start
-    if x_end is None:
-        x_end = Interval.convert_ratioed_pos(mapping, pre_transcript.end).end
+    genomic_min = pre_transcript.start if genomic_min is None else min(pre_transcript.start, genomic_min)
+    genomic_max = pre_transcript.end if genomic_max is None else max(pre_transcript.end, genomic_max)
 
     label_prefix = config.transcript_label_prefix
     if isinstance(pre_transcript, FusionTranscript):
@@ -121,7 +129,18 @@ def draw_transcript_with_translation(
     # if the splicing takes up more room than the track we need to adjust for it
     y = config.splice_height
 
-    exon_track_group = draw_exon_track(config, canvas, pre_transcript, mapping, colors, translation=translation)
+    exon_track_group = draw_exon_track(
+        config, canvas, pre_transcript, mapping, colors,
+        translation=translation,
+        genomic_min=genomic_min,
+        genomic_max=genomic_max
+    )
+    # calculate the outer pixel boundaries for the exon track
+    leftmost_ex_px = Interval.convert_ratioed_pos(mapping, pre_transcript.start)
+    leftmost_ex_px = leftmost_ex_px.start if pre_transcript.start == genomic_min else leftmost_ex_px.end
+    rightmost_ex_px = Interval.convert_ratioed_pos(mapping, pre_transcript.end)
+    rightmost_ex_px = rightmost_ex_px.end if pre_transcript.end == genomic_max else rightmost_ex_px.start
+
     exon_track_group.translate(0, y)
     exon_track_group.add(canvas.text(
         labels.add(spl_tx, label_prefix),
@@ -138,8 +157,8 @@ def draw_transcript_with_translation(
     # draw the splicing pattern
     splice_group = canvas.g(class_='splicing')
     for p1, p2 in zip(spl_tx.splicing_pattern[::2], spl_tx.splicing_pattern[1::2]):
-        a = Interval.convert_pos(mapping, p1.pos)
-        b = Interval.convert_pos(mapping, p2.pos)
+        a = Interval.convert_ratioed_pos(mapping, p1.pos).start
+        b = Interval.convert_ratioed_pos(mapping, p2.pos).end
         polyline = [(a, y), (a + (b - a) / 2, y - config.splice_height), (b, y)]
         p = canvas.polyline(polyline, fill='none')
         p.dasharray(config.splice_stroke_dasharray)
@@ -175,26 +194,31 @@ def draw_transcript_with_translation(
         except AttributeError:
             pass
 
-    s = Interval.convert_pos(mapping, translated_genomic_regions[0].start)
-    t = Interval.convert_pos(mapping, translated_genomic_regions[-1].end)
-
     gt = canvas.g(class_='translation')
     protein_group.add(gt)
     h = config.translation_track_height
 
+    leftmost_tx_px = None
+    rightmost_tx_px = None
     for sec in translated_genomic_regions:
-        start = Interval.convert_pos(mapping, sec.start)
-        end = Interval.convert_pos(mapping, sec.end)
+        start = Interval.convert_ratioed_pos(mapping, sec.start)
+        start = start.start if sec.start == pre_transcript.start else start.end
+        end = Interval.convert_ratioed_pos(mapping, sec.end)
+        end = end.end if sec.end == pre_transcript.end else end.start
         gt.add(
             canvas.rect(
                 (start, h / 2 - config.translation_track_height / 2), (end - start + 1, config.translation_track_height),
                 fill=config.translation_scaffold_color,
                 class_='scaffold'
             ))
+        leftmost_tx_px = min(start, end) if leftmost_tx_px is None else min(start, end, leftmost_tx_px)
+        rightmost_tx_px = max(start, end) if rightmost_tx_px is None else max(start, end, rightmost_tx_px)
+
     gt.add(canvas.text(
         config.translation_end_marker if spl_tx.get_strand() == STRAND.NEG else config.translation_start_marker,
         insert=(
-            s - config.translation_marker_padding, h / 2 + config.font_central_shift_ratio * config.translation_font_size
+            leftmost_tx_px - config.translation_marker_padding,
+            h / 2 + config.font_central_shift_ratio * config.translation_font_size
         ),
         fill=config.label_color,
         style=config.font_style.format(font_size=config.translation_font_size, text_anchor='end'),
@@ -203,7 +227,8 @@ def draw_transcript_with_translation(
     gt.add(canvas.text(
         config.translation_start_marker if spl_tx.get_strand() == STRAND.NEG else config.translation_end_marker,
         insert=(
-            t + config.translation_marker_padding, h / 2 + config.font_central_shift_ratio * config.translation_font_size
+            rightmost_tx_px + config.translation_marker_padding,
+            h / 2 + config.font_central_shift_ratio * config.translation_font_size
         ),
         fill=config.label_color,
         style=config.font_style.format(font_size=config.translation_font_size, text_anchor='start'),
@@ -220,7 +245,7 @@ def draw_transcript_with_translation(
         py += config.padding
         domain_group = canvas.g(class_='domain')
         domain_group.add(canvas.rect(
-            (x_start, config.domain_track_height / 2), (x_end - x_start, config.domain_scaffold_height),
+            (leftmost_ex_px, config.domain_track_height / 2), (rightmost_ex_px - leftmost_ex_px, config.domain_scaffold_height),
             fill=config.domain_scaffold_color, class_='scaffold'
         ))
         fill = config.domain_color
@@ -313,12 +338,8 @@ def draw_ustranscript(
     main_group = canvas.g(class_='pre_transcript')
 
     y = config.breakpoint_top_margin if len(breakpoints) > 0 else 0
-    x_start = Interval.convert_ratioed_pos(mapping, pre_transcript.start).start
-    x_end = Interval.convert_ratioed_pos(mapping, pre_transcript.end).end
-
-    if target_width:
-        x_start = 0
-        x_end = target_width
+    genomic_min = min(list(itertools.chain.from_iterable(mapping.keys())) + [pre_transcript.start])
+    genomic_max = max(list(itertools.chain.from_iterable(mapping.keys())) + [pre_transcript.end])
 
     if masks is None:
         masks = []
@@ -340,7 +361,7 @@ def draw_ustranscript(
     if isinstance(pre_transcript, FusionTranscript):
         label_prefix = config.fusion_label_prefix
 
-    if len(pre_transcript.translations) == 0:
+    if not pre_transcript.translations:
         y += config.splice_height
         exon_track_group = draw_exon_track(config, canvas, pre_transcript, mapping, colors)
         exon_track_group.translate(0, y)
@@ -358,7 +379,7 @@ def draw_ustranscript(
         # draw the protein features if there are any
         for i, tl in enumerate(pre_transcript.translations):
             gp = draw_transcript_with_translation(
-                config, canvas, tl, labels, colors, mapping, x_start=x_start, x_end=x_end
+                config, canvas, tl, labels, colors, mapping, genomic_min=genomic_min, genomic_max=genomic_max
             )
             gp.translate(0, y)
             if i < len(pre_transcript.translations) - 1:
@@ -366,7 +387,7 @@ def draw_ustranscript(
             y += gp.height
             main_group.add(gp)
 
-    y += config.breakpoint_bottom_margin if len(breakpoints) > 0 else 0
+    y += config.breakpoint_bottom_margin if breakpoints else 0
     # add masks
     for mask in masks:
         pixel = Interval.convert_ratioed_pos(mapping, mask.start) | Interval.convert_ratioed_pos(mapping, mask.end)
@@ -384,7 +405,9 @@ def draw_ustranscript(
         main_group.add(bg)
 
     setattr(main_group, 'height', y)
-    setattr(main_group, 'width', x_end - x_start)
+    setattr(
+        main_group, 'width',
+        Interval.convert_ratioed_pos(mapping, genomic_min).start - Interval.convert_ratioed_pos(mapping, genomic_max).end)
     setattr(main_group, 'mapping', mapping)
     setattr(main_group, 'labels', labels)
     return main_group

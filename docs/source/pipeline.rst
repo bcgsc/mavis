@@ -71,6 +71,17 @@ The submit_pipeline_<batchid>.sh is the wrapper script which can be executed on 
     cd /path/to/output_dir
     bash submit_pipeline_<batchid>.sh
 
+This will submit a series of jobs with dependencies. 
+
+.. _pipeline-dependency-graph:
+
+
+.. figure:: _static/pipeline_dependency_graph.svg
+    :width: 100%
+
+    Dependency graph of MAVIS jobs for the standard pipeline setup. The notation on the arrows indicates the 
+    SLURM setting on the job to add the dependency on the previous job.
+
 
 Non-Standard
 +++++++++++++++
@@ -124,3 +135,45 @@ Finally it can also be added to the config file manually
 
     [schedule]
     queue = QUEUENAME
+
+
+Troubleshooting Dependency Failures
+++++++++++++++++++++++++++++++++++++++
+
+The most common error to occur when running MAVIS on the cluster is a memory or time limit exception. These can be detected by running the checker or looking for dependency failures reported on the cluster. The suffix of the job name will be a number and will correspond to the suffix of the job directory. Note that the following example commands are :term:`SLURM`-specific and do not apply to :term:`SGE`.
+
+.. code::
+
+    mavis checker -o /path/to/output/dir
+
+This will report any failed jobs. For example if this were a memory issue for one of the validation jobs we might expect to see something like below in the checker output
+
+.. code:: text
+
+    validate FAIL
+        1 jobs CRASHED (jobs: <job number>)
+            slurmstepd: error: exceeded job memory limit (jobs: <job number>)
+
+Each job has its own submission script. The values for memory/time limits or other parameters can be edited by editing the script header and resubmitting the failed job.
+
+.. code:: bash
+    
+    cd /path/to/output/dir/<library>*/validate/*-<job number>
+    vim submit.sh  # edit the header to change memory/time/etc.
+    sbatch submit.sh
+
+Now you will need to edit the annotation job which was dependent on it. For convenience it is easiest to find the job by name. The annotation job name will be the same as the validation job name except that instead of the ``MV_`` prefix it will begin with the ``MA_`` prefix.
+
+.. code:: bash
+    
+    squeue -n MA_*-<job number>
+
+And then change the dependency to be the new validation job
+
+.. code:: bash
+        
+    scontrol update job=<annotation job id> Dependency=afterok:<new validation job id>
+
+If memory errors are frequent then it would be better to adjust the default values (:term:`trans_validation_memory`, :term:`validation_memory`, :term:`time_limit`)
+
+

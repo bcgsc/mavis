@@ -61,7 +61,7 @@ class TestPipeline(unittest.TestCase):
         self.assertLessEqual(1, len(cluster_files))
         # next test the validate runs without errors
         validate_main(
-            cluster_files[0], self.output, genome_bam_fh, False, 'mock-A36971', PROTOCOL.GENOME,
+            [cluster_files[0]], self.output, genome_bam_fh, False, 'mock-A36971', PROTOCOL.GENOME,
             median_fragment_size=427, stdev_fragment_size=106, read_length=150,
             reference_genome=reference_genome, annotations=annotations, masking=masking,
             aligner_reference=REFERENCE_GENOME_FILE_2BIT, samtools_version=None,
@@ -79,11 +79,11 @@ class TestPipeline(unittest.TestCase):
             '.contigs.bam',
             '.igv.batch'
         ]:
-            self.assertTrue(os.path.exists(prefix + suffix))
+            self.assertTrue(os.path.exists(os.path.join(self.output, 'validate' + suffix)))
 
         # test the annotation
         annotate_main(
-            [prefix + '.validation-passed.tab'], self.output, 'mock-A36971', PROTOCOL.GENOME,
+            [os.path.join(self.output, 'validate.validation-passed.tab')], self.output, 'mock-A36971', PROTOCOL.GENOME,
             reference_genome, annotations, template_metadata,
             min_domain_mapping_match=0.95, min_orf_size=300, max_orf_cap=3,
         )

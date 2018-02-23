@@ -237,6 +237,7 @@ def main(
     # TODO: report the pairings so that germline and somatic etc can be determined properly
     output_columns = {
         COLUMNS.annotation_id,
+        COLUMNS.product_id,
         COLUMNS.break1_chromosome,
         COLUMNS.break1_homologous_seq,
         COLUMNS.break1_orientation,
@@ -253,6 +254,7 @@ def main(
         COLUMNS.fusion_cdna_coding_start,
         COLUMNS.fusion_protein_hgvs,
         COLUMNS.fusion_mapped_domains,
+        COLUMNS.fusion_splicing_pattern,
         COLUMNS.gene1,
         COLUMNS.gene1_direction,
         COLUMNS.gene2,
