@@ -316,9 +316,13 @@ class MavisConfig:
                     raise UserWarning(
                         'conversion using the built-in convert_tool_output requires specifying the input file(s) and '
                         'tool name. currently supported tools include:', SUPPORTED_TOOL.values(), 'given', val)
+                expanded_inputs = []
                 for file_expr in val[1:-2]:
-                    if not bash_expands(file_expr):
+                    expanded = bash_expands(file_expr)
+                    if not expanded:
                         raise OSError('input file(s) do not exist', val[1:-2])
+                    expanded_inputs.extend(expanded)
+                val = [val[0]] + expanded_inputs + val[-2:]
             self.convert[attr] = val
         self.convert = MavisNamespace(**self.convert)
 
