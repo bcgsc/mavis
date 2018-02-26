@@ -558,11 +558,10 @@ def generate_config(args, parser, log=devnull):
     if SUBCOMMAND.VALIDATE not in args.skip_stage:
         # load the annotations if we need them
         if any([l.is_trans() for l in libs]):
-            if not args.get('annotations'):
+            if not args.get('annotations_filename'):
                 parser.error('argument --annotations: is required to gather bam stats for transcriptome libraries')
-            log('loading the reference annotations file', args.annotations)
-            args.annotations_filename = args.annotations
-            args.annotations = load_annotations(args.annotations)
+            log('loading the reference annotations file', args.annotations_filename)
+            args.annotations = load_annotations(args.annotations_filename)
         for i, libconf in enumerate(libs):
             log('generating the config section for:', libconf.library)
             libs[i] = LibraryConfig.build(
