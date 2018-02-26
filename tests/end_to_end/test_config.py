@@ -4,6 +4,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+import statistics
 # sys.stderr = sys.stdout  # redirect so stderr is captured during testing
 
 from mavis.constants import SUBCOMMAND
@@ -36,7 +37,7 @@ class TestConvert(unittest.TestCase):
     def run_main(self, exit_status=0):
         outputfile = os.path.join(self.temp_output, 'config.cfg')
         self.args.extend(['-w', outputfile])
-        with patch.object(sys, 'argv', self.args):
+        with patch.object(sys, 'argv', [str(a) for a in self.args]):
             print('sys.argv', sys.argv)
             try:
                 return_code = main()
@@ -48,11 +49,11 @@ class TestConvert(unittest.TestCase):
         self.run_main()
 
     def test_skip_no_annotations(self):
-        self.args.extend(self.trans + [False, self.trans_bam, '--input', self.input, 'mock_trans', '--skip_stage', SUBCOMMAND.VALIDATE])
+        self.args.extend(self.trans + ['False', self.trans_bam, '--input', self.input, 'mock_trans', '--skip_stage', SUBCOMMAND.VALIDATE])
         self.run_main()
 
     def test_requires_annotations_trans(self):
-        self.args.extend(self.trans + [False, self.trans_bam, '--input', self.input, 'mock_trans'])
+        self.args.extend(self.trans + ['False', self.trans_bam, '--input', self.input, 'mock_trans'])
         self.run_main(2)
 
     def test_require_bam_noskip_error(self):
@@ -61,8 +62,18 @@ class TestConvert(unittest.TestCase):
 
     def test_genome_only(self):
         # should be ok without the annotations file
-        self.args.extend(self.genome + [False, self.genome_bam, '--input', self.input, 'mock_genome'])
+        self.args.extend(self.genome + ['False', self.genome_bam, '--input', self.input, 'mock_genome'])
         self.run_main()
+
+    def test_trans_with_annotations(self):
+        self.args.extend(
+            self.genome +
+            [False, self.genome_bam] +
+            self.trans +
+            [True, self.trans_bam, '--input', self.input, 'mock_genome', 'mock_trans', '--annotations', self.annotations]
+        )
+        with self.assertRaises(statistics.StatisticsError):  # too few annotations to calc median
+            self.run_main()
 
     def tearDown(self):
         # remove the temp directory and outputs
