@@ -1,11 +1,13 @@
 import random
 import unittest
+import os
 
 from mavis.annotate.base import BioInterval
 from mavis.annotate.file_io import load_templates
-from mavis.annotate.genomic import Gene, IntergenicRegion, Template
-from mavis.annotate.protein import Domain
-from mavis.annotate.variant import Annotation, FusionTranscript
+from mavis.annotate import genomic
+from mavis.annotate import protein
+from mavis.annotate import variant
+from mavis.annotate import fusion
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import ORIENT, PROTOCOL, STRAND, SVTYPE
 from mavis.illustrate.constants import DiagramSettings, DEFAULTS
@@ -23,7 +25,7 @@ DEFAULTS.domain_name_regex_filter = r'.*'
 
 
 def setUpModule():
-    global TEMPLATE_METADATA
+    global TEMPLATE_METADATA, EXAMPLE_ANNOTATIONS
     TEMPLATE_METADATA = load_templates(TEMPLATE_METADATA_FILE)
 
 
@@ -53,8 +55,8 @@ class TestDraw(unittest.TestCase):
         Interval.convert_pos(mapping, end)
 
     def test_generate_gene_mapping_err(self):
-        #  _generate_interval_mapping [IntergenicRegion(11:77361962_77361962+)] 1181.39453125 5 30 None 77356962 77366962)
-        ir = IntergenicRegion('11', 5000, 5000, STRAND.POS)
+        #  _generate_interval_mapping [genomic.IntergenicRegion(11:77361962_77361962+)] 1181.39453125 5 30 None 77356962 77366962)
+        ir = genomic.IntergenicRegion('11', 5000, 5000, STRAND.POS)
         tgt_width = 1000
         d = DiagramSettings()
         d.gene_min_buffer = 10
@@ -80,9 +82,9 @@ class TestDraw(unittest.TestCase):
 
     def test_draw_genes(self):
 
-        x = Gene('1', 1000, 2000, strand=STRAND.POS)
-        y = Gene('1', 5000, 7000, strand=STRAND.NEG)
-        z = Gene('1', 1500, 2500, strand=STRAND.POS)
+        x = genomic.Gene('1', 1000, 2000, strand=STRAND.POS)
+        y = genomic.Gene('1', 5000, 7000, strand=STRAND.NEG)
+        z = genomic.Gene('1', 1500, 2500, strand=STRAND.POS)
 
         d = DiagramSettings()
         breakpoints = [
@@ -112,9 +114,9 @@ class TestDraw(unittest.TestCase):
 
     def test_draw_ustranscript(self):
         d = DiagramSettings()
-        # domains = [Domain()]
-        d1 = Domain('first', [(55, 61), (71, 73)])
-        d2 = Domain('second', [(10, 20), (30, 34)])
+        # domains = [protein.Domain()]
+        d1 = protein.Domain('first', [(55, 61), (71, 73)])
+        d2 = protein.Domain('second', [(10, 20), (30, 34)])
 
         t = build_transcript(
             gene=None,
@@ -182,18 +184,18 @@ class TestDraw(unittest.TestCase):
 
     def test_draw_layout_single_transcript(self):
         d = DiagramSettings()
-        d1 = Domain('first', [(55, 61), (71, 73)])
-        d2 = Domain('second', [(10, 20), (30, 34)])
-        g1 = Gene('1', 150, 1000, strand=STRAND.POS)
+        d1 = protein.Domain('first', [(55, 61), (71, 73)])
+        d2 = protein.Domain('second', [(10, 20), (30, 34)])
+        g1 = genomic.Gene('1', 150, 1000, strand=STRAND.POS)
         t = build_transcript(g1, [(200, 299), (400, 499), (700, 899)], 50, 249, [d2, d1])
         b1 = Breakpoint('1', 350, orient=ORIENT.RIGHT)
         b2 = Breakpoint('1', 600, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='')
-        ann = Annotation(bpp, transcript1=t, transcript2=t, event_type=SVTYPE.DUP, protocol=PROTOCOL.GENOME)
-        ann.add_gene(Gene('1', 1500, 1950, strand=STRAND.POS))
+        ann = variant.Annotation(bpp, transcript1=t, transcript2=t, event_type=SVTYPE.DUP, protocol=PROTOCOL.GENOME)
+        ann.add_gene(genomic.Gene('1', 1500, 1950, strand=STRAND.POS))
 
         reference_genome = {'1': MockObject(seq=MockString('A'))}
-        ft = FusionTranscript.build(ann, reference_genome)
+        ft = variant.FusionTranscript.build(ann, reference_genome)
         ann.fusion = ft
         canvas, legend = draw_sv_summary_diagram(d, ann)
         self.assertEqual(4, len(canvas.elements))  # defs counts as element
@@ -211,10 +213,10 @@ class TestDraw(unittest.TestCase):
 
     def test_draw_layout_single_genomic(self):
         d = DiagramSettings()
-        d1 = Domain('first', [(55, 61), (71, 73)])
-        d2 = Domain('second', [(10, 20), (30, 34)])
-        g1 = Gene('1', 150, 1000, strand=STRAND.POS)
-        g2 = Gene('1', 5000, 7500, strand=STRAND.POS)
+        d1 = protein.Domain('first', [(55, 61), (71, 73)])
+        d2 = protein.Domain('second', [(10, 20), (30, 34)])
+        g1 = genomic.Gene('1', 150, 1000, strand=STRAND.POS)
+        g2 = genomic.Gene('1', 5000, 7500, strand=STRAND.POS)
         t1 = build_transcript(
             gene=g1,
             cds_start=50,
@@ -232,14 +234,14 @@ class TestDraw(unittest.TestCase):
         b1 = Breakpoint('1', 350, orient=ORIENT.LEFT)
         b2 = Breakpoint('1', 6500, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='')
-        ann = Annotation(bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.DEL, protocol=PROTOCOL.GENOME)
-        ann.add_gene(Gene('1', 1500, 1950, strand=STRAND.POS))
-        ann.add_gene(Gene('1', 3000, 3980, strand=STRAND.POS))
-        ann.add_gene(Gene('1', 3700, 4400, strand=STRAND.NEG))
+        ann = variant.Annotation(bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.DEL, protocol=PROTOCOL.GENOME)
+        ann.add_gene(genomic.Gene('1', 1500, 1950, strand=STRAND.POS))
+        ann.add_gene(genomic.Gene('1', 3000, 3980, strand=STRAND.POS))
+        ann.add_gene(genomic.Gene('1', 3700, 4400, strand=STRAND.NEG))
 
         reference_genome = {'1': MockObject(seq=MockString('A'))}
 
-        ft = FusionTranscript.build(ann, reference_genome)
+        ft = variant.FusionTranscript.build(ann, reference_genome)
         ann.fusion = ft
         self.assertEqual(t1.exons[0], ft.exon_mapping[ft.exons[0].position])
         self.assertEqual(t2.exons[2], ft.exon_mapping[ft.exons[1].position])
@@ -262,10 +264,10 @@ class TestDraw(unittest.TestCase):
 
     def test_draw_layout_translocation(self):
         d = DiagramSettings()
-        d1 = Domain('first', [(55, 61), (71, 73)])
-        d2 = Domain('second', [(10, 20), (30, 34)])
-        g1 = Gene('1', 150, 1000, strand=STRAND.POS)
-        g2 = Gene('2', 5000, 7500, strand=STRAND.NEG)
+        d1 = protein.Domain('first', [(55, 61), (71, 73)])
+        d2 = protein.Domain('second', [(10, 20), (30, 34)])
+        g1 = genomic.Gene('1', 150, 1000, strand=STRAND.POS)
+        g2 = genomic.Gene('2', 5000, 7500, strand=STRAND.NEG)
         t1 = build_transcript(
             gene=g1,
             cds_start=50,
@@ -283,19 +285,19 @@ class TestDraw(unittest.TestCase):
         b1 = Breakpoint('1', 350, orient=ORIENT.LEFT)
         b2 = Breakpoint('2', 6520, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_seq='')
-        ann = Annotation(bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.ITRANS, protocol=PROTOCOL.GENOME)
+        ann = variant.Annotation(bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.ITRANS, protocol=PROTOCOL.GENOME)
         # genes 1
-        ann.add_gene(Gene('1', 1500, 1950, strand=STRAND.POS))
-        ann.add_gene(Gene('1', 3000, 3980, strand=STRAND.POS))
-        ann.add_gene(Gene('1', 3700, 4400, strand=STRAND.NEG))
+        ann.add_gene(genomic.Gene('1', 1500, 1950, strand=STRAND.POS))
+        ann.add_gene(genomic.Gene('1', 3000, 3980, strand=STRAND.POS))
+        ann.add_gene(genomic.Gene('1', 3700, 4400, strand=STRAND.NEG))
         # genes 2
-        ann.add_gene(Gene('2', 1500, 1950, strand=STRAND.NEG))
-        ann.add_gene(Gene('2', 5500, 9000, strand=STRAND.POS))
-        ann.add_gene(Gene('2', 3700, 4400, strand=STRAND.NEG))
+        ann.add_gene(genomic.Gene('2', 1500, 1950, strand=STRAND.NEG))
+        ann.add_gene(genomic.Gene('2', 5500, 9000, strand=STRAND.POS))
+        ann.add_gene(genomic.Gene('2', 3700, 4400, strand=STRAND.NEG))
 
         reference_genome = {'1': MockObject(seq=MockString('A')), '2': MockObject(seq=MockString('A'))}
 
-        ft = FusionTranscript.build(ann, reference_genome)
+        ft = variant.FusionTranscript.build(ann, reference_genome)
         ann.fusion = ft
         canvas, legend = draw_sv_summary_diagram(d, ann)
         self.assertEqual(6, len(canvas.elements))  # defs counts as element
@@ -313,7 +315,7 @@ class TestDraw(unittest.TestCase):
         # def draw_template(self, canvas, template, target_width, height, labels=None, colors=None):
         d = DiagramSettings()
         canvas = Drawing(size=(1000, 50))
-        t = Template(
+        t = genomic.Template(
             '1', 1, 100000,
             bands=[
                 BioInterval(None, 1, 8000, 'p1'),
@@ -332,10 +334,10 @@ class TestDraw(unittest.TestCase):
 
     def test_draw_translocation_with_template(self):
         d = DiagramSettings()
-        d1 = Domain('PF0001', [(55, 61), (71, 73)])
-        d2 = Domain('PF0002', [(10, 20), (30, 34)])
-        g1 = Gene(TEMPLATE_METADATA['1'], 150, 1000, strand=STRAND.POS, aliases=['HUGO2'])
-        g2 = Gene(TEMPLATE_METADATA['X'], 5000, 7500, strand=STRAND.NEG, aliases=['HUGO3'])
+        d1 = protein.Domain('PF0001', [(55, 61), (71, 73)])
+        d2 = protein.Domain('PF0002', [(10, 20), (30, 34)])
+        g1 = genomic.Gene(TEMPLATE_METADATA['1'], 150, 1000, strand=STRAND.POS, aliases=['HUGO2'])
+        g2 = genomic.Gene(TEMPLATE_METADATA['X'], 5000, 7500, strand=STRAND.NEG, aliases=['HUGO3'])
         t1 = build_transcript(
             gene=g1,
             name='transcript1',
@@ -355,19 +357,19 @@ class TestDraw(unittest.TestCase):
         b1 = Breakpoint('1', 350, orient=ORIENT.LEFT)
         b2 = Breakpoint('2', 6520, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_seq='')
-        ann = Annotation(bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.ITRANS, protocol=PROTOCOL.GENOME)
+        ann = variant.Annotation(bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.ITRANS, protocol=PROTOCOL.GENOME)
         # genes 1
-        ann.add_gene(Gene('1', 1500, 1950, strand=STRAND.POS, aliases=['HUGO5']))
-        ann.add_gene(Gene('1', 3000, 3980, strand=STRAND.POS))
-        ann.add_gene(Gene('1', 3700, 4400, strand=STRAND.NEG))
+        ann.add_gene(genomic.Gene('1', 1500, 1950, strand=STRAND.POS, aliases=['HUGO5']))
+        ann.add_gene(genomic.Gene('1', 3000, 3980, strand=STRAND.POS))
+        ann.add_gene(genomic.Gene('1', 3700, 4400, strand=STRAND.NEG))
         # genes 2
-        ann.add_gene(Gene('2', 1500, 1950, strand=STRAND.NEG))
-        ann.add_gene(Gene('2', 5500, 9000, strand=STRAND.POS))
-        ann.add_gene(Gene('2', 3700, 4400, strand=STRAND.NEG))
+        ann.add_gene(genomic.Gene('2', 1500, 1950, strand=STRAND.NEG))
+        ann.add_gene(genomic.Gene('2', 5500, 9000, strand=STRAND.POS))
+        ann.add_gene(genomic.Gene('2', 3700, 4400, strand=STRAND.NEG))
 
         reference_genome = {'1': MockObject(seq=MockString('A')), '2': MockObject(seq=MockString('A'))}
 
-        ft = FusionTranscript.build(ann, reference_genome)
+        ft = variant.FusionTranscript.build(ann, reference_genome)
         ann.fusion = ft
         canvas, legend = draw_sv_summary_diagram(d, ann, draw_reference_templates=True, templates=TEMPLATE_METADATA)
         if OUTPUT_SVG:
@@ -385,7 +387,7 @@ class TestDraw(unittest.TestCase):
         self.assertAlmostEqual(expected_height, canvas.attribs['height'])
 
     def test_draw_overlay(self):
-        gene = Gene('12', 25357723, 25403870, strand=STRAND.NEG, name='KRAS')
+        gene = genomic.Gene('12', 25357723, 25403870, strand=STRAND.NEG, name='KRAS')
         marker = BioInterval('12', 25403865, name='splice site mutation')
         t = build_transcript(
             cds_start=193, cds_end=759,
@@ -409,7 +411,7 @@ class TestDraw(unittest.TestCase):
                 (25378548, 25378707),
                 (25368371, 25368494),
                 (25362365, 25362845)],
-            gene=gene, domains=[Domain('domain1', [(1, 10)]), Domain('domain1', [(4, 10)])],
+            gene=gene, domains=[protein.Domain('domain1', [(1, 10)]), protein.Domain('domain1', [(4, 10)])],
             is_best_transcript=True)
         build_transcript(
             cds_start=65, cds_end=634,
@@ -433,3 +435,20 @@ class TestDraw(unittest.TestCase):
         self.assertEqual(2, len(canvas.elements))  # defs counts as element
         if OUTPUT_SVG:
             canvas.saveas('test_draw_overlay.svg')
+
+    def test_single_bp_ins_exon(self):
+        transcript = fusion.FusionTranscript()
+        transcript.position = Interval(401258, 408265)
+        transcript.exons = [
+            genomic.Exon(401258, 401461, transcript=transcript),
+            genomic.Exon(404799, 405254, intact_end_splice=False, transcript=transcript),
+            genomic.Exon(405255, 405255, intact_start_splice=False, intact_end_splice=False, transcript=transcript),
+            genomic.Exon(405256, 408265, intact_start_splice=False, transcript=transcript)
+        ]
+
+        cfg = DiagramSettings(width=1500)
+        canvas = Drawing(size=(cfg.width, 1000))
+        drawing_width = cfg.width - cfg.label_left_margin - cfg.left_margin - cfg.right_margin
+        canvas.add(draw_ustranscript(cfg, canvas, transcript, target_width=drawing_width))
+        if OUTPUT_SVG:
+            canvas.saveas('test_single_bp_ins_exon.svg')

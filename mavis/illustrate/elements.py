@@ -92,19 +92,29 @@ def draw_exon_track(config, canvas, transcript, mapping, colors=None, genomic_mi
         end = Interval.convert_ratioed_pos(mapping, exon.end)
         start = start.start if exon.start == genomic_min else start.end
         end = end.end if exon.end == genomic_max else end.start
-        pxi = Interval(start, end)
-        exon_number = 'n'
+        pxi = Interval(*sorted([start, end]))  # for very small intervals (single bp) these may reverse
+
         try:
             exon_number = transcript.exon_number(exon)
         except KeyError:
-            pass
+            exon_number = 'n'
+
+        exon_height = config.track_height
+
+        if len(exon) < config.exon_min_focus_size:
+            if exon_number == 'n':
+                exon_height = config.track_height + config.ins_increase
+            exon_number = ''  # don't add labels to very small exons
+
+        exon_width = max(config.non_focus_min_width, pxi.length())
+
         group = draw_exon(
             config,
-            canvas, exon, pxi.length(), config.track_height, colors.get(exon, config.exon1_color),
+            canvas, exon, exon_width, exon_height, colors.get(exon, config.exon1_color),
             label=exon_number,
             translation=translation
         )
-        group.translate(pxi.start, y - config.track_height / 2)
+        group.translate(pxi.center - exon_width / 2, y - exon_height / 2)
         main_group.add(group)
 
     setattr(main_group, 'height', y + config.track_height / 2)
@@ -320,15 +330,18 @@ def draw_ustranscript(
         svgwrite.container.Group: the group element for the transcript diagram
                 Has the added parameters of labels, height, and mapping
     """
-
     if pre_transcript.get_strand() not in [STRAND.POS, STRAND.NEG]:
         raise NotSpecifiedError('strand must be positive or negative to draw the pre_transcript')
     if (mapping is None and target_width is None) or (mapping is not None and target_width is not None):
         raise AttributeError('mapping and target_width arguments are required and mutually exclusive')
 
     if mapping is None:
+        try:
+            exons_to_map = [e for e in pre_transcript.exons if len(e) >= config.exon_min_focus_size]
+        except AttributeError:
+            exons_to_map = pre_transcript.exons
         mapping = generate_interval_mapping(
-            pre_transcript.exons,
+            exons_to_map,
             target_width,
             config.exon_intron_ratio,
             config.exon_min_width,
@@ -534,7 +547,6 @@ def draw_vmarker(config, canvas, marker, width, height, label='', color=None):
         svgwrite.container.Group: the group element for the diagram
     """
     color = config.marker_color if color is None else color
-    width = max([config.abs_min_width, width])
     g = canvas.g(class_='marker')
     y = config.padding + config.marker_label_font_size / 2
     t = canvas.text(
@@ -638,6 +650,8 @@ def draw_exon(config, canvas, exon, width, height, fill, label='', translation=N
         except IndexError:
             title += '  cdna(N/A)'
     title += '  length({})'.format(len(exon))
+    if exon.seq and len(exon.seq) < config.exon_min_focus_size:
+        title += ' seq={}'.format(exon.seq)
     g.add(Tag('title', title))
     return g
 

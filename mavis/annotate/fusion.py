@@ -160,7 +160,8 @@ class FusionTranscript(PreTranscript):
                 exon = Exon(
                     novel_exon_start, novel_exon_end, fusion_pre_transcript,
                     intact_start_splice=False,
-                    intact_end_splice=False
+                    intact_end_splice=False,
+                    seq=fusion_pre_transcript.seq[novel_exon_start - 1:novel_exon_end]
                 )
                 fusion_pre_transcript.exons.append(exon)
         fusion_pre_transcript.seq += seq2
@@ -168,7 +169,8 @@ class FusionTranscript(PreTranscript):
             exon = Exon(
                 ex.start + offset, ex.end + offset, fusion_pre_transcript,
                 intact_start_splice=ex.start_splice_site.intact,
-                intact_end_splice=ex.end_splice_site.intact
+                intact_end_splice=ex.end_splice_site.intact,
+                seq=ex.seq
             )
             fusion_pre_transcript.exons.append(exon)
             fusion_pre_transcript.exon_mapping[exon.position] = old_ex
@@ -221,7 +223,8 @@ class FusionTranscript(PreTranscript):
                 e = Exon(
                     novel_exon_start, novel_exon_end, fusion_pre_transcript,
                     intact_start_splice=False,
-                    intact_end_splice=False
+                    intact_end_splice=False,
+                    seq=fusion_pre_transcript.seq[novel_exon_start - 1:novel_exon_end]
                 )
                 fusion_pre_transcript.exons.append(e)
 
@@ -229,7 +232,8 @@ class FusionTranscript(PreTranscript):
             e = Exon(
                 ex.start + offset, ex.end + offset, fusion_pre_transcript,
                 intact_start_splice=ex.start_splice_site.intact,
-                intact_end_splice=ex.end_splice_site.intact
+                intact_end_splice=ex.end_splice_site.intact,
+                seq=ex.seq
             )
             fusion_pre_transcript.exons.append(e)
             fusion_pre_transcript.exon_mapping[e.position] = old_ex
@@ -348,14 +352,16 @@ class FusionTranscript(PreTranscript):
                     e = Exon(
                         novel_exon_start, novel_exon_end, fusion_pre_transcript,
                         intact_start_splice=False,
-                        intact_end_splice=False
+                        intact_end_splice=False,
+                        seq=fusion_pre_transcript.seq[novel_exon_start - 1:novel_exon_end]
                     )
                     fusion_pre_transcript.exons.append(e)
             for ex, old_ex in ex2:
                 e = Exon(
                     ex.start + offset, ex.end + offset, fusion_pre_transcript,
                     intact_start_splice=ex.start_splice_site.intact,
-                    intact_end_splice=ex.end_splice_site.intact
+                    intact_end_splice=ex.end_splice_site.intact,
+                    seq=ex.seq
                 )
                 fusion_pre_transcript.exons.append(e)
                 fusion_pre_transcript.exon_mapping[e.position] = old_ex
@@ -461,6 +467,7 @@ class FusionTranscript(PreTranscript):
                         strand=STRAND.POS
                     )
                     temp = reference_sequence[exon.start - 1:t]
+                    e.seq = str(temp)
                     s += temp
                     new_exons.append((e, exon))
         elif breakpoint.orient == ORIENT.RIGHT:  # three prime
@@ -483,6 +490,7 @@ class FusionTranscript(PreTranscript):
                         strand=STRAND.POS
                     )
                     temp = reference_sequence[exon.start - 1:exon.end]
+                    e.seq = str(temp)
                     assert len(temp) == len(e)
                     s += temp
                     new_exons.append((e, exon))
@@ -498,6 +506,7 @@ class FusionTranscript(PreTranscript):
                         intact_end_splice=intact_end_splice,
                         strand=STRAND.POS
                     )
+                    e.seq = str(temp)
                     s += temp
                     new_exons.append((e, exon))
         else:
