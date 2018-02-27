@@ -40,13 +40,14 @@ DEFAULTS.add('gene2_color', '#325556', defn='The color of genes near the second 
 DEFAULTS.add('label_color', '#000000', defn='The label color')
 DEFAULTS.add('domain_color', '#ccccb3', defn='Domain fill color')
 DEFAULTS.add('domain_mismatch_color', '#b2182b', defn='Domain fill color on 0%% match')
-DEFAULTS.add('novel_exon_color', '#000000', defn='Novel Exon fill color')
+DEFAULTS.add('novel_exon_color', '#5D3F6A', defn='Novel Exon fill color')
 DEFAULTS.add('splice_color', '#000000', defn='Splicing lines color')
 DEFAULTS.add('breakpoint_color', '#000000', defn='Breakpoint outline color')
 DEFAULTS.add('mask_fill', '#ffffff', defn='Color of mask (for deleted region etc.)')
 DEFAULTS.add('mask_opacity', 0.7, defn='opacity of the mask layer', cast_type=float_fraction)
 DEFAULTS.add('domain_scaffold_color', '#000000', defn='The color of the domain scaffold')
 DEFAULTS.add('drawing_width_iter_increase', 500, defn='The amount (in  pixels) by which to increase the drawing width upon failure to fit')
+DEFAULTS.add('exon_min_focus_size', 10, defn='minimum size of an exon for it to be granted a label or min exon width')
 
 
 class DiagramSettings:
@@ -73,13 +74,15 @@ class DiagramSettings:
         self.padding = 5
         self.scaffold_height = 3
         self.track_height = 50
+
+        self.ins_increase = 6
         # removing unsupported attr: 'alignment-baseline:central;dominant-baseline:central;' \
         self.font_style = 'font-size:{font_size}px;font-weight:bold;alignment-baseline:baseline;' \
             'text-anchor:{text_anchor};font-family: consolas, courier new, monospace'
         # ratio for courier new which is wider than consolas, used for estimating width
         self.font_width_height_ratio = 1229 / 2048
         self.font_central_shift_ratio = 0.3
-        self.abs_min_width = 0.01
+        self.non_focus_min_width = 2
 
         self.gene_default_color = self.gene1_color
         self.gene_min_buffer = 1000
