@@ -54,11 +54,11 @@ This will create submission scripts as follows
 
     output_dir/
     |-- library1/
-    |   |-- validation/<jobdir>/submit.sh
-    |   `-- annotation/<jobdir>/submit.sh
+    |   |-- validate/<jobdir>/submit.sh
+    |   `-- annotate/<jobdir>/submit.sh
     |-- library2/
-    |   |-- validation/<jobdir>/submit.sh
-    |   `-- annotation/<jobdir>/submit.sh
+    |   |-- validate/<jobdir>/submit.sh
+    |   `-- annotate/<jobdir>/submit.sh
     |-- pairing/submit.sh
     |-- summary/submit.sh
     `-- submit_pipeline_<batchid>.sh
