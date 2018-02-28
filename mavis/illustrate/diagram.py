@@ -389,8 +389,8 @@ def draw_multi_transcript_overlay(config, gene, vmarkers=None, window_buffer=0, 
     # now draw the breakpoints overtop
     for marker in sorted(vmarkers):
         px_itvl = Interval(
-            Interval.convert_ratioed_pos(mapping, marker.start).start,
-            Interval.convert_ratioed_pos(mapping, marker.end).end)
+            mapping.convert_ratioed_pos(marker.start).start,
+            mapping.convert_ratioed_pos(marker.end).end)
         group_element = draw_vmarker(
             config, canvas, marker, px_itvl.length(), y, label=marker.name)
         group_element.translate(x + px_itvl.start, 0)

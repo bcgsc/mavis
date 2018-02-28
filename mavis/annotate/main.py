@@ -189,6 +189,7 @@ def main(
             log(
                 '({} of {}) current annotation'.format(i + 1, total),
                 ann.annotation_id, ann.transcript1, ann.transcript2, ann.event_type)
+            log(ann, time_stamp=False)
             # get the reference sequences for either transcript
             ref_cdna_seq = {}
             ref_protein_seq = {}

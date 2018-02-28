@@ -75,9 +75,9 @@ def draw_exon_track(config, canvas, transcript, mapping, colors=None, genomic_mi
     genomic_min = exonic_min if genomic_min is None else min(genomic_min, exonic_min)
     genomic_max = exonic_max if genomic_max is None else max(genomic_max, exonic_max)
 
-    start = Interval.convert_ratioed_pos(mapping, exonic_min)
+    start = mapping.convert_ratioed_pos(exonic_min)
     start = start.start if exonic_min == genomic_min else start.end
-    end = Interval.convert_ratioed_pos(mapping, exonic_max)
+    end = mapping.convert_ratioed_pos(exonic_max)
     end = end.end if exonic_max == genomic_max else end.start
 
     main_group.add(
@@ -88,8 +88,8 @@ def draw_exon_track(config, canvas, transcript, mapping, colors=None, genomic_mi
 
     # draw the exons
     for exon in exons:
-        start = Interval.convert_ratioed_pos(mapping, exon.start)
-        end = Interval.convert_ratioed_pos(mapping, exon.end)
+        start = mapping.convert_ratioed_pos(exon.start)
+        end = mapping.convert_ratioed_pos(exon.end)
         start = start.start if exon.start == genomic_min else start.end
         end = end.end if exon.end == genomic_max else end.start
         pxi = Interval(*sorted([start, end]))  # for very small intervals (single bp) these may reverse
@@ -146,9 +146,9 @@ def draw_transcript_with_translation(
         genomic_max=genomic_max
     )
     # calculate the outer pixel boundaries for the exon track
-    leftmost_ex_px = Interval.convert_ratioed_pos(mapping, pre_transcript.start)
+    leftmost_ex_px = mapping.convert_ratioed_pos(pre_transcript.start)
     leftmost_ex_px = leftmost_ex_px.start if pre_transcript.start == genomic_min else leftmost_ex_px.end
-    rightmost_ex_px = Interval.convert_ratioed_pos(mapping, pre_transcript.end)
+    rightmost_ex_px = mapping.convert_ratioed_pos(pre_transcript.end)
     rightmost_ex_px = rightmost_ex_px.end if pre_transcript.end == genomic_max else rightmost_ex_px.start
 
     exon_track_group.translate(0, y)
@@ -167,8 +167,8 @@ def draw_transcript_with_translation(
     # draw the splicing pattern
     splice_group = canvas.g(class_='splicing')
     for p1, p2 in zip(spl_tx.splicing_pattern[::2], spl_tx.splicing_pattern[1::2]):
-        a = Interval.convert_ratioed_pos(mapping, p1.pos).start
-        b = Interval.convert_ratioed_pos(mapping, p2.pos).end
+        a = mapping.convert_ratioed_pos(p1.pos).start
+        b = mapping.convert_ratioed_pos(p2.pos).end
         polyline = [(a, y), (a + (b - a) / 2, y - config.splice_height), (b, y)]
         p = canvas.polyline(polyline, fill='none')
         p.dasharray(config.splice_stroke_dasharray)
@@ -211,9 +211,9 @@ def draw_transcript_with_translation(
     leftmost_tx_px = None
     rightmost_tx_px = None
     for sec in translated_genomic_regions:
-        start = Interval.convert_ratioed_pos(mapping, sec.start)
+        start = mapping.convert_ratioed_pos(sec.start)
         start = start.start if sec.start == pre_transcript.start else start.end
-        end = Interval.convert_ratioed_pos(mapping, sec.end)
+        end = mapping.convert_ratioed_pos(sec.end)
         end = end.end if sec.end == pre_transcript.end else end.start
         gt.add(
             canvas.rect(
@@ -270,8 +270,8 @@ def draw_transcript_with_translation(
             # convert the AA position to cdna position, then convert the cdna to genomic, etc
             s = translation.convert_aa_to_cdna(region.start)
             t = translation.convert_aa_to_cdna(region.end)
-            s = Interval.convert_pos(mapping, spl_tx.convert_cdna_to_genomic(s.start))
-            t = Interval.convert_pos(mapping, spl_tx.convert_cdna_to_genomic(t.end))
+            s = mapping.convert_pos(spl_tx.convert_cdna_to_genomic(s.start))
+            t = mapping.convert_pos(spl_tx.convert_cdna_to_genomic(t.end))
             if s > t:
                 t, s = (s, t)
             domain_region_group = canvas.g(class_='domain_region')
@@ -335,24 +335,28 @@ def draw_ustranscript(
     if (mapping is None and target_width is None) or (mapping is not None and target_width is not None):
         raise AttributeError('mapping and target_width arguments are required and mutually exclusive')
 
+    genomic_min = min([e.start for e in pre_transcript.exons] + [pre_transcript.start])
+    genomic_max = max([e.end for e in pre_transcript.exons] + [pre_transcript.end])
+
     if mapping is None:
         try:
             exons_to_map = [e for e in pre_transcript.exons if len(e) >= config.exon_min_focus_size]
         except AttributeError:
             exons_to_map = pre_transcript.exons
+
         mapping = generate_interval_mapping(
             exons_to_map,
             target_width,
             config.exon_intron_ratio,
             config.exon_min_width,
-            min_inter_width=config.min_width
+            min_inter_width=config.min_width,
+            start=genomic_min,
+            end=genomic_max
         )
 
     main_group = canvas.g(class_='pre_transcript')
 
     y = config.breakpoint_top_margin if len(breakpoints) > 0 else 0
-    genomic_min = min(list(itertools.chain.from_iterable(mapping.keys())) + [pre_transcript.start])
-    genomic_max = max(list(itertools.chain.from_iterable(mapping.keys())) + [pre_transcript.end])
 
     if masks is None:
         masks = []
@@ -403,7 +407,7 @@ def draw_ustranscript(
     y += config.breakpoint_bottom_margin if breakpoints else 0
     # add masks
     for mask in masks:
-        pixel = Interval.convert_ratioed_pos(mapping, mask.start) | Interval.convert_ratioed_pos(mapping, mask.end)
+        pixel = mapping.convert_ratioed_pos(mask.start) | mapping.convert_ratioed_pos(mask.end)
         m = canvas.rect(
             (pixel.start, 0), (pixel.length(), y),
             class_='mask', fill=config.mask_fill, opacity=config.mask_opacity, pointer_events='none'
@@ -412,7 +416,7 @@ def draw_ustranscript(
 
     # now overlay the breakpoints on top of everything
     for i, b in enumerate(breakpoints):
-        pixel = Interval.convert_ratioed_pos(mapping, b.start) | Interval.convert_ratioed_pos(mapping, b.end)
+        pixel = mapping.convert_ratioed_pos(b.start) | mapping.convert_ratioed_pos(b.end)
         bg = draw_breakpoint(config, canvas, b, pixel.length(), y, label=labels.add(b, config.breakpoint_label_prefix))
         bg.translate(pixel.start, 0)
         main_group.add(bg)
@@ -420,7 +424,7 @@ def draw_ustranscript(
     setattr(main_group, 'height', y)
     setattr(
         main_group, 'width',
-        Interval.convert_ratioed_pos(mapping, genomic_min).start - Interval.convert_ratioed_pos(mapping, genomic_max).end)
+        mapping.convert_ratioed_pos(genomic_min).start - mapping.convert_ratioed_pos(genomic_max).end)
     setattr(main_group, 'mapping', mapping)
     setattr(main_group, 'labels', labels)
     return main_group
@@ -478,8 +482,8 @@ def draw_genes(config, canvas, genes, target_width, breakpoints=None, colors=Non
 
     gene_px_intervals = {}
     for i, gene in enumerate(sorted(genes, key=lambda x: x.start)):
-        s = Interval.convert_ratioed_pos(mapping, gene.start)
-        t = Interval.convert_ratioed_pos(mapping, gene.end)
+        s = mapping.convert_ratioed_pos(gene.start)
+        t = mapping.convert_ratioed_pos(gene.end)
         gene_px_intervals[Interval(s.start, t.end)] = gene
         labels.add(gene, config.gene_label_prefix)
     tracks = split_intervals_into_tracks(gene_px_intervals)
@@ -513,7 +517,7 @@ def draw_genes(config, canvas, genes, target_width, breakpoints=None, colors=Non
 
     # adding the masks is the final step
     for mask in masks:
-        pixel = Interval.convert_ratioed_pos(mapping, mask.start) | Interval.convert_ratioed_pos(mapping, mask.end)
+        pixel = mapping.convert_ratioed_pos(mask.start) | mapping.convert_ratioed_pos(mask.end)
         m = canvas.rect(
             (pixel.start, 0), (pixel.length(), y),
             class_='mask', fill=config.mask_fill, pointer_events='none', opacity=config.mask_opacity
@@ -522,8 +526,8 @@ def draw_genes(config, canvas, genes, target_width, breakpoints=None, colors=Non
 
     # now overlay the breakpoints on top of everything
     for i, b in enumerate(sorted(breakpoints)):
-        s = Interval.convert_ratioed_pos(mapping, b.start).start
-        t = Interval.convert_ratioed_pos(mapping, b.end).end
+        s = mapping.convert_ratioed_pos(b.start).start
+        t = mapping.convert_ratioed_pos(b.end).end
         bg = draw_breakpoint(config, canvas, b, abs(t - s) + 1, y, label=labels.add(b, config.breakpoint_label_prefix))
         bg.translate(s, 0)
         main_group.add(bg)
@@ -694,8 +698,8 @@ def draw_template(config, canvas, template, target_width, labels=None, colors=No
     group.add(label_group)
 
     for band in template.bands:
-        s = Interval.convert_pos(mapping, band[0])
-        t = Interval.convert_pos(mapping, band[1])
+        s = mapping.convert_pos(band[0])
+        t = mapping.convert_pos(band[1])
 
         bgroup = canvas.g(class_='cytoband')
         f = config.template_band_fill.get(band.data.get('giemsa_stain', None), config.template_default_fill)
@@ -725,8 +729,8 @@ def draw_template(config, canvas, template, target_width, labels=None, colors=No
         group.add(bgroup)
     # now draw the breakpoints overtop
     for i, b in enumerate(sorted(breakpoints)):
-        s = Interval.convert_pos(mapping, b.start)
-        t = Interval.convert_pos(mapping, b.end)
+        s = mapping.convert_pos(b.start)
+        t = mapping.convert_pos(b.end)
         bg = draw_breakpoint(
             config, canvas, b, abs(t - s) + 1, total_height, label=labels.add(b, config.breakpoint_label_prefix))
         bg.translate(s, 0)

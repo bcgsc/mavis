@@ -452,3 +452,34 @@ class TestDraw(unittest.TestCase):
         canvas.add(draw_ustranscript(cfg, canvas, transcript, target_width=drawing_width))
         if OUTPUT_SVG:
             canvas.saveas('test_single_bp_ins_exon.svg')
+
+    def test_single_bp_dup(self):
+        transcript = fusion.FusionTranscript()
+        transcript.position = Interval(1, 500)
+        transcript.exons = [
+            genomic.Exon(1, 7, transcript=transcript, intact_end_splice=False),
+            genomic.Exon(8, 8, transcript=transcript, intact_start_splice=False, intact_end_splice=False),
+            genomic.Exon(9, 100, transcript=transcript, intact_start_splice=False),
+            genomic.Exon(200, 500, transcript=transcript)
+        ]
+        cfg = DiagramSettings(width=1500)
+        canvas = Drawing(size=(cfg.width, 1000))
+        drawing_width = cfg.width - cfg.label_left_margin - cfg.left_margin - cfg.right_margin
+        canvas.add(draw_ustranscript(cfg, canvas, transcript, target_width=drawing_width))
+        if OUTPUT_SVG:
+            canvas.saveas('test_single_bp_dup.svg')
+
+    def test_two_exon_transcript(self):
+        transcript = fusion.FusionTranscript()
+        transcript.position = Interval(1, 555)
+        transcript.exons = [
+            genomic.Exon(55820038, 55820969, transcript=transcript),
+            genomic.Exon(55820971, 55820976, transcript=transcript)
+        ]
+        transcript.exon_mapping[Interval(55820971, 55820976)] = MockObject(transcript=MockObject(exon_number=lambda *x: 2))
+        cfg = DiagramSettings(width=1500)
+        canvas = Drawing(size=(cfg.width, 1000))
+        drawing_width = cfg.width - cfg.label_left_margin - cfg.left_margin - cfg.right_margin
+        canvas.add(draw_ustranscript(cfg, canvas, transcript, target_width=drawing_width))
+        if OUTPUT_SVG:
+            canvas.saveas('test_two_exon_transcript.svg')
