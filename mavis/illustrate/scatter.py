@@ -118,7 +118,7 @@ def draw_scatter(ds, canvas, plot, xmapping, log=devnull):
     circles = []
     for x_pos, y_pos in plot.points:
         try:
-            x_px = Interval.convert_ratioed_pos(xmapping, x_pos)
+            x_px = Interval.convert_ratioed_pos(xmapping, x_pos, forward_to_reverse=False)
             y_px = Interval(plot.height - abs(min(y_pos, plot.ymax) - plot.ymin) * yratio)
             current_circle = sPoint(x_px.center, y_px.center).buffer(ds.scatter_marker_radius)
             if circles:
@@ -152,7 +152,7 @@ def draw_scatter(ds, canvas, plot, xmapping, log=devnull):
             r=ds.scatter_marker_radius
         ))
 
-    xmax = Interval.convert_ratioed_pos(xmapping, plot.xmax).end
+    xmax = Interval.convert_ratioed_pos(xmapping, plot.xmax, forward_to_reverse=False).end
     for py in plot.hmarkers:
         py = plot.height - abs(py - plot.ymin) * yratio
         plot_group.add(

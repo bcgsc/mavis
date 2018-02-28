@@ -2,7 +2,7 @@ from colour import Color
 import svgwrite
 
 from ..error import DrawingFitError
-from ..interval import Interval
+from ..interval import Interval, IntervalMapping
 
 
 MIN_PIXEL_ACCURACY = 1
@@ -220,26 +220,18 @@ def generate_interval_mapping(
         raise AssertionError(
             'end is off by more than the expected pixel allowable error',
             mapping[-1][1].end, target_width, min_pixel_accuracy)
-    temp = mapping
-    mapping = dict()
-    for ifrom, ito in temp:
-        mapping[ifrom] = ito
+    mapping = {k: v for k, v in mapping}
     # assert that that mapping is correct
-    for ifrom in input_intervals:
-        ifrom = Interval(ifrom.start, ifrom.end)
-        p1 = Interval.convert_ratioed_pos(mapping, ifrom.start)
-        p2 = Interval.convert_ratioed_pos(mapping, ifrom.end)
-        if ifrom in mapping and ito.end == target_width:
+    for ifrom, ito in mapping.items():
+        if ifrom not in input_intervals:
             continue
-        n = p1 | p2
-        if n.length() < min_width and abs(n.length() - min_width) > min_pixel_accuracy:  # precision error allowable
+        if ito.length() < min_width and abs(ito.length() - min_width) > min_pixel_accuracy:  # precision error allowable
             raise AssertionError(
                 'interval mapping should not map any intervals to less than the minimum required width. Interval {}'
                 ' was mapped to a pixel interval of length {} but the minimum width is {}'.format(
-                    ifrom, n.length(), min_width),
-                p1, p2, mapping,
+                    ifrom, ito.length(), min_width), mapping,
                 input_intervals, target_width, ratio, min_width, buffer_length, start, end, min_inter_width)
-    return mapping
+    return IntervalMapping(mapping)
 
 
 class Tag(svgwrite.base.BaseElement):

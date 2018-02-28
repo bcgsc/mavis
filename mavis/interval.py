@@ -209,51 +209,6 @@ class Interval:
     def __hash__(self):
         return hash((self[0], self[1], self.freq))
 
-    # @classmethod
-    # def weighted_mean_ci(cls, *intervals):
-    #     """
-    #     Calculates the weighted mean of a set of intervals. The weighting is inversely proportional to
-    #     the size of the input interval. The length of the final interval is the weight mean length of
-    #     the input intervals also weighted by length
-
-    #     Args:
-    #         intervals (Interval): a list of intervals
-
-    #     Returns:
-    #         Interval: the weighted mean interval of the input intervals
-
-    #     Raises:
-    #         AttributeError: if the input list is empty
-
-    #     Example:
-    #         >>> Interval.weighted_mean((1, 2), (1, 9), (2, 10))
-    #         Interval(1, 4)
-    #         >>> Interval.weighted_mean((1, 1), (10, 10))
-    #         Interval(6)
-    #     """
-    #     centers = []
-    #     weights = []
-    #     lengths = []
-    #     number_type = int
-    #     if len(intervals) == 0:
-    #         raise AttributeError('cannot compute the weighted mean interval of an empty set of intervals')
-    #     for i in intervals:
-    #         try:
-    #             if i.number_type == float:
-    #                 number_type = float
-    #         except AttributeError:
-    #             pass
-    #         if not isinstance(i, Interval):
-    #             i = Interval(i[0], i[1])
-    #         for temp in range(0, i.freq):
-    #             centers.append(i.center)
-    #             weights.append(1 / i.length())
-    #             lengths.append(i.length())
-
-    #     center = np.average(centers, weights=weights)
-    #     size = max([np.average(lengths) - 1, 1]) if number_type == int else np.average(lengths)
-    #     return Interval(round(center - size / 2, 0), round(center + size / 2, 0))
-
     @classmethod
     def position_in_range(cls, segments, pos):
         if len(segments) == 0:
@@ -302,7 +257,7 @@ class Interval:
             pos (int): a position in the first coordinate system
 
         Returns:
-            int: the position in the alternate coordinate system given the input mapping
+            Interval: the position in the alternate coordinate system given the input mapping
 
         Raises:
             AttributeError: if the input position is outside the set of input segments
@@ -331,11 +286,6 @@ class Interval:
                         'input intervals cannot be overlapping',
                         input_intervals[i], input_intervals[i - 1]
                     )
-                """if Interval.overlaps(mapped_to_intervals[i - 1], mapped_to_intervals[i]):
-                    raise AttributeError(
-                        'mapped_to intervals cannot be overlapping',
-                        mapped_to_intervals[i], mapped_to_intervals[i - 1]
-                    )"""
                 if mapped_to_intervals[i][0] > mapped_to_intervals[i - 1][1]:
                     if forward_to_reverse is None:
                         forward_to_reverse = False
@@ -489,6 +439,12 @@ class IntervalMapping:
         for i in self.mapping:
             self.opposing_directions.setdefault(i, False)
 
+    def keys(self):
+        return self.mapping.keys()
+
+    def __getitem__(self, item):
+        return self.mapping[item]
+
     def add(self, src_interval, tgt_interval, opposing_directions=True):
         src_interval = Interval(src_interval[0], src_interval[1])
         tgt_interval = Interval(tgt_interval[0], tgt_interval[1])
@@ -498,7 +454,41 @@ class IntervalMapping:
         self.mapping[src_interval] = tgt_interval
         self.opposing_directions[src_interval] = opposing_directions
 
-    def convert_pos(self, pos, simplify=True):
+    def convert_ratioed_pos(self, pos):
+        """ convert any given position given a mapping of intervals to another range
+
+        Args:
+            pos (Interval): a position in the first coordinate system
+
+        Returns:
+            the position in the alternate coordinate system given the input mapping
+            - int: if simplify is True
+            - Interval: if simplify is False
+
+        Raises:
+            IndexError: if the input position is not in any of the mapped intervals
+
+        Example:
+            >>> mapping = IntervalMapping(mapping={(1, 10): (101, 110), (11, 20): (555, 564)})
+            >>> mapping.convert_pos(5)
+            5
+            >>> mapping.convert_pos(15)
+            559
+        """
+        for src_interval, tgt_interval in self.mapping.items():
+            if pos in src_interval:
+                if src_interval.length() > 0:
+                    ratio = tgt_interval.length() / src_interval.length()
+                    shift = (pos - src_interval.start) * ratio
+                    if self.opposing_directions[src_interval]:
+                        return Interval(tgt_interval.end - shift - ratio, tgt_interval.end - shift)
+                    else:
+                        return Interval(tgt_interval.start + shift, tgt_interval.start + shift + ratio)
+                else:
+                    return tgt_interval
+        raise IndexError(pos, 'position not found in mapping', self.mapping.keys())
+
+    def convert_pos(self, pos):
         """ convert any given position given a mapping of intervals to another range
 
         Args:
@@ -521,16 +511,13 @@ class IntervalMapping:
         """
         for src_interval, tgt_interval in self.mapping.items():
             if pos in src_interval:
-                forward_to_reverse = self.opposing_directions[src_interval]
-                # minus 1 because we start at the start pos
-                result = tgt_interval.start
                 if src_interval.length() > 0:
                     ratio = tgt_interval.length() / src_interval.length()
                     shift = (pos - src_interval.start) * ratio
-                    shift = (pos - src_interval.start) * ratio
-                    result = tgt_interval[1] - shift if forward_to_reverse else tgt_interval[0] + shift
-                elif tgt_interval.length() > 0:
-                    shift = tgt_interval.length() / 2
-                    result = tgt_interval[1] - shift if forward_to_reverse else tgt_interval[0] + shift
-                return int(round(result, 0)) if simplify else result
+                    if self.opposing_directions[src_interval]:
+                        return int(round(tgt_interval.end - shift, 0))
+                    else:
+                        return int(round(tgt_interval.start + shift, 0))
+                else:
+                    return int(round(tgt_interval.start, 0))
         raise IndexError(pos, 'position not found in mapping', self.mapping.keys())

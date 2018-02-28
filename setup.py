@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 import re
 
 
-VERSION = '1.6.9'
+VERSION = '1.6.10'
 
 
 def parse_md_readme():
@@ -13,7 +13,7 @@ def parse_md_readme():
     try:
         from m2r import parse_from_file
         rst_lines = parse_from_file('README.md').split('\n')
-        long_description = ['.. image:: http://mavis.bcgsc.ca/docs/latest/_static/acronym.svg\n\n']  # backup since pip can't handle raw directives
+        long_description = ['.. image:: http://mavis.bcgsc.ca/docs/latest/_static/acronym.svg\n\n|\n']  # backup since pip can't handle raw directives
         i = 0
         while i < len(rst_lines):
             if re.match(r'^..\s+raw::.*', rst_lines[i]):
