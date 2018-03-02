@@ -941,7 +941,6 @@ class Evidence(BreakpointPair):
             COLUMNS.break2_ewindow: '{}-{}'.format(*self.outer_window2),
             COLUMNS.break1_ewindow_count: self.counts[0],
             COLUMNS.break2_ewindow_count: self.counts[1],
-            COLUMNS.contigs_aligned: sum([len(c.alignments) for c in self.contigs]),
             COLUMNS.contigs_assembled: len(self.contigs)
         })
         return row

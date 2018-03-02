@@ -79,7 +79,6 @@ def main(
             COLUMNS.break2_split_reads_forced,
             COLUMNS.linking_split_reads,
             COLUMNS.flanking_pairs,
-            COLUMNS.contigs_aligned,
             COLUMNS.contigs_assembled,
             COLUMNS.contig_alignment_score,
             COLUMNS.contig_remap_score,

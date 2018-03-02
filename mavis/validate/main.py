@@ -219,8 +219,8 @@ def main(
             if call.contig_alignment:
                 log('{} {} [{}] contig_alignment_score: {}, contig_alignment_mq: {} contig_alignment_rank: {}'.format(
                     call.event_type, call.call_method, call.contig_alignment.query_name,
-                    round(call.contig_alignment.score(), 2), call.contig_alignment.mapping_quality(),
-                    call.contig_alignment.alignment_rank()
+                    round(call.contig_alignment.score(), 2), tuple(call.contig_alignment.mapping_quality()),
+                    tuple(call.contig_alignment.alignment_rank())
                 ), time_stamp=False)
                 log('alignment: ({}, {})'.format(call.contig_alignment.read1.alignment_id,
                     None if not call.contig_alignment.read2 else call.contig_alignment.read2.alignment_id),

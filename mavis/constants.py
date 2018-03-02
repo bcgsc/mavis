@@ -619,7 +619,6 @@ COLUMNS = MavisNamespace(
     contig_remapped_reads='contig_remapped_reads',
     contig_seq='contig_seq',
     contig_strand_specific='contig_strand_specific',
-    contigs_aligned='contigs_aligned',
     contigs_assembled='contigs_assembled',
     spanning_reads='spanning_reads',
     spanning_read_names='spanning_read_names',
@@ -690,7 +689,6 @@ COLUMNS = MavisNamespace(
 - :term:`contig_remapped_reads`
 - :term:`contig_seq`
 - :term:`contig_strand_specific`
-- :term:`contigs_aligned`
 - :term:`contigs_assembled`
 - :term:`event_type`
 - :term:`flanking_median_fragment_size`
