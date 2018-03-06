@@ -11,6 +11,13 @@ SCHEDULER = MavisNamespace(SGE='SGE', SLURM='SLURM', __name__='~mavis.submit.SCH
 - :term:`SLURM`
 """
 
+MAIL_TYPE = MavisNamespace(BEGIN='BEGIN', END='END', FAIL='FAIL', ALL='ALL', NONE='NONE')
+"""
+only supporting common mail type options between sge and slurm
+https://slurm.schedmd.com/sbatch.html
+http://gridscheduler.sourceforge.net/htmlman/htmlman1/qsub.html
+"""
+
 STD_OPTIONS = ['memory_limit', 'queue', 'time_limit', 'import_env']
 
 OPTIONS = WeakMavisNamespace(__name__='~mavis.submit.options')
@@ -34,7 +41,28 @@ OPTIONS.add('validation_memory', 16000, defn='default memory limit (MB) for the 
 OPTIONS.add('trans_validation_memory', 18000, defn='default memory limit (MB) for the validation stage (for transcriptomes)')
 OPTIONS.add('annotation_memory', 12000, defn='default memory limit (MB) for the annotation stage')
 OPTIONS.add('scheduler', SCHEDULER.SLURM, defn='The scheduler being used', cast_type=SCHEDULER)
+OPTIONS.add('mail_type', cast_type=MAIL_TYPE.enforce, defn='When to notify the mail_user (if given)')
 
+
+def _sge_mail_type(mail_type):
+    """
+    from: http://gridscheduler.sourceforge.net/htmlman/htmlman1/qsub.html
+    `b'     Mail is sent at the beginning of the job.
+    `e'     Mail is sent at the end of the job.
+    `a'     Mail is sent when the job is aborted or rescheduled.
+    `s'     Mail is sent when the job is suspended.
+    `n'     No mail is sent.
+    """
+    if mail_type == MAIL_TYPE.NONE:
+        return 'n'
+    elif mail_type == MAIL_TYPE.BEGIN:
+        return 'b'
+    elif mail_type == MAIL_TYPE.END:
+        return 'e'
+    elif mail_type == MAIL_TYPE.FAIL:
+        return 'as'
+    else:
+        return 'abes'
 
 def build_dependency_string(command, delim, jobs):
     if isinstance(jobs, str):
@@ -54,7 +82,9 @@ SCHEDULER_CONFIG = MavisNamespace(
         join_output=lambda x: '-j {}'.format('y' if x else 'n'),
         import_env=lambda x: '-V',
         stdout='-o {}/sge-$JOB_NAME-$JOB_ID.log'.format,
-        time_limit=lambda x: '-l h_rt={}'.format(str(timedelta(seconds=x)))
+        time_limit=lambda x: '-l h_rt={}'.format(str(timedelta(seconds=x))),
+        mail_type=lambda x: '-m {}'.format(_sge_mail_type(x)),
+        mail_user='-M {}'.format
     ),
     SLURM=MavisNamespace(
         shebang='#!/bin/bash -l',
@@ -66,7 +96,9 @@ SCHEDULER_CONFIG = MavisNamespace(
         stdout='-o {}/slurm-%x-%j.log'.format,
         dependency=lambda x: build_dependency_string('--dependency=afterok:{}', ':', x),
         import_env=lambda x: '--export=ALL',
-        queue='--partition={}'.format
+        queue='--partition={}'.format,
+        mail_type='--mail-type={}'.format,
+        mail_user='--mail-user={}'.format
     )
 )
 
@@ -77,7 +109,7 @@ class SubmissionScript:
     """
     def __init__(self, content, scheduler, **kwargs):
         self.scheduler = scheduler
-        self.options = {k: kwargs.pop(k, OPTIONS.get(k, None)) for k in ['jobname', 'stdout'] + STD_OPTIONS}
+        self.options = {k: kwargs.pop(k, OPTIONS.get(k, None)) for k in ['jobname', 'stdout', 'mail_type', 'mail_user'] + STD_OPTIONS}
         if kwargs:
             raise TypeError('unexpected argument(s):', list(kwargs.keys()))
         if self.scheduler not in SCHEDULER_CONFIG:
@@ -99,6 +131,8 @@ class SubmissionScript:
         if self.scheduler == 'SGE':
             header.append(config.option_prefix + ' ' + config['join_output'](True))
         for option, value in sorted(self.options.items()):
+            if option == 'mail_type' and not self.options.get('mail_user', None):  # ignore mail type if mail user option is not given
+                continue
             if value is not None and value != '' and option in config:
                 line = config.option_prefix + ' ' + config[option](value)
                 header.append(line)

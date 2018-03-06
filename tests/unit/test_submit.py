@@ -59,3 +59,53 @@ class TestBuildHeader(unittest.TestCase):
         header = script.build_header()
         exp = '#$ -V'
         self.assertTrue(exp in header)
+
+    def test_sge_mail_type_no_user(self):
+        script = SubmissionScript('', scheduler='SGE', stdout='thing', mail_type='ALL')
+        header = script.build_header()
+        exp = '#$ -m abes'
+        self.assertTrue(exp not in header)
+
+    def test_slurm_mail_type_no_user(self):
+        script = SubmissionScript('', scheduler='SLURM', stdout='thing', mail_type='ALL')
+        header = script.build_header()
+        exp = '#SBATCH --mail-type=ALL'
+        self.assertTrue(exp not in header)
+
+    def test_sge_mail_user_only(self):
+        script = SubmissionScript('', scheduler='SGE', stdout='thing', mail_user='someone')
+        header = script.build_header()
+        exp = '#$ -M someone'
+        self.assertTrue(exp in header)
+
+    def test_slurm_mail_user_only(self):
+        script = SubmissionScript('', scheduler='SLURM', stdout='thing', mail_user='someone')
+        header = script.build_header()
+        exp = '#SBATCH --mail-user=someone'
+        self.assertTrue(exp in header)
+
+    def test_sge_mail(self):
+        script = SubmissionScript('', scheduler='SGE', stdout='thing', mail_type='ALL', mail_user='someone')
+        header = script.build_header()
+        print(header)
+        self.assertTrue('#$ -M someone' in header)
+        self.assertTrue('#$ -m abes' in header)
+
+    def test_slurm_mail(self):
+        script = SubmissionScript('', scheduler='SLURM', stdout='thing', mail_type='ALL', mail_user='someone')
+        header = script.build_header()
+        self.assertTrue('#SBATCH --mail-user=someone' in header)
+        self.assertTrue('#SBATCH --mail-type=ALL' in header)
+
+    def test_sge_mail_fail(self):
+        script = SubmissionScript('', scheduler='SGE', stdout='thing', mail_type='FAIL', mail_user='someone')
+        header = script.build_header()
+        print(header)
+        self.assertTrue('#$ -M someone' in header)
+        self.assertTrue('#$ -m as' in header)
+
+    def test_slurm_mail_fail(self):
+        script = SubmissionScript('', scheduler='SLURM', stdout='thing', mail_type='FAIL', mail_user='someone')
+        header = script.build_header()
+        self.assertTrue('#SBATCH --mail-user=someone' in header)
+        self.assertTrue('#SBATCH --mail-type=FAIL' in header)
