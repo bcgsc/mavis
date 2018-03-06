@@ -226,7 +226,7 @@ def digraph_connected_components(graph, subgraph=None):
 
 
 def pull_contigs_from_component(
-    assembly, component, assembly_min_nc_edge_weight, assembly_max_paths, log=devnull
+    assembly, component, min_edge_trim_weight, assembly_max_paths, log=devnull
 ):
     """
     builds contigs from the a connected component of the assembly DeBruijn graph
@@ -234,7 +234,7 @@ def pull_contigs_from_component(
     Args:
         assembly (DeBruijnGraph): the assembly graph
         component (list):  list of nodes which make up the connected component
-        assembly_min_nc_edge_weight (int): the minimum weight to not remove a non cutting edge/path
+        min_edge_trim_weight (int): the minimum weight to not remove a non cutting edge/path
         assembly_max_paths (int): the maximum number of paths allowed before the graph is further simplified
         log (function): the log function
 
@@ -242,7 +242,7 @@ def pull_contigs_from_component(
         :class:`Dict` of :class:`int` by :class:`str`: the paths/contigs and their scores
     """
     path_scores = {}  # path_str => score_int
-    w = assembly_min_nc_edge_weight
+    w = min_edge_trim_weight
     unresolved_components = [component]
 
     while len(unresolved_components) > 0:
@@ -311,31 +311,28 @@ def filter_contigs(contigs, assembly_min_uniq=0.01):
 
 def assemble(
     sequences,
-    assembly_max_kmer_size=-1,
-    assembly_min_nc_edge_weight=3,
-    assembly_min_edge_weight=2,
-    assembly_min_match_quality=0.95,
-    assembly_min_read_mapping_overlap=None,
-    assembly_min_contig_length=None,
-    assembly_min_exact_match_to_remap=6,
+    kmer_size,
+    min_edge_trim_weight=3,
     assembly_max_paths=20,
     assembly_min_uniq=0.01,
-    assembly_max_kmer_strict=False,
-    log=lambda *pos, **kwargs: None
+    log=lambda *pos, **kwargs: None,
+    **kwargs
 ):
     """
     for a set of sequences creates a DeBruijnGraph
     simplifies trailing and leading paths where edges fall
     below a weight threshold and the return all possible unitigs/contigs
 
+    drops any sequences too small to fit the kmer size
+
     Args:
         sequences (:class:`list` of :class:`str`): a list of strings/sequences to assemble
-        assembly_max_kmer_size: see :term:`assembly_max_kmer_size`
-        assembly_min_nc_edge_weight: see :term:`assembly_min_nc_edge_weight`
-        assembly_min_edge_weight: see :term:`assembly_min_edge_weight`
+        kmer_size: see :term:`assembly_kmer_size` the size of the kmer to use
+        min_edge_trim_weight: see :term:`min_edge_trim_weight`
+        min_edge_trim_weight: see :term:`min_edge_trim_weight`
         assembly_min_match_quality: see :term:`assembly_min_match_quality`
         assembly_min_read_mapping_overlap: see :term:`assembly_min_read_mapping_overlap`
-        assembly_min_contig_length: see :term:`assembly_min_contig_length`
+        min_contig_length: see :term:`assembly_min_contig_length`
         assembly_min_exact_match_to_remap: see :term:`assembly_min_exact_match_to_remap`
         assembly_max_paths: see :term:`assembly_max_paths`
         log (function): the log function
@@ -343,38 +340,25 @@ def assemble(
     Returns:
         :class:`list` of :class:`Contig`: a list of putative contigs
     """
-    if len(sequences) == 0:
+    if not sequences:
         return []
     min_seq = min([len(s) for s in sequences])
-    if assembly_max_kmer_size < 0:
-        temp = int(min_seq * 0.75)
-        if temp < 10:
-            assembly_max_kmer_size = min(min_seq, 10)
-        else:
-            assembly_max_kmer_size = temp
-    elif assembly_max_kmer_size > min_seq:
-        if not assembly_max_kmer_strict:
-            assembly_max_kmer_size = min_seq
-            warnings.warn(
-                'cannot specify a kmer size larger than one of the input sequences. reset to {0}'.format(min_seq))
-    if assembly_min_read_mapping_overlap is None:
-        assembly_min_read_mapping_overlap = assembly_max_kmer_size
-    if assembly_min_contig_length is None:
-        assembly_min_contig_length = min(assembly_min_read_mapping_overlap, min_seq + 1)
+    kmer_size = int(round(kmer_size, 0))
+    min_contig_length = kwargs.pop('min_contig_length', min_seq + 1)
+    remap_min_overlap = kwargs.pop('remap_min_overlap', kmer_size)
+    remap_min_exact_match = kwargs.pop('remap_min_exact_match', 6)
+    remap_min_match = kwargs.pop('remap_min_match', 0.95)
 
+    if kwargs:
+        raise TypeError('unrecognized keyword argument(s)', kwargs)
     assembly = DeBruijnGraph()
     for s in sequences:
-        if len(s) < assembly_max_kmer_size:
+        if len(s) < kmer_size:
             continue
-        kmers_list = kmers(s, assembly_max_kmer_size)
+        kmers_list = kmers(s, kmer_size)
         for kmer in kmers_list:
             assembly.add_edge(kmer[:-1], kmer[1:])
     # use the ab min edge weight to remove all low weight edges first
-    edges = list(assembly.edges(data=True))
-    for s, t, data in edges:
-        if data['freq'] < assembly_min_edge_weight:
-            assembly.remove_edge(s, t)
-    # then remove all nodes with no edges
     nodes = list(assembly.nodes())
     for n in nodes:
         if assembly.in_degree(n) == 0 and assembly.out_degree(n) == 0:
@@ -389,9 +373,9 @@ def assemble(
                 assembly.remove_node(node)
 
     # initial data cleaning
-    assembly.trim_forks_by_freq(assembly_min_nc_edge_weight)
-    assembly.trim_noncutting_paths_by_freq(assembly_min_nc_edge_weight)
-    assembly.trim_tails_by_freq(assembly_min_nc_edge_weight)
+    assembly.trim_forks_by_freq(min_edge_trim_weight)
+    assembly.trim_noncutting_paths_by_freq(min_edge_trim_weight)
+    assembly.trim_tails_by_freq(min_edge_trim_weight)
 
     path_scores = {}
 
@@ -399,7 +383,7 @@ def assemble(
         # pull the path scores
         path_scores.update(pull_contigs_from_component(
             assembly, component,
-            assembly_min_nc_edge_weight=assembly_min_nc_edge_weight,
+            min_edge_trim_weight=min_edge_trim_weight,
             assembly_max_paths=assembly_max_paths,
             log=log
         ))
@@ -407,7 +391,7 @@ def assemble(
     # now map the contigs to the possible input sequences
     contigs = []
     for seq, score in list(path_scores.items()):
-        if len(seq) >= assembly_min_contig_length:
+        if len(seq) >= min_contig_length:
             contigs.append(Contig(seq, score))
     log('filtering similar contigs', len(contigs))
     # remap the input reads
@@ -420,16 +404,16 @@ def assemble(
             a = nsb_align(
                 contig.seq,
                 input_seq,
-                min_overlap_percent=assembly_min_read_mapping_overlap / len(contig.seq),
-                min_match=assembly_min_match_quality,
-                min_consecutive_match=assembly_min_exact_match_to_remap
+                min_overlap_percent=remap_min_overlap / len(contig.seq),
+                min_match=remap_min_match,
+                min_consecutive_match=remap_min_exact_match
             )
             if len(a) != 1:
                 continue
-            if _cigar.match_percent(a[0].cigar) < assembly_min_match_quality:
+            if _cigar.match_percent(a[0].cigar) < remap_min_match:
                 continue
             maps_to[contig] = a[0]
-        if len(maps_to) > 0:
+        if maps_to:
             scores = []
             for contig, read in maps_to.items():
                 score = calculate_alignment_score(read)

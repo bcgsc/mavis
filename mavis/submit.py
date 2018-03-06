@@ -64,6 +64,7 @@ def _sge_mail_type(mail_type):
     else:
         return 'abes'
 
+
 def build_dependency_string(command, delim, jobs):
     if isinstance(jobs, str):
         return command.format(jobs)

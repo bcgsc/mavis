@@ -659,36 +659,34 @@ class Evidence(BreakpointPair):
 
         # add half-mapped reads
         # exclude half-mapped reads if there is 'n' split reads that target align
-        if targeted < self.assembly_min_tgt_to_exclude_half_map and \
-                self.assembly_include_half_mapped_reads:
+        if targeted < self.assembly_min_tgt_to_exclude_half_map:
             for read in itertools.chain.from_iterable(self.half_mapped):
                 assembly_sequences.setdefault(read.query_sequence, set()).add(read)
                 rqs_comp = reverse_complement(read.query_sequence)
                 assembly_sequences.setdefault(rqs_comp, set()).add(read)
 
         # add flanking reads
-        if self.assembly_include_flanking_pairs:
-            for read, mate in self.flanking_pairs:
-                assembly_sequences.setdefault(read.query_sequence, set()).add(read)
-                rqs_comp = reverse_complement(read.query_sequence)
-                assembly_sequences.setdefault(rqs_comp, set()).add(read)
+        for read, mate in self.flanking_pairs:
+            assembly_sequences.setdefault(read.query_sequence, set()).add(read)
+            rqs_comp = reverse_complement(read.query_sequence)
+            assembly_sequences.setdefault(rqs_comp, set()).add(read)
 
-                assembly_sequences.setdefault(mate.query_sequence, set()).add(mate)
-                rqs_comp = reverse_complement(mate.query_sequence)
-                assembly_sequences.setdefault(rqs_comp, set()).add(mate)
+            assembly_sequences.setdefault(mate.query_sequence, set()).add(mate)
+            rqs_comp = reverse_complement(mate.query_sequence)
+            assembly_sequences.setdefault(rqs_comp, set()).add(mate)
 
         log('assembly size of {} sequences'.format(len(assembly_sequences) // 2))
 
+        kmer_size = self.read_length * self.assembly_kmer_size
+
         contigs = assemble(
-            assembly_sequences,
-            assembly_min_edge_weight=self.assembly_min_edge_weight,
-            assembly_min_nc_edge_weight=self.assembly_min_nc_edge_weight,
+            assembly_sequences, kmer_size,
+            min_edge_trim_weight=self.assembly_min_edge_trim_weight,
             assembly_max_paths=self.assembly_max_paths,
-            assembly_min_contig_length=self.read_length,
+            min_contig_length=self.read_length,
             log=log,
-            assembly_min_exact_match_to_remap=self.assembly_min_exact_match_to_remap,
-            assembly_max_kmer_size=self.assembly_max_kmer_size,
-            assembly_max_kmer_strict=self.assembly_max_kmer_strict
+            remap_min_exact_match=self.assembly_min_exact_match_to_remap,
+            assembly_min_uniq=self.assembly_min_uniq
         )
 
         # add the input reads

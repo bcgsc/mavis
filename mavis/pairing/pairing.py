@@ -165,7 +165,10 @@ def pair_by_distance(calls, distances, log=devnull, against_self=False):
     break2_sorted = sorted(calls, key=lambda b: b.break2.start)
     lowest_resolution = max([len(b.break1) for b in calls] + [len(b.break2) for b in calls] + [1])
     max_distance = max(distances.values())
+    max_useq = max([len(c.untemplated_seq) if c.untemplated_seq else 0 for c in calls] + [0])
+    max_distance += max_useq * 2
     log('lowest_resolution', lowest_resolution, 'max_distance', max_distance, 'possible comparisons', len(break1_sorted) * len(break1_sorted), time_stamp=False)
+
     comparisons = 0
     for i in range(0, len(break1_sorted)):
         current = break1_sorted[i]

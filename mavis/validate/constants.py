@@ -10,9 +10,9 @@ DEFAULTS = WeakMavisNamespace()
 - :term:`assembly_max_kmer_size`
 - :term:`assembly_max_kmer_strict`
 - :term:`assembly_max_paths`
-- :term:`assembly_min_edge_weight`
+- :term:`min_edge_trim_weight`
 - :term:`assembly_min_exact_match_to_remap`
-- :term:`assembly_min_nc_edge_weight`
+- :term:`min_edge_trim_weight`
 - :term:`assembly_min_remap_coverage`
 - :term:`assembly_min_remapped_seq`
 - :term:`assembly_min_tgt_to_exclude_half_map`
@@ -55,21 +55,8 @@ DEFAULTS.add(
     'aligner', SUPPORTED_ALIGNER.BLAT, cast_type=SUPPORTED_ALIGNER,
     defn='the aligner to use to map the contigs/reads back to the reference e.g blat or bwa')
 DEFAULTS.add(
-    'assembly_include_flanking_pairs', True,
-    defn='if true then when the split reads are assembled, any flanking read pairs will also be added')
-DEFAULTS.add(
-    'assembly_include_half_mapped_reads', True,
-    defn='if true then when the split reads are assembled, any half-mapped read mates will also be added')
-DEFAULTS.add(
-    'assembly_max_kmer_size', -1,
-    defn='the minimum between this and the smallest length input sequence is used as the kmer size for assembling '
-    'the DeBruijn Graph. If this is not set (any value less than 0 is considered not set) the default is the 75%% of '
-    'the minimum length input sequence')
-DEFAULTS.add(
-    'assembly_max_kmer_strict', True,
-    defn='If True then any sequences input to the assembly algorithm that cannot create a kmer of this size '
-    'will be discarded. If False, then the kmer size will be reduced to the minimum input and all input '
-    'sequences will be used in the assembly algorithm')
+    'assembly_kmer_size', 0.75, cast_type=float_fraction,
+    defn='The percent of the read length to make kmers for assembly')
 DEFAULTS.add(
     'assembly_max_paths', 8,
     defn='the maximum number of paths to resolve. This is used to limit when there is a messy assembly graph to '
@@ -79,14 +66,12 @@ DEFAULTS.add(
     'assembly_min_uniq', 0.10, cast_type=float_fraction,
     defn='Minimum percent uniq required to keep separate assembled contigs. If contigs are more similar then the lower scoring, then shorter, contig is dropped')
 DEFAULTS.add(
-    'assembly_min_edge_weight', 2,
-    defn='Discards all edges with a weight/frequency less than this from the DeBruijn graph')
-DEFAULTS.add(
     'assembly_min_exact_match_to_remap', 15,
     defn='The minimum length of exact matches to initiate remapping a read to a contig')
 DEFAULTS.add(
-    'assembly_min_nc_edge_weight', 3,
-    defn='Discards all non-cutting edges with a weight/frequency less than this from the DeBruijn graph')
+    'assembly_min_edge_trim_weight', 3,
+    defn='this is used to simplify the DeBruijn graph before path finding. Edges with less than this frequency will '
+    'be discarded if they are non-cutting, at a fork, or the end of a path')
 DEFAULTS.add(
     'assembly_min_remap_coverage', 0.9, cast_type=float_fraction,
     defn='Minimum fraction of the contig sequence which the remapped sequences must align over')
