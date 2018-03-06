@@ -53,7 +53,8 @@ class TestCallByContig(unittest.TestCase):
             cigar=convert_string_to_cigar('68M678D50M15D34M6472D185M10240D158M891D74M' '5875D' '6M' '1X' '29M'),
             reference_name='7',
             reference_id=6,
-            reference_start=55241669
+            reference_start=55241669,
+            alignment_rank=0
         )
         print('read.cigar', read.cigar)
         evidence = TranscriptomeEvidence(

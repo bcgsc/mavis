@@ -339,7 +339,7 @@ class EventCall(BreakpointPair):
             COLUMNS.contig_seq: None,
             COLUMNS.contig_remap_score: None,
             COLUMNS.contig_alignment_score: None,
-            COLUMNS.contig_blat_rank: None,
+            COLUMNS.contig_alignment_rank: None,
             COLUMNS.contig_remapped_reads: None,
             COLUMNS.contig_remapped_read_names: None,
             COLUMNS.contig_strand_specific: None,
@@ -391,12 +391,6 @@ class EventCall(BreakpointPair):
             row[COLUMNS.net_size] = None
         # add contig specific metrics and columns
         if self.contig:
-            blat_score = None
-            if self.contig_alignment.read1.has_tag('br'):
-                blat_score = self.contig_alignment.read1.get_tag('br')
-                if self.contig_alignment.read2:
-                    blat_score += self.contig_alignment.read2.get_tag('br')
-                    blat_score = round(blat_score / 2, 1)
             cseq = self.contig_alignment.query_sequence
             try:
                 break1_read_depth = SplitAlignment.breakpoint_contig_remapped_depth(
@@ -415,7 +409,7 @@ class EventCall(BreakpointPair):
                 COLUMNS.contig_seq: cseq,  # don't output sequence directly from contig b/c must always be wrt to the positive strand
                 COLUMNS.contig_remap_score: self.contig.remap_score(),
                 COLUMNS.contig_alignment_score: self.contig_alignment.score(),
-                COLUMNS.contig_blat_rank: blat_score,
+                COLUMNS.contig_alignment_rank: self.contig_alignment.alignment_rank().center,
                 COLUMNS.contig_remapped_reads: len(self.contig.input_reads),
                 COLUMNS.contig_remapped_read_names:
                     ';'.join(sorted(set([r.query_name for r in self.contig.input_reads]))),

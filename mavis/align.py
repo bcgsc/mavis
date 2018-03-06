@@ -93,6 +93,11 @@ class SplitAlignment(BreakpointPair):
             return Interval(self.read1.mapping_quality)
         return Interval(self.read1.mapping_quality) | Interval(self.read2.mapping_quality)
 
+    def alignment_rank(self):
+        if not self.read2:
+            return Interval(self.read1.alignment_rank)
+        return Interval(self.read1.alignment_rank) | Interval(self.read2.alignment_rank)
+
     @staticmethod
     def breakpoint_contig_remapped_depth(breakpoint, contig, read):
         if breakpoint.chr != read.reference_name:
@@ -375,6 +380,9 @@ def align_sequences(
                         read.cigar = _cigar.recompute_cigar_mismatch(read, reference_genome[read.reference_name])
                         query_seq = sequences[read.query_name]
                         reads_by_query.setdefault(query_seq, []).append(read)
+            for reads in reads_by_query.values():
+                for i, read in enumerate(sorted(reads, key=lambda r: (r.is_secondary, r.is_supplementary, r.mapping_quality * -1))):
+                    read.alignment_rank = i
             return reads_by_query
         else:
             raise NotImplementedError('unsupported aligner', aligner)
@@ -457,4 +465,7 @@ def select_contig_alignments(evidence, reads_by_query):
             ]):
                 continue
             filtered_alignments.add(alignment)
+        if filtered_alignments:
+            max_rank = max([a.alignment_rank().center for a in filtered_alignments])
+            filtered_alignments = {f for f in filtered_alignments if f.alignment_rank().center == max_rank}
         contig.alignments.update(filtered_alignments)

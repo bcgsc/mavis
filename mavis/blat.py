@@ -380,6 +380,7 @@ def process_blat_output(
             else:
                 if row['rank'] > 0:
                     read.mapping_quality = 0
+                read.alignment_rank = row['rank']
                 read.set_tag(PYSAM_READ_FLAGS.BLAT_SCORE, row['score'], value_type='i')
                 read.set_tag(PYSAM_READ_FLAGS.BLAT_ALIGNMENTS, len(filtered_rows), value_type='i')
                 read.set_tag(PYSAM_READ_FLAGS.BLAT_PMS, blat_min_percent_of_max_score, value_type='f')

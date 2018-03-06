@@ -665,11 +665,11 @@ class TestSelectContigAlignments(unittest.TestCase):
         )
         read1 = SamRead(
             reference_id=3, reference_start=1114, cigar=[(CIGAR.S, 125), (CIGAR.EQ, 120)], query_sequence=s,
-            is_reverse=False, reference_name='3'
+            is_reverse=False, reference_name='3', alignment_rank=0
         )
         read2 = SamRead(
             reference_id=3, reference_start=2187, cigar=[(CIGAR.S, 117), (CIGAR.EQ, 8), (CIGAR.D, 1), (CIGAR.EQ, 120)],
-            query_sequence=reverse_complement(s), is_reverse=True, reference_name='3'
+            query_sequence=reverse_complement(s), is_reverse=True, reference_name='3', alignment_rank=1
         )
         raw_alignments = {s: [read1, read2]}
         align.select_contig_alignments(evidence, raw_alignments)

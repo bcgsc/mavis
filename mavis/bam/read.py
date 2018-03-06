@@ -23,6 +23,7 @@ class SamRead(pysam.AlignedSegment):
         self._next_reference_name = next_reference_name
         self.alignment_score = alignment_score
         self.mapping_quality = NA_MAPPING_QUALITY
+        self.alignment_rank = None
         for attr, val in kwargs.items():
             setattr(self, attr, val)
 
@@ -54,6 +55,10 @@ class SamRead(pysam.AlignedSegment):
         cp.cigar = pysamread.cigar[:]
         cp.query_name = pysamread.query_name
         cp.mapping_quality = pysamread.mapping_quality
+        try:
+            cp.alignment_rank = pysamread.alignment_rank
+        except AttributeError:
+            pass
         cp.set_tags(pysamread.get_tags())
         cp.flag = pysamread.flag
         if pysamread.is_paired:
