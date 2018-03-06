@@ -18,7 +18,7 @@ https://slurm.schedmd.com/sbatch.html
 http://gridscheduler.sourceforge.net/htmlman/htmlman1/qsub.html
 """
 
-STD_OPTIONS = ['memory_limit', 'queue', 'time_limit', 'import_env']
+STD_OPTIONS = ['memory_limit', 'queue', 'time_limit', 'import_env', 'mail_user', 'mail_type']
 
 OPTIONS = WeakMavisNamespace(__name__='~mavis.submit.options')
 """:class:`~mavis.constants.MavisNamespace`: submission options
@@ -41,7 +41,8 @@ OPTIONS.add('validation_memory', 16000, defn='default memory limit (MB) for the 
 OPTIONS.add('trans_validation_memory', 18000, defn='default memory limit (MB) for the validation stage (for transcriptomes)')
 OPTIONS.add('annotation_memory', 12000, defn='default memory limit (MB) for the annotation stage')
 OPTIONS.add('scheduler', SCHEDULER.SLURM, defn='The scheduler being used', cast_type=SCHEDULER)
-OPTIONS.add('mail_type', cast_type=MAIL_TYPE.enforce, defn='When to notify the mail_user (if given)')
+OPTIONS.add('mail_type', '', cast_type=MAIL_TYPE.enforce, defn='When to notify the mail_user (if given)')
+OPTIONS.add('mail_user', '', defn='User to send notifications to')
 
 
 def _sge_mail_type(mail_type):
@@ -110,7 +111,7 @@ class SubmissionScript:
     """
     def __init__(self, content, scheduler, **kwargs):
         self.scheduler = scheduler
-        self.options = {k: kwargs.pop(k, OPTIONS.get(k, None)) for k in ['jobname', 'stdout', 'mail_type', 'mail_user'] + STD_OPTIONS}
+        self.options = {k: kwargs.pop(k, OPTIONS.get(k, None)) for k in ['jobname', 'stdout'] + STD_OPTIONS}
         if kwargs:
             raise TypeError('unexpected argument(s):', list(kwargs.keys()))
         if self.scheduler not in SCHEDULER_CONFIG:

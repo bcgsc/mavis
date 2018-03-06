@@ -109,3 +109,29 @@ class TestBuildHeader(unittest.TestCase):
         header = script.build_header()
         self.assertTrue('#SBATCH --mail-user=someone' in header)
         self.assertTrue('#SBATCH --mail-type=FAIL' in header)
+
+    def test_sge_mail_option_from_env(self):
+        os.environ['MAVIS_MAIL_TYPE'] = 'ALL'
+        os.environ['MAVIS_MAIL_USER'] = 'someone'
+        script = SubmissionScript('', scheduler='SGE')
+        header = script.build_header()
+        self.assertTrue('#$ -M someone' in header)
+        self.assertTrue('#$ -m abes' in header)
+
+    def test_slurm_mail_option_from_env(self):
+        os.environ['MAVIS_MAIL_TYPE'] = 'ALL'
+        os.environ['MAVIS_MAIL_USER'] = 'someone'
+        script = SubmissionScript('', scheduler='SLURM')
+        header = script.build_header()
+        self.assertTrue('#SBATCH --mail-user=someone' in header)
+        self.assertTrue('#SBATCH --mail-type=ALL' in header)
+
+    def tearDown(self):
+        try:
+            del os.environ['MAVIS_MAIL_TYPE']
+        except KeyError:
+            pass
+        try:
+            del os.environ['MAVIS_MAIL_USER']
+        except KeyError:
+            pass
