@@ -126,6 +126,42 @@ class TestBuildHeader(unittest.TestCase):
         self.assertTrue('#SBATCH --mail-user=someone' in header)
         self.assertTrue('#SBATCH --mail-type=ALL' in header)
 
+    def test_slurm_multiple_mail_types(self):
+        script = SubmissionScript('', scheduler='SLURM', stdout='thing', mail_type='FAIL,ALL', mail_user='someone')
+        header = script.build_header()
+        self.assertTrue('#SBATCH --mail-user=someone' in header)
+        self.assertTrue('#SBATCH --mail-type=ALL,FAIL' in header)
+
+    def test_slurm_bad_mail_type(self):
+        script = SubmissionScript('', scheduler='SLURM', stdout='thing', mail_type='FAIL,BAD', mail_user='someone')
+        with self.assertRaises(KeyError):
+            header = script.build_header()
+
+        script = SubmissionScript('', scheduler='SLURM', stdout='thing', mail_type='BAD', mail_user='someone')
+        with self.assertRaises(KeyError):
+            header = script.build_header()
+
+    def test_sge_bad_mail_type(self):
+        script = SubmissionScript('', scheduler='SGE', stdout='thing', mail_type='BAD', mail_user='someone')
+        with self.assertRaises(KeyError):
+            header = script.build_header()
+
+    def test_sge_multiple_mail_options(self):
+        script = SubmissionScript('', scheduler='SGE', stdout='thing', mail_type='FAIL,ALL', mail_user='someone')
+        header = script.build_header()
+        self.assertTrue('#$ -M someone' in header)
+        self.assertTrue('#$ -m abes' in header)
+
+    def test_slurm_mail_type_none_mix(self):
+        script = SubmissionScript('', scheduler='SLURM', stdout='thing', mail_type='ALL,NONE', mail_user='someone')
+        with self.assertRaises(ValueError):
+            header = script.build_header()
+
+    def test_sge_mail_type_none_mix(self):
+        script = SubmissionScript('', scheduler='SGE', stdout='thing', mail_type='ALL,NONE', mail_user='someone')
+        with self.assertRaises(ValueError):
+            header = script.build_header()
+
     def tearDown(self):
         try:
             del os.environ['MAVIS_MAIL_TYPE']

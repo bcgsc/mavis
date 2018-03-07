@@ -66,6 +66,25 @@ def _sge_mail_type(mail_type):
         return 'abes'
 
 
+def _sge_mail_type_csv(mail_type_csv):
+    mail_options = set()
+    for opt in [o for o in mail_type_csv.split(',') if o]:
+        MAIL_TYPE.enforce(opt)
+        mail_options.update(_sge_mail_type(opt))
+    if 'n' in mail_options and len(mail_options) > 1:
+        raise ValueError('cannot specify NONE with other mail type options', mail_options)
+    return ''.join(sorted(mail_options))
+
+
+def _slurm_mail_type_csv(mail_type_csv):
+    mail_options = set()
+    for opt in [o for o in mail_type_csv.split(',') if o]:
+        mail_options.add(MAIL_TYPE.enforce(opt))
+    if MAIL_TYPE.NONE in mail_options and len(mail_options) > 1:
+        raise ValueError('cannot specify NONE with other mail type options', mail_options)
+    return ','.join(sorted(mail_options))
+
+
 def build_dependency_string(command, delim, jobs):
     if isinstance(jobs, str):
         return command.format(jobs)
@@ -85,7 +104,7 @@ SCHEDULER_CONFIG = MavisNamespace(
         import_env=lambda x: '-V',
         stdout='-o {}/sge-$JOB_NAME-$JOB_ID.log'.format,
         time_limit=lambda x: '-l h_rt={}'.format(str(timedelta(seconds=x))),
-        mail_type=lambda x: '-m {}'.format(_sge_mail_type(x)),
+        mail_type=lambda x: '-m {}'.format(_sge_mail_type_csv(x)),
         mail_user='-M {}'.format
     ),
     SLURM=MavisNamespace(
@@ -99,7 +118,7 @@ SCHEDULER_CONFIG = MavisNamespace(
         dependency=lambda x: build_dependency_string('--dependency=afterok:{}', ':', x),
         import_env=lambda x: '--export=ALL',
         queue='--partition={}'.format,
-        mail_type='--mail-type={}'.format,
+        mail_type=lambda x: '--mail-type={}'.format(_slurm_mail_type_csv(x)),
         mail_user='--mail-user={}'.format
     )
 )
