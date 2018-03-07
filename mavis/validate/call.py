@@ -505,7 +505,10 @@ def _call_by_spanning_reads(source_evidence, consumed_evidence):
 
     for read in source_evidence.spanning_reads - consumed_evidence:
         for event in call_read_events(read):
-            if event.query_consumption() >= source_evidence.contig_aln_min_query_consumption:
+            if all([
+                event.query_consumption() >= source_evidence.contig_aln_min_query_consumption,
+                event.score() >= source_evidence.contig_aln_min_score
+            ]):
                 spanning_calls.setdefault(event, set()).add(read)
     result = []
     for event, reads in spanning_calls.items():
