@@ -64,13 +64,17 @@ class EventCall(BreakpointPair):
             self.compatible_type = SVTYPE.DUP
         else:
             self.compatible_type = None
-        if event_type not in BreakpointPair.classify(self) and self.compatible_type in BreakpointPair.classify(self):
+        # use the distance function from the source evidence to narrow the possible types
+        putative_types = BreakpointPair.classify(self, source_evidence.distance)
+        if event_type not in putative_types and self.compatible_type in putative_types:
             event_type, self.compatible_type = self.compatible_type, event_type
+            putative_types = BreakpointPair.classify(self, source_evidence.distance)
+
         self.event_type = SVTYPE.enforce(event_type)
-        if event_type not in BreakpointPair.classify(self) | {self.compatible_type}:
+        if event_type not in putative_types | {self.compatible_type}:
             raise ValueError(
                 'event_type is not compatible with the breakpoint call',
-                'expected event type=', event_type, 'event classified types=', BreakpointPair.classify(self),
+                'expected event type=', event_type, 'event classified types=', putative_types,
                 'compatible type=', self.compatible_type, str(self))
         self.contig = contig
         self.call_method = CALL_METHOD.enforce(call_method)
@@ -822,8 +826,6 @@ def _call_by_supporting_reads(evidence, event_type, consumed_evidence=None):
             max_insert = evidence.read_length - 2 * evidence.min_softclipping
             if event_type == SVTYPE.INS and max_insert < deletion_size:
                 continue
-            elif event_type == SVTYPE.DEL and deletion_size < max_insert:
-                continue
         elif links >= evidence.min_double_aligned_to_estimate_insertion_size:
             if deletion_size > evidence.max_expected_fragment_size and event_type == SVTYPE.INS:
                 continue
@@ -848,10 +850,10 @@ def _call_by_supporting_reads(evidence, event_type, consumed_evidence=None):
                     if not evidence.stranded:
                         call.break1.strand = STRAND.NS
                         call.break2.strand = STRAND.NS
-                    if BreakpointPair.classify(call) & event_types:  # ensure we are calling the correct event types
-                        resolved_calls.setdefault(call, (set(), set()))
-                        resolved_calls[call][0].add(read1)
-                        resolved_calls[call][1].add(read2)
+                    # check the type later, we want this to fail if wrong type
+                    resolved_calls.setdefault(call, (set(), set()))
+                    resolved_calls[call][0].add(read1)
+                    resolved_calls[call][1].add(read2)
                 except AssertionError:
                     pass  # will be thrown if the reads do not actually belong together
 
@@ -859,7 +861,10 @@ def _call_by_supporting_reads(evidence, event_type, consumed_evidence=None):
         first_breakpoint = Breakpoint(evidence.break1.chr, first, strand=evidence.break1.strand, orient=evidence.break1.orient)
         second_breakpoint = Breakpoint(evidence.break2.chr, second, strand=evidence.break2.strand, orient=evidence.break2.orient)
         bpp = BreakpointPair(first_breakpoint, second_breakpoint, event_type=event_type)
-        resolved_calls.setdefault(bpp, (set(), set()))
+
+        # ignore untemplated sequence since was not known previously
+        if not any([call.break1 == bpp.break1 and call.break2 == bpp.break2 for call in resolved_calls]):
+            resolved_calls.setdefault(bpp, (set(), set()))
 
         uncons_break1_reads = evidence.split_reads[0] - consumed_evidence
         uncons_break2_reads = evidence.split_reads[1] - consumed_evidence
