@@ -101,7 +101,9 @@ def group_events(events):
         opposing_strands=first.opposing_strands,
         stranded=first.stranded
     )
+    data_columns = set()
     for bpp in events:
+        data_columns.update(bpp.data.keys())
         if any([
             bpp.break1.chr != new_bpp.break1.chr,
             bpp.break2.chr != new_bpp.break2.chr,
@@ -115,7 +117,7 @@ def group_events(events):
 
     # Note: There are some attributes that shouldn't be lost if different, currently appending the information
     # The evidence could be better off as a max instead of a join
-    for col in [
+    list_columns = {
         COLUMNS.contig_seq, COLUMNS.call_method,
         COLUMNS.break1_split_reads, COLUMNS.break2_split_reads, COLUMNS.contig_alignment_score,
         COLUMNS.spanning_reads, COLUMNS.flanking_pairs, COLUMNS.tools,
@@ -123,9 +125,13 @@ def group_events(events):
         COLUMNS.pairing, COLUMNS.annotation_figure,
         COLUMNS.contig_remapped_reads, COLUMNS.tools,
         COLUMNS.tracking_id
-    ]:
+    }
+    for col in data_columns:
         new_data = sorted(list({bpp.data[col] for bpp in events}))
-        new_bpp.data[col] = new_data[0] if len(new_data) == 1 else ';'.join([str(v) for v in new_data])
+        if len(new_data) == 1:
+            new_bpp.data[col] = new_data[0]
+        elif col in list_columns:
+            new_bpp.data[col] = ';'.join([str(v) for v in new_data])
 
     untemplated_seq = {bpp.untemplated_seq for bpp in events}
     if len(untemplated_seq) == 1:
