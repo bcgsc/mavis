@@ -79,9 +79,6 @@ DEFAULTS.add(
     'assembly_min_remapped_seq', 3,
     defn='The minimum input sequences that must remap for an assembled contig to be used')
 DEFAULTS.add(
-    'assembly_min_tgt_to_exclude_half_map', 7,
-    defn='The minimum number of split reads aligning to both breakpoints in order to exclude half-mapped reads from the assembly input')
-DEFAULTS.add(
     'assembly_strand_concordance', 0.51, cast_type=float_fraction,
     defn='When the number of remapped reads from each strand are compared, the ratio must be above this number to '
     'decide on the strand')

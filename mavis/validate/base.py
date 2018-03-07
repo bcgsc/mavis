@@ -646,24 +646,20 @@ class Evidence(BreakpointPair):
         """
         # gather reads for the putative assembly
         assembly_sequences = {}
-        targeted = 0
         # add split reads
         for read in list(itertools.chain.from_iterable(self.split_reads)) + list(self.spanning_reads):
             # ignore targeted realignments
             if read.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT) and read.get_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT):
-                targeted += 1
                 continue
             assembly_sequences.setdefault(read.query_sequence, set()).add(read)
             rqs_comp = reverse_complement(read.query_sequence)
             assembly_sequences.setdefault(rqs_comp, set()).add(read)
 
         # add half-mapped reads
-        # exclude half-mapped reads if there is 'n' split reads that target align
-        if targeted < self.assembly_min_tgt_to_exclude_half_map:
-            for read in itertools.chain.from_iterable(self.half_mapped):
-                assembly_sequences.setdefault(read.query_sequence, set()).add(read)
-                rqs_comp = reverse_complement(read.query_sequence)
-                assembly_sequences.setdefault(rqs_comp, set()).add(read)
+        for read in itertools.chain.from_iterable(self.half_mapped):
+            assembly_sequences.setdefault(read.query_sequence, set()).add(read)
+            rqs_comp = reverse_complement(read.query_sequence)
+            assembly_sequences.setdefault(rqs_comp, set()).add(read)
 
         # add flanking reads
         for read, mate in self.flanking_pairs:
