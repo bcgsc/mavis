@@ -331,11 +331,10 @@ def assemble(
         sequences (:class:`list` of :class:`str`): a list of strings/sequences to assemble
         kmer_size: see :term:`assembly_kmer_size` the size of the kmer to use
         min_edge_trim_weight: see :term:`min_edge_trim_weight`
-        min_edge_trim_weight: see :term:`min_edge_trim_weight`
-        assembly_min_match_quality: see :term:`assembly_min_match_quality`
-        assembly_min_read_mapping_overlap: see :term:`assembly_min_read_mapping_overlap`
+        remap_min_match: see :term:`assembly_min_match_quality`
+        remap_min_overlap: defaults to the kmer size. see :term:`assembly_min_read_mapping_overlap`
         min_contig_length: see :term:`assembly_min_contig_length`
-        assembly_min_exact_match_to_remap: see :term:`assembly_min_exact_match_to_remap`
+        remap_min_exact_match: see :term:`assembly_min_exact_match_to_remap`
         assembly_max_paths: see :term:`assembly_max_paths`
         log (function): the log function
 
