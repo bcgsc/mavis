@@ -4,6 +4,7 @@ Should take in a sam file from a aligner like bwa aln or bwa mem and convert it 
 from copy import copy
 import itertools
 import os
+import re
 import subprocess
 import warnings
 
@@ -119,6 +120,33 @@ class SplitAlignment(BreakpointPair):
             st = max(st, breakpoint.start)
         qrange = _read.map_ref_range_to_query_range(read, Interval(st, end))
         return contig.remap_depth(qrange)
+
+
+def get_aligner_version(aligner):
+    """
+    executes a subprocess to try and run the aligner without arguments and parse the version number from the output
+
+    Example:
+        >>> get_aligner_version('blat')
+        '36x2'
+    """
+    if aligner == SUPPORTED_ALIGNER.BWA_MEM:
+        proc = subprocess.getoutput(['bwa'])
+        for line in proc.split('\n'):
+            # Version: 0.7.15-r1140
+            match = re.search(r'Version: (\d+\.\d+\.\d+(-r\d+)?)', line)
+            if match:
+                return match.group(1)
+        raise ValueError("unable to parse bwa version number from:'{}'".format(proc))
+    elif aligner == SUPPORTED_ALIGNER.BLAT:
+        proc = subprocess.getoutput([aligner])
+        for line in proc.split('\n'):
+            match = re.search(r'blat - Standalone BLAT v. (\d+(x\d+)?)', line)
+            if match:
+                return match.group(1)
+        raise ValueError("unable to parse blat version number from:'{}'".format(proc))
+    else:
+        raise NotImplementedError(aligner)
 
 
 def query_coverage_interval(read):

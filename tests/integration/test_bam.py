@@ -1,5 +1,6 @@
 import os
 import unittest
+from unittest import mock
 import warnings
 
 from mavis.annotate.file_io import load_reference_genes, load_reference_genome
@@ -40,6 +41,15 @@ class TestGetSamtoolsVersion(unittest.TestCase):
                 self.assertEqual(version, get_samtools_version())
             except PermissionError:
                 pass
+
+    def test_parse_samtools_1_2(self):
+        with mock.patch('subprocess.getoutput', mock.Mock(return_value='samtools\nVersion: 1.2 (using htslib 1.2.1)')):
+            self.assertEqual((1, 2, 0), get_samtools_version())
+
+    def test_parse_samtools_0_1_18(self):
+        content = 'samtools\n\nProgram: samtools (Tools for alignments in the SAM format)\nVersion: 0.1.18 (r982:295)'
+        with mock.patch('subprocess.getoutput', mock.Mock(return_value=content)):
+            self.assertEqual((0, 1, 18), get_samtools_version())
 
 
 class TestBamCache(unittest.TestCase):

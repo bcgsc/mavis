@@ -10,12 +10,12 @@ import time
 import tab
 
 from . import __version__
+from .align import get_aligner_version, SUPPORTED_ALIGNER
 from .annotate.base import BioInterval
 from .annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
 from .annotate.file_io import load_annotations, load_masking_regions, load_reference_genome, load_templates
 from .annotate.main import main as annotate_main
 from .bam.read import get_samtools_version
-from .blat import get_blat_version
 from .checker import check_completion
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from .cluster.main import main as cluster_main
@@ -520,7 +520,7 @@ def main():
 
     if args.command == SUBCOMMAND.VALIDATE:
         args.samtools_version = get_samtools_version()
-        args.blat_version = get_blat_version()
+        args.aligner_version = get_aligner_version(args.aligner)
 
     log('MAVIS: {}'.format(__version__))
     log('hostname:', platform.node(), time_stamp=False)
