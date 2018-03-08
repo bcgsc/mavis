@@ -8,8 +8,9 @@ from mavis.assemble import Contig, assemble, filter_contigs
 from mavis.interval import Interval
 from mavis.constants import reverse_complement
 from mavis.validate.constants import DEFAULTS
+from mavis.util import log
 
-from . import MockObject, DATA_DIR
+from . import MockObject, DATA_DIR, RUN_FULL
 
 
 class TestFilterContigs(unittest.TestCase):
@@ -84,7 +85,7 @@ class TestAssemble(unittest.TestCase):
             'CATTTCCCTCTCTCTCTGCTTTCCACAGTTCTCCACACTAACAAAGGGCTAGTCTGTCTGTCTTTCTTTCTTTCTTTCTTTCTTTCTTTCTTTCTTTCTTTCTTTCTTTTTCTTTCTTTCTTTCTTTCTTTCTTTTCTTTTTTCTTCCTG',
             'CAGGAAGAAAAAAGAAAAGAAAGAAAGAAAGAAAGAAAGAAAAAGAAAGAAAGAAAGAAAGAAAGAAAGAAAGAAAGAAAGAAAGAAAGACAGACAGACTAGCCCTTTGTTAGTGTGGAGAACTGTGGAAAGCAGAGAGAGAGGGAAATG',
             'CTACCTGGGCCAAACTCAGAAGAGCTGGGGGAGGGGAGATTAGGACAACCTTCACCAGTTCATTTCCCTCTCTCTCTGCTTTCCACAGTTCTCCACACTAACAAAGGACTAGTCTTTTTCTTTCTTTCTTTCTATTCTATCTTCTTCCTG',
-            'CAGGAAGAAG            assembly_kmer_size=ATAGAATAGAAAGAAAGAAAGAAAAAGACTAGTCCTTTGTTAGTGTGGAGAACTGTGGAAAGCAGAGAGAGAGGGAAATGAACTGGTGAAGGTTGTCCTAATCTCCCCTCCCCCAGCTCTTCTGAGTTTGGCCCAGGTAG',
+            'CAGGAAGAAGATAGAATAGAAAGAAAGAAAGAAAAAGACTAGTCCTTTGTTAGTGTGGAGAACTGTGGAAAGCAGAGAGAGAGGGAAATGAACTGGTGAAGGTTGTCCTAATCTCCCCTCCCCCAGCTCTTCTGAGTTTGGCCCAGGTAG',
             'ACTTTGCTTCCCTTGTGCCCCTTTCCCTACCTGGGCCAAACTCAGAAGAGCTGGGGGAGGGGAGATTAGGACAACCTTCACCAGTTCATTTCCCTCTCTCTCTGCTTTCCACAGTTCTCCACACTAACAAAGGACTAGTCTTTTTCTTTC',
             'GAAAGAAAAAGACTAGTCCTTTGTTAGTGTGGAGAACTGTGGAAAGCAGAGAGAGAGGGAAATGAACTGGTGAAGGTTGTCCTAATCTCCCCTCCCCCAGCTCTTCTGAGTTTGGCCCAGGTAGGGAAAGGGGCACAAGGGAAGCAAAGT',
             'TACCTGGGCCAAACTCAGAAGAGCTGGGGGAGGGGAGATTAGGACAACCTTCACCAGTTCATTTCCCTCTCTCTCTGCTTTCCACAGTTCTCCACACTAACAAAGGACTAGTCTTTTTCTTTCTTTCTTTCTATTCTATCTTCTTCCTGA',
@@ -164,7 +165,9 @@ class TestAssemble(unittest.TestCase):
             assembly_max_paths=20,
             assembly_min_uniq=0.01,
             log=self.log)
-        self.assertEqual(3, len(assembly))
+        for contig in assembly:
+            print(contig.seq)
+        self.assertTrue(assembly)
 
     def test_assembly_low_center(self):
         sequences = {
@@ -327,3 +330,32 @@ class TestAssemble(unittest.TestCase):
         expected = 'ACCAGGTCTTCGATATATAAAAACCCTAGGTCGGCCGGTCGGCCGTGTTAGTGAGACACACACACACACATGTATACCCGTGCGCGCCCGCGGGAGAGAGAGAGAGAGAGATATATATATAGCAGACCAGGAGAGCGAGAGCGAGAGAGATATAGAGAGATCGCGCGCGAGAGAGATAGGAGACC'
         self.assertEqual(expected, assemblies[0].seq)
         self.assertEqual(1, len(assemblies))
+
+    @timeout_decorator.timeout(300)
+    @unittest.skipIf(not RUN_FULL, 'slower tests will not be run unless the environment variable RUN_FULL is given')
+    def test_large_assembly(self):
+        sequences = set()
+        with open(os.path.join(DATA_DIR, 'large_assembly.txt'), 'r') as fh:
+            sequences.update([l.strip() for l in fh.readlines()])
+        kmer_size = 150 * DEFAULTS.assembly_kmer_size
+        print('read inputs')
+        contigs = assemble(
+            sequences, kmer_size,
+            min_edge_trim_weight=DEFAULTS.assembly_min_edge_trim_weight,
+            assembly_max_paths=DEFAULTS.assembly_max_paths,
+            min_contig_length=150,
+            log=log,
+            remap_min_exact_match=30,
+            assembly_min_uniq=DEFAULTS.assembly_min_uniq
+        )
+        expected_seq = {
+            'GTTTTTTAATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCTGCCGCCGCCAGGTCCTGGGGCAGCCGGGGTTCCTGGCGCTCCGGGGGCAGCCGGGCGGCCGCCGGTGGGTCCGCTGGGCCGCTGCCCCGCTCCGGGTGGG',
+            'GGTCTTTTTTAATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCTGGTCCTGGGGCAGCCGGGGTTCCTGGCGCTCCGGGGGCAGCCGGGCGGCCGCCGGTGGGTCCGCTGGGCCGCTGCCCCGCTCCGGG',
+            'GGCCGTTTTTTAATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCTCAGCCGGGGTTCCTGGCGCTCCGGGGGCAGCCGGGCGGCCGCCGGTGGGTCCGCTGGGCCGCTGCCCCGCTCCGGGTGGGG'
+        }
+        expected_seq.update({reverse_complement(c) for c in expected_seq})
+        for contig in contigs:
+            print(len(contig.seq), contig.remap_score())
+        self.assertEqual(3, len(contigs))
+        obs_seq = {c.seq for c in contigs}
+        self.assertEqual(expected_seq & obs_seq, obs_seq)

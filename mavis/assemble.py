@@ -80,6 +80,9 @@ class DeBruijnGraph(nx.DiGraph):
             freq += data['freq']
         nx.DiGraph.add_edge(self, n1, n2, freq=freq)
 
+    def edges(self, *nodes, data=False):
+        return self.in_edges(*nodes, data=data) + self.out_edges(*nodes, data=data)
+
     def trim_tails_by_freq(self, min_weight):
         """
         for any paths where all edges are lower than the minimum weight trim
@@ -87,45 +90,44 @@ class DeBruijnGraph(nx.DiGraph):
         Args:
             min_weight (int): the minimum weight for an edge to be retained
         """
-        for n in list(self.nodes()):
-            if not self.has_node(n):
+        ends = [n for n in self.nodes() if self.degree(n) < 2]
+
+        for node in ends:
+            if not self.has_node(node):
                 continue
             # follow until the path forks or we run out of low weigh edges
-            curr = n
+            curr = node
             while self.degree(curr) == 1:
-                if self.out_degree(curr) == 1:
-                    curr, other, data = self.out_edges(curr, data=True)[0]
-                    if data['freq'] < min_weight:
-                        self.remove_node(curr)
-                        curr = other
-                    else:
-                        break
-                elif self.in_degree(curr) == 1:
-                    other, curr, data = self.in_edges(curr, data=True)[0]
-                    if data['freq'] < min_weight:
-                        self.remove_node(curr)
-                        curr = other
-                    else:
-                        break
+                src, tgt, data = self.edges(curr, data=True)[0]
+                if data['freq'] < min_weight:
+                    self.remove_node(curr)
+                    curr = src if src != curr else tgt
                 else:
                     break
-        for n in list(self.nodes()):
-            if not self.has_node(n):
+        for node in ends:
+            if not self.has_node(node):
                 continue
-            if self.degree(n) == 0:
-                self.remove_node(n)
+            if self.degree(node) == 0:
+                self.remove_node(node)
 
     def trim_forks_by_freq(self, min_weight):
         """
         for all nodes in the graph, if the node has an out-degree > 1 and one of the outgoing
         edges has freq < min_weight. then that outgoing edge is deleted
         """
-        nodes = list(self.nodes())
+        nodes = [n for n in self.nodes() if self.degree(n) > 2]
         for node in nodes:
-            outgoing_edges = self.out_edges(node, data=True)
-            if len(outgoing_edges) > 1:
+            if self.out_degree(node) > 1:
+                outgoing_edges = self.out_edges(node, data=True)
+                best = max([e[2]['freq'] for e in outgoing_edges])
                 for src, tgt, data in outgoing_edges:
-                    if data['freq'] < min_weight:
+                    if data['freq'] < min_weight and data['freq'] != best:
+                        self.remove_edge(src, tgt)
+            if self.in_degree(node) > 1:
+                ingoing_edges = self.in_edges(node, data=True)
+                best = max([e[2]['freq'] for e in ingoing_edges])
+                for src, tgt, data in ingoing_edges:
+                    if data['freq'] < min_weight and data['freq'] != best:
                         self.remove_edge(src, tgt)
 
     def trim_noncutting_paths_by_freq(self, min_weight):
@@ -214,14 +216,14 @@ def digraph_connected_components(graph, subgraph=None):
         :class:`list` of :class:`list`: returns a list of compnents which are lists of node names
     """
     if subgraph is None:
-        subgraph = graph.nodes()
+        subgraph = set(graph.nodes())
     g = nx.Graph()
     for src, tgt in graph.edges():
         if src in subgraph and tgt in subgraph:
             g.add_edge(src, tgt)
-    for n in graph.nodes():
-        if n in subgraph:
-            g.add_node(n)
+    for node in subgraph:
+        if graph.has_node(node):
+            g.add_node(node)
     return nx.connected_components(g)
 
 
@@ -363,7 +365,6 @@ def assemble(
     for n in nodes:
         if assembly.in_degree(n) == 0 and assembly.out_degree(n) == 0:
             assembly.remove_node(n)
-
     # drop all cyclic components
     for component in digraph_connected_components(assembly):
         subgraph = assembly.subgraph(component)
@@ -371,11 +372,10 @@ def assemble(
             log('dropping cyclic component', time_stamp=False)
             for node in subgraph.nodes():
                 assembly.remove_node(node)
-
     # initial data cleaning
     assembly.trim_forks_by_freq(min_edge_trim_weight)
-    assembly.trim_noncutting_paths_by_freq(min_edge_trim_weight)
     assembly.trim_tails_by_freq(min_edge_trim_weight)
+    assembly.trim_noncutting_paths_by_freq(min_edge_trim_weight)
 
     path_scores = {}
 
@@ -401,18 +401,18 @@ def assemble(
     for input_seq in sequences:
         maps_to = {}  # contig, score
         for contig in contigs:
-            a = nsb_align(
+            alignment = nsb_align(
                 contig.seq,
                 input_seq,
                 min_overlap_percent=remap_min_overlap / len(contig.seq),
                 min_match=remap_min_match,
                 min_consecutive_match=remap_min_exact_match
             )
-            if len(a) != 1:
+            if len(alignment) != 1:
                 continue
-            if _cigar.match_percent(a[0].cigar) < remap_min_match:
+            if _cigar.match_percent(alignment[0].cigar) < remap_min_match:
                 continue
-            maps_to[contig] = a[0]
+            maps_to[contig] = alignment[0]
         if maps_to:
             scores = []
             for contig, read in maps_to.items():
