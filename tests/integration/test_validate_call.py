@@ -7,7 +7,7 @@ from mavis.bam.cache import BamCache
 from mavis.bam.read import sequenced_strand, SamRead
 from mavis.bam.cigar import convert_string_to_cigar
 from mavis.breakpoint import Breakpoint, BreakpointPair
-from mavis.constants import CALL_METHOD, CIGAR, ORIENT, PYSAM_READ_FLAGS, STRAND, SVTYPE, reverse_complement
+from mavis.constants import CALL_METHOD, CIGAR, ORIENT, PYSAM_READ_FLAGS, STRAND, SVTYPE
 from mavis.interval import Interval
 from mavis.validate import call
 from mavis.validate.base import Evidence
@@ -98,6 +98,22 @@ class TestEventCall(unittest.TestCase):
             event_type=SVTYPE.INV,
             call_method=CALL_METHOD.SPLIT
         )
+
+    def test_bad_deletion(self):
+        evidence = GenomeEvidence(
+            Breakpoint('reference3', 16, orient='L'),
+            Breakpoint('reference3', 90, orient='R'),
+            BAM_CACHE, REFERENCE_GENOME,
+            read_length=125,
+            stdev_fragment_size=100,
+            median_fragment_size=380
+        )
+        with self.assertRaises(ValueError):
+            call.EventCall(
+                Breakpoint('reference3', 43, orient='L'),
+                Breakpoint('reference3', 44, orient='R'),
+                evidence, event_type=SVTYPE.DEL, call_method=CALL_METHOD.SPLIT
+            )
 
     def test_flanking_support_empty(self):
         self.assertEqual(0, len(self.ev.flanking_pairs))

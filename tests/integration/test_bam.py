@@ -51,6 +51,21 @@ class TestGetSamtoolsVersion(unittest.TestCase):
         with mock.patch('subprocess.getoutput', mock.Mock(return_value=content)):
             self.assertEqual((0, 1, 18), get_samtools_version())
 
+    def test_parse_samtools_0_1_17(self):
+        content = "\nProgram: samtools (Tools for alignments in the SAM format)\nVersion: 0.1.17 (r973:277)\n"
+        with mock.patch('subprocess.getoutput', mock.Mock(return_value=content)):
+            self.assertEqual((0, 1, 17), get_samtools_version())
+
+    def test_parse_samtools_0_1_19rc(self):
+        content = "\nProgram: samtools (Tools for alignments in the SAM format)\nVersion: 0.1.19-44428cd\n"
+        with mock.patch('subprocess.getoutput', mock.Mock(return_value=content)):
+            self.assertEqual((0, 1, 19), get_samtools_version())
+
+    def test_parse_samtools_0_1_8(self):
+        content = "Version: 0.1.8 (r613)"
+        with mock.patch('subprocess.getoutput', mock.Mock(return_value=content)):
+            self.assertEqual((0, 1, 8), get_samtools_version())
+
 
 class TestBamCache(unittest.TestCase):
 

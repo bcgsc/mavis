@@ -391,6 +391,10 @@ class TestClassifyBreakpointPair(unittest.TestCase):
         self.assertEqual(Interval(-71), net_size)
         self.assertEqual(sorted([SVTYPE.DEL]), sorted(BreakpointPair.classify(bpp, distance)))
 
+    def test_deletion_no_distance_error(self):
+        bpp = BreakpointPair(Breakpoint('1', 7039, orient='L'), Breakpoint('1', 7040, orient='R'), opposing=False)
+        self.assertEqual(sorted([SVTYPE.INS]), sorted(BreakpointPair.classify(bpp)))
+
 
 class TestNetSize(unittest.TestCase):
 
