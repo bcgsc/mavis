@@ -44,7 +44,7 @@ class MavisNamespace(argparse.Namespace):
         return [(k, self[k]) for k in self.keys()]
 
     def __getitem__(self, key):
-        return getattr(self, key)
+        return getattr(self, str(key))
 
     def __setitem__(self, key, val):
         if key in MavisNamespace.reserved_attr:

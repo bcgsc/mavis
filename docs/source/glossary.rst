@@ -40,9 +40,9 @@ General Terms
 
     IGV batch file
         This is a file format type defined by :term:`IGV` see
-        `running IGV with a batch file <https://software.broadinstitute.org/software/igv/batch>`_.
+        `running IGV with a batch file <https://software.broadinstitute.org/software/igv/batch>`__.
 
-    bam
+    BAM
         File format specification. See https://genome.ucsc.edu/FAQ/FAQformat#format5.1.
 
     2bit
@@ -80,6 +80,30 @@ General Terms
 
     :ref:`HGVS <den-Dunnen-2016>`
         Community based standard of reccommendations for variant notation. See http://varnomen.hgvs.org/
+
+    BreakDancer
+        BreakDancer is an SV caller. Soure for BreakDancer can be found `here <https://github.com/genome/breakdancer>`__ [Chen-2009]_ 
+
+    Chimerascan
+        Chimerascan is an SV caller. Source for Chimerascan can be found `here <https://code.google.com/archive/p/chimerascan>`__ [Iyer-2011]_
+    
+    DeFuse
+        DeFuse is an SV caller. Source for DeFuse can be found `here <https://bitbucket.org/dranew/defuse>`__ [McPherson-2011]_
+
+    DELLY
+        DELLY is an SV caller. Source for DELLY can be found `here <https://github.com/dellytools/delly>`__ [Rausch-2012]_
+
+    Manta 
+        Manta is an SV caller. Source for Manta can be found `here <https://github.com/Illumina/manta>`__ [Chen-2016]_
+
+    Pindel
+        Pindel is an SV caller. Source for Pindel can be found `here <https://github.com/genome/pindel>`__ [Ye-2009]_
+
+    Trans-ABySS
+        Trans-ABySS is an SV caller. Source for Trans-ABySS can be found `here <https://github.com/bcgsc/transabyss>`__ [Robertson-2010]_
+
+    SV
+        Structural Variant
 
 
 .. include:: config_settings_glossary.rst

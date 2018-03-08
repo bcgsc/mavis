@@ -5,17 +5,12 @@ from ..util import WeakMavisNamespace
 DEFAULTS = WeakMavisNamespace()
 """
 - :term:`aligner`
-- :term:`assembly_include_flanking_pairs`
-- :term:`assembly_include_half_mapped_reads`
-- :term:`assembly_max_kmer_size`
-- :term:`assembly_max_kmer_strict`
+- :term:`assembly_kmer_size`
 - :term:`assembly_max_paths`
-- :term:`min_edge_trim_weight`
+- :term:`assembly_min_edge_trim_weight`
 - :term:`assembly_min_exact_match_to_remap`
-- :term:`min_edge_trim_weight`
 - :term:`assembly_min_remap_coverage`
 - :term:`assembly_min_remapped_seq`
-- :term:`assembly_min_tgt_to_exclude_half_map`
 - :term:`assembly_min_uniq`
 - :term:`assembly_strand_concordance`
 - :term:`blat_limit_top_aln`
