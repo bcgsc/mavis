@@ -127,7 +127,7 @@ def group_events(events):
         COLUMNS.tracking_id
     }
     for col in data_columns:
-        new_data = sorted(list({bpp.data[col] for bpp in events}))
+        new_data = sorted(list({bpp.data[col] for bpp in events}), key=lambda x: str(x))
         if len(new_data) == 1:
             new_bpp.data[col] = new_data[0]
         elif col in list_columns:
