@@ -50,7 +50,7 @@ DEFAULTS.add(
     'aligner', SUPPORTED_ALIGNER.BLAT, cast_type=SUPPORTED_ALIGNER,
     defn='the aligner to use to map the contigs/reads back to the reference e.g blat or bwa')
 DEFAULTS.add(
-    'assembly_kmer_size', 0.75, cast_type=float_fraction,
+    'assembly_kmer_size', 0.74, cast_type=float_fraction,
     defn='The percent of the read length to make kmers for assembly')
 DEFAULTS.add(
     'assembly_max_paths', 8,
