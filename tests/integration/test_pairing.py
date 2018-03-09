@@ -408,3 +408,20 @@ class TestEquivalent(unittest.TestCase):
             call_method='spanning reads'
         )
         self.assertTrue(pairing.equivalent(event1, event2))
+
+    def test_useq_uncertainty2(self):
+        event1 = BreakpointPair(
+            Breakpoint('1', 32, orient='L'),
+            Breakpoint('1', 61, orient='R'),
+            event_type='deletion',
+            call_method='contig',
+            untemplated_seq='A'
+        )
+        event2 = BreakpointPair(
+            Breakpoint('1', 24, orient='L'),
+            Breakpoint('1', 61, orient='R'),
+            event_type='deletion',
+            call_method='contig',
+            untemplated_seq='TTTTTTTTT'
+        )
+        self.assertTrue(pairing.equivalent(event1, event2))

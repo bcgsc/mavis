@@ -35,18 +35,12 @@ class LogDetails:
         self.last_mod = None
 
         with open(filename, 'r') as fh:
-            lines = fh.readlines()
+            lines = [l.strip() for l in fh.readlines() if l.strip()]
             if not lines:
                 self.status = LOGFILE_STATUS.EMPTY
             else:
-                for line in lines[::-1]:
-                    line = line.strip()
-                    if line:
-                        non_empty_line = line.lower()
-                        break
-                else:
-                    non_empty_line = lines[-1].lower()
-                if re.search(r'\b(error|fault|fatal|aborted|core dumped|killed|died|^\S+error)\b', non_empty_line):
+                non_empty_line = lines[-1].lower()
+                if re.search(r'(\b|^)((\S+)?error|fault|fatal|aborted|core dumped|killed|died|command not found)(\b|$)', non_empty_line):
                     self.status = LOGFILE_STATUS.CRASH
                     self.message = non_empty_line.strip()
                 else:

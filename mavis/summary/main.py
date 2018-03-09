@@ -50,6 +50,7 @@ def main(
         inputs,
         require=[
             COLUMNS.event_type,
+            COLUMNS.product_id,
             COLUMNS.fusion_cdna_coding_end,
             COLUMNS.fusion_cdna_coding_start,
             COLUMNS.fusion_splicing_pattern,
@@ -321,7 +322,7 @@ def main(
             rows.append(row.flatten())
     fname = os.path.join(
         output,
-        'mavis_summary_{}.tab'.format('_'.join(sorted(list(libraries.keys()))))
+        'mavis_summary_all_{}.tab'.format('_'.join(sorted(list(libraries.keys()))))
     )
     output_tabbed_file(rows, fname, header=output_columns)
     log('wrote {} structural variants to {}'.format(len(rows), fname))

@@ -24,18 +24,19 @@ class TestModule(unittest.TestCase):
     def test_assemble(self):
         sequences = ['ABCD', 'BCDE', 'CDEF', 'ABCDE', 'DEFG']
         c = assemble(
-            sequences, assembly_min_edge_weight=0, assembly_min_nc_edge_weight=1, assembly_min_exact_match_to_remap=1)
+            sequences, 3, min_edge_trim_weight=1, remap_min_exact_match=1
+        )
         self.assertEqual(1, len(c))
         self.assertEqual('ABCDEFG', c[0].seq)
         self.assertEqual(5, c[0].remap_score())
 
     def test_assemble_empty_list(self):
-        self.assertEqual([], assemble([]))
+        self.assertEqual([], assemble([], 1))
 
     def test_repeat_region_assembly(self):
         rep = 'ABCDEF'
         seqs = kmers(rep + rep, len(rep))
-        contigs = assemble(seqs, assembly_min_edge_weight=1, assembly_min_exact_match_to_remap=1)
+        contigs = assemble(seqs, len(rep) - 1, remap_min_exact_match=1)
         self.assertEqual(0, len(contigs))
 
 

@@ -4,6 +4,7 @@ Should take in a sam file from a aligner like bwa aln or bwa mem and convert it 
 from copy import copy
 import itertools
 import os
+import re
 import subprocess
 import warnings
 
@@ -119,6 +120,33 @@ class SplitAlignment(BreakpointPair):
             st = max(st, breakpoint.start)
         qrange = _read.map_ref_range_to_query_range(read, Interval(st, end))
         return contig.remap_depth(qrange)
+
+
+def get_aligner_version(aligner):
+    """
+    executes a subprocess to try and run the aligner without arguments and parse the version number from the output
+
+    Example:
+        >>> get_aligner_version('blat')
+        '36x2'
+    """
+    if aligner == SUPPORTED_ALIGNER.BWA_MEM:
+        proc = subprocess.getoutput(['bwa'])
+        for line in proc.split('\n'):
+            # Version: 0.7.15-r1140
+            match = re.search(r'Version: (\d+\.\d+\.\d+(-r\d+)?)', line)
+            if match:
+                return match.group(1)
+        raise ValueError("unable to parse bwa version number from:'{}'".format(proc))
+    elif aligner == SUPPORTED_ALIGNER.BLAT:
+        proc = subprocess.getoutput([aligner])
+        for line in proc.split('\n'):
+            match = re.search(r'blat - Standalone BLAT v. (\d+(x\d+)?)', line)
+            if match:
+                return match.group(1)
+        raise ValueError("unable to parse blat version number from:'{}'".format(proc))
+    else:
+        raise NotImplementedError(aligner)
 
 
 def query_coverage_interval(read):
@@ -402,6 +430,28 @@ def select_contig_alignments(evidence, reads_by_query):
     standardize/simplify reads and filter bad/irrelevant alignments
     adds the contig alignments to the contigs
     """
+    putative_types = BreakpointPair.classify(evidence)
+    if {SVTYPE.DUP, SVTYPE.INS} & putative_types:
+        putative_types.update({SVTYPE.DUP, SVTYPE.INS})
+
+    def filter_pass(alignment):
+        return not any([
+            alignment.query_consumption() < evidence.contig_aln_min_query_consumption,
+            alignment.score() < evidence.contig_aln_min_score,
+            alignment.mapping_quality() == Interval(0),
+            alignment.read2 is not None and alignment.query_overlap_extension() < evidence.contig_aln_min_extend_overlap
+        ])
+
+    def supports_primary_event(alignment):
+        return all([
+            BreakpointPair.classify(alignment) & putative_types,
+            alignment.break1.chr == evidence.break1.chr,
+            alignment.break2.chr == evidence.break2.chr,
+            alignment.break1 & evidence.outer_window1,
+            alignment.break2 & evidence.outer_window2,
+            filter_pass(alignment)
+        ])
+
     for contig in evidence.contigs:
         std_reads = set()
         alignments = []
@@ -418,12 +468,8 @@ def select_contig_alignments(evidence, reads_by_query):
 
             for single_alignment in call_read_events(read):
                 single_alignment = convert_to_duplication(single_alignment, evidence.reference_genome)
-                if single_alignment.break1.chr in {evidence.break1.chr, evidence.break2.chr}:
-                    if any([
-                        (single_alignment.break1 | single_alignment.break2) & evidence.outer_window1,
-                        (single_alignment.break1 | single_alignment.break2) & evidence.outer_window2
-                    ]):
-                        alignments.append(single_alignment)
+                if supports_primary_event(single_alignment):
+                    alignments.append(single_alignment)
 
             std_reads.add(_read.convert_events_to_softclipping(
                 read, evidence.break1.orient,
@@ -441,31 +487,25 @@ def select_contig_alignments(evidence, reads_by_query):
         for read1, read2 in itertools.combinations(std_reads, 2):
             try:
                 paired_event = call_paired_read_event(read1, read2)
+
             except AssertionError:
                 continue
-            if all([
-                BreakpointPair.classify(paired_event) & BreakpointPair.classify(evidence),
-                paired_event.break1.chr == evidence.break1.chr,
-                paired_event.break2.chr == evidence.break2.chr,
-                paired_event.break1 & evidence.outer_window1,
-                paired_event.break2 & evidence.outer_window2
-            ]):
+            if supports_primary_event(paired_event):
                 alignments.append(paired_event)
-                for event in call_read_events(read1, read2) + call_read_events(read2, read1):
-                    event = convert_to_duplication(event, evidence.reference_genome)
-                    alignments.append(event)
         filtered_alignments = set()
-        for alignment in sorted(alignments, key=lambda x: (x.read2 is None, x.score()), reverse=True):
-            if any([
-                alignment.query_consumption() < evidence.contig_aln_min_query_consumption,
-                alignment.read2 is not None and alignment.query_overlap_extension() < evidence.contig_aln_min_extend_overlap,
-                alignment in filtered_alignments,
-                alignment.score() < evidence.contig_aln_min_score,
-                alignment.mapping_quality() == Interval(0)
-            ]):
+        for alignment in sorted(alignments, key=lambda x: (x.read2 is None, -1 * x.alignment_rank().center, x.score()), reverse=True):
+            if alignment in filtered_alignments:  # filter out identical primary events called by different reads
                 continue
             filtered_alignments.add(alignment)
         if filtered_alignments:
-            max_rank = max([a.alignment_rank().center for a in filtered_alignments])
-            filtered_alignments = {f for f in filtered_alignments if f.alignment_rank().center == max_rank}
+            best_rank = min([a.alignment_rank().center for a in filtered_alignments])
+            filtered_alignments = {f for f in filtered_alignments if f.alignment_rank().center == best_rank}
+            for primary_alignment in list(filtered_alignments):
+                # now call supplementary events
+                supp_events = call_read_events(primary_alignment.read1, primary_alignment.read2)
+                if primary_alignment.read2:
+                    supp_events.extend(call_read_events(primary_alignment.read2, primary_alignment.read1))
+                for supp_event in supp_events:
+                    if supp_event not in filtered_alignments and filter_pass(supp_event):
+                        filtered_alignments.add(supp_event)
         contig.alignments.update(filtered_alignments)

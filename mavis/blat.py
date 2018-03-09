@@ -310,22 +310,6 @@ class Blat:
         return read
 
 
-def get_blat_version():
-    """
-    executes a subprocess to try and run blat and parse the version number from the output
-
-    Example:
-        >>> get_blat_version()
-        '36x2'
-    """
-    proc = subprocess.getoutput([SUPPORTED_ALIGNER.BLAT])
-    for line in proc.split('\n'):
-        match = re.search(r'blat - Standalone BLAT v. (\d+(x\d+)?)', line)
-        if match:
-            return match.group(1)
-    raise ValueError("unable to parse blat version number from:'{}'".format(proc))
-
-
 def process_blat_output(
         input_bam_cache,
         query_id_mapping,
