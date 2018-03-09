@@ -44,7 +44,7 @@ class MavisNamespace(argparse.Namespace):
         return [(k, self[k]) for k in self.keys()]
 
     def __getitem__(self, key):
-        return getattr(self, key)
+        return getattr(self, str(key))
 
     def __setitem__(self, key, val):
         if key in MavisNamespace.reserved_attr:
@@ -620,6 +620,7 @@ COLUMNS = MavisNamespace(
     contig_seq='contig_seq',
     contig_strand_specific='contig_strand_specific',
     contigs_assembled='contigs_assembled',
+    contig_complexity='contig_complexity',
     spanning_reads='spanning_reads',
     spanning_read_names='spanning_read_names',
     flanking_median_fragment_size='flanking_median_fragment_size',
@@ -690,6 +691,7 @@ COLUMNS = MavisNamespace(
 - :term:`contig_seq`
 - :term:`contig_strand_specific`
 - :term:`contigs_assembled`
+- :term:`contig_complexity`
 - :term:`event_type`
 - :term:`flanking_median_fragment_size`
 - :term:`flanking_pairs_compatible`

@@ -18,6 +18,7 @@ Contents
    tools_supported.rst
    illustrations.rst
    faqs.rst
+   examples.rst
    theory.rst
    development.rst
    package.rst

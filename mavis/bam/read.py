@@ -1,4 +1,5 @@
 from copy import copy
+import itertools
 import re
 import subprocess
 
@@ -171,7 +172,7 @@ def get_samtools_version():
             mid = int(match.group('mid')) if match.group('mid') else 0
             minor = int(match.group('minor')) if match.group('minor') else 0
             return major, mid, minor
-    raise ValueError('unable to parse samtools version number', proc)
+    raise ValueError('unable to parse samtools version number from: {}'.format(proc))
 
 
 def samtools_v0_sort(input_bam, output_bam):
@@ -519,3 +520,18 @@ def convert_events_to_softclipping(read, orientation, max_event_size, min_anchor
     else:
         raise ValueError('orientation must be specified', orientation)
     return read
+
+
+def sequence_complexity(seq):
+    """
+    basic measure of sequence complexity
+    """
+    if not seq:
+        return 0
+    hist = {c: 0 for c in 'ATGC'}
+    for base in seq.upper():
+        if base in hist:  # ignore N's etc
+            hist[base] += 1
+    total = sum(hist.values())
+    scores = [(hist[base1] + hist[base2]) / total for base1, base2 in itertools.combinations('ATCG', 2)]
+    return min(scores)

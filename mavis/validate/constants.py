@@ -5,17 +5,12 @@ from ..util import WeakMavisNamespace
 DEFAULTS = WeakMavisNamespace()
 """
 - :term:`aligner`
-- :term:`assembly_include_flanking_pairs`
-- :term:`assembly_include_half_mapped_reads`
-- :term:`assembly_max_kmer_size`
-- :term:`assembly_max_kmer_strict`
+- :term:`assembly_kmer_size`
 - :term:`assembly_max_paths`
-- :term:`min_edge_trim_weight`
+- :term:`assembly_min_edge_trim_weight`
 - :term:`assembly_min_exact_match_to_remap`
-- :term:`min_edge_trim_weight`
 - :term:`assembly_min_remap_coverage`
 - :term:`assembly_min_remapped_seq`
-- :term:`assembly_min_tgt_to_exclude_half_map`
 - :term:`assembly_min_uniq`
 - :term:`assembly_strand_concordance`
 - :term:`blat_limit_top_aln`
@@ -52,10 +47,13 @@ DEFAULTS = WeakMavisNamespace()
 
 """
 DEFAULTS.add(
+    'min_contig_complexity', 0.2, cast_type=float_fraction,
+    defn='The minimum complexity score for a contig. see :term:`contig_complexity`')
+DEFAULTS.add(
     'aligner', SUPPORTED_ALIGNER.BLAT, cast_type=SUPPORTED_ALIGNER,
     defn='the aligner to use to map the contigs/reads back to the reference e.g blat or bwa')
 DEFAULTS.add(
-    'assembly_kmer_size', 0.75, cast_type=float_fraction,
+    'assembly_kmer_size', 0.74, cast_type=float_fraction,
     defn='The percent of the read length to make kmers for assembly')
 DEFAULTS.add(
     'assembly_max_paths', 8,

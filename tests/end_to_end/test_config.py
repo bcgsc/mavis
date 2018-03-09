@@ -1,23 +1,24 @@
+import argparse
 import glob
 import os
 import shutil
+import statistics
 import sys
 import tempfile
 import unittest
-import statistics
-# sys.stderr = sys.stdout  # redirect so stderr is captured during testing
+from unittest import mock
 
 from mavis.constants import SUBCOMMAND
 from mavis.main import main
 from mavis.tools import SUPPORTED_TOOL
 from mavis.util import unique_exists
-from mock import patch
 
 
 DATA_PREFIX = os.path.join(os.path.dirname(__file__), './../integration/data')
+ARGERROR_EXIT_CODE = 2
 
 
-class TestConvert(unittest.TestCase):
+class TestConfig(unittest.TestCase):
 
     def setUp(self):
         if 'MAVIS_ANNOTATIONS' in os.environ:
@@ -37,7 +38,7 @@ class TestConvert(unittest.TestCase):
     def run_main(self, exit_status=0):
         outputfile = os.path.join(self.temp_output, 'config.cfg')
         self.args.extend(['-w', outputfile])
-        with patch.object(sys, 'argv', [str(a) for a in self.args]):
+        with mock.patch.object(sys, 'argv', [str(a) for a in self.args]):
             print('sys.argv', sys.argv)
             try:
                 return_code = main()
@@ -48,21 +49,38 @@ class TestConvert(unittest.TestCase):
     def test_no_libs_no_annotations(self):
         self.run_main()
 
+    def test_no_input_error(self):
+        self.args.extend(self.genome + ['False', self.genome_bam])
+        self.run_main(ARGERROR_EXIT_CODE)
+
+    def test_input_missing_library(self):
+        self.args.extend(self.genome + ['False', self.genome_bam, '--input', self.input, 'mock_genome', 'bad_genome'])
+        self.run_main(ARGERROR_EXIT_CODE)
+
+    def test_assign_missing_library(self):
+        self.args.extend(self.genome + ['False', self.genome_bam, '--input', self.input, 'mock_genome', '--assign', 'bad_genome', self.input])
+        self.run_main(ARGERROR_EXIT_CODE)
+
     def test_skip_no_annotations(self):
         self.args.extend(self.trans + ['False', self.trans_bam, '--input', self.input, 'mock_trans', '--skip_stage', SUBCOMMAND.VALIDATE])
         self.run_main()
 
     def test_requires_annotations_trans(self):
         self.args.extend(self.trans + ['False', self.trans_bam, '--input', self.input, 'mock_trans'])
-        self.run_main(2)
+        self.run_main(ARGERROR_EXIT_CODE)
 
     def test_require_bam_noskip_error(self):
         self.args.extend(self.genome + ['--annotations', self.annotations, '--input', self.input, 'mock_genome'])
-        self.run_main(2)
+        self.run_main(ARGERROR_EXIT_CODE)
 
     def test_genome_only(self):
         # should be ok without the annotations file
         self.args.extend(self.genome + ['False', self.genome_bam, '--input', self.input, 'mock_genome'])
+        self.run_main()
+
+    def test_genome_include_defaults(self):
+        # should be ok without the annotations file
+        self.args.extend(self.genome + ['False', self.genome_bam, '--input', self.input, 'mock_genome', '--add_defaults'])
         self.run_main()
 
     def test_trans_with_annotations(self):
@@ -74,6 +92,42 @@ class TestConvert(unittest.TestCase):
         )
         with self.assertRaises(statistics.StatisticsError):  # too few annotations to calc median
             self.run_main()
+
+    def test_convert_multiple(self):
+        self.args.extend(self.genome + ['False', self.genome_bam])
+        self.args.extend(['--convert', 'ta', 'transabyss_events.tab', 'transabyss_indels_output.tab', 'transabyss'])
+        self.args.extend(['--assign', 'mock_genome', 'ta'])
+        self.run_main()
+
+    def test_convert_multiple_strand(self):
+        self.args.extend(self.genome + ['False', self.genome_bam])
+        self.args.extend(['--convert', 'ta', 'transabyss_events.tab', 'transabyss_indels_output.tab', 'transabyss', 'False'])
+        self.args.extend(['--assign', 'mock_genome', 'ta'])
+        self.run_main()
+
+    def test_convert_quoted(self):
+        self.args.extend(self.genome + ['False', self.genome_bam])
+        self.args.extend(['--convert', 'ta', 'transabyss_{events,indels_output}.tab', 'transabyss'])
+        self.args.extend(['--assign', 'mock_genome', 'ta'])
+        self.run_main()
+
+    def test_convert_quoted_strand(self):
+        self.args.extend(self.genome + ['False', self.genome_bam])
+        self.args.extend(['--convert', 'ta', 'transabyss_{events,indels_output}.tab', 'transabyss', 'False'])
+        self.args.extend(['--assign', 'mock_genome', 'ta'])
+        self.run_main()
+
+    def test_convert_argument_error(self):
+        self.args.extend(self.genome + ['False', self.genome_bam])
+        self.args.extend(['--convert', 'ta', 'transabyss', 'False'])
+        self.args.extend(['--assign', 'mock_genome', 'ta'])
+        self.run_main(ARGERROR_EXIT_CODE)
+
+    def test_convert_argument_error2(self):
+        self.args.extend(self.genome + ['False', self.genome_bam])
+        self.args.extend(['--convert', 'ta', 'transabyss'])
+        self.args.extend(['--assign', 'mock_genome', 'ta'])
+        self.run_main(ARGERROR_EXIT_CODE)
 
     def tearDown(self):
         # remove the temp directory and outputs

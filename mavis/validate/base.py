@@ -682,7 +682,8 @@ class Evidence(BreakpointPair):
             min_contig_length=self.read_length,
             log=log,
             remap_min_exact_match=self.assembly_min_exact_match_to_remap,
-            assembly_min_uniq=self.assembly_min_uniq
+            assembly_min_uniq=self.assembly_min_uniq,
+            min_complexity=self.min_contig_complexity
         )
 
         # add the input reads
