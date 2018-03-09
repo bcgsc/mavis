@@ -5,7 +5,7 @@ import distance
 import networkx as nx
 
 from .bam import cigar as _cigar
-from .bam.read import calculate_alignment_score, nsb_align
+from .bam.read import calculate_alignment_score, nsb_align, sequence_complexity
 from .constants import reverse_complement
 from .interval import Interval
 from .util import devnull
@@ -25,6 +25,9 @@ class Contig:
 
     def __hash__(self):
         return hash(self.seq)
+
+    def complexity(self):
+        return sequence_complexity(self.seq)
 
     def add_mapped_sequence(self, read, multimap=1):
         self.remapped_sequences[read] = 1 / multimap
@@ -317,6 +320,7 @@ def assemble(
     min_edge_trim_weight=3,
     assembly_max_paths=20,
     assembly_min_uniq=0.01,
+    min_complexity=0,
     log=lambda *pos, **kwargs: None,
     **kwargs
 ):
@@ -388,10 +392,12 @@ def assemble(
         ))
 
     # now map the contigs to the possible input sequences
+    log('filtering contigs by size and complexity', len(path_scores), time_stamp=False)
     contigs = []
     for seq, score in list(path_scores.items()):
-        if len(seq) >= min_contig_length:
-            contigs.append(Contig(seq, score))
+        contig = Contig(seq, score)
+        if len(contig.seq) >= min_contig_length and contig.complexity() >= min_complexity:
+            contigs.append(contig)
     log('filtering similar contigs', len(contigs))
     # remap the input reads
     contigs = filter_contigs(contigs, assembly_min_uniq)

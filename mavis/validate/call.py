@@ -354,6 +354,7 @@ class EventCall(BreakpointPair):
             COLUMNS.contig_read_depth: None,
             COLUMNS.contig_break1_read_depth: None,
             COLUMNS.contig_break2_read_depth: None,
+            COLUMNS.contig_complexity: None,
             COLUMNS.supplementary_call: self.is_supplementary()
         })
         try:
@@ -424,7 +425,8 @@ class EventCall(BreakpointPair):
                 COLUMNS.contig_remap_coverage: self.contig.remap_coverage(),
                 COLUMNS.contig_read_depth: self.contig.remap_depth(),
                 COLUMNS.contig_break1_read_depth: break1_read_depth,
-                COLUMNS.contig_break2_read_depth: break2_read_depth
+                COLUMNS.contig_break2_read_depth: break2_read_depth,
+                COLUMNS.contig_complexity: self.contig.complexity()
             })
         return row
 
