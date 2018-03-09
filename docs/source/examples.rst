@@ -4,7 +4,7 @@ Examples
 Tumour Pair Full Pipeline
 ----------------------------
 
-The following example is a tumour normal genome pair with a tumour transcriptome. All of which was set up to run on :term:`SLURM`.
+The following example is a tumour normal genome pair with a tumour transcriptome, all of which was set up to run on :term:`SLURM`.
 
 Before you Start
 ....................
