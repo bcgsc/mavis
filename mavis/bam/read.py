@@ -171,7 +171,7 @@ def get_samtools_version():
             mid = int(match.group('mid')) if match.group('mid') else 0
             minor = int(match.group('minor')) if match.group('minor') else 0
             return major, mid, minor
-    raise ValueError('unable to parse samtools version number', proc)
+    raise ValueError('unable to parse samtools version number from: {}'.format(proc))
 
 
 def samtools_v0_sort(input_bam, output_bam):
