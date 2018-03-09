@@ -51,7 +51,7 @@ MAVIS also supports a :ref:`general VCF input <general-vcf-inputs>`. It should b
     :term:`Trans-ABySS`: The trans-abyss version used was an in-house dev version. However the output columns are compatible with 1.4.8 as that
     was the version branched from. Additionally, although indels can be used from both genome and transcriptome outputs of Trans-ABySS, it is 
     reccommended to only use the genome indel calls as the transcriptome indels calls (for versions tested) introduce a very high number of 
-    false positives. This will slow down validation. It is much faster to simple use the genome indels for both genome and transcriptome.
+    false positives. This will slow down validation. It is much faster to simply use the genome indels for both genome and transcriptome.
 
 
 :term:`DELLY` Post-processing
