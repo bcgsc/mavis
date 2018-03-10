@@ -286,8 +286,8 @@ List of column names and their definitions. The types indicated here are the exp
         For any sequence its contribution to the score is divided by the number of mappings to give less weight to
         multimaps
 
-    contig_complexity
-        :class:`float` - The minimum amount any two bases account for of the proportion of contig sequence
+    call_sequence_complexity
+        :class:`float` - The minimum amount any two bases account for of the proportion of call sequence. An average for non-contig calls
 
     contig_remapped_reads
         :class:`int` - the number of reads from the input bam that map to the assembled contig

@@ -683,7 +683,7 @@ class Evidence(BreakpointPair):
             log=log,
             remap_min_exact_match=self.assembly_min_exact_match_to_remap,
             assembly_min_uniq=self.assembly_min_uniq,
-            min_complexity=self.min_contig_complexity
+            min_complexity=self.min_call_complexity
         )
 
         # add the input reads

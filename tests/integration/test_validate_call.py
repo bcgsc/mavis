@@ -1,4 +1,5 @@
 import unittest
+from unittest import mock
 
 from mavis.align import call_paired_read_event, select_contig_alignments
 from mavis.annotate.file_io import load_reference_genome
@@ -13,7 +14,7 @@ from mavis.validate import call
 from mavis.validate.base import Evidence
 from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
 
-from . import BAM_INPUT, FULL_BAM_INPUT, mock_read_pair, MockBamFileHandle, MockObject, MockRead, REFERENCE_GENOME_FILE, get_example_genes, MockLongString
+from . import BAM_INPUT, FULL_BAM_INPUT, mock_read_pair, MockBamFileHandle, MockRead, REFERENCE_GENOME_FILE, get_example_genes, MockLongString
 
 REFERENCE_GENOME = None
 
@@ -44,7 +45,7 @@ class TestCallByContig(unittest.TestCase):
     def test_EGFR_small_del_transcriptome(self):
         gene = get_example_genes()['EGFR']
         reference_annotations = {gene.chr: [gene]}
-        reference_genome = {gene.chr: MockObject(
+        reference_genome = {gene.chr: mock.Mock(
             seq=MockLongString(gene.seq, offset=gene.start - 1)
         )}
 
@@ -62,9 +63,9 @@ class TestCallByContig(unittest.TestCase):
             Breakpoint(gene.chr, gene.start, gene.end, orient='L', strand='+'), Breakpoint(gene.chr, gene.start, gene.end, orient='R', strand='+'),
             reference_genome=reference_genome,
             read_length=75, stdev_fragment_size=75, median_fragment_size=220,
-            bam_cache=MockObject(get_read_reference_name=lambda x: gene.chr, stranded=True)
+            bam_cache=mock.Mock(get_read_reference_name=lambda x: gene.chr, stranded=True)
         )
-        evidence.contigs.append(MockObject(seq=read.query_sequence, alignments=set()))
+        evidence.contigs.append(mock.Mock(seq=read.query_sequence, alignments=set()))
         select_contig_alignments(evidence, {read.query_sequence: {read}})
         print('distance', evidence.distance(55219055, 55220239))
         print('selected contig alignments')
@@ -418,11 +419,11 @@ class TestEvidenceConsumption(unittest.TestCase):
             MockRead(
                 query_name='t1', reference_id=0, reference_name='1', reference_start=460, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
                 query_sequence='A' * 100))
-        contig = MockObject(
-            seq='',
-            alignments=[
+        contig = mock.Mock(**{
+            'seq': '', 'complexity.return_value': 1,
+            'alignments': [
                 call_paired_read_event(r1, r2)
-            ])
+            ]})
         contig.input_reads = {MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])}
         evidence.contigs.append(contig)
 
@@ -479,9 +480,9 @@ class TestEvidenceConsumption(unittest.TestCase):
             MockRead(query_name='t1', reference_id=0, reference_name='1', reference_start=480, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
                      query_sequence='A' * 100))
         bpp = call_paired_read_event(r1, r2)
-        contig = MockObject(
-            seq='',
-            alignments=[bpp])
+        contig = mock.Mock(**{
+            'seq': '', 'complexity.return_value': 1,
+            'alignments': [bpp]})
         contig.input_reads = {MockRead(query_name='t1', reference_start=100, reference_name='1', cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])}
         evidence.contigs.append(contig)
 
@@ -520,9 +521,11 @@ class TestEvidenceConsumption(unittest.TestCase):
                      query_sequence='A' * 100),
             MockRead(query_name='t1', reference_id=0, reference_name='1', reference_start=480, cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
                      query_sequence='A' * 100))
-        contig = MockObject(
-            seq='',
-            alignments=[call_paired_read_event(r1, r2)])
+        contig = mock.Mock(**{
+            'seq': '', 'complexity.return_value': 1,
+            'alignments': [
+                call_paired_read_event(r1, r2)
+            ]})
         contig.input_reads = {MockRead(query_name='t1', reference_name='1', reference_start=100, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])}
         evidence.contigs.append(contig)
 
@@ -618,7 +621,8 @@ class TestCallBySupportingReads(unittest.TestCase):
             min_splits_reads_resolution=1,
             min_flanking_pairs_resolution=1,
             min_linking_split_reads=1,
-            min_spanning_reads_resolution=3
+            min_spanning_reads_resolution=3,
+            min_call_complexity=0
         )
         self.dup = GenomeEvidence(
             Breakpoint('fake', 50, orient=ORIENT.RIGHT),
@@ -632,7 +636,8 @@ class TestCallBySupportingReads(unittest.TestCase):
             min_splits_reads_resolution=1,
             min_flanking_pairs_resolution=1,
             min_linking_split_reads=1,
-            min_spanning_reads_resolution=3
+            min_spanning_reads_resolution=3,
+            min_call_complexity=0
         )
 
     def test_empty(self):
@@ -1171,7 +1176,7 @@ class TestCallBySpanningReads(unittest.TestCase):
 class TestCharacterizeRepeatRegion(unittest.TestCase):
 
     def test_bad_deletion_call(self):
-        reference_genome = {'19': MockObject(seq=MockLongString(
+        reference_genome = {'19': mock.Mock(seq=MockLongString(
             'AAATCTTTTTTCCATTATGGCTATACAAAGTGAATACATTTCCACAAGCAAATATGATAGATTAATTGGTGCATTGTATATATTTCTCAAACCATCAGCTCCTCTT'
             'TTTTTCAAAGTCTAGAATTTGTAATGGTGGATATCTCTGTTCTGTATTCTGTTGTCTAGATATCCAAGTTTAATGCAAAATTTTATGACATGGAACTTGACACTTT'
             'CTAGAAATGTTCACATATGGTTGTTTATTAAATTATCTCTCATGGAAATATTTAAATGACATGTTTATTGTCTGAAAAGGACAGATATTTAAGCTTTTTTTTTTTT'
@@ -1196,7 +1201,7 @@ class TestCharacterizeRepeatRegion(unittest.TestCase):
             opposing_strands=False,
             event_type=SVTYPE.INS
         )
-        reference_genome = {'1': MockObject(seq=MockLongString(
+        reference_genome = {'1': mock.Mock(seq=MockLongString(
             'TCGATTCAGGATCAGATTTTGAACAAGTACATACG', offset=100
         ))}
         print('upto and including the first breakpoint', reference_genome['1'].seq[bpp.break1.start - 10:bpp.break1.start])
@@ -1210,7 +1215,7 @@ class TestCharacterizeRepeatRegion(unittest.TestCase):
             opposing_strands=False,
             event_type=SVTYPE.DEL
         )
-        reference_genome = {'1': MockObject(seq=MockLongString(
+        reference_genome = {'1': mock.Mock(seq=MockLongString(
             'TCGATTCAGGATCAGATTTTTGAACAAGTACATACG', offset=100
         ))}
         print('upto and including the first breakpoint', reference_genome['1'].seq[bpp.break1.start - 10:bpp.break1.start])
@@ -1224,7 +1229,7 @@ class TestCharacterizeRepeatRegion(unittest.TestCase):
             opposing_strands=False,
             event_type=SVTYPE.DUP
         )
-        reference_genome = {'1': MockObject(seq=MockLongString(
+        reference_genome = {'1': mock.Mock(seq=MockLongString(
             'TCGATTCAGGATCAGATTTTTGAACAAGTACATACG', offset=100
         ))}
         print('upto and including the first breakpoint', reference_genome['1'].seq[bpp.break1.start - 10:bpp.break1.start])
@@ -1238,7 +1243,7 @@ class TestCharacterizeRepeatRegion(unittest.TestCase):
             opposing_strands=False,
             event_type=SVTYPE.DUP
         )
-        reference_genome = {'1': MockObject(seq=MockLongString(
+        reference_genome = {'1': mock.Mock(seq=MockLongString(
             'TCGATTCAGGATCAGATAGTAGTAGGAACAAGTACATACG', offset=100
         ))}
         print('upto and including the first breakpoint', reference_genome['1'].seq[bpp.break1.start - 10:bpp.break1.start])
@@ -1252,7 +1257,7 @@ class TestCharacterizeRepeatRegion(unittest.TestCase):
             opposing_strands=False,
             event_type=SVTYPE.INS
         )
-        reference_genome = {'1': MockObject(seq=MockLongString(
+        reference_genome = {'1': mock.Mock(seq=MockLongString(
             'TCGATTCAGGATCAGATAGTAGTAGGAACAAGTACATACG', offset=100
         ))}
         print('upto and including the first breakpoint', reference_genome['1'].seq[bpp.break1.start - 10:bpp.break1.start])
@@ -1266,7 +1271,7 @@ class TestCharacterizeRepeatRegion(unittest.TestCase):
             opposing_strands=False,
             event_type=SVTYPE.DEL
         )
-        reference_genome = {'1': MockObject(seq=MockLongString(
+        reference_genome = {'1': mock.Mock(seq=MockLongString(
             'TCGATTCAGGATCAGATAGTAGTAGTAGGAACAAGTACATACG', offset=100
         ))}
         print('upto and including the second breakpoint', reference_genome['1'].seq[bpp.break2.start - 10:bpp.break2.start])
@@ -1280,7 +1285,7 @@ class TestCharacterizeRepeatRegion(unittest.TestCase):
             opposing_strands=False,
             event_type=SVTYPE.INS
         )
-        reference_genome = {'1': MockObject(seq=MockLongString(
+        reference_genome = {'1': mock.Mock(seq=MockLongString(
             'TCGATTCAGGATCAGATAGTAGTAGGAACAAGTACATACG', offset=100
         ))}
         print('upto and including the first breakpoint', reference_genome['1'].seq[bpp.break1.start - 10:bpp.break1.start])

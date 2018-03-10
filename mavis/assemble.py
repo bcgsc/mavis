@@ -396,7 +396,7 @@ def assemble(
     contigs = []
     for seq, score in list(path_scores.items()):
         contig = Contig(seq, score)
-        if len(contig.seq) >= min_contig_length and contig.complexity() >= min_complexity:
+        if len(contig.seq) >= min_contig_length and (not min_complexity or contig.complexity() >= min_complexity):
             contigs.append(contig)
     log('filtering similar contigs', len(contigs))
     # remap the input reads

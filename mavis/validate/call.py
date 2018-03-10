@@ -92,6 +92,31 @@ class EventCall(BreakpointPair):
             bed.append((self.break1.chr, self.break1.start - 1, self.break2.end, name))
         return bed
 
+    def complexity(self):
+        """
+        The sequence complexity for the call. If called by contig then the complexity of the
+        contig sequence, otherwise an average of the sequence complexity of the support based
+        on the call method
+        """
+        if self.call_method == CALL_METHOD.CONTIG:
+            return self.contig.complexity()
+        elif self.call_method == CALL_METHOD.SPAN:
+            comp = sum([_read.sequence_complexity(r.query_sequence) for r in self.spanning_reads])
+            return comp / len(self.spanning_reads)
+        elif self.call_method == CALL_METHOD.SPLIT:
+            comp1 = sum([_read.sequence_complexity(r.query_sequence) for r in self.break1_split_reads])
+            comp1 /= len(self.break1_split_reads)
+            comp2 = sum([_read.sequence_complexity(r.query_sequence) for r in self.break2_split_reads])
+            comp2 /= len(self.break2_split_reads)
+            return (comp1 + comp2) / 2
+        elif self.call_method == CALL_METHOD.FLANK:
+            comp1 = sum([_read.sequence_complexity(r.query_sequence) for r, m in self.flanking_pairs])
+            comp1 /= len(self.flanking_pairs)
+            comp2 = sum([_read.sequence_complexity(m.query_sequence) for r, m in self.flanking_pairs])
+            comp2 /= len(self.flanking_pairs)
+            return (comp1 + comp2) / 2
+        return None  # input call has no sequence
+
     def support(self):
         """return a set of all reads which support the call"""
         support = set()
@@ -354,7 +379,7 @@ class EventCall(BreakpointPair):
             COLUMNS.contig_read_depth: None,
             COLUMNS.contig_break1_read_depth: None,
             COLUMNS.contig_break2_read_depth: None,
-            COLUMNS.contig_complexity: None,
+            COLUMNS.call_sequence_complexity: self.complexity(),
             COLUMNS.supplementary_call: self.is_supplementary()
         })
         try:
@@ -426,7 +451,7 @@ class EventCall(BreakpointPair):
                 COLUMNS.contig_read_depth: self.contig.remap_depth(),
                 COLUMNS.contig_break1_read_depth: break1_read_depth,
                 COLUMNS.contig_break2_read_depth: break2_read_depth,
-                COLUMNS.contig_complexity: self.contig.complexity()
+                COLUMNS.call_sequence_complexity: self.contig.complexity()
             })
         return row
 
@@ -580,15 +605,15 @@ def call_events(source_evidence):
     calls = []
     errors = set()
 
-    contig_calls = _call_by_contigs(source_evidence)
-    calls.extend(contig_calls)
-    for call in contig_calls:
-        consumed_evidence.update(call.support())
+    for call in _call_by_contigs(source_evidence):
+        if call.complexity() >= source_evidence.min_call_complexity:
+            calls.append(call)
+            consumed_evidence.update(call.support())
 
-    spanning_calls = _call_by_spanning_reads(source_evidence, consumed_evidence)
-    for call in spanning_calls:
-        consumed_evidence.update(call.support())
-    calls.extend(spanning_calls)
+    for call in _call_by_spanning_reads(source_evidence, consumed_evidence):
+        if call.complexity() >= source_evidence.min_call_complexity:
+            consumed_evidence.update(call.support())
+            calls.append(call)
 
     for event_type in sorted(source_evidence.putative_event_types()):
         # try calling by split/flanking reads
@@ -904,7 +929,7 @@ def _call_by_supporting_reads(evidence, event_type, consumed_evidence=None):
                     len(call.break1_split_read_names()) < 1,
                     len(call.break2_split_read_names()) < 1,
                     linking_reads < evidence.min_linking_split_reads,
-                ]):
+                ]) and call.complexity() >= evidence.min_call_complexity:
                     linked_pairings.append(call)
                     # consume the evidence
                     consumed_evidence.update(call.break1_split_reads)
@@ -927,7 +952,10 @@ def _call_by_supporting_reads(evidence, event_type, consumed_evidence=None):
         call.add_flanking_support(available_flanking_pairs)
         if call.has_compatible:
             call.add_flanking_support(available_flanking_pairs, is_compatible=True)
-        linked_pairings.append(call)
+        if len(call.flanking_pairs) >= evidence.min_flanking_pairs_resolution and call.complexity() >= evidence.min_call_complexity:
+            linked_pairings.append(call)
+        else:
+            error_messages.add('flanking call failed minimum call complexity filter: {}'.format(call.complexity()))
     except (AssertionError, UserWarning) as err:
         error_messages.add(str(err))
     except ValueError:  # incompatible type

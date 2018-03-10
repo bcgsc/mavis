@@ -2,11 +2,11 @@ import os
 import subprocess
 import sys
 import unittest
+from unittest.mock import patch
 
 
 from mavis.constants import SUBCOMMAND
 from mavis.main import main
-from mock import patch
 
 
 class TestHelpMenu(unittest.TestCase):

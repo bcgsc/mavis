@@ -620,7 +620,7 @@ COLUMNS = MavisNamespace(
     contig_seq='contig_seq',
     contig_strand_specific='contig_strand_specific',
     contigs_assembled='contigs_assembled',
-    contig_complexity='contig_complexity',
+    call_sequence_complexity='call_sequence_complexity',
     spanning_reads='spanning_reads',
     spanning_read_names='spanning_read_names',
     flanking_median_fragment_size='flanking_median_fragment_size',
@@ -691,7 +691,7 @@ COLUMNS = MavisNamespace(
 - :term:`contig_seq`
 - :term:`contig_strand_specific`
 - :term:`contigs_assembled`
-- :term:`contig_complexity`
+- :term:`call_sequence_complexity`
 - :term:`event_type`
 - :term:`flanking_median_fragment_size`
 - :term:`flanking_pairs_compatible`

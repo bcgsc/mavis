@@ -87,7 +87,6 @@ setup(
         'nose',
         'timeout-decorator==0.3.3',
         'coverage==4.2',
-        'mock>=2.0.0',
         'nose-capturestderr==1.2',
         'nose-exclude>=0.5.0'
     ],

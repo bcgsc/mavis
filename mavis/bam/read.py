@@ -4,6 +4,7 @@ import re
 import subprocess
 
 import pysam
+from Bio.Data import IUPACData as iupac
 
 from . import cigar as _cigar
 from .cigar import EVENT_STATES, QUERY_ALIGNED_STATES, REFERENCE_ALIGNED_STATES, convert_cigar_to_string
@@ -528,10 +529,11 @@ def sequence_complexity(seq):
     """
     if not seq:
         return 0
-    hist = {c: 0 for c in 'ATGC'}
-    for base in seq.upper():
-        if base in hist:  # ignore N's etc
-            hist[base] += 1
+    hist = {c: 0 for c in iupac.unambiguous_dna_letters}
+    for ambig_base in seq.upper():
+        values = iupac.ambiguous_dna_values[ambig_base]
+        for base in values:  # ignore N's etc
+            hist[base] += 1 / len(values)
     total = sum(hist.values())
-    scores = [(hist[base1] + hist[base2]) / total for base1, base2 in itertools.combinations('ATCG', 2)]
+    scores = [(hist[base1] + hist[base2]) / total for base1, base2 in itertools.combinations(iupac.unambiguous_dna_letters, 2)]
     return min(scores)
