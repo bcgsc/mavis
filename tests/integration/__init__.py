@@ -63,7 +63,7 @@ class MockRead:
     def __init__(
         self,
         query_name=None,
-        reference_id=None,
+        reference_id=0,
         reference_start=None,
         reference_end=None,
         cigar=None,
@@ -77,6 +77,7 @@ class MockRead:
         query_alignment_sequence=None,
         query_alignment_start=None,
         query_alignment_end=None,
+        query_alignment_length=None,
         flag=None,
         tags=[],
         is_read1=True,
@@ -94,14 +95,23 @@ class MockRead:
         self.reference_start = reference_start
         self.reference_end = reference_end
         self.cigar = cigar
+        self.query_alignment_length = query_alignment_length
+        self.query_sequence = query_sequence
         if self.reference_end is None and cigar and reference_start is not None:
             self.reference_end = reference_start + sum([f for v, f in cigar if v not in [CIGAR.S, CIGAR.I]])
+        if not self.query_alignment_length:
+            if cigar:
+                self.query_alignment_length = sum([v for s, v in cigar if s not in [CIGAR.S, CIGAR.H]])
+            elif self.query_sequence:
+                self.query_alignment_length = len(self.query_sequence)
+            else:
+                self.query_alignment_length = 0
         self.is_reverse = is_reverse
         self.mate_is_reverse = mate_is_reverse
         self.next_reference_start = next_reference_start
         self.next_reference_id = next_reference_id
         self.reference_name = reference_name
-        self.query_sequence = query_sequence
+
         self.query_alignment_sequence = query_alignment_sequence
         self.query_alignment_start = query_alignment_start
         self.query_alignment_end = query_alignment_end

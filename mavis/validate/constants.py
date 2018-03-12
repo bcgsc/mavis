@@ -47,7 +47,7 @@ DEFAULTS = WeakMavisNamespace()
 
 """
 DEFAULTS.add(
-    'min_call_complexity', 0.25, cast_type=float_fraction,
+    'min_call_complexity', 0.21, cast_type=float_fraction,
     defn='The minimum complexity score for a call sequence. Is an average for non-contig calls. see :term:`contig_complexity`')
 DEFAULTS.add(
     'aligner', SUPPORTED_ALIGNER.BLAT, cast_type=SUPPORTED_ALIGNER,
