@@ -101,20 +101,15 @@ class EventCall(BreakpointPair):
         if self.call_method == CALL_METHOD.CONTIG:
             return self.contig.complexity()
         elif self.call_method == CALL_METHOD.SPAN:
-            comp = sum([_read.sequence_complexity(r.query_sequence) for r in self.spanning_reads])
-            return comp / len(self.spanning_reads)
+            return max([_read.sequence_complexity(r.query_sequence) for r in self.spanning_reads])
         elif self.call_method == CALL_METHOD.SPLIT:
-            comp1 = sum([_read.sequence_complexity(r.query_sequence) for r in self.break1_split_reads])
-            comp1 /= len(self.break1_split_reads)
-            comp2 = sum([_read.sequence_complexity(r.query_sequence) for r in self.break2_split_reads])
-            comp2 /= len(self.break2_split_reads)
-            return (comp1 + comp2) / 2
+            comp1 = max([_read.sequence_complexity(r.query_sequence) for r in self.break1_split_reads])
+            comp2 = max([_read.sequence_complexity(r.query_sequence) for r in self.break2_split_reads])
+            return min(comp1, comp2)
         elif self.call_method == CALL_METHOD.FLANK:
-            comp1 = sum([_read.sequence_complexity(r.query_sequence) for r, m in self.flanking_pairs])
-            comp1 /= len(self.flanking_pairs)
-            comp2 = sum([_read.sequence_complexity(m.query_sequence) for r, m in self.flanking_pairs])
-            comp2 /= len(self.flanking_pairs)
-            return (comp1 + comp2) / 2
+            comp1 = max([_read.sequence_complexity(r.query_sequence) for r, m in self.flanking_pairs])
+            comp2 = max([_read.sequence_complexity(m.query_sequence) for r, m in self.flanking_pairs])
+            return min(comp1, comp2)
         return None  # input call has no sequence
 
     def support(self):
