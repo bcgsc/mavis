@@ -381,6 +381,20 @@ class TestClassifyBreakpointPair(unittest.TestCase):
         )
         self.assertEqual(sorted([SVTYPE.DEL]), sorted(BreakpointPair.classify(b)))
 
+    def test_deletion_with_useq(self):
+        bpp = BreakpointPair(Breakpoint('1', 6964, orient='L'), Breakpoint('1', 7040, orient='R'), opposing=False, untemplated_seq='CCCT')
+        self.assertEqual(sorted([SVTYPE.DEL, SVTYPE.INS]), sorted(BreakpointPair.classify(bpp)))
+
+        def distance(x, y):
+            return Interval(abs(x - y))
+        net_size = BreakpointPair.net_size(bpp, distance)
+        self.assertEqual(Interval(-71), net_size)
+        self.assertEqual(sorted([SVTYPE.DEL]), sorted(BreakpointPair.classify(bpp, distance)))
+
+    def test_deletion_no_distance_error(self):
+        bpp = BreakpointPair(Breakpoint('1', 7039, orient='L'), Breakpoint('1', 7040, orient='R'), opposing=False)
+        self.assertEqual(sorted([SVTYPE.INS]), sorted(BreakpointPair.classify(bpp)))
+
 
 class TestNetSize(unittest.TestCase):
 

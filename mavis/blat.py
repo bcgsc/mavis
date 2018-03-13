@@ -310,22 +310,6 @@ class Blat:
         return read
 
 
-def get_blat_version():
-    """
-    executes a subprocess to try and run blat and parse the version number from the output
-
-    Example:
-        >>> get_blat_version()
-        '36x2'
-    """
-    proc = subprocess.getoutput([SUPPORTED_ALIGNER.BLAT])
-    for line in proc.split('\n'):
-        match = re.search(r'blat - Standalone BLAT v. (\d+(x\d+)?)', line)
-        if match:
-            return match.group(1)
-    raise ValueError("unable to parse blat version number from:'{}'".format(proc))
-
-
 def process_blat_output(
         input_bam_cache,
         query_id_mapping,
@@ -380,6 +364,7 @@ def process_blat_output(
             else:
                 if row['rank'] > 0:
                     read.mapping_quality = 0
+                read.alignment_rank = row['rank']
                 read.set_tag(PYSAM_READ_FLAGS.BLAT_SCORE, row['score'], value_type='i')
                 read.set_tag(PYSAM_READ_FLAGS.BLAT_ALIGNMENTS, len(filtered_rows), value_type='i')
                 read.set_tag(PYSAM_READ_FLAGS.BLAT_PMS, blat_min_percent_of_max_score, value_type='f')

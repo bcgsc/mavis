@@ -1,8 +1,10 @@
 from copy import copy
+import itertools
 import re
 import subprocess
 
 import pysam
+from Bio.Data import IUPACData as iupac
 
 from . import cigar as _cigar
 from .cigar import EVENT_STATES, QUERY_ALIGNED_STATES, REFERENCE_ALIGNED_STATES, convert_cigar_to_string
@@ -23,6 +25,7 @@ class SamRead(pysam.AlignedSegment):
         self._next_reference_name = next_reference_name
         self.alignment_score = alignment_score
         self.mapping_quality = NA_MAPPING_QUALITY
+        self.alignment_rank = None
         for attr, val in kwargs.items():
             setattr(self, attr, val)
 
@@ -54,6 +57,10 @@ class SamRead(pysam.AlignedSegment):
         cp.cigar = pysamread.cigar[:]
         cp.query_name = pysamread.query_name
         cp.mapping_quality = pysamread.mapping_quality
+        try:
+            cp.alignment_rank = pysamread.alignment_rank
+        except AttributeError:
+            pass
         cp.set_tags(pysamread.get_tags())
         cp.flag = pysamread.flag
         if pysamread.is_paired:
@@ -166,7 +173,7 @@ def get_samtools_version():
             mid = int(match.group('mid')) if match.group('mid') else 0
             minor = int(match.group('minor')) if match.group('minor') else 0
             return major, mid, minor
-    raise ValueError('unable to parse samtools version number')
+    raise ValueError('unable to parse samtools version number from: {}'.format(proc))
 
 
 def samtools_v0_sort(input_bam, output_bam):
@@ -514,3 +521,19 @@ def convert_events_to_softclipping(read, orientation, max_event_size, min_anchor
     else:
         raise ValueError('orientation must be specified', orientation)
     return read
+
+
+def sequence_complexity(seq):
+    """
+    basic measure of sequence complexity
+    """
+    if not seq:
+        return 0
+    hist = {c: 0 for c in iupac.unambiguous_dna_letters}
+    for ambig_base in seq.upper():
+        values = iupac.ambiguous_dna_values[ambig_base]
+        for base in values:  # ignore N's etc
+            hist[base] += 1 / len(values)
+    total = sum(hist.values())
+    scores = [(hist[base1] + hist[base2]) / total for base1, base2 in itertools.combinations(iupac.unambiguous_dna_letters, 2)]
+    return min(scores)

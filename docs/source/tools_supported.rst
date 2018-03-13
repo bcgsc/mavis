@@ -4,7 +4,7 @@
 Supported SV Callers
 ================================
 
-MAVIS supports output from a wide-variety of SV callers. Assumptions are made for each tool based on interpretation of
+MAVIS supports output from a wide-variety of :term:`SV` callers. Assumptions are made for each tool based on interpretation of
 the output and the publications for each tool. The tools and versions currently supported are given below. Versions listed
 indicate the version of the tool for which output files have been tested as input into MAVIS
 
@@ -17,42 +17,44 @@ MAVIS also supports a :ref:`general VCF input <general-vcf-inputs>`. It should b
         - Version(s)
         - MAVIS input
         - Publication
-    *   - `BreakDancer <https://github.com/genome/breakdancer>`_
+    *   - :term:`BreakDancer`
         - ``1.4.5``
         -
         - [Chen-2009]_
-    *   - `Chimerascan <https://code.google.com/archive/p/chimerascan>`_
+    *   - :term:`Chimerascan`
         - ``0.4.5``
         - ``*.bedpe``
         - [Iyer-2011]_
-    *   - `DeFuse <https://bitbucket.org/dranew/defuse>`_
+    *   - :term:`DeFuse`
         - ``0.6.2``
         - ``results/results.classify.tsv``
         - [McPherson-2011]_
-    *   - `DELLY <https://github.com/dellytools/delly>`_
+    *   - :term:`DELLY`
         - ``0.6.1`` ``0.7.3``
         - ``combined.vcf`` (converted from bcf)
         - [Rausch-2012]_
-    *   - `Manta <https://github.com/Illumina/manta>`_
+    *   - :term:`Manta`
         - ``1.0.0``
         - ``{diploidSV,somaticSV}.vcf``
         - [Chen-2016]_
-    *   - `Pindel <https://github.com/genome/pindel>`_
+    *   - :term:`Pindel`
         - ``0.2.5b9``
         -
         - [Ye-2009]_
-    *   - `Trans-ABySS <https://github.com/bcgsc/transabyss>`_
+    *   - :term:`Trans-ABySS`
         - ``1.4.8 (custom)``
-        - ``fusions/*.tsv``
+        - ``{indels/events_novel_exons,fusions/*}.tsv``
         - [Robertson-2010]_
 
 .. note::
 
-    The trans-abyss version used was an in-house dev version. However the output columns are compatible with 1.4.8 as that
-    was the version branched from
+    :term:`Trans-ABySS`: The trans-abyss version used was an in-house dev version. However the output columns are compatible with 1.4.8 as that
+    was the version branched from. Additionally, although indels can be used from both genome and transcriptome outputs of Trans-ABySS, it is 
+    reccommended to only use the genome indel calls as the transcriptome indels calls (for versions tested) introduce a very high number of 
+    false positives. This will slow down validation. It is much faster to simply use the genome indels for both genome and transcriptome.
 
 
-:ref:`DELLY <Rausch-2012>` Post-processing
+:term:`DELLY` Post-processing
 ---------------------------------------------
 
 Some post-processing on the delly output files is generally done prior to input. The output BCF files are converted to a VCF file
@@ -67,7 +69,7 @@ Some post-processing on the delly output files is generally done prior to input.
 Writing A Custom Conversion Script
 -----------------------------------
 
-Logic Example - :ref:`Chimerascan <Iyer-2011>`
+Logic Example - :term:`Chimerascan`
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 

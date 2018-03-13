@@ -10,19 +10,19 @@ DEFAULTS = WeakMavisNamespace()
 - :term:`split_call_distance`
 """
 DEFAULTS.add(
-    'flanking_call_distance', 0,
+    'flanking_call_distance', 10,
     defn='the maximum distance allowed between breakpoint pairs (called by flanking pairs) in order for them to pair')
 DEFAULTS.add(
-    'split_call_distance', 10,
+    'split_call_distance', 20,
     defn='the maximum distance allowed between breakpoint pairs (called by split reads) in order for them to pair')
 DEFAULTS.add(
-    'contig_call_distance', 0,
+    'contig_call_distance', 10,
     defn='the maximum distance allowed between breakpoint pairs (called by contig) in order for them to pair')
 DEFAULTS.add(
-    'spanning_call_distance', 5,
+    'spanning_call_distance', 20,
     defn='the maximum distance allowed between breakpoint pairs (called by spanning reads) in order for them to pair')
 DEFAULTS.add(
-    'input_call_distance', 5,
+    'input_call_distance', 20,
     defn='the maximum distance allowed between breakpoint pairs (called by input tools, not validated) in order for them to pair')
 
 PAIRING_DISTANCES = MavisNamespace(**{

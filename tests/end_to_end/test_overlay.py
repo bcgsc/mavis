@@ -5,7 +5,7 @@ import sys
 import tempfile
 import unittest
 
-from mock import patch
+from unittest.mock import patch
 
 from mavis.constants import SUBCOMMAND
 from mavis.main import main

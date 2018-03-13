@@ -259,3 +259,13 @@ class TestExtendSoftclipping(unittest.TestCase):
         cnew, prefix = _cigar.extend_softclipping(c, 6)
         self.assertEqual(0, prefix)
         self.assertEqual(c, cnew)
+
+
+class TestSequenceComplexity(unittest.TestCase):
+
+    def test_low_at(self):
+        seq = 'TATATATAAATATATATTTATATATACATTATTTATATATAAATATATATTTATACATTATTTATATATAAATATATATTTATATATACATTATGTATATATAAAT'
+        self.assertEqual(0.04, round(_read.sequence_complexity(seq), 2))
+
+    def test_empty(self):
+        self.assertEqual(0, _read.sequence_complexity(''))

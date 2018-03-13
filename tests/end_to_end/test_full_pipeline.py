@@ -5,13 +5,11 @@ import shutil
 import sys
 import tempfile
 import unittest
-
+from unittest.mock import patch
 
 from mavis.constants import SUBCOMMAND
 from mavis.main import main
 from mavis.util import unique_exists
-from mock import patch
-
 
 from . import glob_exists
 

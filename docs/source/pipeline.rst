@@ -36,6 +36,7 @@ will generate submission scripts and a wrapper bash script for the user to execu
     The MAVIS pipeline is highly configurable. Some pipeline steps (cluster, validate) are optional and can be automatically skipped.
     The standard pipeline is far-left.
 
+.. _pipeline-standard:
 
 Standard
 +++++++++++
@@ -109,7 +110,7 @@ Or to skip both clustering and validation, simply call the option twice.
 Configuring Scheduler Settings
 +++++++++++++++++++++++++++++++
 
-There are mutiple ways to configure the scheduler settings. Some of the configurable options are listed below
+There are multiple ways to configure the scheduler settings. Some of the configurable options are listed below
 
 - :term:`queue` ``MAVIS_QUEUE``
 - :term:`memory_limit` ``MAVIS_MEMORY_LIMIT``

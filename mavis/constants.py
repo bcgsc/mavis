@@ -44,7 +44,7 @@ class MavisNamespace(argparse.Namespace):
         return [(k, self[k]) for k in self.keys()]
 
     def __getitem__(self, key):
-        return getattr(self, key)
+        return getattr(self, str(key))
 
     def __setitem__(self, key, val):
         if key in MavisNamespace.reserved_attr:
@@ -611,7 +611,7 @@ COLUMNS = MavisNamespace(
     contig_read_depth='contig_read_depth',
     contig_break1_read_depth='contig_break1_read_depth',
     contig_break2_read_depth='contig_break2_read_depth',
-    contig_blat_rank='contig_blat_rank',
+    contig_alignment_rank='contig_alignment_rank',
     contig_build_score='contig_build_score',
     contig_remap_score='contig_remap_score',
     contig_remap_coverage='contig_remap_coverage',
@@ -619,8 +619,8 @@ COLUMNS = MavisNamespace(
     contig_remapped_reads='contig_remapped_reads',
     contig_seq='contig_seq',
     contig_strand_specific='contig_strand_specific',
-    contigs_aligned='contigs_aligned',
     contigs_assembled='contigs_assembled',
+    call_sequence_complexity='call_sequence_complexity',
     spanning_reads='spanning_reads',
     spanning_read_names='spanning_read_names',
     flanking_median_fragment_size='flanking_median_fragment_size',
@@ -690,8 +690,8 @@ COLUMNS = MavisNamespace(
 - :term:`contig_remapped_reads`
 - :term:`contig_seq`
 - :term:`contig_strand_specific`
-- :term:`contigs_aligned`
 - :term:`contigs_assembled`
+- :term:`call_sequence_complexity`
 - :term:`event_type`
 - :term:`flanking_median_fragment_size`
 - :term:`flanking_pairs_compatible`

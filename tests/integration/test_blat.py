@@ -286,8 +286,3 @@ class TestBlat(unittest.TestCase):
         self.assertEqual(73014606, read2.reference_start)
         self.assertEqual([(CIGAR.M, 141), (CIGAR.I, 98), (CIGAR.M, 30)], _cigar.convert_for_igv(read2.cigar))
         self.assertEqual(Interval(0, len(pslx_row['qseq_full']) - 1), query_coverage_interval(read2))
-
-    def test_ranking_alignments(self):
-        # >seq105
-        # CACCACTGAGACCACATCCCACAGTACTCCCAGCTTCACTTCTTTGATCACCATCACCGAGACCACCTCACACAGTACTCCCAGCTTCACTTCTTTGATAACCACCTCTGAGACCCCGTCACACAGTACTCCCAGCTTCACTTCTTCGATTACCACCACCGAGACCCCCTCAAGCAGTACTCCCAGCTTCACTTCTTCGATCACCACCACCGAGACCACATCCCAC
-        pass

@@ -64,13 +64,17 @@ class EventCall(BreakpointPair):
             self.compatible_type = SVTYPE.DUP
         else:
             self.compatible_type = None
-        if event_type not in BreakpointPair.classify(self) and self.compatible_type in BreakpointPair.classify(self):
+        # use the distance function from the source evidence to narrow the possible types
+        putative_types = BreakpointPair.classify(self, source_evidence.distance)
+        if event_type not in putative_types and self.compatible_type in putative_types:
             event_type, self.compatible_type = self.compatible_type, event_type
+            putative_types = BreakpointPair.classify(self, source_evidence.distance)
+
         self.event_type = SVTYPE.enforce(event_type)
-        if event_type not in BreakpointPair.classify(self) | {self.compatible_type}:
+        if event_type not in putative_types | {self.compatible_type}:
             raise ValueError(
                 'event_type is not compatible with the breakpoint call',
-                'expected event type=', event_type, 'event classified types=', BreakpointPair.classify(self),
+                'expected event type=', event_type, 'event classified types=', putative_types,
                 'compatible type=', self.compatible_type, str(self))
         self.contig = contig
         self.call_method = CALL_METHOD.enforce(call_method)
@@ -87,6 +91,26 @@ class EventCall(BreakpointPair):
         else:
             bed.append((self.break1.chr, self.break1.start - 1, self.break2.end, name))
         return bed
+
+    def complexity(self):
+        """
+        The sequence complexity for the call. If called by contig then the complexity of the
+        contig sequence, otherwise an average of the sequence complexity of the support based
+        on the call method
+        """
+        if self.call_method == CALL_METHOD.CONTIG:
+            return self.contig.complexity()
+        elif self.call_method == CALL_METHOD.SPAN:
+            return max([_read.sequence_complexity(r.query_sequence) for r in self.spanning_reads])
+        elif self.call_method == CALL_METHOD.SPLIT:
+            comp1 = max([_read.sequence_complexity(r.query_sequence) for r in self.break1_split_reads])
+            comp2 = max([_read.sequence_complexity(r.query_sequence) for r in self.break2_split_reads])
+            return min(comp1, comp2)
+        elif self.call_method == CALL_METHOD.FLANK:
+            comp1 = max([_read.sequence_complexity(r.query_sequence) for r, m in self.flanking_pairs])
+            comp2 = max([_read.sequence_complexity(m.query_sequence) for r, m in self.flanking_pairs])
+            return min(comp1, comp2)
+        return None  # input call has no sequence
 
     def support(self):
         """return a set of all reads which support the call"""
@@ -339,7 +363,7 @@ class EventCall(BreakpointPair):
             COLUMNS.contig_seq: None,
             COLUMNS.contig_remap_score: None,
             COLUMNS.contig_alignment_score: None,
-            COLUMNS.contig_blat_rank: None,
+            COLUMNS.contig_alignment_rank: None,
             COLUMNS.contig_remapped_reads: None,
             COLUMNS.contig_remapped_read_names: None,
             COLUMNS.contig_strand_specific: None,
@@ -350,6 +374,7 @@ class EventCall(BreakpointPair):
             COLUMNS.contig_read_depth: None,
             COLUMNS.contig_break1_read_depth: None,
             COLUMNS.contig_break2_read_depth: None,
+            COLUMNS.call_sequence_complexity: self.complexity(),
             COLUMNS.supplementary_call: self.is_supplementary()
         })
         try:
@@ -391,12 +416,6 @@ class EventCall(BreakpointPair):
             row[COLUMNS.net_size] = None
         # add contig specific metrics and columns
         if self.contig:
-            blat_score = None
-            if self.contig_alignment.read1.has_tag('br'):
-                blat_score = self.contig_alignment.read1.get_tag('br')
-                if self.contig_alignment.read2:
-                    blat_score += self.contig_alignment.read2.get_tag('br')
-                    blat_score = round(blat_score / 2, 1)
             cseq = self.contig_alignment.query_sequence
             try:
                 break1_read_depth = SplitAlignment.breakpoint_contig_remapped_depth(
@@ -415,7 +434,7 @@ class EventCall(BreakpointPair):
                 COLUMNS.contig_seq: cseq,  # don't output sequence directly from contig b/c must always be wrt to the positive strand
                 COLUMNS.contig_remap_score: self.contig.remap_score(),
                 COLUMNS.contig_alignment_score: self.contig_alignment.score(),
-                COLUMNS.contig_blat_rank: blat_score,
+                COLUMNS.contig_alignment_rank: self.contig_alignment.alignment_rank().center,
                 COLUMNS.contig_remapped_reads: len(self.contig.input_reads),
                 COLUMNS.contig_remapped_read_names:
                     ';'.join(sorted(set([r.query_name for r in self.contig.input_reads]))),
@@ -426,7 +445,8 @@ class EventCall(BreakpointPair):
                 COLUMNS.contig_remap_coverage: self.contig.remap_coverage(),
                 COLUMNS.contig_read_depth: self.contig.remap_depth(),
                 COLUMNS.contig_break1_read_depth: break1_read_depth,
-                COLUMNS.contig_break2_read_depth: break2_read_depth
+                COLUMNS.contig_break2_read_depth: break2_read_depth,
+                COLUMNS.call_sequence_complexity: self.contig.complexity()
             })
         return row
 
@@ -507,7 +527,10 @@ def _call_by_spanning_reads(source_evidence, consumed_evidence):
 
     for read in source_evidence.spanning_reads - consumed_evidence:
         for event in call_read_events(read):
-            if event.query_consumption() >= source_evidence.contig_aln_min_query_consumption:
+            if all([
+                event.query_consumption() >= source_evidence.contig_aln_min_query_consumption,
+                event.score() >= source_evidence.contig_aln_min_score
+            ]):
                 spanning_calls.setdefault(event, set()).add(read)
     result = []
     for event, reads in spanning_calls.items():
@@ -577,24 +600,43 @@ def call_events(source_evidence):
     calls = []
     errors = set()
 
-    contig_calls = _call_by_contigs(source_evidence)
-    calls.extend(contig_calls)
-    for call in contig_calls:
-        consumed_evidence.update(call.support())
+    for call in _call_by_contigs(source_evidence):
+        if call.complexity() >= source_evidence.min_call_complexity:
+            calls.append(call)
+            consumed_evidence.update(call.support())
 
-    spanning_calls = _call_by_spanning_reads(source_evidence, consumed_evidence)
-    for call in spanning_calls:
-        consumed_evidence.update(call.support())
-    calls.extend(spanning_calls)
+    for call in _call_by_spanning_reads(source_evidence, consumed_evidence):
+        if call.complexity() >= source_evidence.min_call_complexity:
+            consumed_evidence.update(call.support())
+            calls.append(call)
 
-    for event_type in sorted(source_evidence.putative_event_types()):
+    # for ins/dup check for compatible call as well
+    putative_types = source_evidence.putative_event_types()
+    if putative_types & {SVTYPE.INS, SVTYPE.DUP}:
+        putative_types.update({SVTYPE.INS, SVTYPE.DUP})
+
+    for event_type in sorted(putative_types):
         # try calling by split/flanking reads
+        type_consumed_evidence = set()
+        type_consumed_evidence.update(consumed_evidence)
+
+        for call in _call_by_split_reads(source_evidence, event_type, type_consumed_evidence):
+            type_consumed_evidence.update(call.support())
+            calls.append(call)
+
         try:
-            contig_consumed_evidence = set()
-            contig_consumed_evidence.update(consumed_evidence)
-            calls.extend(_call_by_supporting_reads(source_evidence, event_type, contig_consumed_evidence))
-        except UserWarning as err:
+            call = _call_by_flanking_pairs(source_evidence, event_type, type_consumed_evidence)
+            if len(call.flanking_pairs) < source_evidence.min_flanking_pairs_resolution:
+                errors.add('flanking call ({}) failed to supply the minimum evidence required ({} < {})'.format(
+                    event_type, len(call.flanking_pairs), source_evidence.min_flanking_pairs_resolution))
+            elif call.complexity() < source_evidence.min_call_complexity:
+                errors.add('flanking call failed minimum call complexity filter: {}'.format(call.complexity()))
+            else:
+                calls.append(call)
+        except AssertionError as err:
             errors.add(str(err))
+        except ValueError:  # incompatible type
+            pass
 
     if not calls and errors:
         raise UserWarning(';'.join(sorted(list(errors))))
@@ -628,8 +670,7 @@ def _call_interval_by_flanking_coverage(coverage, orientation, max_expected_frag
         raise ValueError('orientation must be specific', orientation)
 
 
-def _call_by_flanking_pairs(
-        evidence, event_type, first_breakpoint_called=None, second_breakpoint_called=None, consumed_evidence=None):
+def _call_by_flanking_pairs(evidence, event_type, consumed_evidence=None):
     """
     Given a set of flanking reads, computes the coverage interval (the area that is covered by flanking read alignments)
     this area gives the starting position for computing the breakpoint interval.
@@ -647,9 +688,7 @@ def _call_by_flanking_pairs(
     first_positions = []
     second_positions = []
 
-    flanking_count = 0
-    cover1_reads = []
-    cover2_reads = []
+    selected_flanking_pairs = []
     available_flanking_pairs = filter_consumed_pairs(evidence.flanking_pairs, consumed_evidence)
 
     for read, mate in available_flanking_pairs:
@@ -661,13 +700,18 @@ def _call_by_flanking_pairs(
         elif event_type == SVTYPE.INS:
             if fragment_size.start >= evidence.min_expected_fragment_size:
                 continue
-        flanking_count += 1
-        cover1_reads.append(read)
-        cover2_reads.append(mate)
-        first_positions.extend([read.reference_start + 1, read.reference_end])
-        second_positions.extend([mate.reference_start + 1, mate.reference_end])
-    if flanking_count < evidence.min_flanking_pairs_resolution:
-        raise AssertionError('insufficient coverage to call {} by flanking reads'.format(event_type))
+        selected_flanking_pairs.append((read, mate))
+        if evidence.break1.orient == ORIENT.LEFT:
+            first_positions.extend([read.reference_end, read.reference_end - read.query_alignment_length + 1])
+        else:
+            first_positions.extend([read.reference_start + 1, read.reference_start + read.query_alignment_length])
+        if evidence.break2.orient == ORIENT.LEFT:
+            second_positions.extend([mate.reference_end, mate.reference_end - mate.query_alignment_length + 1])
+        else:
+            second_positions.extend([mate.reference_start + 1, mate.reference_start + mate.query_alignment_length])
+    if len(selected_flanking_pairs) < evidence.min_flanking_pairs_resolution:
+        raise AssertionError('insufficient flanking pairs ({}) to call {} by flanking reads'.format(
+            len(selected_flanking_pairs), event_type))
 
     cover1 = Interval(min(first_positions), max(first_positions))
     cover2 = Interval(min(second_positions), max(second_positions))
@@ -676,104 +720,53 @@ def _call_by_flanking_pairs(
             raise AssertionError('flanking read coverage overlaps. cannot call by flanking reads', cover1, cover2)
         elif event_type == SVTYPE.DUP and (cover1.start > cover2.start or cover2.end < cover1.end):
             raise AssertionError('flanking coverage for duplications must have some distinct positions', cover1, cover2)
-
     break1_strand = STRAND.NS
     break2_strand = STRAND.NS
     if evidence.stranded:
-        break1_strand = evidence.decide_sequenced_strand(cover1_reads)
-        break2_strand = evidence.decide_sequenced_strand(cover2_reads)
+        break1_strand = evidence.decide_sequenced_strand([f for f, m in selected_flanking_pairs])
+        break2_strand = evidence.decide_sequenced_strand([m for f, m in selected_flanking_pairs])
 
-    if first_breakpoint_called is None and second_breakpoint_called is None:
+    window1 = _call_interval_by_flanking_coverage(
+        cover1, evidence.break1.orient, evidence.max_expected_fragment_size, evidence.read_length,
+        distance=evidence.distance, traverse=evidence.traverse
+    )
 
-        window1 = _call_interval_by_flanking_coverage(
-            cover1, evidence.break1.orient, evidence.max_expected_fragment_size, evidence.read_length,
-            distance=evidence.distance, traverse=evidence.traverse
-        )
+    window2 = _call_interval_by_flanking_coverage(
+        cover2, evidence.break2.orient, evidence.max_expected_fragment_size, evidence.read_length,
+        distance=evidence.distance, traverse=evidence.traverse
+    )
 
-        window2 = _call_interval_by_flanking_coverage(
-            cover2, evidence.break2.orient, evidence.max_expected_fragment_size, evidence.read_length,
-            distance=evidence.distance, traverse=evidence.traverse
-        )
+    if not evidence.interchromosomal:
+        if window1.start > window2.end:
+            raise AssertionError('flanking window regions are incompatible', window1, window2)
+        window1.end = min([window1.end, window2.end, cover2.start - (0 if event_type == SVTYPE.DUP else 1)])
+        window2.start = max([window1.start, window2.start, cover1.end + (0 if event_type == SVTYPE.DUP else 1)])
 
-        if not evidence.interchromosomal:
-            if window1.start > window2.end:
-                raise AssertionError('flanking window regions are incompatible', window1, window2)
-            window1.end = min([window1.end, window2.end, cover2.start - (0 if event_type == SVTYPE.DUP else 1)])
-            window2.start = max([window1.start, window2.start, cover1.end + (0 if event_type == SVTYPE.DUP else 1)])
-        first_breakpoint_called = Breakpoint(
+    call = EventCall(
+        Breakpoint(
             evidence.break1.chr, window1.start, window1.end,
             orient=evidence.break1.orient,
             strand=break1_strand
-        )
-
-        second_breakpoint_called = Breakpoint(
+        ),
+        Breakpoint(
             evidence.break2.chr, window2.start, window2.end,
             orient=evidence.break2.orient,
             strand=break2_strand
-        )
-        return first_breakpoint_called, second_breakpoint_called
-
-    elif second_breakpoint_called is None:
-        # does the input breakpoint make sense with the coverage?
-        if any([
-            first_breakpoint_called.orient == ORIENT.LEFT and cover1.end > first_breakpoint_called.end,
-            first_breakpoint_called.orient == ORIENT.RIGHT and cover1.start < first_breakpoint_called.start
-        ]):
-            raise AssertionError(
-                'input breakpoint is incompatible with flanking coverage', cover1, first_breakpoint_called)
-
-        window = _call_interval_by_flanking_coverage(
-            cover2, evidence.break2.orient, evidence.max_expected_fragment_size, evidence.read_length,
-            distance=evidence.distance, traverse=evidence.traverse
-        )
-        # trim the putative window by the input breakpoint location for intrachromosomal events
-        if not evidence.interchromosomal:
-            window.start = max([
-                window.start, first_breakpoint_called.start + (0 if event_type == SVTYPE.DUP else 1), cover1.end + 1])
-            if window.start > window.end or window.end < first_breakpoint_called.start:
-                raise AssertionError('input breakpoint incompatible with call', window, first_breakpoint_called)
-        second_breakpoint_called = Breakpoint(
-            evidence.break2.chr, window.start, window.end,
-            orient=evidence.break2.orient,
-            strand=break2_strand
-        )
-        return first_breakpoint_called, second_breakpoint_called
-
-    elif first_breakpoint_called is None:
-        # does the input breakpoint make sense with the coverage?
-        if any([
-            second_breakpoint_called.orient == ORIENT.LEFT and cover2.end > second_breakpoint_called.end,
-            second_breakpoint_called.orient == ORIENT.RIGHT and cover2.start < second_breakpoint_called.start
-        ]):
-            raise AssertionError(
-                'input breakpoint is incompatible with flanking coverage', cover2, second_breakpoint_called)
-
-        window = _call_interval_by_flanking_coverage(
-            cover1, evidence.break1.orient, evidence.max_expected_fragment_size, evidence.read_length,
-            distance=evidence.distance, traverse=evidence.traverse
-        )
-
-        # trim the putative window by the input breakpoint location for intrachromosomal events
-        if not evidence.interchromosomal:
-            window.end = min([
-                window.end, second_breakpoint_called.end - (0 if event_type == SVTYPE.DUP else 1), cover2.start - 1])
-            if window.end < window.start or window.start > second_breakpoint_called.end:
-                raise AssertionError('input breakpoint incompatible with call', window, second_breakpoint_called)
-        first_breakpoint_called = Breakpoint(
-            evidence.break1.chr, window.start, window.end,
-            orient=evidence.break1.orient,
-            strand=break1_strand
-        )
-        return first_breakpoint_called, second_breakpoint_called
-    else:
-        raise ValueError('cannot input both breakpoints')
+        ),
+        evidence,
+        event_type,
+        call_method=CALL_METHOD.FLANK
+    )
+    call.add_flanking_support(selected_flanking_pairs)
+    if call.has_compatible:
+        call.add_flanking_support(evidence.compatible_flanking_pairs, is_compatible=True)
+    return call
 
 
-def _call_by_supporting_reads(evidence, event_type, consumed_evidence=None):
+def _call_by_split_reads(evidence, event_type, consumed_evidence=None):
     """
     use split read evidence to resolve bp-level calls for breakpoint pairs (where possible)
     if a bp level call is not possible for one of the breakpoints then returns None
-    if no breakpoints can be resolved returns the original event only with NO split read evidence
     also sets the SV type call if multiple are input
     """
     if consumed_evidence is None:
@@ -828,8 +821,6 @@ def _call_by_supporting_reads(evidence, event_type, consumed_evidence=None):
             max_insert = evidence.read_length - 2 * evidence.min_softclipping
             if event_type == SVTYPE.INS and max_insert < deletion_size:
                 continue
-            elif event_type == SVTYPE.DEL and deletion_size < max_insert:
-                continue
         elif links >= evidence.min_double_aligned_to_estimate_insertion_size:
             if deletion_size > evidence.max_expected_fragment_size and event_type == SVTYPE.INS:
                 continue
@@ -844,9 +835,6 @@ def _call_by_supporting_reads(evidence, event_type, consumed_evidence=None):
 
         # now create calls using the double aligned split read pairs if possible (to resolve untemplated sequence)
         resolved_calls = dict()
-        event_types = {event_type}
-        if event_type in {SVTYPE.DUP, SVTYPE.INS}:
-            event_types.update({SVTYPE.DUP, SVTYPE.INS})
         for reads in [d for d in double_aligned.values() if len(d) > 1]:
             for read1, read2 in itertools.combinations(reads, 2):
                 try:
@@ -854,10 +842,10 @@ def _call_by_supporting_reads(evidence, event_type, consumed_evidence=None):
                     if not evidence.stranded:
                         call.break1.strand = STRAND.NS
                         call.break2.strand = STRAND.NS
-                    if BreakpointPair.classify(call) & event_types:  # ensure we are calling the correct event types
-                        resolved_calls.setdefault(call, (set(), set()))
-                        resolved_calls[call][0].add(read1)
-                        resolved_calls[call][1].add(read2)
+                    # check the type later, we want this to fail if wrong type
+                    resolved_calls.setdefault(call, (set(), set()))
+                    resolved_calls[call][0].add(read1)
+                    resolved_calls[call][1].add(read2)
                 except AssertionError:
                     pass  # will be thrown if the reads do not actually belong together
 
@@ -865,7 +853,10 @@ def _call_by_supporting_reads(evidence, event_type, consumed_evidence=None):
         first_breakpoint = Breakpoint(evidence.break1.chr, first, strand=evidence.break1.strand, orient=evidence.break1.orient)
         second_breakpoint = Breakpoint(evidence.break2.chr, second, strand=evidence.break2.strand, orient=evidence.break2.orient)
         bpp = BreakpointPair(first_breakpoint, second_breakpoint, event_type=event_type)
-        resolved_calls.setdefault(bpp, (set(), set()))
+
+        # ignore untemplated sequence since was not known previously
+        if not any([call.break1 == bpp.break1 and call.break2 == bpp.break2 for call in resolved_calls]):
+            resolved_calls.setdefault(bpp, (set(), set()))
 
         uncons_break1_reads = evidence.split_reads[0] - consumed_evidence
         uncons_break2_reads = evidence.split_reads[1] - consumed_evidence
@@ -900,7 +891,8 @@ def _call_by_supporting_reads(evidence, event_type, consumed_evidence=None):
                     len(call.break1_split_read_names()) < 1,
                     len(call.break2_split_read_names()) < 1,
                     linking_reads < evidence.min_linking_split_reads,
-                ]):
+                    call.event_type != event_type
+                ]) and call.complexity() >= evidence.min_call_complexity:
                     linked_pairings.append(call)
                     # consume the evidence
                     consumed_evidence.update(call.break1_split_reads)
@@ -908,27 +900,4 @@ def _call_by_supporting_reads(evidence, event_type, consumed_evidence=None):
             except ValueError:  # incompatible types
                 continue
 
-    for call in linked_pairings:
-        consumed_evidence.update(call.support())
-
-    error_messages = set()
-    available_flanking_pairs = filter_consumed_pairs(available_flanking_pairs, consumed_evidence)
-
-    try:
-        first, second = _call_by_flanking_pairs(evidence, event_type, consumed_evidence=consumed_evidence)
-        call = EventCall(
-            first, second, evidence, event_type,
-            call_method=CALL_METHOD.FLANK
-        )
-        call.add_flanking_support(available_flanking_pairs)
-        if call.has_compatible:
-            call.add_flanking_support(available_flanking_pairs, is_compatible=True)
-        linked_pairings.append(call)
-    except (AssertionError, UserWarning) as err:
-        error_messages.add(str(err))
-    except ValueError:  # incompatible type
-        pass
-
-    if not linked_pairings:
-        raise UserWarning(';'.join(list(error_messages)))
     return linked_pairings

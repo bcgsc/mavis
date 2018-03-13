@@ -517,10 +517,11 @@ def generate_config(args, parser, log=devnull):
         required: the argparse required arguments group
         optional: the argparse optional arguments group
     """
+    libs = []
+    inputs_by_lib = {}
+    convert = {}
     try:
         # process the libraries by input argument (--input)
-        libs = []
-        inputs_by_lib = {}
         for libconf in [LibraryConfig.parse_args(*a) for a in args.library]:
             if not libconf.bam_file and SUBCOMMAND.VALIDATE not in args.skip_stage:
                 raise KeyError('argument --library: bam file must be given if validation is not being skipped')
@@ -549,11 +550,42 @@ def generate_config(args, parser, log=devnull):
                 raise KeyError('argument --input: no input was given for the library', libconf.library)
             libconf.inputs = inputs_by_lib[libconf.library]
 
+        for alias, command in args.external_conversion:
+            if alias in convert:
+                raise KeyError('duplicate alias names are not allowed', alias)
+            convert[alias] = []
+            open_option = False
+            for item in re.split(r'\s+', command):
+                if convert[alias]:
+                    if open_option:
+                        convert[alias][-1] += ' ' + item
+                        open_option = False
+                    else:
+                        convert[alias].append(item)
+                        if item[0] == '-':
+                            open_option = True
+                else:
+                    convert[alias].append(item)
+
+        for arg in args.convert:
+            # should follow the pattern: alias file [file...] toolname [stranded]
+            alias = arg[0]
+            if alias in convert:
+                raise KeyError('duplicate alias names are not allowed: {}'.format(alias))
+            if arg[-1] in SUPPORTED_TOOL.values():
+                toolname = arg[-1]
+                stranded = False
+                inputfiles = arg[1:-1]
+            else:
+                toolname, stranded = arg[-2:]
+                inputfiles = arg[1:-2]
+            if not inputfiles:
+                raise KeyError('argument --convert is missing input file path(s): {}'.format(arg))
+            stranded = str(tab.cast_boolean(stranded))
+            SUPPORTED_TOOL.enforce(toolname)
+            convert[alias] = ['convert_tool_output'] + inputfiles + [toolname, stranded]
     except KeyError as err:
         parser.error(' '.join(err.args))
-
-    log('MAVIS: {}'.format(__version__))
-    log_arguments(args)
 
     if SUBCOMMAND.VALIDATE not in args.skip_stage:
         # load the annotations if we need them
@@ -571,28 +603,4 @@ def generate_config(args, parser, log=devnull):
                 sample_size=args.genome_bins if libconf.protocol == PROTOCOL.GENOME else args.transcriptome_bins,
                 distribution_fraction=args.distribution_fraction
             )
-    convert = {}
-    for alias, command in args.external_conversion:
-        if alias in convert:
-            raise KeyError('duplicate alias names are not allowed', alias)
-        convert[alias] = []
-        open_option = False
-        for item in re.split(r'\s+', command):
-            if convert[alias]:
-                if open_option:
-                    convert[alias][-1] += ' ' + item
-                    open_option = False
-                else:
-                    convert[alias].append(item)
-                    if item[0] == '-':
-                        open_option = True
-            else:
-                convert[alias].append(item)
-
-    for alias, inputfile, toolname, stranded in args.convert:
-        if alias in convert:
-            raise KeyError('duplicate alias names are not allowed', alias)
-        stranded = str(tab.cast_boolean(stranded))
-        SUPPORTED_TOOL.enforce(toolname)
-        convert[alias] = ['convert_tool_output', inputfile, toolname, stranded]
     write_config(args.write, include_defaults=args.add_defaults, libraries=libs, conversions=convert, log=log)

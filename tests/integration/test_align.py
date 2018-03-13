@@ -1,5 +1,6 @@
 import shutil
 import unittest
+from unittest import mock
 
 from mavis import align
 from mavis.annotate.file_io import load_reference_genome
@@ -665,13 +666,36 @@ class TestSelectContigAlignments(unittest.TestCase):
         )
         read1 = SamRead(
             reference_id=3, reference_start=1114, cigar=[(CIGAR.S, 125), (CIGAR.EQ, 120)], query_sequence=s,
-            is_reverse=False, reference_name='3'
+            is_reverse=False, reference_name='3', alignment_rank=0
         )
         read2 = SamRead(
             reference_id=3, reference_start=2187, cigar=[(CIGAR.S, 117), (CIGAR.EQ, 8), (CIGAR.D, 1), (CIGAR.EQ, 120)],
-            query_sequence=reverse_complement(s), is_reverse=True, reference_name='3'
+            query_sequence=reverse_complement(s), is_reverse=True, reference_name='3', alignment_rank=1
         )
         raw_alignments = {s: [read1, read2]}
         align.select_contig_alignments(evidence, raw_alignments)
         alignments = list(evidence.contigs[0].alignments)
         self.assertEqual(2, len(alignments))
+
+
+class TestGetAlignerVersion(unittest.TestCase):
+
+    def test_get_blat_36x2(self):
+        content = 'blat - Standalone BLAT v. 36x2 fast sequence search command line tool\n'
+        with mock.patch('subprocess.getoutput', mock.Mock(return_value=content)):
+            self.assertEqual('36x2', align.get_aligner_version(align.SUPPORTED_ALIGNER.BLAT))
+
+    def test_get_blat_36(self):
+        content = "blat - Standalone BLAT v. 36 fast sequence search command line tool"
+        with mock.patch('subprocess.getoutput', mock.Mock(return_value=content)):
+            self.assertEqual('36', align.get_aligner_version(align.SUPPORTED_ALIGNER.BLAT))
+
+    def test_get_bwa_0_7_15(self):
+        content = "\nProgram: bwa (alignment via Burrows-Wheeler transformation)\nVersion: 0.7.15-r1140"
+        with mock.patch('subprocess.getoutput', mock.Mock(return_value=content)):
+            self.assertEqual('0.7.15-r1140', align.get_aligner_version(align.SUPPORTED_ALIGNER.BWA_MEM))
+
+    def test_get_bwa_0_7_12(self):
+        content = "\nProgram: bwa (alignment via Burrows-Wheeler transformation)\nVersion: 0.7.12-r1039"
+        with mock.patch('subprocess.getoutput', mock.Mock(return_value=content)):
+            self.assertEqual('0.7.12-r1039', align.get_aligner_version(align.SUPPORTED_ALIGNER.BWA_MEM))

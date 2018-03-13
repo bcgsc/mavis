@@ -3,11 +3,11 @@ import shutil
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from mavis.constants import SUBCOMMAND
 from mavis.main import main
 from mavis.util import read_bpp_from_input_file
-from mock import patch
 
 
 DATA_PREFIX = os.path.join(os.path.dirname(__file__), 'data')
