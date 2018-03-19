@@ -10,7 +10,7 @@ DEFAULTS = WeakMavisNamespace()
 - :term:`split_call_distance`
 """
 DEFAULTS.add(
-    'flanking_call_distance', 10,
+    'flanking_call_distance', 50,
     defn='the maximum distance allowed between breakpoint pairs (called by flanking pairs) in order for them to pair')
 DEFAULTS.add(
     'split_call_distance', 20,

@@ -157,34 +157,6 @@ def map_ref_range_to_query_range(read, ref_range):
     return Interval(qstart, qend)
 
 
-def get_samtools_version():
-    """
-    executes a subprocess to try and run samtools and parse the version number from the output
-
-    Example:
-        >>> get_samtools_version()
-        (1, 2, 1)
-    """
-    proc = subprocess.getoutput(['samtools'])
-    for line in proc.split('\n'):
-        match = re.search(r'Version: (?P<major>\d+)(\.(?P<mid>\d+)(\.(?P<minor>\d+))?)?', line)
-        if match:
-            major = int(match.group('major'))
-            mid = int(match.group('mid')) if match.group('mid') else 0
-            minor = int(match.group('minor')) if match.group('minor') else 0
-            return major, mid, minor
-    raise ValueError('unable to parse samtools version number from: {}'.format(proc))
-
-
-def samtools_v0_sort(input_bam, output_bam):
-    prefix = re.sub('\.bam$', '', output_bam)
-    return 'samtools sort {} {}'.format(input_bam, prefix)
-
-
-def samtools_v1_sort(input_bam, output_bam):
-    return 'samtools sort {} -o {}'.format(input_bam, output_bam)
-
-
 def breakpoint_pos(read, orient=ORIENT.NS):
     """
     assumes the breakpoint is the position following softclipping on the side with more

@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 import re
 
 
-VERSION = '1.6.10'
+VERSION = '1.7.0'
 
 
 def parse_md_readme():
@@ -61,34 +61,34 @@ setup(
     description='A Structural Variant Post-Processing Package',
     long_description=parse_md_readme(),
     install_requires=[
-        'docutils==0.14',
-        'colour',
-        'networkx==1.11.0',
-        'svgwrite',
-        'sphinx==1.6.3',  # for building the documentation only
-        'sphinx-rtd-theme==0.2.5b1',  # for building the documentation only
-        'pysam>=0.9',
-        'numpy>=1.13.1',
-        'pyvcf==0.6.8',
-        'braceexpand==0.1.2',
-        'biopython>=1.70',
         'Distance>=0.1.3',
-        'setuptools>=36.6.0',
-        'shortuuid>=0.5.0',
+        'Shapely==1.6.4.post1',
+        'biopython>=1.70',
+        'braceexpand==0.1.2',
+        'colour',
+        'docutils==0.14',
         'm2r>=0.1.12',
-        'Shapely==1.6.4.post1'
+        'networkx==1.11.0',
+        'numpy>=1.13.1',
+        'pysam>=0.9',
+        'pyvcf==0.6.8',
+        'shortuuid>=0.5.0',
+        'sphinx-rtd-theme==0.2.5b1',  # for building the documentation only
+        'sphinx==1.6.3',  # for building the documentation only
+        'svgwrite',
+    ],
+    tests_require=[
+        'nose==1.3.7',
+        'timeout-decorator==0.3.3',
+        'coverage==4.2',
+        'nose-capturestderr==1.2',
+        'nose-exclude>=0.5.0'
     ],
     python_requires='>=3',
     author='Caralyn Reisle',
     author_email='creisle@bcgsc.ca',
     setup_requires=[
-        'numpy>=1.13.1',  # put here b/c biopython doesn't declare this as a setup dependency properly
-        'setuptools>=36.6.0',
-        'nose',
-        'timeout-decorator==0.3.3',
-        'coverage==4.2',
-        'nose-capturestderr==1.2',
-        'nose-exclude>=0.5.0'
+        'setuptools>=36.6.0'
     ],
     test_suite='nose.collector',
     entry_points={'console_scripts': ['mavis = mavis.main:main']},
