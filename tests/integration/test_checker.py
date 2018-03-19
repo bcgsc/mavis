@@ -1,9 +1,15 @@
+import os
+import shutil
+import tempfile
 import unittest
-from unittest.mock import patch
-from unittest.mock import mock_open
-
+from unittest.mock import mock_open, patch
 
 from mavis import checker
+from mavis.constants import COMPLETE_STAMP, SUBCOMMAND
+
+DATA_PREFIX = os.path.join(os.path.dirname(__file__), 'data')
+MOCK_GENOME = 'mock-A36971'
+MOCK_TRANS = 'mock-A47933'
 
 
 class TestParseLogFile(unittest.TestCase):
@@ -86,3 +92,50 @@ class TestModule(unittest.TestCase):
             isfile.return_value = True
             result = checker.parse_run_time('log')
         self.assertEqual(1, result)
+
+
+class TestCompletion(unittest.TestCase):
+
+    def mock_log(self, name):
+        log = 'batch-mock-1.log'
+        content = "[2018-03-06 15:25:46.153560] complete: MAVIS.COMPLETE\nrun time (hh/mm/ss): 0:06:41\nrun time (s): 1\n"
+        stamp = COMPLETE_STAMP
+        stamp_content = "run time (hh/mm/ss): 0:07:19\nrun time (s): 439\n"
+        os.makedirs(name)
+        with open(os.path.join(name, log), 'w') as f:
+            f.write(content)
+        with open(os.path.join(name, stamp), 'w') as f:
+            f.write(stamp_content)
+
+    def setUp(self):
+        # create the temp output directory to store file outputs
+        self.temp_output = tempfile.mkdtemp()
+        print('output dir', self.temp_output)
+
+        for lib in [MOCK_GENOME + '_diseased_genome', MOCK_TRANS + '_diseased_transcriptome']:
+            os.makedirs(os.path.join(self.temp_output, lib))
+            for subdir in [SUBCOMMAND.ANNOTATE, SUBCOMMAND.VALIDATE]:
+                self.mock_log(os.path.join(self.temp_output, lib, subdir, 'batch-mock-1'))
+
+            self.mock_log(os.path.join(self.temp_output, lib, SUBCOMMAND.CLUSTER))
+
+        for subdir in [SUBCOMMAND.PAIR, SUBCOMMAND.SUMMARY]:
+            self.mock_log(os.path.join(self.temp_output, subdir))
+
+    def test_completion_valid_dir(self):
+        result = checker.check_completion(self.temp_output)
+        self.assertEqual(True, result)
+
+    def test_completion_invalid_dir(self):
+        result = checker.check_completion('')
+        self.assertEqual(False, result)
+
+    def test_completion_empty_dir(self):
+        temp_output = tempfile.mkdtemp()
+        result = checker.check_completion(temp_output)
+        self.assertEqual(False, result)
+        shutil.rmtree(temp_output)
+
+    def tearDown(self):
+        # remove the temp directory and outputs
+        shutil.rmtree(self.temp_output)
