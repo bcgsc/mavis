@@ -643,7 +643,7 @@ def main():
     elif args.command == SUBCOMMAND.CONFIG:
         generate_config(args, parser, log=log)
     elif args.command == SUBCOMMAND.CHECKER:
-        check_completion(args.output)
+        return EXIT_OK if check_completion(args.output) else EXIT_ERROR
     else:  # PIPELINE
         main_pipeline(args)
 
