@@ -397,6 +397,8 @@ def check_completion(target_dir, skipped_stages=None):
     max_run_time = []
     total_run_time = 0
     log_parse_error = False
+    if not libraries:
+        success_flag = False
     for lib in sorted(libraries, key=lambda x: x.name):
         log('checking library:', lib.name)
         if not lib.report():
@@ -408,12 +410,12 @@ def check_completion(target_dir, skipped_stages=None):
             log_parse_error = True
     max_run_time = max(max_run_time + [0])
 
-    if not pairing.report(time_stamp=True):
+    if pairing and not pairing.report(time_stamp=True):
         success_flag = False
-    if not summary.report(time_stamp=True):
+    if summary and not summary.report(time_stamp=True):
         success_flag = False
     for stage in [summary, pairing]:
-        if stage.max_run_time is not None:
+        if stage and stage.max_run_time is not None:
             max_run_time += stage.max_run_time
             total_run_time += stage.total_run_time
         else:
