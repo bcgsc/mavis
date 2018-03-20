@@ -27,12 +27,12 @@ The general [MAVIS](http://mavis.bcgsc.ca) pipeline consists of six main stages
 
 There are 3 major steps to setting up and installing [MAVIS](http://mavis.bcgsc.ca)
 
-1. **Install non-python dependencies**
+1. **Install Aligner**
 
-Before [MAVIS](http://mavis.bcgsc.ca) can be installed, the [non-python dependencies](http://mavis.bcgsc.ca/docs/latest/about.html#non-python-dependencies) will need to be installed.
+Before [MAVIS](http://mavis.bcgsc.ca) can be installed, the [non-python dependency](http://mavis.bcgsc.ca/docs/latest/about.html#non-python-dependencies) will need to be installed.
 After these have been installed MAVIS itself can be installed through pip
 
-These include: an aligner ([blat](http://mavis.bcgsc.ca/docs/latest/glossary.html#term-blat) or [bwa mem](http://mavis.bcgsc.ca/docs/latest/glossary.html#term-bwa)) and [samtools](http://samtools.sourceforge.net).
+The user may configure MAVIS to run using [blat](http://mavis.bcgsc.ca/docs/latest/glossary.html#term-blat) or [bwa mem](http://mavis.bcgsc.ca/docs/latest/glossary.html#term-bwa).
 
 2. **Install MAVIS**
 
