@@ -6,11 +6,8 @@ About
 
 .. _non-python-dependencies:
 
-Non-python dependencies
+Aligner dependency
 -----------------------
-
-Aligner 
-+++++++++
 
 In addition to the python package dependencies, MAVIS also requires an aligner to be installed. Currently the only
 aligners supported are :term:`blat` and :term:`bwa mem <bwa>`. For MAVIS to run successfully the aligner must be installed and accessible on the 
@@ -35,13 +32,6 @@ should be specified
     call set dependent on the aligner used to align putatative contigs. Additionally the aligner used on the input bam
     will have a more significant impact as it will affect the reads collected in addition to the coordintates of all non-contig
     calls.
-
-
-Samtools
-++++++++++++++++++
-
-Samtools is only used in sorting and indexing the intermediary output bams. Eventually this will hopefully be 
-accomplished through :term:`pysam` only.
 
 
 .. _resource-requirements:
