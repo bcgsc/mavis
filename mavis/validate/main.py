@@ -17,7 +17,6 @@ from ..align import align_sequences, select_contig_alignments, SUPPORTED_ALIGNER
 from ..annotate.base import BioInterval
 from ..bam import cigar as _cigar
 from ..bam.cache import BamCache
-from ..bam.read import get_samtools_version, samtools_v0_sort, samtools_v1_sort
 from ..breakpoint import BreakpointPair
 from ..constants import COLUMNS, MavisNamespace, PROTOCOL
 from ..util import filter_on_overlap, generate_complete_stamp, log, mkdirp, output_tabbed_file, read_inputs, write_bed_file
@@ -30,7 +29,7 @@ def main(
     bam_file, strand_specific,
     library, protocol, median_fragment_size, stdev_fragment_size, read_length,
     reference_genome, reference_genome_filename, annotations, masking, aligner_reference,
-    samtools_version, start_time=int(time.time()), filename_prefix='validate', **kwargs
+    start_time=int(time.time()), filename_prefix='validate', **kwargs
 ):
     """
     Args:
@@ -70,9 +69,6 @@ def main(
         raise NotImplementedError('unsupported aligner', validation_settings.aligner)
     igv_batch_file = os.path.join(output, filename_prefix + '.igv.batch')
     input_bam_cache = BamCache(bam_file, strand_specific)
-
-    if samtools_version is None:
-        samtools_version = get_samtools_version()
 
     bpps = read_inputs(
         inputs,
@@ -281,24 +277,18 @@ def main(
         # now sort the contig bam
         sort = re.sub('.bam$', '.sorted.bam', contig_bam)
         log('sorting the bam file:', contig_bam)
-        if samtools_version <= (1, 2, 0):
-            subprocess.call(samtools_v0_sort(contig_bam, sort), shell=True)
-        else:
-            subprocess.call(samtools_v1_sort(contig_bam, sort), shell=True)
+        pysam.sort('-o', sort, contig_bam)
         contig_bam = sort
         log('indexing the sorted bam:', contig_bam)
-        subprocess.call(['samtools', 'index', contig_bam])
+        pysam.index(contig_bam)
 
         # then sort the evidence bam file
         sort = re.sub('.bam$', '.sorted.bam', raw_evidence_bam)
         log('sorting the bam file:', raw_evidence_bam)
-        if samtools_version <= (1, 2, 0):
-            subprocess.call(samtools_v0_sort(raw_evidence_bam, sort), shell=True)
-        else:
-            subprocess.call(samtools_v1_sort(raw_evidence_bam, sort), shell=True)
+        pysam.sort('-o', sort, raw_evidence_bam)
         raw_evidence_bam = sort
         log('indexing the sorted bam:', raw_evidence_bam)
-        subprocess.call(['samtools', 'index', raw_evidence_bam])
+        pysam.index(raw_evidence_bam)
 
         # write the igv batch file
         with open(igv_batch_file, 'w') as fh:

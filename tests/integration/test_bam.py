@@ -7,14 +7,13 @@ from mavis.annotate.file_io import load_reference_genes, load_reference_genome
 from mavis.bam import cigar as _cigar
 from mavis.bam import read as _read
 from mavis.bam.cache import BamCache
-from mavis.bam.read import breakpoint_pos, get_samtools_version, orientation_supports_type, read_pair_type, sequenced_strand
+from mavis.bam.read import breakpoint_pos, orientation_supports_type, read_pair_type, sequenced_strand
 from mavis.bam.stats import compute_genome_bam_stats, compute_transcriptome_bam_stats, Histogram
 from mavis.constants import CIGAR, DNA_ALPHABET, ORIENT, READ_PAIR_TYPE, STRAND, SVTYPE, NA_MAPPING_QUALITY
 from mavis.interval import Interval
 import timeout_decorator
 
 from . import BAM_INPUT, FULL_BAM_INPUT, FULL_REFERENCE_ANNOTATIONS_FILE_JSON, MockBamFileHandle, MockRead, REFERENCE_GENOME_FILE, TRANSCRIPTOME_BAM_INPUT
-from .config import samtools_versions
 
 
 REFERENCE_GENOME = None
@@ -26,45 +25,6 @@ def setUpModule():
     REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
     if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
         raise AssertionError('fake genome file does not have the expected contents')
-
-
-class TestGetSamtoolsVersion(unittest.TestCase):
-
-    def test_get_samtools_version(self):
-        env = os.environ
-        for version, path in samtools_versions.items():
-            env['PATH'] = os.path.dirname(path) + ':' + env['PATH']
-            try:
-                if not os.path.exists(path):
-                    raise PermissionError(path)
-                print(path)
-                self.assertEqual(version, get_samtools_version())
-            except PermissionError:
-                pass
-
-    def test_parse_samtools_1_2(self):
-        with mock.patch('subprocess.getoutput', mock.Mock(return_value='samtools\nVersion: 1.2 (using htslib 1.2.1)')):
-            self.assertEqual((1, 2, 0), get_samtools_version())
-
-    def test_parse_samtools_0_1_18(self):
-        content = 'samtools\n\nProgram: samtools (Tools for alignments in the SAM format)\nVersion: 0.1.18 (r982:295)'
-        with mock.patch('subprocess.getoutput', mock.Mock(return_value=content)):
-            self.assertEqual((0, 1, 18), get_samtools_version())
-
-    def test_parse_samtools_0_1_17(self):
-        content = "\nProgram: samtools (Tools for alignments in the SAM format)\nVersion: 0.1.17 (r973:277)\n"
-        with mock.patch('subprocess.getoutput', mock.Mock(return_value=content)):
-            self.assertEqual((0, 1, 17), get_samtools_version())
-
-    def test_parse_samtools_0_1_19rc(self):
-        content = "\nProgram: samtools (Tools for alignments in the SAM format)\nVersion: 0.1.19-44428cd\n"
-        with mock.patch('subprocess.getoutput', mock.Mock(return_value=content)):
-            self.assertEqual((0, 1, 19), get_samtools_version())
-
-    def test_parse_samtools_0_1_8(self):
-        content = "Version: 0.1.8 (r613)"
-        with mock.patch('subprocess.getoutput', mock.Mock(return_value=content)):
-            self.assertEqual((0, 1, 8), get_samtools_version())
 
 
 class TestBamCache(unittest.TestCase):
