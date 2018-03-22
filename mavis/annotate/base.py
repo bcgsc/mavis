@@ -117,7 +117,15 @@ class BioInterval:
         return False
 
     def __hash__(self):
-        return hash(self.key())
+        #Use of str removes warning from Bio.Seq.py - below
+
+        # "Biopython Seq objects now use string comparison. "
+        # "Older versions of Biopython used object comparison. "
+        # "During this transition, please use hash(id(my_seq)) "
+        # "or my_dict[id(my_seq)] if you want the old behaviour, "
+        # "or use hash(str(my_seq)) or my_dict[str(my_seq)] for "
+        # "the new string hashing behaviour.", BiopythonWarning)
+        return hash(str(self.key()))
 
     def get_seq(self, reference_genome=None, ignore_cache=False):
         """
