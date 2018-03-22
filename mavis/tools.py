@@ -202,8 +202,13 @@ def _parse_vcf_record(record):
     records = []
     for alt in record.alts if record.alts else [None]:
         info = {}
-        for entry in record.info.items():
-            info[entry[0]] = entry[1:] if len(entry[1:]) > 1 else entry[1]
+        for key in record.info.keys():
+            try:
+                info[key] = record.info[key]
+            except UnicodeDecodeError as e:
+                # Invalid character in this info field.
+                # TODO: log a warning?
+                pass
         std_row = {}
         if record.id and record.id != 'N':  # to account for NovoBreak N in the ID field
             std_row['id'] = record.id
@@ -380,7 +385,7 @@ def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fa
     rows = None
     if file_type == SUPPORTED_TOOL.MAVIS:
         result = read_bpp_from_input_file(input_file, expand_orient=True, expand_svtype=True, add_default={'stranded': stranded})
-    elif file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL]:
+    elif file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL, SUPPORTED_TOOL.VCF]:
         rows = []
         for vcf_record in VariantFile(input_file).fetch():
             rows.extend(_parse_vcf_record(vcf_record))
