@@ -1,5 +1,6 @@
 import glob
 import itertools
+import logging
 import re
 import warnings
 
@@ -205,10 +206,15 @@ def _parse_vcf_record(record):
         for key in record.info.keys():
             try:
                 info[key] = record.info[key]
-            except UnicodeDecodeError as e:
-                # Invalid character in this info field.
-                # TODO: log a warning?
-                pass
+            except UnicodeDecodeError as err:
+                logging.warn("Invalid Unicode character in INFO:"
+                        "'{info_key}' of VCF record chrom '{chrom}' pos '{pos}' ref '{ref}' alt '{alt}' : {err_message}".format(
+                        info_key=key,
+                        chrom=record.chrom,
+                        pos=record.pos,
+                        ref=record.ref,
+                        alt=record.alts,
+                        err_message=err,))
         std_row = {}
         if record.id and record.id != 'N':  # to account for NovoBreak N in the ID field
             std_row['id'] = record.id

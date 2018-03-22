@@ -4,6 +4,7 @@ import errno
 from functools import partial
 from glob import glob
 import itertools
+import logging
 import os
 import re
 import time
@@ -153,10 +154,11 @@ def log_arguments(args):
 
 
 def log(*pos, time_stamp=True):
-    if time_stamp:
-        print('[{}]'.format(datetime.now()), *pos)
+    if isinstance(pos, tuple):
+        log_str = ''.join((str(i) for i in pos))
     else:
-        print(' ' * 28, *pos)
+        log_str = str(pos)
+    logging.info(log_str)
 
 
 def devnull(*pos, **kwargs):
@@ -511,7 +513,10 @@ def read_bpp_from_input_file(filename, expand_orient=False, expand_strand=False,
                 if not expand_strand:
                     raise err
         if not temp:
-            raise InvalidRearrangement('could not produce a valid rearrangement', row)
+            logging.error("Invalid rearrangement in {filename}: Skipping {row}".format(
+                filename=filename, row=row))
+            # Just log the error and move on, instead of stopping, with the error below
+            # raise InvalidRearrangement('could not produce a valid rearrangement', row)
         else:
             pairs.extend(temp)
     return pairs
