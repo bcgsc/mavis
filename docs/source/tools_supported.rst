@@ -2,7 +2,7 @@
 
 
 Supported SV Callers
-================================
+---------------------
 
 MAVIS supports output from a wide-variety of :term:`SV` callers. Assumptions are made for each tool based on interpretation of
 the output and the publications for each tool. The tools and versions currently supported are given below. Versions listed
@@ -55,7 +55,7 @@ MAVIS also supports a :ref:`general VCF input <general-vcf-inputs>`. It should b
 
 
 :term:`DELLY` Post-processing
----------------------------------------------
+..................................
 
 Some post-processing on the delly output files is generally done prior to input. The output BCF files are converted to a VCF file
 
@@ -67,7 +67,7 @@ Some post-processing on the delly output files is generally done prior to input.
 .. _custom-conversion:
 
 Writing A Custom Conversion Script
------------------------------------
+......................................
 
 Logic Example - :term:`Chimerascan`
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -139,7 +139,7 @@ You can also re-use the same conversion script if you have multiple inputs to co
 
 
 General VCF inputs
--------------------
+......................
 
 Assuming that the tool outputting the VCF file follows standard conventions, then it is possible to use a general VCF 
 conversion that is not tool-specific. Given the wide variety in content for VCF files, MAVIS makes a number of

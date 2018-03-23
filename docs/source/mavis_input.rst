@@ -1,5 +1,10 @@
+Inputs
+=======
+
+.. include:: reference.rst
+
 MAVIS standard input file format
-==================================
+-----------------------------------
 
 .. _mavis-input-format:
 

@@ -64,7 +64,7 @@ General Terms
         JSON (JavaScript Object Notation) is a data file format. see https://www.w3schools.com/js/js_json_intro.asp.
 
     blat
-        Alignment tool. see https://genome.ucsc.edu/FAQ/FAQblat.html.
+        Alignment tool. see https://genome.ucsc.edu/FAQ/FAQblat.html#blat3 for instructions on download and install. 
 
     IGV
         Integrative Genomics Viewer is a visualization tool. see http://software.broadinstitute.org/software/igv.
@@ -76,7 +76,7 @@ General Terms
         SLURM is a job scheduling system for cluster management see https://slurm.schedmd.com/quickstart.html.
 
     BWA
-        BWA is an alignement tool. See https://github.com/lh3/bwa
+        BWA is an alignement tool. See https://github.com/lh3/bwa for install instructions.
 
     :ref:`HGVS <den-Dunnen-2016>`
         Community based standard of reccommendations for variant notation. See http://varnomen.hgvs.org/

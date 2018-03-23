@@ -1,8 +1,8 @@
 Illustrations
-================
+----------------
 
 Fusion Diagrams
-----------------------
+.................
 
 These are diagrams produced during the annotate step. These represent the putative fusion events of a 
 single breakpoint pair.
@@ -24,7 +24,7 @@ a diagram, even anti-sense fusions
 
 
 Transcript Overlays
-----------------------
+.....................
 
 MAVIS supports generating diagrams of all transcripts for a given gene. These
 can be overlaid with markers and bam_file pileup data. This is particularly 

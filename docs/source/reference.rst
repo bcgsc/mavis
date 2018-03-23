@@ -1,7 +1,7 @@
 .. _reference-input:
 
 Reference Input Files
-======================
+----------------------
 
 There are several reference files that are required for full functionality of the MAVIS pipeline. If the same
 reference file will be reused often then the user may find it helpful to set reasonable defaults. Default values

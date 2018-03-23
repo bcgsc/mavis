@@ -1,10 +1,9 @@
-Examples
-=========
 
-Tumour Pair Full Pipeline
-----------------------------
+Run Through Example
+----------------------
 
 The following example is a tumour normal genome pair with a tumour transcriptome, all of which was set up to run on :term:`SLURM`.
+
 
 Before you Start
 ....................
@@ -72,6 +71,9 @@ The appropriate :term:`BAM` files might look like
     NG1.bam.bai
 
 If you have all of these inputs then you are ready to generate the MAVIS pipeline config file.
+
+.. _example-generating-the-conf:
+
 
 Generating the Config File
 .............................

@@ -1,5 +1,5 @@
 Literature
-===========
+..........
 
 .. [Chen-2009] Chen,K. et al. (2009) BreakDancer: an algorithm for high-resolution mapping of genomic structural variation. Nat. Methods, 6, 677–681.
 .. [Chen-2016] Chen,X. et al. (2016) Manta: rapid detection of structural variants and indels for germline and cancer sequencing applications. Bioinformatics, 32, 1220–1222.
