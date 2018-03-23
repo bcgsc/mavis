@@ -95,7 +95,7 @@ This will install mavis and its python dependencies.
 
 ### 3. Build or Download Reference Files
 
-After [MAVIS](http://mavis.bcgsc.ca) is installed the [reference files](http://mavis.bcgsc.ca/docs/latest/reference.html) must be generated (or downloaded) before it can be run.
+After [MAVIS](http://mavis.bcgsc.ca) is installed the [reference files](http://mavis.bcgsc.ca/docs/latest/mavis_input.html#reference-input-files) must be generated (or downloaded) before it can be run.
 
 Once the above 3 steps are complete [MAVIS](http://mavis.bcgsc.ca) is ready to be run. See [running the pipeline](http://mavis.bcgsc.ca/docs/latest/pipeline.html).
 
