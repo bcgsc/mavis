@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 import re
 
 
-VERSION = '1.7.0'
+VERSION = '1.7.1'
 
 
 def parse_md_readme():
@@ -48,8 +48,9 @@ def check_nonpython_dependencies():
         raise OSError('Aligner is required. Missing executable: {}'.format(aligner))
     print('Found: aligner at', pth)
 
-# HSTLIB is a dependency for pysam
-os.environ['HTSLIB_CONFIGURE_OPTIONS'] = '--disable-lzma'  # only required for CRAM files
+# HSTLIB is a dependency for pysam.
+# The cram file libraries fail for some OS versions and mavis does not use cram files so we disable these options
+os.environ['HTSLIB_CONFIGURE_OPTIONS'] = '--disable-lzma --disable-bz2 --disable-libcurl'
 
 
 setup(
@@ -66,17 +67,21 @@ setup(
         'biopython>=1.70',
         'braceexpand==0.1.2',
         'colour',
-        'docutils==0.14',
-        'm2r>=0.1.12',
         'networkx==1.11.0',
         'numpy>=1.13.1',
         'pysam>=0.9',
         'pyvcf==0.6.8',
         'shortuuid>=0.5.0',
-        'sphinx-rtd-theme==0.2.5b1',  # for building the documentation only
-        'sphinx==1.6.3',  # for building the documentation only
-        'svgwrite',
+        'svgwrite'
     ],
+    extras_require={
+        'docs': [  # modules required for auto-generating the documentation
+            'docutils==0.14',
+            'm2r>=0.1.12',
+            'sphinx-rtd-theme==0.2.5b1',
+            'sphinx==1.6.3'
+        ]
+    },
     tests_require=[
         'nose==1.3.7',
         'timeout-decorator==0.3.3',
@@ -84,12 +89,13 @@ setup(
         'nose-capturestderr==1.2',
         'nose-exclude>=0.5.0'
     ],
+    setup_requires=[
+        'pip>=9.0.0',
+        'setuptools>=36.0.0'
+    ],
     python_requires='>=3',
     author='Caralyn Reisle',
     author_email='creisle@bcgsc.ca',
-    setup_requires=[
-        'setuptools>=36.6.0'
-    ],
     test_suite='nose.collector',
     entry_points={'console_scripts': ['mavis = mavis.main:main']},
     project_urls={'mavis': 'http://mavis.bcgsc.ca'}
