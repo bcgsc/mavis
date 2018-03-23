@@ -1,7 +1,6 @@
 #!python
 import argparse
 import platform
-import logging
 import os
 import re
 import subprocess
@@ -393,12 +392,6 @@ def convert_main(inputs, outputfile, file_type, strand_specific=False, assume_no
 
 
 def main():
-    BASIC_LOG_FORMAT = '%(asctime)s %(levelname)-8s: %(message)s'
-    DETAILED_LOG_FORMAT = '%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)s - %(funcName)20s()] : %(message)s'
-    logging.basicConfig(
-        level=logging.INFO,
-        datefmt='%Y-%m-%d %H:%M:%S',
-        format=BASIC_LOG_FORMAT)
     start_time = int(time.time())
 
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
