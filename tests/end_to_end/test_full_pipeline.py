@@ -45,6 +45,7 @@ class TestPipeline(unittest.TestCase):
     def test_pipeline_with_bwa(self):
         args = ['mavis', SUBCOMMAND.PIPELINE, BWA_CONFIG, '-o', self.temp_output]
         with patch.object(sys, 'argv', args):
+            print(args)
             self.assertEqual(0, main())
 
         # check that the subdirectories were built

@@ -325,7 +325,10 @@ def process_blat_output(
     if is_protein:
         raise NotImplementedError('currently does not support aligning protein sequences')
 
-    _, rows = Blat.read_pslx(aligner_output_file, query_id_mapping, is_protein=is_protein)
+    try:
+        _, rows = Blat.read_pslx(aligner_output_file, query_id_mapping, is_protein=is_protein)
+    except tab.tab.EmptyFileError:
+        rows = []
 
     # split the rows by query id
     rows_by_query = {}
