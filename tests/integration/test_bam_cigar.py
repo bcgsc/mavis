@@ -466,7 +466,7 @@ class TestHgvsStandardizeCigars(unittest.TestCase):
         print(SamRead.deletion_sequences(read, REFERENCE_GENOME))
         self.assertEqual(expected_cigar, std_cigar)
 
-    @timeout_decorator.timeout(0.01)
+    @timeout_decorator.timeout(1)
     def test_complex(self):
         qseq = (
             'TATTTGGAAATATTTGTAAGATAGATGTCTCTG' 'C'
