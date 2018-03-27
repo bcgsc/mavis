@@ -410,7 +410,7 @@ SVTYPE = MavisNamespace(
 - ``DUP``: duplication
 """
 
-CIGAR = MavisNamespace(M=0, I=1, D=2, N=3, S=4, H=5, P=6, X=8, EQ=7)
+CIGAR = MavisNamespace(M=0, I=1, D=2, N=3, S=4, H=5, P=6, X=8, EQ=7)  # noqa
 """:class:`MavisNamespace`: Enum-like. For readable cigar values
 
 - ``M``: alignment match (can be a sequence match or mismatch)

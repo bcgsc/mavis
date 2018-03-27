@@ -109,6 +109,7 @@ class TestConvert(unittest.TestCase):
     def test_breakseq2(self):
         result = self.run_main(os.path.join(DATA_PREFIX, 'breakseq.vcf'), SUPPORTED_TOOL.BREAKSEQ, False)
 
+
 def tearDownModule():
     # remove the temp directory and outputs
     shutil.rmtree(TEMP_OUTPUT)
