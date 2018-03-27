@@ -99,6 +99,12 @@ class TestConvert(unittest.TestCase):
         self.run_main(os.path.join(DATA_PREFIX, 'transabyss_indels_output.tab'), SUPPORTED_TOOL.TA, False)
         self.run_main(os.path.join(DATA_PREFIX, 'transabyss_events.tab'), SUPPORTED_TOOL.TA, False)
 
+    def test_vcf(self):
+        results = self.run_main(os.path.join(DATA_PREFIX, 'clinvar_short_test.vcf'), SUPPORTED_TOOL.VCF, False)
+        print(results.keys())
+        record = results['vcf-460818'][0]
+        print(record, record.data)
+        self.assertEqual('Pathogenic', record.data['CLNSIG'])
 
 def tearDownModule():
     # remove the temp directory and outputs
