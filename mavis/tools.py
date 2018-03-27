@@ -1,13 +1,12 @@
-import glob
+from argparse import Namespace
 import itertools
 import re
-import warnings
 
 from braceexpand import braceexpand
 from shortuuid import uuid
 import tab
 from pysam import VariantFile
-from argparse import Namespace
+
 
 from .breakpoint import Breakpoint, BreakpointPair
 from .constants import COLUMNS, MavisNamespace, ORIENT, STRAND, SVTYPE
@@ -23,7 +22,8 @@ SUPPORTED_TOOL = MavisNamespace(
     MAVIS='mavis',
     DEFUSE='defuse',
     BREAKDANCER='breakdancer',
-    VCF='vcf'
+    VCF='vcf',
+    BREAKSEQ='breakseq'
 )
 """
 Supported Tools used to call SVs and then used as input into MAVIS
@@ -262,7 +262,7 @@ def _parse_vcf_record(record, log=devnull):
             std_row[COLUMNS.break2_orientation] = connection_type[orient2]
         except KeyError:
             pass
-        std_row.update({k: v for k, v in info.items() if k not in {'CHR2', 'SVTYPE', 'CIPOS', 'CIEND'}})
+        std_row.update({k: v for k, v in info.items() if k not in {'CHR2', 'SVTYPE', 'CIPOS', 'CIEND', 'CT'}})
         records.append(std_row)
     return records
 
@@ -283,7 +283,7 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
     std_row[COLUMNS.break1_strand] = std_row[COLUMNS.break2_strand] = STRAND.NS
     result = []
     # convert the specified file type to a standard format
-    if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL, SUPPORTED_TOOL.VCF]:
+    if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL, SUPPORTED_TOOL.VCF, SUPPORTED_TOOL.BREAKSEQ]:
 
         std_row.update(row)
 
@@ -393,9 +393,14 @@ def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fa
     rows = None
     if file_type == SUPPORTED_TOOL.MAVIS:
         result = read_bpp_from_input_file(input_file, expand_orient=True, expand_svtype=True, add_default={'stranded': stranded})
-    elif file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL, SUPPORTED_TOOL.VCF]:
+    elif file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL, SUPPORTED_TOOL.VCF, SUPPORTED_TOOL.BREAKSEQ]:
         rows = []
-        for vcf_record in VariantFile(input_file).fetch():
+        vfile = VariantFile(input_file)
+        try:
+            vfile.header.info.add('END', number=1, type='Integer', description='End of the interval')
+        except ValueError:
+            pass
+        for vcf_record in vfile.fetch():
             rows.extend(_parse_vcf_record(vcf_record, log=log))
     elif file_type == SUPPORTED_TOOL.BREAKDANCER:
         with open(input_file, 'r') as fh:

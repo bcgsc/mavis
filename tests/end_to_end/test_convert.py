@@ -106,6 +106,9 @@ class TestConvert(unittest.TestCase):
         print(record, record.data)
         self.assertEqual('Pathogenic', record.data['CLNSIG'])
 
+    def test_breakseq2(self):
+        result = self.run_main(os.path.join(DATA_PREFIX, 'breakseq.vcf'), SUPPORTED_TOOL.BREAKSEQ, False)
+
 def tearDownModule():
     # remove the temp directory and outputs
     shutil.rmtree(TEMP_OUTPUT)
