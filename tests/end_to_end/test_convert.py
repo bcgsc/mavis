@@ -91,6 +91,8 @@ class TestConvert(unittest.TestCase):
             self.assertEqual(17396810, bpp.break2.start)
             self.assertEqual(17396810, bpp.break2.end)
             self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
+        somatic_event = result['manta-MantaDEL:20644:0:2:0:0:0'][0]
+        self.assertEqual('True', somatic_event.data.get('SOMATIC', False))
 
     def test_pindel(self):
         self.run_main(os.path.join(DATA_PREFIX, 'pindel_events.vcf'), SUPPORTED_TOOL.PINDEL, False)

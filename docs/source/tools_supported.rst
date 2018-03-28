@@ -2,7 +2,7 @@
 
 
 Supported SV Callers
----------------------
+-----------------------
 
 MAVIS supports output from a wide-variety of :term:`SV` callers. Assumptions are made for each tool based on interpretation of
 the output and the publications for each tool. The tools and versions currently supported are given below. Versions listed
@@ -21,6 +21,10 @@ MAVIS also supports a :ref:`general VCF input <general-vcf-inputs>`. It should b
         - ``1.4.5``
         -
         - [Chen-2009]_
+    *   - :term:`BreakSeq`
+        - ``2.2``
+        - ``work/breakseq.vcf.gz``
+        - [Abyzov-2015]_
     *   - :term:`Chimerascan`
         - ``0.4.5``
         - ``*.bedpe``
@@ -55,7 +59,7 @@ MAVIS also supports a :ref:`general VCF input <general-vcf-inputs>`. It should b
 
 
 :term:`DELLY` Post-processing
-..................................
+..............................................................
 
 Some post-processing on the delly output files is generally done prior to input. The output BCF files are converted to a VCF file
 
@@ -67,10 +71,10 @@ Some post-processing on the delly output files is generally done prior to input.
 .. _custom-conversion:
 
 Writing A Custom Conversion Script
-......................................
+..............................................................
 
 Logic Example - :term:`Chimerascan`
-++++++++++++++++++++++++++++++++++++++++++++++++++++++
++++++++++++++++++++++++++++++++++++++
 
 
 The following is a description of how the conversion script for :ref:`Chimerascan <Iyer-2011>` was generated. While this is a built-in
@@ -100,7 +104,7 @@ The logic for all cases is shown in the code below
     :emphasize-lines: 10-22
 
 Calling A Custom Conversion Script
-+++++++++++++++++++++++++++++++++++++
+..............................................................
 
 Custom conversion scripts can be specified during :ref:`automatic config generation <pipeline-config>` using the
 ``--external_conversion`` option.
@@ -139,7 +143,7 @@ You can also re-use the same conversion script if you have multiple inputs to co
 
 
 General VCF inputs
-......................
+..............................................................
 
 Assuming that the tool outputting the VCF file follows standard conventions, then it is possible to use a general VCF 
 conversion that is not tool-specific. Given the wide variety in content for VCF files, MAVIS makes a number of

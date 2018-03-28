@@ -1,6 +1,7 @@
 Literature
 ..........
 
+.. [Abyzov-2015] Abyzov,A. et al. (2015) Analysis of deletion breakpoints from 1,092 humans reveals details of mutation mechanisms. Nat. Commun., 6, 7256.
 .. [Chen-2009] Chen,K. et al. (2009) BreakDancer: an algorithm for high-resolution mapping of genomic structural variation. Nat. Methods, 6, 677–681.
 .. [Chen-2016] Chen,X. et al. (2016) Manta: rapid detection of structural variants and indels for germline and cancer sequencing applications. Bioinformatics, 32, 1220–1222.
 .. [den-Dunnen-2016] den Dunnen,J.T. et al. (2016) HGVS Recommendations for the Description of Sequence Variants: 2016 Update. Hum. Mutat., 37, 564–569.

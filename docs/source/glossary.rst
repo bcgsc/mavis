@@ -82,7 +82,10 @@ General Terms
         Community based standard of reccommendations for variant notation. See http://varnomen.hgvs.org/
 
     BreakDancer
-        BreakDancer is an SV caller. Soure for BreakDancer can be found `here <https://github.com/genome/breakdancer>`__ [Chen-2009]_ 
+        BreakDancer is an SV caller. Source for BreakDancer can be found `here <https://github.com/genome/breakdancer>`__ [Chen-2009]_ 
+
+    BreakSeq
+        BreakSeq is an SV caller. Source for BreakSeq can be found `here <https://github.com/bioinform/breakseq2>`__ [Abyzov-2015]_
 
     Chimerascan
         Chimerascan is an SV caller. Source for Chimerascan can be found `here <https://code.google.com/archive/p/chimerascan>`__ [Iyer-2011]_

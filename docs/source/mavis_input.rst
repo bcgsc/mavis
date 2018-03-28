@@ -37,7 +37,7 @@ A simple input file might look as follows
 
 
 Required Columns
-,,,,,,,,,,,,,,,,,
+....................
 
 - :term:`break1_chromosome`
 - :term:`break1_position_start`
@@ -48,7 +48,7 @@ Required Columns
 
 
 Optional Columns
-,,,,,,,,,,,,,,,,,
+....................
 
 Optional Columns that are not given as input will be added with default (or command line parameter options) during
 the clustering stage of MAVIS as some are required for subsequent pipeline steps
@@ -65,7 +65,7 @@ the clustering stage of MAVIS as some are required for subsequent pipeline steps
 
 
 Summary by Pipeline Step
-,,,,,,,,,,,,,,,,,,,,,,,,,,,
+.........................
 
 The different pipeline steps of MAVIS have different input column requirements. These are summarized below (for the
 pipeline steps which can act as the pipeline start)
@@ -112,3 +112,6 @@ tools can be used as long as the user converts the tools native output to match 
 .. |X| raw:: html
 
     &#10004;
+
+
+.. include:: tools_supported.rst

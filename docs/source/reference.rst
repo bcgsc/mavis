@@ -85,7 +85,7 @@ script is called (including generating the template config file)
 .. _reference-files-reference-genome:
 
 Reference Genome
-,,,,,,,,,,,,,,,,,,,,,,,
+.................
 
 These are the sequence files in fasta format that are used in aligning and generating the fusion sequences.
 
@@ -93,7 +93,7 @@ These are the sequence files in fasta format that are used in aligning and gener
 .. _reference-files-template-metadata:
 
 Template Metadata
-,,,,,,,,,,,,,,,,,,,,,,,,
+....................
 
 This is the file which contains the band information for the chromosomes. This is only used during visualization.
 
@@ -111,7 +111,7 @@ The structure of the file should look something like this
 .. _reference-files-masking:
 
 Masking File
-,,,,,,,,,,,,,,,,,,,,,,,
+...............
 
 The masking file is a tab delimited file which contains regions that we should ignore calls in. 
 This can be used to filter out regions with known false positives, bad mapping, centromeres, telomeres etc. 
@@ -131,7 +131,7 @@ Masking is not required (can provide a header-only file), but is recommended as 
 .. _reference-files-annotations:
 
 Annotations
-,,,,,,,,,,,,,,,,,,,,,,,
+.................
 
 This is a custom file format. It is a :term:`JSON` file which contains the gene, transcript, exon,
 translation and protein domain positional information
@@ -191,7 +191,7 @@ necessary information so long as the above :term:`JSON` structure is respected.
 .. _generate-reference-annotations:
 
 Generating the Annotations from :ref:`Ensembl <Yates-2016>`
-...............................................................
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 There is a helper script included with mavis to facilitate generating the custom annotations
 file from an instance of the :ref:`Ensembl <Yates-2016>` database. This uses the :ref:`Ensembl <Yates-2016>` perl api to connect and
@@ -249,7 +249,7 @@ or if you have configured the environment variables as given in step 2, then sim
 .. _reference-files-dgv-annotations:
 
 :ref:`DGV (Database of Genomic Variants) <Macdonald-2014>` Annotations
-,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+.........................................................................
 
 The DGV annotations file contains regions corresponding to what is found in the database of genomic variants. This is
 used to annotate events that are found in healthy control samples and therefore may not be of interest
@@ -275,7 +275,7 @@ An example is shown below
 .. _reference-files-aligner-reference:
 
 Aligner Reference
-,,,,,,,,,,,,,,,,,,,,,,,
+..................
 
 The aligner reference file is the reference genome file used by the aligner during the validate stage. For example,
 if :term:`blat` is the aligner then this will be a :term:`2bit` file.

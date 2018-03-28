@@ -55,7 +55,8 @@ TOOL_SVTYPE_MAPPING.update({
     'ins': [SVTYPE.INS],
     'del': [SVTYPE.DEL],
     'dup': [SVTYPE.DUP],
-    'ITD': [SVTYPE.DUP]
+    'ITD': [SVTYPE.DUP],
+    'IDP': [SVTYPE.INS]
 })
 
 TRACKING_COLUMN = 'tracking_id'
@@ -417,7 +418,12 @@ def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fa
     if rows:
         log('found', len(rows), 'rows')
         for row in rows:
-            std_rows = _convert_tool_row(row, file_type, stranded, assume_no_untemplated=assume_no_untemplated)
-            result.extend(std_rows)
+            try:
+                std_rows = _convert_tool_row(row, file_type, stranded, assume_no_untemplated=assume_no_untemplated)
+            except Exception as err:
+                log('Error in converting row', row)
+                raise err
+            else:
+                result.extend(std_rows)
     log('generated', len(result), 'breakpoint pairs')
     return result

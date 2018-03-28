@@ -11,7 +11,6 @@ Contents
    :maxdepth: -1
     
    about.rst
-   supported_tools.rst
    mavis_input.rst
    pipeline.rst
    configuration.rst
