@@ -1,0 +1,44 @@
+##fileformat=VCFv4.1
+##fileDate=2018-01-28
+##source=ClinVar
+##reference=GRCh37
+##ID=<Description="ClinVar Variation ID">
+##INFO=<ID=AF_ESP,Number=1,Type=Float,Description="allele frequencies from GO-ESP">
+##INFO=<ID=AF_EXAC,Number=1,Type=Float,Description="allele frequencies from ExAC">
+##INFO=<ID=AF_TGP,Number=1,Type=Float,Description="allele frequencies from TGP">
+##INFO=<ID=ALLELEID,Number=1,Type=Integer,Description="the ClinVar Allele ID">
+##INFO=<ID=CLNDN,Number=.,Type=String,Description="ClinVar's preferred disease name for the concept specified by disease identifiers in CLNDISDB">
+##INFO=<ID=CLNDNINCL,Number=.,Type=String,Description="For included Variant : ClinVar's preferred disease name for the concept specified by disease identifiers in CLNDISDB">
+##INFO=<ID=CLNDISDB,Number=.,Type=String,Description="Tag-value pairs of disease database name and identifier, e.g. OMIM:NNNNNN">
+##INFO=<ID=CLNDISDBINCL,Number=.,Type=String,Description="For included Variant: Tag-value pairs of disease database name and identifier, e.g. OMIM:NNNNNN">
+##INFO=<ID=CLNHGVS,Number=.,Type=String,Description="Top-level (primary assembly, alt, or patch) HGVS expression.">
+##INFO=<ID=CLNREVSTAT,Number=.,Type=String,Description="ClinVar review status for the Variation ID">
+##INFO=<ID=CLNSIG,Number=.,Type=String,Description="Clinical significance for this single variant">
+##INFO=<ID=CLNSIGINCL,Number=.,Type=String,Description="Clinical significance for a haplotype or genotype that includes this variant. Reported as pairs of VariationID:clinical significance.">
+##INFO=<ID=CLNVC,Number=1,Type=String,Description="Variant type">
+##INFO=<ID=CLNVCSO,Number=1,Type=String,Description="Sequence Ontology id for variant type">
+##INFO=<ID=CLNVI,Number=.,Type=String,Description="the variant's clinical sources reported as tag-value pairs of database and variant identifier">
+##INFO=<ID=DBVARID,Number=.,Type=String,Description="nsv accessions from dbVar for the variant">
+##INFO=<ID=GENEINFO,Number=1,Type=String,Description="Gene(s) for the variant reported as gene symbol:gene id. The gene symbol and id are delimited by a colon (:) and each pair is delimited by a vertical bar (|)">
+##INFO=<ID=MC,Number=.,Type=String,Description="comma separated list of molecular consequence in the form of Sequence Ontology ID|molecular_consequence">
+##INFO=<ID=ORIGIN,Number=.,Type=String,Description="Allele origin. One or more of the following values may be added: 0 - unknown; 1 - germline; 2 - somatic; 4 - inherited; 8 - paternal; 16 - maternal; 32 - de-novo; 64 - biparental; 128 - uniparental; 256 - not-tested; 512 - tested-inconclusive; 1073741824 - other">
+##INFO=<ID=RS,Number=.,Type=String,Description="dbSNP ID (i.e. rs number)">
+##INFO=<ID=SSR,Number=1,Type=Integer,Description="Variant Suspect Reason Codes. One or more of the following values may be added: 0 - unspecified, 1 - Paralog, 2 - byEST, 4 - oldAlign, 8 - Para_EST, 16 - 1kg_failed, 1024 - other">
+## Test cases by dustin
+## NC_000022.10:g.29130463G>A -- Medically relevant nonsense SNP
+## NC_000022.10:g.29130406C>A -- 5_prime_UTR relevant SNP 
+## NC_000007.13:g.140453155C>T -- BRAF pathogenic SNP
+## NC_000017.10:g.7577124_7577125delCCinsTA -- TP53 2bp change
+## NC_000002.11:g.48033434_48033455inv -- larger inversion - cancer related
+## NC_000007.13:g.140453139_140453141dupGTA -- BRAF insertion/duplication
+## NC_000007.13:g.140481401_140481403delTCC -- BRAF deletion
+## NC_000001.10:g.55505552_55505553insTG -- invalid character in University name PCSK9
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+22	29130463	460818	G	A	.	.	ALLELEID=470077;CLNDISDB=MedGen:C0346153,OMIM:114480,Orphanet:ORPHA227535,SNOMED_CT:254843006;CLNDN=Familial_cancer_of_breast;CLNHGVS=NC_000022.10:g.29130463G>A;CLNREVSTAT=criteria_provided,_single_submitter;CLNSIG=Pathogenic;CLNVC=single_nucleotide_variant;CLNVCSO=SO:0001483;GENEINFO=CHEK2:11200;MC=SO:0001587|nonsense;ORIGIN=1
+22	29130406	232547	C	A	.	.	ALLELEID=236691;CLNDISDB=MedGen:C0027672,SNOMED_CT:699346009;CLNDN=Hereditary_cancer-predisposing_syndrome;CLNHGVS=NC_000022.10:g.29130406C>A;CLNREVSTAT=criteria_provided,_single_submitter;CLNSIG=Pathogenic;CLNVC=single_nucleotide_variant;CLNVCSO=SO:0001483;GENEINFO=CHEK2:11200;MC=SO:0001587|nonsense,SO:0001623|5_prime_UTR_variant;ORIGIN=1;RS=876659833
+7	140453155	44813	C	T	.	.	ALLELEID=53980;CLNDISDB=Human_Phenotype_Ontology:HP:0006740,MedGen:C0279680|MeSH:C535575,MedGen:C1168401,OMIM:275355,Orphanet:ORPHA67037|MeSH:C538231,MedGen:C0152013|MeSH:C562393,MedGen:C0151779,SNOMED_CT:93655004|MeSH:D001932,MedGen:C0006118,SNOMED_CT:126952004|MeSH:D002289,MedGen:C0007131,SNOMED_CT:254637007|MeSH:D008545,MedGen:C0025202,SNOMED_CT:2092003|MeSH:D009101,MedGen:C0026764,OMIM:254500,Orphanet:ORPHA29073,SNOMED_CT:109989006,SNOMED_CT:55921005|MeSH:D015179,MedGen:CN236642|MeSH:D015451,MedGen:C0023434,OMIM:151400,Orphanet:ORPHA67038,SNOMED_CT:277473004,SNOMED_CT:51092000|MeSH:D018268,MedGen:C0206686,Orphanet:ORPHA1501;CLNDN=Transitional_cell_carcinoma_of_the_bladder|Squamous_cell_carcinoma_of_the_head_and_neck|Adenocarcinoma_of_lung|Malignant_melanoma_of_skin|Neoplasm_of_brain|Non-small_cell_lung_cancer|Malignant_melanoma|Multiple_myeloma|Colorectal_Neoplasms|Chronic_lymphocytic_leukemia|Adrenocortical_carcinoma;CLNHGVS=NC_000007.13:g.140453155C>T;CLNREVSTAT=criteria_provided,_single_submitter;CLNSIG=Pathogenic/Likely_pathogenic;CLNVC=single_nucleotide_variant;CLNVCSO=SO:0001483;GENEINFO=BRAF:673;MC=SO:0001583|missense_variant;ORIGIN=2;RS=397516896
+17	7577124	480756	CC	TA	.	.	ALLELEID=480015;CLNDISDB=MedGen:C0027672,SNOMED_CT:699346009;CLNDN=Hereditary_cancer-predisposing_syndrome;CLNHGVS=NC_000017.10:g.7577124_7577125delCCinsTA;CLNREVSTAT=criteria_provided,_single_submitter;CLNSIG=Uncertain_significance;CLNVC=Indel;CLNVCSO=SO:1000032;GENEINFO=TP53:7157;ORIGIN=1
+2	48033434	455281	AACTCACTACCATTCATTAGTA	TACTAATGAATGGTAGTGAGTT	.	.	ALLELEID=451642;CLNDISDB=MedGen:C0009405,Orphanet:ORPHA443090;CLNDN=Hereditary_nonpolyposis_colon_cancer;CLNHGVS=NC_000002.11:g.48033434_48033455inv;CLNREVSTAT=criteria_provided,_single_submitter;CLNSIG=Pathogenic;CLNVC=Inversion;CLNVCSO=SO:1000036;GENEINFO=MSH6:2956;ORIGIN=1
+7	140453138	162793	T	TGTA	.	.	ALLELEID=176758;CLNDISDB=MeSH:D002289,MedGen:C0007131,SNOMED_CT:254637007|MedGen:C0699790,OMIM:114500,SNOMED_CT:269533000|MedGen:C1332969;CLNDN=Non-small_cell_lung_cancer|Carcinoma_of_colon|Childhood_ganglioglioma;CLNHGVS=NC_000007.13:g.140453139_140453141dupGTA;CLNREVSTAT=criteria_provided,_single_submitter;CLNSIG=Pathogenic;CLNVC=Duplication;CLNVCSO=SO:1000035;GENEINFO=BRAF:673;ORIGIN=2;RS=727502902
+7	140481400	44802	TTCC	T	.	.	ALLELEID=53969;CLNDISDB=MeSH:D002289,MedGen:C0007131,SNOMED_CT:254637007;CLNDN=Non-small_cell_lung_cancer;CLNHGVS=NC_000007.13:g.140481401_140481403delTCC;CLNREVSTAT=no_assertion_criteria_provided;CLNSIG=Pathogenic;CLNVC=Deletion;CLNVCSO=SO:0000159;GENEINFO=BRAF:673;ORIGIN=2;RS=397516890
+1	55505552	431555	A	ATG	.	.	ALLELEID=424994;CLNDISDB=MedGen:C0020445,OMIM:143890,SNOMED_CT:397915002,SNOMED_CT:398036000;CLNDN=Familial_hypercholesterolemia;CLNHGVS=NC_000001.10:g.55505552_55505553insTG;CLNREVSTAT=criteria_provided,_single_submitter;CLNSIG=Pathogenic;CLNVC=Insertion;CLNVCSO=SO:0000667;CLNVI=Laboratory_of_Genetics_and_Molecular_Cardiology,University_of_São_Paulo:PCSK9_142;GENEINFO=PCSK9:255738;MC=SO:0001589|frameshift_variant;ORIGIN=1;RS=371488778

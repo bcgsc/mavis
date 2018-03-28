@@ -202,19 +202,19 @@ class TestInterval(unittest.TestCase):
         self.assertEqual(Interval(25, 25), Interval.convert_ratioed_pos(mapping, 50))
 
     def test_union(self):
-        l = [Interval(1, 10), Interval(5, 7), Interval(7)]
-        self.assertEqual(Interval(1, 10), Interval.union(*l))
-        m = l + [Interval(11)]
+        interval_list = [Interval(1, 10), Interval(5, 7), Interval(7)]
+        self.assertEqual(Interval(1, 10), Interval.union(*interval_list))
+        m = interval_list + [Interval(11)]
         self.assertEqual(Interval(1, 11), Interval.union(*m))
 
         with self.assertRaises(AttributeError):
             Interval.union()
 
     def test_intersection(self):
-        l = [Interval(1, 10), Interval(5, 7), Interval(7)]
-        self.assertEqual(Interval(7), Interval.intersection(*l))
-        l.append(Interval(11))
-        self.assertEqual(None, Interval.intersection(*l))
+        interval_list = [Interval(1, 10), Interval(5, 7), Interval(7)]
+        self.assertEqual(Interval(7), Interval.intersection(*interval_list))
+        interval_list.append(Interval(11))
+        self.assertEqual(None, Interval.intersection(*interval_list))
 
         with self.assertRaises(AttributeError):
             Interval.intersection()

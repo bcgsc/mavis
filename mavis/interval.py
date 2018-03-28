@@ -413,8 +413,7 @@ class Interval:
                     for input_itvl in intervals[set_start:set_end + 1]:
                         intersection = input_itvl & itvl
                         if intersection:
-                            l = (len(intersection) / len(input_itvl)) * weight_mapping[input_itvl]
-                            weight = max([l, weight])
+                            weight = max((len(intersection) / len(input_itvl)) * weight_mapping[input_itvl], weight)
                     split_intervals[itvl] = int(round(weight, 0))
             set_start = set_end + 1
         return split_intervals

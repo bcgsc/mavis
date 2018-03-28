@@ -1,13 +1,12 @@
-import glob
+from argparse import Namespace
 import itertools
 import re
-import warnings
 
 from braceexpand import braceexpand
 from shortuuid import uuid
 import tab
 from pysam import VariantFile
-from argparse import Namespace
+
 
 from .breakpoint import Breakpoint, BreakpointPair
 from .constants import COLUMNS, MavisNamespace, ORIENT, STRAND, SVTYPE
@@ -23,7 +22,8 @@ SUPPORTED_TOOL = MavisNamespace(
     MAVIS='mavis',
     DEFUSE='defuse',
     BREAKDANCER='breakdancer',
-    VCF='vcf'
+    VCF='vcf',
+    BREAKSEQ='breakseq'
 )
 """
 Supported Tools used to call SVs and then used as input into MAVIS
@@ -186,7 +186,7 @@ def _parse_bnd_alt(alt):
         raise NotImplementedError('alt specification in unexpected format', alt)
 
 
-def _parse_vcf_record(record):
+def _parse_vcf_record(record, log=devnull):
     """
     converts a vcf record
 
@@ -202,8 +202,18 @@ def _parse_vcf_record(record):
     records = []
     for alt in record.alts if record.alts else [None]:
         info = {}
-        for entry in record.info.items():
-            info[entry[0]] = entry[1:] if len(entry[1:]) > 1 else entry[1]
+        for key in record.info.keys():
+            try:
+                value = record.info[key]
+            except UnicodeDecodeError as err:
+                log('Ignoring invalid INFO field {} with error: {}'.format(key, err))
+            else:
+                try:
+                    value = value[0] if len(value) == 1 else value
+                except TypeError:
+                    pass  # anything non-tuple
+            info[key] = value
+
         std_row = {}
         if record.id and record.id != 'N':  # to account for NovoBreak N in the ID field
             std_row['id'] = record.id
@@ -252,6 +262,7 @@ def _parse_vcf_record(record):
             std_row[COLUMNS.break2_orientation] = connection_type[orient2]
         except KeyError:
             pass
+        std_row.update({k: v for k, v in info.items() if k not in {'CHR2', 'SVTYPE', 'CIPOS', 'CIEND', 'CT'}})
         records.append(std_row)
     return records
 
@@ -272,7 +283,7 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
     std_row[COLUMNS.break1_strand] = std_row[COLUMNS.break2_strand] = STRAND.NS
     result = []
     # convert the specified file type to a standard format
-    if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL, SUPPORTED_TOOL.VCF]:
+    if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL, SUPPORTED_TOOL.VCF, SUPPORTED_TOOL.BREAKSEQ]:
 
         std_row.update(row)
 
@@ -361,7 +372,9 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
                 stranded=stranded
             )
 
-            bpp.data.update({k: std_row[k] for k in std_row if k.startswith(file_type)})
+            for col, value in std_row.items():
+                if col not in COLUMNS and col not in bpp.data:
+                    bpp.data[col] = value
             if not event_type or event_type in BreakpointPair.classify(bpp):
                 result.append(bpp)
 
@@ -380,10 +393,15 @@ def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fa
     rows = None
     if file_type == SUPPORTED_TOOL.MAVIS:
         result = read_bpp_from_input_file(input_file, expand_orient=True, expand_svtype=True, add_default={'stranded': stranded})
-    elif file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL]:
+    elif file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL, SUPPORTED_TOOL.VCF, SUPPORTED_TOOL.BREAKSEQ]:
         rows = []
-        for vcf_record in VariantFile(input_file).fetch():
-            rows.extend(_parse_vcf_record(vcf_record))
+        vfile = VariantFile(input_file)
+        try:
+            vfile.header.info.add('END', number=1, type='Integer', description='End of the interval')
+        except ValueError:
+            pass
+        for vcf_record in vfile.fetch():
+            rows.extend(_parse_vcf_record(vcf_record, log=log))
     elif file_type == SUPPORTED_TOOL.BREAKDANCER:
         with open(input_file, 'r') as fh:
             # comments in breakdancer are marked with a single # so they need to be discarded before reading
