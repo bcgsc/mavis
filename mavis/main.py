@@ -397,6 +397,7 @@ def main():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
     augment_parser(['version'], parser)
     subp = parser.add_subparsers(dest='command', help='specifies which step/stage in the pipeline or which subprogram to use')
+    subp.required = True
     required = {}  # hold required argument group by subparser command name
     optional = {}  # hold optional argument group by subparser command name
     for command in SUBCOMMAND.values():
@@ -438,7 +439,7 @@ def main():
         help='alias for use in inputs and full command (quoted)', action='append')
     optional[SUBCOMMAND.CONFIG].add_argument(
         '--add_defaults', default=False, action='store_true', help='write current defaults for all non-specified options to the config output')
-    augment_parser(['annotations'], optional[SUBCOMMAND.CONFIG], optional[SUBCOMMAND.CONFIG])
+    augment_parser(['annotations'], optional[SUBCOMMAND.CONFIG])
     # add the optional annotations file (only need this is auto generating bam stats for the transcriptome)
     augment_parser(['skip_stage'], optional[SUBCOMMAND.CONFIG])
 
@@ -465,23 +466,24 @@ def main():
     # cluster
     augment_parser(
         ['library', 'protocol', 'strand_specific', 'disease_status', 'annotations', 'masking'],
-        required[SUBCOMMAND.CLUSTER], optional[SUBCOMMAND.CLUSTER])
+        required[SUBCOMMAND.CLUSTER])
     augment_parser(CLUSTER_DEFAULTS.keys(), optional[SUBCOMMAND.CLUSTER])
 
     # validate
     augment_parser(
         ['library', 'protocol', 'bam_file', 'read_length', 'stdev_fragment_size', 'median_fragment_size'] +
-        ['strand_specific', 'annotations', 'reference_genome', 'aligner_reference', 'masking'],
-        required[SUBCOMMAND.VALIDATE], optional[SUBCOMMAND.VALIDATE]
+        ['strand_specific', 'annotations', 'reference_genome', 'aligner_reference'],
+        required[SUBCOMMAND.VALIDATE]
     )
     augment_parser(VALIDATION_DEFAULTS.keys(), optional[SUBCOMMAND.VALIDATE])
+    augment_parser(['masking'], optional[SUBCOMMAND.VALIDATE])
 
     # annotate
     augment_parser(
-        ['library', 'protocol', 'annotations', 'reference_genome', 'masking', 'template_metadata'],
-        required[SUBCOMMAND.ANNOTATE], optional[SUBCOMMAND.ANNOTATE]
+        ['library', 'protocol', 'annotations', 'reference_genome'],
+        required[SUBCOMMAND.ANNOTATE]
     )
-    augment_parser(['max_proximity'], optional[SUBCOMMAND.ANNOTATE])
+    augment_parser(['max_proximity', 'masking', 'template_metadata'], optional[SUBCOMMAND.ANNOTATE])
     augment_parser(list(ANNOTATION_DEFAULTS.keys()) + list(ILLUSTRATION_DEFAULTS.keys()), optional[SUBCOMMAND.ANNOTATE])
 
     # pair
@@ -490,14 +492,15 @@ def main():
 
     # summary
     augment_parser(
-        ['annotations', 'dgv_annotation', 'flanking_call_distance', 'split_call_distance', 'contig_call_distance', 'spanning_call_distance'],
-        required[SUBCOMMAND.SUMMARY], optional[SUBCOMMAND.SUMMARY]
+        ['annotations', 'flanking_call_distance', 'split_call_distance', 'contig_call_distance', 'spanning_call_distance'],
+        required[SUBCOMMAND.SUMMARY]
     )
     augment_parser(SUMMARY_DEFAULTS.keys(), optional[SUBCOMMAND.SUMMARY])
+    augment_parser(['dgv_annotation'], optional[SUBCOMMAND.SUMMARY])
 
     # overlay arguments
     required[SUBCOMMAND.OVERLAY].add_argument('gene_name', help='Gene ID or gene alias to be drawn')
-    augment_parser(['annotations'], required[SUBCOMMAND.OVERLAY], optional[SUBCOMMAND.OVERLAY])
+    augment_parser(['annotations'], required[SUBCOMMAND.OVERLAY])
     augment_parser(['drawing_width_iter_increase', 'max_drawing_retries', 'width', 'min_mapping_quality'], optional[SUBCOMMAND.OVERLAY])
     optional[SUBCOMMAND.OVERLAY].add_argument(
         '--buffer_length', default=0, type=int, help='minimum genomic length to plot on either side of the target gene')
@@ -511,9 +514,6 @@ def main():
         action=RangeAppendAction)
 
     args = MavisNamespace(**parser.parse_args().__dict__)
-    if not args.command:
-        parser.error('the following arguments are required: command')
-
     if args.command == SUBCOMMAND.OVERLAY:
         args = check_overlay_args(args, parser)
 
@@ -533,19 +533,6 @@ def main():
         rargs = config.reference
         args = config
 
-    # set all reference files to their absolute paths to make tracking them down later easier
-    for arg in ['output', 'reference_genome', 'template_metadata', 'annotations', 'masking', 'aligner_reference',
-                'dgv_annotation']:
-        try:
-            rargs[arg] = os.path.abspath(rargs[arg])
-            if arg != 'output' and not os.path.isfile(rargs[arg]):
-                raise OSError('input reference file does not exist', arg, rargs[arg])
-        except AttributeError:
-            pass
-        except TypeError as err:
-            if args.command != SUBCOMMAND.CONFIG or arg != 'annotations':
-                raise err
-
     # try checking the input files exist
     try:
         inputs = []
@@ -558,71 +545,49 @@ def main():
     except AttributeError:
         pass
 
+    for arg in ['reference_genome', 'aligner_reference']:
+        if arg in rargs:
+            if not os.path.exists(str(rargs[arg])):
+                parser.error('--{} file does not exist at: {}'.format(arg, rargs[arg]))
+            rargs['{}_filename'.format(arg)] = rargs[arg]
+
+    for arg in ['masking', 'dgv_annotation', 'template_metadata']:  # optional inputs can be None
+        filename = '{}_filename'.format(arg)
+        if rargs.get(arg, None):
+            if not os.path.exists(str(rargs[arg])):
+                parser.error('--{} file does not exist at: {}'.format(arg, rargs[arg]))
+            rargs[filename] = rargs[arg]
+            rargs[arg] = None
+        elif arg in rargs:
+            rargs[filename] = None
+            rargs[arg] = {}
+
     # load the reference files if they have been given and reset the arguments to hold the original file name and the
-    # loaded data
-    try:
-        if any([
-            args.command == SUBCOMMAND.CLUSTER and args.uninformative_filter,
-            args.command == SUBCOMMAND.PIPELINE and config.cluster.uninformative_filter,
-            args.command == SUBCOMMAND.VALIDATE and args.protocol == PROTOCOL.TRANS,
-            args.command == SUBCOMMAND.PIPELINE and config.has_transcriptome() and SUBCOMMAND.VALIDATE not in config.skip_stage,
-            args.command in {SUBCOMMAND.PAIR, SUBCOMMAND.ANNOTATE, SUBCOMMAND.SUMMARY, SUBCOMMAND.OVERLAY}
-        ]):
-            log('loading:', rargs.annotations)
-            rargs.annotations_filename = rargs.annotations
-            rargs.annotations = load_annotations(rargs.annotations)
-        else:
-            rargs.annotations_filename = rargs.annotations
-            rargs.annotations = None
-    except AttributeError as err:
-        pass
-    # reference genome
-    try:
-        if args.command in [SUBCOMMAND.VALIDATE, SUBCOMMAND.ANNOTATE]:
-            log('loading:', rargs.reference_genome)
-            rargs.reference_genome_filename = rargs.reference_genome
-            rargs.reference_genome = load_reference_genome(rargs.reference_genome)
-        else:
-            rargs.reference_genome_filename = rargs.reference_genome
-            rargs.reference_genome = None
-    except AttributeError:
-        pass
+    if any([
+        args.command == SUBCOMMAND.CLUSTER and args.uninformative_filter,
+        args.command == SUBCOMMAND.PIPELINE and config.cluster.uninformative_filter,
+        args.command == SUBCOMMAND.VALIDATE and args.protocol == PROTOCOL.TRANS,
+        args.command == SUBCOMMAND.PIPELINE and config.has_transcriptome() and SUBCOMMAND.VALIDATE not in config.skip_stage,
+        args.command in {SUBCOMMAND.PAIR, SUBCOMMAND.ANNOTATE, SUBCOMMAND.SUMMARY, SUBCOMMAND.OVERLAY},
+        args.command == SUBCOMMAND.CONFIG and any([PROTOCOL.TRANS in values for values in args.library]) and SUBCOMMAND.VALIDATE not in args.skip_stage
+    ]):
+        log('loading (annotations):', rargs.annotations)
+        rargs.annotations_filename = rargs.annotations
+        if not rargs.annotations or not os.path.exists(rargs.annotations):
+            parser.error('--annotations file does not exist at: {}'.format(rargs.annotations))
+        rargs.annotations = load_annotations(rargs.annotations)
 
-    # masking file
-    try:
-        if args.command in [SUBCOMMAND.VALIDATE, SUBCOMMAND.CLUSTER, SUBCOMMAND.PIPELINE]:
-            log('loading:', rargs.masking)
-            rargs.masking_filename = rargs.masking
-            rargs.masking = load_masking_regions(rargs.masking)
-        else:
-            rargs.masking_filename = rargs.masking
-            rargs.masking = None
-    except AttributeError:
-        pass
+    for arg, load_func in [
+        ('reference_genome', load_reference_genome),
+        ('masking', load_masking_regions),
+        ('template_metadata', load_templates),
+        ('dgv_annotation', load_masking_regions)
+    ]:
+        fname = '{}_filename'.format(arg)
+        if rargs.get(fname, None):
+            log('loading ({}):'.format(arg), rargs[fname])
+            rargs[arg] = load_func(rargs[fname])
 
-    # dgv annotation
-    try:
-        if args.command == SUBCOMMAND.SUMMARY:
-            log('loading:', rargs.dgv_annotation)
-            rargs.dgv_annotation_filename = rargs.dgv_annotation
-            rargs.dgv_annotation = load_masking_regions(rargs.dgv_annotation)
-        else:
-            rargs.dgv_annotation_filename = rargs.dgv_annotation
-            rargs.dgv_annotation = None
-    except AttributeError:
-        pass
-
-    # template metadata
-    try:
-        if args.command == SUBCOMMAND.ANNOTATE:
-            log('loading:', rargs.template_metadata)
-            rargs.template_metadata_filename = rargs.template_metadata
-            rargs.template_metadata = load_templates(rargs.template_metadata)
-        else:
-            rargs.template_metadata_filename = rargs.template_metadata
-            rargs.template_metadata = None
-    except AttributeError:
-        pass
     # decide which main function to execute
     if args.command == SUBCOMMAND.CLUSTER:
         cluster_main(**args, start_time=start_time)

@@ -25,14 +25,25 @@ from .util import bash_expands, cast, devnull, ENV_VAR_PREFIX, MavisNamespace, W
 from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 
 
-REFERENCE_DEFAULTS = WeakMavisNamespace(
-    annotations='',
-    reference_genome='',
-    template_metadata='',
-    masking='',
-    aligner_reference='',
-    dgv_annotation=''
-)
+REFERENCE_DEFAULTS = WeakMavisNamespace()
+REFERENCE_DEFAULTS.add(
+    'template_metadata', None, cast_type=str,
+    defn='file containing the cytoband template information. Used for illustrations only')
+REFERENCE_DEFAULTS.add(
+    'masking', None, cast_type=str,
+    defn='file containing regions for which input events overlapping them are dropped prior to validation')
+REFERENCE_DEFAULTS.add(
+    'annotations', None, cast_type=str,
+    defn='path to the reference annotations of genes, transcript, exons, domains, etc')
+REFERENCE_DEFAULTS.add(
+    'aligner_reference', None, cast_type=str,
+    defn='path to the aligner reference file used for aligning the contig sequences')
+REFERENCE_DEFAULTS.add(
+    'dgv_annotation', None, cast_type=str,
+    defn='Path to the dgv reference processed to look like the cytoband file.')
+REFERENCE_DEFAULTS.add(
+    'reference_genome', None, cast_type=str,
+    defn='Path to the human reference genome fasta file')
 
 CONVERT_OPTIONS = WeakMavisNamespace()
 CONVERT_OPTIONS.add('assume_no_untemplated', True, defn='assume that if not given there is no untemplated sequence between the breakpoints')
@@ -43,6 +54,8 @@ class CustomHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
     subclass the default help formatter to stop default printing for required arguments
     """
     def _format_args(self, action, default_metavar):
+        if action.metavar is None:
+            action.metavar = get_metavar(action.type)
         if isinstance(action, RangeAppendAction):
             return '%s' % self._metavar_formatter(action, default_metavar)(1)
         return super(CustomHelpFormatter, self)._format_args(action, default_metavar)
@@ -51,6 +64,11 @@ class CustomHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
         if action.required:
             return action.help
         return super(CustomHelpFormatter, self)._get_help_string(action)
+
+    def add_arguments(self, actions):
+        # sort the arguments alphanumerically so they print in the help that way
+        actions = sorted(actions, key=lambda x: getattr(x, 'option_strings'))
+        super(CustomHelpFormatter, self).add_arguments(actions)
 
 
 class RangeAppendAction(argparse.Action):
@@ -295,8 +313,8 @@ class MavisConfig:
         SUPPORTED_ALIGNER.enforce(self.validate.aligner)
 
         for attr, fname in self.reference.items():
-            if not os.path.exists(fname):
-                raise OSError(attr, 'file at', fname, 'does not exist')
+            if (fname and not os.path.exists(fname)) or (not fname and attr not in {'dgv_annotation', 'masking', 'template_metadata'}):
+                raise OSError('required reference file {} does not exist at: {}'.format(attr, fname))
 
         # set the conversion section
         self.convert = kwargs.pop('convert', {})
@@ -375,20 +393,6 @@ class MavisConfig:
         return MavisConfig(**config_dict)
 
 
-def add_semi_optional_argument(argname, success_parser, failure_parser, help_msg='', metavar=None):
-    """
-    for an argument tries to get the argument default from the environment variable
-    """
-    env_name = ENV_VAR_PREFIX + argname.upper()
-    help_msg += ' The default for this argument is configured by setting the environment variable {}'.format(env_name)
-    if os.environ.get(env_name, None):
-        required = required = bool(success_parser.title.startswith('required'))
-        success_parser.add_argument('--{}'.format(argname), required=required, default=os.environ[env_name], help=help_msg, metavar=metavar)
-    else:
-        required = required = bool(failure_parser.title.startswith('required'))
-        failure_parser.add_argument('--{}'.format(argname), required=required, help=help_msg, metavar=metavar)
-
-
 def get_metavar(arg_type):
     """
     For a given argument type, returns the string to be used for the metavar argument in add_argument
@@ -403,10 +407,24 @@ def get_metavar(arg_type):
         return 'FLOAT'
     elif arg_type == int:
         return 'INT'
+    elif arg_type == filepath:
+        return 'FILEPATH'
     return None
 
 
-def augment_parser(arguments, parser, semi_opt_parser=None, required=None):
+def filepath(path):
+    if not os.path.exists(path):
+        raise TypeError('File does not exist')
+    return os.path.abspath(path)
+
+
+def nullable_filepath(path):
+    if str(path).lower() == 'none':
+        return None
+    return filepath(path)
+
+
+def augment_parser(arguments, parser, required=None):
     """
     Adds options to the argument parser. Separate function to facilitate the pipeline steps
     all having a similar look/feel
@@ -425,37 +443,25 @@ def augment_parser(arguments, parser, semi_opt_parser=None, required=None):
             parser.add_argument(
                 '-v', '--version', action='version', version='%(prog)s version ' + __version__,
                 help='Outputs the version number')
-        elif arg == 'annotations':
-            add_semi_optional_argument(
-                arg, semi_opt_parser, parser, 'Path to the reference annotations of genes, transcript, exons, domains, etc.', 'FILEPATH')
-        elif arg == 'reference_genome':
-            add_semi_optional_argument(arg, semi_opt_parser, parser, 'Path to the human reference genome fasta file.', 'FILEPATH')
-        elif arg == 'template_metadata':
-            add_semi_optional_argument(arg, semi_opt_parser, parser, 'File containing the cytoband template information.', 'FILEPATH')
-        elif arg == 'masking':
-            add_semi_optional_argument(arg, semi_opt_parser, parser, metavar='FILEPATH')
-        elif arg == 'aligner_reference':
-            add_semi_optional_argument(
-                arg, semi_opt_parser, parser, 'path to the aligner reference file used for aligning the contig sequences.', 'FILEPATH')
-        elif arg == 'dgv_annotation':
-            add_semi_optional_argument(
-                arg, semi_opt_parser, parser, 'Path to the dgv reference processed to look like the cytoband file.', 'FILEPATH')
+        elif arg in REFERENCE_DEFAULTS:
+            parser.add_argument(
+                '--{}'.format(arg), default=REFERENCE_DEFAULTS[arg], required=required,
+                help=REFERENCE_DEFAULTS.define(arg), type=nullable_filepath)
         elif arg == 'config':
-            parser.add_argument('config', 'path to the config file', metavar='FILEPATH')
+            parser.add_argument('config', 'path to the config file', type=filepath)
         elif arg == 'bam_file':
-            parser.add_argument('--bam_file', help='path to the input bam file', required=required, metavar='FILEPATH')
+            parser.add_argument('--bam_file', help='path to the input bam file', required=required, type=filepath)
         elif arg == 'read_length':
             parser.add_argument(
                 '--read_length', type=int, help='the length of the reads in the bam file',
-                required=required, metavar=get_metavar(int))
+                required=required)
         elif arg == 'stdev_fragment_size':
             parser.add_argument(
                 '--stdev_fragment_size', type=int, help='expected standard deviation in insert sizes',
-                required=required, metavar=get_metavar(int))
+                required=required)
         elif arg == 'median_fragment_size':
             parser.add_argument(
-                '--median_fragment_size', type=int, help='median inset size for pairs in the bam file', required=required,
-                metavar=get_metavar(int))
+                '--median_fragment_size', type=int, help='median inset size for pairs in the bam file', required=required)
         elif arg == 'library':
             parser.add_argument('--library', help='library name', required=required)
         elif arg == 'protocol':
@@ -469,7 +475,7 @@ def augment_parser(arguments, parser, semi_opt_parser=None, required=None):
                 help='Use flag once per stage to skip. Can skip clustering or validation or both')
         elif arg == 'strand_specific':
             parser.add_argument(
-                '--strand_specific', type=tab.cast_boolean, metavar=get_metavar(bool),
+                '--strand_specific', type=tab.cast_boolean,
                 default=False, help='indicates that the input is strand specific')
         else:
             value_type = None
@@ -505,7 +511,7 @@ def augment_parser(arguments, parser, semi_opt_parser=None, required=None):
                 raise KeyError('invalid argument', arg)
 
             parser.add_argument(
-                '--{}'.format(arg), choices=choices, metavar=get_metavar(value_type),
+                '--{}'.format(arg), choices=choices,
                 help=help_msg, required=required, default=default_value, type=value_type
             )
 
@@ -590,7 +596,7 @@ def generate_config(args, parser, log=devnull):
     if SUBCOMMAND.VALIDATE not in args.skip_stage:
         # load the annotations if we need them
         if any([l.is_trans() for l in libs]):
-            if not args.get('annotations_filename'):
+            if not args.get('annotations_filename', None):
                 parser.error('argument --annotations: is required to gather bam stats for transcriptome libraries')
             log('loading the reference annotations file', args.annotations_filename)
             args.annotations = load_annotations(args.annotations_filename)

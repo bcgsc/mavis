@@ -73,10 +73,12 @@ def main(
     bpps = read_inputs(
         inputs,
         add_default={
-            COLUMNS.protocol: protocol,
-            COLUMNS.library: library,
             COLUMNS.cluster_id: None,
-            COLUMNS.stranded: strand_specific
+            COLUMNS.stranded: False
+        },
+        add={
+            COLUMNS.protocol: protocol,
+            COLUMNS.library: library
         },
         expand_strand=False, expand_orient=True,
         cast={COLUMNS.cluster_id: lambda x: str(uuid()) if not x else x}
@@ -188,6 +190,7 @@ def main(
     event_calls = []
     total_pass = 0
     write_bed_file(evidence_bed, itertools.chain.from_iterable([e.get_bed_repesentation() for e in evidence_clusters]))
+    validation_counts = {}
     for index, evidence in enumerate(evidence_clusters):
         print()
         log('({} of {}) calling events for: {} {} (tracking_id: {})'.format(
@@ -210,7 +213,7 @@ def main(
             total_pass += 1
 
         log('called {} event(s)'.format(len(calls)))
-        for i, call in enumerate(calls):
+        for call in calls:
             log(call, time_stamp=False)
             if call.contig_alignment:
                 log('{} {} [{}] contig_alignment_score: {}, contig_alignment_mq: {} contig_alignment_rank: {}'.format(
@@ -223,7 +226,8 @@ def main(
                     time_stamp=False)
             else:
                 log(call.event_type, call.call_method, time_stamp=False)
-            call.data[COLUMNS.validation_id] = '{}-v{}'.format(call.cluster_id, i + 1)
+            validation_counts[call.cluster_id] = validation_counts.get(call.cluster_id, 0) + 1
+            call.data[COLUMNS.validation_id] = '{}-v{}'.format(call.cluster_id, validation_counts[call.cluster_id])
             log(
                 'remapped reads: {}; spanning reads: {}; split reads: [{} ({}), {} ({}), {}]'
                 ', flanking pairs: {}{}'.format(

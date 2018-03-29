@@ -159,7 +159,7 @@ DEFAULTS.add(
     'min_mapping_quality', 5,
     defn='the minimum mapping quality of reads to be used as evidence')
 DEFAULTS.add(
-    'trans_min_mapping_quality', 1, cast_type=nullable_int,
+    'trans_min_mapping_quality', 0, cast_type=nullable_int,
     defn='Related to :term:`min_mapping_quality`. Overrides the min_mapping_quality if the library is a transcriptome '
     'and this is set to any number not None. If this value is None, min_mapping_quality is used for transcriptomes as'
     'well as genomes')
