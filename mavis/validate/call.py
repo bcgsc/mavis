@@ -5,7 +5,7 @@ import statistics
 import warnings
 
 from .evidence import TranscriptomeEvidence
-from ..align import SplitAlignment, query_coverage_interval, call_read_events, call_paired_read_event
+from ..align import SplitAlignment, query_coverage_interval, call_read_events, call_paired_read_event, convert_to_duplication
 from ..bam import read as _read
 from ..util import log
 
@@ -527,6 +527,7 @@ def _call_by_spanning_reads(source_evidence, consumed_evidence):
 
     for read in source_evidence.spanning_reads - consumed_evidence:
         for event in call_read_events(read):
+            event = convert_to_duplication(event, source_evidence.reference_genome)
             if all([
                 event.query_consumption() >= source_evidence.contig_aln_min_query_consumption,
                 event.score() >= source_evidence.contig_aln_min_score

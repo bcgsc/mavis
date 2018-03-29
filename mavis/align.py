@@ -506,6 +506,7 @@ def select_contig_alignments(evidence, reads_by_query):
                 if primary_alignment.read2:
                     supp_events.extend(call_read_events(primary_alignment.read2, primary_alignment.read1))
                 for supp_event in supp_events:
+                    supp_event = convert_to_duplication(supp_event, evidence.reference_genome)
                     if supp_event not in filtered_alignments and filter_pass(supp_event):
                         filtered_alignments.add(supp_event)
         contig.alignments.update(filtered_alignments)

@@ -3,7 +3,7 @@ from ..util import WeakMavisNamespace
 
 
 DEFAULTS = WeakMavisNamespace()
-HOMOPOLYMER_MIN_LENGTH = 5
+HOMOPOLYMER_MIN_LENGTH = 3
 
 """
 - :term:`filter_cdna_synon`

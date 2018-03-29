@@ -89,7 +89,14 @@ def get_env_variable(arg, default, cast_type=None):
 class WeakMavisNamespace(MavisNamespace):
 
     def __getattribute__(self, attr):
-        return get_env_variable(attr, object.__getattribute__(self, attr))
+        try:
+            return get_env_variable(
+                attr,
+                object.__getattribute__(self, attr),
+                object.__getattribute__(self, '_types')[attr]
+            )
+        except KeyError:
+            return object.__getattribute__(self, attr)
 
 
 class ChrListString(list):
