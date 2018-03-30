@@ -23,7 +23,8 @@ SUPPORTED_TOOL = MavisNamespace(
     DEFUSE='defuse',
     BREAKDANCER='breakdancer',
     VCF='vcf',
-    BREAKSEQ='breakseq'
+    BREAKSEQ='breakseq',
+    CNVNATOR='cnvnator'
 )
 """
 Supported Tools used to call SVs and then used as input into MAVIS
@@ -164,6 +165,36 @@ def _parse_chimerascan(row):
     return std_row
 
 
+def _parse_cnvnator(row):
+    """
+
+    Args:
+        row (dict by str): dict representing the row output from cnvnator
+
+    Returns:
+        dict: transformed row using mavis starndard column names
+
+    Note:
+        from cnvnator: https://github.com/abyzovlab/CNVnator
+
+        CNV_type coordinates CNV_size normalized_RD e-val1 e-val2 e-val3 e-val4 q0
+
+        normalized_RD -- normalized to 1.
+        e-val1        -- is calculated using t-test statistics.
+        e-val2        -- is from the probability of RD values within the region to be in
+        the tails of a gaussian distribution describing frequencies of RD values in bins.
+        e-val3        -- same as e-val1 but for the middle of CNV
+        e-val4        -- same as e-val2 but for the middle of CNV
+        q0            -- fraction of reads mapped with q0 quality
+    """
+    result = {k: v for k, v in row.items() if k != 'coordinates'}
+    chrom, start, end = re.split(r'[-:]', row['coordinates'])
+    result['break1_chromosome'] = result['break2_chromosome'] = chrom
+    result['break1_position_start'] = result['break1_position_end'] = start
+    result['break2_position_start'] = result['break2_position_end'] = end
+    return result
+
+
 def _parse_bnd_alt(alt):
     """
     parses the alt statement from vcf files using the specification in vcf 4.2/4.2.
@@ -292,6 +323,10 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
 
         std_row.update(_parse_chimerascan(row))
 
+    elif file_type == SUPPORTED_TOOL.CNVNATOR:
+
+        std_row.update(_parse_cnvnator(row))
+
     elif file_type == SUPPORTED_TOOL.DEFUSE:
 
         std_row[COLUMNS.break1_orientation] = ORIENT.LEFT if row['genomic_strand1'] == STRAND.POS else ORIENT.RIGHT
@@ -394,6 +429,16 @@ def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fa
     rows = None
     if file_type == SUPPORTED_TOOL.MAVIS:
         result = read_bpp_from_input_file(input_file, expand_orient=True, expand_svtype=True, add_default={'stranded': stranded})
+    elif file_type == SUPPORTED_TOOL.CNVNATOR:
+        _, rows = tab.read_file(
+            input_file,
+            header=[
+                'event_type',
+                'coordinates',
+                'size',
+                'normalized_RD',
+                'e-val1', 'e-val2', 'e-val3', 'e-val4', 'q0'
+            ])
     elif file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL, SUPPORTED_TOOL.VCF, SUPPORTED_TOOL.BREAKSEQ]:
         rows = []
         vfile = VariantFile(input_file)

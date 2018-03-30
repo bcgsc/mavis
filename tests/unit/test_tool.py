@@ -60,6 +60,41 @@ class TestDelly(unittest.TestCase):
         self.assertEqual(4, len(bpp_list))
 
 
+class TestCnvNator(unittest.TestCase):
+
+    def test_convert_deletion(self):
+        row = {
+            'event_type': 'deletion',
+            'coordinates': '1:1-10000'
+        }
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.CNVNATOR, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual(1, bpp.break1.start)
+        self.assertEqual(1, bpp.break1.end)
+        self.assertEqual(10000, bpp.break2.start)
+        self.assertEqual(10000, bpp.break2.start)
+        self.assertEqual(SVTYPE.DEL, bpp.event_type)
+        self.assertEqual('1', bpp.break1.chr)
+        self.assertEqual('1', bpp.break2.chr)
+
+    def test_convert_deletion(self):
+        row = {
+            'event_type': 'duplication',
+            'coordinates': '1:1-10000'
+        }
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.CNVNATOR, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual(1, bpp.break1.start)
+        self.assertEqual(1, bpp.break1.end)
+        self.assertEqual(10000, bpp.break2.start)
+        self.assertEqual(10000, bpp.break2.start)
+        self.assertEqual(SVTYPE.DUP, bpp.event_type)
+        self.assertEqual('1', bpp.break1.chr)
+        self.assertEqual('1', bpp.break2.chr)
+
+
 class TestTransAbyss(unittest.TestCase):
 
     def test_convert_stranded_indel_insertion(self):
