@@ -386,7 +386,7 @@ def align_sequences(
 
         elif aligner == SUPPORTED_ALIGNER.BWA_MEM:
             align_options = kwargs.get('align_options', '')
-            command = '{} {} {} -Y {}'.format(aligner, aligner_reference, aligner_fa_input_file, align_options)
+            command = '{} -Y {} {} {}'.format(aligner, align_options, aligner_reference, aligner_fa_input_file)
             log('writing aligner logging to:', aligner_output_log, time_stamp=False)
             with open(aligner_output_log, 'w') as log_fh, open(aligner_output_file, 'w') as aligner_output_fh:
                 log_fh.write('>>> {}\n'.format(command))
