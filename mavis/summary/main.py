@@ -140,7 +140,7 @@ def main(
                     netsize_max = abs(int(match.group(2)))
 
                     if all([
-                        int(bpp.repeat_count) >= HOMOPOLYMER_MIN_LENGTH,
+                        int(bpp.repeat_count) + 1 >= HOMOPOLYMER_MIN_LENGTH,  # repeat count is 1 less than the length of the repeat
                         netsize_min == netsize_max and netsize_min == 1,
                         PROTOCOL.GENOME not in bpp.data.get(COLUMNS.pairing, '')
                     ]):
