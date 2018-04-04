@@ -47,8 +47,9 @@ DEFAULTS = WeakMavisNamespace()
 
 """
 DEFAULTS.add(
-    'min_call_complexity', 0.21, cast_type=float_fraction,
-    defn='The minimum complexity score for a call sequence. Is an average for non-contig calls. see :term:`contig_complexity`')
+    'min_call_complexity', 0.10, cast_type=float_fraction,
+    defn='The minimum complexity score for a call sequence. Is an average for non-contig calls. Filters '
+         'low complexity contigs before alignment. see :term:`contig_complexity`')
 DEFAULTS.add(
     'aligner', SUPPORTED_ALIGNER.BLAT, cast_type=SUPPORTED_ALIGNER,
     defn='the aligner to use to map the contigs/reads back to the reference e.g blat or bwa')

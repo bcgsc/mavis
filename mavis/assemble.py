@@ -409,7 +409,7 @@ def assemble(
             alignment = nsb_align(
                 contig.seq,
                 input_seq,
-                min_overlap_percent=remap_min_overlap / len(contig.seq),
+                min_overlap_percent=remap_min_overlap / len(input_seq),
                 min_match=remap_min_match,
                 min_consecutive_match=remap_min_exact_match
             )

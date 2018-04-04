@@ -8,6 +8,7 @@ import warnings
 import tab
 
 from . import __version__
+from . import util
 from .align import SUPPORTED_ALIGNER
 from .annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
 from .annotate.file_io import load_annotations
@@ -27,22 +28,22 @@ from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 
 REFERENCE_DEFAULTS = WeakMavisNamespace()
 REFERENCE_DEFAULTS.add(
-    'template_metadata', None, cast_type=str,
+    'template_metadata', util.DelimListString(), cast_type=util.DelimListString,
     defn='file containing the cytoband template information. Used for illustrations only')
 REFERENCE_DEFAULTS.add(
-    'masking', None, cast_type=str,
+    'masking', util.DelimListString(), cast_type=util.DelimListString,
     defn='file containing regions for which input events overlapping them are dropped prior to validation')
 REFERENCE_DEFAULTS.add(
-    'annotations', None, cast_type=str,
+    'annotations', util.DelimListString(), cast_type=util.DelimListString,
     defn='path to the reference annotations of genes, transcript, exons, domains, etc')
 REFERENCE_DEFAULTS.add(
     'aligner_reference', None, cast_type=str,
     defn='path to the aligner reference file used for aligning the contig sequences')
 REFERENCE_DEFAULTS.add(
-    'dgv_annotation', None, cast_type=str,
+    'dgv_annotation', util.DelimListString(), cast_type=util.DelimListString,
     defn='Path to the dgv reference processed to look like the cytoband file.')
 REFERENCE_DEFAULTS.add(
-    'reference_genome', None, cast_type=str,
+    'reference_genome', util.DelimListString(), cast_type=util.DelimListString,
     defn='Path to the human reference genome fasta file')
 
 CONVERT_OPTIONS = WeakMavisNamespace()
@@ -312,9 +313,11 @@ class MavisConfig:
 
         SUPPORTED_ALIGNER.enforce(self.validate.aligner)
 
-        for attr, fname in self.reference.items():
-            if (fname and not os.path.exists(fname)) or (not fname and attr not in {'dgv_annotation', 'masking', 'template_metadata'}):
-                raise OSError('required reference file {} does not exist at: {}'.format(attr, fname))
+        for attr, fnames in self.reference.items():
+            if attr != 'aligner_reference':
+                self.reference[attr] = [filepath(v) for v in fnames]
+            if not self.reference[attr] and attr not in {'dgv_annotation', 'masking', 'template_metadata'}:
+                raise FileNotFoundError('required reference file {} does not exist'.format(attr))
 
         # set the conversion section
         self.convert = kwargs.pop('convert', {})
@@ -338,7 +341,7 @@ class MavisConfig:
                 for file_expr in val[1:-2]:
                     expanded = bash_expands(file_expr)
                     if not expanded:
-                        raise OSError('input file(s) do not exist', val[1:-2])
+                        raise FileNotFoundError('input file(s) do not exist', val[1:-2])
                     expanded_inputs.extend(expanded)
                 val = [val[0]] + expanded_inputs + val[-2:]
             self.convert[attr] = val
@@ -382,7 +385,7 @@ class MavisConfig:
             class:`list` of :class:`Namespace`: namespace arguments for each library
         """
         if not os.path.exists(filepath):
-            raise OSError('File does not exist: {}'.format(filepath))
+            raise FileNotFoundError('File does not exist: {}'.format(filepath))
         parser = ConfigParser(interpolation=ExtendedInterpolation())
         parser.read(filepath)
         config_dict = {}
@@ -413,7 +416,8 @@ def get_metavar(arg_type):
 
 
 def filepath(path):
-    if not os.path.exists(path):
+    file_list = bash_expands(path)
+    if not file_list:
         raise TypeError('File does not exist')
     return os.path.abspath(path)
 
@@ -443,10 +447,14 @@ def augment_parser(arguments, parser, required=None):
             parser.add_argument(
                 '-v', '--version', action='version', version='%(prog)s version ' + __version__,
                 help='Outputs the version number')
+        elif arg == 'aligner_reference':
+            parser.add_argument(
+                '--{}'.format(arg), default=REFERENCE_DEFAULTS[arg], required=required,
+                help=REFERENCE_DEFAULTS.define(arg), type=filepath)
         elif arg in REFERENCE_DEFAULTS:
             parser.add_argument(
                 '--{}'.format(arg), default=REFERENCE_DEFAULTS[arg], required=required,
-                help=REFERENCE_DEFAULTS.define(arg), type=nullable_filepath)
+                help=REFERENCE_DEFAULTS.define(arg), type=filepath, nargs='*')
         elif arg == 'config':
             parser.add_argument('config', 'path to the config file', type=filepath)
         elif arg == 'bam_file':
@@ -594,12 +602,6 @@ def generate_config(args, parser, log=devnull):
         parser.error(' '.join(err.args))
 
     if SUBCOMMAND.VALIDATE not in args.skip_stage:
-        # load the annotations if we need them
-        if any([l.is_trans() for l in libs]):
-            if not args.get('annotations_filename', None):
-                parser.error('argument --annotations: is required to gather bam stats for transcriptome libraries')
-            log('loading the reference annotations file', args.annotations_filename)
-            args.annotations = load_annotations(args.annotations_filename)
         for i, libconf in enumerate(libs):
             log('generating the config section for:', libconf.library)
             libs[i] = LibraryConfig.build(

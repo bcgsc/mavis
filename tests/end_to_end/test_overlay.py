@@ -25,7 +25,7 @@ class TestOverlayOptions(unittest.TestCase):
 
     def test_basic(self):
         with patch.object(sys, 'argv', [
-            'mavis', SUBCOMMAND.OVERLAY, '--annotations', ANNOTATIONS, 'GAGE4', '--output', self.temp_output
+            'mavis', SUBCOMMAND.OVERLAY, 'GAGE4', '--annotations', ANNOTATIONS, '--output', self.temp_output
         ]):
             try:
                 returncode = main()
@@ -37,7 +37,7 @@ class TestOverlayOptions(unittest.TestCase):
 
     def test_marker(self):
         with patch.object(sys, 'argv', [
-            'mavis', SUBCOMMAND.OVERLAY, '--annotations', ANNOTATIONS, 'GAGE4', '--output', self.temp_output,
+            'mavis', SUBCOMMAND.OVERLAY, 'GAGE4', '--annotations', ANNOTATIONS, '--output', self.temp_output,
             '--marker', 'm', '49364900'
         ]):
             try:
@@ -50,7 +50,7 @@ class TestOverlayOptions(unittest.TestCase):
 
     def test_marker_range(self):
         with patch.object(sys, 'argv', [
-            'mavis', SUBCOMMAND.OVERLAY, '--annotations', ANNOTATIONS, 'GAGE4', '--output', self.temp_output,
+            'mavis', SUBCOMMAND.OVERLAY, 'GAGE4', '--annotations', ANNOTATIONS, '--output', self.temp_output,
             '--marker', 'm', '49364900', '49365900'
         ]):
             try:
@@ -63,7 +63,7 @@ class TestOverlayOptions(unittest.TestCase):
 
     def test_marker_not_enough_args(self):
         with patch.object(sys, 'argv', [
-            'mavis', SUBCOMMAND.OVERLAY, '--annotations', ANNOTATIONS, 'GAGE4', '--output', self.temp_output,
+            'mavis', SUBCOMMAND.OVERLAY, 'GAGE4', '--annotations', ANNOTATIONS, '--output', self.temp_output,
             '--marker', 'm'
         ]):
             try:
@@ -88,7 +88,7 @@ class TestOverlayOptions(unittest.TestCase):
 
     def test_marker_not_int(self):
         with patch.object(sys, 'argv', [
-            'mavis', SUBCOMMAND.OVERLAY, '--annotations', ANNOTATIONS, 'GAGE4', '--output', self.temp_output,
+            'mavis', SUBCOMMAND.OVERLAY, 'GAGE4', '--annotations', ANNOTATIONS, '--output', self.temp_output,
             '--marker', 'm', 'k'
         ]):
             try:
@@ -101,7 +101,7 @@ class TestOverlayOptions(unittest.TestCase):
 
     def test_read_depth_plot(self):
         with patch.object(sys, 'argv', [
-            'mavis', SUBCOMMAND.OVERLAY, '--annotations', ANNOTATIONS, 'GAGE4', '--output', self.temp_output,
+            'mavis', SUBCOMMAND.OVERLAY, 'GAGE4', '--annotations', ANNOTATIONS, '--output', self.temp_output,
             '--read_depth_plot', 'axis', BAM
         ]):
             try:
@@ -114,7 +114,7 @@ class TestOverlayOptions(unittest.TestCase):
 
     def test_read_depth_plot_binned(self):
         with patch.object(sys, 'argv', [
-            'mavis', SUBCOMMAND.OVERLAY, '--annotations', ANNOTATIONS, 'GAGE4', '--output', self.temp_output,
+            'mavis', SUBCOMMAND.OVERLAY, 'GAGE4', '--annotations', ANNOTATIONS, '--output', self.temp_output,
             '--read_depth_plot', 'axis', BAM, '0.5'
         ]):
             try:
@@ -128,7 +128,7 @@ class TestOverlayOptions(unittest.TestCase):
     def test_read_depth_plot_not_binned_but_stranded(self):
         # no ymax
         with patch.object(sys, 'argv', [
-            'mavis', SUBCOMMAND.OVERLAY, '--annotations', ANNOTATIONS, 'GAGE4', '--output', self.temp_output,
+            'mavis', SUBCOMMAND.OVERLAY, 'GAGE4', '--annotations', ANNOTATIONS, '--output', self.temp_output,
             '--read_depth_plot', 'axis', BAM, '1', 'none', 'True'
         ]):
             try:

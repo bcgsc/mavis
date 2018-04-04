@@ -127,7 +127,7 @@ def main(
     if other_libs:
         log('warning: ignoring breakpoints found for other libraries:', sorted([l for l in other_libs]))
     if other_chr:
-        log('warning: filtered events on chromosomes not found in "limit_to_chr"', other_chr)
+        log('warning: filtered events on chromosomes', other_chr)
     # filter by masking file
     breakpoint_pairs, masked_pairs = filter_on_overlap(breakpoint_pairs, masking)
     for bpp in masked_pairs:

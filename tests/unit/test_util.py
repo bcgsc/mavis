@@ -3,7 +3,7 @@ import unittest
 
 from mavis.constants import COLUMNS, ORIENT, STRAND
 from mavis.error import NotSpecifiedError
-from mavis.util import cast, ChrListString, ENV_VAR_PREFIX, get_env_variable, MavisNamespace, WeakMavisNamespace, read_bpp_from_input_file, get_connected_components
+from mavis.util import cast, DelimListString, ENV_VAR_PREFIX, get_env_variable, MavisNamespace, WeakMavisNamespace, read_bpp_from_input_file, get_connected_components
 
 from .mock import Mock
 
@@ -40,19 +40,23 @@ class TestGetConnectedComponents(unittest.TestCase):
         self.assertEqual({6, 7, 8}, components[1])
 
 
-class TestChrListString(unittest.TestCase):
+class TestDelimListString(unittest.TestCase):
     def test_cast_from_list(self):
-        c = ChrListString(['1', '2', '3'])
+        c = DelimListString(['1', '2', '3'])
         self.assertTrue('1' in c)
         self.assertTrue('2' in c)
         self.assertTrue('3' in c)
         self.assertFalse('4' in c)
 
     def test_cast_from_string(self):
-        c = ChrListString('1;2;3;4')
+        c = DelimListString('1;2;3;4')
         self.assertEqual(['1', '2', '3', '4'], list(c))
         self.assertTrue('1' in c)
         self.assertFalse('x' in c)
+
+    def test_all_is_none(self):
+        self.assertNotIn('1', DelimListString(''))
+        self.assertIn('1', DelimListString('', none_is_all=True))
 
 
 class TestCast(unittest.TestCase):

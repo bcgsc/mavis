@@ -14,10 +14,10 @@ from .align import get_aligner_version, SUPPORTED_ALIGNER
 from .annotate.base import BioInterval
 from .annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
 from .annotate.file_io import load_annotations, load_masking_regions, load_reference_genome, load_templates
-from .annotate.main import main as annotate_main
+from .annotate import main as annotate_main
 from .checker import check_completion
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
-from .cluster.main import main as cluster_main
+from .cluster import main as cluster_main
 from .config import augment_parser, MavisConfig, generate_config, get_metavar, CustomHelpFormatter, RangeAppendAction
 from .constants import SUBCOMMAND, PROTOCOL, float_fraction
 from .error import DrawingFitError
@@ -25,15 +25,15 @@ from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS, DiagramSett
 from .illustrate.diagram import draw_multi_transcript_overlay
 from .illustrate.scatter import bam_to_scatter
 from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
-from .pairing.main import main as pairing_main
+from .pairing import main as pairing_main
 from .submit import SubmissionScript, SCHEDULER_CONFIG
 from .submit import STD_OPTIONS as STD_SUBMIT_OPTIONS
 from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
-from .summary.main import main as summary_main
+from .summary import main as summary_main
 from .tools import convert_tool_output, SUPPORTED_TOOL
 from .util import bash_expands, get_env_variable, log, log_arguments, MavisNamespace, mkdirp, output_tabbed_file
 from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
-from .validate.main import main as validate_main
+from .validate import main as validate_main
 
 
 VALIDATION_PASS_PATTERN = '*.validation-passed.tab'
@@ -64,11 +64,7 @@ def build_validate_command(config, libconf, inputfile, outputdir):
     args.update({k: v for k, v in libconf.items() if k in args})
 
     command = ['{} {}'.format(PROGNAME, SUBCOMMAND.VALIDATE)]
-    for argname, value in args.items():
-        if isinstance(value, str):
-            command.append('--{} "{}"'.format(argname, value))
-        else:
-            command.append('--{} {}'.format(argname, value))
+    command.extend(stringify_args_to_command(args))
     command.append('--inputs {}'.format(repr(inputfile)))
     command.append('--output {}'.format(outputdir))
     return ' \\\n\t'.join(command) + '\n'
@@ -94,11 +90,7 @@ def build_annotate_command(config, libconf, inputfile, outputdir):
     args.update(config.annotate.items())
     args.update({k: v for k, v in libconf.items() if k in args})
     command = ['{} {}'.format(PROGNAME, SUBCOMMAND.ANNOTATE)]
-    for argname, value in args.items():
-        if isinstance(value, str):
-            command.append('--{} "{}"'.format(argname, value))
-        else:
-            command.append('--{} {}'.format(argname, value))
+    command.extend(stringify_args_to_command(args))
     command.append('--inputs {}'.format(inputfile))
     command.append('--output {}'.format(outputdir))
     return ' \\\n\t'.join(command) + '\n'
@@ -129,6 +121,20 @@ def run_conversion(config, libconf, conversion_dir, assume_no_untemplated=True):
         else:
             inputs.append(input_file)
     return inputs
+
+
+def stringify_args_to_command(args):
+    command = []
+    for argname, value in args.items():
+        if isinstance(value, str):
+            command.append('--{} "{}"'.format(argname, value))
+        else:
+            try:
+                value = ' '.join([str(v) for v in value])
+            except TypeError:
+                pass
+            command.append('--{} {}'.format(argname, value))
+    return command
 
 
 def main_pipeline(config):
@@ -162,7 +168,7 @@ def main_pipeline(config):
         merge_args.update(config.cluster.items())
         merge_args.update(libconf.items())
         log('clustering', '(split only)' if merge_args['split_only'] else '')
-        inputs = cluster_main(log_args=True, **merge_args)
+        inputs = cluster_main.main(log_args=True, **merge_args)
 
         for inputfile in inputs:
             prefix = get_prefix(inputfile)  # will be batch id + job number
@@ -213,11 +219,7 @@ def main_pipeline(config):
         'annotations': config.reference.annotations_filename
     })
     command = ['{} {}'.format(PROGNAME, SUBCOMMAND.PAIR)]
-    for arg, value in sorted(args.items()):
-        if isinstance(value, str):
-            command.append('--{} "{}"'.format(arg, value))
-        else:
-            command.append('--{} {}'.format(arg, value))
+    command.extend(stringify_args_to_command(args))
     command.append('--inputs {}'.format(' \\\n\t'.join(pairing_inputs)))
     command = ' \\\n\t'.join(command)
 
@@ -247,11 +249,7 @@ def main_pipeline(config):
     )
     args.update(config.summary.items())
     command = ['{} {}'.format(PROGNAME, SUBCOMMAND.SUMMARY)]
-    for arg, value in sorted(args.items()):
-        if isinstance(value, str):
-            command.append('--{} "{}"'.format(arg, value))
-        else:
-            command.append('--{} {}'.format(arg, value))
+    command.extend(stringify_args_to_command(args))
     command = ' \\\n\t'.join(command)
 
     options = {k: config.schedule[k] for k in STD_SUBMIT_OPTIONS}
@@ -465,18 +463,18 @@ def main():
 
     # cluster
     augment_parser(
-        ['library', 'protocol', 'strand_specific', 'disease_status', 'annotations', 'masking'],
+        ['library', 'protocol', 'strand_specific', 'disease_status'],
         required[SUBCOMMAND.CLUSTER])
-    augment_parser(CLUSTER_DEFAULTS.keys(), optional[SUBCOMMAND.CLUSTER])
+    augment_parser(list(CLUSTER_DEFAULTS.keys()) + ['masking', 'annotations'], optional[SUBCOMMAND.CLUSTER])
 
     # validate
     augment_parser(
         ['library', 'protocol', 'bam_file', 'read_length', 'stdev_fragment_size', 'median_fragment_size'] +
-        ['strand_specific', 'annotations', 'reference_genome', 'aligner_reference'],
+        ['strand_specific', 'reference_genome', 'aligner_reference'],
         required[SUBCOMMAND.VALIDATE]
     )
     augment_parser(VALIDATION_DEFAULTS.keys(), optional[SUBCOMMAND.VALIDATE])
-    augment_parser(['masking'], optional[SUBCOMMAND.VALIDATE])
+    augment_parser(['masking', 'annotations'], optional[SUBCOMMAND.VALIDATE])
 
     # annotate
     augment_parser(
@@ -547,19 +545,17 @@ def main():
 
     for arg in ['reference_genome', 'aligner_reference']:
         if arg in rargs:
-            if not os.path.exists(str(rargs[arg])):
+            if not rargs[arg]:
                 parser.error('--{} file does not exist at: {}'.format(arg, rargs[arg]))
             rargs['{}_filename'.format(arg)] = rargs[arg]
 
     for arg in ['masking', 'dgv_annotation', 'template_metadata']:  # optional inputs can be None
         filename = '{}_filename'.format(arg)
         if rargs.get(arg, None):
-            if not os.path.exists(str(rargs[arg])):
-                parser.error('--{} file does not exist at: {}'.format(arg, rargs[arg]))
             rargs[filename] = rargs[arg]
             rargs[arg] = None
         elif arg in rargs:
-            rargs[filename] = None
+            rargs[filename] = []
             rargs[arg] = {}
 
     # load the reference files if they have been given and reset the arguments to hold the original file name and the
@@ -573,9 +569,9 @@ def main():
     ]):
         log('loading (annotations):', rargs.annotations)
         rargs.annotations_filename = rargs.annotations
-        if not rargs.annotations or not os.path.exists(rargs.annotations):
-            parser.error('--annotations file does not exist at: {}'.format(rargs.annotations))
-        rargs.annotations = load_annotations(rargs.annotations)
+        if not rargs.annotations:
+            parser.error('--annotations file(s) are required and do not exist')
+        rargs.annotations = load_annotations(*rargs.annotations)
 
     for arg, load_func in [
         ('reference_genome', load_reference_genome),
@@ -586,19 +582,19 @@ def main():
         fname = '{}_filename'.format(arg)
         if rargs.get(fname, None):
             log('loading ({}):'.format(arg), rargs[fname])
-            rargs[arg] = load_func(rargs[fname])
+            rargs[arg] = load_func(*rargs[fname])
 
     # decide which main function to execute
     if args.command == SUBCOMMAND.CLUSTER:
-        cluster_main(**args, start_time=start_time)
+        cluster_main.main(**args, start_time=start_time)
     elif args.command == SUBCOMMAND.VALIDATE:
-        validate_main(**args, start_time=start_time)
+        validate_main.main(**args, start_time=start_time)
     elif args.command == SUBCOMMAND.ANNOTATE:
-        annotate_main(**args, start_time=start_time)
+        annotate_main.main(**args, start_time=start_time)
     elif args.command == SUBCOMMAND.PAIR:
-        pairing_main(**args, start_time=start_time)
+        pairing_main.main(**args, start_time=start_time)
     elif args.command == SUBCOMMAND.SUMMARY:
-        summary_main(**args, start_time=start_time)
+        summary_main.main(**args, start_time=start_time)
     elif args.command == SUBCOMMAND.CONVERT:
         del args.command
         convert_main(**args)
