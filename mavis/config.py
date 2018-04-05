@@ -369,6 +369,9 @@ class MavisConfig:
                     self.libraries[libname] = lc
                 except Exception as err:
                     raise UserWarning('could not build configuration section for library', libname, err, terr)
+            for inputfile in lc.inputs:
+                if inputfile not in self.convert and not os.path.exists(inputfile):
+                    raise FileNotFoundError('Input file specified in the config does not exist', inputfile)
 
     def has_transcriptome(self):
         return any([l.is_trans() for l in self.libraries.values()])
@@ -456,7 +459,7 @@ def augment_parser(arguments, parser, required=None):
                 '--{}'.format(arg), default=REFERENCE_DEFAULTS[arg], required=required,
                 help=REFERENCE_DEFAULTS.define(arg), type=filepath, nargs='*')
         elif arg == 'config':
-            parser.add_argument('config', 'path to the config file', type=filepath)
+            parser.add_argument('config', help='path to the config file', type=filepath)
         elif arg == 'bam_file':
             parser.add_argument('--bam_file', help='path to the input bam file', required=required, type=filepath)
         elif arg == 'read_length':

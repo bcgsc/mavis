@@ -154,8 +154,18 @@ class TestPipeline(unittest.TestCase):
     def test_error_on_bad_config(self):
         args = ['mavis', SUBCOMMAND.PIPELINE, 'thing/that/doesnot/exist.cfg', '-o', self.temp_output]
         with patch.object(sys, 'argv', args):
-            with self.assertRaises(OSError):
-                self.assertEqual(0, main())
+            print(sys.argv)
+            try:
+                main()
+                raise AssertionError('should have thrown error')
+            except SystemExit as err:
+                self.assertEqual(2, err.code)
+
+    def test_error_on_bad_input_file(self):
+        args = ['mavis', SUBCOMMAND.PIPELINE, data('bad_input_file.cfg'), '-o', self.temp_output]
+        with patch.object(sys, 'argv', args):
+            with self.assertRaises(FileNotFoundError):
+                main()
 
     def test_missing_reference(self):
         args = ['mavis', SUBCOMMAND.PIPELINE, data('missing_reference.cfg'), '-o', self.temp_output]

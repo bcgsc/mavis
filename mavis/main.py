@@ -455,7 +455,7 @@ def main():
         required[command].add_argument('-o', '--output', help='path to the output directory', required=True)
 
     # pipeline
-    required[SUBCOMMAND.PIPELINE].add_argument('config', help='path to the input pipeline configuration file', metavar='FILEPATH')
+    augment_parser(['config'], required[SUBCOMMAND.PIPELINE])
     optional[SUBCOMMAND.PIPELINE].add_argument(
         '--skip_stage', choices=[SUBCOMMAND.CLUSTER, SUBCOMMAND.VALIDATE], action='append', default=[],
         help='Use flag once per stage to skip. Can skip clustering or validation or both')

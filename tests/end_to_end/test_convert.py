@@ -114,6 +114,7 @@ class TestConvert(unittest.TestCase):
     def test_cnvnator(self):
         self.run_main(os.path.join(DATA_PREFIX, 'cnvnator.tab'), SUPPORTED_TOOL.CNVNATOR, False)
 
+
 def tearDownModule():
     # remove the temp directory and outputs
     shutil.rmtree(TEMP_OUTPUT)
