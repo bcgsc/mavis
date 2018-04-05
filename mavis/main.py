@@ -575,6 +575,10 @@ def main():
         if not rargs.annotations:
             parser.error('--annotations file(s) are required and do not exist')
         rargs.annotations = load_annotations(*rargs.annotations)
+    elif args.command == SUBCOMMAND.PIPELINE:
+        rargs.annotations_filename = rargs.annotations
+        if not rargs.annotations:
+            parser.error('--annotations file(s) are required and do not exist')
 
     for arg, load_func in [
         ('reference_genome', load_reference_genome),
@@ -583,6 +587,8 @@ def main():
         ('dgv_annotation', load_masking_regions)
     ]:
         fname = '{}_filename'.format(arg)
+        if args.command == SUBCOMMAND.PIPELINE and arg != 'masking':
+            continue
         if rargs.get(fname, None):
             log('loading ({}):'.format(arg), rargs[fname])
             rargs[arg] = load_func(*rargs[fname])
