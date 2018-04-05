@@ -51,7 +51,6 @@ def build_validate_command(config, libconf, inputfile, outputdir):
         'masking': config.reference.masking_filename,
         'reference_genome': config.reference.reference_genome_filename,
         'aligner_reference': config.reference.aligner_reference,
-        'annotations': config.reference.annotations_filename,
         'library': libconf.library,
         'bam_file': libconf.bam_file,
         'protocol': libconf.protocol,
@@ -60,6 +59,10 @@ def build_validate_command(config, libconf, inputfile, outputdir):
         'median_fragment_size': libconf.median_fragment_size,
         'strand_specific': libconf.strand_specific
     }
+    try:
+        args['annotations'] = config.reference.annotations_filename
+    except AttributeError:
+        pass
     args.update(config.validate.items())
     args.update({k: v for k, v in libconf.items() if k in args})
 
@@ -78,6 +81,7 @@ def build_annotate_command(config, libconf, inputfile, outputdir):
         'reference_genome': config.reference.reference_genome_filename,
         'template_metadata': config.reference.template_metadata_filename,
         'masking': config.reference.masking_filename,
+        'annotations': config.reference.annotations_filename,
         'min_orf_size': config.annotate.min_orf_size,
         'max_orf_cap': config.annotate.max_orf_cap,
         'library': libconf.library,
@@ -86,10 +90,6 @@ def build_annotate_command(config, libconf, inputfile, outputdir):
         'domain_name_regex_filter': config.illustrate.domain_name_regex_filter,
         'max_proximity': config.cluster.max_proximity
     }
-    try:
-        args['annotations'] = config.reference.annotations_filename
-    except AttributeError:
-        pass
     args.update(config.annotate.items())
     args.update({k: v for k, v in libconf.items() if k in args})
     command = ['{} {}'.format(PROGNAME, SUBCOMMAND.ANNOTATE)]
