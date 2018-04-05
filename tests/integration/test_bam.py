@@ -164,6 +164,18 @@ class TestNsbAlign(unittest.TestCase):
         alignments = _read.nsb_align(ref, seq, min_consecutive_match=6, min_overlap_percent=0.5)
         self.assertEqual(1, len(alignments))
 
+    def test_min_overlap(self):
+        ref = 'ATTACATTAAAGATTCAAACTCCTAGAGTTTTTTTGATTTTTAGTATGATCTTTAGATAAAAAAAAAGGAAGAAAAAGAAAAAAAAACAGAGTCTATTAAGGCATCTTCTATGGTCAGATATATCTATTTTTTTCTTTCTTTTTTTTACTTTCATTAAGTGCCACTAAAAAATTAGGTTCAATTAAACTTTATTAATCTCTTCTGAGTTTTGAT'
+        seq = 'GATATATCTATTTTTTTCTTTCTTTTTTTTACTTTCATTAAGTGCCACTAAAAAATTAGGTTCAATTAAACTTTATTAATCTCTTCTGAGTTTTGATTGAGTGTATATATATATATATATATATATATATATATACCCAGTTTCAAGCAG'
+        alignments = _read.nsb_align(
+            ref, seq,
+            min_consecutive_match=15,
+            min_match=0.95,
+            min_overlap_percent=(len(seq) - 15) / len(seq)
+        )
+        print(alignments)
+        self.assertEqual(0, len(alignments))
+
 
 class TestReadPairStrand(unittest.TestCase):
     def setUp(self):

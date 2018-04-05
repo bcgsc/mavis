@@ -674,6 +674,7 @@ class Evidence(BreakpointPair):
         log('assembly size of {} sequences'.format(len(assembly_sequences) // 2))
 
         kmer_size = self.read_length * self.assembly_kmer_size
+        remap_min_overlap = max(self.read_length - self.assembly_min_exact_match_to_remap, kmer_size)
 
         contigs = assemble(
             assembly_sequences, kmer_size,
@@ -681,6 +682,7 @@ class Evidence(BreakpointPair):
             assembly_max_paths=self.assembly_max_paths,
             min_contig_length=self.read_length,
             log=log,
+            remap_min_overlap=remap_min_overlap,
             remap_min_exact_match=self.assembly_min_exact_match_to_remap,
             assembly_min_uniq=self.assembly_min_uniq,
             min_complexity=self.min_call_complexity

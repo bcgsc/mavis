@@ -528,6 +528,9 @@ def _call_by_spanning_reads(source_evidence, consumed_evidence):
     for read in source_evidence.spanning_reads - consumed_evidence:
         for event in call_read_events(read):
             event = convert_to_duplication(event, source_evidence.reference_genome)
+            if not source_evidence.stranded:
+                event.break1.strand = STRAND.NS
+                event.break2.strand = STRAND.NS
             if all([
                 event.query_consumption() >= source_evidence.contig_aln_min_query_consumption,
                 event.score() >= source_evidence.contig_aln_min_score
@@ -542,9 +545,6 @@ def _call_by_spanning_reads(source_evidence, consumed_evidence):
             continue
         event.break1.seq = None  # unless we are collecting a consensus we shouldn't assign sequences to the breaks
         event.break2.seq = None
-        if not source_evidence.stranded:
-            event.break1.strand = STRAND.NS
-            event.break2.strand = STRAND.NS
         for event_type in BreakpointPair.classify(source_evidence) & BreakpointPair.classify(event, distance=source_evidence.distance):
             try:
                 new_event = EventCall(
@@ -602,14 +602,12 @@ def call_events(source_evidence):
     errors = set()
 
     for call in _call_by_contigs(source_evidence):
-        if call.complexity() >= source_evidence.min_call_complexity:
-            calls.append(call)
-            consumed_evidence.update(call.support())
+        consumed_evidence.update(call.support())
+        calls.append(call)
 
     for call in _call_by_spanning_reads(source_evidence, consumed_evidence):
-        if call.complexity() >= source_evidence.min_call_complexity:
-            consumed_evidence.update(call.support())
-            calls.append(call)
+        consumed_evidence.update(call.support())
+        calls.append(call)
 
     # for ins/dup check for compatible call as well
     putative_types = source_evidence.putative_event_types()
@@ -630,8 +628,6 @@ def call_events(source_evidence):
             if len(call.flanking_pairs) < source_evidence.min_flanking_pairs_resolution:
                 errors.add('flanking call ({}) failed to supply the minimum evidence required ({} < {})'.format(
                     event_type, len(call.flanking_pairs), source_evidence.min_flanking_pairs_resolution))
-            elif call.complexity() < source_evidence.min_call_complexity:
-                errors.add('flanking call failed minimum call complexity filter: {}'.format(call.complexity()))
             else:
                 calls.append(call)
         except AssertionError as err:
@@ -893,7 +889,7 @@ def _call_by_split_reads(evidence, event_type, consumed_evidence=None):
                     len(call.break2_split_read_names()) < 1,
                     linking_reads < evidence.min_linking_split_reads,
                     call.event_type != event_type
-                ]) and call.complexity() >= evidence.min_call_complexity:
+                ]):
                     linked_pairings.append(call)
                     # consume the evidence
                     consumed_evidence.update(call.break1_split_reads)

@@ -99,23 +99,37 @@ class WeakMavisNamespace(MavisNamespace):
             return object.__getattribute__(self, attr)
 
 
-class ChrListString(list):
+class DelimListString(list):
 
-    def __init__(self, string):
+    def __init__(self, string='', none_is_all=False, delim=r'[\s;,]+'):
+        self.delim = delim
         if not isinstance(string, str):
             for item in string:
                 self.append(item)
         else:
-            delim = '\s+' if ';' not in string else ';'
-            items = [i for i in re.split(delim, string) if i]
+            items = [i for i in re.split(self.delim, string) if i]
             for item in items:
                 self.append(item)
+        self.none_is_all = none_is_all
 
     def __contains__(self, item):
-        if list.__len__(self) == 0:
+        if list.__len__(self) == 0 and self.none_is_all:
             return True
         else:
             return list.__contains__(self, item)
+
+    def __str__(self):
+        return ' '.join([repr(s) for s in self])
+
+    def __repr__(self):
+        return 'DelimListString({})'.format(str(self))
+
+
+class ChrListString(DelimListString):
+
+    def __init__(self, *pos, **kwargs):
+        DelimListString.__init__(self, *pos, **kwargs)
+        self.none_is_all = True
 
 
 def bash_expands(expression):
@@ -146,8 +160,8 @@ def log_arguments(args):
     log('arguments')
     for arg, val in sorted(args.items()):
         if isinstance(val, list):
-            if not val:
-                log(arg, '= []', time_stamp=False)
+            if len(val) <= 1:
+                log(arg, '= {}'.format(val), time_stamp=False)
                 continue
             log(arg, '= [', time_stamp=False)
             for v in val:
