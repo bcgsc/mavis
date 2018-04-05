@@ -76,7 +76,6 @@ def build_annotate_command(config, libconf, inputfile, outputdir):
     """
     args = {
         'reference_genome': config.reference.reference_genome_filename,
-        'annotations': config.reference.annotations_filename,
         'template_metadata': config.reference.template_metadata_filename,
         'masking': config.reference.masking_filename,
         'min_orf_size': config.annotate.min_orf_size,
@@ -87,6 +86,10 @@ def build_annotate_command(config, libconf, inputfile, outputdir):
         'domain_name_regex_filter': config.illustrate.domain_name_regex_filter,
         'max_proximity': config.cluster.max_proximity
     }
+    try:
+        args['annotations'] = config.reference.annotations_filename
+    except AttributeError:
+        pass
     args.update(config.annotate.items())
     args.update({k: v for k, v in libconf.items() if k in args})
     command = ['{} {}'.format(PROGNAME, SUBCOMMAND.ANNOTATE)]
