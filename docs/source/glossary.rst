@@ -7,7 +7,7 @@ General Terms
 
 .. glossary::
     :sorted:
-    
+
     flanking read pair
         A pair of reads where one read maps to one side of a set of breakpoints and its mate maps to the other.
 
@@ -64,7 +64,7 @@ General Terms
         JSON (JavaScript Object Notation) is a data file format. see https://www.w3schools.com/js/js_json_intro.asp.
 
     blat
-        Alignment tool. see https://genome.ucsc.edu/FAQ/FAQblat.html#blat3 for instructions on download and install. 
+        Alignment tool. see https://genome.ucsc.edu/FAQ/FAQblat.html#blat3 for instructions on download and install.
 
     IGV
         Integrative Genomics Viewer is a visualization tool. see http://software.broadinstitute.org/software/igv.
@@ -82,21 +82,24 @@ General Terms
         Community based standard of reccommendations for variant notation. See http://varnomen.hgvs.org/
 
     BreakDancer
-        BreakDancer is an SV caller. Source for BreakDancer can be found `here <https://github.com/genome/breakdancer>`__ [Chen-2009]_ 
+        BreakDancer is an SV caller. Source for BreakDancer can be found `here <https://github.com/genome/breakdancer>`__ [Chen-2009]_
 
     BreakSeq
         BreakSeq is an SV caller. Source for BreakSeq can be found `here <https://github.com/bioinform/breakseq2>`__ [Abyzov-2015]_
 
     Chimerascan
         Chimerascan is an SV caller. Source for Chimerascan can be found `here <https://code.google.com/archive/p/chimerascan>`__ [Iyer-2011]_
-    
+
+    CNVnator
+        CNVnator is an SV caller. Source for CNVnator can be found `here <https://github.com/abyzovlab/CNVnator>`__ [Abyzov-2011]_
+
     DeFuse
         DeFuse is an SV caller. Source for DeFuse can be found `here <https://bitbucket.org/dranew/defuse>`__ [McPherson-2011]_
 
     DELLY
         DELLY is an SV caller. Source for DELLY can be found `here <https://github.com/dellytools/delly>`__ [Rausch-2012]_
 
-    Manta 
+    Manta
         Manta is an SV caller. Source for Manta can be found `here <https://github.com/Illumina/manta>`__ [Chen-2016]_
 
     Pindel
