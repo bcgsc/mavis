@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 import re
 
 
-VERSION = '1.7.1'
+VERSION = '1.8.0'
 
 
 def parse_md_readme():
@@ -37,10 +37,6 @@ def check_nonpython_dependencies():
         OSError: A dependency is not installed
     """
     import shutil
-    pth = shutil.which('samtools')
-    if not pth:
-        raise OSError('Samtools is required. Missing executable: samtools')
-    print('Found: samtools at', pth)
     aligner = os.environ['MAVIS_ALIGNER'] if 'MAVIS_ALIGNER' in os.environ and os.environ['MAVIS_ALIGNER'] else 'blat'
     aligner = re.split(r'\s+', aligner)[0]
     pth = shutil.which(aligner)
