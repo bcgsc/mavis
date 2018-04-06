@@ -105,7 +105,8 @@ bash get_hg19_reference_files.sh
 source reference_inputs/hg19_env.sh
 ```
 
-Once the above 3 steps are complete [MAVIS](http://mavis.bcgsc.ca) is ready to be run. See [running the pipeline](http://mavis.bcgsc.ca/docs/latest/pipeline.html).
+Once the above 3 steps are complete [MAVIS](http://mavis.bcgsc.ca) is ready to be run. 
+See the MAVIS [tutorial](http://mavis.bcgsc.ca/docs/latest/pipeline.html#mavis-tutorial) to learn about running MAVIS.
 
 
 
