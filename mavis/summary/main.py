@@ -311,8 +311,16 @@ def main(
             row.data.setdefault(COLUMNS.pairing, '')
             row.data.setdefault(COLUMNS.library, lib)
             # filter pairing ids based on what is still kept?
-            paired_libraries = set([p.split('_')[0] for p in row.pairing.split(';')])
-            inferred_paired_libraries = set([p.split('_')[0] for p in row.inferred_pairing.split(';')])
+            paired_libraries = set()
+            for product_id in row.pairing.split(';'):
+                for lib in bpps_by_library:
+                    if product_id.startswith(lib):
+                        paired_libraries.add(lib)
+            inferred_paired_libraries = set()
+            for product_id in row.inferred_pairing.split(';'):
+                for lib in bpps_by_library:
+                    if product_id.startswith(lib):
+                        inferred_paired_libraries.add(lib)
             for other_lib, (other_protocol, other_disease_state) in libraries.items():
                 column_name = '{}_{}_{}'.format(other_lib, other_disease_state, other_protocol)
                 if other_lib != row.library:

@@ -351,6 +351,7 @@ class MavisConfig:
         self.libraries = {}
 
         for libname, val in kwargs.items():  # all other sections already popped
+            libname = library_name_format(libname)
             d = {}
             d.update(self.cluster.items())
             d.update(self.validate.items())
@@ -431,6 +432,19 @@ def nullable_filepath(path):
     return filepath(path)
 
 
+def library_name_format(input_string):
+    input_string = str(input_string).lower()
+    if re.search(r'[;,_\s]', input_string):
+        raise TypeError('library names cannot contain the reserved characters [;,_\s]', input_string)
+    if input_string == 'none':
+        raise TypeError('library name cannot be none', input_string)
+    if not input_string:
+        raise TypeError('library name cannot be an empty string', input_string)
+    if not re.search(r'^[a-z]', input_string):
+        raise TypeError('library names must start with a letter', input_string)
+    return input_string
+
+
 def augment_parser(arguments, parser, required=None):
     """
     Adds options to the argument parser. Separate function to facilitate the pipeline steps
@@ -474,7 +488,7 @@ def augment_parser(arguments, parser, required=None):
             parser.add_argument(
                 '--median_fragment_size', type=int, help='median inset size for pairs in the bam file', required=required)
         elif arg == 'library':
-            parser.add_argument('--library', help='library name', required=required)
+            parser.add_argument('--library', help='library name', required=required, type=library_name_format)
         elif arg == 'protocol':
             parser.add_argument('--protocol', choices=PROTOCOL.values(), help='library protocol', required=required)
         elif arg == 'disease_status':
