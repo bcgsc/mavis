@@ -545,7 +545,8 @@ def _call_by_spanning_reads(source_evidence, consumed_evidence):
             continue
         event.break1.seq = None  # unless we are collecting a consensus we shouldn't assign sequences to the breaks
         event.break2.seq = None
-        for event_type in BreakpointPair.classify(source_evidence) & BreakpointPair.classify(event, distance=source_evidence.distance):
+        types = BreakpointPair.classify(source_evidence) | {source_evidence.compatible_type}
+        for event_type in types & BreakpointPair.classify(event, distance=source_evidence.distance):
             try:
                 new_event = EventCall(
                     event.break1, event.break2,
@@ -581,7 +582,6 @@ def _call_by_spanning_reads(source_evidence, consumed_evidence):
                 filtered_events.append(event)
         else:
             filtered_events.append(event)
-
     return filtered_events
 
 
