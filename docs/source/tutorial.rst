@@ -1,76 +1,71 @@
 
-Run Through Example
-----------------------
-
-The following example is a tumour normal genome pair with a tumour transcriptome, all of which was set up to run on :term:`SLURM`.
+....
 
 
-Before you Start
-....................
+MAVIS Tutorial
+----------------
 
-Before you can run MAVIS, you will need the output from SV callers and :term:`BAM` files for any libraries that you wish to validate. In this example
-we used output from :term:`DELLY`, :term:`Manta`, :term:`Trans-ABySS`, :term:`Chimerascan`, and :term:`DeFuse`. The results 
-looked something like below (note that for simplicity only relevant files are shown).
+The following tutorial is an introduction to running MAVIS. You will need to download the tutorial data. Additionally
+the instructions pertain to running MAVIS on a :term:`SLURM` cluster.
 
-For the purposes of this example we have 3 libraries
+Getting the Tutorial Data
+.............................
 
-- NG1: A normal genome (blood)
-- TG1: A diseased genome (tumour biopsy)
-- TT1: A diseased transcriptome (tumour transcriptome)
+The tutorial data can be downloaded from the link below. Note that it may take a while as the download is ~29GB 
 
-.. code:: text
+.. code::
 
-    trans-abyss_TT1/
-    |-- fusions/
-    |   |-- fusions.tsv
-    |   |-- ITD.tsv
-    |   |-- local.tsv
-    |   |-- LSR.tsv
-    |   |-- PTD.tsv
-    |   `-- sense_fusion.tsv
-    `-- indels/
-        `-- events_exons_novel.tsv
-    
-    trans-abyss_TG1/
-    |-- fusions/
-    |   |-- fusions.tsv
-    |   |-- ITD.tsv
-    |   |-- local.tsv
-    |   |-- LSR.tsv
-    |   |-- PTD.tsv
-    |   `-- sense_fusion.tsv
-    `-- indels/
-        `-- events_exons_novel.tsv
+    wget http://www.bcgsc.ca/downloads/mavis/tutorial_data.tar.gz
+    tar -xvzf tutorial_data.tar.gz
 
-    defuse_TT1/
-    `-- results/
-        `-- results.classify.tsv
 
-    chimeracan_TT1/
-    `-- chimeras.bedpe
-    
-    manta_TG1_NG1/
-    `-- results/
-        `-- variants/
-            |-- diploidSV.vcf
-            `-- somaticSV.vcf
+The expected contents are
 
-    delly_TG1_NG1/
-    |-- *.bcf
-    `-- combined.vcf
+.. list-table::
+    :header-rows: 1
 
-The appropriate :term:`BAM` files might look like
+    *   - Path
+        - Description
+    *   - README
+        - Information regarding the other files in the directory
+    *   - L1522785992_expected_events.tab
+        - The events that we expect to find, either experimentally validated or 'spiked' in
+    *   - L1522785992_normal.sorted.bam
+        - Paired normal library BAM file
+    *   - L1522785992_normal.sorted.bam.bai
+        - BAM index
+    *   - L1522785992_trans.sorted.bam
+        - Tumour transcriptome BAM file
+    *   - L1522785992_trans.sorted.bam.bai
+        - BAM index file
+    *   - L1522785992_tumour.sorted.bam
+        - Tumour genome BAM file
+    *   - L1522785992_tumour.sorted.bam.bai
+        - BAM index file
+    *   - breakdancer-1.4.5/
+        - Contains the :term:`BreakDancer` output which was run on the tumour genome BAM file
+    *   - breakseq-2.2/
+        - Contains the :term:`BreakSeq` output which was run on the tumour genome BAM file
+    *   - chimerascan-0.4.5/
+        - Contains the :term:`ChimeraScan` output which was run on the tumour transcriptome BAM file
+    *   - defuse-0.6.2/
+        - Contains the :term:`deFuse` output which was run on the tumour transcriptome BAM file
+    *   - manta-1.0.0/
+        - Contains the :term:`Manta` output which was run on the tumour genome and paired normal genome BAM files
 
-.. code:: text
 
-    TT1.bam
-    TT1.bam.bai
-    TG1.bam
-    TG1.bam.bai
-    NG1.bam
-    NG1.bam.bai
+It is also assumed that the user has set the MAVIS environment variables for the required hg19 reference files. For example, the file
+your source might look like
 
-If you have all of these inputs then you are ready to generate the MAVIS pipeline config file.
+.. code:: bash
+
+    export MAVIS_REFERENCE_GENOME=/reference_inputs/hg19.fa
+    export MAVIS_ANNOTATIONS=/reference_inputs/ensembl69_hg19_annotations.json
+    export MAVIS_MASKING=/reference_inputs/hg19_masking.tab
+    export MAVIS_DGV_ANNOTATION=/reference_inputs/dgv_hg19_variants.tab
+    export MAVIS_ALIGNER_REFERENCE=/reference_inputs/hg19.2bit
+    export MAVIS_TEMPLATE_METADATA=/reference_inputs/cytoBand.txt
+
 
 .. _example-generating-the-conf:
 
@@ -84,9 +79,9 @@ The :ref:`config <pipeline-config>` command does most of the work of creating th
 
 .. code:: text
 
-    --library NG1 genome normal False NG1.bam
-    --library TG1 genome diseased False TG1.bam
-    --library TT1 transcriptome diseased True TT1.bam
+    --library L1522785992-normal genome normal False tutorial_data/L1522785992_normal.sorted.bam
+    --library L1522785992-tumour genome diseased False tutorial_data/L1522785992_tumour.sorted.bam
+    --library L1522785992-trans transcriptome diseased True tutorial_data/L1522785992_trans.sorted.bam
 
 2. **Where your SV caller output files (events) are**
    
@@ -94,13 +89,11 @@ If they are raw tool output as in the current example you will need to use the c
 
 .. code:: text
 
-    --convert ta_trans trans-abyss_TT1/fusions/*.tsv transabyss
-    --convert defuse defuse_TT1/results/results.classify.tsv defuse
-    --convert chimera chimeracan_TT1/chimeras.bedpe chimerascan
-    --convert delly delly_TG1_NG1/combined.vcf delly
-    --convert manta manta_TG1_NG1/results/variant/{Diploid,Somatic}.vcf
-    --convert ta_genome trans-abyss_TG1/fusions/*.tsv transabyss
-    --convert ta_indels trans-abyss_TG1/indels/events_exons_novel.tsv transabyss
+    --convert breakdancer tutorial_data/breakdancer-1.4.5/*txt breakdancer
+    --convert breakseq tutorial_data/breakseq-2.2/breakseq.vcf.gz breakseq
+    --convert chimerascan tutorial_data/chimerascan-0.4.5/chimeras.bedpe chimerascan
+    --convert defuse tutorial_data/defuse-0.6.2/results.classify.tsv defuse
+    --convert manta tutorial_data/manta-1.0.0/diploidSV.vcf.gz tutorial_data/manta-1.0.0/somaticSV.vcf manta
 
 .. note::
 
@@ -115,29 +108,28 @@ or the alias from a conversion (the first argument given to the convert option)
 
 .. code:: text
     
-    --assign TT1 ta_indels ta_trans chimera defuse
-    --assign TG1 ta_indels ta_genome manta delly
-    --assign NG1 ta_indels ta_genome manta delly
+    --assign L1522785992-trans chimerascan defuse
+    --assign L1522785992-tumour breakdancer breakseq manta 
+    --assign L1522785992-normal breakdancer breakseq manta
 
-Putting this altogether with a name to call the config, we have the command to generate the pipeline config
+Putting this altogether with a name to call the config, we have the command to generate the pipeline config. You should
+expect this step with these inputs to take about ~5GB memory.
 
 .. code:: bash
 
     mavis config \
-    --library NG1 genome normal False NG1.bam \
-    --library TG1 genome diseased False TG1.bam \
-    --library TT1 transcriptome diseased True TT1.bam \
-    --convert ta_trans trans-abyss_TT1/fusions/*.tsv transabyss \
-    --convert defuse defuse_TT1/results/results.classify.tsv defuse \
-    --convert chimera chimeracan_TT1/chimeras.bedpe chimerascan \
-    --convert delly delly_TG1_NG1/combined.vcf delly \
-    --convert manta manta_TG1_NG1/results/variant/{Diploid,Somatic}.vcf \
-    --convert ta_genome trans-abyss_TG1/fusions/*.tsv transabyss \
-    --convert ta_indels trans-abyss_TG1/indels/events_exons_novel.tsv trans \
-    --assign TT1 ta_indels ta_trans chimera defuse \
-    --assign TG1 ta_indels ta_genome manta delly \
-    --assign NG1 ta_indels ta_genome manta delly \
-    -w mavis.cfg
+        --library L1522785992-normal genome normal False tutorial_data/L1522785992_normal.sorted.bam \
+        --library L1522785992-tumour genome diseased False tutorial_data/L1522785992_tumour.sorted.bam \
+        --library L1522785992-trans transcriptome diseased True tutorial_data/L1522785992_trans.sorted.bam \
+        --convert breakdancer tutorial_data/breakdancer-1.4.5/*txt breakdancer \
+        --convert breakseq tutorial_data/breakseq-2.2/breakseq.vcf.gz breakseq \
+        --convert chimerascan tutorial_data/chimerascan-0.4.5/chimeras.bedpe chimerascan \
+        --convert defuse tutorial_data/defuse-0.6.2/results.classify.tsv defuse \
+        --convert manta tutorial_data/manta-1.0.0/diploidSV.vcf.gz tutorial_data/manta-1.0.0/somaticSV.vcf manta \
+        --assign L1522785992-trans chimerascan defuse \
+        --assign L1522785992-tumour breakdancer breakseq manta  \
+        --assign L1522785992-normal breakdancer breakseq manta \
+        -w mavis.cfg
 
 .. note::
 
@@ -154,47 +146,65 @@ submission scripts for the other stages.
 
     mavis pipeline mavis.config -o output_dir/
 
-Once complete this will look something like this. For simplicity only two of the job directories/files are shown (the number of jobs in configurable)
-and only the contents of one of the library directories
+At this stage you should have something that looks like this. 
+For simplicity not all files/directories have been shown.
 
 .. code:: text
 
     output_dir/
-    |-- converted_inputs/
-    |   |-- delly.tab
-    |   |-- chimera.tab
+    |-- converted_inputs
+    |   |-- breakdancer.tab
+    |   |-- breakseq.tab
+    |   |-- chimerascan.tab
     |   |-- defuse.tab
-    |   |-- manta.tab
-    |   |-- ta_genome.tab
-    |   |-- ta_indels.tab
-    |   `-- ta_trans.tab
-    |-- NG1_normal_genome/
-    |   |-- cluster/
-    |   |   |-- batch-d8zWDrpkbBuxj7eTahuH3K-1.tab
-    |   |   |-- batch-d8zWDrpkbBuxj7eTahuH3K-2.tab
+    |   `-- manta.tab
+    |-- L1522785992-normal_normal_genome
+    |   |-- annotate
+    |   |   `-- batch-EK5Nx7xmfrbX9Vhuz2S7LR-1
+    |   |       `-- submit.sh
+    |   |-- cluster
+    |   |   |-- batch-EK5Nx7xmfrbX9Vhuz2S7LR-1.tab
     |   |   |-- cluster_assignment.tab
     |   |   |-- clusters.bed
     |   |   |-- filtered_pairs.tab
     |   |   `-- MAVIS.COMPLETE
-    |   |-- validate/
-    |   |   |-- batch-d8zWDrpkbBuxj7eTahuH3K-1/
-    |   |   |   `-- submit.sh
-    |   |   `-- batch-d8zWDrpkbBuxj7eTahuH3K-2/
+    |   `-- validate
+    |       `-- batch-EK5Nx7xmfrbX9Vhuz2S7LR-1
+    |           `-- submit.sh
+    |-- L1522785992-trans_diseased_transcriptome
+    |   |-- annotate
+    |   |   `-- batch-EK5Nx7xmfrbX9Vhuz2S7LR-1
     |   |       `-- submit.sh
-    |   `-- annotate/
-    |   |   |-- batch-d8zWDrpkbBuxj7eTahuH3K-1/
-    |   |   |   `-- submit.sh
-    |   |   `-- batch-d8zWDrpkbBuxj7eTahuH3K-2/
+    |   |-- cluster
+    |   |   |-- batch-EK5Nx7xmfrbX9Vhuz2S7LR-1.tab
+    |   |   |-- cluster_assignment.tab
+    |   |   |-- clusters.bed
+    |   |   |-- filtered_pairs.tab
+    |   |   `-- MAVIS.COMPLETE
+    |   `-- validate
+    |       `-- batch-EK5Nx7xmfrbX9Vhuz2S7LR-1
+    |           `-- submit.sh
+    |-- L1522785992-tumour_diseased_genome
+    |   |-- annotate
+    |   |   `-- batch-EK5Nx7xmfrbX9Vhuz2S7LR-1
     |   |       `-- submit.sh
-    |-- TG1_diseased_genome/
-    |-- TT1_diseased_genome/
-    |-- pairing/
+    |   |-- cluster
+    |   |   |-- batch-EK5Nx7xmfrbX9Vhuz2S7LR-1.tab
+    |   |   |-- cluster_assignment.tab
+    |   |   |-- clusters.bed
+    |   |   |-- filtered_pairs.tab
+    |   |   `-- MAVIS.COMPLETE
+    |   `-- validate
+    |       `-- batch-EK5Nx7xmfrbX9Vhuz2S7LR-1
+    |           `-- submit.sh
+    |-- pairing
     |   `-- submit.sh
-    |-- summary/
-    |   `-- submit.sh
-    `-- submit_pipeline_batch-d8zWDrpkbBuxj7eTahuH3K.sh
+    |-- submit_pipeline_batch-EK5Nx7xmfrbX9Vhuz2S7LR.sh
+    `-- summary
+        `-- submit.sh
 
-Submitting the Pipeline to SLURM
+
+Submitting Jobs to the Cluster
 ..................................
 
 The last step is simple, ssh to your head node of your :term:`SLURM` cluster and run
@@ -207,4 +217,27 @@ jobs and chain their dependencies
     cd output_dir/
     bash submit_pipeline_batch-d8zWDrpkbBuxj7eTahuH3K.sh
 
+You should see the output (with a different job number)
 
+.. code:: bash
+
+    Submitted batch job 1120999
+
+This is the job number of the mavis summary job. When this job is complete your MAVIS run is complete.
+To check that everything ran correctly MAVIS has a built-in checker.
+
+.. code:: bash
+
+    mavis checker -o output_dir
+
+This should give you output something like below (times may vary) if your run completed correctly.
+
+Analyzing the Output
+.....................
+
+The best place to start with looking at the MAVIS output is the summary folder which contains the 
+final results. For column name definitions see the :ref:`glossary <glossary-column-names>`.
+
+.. code:: text
+
+    output_dir/summary/mavis_summary_all_L1522785992-normal_L1522785992-trans_L1522785992-tumour.tab

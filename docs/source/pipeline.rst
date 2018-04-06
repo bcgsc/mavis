@@ -116,5 +116,5 @@ And then change the dependency to be the new validation job
 
 If memory errors are frequent then it would be better to adjust the default values (:term:`trans_validation_memory`, :term:`validation_memory`, :term:`time_limit`)
 
-.. include:: example.rst
+.. include:: tutorial.rst
 

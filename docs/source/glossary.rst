@@ -114,6 +114,8 @@ General Terms
 
 .. include:: config_settings_glossary.rst
 
+.. _glossary-column-names:
+
 
 Column Names
 ++++++++++++++

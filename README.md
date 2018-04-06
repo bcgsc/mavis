@@ -96,7 +96,14 @@ This will install mavis and its python dependencies.
 
 ### 3. Build or Download Reference Files
 
-After [MAVIS](http://mavis.bcgsc.ca) is installed the [reference files](http://mavis.bcgsc.ca/docs/latest/mavis_input.html#reference-input-files) must be generated (or downloaded) before it can be run.
+After [MAVIS](http://mavis.bcgsc.ca) is installed the [reference files](http://mavis.bcgsc.ca/docs/latest/mavis_input.html#reference-input-files) must be generated (or downloaded) before it can be run. A simple bash script to download the hg19 reference files and generate a MAVIS environment file is provided under mavis/tools for convenience. 
+
+```
+cd /path/to/where/you/want/to/put/the/files
+wget https://raw.githubusercontent.com/bcgsc/mavis/master/tools/get_hg19_reference_files.sh
+bash get_hg19_reference_files.sh
+source reference_inputs/hg19_env.sh
+```
 
 Once the above 3 steps are complete [MAVIS](http://mavis.bcgsc.ca) is ready to be run. See [running the pipeline](http://mavis.bcgsc.ca/docs/latest/pipeline.html).
 
