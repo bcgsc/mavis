@@ -48,7 +48,7 @@ class TestNoReservedChars(unittest.TestCase):
 
     def test_ok(self):
         lib = 'libName'
-        self.assertEqual('libname', library_name_format(lib))
+        self.assertEqual('libName', library_name_format(lib))
 
     def test_number_start_error(self):
         with self.assertRaises(TypeError):
