@@ -1,13 +1,12 @@
-import glob
+from argparse import Namespace
 import itertools
 import re
-import warnings
 
 from braceexpand import braceexpand
 from shortuuid import uuid
 import tab
 from pysam import VariantFile
-from argparse import Namespace
+
 
 from .breakpoint import Breakpoint, BreakpointPair
 from .constants import COLUMNS, MavisNamespace, ORIENT, STRAND, SVTYPE
@@ -23,7 +22,9 @@ SUPPORTED_TOOL = MavisNamespace(
     MAVIS='mavis',
     DEFUSE='defuse',
     BREAKDANCER='breakdancer',
-    VCF='vcf'
+    VCF='vcf',
+    BREAKSEQ='breakseq',
+    CNVNATOR='cnvnator'
 )
 """
 Supported Tools used to call SVs and then used as input into MAVIS
@@ -55,7 +56,8 @@ TOOL_SVTYPE_MAPPING.update({
     'ins': [SVTYPE.INS],
     'del': [SVTYPE.DEL],
     'dup': [SVTYPE.DUP],
-    'ITD': [SVTYPE.DUP]
+    'ITD': [SVTYPE.DUP],
+    'IDP': [SVTYPE.INS]
 })
 
 TRACKING_COLUMN = 'tracking_id'
@@ -163,6 +165,36 @@ def _parse_chimerascan(row):
     return std_row
 
 
+def _parse_cnvnator(row):
+    """
+
+    Args:
+        row (dict by str): dict representing the row output from cnvnator
+
+    Returns:
+        dict: transformed row using mavis starndard column names
+
+    Note:
+        from cnvnator: https://github.com/abyzovlab/CNVnator
+
+        CNV_type coordinates CNV_size normalized_RD e-val1 e-val2 e-val3 e-val4 q0
+
+        normalized_RD -- normalized to 1.
+        e-val1        -- is calculated using t-test statistics.
+        e-val2        -- is from the probability of RD values within the region to be in
+        the tails of a gaussian distribution describing frequencies of RD values in bins.
+        e-val3        -- same as e-val1 but for the middle of CNV
+        e-val4        -- same as e-val2 but for the middle of CNV
+        q0            -- fraction of reads mapped with q0 quality
+    """
+    result = {k: v for k, v in row.items() if k != 'coordinates'}
+    chrom, start, end = re.split(r'[-:]', row['coordinates'])
+    result['break1_chromosome'] = result['break2_chromosome'] = chrom
+    result['break1_position_start'] = result['break1_position_end'] = start
+    result['break2_position_start'] = result['break2_position_end'] = end
+    return result
+
+
 def _parse_bnd_alt(alt):
     """
     parses the alt statement from vcf files using the specification in vcf 4.2/4.2.
@@ -186,7 +218,7 @@ def _parse_bnd_alt(alt):
         raise NotImplementedError('alt specification in unexpected format', alt)
 
 
-def _parse_vcf_record(record):
+def _parse_vcf_record(record, log=devnull):
     """
     converts a vcf record
 
@@ -202,8 +234,18 @@ def _parse_vcf_record(record):
     records = []
     for alt in record.alts if record.alts else [None]:
         info = {}
-        for entry in record.info.items():
-            info[entry[0]] = entry[1:] if len(entry[1:]) > 1 else entry[1]
+        for key in record.info.keys():
+            try:
+                value = record.info[key]
+            except UnicodeDecodeError as err:
+                log('Ignoring invalid INFO field {} with error: {}'.format(key, err))
+            else:
+                try:
+                    value = value[0] if len(value) == 1 else value
+                except TypeError:
+                    pass  # anything non-tuple
+            info[key] = value
+
         std_row = {}
         if record.id and record.id != 'N':  # to account for NovoBreak N in the ID field
             std_row['id'] = record.id
@@ -252,6 +294,7 @@ def _parse_vcf_record(record):
             std_row[COLUMNS.break2_orientation] = connection_type[orient2]
         except KeyError:
             pass
+        std_row.update({k: v for k, v in info.items() if k not in {'CHR2', 'SVTYPE', 'CIPOS', 'CIEND', 'CT'}})
         records.append(std_row)
     return records
 
@@ -272,13 +315,17 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
     std_row[COLUMNS.break1_strand] = std_row[COLUMNS.break2_strand] = STRAND.NS
     result = []
     # convert the specified file type to a standard format
-    if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL, SUPPORTED_TOOL.VCF]:
+    if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL, SUPPORTED_TOOL.VCF, SUPPORTED_TOOL.BREAKSEQ]:
 
         std_row.update(row)
 
     elif file_type == SUPPORTED_TOOL.CHIMERASCAN:
 
         std_row.update(_parse_chimerascan(row))
+
+    elif file_type == SUPPORTED_TOOL.CNVNATOR:
+
+        std_row.update(_parse_cnvnator(row))
 
     elif file_type == SUPPORTED_TOOL.DEFUSE:
 
@@ -361,7 +408,9 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
                 stranded=stranded
             )
 
-            bpp.data.update({k: std_row[k] for k in std_row if k.startswith(file_type)})
+            for col, value in std_row.items():
+                if col not in COLUMNS and col not in bpp.data:
+                    bpp.data[col] = value
             if not event_type or event_type in BreakpointPair.classify(bpp):
                 result.append(bpp)
 
@@ -380,10 +429,25 @@ def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fa
     rows = None
     if file_type == SUPPORTED_TOOL.MAVIS:
         result = read_bpp_from_input_file(input_file, expand_orient=True, expand_svtype=True, add_default={'stranded': stranded})
-    elif file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL]:
+    elif file_type == SUPPORTED_TOOL.CNVNATOR:
+        _, rows = tab.read_file(
+            input_file,
+            header=[
+                'event_type',
+                'coordinates',
+                'size',
+                'normalized_RD',
+                'e-val1', 'e-val2', 'e-val3', 'e-val4', 'q0'
+            ])
+    elif file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL, SUPPORTED_TOOL.VCF, SUPPORTED_TOOL.BREAKSEQ]:
         rows = []
-        for vcf_record in VariantFile(input_file).fetch():
-            rows.extend(_parse_vcf_record(vcf_record))
+        vfile = VariantFile(input_file)
+        try:
+            vfile.header.info.add('END', number=1, type='Integer', description='End of the interval')
+        except ValueError:
+            pass
+        for vcf_record in vfile.fetch():
+            rows.extend(_parse_vcf_record(vcf_record, log=log))
     elif file_type == SUPPORTED_TOOL.BREAKDANCER:
         with open(input_file, 'r') as fh:
             # comments in breakdancer are marked with a single # so they need to be discarded before reading
@@ -399,7 +463,12 @@ def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fa
     if rows:
         log('found', len(rows), 'rows')
         for row in rows:
-            std_rows = _convert_tool_row(row, file_type, stranded, assume_no_untemplated=assume_no_untemplated)
-            result.extend(std_rows)
+            try:
+                std_rows = _convert_tool_row(row, file_type, stranded, assume_no_untemplated=assume_no_untemplated)
+            except Exception as err:
+                log('Error in converting row', row)
+                raise err
+            else:
+                result.extend(std_rows)
     log('generated', len(result), 'breakpoint pairs')
     return result

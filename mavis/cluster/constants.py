@@ -29,5 +29,5 @@ DEFAULTS.add(
     'out prior to clustering')
 DEFAULTS.add(
     'limit_to_chr', ChrListString(';'.join([str(x) for x in range(1, 23)] + ['X', 'Y'])), cast_type=ChrListString,
-    defn='A semi-colon delimited list of chromosome names to use. BreakpointPairs on other chromosomes will be filtered'
+    defn='A delimited (;,\s) list of chromosome names to use. BreakpointPairs on other chromosomes will be filtered'
     'out. For example \'1;2;3;4\' would filter out events/breakpoint pairs on any chromosomes but 1, 2, 3, and 4')

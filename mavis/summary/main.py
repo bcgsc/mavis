@@ -30,6 +30,7 @@ def main(
     filter_min_split_reads=DEFAULTS.filter_min_split_reads,
     filter_trans_homopolymers=DEFAULTS.filter_trans_homopolymers,
     filter_min_linking_split_reads=DEFAULTS.filter_min_linking_split_reads,
+    filter_min_complexity=DEFAULTS.filter_min_complexity,
     flanking_call_distance=PAIRING_DEFAULTS.flanking_call_distance,
     split_call_distance=PAIRING_DEFAULTS.split_call_distance,
     contig_call_distance=PAIRING_DEFAULTS.contig_call_distance,
@@ -120,35 +121,41 @@ def main(
                     best_transcripts[t.name] = t
 
     filtered_pairs = []
-    # filter by synonymous and RNA homopolymers
-    if filter_cdna_synon or filter_protein_synon or filter_trans_homopolymers:
-        temp = []
-        for bpp in bpps:
-            if filter_protein_synon and bpp.protein_synon:
-                bpp.data[COLUMNS.filter_comment] = 'synonymous protein'
-                filtered_pairs.append(bpp)
-                continue
-            elif filter_cdna_synon and bpp.cdna_synon:
-                bpp.data[COLUMNS.filter_comment] = 'synonymous cdna'
-                filtered_pairs.append(bpp)
-                continue
-            elif bpp.protocol == PROTOCOL.TRANS and bpp.data.get(COLUMNS.repeat_count, None) and bpp.event_type in [SVTYPE.DUP, SVTYPE.INS, SVTYPE.DEL]:
-                # a transcriptome event in a repeat region
-                match = re.match(r'^(-?\d+)-(-?\d+)$', str(bpp.data[COLUMNS.net_size]))
-                if match:
-                    netsize_min = abs(int(match.group(1)))
-                    netsize_max = abs(int(match.group(2)))
+    temp = []  # store the bpps while we filter out
 
-                    if all([
-                        int(bpp.repeat_count) >= HOMOPOLYMER_MIN_LENGTH,
-                        netsize_min == netsize_max and netsize_min == 1,
-                        PROTOCOL.GENOME not in bpp.data.get(COLUMNS.pairing, '')
-                    ]):
-                        bpp.data[COLUMNS.filter_comment] = 'homopolymer filter'
-                        filtered_pairs.append(bpp)
-                        continue
-            temp.append(bpp)
-        bpps = temp
+    for bpp in bpps:
+        # filter by synonymous and RNA homopolymers
+        if filter_protein_synon and bpp.protein_synon:
+            bpp.data[COLUMNS.filter_comment] = 'synonymous protein'
+            filtered_pairs.append(bpp)
+            continue
+        elif filter_cdna_synon and bpp.cdna_synon:
+            bpp.data[COLUMNS.filter_comment] = 'synonymous cdna'
+            filtered_pairs.append(bpp)
+            continue
+        elif bpp.protocol == PROTOCOL.TRANS and bpp.data.get(COLUMNS.repeat_count, None) and bpp.event_type in [SVTYPE.DUP, SVTYPE.INS, SVTYPE.DEL]:
+            # a transcriptome event in a repeat region
+            match = re.match(r'^(-?\d+)-(-?\d+)$', str(bpp.data[COLUMNS.net_size]))
+            if match:
+                netsize_min = abs(int(match.group(1)))
+                netsize_max = abs(int(match.group(2)))
+
+                if all([
+                    int(bpp.repeat_count) + 1 >= HOMOPOLYMER_MIN_LENGTH,  # repeat count is 1 less than the length of the repeat
+                    netsize_min == netsize_max and netsize_min == 1,
+                    PROTOCOL.GENOME not in bpp.data.get(COLUMNS.pairing, '')
+                ]):
+                    bpp.data[COLUMNS.filter_comment] = 'homopolymer filter'
+                    filtered_pairs.append(bpp)
+                    continue
+        # filter based on the sequence call complexity
+        sc = str(bpp.data.get(COLUMNS.call_sequence_complexity, 'none')).lower()
+        if sc != 'none' and float(sc) < filter_min_complexity:
+            bpp.data[COLUMNS.filter_comment] = 'low complexity'
+            filtered_pairs.append(bpp)
+            continue
+        temp.append(bpp)
+    bpps = temp  # reassign the filtered result
 
     # filter based on minimum evidence levels
     bpps, filtered = filter_by_evidence(
@@ -304,8 +311,16 @@ def main(
             row.data.setdefault(COLUMNS.pairing, '')
             row.data.setdefault(COLUMNS.library, lib)
             # filter pairing ids based on what is still kept?
-            paired_libraries = set([p.split('_')[0] for p in row.pairing.split(';')])
-            inferred_paired_libraries = set([p.split('_')[0] for p in row.inferred_pairing.split(';')])
+            paired_libraries = set()
+            for product_id in row.pairing.split(';'):
+                for lib in bpps_by_library:
+                    if product_id.startswith(lib):
+                        paired_libraries.add(lib)
+            inferred_paired_libraries = set()
+            for product_id in row.inferred_pairing.split(';'):
+                for lib in bpps_by_library:
+                    if product_id.startswith(lib):
+                        inferred_paired_libraries.add(lib)
             for other_lib, (other_protocol, other_disease_state) in libraries.items():
                 column_name = '{}_{}_{}'.format(other_lib, other_disease_state, other_protocol)
                 if other_lib != row.library:

@@ -22,6 +22,7 @@ FULL_BASE_EVENTS = os.path.join(DATA_DIR, 'mock_sv_events.tsv')
 BASE_EVENTS = os.path.join(DATA_DIR, 'mini_mock_sv_events.tsv')
 BLAT_INPUT = os.path.join(DATA_DIR, 'blat_input.fa')
 BLAT_OUTPUT = os.path.join(DATA_DIR, 'blat_output.pslx')
+ARGUMENT_ERROR = 2
 
 RUN_FULL = int(os.environ.get('RUN_FULL', 1))
 OUTPUT_SVG = int(os.environ.get('OUTPUT_SVG', 0))

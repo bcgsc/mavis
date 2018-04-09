@@ -47,8 +47,9 @@ DEFAULTS = WeakMavisNamespace()
 
 """
 DEFAULTS.add(
-    'min_call_complexity', 0.21, cast_type=float_fraction,
-    defn='The minimum complexity score for a call sequence. Is an average for non-contig calls. see :term:`contig_complexity`')
+    'min_call_complexity', 0.10, cast_type=float_fraction,
+    defn='The minimum complexity score for a call sequence. Is an average for non-contig calls. Filters '
+         'low complexity contigs before alignment. see :term:`contig_complexity`')
 DEFAULTS.add(
     'aligner', SUPPORTED_ALIGNER.BLAT, cast_type=SUPPORTED_ALIGNER,
     defn='the aligner to use to map the contigs/reads back to the reference e.g blat or bwa')
@@ -159,7 +160,7 @@ DEFAULTS.add(
     'min_mapping_quality', 5,
     defn='the minimum mapping quality of reads to be used as evidence')
 DEFAULTS.add(
-    'trans_min_mapping_quality', 1, cast_type=nullable_int,
+    'trans_min_mapping_quality', 0, cast_type=nullable_int,
     defn='Related to :term:`min_mapping_quality`. Overrides the min_mapping_quality if the library is a transcriptome '
     'and this is set to any number not None. If this value is None, min_mapping_quality is used for transcriptomes as'
     'well as genomes')

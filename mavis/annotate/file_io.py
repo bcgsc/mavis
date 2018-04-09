@@ -16,7 +16,7 @@ from ..interval import Interval
 from ..util import devnull
 
 
-def load_masking_regions(filepath):
+def load_masking_regions(*filepaths):
     """
     reads a file of regions. The expect input format for the file is tab-delimited and
     the header should contain the following columns
@@ -43,15 +43,16 @@ def load_masking_regions(filepath):
         >>> m['1']
         [BioInterval(), BioInterval(), ...]
     """
-    _, rows = tab.read_file(
-        filepath,
-        require=['chr', 'start', 'end', 'name'],
-        cast={'start': int, 'end': int, 'chr': ReferenceName}
-    )
     regions = {}
-    for row in rows:
-        mask_region = BioInterval(reference_object=row['chr'], start=row['start'], end=row['end'], name=row['name'])
-        regions.setdefault(mask_region.reference_object, []).append(mask_region)
+    for filepath in filepaths:
+        _, rows = tab.read_file(
+            filepath,
+            require=['chr', 'start', 'end', 'name'],
+            cast={'start': int, 'end': int, 'chr': ReferenceName}
+        )
+        for row in rows:
+            mask_region = BioInterval(reference_object=row['chr'], start=row['start'], end=row['end'], name=row['name'])
+            regions.setdefault(mask_region.reference_object, []).append(mask_region)
     return regions
 
 
@@ -63,7 +64,7 @@ def load_reference_genes(*pos, **kwargs):
     return load_annotations(*pos, **kwargs)
 
 
-def load_annotations(filepath, warn=devnull, reference_genome=None, filetype=None, best_transcripts_only=False):
+def load_annotations(*filepaths, warn=devnull, reference_genome=None, best_transcripts_only=False):
     """
     loads gene models from an input file. Expects a tabbed or json file.
 
@@ -77,22 +78,24 @@ def load_annotations(filepath, warn=devnull, reference_genome=None, filetype=Non
     Returns:
         :class:`dict` of :class:`list` of :class:`~mavis.annotate.genomic.Gene` by :class:`str`: lists of genes keyed by chromosome name
     """
-    if filetype is None:
-        m = re.match('.*\.(?P<ext>tsv|tab|json)$', filepath)
-        if m:
-            filetype = m.group('ext')
-    data = None
+    total_annotations = {}
 
-    if filetype == 'json':
-        with open(filepath) as fh:
-            data = json.load(fh)
-    elif filetype == 'tab' or filetype == 'tsv':
-        data = convert_tab_to_json(filepath, warn)
-    else:
-        raise NotImplementedError('unsupported filetype:', filetype, filepath)
+    for filepath in filepaths:
+        data = None
 
-    return parse_annotations_json(
-        data, reference_genome=reference_genome, best_transcripts_only=best_transcripts_only, warn=warn)
+        if filepath.endswith('.tab') or filepath.endswith('.tsv'):
+            data = convert_tab_to_json(filepath, warn)
+        else:
+            with open(filepath) as fh:
+                data = json.load(fh)
+
+        current_annotations = parse_annotations_json(
+            data, reference_genome=reference_genome, best_transcripts_only=best_transcripts_only, warn=warn)
+
+        for chrom in current_annotations:
+            for gene in current_annotations[chrom]:
+                total_annotations.setdefault(chrom, []).append(gene)
+    return total_annotations
 
 
 def parse_annotations_json(data, reference_genome=None, best_transcripts_only=False, warn=devnull):
@@ -180,13 +183,6 @@ def parse_annotations_json(data, reference_genome=None, best_transcripts_only=Fa
         if not best_transcripts_only or has_best:
             genes_by_chr.setdefault(gene.chr, []).append(gene)
     return genes_by_chr
-
-
-def _load_reference_genes_json(filepath, reference_genome=None, best_transcripts_only=False, warn=devnull):
-    with open(filepath) as fh:
-        data = json.load(fh)
-        return parse_annotations_json(
-            data, reference_genome=reference_genome, best_transcripts_only=best_transcripts_only, warn=warn)
 
 
 def convert_tab_to_json(filepath, warn=devnull):
@@ -321,20 +317,21 @@ def convert_tab_to_json(filepath, warn=devnull):
     return {'genes': genes.values()}
 
 
-def load_reference_genome(filename, low_mem=False):
+def load_reference_genome(*filepaths):
     """
     Args:
-        filename (str): the path to the file containing the input fasta genome
+        filepaths (list of str): the paths to the files containing the input fasta genomes
 
     Returns:
         :class:`dict` of :class:`Bio.SeqRecord` by :class:`str`: a dictionary representing the sequences in the fasta file
     """
-    reference_genome = None
-    if not low_mem:
+    reference_genome = {}
+    for filename in filepaths:
         with open(filename, 'rU') as fh:
-            reference_genome = SeqIO.to_dict(SeqIO.parse(fh, 'fasta'))
-    else:
-        reference_genome = SeqIO.index(filename, 'fasta')
+            for chrom, seq in SeqIO.to_dict(SeqIO.parse(fh, 'fasta')).items():
+                if chrom in reference_genome:
+                    raise KeyError('Duplicate chromosome name', chrom, filepath)
+                reference_genome[chrom] = seq
 
     names = list(reference_genome.keys())
 
@@ -358,7 +355,7 @@ def load_reference_genome(filename, low_mem=False):
     return reference_genome
 
 
-def load_templates(filename):
+def load_templates(*filepaths):
     """
     primarily useful if template drawings are required and is not necessary otherwise
     assumes the input file is 0-indexed with [start,end) style. Columns are expected in
@@ -385,22 +382,24 @@ def load_templates(filename):
 
     """
     header = ['name', 'start', 'end', 'band_name', 'giemsa_stain']
-    header, rows = tab.read_file(
-        filename,
-        header=header,
-        cast={'start': int, 'end': int},
-        in_={'giemsa_stain': GIEMSA_STAIN.values()}
-    )
+    templates = {}
 
-    bands_by_template = {}
-    for row in rows:
-        band = BioInterval(None, row['start'] + 1, row['end'], name=row['band_name'], data=row)
-        bands_by_template.setdefault(row['name'], []).append(band)
+    for filename in filepaths:
+        header, rows = tab.read_file(
+            filename,
+            header=header,
+            cast={'start': int, 'end': int},
+            in_={'giemsa_stain': GIEMSA_STAIN.values()}
+        )
 
-    templates = dict()
-    for tname, bands in bands_by_template.items():
-        start = min([b.start for b in bands])
-        end = max([b.end for b in bands])
-        end = Template(tname, start, end, bands=bands)
-        templates[end.name] = end
+        bands_by_template = {}
+        for row in rows:
+            band = BioInterval(None, row['start'] + 1, row['end'], name=row['band_name'], data=row)
+            bands_by_template.setdefault(row['name'], []).append(band)
+
+        for tname, bands in bands_by_template.items():
+            start = min([b.start for b in bands])
+            end = max([b.end for b in bands])
+            end = Template(tname, start, end, bands=bands)
+            templates[end.name] = end
     return templates

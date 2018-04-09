@@ -597,13 +597,13 @@ def draw_breakpoint(config, canvas, breakpoint, width, height, label=''):
     g.add(r)
 
     if breakpoint.orient == ORIENT.LEFT:
-        l = canvas.line((0, y), (0, height))
-        l.stroke(config.breakpoint_color, width=config.breakpoint_orient_stroke_width)
-        g.add(l)
+        line = canvas.line((0, y), (0, height))
+        line.stroke(config.breakpoint_color, width=config.breakpoint_orient_stroke_width)
+        g.add(line)
     elif breakpoint.orient == ORIENT.RIGHT:
-        l = canvas.line((width, y), (width, height))
-        l.stroke(config.breakpoint_color, width=config.breakpoint_orient_stroke_width)
-        g.add(l)
+        line = canvas.line((width, y), (width, height))
+        line.stroke(config.breakpoint_color, width=config.breakpoint_orient_stroke_width)
+        g.add(line)
     g.add(Tag('title', 'Breakpoint {}:g.{}_{}{} {}'.format(
         breakpoint.chr, breakpoint.start, breakpoint.end, breakpoint.strand, breakpoint.orient)))
     return g

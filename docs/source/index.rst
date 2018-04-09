@@ -11,19 +11,14 @@ Contents
    :maxdepth: -1
     
    about.rst
-   pipeline.rst
    mavis_input.rst
-   reference.rst
+   pipeline.rst
    configuration.rst
-   tools_supported.rst
-   illustrations.rst
-   faqs.rst
-   examples.rst
    theory.rst
+   illustrations.rst
    development.rst
    package.rst
    glossary.rst
-   citations.rst
 
 
 Indices and tables

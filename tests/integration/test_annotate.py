@@ -1259,8 +1259,8 @@ class TestAnnotate(unittest.TestCase):
         self.assertEqual(1, len(annotations.keys()))
         self.assertEqual(1, len(list(annotations.values())[0]))
 
-    def test_loading_annotations_unsupported_filetype(self):
-        with self.assertRaises(NotImplementedError):
+    def test_loading_annotations_not_found(self):
+        with self.assertRaises(FileNotFoundError):
             load_reference_genes('file.other')
 
     def test_determine_prime(self):

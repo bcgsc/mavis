@@ -2,7 +2,7 @@
 
 
 Supported SV Callers
-================================
+-----------------------
 
 MAVIS supports output from a wide-variety of :term:`SV` callers. Assumptions are made for each tool based on interpretation of
 the output and the publications for each tool. The tools and versions currently supported are given below. Versions listed
@@ -21,10 +21,18 @@ MAVIS also supports a :ref:`general VCF input <general-vcf-inputs>`. It should b
         - ``1.4.5``
         -
         - [Chen-2009]_
+    *   - :term:`BreakSeq`
+        - ``2.2``
+        - ``work/breakseq.vcf.gz``
+        - [Abyzov-2015]_
     *   - :term:`Chimerascan`
         - ``0.4.5``
         - ``*.bedpe``
         - [Iyer-2011]_
+    *   - :term:`CNVnator`
+        - ``0.3.3``
+        -
+        - [Abyzov-2011]_
     *   - :term:`DeFuse`
         - ``0.6.2``
         - ``results/results.classify.tsv``
@@ -49,13 +57,13 @@ MAVIS also supports a :ref:`general VCF input <general-vcf-inputs>`. It should b
 .. note::
 
     :term:`Trans-ABySS`: The trans-abyss version used was an in-house dev version. However the output columns are compatible with 1.4.8 as that
-    was the version branched from. Additionally, although indels can be used from both genome and transcriptome outputs of Trans-ABySS, it is 
-    reccommended to only use the genome indel calls as the transcriptome indels calls (for versions tested) introduce a very high number of 
+    was the version branched from. Additionally, although indels can be used from both genome and transcriptome outputs of Trans-ABySS, it is
+    reccommended to only use the genome indel calls as the transcriptome indels calls (for versions tested) introduce a very high number of
     false positives. This will slow down validation. It is much faster to simply use the genome indels for both genome and transcriptome.
 
 
 :term:`DELLY` Post-processing
----------------------------------------------
+..............................................................
 
 Some post-processing on the delly output files is generally done prior to input. The output BCF files are converted to a VCF file
 
@@ -67,10 +75,10 @@ Some post-processing on the delly output files is generally done prior to input.
 .. _custom-conversion:
 
 Writing A Custom Conversion Script
------------------------------------
+..............................................................
 
 Logic Example - :term:`Chimerascan`
-++++++++++++++++++++++++++++++++++++++++++++++++++++++
++++++++++++++++++++++++++++++++++++++
 
 
 The following is a description of how the conversion script for :ref:`Chimerascan <Iyer-2011>` was generated. While this is a built-in
@@ -100,7 +108,7 @@ The logic for all cases is shown in the code below
     :emphasize-lines: 10-22
 
 Calling A Custom Conversion Script
-+++++++++++++++++++++++++++++++++++++
+..............................................................
 
 Custom conversion scripts can be specified during :ref:`automatic config generation <pipeline-config>` using the
 ``--external_conversion`` option.
@@ -139,9 +147,9 @@ You can also re-use the same conversion script if you have multiple inputs to co
 
 
 General VCF inputs
--------------------
+..............................................................
 
-Assuming that the tool outputting the VCF file follows standard conventions, then it is possible to use a general VCF 
+Assuming that the tool outputting the VCF file follows standard conventions, then it is possible to use a general VCF
 conversion that is not tool-specific. Given the wide variety in content for VCF files, MAVIS makes a number of
 assumptions and the VCF conversion may not work for all VCFs. In general MAVIS follows the `VCF 4.2 specification <https://samtools.github.io/hts-specs/VCFv4.2.pdf>`_.
 If the input tool you are using differs, it would be better to use a :ref:`custom conversion script <custom-conversion>`.
@@ -151,4 +159,3 @@ If the input tool you are using differs, it would be better to use a :ref:`custo
 - ``PRECISE`` if given, Confidence intervals are ignored if given in favour of exact breakpoint calls using pos and END as the breakpoint positions
 - ``CT`` values if given are representative of the breakpoint orientations.
 - ``CHR2`` is given for all interchromosomal events
-

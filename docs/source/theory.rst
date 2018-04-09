@@ -443,3 +443,4 @@ After breakpoints have been called and annotated we often need to see if the sam
     splice site prior to the breakpoint is an acceptor and the first acceptor is used. (G) The first splice site prior to the
     breakpoint is an acceptor and the second acceptor is used. (H) The first splice site prior to the breakpoint is a donor
 
+.. include:: citations.rst

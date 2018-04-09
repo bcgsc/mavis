@@ -1234,5 +1234,6 @@ class TestCharacterizeRepeatRegion(unittest.TestCase):
         with self.assertRaises(ValueError):
             call.EventCall.characterize_repeat_region(bpp, None)
 
+
 if __name__ == '__main__':
     unittest.main()

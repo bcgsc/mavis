@@ -386,7 +386,7 @@ def align_sequences(
 
         elif aligner == SUPPORTED_ALIGNER.BWA_MEM:
             align_options = kwargs.get('align_options', '')
-            command = '{} {} {} -Y {}'.format(aligner, aligner_reference, aligner_fa_input_file, align_options)
+            command = '{} -Y {} {} {}'.format(aligner, align_options, aligner_reference, aligner_fa_input_file)
             log('writing aligner logging to:', aligner_output_log, time_stamp=False)
             with open(aligner_output_log, 'w') as log_fh, open(aligner_output_file, 'w') as aligner_output_fh:
                 log_fh.write('>>> {}\n'.format(command))
@@ -506,6 +506,7 @@ def select_contig_alignments(evidence, reads_by_query):
                 if primary_alignment.read2:
                     supp_events.extend(call_read_events(primary_alignment.read2, primary_alignment.read1))
                 for supp_event in supp_events:
+                    supp_event = convert_to_duplication(supp_event, evidence.reference_genome)
                     if supp_event not in filtered_alignments and filter_pass(supp_event):
                         filtered_alignments.add(supp_event)
         contig.alignments.update(filtered_alignments)
