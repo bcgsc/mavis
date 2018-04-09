@@ -36,7 +36,7 @@ Help sub-menus can be found by giving the pipeline step followed by no arguments
     mavis cluster -h
 
 Common problems and questions are addressed on the [wiki](https://github.com/bcgsc/mavis/wiki/Help-and-Frequently-Asked-Questions).
-If you have a question or issue that is not answered there (or already an github issue) please submit
+If you have a question or issue that is not answered there (or already a github issue) please submit
 a github issue to our [github page](https://github.com/bcgsc/mavis/issues) or contact us by email at [mavis@bcgsc.ca](mailto:mavis@bcgsc.ca)
 
 
