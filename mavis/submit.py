@@ -41,7 +41,7 @@ OPTIONS.add('validation_memory', 16000, defn='default memory limit (MB) for the 
 OPTIONS.add('trans_validation_memory', 18000, defn='default memory limit (MB) for the validation stage (for transcriptomes)')
 OPTIONS.add('annotation_memory', 12000, defn='default memory limit (MB) for the annotation stage')
 OPTIONS.add('scheduler', SCHEDULER.SLURM, defn='The scheduler being used', cast_type=SCHEDULER)
-OPTIONS.add('mail_type', '', cast_type=MAIL_TYPE.enforce, defn='When to notify the mail_user (if given)')
+OPTIONS.add('mail_type', 'NONE', cast_type=MAIL_TYPE.enforce, defn='When to notify the mail_user (if given)')
 OPTIONS.add('mail_user', '', defn='User to send notifications to')
 
 

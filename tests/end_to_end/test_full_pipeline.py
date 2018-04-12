@@ -11,13 +11,7 @@ from mavis.constants import SUBCOMMAND
 from mavis.main import main
 from mavis.util import unique_exists
 
-from . import glob_exists
-
-DATA_PREFIX = os.path.join(os.path.dirname(__file__), 'data')
-
-
-def data(*path):
-    return os.path.join(DATA_PREFIX, *path)
+from . import glob_exists, data
 
 
 CONFIG = data('pipeline_config.cfg')

@@ -20,24 +20,6 @@ from .interval import Interval
 ENV_VAR_PREFIX = 'MAVIS_'
 
 
-def assert_equal_attributes(attrs, iterable):
-    """
-    check that a set of items have equal values for some number of attributes.
-    """
-    if not iterable:
-        raise ValueError('cannot operate on an empty iterable')
-    result = MavisNamespace()
-    for attr in attrs:
-        value = None
-        for item in iterable:
-            if value is None:
-                value = getattr(item, attr)
-            elif value != getattr(item, attr):
-                raise AssertionError('input items differ on value of attribute {}: {} vs {}'.format(attr, value, getattr(item, attr)))
-        result[attr] = value
-    return result
-
-
 def cast(value, cast_func):
     """
     cast a value to a given type
