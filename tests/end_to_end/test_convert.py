@@ -114,6 +114,9 @@ class TestConvert(unittest.TestCase):
     def test_cnvnator(self):
         self.run_main(os.path.join(DATA_PREFIX, 'cnvnator.tab'), SUPPORTED_TOOL.CNVNATOR, False)
 
+    def test_breakdancer(self):
+        self.run_main(os.path.join(DATA_PREFIX, 'breakdancer_output.txt'), SUPPORTED_TOOL.BREAKDANCER, False)
+
 
 def tearDownModule():
     # remove the temp directory and outputs

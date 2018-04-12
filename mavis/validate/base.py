@@ -702,7 +702,8 @@ class Evidence(BreakpointPair):
 
             ctg_reads = {r.query_sequence for r in ctg.input_reads}
             ctg_reads.update({reverse_complement(r) for r in ctg_reads})
-            if ctg_reads & break1_reads and ctg_reads & break2_reads:
+            if (ctg_reads & break1_reads and ctg_reads & break2_reads) or \
+                    (not self.interchromosomal and len(self.break1 | self.break2) < self.read_length):
                 filtered_contigs.append(ctg)
         log('filtered contigs from {} to {} based on remapped reads from both breakpoints'.format(len(contigs), len(filtered_contigs)), time_stamp=False)
         contigs = filtered_contigs

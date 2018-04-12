@@ -287,17 +287,20 @@ def validate_section(section, namespace, use_defaults=False):
         else:
             try:
                 new_namespace.add(attr, namespace.type(attr)(value), cast_type=namespace.type(attr))
-            except ValueError:
-                raise ValueError('failed casting {} with value {}'.format(attr, value))
+            except Exception as err:
+                raise ValueError('failed adding {}. {}'.format(attr, err))
     return new_namespace
 
 
 class MavisConfig:
 
     def __init__(self, **kwargs):
-
         # section can be named schedule or qsub to support older versions
-        self.schedule = validate_section(kwargs.pop('schedule', kwargs.pop('qsub', {})), SUBMIT_OPTIONS, True)
+        try:
+            self.schedule = validate_section(kwargs.pop('schedule', kwargs.pop('qsub', {})), SUBMIT_OPTIONS, True)
+        except Exception as err:
+            err.args = ['Error in validating the schedule section in the config. ' + ' '.join([str(a) for a in err.args])]
+            raise err
 
         # set the global defaults
         for sec, defaults in [
@@ -309,7 +312,12 @@ class MavisConfig:
             ('cluster', CLUSTER_DEFAULTS),
             ('reference', REFERENCE_DEFAULTS)
         ]:
-            setattr(self, sec, validate_section(kwargs.pop(sec, {}), defaults, True))
+            try:
+                setattr(self, sec, validate_section(kwargs.pop(sec, {}), defaults, True))
+            except Exception as err:
+                err.args = ['Error in validating the {} section in the config. '.format(sec) + ' '.join([str(a) for a in err.args])]
+
+                raise err
 
         SUPPORTED_ALIGNER.enforce(self.validate.aligner)
 
@@ -317,7 +325,9 @@ class MavisConfig:
             if attr != 'aligner_reference':
                 self.reference[attr] = [filepath(v) for v in fnames]
             if not self.reference[attr] and attr not in {'dgv_annotation', 'masking', 'template_metadata'}:
-                raise FileNotFoundError('required reference file {} does not exist'.format(attr))
+                raise FileNotFoundError(
+                    'Error in validating the convert section of the config for tag={}. '
+                    'Required reference file does not exist'.format(attr))
 
         # set the conversion section
         self.convert = kwargs.pop('convert', {})
@@ -327,7 +337,7 @@ class MavisConfig:
                 continue
             val = [v for v in re.split(r'[;\s]+', val) if v]
             if not val:
-                raise UserWarning('conversion tag requires arguments', attr)
+                raise UserWarning('Error in validating convert section of the config for tag={}. Tag requires arguments'.format(attr))
             if val[0] == 'convert_tool_output':
                 try:
                     val[-1] = tab.cast_boolean(val[-1])
@@ -335,13 +345,16 @@ class MavisConfig:
                     val.append(False)
                 if len(val) < 4 or val[-2] not in SUPPORTED_TOOL.values():
                     raise UserWarning(
-                        'conversion using the built-in convert_tool_output requires specifying the input file(s) and '
-                        'tool name. currently supported tools include:', SUPPORTED_TOOL.values(), 'given', val)
+                        'Error in validating the convert section of the config for tag={}. '.format(attr),
+                        'Conversion using the built-in convert_tool_output requires specifying the input file(s) and '
+                        'tool name. Currently supported tools include:', SUPPORTED_TOOL.values(), 'given', val)
                 expanded_inputs = []
                 for file_expr in val[1:-2]:
                     expanded = bash_expands(file_expr)
                     if not expanded:
-                        raise FileNotFoundError('input file(s) do not exist', val[1:-2])
+                        raise FileNotFoundError(
+                            'Error in validating the config for tag={}. '
+                            'Input file(s) do not exist'.format(attr), val[1:-2])
                     expanded_inputs.extend(expanded)
                 val = [val[0]] + expanded_inputs + val[-2:]
             self.convert[attr] = val
@@ -369,10 +382,11 @@ class MavisConfig:
                     lc = LibraryConfig.build(**d)
                     self.libraries[libname] = lc
                 except Exception as err:
-                    raise UserWarning('could not build configuration section for library', libname, err, terr)
+                    raise UserWarning('Error in validating the library section of the config.', libname, err, terr)
             for inputfile in lc.inputs:
                 if inputfile not in self.convert and not os.path.exists(inputfile):
-                    raise FileNotFoundError('Input file specified in the config does not exist', inputfile)
+                    raise FileNotFoundError(
+                        'Error in validating the library section of the config. Input file does not exist', libname, inputfile)
 
     def has_transcriptome(self):
         return any([l.is_trans() for l in self.libraries.values()])
@@ -422,7 +436,7 @@ def get_metavar(arg_type):
 def filepath(path):
     file_list = bash_expands(path)
     if not file_list:
-        raise TypeError('File does not exist')
+        raise TypeError('File does not exist', path)
     return os.path.abspath(path)
 
 

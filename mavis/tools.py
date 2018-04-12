@@ -75,7 +75,25 @@ def convert_tool_output(fnames, file_type=SUPPORTED_TOOL.MAVIS, stranded=False, 
         for bpp in result:
             collapse_mapping.setdefault(bpp, []).append(bpp)
         log('collapsed', len(result), 'to', len(collapse_mapping), 'calls')
-        result = list(collapse_mapping.keys())
+        result = []
+        temp_sets = set()
+        for bpp, bpp_list in collapse_mapping.items():
+            for otherbpp in bpp_list:
+                for col, val in otherbpp.data.items():
+                    if val is None:
+                        continue
+                    if col not in bpp.data or not bpp.data[col]:
+                        bpp.data[col] = val
+                    elif isinstance(bpp.data[col], set):
+                        bpp.data[col].add(val)
+                    elif bpp.data[col] != val and bpp.data[col]:
+                        bpp.data[col] = {bpp.data[col], val}
+                        temp_sets.add(col)
+            result.append(bpp)
+        for bpp in result:
+            for col, val in bpp.data.items():
+                if isinstance(val, set) and col in temp_sets:
+                    bpp.data[col] = ';'.join(sorted([str(v) for v in val]))
     return result
 
 
@@ -355,6 +373,7 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
             COLUMNS.break1_position_start: row['Pos1'],
             COLUMNS.break2_position_start: row['Pos2'],
         })
+        std_row.update({k: v for k, v in row.items() if k not in {'Type', 'Chr1', 'Chr2', 'Pos1', 'Pos2'}})
 
     else:
         raise NotImplementedError('unsupported file type', file_type)
@@ -423,6 +442,26 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
     return result
 
 
+def _convert_breakdancer_file(input_file):
+    bam_to_lib = {}
+    with open(input_file, 'r') as fh:
+        # comments in breakdancer are marked with a single # so they need to be discarded before reading
+        lines = fh.readlines()
+        header = 0
+        while header < len(lines) and lines[header].startswith('#'):
+            metadata_match = re.match('^#(\S+)\t.*\tlibrary:(\S+)\t.*', lines[header])
+            if metadata_match:
+                bam_to_lib[metadata_match.group(1)] = metadata_match.group(2)
+            header += 1
+        lines = lines[header - 1:]
+        input_file = Namespace(readlines=lambda: lines)
+    header, rows = tab.read_file(input_file, allow_short=True, require=['num_Reads_lib'])
+    for row in rows:
+        for bam, lib in bam_to_lib.items():
+            row['num_Reads_lib'] = row['num_Reads_lib'].replace(bam, lib)
+    return rows
+
+
 def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=False, log=devnull, assume_no_untemplated=True):
     log('reading:', input_file)
     result = []
@@ -449,15 +488,7 @@ def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fa
         for vcf_record in vfile.fetch():
             rows.extend(_parse_vcf_record(vcf_record, log=log))
     elif file_type == SUPPORTED_TOOL.BREAKDANCER:
-        with open(input_file, 'r') as fh:
-            # comments in breakdancer are marked with a single # so they need to be discarded before reading
-            lines = fh.readlines()
-            header = 0
-            while header < len(lines) and lines[header].startswith('#'):
-                header += 1
-            lines = lines[header - 1:]
-            input_file = Namespace(readlines=lambda: lines)
-        _, rows = tab.read_file(input_file, allow_short=True)
+        rows = _convert_breakdancer_file(input_file)
     else:
         _, rows = tab.read_file(input_file)
     if rows:

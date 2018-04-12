@@ -653,7 +653,6 @@ def _call_interval_by_flanking_coverage(coverage, orientation, max_expected_frag
     if coverage_d > max_interval:
         msg = 'length of the coverage interval ({}) is greater than the maximum expected ({})'.format(
             coverage_d, max_interval)
-        warnings.warn(msg)
         raise AssertionError(msg)
     if orientation == ORIENT.LEFT:
         start = coverage.end
@@ -682,11 +681,25 @@ def _call_by_flanking_pairs(evidence, event_type, consumed_evidence=None):
         consumed_evidence = set()
     # for all flanking read pairs mark the farthest possible distance to the breakpoint
     # the start/end of the read on the breakpoint side
-    first_positions = []
-    second_positions = []
-
     selected_flanking_pairs = []
+    fragments = []
     available_flanking_pairs = filter_consumed_pairs(evidence.flanking_pairs, consumed_evidence)
+
+    def _compute_coverage_intervals(pairs):
+        first_positions = []
+        second_positions = []
+        for read, mate in pairs:
+            if evidence.break1.orient == ORIENT.LEFT:
+                first_positions.extend([read.reference_end, read.reference_end - read.query_alignment_length + 1])
+            else:
+                first_positions.extend([read.reference_start + 1, read.reference_start + read.query_alignment_length])
+            if evidence.break2.orient == ORIENT.LEFT:
+                second_positions.extend([mate.reference_end, mate.reference_end - mate.query_alignment_length + 1])
+            else:
+                second_positions.extend([mate.reference_start + 1, mate.reference_start + mate.query_alignment_length])
+        cover1 = Interval(min(first_positions), max(first_positions))
+        cover2 = Interval(min(second_positions), max(second_positions))
+        return cover1, cover2
 
     for read, mate in available_flanking_pairs:
         # check that the fragment size is reasonable
@@ -697,21 +710,41 @@ def _call_by_flanking_pairs(evidence, event_type, consumed_evidence=None):
         elif event_type == SVTYPE.INS:
             if fragment_size.start >= evidence.min_expected_fragment_size:
                 continue
+        fragments.append(fragment_size)
         selected_flanking_pairs.append((read, mate))
-        if evidence.break1.orient == ORIENT.LEFT:
-            first_positions.extend([read.reference_end, read.reference_end - read.query_alignment_length + 1])
+
+    cover1 = None
+    cover2 = None
+    window1 = None
+    window2 = None
+
+    while selected_flanking_pairs:  # try calling until you run out of available reads
+        cover1, cover2 = _compute_coverage_intervals(selected_flanking_pairs)
+        try:
+            window1 = _call_interval_by_flanking_coverage(
+                cover1, evidence.break1.orient, evidence.max_expected_fragment_size, evidence.read_length,
+                distance=evidence.distance, traverse=evidence.traverse
+            )
+            window2 = _call_interval_by_flanking_coverage(
+                cover2, evidence.break2.orient, evidence.max_expected_fragment_size, evidence.read_length,
+                distance=evidence.distance, traverse=evidence.traverse
+            )
+        except AssertionError:
+            # length of coverage is greater than expected
+            # remove the farthest outlier from the pairs wrt fragment size (most likely to belong to a different event)
+            average = Interval(
+                sum([f.start for f in fragments]) / len(fragments),
+                sum([f.end for f in fragments]) / len(fragments)
+            )
+            farthest = max(fragments, key=lambda f: abs(Interval.dist(f, average)))
+            fragments = [f for f in fragments if f != farthest]
+            selected_flanking_pairs = [(r, m) for r, m in selected_flanking_pairs if evidence.compute_fragment_size(r, m) != farthest]
         else:
-            first_positions.extend([read.reference_start + 1, read.reference_start + read.query_alignment_length])
-        if evidence.break2.orient == ORIENT.LEFT:
-            second_positions.extend([mate.reference_end, mate.reference_end - mate.query_alignment_length + 1])
-        else:
-            second_positions.extend([mate.reference_start + 1, mate.reference_start + mate.query_alignment_length])
+            break
     if len(selected_flanking_pairs) < evidence.min_flanking_pairs_resolution:
         raise AssertionError('insufficient flanking pairs ({}) to call {} by flanking reads'.format(
             len(selected_flanking_pairs), event_type))
 
-    cover1 = Interval(min(first_positions), max(first_positions))
-    cover2 = Interval(min(second_positions), max(second_positions))
     if not evidence.interchromosomal:
         if Interval.overlaps(cover1, cover2) and event_type != SVTYPE.DUP:
             raise AssertionError('flanking read coverage overlaps. cannot call by flanking reads', cover1, cover2)
@@ -722,16 +755,6 @@ def _call_by_flanking_pairs(evidence, event_type, consumed_evidence=None):
     if evidence.stranded:
         break1_strand = evidence.decide_sequenced_strand([f for f, m in selected_flanking_pairs])
         break2_strand = evidence.decide_sequenced_strand([m for f, m in selected_flanking_pairs])
-
-    window1 = _call_interval_by_flanking_coverage(
-        cover1, evidence.break1.orient, evidence.max_expected_fragment_size, evidence.read_length,
-        distance=evidence.distance, traverse=evidence.traverse
-    )
-
-    window2 = _call_interval_by_flanking_coverage(
-        cover2, evidence.break2.orient, evidence.max_expected_fragment_size, evidence.read_length,
-        distance=evidence.distance, traverse=evidence.traverse
-    )
 
     if not evidence.interchromosomal:
         if window1.start > window2.end:
@@ -757,6 +780,10 @@ def _call_by_flanking_pairs(evidence, event_type, consumed_evidence=None):
     call.add_flanking_support(selected_flanking_pairs)
     if call.has_compatible:
         call.add_flanking_support(evidence.compatible_flanking_pairs, is_compatible=True)
+
+    if len(call.flanking_pairs) < evidence.min_flanking_pairs_resolution:
+        raise AssertionError('insufficient flanking pairs ({}) to call {} by flanking reads'.format(
+            len(call.flanking_pairs), event_type))
     return call
 
 

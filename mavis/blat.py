@@ -341,22 +341,9 @@ def process_blat_output(
         reads_by_query[seq] = []
     for query_id, rows in rows_by_query.items():
         query_seq = query_id_mapping[query_id]
-        # filter on percent id
-        score_ranks = {}
-        for count, score in enumerate(sorted([r['score'] for r in rows], reverse=True)):
-            score_ranks[score] = count
 
-        filtered_rows = [row for row in rows if round(row['percent_ident'], 0) >= blat_min_identity]
-
-        # filter on score
-        filtered_rows.sort(key=lambda x: x['score'], reverse=True)
         reads = []
-        # compute ranks first
-
-        for count, row in enumerate(filtered_rows):
-            if count >= blat_limit_top_aln:
-                break
-            row['rank'] = score_ranks[row['score']]
+        for row in rows:
             try:
                 read = Blat.pslx_row_to_pysam(row, input_bam_cache, reference_genome)
             except KeyError as err:
@@ -365,14 +352,30 @@ def process_blat_output(
             except AssertionError as err:
                 warnings.warn('warning: invalid blat alignment: {}'.format(repr(err)))
             else:
-                if row['rank'] > 0:
-                    read.mapping_quality = 0
-                read.alignment_rank = row['rank']
-                read.set_tag(PYSAM_READ_FLAGS.BLAT_SCORE, row['score'], value_type='i')
-                read.set_tag(PYSAM_READ_FLAGS.BLAT_ALIGNMENTS, len(filtered_rows), value_type='i')
-                read.set_tag(PYSAM_READ_FLAGS.BLAT_PMS, blat_min_percent_of_max_score, value_type='f')
-                read.set_tag(PYSAM_READ_FLAGS.BLAT_RANK, row['rank'], value_type='i')
-                read.set_tag(PYSAM_READ_FLAGS.BLAT_PERCENT_IDENTITY, row['percent_ident'], value_type='f')
-                reads.append(read)
-        reads_by_query[query_seq] = reads
+                reads.append((row, read))
+
+        filtered_rows = [(row, read) for row, read in reads if round(row['percent_ident'], 0) >= blat_min_identity]
+        # filter on score
+        filtered_rows.sort(key=lambda x: x[0]['score'], reverse=True)
+        # filter on percent id
+        score_ranks = {}
+        for count, score in enumerate(sorted([row['score'] for row, read in reads], reverse=True)):
+            score_ranks[score] = count
+        min_rank = min(list(score_ranks.values()) + [0])
+
+        filtered_reads = []
+        for count, (row, read) in enumerate(sorted(reads, key=lambda x: x[0]['score'], reverse=True)):
+            if count >= blat_limit_top_aln:
+                break
+            row['rank'] = score_ranks[row['score']]
+            if row['rank'] > min_rank:
+                read.mapping_quality = 0
+            read.alignment_rank = row['rank']
+            read.set_tag(PYSAM_READ_FLAGS.BLAT_SCORE, row['score'], value_type='i')
+            read.set_tag(PYSAM_READ_FLAGS.BLAT_ALIGNMENTS, len(filtered_rows), value_type='i')
+            read.set_tag(PYSAM_READ_FLAGS.BLAT_PMS, blat_min_percent_of_max_score, value_type='f')
+            read.set_tag(PYSAM_READ_FLAGS.BLAT_RANK, row['rank'], value_type='i')
+            read.set_tag(PYSAM_READ_FLAGS.BLAT_PERCENT_IDENTITY, row['percent_ident'], value_type='f')
+            filtered_reads.append(read)
+        reads_by_query[query_seq] = filtered_reads
     return reads_by_query

@@ -125,7 +125,7 @@ class MavisNamespace(argparse.Namespace):
             ....
         """
         if value not in self.values():
-            raise KeyError('value {0} is not a valid member'.format(value), self.values())
+            raise KeyError('value {0} is not a valid member of '.format(repr(value)), self.values())
         return value
 
     def reverse(self, value):
@@ -220,11 +220,11 @@ class MavisNamespace(argparse.Namespace):
             >>> nspace.add('thing', value=1, cast_type=int, defn='I am a thing')
         """
         if len(pos) > 1:
-            raise TypeError('add() takes 3 positional arguments but more were given')
+            raise TypeError('add({}) takes 3 positional arguments but more were given'.format(', '.join([str(p) for p in pos])))
 
         for value, argname in zip(pos, ['value', 'cast_type', 'defn'][:len(pos)]):
             if argname in kwargs:
-                raise TypeError('add() got multiple values for argument {}'.format(repr(argname)))
+                raise TypeError('add({}, ...) got multiple values for argument {}'.format(attr, repr(argname)))
             kwargs['value'] = pos[0]
         value = kwargs.pop('value', attr)
         self[attr] = value
@@ -235,14 +235,14 @@ class MavisNamespace(argparse.Namespace):
         if 'defn' in kwargs:
             self._defns[attr] = kwargs.pop('defn')
         if kwargs:
-            raise TypeError('invalid arguments: {}'.format(kwargs.keys()))
+            raise TypeError('invalid arguments for {}: {}'.format(attr, kwargs.keys()))
 
     def __call__(self, value):
         try:
             return self.enforce(value)
         except KeyError:
-            raise TypeError('Invalid value {}. Cannot cast to type {}. Must be a valid member: {}'.format(
-                repr(value), self.__class__.__name__, self.values()))
+            raise TypeError('Invalid value {} for {}. Cannot cast to type {}. Must be a valid member: {}'.format(
+                repr(value), attr, self.__class__.__name__, self.values()))
 
 
 def float_fraction(num):

@@ -1,0 +1,6 @@
+## False	reference9	2000	2000	reference9	2001	2001	L	R	+	+	insertion	genome	convert_ta.py_v0.0.1	mock-A36971	9:66466004
+#stranded	break1_chromosome	break1_position_start	break1_position_end	break2_chromosome	break2_position_start	break2_position_end	break1_orientation	break2_orientation	break1_strand	break2_strand	event_type	protocol	tools	library	comment
+False	gene3	27175	27175	gene3	27176	27176	R	L	+	+	duplication	transcriptome	convert_ta.py_v0.0.1	mock-A47933	1:207249992
+True	gene1	34090	34090	gene5	608	608	R	R	-	+	inverted translocation	transcriptome	convert_ta.py_v0.0.1	mock-A47933	15:40854971|7:26241389
+False	gene2	22979	22979	gene2	23783	23783	R	L	+	+	duplication	transcriptome	convert_ta.py_v0.0.1	mock-A47933	15:41623873|15:41625248#this one is pretty low qual
+False	gene6	70057	77430	gene6	89472	94742	L	R	+	+	deletion	transcriptome	convert_ta.py_v0.0.1	mock-A47933	approx 10:89700299|10:89712341

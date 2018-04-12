@@ -5,7 +5,7 @@ from mavis.align import call_paired_read_event, select_contig_alignments
 from mavis.annotate.file_io import load_reference_genome
 from mavis.annotate.genomic import PreTranscript, Transcript
 from mavis.bam.cache import BamCache
-from mavis.bam.read import sequenced_strand, SamRead
+from mavis.bam.read import sequenced_strand, SamRead, read_pair_type
 from mavis.bam.cigar import convert_string_to_cigar
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import CALL_METHOD, CIGAR, ORIENT, PYSAM_READ_FLAGS, STRAND, SVTYPE
@@ -1033,16 +1033,17 @@ class TestCallByFlankingReadsTranscriptome(unittest.TestCase):
         )
         # now add the flanking pairs
         pair = mock_read_pair(
-            MockRead('name', '1', 951, 1051, is_reverse=True, query_alignment_length=50),
-            MockRead('name', '1', 2299, 2399, is_reverse=False, query_alignment_length=50)
+            MockRead('name', '1', 951, 1051, is_reverse=False, query_alignment_length=50, is_read1=False),
+            MockRead('name', '1', 2299, 2399, is_reverse=True, query_alignment_length=50)
         )
+        print(read_pair_type(pair[0]))
         # following help in debugging the mockup
-        self.assertTrue(pair[0].is_reverse)
-        self.assertTrue(pair[0].is_read1)
-        self.assertFalse(pair[0].is_read2)
-        self.assertFalse(pair[1].is_reverse)
-        self.assertFalse(pair[1].is_read1)
-        self.assertTrue(pair[1].is_read2)
+        self.assertFalse(pair[0].is_reverse)
+        self.assertFalse(pair[0].is_read1)
+        self.assertTrue(pair[0].is_read2)
+        self.assertTrue(pair[1].is_reverse)
+        self.assertTrue(pair[1].is_read1)
+        self.assertFalse(pair[1].is_read2)
         self.assertEqual(STRAND.POS, sequenced_strand(pair[0], 2))
         self.assertEqual(STRAND.POS, evidence.decide_sequenced_strand([pair[0]]))
         self.assertEqual(STRAND.POS, sequenced_strand(pair[1], 2))
