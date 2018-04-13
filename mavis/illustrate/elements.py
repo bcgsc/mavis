@@ -87,11 +87,19 @@ def draw_exon_track(config, canvas, transcript, mapping, colors=None, genomic_mi
         ))
 
     # draw the exons
-    for exon in exons:
+    for i, exon in enumerate(exons):
         start = mapping.convert_ratioed_pos(exon.start)
         end = mapping.convert_ratioed_pos(exon.end)
-        start = start.start if exon.start == genomic_min else start.end
-        end = end.end if exon.end == genomic_max else end.start
+
+        if exon.start == genomic_min or (i > 0 and exon.start - exons[i - 1].end == 1):  # consecutive with previous exon
+            start = start.start
+        else:
+            start = start.end
+
+        if exon.end == genomic_max or (i < len(exons) - 1 and exons[i + 1].start - exon.end == 1):  # consecutive with following exon
+            end = end.end
+        else:
+            end = end.start
         pxi = Interval(*sorted([start, end]))  # for very small intervals (single bp) these may reverse
 
         try:
@@ -167,6 +175,8 @@ def draw_transcript_with_translation(
     # draw the splicing pattern
     splice_group = canvas.g(class_='splicing')
     for p1, p2 in zip(spl_tx.splicing_pattern[::2], spl_tx.splicing_pattern[1::2]):
+        if abs(p1.pos - p2.pos) < 2:  # do not add splicing marks for consecutive exons
+            continue
         a = mapping.convert_ratioed_pos(p1.pos).start
         b = mapping.convert_ratioed_pos(p2.pos).end
         polyline = [(a, y), (a + (b - a) / 2, y - config.splice_height), (b, y)]
@@ -353,6 +363,8 @@ def draw_ustranscript(
             start=genomic_min,
             end=genomic_max
         )
+    for src, tgt in mapping.mapping.items():
+        print(src, '==>', tgt)
 
     main_group = canvas.g(class_='pre_transcript')
 

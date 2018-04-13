@@ -160,6 +160,41 @@ class TestDraw(unittest.TestCase):
         self.assertEqual(d1.name, g.labels['D1'])
         self.assertEqual(d2.name, g.labels['D2'])
 
+    def test_draw_consec_exons(self):
+        d = DiagramSettings()
+        # domains = [protein.Domain()]
+        t = build_transcript(
+            gene=None,
+            cds_start=50,
+            cds_end=249,
+            exons=[(1, 99), (200, 299), (300, 350), (400, 499)],
+            strand=STRAND.POS,
+            domains=[]
+        )
+        b = Breakpoint('1', 350, 410, orient=ORIENT.LEFT)
+        g = draw_ustranscript(
+            d, self.canvas, t, 500,
+            colors={t.exons[1]: '#FFFF00'},
+            breakpoints=[b]
+        )
+        self.canvas.add(g)
+        if OUTPUT_SVG:
+            self.canvas.saveas('test_draw_consec_exons.svg')
+
+        # self.canvas.saveas('test_draw_ustranscript.svg')
+        self.assertEqual(2, len(self.canvas.elements))
+        self.assertEqual(3, len(g.elements))
+        # check that only 2 splicing marks were created
+        self.assertEqual(2, len(g.elements[0].elements[0].elements))
+        # get the second exon
+        ex2 = g.elements[0].elements[1].elements[2].elements[0]
+        print(ex2)
+        self.assertAlmostEqual(120.7783426339, ex2.attribs.get('width'))
+        # get the third exon
+        ex3 = g.elements[0].elements[1].elements[3].elements[0]
+        print(ex3)
+        self.assertAlmostEqual(96.52494419642852, ex3.attribs.get('width'))
+
     def test_dynamic_label_color(self):
         self.assertEqual(HEX_WHITE, dynamic_label_color(HEX_BLACK))
         self.assertEqual(HEX_BLACK, dynamic_label_color(HEX_WHITE))
