@@ -1,5 +1,6 @@
 import argparse
 import glob
+import itertools
 import os
 import shutil
 import statistics
@@ -85,10 +86,11 @@ class TestConfig(unittest.TestCase):
 
     def test_trans_with_annotations(self):
         self.args.extend(
-            self.genome +
-            [False, self.genome_bam] +
-            self.trans +
-            [True, self.trans_bam, '--input', self.input, 'mock_genome', 'mock_trans', '--annotations', self.annotations]
+            itertools.chain(
+                self.genome,
+                [False, self.genome_bam],
+                self.trans,
+                [True, self.trans_bam, '--input', self.input, 'mock_genome', 'mock_trans', '--annotations', self.annotations])
         )
         with self.assertRaises(statistics.StatisticsError):  # too few annotations to calc median
             self.run_main()

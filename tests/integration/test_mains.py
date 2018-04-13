@@ -67,7 +67,7 @@ class TestPipeline(unittest.TestCase):
             aligner_reference=REFERENCE_GENOME_FILE_2BIT,
             reference_genome_filename=REFERENCE_GENOME_FILE
         )
-        prefix = re.sub('\.tab$', '', cluster_files[0])
+        prefix = re.sub(r'\.tab$', '', cluster_files[0])
         for suffix in [
             '.validation-passed.tab',
             '.validation-failed.tab',

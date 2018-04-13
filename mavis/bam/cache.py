@@ -236,9 +236,9 @@ class BamCache:
                 raise KeyError('mate is not found in the cache')
             else:
                 warnings.warn(
-                    'looking for uncached mate of {0}. This requires file access and'.format(read.query_name) +
-                    ' requests may be slow. This should also not be using in a loop iterating using the file pointer ' +
-                    ' as it will change the file pointer position')
+                    'looking for uncached mate of {0}. This requires file access and'
+                    ' requests may be slow. This should also not be using in a loop iterating using the file pointer '
+                    ' as it will change the file pointer position'.format(read.query_name))
                 m = self.fh.mate(read)
                 self.add_read(m)
                 return [m]

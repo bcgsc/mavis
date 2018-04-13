@@ -472,8 +472,10 @@ def main():
 
     # validate
     augment_parser(
-        ['library', 'protocol', 'bam_file', 'read_length', 'stdev_fragment_size', 'median_fragment_size'] +
-        ['strand_specific', 'reference_genome', 'aligner_reference'],
+        [
+            'library', 'protocol', 'bam_file', 'read_length', 'stdev_fragment_size',
+            'median_fragment_size', 'strand_specific', 'reference_genome', 'aligner_reference'
+        ],
         required[SUBCOMMAND.VALIDATE]
     )
     augment_parser(VALIDATION_DEFAULTS.keys(), optional[SUBCOMMAND.VALIDATE])

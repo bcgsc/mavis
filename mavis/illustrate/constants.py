@@ -165,8 +165,8 @@ class DiagramSettings:
         self.template_band_stroke = '#000000'
         self.template_track_height = max([
             self.track_height / 3,
-            self.label_font_size - self.breakpoint_bottom_margin -
-            self.breakpoint_top_margin + self.breakpoint_label_font_size])
+            self.label_font_size - self.breakpoint_bottom_margin - self.breakpoint_top_margin + self.breakpoint_label_font_size
+        ])
         self.template_default_fill = '#ffffff'
         self.template_band_min_width = 2
         self.template_label_prefix = 'C'

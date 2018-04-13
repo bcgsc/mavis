@@ -492,8 +492,7 @@ def draw_genes(config, canvas, genes, target_width, breakpoints=None, colors=Non
 
     main_group.add(
         canvas.rect(
-            (0, y + config.track_height / 2 - config.scaffold_height / 2 +
-                (len(tracks) - 1) * (config.track_height + config.padding)),
+            (0, y + config.track_height / 2 - config.scaffold_height / 2 + (len(tracks) - 1) * (config.track_height + config.padding)),
             (target_width, config.scaffold_height),
             fill=config.scaffold_color,
             class_='scaffold'
@@ -688,8 +687,9 @@ def draw_template(config, canvas, template, target_width, labels=None, colors=No
     label_group.add(canvas.text(
         labels.add(template, config.template_label_prefix),
         insert=(
-            0 - config.padding, config.breakpoint_top_margin + config.template_track_height / 2 +
-            config.font_central_shift_ratio * config.label_font_size),
+            0 - config.padding,
+            config.breakpoint_top_margin + config.template_track_height / 2 + config.font_central_shift_ratio * config.label_font_size
+        ),
         fill=config.label_color,
         style=config.font_style.format(font_size=config.label_font_size, text_anchor='end'),
         class_='label'

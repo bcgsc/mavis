@@ -449,7 +449,7 @@ def nullable_filepath(path):
 def library_name_format(input_string):
     input_string = str(input_string)
     if re.search(r'[;,_\s]', input_string):
-        raise TypeError('library names cannot contain the reserved characters [;,_\s]', input_string)
+        raise TypeError('library names cannot contain the reserved characters [;,_\\s]', input_string)
     if input_string.lower() == 'none':
         raise TypeError('library name cannot be none', input_string)
     if not input_string:
