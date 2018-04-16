@@ -83,7 +83,7 @@ class DeBruijnGraph(nx.DiGraph):
             freq += data['freq']
         nx.DiGraph.add_edge(self, n1, n2, freq=freq)
 
-    def edges(self, *nodes, data=False):
+    def all_edges(self, *nodes, data=False):
         return self.in_edges(*nodes, data=data) + self.out_edges(*nodes, data=data)
 
     def trim_tails_by_freq(self, min_weight):
@@ -98,12 +98,12 @@ class DeBruijnGraph(nx.DiGraph):
 
         while ends:
             curr = ends.pop()
-            if not self.has_node(curr):
+            if not self.has_node(curr) or curr in visited:
                 continue
             visited.add(curr)
             # follow until the path forks or we run out of low weigh edges
             if self.out_degree(curr) == 0 or self.in_degree(curr) == 0:
-                for src, tgt, data in list(self.edges(curr, data=True)):
+                for src, tgt, data in list(self.all_edges(curr, data=True)):
                     if data['freq'] < min_weight:
                         self.remove_edge(src, tgt)
                     if src not in visited:
@@ -143,7 +143,7 @@ class DeBruijnGraph(nx.DiGraph):
         trim any low weight edges where another path exists between the source and target
         of higher weight
         """
-        current_edges = list(self.edges(data=True))
+        current_edges = list(self.all_edges(data=True))
         for src, tgt, data in sorted(current_edges, key=lambda x: (x[2]['freq'], x[0], x[1])):
             # come up with the path by extending this edge either direction until the degree > 2
             if not self.has_node(src) or not self.has_node(tgt) or not self.has_edge(src, tgt):

@@ -89,6 +89,8 @@ class TestDeBruijnGraph(unittest.TestCase):
         g = DeBruijnGraph()
         for s, t in itertools.combinations([1, 2, 3, 4, 5, 6], 2):
             g.add_edge(s, t)
+            print('s => t', s, t)
+        g.add_edge(6, 1)
         g.add_node(10)  # singlet
         g.add_edge(7, 6)
         g.add_edge(8, 7)
@@ -100,6 +102,7 @@ class TestDeBruijnGraph(unittest.TestCase):
         for s, t in itertools.combinations([1, 2, 3, 4, 5, 6], 2):
             g.add_edge(s, t)
         g.add_node(10)  # singlet
+        g.add_edge(6, 1)
         g.add_edge(7, 6)
         g.add_edge(7, 8)
         g.add_edge(8, 7)
@@ -111,6 +114,7 @@ class TestDeBruijnGraph(unittest.TestCase):
         for s, t in itertools.combinations([1, 2, 3, 4, 5, 6], 2):
             g.add_edge(s, t)
         g.add_node(10)  # singlet
+        g.add_edge(6, 1)
         g.add_edge(7, 6)
         g.add_edge(7, 8)
         g.add_edge(9, 8)
