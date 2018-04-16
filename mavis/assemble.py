@@ -254,7 +254,6 @@ def pull_contigs_from_component(
     path_scores = {}  # path_str => score_int
     w = min_edge_trim_weight
     unresolved_components = [component]
-    last_path_est = None
 
     while unresolved_components:
         # since now we know it's a tree, the assemblies will all be ltd to
@@ -263,9 +262,12 @@ def pull_contigs_from_component(
         paths_est = len(assembly.get_sinks(component)) * len(assembly.get_sources(component))
 
         if paths_est > assembly_max_paths:
-            min_edge_weight = min([e[2]['freq'] for e in assembly.edges(
+            edge_weights = sorted([e[2]['freq'] for e in assembly.all_edges(
                 assembly.get_sources(component) | assembly.get_sinks(component), data=True)])
-            w = max([w + 1, min_edge_weight])
+            w = max([w + 1, edge_weights[0]])
+
+            if w > edge_weights[-1]:
+                continue
             log(
                 'reducing estimated paths. Current estimate is {}+ from'.format(paths_est),
                 len(component), 'nodes', 'filter increase', w)
