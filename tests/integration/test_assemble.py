@@ -10,7 +10,7 @@ from mavis.constants import reverse_complement
 from mavis.validate.constants import DEFAULTS
 from mavis.util import log
 
-from . import MockObject, DATA_DIR, RUN_FULL
+from . import MockObject, DATA_DIR, RUN_FULL, get_data
 
 
 class TestFilterContigs(unittest.TestCase):
@@ -334,6 +334,7 @@ class TestAssemble(unittest.TestCase):
     @timeout_decorator.timeout(300)
     @unittest.skipIf(not RUN_FULL, 'slower tests will not be run unless the environment variable RUN_FULL is given')
     def test_large_assembly(self):
+        # simply testing that this will complete before the timeout
         sequences = set()
         with open(os.path.join(DATA_DIR, 'large_assembly.txt'), 'r') as fh:
             sequences.update([l.strip() for l in fh.readlines()])
@@ -348,17 +349,10 @@ class TestAssemble(unittest.TestCase):
             remap_min_exact_match=30,
             assembly_min_uniq=DEFAULTS.assembly_min_uniq
         )
-        expected_seq = {
-            'GTTTTTTAATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCTGCCGCCGCCAGGTCCTGGGGCAGCCGGGGTTCCTGGCGCTCCGGGGGCAGCCGGGCGGCCGCCGGTGGGTCCGCTGGGCCGCTGCCCCGCTCCGGGTGGG',
-            'GGTCTTTTTTAATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCTGGTCCTGGGGCAGCCGGGGTTCCTGGCGCTCCGGGGGCAGCCGGGCGGCCGCCGGTGGGTCCGCTGGGCCGCTGCCCCGCTCCGGG',
-            'GGCCGTTTTTTAATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCTCAGCCGGGGTTCCTGGCGCTCCGGGGGCAGCCGGGCGGCCGCCGGTGGGTCCGCTGGGCCGCTGCCCCGCTCCGGGTGGGG'
-        }
-        expected_seq.update({reverse_complement(c) for c in expected_seq})
         for contig in contigs:
             print(len(contig.seq), contig.remap_score())
-        self.assertEqual(3, len(contigs))
-        obs_seq = {c.seq for c in contigs}
-        self.assertEqual(expected_seq & obs_seq, obs_seq)
+            print(contig.seq)
+        self.assertTrue(len(contigs))
 
     def test_assemble_short_contig(self):
         sequences = {
@@ -610,3 +604,14 @@ class TestAssemble(unittest.TestCase):
         for contig in contigs:
             print(len(contig.seq), contig.remap_score(), contig.seq)
         self.assertTrue({target, reverse_complement(target)} & {c.seq for c in contigs})
+
+    @timeout_decorator.timeout(20)
+    @unittest.skipIf(not RUN_FULL, 'slower tests will not be run unless the environment variable RUN_FULL is given')
+    def test_long_filter_bug(self):
+        sequences = set()
+        with open(get_data('long_filter_assembly.txt'), 'r') as fh:
+            sequences.update([s.strip() for s in fh.readlines() if s])
+        contigs = assemble(sequences, 111, 3, 8, 0.1, 0.1, log=log)
+        for c in contigs:
+            print(c.seq, c.remap_score())
+        self.assertTrue(len(contigs))

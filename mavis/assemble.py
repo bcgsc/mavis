@@ -83,7 +83,7 @@ class DeBruijnGraph(nx.DiGraph):
             freq += data['freq']
         nx.DiGraph.add_edge(self, n1, n2, freq=freq)
 
-    def edges(self, *nodes, data=False):
+    def all_edges(self, *nodes, data=False):
         return self.in_edges(*nodes, data=data) + self.out_edges(*nodes, data=data)
 
     def trim_tails_by_freq(self, min_weight):
@@ -93,21 +93,26 @@ class DeBruijnGraph(nx.DiGraph):
         Args:
             min_weight (int): the minimum weight for an edge to be retained
         """
-        ends = [n for n in self.nodes() if self.degree(n) < 2]
+        ends = {n for n in self.nodes() if self.out_degree(n) == 0 or self.in_degree(n) == 0}
+        visited = set()
 
-        for node in ends:
-            if not self.has_node(node):
+        while ends:
+            curr = ends.pop()
+            if not self.has_node(curr) or curr in visited:
                 continue
+            visited.add(curr)
             # follow until the path forks or we run out of low weigh edges
-            curr = node
-            while self.degree(curr) == 1:
-                src, tgt, data = self.edges(curr, data=True)[0]
-                if data['freq'] < min_weight:
-                    self.remove_node(curr)
-                    curr = src if src != curr else tgt
-                else:
-                    break
-        for node in ends:
+            if self.out_degree(curr) == 0 or self.in_degree(curr) == 0:
+                for src, tgt, data in list(self.all_edges(curr, data=True)):
+                    if data['freq'] < min_weight:
+                        self.remove_edge(src, tgt)
+                    if src not in visited:
+                        ends.add(src)
+                    if tgt not in visited:
+                        ends.add(tgt)
+
+        # remove any resulting singlets
+        for node in visited:
             if not self.has_node(node):
                 continue
             if self.degree(node) == 0:
@@ -138,7 +143,7 @@ class DeBruijnGraph(nx.DiGraph):
         trim any low weight edges where another path exists between the source and target
         of higher weight
         """
-        current_edges = list(self.edges(data=True))
+        current_edges = list(self.all_edges(data=True))
         for src, tgt, data in sorted(current_edges, key=lambda x: (x[2]['freq'], x[0], x[1])):
             # come up with the path by extending this edge either direction until the degree > 2
             if not self.has_node(src) or not self.has_node(tgt) or not self.has_edge(src, tgt):
@@ -250,16 +255,19 @@ def pull_contigs_from_component(
     w = min_edge_trim_weight
     unresolved_components = [component]
 
-    while len(unresolved_components) > 0:
+    while unresolved_components:
         # since now we know it's a tree, the assemblies will all be ltd to
         # simple paths
         component = unresolved_components.pop(0)
         paths_est = len(assembly.get_sinks(component)) * len(assembly.get_sources(component))
 
         if paths_est > assembly_max_paths:
-            min_edge_weight = min([e[2]['freq'] for e in assembly.edges(
+            edge_weights = sorted([e[2]['freq'] for e in assembly.all_edges(
                 assembly.get_sources(component) | assembly.get_sinks(component), data=True)])
-            w = max([w + 1, min_edge_weight])
+            w = max([w + 1, edge_weights[0]])
+
+            if w > edge_weights[-1]:
+                continue
             log(
                 'reducing estimated paths. Current estimate is {}+ from'.format(paths_est),
                 len(component), 'nodes', 'filter increase', w)

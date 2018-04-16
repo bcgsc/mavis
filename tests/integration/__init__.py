@@ -29,6 +29,10 @@ OUTPUT_SVG = int(os.environ.get('OUTPUT_SVG', 0))
 _EXAMPLE_GENES = None
 
 
+def get_data(path):
+    return os.path.join(DATA_DIR, path)
+
+
 def get_example_genes():
     return _EXAMPLE_GENES
 

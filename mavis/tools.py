@@ -449,7 +449,7 @@ def _convert_breakdancer_file(input_file):
         lines = fh.readlines()
         header = 0
         while header < len(lines) and lines[header].startswith('#'):
-            metadata_match = re.match('^#(\S+)\t.*\tlibrary:(\S+)\t.*', lines[header])
+            metadata_match = re.match(r'^#(\S+)\t.*\tlibrary:(\S+)\t.*', lines[header])
             if metadata_match:
                 bam_to_lib[metadata_match.group(1)] = metadata_match.group(2)
             header += 1

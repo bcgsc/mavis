@@ -207,7 +207,7 @@ class TestTransformLine(unittest.TestCase):
 
     def test_split_combine_cast(self):
         h = ['a', 'b', 'c']
-        ft = MockFileTransform(h, split={'a': '^(?P<a1>\d+)_(?P<a2>\d+)$'}, combine={'k': '{a1}{b}{c}'}, cast={'k': int})
+        ft = MockFileTransform(h, split={'a': r'^(?P<a1>\d+)_(?P<a2>\d+)$'}, combine={'k': '{a1}{b}{c}'}, cast={'k': int})
         row = ft.transform_line(['1_10', '2', '3'])
         self.assertEqual(123, row['k'])
 
@@ -272,7 +272,7 @@ class TestTransformLine(unittest.TestCase):
         h = ['a']
         ft = MockFileTransform(
             h,
-            split={'a': '^(?P<a1>\d+)[_]+(?P<a2>\d+)$'}
+            split={'a': r'^(?P<a1>\d+)[_]+(?P<a2>\d+)$'}
         )
         row = ft.transform_line(['1_2'])
         self.assertEqual('1', row['a1'])
