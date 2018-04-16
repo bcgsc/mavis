@@ -363,8 +363,6 @@ def draw_ustranscript(
             start=genomic_min,
             end=genomic_max
         )
-    for src, tgt in mapping.mapping.items():
-        print(src, '==>', tgt)
 
     main_group = canvas.g(class_='pre_transcript')
 
