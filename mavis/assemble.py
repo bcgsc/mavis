@@ -93,21 +93,26 @@ class DeBruijnGraph(nx.DiGraph):
         Args:
             min_weight (int): the minimum weight for an edge to be retained
         """
-        ends = [n for n in self.nodes() if self.degree(n) < 2]
+        ends = {n for n in self.nodes() if self.out_degree(n) == 0 or self.in_degree(n) == 0}
+        visited = set()
 
-        for node in ends:
-            if not self.has_node(node):
+        while ends:
+            curr = ends.pop()
+            if not self.has_node(curr):
                 continue
+            visited.add(curr)
             # follow until the path forks or we run out of low weigh edges
-            curr = node
-            while self.degree(curr) == 1:
-                src, tgt, data = self.edges(curr, data=True)[0]
-                if data['freq'] < min_weight:
-                    self.remove_node(curr)
-                    curr = src if src != curr else tgt
-                else:
-                    break
-        for node in ends:
+            if self.out_degree(curr) == 0 or self.in_degree(curr) == 0:
+                for src, tgt, data in list(self.edges(curr, data=True)):
+                    if data['freq'] < min_weight:
+                        self.remove_edge(src, tgt)
+                    if src not in visited:
+                        ends.add(src)
+                    if tgt not in visited:
+                        ends.add(tgt)
+
+        # remove any resulting singlets
+        for node in visited:
             if not self.has_node(node):
                 continue
             if self.degree(node) == 0:
@@ -249,8 +254,9 @@ def pull_contigs_from_component(
     path_scores = {}  # path_str => score_int
     w = min_edge_trim_weight
     unresolved_components = [component]
+    last_path_est = None
 
-    while len(unresolved_components) > 0:
+    while unresolved_components:
         # since now we know it's a tree, the assemblies will all be ltd to
         # simple paths
         component = unresolved_components.pop(0)
