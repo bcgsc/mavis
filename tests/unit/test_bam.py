@@ -223,6 +223,10 @@ class TestMergeInternalEvents(unittest.TestCase):
         print(actual)
         self.assertEqual(exp, actual)
 
+    def test_mismatch_only(self):
+        exp = _cigar.convert_string_to_cigar('39=1X16=1X71=22S')
+        self.assertEqual(exp, _cigar.merge_internal_events(exp, 20, 15))
+
 
 class TestExtendSoftclipping(unittest.TestCase):
 

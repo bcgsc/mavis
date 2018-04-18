@@ -304,6 +304,7 @@ class TranscriptomeEvidence(Evidence):
         return _cigar.join(new_cigar)
 
     def standardize_read(self, read):
+        read.cigar = self.exon_boundary_shift_cigar(read)  # do this twice to avoid merging events accidentally
         read = Evidence.standardize_read(self, read)
         read.cigar = self.exon_boundary_shift_cigar(read)
         return read
