@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import Mock
 
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import COLUMNS, ORIENT, STRAND, SVTYPE
@@ -460,3 +461,17 @@ class TestNetSize(unittest.TestCase):
             untemplated_seq='TT'
         )
         self.assertEqual(Interval(2), bpp.net_size())
+
+
+class TestUntemplatedShift(unittest.TestCase):
+
+    def test_indel(self):
+        ref = {'1': Mock(seq='AGAAAAAAAAAACAGAGTCTATTAAGGCATCTTCTATGGTCAGATATATCTATTTTTTTCTTTCTTTTTTTTACTTTCATTAAGTGCCACTAAAAAATTAGGTTCAATTAAACTTTATTAATCTCTTCTGAGTTTTGATTGAGTATATATATATATATACCCAGTTTCAAGCAGGTATCTGCCTTTAAAGATAAGAGACCTCCTAAATGCTTTCTTTTATTAGTTGCCCTGTTTCAGATTCAGCTTTGTATCTATATCACCTGTTAATATGTGTGGACTCACAGAAATGATCATTGAGGGAATGCACCCTGTTTGGGTG')}
+        bpp = BreakpointPair(
+            Breakpoint('1', 40237990 - 40237846, orient=ORIENT.LEFT),
+            Breakpoint('1', 40237991 - 40237846, orient=ORIENT.RIGHT),
+            untemplated_seq='GTATATATATATATATAT'
+        )
+        result = bpp.untemplated_shift(ref)
+        print(result)
+        self.assertEqual((0, 1), result)

@@ -7,6 +7,7 @@ from mavis.annotate.genomic import PreTranscript, Transcript
 from mavis.bam.cache import BamCache
 from mavis.bam.read import sequenced_strand, SamRead, read_pair_type
 from mavis.bam.cigar import convert_string_to_cigar
+from mavis.bam import cigar as _cigar
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import CALL_METHOD, CIGAR, ORIENT, PYSAM_READ_FLAGS, STRAND, SVTYPE
 from mavis.interval import Interval
@@ -39,6 +40,12 @@ def setUpModule():
             READS[read.qname][0] = read
         else:
             READS[read.qname][1] = read
+    patcher = mock.patch('mavis.breakpoint.BreakpointPair.untemplated_shift', new=lambda *x: (0, 0))
+    patcher.start()
+
+
+def tearDownModule():
+    mock.patch.stopall()
 
 
 class TestCallByContig(unittest.TestCase):
@@ -57,7 +64,7 @@ class TestCallByContig(unittest.TestCase):
             reference_start=55241669,
             alignment_rank=0
         )
-        print('read.cigar', read.cigar)
+        print('read.cigar', _cigar.convert_cigar_to_string(read.cigar))
         evidence = TranscriptomeEvidence(
             reference_annotations,
             Breakpoint(gene.chr, gene.start, gene.end, orient='L', strand='+'), Breakpoint(gene.chr, gene.start, gene.end, orient='R', strand='+'),
@@ -69,8 +76,14 @@ class TestCallByContig(unittest.TestCase):
         select_contig_alignments(evidence, {read.query_sequence: {read}})
         print('distance', evidence.distance(55219055, 55220239))
         print('selected contig alignments')
-        print([c.alignments for c in evidence.contigs])
+        for contig in evidence.contigs:
+            print(contig)
+            for aln in contig.alignments:
+                print(aln.alignment_id())
         events = call._call_by_contigs(evidence)
+        for ev in events:
+            print(ev)
+            print(evidence.distance(ev.break1.start, ev.break2.start))
         self.assertEqual(1, len(events))
         self.assertEqual(Breakpoint('7', 55242465, orient='L', strand='+'), events[0].break1)
         self.assertEqual(Breakpoint('7', 55242481, orient='R', strand='+'), events[0].break2)
@@ -1085,7 +1098,7 @@ class TestCallBySpanningReads(unittest.TestCase):
                 cigar=[(CIGAR.EQ, 15), (CIGAR.D, 5), (CIGAR.I, 2), (CIGAR.EQ, 10)],
                 query_sequence='ATCGATCTAGATCTA' 'GG' 'ATAGTTCTAG'),
             SamRead(
-                query_name='name', reference_name='fake', reference_start=50,
+                query_name='name2', reference_name='fake', reference_start=50,
                 cigar=[(CIGAR.EQ, 15), (CIGAR.I, 2), (CIGAR.D, 5), (CIGAR.EQ, 10)],
                 query_sequence='ATCGATCTAGATCTA' 'GG' 'ATAGTTCTAG')
         ]

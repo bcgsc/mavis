@@ -99,6 +99,11 @@ class SplitAlignment(BreakpointPair):
             return Interval(self.read1.alignment_rank)
         return Interval(self.read1.alignment_rank) | Interval(self.read2.alignment_rank)
 
+    def alignment_id(self):
+        if not self.read2:
+            return _read.SamRead.alignment_id(self.read1), None
+        return _read.SamRead.alignment_id(self.read1), _read.SamRead.alignment_id(self.read2)
+
     @staticmethod
     def breakpoint_contig_remapped_depth(breakpoint, contig, read):
         if breakpoint.chr != read.reference_name:
@@ -192,7 +197,7 @@ def convert_to_duplication(alignment, reference_genome):
     return alignment
 
 
-def call_read_events(read, secondary_read=None):
+def call_read_events(read, secondary_read=None, is_stranded=False):
     """
     Given a read, return breakpoint pairs representing all putative events
     """
@@ -234,8 +239,8 @@ def call_read_events(read, secondary_read=None):
     strand = STRAND.NEG if read.is_reverse else STRAND.POS
     for ref_start, delsize, insseq in events:
         bpp = SplitAlignment(
-            Breakpoint(read.reference_name, ref_start, orient=ORIENT.LEFT, strand=strand),
-            Breakpoint(read.reference_name, ref_start + delsize + 1, orient=ORIENT.RIGHT, strand=strand),
+            Breakpoint(read.reference_name, ref_start, orient=ORIENT.LEFT, strand=strand if is_stranded else STRAND.NS),
+            Breakpoint(read.reference_name, ref_start + delsize + 1, orient=ORIENT.RIGHT, strand=strand if is_stranded else STRAND.NS),
             untemplated_seq=insseq, read1=read, read2=secondary_read
         )
         result.append(bpp)
@@ -269,7 +274,7 @@ def read_breakpoint(read):
         )
 
 
-def call_paired_read_event(read1, read2):
+def call_paired_read_event(read1, read2, is_stranded=False):
     """
     For a given pair of reads call all applicable events. Assume there is a major
     event from both reads and then call indels from the individual reads
@@ -319,7 +324,14 @@ def call_paired_read_event(read1, read2):
         untemplated_seq = read1.query_sequence[r1_query_cover[1] + 1:r2_query_cover[0]]
     else:  # query coverage overlaps
         pass
-    return SplitAlignment(break1, break2, untemplated_seq=untemplated_seq, read1=read1, read2=read2)
+    if not is_stranded:
+        break1.strand = STRAND.NS
+        break2.strand = STRAND.NS
+    return SplitAlignment(
+        break1, break2,
+        untemplated_seq=untemplated_seq,
+        read1=read1,
+        read2=read2)
 
 
 def align_sequences(
@@ -466,7 +478,7 @@ def select_contig_alignments(evidence, reads_by_query):
             )
             read = evidence.standardize_read(read)  # genome needs to merge first, trans needs to standard first
 
-            for single_alignment in call_read_events(read):
+            for single_alignment in call_read_events(read, is_stranded=evidence.bam_cache.stranded):
                 single_alignment = convert_to_duplication(single_alignment, evidence.reference_genome)
                 if supports_primary_event(single_alignment):
                     alignments.append(single_alignment)
@@ -486,7 +498,7 @@ def select_contig_alignments(evidence, reads_by_query):
 
         for read1, read2 in itertools.combinations(std_reads, 2):
             try:
-                paired_event = call_paired_read_event(read1, read2)
+                paired_event = call_paired_read_event(read1, read2, is_stranded=evidence.bam_cache.stranded)
 
             except AssertionError:
                 continue
@@ -502,9 +514,12 @@ def select_contig_alignments(evidence, reads_by_query):
             filtered_alignments = {f for f in filtered_alignments if f.alignment_rank().center == best_rank}
             for primary_alignment in list(filtered_alignments):
                 # now call supplementary events
-                supp_events = call_read_events(primary_alignment.read1, primary_alignment.read2)
+                supp_events = call_read_events(primary_alignment.read1, primary_alignment.read2, is_stranded=evidence.bam_cache.stranded)
                 if primary_alignment.read2:
-                    supp_events.extend(call_read_events(primary_alignment.read2, primary_alignment.read1))
+                    supp_events.extend(call_read_events(
+                        primary_alignment.read2,
+                        primary_alignment.read1,
+                        is_stranded=evidence.bam_cache.stranded))
                 for supp_event in supp_events:
                     supp_event = convert_to_duplication(supp_event, evidence.reference_genome)
                     if supp_event not in filtered_alignments and filter_pass(supp_event):

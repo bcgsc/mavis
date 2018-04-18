@@ -419,6 +419,50 @@ class BreakpointPair:
 
         return ''.join(first_seq).upper(), ''.join(second_seq).upper()
 
+    def untemplated_shift(self, reference_genome):
+        """gives a range for each breakpoint on the possible alignment range in the shifting the untemplated
+        sequence"""
+        if any([
+            self.untemplated_seq is None,
+            len(self.break1) + len(self.break2) > 2,
+            self.break1.orient == ORIENT.NS,
+            self.break2.orient == ORIENT.NS
+        ]):
+            raise AttributeError('Cannot calculate the shift for non specific breakpoint calls', self)
+        lutemp = len(self.untemplated_seq)
+        break1_shift = 0
+        if self.break1.orient == ORIENT.LEFT:
+            break1_seq = reference_genome[self.break1.chr].seq[self.break1.start - lutemp: self.break1.start]
+            for i in range(1, lutemp + 1):
+                if break1_seq[lutemp - i] == self.untemplated_seq[lutemp - i]:
+                    break1_shift += 1
+                else:
+                    break
+        else:
+            break1_seq = reference_genome[self.break1.chr].seq[self.break1.start - 1: self.break1.start + lutemp - 1]
+            for i in range(0, lutemp):
+                if break1_seq[i] == self.untemplated_seq[i]:
+                    break1_shift += 1
+                else:
+                    break
+
+        break2_shift = 0
+        if self.break2.orient == ORIENT.LEFT:
+            break2_seq = reference_genome[self.break2.chr].seq[self.break2.start - lutemp: self.break2.start]
+            for i in range(1, lutemp + 1):
+                if break2_seq[lutemp - i] == self.untemplated_seq[lutemp - i]:
+                    break2_shift += 1
+                else:
+                    break
+        else:
+            break2_seq = reference_genome[self.break2.chr].seq[self.break2.start - 1: self.break2.start + lutemp - 1]
+            for i in range(0, lutemp):
+                if break2_seq[i] == self.untemplated_seq[i]:
+                    break2_shift += 1
+                else:
+                    break
+        return (break2_shift, break1_shift)
+
     def get_bed_repesentation(self):
         bed = []
         if self.interchromosomal:
