@@ -4,6 +4,7 @@ import warnings
 
 import pysam
 
+from .read import SamRead
 from ..annotate.base import ReferenceName
 from ..interval import Interval
 
@@ -46,7 +47,11 @@ class BamCache:
         Args:
             read (pysam.AlignedSegment): the read to add to the cache
         """
-        self.cache.setdefault(read.query_name, set()).add(read)
+        if not isinstance(read, SamRead):
+            read = SamRead.copy(read)
+        self.cache.setdefault(read.query_name, set())
+        if read not in self.cache[read.query_name]:
+            self.cache[read.query_name].add(read)
 
     def has_read(self, read):
         """
@@ -147,6 +152,7 @@ class BamCache:
                 break
             if stop_on_cached_read and self.has_read(read):
                 break
+            read = SamRead.copy(read)
             if not filter_if(read):
                 result.append(read)
             if cache_if(read):
@@ -198,6 +204,7 @@ class BamCache:
             for read in self.fh.fetch(chrom, fstart, fend):
                 if bin_limit is not None and count >= running_surplus:
                     break
+                read = SamRead.copy(read)
                 if not filter_if(read):
                     result.append(read)
                 if read.query_name not in temp_cache:
@@ -240,6 +247,7 @@ class BamCache:
                     ' requests may be slow. This should also not be using in a loop iterating using the file pointer '
                     ' as it will change the file pointer position'.format(read.query_name))
                 m = self.fh.mate(read)
+                m = SamRead.copy(m)
                 self.add_read(m)
                 return [m]
         return mates
