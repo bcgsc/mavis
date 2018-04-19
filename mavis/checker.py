@@ -94,7 +94,7 @@ class PipelineStageRun:
             if not self.job_ids:
                 self.job_ids.add(1)
 
-    def report(self, indent='  ', indent_level=0, time_stamp=False):
+    def report(self, indent='  ', indent_level=0, time_stamp=False, dependencies=None):
         """
         parses log files and checks for complete stamps. Reports any errors observed
 
@@ -117,6 +117,7 @@ class PipelineStageRun:
         missing_stamp = set()
         missing_both = set()
         errors = set()
+        dependency_errors = {}
         run_times = {}
 
         for job_task_id in sorted(self.job_ids):
@@ -133,6 +134,15 @@ class PipelineStageRun:
                         errors.add(job_task_id)
                     if logfile.run_time is not None:
                         run_times[job_task_id] = logfile.run_time
+                if dependencies:
+                    try:
+                        last_dedit = os.path.getmtime(dependencies.stamps[job_task_id])
+                        last_edit = os.path.getmtime(self.stamps[job_task_id])
+                        if last_dedit - last_edit > 1:  # Allow for 1 second in case the files are very close (i.e. tests)
+                            print(last_dedit, last_edit)
+                            dependency_errors[job_task_id] = 'Dependent task completion stamp is newer than the current task'
+                    except KeyError:
+                        dependency_errors[job_task_id] = 'Unable to find dependency completion stamp'
             else:
                 if job_task_id in self.logs:
                     logfile = self.logs[job_task_id]
@@ -150,7 +160,7 @@ class PipelineStageRun:
             log(indent * indent_level + self.name, 'FAIL', time_stamp=time_stamp)
             log(indent * indent_level + '  no files found: stage not started, or skipped', time_stamp=False)
             return False
-        elif any([incomplete_jobs, missing_both, missing_stamp, errors]):
+        elif any([incomplete_jobs, missing_both, missing_stamp, errors, dependency_errors]):
             log(indent * indent_level + self.name, 'FAIL', time_stamp=time_stamp)
             # summarize the errors
             if None not in self.job_ids or len(self.job_ids) > 1:
@@ -177,6 +187,9 @@ class PipelineStageRun:
                         if len(msg) > 80:
                             msg = msg[:80] + ' ...'
                         log('{}{} (jobs: {})'.format(indent * (indent_level + 2), msg, convert_set_to_ranges(jobs)), time_stamp=False)
+                if dependency_errors:
+                    log('{}{} dependency errors (jobs: {})'.format(
+                        indent * (indent_level + 1), len(dependency_errors), convert_set_to_ranges(dependency_errors.keys())), time_stamp=False)
             else:
                 if missing_logs:
                     log(indent * (indent_level + 1) + 'job stamped complete but missing log file', time_stamp=False)
@@ -188,7 +201,7 @@ class PipelineStageRun:
                     log(indent * (indent_level + 1) + 'job incomplete without errors', time_stamp=False)
                 if errors:
                     log(indent * (indent_level + 1) + 'job CRASHED', self.logs[None].message, time_stamp=False)
-            return False if any([incomplete_jobs, missing_both, missing_stamp, errors]) else True
+            return False
         else:
             log(indent * indent_level + self.name, 'OK', time_stamp=time_stamp)
             run_times, all_times = self.estimate_run_time()
@@ -326,7 +339,7 @@ class LibraryRun:
             result = False
         if self.validation and not self.validation.report(indent_level=1):
             result = False
-        if not self.annotation or not self.annotation.report(indent_level=1):
+        if not self.annotation or not self.annotation.report(indent_level=1, dependencies=None if not self.validation else self.validation):
             result = False
         if self.cluster.max_run_time is not None:
             self.max_run_time += self.cluster.max_run_time

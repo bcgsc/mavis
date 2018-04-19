@@ -630,7 +630,9 @@ class TestStandardizeRead(unittest.TestCase):
                 'TCATTATAACAGATAACGTGACCCTCAGCGATATCCCAAGTATTTTCCTGTTCTCATCTATACTATGGCAAAGGGGCAAATACCTCTCAGTAAAGAAAGAAATAACA'
                 'ACTTCTATCTTGGGCGAGGCATTTCTTCTGTTAGAACTTTGTACACGGAATAAAATAGATCTGTTTGTGCTTATCTTTCTCCTTAGAATTATTGAATTTGAAGTCTT'
                 'TCCCAGGGTGGGGGTGGAGTGAAGCTGGGGTTTCATAAGCACATAGATAGTAGTG', offset=224646450))},
-            bam_cache=MockObject(get_read_reference_name=lambda x: x.reference_name)
+            bam_cache=MockObject(get_read_reference_name=lambda x: x.reference_name),
+            contig_aln_merge_inner_anchor=10,
+            contig_aln_merge_outer_anchor=20
         )
 
     def test_bwa_mem(self):

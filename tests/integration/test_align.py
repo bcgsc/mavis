@@ -42,7 +42,7 @@ class TestCallReadEvents(unittest.TestCase):
             Breakpoint('15', 71491956, orient='L', strand='-'),
             Breakpoint('15', 71491958, orient='R', strand='-'),
             untemplated_seq='')
-        events = align.call_read_events(read)
+        events = align.call_read_events(read, is_stranded=True)
         self.assertEqual(1, len(events))
         self.assertEqual(expected_bpp.break1, events[0].break1)
         self.assertEqual(expected_bpp.break2, events[0].break2)
@@ -390,7 +390,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             query_sequence=seq,
             is_reverse=False
         )
-        bpp = align.call_paired_read_event(r1, r2)
+        bpp = align.call_paired_read_event(r1, r2, is_stranded=True)
         self.assertEqual(STRAND.POS, bpp.break1.strand)
         self.assertEqual(STRAND.POS, bpp.break2.strand)
         self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
@@ -423,7 +423,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             query_sequence=seq,
             is_reverse=False
         )
-        bpp = align.call_paired_read_event(r1, r2)
+        bpp = align.call_paired_read_event(r1, r2, is_stranded=True)
         self.assertEqual(STRAND.POS, bpp.break1.strand)
         self.assertEqual(STRAND.POS, bpp.break2.strand)
         self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
@@ -454,7 +454,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             query_sequence=seq,
             is_reverse=False
         )
-        bpp = align.call_paired_read_event(r1, r2)
+        bpp = align.call_paired_read_event(r1, r2, is_stranded=True)
         self.assertEqual(STRAND.POS, bpp.break1.strand)
         self.assertEqual(STRAND.POS, bpp.break2.strand)
         self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
@@ -487,7 +487,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             is_reverse=False
         )
         self.assertEqual(21, r1.reference_end)
-        bpp = align.call_paired_read_event(r1, r2)
+        bpp = align.call_paired_read_event(r1, r2, is_stranded=True)
         self.assertEqual(STRAND.POS, bpp.break1.strand)
         self.assertEqual(STRAND.POS, bpp.break2.strand)
         self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
@@ -522,7 +522,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             query_sequence=reverse_complement(seq),
             is_reverse=True
         )
-        bpp = align.call_paired_read_event(r1, r2)
+        bpp = align.call_paired_read_event(r1, r2, is_stranded=True)
         self.assertEqual(STRAND.POS, bpp.break1.strand)
         self.assertEqual(STRAND.NEG, bpp.break2.strand)
         self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
@@ -544,7 +544,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             reference_id=3, reference_start=2187, cigar=[(CIGAR.S, 117), (CIGAR.EQ, 8), (CIGAR.D, 1), (CIGAR.M, 120)],
             query_sequence=reverse_complement(s), is_reverse=True
         )
-        bpp = align.call_paired_read_event(read1, read2)
+        bpp = align.call_paired_read_event(read1, read2, is_stranded=True)
         self.assertEqual(STRAND.POS, bpp.break1.strand)
         self.assertEqual(STRAND.NEG, bpp.break2.strand)
         self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
@@ -585,7 +585,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             query_sequence=reverse_complement(seq),
             is_reverse=True
         )
-        bpp = align.call_paired_read_event(r1, r2)
+        bpp = align.call_paired_read_event(r1, r2, is_stranded=True)
         self.assertEqual(STRAND.POS, bpp.break1.strand)
         self.assertEqual(STRAND.NEG, bpp.break2.strand)
         self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
@@ -662,7 +662,8 @@ class TestSelectContigAlignments(unittest.TestCase):
             contig_aln_min_score=DEFAULTS.contig_aln_min_score,
             outer_window1=Interval(1000, 1200),
             outer_window2=Interval(2000, 2200),
-            reference_genome=None
+            reference_genome=None,
+            bam_cache=mock.Mock(stranded=False)
         )
         read1 = SamRead(
             reference_id=3, reference_start=1114, cigar=[(CIGAR.S, 125), (CIGAR.EQ, 120)], query_sequence=s,

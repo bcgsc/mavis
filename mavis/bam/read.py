@@ -26,22 +26,32 @@ class SamRead(pysam.AlignedSegment):
         self.alignment_score = alignment_score
         self.mapping_quality = NA_MAPPING_QUALITY
         self.alignment_rank = None
+        self._key = None
         for attr, val in kwargs.items():
             setattr(self, attr, val)
 
-    @property
+    def set_key(self):
+        """
+        Warning:
+            Using this method sets the _key attribute which is used for comparison and hashing. If you alter
+            this attribute while items are in a hashed state it may lead to unexpected results such as duplicates
+            of a single object within a set
+        """
+        self._key = (self.query_name, self.query_sequence, self.reference_id, self.reference_start, self.is_supplementary)
+
+    def key(self):
+        """
+        uses a stored _key attribute, if available. This is to avoid the hash changing if the reference start (for example)
+        is changed but also allow this attribute to be used and calculated for non SamRead objects
+
+        This way to change the hash behaviour the user must be explicit and use the set_key method
+        """
+        if hasattr(self, '_key') and self._key is not None:
+            return self._key
+        return (self.query_name, self.query_sequence, self.reference_id, self.reference_start, self.is_supplementary)
+
     def alignment_id(self):
         return '{}:{}[{}]{}'.format(self.reference_name, self.reference_start, self.query_name, convert_cigar_to_string(self.cigar))
-
-    def __repr__(self):
-        return '{}({}:{}-{}, {}, {}...)'.format(
-            self.__class__.__name__, self.reference_name, self.reference_start, self.reference_end,
-            convert_cigar_to_string(self.cigar), self.query_sequence[:10]
-        )
-
-    @property
-    def query_length(self):
-        return len(self.query_sequence) + sum([f for v, f in self.cigar if v == CIGAR.H] + [0])
 
     @classmethod
     def copy(cls, pysamread):
@@ -57,12 +67,15 @@ class SamRead(pysam.AlignedSegment):
         cp.cigar = pysamread.cigar[:]
         cp.query_name = pysamread.query_name
         cp.mapping_quality = pysamread.mapping_quality
+        cp.query_qualities = pysamread.query_qualities
+        cp.template_length = pysamread.template_length
         try:
             cp.alignment_rank = pysamread.alignment_rank
         except AttributeError:
             pass
         cp.set_tags(pysamread.get_tags())
         cp.flag = pysamread.flag
+
         if pysamread.is_paired:
             cp.next_reference_id = pysamread.next_reference_id
             cp.next_reference_start = pysamread.next_reference_start
@@ -71,6 +84,7 @@ class SamRead(pysam.AlignedSegment):
             cp.alignment_score = pysamread.alignment_score
         except AttributeError:
             pass
+        cp.set_key()
         return cp
 
     def __copy__(self):
@@ -106,10 +120,16 @@ class SamRead(pysam.AlignedSegment):
                 qpos += freq
         return result
 
+    def __eq__(self, other):
+        return self.key() == SamRead.key(other)
+
+    def __hash__(self):
+        return hash(self.key())
+
 
 def pileup(reads, filter_func=None):
     """
-    For a given set of reads generate a pileup of all reads (exlcuding those for which the filter_func returns True)
+    For a given set of reads generate a pileup of all reads (excluding those for which the filter_func returns True)
 
     Args:
         reads (iterable of pysam.AlignedSegment): reads to pileup

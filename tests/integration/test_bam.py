@@ -37,10 +37,14 @@ class TestBamCache(unittest.TestCase):
     def test_add_read(self):
         fh = MockBamFileHandle()
         b = BamCache(fh)
-        r = MockRead('name')
+        r = mock.MagicMock(query_name='name', query_sequence='')
         b.add_read(r)
         self.assertEqual(1, len(b.cache.values()))
-        self.assertEqual(set([r]), b.cache['name'])
+        b.add_read(r)
+        self.assertEqual(1, len(b.cache.values()))
+        r.reference_start = 0
+        b.add_read(r)
+        self.assertEqual(1, len(b.cache.values()))
 
     def test_reference_id(self):
         fh = MockBamFileHandle({'1': 0})

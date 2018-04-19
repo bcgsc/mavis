@@ -18,7 +18,7 @@ from ..annotate.base import BioInterval
 from ..bam import cigar as _cigar
 from ..bam.cache import BamCache
 from ..breakpoint import BreakpointPair
-from ..constants import COLUMNS, MavisNamespace, PROTOCOL
+from ..constants import CALL_METHOD, COLUMNS, MavisNamespace, PROTOCOL
 from ..util import filter_on_overlap, generate_complete_stamp, log, mkdirp, output_tabbed_file, read_inputs, write_bed_file
 
 VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
@@ -215,21 +215,22 @@ def main(
         log('called {} event(s)'.format(len(calls)))
         for call in calls:
             log(call, time_stamp=False)
-            if call.contig_alignment:
-                log('{} {} [{}] contig_alignment_score: {}, contig_alignment_mq: {} contig_alignment_rank: {}'.format(
+            if call.call_method == CALL_METHOD.CONTIG:
+                log('\t{} {} [{}] contig_alignment_score: {}, contig_alignment_mq: {} contig_alignment_rank: {}'.format(
                     call.event_type, call.call_method, call.contig_alignment.query_name,
                     round(call.contig_alignment.score(), 2), tuple(call.contig_alignment.mapping_quality()),
                     tuple(call.contig_alignment.alignment_rank())
                 ), time_stamp=False)
-                log('alignment: ({}, {})'.format(call.contig_alignment.read1.alignment_id,
-                    None if not call.contig_alignment.read2 else call.contig_alignment.read2.alignment_id),
-                    time_stamp=False)
+                log('\talignment:', call.contig_alignment.alignment_id(), time_stamp=False)
+            elif call.contig_alignment:
+                log('\t{} {} alignment:'.format(
+                    call.event_type, call.call_method), call.contig_alignment.alignment_id(), time_stamp=False)
             else:
-                log(call.event_type, call.call_method, time_stamp=False)
+                log('\t{} {}'.format(call.event_type, call.call_method), time_stamp=False)
             validation_counts[call.cluster_id] = validation_counts.get(call.cluster_id, 0) + 1
             call.data[COLUMNS.validation_id] = '{}-v{}'.format(call.cluster_id, validation_counts[call.cluster_id])
             log(
-                'remapped reads: {}; spanning reads: {}; split reads: [{} ({}), {} ({}), {}]'
+                '\tremapped reads: {}; spanning reads: {}; split reads: [{} ({}), {} ({}), {}]'
                 ', flanking pairs: {}{}'.format(
                     0 if not call.contig else len(call.contig.input_reads),
                     len(call.spanning_reads),

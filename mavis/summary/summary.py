@@ -219,21 +219,17 @@ def get_pairing_state(current_protocol, current_disease_state, other_protocol, o
     dt = (PROTOCOL.TRANS, DISEASE_STATUS.DISEASED)
     ng = (PROTOCOL.GENOME, DISEASE_STATUS.NORMAL)
 
-    if curr == dg and other == ng:
+    if current_protocol != other_protocol:
+        is_matched = is_matched or inferred_is_matched
+
+    if curr in {dg, dt} and other == ng:
         return PAIRING_STATE.GERMLINE if is_matched else PAIRING_STATE.SOMATIC
-    elif curr == dg and other == dt:
-        return PAIRING_STATE.EXP if inferred_is_matched else PAIRING_STATE.NO_EXP
+    elif curr in {dg, ng} and other == dt:
+        return PAIRING_STATE.EXP if is_matched else PAIRING_STATE.NO_EXP
     elif curr == dt and other == dg:
-        return PAIRING_STATE.GENOMIC if inferred_is_matched else PAIRING_STATE.NO_GENOMIC
-    elif curr == dt and other == ng:
-        return PAIRING_STATE.GERMLINE if inferred_is_matched else PAIRING_STATE.SOMATIC
-    elif curr == ng and other == dt:
-        return PAIRING_STATE.EXP if inferred_is_matched else PAIRING_STATE.NO_EXP
+        return PAIRING_STATE.GENOMIC if is_matched else PAIRING_STATE.NO_GENOMIC
     else:
-        if current_protocol == other_protocol:
-            return PAIRING_STATE.MATCH if is_matched else PAIRING_STATE.NO_MATCH
-        else:
-            return PAIRING_STATE.MATCH if inferred_is_matched else PAIRING_STATE.NO_MATCH
+        return PAIRING_STATE.MATCH if is_matched else PAIRING_STATE.NO_MATCH
 
 
 def filter_by_evidence(

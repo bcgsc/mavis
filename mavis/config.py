@@ -479,12 +479,14 @@ def augment_parser(arguments, parser, required=None):
                 '-v', '--version', action='version', version='%(prog)s version ' + __version__,
                 help='Outputs the version number')
         elif arg == 'aligner_reference':
+            default = REFERENCE_DEFAULTS[arg]
             parser.add_argument(
-                '--{}'.format(arg), default=REFERENCE_DEFAULTS[arg], required=required,
+                '--{}'.format(arg), default=default, required=required if not default else False,
                 help=REFERENCE_DEFAULTS.define(arg), type=filepath)
         elif arg in REFERENCE_DEFAULTS:
+            default = REFERENCE_DEFAULTS[arg]
             parser.add_argument(
-                '--{}'.format(arg), default=REFERENCE_DEFAULTS[arg], required=required,
+                '--{}'.format(arg), default=default, required=required if not default else False,
                 help=REFERENCE_DEFAULTS.define(arg), type=filepath, nargs='*')
         elif arg == 'config':
             parser.add_argument('config', help='path to the config file', type=filepath)

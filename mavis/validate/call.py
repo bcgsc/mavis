@@ -81,6 +81,10 @@ class EventCall(BreakpointPair):
         if contig and self.call_method != CALL_METHOD.CONTIG:
             raise ValueError('if a contig is given the call method must be by contig')
         self.contig_alignment = contig_alignment
+        try:
+            self.utemp_shift = self.untemplated_shift(source_evidence.reference_genome)
+        except AttributeError:  # non-specific breakpoint calls
+            self.utemp_shift = (0, 0)
 
     def get_bed_repesentation(self):
         bed = []
@@ -216,7 +220,7 @@ class EventCall(BreakpointPair):
         """
         try:
             pos = _read.breakpoint_pos(read, self.break1.orient) + 1
-            if Interval.overlaps((pos, pos), self.break1):
+            if Interval.overlaps((pos, pos), (self.break1.start - self.utemp_shift[0], self.break1.end + self.utemp_shift[0])):
                 self.break1_split_reads.add(read)
         except AttributeError:
             pass
@@ -228,7 +232,7 @@ class EventCall(BreakpointPair):
         """
         try:
             pos = _read.breakpoint_pos(read, self.break2.orient) + 1
-            if Interval.overlaps((pos, pos), self.break2):
+            if Interval.overlaps((pos, pos), (self.break2.start - self.utemp_shift[1], self.break2.end + self.utemp_shift[1])):
                 self.break2_split_reads.add(read)
         except AttributeError:
             pass
@@ -238,9 +242,10 @@ class EventCall(BreakpointPair):
         Args:
             read (pysam.AlignedSegment): putative spanning read
         """
-        for event in call_read_events(read):
+        for event in call_read_events(read, is_stranded=self.source_evidence.bam_cache.stranded):
             if event == self and self.event_type in BreakpointPair.classify(event, distance=self.source_evidence.distance):
                 self.spanning_reads.add(read)
+                return
 
     def __hash__(self):
         raise NotImplementedError('this object type does not support hashing')
@@ -524,13 +529,9 @@ def filter_consumed_pairs(pairs, consumed_reads):
 def _call_by_spanning_reads(source_evidence, consumed_evidence):
     spanning_calls = {}
     available_flanking_pairs = filter_consumed_pairs(source_evidence.flanking_pairs, consumed_evidence)
-
     for read in source_evidence.spanning_reads - consumed_evidence:
-        for event in call_read_events(read):
+        for event in call_read_events(read, is_stranded=source_evidence.bam_cache.stranded):
             event = convert_to_duplication(event, source_evidence.reference_genome)
-            if not source_evidence.stranded:
-                event.break1.strand = STRAND.NS
-                event.break2.strand = STRAND.NS
             if all([
                 event.query_consumption() >= source_evidence.contig_aln_min_query_consumption,
                 event.score() >= source_evidence.contig_aln_min_score
@@ -553,7 +554,8 @@ def _call_by_spanning_reads(source_evidence, consumed_evidence):
                     source_evidence,
                     event_type,
                     CALL_METHOD.SPAN,
-                    untemplated_seq=event.untemplated_seq
+                    untemplated_seq=event.untemplated_seq,
+                    contig_alignment=event
                 )
             except ValueError:
                 continue
@@ -862,10 +864,7 @@ def _call_by_split_reads(evidence, event_type, consumed_evidence=None):
         for reads in [d for d in double_aligned.values() if len(d) > 1]:
             for read1, read2 in itertools.combinations(reads, 2):
                 try:
-                    call = call_paired_read_event(read1, read2)
-                    if not evidence.stranded:
-                        call.break1.strand = STRAND.NS
-                        call.break2.strand = STRAND.NS
+                    call = call_paired_read_event(read1, read2, is_stranded=evidence.bam_cache.stranded)
                     # check the type later, we want this to fail if wrong type
                     resolved_calls.setdefault(call, (set(), set()))
                     resolved_calls[call][0].add(read1)
@@ -893,8 +892,12 @@ def _call_by_split_reads(evidence, event_type, consumed_evidence=None):
             try:
                 call = EventCall(
                     call.break1, call.break2, evidence, event_type,
-                    call_method=CALL_METHOD.SPLIT, untemplated_seq=call.untemplated_seq
+                    call_method=CALL_METHOD.SPLIT, untemplated_seq=call.untemplated_seq,
+                    contig_alignment=None if not isinstance(call, SplitAlignment) else call
                 )
+            except ValueError:  # incompatible types
+                continue
+            else:
                 call.break1_split_reads.update(reads1 - consumed_evidence)
                 call.break2_split_reads.update(reads2 - consumed_evidence)
                 call.add_flanking_support(available_flanking_pairs)
@@ -921,7 +924,5 @@ def _call_by_split_reads(evidence, event_type, consumed_evidence=None):
                     # consume the evidence
                     consumed_evidence.update(call.break1_split_reads)
                     consumed_evidence.update(call.break2_split_reads)
-            except ValueError:  # incompatible types
-                continue
 
     return linked_pairings

@@ -5,6 +5,7 @@ from mavis.annotate.file_io import load_reference_genome
 from mavis.bam.cigar import alignment_matches, compute, convert_for_igv, convert_string_to_cigar, extend_softclipping, hgvs_standardize_cigar, join, longest_fuzzy_match, match_percent, merge_internal_events, recompute_cigar_mismatch, score
 from mavis.constants import CIGAR
 from mavis.bam.read import SamRead
+from mavis.bam import read as _read
 import timeout_decorator
 
 from . import MockRead, REFERENCE_GENOME_FILE, MockObject
@@ -520,6 +521,22 @@ class TestHgvsStandardizeCigars(unittest.TestCase):
             cigar=convert_string_to_cigar('13=1I6D15=')
         )
         self.assertEqual(convert_string_to_cigar('13=1I6D15='), hgvs_standardize_cigar(read, rseq))
+
+    def test_shift_complex_indel(self):
+        refseq = 'ATATATCTATTTTTTTCTTTCTTTTTTTTACTTTCATTAAGTGCCACTAAAAAATTAGGTTCAATTAAACTTTATTAATCTCTTCTGAGTTTTGATTGAGTATATATATATATATACCCAGTTTCAAGCAGGTATCTGCCTTTAAAGATAAGAGACCTCCTAAATGCTTTCTTTTATTAGTTGCCCTGTTTCAGATTCAGCTTTGTATCTATATCACCTGTTAATATGTGTGGACTCACAGAAATGATCATTGAGGGAATGCACCCTGTTTGGGTGTAAGTAGCTCAGGGAAAAAATCCTAG'
+        read = MockRead(
+            'name', reference_name='18',
+            reference_start=40237946 - 40237890,
+            query_sequence='AGGTTCAATTAAACTTTATTAATCTCTTCTGAGTTTTGATTGAGTGTATATATATATATATATATATATATATATATACCCAGTTTCAAGCAGGTATCTGCCTTTAAAGATAAGAGACCTCCTAAGTGCTTTCTTTTATTAGTGGCCCTG',
+            cigar=convert_string_to_cigar('44M18I88M')
+        )
+        print(_read.convert_cigar_to_string(read.cigar))
+        read.cigar = recompute_cigar_mismatch(read, refseq)
+        self.assertEqual(convert_string_to_cigar('44=18I63=1X17=1X6='), read.cigar)
+        print(_read.convert_cigar_to_string(read.cigar))
+        read.cigar = hgvs_standardize_cigar(read, refseq)
+        print(_read.convert_cigar_to_string(read.cigar))
+        self.assertEqual(convert_string_to_cigar('45=18I62=1X17=1X6='), read.cigar)
 
 
 class TestMergeInternalEvents(unittest.TestCase):

@@ -149,6 +149,11 @@ class Evidence(BreakpointPair):
         except AttributeError:
             pass
         read.cigar = _cigar.join(cigar)
+        read.cigar = _cigar.merge_internal_events(
+            read.cigar,
+            inner_anchor=self.contig_aln_merge_inner_anchor,
+            outer_anchor=self.contig_aln_merge_outer_anchor
+        )
         read.reference_start = read.reference_start + prefix
 
         # makes sure all indels are called as far 'right' as possible
@@ -583,6 +588,7 @@ class Evidence(BreakpointPair):
                 elif opposite_breakpoint.orient == ORIENT.RIGHT:
                     if alignment.cigar[-1][0] == CIGAR.S and alignment.cigar[-1][1] > self.max_sc_preceeding_anchor:
                         continue
+            alignment.set_key()  # set the hash key before we add the read as evidence
             scores.append((s, _cigar.match_percent(alignment.cigar), alignment))
 
         scores = sorted(scores, key=lambda x: (x[0], x[1]), reverse=True) if scores else []

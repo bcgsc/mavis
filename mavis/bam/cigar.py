@@ -435,6 +435,8 @@ def merge_internal_events(cigar, inner_anchor=10, outer_anchor=10):
     between exact matches on either side (anchors) and separated by less exact
     matches than the given parameter
 
+    does not merge two mismatches, must contain a deletion/insertion
+
     Args:
         cigar (list): a list of tuples of cigar states and counts
         inner_anchor (int): minimum number of consecutive exact matches separating events
@@ -463,25 +465,44 @@ def merge_internal_events(cigar, inner_anchor=10, outer_anchor=10):
     spos = exact_match_pos[-1][0]
     suffix = read_cigar[spos:None]
     read_cigar = read_cigar[len(prefix):len(suffix) * -1]
-    new_cigar = prefix
+    new_cigar = prefix[:]
     for state, count in read_cigar:
+        last_state, last_value = new_cigar[-1]
+
         if state == CIGAR.X:
-            if new_cigar[-1][0] in EVENT_STATES:
+            if last_state in EVENT_STATES - {CIGAR.X}:  # any event that is not a mismatch
                 new_cigar.extend([(CIGAR.I, count), (CIGAR.D, count)])
             else:
                 new_cigar.append((state, count))
         elif state in EVENT_STATES:
-            if new_cigar[-1][0] == CIGAR.X:
-                new_cigar[-1] = CIGAR.I, new_cigar[-1][1]
-                new_cigar.append((CIGAR.D, new_cigar[-1][1]))
+            if last_state == CIGAR.X:  # last event was a mismatch, convert the mismatch to an indel
+                new_cigar[-1] = CIGAR.I, last_value
+                new_cigar.append((CIGAR.D, last_value))
+            # count the inner block anchor size
+            last_event = len(new_cigar)
+            for i, (new_state, new_count) in enumerate(new_cigar[::-1]):
+                if new_state in EVENT_STATES:
+                    last_event = len(new_cigar) - i - 1
+                elif last_event != len(new_cigar):
+                    break
+            anchor = sum([v for c, v in new_cigar[last_event + 1:]] + [0])
+            # if the anchor is too small, merge it
+            if last_event >= len(prefix) and anchor < inner_anchor:
+                temp = new_cigar[last_event:]
+                new_cigar = new_cigar[:last_event]
+                for new_state, new_count in temp:
+                    if new_state in {CIGAR.EQ, CIGAR.M, CIGAR.X}:
+                        new_cigar.extend([(CIGAR.D, new_count), (CIGAR.I, new_count)])
+                    else:
+                        new_cigar.append((new_state, new_count))
             new_cigar.append((state, count))
         elif state in [CIGAR.EQ, CIGAR.M]:
-            if count >= inner_anchor or new_cigar[-1][0] not in EVENT_STATES:
+            if count >= inner_anchor or last_state not in EVENT_STATES - {CIGAR.X}:
                 new_cigar.append((state, count))
             else:
-                if new_cigar[-1][0] == CIGAR.X:
-                    new_cigar[-1] = CIGAR.I, new_cigar[-1][1]
-                    new_cigar.append((CIGAR.D, new_cigar[-1][1]))
+                if last_state == CIGAR.X:
+                    new_cigar[-1] = CIGAR.I, last_value
+                    new_cigar.append((CIGAR.D, last_value))
                 new_cigar.append((CIGAR.I, count))
                 new_cigar.append((CIGAR.D, count))
         else:

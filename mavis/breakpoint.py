@@ -419,6 +419,44 @@ class BreakpointPair:
 
         return ''.join(first_seq).upper(), ''.join(second_seq).upper()
 
+    @staticmethod
+    def _breakpoint_utemp_shift(breakpoint, untemplated_seq, reference_genome):
+        """
+        Calculates the amount of the untemplated sequence that could be aligned further.
+        Gives an idea of how much different alignments might differ.
+        """
+        break_shift = 0
+        lutemp = len(untemplated_seq)
+        if breakpoint.orient == ORIENT.LEFT:
+            break_seq = reference_genome[breakpoint.chr].seq[breakpoint.start - lutemp: breakpoint.start]
+            for i in range(1, lutemp + 1):
+                if break_seq[lutemp - i] == untemplated_seq[lutemp - i]:
+                    break_shift += 1
+                else:
+                    break
+        else:
+            break_seq = reference_genome[breakpoint.chr].seq[breakpoint.start - 1: breakpoint.start + lutemp - 1]
+            for i in range(0, lutemp):
+                if break_seq[i] == untemplated_seq[i]:
+                    break_shift += 1
+                else:
+                    break
+        return break_shift
+
+    def untemplated_shift(self, reference_genome):
+        """gives a range for each breakpoint on the possible alignment range in the shifting the untemplated
+        sequence"""
+        if any([
+            self.untemplated_seq is None,
+            len(self.break1) + len(self.break2) > 2,
+            self.break1.orient == ORIENT.NS,
+            self.break2.orient == ORIENT.NS
+        ]):
+            raise AttributeError('Cannot calculate the shift for non specific breakpoint calls', self)
+        break1_shift = BreakpointPair._breakpoint_utemp_shift(self.break1, self.untemplated_seq, reference_genome)
+        break2_shift = BreakpointPair._breakpoint_utemp_shift(self.break2, self.untemplated_seq, reference_genome)
+        return (break2_shift, break1_shift)
+
     def get_bed_repesentation(self):
         bed = []
         if self.interchromosomal:
