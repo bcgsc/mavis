@@ -22,7 +22,7 @@ DEFAULTS.add('filter_min_flanking_reads', 10, defn='Minimum number of flanking p
 DEFAULTS.add('filter_min_split_reads', 5, defn='Minimum number of split reads for a call by split reads')
 DEFAULTS.add('filter_min_linking_split_reads', 1, defn='Minimum number of linking split reads for a call by split reads')
 DEFAULTS.add('filter_cdna_synon', True, defn='Filter all annotations synonymous at the cdna level')
-DEFAULTS.add('filter_protein_synon', True, defn='Filter all annotations synonymous at the protein level')
+DEFAULTS.add('filter_protein_synon', False, defn='Filter all annotations synonymous at the protein level')
 DEFAULTS.add(
     'filter_trans_homopolymers', True,
     defn='Filter all single bp ins/del/dup events that are in a homopolymer region of at least '
