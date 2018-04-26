@@ -330,7 +330,7 @@ def read_file(inputfile, delimiter='\t', header=None, strict=True, suppress_inde
             raise EmptyFileError('no lines beyond comments to read as header')
         line = re.sub(r'(^#)|([\r\n\s]*$)', '', lines[current_line_index])  # clean the header
         current_line_index += 1
-        header = line.split(delimiter) if delimiter in line else []
+        header = line.split(delimiter) if line else []
     if not header:
         raise EmptyFileError('header is empty', inputfile)
     # create the file transform object
