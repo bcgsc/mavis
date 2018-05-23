@@ -10,7 +10,7 @@ from mavis.constants import CIGAR, reverse_complement
 from mavis.interval import Interval
 import mavis.bam.cigar as _cigar
 
-from . import BAM_INPUT, BLAT_INPUT, BLAT_OUTPUT, MockBamFileHandle, REFERENCE_GENOME_FILE, MockObject, MockLongString
+from . import BAM_INPUT, BLAT_INPUT, BLAT_OUTPUT, MockBamFileHandle, get_data(mock_reference_genome.fa), MockObject, MockLongString
 
 
 REFERENCE_GENOME = None
@@ -18,7 +18,7 @@ REFERENCE_GENOME = None
 
 def setUpModule():
     global REFERENCE_GENOME
-    REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
+    REFERENCE_GENOME = load_reference_genome(get_data(mock_reference_genome.fa))
     if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
         raise AssertionError('fake genome file does not have the expected contents')
     global BAM_CACHE

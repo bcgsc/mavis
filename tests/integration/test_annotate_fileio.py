@@ -3,7 +3,7 @@ import unittest
 
 from mavis.annotate.file_io import convert_tab_to_json, load_annotations
 
-from . import DATA_DIR, REFERENCE_ANNOTATIONS_FILE
+from . import DATA_DIR, get_data(mock_reference_annotation.tsv)
 
 
 class TestAnnotationLoading(unittest.TestCase):
@@ -36,7 +36,7 @@ class TestAnnotationLoading(unittest.TestCase):
         for d in domains:
             print(d.name, d.regions)
         self.assertEqual(2, len(domains))
-        result = load_annotations(REFERENCE_ANNOTATIONS_FILE, warn=print)
+        result = load_annotations(get_data(mock_reference_annotation.tsv), warn=print)
         self.assertEqual(1, len(result.keys()))
 
     def test_load_json(self):

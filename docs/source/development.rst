@@ -1,3 +1,5 @@
+.. _guidelines-for-contributors:
+
 Guidelines for Contributors
 ===================================
 

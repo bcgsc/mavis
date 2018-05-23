@@ -6,8 +6,8 @@ import glob
 import os
 import re
 
-from .constants import COMPLETE_STAMP, DISEASE_STATUS, SUBCOMMAND, PROTOCOL
-from .util import bash_expands, log, MavisNamespace, unique_exists
+from ..constants import COMPLETE_STAMP, DISEASE_STATUS, SUBCOMMAND, PROTOCOL
+from ..util import bash_expands, log, MavisNamespace, unique_exists
 
 
 LIBRARY_DIR_REGEX = r'^[\w-]+_({})_({})$'.format('|'.join(DISEASE_STATUS.values()), '|'.join(PROTOCOL.values()))

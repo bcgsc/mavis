@@ -1,3 +1,4 @@
+.. _configuration-and-settings:
 
 Configuration and Settings
 =============================
@@ -11,7 +12,7 @@ The pipeline can be run in steps or it can be configured using a configuration f
 will be generated to run all steps following clustering. The configuration file can be built from scratch or a template
 can be output as shown below
 
-.. code-block:: bash
+.. code:: bash
 
     >>> mavis config --write template.cfg
 
@@ -34,32 +35,41 @@ All environment variables are prefixed with MAVIS and an underscore. Otherwise t
 as that used for the command line parameter or config setting (uppercased). For example to change the default minimum mapping
 quality used during the validate stage
 
-.. code-block:: bash
+.. code:: bash
 
     >>> export MAVIS_MIN_MAPPING_QUALITY=10
 
 
-.. _resource-requirements:
+Adjusting the Resource Requirements
+------------------------------------
 
-Resource Requirements
-----------------------------------
+Choosing the Number of Validation/Annotation Jobs
+.....................................................
 
-MAVIS has been tested on both unix and linux systems. For the standard pipeline, the validation stage is
-the most computationally expensive. This will vary depending on the size of your input bam file and
-the number of events input to be validated. There are a number of settings that can be adjusted to reduce
-memory and cpu requirements depending on what the user is trying to analyze.  
+MAVIS chooses the number of jobs to split validate/annotate stages into based on
+two settings: :term:`max_files` and :term:`min_clusters_per_file`.
+
+For example, in the following situation say you have: 1000 clusters, ``max_files=10``, and ``min_clusters_per_file=10``. Then
+MAVIS will set up 10 validation jobs each with 100 events.
+
+However, if ``min_clusters_per_file=500``, then MAVIS would only set up 2 jobs each with 500 events. This is because
+:term:`min_clusters_per_file` takes precedence over :term:`max_files`.
+
+Splitting into more jobs will lower the resource requirements per job (see :ref:`resource requirements <resource-requirements>`). The memory and time requirements for
+validation are linear with respect to the number of events to be validated.
+
 
 Uninformative Filter
 ......................
 
-For example, if the user is only interested in events in genes, then the :term:`uninformative_filter` can be used. 
-This will drop all events that are not within a certain distance (:term:`max_proximity`) to any annotation in the 
-annotations reference file. These events will be dropped prior to the validation stage which results in 
+For example, if the user is only interested in events in genes, then the :term:`uninformative_filter` can be used.
+This will drop all events that are not within a certain distance (:term:`max_proximity`) to any annotation in the
+annotations reference file. These events will be dropped prior to the validation stage which results in
 significant speed up.
 
 This can be set using the environment variable
 
-.. code::
+.. code:: bash
 
     export MAVIS_UNINFORMATIVE_FILTER=True
 
@@ -72,21 +82,36 @@ or in the pipeline config file
 
 or as a command line argument to the cluster stage
 
-.. code::
+.. code:: bash
 
     mavis cluster --uninformative_filter True ....
 
-Splitting Validation into Cluster Jobs
-...........................................
-
-MAVIS chooses the number of jobs to split validate/annotate stages into based on
-two settings: :term:`max_files` and :term:`min_clusters_per_file`.
-
-For example, in the following situation say you have: 1000 clusters, ``max_files=10``, and ``min_clusters_per_file=10``. Then
-MAVIS will set up 10 validation jobs each with 100 events.
-
-However, if ``min_clusters_per_file=500``, then MAVIS would only set up 2 jobs each with 500 events. This is because
-:term:`min_clusters_per_file` takes precedence over :term:`max_files`. 
 
 
-.. |TOOLNAME| replace:: **MAVIS**
+Configuring the Job Scheduler
+-------------------------------
+
+MAVIS supports submission to both :term:`SGE` and :term:`SLURM` by default. This can be configured using the :term:`scheduler` setting. Users requiring
+support for other schedulers may make a request by `submitting an issue to our github page <https://github.com/bcgsc/mavis/issues>`__. Additionally, developers looking to
+extend the functionality may submit a pull request (Please see the :ref:`guidelines for contributors <guideline-for-contributors>`).
+
+The submission scripts which MAVIS generates are all submitted with the main pipeline submission script. However each of these scripts is simply a bash command with scheduler specific
+submission information contained in the header portion and can therefore also be run locally.
+
+As an immediate solution to an unsupported scheduler, these submit scripts can also be edited directly.
+
+For example, the header of a validation job submit script might looks something like this if created with SLURM as the default scheduler.
+
+.. code:: bash
+
+    #!/bin/bash -l
+    #SBATCH --export=ALL
+    #SBATCH -J MV_A10000_batch-63cpNZvyGDfEPNQbk4dw7N-1
+    #SBATCH --mem 16000M
+    #SBATCH --partition=short
+    #SBATCH -o /path/to/mavis/output/folder/A10000_diseased_genome/validate/batch-63cpNZvyGDfEPNQbk4dw7N-1/slurm-%x-%j.log
+    #SBATCH -t 16:00:00
+
+What each setting corresponds to can be found in the documentation at the `SLURM sbatch page <https://slurm.schedmd.com/sbatch.html>`__.
+Many schedulers use similar commands and would simply require replacing the slurm specific command with one appropriate for the desired scheduler. Additionally the main pipeline
+submit script should be altered to match the dependency chaining syntax of the desired scheduler.

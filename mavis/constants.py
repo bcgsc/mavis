@@ -22,16 +22,23 @@ class MavisNamespace(argparse.Namespace):
         >>> nspace.otherthing
         2
     """
-    reserved_attr = ['_types', '_defns']
-
-    def __init__(self, **kwargs):
-        for k in kwargs:
-            if k in MavisNamespace.reserved_attr:
-                raise AttributeError('reserved attribute {} cannot be used'.format(k))
+    def __init__(self, *pos, **kwargs):
         self._defns = {}
         self._types = {}
+
+        for k in pos:
+            if hasattr(self, k):
+                raise AttributeError('Cannot respecify existing attribute', k, self.k)
+            setattr(self, k, k)
+
+        for k in kwargs:
+            if hasattr(self, k):
+                raise AttributeError('Cannot respecify existing attribute', k, self.k)
+            setattr(self, k, kwargs[k])
+
         argparse.Namespace.__init__(self, **kwargs)
-        for attr, value in kwargs.items():
+
+        for attr, value in self.items():
             if not attr.startswith('_'):
                 self._set_type(attr, type(value))
 
@@ -47,8 +54,8 @@ class MavisNamespace(argparse.Namespace):
         return getattr(self, str(key))
 
     def __setitem__(self, key, val):
-        if key in MavisNamespace.reserved_attr:
-            raise AttributeError('reserved attribute {} cannot be used'.format(key))
+        if key == '_defns' or key == '_types':
+            raise ValueError('Cannot set _types or _defns. They are reserved attributes', key)
         self.__dict__[key] = val
 
     def flatten(self):

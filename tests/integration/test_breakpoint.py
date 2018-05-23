@@ -8,7 +8,7 @@ from mavis.validate.evidence import TranscriptomeEvidence
 from mavis.validate.constants import DEFAULTS
 from functools import partial
 
-from . import MockRead, MockObject, REFERENCE_GENOME_FILE, get_example_genes
+from . import MockRead, MockObject, get_data(mock_reference_genome.fa), get_example_genes
 
 REFERENCE_GENOME = None
 REF_CHR = 'fake'
@@ -16,7 +16,7 @@ REF_CHR = 'fake'
 
 def setUpModule():
     global REFERENCE_GENOME
-    REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
+    REFERENCE_GENOME = load_reference_genome(get_data(mock_reference_genome.fa))
     if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME[REF_CHR].seq[0:50].upper():
         raise AssertionError('fake genome file does not have the expected contents')
 

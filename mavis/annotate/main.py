@@ -24,6 +24,9 @@ ACCEPTED_FILTERS = {
 }
 
 
+ANNOTATION_PASS = 'annotations.tab'
+
+
 def draw(drawing_config, ann, reference_genome, template_metadata, drawings_directory):
     """
     produces the svg diagram and json legend for a given annotation
@@ -117,7 +120,7 @@ def main(
         max_orf_cap (int): the maximum number of :term:`open reading frame` s to collect for any given event
     """
     drawings_directory = os.path.join(output, 'drawings')
-    tabbed_output_file = os.path.join(output, 'annotations.tab')
+    tabbed_output_file = os.path.join(output, ANNOTATION_PASS)
     fa_output_file = os.path.join(output, 'annotations.fusion-cdna.fa')
 
     annotation_filters = [] if not annotation_filters else annotation_filters.split(',')

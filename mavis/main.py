@@ -15,7 +15,7 @@ from .annotate.base import BioInterval
 from .annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
 from .annotate.file_io import load_annotations, load_masking_regions, load_reference_genome, load_templates
 from .annotate import main as annotate_main
-from .checker import check_completion
+from .schedule.checker import check_completion
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from .cluster import main as cluster_main
 from .config import augment_parser, MavisConfig, generate_config, get_metavar, CustomHelpFormatter, RangeAppendAction
@@ -26,14 +26,13 @@ from .illustrate.diagram import draw_multi_transcript_overlay
 from .illustrate.scatter import bam_to_scatter
 from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from .pairing import main as pairing_main
-from .submit import SubmissionScript, SCHEDULER_CONFIG
-from .submit import STD_OPTIONS as STD_SUBMIT_OPTIONS
 from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 from .summary import main as summary_main
 from .tools import convert_tool_output, SUPPORTED_TOOL
 from .util import bash_expands, get_env_variable, log, log_arguments, MavisNamespace, mkdirp, output_tabbed_file
 from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 from .validate import main as validate_main
+from .schedule.pipeline import Pipeline
 
 
 VALIDATION_PASS_PATTERN = '*.validation-passed.tab'
@@ -138,140 +137,6 @@ def stringify_args_to_command(args):
                 pass
             command.append('--{} {}'.format(argname, value))
     return command
-
-
-def main_pipeline(config):
-    """
-    runs the pipeline subcommand. Runs clustering (or just splitting if clustering is skipped) and sets up
-    submission scripts for the other pipeline stages/steps
-    """
-    from shortuuid import uuid
-    batch_id = 'batch-' + str(uuid())
-    conversion_dir = mkdirp(os.path.join(config.output, 'converted_inputs'))
-    pairing_inputs = []
-    submitall = []
-    jobid_var_index = 0
-    config.output = os.path.abspath(config.output)
-
-    def get_prefix(filename):
-        return re.sub(r'\.[^\.]+$', '', os.path.basename(filename))
-
-    job_name_by_output = {}
-
-    for libconf in config.libraries.values():
-        base = os.path.join(config.output, '{}_{}_{}'.format(libconf.library, libconf.disease_status, libconf.protocol))
-        log('setting up the directory structure for', libconf.library, 'as', base)
-        libconf.inputs = run_conversion(config, libconf, conversion_dir)
-
-        # run the cluster stage
-        cluster_output = mkdirp(os.path.join(base, SUBCOMMAND.CLUSTER))  # creates the output dir
-        merge_args = {'batch_id': batch_id, 'output': cluster_output}
-        merge_args['split_only'] = SUBCOMMAND.CLUSTER in config.skip_stage
-        merge_args.update(config.reference.items())
-        merge_args.update(config.cluster.items())
-        merge_args.update(libconf.items())
-        log('clustering', '(split only)' if merge_args['split_only'] else '')
-        inputs = cluster_main.main(log_args=True, **merge_args)
-
-        for inputfile in inputs:
-            prefix = get_prefix(inputfile)  # will be batch id + job number
-            dependency = ''
-            if SUBCOMMAND.VALIDATE not in config.skip_stage:
-                outputdir = mkdirp(os.path.join(base, SUBCOMMAND.VALIDATE, prefix))
-                command = build_validate_command(config, libconf, inputfile, outputdir)
-                # build the submission script
-                options = {k: config.schedule[k] for k in STD_SUBMIT_OPTIONS}
-                options['stdout'] = outputdir
-                options['jobname'] = 'MV_{}_{}'.format(libconf.library, prefix)
-
-                if libconf.is_trans():
-                    options['memory_limit'] = config.schedule.trans_validation_memory
-                else:
-                    options['memory_limit'] = config.schedule.validation_memory
-                script = SubmissionScript(command, config.schedule.scheduler, **options)
-                scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
-
-                submitall.append('vjob{}=$({} {})'.format(jobid_var_index, SCHEDULER_CONFIG[config.schedule.scheduler].submit, scriptname))
-                # for setting up subsequent jobs and holds
-                outputfile = os.path.join(outputdir, VALIDATION_PASS_PATTERN)
-                job_name_by_output[outputfile] = options['jobname']
-                inputfile = outputfile
-                dependency = SCHEDULER_CONFIG[config.schedule.scheduler].dependency('${{vjob{}##* }}'.format(jobid_var_index))
-            # annotation cannot be skipped
-            outputdir = mkdirp(os.path.join(base, SUBCOMMAND.ANNOTATE, prefix))
-            command = build_annotate_command(config, libconf, inputfile, outputdir)
-
-            options = {k: config.schedule[k] for k in STD_SUBMIT_OPTIONS}
-            options['stdout'] = outputdir
-            options['jobname'] = 'MA_{}_{}'.format(libconf.library, prefix)
-            options['memory_limit'] = config.schedule.annotation_memory
-            script = SubmissionScript(command, config.schedule.scheduler, **options)
-            scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
-            submitall.append('ajob{}=$({} {} {})'.format(
-                jobid_var_index, SCHEDULER_CONFIG[config.schedule.scheduler].submit, dependency, scriptname))
-            outputfile = os.path.join(outputdir, ANNOTATION_PASS_PATTERN)
-            pairing_inputs.append(outputfile)
-            job_name_by_output[outputfile] = options['jobname']
-            jobid_var_index += 1
-
-    # set up scripts for the pairing held on all of the annotation jobs
-    outputdir = mkdirp(os.path.join(config.output, SUBCOMMAND.PAIR))
-    args = config.pairing.flatten()
-    args.update({
-        'output': outputdir,
-        'annotations': config.reference.annotations_filename
-    })
-    command = ['{} {}'.format(PROGNAME, SUBCOMMAND.PAIR)]
-    command.extend(stringify_args_to_command(args))
-    command.append('--inputs {}'.format(' \\\n\t'.join(pairing_inputs)))
-    command = ' \\\n\t'.join(command)
-
-    options = {k: config.schedule[k] for k in STD_SUBMIT_OPTIONS}
-    options['stdout'] = outputdir
-    options['jobname'] = 'MP_{}'.format(batch_id)
-    script = SubmissionScript(command, config.schedule.scheduler, **options)
-    scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
-
-    submitall.append('jobid=$({} {} {})'.format(
-        SCHEDULER_CONFIG[config.schedule.scheduler].submit,
-        SCHEDULER_CONFIG[config.schedule.scheduler].dependency(
-            ':'.join(['${{ajob{}##* }}'.format(i) for i in range(0, jobid_var_index)])),
-        scriptname))
-
-    # set up scripts for the summary held on the pairing job
-    outputdir = mkdirp(os.path.join(config.output, SUBCOMMAND.SUMMARY))
-    args = dict(
-        output=outputdir,
-        flanking_call_distance=config.pairing.flanking_call_distance,
-        split_call_distance=config.pairing.split_call_distance,
-        contig_call_distance=config.pairing.contig_call_distance,
-        spanning_call_distance=config.pairing.spanning_call_distance,
-        dgv_annotation=config.reference.dgv_annotation_filename,
-        annotations=config.reference.annotations_filename,
-        inputs=os.path.join(config.output, 'pairing/mavis_paired*.tab')
-    )
-    args.update(config.summary.items())
-    command = ['{} {}'.format(PROGNAME, SUBCOMMAND.SUMMARY)]
-    command.extend(stringify_args_to_command(args))
-    command = ' \\\n\t'.join(command)
-
-    options = {k: config.schedule[k] for k in STD_SUBMIT_OPTIONS}
-    options['stdout'] = outputdir
-    options['jobname'] = 'MS_{}'.format(batch_id)
-    script = SubmissionScript(command, config.schedule.scheduler, **options)
-    scriptname = script.write(os.path.join(outputdir, 'submit.sh'))
-
-    submitall.append('{} {} {}'.format(
-        SCHEDULER_CONFIG[config.schedule.scheduler].submit,
-        SCHEDULER_CONFIG[config.schedule.scheduler].dependency('${jobid##* }'),
-        scriptname))
-
-    # now write a script at the top level to submit all
-    submitallfile = os.path.join(config.output, 'submit_pipeline_{}.sh'.format(batch_id))
-    log('writing:', submitallfile)
-    with open(submitallfile, 'w') as fh:
-        for line in submitall:
-            fh.write(line + '\n')
 
 
 def check_overlay_args(args, parser):
@@ -617,7 +482,10 @@ def main():
     elif args.command == SUBCOMMAND.CHECKER:
         return EXIT_OK if check_completion(args.output) else EXIT_ERROR
     else:  # PIPELINE
-        main_pipeline(args)
+        pipeline = Pipeline.build(config)
+        build_file = os.path.join(config.output, 'build.cfg')
+        log('writing:', build_file)
+        pipeline.write_build_file(build_file)
 
     duration = int(time.time()) - start_time
     hours = duration - duration % 3600

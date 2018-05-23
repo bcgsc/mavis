@@ -13,7 +13,7 @@ from mavis.constants import CIGAR, DNA_ALPHABET, ORIENT, READ_PAIR_TYPE, STRAND,
 from mavis.interval import Interval
 import timeout_decorator
 
-from . import BAM_INPUT, FULL_BAM_INPUT, FULL_REFERENCE_ANNOTATIONS_FILE_JSON, MockBamFileHandle, MockRead, REFERENCE_GENOME_FILE, TRANSCRIPTOME_BAM_INPUT
+from . import BAM_INPUT, FULL_BAM_INPUT, get_data(mock_annotations.json), MockBamFileHandle, MockRead, get_data(mock_reference_genome.fa), TRANSCRIPTOME_BAM_INPUT
 
 
 REFERENCE_GENOME = None
@@ -22,7 +22,7 @@ REFERENCE_GENOME = None
 def setUpModule():
     warnings.simplefilter('ignore')
     global REFERENCE_GENOME
-    REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
+    REFERENCE_GENOME = load_reference_genome(get_data(mock_reference_genome.fa))
     if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
         raise AssertionError('fake genome file does not have the expected contents')
 
@@ -373,7 +373,7 @@ class TestBamStats(unittest.TestCase):
 
     def test_trans_bam_stats(self):
         bamfh = BamCache(TRANSCRIPTOME_BAM_INPUT)
-        annotations = load_reference_genes(FULL_REFERENCE_ANNOTATIONS_FILE_JSON)
+        annotations = load_reference_genes(get_data(mock_annotations.json))
         stats = compute_transcriptome_bam_stats(
             bamfh,
             annotations,

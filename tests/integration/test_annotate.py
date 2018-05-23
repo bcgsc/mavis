@@ -13,7 +13,8 @@ from mavis.constants import ORIENT, PRIME, PROTOCOL, reverse_complement, STRAND,
 from mavis.error import NotSpecifiedError
 from mavis.interval import Interval
 
-from . import DATA_DIR, MockLongString, MockObject, REFERENCE_ANNOTATIONS_FILE, REFERENCE_ANNOTATIONS_FILE2, REFERENCE_ANNOTATIONS_FILE_JSON, REFERENCE_GENOME_FILE, get_example_genes
+from . import  MockLongString, MockObject, get_example_genes
+from ..util import get_data
 
 
 REFERENCE_ANNOTATIONS = None
@@ -25,13 +26,13 @@ ALT_REF_CHR = 'ref2'
 def setUpModule():
     global REFERENCE_ANNOTATIONS, REFERENCE_GENOME, REF_CHR, EXAMPLE_GENES
     EXAMPLE_GENES = get_example_genes()
-    REFERENCE_ANNOTATIONS = load_reference_genes(REFERENCE_ANNOTATIONS_FILE)
+    REFERENCE_ANNOTATIONS = load_reference_genes(get_data('mock_reference_annotations.tsv'))
     count = sum([len(l) for l in REFERENCE_ANNOTATIONS.values()])
     print('loaded annotations', count)
     assert(count >= 6)  # make sure this is the file we expect
-    REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
+    REFERENCE_GENOME = load_reference_genome(get_data('mock_reference_genome.fa'))
     assert(REF_CHR in REFERENCE_GENOME)
-    print('loaded the reference genome', REFERENCE_GENOME_FILE)
+    print('loaded the reference genome', get_data('mock_reference_genome.fa'))
 
 
 class TestTemplate(unittest.TestCase):
@@ -1255,7 +1256,7 @@ class TestAnnotate(unittest.TestCase):
         self.assertEqual(1, len(d))
 
     def test_loading_json_annotations(self):
-        annotations = load_reference_genes(REFERENCE_ANNOTATIONS_FILE_JSON)
+        annotations = load_reference_genes(get_data('mock_reference_annotations.json'))
         self.assertEqual(1, len(annotations.keys()))
         self.assertEqual(1, len(list(annotations.values())[0]))
 
@@ -1349,7 +1350,7 @@ class TestAnnotate(unittest.TestCase):
 class TestAnnotateEvents(unittest.TestCase):
 
     def test_annotate_events(self):
-        reference_annotations = load_reference_genes(REFERENCE_ANNOTATIONS_FILE2)
+        reference_annotations = load_reference_genes(get_data('mock_reference_annotations.full.tsv'))
         b1 = Breakpoint('fakereference9', 658, orient=ORIENT.RIGHT, strand=STRAND.POS)
         b2 = Breakpoint('fakereference9', 10237, orient=ORIENT.RIGHT, strand=STRAND.NEG)
         bpp = BreakpointPair(

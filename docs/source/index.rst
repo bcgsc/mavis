@@ -9,11 +9,12 @@ Contents
 
 .. toctree::
    :maxdepth: -1
-    
+
    about.rst
    mavis_input.rst
    pipeline.rst
    configuration.rst
+   performance.rst
    theory.rst
    illustrations.rst
    development.rst

@@ -15,20 +15,21 @@ from mavis.validate import call
 from mavis.validate.base import Evidence
 from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
 
-from . import BAM_INPUT, FULL_BAM_INPUT, mock_read_pair, MockBamFileHandle, MockRead, REFERENCE_GENOME_FILE, get_example_genes, MockLongString
+from . import mock_read_pair, MockBamFileHandle, MockRead, get_example_genes, MockLongString
+from ..util import get_data
 
 REFERENCE_GENOME = None
 
 
 def setUpModule():
     global REFERENCE_GENOME
-    REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
+    REFERENCE_GENOME = load_reference_genome(get_data('mock_reference_genome.fa'))
     if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
         raise AssertionError('fake genome file does not have the expected contents')
     global BAM_CACHE
-    BAM_CACHE = BamCache(BAM_INPUT)
+    BAM_CACHE = BamCache(get_data('mini_mock_reads_for_events.sorted.bam'))
     global FULL_BAM_CACHE
-    FULL_BAM_CACHE = BamCache(FULL_BAM_INPUT)
+    FULL_BAM_CACHE = BamCache(get_data('mock_reads_for_events.sorted.bam'))
     global READS
     READS = {}
     for read in BAM_CACHE.fetch('reference3', 1, 8000):

@@ -13,10 +13,3 @@ def glob_exists(*pos, strict=True, n=1):
         print(globexpr)
         print(file_list)
         return False
-
-
-DATA_PREFIX = os.path.join(os.path.dirname(__file__), 'data')
-
-
-def data(*path):
-    return os.path.join(DATA_PREFIX, *path)

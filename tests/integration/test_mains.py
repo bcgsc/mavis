@@ -13,7 +13,8 @@ from mavis.util import ChrListString
 from mavis.validate.main import main as validate_main
 import pysam
 
-from . import FULL_BAM_INPUT, FULL_BASE_EVENTS, FULL_REFERENCE_ANNOTATIONS_FILE_JSON, REFERENCE_GENOME_FILE, REFERENCE_GENOME_FILE_2BIT, RUN_FULL, TEMPLATE_METADATA_FILE, TRANSCRIPTOME_BAM_INPUT
+from . import RUN_FULL
+from ..util import get_data
 
 annotations = None
 reference_genome = None
@@ -26,11 +27,11 @@ masking = {}  # do not mask
 def setUpModule():
     global annotations, reference_genome, template_metadata, genome_bam_fh, trans_bam_fh, masking
     print('setup start')
-    annotations = load_reference_genes(FULL_REFERENCE_ANNOTATIONS_FILE_JSON)
-    reference_genome = load_reference_genome(REFERENCE_GENOME_FILE)
-    template_metadata = load_templates(TEMPLATE_METADATA_FILE)
-    genome_bam_fh = pysam.AlignmentFile(FULL_BAM_INPUT)
-    trans_bam_fh = pysam.AlignmentFile(TRANSCRIPTOME_BAM_INPUT)
+    annotations = load_reference_genes(get_data('mock_annotations.json'))
+    reference_genome = load_reference_genome(get_data('mock_reference_genome.fa'))
+    template_metadata = load_templates('cytoband.txt')
+    genome_bam_fh = pysam.AlignmentFile('mock_reads_for_events.sorted.bam')
+    trans_bam_fh = pysam.AlignmentFile('mock_trans_reads_for_events.sorted.bam')
     print('setup loading is complete')
 
 
@@ -51,7 +52,7 @@ class TestPipeline(unittest.TestCase):
     def test_mains(self):
         # test the clustering
         cluster_files = cluster_main(
-            [FULL_BASE_EVENTS], self.output, False, 'mock-A36971', PROTOCOL.GENOME, DISEASE_STATUS.DISEASED,
+            [get_data('mock_sv_events.tsv')], self.output, False, 'mock-A36971', PROTOCOL.GENOME, DISEASE_STATUS.DISEASED,
             limit_to_chr=ChrListString([]), log_args=True,
             masking=masking, cluster_clique_size=15, cluster_radius=20,
             uninformative_filter=True, max_proximity=5000,
@@ -64,8 +65,8 @@ class TestPipeline(unittest.TestCase):
             [cluster_files[0]], self.output, genome_bam_fh, False, 'mock-A36971', PROTOCOL.GENOME,
             median_fragment_size=427, stdev_fragment_size=106, read_length=150,
             reference_genome=reference_genome, annotations=annotations, masking=masking,
-            aligner_reference=REFERENCE_GENOME_FILE_2BIT,
-            reference_genome_filename=REFERENCE_GENOME_FILE
+            aligner_reference=get_data('mock_reference_genome.2bit'),
+            reference_genome_filename=get_data('mock_reference_genome.fa')
         )
         prefix = re.sub(r'\.tab$', '', cluster_files[0])
         for suffix in [

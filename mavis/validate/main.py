@@ -21,7 +21,7 @@ from ..breakpoint import BreakpointPair
 from ..constants import CALL_METHOD, COLUMNS, MavisNamespace, PROTOCOL
 from ..util import filter_on_overlap, generate_complete_stamp, log, mkdirp, output_tabbed_file, read_inputs, write_bed_file
 
-VALIDATION_PASS_SUFFIX = '.validation-passed.tab'
+VALIDATION_PASS = 'validation-passed.tab'
 
 
 def main(
@@ -29,7 +29,7 @@ def main(
     bam_file, strand_specific,
     library, protocol, median_fragment_size, stdev_fragment_size, read_length,
     reference_genome, reference_genome_filename, annotations, masking, aligner_reference,
-    start_time=int(time.time()), filename_prefix='validate', **kwargs
+    start_time=int(time.time()), **kwargs
 ):
     """
     Args:
@@ -51,23 +51,23 @@ def main(
     validation_settings.update({k: v for k, v in kwargs.items() if k in DEFAULTS})
     validation_settings = MavisNamespace(**validation_settings)
 
-    raw_evidence_bam = os.path.join(output, filename_prefix + '.raw_evidence.bam')
-    contig_bam = os.path.join(output, filename_prefix + '.contigs.bam')
-    evidence_bed = os.path.join(output, filename_prefix + '.evidence.bed')
+    raw_evidence_bam = os.path.join(output, 'raw_evidence.bam')
+    contig_bam = os.path.join(output, 'contigs.bam')
+    evidence_bed = os.path.join(output, 'evidence.bed')
 
-    passed_output_file = os.path.join(output, filename_prefix + VALIDATION_PASS_SUFFIX)
-    passed_bed_file = os.path.join(output, filename_prefix + '.validation-passed.bed')
-    failed_output_file = os.path.join(output, filename_prefix + '.validation-failed.tab')
-    contig_aligner_fa = os.path.join(output, filename_prefix + '.contigs.fa')
+    passed_output_file = os.path.join(output, VALIDATION_PASS)
+    passed_bed_file = os.path.join(output, 'validation-passed.bed')
+    failed_output_file = os.path.join(output, 'validation-failed.tab')
+    contig_aligner_fa = os.path.join(output, 'contigs.fa')
     if validation_settings.aligner == SUPPORTED_ALIGNER.BLAT:
-        contig_aligner_output = os.path.join(output, filename_prefix + '.contigs.blat_out.pslx')
-        contig_aligner_log = os.path.join(output, filename_prefix + '.contigs.blat.log')
+        contig_aligner_output = os.path.join(output, 'contigs.blat_out.pslx')
+        contig_aligner_log = os.path.join(output, 'contigs.blat.log')
     elif validation_settings.aligner == SUPPORTED_ALIGNER.BWA_MEM:
-        contig_aligner_output = os.path.join(output, filename_prefix + '.contigs.bwa_mem.sam')
-        contig_aligner_log = os.path.join(output, filename_prefix + '.contigs.bwa_mem.log')
+        contig_aligner_output = os.path.join(output, 'contigs.bwa_mem.sam')
+        contig_aligner_log = os.path.join(output, 'contigs.bwa_mem.log')
     else:
         raise NotImplementedError('unsupported aligner', validation_settings.aligner)
-    igv_batch_file = os.path.join(output, filename_prefix + '.igv.batch')
+    igv_batch_file = os.path.join(output, 'igv.batch')
     input_bam_cache = BamCache(bam_file, strand_specific)
 
     bpps = read_inputs(

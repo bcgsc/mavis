@@ -18,7 +18,8 @@ from mavis.illustrate.util import dynamic_label_color, split_intervals_into_trac
 from mavis.interval import Interval
 from svgwrite import Drawing
 
-from . import build_transcript, MockObject, MockString, OUTPUT_SVG, TEMPLATE_METADATA_FILE
+from . import build_transcript, MockObject, MockString, OUTPUT_SVG
+from ..util import get_data
 
 TEMPLATE_METADATA = None
 DEFAULTS.domain_name_regex_filter = r'.*'
@@ -26,7 +27,7 @@ DEFAULTS.domain_name_regex_filter = r'.*'
 
 def setUpModule():
     global TEMPLATE_METADATA, EXAMPLE_ANNOTATIONS
-    TEMPLATE_METADATA = load_templates(TEMPLATE_METADATA_FILE)
+    TEMPLATE_METADATA = load_templates(get_data('cytoBand.txt'))
 
 
 class TestDraw(unittest.TestCase):
