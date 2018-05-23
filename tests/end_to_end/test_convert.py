@@ -12,8 +12,9 @@ from mavis.main import main
 from mavis.tools import SUPPORTED_TOOL
 from mavis.util import unique_exists, read_bpp_from_input_file
 
+from ..util import get_data
 
-DATA_PREFIX = os.path.join(os.path.dirname(__file__), 'data')
+
 TEMP_OUTPUT = None
 
 
@@ -45,13 +46,13 @@ class TestConvert(unittest.TestCase):
         return result
 
     def test_chimerascan(self):
-        self.run_main(os.path.join(DATA_PREFIX, 'chimerascan_output.bedpe'), SUPPORTED_TOOL.CHIMERASCAN, False)
+        self.run_main(get_data('chimerascan_output.bedpe'), SUPPORTED_TOOL.CHIMERASCAN, False)
 
     def test_defuse(self):
-        self.run_main(os.path.join(DATA_PREFIX, 'defuse_output.tsv'), SUPPORTED_TOOL.DEFUSE, False)
+        self.run_main(get_data('defuse_output.tsv'), SUPPORTED_TOOL.DEFUSE, False)
 
     def test_delly(self):
-        result = self.run_main(os.path.join(DATA_PREFIX, 'delly_events.vcf'), SUPPORTED_TOOL.DELLY, False)
+        result = self.run_main(get_data('delly_events.vcf'), SUPPORTED_TOOL.DELLY, False)
         # test the contents were converted successfully
         self.assertEqual(1, len(result['delly-DUP00000424']))
         bpp = result['delly-DUP00000424'][0]
@@ -74,7 +75,7 @@ class TestConvert(unittest.TestCase):
         self.assertEqual(len(result), 31)
 
     def test_manta(self):
-        result = self.run_main(os.path.join(DATA_PREFIX, 'manta_events.vcf'), SUPPORTED_TOOL.MANTA, False)
+        result = self.run_main(get_data('manta_events.vcf'), SUPPORTED_TOOL.MANTA, False)
         # ensure weird bnd type is converted correctly
         bnd_id = 'manta-MantaBND:173633:0:1:0:0:0:0'
         self.assertEqual(2, len(result[bnd_id]))
@@ -95,27 +96,27 @@ class TestConvert(unittest.TestCase):
         self.assertEqual('True', somatic_event.data.get('SOMATIC', False))
 
     def test_pindel(self):
-        self.run_main(os.path.join(DATA_PREFIX, 'pindel_events.vcf'), SUPPORTED_TOOL.PINDEL, False)
+        self.run_main(get_data('pindel_events.vcf'), SUPPORTED_TOOL.PINDEL, False)
 
     def test_transabyss(self):
-        self.run_main(os.path.join(DATA_PREFIX, 'transabyss_indels_output.tab'), SUPPORTED_TOOL.TA, False)
-        self.run_main(os.path.join(DATA_PREFIX, 'transabyss_events.tab'), SUPPORTED_TOOL.TA, False)
+        self.run_main(get_data('transabyss_indels_output.tab'), SUPPORTED_TOOL.TA, False)
+        self.run_main(get_data('transabyss_events.tab'), SUPPORTED_TOOL.TA, False)
 
     def test_vcf(self):
-        results = self.run_main(os.path.join(DATA_PREFIX, 'clinvar_short_test.vcf'), SUPPORTED_TOOL.VCF, False)
+        results = self.run_main(get_data('clinvar_short_test.vcf'), SUPPORTED_TOOL.VCF, False)
         print(results.keys())
         record = results['vcf-460818'][0]
         print(record, record.data)
         self.assertEqual('Pathogenic', record.data['CLNSIG'])
 
     def test_breakseq2(self):
-        self.run_main(os.path.join(DATA_PREFIX, 'breakseq.vcf'), SUPPORTED_TOOL.BREAKSEQ, False)
+        self.run_main(get_data('breakseq.vcf'), SUPPORTED_TOOL.BREAKSEQ, False)
 
     def test_cnvnator(self):
-        self.run_main(os.path.join(DATA_PREFIX, 'cnvnator.tab'), SUPPORTED_TOOL.CNVNATOR, False)
+        self.run_main(get_data('cnvnator.tab'), SUPPORTED_TOOL.CNVNATOR, False)
 
     def test_breakdancer(self):
-        self.run_main(os.path.join(DATA_PREFIX, 'breakdancer_output.txt'), SUPPORTED_TOOL.BREAKDANCER, False)
+        self.run_main(get_data('breakdancer_output.txt'), SUPPORTED_TOOL.BREAKDANCER, False)
 
 
 def tearDownModule():

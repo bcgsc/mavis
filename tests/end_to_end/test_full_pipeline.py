@@ -11,12 +11,13 @@ from mavis.constants import SUBCOMMAND
 from mavis.main import main
 from mavis.util import unique_exists
 
-from . import glob_exists, data
+from . import glob_exists
+from ..util import get_data
 
 
-CONFIG = data('pipeline_config.cfg')
-BWA_CONFIG = data('bwa_pipeline_config.cfg')
-CLEAN_CONFIG = data('clean_pipeline_config.cfg')
+CONFIG = get_data('pipeline_config.cfg')
+BWA_CONFIG = get_data('bwa_pipeline_config.cfg')
+CLEAN_CONFIG = get_data('clean_pipeline_config.cfg')
 MOCK_GENOME = 'mock-A36971'
 MOCK_TRANS = 'mock-A47933'
 
@@ -156,13 +157,13 @@ class TestPipeline(unittest.TestCase):
                 self.assertEqual(2, err.code)
 
     def test_error_on_bad_input_file(self):
-        args = ['mavis', SUBCOMMAND.PIPELINE, data('bad_input_file.cfg'), '-o', self.temp_output]
+        args = ['mavis', SUBCOMMAND.PIPELINE, get_data('bad_input_file.cfg'), '-o', self.temp_output]
         with patch.object(sys, 'argv', args):
             with self.assertRaises(FileNotFoundError):
                 main()
 
     def test_missing_reference(self):
-        args = ['mavis', SUBCOMMAND.PIPELINE, data('missing_reference.cfg'), '-o', self.temp_output]
+        args = ['mavis', SUBCOMMAND.PIPELINE, get_data('missing_reference.cfg'), '-o', self.temp_output]
         with patch.object(sys, 'argv', args):
             with self.assertRaises(OSError):
                 main()
@@ -190,7 +191,7 @@ class TestPipeline(unittest.TestCase):
         self.assertTrue(glob_exists(self.temp_output, 'submit_pipeline*.sh'))
 
     def test_no_optional_files(self):
-        args = ['mavis', SUBCOMMAND.PIPELINE, data('no_opt_pipeline.cfg'), '-o', self.temp_output]
+        args = ['mavis', SUBCOMMAND.PIPELINE, get_data('no_opt_pipeline.cfg'), '-o', self.temp_output]
         with patch.object(sys, 'argv', args):
             self.assertEqual(0, main())
 
@@ -211,7 +212,7 @@ class TestPipeline(unittest.TestCase):
         self.assertTrue(glob_exists(self.temp_output, 'submit_pipeline*.sh'))
 
     def test_reference_from_env(self):
-        args = ['mavis', SUBCOMMAND.PIPELINE, data('reference_from_env.cfg'), '-o', self.temp_output]
+        args = ['mavis', SUBCOMMAND.PIPELINE, get_data('reference_from_env.cfg'), '-o', self.temp_output]
         env = {k: v for k, v in os.environ.items()}
         env.update({
             'MAVIS_TEMPLATE_METADATA': 'tests/integration/data/cytoBand.txt',

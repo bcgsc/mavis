@@ -11,10 +11,11 @@ from mavis.constants import SUBCOMMAND
 from mavis.main import main
 
 from . import glob_exists
+from ..util import get_data
 
 
-ANNOTATIONS = os.path.join(os.path.dirname(__file__), '../integration/data/annotations_subsample.json')
-BAM = os.path.join(os.path.dirname(__file__), '../integration/data/mock_reads_for_events.sorted.bam')
+ANNOTATIONS = get_data('annotations_subsample.json')
+BAM = get_data('mock_reads_for_events.sorted.bam')
 
 
 class TestOverlayOptions(unittest.TestCase):

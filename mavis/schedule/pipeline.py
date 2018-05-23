@@ -288,6 +288,9 @@ class Pipeline:
     def read_build_file(cls, filepath):
         """
         read the configuration file which stored the build information concerning jobs and dependencies
+
+        Args
+            filepath (str): path to the input config file
         """
         if not os.path.exists(filepath):
             raise FileNotFoundError('File does not exist: {}'.format(filepath))
@@ -338,6 +341,13 @@ class Pipeline:
 
 
     def write_build_file(self, filename):
+        """
+        write the build.cfg file for the current pipeline. This is the file used in re-loading the pipeline
+        to check the status and report failures, etc. later.
+
+        Args
+            filename (str): path to the output config file
+        """
         parser = ConfigParser(interpolation=ExtendedInterpolation())
         parser['general'] = {
             'batch_id': self.batch_id,

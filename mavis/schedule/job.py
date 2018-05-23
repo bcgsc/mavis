@@ -227,9 +227,128 @@ class SlurmScheduler(Scheduler):
         job.status = JOB_STATUS.CANCELLED
 
 
+def parse_fixed_width_table(string):
+    string = string.strip()
+    lines = [l for l in string.split('\n') if l.strip()]
+    header = []
+    for char in lines.pop(0):
+        if not header or not re.match(r'\s', char):
+            header.append(char)
+        else:
+            header[-1] = header[-1] + char
+    column_sizes = [len(col) for col in header]
+    header = [col.strip() for col in header]
+    rows = []
+
+    for line in lines:
+        if re.match(r'^[\-]+$', line):
+            continue  # ignore dashed separators
+        row = {}
+        pos = 0
+        for col, size in zip(header, column_sizes):
+            row[col] = line[pos:pos + size]
+            pos += size
+        rows.append(row)
+    return rows
+
 
 class SgeScheduler(Scheduler):
     NAME = SCHEDULER.SGE
+    ARRAY_DEPENDENCY = '-hold_jid {}'
+    JOB_DEPENDENCY = '-hold_jid_ad {}'
+    ENV_TASK_IDENT = 'TASK_ID'
+    ENV_JOB_IDENT = 'JOB_ID'
+    ENV_JOB_NAME = 'JOB_NAME'
+
+    @classmethod
+    def format_stdout(cls, job):
+        if isinstance(job, ArrayJob):
+            name = job.stdout.format(
+                name='\${}'.format(cls.ENV_JOB_NAME),
+                job_ident='\${}-\${}'.format(
+                    cls.ENV_JOB_IDENT,
+                    cls.ENV_TASK_IDENT))
+        else:
+            name = job.stdout.format(
+                name='\${}'.format(cls.ENV_JOB_NAME),
+                job_ident='\${}'.format(cls.ENV_JOB_IDENT))
+        return name
+
+    @classmethod
+    def submit(cls, job, task_ident=None, cascade=False):
+        """
+        runs a subprocess sbatch command
+
+        Args
+            job (Job): the job to be submitted
+            task_ident (int): submit only a particular task of the current job
+            cascade (bool): submit dependencies if they have not yet been submitted
+        """
+        command = ['qsub', '-j', 'y']  # always join output
+        if job.job_ident:
+            raise ValueError('Job has already been submitted and has the job number', job.job_ident)
+        if job.queue:
+            command.append('-q {}'.format(job.queue))
+        if job.memory_limit:
+            command.extend([
+                '-l',
+                'mem_free={0}M,mem_token={0}M,h_vmem={}M'.format(job.memory_limit)
+            ])
+        if job.time_limit:
+            command.extend([
+                '-l',
+                'h_rt={}'.format(str(timedelta(seconds=job.time_limit)))])
+        if job.import_env:
+            command.append('-V')
+        if job.dependencies:
+            command.append(cls.format_dependencies(job, task_ident=task_ident, cascade=cascade))
+        if job.name:
+            command.extend(['-J', job.name])
+        if job.stdout:
+            command.extend(['-o', cls.format_stdout(job)])
+        if job.mail_type:
+            command.extend(['-m', job.mail_type])
+        if job.mail_user:
+            command.extend(['-M', job.mail_user])
+        # options specific to job arrays
+        if isinstance(job, ArrayJob):
+            if task_ident is None:  # default to all
+                command.extend(['-t', '1-{}'.format(job.tasks)])
+            else:
+                command.append(['-t', str(task_ident)])
+
+        command.append(job.script)
+        content = subprocess.check_output(command).decode('utf8').strip()
+
+        match = re.match(r'^submitted batch job (\d+)$', content, re.IGNORECASE)
+        if not match:
+            raise NotImplementedError('Error in retrieving the submitted job number. Did not match the expected pattern', content)
+        job.job_ident = match.group(1)
+        job.status = JOB_STATUS.SUBMITTED
+
+    @classmethod
+    def status(cls, job, task_ident=None):
+        """
+        runs a subprocess scontrol command to get job details
+        """
+        command = ['qstat']
+        if job.queue:
+            command.extend(['-q', job.queue])
+        content = subprocess.check_output(command).decode('utf8').strip()
+
+        for job in parse_fixed_width_table(content):
+            job_status = row['state']
+            if job_status not in JOB_STATUS:
+                raise NotImplementedError('Error parsing the unknown job status value', job_status)
+            status_hist[job_status] = status_hist.get(job_status, 0) + 1
+        return status_hist
+
+    @classmethod
+    def cancel(cls, job):
+        command = ['scancel', job.job_ident]
+        subprocess.check_output(command)
+        job.job_ident = None
+        job.status = JOB_STATUS.CANCELLED
 
 class PbsScheduler(Scheduler):
     NAME = SCHEDULER.PBS
