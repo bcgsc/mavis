@@ -15,7 +15,7 @@ from ..error import DrawingFitError, NotSpecifiedError
 from ..illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from ..illustrate.constants import DiagramSettings
 from ..illustrate.diagram import draw_sv_summary_diagram
-from ..util import generate_complete_stamp, log, mkdirp, read_inputs
+from ..util import generate_complete_stamp, LOG, mkdirp, read_inputs
 
 
 ACCEPTED_FILTERS = {
@@ -45,7 +45,7 @@ def draw(drawing_config, ann, reference_genome, template_metadata, drawings_dire
     drawing_attempts.append((initial_width, {'draw_fusion_transcript': False, 'draw_reference_transcripts': False}))
 
     for i, (curr_width, other_settings) in enumerate(drawing_attempts):
-        log('drawing attempt:', i + 1, str(curr_width) + 'px', other_settings if other_settings else '', time_stamp=False)
+        LOG('drawing attempt:', i + 1, str(curr_width) + 'px', other_settings if other_settings else '', time_stamp=False)
         try:
             drawing_config.width = curr_width
             canvas, legend_json = draw_sv_summary_diagram(
@@ -82,10 +82,10 @@ def draw(drawing_config, ann, reference_genome, template_metadata, drawings_dire
 
             drawing = os.path.join(drawings_directory, name + '.svg')
             legend = os.path.join(drawings_directory, name + '.legend.json')
-            log('generating svg:', drawing, time_stamp=False)
+            LOG('generating svg:', drawing, time_stamp=False)
             canvas.saveas(drawing)
 
-            log('generating legend:', legend, time_stamp=False)
+            LOG('generating legend:', legend, time_stamp=False)
             with open(legend, 'w') as fh:
                 json.dump(legend_json, fh)
             break
@@ -138,7 +138,7 @@ def main(
         require=[COLUMNS.protocol, COLUMNS.library],
         expand_strand=False, expand_orient=True, expand_svtype=True
     )
-    log('read {} breakpoint pairs'.format(len(bpps)))
+    LOG('read {} breakpoint pairs'.format(len(bpps)))
 
     annotations = annotate_events(
         bpps,
@@ -148,7 +148,7 @@ def main(
         min_domain_mapping_match=min_domain_mapping_match,
         max_proximity=max_proximity,
         max_orf_cap=max_orf_cap,
-        log=log,
+        log=LOG,
         filters=annotation_filters
     )
 
@@ -175,9 +175,9 @@ def main(
         COLUMNS.protein_synon
     }
     header = None
-    log('opening for write:', tabbed_output_file)
+    LOG('opening for write:', tabbed_output_file)
     tabbed_fh = open(tabbed_output_file, 'w')
-    log('opening for write:', fa_output_file)
+    LOG('opening for write:', fa_output_file)
     fasta_fh = open(fa_output_file, 'w')
 
     try:
@@ -189,10 +189,10 @@ def main(
                 header_req.update(ann_row.keys())
                 header = sort_columns(header_req)
                 tabbed_fh.write('\t'.join([str(c) for c in header]) + '\n')
-            log(
+            LOG(
                 '({} of {}) current annotation'.format(i + 1, total),
                 ann.annotation_id, ann.transcript1, ann.transcript2, ann.event_type)
-            log(ann, time_stamp=False)
+            LOG(ann, time_stamp=False)
             # get the reference sequences for either transcript
             ref_cdna_seq = {}
             ref_protein_seq = {}
@@ -254,9 +254,9 @@ def main(
                 rows = [ann_row]
             for row in rows:
                 tabbed_fh.write('\t'.join([str(row.get(k, None)) for k in header]) + '\n')
-        generate_complete_stamp(output, log, start_time=start_time)
+        generate_complete_stamp(output, LOG, start_time=start_time)
     finally:
-        log('closing:', tabbed_output_file)
+        LOG('closing:', tabbed_output_file)
         tabbed_fh.close()
-        log('closing:', fa_output_file)
+        LOG('closing:', fa_output_file)
         fasta_fh.close()

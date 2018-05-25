@@ -7,6 +7,8 @@ import itertools
 import os
 import re
 import time
+import logging
+import sys
 
 from braceexpand import braceexpand
 from tab import tab
@@ -18,6 +20,46 @@ from .error import InvalidRearrangement
 from .interval import Interval
 
 ENV_VAR_PREFIX = 'MAVIS_'
+
+
+logging.basicConfig(format='{message}', style='{')
+logging.root.setLevel(logging.INFO)
+
+class Log:
+    """
+    wrapper aroung the builtin logging to make it more readable
+    """
+    def __init__(self, indent_str='  ', indent_level=0, level=logging.INFO):
+        self.indent_str = indent_str
+        self.indent_level = indent_level
+        self.level = level
+
+    def __call__(self, *pos, time_stamp=False, level=None, indent_level=0, **kwargs):
+        if level is None and self.level is None:
+            return
+        elif self.level is not None:
+            level = self.level
+
+        stamp = datetime.now().strftime('[%Y-%m-%d %H:%M:%S]') if time_stamp else ' ' * 21
+        indent_prefix = self.indent_str * (self.indent_level + indent_level)
+        message = '{} {}{}'.format(stamp, indent_prefix, ' '.join([str(p) for p in pos]))
+        logging.log(level, message, **kwargs)
+
+    def indent(self):
+        return Log(self.indent_str, self.indent_level + 1, self.level)
+
+    def dedent(self):
+        return Log(self.indent_str, max(0, self.indent_level - 1), self.level)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *pos):
+        pass
+
+
+LOG = Log()
+DEVNULL = Log(level=None)
 
 
 def cast(value, cast_func):
@@ -139,41 +181,27 @@ def log_arguments(args):
     Args:
         args (Namespace): the namespace to print arguments for
     """
-    log('arguments')
+    LOG('arguments', time_stamp=True)
     for arg, val in sorted(args.items()):
         if isinstance(val, list):
             if len(val) <= 1:
-                log(arg, '= {}'.format(val), time_stamp=False)
+                LOG(arg, '= {}'.format(val))
                 continue
-            log(arg, '= [', time_stamp=False)
+            LOG(arg, '= [')
             for v in val:
-                log('\t', repr(v), time_stamp=False)
-            log(']', time_stamp=False)
+                LOG(repr(v), indent_level=1)
+            LOG(']')
         elif any([isinstance(val, typ) for typ in [str, int, float, bool, tuple]]) or val is None:
-            log(arg, '=', repr(val), time_stamp=False)
+            LOG(arg, '=', repr(val))
         else:
-            log(arg, '=', object.__repr__(val), time_stamp=False)
-
-
-def log(*pos, time_stamp=True):
-    if time_stamp:
-        print('[{}]'.format(datetime.now()), *pos)
-    else:
-        print(' ' * 28, *pos)
-
-
-def devnull(*pos, **kwargs):
-    """
-    Takes any number of arguments and does nothing
-    """
-    pass
+            LOG(arg, '=', object.__repr__(val))
 
 
 def mkdirp(dirname):
     """
     Make a directory or path of directories. Suppresses the error that is normally raised when the directory already exists
     """
-    log("creating output directory: '{}'".format(dirname))
+    LOG("creating output directory: '{}'".format(dirname))
     try:
         os.makedirs(dirname)
     except OSError as exc:  # Python >2.5: http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
@@ -192,7 +220,7 @@ def filter_on_overlap(bpps, regions_by_reference_name):
         bpps (:class:`list` of :class:`~mavis.breakpoint.BreakpointPair`): list of breakpoint pairs to be filtered
         regions_by_reference_name (:class:`dict` of :class:`list` of :class:`~mavis.annotate.base.BioInterval` by :class:`str`): regions to filter against
     """
-    log('filtering from', len(bpps), 'using overlaps with regions filter')
+    LOG('filtering from', len(bpps), 'using overlaps with regions filter')
     failed = []
     passed = []
     for bpp in bpps:
@@ -212,7 +240,7 @@ def filter_on_overlap(bpps, regions_by_reference_name):
             failed.append(bpp)
         else:
             passed.append(bpp)
-    log('filtered from', len(bpps), 'down to', len(passed), '(removed {})'.format(len(failed)))
+    LOG('filtered from', len(bpps), 'down to', len(passed), '(removed {})'.format(len(failed)))
     return passed, failed
 
 
@@ -225,14 +253,14 @@ def read_inputs(inputs, **kwargs):
     for expr in inputs:
         for finput in bash_expands(expr):
             try:
-                log('loading:', finput)
+                LOG('loading:', finput)
                 bpps.extend(read_bpp_from_input_file(
                     finput,
                     **kwargs
                 ))
             except tab.EmptyFileError:
-                log('ignoring empty file:', finput)
-    log('loaded', len(bpps), 'breakpoint pairs')
+                LOG('ignoring empty file:', finput)
+    LOG('loaded', len(bpps), 'breakpoint pairs')
     return bpps
 
 
@@ -252,14 +280,14 @@ def output_tabbed_file(bpps, filename, header=None):
     header = sort_columns(header)
 
     with open(filename, 'w') as fh:
-        log('writing:', filename)
+        LOG('writing:', filename)
         fh.write('#' + '\t'.join(header) + '\n')
         for row in rows:
             fh.write('\t'.join([str(row.get(c, None)) for c in header]) + '\n')
 
 
 def write_bed_file(filename, bed_rows):
-    log('writing:', filename)
+    LOG('writing:', filename)
     with open(filename, 'w') as fh:
         for bed in bed_rows:
             fh.write('\t'.join([str(c) for c in bed]) + '\n')
@@ -286,7 +314,7 @@ def get_connected_components(adj_matrix):
     return components
 
 
-def generate_complete_stamp(output_dir, log=devnull, prefix='MAVIS.', start_time=None):
+def generate_complete_stamp(output_dir, log=DEVNULL, prefix='MAVIS.', start_time=None):
     """
     writes a complete stamp, optionally including the run time if start_time is given
 

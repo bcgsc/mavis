@@ -13,10 +13,13 @@ from .genomic import Exon, Gene, Template, Transcript, PreTranscript
 from .protein import Domain, Translation
 from ..constants import CODON_SIZE, GIEMSA_STAIN, START_AA, STOP_AA, STRAND, translate
 from ..interval import Interval
-from ..util import devnull
+from ..util import DEVNULL
 
 
-def load_masking_regions(*filepaths):
+FILE_CACHE = {}  # cache loaded reference files to avoid loading them multiple times
+
+
+def load_masking_regions(*filepaths, use_cache=True):
     """
     reads a file of regions. The expect input format for the file is tab-delimited and
     the header should contain the following columns
@@ -43,6 +46,9 @@ def load_masking_regions(*filepaths):
         >>> m['1']
         [BioInterval(), BioInterval(), ...]
     """
+    fileload_key = tuple(sorted(filepaths))
+    if use_cache and fileload_key in FILE_CACHE:
+        return FILE_CACHE[fileload_key]
     regions = {}
     for filepath in filepaths:
         _, rows = tab.read_file(
@@ -53,6 +59,9 @@ def load_masking_regions(*filepaths):
         for row in rows:
             mask_region = BioInterval(reference_object=row['chr'], start=row['start'], end=row['end'], name=row['name'])
             regions.setdefault(mask_region.reference_object, []).append(mask_region)
+    # add to the cache
+    if use_cache:
+        FILE_CACHE[fileload_key] = regions
     return regions
 
 
@@ -64,7 +73,7 @@ def load_reference_genes(*pos, **kwargs):
     return load_annotations(*pos, **kwargs)
 
 
-def load_annotations(*filepaths, warn=devnull, reference_genome=None, best_transcripts_only=False):
+def load_annotations(*filepaths, warn=DEVNULL, reference_genome=None, best_transcripts_only=False, use_cache=True):
     """
     loads gene models from an input file. Expects a tabbed or json file.
 
@@ -79,6 +88,9 @@ def load_annotations(*filepaths, warn=devnull, reference_genome=None, best_trans
         :class:`dict` of :class:`list` of :class:`~mavis.annotate.genomic.Gene` by :class:`str`: lists of genes keyed by chromosome name
     """
     total_annotations = {}
+    fileload_key = tuple(sorted(filepaths) + [reference_genome, best_transcripts_only])
+    if use_cache and fileload_key in FILE_CACHE:
+        return FILE_CACHE[fileload_key]
 
     for filepath in filepaths:
         data = None
@@ -90,15 +102,20 @@ def load_annotations(*filepaths, warn=devnull, reference_genome=None, best_trans
                 data = json.load(fh)
 
         current_annotations = parse_annotations_json(
-            data, reference_genome=reference_genome, best_transcripts_only=best_transcripts_only, warn=warn)
+            data,
+            reference_genome=reference_genome,
+            best_transcripts_only=best_transcripts_only,
+            warn=warn)
 
         for chrom in current_annotations:
             for gene in current_annotations[chrom]:
                 total_annotations.setdefault(chrom, []).append(gene)
+    if use_cache:
+        FILE_CACHE[fileload_key] = total_annotations
     return total_annotations
 
 
-def parse_annotations_json(data, reference_genome=None, best_transcripts_only=False, warn=devnull):
+def parse_annotations_json(data, reference_genome=None, best_transcripts_only=False, warn=DEVNULL):
     """
     parses a json of annotation information into annotation objects
     """
@@ -185,7 +202,7 @@ def parse_annotations_json(data, reference_genome=None, best_transcripts_only=Fa
     return genes_by_chr
 
 
-def convert_tab_to_json(filepath, warn=devnull):
+def convert_tab_to_json(filepath, warn=DEVNULL):
     """
     given a file in the std input format (see below) reads and return a list of genes (and sub-objects)
 
@@ -317,7 +334,7 @@ def convert_tab_to_json(filepath, warn=devnull):
     return {'genes': genes.values()}
 
 
-def load_reference_genome(*filepaths):
+def load_reference_genome(*filepaths, use_cache=True):
     """
     Args:
         filepaths (list of str): the paths to the files containing the input fasta genomes
@@ -325,12 +342,17 @@ def load_reference_genome(*filepaths):
     Returns:
         :class:`dict` of :class:`Bio.SeqRecord` by :class:`str`: a dictionary representing the sequences in the fasta file
     """
+    fileload_key = tuple(sorted(filepaths))
+
+    if use_cache and fileload_key in FILE_CACHE:
+        return FILE_CACHE[fileload_key]
+
     reference_genome = {}
     for filename in filepaths:
         with open(filename, 'rU') as fh:
             for chrom, seq in SeqIO.to_dict(SeqIO.parse(fh, 'fasta')).items():
                 if chrom in reference_genome:
-                    raise KeyError('Duplicate chromosome name', chrom, filepath)
+                    raise KeyError('Duplicate chromosome name', chrom, filename)
                 reference_genome[chrom] = seq
 
     names = list(reference_genome.keys())
@@ -352,10 +374,13 @@ def load_reference_genome(*filepaths):
                     'loaded'.format(template_name, prefixed))
             reference_genome.setdefault(prefixed, reference_genome[template_name].upper())
         reference_genome[template_name] = reference_genome[template_name].upper()
+
+    if use_cache:
+        FILE_CACHE[fileload_key] = reference_genome
     return reference_genome
 
 
-def load_templates(*filepaths):
+def load_templates(*filepaths, use_cache=True):
     """
     primarily useful if template drawings are required and is not necessary otherwise
     assumes the input file is 0-indexed with [start,end) style. Columns are expected in
@@ -383,6 +408,10 @@ def load_templates(*filepaths):
     """
     header = ['name', 'start', 'end', 'band_name', 'giemsa_stain']
     templates = {}
+    fileload_key = tuple(sorted(filepaths))
+
+    if use_cache and fileload_key in FILE_CACHE:
+        return FILE_CACHE[fileload_key]
 
     for filename in filepaths:
         header, rows = tab.read_file(
@@ -402,4 +431,7 @@ def load_templates(*filepaths):
             end = max([b.end for b in bands])
             end = Template(tname, start, end, bands=bands)
             templates[end.name] = end
+
+    if use_cache:
+        FILE_CACHE[fileload_key] = templates
     return templates

@@ -9,7 +9,7 @@ from ..breakpoint import BreakpointPair
 from ..constants import CIGAR, COLUMNS, NA_MAPPING_QUALITY, ORIENT, PROTOCOL, PYSAM_READ_FLAGS, reverse_complement, STRAND, SVTYPE
 from ..error import NotSpecifiedError
 from ..interval import Interval
-from ..util import devnull
+from ..util import DEVNULL
 
 
 class Evidence(BreakpointPair):
@@ -642,7 +642,7 @@ class Evidence(BreakpointPair):
                 return STRAND.NEG
             raise ValueError('Could not determine the strand. Equivocal POS/(NEG + POS) ratio', ratio, strand_calls)
 
-    def assemble_contig(self, log=devnull):
+    def assemble_contig(self, log=DEVNULL):
         """
         uses the split reads and the partners of the half mapped reads to create a contig
         representing the sequence across the breakpoints
@@ -766,7 +766,7 @@ class Evidence(BreakpointPair):
                     filtered_contigs[contig.seq] = contig
         self.contigs = list(filtered_contigs.values())
 
-    def load_evidence(self, log=devnull):
+    def load_evidence(self, log=DEVNULL):
         """
         open the associated bam file and read and store the evidence
         does some preliminary read-quality filtering

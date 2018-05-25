@@ -2,20 +2,16 @@
 import argparse
 import platform
 import os
-import re
-import subprocess
-import sys
 import time
 
 import tab
 
 from . import __version__
-from .align import get_aligner_version, SUPPORTED_ALIGNER
+from .align import get_aligner_version
 from .annotate.base import BioInterval
 from .annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
 from .annotate.file_io import load_annotations, load_masking_regions, load_reference_genome, load_templates
 from .annotate import main as annotate_main
-from .schedule.checker import check_completion
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from .cluster import main as cluster_main
 from .config import augment_parser, MavisConfig, generate_config, get_metavar, CustomHelpFormatter, RangeAppendAction
@@ -29,7 +25,7 @@ from .pairing import main as pairing_main
 from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 from .summary import main as summary_main
 from .tools import convert_tool_output, SUPPORTED_TOOL
-from .util import bash_expands, get_env_variable, log, log_arguments, MavisNamespace, mkdirp, output_tabbed_file
+from .util import bash_expands, get_env_variable, LOG, log_arguments, MavisNamespace, mkdirp, output_tabbed_file
 from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 from .validate import main as validate_main
 from .schedule.pipeline import Pipeline
@@ -100,7 +96,7 @@ def overlay_main(
         for gene in annotations[chrom]:
             if gene_name in gene.aliases or gene_name == gene.name:
                 gene_to_draw = gene
-                log('Found target gene: {}(aka. {}) {}:{}-{}'.format(gene.name, gene.aliases, gene.chr, gene.start, gene.end))
+                LOG('Found target gene: {}(aka. {}) {}:{}-{}'.format(gene.name, gene.aliases, gene.chr, gene.start, gene.end))
                 break
     if gene_to_draw is None:
         raise KeyError('Could not find gene alias or id in annotations file', gene_name)
@@ -135,24 +131,24 @@ def overlay_main(
                 vmarkers=markers,
                 plots=plots,
                 window_buffer=buffer_length,
-                log=log
+                log=LOG
             )
             break
         except DrawingFitError as err:
             if attempts > max_drawing_retries:
                 raise err
-            log('Drawing fit: extending window', drawing_width_iter_increase)
+            LOG('Drawing fit: extending window', drawing_width_iter_increase)
             settings.width += drawing_width_iter_increase
             attempts += 1
 
     svg_output_file = os.path.join(output, '{}_{}_overlay.svg'.format(gene_to_draw.name, gene_name))
-    log('writing:', svg_output_file)
+    LOG('writing:', svg_output_file)
 
     canvas.saveas(svg_output_file)
 
 
 def convert_main(inputs, outputfile, file_type, strand_specific=False, assume_no_untemplated=True):
-    bpp_results = convert_tool_output(inputs, file_type, strand_specific, log, True, assume_no_untemplated=assume_no_untemplated)
+    bpp_results = convert_tool_output(inputs, file_type, strand_specific, LOG, True, assume_no_untemplated=assume_no_untemplated)
     if os.path.dirname(outputfile):
         mkdirp(os.path.dirname(outputfile))
     output_tabbed_file(bpp_results, outputfile)
@@ -225,6 +221,7 @@ def main():
     optional[SUBCOMMAND.PIPELINE].add_argument(
         '--skip_stage', choices=[SUBCOMMAND.CLUSTER, SUBCOMMAND.VALIDATE], action='append', default=[],
         help='Use flag once per stage to skip. Can skip clustering or validation or both')
+    optional[SUBCOMMAND.SCHEDULE].add_argument('--submit', action='store_true', default=False, help='submit jobs to the the scheduler specified')
 
     # add the inputs argument
     for command in [SUBCOMMAND.CLUSTER, SUBCOMMAND.ANNOTATE, SUBCOMMAND.VALIDATE, SUBCOMMAND.PAIR, SUBCOMMAND.SUMMARY, SUBCOMMAND.CONVERT]:
@@ -289,8 +286,8 @@ def main():
     if args.command == SUBCOMMAND.VALIDATE:
         args.aligner_version = get_aligner_version(args.aligner)
 
-    log('MAVIS: {}'.format(__version__))
-    log('hostname:', platform.node(), time_stamp=False)
+    LOG('MAVIS: {}'.format(__version__))
+    LOG('hostname:', platform.node(), time_stamp=False)
     log_arguments(args)
     rargs = args
 
@@ -338,7 +335,7 @@ def main():
         args.command in {SUBCOMMAND.PAIR, SUBCOMMAND.ANNOTATE, SUBCOMMAND.SUMMARY, SUBCOMMAND.OVERLAY},
         args.command == SUBCOMMAND.CONFIG and any([PROTOCOL.TRANS in values for values in args.library]) and SUBCOMMAND.VALIDATE not in args.skip_stage
     ]):
-        log('loading (annotations):', rargs.annotations)
+        LOG('loading (annotations):', rargs.annotations)
         rargs.annotations_filename = rargs.annotations
         if not rargs.annotations:
             parser.error('--annotations file(s) are required and do not exist')
@@ -358,7 +355,7 @@ def main():
         if args.command == SUBCOMMAND.PIPELINE and arg != 'masking':
             continue
         if rargs.get(fname, None):
-            log('loading ({}):'.format(arg), rargs[fname])
+            LOG('loading ({}):'.format(arg), rargs[fname])
             rargs[arg] = load_func(*rargs[fname])
 
     # decide which main function to execute
@@ -379,23 +376,31 @@ def main():
         del args.command
         overlay_main(**args)
     elif args.command == SUBCOMMAND.CONFIG:
-        generate_config(args, parser, log=log)
+        generate_config(args, parser, log=LOG)
     elif args.command == SUBCOMMAND.CHECKER:
         return EXIT_OK if check_completion(args.output) else EXIT_ERROR
+    elif args.command == SUBCOMMAND.SCHEDULE:
+        build_file = os.path.join(args.output, 'build.cfg')
+        pipeline = Pipeline.read_build_file(build_file)
+        try:
+            pipeline.check_status(log=LOG, submit=args.submit)
+        finally:
+            LOG('rewriting:', build_file)
+            pipeline.write_build_file(build_file)
     else:  # PIPELINE
         pipeline = Pipeline.build(config)
         build_file = os.path.join(config.output, 'build.cfg')
-        log('writing:', build_file)
+        LOG('writing:', build_file)
         pipeline.write_build_file(build_file)
 
     duration = int(time.time()) - start_time
     hours = duration - duration % 3600
     minutes = duration - hours - (duration - hours) % 60
     seconds = duration - hours - minutes
-    log(
+    LOG(
         'run time (hh/mm/ss): {}:{:02d}:{:02d}'.format(hours // 3600, minutes // 60, seconds),
         time_stamp=False)
-    log('run time (s): {}'.format(duration), time_stamp=False)
+    LOG('run time (s): {}'.format(duration), time_stamp=False)
     return EXIT_OK
 
 

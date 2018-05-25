@@ -11,7 +11,7 @@ from pysam import VariantFile
 from .breakpoint import Breakpoint, BreakpointPair
 from .constants import COLUMNS, MavisNamespace, ORIENT, STRAND, SVTYPE
 from .error import InvalidRearrangement
-from .util import devnull, read_bpp_from_input_file
+from .util import DEVNULL, read_bpp_from_input_file
 
 SUPPORTED_TOOL = MavisNamespace(
     MANTA='manta',
@@ -63,7 +63,7 @@ TOOL_SVTYPE_MAPPING.update({
 TRACKING_COLUMN = 'tracking_id'
 
 
-def convert_tool_output(fnames, file_type=SUPPORTED_TOOL.MAVIS, stranded=False, log=devnull, collapse=True, assume_no_untemplated=True):
+def convert_tool_output(fnames, file_type=SUPPORTED_TOOL.MAVIS, stranded=False, log=DEVNULL, collapse=True, assume_no_untemplated=True):
     """
     Reads output from a given SV caller and converts to a set of MAVIS breakpoint pairs. Also collapses duplicates
     """
@@ -236,7 +236,7 @@ def _parse_bnd_alt(alt):
         raise NotImplementedError('alt specification in unexpected format', alt)
 
 
-def _parse_vcf_record(record, log=devnull):
+def _parse_vcf_record(record, log=DEVNULL):
     """
     converts a vcf record
 
@@ -462,7 +462,7 @@ def _convert_breakdancer_file(input_file):
     return rows
 
 
-def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=False, log=devnull, assume_no_untemplated=True):
+def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=False, log=DEVNULL, assume_no_untemplated=True):
     log('reading:', input_file)
     result = []
     rows = None

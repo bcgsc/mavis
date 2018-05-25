@@ -8,7 +8,7 @@ from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import COLUMNS, GENE_PRODUCT_TYPE, PROTOCOL, STOP_AA, STRAND, SVTYPE
 from ..error import NotSpecifiedError
 from ..interval import Interval
-from ..util import devnull
+from ..util import DEVNULL
 
 
 class Annotation(BreakpointPair):
@@ -685,7 +685,7 @@ def annotate_events(
     min_orf_size=200,
     min_domain_mapping_match=0.95,
     max_orf_cap=3,
-    log=devnull,
+    log=DEVNULL,
     filters=None
 ):
     """

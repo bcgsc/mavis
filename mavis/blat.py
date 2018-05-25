@@ -26,7 +26,7 @@ from .bam.cigar import QUERY_ALIGNED_STATES
 from .bam.read import SamRead
 from .constants import CIGAR, DNA_ALPHABET, NA_MAPPING_QUALITY, PYSAM_READ_FLAGS, reverse_complement, STRAND
 from .interval import Interval
-from .util import devnull
+from .util import DEVNULL
 
 
 class Blat:

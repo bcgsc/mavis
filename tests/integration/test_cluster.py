@@ -6,8 +6,11 @@ from mavis.constants import COLUMNS, PROTOCOL, SVTYPE
 from mavis.interval import Interval
 from mavis.util import read_bpp_from_input_file
 
-from . import FULL_BASE_EVENTS
 
+from ..util import get_data
+
+
+FULL_BASE_EVENTS = get_data('mock_sv_events.tsv')
 REF_CHR = 'fake'
 
 

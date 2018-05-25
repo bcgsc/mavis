@@ -26,6 +26,7 @@ def convert_qsub_to_args(filename, sub=None):
     with open(filename, 'r') as fh:
         lines = [l.strip() for l in fh.readlines() if not l.startswith('#') and l]
         lines = ' '.join(lines)
+        lines = lines.replace('$SLURM_ARRAY_TASK_ID', '1')
         if sub:
             for original, replacement in sub:
                 lines.replace(original, replacement)
@@ -49,7 +50,7 @@ class TestPipeline(unittest.TestCase):
     def check_and_run_annotate(self, lib):
         # run annotation
         self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE))
-        qsub = unique_exists(os.path.join(self.temp_output, lib, SUBCOMMAND.ANNOTATE, '*-1/submit.sh'))
+        qsub = unique_exists(os.path.join(self.temp_output, lib, SUBCOMMAND.ANNOTATE, 'submit.sh'))
         args = convert_qsub_to_args(qsub)
         with patch.object(sys, 'argv', args):
             self.assertEqual(0, main())
@@ -64,7 +65,7 @@ class TestPipeline(unittest.TestCase):
     def check_and_run_validate(self, lib):
         # run validation
         self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE))
-        qsub = unique_exists(os.path.join(self.temp_output, lib, SUBCOMMAND.VALIDATE, '*-1/submit.sh'))
+        qsub = unique_exists(os.path.join(self.temp_output, lib, SUBCOMMAND.VALIDATE, 'submit.sh'))
         args = convert_qsub_to_args(qsub)  # read the arguments from the file
         print(args)
         with patch.object(sys, 'argv', args):
@@ -253,7 +254,7 @@ class TestPipeline(unittest.TestCase):
 
             # run validation
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE))
-            qsub = unique_exists(os.path.join(self.temp_output, lib, SUBCOMMAND.VALIDATE, '*-1/submit.sh'))
+            qsub = unique_exists(os.path.join(self.temp_output, lib, SUBCOMMAND.VALIDATE, 'submit.sh'))
             args = convert_qsub_to_args(qsub)  # read the arguments from the file
             print(args)
             with patch.object(sys, 'argv', args):
@@ -264,7 +265,7 @@ class TestPipeline(unittest.TestCase):
                 'validation-failed.tab',
                 'validation-passed.tab'
             ]:
-                self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', '*.' + suffix))
+                self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', suffix))
             for suffix in [
                 'contigs.bam',
                 'contigs.blat_out.pslx',
@@ -276,7 +277,7 @@ class TestPipeline(unittest.TestCase):
                 'raw_evidence.sorted.bam',
                 'raw_evidence.sorted.bam.bai',
             ]:
-                self.assertFalse(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', '*.' + suffix))
+                self.assertFalse(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', suffix))
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', '*.COMPLETE'))
 
             self.check_and_run_annotate(lib)

@@ -1,9 +1,27 @@
 from ..constants import MavisNamespace
 from ..util import WeakMavisNamespace
 
-JOB_STATUS = MavisNamespace('SUBMITTED', 'COMPLETE', 'ERROR', 'RUNNING', 'FAILED', 'CANCELLED', 'UNKWOWN')
 
-SCHEDULER = MavisNamespace('SGE', 'SLURM', 'PBS', 'NONE', __name__='~mavis.submit.SCHEDULER')
+JOB_STATUS = MavisNamespace(
+    'SUBMITTED',
+    'COMPLETED',
+    'ERROR',
+    'RUNNING',
+    'FAILED',
+    'PENDING',
+    'CANCELLED',
+    NOT_SUBMITTED='NOT SUBMITTED'
+)
+
+def cumulative_job_state(states):
+    priority = [JOB_STATUS.ERROR, JOB_STATUS.FAILED, JOB_STATUS.CANCELLED, JOB_STATUS.NOT_SUBMITTED, JOB_STATUS.PENDING, JOB_STATUS.SUBMITTED, JOB_STATUS.RUNNING, JOB_STATUS.COMPLETED]
+    for state in priority:
+        if state in states:
+            return state
+    return JOB_STATUS.NOT_SUBMITTED
+
+
+SCHEDULER = MavisNamespace('SGE', 'SLURM', 'TORQUE', 'NONE', __name__='~mavis.submit.SCHEDULER')
 """:class:`~mavis.constants.MavisNamespace`: scheduler types
 
 - :term:`SGE`
@@ -35,7 +53,7 @@ OPTIONS = WeakMavisNamespace(__name__='~mavis.submit.options')
 OPTIONS.add('annotation_memory', 12000, defn='default memory limit (MB) for the annotation stage')
 OPTIONS.add('import_env', True, defn='flag to import environment variables')
 OPTIONS.add('mail_type', 'NONE', cast_type=MAIL_TYPE.enforce, defn='When to notify the mail_user (if given)')
-OPTIONS.add('mail_user', '', defn='User to send notifications to')
+OPTIONS.add('mail_user', '', defn='User(s) to send notifications to')
 OPTIONS.add('memory_limit', 16000, defn='the maximum number of megabytes (MB) any given job is allowed')  # 16 GB
 OPTIONS.add('queue', '', cast_type=str, defn='the queue jobs are to be submitted to')
 OPTIONS.add('scheduler', SCHEDULER.SLURM, defn='The scheduler being used', cast_type=SCHEDULER)

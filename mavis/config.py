@@ -22,7 +22,7 @@ from .schedule.constants import OPTIONS as SUBMIT_OPTIONS
 from .schedule.constants import SCHEDULER
 from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 from .tools import SUPPORTED_TOOL
-from .util import bash_expands, cast, devnull, ENV_VAR_PREFIX, MavisNamespace, WeakMavisNamespace, get_env_variable, log_arguments
+from .util import bash_expands, cast, DEVNULL, ENV_VAR_PREFIX, MavisNamespace, WeakMavisNamespace, get_env_variable, log_arguments
 from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 
 
@@ -163,7 +163,7 @@ class LibraryConfig(MavisNamespace):
     def build(
         library, protocol, bam_file, inputs,
         annotations=None,
-        log=devnull,
+        log=DEVNULL,
         distribution_fraction=0.98,
         sample_cap=3000,
         sample_bin_size=1000,
@@ -218,7 +218,7 @@ class LibraryConfig(MavisNamespace):
         return LibraryConfig(args[0], protocol=args[1], disease_status=args[2], strand_specific=args[3], bam_file=args[4])
 
 
-def write_config(filename, include_defaults=False, libraries=[], conversions={}, log=devnull):
+def write_config(filename, include_defaults=False, libraries=[], conversions={}, log=DEVNULL):
     """
     Args:
         filename (str): path to the output file
@@ -323,7 +323,7 @@ class MavisConfig(MavisNamespace):
 
         for attr, fnames in self.reference.items():
             if attr != 'aligner_reference':
-                self.reference[attr] = [filepath(v) for v in fnames]
+                self.reference[attr] = [f for f in [nullable_filepath(v) for v in fnames] if f]
             if not self.reference[attr] and attr not in {'dgv_annotation', 'masking', 'template_metadata'}:
                 raise FileNotFoundError(
                     'Error in validating the convert section of the config for tag={}. '
@@ -487,7 +487,7 @@ def augment_parser(arguments, parser, required=None):
             default = REFERENCE_DEFAULTS[arg]
             parser.add_argument(
                 '--{}'.format(arg), default=default, required=required if not default else False,
-                help=REFERENCE_DEFAULTS.define(arg), type=filepath, nargs='*')
+                help=REFERENCE_DEFAULTS.define(arg), type=filepath if required else nullable_filepath, nargs='*')
         elif arg == 'config':
             parser.add_argument('config', help='path to the config file', type=filepath)
         elif arg == 'bam_file':
@@ -557,7 +557,7 @@ def augment_parser(arguments, parser, required=None):
             )
 
 
-def generate_config(args, parser, log=devnull):
+def generate_config(args, parser, log=DEVNULL):
     """
     Args:
         parser (argparse.ArgumentParser): the main parser

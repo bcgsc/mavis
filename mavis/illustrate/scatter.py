@@ -1,7 +1,7 @@
 import os
 
 from ..bam.read import sequenced_strand, pileup
-from ..util import log, devnull
+from ..util import LOG, DEVNULL
 from ..interval import Interval
 from ..validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 
@@ -28,7 +28,7 @@ def bam_to_scatter(bam_file, chrom, start, end, density, strand=None, axis_name=
     if not axis_name:
         axis_name = os.path.basename(bam_file)
     # one plot per bam
-    log('reading:', bam_file)
+    LOG('reading:', bam_file)
     plot = None
     samfile = pysam.AlignmentFile(bam_file, 'rb')
 
@@ -51,7 +51,7 @@ def bam_to_scatter(bam_file, chrom, start, end, density, strand=None, axis_name=
         except ValueError:  # chrom not in bam
             pass
 
-        log('scatter plot {} has {} points'.format(axis_name, len(points)))
+        LOG('scatter plot {} has {} points'.format(axis_name, len(points)))
         plot = ScatterPlot(
             points, axis_name,
             ymin=0,
@@ -98,7 +98,7 @@ class ScatterPlot:
         self.density = density
 
 
-def draw_scatter(ds, canvas, plot, xmapping, log=devnull):
+def draw_scatter(ds, canvas, plot, xmapping, log=DEVNULL):
     """
     given a xmapping, draw the scatter plot svg group
 

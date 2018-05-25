@@ -35,28 +35,34 @@ class TestReadBuildFile(unittest.TestCase):
     def test_basic(self):
         content = """
 [general]
-outputdir = temp
+output_dir = temp
+scheduler = SLURM
+batch_id = 1
 
 [job1]
 stage = validate
 tasks = 1000
 name = job1
+output_dir = temp2
 
 
 [job2]
 stage = annotate
 name = job2
 dependencies = job1
+output_dir = temp3
 
 [job3]
 stage = pairing
 name = job3
 dependencies = job2
+output_dir = temp4
 
 [job4]
 stage = summary
 name = job4
 dependencies = job3
+output_dir = temp5
         """
         result = self.read_mock_config(content)
         self.assertEqual('job3', result.pairing.name)
@@ -65,6 +71,11 @@ dependencies = job3
         self.assertEqual(result.validations[0], result.annotations[0].dependencies[0])
         self.assertEqual(result.annotations[0], result.pairing.dependencies[0])
         self.assertEqual(result.pairing, result.summary.dependencies[0])
+
+    def test_parsed_types(self):
+        build =  _pipeline.Pipeline.read_build_file(get_data('build.cfg'))
+        self.assertIs(build.validations[0].import_env, True)
+        self.assertIs(build.validations[0].concurrency_limit, None)
 
     def tearDown(self):
         self.exists_patcher.stop()
@@ -77,7 +88,25 @@ class TestBuildPipeline(unittest.TestCase):
         self.env_patch = mock.patch('os.environ', {k:v for k, v in os.environ.items() if not k.startswith('MAVIS_')})
         self.env_patch.start()
 
-    def test_basic(self):
+    def test_basic_slurm(self):
+        os.environ['MAVIS_SCHEDULER'] = 'SLURM'
+        config = get_data('pipeline_config.cfg')
+
+        with mock.patch('sys.argv', ['mavis', 'pipeline', '--output', self.temp_output, config]):
+            self.assertEqual(0, main())
+        build_file = os.path.join(self.temp_output, 'build.cfg')
+        with open(build_file, 'r') as fh:
+            print(fh.read())
+        build = _pipeline.Pipeline.read_build_file(build_file)
+        print(build)
+        self.assertGreaterEqual(len(build.validations), 1)
+        self.assertGreaterEqual(len(build.annotations), 1)
+        self.assertEqual(2, len(build.pairing.dependencies))
+        self.assertIsNotNone(build.pairing)
+        self.assertIsNotNone(build.summary)
+
+    def test_basic_sge(self):
+        os.environ['MAVIS_SCHEDULER'] = 'SGE'
         config = get_data('pipeline_config.cfg')
 
         with mock.patch('sys.argv', ['mavis', 'pipeline', '--output', self.temp_output, config]):

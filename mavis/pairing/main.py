@@ -6,7 +6,7 @@ from .pairing import inferred_equivalent, product_key, pair_by_distance
 from .constants import DEFAULTS
 from ..annotate.constants import SPLICE_TYPE
 from ..constants import CALL_METHOD, COLUMNS, PROTOCOL, SVTYPE
-from ..util import generate_complete_stamp, log, output_tabbed_file, read_inputs
+from ..util import generate_complete_stamp, LOG, output_tabbed_file, read_inputs
 
 
 def main(
@@ -57,7 +57,7 @@ def main(
         },
         expand_strand=False, expand_orient=False, expand_svtype=False
     ))
-    log('read {} breakpoint pairs'.format(len(bpps)))
+    LOG('read {} breakpoint pairs'.format(len(bpps)))
 
     # load all transcripts
     reference_transcripts = dict()
@@ -91,14 +91,14 @@ def main(
 
     distance_pairings = {}
     product_pairings = {}
-    log('computing distance based pairings')
+    LOG('computing distance based pairings')
     # pairwise comparison of breakpoints between all libraries
     for set_num, (category, calls) in enumerate(sorted(calls_by_cat.items(), key=lambda x: (len(x[1]), x[0]), reverse=True)):
-        log('comparing set {} of {} with {} items'.format(set_num + 1, len(calls_by_cat), len(calls)))
+        LOG('comparing set {} of {} with {} items'.format(set_num + 1, len(calls_by_cat), len(calls)))
         for node, adj_list in pair_by_distance(calls, distances, against_self=False).items():
             distance_pairings.setdefault(node, set()).update(adj_list)
 
-    log('computing inferred (by product) pairings')
+    LOG('computing inferred (by product) pairings')
     for calls in calls_by_ann.values():
         calls_by_lib = {}
         for call in calls:
@@ -132,4 +132,4 @@ def main(
         'mavis_paired_{}.tab'.format('_'.join(sorted(list(libraries))))
     )
     output_tabbed_file(bpps, fname)
-    generate_complete_stamp(output, log, start_time=start_time)
+    generate_complete_stamp(output, LOG, start_time=start_time)

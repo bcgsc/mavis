@@ -291,6 +291,7 @@ SUBCOMMAND = MavisNamespace(
     ANNOTATE='annotate',
     VALIDATE='validate',
     PIPELINE='pipeline',
+    SCHEDULE='schedule',
     CLUSTER='cluster',
     PAIR='pairing',
     SUMMARY='summary',
