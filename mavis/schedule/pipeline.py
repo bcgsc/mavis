@@ -165,6 +165,7 @@ class Pipeline:
         self.summary = summary
         self.checker = checker
         self.batch_id = batch_id
+        self.args = {}  # for local runs only, store config to be passed to MAVIS stage
 
     def write_submission_script(self, subcommand, job, args):
         """
@@ -229,15 +230,25 @@ class Pipeline:
                 if libconf.protocol == PROTOCOL.TRANS:
                     job_options['memory_limit'] = config.schedule.trans_validation_memory
 
-                validate_job = ArrayJob(
-                    stage=SUBCOMMAND.VALIDATE,
-                    tasks=len(clustered_files),
-                    output_dir=os.path.join(base, SUBCOMMAND.VALIDATE, '{}-{{task_ident}}'.format(pipeline.batch_id)),
-                    script=script_name,
-                    name='MV_{}_{}'.format(libconf.library, pipeline.batch_id),
-                    **job_options
-                )
-                pipeline.write_submission_script(SUBCOMMAND.VALIDATE, validate_job, args)
+                if isinstance(scheduler, LocalScheduler):
+                    validate_job = LocalArrayJob(
+                        stage=SUBCOMMAND.VALIDATE,
+                        tasks=len(clustered_files),
+                        output_dir=os.path.join(base, SUBCOMMAND.VALIDATE, '{}-{{task_ident}}'.format(pipeline.batch_id)),
+                        name='MV_{}_{}'.format(libconf.library, pipeline.batch_id),
+                        args=args,
+                        **job_options
+                    )
+                else:
+                    validate_job = ArrayJob(
+                        stage=SUBCOMMAND.VALIDATE,
+                        tasks=len(clustered_files),
+                        output_dir=os.path.join(base, SUBCOMMAND.VALIDATE, '{}-{{task_ident}}'.format(pipeline.batch_id)),
+                        script=script_name,
+                        name='MV_{}_{}'.format(libconf.library, pipeline.batch_id),
+                        **job_options
+                    )
+                    pipeline.write_submission_script(SUBCOMMAND.VALIDATE, validate_job, args)
                 pipeline.validations.append(validate_job)
 
             # make an annotation job for each validation/cluster job/file

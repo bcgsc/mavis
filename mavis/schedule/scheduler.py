@@ -566,7 +566,4 @@ class TorqueScheduler(SgeScheduler):
         job.status = JOB_STATUS.CANCELLED
 
 
-class LocalScheduler(Scheduler):
-    NAME = SCHEDULER.NONE
-
 

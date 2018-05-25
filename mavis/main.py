@@ -154,6 +154,10 @@ def convert_main(inputs, outputfile, file_type, strand_specific=False, assume_no
     output_tabbed_file(bpp_results, outputfile)
 
 
+def load_applicable_references(args):
+    pass
+
+
 def main():
     start_time = int(time.time())
 
