@@ -175,14 +175,16 @@ class LibraryConfig(MavisNamespace):
         """
         PROTOCOL.enforce(protocol)
 
-        if protocol == PROTOCOL.TRANS and annotations is None:
-            raise AttributeError(
-                'missing required attribute: annotations. Annotations must be given for transcriptomes')
+        if protocol == PROTOCOL.TRANS:
+            if annotations is None or annotations.is_empty():
+                raise AttributeError(
+                    'missing required attribute: annotations. Annotations must be given for transcriptomes')
+            annotations.load()
         bam = BamCache(bam_file)
         if protocol == PROTOCOL.TRANS:
             bamstats = compute_transcriptome_bam_stats(
                 bam,
-                annotations=annotations,
+                annotations=annotations.content,
                 sample_size=sample_size,
                 sample_cap=sample_cap,
                 distribution_fraction=distribution_fraction
@@ -574,6 +576,8 @@ def generate_config(args, parser, log=DEVNULL):
                 raise KeyError('argument --library: bam file must be given if validation is not being skipped')
             libs.append(libconf)
             inputs_by_lib[libconf.library] = set()
+            if SUBCOMMAND.VALIDATE not in args.skip_stage and libconf.protocol == PROTOCOL.TRANS and (not args.annotations or args.annotations.is_empty()):
+                parser.error('argument --annotations is required to build configuration files for transcriptome libraries')
 
         for arg_list in args.input:
             inputfile = arg_list[0]

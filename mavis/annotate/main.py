@@ -119,6 +119,13 @@ def main(
         min_orf_size (int): minimum size of an :term:`open reading frame` to keep as a putative translation
         max_orf_cap (int): the maximum number of :term:`open reading frame` s to collect for any given event
     """
+    # error early on missing input files
+    annotations.files_exist()
+    reference_genome.files_exist()
+    template_metadata.files_exist()
+    if not template_metadata.is_loaded():
+        template_metadata.load()
+
     drawings_directory = os.path.join(output, 'drawings')
     tabbed_output_file = os.path.join(output, ANNOTATION_PASS)
     fa_output_file = os.path.join(output, 'annotations.fusion-cdna.fa')
@@ -140,10 +147,12 @@ def main(
     )
     LOG('read {} breakpoint pairs'.format(len(bpps)))
 
-    annotations = annotate_events(
+    annotations.load()
+    reference_genome.load()
+    annotated_events = annotate_events(
         bpps,
-        reference_genome=reference_genome,
-        annotations=annotations,
+        reference_genome=reference_genome.content,
+        annotations=annotations.content,
         min_orf_size=min_orf_size,
         min_domain_mapping_match=min_domain_mapping_match,
         max_proximity=max_proximity,
@@ -152,7 +161,6 @@ def main(
         filters=annotation_filters
     )
 
-    fa_sequence_names = set()
     # now try generating the svg
     drawing_config = DiagramSettings(**{k: v for k, v in kwargs.items() if k in ILLUSTRATION_DEFAULTS})
 
@@ -181,8 +189,8 @@ def main(
     fasta_fh = open(fa_output_file, 'w')
 
     try:
-        total = len(annotations)
-        for i, ann in enumerate(annotations):
+        total = len(annotated_events)
+        for i, ann in enumerate(annotated_events):
             ann_row = ann.flatten()
             ann_row[COLUMNS.fusion_sequence_fasta_file] = fa_output_file
             if header is None:
@@ -200,9 +208,9 @@ def main(
             for pre_transcript in [x for x in [ann.transcript1, ann.transcript2] if isinstance(x, PreTranscript)]:
                 name = pre_transcript.name
                 for spl_tx in pre_transcript.spliced_transcripts:
-                    ref_cdna_seq.setdefault(spl_tx.get_seq(reference_genome), set()).add(name)
+                    ref_cdna_seq.setdefault(spl_tx.get_seq(reference_genome.content), set()).add(name)
                     for translation in spl_tx.translations:
-                        ref_protein_seq.setdefault(translation.get_aa_seq(reference_genome), set()).add(name)
+                        ref_protein_seq.setdefault(translation.get_aa_seq(reference_genome.content), set()).add(name)
 
             # try building the fusion product
             rows = []
@@ -235,18 +243,18 @@ def main(
                         nrow.update(flatten_fusion_translation(fusion_translation))
                         if ann.single_transcript() and ann.transcript1.translations:
                             nrow[COLUMNS.fusion_protein_hgvs] = call_protein_indel(
-                                ann.transcript1.translations[0], fusion_translation, reference_genome)
+                                ann.transcript1.translations[0], fusion_translation, reference_genome.content)
                         rows.append(nrow)
                 else:
                     temp_row.update(ann_row)
                     rows.append(temp_row)
-            # draw the annotation and add the path to all applicable rows (one drawing for multiple annotations)
+            # draw the annotation and add the path to all applicable rows (one drawing for multiple annotated_events)
             if any([
                 not ann.fusion and not draw_fusions_only,
                 ann.fusion and not draw_non_synonymous_cdna_only,
                 ann.fusion and draw_non_synonymous_cdna_only and not cdna_synon_all
             ]):
-                drawing, legend = draw(drawing_config, ann, reference_genome, template_metadata, drawings_directory)
+                drawing, legend = draw(drawing_config, ann, reference_genome.content, template_metadata.content, drawings_directory)
                 for row in rows + [ann_row]:
                     row[COLUMNS.annotation_figure] = drawing
                     row[COLUMNS.annotation_figure_legend] = legend

@@ -7,18 +7,18 @@ from mavis.config import MavisConfig
 
 STUB = """
 [reference]
-template_metadata = tests/integration/data/cytoBand.txt
-annotations = tests/integration/data/mock_annotations.json
-masking = tests/integration/data/mock_masking.tab
-reference_genome = tests/integration/data/mock_reference_genome.fa
-aligner_reference = tests/integration/data/mock_reference_genome.2bit
-dgv_annotation = tests/integration/data/mock_dgv_annotation.txt
+template_metadata = tests/data/cytoBand.txt
+annotations = tests/data/mock_annotations.json
+masking = tests/data/mock_masking.tab
+reference_genome = tests/data/mock_reference_genome.fa
+aligner_reference = tests/data/mock_reference_genome.2bit
+dgv_annotation = tests/data/mock_dgv_annotation.txt
 
 [mock-A36971]
 read_length = 150
 median_fragment_size = 400
 stdev_fragment_size = 97
-bam_file = tests/integration/data/mock_reads_for_events.sorted.bam
+bam_file = tests/data/mock_reads_for_events.sorted.bam
 protocol = genome
 inputs = mock_converted
 strand_specific = False
@@ -28,7 +28,7 @@ disease_status=diseased
 read_length = 75
 median_fragment_size = 188
 stdev_fragment_size = 50
-bam_file = tests/integration/data/mock_trans_reads_for_events.sorted.bam
+bam_file = tests/data/mock_trans_reads_for_events.sorted.bam
 protocol = transcriptome
 inputs = mock_converted
 strand_specific = True
@@ -38,8 +38,8 @@ disease_status=diseased
 assume_no_untemplated = True
 # addfile twice to check this notation is ok (will collapse them anyway)
 mock_converted = convert_tool_output
-    tests/integration/data/mock_sv_events.tsv
-    tests/integration/data/mock_sv_events.tsv
+    tests/data/mock_sv_events.tsv
+    tests/data/mock_sv_events.tsv
     mavis
     False
 """

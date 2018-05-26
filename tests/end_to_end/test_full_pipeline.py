@@ -84,15 +84,15 @@ class TestPipeline(unittest.TestCase):
             'validation-failed.tab',
             'validation-passed.tab'
         ]:
-            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', '*.' + suffix))
-        self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', '*.COMPLETE'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', suffix), msg=suffix)
+        self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', 'MAVIS.COMPLETE'))
 
     def check_aligner_output_files(self, lib, mem=False):
         if mem:
-            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', '*.contigs.bwa_mem.sam'))
-            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', '*.contigs.bwa_mem.log'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', 'contigs.bwa_mem.sam'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', 'contigs.bwa_mem.log'))
         else:
-            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', '*.contigs.blat_out.pslx'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', 'contigs.blat_out.pslx'))
 
     def check_cluster(self, lib, skipped=False):
         self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER))
@@ -103,7 +103,7 @@ class TestPipeline(unittest.TestCase):
             self.assertFalse(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'cluster_assignment.tab'))
         else:
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'cluster_assignment.tab'))
-        self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, '*.COMPLETE'))
+        self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'MAVIS.COMPLETE'))
 
     def check_and_run_pairing(self):
         # now run the pairing
@@ -114,7 +114,7 @@ class TestPipeline(unittest.TestCase):
             self.assertEqual(0, main())
 
         self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR, 'mavis_paired*.tab'))
-        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR, '*.COMPLETE'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR, 'MAVIS.COMPLETE'))
 
     def check_and_run_summary(self, count=3):
         # now run the summary
@@ -125,7 +125,7 @@ class TestPipeline(unittest.TestCase):
             self.assertEqual(0, main())
 
         self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'mavis_summary*.tab', n=count))
-        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, '*.COMPLETE'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'MAVIS.COMPLETE'))
 
     def test_pipeline_with_bwa(self):
         args = ['mavis', SUBCOMMAND.PIPELINE, BWA_CONFIG, '-o', self.temp_output]
@@ -145,7 +145,7 @@ class TestPipeline(unittest.TestCase):
 
         with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):
             self.assertEqual(0, main())
-        self.assertTrue(glob_exists(self.temp_output, 'submit_pipeline*.sh'))
+        self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
 
     def test_error_on_bad_config(self):
         args = ['mavis', SUBCOMMAND.PIPELINE, 'thing/that/doesnot/exist.cfg', '-o', self.temp_output]
@@ -189,7 +189,7 @@ class TestPipeline(unittest.TestCase):
 
         with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):
             self.assertEqual(0, main())
-        self.assertTrue(glob_exists(self.temp_output, 'submit_pipeline*.sh'))
+        self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
 
     def test_no_optional_files(self):
         args = ['mavis', SUBCOMMAND.PIPELINE, get_data('no_opt_pipeline.cfg'), '-o', self.temp_output]
@@ -210,18 +210,18 @@ class TestPipeline(unittest.TestCase):
 
         with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):
             self.assertEqual(0, main())
-        self.assertTrue(glob_exists(self.temp_output, 'submit_pipeline*.sh'))
+        self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
 
     def test_reference_from_env(self):
         args = ['mavis', SUBCOMMAND.PIPELINE, get_data('reference_from_env.cfg'), '-o', self.temp_output]
         env = {k: v for k, v in os.environ.items()}
         env.update({
-            'MAVIS_TEMPLATE_METADATA': 'tests/integration/data/cytoBand.txt',
-            'MAVIS_ANNOTATIONS': 'tests/integration/data/mock_annotations.json',
-            'MAVIS_MASKING': 'tests/integration/data/mock_masking.tab',
-            'MAVIS_REFERENCE_GENOME': 'tests/integration/data/mock_reference_genome.fa',
-            'MAVIS_ALIGNER_REFERENCE': 'tests/integration/data/mock_reference_genome.2bit',
-            'MAVIS_DGV_ANNOTATION': 'tests/integration/data/mock_dgv_annotation.txt',
+            'MAVIS_TEMPLATE_METADATA': get_data('cytoBand.txt'),
+            'MAVIS_ANNOTATIONS': get_data('mock_annotations.json'),
+            'MAVIS_MASKING': get_data('mock_masking.tab'),
+            'MAVIS_REFERENCE_GENOME': get_data('mock_reference_genome.fa'),
+            'MAVIS_ALIGNER_REFERENCE': get_data('mock_reference_genome.2bit'),
+            'MAVIS_DGV_ANNOTATION': get_data('mock_dgv_annotation.txt'),
         })
         with patch.object(os, 'environ', env):
             with patch.object(sys, 'argv', args):
@@ -241,7 +241,7 @@ class TestPipeline(unittest.TestCase):
 
             with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):
                 self.assertEqual(0, main())
-            self.assertTrue(glob_exists(self.temp_output, 'submit_pipeline*.sh'))
+            self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
 
     def test_clean_files(self):
         args = ['mavis', SUBCOMMAND.PIPELINE, CLEAN_CONFIG, '-o', self.temp_output]
@@ -277,8 +277,8 @@ class TestPipeline(unittest.TestCase):
                 'raw_evidence.sorted.bam',
                 'raw_evidence.sorted.bam.bai',
             ]:
-                self.assertFalse(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', suffix))
-            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', '*.COMPLETE'))
+                self.assertFalse(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', suffix), msg=suffix)
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', 'MAVIS.COMPLETE'))
 
             self.check_and_run_annotate(lib)
         # now run the pairing
@@ -289,7 +289,7 @@ class TestPipeline(unittest.TestCase):
 
         with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):
             self.assertEqual(0, main())
-        self.assertTrue(glob_exists(self.temp_output, 'submit_pipeline*.sh'))
+        self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
 
     def test_skip_clustering(self):
         args = ['mavis', SUBCOMMAND.PIPELINE, CONFIG, '-o', self.temp_output, '--skip_stage', SUBCOMMAND.CLUSTER]
@@ -307,7 +307,7 @@ class TestPipeline(unittest.TestCase):
 
         with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):
             self.assertEqual(0, main())
-        self.assertTrue(glob_exists(self.temp_output, 'submit_pipeline*.sh'))
+        self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
 
     def test_skip_validation(self):
         args = ['mavis', SUBCOMMAND.PIPELINE, CONFIG, '-o', self.temp_output, '--skip_stage', SUBCOMMAND.VALIDATE]
@@ -324,7 +324,7 @@ class TestPipeline(unittest.TestCase):
 
         with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):
             self.assertEqual(0, main())
-        self.assertTrue(glob_exists(self.temp_output, 'submit_pipeline*.sh'))
+        self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
 
     def test_skip_cluster_and_validate(self):
         args = [
@@ -346,7 +346,7 @@ class TestPipeline(unittest.TestCase):
 
         with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):
             self.assertEqual(0, main())
-        self.assertTrue(glob_exists(self.temp_output, 'submit_pipeline*.sh'))
+        self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
 
     def tearDown(self):
         # remove the temp directory and outputs

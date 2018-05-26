@@ -546,17 +546,3 @@ def read_bpp_from_input_file(filename, expand_orient=False, expand_strand=False,
         else:
             pairs.extend(temp)
     return pairs
-
-
-def stringify_args_to_command(args):
-    command = []
-    for argname, value in args.items():
-        if isinstance(value, str):
-            command.append('--{} "{}"'.format(argname, value))
-        else:
-            try:
-                value = ' '.join([str(v) for v in value])
-            except TypeError:
-                pass
-            command.append('--{} {}'.format(argname, value))
-    return command

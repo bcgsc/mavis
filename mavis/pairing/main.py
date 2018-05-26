@@ -26,6 +26,7 @@ def main(
         split_call_distance (int): pairing distance for pairing with an event called by :term:`split read`
         contig_call_distance (int): pairing distance for pairing with an event called by contig or :term:`spanning read`
     """
+    annotations.load()
     # load the file
     distances = {
         CALL_METHOD.FLANK: flanking_call_distance,
@@ -61,7 +62,7 @@ def main(
 
     # load all transcripts
     reference_transcripts = dict()
-    for genes in annotations.values():
+    for genes in annotations.content.values():
         for gene in genes:
             for unspliced_t in gene.transcripts:
                 if unspliced_t.name in reference_transcripts:

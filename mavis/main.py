@@ -8,9 +8,7 @@ import tab
 
 from . import __version__
 from .align import get_aligner_version
-from .annotate.base import BioInterval
-from .annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
-from .annotate.file_io import load_annotations, load_masking_regions, load_reference_genome, load_templates
+from . import annotate as _annotate
 from .annotate import main as annotate_main
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from .cluster import main as cluster_main
@@ -28,7 +26,7 @@ from .tools import convert_tool_output, SUPPORTED_TOOL
 from .util import bash_expands, get_env_variable, LOG, log_arguments, MavisNamespace, mkdirp, output_tabbed_file
 from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 from .validate import main as validate_main
-from .schedule.pipeline import Pipeline
+from . import schedule as _schedule
 
 
 PROGNAME = 'mavis'
@@ -81,7 +79,7 @@ def check_overlay_args(args, parser):
 
 def overlay_main(
     gene_name, output, buffer_length, read_depth_plots, markers,
-    annotations, annotations_filename,
+    annotations,
     drawing_width_iter_increase, max_drawing_retries, min_mapping_quality,
     ymax_color='#FF0000',
     **kwargs
@@ -89,11 +87,12 @@ def overlay_main(
     """
     generates an overlay diagram
     """
+    annotations.load()
     # check options formatting
     gene_to_draw = None
 
-    for chrom in annotations:
-        for gene in annotations[chrom]:
+    for chrom in annotations.content:
+        for gene in annotations.content[chrom]:
             if gene_name in gene.aliases or gene_name == gene.name:
                 gene_to_draw = gene
                 LOG('Found target gene: {}(aka. {}) {}:{}-{}'.format(gene.name, gene.aliases, gene.chr, gene.start, gene.end))
@@ -120,7 +119,7 @@ def overlay_main(
         ))
 
     for i, (marker_name, marker_start, marker_end) in enumerate(markers):
-        markers[i] = BioInterval(gene_to_draw.chr, marker_start, marker_end, name=marker_name)
+        markers[i] = _annotate.base.BioInterval(gene_to_draw.chr, marker_start, marker_end, name=marker_name)
 
     canvas = None
     attempts = 1
@@ -154,11 +153,12 @@ def convert_main(inputs, outputfile, file_type, strand_specific=False, assume_no
     output_tabbed_file(bpp_results, outputfile)
 
 
-def load_applicable_references(args):
-    pass
-
 
 def main():
+    """
+    sets up the parser and checks the validity of command line args
+    loads reference files and redirects into subcommand main functions
+    """
     start_time = int(time.time())
 
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
@@ -254,7 +254,7 @@ def main():
         required[SUBCOMMAND.ANNOTATE]
     )
     augment_parser(['max_proximity', 'masking', 'template_metadata'], optional[SUBCOMMAND.ANNOTATE])
-    augment_parser(list(ANNOTATION_DEFAULTS.keys()) + list(ILLUSTRATION_DEFAULTS.keys()), optional[SUBCOMMAND.ANNOTATE])
+    augment_parser(list(_annotate.constants.DEFAULTS.keys()) + list(ILLUSTRATION_DEFAULTS.keys()), optional[SUBCOMMAND.ANNOTATE])
 
     # pair
     augment_parser(['annotations'], required[SUBCOMMAND.PAIR], optional[SUBCOMMAND.PAIR])
@@ -293,14 +293,14 @@ def main():
     LOG('MAVIS: {}'.format(__version__))
     LOG('hostname:', platform.node(), time_stamp=False)
     log_arguments(args)
-    rargs = args
+    rfile_args = args
 
     if args.command == SUBCOMMAND.PIPELINE:  # load the configuration file
         config = MavisConfig.read(args.config)
         config.output = args.output
         config.skip_stage = args.skip_stage
         config.command = SUBCOMMAND.PIPELINE
-        rargs = config.reference
+        rfile_args = config.reference
         args = config
 
     # try checking the input files exist
@@ -315,52 +315,33 @@ def main():
     except AttributeError:
         pass
 
-    for arg in ['reference_genome', 'aligner_reference']:
-        if arg in rargs:
-            if not rargs[arg]:
-                parser.error('--{} file does not exist at: {}'.format(arg, rargs[arg]))
-            rargs['{}_filename'.format(arg)] = rargs[arg]
+    # convert reference files to objects to store both content and name for rewrite
+    for arg, loader in [
+        ('reference_genome', _annotate.file_io.load_reference_genome),
+        ('masking', _annotate.file_io.load_masking_regions),
+        ('template_metadata', _annotate.file_io.load_templates),
+        ('dgv_annotation', _annotate.file_io.load_masking_regions),
+        ('annotations', _annotate.file_io.load_annotations)
+    ]:
+        if arg in rfile_args:
+            rfile_args[arg] = _annotate.file_io.ReferenceFile(loader, *rfile_args[arg])
 
-    for arg in ['masking', 'dgv_annotation', 'template_metadata']:  # optional inputs can be None
-        filename = '{}_filename'.format(arg)
-        if rargs.get(arg, None):
-            rargs[filename] = rargs[arg]
-            rargs[arg] = None
-        elif arg in rargs:
-            rargs[filename] = []
-            rargs[arg] = {}
+    # throw an error if MAVIS can't find the aligner reference
+    if rfile_args.get('aligner_reference', False):
+        if not rfile_args.aligner_reference:
+            parser.error('--aligner_reference file does not exist at: {}'.format(rfile_args.aligner_reference))
 
-    # load the reference files if they have been given and reset the arguments to hold the original file name and the
+    # for specific cases throw an argument error if missing annotations
     if any([
         args.command == SUBCOMMAND.CLUSTER and args.uninformative_filter,
-        args.command == SUBCOMMAND.PIPELINE and config.cluster.uninformative_filter,
+        args.command == SUBCOMMAND.CONFIG and any([PROTOCOL.TRANS in values for values in args.library]) and SUBCOMMAND.VALIDATE not in args.skip_stage,
         args.command == SUBCOMMAND.VALIDATE and args.protocol == PROTOCOL.TRANS,
-        args.command == SUBCOMMAND.PIPELINE and config.has_transcriptome() and SUBCOMMAND.VALIDATE not in config.skip_stage,
-        args.command in {SUBCOMMAND.PAIR, SUBCOMMAND.ANNOTATE, SUBCOMMAND.SUMMARY, SUBCOMMAND.OVERLAY},
-        args.command == SUBCOMMAND.CONFIG and any([PROTOCOL.TRANS in values for values in args.library]) and SUBCOMMAND.VALIDATE not in args.skip_stage
+        args.command in {SUBCOMMAND.PAIR, SUBCOMMAND.ANNOTATE, SUBCOMMAND.SUMMARY, SUBCOMMAND.OVERLAY, SUBCOMMAND.PIPELINE},
     ]):
-        LOG('loading (annotations):', rargs.annotations)
-        rargs.annotations_filename = rargs.annotations
-        if not rargs.annotations:
+        try:
+            rfile_args.annotations.files_exist()
+        except FileNotFoundError:
             parser.error('--annotations file(s) are required and do not exist')
-        rargs.annotations = load_annotations(*rargs.annotations)
-    elif args.command == SUBCOMMAND.PIPELINE:
-        rargs.annotations_filename = rargs.annotations
-        if not rargs.annotations:
-            parser.error('--annotations file(s) are required and do not exist')
-
-    for arg, load_func in [
-        ('reference_genome', load_reference_genome),
-        ('masking', load_masking_regions),
-        ('template_metadata', load_templates),
-        ('dgv_annotation', load_masking_regions)
-    ]:
-        fname = '{}_filename'.format(arg)
-        if args.command == SUBCOMMAND.PIPELINE and arg != 'masking':
-            continue
-        if rargs.get(fname, None):
-            LOG('loading ({}):'.format(arg), rargs[fname])
-            rargs[arg] = load_func(*rargs[fname])
 
     # decide which main function to execute
     if args.command == SUBCOMMAND.CLUSTER:
@@ -382,17 +363,18 @@ def main():
     elif args.command == SUBCOMMAND.CONFIG:
         generate_config(args, parser, log=LOG)
     elif args.command == SUBCOMMAND.CHECKER:
-        return EXIT_OK if check_completion(args.output) else EXIT_ERROR
+        pass#return EXIT_OK if check_completion(args.output) else EXIT_ERROR
     elif args.command == SUBCOMMAND.SCHEDULE:
         build_file = os.path.join(args.output, 'build.cfg')
-        pipeline = Pipeline.read_build_file(build_file)
+        pipeline = _schedule.pipeline.Pipeline.read_build_file(build_file)
         try:
             pipeline.check_status(log=LOG, submit=args.submit)
         finally:
             LOG('rewriting:', build_file)
             pipeline.write_build_file(build_file)
     else:  # PIPELINE
-        pipeline = Pipeline.build(config)
+        config.reference = rfile_args
+        pipeline = _schedule.pipeline.Pipeline.build(config)
         build_file = os.path.join(config.output, 'build.cfg')
         LOG('writing:', build_file)
         pipeline.write_build_file(build_file)

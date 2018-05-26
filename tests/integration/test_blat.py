@@ -10,7 +10,8 @@ from mavis.constants import CIGAR, reverse_complement
 from mavis.interval import Interval
 import mavis.bam.cigar as _cigar
 
-from . import BAM_INPUT, BLAT_INPUT, BLAT_OUTPUT, MockBamFileHandle, get_data(mock_reference_genome.fa), MockObject, MockLongString
+from . import MockBamFileHandle, MockObject, MockLongString
+from ..util import get_data
 
 
 REFERENCE_GENOME = None
@@ -18,11 +19,11 @@ REFERENCE_GENOME = None
 
 def setUpModule():
     global REFERENCE_GENOME
-    REFERENCE_GENOME = load_reference_genome(get_data(mock_reference_genome.fa))
+    REFERENCE_GENOME = load_reference_genome(get_data('mock_reference_genome.fa'))
     if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
         raise AssertionError('fake genome file does not have the expected contents')
     global BAM_CACHE
-    BAM_CACHE = BamCache(BAM_INPUT)
+    BAM_CACHE = BamCache('mini_mock_reads_for_events.sorted.bam')
 
 
 class TestBlat(unittest.TestCase):
@@ -31,9 +32,9 @@ class TestBlat(unittest.TestCase):
 
     def test_read_pslx(self):
         mapping = {}
-        for record in SeqIO.parse(BLAT_INPUT, 'fasta'):
+        for record in SeqIO.parse(get_data('blat_input.fa'), 'fasta'):
             mapping[record.id] = record.seq
-        header, rows = Blat.read_pslx(BLAT_OUTPUT, mapping)
+        header, rows = Blat.read_pslx(get_data('blat_output.pslx'), mapping)
         self.assertEqual(11067, len(rows))
         expect_pslx_header = [
             'match', 'mismatch', 'repmatch', 'ncount',

@@ -74,7 +74,7 @@ def main(
           within a specified (max_proximity) distance to any annotation
         max_proximity (int): the maximum distance away an annotation can be before the uninformative_filter
           is applied
-        annotations (object): see :func:`~mavis.annotate.file_io.load_reference_genes`
+        annotations (ReferenceFile): see :func:`~mavis.annotate.file_io.load_reference_genes`
         min_clusters_per_file (int): the minimum number of clusters to output to a file
         max_files (int): the maximum number of files to split clusters into
     """
@@ -83,6 +83,11 @@ def main(
         args, _, _, values = inspect.getargvalues(frame)
         args = {arg: values[arg] for arg in args if arg != 'log_args'}
         log_arguments(args)
+
+    if uninformative_filter:
+        annotations.load()
+    if masking:
+        masking.load()
 
     # output files
     batch_id = 'batch-' + str(uuid()) if batch_id is None else batch_id
@@ -129,14 +134,13 @@ def main(
     if other_chr:
         LOG('warning: filtered events on chromosomes', other_chr)
     # filter by masking file
-    print(masking)
-    breakpoint_pairs, masked_pairs = filter_on_overlap(breakpoint_pairs, masking)
+    breakpoint_pairs, masked_pairs = filter_on_overlap(breakpoint_pairs, masking.content)
     for bpp in masked_pairs:
         filtered_pairs.append(bpp)
     # filter by informative
     if uninformative_filter:
         LOG('filtering from', len(breakpoint_pairs), 'breakpoint pairs using informative filter')
-        pass_clusters, uninformative_clusters = filter_uninformative(annotations, breakpoint_pairs, max_proximity=max_proximity)
+        pass_clusters, uninformative_clusters = filter_uninformative(annotations.content, breakpoint_pairs, max_proximity=max_proximity)
         LOG(
             'filtered from', len(breakpoint_pairs),
             'down to', len(pass_clusters),

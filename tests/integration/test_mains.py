@@ -29,9 +29,9 @@ def setUpModule():
     print('setup start')
     annotations = load_reference_genes(get_data('mock_annotations.json'))
     reference_genome = load_reference_genome(get_data('mock_reference_genome.fa'))
-    template_metadata = load_templates('cytoband.txt')
-    genome_bam_fh = pysam.AlignmentFile('mock_reads_for_events.sorted.bam')
-    trans_bam_fh = pysam.AlignmentFile('mock_trans_reads_for_events.sorted.bam')
+    template_metadata = load_templates(get_data('cytoband.txt'))
+    genome_bam_fh = pysam.AlignmentFile(get_data('mock_reads_for_events.sorted.bam'))
+    trans_bam_fh = pysam.AlignmentFile(get_data('mock_trans_reads_for_events.sorted.bam'))
     print('setup loading is complete')
 
 

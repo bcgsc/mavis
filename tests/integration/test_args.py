@@ -43,7 +43,7 @@ class TestCluster(unittest.TestCase):
             '--input', data('mock_sv_events.tsv'),
             '--output', 'outdir'
         ]
-        with patch.object(cluster_main, 'main', util.devnull):
+        with patch.object(cluster_main, 'main', util.DEVNULL):
             with patch.object(sys, 'argv', args):
                 mavis_main()
 
@@ -58,7 +58,7 @@ class TestCluster(unittest.TestCase):
             '--output', 'outdir',
             '--masking', data('mock_masking.tab')
         ]
-        with patch.object(cluster_main, 'main', util.devnull):
+        with patch.object(cluster_main, 'main', util.DEVNULL):
             with patch.object(sys, 'argv', args):
                 mavis_main()
 
@@ -72,7 +72,7 @@ class TestCluster(unittest.TestCase):
             '--output', 'outdir',
             '--uninformative_filter', 'True'
         ]
-        with patch.object(cluster_main, 'main', util.devnull):
+        with patch.object(cluster_main, 'main', util.DEVNULL):
             with patch.object(sys, 'argv', args):
                 err = expect_error(self, mavis_main, SystemExit)
                 self.assertEqual(ARGUMENT_ERROR, err.code)
@@ -86,7 +86,7 @@ class TestCluster(unittest.TestCase):
             '--input', data('mock_sv_events.tsv'),
             '--output', 'outdir'
         ]
-        with patch.object(cluster_main, 'main', util.devnull):
+        with patch.object(cluster_main, 'main', util.DEVNULL):
             with patch.object(sys, 'argv', args):
                 mavis_main()
 
@@ -107,7 +107,7 @@ class TestValidate(unittest.TestCase):
             '--aligner_reference', data('mock_reference_genome.fa'),
             '--read_length', '125'
         ]
-        with patch.object(validate_main, 'main', util.devnull):
+        with patch.object(validate_main, 'main', util.DEVNULL):
             with patch.object(sys, 'argv', args):
                 err = expect_error(self, mavis_main, SystemExit)
                 self.assertEqual(ARGUMENT_ERROR, err.code)
@@ -126,7 +126,7 @@ class TestValidate(unittest.TestCase):
             '--aligner_reference', data('mock_reference_genome.fa'),
             '--read_length', '125'
         ]
-        with patch.object(validate_main, 'main', util.devnull):
+        with patch.object(validate_main, 'main', util.DEVNULL):
             with patch.object(sys, 'argv', args):
                 mavis_main()
 
@@ -144,7 +144,7 @@ class TestValidate(unittest.TestCase):
             '--aligner_reference', data('mock_reference_genome.fa'),
             '--read_length', '125'
         ]
-        with patch.object(validate_main, 'main', util.devnull):
+        with patch.object(validate_main, 'main', util.DEVNULL):
             with patch.object(sys, 'argv', args):
                 mavis_main()
 
@@ -162,7 +162,7 @@ class TestValidate(unittest.TestCase):
             '--aligner_reference', data('mock_reference_genome.fa'), data('example_genes.fa'),
             '--read_length', '125'
         ]
-        with patch.object(validate_main, 'main', util.devnull):
+        with patch.object(validate_main, 'main', util.DEVNULL):
             with patch.object(sys, 'argv', args):
                 err = expect_error(self, mavis_main, SystemExit)
                 self.assertEqual(ARGUMENT_ERROR, err.code)
@@ -180,7 +180,7 @@ class TestValidate(unittest.TestCase):
             '--reference_genome', data('mock_reference_genome.fa'),
             '--read_length', '125'
         ]
-        with patch.object(validate_main, 'main', util.devnull):
+        with patch.object(validate_main, 'main', util.DEVNULL):
             with patch.object(sys, 'argv', args):
                 err = expect_error(self, mavis_main, SystemExit)
                 self.assertEqual(ARGUMENT_ERROR, err.code)
@@ -198,7 +198,7 @@ class TestValidate(unittest.TestCase):
             '--aligner_reference', data('mock_reference_genome.fa'),
             '--read_length', '125'
         ]
-        with patch.object(validate_main, 'main', util.devnull):
+        with patch.object(validate_main, 'main', util.DEVNULL):
             with patch.object(sys, 'argv', args):
                 err = expect_error(self, mavis_main, SystemExit)
                 self.assertEqual(ARGUMENT_ERROR, err.code)
@@ -217,7 +217,7 @@ class TestValidate(unittest.TestCase):
             '--aligner_reference', 'bad',
             '--read_length', '125'
         ]
-        with patch.object(validate_main, 'main', util.devnull):
+        with patch.object(validate_main, 'main', util.DEVNULL):
             with patch.object(sys, 'argv', args):
                 err = expect_error(self, mavis_main, SystemExit)
                 self.assertEqual(ARGUMENT_ERROR, err.code)
@@ -236,7 +236,7 @@ class TestValidate(unittest.TestCase):
             '--aligner_reference', 'none',
             '--read_length', '125'
         ]
-        with patch.object(validate_main, 'main', util.devnull):
+        with patch.object(validate_main, 'main', util.DEVNULL):
             with patch.object(sys, 'argv', args):
                 err = expect_error(self, mavis_main, SystemExit)
                 self.assertEqual(ARGUMENT_ERROR, err.code)

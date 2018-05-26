@@ -4,6 +4,7 @@ module which holds all functions relating to loading reference files
 import json
 import re
 import warnings
+import os
 
 from Bio import SeqIO
 import tab
@@ -16,10 +17,7 @@ from ..interval import Interval
 from ..util import DEVNULL
 
 
-FILE_CACHE = {}  # cache loaded reference files to avoid loading them multiple times
-
-
-def load_masking_regions(*filepaths, use_cache=True):
+def load_masking_regions(*filepaths):
     """
     reads a file of regions. The expect input format for the file is tab-delimited and
     the header should contain the following columns
@@ -46,9 +44,6 @@ def load_masking_regions(*filepaths, use_cache=True):
         >>> m['1']
         [BioInterval(), BioInterval(), ...]
     """
-    fileload_key = tuple(sorted(filepaths))
-    if use_cache and fileload_key in FILE_CACHE:
-        return FILE_CACHE[fileload_key]
     regions = {}
     for filepath in filepaths:
         _, rows = tab.read_file(
@@ -59,9 +54,6 @@ def load_masking_regions(*filepaths, use_cache=True):
         for row in rows:
             mask_region = BioInterval(reference_object=row['chr'], start=row['start'], end=row['end'], name=row['name'])
             regions.setdefault(mask_region.reference_object, []).append(mask_region)
-    # add to the cache
-    if use_cache:
-        FILE_CACHE[fileload_key] = regions
     return regions
 
 
@@ -73,7 +65,7 @@ def load_reference_genes(*pos, **kwargs):
     return load_annotations(*pos, **kwargs)
 
 
-def load_annotations(*filepaths, warn=DEVNULL, reference_genome=None, best_transcripts_only=False, use_cache=True):
+def load_annotations(*filepaths, warn=DEVNULL, reference_genome=None, best_transcripts_only=False):
     """
     loads gene models from an input file. Expects a tabbed or json file.
 
@@ -88,9 +80,6 @@ def load_annotations(*filepaths, warn=DEVNULL, reference_genome=None, best_trans
         :class:`dict` of :class:`list` of :class:`~mavis.annotate.genomic.Gene` by :class:`str`: lists of genes keyed by chromosome name
     """
     total_annotations = {}
-    fileload_key = tuple(sorted(filepaths) + [reference_genome, best_transcripts_only])
-    if use_cache and fileload_key in FILE_CACHE:
-        return FILE_CACHE[fileload_key]
 
     for filepath in filepaths:
         data = None
@@ -110,8 +99,6 @@ def load_annotations(*filepaths, warn=DEVNULL, reference_genome=None, best_trans
         for chrom in current_annotations:
             for gene in current_annotations[chrom]:
                 total_annotations.setdefault(chrom, []).append(gene)
-    if use_cache:
-        FILE_CACHE[fileload_key] = total_annotations
     return total_annotations
 
 
@@ -334,7 +321,7 @@ def convert_tab_to_json(filepath, warn=DEVNULL):
     return {'genes': genes.values()}
 
 
-def load_reference_genome(*filepaths, use_cache=True):
+def load_reference_genome(*filepaths):
     """
     Args:
         filepaths (list of str): the paths to the files containing the input fasta genomes
@@ -342,11 +329,6 @@ def load_reference_genome(*filepaths, use_cache=True):
     Returns:
         :class:`dict` of :class:`Bio.SeqRecord` by :class:`str`: a dictionary representing the sequences in the fasta file
     """
-    fileload_key = tuple(sorted(filepaths))
-
-    if use_cache and fileload_key in FILE_CACHE:
-        return FILE_CACHE[fileload_key]
-
     reference_genome = {}
     for filename in filepaths:
         with open(filename, 'rU') as fh:
@@ -375,12 +357,10 @@ def load_reference_genome(*filepaths, use_cache=True):
             reference_genome.setdefault(prefixed, reference_genome[template_name].upper())
         reference_genome[template_name] = reference_genome[template_name].upper()
 
-    if use_cache:
-        FILE_CACHE[fileload_key] = reference_genome
     return reference_genome
 
 
-def load_templates(*filepaths, use_cache=True):
+def load_templates(*filepaths):
     """
     primarily useful if template drawings are required and is not necessary otherwise
     assumes the input file is 0-indexed with [start,end) style. Columns are expected in
@@ -408,10 +388,6 @@ def load_templates(*filepaths, use_cache=True):
     """
     header = ['name', 'start', 'end', 'band_name', 'giemsa_stain']
     templates = {}
-    fileload_key = tuple(sorted(filepaths))
-
-    if use_cache and fileload_key in FILE_CACHE:
-        return FILE_CACHE[fileload_key]
 
     for filename in filepaths:
         header, rows = tab.read_file(
@@ -431,7 +407,60 @@ def load_templates(*filepaths, use_cache=True):
             end = max([b.end for b in bands])
             end = Template(tname, start, end, bands=bands)
             templates[end.name] = end
-
-    if use_cache:
-        FILE_CACHE[fileload_key] = templates
     return templates
+
+
+
+class ReferenceFile:
+
+    CACHE = {}  # store loaded file to avoid re-loading
+
+    def __init__(self, loader, *filepaths, eager_load=False, assert_exists=False, **opt):
+        """
+        Args
+            *filepaths (str): list of paths to load
+            loader (callable): function to load the file. Should return an object that can be assigned as the content
+            eager_load (bool=False): load the files immeadiately
+            assert_exists (bool=False): check that all files exist
+            **opt: key word arguments to be passed to the load function and used as part of the file cache key
+
+        Raises
+            FileNotFoundError: when assert_exists and an input does not exist
+        """
+        self.name = sorted(filepaths)
+        self.key = tuple(self.name + sorted(list(opt.items())))  # freeze the input state so we know when to reload
+        self.content = None
+        self.opt = opt
+        self.loader = loader
+        if assert_exists:
+            self.files_exist()
+        if eager_load:
+            self.load()
+
+    def files_exist(self):
+        for filepath in self.name:
+            if not os.path.exists(filepath):
+                raise FileNotFoundError('Missing file', filepath, self)
+
+    def is_empty(self):
+        return not self.name
+
+    def is_loaded(self):
+        return False if self.content is None else True
+
+    def load(self, ignore_cache=False):
+        """
+        load (or return) the contents of a reference file and add it to the cache if enabled
+        """
+        if self.content is not None:
+            return self.content
+        if self.key in ReferenceFile.CACHE and not ignore_cache:
+            self.content = ReferenceFile.CACHE[self.key]
+        self.files_exist()
+        try:
+            self.content = self.loader(*self.name, **self.opt)
+            ReferenceFile.CACHE[self.key] = self
+        except Exception as err:
+            message = 'Error in loading files: {}. {}'.format(', '.join(self.name), err)
+            raise err.__class__(message)
+        return self.content

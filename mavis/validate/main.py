@@ -9,7 +9,6 @@ import warnings
 import pysam
 from shortuuid import uuid
 
-from .base import Evidence
 from .call import call_events
 from .constants import DEFAULTS
 from .evidence import GenomeEvidence, TranscriptomeEvidence
@@ -28,7 +27,7 @@ def main(
     inputs, output,
     bam_file, strand_specific,
     library, protocol, median_fragment_size, stdev_fragment_size, read_length,
-    reference_genome, reference_genome_filename, annotations, masking, aligner_reference,
+    reference_genome, annotations, masking, aligner_reference,
     start_time=int(time.time()), **kwargs
 ):
     """
@@ -46,6 +45,12 @@ def main(
         aligner_reference (str): path to the aligner reference file (e.g 2bit file for blat)
     """
     mkdirp(output)
+    # check the files exist early to avoid waiting for errors
+    if protocol == PROTOCOL.TRANS:
+        annotations.load()
+    reference_genome.load()
+    masking.load()
+
     validation_settings = {}
     validation_settings.update(DEFAULTS.flatten())
     validation_settings.update({k: v for k, v in kwargs.items() if k in DEFAULTS})
@@ -90,7 +95,7 @@ def main(
                 evidence = GenomeEvidence(
                     bpp.break1, bpp.break2,
                     input_bam_cache,
-                    reference_genome,
+                    reference_genome.content,
                     opposing_strands=bpp.opposing_strands,
                     stranded=bpp.stranded,
                     untemplated_seq=bpp.untemplated_seq,
@@ -106,10 +111,10 @@ def main(
         elif bpp.data[COLUMNS.protocol] == PROTOCOL.TRANS:
             try:
                 evidence = TranscriptomeEvidence(
-                    annotations,
+                    annotations.content,
                     bpp.break1, bpp.break2,
                     input_bam_cache,
-                    reference_genome,
+                    reference_genome.content,
                     opposing_strands=bpp.opposing_strands,
                     stranded=bpp.stranded,
                     untemplated_seq=bpp.untemplated_seq,
@@ -126,7 +131,7 @@ def main(
             raise ValueError('protocol not recognized', bpp.data[COLUMNS.protocol])
 
     extended_masks = {}
-    for chrom, masks in masking.items():  # extend masking by read length
+    for chrom, masks in masking.content.items():  # extend masking by read length
         extended_masks[chrom] = []
         for mask in masks:
             extended_masks[chrom].append(BioInterval(
@@ -173,7 +178,7 @@ def main(
     raw_contig_alignments = align_sequences(
         contig_sequences,
         input_bam_cache,
-        reference_genome=reference_genome,
+        reference_genome=reference_genome.content,
         aligner_fa_input_file=contig_aligner_fa,
         aligner_output_file=contig_aligner_output,
         clean_files=validation_settings.clean_aligner_files,
@@ -246,7 +251,7 @@ def main(
         b1_homseq = None
         b2_homseq = None
         try:
-            b1_homseq, b2_homseq = call.breakpoint_sequence_homology(reference_genome)
+            b1_homseq, b2_homseq = call.breakpoint_sequence_homology(reference_genome.content)
         except AttributeError:
             pass
         call.data.update({
@@ -280,7 +285,7 @@ def main(
                 read.cigar = _cigar.convert_for_igv(read.cigar)
                 fh.write(read)
         # now sort the contig bam
-        sort = re.sub('.bam$', '.sorted.bam', contig_bam)
+        sort = re.sub(r'.bam$', '.sorted.bam', contig_bam)
         LOG('sorting the bam file:', contig_bam)
         pysam.sort('-o', sort, contig_bam)
         contig_bam = sort
@@ -288,7 +293,7 @@ def main(
         pysam.index(contig_bam)
 
         # then sort the evidence bam file
-        sort = re.sub('.bam$', '.sorted.bam', raw_evidence_bam)
+        sort = re.sub(r'.bam$', '.sorted.bam', raw_evidence_bam)
         LOG('sorting the bam file:', raw_evidence_bam)
         pysam.sort('-o', sort, raw_evidence_bam)
         raw_evidence_bam = sort
@@ -298,7 +303,6 @@ def main(
         # write the igv batch file
         with open(igv_batch_file, 'w') as fh:
             LOG('writing:', igv_batch_file)
-            fh.write('new\ngenome {}\n'.format(reference_genome_filename))
 
             fh.write('load {} name="{}"\n'.format(passed_bed_file, 'passed events'))
             fh.write('load {} name="{}"\n'.format(contig_bam, 'aligned contigs'))

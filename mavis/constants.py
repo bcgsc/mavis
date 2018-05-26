@@ -28,12 +28,12 @@ class MavisNamespace(argparse.Namespace):
 
         for k in pos:
             if hasattr(self, k):
-                raise AttributeError('Cannot respecify existing attribute', k, self.k)
+                raise AttributeError('Cannot respecify existing attribute', k, self[k])
             setattr(self, k, k)
 
         for k in kwargs:
             if hasattr(self, k):
-                raise AttributeError('Cannot respecify existing attribute', k, self.k)
+                raise AttributeError('Cannot respecify existing attribute', k, self[k])
             setattr(self, k, kwargs[k])
 
         argparse.Namespace.__init__(self, **kwargs)

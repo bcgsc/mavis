@@ -8,7 +8,8 @@ from mavis.bam.read import SamRead
 from mavis.bam import read as _read
 import timeout_decorator
 
-from . import MockRead, get_data(mock_reference_genome.fa), MockObject
+from . import MockRead, MockObject
+from ..util import get_data
 
 
 REFERENCE_GENOME = None
@@ -17,7 +18,7 @@ REFERENCE_GENOME = None
 def setUpModule():
     warnings.simplefilter('ignore')
     global REFERENCE_GENOME
-    REFERENCE_GENOME = load_reference_genome(get_data(mock_reference_genome.fa))
+    REFERENCE_GENOME = load_reference_genome(get_data('mock_reference_genome.fa'))
     if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
         raise AssertionError('fake genome file does not have the expected contents')
 

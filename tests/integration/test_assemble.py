@@ -8,16 +8,17 @@ from mavis.assemble import Contig, assemble, filter_contigs
 from mavis.interval import Interval
 from mavis.constants import reverse_complement
 from mavis.validate.constants import DEFAULTS
-from mavis.util import log
+from mavis.util import LOG
 
-from . import MockObject, DATA_DIR, RUN_FULL, get_data
+from . import MockObject, RUN_FULL
+from ..util import get_data
 
 
 class TestFilterContigs(unittest.TestCase):
     @timeout_decorator.timeout(30)
     def test_large_set(self):
         contigs = []
-        with open(os.path.join(DATA_DIR, 'similar_contigs.txt'), 'r') as fh:
+        with open(get_data('similar_contigs.txt'), 'r') as fh:
             for line in fh.readlines():
                 contigs.append(Contig(line.strip(), 1))  # give a dummy score of 1
         start_time = int(time.time())
@@ -336,7 +337,7 @@ class TestAssemble(unittest.TestCase):
     def test_large_assembly(self):
         # simply testing that this will complete before the timeout
         sequences = set()
-        with open(os.path.join(DATA_DIR, 'large_assembly.txt'), 'r') as fh:
+        with open(get_data('large_assembly.txt'), 'r') as fh:
             sequences.update([l.strip() for l in fh.readlines()])
         kmer_size = 150 * DEFAULTS.assembly_kmer_size
         print('read inputs')
@@ -345,7 +346,7 @@ class TestAssemble(unittest.TestCase):
             min_edge_trim_weight=DEFAULTS.assembly_min_edge_trim_weight,
             assembly_max_paths=DEFAULTS.assembly_max_paths,
             min_contig_length=150,
-            log=log,
+            log=LOG,
             remap_min_exact_match=30,
             assembly_min_uniq=DEFAULTS.assembly_min_uniq
         )
@@ -597,7 +598,7 @@ class TestAssemble(unittest.TestCase):
             assembly_min_uniq=0.1,
             min_contig_length=125,
             remap_min_exact_match=15,
-            log=log)
+            log=LOG)
 
         target = 'GGGCACGGCTGCAGCGTCGCGGTGCATCAAGCTTGCTATGGCATTGTTCAAGTACCCACTGGACCGTGGTTTTGCAGGAAATGTGAATCTCAGGAGAGAGCAGCCAGAGTGATACAGTTTATGTAACTTGATGGAAGAA'
         print('target', target)
@@ -611,7 +612,7 @@ class TestAssemble(unittest.TestCase):
         sequences = set()
         with open(get_data('long_filter_assembly.txt'), 'r') as fh:
             sequences.update([s.strip() for s in fh.readlines() if s])
-        contigs = assemble(sequences, 111, 3, 8, 0.1, 0.1, log=log)
+        contigs = assemble(sequences, 111, 3, 8, 0.1, 0.1, log=LOG)
         for c in contigs:
             print(c.seq, c.remap_score())
         self.assertTrue(len(contigs))
