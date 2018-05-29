@@ -468,6 +468,75 @@ class TorqueScheduler(SgeScheduler):
         MAIL_TYPE.END: 'e',
         MAIL_TYPE.ALL: 'abef'
     }
+    STATE_MAPPING = {
+        'C': JOB_STATUS.COMPLETED,
+        'E': JOB_STATUS.RUNNING,
+        'H': JOB_STATUS.PENDING,
+        'Q': JOB_STATUS.PENDING,
+        'T': JOB_STATUS.RUNNING,
+        'W': JOB_STATUS.PENDING,
+        'S': JOB_STATUS.ERROR
+    }
+
+
+    @classmethod
+    def parse_qstat(cls, content):
+        """
+        parses the qstat content into rows/dicts representing individual jobs
+
+        Args
+            content (str): content returned from the qstat command
+        """
+        content = re.sub(r'\t', '    ', content)
+        jobs = re.split(r'\s*\n\n\s*', content.strip())
+        rows = []
+
+        for job in jobs:
+            if job.startswith('request_version') or not job:
+                continue
+            row = {}
+            lines = job.split('\n')
+            task_ident = None
+            row['Job Id'] = lines[0].split(':', 1)[1].strip()
+            match = re.match(r'^(\d+\[)(\d+)(\].*)$', row['Job Id'])
+            if match:
+                row['Job Id'] = match.group(1) + match.group(3)
+                task_ident = match.group(2)
+            tab_size = None
+            columns = []
+            values = []
+            for line in lines[1:]:
+                print(line)
+                match = re.match(r'^(\s*)(\S.*)', line)
+                curr_tab_size = len(match.group(1))
+                if tab_size is None:
+                    tab_size = curr_tab_size
+
+                if curr_tab_size > tab_size or '=' not in line:
+                    if not values:
+                        raise NotImplementedError('Unexpected indentation prior to setting column', line)
+                    values[-1] = values[-1] + line.strip()
+                elif curr_tab_size == tab_size:
+                    col, val = line.split('=', 1)
+                    columns.append(col.strip())
+                    values.append(val.strip())
+                else:
+                    raise NotImplementedError('Unexpected indentation', line)
+            for col, val in zip(columns, values):
+                row[col] = val
+            print(row)
+            status = cls.STATE_MAPPING[row['job_state']]
+            if status == JOB_STATUS.COMPLETED:
+                if row['exit_status'] != '0':
+                    status = JOB_STATUS.FAILED
+            rows.append({
+                'job_ident': row['Job Id'],
+                'name': row['Job_Name'],
+                'status': status,
+                'task_ident': task_ident,
+                'status_comment': ''
+            })
+        return rows
 
     @classmethod
     def submit(cls, job, task_ident=None, cascade=False):
@@ -518,10 +587,7 @@ class TorqueScheduler(SgeScheduler):
         command.append(job.script)
         content = subprocess.check_output(command).decode('utf8').strip()
 
-        match = re.match(r'^submitted batch job (\d+)$', content, re.IGNORECASE)
-        if not match:
-            raise NotImplementedError('Error in retrieving the submitted job number. Did not match the expected pattern', content)
-        job.job_ident = match.group(1)
+        job.job_ident = content.strip()
         job.status = JOB_STATUS.SUBMITTED
 
     @classmethod
@@ -532,34 +598,31 @@ class TorqueScheduler(SgeScheduler):
         Raises
             ValueError: if the job information could not be retrieved
         """
-        command = ['qstat']
-        if job.queue:
-            command.extend(['-q', job.queue])
+        if job.job_ident is None:
+            job.status = JOB_STATUS.NOT_SUBMITTED
+            return
+        command = ['qstat', '-f', job.job_ident]
+        if isinstance(job, ArrayJob):
+            command.append('-t')
         content = subprocess.check_output(command).decode('utf8').strip()
-        rows = [row for row in cls.parse_qstat(content) if row['job_ident'] == job.job_ident]
+        rows = cls.parse_qstat(content)
+        tasks_updated = False
 
-        updated = False
-        if not rows:
-            # job no longer scheduled
-            command = ['qacct', '-j', job.job_ident]
-            content = subprocess.check_output(command).decode('utf8').strip()
-            rows = cls.parse_qacct(content)
-            # job is still on the scheduler
         for row in rows:
+            if row['job_ident'] != job.job_ident:
+                continue
             if isinstance(job, ArrayJob) and row['task_ident']:
                 task_ident = int(row['task_ident'])
                 job.task_list[task_ident - 1].status = row['status']
                 job.task_list[task_ident - 1].status_comment = row['status_comment']
+                tasks_updated = True
             else:
                 job.status = row['status']
                 job.status_comment = row['status_comment']
-                updated = True
 
-        try:
-            if not updated:
-                job.status = cumulative_job_state([task.status for task in job.task_list])
-        except AttributeError:
-            pass  # only applies to array jobs
+        if tasks_updated:
+            job.status = cumulative_job_state([t.status for t in job.task_list])
+
 
     @classmethod
     def cancel(cls, job):

@@ -251,30 +251,31 @@ def write_config(filename, include_defaults=False, libraries=[], conversions={},
     """
     config = {}
 
-    config['reference'] = REFERENCE_DEFAULTS.items()
+    config['reference'] = REFERENCE_DEFAULTS.to_dict()
     for filetype, fname in REFERENCE_DEFAULTS.items():
         if fname is None:
             warnings.warn('filetype {} has not been set. This must be done manually before the configuration file is used'.format(filetype))
 
     if libraries:
         for lib in libraries:
-            config[lib.library] = lib.items()
+            config[lib.library] = lib.to_dict()
 
     if include_defaults:
-        config['schedule'] = SUBMIT_OPTIONS.items()
-        config['validate'] = VALIDATION_DEFAULTS.items()
-        config['cluster'] = CLUSTER_DEFAULTS.items()
-        config['annotate'] = ANNOTATION_DEFAULTS.items()
-        config['illustrate'] = ILLUSTRATION_DEFAULTS.items()
-        config['summary'] = SUMMARY_DEFAULTS.items()
+        config['schedule'] = SUBMIT_OPTIONS.to_dict()
+        config['validate'] = VALIDATION_DEFAULTS.to_dict()
+        config['cluster'] = CLUSTER_DEFAULTS.to_dict()
+        config['annotate'] = ANNOTATION_DEFAULTS.to_dict()
+        config['illustrate'] = ILLUSTRATION_DEFAULTS.to_dict()
+        config['summary'] = SUMMARY_DEFAULTS.to_dict()
 
-    config['convert'] = CONVERT_OPTIONS.items()
+    config['convert'] = CONVERT_OPTIONS.to_dict()
     for alias, command in conversions.items():
         if alias in CONVERT_OPTIONS:
             raise UserWarning('error in writing config. Alias for conversion product cannot be a setting', alias, CONVERT_OPTIONS.keys())
         config['convert'][alias] = '\n'.join(command)
 
     for sec in config:
+        print(sec, config[sec])
         for tag, value in config[sec].items():
             if '_regex_' in tag:
                 config[sec][tag] = re.sub(r'\$', '$$', config[sec][tag])

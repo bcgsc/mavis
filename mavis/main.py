@@ -356,27 +356,27 @@ def main(argv=None):
 
     # decide which main function to execute
     ret_val = EXIT_OK
-    if args.command == SUBCOMMAND.CLUSTER:
+    command = args.command
+    args.discard('command')
+    if command == SUBCOMMAND.CLUSTER:
         ret_val = cluster_main.main(**args, start_time=start_time)
-    elif args.command == SUBCOMMAND.VALIDATE:
+    elif command == SUBCOMMAND.VALIDATE:
         validate_main.main(**args, start_time=start_time)
-    elif args.command == SUBCOMMAND.ANNOTATE:
+    elif command == SUBCOMMAND.ANNOTATE:
         annotate_main.main(**args, start_time=start_time)
-    elif args.command == SUBCOMMAND.PAIR:
+    elif command == SUBCOMMAND.PAIR:
         pairing_main.main(**args, start_time=start_time)
-    elif args.command == SUBCOMMAND.SUMMARY:
+    elif command == SUBCOMMAND.SUMMARY:
         summary_main.main(**args, start_time=start_time)
-    elif args.command == SUBCOMMAND.CONVERT:
-        del args.command
+    elif command == SUBCOMMAND.CONVERT:
         convert_main(**args)
-    elif args.command == SUBCOMMAND.OVERLAY:
-        del args.command
+    elif command == SUBCOMMAND.OVERLAY:
         overlay_main(**args)
-    elif args.command == SUBCOMMAND.CONFIG:
+    elif command == SUBCOMMAND.CONFIG:
         _config.generate_config(args, parser, log=LOG)
-    elif args.command == SUBCOMMAND.CHECKER:
+    elif command == SUBCOMMAND.CHECKER:
         pass#return EXIT_OK if check_completion(args.output) else EXIT_ERROR
-    elif args.command == SUBCOMMAND.SCHEDULE:
+    elif command == SUBCOMMAND.SCHEDULE:
         build_file = os.path.join(args.output, 'build.cfg')
         pipeline = _pipeline.Pipeline.read_build_file(build_file)
         try:

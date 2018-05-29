@@ -52,6 +52,14 @@ class MavisNamespace:
     def __repr__(self):
         return '{}({})'.format(self.__class__.__name__, ', '.join(['{}={}'.format(k, repr(v)) for k, v in self.items()]))
 
+    def discard(self, attr):
+        self._members.pop(attr, None)
+        self._listable.discard(attr)
+        self._nullable.discard(attr)
+        self._defns.pop(attr, None)
+        self._types.pop(attr, None)
+        self._env_overwritable.discard(attr)
+
     def get_env_name(self, attr):
         if self._env_prefix:
             return '{}_{}'.format(self._env_prefix, attr).upper()
@@ -112,6 +120,9 @@ class MavisNamespace:
             [('thing', 1), ('otherthing', 2)]
         """
         return [(k, self[k]) for k in self.keys()]
+
+    def to_dict(self):
+        return dict(self.items())
 
     def __getitem__(self, key):
         return getattr(self, key)

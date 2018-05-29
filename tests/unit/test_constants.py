@@ -107,3 +107,7 @@ class TestMavisNamespace(unittest.TestCase):
             self.namespace.get('a', 1, 1)
         with self.assertRaises(AttributeError):
             self.namespace.get('d')
+
+    def test_iterating(self):
+        for act, exp in zip(self.namespace, ['a', 'b', 'c']):
+            self.assertEqual(exp, act)
