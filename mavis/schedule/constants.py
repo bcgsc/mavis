@@ -66,6 +66,6 @@ OPTIONS.add('trans_validation_memory', 18000, defn='default memory limit (MB) fo
 OPTIONS.add('validation_memory', 16000, defn='default memory limit (MB) for the validation stage')
 OPTIONS.add(
     'concurrency_limit',
-    multiprocessing.cpu_count() - 1,
+    None,
     cast_type=nullable_int,
     defn='The concurrency limit for tasks in any given job array or the number of concurrent processes allowed for a local run')
