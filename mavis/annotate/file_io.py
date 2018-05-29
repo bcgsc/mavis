@@ -442,6 +442,9 @@ class ReferenceFile:
             if not os.path.exists(filepath):
                 raise FileNotFoundError('Missing file', filepath, self)
 
+    def __iter__(self):
+        return iter(self.name)
+
     def is_empty(self):
         return not self.name
 

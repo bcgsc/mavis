@@ -67,9 +67,9 @@ class Evidence(BreakpointPair):
                     self.break2.start, self.break2.end, self.break2.chr, len(reference_genome[self.break2.chr].seq)))
         defaults = dict()
         for arg in kwargs:
-            if arg not in DEFAULTS.__dict__:
+            if arg not in DEFAULTS:
                 raise AttributeError('unrecognized attribute', arg)
-        defaults.update(DEFAULTS.__dict__)
+        defaults.update(DEFAULTS.items())
         kwargs.setdefault('assembly_max_kmer_size', int(read_length * 0.7))
         defaults.update(kwargs)  # input arguments should override the defaults
         for arg, val in defaults.items():

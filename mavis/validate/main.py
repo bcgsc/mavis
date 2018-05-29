@@ -54,7 +54,6 @@ def main(
             annotations = _file_io.ReferenceFile(_file_io.load_annotations, *annotations).load()
             annotations.load()
     try:
-        print(reference_genome)
         reference_genome.load()
     except AttributeError:
         reference_genome = _file_io.ReferenceFile(_file_io.load_reference_genome, *reference_genome).load()
@@ -64,7 +63,7 @@ def main(
         masking = _file_io.ReferenceFile(_file_io.load_masking_regions, *masking).load()
 
     validation_settings = {}
-    validation_settings.update(DEFAULTS.flatten())
+    validation_settings.update(DEFAULTS.items())
     validation_settings.update({k: v for k, v in kwargs.items() if k in DEFAULTS})
     validation_settings = MavisNamespace(**validation_settings)
 
@@ -115,7 +114,7 @@ def main(
                     stdev_fragment_size=stdev_fragment_size,
                     read_length=read_length,
                     median_fragment_size=median_fragment_size,
-                    **validation_settings.flatten()
+                    **dict(validation_settings.items())
                 )
                 evidence_clusters.append(evidence)
             except ValueError as err:
@@ -134,7 +133,7 @@ def main(
                     stdev_fragment_size=stdev_fragment_size,
                     read_length=read_length,
                     median_fragment_size=median_fragment_size,
-                    **validation_settings.flatten()
+                    **dict(validation_settings.items())
                 )
                 evidence_clusters.append(evidence)
             except ValueError as err:
@@ -195,7 +194,7 @@ def main(
         aligner_output_file=contig_aligner_output,
         clean_files=validation_settings.clean_aligner_files,
         aligner=kwargs.get('aligner', validation_settings.aligner),
-        aligner_reference=aligner_reference,
+        aligner_reference=aligner_reference.name[0],
         aligner_output_log=contig_aligner_log,
         blat_min_identity=kwargs.get('blat_min_identity', validation_settings.blat_min_identity),
         blat_limit_top_aln=kwargs.get('blat_limit_top_aln', validation_settings.blat_limit_top_aln),

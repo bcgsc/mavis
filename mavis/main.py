@@ -243,6 +243,7 @@ def main(argv=None):
         required[SUBCOMMAND.CLUSTER])
     _config.augment_parser(list(CLUSTER_DEFAULTS.keys()) + ['masking', 'annotations'], optional[SUBCOMMAND.CLUSTER])
     optional[SUBCOMMAND.CLUSTER].add_argument('--batch_id', help='batch id to use for prefix of split files', type=_config.nameable_string)
+    optional[SUBCOMMAND.CLUSTER].add_argument('--split_only', help='Cluster the files or simply split them without clustering', type=tab.cast_boolean)
 
     # validate
     _config.augment_parser(
@@ -354,8 +355,9 @@ def main(argv=None):
             parser.error('--annotations file(s) are required and do not exist')
 
     # decide which main function to execute
+    ret_val = EXIT_OK
     if args.command == SUBCOMMAND.CLUSTER:
-        cluster_main.main(**args, start_time=start_time)
+        ret_val = cluster_main.main(**args, start_time=start_time)
     elif args.command == SUBCOMMAND.VALIDATE:
         validate_main.main(**args, start_time=start_time)
     elif args.command == SUBCOMMAND.ANNOTATE:
@@ -401,7 +403,7 @@ def main(argv=None):
         'run time (hh/mm/ss): {}:{:02d}:{:02d}'.format(hours // 3600, minutes // 60, seconds),
         time_stamp=False)
     LOG('run time (s): {}'.format(duration), time_stamp=False)
-    return EXIT_OK
+    return ret_val
 
 
 if __name__ == '__main__':

@@ -58,10 +58,10 @@ class DiagramSettings:
         self, **kwargs
     ):
         inputs = {}
-        inputs.update(DEFAULTS.__dict__)
+        inputs.update(DEFAULTS.items())
         inputs.update(kwargs)
         for arg, val in inputs.items():
-            if arg not in DEFAULTS.__dict__:
+            if arg not in DEFAULTS:
                 raise KeyError('unrecognized argument', arg)
             setattr(self, arg, val)
         self.min_width = 10  # no element (exon, gene, etc can be less than this wide)

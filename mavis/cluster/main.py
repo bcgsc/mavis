@@ -54,7 +54,6 @@ def main(
     max_proximity=DEFAULTS.max_proximity,
     min_clusters_per_file=DEFAULTS.min_clusters_per_file,
     max_files=DEFAULTS.max_files,
-    log_args=False,
     batch_id=None,
     split_only=False,
     start_time=int(time.time()),
@@ -78,12 +77,6 @@ def main(
         min_clusters_per_file (int): the minimum number of clusters to output to a file
         max_files (int): the maximum number of files to split clusters into
     """
-    if log_args:
-        frame = inspect.currentframe()
-        args, _, _, values = inspect.getargvalues(frame)
-        args = {arg: values[arg] for arg in args if arg != 'log_args'}
-        log_arguments(args)
-
     if uninformative_filter:
         annotations.load()
     if masking:
@@ -121,7 +114,7 @@ def main(
             other_libs.add(bpp.library)
             bpp.data[COLUMNS.filter_comment] = 'Not the target library name'
             filtered_pairs.append(bpp)
-        elif bpp.break1.chr in limit_to_chr and bpp.break2.chr in limit_to_chr:
+        elif None in limit_to_chr or (bpp.break1.chr in limit_to_chr and bpp.break2.chr in limit_to_chr):
             unfiltered_breakpoint_pairs.append(bpp)
         else:
             other_chr.update({bpp.break1.chr, bpp.break2.chr})

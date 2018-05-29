@@ -24,6 +24,7 @@ class MavisNamespace:
         2
     """
     DELIM = r'[;,\s]+'
+
     def __init__(self, *pos, **kwargs):
         object.__setattr__(self, '_defns', {})
         object.__setattr__(self, '_types', {})
@@ -47,6 +48,9 @@ class MavisNamespace:
 
         for attr, value in self._members.items():
             self._set_type(attr, type(value))
+
+    def __repr__(self):
+        return '{}({})'.format(self.__class__.__name__, ', '.join(['{}={}'.format(k, repr(v)) for k, v in self.items()]))
 
     def get_env_name(self, attr):
         if self._env_prefix:
@@ -120,17 +124,20 @@ class MavisNamespace:
             raise ValueError('cannot set private', attr)
         object.__getattribute__(self, '_members')[attr] = val
 
-    def flatten(self):
+    def copy_from(self, source, attrs=None):
         """
-        returns the namespace (minus types and definitions) as a dictionary
-
-        Example:
-            >>> MavisNamespace(thing=1, otherthing=2).flatten()
-            {'thing': 1, 'otherthing': 2}
+        Copy variables from one namespace onto the current namespace
         """
-        items = {}
-        items.update(self.items())
-        return items
+        if attrs is None:
+            attrs = source.keys()
+        for attr in attrs:
+            self.add(
+                attr, source[attr],
+                listable=source.is_listable(attr),
+                nullable=source.is_nullable(attr),
+                defn=source.define(attr, None),
+                cast_type=source.type(attr, None)
+            )
 
     def get(self, key, *pos):
         """
@@ -232,7 +239,7 @@ class MavisNamespace:
         else:
             self._types[attr] = cast_type
 
-    def type(self, attr):
+    def type(self, attr, *pos):
         """
         returns the type
 
@@ -241,7 +248,14 @@ class MavisNamespace:
             >>> nspace.type('thing')
             <class 'int'>
         """
-        return self._types[attr]
+        if len(pos) > 1:
+            raise TypeError('too many arguments. type takes a single \'default\' value argument')
+        try:
+            return self._types[attr]
+        except AttributeError as err:
+            if pos:
+                return pos[0]
+            raise err
 
     def define(self, attr, *pos):
         """
@@ -309,51 +323,6 @@ class MavisNamespace:
         except KeyError:
             raise TypeError('Invalid value {} for {}. Must be a valid member: {}'.format(
                 repr(value), self.__class__.__name__, self.values()))
-
-
-class Default:
-    ENV_DELIM = r'[;,\s]+'
-    def __init__(self, name, default_value=None, type=str, nargs=1, help='', env_overwrite=False, env_prefix='MAVIS', nullable=False):
-        """
-        Args
-            name (str): name of the variable
-            default_value: the initial value
-            type (callable): the type to cast any value set for this as
-            nargs (int): defines if the argument can take 0, 1, 1+, or 0+ values
-            env_overwrite (bool): if set, then the environment variable will override the default set here
-            env_prefix (str): prefix to use when fetching the environment variable
-        """
-        self.name = name
-        self.default_value = default_value
-        self.type = type
-        self.nargs = nargs
-        self.help = help
-        self.env_overwrite = env_overwrite
-        self.env_prefix = env_prefix
-        self.nullable = nullable
-
-    def env(self):
-        env_name = ('{1}_{0}' if self.env_prefix else '{}').format(self.name, self.env_prefix).upper()
-        if env_name in os.environ:
-            val = os.environ[env_name].strip()
-            if self.nargs in '+*':
-                if not val:
-                    val = []
-                else:
-                    result = []
-                    for val in re.split(self.ENV_DELIM, val):
-                        if self.nullable and val.lower() == 'none':
-                            result.append(None)
-                        else:
-                            result.append(self.type(val))
-                    val = result
-            else:
-                val = self.type(val)
-            return self.type(os.environ[env_name])
-        raise KeyError('environment variable is not defined', env_name)
-
-    def add_argument(self, parser):
-        parser.add_argument('--{}'.format(self.name), type=self.type, help=self.help, default=self.default_value, nargs=self.nargs)
 
 
 def float_fraction(num):

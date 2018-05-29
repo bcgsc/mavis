@@ -7,9 +7,8 @@ import itertools
 import subprocess
 
 
-from ..cluster import main as cluster_main
+from ..cluster import constants as _CLUSTER
 from ..constants import SUBCOMMAND, PROTOCOL
-from ..summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 from ..tools import convert_tool_output
 from ..util import mkdirp, output_tabbed_file, LOG, DEVNULL
 from ..validate import constants as _VALIDATE
@@ -17,7 +16,6 @@ from ..annotate import constants as _ANNOTATE
 from ..annotate import file_io as _file_io
 from ..pairing import constants as _PAIRING
 from ..summary import constants as _SUMMARY
-from ..args import main as _main
 from .job import Job, ArrayJob, LogFile
 from .scheduler import SlurmScheduler, TorqueScheduler, SgeScheduler
 from .local import LocalJob, LocalScheduler
@@ -158,6 +156,26 @@ def summary_args(config):
     return args
 
 
+def cluster_args(config, libconf):
+    allowed_args = [
+        'masking',
+        'annotations',
+        'library',
+        'protocol',
+        'disease_status',
+        'strand_specific'
+    ] + list(_CLUSTER.DEFAULTS.keys())
+    args = {}
+    args.update(_CLUSTER.DEFAULTS.items())
+    args.update({k: v.name for k, v in config.reference.items()})
+    args.update(config.cluster.items())
+    args.update(config.illustrate.items())
+    args.update(config.annotate.items())
+    args.update(libconf.items())
+    args = {k:v for k, v in args.items() if k in allowed_args}
+    return args
+
+
 class Pipeline:
 
     def __init__(
@@ -209,12 +227,13 @@ class Pipeline:
         command = [subcommand]
         for arg, val in args.items():
             command.append('--{}'.format(arg))
-            if isinstance(val, _file_io.ReferenceFile):
-                command.extend(val.name)
-            elif isinstance(val, list):
-                command.extend(val)
-            else:
+            if isinstance(val, str):
                 command.append(val)
+            else:
+                try:
+                    command.extend(iter(val))
+                except TypeError:
+                    command.append(val)
         return [str(v) for v in command]
 
     @classmethod
@@ -225,6 +244,7 @@ class Pipeline:
         Returns
             Pipeline: the pipeline instance with job dependencies information etc.
         """
+        from ..main import main as _main
         conversion_dir = mkdirp(os.path.join(config.output, 'converted_inputs'))
         config.output = os.path.abspath(config.output)
         if config.schedule.scheduler not in SCHEDULERS_BY_NAME:
@@ -244,15 +264,12 @@ class Pipeline:
 
             # run the cluster stage
             cluster_output = mkdirp(os.path.join(base, SUBCOMMAND.CLUSTER))  # creates the clustering output dir
-            merge_args = {'batch_id': pipeline.batch_id, 'output': cluster_output}
-            merge_args['split_only'] = SUBCOMMAND.CLUSTER in config.get('skip_stage', [])
-            merge_args.update(config.reference.items())
-            merge_args.update(config.cluster.items())
-            merge_args.update(libconf.items())
-            LOG('clustering', '(split only)' if merge_args['split_only'] else '')
-            merge_args = cls.format_args(SUBCOMMAND.CLUSTER, merge_args)
-            print(merge_args)
-            clustered_files =  _main(merge_args)
+            args = cluster_args(config, libconf)
+            args.update({'batch_id': pipeline.batch_id, 'output': cluster_output})
+            args['split_only'] = SUBCOMMAND.CLUSTER in config.get('skip_stage', [])
+            args['inputs'] = libconf.inputs
+            LOG('clustering', '(split only)' if args['split_only'] else '')
+            clustered_files =  _main(cls.format_args(SUBCOMMAND.CLUSTER, args))
             #clustered_files = cluster_main.main(log_args=True, **merge_args)
 
             # make a validation job for each cluster file
@@ -363,8 +380,6 @@ class Pipeline:
         script_name = os.path.join(config.output, SUBCOMMAND.PAIR, 'submit.sh')
 
         if isinstance(scheduler, LocalScheduler):
-            print(STD_OPTIONS)
-            print(config.schedule.keys())
             pipeline.pairing = LocalJob(
                 stage=SUBCOMMAND.PAIR,
                 script=script_name,

@@ -39,6 +39,13 @@ def filepath(path):
     return file_list[0]
 
 
+def nullable(item, callback):
+    if str(item).lower() == 'none':
+        return None
+    else:
+        return callback(item)
+
+
 REFERENCE_DEFAULTS = WeakMavisNamespace()
 REFERENCE_DEFAULTS.add(
     'template_metadata', [], cast_type=filepath, listable=True,
@@ -161,11 +168,11 @@ class LibraryConfig(MavisNamespace):
             for namespace in [CLUSTER_DEFAULTS, VALIDATION_DEFAULTS, ANNOTATION_DEFAULTS]:
                 if attr not in namespace:
                     continue
-                setattr(self, attr, namespace.type(attr)(value))
+                self.add(attr, value, listable=namespace.is_listable(attr), nullable=namespace.is_nullable(attr), cast_type=namespace.type(attr))
                 break
 
     def flatten(self):
-        result = MavisNamespace.flatten(self)
+        result = MavisNamespace.items(self)
         result['inputs'] = '\n'.join(result['inputs'])
         return result
 
@@ -244,24 +251,24 @@ def write_config(filename, include_defaults=False, libraries=[], conversions={},
     """
     config = {}
 
-    config['reference'] = REFERENCE_DEFAULTS.flatten()
+    config['reference'] = REFERENCE_DEFAULTS.items()
     for filetype, fname in REFERENCE_DEFAULTS.items():
         if fname is None:
             warnings.warn('filetype {} has not been set. This must be done manually before the configuration file is used'.format(filetype))
 
     if libraries:
         for lib in libraries:
-            config[lib.library] = lib.flatten()
+            config[lib.library] = lib.items()
 
     if include_defaults:
-        config['schedule'] = SUBMIT_OPTIONS.flatten()
-        config['validate'] = VALIDATION_DEFAULTS.flatten()
-        config['cluster'] = CLUSTER_DEFAULTS.flatten()
-        config['annotate'] = ANNOTATION_DEFAULTS.flatten()
-        config['illustrate'] = ILLUSTRATION_DEFAULTS.flatten()
-        config['summary'] = SUMMARY_DEFAULTS.flatten()
+        config['schedule'] = SUBMIT_OPTIONS.items()
+        config['validate'] = VALIDATION_DEFAULTS.items()
+        config['cluster'] = CLUSTER_DEFAULTS.items()
+        config['annotate'] = ANNOTATION_DEFAULTS.items()
+        config['illustrate'] = ILLUSTRATION_DEFAULTS.items()
+        config['summary'] = SUMMARY_DEFAULTS.items()
 
-    config['convert'] = CONVERT_OPTIONS.flatten()
+    config['convert'] = CONVERT_OPTIONS.items()
     for alias, command in conversions.items():
         if alias in CONVERT_OPTIONS:
             raise UserWarning('error in writing config. Alias for conversion product cannot be a setting', alias, CONVERT_OPTIONS.keys())
@@ -293,8 +300,7 @@ def validate_section(section, namespace, use_defaults=False):
     """
     new_namespace = MavisNamespace()
     if use_defaults:
-        for attr, value in namespace.items():
-            new_namespace.add(attr, value, cast_type=namespace.type(attr), listable=namespace.is_listable(attr), nullable=namespace.is_nullable(attr))
+        new_namespace.copy_from(namespace)
 
     for attr, value in section.items():
         if attr not in namespace:
@@ -454,7 +460,6 @@ def get_metavar(arg_type):
     return None
 
 
-
 def nullable_filepath(path):
     if str(path).lower() == 'none':
         return None
@@ -541,7 +546,7 @@ def augment_parser(arguments, parser, required=None):
             help_msg = None
             default_value = None
             choices = None
-            nargs = 1
+            nargs = None
             if arg == 'aligner':
                 choices = SUPPORTED_ALIGNER.values()
                 help_msg = 'aligner to use for aligning contigs'
@@ -562,16 +567,19 @@ def augment_parser(arguments, parser, required=None):
                     CONVERT_OPTIONS]:
                 if arg in nspace:
                     default_value = nspace[arg]
-                    value_type = type(default_value) if not isinstance(default_value, bool) else tab.cast_boolean
+                    if nspace.is_listable(arg):
+                        nargs = '*'
+                    value_type = nspace.type(arg, None)
+                    if nspace.is_nullable(arg):
+                        value_type = lambda x: nullable(x, value_type)
                     if not help_msg:
                         help_msg = nspace.define(arg)
                     break
 
             if help_msg is None:
                 raise KeyError('invalid argument', arg)
-
             parser.add_argument(
-                '--{}'.format(arg), choices=choices,
+                '--{}'.format(arg), choices=choices, nargs=nargs,
                 help=help_msg, required=required, default=default_value, type=value_type
             )
 
