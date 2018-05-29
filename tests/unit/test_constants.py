@@ -50,10 +50,6 @@ class TestMavisNamespace(unittest.TestCase):
     def setUp(self):
         self.namespace = MavisNamespace(a=1, b=2, c=3)
 
-    def test_error_on_reserved_attr(self):
-        with self.assertRaises(ValueError):
-            MavisNamespace(_defns=None)
-
     def test_get_item(self):
         self.assertEqual(1, self.namespace['a'])
         self.assertEqual(1, self.namespace.a)
@@ -89,18 +85,6 @@ class TestMavisNamespace(unittest.TestCase):
         self.assertEqual(int, self.namespace.type('d'))
         self.assertEqual('this is the letter d', self.namespace.define('d'))
         self.assertEqual(4, self.namespace.d)
-
-    def test_add_arguments_error(self):
-        with self.assertRaises(TypeError):
-            self.namespace.add('d', 4, value=5, defn='this is the letter d')
-        with self.assertRaises(TypeError):
-            self.namespace.add('d', 4, 'this is the letter d')
-        with self.assertRaises(TypeError):
-            self.namespace.add('d', 4, defn='this is the letter d', blargh=3)
-
-    def test_error_on_set_reserved(self):
-        with self.assertRaises(ValueError):
-            self.namespace['_defns'] = {}
 
     def test_error_on_enforce_bad_value(self):
         with self.assertRaises(KeyError):

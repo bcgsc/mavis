@@ -2,6 +2,8 @@ from ..constants import float_fraction, nullable_int
 from ..align import SUPPORTED_ALIGNER
 from ..util import WeakMavisNamespace
 
+PASS = 'validation-passed.tab'
+
 DEFAULTS = WeakMavisNamespace()
 """
 - :term:`aligner`

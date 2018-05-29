@@ -29,6 +29,7 @@ class TestOverlayOptions(unittest.TestCase):
             'mavis', SUBCOMMAND.OVERLAY, 'GAGE4', '--annotations', ANNOTATIONS, '--output', self.temp_output
         ]):
             try:
+                print(sys.argv)
                 returncode = main()
             except SystemExit as err:
                 self.assertEqual(0, err.code)

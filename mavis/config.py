@@ -26,24 +26,37 @@ from .util import bash_expands, cast, DEVNULL, ENV_VAR_PREFIX, MavisNamespace, W
 from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 
 
+def filepath(path):
+    try:
+        file_list = bash_expands(path)
+    except FileNotFoundError:
+        raise TypeError('File does not exist', path)
+    else:
+        if not file_list:
+            raise TypeError('File not found', path)
+        elif len(file_list) > 1:
+            raise TypeError('File pattern match multiple files and expected only one', path)
+    return file_list[0]
+
+
 REFERENCE_DEFAULTS = WeakMavisNamespace()
 REFERENCE_DEFAULTS.add(
-    'template_metadata', util.DelimListString(), cast_type=util.DelimListString,
+    'template_metadata', [], cast_type=filepath, listable=True,
     defn='file containing the cytoband template information. Used for illustrations only')
 REFERENCE_DEFAULTS.add(
-    'masking', util.DelimListString(), cast_type=util.DelimListString,
+    'masking', [], cast_type=filepath, listable=True,
     defn='file containing regions for which input events overlapping them are dropped prior to validation')
 REFERENCE_DEFAULTS.add(
-    'annotations', util.DelimListString(), cast_type=util.DelimListString,
+    'annotations', [], cast_type=filepath, listable=True,
     defn='path to the reference annotations of genes, transcript, exons, domains, etc')
 REFERENCE_DEFAULTS.add(
-    'aligner_reference', None, cast_type=str,
+    'aligner_reference', None, cast_type=filepath, nullable=True,
     defn='path to the aligner reference file used for aligning the contig sequences')
 REFERENCE_DEFAULTS.add(
-    'dgv_annotation', util.DelimListString(), cast_type=util.DelimListString,
+    'dgv_annotation', [], cast_type=filepath, listable=True,
     defn='Path to the dgv reference processed to look like the cytoband file.')
 REFERENCE_DEFAULTS.add(
-    'reference_genome', util.DelimListString(), cast_type=util.DelimListString,
+    'reference_genome', [], cast_type=filepath, listable=True,
     defn='Path to the human reference genome fasta file')
 
 CONVERT_OPTIONS = WeakMavisNamespace()
@@ -281,14 +294,19 @@ def validate_section(section, namespace, use_defaults=False):
     new_namespace = MavisNamespace()
     if use_defaults:
         for attr, value in namespace.items():
-            new_namespace.add(attr, value, cast_type=namespace.type(attr))
+            new_namespace.add(attr, value, cast_type=namespace.type(attr), listable=namespace.is_listable(attr), nullable=namespace.is_nullable(attr))
 
     for attr, value in section.items():
         if attr not in namespace:
             raise KeyError('tag not recognized', attr)
         else:
+            cast_type = namespace.type(attr)
+            if namespace.is_listable(attr):
+                value = MavisNamespace.parse_listable_string(value, cast_type, namespace.is_nullable(attr))
+            else:
+                value = cast_type(value)
             try:
-                new_namespace.add(attr, namespace.type(attr)(value), cast_type=namespace.type(attr))
+                new_namespace.add(attr, value, cast_type=cast_type, listable=namespace.is_listable(attr), nullable=namespace.is_nullable(attr))
             except Exception as err:
                 raise ValueError('failed adding {}. {}'.format(attr, err))
     return new_namespace
@@ -298,8 +316,10 @@ class MavisConfig(MavisNamespace):
 
     def __init__(self, **kwargs):
         # section can be named schedule or qsub to support older versions
+        MavisNamespace.__init__(self)
         try:
-            self.schedule = validate_section(kwargs.pop('schedule', kwargs.pop('qsub', {})), SUBMIT_OPTIONS, True)
+            content = validate_section(kwargs.pop('schedule', kwargs.pop('qsub', {})), SUBMIT_OPTIONS, True)
+            self.schedule = content
         except Exception as err:
             err.args = ['Error in validating the schedule section in the config. ' + ' '.join([str(a) for a in err.args])]
             raise err
@@ -315,14 +335,13 @@ class MavisConfig(MavisNamespace):
             ('reference', REFERENCE_DEFAULTS)
         ]:
             try:
-                setattr(self, sec, validate_section(kwargs.pop(sec, {}), defaults, True))
+                self[sec] = validate_section(kwargs.pop(sec, {}), defaults, True)
             except Exception as err:
                 err.args = ['Error in validating the {} section in the config. '.format(sec) + ' '.join([str(a) for a in err.args])]
 
                 raise err
 
         SUPPORTED_ALIGNER.enforce(self.validate.aligner)
-
         for attr, fnames in self.reference.items():
             if attr != 'aligner_reference':
                 self.reference[attr] = [f for f in [nullable_filepath(v) for v in fnames] if f]
@@ -366,7 +385,7 @@ class MavisConfig(MavisNamespace):
         self.libraries = {}
 
         for libname, val in kwargs.items():  # all other sections already popped
-            libname = library_name_format(libname)
+            libname = nameable_string(libname)
             d = {}
             d.update(self.cluster.items())
             d.update(self.validate.items())
@@ -435,12 +454,6 @@ def get_metavar(arg_type):
     return None
 
 
-def filepath(path):
-    file_list = bash_expands(path)
-    if not file_list:
-        raise TypeError('File does not exist', path)
-    return os.path.abspath(path)
-
 
 def nullable_filepath(path):
     if str(path).lower() == 'none':
@@ -448,16 +461,19 @@ def nullable_filepath(path):
     return filepath(path)
 
 
-def library_name_format(input_string):
+def nameable_string(input_string):
+    """
+    A string that can be used for library and/or filenames
+    """
     input_string = str(input_string)
     if re.search(r'[;,_\s]', input_string):
-        raise TypeError('library names cannot contain the reserved characters [;,_\\s]', input_string)
+        raise TypeError('names cannot contain the reserved characters [;,_\\s]', input_string)
     if input_string.lower() == 'none':
-        raise TypeError('library name cannot be none', input_string)
+        raise TypeError('names cannot be none', input_string)
     if not input_string:
-        raise TypeError('library name cannot be an empty string', input_string)
+        raise TypeError('names cannot be an empty string', input_string)
     if not re.search(r'^[a-zA-Z]', input_string):
-        raise TypeError('library names must start with a letter', input_string)
+        raise TypeError('names must start with a letter', input_string)
     return input_string
 
 
@@ -506,7 +522,7 @@ def augment_parser(arguments, parser, required=None):
             parser.add_argument(
                 '--median_fragment_size', type=int, help='median inset size for pairs in the bam file', required=required)
         elif arg == 'library':
-            parser.add_argument('--library', help='library name', required=required, type=library_name_format)
+            parser.add_argument('--library', help='library name', required=required, type=nameable_string)
         elif arg == 'protocol':
             parser.add_argument('--protocol', choices=PROTOCOL.values(), help='library protocol', required=required)
         elif arg == 'disease_status':
@@ -525,6 +541,7 @@ def augment_parser(arguments, parser, required=None):
             help_msg = None
             default_value = None
             choices = None
+            nargs = 1
             if arg == 'aligner':
                 choices = SUPPORTED_ALIGNER.values()
                 help_msg = 'aligner to use for aligning contigs'

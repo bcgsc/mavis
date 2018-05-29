@@ -5,7 +5,7 @@ import time
 import warnings
 import hashlib
 
-from .constants import DEFAULTS
+from .constants import DEFAULTS, PASS
 from .genomic import PreTranscript
 from .variant import annotate_events, choose_more_annotated, choose_transcripts_by_priority, call_protein_indel, flatten_fusion_transcript, flatten_fusion_translation
 from .fusion import determine_prime
@@ -22,9 +22,6 @@ ACCEPTED_FILTERS = {
     'choose_more_annotated': choose_more_annotated,
     'choose_transcripts_by_priority': choose_transcripts_by_priority
 }
-
-
-ANNOTATION_PASS = 'annotations.tab'
 
 
 def draw(drawing_config, ann, reference_genome, template_metadata, drawings_directory):
@@ -127,7 +124,7 @@ def main(
         template_metadata.load()
 
     drawings_directory = os.path.join(output, 'drawings')
-    tabbed_output_file = os.path.join(output, ANNOTATION_PASS)
+    tabbed_output_file = os.path.join(output, PASS)
     fa_output_file = os.path.join(output, 'annotations.fusion-cdna.fa')
 
     annotation_filters = [] if not annotation_filters else annotation_filters.split(',')

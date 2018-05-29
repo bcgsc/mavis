@@ -463,4 +463,4 @@ class ReferenceFile:
         except Exception as err:
             message = 'Error in loading files: {}. {}'.format(', '.join(self.name), err)
             raise err.__class__(message)
-        return self.content
+        return self

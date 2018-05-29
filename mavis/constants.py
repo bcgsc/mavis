@@ -3,6 +3,7 @@ module responsible for small utility functions and constants used throughout the
 """
 import argparse
 import re
+import os
 
 from Bio.Alphabet import Gapped
 from Bio.Alphabet.IUPAC import ambiguous_dna
@@ -11,7 +12,7 @@ from Bio.Seq import Seq
 from tab import cast_boolean, cast_null
 
 
-class MavisNamespace(argparse.Namespace):
+class MavisNamespace:
     """
     Namespace to hold module constants
 
@@ -22,25 +23,83 @@ class MavisNamespace(argparse.Namespace):
         >>> nspace.otherthing
         2
     """
+    DELIM = r'[;,\s]+'
     def __init__(self, *pos, **kwargs):
-        self._defns = {}
-        self._types = {}
+        object.__setattr__(self, '_defns', {})
+        object.__setattr__(self, '_types', {})
+        object.__setattr__(self, '_members', {})
+        object.__setattr__(self, '_nullable', set())
+        object.__setattr__(self, '_listable', set())
+        object.__setattr__(self, '_env_overwritable', set())
+        object.__setattr__(self, '_env_prefix', 'MAVIS')
+        if '__name__' in kwargs:  # for building auto documentation
+            object.__setattr__(self, '__name__', kwargs.pop('__name__'))
 
         for k in pos:
-            if hasattr(self, k):
-                raise AttributeError('Cannot respecify existing attribute', k, self[k])
-            setattr(self, k, k)
+            if k in self._members:
+                raise AttributeError('Cannot respecify existing attribute', k, self._members[k])
+            self[k] = k
 
-        for k in kwargs:
-            if hasattr(self, k):
-                raise AttributeError('Cannot respecify existing attribute', k, self[k])
-            setattr(self, k, kwargs[k])
+        for attr, val in kwargs.items():
+            if attr in self._members:
+                raise AttributeError('Cannot respecify existing attribute', attr, self._members[attr])
+            self[attr] = val
 
-        argparse.Namespace.__init__(self, **kwargs)
+        for attr, value in self._members.items():
+            self._set_type(attr, type(value))
 
-        for attr, value in self.items():
-            if not attr.startswith('_'):
-                self._set_type(attr, type(value))
+    def get_env_name(self, attr):
+        if self._env_prefix:
+            return '{}_{}'.format(self._env_prefix, attr).upper()
+        return attr.upper()
+
+    def get_env_var(self, attr):
+        """
+        retrieve the environment variable definition of a given attribute
+        """
+        env_name = self.get_env_name(attr)
+        env = os.environ[env_name].strip()
+        attr_type = self._types.get(attr, str)
+
+        if attr in self._listable:
+            return self.parse_listable_string(env, attr_type, attr in self._nullable)
+        if attr in self._nullable and env.lower() == 'none':
+            return None
+        return attr_type(env)
+
+    @classmethod
+    def parse_listable_string(cls, string, cast_type=str, nullable=False):
+        result = []
+        string = string.strip()
+        for val in re.split(cls.DELIM, string) if string else []:
+            if nullable and val.lower() == 'none':
+                result.append(None)
+            else:
+                result.append(cast_type(val))
+        return result
+
+    def is_env_overwritable(self, attr):
+        return attr in self._env_overwritable
+
+    def is_listable(self, attr):
+        return attr in self._listable
+
+    def is_nullable(self, attr):
+        return attr in self._nullable
+
+    def __getattribute__(self, attr):
+        try:
+            return object.__getattribute__(self, attr)
+        except AttributeError as err:
+            variables = object.__getattribute__(self, '_members')
+            if attr not in variables:
+                raise err
+            if self.is_env_overwritable(attr):
+                try:
+                    return self.get_env_var(attr)
+                except KeyError:
+                    pass
+            return variables[attr]
 
     def items(self):
         """
@@ -51,12 +110,15 @@ class MavisNamespace(argparse.Namespace):
         return [(k, self[k]) for k in self.keys()]
 
     def __getitem__(self, key):
-        return getattr(self, str(key))
+        return getattr(self, key)
 
     def __setitem__(self, key, val):
-        if key == '_defns' or key == '_types':
-            raise ValueError('Cannot set _types or _defns. They are reserved attributes', key)
-        self.__dict__[key] = val
+        self.__setattr__(key, val)
+
+    def __setattr__(self, attr, val):
+        if attr.startswith('_'):
+            raise ValueError('cannot set private', attr)
+        object.__getattribute__(self, '_members')[attr] = val
 
     def flatten(self):
         """
@@ -101,7 +163,7 @@ class MavisNamespace(argparse.Namespace):
             >>> MavisNamespace(thing=1, otherthing=2).keys()
             ['thing', 'otherthing']
         """
-        return [k for k in self.__dict__ if not k.startswith('_')]
+        return [k for k in self._members]
 
     def values(self):
         """
@@ -111,7 +173,7 @@ class MavisNamespace(argparse.Namespace):
             >>> MavisNamespace(thing=1, otherthing=2).values()
             [1, 2]
         """
-        return [self[k] for k in self.keys()]
+        return [self[k] for k in self._members]
 
     def enforce(self, value):
         """
@@ -212,7 +274,7 @@ class MavisNamespace(argparse.Namespace):
                 return pos[0]
             raise err
 
-    def add(self, attr, *pos, **kwargs):
+    def add(self, attr, value, defn=None, cast_type=None, nullable=False, env_overwritable=False, listable=False):
         """
         Add an attribute to the name space. Optionally include cast_type and definition
 
@@ -226,30 +288,72 @@ class MavisNamespace(argparse.Namespace):
             >>> nspace = MavisNamespace()
             >>> nspace.add('thing', value=1, cast_type=int, defn='I am a thing')
         """
-        if len(pos) > 1:
-            raise TypeError('add({}) takes 3 positional arguments but more were given'.format(', '.join([str(p) for p in pos])))
-
-        for value, argname in zip(pos, ['value', 'cast_type', 'defn'][:len(pos)]):
-            if argname in kwargs:
-                raise TypeError('add({}, ...) got multiple values for argument {}'.format(attr, repr(argname)))
-            kwargs['value'] = pos[0]
-        value = kwargs.pop('value', attr)
-        self[attr] = value
-        if 'cast_type' not in kwargs:
-            self._set_type(attr, type(value))
+        if cast_type:
+            self._set_type(attr, cast_type)
         else:
-            self._types[attr] = kwargs.pop('cast_type')
-        if 'defn' in kwargs:
-            self._defns[attr] = kwargs.pop('defn')
-        if kwargs:
-            raise TypeError('invalid arguments for {}: {}'.format(attr, kwargs.keys()))
+            self._set_type(attr, type(value))
+        if defn:
+            self._defns[attr] = defn
+
+        if nullable:
+            self._nullable.add(attr)
+        if env_overwritable:
+            self._env_overwritable.add(attr)
+        if listable:
+            self._listable.add(attr)
+        self[attr] = value
 
     def __call__(self, value):
         try:
             return self.enforce(value)
         except KeyError:
-            raise TypeError('Invalid value {} for {}. Cannot cast to type {}. Must be a valid member: {}'.format(
-                repr(value), attr, self.__class__.__name__, self.values()))
+            raise TypeError('Invalid value {} for {}. Must be a valid member: {}'.format(
+                repr(value), self.__class__.__name__, self.values()))
+
+
+class Default:
+    ENV_DELIM = r'[;,\s]+'
+    def __init__(self, name, default_value=None, type=str, nargs=1, help='', env_overwrite=False, env_prefix='MAVIS', nullable=False):
+        """
+        Args
+            name (str): name of the variable
+            default_value: the initial value
+            type (callable): the type to cast any value set for this as
+            nargs (int): defines if the argument can take 0, 1, 1+, or 0+ values
+            env_overwrite (bool): if set, then the environment variable will override the default set here
+            env_prefix (str): prefix to use when fetching the environment variable
+        """
+        self.name = name
+        self.default_value = default_value
+        self.type = type
+        self.nargs = nargs
+        self.help = help
+        self.env_overwrite = env_overwrite
+        self.env_prefix = env_prefix
+        self.nullable = nullable
+
+    def env(self):
+        env_name = ('{1}_{0}' if self.env_prefix else '{}').format(self.name, self.env_prefix).upper()
+        if env_name in os.environ:
+            val = os.environ[env_name].strip()
+            if self.nargs in '+*':
+                if not val:
+                    val = []
+                else:
+                    result = []
+                    for val in re.split(self.ENV_DELIM, val):
+                        if self.nullable and val.lower() == 'none':
+                            result.append(None)
+                        else:
+                            result.append(self.type(val))
+                    val = result
+            else:
+                val = self.type(val)
+            return self.type(os.environ[env_name])
+        raise KeyError('environment variable is not defined', env_name)
+
+    def add_argument(self, parser):
+        parser.add_argument('--{}'.format(self.name), type=self.type, help=self.help, default=self.default_value, nargs=self.nargs)
 
 
 def float_fraction(num):

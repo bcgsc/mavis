@@ -10,17 +10,18 @@ import pysam
 from shortuuid import uuid
 
 from .call import call_events
-from .constants import DEFAULTS
+from .constants import DEFAULTS, PASS
 from .evidence import GenomeEvidence, TranscriptomeEvidence
 from ..align import align_sequences, select_contig_alignments, SUPPORTED_ALIGNER
 from ..annotate.base import BioInterval
+from ..annotate import file_io as _file_io
 from ..bam import cigar as _cigar
 from ..bam.cache import BamCache
 from ..breakpoint import BreakpointPair
 from ..constants import CALL_METHOD, COLUMNS, MavisNamespace, PROTOCOL
 from ..util import filter_on_overlap, generate_complete_stamp, LOG, mkdirp, output_tabbed_file, read_inputs, write_bed_file
 
-VALIDATION_PASS = 'validation-passed.tab'
+
 
 
 def main(
@@ -47,9 +48,20 @@ def main(
     mkdirp(output)
     # check the files exist early to avoid waiting for errors
     if protocol == PROTOCOL.TRANS:
-        annotations.load()
-    reference_genome.load()
-    masking.load()
+        try:
+            annotations.load()
+        except AttributeError:
+            annotations = _file_io.ReferenceFile(_file_io.load_annotations, *annotations).load()
+            annotations.load()
+    try:
+        print(reference_genome)
+        reference_genome.load()
+    except AttributeError:
+        reference_genome = _file_io.ReferenceFile(_file_io.load_reference_genome, *reference_genome).load()
+    try:
+        masking.load()
+    except AttributeError:
+        masking = _file_io.ReferenceFile(_file_io.load_masking_regions, *masking).load()
 
     validation_settings = {}
     validation_settings.update(DEFAULTS.flatten())
@@ -60,7 +72,7 @@ def main(
     contig_bam = os.path.join(output, 'contigs.bam')
     evidence_bed = os.path.join(output, 'evidence.bed')
 
-    passed_output_file = os.path.join(output, VALIDATION_PASS)
+    passed_output_file = os.path.join(output, PASS)
     passed_bed_file = os.path.join(output, 'validation-passed.bed')
     failed_output_file = os.path.join(output, 'validation-failed.tab')
     contig_aligner_fa = os.path.join(output, 'contigs.fa')
@@ -126,9 +138,9 @@ def main(
                 )
                 evidence_clusters.append(evidence)
             except ValueError as err:
-                warnings.warn('Dropping breakpoint pair ({}) as bad input {}'.format(str(bpp), str(err)))
+                warnings.warn('Dropping ({}) as bad input {}'.format(str(bpp), str(err)))
         else:
-            raise ValueError('protocol not recognized', bpp.data[COLUMNS.protocol])
+            raise ValueError('protocol error', bpp.data[COLUMNS.protocol])
 
     extended_masks = {}
     for chrom, masks in masking.content.items():  # extend masking by read length

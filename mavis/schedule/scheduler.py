@@ -16,7 +16,7 @@ class Scheduler:
     ARRAY_DEPENDENCY = None
     JOB_DEPENDENCY = None
     CORR_ARRAY_DEPENDENCY = None
-    ENV_TASK_IDENT = 'TASK_IDENT'
+    ENV_TASK_IDENT = '{TASK_IDENT}'
     DEPENDENCY_DELIM = ':'
     HEADER_PREFIX = '#'
 
@@ -230,6 +230,9 @@ class SlurmScheduler(Scheduler):
 
 
 class SgeScheduler(Scheduler):
+    """
+    Class for managing interactions with the SGE scheduler
+    """
     NAME = SCHEDULER.SGE
     ARRAY_DEPENDENCY = '-hold_jid_ad {}'
     JOB_DEPENDENCY = '-hold_jid {}'

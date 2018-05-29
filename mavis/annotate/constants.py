@@ -6,6 +6,8 @@ from ..constants import MavisNamespace, float_fraction
 from ..util import WeakMavisNamespace
 
 
+PASS = 'annotations.tab'
+
 DEFAULTS = WeakMavisNamespace()
 """
 - :term:`annotation_filters`

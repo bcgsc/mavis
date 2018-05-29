@@ -112,51 +112,11 @@ def get_env_variable(arg, default, cast_type=None):
 
 class WeakMavisNamespace(MavisNamespace):
 
-    def __getattribute__(self, attr):
-        try:
-            return get_env_variable(
-                attr,
-                object.__getattribute__(self, attr),
-                object.__getattribute__(self, '_types')[attr]
-            )
-        except KeyError:
-            return object.__getattribute__(self, attr)
+    def is_env_overwritable(self, attr):
+        return True
 
 
-class DelimListString(list):
-
-    def __init__(self, string='', none_is_all=False, delim=r'[\s;,]+'):
-        self.delim = delim
-        if not isinstance(string, str):
-            for item in string:
-                self.append(item)
-        else:
-            items = [i for i in re.split(self.delim, string) if i]
-            for item in items:
-                self.append(item)
-        self.none_is_all = none_is_all
-
-    def __contains__(self, item):
-        if list.__len__(self) == 0 and self.none_is_all:
-            return True
-        else:
-            return list.__contains__(self, item)
-
-    def __str__(self):
-        return ' '.join([repr(s) for s in self])
-
-    def __repr__(self):
-        return 'DelimListString({})'.format(str(self))
-
-
-class ChrListString(DelimListString):
-
-    def __init__(self, *pos, **kwargs):
-        DelimListString.__init__(self, *pos, **kwargs)
-        self.none_is_all = True
-
-
-def bash_expands(expression):
+def bash_expands(*expressions):
     """
     expand a file glob expression, allowing bash-style brackets.
 
@@ -168,10 +128,15 @@ def bash_expands(expression):
         [...]
     """
     result = []
-    for name in braceexpand(expression):
-        for fname in glob(name):
-            result.append(fname)
-    return result
+    for expression in expressions:
+        eresult = []
+        for name in braceexpand(expression):
+            for fname in glob(name):
+                eresult.append(fname)
+        if not eresult:
+            raise FileNotFoundError('The expression does not match any files', expression)
+        result.extend(eresult)
+    return [os.path.abspath(f) for f in result]
 
 
 def log_arguments(args):
@@ -250,16 +215,15 @@ def read_inputs(inputs, **kwargs):
     kwargs['require'] = list(set(kwargs['require'] + [COLUMNS.protocol]))
     kwargs.setdefault('in_', {})
     kwargs['in_'][COLUMNS.protocol] = PROTOCOL.values()
-    for expr in inputs:
-        for finput in bash_expands(expr):
-            try:
-                LOG('loading:', finput)
-                bpps.extend(read_bpp_from_input_file(
-                    finput,
-                    **kwargs
-                ))
-            except tab.EmptyFileError:
-                LOG('ignoring empty file:', finput)
+    for finput in bash_expands(*inputs):
+        try:
+            LOG('loading:', finput)
+            bpps.extend(read_bpp_from_input_file(
+                finput,
+                **kwargs
+            ))
+        except tab.EmptyFileError:
+            LOG('ignoring empty file:', finput)
     LOG('loaded', len(bpps), 'breakpoint pairs')
     return bpps
 

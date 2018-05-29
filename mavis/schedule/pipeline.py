@@ -3,6 +3,7 @@ from shortuuid import uuid
 import os
 import re
 import shutil
+import itertools
 import subprocess
 
 
@@ -11,8 +12,12 @@ from ..constants import SUBCOMMAND, PROTOCOL
 from ..summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 from ..tools import convert_tool_output
 from ..util import mkdirp, output_tabbed_file, LOG, DEVNULL
-from .. import validate as _validate
-from .. import annotate as _annotate
+from ..validate import constants as _VALIDATE
+from ..annotate import constants as _ANNOTATE
+from ..annotate import file_io as _file_io
+from ..pairing import constants as _PAIRING
+from ..summary import constants as _SUMMARY
+from ..args import main as _main
 from .job import Job, ArrayJob, LogFile
 from .scheduler import SlurmScheduler, TorqueScheduler, SgeScheduler
 from .local import LocalJob, LocalScheduler
@@ -29,7 +34,7 @@ def stringify_args_to_command(args):
     """
     command = []
     for argname, value in args.items():
-        if isinstance(value, _annotate.file_io.ReferenceFile):
+        if isinstance(value, _file_io.ReferenceFile):
             value = value.name
         if isinstance(value, str):
             command.append('--{} "{}"'.format(argname, value))
@@ -101,12 +106,12 @@ def validate_args(config, libconf):
         'median_fragment_size',
         'strand_specific',
         'annotations'
-    ] + list(_validate.constants.DEFAULTS.keys())
+    ] + list(_VALIDATE.DEFAULTS.keys())
 
     # overwrite args in order of increasing specificity
     args = {}
-    args.update(_validate.constants.DEFAULTS.items())
-    args.update(config.reference.items())
+    args.update(_VALIDATE.DEFAULTS.items())
+    args.update({k: v.name for k, v in config.reference.items()})
     args.update(config.validate.items())
     args.update(libconf.items())
     args = {k:v for k, v in args.items() if k in allowed_args}
@@ -125,10 +130,10 @@ def annotate_args(config, libconf):
         'min_domain_mapping_match',
         'domain_name_regex_filter',
         'max_proximity'
-    ] + list(_annotate.constants.DEFAULTS.keys())
+    ] + list(_ANNOTATE.DEFAULTS.keys())
     args = {}
-    args.update(_annotate.constants.DEFAULTS.items())
-    args.update(config.reference.items())
+    args.update(_ANNOTATE.DEFAULTS.items())
+    args.update({k: v.name for k, v in config.reference.items()})
     args.update(config.cluster.items())
     args.update(config.illustrate.items())
     args.update(config.annotate.items())
@@ -144,9 +149,9 @@ def summary_args(config):
         'spanning_call_distance',
         'dgv_annotation',
         'annotations'
-    ] + list(SUMMARY_DEFAULTS.keys())
+    ] + list(_SUMMARY.DEFAULTS.keys())
     args = {}
-    args.update(config.reference.items())
+    args.update({k: v.name for k, v in config.reference.items()})
     args.update(config.pairing.items())
     args.update(config.summary.items())
     args = {k:v for k, v in args.items() if k in allowed_args}
@@ -196,8 +201,21 @@ class Pipeline:
         LOG('writing:', job.script)
         with open(job.script, 'w') as fh:
             fh.write(SHEBANG + '\n')
-            commands = ['{} {}'.format(PROGNAME, subcommand)] + stringify_args_to_command(args)
+            commands = [PROGNAME, subcommand] + stringify_args_to_command(args)
             fh.write(' \\\n\t'.join(commands) + '\n')
+
+    @classmethod
+    def format_args(cls, subcommand, args):
+        command = [subcommand]
+        for arg, val in args.items():
+            command.append('--{}'.format(arg))
+            if isinstance(val, _file_io.ReferenceFile):
+                command.extend(val.name)
+            elif isinstance(val, list):
+                command.extend(val)
+            else:
+                command.append(val)
+        return [str(v) for v in command]
 
     @classmethod
     def build(cls, config):
@@ -212,7 +230,9 @@ class Pipeline:
         if config.schedule.scheduler not in SCHEDULERS_BY_NAME:
             raise NotImplementedError('unsupported scheduler', config.schedule.scheduler, list(SCHEDULERS_BY_NAME.keys()))
 
-        scheduler = SCHEDULERS_BY_NAME[config.schedule.scheduler]()
+        scheduler = SCHEDULERS_BY_NAME[config.schedule.scheduler]
+        if scheduler.NAME == 'LOCAL':
+            scheduler = scheduler(config.schedule['concurrency_limit'])
         pipeline = Pipeline(output_dir=config.output, scheduler=scheduler)
 
         annotation_output_files = []
@@ -230,18 +250,19 @@ class Pipeline:
             merge_args.update(config.cluster.items())
             merge_args.update(libconf.items())
             LOG('clustering', '(split only)' if merge_args['split_only'] else '')
-            clustered_files = cluster_main.main(log_args=True, **merge_args)
+            merge_args = cls.format_args(SUBCOMMAND.CLUSTER, merge_args)
+            print(merge_args)
+            clustered_files =  _main(merge_args)
+            #clustered_files = cluster_main.main(log_args=True, **merge_args)
 
             # make a validation job for each cluster file
-            validate_job = None
+            validate_jobs = []
 
             if SUBCOMMAND.VALIDATE not in config.skip_stage:
                 mkdirp(os.path.join(base, SUBCOMMAND.VALIDATE))
                 for task_ident in range(1, len(clustered_files) + 1):
                     mkdirp(os.path.join(base, SUBCOMMAND.VALIDATE, '{}-{}'.format(pipeline.batch_id, task_ident)))
                 args = validate_args(config, libconf)
-                args['output'] = os.path.join(base, SUBCOMMAND.VALIDATE, '{}-${}'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT))
-                args['inputs'] = os.path.join(cluster_output, '{}-${}.tab'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT))
 
                 script_name = os.path.join(base, SUBCOMMAND.VALIDATE, 'submit.sh')
                 job_options = {k: v for k, v in config.schedule.items() if k in STD_OPTIONS}
@@ -251,16 +272,23 @@ class Pipeline:
 
                 if isinstance(scheduler, LocalScheduler):
                     for task_ident in range(1, len(clustered_files) + 1):
+                        jargs = {}
+                        jargs.update(args)
+                        jargs['inputs'] = [os.path.join(cluster_output, '{}-{}.tab'.format(pipeline.batch_id, task_ident))]
+                        jargs['output'] = os.path.join(base, SUBCOMMAND.VALIDATE, '{}-{}'.format(pipeline.batch_id, task_ident))
                         validate_job = LocalJob(
                             stage=SUBCOMMAND.VALIDATE,
-                            output_dir=os.path.join(base, SUBCOMMAND.VALIDATE, '{}-{}'.format(pipeline.batch_id, task_ident)),
+                            output_dir=jargs['output'],
                             name='MV_{}_{}-{}'.format(libconf.library, pipeline.batch_id, task_ident),
-                            args=args,
-                            func=_validate.main.main
+                            args=jargs,
+                            func=_main,
                             **job_options
                         )
                         pipeline.validations.append(validate_job)
+                        validate_jobs.append(validate_job)
                 else:
+                    args['inputs'] = os.path.join(cluster_output, '{}-${}.tab'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT))
+                    args['output'] = os.path.join(base, SUBCOMMAND.VALIDATE, '{}-${}'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT))
                     validate_job = ArrayJob(
                         stage=SUBCOMMAND.VALIDATE,
                         tasks=len(clustered_files),
@@ -271,6 +299,7 @@ class Pipeline:
                     )
                     pipeline.write_submission_script(SUBCOMMAND.VALIDATE, validate_job, args)
                     pipeline.validations.append(validate_job)
+                    validate_jobs.append(validate_job)
 
             # make an annotation job for each validation/cluster job/file
             mkdirp(os.path.join(base, SUBCOMMAND.ANNOTATE))
@@ -281,29 +310,45 @@ class Pipeline:
 
             # annotate 'clustered' files if the pipeline does not include the validation step
             if SUBCOMMAND.VALIDATE not in config.skip_stage:
-                args['inputs'] = os.path.join(base, SUBCOMMAND.VALIDATE, '{}-${}'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT), _validate.main.VALIDATION_PASS)
+                args['inputs'] = [os.path.join(base, SUBCOMMAND.VALIDATE, '{}-${}'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT), _VALIDATE.PASS)]
             else:
-                args['inputs'] = os.path.join(cluster_output, '{}-${}.tab'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT))
+                args['inputs'] = [os.path.join(cluster_output, '{}-${}.tab'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT))]
 
             script_name = os.path.join(base, SUBCOMMAND.ANNOTATE, 'submit.sh')
             job_options = {k: v for k, v in config.schedule.items() if k in STD_OPTIONS}
             job_options['memory_limit'] = config.schedule.annotation_memory
-            if validate_job:
-                job_options['dependencies'] = [validate_job]
-            annotate_job = ArrayJob(
-                stage=SUBCOMMAND.ANNOTATE,
-                tasks=len(clustered_files),
-                script=script_name,
-                name='MA_{}_{}'.format(libconf.library, pipeline.batch_id),
-                output_dir=os.path.join(base, SUBCOMMAND.ANNOTATE, '{}-{{task_ident}}'.format(pipeline.batch_id)),
-                **job_options
-            )
-            pipeline.write_submission_script(SUBCOMMAND.ANNOTATE, annotate_job, args)
-            pipeline.annotations.append(annotate_job)
+
+            if isinstance(scheduler, LocalScheduler):
+                for task_ident in range(1, len(clustered_files) + 1):
+                    annotate_job = LocalJob(
+                        stage=SUBCOMMAND.ANNOTATE,
+                        script=script_name,
+                        name='MA_{}_{}'.format(libconf.library, pipeline.batch_id),
+                        output_dir=os.path.join(base, SUBCOMMAND.ANNOTATE, '{}-{}'.format(pipeline.batch_id, task_ident)),
+                        args=args,
+                        func=_main,
+                        **job_options
+                    )
+                    pipeline.annotations.append(annotate_job)
+                    if validate_jobs:
+                        annotate_job.dependencies.append(validate_jobs[task_ident - 1])
+            else:
+                annotate_job = ArrayJob(
+                    stage=SUBCOMMAND.ANNOTATE,
+                    tasks=len(clustered_files),
+                    script=script_name,
+                    name='MA_{}_{}'.format(libconf.library, pipeline.batch_id),
+                    output_dir=os.path.join(base, SUBCOMMAND.ANNOTATE, '{}-{{task_ident}}'.format(pipeline.batch_id)),
+                    **job_options
+                )
+                pipeline.write_submission_script(SUBCOMMAND.ANNOTATE, annotate_job, args)
+                pipeline.annotations.append(annotate_job)
+                if validate_jobs:
+                    annotate_job.dependencies.extend(validate_jobs)
 
             # add the expected output file names for input to pairing
             for taskid in range(1, len(clustered_files) + 1):
-                fname = os.path.join(args['output'], _annotate.main.ANNOTATION_PASS)
+                fname = os.path.join(args['output'], _ANNOTATE.PASS)
                 fname = re.sub(r'\${}'.format(scheduler.ENV_TASK_IDENT), str(taskid), fname)
                 annotation_output_files.append(fname)
 
@@ -317,31 +362,56 @@ class Pipeline:
 
         script_name = os.path.join(config.output, SUBCOMMAND.PAIR, 'submit.sh')
 
-        pipeline.pairing = Job(
-            SUBCOMMAND.PAIR,
-            script=script_name,
-            output_dir=args['output'],
-            name='MP_{}'.format(pipeline.batch_id),
-            dependencies=pipeline.annotations,
-            **{k: v for k, v in config.schedule.items() if k in STD_OPTIONS}
-        )
-        pipeline.write_submission_script(SUBCOMMAND.PAIR, pipeline.pairing, args)
+        if isinstance(scheduler, LocalScheduler):
+            print(STD_OPTIONS)
+            print(config.schedule.keys())
+            pipeline.pairing = LocalJob(
+                stage=SUBCOMMAND.PAIR,
+                script=script_name,
+                output_dir=args['output'],
+                name='MP_{}'.format(pipeline.batch_id),
+                dependencies=pipeline.annotations,
+                args=args,
+                func=_main,
+                **{k: v for k, v in config.schedule.items() if k in STD_OPTIONS}
+            )
+        else:
+            pipeline.pairing = Job(
+                SUBCOMMAND.PAIR,
+                script=script_name,
+                output_dir=args['output'],
+                name='MP_{}'.format(pipeline.batch_id),
+                dependencies=pipeline.annotations,
+                **{k: v for k, v in config.schedule.items() if k in STD_OPTIONS}
+            )
+            pipeline.write_submission_script(SUBCOMMAND.PAIR, pipeline.pairing, args)
         # set up the summary job
         args = summary_args(config)
         args['output'] = os.path.join(config.output, SUBCOMMAND.SUMMARY)
         mkdirp(args['output'])
-        args['inputs'] = os.path.join(config.output, SUBCOMMAND.PAIR, 'mavis_paired*.tab')
+        args['inputs'] = [os.path.join(config.output, SUBCOMMAND.PAIR, 'mavis_paired*.tab')]
         script_name = os.path.join(args['output'], 'submit.sh')
-
-        pipeline.summary = Job(
-            stage=SUBCOMMAND.SUMMARY,
-            name='MS_{}'.format(pipeline.batch_id),
-            output_dir=args['output'],
-            script=script_name,
-            dependencies=[pipeline.pairing],
-            **{k: v for k, v in config.schedule.items() if k in STD_OPTIONS}
-        )
-        pipeline.write_submission_script(SUBCOMMAND.SUMMARY, pipeline.summary, args)
+        if isinstance(scheduler, LocalScheduler):
+            pipeline.summary = LocalJob(
+                stage=SUBCOMMAND.SUMMARY,
+                name='MS_{}'.format(pipeline.batch_id),
+                output_dir=args['output'],
+                script=script_name,
+                dependencies=[pipeline.pairing],
+                args=args,
+                func=_main,
+                **{k: v for k, v in config.schedule.items() if k in STD_OPTIONS}
+            )
+        else:
+            pipeline.summary = Job(
+                stage=SUBCOMMAND.SUMMARY,
+                name='MS_{}'.format(pipeline.batch_id),
+                output_dir=args['output'],
+                script=script_name,
+                dependencies=[pipeline.pairing],
+                **{k: v for k, v in config.schedule.items() if k in STD_OPTIONS}
+            )
+            pipeline.write_submission_script(SUBCOMMAND.SUMMARY, pipeline.summary, args)
         return pipeline
 
     def _job_status(self, job, submit=False, log=DEVNULL):

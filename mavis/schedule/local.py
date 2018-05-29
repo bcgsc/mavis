@@ -1,6 +1,9 @@
 import multiprocessing
-import shlex
+import os
+
 import shortuuid
+
+from ..util import LOG
 
 from .job import Job
 from .scheduler import Scheduler
@@ -10,6 +13,7 @@ from .constants import JOB_STATUS
 MAX_PROCESSES = 2
 
 class LocalJob(Job):
+
     def __init__(self, args, func, rank=None, response=None, *pos, **kwargs):
         self.args = args
         self.func = func
@@ -17,15 +21,21 @@ class LocalJob(Job):
         self.rank = rank
         Job.__init__(self, *pos, **kwargs)
 
-    def __call__(self):
-        self.job_ident = str(shortuuid.uuid())
-        self.func(**self.args)
+    def check_complete(self):
+        return os.path.exists(self.complete_stamp())
 
 
 class LocalScheduler(Scheduler):
+    """
+    Scheduler class for dealing with running mavis locally
+    """
     NAME = 'LOCAL'
 
     def __init__(self, concurrency_limit=multiprocessing.cpu_count() - 1):
+        """
+        Args
+            concurrency_limit (int): Size of the pool, the maximum allowed concurrent processes. Defaults to one less than the total number available
+        """
         self.concurrency_limit = concurrency_limit
         self.pool = multiprocessing.Pool(concurrency_limit)
         self.submitted = {}  # submitted jobs process response objects by job ID
@@ -40,9 +50,11 @@ class LocalScheduler(Scheduler):
         if job.job_ident in self.submitted:
             return self.submitted[job.job_ident]
         # otherwise add it to the pool
-        job.response = self.pool.apply_async(job)  # no arguments, defined all in the job object
+        print(job.name, job.args, job.func)
+        job.response = self.pool.apply_async(job.func, kwds=job.args)  # no arguments, defined all in the job object
         self.submitted[job.job_ident] = job
         job.rank = len(self.submitted)
+        LOG('submitted', job.name, indent_level=1)
 
     def wait_on_jobs(self, job_list):
         if self.pool is None:
@@ -50,23 +62,29 @@ class LocalScheduler(Scheduler):
         for job in job_list:
             self.submit(job)
         self.pool.close()
-        self.pool.join()
+        for job in job_list:
+            job.response.get()
         self.pool = None
         for job in job_list:
             self.set_status(job)
+            print('job status', job.name, job.status)
 
     def submit_all(self, pipeline):
         # validations
+        LOG('submitting {} validate jobs'.format(len(pipeline.validations)), time_stamp=True)
         self.wait_on_jobs(pipeline.validations)
         # annotations
+        LOG('submitting {} annotate jobs'.format(len(pipeline.annotations)), time_stamp=True)
         self.wait_on_jobs(pipeline.annotations)
         # pairing
-        self.wait_on_jobs(pipeline.pairing)
+        LOG('submitting the pairing job', time_stamp=True)
+        self.wait_on_jobs([pipeline.pairing])
         # summary
-        self.wait_on_jobs(pipeline.summary)
+        LOG('submitting the summary job', time_stamp=True)
+        self.wait_on_jobs([pipeline.summary])
 
     def jobs_completed(self):
-        return sum([1 for job in self.submitted.values() if job.response.ready()])
+        return sum([1 for job in self.submitted.values() if job.status == JOB_STATUS.COMPLETED or job.response.ready()])
 
     def jobs_running(self):
         jobs = len(self.submitted) - self.jobs_completed()
@@ -80,7 +98,7 @@ class LocalScheduler(Scheduler):
             job.status = JOB_STATUS.NOT_SUBMITTED
             return
         if job.response.ready():  # is the job complete?
-            if job.response.sucessful():
+            if job.response.successful():
                 job.status = JOB_STATUS.COMPLETE
             else:
                 job.status = JOB_STATUS.FAILED
@@ -88,17 +106,3 @@ class LocalScheduler(Scheduler):
             job.status = JOB_STATUS.RUNNING
         else:
             job.status = JOB_STATUS.PENDING
-
-
-def parse_script(filename):
-    """
-    Given some mavis bash script, parse and return just the mavis command
-    """
-    with open(filename, 'r') as fh:
-        lines = [l.strip() for l in fh.readlines() if not l.startswith('#') and l]
-        lines = ' '.join(lines)
-        if sub:
-            for original, replacement in sub:
-                lines.replace(original, replacement)
-        lex = shlex.split(lines)
-        return [a.strip() for a in lex]
