@@ -70,3 +70,5 @@ OPTIONS.add(
     None,
     cast_type=nullable_int,
     defn='The concurrency limit for tasks in any given job array or the number of concurrent processes allowed for a local run')
+OPTIONS.add('remote_head_ssh', '', cast_type=str, defn='ssh target for remote scheduler commands')
+OPTIONS.add('remote_head_name', '', cast_type=str, defn='The host name of the remote head node (to prevent ssh when already on the head node)')

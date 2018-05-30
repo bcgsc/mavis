@@ -19,7 +19,7 @@ from ..summary import constants as _SUMMARY
 from .job import Job, ArrayJob, LogFile
 from .scheduler import SlurmScheduler, TorqueScheduler, SgeScheduler
 from .local import LocalJob, LocalScheduler
-from .constants import JOB_STATUS, STD_OPTIONS
+from .constants import JOB_STATUS, STD_OPTIONS, OPTIONS
 
 PROGNAME = shutil.which('mavis')
 SHEBANG = '#!/bin/bash'
@@ -251,7 +251,11 @@ class Pipeline:
         if config.schedule.scheduler not in SCHEDULERS_BY_NAME:
             raise NotImplementedError('unsupported scheduler', config.schedule.scheduler, list(SCHEDULERS_BY_NAME.keys()))
 
-        scheduler = SCHEDULERS_BY_NAME[config.schedule.scheduler](config.schedule.get('concurrency_limit', None))
+        scheduler = SCHEDULERS_BY_NAME[config.schedule.scheduler](
+            config.schedule.get('concurrency_limit', OPTIONS.concurrency_limit),
+            remote_head_ssh=config.schedule.get('remote_head_ssh', OPTIONS.remote_head_ssh),
+            remote_head_name=config.schedule.get('remote_head_name', OPTIONS.remote_head_name)
+        )
         pipeline = Pipeline(output_dir=config.output, scheduler=scheduler)
 
         annotation_output_files = []
@@ -582,7 +586,9 @@ class Pipeline:
         pipeline = cls(
             output_dir=parser['general']['output_dir'],
             scheduler=SCHEDULERS_BY_NAME[parser['general']['scheduler']](
-                parser['general']['concurrency_limit'] if 'concurrency_limit' in parser['general'] else None
+                concurrency_limit=parser['general']['concurrency_limit'] if 'concurrency_limit' in parser['general'] else OPTIONS.concurrency_limit,
+                remote_head_ssh=parser['general']['remote_head_ssh'] if 'remote_head_ssh' in parser['general'] else OPTIONS.remote_head_ssh,
+                remote_head_name=parser['general']['remote_head_name'] if 'remote_head_name' in parser['general'] else OPTIONS.remote_head_name
             ),
             batch_id=parser['general']['batch_id']
         )

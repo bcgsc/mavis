@@ -68,6 +68,18 @@ class TestContigRemap(unittest.TestCase):
 
 
 class TestAssemble(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # load files here so they do not count towar timeout checking
+        sequences = set()
+        with open(get_data('long_filter_assembly.txt'), 'r') as fh:
+            sequences.update([s.strip() for s in fh.readlines() if s])
+        cls.long_filter_seq = sequences
+        sequences = set()
+        with open(get_data('large_assembly.txt'), 'r') as fh:
+            sequences.update([l.strip() for l in fh.readlines()])
+        cls.large_assembly_seq = sequences
+
     def setUp(self):
         self.log = lambda *x, **k: print(x, k)
 
@@ -336,9 +348,7 @@ class TestAssemble(unittest.TestCase):
     @unittest.skipIf(not RUN_FULL, 'slower tests will not be run unless the environment variable RUN_FULL is given')
     def test_large_assembly(self):
         # simply testing that this will complete before the timeout
-        sequences = set()
-        with open(get_data('large_assembly.txt'), 'r') as fh:
-            sequences.update([l.strip() for l in fh.readlines()])
+        sequences = self.large_assembly_seq
         kmer_size = 150 * DEFAULTS.assembly_kmer_size
         print('read inputs')
         contigs = assemble(
@@ -606,12 +616,10 @@ class TestAssemble(unittest.TestCase):
             print(len(contig.seq), contig.remap_score(), contig.seq)
         self.assertTrue({target, reverse_complement(target)} & {c.seq for c in contigs})
 
-    @timeout_decorator.timeout(20)
+    @timeout_decorator.timeout(60)
     @unittest.skipIf(not RUN_FULL, 'slower tests will not be run unless the environment variable RUN_FULL is given')
     def test_long_filter_bug(self):
-        sequences = set()
-        with open(get_data('long_filter_assembly.txt'), 'r') as fh:
-            sequences.update([s.strip() for s in fh.readlines() if s])
+        sequences = self.long_filter_seq
         contigs = assemble(sequences, 111, 3, 8, 0.1, 0.1, log=LOG)
         for c in contigs:
             print(c.seq, c.remap_score())

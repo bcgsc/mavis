@@ -2,6 +2,7 @@ from datetime import timedelta, datetime
 import subprocess
 import re
 import logging
+import socket
 
 from ..util import LOG
 
@@ -20,8 +21,18 @@ class Scheduler:
     DEPENDENCY_DELIM = ':'
     HEADER_PREFIX = '#'
 
-    def __init__(self, concurrency_limit=None):
+    def __init__(self, concurrency_limit=None, remote_head_ssh='', remote_head_name=''):
         self.concurrency_limit = concurrency_limit
+        self.remote_head_ssh = remote_head_ssh
+        self.remote_head_name = remote_head_name
+
+    def command(self, command, shell=False):
+        if self.remote_head_ssh and self.remote_head_name != socket.gethostname():
+            # ssh to remote head and run the command there
+            if not isinstance(command, str):
+                command = ' '.join(command)
+            return subprocess.check_output(['ssh', str(self.remote_head_ssh), command]).decode('utf8').strip()
+        return subprocess.check_output(command, shell=shell).decode('utf8').strip()
 
     def wait(self):
         pass
@@ -117,7 +128,7 @@ class SlurmScheduler(Scheduler):
                 command.append('--array={}{}'.format(task_ident, concurrency_limit))
 
         command.append(job.script)
-        content = subprocess.check_output(command).decode('utf8').strip()
+        content =  self.command(command)
 
         match = re.match(r'^submitted batch job (\d+)$', content, re.IGNORECASE)
         if not match:
@@ -196,10 +207,7 @@ class SlurmScheduler(Scheduler):
         if not job.job_ident:
             return
         command = ['sacct', '-j', job.job_ident, '--long', '--parsable2']
-        #else:
-        #    start_date = datetime.fromtimestamp(job.created_at).strftime('%Y-%m-%d')
-        #    command = ['sacct', '--name', job.name, '--long', '--parsable2', '-S', start_date]
-        content = subprocess.check_output(command).decode('utf8')
+        content = self.command(command)
         rows = self.parse_sacct(content)
         updated = False
 
@@ -217,13 +225,6 @@ class SlurmScheduler(Scheduler):
                 job.status = cumulative_job_state([t.status for t in job.task_list])
         except AttributeError:
             pass
-
-
-    def cancel(self, job):
-        command = ['scancel', job.job_ident]
-        subprocess.check_output(command)
-        job.job_ident = None
-        job.status = JOB_STATUS.CANCELLED
 
 
 class SgeScheduler(Scheduler):
@@ -398,7 +399,7 @@ class SgeScheduler(Scheduler):
         command.append(job.script)
         command = ' '.join(command)
         LOG(command, level=logging.DEBUG)
-        content = subprocess.check_output(command, shell=True).decode('utf8').strip()
+        content = self.command(command, shell=True)
 
         # example: Your job-array 3760559.1-1:1 ("MV_mock-A36971_batch-E6aEZJnTQAau598tcsMjAE") has been submitted
         # example: Your job 3766949 ("MP_batch-TvkFvM52v3ncuNQZb2M9TD") has been submitted
@@ -421,14 +422,14 @@ class SgeScheduler(Scheduler):
         command = ['qstat']
         if job.queue:
             command.extend(['-q', job.queue])
-        content = subprocess.check_output(command).decode('utf8').strip()
+        content = self.command(command)
         rows = [row for row in self.parse_qstat(content) if row['job_ident'] == job.job_ident]
 
         updated = False
         if not rows:
             # job no longer scheduled
             command = ['qacct', '-j', job.job_ident]
-            content = subprocess.check_output(command).decode('utf8').strip()
+            content = self.command(command)
             rows = self.parse_qacct(content)
             # job is still on the scheduler
         for row in rows:
@@ -475,6 +476,37 @@ class TorqueScheduler(SgeScheduler):
         'R': JOB_STATUS.RUNNING
     }
 
+    @classmethod
+    def format_dependencies(cls, job, task_ident=None, cascade=False):
+        """
+        returns a string representing the dependency argument
+        """
+        if not cls.ARRAY_DEPENDENCY or not cls.JOB_DEPENDENCY:
+            raise NotImplementedError('Abstract class. Implementing class must define class attributes ARRAY_DEPENDENCY and JOB_DEPENDENCY')
+
+        arr_dependencies = []
+        job_dependencies = []
+
+        for dep in job.dependencies:
+            if not dep.job_ident:
+                if cascade:
+                    cls.submit(dep, task_ident, cascade=cascade)
+                else:
+                    raise ValueError('An array job must be dependent only on another single array job with the same number of tasks', job, dep)
+
+            if isinstance(dep, ArrayJob):
+                arr_dependencies.append(dep.job_ident)
+            else:
+                job_dependencies.append(dep.job_ident)
+
+        result = []
+
+        if arr_dependencies:
+            result.append(cls.ARRAY_DEPENDENCY.format(cls.DEPENDENCY_DELIM.join(arr_dependencies)))
+        if job_dependencies:
+            result.append(cls.JOB_DEPENDENCY.format(cls.DEPENDENCY_DELIM.join(job_dependencies)))
+
+        return ','.join(result)
 
     @classmethod
     def parse_qstat(cls, content):
@@ -586,7 +618,7 @@ class TorqueScheduler(SgeScheduler):
                 command.extend(['-t', '{}{}'.format(task_ident if task_ident is not None else 1, concurrency_limit)])
 
         command.append(job.script)
-        content = subprocess.check_output(command).decode('utf8').strip()
+        content = self.command(command)
 
         job.job_ident = content.strip()
         job.status = JOB_STATUS.SUBMITTED
@@ -614,7 +646,7 @@ class TorqueScheduler(SgeScheduler):
         command = ['qstat', '-f', job.job_ident]
         if isinstance(job, ArrayJob):
             command.append('-t')
-        content = subprocess.check_output(command).decode('utf8').strip()
+        content = self.command(command)
         rows = self.parse_qstat(content)
         tasks_updated = False
 
@@ -632,12 +664,4 @@ class TorqueScheduler(SgeScheduler):
 
         if tasks_updated:
             job.status = cumulative_job_state([t.status for t in job.task_list])
-
-    def cancel(self, job):
-        command = ['scancel', job.job_ident]
-        subprocess.check_output(command)
-        job.job_ident = None
-        job.status = JOB_STATUS.CANCELLED
-
-
 
