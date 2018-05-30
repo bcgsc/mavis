@@ -1,5 +1,6 @@
 #!python
 import argparse
+import logging
 import platform
 import os
 import time
@@ -24,7 +25,8 @@ from .pairing import main as pairing_main
 from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 from .summary import main as summary_main
 from .tools import convert_tool_output, SUPPORTED_TOOL
-from .util import bash_expands, get_env_variable, LOG, log_arguments, MavisNamespace, mkdirp, output_tabbed_file
+#from .util import bash_expands, get_env_variable, LOG, log_arguments, MavisNamespace, mkdirp, output_tabbed_file
+from . import util as _util
 from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 from .validate import main as validate_main
 from .schedule import pipeline as _pipeline
@@ -96,7 +98,7 @@ def overlay_main(
         for gene in annotations.content[chrom]:
             if gene_name in gene.aliases or gene_name == gene.name:
                 gene_to_draw = gene
-                LOG('Found target gene: {}(aka. {}) {}:{}-{}'.format(gene.name, gene.aliases, gene.chr, gene.start, gene.end))
+                _util.LOG('Found target gene: {}(aka. {}) {}:{}-{}'.format(gene.name, gene.aliases, gene.chr, gene.start, gene.end))
                 break
     if gene_to_draw is None:
         raise KeyError('Could not find gene alias or id in annotations file', gene_name)
@@ -131,28 +133,27 @@ def overlay_main(
                 vmarkers=markers,
                 plots=plots,
                 window_buffer=buffer_length,
-                log=LOG
+                log=_util.LOG
             )
             break
         except DrawingFitError as err:
             if attempts > max_drawing_retries:
                 raise err
-            LOG('Drawing fit: extending window', drawing_width_iter_increase)
+            _util.LOG('Drawing fit: extending window', drawing_width_iter_increase)
             settings.width += drawing_width_iter_increase
             attempts += 1
 
     svg_output_file = os.path.join(output, '{}_{}_overlay.svg'.format(gene_to_draw.name, gene_name))
-    LOG('writing:', svg_output_file)
+    _util.LOG('writing:', svg_output_file)
 
     canvas.saveas(svg_output_file)
 
 
 def convert_main(inputs, outputfile, file_type, strand_specific=False, assume_no_untemplated=True):
-    bpp_results = convert_tool_output(inputs, file_type, strand_specific, LOG, True, assume_no_untemplated=assume_no_untemplated)
+    bpp_results = convert_tool_output(inputs, file_type, strand_specific, _util.LOG, True, assume_no_untemplated=assume_no_untemplated)
     if os.path.dirname(outputfile):
-        mkdirp(os.path.dirname(outputfile))
-    output_tabbed_file(bpp_results, outputfile)
-
+        _util.mkdirp(os.path.dirname(outputfile))
+    _util.output_tabbed_file(bpp_results, outputfile)
 
 
 def main(argv=None):
@@ -177,7 +178,7 @@ def main(argv=None):
         subparser = subp.add_parser(command, formatter_class=_config.CustomHelpFormatter, add_help=False)
         required[command] = subparser.add_argument_group('required arguments')
         optional[command] = subparser.add_argument_group('optional arguments')
-        _config.augment_parser(['help', 'version'], optional[command])
+        _config.augment_parser(['help', 'version', 'log', 'log_level'], optional[command])
 
     # config arguments
     required[SUBCOMMAND.CONFIG].add_argument('-w', '--write', help='path to the new configuration file', required=True, metavar='FILEPATH')
@@ -195,13 +196,13 @@ def main(argv=None):
         ' of inputs that should be used for the library', action=_config.RangeAppendAction, nmin=2,
         metavar='<name> FILEPATH [FILEPATH ...]')
     optional[SUBCOMMAND.CONFIG].add_argument(
-        '--genome_bins', default=get_env_variable('genome_bins', 100), type=int, metavar=_config.get_metavar(int),
+        '--genome_bins', default=_util.get_env_variable('genome_bins', 100), type=int, metavar=_config.get_metavar(int),
         help='number of bins/samples to use in calculating the fragment size stats for genomes')
     optional[SUBCOMMAND.CONFIG].add_argument(
-        '--transcriptome_bins', default=get_env_variable('transcriptome_bins', 500), type=int, metavar=_config.get_metavar(int),
+        '--transcriptome_bins', default=_util.get_env_variable('transcriptome_bins', 500), type=int, metavar=_config.get_metavar(int),
         help='number of genes to use in calculating the fragment size stats for genomes')
     optional[SUBCOMMAND.CONFIG].add_argument(
-        '--distribution_fraction', default=get_env_variable('distribution_fraction', 0.97), type=float_fraction, metavar=_config.get_metavar(float),
+        '--distribution_fraction', default=_util.get_env_variable('distribution_fraction', 0.97), type=float_fraction, metavar=_config.get_metavar(float),
         help='the proportion of the distribution of calculated fragment sizes to use in determining the stdev')
     optional[SUBCOMMAND.CONFIG].add_argument(
         '--convert', nmin=3,
@@ -231,7 +232,10 @@ def main(argv=None):
     optional[SUBCOMMAND.PIPELINE].add_argument(
         '--skip_stage', choices=[SUBCOMMAND.CLUSTER, SUBCOMMAND.VALIDATE], action='append', default=[],
         help='Use flag once per stage to skip. Can skip clustering or validation or both')
+
+    # schedule arguments
     optional[SUBCOMMAND.SCHEDULE].add_argument('--submit', action='store_true', default=False, help='submit jobs to the the scheduler specified')
+    optional[SUBCOMMAND.SCHEDULE].add_argument('--resubmit', action='store_true', default=False, help='resubmit jobs in error states to the the scheduler specified')
 
     # add the inputs argument
     for command in [SUBCOMMAND.CLUSTER, SUBCOMMAND.ANNOTATE, SUBCOMMAND.VALIDATE, SUBCOMMAND.PAIR, SUBCOMMAND.SUMMARY, SUBCOMMAND.CONVERT]:
@@ -291,16 +295,25 @@ def main(argv=None):
         'The label should be a short descriptor to avoid overlapping labels on the diagram',
         action=_config.RangeAppendAction)
 
-    args = MavisNamespace(**parser.parse_args(argv).__dict__)
+    args = _util.MavisNamespace(**parser.parse_args(argv).__dict__)
     if args.command == SUBCOMMAND.OVERLAY:
         args = check_overlay_args(args, parser)
 
     if args.command == SUBCOMMAND.VALIDATE:
         args.aligner_version = get_aligner_version(args.aligner)
 
-    LOG('MAVIS: {}'.format(__version__))
-    LOG('hostname:', platform.node(), time_stamp=False)
-    log_arguments(args)
+    log_conf = {'format': '{message}', 'style': '{', 'level': args.log_level}
+
+    for handler in logging.root.handlers:
+        logging.root.removeHandler(handler)
+    if args.log:  # redirect stdout AND stderr to a log file
+        log_conf['filename'] = args.log
+    logging.basicConfig(**log_conf)
+
+
+    _util.LOG('MAVIS: {}'.format(__version__))
+    _util.LOG('hostname:', platform.node(), time_stamp=False)
+    _util.log_arguments(args)
     rfile_args = args
 
     if args.command == SUBCOMMAND.PIPELINE:  # load the configuration file
@@ -313,11 +326,11 @@ def main(argv=None):
 
     # try checking the input files exist
     try:
-        args.inputs = bash_expands(*args.inputs)
+        args.inputs = _util.bash_expands(*args.inputs)
     except AttributeError:
         pass
     except FileNotFoundError:
-        parser.error('--inputs file(s) {} do not exist'.format(args.inputs))
+        parser.error('--inputs file(s) for {} {} do not exist'.format(args.command, args.inputs))
 
     # convert reference files to objects to store both content and name for rewrite
     for arg, loader in [
@@ -350,59 +363,66 @@ def main(argv=None):
         args.command in {SUBCOMMAND.PAIR, SUBCOMMAND.ANNOTATE, SUBCOMMAND.SUMMARY, SUBCOMMAND.OVERLAY, SUBCOMMAND.PIPELINE},
     ]):
         try:
-            rfile_args.annotations.files_exist()
+            rfile_args.annotations.files_exist(not_empty=True)
         except FileNotFoundError:
             parser.error('--annotations file(s) are required and do not exist')
 
     # decide which main function to execute
     ret_val = EXIT_OK
     command = args.command
-    args.discard('command')
-    if command == SUBCOMMAND.CLUSTER:
-        ret_val = cluster_main.main(**args, start_time=start_time)
-    elif command == SUBCOMMAND.VALIDATE:
-        validate_main.main(**args, start_time=start_time)
-    elif command == SUBCOMMAND.ANNOTATE:
-        annotate_main.main(**args, start_time=start_time)
-    elif command == SUBCOMMAND.PAIR:
-        pairing_main.main(**args, start_time=start_time)
-    elif command == SUBCOMMAND.SUMMARY:
-        summary_main.main(**args, start_time=start_time)
-    elif command == SUBCOMMAND.CONVERT:
-        convert_main(**args)
-    elif command == SUBCOMMAND.OVERLAY:
-        overlay_main(**args)
-    elif command == SUBCOMMAND.CONFIG:
-        _config.generate_config(args, parser, log=LOG)
-    elif command == SUBCOMMAND.CHECKER:
-        pass#return EXIT_OK if check_completion(args.output) else EXIT_ERROR
-    elif command == SUBCOMMAND.SCHEDULE:
-        build_file = os.path.join(args.output, 'build.cfg')
-        pipeline = _pipeline.Pipeline.read_build_file(build_file)
-        try:
-            pipeline.check_status(log=LOG, submit=args.submit)
-        finally:
-            LOG('rewriting:', build_file)
+    log_to_file = args.get('log', None)
+
+    # discard any arguments needed for redirect/setup only
+    for init_arg in ['command', 'log', 'log_level']:
+        args.discard(init_arg)
+
+    try:
+        if command == SUBCOMMAND.CLUSTER:
+            ret_val = cluster_main.main(**args, start_time=start_time)
+        elif command == SUBCOMMAND.VALIDATE:
+            validate_main.main(**args, start_time=start_time)
+        elif command == SUBCOMMAND.ANNOTATE:
+            annotate_main.main(**args, start_time=start_time)
+        elif command == SUBCOMMAND.PAIR:
+            pairing_main.main(**args, start_time=start_time)
+        elif command == SUBCOMMAND.SUMMARY:
+            summary_main.main(**args, start_time=start_time)
+        elif command == SUBCOMMAND.CONVERT:
+            convert_main(**args)
+        elif command == SUBCOMMAND.OVERLAY:
+            overlay_main(**args)
+        elif command == SUBCOMMAND.CONFIG:
+            _config.generate_config(args, parser, log=_util.LOG)
+        elif command == SUBCOMMAND.CHECKER:
+            pass#return EXIT_OK if check_completion(args.output) else EXIT_ERROR
+        elif command == SUBCOMMAND.SCHEDULE:
+            build_file = os.path.join(args.output, 'build.cfg')
+            args.discard('output')
+            pipeline = _pipeline.Pipeline.read_build_file(build_file)
+            try:
+                pipeline.check_status(log=_util.LOG, **args)
+            finally:
+                _util.LOG('rewriting:', build_file)
+                pipeline.write_build_file(build_file)
+        else:  # PIPELINE
+            config.reference = rfile_args
+            pipeline = _pipeline.Pipeline.build(config)
+            build_file = os.path.join(config.output, 'build.cfg')
+            _util.LOG('writing:', build_file)
             pipeline.write_build_file(build_file)
-    else:  # PIPELINE
-        config.reference = rfile_args
-        pipeline = _pipeline.Pipeline.build(config)
-        build_file = os.path.join(config.output, 'build.cfg')
-        LOG('writing:', build_file)
-        pipeline.write_build_file(build_file)
-        if pipeline.scheduler.NAME == 'LOCAL':
-            # also start the run
-            LOG('local configuration. Beginning job submission', time_stamp=True)
-            pipeline.scheduler.submit_all(pipeline)
+    except Exception as err:
+        if log_to_file:
+            logging.exception(err)  # capture the error in the logging output file
+        raise err
 
     duration = int(time.time()) - start_time
     hours = duration - duration % 3600
     minutes = duration - hours - (duration - hours) % 60
     seconds = duration - hours - minutes
-    LOG(
+    _util.LOG(
         'run time (hh/mm/ss): {}:{:02d}:{:02d}'.format(hours // 3600, minutes // 60, seconds),
         time_stamp=False)
-    LOG('run time (s): {}'.format(duration), time_stamp=False)
+    _util.LOG('run time (s): {}'.format(duration), time_stamp=False)
     return ret_val
 
 

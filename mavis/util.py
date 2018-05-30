@@ -22,9 +22,6 @@ from .interval import Interval
 ENV_VAR_PREFIX = 'MAVIS_'
 
 
-logging.basicConfig(format='{message}', style='{')
-logging.root.setLevel(logging.INFO)
-
 class Log:
     """
     wrapper aroung the builtin logging to make it more readable
@@ -147,19 +144,20 @@ def log_arguments(args):
         args (Namespace): the namespace to print arguments for
     """
     LOG('arguments', time_stamp=True)
-    for arg, val in sorted(args.items()):
-        if isinstance(val, list):
-            if len(val) <= 1:
-                LOG(arg, '= {}'.format(val))
-                continue
-            LOG(arg, '= [')
-            for v in val:
-                LOG(repr(v), indent_level=1)
-            LOG(']')
-        elif any([isinstance(val, typ) for typ in [str, int, float, bool, tuple]]) or val is None:
-            LOG(arg, '=', repr(val))
-        else:
-            LOG(arg, '=', object.__repr__(val))
+    with LOG.indent() as log:
+        for arg, val in sorted(args.items()):
+            if isinstance(val, list):
+                if len(val) <= 1:
+                    log(arg, '= {}'.format(val))
+                    continue
+                log(arg, '= [')
+                for v in val:
+                    log(repr(v), indent_level=1)
+                log(']')
+            elif any([isinstance(val, typ) for typ in [str, int, float, bool, tuple]]) or val is None:
+                log(arg, '=', repr(val))
+            else:
+                log(arg, '=', object.__repr__(val))
 
 
 def mkdirp(dirname):

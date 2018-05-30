@@ -87,7 +87,7 @@ def main(
         bpp.data[COLUMNS.inferred_pairing] = ''
 
         if product_key(bpp) in bpp_by_product_key:
-            raise KeyError('duplicate bpp is not unique within lib', bpp.library, product_key, bpp, bpp.data)
+            raise KeyError('duplicate bpp is not unique within lib', product_key(bpp))
         bpp_by_product_key[product_key(bpp)] = bpp
 
     distance_pairings = {}

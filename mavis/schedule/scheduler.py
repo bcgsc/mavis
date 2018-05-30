@@ -20,19 +20,22 @@ class Scheduler:
     DEPENDENCY_DELIM = ':'
     HEADER_PREFIX = '#'
 
-    @classmethod
-    def submit(cls, job, task_ident=None, cascade=False):
+    def __init__(self, concurrency_limit=None):
+        self.concurrency_limit = concurrency_limit
+
+    def wait(self):
+        pass
+
+    def submit(self, job, task_ident=None, cascade=False):
         raise NotImplementedError('abstract method')
 
-    @classmethod
-    def update_info(cls, job):
+    def update_info(self, job):
         """
         update the information about the job from the scheduler
         """
         raise NotImplementedError('abstract method')
 
-    @classmethod
-    def cancel(cls, job):
+    def cancel(self, job):
         raise NotImplementedError('abstract method')
 
     @classmethod
@@ -72,8 +75,7 @@ class SlurmScheduler(Scheduler):
     JOB_DEPENDENCY = '--dependency=afterok:{}'
     ENV_TASK_IDENT = 'SLURM_ARRAY_TASK_ID'
 
-    @classmethod
-    def submit(cls, job, task_ident=None, cascade=False):
+    def submit(self, job, task_ident=None, cascade=False):
         """
         runs a subprocess sbatch command
 
@@ -94,7 +96,7 @@ class SlurmScheduler(Scheduler):
         if job.import_env:
             command.append('--export=ALL')
         if job.dependencies:
-            command.append(cls.format_dependencies(job, task_ident=task_ident, cascade=cascade))
+            command.append(self.format_dependencies(job, task_ident=task_ident, cascade=cascade))
         if job.name:
             command.extend(['-J', job.name])
         if job.stdout:
@@ -190,12 +192,7 @@ class SlurmScheduler(Scheduler):
             })
         return rows
 
-    @classmethod
-    def get_job_ident(cls, name):
-        command = ['sacct', '--name', name, '--parsable2']
-
-    @classmethod
-    def update_info(cls, job):
+    def update_info(self, job):
         if not job.job_ident:
             return
         command = ['sacct', '-j', job.job_ident, '--long', '--parsable2']
@@ -203,7 +200,7 @@ class SlurmScheduler(Scheduler):
         #    start_date = datetime.fromtimestamp(job.created_at).strftime('%Y-%m-%d')
         #    command = ['sacct', '--name', job.name, '--long', '--parsable2', '-S', start_date]
         content = subprocess.check_output(command).decode('utf8')
-        rows = cls.parse_sacct(content)
+        rows = self.parse_sacct(content)
         updated = False
 
         for row in rows:
@@ -221,8 +218,8 @@ class SlurmScheduler(Scheduler):
         except AttributeError:
             pass
 
-    @classmethod
-    def cancel(cls, job):
+
+    def cancel(self, job):
         command = ['scancel', job.job_ident]
         subprocess.check_output(command)
         job.job_ident = None
@@ -353,9 +350,7 @@ class SgeScheduler(Scheduler):
             states.add(cls.STATE_MAPPING[char])
         return cumulative_job_state(states)
 
-
-    @classmethod
-    def submit(cls, job, task_ident=None, cascade=False):
+    def submit(self, job, task_ident=None, cascade=False):
         """
         runs a subprocess sbatch command
 
@@ -381,11 +376,11 @@ class SgeScheduler(Scheduler):
         if job.import_env:
             command.append('-V')
         if job.dependencies:
-            command.append(cls.format_dependencies(job, task_ident=task_ident, cascade=cascade))
+            command.append(self.format_dependencies(job, task_ident=task_ident, cascade=cascade))
         if job.name:
             command.extend(['-N', job.name])
         if job.mail_type and job.mail_user:
-            command.extend(['-m', cls.MAIL_TYPE_MAPPING[job.mail_type]])
+            command.extend(['-m', self.MAIL_TYPE_MAPPING[job.mail_type]])
             command.extend(['-M', job.mail_user])
         # options specific to job arrays
         if isinstance(job, ArrayJob):
@@ -395,8 +390,8 @@ class SgeScheduler(Scheduler):
                 command.append(['-t', str(task_ident)])
         if job.stdout:
             command.extend(['-o', job.stdout.format(
-                name='\${}'.format(cls.ENV_JOB_NAME),
-                job_ident='\${}'.format(cls.ENV_JOB_IDENT),
+                name='\${}'.format(self.ENV_JOB_NAME),
+                job_ident='\${}'.format(self.ENV_JOB_IDENT),
                 task_ident='\$TASK_ID'
             )])
 
@@ -413,8 +408,8 @@ class SgeScheduler(Scheduler):
         job.job_ident = match.group(2)
         job.status = JOB_STATUS.SUBMITTED
 
-    @classmethod
-    def update_info(cls, job):
+
+    def update_info(self, job):
         """
         runs a subprocess scontrol command to get job details and add them to the current job
 
@@ -427,14 +422,14 @@ class SgeScheduler(Scheduler):
         if job.queue:
             command.extend(['-q', job.queue])
         content = subprocess.check_output(command).decode('utf8').strip()
-        rows = [row for row in cls.parse_qstat(content) if row['job_ident'] == job.job_ident]
+        rows = [row for row in self.parse_qstat(content) if row['job_ident'] == job.job_ident]
 
         updated = False
         if not rows:
             # job no longer scheduled
             command = ['qacct', '-j', job.job_ident]
             content = subprocess.check_output(command).decode('utf8').strip()
-            rows = cls.parse_qacct(content)
+            rows = self.parse_qacct(content)
             # job is still on the scheduler
         for row in rows:
             if isinstance(job, ArrayJob) and row['task_ident']:
@@ -461,6 +456,7 @@ class TorqueScheduler(SgeScheduler):
     ENV_TASK_IDENT = 'PBS_ARRAYID'
     ENV_JOB_IDENT = 'PBS_JOBID'
     ENV_JOB_NAME = 'PBS_JOBNAME'
+    TAB_SIZE = 8
     MAIL_TYPE_MAPPING = {
         MAIL_TYPE.BEGIN: 'b',
         MAIL_TYPE.NONE: 'p',
@@ -487,7 +483,7 @@ class TorqueScheduler(SgeScheduler):
         Args
             content (str): content returned from the qstat command
         """
-        content = re.sub(r'\t', '    ', content)
+        content = re.sub(r'\t', ' ' * cls.TAB_SIZE, content)  # PBS  torque tab size is 8
         jobs = re.split(r'\s*\n\n\s*', content.strip())
         rows = []
 
@@ -506,13 +502,12 @@ class TorqueScheduler(SgeScheduler):
             columns = []
             values = []
             for line in lines[1:]:
-                print(line)
                 match = re.match(r'^(\s*)(\S.*)', line)
                 curr_tab_size = len(match.group(1))
                 if tab_size is None:
                     tab_size = curr_tab_size
 
-                if curr_tab_size > tab_size or '=' not in line:
+                if curr_tab_size > tab_size:
                     if not values:
                         raise NotImplementedError('Unexpected indentation prior to setting column', line)
                     values[-1] = values[-1] + line.strip()
@@ -524,7 +519,6 @@ class TorqueScheduler(SgeScheduler):
                     raise NotImplementedError('Unexpected indentation', line)
             for col, val in zip(columns, values):
                 row[col] = val
-            print(row)
             status = cls.STATE_MAPPING[row['job_state']]
             if status == JOB_STATUS.COMPLETED:
                 if row['exit_status'] != '0':
@@ -538,8 +532,7 @@ class TorqueScheduler(SgeScheduler):
             })
         return rows
 
-    @classmethod
-    def submit(cls, job, task_ident=None, cascade=False):
+    def submit(self, job, task_ident=None, cascade=False):
         """
         runs a subprocess sbatch command
 
@@ -565,14 +558,14 @@ class TorqueScheduler(SgeScheduler):
         if job.import_env:
             command.append('-V')
         if job.dependencies:
-            command.append(cls.format_dependencies(job, task_ident=task_ident, cascade=cascade))
+            command.append(self.format_dependencies(job, task_ident=task_ident, cascade=cascade))
         if job.name:
             command.extend(['-N', job.name])
         if job.stdout:
             command.extend(['-o', job.stdout.format(
-                name='\${}'.format(cls.ENV_JOB_NAME),
-                job_ident='\${}'.format(cls.ENV_JOB_IDENT),
-                task_ident='\${}'.format(cls.ENV_TASK_IDENT)
+                name='\${}'.format(self.ENV_JOB_NAME),
+                job_ident='\${}'.format(self.ENV_JOB_IDENT),
+                task_ident='\${}'.format(self.ENV_TASK_IDENT)
             )])
         if job.mail_type and job.mail_user:
             command.extend(['-m', job.mail_type])
@@ -590,8 +583,7 @@ class TorqueScheduler(SgeScheduler):
         job.job_ident = content.strip()
         job.status = JOB_STATUS.SUBMITTED
 
-    @classmethod
-    def update_info(cls, job):
+    def update_info(self, job):
         """
         runs a subprocess scontrol command to get job details and add them to the current job
 
@@ -605,7 +597,7 @@ class TorqueScheduler(SgeScheduler):
         if isinstance(job, ArrayJob):
             command.append('-t')
         content = subprocess.check_output(command).decode('utf8').strip()
-        rows = cls.parse_qstat(content)
+        rows = self.parse_qstat(content)
         tasks_updated = False
 
         for row in rows:
@@ -623,9 +615,7 @@ class TorqueScheduler(SgeScheduler):
         if tasks_updated:
             job.status = cumulative_job_state([t.status for t in job.task_list])
 
-
-    @classmethod
-    def cancel(cls, job):
+    def cancel(self, job):
         command = ['scancel', job.job_ident]
         subprocess.check_output(command)
         job.job_ident = None

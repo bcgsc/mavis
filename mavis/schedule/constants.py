@@ -14,7 +14,8 @@ JOB_STATUS = MavisNamespace(
     'FAILED',
     'PENDING',
     'CANCELLED',
-    NOT_SUBMITTED='NOT SUBMITTED'
+    NOT_SUBMITTED='NOT SUBMITTED',
+    UNKNOWN='UNKNOWN'
 )
 
 def cumulative_job_state(states):

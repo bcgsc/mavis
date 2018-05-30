@@ -153,11 +153,12 @@ def main(
     evidence_clusters, filtered_evidence_clusters = filter_on_overlap(evidence_clusters, extended_masks)
     contig_sequences = {}
     for i, evidence in enumerate(evidence_clusters):
-        print()
+        LOG()
         LOG(
             '({} of {})'.format(i + 1, len(evidence_clusters)),
             'gathered evidence for:', evidence.cluster_id,
-            '' if COLUMNS.tracking_id not in evidence.data else '(tracking_id: {})'.format(evidence.tracking_id)
+            '' if COLUMNS.tracking_id not in evidence.data else '(tracking_id: {})'.format(evidence.tracking_id),
+            time_stamp=True
         )
         LOG(evidence, time_stamp=False)
         LOG('possible event type(s):', BreakpointPair.classify(evidence), time_stamp=False)
@@ -202,23 +203,23 @@ def main(
     )
     for evidence in evidence_clusters:
         select_contig_alignments(evidence, raw_contig_alignments)
-    LOG('alignment complete')
+    LOG('alignment complete', time_stamp=True)
     event_calls = []
     total_pass = 0
     write_bed_file(evidence_bed, itertools.chain.from_iterable([e.get_bed_repesentation() for e in evidence_clusters]))
     validation_counts = {}
     for index, evidence in enumerate(evidence_clusters):
-        print()
+        LOG()
         LOG('({} of {}) calling events for: {} {} (tracking_id: {})'.format(
-            index + 1, len(evidence_clusters), evidence.cluster_id, evidence.putative_event_types(), evidence.tracking_id))
-        LOG('source:', evidence, time_stamp=False)
+            index + 1, len(evidence_clusters), evidence.cluster_id, evidence.putative_event_types(), evidence.tracking_id), time_stamp=True)
+        LOG('source:', evidence)
         calls = []
         failure_comment = None
         try:
             calls = call_events(evidence)
             event_calls.extend(calls)
         except UserWarning as err:
-            LOG('warning: error in calling events', repr(err), time_stamp=False)
+            LOG('warning: error in calling events', repr(err))
             failure_comment = str(err)
 
         if not calls:
@@ -228,19 +229,19 @@ def main(
         else:
             total_pass += 1
 
-        LOG('called {} event(s)'.format(len(calls)))
+        LOG('called {} event(s)'.format(len(calls)), time_stamp=True)
         for call in calls:
-            LOG(call, time_stamp=False)
+            LOG(call)
             if call.call_method == CALL_METHOD.CONTIG:
                 LOG('\t{} {} [{}] contig_alignment_score: {}, contig_alignment_mq: {} contig_alignment_rank: {}'.format(
                     call.event_type, call.call_method, call.contig_alignment.query_name,
                     round(call.contig_alignment.score(), 2), tuple(call.contig_alignment.mapping_quality()),
                     tuple(call.contig_alignment.alignment_rank())
-                ), time_stamp=False)
-                LOG('\talignment:', call.contig_alignment.alignment_id(), time_stamp=False)
+                ))
+                LOG('\talignment:', call.contig_alignment.alignment_id())
             elif call.contig_alignment:
                 LOG('\t{} {} alignment:'.format(
-                    call.event_type, call.call_method), call.contig_alignment.alignment_id(), time_stamp=False)
+                    call.event_type, call.call_method), call.contig_alignment.alignment_id())
             else:
                 LOG('\t{} {}'.format(call.event_type, call.call_method), time_stamp=False)
             validation_counts[call.cluster_id] = validation_counts.get(call.cluster_id, 0) + 1
@@ -255,7 +256,7 @@ def main(
                     len(call.linking_split_read_names()),
                     len(call.flanking_pairs),
                     '' if not call.has_compatible else '(' + str(len(call.compatible_flanking_pairs)) + ')'
-                ), time_stamp=False)
+                ))
 
     # write the output validated clusters (split by type and contig)
     for i, call in enumerate(event_calls):
@@ -269,14 +270,14 @@ def main(
             COLUMNS.break1_homologous_seq: b1_homseq,
             COLUMNS.break2_homologous_seq: b2_homseq,
         })
-    LOG('{} putative calls resulted in {} events with 1 or more event call'.format(len(evidence_clusters), total_pass))
+    LOG('{} putative calls resulted in {} events with 1 or more event call'.format(len(evidence_clusters), total_pass), time_stamp=True)
     output_tabbed_file(event_calls, passed_output_file)
     output_tabbed_file(filtered_evidence_clusters, failed_output_file)
     write_bed_file(passed_bed_file, itertools.chain.from_iterable([e.get_bed_repesentation() for e in event_calls]))
 
     if validation_settings.write_evidence_files:
         with pysam.AlignmentFile(contig_bam, 'wb', template=input_bam_cache.fh) as fh:
-            LOG('writing:', contig_bam)
+            LOG('writing:', contig_bam, time_stamp=True)
             for evidence in evidence_clusters:
                 for contig in evidence.contigs:
                     for aln in contig.alignments:
@@ -288,7 +289,7 @@ def main(
 
         # write the evidence
         with pysam.AlignmentFile(raw_evidence_bam, 'wb', template=input_bam_cache.fh) as fh:
-            LOG('writing:', raw_evidence_bam)
+            LOG('writing:', raw_evidence_bam, time_stamp=True)
             reads = set()
             for evidence in evidence_clusters:
                 reads.update(evidence.supporting_reads())
@@ -297,7 +298,7 @@ def main(
                 fh.write(read)
         # now sort the contig bam
         sort = re.sub(r'.bam$', '.sorted.bam', contig_bam)
-        LOG('sorting the bam file:', contig_bam)
+        LOG('sorting the bam file:', contig_bam, time_stamp=True)
         pysam.sort('-o', sort, contig_bam)
         contig_bam = sort
         LOG('indexing the sorted bam:', contig_bam)
@@ -305,7 +306,7 @@ def main(
 
         # then sort the evidence bam file
         sort = re.sub(r'.bam$', '.sorted.bam', raw_evidence_bam)
-        LOG('sorting the bam file:', raw_evidence_bam)
+        LOG('sorting the bam file:', raw_evidence_bam, time_stamp=True)
         pysam.sort('-o', sort, raw_evidence_bam)
         raw_evidence_bam = sort
         LOG('indexing the sorted bam:', raw_evidence_bam)
@@ -313,7 +314,7 @@ def main(
 
         # write the igv batch file
         with open(igv_batch_file, 'w') as fh:
-            LOG('writing:', igv_batch_file)
+            LOG('writing:', igv_batch_file, time_stamp=True)
 
             fh.write('load {} name="{}"\n'.format(passed_bed_file, 'passed events'))
             fh.write('load {} name="{}"\n'.format(contig_bam, 'aligned contigs'))

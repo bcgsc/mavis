@@ -1,8 +1,10 @@
 import argparse
 from configparser import ConfigParser, ExtendedInterpolation
 from copy import copy as _copy
+import logging
 import os
 import re
+import sys
 import warnings
 
 import tab
@@ -22,7 +24,7 @@ from .schedule.constants import OPTIONS as SUBMIT_OPTIONS
 from .schedule.constants import SCHEDULER
 from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 from .tools import SUPPORTED_TOOL
-from .util import bash_expands, cast, DEVNULL, ENV_VAR_PREFIX, MavisNamespace, WeakMavisNamespace, get_env_variable, log_arguments
+from .util import bash_expands, cast, DEVNULL, MavisNamespace, WeakMavisNamespace
 from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 
 
@@ -275,7 +277,6 @@ def write_config(filename, include_defaults=False, libraries=[], conversions={},
         config['convert'][alias] = '\n'.join(command)
 
     for sec in config:
-        print(sec, config[sec])
         for tag, value in config[sec].items():
             if '_regex_' in tag:
                 config[sec][tag] = re.sub(r'\$', '$$', config[sec][tag])
@@ -502,6 +503,10 @@ def augment_parser(arguments, parser, required=None):
             parser.add_argument(
                 '-v', '--version', action='version', version='%(prog)s version ' + __version__,
                 help='Outputs the version number')
+        elif arg == 'log':
+            parser.add_argument('--log', help='redirect stdout to a log file', default=None)
+        elif arg == 'log_level':
+            parser.add_argument('--log_level', help='level of logging to output', choices=['INFO', 'DEBUG'], default='INFO')
         elif arg == 'aligner_reference':
             default = REFERENCE_DEFAULTS[arg]
             parser.add_argument(

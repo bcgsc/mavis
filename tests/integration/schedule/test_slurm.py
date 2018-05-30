@@ -151,14 +151,15 @@ class TestSubmit(unittest.TestCase):
             '-t', '16:00:00',
             '--export=ALL',
             '-J', 'job1',
-            '-o', 'temp/job-%x-%A_%a.log',
+            '-o', 'temp/job-%x-%A-%a.log',
             '--array=1-10',
             'submit.sh'
         ])
 
     @mock.patch('subprocess.check_output')
     def test_job_array_concurrency_limit(self, patch_check):
-        patch_check.return_value = "Submitted batch job 1665695".encode('utf8')
+        patch_check.side_effect = ["Submitted batch job 1665695".encode('utf8')]
+        print(patch_check)
         job = _job.ArrayJob(
             output_dir='temp',
             name='job1',
@@ -167,20 +168,20 @@ class TestSubmit(unittest.TestCase):
             tasks=10,
             concurrency_limit=2
         )
-        print(job)
         _scheduler.SlurmScheduler.submit(job)
         self.assertEqual(_constants.JOB_STATUS.SUBMITTED, job.status)
         self.assertEqual('1665695', job.job_ident)
-        patch_check.assert_called_with([
+        exp = [
             'sbatch',
             '--mem', '16000',
             '-t', '16:00:00',
             '--export=ALL',
             '-J', 'job1',
-            '-o', 'temp/job-%x-%A_%a.log',
+            '-o', 'temp/job-%x-%A-%a.log',
             '--array=1-10%2',
             'submit.sh'
-        ])
+        ]
+        patch_check.assert_called_with(exp)
 
 
 class TestUpdate(unittest.TestCase):

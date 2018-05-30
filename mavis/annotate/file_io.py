@@ -14,7 +14,7 @@ from .genomic import Exon, Gene, Template, Transcript, PreTranscript
 from .protein import Domain, Translation
 from ..constants import CODON_SIZE, GIEMSA_STAIN, START_AA, STOP_AA, STRAND, translate
 from ..interval import Interval
-from ..util import DEVNULL
+from ..util import DEVNULL, LOG
 
 
 def load_masking_regions(*filepaths):
@@ -437,7 +437,13 @@ class ReferenceFile:
         if eager_load:
             self.load()
 
-    def files_exist(self):
+    def __repr__(self):
+        cls = self.__class__.__name__
+        return '{}(files={}, loaded={}, content={})'.format(cls, self.name, self.content is not None, object.__repr__(self.content))
+
+    def files_exist(self, not_empty=False):
+        if not_empty and not self.name:
+            raise FileNotFoundError('expected files but given an empty list', self)
         for filepath in self.name:
             if not os.path.exists(filepath):
                 raise FileNotFoundError('Missing file', filepath, self)
@@ -456,11 +462,14 @@ class ReferenceFile:
         load (or return) the contents of a reference file and add it to the cache if enabled
         """
         if self.content is not None:
-            return self.content
+            return self
         if self.key in ReferenceFile.CACHE and not ignore_cache:
-            self.content = ReferenceFile.CACHE[self.key]
+            LOG('cached content:', self.name)
+            self.content = ReferenceFile.CACHE[self.key].content
+            return self
         self.files_exist()
         try:
+            LOG('loading:', self.name, time_stamp=True)
             self.content = self.loader(*self.name, **self.opt)
             ReferenceFile.CACHE[self.key] = self
         except Exception as err:

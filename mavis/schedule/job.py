@@ -95,7 +95,12 @@ class Job:
         result = {}
         for attr, value in self.__dict__.items():
             if attr == 'dependencies':
-                value = '\n'.join(sorted([str(j.name) for j in self.dependencies]))
+                value = [j.name for j in value]
+            try:
+                if not isinstance(value, str):
+                    value = '\n'.join([str(v) for v in value])
+            except TypeError:
+                pass
             result[attr] = str(value)
         return result
 
@@ -110,7 +115,7 @@ class ArrayJob(Job):
 
     def __init__(self, stage, tasks, concurrency_limit=OPTIONS.concurrency_limit, **kwargs):
         Job.__init__(self, stage, **kwargs)
-        self.stdout = os.path.join(self.output_dir, 'job-{name}-{job_ident}_{task_ident}.log')
+        self.stdout = os.path.join(self.output_dir, 'job-{name}-{job_ident}-{task_ident}.log') if 'stdout' not in kwargs else kwargs['stdout']
         self.concurrency_limit = concurrency_limit
         self.tasks = int(tasks)
         self.task_list = [Task(self, n) for n in range(1, self.tasks + 1)]
@@ -122,13 +127,7 @@ class ArrayJob(Job):
         return Job.complete_stamp(self).format(task_ident=task_ident)
 
     def flatten(self):
-        result = {}
-        for attr, value in self.__dict__.items():
-            if attr == 'dependencies':
-                value = '\n'.join(sorted([str(j.name) for j in self.dependencies]))
-            elif attr == 'task_list':
-                continue
-            result[attr] = str(value)
+        result = {k:v for k, v in Job.flatten(self).items() if k != 'task_list'}
         return result
 
 
