@@ -451,8 +451,8 @@ class SgeScheduler(Scheduler):
 class TorqueScheduler(SgeScheduler):
     NAME = SCHEDULER.TORQUE
     DEPENDENCY_DELIM = ':'
-    ARRAY_DEPENDENCY = '-W dependency=afterokarray:{}'
-    JOB_DEPENDENCY = '-W dependency=afterok:{}'
+    ARRAY_DEPENDENCY = '-W depend=afterokarray:{}'
+    JOB_DEPENDENCY = '-W depend=afterok:{}'
     ENV_TASK_IDENT = 'PBS_ARRAYID'
     ENV_JOB_IDENT = 'PBS_JOBID'
     ENV_JOB_NAME = 'PBS_JOBNAME'
@@ -471,7 +471,8 @@ class TorqueScheduler(SgeScheduler):
         'Q': JOB_STATUS.PENDING,
         'T': JOB_STATUS.RUNNING,
         'W': JOB_STATUS.PENDING,
-        'S': JOB_STATUS.ERROR
+        'S': JOB_STATUS.ERROR,
+        'R': JOB_STATUS.RUNNING
     }
 
 
@@ -502,12 +503,14 @@ class TorqueScheduler(SgeScheduler):
             columns = []
             values = []
             for line in lines[1:]:
+                if not line.strip():
+                    continue
                 match = re.match(r'^(\s*)(\S.*)', line)
                 curr_tab_size = len(match.group(1))
                 if tab_size is None:
                     tab_size = curr_tab_size
 
-                if curr_tab_size > tab_size:
+                if curr_tab_size > tab_size or '=' not in line:
                     if not values:
                         raise NotImplementedError('Unexpected indentation prior to setting column', line)
                     values[-1] = values[-1] + line.strip()
@@ -521,8 +524,11 @@ class TorqueScheduler(SgeScheduler):
                 row[col] = val
             status = cls.STATE_MAPPING[row['job_state']]
             if status == JOB_STATUS.COMPLETED:
-                if row['exit_status'] != '0':
-                    status = JOB_STATUS.FAILED
+                if 'exit_status' in row:
+                    if row['exit_status'] != '0':
+                        status = JOB_STATUS.FAILED
+                else:
+                    status = JOB_STATUS.CANCELLED
             rows.append({
                 'job_ident': row['Job Id'],
                 'name': row['Job_Name'],
@@ -532,7 +538,7 @@ class TorqueScheduler(SgeScheduler):
             })
         return rows
 
-    def submit(self, job, task_ident=None, cascade=False):
+    def submit(self, job, resubmit=False, task_ident=None, cascade=False):
         """
         runs a subprocess sbatch command
 
@@ -542,7 +548,7 @@ class TorqueScheduler(SgeScheduler):
             cascade (bool): submit dependencies if they have not yet been submitted
         """
         command = ['qsub', '-j', 'oe']  # always join output as stdout
-        if job.job_ident:
+        if job.job_ident and not resubmit:
             raise ValueError('Job has already been submitted and has the job number', job.job_ident)
         if job.queue:
             command.append('-q {}'.format(job.queue))
@@ -563,25 +569,37 @@ class TorqueScheduler(SgeScheduler):
             command.extend(['-N', job.name])
         if job.stdout:
             command.extend(['-o', job.stdout.format(
-                name='\${}'.format(self.ENV_JOB_NAME),
-                job_ident='\${}'.format(self.ENV_JOB_IDENT),
-                task_ident='\${}'.format(self.ENV_TASK_IDENT)
+                name='${}'.format(self.ENV_JOB_NAME),
+                job_ident='${}'.format(self.ENV_JOB_IDENT),
+                task_ident='${}'.format(self.ENV_TASK_IDENT)
             )])
         if job.mail_type and job.mail_user:
             command.extend(['-m', job.mail_type])
             command.extend(['-M', job.mail_user])
         # options specific to job arrays
         if isinstance(job, ArrayJob):
-            if task_ident is None:  # default to all
-                command.extend(['-t', '1-{}'.format(job.tasks)])
+            concurrency_limit = '' if job.concurrency_limit is None else '%{}'.format(job.concurrency_limit)
+
+            if task_ident is None and job.tasks != 1:  # default to all
+                command.extend(['-t', '1-{}{}'.format(job.tasks, concurrency_limit)])
             else:
-                command.append(['-t', str(task_ident)])
+                command.extend(['-t', '{}{}'.format(task_ident if task_ident is not None else 1, concurrency_limit)])
 
         command.append(job.script)
         content = subprocess.check_output(command).decode('utf8').strip()
 
         job.job_ident = content.strip()
         job.status = JOB_STATUS.SUBMITTED
+        job.status_comment = ''
+
+        # update task status
+        try:
+            for task in job.task_list:
+                task.status = job.status
+                task.status_comment = job.status_comment
+        except AttributeError:
+            pass
+
 
     def update_info(self, job):
         """

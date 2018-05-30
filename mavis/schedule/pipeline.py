@@ -451,9 +451,9 @@ class Pipeline:
         """
         run_time = -1
         if not job.job_ident and submit:
-            self.scheduler.submit(job)
+            self.scheduler.submit(job, resubmit)
         elif job.job_ident and resubmit and job.status in self.ERROR_STATES:
-            self.scheduler.submit(job)
+            self.scheduler.submit(job, resubmit)
         if job.job_ident:
             log('{} ({}) is {}'.format(job.name, job.job_ident, job.status))
         else:
