@@ -410,14 +410,13 @@ def load_templates(*filepaths):
     return templates
 
 
-
 class ReferenceFile:
 
     CACHE = {}  # store loaded file to avoid re-loading
 
     def __init__(self, loader, *filepaths, eager_load=False, assert_exists=False, **opt):
         """
-        Args
+        Args:
             *filepaths (str): list of paths to load
             loader (callable): function to load the file. Should return an object that can be assigned as the content
             eager_load (bool=False): load the files immeadiately

@@ -9,7 +9,6 @@ from mavis.annotate.file_io import load_reference_genes, load_reference_genome, 
 from mavis.annotate.main import main as annotate_main
 from mavis.cluster.main import main as cluster_main
 from mavis.constants import DISEASE_STATUS, PROTOCOL
-from mavis.util import ChrListString
 from mavis.validate.main import main as validate_main
 import pysam
 
@@ -29,7 +28,7 @@ def setUpModule():
     print('setup start')
     annotations = load_reference_genes(get_data('mock_annotations.json'))
     reference_genome = load_reference_genome(get_data('mock_reference_genome.fa'))
-    template_metadata = load_templates(get_data('cytoband.txt'))
+    template_metadata = load_templates(get_data('cytoBand.txt'))
     genome_bam_fh = pysam.AlignmentFile(get_data('mock_reads_for_events.sorted.bam'))
     trans_bam_fh = pysam.AlignmentFile(get_data('mock_trans_reads_for_events.sorted.bam'))
     print('setup loading is complete')
@@ -53,7 +52,7 @@ class TestPipeline(unittest.TestCase):
         # test the clustering
         cluster_files = cluster_main(
             [get_data('mock_sv_events.tsv')], self.output, False, 'mock-A36971', PROTOCOL.GENOME, DISEASE_STATUS.DISEASED,
-            limit_to_chr=ChrListString([]), log_args=True,
+            limit_to_chr=[None], log_args=True,
             masking=masking, cluster_clique_size=15, cluster_radius=20,
             uninformative_filter=True, max_proximity=5000,
             annotations=annotations, min_clusters_per_file=5, max_files=1

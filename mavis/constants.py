@@ -12,6 +12,12 @@ from Bio.Seq import Seq
 from tab import cast_boolean, cast_null
 
 
+PROGNAME = 'mavis'
+EXIT_OK = 0
+EXIT_ERROR = 1
+EXIT_INCOMPLETE = 2
+
+
 class MavisNamespace:
     """
     Namespace to hold module constants
@@ -24,6 +30,7 @@ class MavisNamespace:
         2
     """
     DELIM = r'[;,\s]+'
+    """:class:`str`: delimiter to use is parsing listable variables from the environment or config file"""
 
     def __init__(self, *pos, **kwargs):
         object.__setattr__(self, '_defns', {})
@@ -50,9 +57,12 @@ class MavisNamespace:
             self._set_type(attr, type(value))
 
     def __repr__(self):
-        return '{}({})'.format(self.__class__.__name__, ', '.join(['{}={}'.format(k, repr(v)) for k, v in self.items()]))
+        return '{}({})'.format(self.__class__.__name__, ', '.join(sorted(['{}={}'.format(k, repr(v)) for k, v in self.items()])))
 
     def discard(self, attr):
+        """
+        Remove a variable if it exists
+        """
         self._members.pop(attr, None)
         self._listable.discard(attr)
         self._nullable.discard(attr)
@@ -61,6 +71,14 @@ class MavisNamespace:
         self._env_overwritable.discard(attr)
 
     def get_env_name(self, attr):
+        """
+        Get the name of the corresponding environment variable
+
+        Example:
+            >>> nspace = MavisNamespace(a=1)
+            >>> nspace.get_env_name('a')
+            'MAVIS_A'
+        """
         if self._env_prefix:
             return '{}_{}'.format(self._env_prefix, attr).upper()
         return attr.upper()
@@ -81,6 +99,15 @@ class MavisNamespace:
 
     @classmethod
     def parse_listable_string(cls, string, cast_type=str, nullable=False):
+        """
+        Given some string, parse it into a list
+
+        Example:
+            >>> MavisNamespace.parse_listable_string('1,2,3', int)
+            [1, 2, 3]
+            >>> MavisNamespace.parse_listable_string('1;2,None', int, True)
+            [1, 2, None]
+        """
         result = []
         string = string.strip()
         for val in re.split(cls.DELIM, string) if string else []:
@@ -91,12 +118,24 @@ class MavisNamespace:
         return result
 
     def is_env_overwritable(self, attr):
+        """
+        Returns:
+            bool: True if the variable is overrided by specifying the environment variable equivalent
+        """
         return attr in self._env_overwritable
 
     def is_listable(self, attr):
+        """
+        Returns:
+            bool: True if the variable should be parsed as a list
+        """
         return attr in self._listable
 
     def is_nullable(self, attr):
+        """
+        Returns:
+            bool: True if the variable can be set to None
+        """
         return attr in self._nullable
 
     def __getattribute__(self, attr):
@@ -301,7 +340,16 @@ class MavisNamespace:
 
     def add(self, attr, value, defn=None, cast_type=None, nullable=False, env_overwritable=False, listable=False):
         """
-        Add an attribute to the name space. Optionally include cast_type and definition
+        Add an attribute to the name space
+
+        Args:
+            attr (str): name of the attribute being added
+            value: the value of the attribute
+            defn (str): the definition, will be used in generating documentation and help menus
+            cast_type (callable): the function to use in casting the value
+            nullable (bool): True if this attribute can have a None value
+            env_overwritable (bool): True if this attribute will be overriden by its environment variable equivalent
+            listable (bool): True if this attribute can have multiple values
 
         Example:
             >>> nspace = MavisNamespace()
@@ -358,18 +406,8 @@ def float_fraction(num):
     return num
 
 
-def nullable_int(num):
-    """
-    casts input to an int if not an accepted null value. See :func:tab.tab.cast_null
-    """
-    try:
-        return cast_null(num)
-    except TypeError:
-        pass
-    return int(num)
-
-
 COMPLETE_STAMP = 'MAVIS.COMPLETE'
+""":class:`str`: Filename for all complete stamp files"""
 
 SUBCOMMAND = MavisNamespace(
     ANNOTATE='annotate',
@@ -379,7 +417,6 @@ SUBCOMMAND = MavisNamespace(
     CLUSTER='cluster',
     PAIR='pairing',
     SUMMARY='summary',
-    CHECKER='checker',
     CONFIG='config',
     CONVERT='convert',
     OVERLAY='overlay'
@@ -387,14 +424,14 @@ SUBCOMMAND = MavisNamespace(
 """:class:`MavisNamespace`: holds controlled vocabulary for allowed pipeline stage values
 
 - annotate
-- validate
-- pipeline
 - cluster
-- pairing
-- summary
-- checker
 - config
 - convert
+- pairing
+- pipeline
+- schedule
+- summary
+- validate
 """
 
 

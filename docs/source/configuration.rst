@@ -91,27 +91,8 @@ or as a command line argument to the cluster stage
 Configuring the Job Scheduler
 -------------------------------
 
-MAVIS supports submission to both :term:`SGE` and :term:`SLURM` by default. This can be configured using the :term:`scheduler` setting. Users requiring
+MAVIS supports submission to multiple schedulers: :term:`SGE`, :term:`SLURM` (default), and :term:`TORQUE`. This can be configured using the :term:`scheduler` setting. Users requiring
 support for other schedulers may make a request by `submitting an issue to our github page <https://github.com/bcgsc/mavis/issues>`__. Additionally, developers looking to
 extend the functionality may submit a pull request (Please see the :ref:`guidelines for contributors <guideline-for-contributors>`).
 
-The submission scripts which MAVIS generates are all submitted with the main pipeline submission script. However each of these scripts is simply a bash command with scheduler specific
-submission information contained in the header portion and can therefore also be run locally.
-
-As an immediate solution to an unsupported scheduler, these submit scripts can also be edited directly.
-
-For example, the header of a validation job submit script might looks something like this if created with SLURM as the default scheduler.
-
-.. code:: bash
-
-    #!/bin/bash -l
-    #SBATCH --export=ALL
-    #SBATCH -J MV_A10000_batch-63cpNZvyGDfEPNQbk4dw7N-1
-    #SBATCH --mem 16000M
-    #SBATCH --partition=short
-    #SBATCH -o /path/to/mavis/output/folder/A10000_diseased_genome/validate/batch-63cpNZvyGDfEPNQbk4dw7N-1/slurm-%x-%j.log
-    #SBATCH -t 16:00:00
-
-What each setting corresponds to can be found in the documentation at the `SLURM sbatch page <https://slurm.schedmd.com/sbatch.html>`__.
-Many schedulers use similar commands and would simply require replacing the slurm specific command with one appropriate for the desired scheduler. Additionally the main pipeline
-submit script should be altered to match the dependency chaining syntax of the desired scheduler.
+MAVIS can also be run locally without a scheduler. This uses the python multiprocessing library to manage MAVIS jobs.

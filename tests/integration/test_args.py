@@ -20,13 +20,6 @@ def expect_error(testcase, func, catchtype):
     else:
         raise AssertionError('Did not throw the expected error', catchtype)
 
-class TestConfig(unittest.TestCase):
-    pass
-
-
-class TestPipeline(unittest.TestCase):
-    pass
-
 
 class TestCluster(unittest.TestCase):
 
@@ -237,15 +230,3 @@ class TestValidate(unittest.TestCase):
             with patch.object(sys, 'argv', args):
                 err = expect_error(self, mavis_main, SystemExit)
                 self.assertEqual(ARGUMENT_ERROR, err.code)
-
-
-class TestAnnotate(unittest.TestCase):
-    pass
-
-
-class TestPairing(unittest.TestCase):
-    pass
-
-
-class TestSummary(unittest.TestCase):
-    pass

@@ -2,7 +2,7 @@ import glob
 import os
 
 
-def glob_exists(*pos, strict=True, n=1):
+def glob_exists(*pos, strict=False, n=1):
     globexpr = os.path.join(*pos)
     file_list = glob.glob(globexpr)
     if strict and len(file_list) == n:

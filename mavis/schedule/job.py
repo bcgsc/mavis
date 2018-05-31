@@ -1,11 +1,9 @@
-from datetime import timedelta, datetime
 import os
-import subprocess
 import re
 import time
 
 from ..constants import SUBCOMMAND, MavisNamespace
-from .constants import JOB_STATUS, OPTIONS, STD_OPTIONS, SCHEDULER, cumulative_job_state, MAIL_TYPE
+from .constants import JOB_STATUS, OPTIONS, STD_OPTIONS
 
 
 class LogFile:
@@ -13,8 +11,15 @@ class LogFile:
     stores information about the log status
     """
     STATUS = MavisNamespace('EMPTY', 'CRASH', 'INCOMPLETE', 'COMPLETE')
+    """:class:`~mavis.constants.MavisNamespace`: The status of the job based on parsing of the logfile"""
 
     def __init__(self, filename, status, message=None):
+        """
+        Args:
+            filename (str): path to the logfile
+            status (LogFile.STATUS): the status of the logfile
+            message (str): the message parsed from the logfile. Generally this is an error from the log
+        """
         self.filename = filename
         self.status = status
         self.message = message
@@ -25,7 +30,7 @@ class LogFile:
         given a file parse to see if it looks like a complete log file (contains run time),
         was truncated, or reported an error
         """
-        if not os.path.exists(filename):
+        if not os.path.isfile(filename):
             raise FileNotFoundError('Log file does not exist', filename)
         log = None
         with open(filename, 'r') as fh:
@@ -60,13 +65,17 @@ class Job:
         **options
     ):
         """
-        Args
+        Args:
             stage (str): the mavis pipleine stage this job belongs to
             job_ident (int): the job number/id according to the scheduler being used
+            output_dir (str): path to the output directory where logs/stamps for this job will be written
             name (str): the job name according to the scheduler being used
             dependencies (list of Job): list of jobs which must complete for this job to run
             stdout (str): basename of the file to write std output to
             script (str): path to the script which contains the commands for the job
+            created_at (int): the time stamp for when the job was created (created != submitted)
+            status (~mavis.schedule.constants.JOB_STATUS): The current (since last checked) status of the job
+            status_comment (str): the comment which describes the status, generally this is used for reporting errors from the log file or failed dependencies (SLURM)
             options (**dict): override default options specified by OPTIONS
         """
         self.stage = SUBCOMMAND.enforce(stage)
@@ -105,15 +114,26 @@ class Job:
         return result
 
     def logfile(self):
+        """
+        returns the path to the logfile with job name and job id substituted into the stdout pattern
+        """
         return self.stdout.format(name=self.name, job_ident=self.job_ident)
 
     def complete_stamp(self):
+        """
+        returns the path to the expected complete stamp
+        """
         return os.path.join(self.output_dir, 'MAVIS.COMPLETE')
 
 
 class ArrayJob(Job):
 
     def __init__(self, stage, tasks, concurrency_limit=OPTIONS.concurrency_limit, **kwargs):
+        """
+        Args:
+            concurrency_limit (int): the maximum number of tasks to be run concurrently for any given job array
+            tasks (int): the number of tasks in the job array
+        """
         Job.__init__(self, stage, **kwargs)
         self.stdout = os.path.join(self.output_dir, 'job-{name}-{job_ident}-{task_ident}.log') if 'stdout' not in kwargs else kwargs['stdout']
         self.concurrency_limit = concurrency_limit
@@ -127,7 +147,7 @@ class ArrayJob(Job):
         return Job.complete_stamp(self).format(task_ident=task_ident)
 
     def flatten(self):
-        result = {k:v for k, v in Job.flatten(self).items() if k != 'task_list'}
+        result = {k: v for k, v in Job.flatten(self).items() if k != 'task_list'}
         return result
 
 

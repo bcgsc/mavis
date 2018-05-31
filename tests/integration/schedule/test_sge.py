@@ -143,6 +143,7 @@ ar_sub_time  undefined
 category     -U transabyss_users
 """
 
+
 class TestUpdate(unittest.TestCase):
     # TODO: status of array job
     # TODO: status of single job
@@ -162,7 +163,7 @@ job-ID  prior   name       user         state submit/start at     queue         
             tasks=10,
             stage='validate'
         )
-        _scheduler.SgeScheduler.update_info(job)
+        _scheduler.SgeScheduler().update_info(job)
         self.assertEqual(_constants.JOB_STATUS.PENDING, job.status)
 
     @mock.patch('subprocess.check_output')
@@ -188,7 +189,7 @@ job-ID  prior   name       user         state submit/start at     queue         
             tasks=10,
             stage='validate'
         )
-        _scheduler.SgeScheduler.update_info(job)
+        _scheduler.SgeScheduler().update_info(job)
 
         for task in job.task_list[:9]:
             self.assertEqual(_constants.JOB_STATUS.RUNNING, task.status)
@@ -208,7 +209,7 @@ job-ID  prior   name       user         state submit/start at     queue         
             job_ident='217940',
             stage='validate'
         )
-        _scheduler.SgeScheduler.update_info(job)
+        _scheduler.SgeScheduler().update_info(job)
         self.assertEqual(_constants.JOB_STATUS.PENDING, job.status)
 
     @mock.patch('subprocess.check_output')
@@ -224,7 +225,7 @@ job-ID  prior   name       user         state submit/start at     queue         
             name='arrtest',
             tasks=3
         )
-        _scheduler.SgeScheduler.update_info(job)
+        _scheduler.SgeScheduler().update_info(job)
         self.assertEqual(_constants.JOB_STATUS.COMPLETED, job.status)
         for task in job.task_list:
             self.assertEqual(_constants.JOB_STATUS.COMPLETED, task.status)
@@ -234,7 +235,7 @@ class TestParseQacct(unittest.TestCase):
 
     def test_job_array(self):
         content = QACCT_ARR3_OK
-        rows = _scheduler.SgeScheduler.parse_qacct(content)
+        rows = _scheduler.SgeScheduler().parse_qacct(content)
         expected = {
             'job_ident': '3757289',
             'name': 'arrtest',
@@ -294,7 +295,7 @@ arid         undefined
 ar_sub_time  undefined
 category     -U transabyss_users -q transabyss.q -l h_vmem=3.85G,mem_free=3.85G,mem_token=3.85G -pe openmpi 8
         """
-        rows = _scheduler.SgeScheduler.parse_qacct(content)
+        rows = _scheduler.SgeScheduler().parse_qacct(content)
         self.assertEqual(1, len(rows))
         expected = {
             'job_ident': '3744253',
@@ -354,7 +355,7 @@ ar_sub_time  undefined
 category     -U transabyss_users
         """
 
-        rows = _scheduler.SgeScheduler.parse_qacct(content)
+        rows = _scheduler.SgeScheduler().parse_qacct(content)
         self.assertEqual(1, len(rows))
         expected = {
             'job_ident': '3755560',
@@ -413,7 +414,7 @@ arid         undefined
 ar_sub_time  undefined
 category     -U transabyss_users -l h_rt=57600,h_vmem=16000M,mem_free=16000M,mem_token=16000M
         """
-        rows = _scheduler.SgeScheduler.parse_qacct(content)
+        rows = _scheduler.SgeScheduler().parse_qacct(content)
         self.assertEqual(1, len(rows))
         expected = {
             'job_ident': '3760712',
@@ -472,7 +473,7 @@ arid         undefined
 ar_sub_time  undefined
 category     -U transabyss_users
         """
-        rows = _scheduler.SgeScheduler.parse_qacct(content)
+        rows = _scheduler.SgeScheduler().parse_qacct(content)
         self.assertEqual(1, len(rows))
         expected = {
             'job_ident': '3757249',
@@ -491,7 +492,7 @@ Total System Usage
    3786481073 6713770428.951 4374477378.582 11585461604.347   187237653407.317      156350319.140              0.000
         """
         with self.assertRaises(ValueError):
-            _scheduler.SgeScheduler.parse_qacct(content)
+            _scheduler.SgeScheduler().parse_qacct(content)
 
 
 class TestParseQstat(unittest.TestCase):
@@ -501,7 +502,7 @@ job-ID  prior   name       user         state submit/start at     queue         
 -----------------------------------------------------------------------------------------------------------------
  217940 1.50000 subtest.sh creisle      qw    05/22/2018 23:39:55                                    1
         """
-        rows = _scheduler.SgeScheduler.parse_qstat(content)
+        rows = _scheduler.SgeScheduler().parse_qstat(content)
         self.assertEqual(1, len(rows))
         expected = {
             'job_ident': '217940',
@@ -513,5 +514,5 @@ job-ID  prior   name       user         state submit/start at     queue         
         self.assertEqual(expected, rows[0])
 
     def test_no_jobs_found(self):
-        rows = _scheduler.SgeScheduler.parse_qstat("")
+        rows = _scheduler.SgeScheduler().parse_qstat("")
         self.assertEqual([], rows)

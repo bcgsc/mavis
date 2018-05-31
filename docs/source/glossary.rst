@@ -75,6 +75,9 @@ General Terms
     SLURM
         SLURM is a job scheduling system for cluster management see https://slurm.schedmd.com/quickstart.html.
 
+    TORQUE
+        TORQUE is a job scheduling system for cluster management see http://www.adaptivecomputing.com/products/open-source/torque/.
+
     BWA
         BWA is an alignement tool. See https://github.com/lh3/bwa for install instructions.
 

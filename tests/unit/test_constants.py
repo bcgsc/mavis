@@ -55,8 +55,8 @@ class TestMavisNamespace(unittest.TestCase):
         self.assertEqual(1, self.namespace.a)
         self.assertEqual(1, self.namespace.get('a', None))
 
-    def test_flatten(self):
-        self.assertEqual({'a': 1, 'b': 2, 'c': 3}, self.namespace.flatten())
+    def test_to_dict(self):
+        self.assertEqual({'a': 1, 'b': 2, 'c': 3}, self.namespace.to_dict())
 
     def test_get_with_default(self):
         self.assertEqual(4, self.namespace.get('d', 4))

@@ -10,6 +10,7 @@ from mavis.main import main
 
 from ...util import get_data
 
+
 class TestReadBuildFile(unittest.TestCase):
 
     # TODO: test_skip_validate
@@ -73,7 +74,7 @@ output_dir = temp5
         self.assertEqual(result.pairing, result.summary.dependencies[0])
 
     def test_parsed_types(self):
-        build =  _pipeline.Pipeline.read_build_file(get_data('build.cfg'))
+        build = _pipeline.Pipeline.read_build_file(get_data('build.cfg'))
         self.assertIs(build.validations[0].import_env, True)
         self.assertIs(build.validations[0].concurrency_limit, None)
 
@@ -85,7 +86,7 @@ class TestBuildPipeline(unittest.TestCase):
     def setUp(self):
         self.temp_output = tempfile.mkdtemp()
         # clear any environment variables
-        self.env_patch = mock.patch('os.environ', {k:v for k, v in os.environ.items() if not k.startswith('MAVIS_')})
+        self.env_patch = mock.patch('os.environ', {k: v for k, v in os.environ.items() if not k.startswith('MAVIS_')})
         self.env_patch.start()
 
     def test_basic_slurm(self):
@@ -121,13 +122,10 @@ class TestBuildPipeline(unittest.TestCase):
         self.assertIsNotNone(build.pairing)
         self.assertIsNotNone(build.summary)
 
-    def test_basic_submit(self):
-        pass
-
+    # TODO: test_basic_submit
     # TODO: test pipeline failure
     # TODO: test conversion failure
 
     def tearDown(self):
         shutil.rmtree(self.temp_output)
         self.env_patch.stop()
-

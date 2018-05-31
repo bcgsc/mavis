@@ -22,8 +22,6 @@ from ..constants import CALL_METHOD, COLUMNS, MavisNamespace, PROTOCOL
 from ..util import filter_on_overlap, generate_complete_stamp, LOG, mkdirp, output_tabbed_file, read_inputs, write_bed_file
 
 
-
-
 def main(
     inputs, output,
     bam_file, strand_specific,

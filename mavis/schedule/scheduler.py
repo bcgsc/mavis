@@ -1,12 +1,13 @@
-from datetime import timedelta, datetime
+from datetime import timedelta
 import subprocess
 import re
 import logging
 import socket
 
 from ..util import LOG
+from ..config import NullableType
 
-from .job import Job, ArrayJob, Task
+from .job import ArrayJob
 from .constants import SCHEDULER, JOB_STATUS, cumulative_job_state, MAIL_TYPE
 
 
@@ -15,18 +16,34 @@ class Scheduler:
     Class responsible for methods interacting with the scheduler
     """
     ARRAY_DEPENDENCY = None
+    """:class:`str`: string which takes format arguments and is used to add array dependency arguments for job submission"""
     JOB_DEPENDENCY = None
-    CORR_ARRAY_DEPENDENCY = None
+    """:class:`str`: string which takes format arguments and is used to add job dependency arguments for job submission"""
     ENV_TASK_IDENT = '{TASK_IDENT}'
+    """:class:`str`: the expected pattern of environment variables which store the task id"""
     DEPENDENCY_DELIM = ':'
+    """:class:`str`: the delimiter to use between jobs of the same depenency type"""
     HEADER_PREFIX = '#'
 
     def __init__(self, concurrency_limit=None, remote_head_ssh='', remote_head_name=''):
-        self.concurrency_limit = concurrency_limit
+        """
+        Args:
+            concurrency_limit (int): Size of the pool, the maximum allowed concurrent processes. Defaults to one less than the total number available
+        """
+        self.concurrency_limit = NullableType(int)(concurrency_limit)
         self.remote_head_ssh = remote_head_ssh
         self.remote_head_name = remote_head_name
 
     def command(self, command, shell=False):
+        """
+        Wrapper to deal with subprocess commands. If configured and not on the head node currently, will send the command through ssh
+
+        Args:
+            command (list or str): the command can be a list or a string and is passed to the subprocess to be run
+
+        Returns:
+            str: the content returns from stdout of the subprocess
+        """
         if self.remote_head_ssh and self.remote_head_name != socket.gethostname():
             # ssh to remote head and run the command there
             if not isinstance(command, str):
@@ -38,6 +55,9 @@ class Scheduler:
         pass
 
     def submit(self, job, task_ident=None, cascade=False):
+        """
+        submit a job to the scheduler
+        """
         raise NotImplementedError('abstract method')
 
     def update_info(self, job):
@@ -49,12 +69,11 @@ class Scheduler:
     def cancel(self, job):
         raise NotImplementedError('abstract method')
 
-    @classmethod
-    def format_dependencies(cls, job, task_ident=None, cascade=False):
+    def format_dependencies(self, job, task_ident=None, cascade=False):
         """
         returns a string representing the dependency argument
         """
-        if not cls.ARRAY_DEPENDENCY or not cls.JOB_DEPENDENCY:
+        if not self.ARRAY_DEPENDENCY or not self.JOB_DEPENDENCY:
             raise NotImplementedError('Abstract class. Implementing class must define class attributes ARRAY_DEPENDENCY and JOB_DEPENDENCY')
 
         if len(job.dependencies) == 1 and isinstance(job, ArrayJob) and isinstance(job.dependencies[0], ArrayJob) and task_ident is None:
@@ -64,16 +83,16 @@ class Scheduler:
             if not cascade and not dependency.job_ident:
                 raise ValueError('The dependencies must be submitted before the dependent job', job, dependency)
             elif not dependency.job_ident:
-                cls.submit(dependency, task_ident, cascade=cascade)
+                self.submit(dependency, task_ident=task_ident, cascade=cascade)
             if task_ident is not None:
-                return cls.ARRAY_DEPENDENCY.format('{}_{}'.format(dependency.job_ident, dependency.task_ident))
-            return cls.ARRAY_DEPENDENCY.format(dependency.job_ident)
+                return self.ARRAY_DEPENDENCY.format('{}_{}'.format(dependency.job_ident, dependency.task_ident))
+            return self.ARRAY_DEPENDENCY.format(dependency.job_ident)
         for dependency in job.dependencies:
             if not dependency.job_ident:
                 if not cascade:
                     raise ValueError('The dependencies must be submitted before the dependent job', job, dependency)
-                cls.submit(dependency, task_ident, cascade=cascade)
-        return cls.JOB_DEPENDENCY.format(cls.DEPENDENCY_DELIM.join([d.job_ident for d in job.dependencies]))
+                self.submit(dependency, task_ident=task_ident, cascade=cascade)
+        return self.JOB_DEPENDENCY.format(self.DEPENDENCY_DELIM.join([d.job_ident for d in job.dependencies]))
 
 
 class SlurmScheduler(Scheduler):
@@ -82,6 +101,7 @@ class SlurmScheduler(Scheduler):
     SLURM docs can be found here https://slurm.schedmd.com
     """
     NAME = SCHEDULER.SLURM
+    """:attr:`~mavis.schedule.constants.SCHEDULER`: the type of scheduler"""
     ARRAY_DEPENDENCY = '--dependency=aftercorr:{}'
     JOB_DEPENDENCY = '--dependency=afterok:{}'
     ENV_TASK_IDENT = 'SLURM_ARRAY_TASK_ID'
@@ -90,7 +110,7 @@ class SlurmScheduler(Scheduler):
         """
         runs a subprocess sbatch command
 
-        Args
+        Args:
             job (Job): the job to be submitted
             task_ident (int): submit only a particular task of the current job
             cascade (bool): submit dependencies if they have not yet been submitted
@@ -128,7 +148,7 @@ class SlurmScheduler(Scheduler):
                 command.append('--array={}{}'.format(task_ident, concurrency_limit))
 
         command.append(job.script)
-        content =  self.command(command)
+        content = self.command(command)
 
         match = re.match(r'^submitted batch job (\d+)$', content, re.IGNORECASE)
         if not match:
@@ -136,10 +156,20 @@ class SlurmScheduler(Scheduler):
         job.job_ident = match.group(1)
         job.status = JOB_STATUS.SUBMITTED
 
+        try:
+            for task in job.task_list:
+                task.status = job.status
+                task.status_comment = job.status_comment
+        except AttributeError:
+            pass
+
     @classmethod
     def parse_sacct(cls, content):
         """
         parses content returned from the sacct command
+
+        Args:
+            content (str): the content returned from the sacct command
         """
         lines = content.strip().split('\n')
         header = lines[0].split('|')
@@ -204,6 +234,9 @@ class SlurmScheduler(Scheduler):
         return rows
 
     def update_info(self, job):
+        """
+        Pull job information about status etc from the scheduler. Updates the input job
+        """
         if not job.job_ident:
             return
         command = ['sacct', '-j', job.job_ident, '--long', '--parsable2']
@@ -232,11 +265,14 @@ class SgeScheduler(Scheduler):
     Class for managing interactions with the SGE scheduler
     """
     NAME = SCHEDULER.SGE
+    """:attr:`~mavis.schedule.constants.SCHEDULER`: the type of scheduler"""
     ARRAY_DEPENDENCY = '-hold_jid_ad {}'
     JOB_DEPENDENCY = '-hold_jid {}'
     ENV_TASK_IDENT = 'SGE_TASK_ID'
     ENV_JOB_IDENT = 'JOB_ID'
+    """:class:`str`: expected pattern for environment variables which store the job id"""
     ENV_JOB_NAME = 'JOB_NAME'
+    """:class:`str`: expected pattern for environment variables which store the job name"""
     DEPENDENCY_DELIM = ','
     HEADER_PREFIX = '#$'
 
@@ -252,7 +288,7 @@ class SgeScheduler(Scheduler):
         'T': JOB_STATUS.ERROR,
         't': JOB_STATUS.RUNNING
     }
-
+    """:class:`dict`: mapping from SGE job states to their MAVIS JOB_STATUS equivalent"""
     MAIL_TYPE_MAPPING = {
         MAIL_TYPE.BEGIN: 'b',
         MAIL_TYPE.NONE: 'n',
@@ -260,13 +296,14 @@ class SgeScheduler(Scheduler):
         MAIL_TYPE.END: 'e',
         MAIL_TYPE.ALL: 'abes'
     }
+    """:class:`dict`: mapping from MAVIS mail type options to SGE mail options"""
 
     @classmethod
     def parse_qacct(cls, content):
         """
         parses the information produced by qacct
 
-        Args
+        Args:
             content (str): the content returned from the qacct command
 
         Raises
@@ -280,7 +317,7 @@ class SgeScheduler(Scheduler):
             for line in section.split('\n'):
                 if re.match(r'^[\s=]*$', line):
                     continue
-                col, val = re.split('\s+', line, 1)
+                col, val = re.split(r'\s+', line, 1)
                 val = val.strip()
                 if val == 'undefined':
                     val = None
@@ -310,7 +347,7 @@ class SgeScheduler(Scheduler):
         """
         parses the qstat content into rows/dicts representing individual jobs
 
-        Args
+        Args:
             content (str): content returned from the qstat command
         """
         header = ['job-ID', 'prior', 'name', 'user', 'state', 'submit/start at', 'queue', 'slots', 'ja-task-ID']
@@ -355,7 +392,7 @@ class SgeScheduler(Scheduler):
         """
         runs a subprocess sbatch command
 
-        Args
+        Args:
             job (Job): the job to be submitted
             task_ident (int): submit only a particular task of the current job
             cascade (bool): submit dependencies if they have not yet been submitted
@@ -391,9 +428,9 @@ class SgeScheduler(Scheduler):
                 command.append(['-t', str(task_ident)])
         if job.stdout:
             command.extend(['-o', job.stdout.format(
-                name='\${}'.format(self.ENV_JOB_NAME),
-                job_ident='\${}'.format(self.ENV_JOB_IDENT),
-                task_ident='\$TASK_ID'
+                name='\\${}'.format(self.ENV_JOB_NAME),
+                job_ident='\\${}'.format(self.ENV_JOB_IDENT),
+                task_ident='\\$TASK_ID'
             )])
 
         command.append(job.script)
@@ -409,6 +446,12 @@ class SgeScheduler(Scheduler):
         job.job_ident = match.group(2)
         job.status = JOB_STATUS.SUBMITTED
 
+        try:
+            for task in job.task_list:
+                task.status = job.status
+                task.status_comment = job.status_comment
+        except AttributeError:
+            pass
 
     def update_info(self, job):
         """
@@ -450,13 +493,19 @@ class SgeScheduler(Scheduler):
 
 
 class TorqueScheduler(SgeScheduler):
+    """
+    Class for managing interactions with the Torque scheduler
+    """
     NAME = SCHEDULER.TORQUE
+    """:attr:`~mavis.schedule.constants.SCHEDULER`: the type of scheduler"""
     DEPENDENCY_DELIM = ':'
     ARRAY_DEPENDENCY = '-W depend=afterokarray:{}'
     JOB_DEPENDENCY = '-W depend=afterok:{}'
     ENV_TASK_IDENT = 'PBS_ARRAYID'
     ENV_JOB_IDENT = 'PBS_JOBID'
+    """:class:`str`: expected pattern for environment variables which store the job id"""
     ENV_JOB_NAME = 'PBS_JOBNAME'
+    """:class:`str`: expected pattern for environment variables which store the job name"""
     TAB_SIZE = 8
     MAIL_TYPE_MAPPING = {
         MAIL_TYPE.BEGIN: 'b',
@@ -465,6 +514,7 @@ class TorqueScheduler(SgeScheduler):
         MAIL_TYPE.END: 'e',
         MAIL_TYPE.ALL: 'abef'
     }
+    """:class:`dict`: mapping from MAVIS mail type options to Torque mail options"""
     STATE_MAPPING = {
         'C': JOB_STATUS.COMPLETED,
         'E': JOB_STATUS.RUNNING,
@@ -475,13 +525,13 @@ class TorqueScheduler(SgeScheduler):
         'S': JOB_STATUS.ERROR,
         'R': JOB_STATUS.RUNNING
     }
+    """:class:`dict`: mapping from Torque job states to their MAVIS JOB_STATUS equivalent"""
 
-    @classmethod
-    def format_dependencies(cls, job, task_ident=None, cascade=False):
+    def format_dependencies(self, job, task_ident=None, cascade=False):
         """
         returns a string representing the dependency argument
         """
-        if not cls.ARRAY_DEPENDENCY or not cls.JOB_DEPENDENCY:
+        if not self.ARRAY_DEPENDENCY or not self.JOB_DEPENDENCY:
             raise NotImplementedError('Abstract class. Implementing class must define class attributes ARRAY_DEPENDENCY and JOB_DEPENDENCY')
 
         arr_dependencies = []
@@ -490,7 +540,7 @@ class TorqueScheduler(SgeScheduler):
         for dep in job.dependencies:
             if not dep.job_ident:
                 if cascade:
-                    cls.submit(dep, task_ident, cascade=cascade)
+                    self.submit(dep, task_ident, cascade=cascade)
                 else:
                     raise ValueError('An array job must be dependent only on another single array job with the same number of tasks', job, dep)
 
@@ -502,9 +552,9 @@ class TorqueScheduler(SgeScheduler):
         result = []
 
         if arr_dependencies:
-            result.append(cls.ARRAY_DEPENDENCY.format(cls.DEPENDENCY_DELIM.join(arr_dependencies)))
+            result.append(self.ARRAY_DEPENDENCY.format(self.DEPENDENCY_DELIM.join(arr_dependencies)))
         if job_dependencies:
-            result.append(cls.JOB_DEPENDENCY.format(cls.DEPENDENCY_DELIM.join(job_dependencies)))
+            result.append(self.JOB_DEPENDENCY.format(self.DEPENDENCY_DELIM.join(job_dependencies)))
 
         return ','.join(result)
 
@@ -513,7 +563,7 @@ class TorqueScheduler(SgeScheduler):
         """
         parses the qstat content into rows/dicts representing individual jobs
 
-        Args
+        Args:
             content (str): content returned from the qstat command
         """
         content = re.sub(r'\t', ' ' * cls.TAB_SIZE, content)  # PBS  torque tab size is 8
@@ -574,10 +624,11 @@ class TorqueScheduler(SgeScheduler):
         """
         runs a subprocess sbatch command
 
-        Args
+        Args:
             job (Job): the job to be submitted
             task_ident (int): submit only a particular task of the current job
             cascade (bool): submit dependencies if they have not yet been submitted
+            resubmit (bool): if true the job will be submitted even if it already has a job_ident
         """
         command = ['qsub', '-j', 'oe']  # always join output as stdout
         if job.job_ident and not resubmit:
@@ -632,7 +683,6 @@ class TorqueScheduler(SgeScheduler):
         except AttributeError:
             pass
 
-
     def update_info(self, job):
         """
         runs a subprocess scontrol command to get job details and add them to the current job
@@ -664,4 +714,3 @@ class TorqueScheduler(SgeScheduler):
 
         if tasks_updated:
             job.status = cumulative_job_state([t.status for t in job.task_list])
-

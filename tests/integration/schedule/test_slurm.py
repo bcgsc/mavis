@@ -1,19 +1,9 @@
 import unittest
 from unittest import mock
-import configparser
-import tempfile
-import shutil
-import os
-import subprocess
 
-from mavis.schedule import pipeline as _pipeline
 from mavis.schedule import job as _job
 from mavis.schedule import constants as _constants
 from mavis.schedule import scheduler as _scheduler
-from mavis.config import MavisConfig
-from mavis.main import main
-
-from ...util import get_data
 
 
 class TestSubmit(unittest.TestCase):
@@ -32,7 +22,7 @@ class TestSubmit(unittest.TestCase):
             script='submit.sh'
         )
         print(job)
-        _scheduler.SlurmScheduler.submit(job)
+        _scheduler.SlurmScheduler().submit(job)
         self.assertEqual(_constants.JOB_STATUS.SUBMITTED, job.status)
         self.assertEqual('1665695', job.job_ident)
         patch_check.assert_called_with([
@@ -43,7 +33,7 @@ class TestSubmit(unittest.TestCase):
             '-J', 'job1',
             '-o', 'temp/job-%x-%j.log',
             'submit.sh'
-        ])
+        ], shell=False)
 
     @mock.patch('subprocess.check_output')
     def test_dependent_job(self, patch_check):
@@ -62,7 +52,7 @@ class TestSubmit(unittest.TestCase):
             )]
         )
         print(job)
-        _scheduler.SlurmScheduler.submit(job)
+        _scheduler.SlurmScheduler().submit(job)
         self.assertEqual(_constants.JOB_STATUS.SUBMITTED, job.status)
         self.assertEqual('1665695', job.job_ident)
         patch_check.assert_called_with([
@@ -74,7 +64,7 @@ class TestSubmit(unittest.TestCase):
             '-J', 'job1',
             '-o', 'temp/job-%x-%j.log',
             'submit.sh'
-        ])
+        ], shell=False)
 
     @mock.patch('subprocess.check_output')
     def test_cascade(self, patch_check):
@@ -95,7 +85,7 @@ class TestSubmit(unittest.TestCase):
             )]
         )
         print(job)
-        _scheduler.SlurmScheduler.submit(job, cascade=True)
+        _scheduler.SlurmScheduler().submit(job, cascade=True)
         self.assertEqual(_constants.JOB_STATUS.SUBMITTED, job.status)
         self.assertEqual('1665695', job.job_ident)
         patch_check.assert_called_with([
@@ -107,7 +97,7 @@ class TestSubmit(unittest.TestCase):
             '-J', 'job1',
             '-o', 'temp/job-%x-%j.log',
             'submit.sh'
-        ])
+        ], shell=False)
 
     @mock.patch('subprocess.check_output')
     def test_no_cascade_error(self, patch_check):
@@ -129,7 +119,7 @@ class TestSubmit(unittest.TestCase):
         )
         print(job)
         with self.assertRaises(ValueError):
-            _scheduler.SlurmScheduler.submit(job, cascade=False)
+            _scheduler.SlurmScheduler().submit(job, cascade=False)
 
     @mock.patch('subprocess.check_output')
     def test_job_array(self, patch_check):
@@ -142,7 +132,7 @@ class TestSubmit(unittest.TestCase):
             tasks=10
         )
         print(job)
-        _scheduler.SlurmScheduler.submit(job)
+        _scheduler.SlurmScheduler().submit(job)
         self.assertEqual(_constants.JOB_STATUS.SUBMITTED, job.status)
         self.assertEqual('1665695', job.job_ident)
         patch_check.assert_called_with([
@@ -154,7 +144,7 @@ class TestSubmit(unittest.TestCase):
             '-o', 'temp/job-%x-%A-%a.log',
             '--array=1-10',
             'submit.sh'
-        ])
+        ], shell=False)
 
     @mock.patch('subprocess.check_output')
     def test_job_array_concurrency_limit(self, patch_check):
@@ -168,7 +158,7 @@ class TestSubmit(unittest.TestCase):
             tasks=10,
             concurrency_limit=2
         )
-        _scheduler.SlurmScheduler.submit(job)
+        _scheduler.SlurmScheduler().submit(job)
         self.assertEqual(_constants.JOB_STATUS.SUBMITTED, job.status)
         self.assertEqual('1665695', job.job_ident)
         exp = [
@@ -181,7 +171,7 @@ class TestSubmit(unittest.TestCase):
             '--array=1-10%2',
             'submit.sh'
         ]
-        patch_check.assert_called_with(exp)
+        patch_check.assert_called_with(exp, shell=False)
 
 
 class TestUpdate(unittest.TestCase):
@@ -303,7 +293,7 @@ JobID|JobIDRaw|JobName|Partition|MaxVMSize|MaxVMSizeNode|MaxVMSizeTask|AveVMSize
             tasks=3,
             stage='validate'
         )
-        _scheduler.SlurmScheduler.update_info(job)
+        _scheduler.SlurmScheduler().update_info(job)
         self.assertEqual(_constants.JOB_STATUS.COMPLETED, job.status)
         self.assertEqual(3, len(job.task_list))
 
@@ -339,7 +329,7 @@ JobId=1673292 JobName=MP_batch-8PyNX8EN4cBdD9vQd9FrRG
    Power=
 
         """
-        rows = _scheduler.SlurmScheduler.parse_scontrol_show(content)
+        rows = _scheduler.SlurmScheduler().parse_scontrol_show(content)
         self.assertEqual(1, len(rows))
         self.assertEqual({
             'job_ident': '1673292',
@@ -433,7 +423,7 @@ JobId=1673302 ArrayJobId=1673301 ArrayTaskId=1 JobName=subtest.sh
    Power=
 
         """
-        rows = _scheduler.SlurmScheduler.parse_scontrol_show(content)
+        rows = _scheduler.SlurmScheduler().parse_scontrol_show(content)
         self.assertEqual(3, len(rows))
 
 
@@ -444,7 +434,7 @@ class TestParseSacctTable(unittest.TestCase):
 JobID|JobIDRaw|JobName|Partition|MaxVMSize|MaxVMSizeNode|MaxVMSizeTask|AveVMSize|MaxRSS|MaxRSSNode|MaxRSSTask|AveRSS|MaxPages|MaxPagesNode|MaxPagesTask|AvePages|MinCPU|MinCPUNode|MinCPUTask|AveCPU|NTasks|AllocCPUS|Elapsed|State|ExitCode|AveCPUFreq|ReqCPUFreqMin|ReqCPUFreqMax|ReqCPUFreqGov|ReqMem|ConsumedEnergy|MaxDiskRead|MaxDiskReadNode|MaxDiskReadTask|AveDiskRead|MaxDiskWrite|MaxDiskWriteNode|MaxDiskWriteTask|AveDiskWrite|AllocGRES|ReqGRES|ReqTRES|AllocTRES
 1672273|1672273|MS_batch-iJUMYRdLFDsuu9eVzGmmKm|short||||||||||||||||||1|00:00:00|CANCELLED by 1365|0:0||Unknown|Unknown|Unknown|16000Mn||||||||||||cpu=1,mem=16000M,node=1|
         """
-        rows = _scheduler.SlurmScheduler.parse_sacct(content)
+        rows = _scheduler.SlurmScheduler().parse_sacct(content)
         self.assertEqual(1, len(rows))
         row = rows[0]
         self.assertEqual(_constants.JOB_STATUS.CANCELLED, row['status'])

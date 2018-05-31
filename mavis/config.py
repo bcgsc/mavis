@@ -10,10 +10,8 @@ import warnings
 import tab
 
 from . import __version__
-from . import util
 from .align import SUPPORTED_ALIGNER
 from .annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
-from .annotate.file_io import load_annotations
 from .bam.cache import BamCache
 from .bam.stats import compute_genome_bam_stats, compute_transcriptome_bam_stats
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
@@ -41,11 +39,15 @@ def filepath(path):
     return file_list[0]
 
 
-def nullable(item, callback):
-    if str(item).lower() == 'none':
-        return None
-    else:
-        return callback(item)
+class NullableType:
+    def __init__(self, callback_func):
+        self.callback_func = callback_func
+
+    def __call__(self, item):
+        if str(item).lower() == 'none':
+            return None
+        else:
+            return self.callback_func(item)
 
 
 REFERENCE_DEFAULTS = WeakMavisNamespace()
@@ -577,7 +579,7 @@ def augment_parser(arguments, parser, required=None):
                         nargs = '*'
                     value_type = nspace.type(arg, None)
                     if nspace.is_nullable(arg):
-                        value_type = lambda x: nullable(x, value_type)
+                        value_type = NullableType(value_type)
                     if not help_msg:
                         help_msg = nspace.define(arg)
                     break

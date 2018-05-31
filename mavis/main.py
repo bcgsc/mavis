@@ -15,7 +15,7 @@ from .annotate import main as annotate_main
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from .cluster import main as cluster_main
 from . import config as _config
-from .constants import SUBCOMMAND, PROTOCOL, float_fraction
+from .constants import SUBCOMMAND, PROTOCOL, float_fraction, EXIT_ERROR, EXIT_OK, PROGNAME
 from .error import DrawingFitError
 from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS, DiagramSettings
 from .illustrate.diagram import draw_multi_transcript_overlay
@@ -25,16 +25,10 @@ from .pairing import main as pairing_main
 from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 from .summary import main as summary_main
 from .tools import convert_tool_output, SUPPORTED_TOOL
-#from .util import bash_expands, get_env_variable, LOG, log_arguments, MavisNamespace, mkdirp, output_tabbed_file
 from . import util as _util
 from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 from .validate import main as validate_main
 from .schedule import pipeline as _pipeline
-
-
-PROGNAME = 'mavis'
-EXIT_OK = 0
-EXIT_ERROR = 1
 
 
 def check_overlay_args(args, parser):
@@ -161,7 +155,7 @@ def main(argv=None):
     sets up the parser and checks the validity of command line args
     loads reference files and redirects into subcommand main functions
 
-    Args
+    Args:
         argv (list): List of arguments, defaults to command line arguments
     """
     if argv is None:  # need to do at run time or patching will not behave as expected
@@ -304,12 +298,12 @@ def main(argv=None):
 
     log_conf = {'format': '{message}', 'style': '{', 'level': args.log_level}
 
+    original_logging_handlers = logging.root.handlers[:]
     for handler in logging.root.handlers:
         logging.root.removeHandler(handler)
     if args.log:  # redirect stdout AND stderr to a log file
         log_conf['filename'] = args.log
     logging.basicConfig(**log_conf)
-
 
     _util.LOG('MAVIS: {}'.format(__version__))
     _util.LOG('hostname:', platform.node(), time_stamp=False)
@@ -393,38 +387,45 @@ def main(argv=None):
             overlay_main(**args)
         elif command == SUBCOMMAND.CONFIG:
             _config.generate_config(args, parser, log=_util.LOG)
-        elif command == SUBCOMMAND.CHECKER:
-            pass#return EXIT_OK if check_completion(args.output) else EXIT_ERROR
         elif command == SUBCOMMAND.SCHEDULE:
             build_file = os.path.join(args.output, 'build.cfg')
             args.discard('output')
             pipeline = _pipeline.Pipeline.read_build_file(build_file)
             try:
-                pipeline.check_status(log=_util.LOG, **args)
+                code = pipeline.check_status(log=_util.LOG, **args)
             finally:
                 _util.LOG('rewriting:', build_file)
                 pipeline.write_build_file(build_file)
+            if code != EXIT_OK:
+                sys.exit(code)  # EXIT
         else:  # PIPELINE
             config.reference = rfile_args
             pipeline = _pipeline.Pipeline.build(config)
             build_file = os.path.join(config.output, 'build.cfg')
             _util.LOG('writing:', build_file)
             pipeline.write_build_file(build_file)
+
+        duration = int(time.time()) - start_time
+        hours = duration - duration % 3600
+        minutes = duration - hours - (duration - hours) % 60
+        seconds = duration - hours - minutes
+        _util.LOG(
+            'run time (hh/mm/ss): {}:{:02d}:{:02d}'.format(hours // 3600, minutes // 60, seconds),
+            time_stamp=False)
+        _util.LOG('run time (s): {}'.format(duration), time_stamp=False)
+        return ret_val
     except Exception as err:
         if log_to_file:
             logging.exception(err)  # capture the error in the logging output file
         raise err
+    finally:
+        for handler in logging.root.handlers:
+            logging.root.removeHandler(handler)
+        for handler in original_logging_handlers:
+            logging.root.addHandler(handler)
 
-    duration = int(time.time()) - start_time
-    hours = duration - duration % 3600
-    minutes = duration - hours - (duration - hours) % 60
-    seconds = duration - hours - minutes
-    _util.LOG(
-        'run time (hh/mm/ss): {}:{:02d}:{:02d}'.format(hours // 3600, minutes // 60, seconds),
-        time_stamp=False)
-    _util.LOG('run time (s): {}'.format(duration), time_stamp=False)
-    return ret_val
+
 
 
 if __name__ == '__main__':
-    exit(main())
+    main()

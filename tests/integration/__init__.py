@@ -9,15 +9,6 @@ from mavis.constants import CIGAR, NA_MAPPING_QUALITY
 from ..util import DATA_DIR
 
 
-#DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
-#TEMPLATE_METADATA_FILE = os.path.join(DATA_DIR, 'cytoBand.txt')
-#TRANSCRIPTOME_BAM_INPUT = os.path.join(DATA_DIR, 'mock_trans_reads_for_events.sorted.bam')
-#BAM_INPUT = os.path.join(DATA_DIR, 'mini_mock_reads_for_events.sorted.bam')
-#FULL_BAM_INPUT = os.path.join(DATA_DIR, 'mock_reads_for_events.sorted.bam')
-#FULL_BASE_EVENTS = os.path.join(DATA_DIR, 'mock_sv_events.tsv')
-#BASE_EVENTS = os.path.join(DATA_DIR, 'mini_mock_sv_events.tsv')
-#BLAT_INPUT = os.path.join(DATA_DIR, 'blat_input.fa')
-#BLAT_OUTPUT = os.path.join(DATA_DIR, 'blat_output.pslx')
 ARGUMENT_ERROR = 2
 
 RUN_FULL = int(os.environ.get('RUN_FULL', 1))

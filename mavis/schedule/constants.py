@@ -1,9 +1,5 @@
-import multiprocessing
-
-
-from ..constants import MavisNamespace, nullable_int
+from ..constants import MavisNamespace
 from ..util import WeakMavisNamespace
-
 
 
 JOB_STATUS = MavisNamespace(
@@ -18,7 +14,11 @@ JOB_STATUS = MavisNamespace(
     UNKNOWN='UNKNOWN'
 )
 
+
 def cumulative_job_state(states):
+    """
+    Given a set of states, return a single state based on the reporting priority
+    """
     priority = [JOB_STATUS.ERROR, JOB_STATUS.FAILED, JOB_STATUS.CANCELLED, JOB_STATUS.NOT_SUBMITTED, JOB_STATUS.PENDING, JOB_STATUS.SUBMITTED, JOB_STATUS.RUNNING, JOB_STATUS.COMPLETED]
     for state in priority:
         if state in states:
@@ -26,11 +26,13 @@ def cumulative_job_state(states):
     return JOB_STATUS.NOT_SUBMITTED
 
 
-SCHEDULER = MavisNamespace('SGE', 'SLURM', 'TORQUE', 'LOCAL', __name__='~mavis.submit.SCHEDULER')
+SCHEDULER = MavisNamespace('SGE', 'SLURM', 'TORQUE', 'LOCAL', __name__='~mavis.schedule.constants.SCHEDULER')
 """:class:`~mavis.constants.MavisNamespace`: scheduler types
 
+- :term:`LOCAL`
 - :term:`SGE`
 - :term:`SLURM`
+- :term:`TORQUE`
 """
 
 MAIL_TYPE = MavisNamespace('BEGIN', 'END', 'FAIL', 'ALL', 'NONE')
@@ -42,13 +44,18 @@ http://gridscheduler.sourceforge.net/htmlman/htmlman1/qsub.html
 
 STD_OPTIONS = ['memory_limit', 'queue', 'time_limit', 'import_env', 'mail_user', 'mail_type']
 
-OPTIONS = WeakMavisNamespace(__name__='~mavis.submit.options')
+OPTIONS = WeakMavisNamespace(__name__='~mavis.schedule.constants.options')
 """:class:`~mavis.constants.MavisNamespace`: submission options
 
 - :term:`annotation_memory`
+- :term:`concurrency_limit`
 - :term:`import_env`
+- :term:`mail_type`
+- :term:`mail_user`
 - :term:`memory_limit`
 - :term:`queue`
+- :term:`remote_head_name`
+- :term:`remote_head_ssh`
 - :term:`scheduler`
 - :term:`time_limit`
 - :term:`trans_validation_memory`
@@ -68,7 +75,8 @@ OPTIONS.add('validation_memory', 16000, defn='default memory limit (MB) for the 
 OPTIONS.add(
     'concurrency_limit',
     None,
-    cast_type=nullable_int,
+    nullable=True,
+    cast_type=int,
     defn='The concurrency limit for tasks in any given job array or the number of concurrent processes allowed for a local run')
 OPTIONS.add('remote_head_ssh', '', cast_type=str, defn='ssh target for remote scheduler commands')
 OPTIONS.add('remote_head_name', '', cast_type=str, defn='The host name of the remote head node (to prevent ssh when already on the head node)')

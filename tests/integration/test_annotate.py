@@ -13,7 +13,7 @@ from mavis.constants import ORIENT, PRIME, PROTOCOL, reverse_complement, STRAND,
 from mavis.error import NotSpecifiedError
 from mavis.interval import Interval
 
-from . import  MockLongString, MockObject, get_example_genes
+from . import MockLongString, MockObject, get_example_genes
 from ..util import get_data
 
 

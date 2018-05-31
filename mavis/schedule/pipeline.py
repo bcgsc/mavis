@@ -8,7 +8,7 @@ import subprocess
 
 
 from ..cluster import constants as _CLUSTER
-from ..constants import SUBCOMMAND, PROTOCOL
+from ..constants import SUBCOMMAND, PROTOCOL, EXIT_ERROR, EXIT_OK, EXIT_INCOMPLETE
 from ..tools import convert_tool_output
 from ..util import mkdirp, output_tabbed_file, LOG, DEVNULL
 from ..validate import constants as _VALIDATE
@@ -83,6 +83,7 @@ def run_conversion(config, libconf, conversion_dir, assume_no_untemplated=True):
             inputs.append(input_file)
     return inputs
 
+
 def validate_args(config, libconf):
     """
     returns the mavis command for running the validate step
@@ -112,8 +113,9 @@ def validate_args(config, libconf):
     args.update({k: v.name for k, v in config.reference.items()})
     args.update(config.validate.items())
     args.update(libconf.items())
-    args = {k:v for k, v in args.items() if k in allowed_args}
+    args = {k: v for k, v in args.items() if k in allowed_args}
     return args
+
 
 def annotate_args(config, libconf):
     allowed_args = [
@@ -136,8 +138,9 @@ def annotate_args(config, libconf):
     args.update(config.illustrate.items())
     args.update(config.annotate.items())
     args.update(libconf.items())
-    args = {k:v for k, v in args.items() if k in allowed_args}
+    args = {k: v for k, v in args.items() if k in allowed_args}
     return args
+
 
 def summary_args(config):
     allowed_args = [
@@ -152,7 +155,7 @@ def summary_args(config):
     args.update({k: v.name for k, v in config.reference.items()})
     args.update(config.pairing.items())
     args.update(config.summary.items())
-    args = {k:v for k, v in args.items() if k in allowed_args}
+    args = {k: v for k, v in args.items() if k in allowed_args}
     return args
 
 
@@ -172,7 +175,7 @@ def cluster_args(config, libconf):
     args.update(config.illustrate.items())
     args.update(config.annotate.items())
     args.update(libconf.items())
-    args = {k:v for k, v in args.items() if k in allowed_args}
+    args = {k: v for k, v in args.items() if k in allowed_args}
     return args
 
 
@@ -191,11 +194,11 @@ class Pipeline:
         batch_id='batch-{}'.format(uuid())
     ):
         """
-        Args
+        Args:
             output_dir (str): path to main output directory for all mavis pipeline results
             scheduler (Scheduler): the class for interacting with a job scheduler
-            validations (list of Job): list of validation jobs
-            annotations (list of Job): list of annotation jobs
+            validations (:class:`list` of :class:`Job`): list of validation jobs
+            annotations (:class:`list` of :class:`Job`): list of annotation jobs
             pairing (Job): pairing job
             summary (Job): summary job
             batch_id (str): the batch id for this pipeline run. Used in avoinfing job name conflicts
@@ -212,7 +215,7 @@ class Pipeline:
 
     def write_submission_script(self, subcommand, job, args):
         """
-        Args
+        Args:
             subcommand (SUBCOMMAND): the pipeline step this script will run
             job (Job): the job the script is for
             args (dict): arguments for the subcommand
@@ -240,9 +243,9 @@ class Pipeline:
     @classmethod
     def build(cls, config):
         """
-        Args
+        Args:
             config (MavisConfig): the main configuration. Note this is the config after all reference inputs have been loaded
-        Returns
+        Returns:
             Pipeline: the pipeline instance with job dependencies information etc.
         """
         from ..main import main as _main
@@ -259,7 +262,6 @@ class Pipeline:
         pipeline = Pipeline(output_dir=config.output, scheduler=scheduler)
 
         annotation_output_files = []
-
         for libconf in config.libraries.values():
             base = os.path.join(config.output, '{}_{}_{}'.format(libconf.library, libconf.disease_status, libconf.protocol))
             LOG('setting up the directory structure for', libconf.library, 'as', base)
@@ -272,8 +274,10 @@ class Pipeline:
             args['split_only'] = SUBCOMMAND.CLUSTER in config.get('skip_stage', [])
             args['inputs'] = libconf.inputs
             LOG('clustering', '(split only)' if args['split_only'] else '')
-            clustered_files =  _main(cls.format_args(SUBCOMMAND.CLUSTER, args))
-            #clustered_files = cluster_main.main(log_args=True, **merge_args)
+            clustering_log = os.path.join(args['output'], 'MC_{}_{}.log'.format(libconf.library, pipeline.batch_id))
+            LOG('writing:', clustering_log)
+            args['log'] = clustering_log
+            clustered_files = _main(cls.format_args(SUBCOMMAND.CLUSTER, args))
 
             # make a validation job for each cluster file
             validate_jobs = []
@@ -455,9 +459,9 @@ class Pipeline:
         """
         run_time = -1
         if not job.job_ident and submit:
-            self.scheduler.submit(job, resubmit)
+            self.scheduler.submit(job)
         elif job.job_ident and resubmit and job.status in self.ERROR_STATES:
-            self.scheduler.submit(job, resubmit)
+            self.scheduler.submit(job)
         if job.job_ident:
             log('{} ({}) is {}'.format(job.name, job.job_ident, job.status))
         else:
@@ -503,7 +507,7 @@ class Pipeline:
         """
         Check all jobs for completetion. Report any failures, etc.
 
-        Args
+        Args:
             submit (bool): submit any pending jobs
         """
         # update the information for all jobs where possible
@@ -519,10 +523,6 @@ class Pipeline:
             if job.status == JOB_STATUS.COMPLETED:
                 if run_time >= 0:
                     total_run_time += run_time
-            elif job.status in self.ERROR_STATES:
-                jobs_with_errors += 1
-            else:
-                jobs_not_complete += 1
         self.scheduler.wait()
 
         log('annotate', time_stamp=True)
@@ -531,10 +531,6 @@ class Pipeline:
             if job.status == JOB_STATUS.COMPLETED:
                 if run_time >= 0:
                     total_run_time += run_time
-            elif job.status in self.ERROR_STATES:
-                jobs_with_errors += 1
-            else:
-                jobs_not_complete += 1
         self.scheduler.wait()
 
         log('pairing', time_stamp=True)
@@ -542,10 +538,6 @@ class Pipeline:
         if self.pairing.status == JOB_STATUS.COMPLETED:
             if run_time >= 0:
                 total_run_time += run_time
-        elif self.pairing.status in self.ERROR_STATES:
-            jobs_with_errors += 1
-        else:
-            jobs_not_complete += 1
         self.scheduler.wait()
 
         log('summary', time_stamp=True)
@@ -553,26 +545,30 @@ class Pipeline:
         if self.summary.status == JOB_STATUS.COMPLETED:
             if run_time >= 0:
                 total_run_time += run_time
-        elif self.summary.status in self.ERROR_STATES:
-            jobs_with_errors += 1
-        else:
-            jobs_not_complete += 1
         self.scheduler.wait()
+
+        for job in self.validations + self.annotations + [self.pairing, self.summary]:
+            if submit or resubmit and job.status != JOB_STATUS.COMPLETED:
+                self.scheduler.update_info(job)
+            if job.status in self.ERROR_STATES:
+                jobs_with_errors += 1
+            elif job.status != JOB_STATUS.COMPLETED:
+                jobs_not_complete += 1
 
         if jobs_not_complete + jobs_with_errors == 0:
             log('parllel run time:', total_run_time)
-            return 0
+            return EXIT_OK
         elif not jobs_with_errors:
-            return 1
+            return EXIT_INCOMPLETE
         else:
-            return 2
+            return EXIT_ERROR
 
     @classmethod
     def read_build_file(cls, filepath):
         """
         read the configuration file which stored the build information concerning jobs and dependencies
 
-        Args
+        Args:
             filepath (str): path to the input config file
         """
         from ..main import main as _main
@@ -599,7 +595,7 @@ class Pipeline:
                 section = {}
                 for attr, value in parser[sec].items():
                     if attr in ['dependencies', 'inputs', 'outputs', 'args'] and value:
-                        section[attr] = re.split(r'[;\s]+', value)
+                        section[attr] = [s.strip() for s in re.split(r'\n', value)]
                     elif value == 'None':
                         section[attr] = None
                     elif value in cast:
@@ -644,14 +640,17 @@ class Pipeline:
         write the build.cfg file for the current pipeline. This is the file used in re-loading the pipeline
         to check the status and report failures, etc. later.
 
-        Args
+        Args:
             filename (str): path to the output config file
         """
         parser = ConfigParser(interpolation=ExtendedInterpolation())
         parser['general'] = {
             'batch_id': self.batch_id,
             'output_dir': self.output_dir,
-            'scheduler': self.scheduler.NAME
+            'scheduler': self.scheduler.NAME,
+            'remote_head_name': self.scheduler.remote_head_name,
+            'remote_head_ssh': self.scheduler.remote_head_ssh,
+            'concurrency_limit': str(self.scheduler.concurrency_limit)
         }
 
         for job in [self.summary, self.pairing] + self.validations + self.annotations:

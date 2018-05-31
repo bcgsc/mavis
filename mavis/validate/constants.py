@@ -1,4 +1,4 @@
-from ..constants import float_fraction, nullable_int
+from ..constants import float_fraction
 from ..align import SUPPORTED_ALIGNER
 from ..util import WeakMavisNamespace
 
@@ -125,7 +125,7 @@ DEFAULTS.add(
     'fetch_reads_limit', 3000,
     defn='maximum number of reads, cap, to loop over for any given evidence window')
 DEFAULTS.add(
-    'trans_fetch_reads_limit', 12000, cast_type=nullable_int,
+    'trans_fetch_reads_limit', 12000, cast_type=int, nullable=True,
     defn='Related to :term:`fetch_reads_limit`. Overrides fetch_reads_limit for transcriptome libraries when set. '
     'If this has a value of None then fetch_reads_limit will be used for transcriptome libraries instead')
 DEFAULTS.add(
@@ -162,7 +162,7 @@ DEFAULTS.add(
     'min_mapping_quality', 5,
     defn='the minimum mapping quality of reads to be used as evidence')
 DEFAULTS.add(
-    'trans_min_mapping_quality', 0, cast_type=nullable_int,
+    'trans_min_mapping_quality', 0, cast_type=int, nullable=True,
     defn='Related to :term:`min_mapping_quality`. Overrides the min_mapping_quality if the library is a transcriptome '
     'and this is set to any number not None. If this value is None, min_mapping_quality is used for transcriptomes as'
     'well as genomes')

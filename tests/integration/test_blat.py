@@ -23,7 +23,7 @@ def setUpModule():
     if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
         raise AssertionError('fake genome file does not have the expected contents')
     global BAM_CACHE
-    BAM_CACHE = BamCache('mini_mock_reads_for_events.sorted.bam')
+    BAM_CACHE = BamCache(get_data('mini_mock_reads_for_events.sorted.bam'))
 
 
 class TestBlat(unittest.TestCase):
