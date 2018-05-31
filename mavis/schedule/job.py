@@ -123,7 +123,7 @@ class Job:
         """
         returns the path to the expected complete stamp
         """
-        return os.path.join(self.output_dir, 'MAVIS.COMPLETE')
+        return os.path.join(self.output_dir, 'MAVIS-{job_ident}.COMPLETE').format(job_ident=self.job_ident, name=self.name)
 
 
 class ArrayJob(Job):
@@ -144,7 +144,10 @@ class ArrayJob(Job):
         return self.stdout.format(name=self.name, job_ident=self.job_ident, task_ident=task_ident)
 
     def complete_stamp(self, task_ident):
-        return Job.complete_stamp(self).format(task_ident=task_ident)
+        """
+        returns the path to the expected complete stamp
+        """
+        return os.path.join(self.output_dir, 'MAVIS-{job_ident}.COMPLETE').format(job_ident=self.job_ident, name=self.name, task_ident=task_ident)
 
     def flatten(self):
         result = {k: v for k, v in Job.flatten(self).items() if k != 'task_list'}

@@ -21,6 +21,8 @@ class Scheduler:
     """:class:`str`: string which takes format arguments and is used to add job dependency arguments for job submission"""
     ENV_TASK_IDENT = '{TASK_IDENT}'
     """:class:`str`: the expected pattern of environment variables which store the task id"""
+    ENV_JOB_IDENT = '{JOB_IDENT}'
+    """:class:`str`: the expected pattern of environment variables which store the job id"""
     DEPENDENCY_DELIM = ':'
     """:class:`str`: the delimiter to use between jobs of the same depenency type"""
     HEADER_PREFIX = '#'
@@ -66,7 +68,7 @@ class Scheduler:
         """
         raise NotImplementedError('abstract method')
 
-    def cancel(self, job):
+    def cancel(self, job, task_ident=None):
         raise NotImplementedError('abstract method')
 
     def format_dependencies(self, job, task_ident=None, cascade=False):
@@ -105,6 +107,7 @@ class SlurmScheduler(Scheduler):
     ARRAY_DEPENDENCY = '--dependency=aftercorr:{}'
     JOB_DEPENDENCY = '--dependency=afterok:{}'
     ENV_TASK_IDENT = 'SLURM_ARRAY_TASK_ID'
+    ENV_JOB_IDENT = 'SLURM_JOB_ID'
 
     def submit(self, job, task_ident=None, cascade=False):
         """
@@ -195,6 +198,7 @@ class SlurmScheduler(Scheduler):
             row['State'] = row['State'].split(' ')[0]
             if '_' in row['JobID']:
                 job_ident, task_ident = row['JobID'].rsplit('_', 1)
+                task_ident = re.sub(r'[\[\]]', '', task_ident)  # sometimes bracketed
             else:
                 job_ident = row['JobID']
                 task_ident = None
@@ -258,6 +262,25 @@ class SlurmScheduler(Scheduler):
                 job.status = cumulative_job_state([t.status for t in job.task_list])
         except AttributeError:
             pass
+
+    def cancel(self, job, task_ident=None):
+        """
+        cancel a job
+        """
+        if not job.job_ident:
+            return
+        if task_ident is not None:
+            self.command(['qdel', '{}_{}'.format(job.job_ident, task_ident)])
+            job.task_list[task_ident - 1].status = JOB_STATUS.CANCELLED
+        else:
+            self.command(['qdel', job.job_ident])
+            job.status = JOB_STATUS.CANCELLED
+
+            try:
+                for task in job.task_list:
+                    task.status = JOB_STATUS.CANCELLED
+            except AttributeError:
+                pass
 
 
 class SgeScheduler(Scheduler):
@@ -358,6 +381,8 @@ class SgeScheduler(Scheduler):
         column_sizes = []
         for col in header:
             match = re.search(col + r'\s*', lines[0])
+            if not match:
+                raise ValueError('Error in parsing the qstat content for the column from', col, lines[0])
             column_sizes.append(len(match.group(0)))
         rows = []
 
@@ -490,6 +515,25 @@ class SgeScheduler(Scheduler):
                 job.status = cumulative_job_state([task.status for task in job.task_list])
         except AttributeError:
             pass  # only applies to array jobs
+
+    def cancel(self, job, task_ident=None):
+        """
+        cancel a job
+        """
+        if not job.job_ident:
+            return
+        if task_ident is not None:
+            self.command(['qdel', job.job_ident, '-t', task_ident])
+            job.task_list[task_ident - 1].status = JOB_STATUS.CANCELLED
+        else:
+            self.command(['qdel', job.job_ident])
+            job.status = JOB_STATUS.CANCELLED
+
+            try:
+                for task in job.task_list:
+                    task.status = JOB_STATUS.CANCELLED
+            except AttributeError:
+                pass
 
 
 class TorqueScheduler(SgeScheduler):
@@ -714,3 +758,22 @@ class TorqueScheduler(SgeScheduler):
 
         if tasks_updated:
             job.status = cumulative_job_state([t.status for t in job.task_list])
+
+    def cancel(self, job, task_ident=None):
+        """
+        cancel a job
+        """
+        if not job.job_ident:
+            return
+        if task_ident is not None:
+            self.command(['qdel', job.job_ident, '-t', task_ident])
+            job.task_list[task_ident - 1].status = JOB_STATUS.CANCELLED
+        else:
+            self.command(['qdel', job.job_ident])
+            job.status = JOB_STATUS.CANCELLED
+
+            try:
+                for task in job.task_list:
+                    task.status = JOB_STATUS.CANCELLED
+            except AttributeError:
+                pass

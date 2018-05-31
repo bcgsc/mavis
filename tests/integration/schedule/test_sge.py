@@ -1,9 +1,11 @@
+import subprocess
 import unittest
 from unittest import mock
 
 from mavis.schedule import job as _job
 from mavis.schedule import scheduler as _scheduler
 from mavis.schedule import constants as _constants
+from mavis.constants import SUBCOMMAND
 
 QACCT_ARR3_OK = """
 ==============================================================
@@ -516,3 +518,42 @@ job-ID  prior   name       user         state submit/start at     queue         
     def test_no_jobs_found(self):
         rows = _scheduler.SgeScheduler().parse_qstat("")
         self.assertEqual([], rows)
+
+
+class TestCancel(unittest.TestCase):
+
+    @mock.patch('mavis.schedule.scheduler.SgeScheduler.command', mock.Mock())
+    def test_single_job(self):
+        sched = _scheduler.SgeScheduler()
+        job = _job.Job(SUBCOMMAND.VALIDATE, '', job_ident='1234')
+        sched.cancel(job)
+        self.assertEqual(_constants.JOB_STATUS.CANCELLED, job.status)
+
+    @mock.patch('mavis.schedule.scheduler.SgeScheduler.command', mock.Mock())
+    def test_array_job(self):
+        sched = _scheduler.SgeScheduler()
+        job = _job.ArrayJob(SUBCOMMAND.VALIDATE, 10, output_dir='', job_ident='1234')
+        sched.cancel(job)
+        self.assertEqual(_constants.JOB_STATUS.CANCELLED, job.status)
+        for task in job.task_list:
+            self.assertEqual(_constants.JOB_STATUS.CANCELLED, task.status)
+
+    @mock.patch('mavis.schedule.scheduler.SgeScheduler.command', mock.Mock())
+    def test_array_job_task(self):
+        sched = _scheduler.SgeScheduler()
+        job = _job.ArrayJob(SUBCOMMAND.VALIDATE, 10, output_dir='', job_ident='1234')
+        sched.cancel(job, task_ident=4)
+        self.assertEqual(_constants.JOB_STATUS.NOT_SUBMITTED, job.status)
+        for i, task in enumerate(job.task_list):
+            if i == 3:
+                self.assertEqual(_constants.JOB_STATUS.CANCELLED, task.status)
+            else:
+                self.assertEqual(_constants.JOB_STATUS.NOT_SUBMITTED, task.status)
+
+    @mock.patch('mavis.schedule.scheduler.SgeScheduler.command')
+    def test_bad_command(self, patcher):
+        patcher.side_effect = [subprocess.CalledProcessError(1, 'cmd')]
+        sched = _scheduler.SgeScheduler()
+        job = _job.Job(SUBCOMMAND.VALIDATE, '', job_ident='1234')
+        with self.assertRaises(subprocess.CalledProcessError):
+            sched.cancel(job)

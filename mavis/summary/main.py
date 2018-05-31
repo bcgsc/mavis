@@ -364,4 +364,3 @@ def main(
             ]):
                 lib_rows.append(row)
         output_tabbed_file(lib_rows, filename, header=output_columns)
-    generate_complete_stamp(output, LOG, start_time=start_time)

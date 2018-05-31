@@ -1,5 +1,7 @@
 import atexit
 from concurrent import futures
+from datetime import datetime
+import logging
 import multiprocessing
 import os
 
@@ -43,6 +45,18 @@ class LocalJob(Job):
         return {k: v for k, v in result.items() if k not in omit}
 
 
+def write_stamp_callback(response):
+    if response.exception() or response.cancelled() or response.running():
+        return
+    try:
+        LOG('writing:', response.complete_stamp, time_stamp=True, indent_level=1)
+        with open(response.complete_stamp, 'w') as fh:
+            fh.write('end: {}\n'.format(int(datetime.timestamp(datetime.utcnow()))))
+    except Exception as err:
+        LOG('error writing the complete stamp', level=logging.CRITICAL, indent_level=1)
+        raise err
+
+
 class LocalScheduler(Scheduler):
     """
     Scheduler class for dealing with running mavis locally
@@ -75,6 +89,8 @@ class LocalScheduler(Scheduler):
             return self.submitted[job.job_ident]
         # otherwise add it to the pool
         job.response = self.pool.submit(job.func, args)  # no arguments, defined all in the job object
+        setattr(job.response, 'complete_stamp', job.complete_stamp())
+        job.response.add_done_callback(write_stamp_callback)
         self.submitted[job.job_ident] = job
         job.rank = len(self.submitted)
         LOG('submitted', job.name, indent_level=1)

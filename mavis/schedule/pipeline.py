@@ -50,10 +50,14 @@ def parse_run_time(filename):
     parses the run time listed at the end of a file following mavis conventions
     """
     with open(filename, 'r') as fh:
-        for line in fh.readlines()[::-1]:
-            match = re.match(r'^\s*run time \(s\): (\d+)\s*$', line)
+        content = fh.read().strip()
+        for line in [l.strip() for l in content.split('\n')][::-1]:
+            match = re.match(r'^\s*run time \(s\): (\d+)\s*$', line)  # older style complete stamp
             if match:
                 return int(match.group(1))
+            match = re.search(r'start:\s*(\d+)\s*end:\s*(\d+)', line)
+            if match:
+                return int(match.group(2)) - int(match.group(1))
     return -1
 
 
@@ -220,11 +224,14 @@ class Pipeline:
             job (Job): the job the script is for
             args (dict): arguments for the subcommand
         """
-        LOG('writing:', job.script)
+        LOG('writing:', job.script, time_stamp=True)
         with open(job.script, 'w') as fh:
             fh.write(SHEBANG + '\n')
+            fh.write('START_TIME=$(date +%s)\n\n')
             commands = [PROGNAME, subcommand] + stringify_args_to_command(args)
-            fh.write(' \\\n\t'.join(commands) + '\n')
+            fh.write(' \\\n\t'.join(commands) + '\n\n')
+            fh.write('END_TIME=$(date +%s)\n')
+            fh.write('echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE\n\n'.format(args['output'], self.scheduler.ENV_JOB_IDENT))
 
     @classmethod
     def format_args(cls, subcommand, args):
@@ -273,9 +280,9 @@ class Pipeline:
             args.update({'batch_id': pipeline.batch_id, 'output': cluster_output})
             args['split_only'] = SUBCOMMAND.CLUSTER in config.get('skip_stage', [])
             args['inputs'] = libconf.inputs
-            LOG('clustering', '(split only)' if args['split_only'] else '')
+            LOG('clustering', '(split only)' if args['split_only'] else '', time_stamp=True)
             clustering_log = os.path.join(args['output'], 'MC_{}_{}.log'.format(libconf.library, pipeline.batch_id))
-            LOG('writing:', clustering_log)
+            LOG('writing:', clustering_log, time_stamp=True)
             args['log'] = clustering_log
             clustered_files = _main(cls.format_args(SUBCOMMAND.CLUSTER, args))
 
@@ -511,7 +518,7 @@ class Pipeline:
             submit (bool): submit any pending jobs
         """
         # update the information for all jobs where possible
-        total_run_time = 0
+        run_times = [[], [], [], []]
         jobs_not_complete = 0
         jobs_with_errors = 0
 
@@ -522,29 +529,44 @@ class Pipeline:
             run_time = self._job_status(job, submit=submit, resubmit=resubmit, log=log.indent())
             if job.status == JOB_STATUS.COMPLETED:
                 if run_time >= 0:
-                    total_run_time += run_time
+                    run_times[0].append(run_time)
         self.scheduler.wait()
 
         log('annotate', time_stamp=True)
+        if not all([job.status == JOB_STATUS.COMPLETED for job in self.validations]) and self.scheduler.NAME == 'LOCAL':
+            log('Stopping submission. Dependencies not complete', indent_level=1)
+            submit = False
+            resubmit = False
+
         for job in self.annotations:
             self._job_status(job, submit=submit, resubmit=resubmit, log=log.indent())
             if job.status == JOB_STATUS.COMPLETED:
                 if run_time >= 0:
-                    total_run_time += run_time
+                    run_times[1].append(run_time)
         self.scheduler.wait()
 
         log('pairing', time_stamp=True)
+        if not all([job.status == JOB_STATUS.COMPLETED for job in self.annotations]) and self.scheduler.NAME == 'LOCAL':
+            log('Stopping submission. Dependencies not complete', indent_level=1)
+            submit = False
+            resubmit = False
+
         run_time = self._job_status(self.pairing, submit=submit, resubmit=resubmit, log=log.indent())
         if self.pairing.status == JOB_STATUS.COMPLETED:
             if run_time >= 0:
-                total_run_time += run_time
+                run_times[2].append(run_time)
         self.scheduler.wait()
 
         log('summary', time_stamp=True)
+        if self.pairing.status != JOB_STATUS.COMPLETED and self.scheduler.NAME == 'LOCAL':
+            log('Stopping submission. Dependencies not complete', indent_level=1)
+            submit = False
+            resubmit = False
+
         run_time = self._job_status(self.summary, submit=submit, resubmit=resubmit, log=log.indent())
         if self.summary.status == JOB_STATUS.COMPLETED:
             if run_time >= 0:
-                total_run_time += run_time
+                run_times[3].append(run_time)
         self.scheduler.wait()
 
         for job in self.validations + self.annotations + [self.pairing, self.summary]:
@@ -556,7 +578,8 @@ class Pipeline:
                 jobs_not_complete += 1
 
         if jobs_not_complete + jobs_with_errors == 0:
-            log('parllel run time:', total_run_time)
+            if all([r for r in run_times]):
+                log('parallel run time:', sum([max(r) for r in run_times]))
             return EXIT_OK
         elif not jobs_with_errors:
             return EXIT_INCOMPLETE

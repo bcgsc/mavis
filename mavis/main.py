@@ -425,7 +425,5 @@ def main(argv=None):
             logging.root.addHandler(handler)
 
 
-
-
 if __name__ == '__main__':
     main()

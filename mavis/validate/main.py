@@ -19,7 +19,7 @@ from ..bam import cigar as _cigar
 from ..bam.cache import BamCache
 from ..breakpoint import BreakpointPair
 from ..constants import CALL_METHOD, COLUMNS, MavisNamespace, PROTOCOL
-from ..util import filter_on_overlap, generate_complete_stamp, LOG, mkdirp, output_tabbed_file, read_inputs, write_bed_file
+from ..util import filter_on_overlap, LOG, mkdirp, output_tabbed_file, read_inputs, write_bed_file
 
 
 def main(
@@ -319,5 +319,3 @@ def main(
             fh.write('load {} name="{}"\n'.format(evidence_bed, 'evidence windows'))
             fh.write('load {} name="{}"\n'.format(raw_evidence_bam, 'raw evidence'))
             fh.write('load {} name="{} {} input"\n'.format(bam_file, library, protocol))
-
-    generate_complete_stamp(output, LOG, start_time=start_time)

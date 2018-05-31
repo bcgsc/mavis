@@ -211,5 +211,5 @@ def main(
         write_bed_summary=True
     )
 
-    generate_complete_stamp(output, LOG, start_time=start_time)
+    generate_complete_stamp(output, LOG, start_time=start_time, prefix='MAVIS-{}.'.format(batch_id))
     return output_files

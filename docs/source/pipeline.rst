@@ -25,15 +25,16 @@ The pipeline setup step will run clustering and create scripts for running the o
     mavis config .... -w config.cfg
     mavis pipeline config.cfg -o /path/to/top/output_dir
 
-This will create the pipeline submission script (submit_pipeline_<batchid>.sh) wrapper, which can be executed on the head node
+This will create the build.cfg configuration file, which is used by the scheduler to submit jobs. To use a particular scheduler you
+will need to set the `MAVIS_SCHEDULER` environment variable. After the build configuration file has been created you can run the mavis
+schedule option to submit your jobs
 
 .. code:: bash
 
     ssh cluster_head_node
-    cd /path/to/output_dir
-    bash submit_pipeline_<batchid>.sh
+    mavis schedule -o /path/to/output_dir --submit
 
-This will submit a series of jobs with dependencies. 
+This will submit a series of jobs with dependencies.
 
 .. _pipeline-dependency-graph:
 
@@ -41,7 +42,7 @@ This will submit a series of jobs with dependencies.
 .. figure:: _static/pipeline_dependency_graph.svg
     :width: 100%
 
-    Dependency graph of MAVIS jobs for the standard pipeline setup. The notation on the arrows indicates the 
+    Dependency graph of MAVIS jobs for the standard pipeline setup. The notation on the arrows indicates the
     SLURM setting on the job to add the dependency on the previous job.
 
 
@@ -63,13 +64,7 @@ For example to set the job queue default using an :ref:`environment variable <co
 
     export MAVIS_QUEUE=QUEUENAME
 
-Or to give it as an argument during :ref:`config generation <pipeline-config>`
-
-.. code:: bash
-
-    mavis config -w /path/to/config --queue QUEUENAME
-
-Finally it can also be added to the config file manually
+Or it can also be added to the config file manually
 
 .. code:: text
 
@@ -80,39 +75,60 @@ Finally it can also be added to the config file manually
 Troubleshooting Dependency Failures
 .....................................
 
-The most common error to occur when running MAVIS on the cluster is a memory or time limit exception. These can be detected by running the checker or looking for dependency failures reported on the cluster. The suffix of the job name will be a number and will correspond to the suffix of the job directory. Note that the following example commands are :term:`SLURM`-specific and do not apply to :term:`SGE`.
+The most common error to occur when running MAVIS on the cluster is a memory or time limit exception.
+These can be detected by running the schedule step or looking for dependency failures reported on the cluster.
+The suffix of the job name will be a number and will correspond to the suffix of the job directory.
 
-.. code::
+.. code:: bash
 
-    mavis checker -o /path/to/output/dir
+    mavis schedule -o /path/to/output/dir
 
-This will report any failed jobs. For example if this were a memory issue for one of the validation jobs we might expect to see something like below in the checker output
+This will report any failed jobs. For example if this were a crash report for one of the validation jobs we might expect to see something like below in the schedule output
 
 .. code:: text
 
-    validate FAIL
-        1 jobs CRASHED (jobs: <job number>)
-            slurmstepd: error: exceeded job memory limit (jobs: <job number>)
+    [2018-05-31 13:02:06] validate
+                            MV_<library>_<batch id>-<task id> (<job id>) is FAILED
+                              CRASH: <error from log file>
 
-Each job has its own submission script. The values for memory/time limits or other parameters can be edited by editing the script header and resubmitting the failed job.
 
-.. code:: bash
-    
-    cd /path/to/output/dir/<library>*/validate/*-<job number>
-    vim submit.sh  # edit the header to change memory/time/etc.
-    sbatch submit.sh
-
-Now you will need to edit the annotation job which was dependent on it. For convenience it is easiest to find the job by name. The annotation job name will be the same as the validation job name except that instead of the ``MV_`` prefix it will begin with the ``MA_`` prefix.
+Any jobs in an error, failed, etc. state can be resubmitted by running mavis schedule with the resubmit flag
 
 .. code:: bash
-    
-    squeue -n MA_*-<job number>
 
-And then change the dependency to be the new validation job
+    mavis schedule -o /path/to/output/dir --resubmit
 
-.. code:: bash
-        
-    scontrol update job=<annotation job id> Dependency=afterok:<new validation job id>
+If a job has failed due to memory or time limits, editing the ``/path/to/output/dir/build.cfg`` file can allow the user to change a job without resetting up and rerunning the other jobs.
+For example, below is the configuration for a validation job
+
+.. code:: text
+
+    [MV_mock-A47933_batch-D2nTiy9AhGye4UZNapAik6]
+    stage = validate
+    job_ident = 1691742
+    name = MV_mock-A47933_batch-D2nTiy9AhGye4UZNapAik6
+    dependencies =
+    script = /path/to/output/dir/mock-A47933_diseased_transcriptome/validate/submit.sh
+    status = FAILED
+    output_dir = /path/to/output/dir/mock-A47933_diseased_transcriptome/validate/batch-D2nTiy9AhGye4UZNapAik6-{task_ident}
+    stdout = /path/to/output/dir/mock-A47933_diseased_transcriptome/validate/batch-D2nTiy9AhGye4UZNapAik6-{task_ident}/job-{name}-{job_ident}-{task_ident}.log
+    created_at = 1527641526
+    status_comment =
+    memory_limit = 18000
+    queue = short
+    time_limit = 57600
+    import_env = True
+    mail_user =
+    mail_type = NONE
+    concurrency_limit = None
+    tasks = 3
+
+The memory_limit is in Mb and the time_limit is in seconds. Editing the values here will cause the job to be resubmitted with the new values.
+
+.. warning::
+
+    Incorrectly editing the build.cfg file may have unanticipated results and require re-setting up MAVIS to fix.
+    Generally the user should ONLY ``edit memory_limit`` and ``time_limit`` values.
 
 If memory errors are frequent then it would be better to adjust the default values (:term:`trans_validation_memory`, :term:`validation_memory`, :term:`time_limit`)
 

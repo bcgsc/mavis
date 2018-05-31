@@ -1,8 +1,10 @@
 import unittest
+from unittest import mock
 
-from mavis.schedule.scheduler import TorqueScheduler
-from mavis.schedule.constants import JOB_STATUS
-
+from mavis.schedule import scheduler as _scheduler
+from mavis.schedule import constants as _constants
+from mavis.schedule import job as _job
+from mavis.constants import SUBCOMMAND
 
 class TestParseQstat(unittest.TestCase):
 
@@ -72,10 +74,10 @@ Job Id: 9.torque01.bcgsc.ca
     request_version = 1
 
         """
-        rows = TorqueScheduler().parse_qstat(content)
+        rows = _scheduler.TorqueScheduler().parse_qstat(content)
         self.assertEqual(1, len(rows))
         row = rows[0]
-        self.assertEqual(JOB_STATUS.COMPLETED, row['status'])
+        self.assertEqual(_constants.JOB_STATUS.COMPLETED, row['status'])
         self.assertEqual('9.torque01.bcgsc.ca', row['job_ident'])
         self.assertEqual('subtest.sh', row['name'])
         self.assertIs(None, row['task_ident'])
@@ -86,3 +88,41 @@ Job Id: 9.torque01.bcgsc.ca
     # TODO: batch job error
     # TODO: single job exiting
     # TODO: batch job exiting
+
+class TestCancel(unittest.TestCase):
+
+    @mock.patch('mavis.schedule.scheduler.TorqueScheduler.command', mock.Mock())
+    def test_single_job(self):
+        sched = _scheduler.TorqueScheduler()
+        job = _job.Job(SUBCOMMAND.VALIDATE, '', job_ident='1234')
+        sched.cancel(job)
+        self.assertEqual(_constants.JOB_STATUS.CANCELLED, job.status)
+
+    @mock.patch('mavis.schedule.scheduler.TorqueScheduler.command', mock.Mock())
+    def test_array_job(self):
+        sched = _scheduler.TorqueScheduler()
+        job = _job.ArrayJob(SUBCOMMAND.VALIDATE, 10, output_dir='', job_ident='1234')
+        sched.cancel(job)
+        self.assertEqual(_constants.JOB_STATUS.CANCELLED, job.status)
+        for task in job.task_list:
+            self.assertEqual(_constants.JOB_STATUS.CANCELLED, task.status)
+
+    @mock.patch('mavis.schedule.scheduler.TorqueScheduler.command', mock.Mock())
+    def test_array_job_task(self):
+        sched = _scheduler.TorqueScheduler()
+        job = _job.ArrayJob(SUBCOMMAND.VALIDATE, 10, output_dir='', job_ident='1234')
+        sched.cancel(job, task_ident=4)
+        self.assertEqual(_constants.JOB_STATUS.NOT_SUBMITTED, job.status)
+        for i, task in enumerate(job.task_list):
+            if i == 3:
+                self.assertEqual(_constants.JOB_STATUS.CANCELLED, task.status)
+            else:
+                self.assertEqual(_constants.JOB_STATUS.NOT_SUBMITTED, task.status)
+
+    @mock.patch('mavis.schedule.scheduler.TorqueScheduler.command')
+    def test_bad_command(self, patcher):
+        patcher.side_effect = [subprocess.CalledProcessError(1, 'cmd')]
+        sched = _scheduler.TorqueScheduler()
+        job = _job.Job(SUBCOMMAND.VALIDATE, '', job_ident='1234')
+        with self.assertRaises(subprocess.CalledProcessError):
+            sched.cancel(job)

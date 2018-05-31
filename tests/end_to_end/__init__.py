@@ -13,3 +13,9 @@ def glob_exists(*pos, strict=False, n=1):
         print(globexpr)
         print(file_list)
         return False
+
+
+def glob_not_exists(*pos):
+    globexpr = os.path.join(*pos)
+    file_list = glob.glob(globexpr)
+    return not file_list

@@ -4,8 +4,9 @@ import re
 import shutil
 from tempfile import mkdtemp
 import unittest
+from unittest import mock
 
-from mavis.annotate.file_io import load_reference_genes, load_reference_genome, load_templates
+from mavis.annotate.file_io import load_reference_genes, load_reference_genome, load_templates, ReferenceFile, load_annotations
 from mavis.annotate.main import main as annotate_main
 from mavis.cluster.main import main as cluster_main
 from mavis.constants import DISEASE_STATUS, PROTOCOL
@@ -20,15 +21,15 @@ reference_genome = None
 template_metadata = None
 trans_bam_fh = None
 genome_bam_fh = None
-masking = {}  # do not mask
+masking = mock.Mock(content={})  # do not mask
 
 
 def setUpModule():
     global annotations, reference_genome, template_metadata, genome_bam_fh, trans_bam_fh, masking
     print('setup start')
-    annotations = load_reference_genes(get_data('mock_annotations.json'))
-    reference_genome = load_reference_genome(get_data('mock_reference_genome.fa'))
-    template_metadata = load_templates(get_data('cytoBand.txt'))
+    annotations = ReferenceFile(load_annotations, get_data('mock_annotations.json'))
+    reference_genome = ReferenceFile(load_reference_genome, get_data('mock_reference_genome.fa'), eager_load=True)
+    template_metadata = ReferenceFile(load_templates, get_data('cytoBand.txt'), eager_load=True)
     genome_bam_fh = pysam.AlignmentFile(get_data('mock_reads_for_events.sorted.bam'))
     trans_bam_fh = pysam.AlignmentFile(get_data('mock_trans_reads_for_events.sorted.bam'))
     print('setup loading is complete')
@@ -64,26 +65,24 @@ class TestPipeline(unittest.TestCase):
             [cluster_files[0]], self.output, genome_bam_fh, False, 'mock-A36971', PROTOCOL.GENOME,
             median_fragment_size=427, stdev_fragment_size=106, read_length=150,
             reference_genome=reference_genome, annotations=annotations, masking=masking,
-            aligner_reference=get_data('mock_reference_genome.2bit'),
-            reference_genome_filename=get_data('mock_reference_genome.fa')
+            aligner_reference=ReferenceFile(None, get_data('mock_reference_genome.2bit'))
         )
-        prefix = re.sub(r'\.tab$', '', cluster_files[0])
         for suffix in [
-            '.validation-passed.tab',
-            '.validation-failed.tab',
-            '.raw_evidence.bam',
-            '.raw_evidence.sorted.bam',
-            '.raw_evidence.sorted.bam.bai',
-            '.contigs.sorted.bam',
-            '.contigs.sorted.bam.bai',
-            '.contigs.bam',
-            '.igv.batch'
+            'validation-passed.tab',
+            'validation-failed.tab',
+            'raw_evidence.bam',
+            'raw_evidence.sorted.bam',
+            'raw_evidence.sorted.bam.bai',
+            'contigs.sorted.bam',
+            'contigs.sorted.bam.bai',
+            'contigs.bam',
+            'igv.batch'
         ]:
-            self.assertTrue(os.path.exists(os.path.join(self.output, 'validate' + suffix)))
+            self.assertTrue(os.path.exists(os.path.join(self.output, suffix)))
 
         # test the annotation
         annotate_main(
-            [os.path.join(self.output, 'validate.validation-passed.tab')], self.output, 'mock-A36971', PROTOCOL.GENOME,
+            [os.path.join(self.output, 'validation-passed.tab')], self.output, 'mock-A36971', PROTOCOL.GENOME,
             reference_genome, annotations, template_metadata,
             min_domain_mapping_match=0.95, min_orf_size=300, max_orf_cap=3,
         )

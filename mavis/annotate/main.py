@@ -15,7 +15,7 @@ from ..error import DrawingFitError, NotSpecifiedError
 from ..illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from ..illustrate.constants import DiagramSettings
 from ..illustrate.diagram import draw_sv_summary_diagram
-from ..util import generate_complete_stamp, LOG, mkdirp, read_inputs
+from ..util import LOG, mkdirp, read_inputs
 
 
 ACCEPTED_FILTERS = {
@@ -259,7 +259,6 @@ def main(
                 rows = [ann_row]
             for row in rows:
                 tabbed_fh.write('\t'.join([str(row.get(k, None)) for k in header]) + '\n')
-        generate_complete_stamp(output, LOG, start_time=start_time)
     finally:
         LOG('closing:', tabbed_output_file)
         tabbed_fh.close()

@@ -133,4 +133,3 @@ def main(
         'mavis_paired_{}.tab'.format('_'.join(sorted(list(libraries))))
     )
     output_tabbed_file(bpps, fname)
-    generate_complete_stamp(output, LOG, start_time=start_time)
