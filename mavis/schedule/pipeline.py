@@ -184,7 +184,7 @@ def cluster_args(config, libconf):
 
 
 class Pipeline:
-    ERROR_STATES = {JOB_STATUS.ERROR, JOB_STATUS.FAILED, JOB_STATUS.CANCELLED, JOB_STATUS.UNKNOWN}
+    ERROR_STATES = {JOB_STATUS.ERROR, JOB_STATUS.FAILED, JOB_STATUS.CANCELLED, JOB_STATUS.UNKNOWN, JOB_STATUS.NOT_SUBMITTED}
 
     def __init__(
         self,
@@ -231,7 +231,9 @@ class Pipeline:
             commands = [PROGNAME, subcommand] + stringify_args_to_command(args)
             fh.write(' \\\n\t'.join(commands) + '\n\n')
             fh.write('END_TIME=$(date +%s)\n')
-            fh.write('echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE\n\n'.format(args['output'], self.scheduler.ENV_JOB_IDENT))
+            fh.write('echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE\n\n'.format(
+                args['output'],
+                self.scheduler.ENV_JOB_IDENT if not isinstance(job, ArrayJob) else self.scheduler.ENV_ARRAY_IDENT))
 
     @classmethod
     def format_args(cls, subcommand, args):
@@ -323,7 +325,7 @@ class Pipeline:
                     args['output'] = os.path.join(base, SUBCOMMAND.VALIDATE, '{}-${}'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT))
                     validate_job = ArrayJob(
                         stage=SUBCOMMAND.VALIDATE,
-                        tasks=len(clustered_files),
+                        task_list=len(clustered_files),
                         output_dir=os.path.join(base, SUBCOMMAND.VALIDATE, '{}-{{task_ident}}'.format(pipeline.batch_id)),
                         script=script_name,
                         name='MV_{}_{}'.format(libconf.library, pipeline.batch_id),
@@ -377,7 +379,7 @@ class Pipeline:
 
                 annotate_job = ArrayJob(
                     stage=SUBCOMMAND.ANNOTATE,
-                    tasks=len(clustered_files),
+                    task_list=len(clustered_files),
                     script=script_name,
                     name='MA_{}_{}'.format(libconf.library, pipeline.batch_id),
                     output_dir=os.path.join(base, SUBCOMMAND.ANNOTATE, '{}-{{task_ident}}'.format(pipeline.batch_id)),
@@ -460,15 +462,93 @@ class Pipeline:
             pipeline.write_submission_script(SUBCOMMAND.SUMMARY, pipeline.summary, args)
         return pipeline
 
+    def _resubmit_job(self, job):
+        # resubmit the job or all failed tasks for the job. Update any dependencies
+        failed_tasks = set()
+        try:
+            for task in job.task_list:
+                if task.status in self.ERROR_STATES:
+                    failed_tasks.add(task.task_ident)
+            if len(failed_tasks) == len(job.task_list):
+                failed_tasks = []
+        except AttributeError:  # non-array jobs
+            pass
+        if failed_tasks:  # resubmit failed tasks only and create a new job
+            new_job = job.copy_with_tasks(failed_tasks)
+            for task_ident in failed_tasks:
+                # cancel and remove the failed task
+                try:
+                    self.scheduler.cancel(job, task_ident=task_ident)
+                    job.remove_task(task_ident)
+                except subprocess.CalledProcessError:  # ignore cancelling errors
+                    pass
+            self.scheduler.submit(new_job)
+        else:
+            # 'clean' the current job so that it is no longer 'submitted'
+            self.scheduler.cancel(job)
+            job.reset()
+            try:
+                for task in job.task_list:
+                    task.status = JOB_STATUS.NOT_SUBMITTED
+                    task.status_comment = ''
+            except AttributeError:
+                pass
+            self.scheduler.submit(job)
+            new_job = job
+
+        if new_job.stage == SUBCOMMAND.VALIDATE:
+            if new_job not in self.validations:
+                self.validations.append(new_job)
+            # cancel and resubmit annotate, pairing and summary jobs
+            new_annotations = []
+            for ajob in self.annotations:
+                if ajob.dependencies == [job] and failed_tasks:  # only dependent on this job
+                    try:
+                        new_ajob = ajob.copy_with_tasks(failed_tasks)
+                        new_annotations.append(new_ajob)
+                        for task in failed_tasks:
+                            self.scheduler.cancel(ajob, task_ident=task)
+                            ajob.remove_task(task)
+                        new_ajob.dependencies = [new_job]
+                        self.scheduler.submit(new_ajob)
+                    except AttributeError:
+                        self.scheduler.cancel(ajob)
+                        ajob.reset()
+                        if new_job not in ajob.dependencies:
+                            ajob.dependencies.append(new_job)
+                        self.scheduler.submit(ajob)
+                elif job in ajob.dependencies:
+                    # dependent on multiple jobs
+                    self.scheduler.cancel(ajob)
+                    ajob.reset()
+                    if new_job not in ajob.dependencies:
+                        ajob.dependencies.append(new_job)
+                    self.scheduler.submit(ajob)
+                # ignore annotation jobs not related to the failed validation job
+            self.annotations.extend(new_annotations)
+        elif new_job.stage == SUBCOMMAND.ANNOTATE:
+            if new_job not in self.annotations:
+                self.annotations.append(new_job)
+
+        if new_job.stage in {SUBCOMMAND.VALIDATE, SUBCOMMAND.ANNOTATE}:
+            # cancel pairing
+            self.scheduler.cancel(self.pairing)
+            self.pairing.reset()
+            self.pairing.dependencies = self.annotations[:]
+
+        # all resubmissions result in cancelling summary
+        self.scheduler.cancel(self.summary)
+        self.summary.reset()
+
     def _job_status(self, job, submit=False, resubmit=False, log=DEVNULL):
         """
         report information regarding a particular job status
         """
         run_time = -1
-        if not job.job_ident and submit:
+        if not job.job_ident and (submit or resubmit):
             self.scheduler.submit(job)
         elif job.job_ident and resubmit and job.status in self.ERROR_STATES:
-            self.scheduler.submit(job)
+            self._resubmit_job(job)
         if job.job_ident:
             log('{} ({}) is {}'.format(job.name, job.job_ident, job.status))
         else:
@@ -477,9 +557,8 @@ class Pipeline:
             if isinstance(job, ArrayJob):
                 for task in job.task_list:
                     if not os.path.exists(task.complete_stamp()):
-                        with log.indent() as log:
-                            log('complete stamp is expected but does not exist')
-                            log(task.complete_stamp())
+                        log('complete stamp is expected but does not exist', indent_level=1)
+                        log(task.complete_stamp(), indent_level=2)
                     else:
                         run_time = max(run_time, parse_run_time(task.complete_stamp()))
             elif not os.path.exists(job.complete_stamp()):
@@ -489,6 +568,8 @@ class Pipeline:
             else:
                 run_time = max(run_time, parse_run_time(job.complete_stamp()))
             if run_time >= 0:
+                if isinstance(job, ArrayJob):
+                    log('{} {} COMPLETED'.format(job.tasks, 'task is' if job.tasks == 1 else 'tasks are'), indent_level=1)
                 log('run time: {}'.format(run_time), indent_level=1)
         else:
             if isinstance(job, ArrayJob):
@@ -497,10 +578,10 @@ class Pipeline:
                     tasks_by_status.setdefault(task.status, []).append(task)
                 for status, tasks in tasks_by_status.items():
                     comments = set([t.status_comment for t in tasks if t.status_comment])
-                    with log.indent() as log:
-                        log('{} tasks are {}'.format(len(tasks), status))
-                        for comment in comments:
-                            log('comment:', comment, indent_level=1)
+                    context = 'tasks are' if len(tasks) != 1 else 'task is'
+                    LOG('{} {} {}'.format(len(tasks), context, status), indent_level=2)
+                    for comment in comments:
+                        LOG('comment:', comment, indent_level=3)
             elif job.status not in {JOB_STATUS.PENDING, JOB_STATUS.NOT_SUBMITTED, JOB_STATUS.SUBMITTED}:
                 try:
                     content = LogFile.parse(job.logfile())
@@ -617,7 +698,7 @@ class Pipeline:
             if sec != 'general':
                 section = {}
                 for attr, value in parser[sec].items():
-                    if attr in ['dependencies', 'inputs', 'outputs', 'args'] and value:
+                    if attr in ['dependencies', 'inputs', 'outputs', 'args', 'task_list'] and value:
                         section[attr] = [s.strip() for s in re.split(r'\n', value)]
                     elif value == 'None':
                         section[attr] = None
@@ -627,7 +708,7 @@ class Pipeline:
                         section[attr] = value
                 if pipeline.scheduler.NAME == 'LOCAL':
                     jobs[sec] = LocalJob(func=_main, **section)
-                elif 'tasks' in parser[sec]:
+                elif 'task_list' in section:
                     jobs[sec] = ArrayJob(**section)
                 else:
                     jobs[sec] = Job(**section)
@@ -677,7 +758,7 @@ class Pipeline:
         }
 
         for job in [self.summary, self.pairing] + self.validations + self.annotations:
-            parser[job.name] = {k: re.sub(r'\$', '$$', v) for k, v in job.flatten().items()}
+            parser[job.display_name] = {k: re.sub(r'\$', '$$', v) for k, v in job.flatten().items()}
 
         with open(filename, 'w') as configfile:
             parser.write(configfile)

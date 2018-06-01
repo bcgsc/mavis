@@ -42,7 +42,16 @@ batch_id = 1
 
 [job1]
 stage = validate
-tasks = 1000
+task_list = 1
+    2
+    3
+    4
+    5
+    6
+    7
+    8
+    9
+    10
 name = job1
 output_dir = temp2
 
@@ -76,7 +85,7 @@ output_dir = temp5
     def test_parsed_types(self):
         build = _pipeline.Pipeline.read_build_file(get_data('build.cfg'))
         self.assertIs(build.validations[0].import_env, True)
-        self.assertIs(build.validations[0].concurrency_limit, None)
+        self.assertIs(build.scheduler.concurrency_limit, None)
 
     def tearDown(self):
         self.exists_patcher.stop()

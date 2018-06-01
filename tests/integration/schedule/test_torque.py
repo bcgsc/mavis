@@ -1,3 +1,4 @@
+import subprocess
 import unittest
 from unittest import mock
 
@@ -91,33 +92,36 @@ Job Id: 9.torque01.bcgsc.ca
 
 class TestCancel(unittest.TestCase):
 
-    @mock.patch('mavis.schedule.scheduler.TorqueScheduler.command', mock.Mock())
-    def test_single_job(self):
+    @mock.patch('mavis.schedule.scheduler.TorqueScheduler.command')
+    def test_single_job(self, patcher):
         sched = _scheduler.TorqueScheduler()
         job = _job.Job(SUBCOMMAND.VALIDATE, '', job_ident='1234')
         sched.cancel(job)
         self.assertEqual(_constants.JOB_STATUS.CANCELLED, job.status)
+        patcher.assert_called_with(['qdel', '1234'])
 
-    @mock.patch('mavis.schedule.scheduler.TorqueScheduler.command', mock.Mock())
-    def test_array_job(self):
+    @mock.patch('mavis.schedule.scheduler.TorqueScheduler.command')
+    def test_array_job(self, patcher):
         sched = _scheduler.TorqueScheduler()
         job = _job.ArrayJob(SUBCOMMAND.VALIDATE, 10, output_dir='', job_ident='1234')
         sched.cancel(job)
         self.assertEqual(_constants.JOB_STATUS.CANCELLED, job.status)
         for task in job.task_list:
             self.assertEqual(_constants.JOB_STATUS.CANCELLED, task.status)
+        patcher.assert_called_with(['qdel', '1234'])
 
-    @mock.patch('mavis.schedule.scheduler.TorqueScheduler.command', mock.Mock())
-    def test_array_job_task(self):
+    @mock.patch('mavis.schedule.scheduler.TorqueScheduler.command')
+    def test_array_job_task(self, patcher):
         sched = _scheduler.TorqueScheduler()
         job = _job.ArrayJob(SUBCOMMAND.VALIDATE, 10, output_dir='', job_ident='1234')
-        sched.cancel(job, task_ident=4)
+        sched.cancel(job, task_ident='4')
         self.assertEqual(_constants.JOB_STATUS.NOT_SUBMITTED, job.status)
         for i, task in enumerate(job.task_list):
             if i == 3:
                 self.assertEqual(_constants.JOB_STATUS.CANCELLED, task.status)
             else:
                 self.assertEqual(_constants.JOB_STATUS.NOT_SUBMITTED, task.status)
+        patcher.assert_called_with(['qdel', '1234', '-t', '4'])
 
     @mock.patch('mavis.schedule.scheduler.TorqueScheduler.command')
     def test_bad_command(self, patcher):
@@ -126,3 +130,4 @@ class TestCancel(unittest.TestCase):
         job = _job.Job(SUBCOMMAND.VALIDATE, '', job_ident='1234')
         with self.assertRaises(subprocess.CalledProcessError):
             sched.cancel(job)
+        patcher.assert_called_with(['qdel', '1234'])

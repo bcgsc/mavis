@@ -1,3 +1,4 @@
+from copy import copy as _copy
 import os
 import re
 import time
@@ -100,11 +101,17 @@ class Job:
             if option not in STD_OPTIONS:
                 raise AttributeError('unexpected attribute: {}'.format(option))
 
+    @property
+    def display_name(self):
+        if self.job_ident is None:
+            return self.name
+        return '{}_{}'.format(self.name, self.job_ident)
+
     def flatten(self):
         result = {}
         for attr, value in self.__dict__.items():
             if attr == 'dependencies':
-                value = [j.name for j in value]
+                value = [j.display_name for j in value]
             try:
                 if not isinstance(value, str):
                     value = '\n'.join([str(v) for v in value])
@@ -125,20 +132,49 @@ class Job:
         """
         return os.path.join(self.output_dir, 'MAVIS-{job_ident}.COMPLETE').format(job_ident=self.job_ident, name=self.name)
 
+    def reset(self):
+        self.status = JOB_STATUS.NOT_SUBMITTED
+        self.status_comment = ''
+        self.job_ident = None
+
 
 class ArrayJob(Job):
 
-    def __init__(self, stage, tasks, concurrency_limit=OPTIONS.concurrency_limit, **kwargs):
+    def __init__(self, stage, task_list, **kwargs):
         """
         Args:
-            concurrency_limit (int): the maximum number of tasks to be run concurrently for any given job array
             tasks (int): the number of tasks in the job array
         """
         Job.__init__(self, stage, **kwargs)
         self.stdout = os.path.join(self.output_dir, 'job-{name}-{job_ident}-{task_ident}.log') if 'stdout' not in kwargs else kwargs['stdout']
-        self.concurrency_limit = concurrency_limit
-        self.tasks = int(tasks)
-        self.task_list = [Task(self, n) for n in range(1, self.tasks + 1)]
+
+        if isinstance(task_list, int):
+            task_list = list(range(1, task_list + 1))
+        self.task_list = [Task(self, n) for n in task_list]
+
+    @property
+    def tasks(self):
+        return len(self.task_list)
+
+    def get_task(self, task_ident):
+        """
+        returns a task by task id
+        """
+        task_ident = int(task_ident)
+        for task in self.task_list:
+            if task.task_ident == task_ident:
+                return task
+        raise KeyError('task id not found', task_ident, self.task_list)
+
+    def has_task(self, task_ident):
+        task_ident = int(task_ident)
+        for task in self.task_list:
+            if task.task_ident == task_ident:
+                return True
+        return False
+
+    def remove_task(self, task_ident):
+        self.task_list = [task for task in self.task_list if task.task_ident != task_ident]
 
     def logfile(self, task_ident):
         return self.stdout.format(name=self.name, job_ident=self.job_ident, task_ident=task_ident)
@@ -151,19 +187,39 @@ class ArrayJob(Job):
 
     def flatten(self):
         result = {k: v for k, v in Job.flatten(self).items() if k != 'task_list'}
+        result['task_list'] = '\n'.join([str(t.task_ident) for t in self.task_list])
         return result
+
+    def copy_with_tasks(self, task_list):
+        copy = _copy(self)
+        copy.task_list = [Task(self, n) for n in task_list]
+        copy.dependencies = []
+        copy.reset()
+        return copy
+
+    def reset(self):
+        Job.reset(self)
+        for task in self.task_list:
+            task.reset()
+
+    def __repr__(self):
+        return '{}(job_ident={}, name={}, stage={}, status={})'.format(self.__class__.__name__, self.job_ident, self.name, self.stage, self.status)
 
 
 class Task:
 
-    def __init__(self, array_job, task_id):
+    def __init__(self, array_job, task_ident):
         self.array_job = array_job
-        self.task_id = task_id
+        self.task_ident = int(task_ident)
         self.status = JOB_STATUS.NOT_SUBMITTED
         self.status_comment = ''
 
     def logfile(self):
-        return self.array_job.logfile(self.task_id)
+        return self.array_job.logfile(self.task_ident)
 
     def complete_stamp(self):
-        return self.array_job.complete_stamp(self.task_id)
+        return self.array_job.complete_stamp(self.task_ident)
+
+    def reset(self):
+        self.status = JOB_STATUS.NOT_SUBMITTED
+        self.status_comment = ''

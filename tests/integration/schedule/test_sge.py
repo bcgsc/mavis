@@ -162,7 +162,7 @@ job-ID  prior   name       user         state submit/start at     queue         
         job = _job.ArrayJob(
             output_dir='temp',
             job_ident='3751935',
-            tasks=10,
+            task_list=10,
             stage='validate'
         )
         _scheduler.SgeScheduler().update_info(job)
@@ -188,7 +188,7 @@ job-ID  prior   name       user         state submit/start at     queue         
         job = _job.ArrayJob(
             output_dir='temp',
             job_ident='3751935',
-            tasks=10,
+            task_list=10,
             stage='validate'
         )
         _scheduler.SgeScheduler().update_info(job)
@@ -225,7 +225,7 @@ job-ID  prior   name       user         state submit/start at     queue         
             job_ident='3757289',
             stage='validate',
             name='arrtest',
-            tasks=3
+            task_list=3
         )
         _scheduler.SgeScheduler().update_info(job)
         self.assertEqual(_constants.JOB_STATUS.COMPLETED, job.status)
@@ -522,24 +522,26 @@ job-ID  prior   name       user         state submit/start at     queue         
 
 class TestCancel(unittest.TestCase):
 
-    @mock.patch('mavis.schedule.scheduler.SgeScheduler.command', mock.Mock())
-    def test_single_job(self):
+    @mock.patch('mavis.schedule.scheduler.SgeScheduler.command')
+    def test_single_job(self, patcher):
         sched = _scheduler.SgeScheduler()
         job = _job.Job(SUBCOMMAND.VALIDATE, '', job_ident='1234')
         sched.cancel(job)
         self.assertEqual(_constants.JOB_STATUS.CANCELLED, job.status)
+        patcher.assert_called_with(['qdel', '1234'])
 
-    @mock.patch('mavis.schedule.scheduler.SgeScheduler.command', mock.Mock())
-    def test_array_job(self):
+    @mock.patch('mavis.schedule.scheduler.SgeScheduler.command')
+    def test_array_job(self, patcher):
         sched = _scheduler.SgeScheduler()
         job = _job.ArrayJob(SUBCOMMAND.VALIDATE, 10, output_dir='', job_ident='1234')
         sched.cancel(job)
         self.assertEqual(_constants.JOB_STATUS.CANCELLED, job.status)
         for task in job.task_list:
             self.assertEqual(_constants.JOB_STATUS.CANCELLED, task.status)
+        patcher.assert_called_with(['qdel', '1234'])
 
-    @mock.patch('mavis.schedule.scheduler.SgeScheduler.command', mock.Mock())
-    def test_array_job_task(self):
+    @mock.patch('mavis.schedule.scheduler.SgeScheduler.command')
+    def test_array_job_task(self, patcher):
         sched = _scheduler.SgeScheduler()
         job = _job.ArrayJob(SUBCOMMAND.VALIDATE, 10, output_dir='', job_ident='1234')
         sched.cancel(job, task_ident=4)
@@ -549,6 +551,7 @@ class TestCancel(unittest.TestCase):
                 self.assertEqual(_constants.JOB_STATUS.CANCELLED, task.status)
             else:
                 self.assertEqual(_constants.JOB_STATUS.NOT_SUBMITTED, task.status)
+        patcher.assert_called_with(['qdel', '1234', '-t', '4'])
 
     @mock.patch('mavis.schedule.scheduler.SgeScheduler.command')
     def test_bad_command(self, patcher):
@@ -557,3 +560,4 @@ class TestCancel(unittest.TestCase):
         job = _job.Job(SUBCOMMAND.VALIDATE, '', job_ident='1234')
         with self.assertRaises(subprocess.CalledProcessError):
             sched.cancel(job)
+        patcher.assert_called_with(['qdel', '1234'])
