@@ -282,10 +282,14 @@ def write_config(filename, include_defaults=False, libraries=[], conversions={},
         for tag, value in config[sec].items():
             if '_regex_' in tag:
                 config[sec][tag] = re.sub(r'\$', '$$', config[sec][tag])
-            elif isinstance(value, list):
-                config[sec][tag] = '\n'.join([str(v) for v in value])
-            else:
-                config[sec][tag] = str(value)
+                continue
+            elif not isinstance(value, str):
+                try:
+                    config[sec][tag] = '\n'.join([str(v) for v in value])
+                    continue
+                except TypeError:
+                    pass
+            config[sec][tag] = str(value)
 
     conf = ConfigParser()
     for sec in config:

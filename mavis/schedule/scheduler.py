@@ -11,20 +11,14 @@ from .job import ArrayJob
 from .constants import SCHEDULER, JOB_STATUS, cumulative_job_state, MAIL_TYPE
 
 
-class Scheduler:
+class Scheduler:  # pragma: no cover
     """
     Class responsible for methods interacting with the scheduler
     """
-    ARRAY_DEPENDENCY = None
-    """:class:`str`: string which takes format arguments and is used to add array dependency arguments for job submission"""
-    JOB_DEPENDENCY = None
-    """:class:`str`: string which takes format arguments and is used to add job dependency arguments for job submission"""
     ENV_TASK_IDENT = '{TASK_IDENT}'
     """:class:`str`: the expected pattern of environment variables which store the task id"""
     ENV_JOB_IDENT = '{JOB_IDENT}'
     """:class:`str`: the expected pattern of environment variables which store the job id"""
-    DEPENDENCY_DELIM = ':'
-    """:class:`str`: the delimiter to use between jobs of the same depenency type"""
     HEADER_PREFIX = '#'
 
     def __init__(self, concurrency_limit=None, remote_head_ssh='', remote_head_name=''):
@@ -175,12 +169,14 @@ class SlurmScheduler(Scheduler):
         rows = []
         for row in results.values():
             row['State'] = row['State'].split(' ')[0]
+            task_ident = None
             if re.match(r'^\d+_\d+$', row['JobID']):
                 job_ident, task_ident = row['JobID'].rsplit('_', 1)
                 task_ident = int(task_ident)
+            elif re.match(r'^(\d+)_\[\d+(-\d+)?\]$', row['JobID']):
+                job_ident = row['JobID'].split('_', 1)[0]
             else:
                 job_ident = row['JobID']
-                task_ident = None
             rows.append({
                 'job_ident': job_ident,
                 'task_ident': task_ident,
@@ -230,6 +226,7 @@ class SlurmScheduler(Scheduler):
         content = self.command(command)
         rows = self.parse_sacct(content)
         updated = False
+        updated_tasks = set()
 
         for row in rows:
             if row['job_ident'] == job.job_ident:
@@ -238,14 +235,20 @@ class SlurmScheduler(Scheduler):
                         task = job.get_task(row['task_ident'])
                         task.status = row['status']
                         task.status_comment = row['status_comment']
+                        updated_tasks.add(task.task_ident)
                 else:
                     job.status = row['status']
                     job.status_comment = row['status_comment']
                     updated = True
-
+            else:
+                print(row['job_ident'])
         try:
             if not updated:
                 job.status = cumulative_job_state([t.status for t in job.task_list])
+            else:
+                for task in job.task_list:
+                    if task.task_ident not in updated_tasks:
+                        task.status = job.status
         except AttributeError:
             pass
 
@@ -309,7 +312,6 @@ class SgeScheduler(Scheduler):
     ENV_ARRAY_IDENT = ENV_JOB_IDENT
     ENV_JOB_NAME = 'JOB_NAME'
     """:class:`str`: expected pattern for environment variables which store the job name"""
-    DEPENDENCY_DELIM = ','
     HEADER_PREFIX = '#$'
 
     STATE_MAPPING = {
@@ -514,10 +516,10 @@ class SgeScheduler(Scheduler):
                 task_ident = int(row['task_ident'])
                 task = job.get_task(task_ident)
                 task.status = row['status']
-                task.status_comment = row['status_comment']
+                task.status_comment = row['status_comment'].strip()
             else:
                 job.status = row['status']
-                job.status_comment = row['status_comment']
+                job.status_comment = row['status_comment'].strip()
                 updated = True
 
         try:
@@ -532,20 +534,23 @@ class SgeScheduler(Scheduler):
         """
         if not job.job_ident:
             return
-        if task_ident is not None:
-            self.command(['qdel', job.job_ident, '-t', str(task_ident)])
-            job.get_task(int(task_ident)).status = JOB_STATUS.CANCELLED
-            LOG('cancelled task', job.name, job.job_ident, task_ident)
-        else:
-            self.command(['qdel', job.job_ident])
-            job.status = JOB_STATUS.CANCELLED
-            LOG('cancelled job', job.name, job.job_ident)
+        try:
+            if task_ident is not None:
+                self.command(['qdel', job.job_ident, '-t', str(task_ident)])
+                job.get_task(int(task_ident)).status = JOB_STATUS.CANCELLED
+                LOG('cancelled task', job.name, job.job_ident, task_ident)
+            else:
+                self.command(['qdel', job.job_ident])
+                job.status = JOB_STATUS.CANCELLED
+                LOG('cancelled job', job.name, job.job_ident)
 
-            try:
-                for task in job.task_list:
-                    task.status = JOB_STATUS.CANCELLED
-            except AttributeError:
-                pass
+                try:
+                    for task in job.task_list:
+                        task.status = JOB_STATUS.CANCELLED
+                except AttributeError:
+                    pass
+        except subprocess.CalledProcessError:
+            LOG('unable to cancel job', job.job_ident)
 
     def format_dependencies(self, job):
         """
@@ -573,9 +578,6 @@ class TorqueScheduler(SgeScheduler):
     """
     NAME = SCHEDULER.TORQUE
     """:attr:`~mavis.schedule.constants.SCHEDULER`: the type of scheduler"""
-    DEPENDENCY_DELIM = ':'
-    ARRAY_DEPENDENCY = '-W depend=afterokarray:{}'
-    JOB_DEPENDENCY = '-W depend=afterok:{}'
     ENV_TASK_IDENT = 'PBS_ARRAYID'
     ENV_JOB_IDENT = 'PBS_JOBID'
     """:class:`str`: expected pattern for environment variables which store the job id"""
@@ -615,18 +617,18 @@ class TorqueScheduler(SgeScheduler):
                 raise ValueError('An array job must be dependent only on another single array job with the same number of tasks', job, dep)
 
             if isinstance(dep, ArrayJob):
-                arr_dependencies.append(dep.job_ident)
+                task_ident = re.sub('\[\]', '[{}]'.format(dep.tasks) if dep.tasks > 1 else '[]', dep.job_ident)
+                arr_dependencies.append(task_ident)
             else:
                 job_dependencies.append(dep.job_ident)
 
         result = []
-
         if arr_dependencies:
-            result.append(self.ARRAY_DEPENDENCY.format(self.DEPENDENCY_DELIM.join(arr_dependencies)))
+            result.append('afterokarray:{}'.format(':'.join(arr_dependencies)))
         if job_dependencies:
-            result.append(self.JOB_DEPENDENCY.format(self.DEPENDENCY_DELIM.join(job_dependencies)))
+            result.append('afterok:{}'.format(':'.join(job_dependencies)))
 
-        return ','.join(result)
+        return '-W depend={}'.format(','.join(result))
 
     @classmethod
     def parse_qstat(cls, content):
@@ -647,10 +649,10 @@ class TorqueScheduler(SgeScheduler):
             lines = job.split('\n')
             task_ident = None
             row['Job Id'] = lines[0].split(':', 1)[1].strip()
-            match = re.match(r'^(\d+\[)(\d+)(\].*)$', row['Job Id'])
+            match = re.match(r'^(\d+)\[(\d+)\](.*)$', row['Job Id'])
             if match:
                 row['Job Id'] = match.group(1) + match.group(3)
-                task_ident = match.group(2)
+                task_ident = int(match.group(2))
             tab_size = None
             columns = []
             values = []
@@ -692,7 +694,7 @@ class TorqueScheduler(SgeScheduler):
 
     def submit(self, job, resubmit=False):
         """
-        runs a subprocess sbatch command
+        runs a subprocess qsub command
 
         Args:
             job (Job): the job to be submitted
@@ -730,9 +732,11 @@ class TorqueScheduler(SgeScheduler):
         # options specific to job arrays
         if isinstance(job, ArrayJob):
             concurrency_limit = '' if self.concurrency_limit is None else '%{}'.format(self.concurrency_limit)
-            command.extend(['-t', '{}{}'.format(','.join([t.task_ident for t in job.task_list]), concurrency_limit)])
+            command.extend(['-t', '{}{}'.format(','.join([str(t.task_ident) for t in job.task_list]), concurrency_limit)])
 
         command.append(job.script)
+        print(job)
+        print(job.dependencies)
         LOG('submitting', job.name)
         content = self.command(command)
 
@@ -758,9 +762,7 @@ class TorqueScheduler(SgeScheduler):
         if job.job_ident is None:
             job.status = JOB_STATUS.NOT_SUBMITTED
             return
-        command = ['qstat', '-f', job.job_ident]
-        if isinstance(job, ArrayJob):
-            command.append('-t')
+        command = ['qstat', '-f', '-t', job.job_ident]  # always split into tasks
         content = self.command(command)
         rows = self.parse_qstat(content)
         tasks_updated = False

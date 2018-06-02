@@ -26,3 +26,21 @@ Current Limitations
 - Transcriptome validation uses a collapsed model of all overlapping transcripts and is not isoform specific. Allowing
   for isoform specific validation would be computationally expensive but may be considered as an optional setting for
   future releases.
+
+Computing Code coverage
+-------------------------
+
+Since MAVIS uses multiple processes, it adds complexity to computing the code coverage. Running coverage normally will undereport.
+To ensure that the coverage module captures the information from the subprocesses we need to do the following
+
+In our development python virtual environment put a coverage.pth file (ex. ``venv/lib/python3.6/site-packages/coverage.pth``) containing the following
+
+.. code:: python
+
+    import coverage; coverage.process_startup()
+
+Additionally you will need to set the environment variable
+
+.. code:: bash
+
+    export COVERAGE_PROCESS_START=/path/to/mavis/repo/mavis/.coveragerc

@@ -84,7 +84,112 @@ Job Id: 9.torque01.bcgsc.ca
         self.assertIs(None, row['task_ident'])
         self.assertEqual('', row['status_comment'])
 
-    # TODO: batch job complete
+    def test_array_job(self):
+        content = """
+Job Id: 48[1].torque01.bcgsc.ca
+    Job_Name = MA_mock-A47933_batch-JT3CUggKXNStHcoFXYaGR3-1
+    Job_Owner = creisle@torque01.bcgsc.ca
+    job_state = C
+    queue = batch
+    server = torque01.bcgsc.ca
+    Checkpoint = u
+    ctime = Tue May 29 18:27:33 2018
+    depend = afterokarray:43[].torque01.bcgsc.ca
+    Error_Path = torque01.bcgsc.ca:/projects/trans_scratch/validations/workspa
+	ce/creisle/temp/test_submission/output_torque/mock-A47933_diseased_tra
+	nscriptome/annotate/batch-JT3CUggKXNStHcoFXYaGR3-/job---.log-1
+    Join_Path = oe
+    Keep_Files = n
+    Mail_Points = a
+    mtime = Tue May 29 18:27:33 2018
+    Output_Path = torque01.bcgsc.ca:/projects/trans_scratch/validations/worksp
+	ace/creisle/temp/test_submission/output_torque/mock-A47933_diseased_tr
+	anscriptome/annotate/batch-JT3CUggKXNStHcoFXYaGR3-/job---.log-1
+    Priority = 0
+    qtime = Tue May 29 18:27:33 2018
+    Rerunable = True
+    Resource_List.mem = 12000mb
+    Resource_List.walltime = 16:00:00
+    Resource_List.nodes = 1
+    Resource_List.nodect = 1
+    Variable_List = PBS_ARRAYID=1,PBS_O_QUEUE=batch,PBS_O_HOME=/home/creisle,
+	PBS_O_LOGNAME=creisle,
+	PBS_O_PATH=/home/creisle/git/mavis/venv/bin:/home/creisle/application
+	s/node-v10.1.0-linux-x64/bin:/home/creisle/.npm-packages/bin:/home/cre
+	isle/bin:/home/creisle/applications/centos06/python-3.6.1/bin:/project
+	s/tumour_char/analysis_scripts/bin/pog:/gsc/software/linux-x86_64-cent
+	os6/git-2.12.0/bin/:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr
+	/bin:/usr/local/sbin:/usr/sbin:/projects/trans_scratch/software/pipeli
+	ne_commands/:/home/creisle/bin,PBS_O_MAIL=/var/spool/mail/creisle,
+	PBS_O_SHELL=/bin/bash,PBS_O_LANG=en_US.UTF-8,
+	PBS_O_WORKDIR=/projects/trans_scratch/validations/workspace/creisle/t
+	emp/test_submission,PBS_O_HOST=torque01.bcgsc.ca,
+	PBS_O_SERVER=torque01.bcgsc.ca,
+	MANPATH=/home/creisle/.npm-packages/share/man:/home/creisle/applicati
+	ons/centos06/python-3.6.1/man:/usr/local/share/man:/usr/share/man/over
+	rides:/usr/share/man,XDG_SESSION_ID=1340,HOSTNAME=torque01.bcgsc.ca,
+	SHELL=/bin/bash,TERM=xterm-256color,HISTSIZE=1000,CLICOLOR=1,
+	SSH_CLIENT=10.9.202.242 35994 22,TMPDIR=/var/tmp/,
+	PYTHONUNBUFFERED=True,MAVIS_MIN_CLUSTERS_PER_FILE=2,
+	NODE_OPTIONS=--trace-warnings,SSH_TTY=/dev/pts/0,USER=creisle,
+	SVN_EDITOR=vim,LS_COLORS=di=34;01;47:mi=100;31;01:ln=36;01:ex=01;32,
+	MAVIS_SCHEDULER=TORQUE,VIRTUAL_ENV=/home/creisle/git/mavis/venv,
+	SACCT_FORMAT=jobid%-18\,jobname%45\,user%-8\,reqmem\,elapsed\,state\,
+	MaxRSS\,AveRSS\,Partition,
+	PATH=/home/creisle/git/mavis/venv/bin:/home/creisle/applications/node
+	-v10.1.0-linux-x64/bin:/home/creisle/.npm-packages/bin:/home/creisle/b
+	in:/home/creisle/applications/centos06/python-3.6.1/bin:/projects/tumo
+	ur_char/analysis_scripts/bin/pog:/gsc/software/linux-x86_64-centos6/gi
+	t-2.12.0/bin/:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/
+	usr/local/sbin:/usr/sbin:/projects/trans_scratch/software/pipeline_com
+	mands/:/home/creisle/bin,MAIL=/var/spool/mail/creisle,
+	_=/usr/local/bin/qsub,
+	PWD=/projects/trans_scratch/validations/workspace/creisle/temp/test_s
+	ubmission,XMODIFIERS=@im=none,LANG=en_US.UTF-8,
+	MODULEPATH=/usr/share/Modules/modulefiles:/etc/modulefiles,
+	LOADEDMODULES=,
+	NODE_PATH=/home/creisle/.npm-packages/lib/node_modules,
+	SQUEUE_FORMAT=%.12i %9P %45j %.8u %.2t %.10M %.6D %.8m %.14l %.4c %.2
+	0R %E,HISTCONTROL=ignoredups,MAVIS_MAX_FILES=1,HOME=/home/creisle,
+	SHLVL=2,LOGNAME=creisle,
+	PYTHONPATH=/home/creisle/applications/centos06/python-3.6.1/bin:,
+	SSH_CONNECTION=10.9.202.242 35994 10.9.220.231 22,
+	ORIENTDB_HOME=/home/creisle/applications/orientdb/orientdb-community-
+	2.2.34,MODULESHOME=/usr/share/Modules,
+	LESSOPEN=||/usr/bin/lesspipe.sh %s,BROWSER=/usr/bin/google-chrome,
+	NPM_PACKAGES=/home/creisle/.npm-packages,
+	XDG_RUNTIME_DIR=/run/user/1365,
+	BASH_FUNC_module()=() {  eval `/usr/bin/modulecmd bash $*`\
+}
+    euser = creisle
+    egroup = users
+    queue_type = E
+    comment = Job 48[].torque01.bcgsc.ca deleted because its dependency of arr
+	ay 43[].torque01.bcgsc.ca can never be satisfied
+    etime = Tue May 29 18:27:33 2018
+    exit_status = 271
+    submit_args = -j oe -l mem=12000mb -l walltime=16:00:00 -V -W depend=after
+	okarray:43[].torque01.bcgsc.ca -N MA_mock-A47933_batch-JT3CUggKXNStHco
+	FXYaGR3 -o /projects/trans_scratch/validations/workspace/creisle/temp/
+	test_submission/output_torque/mock-A47933_diseased_transcriptome/annot
+	ate/batch-JT3CUggKXNStHcoFXYaGR3-/job---.log -t 1 /projects/trans_scra
+	tch/validations/workspace/creisle/temp/test_submission/output_torque/m
+	ock-A47933_diseased_transcriptome/annotate/submit.sh
+    job_array_id = 1
+    fault_tolerant = False
+    job_radix = 0
+    submit_host = torque01.bcgsc.ca
+    init_work_dir = /projects/trans_scratch/validations/workspace/creisle/temp
+	/test_submission
+    request_version = 1
+
+        """
+        rows = _scheduler.TorqueScheduler().parse_qstat(content)
+        self.assertEqual(1, len(rows))
+        row = rows[0]
+        self.assertEqual('48.torque01.bcgsc.ca', row['job_ident'])
+        self.assertIs(1, row['task_ident'])
+
     # TODO: single job error
     # TODO: batch job error
     # TODO: single job exiting

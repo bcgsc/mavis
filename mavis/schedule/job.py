@@ -2,6 +2,7 @@ from copy import copy as _copy
 import os
 import re
 import time
+import unicodedata
 
 from ..constants import SUBCOMMAND, MavisNamespace
 from .constants import JOB_STATUS, OPTIONS, STD_OPTIONS
@@ -23,7 +24,7 @@ class LogFile:
         """
         self.filename = filename
         self.status = status
-        self.message = message
+        self.message = message.strip() if message is not None else None
 
     @classmethod
     def parse(cls, filename):
@@ -36,17 +37,17 @@ class LogFile:
         log = None
         with open(filename, 'r') as fh:
             lines = [l.strip() for l in fh.readlines() if l.strip()]
-            if not lines:
-                log = LogFile(filename, cls.STATUS.EMPTY)
-            else:
-                non_empty_line = lines[-1].lower()
-                if re.search(r'(\b|^)((\S+)?error|fault|fatal|aborted|core dumped|killed|died|command not found)(\b|$)', non_empty_line):
-                    log = LogFile(filename, cls.STATUS.CRASH, non_empty_line.strip())
-                elif any([re.match(r'^\s*run time \(s\): (\d+)\s*$', line) for line in lines[-10:]]):
-                    log = LogFile(filename, cls.STATUS.COMPLETE)
-                else:
-                    log = LogFile(filename, cls.STATUS.INCOMPLETE, lines[-1].strip())
-        return log
+            for line in lines[::-1]:
+                line = line.strip().lower()
+                if line and line[0] != '\x1b':  # ignore lines starting with terminal control characters
+                    if re.search(r'(\b|^)((\S+)?error|fault|fatal|aborted|core dumped|killed|died|command not found)(\b|$)', line):
+                        log = LogFile(filename, cls.STATUS.CRASH, line)
+                    elif re.match(r'^\s*run time \(s\): (\d+)\s*$', line):
+                        log = LogFile(filename, cls.STATUS.COMPLETE)
+                    else:
+                        log = LogFile(filename, cls.STATUS.INCOMPLETE, line)
+                    return log
+            return LogFile(filename, cls.STATUS.EMPTY)
 
 
 class Job:
@@ -204,6 +205,21 @@ class ArrayJob(Job):
 
     def __repr__(self):
         return '{}(job_ident={}, name={}, stage={}, status={})'.format(self.__class__.__name__, self.job_ident, self.name, self.stage, self.status)
+
+
+class TorqueArrayJob(ArrayJob):
+
+    def complete_stamp(self, task_ident):
+        # example: MAVIS-136[1].torque01.bcgsc.ca.COMPLETE
+        job_ident = re.sub('\[\]', '[{}]'.format(task_ident), self.job_ident)
+        return os.path.join(self.output_dir, 'MAVIS-{job_ident}.COMPLETE').format(job_ident=job_ident, name=self.name, task_ident=task_ident)
+
+    def logfile(self, task_ident):
+        # example: job-MV_mock-A47933_batch-B9PE6YAtnHu4cHA2GrsEzX-1-136[1].torque01.bcgsc.ca-1.log-1
+        name = '{}-{}'.format(self.name, task_ident)
+        job_ident = re.sub('\[\]', '[{}]'.format(task_ident), self.job_ident)
+        log = self.stdout.format(name=name, job_ident=job_ident, task_ident=task_ident)
+        return '{}-{}'.format(log, task_ident)
 
 
 class Task:

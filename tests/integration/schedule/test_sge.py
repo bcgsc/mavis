@@ -555,9 +555,8 @@ class TestCancel(unittest.TestCase):
 
     @mock.patch('mavis.schedule.scheduler.SgeScheduler.command')
     def test_bad_command(self, patcher):
-        patcher.side_effect = [subprocess.CalledProcessError(1, 'cmd')]
+        patcher.side_effect = [subprocess.CalledProcessError(1, 'command')]
         sched = _scheduler.SgeScheduler()
         job = _job.Job(SUBCOMMAND.VALIDATE, '', job_ident='1234')
-        with self.assertRaises(subprocess.CalledProcessError):
-            sched.cancel(job)
-        patcher.assert_called_with(['qdel', '1234'])
+        sched.cancel(job)
+        self.assertEqual(_constants.JOB_STATUS.NOT_SUBMITTED, job.status)

@@ -16,10 +16,10 @@ from ..annotate import constants as _ANNOTATE
 from ..annotate import file_io as _file_io
 from ..pairing import constants as _PAIRING
 from ..summary import constants as _SUMMARY
-from .job import Job, ArrayJob, LogFile
+from .job import Job, ArrayJob, LogFile, TorqueArrayJob
 from .scheduler import SlurmScheduler, TorqueScheduler, SgeScheduler
 from .local import LocalJob, LocalScheduler
-from .constants import JOB_STATUS, STD_OPTIONS, OPTIONS
+from .constants import JOB_STATUS, STD_OPTIONS, OPTIONS, SCHEDULER
 
 PROGNAME = shutil.which('mavis')
 SHEBANG = '#!/bin/bash'
@@ -217,7 +217,7 @@ class Pipeline:
         self.batch_id = batch_id
         self.args = {}  # for local runs only, store config to be passed to MAVIS stage
 
-    def write_submission_script(self, subcommand, job, args):
+    def write_submission_script(self, subcommand, job, args, aligner_path=None):
         """
         Args:
             subcommand (SUBCOMMAND): the pipeline step this script will run
@@ -226,12 +226,29 @@ class Pipeline:
         """
         LOG('writing:', job.script, time_stamp=True)
         with open(job.script, 'w') as fh:
-            fh.write(SHEBANG + '\n')
-            fh.write('START_TIME=$(date +%s)\n\n')
+            fh.write("""{shebang}
+{aligner_path}
+cd {cwd}
+START_TIME=$(date +%s)\n\n""".format(
+                shebang=SHEBANG,
+                aligner_path='export PATH={}:$PATH'.format(aligner_path) if aligner_path else '',
+                cwd=os.getcwd()
+            ))
             commands = [PROGNAME, subcommand] + stringify_args_to_command(args)
             fh.write(' \\\n\t'.join(commands) + '\n\n')
-            fh.write('END_TIME=$(date +%s)\n')
-            fh.write('echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE\n\n'.format(
+            fh.write("""
+code=$?
+
+if [ "$code" -ne "0" ]
+then
+    exit $code
+fi
+
+END_TIME=$(date +%s)
+
+echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
+
+            """.format(
                 args['output'],
                 self.scheduler.ENV_JOB_IDENT if not isinstance(job, ArrayJob) else self.scheduler.ENV_ARRAY_IDENT))
 
@@ -303,7 +320,7 @@ class Pipeline:
                 if libconf.protocol == PROTOCOL.TRANS:
                     job_options['memory_limit'] = config.schedule.trans_validation_memory
 
-                if isinstance(scheduler, LocalScheduler):
+                if scheduler.NAME == SCHEDULER.LOCAL:
                     for task_ident in range(1, len(clustered_files) + 1):
                         args['inputs'] = [os.path.join(cluster_output, '{}-{}.tab'.format(pipeline.batch_id, task_ident))]
                         args['output'] = os.path.join(base, SUBCOMMAND.VALIDATE, '{}-{}'.format(pipeline.batch_id, task_ident))
@@ -323,7 +340,9 @@ class Pipeline:
                 else:
                     args['inputs'] = os.path.join(cluster_output, '{}-${}.tab'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT))
                     args['output'] = os.path.join(base, SUBCOMMAND.VALIDATE, '{}-${}'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT))
-                    validate_job = ArrayJob(
+                    aligner_path = shutil.which(args['aligner'].split(' ')[0])
+                    job_class = ArrayJob if scheduler.NAME != SCHEDULER.TORQUE else TorqueArrayJob
+                    validate_job = job_class(
                         stage=SUBCOMMAND.VALIDATE,
                         task_list=len(clustered_files),
                         output_dir=os.path.join(base, SUBCOMMAND.VALIDATE, '{}-{{task_ident}}'.format(pipeline.batch_id)),
@@ -331,7 +350,7 @@ class Pipeline:
                         name='MV_{}_{}'.format(libconf.library, pipeline.batch_id),
                         **job_options
                     )
-                    pipeline.write_submission_script(SUBCOMMAND.VALIDATE, validate_job, args)
+                    pipeline.write_submission_script(SUBCOMMAND.VALIDATE, validate_job, args, aligner_path=aligner_path)
                     pipeline.validations.append(validate_job)
                     validate_jobs.append(validate_job)
 
@@ -377,7 +396,8 @@ class Pipeline:
                 else:
                     args['inputs'] = [os.path.join(cluster_output, '{}-${}.tab'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT))]
 
-                annotate_job = ArrayJob(
+                job_class = ArrayJob if scheduler.NAME != SCHEDULER.TORQUE else TorqueArrayJob
+                annotate_job = job_class(
                     stage=SUBCOMMAND.ANNOTATE,
                     task_list=len(clustered_files),
                     script=script_name,
@@ -614,7 +634,7 @@ class Pipeline:
         self.scheduler.wait()
 
         log('annotate', time_stamp=True)
-        if not all([job.status == JOB_STATUS.COMPLETED for job in self.validations]) and self.scheduler.NAME == 'LOCAL':
+        if not all([job.status == JOB_STATUS.COMPLETED for job in self.validations]) and self.scheduler.NAME == 'LOCAL' and (submit or resubmit):
             log('Stopping submission. Dependencies not complete', indent_level=1)
             submit = False
             resubmit = False
@@ -627,7 +647,7 @@ class Pipeline:
         self.scheduler.wait()
 
         log('pairing', time_stamp=True)
-        if not all([job.status == JOB_STATUS.COMPLETED for job in self.annotations]) and self.scheduler.NAME == 'LOCAL':
+        if not all([job.status == JOB_STATUS.COMPLETED for job in self.annotations]) and self.scheduler.NAME == 'LOCAL' and (submit or resubmit):
             log('Stopping submission. Dependencies not complete', indent_level=1)
             submit = False
             resubmit = False
@@ -639,7 +659,7 @@ class Pipeline:
         self.scheduler.wait()
 
         log('summary', time_stamp=True)
-        if self.pairing.status != JOB_STATUS.COMPLETED and self.scheduler.NAME == 'LOCAL':
+        if self.pairing.status != JOB_STATUS.COMPLETED and self.scheduler.NAME == 'LOCAL' and (submit or resubmit):
             log('Stopping submission. Dependencies not complete', indent_level=1)
             submit = False
             resubmit = False
@@ -706,10 +726,13 @@ class Pipeline:
                         value = cast[value]
                     else:
                         section[attr] = value
-                if pipeline.scheduler.NAME == 'LOCAL':
+                if pipeline.scheduler.NAME == SCHEDULER.LOCAL:
                     jobs[sec] = LocalJob(func=_main, **section)
                 elif 'task_list' in section:
-                    jobs[sec] = ArrayJob(**section)
+                    if pipeline.scheduler.NAME == SCHEDULER.TORQUE:
+                        jobs[sec] = TorqueArrayJob(**section)
+                    else:
+                        jobs[sec] = ArrayJob(**section)
                 else:
                     jobs[sec] = Job(**section)
 

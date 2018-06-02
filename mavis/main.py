@@ -15,7 +15,7 @@ from .annotate import main as annotate_main
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from .cluster import main as cluster_main
 from . import config as _config
-from .constants import SUBCOMMAND, PROTOCOL, float_fraction, EXIT_ERROR, EXIT_OK, PROGNAME
+from .constants import SUBCOMMAND, PROTOCOL, float_fraction, EXIT_OK
 from .error import DrawingFitError
 from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS, DiagramSettings
 from .illustrate.diagram import draw_multi_transcript_overlay
