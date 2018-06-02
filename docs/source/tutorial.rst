@@ -1,7 +1,7 @@
 
 ....
 
-.. _mini_tutorial:
+.. _mini-tutorial:
 
 MAVIS (Mini) Tutorial
 -----------------------
@@ -9,7 +9,7 @@ MAVIS (Mini) Tutorial
 This tutorial is based on the data included in the tests folder of MAVIS. The data files are very small and
 this tutorial is really only intended for testing a MAVIS install. The data here is simulated and results are
 not representitive of the typical events you would see reported from MAVIS. For a more complete tutorial with
-actual fusion gene examples, please see the :ref:`full tutorial below <full-tutorial>`.
+actual fusion gene examples, please see the :ref:`full-tutorial` below.
 
 
 The first step is to clone or download a zip of the MAVIS repository (https://github.com/bcgsc/mavis). You will need the tests directory.
@@ -127,14 +127,14 @@ If you see the above, then MAVIS has completed correctly!
 ....
 
 
-.. _full_tutorial:
+.. _full-tutorial:
 
 MAVIS (Full) Tutorial
 -----------------------
 
 The following tutorial is an introduction to running MAVIS. You will need to download the tutorial data. Additionally
 the instructions pertain to running MAVIS on a :term:`SLURM` cluster. This tutorial will require more resources than
-the :ref:`mini tutorial above <mini-tutorial>`
+the :ref:`mini-tutorial` above.
 
 Getting the Tutorial Data
 .............................
@@ -195,7 +195,6 @@ Run the following to download the hg19 reference files and set up the environmen
 
 
 .. _example-generating-the-conf:
-
 
 Generating the Config File
 .............................
