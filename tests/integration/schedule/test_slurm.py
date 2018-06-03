@@ -38,6 +38,58 @@ class TestSubmit(unittest.TestCase):
         ], shell=False)
 
     @mock.patch('subprocess.check_output')
+    def test_partition(self, patch_check):
+        patch_check.return_value = "Submitted batch job 1665695".encode('utf8')
+        job = _job.Job(
+            output_dir='temp',
+            name='job1',
+            stage='validate',
+            script='submit.sh',
+            queue='all'
+        )
+        print(job)
+        _scheduler.SlurmScheduler().submit(job)
+        self.assertEqual(_constants.JOB_STATUS.SUBMITTED, job.status)
+        self.assertEqual('1665695', job.job_ident)
+        patch_check.assert_called_with([
+            'sbatch',
+            '--partition=all',
+            '--mem', '16000',
+            '-t', '16:00:00',
+            '--export=ALL',
+            '-J', 'job1',
+            '-o', 'temp/job-%x-%j.log',
+            'submit.sh'
+        ], shell=False)
+
+    @mock.patch('subprocess.check_output')
+    def test_mail_options(self, patch_check):
+        patch_check.return_value = "Submitted batch job 1665695".encode('utf8')
+        job = _job.Job(
+            output_dir='temp',
+            name='job1',
+            stage='validate',
+            script='submit.sh',
+            mail_user='me@example.com',
+            mail_type=_constants.MAIL_TYPE.ALL
+        )
+        print(job)
+        _scheduler.SlurmScheduler().submit(job)
+        self.assertEqual(_constants.JOB_STATUS.SUBMITTED, job.status)
+        self.assertEqual('1665695', job.job_ident)
+        patch_check.assert_called_with([
+            'sbatch',
+            '--mem', '16000',
+            '-t', '16:00:00',
+            '--export=ALL',
+            '-J', 'job1',
+            '-o', 'temp/job-%x-%j.log',
+            '--mail-type=ALL',
+            '--mail-user=me@example.com',
+            'submit.sh'
+        ], shell=False)
+
+    @mock.patch('subprocess.check_output')
     def test_dependent_job(self, patch_check):
         patch_check.side_effect = ["Submitted batch job 1665695".encode('utf8')]
         job = _job.Job(
@@ -431,7 +483,6 @@ JobId=1697512 ArrayJobId=1697503 ArrayTaskId=1 JobName=MV_mock-A47933_batch-uwSw
         self.assertEqual(_constants.JOB_STATUS.CANCELLED, row['status'])
 
 
-
 class TestParseSacctTable(unittest.TestCase):
 
     def test_basic_table(self):
@@ -459,6 +510,20 @@ JobID|JobName|User|ReqMem|Elapsed|State|MaxRSS|AveRSS|Partition
         self.assertEqual(3, len(rows))
         self.assertEqual(_constants.JOB_STATUS.CANCELLED, rows[1]['status'])
         self.assertEqual(_constants.JOB_STATUS.COMPLETED, rows[0]['status'])
+
+    def test_pending_array(self):
+        content = """
+JobID|JobName|User|ReqMem|Elapsed|State|MaxRSS|AveRSS|Partition
+1701003_[37-200]|MA_L1522785992-normal_batch-aUmErftiY7eEWvENfSeJwc|creisle|12000Mn|00:00:00|PENDING|||all
+1701003_1|MA_L1522785992-normal_batch-aUmErftiY7eEWvENfSeJwc|creisle|12000Mn|00:05:00|RUNNING|||all
+        """
+        rows = _scheduler.SlurmScheduler().parse_sacct(content)
+        self.assertEqual(2, len(rows))
+        self.assertEqual(_constants.JOB_STATUS.PENDING, rows[0]['status'])
+        self.assertEqual(_constants.JOB_STATUS.RUNNING, rows[1]['status'])
+        self.assertIs(None, rows[0]['task_ident'])
+        self.assertEqual(1, rows[1]['task_ident'])
+
 
 class TestCancel(unittest.TestCase):
 

@@ -211,13 +211,13 @@ class TorqueArrayJob(ArrayJob):
 
     def complete_stamp(self, task_ident):
         # example: MAVIS-136[1].torque01.bcgsc.ca.COMPLETE
-        job_ident = re.sub('\[\]', '[{}]'.format(task_ident), self.job_ident)
+        job_ident = re.sub(r'\[\]', '[{}]'.format(task_ident), self.job_ident)
         return os.path.join(self.output_dir, 'MAVIS-{job_ident}.COMPLETE').format(job_ident=job_ident, name=self.name, task_ident=task_ident)
 
     def logfile(self, task_ident):
         # example: job-MV_mock-A47933_batch-B9PE6YAtnHu4cHA2GrsEzX-1-136[1].torque01.bcgsc.ca-1.log-1
         name = '{}-{}'.format(self.name, task_ident)
-        job_ident = re.sub('\[\]', '[{}]'.format(task_ident), self.job_ident)
+        job_ident = re.sub(r'\[\]', '[{}]'.format(task_ident), self.job_ident)
         log = self.stdout.format(name=name, job_ident=job_ident, task_ident=task_ident)
         return '{}-{}'.format(log, task_ident)
 

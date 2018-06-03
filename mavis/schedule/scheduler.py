@@ -11,6 +11,23 @@ from .job import ArrayJob
 from .constants import SCHEDULER, JOB_STATUS, cumulative_job_state, MAIL_TYPE
 
 
+def consecutive_ranges(numbers):
+    """
+    Given a list of integers, return a list of ranges
+
+    Example:
+        >>> consecutive_ranges([1, 2, 3, 4, 5, 9, 10, 14, 18])
+        [(1, 5), (9, 10), (14, 14), (18, 18)]
+    """
+    ranges = []
+    for number in sorted(set(numbers)):
+        if not ranges or ranges[-1][1] + 1 != number:
+            ranges.append((number, number))
+        else:
+            ranges[-1] = ranges[-1][0], number
+    return ranges
+
+
 class Scheduler:  # pragma: no cover
     """
     Class responsible for methods interacting with the scheduler
@@ -50,7 +67,7 @@ class Scheduler:  # pragma: no cover
     def wait(self):
         pass
 
-    def submit(self, job, resubmit=False):
+    def submit(self, job):
         """
         submit a job to the scheduler
         """
@@ -120,7 +137,8 @@ class SlurmScheduler(Scheduler):
         # options specific to job arrays
         if isinstance(job, ArrayJob):
             concurrency_limit = '' if self.concurrency_limit is None else '%{}'.format(self.concurrency_limit)
-            command.append('--array={}{}'.format(','.join([str(task.task_ident) for task in job.task_list]), concurrency_limit))
+            task_ranges = ['{}{}'.format(s, '-{}'.format(t) if s != t else '') for s, t in consecutive_ranges([task.task_ident for task in job.task_list])]
+            command.append('--array={}{}'.format(','.join(task_ranges), concurrency_limit))
 
         command.append(job.script)
         LOG('submitting', job.name)
@@ -240,8 +258,6 @@ class SlurmScheduler(Scheduler):
                     job.status = row['status']
                     job.status_comment = row['status_comment']
                     updated = True
-            else:
-                print(row['job_ident'])
         try:
             if not updated:
                 job.status = cumulative_job_state([t.status for t in job.task_list])
@@ -279,7 +295,7 @@ class SlurmScheduler(Scheduler):
         """
         try:
             if len(job.dependencies) == 1 and job.tasks == job.dependencies[0].tasks:
-            # array job dependent on only another array job with the same number of tasks
+                # array job dependent on only another array job with the same number of tasks
                 dependency = job.dependencies[0]
                 if not dependency.job_ident:
                     raise ValueError('The dependencies must be submitted before the dependent job', job, dependency)
@@ -460,7 +476,10 @@ class SgeScheduler(Scheduler):
             command.extend(['-M', job.mail_user])
         # options specific to job arrays
         if isinstance(job, ArrayJob):
-            command.extend(['-t', '1-{}'.format(job.tasks)])
+            task_ranges = consecutive_ranges([t.task_ident for t in job.task_list])
+            if len(task_ranges) != 1:
+                raise ValueError('SGE does not support array jobs with non-consecutive task ranges', task_ranges)
+            command.extend(['-t', '{}-{}'.format(*task_ranges[0])])
         if job.stdout:
             command.extend(['-o', job.stdout.format(
                 name='\\${}'.format(self.ENV_JOB_NAME),
@@ -512,7 +531,14 @@ class SgeScheduler(Scheduler):
             rows = self.parse_qacct(content)
             # job is still on the scheduler
         for row in rows:
-            if isinstance(job, ArrayJob) and row['task_ident']:
+            if row['job_ident'] != job.job_ident:
+                continue
+            try:
+                if row['task_ident'] and not job.has_task(row['task_ident']):
+                    continue
+            except AttributeError:
+                pass
+            if row['task_ident']:
                 task_ident = int(row['task_ident'])
                 task = job.get_task(task_ident)
                 task.status = row['status']
@@ -617,7 +643,7 @@ class TorqueScheduler(SgeScheduler):
                 raise ValueError('An array job must be dependent only on another single array job with the same number of tasks', job, dep)
 
             if isinstance(dep, ArrayJob):
-                task_ident = re.sub('\[\]', '[{}]'.format(dep.tasks) if dep.tasks > 1 else '[]', dep.job_ident)
+                task_ident = re.sub(r'\[\]', '[{}]'.format(dep.tasks) if dep.tasks > 1 else '[]', dep.job_ident)
                 arr_dependencies.append(task_ident)
             else:
                 job_dependencies.append(dep.job_ident)
@@ -692,7 +718,7 @@ class TorqueScheduler(SgeScheduler):
             })
         return rows
 
-    def submit(self, job, resubmit=False):
+    def submit(self, job):
         """
         runs a subprocess qsub command
 
@@ -701,7 +727,7 @@ class TorqueScheduler(SgeScheduler):
             resubmit (bool): if true the job will be submitted even if it already has a job_ident
         """
         command = ['qsub', '-j', 'oe']  # always join output as stdout
-        if job.job_ident and not resubmit:
+        if job.job_ident:
             raise ValueError('Job has already been submitted and has the job number', job.job_ident)
         if job.queue:
             command.append('-q {}'.format(job.queue))
@@ -732,11 +758,10 @@ class TorqueScheduler(SgeScheduler):
         # options specific to job arrays
         if isinstance(job, ArrayJob):
             concurrency_limit = '' if self.concurrency_limit is None else '%{}'.format(self.concurrency_limit)
-            command.extend(['-t', '{}{}'.format(','.join([str(t.task_ident) for t in job.task_list]), concurrency_limit)])
+            task_ranges = ['{}{}'.format(s, '-{}'.format(t) if s != t else '') for s, t in consecutive_ranges([task.task_ident for task in job.task_list])]
+            command.extend(['-t', '{}{}'.format(','.join(task_ranges), concurrency_limit)])
 
         command.append(job.script)
-        print(job)
-        print(job.dependencies)
         LOG('submitting', job.name)
         content = self.command(command)
 

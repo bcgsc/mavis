@@ -1,11 +1,10 @@
 from configparser import ConfigParser, ExtendedInterpolation
-from shortuuid import uuid
 import os
 import re
 import shutil
-import itertools
 import subprocess
 
+from shortuuid import uuid
 
 from ..cluster import constants as _CLUSTER
 from ..constants import SUBCOMMAND, PROTOCOL, EXIT_ERROR, EXIT_OK, EXIT_INCOMPLETE
@@ -14,10 +13,9 @@ from ..util import mkdirp, output_tabbed_file, LOG, DEVNULL
 from ..validate import constants as _VALIDATE
 from ..annotate import constants as _ANNOTATE
 from ..annotate import file_io as _file_io
-from ..pairing import constants as _PAIRING
 from ..summary import constants as _SUMMARY
 from .job import Job, ArrayJob, LogFile, TorqueArrayJob
-from .scheduler import SlurmScheduler, TorqueScheduler, SgeScheduler
+from .scheduler import SlurmScheduler, TorqueScheduler, SgeScheduler, consecutive_ranges
 from .local import LocalJob, LocalScheduler
 from .constants import JOB_STATUS, STD_OPTIONS, OPTIONS, SCHEDULER
 
@@ -483,6 +481,9 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
         return pipeline
 
     def _resubmit_job(self, job):
+        """
+        Given a failed job, cancel it and all of its dependencies and then resubmit them
+        """
         # resubmit the job or all failed tasks for the job. Update any dependencies
         failed_tasks = set()
         try:
@@ -493,6 +494,10 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
                 failed_tasks = []
         except AttributeError:  # non-array jobs
             pass
+        # SGE cannot submit a task list that is non-consecutive so we will cancel the entire array
+        if self.scheduler.NAME == SCHEDULER.SGE and len(consecutive_ranges(failed_tasks)) != 1:
+            failed_tasks = set()
+
         if failed_tasks:  # resubmit failed tasks only and create a new job
             new_job = job.copy_with_tasks(failed_tasks)
             for task_ident in failed_tasks:
