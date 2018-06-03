@@ -113,5 +113,3 @@ tools can be used as long as the user converts the tools native output to match 
 
     &#10004;
 
-
-.. include:: tools_supported.rst

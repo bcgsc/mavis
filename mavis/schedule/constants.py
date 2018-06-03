@@ -11,7 +11,8 @@ JOB_STATUS = MavisNamespace(
     'PENDING',
     'CANCELLED',
     NOT_SUBMITTED='NOT SUBMITTED',
-    UNKNOWN='UNKNOWN'
+    UNKNOWN='UNKNOWN',
+    __name__='~mavis.schedule.constants.JOB_STATUS'
 )
 
 
@@ -35,11 +36,15 @@ SCHEDULER = MavisNamespace('SGE', 'SLURM', 'TORQUE', 'LOCAL', __name__='~mavis.s
 - :term:`TORQUE`
 """
 
-MAIL_TYPE = MavisNamespace('BEGIN', 'END', 'FAIL', 'ALL', 'NONE')
+MAIL_TYPE = MavisNamespace('BEGIN', 'END', 'FAIL', 'ALL', 'NONE', __name__='~mavis.schedule.constants.MAIL_TYPE')
 """
-only supporting common mail type options between sge and slurm
-https://slurm.schedmd.com/sbatch.html
-http://gridscheduler.sourceforge.net/htmlman/htmlman1/qsub.html
+When the scheduler should notify :term:`mail_user` about a job
+
+- ``ALL`` - All other options (except none)
+- ``BEGIN`` - Send an email when the job starts
+- ``END`` - Send an email when the job has terminated
+- ``FAIL`` - Send an email if the job fails
+- ``NONE`` - Do not send mail
 """
 
 STD_OPTIONS = ['memory_limit', 'queue', 'time_limit', 'import_env', 'mail_user', 'mail_type']
@@ -64,7 +69,7 @@ OPTIONS = WeakMavisNamespace(__name__='~mavis.schedule.constants.options')
 """
 OPTIONS.add('annotation_memory', 12000, defn='default memory limit (MB) for the annotation stage')
 OPTIONS.add('import_env', True, defn='flag to import environment variables')
-OPTIONS.add('mail_type', 'NONE', cast_type=MAIL_TYPE.enforce, defn='When to notify the mail_user (if given)')
+OPTIONS.add('mail_type', MAIL_TYPE.NONE, cast_type=MAIL_TYPE, defn='When to notify the mail_user (if given)')
 OPTIONS.add('mail_user', '', defn='User(s) to send notifications to')
 OPTIONS.add('memory_limit', 16000, defn='the maximum number of megabytes (MB) any given job is allowed')  # 16 GB
 OPTIONS.add('queue', '', cast_type=str, defn='the queue jobs are to be submitted to')

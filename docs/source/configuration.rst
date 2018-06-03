@@ -85,14 +85,3 @@ or as a command line argument to the cluster stage
 .. code:: bash
 
     mavis cluster --uninformative_filter True ....
-
-
-
-Configuring the Job Scheduler
--------------------------------
-
-MAVIS supports submission to multiple schedulers: :term:`SGE`, :term:`SLURM` (default), and :term:`TORQUE`. This can be configured using the :term:`scheduler` setting. Users requiring
-support for other schedulers may make a request by `submitting an issue to our github page <https://github.com/bcgsc/mavis/issues>`__. Additionally, developers looking to
-extend the functionality may submit a pull request (Please see the :ref:`guidelines for contributors <guideline-for-contributors>`).
-
-MAVIS can also be run locally without a scheduler. This uses the python py:module:`concurrent.futures` library to manage MAVIS jobs.

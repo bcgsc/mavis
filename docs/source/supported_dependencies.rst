@@ -1,7 +1,74 @@
+Supported Dependencies
+=======================
+
+MAVIS integrates with :ref:`SV callers <supported-sv-callers>`, :ref:`job schedulers <dep-job-schedulers>`, and :ref:`aligners <dep-aligners>`. While some of these dependencies are optional, all currently supported options are detailed below. The versions column
+in the tables below list all the versions which were tested for each tool. Each version listed is known to be compatible with MAVIS.
+
+.. _dep-job-schedulers:
+
+Job Schedulers
+--------------------
+
+MAVIS can be run locally without a job scheduler (``MAVIS_SCHEDULER=LOCAL``) however, due to the computational resources generally required, it is recommended that you
+use one of the supported schedulers listed below.
+
+
+.. list-table::
+    :header-rows: 1
+
+    *   - Name
+        - Version(s)
+        - Environment Setting
+    *   - :term:`TORQUE`
+        - ``6.1.2``
+        - ``MAVIS_SCHEDULER=TORQUE``
+    *   - :term:`SGE`
+        - ``8.1.8``
+        - ``MAVIS_SCHEDULER=SGE``
+    *   - :term:`SLURM`
+        - ``17.02.1-2``
+        - ``MAVIS_SCHEDULER=SLURM``
+
+Users requiring support for other schedulers may make a request by `submitting an issue to our github page <https://github.com/bcgsc/mavis/issues>`__. Additionally, developers looking to
+extend the functionality may submit a pull request (Please see the :ref:`guidelines for contributors <guideline-for-contributors>`).
+
+MAVIS running locally uses the python :py:mod:`concurrent.futures` library to manage jobs.
+
+
+....
+
+
+.. _dep-aligners:
+
+Aligners
+-----------
+
+Two aligners are supported :term:`bwa` and :term:`blat` (default).
+
+.. list-table::
+    :header-rows: 1
+
+    *   - Name
+        - Version(s)
+        - Environment Setting
+    *   - :term:`blat`
+        - ``36x2`` ``36``
+        - ``MAVIS_ALIGNER=blat``
+    *   - :term:`bwa mem <bwa>`
+        - ``0.7.15-r1140`` ``0.7.12``
+        - ``MAVIS_ALIGNER='bwa mem'``
+
+.. note::
+
+    When setting the aligner you will also need to set the :term:`aligner_reference` to match
+
+
+....
+
+
 .. _supported-sv-callers:
 
-
-Supported SV Callers
+SV Callers
 -----------------------
 
 MAVIS supports output from a wide-variety of :term:`SV` callers. Assumptions are made for each tool based on interpretation of
