@@ -163,7 +163,7 @@ class TestSubmit(unittest.TestCase):
             '--export=ALL',
             '-J', 'job1',
             '-o', 'temp/job-%x-%A-%a.log',
-            '--array=1,2,3,4,5,6,7,8,9,10',
+            '--array=1-10',
             'submit.sh'
         ], shell=False)
 
@@ -176,7 +176,7 @@ class TestSubmit(unittest.TestCase):
             name='job1',
             stage='validate',
             script='submit.sh',
-            task_list=10
+            task_list=[1, 2, 3, 4, 5, 14, 16]
         )
         _scheduler.SlurmScheduler(concurrency_limit=2).submit(job)
         self.assertEqual(_constants.JOB_STATUS.SUBMITTED, job.status)
@@ -188,7 +188,7 @@ class TestSubmit(unittest.TestCase):
             '--export=ALL',
             '-J', 'job1',
             '-o', 'temp/job-%x-%A-%a.log',
-            '--array=1,2,3,4,5,6,7,8,9,10%2',
+            '--array=1-5,14,16%2',
             'submit.sh'
         ]
         patch_check.assert_called_with(exp, shell=False)

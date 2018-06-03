@@ -455,7 +455,7 @@ class SgeScheduler(Scheduler):
         if job.job_ident:
             raise ValueError('Job has already been submitted and has the job number', job.job_ident)
         if job.queue:
-            command.append('-q {}'.format(job.queue))
+            command.extend(['-q', job.queue])
         if job.memory_limit:
             command.extend([
                 '-l',
@@ -640,7 +640,7 @@ class TorqueScheduler(SgeScheduler):
 
         for dep in job.dependencies:
             if not dep.job_ident:
-                raise ValueError('An array job must be dependent only on another single array job with the same number of tasks', job, dep)
+                raise ValueError('Dependencies must be submitted beforehand', job, dep)
 
             if isinstance(dep, ArrayJob):
                 task_ident = re.sub(r'\[\]', '[{}]'.format(dep.tasks) if dep.tasks > 1 else '[]', dep.job_ident)
@@ -730,7 +730,7 @@ class TorqueScheduler(SgeScheduler):
         if job.job_ident:
             raise ValueError('Job has already been submitted and has the job number', job.job_ident)
         if job.queue:
-            command.append('-q {}'.format(job.queue))
+            command.extend(['-q', job.queue])
         if job.memory_limit:
             command.extend([
                 '-l',
@@ -753,7 +753,7 @@ class TorqueScheduler(SgeScheduler):
                 task_ident='${}'.format(self.ENV_TASK_IDENT)
             )])
         if job.mail_type and job.mail_user:
-            command.extend(['-m', job.mail_type])
+            command.extend(['-m', self.MAIL_TYPE_MAPPING[job.mail_type]])
             command.extend(['-M', job.mail_user])
         # options specific to job arrays
         if isinstance(job, ArrayJob):

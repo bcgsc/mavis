@@ -140,6 +140,9 @@ class Job:
 
 
 class ArrayJob(Job):
+    """
+    Class for dealing with array jobs. Jobs with many tasks
+    """
 
     def __init__(self, stage, task_list, **kwargs):
         """

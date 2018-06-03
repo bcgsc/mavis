@@ -238,3 +238,139 @@ class TestCancel(unittest.TestCase):
         with self.assertRaises(subprocess.CalledProcessError):
             sched.cancel(job)
         patcher.assert_called_with(['qdel', '1234'])
+
+
+class TestSubmit(unittest.TestCase):
+
+    @mock.patch('mavis.schedule.scheduler.TorqueScheduler.command')
+    def test_job(self, patcher):
+        patcher.side_effect = ['141.torque01.bcgsc.ca\n']
+        job = _job.Job(
+            stage=SUBCOMMAND.VALIDATE,
+            queue='all',
+            output_dir='output_dir',
+            name='MV1',
+            memory_limit=1,
+            mail_user='me@example.com',
+            mail_type=_constants.MAIL_TYPE.ALL,
+            script='script.sh'
+        )
+
+        sched = _scheduler.TorqueScheduler()
+        sched.submit(job)
+        self.assertEqual('141.torque01.bcgsc.ca', job.job_ident)
+        patcher.assert_called_with([
+            'qsub', '-j', 'oe', '-q', 'all', '-l', 'mem=1mb',
+            '-l', 'walltime=16:00:00', '-V', '-N', 'MV1',
+            '-o', 'output_dir/job-$PBS_JOBNAME-$PBS_JOBID.log',
+            '-m', 'abef', '-M', 'me@example.com', 'script.sh'
+        ])
+
+    @mock.patch('mavis.schedule.scheduler.TorqueScheduler.command')
+    def test_job_with_job_deps(self, patcher):
+        patcher.side_effect = ['141.torque01.bcgsc.ca\n']
+        job = _job.Job(
+            stage=SUBCOMMAND.VALIDATE,
+            queue='all',
+            output_dir='output_dir',
+            name='MV1',
+            memory_limit=1,
+            mail_user='me@example.com',
+            mail_type=_constants.MAIL_TYPE.ALL,
+            script='script.sh',
+            dependencies=[
+            _job.Job(
+                stage=SUBCOMMAND.VALIDATE,
+                output_dir='output_dir',
+                job_ident='1234.torque01.bcgsc.ca'
+            ),
+            _job.Job(
+                stage=SUBCOMMAND.VALIDATE,
+                output_dir='output_dir',
+                job_ident='54.torque01.bcgsc.ca'
+            )]
+        )
+
+        sched = _scheduler.TorqueScheduler()
+        sched.submit(job)
+        self.assertEqual('141.torque01.bcgsc.ca', job.job_ident)
+        patcher.assert_called_with([
+            'qsub', '-j', 'oe', '-q', 'all', '-l', 'mem=1mb',
+            '-l', 'walltime=16:00:00', '-V',
+            '-W depend=afterok:1234.torque01.bcgsc.ca:54.torque01.bcgsc.ca',
+            '-N', 'MV1',
+            '-o', 'output_dir/job-$PBS_JOBNAME-$PBS_JOBID.log',
+            '-m', 'abef', '-M', 'me@example.com', 'script.sh'
+        ])
+
+    @mock.patch('mavis.schedule.scheduler.TorqueScheduler.command')
+    def test_job_with_mixed_deps(self, patcher):
+        patcher.side_effect = ['141.torque01.bcgsc.ca\n']
+        job = _job.Job(
+            stage=SUBCOMMAND.VALIDATE,
+            queue='all',
+            output_dir='output_dir',
+            name='MV1',
+            memory_limit=1,
+            mail_user='me@example.com',
+            mail_type=_constants.MAIL_TYPE.ALL,
+            script='script.sh',
+            dependencies=[
+            _job.Job(
+                stage=SUBCOMMAND.VALIDATE,
+                output_dir='output_dir',
+                job_ident='1234.torque01.bcgsc.ca'
+            ),
+            _job.Job(
+                stage=SUBCOMMAND.VALIDATE,
+                output_dir='output_dir',
+                job_ident='54.torque01.bcgsc.ca'
+            ),
+            _job.TorqueArrayJob(
+                stage=SUBCOMMAND.VALIDATE,
+                output_dir='output_dir',
+                job_ident='99[].torque01.bcgsc.ca',
+                task_list=5
+            )]
+        )
+
+        sched = _scheduler.TorqueScheduler()
+        sched.submit(job)
+        self.assertEqual('141.torque01.bcgsc.ca', job.job_ident)
+        patcher.assert_called_with([
+            'qsub', '-j', 'oe', '-q', 'all', '-l', 'mem=1mb',
+            '-l', 'walltime=16:00:00', '-V',
+            '-W depend=afterokarray:99[5].torque01.bcgsc.ca,afterok:1234.torque01.bcgsc.ca:54.torque01.bcgsc.ca',
+            '-N', 'MV1',
+            '-o', 'output_dir/job-$PBS_JOBNAME-$PBS_JOBID.log',
+            '-m', 'abef', '-M', 'me@example.com', 'script.sh'
+        ])
+
+    @mock.patch('mavis.schedule.scheduler.TorqueScheduler.command')
+    def test_array(self, patcher):
+        patcher.side_effect = ['142[].torque01.bcgsc.ca\n']
+        job = _job.TorqueArrayJob(
+            stage=SUBCOMMAND.VALIDATE,
+            queue='all',
+            output_dir='output_dir',
+            name='MV1',
+            memory_limit=1,
+            mail_user='me@example.com',
+            mail_type=_constants.MAIL_TYPE.ALL,
+            script='script.sh',
+            task_list=[1, 2, 3, 6, 9]
+        )
+
+        sched = _scheduler.TorqueScheduler(concurrency_limit=2)
+        sched.submit(job)
+        self.assertEqual('142[].torque01.bcgsc.ca', job.job_ident)
+        patcher.assert_called_with([
+            'qsub', '-j', 'oe', '-q', 'all', '-l', 'mem=1mb',
+            '-l', 'walltime=16:00:00', '-V', '-N', 'MV1',
+            '-o', 'output_dir/job-$PBS_JOBNAME-$PBS_JOBID-$PBS_ARRAYID.log',
+            '-m', 'abef', '-M', 'me@example.com',
+            '-t', '1-3,6,9%2',
+            'script.sh'
+        ])
+
+
