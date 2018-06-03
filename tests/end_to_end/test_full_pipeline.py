@@ -102,7 +102,7 @@ class TestPipeline(unittest.TestCase):
 
     @mock.patch('os.environ', ENV.copy())
     def test_pipeline_with_bwa(self):
-        main([SUBCOMMAND.PIPELINE, BWA_CONFIG, '-o', self.temp_output])
+        main([SUBCOMMAND.SETUP, BWA_CONFIG, '-o', self.temp_output])
         self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
         main([SUBCOMMAND.SCHEDULE, '-o', self.temp_output, '--submit'])
         # check that the subdirectories were built
@@ -118,22 +118,22 @@ class TestPipeline(unittest.TestCase):
     @mock.patch('os.environ', ENV.copy())
     def test_error_on_bad_config(self):
         with self.assertRaises(SystemExit) as err:
-            main([SUBCOMMAND.PIPELINE, 'thing/that/doesnot/exist.cfg', '-o', self.temp_output])
+            main([SUBCOMMAND.SETUP, 'thing/that/doesnot/exist.cfg', '-o', self.temp_output])
         self.assertEqual(2, err.exception.code)
 
     @mock.patch('os.environ', ENV.copy())
     def test_error_on_bad_input_file(self):
         with self.assertRaises(FileNotFoundError):
-            main([SUBCOMMAND.PIPELINE, get_data('bad_input_file.cfg'), '-o', self.temp_output])
+            main([SUBCOMMAND.SETUP, get_data('bad_input_file.cfg'), '-o', self.temp_output])
 
     @mock.patch('os.environ', ENV.copy())
     def test_missing_reference(self):
         with self.assertRaises(OSError):
-            main([SUBCOMMAND.PIPELINE, get_data('missing_reference.cfg'), '-o', self.temp_output])
+            main([SUBCOMMAND.SETUP, get_data('missing_reference.cfg'), '-o', self.temp_output])
 
     @mock.patch('os.environ', ENV.copy())
     def test_full_pipeline(self):
-        main([SUBCOMMAND.PIPELINE, CONFIG, '-o', self.temp_output])
+        main([SUBCOMMAND.SETUP, CONFIG, '-o', self.temp_output])
         self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
 
         main([SUBCOMMAND.SCHEDULE, '-o', self.temp_output, '--submit'])
@@ -152,7 +152,7 @@ class TestPipeline(unittest.TestCase):
 
     @mock.patch('os.environ', ENV.copy())
     def test_no_optional_files(self):
-        main([SUBCOMMAND.PIPELINE, get_data('no_opt_pipeline.cfg'), '-o', self.temp_output])
+        main([SUBCOMMAND.SETUP, get_data('no_opt_pipeline.cfg'), '-o', self.temp_output])
         self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
 
         main([SUBCOMMAND.SCHEDULE, '-o', self.temp_output, '--submit'])
@@ -175,7 +175,7 @@ class TestPipeline(unittest.TestCase):
             'MAVIS_ALIGNER_REFERENCE': get_data('mock_reference_genome.2bit'),
             'MAVIS_DGV_ANNOTATION': get_data('mock_dgv_annotation.txt'),
         })
-        main([SUBCOMMAND.PIPELINE, get_data('reference_from_env.cfg'), '-o', self.temp_output])
+        main([SUBCOMMAND.SETUP, get_data('reference_from_env.cfg'), '-o', self.temp_output])
         self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
         main([SUBCOMMAND.SCHEDULE, '-o', self.temp_output, '--submit'])
         # check that the subdirectories were built
@@ -189,7 +189,7 @@ class TestPipeline(unittest.TestCase):
 
     @mock.patch('os.environ', ENV.copy())
     def test_clean_files(self):
-        main([SUBCOMMAND.PIPELINE, CLEAN_CONFIG, '-o', self.temp_output])
+        main([SUBCOMMAND.SETUP, CLEAN_CONFIG, '-o', self.temp_output])
 
         self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
         main([SUBCOMMAND.SCHEDULE, '-o', self.temp_output, '--submit'])
@@ -225,7 +225,7 @@ class TestPipeline(unittest.TestCase):
 
     @mock.patch('os.environ', ENV.copy())
     def test_skip_clustering(self):
-        main([SUBCOMMAND.PIPELINE, CONFIG, '-o', self.temp_output, '--skip_stage', SUBCOMMAND.CLUSTER])
+        main([SUBCOMMAND.SETUP, CONFIG, '-o', self.temp_output, '--skip_stage', SUBCOMMAND.CLUSTER])
         self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
         main([SUBCOMMAND.SCHEDULE, '-o', self.temp_output, '--submit'])
 
@@ -240,7 +240,7 @@ class TestPipeline(unittest.TestCase):
 
     @mock.patch('os.environ', ENV.copy())
     def test_skip_validation(self):
-        main([SUBCOMMAND.PIPELINE, CONFIG, '-o', self.temp_output, '--skip_stage', SUBCOMMAND.VALIDATE])
+        main([SUBCOMMAND.SETUP, CONFIG, '-o', self.temp_output, '--skip_stage', SUBCOMMAND.VALIDATE])
 
         self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
         main([SUBCOMMAND.SCHEDULE, '-o', self.temp_output, '--submit'])
@@ -256,7 +256,7 @@ class TestPipeline(unittest.TestCase):
     @mock.patch('os.environ', ENV.copy())
     def test_skip_cluster_and_validate(self):
         args = [
-            SUBCOMMAND.PIPELINE, CONFIG,
+            SUBCOMMAND.SETUP, CONFIG,
             '-o', self.temp_output,
             '--skip_stage', SUBCOMMAND.VALIDATE,
             '--skip_stage', SUBCOMMAND.CLUSTER
@@ -289,7 +289,7 @@ class TestSetUp(unittest.TestCase):
     def test_slurm(self):
         os.environ['MAVIS_SCHEDULER'] = 'SLURM'
         args = [
-            SUBCOMMAND.PIPELINE, CONFIG,
+            SUBCOMMAND.SETUP, CONFIG,
             '-o', self.temp_output
         ]
         main(args)
@@ -303,7 +303,7 @@ class TestSetUp(unittest.TestCase):
     def test_slurm_skip_validate(self):
         os.environ['MAVIS_SCHEDULER'] = 'SLURM'
         args = [
-            SUBCOMMAND.PIPELINE, CONFIG,
+            SUBCOMMAND.SETUP, CONFIG,
             '-o', self.temp_output,
             '--skip_stage', SUBCOMMAND.VALIDATE
         ]
@@ -318,7 +318,7 @@ class TestSetUp(unittest.TestCase):
     def test_slurm_skip_cluster(self):
         os.environ['MAVIS_SCHEDULER'] = 'SLURM'
         args = [
-            SUBCOMMAND.PIPELINE, CONFIG,
+            SUBCOMMAND.SETUP, CONFIG,
             '-o', self.temp_output,
             '--skip_stage', SUBCOMMAND.CLUSTER
         ]
@@ -333,7 +333,7 @@ class TestSetUp(unittest.TestCase):
     def test_sge(self):
         os.environ['MAVIS_SCHEDULER'] = 'SGE'
         args = [
-            SUBCOMMAND.PIPELINE, CONFIG,
+            SUBCOMMAND.SETUP, CONFIG,
             '-o', self.temp_output
         ]
         main(args)
@@ -347,7 +347,7 @@ class TestSetUp(unittest.TestCase):
     def test_torque(self):
         os.environ['MAVIS_SCHEDULER'] = 'TORQUE'
         args = [
-            SUBCOMMAND.PIPELINE, CONFIG,
+            SUBCOMMAND.SETUP, CONFIG,
             '-o', self.temp_output
         ]
         main(args)

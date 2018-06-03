@@ -6,7 +6,7 @@ Running the Pipeline
 Running MAVIS using a Job Scheduler
 ---------------------------------------
 
-The default setup and main 'pipeline' step of MAVIS is set up to use a :ref:`dep-job-schedulers` job scheduler on a compute cluster.
+The setup step of MAVIS is set up to use a :ref:`dep-job-schedulers` job scheduler on a compute cluster.
 will generate submission scripts and a wrapper bash script for the user to execute on their cluster head node.
 
 .. figure:: _static/pipeline_options.svg
@@ -22,7 +22,7 @@ The pipeline setup step will run clustering and create scripts for running the o
 .. code:: bash
 
     mavis config .... -w config.cfg
-    mavis pipeline config.cfg -o /path/to/top/output_dir
+    mavis setup config.cfg -o /path/to/top/output_dir
 
 This will create the build.cfg configuration file, which is used by the scheduler to submit jobs. To use a particular scheduler you
 will need to set the `MAVIS_SCHEDULER` environment variable. After the build configuration file has been created you can run the mavis

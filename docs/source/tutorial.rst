@@ -18,7 +18,7 @@ The tag you check out should correspond to the MAVIS version you have installed
 .. code:: bash
 
     git clone https://github.com/bcgsc/mavis.git
-    git checkout v1.8.4
+    git checkout v2.0.0
     mv mavis/tests .
     rm -r mavis
 
@@ -43,7 +43,7 @@ First set up the pipeline
 
 .. code:: bash
 
-    mavis pipeline tests/data/pipeline_config.cfg -o output_dir
+    mavis setup tests/data/pipeline_config.cfg -o output_dir
 
 Now if you run the schedule step (without the submit flag, schedule acts as a checker) you should see something like
 
@@ -261,12 +261,12 @@ expect this step with these inputs to take about ~5GB memory.
 Setting Up the Pipeline
 .........................
 
-The next step is :ref:`running the pipeline stage <pipeline-standard>`. This will perform conversion, clustering, and creating the
+The next step is :ref:`running the setup stage <pipeline-standard>`. This will perform conversion, clustering, and creating the
 submission scripts for the other stages.
 
 .. code:: bash
 
-    mavis pipeline mavis.cfg -o output_dir/
+    mavis setup mavis.cfg -o output_dir/
 
 At this stage you should have something that looks like this.
 For simplicity not all files/directories have been shown.
@@ -274,6 +274,7 @@ For simplicity not all files/directories have been shown.
 .. code:: text
 
     output_dir/
+    |-- build.cfg
     |-- converted_inputs
     |   |-- breakdancer.tab
     |   |-- breakseq.tab
@@ -282,48 +283,22 @@ For simplicity not all files/directories have been shown.
     |   `-- manta.tab
     |-- L1522785992-normal_normal_genome
     |   |-- annotate
-    |   |   `-- batch-EK5Nx7xmfrbX9Vhuz2S7LR-1
-    |   |       `-- submit.sh
+    |   |   |-- batch-aUmErftiY7eEWvENfSeJwc-1/
+    |   |   `-- submit.sh
     |   |-- cluster
-    |   |   |-- batch-EK5Nx7xmfrbX9Vhuz2S7LR-1.tab
+    |   |   |-- batch-aUmErftiY7eEWvENfSeJwc-1.tab
     |   |   |-- cluster_assignment.tab
     |   |   |-- clusters.bed
     |   |   |-- filtered_pairs.tab
-    |   |   `-- MAVIS.COMPLETE
+    |   |   `-- MAVIS-batch-aUmErftiY7eEWvENfSeJwc.COMPLETE
     |   `-- validate
-    |       `-- batch-EK5Nx7xmfrbX9Vhuz2S7LR-1
-    |           `-- submit.sh
-    |-- L1522785992-trans_diseased_transcriptome
-    |   |-- annotate
-    |   |   `-- batch-EK5Nx7xmfrbX9Vhuz2S7LR-1
-    |   |       `-- submit.sh
-    |   |-- cluster
-    |   |   |-- batch-EK5Nx7xmfrbX9Vhuz2S7LR-1.tab
-    |   |   |-- cluster_assignment.tab
-    |   |   |-- clusters.bed
-    |   |   |-- filtered_pairs.tab
-    |   |   `-- MAVIS.COMPLETE
-    |   `-- validate
-    |       `-- batch-EK5Nx7xmfrbX9Vhuz2S7LR-1
-    |           `-- submit.sh
-    |-- L1522785992-tumour_diseased_genome
-    |   |-- annotate
-    |   |   `-- batch-EK5Nx7xmfrbX9Vhuz2S7LR-1
-    |   |       `-- submit.sh
-    |   |-- cluster
-    |   |   |-- batch-EK5Nx7xmfrbX9Vhuz2S7LR-1.tab
-    |   |   |-- cluster_assignment.tab
-    |   |   |-- clusters.bed
-    |   |   |-- filtered_pairs.tab
-    |   |   `-- MAVIS.COMPLETE
-    |   `-- validate
-    |       `-- batch-EK5Nx7xmfrbX9Vhuz2S7LR-1
-    |           `-- submit.sh
+    |       |-- batch-aUmErftiY7eEWvENfSeJwc-1/
+    |       `-- submit.sh
     |-- pairing
     |   `-- submit.sh
-    |-- submit_pipeline_batch-EK5Nx7xmfrbX9Vhuz2S7LR.sh
     `-- summary
         `-- submit.sh
+
 
 Submitting Jobs to the Cluster
 ..................................
@@ -336,20 +311,58 @@ The last step is simple, ssh to your head node of your :term:`SLURM` cluster (or
     ssh head_node
     mavis schedule -o output_dir --submit
 
-
-
-.. code:: bash
-
-    Submitted batch job 1120999
-
-This is the job number of the mavis summary job. When this job is complete your MAVIS run is complete.
-To check that everything ran correctly MAVIS has a built-in checker.
+The schedule step also acts as a built-in checker and can be run to check for errors or if the pipeline has completed.
 
 .. code:: bash
 
-    mavis checker -o output_dir
+    mavis schedule -o output_dir
 
-This should give you output something like below (times may vary) if your run completed correctly.
+This should give you output something like below (times may vary) after your run completed correctly.
+
+::
+
+                          MAVIS: 2.0.0
+                          hostname: gphost08.bcgsc.ca
+    [2018-06-02 19:47:56] arguments
+                            command = 'schedule'
+                            log = None
+                            log_level = 'INFO'
+                            output = 'output_dir/'
+                            resubmit = False
+                            submit = False
+    [2018-06-02 19:48:01] validate
+                            MV_L1522785992-normal_batch-aUmErftiY7eEWvENfSeJwc (1701000) is COMPLETED
+                              200 tasks are COMPLETED
+                              run time: 609
+                            MV_L1522785992-tumour_batch-aUmErftiY7eEWvENfSeJwc (1701001) is COMPLETED
+                              200 tasks are COMPLETED
+                              run time: 669
+                            MV_L1522785992-trans_batch-aUmErftiY7eEWvENfSeJwc (1701002) is COMPLETED
+                              23 tasks are COMPLETED
+                              run time: 1307
+    [2018-06-02 19:48:02] annotate
+                            MA_L1522785992-normal_batch-aUmErftiY7eEWvENfSeJwc (1701003) is COMPLETED
+                              200 tasks are COMPLETED
+                              run time: 622
+                            MA_L1522785992-tumour_batch-aUmErftiY7eEWvENfSeJwc (1701004) is COMPLETED
+                              200 tasks are COMPLETED
+                              run time: 573
+                            MA_L1522785992-trans_batch-aUmErftiY7eEWvENfSeJwc (1701005) is COMPLETED
+                              23 tasks are COMPLETED
+                              run time: 537
+    [2018-06-02 19:48:07] pairing
+                            MP_batch-aUmErftiY7eEWvENfSeJwc (1701006) is COMPLETED
+                              run time: 466
+    [2018-06-02 19:48:07] summary
+                            MS_batch-aUmErftiY7eEWvENfSeJwc (1701007) is COMPLETED
+                              run time: 465
+                          parallel run time: 3545
+                          rewriting: output_dir/build.cfg
+                          run time (hh/mm/ss): 0:00:11
+                          run time (s): 11
+
+The parallel run time reported corresponds to the sum of the slowest job for each stage and does not include any queue time etc.
+
 
 Analyzing the Output
 .....................
@@ -357,6 +370,6 @@ Analyzing the Output
 The best place to start with looking at the MAVIS output is the summary folder which contains the
 final results. For column name definitions see the :ref:`glossary <glossary-column-names>`.
 
-.. code:: text
+::
 
     output_dir/summary/mavis_summary_all_L1522785992-normal_L1522785992-trans_L1522785992-tumour.tab

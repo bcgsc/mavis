@@ -222,8 +222,8 @@ def main(argv=None):
         required[command].add_argument('-o', '--output', help='path to the output directory', required=True)
 
     # pipeline
-    _config.augment_parser(['config'], required[SUBCOMMAND.PIPELINE])
-    optional[SUBCOMMAND.PIPELINE].add_argument(
+    _config.augment_parser(['config'], required[SUBCOMMAND.SETUP])
+    optional[SUBCOMMAND.SETUP].add_argument(
         '--skip_stage', choices=[SUBCOMMAND.CLUSTER, SUBCOMMAND.VALIDATE], action='append', default=[],
         help='Use flag once per stage to skip. Can skip clustering or validation or both')
 
@@ -310,11 +310,11 @@ def main(argv=None):
     _util.log_arguments(args)
     rfile_args = args
 
-    if args.command == SUBCOMMAND.PIPELINE:  # load the configuration file
+    if args.command == SUBCOMMAND.SETUP:  # load the configuration file
         config = _config.MavisConfig.read(args.config)
         config.output = args.output
         config.skip_stage = args.skip_stage
-        config.command = SUBCOMMAND.PIPELINE
+        config.command = SUBCOMMAND.SETUP
         rfile_args = config.reference
         args = config
 
@@ -354,7 +354,7 @@ def main(argv=None):
         args.command == SUBCOMMAND.CLUSTER and args.uninformative_filter,
         args.command == SUBCOMMAND.CONFIG and any([PROTOCOL.TRANS in values for values in args.library]) and SUBCOMMAND.VALIDATE not in args.skip_stage,
         args.command == SUBCOMMAND.VALIDATE and args.protocol == PROTOCOL.TRANS,
-        args.command in {SUBCOMMAND.PAIR, SUBCOMMAND.ANNOTATE, SUBCOMMAND.SUMMARY, SUBCOMMAND.OVERLAY, SUBCOMMAND.PIPELINE},
+        args.command in {SUBCOMMAND.PAIR, SUBCOMMAND.ANNOTATE, SUBCOMMAND.SUMMARY, SUBCOMMAND.OVERLAY, SUBCOMMAND.SETUP},
     ]):
         try:
             rfile_args.annotations.files_exist(not_empty=True)

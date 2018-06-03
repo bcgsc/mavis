@@ -54,7 +54,7 @@ class TestConfig(unittest.TestCase):
             return MavisConfig.read(content)
 
     def test_error_in_schedule(self):
-        with self.assertRaises(KeyError):
+        with self.assertRaises(TypeError):
             content = STUB + '\n[schedule]\nmail_type=\n'
             print(content)
             self.mock_config(content)

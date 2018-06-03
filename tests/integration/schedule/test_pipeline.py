@@ -102,7 +102,7 @@ class TestBuildPipeline(unittest.TestCase):
         os.environ['MAVIS_SCHEDULER'] = 'SLURM'
         config = get_data('pipeline_config.cfg')
 
-        with mock.patch('sys.argv', ['mavis', 'pipeline', '--output', self.temp_output, config]):
+        with mock.patch('sys.argv', ['mavis', 'setup', '--output', self.temp_output, config]):
             self.assertEqual(0, main())
         build_file = os.path.join(self.temp_output, 'build.cfg')
         with open(build_file, 'r') as fh:
@@ -119,7 +119,7 @@ class TestBuildPipeline(unittest.TestCase):
         os.environ['MAVIS_SCHEDULER'] = 'SGE'
         config = get_data('pipeline_config.cfg')
 
-        with mock.patch('sys.argv', ['mavis', 'pipeline', '--output', self.temp_output, config]):
+        with mock.patch('sys.argv', ['mavis', 'setup', '--output', self.temp_output, config]):
             self.assertEqual(0, main())
         build_file = os.path.join(self.temp_output, 'build.cfg')
         with open(build_file, 'r') as fh:
