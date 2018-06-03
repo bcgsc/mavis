@@ -53,7 +53,7 @@ Now if you run the schedule step (without the submit flag, schedule acts as a ch
     mavis schedule -o output_dir/
 
 
-.. code:: text
+::
 
                           MAVIS: 1.8.4
                           hostname: gphost08.bcgsc.ca
@@ -90,7 +90,7 @@ Adding the submit argument will start the pipeline
 
 After this completes, run schedule without the submit flag again and you should see something like
 
-.. code:: text
+::
 
                           MAVIS: 1.8.4
                           hostname: gphost08.bcgsc.ca
@@ -271,7 +271,7 @@ submission scripts for the other stages.
 At this stage you should have something that looks like this.
 For simplicity not all files/directories have been shown.
 
-.. code:: text
+::
 
     output_dir/
     |-- build.cfg

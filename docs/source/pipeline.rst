@@ -84,7 +84,7 @@ The suffix of the job name will be a number and will correspond to the suffix of
 
 This will report any failed jobs. For example if this were a crash report for one of the validation jobs we might expect to see something like below in the schedule output
 
-.. code:: text
+::
 
     [2018-05-31 13:02:06] validate
                             MV_<library>_<batch id>-<task id> (<job id>) is FAILED
@@ -100,7 +100,7 @@ Any jobs in an error, failed, etc. state can be resubmitted by running mavis sch
 If a job has failed due to memory or time limits, editing the ``/path/to/output/dir/build.cfg`` file can allow the user to change a job without resetting up and rerunning the other jobs.
 For example, below is the configuration for a validation job
 
-.. code:: text
+::
 
     [MV_mock-A47933_batch-D2nTiy9AhGye4UZNapAik6]
     stage = validate
@@ -127,7 +127,7 @@ The memory_limit is in Mb and the time_limit is in seconds. Editing the values h
 .. warning::
 
     Incorrectly editing the build.cfg file may have unanticipated results and require re-setting up MAVIS to fix.
-    Generally the user should ONLY ``edit memory_limit`` and ``time_limit`` values.
+    Generally the user should ONLY edit ``memory_limit`` and ``time_limit`` values.
 
 If memory errors are frequent then it would be better to adjust the default values (:term:`trans_validation_memory`, :term:`validation_memory`, :term:`time_limit`)
 

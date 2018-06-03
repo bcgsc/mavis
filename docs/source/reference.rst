@@ -100,7 +100,7 @@ This is the file which contains the band information for the chromosomes. This i
 
 The structure of the file should look something like this
 
-.. code:: text
+::
 
     chr1    0       2300000 p36.33  gneg
     chr1    2300000 5400000 p36.32  gpos25
@@ -117,7 +117,7 @@ The masking file is a tab delimited file which contains regions that we should i
 This can be used to filter out regions with known false positives, bad mapping, centromeres, telomeres etc.
 An example of the expected format is shown below. The file should have four columns: chr, start, end and name.
 
-.. code:: text
+::
 
     #chr    start   end     name
     chr1    0       2300000 centromere
@@ -265,7 +265,7 @@ and reformatted to have 4 columns after download. We used awk to convert the raw
 Note in hg19 the column is called "name" and in hg38 the column is called "variantaccession".
 An example is shown below
 
-.. code:: text
+::
 
     #chr     start   end     name
     1       1       2300000 nsv482937

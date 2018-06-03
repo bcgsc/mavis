@@ -195,7 +195,7 @@ Given that we expect mutations and therefore abnormal fragment sizes, we use a m
 median for each fragment and then take a fraction of this to be 'normal' variation. So the most abnormal portion is
 ignored, assuming it is supposed to be abnormal. This results in a calculation as follows.
 
-.. code::
+.. code:: python
 
     from statistics import median
     import math
