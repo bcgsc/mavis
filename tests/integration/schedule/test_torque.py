@@ -13,6 +13,7 @@ class TestParseQstat(unittest.TestCase):
     # TODO: single job running
     # TODO: batch job running
     # TODO: single job complete
+
     def test_single_job_complete(self):
         content = """
 Job Id: 9.torque01.bcgsc.ca
@@ -279,16 +280,16 @@ class TestSubmit(unittest.TestCase):
             mail_type=_constants.MAIL_TYPE.ALL,
             script='script.sh',
             dependencies=[
-            _job.Job(
-                stage=SUBCOMMAND.VALIDATE,
-                output_dir='output_dir',
-                job_ident='1234.torque01.bcgsc.ca'
-            ),
-            _job.Job(
-                stage=SUBCOMMAND.VALIDATE,
-                output_dir='output_dir',
-                job_ident='54.torque01.bcgsc.ca'
-            )]
+                _job.Job(
+                    stage=SUBCOMMAND.VALIDATE,
+                    output_dir='output_dir',
+                    job_ident='1234.torque01.bcgsc.ca'
+                ),
+                _job.Job(
+                    stage=SUBCOMMAND.VALIDATE,
+                    output_dir='output_dir',
+                    job_ident='54.torque01.bcgsc.ca'
+                )]
         )
 
         sched = _scheduler.TorqueScheduler()
@@ -316,22 +317,22 @@ class TestSubmit(unittest.TestCase):
             mail_type=_constants.MAIL_TYPE.ALL,
             script='script.sh',
             dependencies=[
-            _job.Job(
-                stage=SUBCOMMAND.VALIDATE,
-                output_dir='output_dir',
-                job_ident='1234.torque01.bcgsc.ca'
-            ),
-            _job.Job(
-                stage=SUBCOMMAND.VALIDATE,
-                output_dir='output_dir',
-                job_ident='54.torque01.bcgsc.ca'
-            ),
-            _job.TorqueArrayJob(
-                stage=SUBCOMMAND.VALIDATE,
-                output_dir='output_dir',
-                job_ident='99[].torque01.bcgsc.ca',
-                task_list=5
-            )]
+                _job.Job(
+                    stage=SUBCOMMAND.VALIDATE,
+                    output_dir='output_dir',
+                    job_ident='1234.torque01.bcgsc.ca'
+                ),
+                _job.Job(
+                    stage=SUBCOMMAND.VALIDATE,
+                    output_dir='output_dir',
+                    job_ident='54.torque01.bcgsc.ca'
+                ),
+                _job.TorqueArrayJob(
+                    stage=SUBCOMMAND.VALIDATE,
+                    output_dir='output_dir',
+                    job_ident='99[].torque01.bcgsc.ca',
+                    task_list=5
+                )]
         )
 
         sched = _scheduler.TorqueScheduler()
@@ -372,5 +373,3 @@ class TestSubmit(unittest.TestCase):
             '-t', '1-3,6,9%2',
             'script.sh'
         ])
-
-
