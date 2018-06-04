@@ -10,7 +10,7 @@ import pysam
 from shortuuid import uuid
 
 from .call import call_events
-from .constants import DEFAULTS, PASS
+from .constants import DEFAULTS, PASS_FILENAME
 from .evidence import GenomeEvidence, TranscriptomeEvidence
 from ..align import align_sequences, select_contig_alignments, SUPPORTED_ALIGNER
 from ..annotate.base import BioInterval
@@ -69,7 +69,7 @@ def main(
     contig_bam = os.path.join(output, 'contigs.bam')
     evidence_bed = os.path.join(output, 'evidence.bed')
 
-    passed_output_file = os.path.join(output, PASS)
+    passed_output_file = os.path.join(output, PASS_FILENAME)
     passed_bed_file = os.path.join(output, 'validation-passed.bed')
     failed_output_file = os.path.join(output, 'validation-failed.tab')
     contig_aligner_fa = os.path.join(output, 'contigs.fa')

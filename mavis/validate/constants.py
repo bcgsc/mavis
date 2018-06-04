@@ -2,7 +2,7 @@ from ..constants import float_fraction
 from ..align import SUPPORTED_ALIGNER
 from ..util import WeakMavisNamespace
 
-PASS = 'validation-passed.tab'
+PASS_FILENAME = 'validation-passed.tab'
 
 DEFAULTS = WeakMavisNamespace()
 """

@@ -367,7 +367,7 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
                     args['output'] = os.path.join(base, SUBCOMMAND.ANNOTATE, '{}-{}'.format(pipeline.batch_id, task_ident))
                     # annotate 'clustered' files if the pipeline does not include the validation step
                     if SUBCOMMAND.VALIDATE not in config.skip_stage:
-                        args['inputs'] = [os.path.join(base, SUBCOMMAND.VALIDATE, '{}-{}'.format(pipeline.batch_id, task_ident), _VALIDATE.PASS)]
+                        args['inputs'] = [os.path.join(base, SUBCOMMAND.VALIDATE, '{}-{}'.format(pipeline.batch_id, task_ident), _VALIDATE.PASS_FILENAME)]
                     else:
                         args['inputs'] = [os.path.join(cluster_output, '{}-{}.tab'.format(pipeline.batch_id, task_ident))]
                     job_name = 'MA_{}_{}-{}'.format(libconf.library, pipeline.batch_id, task_ident)
@@ -383,14 +383,14 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
                         **job_options
                     )
                     pipeline.annotations.append(annotate_job)
-                    annotation_output_files.append(os.path.join(args['output'], _ANNOTATE.PASS))
+                    annotation_output_files.append(os.path.join(args['output'], _ANNOTATE.PASS_FILENAME))
                     if validate_jobs:
                         annotate_job.dependencies.append(validate_jobs[task_ident - 1])
             else:
                 args['output'] = os.path.join(base, SUBCOMMAND.ANNOTATE, '{}-${}'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT))
                 # annotate 'clustered' files if the pipeline does not include the validation step
                 if SUBCOMMAND.VALIDATE not in config.skip_stage:
-                    args['inputs'] = [os.path.join(base, SUBCOMMAND.VALIDATE, '{}-${}'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT), _VALIDATE.PASS)]
+                    args['inputs'] = [os.path.join(base, SUBCOMMAND.VALIDATE, '{}-${}'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT), _VALIDATE.PASS_FILENAME)]
                 else:
                     args['inputs'] = [os.path.join(cluster_output, '{}-${}.tab'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT))]
 
@@ -410,7 +410,7 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
 
                 # add the expected output file names for input to pairing
                 for taskid in range(1, len(clustered_files) + 1):
-                    fname = os.path.join(args['output'], _ANNOTATE.PASS)
+                    fname = os.path.join(args['output'], _ANNOTATE.PASS_FILENAME)
                     fname = re.sub(r'\${}'.format(scheduler.ENV_TASK_IDENT), str(taskid), fname)
                     annotation_output_files.append(fname)
 

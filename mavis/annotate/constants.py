@@ -6,7 +6,7 @@ from ..constants import MavisNamespace, float_fraction
 from ..util import WeakMavisNamespace
 
 
-PASS = 'annotations.tab'
+PASS_FILENAME = 'annotations.tab'
 
 DEFAULTS = WeakMavisNamespace()
 """
