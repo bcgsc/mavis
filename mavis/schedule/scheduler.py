@@ -116,7 +116,7 @@ class SlurmScheduler(Scheduler):
         if job.queue:
             command.append('--partition={}'.format(job.queue))
         if job.memory_limit:
-            command.extend(['--mem', str(job.memory_limit)])
+            command.extend(['--mem', str(job.memory_limit) + 'M'])
         if job.time_limit:
             command.extend(['-t', str(timedelta(seconds=job.time_limit))])
         if job.import_env:
@@ -517,11 +517,12 @@ class SgeScheduler(Scheduler):
         """
         if not job.job_ident:
             return
-        command = ['qstat']
-        if job.queue:
-            command.extend(['-q', job.queue])
-        content = self.command(command)
-        rows = [row for row in self.parse_qstat(content) if row['job_ident'] == job.job_ident]
+
+        try:
+            content = self.command(['qstat', '-j', job.job_ident])
+            rows = self.parse_qstat(content)
+        except subprocess.CalledProcessError:  # job not queued
+            rows = []
 
         updated = False
         if not rows:
