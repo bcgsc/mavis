@@ -38,27 +38,17 @@ def main(
         median_fragment_size (int): the median fragment size
         stdev_fragment_size (int): the standard deviation in fragment size
         read_length (int): read length
-        reference_genome (Object): see :func:`~mavis.annotate.file_io.load_reference_genome`
-        annotations (object): see :func:`~mavis.annotate.file_io.load_reference_genes`
-        masking (object): see :func:`~mavis.annotate.file_io.load_masking_regions`
-        aligner_reference (str): path to the aligner reference file (e.g 2bit file for blat)
+        reference_genome (:class:`~mavis.annotate.file_io.ReferenceFile`): see :func:`~mavis.annotate.file_io.load_reference_genome`
+        annotations (:class:`~mavis.annotate.file_io.ReferenceFile`): see :func:`~mavis.annotate.file_io.load_reference_genes`
+        masking (:class:`~mavis.annotate.file_io.ReferenceFile`): see :func:`~mavis.annotate.file_io.load_masking_regions`
+        aligner_reference (:class:`~mavis.annotate.file_io.ReferenceFile`): path to the aligner reference file (e.g 2bit file for blat)
     """
     mkdirp(output)
     # check the files exist early to avoid waiting for errors
     if protocol == PROTOCOL.TRANS:
-        try:
-            annotations.load()
-        except AttributeError:
-            annotations = _file_io.ReferenceFile(_file_io.load_annotations, *annotations).load()
-            annotations.load()
-    try:
-        reference_genome.load()
-    except AttributeError:
-        reference_genome = _file_io.ReferenceFile(_file_io.load_reference_genome, *reference_genome).load()
-    try:
-        masking.load()
-    except AttributeError:
-        masking = _file_io.ReferenceFile(_file_io.load_masking_regions, *masking).load()
+        annotations.load()
+    reference_genome.load()
+    masking.load()
 
     validation_settings = {}
     validation_settings.update(DEFAULTS.items())
