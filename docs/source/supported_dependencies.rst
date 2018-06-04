@@ -86,7 +86,7 @@ MAVIS also supports a :ref:`general VCF input <general-vcf-inputs>`. It should b
         - Publication
     *   - :term:`BreakDancer`
         - ``1.4.5``
-        -
+        - ``Tools main output file(s)``
         - [Chen-2009]_
     *   - :term:`BreakSeq`
         - ``2.2``
@@ -98,7 +98,7 @@ MAVIS also supports a :ref:`general VCF input <general-vcf-inputs>`. It should b
         - [Iyer-2011]_
     *   - :term:`CNVnator`
         - ``0.3.3``
-        -
+        - ``Tools main output file(s)``
         - [Abyzov-2011]_
     *   - :term:`DeFuse`
         - ``0.6.2``
@@ -114,7 +114,7 @@ MAVIS also supports a :ref:`general VCF input <general-vcf-inputs>`. It should b
         - [Chen-2016]_
     *   - :term:`Pindel`
         - ``0.2.5b9``
-        -
+        - ``Tools main output file(s)``
         - [Ye-2009]_
     *   - :term:`Trans-ABySS`
         - ``1.4.8 (custom)``
