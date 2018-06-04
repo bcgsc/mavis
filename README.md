@@ -4,15 +4,15 @@
     </object><br>
 </object>
 
-![master branch build Status](https://www.bcgsc.ca/bamboo/plugins/servlet/wittified/build-status/MAV-TEST) 
+![master branch build Status](https://www.bcgsc.ca/bamboo/plugins/servlet/wittified/build-status/MAV-TEST)
 *(master)*
 
-![develop branch build status](https://www.bcgsc.ca/bamboo/plugins/servlet/wittified/build-status/MAV-TEST0) 
+![develop branch build status](https://www.bcgsc.ca/bamboo/plugins/servlet/wittified/build-status/MAV-TEST0)
 *(develop)*
 
 # About
 
-[MAVIS](http://mavis.bcgsc.ca) is python command-line tool for the post-processing of structural variant calls. 
+[MAVIS](http://mavis.bcgsc.ca) is python command-line tool for the post-processing of structural variant calls.
 The general [MAVIS](http://mavis.bcgsc.ca) pipeline consists of six main stages
 
 - convert
@@ -43,9 +43,9 @@ There are 3 major steps to setting up and installing [MAVIS](http://mavis.bcgsc.
 
 ### 1. Install Aligner
 
-In addition to the python package dependencies, [MAVIS](http://mavis.bcgsc.ca) also requires an aligner to be installed. 
-Currently the only aligners supported are [blat](http://mavis.bcgsc.ca/docs/latest/glossary.html#term-blat) and [bwa mem](http://mavis.bcgsc.ca/docs/latest/glossary.html#term-bwa). 
-For MAVIS to run successfully the aligner must be installed and accessible on the path. 
+In addition to the python package dependencies, [MAVIS](http://mavis.bcgsc.ca) also requires an aligner to be installed.
+Currently the only aligners supported are [blat](http://mavis.bcgsc.ca/docs/latest/glossary.html#term-blat) and [bwa mem](http://mavis.bcgsc.ca/docs/latest/glossary.html#term-bwa).
+For MAVIS to run successfully the aligner must be installed and accessible on the path.
 If you have a non-standard install you may find it useful to edit the PATH environment variable. For example
 
 ``` bash
@@ -60,11 +60,11 @@ export MAVIS_ALIGNER='bwa mem'
 export MAVIS_ALIGNER_REFERENCE=/path/to/mem/fasta/ref/file
 ```
 
-After these have been installed MAVIS itself can be installed through pip
+After this have been installed MAVIS itself can be installed through [pip](https://pypi.org/project/mavis/)
 
-#### 2. Install MAVIS
+### 2. Install MAVIS
 
-##### Install using pip
+#### Install using pip
 
 The easiest way to install [MAVIS](http://mavis.bcgsc.ca) is through the python package manager, pip. If you do not have python3 installed it can be found [here](https://www.python.org/downloads)
 
@@ -90,7 +90,7 @@ pip install mavis
 
 This will install mavis and its python dependencies.
 
-##### Install using Buildout
+#### Install using Buildout
 
 Alternatively you can use the [bootstrap/buildout](http://www.buildout.org/en/latest/) to install mavis into bin/mavis
 
@@ -116,4 +116,4 @@ source reference_inputs/hg19_env.sh
 ```
 
 Once the above 3 steps are complete [MAVIS](http://mavis.bcgsc.ca) is ready to be run.
-See the MAVIS [tutorial](http://mavis.bcgsc.ca/docs/latest/pipeline.html#mavis-tutorial) to learn about running MAVIS.
+See the MAVIS [tutorial](http://mavis.bcgsc.ca/docs/latest/pipeline.html#mavis-mini-tutorial) to learn about running MAVIS.
