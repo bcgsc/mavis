@@ -29,7 +29,7 @@ class TestSubmit(unittest.TestCase):
         self.assertEqual('1665695', job.job_ident)
         patch_check.assert_called_with([
             'sbatch',
-            '--mem', '16000',
+            '--mem', '16000M',
             '-t', '16:00:00',
             '--export=ALL',
             '-J', 'job1',
@@ -54,7 +54,7 @@ class TestSubmit(unittest.TestCase):
         patch_check.assert_called_with([
             'sbatch',
             '--partition=all',
-            '--mem', '16000',
+            '--mem', '16000M',
             '-t', '16:00:00',
             '--export=ALL',
             '-J', 'job1',
@@ -79,7 +79,7 @@ class TestSubmit(unittest.TestCase):
         self.assertEqual('1665695', job.job_ident)
         patch_check.assert_called_with([
             'sbatch',
-            '--mem', '16000',
+            '--mem', '16000M',
             '-t', '16:00:00',
             '--export=ALL',
             '-J', 'job1',
@@ -111,7 +111,7 @@ class TestSubmit(unittest.TestCase):
         self.assertEqual('1665695', job.job_ident)
         patch_check.assert_called_with([
             'sbatch',
-            '--mem', '16000',
+            '--mem', '16000M',
             '-t', '16:00:00',
             '--export=ALL',
             '--dependency=afterok:12345678',
@@ -158,7 +158,7 @@ class TestSubmit(unittest.TestCase):
         self.assertEqual('1665695', job.job_ident)
         patch_check.assert_called_with([
             'sbatch',
-            '--mem', '16000',
+            '--mem', '16000M',
             '-t', '16:00:00',
             '--export=ALL',
             '-J', 'job1',
@@ -183,7 +183,7 @@ class TestSubmit(unittest.TestCase):
         self.assertEqual('1665695', job.job_ident)
         exp = [
             'sbatch',
-            '--mem', '16000',
+            '--mem', '16000M',
             '-t', '16:00:00',
             '--export=ALL',
             '-J', 'job1',
