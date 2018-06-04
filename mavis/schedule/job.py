@@ -104,9 +104,12 @@ class Job:
 
     @property
     def display_name(self):
-        if self.job_ident is None:
-            return self.name
-        return '{}_{}'.format(self.name, self.job_ident)
+        """
+        Used for identifying this job in an ini config file
+        """
+        display_name = self.name if self.job_ident is None else '{}_{}'.format(self.name, self.job_ident)
+        display_name = re.sub(r'[\[\]#;]', '_', display_name)
+        return display_name
 
     def flatten(self):
         result = {}

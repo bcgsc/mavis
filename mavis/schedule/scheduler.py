@@ -643,7 +643,7 @@ class TorqueScheduler(SgeScheduler):
                 raise ValueError('Dependencies must be submitted beforehand', job, dep)
 
             if isinstance(dep, ArrayJob):
-                task_ident = re.sub(r'\[\]', '[{}]'.format(dep.tasks) if dep.tasks > 1 else '[]', dep.job_ident)
+                task_ident = re.sub(r'\[\]', '[][{}]'.format(dep.tasks) if dep.tasks > 1 else '[]', dep.job_ident)
                 arr_dependencies.append(task_ident)
             else:
                 job_dependencies.append(dep.job_ident)
@@ -677,7 +677,7 @@ class TorqueScheduler(SgeScheduler):
             row['Job Id'] = lines[0].split(':', 1)[1].strip()
             match = re.match(r'^(\d+)\[(\d+)\](.*)$', row['Job Id'])
             if match:
-                row['Job Id'] = match.group(1) + match.group(3)
+                row['Job Id'] = '{}[]{}'.format(match.group(1), match.group(3))
                 task_ident = int(match.group(2))
             tab_size = None
             columns = []
@@ -797,10 +797,14 @@ class TorqueScheduler(SgeScheduler):
                 continue
             if isinstance(job, ArrayJob) and row['task_ident']:
                 task_ident = int(row['task_ident'])
-                task = job.get_task(task_ident)
-                task.status = row['status']
-                task.status_comment = row['status_comment']
-                tasks_updated = True
+                try:
+                    task = job.get_task(task_ident)
+                except KeyError:
+                    pass
+                else:
+                    task.status = row['status']
+                    task.status_comment = row['status_comment']
+                    tasks_updated = True
             else:
                 job.status = row['status']
                 job.status_comment = row['status_comment']
@@ -814,17 +818,20 @@ class TorqueScheduler(SgeScheduler):
         """
         if not job.job_ident:
             return
-        if task_ident is not None:
-            self.command(['qdel', job.job_ident, '-t', str(task_ident)])
-            job.get_task(int(task_ident)).status = JOB_STATUS.CANCELLED
-            LOG('cancelled task', job.name, job.job_ident, task_ident)
-        else:
-            self.command(['qdel', job.job_ident])
-            job.status = JOB_STATUS.CANCELLED
-            LOG('cancelled job', job.name, job.job_ident)
+        try:
+            if task_ident is not None:
+                self.command(['qdel', job.job_ident, '-t', str(task_ident)])
+                job.get_task(int(task_ident)).status = JOB_STATUS.CANCELLED
+                LOG('cancelled task', job.name, job.job_ident, task_ident)
+            else:
+                self.command(['qdel', job.job_ident])
+                job.status = JOB_STATUS.CANCELLED
+                LOG('cancelled job', job.name, job.job_ident)
 
-            try:
-                for task in job.task_list:
-                    task.status = JOB_STATUS.CANCELLED
-            except AttributeError:
-                pass
+                try:
+                    for task in job.task_list:
+                        task.status = JOB_STATUS.CANCELLED
+                except AttributeError:
+                    pass
+        except subprocess.CalledProcessError:
+            LOG('failed to cancel {}'.format(job.job_ident), level=logging.DEBUG)

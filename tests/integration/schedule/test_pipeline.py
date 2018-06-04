@@ -33,6 +33,13 @@ class TestReadBuildFile(unittest.TestCase):
         with mock.patch('configparser.ConfigParser.read', configparser.ConfigParser.read_string):
             return _pipeline.Pipeline.read_build_file(content)
 
+    def test_torque(self):
+        pipeline = _pipeline.Pipeline.read_build_file(get_data('torque_build.cfg'))
+        self.assertEqual(3, len(pipeline.validations))
+        self.assertEqual(3, len(pipeline.annotations))
+        self.assertIn(pipeline.annotations[0].dependencies[0], pipeline.validations)
+        self.assertIn(pipeline.pairing, pipeline.summary.dependencies)
+
     def test_basic(self):
         content = """
 [general]

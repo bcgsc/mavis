@@ -189,7 +189,7 @@ Job Id: 48[1].torque01.bcgsc.ca
         rows = _scheduler.TorqueScheduler().parse_qstat(content)
         self.assertEqual(1, len(rows))
         row = rows[0]
-        self.assertEqual('48.torque01.bcgsc.ca', row['job_ident'])
+        self.assertEqual('48[].torque01.bcgsc.ca', row['job_ident'])
         self.assertIs(1, row['task_ident'])
 
     # TODO: single job error
@@ -236,9 +236,9 @@ class TestCancel(unittest.TestCase):
         patcher.side_effect = [subprocess.CalledProcessError(1, 'cmd')]
         sched = _scheduler.TorqueScheduler()
         job = _job.Job(SUBCOMMAND.VALIDATE, '', job_ident='1234')
-        with self.assertRaises(subprocess.CalledProcessError):
-            sched.cancel(job)
+        sched.cancel(job)
         patcher.assert_called_with(['qdel', '1234'])
+        self.assertNotEqual(_constants.JOB_STATUS.CANCELLED, job.status)
 
 
 class TestSubmit(unittest.TestCase):
@@ -341,7 +341,7 @@ class TestSubmit(unittest.TestCase):
         patcher.assert_called_with([
             'qsub', '-j', 'oe', '-q', 'all', '-l', 'mem=1mb',
             '-l', 'walltime=16:00:00', '-V',
-            '-W depend=afterokarray:99[5].torque01.bcgsc.ca,afterok:1234.torque01.bcgsc.ca:54.torque01.bcgsc.ca',
+            '-W depend=afterokarray:99[][5].torque01.bcgsc.ca,afterok:1234.torque01.bcgsc.ca:54.torque01.bcgsc.ca',
             '-N', 'MV1',
             '-o', 'output_dir/job-$PBS_JOBNAME-$PBS_JOBID.log',
             '-m', 'abef', '-M', 'me@example.com', 'script.sh'
