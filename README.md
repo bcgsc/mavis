@@ -60,7 +60,7 @@ export MAVIS_ALIGNER='bwa mem'
 export MAVIS_ALIGNER_REFERENCE=/path/to/mem/fasta/ref/file
 ```
 
-After this have been installed MAVIS itself can be installed through [pip](https://pypi.org/project/mavis/)
+After this has been installed MAVIS itself can be installed through [pip](https://pypi.org/project/mavis/)
 
 ### 2. Install MAVIS
 
