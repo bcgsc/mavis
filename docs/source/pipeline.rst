@@ -65,7 +65,7 @@ For example to set the job queue default using an :ref:`environment variable <co
 
 Or it can also be added to the config file manually
 
-.. code:: text
+::
 
     [schedule]
     queue = QUEUENAME
