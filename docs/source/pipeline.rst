@@ -120,7 +120,9 @@ For example, below is the configuration for a validation job
     mail_user =
     mail_type = NONE
     concurrency_limit = None
-    tasks = 3
+    task_list = 1
+        2
+        3
 
 The memory_limit is in Mb and the time_limit is in seconds. Editing the values here will cause the job to be resubmitted with the new values.
 
