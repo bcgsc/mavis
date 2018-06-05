@@ -41,7 +41,7 @@ class Scheduler:  # pragma: no cover
     def __init__(self, concurrency_limit=None, remote_head_ssh='', remote_head_name=''):
         """
         Args:
-            concurrency_limit (int): Size of t, mock.Mock(), the maximum allowed concurrent processes. Defaults to one less than the total number available
+            concurrency_limit (int): the maximum allowed concurrent processes. Defaults to one less than the total number available
         """
         self.concurrency_limit = NullableType(int)(concurrency_limit)
         self.remote_head_ssh = remote_head_ssh
