@@ -26,3 +26,6 @@ dist
 src
 /docs/source/config_settings_glossary.rst
 *coverage*
+*.tgf
+analysis_scripts
+.vscode

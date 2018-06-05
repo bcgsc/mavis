@@ -9,7 +9,7 @@ from .constants import DEFAULTS, HOMOPOLYMER_MIN_LENGTH
 from .summary import annotate_dgv, filter_by_annotations, filter_by_call_method, filter_by_evidence, get_pairing_state, group_by_distance
 from ..constants import CALL_METHOD, COLUMNS, PROTOCOL, SVTYPE
 from ..pairing.constants import DEFAULTS as PAIRING_DEFAULTS
-from ..util import generate_complete_stamp, log, output_tabbed_file, read_inputs, soft_cast
+from ..util import generate_complete_stamp, LOG, output_tabbed_file, read_inputs, soft_cast
 
 
 def soft_cast_null(value):
@@ -38,6 +38,9 @@ def main(
     start_time=int(time.time()),
     **kwargs
 ):
+    annotations.load()
+    if dgv_annotation:
+        dgv_annotation.load()
     # pairing threshold parameters to be defined in config file
     distances = {
         CALL_METHOD.FLANK: flanking_call_distance,
@@ -113,7 +116,7 @@ def main(
     # load all transcripts
     reference_transcripts = dict()
     best_transcripts = dict()
-    for chr, genes in annotations.items():
+    for chr, genes in annotations.content.items():
         for gene in genes:
             for t in gene.transcripts:
                 reference_transcripts[t.name] = t
@@ -133,7 +136,12 @@ def main(
             bpp.data[COLUMNS.filter_comment] = 'synonymous cdna'
             filtered_pairs.append(bpp)
             continue
-        elif bpp.protocol == PROTOCOL.TRANS and bpp.data.get(COLUMNS.repeat_count, None) and bpp.event_type in [SVTYPE.DUP, SVTYPE.INS, SVTYPE.DEL]:
+        elif all([
+            filter_trans_homopolymers,
+            bpp.protocol == PROTOCOL.TRANS,
+            bpp.data.get(COLUMNS.repeat_count, None),
+            bpp.event_type in [SVTYPE.DUP, SVTYPE.INS, SVTYPE.DEL]
+        ]):
             # a transcriptome event in a repeat region
             match = re.match(r'^(-?\d+)-(-?\d+)$', str(bpp.data[COLUMNS.net_size]))
             if match:
@@ -301,10 +309,10 @@ def main(
 
     rows = []
     for lib in bpps_by_library:
-        log('annotating dgv for', lib)
+        LOG('annotating dgv for', lib)
         if dgv_annotation:
-            annotate_dgv(bpps_by_library[lib], dgv_annotation, distance=10)  # TODO make distance a parameter
-        log('adding pairing states for', lib)
+            annotate_dgv(bpps_by_library[lib], dgv_annotation.content, distance=10)  # TODO make distance a parameter
+        LOG('adding pairing states for', lib)
         for row in bpps_by_library[lib]:
             # in case no pairing was done, add default (applicable to single library summaries)
             row.data.setdefault(COLUMNS.inferred_pairing, '')
@@ -340,7 +348,7 @@ def main(
         'mavis_summary_all_{}.tab'.format('_'.join(sorted(list(libraries.keys()))))
     )
     output_tabbed_file(rows, fname, header=output_columns)
-    log('wrote {} structural variants to {}'.format(len(rows), fname))
+    LOG('wrote {} structural variants to {}'.format(len(rows), fname))
     output_tabbed_file(filtered_pairs, os.path.join(output, 'filtered_pairs.tab'))
     # output by library non-synon protein-product
     for lib in bpps_by_library:
@@ -356,4 +364,3 @@ def main(
             ]):
                 lib_rows.append(row)
         output_tabbed_file(lib_rows, filename, header=output_columns)
-    generate_complete_stamp(output, log, start_time=start_time)

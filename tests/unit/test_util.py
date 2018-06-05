@@ -3,7 +3,7 @@ import unittest
 
 from mavis.constants import COLUMNS, ORIENT, STRAND
 from mavis.error import NotSpecifiedError
-from mavis.util import cast, DelimListString, ENV_VAR_PREFIX, get_env_variable, MavisNamespace, WeakMavisNamespace, read_bpp_from_input_file, get_connected_components
+from mavis.util import cast, ENV_VAR_PREFIX, get_env_variable, MavisNamespace, WeakMavisNamespace, read_bpp_from_input_file, get_connected_components
 
 from .mock import Mock
 
@@ -38,25 +38,6 @@ class TestGetConnectedComponents(unittest.TestCase):
         self.assertEqual(2, len(components))
         self.assertEqual({1, 2, 3, 4}, components[0])
         self.assertEqual({6, 7, 8}, components[1])
-
-
-class TestDelimListString(unittest.TestCase):
-    def test_cast_from_list(self):
-        c = DelimListString(['1', '2', '3'])
-        self.assertTrue('1' in c)
-        self.assertTrue('2' in c)
-        self.assertTrue('3' in c)
-        self.assertFalse('4' in c)
-
-    def test_cast_from_string(self):
-        c = DelimListString('1;2;3;4')
-        self.assertEqual(['1', '2', '3', '4'], list(c))
-        self.assertTrue('1' in c)
-        self.assertFalse('x' in c)
-
-    def test_all_is_none(self):
-        self.assertNotIn('1', DelimListString(''))
-        self.assertIn('1', DelimListString('', none_is_all=True))
 
 
 class TestCast(unittest.TestCase):
@@ -96,14 +77,19 @@ class TestMavisNamespace(unittest.TestCase):
         self.assertEqual(2, self.namespace.thing)
 
     def test_items(self):
+        print(self.namespace)
         self.namespace.thing = 2
+        print(self.namespace)
         self.namespace.otherthing = 3
+        print(self.namespace)
+        self.assertEqual({'thing': 2, 'otherthing': 3}, self.namespace._members)
         self.assertEqual([('otherthing', 3), ('thing', 2)], list(sorted(self.namespace.items())))
 
 
 class TestWeakMavisNamespace(unittest.TestCase):
     def setUp(self):
         self.namespace = WeakMavisNamespace(a=1, b=2, c=3)
+        print(self.namespace._members)
         for v in ['a', 'b', 'c']:
             v = ENV_VAR_PREFIX + v.upper()
             if v in os.environ:
@@ -115,8 +101,12 @@ class TestWeakMavisNamespace(unittest.TestCase):
 
     def test_env_overrides_default(self):
         os.environ['MAVIS_A'] = '5'
+        env_name = self.namespace.get_env_name('a')
+        self.assertEqual('MAVIS_A', env_name)
+        self.assertEqual('5', os.environ[env_name])
+        self.assertTrue(self.namespace.is_env_overwritable('a'))
         self.assertEqual(5, self.namespace.a)
-        self.assertEqual(1, self.namespace.__dict__['a'])
+        self.assertEqual(1, self.namespace._members['a'])
         self.assertEqual(5, self.namespace['a'])
 
     def test_error_on_invalid_attr(self):

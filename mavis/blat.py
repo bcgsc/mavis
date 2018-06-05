@@ -13,20 +13,19 @@
 -- http://wiki.bits.vib.be/index.php/Blat
 
 """
+import logging
 import math
 import re
-import subprocess
-import warnings
 
 import tab
 
-from .align import query_coverage_interval, SUPPORTED_ALIGNER
+from .align import query_coverage_interval
 from .bam import cigar as _cigar
 from .bam.cigar import QUERY_ALIGNED_STATES
 from .bam.read import SamRead
 from .constants import CIGAR, DNA_ALPHABET, NA_MAPPING_QUALITY, PYSAM_READ_FLAGS, reverse_complement, STRAND
+from .util import LOG
 from .interval import Interval
-from .util import devnull
 
 
 class Blat:
@@ -169,8 +168,7 @@ class Blat:
                                 x, row[x]))
                 final_rows.append(row)
             except AssertionError as err:
-                if verbose:
-                    warnings.warn(repr(err))
+                LOG(type(err), ':', str(err), level=logging.DEBUG)
         return header, final_rows
 
     @staticmethod
@@ -347,10 +345,9 @@ def process_blat_output(
             try:
                 read = Blat.pslx_row_to_pysam(row, input_bam_cache, reference_genome)
             except KeyError as err:
-                warnings.warn(
-                    'warning: reference template name not recognized {0}'.format(err))
+                LOG('warning: reference template name not recognized', str(err), level=logging.DEBUG)
             except AssertionError as err:
-                warnings.warn('warning: invalid blat alignment: {}'.format(repr(err)))
+                LOG('warning: invalid blat alignment', repr(err), level=logging.DEBUG)
             else:
                 reads.append((row, read))
 

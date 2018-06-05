@@ -6,7 +6,7 @@ from .pairing import inferred_equivalent, product_key, pair_by_distance
 from .constants import DEFAULTS
 from ..annotate.constants import SPLICE_TYPE
 from ..constants import CALL_METHOD, COLUMNS, PROTOCOL, SVTYPE
-from ..util import generate_complete_stamp, log, output_tabbed_file, read_inputs
+from ..util import generate_complete_stamp, LOG, output_tabbed_file, read_inputs
 
 
 def main(
@@ -26,6 +26,7 @@ def main(
         split_call_distance (int): pairing distance for pairing with an event called by :term:`split read`
         contig_call_distance (int): pairing distance for pairing with an event called by contig or :term:`spanning read`
     """
+    annotations.load()
     # load the file
     distances = {
         CALL_METHOD.FLANK: flanking_call_distance,
@@ -57,11 +58,11 @@ def main(
         },
         expand_strand=False, expand_orient=False, expand_svtype=False
     ))
-    log('read {} breakpoint pairs'.format(len(bpps)))
+    LOG('read {} breakpoint pairs'.format(len(bpps)))
 
     # load all transcripts
     reference_transcripts = dict()
-    for genes in annotations.values():
+    for genes in annotations.content.values():
         for gene in genes:
             for unspliced_t in gene.transcripts:
                 if unspliced_t.name in reference_transcripts:
@@ -86,19 +87,19 @@ def main(
         bpp.data[COLUMNS.inferred_pairing] = ''
 
         if product_key(bpp) in bpp_by_product_key:
-            raise KeyError('duplicate bpp is not unique within lib', bpp.library, product_key, bpp, bpp.data)
+            raise KeyError('duplicate bpp is not unique within lib', product_key(bpp))
         bpp_by_product_key[product_key(bpp)] = bpp
 
     distance_pairings = {}
     product_pairings = {}
-    log('computing distance based pairings')
+    LOG('computing distance based pairings')
     # pairwise comparison of breakpoints between all libraries
     for set_num, (category, calls) in enumerate(sorted(calls_by_cat.items(), key=lambda x: (len(x[1]), x[0]), reverse=True)):
-        log('comparing set {} of {} with {} items'.format(set_num + 1, len(calls_by_cat), len(calls)))
+        LOG('comparing set {} of {} with {} items'.format(set_num + 1, len(calls_by_cat), len(calls)))
         for node, adj_list in pair_by_distance(calls, distances, against_self=False).items():
             distance_pairings.setdefault(node, set()).update(adj_list)
 
-    log('computing inferred (by product) pairings')
+    LOG('computing inferred (by product) pairings')
     for calls in calls_by_ann.values():
         calls_by_lib = {}
         for call in calls:
@@ -132,4 +133,3 @@ def main(
         'mavis_paired_{}.tab'.format('_'.join(sorted(list(libraries))))
     )
     output_tabbed_file(bpps, fname)
-    generate_complete_stamp(output, log, start_time=start_time)

@@ -13,7 +13,8 @@ from mavis.constants import CIGAR, DNA_ALPHABET, ORIENT, READ_PAIR_TYPE, STRAND,
 from mavis.interval import Interval
 import timeout_decorator
 
-from . import BAM_INPUT, FULL_BAM_INPUT, FULL_REFERENCE_ANNOTATIONS_FILE_JSON, MockBamFileHandle, MockRead, REFERENCE_GENOME_FILE, TRANSCRIPTOME_BAM_INPUT
+from . import MockRead, MockBamFileHandle
+from ..util import get_data
 
 
 REFERENCE_GENOME = None
@@ -22,7 +23,7 @@ REFERENCE_GENOME = None
 def setUpModule():
     warnings.simplefilter('ignore')
     global REFERENCE_GENOME
-    REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
+    REFERENCE_GENOME = load_reference_genome(get_data('mock_reference_genome.fa'))
     if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
         raise AssertionError('fake genome file does not have the expected contents')
 
@@ -71,7 +72,7 @@ class TestBamCache(unittest.TestCase):
         self.assertEqual([(1, 50), (51, 100)], BamCache._generate_fetch_bins(1, 100, 5, 50))
 
     def test_fetch_single_read(self):
-        b = BamCache(BAM_INPUT)
+        b = BamCache(get_data('mini_mock_reads_for_events.sorted.bam'))
         s = b.fetch_from_bins('reference3', 1382, 1383, read_limit=1, sample_bins=1)
         self.assertEqual(1, len(s))
         r = list(s)[0]
@@ -80,7 +81,7 @@ class TestBamCache(unittest.TestCase):
 
     def test_get_mate(self):
         # dependant on fetch working
-        b = BamCache(BAM_INPUT)
+        b = BamCache(get_data('mini_mock_reads_for_events.sorted.bam'))
         s = b.fetch_from_bins('reference3', 1382, 1383, read_limit=1, sample_bins=1)
         self.assertEqual(1, len(s))
         r = list(s)[0]
@@ -358,7 +359,7 @@ class TestHistogram(unittest.TestCase):
 
 class TestBamStats(unittest.TestCase):
     def test_genome_bam_stats(self):
-        bamfh = BamCache(FULL_BAM_INPUT)
+        bamfh = BamCache(get_data('mock_reads_for_events.sorted.bam'))
         stats = compute_genome_bam_stats(
             bamfh,
             1000,
@@ -372,8 +373,8 @@ class TestBamStats(unittest.TestCase):
         bamfh.close()
 
     def test_trans_bam_stats(self):
-        bamfh = BamCache(TRANSCRIPTOME_BAM_INPUT)
-        annotations = load_reference_genes(FULL_REFERENCE_ANNOTATIONS_FILE_JSON)
+        bamfh = BamCache(get_data('mock_trans_reads_for_events.sorted.bam'))
+        annotations = load_reference_genes(get_data('mock_annotations.json'))
         stats = compute_transcriptome_bam_stats(
             bamfh,
             annotations,

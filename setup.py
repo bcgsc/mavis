@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 import re
 
 
-VERSION = '1.8.4'
+VERSION = '2.0.0'
 
 
 def parse_md_readme():
@@ -91,7 +91,7 @@ setup(
         'pip>=9.0.0',
         'setuptools>=36.0.0'
     ],
-    python_requires='>=3',
+    python_requires='>=3.2',
     author='Caralyn Reisle',
     author_email='creisle@bcgsc.ca',
     test_suite='nose.collector',

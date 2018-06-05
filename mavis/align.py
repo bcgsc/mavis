@@ -16,7 +16,7 @@ from .breakpoint import BreakpointPair, Breakpoint
 from .constants import CIGAR, COLUMNS, MavisNamespace, ORIENT, reverse_complement, STRAND, SVTYPE, NA_MAPPING_QUALITY
 from .error import InvalidRearrangement
 from .interval import Interval
-from .util import devnull
+from .util import DEVNULL
 
 
 SUPPORTED_ALIGNER = MavisNamespace(BWA_MEM='bwa mem', BLAT='blat', __name__='~mavis.align.SUPPORTED_ALIGNER')
@@ -346,7 +346,7 @@ def align_sequences(
     blat_limit_top_aln=25,
     blat_min_identity=0.7,
     clean_files=True,
-    log=devnull,
+    log=DEVNULL,
     **kwargs
 ):
     """

@@ -2,7 +2,7 @@ import glob
 import os
 
 
-def glob_exists(*pos, strict=True, n=1):
+def glob_exists(*pos, strict=False, n=1):
     globexpr = os.path.join(*pos)
     file_list = glob.glob(globexpr)
     if strict and len(file_list) == n:
@@ -15,8 +15,7 @@ def glob_exists(*pos, strict=True, n=1):
         return False
 
 
-DATA_PREFIX = os.path.join(os.path.dirname(__file__), 'data')
-
-
-def data(*path):
-    return os.path.join(DATA_PREFIX, *path)
+def glob_not_exists(*pos):
+    globexpr = os.path.join(*pos)
+    file_list = glob.glob(globexpr)
+    return not file_list

@@ -9,8 +9,7 @@ from mavis.constants import SUBCOMMAND
 from mavis.main import main
 from mavis.util import read_bpp_from_input_file
 
-
-DATA_PREFIX = os.path.join(os.path.dirname(__file__), 'data')
+from ..util import get_data
 TEMP_OUTPUT = None
 
 
@@ -25,9 +24,9 @@ class TestPairing(unittest.TestCase):
     def test_pairing(self):
         args = [
             'mavis', SUBCOMMAND.PAIR,
-            '-n', os.path.join(DATA_PREFIX, 'pairing_annotations.tab'),
+            '-n', get_data('pairing_annotations.tab'),
             '-o', TEMP_OUTPUT,
-            '--annotations', os.path.join(DATA_PREFIX, 'pairing_reference_annotations_file.tab')
+            '--annotations', get_data('pairing_reference_annotations_file.tab')
         ]
         with patch.object(sys, 'argv', args):
             self.assertEqual(0, main())

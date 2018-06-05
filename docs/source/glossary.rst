@@ -73,7 +73,10 @@ General Terms
         Sun Grid Engine (SGE) is a job scheduling system for cluster management see http://star.mit.edu/cluster/docs/0.93.3/guides/sge.html.
 
     SLURM
-        SLURM is a job scheduling system for cluster management see https://slurm.schedmd.com/quickstart.html.
+        SLURM is a job scheduling system for cluster management see https://slurm.schedmd.com/archive/slurm-17.02.1.
+
+    TORQUE
+        TORQUE is a job scheduling system for cluster management see http://www.adaptivecomputing.com/products/open-source/torque/.
 
     BWA
         BWA is an alignement tool. See https://github.com/lh3/bwa for install instructions.

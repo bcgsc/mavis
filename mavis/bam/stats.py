@@ -7,7 +7,6 @@ import numpy as np
 
 from .read import sequenced_strand
 from ..constants import STRAND
-from ..util import devnull
 
 
 class BamStats:

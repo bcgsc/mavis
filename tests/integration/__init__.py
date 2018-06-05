@@ -6,31 +6,14 @@ from mavis.annotate.file_io import load_annotations, load_reference_genome
 from mavis.annotate.protein import Translation
 from mavis.constants import CIGAR, NA_MAPPING_QUALITY
 
+from ..util import DATA_DIR
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
-REFERENCE_GENOME_FILE = os.path.join(DATA_DIR, 'mock_reference_genome.fa')
-REFERENCE_GENOME_FILE_2BIT = os.path.join(DATA_DIR, 'mock_reference_genome.2bit')
-REFERENCE_ANNOTATIONS_FILE = os.path.join(DATA_DIR, 'mock_reference_annotations.tsv')
-REFERENCE_ANNOTATIONS_FILE2 = os.path.join(DATA_DIR, 'mock_reference_annotations.full.tsv')
-REFERENCE_ANNOTATIONS_FILE_JSON = os.path.join(DATA_DIR, 'mock_reference_annotations.json')
-FULL_REFERENCE_ANNOTATIONS_FILE_JSON = os.path.join(DATA_DIR, 'mock_annotations.json')
-TEMPLATE_METADATA_FILE = os.path.join(DATA_DIR, 'cytoBand.txt')
-TRANSCRIPTOME_BAM_INPUT = os.path.join(DATA_DIR, 'mock_trans_reads_for_events.sorted.bam')
-BAM_INPUT = os.path.join(DATA_DIR, 'mini_mock_reads_for_events.sorted.bam')
-FULL_BAM_INPUT = os.path.join(DATA_DIR, 'mock_reads_for_events.sorted.bam')
-FULL_BASE_EVENTS = os.path.join(DATA_DIR, 'mock_sv_events.tsv')
-BASE_EVENTS = os.path.join(DATA_DIR, 'mini_mock_sv_events.tsv')
-BLAT_INPUT = os.path.join(DATA_DIR, 'blat_input.fa')
-BLAT_OUTPUT = os.path.join(DATA_DIR, 'blat_output.pslx')
+
 ARGUMENT_ERROR = 2
 
 RUN_FULL = int(os.environ.get('RUN_FULL', 1))
 OUTPUT_SVG = int(os.environ.get('OUTPUT_SVG', 0))
 _EXAMPLE_GENES = None
-
-
-def get_data(path):
-    return os.path.join(DATA_DIR, path)
 
 
 def get_example_genes():

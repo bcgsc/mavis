@@ -5,7 +5,7 @@ from ..breakpoint import Breakpoint
 from ..constants import CALL_METHOD, COLUMNS, ORIENT, PRIME, PROTOCOL, STRAND
 from ..error import NotSpecifiedError
 from ..interval import Interval
-from ..util import devnull
+from ..util import DEVNULL
 
 
 def product_key(bpp):
@@ -156,7 +156,7 @@ def equivalent(event1, event2, distances=None):
     return True
 
 
-def pair_by_distance(calls, distances, log=devnull, against_self=False):
+def pair_by_distance(calls, distances, log=DEVNULL, against_self=False):
     """
     for a set of input calls, pair by distance
     """

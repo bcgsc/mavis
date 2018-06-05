@@ -6,7 +6,8 @@ import sys
 import subprocess
 import glob
 import re
-from mavis.config import SUBMIT_OPTIONS
+from mavis.config import REFERENCE_DEFAULTS
+from mavis.schedule.constants import OPTIONS as SUBMIT_OPTIONS
 from mavis.summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 from mavis.pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from mavis.validate.constants import DEFAULTS as VALIDATION_DEFAULTS
@@ -59,6 +60,7 @@ with open(fname, 'w') as fh:
     }
     for namespace in [
         SUBMIT_OPTIONS,
+        REFERENCE_DEFAULTS,
         SUMMARY_DEFAULTS,
         PAIRING_DEFAULTS,
         ANNOTATION_DEFAULTS,

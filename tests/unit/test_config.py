@@ -1,7 +1,7 @@
 import unittest
 from argparse import ArgumentTypeError
 
-from mavis.config import float_fraction, library_name_format
+from mavis.config import float_fraction, nameable_string
 
 
 class TestFloatFraction(unittest.TestCase):
@@ -29,41 +29,41 @@ class TestNoReservedChars(unittest.TestCase):
 
     def test_semicolon_error(self):
         with self.assertRaises(TypeError):
-            library_name_format('thing;thing')
+            nameable_string('thing;thing')
 
     def test_comma_error(self):
         with self.assertRaises(TypeError):
-            library_name_format('thing,thing')
+            nameable_string('thing,thing')
 
     def test_underscore_error(self):
         with self.assertRaises(TypeError):
-            library_name_format('thing_thing')
+            nameable_string('thing_thing')
 
     def test_space_error(self):
         with self.assertRaises(TypeError):
-            library_name_format(' ')
+            nameable_string(' ')
 
         with self.assertRaises(TypeError):
-            library_name_format('thing thing')
+            nameable_string('thing thing')
 
     def test_ok(self):
         lib = 'libName'
-        self.assertEqual('libName', library_name_format(lib))
+        self.assertEqual('libName', nameable_string(lib))
 
     def test_number_start_error(self):
         with self.assertRaises(TypeError):
-            library_name_format('1thing')
+            nameable_string('1thing')
 
         with self.assertRaises(TypeError):
-            library_name_format('1')
+            nameable_string('1')
 
     def test_empty_error(self):
         with self.assertRaises(TypeError):
-            library_name_format('')
+            nameable_string('')
 
     def test_none_error(self):
         with self.assertRaises(TypeError):
-            library_name_format('none')
+            nameable_string('none')
 
         with self.assertRaises(TypeError):
-            library_name_format(None)
+            nameable_string(None)

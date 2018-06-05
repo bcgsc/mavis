@@ -3,6 +3,7 @@ module responsible for small utility functions and constants used throughout the
 """
 import argparse
 import re
+import os
 
 from Bio.Alphabet import Gapped
 from Bio.Alphabet.IUPAC import ambiguous_dna
@@ -11,7 +12,13 @@ from Bio.Seq import Seq
 from tab import cast_boolean, cast_null
 
 
-class MavisNamespace(argparse.Namespace):
+PROGNAME = 'mavis'
+EXIT_OK = 0
+EXIT_ERROR = 1
+EXIT_INCOMPLETE = 2
+
+
+class MavisNamespace:
     """
     Namespace to hold module constants
 
@@ -22,18 +29,128 @@ class MavisNamespace(argparse.Namespace):
         >>> nspace.otherthing
         2
     """
-    reserved_attr = ['_types', '_defns']
+    DELIM = r'[;,\s]+'
+    """:class:`str`: delimiter to use is parsing listable variables from the environment or config file"""
 
-    def __init__(self, **kwargs):
-        for k in kwargs:
-            if k in MavisNamespace.reserved_attr:
-                raise AttributeError('reserved attribute {} cannot be used'.format(k))
-        self._defns = {}
-        self._types = {}
-        argparse.Namespace.__init__(self, **kwargs)
-        for attr, value in kwargs.items():
-            if not attr.startswith('_'):
-                self._set_type(attr, type(value))
+    def __init__(self, *pos, **kwargs):
+        object.__setattr__(self, '_defns', {})
+        object.__setattr__(self, '_types', {})
+        object.__setattr__(self, '_members', {})
+        object.__setattr__(self, '_nullable', set())
+        object.__setattr__(self, '_listable', set())
+        object.__setattr__(self, '_env_overwritable', set())
+        object.__setattr__(self, '_env_prefix', 'MAVIS')
+        if '__name__' in kwargs:  # for building auto documentation
+            object.__setattr__(self, '__name__', kwargs.pop('__name__'))
+
+        for k in pos:
+            if k in self._members:
+                raise AttributeError('Cannot respecify existing attribute', k, self._members[k])
+            self[k] = k
+
+        for attr, val in kwargs.items():
+            if attr in self._members:
+                raise AttributeError('Cannot respecify existing attribute', attr, self._members[attr])
+            self[attr] = val
+
+        for attr, value in self._members.items():
+            self._set_type(attr, type(value))
+
+    def __repr__(self):
+        return '{}({})'.format(self.__class__.__name__, ', '.join(sorted(['{}={}'.format(k, repr(v)) for k, v in self.items()])))
+
+    def discard(self, attr):
+        """
+        Remove a variable if it exists
+        """
+        self._members.pop(attr, None)
+        self._listable.discard(attr)
+        self._nullable.discard(attr)
+        self._defns.pop(attr, None)
+        self._types.pop(attr, None)
+        self._env_overwritable.discard(attr)
+
+    def get_env_name(self, attr):
+        """
+        Get the name of the corresponding environment variable
+
+        Example:
+            >>> nspace = MavisNamespace(a=1)
+            >>> nspace.get_env_name('a')
+            'MAVIS_A'
+        """
+        if self._env_prefix:
+            return '{}_{}'.format(self._env_prefix, attr).upper()
+        return attr.upper()
+
+    def get_env_var(self, attr):
+        """
+        retrieve the environment variable definition of a given attribute
+        """
+        env_name = self.get_env_name(attr)
+        env = os.environ[env_name].strip()
+        attr_type = self._types.get(attr, str)
+
+        if attr in self._listable:
+            return self.parse_listable_string(env, attr_type, attr in self._nullable)
+        if attr in self._nullable and env.lower() == 'none':
+            return None
+        return attr_type(env)
+
+    @classmethod
+    def parse_listable_string(cls, string, cast_type=str, nullable=False):
+        """
+        Given some string, parse it into a list
+
+        Example:
+            >>> MavisNamespace.parse_listable_string('1,2,3', int)
+            [1, 2, 3]
+            >>> MavisNamespace.parse_listable_string('1;2,None', int, True)
+            [1, 2, None]
+        """
+        result = []
+        string = string.strip()
+        for val in re.split(cls.DELIM, string) if string else []:
+            if nullable and val.lower() == 'none':
+                result.append(None)
+            else:
+                result.append(cast_type(val))
+        return result
+
+    def is_env_overwritable(self, attr):
+        """
+        Returns:
+            bool: True if the variable is overrided by specifying the environment variable equivalent
+        """
+        return attr in self._env_overwritable
+
+    def is_listable(self, attr):
+        """
+        Returns:
+            bool: True if the variable should be parsed as a list
+        """
+        return attr in self._listable
+
+    def is_nullable(self, attr):
+        """
+        Returns:
+            bool: True if the variable can be set to None
+        """
+        return attr in self._nullable
+
+    def __getattribute__(self, attr):
+        try:
+            return object.__getattribute__(self, attr)
+        except AttributeError as err:
+            variables = object.__getattribute__(self, '_members')
+            if attr not in variables:
+                raise err
+            if self.is_env_overwritable(attr):
+                try:
+                    return self.get_env_var(attr)
+                except KeyError:
+                    pass
+            return variables[attr]
 
     def items(self):
         """
@@ -43,25 +160,34 @@ class MavisNamespace(argparse.Namespace):
         """
         return [(k, self[k]) for k in self.keys()]
 
+    def to_dict(self):
+        return dict(self.items())
+
     def __getitem__(self, key):
-        return getattr(self, str(key))
+        return getattr(self, key)
 
     def __setitem__(self, key, val):
-        if key in MavisNamespace.reserved_attr:
-            raise AttributeError('reserved attribute {} cannot be used'.format(key))
-        self.__dict__[key] = val
+        self.__setattr__(key, val)
 
-    def flatten(self):
-        """
-        returns the namespace (minus types and definitions) as a dictionary
+    def __setattr__(self, attr, val):
+        if attr.startswith('_'):
+            raise ValueError('cannot set private', attr)
+        object.__getattribute__(self, '_members')[attr] = val
 
-        Example:
-            >>> MavisNamespace(thing=1, otherthing=2).flatten()
-            {'thing': 1, 'otherthing': 2}
+    def copy_from(self, source, attrs=None):
         """
-        items = {}
-        items.update(self.items())
-        return items
+        Copy variables from one namespace onto the current namespace
+        """
+        if attrs is None:
+            attrs = source.keys()
+        for attr in attrs:
+            self.add(
+                attr, source[attr],
+                listable=source.is_listable(attr),
+                nullable=source.is_nullable(attr),
+                defn=source.define(attr, None),
+                cast_type=source.type(attr, None)
+            )
 
     def get(self, key, *pos):
         """
@@ -94,7 +220,7 @@ class MavisNamespace(argparse.Namespace):
             >>> MavisNamespace(thing=1, otherthing=2).keys()
             ['thing', 'otherthing']
         """
-        return [k for k in self.__dict__ if not k.startswith('_')]
+        return [k for k in self._members]
 
     def values(self):
         """
@@ -104,7 +230,7 @@ class MavisNamespace(argparse.Namespace):
             >>> MavisNamespace(thing=1, otherthing=2).values()
             [1, 2]
         """
-        return [self[k] for k in self.keys()]
+        return [self[k] for k in self._members]
 
     def enforce(self, value):
         """
@@ -163,7 +289,7 @@ class MavisNamespace(argparse.Namespace):
         else:
             self._types[attr] = cast_type
 
-    def type(self, attr):
+    def type(self, attr, *pos):
         """
         returns the type
 
@@ -172,7 +298,14 @@ class MavisNamespace(argparse.Namespace):
             >>> nspace.type('thing')
             <class 'int'>
         """
-        return self._types[attr]
+        if len(pos) > 1:
+            raise TypeError('too many arguments. type takes a single \'default\' value argument')
+        try:
+            return self._types[attr]
+        except AttributeError as err:
+            if pos:
+                return pos[0]
+            raise err
 
     def define(self, attr, *pos):
         """
@@ -205,9 +338,18 @@ class MavisNamespace(argparse.Namespace):
                 return pos[0]
             raise err
 
-    def add(self, attr, *pos, **kwargs):
+    def add(self, attr, value, defn=None, cast_type=None, nullable=False, env_overwritable=False, listable=False):
         """
-        Add an attribute to the name space. Optionally include cast_type and definition
+        Add an attribute to the name space
+
+        Args:
+            attr (str): name of the attribute being added
+            value: the value of the attribute
+            defn (str): the definition, will be used in generating documentation and help menus
+            cast_type (callable): the function to use in casting the value
+            nullable (bool): True if this attribute can have a None value
+            env_overwritable (bool): True if this attribute will be overriden by its environment variable equivalent
+            listable (bool): True if this attribute can have multiple values
 
         Example:
             >>> nspace = MavisNamespace()
@@ -219,30 +361,27 @@ class MavisNamespace(argparse.Namespace):
             >>> nspace = MavisNamespace()
             >>> nspace.add('thing', value=1, cast_type=int, defn='I am a thing')
         """
-        if len(pos) > 1:
-            raise TypeError('add({}) takes 3 positional arguments but more were given'.format(', '.join([str(p) for p in pos])))
-
-        for value, argname in zip(pos, ['value', 'cast_type', 'defn'][:len(pos)]):
-            if argname in kwargs:
-                raise TypeError('add({}, ...) got multiple values for argument {}'.format(attr, repr(argname)))
-            kwargs['value'] = pos[0]
-        value = kwargs.pop('value', attr)
-        self[attr] = value
-        if 'cast_type' not in kwargs:
-            self._set_type(attr, type(value))
+        if cast_type:
+            self._set_type(attr, cast_type)
         else:
-            self._types[attr] = kwargs.pop('cast_type')
-        if 'defn' in kwargs:
-            self._defns[attr] = kwargs.pop('defn')
-        if kwargs:
-            raise TypeError('invalid arguments for {}: {}'.format(attr, kwargs.keys()))
+            self._set_type(attr, type(value))
+        if defn:
+            self._defns[attr] = defn
+
+        if nullable:
+            self._nullable.add(attr)
+        if env_overwritable:
+            self._env_overwritable.add(attr)
+        if listable:
+            self._listable.add(attr)
+        self[attr] = value
 
     def __call__(self, value):
         try:
             return self.enforce(value)
         except KeyError:
-            raise TypeError('Invalid value {} for {}. Cannot cast to type {}. Must be a valid member: {}'.format(
-                repr(value), attr, self.__class__.__name__, self.values()))
+            raise TypeError('Invalid value {} for {}. Must be a valid member: {}'.format(
+                repr(value), self.__class__.__name__, self.values()))
 
 
 def float_fraction(num):
@@ -267,27 +406,17 @@ def float_fraction(num):
     return num
 
 
-def nullable_int(num):
-    """
-    casts input to an int if not an accepted null value. See :func:tab.tab.cast_null
-    """
-    try:
-        return cast_null(num)
-    except TypeError:
-        pass
-    return int(num)
-
-
 COMPLETE_STAMP = 'MAVIS.COMPLETE'
+""":class:`str`: Filename for all complete stamp files"""
 
 SUBCOMMAND = MavisNamespace(
     ANNOTATE='annotate',
     VALIDATE='validate',
-    PIPELINE='pipeline',
+    SETUP='setup',
+    SCHEDULE='schedule',
     CLUSTER='cluster',
     PAIR='pairing',
     SUMMARY='summary',
-    CHECKER='checker',
     CONFIG='config',
     CONVERT='convert',
     OVERLAY='overlay'
@@ -295,14 +424,14 @@ SUBCOMMAND = MavisNamespace(
 """:class:`MavisNamespace`: holds controlled vocabulary for allowed pipeline stage values
 
 - annotate
-- validate
-- pipeline
 - cluster
-- pairing
-- summary
-- checker
 - config
 - convert
+- pairing
+- pipeline
+- schedule
+- summary
+- validate
 """
 
 
