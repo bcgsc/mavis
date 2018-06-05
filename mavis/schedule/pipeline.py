@@ -88,12 +88,11 @@ def run_conversion(config, libconf, conversion_dir, assume_no_untemplated=True):
 
 def validate_args(config, libconf):
     """
-    returns the mavis command for running the validate step
+    Pull arguments from the main config and library specific config to pass to validate
 
-    writes the bash script for running the validation job
-
-    creates a job instance with input/output paths
-
+    Args:
+        config (MavisConfig): the main program config
+        libconf (LibraryConfig): library specific configuration
     """
     allowed_args = [
         'masking',
@@ -120,6 +119,13 @@ def validate_args(config, libconf):
 
 
 def annotate_args(config, libconf):
+    """
+    Pull arguments from the main config and library specific config to pass to annotate
+
+    Args:
+        config (MavisConfig): the main program config
+        libconf (LibraryConfig): library specific configuration
+    """
     allowed_args = [
         'reference_genome',
         'template_metadata',
@@ -145,6 +151,13 @@ def annotate_args(config, libconf):
 
 
 def summary_args(config):
+    """
+    Pull arguments from the main config and library specific config to pass to summary
+
+    Args:
+        config (MavisConfig): the main program config
+        libconf (LibraryConfig): library specific configuration
+    """
     allowed_args = [
         'flanking_call_distance',
         'split_call_distance',
@@ -162,6 +175,13 @@ def summary_args(config):
 
 
 def cluster_args(config, libconf):
+    """
+    Pull arguments from the main config and library specific config to pass to cluster
+
+    Args:
+        config (MavisConfig): the main program config
+        libconf (LibraryConfig): library specific configuration
+    """
     allowed_args = [
         'masking',
         'annotations',
