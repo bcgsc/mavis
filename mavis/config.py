@@ -123,27 +123,6 @@ class RangeAppendAction(argparse.Action):
         setattr(namespace, self.dest, items)
 
 
-def cast_if_not_none(value, cast_type):
-    """
-    cast a value to a given type unless it is None
-
-    Example:
-        >>> cast_if_not_none('1', int)
-        1
-        >>> cast_if_not_none(None, int)
-        None
-        >>> cast_if_not_none('null', int)
-        None
-        >>> cast_if_not_none('', int)
-        None
-        >>> cast_if_not_none('none', int)
-        None
-    """
-    if value is None or str(value).lower() in ['none', 'null', '']:
-        return None
-    return cast(value, cast_type)
-
-
 class LibraryConfig(MavisNamespace):
     """
     holds library specific configuration information
@@ -157,9 +136,9 @@ class LibraryConfig(MavisNamespace):
         self.library = library
         self.protocol = PROTOCOL.enforce(protocol)
         self.bam_file = bam_file
-        self.read_length = cast_if_not_none(read_length, int)
-        self.median_fragment_size = cast_if_not_none(median_fragment_size, int)
-        self.stdev_fragment_size = cast_if_not_none(stdev_fragment_size, int)
+        self.read_length = NullableType(int)(read_length)
+        self.median_fragment_size = NullableType(int)(median_fragment_size)
+        self.stdev_fragment_size = NullableType(int)(stdev_fragment_size)
         self.strand_specific = cast(strand_specific, bool)
         self.strand_determining_read = int(strand_determining_read)
         self.disease_status = DISEASE_STATUS.enforce(disease_status)
@@ -244,88 +223,6 @@ class LibraryConfig(MavisNamespace):
         return LibraryConfig(args[0], protocol=args[1], disease_status=args[2], strand_specific=args[3], bam_file=args[4])
 
 
-def write_config(filename, include_defaults=False, libraries=[], conversions={}, log=DEVNULL):
-    """
-    Args:
-        filename (str): path to the output file
-        include_defaults (bool): True if default parameters should be written to the config, False otherwise
-        libraries (list of LibraryConfig): library configuration sections
-        conversions (dict of list by str): conversion commands by alias name
-        log (function): function to pass output logging to
-    """
-    config = {}
-
-    config['reference'] = REFERENCE_DEFAULTS.to_dict()
-    for filetype, fname in REFERENCE_DEFAULTS.items():
-        if fname is None:
-            warnings.warn('filetype {} has not been set. This must be done manually before the configuration file is used'.format(filetype))
-
-    if libraries:
-        for lib in libraries:
-            config[lib.library] = lib.to_dict()
-
-    if include_defaults:
-        config['schedule'] = SUBMIT_OPTIONS.to_dict()
-        config['validate'] = VALIDATION_DEFAULTS.to_dict()
-        config['cluster'] = CLUSTER_DEFAULTS.to_dict()
-        config['annotate'] = ANNOTATION_DEFAULTS.to_dict()
-        config['illustrate'] = ILLUSTRATION_DEFAULTS.to_dict()
-        config['summary'] = SUMMARY_DEFAULTS.to_dict()
-
-    config['convert'] = CONVERT_OPTIONS.to_dict()
-    for alias, command in conversions.items():
-        if alias in CONVERT_OPTIONS:
-            raise UserWarning('error in writing config. Alias for conversion product cannot be a setting', alias, CONVERT_OPTIONS.keys())
-        config['convert'][alias] = '\n'.join(command)
-
-    for sec in config:
-        for tag, value in config[sec].items():
-            if '_regex_' in tag:
-                config[sec][tag] = re.sub(r'\$', '$$', config[sec][tag])
-                continue
-            elif not isinstance(value, str):
-                try:
-                    config[sec][tag] = '\n'.join([str(v) for v in value])
-                    continue
-                except TypeError:
-                    pass
-            config[sec][tag] = str(value)
-
-    conf = ConfigParser()
-    for sec in config:
-        conf[sec] = {}
-        for tag, val in config[sec].items():
-            conf[sec][tag] = val
-    log('writing:', filename)
-    with open(filename, 'w') as configfile:
-        conf.write(configfile)
-
-
-def validate_section(section, namespace, use_defaults=False):
-    """
-    given a dictionary of values, returns a new dict with the values casted to their appropriate type or set
-    to a default if the value was not given
-    """
-    new_namespace = MavisNamespace()
-    if use_defaults:
-        new_namespace.copy_from(namespace)
-
-    for attr, value in section.items():
-        if attr not in namespace:
-            raise KeyError('tag not recognized', attr)
-        else:
-            cast_type = namespace.type(attr)
-            if namespace.is_listable(attr):
-                value = MavisNamespace.parse_listable_string(value, cast_type, namespace.is_nullable(attr))
-            else:
-                value = cast_type(value)
-            try:
-                new_namespace.add(attr, value, cast_type=cast_type, listable=namespace.is_listable(attr), nullable=namespace.is_nullable(attr))
-            except Exception as err:
-                raise ValueError('failed adding {}. {}'.format(attr, err))
-    return new_namespace
-
-
 class MavisConfig(MavisNamespace):
 
     def __init__(self, **kwargs):
@@ -358,7 +255,7 @@ class MavisConfig(MavisNamespace):
         SUPPORTED_ALIGNER.enforce(self.validate.aligner)
         for attr, fnames in self.reference.items():
             if attr != 'aligner_reference':
-                self.reference[attr] = [f for f in [nullable_filepath(v) for v in fnames] if f]
+                self.reference[attr] = [f for f in [NullableType(filepath)(v) for v in fnames] if f]
             if not self.reference[attr] and attr not in {'dgv_annotation', 'masking', 'template_metadata'}:
                 raise FileNotFoundError(
                     'Error in validating the convert section of the config for tag={}. '
@@ -449,6 +346,88 @@ class MavisConfig(MavisNamespace):
         return MavisConfig(**config_dict)
 
 
+def write_config(filename, include_defaults=False, libraries=[], conversions={}, log=DEVNULL):
+    """
+    Args:
+        filename (str): path to the output file
+        include_defaults (bool): True if default parameters should be written to the config, False otherwise
+        libraries (list of LibraryConfig): library configuration sections
+        conversions (dict of list by str): conversion commands by alias name
+        log (function): function to pass output logging to
+    """
+    config = {}
+
+    config['reference'] = REFERENCE_DEFAULTS.to_dict()
+    for filetype, fname in REFERENCE_DEFAULTS.items():
+        if fname is None:
+            warnings.warn('filetype {} has not been set. This must be done manually before the configuration file is used'.format(filetype))
+
+    if libraries:
+        for lib in libraries:
+            config[lib.library] = lib.to_dict()
+
+    if include_defaults:
+        config['schedule'] = SUBMIT_OPTIONS.to_dict()
+        config['validate'] = VALIDATION_DEFAULTS.to_dict()
+        config['cluster'] = CLUSTER_DEFAULTS.to_dict()
+        config['annotate'] = ANNOTATION_DEFAULTS.to_dict()
+        config['illustrate'] = ILLUSTRATION_DEFAULTS.to_dict()
+        config['summary'] = SUMMARY_DEFAULTS.to_dict()
+
+    config['convert'] = CONVERT_OPTIONS.to_dict()
+    for alias, command in conversions.items():
+        if alias in CONVERT_OPTIONS:
+            raise UserWarning('error in writing config. Alias for conversion product cannot be a setting', alias, CONVERT_OPTIONS.keys())
+        config['convert'][alias] = '\n'.join(command)
+
+    for sec in config:
+        for tag, value in config[sec].items():
+            if '_regex_' in tag:
+                config[sec][tag] = re.sub(r'\$', '$$', config[sec][tag])
+                continue
+            elif not isinstance(value, str):
+                try:
+                    config[sec][tag] = '\n'.join([str(v) for v in value])
+                    continue
+                except TypeError:
+                    pass
+            config[sec][tag] = str(value)
+
+    conf = ConfigParser()
+    for sec in config:
+        conf[sec] = {}
+        for tag, val in config[sec].items():
+            conf[sec][tag] = val
+    log('writing:', filename)
+    with open(filename, 'w') as configfile:
+        conf.write(configfile)
+
+
+def validate_section(section, namespace, use_defaults=False):
+    """
+    given a dictionary of values, returns a new dict with the values casted to their appropriate type or set
+    to a default if the value was not given
+    """
+    new_namespace = MavisNamespace()
+    if use_defaults:
+        new_namespace.copy_from(namespace)
+
+    for attr, value in section.items():
+        if attr not in namespace:
+            raise KeyError('tag not recognized', attr)
+        else:
+            cast_type = namespace.type(attr)
+            if namespace.is_listable(attr):
+                value = MavisNamespace.parse_listable_string(value, cast_type, namespace.is_nullable(attr))
+            else:
+                value = cast_type(value)
+            try:
+                new_namespace.add(attr, value, cast_type=cast_type, listable=namespace.is_listable(attr), nullable=namespace.is_nullable(attr))
+            except Exception as err:
+                raise ValueError('failed adding {}. {}'.format(attr, err))
+    return new_namespace
+
+
 def get_metavar(arg_type):
     """
     For a given argument type, returns the string to be used for the metavar argument in add_argument
@@ -466,12 +445,6 @@ def get_metavar(arg_type):
     elif arg_type == filepath:
         return 'FILEPATH'
     return None
-
-
-def nullable_filepath(path):
-    if str(path).lower() == 'none':
-        return None
-    return filepath(path)
 
 
 def nameable_string(input_string):
@@ -522,7 +495,7 @@ def augment_parser(arguments, parser, required=None):
             default = REFERENCE_DEFAULTS[arg]
             parser.add_argument(
                 '--{}'.format(arg), default=default, required=required if not default else False,
-                help=REFERENCE_DEFAULTS.define(arg), type=filepath if required else nullable_filepath, nargs='*')
+                help=REFERENCE_DEFAULTS.define(arg), type=filepath if required else NullableType(filepath), nargs='*')
         elif arg == 'config':
             parser.add_argument('config', help='path to the config file', type=filepath)
         elif arg == 'bam_file':
