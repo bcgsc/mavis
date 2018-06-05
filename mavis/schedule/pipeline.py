@@ -656,10 +656,6 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
         jobs_not_complete = 0
         jobs_with_errors = 0
 
-        if self.scheduler.NAME == SCHEDULER.LOCAL and (submit or resubmit):
-            if any([job.status != JOB_STATUS.COMPLETED for job in self.validations]):
-                pass
-
         for job in self.validations + self.annotations + [self.pairing, self.summary]:
             self.scheduler.update_info(job)
         log('validate', time_stamp=True)
