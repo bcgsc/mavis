@@ -825,6 +825,10 @@ class Evidence(BreakpointPair):
             self.counts[0] += 1
             if read.is_unmapped:
                 continue
+
+            # TODO In this case the read should be considered unmapped in the bam_cache
+            if read.reference_start == read.reference_end:
+                continue
             if not self.collect_split_read(read, True):
                 self.collect_spanning_read(read)
             if read.mate_is_unmapped:
@@ -849,6 +853,9 @@ class Evidence(BreakpointPair):
             self.counts[1] += 1
 
             if read.is_unmapped:
+                continue
+            # TODO In this case the read should be considered unmapped in the bam_cache
+            if read.reference_start == read.reference_end:
                 continue
             if not self.collect_split_read(read, False):
                 self.collect_spanning_read(read)
