@@ -334,10 +334,15 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
                 script_name = os.path.join(base, SUBCOMMAND.VALIDATE, 'submit.sh')
                 job_options = {k: v for k, v in config.schedule.items() if k in STD_OPTIONS}
                 job_options['memory_limit'] = config.schedule.validation_memory
+
                 if libconf.protocol == PROTOCOL.TRANS:
                     job_options['memory_limit'] = config.schedule.trans_validation_memory
 
                 if scheduler.NAME == SCHEDULER.LOCAL:
+                    job_options['reference_genome'] = args['reference_genome']
+                    if libconf.protocol == PROTOCOL.TRANS:
+                        job_options['annotations'] = args['annotations']
+
                     for task_ident in range(1, len(clustered_files) + 1):
                         args['inputs'] = [os.path.join(cluster_output, '{}-{}.tab'.format(pipeline.batch_id, task_ident))]
                         args['output'] = os.path.join(base, SUBCOMMAND.VALIDATE, '{}-{}'.format(pipeline.batch_id, task_ident))
@@ -382,6 +387,10 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
             job_options['memory_limit'] = config.schedule.annotation_memory
 
             if isinstance(scheduler, LocalScheduler):
+                job_options['annotations'] = args['annotations']
+                job_options['reference_genome'] = args['reference_genome']
+                if args['template_metadata']:
+                    job_options['template_metadata'] = args['template_metadata']
                 for task_ident in range(1, len(clustered_files) + 1):
                     args['output'] = os.path.join(base, SUBCOMMAND.ANNOTATE, '{}-{}'.format(pipeline.batch_id, task_ident))
                     # annotate 'clustered' files if the pipeline does not include the validation step
@@ -646,6 +655,10 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
         run_times = [[], [], [], []]
         jobs_not_complete = 0
         jobs_with_errors = 0
+
+        if self.scheduler.NAME == SCHEDULER.LOCAL and (submit or resubmit):
+            if any([job.status != JOB_STATUS.COMPLETED for job in self.validations]):
+                pass
 
         for job in self.validations + self.annotations + [self.pairing, self.summary]:
             self.scheduler.update_info(job)

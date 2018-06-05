@@ -27,9 +27,9 @@ masking = mock.Mock(content={})  # do not mask
 def setUpModule():
     global annotations, reference_genome, template_metadata, genome_bam_fh, trans_bam_fh, masking
     print('setup start')
-    annotations = ReferenceFile(load_annotations, get_data('mock_annotations.json'))
-    reference_genome = ReferenceFile(load_reference_genome, get_data('mock_reference_genome.fa'), eager_load=True)
-    template_metadata = ReferenceFile(load_templates, get_data('cytoBand.txt'), eager_load=True)
+    annotations = ReferenceFile('annotations', get_data('mock_annotations.json'))
+    reference_genome = ReferenceFile('reference_genome', get_data('mock_reference_genome.fa'), eager_load=True)
+    template_metadata = ReferenceFile('template_metadata', get_data('cytoBand.txt'), eager_load=True)
     genome_bam_fh = pysam.AlignmentFile(get_data('mock_reads_for_events.sorted.bam'))
     trans_bam_fh = pysam.AlignmentFile(get_data('mock_trans_reads_for_events.sorted.bam'))
     print('setup loading is complete')
@@ -65,7 +65,7 @@ class TestPipeline(unittest.TestCase):
             [cluster_files[0]], self.output, genome_bam_fh, False, 'mock-A36971', PROTOCOL.GENOME,
             median_fragment_size=427, stdev_fragment_size=106, read_length=150,
             reference_genome=reference_genome, annotations=annotations, masking=masking,
-            aligner_reference=ReferenceFile(None, get_data('mock_reference_genome.2bit'))
+            aligner_reference=ReferenceFile('aligner_reference', get_data('mock_reference_genome.2bit'))
         )
         for suffix in [
             'validation-passed.tab',

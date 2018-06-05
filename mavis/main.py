@@ -327,15 +327,9 @@ def main(argv=None):
         parser.error('--inputs file(s) for {} {} do not exist'.format(args.command, args.inputs))
 
     # convert reference files to objects to store both content and name for rewrite
-    for arg, loader in [
-        ('reference_genome', _annotate.file_io.load_reference_genome),
-        ('masking', _annotate.file_io.load_masking_regions),
-        ('template_metadata', _annotate.file_io.load_templates),
-        ('dgv_annotation', _annotate.file_io.load_masking_regions),
-        ('annotations', _annotate.file_io.load_annotations)
-    ]:
+    for arg in [f for f in _annotate.file_io.REFERENCE_DEFAULTS.keys() if f != 'aligner_reference']:
         try:
-            rfile_args[arg] = _annotate.file_io.ReferenceFile(loader, assert_exists=True, *rfile_args[arg])
+            rfile_args[arg] = _annotate.file_io.ReferenceFile(arg, assert_exists=True, *rfile_args[arg])
         except AttributeError:
             pass
         except FileNotFoundError:
@@ -343,7 +337,7 @@ def main(argv=None):
 
     # throw an error if MAVIS can't find the aligner reference
     try:
-        rfile_args.aligner_reference = _annotate.file_io.ReferenceFile(None, rfile_args.aligner_reference, assert_exists=True)
+        rfile_args.aligner_reference = _annotate.file_io.ReferenceFile('aligner_reference', rfile_args.aligner_reference, assert_exists=True)
     except AttributeError:
         pass
     except FileNotFoundError:
