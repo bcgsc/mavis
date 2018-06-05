@@ -14,9 +14,6 @@ from .scheduler import Scheduler
 from .constants import JOB_STATUS, SCHEDULER
 
 
-MAX_PROCESSES = 2
-
-
 class LocalJob(Job):
 
     def __init__(self, args, func, rank=None, response=None, *pos, **kwargs):
@@ -25,7 +22,7 @@ class LocalJob(Job):
             args (list): A list of arguments to passed to the function given
             func (callable): the function to be run
             rank (int): rank of the job within the pool
-            response (multiprocessing.pool.AsyncResult): the result from the subprocess
+            response (:class:`~concurrent.futures.Future`): the result from the subprocess
         """
         self.args = args
         self.func = func
@@ -106,27 +103,6 @@ class LocalScheduler(Scheduler):
         self.pool = None
         for job in self.submitted.values():
             self.update_info(job)
-
-    def jobs_completed(self):
-        """
-        Returns:
-            int: the number of jobs which have completed
-        """
-        return sum([1 for job in self.submitted.values() if job.status == JOB_STATUS.COMPLETED or job.response.done()])
-
-    def jobs_running(self):
-        """
-        Returns:
-            int: the number of jobs that are currently being run
-        """
-        return sum([1 for job in self.submitted.values() if job.response.running()])
-
-    def _check_running(self, job):
-        """
-        Returns:
-            bool: True if the job is currently running, False otherwise
-        """
-        return job.response.running()
 
     def update_info(self, job):
         """

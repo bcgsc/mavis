@@ -38,14 +38,13 @@ class Scheduler:  # pragma: no cover
     """:class:`str`: the expected pattern of environment variables which store the job id"""
     HEADER_PREFIX = '#'
 
-    def __init__(self, concurrency_limit=None, remote_head_ssh='', remote_head_name=''):
+    def __init__(self, concurrency_limit=None, remote_head_ssh=''):
         """
         Args:
             concurrency_limit (int): the maximum allowed concurrent processes. Defaults to one less than the total number available
         """
         self.concurrency_limit = NullableType(int)(concurrency_limit)
         self.remote_head_ssh = remote_head_ssh
-        self.remote_head_name = remote_head_name
 
     def command(self, command, shell=False):
         """
@@ -57,7 +56,7 @@ class Scheduler:  # pragma: no cover
         Returns:
             str: the content returns from stdout of the subprocess
         """
-        if self.remote_head_ssh and self.remote_head_name != socket.gethostname():
+        if self.remote_head_ssh and self.remote_head_ssh != socket.gethostname():
             # ssh to remote head and run the command there
             if not isinstance(command, str):
                 command = ' '.join(command)
@@ -107,8 +106,6 @@ class SlurmScheduler(Scheduler):
 
         Args:
             job (Job): the job to be submitted
-            task_ident (int): submit only a particular task of the current job
-            resubmit (bool): indicates if this is a resubmission (will cancel and resubmit dependent jobs and submit individual tasks where appropriate)
         """
         command = ['sbatch']
         if job.job_ident:
@@ -209,6 +206,9 @@ class SlurmScheduler(Scheduler):
     def parse_scontrol_show(cls, content):
         """
         parse the content from the command: scontrol show job <JOBID>
+
+        Args:
+            content (str): the content to be parsed
         """
         rows = []
         for job_content in re.split(r'\n\s*\n', content):
@@ -237,6 +237,9 @@ class SlurmScheduler(Scheduler):
     def update_info(self, job):
         """
         Pull job information about status etc from the scheduler. Updates the input job
+
+        Args:
+            job (Job): the job to be updated
         """
         if not job.job_ident:
             return
@@ -271,6 +274,10 @@ class SlurmScheduler(Scheduler):
     def cancel(self, job, task_ident=None):
         """
         cancel a job
+
+        Args:
+            job (Job): the job to be cancelled
+            task_ident (int): the task id to be cancelled (instead of the entire array)
         """
         if not job.job_ident:
             return
@@ -292,6 +299,9 @@ class SlurmScheduler(Scheduler):
     def format_dependencies(self, job):
         """
         returns a string representing the dependency argument
+
+        Args:
+            job (Job): the job the argument is being built for
         """
         try:
             if len(job.dependencies) == 1 and job.tasks == job.dependencies[0].tasks:
@@ -512,6 +522,9 @@ class SgeScheduler(Scheduler):
         """
         runs a subprocess scontrol command to get job details and add them to the current job
 
+        Args:
+            job (Job): the job information is being gathered for
+
         Raises
             ValueError: if the job information could not be retrieved
         """
@@ -557,7 +570,11 @@ class SgeScheduler(Scheduler):
 
     def cancel(self, job, task_ident=None):
         """
-        cancel a job
+        cancel a job or a specific task of an array job
+
+        Args:
+            job (Job): the job to cancel
+            task_ident (int): if specified, will cancel the given task instead of the whole array or job
         """
         if not job.job_ident:
             return
@@ -725,7 +742,6 @@ class TorqueScheduler(SgeScheduler):
 
         Args:
             job (Job): the job to be submitted
-            resubmit (bool): if true the job will be submitted even if it already has a job_ident
         """
         command = ['qsub', '-j', 'oe']  # always join output as stdout
         if job.job_ident:
@@ -782,6 +798,9 @@ class TorqueScheduler(SgeScheduler):
         """
         runs a subprocess scontrol command to get job details and add them to the current job
 
+        Args:
+            job (Job): the job information is being gathered for
+
         Raises
             ValueError: if the job information could not be retrieved
         """
@@ -816,6 +835,10 @@ class TorqueScheduler(SgeScheduler):
     def cancel(self, job, task_ident=None):
         """
         cancel a job
+
+        Args:
+            job (Job): the job to be cancelled
+            task_ident (int): if specified then a single task will be cancelled instead of the whole job or array
         """
         if not job.job_ident:
             return

@@ -44,7 +44,7 @@ When the scheduler should notify :term:`mail_user` about a job
 - ``BEGIN`` - Send an email when the job starts
 - ``END`` - Send an email when the job has terminated
 - ``FAIL`` - Send an email if the job fails
-- ``NONE`` - Do not send mail
+- ``NONE`` - Do not send email
 """
 
 STD_OPTIONS = ['memory_limit', 'queue', 'time_limit', 'import_env', 'mail_user', 'mail_type']
@@ -59,7 +59,6 @@ OPTIONS = WeakMavisNamespace(__name__='~mavis.schedule.constants.options')
 - :term:`mail_user`
 - :term:`memory_limit`
 - :term:`queue`
-- :term:`remote_head_name`
 - :term:`remote_head_ssh`
 - :term:`scheduler`
 - :term:`time_limit`
@@ -84,4 +83,3 @@ OPTIONS.add(
     cast_type=int,
     defn='The concurrency limit for tasks in any given job array or the number of concurrent processes allowed for a local run')
 OPTIONS.add('remote_head_ssh', '', cast_type=str, defn='ssh target for remote scheduler commands')
-OPTIONS.add('remote_head_name', '', cast_type=str, defn='The host name of the remote head node (to prevent ssh when already on the head node)')

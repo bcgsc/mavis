@@ -2,7 +2,6 @@ from copy import copy as _copy
 import os
 import re
 import time
-import unicodedata
 
 from ..constants import SUBCOMMAND, MavisNamespace
 from .constants import JOB_STATUS, OPTIONS, STD_OPTIONS
@@ -23,7 +22,7 @@ class LogFile:
             message (str): the message parsed from the logfile. Generally this is an error from the log
         """
         self.filename = filename
-        self.status = status
+        self.status = self.STATUS.enforce(status)
         self.message = message.strip() if message is not None else None
 
     @classmethod
@@ -85,7 +84,7 @@ class Job:
         self.name = name
         self.dependencies = dependencies if dependencies else []
         self.script = script
-        self.status = status
+        self.status = JOB_STATUS.enforce(status)
         self.output_dir = output_dir
         self.stdout = os.path.join(output_dir, 'job-{name}-{job_ident}.log') if not stdout else stdout
 
@@ -150,7 +149,7 @@ class ArrayJob(Job):
     def __init__(self, stage, task_list, **kwargs):
         """
         Args:
-            tasks (int): the number of tasks in the job array
+            task_list (:class:`list` or :class:`int`): the ids of tasks in the job array
         """
         Job.__init__(self, stage, **kwargs)
         self.stdout = os.path.join(self.output_dir, 'job-{name}-{job_ident}-{task_ident}.log') if 'stdout' not in kwargs else kwargs['stdout']

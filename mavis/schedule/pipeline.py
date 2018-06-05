@@ -280,8 +280,7 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
 
         scheduler = SCHEDULERS_BY_NAME[config.schedule.scheduler](
             config.schedule.get('concurrency_limit', OPTIONS.concurrency_limit),
-            remote_head_ssh=config.schedule.get('remote_head_ssh', OPTIONS.remote_head_ssh),
-            remote_head_name=config.schedule.get('remote_head_name', OPTIONS.remote_head_name)
+            remote_head_ssh=config.schedule.get('remote_head_ssh', OPTIONS.remote_head_ssh)
         )
         pipeline = Pipeline(output_dir=config.output, scheduler=scheduler)
 
@@ -712,8 +711,7 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
             output_dir=parser['general']['output_dir'],
             scheduler=SCHEDULERS_BY_NAME[parser['general']['scheduler']](
                 concurrency_limit=parser['general']['concurrency_limit'] if 'concurrency_limit' in parser['general'] else OPTIONS.concurrency_limit,
-                remote_head_ssh=parser['general']['remote_head_ssh'] if 'remote_head_ssh' in parser['general'] else OPTIONS.remote_head_ssh,
-                remote_head_name=parser['general']['remote_head_name'] if 'remote_head_name' in parser['general'] else OPTIONS.remote_head_name
+                remote_head_ssh=parser['general']['remote_head_ssh'] if 'remote_head_ssh' in parser['general'] else OPTIONS.remote_head_ssh
             ),
             batch_id=parser['general']['batch_id']
         )
@@ -780,7 +778,6 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
             'batch_id': self.batch_id,
             'output_dir': self.output_dir,
             'scheduler': self.scheduler.NAME,
-            'remote_head_name': self.scheduler.remote_head_name,
             'remote_head_ssh': self.scheduler.remote_head_ssh,
             'concurrency_limit': str(self.scheduler.concurrency_limit)
         }
