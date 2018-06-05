@@ -14,7 +14,28 @@ from .genomic import Exon, Gene, Template, Transcript, PreTranscript
 from .protein import Domain, Translation
 from ..constants import CODON_SIZE, GIEMSA_STAIN, START_AA, STOP_AA, STRAND, translate
 from ..interval import Interval
-from ..util import DEVNULL, LOG
+from ..util import DEVNULL, LOG, filepath, WeakMavisNamespace
+
+
+REFERENCE_DEFAULTS = WeakMavisNamespace()
+REFERENCE_DEFAULTS.add(
+    'template_metadata', [], cast_type=filepath, listable=True,
+    defn='file containing the cytoband template information. Used for illustrations only')
+REFERENCE_DEFAULTS.add(
+    'masking', [], cast_type=filepath, listable=True,
+    defn='file containing regions for which input events overlapping them are dropped prior to validation')
+REFERENCE_DEFAULTS.add(
+    'annotations', [], cast_type=filepath, listable=True,
+    defn='path to the reference annotations of genes, transcript, exons, domains, etc')
+REFERENCE_DEFAULTS.add(
+    'aligner_reference', None, cast_type=filepath, nullable=True,
+    defn='path to the aligner reference file used for aligning the contig sequences')
+REFERENCE_DEFAULTS.add(
+    'dgv_annotation', [], cast_type=filepath, listable=True,
+    defn='Path to the dgv reference processed to look like the cytoband file.')
+REFERENCE_DEFAULTS.add(
+    'reference_genome', [], cast_type=filepath, listable=True,
+    defn='Path to the human reference genome fasta file')
 
 
 def load_masking_regions(*filepaths):
@@ -81,13 +102,13 @@ def load_annotations(*filepaths, warn=DEVNULL, reference_genome=None, best_trans
     """
     total_annotations = {}
 
-    for filepath in filepaths:
+    for filename in filepaths:
         data = None
 
-        if filepath.endswith('.tab') or filepath.endswith('.tsv'):
-            data = convert_tab_to_json(filepath, warn)
+        if filename.endswith('.tab') or filename.endswith('.tsv'):
+            data = convert_tab_to_json(filename, warn)
         else:
-            with open(filepath) as fh:
+            with open(filename) as fh:
                 data = json.load(fh)
 
         current_annotations = parse_annotations_json(
@@ -414,11 +435,21 @@ class ReferenceFile:
 
     CACHE = {}  # store loaded file to avoid re-loading
 
-    def __init__(self, loader, *filepaths, eager_load=False, assert_exists=False, **opt):
+    LOAD_FUNCTIONS = {
+        'annotations': load_annotations,
+        'reference_genome': load_reference_genome,
+        'masking': load_masking_regions,
+        'template_metadata': load_templates,
+        'dgv_annotation': load_masking_regions,
+        'aligner_reference': None
+    }
+    """:class:`dict`: Mapping of file types (based on ENV name) to load functions"""
+
+    def __init__(self, file_type, *filepaths, eager_load=False, assert_exists=False, **opt):
         """
         Args:
             *filepaths (str): list of paths to load
-            loader (callable): function to load the file. Should return an object that can be assigned as the content
+            file_type (str): Type of file to load
             eager_load (bool=False): load the files immeadiately
             assert_exists (bool=False): check that all files exist
             **opt: key word arguments to be passed to the load function and used as part of the file cache key
@@ -427,10 +458,11 @@ class ReferenceFile:
             FileNotFoundError: when assert_exists and an input does not exist
         """
         self.name = sorted(filepaths)
+        self.file_type = file_type
         self.key = tuple(self.name + sorted(list(opt.items())))  # freeze the input state so we know when to reload
         self.content = None
         self.opt = opt
-        self.loader = loader
+        self.loader = self.LOAD_FUNCTIONS[self.file_type]
         if assert_exists:
             self.files_exist()
         if eager_load:
@@ -438,14 +470,14 @@ class ReferenceFile:
 
     def __repr__(self):
         cls = self.__class__.__name__
-        return '{}(files={}, loaded={}, content={})'.format(cls, self.name, self.content is not None, object.__repr__(self.content))
+        return '{}(file_type={}, files={}, loaded={}, content={})'.format(cls, self.file_type, self.name, self.content is not None, object.__repr__(self.content))
 
     def files_exist(self, not_empty=False):
         if not_empty and not self.name:
             raise FileNotFoundError('expected files but given an empty list', self)
-        for filepath in self.name:
-            if not os.path.exists(filepath):
-                raise FileNotFoundError('Missing file', filepath, self)
+        for filename in self.name:
+            if not os.path.exists(filename):
+                raise FileNotFoundError('Missing file', filename, self)
 
     def __iter__(self):
         return iter(self.name)
@@ -456,14 +488,15 @@ class ReferenceFile:
     def is_loaded(self):
         return False if self.content is None else True
 
-    def load(self, ignore_cache=False):
+    def load(self, ignore_cache=False, verbose=True):
         """
         load (or return) the contents of a reference file and add it to the cache if enabled
         """
         if self.content is not None:
             return self
         if self.key in ReferenceFile.CACHE and not ignore_cache:
-            LOG('cached content:', self.name)
+            if verbose:
+                LOG('cached content:', self.name)
             self.content = ReferenceFile.CACHE[self.key].content
             return self
         self.files_exist()

@@ -59,6 +59,30 @@ LOG = Log()
 DEVNULL = Log(level=None)
 
 
+def filepath(path):
+    try:
+        file_list = bash_expands(path)
+    except FileNotFoundError:
+        raise TypeError('File does not exist', path)
+    else:
+        if not file_list:
+            raise TypeError('File not found', path)
+        elif len(file_list) > 1:
+            raise TypeError('File pattern match multiple files and expected only one', path)
+    return file_list[0]
+
+
+class NullableType:
+    def __init__(self, callback_func):
+        self.callback_func = callback_func
+
+    def __call__(self, item):
+        if str(item).lower() == 'none':
+            return None
+        else:
+            return self.callback_func(item)
+
+
 def cast(value, cast_func):
     """
     cast a value to a given type

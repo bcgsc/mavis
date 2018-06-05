@@ -8,6 +8,7 @@ import os
 import shortuuid
 
 from ..util import LOG
+from ..annotate.file_io import REFERENCE_DEFAULTS, ReferenceFile
 
 from .job import Job
 from .scheduler import Scheduler
@@ -28,11 +29,13 @@ class LocalJob(Job):
         self.func = func
         self.response = response
         self.rank = rank
+        for filetype in REFERENCE_DEFAULTS:
+            setattr(self, filetype, kwargs.pop(filetype, None))
         Job.__init__(self, *pos, **kwargs)
 
     def check_complete(self):
         """
-        check that the compelte stamp associated with this job exists
+        check that the complete stamp associated with this job exists
         """
         return os.path.exists(self.complete_stamp())
 
@@ -84,6 +87,12 @@ class LocalScheduler(Scheduler):
         # if this job exists in the pool, return its response object
         if job.job_ident in self.submitted:
             return self.submitted[job.job_ident]
+
+        # load any reference files not cached into the parent memory space
+        for filetype in [f for f in REFERENCE_DEFAULTS.keys() if f != 'aligner_reference']:
+            if getattr(job, filetype) is not None:
+                ref = ReferenceFile(filetype, getattr(job, filetype))
+                ref.load(verbose=False)
         # otherwise add it to the pool
         job.response = self.pool.submit(job.func, args)  # no arguments, defined all in the job object
         setattr(job.response, 'complete_stamp', job.complete_stamp())

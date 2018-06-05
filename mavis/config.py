@@ -12,6 +12,7 @@ import tab
 from . import __version__
 from .align import SUPPORTED_ALIGNER
 from .annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
+from .annotate.file_io import REFERENCE_DEFAULTS
 from .bam.cache import BamCache
 from .bam.stats import compute_genome_bam_stats, compute_transcriptome_bam_stats
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
@@ -22,53 +23,9 @@ from .schedule.constants import OPTIONS as SUBMIT_OPTIONS
 from .schedule.constants import SCHEDULER
 from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 from .tools import SUPPORTED_TOOL
-from .util import bash_expands, cast, DEVNULL, MavisNamespace, WeakMavisNamespace
+from .util import bash_expands, cast, DEVNULL, MavisNamespace, WeakMavisNamespace, filepath, NullableType
 from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 
-
-def filepath(path):
-    try:
-        file_list = bash_expands(path)
-    except FileNotFoundError:
-        raise TypeError('File does not exist', path)
-    else:
-        if not file_list:
-            raise TypeError('File not found', path)
-        elif len(file_list) > 1:
-            raise TypeError('File pattern match multiple files and expected only one', path)
-    return file_list[0]
-
-
-class NullableType:
-    def __init__(self, callback_func):
-        self.callback_func = callback_func
-
-    def __call__(self, item):
-        if str(item).lower() == 'none':
-            return None
-        else:
-            return self.callback_func(item)
-
-
-REFERENCE_DEFAULTS = WeakMavisNamespace()
-REFERENCE_DEFAULTS.add(
-    'template_metadata', [], cast_type=filepath, listable=True,
-    defn='file containing the cytoband template information. Used for illustrations only')
-REFERENCE_DEFAULTS.add(
-    'masking', [], cast_type=filepath, listable=True,
-    defn='file containing regions for which input events overlapping them are dropped prior to validation')
-REFERENCE_DEFAULTS.add(
-    'annotations', [], cast_type=filepath, listable=True,
-    defn='path to the reference annotations of genes, transcript, exons, domains, etc')
-REFERENCE_DEFAULTS.add(
-    'aligner_reference', None, cast_type=filepath, nullable=True,
-    defn='path to the aligner reference file used for aligning the contig sequences')
-REFERENCE_DEFAULTS.add(
-    'dgv_annotation', [], cast_type=filepath, listable=True,
-    defn='Path to the dgv reference processed to look like the cytoband file.')
-REFERENCE_DEFAULTS.add(
-    'reference_genome', [], cast_type=filepath, listable=True,
-    defn='Path to the human reference genome fasta file')
 
 CONVERT_OPTIONS = WeakMavisNamespace()
 CONVERT_OPTIONS.add('assume_no_untemplated', True, defn='assume that if not given there is no untemplated sequence between the breakpoints')
