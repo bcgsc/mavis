@@ -29,3 +29,4 @@ src
 *.tgf
 analysis_scripts
 .vscode
+*.nfs*
