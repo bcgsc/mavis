@@ -47,6 +47,9 @@ class BamCache:
         Args:
             read (pysam.AlignedSegment): the read to add to the cache
         """
+        if not read.is_unmapped and read.reference_start == read.reference_end:
+            warnings.warn('ignoring invalid read: {}'.format(read.query_name))
+            return  # ignore invalid reads
         if not isinstance(read, SamRead):
             read = SamRead.copy(read)
         self.cache.setdefault(read.query_name, set())
@@ -152,6 +155,9 @@ class BamCache:
                 break
             if stop_on_cached_read and self.has_read(read):
                 break
+            if not read.is_unmapped and read.reference_start == read.reference_end:
+                warnings.warn('ignoring invalid read: {}'.format(read.query_name))
+                continue
             read = SamRead.copy(read)
             if not filter_if(read):
                 result.append(read)
@@ -204,6 +210,9 @@ class BamCache:
             for read in self.fh.fetch(chrom, fstart, fend):
                 if bin_limit is not None and count >= running_surplus:
                     break
+                if not read.is_unmapped and read.reference_start == read.reference_end:
+                    warnings.warn('ignoring invalid read: {}'.format(read.query_name))
+                    continue
                 read = SamRead.copy(read)
                 if not filter_if(read):
                     result.append(read)

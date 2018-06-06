@@ -46,6 +46,34 @@ class TestBamCache(unittest.TestCase):
         b.add_read(r)
         self.assertEqual(1, len(b.cache.values()))
 
+    @mock.patch('warnings.warn')
+    def test_add_invalid_read(self, log_patcher):
+        bad_read = mock.Mock(is_unmapped=False, reference_start=0, reference_end=0, query_name='BAD_READ')
+        cache = BamCache(MockBamFileHandle())
+        cache.add_read(bad_read)
+        self.assertEqual(0, len(cache.cache))
+        log_patcher.assert_called_with('ignoring invalid read: BAD_READ')
+
+    @mock.patch('warnings.warn')
+    def test_fetch_invalid_read(self, log_patcher):
+        bad_read = mock.Mock(is_unmapped=False, reference_start=0, reference_end=0, query_name='BAD_READ')
+        fh = mock.Mock(references=['chr'], spec=['references', 'fetch'])
+        fh.configure_mock(**{'fetch.return_value': [bad_read]})
+        cache = BamCache(fh)
+        cache.fetch('chr', 1, 10)
+        self.assertEqual(0, len(cache.cache))
+        log_patcher.assert_called_with('ignoring invalid read: BAD_READ')
+
+    @mock.patch('warnings.warn')
+    def test_bin_fetch_invalid_read(self, log_patcher):
+        bad_read = mock.Mock(is_unmapped=False, reference_start=0, reference_end=0, query_name='BAD_READ')
+        fh = mock.Mock(references=['chr'], spec=['references', 'fetch'])
+        fh.configure_mock(**{'fetch.return_value': [bad_read]})
+        cache = BamCache(fh)
+        cache.fetch_from_bins('chr', 1, 10)
+        self.assertEqual(0, len(cache.cache))
+        log_patcher.assert_called_with('ignoring invalid read: BAD_READ')
+
     def test_reference_id(self):
         fh = MockBamFileHandle({'1': 0})
         b = BamCache(fh)
