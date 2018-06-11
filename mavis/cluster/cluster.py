@@ -7,7 +7,7 @@ import itertools
 from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import ORIENT, STRAND
 from ..interval import Interval
-from ..util import log, devnull
+from ..util import LOG, DEVNULL
 
 
 class BreakpointPairGroupKey(namedtuple('BreakpointPairGroupKey', [
@@ -230,7 +230,7 @@ def merge_breakpoint_pairs(input_pairs, cluster_radius=200, cluster_initial_size
     for group_key in sorted(set(list(groups) + list(phase2_groups))):
         count = len(groups.get(group_key, [])) + len(phase2_groups.get(group_key, []))
         if verbose:
-            log(group_key, 'pairs:', count)
+            LOG(group_key, 'pairs:', count)
         nodes = merge_by_union(
             groups.get(group_key, []), group_key,
             weight_adjustment=cluster_initial_size_limit, cluster_radius=cluster_radius)
@@ -284,7 +284,7 @@ def merge_breakpoint_pairs(input_pairs, cluster_radius=200, cluster_initial_size
                     b1, b2, opposing_strands=group_key.opposing_strands, stranded=explicit_strand)
                 nodes.setdefault(new_bpp, []).append(pair)
         if verbose:
-            log('merged', count, 'down to', len(nodes))
+            LOG('merged', count, 'down to', len(nodes))
         for node, pairs in nodes.items():
             if node in mapping:
                 raise KeyError('duplicate merge node', str(node), node, pair_key(node))

@@ -14,19 +14,19 @@ from mavis.validate.evidence import GenomeEvidence
 from mavis.validate.constants import DEFAULTS
 from mavis.bam.read import SamRead
 
-from . import BAM_INPUT, MockBamFileHandle, MockObject, MockLongString, MockRead, REFERENCE_GENOME_FILE, REFERENCE_GENOME_FILE_2BIT
-
+from . import MockBamFileHandle, MockObject, MockLongString, MockRead
+from ..util import get_data
 
 REFERENCE_GENOME = None
 
 
 def setUpModule():
     global REFERENCE_GENOME
-    REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
+    REFERENCE_GENOME = load_reference_genome(get_data('mock_reference_genome.fa'))
     if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
         raise AssertionError('fake genome file does not have the expected contents')
     global BAM_CACHE
-    BAM_CACHE = BamCache(BAM_INPUT)
+    BAM_CACHE = BamCache(get_data('mini_mock_reads_for_events.sorted.bam'))
 
 
 class TestCallReadEvents(unittest.TestCase):
@@ -74,7 +74,7 @@ class TestAlign(unittest.TestCase):
                 'TTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT', 0)
         ]
         print(ev.contigs[0].seq)
-        seq = align.align_sequences({'seq': ev.contigs[0].seq}, BAM_CACHE, REFERENCE_GENOME, aligner_reference=REFERENCE_GENOME_FILE_2BIT, aligner='blat')
+        seq = align.align_sequences({'seq': ev.contigs[0].seq}, BAM_CACHE, REFERENCE_GENOME, aligner_reference=get_data('mock_reference_genome.2bit'), aligner='blat')
         print(seq)
         align.select_contig_alignments(ev, seq)
         print(ev.contigs[0].alignments)
@@ -112,7 +112,7 @@ class TestAlign(unittest.TestCase):
         print(ev.contigs[0].seq)
         seq = align.align_sequences(
             {'seq': ev.contigs[0].seq}, BAM_CACHE, REFERENCE_GENOME,
-            aligner_reference=REFERENCE_GENOME_FILE,
+            aligner_reference=get_data('mock_reference_genome.fa'),
             aligner='bwa mem',
             aligner_output_file='mem.out',
             aligner_fa_input_file='mem.in.fa'
@@ -149,7 +149,7 @@ class TestAlign(unittest.TestCase):
                 'GGTATATATTTCTCAGATAAAAGATATTTTCCCTTTTATCTTTCCCTAAGCTCACACTACATATATTGCATTTATCTTATATCTGCTTTAAAACCTATTTAT'
                 'TATGTCATTTAAATATCTAGAAAAGTTATGACTTCACCAGGTATGAAAAATATAAAAAGAACTCTGTCAAGAAT', 0)
         ]
-        seq = align.align_sequences({'seq': ev.contigs[0].seq}, BAM_CACHE, REFERENCE_GENOME, aligner_reference=REFERENCE_GENOME_FILE_2BIT, aligner='blat')
+        seq = align.align_sequences({'seq': ev.contigs[0].seq}, BAM_CACHE, REFERENCE_GENOME, aligner_reference=get_data('mock_reference_genome.2bit'), aligner='blat')
         for query, reads in seq.items():
             print('>>>', query)
             for read in reads:
@@ -187,7 +187,7 @@ class TestAlign(unittest.TestCase):
         seq = 'GGTATATATTTCTCAGATAAAAGATATTTTCCCTTTTATCTTTCCCTAAGCTCACACTACATATATTGCATTTATCTTATATCTGCTTTAAAACCTATTTAT' \
               'TATGTCATTTAAATATCTAGAAAAGTTATGACTTCACCAGGTATGAAAAATATAAAAAGAACTCTGTCAAGAAT'
         ev.contigs = [Contig(reverse_complement(seq), 0)]
-        align.select_contig_alignments(ev, align.align_sequences({'seq': ev.contigs[0].seq}, BAM_CACHE, REFERENCE_GENOME, aligner_reference=REFERENCE_GENOME_FILE_2BIT, aligner='blat'))
+        align.select_contig_alignments(ev, align.align_sequences({'seq': ev.contigs[0].seq}, BAM_CACHE, REFERENCE_GENOME, aligner_reference=get_data('mock_reference_genome.2bit'), aligner='blat'))
         print('alignments:', ev.contigs[0].alignments)
         alignment = list(ev.contigs[0].alignments)[0]
         print(alignment)

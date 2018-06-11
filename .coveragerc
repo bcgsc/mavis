@@ -1,0 +1,7 @@
+[run]
+parallel = True
+concurrency = multiprocessing
+
+[html]
+directory = coverage
+title = mavis coverage report

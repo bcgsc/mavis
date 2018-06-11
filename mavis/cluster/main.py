@@ -7,7 +7,7 @@ import time
 from .cluster import merge_breakpoint_pairs
 from .constants import DEFAULTS
 from ..constants import COLUMNS
-from ..util import filter_on_overlap, filter_uninformative, generate_complete_stamp, log, log_arguments, mkdirp, output_tabbed_file, read_inputs, write_bed_file
+from ..util import filter_on_overlap, filter_uninformative, generate_complete_stamp, LOG, log_arguments, mkdirp, output_tabbed_file, read_inputs, write_bed_file
 
 
 def split_clusters(clusters, outputdir, batch_id, min_clusters_per_file=0, max_files=1, write_bed_summary=True):
@@ -54,7 +54,6 @@ def main(
     max_proximity=DEFAULTS.max_proximity,
     min_clusters_per_file=DEFAULTS.min_clusters_per_file,
     max_files=DEFAULTS.max_files,
-    log_args=False,
     batch_id=None,
     split_only=False,
     start_time=int(time.time()),
@@ -74,15 +73,14 @@ def main(
           within a specified (max_proximity) distance to any annotation
         max_proximity (int): the maximum distance away an annotation can be before the uninformative_filter
           is applied
-        annotations (object): see :func:`~mavis.annotate.file_io.load_reference_genes`
+        annotations (ReferenceFile): see :func:`~mavis.annotate.file_io.load_reference_genes`
         min_clusters_per_file (int): the minimum number of clusters to output to a file
         max_files (int): the maximum number of files to split clusters into
     """
-    if log_args:
-        frame = inspect.currentframe()
-        args, _, _, values = inspect.getargvalues(frame)
-        args = {arg: values[arg] for arg in args if arg != 'log_args'}
-        log_arguments(args)
+    if uninformative_filter:
+        annotations.load()
+    if masking:
+        masking.load()
 
     # output files
     batch_id = 'batch-' + str(uuid()) if batch_id is None else batch_id
@@ -108,7 +106,7 @@ def main(
     other_chr = set()
     unfiltered_breakpoint_pairs = []
     filtered_pairs = []
-    log('filtering by library and chr name')
+    LOG('filtering by library and chr name')
     for bpp in breakpoint_pairs:
         if bpp.library is None:
             bpp.library = library
@@ -116,7 +114,7 @@ def main(
             other_libs.add(bpp.library)
             bpp.data[COLUMNS.filter_comment] = 'Not the target library name'
             filtered_pairs.append(bpp)
-        elif bpp.break1.chr in limit_to_chr and bpp.break2.chr in limit_to_chr:
+        elif None in limit_to_chr or (bpp.break1.chr in limit_to_chr and bpp.break2.chr in limit_to_chr):
             unfiltered_breakpoint_pairs.append(bpp)
         else:
             other_chr.update({bpp.break1.chr, bpp.break2.chr})
@@ -125,18 +123,18 @@ def main(
     other_chr -= set(limit_to_chr)
     breakpoint_pairs = unfiltered_breakpoint_pairs
     if other_libs:
-        log('warning: ignoring breakpoints found for other libraries:', sorted([l for l in other_libs]))
+        LOG('warning: ignoring breakpoints found for other libraries:', sorted([l for l in other_libs]))
     if other_chr:
-        log('warning: filtered events on chromosomes', other_chr)
+        LOG('warning: filtered events on chromosomes', other_chr)
     # filter by masking file
-    breakpoint_pairs, masked_pairs = filter_on_overlap(breakpoint_pairs, masking)
+    breakpoint_pairs, masked_pairs = filter_on_overlap(breakpoint_pairs, masking.content)
     for bpp in masked_pairs:
         filtered_pairs.append(bpp)
     # filter by informative
     if uninformative_filter:
-        log('filtering from', len(breakpoint_pairs), 'breakpoint pairs using informative filter')
-        pass_clusters, uninformative_clusters = filter_uninformative(annotations, breakpoint_pairs, max_proximity=max_proximity)
-        log(
+        LOG('filtering from', len(breakpoint_pairs), 'breakpoint pairs using informative filter')
+        pass_clusters, uninformative_clusters = filter_uninformative(annotations.content, breakpoint_pairs, max_proximity=max_proximity)
+        LOG(
             'filtered from', len(breakpoint_pairs),
             'down to', len(pass_clusters),
             '(removed {})'.format(len(uninformative_clusters))
@@ -146,13 +144,13 @@ def main(
             bpp.data[COLUMNS.filter_comment] = 'Uninformative'
             filtered_pairs.append(bpp)
     else:
-        log('did not apply uninformative filter')
+        LOG('did not apply uninformative filter')
 
     output_tabbed_file(filtered_pairs, filtered_output)
     mkdirp(output)
 
     if not split_only:
-        log('computing clusters')
+        LOG('computing clusters')
         clusters = merge_breakpoint_pairs(
             breakpoint_pairs, cluster_radius=cluster_radius, cluster_initial_size_limit=cluster_initial_size_limit)
 
@@ -185,9 +183,9 @@ def main(
                 common_data = set(common_data)
                 if len(common_data) == 1:
                     cluster.data[item] = list(common_data)[0]
-        log('computed', len(clusters), 'clusters', time_stamp=False)
-        log('cluster input pairs distribution', sorted(hist.items()), time_stamp=False)
-        log('cluster intervals lengths', sorted(length_hist.items()), time_stamp=False)
+        LOG('computed', len(clusters), 'clusters', time_stamp=False)
+        LOG('cluster input pairs distribution', sorted(hist.items()), time_stamp=False)
+        LOG('cluster intervals lengths', sorted(length_hist.items()), time_stamp=False)
         # map input pairs to cluster ids
         # now create the mapping from the original input files to the cluster(s)
 
@@ -213,5 +211,5 @@ def main(
         write_bed_summary=True
     )
 
-    generate_complete_stamp(output, log, start_time=start_time)
+    generate_complete_stamp(output, LOG, start_time=start_time, prefix='MAVIS-{}.'.format(batch_id))
     return output_files

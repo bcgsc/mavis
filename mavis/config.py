@@ -1,50 +1,31 @@
 import argparse
 from configparser import ConfigParser, ExtendedInterpolation
 from copy import copy as _copy
+import logging
 import os
 import re
+import sys
 import warnings
 
 import tab
 
 from . import __version__
-from . import util
 from .align import SUPPORTED_ALIGNER
 from .annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
-from .annotate.file_io import load_annotations
+from .annotate.file_io import REFERENCE_DEFAULTS
 from .bam.cache import BamCache
 from .bam.stats import compute_genome_bam_stats, compute_transcriptome_bam_stats
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from .constants import DISEASE_STATUS, SUBCOMMAND, PROTOCOL, float_fraction
 from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
-from .submit import OPTIONS as SUBMIT_OPTIONS
-from .submit import SCHEDULER
+from .schedule.constants import OPTIONS as SUBMIT_OPTIONS
+from .schedule.constants import SCHEDULER
 from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 from .tools import SUPPORTED_TOOL
-from .util import bash_expands, cast, devnull, ENV_VAR_PREFIX, MavisNamespace, WeakMavisNamespace, get_env_variable, log_arguments
+from .util import bash_expands, cast, DEVNULL, MavisNamespace, WeakMavisNamespace, filepath, NullableType
 from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 
-
-REFERENCE_DEFAULTS = WeakMavisNamespace()
-REFERENCE_DEFAULTS.add(
-    'template_metadata', util.DelimListString(), cast_type=util.DelimListString,
-    defn='file containing the cytoband template information. Used for illustrations only')
-REFERENCE_DEFAULTS.add(
-    'masking', util.DelimListString(), cast_type=util.DelimListString,
-    defn='file containing regions for which input events overlapping them are dropped prior to validation')
-REFERENCE_DEFAULTS.add(
-    'annotations', util.DelimListString(), cast_type=util.DelimListString,
-    defn='path to the reference annotations of genes, transcript, exons, domains, etc')
-REFERENCE_DEFAULTS.add(
-    'aligner_reference', None, cast_type=str,
-    defn='path to the aligner reference file used for aligning the contig sequences')
-REFERENCE_DEFAULTS.add(
-    'dgv_annotation', util.DelimListString(), cast_type=util.DelimListString,
-    defn='Path to the dgv reference processed to look like the cytoband file.')
-REFERENCE_DEFAULTS.add(
-    'reference_genome', util.DelimListString(), cast_type=util.DelimListString,
-    defn='Path to the human reference genome fasta file')
 
 CONVERT_OPTIONS = WeakMavisNamespace()
 CONVERT_OPTIONS.add('assume_no_untemplated', True, defn='assume that if not given there is no untemplated sequence between the breakpoints')
@@ -99,27 +80,6 @@ class RangeAppendAction(argparse.Action):
         setattr(namespace, self.dest, items)
 
 
-def cast_if_not_none(value, cast_type):
-    """
-    cast a value to a given type unless it is None
-
-    Example:
-        >>> cast_if_not_none('1', int)
-        1
-        >>> cast_if_not_none(None, int)
-        None
-        >>> cast_if_not_none('null', int)
-        None
-        >>> cast_if_not_none('', int)
-        None
-        >>> cast_if_not_none('none', int)
-        None
-    """
-    if value is None or str(value).lower() in ['none', 'null', '']:
-        return None
-    return cast(value, cast_type)
-
-
 class LibraryConfig(MavisNamespace):
     """
     holds library specific configuration information
@@ -133,9 +93,9 @@ class LibraryConfig(MavisNamespace):
         self.library = library
         self.protocol = PROTOCOL.enforce(protocol)
         self.bam_file = bam_file
-        self.read_length = cast_if_not_none(read_length, int)
-        self.median_fragment_size = cast_if_not_none(median_fragment_size, int)
-        self.stdev_fragment_size = cast_if_not_none(stdev_fragment_size, int)
+        self.read_length = NullableType(int)(read_length)
+        self.median_fragment_size = NullableType(int)(median_fragment_size)
+        self.stdev_fragment_size = NullableType(int)(stdev_fragment_size)
         self.strand_specific = cast(strand_specific, bool)
         self.strand_determining_read = int(strand_determining_read)
         self.disease_status = DISEASE_STATUS.enforce(disease_status)
@@ -148,11 +108,11 @@ class LibraryConfig(MavisNamespace):
             for namespace in [CLUSTER_DEFAULTS, VALIDATION_DEFAULTS, ANNOTATION_DEFAULTS]:
                 if attr not in namespace:
                     continue
-                setattr(self, attr, namespace.type(attr)(value))
+                self.add(attr, value, listable=namespace.is_listable(attr), nullable=namespace.is_nullable(attr), cast_type=namespace.type(attr))
                 break
 
     def flatten(self):
-        result = MavisNamespace.flatten(self)
+        result = MavisNamespace.items(self)
         result['inputs'] = '\n'.join(result['inputs'])
         return result
 
@@ -163,7 +123,7 @@ class LibraryConfig(MavisNamespace):
     def build(
         library, protocol, bam_file, inputs,
         annotations=None,
-        log=devnull,
+        log=DEVNULL,
         distribution_fraction=0.98,
         sample_cap=3000,
         sample_bin_size=1000,
@@ -175,14 +135,16 @@ class LibraryConfig(MavisNamespace):
         """
         PROTOCOL.enforce(protocol)
 
-        if protocol == PROTOCOL.TRANS and annotations is None:
-            raise AttributeError(
-                'missing required attribute: annotations. Annotations must be given for transcriptomes')
+        if protocol == PROTOCOL.TRANS:
+            if annotations is None or annotations.is_empty():
+                raise AttributeError(
+                    'missing required attribute: annotations. Annotations must be given for transcriptomes')
+            annotations.load()
         bam = BamCache(bam_file)
         if protocol == PROTOCOL.TRANS:
             bamstats = compute_transcriptome_bam_stats(
                 bam,
-                annotations=annotations,
+                annotations=annotations.content,
                 sample_size=sample_size,
                 sample_cap=sample_cap,
                 distribution_fraction=distribution_fraction
@@ -218,86 +180,14 @@ class LibraryConfig(MavisNamespace):
         return LibraryConfig(args[0], protocol=args[1], disease_status=args[2], strand_specific=args[3], bam_file=args[4])
 
 
-def write_config(filename, include_defaults=False, libraries=[], conversions={}, log=devnull):
-    """
-    Args:
-        filename (str): path to the output file
-        include_defaults (bool): True if default parameters should be written to the config, False otherwise
-        libraries (list of LibraryConfig): library configuration sections
-        conversions (dict of list by str): conversion commands by alias name
-        log (function): function to pass output logging to
-    """
-    config = {}
-
-    config['reference'] = REFERENCE_DEFAULTS.flatten()
-    for filetype, fname in REFERENCE_DEFAULTS.items():
-        if fname is None:
-            warnings.warn('filetype {} has not been set. This must be done manually before the configuration file is used'.format(filetype))
-
-    if libraries:
-        for lib in libraries:
-            config[lib.library] = lib.flatten()
-
-    if include_defaults:
-        config['schedule'] = SUBMIT_OPTIONS.flatten()
-        config['validate'] = VALIDATION_DEFAULTS.flatten()
-        config['cluster'] = CLUSTER_DEFAULTS.flatten()
-        config['annotate'] = ANNOTATION_DEFAULTS.flatten()
-        config['illustrate'] = ILLUSTRATION_DEFAULTS.flatten()
-        config['summary'] = SUMMARY_DEFAULTS.flatten()
-
-    config['convert'] = CONVERT_OPTIONS.flatten()
-    for alias, command in conversions.items():
-        if alias in CONVERT_OPTIONS:
-            raise UserWarning('error in writing config. Alias for conversion product cannot be a setting', alias, CONVERT_OPTIONS.keys())
-        config['convert'][alias] = '\n'.join(command)
-
-    for sec in config:
-        for tag, value in config[sec].items():
-            if '_regex_' in tag:
-                config[sec][tag] = re.sub(r'\$', '$$', config[sec][tag])
-            elif isinstance(value, list):
-                config[sec][tag] = '\n'.join([str(v) for v in value])
-            else:
-                config[sec][tag] = str(value)
-
-    conf = ConfigParser()
-    for sec in config:
-        conf[sec] = {}
-        for tag, val in config[sec].items():
-            conf[sec][tag] = val
-    log('writing:', filename)
-    with open(filename, 'w') as configfile:
-        conf.write(configfile)
-
-
-def validate_section(section, namespace, use_defaults=False):
-    """
-    given a dictionary of values, returns a new dict with the values casted to their appropriate type or set
-    to a default if the value was not given
-    """
-    new_namespace = MavisNamespace()
-    if use_defaults:
-        for attr, value in namespace.items():
-            new_namespace.add(attr, value, cast_type=namespace.type(attr))
-
-    for attr, value in section.items():
-        if attr not in namespace:
-            raise KeyError('tag not recognized', attr)
-        else:
-            try:
-                new_namespace.add(attr, namespace.type(attr)(value), cast_type=namespace.type(attr))
-            except Exception as err:
-                raise ValueError('failed adding {}. {}'.format(attr, err))
-    return new_namespace
-
-
-class MavisConfig:
+class MavisConfig(MavisNamespace):
 
     def __init__(self, **kwargs):
         # section can be named schedule or qsub to support older versions
+        MavisNamespace.__init__(self)
         try:
-            self.schedule = validate_section(kwargs.pop('schedule', kwargs.pop('qsub', {})), SUBMIT_OPTIONS, True)
+            content = validate_section(kwargs.pop('schedule', kwargs.pop('qsub', {})), SUBMIT_OPTIONS, True)
+            self.schedule = content
         except Exception as err:
             err.args = ['Error in validating the schedule section in the config. ' + ' '.join([str(a) for a in err.args])]
             raise err
@@ -313,17 +203,16 @@ class MavisConfig:
             ('reference', REFERENCE_DEFAULTS)
         ]:
             try:
-                setattr(self, sec, validate_section(kwargs.pop(sec, {}), defaults, True))
+                self[sec] = validate_section(kwargs.pop(sec, {}), defaults, True)
             except Exception as err:
                 err.args = ['Error in validating the {} section in the config. '.format(sec) + ' '.join([str(a) for a in err.args])]
 
                 raise err
 
         SUPPORTED_ALIGNER.enforce(self.validate.aligner)
-
         for attr, fnames in self.reference.items():
             if attr != 'aligner_reference':
-                self.reference[attr] = [filepath(v) for v in fnames]
+                self.reference[attr] = [f for f in [NullableType(filepath)(v) for v in fnames] if f]
             if not self.reference[attr] and attr not in {'dgv_annotation', 'masking', 'template_metadata'}:
                 raise FileNotFoundError(
                     'Error in validating the convert section of the config for tag={}. '
@@ -364,7 +253,7 @@ class MavisConfig:
         self.libraries = {}
 
         for libname, val in kwargs.items():  # all other sections already popped
-            libname = library_name_format(libname)
+            libname = nameable_string(libname)
             d = {}
             d.update(self.cluster.items())
             d.update(self.validate.items())
@@ -414,6 +303,88 @@ class MavisConfig:
         return MavisConfig(**config_dict)
 
 
+def write_config(filename, include_defaults=False, libraries=[], conversions={}, log=DEVNULL):
+    """
+    Args:
+        filename (str): path to the output file
+        include_defaults (bool): True if default parameters should be written to the config, False otherwise
+        libraries (list of LibraryConfig): library configuration sections
+        conversions (dict of list by str): conversion commands by alias name
+        log (function): function to pass output logging to
+    """
+    config = {}
+
+    config['reference'] = REFERENCE_DEFAULTS.to_dict()
+    for filetype, fname in REFERENCE_DEFAULTS.items():
+        if fname is None:
+            warnings.warn('filetype {} has not been set. This must be done manually before the configuration file is used'.format(filetype))
+
+    if libraries:
+        for lib in libraries:
+            config[lib.library] = lib.to_dict()
+
+    if include_defaults:
+        config['schedule'] = SUBMIT_OPTIONS.to_dict()
+        config['validate'] = VALIDATION_DEFAULTS.to_dict()
+        config['cluster'] = CLUSTER_DEFAULTS.to_dict()
+        config['annotate'] = ANNOTATION_DEFAULTS.to_dict()
+        config['illustrate'] = ILLUSTRATION_DEFAULTS.to_dict()
+        config['summary'] = SUMMARY_DEFAULTS.to_dict()
+
+    config['convert'] = CONVERT_OPTIONS.to_dict()
+    for alias, command in conversions.items():
+        if alias in CONVERT_OPTIONS:
+            raise UserWarning('error in writing config. Alias for conversion product cannot be a setting', alias, CONVERT_OPTIONS.keys())
+        config['convert'][alias] = '\n'.join(command)
+
+    for sec in config:
+        for tag, value in config[sec].items():
+            if '_regex_' in tag:
+                config[sec][tag] = re.sub(r'\$', '$$', config[sec][tag])
+                continue
+            elif not isinstance(value, str):
+                try:
+                    config[sec][tag] = '\n'.join([str(v) for v in value])
+                    continue
+                except TypeError:
+                    pass
+            config[sec][tag] = str(value)
+
+    conf = ConfigParser()
+    for sec in config:
+        conf[sec] = {}
+        for tag, val in config[sec].items():
+            conf[sec][tag] = val
+    log('writing:', filename)
+    with open(filename, 'w') as configfile:
+        conf.write(configfile)
+
+
+def validate_section(section, namespace, use_defaults=False):
+    """
+    given a dictionary of values, returns a new dict with the values casted to their appropriate type or set
+    to a default if the value was not given
+    """
+    new_namespace = MavisNamespace()
+    if use_defaults:
+        new_namespace.copy_from(namespace)
+
+    for attr, value in section.items():
+        if attr not in namespace:
+            raise KeyError('tag not recognized', attr)
+        else:
+            cast_type = namespace.type(attr)
+            if namespace.is_listable(attr):
+                value = MavisNamespace.parse_listable_string(value, cast_type, namespace.is_nullable(attr))
+            else:
+                value = cast_type(value)
+            try:
+                new_namespace.add(attr, value, cast_type=cast_type, listable=namespace.is_listable(attr), nullable=namespace.is_nullable(attr))
+            except Exception as err:
+                raise ValueError('failed adding {}. {}'.format(attr, err))
+    return new_namespace
+
+
 def get_metavar(arg_type):
     """
     For a given argument type, returns the string to be used for the metavar argument in add_argument
@@ -433,29 +404,19 @@ def get_metavar(arg_type):
     return None
 
 
-def filepath(path):
-    file_list = bash_expands(path)
-    if not file_list:
-        raise TypeError('File does not exist', path)
-    return os.path.abspath(path)
-
-
-def nullable_filepath(path):
-    if str(path).lower() == 'none':
-        return None
-    return filepath(path)
-
-
-def library_name_format(input_string):
+def nameable_string(input_string):
+    """
+    A string that can be used for library and/or filenames
+    """
     input_string = str(input_string)
     if re.search(r'[;,_\s]', input_string):
-        raise TypeError('library names cannot contain the reserved characters [;,_\\s]', input_string)
+        raise TypeError('names cannot contain the reserved characters [;,_\\s]', input_string)
     if input_string.lower() == 'none':
-        raise TypeError('library name cannot be none', input_string)
+        raise TypeError('names cannot be none', input_string)
     if not input_string:
-        raise TypeError('library name cannot be an empty string', input_string)
+        raise TypeError('names cannot be an empty string', input_string)
     if not re.search(r'^[a-zA-Z]', input_string):
-        raise TypeError('library names must start with a letter', input_string)
+        raise TypeError('names must start with a letter', input_string)
     return input_string
 
 
@@ -478,6 +439,10 @@ def augment_parser(arguments, parser, required=None):
             parser.add_argument(
                 '-v', '--version', action='version', version='%(prog)s version ' + __version__,
                 help='Outputs the version number')
+        elif arg == 'log':
+            parser.add_argument('--log', help='redirect stdout to a log file', default=None)
+        elif arg == 'log_level':
+            parser.add_argument('--log_level', help='level of logging to output', choices=['INFO', 'DEBUG'], default='INFO')
         elif arg == 'aligner_reference':
             default = REFERENCE_DEFAULTS[arg]
             parser.add_argument(
@@ -487,7 +452,7 @@ def augment_parser(arguments, parser, required=None):
             default = REFERENCE_DEFAULTS[arg]
             parser.add_argument(
                 '--{}'.format(arg), default=default, required=required if not default else False,
-                help=REFERENCE_DEFAULTS.define(arg), type=filepath, nargs='*')
+                help=REFERENCE_DEFAULTS.define(arg), type=filepath if required else NullableType(filepath), nargs='*')
         elif arg == 'config':
             parser.add_argument('config', help='path to the config file', type=filepath)
         elif arg == 'bam_file':
@@ -504,7 +469,7 @@ def augment_parser(arguments, parser, required=None):
             parser.add_argument(
                 '--median_fragment_size', type=int, help='median inset size for pairs in the bam file', required=required)
         elif arg == 'library':
-            parser.add_argument('--library', help='library name', required=required, type=library_name_format)
+            parser.add_argument('--library', help='library name', required=required, type=nameable_string)
         elif arg == 'protocol':
             parser.add_argument('--protocol', choices=PROTOCOL.values(), help='library protocol', required=required)
         elif arg == 'disease_status':
@@ -523,6 +488,7 @@ def augment_parser(arguments, parser, required=None):
             help_msg = None
             default_value = None
             choices = None
+            nargs = None
             if arg == 'aligner':
                 choices = SUPPORTED_ALIGNER.values()
                 help_msg = 'aligner to use for aligning contigs'
@@ -543,21 +509,24 @@ def augment_parser(arguments, parser, required=None):
                     CONVERT_OPTIONS]:
                 if arg in nspace:
                     default_value = nspace[arg]
-                    value_type = type(default_value) if not isinstance(default_value, bool) else tab.cast_boolean
+                    if nspace.is_listable(arg):
+                        nargs = '*'
+                    value_type = nspace.type(arg, None)
+                    if nspace.is_nullable(arg):
+                        value_type = NullableType(value_type)
                     if not help_msg:
                         help_msg = nspace.define(arg)
                     break
 
             if help_msg is None:
                 raise KeyError('invalid argument', arg)
-
             parser.add_argument(
-                '--{}'.format(arg), choices=choices,
+                '--{}'.format(arg), choices=choices, nargs=nargs,
                 help=help_msg, required=required, default=default_value, type=value_type
             )
 
 
-def generate_config(args, parser, log=devnull):
+def generate_config(args, parser, log=DEVNULL):
     """
     Args:
         parser (argparse.ArgumentParser): the main parser
@@ -574,6 +543,8 @@ def generate_config(args, parser, log=devnull):
                 raise KeyError('argument --library: bam file must be given if validation is not being skipped')
             libs.append(libconf)
             inputs_by_lib[libconf.library] = set()
+            if SUBCOMMAND.VALIDATE not in args.skip_stage and libconf.protocol == PROTOCOL.TRANS and (not args.annotations or args.annotations.is_empty()):
+                parser.error('argument --annotations is required to build configuration files for transcriptome libraries')
 
         for arg_list in args.input:
             inputfile = arg_list[0]

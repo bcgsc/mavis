@@ -10,7 +10,7 @@ from .util import generate_interval_mapping, LabelMapping
 
 from ..annotate.genomic import IntergenicRegion
 from ..interval import Interval
-from ..util import devnull
+from ..util import DEVNULL
 
 # draw gene level view
 # draw gene box
@@ -308,7 +308,7 @@ def draw_sv_summary_diagram(
     return canvas, legend
 
 
-def draw_multi_transcript_overlay(config, gene, vmarkers=None, window_buffer=0, plots=None, log=devnull):
+def draw_multi_transcript_overlay(config, gene, vmarkers=None, window_buffer=0, plots=None, log=DEVNULL):
     vmarkers = [] if vmarkers is None else vmarkers
     plots = [] if plots is None else plots
 

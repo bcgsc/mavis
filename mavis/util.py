@@ -7,6 +7,8 @@ import itertools
 import os
 import re
 import time
+import logging
+import sys
 
 from braceexpand import braceexpand
 from tab import tab
@@ -18,6 +20,67 @@ from .error import InvalidRearrangement
 from .interval import Interval
 
 ENV_VAR_PREFIX = 'MAVIS_'
+
+
+class Log:
+    """
+    wrapper aroung the builtin logging to make it more readable
+    """
+    def __init__(self, indent_str='  ', indent_level=0, level=logging.INFO):
+        self.indent_str = indent_str
+        self.indent_level = indent_level
+        self.level = level
+
+    def __call__(self, *pos, time_stamp=False, level=None, indent_level=0, **kwargs):
+        if level is None and self.level is None:
+            return
+        elif self.level is not None:
+            level = self.level
+
+        stamp = datetime.now().strftime('[%Y-%m-%d %H:%M:%S]') if time_stamp else ' ' * 21
+        indent_prefix = self.indent_str * (self.indent_level + indent_level)
+        message = '{} {}{}'.format(stamp, indent_prefix, ' '.join([str(p) for p in pos]))
+        logging.log(level, message, **kwargs)
+
+    def indent(self):
+        return Log(self.indent_str, self.indent_level + 1, self.level)
+
+    def dedent(self):
+        return Log(self.indent_str, max(0, self.indent_level - 1), self.level)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *pos):
+        pass
+
+
+LOG = Log()
+DEVNULL = Log(level=None)
+
+
+def filepath(path):
+    try:
+        file_list = bash_expands(path)
+    except FileNotFoundError:
+        raise TypeError('File does not exist', path)
+    else:
+        if not file_list:
+            raise TypeError('File not found', path)
+        elif len(file_list) > 1:
+            raise TypeError('File pattern match multiple files and expected only one', path)
+    return file_list[0]
+
+
+class NullableType:
+    def __init__(self, callback_func):
+        self.callback_func = callback_func
+
+    def __call__(self, item):
+        if str(item).lower() == 'none':
+            return None
+        else:
+            return self.callback_func(item)
 
 
 def cast(value, cast_func):
@@ -70,51 +133,11 @@ def get_env_variable(arg, default, cast_type=None):
 
 class WeakMavisNamespace(MavisNamespace):
 
-    def __getattribute__(self, attr):
-        try:
-            return get_env_variable(
-                attr,
-                object.__getattribute__(self, attr),
-                object.__getattribute__(self, '_types')[attr]
-            )
-        except KeyError:
-            return object.__getattribute__(self, attr)
+    def is_env_overwritable(self, attr):
+        return True
 
 
-class DelimListString(list):
-
-    def __init__(self, string='', none_is_all=False, delim=r'[\s;,]+'):
-        self.delim = delim
-        if not isinstance(string, str):
-            for item in string:
-                self.append(item)
-        else:
-            items = [i for i in re.split(self.delim, string) if i]
-            for item in items:
-                self.append(item)
-        self.none_is_all = none_is_all
-
-    def __contains__(self, item):
-        if list.__len__(self) == 0 and self.none_is_all:
-            return True
-        else:
-            return list.__contains__(self, item)
-
-    def __str__(self):
-        return ' '.join([repr(s) for s in self])
-
-    def __repr__(self):
-        return 'DelimListString({})'.format(str(self))
-
-
-class ChrListString(DelimListString):
-
-    def __init__(self, *pos, **kwargs):
-        DelimListString.__init__(self, *pos, **kwargs)
-        self.none_is_all = True
-
-
-def bash_expands(expression):
+def bash_expands(*expressions):
     """
     expand a file glob expression, allowing bash-style brackets.
 
@@ -126,10 +149,15 @@ def bash_expands(expression):
         [...]
     """
     result = []
-    for name in braceexpand(expression):
-        for fname in glob(name):
-            result.append(fname)
-    return result
+    for expression in expressions:
+        eresult = []
+        for name in braceexpand(expression):
+            for fname in glob(name):
+                eresult.append(fname)
+        if not eresult:
+            raise FileNotFoundError('The expression does not match any files', expression)
+        result.extend(eresult)
+    return [os.path.abspath(f) for f in result]
 
 
 def log_arguments(args):
@@ -139,41 +167,28 @@ def log_arguments(args):
     Args:
         args (Namespace): the namespace to print arguments for
     """
-    log('arguments')
-    for arg, val in sorted(args.items()):
-        if isinstance(val, list):
-            if len(val) <= 1:
-                log(arg, '= {}'.format(val), time_stamp=False)
-                continue
-            log(arg, '= [', time_stamp=False)
-            for v in val:
-                log('\t', repr(v), time_stamp=False)
-            log(']', time_stamp=False)
-        elif any([isinstance(val, typ) for typ in [str, int, float, bool, tuple]]) or val is None:
-            log(arg, '=', repr(val), time_stamp=False)
-        else:
-            log(arg, '=', object.__repr__(val), time_stamp=False)
-
-
-def log(*pos, time_stamp=True):
-    if time_stamp:
-        print('[{}]'.format(datetime.now()), *pos)
-    else:
-        print(' ' * 28, *pos)
-
-
-def devnull(*pos, **kwargs):
-    """
-    Takes any number of arguments and does nothing
-    """
-    pass
+    LOG('arguments', time_stamp=True)
+    with LOG.indent() as log:
+        for arg, val in sorted(args.items()):
+            if isinstance(val, list):
+                if len(val) <= 1:
+                    log(arg, '= {}'.format(val))
+                    continue
+                log(arg, '= [')
+                for v in val:
+                    log(repr(v), indent_level=1)
+                log(']')
+            elif any([isinstance(val, typ) for typ in [str, int, float, bool, tuple]]) or val is None:
+                log(arg, '=', repr(val))
+            else:
+                log(arg, '=', object.__repr__(val))
 
 
 def mkdirp(dirname):
     """
     Make a directory or path of directories. Suppresses the error that is normally raised when the directory already exists
     """
-    log("creating output directory: '{}'".format(dirname))
+    LOG("creating output directory: '{}'".format(dirname))
     try:
         os.makedirs(dirname)
     except OSError as exc:  # Python >2.5: http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
@@ -192,7 +207,7 @@ def filter_on_overlap(bpps, regions_by_reference_name):
         bpps (:class:`list` of :class:`~mavis.breakpoint.BreakpointPair`): list of breakpoint pairs to be filtered
         regions_by_reference_name (:class:`dict` of :class:`list` of :class:`~mavis.annotate.base.BioInterval` by :class:`str`): regions to filter against
     """
-    log('filtering from', len(bpps), 'using overlaps with regions filter')
+    LOG('filtering from', len(bpps), 'using overlaps with regions filter')
     failed = []
     passed = []
     for bpp in bpps:
@@ -212,7 +227,7 @@ def filter_on_overlap(bpps, regions_by_reference_name):
             failed.append(bpp)
         else:
             passed.append(bpp)
-    log('filtered from', len(bpps), 'down to', len(passed), '(removed {})'.format(len(failed)))
+    LOG('filtered from', len(bpps), 'down to', len(passed), '(removed {})'.format(len(failed)))
     return passed, failed
 
 
@@ -222,17 +237,16 @@ def read_inputs(inputs, **kwargs):
     kwargs['require'] = list(set(kwargs['require'] + [COLUMNS.protocol]))
     kwargs.setdefault('in_', {})
     kwargs['in_'][COLUMNS.protocol] = PROTOCOL.values()
-    for expr in inputs:
-        for finput in bash_expands(expr):
-            try:
-                log('loading:', finput)
-                bpps.extend(read_bpp_from_input_file(
-                    finput,
-                    **kwargs
-                ))
-            except tab.EmptyFileError:
-                log('ignoring empty file:', finput)
-    log('loaded', len(bpps), 'breakpoint pairs')
+    for finput in bash_expands(*inputs):
+        try:
+            LOG('loading:', finput)
+            bpps.extend(read_bpp_from_input_file(
+                finput,
+                **kwargs
+            ))
+        except tab.EmptyFileError:
+            LOG('ignoring empty file:', finput)
+    LOG('loaded', len(bpps), 'breakpoint pairs')
     return bpps
 
 
@@ -252,14 +266,14 @@ def output_tabbed_file(bpps, filename, header=None):
     header = sort_columns(header)
 
     with open(filename, 'w') as fh:
-        log('writing:', filename)
+        LOG('writing:', filename)
         fh.write('#' + '\t'.join(header) + '\n')
         for row in rows:
             fh.write('\t'.join([str(row.get(c, None)) for c in header]) + '\n')
 
 
 def write_bed_file(filename, bed_rows):
-    log('writing:', filename)
+    LOG('writing:', filename)
     with open(filename, 'w') as fh:
         for bed in bed_rows:
             fh.write('\t'.join([str(c) for c in bed]) + '\n')
@@ -286,7 +300,7 @@ def get_connected_components(adj_matrix):
     return components
 
 
-def generate_complete_stamp(output_dir, log=devnull, prefix='MAVIS.', start_time=None):
+def generate_complete_stamp(output_dir, log=DEVNULL, prefix='MAVIS.', start_time=None):
     """
     writes a complete stamp, optionally including the run time if start_time is given
 

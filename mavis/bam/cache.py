@@ -1,4 +1,5 @@
 import atexit
+import logging
 import re
 import warnings
 
@@ -7,6 +8,7 @@ import pysam
 from .read import SamRead
 from ..annotate.base import ReferenceName
 from ..interval import Interval
+from .. import util as _util
 
 
 class BamCache:
@@ -47,6 +49,9 @@ class BamCache:
         Args:
             read (pysam.AlignedSegment): the read to add to the cache
         """
+        if not read.is_unmapped and read.reference_start == read.reference_end:
+            _util.LOG('ignoring invalid read', read.query_name, level=logging.DEBUG)
+            return
         if not isinstance(read, SamRead):
             read = SamRead.copy(read)
         self.cache.setdefault(read.query_name, set())
@@ -143,7 +148,7 @@ class BamCache:
             if chrom not in self.fh.references:
                 chrom = 'chr' + chrom
             if chrom not in self.fh.references:
-                raise KeyError('bam file does not contain the expected reference', input_chrom)
+                raise KeyError('bam file does not contain the expected reference', input_chrom, self.fh.references)
         temp_cache = set()
         count = 0
 
@@ -152,6 +157,9 @@ class BamCache:
                 break
             if stop_on_cached_read and self.has_read(read):
                 break
+            if not read.is_unmapped and read.reference_start == read.reference_end:
+                _util.LOG('ignoring invalid read', read.query_name, level=logging.DEBUG)
+                continue
             read = SamRead.copy(read)
             if not filter_if(read):
                 result.append(read)
@@ -204,6 +212,9 @@ class BamCache:
             for read in self.fh.fetch(chrom, fstart, fend):
                 if bin_limit is not None and count >= running_surplus:
                     break
+                if not read.is_unmapped and read.reference_start == read.reference_end:
+                    _util.LOG('ignoring invalid read', read.query_name, level=logging.DEBUG)
+                    continue
                 read = SamRead.copy(read)
                 if not filter_if(read):
                     result.append(read)

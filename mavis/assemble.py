@@ -8,7 +8,7 @@ from .bam import cigar as _cigar
 from .bam.read import calculate_alignment_score, nsb_align, sequence_complexity
 from .constants import reverse_complement
 from .interval import Interval
-from .util import devnull
+from .util import DEVNULL
 
 
 class Contig:
@@ -236,7 +236,7 @@ def digraph_connected_components(graph, subgraph=None):
 
 
 def pull_contigs_from_component(
-    assembly, component, min_edge_trim_weight, assembly_max_paths, log=devnull
+    assembly, component, min_edge_trim_weight, assembly_max_paths, log=DEVNULL
 ):
     """
     builds contigs from the a connected component of the assembly DeBruijn graph

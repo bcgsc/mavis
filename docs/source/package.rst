@@ -9,14 +9,13 @@ Package Documentation
 
 .. toctree::
     :maxdepth: -1
-    
+
     auto/mavis.align
     mavis.annotate
     auto/mavis.assemble
     mavis.bam
     auto/mavis.blat
     auto/mavis.breakpoint
-    auto/mavis.checker
     mavis.cluster
     auto/mavis.config
     auto/mavis.constants
@@ -25,7 +24,7 @@ Package Documentation
     auto/mavis.interval
     mavis.pairing
     mavis.validate
-    auto/mavis.submit
+    mavis.schedule
     mavis.summary
     auto/mavis.tools
     auto/mavis.util

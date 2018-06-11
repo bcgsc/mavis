@@ -4,33 +4,34 @@ import re
 import shutil
 from tempfile import mkdtemp
 import unittest
+from unittest import mock
 
-from mavis.annotate.file_io import load_reference_genes, load_reference_genome, load_templates
+from mavis.annotate.file_io import load_reference_genes, load_reference_genome, load_templates, ReferenceFile, load_annotations
 from mavis.annotate.main import main as annotate_main
 from mavis.cluster.main import main as cluster_main
 from mavis.constants import DISEASE_STATUS, PROTOCOL
-from mavis.util import ChrListString
 from mavis.validate.main import main as validate_main
 import pysam
 
-from . import FULL_BAM_INPUT, FULL_BASE_EVENTS, FULL_REFERENCE_ANNOTATIONS_FILE_JSON, REFERENCE_GENOME_FILE, REFERENCE_GENOME_FILE_2BIT, RUN_FULL, TEMPLATE_METADATA_FILE, TRANSCRIPTOME_BAM_INPUT
+from . import RUN_FULL
+from ..util import get_data
 
 annotations = None
 reference_genome = None
 template_metadata = None
 trans_bam_fh = None
 genome_bam_fh = None
-masking = {}  # do not mask
+masking = mock.Mock(content={})  # do not mask
 
 
 def setUpModule():
     global annotations, reference_genome, template_metadata, genome_bam_fh, trans_bam_fh, masking
     print('setup start')
-    annotations = load_reference_genes(FULL_REFERENCE_ANNOTATIONS_FILE_JSON)
-    reference_genome = load_reference_genome(REFERENCE_GENOME_FILE)
-    template_metadata = load_templates(TEMPLATE_METADATA_FILE)
-    genome_bam_fh = pysam.AlignmentFile(FULL_BAM_INPUT)
-    trans_bam_fh = pysam.AlignmentFile(TRANSCRIPTOME_BAM_INPUT)
+    annotations = ReferenceFile('annotations', get_data('mock_annotations.json'))
+    reference_genome = ReferenceFile('reference_genome', get_data('mock_reference_genome.fa'), eager_load=True)
+    template_metadata = ReferenceFile('template_metadata', get_data('cytoBand.txt'), eager_load=True)
+    genome_bam_fh = pysam.AlignmentFile(get_data('mock_reads_for_events.sorted.bam'))
+    trans_bam_fh = pysam.AlignmentFile(get_data('mock_trans_reads_for_events.sorted.bam'))
     print('setup loading is complete')
 
 
@@ -51,8 +52,8 @@ class TestPipeline(unittest.TestCase):
     def test_mains(self):
         # test the clustering
         cluster_files = cluster_main(
-            [FULL_BASE_EVENTS], self.output, False, 'mock-A36971', PROTOCOL.GENOME, DISEASE_STATUS.DISEASED,
-            limit_to_chr=ChrListString([]), log_args=True,
+            [get_data('mock_sv_events.tsv')], self.output, False, 'mock-A36971', PROTOCOL.GENOME, DISEASE_STATUS.DISEASED,
+            limit_to_chr=[None], log_args=True,
             masking=masking, cluster_clique_size=15, cluster_radius=20,
             uninformative_filter=True, max_proximity=5000,
             annotations=annotations, min_clusters_per_file=5, max_files=1
@@ -64,26 +65,24 @@ class TestPipeline(unittest.TestCase):
             [cluster_files[0]], self.output, genome_bam_fh, False, 'mock-A36971', PROTOCOL.GENOME,
             median_fragment_size=427, stdev_fragment_size=106, read_length=150,
             reference_genome=reference_genome, annotations=annotations, masking=masking,
-            aligner_reference=REFERENCE_GENOME_FILE_2BIT,
-            reference_genome_filename=REFERENCE_GENOME_FILE
+            aligner_reference=ReferenceFile('aligner_reference', get_data('mock_reference_genome.2bit'))
         )
-        prefix = re.sub(r'\.tab$', '', cluster_files[0])
         for suffix in [
-            '.validation-passed.tab',
-            '.validation-failed.tab',
-            '.raw_evidence.bam',
-            '.raw_evidence.sorted.bam',
-            '.raw_evidence.sorted.bam.bai',
-            '.contigs.sorted.bam',
-            '.contigs.sorted.bam.bai',
-            '.contigs.bam',
-            '.igv.batch'
+            'validation-passed.tab',
+            'validation-failed.tab',
+            'raw_evidence.bam',
+            'raw_evidence.sorted.bam',
+            'raw_evidence.sorted.bam.bai',
+            'contigs.sorted.bam',
+            'contigs.sorted.bam.bai',
+            'contigs.bam',
+            'igv.batch'
         ]:
-            self.assertTrue(os.path.exists(os.path.join(self.output, 'validate' + suffix)))
+            self.assertTrue(os.path.exists(os.path.join(self.output, suffix)))
 
         # test the annotation
         annotate_main(
-            [os.path.join(self.output, 'validate.validation-passed.tab')], self.output, 'mock-A36971', PROTOCOL.GENOME,
+            [os.path.join(self.output, 'validation-passed.tab')], self.output, 'mock-A36971', PROTOCOL.GENOME,
             reference_genome, annotations, template_metadata,
             min_domain_mapping_match=0.95, min_orf_size=300, max_orf_cap=3,
         )

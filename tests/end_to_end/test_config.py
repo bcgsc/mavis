@@ -14,8 +14,9 @@ from mavis.main import main
 from mavis.tools import SUPPORTED_TOOL
 from mavis.util import unique_exists
 
+from ..util import get_data
 
-DATA_PREFIX = os.path.join(os.path.dirname(__file__), './../integration/data')
+
 ARGERROR_EXIT_CODE = 2
 
 
@@ -27,14 +28,14 @@ class TestConfig(unittest.TestCase):
         self.temp_output = tempfile.mkdtemp()
         # [--library <name> {genome,transcriptome} {diseased,normal} [strand_specific] [/path/to/bam/file]]
         self.genome = ['--library', 'mock_genome', 'genome', 'diseased']
-        self.genome_bam = os.path.join(DATA_PREFIX, 'mock_reads_for_events.sorted.bam')
+        self.genome_bam = get_data('mock_reads_for_events.sorted.bam')
         self.trans = ['--library', 'mock_trans', 'transcriptome', 'diseased']
-        self.trans_bam = os.path.join(DATA_PREFIX, 'mock_trans_reads_for_events.sorted.bam')
-        self.annotations = os.path.join(DATA_PREFIX, 'mock_reference_annotations.json')
+        self.trans_bam = get_data('mock_trans_reads_for_events.sorted.bam')
+        self.annotations = get_data('mock_reference_annotations.json')
         self.args = [
             'mavis', SUBCOMMAND.CONFIG
         ]
-        self.input = os.path.join(DATA_PREFIX, 'mock_sv_events.tsv')
+        self.input = get_data('mock_sv_events.tsv')
 
     def run_main(self, exit_status=0):
         outputfile = os.path.join(self.temp_output, 'config.cfg')

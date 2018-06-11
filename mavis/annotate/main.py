@@ -5,7 +5,7 @@ import time
 import warnings
 import hashlib
 
-from .constants import DEFAULTS
+from .constants import DEFAULTS, PASS_FILENAME
 from .genomic import PreTranscript
 from .variant import annotate_events, choose_more_annotated, choose_transcripts_by_priority, call_protein_indel, flatten_fusion_transcript, flatten_fusion_translation
 from .fusion import determine_prime
@@ -15,7 +15,7 @@ from ..error import DrawingFitError, NotSpecifiedError
 from ..illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from ..illustrate.constants import DiagramSettings
 from ..illustrate.diagram import draw_sv_summary_diagram
-from ..util import generate_complete_stamp, log, mkdirp, read_inputs
+from ..util import LOG, mkdirp, read_inputs
 
 
 ACCEPTED_FILTERS = {
@@ -42,7 +42,7 @@ def draw(drawing_config, ann, reference_genome, template_metadata, drawings_dire
     drawing_attempts.append((initial_width, {'draw_fusion_transcript': False, 'draw_reference_transcripts': False}))
 
     for i, (curr_width, other_settings) in enumerate(drawing_attempts):
-        log('drawing attempt:', i + 1, str(curr_width) + 'px', other_settings if other_settings else '', time_stamp=False)
+        LOG('drawing attempt:', i + 1, str(curr_width) + 'px', other_settings if other_settings else '', time_stamp=False)
         try:
             drawing_config.width = curr_width
             canvas, legend_json = draw_sv_summary_diagram(
@@ -79,10 +79,10 @@ def draw(drawing_config, ann, reference_genome, template_metadata, drawings_dire
 
             drawing = os.path.join(drawings_directory, name + '.svg')
             legend = os.path.join(drawings_directory, name + '.legend.json')
-            log('generating svg:', drawing, time_stamp=False)
+            LOG('generating svg:', drawing, time_stamp=False)
             canvas.saveas(drawing)
 
-            log('generating legend:', legend, time_stamp=False)
+            LOG('generating legend:', legend, time_stamp=False)
             with open(legend, 'w') as fh:
                 json.dump(legend_json, fh)
             break
@@ -109,15 +109,22 @@ def main(
     Args:
         inputs (:class:`List` of :class:`str`): list of input files to read
         output (str): path to the output directory
-        reference_genome (object): see :func:`~mavis.annotate.file_io.load_reference_genome`
-        annotations(object): see :func:`~mavis.annotate.file_io.load_reference_genes`
-        template_metadata (object): see :func:`~mavis.annotate.file_io.load_templates`
+        reference_genome (:class:`~mavis.annotate.file_io.ReferenceFile`): see :func:`~mavis.annotate.file_io.load_reference_genome`
+        annotations (:class:`~mavis.annotate.file_io.ReferenceFile`): see :func:`~mavis.annotate.file_io.load_reference_genes`
+        template_metadata (:class:`~mavis.annotate.file_io.ReferenceFile`): see :func:`~mavis.annotate.file_io.load_templates`
         min_domain_mapping_match (float): min mapping match percent (0-1) to count a domain as mapped
         min_orf_size (int): minimum size of an :term:`open reading frame` to keep as a putative translation
         max_orf_cap (int): the maximum number of :term:`open reading frame` s to collect for any given event
     """
+    # error early on missing input files
+    annotations.files_exist()
+    reference_genome.files_exist()
+    template_metadata.files_exist()
+    if not template_metadata.is_loaded():
+        template_metadata.load()
+
     drawings_directory = os.path.join(output, 'drawings')
-    tabbed_output_file = os.path.join(output, 'annotations.tab')
+    tabbed_output_file = os.path.join(output, PASS_FILENAME)
     fa_output_file = os.path.join(output, 'annotations.fusion-cdna.fa')
 
     annotation_filters = [] if not annotation_filters else annotation_filters.split(',')
@@ -135,21 +142,22 @@ def main(
         require=[COLUMNS.protocol, COLUMNS.library],
         expand_strand=False, expand_orient=True, expand_svtype=True
     )
-    log('read {} breakpoint pairs'.format(len(bpps)))
+    LOG('read {} breakpoint pairs'.format(len(bpps)))
 
-    annotations = annotate_events(
+    annotations.load()
+    reference_genome.load()
+    annotated_events = annotate_events(
         bpps,
-        reference_genome=reference_genome,
-        annotations=annotations,
+        reference_genome=reference_genome.content,
+        annotations=annotations.content,
         min_orf_size=min_orf_size,
         min_domain_mapping_match=min_domain_mapping_match,
         max_proximity=max_proximity,
         max_orf_cap=max_orf_cap,
-        log=log,
+        log=LOG,
         filters=annotation_filters
     )
 
-    fa_sequence_names = set()
     # now try generating the svg
     drawing_config = DiagramSettings(**{k: v for k, v in kwargs.items() if k in ILLUSTRATION_DEFAULTS})
 
@@ -172,24 +180,24 @@ def main(
         COLUMNS.protein_synon
     }
     header = None
-    log('opening for write:', tabbed_output_file)
+    LOG('opening for write:', tabbed_output_file)
     tabbed_fh = open(tabbed_output_file, 'w')
-    log('opening for write:', fa_output_file)
+    LOG('opening for write:', fa_output_file)
     fasta_fh = open(fa_output_file, 'w')
 
     try:
-        total = len(annotations)
-        for i, ann in enumerate(annotations):
+        total = len(annotated_events)
+        for i, ann in enumerate(annotated_events):
             ann_row = ann.flatten()
             ann_row[COLUMNS.fusion_sequence_fasta_file] = fa_output_file
             if header is None:
                 header_req.update(ann_row.keys())
                 header = sort_columns(header_req)
                 tabbed_fh.write('\t'.join([str(c) for c in header]) + '\n')
-            log(
+            LOG(
                 '({} of {}) current annotation'.format(i + 1, total),
                 ann.annotation_id, ann.transcript1, ann.transcript2, ann.event_type)
-            log(ann, time_stamp=False)
+            LOG(ann, time_stamp=False)
             # get the reference sequences for either transcript
             ref_cdna_seq = {}
             ref_protein_seq = {}
@@ -197,9 +205,9 @@ def main(
             for pre_transcript in [x for x in [ann.transcript1, ann.transcript2] if isinstance(x, PreTranscript)]:
                 name = pre_transcript.name
                 for spl_tx in pre_transcript.spliced_transcripts:
-                    ref_cdna_seq.setdefault(spl_tx.get_seq(reference_genome), set()).add(name)
+                    ref_cdna_seq.setdefault(spl_tx.get_seq(reference_genome.content), set()).add(name)
                     for translation in spl_tx.translations:
-                        ref_protein_seq.setdefault(translation.get_aa_seq(reference_genome), set()).add(name)
+                        ref_protein_seq.setdefault(translation.get_aa_seq(reference_genome.content), set()).add(name)
 
             # try building the fusion product
             rows = []
@@ -232,18 +240,18 @@ def main(
                         nrow.update(flatten_fusion_translation(fusion_translation))
                         if ann.single_transcript() and ann.transcript1.translations:
                             nrow[COLUMNS.fusion_protein_hgvs] = call_protein_indel(
-                                ann.transcript1.translations[0], fusion_translation, reference_genome)
+                                ann.transcript1.translations[0], fusion_translation, reference_genome.content)
                         rows.append(nrow)
                 else:
                     temp_row.update(ann_row)
                     rows.append(temp_row)
-            # draw the annotation and add the path to all applicable rows (one drawing for multiple annotations)
+            # draw the annotation and add the path to all applicable rows (one drawing for multiple annotated_events)
             if any([
                 not ann.fusion and not draw_fusions_only,
                 ann.fusion and not draw_non_synonymous_cdna_only,
                 ann.fusion and draw_non_synonymous_cdna_only and not cdna_synon_all
             ]):
-                drawing, legend = draw(drawing_config, ann, reference_genome, template_metadata, drawings_directory)
+                drawing, legend = draw(drawing_config, ann, reference_genome.content, template_metadata.content, drawings_directory)
                 for row in rows + [ann_row]:
                     row[COLUMNS.annotation_figure] = drawing
                     row[COLUMNS.annotation_figure_legend] = legend
@@ -251,9 +259,8 @@ def main(
                 rows = [ann_row]
             for row in rows:
                 tabbed_fh.write('\t'.join([str(row.get(k, None)) for k in header]) + '\n')
-        generate_complete_stamp(output, log, start_time=start_time)
     finally:
-        log('closing:', tabbed_output_file)
+        LOG('closing:', tabbed_output_file)
         tabbed_fh.close()
-        log('closing:', fa_output_file)
+        LOG('closing:', fa_output_file)
         fasta_fh.close()

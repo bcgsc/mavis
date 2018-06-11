@@ -1,35 +1,35 @@
-import glob
 import os
-import shlex
 import shutil
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest import mock
 
-from mavis.constants import SUBCOMMAND
+from mavis.constants import SUBCOMMAND, EXIT_OK, EXIT_ERROR
 from mavis.main import main
 from mavis.util import unique_exists
 
-from . import glob_exists, data
+from . import glob_exists, glob_not_exists
+from ..util import get_data
 
 
-CONFIG = data('pipeline_config.cfg')
-BWA_CONFIG = data('bwa_pipeline_config.cfg')
-CLEAN_CONFIG = data('clean_pipeline_config.cfg')
+CONFIG = get_data('pipeline_config.cfg')
+BWA_CONFIG = get_data('bwa_pipeline_config.cfg')
+CLEAN_CONFIG = get_data('clean_pipeline_config.cfg')
 MOCK_GENOME = 'mock-A36971'
 MOCK_TRANS = 'mock-A47933'
+ENV = {e: v for e, v in os.environ.items() if not e.startswith('MAVIS_')}
+ENV.update({'MAVIS_SCHEDULER': 'LOCAL', 'MAVIS_CONCURRENCY_LIMIT': '2'})
 
 
-def convert_qsub_to_args(filename, sub=None):
-    with open(filename, 'r') as fh:
-        lines = [l.strip() for l in fh.readlines() if not l.startswith('#') and l]
-        lines = ' '.join(lines)
-        if sub:
-            for original, replacement in sub:
-                lines.replace(original, replacement)
-        lex = shlex.split(lines)
-        return [a.strip() for a in lex]
+def print_file_tree(dirname):
+    for root, dirs, files in os.walk(dirname):
+        level = root.replace(dirname, '').count(os.sep)
+        indent = ' ' * 4 * (level)
+        print('{}{}/'.format(indent, os.path.basename(root)))
+        subindent = ' ' * 4 * (level + 1)
+        for f in files:
+            print('{}{}'.format(subindent, f))
 
 
 @unittest.skipIf(
@@ -39,35 +39,20 @@ class TestPipeline(unittest.TestCase):
 
     def setUp(self):
         # create the temp output directory to store file outputs
-        envs = [e for e in os.environ.keys() if e.startswith('MAVIS_')]
-        for evar in envs:
-            del os.environ[evar]
         self.temp_output = tempfile.mkdtemp()
         print('output dir', self.temp_output)
 
-    def check_and_run_annotate(self, lib):
+    def check_annotate(self, lib):
         # run annotation
         self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE))
-        qsub = unique_exists(os.path.join(self.temp_output, lib, SUBCOMMAND.ANNOTATE, '*-1/submit.sh'))
-        args = convert_qsub_to_args(qsub)
-        with patch.object(sys, 'argv', args):
-            self.assertEqual(0, main())
         # check the generated files
-        self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'annotations.tab'))
-        self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'annotations.fusion-cdna.fa'))
-        self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'drawings'))
-        self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'drawings', '*svg', strict=False))
-        self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', 'drawings', '*json', strict=False))
-        self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE + '/*-1', '*.COMPLETE'))
+        for filename in ['annotations.tab', 'annotations.fusion-cdna.fa', 'drawings', 'drawings/*svg', 'drawings/*json', 'MAVIS-*.COMPLETE']:
+            filename = os.path.join(self.temp_output, lib, SUBCOMMAND.ANNOTATE, '*-1', filename)
+            self.assertTrue(glob_exists(filename), msg=filename)
 
-    def check_and_run_validate(self, lib):
+    def check_validate(self, lib):
         # run validation
         self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE))
-        qsub = unique_exists(os.path.join(self.temp_output, lib, SUBCOMMAND.VALIDATE, '*-1/submit.sh'))
-        args = convert_qsub_to_args(qsub)  # read the arguments from the file
-        print(args)
-        with patch.object(sys, 'argv', args):
-            self.assertEqual(0, main())
 
         for suffix in [
             'contigs.bam',
@@ -80,20 +65,22 @@ class TestPipeline(unittest.TestCase):
             'raw_evidence.sorted.bam',
             'raw_evidence.sorted.bam.bai',
             'validation-failed.tab',
-            'validation-passed.tab'
+            'validation-passed.tab',
+            'MAVIS-*.COMPLETE'
         ]:
-            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', '*.' + suffix))
-        self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', '*.COMPLETE'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', suffix), msg=suffix)
 
     def check_aligner_output_files(self, lib, mem=False):
         if mem:
-            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', '*.contigs.bwa_mem.sam'))
-            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', '*.contigs.bwa_mem.log'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', 'contigs.bwa_mem.sam'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', 'contigs.bwa_mem.log'))
         else:
-            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', '*.contigs.blat_out.pslx'))
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', 'contigs.blat_out.pslx'))
 
     def check_cluster(self, lib, skipped=False):
         self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER))
+        logfile = os.path.join(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'MC_{}*batch-*.log'.format(lib))
+        self.assertTrue(glob_exists(logfile), msg=logfile)
         self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'batch-*-1.tab'))
         self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'filtered_pairs.tab'))
         self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'clusters.bed'))
@@ -101,169 +88,123 @@ class TestPipeline(unittest.TestCase):
             self.assertFalse(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'cluster_assignment.tab'))
         else:
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'cluster_assignment.tab'))
-        self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, '*.COMPLETE'))
+        self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'MAVIS-*.COMPLETE'))
 
-    def check_and_run_pairing(self):
-        # now run the pairing
+    def check_pairing(self):
         self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR))
-        qsub = unique_exists(os.path.join(self.temp_output, SUBCOMMAND.PAIR, 'submit.sh'))
-        args = convert_qsub_to_args(qsub)
-        with patch.object(sys, 'argv', args):
-            self.assertEqual(0, main())
-
         self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR, 'mavis_paired*.tab'))
-        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR, '*.COMPLETE'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR, 'MAVIS-*.COMPLETE'))
 
-    def check_and_run_summary(self, count=3):
-        # now run the summary
+    def check_summary(self, count=3):
         self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY))
-        qsub = unique_exists(os.path.join(self.temp_output, SUBCOMMAND.SUMMARY, 'submit.sh'))
-        args = convert_qsub_to_args(qsub)
-        with patch.object(sys, 'argv', args):
-            self.assertEqual(0, main())
-
         self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'mavis_summary*.tab', n=count))
-        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, '*.COMPLETE'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'MAVIS-*.COMPLETE'))
 
+    @mock.patch('os.environ', ENV.copy())
     def test_pipeline_with_bwa(self):
-        args = ['mavis', SUBCOMMAND.PIPELINE, BWA_CONFIG, '-o', self.temp_output]
-        with patch.object(sys, 'argv', args):
-            print(args)
-            self.assertEqual(0, main())
-
+        main([SUBCOMMAND.SETUP, BWA_CONFIG, '-o', self.temp_output])
+        self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
+        main([SUBCOMMAND.SCHEDULE, '-o', self.temp_output, '--submit'])
         # check that the subdirectories were built
         for lib in[MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
             self.check_cluster(lib)
-            self.check_and_run_validate(lib)
+            self.check_validate(lib)
             self.check_aligner_output_files(lib, mem=True)
-            self.check_and_run_annotate(lib)
+            self.check_annotate(lib)
 
-        self.check_and_run_pairing()
-        self.check_and_run_summary()
+        self.check_pairing()
+        self.check_summary()
 
-        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):
-            self.assertEqual(0, main())
-        self.assertTrue(glob_exists(self.temp_output, 'submit_pipeline*.sh'))
-
+    @mock.patch('os.environ', ENV.copy())
     def test_error_on_bad_config(self):
-        args = ['mavis', SUBCOMMAND.PIPELINE, 'thing/that/doesnot/exist.cfg', '-o', self.temp_output]
-        with patch.object(sys, 'argv', args):
-            print(sys.argv)
-            try:
-                main()
-                raise AssertionError('should have thrown error')
-            except SystemExit as err:
-                self.assertEqual(2, err.code)
+        with self.assertRaises(SystemExit) as err:
+            main([SUBCOMMAND.SETUP, 'thing/that/doesnot/exist.cfg', '-o', self.temp_output])
+        self.assertEqual(2, err.exception.code)
 
+    @mock.patch('os.environ', ENV.copy())
     def test_error_on_bad_input_file(self):
-        args = ['mavis', SUBCOMMAND.PIPELINE, data('bad_input_file.cfg'), '-o', self.temp_output]
-        with patch.object(sys, 'argv', args):
-            with self.assertRaises(FileNotFoundError):
-                main()
+        with self.assertRaises(FileNotFoundError):
+            main([SUBCOMMAND.SETUP, get_data('bad_input_file.cfg'), '-o', self.temp_output])
 
+    @mock.patch('os.environ', ENV.copy())
     def test_missing_reference(self):
-        args = ['mavis', SUBCOMMAND.PIPELINE, data('missing_reference.cfg'), '-o', self.temp_output]
-        with patch.object(sys, 'argv', args):
-            with self.assertRaises(OSError):
-                main()
+        with self.assertRaises(OSError):
+            main([SUBCOMMAND.SETUP, get_data('missing_reference.cfg'), '-o', self.temp_output])
 
+    @mock.patch('os.environ', ENV.copy())
     def test_full_pipeline(self):
-        args = ['mavis', SUBCOMMAND.PIPELINE, CONFIG, '-o', self.temp_output]
-        with patch.object(sys, 'argv', args):
-            self.assertEqual(0, main())
+        main([SUBCOMMAND.SETUP, CONFIG, '-o', self.temp_output])
+        self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
 
+        main([SUBCOMMAND.SCHEDULE, '-o', self.temp_output, '--submit'])
         # check that the subdirectories were built
         for lib in[MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
             self.check_cluster(lib)
-            self.check_and_run_validate(lib)
+            self.check_validate(lib)
             self.check_aligner_output_files(lib)
-            self.check_and_run_annotate(lib)
+            self.check_annotate(lib)
 
-        # now run the pairing
-        self.check_and_run_pairing()
+        self.check_pairing()
+        self.check_summary()
 
-        # now run the summary
-        self.check_and_run_summary()
+        retcode = main([SUBCOMMAND.SCHEDULE, '-o', self.temp_output])
+        self.assertEqual(EXIT_OK, retcode)
 
-        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):
-            self.assertEqual(0, main())
-        self.assertTrue(glob_exists(self.temp_output, 'submit_pipeline*.sh'))
-
+    @mock.patch('os.environ', ENV.copy())
     def test_no_optional_files(self):
-        args = ['mavis', SUBCOMMAND.PIPELINE, data('no_opt_pipeline.cfg'), '-o', self.temp_output]
-        with patch.object(sys, 'argv', args):
-            self.assertEqual(0, main())
+        main([SUBCOMMAND.SETUP, get_data('no_opt_pipeline.cfg'), '-o', self.temp_output])
+        self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
 
+        main([SUBCOMMAND.SCHEDULE, '-o', self.temp_output, '--submit'])
         # check that the subdirectories were built
         for lib in[MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
             self.check_cluster(lib)
-            self.check_and_run_validate(lib)
+            self.check_validate(lib)
             self.check_aligner_output_files(lib)
-            self.check_and_run_annotate(lib)
-        # now run the pairing
-        self.check_and_run_pairing()
+            self.check_annotate(lib)
+        self.check_pairing()
+        self.check_summary()
 
-        # now run the summary
-        self.check_and_run_summary()
-
-        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):
-            self.assertEqual(0, main())
-        self.assertTrue(glob_exists(self.temp_output, 'submit_pipeline*.sh'))
-
+    @mock.patch('os.environ', ENV.copy())
     def test_reference_from_env(self):
-        args = ['mavis', SUBCOMMAND.PIPELINE, data('reference_from_env.cfg'), '-o', self.temp_output]
-        env = {k: v for k, v in os.environ.items()}
-        env.update({
-            'MAVIS_TEMPLATE_METADATA': 'tests/integration/data/cytoBand.txt',
-            'MAVIS_ANNOTATIONS': 'tests/integration/data/mock_annotations.json',
-            'MAVIS_MASKING': 'tests/integration/data/mock_masking.tab',
-            'MAVIS_REFERENCE_GENOME': 'tests/integration/data/mock_reference_genome.fa',
-            'MAVIS_ALIGNER_REFERENCE': 'tests/integration/data/mock_reference_genome.2bit',
-            'MAVIS_DGV_ANNOTATION': 'tests/integration/data/mock_dgv_annotation.txt',
+        os.environ.update({
+            'MAVIS_TEMPLATE_METADATA': get_data('cytoBand.txt'),
+            'MAVIS_ANNOTATIONS': get_data('mock_annotations.json'),
+            'MAVIS_MASKING': get_data('mock_masking.tab'),
+            'MAVIS_REFERENCE_GENOME': get_data('mock_reference_genome.fa'),
+            'MAVIS_ALIGNER_REFERENCE': get_data('mock_reference_genome.2bit'),
+            'MAVIS_DGV_ANNOTATION': get_data('mock_dgv_annotation.txt'),
         })
-        with patch.object(os, 'environ', env):
-            with patch.object(sys, 'argv', args):
-                self.assertEqual(0, main())
+        main([SUBCOMMAND.SETUP, get_data('reference_from_env.cfg'), '-o', self.temp_output])
+        self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
+        main([SUBCOMMAND.SCHEDULE, '-o', self.temp_output, '--submit'])
+        # check that the subdirectories were built
+        for lib in [MOCK_GENOME + '_*']:
+            self.check_cluster(lib)
+            self.check_validate(lib)
+            self.check_aligner_output_files(lib)
+            self.check_annotate(lib)
+        self.check_pairing()
+        self.check_summary(count=2)
 
-            # check that the subdirectories were built
-            for lib in [MOCK_GENOME + '_*']:
-                self.check_cluster(lib)
-                self.check_and_run_validate(lib)
-                self.check_aligner_output_files(lib)
-                self.check_and_run_annotate(lib)
-            # now run the pairing
-            self.check_and_run_pairing()
-
-            # now run the summary
-            self.check_and_run_summary(count=2)
-
-            with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):
-                self.assertEqual(0, main())
-            self.assertTrue(glob_exists(self.temp_output, 'submit_pipeline*.sh'))
-
+    @mock.patch('os.environ', ENV.copy())
     def test_clean_files(self):
-        args = ['mavis', SUBCOMMAND.PIPELINE, CLEAN_CONFIG, '-o', self.temp_output]
-        with patch.object(sys, 'argv', args):
-            self.assertEqual(0, main())
+        main([SUBCOMMAND.SETUP, CLEAN_CONFIG, '-o', self.temp_output])
+
+        self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
+        main([SUBCOMMAND.SCHEDULE, '-o', self.temp_output, '--submit'])
 
         # check that the subdirectories were built
-        for lib in[MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
+        for lib in [MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
             self.check_cluster(lib)
-
-            # run validation
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE))
-            qsub = unique_exists(os.path.join(self.temp_output, lib, SUBCOMMAND.VALIDATE, '*-1/submit.sh'))
-            args = convert_qsub_to_args(qsub)  # read the arguments from the file
-            print(args)
-            with patch.object(sys, 'argv', args):
-                self.assertEqual(0, main())
 
             for suffix in [
                 'evidence.bed',
                 'validation-failed.tab',
                 'validation-passed.tab'
             ]:
-                self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', '*.' + suffix))
+                self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', suffix))
             for suffix in [
                 'contigs.bam',
                 'contigs.blat_out.pslx',
@@ -275,79 +216,150 @@ class TestPipeline(unittest.TestCase):
                 'raw_evidence.sorted.bam',
                 'raw_evidence.sorted.bam.bai',
             ]:
-                self.assertFalse(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', '*.' + suffix))
-            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', '*.COMPLETE'))
+                self.assertFalse(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', suffix), msg=suffix)
+            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', 'MAVIS-*.COMPLETE'))
 
-            self.check_and_run_annotate(lib)
-        # now run the pairing
-        self.check_and_run_pairing()
+            self.check_annotate(lib)
+        self.check_pairing()
+        self.check_summary()
 
-        # now run the summary
-        self.check_and_run_summary()
-
-        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):
-            self.assertEqual(0, main())
-        self.assertTrue(glob_exists(self.temp_output, 'submit_pipeline*.sh'))
-
+    @mock.patch('os.environ', ENV.copy())
     def test_skip_clustering(self):
-        args = ['mavis', SUBCOMMAND.PIPELINE, CONFIG, '-o', self.temp_output, '--skip_stage', SUBCOMMAND.CLUSTER]
-        with patch.object(sys, 'argv', args):
-            self.assertEqual(0, main())
+        main([SUBCOMMAND.SETUP, CONFIG, '-o', self.temp_output, '--skip_stage', SUBCOMMAND.CLUSTER])
+        self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
+        main([SUBCOMMAND.SCHEDULE, '-o', self.temp_output, '--submit'])
 
         # check that the subdirectories were built
         for lib in[MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
             self.check_cluster(lib, skipped=True)
-            self.check_and_run_validate(lib)
+            self.check_validate(lib)
             self.check_aligner_output_files(lib)
-            self.check_and_run_annotate(lib)
-        self.check_and_run_pairing()
-        self.check_and_run_summary()
+            self.check_annotate(lib)
+        self.check_pairing()
+        self.check_summary()
 
-        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):
-            self.assertEqual(0, main())
-        self.assertTrue(glob_exists(self.temp_output, 'submit_pipeline*.sh'))
-
+    @mock.patch('os.environ', ENV.copy())
     def test_skip_validation(self):
-        args = ['mavis', SUBCOMMAND.PIPELINE, CONFIG, '-o', self.temp_output, '--skip_stage', SUBCOMMAND.VALIDATE]
-        with patch.object(sys, 'argv', args):
-            self.assertEqual(0, main())
+        main([SUBCOMMAND.SETUP, CONFIG, '-o', self.temp_output, '--skip_stage', SUBCOMMAND.VALIDATE])
+
+        self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
+        main([SUBCOMMAND.SCHEDULE, '-o', self.temp_output, '--submit'])
 
         # check that the subdirectories were built
         for lib in[MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
             self.check_cluster(lib)
             self.assertFalse(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE))
-            self.check_and_run_annotate(lib)
-        self.check_and_run_pairing()
-        self.check_and_run_summary()
+            self.check_annotate(lib)
+        self.check_pairing()
+        self.check_summary()
 
-        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):
-            self.assertEqual(0, main())
-        self.assertTrue(glob_exists(self.temp_output, 'submit_pipeline*.sh'))
-
+    @mock.patch('os.environ', ENV.copy())
     def test_skip_cluster_and_validate(self):
         args = [
-            'mavis', SUBCOMMAND.PIPELINE, CONFIG,
+            SUBCOMMAND.SETUP, CONFIG,
             '-o', self.temp_output,
             '--skip_stage', SUBCOMMAND.VALIDATE,
             '--skip_stage', SUBCOMMAND.CLUSTER
         ]
-        with patch.object(sys, 'argv', args):
-            self.assertEqual(0, main())
+        main(args)
+        self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
+        main([SUBCOMMAND.SCHEDULE, '-o', self.temp_output, '--submit'])
 
         # check that the subdirectories were built
         for lib in[MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
             self.check_cluster(lib, skipped=True)
             self.assertFalse(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE))
-            self.check_and_run_annotate(lib)
-        self.check_and_run_pairing()
-        self.check_and_run_summary()
-
-        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CHECKER, '-o', self.temp_output]):
-            self.assertEqual(0, main())
-        self.assertTrue(glob_exists(self.temp_output, 'submit_pipeline*.sh'))
+            self.check_annotate(lib)
+        self.check_pairing()
+        self.check_summary()
 
     def tearDown(self):
         # remove the temp directory and outputs
+        print_file_tree(self.temp_output)
+        shutil.rmtree(self.temp_output)
+
+
+class TestSetUp(unittest.TestCase):
+    def setUp(self):
+        # create the temp output directory to store file outputs
+        self.temp_output = tempfile.mkdtemp()
+        print('output dir', self.temp_output)
+
+    @mock.patch('os.environ', ENV.copy())
+    def test_slurm(self):
+        os.environ['MAVIS_SCHEDULER'] = 'SLURM'
+        args = [
+            SUBCOMMAND.SETUP, CONFIG,
+            '-o', self.temp_output
+        ]
+        main(args)
+        self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
+        self.assertTrue(glob_exists(self.temp_output, '*', SUBCOMMAND.VALIDATE, 'submit.sh', n=2))
+        self.assertTrue(glob_exists(self.temp_output, '*', SUBCOMMAND.ANNOTATE, 'submit.sh', n=2))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR, 'submit.sh'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'submit.sh'))
+
+    @mock.patch('os.environ', ENV.copy())
+    def test_slurm_skip_validate(self):
+        os.environ['MAVIS_SCHEDULER'] = 'SLURM'
+        args = [
+            SUBCOMMAND.SETUP, CONFIG,
+            '-o', self.temp_output,
+            '--skip_stage', SUBCOMMAND.VALIDATE
+        ]
+        main(args)
+        self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
+        self.assertTrue(glob_not_exists(self.temp_output, '*', SUBCOMMAND.VALIDATE, 'submit.sh'))
+        self.assertTrue(glob_exists(self.temp_output, '*', SUBCOMMAND.ANNOTATE, 'submit.sh', n=2))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR, 'submit.sh'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'submit.sh'))
+
+    @mock.patch('os.environ', ENV.copy())
+    def test_slurm_skip_cluster(self):
+        os.environ['MAVIS_SCHEDULER'] = 'SLURM'
+        args = [
+            SUBCOMMAND.SETUP, CONFIG,
+            '-o', self.temp_output,
+            '--skip_stage', SUBCOMMAND.CLUSTER
+        ]
+        main(args)
+        self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
+        self.assertTrue(glob_exists(self.temp_output, '*', SUBCOMMAND.VALIDATE, 'submit.sh', n=2))
+        self.assertTrue(glob_exists(self.temp_output, '*', SUBCOMMAND.ANNOTATE, 'submit.sh', n=2))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR, 'submit.sh'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'submit.sh'))
+
+    @mock.patch('os.environ', ENV.copy())
+    def test_sge(self):
+        os.environ['MAVIS_SCHEDULER'] = 'SGE'
+        args = [
+            SUBCOMMAND.SETUP, CONFIG,
+            '-o', self.temp_output
+        ]
+        main(args)
+        self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
+        self.assertTrue(glob_exists(self.temp_output, '*', SUBCOMMAND.VALIDATE, 'submit.sh', n=2))
+        self.assertTrue(glob_exists(self.temp_output, '*', SUBCOMMAND.ANNOTATE, 'submit.sh', n=2))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR, 'submit.sh'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'submit.sh'))
+
+    @mock.patch('os.environ', ENV.copy())
+    def test_torque(self):
+        os.environ['MAVIS_SCHEDULER'] = 'TORQUE'
+        args = [
+            SUBCOMMAND.SETUP, CONFIG,
+            '-o', self.temp_output
+        ]
+        main(args)
+        self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
+        self.assertTrue(glob_exists(self.temp_output, '*', SUBCOMMAND.VALIDATE, 'submit.sh', n=2))
+        self.assertTrue(glob_exists(self.temp_output, '*', SUBCOMMAND.ANNOTATE, 'submit.sh', n=2))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.PAIR, 'submit.sh'))
+        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'submit.sh'))
+
+    def tearDown(self):
+        # remove the temp directory and outputs
+        print_file_tree(self.temp_output)
         shutil.rmtree(self.temp_output)
 
 

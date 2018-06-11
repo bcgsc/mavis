@@ -21,7 +21,7 @@ class TestHelpMenu(unittest.TestCase):
                 self.assertEqual(0, returncode)
 
     def test_pipeline(self):
-        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.PIPELINE, '-h']):
+        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.SETUP, '-h']):
             try:
                 returncode = main()
             except SystemExit as err:
@@ -102,7 +102,7 @@ class TestHelpMenu(unittest.TestCase):
                 self.assertEqual(0, returncode)
 
     def test_bad_option(self):
-        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.PIPELINE, '--blargh']):
+        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.SETUP, '--blargh']):
             try:
                 returncode = main()
             except SystemExit as err:

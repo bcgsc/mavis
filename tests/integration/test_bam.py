@@ -1,3 +1,4 @@
+import logging
 import os
 import unittest
 from unittest import mock
@@ -13,7 +14,8 @@ from mavis.constants import CIGAR, DNA_ALPHABET, ORIENT, READ_PAIR_TYPE, STRAND,
 from mavis.interval import Interval
 import timeout_decorator
 
-from . import BAM_INPUT, FULL_BAM_INPUT, FULL_REFERENCE_ANNOTATIONS_FILE_JSON, MockBamFileHandle, MockRead, REFERENCE_GENOME_FILE, TRANSCRIPTOME_BAM_INPUT
+from . import MockRead, MockBamFileHandle
+from ..util import get_data
 
 
 REFERENCE_GENOME = None
@@ -22,7 +24,7 @@ REFERENCE_GENOME = None
 def setUpModule():
     warnings.simplefilter('ignore')
     global REFERENCE_GENOME
-    REFERENCE_GENOME = load_reference_genome(REFERENCE_GENOME_FILE)
+    REFERENCE_GENOME = load_reference_genome(get_data('mock_reference_genome.fa'))
     if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
         raise AssertionError('fake genome file does not have the expected contents')
 
@@ -45,6 +47,34 @@ class TestBamCache(unittest.TestCase):
         r.reference_start = 0
         b.add_read(r)
         self.assertEqual(1, len(b.cache.values()))
+
+    @mock.patch('mavis.util.LOG')
+    def test_add_invalid_read(self, log_patcher):
+        bad_read = mock.Mock(is_unmapped=False, reference_start=0, reference_end=0, query_name='BAD_READ')
+        cache = BamCache(MockBamFileHandle())
+        cache.add_read(bad_read)
+        self.assertEqual(0, len(cache.cache))
+        log_patcher.assert_called_with('ignoring invalid read', 'BAD_READ', level=logging.DEBUG)
+
+    @mock.patch('mavis.util.LOG')
+    def test_fetch_invalid_read(self, log_patcher):
+        bad_read = mock.Mock(is_unmapped=False, reference_start=0, reference_end=0, query_name='BAD_READ')
+        fh = mock.Mock(references=['chr'], spec=['references', 'fetch'])
+        fh.configure_mock(**{'fetch.return_value': [bad_read]})
+        cache = BamCache(fh)
+        cache.fetch('chr', 1, 10)
+        self.assertEqual(0, len(cache.cache))
+        log_patcher.assert_called_with('ignoring invalid read', 'BAD_READ', level=logging.DEBUG)
+
+    @mock.patch('mavis.util.LOG')
+    def test_bin_fetch_invalid_read(self, log_patcher):
+        bad_read = mock.Mock(is_unmapped=False, reference_start=0, reference_end=0, query_name='BAD_READ')
+        fh = mock.Mock(references=['chr'], spec=['references', 'fetch'])
+        fh.configure_mock(**{'fetch.return_value': [bad_read]})
+        cache = BamCache(fh)
+        cache.fetch_from_bins('chr', 1, 10)
+        self.assertEqual(0, len(cache.cache))
+        log_patcher.assert_called_with('ignoring invalid read', 'BAD_READ', level=logging.DEBUG)
 
     def test_reference_id(self):
         fh = MockBamFileHandle({'1': 0})
@@ -71,7 +101,7 @@ class TestBamCache(unittest.TestCase):
         self.assertEqual([(1, 50), (51, 100)], BamCache._generate_fetch_bins(1, 100, 5, 50))
 
     def test_fetch_single_read(self):
-        b = BamCache(BAM_INPUT)
+        b = BamCache(get_data('mini_mock_reads_for_events.sorted.bam'))
         s = b.fetch_from_bins('reference3', 1382, 1383, read_limit=1, sample_bins=1)
         self.assertEqual(1, len(s))
         r = list(s)[0]
@@ -80,7 +110,7 @@ class TestBamCache(unittest.TestCase):
 
     def test_get_mate(self):
         # dependant on fetch working
-        b = BamCache(BAM_INPUT)
+        b = BamCache(get_data('mini_mock_reads_for_events.sorted.bam'))
         s = b.fetch_from_bins('reference3', 1382, 1383, read_limit=1, sample_bins=1)
         self.assertEqual(1, len(s))
         r = list(s)[0]
@@ -358,7 +388,7 @@ class TestHistogram(unittest.TestCase):
 
 class TestBamStats(unittest.TestCase):
     def test_genome_bam_stats(self):
-        bamfh = BamCache(FULL_BAM_INPUT)
+        bamfh = BamCache(get_data('mock_reads_for_events.sorted.bam'))
         stats = compute_genome_bam_stats(
             bamfh,
             1000,
@@ -372,8 +402,8 @@ class TestBamStats(unittest.TestCase):
         bamfh.close()
 
     def test_trans_bam_stats(self):
-        bamfh = BamCache(TRANSCRIPTOME_BAM_INPUT)
-        annotations = load_reference_genes(FULL_REFERENCE_ANNOTATIONS_FILE_JSON)
+        bamfh = BamCache(get_data('mock_trans_reads_for_events.sorted.bam'))
+        annotations = load_reference_genes(get_data('mock_annotations.json'))
         stats = compute_transcriptome_bam_stats(
             bamfh,
             annotations,

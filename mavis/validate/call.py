@@ -1,16 +1,12 @@
-from functools import partial
 import itertools
 import math
 import statistics
-import warnings
 
-from .evidence import TranscriptomeEvidence
-from ..align import SplitAlignment, query_coverage_interval, call_read_events, call_paired_read_event, convert_to_duplication
+from ..align import SplitAlignment, call_read_events, call_paired_read_event, convert_to_duplication
 from ..bam import read as _read
-from ..util import log
 
 from ..breakpoint import Breakpoint, BreakpointPair
-from ..constants import CALL_METHOD, CIGAR, COLUMNS, ORIENT, PROTOCOL, PYSAM_READ_FLAGS, STRAND, SVTYPE, reverse_complement
+from ..constants import CALL_METHOD, COLUMNS, ORIENT, PYSAM_READ_FLAGS, STRAND, SVTYPE, reverse_complement
 from ..interval import Interval
 
 
