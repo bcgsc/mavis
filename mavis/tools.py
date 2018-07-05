@@ -2,7 +2,6 @@ from argparse import Namespace
 import itertools
 import re
 
-from braceexpand import braceexpand
 from shortuuid import uuid
 import tab
 from pysam import VariantFile
@@ -24,7 +23,8 @@ SUPPORTED_TOOL = MavisNamespace(
     BREAKDANCER='breakdancer',
     VCF='vcf',
     BREAKSEQ='breakseq',
-    CNVNATOR='cnvnator'
+    CNVNATOR='cnvnator',
+    STRELKA='strelka'
 )
 """
 Supported Tools used to call SVs and then used as input into MAVIS
@@ -333,7 +333,7 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
     std_row[COLUMNS.break1_strand] = std_row[COLUMNS.break2_strand] = STRAND.NS
     result = []
     # convert the specified file type to a standard format
-    if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL, SUPPORTED_TOOL.VCF, SUPPORTED_TOOL.BREAKSEQ]:
+    if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL, SUPPORTED_TOOL.VCF, SUPPORTED_TOOL.BREAKSEQ, SUPPORTED_TOOL.STRELKA]:
 
         std_row.update(row)
 
@@ -478,7 +478,7 @@ def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fa
                 'normalized_RD',
                 'e-val1', 'e-val2', 'e-val3', 'e-val4', 'q0'
             ])
-    elif file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL, SUPPORTED_TOOL.VCF, SUPPORTED_TOOL.BREAKSEQ]:
+    elif file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL, SUPPORTED_TOOL.VCF, SUPPORTED_TOOL.BREAKSEQ, SUPPORTED_TOOL.STRELKA]:
         rows = []
         vfile = VariantFile(input_file)
         try:
@@ -486,7 +486,14 @@ def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fa
         except ValueError:
             pass
         for vcf_record in vfile.fetch():
-            rows.extend(_parse_vcf_record(vcf_record, log=log))
+            try:
+                rows.extend(_parse_vcf_record(vcf_record, log=log))
+            except Exception as err:
+                if file_type != SUPPORTED_TOOL.STRELKA:
+                    raise err
+                else:
+                    log('Ignoring', vcf_record)
+
     elif file_type == SUPPORTED_TOOL.BREAKDANCER:
         rows = _convert_breakdancer_file(input_file)
     else:
