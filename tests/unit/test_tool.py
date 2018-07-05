@@ -2,7 +2,6 @@ import unittest
 
 from mavis.constants import COLUMNS, ORIENT, STRAND, SVTYPE
 from mavis.tools import _convert_tool_row, SUPPORTED_TOOL, _parse_transabyss, _parse_chimerascan, _parse_bnd_alt, _parse_vcf_record
-import inspect
 
 from .mock import Mock
 
@@ -78,7 +77,7 @@ class TestCnvNator(unittest.TestCase):
         self.assertEqual('1', bpp.break1.chr)
         self.assertEqual('1', bpp.break2.chr)
 
-    def test_convert_deletion(self):
+    def test_convert_duplication(self):
         row = {
             'event_type': 'duplication',
             'coordinates': '1:1-10000'
@@ -712,10 +711,53 @@ class TestBreakDancer(unittest.TestCase):
         self.assertEqual(False, bpps[0].opposing_strands)
 
 
+class TestStrelka(unittest.TestCase):
+
+    def testInsertion(self):
+        event = Mock(
+            chrom='1', pos=724986, id=None,
+            info={}, ref='G',
+            stop=724986, alts=('GGAATT',)
+        )
+        bpp_list = _convert_tool_row(_parse_vcf_record(event)[0], SUPPORTED_TOOL.STRELKA, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual(724986, bpp.break1.start)
+        self.assertEqual(724986, bpp.break1.end)
+        self.assertEqual(724986, bpp.break2.start)
+        self.assertEqual(724986, bpp.break2.end)
+        self.assertEqual(SVTYPE.INS, bpp.event_type)
+
+    def testDeletion(self):
+        event = Mock(
+            chrom='1', pos=1265353, id=None,
+            info={}, ref='GCGTGTGCCATGCA',
+            stop=1265366, alts=('G',)
+        )
+        bpp_list = _convert_tool_row(_parse_vcf_record(event)[0], SUPPORTED_TOOL.STRELKA, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual(1265353, bpp.break1.start)
+        self.assertEqual(1265353, bpp.break1.end)
+        self.assertEqual(1265366, bpp.break2.start)
+        self.assertEqual(1265366, bpp.break2.end)
+        self.assertEqual(SVTYPE.DEL, bpp.event_type)
+
+    def testMalformated(self):
+        event = Mock(
+            chrom='1', pos=53678660, id=None, info={'SVTYPE': 'BND'},
+            ref='C',
+            alts=('CTTTTAAATGTAACATGACATAATATATTTCCTAAATAATTTAAAATAATC.',),
+            stop=53678660
+        )
+        with self.assertRaises(NotImplementedError):
+            _convert_tool_row(_parse_vcf_record(event)[0], SUPPORTED_TOOL.STRELKA, False)
+
+
 class TestVCF(unittest.TestCase):
 
     def setUp(self):
-        self.tra = row = Mock(
+        self.tra = Mock(
             chrom='2', pos=21673582, id=None,
             info={
                 'SVTYPE': 'TRA',
