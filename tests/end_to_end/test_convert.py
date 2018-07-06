@@ -118,6 +118,9 @@ class TestConvert(unittest.TestCase):
     def test_breakdancer(self):
         self.run_main(get_data('breakdancer_output.txt'), SUPPORTED_TOOL.BREAKDANCER, False)
 
+    def test_strelka(self):
+        self.run_main(get_data('strelka.vcf'), SUPPORTED_TOOL.STRELKA, False)
+
 
 def tearDownModule():
     # remove the temp directory and outputs

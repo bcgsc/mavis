@@ -13,3 +13,4 @@ Literature
 .. [Robertson-2010] Robertson,G. et al. (2010) De novo assembly and analysis of RNA-seq data. Nat. Methods, 7, 909–912.
 .. [Yates-2016] Yates,A. et al. (2016) Ensembl 2016. Nucleic Acids Res., 44, D710–D716.
 .. [Ye-2009] Ye,K. et al. (2009) Pindel: a pattern growth approach to detect break points of large deletions and medium sized insertions from paired-end short reads. Bioinformatics, 25, 2865–2871.
+.. [Saunders-2012] Saunders,C.T. et al. (2012) Strelka: accurate somatic small-variant calling from sequenced tumor–normal sample pairs. Bioinformatics, 28, 1811–1817.
