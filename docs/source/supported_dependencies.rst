@@ -120,7 +120,10 @@ MAVIS also supports a :ref:`general VCF input <general-vcf-inputs>`. It should b
         - ``1.4.8 (custom)``
         - ``{indels/events_novel_exons,fusions/*}.tsv``
         - [Robertson-2010]_
-
+    *   - :term:`Strelka`
+        - ``1.0.6``
+        - ``passed.somatic.indels.vcf``
+        - [Saunders-2012]_
 .. note::
 
     :term:`Trans-ABySS`: The trans-abyss version used was an in-house dev version. However the output columns are compatible with 1.4.8 as that

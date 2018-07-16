@@ -105,6 +105,9 @@ General Terms
     Manta
         Manta is an SV caller. Source for Manta can be found `here <https://github.com/Illumina/manta>`__ [Chen-2016]_
 
+    Strelka
+        Strelka is an SNV and small indel caller. Only the small indels can be processed, since SNVs are not currently suported. Source for Strelka can be found `here <https://github.com/Illumina/strelka>`__ [Saunders-2012]_
+
     Pindel
         Pindel is an SV caller. Source for Pindel can be found `here <https://github.com/genome/pindel>`__ [Ye-2009]_
 

@@ -249,7 +249,7 @@ class Pipeline:
 cd {cwd}
 START_TIME=$(date +%s)\n\n""".format(
                 shebang=SHEBANG,
-                aligner_path='export PATH={}:$PATH'.format(aligner_path) if aligner_path else '',
+                aligner_path='export PATH={}:$PATH'.format(os.path.dirname(aligner_path)) if aligner_path else '',
                 cwd=os.getcwd()
             ))
             commands = [PROGNAME, subcommand] + stringify_args_to_command(args)
