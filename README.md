@@ -117,3 +117,10 @@ source reference_inputs/hg19_env.sh
 
 Once the above 3 steps are complete [MAVIS](http://mavis.bcgsc.ca) is ready to be run.
 See the MAVIS [tutorial](http://mavis.bcgsc.ca/docs/latest/pipeline.html#mavis-mini-tutorial) to learn about running MAVIS.
+
+
+## Citation
+
+If you use MAVIS as a part of your project please cite
+
+[Reisle,C. et al. (2018) MAVIS: Merging, Annotation, Validation, and Illustration of Structural variants. Bioinformatics.](https://doi.org/10.1093/bioinformatics/bty621)

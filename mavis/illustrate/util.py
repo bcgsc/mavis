@@ -98,7 +98,8 @@ def generate_interval_mapping(
     min_inter_width = min_width if min_inter_width is None else min_inter_width
     if all([x is not None for x in [start, end, buffer_length]]):
         raise AttributeError('buffer_length is a mutually exclusive argument with start/end')
-
+    if not input_intervals and (start is None or end is None):
+        raise AttributeError('must specify an interval or start/end at minimum to generate an interval mapping')
     intervals = []
     for i in Interval.min_nonoverlapping(*input_intervals):
         if not intervals or abs(Interval.dist(intervals[-1], i)) > 1:
@@ -155,6 +156,9 @@ def generate_interval_mapping(
         end = intervals[-1].end + buffer_length
     elif end <= 0:
         raise AttributeError('end must be a natural number', end)
+
+    if not intervals:  # if no input intervals are given, then use the start/end of the entire range as the focus
+        intervals = [Interval(start, end)]
 
     total_length = end - start + 1
     genic_length = sum([len(i) for i in intervals])
