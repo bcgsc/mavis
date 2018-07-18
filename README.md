@@ -77,7 +77,7 @@ pip install --upgrade pip setuptools
 or (for Anaconda users)
 
 ``` bash
-conda update pip setuptoos
+conda update pip setuptools
 ```
 
 If this is not a clean/new python install it may be useful to set up mavis in a [virtual python environment](https://docs.python.org/3/tutorial/venv.html)
