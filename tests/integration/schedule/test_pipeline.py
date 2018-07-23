@@ -6,10 +6,15 @@ import shutil
 import os
 
 from mavis.schedule import pipeline as _pipeline
+from mavis.schedule import scheduler
 from mavis.main import main
 
 from ...util import get_data
 
+class TestTime(unittest.TestCase):
+    def test_time(self):
+        self.assertEqual('0:20:0', scheduler.time_format(1200))
+        self.assertEqual('1:0:0', scheduler.time_format(3600))
 
 class TestReadBuildFile(unittest.TestCase):
 
