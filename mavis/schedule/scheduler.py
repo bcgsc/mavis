@@ -1,4 +1,3 @@
-from datetime import timedelta
 import subprocess
 import re
 import logging
@@ -9,6 +8,15 @@ from ..config import NullableType
 
 from .job import ArrayJob
 from .constants import SCHEDULER, JOB_STATUS, cumulative_job_state, MAIL_TYPE
+
+
+def time_format(total_seconds):
+    """
+    Converts a total seconds to a str format "H:M:S"
+    """
+    hours, remainder = divmod(total_seconds, 60*60)
+    minutes, seconds = divmod(remainder, 60)
+    return "{}:{}:{}".format(hours, minutes, seconds)
 
 
 def consecutive_ranges(numbers):
@@ -115,7 +123,7 @@ class SlurmScheduler(Scheduler):
         if job.memory_limit:
             command.extend(['--mem', str(job.memory_limit) + 'M'])
         if job.time_limit:
-            command.extend(['-t', str(timedelta(seconds=job.time_limit))])
+            command.extend(['-t', time_format(job.time_limit)])
         if job.import_env:
             command.append('--export=ALL')
         if job.dependencies:
@@ -471,7 +479,7 @@ class SgeScheduler(Scheduler):
         if job.time_limit:
             command.extend([
                 '-l',
-                'h_rt={}'.format(str(timedelta(seconds=job.time_limit)))])
+                'h_rt={}'.format(time_format(job.time_limit))])
         if job.import_env:
             command.append('-V')
         if job.dependencies:
@@ -753,7 +761,7 @@ class TorqueScheduler(SgeScheduler):
         if job.time_limit:
             command.extend([
                 '-l',
-                'walltime={}'.format(str(timedelta(seconds=job.time_limit)))])
+                'walltime={}'.format(time_format(job.time_limit))])
         if job.import_env:
             command.append('-V')
         if job.dependencies:
