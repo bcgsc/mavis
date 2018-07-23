@@ -177,10 +177,7 @@ class SlurmScheduler(Scheduler):
         for row in rows:
             jobid = re.sub(r'\.batch$', '', row['JobID'])
             if row['JobName'] == 'batch' and jobid in results:
-                curr = results[jobid]
-                for col, val in row.items():
-                    if not curr[col]:
-                        curr[col] = val
+                results[jobid].update({k:v for k, v in row.items() if k != 'JobName'})
         rows = []
         for row in results.values():
             row['State'] = row['State'].split(' ')[0]
