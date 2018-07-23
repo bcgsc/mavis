@@ -16,7 +16,7 @@ def time_format(total_seconds):
     """
     hours, remainder = divmod(total_seconds, 60*60)
     minutes, seconds = divmod(remainder, 60)
-    return "{}:{}:{}".format(hours, minutes, seconds)
+    return "{}:{:02d}:{:02d}".format(hours, minutes, seconds)
 
 
 def consecutive_ranges(numbers):
@@ -185,7 +185,7 @@ class SlurmScheduler(Scheduler):
         for row in rows:
             jobid = re.sub(r'\.batch$', '', row['JobID'])
             if row['JobName'] == 'batch' and jobid in results:
-                results[jobid].update({k:v for k, v in row.items() if k != 'JobName'})
+                results[jobid].update({k: v for k, v in row.items() if k not in ['JobName', 'JobID']})
         rows = []
         for row in results.values():
             row['State'] = row['State'].split(' ')[0]

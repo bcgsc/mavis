@@ -524,6 +524,30 @@ JobID|JobName|User|ReqMem|Elapsed|State|MaxRSS|AveRSS|Partition
         self.assertIs(None, rows[0]['task_ident'])
         self.assertEqual(1, rows[1]['task_ident'])
 
+    def test_resubmission_array(self):
+        content = """
+JobID|JobIDRaw|JobName|Partition|MaxVMSize|MaxVMSizeNode|MaxVMSizeTask|AveVMSize|MaxRSS|MaxRSSNode|MaxRSSTask|AveRSS|MaxPages|MaxPagesNode|MaxPagesTask|AvePages|MinCPU|MinCPUNode|MinCPUTask|AveCPU|NTasks|AllocCPUS|Elapsed|State|ExitCode|AveCPUFreq|ReqCPUFreqMin|ReqCPUFreqMax|ReqCPUFreqGov|ReqMem|ConsumedEnergy|MaxDiskRead|MaxDiskReadNode|MaxDiskReadTask|AveDiskRead|MaxDiskWrite|MaxDiskWriteNode|MaxDiskWriteTask|AveDiskWrite|AllocGRES|ReqGRES|ReqTRES|AllocTRES
+1873472_162|1873671|MV_P02300_batch-egprnnYFaJtPtnECYfGiKf|all||||||||||||||||||1|10:18:26|COMPLETED|0:0||Unknown|Unknown|Unknown|16000Mn||||||||||||cpu=1,mem=16000M,node=1|cpu=1,mem=16000M,node=1
+1873472_162.batch|1873671.batch|batch||13703984K|n106|0|8708976K|11725204K|n106|0|6743424K|53K|n106|0|53K|10:06:31|n106|0|10:06:31|1|1|10:18:26|COMPLETED|0:0|2.19M|0|0|0|16000Mn|0|11767.09M|n106|0|11767.09M|29.74M|n106|0|29.74M||||cpu=1,mem=16000M,node=1
+1873472_163|1873672|MV_P02300_batch-egprnnYFaJtPtnECYfGiKf|all||||||||||||||||||1|08:09:50|COMPLETED|0:0||Unknown|Unknown|Unknown|16000Mn||||||||||||cpu=1,mem=16000M,node=1|cpu=1,mem=16000M,node=1
+1873472_163.batch|1873672.batch|batch||13690948K|n106|0|8686468K|11712556K|n106|0|6721328K|45K|n106|0|45K|07:57:40|n106|0|07:57:40|1|1|08:09:50|COMPLETED|0:0|2.19M|0|0|0|16000Mn|0|13345.62M|n106|0|13345.62M|26.77M|n106|0|26.77M||||cpu=1,mem=16000M,node=1
+1873472_164|1873673|MV_P02300_batch-egprnnYFaJtPtnECYfGiKf|all||||||||||||||||||1|12:26:33|COMPLETED|0:0||Unknown|Unknown|Unknown|16000Mn||||||||||||cpu=1,mem=16000M,node=1|cpu=1,mem=16000M,node=1
+1873472_164.batch|1873673.batch|batch||13730588K|n106|0|9577424K|11750552K|n106|0|6777084K|55K|n106|0|55K|12:13:52|n106|0|12:13:52|1|1|12:26:33|COMPLETED|0:0|2.19M|0|0|0|16000Mn|0|17065.30M|n106|0|17065.30M|34.39M|n106|0|34.39M||||cpu=1,mem=16000M,node=1
+1873472_165|1873674|MV_P02300_batch-egprnnYFaJtPtnECYfGiKf|all||||||||||||||||||1|05:32:32|COMPLETED|0:0||Unknown|Unknown|Unknown|16000Mn||||||||||||cpu=1,mem=16000M,node=1|cpu=1,mem=16000M,node=1
+1873472_165.batch|1873674.batch|batch||13735224K|n106|0|9574752K|11756988K|n106|0|6773916K|52K|n106|0|52K|05:21:46|n106|0|05:21:46|1|1|05:32:32|COMPLETED|0:0|2.18M|0|0|0|16000Mn|0|15997.17M|n106|0|15997.17M|37.74M|n106|0|37.74M||||cpu=1,mem=16000M,node=1
+1873472_166|1873675|MV_P02300_batch-egprnnYFaJtPtnECYfGiKf|all||||||||||||||||||1|07:30:37|COMPLETED|0:0||Unknown|Unknown|Unknown|16000Mn||||||||||||cpu=1,mem=16000M,node=1|cpu=1,mem=16000M,node=1
+1873472_166.batch|1873675.batch|batch||13722476K|n106|0|8669768K|11742400K|n106|0|6702776K|53K|n106|0|53K|07:18:31|n106|0|07:18:31|1|1|07:30:37|COMPLETED|0:0|2.19M|0|0|0|16000Mn|0|14716.82M|n106|0|14716.82M|21.39M|n106|0|21.39M||||cpu=1,mem=16000M,node=1
+1873472_167|1873676|MV_P02300_batch-egprnnYFaJtPtnECYfGiKf|all||||||||||||||||||1|06:45:32|COMPLETED|0:0||Unknown|Unknown|Unknown|16000Mn||||||||||||cpu=1,mem=16000M,node=1|cpu=1,mem=16000M,node=1
+1873472_167.batch|1873676.batch|batch||13686828K|n106|0|8596932K|11707132K|n106|0|6565180K|49K|n106|0|49K|06:35:26|n106|0|06:35:26|1|1|06:45:32|COMPLETED|0:0|2.19M|0|0|0|16000Mn|0|10274.82M|n106|0|10274.82M|39.37M|n106|0|39.37M||||cpu=1,mem=16000M,node=1
+1873472_168|1873677|MV_P02300_batch-egprnnYFaJtPtnECYfGiKf|all||||||||||||||||||1|16:00:06|TIMEOUT|0:0||Unknown|Unknown|Unknown|16000Mn||||||||||||cpu=1,mem=16000M,node=1|cpu=1,mem=16000M,node=1
+1873472_168.batch|1873677.batch|batch||13749848K|n106|0|8700272K|11771032K|n106|0|6734652K|46K|n106|0|46K|15:48:39|n106|0|15:48:39|1|1|16:00:07|CANCELLED|0:15|2.19M|0|0|0|16000Mn|0|10613.36M|n106|0|10613.36M|25.00M|n106|0|25.00M||||cpu=1,mem=16000M,node=1
+        """
+        rows = _scheduler.SlurmScheduler().parse_sacct(content)
+        complete = [row['status'] for row in rows if row['status'] == _constants.JOB_STATUS.COMPLETED]
+        fail = [row['status'] for row in rows if row['status'] == _constants.JOB_STATUS.CANCELLED]
+        self.assertEqual(6, len(complete))
+        self.assertEqual(1, len(fail))
+
 
 class TestCancel(unittest.TestCase):
 
