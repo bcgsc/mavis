@@ -365,3 +365,19 @@ class TestReferenceName(unittest.TestCase):
     def test_hash(self):
         self.assertTrue(ReferenceName('3') in {ReferenceName('3')})
         self.assertTrue(ReferenceName('3') in {ReferenceName('chr3')})
+
+
+class TestIndelCall(unittest.TestCase):
+
+    def test_duplication_in_repeat(self):
+        ref = 'ASFHGHGSFSFSLLLLLL'  'FLLLLSFSLMVPWSFKW'
+        mut = 'ASFHGHGSFSFSLLLLLLL' 'FLLLLSFSLMVPWSFKW'
+
+        call = IndelCall(ref, mut)
+        print(call)
+
+        self.assertEqual(18, call.last_aligned)
+        self.assertEqual(13, call.next_aligned)
+        self.assertTrue(call.is_dup)
+
+        self.assertEqual('p.L18dupL', call.hgvs_protein_notation())

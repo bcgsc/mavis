@@ -270,8 +270,12 @@ class IndelCall:
         if self.next_aligned > len(refseq):
             self.next_aligned = -1
         # check if the inserted sequence is actually a duplication of the preceding sequence
+        print(self)
         if self.ins_seq and self.next_aligned <= self.last_aligned:
             dupped_refseq = self.ref_seq[self.next_aligned - 1:self.last_aligned]
+            if len(dupped_refseq) > len(self.ins_seq):
+                dupped_refseq = dupped_refseq[-1 * len(self.ins_seq):]
+            print(dupped_refseq, self.ins_seq)
             if dupped_refseq == self.ins_seq:
                 self.is_dup = True
 
@@ -296,8 +300,12 @@ class IndelCall:
         if self.is_dup:
             if self.del_seq:
                 raise NotImplementedError('duplication/deletion no supported', self)
-            notation = 'p.{}{}_{}{}dup{}'.format(
-                self.ref_seq[self.next_aligned - 1], self.next_aligned, self.ref_seq[self.last_aligned - 1], self.last_aligned, self.ins_seq)
+            dup_start = self.last_aligned - len(self.ins_seq) + 1
+            if dup_start == self.last_aligned:
+                notation = 'p.{}{}dup{}'.format(self.ref_seq[self.last_aligned - 1], self.last_aligned, self.ins_seq)
+            else:
+                notation = 'p.{}{}_{}{}dup{}'.format(
+                    self.ref_seq[dup_start - 1], dup_start, self.ref_seq[self.last_aligned - 1], self.last_aligned, self.ins_seq)
         else:
             notation = 'p.{}{}'.format(self.ref_seq[last_align - 1], last_align)
             if (self.next_aligned < 0 or self.next_aligned >= len(self.ref_seq)) and self.last_aligned < len(self.mut_seq):
