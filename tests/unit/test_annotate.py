@@ -365,3 +365,188 @@ class TestReferenceName(unittest.TestCase):
     def test_hash(self):
         self.assertTrue(ReferenceName('3') in {ReferenceName('3')})
         self.assertTrue(ReferenceName('3') in {ReferenceName('chr3')})
+
+
+class TestIndelCall(unittest.TestCase):
+
+    def test_duplication_in_repeat(self):
+        ref = 'ASFHGHGSFSFSLLLLLL'  'FLLLLSFSLMVPWSFKW'
+        mut = 'ASFHGHGSFSFSLLLLLLL' 'FLLLLSFSLMVPWSFKW'
+
+        call = IndelCall(ref, mut)
+        print(call)
+
+        self.assertEqual(18, call.nterm_aligned)
+        self.assertEqual(len(ref) - 13 + 1, call.cterm_aligned)
+        self.assertTrue(call.is_dup)
+
+        self.assertEqual('p.L18dupL', call.hgvs_protein_notation())
+
+    def test_nterminal_extension(self):
+
+        ref = 'MABCDEFGH'
+        mut = 'MAFMABCDEFGH'
+
+        call = IndelCall(ref, mut)
+        print(call)
+        self.assertFalse(call.nterm_aligned)
+        self.assertEqual(len(call.ref_seq) - 1 + 1, call.cterm_aligned)
+        self.assertFalse(call.is_dup)
+        self.assertEqual('MAF', call.ins_seq)
+        self.assertEqual('', call.del_seq)
+
+        self.assertEqual('p.M1ext-3', call.hgvs_protein_notation())
+
+    def test_nterminal_deletion(self):
+        ref = 'MABCDEFGH'
+        mut = 'CDEFGH'
+
+        call = IndelCall(ref, mut)
+        print(call)
+        self.assertFalse(call.nterm_aligned)
+        self.assertEqual(len(call.ref_seq) - 4 + 1, call.cterm_aligned)
+        self.assertFalse(call.is_dup)
+        self.assertEqual('', call.ins_seq)
+        self.assertEqual('MAB', call.del_seq)
+
+        self.assertEqual('p.M1_B3delMAB', call.hgvs_protein_notation())
+
+    def test_cterminal_deletion(self):
+        ref = 'MABCDEFGH'
+        mut = 'MABCDE'
+
+        call = IndelCall(ref, mut)
+        print(call)
+        self.assertEqual(6, call.nterm_aligned)
+        self.assertFalse(call.cterm_aligned)
+        self.assertFalse(call.is_dup)
+        self.assertEqual('', call.ins_seq)
+        self.assertEqual('FGH', call.del_seq)
+
+        self.assertEqual('p.F7_H9delFGH', call.hgvs_protein_notation())
+
+    def test_cterminal_extension(self):
+        ref = 'MABCDEFGH'
+        mut = 'MABCDEFGHIJK'
+
+        call = IndelCall(ref, mut)
+        print(call)
+        self.assertEqual(9, call.nterm_aligned)
+        self.assertFalse(call.cterm_aligned)
+        self.assertFalse(call.is_dup)
+        self.assertEqual('IJK', call.ins_seq)
+        self.assertEqual('', call.del_seq)
+
+        self.assertEqual('p.H9ext3', call.hgvs_protein_notation())
+
+    def test_cterminal_stop_extension(self):
+        ref = 'MABCDEFGH*'
+        mut = 'MABCDEFGHIJK*'
+
+        call = IndelCall(ref, mut)
+        print(call)
+        self.assertEqual(9, call.nterm_aligned)
+        self.assertFalse(call.cterm_aligned)
+        self.assertFalse(call.is_dup)
+        self.assertEqual('IJK', call.ins_seq)
+        self.assertEqual('', call.del_seq)
+
+        self.assertEqual('p.*10ext*3', call.hgvs_protein_notation())
+
+    def test_cterminal_no_orf_ext(self):
+        ref = 'MABCDEFGH'
+        mut = 'MABCDEFGHIJK*'
+
+        call = IndelCall(ref, mut)
+        print(call)
+        self.assertEqual(9, call.nterm_aligned)
+        self.assertFalse(call.cterm_aligned)
+        self.assertFalse(call.is_dup)
+        self.assertEqual('IJK*', call.ins_seq)
+        self.assertEqual('', call.del_seq)
+
+        self.assertEqual('p.H9ext*4', call.hgvs_protein_notation())
+
+    def test_single_aa_insertion(self):
+        ref = 'MABCDEFGH'
+        mut = 'MABCKDEFGH'
+
+        call = IndelCall(ref, mut)
+        print(call)
+        self.assertEqual(4, call.nterm_aligned)
+        self.assertEqual(len(call.ref_seq) - 5 + 1, call.cterm_aligned)
+        self.assertFalse(call.is_dup)
+        self.assertEqual('K', call.ins_seq)
+        self.assertEqual('', call.del_seq)
+
+        self.assertEqual('p.C4_D5insK', call.hgvs_protein_notation())
+
+    def test_insertion(self):
+        ref = 'MABCDEFGH'
+        mut = 'MABCKADEFGH'
+
+        call = IndelCall(ref, mut)
+        print(call)
+        self.assertEqual(4, call.nterm_aligned)
+        self.assertEqual(len(call.ref_seq) - 5 + 1, call.cterm_aligned)
+        self.assertFalse(call.is_dup)
+        self.assertEqual('KA', call.ins_seq)
+        self.assertEqual('', call.del_seq)
+
+        self.assertEqual('p.C4_D5insKA', call.hgvs_protein_notation())
+
+    def test_single_aa_deletion(self):
+        ref = 'MABCDEFGH'
+        mut = 'MABCEFGH'
+
+        call = IndelCall(ref, mut)
+        print(call)
+        self.assertEqual(4, call.nterm_aligned)
+        self.assertEqual(len(call.ref_seq) - 6 + 1, call.cterm_aligned)
+        self.assertFalse(call.is_dup)
+        self.assertEqual('', call.ins_seq)
+        self.assertEqual('D', call.del_seq)
+
+        self.assertEqual('p.D5delD', call.hgvs_protein_notation())
+
+    def test_deletion(self):
+        ref = 'MABCDEFGH'
+        mut = 'MABCFGH'
+
+        call = IndelCall(ref, mut)
+        print(call)
+        self.assertEqual(4, call.nterm_aligned)
+        self.assertEqual(len(call.ref_seq) - 7 + 1, call.cterm_aligned)
+        self.assertFalse(call.is_dup)
+        self.assertEqual('', call.ins_seq)
+        self.assertEqual('DE', call.del_seq)
+
+        self.assertEqual('p.D5_E6delDE', call.hgvs_protein_notation())
+
+    def test_deletion_in_repeat(self):
+        ref = 'MABCDEEEEEEFGH'
+        mut = 'MABCDEEEEFGH'
+
+        call = IndelCall(ref, mut)
+        print(call)
+        self.assertEqual(9, call.nterm_aligned)
+        self.assertEqual(len(call.ref_seq) - 8 + 1, call.cterm_aligned)
+        self.assertFalse(call.is_dup)
+        self.assertEqual('', call.ins_seq)
+        self.assertEqual('EE', call.del_seq)
+
+        self.assertEqual('p.E10_E11delEE', call.hgvs_protein_notation())
+
+    def test_insertion_in_repeat(self):
+        ref = 'MABCDEEEEFGH'
+        mut = 'MABCDEEEEEEFGH'
+
+        call = IndelCall(ref, mut)
+        print(call)
+        self.assertEqual(9, call.nterm_aligned)
+        self.assertEqual(len(call.ref_seq) - 6 + 1, call.cterm_aligned)
+        self.assertTrue(call.is_dup)
+        self.assertEqual('EE', call.ins_seq)
+        self.assertEqual('', call.del_seq)
+
+        self.assertEqual('p.E8_E9dupEE', call.hgvs_protein_notation())

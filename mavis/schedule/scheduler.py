@@ -11,12 +11,11 @@ from .job import ArrayJob
 from .constants import SCHEDULER, JOB_STATUS, cumulative_job_state, MAIL_TYPE
 
 
-
 def time_format(total_seconds):
     """
     Converts a total seconds to a str format "H:M:S"
     """
-    hours, remainder = divmod(total_seconds, 60*60)
+    hours, remainder = divmod(total_seconds, 60 * 60)
     minutes, seconds = divmod(remainder, 60)
     return "{}:{:02d}:{:02d}".format(hours, minutes, seconds)
 

@@ -11,8 +11,8 @@ class TestIndelCall(unittest.TestCase):
         refseq = 'asdfghjkl'
         mutseq = 'asdfkl'
         indel = IndelCall(refseq, mutseq)
-        self.assertEqual(4, indel.last_aligned)
-        self.assertEqual(8, indel.next_aligned)
+        self.assertEqual(4, indel.nterm_aligned)
+        self.assertEqual(len(indel.ref_seq) - 8 + 1, indel.cterm_aligned)
         self.assertEqual('ghj', indel.del_seq)
         self.assertEqual('', indel.ins_seq)
         self.assertFalse(indel.is_dup)
@@ -21,8 +21,8 @@ class TestIndelCall(unittest.TestCase):
         refseq = 'asdfghjkl'
         mutseq = 'asdfmmmghjkl'
         indel = IndelCall(refseq, mutseq)
-        self.assertEqual(4, indel.last_aligned)
-        self.assertEqual(5, indel.next_aligned)
+        self.assertEqual(4, indel.nterm_aligned)
+        self.assertEqual(len(indel.ref_seq) - 5 + 1, indel.cterm_aligned)
         self.assertEqual('', indel.del_seq)
         self.assertEqual('mmm', indel.ins_seq)
         self.assertFalse(indel.is_dup)
@@ -32,8 +32,8 @@ class TestIndelCall(unittest.TestCase):
         mutseq = 'asdfsdfghjkl'
         indel = IndelCall(refseq, mutseq)
         print(indel)
-        self.assertEqual(4, indel.last_aligned)
-        self.assertEqual(2, indel.next_aligned)
+        self.assertEqual(4, indel.nterm_aligned)
+        self.assertEqual(len(indel.ref_seq) - 2 + 1, indel.cterm_aligned)
         self.assertEqual('', indel.del_seq)
         self.assertEqual('sdf', indel.ins_seq)
         self.assertTrue(indel.is_dup)
@@ -42,8 +42,8 @@ class TestIndelCall(unittest.TestCase):
         refseq = 'asdfghjkl'
         mutseq = 'asdfmmmkl'
         indel = IndelCall(refseq, mutseq)
-        self.assertEqual(4, indel.last_aligned)
-        self.assertEqual(8, indel.next_aligned)
+        self.assertEqual(4, indel.nterm_aligned)
+        self.assertEqual(len(indel.ref_seq) - 8 + 1, indel.cterm_aligned)
         self.assertEqual('ghj', indel.del_seq)
         self.assertEqual('mmm', indel.ins_seq)
         self.assertFalse(indel.is_dup)
@@ -52,8 +52,8 @@ class TestIndelCall(unittest.TestCase):
         refseq = 'asdfghjkl'
         mutseq = 'fghjkl'
         indel = IndelCall(refseq, mutseq)
-        self.assertEqual(-1, indel.last_aligned)
-        self.assertEqual(4, indel.next_aligned)
+        self.assertEqual(0, indel.nterm_aligned)
+        self.assertEqual(6, indel.cterm_aligned)
         self.assertEqual('asd', indel.del_seq)
         self.assertEqual('', indel.ins_seq)
         self.assertFalse(indel.is_dup)
@@ -62,8 +62,8 @@ class TestIndelCall(unittest.TestCase):
         refseq = 'asdafghjkl'
         mutseq = 'afghjkl'
         indel = IndelCall(refseq, mutseq)
-        self.assertEqual(-1, indel.last_aligned)
-        self.assertEqual(4, indel.next_aligned)
+        self.assertEqual(0, indel.nterm_aligned)
+        self.assertEqual(7, indel.cterm_aligned)
         self.assertEqual('asd', indel.del_seq)
         self.assertEqual('', indel.ins_seq)
         self.assertFalse(indel.is_dup)
@@ -72,8 +72,8 @@ class TestIndelCall(unittest.TestCase):
         refseq = 'asdfghjkl'
         mutseq = 'asdfgh'
         indel = IndelCall(refseq, mutseq)
-        self.assertEqual(6, indel.last_aligned)
-        self.assertEqual(-1, indel.next_aligned)
+        self.assertEqual(6, indel.nterm_aligned)
+        self.assertEqual(0, indel.cterm_aligned)
         self.assertEqual('jkl', indel.del_seq)
         self.assertEqual('', indel.ins_seq)
         self.assertFalse(indel.is_dup)
@@ -82,8 +82,8 @@ class TestIndelCall(unittest.TestCase):
         refseq = 'asdfghjkl'
         mutseq = 'mmasdfghjkl'
         indel = IndelCall(refseq, mutseq)
-        self.assertEqual(-1, indel.last_aligned)
-        self.assertEqual(1, indel.next_aligned)
+        self.assertEqual(0, indel.nterm_aligned)
+        self.assertEqual(9, indel.cterm_aligned)
         self.assertEqual('', indel.del_seq)
         self.assertEqual('mm', indel.ins_seq)
         self.assertFalse(indel.is_dup)
@@ -92,8 +92,8 @@ class TestIndelCall(unittest.TestCase):
         refseq = 'asdfghjkl'
         mutseq = 'asdfghjklmmm'
         indel = IndelCall(refseq, mutseq)
-        self.assertEqual(9, indel.last_aligned)
-        self.assertEqual(-1, indel.next_aligned)
+        self.assertEqual(9, indel.nterm_aligned)
+        self.assertEqual(0, indel.cterm_aligned)
         self.assertEqual('', indel.del_seq)
         self.assertEqual('mmm', indel.ins_seq)
         self.assertFalse(indel.is_dup)
@@ -102,8 +102,8 @@ class TestIndelCall(unittest.TestCase):
         refseq = 'asdfghjkl'
         mutseq = 'mmfghjkl'
         indel = IndelCall(refseq, mutseq)
-        self.assertEqual(-1, indel.last_aligned)
-        self.assertEqual(4, indel.next_aligned)
+        self.assertEqual(0, indel.nterm_aligned)
+        self.assertEqual(6, indel.cterm_aligned)
         self.assertEqual('asd', indel.del_seq)
         self.assertEqual('mm', indel.ins_seq)
         self.assertFalse(indel.is_dup)
@@ -112,8 +112,8 @@ class TestIndelCall(unittest.TestCase):
         refseq = 'asdfghjkl'
         mutseq = 'asdfghjmmm'
         indel = IndelCall(refseq, mutseq)
-        self.assertEqual(7, indel.last_aligned)
-        self.assertEqual(-1, indel.next_aligned)
+        self.assertEqual(7, indel.nterm_aligned)
+        self.assertEqual(0, indel.cterm_aligned)
         self.assertEqual('kl', indel.del_seq)
         self.assertEqual('mmm', indel.ins_seq)
         self.assertFalse(indel.is_dup)
@@ -227,13 +227,13 @@ class TestCallProteinIndel(unittest.TestCase):
         ref_translation = Mock(get_aa_seq=MockFunction('ASDFGHJKLQWERTYUIOP'), name='ref')
         mut_translation = Mock(get_aa_seq=MockFunction('IIASDFGHJKLQWERTYUIOP'))
         notation = call_protein_indel(ref_translation, mut_translation)
-        self.assertEqual(None, notation)
+        self.assertEqual('ref:p.A1ext-2', notation)
 
     def test_ins_end(self):
         ref_translation = Mock(get_aa_seq=MockFunction('ASDFGHJKLQWERTYUIOP'), name='ref')
         mut_translation = Mock(get_aa_seq=MockFunction('ASDFGHJKLQWERTYUIOPII'))
         notation = call_protein_indel(ref_translation, mut_translation)
-        self.assertEqual(None, notation)
+        self.assertEqual('ref:p.P19ext2', notation)
 
     def test_no_reference_obj(self):
         ref_translation = Mock(get_aa_seq=MockFunction('ASDFGHJKLQWERTYUIOP'), name=None, reference_object='thing')
