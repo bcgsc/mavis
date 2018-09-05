@@ -53,7 +53,7 @@ class Annotation(BreakpointPair):
         if data is not None:
             conflicts = set(kwargs.keys()) & set(data.keys())
             self.data.update(data)
-            if len(conflicts) > 0:
+            if conflicts:
                 raise TypeError('got multiple values for data elements:', conflicts)
         self.data.update(kwargs)
 
@@ -242,84 +242,169 @@ class IndelCall:
         """
         Given two sequences, Assuming there exists a single difference between the two
         call an indel which accounts for the change
+
+        Args:
+            refseq (str): The reference (amino acid) sequence
+            mutseq (str): The mutated (amino acid) sequence
+
+        Attributes:
+            nterm_aligned (int): the number of characters aligned consecutively from the start of both strings
+            cterm_aligned (int): the number of characters aligned consecutively from the end of both strings
+            is_dup (bool): flag to indicate a duplication
+            ref_seq (str): the reference sequence
+            mut_seq (str): the mutated sequence
+            ins_seq (str): the inserted sequence
+            del_seq (str): the deleted sequence
+            terminates (bool): both sequences end in stop AAs
         """
-        self.last_aligned = 0
-        self.next_aligned = len(refseq) + 1
+        self.nterm_aligned = 0
+        self.cterm_aligned = 0
         self.ref_seq = refseq
         self.mut_seq = mutseq
         self.is_dup = False
-        for pos in range(0, min(len(refseq), len(mutseq))):
-            if refseq[pos] != mutseq[pos]:
-                break
-            self.last_aligned = pos + 1
+        if self.ref_seq[-1] == STOP_AA and self.mut_seq[-1] == STOP_AA:
+            self.terminates = True
+            self.ref_seq = self.ref_seq[:-1]
+            self.mut_seq = self.mut_seq[:-1]
+        else:
+            self.terminates = False
 
-        for pos in range(0, min(len(refseq), len(mutseq))):
-            if refseq[-1 - pos] != mutseq[-1 - pos]:
-                break
-            self.next_aligned = len(refseq) - pos
+        min_len = min(len(self.mut_seq), len(self.ref_seq))
 
-        if len(self.ref_seq) - self.next_aligned + 1 == len(self.mut_seq):
-            self.last_aligned = 0
-        del_length = max(self.next_aligned - self.last_aligned - 1, 0)
-        ins_length = max(len(mutseq) + del_length - len(refseq), 0)
+        if self.mut_seq[:min_len] == self.ref_seq[:min_len]:
+            # full n-terminal match
+            self.nterm_aligned = min_len
+            if len(self.mut_seq) > len(self.ref_seq):
+                self.ins_seq = self.mut_seq[min_len:]
+                self.del_seq = ''
+            else:
+                self.del_seq = self.ref_seq[min_len:]
+                self.ins_seq = ''
 
-        self.ins_seq = mutseq[self.last_aligned:self.last_aligned + ins_length]
-        self.del_seq = refseq[self.last_aligned:self.next_aligned - 1]
-        if self.last_aligned == 0:
-            self.last_aligned = -1
-        if self.next_aligned > len(refseq):
-            self.next_aligned = -1
-        # check if the inserted sequence is actually a duplication of the preceding sequence
-        print(self)
-        if self.ins_seq and self.next_aligned <= self.last_aligned:
-            dupped_refseq = self.ref_seq[self.next_aligned - 1:self.last_aligned]
-            if len(dupped_refseq) > len(self.ins_seq):
-                dupped_refseq = dupped_refseq[-1 * len(self.ins_seq):]
-            print(dupped_refseq, self.ins_seq)
-            if dupped_refseq == self.ins_seq:
-                self.is_dup = True
+        elif self.mut_seq[-1 * min_len:] == self.ref_seq[-1 * min_len:]:
+            # full c-terminal match
+            self.cterm_aligned = min_len
+            if len(self.mut_seq) > len(self.ref_seq):
+                self.ins_seq = self.mut_seq[:0 - min_len]
+                self.del_seq = ''
+            else:
+                self.del_seq = self.ref_seq[:0 - min_len]
+                self.ins_seq = ''
+        else:
+            for pos in range(0, min_len):
+                if self.ref_seq[pos] != self.mut_seq[pos]:
+                    break
+                self.nterm_aligned = pos + 1
+
+            for pos in range(0, min_len):
+                if self.ref_seq[-1 - pos] != self.mut_seq[-1 - pos]:
+                    break
+                self.cterm_aligned = pos + 1
+
+            if not self.cterm_aligned:
+                self.del_seq = self.ref_seq[self.nterm_aligned:]
+                self.ins_seq = self.mut_seq[self.nterm_aligned:]
+
+            elif not self.nterm_aligned:
+                self.del_seq = self.ref_seq[:0 - self.cterm_aligned]
+                self.ins_seq = self.mut_seq[:0 - self.cterm_aligned]
+
+            elif len(self.ref_seq) - self.cterm_aligned + 1 <= self.nterm_aligned:
+
+                # repeat region
+                diff = len(self.mut_seq) - len(self.ref_seq)
+                if diff > 0:
+                    ins_length = diff
+                    del_length = 0
+                else:
+                    del_length = abs(diff)
+                    ins_length = 0
+                self.ins_seq = mutseq[self.nterm_aligned:self.nterm_aligned + ins_length]
+                self.del_seq = refseq[self.nterm_aligned:self.nterm_aligned + del_length]
+
+                if self.ins_seq:
+                    repeat_start = max(
+                        len(self.ref_seq) - self.cterm_aligned,
+                        self.nterm_aligned - len(self.ins_seq)
+                    )
+                    dupped_refseq = self.ref_seq[repeat_start:self.nterm_aligned]
+
+                    if dupped_refseq == self.ins_seq:
+                        self.is_dup = True
+
+            else:
+                # regular indel
+                self.del_seq = self.ref_seq[self.nterm_aligned:0 - self.cterm_aligned]
+                self.ins_seq = self.mut_seq[self.nterm_aligned:0 - self.cterm_aligned]
 
     def hgvs_protein_notation(self):
         """
         returns the HGVS protein notation for an indel call
         """
-        if any([
-            not self.ins_seq and not self.del_seq,  # synonymous variant
-            not self.del_seq and self.last_aligned < 1,  # insertion before protein start
-            self.last_aligned >= len(self.ref_seq)  # mutation after end of ref sequence
-        ]):
+        if not self.ins_seq and not self.del_seq:  # synonymous variant
             return None
-        last_align = self.last_aligned
-        next_align = self.next_aligned
-        if self.del_seq:
-            last_align = max(1, self.last_aligned + 1)
-            next_align = self.next_aligned - 1
-            if next_align < 0:
-                next_align = len(self.ref_seq)
 
-        if self.is_dup:
+        if not self.cterm_aligned and self.ins_seq:
+            if not self.del_seq:
+                # c-terminal extension
+                notation = 'p.{}{}ext{}{}'.format(
+                    self.ref_seq[-1] if not self.terminates else STOP_AA,
+                    len(self.ref_seq) + self.terminates,
+                    STOP_AA if self.mut_seq[-1] == STOP_AA or self.terminates else '',
+                    len(self.mut_seq) - len(self.ref_seq)
+                )
+            else:
+                # frameshift indel
+                notation = 'p.{}{}{}fs'.format(
+                    self.ref_seq[self.nterm_aligned],
+                    self.nterm_aligned + 1,
+                    self.ins_seq[0]
+                )
+                if STOP_AA in self.ins_seq:
+                    notation += '*{}'.format(self.ins_seq.index(STOP_AA) + 1)
+                elif self.terminates:
+                    notation += '*{}'.format(len(self.ins_seq) + 1)
+        elif not self.nterm_aligned and self.ins_seq and not self.del_seq:
+            # n-terminal extension
+            notation = 'p.{}1ext-{}'.format(
+                self.ref_seq[0],
+                len(self.mut_seq) - len(self.ref_seq)
+            )
+        elif self.is_dup:
             if self.del_seq:
                 raise NotImplementedError('duplication/deletion no supported', self)
-            dup_start = self.last_aligned - len(self.ins_seq) + 1
-            if dup_start == self.last_aligned:
-                notation = 'p.{}{}dup{}'.format(self.ref_seq[self.last_aligned - 1], self.last_aligned, self.ins_seq)
+
+            dup_start = self.nterm_aligned - len(self.ins_seq) + 1
+            if dup_start == self.nterm_aligned:
+                notation = 'p.{}{}dup{}'.format(self.ref_seq[self.nterm_aligned - 1], self.nterm_aligned, self.ins_seq)
             else:
                 notation = 'p.{}{}_{}{}dup{}'.format(
-                    self.ref_seq[dup_start - 1], dup_start, self.ref_seq[self.last_aligned - 1], self.last_aligned, self.ins_seq)
+                    self.ref_seq[dup_start - 1], dup_start, self.ref_seq[self.nterm_aligned - 1], self.nterm_aligned, self.ins_seq)
         else:
-            notation = 'p.{}{}'.format(self.ref_seq[last_align - 1], last_align)
-            if (self.next_aligned < 0 or self.next_aligned >= len(self.ref_seq)) and self.last_aligned < len(self.mut_seq):
-                notation += '{}fs'.format(self.mut_seq[self.last_aligned])
-                next_stops = [i for i, c in enumerate(self.mut_seq[self.last_aligned:]) if c == STOP_AA]
-                if next_stops and next_stops[0]:
-                    notation += '*{}'.format(next_stops[0] + 1)
-            else:
-                if next_align != last_align:
-                    notation += '_{}{}'.format(self.ref_seq[next_align - 1], next_align)
-                if self.del_seq:
-                    notation += 'del{}'.format(self.del_seq)
+            if self.del_seq:  # indel
+                notation = 'p.{}{}'.format(
+                    self.ref_seq[self.nterm_aligned],
+                    self.nterm_aligned + 1
+                )
+                if len(self.del_seq) > 1:
+                    notation += '_{}{}'.format(
+                        self.ref_seq[self.nterm_aligned + len(self.del_seq) - 1],
+                        self.nterm_aligned + len(self.del_seq)
+                    )
+                notation += 'del{}'.format(self.del_seq)
+
                 if self.ins_seq:
                     notation += 'ins{}'.format(self.ins_seq)
+
+            else:  # insertion
+                notation = 'p.{}{}_{}{}ins{}'.format(
+                    self.ref_seq[self.nterm_aligned - 1],
+                    self.nterm_aligned,
+                    self.ref_seq[self.nterm_aligned],
+                    self.nterm_aligned + 1,
+                    self.ins_seq
+                )
+
         return notation
 
     def __str__(self):
