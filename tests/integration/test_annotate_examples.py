@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from mavis.annotate.variant import annotate_events, Annotation, flatten_fusion_transcript
+from mavis.annotate.variant import annotate_events, Annotation, flatten_fusion_transcript, call_protein_indel, IndelCall
 from mavis.annotate.fusion import FusionTranscript
 from mavis.annotate.constants import SPLICE_TYPE
 from mavis.breakpoint import Breakpoint, BreakpointPair
@@ -47,6 +47,45 @@ class TestNDUFA12(unittest.TestCase):
         refseq = ann.transcript1.transcripts[0].get_seq(self.reference_genome)
         self.assertEqual(refseq, fseq)
         self.assertEqual(1, len(annotations))
+
+
+class TestARID1B(unittest.TestCase):
+    def setUp(self):
+        self.gene = get_example_genes()['ARID1B']
+        self.reference_annotations = {self.gene.chr: [self.gene]}
+        self.reference_genome = {self.gene.chr: MockObject(
+            seq=MockLongString(self.gene.seq, offset=self.gene.start - 1)
+        )}
+        self.best = get_best(self.gene)
+
+    def test_small_duplication(self):
+        bpp = BreakpointPair(
+            Breakpoint('6', 157100005, strand='+', orient='R'),
+            Breakpoint('6', 157100007, strand='+', orient='L'),
+            event_type=SVTYPE.DUP,
+            untemplated_seq='',
+            protocol=PROTOCOL.GENOME
+        )
+        # annotate the breakpoint with the gene
+        annotations = annotate_events([bpp], reference_genome=self.reference_genome, annotations=self.reference_annotations)
+        self.assertEqual(1, len(annotations))
+
+        ann = Annotation(bpp, transcript1=self.best, transcript2=self.best)
+        ft = FusionTranscript.build(
+            ann, self.reference_genome,
+            min_orf_size=300, max_orf_cap=10, min_domain_mapping_match=0.9
+        )
+        ref_tx = self.best.translations[0]
+        fusion_tx = ft.translations[0]
+
+        # compare the fusion translation to the refernece translation to create the protein notation
+        ref_aa_seq = ref_tx.get_aa_seq(self.reference_genome)
+        call = IndelCall(ref_aa_seq, fusion_tx.get_aa_seq())
+        self.assertTrue(call.is_dup)
+
+        notation = call_protein_indel(ref_tx, fusion_tx, self.reference_genome)
+        print(notation)
+        self.assertEqual('ENST00000346085:p.G319dupG', notation)
 
 
 class TestSVEP1(unittest.TestCase):

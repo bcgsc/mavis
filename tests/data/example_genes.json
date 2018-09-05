@@ -7980,6 +7980,56 @@
                     "start": 113238163
                 }
             ]
+        },
+        {
+            "aliases": ["ARID1B"],
+            "chr": "6",
+            "strand": "+",
+            "name": "ENSG00000049618",
+            "end": 157530401,
+            "start": 157099063,
+            "transcripts": [{
+                "name": "ENST00000346085",
+                "is_best_transcript": true,
+                "cdna_coding_end": 6751,
+                "cdna_coding_start": 2,
+                "exons": [
+                    {"start": 157099063, "end": 157100605},
+                    {"start": 157150361, "end": 157150555},
+                    {"start": 157192748, "end": 157192786},
+                    {"start": 157222510, "end": 157222659},
+                    {"start": 157256600, "end": 157256710},
+                    {"start": 157405796, "end": 157406039},
+                    {"start": 157431606, "end": 157431695},
+                    {"start": 157454162, "end": 157454341},
+                    {"start": 157469758, "end": 157470085},
+                    {"start": 157488174, "end": 157488319},
+                    {"start": 157495142, "end": 157495251},
+                    {"start": 157502103, "end": 157502312},
+                    {"start": 157505365, "end": 157505569},
+                    {"start": 157510776, "end": 157510914},
+                    {"start": 157511172, "end": 157511344},
+                    {"start": 157517299, "end": 157517449},
+                    {"start": 157519945, "end": 157520041},
+                    {"start": 157521839, "end": 157522622},
+                    {"start": 157525000, "end": 157525130},
+                    {"start": 157527301, "end": 157529495}
+                ],
+                "domains": [
+                    {"name": "PF12031", "regions": [{"start": 1939, "end": 2195}]},
+                    {"name": "PS50324", "regions": [{"start": 35, "end": 57}, {"start": 697, "end": 784}]},
+                    {"name": "PF01388", "regions": [{"start": 1065, "end": 1153}]},
+                    {"name": "PS50099", "regions": [{"start": 715, "end": 820}, {"start": 1472, "end": 1610}]},
+                    {"name": "SSF48371", "regions": [{"start": 2075, "end": 2220}]},
+                    {"name": "PS50316", "regions": [{"start": 81, "end": 104}]},
+                    {"name": "PS50322", "regions": [{"start": 107, "end": 131}, {"start": 574, "end": 646}]},
+                    {"name": "PS51011", "regions": [{"start": 1066, "end": 1157}]},
+                    {"name": "PS50310", "regions": [{"start": 2, "end": 47}, {"start": 329, "end": 493}]},
+                    {"name": "PS50315", "regions": [{"start": 141, "end": 401}]},
+                    {"name": "SSF46774", "regions": [{"start": 1049, "end": 1168}]},
+                    {"name": "SM00501", "regions": [{"start": 1067, "end": 1158}]}
+                ]
+            }]
         }
     ]
 }
