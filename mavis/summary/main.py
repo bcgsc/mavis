@@ -221,7 +221,7 @@ def main(
                 filtered_pairs.append(bpp)
         bpps_by_library[library] = collapsed
 
-    # group close split read calls with identical annotations
+    # group close calls with identical annotations
     for library in bpps_by_library:
         uncollapsed = dict()
         for bpp in bpps_by_library[library]:
@@ -240,8 +240,7 @@ def main(
 
         collapsed = []
         for bpp_set in uncollapsed.values():
-            collapsed.extend([b for b in bpp_set if b.call_method != CALL_METHOD.SPLIT])
-            grouped, removed = group_by_distance([b for b in bpp_set if b.call_method == CALL_METHOD.SPLIT], distances)
+            grouped, removed = group_by_distance(bpp_set, distances)
             collapsed.extend(grouped)
             for bpp in removed:
                 bpp.data[COLUMNS.filter_comment] = 'collapsed into another call'
