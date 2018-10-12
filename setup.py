@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 import re
 
 
-VERSION = '2.1.3'
+VERSION = '2.1.4'
 
 
 def parse_md_readme():
@@ -41,8 +41,9 @@ def check_nonpython_dependencies():
     aligner = re.split(r'\s+', aligner)[0]
     pth = shutil.which(aligner)
     if not pth:
-        raise OSError('Aligner is required. Missing executable: {}'.format(aligner))
-    print('Found: aligner at', pth)
+        print('WARNING: Aligner is required. Missing executable: {}'.format(aligner))
+    else:
+        print('Found: aligner at', pth)
 
 
 # HSTLIB is a dependency for pysam.
