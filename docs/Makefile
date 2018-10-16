@@ -4,6 +4,7 @@
 # You can set these variables from the command line.
 SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build -E
+INSTALL_COMMAND = pip install ./..[docs]
 PAPER         =
 BUILDDIR      = build
 PREPROCESSING = python preprocess.py
@@ -51,6 +52,7 @@ clean:
 
 .PHONY: html
 html:
+	$(INSTALL_COMMAND)
 	$(PREPROCESSING)
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
