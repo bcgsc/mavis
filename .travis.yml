@@ -10,16 +10,16 @@ os:
 
 before_install:
     - >
-        git clone https://github.com/lh3/bwa.git
-        cd bwa
-        git checkout v0.7.17
-        make
-        export PATH=$PATH:$(pwd)
-        cd ..
+        git clone https://github.com/lh3/bwa.git;
+        cd bwa;
+        git checkout v0.7.17;
+        make;
+        export PATH=$PATH:$(pwd);
+        cd ..;
     - >
-        wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/blat/blat
-        chmod a+x blat
-        export PATH=$PATH:$(pwd)
+        wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/blat/blat;
+        chmod a+x blat;
+        export PATH=$PATH:$(pwd);
 
 
 python:
