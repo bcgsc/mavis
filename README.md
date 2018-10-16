@@ -1,11 +1,13 @@
-![PyPi](https://img.shields.io/pypi/v/mavis.svg) ![Travis](https://travis-ci.org/creisle/mavis.svg?branch=master)
-
 <object type='image/svg+xml' data='docs/source/_static/acronym.svg'>
     <object type='image/svg+xml' data='_static/acronym.svg'>
     	<img src='docs/source/_static/acronym.svg' onerror='this.src="_static/acronym.svg"'>
     </object><br>
 </object>
 
+
+![PyPi](https://img.shields.io/pypi/v/mavis.svg) ![Travis](https://travis-ci.org/creisle/mavis.svg?branch=master)
+
+<br/>
 
 # About
 
@@ -114,6 +116,14 @@ source reference_inputs/hg19_env.sh
 
 Once the above 3 steps are complete [MAVIS](http://mavis.bcgsc.ca) is ready to be run.
 See the MAVIS [tutorial](http://mavis.bcgsc.ca/docs/latest/pipeline.html#mavis-mini-tutorial) to learn about running MAVIS.
+
+
+## Build the Sphinx Documentation
+
+```
+pip install .[docs]
+sphinx-build docs/source/ html
+```
 
 
 ## Citation
