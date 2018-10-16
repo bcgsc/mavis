@@ -51,6 +51,38 @@ def check_nonpython_dependencies():
 os.environ['HTSLIB_CONFIGURE_OPTIONS'] = '--disable-lzma --disable-bz2 --disable-libcurl'
 
 
+TEST_REQS = [
+    'timeout-decorator>=0.3.3',
+    'coverage>=4.2',
+    'pycodestyle>=2.3.1',
+    'pytest',
+    'pytest-cov'
+]
+
+
+DOC_REQS = [
+    'docutils>=0.14',
+    'm2r>=0.1.12',
+    'sphinx-rtd-theme>=0.4.2',
+    'sphinx>=1.8.1'
+]
+
+
+INSTALL_REQS = [
+    'Distance>=0.1.3',
+    'Shapely>=1.6.4.post1',
+    'biopython>=1.70',
+    'braceexpand==0.1.2',
+    'colour',
+    'networkx==1.11.0',
+    'numpy>=1.13.1',
+    'pysam>=0.9',
+    'pyvcf==0.6.8',
+    'shortuuid>=0.5.0',
+    'svgwrite'
+]
+
+
 setup(
     name='mavis',
     version='{}'.format(VERSION),
@@ -59,35 +91,12 @@ setup(
     packages=find_packages(exclude=['tests']),
     description='A Structural Variant Post-Processing Package',
     long_description=parse_md_readme(),
-    install_requires=[
-        'Distance>=0.1.3',
-        'Shapely==1.6.4.post1',
-        'biopython>=1.70',
-        'braceexpand==0.1.2',
-        'colour',
-        'networkx==1.11.0',
-        'numpy>=1.13.1',
-        'pysam>=0.9',
-        'pyvcf==0.6.8',
-        'shortuuid>=0.5.0',
-        'svgwrite'
-    ],
+    install_requires=INSTALL_REQS,
     extras_require={
-        'docs': [  # modules required for auto-generating the documentation
-            'docutils==0.14',
-            'm2r>=0.1.12',
-            'sphinx-rtd-theme==0.2.5b1',
-            'sphinx==1.6.3'
-        ]
+        'docs': DOC_REQS,
+        'test': TEST_REQS
     },
-    tests_require=[
-        'nose==1.3.7',
-        'timeout-decorator==0.3.3',
-        'coverage==4.2',
-        'nose-capturestderr==1.2',
-        'nose-exclude>=0.5.0',
-        'pycodestyle>=2.3.1'
-    ],
+    tests_require=TEST_REQS,
     setup_requires=[
         'pip>=9.0.0',
         'setuptools>=36.0.0'
@@ -95,7 +104,7 @@ setup(
     python_requires='>=3.2',
     author='Caralyn Reisle',
     author_email='creisle@bcgsc.ca',
-    test_suite='nose.collector',
+    test_suite='tests',
     entry_points={'console_scripts': ['mavis = mavis.main:main']},
     project_urls={'mavis': 'http://mavis.bcgsc.ca'}
 )

@@ -4,11 +4,10 @@
     </object><br>
 </object>
 
-![master branch build Status](https://www.bcgsc.ca/bamboo/plugins/servlet/wittified/build-status/MAV-TEST)
-*(master)*
 
-![develop branch build status](https://www.bcgsc.ca/bamboo/plugins/servlet/wittified/build-status/MAV-TEST0)
-*(develop)*
+![PyPi](https://img.shields.io/pypi/v/mavis.svg) ![Travis](https://travis-ci.org/creisle/mavis.svg?branch=master) ![ReadTheDocs](https://readthedocs.org/projects/pip/badge/)
+
+<br/>
 
 # About
 
@@ -117,6 +116,14 @@ source reference_inputs/hg19_env.sh
 
 Once the above 3 steps are complete [MAVIS](http://mavis.bcgsc.ca) is ready to be run.
 See the MAVIS [tutorial](http://mavis.bcgsc.ca/docs/latest/pipeline.html#mavis-mini-tutorial) to learn about running MAVIS.
+
+
+## Build the Sphinx Documentation
+
+```
+pip install .[docs]
+sphinx-build docs/source/ html
+```
 
 
 ## Citation

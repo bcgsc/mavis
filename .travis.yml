@@ -1,0 +1,32 @@
+
+# Config file for automatic testing at travis-ci.org
+
+language: python
+
+
+os:
+    - linux
+
+
+before_install:
+    - >
+        git clone https://github.com/lh3/bwa.git;
+        cd bwa;
+        git checkout v0.7.17;
+        make;
+        export PATH=$PATH:$(pwd);
+        cd ..;
+    - >
+        wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/blat/blat;
+        chmod a+x blat;
+        export PATH=$PATH:$(pwd);
+
+
+python:
+  - 3.6
+
+# Command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
+install: pip install -U tox-travis
+
+# Command to run tests, e.g. python setup.py test
+script: tox
