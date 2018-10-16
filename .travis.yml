@@ -6,11 +6,26 @@ language: python
 
 os:
     - linux
+    - osx
 
 
 before_install:
-    - sudo apt-get install -y bwa
-    - wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/blat/blat; chmod a+x blat; export PATH=$PATH:.
+    - >
+        if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+            git clone https://github.com/lh3/bwa.git
+            cd bwa
+            git checkout v0.7.17
+            make
+            export PATH=$PATH:$(pwd)
+        fi
+    - >
+        if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+            wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/blat/blat
+            chmod a+x blat
+            export PATH=$PATH:$(pwd)
+        fi
+    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; brew install bwa; fi
+     - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install blat; fi
 
 
 python:
