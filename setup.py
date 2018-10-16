@@ -61,10 +61,10 @@ TEST_REQS = [
 
 
 DOC_REQS = [
-    'docutils==0.14',
+    'docutils>=0.14',
     'm2r>=0.1.12',
-    'sphinx-rtd-theme==0.2.5b1',
-    'sphinx==1.6.3'
+    'sphinx-rtd-theme>=0.4.2',
+    'sphinx>=1.8.1'
 ]
 
 
