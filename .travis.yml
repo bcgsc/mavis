@@ -2,6 +2,17 @@
 # Config file for automatic testing at travis-ci.org
 
 language: python
+
+
+os:
+    - linux
+
+
+before_install:
+    - sudo apt-get install -y bwa
+    - wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/blat/blat; chmod a+x blat; export PATH=$PATH:.
+
+
 python:
   - 3.6
   - 3.5

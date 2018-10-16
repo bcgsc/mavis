@@ -1,14 +1,11 @@
+![PyPi](https://img.shields.io/pypi/v/mavis.svg) ![Travis](https://travis-ci.org/creisle/mavis.svg?branch=master)
+
 <object type='image/svg+xml' data='docs/source/_static/acronym.svg'>
     <object type='image/svg+xml' data='_static/acronym.svg'>
     	<img src='docs/source/_static/acronym.svg' onerror='this.src="_static/acronym.svg"'>
     </object><br>
 </object>
 
-![master branch build Status](https://www.bcgsc.ca/bamboo/plugins/servlet/wittified/build-status/MAV-TEST)
-*(master)*
-
-![develop branch build status](https://www.bcgsc.ca/bamboo/plugins/servlet/wittified/build-status/MAV-TEST0)
-*(develop)*
 
 # About
 

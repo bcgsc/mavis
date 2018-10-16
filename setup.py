@@ -55,7 +55,8 @@ TEST_REQS = [
     'timeout-decorator>=0.3.3',
     'coverage>=4.2',
     'pycodestyle>=2.3.1',
-    'pytest'
+    'pytest',
+    'pytest-cov'
 ]
 
 

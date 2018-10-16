@@ -17,6 +17,9 @@ _EXAMPLE_GENES = None
 
 
 def get_example_genes():
+    global _EXAMPLE_GENES
+    if _EXAMPLE_GENES is None:
+        _EXAMPLE_GENES = set_example_genes()
     return _EXAMPLE_GENES
 
 
@@ -34,11 +37,6 @@ def set_example_genes():
                     result[alias] = gene
     print(result.keys())
     return result
-
-
-def setUpPackage():
-    global _EXAMPLE_GENES
-    _EXAMPLE_GENES = set_example_genes()
 
 
 class MockObject:
