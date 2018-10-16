@@ -163,7 +163,7 @@ templates_path = ['source/_templates']
 # You can specify multiple suffix as a list of string:
 #
 numfig = True
-numfig_format = {'figure': 'Figure %%s.'}
+numfig_format = {'figure': 'Figure %s.'}
 source_suffix = ['.rst', '.md']
 
 # The encoding of source files.
