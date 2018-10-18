@@ -16,7 +16,5 @@ notifications:
       - 68e06d210f01b88c570294506077e4@hipchat.bcgsc.ca/MAVIS
     template:
       - '%{repository_slug}#%{build_number} (%{branch} - %{commit} : %{author}): %{message}
-    notify: true
   email:
       - mavis@bcgsc.ca
-
