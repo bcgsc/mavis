@@ -1,32 +1,16 @@
-
-# Config file for automatic testing at travis-ci.org
-
 language: python
-
-
 os:
-    - linux
-
-
+- linux
 before_install:
-    - >
-        git clone https://github.com/lh3/bwa.git;
-        cd bwa;
-        git checkout v0.7.17;
-        make;
-        export PATH=$PATH:$(pwd);
-        cd ..;
-    - >
-        wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/blat/blat;
-        chmod a+x blat;
-        export PATH=$PATH:$(pwd);
-
-
+- |
+  git clone https://github.com/lh3/bwa.git; cd bwa; git checkout v0.7.17; make; export PATH=$PATH:$(pwd); cd ..;
+- |
+  wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/blat/blat; chmod a+x blat; export PATH=$PATH:$(pwd);
 python:
-  - 3.6
-
-# Command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
+- 3.6
 install: pip install -U tox-travis
-
-# Command to run tests, e.g. python setup.py test
 script: tox
+notifications:
+  hipchat:
+    rooms:
+      secure: POp7QrSx6LPjPvwhuc1o8g9PSymgN30qUiPb61ZWMCTbds0lfdfS/zqN+vuYKlWQBghnRJHZbt2A7VUhcSmXQMV3PPXeB9ZBDamBWgy/JNCywINFvOOuxcpzOQ4CfoN5wVv4RJK1P0I3g+/EQcQ2B2FIe1i8CzhIDLHRtaW2DVpk+gO9DtluSyn0zqzXm9wGCVYNCfD9BpoToq6Zq8HmXyvD05uHD93E/OMfSK+zsDnLvj7cjdDji+H1CYUft1FKUiTzH2R1vCkZFZK3I+f+dhz9avVRS/FJFqC1q19HSnnNie7g+CS5nGcMutvgrous7xk+BQ5r0YyvC9m5WdhUrk0hXnYmLDF5eby4+3MXG+sjXkphfH58l7xO5hKJF3yjIb9E+YIvkzHF/ALumz9KUcGMYNinNyTP7k1UPEc8gS6O2OQEeuDOCQst+KKcXl/ToaiRTbaddA3C/DlXkZofge9xKwS71hCWC7xXWAnWw6br4TKdjZFvwYcL/uqz6SJDQwiG4SG8hgaQSV8LxTi4HUdK/fQKkK9z9YfMzvIhs7H5LH42wv9DaX9MPf3Vow3Z2el6IMBQGTv4TfOw0Ltl5GQoVVUKs2+Y8jsZjPxJunTnNQIHhdzkHNPyI95+WjkCXTNZGpsYiaZYJxBgsr+ThvMIl+/dkXzuvOSpulVheXo=
