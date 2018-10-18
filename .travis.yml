@@ -13,4 +13,10 @@ script: tox
 notifications:
   hipchat:
     rooms:
-      secure: POp7QrSx6LPjPvwhuc1o8g9PSymgN30qUiPb61ZWMCTbds0lfdfS/zqN+vuYKlWQBghnRJHZbt2A7VUhcSmXQMV3PPXeB9ZBDamBWgy/JNCywINFvOOuxcpzOQ4CfoN5wVv4RJK1P0I3g+/EQcQ2B2FIe1i8CzhIDLHRtaW2DVpk+gO9DtluSyn0zqzXm9wGCVYNCfD9BpoToq6Zq8HmXyvD05uHD93E/OMfSK+zsDnLvj7cjdDji+H1CYUft1FKUiTzH2R1vCkZFZK3I+f+dhz9avVRS/FJFqC1q19HSnnNie7g+CS5nGcMutvgrous7xk+BQ5r0YyvC9m5WdhUrk0hXnYmLDF5eby4+3MXG+sjXkphfH58l7xO5hKJF3yjIb9E+YIvkzHF/ALumz9KUcGMYNinNyTP7k1UPEc8gS6O2OQEeuDOCQst+KKcXl/ToaiRTbaddA3C/DlXkZofge9xKwS71hCWC7xXWAnWw6br4TKdjZFvwYcL/uqz6SJDQwiG4SG8hgaQSV8LxTi4HUdK/fQKkK9z9YfMzvIhs7H5LH42wv9DaX9MPf3Vow3Z2el6IMBQGTv4TfOw0Ltl5GQoVVUKs2+Y8jsZjPxJunTnNQIHhdzkHNPyI95+WjkCXTNZGpsYiaZYJxBgsr+ThvMIl+/dkXzuvOSpulVheXo=
+      - 68e06d210f01b88c570294506077e4@hipchat.bcgsc.ca/MAVIS
+    template:
+      - '%{repository_slug}#%{build_number} (%{branch} - %{commit} : %{author}): %{message}
+    notify: true
+  email:
+      - mavis@bcgsc.ca
+
