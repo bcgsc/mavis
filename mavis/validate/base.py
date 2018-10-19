@@ -1,5 +1,5 @@
 import itertools
-
+import logging
 from .constants import DEFAULTS
 from ..assemble import assemble
 from ..bam import cigar as _cigar
@@ -863,7 +863,7 @@ class Evidence(BreakpointPair):
                 mates = self.bam_cache.get_mate(flanking_read, allow_file_access=False)
                 for mate in mates:
                     if mate.is_unmapped:
-                        log('ignoring unmapped mate', mate.query_name)
+                        log('ignoring unmapped mate', mate.query_name, level=logging.DEBUG)
                         continue
                     self.collect_flanking_pair(flanking_read, mate)
             except KeyError:
@@ -907,7 +907,7 @@ class Evidence(BreakpointPair):
                     mates = self.bam_cache.get_mate(flanking_read, allow_file_access=False)
                     for mate in mates:
                         if mate.is_unmapped:
-                            log('ignoring invalid mate', mate.query_name)
+                            log('ignoring unmapped mate', mate.query_name, level=logging.DEBUG)
                             continue
                         try:
                             self.collect_compatible_flanking_pair(flanking_read, mate, compatible_type)
