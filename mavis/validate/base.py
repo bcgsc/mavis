@@ -862,6 +862,9 @@ class Evidence(BreakpointPair):
             try:
                 mates = self.bam_cache.get_mate(flanking_read, allow_file_access=False)
                 for mate in mates:
+                    if mate.is_unmapped:
+                        log('ignoring unmapped mate', mate.query_name)
+                        continue
                     self.collect_flanking_pair(flanking_read, mate)
             except KeyError:
                 pass
@@ -903,6 +906,9 @@ class Evidence(BreakpointPair):
                 try:
                     mates = self.bam_cache.get_mate(flanking_read, allow_file_access=False)
                     for mate in mates:
+                        if mate.is_unmapped:
+                            log('ignoring invalid mate', mate.query_name)
+                            continue
                         try:
                             self.collect_compatible_flanking_pair(flanking_read, mate, compatible_type)
                         except ValueError:
