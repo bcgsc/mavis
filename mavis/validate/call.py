@@ -350,7 +350,7 @@ class EventCall(BreakpointPair):
                 break
             repeat_count += 1
             rightmost -= len(expected_sequence)
-        return repeat_count
+        return repeat_count, expected_sequence
 
     def flatten(self):
         """
@@ -379,7 +379,7 @@ class EventCall(BreakpointPair):
             COLUMNS.supplementary_call: self.is_supplementary()
         })
         try:
-            row[COLUMNS.repeat_count] = EventCall.characterize_repeat_region(self, self.source_evidence.reference_genome)
+            row[COLUMNS.repeat_count] = EventCall.characterize_repeat_region(self, self.source_evidence.reference_genome)[0]
         except ValueError:
             row[COLUMNS.repeat_count] = None
 
@@ -682,7 +682,6 @@ def _call_by_flanking_pairs(evidence, event_type, consumed_evidence=None):
     selected_flanking_pairs = []
     fragments = []
     available_flanking_pairs = filter_consumed_pairs(evidence.flanking_pairs, consumed_evidence)
-
     def _compute_coverage_intervals(pairs):
         first_positions = []
         second_positions = []
