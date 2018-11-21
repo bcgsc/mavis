@@ -1139,7 +1139,7 @@ class TestCharacterizeRepeatRegion(unittest.TestCase):
             untemplated_seq='',
             event_type=SVTYPE.DEL
         )
-        self.assertEqual(0, call.EventCall.characterize_repeat_region(bpp, reference_genome))
+        self.assertEqual((0, ''), call.EventCall.characterize_repeat_region(bpp, reference_genome))
 
     def test_homopolymer_insertion(self):
         bpp = BreakpointPair(
@@ -1153,7 +1153,7 @@ class TestCharacterizeRepeatRegion(unittest.TestCase):
             'TCGATTCAGGATCAGATTTTGAACAAGTACATACG', offset=100
         ))}
         print('upto and including the first breakpoint', reference_genome['1'].seq[bpp.break1.start - 10:bpp.break1.start])
-        self.assertEqual(4, call.EventCall.characterize_repeat_region(bpp, reference_genome))
+        self.assertEqual((4, 'T'), call.EventCall.characterize_repeat_region(bpp, reference_genome))
 
     def test_homopolymer_deletion(self):
         bpp = BreakpointPair(
@@ -1167,7 +1167,7 @@ class TestCharacterizeRepeatRegion(unittest.TestCase):
             'TCGATTCAGGATCAGATTTTTGAACAAGTACATACG', offset=100
         ))}
         print('upto and including the first breakpoint', reference_genome['1'].seq[bpp.break1.start - 10:bpp.break1.start])
-        self.assertEqual(4, call.EventCall.characterize_repeat_region(bpp, reference_genome))
+        self.assertEqual((4, 'T'), call.EventCall.characterize_repeat_region(bpp, reference_genome))
 
     def test_homopolymer_duplication(self):
         bpp = BreakpointPair(
@@ -1181,7 +1181,7 @@ class TestCharacterizeRepeatRegion(unittest.TestCase):
             'TCGATTCAGGATCAGATTTTTGAACAAGTACATACG', offset=100
         ))}
         print('upto and including the first breakpoint', reference_genome['1'].seq[bpp.break1.start - 10:bpp.break1.start])
-        self.assertEqual(4, call.EventCall.characterize_repeat_region(bpp, reference_genome))
+        self.assertEqual((4, 'T'), call.EventCall.characterize_repeat_region(bpp, reference_genome))
 
     def test_repeat_duplication(self):
         bpp = BreakpointPair(
@@ -1195,7 +1195,7 @@ class TestCharacterizeRepeatRegion(unittest.TestCase):
             'TCGATTCAGGATCAGATAGTAGTAGGAACAAGTACATACG', offset=100
         ))}
         print('upto and including the first breakpoint', reference_genome['1'].seq[bpp.break1.start - 10:bpp.break1.start])
-        self.assertEqual(2, call.EventCall.characterize_repeat_region(bpp, reference_genome))
+        self.assertEqual((2, 'TAG'), call.EventCall.characterize_repeat_region(bpp, reference_genome))
 
     def test_repeat_insertion(self):
         bpp = BreakpointPair(
@@ -1209,7 +1209,7 @@ class TestCharacterizeRepeatRegion(unittest.TestCase):
             'TCGATTCAGGATCAGATAGTAGTAGGAACAAGTACATACG', offset=100
         ))}
         print('upto and including the first breakpoint', reference_genome['1'].seq[bpp.break1.start - 10:bpp.break1.start])
-        self.assertEqual(3, call.EventCall.characterize_repeat_region(bpp, reference_genome))
+        self.assertEqual((3, 'TAG'), call.EventCall.characterize_repeat_region(bpp, reference_genome))
 
     def test_repeat_deletion(self):
         bpp = BreakpointPair(
@@ -1223,7 +1223,7 @@ class TestCharacterizeRepeatRegion(unittest.TestCase):
             'TCGATTCAGGATCAGATAGTAGTAGTAGGAACAAGTACATACG', offset=100
         ))}
         print('upto and including the second breakpoint', reference_genome['1'].seq[bpp.break2.start - 10:bpp.break2.start])
-        self.assertEqual(3, call.EventCall.characterize_repeat_region(bpp, reference_genome))
+        self.assertEqual((3, 'TAG'), call.EventCall.characterize_repeat_region(bpp, reference_genome))
 
     def test_norepeat_insertion(self):
         bpp = BreakpointPair(
@@ -1237,7 +1237,7 @@ class TestCharacterizeRepeatRegion(unittest.TestCase):
             'TCGATTCAGGATCAGATAGTAGTAGGAACAAGTACATACG', offset=100
         ))}
         print('upto and including the first breakpoint', reference_genome['1'].seq[bpp.break1.start - 10:bpp.break1.start])
-        self.assertEqual(0, call.EventCall.characterize_repeat_region(bpp, reference_genome))
+        self.assertEqual((0, 'TTG'), call.EventCall.characterize_repeat_region(bpp, reference_genome))
 
     def test_invalid_event_type(self):
         bpp = BreakpointPair(

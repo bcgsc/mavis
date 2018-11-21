@@ -682,6 +682,7 @@ def _call_by_flanking_pairs(evidence, event_type, consumed_evidence=None):
     selected_flanking_pairs = []
     fragments = []
     available_flanking_pairs = filter_consumed_pairs(evidence.flanking_pairs, consumed_evidence)
+
     def _compute_coverage_intervals(pairs):
         first_positions = []
         second_positions = []
