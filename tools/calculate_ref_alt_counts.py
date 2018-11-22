@@ -1,0 +1,153 @@
+"""
+Module to calculate the ref and alt counts of small indels from a mavis output file
+
+"""
+import argparse
+import logging
+import statistics as stats
+
+import pysam
+
+from mavis.annotate.file_io import load_reference_genome
+from mavis.constants import SVTYPE
+from mavis.util import LOG as log
+from mavis.util import output_tabbed_file, read_inputs
+from mavis.validate.call import EventCall
+
+
+def get_read_length(bam_cache, sample_cap=20):
+    """
+    Determines read length from the first few reads in the bam file. 
+    Assumes consistent read length in bam file.
+    """
+    read_lengths = []
+    counter = 0
+    for read in bam_cache.fetch():
+        if counter == sample_cap:
+            break
+        read_lengths.append(len(read.query_sequence))
+        counter += 1
+
+    read_length = stats.median(read_lengths)
+    return read_length
+
+
+# Requires BAM files and events list
+class RefAltCalculator():
+    """
+    Class to calculate the ref and alt counts of a bpp for a given list of bams
+
+    Args:
+        input_bams (list of tuples): List of (library name, path to bam) tuples
+        reference_genome (str or dict): Path to the reference fasta file or a dictionary created by load_reference_genome
+        max_event_size (int): The maximum size of a indel event to calculate the ref/alt counts for
+        buffer (int): The amount of overhang (accounting for repeats) a read must have in order to be considered
+    """
+
+    def __init__(self, input_bams, reference_genome, max_event_size=6, buffer=1):
+        if isinstance(reference_genome, str):
+            log('loading:', reference_genome, time_stamp=True)
+            self.reference_genome = load_reference_genome(reference_genome)
+        self._load_bams(input_bams)
+        self.bpp_cache = dict()
+        self.max_event_size = max_event_size
+        self.buffer = buffer
+
+    def _load_bams(self, input_bams):
+        """
+        Loads the input bams with pysam and get determines their read lengths
+        """
+        input_bams = [(i, pysam.AlignmentFile(j, 'rb')) for i, j in input_bams]
+        input_bams = [(i, get_read_length(j), j) for i, j in input_bams]
+        self.input_bams = input_bams
+
+    def calculate_ref_counts(self, bpp):
+        """
+        Calculates the ref and alt count for a single BreakPointPair object
+        """
+        if len(bpp.break1) + len(bpp.break2) > 2 or \
+            max(bpp.break2.end - bpp.break1.start,
+                len(bpp.untemplated_seq if bpp.untemplated_seq else '')) > self.max_event_size:
+            raise ValueError("Cannot determine ref and alt count for non precise breakpoint pairs")
+
+        if bpp not in self.bpp_cache:
+            log("processing {}".format(bpp))
+            data = dict()
+            for name, read_length, bam in self.input_bams:
+                ref, alt, ign, mul, ref_sequence, alt_sequence = calculate_ref_count(
+                    bpp, read_length, self.reference_genome, bam, self.buffer)
+                log(bpp, name)
+                log('Calculated counts: Ref: {}, Alt: {}, Mul: {}, Ignored: {} '.format(
+                    len(ref), len(alt), len(mul), len(ign)))
+                log('Ref_probe: {}, Alt_probe: {}'.format(ref_sequence, alt_sequence))
+                info = {'{}_ref_count'.format(name): len(ref),
+                        '{}_alt_count'.format(name): len(alt),
+                        '{}_ignored_count'.format(name): len(ign)}
+                for key, value in info.items():
+                    data[key] = value
+                self.bpp_cache[bpp] = data
+        for key, value in self.bpp_cache[bpp].items():
+            bpp.data[key] = value
+        return bpp
+
+    def calculate_all_counts(self, input_files, output_file):
+        """
+        Helper method to calculate the ref and alt counts for all bpps in a file
+
+        Args:
+            input_files (list): List of mavis formatted files to use as input
+            output_file (str): Path to the desired output file
+        """
+        processed_bpps = {}
+        filtered_events = []
+
+        bpps = read_inputs(input_files, add_default={'stranded': False})
+
+        for bpp in bpps:
+            # only use precise bpps that are within a certain event size
+            try:
+                processed_bpps[bpp.product_id] = self.calculate_ref_counts(bpp)
+            except ValueError:
+                # wrong event type to calculate a ref/alt count
+                filtered_events.append(bpp)
+                continue
+
+        log('filtered {} events'.format(len(filtered_events)))
+
+        output_tabbed_file(processed_bpps.values(), output_file)
+        return processed_bpps, filtered_events
+
+
+def parse_arguments():
+    """
+    parse command line arguments
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-o', '--output',
+        help='path to the output file', required=True, metavar='FILEPATH')
+    parser.add_argument(
+        '-n', '--input', required=True, metavar='FILEPATH', nargs='+',
+        help='Path to the Input mavis summary file')
+    parser.add_argument(
+        '-b', '--bam', action='append', nargs=2, default=[],
+        help='name for the library and the path to its bam file', required=True, metavar=('<name>', 'FILEPATH'))
+    parser.add_argument(
+        '-r', '--reference', required=True, metavar='FILEPATH',
+        help='Path to the Input reference genome fasta file')
+    args = parser.parse_args()
+    return args
+
+
+def main():
+    """
+    main entry point
+    """
+    log_conf = {'format': '{message}', 'style': '{', 'level': 1}
+    logging.basicConfig(**log_conf)
+    args = parse_arguments()
+    calculate_all_counts(args.reference_genome, args.bam, args.input, args.output_file)
+
+
+if __name__ == "__main__":
+    main()
