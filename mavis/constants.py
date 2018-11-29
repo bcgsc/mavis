@@ -652,7 +652,9 @@ STOP_AA = '*'
 
 GIEMSA_STAIN = MavisNamespace(
     GNEG='gneg',
+    GPOS33='gpos33',
     GPOS50='gpos50',
+    GPOS66='gpos66',
     GPOS75='gpos75',
     GPOS25='gpos25',
     GPOS100='gpos100',

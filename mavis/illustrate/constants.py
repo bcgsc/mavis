@@ -153,13 +153,15 @@ class DiagramSettings:
         self.legend_border_stroke_width = 1
 
         self.template_band_stroke_width = 0.5
-        temp = [c.hex for c in Color('#ffffff').range_to(Color('#000000'), 5)]
+        temp = [c.hex for c in Color('#ffffff').range_to(Color('#000000'), 7)]
         self.template_band_fill = {
             GIEMSA_STAIN.ACEN: '#800000',
             GIEMSA_STAIN.GPOS25: temp[1],
-            GIEMSA_STAIN.GPOS50: temp[2],
-            GIEMSA_STAIN.GPOS75: temp[3],
-            GIEMSA_STAIN.GPOS100: temp[4],
+            GIEMSA_STAIN.GPOS33: temp[2],
+            GIEMSA_STAIN.GPOS50: temp[3],
+            GIEMSA_STAIN.GPOS66: temp[4],
+            GIEMSA_STAIN.GPOS75: temp[5],
+            GIEMSA_STAIN.GPOS100: temp[6],
             GIEMSA_STAIN.GNEG: '#ffffff'
         }
         self.template_band_stroke = '#000000'
