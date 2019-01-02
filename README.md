@@ -125,6 +125,32 @@ pip install .[docs]
 sphinx-build docs/source/ html
 ```
 
+## Deploy to PyPi
+
+Install m2r to ensure the README is converted nicely
+
+```bash
+pip install m2r
+```
+
+Install to build the egg
+
+```bash
+python setup.py install
+```
+
+Build the other distribution files
+
+```bash
+python setup.py sdist
+```
+
+Use twine to upload
+
+```bash
+twine upload -r pypi dist/*
+```
+
 
 ## Citation
 
