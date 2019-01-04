@@ -320,6 +320,11 @@ class EventCall(BreakpointPair):
         For a given event, determines the number of repeats the insertion/duplication/deletion is following.
         This is most useful in flagging homopolymer regions. Will raise a ValueError if the current event is
         not an expected type or is non-specific.
+
+        Returns:
+            tuple:
+            :class:`int` - the number of repeats
+            :class:`str` - the repeat sequence
         """
         if len(event.break1) + len(event.break2) > 2:
             raise ValueError('Cannot characterize a repeat region for a non-specific call')

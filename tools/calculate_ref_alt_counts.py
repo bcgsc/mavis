@@ -33,6 +33,56 @@ def get_read_length(bam_cache, sample_cap=20):
 
 
 # Requires BAM files and events list
+def calculate_ref_count(bpp, read_length, reference_genome, bam_cache, buffer=1):
+    """
+    Attempt to calculate the amount of reference reads that support the bpp based on position
+
+    """
+    alt_reads = set()
+    ref_reads = set()
+    ignored_reads = set()
+    multimap_reads = set()
+
+    ref = reference_genome[bpp.break1.chr]
+    try:
+        count, repeat = EventCall.characterize_repeat_region(bpp, reference_genome)
+    except ValueError:
+        # indels cannot be characterized
+        count, repeat = (0, '')
+    # Build the Ref and Alt sequences - This will fail if there are any SNPs in the sample that also occur near the breakpoints.
+    ins_seq = bpp.untemplated_seq if bpp.untemplated_seq else ''
+    if bpp.event_type == SVTYPE.DUP:
+        repeat_start = bpp.break1.start - len(repeat) * count
+        ref_sequence = str(ref[repeat_start - buffer: bpp.break2.end + buffer].seq)
+        dup_seq = str(ref[bpp.break1.start - 1: bpp.break2.end].seq) + ins_seq
+        alt_sequence = str(ref[repeat_start - buffer: bpp.break2.end].seq) + dup_seq + str(ref[bpp.break2.end:bpp.break2.end + buffer].seq)
+    elif bpp.event_type == SVTYPE.INS or bpp.event_type == SVTYPE.DEL:
+        repeat_start = min(bpp.break1.start - 1, bpp.break2.end - 1 - len(repeat) * (count + 1))
+        ref_sequence = str(ref[repeat_start - buffer: bpp.break2.end + buffer].seq)
+        alt_sequence = str(ref[repeat_start - buffer: bpp.break1.start].seq) + ins_seq + str(ref[bpp.break2.end - 1: bpp.break2.end + buffer].seq)
+    else:
+        raise ValueError("Cannot determine ref and alt counts for non dup/ins/del event types")
+    all_reads = bam_cache.fetch(bpp.break1.chr, bpp.break1.start - read_length, bpp.break2.end + read_length)
+
+    for read in all_reads:
+        # compare the actual sequence
+        ref_align = ref_sequence in read.seq
+        alt_align = alt_sequence in read.seq
+
+        if ref_align and alt_align:
+            multimap_reads.add(read)
+
+        elif ref_align:
+            ref_reads.add(read)
+
+        elif alt_align:
+            alt_reads.add(read)
+
+        else:
+            ignored_reads.add(read)
+    return ref_reads, alt_reads, ignored_reads, multimap_reads, ref_sequence, alt_sequence
+
+
 class RefAltCalculator():
     """
     Class to calculate the ref and alt counts of a bpp for a given list of bams
@@ -146,7 +196,8 @@ def main():
     log_conf = {'format': '{message}', 'style': '{', 'level': 1}
     logging.basicConfig(**log_conf)
     args = parse_arguments()
-    calculate_all_counts(args.reference_genome, args.bam, args.input, args.output_file)
+    ref_alt_calculator = RefAltCalculator(args.bam, args.reference)
+    ref_alt_calculator.calculate_all_counts(args.input, args.output)
 
 
 if __name__ == "__main__":
