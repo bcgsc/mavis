@@ -126,6 +126,12 @@ class TestStarFusion(unittest.TestCase):
         self.assertEqual(False, bpp.opposing_strands)
         self.assertEqual(True, bpp.stranded)
 
+    def test_malformed(self):
+        row = {
+            'FusionName': 'BCAS4--BCAS3', 'LeftBreakpoint': '', 'RightBreakpoint': None
+        }
+        with self.assertRaises(AssertionError):
+            _convert_tool_row(row, SUPPORTED_TOOL.STARFUSION, False)
 
 class TestTransAbyss(unittest.TestCase):
 
