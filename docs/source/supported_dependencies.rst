@@ -125,7 +125,7 @@ MAVIS also supports a :ref:`general VCF input <general-vcf-inputs>`. It should b
         - ``passed.somatic.indels.vcf``
         - [Saunders-2012]_
     *   - :term:`STAR-Fusion`
-        - ``1.0.0``
+        - ``1.4.0``
         - ``star-fusion.fusion_predictions.abridged.tsv``
         - [Haas-2017]_
 .. note::
