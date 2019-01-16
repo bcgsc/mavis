@@ -105,6 +105,9 @@ General Terms
     Manta
         Manta is an SV caller. Source for Manta can be found `here <https://github.com/Illumina/manta>`__ [Chen-2016]_
 
+    STAR-Fusion
+        STAR-Fusion is an SV caller. Source for STAR-Fusion can be found `here <https://github.com/STAR-Fusion/STAR-Fusion>`__ [Haas-2017]_
+
     Strelka
         Strelka is an SNV and small indel caller. Only the small indels can be processed, since SNVs are not currently suported. Source for Strelka can be found `here <https://github.com/Illumina/strelka>`__ [Saunders-2012]_
 

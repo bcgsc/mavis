@@ -24,7 +24,8 @@ SUPPORTED_TOOL = MavisNamespace(
     VCF='vcf',
     BREAKSEQ='breakseq',
     CNVNATOR='cnvnator',
-    STRELKA='strelka'
+    STRELKA='strelka',
+    STARFUSION='starfusion'
 )
 """
 Supported Tools used to call SVs and then used as input into MAVIS
@@ -151,6 +152,27 @@ def _parse_transabyss(row):
             std_row[COLUMNS.untemplated_seq] = row['alt'].upper()
         else:
             raise NotImplementedError('unexpected indel type', std_row[COLUMNS.event_type])
+    return std_row
+
+
+def _parse_starfusion(row):
+    """
+    transforms the starfusion output into the common format for expansion. Maps the input column
+    names to column names that MAVIS can read
+    """
+    std_row = {}
+    try:
+        std_row['break1_chromosome'], b1_start, std_row['break1_strand'] = re.split(r':', row['LeftBreakpoint'])
+        std_row['break2_chromosome'], b2_start, std_row['break2_strand'] = re.split(r':', row['RightBreakpoint'])
+    except (ValueError, TypeError):
+        raise NotImplementedError(
+            'Could not parse the breakpoint from the starfusion row:', row
+        )
+    std_row['break1_position_start'] = std_row['break1_position_end'] = b1_start
+    std_row['break2_position_start'] = std_row['break2_position_end'] = b2_start
+
+    std_row['break1_orientation'] = std_row['break2_orientation'] = ORIENT.NS
+
     return std_row
 
 
@@ -344,6 +366,10 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
     elif file_type == SUPPORTED_TOOL.CNVNATOR:
 
         std_row.update(_parse_cnvnator(row))
+
+    elif file_type == SUPPORTED_TOOL.STARFUSION:
+
+        std_row.update(_parse_starfusion(row))
 
     elif file_type == SUPPORTED_TOOL.DEFUSE:
 

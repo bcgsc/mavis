@@ -14,3 +14,4 @@ Literature
 .. [Yates-2016] Yates,A. et al. (2016) Ensembl 2016. Nucleic Acids Res., 44, D710–D716.
 .. [Ye-2009] Ye,K. et al. (2009) Pindel: a pattern growth approach to detect break points of large deletions and medium sized insertions from paired-end short reads. Bioinformatics, 25, 2865–2871.
 .. [Saunders-2012] Saunders,C.T. et al. (2012) Strelka: accurate somatic small-variant calling from sequenced tumor–normal sample pairs. Bioinformatics, 28, 1811–1817.
+.. [Haas-2017] Haas,B et al. (2017) STAR-Fusion: Fast and Accurate Fusion Transcript Detection from RNA-Seq. doi: https://doi.org/10.1101/120295
