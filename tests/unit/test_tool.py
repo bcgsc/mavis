@@ -133,6 +133,7 @@ class TestStarFusion(unittest.TestCase):
         with self.assertRaises(AssertionError):
             _convert_tool_row(row, SUPPORTED_TOOL.STARFUSION, False)
 
+
 class TestTransAbyss(unittest.TestCase):
 
     def test_convert_stranded_indel_insertion(self):
