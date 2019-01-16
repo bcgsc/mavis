@@ -109,3 +109,12 @@ class TestHelpMenu(unittest.TestCase):
                 self.assertNotEqual(0, err.code)
             else:
                 self.assertNotEqual(0, returncode)
+
+    def test_ref_alt_count(self):
+        with patch.object(sys, 'argv', ['calculate_ref_alt_counts', '-h']):
+            try:
+                returncode = main()
+            except SystemExit as err:
+                self.assertEqual(0, err.code)
+            else:
+                self.assertEqual(0, returncode)
