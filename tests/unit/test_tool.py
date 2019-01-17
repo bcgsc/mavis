@@ -94,6 +94,46 @@ class TestCnvNator(unittest.TestCase):
         self.assertEqual('1', bpp.break2.chr)
 
 
+class TestStarFusion(unittest.TestCase):
+
+    def test_convert_standard_event(self):
+        row = {
+            'FusionName': 'GAS6--RASA3', 'LeftBreakpoint': 'chr13:114529969:-', 'RightBreakpoint': 'chr13:114751269:-'
+        }
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.STARFUSION, True)
+
+        self.assertEqual(2, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('chr13', bpp.break1.chr)
+        self.assertEqual('chr13', bpp.break2.chr)
+        self.assertEqual(114529969, bpp.break1.start)
+        self.assertEqual(114751269, bpp.break2.start)
+        self.assertEqual(False, bpp.opposing_strands)
+        self.assertEqual(True, bpp.stranded)
+
+    def test_convert_translocation(self):
+        row = {
+            'FusionName': 'BCAS4--BCAS3', 'LeftBreakpoint': 'chr20:49411710:+', 'RightBreakpoint': 'chr17:59445688:+'
+        }
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.STARFUSION, True)
+
+        self.assertEqual(2, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('chr17', bpp.break1.chr)
+        self.assertEqual('chr20', bpp.break2.chr)
+        self.assertEqual(59445688, bpp.break1.start)
+        self.assertEqual(49411710, bpp.break2.start)
+        self.assertEqual(False, bpp.opposing_strands)
+        self.assertEqual(True, bpp.stranded)
+
+    def test_malformed(self):
+        row = {
+            'FusionName': 'BCAS4--BCAS3', 'LeftBreakpoint': '', 'RightBreakpoint': None
+        }
+        with self.assertRaises(AssertionError):
+            _convert_tool_row(row, SUPPORTED_TOOL.STARFUSION, False)
+
+
 class TestTransAbyss(unittest.TestCase):
 
     def test_convert_stranded_indel_insertion(self):
