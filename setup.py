@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 import re
 
 
-VERSION = '2.1.7'
+VERSION = '2.2.0'
 
 
 def parse_md_readme():
@@ -105,7 +105,8 @@ setup(
     author='Caralyn Reisle',
     author_email='creisle@bcgsc.ca',
     test_suite='tests',
-    entry_points={'console_scripts': ['mavis = mavis.main:main']},
+    entry_points={'console_scripts': ['mavis = mavis.main:main',
+                                      'calculate_ref_alt_counts = tools.calculate_ref_alt_counts:main']},
     project_urls={'mavis': 'http://mavis.bcgsc.ca'}
 )
 check_nonpython_dependencies()

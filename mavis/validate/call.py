@@ -320,6 +320,11 @@ class EventCall(BreakpointPair):
         For a given event, determines the number of repeats the insertion/duplication/deletion is following.
         This is most useful in flagging homopolymer regions. Will raise a ValueError if the current event is
         not an expected type or is non-specific.
+
+        Returns:
+            tuple:
+            :class:`int` - the number of repeats
+            :class:`str` - the repeat sequence
         """
         if len(event.break1) + len(event.break2) > 2:
             raise ValueError('Cannot characterize a repeat region for a non-specific call')
@@ -350,7 +355,7 @@ class EventCall(BreakpointPair):
                 break
             repeat_count += 1
             rightmost -= len(expected_sequence)
-        return repeat_count
+        return repeat_count, expected_sequence
 
     def flatten(self):
         """
@@ -379,7 +384,7 @@ class EventCall(BreakpointPair):
             COLUMNS.supplementary_call: self.is_supplementary()
         })
         try:
-            row[COLUMNS.repeat_count] = EventCall.characterize_repeat_region(self, self.source_evidence.reference_genome)
+            row[COLUMNS.repeat_count] = EventCall.characterize_repeat_region(self, self.source_evidence.reference_genome)[0]
         except ValueError:
             row[COLUMNS.repeat_count] = None
 
