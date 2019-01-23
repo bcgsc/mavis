@@ -536,9 +536,8 @@ class SgeScheduler(Scheduler):
         """
         if not job.job_ident:
             return
-
         try:
-            content = self.command(['qstat', '-j', job.job_ident])
+            content = self.command(['qstat', '-u', "*"])
             rows = self.parse_qstat(content)
         except subprocess.CalledProcessError:  # job not queued
             rows = []
