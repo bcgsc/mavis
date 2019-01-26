@@ -504,7 +504,7 @@ job-ID  prior   name       user         state submit/start at     queue         
 -----------------------------------------------------------------------------------------------------------------
  217940 1.50000 subtest.sh creisle      qw    05/22/2018 23:39:55                                    1
         """
-        rows = _scheduler.SgeScheduler().parse_qstat(content)
+        rows = _scheduler.SgeScheduler().parse_qstat(content, '217940')
         self.assertEqual(1, len(rows))
         expected = {
             'job_ident': '217940',
@@ -516,7 +516,7 @@ job-ID  prior   name       user         state submit/start at     queue         
         self.assertEqual(expected, rows[0])
 
     def test_no_jobs_found(self):
-        rows = _scheduler.SgeScheduler().parse_qstat("")
+        rows = _scheduler.SgeScheduler().parse_qstat("", '217940')
         self.assertEqual([], rows)
 
 

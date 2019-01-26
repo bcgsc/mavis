@@ -413,7 +413,7 @@ class SgeScheduler(Scheduler):
         return rows
 
     @classmethod
-    def parse_qstat(cls, content):
+    def parse_qstat(cls, content, job_id):
         """
         parses the qstat content into rows/dicts representing individual jobs
 
@@ -444,13 +444,14 @@ class SgeScheduler(Scheduler):
             task_ident = row['ja-task-ID']
             if not task_ident or set(task_ident) & set(',:-'):
                 task_ident = None
-            rows.append({
-                'task_ident': task_ident,
-                'job_ident': row['job-ID'],
-                'name': row['name'],
-                'status': cls.convert_state(row['state']),
-                'status_comment': ''
-            })
+            if row['job-ID'] == job_id:
+                rows.append({
+                    'task_ident': task_ident,
+                    'job_ident': row['job-ID'],
+                    'name': row['name'],
+                    'status': cls.convert_state(row['state']),
+                    'status_comment': ''
+                })
         return rows
 
     @classmethod
@@ -536,10 +537,9 @@ class SgeScheduler(Scheduler):
         """
         if not job.job_ident:
             return
-
         try:
-            content = self.command(['qstat', '-j', job.job_ident])
-            rows = self.parse_qstat(content)
+            content = self.command(['qstat', '-u', "*"])
+            rows = self.parse_qstat(content, job.job_ident)
         except subprocess.CalledProcessError:  # job not queued
             rows = []
 
