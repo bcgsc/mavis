@@ -69,6 +69,7 @@ class MockRead:
         is_read1=True,
         is_paired=True,
         is_unmapped=False,
+        is_supplementary=False,
         mate_is_unmapped=False,
         mapping_quality=NA_MAPPING_QUALITY,
         **kwargs
@@ -121,6 +122,7 @@ class MockRead:
         self.is_paired = is_paired
         self.is_unmapped = is_unmapped
         self.mate_is_unmapped = mate_is_unmapped
+        self.is_supplementary = is_supplementary
         if self.reference_start and self.reference_end:
             if not cigar:
                 self.cigar = [(CIGAR.M, self.reference_end - self.reference_start)]
@@ -156,6 +158,17 @@ class MockRead:
     def __str__(self):
         return '{}(ref_id={}, start={}, end={}, seq={})'.format(
             self.__class__.__name__, self.reference_id, self.reference_start, self.reference_end, self.query_sequence)
+
+    def key(self):
+        """
+        uses a stored _key attribute, if available. This is to avoid the hash changing if the reference start (for example)
+        is changed but also allow this attribute to be used and calculated for non SamRead objects
+
+        This way to change the hash behaviour the user must be explicit and use the set_key method
+        """
+        if hasattr(self, '_key') and self._key is not None:
+            return self._key
+        return (self.query_name, self.query_sequence, self.reference_id, self.reference_start, self.is_supplementary)
 
 
 class MockBamFileHandle:

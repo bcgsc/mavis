@@ -159,6 +159,7 @@ class EventCall(BreakpointPair):
             self.source_evidence.min_expected_fragment_size + Interval.dist(self.break1, self.break2),
             self.source_evidence.max_expected_fragment_size])
         max_frag = len(self.break1 | self.break2) + self.source_evidence.max_expected_fragment_size
+
         for read, mate in flanking_pairs:
             # check that the fragment size is reasonable
             fragment_size = self.source_evidence.compute_fragment_size(read, mate)
@@ -704,8 +705,8 @@ def _call_by_flanking_pairs(evidence, event_type, consumed_evidence=None):
         cover2 = Interval(min(second_positions), max(second_positions))
         return cover1, cover2
 
-    for read, mate in available_flanking_pairs:
-        # check that the fragment size is reasonable
+    for read, mate in sorted(available_flanking_pairs, key=lambda r: (r[0].key(), r[1].key())):
+        # check that the fragment size is ssh reasonable
         fragment_size = evidence.compute_fragment_size(read, mate)
         if event_type == SVTYPE.DEL:
             if fragment_size.end <= evidence.max_expected_fragment_size:
@@ -737,8 +738,7 @@ def _call_by_flanking_pairs(evidence, event_type, consumed_evidence=None):
             # remove the farthest outlier from the pairs wrt fragment size (most likely to belong to a different event)
             average = Interval(
                 sum([f.start for f in fragments]) / len(fragments),
-                sum([f.end for f in fragments]) / len(fragments)
-            )
+                sum([f.end for f in fragments]) / len(fragments))
             farthest = max(fragments, key=lambda f: abs(Interval.dist(f, average)))
             fragments = [f for f in fragments if f != farthest]
             selected_flanking_pairs = [(r, m) for r, m in selected_flanking_pairs if evidence.compute_fragment_size(r, m) != farthest]
@@ -827,7 +827,7 @@ def _call_by_split_reads(evidence, event_type, consumed_evidence=None):
 
     linked_pairings = []
     # now pair up the breakpoints with their putative partners
-    for first, second in itertools.product(pos1, pos2):
+    for first, second in itertools.product(sorted(pos1.keys()), sorted(pos2.keys())):
         if evidence.break1.chr == evidence.break2.chr:
             if first >= second:
                 continue
@@ -863,13 +863,12 @@ def _call_by_split_reads(evidence, event_type, consumed_evidence=None):
         # now create calls using the double aligned split read pairs if possible (to resolve untemplated sequence)
         resolved_calls = dict()
         for reads in [d for d in double_aligned.values() if len(d) > 1]:
-            for read1, read2 in itertools.combinations(reads, 2):
+            for read1, read2 in itertools.combinations(sorted(list(reads), key=lambda x: x.key()), 2):
                 try:
                     call = call_paired_read_event(read1, read2, is_stranded=evidence.bam_cache.stranded)
                     # check the type later, we want this to fail if wrong type
-                    resolved_calls.setdefault(call, (set(), set()))
-                    resolved_calls[call][0].add(read1)
-                    resolved_calls[call][1].add(read2)
+                    resolved_calls.setdefault(call, set())
+                    resolved_calls[call].update({read1, read2})
                 except AssertionError:
                     pass  # will be thrown if the reads do not actually belong together
 
@@ -880,14 +879,13 @@ def _call_by_split_reads(evidence, event_type, consumed_evidence=None):
 
         # ignore untemplated sequence since was not known previously
         if not any([call.break1 == bpp.break1 and call.break2 == bpp.break2 for call in resolved_calls]):
-            resolved_calls.setdefault(bpp, (set(), set()))
+            resolved_calls.setdefault(bpp, set())
 
         uncons_break1_reads = evidence.split_reads[0] - consumed_evidence
         uncons_break2_reads = evidence.split_reads[1] - consumed_evidence
-
-        for call, (reads1, reads2) in sorted(
+        for call, resolved_reads in sorted(
             resolved_calls.items(),
-            key=lambda x: (len(x[1][0]) + len(x[1][1]), x[0]),
+            key=lambda x: (len(x[1]), x[0]),
             reverse=True
         ):
             try:
@@ -899,15 +897,13 @@ def _call_by_split_reads(evidence, event_type, consumed_evidence=None):
             except ValueError:  # incompatible types
                 continue
             else:
-                call.break1_split_reads.update(reads1 - consumed_evidence)
-                call.break2_split_reads.update(reads2 - consumed_evidence)
                 call.add_flanking_support(available_flanking_pairs)
                 if call.has_compatible:
                     call.add_flanking_support(available_flanking_pairs, is_compatible=True)
                 # add the initial reads
-                for read in uncons_break1_reads - consumed_evidence:
+                for read in (resolved_reads | uncons_break1_reads) - consumed_evidence:
                     call.add_break1_split_read(read)
-                for read in uncons_break2_reads - consumed_evidence:
+                for read in (resolved_reads | uncons_break2_reads) - consumed_evidence:
                     call.add_break2_split_read(read)
                 linking_reads = len(call.linking_split_read_names())
                 if call.event_type == SVTYPE.INS:  # may not expect linking split reads for insertions

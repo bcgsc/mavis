@@ -93,7 +93,7 @@ class DeBruijnGraph(nx.DiGraph):
         Args:
             min_weight (int): the minimum weight for an edge to be retained
         """
-        ends = {n for n in self.nodes() if self.out_degree(n) == 0 or self.in_degree(n) == 0}
+        ends = sorted([n for n in self.nodes() if self.out_degree(n) == 0 or self.in_degree(n) == 0])
         visited = set()
 
         while ends:
@@ -107,12 +107,12 @@ class DeBruijnGraph(nx.DiGraph):
                     if data['freq'] < min_weight:
                         self.remove_edge(src, tgt)
                     if src not in visited:
-                        ends.add(src)
+                        ends.append(src)
                     if tgt not in visited:
-                        ends.add(tgt)
+                        ends.append(tgt)
 
         # remove any resulting singlets
-        for node in visited:
+        for node in sorted([n for n in visited if self.degree(n) == 0], reverse=True):
             if not self.has_node(node):
                 continue
             if self.degree(node) == 0:
@@ -124,7 +124,7 @@ class DeBruijnGraph(nx.DiGraph):
         edges has freq < min_weight. then that outgoing edge is deleted
         """
         nodes = [n for n in self.nodes() if self.degree(n) > 2]
-        for node in nodes:
+        for node in sorted(nodes, reverse=True):
             if self.out_degree(node) > 1:
                 outgoing_edges = self.out_edges(node, data=True)
                 best = max([e[2]['freq'] for e in outgoing_edges])
@@ -253,6 +253,7 @@ def pull_contigs_from_component(
     """
     path_scores = {}  # path_str => score_int
     w = min_edge_trim_weight
+
     unresolved_components = [component]
 
     while unresolved_components:
@@ -373,7 +374,7 @@ def assemble(
             assembly.add_edge(kmer[:-1], kmer[1:])
     # use the ab min edge weight to remove all low weight edges first
     nodes = list(assembly.nodes())
-    for n in nodes:
+    for n in sorted(nodes, reverse=True):
         if assembly.in_degree(n) == 0 and assembly.out_degree(n) == 0:
             assembly.remove_node(n)
     # drop all cyclic components
@@ -389,11 +390,14 @@ def assemble(
     assembly.trim_noncutting_paths_by_freq(min_edge_trim_weight)
 
     path_scores = {}
+    for component in sorted([i for i in digraph_connected_components(assembly)]):
 
-    for component in digraph_connected_components(assembly):
+        # copy here so filtering is done per component not on the full assembly graph
+        component_graph = assembly.copy()
+
         # pull the path scores
         path_scores.update(pull_contigs_from_component(
-            assembly, component,
+            component_graph, component,
             min_edge_trim_weight=min_edge_trim_weight,
             assembly_max_paths=assembly_max_paths,
             log=log

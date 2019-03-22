@@ -754,9 +754,9 @@ class TestCallBySupportingReads(unittest.TestCase):
 
         self.assertEqual(101, event.break1.start)
         self.assertEqual(101, event.break1.end)
-        self.assertEqual(503, event.break2.start)
-        self.assertEqual(503, event.break2.end)
-        self.assertEqual('', event.untemplated_seq)
+        self.assertEqual(501, event.break2.start)
+        self.assertEqual(501, event.break2.end)
+        self.assertEqual(None, event.untemplated_seq)
 
     def test_both_by_flanking_pairs(self):
         self.ev.flanking_pairs.add(mock_read_pair(
