@@ -112,7 +112,7 @@ class DeBruijnGraph(nx.DiGraph):
                         ends.append(tgt)
 
         # remove any resulting singlets
-        for node in sorted([n for n in visited if self.degree(n) == 0], reverse=True):
+        for node in visited:
             if not self.has_node(node):
                 continue
             if self.degree(node) == 0:
@@ -124,7 +124,7 @@ class DeBruijnGraph(nx.DiGraph):
         edges has freq < min_weight. then that outgoing edge is deleted
         """
         nodes = [n for n in self.nodes() if self.degree(n) > 2]
-        for node in sorted(nodes, reverse=True):
+        for node in sorted(nodes):
             if self.out_degree(node) > 1:
                 outgoing_edges = self.out_edges(node, data=True)
                 best = max([e[2]['freq'] for e in outgoing_edges])
@@ -374,7 +374,7 @@ def assemble(
             assembly.add_edge(kmer[:-1], kmer[1:])
     # use the ab min edge weight to remove all low weight edges first
     nodes = list(assembly.nodes())
-    for n in sorted(nodes, reverse=True):
+    for n in sorted(nodes):
         if assembly.in_degree(n) == 0 and assembly.out_degree(n) == 0:
             assembly.remove_node(n)
     # drop all cyclic components

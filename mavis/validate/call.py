@@ -706,7 +706,7 @@ def _call_by_flanking_pairs(evidence, event_type, consumed_evidence=None):
         return cover1, cover2
 
     for read, mate in sorted(available_flanking_pairs, key=lambda r: (r[0].key(), r[1].key())):
-        # check that the fragment size is ssh reasonable
+        # check that the fragment size is reasonable
         fragment_size = evidence.compute_fragment_size(read, mate)
         if event_type == SVTYPE.DEL:
             if fragment_size.end <= evidence.max_expected_fragment_size:
