@@ -390,7 +390,7 @@ def assemble(
     assembly.trim_noncutting_paths_by_freq(min_edge_trim_weight)
 
     path_scores = {}
-    for component in sorted([i for i in digraph_connected_components(assembly)]):
+    for component in sorted(list(digraph_connected_components(assembly))):
 
         # copy here so filtering is done per component not on the full assembly graph
         component_graph = assembly.copy()
