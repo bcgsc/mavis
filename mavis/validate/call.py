@@ -867,8 +867,9 @@ def _call_by_split_reads(evidence, event_type, consumed_evidence=None):
                 try:
                     call = call_paired_read_event(read1, read2, is_stranded=evidence.bam_cache.stranded)
                     # check the type later, we want this to fail if wrong type
-                    resolved_calls.setdefault(call, set())
-                    resolved_calls[call].update({read1, read2})
+                    resolved_calls.setdefault(call, (set(), set()))
+                    resolved_calls[call][0].add(call.read1)
+                    resolved_calls[call][1].add(call.read2)
                 except AssertionError:
                     pass  # will be thrown if the reads do not actually belong together
 
@@ -879,13 +880,13 @@ def _call_by_split_reads(evidence, event_type, consumed_evidence=None):
 
         # ignore untemplated sequence since was not known previously
         if not any([call.break1 == bpp.break1 and call.break2 == bpp.break2 for call in resolved_calls]):
-            resolved_calls.setdefault(bpp, set())
+            resolved_calls.setdefault(bpp, (set(), set()))
 
         uncons_break1_reads = evidence.split_reads[0] - consumed_evidence
         uncons_break2_reads = evidence.split_reads[1] - consumed_evidence
-        for call, resolved_reads in sorted(
+        for call, (reads1, reads2) in sorted(
             resolved_calls.items(),
-            key=lambda x: (len(x[1]), x[0]),
+            key=lambda x: (len(x[1][0]) + len(x[1][1]), x[0]),
             reverse=True
         ):
             try:
@@ -897,13 +898,16 @@ def _call_by_split_reads(evidence, event_type, consumed_evidence=None):
             except ValueError:  # incompatible types
                 continue
             else:
+                call.break1_split_reads.update(reads1 - consumed_evidence)
+                call.break2_split_reads.update(reads2 - consumed_evidence)
+
                 call.add_flanking_support(available_flanking_pairs)
                 if call.has_compatible:
                     call.add_flanking_support(available_flanking_pairs, is_compatible=True)
                 # add the initial reads
-                for read in (resolved_reads | uncons_break1_reads) - consumed_evidence:
+                for read in uncons_break1_reads - consumed_evidence:
                     call.add_break1_split_read(read)
-                for read in (resolved_reads | uncons_break2_reads) - consumed_evidence:
+                for read in uncons_break2_reads - consumed_evidence:
                     call.add_break2_split_read(read)
                 linking_reads = len(call.linking_split_read_names())
                 if call.event_type == SVTYPE.INS:  # may not expect linking split reads for insertions
