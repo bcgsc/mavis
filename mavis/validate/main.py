@@ -2,7 +2,6 @@ import hashlib
 import itertools
 import os
 import re
-import subprocess
 import time
 import warnings
 
@@ -14,7 +13,6 @@ from .constants import DEFAULTS, PASS_FILENAME
 from .evidence import GenomeEvidence, TranscriptomeEvidence
 from ..align import align_sequences, select_contig_alignments, SUPPORTED_ALIGNER
 from ..annotate.base import BioInterval
-from ..annotate import file_io as _file_io
 from ..bam import cigar as _cigar
 from ..bam.cache import BamCache
 from ..breakpoint import BreakpointPair

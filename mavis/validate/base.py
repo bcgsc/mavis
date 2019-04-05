@@ -764,7 +764,7 @@ class Evidence(BreakpointPair):
                 rseq = reverse_complement(contig.seq)
                 if contig.seq not in filtered_contigs and rseq not in filtered_contigs:
                     filtered_contigs[contig.seq] = contig
-        self.contigs = list(filtered_contigs.values())
+        self.contigs = sorted(list(filtered_contigs.values()), key=lambda x: (x.remap_score() * -1, x.seq))
 
     def load_evidence(self, log=DEVNULL):
         """

@@ -1,8 +1,12 @@
 import itertools
+import random
+import os
 import unittest
 
 from mavis.assemble import assemble, Contig, DeBruijnGraph, filter_contigs, kmers
 from mavis.constants import DNA_ALPHABET
+
+DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 
 
 class TestModule(unittest.TestCase):
@@ -167,3 +171,24 @@ class TestDeBruijnGraph(unittest.TestCase):
 
         g.trim_noncutting_paths_by_freq(3)
         self.assertEqual(list(range(1, 9)) + path2[1:-1], g.nodes())
+
+
+class TestFullAssemly(unittest.TestCase):
+    def setUp(self):
+        # load the sequences
+        with open(os.path.join(DATA_DIR, 'test_assembly_sequences.txt')) as fh:
+            self.seq = [i.strip() for i in fh.readlines()]
+
+    def test_deterministic_assembly(self):
+        contig_sequences = set()
+        for i in range(20):
+            random.shuffle(self.seq)
+            contigs = assemble(self.seq,
+                               111,
+                               min_edge_trim_weight=3,
+                               assembly_max_paths=8,
+                               assembly_min_uniq=0.1,
+                               min_complexity=0.1)
+            self.assertEqual(1, len(contigs))
+            contig_sequences.add(contigs[0].seq)
+        self.assertEqual(1, len(contig_sequences))
