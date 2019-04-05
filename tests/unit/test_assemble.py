@@ -180,7 +180,8 @@ class TestFullAssemly(unittest.TestCase):
             self.seq = [i.strip() for i in fh.readlines()]
 
     def test_deterministic_assembly(self):
-        for i in range(10):
+        contig_lengths = set()
+        for i in range(20):
             random.shuffle(self.seq)
             contigs = assemble(self.seq,
                                111,
@@ -188,6 +189,5 @@ class TestFullAssemly(unittest.TestCase):
                                assembly_max_paths=8,
                                assembly_min_uniq=0.1,
                                min_complexity=0.1)
-            self.assertEqual(1, len(contigs))
-            self.assertEqual(387, contigs[0].score)
-            self.assertEqual('AAGGGAAAGGAAAGGAAAGGAAAGAAAGAAAGAAAGAAAGAAAGAAAGAAAGAAAGGAAAGGAAGACCTACAGCACACACAAAAAGGGGTTCAAAATGGATTAATAACTTAAATGTAAGAGCTTAAACTATAAAACTCCTTGACAAAGCATAGAGGGAAACTACTTGTAT', contigs[0].seq)
+            contig_lengths.add(len(contigs))
+            self.assertEqual(1, len(contig_lengths))

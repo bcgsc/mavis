@@ -279,8 +279,7 @@ def pull_contigs_from_component(
             unresolved_components.extend(digraph_connected_components(assembly, component))
         else:
             for source, sink in itertools.product(assembly.get_sources(component), assembly.get_sinks(component)):
-                paths = list(nx.all_simple_paths(assembly, source, sink))
-                for path in paths:
+                for path in nx.all_simple_paths(assembly, source, sink):
                     s = path[0] + ''.join([p[-1] for p in path[1:]])
                     score = 0
                     for i in range(0, len(path) - 1):
@@ -374,7 +373,7 @@ def assemble(
             assembly.add_edge(kmer[:-1], kmer[1:])
     # use the ab min edge weight to remove all low weight edges first
     nodes = list(assembly.nodes())
-    for n in sorted(nodes):
+    for n in nodes:
         if assembly.in_degree(n) == 0 and assembly.out_degree(n) == 0:
             assembly.remove_node(n)
     # drop all cyclic components
@@ -390,14 +389,11 @@ def assemble(
     assembly.trim_noncutting_paths_by_freq(min_edge_trim_weight)
 
     path_scores = {}
-    for component in sorted(list(digraph_connected_components(assembly))):
-
-        # copy here so filtering is done per component not on the full assembly graph
-        component_graph = assembly.copy()
+    for component in digraph_connected_components(assembly):
 
         # pull the path scores
         path_scores.update(pull_contigs_from_component(
-            component_graph, component,
+            assembly.subgraph(component), component,
             min_edge_trim_weight=min_edge_trim_weight,
             assembly_max_paths=assembly_max_paths,
             log=log
