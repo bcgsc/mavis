@@ -93,7 +93,7 @@ class DeBruijnGraph(nx.DiGraph):
         Args:
             min_weight (int): the minimum weight for an edge to be retained
         """
-        ends = {n for n in self.nodes() if self.out_degree(n) == 0 or self.in_degree(n) == 0}
+        ends = sorted([n for n in self.nodes() if self.out_degree(n) == 0 or self.in_degree(n) == 0])
         visited = set()
 
         while ends:
@@ -107,9 +107,9 @@ class DeBruijnGraph(nx.DiGraph):
                     if data['freq'] < min_weight:
                         self.remove_edge(src, tgt)
                     if src not in visited:
-                        ends.add(src)
+                        ends.append(src)
                     if tgt not in visited:
-                        ends.add(tgt)
+                        ends.append(tgt)
 
         # remove any resulting singlets
         for node in visited:
@@ -124,7 +124,7 @@ class DeBruijnGraph(nx.DiGraph):
         edges has freq < min_weight. then that outgoing edge is deleted
         """
         nodes = [n for n in self.nodes() if self.degree(n) > 2]
-        for node in nodes:
+        for node in sorted(nodes):
             if self.out_degree(node) > 1:
                 outgoing_edges = self.out_edges(node, data=True)
                 best = max([e[2]['freq'] for e in outgoing_edges])
@@ -253,6 +253,7 @@ def pull_contigs_from_component(
     """
     path_scores = {}  # path_str => score_int
     w = min_edge_trim_weight
+
     unresolved_components = [component]
 
     while unresolved_components:
@@ -278,8 +279,7 @@ def pull_contigs_from_component(
             unresolved_components.extend(digraph_connected_components(assembly, component))
         else:
             for source, sink in itertools.product(assembly.get_sources(component), assembly.get_sinks(component)):
-                paths = list(nx.all_simple_paths(assembly, source, sink))
-                for path in paths:
+                for path in nx.all_simple_paths(assembly, source, sink):
                     s = path[0] + ''.join([p[-1] for p in path[1:]])
                     score = 0
                     for i in range(0, len(path) - 1):
@@ -389,11 +389,11 @@ def assemble(
     assembly.trim_noncutting_paths_by_freq(min_edge_trim_weight)
 
     path_scores = {}
-
     for component in digraph_connected_components(assembly):
+
         # pull the path scores
         path_scores.update(pull_contigs_from_component(
-            assembly, component,
+            assembly.subgraph(component), component,
             min_edge_trim_weight=min_edge_trim_weight,
             assembly_max_paths=assembly_max_paths,
             log=log
