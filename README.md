@@ -5,9 +5,8 @@
 </object>
 
 
-![PyPi](https://img.shields.io/pypi/v/mavis.svg) ![Travis](https://travis-ci.org/creisle/mavis.svg?branch=master) ![ReadTheDocs](https://readthedocs.org/projects/pip/badge/)
+![PyPi](https://img.shields.io/pypi/v/mavis.svg) ![Travis](https://travis-ci.org/bcgsc/mavis.svg?branch=master) ![ReadTheDocs](https://readthedocs.org/projects/pip/badge/)
 
-<br/>
 
 # About
 
@@ -26,11 +25,15 @@ The general [MAVIS](http://mavis.bcgsc.ca) pipeline consists of six main stages
 All steps in the MAVIS pipeline are called following the main mavis entry point. The usage menu can be viewed
 by running without any arguments, or by giving the -h/--help option
 
-    mavis -h
+``` bash
+mavis -h
+```
 
 Help sub-menus can be found by giving the pipeline step followed by no arguments or the -h options
 
-    mavis cluster -h
+``` bash
+mavis cluster -h
+```
 
 Common problems and questions are addressed on the [wiki](https://github.com/bcgsc/mavis/wiki/Help-and-Frequently-Asked-Questions).
 If you have a question or issue that is not answered there (or already a github issue) please submit
@@ -120,7 +123,7 @@ See the MAVIS [tutorial](http://mavis.bcgsc.ca/docs/latest/pipeline.html#mavis-m
 
 ## Build the Sphinx Documentation
 
-```
+```bash
 pip install .[docs]
 sphinx-build docs/source/ html
 ```
