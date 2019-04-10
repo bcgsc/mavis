@@ -14,7 +14,7 @@ from .align import SUPPORTED_ALIGNER
 from .annotate.constants import DEFAULTS as ANNOTATION_DEFAULTS
 from .annotate.file_io import REFERENCE_DEFAULTS
 from .bam.cache import BamCache
-from .bam.stats import compute_genome_bam_stats, compute_transcriptome_bam_stats
+from .bam import stats
 from .cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from .constants import DISEASE_STATUS, SUBCOMMAND, PROTOCOL, float_fraction
 from .illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
@@ -142,7 +142,7 @@ class LibraryConfig(MavisNamespace):
             annotations.load()
         bam = BamCache(bam_file)
         if protocol == PROTOCOL.TRANS:
-            bamstats = compute_transcriptome_bam_stats(
+            bamstats = stats.compute_transcriptome_bam_stats(
                 bam,
                 annotations=annotations.content,
                 sample_size=sample_size,
@@ -150,7 +150,7 @@ class LibraryConfig(MavisNamespace):
                 distribution_fraction=distribution_fraction
             )
         elif protocol == PROTOCOL.GENOME:
-            bamstats = compute_genome_bam_stats(
+            bamstats = stats.compute_genome_bam_stats(
                 bam,
                 sample_size=sample_size,
                 sample_bin_size=sample_bin_size,
