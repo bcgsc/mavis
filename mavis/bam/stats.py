@@ -3,10 +3,16 @@ import math
 import statistics as stats
 import warnings
 
-import numpy as np
+import os
 
 from .read import sequenced_strand
 from ..constants import STRAND
+
+os.environ["OMP_NUM_THREADS"] = "4"  # export OMP_NUM_THREADS=4
+os.environ["OPENBLAS_NUM_THREADS"] = "4"  # export OPENBLAS_NUM_THREADS=4
+os.environ["MKL_NUM_THREADS"] = "4"  # export MKL_NUM_THREADS=6
+os.environ["VECLIB_MAXIMUM_THREADS"] = "4"  # export VECLIB_MAXIMUM_THREADS=4
+os.environ["NUMEXPR_NUM_THREADS"] = "6"  # export NUMEXPR_NUM_THREADS=6
 
 
 class BamStats:
@@ -119,6 +125,8 @@ def compute_transcriptome_bam_stats(
     Returns:
         BamStats: the fragment size median, stdev and the read length in a object
     """
+    import numpy as np
+
     total_annotations = []
     for chr, anns_list in annotations.items():
         if bam_cache.valid_chr(chr):
@@ -221,6 +229,7 @@ def compute_genome_bam_stats(
     Returns:
         BamStats: the fragment size median, stdev and the read length in a object
     """
+    import numpy as np
     total = sum([l - sample_bin_size for l in bam_file_handle.fh.lengths])
     bins = []
     randoms = [int(n * (total - 1) + 1) for n in np.random.rand(sample_size)]
