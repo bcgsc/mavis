@@ -14,8 +14,17 @@ HUGO_ENSEMBL_MAPPING: this is a tab delimited file which must have two columns
 2. hugo: a semi-colon delimited list of hugo gene symbols
 
 BEST_TRANSCRIPTS: this is a mapping of gene ids to the preferred transcript for annotations. It must have the following two columns
-1. gene_id: the ensembl gene id
-2. transcript_id: the ensembl transcript id
+ex. /gsc/resources/annotation/ensembl/transcript_info/production/ensembl_best_transcript.tsv
+1. Ensembl_Gene_ID: the ensembl gene id
+2. Ensembl_Transcript_ID: the ensembl transcript id
+
+
+To start the script you must set your environment variables first
+
+export ENSEMBL_HOST=<HOSTNAME>
+export ENSEMBL_PASS=<PASSWORD>
+export ENSEMBL_USER=<USERNAME>
+export ENSEMBL_PORT=<PORT>
 
 =cut
 
@@ -44,18 +53,13 @@ main();
 sub main
 {
     my $outputfile;
-    my $drug_target_file = $ENV{'HUGO_ENSEMBL_MAPPING'}; 
-    if (! defined $drug_target_file) {
-        $drug_target_file = "";
-    }
     my $best_transcript_file = $ENV{'BEST_TRANSCRIPTS'};
     if (! defined $best_transcript_file) {
         $best_transcript_file = "";
     }
     my $option_check = GetOptions(
         "output=s" => \$outputfile,
-        "best_transcript_file" => \$best_transcript_file,
-        "hugo_mapping_file" => \$drug_target_file
+        "best_transcript_file=s" => \$best_transcript_file,
     );
     
     my $database_information =  {
@@ -66,7 +70,7 @@ sub main
     };
     
     my $help_message = <<"END_MESSAGE";
-usage: 
+usage:
     $_program --output OUTPUT_FILE [--best_transcript_file BEST_TRANSCRIPT_FILE] [--hugo_mapping_file HUGO_MAPPING_FILE]
 
 required arguments:
@@ -75,12 +79,9 @@ required arguments:
         path to the output json file where results will be written
 
 optional arguments:
-    
+
     best_transcript_mapping:
         path to the best transcripts file (default: $best_transcript_file)
-
-    hugo_mapping_file:
-        path to the hugo mapping file (default: $drug_target_file)
 END_MESSAGE
 
     # set up the default filenames
@@ -88,46 +89,30 @@ END_MESSAGE
 
     $registry = 'Bio::EnsEMBL::Registry';
     $registry->load_registry_from_db(%$database_information);
-    
-    my %hugo_mapping = ();
-    
-    # read in the drug target file and generate a mapping for the ensembl gene id's
-    if ("$drug_target_file" ne "") {
-        my @required_column_names = ('ensid', 'hugo');
-        print "loading: $drug_target_file\n";
-        my ($header, $rows) = TSV::parse_input($drug_target_file, \@required_column_names);
-        while (my $row = shift @$rows)
-        {
-            my $ensid = $row->{'ensid'};
-            my $hugo = $row->{'hugo'};
-            my @fields = split /;/, $hugo;
-            $hugo_mapping{$ensid} = \@fields; 
-        }
-    }
+
     my %best_transcript_mapping = ();
     if ("$best_transcript_file" ne "") {
-        my @required_column_names = ('gene_id', 'transcript_id');
+        my @required_column_names = ('Ensembl_Gene_ID', 'Ensembl_Transcript_ID');
         print "loading: $best_transcript_file\n";
         my ($header, $rows) = TSV::parse_input($best_transcript_file, \@required_column_names);
-        
+
         while (my $row = shift @$rows)
         {
-            my $ensid = $row->{'gene_id'};
-            my $transcript = $row->{'transcript_id'};
+            my $ensid = $row->{'Ensembl_Gene_ID'};
+            my $transcript = $row->{'Ensembl_Gene_ID'};
             $best_transcript_mapping{$ensid} = $transcript;
         }
     }
     # load all the different transcripts
-    my $transcript_adaptor = $registry->get_adaptor('human', 'core', 'gene'); 
+    my $transcript_adaptor = $registry->get_adaptor('human', 'core', 'gene');
     my @glist = @{$transcript_adaptor->fetch_all()};
     my $counter = 1;
     my $total = scalar @glist;
     my $interval = $total / 100;
-    
+
     my %all_domains = ();
     my $time = localtime();
     my $jsons = {
-        "hugo_mapping_file" => $drug_target_file,
         "best_transcript_file" => $best_transcript_file,
         "ensembl_version" => software_version(),
         "generation_time" => "$time",
@@ -141,12 +126,15 @@ END_MESSAGE
         print ".";
         my @tlist = @{$gene->get_all_Transcripts()};
         my $gid = $gene->stable_id();
-        
+
         # get all hugo aliases for this ensembl gene
         my $hugo = "";
-        if ( exists $hugo_mapping{$gid} ){
-            $hugo = $hugo_mapping{$gid};
+
+        # use the ensembl hugo name if not otherwise given
+        if (defined $gene->external_name()) {
+            $hugo = $gene->external_name();
         }
+
         my $gjson = {
             "name" => $gid,
             "aliases" => $hugo,
