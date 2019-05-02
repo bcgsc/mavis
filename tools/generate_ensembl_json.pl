@@ -174,15 +174,13 @@ END_MESSAGE
                 "cdna_coding_end" => $t->cdna_coding_end(),
                 "domains" => []
             };
-            
-            
+
+
             my $s_obj = $t->seq();
             my $s = $s_obj->seq();
             my $cds_start = $t->cdna_coding_start();
             my $cds_end = $t->cdna_coding_end();
-            if ( !defined $cds_start || !defined $cds_end ){
-                next;
-            }
+
             # get all the refseq aliases for this ensembl transcript
             my @arr = @{$t->get_all_xrefs()};
             my @refseq = ();
@@ -193,33 +191,34 @@ END_MESSAGE
                 }
                 push(@{$tjson->{"aliases"}}, $x->display_id());
             }
-            # get the translation start and end
-            # get the domain coordinates (in amino-acids)
-            # now add all of the domains
-            my @domain_list = @{ $t->translation()->get_all_DomainFeatures() };
-            my $domain_hash = {};
-            for my $dom (@domain_list)
-            {
-                my $key = $dom->display_id(); # ensembl domain regions are split, group by display id
-                my $curr = {
-                    "regions" => [],
-                    "desc" => $dom->idesc(),
-                    "name" => $key
-                };
-
-                if(! exists $domain_hash->{$key})
+            if ( defined $cds_start && defined $cds_end ){
+                # get the translation start and end
+                # get the domain coordinates (in amino-acids)
+                # now add all of the domains
+                my @domain_list = @{ $t->translation()->get_all_DomainFeatures() };
+                my $domain_hash = {};
+                for my $dom (@domain_list)
                 {
-                    $domain_hash->{$key} = $curr;
-                } else {
-                    $curr = $domain_hash->{$key};
-                }
-                my $region = {"start" => $dom->start(), "end" => $dom->end() };
-                push(@{$curr->{"regions"}},  $region);
-            }
-            foreach my $val (values %$domain_hash){
-                push(@{$tjson->{"domains"}}, $val)
-            }
+                    my $key = $dom->display_id(); # ensembl domain regions are split, group by display id
+                    my $curr = {
+                        "regions" => [],
+                        "desc" => $dom->idesc(),
+                        "name" => $key
+                    };
 
+                    if(! exists $domain_hash->{$key})
+                    {
+                        $domain_hash->{$key} = $curr;
+                    } else {
+                        $curr = $domain_hash->{$key};
+                    }
+                    my $region = {"start" => $dom->start(), "end" => $dom->end() };
+                    push(@{$curr->{"regions"}},  $region);
+                }
+                foreach my $val (values %$domain_hash){
+                    push(@{$tjson->{"domains"}}, $val)
+                }
+            }
             my @exon_list = @{ $t->get_all_Exons() };
             for my $ex (@exon_list)
             {
@@ -243,4 +242,3 @@ END_MESSAGE
     close $fh;
     print "[$_program] [COMPLETE] status: Complete!\n";
 }
-
