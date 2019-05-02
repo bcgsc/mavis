@@ -61,14 +61,14 @@ sub main
         "output=s" => \$outputfile,
         "best_transcript_file=s" => \$best_transcript_file,
     );
-    
+
     my $database_information =  {
         -host => $ENV{'ENSEMBL_HOST'},
         -user => $ENV{'ENSEMBL_USER'},
         -port => $ENV{'ENSEMBL_PORT'},
         -pass => $ENV{'ENSEMBL_PASS'}
     };
-    
+
     my $help_message = <<"END_MESSAGE";
 usage:
     $_program --output OUTPUT_FILE [--best_transcript_file BEST_TRANSCRIPT_FILE] [--hugo_mapping_file HUGO_MAPPING_FILE]
@@ -144,15 +144,25 @@ END_MESSAGE
             "end" => $gene->end(),
             "strand" => $gene->strand()
         };
+
+
+        my $best_transcript = "";
+        if ( exists $best_transcript_mapping{$gid} and defined $best_transcript_mapping{$gid}){
+            $best_transcript = $best_transcript_mapping{$gid};
+        } else {
+            # use the canonical transcript as 'best' if not otherwise specified
+            $best_transcript = $gene->canonical_transcript()->stable_id();
+        }
+
         while ( my $t = shift @tlist )
         {
             my $tid = $t->stable_id();
             my $best = JSON::false;
-            if ( exists $best_transcript_mapping{$gid} and defined $best_transcript_mapping{$gid}){
-                if ($best_transcript_mapping{$gid} eq $tid){
-                    $best = JSON::true;
-                }
+
+            if ($best_transcript eq $tid){
+                $best = JSON::true;
             }
+
             my $tjson = {
                 "name" => $tid,
                 "is_best_transcript" => $best,
