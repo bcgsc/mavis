@@ -129,9 +129,9 @@ def parse_annotations_json(data, reference_genome=None, best_transcripts_only=Fa
     """
     genes_by_chr = {}
     for gene_dict in data['genes']:
-        if gene_dict['strand'] in ['1', '+']:
+        if gene_dict['strand'] in ['1', '+', 1]:
             gene_dict['strand'] = STRAND.POS
-        elif gene_dict['strand'] in ['-1', '-']:
+        elif gene_dict['strand'] in ['-1', '-', -1]:
             gene_dict['strand'] = STRAND.NEG
         else:
             raise AssertionError('input has unexpected form. strand must be 1 or -1 but found', gene_dict['strand'])
