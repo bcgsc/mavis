@@ -145,6 +145,8 @@ We have also pre-built the ensembl annotations file including non-coding transcr
     the non-coding genes will require an increase in the default amount of memory for the annotation step.
     The user should also expect the time for this step to increase. This is because the size of the
     annotations file including non-coding transcripts is approximate 1.5X the default (above).
+    On our standard COLO829 we increased the default memory for the annotation step from 12G to 16G.
+    The additional time observed was approximately 77.5 minutes.
 
 
 .. raw:: html
