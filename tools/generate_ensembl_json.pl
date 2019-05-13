@@ -19,12 +19,17 @@ ex. /gsc/resources/annotation/ensembl/transcript_info/production/ensembl_best_tr
 2. Ensembl_Transcript_ID: the ensembl transcript id
 
 
-To start the script you must set your environment variables first
+To start the script you must set up the PERL5LIB to point to the required modules, for example
 
-export ENSEMBL_HOST=<HOSTNAME>
-export ENSEMBL_PASS=<PASSWORD>
-export ENSEMBL_USER=<USERNAME>
-export ENSEMBL_PORT=<PORT>
+PERL_BASE=/gsc/pipelines/fusion_visualization/dependencies/linux_centos07/perl-5.28.1/dist
+
+export PATH=$PERL_BASE/bin:$PATH
+export PERL5LIB=$PERL_BASE/lib:$PERL5LIB
+
+
+ENSEMBL_BASE=/gsc/pipelines/fusion_visualization/dependencies/ensembl_api/ensembl_69
+export PERL5LIB=$ENSEMBL_BASE/bioperl-1.2.3:$ENSEMBL_BASE/ensembl/modules:$ENSEMBL_BASE/ensembl-variation/modules:$PERL5LIB
+export PERL5LIB=$(pwd)/tools:$(pwd):$PERL5LIB
 
 =cut
 
@@ -57,36 +62,60 @@ sub main
     if (! defined $best_transcript_file) {
         $best_transcript_file = "";
     }
+    my $ensembl_host = defined $ENV{'ENSEMBL_HOST'} ? $ENV{'ENSEMBL_HOST'} : '';
+    my $ensembl_port = defined $ENV{'ENSEMBL_PORT'} ? $ENV{'ENSEMBL_PORT'} : 3306;
+    my $ensembl_user = defined $ENV{'ENSEMBL_USER'} ? $ENV{'ENSEMBL_USER'} : 'ensembl';
+    my $ensembl_pass = defined $ENV{'ENSEMBL_PASS'} ? $ENV{'ENSEMBL_PASS'} : 'ensembl';
+    my $include_noncoding;
     my $option_check = GetOptions(
         "output=s" => \$outputfile,
         "best_transcript_file=s" => \$best_transcript_file,
+        "ensembl_host=s" => \$ensembl_host,
+        "ensembl_pass=s" => \$ensembl_pass,
+        "ensembl_port=i" => \$ensembl_port,
+        "ensembl_user=s" => \$ensembl_user,
+        "include_noncoding" => \$include_noncoding
     );
 
     my $database_information =  {
-        -host => $ENV{'ENSEMBL_HOST'},
-        -user => $ENV{'ENSEMBL_USER'},
-        -port => $ENV{'ENSEMBL_PORT'},
-        -pass => $ENV{'ENSEMBL_PASS'}
+        -host => $ensembl_host,
+        -user => $ensembl_user,
+        -port => $ensembl_port,
+        -pass => $ensembl_pass
     };
 
     my $help_message = <<"END_MESSAGE";
 usage:
-    $_program --output OUTPUT_FILE [--best_transcript_file BEST_TRANSCRIPT_FILE] [--hugo_mapping_file HUGO_MAPPING_FILE]
+    $_program --output OUTPUT_FILE --ensembl_host ENSEMBL_HOST [--ensembl_user ENSEMBL_USER]
+        [--ensembl_pass ENSEMBL_PASS] [--ensembl_port ENSEMBL_PORT]
+        [--best_transcript_file BEST_TRANSCRIPT_FILE] [--include_noncoding]
 
 required arguments:
 
     output:
         path to the output json file where results will be written
+    ensembl_host
+        the hostname to use in connecting to the ensembl database (default: $ensembl_host)
 
 optional arguments:
 
     best_transcript_mapping:
         path to the best transcripts file (default: $best_transcript_file)
+    include_noncoding:
+        flag to indicate that non-coding transcripts should be included in the output (default: false)
+    ensembl_user
+        the name of the user to use in connecting to the ensembl database (default $ensembl_user)
+    ensembl_pass
+        the password of the user to use in connecting to the ensembl database
+    ensembl_port
+        the port number to use in connecting to the ensembl database (default: $ensembl_port)
 END_MESSAGE
 
     # set up the default filenames
     die "$help_message\n\nerror: required argument --output not provided" if ! defined $outputfile;
+    die "$ensembl_host\n\nerror: required argument --ensembl_host not provided" if $ensembl_host eq "";
 
+    print "connecting to $ensembl_host:$ensembl_port as $ensembl_user\n";
     $registry = 'Bio::EnsEMBL::Registry';
     $registry->load_registry_from_db(%$database_information);
 
@@ -218,6 +247,8 @@ END_MESSAGE
                 foreach my $val (values %$domain_hash){
                     push(@{$tjson->{"domains"}}, $val)
                 }
+            } elsif (!defined $include_noncoding) {
+                next;
             }
             my @exon_list = @{ $t->get_all_Exons() };
             for my $ex (@exon_list)
