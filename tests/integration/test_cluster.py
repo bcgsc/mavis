@@ -11,6 +11,7 @@ from ..util import get_data
 
 
 FULL_BASE_EVENTS = get_data('mock_sv_events.tsv')
+CLUSTERED_EVENTS = get_data('clustering_input.tab')
 REF_CHR = 'fake'
 
 
@@ -32,6 +33,33 @@ class TestFullClustering(unittest.TestCase):
                 print('\t', ip)
             self.assertEqual(1, len(input_pairs))
         self.assertEqual(len(bpps), len(clusters))
+
+    def test_clustering_events(self):
+        # this file contains 2 events that should be clustered and produce a valid bpp
+        bpps = []
+        for bpp in sorted(read_bpp_from_input_file(CLUSTERED_EVENTS), key=lambda x: (x.break1.chr, x.break2.chr)):
+            if bpp.data[COLUMNS.protocol] == PROTOCOL.GENOME:
+                bpps.append(bpp)
+                print(bpp)
+        self.assertEqual(2, len(bpps))
+        clusters = merge_breakpoint_pairs(bpps, 200, 25)
+
+        self.assertEqual(1, len(clusters))
+
+        for cluster, input_pairs in sorted(clusters.items(), key=lambda x: (x[1][0].break1.chr, x[1][0].break2.chr)):
+            print(cluster)
+            for ip in input_pairs:
+                print('\t', ip)
+            print(cluster.flatten())
+            # BPP(Breakpoint(15:67333604L), Breakpoint(15:67333606R), opposing=False)
+            self.assertEqual('L', cluster.break1.orient)
+            self.assertEqual('R', cluster.break2.orient)
+            self.assertEqual('15', cluster.break1.chr)
+            self.assertEqual('15', cluster.break2.chr)
+            self.assertEqual(67333604, cluster.break1.start)
+            self.assertEqual(67333606, cluster.break2.start)
+            self.assertEqual(67333604, cluster.break1.end)
+            self.assertEqual(67333606, cluster.break2.end)
 
 
 class TestMergeBreakpointPairs(unittest.TestCase):
