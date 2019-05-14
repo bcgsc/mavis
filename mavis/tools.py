@@ -439,7 +439,7 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
                 std_row.get(COLUMNS.break2_position_end, std_row[COLUMNS.break2_position_start]),
                 orient=orient2, strand=strand2
             )
-            if len(break1) == 1 and len(break2) == 1 and event_type == SVTYPE.DEL and abs(break1.start - break2.start) < 2:
+            if len(break1) == 1 and len(break2) == 1 and event_type != SVTYPE.DUP and abs(break1.start - break2.start) < 2:
                 break1 = Breakpoint(break1.chr, break1.start - 1, break1.end - 1, orient=break1.orient, strand=break1.strand)
                 break2 = Breakpoint(break2.chr, break2.start + 1, break2.end + 1, orient=break2.orient, strand=break2.strand)
             bpp = BreakpointPair(

@@ -274,7 +274,9 @@ class BreakpointPair:
                     raise InvalidRearrangement(pair)
                 elif pair.break1.orient == ORIENT.LEFT or pair.break2.orient == ORIENT.RIGHT:
                     if len(pair.break1) == 1 and len(pair.break2) == 1 and abs(pair.break1.start - pair.break2.start) < 2:
-                        if pair.untemplated_seq == '':
+                        if pair.break1.start == pair.break2.start:
+                            raise InvalidRearrangement(pair)
+                        elif pair.untemplated_seq == '':
                             return set()
                         return {SVTYPE.INS}
                     elif pair.untemplated_seq == '':

@@ -169,6 +169,15 @@ def merge_by_union(input_pairs, group_key, weight_adjustment=10, cluster_radius=
             itvl2.start = max(itvl2.start, itvl1.start)
             itvl1.start = min(itvl1.start, itvl1.end)
             itvl2.end = max(itvl2.end, itvl2.start)
+            if all([
+                len(itvl1) == 1,
+                len(itvl2) == 1,
+                abs(itvl1.start - itvl2.start) < 2,
+                group_key.orient1 != ORIENT.RIGHT or group_key.orient2 != ORIENT.LEFT
+            ]):
+                itvl2.start += 2
+                itvl2.end += 2
+
         b1 = Breakpoint(group_key.chr1, itvl1.start, itvl1.end, orient=group_key.orient1, strand=group_key.strand1)
         b2 = Breakpoint(group_key.chr2, itvl2.start, itvl2.end, orient=group_key.orient2, strand=group_key.strand2)
         # create the new bpp representing the merge of the input pairs
@@ -261,6 +270,15 @@ def merge_breakpoint_pairs(input_pairs, cluster_radius=200, cluster_initial_size
                         itvl1.start = min(itvl1.start, itvl1.end)
                         itvl2.end = max(itvl2.end, itvl2.start)
 
+                        if all([
+                            len(itvl1) == 1,
+                            len(itvl2) == 1,
+                            abs(itvl1.start - itvl2.start) < 2,
+                            group_key.orient1 != ORIENT.RIGHT or group_key.orient2 != ORIENT.LEFT
+                        ]):
+                            itvl2.start += 2
+                            itvl2.end += 2
+
                     b1 = Breakpoint(
                         group_key.chr1, itvl1.start, itvl1.end, orient=group_key.orient1, strand=group_key.strand1)
                     b2 = Breakpoint(
@@ -272,16 +290,20 @@ def merge_breakpoint_pairs(input_pairs, cluster_radius=200, cluster_initial_size
                     nodes.setdefault(new_bpp, []).extend(pairs)
                     merged = True
             if not merged:
-                b1 = Breakpoint(
+
+                break1 = Breakpoint(
                     group_key.chr1, pair.break1.start, pair.break1.end,
                     orient=group_key.orient1, strand=group_key.strand1)
 
-                b2 = Breakpoint(
+                break2 = Breakpoint(
                     group_key.chr2, pair.break2.start, pair.break2.end,
                     orient=group_key.orient2, strand=group_key.strand2)
 
+                if break1.chr == break2.chr and len(break1) == 1 and len(break2) == 1 and abs(break1.start - break2.start) < 2 and (group_key.orient1 != ORIENT.RIGHT or group_key.orient2 != ORIENT.LEFT):
+                    break1 = Breakpoint(break1.chr, break1.start - 1, break1.end - 1, orient=break1.orient, strand=break1.strand)
+                    break2 = Breakpoint(break2.chr, break2.start + 1, break2.end + 1, orient=break2.orient, strand=break2.strand)
                 new_bpp = BreakpointPair(
-                    b1, b2, opposing_strands=group_key.opposing_strands, stranded=explicit_strand)
+                    break1, break2, opposing_strands=group_key.opposing_strands, stranded=explicit_strand)
                 nodes.setdefault(new_bpp, []).append(pair)
         if verbose:
             LOG('merged', count, 'down to', len(nodes))

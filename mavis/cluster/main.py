@@ -46,7 +46,7 @@ def split_clusters(clusters, outputdir, batch_id, min_clusters_per_file=0, max_f
 
 
 def main(
-    inputs, output, strand_specific, library, protocol, disease_status, masking, annotations,
+    inputs, output, library, protocol, disease_status, masking, annotations,
     limit_to_chr=DEFAULTS.limit_to_chr,
     cluster_initial_size_limit=DEFAULTS.cluster_initial_size_limit,
     cluster_radius=DEFAULTS.cluster_radius,
@@ -63,7 +63,6 @@ def main(
     Args:
         inputs (:class:`List` of :class:`str`): list of input files to read
         output (str): path to the output directory
-        strand_specific (bool): is the bam using a strand specific protocol
         library (str): the library to look for in each of the input files
         protocol (PROTOCOL): the sequence protocol (genome or transcriptome)
         masking (object): see :func:`~mavis.annotate.file_io.load_masking_regions`
