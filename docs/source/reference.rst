@@ -136,8 +136,23 @@ Annotations
 This is a custom file format. It is a :term:`JSON` file which contains the gene, transcript, exon,
 translation and protein domain positional information
 
-Pre-built annotation files can be downloaded above. The 'best transcript' flag is based on an in-house model, as are the
-aliases (custom one-to-one hugo gene name mapping)
+Pre-built annotation files can be downloaded above. The 'best transcript' flag is based on an in-house model.
+We have also pre-built the ensembl annotations file including non-coding transcripts below.
+
+.. warning::
+
+    It is worth noting that using the reference annotation file including
+    the non-coding genes will require an increase in the default amount of memory for the annotation step due
+    to the increased size of the annotations file. On our standard COLO829 we increased the default memory
+    for the annotation step from 12G to 18G.
+
+
+.. raw:: html
+
+    <a class='download-button btn btn-neutral' href='http://www.bcgsc.ca/downloads/mavis/ensembl69_hg19_annotations_with_ncrna.json' download>
+        <img src='_static/Ic_cloud_download_48px.svg'>GRCh37/Hg19 + Ensembl69 (includes non-coding genes)
+    </a><br><br>
+
 
 .. warning::
 
@@ -201,30 +216,24 @@ Instructions for downloading and installing the perl api can be found on the `en
 
 1. **Make sure the ensembl perl api modules are added to the PERL5LIB environment variable**
 
+Also ensure that the tools directory is on the PERL5LIB path so that the TSV.pm module can be found
+
 .. code:: bash
 
+   INSTALL_PATH=$(pwd)
    PERL5LIB=${PERL5LIB}:$HOME/ensembl_79/bioperl-live
    PERL5LIB=${PERL5LIB}:$HOME/ensembl_79/ensembl/modules
    PERL5LIB=${PERL5LIB}:$HOME/ensembl_79/ensembl-compara/modules
    PERL5LIB=${PERL5LIB}:$HOME/ensembl_79/ensembl-variation/modules
    PERL5LIB=${PERL5LIB}:$HOME/ensembl_79/ensembl-funcgen/modules
+   # include tools/TSV.pm module
+   PERL5LIB=${PERL5LIB}:$INSTALL_PATH/tools
    export PERL5LIB
 
-2. **Configure the environment variables to set defaults for the perl script**
+2. **Run the perl script**
 
-.. code:: bash
-
-   # required data files
-   export HUGO_ENSEMBL_MAPPING=/path/to/mapping/file
-   export BEST_TRANSCRIPTS=/path/to/transcripts/file
-
-   # connection information for the ensembl local (or external) server
-   export ENSEMBL_HOST=HOSTNAME
-   export ENSEMBL_PASS=PASSWORD
-   export ENSEMBL_USER=USERNAME
-   export ENSEMBL_PORT=PORT_NUMBER
-
-3. **Run the perl script**
+The below instructions are shown running from inside the tools directory to avoid prefixing the script name, but it is not required
+to be run from here provided the above step has been executed correctly.
 
 you can view the help menu by running
 
@@ -232,7 +241,7 @@ you can view the help menu by running
 
     perl generate_ensembl_json.pl
 
-you can override the default input file parameters (configured in the above step) by providing arguments
+you can override the default parameters (based on hard-coded defaults or environment variable content) by providing arguments
 to the script itself
 
 .. code:: bash
@@ -279,4 +288,3 @@ Aligner Reference
 
 The aligner reference file is the reference genome file used by the aligner during the validate stage. For example,
 if :term:`blat` is the aligner then this will be a :term:`2bit` file.
-
