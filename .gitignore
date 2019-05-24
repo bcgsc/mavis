@@ -33,3 +33,4 @@ analysis_scripts
 *eggs/
 html
 .pytest*
+.tox
