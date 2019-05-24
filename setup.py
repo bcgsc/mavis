@@ -82,6 +82,12 @@ INSTALL_REQS = [
     'svgwrite'
 ]
 
+DEPLOY_REQS = [
+    'twine',
+    'm2r',
+    'wheel'
+]
+
 
 setup(
     name='mavis',
@@ -94,7 +100,9 @@ setup(
     install_requires=INSTALL_REQS,
     extras_require={
         'docs': DOC_REQS,
-        'test': TEST_REQS
+        'test': TEST_REQS,
+        'dev': ['black', 'flake8'] + DOC_REQS + TEST_REQS + DEPLOY_REQS,
+        'deploy': DEPLOY_REQS
     },
     tests_require=TEST_REQS,
     setup_requires=[
