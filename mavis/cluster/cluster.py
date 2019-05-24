@@ -7,7 +7,7 @@ import itertools
 from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import ORIENT, STRAND
 from ..interval import Interval
-from ..util import LOG, DEVNULL
+from ..util import LOG
 
 
 class BreakpointPairGroupKey(
@@ -321,7 +321,11 @@ def merge_breakpoint_pairs(
                     )
                     if group_key.chr1 == group_key.chr2:
                         itvl1.end = min(itvl2.end, itvl1.end)
-                        itvl2.start = max(itvl2.start, itvl1.start)
+                        itvl1.start = min(itvl1.start, itvl1.end)
+                        itvl2.start = max(
+                            itvl2.start,
+                            itvl1.start + 2 if not any([p.opposing_strands for p in pairs]) else 1,
+                        )  # for merging putative deletion events
                         itvl1.start = min(itvl1.start, itvl1.end)
                         itvl2.end = max(itvl2.end, itvl2.start)
 
