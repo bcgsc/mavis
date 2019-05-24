@@ -102,3 +102,9 @@ Tests can be run as follows
 ```bash
 pytest tests
 ```
+
+To run the tests with tox (multiple python installs tested). Note that you will need to have multiple python installs on your path
+
+```bash
+tox
+```
