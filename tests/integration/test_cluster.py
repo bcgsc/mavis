@@ -118,7 +118,7 @@ class TestMergeBreakpointPairs(unittest.TestCase):
         self.assertEqual('11', merge.break1.chr)
         self.assertEqual('11', merge.break2.chr)
         self.assertEqual(12856838, merge.break1.start)
-        self.assertEqual(12856838, merge.break2.start)
+        self.assertEqual(12856840, merge.break2.start)  # putative indel will be shifted
         self.assertEqual(12897006, merge.break1.end)
         self.assertEqual(12897006, merge.break2.end)
 
