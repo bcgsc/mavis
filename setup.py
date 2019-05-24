@@ -12,8 +12,11 @@ def parse_md_readme():
     """
     try:
         from m2r import parse_from_file
+
         rst_lines = parse_from_file('README.md').split('\n')
-        long_description = ['.. image:: http://mavis.bcgsc.ca/docs/latest/_static/acronym.svg\n\n|\n']  # backup since pip can't handle raw directives
+        long_description = [
+            '.. image:: http://mavis.bcgsc.ca/docs/latest/_static/acronym.svg\n\n|\n'
+        ]  # backup since pip can't handle raw directives
         i = 0
         while i < len(rst_lines):
             if re.match(r'^..\s+raw::.*', rst_lines[i]):
@@ -37,7 +40,12 @@ def check_nonpython_dependencies():
         OSError: A dependency is not installed
     """
     import shutil
-    aligner = os.environ['MAVIS_ALIGNER'] if 'MAVIS_ALIGNER' in os.environ and os.environ['MAVIS_ALIGNER'] else 'blat'
+
+    aligner = (
+        os.environ['MAVIS_ALIGNER']
+        if 'MAVIS_ALIGNER' in os.environ and os.environ['MAVIS_ALIGNER']
+        else 'blat'
+    )
     aligner = re.split(r'\s+', aligner)[0]
     pth = shutil.which(aligner)
     if not pth:
@@ -56,16 +64,11 @@ TEST_REQS = [
     'coverage>=4.2',
     'pycodestyle>=2.3.1',
     'pytest',
-    'pytest-cov'
+    'pytest-cov',
 ]
 
 
-DOC_REQS = [
-    'docutils>=0.14',
-    'm2r>=0.1.12',
-    'sphinx-rtd-theme>=0.4.2',
-    'sphinx>=1.8.1'
-]
+DOC_REQS = ['docutils>=0.14', 'm2r>=0.1.12', 'sphinx-rtd-theme>=0.4.2', 'sphinx>=1.8.1']
 
 
 INSTALL_REQS = [
@@ -79,14 +82,10 @@ INSTALL_REQS = [
     'pysam>=0.9',
     'pyvcf==0.6.8',
     'shortuuid>=0.5.0',
-    'svgwrite'
+    'svgwrite',
 ]
 
-DEPLOY_REQS = [
-    'twine',
-    'm2r',
-    'wheel'
-]
+DEPLOY_REQS = ['twine', 'm2r', 'wheel']
 
 
 setup(
@@ -102,19 +101,20 @@ setup(
         'docs': DOC_REQS,
         'test': TEST_REQS,
         'dev': ['black', 'flake8'] + DOC_REQS + TEST_REQS + DEPLOY_REQS,
-        'deploy': DEPLOY_REQS
+        'deploy': DEPLOY_REQS,
     },
     tests_require=TEST_REQS,
-    setup_requires=[
-        'pip>=9.0.0',
-        'setuptools>=36.0.0'
-    ],
+    setup_requires=['pip>=9.0.0', 'setuptools>=36.0.0'],
     python_requires='>=3.2',
     author='Caralyn Reisle',
     author_email='creisle@bcgsc.ca',
     test_suite='tests',
-    entry_points={'console_scripts': ['mavis = mavis.main:main',
-                                      'calculate_ref_alt_counts = tools.calculate_ref_alt_counts:main']},
-    project_urls={'mavis': 'http://mavis.bcgsc.ca'}
+    entry_points={
+        'console_scripts': [
+            'mavis = mavis.main:main',
+            'calculate_ref_alt_counts = tools.calculate_ref_alt_counts:main',
+        ]
+    },
+    project_urls={'mavis': 'http://mavis.bcgsc.ca'},
 )
 check_nonpython_dependencies()
