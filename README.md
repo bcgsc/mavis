@@ -41,7 +41,7 @@ a github issue to our [github page](https://github.com/bcgsc/mavis/issues) or co
 
 ## Install Instructions
 
-There are 3 major steps to setting up and installing [MAVIS](http://mavis.bcgsc.ca).
+There are 3 major steps to setting up and installing [MAVIS](http://mavis.bcgsc.ca). If you are a developer contributing to mavis, please see the [instructions for developers page](http://mavis.bcgsc.ca/docs/latest/development.html) instead
 
 ### 1. Install Aligner
 
