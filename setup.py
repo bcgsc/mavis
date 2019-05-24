@@ -65,6 +65,7 @@ TEST_REQS = [
     'pycodestyle>=2.3.1',
     'pytest',
     'pytest-cov',
+    'tox',
 ]
 
 
