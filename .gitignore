@@ -31,3 +31,6 @@ analysis_scripts
 .vscode
 *.nfs*
 *eggs/
+html
+.pytest*
+.tox

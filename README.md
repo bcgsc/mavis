@@ -41,7 +41,7 @@ a github issue to our [github page](https://github.com/bcgsc/mavis/issues) or co
 
 ## Install Instructions
 
-There are 3 major steps to setting up and installing [MAVIS](http://mavis.bcgsc.ca).
+There are 3 major steps to setting up and installing [MAVIS](http://mavis.bcgsc.ca). If you are a developer contributing to mavis, please see the [instructions for developers page](http://mavis.bcgsc.ca/docs/latest/development.html) instead
 
 ### 1. Install Aligner
 
@@ -119,40 +119,6 @@ source reference_inputs/hg19_env.sh
 
 Once the above 3 steps are complete [MAVIS](http://mavis.bcgsc.ca) is ready to be run.
 See the MAVIS [tutorial](http://mavis.bcgsc.ca/docs/latest/pipeline.html#mavis-mini-tutorial) to learn about running MAVIS.
-
-
-## Build the Sphinx Documentation
-
-```bash
-pip install .[docs]
-sphinx-build docs/source/ html
-```
-
-## Deploy to PyPi
-
-Install m2r to ensure the README is converted nicely
-
-```bash
-pip install m2r
-```
-
-Install to build the egg
-
-```bash
-python setup.py install
-```
-
-Build the other distribution files
-
-```bash
-python setup.py sdist
-```
-
-Use twine to upload
-
-```bash
-twine upload -r pypi dist/*
-```
 
 
 ## Citation

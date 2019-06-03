@@ -157,11 +157,11 @@ END_MESSAGE
         my $gid = $gene->stable_id();
 
         # get all hugo aliases for this ensembl gene
-        my $hugo = "";
+        my $hugo = [];
 
         # use the ensembl hugo name if not otherwise given
         if (defined $gene->external_name()) {
-            $hugo = $gene->external_name();
+            $hugo = [$gene->external_name()];
         }
 
         my $gjson = {

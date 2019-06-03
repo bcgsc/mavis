@@ -4,38 +4,68 @@
 If you are new to the project a good way to get started is by adding to the documentation, or adding unit tests where
 there is a lack of code coverage.
 
-### Installing for Development (new to python projects?)
+## Install (for Development)
 
 Clone the repository and switch to the development branch
 
-    git clone https://github.com/bcgsc/mavis.git
-    cd mavis
-    git checkout develop
+```bash
+git clone https://github.com/bcgsc/mavis.git
+cd mavis
+git checkout develop
+```
 
-Set up a python virtual environment. If you are developing in python setting up with a virtual environment can be 
+Set up a python virtual environment. If you are developing in python setting up with a virtual environment can be
 incredibly helpful as it allows for a clean install to test. Instructions for setting up the environment
 are below
 
-    pip install virtualenv
-    virtualenv venv
-    source venv/bin/activate
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
 
-Install the MAVIS python package. Running the setup in develop mode will ensure that your code changes are run when you 
+Install the MAVIS python package. Running the setup in develop mode will ensure that your code changes are run when you
 run MAVIS from within that virtual environment
 
-    python setup.py develop
+```bash
+pip install -e .[dev]
+```
 
-Run the unit tests and compute code coverage
+Run the tests and compute code coverage
 
-    python setup.py nosetests 
+```bash
+pytest tests
+```
 
-Make the user manual (optional)
+## Build the Sphinx Documentation
 
-    cd docs
-    make html
+```bash
+pip install .[docs]
+sphinx-build docs/source/ html
+```
 
 The contents of the user manual can then be viewed by opening the build/html/index.html in any available
 web browser (i.e. google-chrome, firefox, etc.)
+
+
+## Deploy to PyPi
+
+Install deployment dependencies
+
+```bash
+pip install .[deploy]
+```
+
+Build the distribution files
+
+```bash
+python setup.py install sdist bdist_wheel
+```
+
+Use twine to upload
+
+```bash
+twine upload -r pypi dist/*
+```
 
 
 ### Reporting a Bug
@@ -66,3 +96,15 @@ if you want to be more explicit with nested types, the following conventions are
 
 - all new code must have unit tests in the tests subdirectory
 - in general for assertEqual statements, the expected value is given first
+
+Tests can be run as follows
+
+```bash
+pytest tests
+```
+
+To run the tests with tox (multiple python installs tested). Note that you will need to have multiple python installs on your path
+
+```bash
+tox
+```
