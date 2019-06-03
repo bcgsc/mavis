@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 import re
 
 
-VERSION = '2.2.5'
+VERSION = '2.2.6'
 
 
 def parse_md_readme():
