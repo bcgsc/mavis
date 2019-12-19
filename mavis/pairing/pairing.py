@@ -12,14 +12,19 @@ def product_key(bpp):
     """
     unique id for the product row
     """
-    return '_'.join([str(v) for v in [
-        bpp.library,
-        bpp.protocol,
-        bpp.annotation_id,
-        bpp.fusion_splicing_pattern,
-        bpp.fusion_cdna_coding_start,
-        bpp.fusion_cdna_coding_end
-    ]])
+    return '_'.join(
+        [
+            str(v)
+            for v in [
+                bpp.library,
+                bpp.protocol,
+                bpp.annotation_id,
+                bpp.fusion_splicing_pattern,
+                bpp.fusion_cdna_coding_start,
+                bpp.fusion_cdna_coding_end,
+            ]
+        ]
+    )
 
 
 def predict_transcriptome_breakpoint(breakpoint, transcript):
@@ -49,7 +54,8 @@ def predict_transcriptome_breakpoint(breakpoint, transcript):
             if len(breakpoint) > 1:
                 raise NotSpecifiedError(
                     'breakpoint overlaps an exon or splice site and is not specific (i.e. has '
-                    'an interval greater than 1)')
+                    'an interval greater than 1)'
+                )
             elif prime == PRIME.FIVE:
                 if i > 0:
                     prev = exons[i - 1]
@@ -58,8 +64,9 @@ def predict_transcriptome_breakpoint(breakpoint, transcript):
                             breakpoint.chr,
                             prev.donor,
                             strand=breakpoint.strand,
-                            orient=breakpoint.orient
-                        ))
+                            orient=breakpoint.orient,
+                        )
+                    )
             else:  # prime == PRIME.THREE
                 if i + 1 < len(exons):
                     nexxt = exons[i + 1]
@@ -68,18 +75,24 @@ def predict_transcriptome_breakpoint(breakpoint, transcript):
                             breakpoint.chr,
                             nexxt.acceptor,
                             strand=breakpoint.strand,
-                            orient=breakpoint.orient
-                        ))
+                            orient=breakpoint.orient,
+                        )
+                    )
             tbreaks.append(
                 Breakpoint(
-                    breakpoint.chr, breakpoint.start, breakpoint.end,
+                    breakpoint.chr,
+                    breakpoint.start,
+                    breakpoint.end,
                     strand=breakpoint.strand,
-                    orient=breakpoint.orient
-                ))
+                    orient=breakpoint.orient,
+                )
+            )
         elif i > 0:  # look at the previous intron
             prev = exons[i - 1]
             try:
-                intron_start, intron_end = sorted([prev.donor_splice_site.end, curr.acceptor_splice_site.start])
+                intron_start, intron_end = sorted(
+                    [prev.donor_splice_site.end, curr.acceptor_splice_site.start]
+                )
                 intron = Interval(intron_start + 1, intron_end - 1)
                 if Interval.overlaps(breakpoint, intron):
                     if prime == PRIME.FIVE:
@@ -88,16 +101,18 @@ def predict_transcriptome_breakpoint(breakpoint, transcript):
                                 breakpoint.chr,
                                 prev.donor,
                                 strand=breakpoint.strand,
-                                orient=breakpoint.orient
-                            ))
+                                orient=breakpoint.orient,
+                            )
+                        )
                     else:
                         tbreaks.append(
                             Breakpoint(
                                 breakpoint.chr,
                                 curr.acceptor,
                                 strand=breakpoint.strand,
-                                orient=breakpoint.orient
-                            ))
+                                orient=breakpoint.orient,
+                            )
+                        )
             except AttributeError:  # for introns that are smaller than this ignore (covered by exon check)
                 pass
 
@@ -108,15 +123,17 @@ def predict_transcriptome_breakpoint(breakpoint, transcript):
 
 def _equivalent_events(event1, event2):
     # basic checks
-    if any([
-        event1.break1.chr != event2.break1.chr,
-        event1.break2.chr != event2.break2.chr,
-        len(set([STRAND.NS, event1.break1.strand, event2.break1.strand])) > 2,
-        len(set([STRAND.NS, event1.break2.strand, event2.break2.strand])) > 2,
-        len(set([ORIENT.NS, event1.break1.orient, event2.break1.orient])) > 2,
-        len(set([ORIENT.NS, event1.break2.orient, event2.break2.orient])) > 2,
-        event1.opposing_strands != event2.opposing_strands
-    ]):
+    if any(
+        [
+            event1.break1.chr != event2.break1.chr,
+            event1.break2.chr != event2.break2.chr,
+            len(set([STRAND.NS, event1.break1.strand, event2.break1.strand])) > 2,
+            len(set([STRAND.NS, event1.break2.strand, event2.break2.strand])) > 2,
+            len(set([ORIENT.NS, event1.break1.orient, event2.break1.orient])) > 2,
+            len(set([ORIENT.NS, event1.break2.orient, event2.break2.orient])) > 2,
+            event1.opposing_strands != event2.opposing_strands,
+        ]
+    ):
         return False
     return True
 
@@ -128,7 +145,8 @@ def comparison_distance(event1, event2, input_distances=None):
         distances.update(input_distances)
     max_distance = max(
         distances[event1.data.get(COLUMNS.call_method, CALL_METHOD.CONTIG)],
-        distances[event2.data.get(COLUMNS.call_method, CALL_METHOD.CONTIG)])
+        distances[event2.data.get(COLUMNS.call_method, CALL_METHOD.CONTIG)],
+    )
     return max_distance
 
 
@@ -141,17 +159,21 @@ def equivalent(event1, event2, distances=None):
 
     if not _equivalent_events(event1, event2):
         return False
-    seqlen = sum([
-        len(event1.untemplated_seq) if event1.untemplated_seq else 0,
-        len(event2.untemplated_seq) if event2.untemplated_seq else 0
-    ])
+    seqlen = sum(
+        [
+            len(event1.untemplated_seq) if event1.untemplated_seq else 0,
+            len(event2.untemplated_seq) if event2.untemplated_seq else 0,
+        ]
+    )
     max_distance += seqlen
     # location comparison
-    if any([
-        abs(Interval.dist(event1.break1, event2.break1)) > max_distance,
-        abs(Interval.dist(event1.break2, event2.break2)) > max_distance,
-        event1.data[COLUMNS.event_type] != event2.data[COLUMNS.event_type]
-    ]):
+    if any(
+        [
+            abs(Interval.dist(event1.break1, event2.break1)) > max_distance,
+            abs(Interval.dist(event1.break2, event2.break2)) > max_distance,
+            event1.data[COLUMNS.event_type] != event2.data[COLUMNS.event_type],
+        ]
+    ):
         return False
     return True
 
@@ -167,7 +189,15 @@ def pair_by_distance(calls, distances, log=DEVNULL, against_self=False):
     max_distance = max(distances.values())
     max_useq = max([len(c.untemplated_seq) if c.untemplated_seq else 0 for c in calls] + [0])
     max_distance += max_useq * 2
-    log('lowest_resolution', lowest_resolution, 'max_distance', max_distance, 'possible comparisons', len(break1_sorted) * len(break1_sorted), time_stamp=False)
+    log(
+        'lowest_resolution',
+        lowest_resolution,
+        'max_distance',
+        max_distance,
+        'possible comparisons',
+        len(break1_sorted) * len(break1_sorted),
+        time_stamp=False,
+    )
 
     comparisons = 0
     for i in range(0, len(break1_sorted)):
@@ -180,7 +210,11 @@ def pair_by_distance(calls, distances, log=DEVNULL, against_self=False):
             if dist > max_distance + lowest_resolution:
                 break
             comparisons += 1
-            if not against_self and current.library == other.library and current.protocol == other.protocol:
+            if (
+                not against_self
+                and current.library == other.library
+                and current.protocol == other.protocol
+            ):
                 continue  # do not pair within a single library
             if equivalent(current, other, distances=distances):
                 distance_pairings[product_key(current)].add(product_key(other))
@@ -192,7 +226,11 @@ def pair_by_distance(calls, distances, log=DEVNULL, against_self=False):
             if dist > max_distance + lowest_resolution:
                 break
             comparisons += 1
-            if not against_self and current.library == other.library and current.protocol == other.protocol:
+            if (
+                not against_self
+                and current.library == other.library
+                and current.protocol == other.protocol
+            ):
                 continue  # do not pair within a single library
             if equivalent(current, other, distances=distances):
                 distance_pairings.setdefault(product_key(current), set()).add(product_key(other))
@@ -214,7 +252,10 @@ def inferred_equivalent(event1, event2, reference_transcripts, distances=None):
 
     max_distance = comparison_distance(event1, event2, distances)
 
-    if event1.data[COLUMNS.fusion_sequence_fasta_id] and event2.data[COLUMNS.fusion_sequence_fasta_id]:
+    if (
+        event1.data[COLUMNS.fusion_sequence_fasta_id]
+        and event2.data[COLUMNS.fusion_sequence_fasta_id]
+    ):
         if event1.fusion_sequence_fasta_id != event2.fusion_sequence_fasta_id:
             return False
         for col in [COLUMNS.fusion_cdna_coding_start, COLUMNS.fusion_cdna_coding_end]:

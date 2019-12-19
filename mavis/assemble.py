@@ -36,7 +36,9 @@ class Contig:
         return sum(self.remapped_sequences.values())
 
     def remap_coverage(self):
-        itvls = Interval.min_nonoverlapping(*[(x.reference_start, x.reference_end - 1) for x in self.remapped_sequences])
+        itvls = Interval.min_nonoverlapping(
+            *[(x.reference_start, x.reference_end - 1) for x in self.remapped_sequences]
+        )
         cov = sum([len(i) for i in itvls])
         return cov / len(self.seq)
 
@@ -93,7 +95,9 @@ class DeBruijnGraph(nx.DiGraph):
         Args:
             min_weight (int): the minimum weight for an edge to be retained
         """
-        ends = sorted([n for n in self.nodes() if self.out_degree(n) == 0 or self.in_degree(n) == 0])
+        ends = sorted(
+            [n for n in self.nodes() if self.out_degree(n) == 0 or self.in_degree(n) == 0]
+        )
         visited = set()
 
         while ends:
@@ -263,22 +267,34 @@ def pull_contigs_from_component(
         paths_est = len(assembly.get_sinks(component)) * len(assembly.get_sources(component))
 
         if paths_est > assembly_max_paths:
-            edge_weights = sorted([e[2]['freq'] for e in assembly.all_edges(
-                assembly.get_sources(component) | assembly.get_sinks(component), data=True)])
+            edge_weights = sorted(
+                [
+                    e[2]['freq']
+                    for e in assembly.all_edges(
+                        assembly.get_sources(component) | assembly.get_sinks(component), data=True
+                    )
+                ]
+            )
             w = max([w + 1, edge_weights[0]])
 
             if w > edge_weights[-1]:
                 continue
             log(
                 'reducing estimated paths. Current estimate is {}+ from'.format(paths_est),
-                len(component), 'nodes', 'filter increase', w)
+                len(component),
+                'nodes',
+                'filter increase',
+                w,
+            )
             assembly.trim_forks_by_freq(w)
             assembly.trim_noncutting_paths_by_freq(w)
             assembly.trim_tails_by_freq(w)
 
             unresolved_components.extend(digraph_connected_components(assembly, component))
         else:
-            for source, sink in itertools.product(assembly.get_sources(component), assembly.get_sinks(component)):
+            for source, sink in itertools.product(
+                assembly.get_sources(component), assembly.get_sinks(component)
+            ):
                 for path in nx.all_simple_paths(assembly, source, sink):
                     s = path[0] + ''.join([p[-1] for p in path[1:]])
                     score = 0
@@ -392,19 +408,24 @@ def assemble(
     for component in digraph_connected_components(assembly):
 
         # pull the path scores
-        path_scores.update(pull_contigs_from_component(
-            assembly.subgraph(component), component,
-            min_edge_trim_weight=min_edge_trim_weight,
-            assembly_max_paths=assembly_max_paths,
-            log=log
-        ))
+        path_scores.update(
+            pull_contigs_from_component(
+                assembly.subgraph(component),
+                component,
+                min_edge_trim_weight=min_edge_trim_weight,
+                assembly_max_paths=assembly_max_paths,
+                log=log,
+            )
+        )
 
     # now map the contigs to the possible input sequences
     log('filtering contigs by size and complexity', len(path_scores), time_stamp=False)
     contigs = []
     for seq, score in list(path_scores.items()):
         contig = Contig(seq, score)
-        if len(contig.seq) >= min_contig_length and (not min_complexity or contig.complexity() >= min_complexity):
+        if len(contig.seq) >= min_contig_length and (
+            not min_complexity or contig.complexity() >= min_complexity
+        ):
             contigs.append(contig)
     log('filtering similar contigs', len(contigs))
     # remap the input reads
@@ -417,9 +438,11 @@ def assemble(
             alignment = nsb_align(
                 contig.seq,
                 input_seq,
-                min_overlap_percent=min(1, remap_min_overlap / len(input_seq)),  # accounts for hardclipped reads which may be short
+                min_overlap_percent=min(
+                    1, remap_min_overlap / len(input_seq)
+                ),  # accounts for hardclipped reads which may be short
                 min_match=remap_min_match,
-                min_consecutive_match=remap_min_exact_match
+                min_consecutive_match=remap_min_exact_match,
             )
             if len(alignment) != 1:
                 continue
@@ -462,5 +485,5 @@ def kmers(s, size):
     for i in range(0, len(s)):
         if i + size > len(s):
             break
-        kmers.append(s[i:i + size])
+        kmers.append(s[i : i + size])
     return kmers

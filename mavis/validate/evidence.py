@@ -10,7 +10,6 @@ from ..interval import Interval
 
 
 class GenomeEvidence(Evidence):
-
     def __init__(self, *pos, **kwargs):
         Evidence.__init__(self, *pos, **kwargs)
         self.protocol = PROTOCOL.GENOME
@@ -19,26 +18,48 @@ class GenomeEvidence(Evidence):
         self.outer_window2 = self.generate_window(self.break2)
         self.inner_window1 = Interval(
             max([self.break1.start - self.call_error - self.read_length + 1, 1]),
-            self.break1.end + self.call_error + self.read_length - 1)
+            self.break1.end + self.call_error + self.read_length - 1,
+        )
         self.inner_window2 = Interval(
             max([self.break2.start - self.call_error - self.read_length + 1, 1]),
-            self.break2.end + self.call_error + self.read_length - 1)
+            self.break2.end + self.call_error + self.read_length - 1,
+        )
 
         if SVTYPE.INS in self.putative_event_types():
             comb = len(self.break1 | self.break2)
             if comb > len(self.break1) and comb > len(self.break2):
                 compt_break1 = Breakpoint(
-                    self.break1.chr, self.break1.start, self.break1.end, orient=ORIENT.RIGHT, strand=self.break1.strand)
+                    self.break1.chr,
+                    self.break1.start,
+                    self.break1.end,
+                    orient=ORIENT.RIGHT,
+                    strand=self.break1.strand,
+                )
                 compt_break2 = Breakpoint(
-                    self.break2.chr, self.break2.start, self.break2.end, orient=ORIENT.LEFT, strand=self.break2.strand)
+                    self.break2.chr,
+                    self.break2.start,
+                    self.break2.end,
+                    orient=ORIENT.LEFT,
+                    strand=self.break2.strand,
+                )
 
                 self.compatible_window1 = self.generate_window(compt_break1)
                 self.compatible_window2 = self.generate_window(compt_break2)
         elif SVTYPE.DUP in self.putative_event_types():
             compt_break1 = Breakpoint(
-                self.break1.chr, self.break1.start, self.break1.end, orient=ORIENT.LEFT, strand=self.break1.strand)
+                self.break1.chr,
+                self.break1.start,
+                self.break1.end,
+                orient=ORIENT.LEFT,
+                strand=self.break1.strand,
+            )
             compt_break2 = Breakpoint(
-                self.break2.chr, self.break2.start, self.break2.end, orient=ORIENT.RIGHT, strand=self.break2.strand)
+                self.break2.chr,
+                self.break2.start,
+                self.break2.end,
+                orient=ORIENT.RIGHT,
+                strand=self.break2.strand,
+            )
 
             self.compatible_window1 = self.generate_window(compt_break1)
             self.compatible_window2 = self.generate_window(compt_break2)
@@ -70,7 +91,6 @@ class GenomeEvidence(Evidence):
 
 
 class TranscriptomeEvidence(Evidence):
-
     def __init__(self, annotations, *pos, **kwargs):
         Evidence.__init__(self, *pos, **kwargs)
 
@@ -82,30 +102,56 @@ class TranscriptomeEvidence(Evidence):
 
         self.protocol = PROTOCOL.TRANS
         # get the list of overlapping transcripts
-        self.overlapping_transcripts = overlapping_transcripts(annotations, self.break1) | overlapping_transcripts(annotations, self.break2)
+        self.overlapping_transcripts = overlapping_transcripts(
+            annotations, self.break1
+        ) | overlapping_transcripts(annotations, self.break2)
 
         self.outer_window1 = self.generate_window(self.break1)
         self.outer_window2 = self.generate_window(self.break2)
         tgt = self.call_error + self.read_length - 1
 
-        self.inner_window1 = self.traverse(self.break1.end, tgt, ORIENT.RIGHT) | self.traverse(self.break1.start, tgt, ORIENT.LEFT)
-        self.inner_window2 = self.traverse(self.break2.start, tgt, ORIENT.LEFT) | self.traverse(self.break2.end, tgt, ORIENT.RIGHT)
+        self.inner_window1 = self.traverse(self.break1.end, tgt, ORIENT.RIGHT) | self.traverse(
+            self.break1.start, tgt, ORIENT.LEFT
+        )
+        self.inner_window2 = self.traverse(self.break2.start, tgt, ORIENT.LEFT) | self.traverse(
+            self.break2.end, tgt, ORIENT.RIGHT
+        )
 
         if SVTYPE.INS in self.putative_event_types():
             comb = len(self.break1 | self.break2)
             if comb > len(self.break1) and comb > len(self.break2):
                 compt_break1 = Breakpoint(
-                    self.break1.chr, self.break1.start, self.break1.end, orient=ORIENT.RIGHT, strand=self.break1.strand)
+                    self.break1.chr,
+                    self.break1.start,
+                    self.break1.end,
+                    orient=ORIENT.RIGHT,
+                    strand=self.break1.strand,
+                )
                 compt_break2 = Breakpoint(
-                    self.break2.chr, self.break2.start, self.break2.end, orient=ORIENT.LEFT, strand=self.break2.strand)
+                    self.break2.chr,
+                    self.break2.start,
+                    self.break2.end,
+                    orient=ORIENT.LEFT,
+                    strand=self.break2.strand,
+                )
                 self.compatible_window1 = self.generate_window(compt_break1)
                 self.compatible_window2 = self.generate_window(compt_break2)
 
         elif SVTYPE.DUP in self.putative_event_types():
             compt_break1 = Breakpoint(
-                self.break1.chr, self.break1.start, self.break1.end, orient=ORIENT.LEFT, strand=self.break1.strand)
+                self.break1.chr,
+                self.break1.start,
+                self.break1.end,
+                orient=ORIENT.LEFT,
+                strand=self.break1.strand,
+            )
             compt_break2 = Breakpoint(
-                self.break2.chr, self.break2.start, self.break2.end, orient=ORIENT.RIGHT, strand=self.break2.strand)
+                self.break2.chr,
+                self.break2.start,
+                self.break2.end,
+                orient=ORIENT.RIGHT,
+                strand=self.break2.strand,
+            )
 
             self.compatible_window1 = self.generate_window(compt_break1)
             self.compatible_window2 = self.generate_window(compt_break2)
@@ -127,15 +173,20 @@ class TranscriptomeEvidence(Evidence):
         genomic_end_positions = set()
         normal_end = GenomeEvidence.traverse(start, distance, direction).start
 
-        for transcript in itertools.chain.from_iterable([pre_transcript.transcripts for pre_transcript in transcripts]):
+        for transcript in itertools.chain.from_iterable(
+            [pre_transcript.transcripts for pre_transcript in transcripts]
+        ):
             # convert the start to cdna coordinates
-            if any([
-                start < transcript.reference_object.start and is_left,
-                start > transcript.reference_object.end and not is_left
-            ]):
+            if any(
+                [
+                    start < transcript.reference_object.start and is_left,
+                    start > transcript.reference_object.end and not is_left,
+                ]
+            ):
                 continue
             cdna_start, start_shift = transcript.convert_genomic_to_nearest_cdna(
-                start, stick_direction=ORIENT.LEFT if is_left else ORIENT.RIGHT, allow_outside=True)
+                start, stick_direction=ORIENT.LEFT if is_left else ORIENT.RIGHT, allow_outside=True
+            )
             if abs(start_shift) > distance:  # entirely within an intron
                 continue
             if transcript.is_reverse:
@@ -164,14 +215,18 @@ class TranscriptomeEvidence(Evidence):
         if read.reference_start > mate.reference_start:
             read, mate = mate, read
         if read.reference_name == mate.reference_name:
-            start, end = self.distance(read.reference_start + 1, mate.reference_end, chrom=read.reference_name)
+            start, end = self.distance(
+                read.reference_start + 1, mate.reference_end, chrom=read.reference_name
+            )
             return Interval(start + 1, end + 1)
         return Interval(0)
 
     def _select_transcripts(self, chrom=None, strand=STRAND.NS):
         result = []
         for transcript in self.overlapping_transcripts:
-            if (chrom is None or transcript.get_chr() == chrom) and STRAND.compare(transcript.strand, strand):
+            if (chrom is None or transcript.get_chr() == chrom) and STRAND.compare(
+                transcript.strand, strand
+            ):
                 result.append(transcript)
         return result
 
@@ -230,8 +285,20 @@ class TranscriptomeEvidence(Evidence):
         window = GenomeEvidence.generate_window(self, breakpoint)
         tgt_left = Evidence.distance(window.start, breakpoint.start)  # amount to expand to the left
         tgt_right = Evidence.distance(breakpoint.end, window.end)  # amount to expand to the right
-        window1 = self.traverse(breakpoint.start, tgt_left.end, ORIENT.LEFT, strand=breakpoint.strand, chrom=breakpoint.chr)
-        window2 = self.traverse(breakpoint.end, tgt_right.end, ORIENT.RIGHT, strand=breakpoint.strand, chrom=breakpoint.chr)
+        window1 = self.traverse(
+            breakpoint.start,
+            tgt_left.end,
+            ORIENT.LEFT,
+            strand=breakpoint.strand,
+            chrom=breakpoint.chr,
+        )
+        window2 = self.traverse(
+            breakpoint.end,
+            tgt_right.end,
+            ORIENT.RIGHT,
+            strand=breakpoint.strand,
+            chrom=breakpoint.chr,
+        )
         return window1 | window2
 
     def min_cds_shift(self, pos, strand=STRAND.NS, chrom=None):
@@ -267,11 +334,15 @@ class TranscriptomeEvidence(Evidence):
                 # be aligned the same as genome indels
                 if state in {CIGAR.D, CIGAR.N} and {next_state} & {prev_state} & {CIGAR.EQ}:
                     nearest_end_boundary = min(exon_ends, key=lambda x: abs(x - reference_pos - 1))
-                    prev_alignment_seq = refseq[reference_pos - prev_freq:reference_pos]
+                    prev_alignment_seq = refseq[reference_pos - prev_freq : reference_pos]
                     next_reference_pos = reference_pos + freq
-                    next_alignment_seq = refseq[max(reference_pos, next_reference_pos - prev_freq):next_reference_pos]
+                    next_alignment_seq = refseq[
+                        max(reference_pos, next_reference_pos - prev_freq) : next_reference_pos
+                    ]
                     shift = 0
-                    for prev_base, next_base in zip(prev_alignment_seq[::-1], next_alignment_seq[::-1]):
+                    for prev_base, next_base in zip(
+                        prev_alignment_seq[::-1], next_alignment_seq[::-1]
+                    ):
                         if prev_base == next_base:
                             shift += 1
                         else:
@@ -304,7 +375,9 @@ class TranscriptomeEvidence(Evidence):
         return _cigar.join(new_cigar)
 
     def standardize_read(self, read):
-        read.cigar = self.exon_boundary_shift_cigar(read)  # do this twice to avoid merging events accidentally
+        read.cigar = self.exon_boundary_shift_cigar(
+            read
+        )  # do this twice to avoid merging events accidentally
         read = Evidence.standardize_read(self, read)
         read.cigar = self.exon_boundary_shift_cigar(read)
         return read

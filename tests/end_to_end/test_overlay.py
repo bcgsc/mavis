@@ -25,9 +25,19 @@ class TestOverlayOptions(unittest.TestCase):
         print('output dir', self.temp_output)
 
     def test_basic(self):
-        with patch.object(sys, 'argv', [
-            'mavis', SUBCOMMAND.OVERLAY, 'GAGE4', '--annotations', ANNOTATIONS, '--output', self.temp_output
-        ]):
+        with patch.object(
+            sys,
+            'argv',
+            [
+                'mavis',
+                SUBCOMMAND.OVERLAY,
+                'GAGE4',
+                '--annotations',
+                ANNOTATIONS,
+                '--output',
+                self.temp_output,
+            ],
+        ):
             try:
                 print(sys.argv)
                 returncode = main()
@@ -38,10 +48,22 @@ class TestOverlayOptions(unittest.TestCase):
                 self.assertTrue(glob_exists(os.path.join(self.temp_output, '*GAGE4*.svg')))
 
     def test_marker(self):
-        with patch.object(sys, 'argv', [
-            'mavis', SUBCOMMAND.OVERLAY, 'GAGE4', '--annotations', ANNOTATIONS, '--output', self.temp_output,
-            '--marker', 'm', '49364900'
-        ]):
+        with patch.object(
+            sys,
+            'argv',
+            [
+                'mavis',
+                SUBCOMMAND.OVERLAY,
+                'GAGE4',
+                '--annotations',
+                ANNOTATIONS,
+                '--output',
+                self.temp_output,
+                '--marker',
+                'm',
+                '49364900',
+            ],
+        ):
             try:
                 returncode = main()
             except SystemExit as err:
@@ -51,10 +73,23 @@ class TestOverlayOptions(unittest.TestCase):
                 self.assertTrue(glob_exists(os.path.join(self.temp_output, '*GAGE4*.svg')))
 
     def test_marker_range(self):
-        with patch.object(sys, 'argv', [
-            'mavis', SUBCOMMAND.OVERLAY, 'GAGE4', '--annotations', ANNOTATIONS, '--output', self.temp_output,
-            '--marker', 'm', '49364900', '49365900'
-        ]):
+        with patch.object(
+            sys,
+            'argv',
+            [
+                'mavis',
+                SUBCOMMAND.OVERLAY,
+                'GAGE4',
+                '--annotations',
+                ANNOTATIONS,
+                '--output',
+                self.temp_output,
+                '--marker',
+                'm',
+                '49364900',
+                '49365900',
+            ],
+        ):
             try:
                 returncode = main()
             except SystemExit as err:
@@ -64,10 +99,21 @@ class TestOverlayOptions(unittest.TestCase):
                 self.assertTrue(glob_exists(os.path.join(self.temp_output, '*GAGE4*.svg')))
 
     def test_marker_not_enough_args(self):
-        with patch.object(sys, 'argv', [
-            'mavis', SUBCOMMAND.OVERLAY, 'GAGE4', '--annotations', ANNOTATIONS, '--output', self.temp_output,
-            '--marker', 'm'
-        ]):
+        with patch.object(
+            sys,
+            'argv',
+            [
+                'mavis',
+                SUBCOMMAND.OVERLAY,
+                'GAGE4',
+                '--annotations',
+                ANNOTATIONS,
+                '--output',
+                self.temp_output,
+                '--marker',
+                'm',
+            ],
+        ):
             try:
                 returncode = main()
             except SystemExit as err:
@@ -76,10 +122,20 @@ class TestOverlayOptions(unittest.TestCase):
                 self.assertNotEqual(0, returncode)
                 self.assertTrue(glob_exists(os.path.join(self.temp_output, '*GAGE4*.svg')))
 
-        with patch.object(sys, 'argv', [
-            'mavis', SUBCOMMAND.OVERLAY, '--annotations', ANNOTATIONS, 'GAGE4', '--output', self.temp_output,
-            '--marker'
-        ]):
+        with patch.object(
+            sys,
+            'argv',
+            [
+                'mavis',
+                SUBCOMMAND.OVERLAY,
+                '--annotations',
+                ANNOTATIONS,
+                'GAGE4',
+                '--output',
+                self.temp_output,
+                '--marker',
+            ],
+        ):
             try:
                 returncode = main()
             except SystemExit as err:
@@ -89,10 +145,22 @@ class TestOverlayOptions(unittest.TestCase):
                 self.assertTrue(glob_exists(os.path.join(self.temp_output, '*GAGE4*.svg')))
 
     def test_marker_not_int(self):
-        with patch.object(sys, 'argv', [
-            'mavis', SUBCOMMAND.OVERLAY, 'GAGE4', '--annotations', ANNOTATIONS, '--output', self.temp_output,
-            '--marker', 'm', 'k'
-        ]):
+        with patch.object(
+            sys,
+            'argv',
+            [
+                'mavis',
+                SUBCOMMAND.OVERLAY,
+                'GAGE4',
+                '--annotations',
+                ANNOTATIONS,
+                '--output',
+                self.temp_output,
+                '--marker',
+                'm',
+                'k',
+            ],
+        ):
             try:
                 returncode = main()
             except SystemExit as err:
@@ -102,10 +170,22 @@ class TestOverlayOptions(unittest.TestCase):
                 self.assertTrue(glob_exists(os.path.join(self.temp_output, '*GAGE4*.svg')))
 
     def test_read_depth_plot(self):
-        with patch.object(sys, 'argv', [
-            'mavis', SUBCOMMAND.OVERLAY, 'GAGE4', '--annotations', ANNOTATIONS, '--output', self.temp_output,
-            '--read_depth_plot', 'axis', BAM
-        ]):
+        with patch.object(
+            sys,
+            'argv',
+            [
+                'mavis',
+                SUBCOMMAND.OVERLAY,
+                'GAGE4',
+                '--annotations',
+                ANNOTATIONS,
+                '--output',
+                self.temp_output,
+                '--read_depth_plot',
+                'axis',
+                BAM,
+            ],
+        ):
             try:
                 returncode = main()
             except SystemExit as err:
@@ -115,10 +195,23 @@ class TestOverlayOptions(unittest.TestCase):
                 self.assertTrue(glob_exists(os.path.join(self.temp_output, '*GAGE4*.svg')))
 
     def test_read_depth_plot_binned(self):
-        with patch.object(sys, 'argv', [
-            'mavis', SUBCOMMAND.OVERLAY, 'GAGE4', '--annotations', ANNOTATIONS, '--output', self.temp_output,
-            '--read_depth_plot', 'axis', BAM, '0.5'
-        ]):
+        with patch.object(
+            sys,
+            'argv',
+            [
+                'mavis',
+                SUBCOMMAND.OVERLAY,
+                'GAGE4',
+                '--annotations',
+                ANNOTATIONS,
+                '--output',
+                self.temp_output,
+                '--read_depth_plot',
+                'axis',
+                BAM,
+                '0.5',
+            ],
+        ):
             try:
                 returncode = main()
             except SystemExit as err:
@@ -129,10 +222,25 @@ class TestOverlayOptions(unittest.TestCase):
 
     def test_read_depth_plot_not_binned_but_stranded(self):
         # no ymax
-        with patch.object(sys, 'argv', [
-            'mavis', SUBCOMMAND.OVERLAY, 'GAGE4', '--annotations', ANNOTATIONS, '--output', self.temp_output,
-            '--read_depth_plot', 'axis', BAM, '1', 'none', 'True'
-        ]):
+        with patch.object(
+            sys,
+            'argv',
+            [
+                'mavis',
+                SUBCOMMAND.OVERLAY,
+                'GAGE4',
+                '--annotations',
+                ANNOTATIONS,
+                '--output',
+                self.temp_output,
+                '--read_depth_plot',
+                'axis',
+                BAM,
+                '1',
+                'none',
+                'True',
+            ],
+        ):
             try:
                 returncode = main()
             except SystemExit as err:

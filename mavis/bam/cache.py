@@ -121,8 +121,14 @@ class BamCache:
         return [Interval(s, t) for s, t in fetch_regions]
 
     def fetch(
-        self, input_chrom, start, stop, limit=10000, cache_if=lambda x: True, filter_if=lambda x: False,
-        stop_on_cached_read=False
+        self,
+        input_chrom,
+        start,
+        stop,
+        limit=10000,
+        cache_if=lambda x: True,
+        filter_if=lambda x: False,
+        stop_on_cached_read=False,
     ):
         """
         Args:
@@ -148,7 +154,11 @@ class BamCache:
             if chrom not in self.fh.references:
                 chrom = 'chr' + chrom
             if chrom not in self.fh.references:
-                raise KeyError('bam file does not contain the expected reference', input_chrom, self.fh.references)
+                raise KeyError(
+                    'bam file does not contain the expected reference',
+                    input_chrom,
+                    self.fh.references,
+                )
         temp_cache = set()
         count = 0
 
@@ -171,8 +181,16 @@ class BamCache:
         return set(result)
 
     def fetch_from_bins(
-        self, input_chrom, start, stop, read_limit=10000, cache=False, sample_bins=3,
-        cache_if=lambda x: True, min_bin_size=10, filter_if=lambda x: False
+        self,
+        input_chrom,
+        start,
+        stop,
+        read_limit=10000,
+        cache=False,
+        sample_bins=3,
+        cache_if=lambda x: True,
+        min_bin_size=10,
+        filter_if=lambda x: False,
     ):
         """
         wrapper around the fetch method, returns a list to avoid errors with changing the file pointer
@@ -240,13 +258,15 @@ class BamCache:
         mates = []
         for mate in putative_mates:
             if not mate.is_unmapped:
-                if any([
-                    read.is_read1 == mate.is_read1,
-                    read.next_reference_start != mate.reference_start,
-                    read.next_reference_id != mate.reference_id,
-                    primary_only and (mate.is_secondary or mate.is_supplementary),
-                    abs(read.template_length) != abs(mate.template_length)
-                ]):
+                if any(
+                    [
+                        read.is_read1 == mate.is_read1,
+                        read.next_reference_start != mate.reference_start,
+                        read.next_reference_id != mate.reference_id,
+                        primary_only and (mate.is_secondary or mate.is_supplementary),
+                        abs(read.template_length) != abs(mate.template_length),
+                    ]
+                ):
                     continue
             mates.append(mate)
         if len(mates) == 0:
@@ -256,7 +276,8 @@ class BamCache:
                 warnings.warn(
                     'looking for uncached mate of {0}. This requires file access and'
                     ' requests may be slow. This should also not be using in a loop iterating using the file pointer '
-                    ' as it will change the file pointer position'.format(read.query_name))
+                    ' as it will change the file pointer position'.format(read.query_name)
+                )
                 m = self.fh.mate(read)
                 m = SamRead.copy(m)
                 self.add_read(m)

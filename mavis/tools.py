@@ -25,7 +25,7 @@ SUPPORTED_TOOL = MavisNamespace(
     BREAKSEQ='breakseq',
     CNVNATOR='cnvnator',
     STRELKA='strelka',
-    STARFUSION='starfusion'
+    STARFUSION='starfusion',
 )
 """
 Supported Tools used to call SVs and then used as input into MAVIS
@@ -39,38 +39,51 @@ Supported Tools used to call SVs and then used as input into MAVIS
 """
 
 TOOL_SVTYPE_MAPPING = {v: [v] for v in SVTYPE.values()}
-TOOL_SVTYPE_MAPPING.update({
-    'DEL': [SVTYPE.DEL],
-    'INS': [SVTYPE.INS],
-    'ITX': [SVTYPE.DUP],
-    'CTX': [SVTYPE.TRANS, SVTYPE.ITRANS],
-    'INV': [SVTYPE.INV],
-    'BND': [SVTYPE.TRANS, SVTYPE.ITRANS],
-    'TRA': [SVTYPE.TRANS, SVTYPE.ITRANS],
-    'CNV': [SVTYPE.DUP],
-    'RPL': [SVTYPE.INS],
-    'DUP:TANDEM': [SVTYPE.DUP],
-    'DUP': [SVTYPE.DUP],
-    'interchromosomal': [SVTYPE.TRANS, SVTYPE.ITRANS],
-    'eversion': [SVTYPE.DUP],
-    'translocation': [SVTYPE.TRANS, SVTYPE.ITRANS],
-    'ins': [SVTYPE.INS],
-    'del': [SVTYPE.DEL],
-    'dup': [SVTYPE.DUP],
-    'ITD': [SVTYPE.DUP],
-    'IDP': [SVTYPE.INS]
-})
+TOOL_SVTYPE_MAPPING.update(
+    {
+        'DEL': [SVTYPE.DEL],
+        'INS': [SVTYPE.INS],
+        'ITX': [SVTYPE.DUP],
+        'CTX': [SVTYPE.TRANS, SVTYPE.ITRANS],
+        'INV': [SVTYPE.INV],
+        'BND': [SVTYPE.TRANS, SVTYPE.ITRANS],
+        'TRA': [SVTYPE.TRANS, SVTYPE.ITRANS],
+        'CNV': [SVTYPE.DUP],
+        'RPL': [SVTYPE.INS],
+        'DUP:TANDEM': [SVTYPE.DUP],
+        'DUP': [SVTYPE.DUP],
+        'interchromosomal': [SVTYPE.TRANS, SVTYPE.ITRANS],
+        'eversion': [SVTYPE.DUP],
+        'translocation': [SVTYPE.TRANS, SVTYPE.ITRANS],
+        'ins': [SVTYPE.INS],
+        'del': [SVTYPE.DEL],
+        'dup': [SVTYPE.DUP],
+        'ITD': [SVTYPE.DUP],
+        'IDP': [SVTYPE.INS],
+    }
+)
 
 TRACKING_COLUMN = 'tracking_id'
 
 
-def convert_tool_output(fnames, file_type=SUPPORTED_TOOL.MAVIS, stranded=False, log=DEVNULL, collapse=True, assume_no_untemplated=True):
+def convert_tool_output(
+    fnames,
+    file_type=SUPPORTED_TOOL.MAVIS,
+    stranded=False,
+    log=DEVNULL,
+    collapse=True,
+    assume_no_untemplated=True,
+):
     """
     Reads output from a given SV caller and converts to a set of MAVIS breakpoint pairs. Also collapses duplicates
     """
     result = []
     for fname in fnames:
-        result.extend(_convert_tool_output(fname, file_type, stranded, log, assume_no_untemplated=assume_no_untemplated))
+        result.extend(
+            _convert_tool_output(
+                fname, file_type, stranded, log, assume_no_untemplated=assume_no_untemplated
+            )
+        )
     if collapse:
         collapse_mapping = {}
         for bpp in result:
@@ -114,23 +127,35 @@ def _parse_transabyss(row):
     if std_row[COLUMNS.event_type] in ['LSR', 'translocation']:
         del std_row[COLUMNS.event_type]
     if 'breakpoint' in row:
-        std_row[COLUMNS.break1_orientation], std_row[COLUMNS.break2_orientation] = row['orientations'].split(',')
+        std_row[COLUMNS.break1_orientation], std_row[COLUMNS.break2_orientation] = row[
+            'orientations'
+        ].split(',')
         match = re.match(
-            r'^(?P<chr1>[^:]+):(?P<pos1_start>\d+)\|(?P<chr2>[^:]+):(?P<pos2_start>\d+)$', row['breakpoint'])
+            r'^(?P<chr1>[^:]+):(?P<pos1_start>\d+)\|(?P<chr2>[^:]+):(?P<pos2_start>\d+)$',
+            row['breakpoint'],
+        )
         if not match:
             raise OSError(
-                'file format error: the breakpoint column did not satisfy the expected pattern', row)
+                'file format error: the breakpoint column did not satisfy the expected pattern', row
+            )
         for group, col in zip(
             ['chr1', 'pos1_start', 'chr2', 'pos2_start'],
-            [COLUMNS.break1_chromosome, COLUMNS.break1_position_start, COLUMNS.break2_chromosome, COLUMNS.break2_position_start]
+            [
+                COLUMNS.break1_chromosome,
+                COLUMNS.break1_position_start,
+                COLUMNS.break2_chromosome,
+                COLUMNS.break2_position_start,
+            ],
         ):
             std_row[col] = match[group]
     else:
-        std_row.update({
-            COLUMNS.break1_chromosome: row['chr'],
-            COLUMNS.break1_position_start: int(row['chr_start']),
-            COLUMNS.break2_position_start: int(row['chr_end'])
-        })
+        std_row.update(
+            {
+                COLUMNS.break1_chromosome: row['chr'],
+                COLUMNS.break1_position_start: int(row['chr_start']),
+                COLUMNS.break2_position_start: int(row['chr_end']),
+            }
+        )
         if std_row[COLUMNS.event_type] == 'del':
             std_row[COLUMNS.break1_position_start] -= 1
             std_row[COLUMNS.break2_position_start] += 1
@@ -142,11 +167,17 @@ def _parse_transabyss(row):
             assert row['alt'] == 'na'
             std_row[COLUMNS.untemplated_seq] = ''
         elif std_row[COLUMNS.event_type] in ['dup', 'ITD']:
-            length = std_row[COLUMNS.break2_position_start] - std_row[COLUMNS.break1_position_start] + 1
+            length = (
+                std_row[COLUMNS.break2_position_start] - std_row[COLUMNS.break1_position_start] + 1
+            )
             if len(row['alt']) != length:
                 raise AssertionError(
                     'expected alternate sequence to be equal to the length of the event',
-                    len(row['alt']), length, row, std_row)
+                    len(row['alt']),
+                    length,
+                    row,
+                    std_row,
+                )
             std_row[COLUMNS.untemplated_seq] = ''
         elif std_row[COLUMNS.event_type] == 'ins':
             std_row[COLUMNS.untemplated_seq] = row['alt'].upper()
@@ -162,12 +193,17 @@ def _parse_starfusion(row):
     """
     std_row = {}
     try:
-        std_row['break1_chromosome'], b1_start, std_row['break1_strand'] = row['LeftBreakpoint'].split(':')
-        std_row['break2_chromosome'], b2_start, std_row['break2_strand'] = row['RightBreakpoint'].split(':')
+        std_row['break1_chromosome'], b1_start, std_row['break1_strand'] = row[
+            'LeftBreakpoint'
+        ].split(':')
+        std_row['break2_chromosome'], b2_start, std_row['break2_strand'] = row[
+            'RightBreakpoint'
+        ].split(':')
     except (ValueError, TypeError):
         raise AssertionError(
             'Could not parse the breakpoint from the starfusion row: {}, {}'.format(
-                row['LeftBreakpoint'], row['RightBreakpoint'])
+                row['LeftBreakpoint'], row['RightBreakpoint']
+            )
         )
     std_row['break1_position_start'] = std_row['break1_position_end'] = b1_start
     std_row['break2_position_start'] = std_row['break2_position_end'] = b2_start
@@ -185,11 +221,17 @@ def _parse_chimerascan(row):
     std_row = {}
     for retained_column in ['genes5p', 'genes3p']:
         if retained_column in row:
-            std_row['{}_{}'.format(SUPPORTED_TOOL.CHIMERASCAN, retained_column)] = row[retained_column]
+            std_row['{}_{}'.format(SUPPORTED_TOOL.CHIMERASCAN, retained_column)] = row[
+                retained_column
+            ]
     if TRACKING_COLUMN not in row:
-        std_row[TRACKING_COLUMN] = '{}-{}'.format(SUPPORTED_TOOL.CHIMERASCAN, row['chimera_cluster_id'])
+        std_row[TRACKING_COLUMN] = '{}-{}'.format(
+            SUPPORTED_TOOL.CHIMERASCAN, row['chimera_cluster_id']
+        )
 
-    std_row.update({COLUMNS.break1_chromosome: row['chrom5p'], COLUMNS.break2_chromosome: row['chrom3p']})
+    std_row.update(
+        {COLUMNS.break1_chromosome: row['chrom5p'], COLUMNS.break2_chromosome: row['chrom3p']}
+    )
     if row['strand5p'] == '+':
         std_row[COLUMNS.break1_position_start] = row['end5p']
         std_row[COLUMNS.break1_orientation] = ORIENT.LEFT
@@ -245,16 +287,40 @@ def _parse_bnd_alt(alt):
     """
     match = re.match(r'^(?P<ref>\w)(?P<useq>\w*)\[(?P<chr>[^:]+):(?P<pos>\d+)\[$', alt)
     if match:
-        return (match.group('chr'), int(match.group('pos')), ORIENT.RIGHT, match.group('ref'), match.group('useq'))
+        return (
+            match.group('chr'),
+            int(match.group('pos')),
+            ORIENT.RIGHT,
+            match.group('ref'),
+            match.group('useq'),
+        )
     match = re.match(r'^\[(?P<chr>[^:]+):(?P<pos>\d+)\[(?P<useq>\w*)(?P<ref>\w)$', alt)
     if match:
-        return (match.group('chr'), int(match.group('pos')), ORIENT.RIGHT, match.group('ref'), match.group('useq'))
+        return (
+            match.group('chr'),
+            int(match.group('pos')),
+            ORIENT.RIGHT,
+            match.group('ref'),
+            match.group('useq'),
+        )
     match = re.match(r'^\](?P<chr>[^:]+):(?P<pos>\d+)\](?P<useq>\w*)(?P<ref>\w)$', alt)
     if match:
-        return (match.group('chr'), int(match.group('pos')), ORIENT.LEFT, match.group('ref'), match.group('useq'))
+        return (
+            match.group('chr'),
+            int(match.group('pos')),
+            ORIENT.LEFT,
+            match.group('ref'),
+            match.group('useq'),
+        )
     match = re.match(r'^(?P<ref>\w)(?P<useq>\w*)](?P<chr>[^:]+):(?P<pos>\d+)\]$', alt)
     if match:
-        return (match.group('chr'), int(match.group('pos')), ORIENT.LEFT, match.group('ref'), match.group('useq'))
+        return (
+            match.group('chr'),
+            int(match.group('pos')),
+            ORIENT.LEFT,
+            match.group('ref'),
+            match.group('useq'),
+        )
     else:
         raise NotImplementedError('alt specification in unexpected format', alt)
 
@@ -298,11 +364,17 @@ def _parse_vcf_record(record, log=DEVNULL):
             if record.ref != ref:
                 raise AssertionError(
                     'Expected the ref specification in the vcf record to match the sequence '
-                    'in the alt string: {} vs {}'.format(record.ref, ref))
+                    'in the alt string: {} vs {}'.format(record.ref, ref)
+                )
         else:
             chr2 = info.get('CHR2', record.chrom)
             end = record.stop
-            if alt and record.ref and re.match(r'^[A-Z]+$', alt) and re.match(r'^[A-Z]+', record.ref):
+            if (
+                alt
+                and record.ref
+                and re.match(r'^[A-Z]+$', alt)
+                and re.match(r'^[A-Z]+', record.ref)
+            ):
                 std_row[COLUMNS.untemplated_seq] = alt[1:]
                 size = len(alt) - len(record.ref)
                 if size > 0:
@@ -310,20 +382,28 @@ def _parse_vcf_record(record, log=DEVNULL):
                 elif size < 0:
                     std_row[COLUMNS.event_type] = SVTYPE.DEL
         std_row.update({COLUMNS.break1_chromosome: record.chrom, COLUMNS.break2_chromosome: chr2})
-        if info.get('PRECISE', False):  # DELLY CI only apply when split reads were not used to refine the breakpoint which is then flagged
-            std_row.update({
-                COLUMNS.break1_position_start: record.pos,
-                COLUMNS.break1_position_end: record.pos,
-                COLUMNS.break2_position_start: end,
-                COLUMNS.break2_position_end: end
-            })
+        if info.get(
+            'PRECISE', False
+        ):  # DELLY CI only apply when split reads were not used to refine the breakpoint which is then flagged
+            std_row.update(
+                {
+                    COLUMNS.break1_position_start: record.pos,
+                    COLUMNS.break1_position_end: record.pos,
+                    COLUMNS.break2_position_start: end,
+                    COLUMNS.break2_position_end: end,
+                }
+            )
         else:
-            std_row.update({
-                COLUMNS.break1_position_start: max(1, record.pos + info.get('CIPOS', (0, 0))[0]),
-                COLUMNS.break1_position_end: record.pos + info.get('CIPOS', (0, 0))[1],
-                COLUMNS.break2_position_start: max(1, end + info.get('CIEND', (0, 0))[0]),
-                COLUMNS.break2_position_end: end + info.get('CIEND', (0, 0))[1]
-            })
+            std_row.update(
+                {
+                    COLUMNS.break1_position_start: max(
+                        1, record.pos + info.get('CIPOS', (0, 0))[0]
+                    ),
+                    COLUMNS.break1_position_end: record.pos + info.get('CIPOS', (0, 0))[1],
+                    COLUMNS.break2_position_start: max(1, end + info.get('CIEND', (0, 0))[0]),
+                    COLUMNS.break2_position_end: end + info.get('CIEND', (0, 0))[1],
+                }
+            )
 
         if 'SVTYPE' in info:
             std_row[COLUMNS.event_type] = info['SVTYPE']
@@ -335,7 +415,9 @@ def _parse_vcf_record(record, log=DEVNULL):
             std_row[COLUMNS.break2_orientation] = connection_type[orient2]
         except KeyError:
             pass
-        std_row.update({k: v for k, v in info.items() if k not in {'CHR2', 'SVTYPE', 'CIPOS', 'CIEND', 'CT'}})
+        std_row.update(
+            {k: v for k, v in info.items() if k not in {'CHR2', 'SVTYPE', 'CIPOS', 'CIEND', 'CT'}}
+        )
         records.append(std_row)
     return records
 
@@ -356,7 +438,14 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
     std_row[COLUMNS.break1_strand] = std_row[COLUMNS.break2_strand] = STRAND.NS
     result = []
     # convert the specified file type to a standard format
-    if file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL, SUPPORTED_TOOL.VCF, SUPPORTED_TOOL.BREAKSEQ, SUPPORTED_TOOL.STRELKA]:
+    if file_type in [
+        SUPPORTED_TOOL.DELLY,
+        SUPPORTED_TOOL.MANTA,
+        SUPPORTED_TOOL.PINDEL,
+        SUPPORTED_TOOL.VCF,
+        SUPPORTED_TOOL.BREAKSEQ,
+        SUPPORTED_TOOL.STRELKA,
+    ]:
 
         std_row.update(row)
 
@@ -374,14 +463,20 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
 
     elif file_type == SUPPORTED_TOOL.DEFUSE:
 
-        std_row[COLUMNS.break1_orientation] = ORIENT.LEFT if row['genomic_strand1'] == STRAND.POS else ORIENT.RIGHT
-        std_row[COLUMNS.break2_orientation] = ORIENT.LEFT if row['genomic_strand2'] == STRAND.POS else ORIENT.RIGHT
-        std_row.update({
-            COLUMNS.break1_chromosome: row['gene_chromosome1'],
-            COLUMNS.break2_chromosome: row['gene_chromosome2'],
-            COLUMNS.break1_position_start: row['genomic_break_pos1'],
-            COLUMNS.break2_position_start: row['genomic_break_pos2']
-        })
+        std_row[COLUMNS.break1_orientation] = (
+            ORIENT.LEFT if row['genomic_strand1'] == STRAND.POS else ORIENT.RIGHT
+        )
+        std_row[COLUMNS.break2_orientation] = (
+            ORIENT.LEFT if row['genomic_strand2'] == STRAND.POS else ORIENT.RIGHT
+        )
+        std_row.update(
+            {
+                COLUMNS.break1_chromosome: row['gene_chromosome1'],
+                COLUMNS.break2_chromosome: row['gene_chromosome2'],
+                COLUMNS.break1_position_start: row['genomic_break_pos1'],
+                COLUMNS.break2_position_start: row['genomic_break_pos2'],
+            }
+        )
         if TRACKING_COLUMN in row:
             std_row[TRACKING_COLUMN] = row[TRACKING_COLUMN]
         else:
@@ -393,14 +488,18 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
 
     elif file_type == SUPPORTED_TOOL.BREAKDANCER:
 
-        std_row.update({
-            COLUMNS.event_type: row['Type'],
-            COLUMNS.break1_chromosome: row['Chr1'],
-            COLUMNS.break2_chromosome: row['Chr2'],
-            COLUMNS.break1_position_start: row['Pos1'],
-            COLUMNS.break2_position_start: row['Pos2'],
-        })
-        std_row.update({k: v for k, v in row.items() if k not in {'Type', 'Chr1', 'Chr2', 'Pos1', 'Pos2'}})
+        std_row.update(
+            {
+                COLUMNS.event_type: row['Type'],
+                COLUMNS.break1_chromosome: row['Chr1'],
+                COLUMNS.break2_chromosome: row['Chr2'],
+                COLUMNS.break1_position_start: row['Pos1'],
+                COLUMNS.break2_position_start: row['Pos2'],
+            }
+        )
+        std_row.update(
+            {k: v for k, v in row.items() if k not in {'Type', 'Chr1', 'Chr2', 'Pos1', 'Pos2'}}
+        )
 
     else:
         raise NotImplementedError('unsupported file type', file_type)
@@ -415,12 +514,20 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
     if not std_row.get(TRACKING_COLUMN, None):
         std_row[TRACKING_COLUMN] = '{}-{}'.format(file_type, std_row.get('id', uuid()))
 
-    combinations = list(itertools.product(
-        ORIENT.expand(std_row[COLUMNS.break1_orientation]), ORIENT.expand(std_row[COLUMNS.break2_orientation]),
-        std_row[COLUMNS.break1_strand], std_row[COLUMNS.break2_strand],
-        TOOL_SVTYPE_MAPPING[std_row[COLUMNS.event_type]] if COLUMNS.event_type in std_row else [None],
-        [True, False] if std_row.get(COLUMNS.opposing_strands, None) is None else [std_row[COLUMNS.opposing_strands]]
-    ))
+    combinations = list(
+        itertools.product(
+            ORIENT.expand(std_row[COLUMNS.break1_orientation]),
+            ORIENT.expand(std_row[COLUMNS.break2_orientation]),
+            std_row[COLUMNS.break1_strand],
+            std_row[COLUMNS.break2_strand],
+            TOOL_SVTYPE_MAPPING[std_row[COLUMNS.event_type]]
+            if COLUMNS.event_type in std_row
+            else [None],
+            [True, False]
+            if std_row.get(COLUMNS.opposing_strands, None) is None
+            else [std_row[COLUMNS.opposing_strands]],
+        )
+    )
     # add the product of all uncertainties as breakpoint pairs
     for orient1, orient2, strand1, strand2, event_type, oppose in combinations:
         try:
@@ -431,27 +538,44 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
                 std_row[COLUMNS.break1_chromosome],
                 std_row[COLUMNS.break1_position_start],
                 std_row.get(COLUMNS.break1_position_end, std_row[COLUMNS.break1_position_start]),
-                orient=orient1, strand=strand1
+                orient=orient1,
+                strand=strand1,
             )
             break2 = Breakpoint(
                 std_row.get(COLUMNS.break2_chromosome, std_row[COLUMNS.break1_chromosome]),
                 std_row[COLUMNS.break2_position_start],
                 std_row.get(COLUMNS.break2_position_end, std_row[COLUMNS.break2_position_start]),
-                orient=orient2, strand=strand2
+                orient=orient2,
+                strand=strand2,
             )
-            if len(break1) == 1 and len(break2) == 1 and event_type == SVTYPE.DEL and abs(break1.start - break2.start) < 2:
-                break1 = Breakpoint(break1.chr, break1.start - 1, break1.end - 1, orient=break1.orient, strand=break1.strand)
-                break2 = Breakpoint(break2.chr, break2.start + 1, break2.end + 1, orient=break2.orient, strand=break2.strand)
+            if (
+                len(break1) == 1
+                and len(break2) == 1
+                and event_type == SVTYPE.DEL
+                and abs(break1.start - break2.start) < 2
+            ):
+                break1 = Breakpoint(
+                    break1.chr,
+                    break1.start - 1,
+                    break1.end - 1,
+                    orient=break1.orient,
+                    strand=break1.strand,
+                )
+                break2 = Breakpoint(
+                    break2.chr,
+                    break2.start + 1,
+                    break2.end + 1,
+                    orient=break2.orient,
+                    strand=break2.strand,
+                )
             bpp = BreakpointPair(
-                break1, break2,
+                break1,
+                break2,
                 opposing_strands=oppose,
                 untemplated_seq=untemplated_seq,
                 event_type=event_type,
-                data={
-                    COLUMNS.tools: file_type,
-                    COLUMNS.tracking_id: std_row[COLUMNS.tracking_id]
-                },
-                stranded=stranded
+                data={COLUMNS.tools: file_type, COLUMNS.tracking_id: std_row[COLUMNS.tracking_id]},
+                stranded=stranded,
             )
 
             for col, value in std_row.items():
@@ -465,7 +589,10 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
     if not result:
         raise UserWarning(
             'row failed to create any breakpoint pairs. This generally indicates an input formatting error',
-            row, std_row, combinations)
+            row,
+            std_row,
+            combinations,
+        )
     return result
 
 
@@ -480,7 +607,7 @@ def _convert_breakdancer_file(input_file):
             if metadata_match:
                 bam_to_lib[metadata_match.group(1)] = metadata_match.group(2)
             header += 1
-        lines = lines[header - 1:]
+        lines = lines[header - 1 :]
         input_file = Namespace(readlines=lambda: lines)
     header, rows = tab.read_file(input_file, allow_short=True, require=['num_Reads_lib'])
     for row in rows:
@@ -489,12 +616,20 @@ def _convert_breakdancer_file(input_file):
     return rows
 
 
-def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=False, log=DEVNULL, assume_no_untemplated=True):
+def _convert_tool_output(
+    input_file,
+    file_type=SUPPORTED_TOOL.MAVIS,
+    stranded=False,
+    log=DEVNULL,
+    assume_no_untemplated=True,
+):
     log('reading:', input_file)
     result = []
     rows = None
     if file_type == SUPPORTED_TOOL.MAVIS:
-        result = read_bpp_from_input_file(input_file, expand_orient=True, expand_svtype=True, add_default={'stranded': stranded})
+        result = read_bpp_from_input_file(
+            input_file, expand_orient=True, expand_svtype=True, add_default={'stranded': stranded}
+        )
     elif file_type == SUPPORTED_TOOL.CNVNATOR:
         _, rows = tab.read_file(
             input_file,
@@ -503,13 +638,27 @@ def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fa
                 'coordinates',
                 'size',
                 'normalized_RD',
-                'e-val1', 'e-val2', 'e-val3', 'e-val4', 'q0'
-            ])
-    elif file_type in [SUPPORTED_TOOL.DELLY, SUPPORTED_TOOL.MANTA, SUPPORTED_TOOL.PINDEL, SUPPORTED_TOOL.VCF, SUPPORTED_TOOL.BREAKSEQ, SUPPORTED_TOOL.STRELKA]:
+                'e-val1',
+                'e-val2',
+                'e-val3',
+                'e-val4',
+                'q0',
+            ],
+        )
+    elif file_type in [
+        SUPPORTED_TOOL.DELLY,
+        SUPPORTED_TOOL.MANTA,
+        SUPPORTED_TOOL.PINDEL,
+        SUPPORTED_TOOL.VCF,
+        SUPPORTED_TOOL.BREAKSEQ,
+        SUPPORTED_TOOL.STRELKA,
+    ]:
         rows = []
         vfile = VariantFile(input_file)
         try:
-            vfile.header.info.add('END', number=1, type='Integer', description='End of the interval')
+            vfile.header.info.add(
+                'END', number=1, type='Integer', description='End of the interval'
+            )
         except ValueError:
             pass
         for vcf_record in vfile.fetch():
@@ -529,7 +678,9 @@ def _convert_tool_output(input_file, file_type=SUPPORTED_TOOL.MAVIS, stranded=Fa
         log('found', len(rows), 'rows')
         for row in rows:
             try:
-                std_rows = _convert_tool_row(row, file_type, stranded, assume_no_untemplated=assume_no_untemplated)
+                std_rows = _convert_tool_row(
+                    row, file_type, stranded, assume_no_untemplated=assume_no_untemplated
+                )
             except Exception as err:
                 log('Error in converting row', row)
                 raise err

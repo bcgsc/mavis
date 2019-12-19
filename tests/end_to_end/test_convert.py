@@ -26,15 +26,19 @@ def setUpModule():
 
 
 class TestConvert(unittest.TestCase):
-
     def run_main(self, inputfile, file_type, strand_specific=False):
         outputfile = os.path.join(TEMP_OUTPUT, file_type + '.tab')
         args = [
-            'mavis', SUBCOMMAND.CONVERT,
-            '-o', outputfile,
-            '-n', inputfile,
-            '--file_type', file_type,
-            '--strand_specific', strand_specific
+            'mavis',
+            SUBCOMMAND.CONVERT,
+            '-o',
+            outputfile,
+            '-n',
+            inputfile,
+            '--file_type',
+            file_type,
+            '--strand_specific',
+            strand_specific,
         ]
         with patch.object(sys, 'argv', args):
             self.assertEqual(0, main())

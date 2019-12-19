@@ -166,18 +166,20 @@ class TestAssemble(unittest.TestCase):
             'GTCCTCAGCCACAGTTCCCTGCTTGCCTTGGCTCTCCTCCAGCCAATTATCTCCTTCTCATTTGGTACTGCTTGCCCTGGGGTGATTGCTTGAGTGGGTGTGACCTGTGGTTGGTCTCACTGGGTCTGGTTAAAGTCCTGTTGTGTGCTC',
             'GAGCACACAACAGGACTTTAACCAGACCCAGTGAGACCAACCACAGGTCACACCCACTCAAGCAATCACCCCAGGGCAAGCAGTACCAAATGAGAAGGAGATAATTGGCTGGAGGAGAGCCAAGGCAAGCAGGGAACTGTGGCTGAGGAC',
             'GGCCCTGGAACTTGTCTGTCTGTCTGTTGATTTGGAATTGACAGTGGTTGCAGACCTTTAAGTCAAACCTTTCCTCTTGATCCCAATGTGCCCTTCGCTTTCTCTAAAAGGTTCTCCCTTCCTCTTATTTTTCCTTATCCTCTTCTCCAT',
-            'ATGGAGAAGAGGATAAGGAAAAATAAGAGGAAGGGAGAACCTTTTAGAGAAAGCGAAGGGCACATTGGGATCAAGAGGAAAGGTTTGACTTAAAGGTCTGCAACCACTGTCAATTCCAAATCAACAGACAGACAGACAAGTTCCAGGGCC'
+            'ATGGAGAAGAGGATAAGGAAAAATAAGAGGAAGGGAGAACCTTTTAGAGAAAGCGAAGGGCACATTGGGATCAAGAGGAAAGGTTTGACTTAAAGGTCTGCAACCACTGTCAATTCCAAATCAACAGACAGACAGACAAGTTCCAGGGCC',
         ]
         kmer_size = 0.75 * len(list(sequences)[0])
         assembly = assemble(
-            sequences, kmer_size,
+            sequences,
+            kmer_size,
             min_edge_trim_weight=3,
             remap_min_match=0.95,
             min_contig_length=150,
             remap_min_exact_match=6,
             assembly_max_paths=20,
             assembly_min_uniq=0.01,
-            log=self.log)
+            log=self.log,
+        )
         for contig in assembly:
             print(contig.seq)
         self.assertTrue(assembly)
@@ -231,19 +233,21 @@ class TestAssemble(unittest.TestCase):
             'TAGAGTTGGGTCTTAAAAGATGAAGGAAGGGGGCACACTGGGTCCCAGTAAGACAAGAAGAGACTATGTGCTGGACATGGCGCTCAGTGATTTACATGTATACAATGCCTCATTTAGTACTCAGAAGAACTGGAAGAAGATGTATTATTA',
             'TAATAATACATCTTCTTCCAGTTCTTCTGAGTACTAAATGAGGCATTGTATACATGTAAATCACTGAGCGCCATGTCCAGCACATAGTCTCTTCTTGTCTTACTGGGACCCAGTGTGCCCCCTTCCTTCATCTTTTAAGACCCAACTCTA',
             'TTTTCTACTCTGGGTGGAGAAAAATTATTAAAAAGTCTTGATTATCAGAATTTGGCCCCTAGTTTTTCTCATCATAACACAGTCCAGTATGTATGTTCTGAAATATCCATGGGCCCGCCTTTGACTGATGCAGACACAGTGAGGATCTTA',
-            'TAAGATCCTCACTGTGTCTGCATCAGTCAAAGGCGGGCCCATGGATATTTCAGAACATACATACTGGACTGTGTTATGATGAGAAAAACTAGGGGCCAAATTCTGATAATCAAGACTTTTTAATAATTTTTCTCCACCCAGAGTAGAAAA'
+            'TAAGATCCTCACTGTGTCTGCATCAGTCAAAGGCGGGCCCATGGATATTTCAGAACATACATACTGGACTGTGTTATGATGAGAAAAACTAGGGGCCAAATTCTGATAATCAAGACTTTTTAATAATTTTTCTCCACCCAGAGTAGAAAA',
         }
         for seq in sequences:
             assert reverse_complement(seq) in sequences
         kmer_size = 0.75 * len(list(sequences)[0])
         assemblies = assemble(
-            sequences, kmer_size,
+            sequences,
+            kmer_size,
             min_edge_trim_weight=2,
             remap_min_match=0.95,
             remap_min_exact_match=6,
             assembly_max_paths=20,
             assembly_min_uniq=0.01,
-            log=self.log)
+            log=self.log,
+        )
         for assembly in assemblies:
             print(assembly.seq)
         self.assertEqual(2, len(assemblies))
@@ -260,7 +264,7 @@ class TestAssemble(unittest.TestCase):
             'GGTATTAGGAAGTGAGACAATTAGGAGGTAATTAGGTCATGAGAGTGGAGCCTTCATGAGTAGGATTATTGCCCATTTTAAAAAAAGGTCCATGAGCACTTTCTTGCCTTTTATCTATCATCTGAGGACACATGCTGGGCACTCTGATTT',
             'TAGGAAGTGAGACAATTAGGAGGTAATTAGGTCATGAGAGTGGAGCCTTCATGAGTAGGATTATTGCCCATTTTAAAAAAAGGTCCATGAGCACTTTCTTGCCTTTTATCTATCATCTGAGGACACATGCTGGGCACTCTGATTTCAGAT',
             'AGGAGGTAATTAGGTCATGAGAGTGGAGCCTTCATGAGTAGGATTATTGCCCATTTTAAAAAAAGGTCCATGAGCACTTTCTTGCCTTTTATCTATCATCTGAGGACACATGCTGGGCACTCTGATTTCAGATTTCCATCCTCCAGAACT',
-            'AAAGTTGGTTTTTCACAAAATTGGGATTGAAATTACAGCCACCATTCGATGGTATTAGGAAGGGAGGCAATTAGGAGGTACTTGGGTCAGGAGAGGGGAGCCTGCATGAGTAGGATTAATGGCCATTTTAAAAAACGATCAATGTGCACG'
+            'AAAGTTGGTTTTTCACAAAATTGGGATTGAAATTACAGCCACCATTCGATGGTATTAGGAAGGGAGGCAATTAGGAGGTACTTGGGTCAGGAGAGGGGAGCCTGCATGAGTAGGATTAATGGCCATTTTAAAAAACGATCAATGTGCACG',
         ]
         sequences = set(seqs)
         for seq in seqs:
@@ -268,7 +272,8 @@ class TestAssemble(unittest.TestCase):
         print('assembly size', len(sequences))
         kmer_size = 0.75 * len(list(seqs)[0])
         assemblies = assemble(
-            sequences, kmer_size,
+            sequences,
+            kmer_size,
             min_edge_trim_weight=2,
             remap_min_match=0.95,
             remap_min_overlap=150 * 0.9,
@@ -276,7 +281,8 @@ class TestAssemble(unittest.TestCase):
             remap_min_exact_match=6,
             assembly_max_paths=20,
             assembly_min_uniq=0.01,
-            log=self.log)
+            log=self.log,
+        )
         for assembly in assemblies:
             print(assembly.seq, assembly.remap_score())
         self.assertEqual(2, len(assemblies))
@@ -319,7 +325,7 @@ class TestAssemble(unittest.TestCase):
             'GCCCGCGGGAGAGAGAGAGAGAGAGATATATATATAGCAGACCAGGAGAGCGAGAGCGAGAGAGATATAGAGAGATCGCGCGCGAGAGAGATAGGAGACC',
             'CCCGCGGGAGAGAGAGAGAGAGAGATATATATATAGCAGACCAGGAGAGCGAGAGCGAGAGAGATATAGAGAGATCGCGCGCGAGAGAGATAGGAGACCA',
             'CGGGAGAGAGAGAGAGAGAGATATATATATAGCAGACCAGGAGAGCGAGAGCGAGAGAGATATAGAGAGATCGCGCGCGAGAGAGATAGGAGACCACCAG',
-            'GATAGATATATATATCACAGACCTGGAGAGCGAGAGCGAGAGAGATATAGAGAGATCGCGCGCGAGAGAGATAGGAGACCCCCAGAGAGAGAGAGGGATG'
+            'GATAGATATATATATCACAGACCTGGAGAGCGAGAGCGAGAGAGATATAGAGAGATCGCGCGCGAGAGAGATAGGAGACCCCCAGAGAGAGAGAGGGATG',
         }
         seqs = list(sequences)
         for seq in seqs:
@@ -327,7 +333,8 @@ class TestAssemble(unittest.TestCase):
         print('assembly size', len(sequences))
         kmer_size = 0.75 * len(list(seqs)[0])
         assemblies = assemble(
-            sequences, kmer_size,
+            sequences,
+            kmer_size,
             min_edge_trim_weight=DEFAULTS.assembly_min_edge_trim_weight,
             remap_min_match=0.95,
             remap_min_overlap=75 * 0.9,
@@ -335,7 +342,8 @@ class TestAssemble(unittest.TestCase):
             remap_min_exact_match=DEFAULTS.assembly_min_exact_match_to_remap,
             assembly_max_paths=DEFAULTS.assembly_max_paths,
             assembly_min_uniq=0.01,
-            log=self.log)
+            log=self.log,
+        )
         print('assemblies', len(assemblies))
         for assembly in assemblies:
             print(assembly.seq, assembly.remap_score())
@@ -345,20 +353,24 @@ class TestAssemble(unittest.TestCase):
         self.assertEqual(1, len(assemblies))
 
     @timeout_decorator.timeout(300)
-    @unittest.skipIf(not RUN_FULL, 'slower tests will not be run unless the environment variable RUN_FULL is given')
+    @unittest.skipIf(
+        not RUN_FULL,
+        'slower tests will not be run unless the environment variable RUN_FULL is given',
+    )
     def test_large_assembly(self):
         # simply testing that this will complete before the timeout
         sequences = self.large_assembly_seq
         kmer_size = 150 * DEFAULTS.assembly_kmer_size
         print('read inputs')
         contigs = assemble(
-            sequences, kmer_size,
+            sequences,
+            kmer_size,
             min_edge_trim_weight=DEFAULTS.assembly_min_edge_trim_weight,
             assembly_max_paths=DEFAULTS.assembly_max_paths,
             min_contig_length=150,
             log=LOG,
             remap_min_exact_match=30,
-            assembly_min_uniq=DEFAULTS.assembly_min_uniq
+            assembly_min_uniq=DEFAULTS.assembly_min_uniq,
         )
         for contig in contigs:
             print(len(contig.seq), contig.remap_score())
@@ -598,7 +610,7 @@ class TestAssemble(unittest.TestCase):
             'GCTCAGACGAGAGAGGCTGGGCCGAGAACCCGCTGGTTTATTGCGACGGGCACGGCTGCAGCGTCGCGGTGCATCAAGCTTGCTATGGCATTGTTCAAGTACCCACTGGACCGTGGTTTTGCAGG',
             'CCTGCAAAACCACGGTCCAGTGGGTACTTGAACAATGCCATAGCAAGCTTGATGCACCGCGACGCTGCAGCCGTGCCCGTCGCAATAAACCAGCGGGTTCTCGGCCCAGCCTCTCTCGTCTGAGC',
             'AAGAGAGTTTAAGAGATTTAAGAGACAGCAGTTTTGGATTTTGCTGGAAGTAAGGATTTTGCTGCTTGAGCACTTGTCTTTTTGGAGTAATTCCATTTTCTTCCATCAAGTTACATAAACTGTAT',
-            'ATACAGTTTATGTAACTTGATGGAAGAAAATGGAATTACTCCAAAAAGACAAGTGCTCAAGCAGCAAAATCCTTACTTCCAGCAAAATCCAAAACTGCTGTCTCTTAAATCTCTTAAACTCTCTT'
+            'ATACAGTTTATGTAACTTGATGGAAGAAAATGGAATTACTCCAAAAAGACAAGTGCTCAAGCAGCAAAATCCTTACTTCCAGCAAAATCCAAAACTGCTGTCTCTTAAATCTCTTAAACTCTCTT',
         }
         contigs = assemble(
             sequences,
@@ -608,7 +620,8 @@ class TestAssemble(unittest.TestCase):
             assembly_min_uniq=0.1,
             min_contig_length=125,
             remap_min_exact_match=15,
-            log=LOG)
+            log=LOG,
+        )
 
         target = 'GGGCACGGCTGCAGCGTCGCGGTGCATCAAGCTTGCTATGGCATTGTTCAAGTACCCACTGGACCGTGGTTTTGCAGGAAATGTGAATCTCAGGAGAGAGCAGCCAGAGTGATACAGTTTATGTAACTTGATGGAAGAA'
         print('target', target)
@@ -617,7 +630,10 @@ class TestAssemble(unittest.TestCase):
         self.assertTrue({target, reverse_complement(target)} & {c.seq for c in contigs})
 
     @timeout_decorator.timeout(60)
-    @unittest.skipIf(not RUN_FULL, 'slower tests will not be run unless the environment variable RUN_FULL is given')
+    @unittest.skipIf(
+        not RUN_FULL,
+        'slower tests will not be run unless the environment variable RUN_FULL is given',
+    )
     def test_long_filter_bug(self):
         sequences = self.long_filter_seq
         contigs = assemble(sequences, 111, 3, 8, 0.1, 0.1, log=LOG)

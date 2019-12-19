@@ -16,21 +16,39 @@ DEFAULTS = WeakMavisNamespace()
 - :term:`min_orf_size`
 """
 DEFAULTS.add(
-    'min_domain_mapping_match', 0.9, cast_type=float_fraction,
+    'min_domain_mapping_match',
+    0.9,
+    cast_type=float_fraction,
     defn='a number between 0 and 1 representing the minimum percent match a domain must map to the fusion transcript '
-    'to be displayed')
-DEFAULTS.add('min_orf_size', 300, defn='the minimum length (in base pairs) to retain a putative open reading frame (ORF)')
-DEFAULTS.add('max_orf_cap', 3, defn='the maximum number of ORFs to return (best putative ORFs will be retained)')
-DEFAULTS.add(
-    'annotation_filters', 'choose_more_annotated,choose_transcripts_by_priority',
-    defn='a comma separated list of filters to apply to putative annotations'
+    'to be displayed',
 )
 DEFAULTS.add(
-    'draw_fusions_only', True, cast_type=tab.cast_boolean,
-    defn='flag to indicate if events which do not produce a fusion transcript should produce illustrations')
+    'min_orf_size',
+    300,
+    defn='the minimum length (in base pairs) to retain a putative open reading frame (ORF)',
+)
 DEFAULTS.add(
-    'draw_non_synonymous_cdna_only', True, cast_type=tab.cast_boolean,
-    defn='flag to indicate if events which are synonymous at the cdna level should produce illustrations')
+    'max_orf_cap',
+    3,
+    defn='the maximum number of ORFs to return (best putative ORFs will be retained)',
+)
+DEFAULTS.add(
+    'annotation_filters',
+    'choose_more_annotated,choose_transcripts_by_priority',
+    defn='a comma separated list of filters to apply to putative annotations',
+)
+DEFAULTS.add(
+    'draw_fusions_only',
+    True,
+    cast_type=tab.cast_boolean,
+    defn='flag to indicate if events which do not produce a fusion transcript should produce illustrations',
+)
+DEFAULTS.add(
+    'draw_non_synonymous_cdna_only',
+    True,
+    cast_type=tab.cast_boolean,
+    defn='flag to indicate if events which are synonymous at the cdna level should produce illustrations',
+)
 
 SPLICE_TYPE = MavisNamespace(
     RETAIN='retained intron',
@@ -38,7 +56,7 @@ SPLICE_TYPE = MavisNamespace(
     NORMAL='normal',
     MULTI_RETAIN='retained multiple introns',
     MULTI_SKIP='skipped multiple exons',
-    COMPLEX='complex'
+    COMPLEX='complex',
 )
 """:class:`MavisNamespace`: holds controlled vocabulary for allowed splice type classification values
 
@@ -50,10 +68,7 @@ SPLICE_TYPE = MavisNamespace(
 - ``COMPLEX``: some combination of exon skipping and intron retention
 """
 
-SPLICE_SITE_TYPE = MavisNamespace(
-    DONOR=3,
-    ACCEPTOR=5
-)
+SPLICE_SITE_TYPE = MavisNamespace(DONOR=3, ACCEPTOR=5)
 
 SPLICE_SITE_RADIUS = 2
 """:class:`int`: number of bases away from an exon boundary considered to be part of the splice site such that if it were altered
@@ -70,5 +85,5 @@ DONOR_SEQ = [
 ACCEPTOR_SEQ = [
     re.compile('([TC]{8}[ATCG]CAG)([GA][ATCG])'),
     re.compile('([TC]{9}TAG)([GA][ATCG])'),
-    re.compile('([TC]{8}[ATCG]AAG)([GA][ATCG])')
+    re.compile('([TC]{8}[ATCG]AAG)([GA][ATCG])'),
 ]

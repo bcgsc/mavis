@@ -157,14 +157,11 @@ class TestUpdate(unittest.TestCase):
 job-ID  prior   name       user         state submit/start at     queue                          slots ja-task-ID
 -----------------------------------------------------------------------------------------------------------------
 3751935 0.00000 subtest.sh creisle      qw    05/23/2018 13:44:04                                    1 1-10:1
-        """.encode('utf8')
-        patch_check.return_value = content
-        job = _job.ArrayJob(
-            output_dir='temp',
-            job_ident='3751935',
-            task_list=10,
-            stage='validate'
+        """.encode(
+            'utf8'
         )
+        patch_check.return_value = content
+        job = _job.ArrayJob(output_dir='temp', job_ident='3751935', task_list=10, stage='validate')
         _scheduler.SgeScheduler().update_info(job)
         self.assertEqual(_constants.JOB_STATUS.PENDING, job.status)
 
@@ -183,14 +180,11 @@ job-ID  prior   name       user         state submit/start at     queue         
 3751935 0.50500 subtest.sh creisle      r     05/23/2018 13:44:12 merge.q@n603.numbers.bcgsc.ca      1 8
 3751935 0.50500 subtest.sh creisle      r     05/23/2018 13:44:12 merge.q@n601.numbers.bcgsc.ca      1 9
 3751935 0.50500 subtest.sh creisle      qw    05/23/2018 13:44:12 merge.q@n602.numbers.bcgsc.ca      1 10
-        """.encode('utf8')
-        patch_check.return_value = content
-        job = _job.ArrayJob(
-            output_dir='temp',
-            job_ident='3751935',
-            task_list=10,
-            stage='validate'
+        """.encode(
+            'utf8'
         )
+        patch_check.return_value = content
+        job = _job.ArrayJob(output_dir='temp', job_ident='3751935', task_list=10, stage='validate')
         _scheduler.SgeScheduler().update_info(job)
 
         for task in job.task_list[:9]:
@@ -204,28 +198,19 @@ job-ID  prior   name       user         state submit/start at     queue         
 job-ID  prior   name       user         state submit/start at     queue                          slots ja-task-ID
 -----------------------------------------------------------------------------------------------------------------
  217940 1.50000 subtest.sh creisle      qw    05/22/2018 23:39:55                                    1
-        """.encode('utf8')
-        patch_check.return_value = content
-        job = _job.Job(
-            output_dir='temp',
-            job_ident='217940',
-            stage='validate'
+        """.encode(
+            'utf8'
         )
+        patch_check.return_value = content
+        job = _job.Job(output_dir='temp', job_ident='217940', stage='validate')
         _scheduler.SgeScheduler().update_info(job)
         self.assertEqual(_constants.JOB_STATUS.PENDING, job.status)
 
     @mock.patch('subprocess.check_output')
     def test_completed_array(self, patch_check):
-        patch_check.side_effect = [
-            ''.encode('utf8'),
-            QACCT_ARR3_OK.encode('utf8')
-        ]
+        patch_check.side_effect = [''.encode('utf8'), QACCT_ARR3_OK.encode('utf8')]
         job = _job.ArrayJob(
-            output_dir='temp',
-            job_ident='3757289',
-            stage='validate',
-            name='arrtest',
-            task_list=3
+            output_dir='temp', job_ident='3757289', stage='validate', name='arrtest', task_list=3
         )
         _scheduler.SgeScheduler().update_info(job)
         self.assertEqual(_constants.JOB_STATUS.COMPLETED, job.status)
@@ -234,7 +219,6 @@ job-ID  prior   name       user         state submit/start at     queue         
 
 
 class TestParseQacct(unittest.TestCase):
-
     def test_job_array(self):
         content = QACCT_ARR3_OK
         rows = _scheduler.SgeScheduler().parse_qacct(content)
@@ -242,7 +226,7 @@ class TestParseQacct(unittest.TestCase):
             'job_ident': '3757289',
             'name': 'arrtest',
             'status': _constants.JOB_STATUS.COMPLETED,
-            'status_comment': ''
+            'status_comment': '',
         }
         for task_id, row in zip([1, 3, 2], rows):
             exp = {'task_ident': str(task_id)}
@@ -304,7 +288,7 @@ category     -U transabyss_users -q transabyss.q -l h_vmem=3.85G,mem_free=3.85G,
             'task_ident': '40',
             'name': 'A89009negative',
             'status': _constants.JOB_STATUS.COMPLETED,
-            'status_comment': ''
+            'status_comment': '',
         }
         self.assertEqual(expected, rows[0])
 
@@ -364,7 +348,7 @@ category     -U transabyss_users
             'task_ident': None,
             'name': 'error',
             'status': _constants.JOB_STATUS.FAILED,
-            'status_comment': ''
+            'status_comment': '',
         }
         self.assertEqual(expected, rows[0])
 
@@ -423,7 +407,7 @@ category     -U transabyss_users -l h_rt=57600,h_vmem=16000M,mem_free=16000M,mem
             'task_ident': '1',
             'name': 'MV_mock-A36971_batch-E6aEZJnTQAau598tcsMjAE',
             'status': _constants.JOB_STATUS.FAILED,
-            'status_comment': 'opening input/output file'
+            'status_comment': 'opening input/output file',
         }
         self.assertEqual(expected, rows[0])
 
@@ -482,7 +466,7 @@ category     -U transabyss_users
             'task_ident': None,
             'name': 'arrtest',
             'status': _constants.JOB_STATUS.CANCELLED,
-            'status_comment': 'assumedly after job'
+            'status_comment': 'assumedly after job',
         }
         self.assertEqual(expected, rows[0])
 
@@ -511,7 +495,7 @@ job-ID  prior   name       user         state submit/start at     queue         
             'task_ident': None,
             'status': _constants.JOB_STATUS.PENDING,
             'name': 'subtest.sh',
-            'status_comment': ''
+            'status_comment': '',
         }
         self.assertEqual(expected, rows[0])
 
@@ -521,7 +505,6 @@ job-ID  prior   name       user         state submit/start at     queue         
 
 
 class TestCancel(unittest.TestCase):
-
     @mock.patch('mavis.schedule.scheduler.SgeScheduler.command')
     def test_single_job(self, patcher):
         sched = _scheduler.SgeScheduler()
@@ -563,7 +546,6 @@ class TestCancel(unittest.TestCase):
 
 
 class TestSubmit(unittest.TestCase):
-
     @mock.patch('mavis.schedule.scheduler.SgeScheduler.command')
     def test_job(self, patcher):
         patcher.side_effect = ['Your job 3891651 ("MV1") has been submitted']
@@ -573,7 +555,7 @@ class TestSubmit(unittest.TestCase):
             output_dir='output_dir',
             script='script.sh',
             name='MV1',
-            memory_limit=1
+            memory_limit=1,
         )
         sched = _scheduler.SgeScheduler()
         sched.submit(job)
@@ -581,7 +563,9 @@ class TestSubmit(unittest.TestCase):
         self.assertEqual(_constants.JOB_STATUS.SUBMITTED, job.status)
         patcher.assert_called_with(
             'qsub -j y -q all -l mem_free=1M,mem_token=1M,h_vmem=1M -l h_rt=16:00:00 -V '
-            '-N MV1 -o output_dir/job-\\$JOB_NAME-\\$JOB_ID.log script.sh', shell=True)
+            '-N MV1 -o output_dir/job-\\$JOB_NAME-\\$JOB_ID.log script.sh',
+            shell=True,
+        )
 
     @mock.patch('mavis.schedule.scheduler.SgeScheduler.command')
     def test_job_with_array_dep(self, patcher):
@@ -594,9 +578,11 @@ class TestSubmit(unittest.TestCase):
             name='MV1',
             memory_limit=1,
             mail_user='me@example.com',
-            mail_type=_constants.MAIL_TYPE.ALL
+            mail_type=_constants.MAIL_TYPE.ALL,
         )
-        dep = _job.ArrayJob(job_ident='1234', task_list=10, output_dir='', stage=SUBCOMMAND.VALIDATE)
+        dep = _job.ArrayJob(
+            job_ident='1234', task_list=10, output_dir='', stage=SUBCOMMAND.VALIDATE
+        )
         job.dependencies.append(dep)
         sched = _scheduler.SgeScheduler()
         sched.submit(job)
@@ -605,7 +591,9 @@ class TestSubmit(unittest.TestCase):
         patcher.assert_called_with(
             'qsub -j y -q all -l mem_free=1M,mem_token=1M,h_vmem=1M -l h_rt=16:00:00 -V '
             '-hold_jid 1234 -N MV1 -m abes -M me@example.com '
-            '-o output_dir/job-\\$JOB_NAME-\\$JOB_ID.log script.sh', shell=True)
+            '-o output_dir/job-\\$JOB_NAME-\\$JOB_ID.log script.sh',
+            shell=True,
+        )
 
     @mock.patch('mavis.schedule.scheduler.SgeScheduler.command')
     def test_job_with_job_dep(self, patcher):
@@ -618,7 +606,7 @@ class TestSubmit(unittest.TestCase):
             name='MV1',
             memory_limit=1,
             mail_user='me@example.com',
-            mail_type=_constants.MAIL_TYPE.ALL
+            mail_type=_constants.MAIL_TYPE.ALL,
         )
         dep = _job.Job(job_ident='1234', output_dir='', stage=SUBCOMMAND.VALIDATE)
         job.dependencies.append(dep)
@@ -629,12 +617,21 @@ class TestSubmit(unittest.TestCase):
         patcher.assert_called_with(
             'qsub -j y -q all -l mem_free=1M,mem_token=1M,h_vmem=1M -l h_rt=16:00:00 -V '
             '-hold_jid 1234 -N MV1 -m abes -M me@example.com '
-            '-o output_dir/job-\\$JOB_NAME-\\$JOB_ID.log script.sh', shell=True)
+            '-o output_dir/job-\\$JOB_NAME-\\$JOB_ID.log script.sh',
+            shell=True,
+        )
 
     @mock.patch('mavis.schedule.scheduler.SgeScheduler.command')
     def test_array_job(self, patcher):
         patcher.side_effect = ['Your job-array 3891657.2-4:1 ("MV1") has been submitted']
-        job = _job.ArrayJob(stage=SUBCOMMAND.VALIDATE, output_dir='output_dir', script='script.sh', name='MV1', task_list=[2, 3, 4], memory_limit=1)
+        job = _job.ArrayJob(
+            stage=SUBCOMMAND.VALIDATE,
+            output_dir='output_dir',
+            script='script.sh',
+            name='MV1',
+            task_list=[2, 3, 4],
+            memory_limit=1,
+        )
         sched = _scheduler.SgeScheduler(concurrency_limit=2)
         sched.submit(job)
         self.assertEqual('3891657', job.job_ident)
@@ -642,12 +639,21 @@ class TestSubmit(unittest.TestCase):
 
         patcher.assert_called_with(
             'qsub -j y -l mem_free=1M,mem_token=1M,h_vmem=1M -l h_rt=16:00:00 -V '
-            '-N MV1 -t 2-4 -o output_dir/job-\\$JOB_NAME-\\$JOB_ID-\\$TASK_ID.log script.sh', shell=True)
+            '-N MV1 -t 2-4 -o output_dir/job-\\$JOB_NAME-\\$JOB_ID-\\$TASK_ID.log script.sh',
+            shell=True,
+        )
 
     @mock.patch('mavis.schedule.scheduler.SgeScheduler.command')
     def test_array_job_with_job_dep(self, patcher):
         patcher.side_effect = ['Your job-array 3891657.2-4:1 ("MV1") has been submitted']
-        job = _job.ArrayJob(stage=SUBCOMMAND.VALIDATE, output_dir='output_dir', script='script.sh', name='MV1', task_list=[2, 3, 4], memory_limit=1)
+        job = _job.ArrayJob(
+            stage=SUBCOMMAND.VALIDATE,
+            output_dir='output_dir',
+            script='script.sh',
+            name='MV1',
+            task_list=[2, 3, 4],
+            memory_limit=1,
+        )
         sched = _scheduler.SgeScheduler(concurrency_limit=2)
 
         dep = _job.Job(job_ident='1234', output_dir='', stage=SUBCOMMAND.VALIDATE)
@@ -660,15 +666,26 @@ class TestSubmit(unittest.TestCase):
         patcher.assert_called_with(
             'qsub -j y -l mem_free=1M,mem_token=1M,h_vmem=1M -l h_rt=16:00:00 -V '
             '-hold_jid 1234 '
-            '-N MV1 -t 2-4 -o output_dir/job-\\$JOB_NAME-\\$JOB_ID-\\$TASK_ID.log script.sh', shell=True)
+            '-N MV1 -t 2-4 -o output_dir/job-\\$JOB_NAME-\\$JOB_ID-\\$TASK_ID.log script.sh',
+            shell=True,
+        )
 
     @mock.patch('mavis.schedule.scheduler.SgeScheduler.command')
     def test_array_job_with_array_dep(self, patcher):
         patcher.side_effect = ['Your job-array 3891657.2-4:1 ("MV1") has been submitted']
-        job = _job.ArrayJob(stage=SUBCOMMAND.VALIDATE, output_dir='output_dir', script='script.sh', name='MV1', task_list=[2, 3, 4], memory_limit=1)
+        job = _job.ArrayJob(
+            stage=SUBCOMMAND.VALIDATE,
+            output_dir='output_dir',
+            script='script.sh',
+            name='MV1',
+            task_list=[2, 3, 4],
+            memory_limit=1,
+        )
         sched = _scheduler.SgeScheduler(concurrency_limit=2)
 
-        dep = _job.ArrayJob(job_ident='1234', task_list=[2, 3, 4], output_dir='', stage=SUBCOMMAND.VALIDATE)
+        dep = _job.ArrayJob(
+            job_ident='1234', task_list=[2, 3, 4], output_dir='', stage=SUBCOMMAND.VALIDATE
+        )
         job.dependencies.append(dep)
 
         sched.submit(job)
@@ -678,15 +695,26 @@ class TestSubmit(unittest.TestCase):
         patcher.assert_called_with(
             'qsub -j y -l mem_free=1M,mem_token=1M,h_vmem=1M -l h_rt=16:00:00 -V '
             '-hold_jid_ad 1234 '
-            '-N MV1 -t 2-4 -o output_dir/job-\\$JOB_NAME-\\$JOB_ID-\\$TASK_ID.log script.sh', shell=True)
+            '-N MV1 -t 2-4 -o output_dir/job-\\$JOB_NAME-\\$JOB_ID-\\$TASK_ID.log script.sh',
+            shell=True,
+        )
 
     @mock.patch('mavis.schedule.scheduler.SgeScheduler.command')
     def test_array_job_with_diff_array(self, patcher):
         patcher.side_effect = ['Your job-array 3891657.2-4:1 ("MV1") has been submitted']
-        job = _job.ArrayJob(stage=SUBCOMMAND.VALIDATE, output_dir='output_dir', script='script.sh', name='MV1', task_list=[2, 3, 4], memory_limit=1)
+        job = _job.ArrayJob(
+            stage=SUBCOMMAND.VALIDATE,
+            output_dir='output_dir',
+            script='script.sh',
+            name='MV1',
+            task_list=[2, 3, 4],
+            memory_limit=1,
+        )
         sched = _scheduler.SgeScheduler(concurrency_limit=2)
 
-        dep = _job.ArrayJob(job_ident='1234', task_list=[2, 3, 4, 5], output_dir='', stage=SUBCOMMAND.VALIDATE)
+        dep = _job.ArrayJob(
+            job_ident='1234', task_list=[2, 3, 4, 5], output_dir='', stage=SUBCOMMAND.VALIDATE
+        )
         job.dependencies.append(dep)
 
         sched.submit(job)
@@ -696,10 +724,19 @@ class TestSubmit(unittest.TestCase):
         patcher.assert_called_with(
             'qsub -j y -l mem_free=1M,mem_token=1M,h_vmem=1M -l h_rt=16:00:00 -V '
             '-hold_jid 1234 '
-            '-N MV1 -t 2-4 -o output_dir/job-\\$JOB_NAME-\\$JOB_ID-\\$TASK_ID.log script.sh', shell=True)
+            '-N MV1 -t 2-4 -o output_dir/job-\\$JOB_NAME-\\$JOB_ID-\\$TASK_ID.log script.sh',
+            shell=True,
+        )
 
     def test_array_job_non_consec_error(self):
-        job = _job.ArrayJob(stage=SUBCOMMAND.VALIDATE, output_dir='output_dir', script='script.sh', name='MV1', task_list=[2, 3, 4, 7], memory_limit=1)
+        job = _job.ArrayJob(
+            stage=SUBCOMMAND.VALIDATE,
+            output_dir='output_dir',
+            script='script.sh',
+            name='MV1',
+            task_list=[2, 3, 4, 7],
+            memory_limit=1,
+        )
         sched = _scheduler.SgeScheduler(concurrency_limit=2)
         with self.assertRaises(ValueError):
             sched.submit(job)

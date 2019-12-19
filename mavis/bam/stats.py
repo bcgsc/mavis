@@ -16,7 +16,6 @@ os.environ["NUMEXPR_NUM_THREADS"] = "6"  # export NUMEXPR_NUM_THREADS=6
 
 
 class BamStats:
-
     def __init__(self, median_fragment_size, stdev_fragment_size, read_length):
         self.median_fragment_size = median_fragment_size
         self.stdev_fragment_size = stdev_fragment_size
@@ -36,19 +35,23 @@ class BamStats:
         else:
             raise AssertionError(
                 'stranded values are equal. either this information was not collected or is not deterministic',
-                strand_hist.items())
+                strand_hist.items(),
+            )
 
     def __str__(self):
-        result = 'BamStats(fragment_size={0.median_fragment_size}+/-' \
-                 '{0.stdev_fragment_size:.4}, read_length={0.read_length}'.format(self)
+        result = (
+            'BamStats(fragment_size={0.median_fragment_size}+/-'
+            '{0.stdev_fragment_size:.4}, read_length={0.read_length}'.format(self)
+        )
         if self.stranded:
-            result += ', strand_determining_read={0.strand_determining_read}[{0.sdr_percent_support:.4}]'.format(self)
+            result += ', strand_determining_read={0.strand_determining_read}[{0.sdr_percent_support:.4}]'.format(
+                self
+            )
         result += ')'
         return result
 
 
 class Histogram(dict):
-
     def add(self, item, freq=1):
         """
         add a key to the histogram with a default frequency of 1
@@ -107,7 +110,7 @@ def compute_transcriptome_bam_stats(
     min_mapping_quality=1,
     stranded=True,
     sample_cap=10000,
-    distribution_fraction=0.97
+    distribution_fraction=0.97,
 ):
     """
     computes various statistical measures relating the input bam file
@@ -139,7 +142,9 @@ def compute_transcriptome_bam_stats(
     else:
         warnings.warn(
             'insufficient annotations to match requested sample size. requested {}, but only {} annotations'.format(
-                sample_size, len(total_annotations)))
+                sample_size, len(total_annotations)
+            )
+        )
 
     fragment_hist = Histogram()
     read_strand_verification = Histogram()
@@ -148,15 +153,19 @@ def compute_transcriptome_bam_stats(
 
     read_lengths = []
     for gene in genes:
-        for read in bam_cache.fetch(gene.chr, gene.start, gene.end, cache_if=lambda x: False, limit=sample_cap):
-            if any([
-                read.is_unmapped,
-                read.mate_is_unmapped,
-                read.mapping_quality < min_mapping_quality,
-                read.next_reference_id != read.reference_id,
-                read.is_secondary,
-                not read.is_proper_pair
-            ]):
+        for read in bam_cache.fetch(
+            gene.chr, gene.start, gene.end, cache_if=lambda x: False, limit=sample_cap
+        ):
+            if any(
+                [
+                    read.is_unmapped,
+                    read.mate_is_unmapped,
+                    read.mapping_quality < min_mapping_quality,
+                    read.next_reference_id != read.reference_id,
+                    read.is_secondary,
+                    not read.is_proper_pair,
+                ]
+            ):
                 continue
             if stranded:
                 try:
@@ -212,7 +221,7 @@ def compute_genome_bam_stats(
     sample_size,
     min_mapping_quality=1,
     sample_cap=10000,
-    distribution_fraction=0.99
+    distribution_fraction=0.99,
 ):
     """
     computes various statistical measures relating the input bam file
@@ -230,6 +239,7 @@ def compute_genome_bam_stats(
         BamStats: the fragment size median, stdev and the read length in a object
     """
     import numpy as np
+
     total = sum([l - sample_bin_size for l in bam_file_handle.fh.lengths])
     bins = []
     randoms = [int(n * (total - 1) + 1) for n in np.random.rand(sample_size)]
@@ -237,7 +247,7 @@ def compute_genome_bam_stats(
         template_index = 0
         for template_length in bam_file_handle.fh.lengths:
             if pos > template_length - sample_bin_size:
-                pos -= (template_length - sample_bin_size)
+                pos -= template_length - sample_bin_size
                 template_index += 1
             else:
                 break
@@ -246,15 +256,19 @@ def compute_genome_bam_stats(
     hist = Histogram()
     read_lengths = []
     for bin_chr, bin_start, bin_end in bins:
-        for read in bam_file_handle.fetch(bin_chr, bin_start, bin_end, limit=sample_cap, cache_if=lambda x: False):
-            if any([
-                read.is_unmapped,
-                read.mate_is_unmapped,
-                read.mapping_quality < min_mapping_quality,
-                read.next_reference_id != read.reference_id,
-                read.is_secondary,
-                not read.is_proper_pair
-            ]):
+        for read in bam_file_handle.fetch(
+            bin_chr, bin_start, bin_end, limit=sample_cap, cache_if=lambda x: False
+        ):
+            if any(
+                [
+                    read.is_unmapped,
+                    read.mate_is_unmapped,
+                    read.mapping_quality < min_mapping_quality,
+                    read.next_reference_id != read.reference_id,
+                    read.is_secondary,
+                    not read.is_proper_pair,
+                ]
+            ):
                 continue
             hist[abs(read.template_length)] = hist.get(abs(read.template_length), 0) + 1
             read_lengths.append(len(read.query_sequence))
