@@ -110,7 +110,9 @@ class TestBuildPipeline(unittest.TestCase):
     def setUp(self):
         self.temp_output = tempfile.mkdtemp()
         # clear any environment variables
-        self.env_patch = mock.patch('os.environ', {k: v for k, v in os.environ.items() if not k.startswith('MAVIS_')})
+        self.env_patch = mock.patch(
+            'os.environ', {k: v for k, v in os.environ.items() if not k.startswith('MAVIS_')}
+        )
         self.env_patch.start()
 
     def test_basic_slurm(self):

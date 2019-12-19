@@ -1,9 +1,16 @@
 import unittest
-from mavis.constants import COLUMNS, MavisNamespace, ORIENT, reverse_complement, sort_columns, STRAND, translate
+from mavis.constants import (
+    COLUMNS,
+    MavisNamespace,
+    ORIENT,
+    reverse_complement,
+    sort_columns,
+    STRAND,
+    translate,
+)
 
 
 class TestConstants(unittest.TestCase):
-
     def test_strand_compare(self):
         self.assertTrue(STRAND.compare(STRAND.NS, STRAND.POS))
         self.assertTrue(STRAND.compare(STRAND.NS, STRAND.NEG))
@@ -37,7 +44,8 @@ class TestConstants(unittest.TestCase):
         temp = ['NEW', 'NEW2', COLUMNS.break1_seq, COLUMNS.break2_seq, COLUMNS.break1_chromosome]
         self.assertEqual(
             [COLUMNS.break1_chromosome, COLUMNS.break1_seq, COLUMNS.break2_seq, 'NEW', 'NEW2'],
-            sort_columns(temp))
+            sort_columns(temp),
+        )
 
     def test_column_matches_column_name(self):
         self.assertEqual(COLUMNS.library, COLUMNS.library)
@@ -46,7 +54,6 @@ class TestConstants(unittest.TestCase):
 
 
 class TestMavisNamespace(unittest.TestCase):
-
     def setUp(self):
         self.namespace = MavisNamespace(a=1, b=2, c=3)
 

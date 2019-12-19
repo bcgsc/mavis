@@ -21,7 +21,9 @@ from .constants import JOB_STATUS, STD_OPTIONS, OPTIONS, SCHEDULER
 
 PROGNAME = shutil.which('mavis')
 SHEBANG = '#!/bin/bash'
-SCHEDULERS_BY_NAME = {sched.NAME: sched for sched in [SlurmScheduler, TorqueScheduler, LocalScheduler, SgeScheduler]}
+SCHEDULERS_BY_NAME = {
+    sched.NAME: sched for sched in [SlurmScheduler, TorqueScheduler, LocalScheduler, SgeScheduler]
+}
 
 
 def stringify_args_to_command(args):
@@ -70,11 +72,20 @@ def run_conversion(config, libconf, conversion_dir, assume_no_untemplated=True):
         if input_file in config.convert:
             if not os.path.exists(output_filename):
                 command = config.convert[input_file]
-                if command[0] == 'convert_tool_output':  # convert_tool_output FILEPATH [FILEPATH...] TOOL stranded
+                if (
+                    command[0] == 'convert_tool_output'
+                ):  # convert_tool_output FILEPATH [FILEPATH...] TOOL stranded
                     LOG('converting input command:', command)
-                    output_tabbed_file(convert_tool_output(
-                        command[1:-2], command[-2], command[-1], log=LOG, assume_no_untemplated=assume_no_untemplated
-                    ), output_filename)
+                    output_tabbed_file(
+                        convert_tool_output(
+                            command[1:-2],
+                            command[-2],
+                            command[-1],
+                            log=LOG,
+                            assume_no_untemplated=assume_no_untemplated,
+                        ),
+                        output_filename,
+                    )
                 else:
                     command = ' '.join(command) + ' -o {}'.format(output_filename)
                     LOG('converting input command:')
@@ -105,7 +116,7 @@ def validate_args(config, libconf):
         'stdev_fragment_size',
         'median_fragment_size',
         'strand_specific',
-        'annotations'
+        'annotations',
     ] + list(_VALIDATE.DEFAULTS.keys())
 
     # overwrite args in order of increasing specificity
@@ -137,7 +148,7 @@ def annotate_args(config, libconf):
         'protocol',
         'min_domain_mapping_match',
         'domain_name_regex_filter',
-        'max_proximity'
+        'max_proximity',
     ] + list(_ANNOTATE.DEFAULTS.keys())
     args = {}
     args.update(_ANNOTATE.DEFAULTS.items())
@@ -164,7 +175,7 @@ def summary_args(config):
         'contig_call_distance',
         'spanning_call_distance',
         'dgv_annotation',
-        'annotations'
+        'annotations',
     ] + list(_SUMMARY.DEFAULTS.keys())
     args = {}
     args.update({k: v.name for k, v in config.reference.items()})
@@ -188,7 +199,7 @@ def cluster_args(config, libconf):
         'library',
         'protocol',
         'disease_status',
-        'strand_specific'
+        'strand_specific',
     ] + list(_CLUSTER.DEFAULTS.keys())
     args = {}
     args.update(_CLUSTER.DEFAULTS.items())
@@ -202,7 +213,13 @@ def cluster_args(config, libconf):
 
 
 class Pipeline:
-    ERROR_STATES = {JOB_STATUS.ERROR, JOB_STATUS.FAILED, JOB_STATUS.CANCELLED, JOB_STATUS.UNKNOWN, JOB_STATUS.NOT_SUBMITTED}
+    ERROR_STATES = {
+        JOB_STATUS.ERROR,
+        JOB_STATUS.FAILED,
+        JOB_STATUS.CANCELLED,
+        JOB_STATUS.UNKNOWN,
+        JOB_STATUS.NOT_SUBMITTED,
+    }
 
     def __init__(
         self,
@@ -213,7 +230,7 @@ class Pipeline:
         pairing=None,
         summary=None,
         checker=None,
-        batch_id='batch-{}'.format(uuid())
+        batch_id='batch-{}'.format(uuid()),
     ):
         """
         Args:
@@ -244,17 +261,22 @@ class Pipeline:
         """
         LOG('writing:', job.script, time_stamp=True)
         with open(job.script, 'w') as fh:
-            fh.write("""{shebang}
+            fh.write(
+                """{shebang}
 {aligner_path}
 cd {cwd}
 START_TIME=$(date +%s)\n\n""".format(
-                shebang=SHEBANG,
-                aligner_path='export PATH={}:$PATH'.format(os.path.dirname(aligner_path)) if aligner_path else '',
-                cwd=os.getcwd()
-            ))
+                    shebang=SHEBANG,
+                    aligner_path='export PATH={}:$PATH'.format(os.path.dirname(aligner_path))
+                    if aligner_path
+                    else '',
+                    cwd=os.getcwd(),
+                )
+            )
             commands = [PROGNAME, subcommand] + stringify_args_to_command(args)
             fh.write(' \\\n\t'.join(commands) + '\n\n')
-            fh.write("""
+            fh.write(
+                """
 code=$?
 
 if [ "$code" -ne "0" ]
@@ -267,8 +289,12 @@ END_TIME=$(date +%s)
 echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
 
             """.format(
-                args['output'],
-                self.scheduler.ENV_JOB_IDENT if not isinstance(job, ArrayJob) else self.scheduler.ENV_ARRAY_IDENT))
+                    args['output'],
+                    self.scheduler.ENV_JOB_IDENT
+                    if not isinstance(job, ArrayJob)
+                    else self.scheduler.ENV_ARRAY_IDENT,
+                )
+            )
 
     @classmethod
     def format_args(cls, subcommand, args):
@@ -293,31 +319,41 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
             Pipeline: the pipeline instance with job dependencies information etc.
         """
         from ..main import main as _main
+
         conversion_dir = mkdirp(os.path.join(config.output, 'converted_inputs'))
         config.output = os.path.abspath(config.output)
         if config.schedule.scheduler not in SCHEDULERS_BY_NAME:
-            raise NotImplementedError('unsupported scheduler', config.schedule.scheduler, list(SCHEDULERS_BY_NAME.keys()))
+            raise NotImplementedError(
+                'unsupported scheduler', config.schedule.scheduler, list(SCHEDULERS_BY_NAME.keys())
+            )
 
         scheduler = SCHEDULERS_BY_NAME[config.schedule.scheduler](
             config.schedule.get('concurrency_limit', OPTIONS.concurrency_limit),
-            remote_head_ssh=config.schedule.get('remote_head_ssh', OPTIONS.remote_head_ssh)
+            remote_head_ssh=config.schedule.get('remote_head_ssh', OPTIONS.remote_head_ssh),
         )
         pipeline = Pipeline(output_dir=config.output, scheduler=scheduler)
 
         annotation_output_files = []
         for libconf in config.libraries.values():
-            base = os.path.join(config.output, '{}_{}_{}'.format(libconf.library, libconf.disease_status, libconf.protocol))
+            base = os.path.join(
+                config.output,
+                '{}_{}_{}'.format(libconf.library, libconf.disease_status, libconf.protocol),
+            )
             LOG('setting up the directory structure for', libconf.library, 'as', base)
             libconf.inputs = run_conversion(config, libconf, conversion_dir)
 
             # run the cluster stage
-            cluster_output = mkdirp(os.path.join(base, SUBCOMMAND.CLUSTER))  # creates the clustering output dir
+            cluster_output = mkdirp(
+                os.path.join(base, SUBCOMMAND.CLUSTER)
+            )  # creates the clustering output dir
             args = cluster_args(config, libconf)
             args.update({'batch_id': pipeline.batch_id, 'output': cluster_output})
             args['split_only'] = SUBCOMMAND.CLUSTER in config.get('skip_stage', [])
             args['inputs'] = libconf.inputs
             LOG('clustering', '(split only)' if args['split_only'] else '', time_stamp=True)
-            clustering_log = os.path.join(args['output'], 'MC_{}_{}.log'.format(libconf.library, pipeline.batch_id))
+            clustering_log = os.path.join(
+                args['output'], 'MC_{}_{}.log'.format(libconf.library, pipeline.batch_id)
+            )
             LOG('writing:', clustering_log, time_stamp=True)
             args['log'] = clustering_log
             clustered_files = _main(cls.format_args(SUBCOMMAND.CLUSTER, args))
@@ -328,7 +364,11 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
             if SUBCOMMAND.VALIDATE not in config.skip_stage:
                 mkdirp(os.path.join(base, SUBCOMMAND.VALIDATE))
                 for task_ident in range(1, len(clustered_files) + 1):
-                    mkdirp(os.path.join(base, SUBCOMMAND.VALIDATE, '{}-{}'.format(pipeline.batch_id, task_ident)))
+                    mkdirp(
+                        os.path.join(
+                            base, SUBCOMMAND.VALIDATE, '{}-{}'.format(pipeline.batch_id, task_ident)
+                        )
+                    )
                 args = validate_args(config, libconf)
 
                 script_name = os.path.join(base, SUBCOMMAND.VALIDATE, 'submit.sh')
@@ -344,9 +384,17 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
                         job_options['annotations'] = args['annotations']
 
                     for task_ident in range(1, len(clustered_files) + 1):
-                        args['inputs'] = [os.path.join(cluster_output, '{}-{}.tab'.format(pipeline.batch_id, task_ident))]
-                        args['output'] = os.path.join(base, SUBCOMMAND.VALIDATE, '{}-{}'.format(pipeline.batch_id, task_ident))
-                        job_name = 'MV_{}_{}-{}'.format(libconf.library, pipeline.batch_id, task_ident)
+                        args['inputs'] = [
+                            os.path.join(
+                                cluster_output, '{}-{}.tab'.format(pipeline.batch_id, task_ident)
+                            )
+                        ]
+                        args['output'] = os.path.join(
+                            base, SUBCOMMAND.VALIDATE, '{}-{}'.format(pipeline.batch_id, task_ident)
+                        )
+                        job_name = 'MV_{}_{}-{}'.format(
+                            libconf.library, pipeline.batch_id, task_ident
+                        )
                         args['log'] = os.path.join(args['output'], 'job-{name}-{job_ident}.log')
                         validate_job = LocalJob(
                             stage=SUBCOMMAND.VALIDATE,
@@ -360,26 +408,41 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
                         pipeline.validations.append(validate_job)
                         validate_jobs.append(validate_job)
                 else:
-                    args['inputs'] = os.path.join(cluster_output, '{}-${}.tab'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT))
-                    args['output'] = os.path.join(base, SUBCOMMAND.VALIDATE, '{}-${}'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT))
+                    args['inputs'] = os.path.join(
+                        cluster_output,
+                        '{}-${}.tab'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT),
+                    )
+                    args['output'] = os.path.join(
+                        base,
+                        SUBCOMMAND.VALIDATE,
+                        '{}-${}'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT),
+                    )
                     aligner_path = shutil.which(args['aligner'].split(' ')[0])
                     job_class = ArrayJob if scheduler.NAME != SCHEDULER.TORQUE else TorqueArrayJob
                     validate_job = job_class(
                         stage=SUBCOMMAND.VALIDATE,
                         task_list=len(clustered_files),
-                        output_dir=os.path.join(base, SUBCOMMAND.VALIDATE, '{}-{{task_ident}}'.format(pipeline.batch_id)),
+                        output_dir=os.path.join(
+                            base, SUBCOMMAND.VALIDATE, '{}-{{task_ident}}'.format(pipeline.batch_id)
+                        ),
                         script=script_name,
                         name='MV_{}_{}'.format(libconf.library, pipeline.batch_id),
                         **job_options
                     )
-                    pipeline.write_submission_script(SUBCOMMAND.VALIDATE, validate_job, args, aligner_path=aligner_path)
+                    pipeline.write_submission_script(
+                        SUBCOMMAND.VALIDATE, validate_job, args, aligner_path=aligner_path
+                    )
                     pipeline.validations.append(validate_job)
                     validate_jobs.append(validate_job)
 
             # make an annotation job for each validation/cluster job/file
             mkdirp(os.path.join(base, SUBCOMMAND.ANNOTATE))
             for task_ident in range(1, len(clustered_files) + 1):
-                mkdirp(os.path.join(base, SUBCOMMAND.ANNOTATE, '{}-{}'.format(pipeline.batch_id, task_ident)))
+                mkdirp(
+                    os.path.join(
+                        base, SUBCOMMAND.ANNOTATE, '{}-{}'.format(pipeline.batch_id, task_ident)
+                    )
+                )
             args = annotate_args(config, libconf)
 
             script_name = os.path.join(base, SUBCOMMAND.ANNOTATE, 'submit.sh')
@@ -392,12 +455,25 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
                 if args['template_metadata']:
                     job_options['template_metadata'] = args['template_metadata']
                 for task_ident in range(1, len(clustered_files) + 1):
-                    args['output'] = os.path.join(base, SUBCOMMAND.ANNOTATE, '{}-{}'.format(pipeline.batch_id, task_ident))
+                    args['output'] = os.path.join(
+                        base, SUBCOMMAND.ANNOTATE, '{}-{}'.format(pipeline.batch_id, task_ident)
+                    )
                     # annotate 'clustered' files if the pipeline does not include the validation step
                     if SUBCOMMAND.VALIDATE not in config.skip_stage:
-                        args['inputs'] = [os.path.join(base, SUBCOMMAND.VALIDATE, '{}-{}'.format(pipeline.batch_id, task_ident), _VALIDATE.PASS_FILENAME)]
+                        args['inputs'] = [
+                            os.path.join(
+                                base,
+                                SUBCOMMAND.VALIDATE,
+                                '{}-{}'.format(pipeline.batch_id, task_ident),
+                                _VALIDATE.PASS_FILENAME,
+                            )
+                        ]
                     else:
-                        args['inputs'] = [os.path.join(cluster_output, '{}-{}.tab'.format(pipeline.batch_id, task_ident))]
+                        args['inputs'] = [
+                            os.path.join(
+                                cluster_output, '{}-{}.tab'.format(pipeline.batch_id, task_ident)
+                            )
+                        ]
                     job_name = 'MA_{}_{}-{}'.format(libconf.library, pipeline.batch_id, task_ident)
                     args['log'] = os.path.join(args['output'], 'job-{name}-{job_ident}.log')
                     annotate_job = LocalJob(
@@ -411,16 +487,34 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
                         **job_options
                     )
                     pipeline.annotations.append(annotate_job)
-                    annotation_output_files.append(os.path.join(args['output'], _ANNOTATE.PASS_FILENAME))
+                    annotation_output_files.append(
+                        os.path.join(args['output'], _ANNOTATE.PASS_FILENAME)
+                    )
                     if validate_jobs:
                         annotate_job.dependencies.append(validate_jobs[task_ident - 1])
             else:
-                args['output'] = os.path.join(base, SUBCOMMAND.ANNOTATE, '{}-${}'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT))
+                args['output'] = os.path.join(
+                    base,
+                    SUBCOMMAND.ANNOTATE,
+                    '{}-${}'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT),
+                )
                 # annotate 'clustered' files if the pipeline does not include the validation step
                 if SUBCOMMAND.VALIDATE not in config.skip_stage:
-                    args['inputs'] = [os.path.join(base, SUBCOMMAND.VALIDATE, '{}-${}'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT), _VALIDATE.PASS_FILENAME)]
+                    args['inputs'] = [
+                        os.path.join(
+                            base,
+                            SUBCOMMAND.VALIDATE,
+                            '{}-${}'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT),
+                            _VALIDATE.PASS_FILENAME,
+                        )
+                    ]
                 else:
-                    args['inputs'] = [os.path.join(cluster_output, '{}-${}.tab'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT))]
+                    args['inputs'] = [
+                        os.path.join(
+                            cluster_output,
+                            '{}-${}.tab'.format(pipeline.batch_id, scheduler.ENV_TASK_IDENT),
+                        )
+                    ]
 
                 job_class = ArrayJob if scheduler.NAME != SCHEDULER.TORQUE else TorqueArrayJob
                 annotate_job = job_class(
@@ -428,7 +522,9 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
                     task_list=len(clustered_files),
                     script=script_name,
                     name='MA_{}_{}'.format(libconf.library, pipeline.batch_id),
-                    output_dir=os.path.join(base, SUBCOMMAND.ANNOTATE, '{}-{{task_ident}}'.format(pipeline.batch_id)),
+                    output_dir=os.path.join(
+                        base, SUBCOMMAND.ANNOTATE, '{}-{{task_ident}}'.format(pipeline.batch_id)
+                    ),
                     **job_options
                 )
                 pipeline.write_submission_script(SUBCOMMAND.ANNOTATE, annotate_job, args)
@@ -622,7 +718,12 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
                 run_time = max(run_time, parse_run_time(job.complete_stamp()))
             if run_time >= 0:
                 if isinstance(job, ArrayJob):
-                    log('{} {} COMPLETED'.format(job.tasks, 'task is' if job.tasks == 1 else 'tasks are'), indent_level=1)
+                    log(
+                        '{} {} COMPLETED'.format(
+                            job.tasks, 'task is' if job.tasks == 1 else 'tasks are'
+                        ),
+                        indent_level=1,
+                    )
                 log('run time: {}'.format(run_time), indent_level=1)
         else:
             if isinstance(job, ArrayJob):
@@ -635,7 +736,11 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
                     LOG('{} {} {}'.format(len(tasks), context, status), indent_level=2)
                     for comment in comments:
                         LOG('comment:', comment, indent_level=3)
-            elif job.status not in {JOB_STATUS.PENDING, JOB_STATUS.NOT_SUBMITTED, JOB_STATUS.SUBMITTED}:
+            elif job.status not in {
+                JOB_STATUS.PENDING,
+                JOB_STATUS.NOT_SUBMITTED,
+                JOB_STATUS.SUBMITTED,
+            }:
                 try:
                     content = LogFile.parse(job.logfile())
                     log('{}: {}'.format(content.status, content.message), indent_level=1)
@@ -667,7 +772,11 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
         self.scheduler.wait()
 
         log('annotate', time_stamp=True)
-        if not all([job.status == JOB_STATUS.COMPLETED for job in self.validations]) and self.scheduler.NAME == 'LOCAL' and (submit or resubmit):
+        if (
+            not all([job.status == JOB_STATUS.COMPLETED for job in self.validations])
+            and self.scheduler.NAME == 'LOCAL'
+            and (submit or resubmit)
+        ):
             log('Stopping submission. Dependencies not complete', indent_level=1)
             submit = False
             resubmit = False
@@ -680,24 +789,36 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
         self.scheduler.wait()
 
         log('pairing', time_stamp=True)
-        if not all([job.status == JOB_STATUS.COMPLETED for job in self.annotations]) and self.scheduler.NAME == 'LOCAL' and (submit or resubmit):
+        if (
+            not all([job.status == JOB_STATUS.COMPLETED for job in self.annotations])
+            and self.scheduler.NAME == 'LOCAL'
+            and (submit or resubmit)
+        ):
             log('Stopping submission. Dependencies not complete', indent_level=1)
             submit = False
             resubmit = False
 
-        run_time = self._job_status(self.pairing, submit=submit, resubmit=resubmit, log=log.indent())
+        run_time = self._job_status(
+            self.pairing, submit=submit, resubmit=resubmit, log=log.indent()
+        )
         if self.pairing.status == JOB_STATUS.COMPLETED:
             if run_time >= 0:
                 run_times[2].append(run_time)
         self.scheduler.wait()
 
         log('summary', time_stamp=True)
-        if self.pairing.status != JOB_STATUS.COMPLETED and self.scheduler.NAME == 'LOCAL' and (submit or resubmit):
+        if (
+            self.pairing.status != JOB_STATUS.COMPLETED
+            and self.scheduler.NAME == 'LOCAL'
+            and (submit or resubmit)
+        ):
             log('Stopping submission. Dependencies not complete', indent_level=1)
             submit = False
             resubmit = False
 
-        run_time = self._job_status(self.summary, submit=submit, resubmit=resubmit, log=log.indent())
+        run_time = self._job_status(
+            self.summary, submit=submit, resubmit=resubmit, log=log.indent()
+        )
         if self.summary.status == JOB_STATUS.COMPLETED:
             if run_time >= 0:
                 run_times[3].append(run_time)
@@ -739,10 +860,14 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
         pipeline = cls(
             output_dir=parser['general']['output_dir'],
             scheduler=SCHEDULERS_BY_NAME[parser['general']['scheduler']](
-                concurrency_limit=parser['general']['concurrency_limit'] if 'concurrency_limit' in parser['general'] else OPTIONS.concurrency_limit,
-                remote_head_ssh=parser['general']['remote_head_ssh'] if 'remote_head_ssh' in parser['general'] else OPTIONS.remote_head_ssh
+                concurrency_limit=parser['general']['concurrency_limit']
+                if 'concurrency_limit' in parser['general']
+                else OPTIONS.concurrency_limit,
+                remote_head_ssh=parser['general']['remote_head_ssh']
+                if 'remote_head_ssh' in parser['general']
+                else OPTIONS.remote_head_ssh,
             ),
-            batch_id=parser['general']['batch_id']
+            batch_id=parser['general']['batch_id'],
         )
 
         jobs = {}
@@ -790,7 +915,9 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
                     raise ValueError('mavis pipeline expects a single checker job')
                 pipeline.checker = job
             else:
-                raise NotImplementedError('unexpected job stage for MAVIS pipeline: {}'.format(job.stage), job)
+                raise NotImplementedError(
+                    'unexpected job stage for MAVIS pipeline: {}'.format(job.stage), job
+                )
 
         return pipeline
 
@@ -808,7 +935,7 @@ echo "start: $START_TIME end: $END_TIME" > {}/MAVIS-${}.COMPLETE
             'output_dir': self.output_dir,
             'scheduler': self.scheduler.NAME,
             'remote_head_ssh': self.scheduler.remote_head_ssh,
-            'concurrency_limit': str(self.scheduler.concurrency_limit)
+            'concurrency_limit': str(self.scheduler.concurrency_limit),
         }
 
         for job in [self.summary, self.pairing] + self.validations + self.annotations:

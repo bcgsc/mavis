@@ -10,7 +10,6 @@ from mavis.main import main
 
 
 class TestHelpMenu(unittest.TestCase):
-
     def test_main(self):
         with patch.object(sys, 'argv', ['mavis', '-h']):
             try:

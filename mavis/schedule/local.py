@@ -16,7 +16,6 @@ from .constants import JOB_STATUS, SCHEDULER
 
 
 class LocalJob(Job):
-
     def __init__(self, args, func, rank=None, response=None, *pos, **kwargs):
         """
         Args:
@@ -41,7 +40,16 @@ class LocalJob(Job):
 
     def flatten(self):
         result = Job.flatten(self)
-        omit = {'script', 'rank', 'response', 'func', 'queue', 'import _env', 'mail_user', 'mail_type'}
+        omit = {
+            'script',
+            'rank',
+            'response',
+            'func',
+            'queue',
+            'import _env',
+            'mail_user',
+            'mail_type',
+        }
         return {k: v for k, v in result.items() if k not in omit}
 
 
@@ -61,12 +69,17 @@ class LocalScheduler(Scheduler):
     """
     Scheduler class for dealing with running mavis locally
     """
+
     NAME = SCHEDULER.LOCAL
     """:attr:`~mavis.schedule.constants.SCHEDULER`: the type of scheduler"""
 
     def __init__(self, *pos, **kwargs):
         Scheduler.__init__(self, *pos, **kwargs)
-        self.concurrency_limit = multiprocessing.cpu_count() - 1 if not self.concurrency_limit else self.concurrency_limit
+        self.concurrency_limit = (
+            multiprocessing.cpu_count() - 1
+            if not self.concurrency_limit
+            else self.concurrency_limit
+        )
         self.pool = None  # set this at the first submission
         self.submitted = {}  # submitted jobs process response objects by job ID
         atexit.register(self.close)  # makes the pool 'auto close' on normal python exit
@@ -94,7 +107,9 @@ class LocalScheduler(Scheduler):
                 ref = ReferenceFile(filetype, getattr(job, filetype))
                 ref.load(verbose=False)
         # otherwise add it to the pool
-        job.response = self.pool.submit(job.func, args)  # no arguments, defined all in the job object
+        job.response = self.pool.submit(
+            job.func, args
+        )  # no arguments, defined all in the job object
         setattr(job.response, 'complete_stamp', job.complete_stamp())
         job.response.add_done_callback(write_stamp_callback)
         self.submitted[job.job_ident] = job

@@ -3,7 +3,6 @@ from mavis.interval import Interval, IntervalMapping
 
 
 class TestInterval(unittest.TestCase):
-
     def test___init__error(self):
         with self.assertRaises(AttributeError):
             Interval(4, 3)
@@ -112,7 +111,9 @@ class TestInterval(unittest.TestCase):
     def test_position_in_range(self):
         pos = (12, 12)
         self.assertEqual((2, False), Interval.position_in_range([(1, 2), (3, 6), (7, 15)], pos))
-        self.assertEqual((3, True), Interval.position_in_range([(1, 2), (3, 6), (7, 10), (14, 16)], pos))
+        self.assertEqual(
+            (3, True), Interval.position_in_range([(1, 2), (3, 6), (7, 10), (14, 16)], pos)
+        )
         self.assertEqual((3, False), Interval.position_in_range([(1, 2), (3, 6), (7, 10)], pos))
         self.assertEqual((0, True), Interval.position_in_range([(15, 16), (17, 19)], pos))
 
@@ -186,7 +187,7 @@ class TestInterval(unittest.TestCase):
             (101.0, 500): (21.0, 30),
             (501.0, 600): (31.0, 51),
             (601.0, 900): (52, 57.0),
-            (901.0, 1100): (58.0, 100)
+            (901.0, 1100): (58.0, 100),
         }
         self.assertEqual(Interval(1), Interval.convert_ratioed_pos(mapping, 1))
         self.assertEqual(Interval(20), Interval.convert_ratioed_pos(mapping, 100))
@@ -243,19 +244,14 @@ class TestInterval(unittest.TestCase):
         self.assertEqual([], Interval.min_nonoverlapping())
 
     def test_split_overlapping_no_weight(self):
-        input_intervals = [
-            Interval(1, 10),
-            Interval(2, 11),
-            Interval(4, 5),
-            Interval(4, 8)
-        ]
+        input_intervals = [Interval(1, 10), Interval(2, 11), Interval(4, 5), Interval(4, 8)]
         exp = [
             Interval(1, 1),
             Interval(2, 3),
             Interval(4, 4),
             Interval(5, 7),
             Interval(8, 9),
-            Interval(10, 11)
+            Interval(10, 11),
         ]
         print('expected', exp)
         result = Interval.split_overlap(*input_intervals)
@@ -264,25 +260,15 @@ class TestInterval(unittest.TestCase):
         self.assertEqual(exp, result)
 
     def test_split_overlapping_weighted(self):
-        input_intervals = [
-            Interval(1, 10),
-            Interval(2, 11),
-            Interval(4, 5),
-            Interval(4, 8)
-        ]
-        weights = {
-            Interval(1, 10): 10,
-            Interval(2, 11): 20,
-            Interval(4, 5): 10,
-            Interval(4, 8): 10
-        }
+        input_intervals = [Interval(1, 10), Interval(2, 11), Interval(4, 5), Interval(4, 8)]
+        weights = {Interval(1, 10): 10, Interval(2, 11): 20, Interval(4, 5): 10, Interval(4, 8): 10}
         exp = {
             Interval(1, 1): 1,
             Interval(2, 3): 4,
             Interval(4, 4): 5,
             Interval(5, 7): 6,
             Interval(8, 9): 4,
-            Interval(10, 11): 4
+            Interval(10, 11): 4,
         }
         result = Interval.split_overlap(*input_intervals, weight_mapping=weights)
         self.assertEqual(sorted(exp), sorted(result))
@@ -291,15 +277,16 @@ class TestInterval(unittest.TestCase):
 
 
 class TestIntervalMapping(unittest.TestCase):
-
     def test_convert_pos_ratioed(self):
-        mapping = IntervalMapping({
-            (1.0, 100): (1, 20.0),
-            (101.0, 500): (21.0, 30),
-            (501.0, 600): (31.0, 51),
-            (601.0, 900): (52, 57.0),
-            (901.0, 1100): (58.0, 100)
-        })
+        mapping = IntervalMapping(
+            {
+                (1.0, 100): (1, 20.0),
+                (101.0, 500): (21.0, 30),
+                (501.0, 600): (31.0, 51),
+                (601.0, 900): (52, 57.0),
+                (901.0, 1100): (58.0, 100),
+            }
+        )
         self.assertEqual(1, mapping.convert_pos(1))
         self.assertEqual(1, mapping.convert_ratioed_pos(1).start)
         self.assertAlmostEqual(1.191919191919, mapping.convert_ratioed_pos(1).end)
@@ -336,7 +323,7 @@ class TestIntervalMapping(unittest.TestCase):
     def test_convert_pos_forward_to_reverse(self):
         mapping = IntervalMapping(
             {(41, 50): (101, 110), (21, 30): (201, 210), (1, 10): (301, 310)},
-            opposing=[(41, 50), (21, 30), (1, 10)]
+            opposing=[(41, 50), (21, 30), (1, 10)],
         )
 
         self.assertEqual(306, mapping.convert_pos(5))

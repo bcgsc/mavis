@@ -1,18 +1,33 @@
 import unittest
 
 from mavis.constants import COLUMNS, ORIENT, STRAND, SVTYPE
-from mavis.convert.tools import _convert_tool_row, SUPPORTED_TOOL, _parse_transabyss, _parse_chimerascan, _parse_bnd_alt, _parse_vcf_record
+from mavis.convert.tools import (
+    _convert_tool_row,
+    SUPPORTED_TOOL,
+    _parse_transabyss,
+    _parse_chimerascan,
+    _parse_bnd_alt,
+    _parse_vcf_record,
+)
 
 from .mock import Mock
 
 
 class TestDelly(unittest.TestCase):
-
     def test_convert_insertion(self):
         row = Mock(
-            chrom='1', pos=247760043, id='1DEL00000330',
-            info={'SVTYPE': 'INS', 'CT': 'NtoN', 'CHR2': '1', 'CIEND': [-10, 10], 'CIPOS': [-10, 10]},
-            stop=247760044, alts=[]
+            chrom='1',
+            pos=247760043,
+            id='1DEL00000330',
+            info={
+                'SVTYPE': 'INS',
+                'CT': 'NtoN',
+                'CHR2': '1',
+                'CIEND': [-10, 10],
+                'CIPOS': [-10, 10],
+            },
+            stop=247760044,
+            alts=[],
         )
         bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.DELLY, False)
         self.assertEqual(1, len(bpp_list))
@@ -30,7 +45,9 @@ class TestDelly(unittest.TestCase):
         self.assertEqual(SVTYPE.INS, bpp.event_type)
         self.assertEqual(None, bpp.untemplated_seq)
 
-        bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.DELLY, False, assume_no_untemplated=True)
+        bpp_list = _convert_tool_row(
+            _parse_vcf_record(row)[0], SUPPORTED_TOOL.DELLY, False, assume_no_untemplated=True
+        )
         self.assertEqual(1, len(bpp_list))
         bpp = bpp_list[0]
         self.assertEqual(None, bpp.untemplated_seq)
@@ -38,15 +55,18 @@ class TestDelly(unittest.TestCase):
 
     def test_convert_convert_translocation(self):
         row = Mock(
-            chrom='7', pos=21673582, id='TRA00016056',
+            chrom='7',
+            pos=21673582,
+            id='TRA00016056',
             info={
                 'SVTYPE': 'TRA',
                 'CT': '5to5',
                 'CIEND': [-700, 700],
                 'CIPOS': [-700, 700],
-                'CHR2': '2'
+                'CHR2': '2',
             },
-            stop=58921502, alts=[]
+            stop=58921502,
+            alts=[],
         )
         bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.DELLY, False)
         for b in bpp_list:
@@ -60,12 +80,8 @@ class TestDelly(unittest.TestCase):
 
 
 class TestCnvNator(unittest.TestCase):
-
     def test_convert_deletion(self):
-        row = {
-            'event_type': 'deletion',
-            'coordinates': '1:1-10000'
-        }
+        row = {'event_type': 'deletion', 'coordinates': '1:1-10000'}
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.CNVNATOR, False)
         self.assertEqual(1, len(bpp_list))
         bpp = bpp_list[0]
@@ -78,10 +94,7 @@ class TestCnvNator(unittest.TestCase):
         self.assertEqual('1', bpp.break2.chr)
 
     def test_convert_duplication(self):
-        row = {
-            'event_type': 'duplication',
-            'coordinates': '1:1-10000'
-        }
+        row = {'event_type': 'duplication', 'coordinates': '1:1-10000'}
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.CNVNATOR, False)
         self.assertEqual(1, len(bpp_list))
         bpp = bpp_list[0]
@@ -95,10 +108,11 @@ class TestCnvNator(unittest.TestCase):
 
 
 class TestStarFusion(unittest.TestCase):
-
     def test_convert_standard_event(self):
         row = {
-            'FusionName': 'GAS6--RASA3', 'LeftBreakpoint': 'chr13:114529969:-', 'RightBreakpoint': 'chr13:114751269:-'
+            'FusionName': 'GAS6--RASA3',
+            'LeftBreakpoint': 'chr13:114529969:-',
+            'RightBreakpoint': 'chr13:114751269:-',
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.STARFUSION, True)
 
@@ -113,7 +127,9 @@ class TestStarFusion(unittest.TestCase):
 
     def test_convert_translocation(self):
         row = {
-            'FusionName': 'BCAS4--BCAS3', 'LeftBreakpoint': 'chr20:49411710:+', 'RightBreakpoint': 'chr17:59445688:+'
+            'FusionName': 'BCAS4--BCAS3',
+            'LeftBreakpoint': 'chr20:49411710:+',
+            'RightBreakpoint': 'chr17:59445688:+',
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.STARFUSION, True)
 
@@ -127,18 +143,21 @@ class TestStarFusion(unittest.TestCase):
         self.assertEqual(True, bpp.stranded)
 
     def test_malformed(self):
-        row = {
-            'FusionName': 'BCAS4--BCAS3', 'LeftBreakpoint': '', 'RightBreakpoint': None
-        }
+        row = {'FusionName': 'BCAS4--BCAS3', 'LeftBreakpoint': '', 'RightBreakpoint': None}
         with self.assertRaises(AssertionError):
             _convert_tool_row(row, SUPPORTED_TOOL.STARFUSION, False)
 
 
 class TestTransAbyss(unittest.TestCase):
-
     def test_convert_stranded_indel_insertion(self):
         row = {
-            'chr': '1', 'chr_start': '10015', 'chr_end': '10015', 'ctg_strand': '-', 'type': 'ins', 'alt': 'aat', 'id': 1
+            'chr': '1',
+            'chr_start': '10015',
+            'chr_end': '10015',
+            'ctg_strand': '-',
+            'type': 'ins',
+            'alt': 'aat',
+            'id': 1,
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.TA, True)
         self.assertEqual(2, len(bpp_list))
@@ -161,7 +180,7 @@ class TestTransAbyss(unittest.TestCase):
             'chr_end': '153523790',
             'alt': 'na',
             'ctg_strand': '+',
-            '_index': 9
+            '_index': 9,
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.TA, True)
         print('after call')
@@ -181,7 +200,7 @@ class TestTransAbyss(unittest.TestCase):
             'chr_end': '8877520',
             'alt': 'tt',
             'ctg_strand': '+',
-            '_index': 1
+            '_index': 1,
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.TA, False)
         print([str(b) for b in bpp_list])
@@ -204,7 +223,7 @@ class TestTransAbyss(unittest.TestCase):
             'chr_end': '108683',
             'alt': 'aaaaaaa',
             'ctg_strand': '+',
-            '_index': 15
+            '_index': 15,
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.TA, False)
         print([str(b) for b in bpp_list])
@@ -229,7 +248,7 @@ class TestTransAbyss(unittest.TestCase):
             'orientations': 'L,L',
             'type': 'sense_fusion',
             '_index': 5261,
-            'id': 1
+            'id': 1,
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.TA, True)
         self.assertEqual(2, len(bpp_list))
@@ -242,7 +261,7 @@ class TestTransAbyss(unittest.TestCase):
             'orientations': 'L,L',
             'type': 'sense_fusion',
             '_index': 5261,
-            'id': 1
+            'id': 1,
         }
         std = _parse_transabyss(row)
         print(std)
@@ -250,15 +269,14 @@ class TestTransAbyss(unittest.TestCase):
 
 
 class TestManta(unittest.TestCase):
-
     def test_convert_deletion(self):
         row = Mock(
-            chrom='21', pos=9412306, id='MantaDEL:20644:0:2:0:0:0',
-            info={
-                'SVTYPE': 'DEL',
-                'CIPOS': [0, 4],
-                'CIEND': [0, 4]
-            }, stop=9412400, alts=[]
+            chrom='21',
+            pos=9412306,
+            id='MantaDEL:20644:0:2:0:0:0',
+            info={'SVTYPE': 'DEL', 'CIPOS': [0, 4], 'CIEND': [0, 4]},
+            stop=9412400,
+            alts=[],
         )
         bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.MANTA, False)
         self.assertEqual(1, len(bpp_list))
@@ -274,11 +292,12 @@ class TestManta(unittest.TestCase):
 
     def test_convert_duplication(self):
         row = Mock(
-            chrom='1', pos=224646602, id='MantaDUP:TANDEM:22477:0:1:0:9:0',
-            info={
-                'SVTYPE': 'DUP',
-                'SVINSSEQ': 'CAAAACTTACTATAGCAGTTCTGTGAGCTGCTCTAGC'
-            }, stop=224800120, alts=[]
+            chrom='1',
+            pos=224646602,
+            id='MantaDUP:TANDEM:22477:0:1:0:9:0',
+            info={'SVTYPE': 'DUP', 'SVINSSEQ': 'CAAAACTTACTATAGCAGTTCTGTGAGCTGCTCTAGC'},
+            stop=224800120,
+            alts=[],
         )
         bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.MANTA, False)
         self.assertEqual(1, len(bpp_list))
@@ -289,7 +308,6 @@ class TestManta(unittest.TestCase):
 
 
 class TestDefuse(unittest.TestCase):
-
     def test_convert_inverted_translocation(self):
         row = {
             'gene_chromosome1': 'X',
@@ -298,7 +316,7 @@ class TestDefuse(unittest.TestCase):
             'genomic_break_pos2': '50294136',
             'genomic_strand1': '+',
             'genomic_strand2': '-',
-            'cluster_id': 1
+            'cluster_id': 1,
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DEFUSE, False)
         self.assertEqual(1, len(bpp_list))
@@ -322,7 +340,7 @@ class TestDefuse(unittest.TestCase):
             'genomic_break_pos2': '50294136',
             'genomic_strand1': '+',
             'genomic_strand2': '+',
-            'cluster_id': 1
+            'cluster_id': 1,
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DEFUSE, False)
         self.assertEqual(1, len(bpp_list))
@@ -346,7 +364,7 @@ class TestDefuse(unittest.TestCase):
             'genomic_break_pos2': '1663681',
             'genomic_strand1': '-',
             'genomic_strand2': '+',
-            'cluster_id': 1
+            'cluster_id': 1,
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DEFUSE, False)
         self.assertEqual(1, len(bpp_list))
@@ -370,7 +388,7 @@ class TestDefuse(unittest.TestCase):
             'genomic_break_pos2': '144898348',
             'genomic_strand1': '+',
             'genomic_strand2': '+',
-            'cluster_id': 1
+            'cluster_id': 1,
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DEFUSE, False)
         self.assertEqual(1, len(bpp_list))
@@ -388,7 +406,6 @@ class TestDefuse(unittest.TestCase):
 
 
 class TestChimerascan(unittest.TestCase):
-
     def test_convert_pos_pos(self):
         row = {
             'chrom5p': 'chr3',
@@ -399,7 +416,7 @@ class TestChimerascan(unittest.TestCase):
             'end3p': '49587666',
             'strand5p': '+',
             'strand3p': '+',
-            'chimera_cluster_id': 'CLUSTER30'
+            'chimera_cluster_id': 'CLUSTER30',
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.CHIMERASCAN, False)
         self.assertEqual(1, len(bpp_list))
@@ -424,7 +441,7 @@ class TestChimerascan(unittest.TestCase):
             'end3p': '49587666',
             'strand5p': '+',
             'strand3p': '-',
-            'chimera_cluster_id': 'CLUSTER30'
+            'chimera_cluster_id': 'CLUSTER30',
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.CHIMERASCAN, False)
         self.assertEqual(1, len(bpp_list))
@@ -449,7 +466,7 @@ class TestChimerascan(unittest.TestCase):
             'end3p': '49587666',
             'strand5p': '-',
             'strand3p': '+',
-            'chimera_cluster_id': 'CLUSTER30'
+            'chimera_cluster_id': 'CLUSTER30',
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.CHIMERASCAN, False)
         self.assertEqual(1, len(bpp_list))
@@ -474,7 +491,7 @@ class TestChimerascan(unittest.TestCase):
             'end3p': '49587666',
             'strand5p': '-',
             'strand3p': '-',
-            'chimera_cluster_id': 'CLUSTER30'
+            'chimera_cluster_id': 'CLUSTER30',
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.CHIMERASCAN, False)
         self.assertEqual(1, len(bpp_list))
@@ -491,15 +508,8 @@ class TestChimerascan(unittest.TestCase):
 
 
 class TestPindel(unittest.TestCase):
-
     def test_convert_deletion(self):
-        row = Mock(
-            chrom='21', pos=9412306,
-            info={
-                'SVTYPE': 'DEL'
-            },
-            stop=9412400, id=None, alts=[]
-        )
+        row = Mock(chrom='21', pos=9412306, info={'SVTYPE': 'DEL'}, stop=9412400, id=None, alts=[])
         bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.PINDEL, False)
         self.assertEqual(1, len(bpp_list))
         bpp = bpp_list[0]
@@ -518,12 +528,7 @@ class TestPindel(unittest.TestCase):
         self.assertEqual(False, bpp.opposing_strands)
 
     def test_convert_insertion(self):
-        row = Mock(
-            chrom='21', pos=9412306,
-            info={
-                'SVTYPE': 'INS'
-            }, stop=9412400, id=None, alts=[]
-        )
+        row = Mock(chrom='21', pos=9412306, info={'SVTYPE': 'INS'}, stop=9412400, id=None, alts=[])
         bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.PINDEL, False)
         self.assertEqual(1, len(bpp_list))
         bpp = bpp_list[0]
@@ -542,12 +547,7 @@ class TestPindel(unittest.TestCase):
         self.assertEqual(False, bpp.opposing_strands)
 
     def test_convert_inversion(self):
-        row = Mock(
-            chrom='21', pos=9412306,
-            info={
-                'SVTYPE': 'INV'
-            }, stop=9412400, id=None, alts=[]
-        )
+        row = Mock(chrom='21', pos=9412306, info={'SVTYPE': 'INV'}, stop=9412400, id=None, alts=[])
         bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.PINDEL, False)
         self.assertEqual(2, len(bpp_list))
         bpp = sorted(bpp_list, key=lambda x: x.break1)[0]
@@ -656,7 +656,7 @@ class TestBreakDancer(unittest.TestCase):
             'Type': 'ITX',
             'Size': '-352',
             'Score': '99',
-            'num_Reads': '43'
+            'num_Reads': '43',
         }
         bpps = _convert_tool_row(row, SUPPORTED_TOOL.BREAKDANCER, False, True)
         self.assertEqual(1, len(bpps))
@@ -680,7 +680,7 @@ class TestBreakDancer(unittest.TestCase):
             'Type': 'DEL',
             'Size': '892',
             'Score': '99',
-            'num_Reads': '67'
+            'num_Reads': '67',
         }
         bpps = _convert_tool_row(row, SUPPORTED_TOOL.BREAKDANCER, False, True)
         self.assertEqual(1, len(bpps))
@@ -704,7 +704,7 @@ class TestBreakDancer(unittest.TestCase):
             'Type': 'INV',
             'Size': '74618',
             'Score': '31',
-            'num_Reads': '2'
+            'num_Reads': '2',
         }
         bpps = _convert_tool_row(row, SUPPORTED_TOOL.BREAKDANCER, False, True)
         self.assertEqual(2, len(bpps))
@@ -737,7 +737,7 @@ class TestBreakDancer(unittest.TestCase):
             'Type': 'INS',
             'Size': '-421',
             'Score': '99',
-            'num_Reads': '3'
+            'num_Reads': '3',
         }
         bpps = _convert_tool_row(row, SUPPORTED_TOOL.BREAKDANCER, False, True)
         self.assertEqual(1, len(bpps))
@@ -752,12 +752,9 @@ class TestBreakDancer(unittest.TestCase):
 
 
 class TestStrelka(unittest.TestCase):
-
     def testInsertion(self):
         event = Mock(
-            chrom='1', pos=724986, id=None,
-            info={}, ref='G',
-            stop=724986, alts=('GGAATT',)
+            chrom='1', pos=724986, id=None, info={}, ref='G', stop=724986, alts=('GGAATT',)
         )
         bpp_list = _convert_tool_row(_parse_vcf_record(event)[0], SUPPORTED_TOOL.STRELKA, False)
         self.assertEqual(1, len(bpp_list))
@@ -770,9 +767,13 @@ class TestStrelka(unittest.TestCase):
 
     def testDeletion(self):
         event = Mock(
-            chrom='1', pos=1265353, id=None,
-            info={}, ref='GCGTGTGCCATGCA',
-            stop=1265366, alts=('G',)
+            chrom='1',
+            pos=1265353,
+            id=None,
+            info={},
+            ref='GCGTGTGCCATGCA',
+            stop=1265366,
+            alts=('G',),
         )
         bpp_list = _convert_tool_row(_parse_vcf_record(event)[0], SUPPORTED_TOOL.STRELKA, False)
         self.assertEqual(1, len(bpp_list))
@@ -785,26 +786,27 @@ class TestStrelka(unittest.TestCase):
 
     def testMalformated(self):
         event = Mock(
-            chrom='1', pos=53678660, id=None, info={'SVTYPE': 'BND'},
+            chrom='1',
+            pos=53678660,
+            id=None,
+            info={'SVTYPE': 'BND'},
             ref='C',
             alts=('CTTTTAAATGTAACATGACATAATATATTTCCTAAATAATTTAAAATAATC.',),
-            stop=53678660
+            stop=53678660,
         )
         with self.assertRaises(NotImplementedError):
             _convert_tool_row(_parse_vcf_record(event)[0], SUPPORTED_TOOL.STRELKA, False)
 
 
 class TestVCF(unittest.TestCase):
-
     def setUp(self):
         self.tra = Mock(
-            chrom='2', pos=21673582, id=None,
-            info={
-                'SVTYPE': 'TRA',
-                'CT': '5to5',
-                'CHR2': '3'
-            },
-            stop=58921502, alts=[]
+            chrom='2',
+            pos=21673582,
+            id=None,
+            info={'SVTYPE': 'TRA', 'CT': '5to5', 'CHR2': '3'},
+            stop=58921502,
+            alts=[],
         )
 
     def test_no_ci(self):
@@ -817,10 +819,7 @@ class TestVCF(unittest.TestCase):
         self.assertEqual(58921502, bpp.break2.end)
 
     def test_ci(self):
-        self.tra.info.update({
-            'CIEND': [-700, 700],
-            'CIPOS': [-700, 700]
-        })
+        self.tra.info.update({'CIEND': [-700, 700], 'CIPOS': [-700, 700]})
         bpp_list = _convert_tool_row(_parse_vcf_record(self.tra)[0], SUPPORTED_TOOL.VCF, False)
         self.assertEqual(1, len(bpp_list))
         bpp = bpp_list[0]
@@ -831,11 +830,7 @@ class TestVCF(unittest.TestCase):
         self.assertEqual(58921502 + 700, bpp.break2.end)
 
     def test_precise_flag_ignores_ci(self):
-        self.tra.info.update({
-            'CIEND': [-700, 700],
-            'CIPOS': [-700, 700],
-            'PRECISE': True
-        })
+        self.tra.info.update({'CIEND': [-700, 700], 'CIPOS': [-700, 700], 'PRECISE': True})
         bpp_list = _convert_tool_row(_parse_vcf_record(self.tra)[0], SUPPORTED_TOOL.VCF, False)
         self.assertEqual(1, len(bpp_list))
         bpp = bpp_list[0]

@@ -23,7 +23,14 @@ from .align import query_coverage_interval
 from .bam import cigar as _cigar
 from .bam.cigar import QUERY_ALIGNED_STATES
 from .bam.read import SamRead
-from .constants import CIGAR, DNA_ALPHABET, NA_MAPPING_QUALITY, PYSAM_READ_FLAGS, reverse_complement, STRAND
+from .constants import (
+    CIGAR,
+    DNA_ALPHABET,
+    NA_MAPPING_QUALITY,
+    PYSAM_READ_FLAGS,
+    reverse_complement,
+    STRAND,
+)
 from .util import LOG
 from .interval import Interval
 
@@ -31,6 +38,7 @@ from .interval import Interval
 class Blat:
     """
     """
+
     @staticmethod
     def millibad(row, is_protein=False, is_mrna=True):
         """
@@ -66,7 +74,9 @@ class Blat:
                 round_away_from_zero = int(round_away_from_zero - 0.5)
             else:
                 round_away_from_zero = int(round_away_from_zero + 0.5)
-            millibad = (1000 * (row['mismatch'] * size_mul + insert_factor + round_away_from_zero)) / total
+            millibad = (
+                1000 * (row['mismatch'] * size_mul + insert_factor + round_away_from_zero)
+            ) / total
             return millibad
         else:
             return 0
@@ -88,10 +98,12 @@ class Blat:
         """
 
         size_mul = 1 if not is_protein else 3
-        score = size_mul * (row['match'] + (row['repmatch'] >> 1)) \
-            - size_mul * row['mismatch'] \
-            - row['qgap_count'] \
+        score = (
+            size_mul * (row['match'] + (row['repmatch'] >> 1))
+            - size_mul * row['mismatch']
+            - row['qgap_count']
             - row['tgap_count']
+        )
         return score
 
     @staticmethod
@@ -101,15 +113,29 @@ class Blat:
     @staticmethod
     def read_pslx(filename, seqid_to_sequence_mapping, is_protein=False, verbose=True):
         pslx_header = [
-            'match', 'mismatch', 'repmatch', 'ncount',
-            'qgap_count', 'qgap_bases',
-            'tgap_count', 'tgap_bases',
+            'match',
+            'mismatch',
+            'repmatch',
+            'ncount',
+            'qgap_count',
+            'qgap_bases',
+            'tgap_count',
+            'tgap_bases',
             'strand',
-            'qname', 'qsize', 'qstart', 'qend',
-            'tname', 'tsize', 'tstart', 'tend',
-            'block_count', 'block_sizes',
-            'qstarts', 'tstarts',
-            'qseqs', 'tseqs'
+            'qname',
+            'qsize',
+            'qstart',
+            'qend',
+            'tname',
+            'tsize',
+            'tstart',
+            'tend',
+            'block_count',
+            'block_sizes',
+            'qstarts',
+            'tstarts',
+            'qseqs',
+            'tseqs',
         ]
 
         def split_csv_trailing_seq(x):
@@ -142,11 +168,9 @@ class Blat:
                 'qstarts': split_csv_trailing_ints,
                 'tstarts': split_csv_trailing_ints,
                 'qseqs': split_csv_trailing_seq,
-                'tseqs': split_csv_trailing_seq
+                'tseqs': split_csv_trailing_seq,
             },
-            validate={
-                'strand': r'^[\+-]$'
-            }
+            validate={'strand': r'^[\+-]$'},
         )
 
         final_rows = []
@@ -158,14 +182,23 @@ class Blat:
                 row['qseq_full'] = qseq
 
                 for x in [
-                    'qgap_count', 'qgap_bases', 'tgap_count',
-                    'tgap_bases', 'qsize', 'tsize', 'ncount',
-                    'match', 'mismatch', 'repmatch'
+                    'qgap_count',
+                    'qgap_bases',
+                    'tgap_count',
+                    'tgap_bases',
+                    'qsize',
+                    'tsize',
+                    'ncount',
+                    'match',
+                    'mismatch',
+                    'repmatch',
                 ]:
                     if row[x] < 0 and verbose:
                         raise AssertionError(
                             'Blat error: blat returned a negative number, which are not allowed: {}={}'.format(
-                                x, row[x]))
+                                x, row[x]
+                            )
+                        )
                 final_rows.append(row)
             except AssertionError as err:
                 LOG(type(err), ':', str(err), level=logging.DEBUG)
@@ -197,7 +230,10 @@ class Blat:
 
         for i in range(1, len(query_ranges)):
             # first check for blat errors
-            if query_ranges[i].start <= query_ranges[i - 1].end or ref_ranges[i].start <= ref_ranges[i - 1].end:
+            if (
+                query_ranges[i].start <= query_ranges[i - 1].end
+                or ref_ranges[i].start <= ref_ranges[i - 1].end
+            ):
                 raise AssertionError('block ranges overlap in row', row)
 
         # try extending by consuming from the next aligned portion
@@ -211,7 +247,9 @@ class Blat:
                 rpos = ref_ranges[i][1] + 1
                 shift = 0
                 while qpos + shift < len(query_sequence) and rpos + shift < len(reference_sequence):
-                    if DNA_ALPHABET.match(query_sequence[qpos + shift], reference_sequence[rpos + shift]):
+                    if DNA_ALPHABET.match(
+                        query_sequence[qpos + shift], reference_sequence[rpos + shift]
+                    ):
                         shift += 1
                     else:
                         break
@@ -229,8 +267,12 @@ class Blat:
                 while shift > 0 and next_index < len(query_ranges):
                     size = query_ranges[next_index][1] - query_ranges[next_index][0] + 1
                     if size > shift:
-                        new_query_ranges.append((query_ranges[next_index][0] + shift, query_ranges[next_index][1]))
-                        new_ref_ranges.append((ref_ranges[next_index][0] + shift, ref_ranges[next_index][1]))
+                        new_query_ranges.append(
+                            (query_ranges[next_index][0] + shift, query_ranges[next_index][1])
+                        )
+                        new_ref_ranges.append(
+                            (ref_ranges[next_index][0] + shift, ref_ranges[next_index][1])
+                        )
                         shift = 0
                     else:
                         shift -= size
@@ -254,31 +296,34 @@ class Blat:
                     if qjump > 1:  # query range skipped. insertion to the reference sequence
                         cigar.append((CIGAR.I, qjump - 1))
                         # adds the inserted seq for the pysam read
-                        seq += query_sequence[qprev[1] + 1:qcurr[0]]
+                        seq += query_sequence[qprev[1] + 1 : qcurr[0]]
                 elif qjump == 1:  # query is consecutive
                     if rjump > 1:  # reference range skipped. deletion of the reference sequence
                         cigar.append((CIGAR.D, rjump - 1))
                 else:  # indel
-                    seq += query_sequence[qprev[1] + 1:qcurr[0]]
+                    seq += query_sequence[qprev[1] + 1 : qcurr[0]]
                     cigar.append((CIGAR.I, qjump - 1))
                     cigar.append((CIGAR.D, rjump - 1))
             # compute the match/mismatch for the current block
             if not reference_sequence:
                 cigar.append((CIGAR.M, size))
             else:
-                for ref_seq, query_seq in zip(reference_sequence[rcurr[0]:rcurr[1] + 1], query_sequence[qcurr[0]:qcurr[1] + 1]):
+                for ref_seq, query_seq in zip(
+                    reference_sequence[rcurr[0] : rcurr[1] + 1],
+                    query_sequence[qcurr[0] : qcurr[1] + 1],
+                ):
                     if DNA_ALPHABET.match(ref_seq, query_seq):
                         cigar.append((CIGAR.EQ, 1))
                     else:
                         cigar.append((CIGAR.X, 1))
-            seq += query_sequence[qcurr[0]:qcurr[1] + 1]
+            seq += query_sequence[qcurr[0] : qcurr[1] + 1]
         # add initial soft-clipping
         if query_ranges[0][0] > 0:  # first block starts after the query start
-            temp = query_sequence[0:query_ranges[0][0]]
+            temp = query_sequence[0 : query_ranges[0][0]]
             seq = temp + seq
             cigar.insert(0, (CIGAR.S, len(temp)))
         if query_ranges[-1][1] < len(query_sequence) - 1:
-            temp = query_sequence[query_ranges[-1][1] + 1:]
+            temp = query_sequence[query_ranges[-1][1] + 1 :]
             seq += temp
             cigar.append((CIGAR.S, len(temp)))
         read = SamRead(reference_name=row['tname'], alignment_score=row['score'])
@@ -291,13 +336,15 @@ class Blat:
         if row['strand'] == STRAND.NEG:
             read.flag = read.flag | PYSAM_READ_FLAGS.REVERSE
             # read.cigar = read.cigar[::-1] # DON't REVERSE b/c blat reports on the positive strand already
-        if read.query_sequence != row['qseq_full'] and read.query_sequence != reverse_complement(row['qseq_full']):
+        if read.query_sequence != row['qseq_full'] and read.query_sequence != reverse_complement(
+            row['qseq_full']
+        ):
             raise AssertionError(
                 'read sequence should reproduce input sequence',
                 read.cigar,
                 read.query_sequence,
                 row['qseq_full'],
-                reverse_complement(row['qseq_full'])
+                reverse_complement(row['qseq_full']),
             )
         qcons = sum([v for c, v in read.cigar if c in QUERY_ALIGNED_STATES])
         assert len(read.query_sequence) == qcons
@@ -309,14 +356,15 @@ class Blat:
 
 
 def process_blat_output(
-        input_bam_cache,
-        query_id_mapping,
-        reference_genome,
-        aligner_output_file='aligner_out.temp',
-        blat_min_percent_of_max_score=0.8,
-        blat_min_identity=0.7,
-        blat_limit_top_aln=25,
-        is_protein=False):
+    input_bam_cache,
+    query_id_mapping,
+    reference_genome,
+    aligner_output_file='aligner_out.temp',
+    blat_min_percent_of_max_score=0.8,
+    blat_min_identity=0.7,
+    blat_limit_top_aln=25,
+    is_protein=False,
+):
     """
     converts the blat output pslx (unheadered file) to bam reads
     """
@@ -345,13 +393,19 @@ def process_blat_output(
             try:
                 read = Blat.pslx_row_to_pysam(row, input_bam_cache, reference_genome)
             except KeyError as err:
-                LOG('warning: reference template name not recognized', str(err), level=logging.DEBUG)
+                LOG(
+                    'warning: reference template name not recognized', str(err), level=logging.DEBUG
+                )
             except AssertionError as err:
                 LOG('warning: invalid blat alignment', repr(err), level=logging.DEBUG)
             else:
                 reads.append((row, read))
 
-        filtered_rows = [(row, read) for row, read in reads if round(row['percent_ident'], 0) >= blat_min_identity]
+        filtered_rows = [
+            (row, read)
+            for row, read in reads
+            if round(row['percent_ident'], 0) >= blat_min_identity
+        ]
         # filter on score
         filtered_rows.sort(key=lambda x: x[0]['score'], reverse=True)
         # filter on percent id
@@ -361,7 +415,9 @@ def process_blat_output(
         min_rank = min(list(score_ranks.values()) + [0])
 
         filtered_reads = []
-        for count, (row, read) in enumerate(sorted(reads, key=lambda x: x[0]['score'], reverse=True)):
+        for count, (row, read) in enumerate(
+            sorted(reads, key=lambda x: x[0]['score'], reverse=True)
+        ):
             if count >= blat_limit_top_aln:
                 break
             row['rank'] = score_ranks[row['score']]
@@ -372,7 +428,9 @@ def process_blat_output(
             read.set_tag(PYSAM_READ_FLAGS.BLAT_ALIGNMENTS, len(filtered_rows), value_type='i')
             read.set_tag(PYSAM_READ_FLAGS.BLAT_PMS, blat_min_percent_of_max_score, value_type='f')
             read.set_tag(PYSAM_READ_FLAGS.BLAT_RANK, row['rank'], value_type='i')
-            read.set_tag(PYSAM_READ_FLAGS.BLAT_PERCENT_IDENTITY, row['percent_ident'], value_type='f')
+            read.set_tag(
+                PYSAM_READ_FLAGS.BLAT_PERCENT_IDENTITY, row['percent_ident'], value_type='f'
+            )
             filtered_reads.append(read)
         reads_by_query[query_seq] = filtered_reads
     return reads_by_query

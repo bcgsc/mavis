@@ -41,7 +41,6 @@ def calculate_orf(spliced_cdna_sequence, min_orf_size=None):
 
 
 class DomainRegion(BioInterval):
-
     def __init__(self, start, end, seq=None, domain=None, name=None):
         BioInterval.__init__(self, domain, start, end, seq=seq, name=name)
         if seq and len(seq) != len(self):
@@ -49,7 +48,6 @@ class DomainRegion(BioInterval):
 
 
 class Domain:
-
     def __init__(self, name, regions, translation=None, data=None):
         """
         Args:
@@ -109,7 +107,7 @@ class Domain:
             for region in self.regions:
                 if not region.seq:
                     raise NotSpecifiedError('insufficient sequence information')
-                ref = aa_seq[region.start - 1:region.end]
+                ref = aa_seq[region.start - 1 : region.end]
                 for aa1, aa2 in zip(ref, region.seq):
                     if aa1 == aa2:
                         matches += 1
@@ -142,7 +140,7 @@ class Domain:
             if self.translation:
                 aa_seq = self.translation.get_aa_seq(reference_genome)
                 for region in self.regions:
-                    region_seq = aa_seq[region.start - 1:region.end]
+                    region_seq = aa_seq[region.start - 1 : region.end]
                     if region not in sequences:
                         sequences[region] = region_seq
             else:
@@ -237,7 +235,6 @@ class Domain:
 
 
 class Translation(BioInterval):
-
     def __init__(self, start, end, transcript=None, domains=None, seq=None, name=None):
         """
         describes the splicing pattern and cds start and end with reference to a particular transcript
@@ -250,13 +247,17 @@ class Translation(BioInterval):
             sequence (str): the cds sequence
         """
         domains = [] if domains is None else domains
-        BioInterval.__init__(self, reference_object=transcript, name=name, start=start, end=end, seq=seq)
+        BioInterval.__init__(
+            self, reference_object=transcript, name=name, start=start, end=end, seq=seq
+        )
         self.domains = [d for d in domains]
 
         if start <= 0:
             raise AttributeError('start must be a positive integer', start)
         if transcript and end > len(transcript):
-            raise AttributeError('translation cannot be outside of related transcript range', end, len(transcript))
+            raise AttributeError(
+                'translation cannot be outside of related transcript range', end, len(transcript)
+            )
 
         for domain in domains:
             domain.reference_object = self
@@ -383,7 +384,7 @@ class Translation(BioInterval):
             return self.seq
         elif self.transcript and self.transcript.get_strand():
             seq = self.transcript.get_seq(reference_genome, ignore_cache)
-            return seq[self.start - 1:self.end]
+            return seq[self.start - 1 : self.end]
         raise NotSpecifiedError('insufficient seq information')
 
     def get_seq(self, reference_genome=None, ignore_cache=False):
