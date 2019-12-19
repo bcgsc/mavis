@@ -5,7 +5,6 @@ from mavis.config import float_fraction, nameable_string
 
 
 class TestFloatFraction(unittest.TestCase):
-
     def test_bad_string(self):
         with self.assertRaises(ArgumentTypeError):
             float_fraction('a')
@@ -26,7 +25,6 @@ class TestFloatFraction(unittest.TestCase):
 
 
 class TestNoReservedChars(unittest.TestCase):
-
     def test_semicolon_error(self):
         with self.assertRaises(TypeError):
             nameable_string('thing;thing')

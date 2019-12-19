@@ -7,7 +7,6 @@ from mavis.pairing import pairing
 
 
 class TestPairing(unittest.TestCase):
-
     def setUp(self):
         self.gev1 = BreakpointPair(
             Breakpoint('1', 1),
@@ -17,8 +16,8 @@ class TestPairing(unittest.TestCase):
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
-                COLUMNS.protocol: PROTOCOL.GENOME
-            }
+                COLUMNS.protocol: PROTOCOL.GENOME,
+            },
         )
         self.gev2 = BreakpointPair(
             Breakpoint('1', 1),
@@ -28,25 +27,18 @@ class TestPairing(unittest.TestCase):
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
-                COLUMNS.protocol: PROTOCOL.GENOME
-            }
+                COLUMNS.protocol: PROTOCOL.GENOME,
+            },
         )
 
         self.ust1 = PreTranscript(
-            exons=[(1, 100), (301, 400), (501, 600)],
-            strand=STRAND.POS,
-            name='t1'
+            exons=[(1, 100), (301, 400), (501, 600)], strand=STRAND.POS, name='t1'
         )
         self.ust2 = PreTranscript(
-            exons=[(1001, 1100), (1301, 1400), (1501, 1600)],
-            strand=STRAND.POS,
-            name='t2'
+            exons=[(1001, 1100), (1301, 1400), (1501, 1600)], strand=STRAND.POS, name='t2'
         )
         self.distances = {CALL_METHOD.CONTIG: 0, CALL_METHOD.FLANK: 0, CALL_METHOD.SPLIT: 10}
-        self.TRANSCRIPTS = {
-            self.ust1.name: self.ust1,
-            self.ust2.name: self.ust2
-        }
+        self.TRANSCRIPTS = {self.ust1.name: self.ust1, self.ust2.name: self.ust2}
 
     def test_genome_protocol_diff_chrom(self):
         self.gev2.break1.chr = '2'
@@ -116,8 +108,8 @@ class TestPairing(unittest.TestCase):
                 COLUMNS.transcript1: None,
                 COLUMNS.transcript2: None,
                 COLUMNS.fusion_cdna_coding_start: 1,
-                COLUMNS.fusion_cdna_coding_end: 10
-            }
+                COLUMNS.fusion_cdna_coding_end: 10,
+            },
         )
         trans_ev = BreakpointPair(
             Breakpoint('1', 50),
@@ -131,8 +123,8 @@ class TestPairing(unittest.TestCase):
                 COLUMNS.transcript1: None,
                 COLUMNS.transcript2: None,
                 COLUMNS.fusion_cdna_coding_start: 1,
-                COLUMNS.fusion_cdna_coding_end: 10
-            }
+                COLUMNS.fusion_cdna_coding_end: 10,
+            },
         )
         self.assertFalse(pairing.equivalent(genome_ev, trans_ev, self.TRANSCRIPTS))
         genome_ev.data[COLUMNS.fusion_sequence_fasta_id] = 'a'
@@ -152,8 +144,8 @@ class TestPairing(unittest.TestCase):
                 COLUMNS.transcript1: None,
                 COLUMNS.transcript2: None,
                 COLUMNS.fusion_cdna_coding_start: 1,
-                COLUMNS.fusion_cdna_coding_end: 10
-            }
+                COLUMNS.fusion_cdna_coding_end: 10,
+            },
         )
         trans_ev = BreakpointPair(
             Breakpoint('1', 50),
@@ -167,8 +159,8 @@ class TestPairing(unittest.TestCase):
                 COLUMNS.transcript1: None,
                 COLUMNS.transcript2: None,
                 COLUMNS.fusion_cdna_coding_start: 1,
-                COLUMNS.fusion_cdna_coding_end: 50
-            }
+                COLUMNS.fusion_cdna_coding_end: 50,
+            },
         )
         self.assertFalse(pairing.inferred_equivalent(genome_ev, trans_ev, self.TRANSCRIPTS))
 
@@ -185,8 +177,8 @@ class TestPairing(unittest.TestCase):
                 COLUMNS.transcript1: None,
                 COLUMNS.transcript2: None,
                 COLUMNS.fusion_cdna_coding_start: 1,
-                COLUMNS.fusion_cdna_coding_end: 10
-            }
+                COLUMNS.fusion_cdna_coding_end: 10,
+            },
         )
         trans_ev = BreakpointPair(
             Breakpoint('1', 50),
@@ -200,8 +192,8 @@ class TestPairing(unittest.TestCase):
                 COLUMNS.transcript1: None,
                 COLUMNS.transcript2: None,
                 COLUMNS.fusion_cdna_coding_start: 1,
-                COLUMNS.fusion_cdna_coding_end: 10
-            }
+                COLUMNS.fusion_cdna_coding_end: 10,
+            },
         )
         self.assertFalse(pairing.inferred_equivalent(genome_ev, trans_ev, self.TRANSCRIPTS))
 
@@ -216,8 +208,8 @@ class TestPairing(unittest.TestCase):
                 COLUMNS.fusion_sequence_fasta_id: None,
                 COLUMNS.protocol: PROTOCOL.GENOME,
                 COLUMNS.transcript1: self.ust1.name,
-                COLUMNS.transcript2: None
-            }
+                COLUMNS.transcript2: None,
+            },
         )
         trans_ev = BreakpointPair(
             Breakpoint('1', 350, orient=ORIENT.LEFT),
@@ -229,8 +221,8 @@ class TestPairing(unittest.TestCase):
                 COLUMNS.fusion_sequence_fasta_id: None,
                 COLUMNS.protocol: PROTOCOL.TRANS,
                 COLUMNS.transcript1: self.ust1.name,
-                COLUMNS.transcript2: None
-            }
+                COLUMNS.transcript2: None,
+            },
         )
         self.assertTrue(pairing.equivalent(genome_ev, trans_ev, self.TRANSCRIPTS))
         self.assertTrue(pairing.equivalent(trans_ev, genome_ev, self.TRANSCRIPTS))
@@ -253,8 +245,8 @@ class TestPairing(unittest.TestCase):
                 COLUMNS.fusion_sequence_fasta_id: None,
                 COLUMNS.protocol: PROTOCOL.GENOME,
                 COLUMNS.transcript1: self.ust1.name,
-                COLUMNS.transcript2: None
-            }
+                COLUMNS.transcript2: None,
+            },
         )
         trans_ev = BreakpointPair(
             Breakpoint('1', 350, orient=ORIENT.LEFT),
@@ -266,8 +258,8 @@ class TestPairing(unittest.TestCase):
                 COLUMNS.fusion_sequence_fasta_id: None,
                 COLUMNS.protocol: PROTOCOL.TRANS,
                 COLUMNS.transcript1: self.ust1.name,
-                COLUMNS.transcript2: None
-            }
+                COLUMNS.transcript2: None,
+            },
         )
         self.assertTrue(pairing.equivalent(genome_ev, trans_ev, self.TRANSCRIPTS))
         self.assertTrue(pairing.equivalent(trans_ev, genome_ev, self.TRANSCRIPTS))
@@ -297,7 +289,6 @@ class TestPairing(unittest.TestCase):
 
 
 class TestBreakpointPrediction(unittest.TestCase):
-
     def setUp(self):
         self.pre_transcript = PreTranscript([(101, 200), (301, 400), (501, 600)], strand=STRAND.POS)
         self.n_ust = PreTranscript([(101, 200), (301, 400), (501, 600)], strand=STRAND.NEG)
@@ -392,20 +383,19 @@ class TestBreakpointPrediction(unittest.TestCase):
 
 
 class TestEquivalent(unittest.TestCase):
-
     def test_useq_uncertainty(self):
         event1 = BreakpointPair(
             Breakpoint('1', 157540650, orient='L'),
             Breakpoint('1', 157540877, orient='R'),
             event_type='deletion',
             call_method='contig',
-            untemplated_seq='GCCTGGCCGCA'
+            untemplated_seq='GCCTGGCCGCA',
         )
         event2 = BreakpointPair(
             Breakpoint('1', 157540661, orient='L'),
             Breakpoint('1', 157540877, orient='R'),
             event_type='deletion',
-            call_method='spanning reads'
+            call_method='spanning reads',
         )
         self.assertTrue(pairing.equivalent(event1, event2))
 
@@ -415,13 +405,13 @@ class TestEquivalent(unittest.TestCase):
             Breakpoint('1', 61, orient='R'),
             event_type='deletion',
             call_method='contig',
-            untemplated_seq='A'
+            untemplated_seq='A',
         )
         event2 = BreakpointPair(
             Breakpoint('1', 24, orient='L'),
             Breakpoint('1', 61, orient='R'),
             event_type='deletion',
             call_method='contig',
-            untemplated_seq='TTTTTTTTT'
+            untemplated_seq='TTTTTTTTT',
         )
         self.assertTrue(pairing.equivalent(event1, event2))

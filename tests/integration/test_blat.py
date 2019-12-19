@@ -20,7 +20,10 @@ REFERENCE_GENOME = None
 def setUpModule():
     global REFERENCE_GENOME
     REFERENCE_GENOME = load_reference_genome(get_data('mock_reference_genome.fa'))
-    if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
+    if (
+        'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT'
+        != REFERENCE_GENOME['fake'].seq[0:50].upper()
+    ):
         raise AssertionError('fake genome file does not have the expected contents')
     global BAM_CACHE
     BAM_CACHE = BamCache(get_data('mini_mock_reads_for_events.sorted.bam'))
@@ -37,15 +40,29 @@ class TestBlat(unittest.TestCase):
         header, rows = Blat.read_pslx(get_data('blat_output.pslx'), mapping)
         self.assertEqual(11067, len(rows))
         expect_pslx_header = [
-            'match', 'mismatch', 'repmatch', 'ncount',
-            'qgap_count', 'qgap_bases',
-            'tgap_count', 'tgap_bases',
+            'match',
+            'mismatch',
+            'repmatch',
+            'ncount',
+            'qgap_count',
+            'qgap_bases',
+            'tgap_count',
+            'tgap_bases',
             'strand',
-            'qname', 'qsize', 'qstart', 'qend',
-            'tname', 'tsize', 'tstart', 'tend',
-            'block_count', 'block_sizes',
-            'qstarts', 'tstarts',
-            'qseqs', 'tseqs'
+            'qname',
+            'qsize',
+            'qstart',
+            'qend',
+            'tname',
+            'tsize',
+            'tstart',
+            'tend',
+            'block_count',
+            'block_sizes',
+            'qstarts',
+            'tstarts',
+            'qseqs',
+            'tseqs',
         ]
         self.assertEqual(expect_pslx_header, header)
 
@@ -63,7 +80,7 @@ class TestBlat(unittest.TestCase):
             'qseqs': ['AATACCATACATGATATA'],
             'percent_ident': 100.0,
             'qseq_full': 'AGCCTCCCAAGTAGCTGGGACTACAGGCGCCCGCCACTACGCCCGGCTAATTTTTTGTATTTTTAGTAGAGACGGGGTTTCACCGTTTT'
-                         'AGCCAGGATGGTCTCGATCTCCTGACCTCATGATCCGCCCGCCTCGGC'
+            'AGCCAGGATGGTCTCGATCTCCTGACCTCATGATCCGCCCGCCTCGGC',
         }
         read = Blat.pslx_row_to_pysam(pslx_row, self.cache, None)
         self.assertEqual(23, read.reference_id)
@@ -86,12 +103,16 @@ class TestBlat(unittest.TestCase):
             'block_sizes': [128],
             'qstarts': [117],
             'tstarts': [2187],
-            'qseqs': ['TGAGCAGAGCTATATATTTAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAACCAAACAGGAAAGAATCCAAATTCTGTGTTTACAGGGCTTTCATGCTCAG'],
-            'tseqs': ['TGAGCAGAGCTATATATTTAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAACCAAACAGGAAAGAATCCAAATTCTGTGTTTACAGGGCTTTCATGCTCAG'],
+            'qseqs': [
+                'TGAGCAGAGCTATATATTTAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAACCAAACAGGAAAGAATCCAAATTCTGTGTTTACAGGGCTTTCATGCTCAG'
+            ],
+            'tseqs': [
+                'TGAGCAGAGCTATATATTTAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAACCAAACAGGAAAGAATCCAAATTCTGTGTTTACAGGGCTTTCATGCTCAG'
+            ],
             '_index': 1,
             'score': 128,
             'percent_ident': 100.0,
-            'qseq_full': 'CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT'
+            'qseq_full': 'CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT',
         }
         read = Blat.pslx_row_to_pysam(pslx_row, self.cache, None)
         self.assertEqual(3, read.reference_id)
@@ -108,10 +129,7 @@ class TestBlat(unittest.TestCase):
             'qstarts': [0],
             'strand': '+',
             'score': 0,
-            'qseq_full':
-                'ATCTAATAACTTGATCAATA'
-                'TCTGTGATTATATTTTCATT'
-                'GCCTTCCAATTTT'
+            'qseq_full': 'ATCTAATAACTTGATCAATA' 'TCTGTGATTATATTTTCATT' 'GCCTTCCAATTTT',
         }
         read = Blat.pslx_row_to_pysam(pslx_row, self.cache, None)
         self.assertEqual(0, read.reference_id)
@@ -129,10 +147,7 @@ class TestBlat(unittest.TestCase):
             'qstarts': [0],
             'strand': '+',
             'score': 0,
-            'qseq_full':
-                'ATCTAATAACTTGATCAATA'
-                'TCTGTGATTATATTTTCATT'
-                'GCCTTCCAATTTT'
+            'qseq_full': 'ATCTAATAACTTGATCAATA' 'TCTGTGATTATATTTTCATT' 'GCCTTCCAATTTT',
         }
         read = Blat.pslx_row_to_pysam(pslx_row, self.cache, REFERENCE_GENOME)
         self.assertEqual(0, read.reference_id)
@@ -150,16 +165,15 @@ class TestBlat(unittest.TestCase):
             'tname': 'fake',
             'qstarts': [0, 47],
             'strand': '+',
-            'qseq_full':
-                'ATCTAATAACTTGATCAATA'
-                'TCTGTGATTATATTTTCATT'
-                'GCCTTCC'
-                'AATTTTGCAGATTATAAGAT'
-                'CAATAGATATTTATTGTAAA'
-                'ATGCACAAATAGTGCAACAT'
-                'TTCTTAAAGTAGACCGTGAA'
-                'ATACTTCATGTTGCCATGTT',
-            'score': 1
+            'qseq_full': 'ATCTAATAACTTGATCAATA'
+            'TCTGTGATTATATTTTCATT'
+            'GCCTTCC'
+            'AATTTTGCAGATTATAAGAT'
+            'CAATAGATATTTATTGTAAA'
+            'ATGCACAAATAGTGCAACAT'
+            'TTCTTAAAGTAGACCGTGAA'
+            'ATACTTCATGTTGCCATGTT',
+            'score': 1,
         }
         read = Blat.pslx_row_to_pysam(pslx_row, self.cache, None)
         self.assertEqual(0, read.reference_id)
@@ -176,16 +190,15 @@ class TestBlat(unittest.TestCase):
             'tname': 'fake',
             'qstarts': [0, 47],
             'strand': '+',
-            'qseq_full':
-                'ATCTAATAACTTGATCAATA'
-                'TCTGTGATTATATTTTCATT'
-                'GCCTTCC'
-                'AATTTTGCAGATTATAAGAT'
-                'CAATAGATATTTATTGTAAA'
-                'ATGCACAAATAGTGCAACAT'
-                'TTCTTAAAGTAGACCGTGAA'
-                'ATACTTCATGTTGCCATGTT',
-            'score': 1
+            'qseq_full': 'ATCTAATAACTTGATCAATA'
+            'TCTGTGATTATATTTTCATT'
+            'GCCTTCC'
+            'AATTTTGCAGATTATAAGAT'
+            'CAATAGATATTTATTGTAAA'
+            'ATGCACAAATAGTGCAACAT'
+            'TTCTTAAAGTAGACCGTGAA'
+            'ATACTTCATGTTGCCATGTT',
+            'score': 1,
         }
         read = Blat.pslx_row_to_pysam(pslx_row, self.cache, REFERENCE_GENOME)
         self.assertEqual(0, read.reference_id)
@@ -204,15 +217,23 @@ class TestBlat(unittest.TestCase):
             'strand': '-',
             'qseq_full': 'CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTA',
             'score': 1,
-            'qseqs': ['TAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCA', 'CCAAATTCTGTGTTTACAGGGCTTTCATGCTCAG'],
-            'tseqs': ['TAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCA', 'CCAAATTCTGTGTTTACAGGGCTTTCATGCTCAG']
+            'qseqs': [
+                'TAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCA',
+                'CCAAATTCTGTGTTTACAGGGCTTTCATGCTCAG',
+            ],
+            'tseqs': [
+                'TAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCA',
+                'CCAAATTCTGTGTTTACAGGGCTTTCATGCTCAG',
+            ],
         }
         read = Blat.pslx_row_to_pysam(pslx_row, self.cache, REFERENCE_GENOME)
         self.assertEqual(3, read.reference_id)
         self.assertEqual(Interval(0, 83), query_coverage_interval(read))
         self.assertEqual(2205, read.reference_start)
         self.assertEqual([(CIGAR.EQ, 51), (CIGAR.D, 26), (CIGAR.EQ, 33)], read.cigar)
-        self.assertEqual('TAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCA', read.query_sequence[0:50])
+        self.assertEqual(
+            'TAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCA', read.query_sequence[0:50]
+        )
         self.assertEqual('CCAAATTCTGTGTTTACAGGGCTTTCATGCTCAG', read.query_sequence[50:])
 
     def test_pslx_row_to_pysam_inversion(self):
@@ -230,10 +251,12 @@ class TestBlat(unittest.TestCase):
             'score': 1,
             'qseqs': [
                 'TCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGG'
-                'TTTTCATTTCTGTATGTTAAT'],
+                'TTTTCATTTCTGTATGTTAAT'
+            ],
             'tseqs': [
                 'TCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGG'
-                'TTTTCATTTCTGTATGTTAAT']
+                'TTTTCATTTCTGTATGTTAAT'
+            ],
         }
         read1 = Blat.pslx_row_to_pysam(pslx_row, self.cache, REFERENCE_GENOME)
         self.assertEqual(3, read1.reference_id)
@@ -254,10 +277,12 @@ class TestBlat(unittest.TestCase):
             'score': 1,
             'qseqs': [
                 'TGAGCAGAGCTATATATTTAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAACCAAACAGGAAAGAATCCAAAT'
-                'TCTGTGTTTACAGGGCTTTCATGCTCAG'],
+                'TCTGTGTTTACAGGGCTTTCATGCTCAG'
+            ],
             'tseqs': [
                 'TGAGCAGAGCTATATATTTAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAACCAAACAGGAAAGAATCCAAAT'
-                'TCTGTGTTTACAGGGCTTTCATGCTCAG']
+                'TCTGTGTTTACAGGGCTTTCATGCTCAG'
+            ],
         }
         read2 = Blat.pslx_row_to_pysam(pslx_row, self.cache, REFERENCE_GENOME)
         self.assertEqual(3, read2.reference_id)
@@ -268,9 +293,14 @@ class TestBlat(unittest.TestCase):
         # test that this is selected for duplication or insertion evidence
 
     def test_pslx_row_to_pysam_duplication(self):
-        reference = {'14': MockObject(seq=MockLongString(
-            'TTCTTCCATGCCCCCTAATCATGGCCACATTGTATCAGCCTGAGCATGAGCAACAGCACCATGGCCACATACGGGAATGGGCCTCATTGGTGTAATATTTGGCAGATTCTCTCCACACCCCCCGTGGCGGTCTGGCTTACTGTTAAGAAGGGTAACCTTAAAAAATACATTTCCCACTCCAGAAAATACTCATATGTGGCCTGTTAGCAGCACAAGAAGGGTGAAAGCAATGCCCATTCCTGCCTCCCTCCCCCTGCTCACCTCCACGTCCCTGTTTGCCCCTTTGTAGGTGAAGTGAGTATATTCAGCGTCTTCATGGCAGGGGAGAGGGTGTATTAATCCGTCTATGTCCGCTGGAAAGGCAGTCTCTGAGCGGGCCACAAGGGTTCAGCCATGGCCCATCCAATAACCTTTTTGATGACTTGGATGAAGAGACAAACATTCCAACCACATTCAAAGATCCAGACCTCCAAAGTGTGGCTCATTTGGTAGATAATGGAATTATATTTGGAAAGCATTTCCCGCAGCTGGGATGATGGGTCAAAAACAGATAGCATTTTACCAGATCATATTTGTGTGTGTGTGTGTGCGCGCGTGTGTGTGTGTGTGTGTGTGTGTTTTAAATTCAGTTTCCCAACTACAGGATG', offset=73014463
-        ))}
+        reference = {
+            '14': MockObject(
+                seq=MockLongString(
+                    'TTCTTCCATGCCCCCTAATCATGGCCACATTGTATCAGCCTGAGCATGAGCAACAGCACCATGGCCACATACGGGAATGGGCCTCATTGGTGTAATATTTGGCAGATTCTCTCCACACCCCCCGTGGCGGTCTGGCTTACTGTTAAGAAGGGTAACCTTAAAAAATACATTTCCCACTCCAGAAAATACTCATATGTGGCCTGTTAGCAGCACAAGAAGGGTGAAAGCAATGCCCATTCCTGCCTCCCTCCCCCTGCTCACCTCCACGTCCCTGTTTGCCCCTTTGTAGGTGAAGTGAGTATATTCAGCGTCTTCATGGCAGGGGAGAGGGTGTATTAATCCGTCTATGTCCGCTGGAAAGGCAGTCTCTGAGCGGGCCACAAGGGTTCAGCCATGGCCCATCCAATAACCTTTTTGATGACTTGGATGAAGAGACAAACATTCCAACCACATTCAAAGATCCAGACCTCCAAAGTGTGGCTCATTTGGTAGATAATGGAATTATATTTGGAAAGCATTTCCCGCAGCTGGGATGATGGGTCAAAAACAGATAGCATTTTACCAGATCATATTTGTGTGTGTGTGTGTGCGCGCGTGTGTGTGTGTGTGTGTGTGTGTTTTAAATTCAGTTTCCCAACTACAGGATG',
+                    offset=73014463,
+                )
+            )
+        }
         pslx_row = {
             'block_count': 2,
             'tstarts': [73014606, 73014747],
@@ -280,10 +310,14 @@ class TestBlat(unittest.TestCase):
             'qstarts': [0, 239],
             'strand': '+',
             'qseq_full': 'AAGAAGGGTAACCTTAAAAAATACATTTCCCACTCCAGAAAATACTCATATGTGGCCTGTTAGCAGCACAAGAAGGGTGAAAGCAATGCCCATTCCTGCCTCCCTCCCCCTGCTCACCTCCACGTCCCTGTTTGCCCCTTTACTCATATGTGGCCTGTTAGCAGCACAAGAAGGGTGAAAGCAATGCCCATTCCTGCCTCCCTCCCCCTGCTCACCTCCACGTCCCTGTTTGCCCCTTTGTAGGTGAAGTGAGTATATTCAGCGTCTTC',
-            'score': 1
+            'score': 1,
         }
         read2 = Blat.pslx_row_to_pysam(pslx_row, self.cache, reference)
         self.assertEqual(13, read2.reference_id)
         self.assertEqual(73014606, read2.reference_start)
-        self.assertEqual([(CIGAR.M, 141), (CIGAR.I, 98), (CIGAR.M, 30)], _cigar.convert_for_igv(read2.cigar))
-        self.assertEqual(Interval(0, len(pslx_row['qseq_full']) - 1), query_coverage_interval(read2))
+        self.assertEqual(
+            [(CIGAR.M, 141), (CIGAR.I, 98), (CIGAR.M, 30)], _cigar.convert_for_igv(read2.cigar)
+        )
+        self.assertEqual(
+            Interval(0, len(pslx_row['qseq_full']) - 1), query_coverage_interval(read2)
+        )

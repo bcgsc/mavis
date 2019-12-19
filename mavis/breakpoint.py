@@ -11,6 +11,7 @@ class Breakpoint(Interval):
     class for storing information about a SV breakpoint
     coordinates are given as 1-indexed
     """
+
     @property
     def key(self):
         return (self.chr, self.start, self.end, self.orient, self.strand)
@@ -48,7 +49,7 @@ class Breakpoint(Interval):
             self.start,
             '-' + str(self.end) if self.end != self.start else '',
             orient,
-            strand
+            strand,
         )
 
     def __eq__(self, other):
@@ -67,7 +68,7 @@ class Breakpoint(Interval):
             'strand': self.strand,
             'seq': self.seq,
             'orientation': self.orient,
-            'type': self.__class__.__name__
+            'type': self.__class__.__name__,
         }
 
 
@@ -98,7 +99,9 @@ class BreakpointPair:
         raise IndexError('index input accessor is out of bounds: 1 or 2 only', index)
 
     def __hash__(self):
-        return hash((self.break1, self.break2, self.opposing_strands, self.stranded, self.untemplated_seq))
+        return hash(
+            (self.break1, self.break2, self.opposing_strands, self.stranded, self.untemplated_seq)
+        )
 
     def __eq__(self, other):
         for attr in ['break1', 'break2', 'opposing_strands', 'stranded', 'untemplated_seq']:
@@ -140,7 +143,16 @@ class BreakpointPair:
         temp.break2 = _copy(self.break2)
         return temp
 
-    def __init__(self, b1, b2, stranded=False, opposing_strands=None, untemplated_seq=None, data=None, **kwargs):
+    def __init__(
+        self,
+        b1,
+        b2,
+        stranded=False,
+        opposing_strands=None,
+        untemplated_seq=None,
+        data=None,
+        **kwargs
+    ):
         """
         Args:
             b1 (Breakpoint): the first breakpoint
@@ -169,10 +181,15 @@ class BreakpointPair:
 
         if self.break1.orient != ORIENT.NS and self.break2.orient != ORIENT.NS:
             if self.opposing_strands is not None:
-                if (self.break1.orient == self.break2.orient and not self.opposing_strands) \
-                        or (self.break1.orient != self.break2.orient and self.opposing_strands):
+                if (self.break1.orient == self.break2.orient and not self.opposing_strands) or (
+                    self.break1.orient != self.break2.orient and self.opposing_strands
+                ):
                     raise InvalidRearrangement(
-                        'invalid breakpoint pair cannot form a valid combination', b1, b2, self.opposing_strands)
+                        'invalid breakpoint pair cannot form a valid combination',
+                        b1,
+                        b2,
+                        self.opposing_strands,
+                    )
             else:
                 self.opposing_strands = self.break1.orient == self.break2.orient
         # between break1 and break2 not in either
@@ -198,7 +215,9 @@ class BreakpointPair:
         if self.opposing_strands is None:
             raise NotSpecifiedError('must specify if opposing_strands')
         if self.stranded and STRAND.NS in [self.break1.strand, self.break2.strand]:
-            raise NotSpecifiedError('if stranded is specified, breakpoint strands cannot be \'not specified\'')
+            raise NotSpecifiedError(
+                'if stranded is specified, breakpoint strands cannot be \'not specified\''
+            )
 
         # try classifying to make sure it's a valid combination
         BreakpointPair.classify(self)
@@ -208,7 +227,7 @@ class BreakpointPair:
             str(self.break1),
             str(self.break2),
             ', opposing={}'.format(self.opposing_strands) if not self.stranded else '',
-            ', seq=' + repr(self.untemplated_seq) if self.untemplated_seq is not None else ''
+            ', seq=' + repr(self.untemplated_seq) if self.untemplated_seq is not None else '',
         )
 
     def flatten(self):
@@ -233,7 +252,7 @@ class BreakpointPair:
             COLUMNS.stranded: self.stranded,
             COLUMNS.untemplated_seq: self.untemplated_seq,
             COLUMNS.break1_seq: self.break1.seq,
-            COLUMNS.break2_seq: self.break2.seq
+            COLUMNS.break2_seq: self.break2.seq,
         }
         for col in temp:
             temp[col] = str(temp[col])
@@ -264,16 +283,22 @@ class BreakpointPair:
         """
         if not pair.interchromosomal:  # intrachromosomal
             if pair.opposing_strands:
-                if (pair.break1.orient == ORIENT.LEFT and pair.break2.orient == ORIENT.RIGHT) \
-                        or (pair.break1.orient == ORIENT.RIGHT and pair.break2.orient == ORIENT.LEFT):
+                if (pair.break1.orient == ORIENT.LEFT and pair.break2.orient == ORIENT.RIGHT) or (
+                    pair.break1.orient == ORIENT.RIGHT and pair.break2.orient == ORIENT.LEFT
+                ):
                     raise InvalidRearrangement(pair)
                 return {SVTYPE.INV}
             else:
-                if (pair.break1.orient == ORIENT.LEFT and pair.break2.orient == ORIENT.LEFT) \
-                        or (pair.break1.orient == ORIENT.RIGHT and pair.break2.orient == ORIENT.RIGHT):
+                if (pair.break1.orient == ORIENT.LEFT and pair.break2.orient == ORIENT.LEFT) or (
+                    pair.break1.orient == ORIENT.RIGHT and pair.break2.orient == ORIENT.RIGHT
+                ):
                     raise InvalidRearrangement(pair)
                 elif pair.break1.orient == ORIENT.LEFT or pair.break2.orient == ORIENT.RIGHT:
-                    if len(pair.break1) == 1 and len(pair.break2) == 1 and abs(pair.break1.start - pair.break2.start) < 2:
+                    if (
+                        len(pair.break1) == 1
+                        and len(pair.break2) == 1
+                        and abs(pair.break1.start - pair.break2.start) < 2
+                    ):
                         if pair.untemplated_seq == '':
                             return set()
                         return {SVTYPE.INS}
@@ -292,13 +317,15 @@ class BreakpointPair:
                     return {SVTYPE.DUP}
         else:  # interchromosomal
             if pair.opposing_strands:
-                if (pair.break1.orient == ORIENT.LEFT and pair.break2.orient == ORIENT.RIGHT) \
-                        or (pair.break1.orient == ORIENT.RIGHT and pair.break2.orient == ORIENT.LEFT):
+                if (pair.break1.orient == ORIENT.LEFT and pair.break2.orient == ORIENT.RIGHT) or (
+                    pair.break1.orient == ORIENT.RIGHT and pair.break2.orient == ORIENT.LEFT
+                ):
                     raise InvalidRearrangement(pair)
                 return {SVTYPE.ITRANS}
             else:
-                if (pair.break1.orient == ORIENT.LEFT and pair.break2.orient == ORIENT.LEFT) \
-                        or (pair.break1.orient == ORIENT.RIGHT and pair.break2.orient == ORIENT.RIGHT):
+                if (pair.break1.orient == ORIENT.LEFT and pair.break2.orient == ORIENT.LEFT) or (
+                    pair.break1.orient == ORIENT.RIGHT and pair.break2.orient == ORIENT.RIGHT
+                ):
                     raise InvalidRearrangement(pair)
                 return {SVTYPE.TRANS}
 
@@ -318,8 +345,8 @@ class BreakpointPair:
             size.start += min_dist + 1
             size.end += max_dist + 1
         elif not self.opposing_strands:
-            size.start -= (max_dist - 1)
-            size.end -= (min_dist - 1)
+            size.start -= max_dist - 1
+            size.end -= min_dist - 1
         return size
 
     @property
@@ -370,16 +397,26 @@ class BreakpointPair:
         pos2 += shift2
 
         first_seq = []
-        while all([
-            pos1 >= 0,
-            pos1 < len(b1_refseq),
-            pos2 >= 0,
-            pos2 < len(b2_refseq),
-            self.interchromosomal or pos2 > self.break1.start - 1,
-            self.interchromosomal or pos1 < self.break2.start - 1
-        ]):
-            break1_bp = b1_refseq[pos1] if self.break1.strand == STRAND.POS else reverse_complement(b1_refseq[pos1])
-            break2_bp = b2_refseq[pos2] if self.break2.strand == STRAND.POS else reverse_complement(b2_refseq[pos2])
+        while all(
+            [
+                pos1 >= 0,
+                pos1 < len(b1_refseq),
+                pos2 >= 0,
+                pos2 < len(b2_refseq),
+                self.interchromosomal or pos2 > self.break1.start - 1,
+                self.interchromosomal or pos1 < self.break2.start - 1,
+            ]
+        ):
+            break1_bp = (
+                b1_refseq[pos1]
+                if self.break1.strand == STRAND.POS
+                else reverse_complement(b1_refseq[pos1])
+            )
+            break2_bp = (
+                b2_refseq[pos2]
+                if self.break2.strand == STRAND.POS
+                else reverse_complement(b2_refseq[pos2])
+            )
             if DNA_ALPHABET.match(break1_bp, break2_bp):
                 first_seq.append(b1_refseq[pos1])
             else:
@@ -397,16 +434,26 @@ class BreakpointPair:
         pos1 += shift1
 
         second_seq = []
-        while all([
-            pos1 >= 0,
-            pos1 < len(b1_refseq),
-            pos2 >= 0,
-            pos2 < len(b2_refseq),
-            self.interchromosomal or pos2 > self.break1.start - 1,
-            self.interchromosomal or pos1 < self.break2.start - 1
-        ]):
-            break1_bp = b1_refseq[pos1] if self.break1.strand == STRAND.POS else reverse_complement(b1_refseq[pos1])
-            break2_bp = b2_refseq[pos2] if self.break2.strand == STRAND.POS else reverse_complement(b2_refseq[pos2])
+        while all(
+            [
+                pos1 >= 0,
+                pos1 < len(b1_refseq),
+                pos2 >= 0,
+                pos2 < len(b2_refseq),
+                self.interchromosomal or pos2 > self.break1.start - 1,
+                self.interchromosomal or pos1 < self.break2.start - 1,
+            ]
+        ):
+            break1_bp = (
+                b1_refseq[pos1]
+                if self.break1.strand == STRAND.POS
+                else reverse_complement(b1_refseq[pos1])
+            )
+            break2_bp = (
+                b2_refseq[pos2]
+                if self.break2.strand == STRAND.POS
+                else reverse_complement(b2_refseq[pos2])
+            )
             if DNA_ALPHABET.match(break1_bp, break2_bp):
                 second_seq.append(b2_refseq[pos2])
             else:
@@ -428,14 +475,18 @@ class BreakpointPair:
         break_shift = 0
         lutemp = len(untemplated_seq)
         if breakpoint.orient == ORIENT.LEFT:
-            break_seq = reference_genome[breakpoint.chr].seq[breakpoint.start - lutemp: breakpoint.start]
+            break_seq = reference_genome[breakpoint.chr].seq[
+                breakpoint.start - lutemp : breakpoint.start
+            ]
             for i in range(1, lutemp + 1):
                 if break_seq[lutemp - i] == untemplated_seq[lutemp - i]:
                     break_shift += 1
                 else:
                     break
         else:
-            break_seq = reference_genome[breakpoint.chr].seq[breakpoint.start - 1: breakpoint.start + lutemp - 1]
+            break_seq = reference_genome[breakpoint.chr].seq[
+                breakpoint.start - 1 : breakpoint.start + lutemp - 1
+            ]
             for i in range(0, lutemp):
                 if break_seq[i] == untemplated_seq[i]:
                     break_shift += 1
@@ -446,22 +497,51 @@ class BreakpointPair:
     def untemplated_shift(self, reference_genome):
         """gives a range for each breakpoint on the possible alignment range in the shifting the untemplated
         sequence"""
-        if any([
-            self.untemplated_seq is None,
-            len(self.break1) + len(self.break2) > 2,
-            self.break1.orient == ORIENT.NS,
-            self.break2.orient == ORIENT.NS
-        ]):
-            raise AttributeError('Cannot calculate the shift for non specific breakpoint calls', self)
-        break1_shift = BreakpointPair._breakpoint_utemp_shift(self.break1, self.untemplated_seq, reference_genome)
-        break2_shift = BreakpointPair._breakpoint_utemp_shift(self.break2, self.untemplated_seq, reference_genome)
+        if any(
+            [
+                self.untemplated_seq is None,
+                len(self.break1) + len(self.break2) > 2,
+                self.break1.orient == ORIENT.NS,
+                self.break2.orient == ORIENT.NS,
+            ]
+        ):
+            raise AttributeError(
+                'Cannot calculate the shift for non specific breakpoint calls', self
+            )
+        break1_shift = BreakpointPair._breakpoint_utemp_shift(
+            self.break1, self.untemplated_seq, reference_genome
+        )
+        break2_shift = BreakpointPair._breakpoint_utemp_shift(
+            self.break2, self.untemplated_seq, reference_genome
+        )
         return (break2_shift, break1_shift)
 
     def get_bed_repesentation(self):
         bed = []
         if self.interchromosomal:
-            bed.append((self.break1.chr, self.break1.start, self.break1.end, self.data.get(COLUMNS.cluster_id, None)))
-            bed.append((self.break2.chr, self.break2.start, self.break2.end, self.data.get(COLUMNS.cluster_id, None)))
+            bed.append(
+                (
+                    self.break1.chr,
+                    self.break1.start,
+                    self.break1.end,
+                    self.data.get(COLUMNS.cluster_id, None),
+                )
+            )
+            bed.append(
+                (
+                    self.break2.chr,
+                    self.break2.start,
+                    self.break2.end,
+                    self.data.get(COLUMNS.cluster_id, None),
+                )
+            )
         else:
-            bed.append((self.break1.chr, self.break1.start, self.break2.end, self.data.get(COLUMNS.cluster_id, None)))
+            bed.append(
+                (
+                    self.break1.chr,
+                    self.break1.start,
+                    self.break2.end,
+                    self.data.get(COLUMNS.cluster_id, None),
+                )
+            )
         return bed

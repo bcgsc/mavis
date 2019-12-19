@@ -29,6 +29,7 @@ class MavisNamespace:
         >>> nspace.otherthing
         2
     """
+
     DELIM = r'[;,\s]+'
     """:class:`str`: delimiter to use is parsing listable variables from the environment or config file"""
 
@@ -50,14 +51,19 @@ class MavisNamespace:
 
         for attr, val in kwargs.items():
             if attr in self._members:
-                raise AttributeError('Cannot respecify existing attribute', attr, self._members[attr])
+                raise AttributeError(
+                    'Cannot respecify existing attribute', attr, self._members[attr]
+                )
             self[attr] = val
 
         for attr, value in self._members.items():
             self._set_type(attr, type(value))
 
     def __repr__(self):
-        return '{}({})'.format(self.__class__.__name__, ', '.join(sorted(['{}={}'.format(k, repr(v)) for k, v in self.items()])))
+        return '{}({})'.format(
+            self.__class__.__name__,
+            ', '.join(sorted(['{}={}'.format(k, repr(v)) for k, v in self.items()])),
+        )
 
     def discard(self, attr):
         """
@@ -182,11 +188,12 @@ class MavisNamespace:
             attrs = source.keys()
         for attr in attrs:
             self.add(
-                attr, source[attr],
+                attr,
+                source[attr],
                 listable=source.is_listable(attr),
                 nullable=source.is_nullable(attr),
                 defn=source.define(attr, None),
-                cast_type=source.type(attr, None)
+                cast_type=source.type(attr, None),
             )
 
     def get(self, key, *pos):
@@ -338,7 +345,16 @@ class MavisNamespace:
                 return pos[0]
             raise err
 
-    def add(self, attr, value, defn=None, cast_type=None, nullable=False, env_overwritable=False, listable=False):
+    def add(
+        self,
+        attr,
+        value,
+        defn=None,
+        cast_type=None,
+        nullable=False,
+        env_overwritable=False,
+        listable=False,
+    ):
         """
         Add an attribute to the name space
 
@@ -380,8 +396,11 @@ class MavisNamespace:
         try:
             return self.enforce(value)
         except KeyError:
-            raise TypeError('Invalid value {} for {}. Must be a valid member: {}'.format(
-                repr(value), self.__class__.__name__, self.values()))
+            raise TypeError(
+                'Invalid value {} for {}. Must be a valid member: {}'.format(
+                    repr(value), self.__class__.__name__, self.values()
+                )
+            )
 
 
 def float_fraction(num):
@@ -419,7 +438,7 @@ SUBCOMMAND = MavisNamespace(
     SUMMARY='summary',
     CONFIG='config',
     CONVERT='convert',
-    OVERLAY='overlay'
+    OVERLAY='overlay',
 )
 """:class:`MavisNamespace`: holds controlled vocabulary for allowed pipeline stage values
 
@@ -527,7 +546,7 @@ SVTYPE = MavisNamespace(
     ITRANS='inverted translocation',
     INV='inversion',
     INS='insertion',
-    DUP='duplication'
+    DUP='duplication',
 )
 """:class:`MavisNamespace`: holds controlled vocabulary for acceptable structural variant classifications
 
@@ -574,7 +593,7 @@ PYSAM_READ_FLAGS = MavisNamespace(
     BLAT_SCORE='bs',
     BLAT_ALIGNMENTS='ba',
     BLAT_PERCENT_IDENTITY='bi',
-    BLAT_PMS='bp'
+    BLAT_PMS='bp',
 )
 
 """:class:`MavisNamespace`: Enum-like. For readable PYSAM flag constants
@@ -620,7 +639,13 @@ FLAGS = MavisNamespace(LQ='LOWQUAL')
 
 READ_PAIR_TYPE = MavisNamespace(RR='RR', LL='LL', RL='RL', LR='LR')
 
-CALL_METHOD = MavisNamespace(CONTIG='contig', SPLIT='split reads', FLANK='flanking reads', SPAN='spanning reads', INPUT='input')
+CALL_METHOD = MavisNamespace(
+    CONTIG='contig',
+    SPLIT='split reads',
+    FLANK='flanking reads',
+    SPAN='spanning reads',
+    INPUT='input',
+)
 """:class:`MavisNamespace`: holds controlled vocabulary for allowed call methods
 
 - ``CONTIG``: a contig was assembled and aligned across the breakpoints
@@ -660,7 +685,7 @@ GIEMSA_STAIN = MavisNamespace(
     GPOS100='gpos100',
     ACEN='acen',
     GVAR='gvar',
-    STALK='stalk'
+    STALK='stalk',
 )
 """:class:`MavisNamespace`: holds controlled vocabulary relating to stains of chromosome bands"""
 
@@ -775,7 +800,7 @@ COLUMNS = MavisNamespace(
     supplementary_call='supplementary_call',
     net_size='net_size',
     repeat_count='repeat_count',
-    assumed_untemplated='assumed_untemplated'
+    assumed_untemplated='assumed_untemplated',
 )
 """:class:`MavisNamespace`: Column names for i/o files used throughout the pipeline
 

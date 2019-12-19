@@ -22,7 +22,6 @@ class MockFileTransform:
 
 
 class TestCast(unittest.TestCase):
-
     def test_cast_boolean_true(self):
         self.assertEqual(True, cast_boolean('+'))
         self.assertEqual(True, cast_boolean('T'))
@@ -51,7 +50,6 @@ class TestCast(unittest.TestCase):
 
 
 class TestFileTransform(unittest.TestCase):
-
     def test_simplify(self):
         h = ['a', 'b', 'c']
         ft = FileTransform(header=h)
@@ -174,7 +172,6 @@ class TestFileTransform(unittest.TestCase):
 
 
 class TestTransformLine(unittest.TestCase):
-
     def test_add(self):
         h = ['a', 'b', 'c']
         ft = MockFileTransform(h, add={'a': 'blargh'})
@@ -207,7 +204,12 @@ class TestTransformLine(unittest.TestCase):
 
     def test_split_combine_cast(self):
         h = ['a', 'b', 'c']
-        ft = MockFileTransform(h, split={'a': r'^(?P<a1>\d+)_(?P<a2>\d+)$'}, combine={'k': '{a1}{b}{c}'}, cast={'k': int})
+        ft = MockFileTransform(
+            h,
+            split={'a': r'^(?P<a1>\d+)_(?P<a2>\d+)$'},
+            combine={'k': '{a1}{b}{c}'},
+            cast={'k': int},
+        )
         row = ft.transform_line(['1_10', '2', '3'])
         self.assertEqual(123, row['k'])
 
@@ -270,10 +272,7 @@ class TestTransformLine(unittest.TestCase):
 
     def test_split(self):
         h = ['a']
-        ft = MockFileTransform(
-            h,
-            split={'a': r'^(?P<a1>\d+)[_]+(?P<a2>\d+)$'}
-        )
+        ft = MockFileTransform(h, split={'a': r'^(?P<a1>\d+)[_]+(?P<a2>\d+)$'})
         row = ft.transform_line(['1_2'])
         self.assertEqual('1', row['a1'])
         self.assertEqual('2', row['a2'])

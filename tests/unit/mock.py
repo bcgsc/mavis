@@ -39,10 +39,7 @@ class MockLongString:
     def __getitem__(self, index):
         if not isinstance(index, slice):
             index = slice(index, index + 1)
-        index = slice(
-            index.start - self.offset,
-            index.stop - self.offset,
-            index.step)
+        index = slice(index.start - self.offset, index.stop - self.offset, index.step)
         if index.start < 0:
             raise NotImplementedError('string portion not given')
         return self.string[index]

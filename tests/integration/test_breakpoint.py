@@ -18,21 +18,25 @@ REF_CHR = 'fake'
 def setUpModule():
     global REFERENCE_GENOME
     REFERENCE_GENOME = load_reference_genome(get_data('mock_reference_genome.fa'))
-    if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME[REF_CHR].seq[0:50].upper():
+    if (
+        'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT'
+        != REFERENCE_GENOME[REF_CHR].seq[0:50].upper()
+    ):
         raise AssertionError('fake genome file does not have the expected contents')
 
 
 class TestNetSizeTransEGFR(unittest.TestCase):
-
     def setUp(self):
         self.evidence = MockObject(
             annotations={},
             read_length=100,
             max_expected_fragment_size=550,
             call_error=11,
-            overlapping_transcripts=set(get_example_genes()['EGFR'].transcripts)
+            overlapping_transcripts=set(get_example_genes()['EGFR'].transcripts),
         )
-        setattr(self.evidence, '_select_transcripts', lambda *pos: self.evidence.overlapping_transcripts)
+        setattr(
+            self.evidence, '_select_transcripts', lambda *pos: self.evidence.overlapping_transcripts
+        )
         setattr(self.evidence, 'distance', partial(TranscriptomeEvidence.distance, self.evidence))
 
     def egfr_distance(self, pos1, pos2):
@@ -40,28 +44,32 @@ class TestNetSizeTransEGFR(unittest.TestCase):
 
     def test_deletion_in_exon(self):
         bpp = BreakpointPair(
-            Breakpoint('7', 55238890, orient=ORIENT.LEFT), Breakpoint('7', 55238899, orient=ORIENT.RIGHT),
-            untemplated_seq=''
+            Breakpoint('7', 55238890, orient=ORIENT.LEFT),
+            Breakpoint('7', 55238899, orient=ORIENT.RIGHT),
+            untemplated_seq='',
         )
         self.assertEqual(Interval(-8), bpp.net_size(self.egfr_distance))
 
         bpp = BreakpointPair(
-            Breakpoint('7', 55238890, orient=ORIENT.LEFT), Breakpoint('7', 55238899, orient=ORIENT.RIGHT),
-            untemplated_seq='GTAC'
+            Breakpoint('7', 55238890, orient=ORIENT.LEFT),
+            Breakpoint('7', 55238899, orient=ORIENT.RIGHT),
+            untemplated_seq='GTAC',
         )
         self.assertEqual(Interval(-4), bpp.net_size(self.egfr_distance))
 
     def test_deletion_across_intron(self):
         # 55240539_55240621  55323947_55324313
         bpp = BreakpointPair(
-            Breakpoint('7', 55240610, orient=ORIENT.LEFT), Breakpoint('7', 55323950, orient=ORIENT.RIGHT),
-            untemplated_seq='GTAC'
+            Breakpoint('7', 55240610, orient=ORIENT.LEFT),
+            Breakpoint('7', 55323950, orient=ORIENT.RIGHT),
+            untemplated_seq='GTAC',
         )
         self.assertEqual(Interval(-10), bpp.net_size(self.egfr_distance))
         # 55210998_55211181 55218987_55219055
         bpp = BreakpointPair(
-            Breakpoint('7', 55211180, orient=ORIENT.LEFT), Breakpoint('7', 55218990, orient=ORIENT.RIGHT),
-            untemplated_seq=''
+            Breakpoint('7', 55211180, orient=ORIENT.LEFT),
+            Breakpoint('7', 55218990, orient=ORIENT.RIGHT),
+            untemplated_seq='',
         )
         self.assertEqual(Interval(-4 + -135, -4), bpp.net_size(self.egfr_distance))
 
@@ -70,71 +78,100 @@ class TestNetSizeTransEGFR(unittest.TestCase):
         # EXON 16: 55238868-55238906
         # EXON 17: 55240676-55240817
         bpp = BreakpointPair(
-            Breakpoint('7', 55238867, orient=ORIENT.LEFT), Breakpoint('7', 55238868, orient=ORIENT.RIGHT),
-            untemplated_seq='TTATCG'
+            Breakpoint('7', 55238867, orient=ORIENT.LEFT),
+            Breakpoint('7', 55238868, orient=ORIENT.RIGHT),
+            untemplated_seq='TTATCG',
         )
         self.assertEqual(Interval(6), bpp.net_size(self.egfr_distance))
 
     def test_insertion_at_exon_start(self):
         # 55238868_55238906
         bpp = BreakpointPair(
-            Breakpoint('7', 55233130, orient=ORIENT.LEFT), Breakpoint('7', 55238868, orient=ORIENT.RIGHT),
-            untemplated_seq='TTATCG'
+            Breakpoint('7', 55233130, orient=ORIENT.LEFT),
+            Breakpoint('7', 55238868, orient=ORIENT.RIGHT),
+            untemplated_seq='TTATCG',
         )
         self.assertEqual(Interval(6), bpp.net_size(self.egfr_distance))
 
     def test_insertion_at_exon_end_mixed(self):
         # 55238868_55238906
         bpp = BreakpointPair(
-            Breakpoint('7', 55238905, orient=ORIENT.LEFT), Breakpoint('7', 55238906, orient=ORIENT.RIGHT),
-            untemplated_seq='TTATCG'
+            Breakpoint('7', 55238905, orient=ORIENT.LEFT),
+            Breakpoint('7', 55238906, orient=ORIENT.RIGHT),
+            untemplated_seq='TTATCG',
         )
         self.assertEqual(Interval(6), bpp.net_size(self.egfr_distance))
 
     def test_insertion_at_exon_end(self):
         # 55238868_55238906
         bpp = BreakpointPair(
-            Breakpoint('7', 55238906, orient=ORIENT.LEFT), Breakpoint('7', 55240676, orient=ORIENT.RIGHT),
-            untemplated_seq='TTATCG'
+            Breakpoint('7', 55238906, orient=ORIENT.LEFT),
+            Breakpoint('7', 55240676, orient=ORIENT.RIGHT),
+            untemplated_seq='TTATCG',
         )
         self.assertEqual(Interval(6), bpp.net_size(self.egfr_distance))
 
     def test_insertion_in_intron(self):
         # 55238868_55238906
         bpp = BreakpointPair(
-            Breakpoint('7', 5523750, orient=ORIENT.LEFT), Breakpoint('7', 5523751, orient=ORIENT.RIGHT),
-            untemplated_seq='TTATCG'
+            Breakpoint('7', 5523750, orient=ORIENT.LEFT),
+            Breakpoint('7', 5523751, orient=ORIENT.RIGHT),
+            untemplated_seq='TTATCG',
         )
         self.assertEqual(Interval(6), bpp.net_size(self.egfr_distance))
 
     def test_indel_in_intron(self):
         # 55238868_55238906
         bpp = BreakpointPair(
-            Breakpoint('7', 5523700, orient=ORIENT.LEFT), Breakpoint('7', 5523751, orient=ORIENT.RIGHT),
-            untemplated_seq='TTATCG'
+            Breakpoint('7', 5523700, orient=ORIENT.LEFT),
+            Breakpoint('7', 5523751, orient=ORIENT.RIGHT),
+            untemplated_seq='TTATCG',
         )
         self.assertEqual(Interval(-44), bpp.net_size(self.egfr_distance))
 
 
 class TestLt(unittest.TestCase):
     def test_break1(self):
-        bpp1 = BreakpointPair(Breakpoint('1', 1, 10, orient=ORIENT.LEFT), Breakpoint('2', 1, orient=ORIENT.LEFT), untemplated_seq='')
-        bpp2 = BreakpointPair(Breakpoint('1', 1, 9, orient=ORIENT.LEFT), Breakpoint('2', 1, orient=ORIENT.LEFT), untemplated_seq='')
+        bpp1 = BreakpointPair(
+            Breakpoint('1', 1, 10, orient=ORIENT.LEFT),
+            Breakpoint('2', 1, orient=ORIENT.LEFT),
+            untemplated_seq='',
+        )
+        bpp2 = BreakpointPair(
+            Breakpoint('1', 1, 9, orient=ORIENT.LEFT),
+            Breakpoint('2', 1, orient=ORIENT.LEFT),
+            untemplated_seq='',
+        )
         self.assertTrue(bpp2 < bpp1)
 
     def test_useq(self):
-        bpp1 = BreakpointPair(Breakpoint('1', 1, 10, orient=ORIENT.LEFT), Breakpoint('2', 1, orient=ORIENT.LEFT), untemplated_seq='')
-        bpp2 = BreakpointPair(Breakpoint('1', 1, 10, orient=ORIENT.LEFT), Breakpoint('2', 1, orient=ORIENT.LEFT), untemplated_seq=None)
+        bpp1 = BreakpointPair(
+            Breakpoint('1', 1, 10, orient=ORIENT.LEFT),
+            Breakpoint('2', 1, orient=ORIENT.LEFT),
+            untemplated_seq='',
+        )
+        bpp2 = BreakpointPair(
+            Breakpoint('1', 1, 10, orient=ORIENT.LEFT),
+            Breakpoint('2', 1, orient=ORIENT.LEFT),
+            untemplated_seq=None,
+        )
         self.assertTrue(bpp2 > bpp1)
 
     def test_break2(self):
-        bpp1 = BreakpointPair(Breakpoint('1', 1, 10, orient=ORIENT.LEFT), Breakpoint('2', 1, orient=ORIENT.RIGHT), untemplated_seq='')
-        bpp2 = BreakpointPair(Breakpoint('1', 1, 10, orient=ORIENT.LEFT), Breakpoint('2', 1, orient=ORIENT.LEFT), untemplated_seq=None)
+        bpp1 = BreakpointPair(
+            Breakpoint('1', 1, 10, orient=ORIENT.LEFT),
+            Breakpoint('2', 1, orient=ORIENT.RIGHT),
+            untemplated_seq='',
+        )
+        bpp2 = BreakpointPair(
+            Breakpoint('1', 1, 10, orient=ORIENT.LEFT),
+            Breakpoint('2', 1, orient=ORIENT.LEFT),
+            untemplated_seq=None,
+        )
         self.assertTrue(bpp2 < bpp1)
 
 
 class TestBreakpointSequenceHomology(unittest.TestCase):
-
     def test_left_pos_right_pos(self):
         b1 = Breakpoint(REF_CHR, 157, strand=STRAND.POS, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 1788, strand=STRAND.POS, orient=ORIENT.RIGHT)

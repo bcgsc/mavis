@@ -85,10 +85,14 @@ class MockRead:
         self.query_alignment_length = query_alignment_length
         self.query_sequence = query_sequence
         if self.reference_end is None and cigar and reference_start is not None:
-            self.reference_end = reference_start + sum([f for v, f in cigar if v not in [CIGAR.S, CIGAR.I]])
+            self.reference_end = reference_start + sum(
+                [f for v, f in cigar if v not in [CIGAR.S, CIGAR.I]]
+            )
         if not self.query_alignment_length:
             if cigar:
-                self.query_alignment_length = sum([v for s, v in cigar if s not in [CIGAR.S, CIGAR.H]])
+                self.query_alignment_length = sum(
+                    [v for s, v in cigar if s not in [CIGAR.S, CIGAR.H]]
+                )
             elif self.query_sequence:
                 self.query_alignment_length = len(self.query_sequence)
             else:
@@ -111,14 +115,20 @@ class MockRead:
                 t -= cigar[-1][1]
             self.query_alignment_sequence = query_sequence[s:t]
         if cigar and query_sequence:
-            if len(query_sequence) != sum([f for v, f in cigar if v not in [CIGAR.H, CIGAR.N, CIGAR.D]]):
-                raise AssertionError('length of sequence does not match cigar', len(query_sequence), sum([f for v, f in cigar if v not in [CIGAR.H, CIGAR.N, CIGAR.D]]))
+            if len(query_sequence) != sum(
+                [f for v, f in cigar if v not in [CIGAR.H, CIGAR.N, CIGAR.D]]
+            ):
+                raise AssertionError(
+                    'length of sequence does not match cigar',
+                    len(query_sequence),
+                    sum([f for v, f in cigar if v not in [CIGAR.H, CIGAR.N, CIGAR.D]]),
+                )
         if template_length is None and reference_end and next_reference_start:
             self.template_length = next_reference_start - reference_end
         else:
             self.template_length = template_length
         self.is_read1 = is_read1
-        self.is_read2 = (not is_read1)
+        self.is_read2 = not is_read1
         self.is_paired = is_paired
         self.is_unmapped = is_unmapped
         self.mate_is_unmapped = mate_is_unmapped
@@ -157,7 +167,12 @@ class MockRead:
 
     def __str__(self):
         return '{}(ref_id={}, start={}, end={}, seq={})'.format(
-            self.__class__.__name__, self.reference_id, self.reference_start, self.reference_end, self.query_sequence)
+            self.__class__.__name__,
+            self.reference_id,
+            self.reference_start,
+            self.reference_end,
+            self.query_sequence,
+        )
 
     def key(self):
         """
@@ -168,7 +183,13 @@ class MockRead:
         """
         if hasattr(self, '_key') and self._key is not None:
             return self._key
-        return (self.query_name, self.query_sequence, self.reference_id, self.reference_start, self.is_supplementary)
+        return (
+            self.query_name,
+            self.query_sequence,
+            self.reference_id,
+            self.reference_start,
+            self.is_supplementary,
+        )
 
 
 class MockBamFileHandle:
@@ -243,8 +264,16 @@ def mock_read_pair(mock1, mock2):
     return mock1, mock2
 
 
-def build_transcript(gene, exons, cds_start, cds_end, domains, strand=None, is_best_transcript=False, name=None):
-    pre_transcript = PreTranscript(exons, gene=gene, strand=strand if strand is not None else gene.get_strand(), is_best_transcript=is_best_transcript, name=name)
+def build_transcript(
+    gene, exons, cds_start, cds_end, domains, strand=None, is_best_transcript=False, name=None
+):
+    pre_transcript = PreTranscript(
+        exons,
+        gene=gene,
+        strand=strand if strand is not None else gene.get_strand(),
+        is_best_transcript=is_best_transcript,
+        name=name,
+    )
     if gene is not None:
         gene.unspliced_transcripts.append(pre_transcript)
 

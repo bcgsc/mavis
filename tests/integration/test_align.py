@@ -23,14 +23,16 @@ REFERENCE_GENOME = None
 def setUpModule():
     global REFERENCE_GENOME
     REFERENCE_GENOME = load_reference_genome(get_data('mock_reference_genome.fa'))
-    if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
+    if (
+        'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT'
+        != REFERENCE_GENOME['fake'].seq[0:50].upper()
+    ):
         raise AssertionError('fake genome file does not have the expected contents')
     global BAM_CACHE
     BAM_CACHE = BamCache(get_data('mini_mock_reads_for_events.sorted.bam'))
 
 
 class TestCallReadEvents(unittest.TestCase):
-
     def test_hardclipping(self):
         read = SamRead(reference_name='15')
         read.reference_start = 71491944
@@ -41,7 +43,8 @@ class TestCallReadEvents(unittest.TestCase):
         expected_bpp = BreakpointPair(
             Breakpoint('15', 71491956, orient='L', strand='-'),
             Breakpoint('15', 71491958, orient='R', strand='-'),
-            untemplated_seq='')
+            untemplated_seq='',
+        )
         events = align.call_read_events(read, is_stranded=True)
         self.assertEqual(1, len(events))
         self.assertEqual(expected_bpp.break1, events[0].break1)
@@ -65,16 +68,24 @@ class TestAlign(unittest.TestCase):
             median_fragment_size=100,
             stdev_count_abnormal=2,
             min_splits_reads_resolution=1,
-            min_flanking_pairs_resolution=1
+            min_flanking_pairs_resolution=1,
         )
         ev.contigs = [
             Contig(
                 'CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAG'
                 'TCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTG'
-                'TTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT', 0)
+                'TTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT',
+                0,
+            )
         ]
         print(ev.contigs[0].seq)
-        seq = align.align_sequences({'seq': ev.contigs[0].seq}, BAM_CACHE, REFERENCE_GENOME, aligner_reference=get_data('mock_reference_genome.2bit'), aligner='blat')
+        seq = align.align_sequences(
+            {'seq': ev.contigs[0].seq},
+            BAM_CACHE,
+            REFERENCE_GENOME,
+            aligner_reference=get_data('mock_reference_genome.2bit'),
+            aligner='blat',
+        )
         print(seq)
         align.select_contig_alignments(ev, seq)
         print(ev.contigs[0].alignments)
@@ -101,26 +112,32 @@ class TestAlign(unittest.TestCase):
             median_fragment_size=100,
             stdev_count_abnormal=2,
             min_splits_reads_resolution=1,
-            min_flanking_pairs_resolution=1
+            min_flanking_pairs_resolution=1,
         )
         ev.contigs = [
             Contig(
                 'CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAG'
                 'TCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTG'
-                'TTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT', 0)
+                'TTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT',
+                0,
+            )
         ]
         print(ev.contigs[0].seq)
         seq = align.align_sequences(
-            {'seq': ev.contigs[0].seq}, BAM_CACHE, REFERENCE_GENOME,
+            {'seq': ev.contigs[0].seq},
+            BAM_CACHE,
+            REFERENCE_GENOME,
             aligner_reference=get_data('mock_reference_genome.fa'),
             aligner='bwa mem',
             aligner_output_file='mem.out',
-            aligner_fa_input_file='mem.in.fa'
+            aligner_fa_input_file='mem.in.fa',
         )
         align.select_contig_alignments(ev, seq)
         print(ev.contigs[0].alignments)
         alignment = list(ev.contigs[0].alignments)[0]
-        self.assertEqual(reverse_complement(alignment.read1.query_sequence), alignment.read2.query_sequence)
+        self.assertEqual(
+            reverse_complement(alignment.read1.query_sequence), alignment.read2.query_sequence
+        )
         self.assertEqual('reference3', alignment.read1.reference_name)
         self.assertEqual('reference3', alignment.read2.reference_name)
         self.assertEqual(1, alignment.read1.reference_id)
@@ -142,14 +159,22 @@ class TestAlign(unittest.TestCase):
             reference_genome=REFERENCE_GENOME,
             read_length=40,
             stdev_fragment_size=25,
-            median_fragment_size=100
+            median_fragment_size=100,
         )
         ev.contigs = [
             Contig(
                 'GGTATATATTTCTCAGATAAAAGATATTTTCCCTTTTATCTTTCCCTAAGCTCACACTACATATATTGCATTTATCTTATATCTGCTTTAAAACCTATTTAT'
-                'TATGTCATTTAAATATCTAGAAAAGTTATGACTTCACCAGGTATGAAAAATATAAAAAGAACTCTGTCAAGAAT', 0)
+                'TATGTCATTTAAATATCTAGAAAAGTTATGACTTCACCAGGTATGAAAAATATAAAAAGAACTCTGTCAAGAAT',
+                0,
+            )
         ]
-        seq = align.align_sequences({'seq': ev.contigs[0].seq}, BAM_CACHE, REFERENCE_GENOME, aligner_reference=get_data('mock_reference_genome.2bit'), aligner='blat')
+        seq = align.align_sequences(
+            {'seq': ev.contigs[0].seq},
+            BAM_CACHE,
+            REFERENCE_GENOME,
+            aligner_reference=get_data('mock_reference_genome.2bit'),
+            aligner='blat',
+        )
         for query, reads in seq.items():
             print('>>>', query)
             for read in reads:
@@ -182,12 +207,23 @@ class TestAlign(unittest.TestCase):
             reference_genome=REFERENCE_GENOME,
             read_length=40,
             stdev_fragment_size=25,
-            median_fragment_size=100
+            median_fragment_size=100,
         )
-        seq = 'GGTATATATTTCTCAGATAAAAGATATTTTCCCTTTTATCTTTCCCTAAGCTCACACTACATATATTGCATTTATCTTATATCTGCTTTAAAACCTATTTAT' \
-              'TATGTCATTTAAATATCTAGAAAAGTTATGACTTCACCAGGTATGAAAAATATAAAAAGAACTCTGTCAAGAAT'
+        seq = (
+            'GGTATATATTTCTCAGATAAAAGATATTTTCCCTTTTATCTTTCCCTAAGCTCACACTACATATATTGCATTTATCTTATATCTGCTTTAAAACCTATTTAT'
+            'TATGTCATTTAAATATCTAGAAAAGTTATGACTTCACCAGGTATGAAAAATATAAAAAGAACTCTGTCAAGAAT'
+        )
         ev.contigs = [Contig(reverse_complement(seq), 0)]
-        align.select_contig_alignments(ev, align.align_sequences({'seq': ev.contigs[0].seq}, BAM_CACHE, REFERENCE_GENOME, aligner_reference=get_data('mock_reference_genome.2bit'), aligner='blat'))
+        align.select_contig_alignments(
+            ev,
+            align.align_sequences(
+                {'seq': ev.contigs[0].seq},
+                BAM_CACHE,
+                REFERENCE_GENOME,
+                aligner_reference=get_data('mock_reference_genome.2bit'),
+                aligner='blat',
+            ),
+        )
         print('alignments:', ev.contigs[0].alignments)
         alignment = list(ev.contigs[0].alignments)[0]
         print(alignment)
@@ -212,7 +248,7 @@ class TestBreakpointContigRemappedDepth(unittest.TestCase):
         read = MockRead(
             cigar=_cigar.convert_string_to_cigar('35M10D5I20M'),
             reference_start=999,
-            reference_name='10'
+            reference_name='10',
         )
         align.SplitAlignment.breakpoint_contig_remapped_depth(b, self.contig, read)
 
@@ -221,23 +257,24 @@ class TestSplitEvents(unittest.TestCase):
     def test_read_with_exons(self):
         contig = MockRead(
             query_sequence='CTTGAAGGAAACTGAATTCAAAAAGATCAAAGTGCTGGGCTCCGGTGCGTTCGGCACGGTGTATAAGGGACTCTGGATCCCAGAAGGTGAGAAAGTTAAAATTCCCGTCGCTATCAAGACATCTCCGAAAGCCAACAAGGAAATCCTCGATGAAGCCTACGTGATGGCCAGCGTGGACAACCCCCACGTGTGCCGCCTGCTGGGCATCTGCCTCACCTCCACCGTGCAGCTCATCATGCAGCTCATGCCCTTCGGCTGCCTCCTGGACTATGTCCGGGAACACAAAGACAATATTGGCTCCCAGTACCTGCTCAACTGGTGTGTGCAGATCGCAAAGGGCATGAACTACTTGGAGGACCGTCGCTTGGTGCACCGCGACCTGGCAGCCAGGAACGTACTGGTGAAAACACCGCAGCATGTCAAGATCACAGATTTTGGGCTGGCCAAACTGCTGGGTGCGGAAGAGAAAGAATACCATGCAGAAGGAGGCAAAGTGCCTATCAAGTGGATGGCATTGGAATCAATTTTACACAGAATCTATACCCACCAGAGTGATGTCTGGAGCTACGGGGTGACCGTTTGGGAGTTGATGACCTTTGGATCCAA',
-            cigar=_cigar.convert_string_to_cigar('68M678D50M15D34M6472D185M10240D158M891D74M8I5883D29M'),
+            cigar=_cigar.convert_string_to_cigar(
+                '68M678D50M15D34M6472D185M10240D158M891D74M8I5883D29M'
+            ),
             reference_name='7',
             reference_id=6,
-            reference_start=55241669
+            reference_start=55241669,
         )
         self.assertEqual(6, len(align.call_read_events(contig)))
 
 
 class TestCallBreakpointPair(unittest.TestCase):
-
     def test_single_one_event(self):
         r = MockRead(
             reference_id=0,
             reference_name='1',
             reference_start=0,
             cigar=[(CIGAR.M, 10), (CIGAR.I, 3), (CIGAR.D, 7), (CIGAR.M, 10)],
-            query_sequence='ACTGAATCGTGGGTAGCTGCTAG'
+            query_sequence='ACTGAATCGTGGGTAGCTGCTAG',
         )
         bpps = align.call_read_events(r)
         self.assertEqual(1, len(bpps))
@@ -255,7 +292,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             reference_name='1',
             reference_start=0,
             cigar=[(CIGAR.M, 10), (CIGAR.I, 3), (CIGAR.M, 5), (CIGAR.D, 7), (CIGAR.M, 5)],
-            query_sequence='ACTGAATCGTGGGTAGCTGCTAG'
+            query_sequence='ACTGAATCGTGGGTAGCTGCTAG',
         )
         # only report the major del event for now
         bpps = align.call_read_events(r)
@@ -280,7 +317,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             reference_name='1',
             reference_start=0,
             cigar=[(CIGAR.M, 10), (CIGAR.I, 8), (CIGAR.M, 5)],
-            query_sequence='ACTGAATCGTGGGTAGCTGCTAG'
+            query_sequence='ACTGAATCGTGGGTAGCTGCTAG',
         )
         bpp = align.call_read_events(r)[0]
         self.assertEqual(False, bpp.opposing_strands)
@@ -297,7 +334,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             reference_start=27155,
             cigar=[(CIGAR.M, 65), (CIGAR.I, 6), (CIGAR.D, 95), (CIGAR.M, 21), (CIGAR.S, 17)],
             query_sequence='TAGTTGGATCTCTGTGCTGACTGACTGACAGACAGACTTTAGTGTCTGTGTGCTGACTGACAGACAGACTTTAGTGTCTGTGTGCTGACT'
-                           'GACAGACTCTAGTAGTGTC'
+            'GACAGACTCTAGTAGTGTC',
         )
         bpp = align.call_read_events(r)[0]
         self.assertEqual(27220, bpp.break1.start)
@@ -309,15 +346,19 @@ class TestCallBreakpointPair(unittest.TestCase):
             query_sequence=(
                 'CTCCCACCAGGAGCTCGTCCTCACCACGTCCTGCACCAGCACCTCCAGCTCCCGCAGCAGCGCCTCGCCCCCACGGTGCGCGCTCCGCGCCGGTTCC'
                 'ATGGGCTCCGTAGGTTCCATGGGCTCCGTAGGTTCCATGGGCTCCGTAGGTTCCATGGGCTCCGTAGGTTCCATCGGCTCCGTGGGTTCCATGGACT'
-                'CTGTGGGCTCGGGCCCGACGCGCACGGAGGACTGGAGGACTGGGGCGTGTGTCTGCGGTGCAGGCGAGGCGGGGCGGGC'),
+                'CTGTGGGCTCGGGCCCGACGCGCACGGAGGACTGGAGGACTGGGGCGTGTGTCTGCGGTGCAGGCGAGGCGGGGCGGGC'
+            ),
             query_name='duplication_with_untemp',
             reference_id=16,
             reference_name='reference17',
             reference_start=1882,
             cigar=[(CIGAR.EQ, 126), (CIGAR.I, 54), (CIGAR.EQ, 93)],
-            is_reverse=False)
+            is_reverse=False,
+        )
         bpp = align.call_read_events(r)[0]
-        self.assertEqual('AGGTTCCATGGGCTCCGTAGGTTCCATGGGCTCCGTAGGTTCCATCGGCTCCGT', bpp.untemplated_seq)
+        self.assertEqual(
+            'AGGTTCCATGGGCTCCGTAGGTTCCATGGGCTCCGTAGGTTCCATCGGCTCCGT', bpp.untemplated_seq
+        )
         self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
         self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
 
@@ -325,13 +366,15 @@ class TestCallBreakpointPair(unittest.TestCase):
         r = MockRead(
             query_sequence=(
                 'GGATGATTTACCTTGGGTAATGAAACTCAGATTTTGCTGTTGTTTTTGTTCGATTTTGCTGTTGTTTTTGTTCCAAAGTGTTTTATACTGATAAAGCAACC'
-                'CCGGTTTAGCATTGCCATTGGTAA'),
+                'CCGGTTTAGCATTGCCATTGGTAA'
+            ),
             query_name='duplication_with_untemp',
             reference_id=2,
             reference_name='reference3',
             reference_start=1497,
             cigar=[(CIGAR.EQ, 51), (CIGAR.I, 22), (CIGAR.EQ, 52)],
-            is_reverse=False)
+            is_reverse=False,
+        )
         # repeat: GATTTTGCTGTTGTTTTTGTTC
         bpp = align.convert_to_duplication(align.call_read_events(r)[0], REFERENCE_GENOME)
         self.assertEqual('', bpp.untemplated_seq)
@@ -345,18 +388,21 @@ class TestCallBreakpointPair(unittest.TestCase):
             query_sequence=(
                 'GGATGATTTACCTTGGGTAATGAAACTCA'
                 'GATTTTGCTGTTGTTTTTGTTC'
-                'GATTTTGCTGTTGTTTTTGTTC' 'GTCAA'
-                'CAAAGTGTTTTATACTGATAAAGCAACCCCGGTTTAGCATTGCCATTGGTAA'),
+                'GATTTTGCTGTTGTTTTTGTTC'
+                'GTCAA'
+                'CAAAGTGTTTTATACTGATAAAGCAACCCCGGTTTAGCATTGCCATTGGTAA'
+            ),
             query_name='duplication_with_untemp',
             reference_id=2,
             reference_name='reference3',
             reference_start=1497,
             cigar=[(CIGAR.EQ, 51), (CIGAR.I, 27), (CIGAR.EQ, 52)],
-            is_reverse=False)
+            is_reverse=False,
+        )
         # repeat: GATTTTGCTGTTGTTTTTGTTC
         print(r)
-        print(REFERENCE_GENOME['reference3'][1497:1497 + 51])
-        print(REFERENCE_GENOME['reference3'][1548 - 21:1548 + 1])
+        print(REFERENCE_GENOME['reference3'][1497 : 1497 + 51])
+        print(REFERENCE_GENOME['reference3'][1548 - 21 : 1548 + 1])
         bpp = align.call_read_events(r)[0]
         print(bpp)
         bpp = align.convert_to_duplication(bpp, REFERENCE_GENOME)
@@ -379,7 +425,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             reference_start=0,
             cigar=[(CIGAR.M, 9), (CIGAR.S, 21)],
             query_sequence=seq,
-            is_reverse=False
+            is_reverse=False,
         )
 
         r2 = MockRead(
@@ -388,7 +434,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             reference_start=99,
             cigar=[(CIGAR.S, 21), (CIGAR.M, 9)],
             query_sequence=seq,
-            is_reverse=False
+            is_reverse=False,
         )
         bpp = align.call_paired_read_event(r1, r2, is_stranded=True)
         self.assertEqual(STRAND.POS, bpp.break1.strand)
@@ -412,7 +458,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             reference_start=0,
             cigar=[(CIGAR.M, 21), (CIGAR.S, 9)],
             query_sequence=seq,
-            is_reverse=False
+            is_reverse=False,
         )
 
         r2 = MockRead(
@@ -421,7 +467,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             reference_start=99,
             cigar=[(CIGAR.S, 21), (CIGAR.M, 9)],
             query_sequence=seq,
-            is_reverse=False
+            is_reverse=False,
         )
         bpp = align.call_paired_read_event(r1, r2, is_stranded=True)
         self.assertEqual(STRAND.POS, bpp.break1.strand)
@@ -443,7 +489,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             reference_start=0,
             cigar=[(CIGAR.M, 21), (CIGAR.S, 9)],
             query_sequence=seq,
-            is_reverse=False
+            is_reverse=False,
         )
 
         r2 = MockRead(
@@ -452,7 +498,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             reference_start=99,
             cigar=[(CIGAR.S, 21), (CIGAR.M, 9)],
             query_sequence=seq,
-            is_reverse=False
+            is_reverse=False,
         )
         bpp = align.call_paired_read_event(r1, r2, is_stranded=True)
         self.assertEqual(STRAND.POS, bpp.break1.strand)
@@ -475,7 +521,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             reference_start=0,
             cigar=[(CIGAR.M, 21), (CIGAR.S, 9)],
             query_sequence=seq,
-            is_reverse=False
+            is_reverse=False,
         )
 
         r2 = MockRead(
@@ -484,7 +530,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             reference_start=99,
             cigar=[(CIGAR.S, 18), (CIGAR.M, 12)],
             query_sequence=seq,
-            is_reverse=False
+            is_reverse=False,
         )
         self.assertEqual(21, r1.reference_end)
         bpp = align.call_paired_read_event(r1, r2, is_stranded=True)
@@ -511,7 +557,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             reference_start=0,
             cigar=[(CIGAR.M, 21), (CIGAR.S, 9)],
             query_sequence=seq,
-            is_reverse=False
+            is_reverse=False,
         )
 
         r2 = MockRead(
@@ -520,7 +566,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             reference_start=99,
             cigar=[(CIGAR.M, 12), (CIGAR.S, 18)],
             query_sequence=reverse_complement(seq),
-            is_reverse=True
+            is_reverse=True,
         )
         bpp = align.call_paired_read_event(r1, r2, is_stranded=True)
         self.assertEqual(STRAND.POS, bpp.break1.strand)
@@ -537,12 +583,18 @@ class TestCallBreakpointPair(unittest.TestCase):
         s = 'CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT'
 
         read1 = MockRead(
-            reference_id=3, reference_start=1114, cigar=[(CIGAR.S, 125), (CIGAR.EQ, 120)], query_sequence=s,
-            is_reverse=False
+            reference_id=3,
+            reference_start=1114,
+            cigar=[(CIGAR.S, 125), (CIGAR.EQ, 120)],
+            query_sequence=s,
+            is_reverse=False,
         )
         read2 = MockRead(
-            reference_id=3, reference_start=2187, cigar=[(CIGAR.S, 117), (CIGAR.EQ, 8), (CIGAR.D, 1), (CIGAR.M, 120)],
-            query_sequence=reverse_complement(s), is_reverse=True
+            reference_id=3,
+            reference_start=2187,
+            cigar=[(CIGAR.S, 117), (CIGAR.EQ, 8), (CIGAR.D, 1), (CIGAR.M, 120)],
+            query_sequence=reverse_complement(s),
+            is_reverse=True,
         )
         bpp = align.call_paired_read_event(read1, read2, is_stranded=True)
         self.assertEqual(STRAND.POS, bpp.break1.strand)
@@ -556,10 +608,14 @@ class TestCallBreakpointPair(unittest.TestCase):
         print(bpp.break2.seq)
         self.assertEqual(
             'TCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAG'
-            'GGTTTTCATTTCTGTATGTTAAT', bpp.break1.seq)
+            'GGTTTTCATTTCTGTATGTTAAT',
+            bpp.break1.seq,
+        )
         self.assertEqual(
             'GCAGAGCTATATATTTAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAACCAAACAGGAAAGAATCCA'
-            'AATTCTGTGTTTACAGGGCTTTCATGCTCAG', bpp.break2.seq)
+            'AATTCTGTGTTTACAGGGCTTTCATGCTCAG',
+            bpp.break2.seq,
+        )
 
     def test_read_pair_inversion_gap_in_query_coverage(self):
         # seq AAATTTCCCGGGAATTCCGGATCGATCGAT
@@ -574,7 +630,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             reference_start=0,
             cigar=[(CIGAR.M, 16), (CIGAR.S, 14)],
             query_sequence=seq,
-            is_reverse=False
+            is_reverse=False,
         )
 
         r2 = MockRead(
@@ -583,7 +639,7 @@ class TestCallBreakpointPair(unittest.TestCase):
             reference_start=99,
             cigar=[(CIGAR.M, 12), (CIGAR.S, 18)],
             query_sequence=reverse_complement(seq),
-            is_reverse=True
+            is_reverse=True,
         )
         bpp = align.call_paired_read_event(r1, r2, is_stranded=True)
         self.assertEqual(STRAND.POS, bpp.break1.strand)
@@ -598,19 +654,25 @@ class TestCallBreakpointPair(unittest.TestCase):
 
 
 class TestConvertToDuplication(unittest.TestCase):
-
     def test_insertion_to_duplication(self):
         # BPP(Breakpoint(3:60204611L), Breakpoint(3:60204612R), opposing=False, seq='CATACATACATACATACATACATACATACATA')
         # insertion contig [seq2] contig_alignment_score: 0.99, contig_alignment_mq: Interval(255, 255)
         # (3:60132614[seq2]140=71788D69=32I86=, None))
         bpp = BreakpointPair(
-            Breakpoint('3', 60204611, orient='L'), Breakpoint('3', 60204612, orient='R'),
+            Breakpoint('3', 60204611, orient='L'),
+            Breakpoint('3', 60204612, orient='R'),
             untemplated_seq='CATACATACATACATACATACATACATACATA',
-            opposing_strands=False
+            opposing_strands=False,
         )
-        reference_genome = {'3': MockObject(
-            seq=MockLongString('CAGGGTCTGAGCTCTTAACTCTATACTGCCTACATACATACATACATACATACATATATACATACATATATAAATT', offset=60204555))}
-        print(reference_genome['3'].seq[60204588:60204588 + 8], 'CATACATA')
+        reference_genome = {
+            '3': MockObject(
+                seq=MockLongString(
+                    'CAGGGTCTGAGCTCTTAACTCTATACTGCCTACATACATACATACATACATACATATATACATACATATATAAATT',
+                    offset=60204555,
+                )
+            )
+        }
+        print(reference_genome['3'].seq[60204588 : 60204588 + 8], 'CATACATA')
         setattr(bpp, 'read1', MockObject(query_sequence='', query_name=None))
         setattr(bpp, 'read2', None)
         event = align.convert_to_duplication(bpp, reference_genome)
@@ -625,13 +687,15 @@ class TestConvertToDuplication(unittest.TestCase):
 
     def test_single_bp_insertion(self):
         bpp = BreakpointPair(
-            Breakpoint('3', 121, orient='L'), Breakpoint('3', 122, orient='R'),
+            Breakpoint('3', 121, orient='L'),
+            Breakpoint('3', 122, orient='R'),
             untemplated_seq='T',
-            opposing_strands=False
+            opposing_strands=False,
         )
-        reference_genome = {'3': MockObject(
-            seq=MockLongString('ATCGAGCTACGGATCTTTTTTCGATCGATCAATA', offset=100))}
-        print(reference_genome['3'].seq[120 - 10:121])
+        reference_genome = {
+            '3': MockObject(seq=MockLongString('ATCGAGCTACGGATCTTTTTTCGATCGATCAATA', offset=100))
+        }
+        print(reference_genome['3'].seq[120 - 10 : 121])
         setattr(bpp, 'read1', MockObject(query_sequence='', query_name=None))
         setattr(bpp, 'read2', None)
         event = align.convert_to_duplication(bpp, reference_genome)
@@ -663,15 +727,25 @@ class TestSelectContigAlignments(unittest.TestCase):
             outer_window1=Interval(1000, 1200),
             outer_window2=Interval(2000, 2200),
             reference_genome=None,
-            bam_cache=mock.Mock(stranded=False)
+            bam_cache=mock.Mock(stranded=False),
         )
         read1 = SamRead(
-            reference_id=3, reference_start=1114, cigar=[(CIGAR.S, 125), (CIGAR.EQ, 120)], query_sequence=s,
-            is_reverse=False, reference_name='3', alignment_rank=0
+            reference_id=3,
+            reference_start=1114,
+            cigar=[(CIGAR.S, 125), (CIGAR.EQ, 120)],
+            query_sequence=s,
+            is_reverse=False,
+            reference_name='3',
+            alignment_rank=0,
         )
         read2 = SamRead(
-            reference_id=3, reference_start=2187, cigar=[(CIGAR.S, 117), (CIGAR.EQ, 8), (CIGAR.D, 1), (CIGAR.EQ, 120)],
-            query_sequence=reverse_complement(s), is_reverse=True, reference_name='3', alignment_rank=1
+            reference_id=3,
+            reference_start=2187,
+            cigar=[(CIGAR.S, 117), (CIGAR.EQ, 8), (CIGAR.D, 1), (CIGAR.EQ, 120)],
+            query_sequence=reverse_complement(s),
+            is_reverse=True,
+            reference_name='3',
+            alignment_rank=1,
         )
         raw_alignments = {s: [read1, read2]}
         align.select_contig_alignments(evidence, raw_alignments)
@@ -680,7 +754,6 @@ class TestSelectContigAlignments(unittest.TestCase):
 
 
 class TestGetAlignerVersion(unittest.TestCase):
-
     def test_get_blat_36x2(self):
         content = 'blat - Standalone BLAT v. 36x2 fast sequence search command line tool\n'
         with mock.patch('subprocess.getoutput', mock.Mock(return_value=content)):
@@ -692,11 +765,19 @@ class TestGetAlignerVersion(unittest.TestCase):
             self.assertEqual('36', align.get_aligner_version(align.SUPPORTED_ALIGNER.BLAT))
 
     def test_get_bwa_0_7_15(self):
-        content = "\nProgram: bwa (alignment via Burrows-Wheeler transformation)\nVersion: 0.7.15-r1140"
+        content = (
+            "\nProgram: bwa (alignment via Burrows-Wheeler transformation)\nVersion: 0.7.15-r1140"
+        )
         with mock.patch('subprocess.getoutput', mock.Mock(return_value=content)):
-            self.assertEqual('0.7.15-r1140', align.get_aligner_version(align.SUPPORTED_ALIGNER.BWA_MEM))
+            self.assertEqual(
+                '0.7.15-r1140', align.get_aligner_version(align.SUPPORTED_ALIGNER.BWA_MEM)
+            )
 
     def test_get_bwa_0_7_12(self):
-        content = "\nProgram: bwa (alignment via Burrows-Wheeler transformation)\nVersion: 0.7.12-r1039"
+        content = (
+            "\nProgram: bwa (alignment via Burrows-Wheeler transformation)\nVersion: 0.7.12-r1039"
+        )
         with mock.patch('subprocess.getoutput', mock.Mock(return_value=content)):
-            self.assertEqual('0.7.12-r1039', align.get_aligner_version(align.SUPPORTED_ALIGNER.BWA_MEM))
+            self.assertEqual(
+                '0.7.12-r1039', align.get_aligner_version(align.SUPPORTED_ALIGNER.BWA_MEM)
+            )

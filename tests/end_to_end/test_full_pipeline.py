@@ -34,9 +34,9 @@ def print_file_tree(dirname):
 
 @unittest.skipIf(
     not int(os.environ.get('RUN_FULL', 1)),
-    'slower tests will not be run unless the environment variable RUN_FULL is given')
+    'slower tests will not be run unless the environment variable RUN_FULL is given',
+)
 class TestPipeline(unittest.TestCase):
-
     def setUp(self):
         # create the temp output directory to store file outputs
         self.temp_output = tempfile.mkdtemp()
@@ -46,7 +46,14 @@ class TestPipeline(unittest.TestCase):
         # run annotation
         self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.ANNOTATE))
         # check the generated files
-        for filename in ['annotations.tab', 'annotations.fusion-cdna.fa', 'drawings', 'drawings/*svg', 'drawings/*json', 'MAVIS-*.COMPLETE']:
+        for filename in [
+            'annotations.tab',
+            'annotations.fusion-cdna.fa',
+            'drawings',
+            'drawings/*svg',
+            'drawings/*json',
+            'MAVIS-*.COMPLETE',
+        ]:
             filename = os.path.join(self.temp_output, lib, SUBCOMMAND.ANNOTATE, '*-1', filename)
             self.assertTrue(glob_exists(filename), msg=filename)
 
@@ -66,28 +73,50 @@ class TestPipeline(unittest.TestCase):
             'raw_evidence.sorted.bam.bai',
             'validation-failed.tab',
             'validation-passed.tab',
-            'MAVIS-*.COMPLETE'
+            'MAVIS-*.COMPLETE',
         ]:
-            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', suffix), msg=suffix)
+            self.assertTrue(
+                glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', suffix), msg=suffix
+            )
 
     def check_aligner_output_files(self, lib, mem=False):
         if mem:
-            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', 'contigs.bwa_mem.sam'))
-            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', 'contigs.bwa_mem.log'))
+            self.assertTrue(
+                glob_exists(
+                    self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', 'contigs.bwa_mem.sam'
+                )
+            )
+            self.assertTrue(
+                glob_exists(
+                    self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', 'contigs.bwa_mem.log'
+                )
+            )
         else:
-            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', 'contigs.blat_out.pslx'))
+            self.assertTrue(
+                glob_exists(
+                    self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', 'contigs.blat_out.pslx'
+                )
+            )
 
     def check_cluster(self, lib, skipped=False):
         self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER))
-        logfile = os.path.join(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'MC_{}*batch-*.log'.format(lib))
+        logfile = os.path.join(
+            self.temp_output, lib, SUBCOMMAND.CLUSTER, 'MC_{}*batch-*.log'.format(lib)
+        )
         self.assertTrue(glob_exists(logfile), msg=logfile)
         self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'batch-*-1.tab'))
-        self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'filtered_pairs.tab'))
+        self.assertTrue(
+            glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'filtered_pairs.tab')
+        )
         self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'clusters.bed'))
         if skipped:
-            self.assertFalse(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'cluster_assignment.tab'))
+            self.assertFalse(
+                glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'cluster_assignment.tab')
+            )
         else:
-            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'cluster_assignment.tab'))
+            self.assertTrue(
+                glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'cluster_assignment.tab')
+            )
         self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.CLUSTER, 'MAVIS-*.COMPLETE'))
 
     def check_pairing(self):
@@ -97,7 +126,9 @@ class TestPipeline(unittest.TestCase):
 
     def check_summary(self, count=3):
         self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY))
-        self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'mavis_summary*.tab', n=count))
+        self.assertTrue(
+            glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'mavis_summary*.tab', n=count)
+        )
         self.assertTrue(glob_exists(self.temp_output, SUBCOMMAND.SUMMARY, 'MAVIS-*.COMPLETE'))
 
     @mock.patch('os.environ', ENV.copy())
@@ -106,7 +137,7 @@ class TestPipeline(unittest.TestCase):
         self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
         main([SUBCOMMAND.SCHEDULE, '-o', self.temp_output, '--submit'])
         # check that the subdirectories were built
-        for lib in[MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
+        for lib in [MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
             self.check_cluster(lib)
             self.check_validate(lib)
             self.check_aligner_output_files(lib, mem=True)
@@ -138,7 +169,7 @@ class TestPipeline(unittest.TestCase):
 
         main([SUBCOMMAND.SCHEDULE, '-o', self.temp_output, '--submit'])
         # check that the subdirectories were built
-        for lib in[MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
+        for lib in [MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
             self.check_cluster(lib)
             self.check_validate(lib)
             self.check_aligner_output_files(lib)
@@ -157,7 +188,7 @@ class TestPipeline(unittest.TestCase):
 
         main([SUBCOMMAND.SCHEDULE, '-o', self.temp_output, '--submit'])
         # check that the subdirectories were built
-        for lib in[MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
+        for lib in [MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
             self.check_cluster(lib)
             self.check_validate(lib)
             self.check_aligner_output_files(lib)
@@ -167,14 +198,16 @@ class TestPipeline(unittest.TestCase):
 
     @mock.patch('os.environ', ENV.copy())
     def test_reference_from_env(self):
-        os.environ.update({
-            'MAVIS_TEMPLATE_METADATA': get_data('cytoBand.txt'),
-            'MAVIS_ANNOTATIONS': get_data('mock_annotations.json'),
-            'MAVIS_MASKING': get_data('mock_masking.tab'),
-            'MAVIS_REFERENCE_GENOME': get_data('mock_reference_genome.fa'),
-            'MAVIS_ALIGNER_REFERENCE': get_data('mock_reference_genome.2bit'),
-            'MAVIS_DGV_ANNOTATION': get_data('mock_dgv_annotation.txt'),
-        })
+        os.environ.update(
+            {
+                'MAVIS_TEMPLATE_METADATA': get_data('cytoBand.txt'),
+                'MAVIS_ANNOTATIONS': get_data('mock_annotations.json'),
+                'MAVIS_MASKING': get_data('mock_masking.tab'),
+                'MAVIS_REFERENCE_GENOME': get_data('mock_reference_genome.fa'),
+                'MAVIS_ALIGNER_REFERENCE': get_data('mock_reference_genome.2bit'),
+                'MAVIS_DGV_ANNOTATION': get_data('mock_dgv_annotation.txt'),
+            }
+        )
         main([SUBCOMMAND.SETUP, get_data('reference_from_env.cfg'), '-o', self.temp_output])
         self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
         main([SUBCOMMAND.SCHEDULE, '-o', self.temp_output, '--submit'])
@@ -199,12 +232,10 @@ class TestPipeline(unittest.TestCase):
             self.check_cluster(lib)
             self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE))
 
-            for suffix in [
-                'evidence.bed',
-                'validation-failed.tab',
-                'validation-passed.tab'
-            ]:
-                self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', suffix))
+            for suffix in ['evidence.bed', 'validation-failed.tab', 'validation-passed.tab']:
+                self.assertTrue(
+                    glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', suffix)
+                )
             for suffix in [
                 'contigs.bam',
                 'contigs.blat_out.pslx',
@@ -216,8 +247,13 @@ class TestPipeline(unittest.TestCase):
                 'raw_evidence.sorted.bam',
                 'raw_evidence.sorted.bam.bai',
             ]:
-                self.assertFalse(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', suffix), msg=suffix)
-            self.assertTrue(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', 'MAVIS-*.COMPLETE'))
+                self.assertFalse(
+                    glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', suffix),
+                    msg=suffix,
+                )
+            self.assertTrue(
+                glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE + '/*-1', 'MAVIS-*.COMPLETE')
+            )
 
             self.check_annotate(lib)
         self.check_pairing()
@@ -230,7 +266,7 @@ class TestPipeline(unittest.TestCase):
         main([SUBCOMMAND.SCHEDULE, '-o', self.temp_output, '--submit'])
 
         # check that the subdirectories were built
-        for lib in[MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
+        for lib in [MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
             self.check_cluster(lib, skipped=True)
             self.check_validate(lib)
             self.check_aligner_output_files(lib)
@@ -240,13 +276,15 @@ class TestPipeline(unittest.TestCase):
 
     @mock.patch('os.environ', ENV.copy())
     def test_skip_validation(self):
-        main([SUBCOMMAND.SETUP, CONFIG, '-o', self.temp_output, '--skip_stage', SUBCOMMAND.VALIDATE])
+        main(
+            [SUBCOMMAND.SETUP, CONFIG, '-o', self.temp_output, '--skip_stage', SUBCOMMAND.VALIDATE]
+        )
 
         self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
         main([SUBCOMMAND.SCHEDULE, '-o', self.temp_output, '--submit'])
 
         # check that the subdirectories were built
-        for lib in[MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
+        for lib in [MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
             self.check_cluster(lib)
             self.assertFalse(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE))
             self.check_annotate(lib)
@@ -256,17 +294,21 @@ class TestPipeline(unittest.TestCase):
     @mock.patch('os.environ', ENV.copy())
     def test_skip_cluster_and_validate(self):
         args = [
-            SUBCOMMAND.SETUP, CONFIG,
-            '-o', self.temp_output,
-            '--skip_stage', SUBCOMMAND.VALIDATE,
-            '--skip_stage', SUBCOMMAND.CLUSTER
+            SUBCOMMAND.SETUP,
+            CONFIG,
+            '-o',
+            self.temp_output,
+            '--skip_stage',
+            SUBCOMMAND.VALIDATE,
+            '--skip_stage',
+            SUBCOMMAND.CLUSTER,
         ]
         main(args)
         self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
         main([SUBCOMMAND.SCHEDULE, '-o', self.temp_output, '--submit'])
 
         # check that the subdirectories were built
-        for lib in[MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
+        for lib in [MOCK_GENOME + '_*', MOCK_TRANS + '_*']:
             self.check_cluster(lib, skipped=True)
             self.assertFalse(glob_exists(self.temp_output, lib, SUBCOMMAND.VALIDATE))
             self.check_annotate(lib)
@@ -288,10 +330,7 @@ class TestSetUp(unittest.TestCase):
     @mock.patch('os.environ', ENV.copy())
     def test_slurm(self):
         os.environ['MAVIS_SCHEDULER'] = 'SLURM'
-        args = [
-            SUBCOMMAND.SETUP, CONFIG,
-            '-o', self.temp_output
-        ]
+        args = [SUBCOMMAND.SETUP, CONFIG, '-o', self.temp_output]
         main(args)
         self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
         self.assertTrue(glob_exists(self.temp_output, '*', SUBCOMMAND.VALIDATE, 'submit.sh', n=2))
@@ -303,9 +342,12 @@ class TestSetUp(unittest.TestCase):
     def test_slurm_skip_validate(self):
         os.environ['MAVIS_SCHEDULER'] = 'SLURM'
         args = [
-            SUBCOMMAND.SETUP, CONFIG,
-            '-o', self.temp_output,
-            '--skip_stage', SUBCOMMAND.VALIDATE
+            SUBCOMMAND.SETUP,
+            CONFIG,
+            '-o',
+            self.temp_output,
+            '--skip_stage',
+            SUBCOMMAND.VALIDATE,
         ]
         main(args)
         self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
@@ -318,9 +360,12 @@ class TestSetUp(unittest.TestCase):
     def test_slurm_skip_cluster(self):
         os.environ['MAVIS_SCHEDULER'] = 'SLURM'
         args = [
-            SUBCOMMAND.SETUP, CONFIG,
-            '-o', self.temp_output,
-            '--skip_stage', SUBCOMMAND.CLUSTER
+            SUBCOMMAND.SETUP,
+            CONFIG,
+            '-o',
+            self.temp_output,
+            '--skip_stage',
+            SUBCOMMAND.CLUSTER,
         ]
         main(args)
         self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
@@ -332,10 +377,7 @@ class TestSetUp(unittest.TestCase):
     @mock.patch('os.environ', ENV.copy())
     def test_sge(self):
         os.environ['MAVIS_SCHEDULER'] = 'SGE'
-        args = [
-            SUBCOMMAND.SETUP, CONFIG,
-            '-o', self.temp_output
-        ]
+        args = [SUBCOMMAND.SETUP, CONFIG, '-o', self.temp_output]
         main(args)
         self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
         self.assertTrue(glob_exists(self.temp_output, '*', SUBCOMMAND.VALIDATE, 'submit.sh', n=2))
@@ -346,10 +388,7 @@ class TestSetUp(unittest.TestCase):
     @mock.patch('os.environ', ENV.copy())
     def test_torque(self):
         os.environ['MAVIS_SCHEDULER'] = 'TORQUE'
-        args = [
-            SUBCOMMAND.SETUP, CONFIG,
-            '-o', self.temp_output
-        ]
+        args = [SUBCOMMAND.SETUP, CONFIG, '-o', self.temp_output]
         main(args)
         self.assertTrue(glob_exists(self.temp_output, 'build.cfg'))
         self.assertTrue(glob_exists(self.temp_output, '*', SUBCOMMAND.VALIDATE, 'submit.sh', n=2))

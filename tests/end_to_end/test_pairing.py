@@ -10,6 +10,7 @@ from mavis.main import main
 from mavis.util import read_bpp_from_input_file
 
 from ..util import get_data
+
 TEMP_OUTPUT = None
 
 
@@ -20,13 +21,16 @@ def setUpModule():
 
 
 class TestPairing(unittest.TestCase):
-
     def test_pairing(self):
         args = [
-            'mavis', SUBCOMMAND.PAIR,
-            '-n', get_data('pairing_annotations.tab'),
-            '-o', TEMP_OUTPUT,
-            '--annotations', get_data('pairing_reference_annotations_file.tab')
+            'mavis',
+            SUBCOMMAND.PAIR,
+            '-n',
+            get_data('pairing_annotations.tab'),
+            '-o',
+            TEMP_OUTPUT,
+            '--annotations',
+            get_data('pairing_reference_annotations_file.tab'),
         ]
         with patch.object(sys, 'argv', args):
             self.assertEqual(0, main())
