@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 from mavis.constants import ORIENT, SUBCOMMAND, SVTYPE
 from mavis.main import main
-from mavis.tools import SUPPORTED_TOOL
+from mavis.convert.tools import SUPPORTED_TOOL
 from mavis.util import unique_exists, read_bpp_from_input_file
 
 from ..util import get_data
@@ -26,15 +26,19 @@ def setUpModule():
 
 
 class TestConvert(unittest.TestCase):
-
     def run_main(self, inputfile, file_type, strand_specific=False):
         outputfile = os.path.join(TEMP_OUTPUT, file_type + '.tab')
         args = [
-            'mavis', SUBCOMMAND.CONVERT,
-            '-o', outputfile,
-            '-n', inputfile,
-            '--file_type', file_type,
-            '--strand_specific', strand_specific
+            'mavis',
+            SUBCOMMAND.CONVERT,
+            '-o',
+            outputfile,
+            '-n',
+            inputfile,
+            '--file_type',
+            file_type,
+            '--strand_specific',
+            strand_specific,
         ]
         with patch.object(sys, 'argv', args):
             self.assertEqual(0, main())

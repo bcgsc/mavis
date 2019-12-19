@@ -1,7 +1,7 @@
 import unittest
 
 from mavis.constants import COLUMNS, ORIENT, STRAND, SVTYPE
-from mavis.tools import _convert_tool_row, SUPPORTED_TOOL, _parse_transabyss, _parse_chimerascan, _parse_bnd_alt, _parse_vcf_record
+from mavis.convert.tools import _convert_tool_row, SUPPORTED_TOOL, _parse_transabyss, _parse_chimerascan, _parse_bnd_alt, _parse_vcf_record
 
 from .mock import Mock
 
