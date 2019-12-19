@@ -316,7 +316,7 @@ def main(
         except AttributeError:
             pass
         call.data.update(
-            {COLUMNS.break1_homologous_seq: b1_homseq, COLUMNS.break2_homologous_seq: b2_homseq,}
+            {COLUMNS.break1_homologous_seq: b1_homseq, COLUMNS.break2_homologous_seq: b2_homseq}
         )
     LOG(
         '{} putative calls resulted in {} events with 1 or more event call'.format(
