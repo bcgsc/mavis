@@ -73,17 +73,17 @@ DOC_REQS = ['docutils>=0.14', 'm2r>=0.1.12', 'sphinx-rtd-theme>=0.4.2', 'sphinx>
 
 
 INSTALL_REQS = [
-    'Distance>=0.1.3',
-    'Shapely>=1.6.4.post1',
-    'biopython>=1.70',
+    'Distance==0.1.3',
+    'Shapely==1.6.4.post2',
+    'biopython==1.75',
     'braceexpand==0.1.2',
-    'colour',
+    'colour==0.1.5',
     'networkx==1.11.0',
-    'numpy>=1.13.1',
-    'pysam>=0.9',
+    'numpy==1.17.4',
+    'pysam==0.15.2',
     'pyvcf==0.6.8',
-    'shortuuid>=0.5.0',
-    'svgwrite',
+    'shortuuid==0.5.0',
+    'svgwrite==1.3.1',
 ]
 
 DEPLOY_REQS = ['twine', 'm2r', 'wheel']
