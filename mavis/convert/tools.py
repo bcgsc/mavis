@@ -7,10 +7,10 @@ import tab
 from pysam import VariantFile
 
 
-from .breakpoint import Breakpoint, BreakpointPair
-from .constants import COLUMNS, MavisNamespace, ORIENT, STRAND, SVTYPE
-from .error import InvalidRearrangement
-from .util import DEVNULL, read_bpp_from_input_file
+from ..breakpoint import Breakpoint, BreakpointPair
+from ..constants import COLUMNS, MavisNamespace, ORIENT, STRAND, SVTYPE
+from ..error import InvalidRearrangement
+from ..annotateutil import DEVNULL, read_bpp_from_input_file
 
 SUPPORTED_TOOL = MavisNamespace(
     MANTA='manta',
