@@ -24,7 +24,7 @@ from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from .pairing import main as pairing_main
 from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 from .summary import main as summary_main
-from .tools import convert_tool_output, SUPPORTED_TOOL
+from .convert.tools import convert_tool_output, SUPPORTED_TOOL
 from . import util as _util
 from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 from .validate import main as validate_main

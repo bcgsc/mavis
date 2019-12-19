@@ -8,7 +8,7 @@ from shortuuid import uuid
 
 from ..cluster import constants as _CLUSTER
 from ..constants import SUBCOMMAND, PROTOCOL, EXIT_ERROR, EXIT_OK, EXIT_INCOMPLETE
-from ..tools import convert_tool_output
+from ..convert.tools import convert_tool_output
 from ..util import mkdirp, output_tabbed_file, LOG, DEVNULL
 from ..validate import constants as _VALIDATE
 from ..annotate import constants as _ANNOTATE

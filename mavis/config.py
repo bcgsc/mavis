@@ -22,7 +22,7 @@ from .pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from .schedule.constants import OPTIONS as SUBMIT_OPTIONS
 from .schedule.constants import SCHEDULER
 from .summary.constants import DEFAULTS as SUMMARY_DEFAULTS
-from .tools import SUPPORTED_TOOL
+from .convert.tools import SUPPORTED_TOOL
 from .util import bash_expands, cast, DEVNULL, MavisNamespace, WeakMavisNamespace, filepath, NullableType
 from .validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 
