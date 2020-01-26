@@ -305,7 +305,7 @@ class BreakpointPair:
             else:
                 if pair.LL or pair.RR:
                     raise InvalidRearrangement(pair)
-                elif pair.LR:
+                elif pair.break1.orient == ORIENT.LEFT or pair.break2.orient == ORIENT.RIGHT:
                     if (
                         len(pair.break1) == 1
                         and len(pair.break2) == 1
@@ -325,7 +325,7 @@ class BreakpointPair:
                         except ValueError:
                             pass
                     return {SVTYPE.DEL, SVTYPE.INS}
-                elif pair.RL:
+                elif pair.break1.orient == ORIENT.RIGHT or pair.break2.orient == ORIENT.LEFT:
                     return {SVTYPE.DUP}
         else:  # interchromosomal
             if pair.opposing_strands:
