@@ -135,6 +135,22 @@ class BreakpointPair:
             return False
         return True
 
+    @property
+    def LL(self):
+        return self.break1.orient == ORIENT.LEFT and self.break2.orient == ORIENT.LEFT
+
+    @property
+    def LR(self):
+        return self.break1.orient == ORIENT.LEFT and self.break2.orient == ORIENT.RIGHT
+
+    @property
+    def RL(self):
+        return self.break1.orient == ORIENT.RIGHT and self.break2.orient == ORIENT.LEFT
+
+    @property
+    def RR(self):
+        return self.break1.orient == ORIENT.RIGHT and self.break2.orient == ORIENT.RIGHT
+
     def copy(self):
         temp = _copy(self)
         temp.data = {}
