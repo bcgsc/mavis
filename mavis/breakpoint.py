@@ -135,6 +135,22 @@ class BreakpointPair:
             return False
         return True
 
+    @property
+    def LL(self):
+        return self.break1.orient == ORIENT.LEFT and self.break2.orient == ORIENT.LEFT
+
+    @property
+    def LR(self):
+        return self.break1.orient == ORIENT.LEFT and self.break2.orient == ORIENT.RIGHT
+
+    @property
+    def RL(self):
+        return self.break1.orient == ORIENT.RIGHT and self.break2.orient == ORIENT.LEFT
+
+    @property
+    def RR(self):
+        return self.break1.orient == ORIENT.RIGHT and self.break2.orient == ORIENT.RIGHT
+
     def copy(self):
         temp = _copy(self)
         temp.data = {}
@@ -283,15 +299,11 @@ class BreakpointPair:
         """
         if not pair.interchromosomal:  # intrachromosomal
             if pair.opposing_strands:
-                if (pair.break1.orient == ORIENT.LEFT and pair.break2.orient == ORIENT.RIGHT) or (
-                    pair.break1.orient == ORIENT.RIGHT and pair.break2.orient == ORIENT.LEFT
-                ):
+                if pair.LR or pair.RL:
                     raise InvalidRearrangement(pair)
                 return {SVTYPE.INV}
             else:
-                if (pair.break1.orient == ORIENT.LEFT and pair.break2.orient == ORIENT.LEFT) or (
-                    pair.break1.orient == ORIENT.RIGHT and pair.break2.orient == ORIENT.RIGHT
-                ):
+                if pair.LL or pair.RR:
                     raise InvalidRearrangement(pair)
                 elif pair.break1.orient == ORIENT.LEFT or pair.break2.orient == ORIENT.RIGHT:
                     if (
@@ -317,15 +329,11 @@ class BreakpointPair:
                     return {SVTYPE.DUP}
         else:  # interchromosomal
             if pair.opposing_strands:
-                if (pair.break1.orient == ORIENT.LEFT and pair.break2.orient == ORIENT.RIGHT) or (
-                    pair.break1.orient == ORIENT.RIGHT and pair.break2.orient == ORIENT.LEFT
-                ):
+                if pair.LR or pair.RL:
                     raise InvalidRearrangement(pair)
                 return {SVTYPE.ITRANS}
             else:
-                if (pair.break1.orient == ORIENT.LEFT and pair.break2.orient == ORIENT.LEFT) or (
-                    pair.break1.orient == ORIENT.RIGHT and pair.break2.orient == ORIENT.RIGHT
-                ):
+                if pair.LL or pair.RR:
                     raise InvalidRearrangement(pair)
                 return {SVTYPE.TRANS}
 
@@ -341,7 +349,7 @@ class BreakpointPair:
 
         min_dist, max_dist = distance(self.break1.start, self.break2.start)
         # if it is a duplication the net change is the untemplated_seq as well as the duplicated region
-        if self.break1.orient == ORIENT.RIGHT and self.break2.orient == ORIENT.LEFT:
+        if self.RL:
             size.start += min_dist + 1
             size.end += max_dist + 1
         elif not self.opposing_strands:
