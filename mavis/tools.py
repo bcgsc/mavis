@@ -406,7 +406,12 @@ def _parse_vcf_record(record, log=DEVNULL):
             )
 
         if 'SVTYPE' in info:
-            std_row[COLUMNS.event_type] = info['SVTYPE']
+            if(info['SVTYPE'] in TOOL_SVTYPE_MAPPING.keys()):
+                std_row[COLUMNS.event_type] = info['SVTYPE']
+            else:
+                raise AssertionError(
+                    'Unrecognised SVTYPE: {}. Expected one of ({}).'.format(info['SVTYPE'], ", ".join(list(TOOL_SVTYPE_MAPPING.keys())))
+                )
 
         try:
             orient1, orient2 = info['CT'].split('to')
@@ -420,6 +425,8 @@ def _parse_vcf_record(record, log=DEVNULL):
         )
         records.append(std_row)
     return records
+
+
 
 
 def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
