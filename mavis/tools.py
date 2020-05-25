@@ -385,28 +385,16 @@ def _parse_sniffles_vcf(record, log=DEVNULL):
                 elif size < 0:
                     std_row[COLUMNS.event_type] = SVTYPE.DEL
         std_row.update({COLUMNS.break1_chromosome: record.chrom, COLUMNS.break2_chromosome: chr2})
-        if info.get(
-            'PRECISE', False
-        ):  # DELLY CI only apply when split reads were not used to refine the breakpoint which is then flagged
-            std_row.update(
-                {
-                    COLUMNS.break1_position_start: record.pos,
-                    COLUMNS.break1_position_end: record.pos,
-                    COLUMNS.break2_position_start: end,
-                    COLUMNS.break2_position_end: end,
-                }
-            )
-        else:
-            std_row.update(
-                {
-                    COLUMNS.break1_position_start: max(
-                        1, record.pos + info.get('CIPOS', (0, 0))[0]
-                    ),
-                    COLUMNS.break1_position_end: record.pos + info.get('CIPOS', (0, 0))[1],
-                    COLUMNS.break2_position_start: max(1, end + info.get('CIEND', (0, 0))[0]),
-                    COLUMNS.break2_position_end: end + info.get('CIEND', (0, 0))[1],
-                }
-            )
+        #Sniffles doesn't do CIs for IMPRECISE variants, so can treat all the same:
+        std_row.update(
+            {
+                COLUMNS.break1_position_start: record.pos,
+                COLUMNS.break1_position_end: record.pos,
+                COLUMNS.break2_position_start: end,
+                COLUMNS.break2_position_end: end,
+            }
+        )
+
 
         if 'SVTYPE' in info:
             std_row[COLUMNS.event_type] = info['SVTYPE']
@@ -583,7 +571,7 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
         std_row[COLUMNS.break1_orientation] = (
             ORIENT.LEFT if row['genomic_strand1'] == STRAND.POS else ORIENT.RIGHT
         )
-        std_row[COLUMNS.break2_orientation] =AttributeError: ('interval start > end is not allowed', 1, 0) (
+        std_row[COLUMNS.break2_orientation] = (
             ORIENT.LEFT if row['genomic_strand2'] == STRAND.POS else ORIENT.RIGHT
         )
         std_row.update(
