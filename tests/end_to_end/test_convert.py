@@ -116,6 +116,9 @@ class TestConvert(unittest.TestCase):
     def test_breakseq2(self):
         self.run_main(get_data('breakseq.vcf'), SUPPORTED_TOOL.BREAKSEQ, False)
 
+    def test_sniffles(self):
+        self.run_main(get_data('sniffles_test.vcf'), SUPPORTED_TOOL.SNIFFLES, False)
+
     def test_cnvnator(self):
         self.run_main(get_data('cnvnator.tab'), SUPPORTED_TOOL.CNVNATOR, False)
 
