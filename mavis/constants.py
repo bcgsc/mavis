@@ -516,10 +516,11 @@ ORIENT = MavisNamespace(LEFT='L', RIGHT='R', NS='?')
 setattr(ORIENT, 'expand', lambda x: [ORIENT.LEFT, ORIENT.RIGHT] if x == ORIENT.NS else [x])
 setattr(ORIENT, 'compare', lambda x, y: True if ORIENT.NS in [x, y] else (x == y))
 
-PROTOCOL = MavisNamespace(GENOME='genome', TRANS='transcriptome')
+PROTOCOL = MavisNamespace(GENOME='genome', TRANS='transcriptome', LRGENOME='genome_longread')
 """:class:`MavisNamespace`: holds controlled vocabulary for allowed protocol values
 
 - ``GENOME``: genome
+- ``LRGENOME``: genome_longread
 - ``TRANS``: transcriptome
 """
 

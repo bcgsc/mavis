@@ -61,7 +61,7 @@ TOOL_SVTYPE_MAPPING.update(
         'dup': [SVTYPE.DUP],
         'ITD': [SVTYPE.DUP],
         'IDP': [SVTYPE.INS],
-        'INVDUP': [SVTYPE.TRANS],  #treat Sniffles' invdup type like a translocation
+        'INVDUP': [SVTYPE.INS],  #treat Sniffles' invdup type like an insertion
     }
 )
 
