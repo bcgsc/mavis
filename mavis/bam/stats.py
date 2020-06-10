@@ -323,12 +323,11 @@ def compute_genome_longread_bam_stats(
         for read in bam_file_handle.fetch(
             bin_chr, bin_start, bin_end, limit=sample_cap, cache_if=lambda x: False
         ):
+            #Exclude secondary and poorly-mapped reads:
             if any(
                 [
                     read.is_unmapped,
-                    read.mate_is_unmapped,
                     read.mapping_quality < min_mapping_quality,
-                    read.next_reference_id != read.reference_id,
                     read.is_secondary,
                 ]
             ):
