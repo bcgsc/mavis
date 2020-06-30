@@ -322,12 +322,44 @@ class TestManta(unittest.TestCase):
         )
         vcf_list = _parse_vcf_record(row)
         bpp_list = _convert_tool_row(vcf_list[0], SUPPORTED_TOOL.MANTA, False)
-        for bpp in bpp_list:
-            self.assertEqual('1', bpp.break1.chr)
-            self.assertEqual('1', bpp.break2.chr)
-            self.assertEqual('R', bpp.break1.orient)
-            self.assertEqual('R', bpp.break2.orient)
-            self.assertEqual('manta-MantaBND:207:0:1:0:0:0:0', bpp.tracking_id)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('1', bpp.break1.chr)
+        self.assertEqual('1', bpp.break2.chr)
+        self.assertEqual(17051724, bpp.break1.start)
+        self.assertEqual(234912188, bpp.break2.start)
+        self.assertEqual('R', bpp.break1.orient)
+        self.assertEqual('R', bpp.break2.orient)
+        self.assertEqual('manta-MantaBND:207:0:1:0:0:0:0', bpp.tracking_id)
+        self.assertEqual(1, len(bpp_list))
+
+    def test_non_trans_bnd_from_mate(self):
+        row = Mock(
+            chrom='chr1',
+            pos=234912188,
+            id='MantaBND:207:0:1:0:0:0:1',
+            info=dict(
+                SVTYPE='BND',
+                MATEID='MantaBND:207:0:1:0:0:0:0',
+                SVINSLEN=7,
+                SVINSSEQ='ATGGGGC',
+                BND_DEPTH=5,
+                MATE_BND_DEPTH=4,
+            ),
+            ref='A',
+            alts=['[chr1:17051724[ATGGGGCA'],
+        )
+        vcf_list = _parse_vcf_record(row)
+        bpp_list = _convert_tool_row(vcf_list[0], SUPPORTED_TOOL.MANTA, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('1', bpp.break1.chr)
+        self.assertEqual('1', bpp.break2.chr)
+        self.assertEqual(17051724, bpp.break1.start)
+        self.assertEqual(234912188, bpp.break2.start)
+        self.assertEqual('R', bpp.break1.orient)
+        self.assertEqual('R', bpp.break2.orient)
+        self.assertEqual('manta-MantaBND:207:0:1:0:0:0:1', bpp.tracking_id)
         self.assertEqual(1, len(bpp_list))
 
 
