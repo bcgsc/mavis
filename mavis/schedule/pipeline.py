@@ -51,7 +51,7 @@ def parse_run_time(filename):
     """
     with open(filename, 'r') as fh:
         content = fh.read().strip()
-        for line in [l.strip() for l in content.split('\n')][::-1]:
+        for line in [line.strip() for line in content.split('\n')][::-1]:
             match = re.match(r'^\s*run time \(s\): (\d+)\s*$', line)  # older style complete stamp
             if match:
                 return int(match.group(1))

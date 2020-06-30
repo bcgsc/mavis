@@ -152,7 +152,7 @@ def main(
     if other_libs:
         LOG(
             'warning: ignoring breakpoints found for other libraries:',
-            sorted([l for l in other_libs]),
+            sorted([lib for lib in other_libs]),
         )
     if other_chr:
         LOG('warning: filtered events on chromosomes', other_chr)
