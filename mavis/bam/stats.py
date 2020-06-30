@@ -240,7 +240,7 @@ def compute_genome_bam_stats(
     """
     import numpy as np
 
-    total = sum([l - sample_bin_size for l in bam_file_handle.fh.lengths])
+    total = sum([length - sample_bin_size for length in bam_file_handle.fh.lengths])
     bins = []
     randoms = [int(n * (total - 1) + 1) for n in np.random.rand(sample_size)]
     for pos in randoms:

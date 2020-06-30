@@ -77,7 +77,7 @@ class TestAssemble(unittest.TestCase):
         cls.long_filter_seq = sequences
         sequences = set()
         with open(get_data('large_assembly.txt'), 'r') as fh:
-            sequences.update([l.strip() for l in fh.readlines()])
+            sequences.update([line.strip() for line in fh.readlines()])
         cls.large_assembly_seq = sequences
 
     def setUp(self):

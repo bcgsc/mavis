@@ -36,7 +36,7 @@ class LogFile:
             raise FileNotFoundError('Log file does not exist', filename)
         log = None
         with open(filename, 'r') as fh:
-            lines = [l.strip() for l in fh.readlines() if l.strip()]
+            lines = [line.strip() for line in fh.readlines() if line.strip()]
             for line in lines[::-1]:
                 line = line.strip().lower()
                 if (

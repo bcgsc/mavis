@@ -468,7 +468,7 @@ class SgeScheduler(Scheduler):
         content = content.strip()
         if not content:
             return []
-        lines = [l for l in content.split('\n') if l.strip()]
+        lines = [line for line in content.split('\n') if line.strip()]
         column_sizes = []
         for col in header:
             match = re.search(col + r'\s*', lines[0])

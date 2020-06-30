@@ -34,7 +34,7 @@ def setUpModule():
     global REFERENCE_ANNOTATIONS, REFERENCE_GENOME, REF_CHR, EXAMPLE_GENES
     EXAMPLE_GENES = get_example_genes()
     REFERENCE_ANNOTATIONS = load_reference_genes(get_data('mock_reference_annotations.tsv'))
-    count = sum([len(l) for l in REFERENCE_ANNOTATIONS.values()])
+    count = sum([len(genes) for genes in REFERENCE_ANNOTATIONS.values()])
     print('loaded annotations', count)
     assert count >= 6  # make sure this is the file we expect
     REFERENCE_GENOME = load_reference_genome(get_data('mock_reference_genome.fa'))

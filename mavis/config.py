@@ -354,7 +354,7 @@ class MavisConfig(MavisNamespace):
                     )
 
     def has_transcriptome(self):
-        return any([l.is_trans() for l in self.libraries.values()])
+        return any([lib.is_trans() for lib in self.libraries.values()])
 
     @staticmethod
     def read(filepath):
