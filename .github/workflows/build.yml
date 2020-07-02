@@ -46,14 +46,14 @@ jobs:
     - name: run short tests with pytest
       run: |
         export PATH=$PATH:$(pwd):$(pwd)/bwa
-        pytest tests -v --junitxml=junit/test-results-${{ matrix.python-version }}.xml --cov markdown_refdocs --cov-report term --cov-report xml --durations=10
+        pytest tests -v --junitxml=junit/test-results-${{ matrix.python-version }}.xml --cov mavis --cov-report term --cov-report xml --durations=10
       env:
         RUN_FULL: 0
       if: github.event_name != 'pull_request'
     - name: run full tests with pytest
       run: |
         export PATH=$PATH:$(pwd):$(pwd)/bwa
-        pytest tests -v --junitxml=junit/test-results-${{ matrix.python-version }}.xml --cov markdown_refdocs --cov-report term --cov-report xml --durations=10
+        pytest tests -v --junitxml=junit/test-results-${{ matrix.python-version }}.xml --cov mavis --cov-report term --cov-report xml --durations=10
       env:
         RUN_FULL: 1
       if: github.event_name == 'pull_request'
