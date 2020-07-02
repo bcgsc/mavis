@@ -36,14 +36,15 @@ Run the tests and compute code coverage
 pytest tests
 ```
 
-## Build the Sphinx Documentation
+## Build the Documentation
 
 ```bash
 pip install .[docs]
-sphinx-build docs/source/ html
+markdown_refdocs mavis -o docs/package
+mkdocs build
 ```
 
-The contents of the user manual can then be viewed by opening the build/html/index.html in any available
+The contents of the user manual can then be viewed by opening the build-docs/index.html in any available
 web browser (i.e. google-chrome, firefox, etc.)
 
 

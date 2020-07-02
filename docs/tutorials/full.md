@@ -114,9 +114,7 @@ mavis config \
 
 ## Setting Up the Pipeline
 
-The next step is
-`running the setup stage <pipeline-standard>`{.interpreted-text
-role="ref"}. This will perform conversion, clustering, and creating the
+The next step is running the setup stage. This will perform conversion, clustering, and creating the
 submission scripts for the other stages.
 
 ```bash

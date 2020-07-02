@@ -1,5 +1,7 @@
 # Guidelines for Contributors
 
+{!./../.github/CONTRIBUTING.md!}
+
 ## Major Assumptions
 
 Some assumptions have been made when developing this project. The major
