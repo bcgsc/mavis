@@ -32,6 +32,19 @@ jobs:
         pip install black
         # stop the build if black needs to be run
         black mavis -S -l 100 --check
+    - name: install bwa
+      run: |
+        git clone https://github.com/lh3/bwa.git
+        cd bwa
+        git checkout v0.7.17
+        make
+        export PATH=$PATH:$(pwd)
+        cd ..
+    - name: install blat
+      run: |
+        wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/blat/blat
+        chmod a+x blat
+        export PATH=$PATH:$(pwd)
     - name: run short tests with pytest
       run: |
         pytest tests -v --junitxml=junit/test-results-${{ matrix.python-version }}.xml --cov markdown_refdocs --cov-report term --cov-report xml
