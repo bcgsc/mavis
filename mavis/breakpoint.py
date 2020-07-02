@@ -283,7 +283,7 @@ class BreakpointPair:
 
         Args:
             pair (BreakpointPair): the pair to classify
-            distance (callable): if defined, will be passed to net size to use in narrowing the list of putative types (del vs ins)
+            distance (Callable): if defined, will be passed to net size to use in narrowing the list of putative types (del vs ins)
         Returns:
             List[SVTYPE]: a list of possible SVTYPE
 

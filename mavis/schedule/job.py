@@ -80,7 +80,7 @@ class Job:
             stdout (str): basename of the file to write std output to
             script (str): path to the script which contains the commands for the job
             created_at (int): the time stamp for when the job was created (created != submitted)
-            status (~mavis.schedule.constants.JOB_STATUS): The current (since last checked) status of the job
+            status (mavis.schedule.constants.JOB_STATUS): The current (since last checked) status of the job
             status_comment (str): the comment which describes the status, generally this is used for reporting errors from the log file or failed dependencies (SLURM)
             options (**dict): override default options specified by OPTIONS
         """

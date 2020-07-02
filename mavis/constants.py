@@ -362,7 +362,7 @@ class MavisNamespace:
             attr (str): name of the attribute being added
             value: the value of the attribute
             defn (str): the definition, will be used in generating documentation and help menus
-            cast_type (callable): the function to use in casting the value
+            cast_type (Callable): the function to use in casting the value
             nullable (bool): True if this attribute can have a None value
             env_overwritable (bool): True if this attribute will be overriden by its environment variable equivalent
             listable (bool): True if this attribute can have multiple values
@@ -649,9 +649,9 @@ CALL_METHOD = MavisNamespace(
 """MavisNamespace: holds controlled vocabulary for allowed call methods
 
 - ``CONTIG``: a contig was assembled and aligned across the breakpoints
-- ``SPLIT``: the event was called by :term:`split read`
-- ``FLANK``: the event was called by :term:`flanking read pair`
-- ``SPAN``: the event was called by :term:`spanning read`
+- ``SPLIT``: the event was called by [split read](/glossary/#split-read)
+- ``FLANK``: the event was called by [flanking read pair](/glossary/#flanking-read-pair)
+- ``SPAN``: the event was called by [spanning read](/glossary/#spanning-read)
 """
 
 GENE_PRODUCT_TYPE = MavisNamespace(SENSE='sense', ANTI_SENSE='anti-sense')
@@ -804,100 +804,100 @@ COLUMNS = MavisNamespace(
 )
 """MavisNamespace: Column names for i/o files used throughout the pipeline
 
-- :term:`annotation_figure_legend`
-- :term:`annotation_figure`
-- :term:`annotation_id`
-- :term:`break1_chromosome`
-- :term:`break1_ewindow_count`
-- :term:`break1_ewindow_practical_coverage`
-- :term:`break1_ewindow`
-- :term:`break1_homologous_seq`
-- :term:`break1_orientation`
-- :term:`break1_position_end`
-- :term:`break1_position_start`
-- :term:`break1_seq`
-- :term:`break1_split_reads_forced`
-- :term:`break1_split_reads`
-- :term:`break1_strand`
-- :term:`break2_chromosome`
-- :term:`break2_ewindow_count`
-- :term:`break2_ewindow_practical_coverage`
-- :term:`break2_ewindow`
-- :term:`break2_homologous_seq`
-- :term:`break2_orientation`
-- :term:`break2_position_end`
-- :term:`break2_position_start`
-- :term:`break2_seq`
-- :term:`break2_split_reads_forced`
-- :term:`break2_split_reads`
-- :term:`break2_strand`
-- :term:`call_method`
-- :term:`cdna_synon`
-- :term:`cluster_id`
-- :term:`cluster_size`
-- :term:`contig_alignment_cigar`
-- :term:`contig_alignment_query_name`
-- :term:`contig_alignment_reference_start`
-- :term:`contig_alignment_score`
-- :term:`contig_build_score`
-- :term:`contig_remap_coverage`
-- :term:`contig_remap_score`
-- :term:`contig_remapped_read_names`
-- :term:`contig_remapped_reads`
-- :term:`contig_seq`
-- :term:`contig_strand_specific`
-- :term:`contigs_assembled`
-- :term:`call_sequence_complexity`
-- :term:`event_type`
-- :term:`flanking_median_fragment_size`
-- :term:`flanking_pairs_compatible`
-- :term:`flanking_pairs`
-- :term:`flanking_stdev_fragment_size`
-- :term:`fusion_cdna_coding_end`
-- :term:`fusion_cdna_coding_end`
-- :term:`fusion_cdna_coding_start`
-- :term:`fusion_mapped_domains`
-- :term:`fusion_sequence_fasta_file`
-- :term:`fusion_sequence_fasta_id`
-- :term:`fusion_splicing_pattern`
-- :term:`fusion_protein_hgvs`
-- :term:`gene1_aliases`
-- :term:`gene1_direction`
-- :term:`gene1`
-- :term:`gene2_aliases`
-- :term:`gene2_direction`
-- :term:`gene2`
-- :term:`gene_product_type`
-- :term:`genes_encompassed`
-- :term:`genes_overlapping_break1`
-- :term:`genes_overlapping_break2`
-- :term:`genes_proximal_to_break1`
-- :term:`genes_proximal_to_break2`
-- :term:`inferred_pairing`
-- :term:`library`
-- :term:`linking_split_reads`
-- :term:`net_size`
-- :term:`opposing_strands`
-- :term:`pairing`
-- :term:`product_id`
-- :term:`protein_synon`
-- :term:`protocol`
-- :term:`raw_break1_split_reads`
-- :term:`raw_break2_split_reads`
-- :term:`raw_flanking_pairs`
-- :term:`raw_spanning_reads`
-- :term:`spanning_read_names`
-- :term:`spanning_reads`
-- :term:`stranded`
-- :term:`tools`
-- :term:`tracking_id`
-- :term:`transcript1`
-- :term:`transcript2`
-- :term:`supplementary_call`
-- :term:`untemplated_seq`
-- :term:`validation_id`
-- :term:`repeat_count`
-- :term:`assumed_untemplated`
+- [annotation_figure_legend](/glossary/#annotation_figure_legend)
+- [annotation_figure](/glossary/#annotation_figure)
+- [annotation_id](/glossary/#annotation_id)
+- [break1_chromosome](/glossary/#break1_chromosome)
+- [break1_ewindow_count](/glossary/#break1_ewindow_count)
+- [break1_ewindow_practical_coverage](/glossary/#break1_ewindow_practical_coverage)
+- [break1_ewindow](/glossary/#break1_ewindow)
+- [break1_homologous_seq](/glossary/#break1_homologous_seq)
+- [break1_orientation](/glossary/#break1_orientation)
+- [break1_position_end](/glossary/#break1_position_end)
+- [break1_position_start](/glossary/#break1_position_start)
+- [break1_seq](/glossary/#break1_seq)
+- [break1_split_reads_forced](/glossary/#break1_split_reads_forced)
+- [break1_split_reads](/glossary/#break1_split_reads)
+- [break1_strand](/glossary/#break1_strand)
+- [break2_chromosome](/glossary/#break2_chromosome)
+- [break2_ewindow_count](/glossary/#break2_ewindow_count)
+- [break2_ewindow_practical_coverage](/glossary/#break2_ewindow_practical_coverage)
+- [break2_ewindow](/glossary/#break2_ewindow)
+- [break2_homologous_seq](/glossary/#break2_homologous_seq)
+- [break2_orientation](/glossary/#break2_orientation)
+- [break2_position_end](/glossary/#break2_position_end)
+- [break2_position_start](/glossary/#break2_position_start)
+- [break2_seq](/glossary/#break2_seq)
+- [break2_split_reads_forced](/glossary/#break2_split_reads_forced)
+- [break2_split_reads](/glossary/#break2_split_reads)
+- [break2_strand](/glossary/#break2_strand)
+- [call_method](/glossary/#call_method)
+- [cdna_synon](/glossary/#cdna_synon)
+- [cluster_id](/glossary/#cluster_id)
+- [cluster_size](/glossary/#cluster_size)
+- [contig_alignment_cigar](/glossary/#contig_alignment_cigar)
+- [contig_alignment_query_name](/glossary/#contig_alignment_query_name)
+- [contig_alignment_reference_start](/glossary/#contig_alignment_reference_start)
+- [contig_alignment_score](/glossary/#contig_alignment_score)
+- [contig_build_score](/glossary/#contig_build_score)
+- [contig_remap_coverage](/glossary/#contig_remap_coverage)
+- [contig_remap_score](/glossary/#contig_remap_score)
+- [contig_remapped_read_names](/glossary/#contig_remapped_read_names)
+- [contig_remapped_reads](/glossary/#contig_remapped_reads)
+- [contig_seq](/glossary/#contig_seq)
+- [contig_strand_specific](/glossary/#contig_strand_specific)
+- [contigs_assembled](/glossary/#contigs_assembled)
+- [call_sequence_complexity](/glossary/#call_sequence_complexity)
+- [event_type](/glossary/#event_type)
+- [flanking_median_fragment_size](/glossary/#flanking_median_fragment_size)
+- [flanking_pairs_compatible](/glossary/#flanking_pairs_compatible)
+- [flanking_pairs](/glossary/#flanking_pairs)
+- [flanking_stdev_fragment_size](/glossary/#flanking_stdev_fragment_size)
+- [fusion_cdna_coding_end](/glossary/#fusion_cdna_coding_end)
+- [fusion_cdna_coding_end](/glossary/#fusion_cdna_coding_end)
+- [fusion_cdna_coding_start](/glossary/#fusion_cdna_coding_start)
+- [fusion_mapped_domains](/glossary/#fusion_mapped_domains)
+- [fusion_sequence_fasta_file](/glossary/#fusion_sequence_fasta_file)
+- [fusion_sequence_fasta_id](/glossary/#fusion_sequence_fasta_id)
+- [fusion_splicing_pattern](/glossary/#fusion_splicing_pattern)
+- [fusion_protein_hgvs](/glossary/#fusion_protein_hgvs)
+- [gene1_aliases](/glossary/#gene1_aliases)
+- [gene1_direction](/glossary/#gene1_direction)
+- [gene1](/glossary/#gene1)
+- [gene2_aliases](/glossary/#gene2_aliases)
+- [gene2_direction](/glossary/#gene2_direction)
+- [gene2](/glossary/#gene2)
+- [gene_product_type](/glossary/#gene_product_type)
+- [genes_encompassed](/glossary/#genes_encompassed)
+- [genes_overlapping_break1](/glossary/#genes_overlapping_break1)
+- [genes_overlapping_break2](/glossary/#genes_overlapping_break2)
+- [genes_proximal_to_break1](/glossary/#genes_proximal_to_break1)
+- [genes_proximal_to_break2](/glossary/#genes_proximal_to_break2)
+- [inferred_pairing](/glossary/#inferred_pairing)
+- [library](/glossary/#library)
+- [linking_split_reads](/glossary/#linking_split_reads)
+- [net_size](/glossary/#net_size)
+- [opposing_strands](/glossary/#opposing_strands)
+- [pairing](/glossary/#pairing)
+- [product_id](/glossary/#product_id)
+- [protein_synon](/glossary/#protein_synon)
+- [protocol](/glossary/#protocol)
+- [raw_break1_split_reads](/glossary/#raw_break1_split_reads)
+- [raw_break2_split_reads](/glossary/#raw_break2_split_reads)
+- [raw_flanking_pairs](/glossary/#raw_flanking_pairs)
+- [raw_spanning_reads](/glossary/#raw_spanning_reads)
+- [spanning_read_names](/glossary/#spanning_read_names)
+- [spanning_reads](/glossary/#spanning_reads)
+- [stranded](/glossary/#stranded)
+- [tools](/glossary/#tools)
+- [tracking_id](/glossary/#tracking_id)
+- [transcript1](/glossary/#transcript1)
+- [transcript2](/glossary/#transcript2)
+- [supplementary_call](/glossary/#supplementary_call)
+- [untemplated_seq](/glossary/#untemplated_seq)
+- [validation_id](/glossary/#validation_id)
+- [repeat_count](/glossary/#repeat_count)
+- [assumed_untemplated](/glossary/#assumed_untemplated)
 """
 
 

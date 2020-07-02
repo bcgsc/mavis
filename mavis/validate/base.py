@@ -318,7 +318,8 @@ class Evidence(BreakpointPair):
         Raises:
             ValueError: if the input reads are not a valid pair
 
-        see :ref:`theory - types of flanking evidence <theory-compatible-flanking-pairs>`
+        Note:
+            see [theory - types of flanking evidence](/background/theory/#compatible-flanking-pairs)
         """
         if (
             read.is_unmapped
@@ -408,7 +409,7 @@ class Evidence(BreakpointPair):
         Raises:
             ValueError: if the input reads are not a valid pair
 
-        see :ref:`theory - types of flanking evidence <theory-types-of-flanking-evidence>`
+        see [theory - types of flanking evidence](/background/theory/#types-of-flanking-evidence)
         """
         if read.is_unmapped or mate.is_unmapped:
             raise ValueError(

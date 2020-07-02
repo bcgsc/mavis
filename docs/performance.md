@@ -18,7 +18,7 @@ COLO829 tumour genome. The BAM file for the tumour genome is 127GB.
 Validation jobs were tested splitting into: 100, 500, 1000, and 2500
 structural variant validations per job. The effect of number of events
 validated on both memory and time is plotted
-above.](./images/colo829_tumour_validation_resource_req.png)
+above.](/images/colo829_tumour_validation_resource_req.png)
 
 ## Annotation Resources
 
@@ -30,4 +30,4 @@ not read more data in for more events.
 ![Resource Requirements (MAVIS 1.8.0) for each annotation job of the
 COLO829 tumour genome. The events which passed validation (see above)
 represent the number of events input to the annotation
-step.](./images/colo829_tumour_annotation_resource_req.png)
+step.](/images/colo829_tumour_annotation_resource_req.png)

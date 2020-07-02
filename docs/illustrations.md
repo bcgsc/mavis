@@ -7,13 +7,13 @@ the putative fusion events of a single breakpoint pair.
 
 ![Fusion from transcriptome data. Intronic breakpoints here indicate
 retained intron sequence and a novel exon is
-predicted.](./images/GIMAP4_IL7_fusion.svg)
+predicted.](/images/GIMAP4_IL7_fusion.svg)
 
-If the [draw_fusions_only](./../glossary#draw_fusions_only) flag is set to
+If the [draw_fusions_only](/glossary/#draw_fusions_only) flag is set to
 False then all events will produce a diagram, even anti-sense fusions
 
 ![Disruptive Anti-sense
-Fusion](./images/UBE2V2_GIMAP4_disruptive_fusion.svg)
+Fusion](/images/UBE2V2_GIMAP4_disruptive_fusion.svg)
 
 ## Transcript Overlays
 
@@ -22,7 +22,7 @@ These can be overlaid with markers and bam\_file pileup data. This is
 particularly useful for visualizing splice site mutations.
 
 ![RB1 splice site mutation results in skipping of exon
-9](./images/ENSG00000139687_RB1_overlay.png)
+9](/images/ENSG00000139687_RB1_overlay.png)
 
 The above diagram was generated using the overlay command
 

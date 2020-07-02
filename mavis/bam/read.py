@@ -164,11 +164,11 @@ def pileup(reads, filter_func=None):
     For a given set of reads generate a pileup of all reads (excluding those for which the filter_func returns True)
 
     Args:
-        reads (iterable of pysam.AlignedSegment): reads to pileup
-        filter_func (callable): function which takes in a  read and returns True if it should be ignored and False otherwise
+        reads (Iterable[pysam.AlignedSegment]): reads to pileup
+        filter_func (Callable): function which takes in a  read and returns True if it should be ignored and False otherwise
 
     Returns:
-        iterable of tuple of int and int: tuples of genomic position and read count at that position
+        Iterable[Tuple[int,int]]: tuples of genomic position and read count at that position
 
     Note:
         returns positions using 1-based indexing
@@ -312,7 +312,7 @@ def nsb_align(
         min_overlap_percent (float): the minimum amount of overlap of the input sequence to the reference
             should be a number between 0 and 1
         min_match (float): the minimum number of matches compared to total
-        scoring_function (callable): any function that will take a read as input and return a float
+        scoring_function (Callable): any function that will take a read as input and return a float
           used in comparing alignments to choose the best alignment
 
     Returns:

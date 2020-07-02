@@ -450,7 +450,7 @@ def call_protein_indel(ref_translation, fusion_translation, reference_genome=Non
         fusion_translation (Translation): the fusion protein/translation
         reference_genome: the reference genome object used to fetch the reference translation AA sequence
     Returns:
-        str: the :term:`HGVS` protein indel notation
+        str: the [HGVS](/glossary/#HGVS) protein indel notation
     """
     ref_aa_seq = ref_translation.get_aa_seq(reference_genome)
     call = IndelCall(ref_aa_seq, fusion_translation.get_aa_seq())
@@ -836,11 +836,11 @@ def annotate_events(
         bpps (List[mavis.breakpoint.BreakpointPair]): list of events
         annotations: reference annotations
         reference_genome (Dict[string,string]): dictionary of reference sequences by name
-        max_proximity (int): see :term:`max_proximity`
-        min_orf_size (int): see :term:`min_orf_size`
-        min_domain_mapping_match (float): see :term:`min_domain_mapping_match`
-        max_orf_cap (int): see :term:`max_orf_cap`
-        log (callable): callable function to take in strings and time_stamp args
+        max_proximity (int): see [max_proximity](/glossary/#max_proximity)
+        min_orf_size (int): see [min_orf_size](/glossary/#min_orf_size)
+        min_domain_mapping_match (float): see [min_domain_mapping_match](/glossary/#min_domain_mapping_match)
+        max_orf_cap (int): see [max_orf_cap](/glossary/#max_orf_cap)
+        log (Callable): callable function to take in strings and time_stamp args
         filters (List[callable]): list of functions taking in a list and returning a list for filtering
 
     Returns:

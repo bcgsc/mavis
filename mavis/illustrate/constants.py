@@ -4,24 +4,24 @@ from ..util import WeakMavisNamespace
 
 DEFAULTS = WeakMavisNamespace()
 """
-- :term:`breakpoint_color`
-- :term:`domain_color`
-- :term:`domain_mismatch_color`
-- :term:`domain_name_regex_filter`
-- :term:`domain_scaffold_color`
-- :term:`drawing_width_iter_increase`
-- :term:`gene1_color_selected`
-- :term:`gene1_color`
-- :term:`gene2_color_selected`
-- :term:`gene2_color`
-- :term:`label_color`
-- :term:`mask_fill`
-- :term:`mask_opacity`
-- :term:`max_drawing_retries`
-- :term:`novel_exon_color`
-- :term:`scaffold_color`
-- :term:`splice_color`
-- :term:`width`
+- [breakpoint_color](/glossary/#breakpoint_color)
+- [domain_color](/glossary/#domain_color)
+- [domain_mismatch_color](/glossary/#domain_mismatch_color)
+- [domain_name_regex_filter](/glossary/#domain_name_regex_filter)
+- [domain_scaffold_color](/glossary/#domain_scaffold_color)
+- [drawing_width_iter_increase](/glossary/#drawing_width_iter_increase)
+- [gene1_color_selected](/glossary/#gene1_color_selected)
+- [gene1_color](/glossary/#gene1_color)
+- [gene2_color_selected](/glossary/#gene2_color_selected)
+- [gene2_color](/glossary/#gene2_color)
+- [label_color](/glossary/#label_color)
+- [mask_fill](/glossary/#mask_fill)
+- [mask_opacity](/glossary/#mask_opacity)
+- [max_drawing_retries](/glossary/#max_drawing_retries)
+- [novel_exon_color](/glossary/#novel_exon_color)
+- [scaffold_color](/glossary/#scaffold_color)
+- [splice_color](/glossary/#splice_color)
+- [width](/glossary/#width)
 """
 DEFAULTS.add('width', 1000, defn='The drawing width in pixels')
 DEFAULTS.add(

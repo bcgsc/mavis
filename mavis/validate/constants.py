@@ -6,46 +6,46 @@ PASS_FILENAME = 'validation-passed.tab'
 
 DEFAULTS = WeakMavisNamespace()
 """
-- :term:`aligner`
-- :term:`assembly_kmer_size`
-- :term:`assembly_max_paths`
-- :term:`assembly_min_edge_trim_weight`
-- :term:`assembly_min_exact_match_to_remap`
-- :term:`assembly_min_remap_coverage`
-- :term:`assembly_min_remapped_seq`
-- :term:`assembly_min_uniq`
-- :term:`assembly_strand_concordance`
-- :term:`blat_limit_top_aln`
-- :term:`blat_min_identity`
-- :term:`call_error`
-- :term:`contig_aln_max_event_size`
-- :term:`contig_aln_merge_inner_anchor`
-- :term:`contig_aln_merge_outer_anchor`
-- :term:`contig_aln_min_anchor_size`
-- :term:`contig_aln_min_extend_overlap`
-- :term:`contig_aln_min_query_consumption`
-- :term:`contig_aln_min_score`
-- :term:`fetch_min_bin_size`
-- :term:`fetch_reads_bins`
-- :term:`fetch_reads_limit`
-- :term:`filter_secondary_alignments`
-- :term:`fuzzy_mismatch_number`
-- :term:`max_sc_preceeding_anchor`
-- :term:`min_anchor_exact`
-- :term:`min_anchor_fuzzy`
-- :term:`min_anchor_match`
-- :term:`min_double_aligned_to_estimate_insertion_size`
-- :term:`min_flanking_pairs_resolution`
-- :term:`min_linking_split_reads`
-- :term:`min_mapping_quality`
-- :term:`min_non_target_aligned_split_reads`
-- :term:`min_sample_size_to_apply_percentage`
-- :term:`min_softclipping`
-- :term:`min_spanning_reads_resolution`
-- :term:`min_splits_reads_resolution`
-- :term:`outer_window_min_event_size`
-- :term:`stdev_count_abnormal`
-- :term:`strand_determining_read`
+- [aligner](/glossary/#aligner)
+- [assembly_kmer_size](/glossary/#assembly_kmer_size)
+- [assembly_max_paths](/glossary/#assembly_max_paths)
+- [assembly_min_edge_trim_weight](/glossary/#assembly_min_edge_trim_weight)
+- [assembly_min_exact_match_to_remap](/glossary/#assembly_min_exact_match_to_remap)
+- [assembly_min_remap_coverage](/glossary/#assembly_min_remap_coverage)
+- [assembly_min_remapped_seq](/glossary/#assembly_min_remapped_seq)
+- [assembly_min_uniq](/glossary/#assembly_min_uniq)
+- [assembly_strand_concordance](/glossary/#assembly_strand_concordance)
+- [blat_limit_top_aln](/glossary/#blat_limit_top_aln)
+- [blat_min_identity](/glossary/#blat_min_identity)
+- [call_error](/glossary/#call_error)
+- [contig_aln_max_event_size](/glossary/#contig_aln_max_event_size)
+- [contig_aln_merge_inner_anchor](/glossary/#contig_aln_merge_inner_anchor)
+- [contig_aln_merge_outer_anchor](/glossary/#contig_aln_merge_outer_anchor)
+- [contig_aln_min_anchor_size](/glossary/#contig_aln_min_anchor_size)
+- [contig_aln_min_extend_overlap](/glossary/#contig_aln_min_extend_overlap)
+- [contig_aln_min_query_consumption](/glossary/#contig_aln_min_query_consumption)
+- [contig_aln_min_score](/glossary/#contig_aln_min_score)
+- [fetch_min_bin_size](/glossary/#fetch_min_bin_size)
+- [fetch_reads_bins](/glossary/#fetch_reads_bins)
+- [fetch_reads_limit](/glossary/#fetch_reads_limit)
+- [filter_secondary_alignments](/glossary/#filter_secondary_alignments)
+- [fuzzy_mismatch_number](/glossary/#fuzzy_mismatch_number)
+- [max_sc_preceeding_anchor](/glossary/#max_sc_preceeding_anchor)
+- [min_anchor_exact](/glossary/#min_anchor_exact)
+- [min_anchor_fuzzy](/glossary/#min_anchor_fuzzy)
+- [min_anchor_match](/glossary/#min_anchor_match)
+- [min_double_aligned_to_estimate_insertion_size](/glossary/#min_double_aligned_to_estimate_insertion_size)
+- [min_flanking_pairs_resolution](/glossary/#min_flanking_pairs_resolution)
+- [min_linking_split_reads](/glossary/#min_linking_split_reads)
+- [min_mapping_quality](/glossary/#min_mapping_quality)
+- [min_non_target_aligned_split_reads](/glossary/#min_non_target_aligned_split_reads)
+- [min_sample_size_to_apply_percentage](/glossary/#min_sample_size_to_apply_percentage)
+- [min_softclipping](/glossary/#min_softclipping)
+- [min_spanning_reads_resolution](/glossary/#min_spanning_reads_resolution)
+- [min_splits_reads_resolution](/glossary/#min_splits_reads_resolution)
+- [outer_window_min_event_size](/glossary/#outer_window_min_event_size)
+- [stdev_count_abnormal](/glossary/#stdev_count_abnormal)
+- [strand_determining_read](/glossary/#strand_determining_read)
 
 """
 DEFAULTS.add(
@@ -53,7 +53,7 @@ DEFAULTS.add(
     0.10,
     cast_type=float_fraction,
     defn='The minimum complexity score for a call sequence. Is an average for non-contig calls. Filters '
-    'low complexity contigs before alignment. see :term:`contig_complexity`',
+    'low complexity contigs before alignment. see [contig_complexity](/glossary/#contig_complexity)',
 )
 DEFAULTS.add(
     'aligner',
@@ -179,7 +179,7 @@ DEFAULTS.add(
     12000,
     cast_type=int,
     nullable=True,
-    defn='Related to :term:`fetch_reads_limit`. Overrides fetch_reads_limit for transcriptome libraries when set. '
+    defn='Related to [fetch_reads_limit](/glossary/#fetch_reads_limit). Overrides fetch_reads_limit for transcriptome libraries when set. '
     'If this has a value of None then fetch_reads_limit will be used for transcriptome libraries instead',
 )
 DEFAULTS.add(
@@ -241,7 +241,7 @@ DEFAULTS.add(
     0,
     cast_type=int,
     nullable=True,
-    defn='Related to :term:`min_mapping_quality`. Overrides the min_mapping_quality if the library is a transcriptome '
+    defn='Related to [min_mapping_quality](/glossary/#min_mapping_quality). Overrides the min_mapping_quality if the library is a transcriptome '
     'and this is set to any number not None. If this value is None, min_mapping_quality is used for transcriptomes as'
     'well as genomes',
 )

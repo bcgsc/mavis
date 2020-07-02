@@ -46,9 +46,9 @@ def main(
         median_fragment_size (int): the median fragment size
         stdev_fragment_size (int): the standard deviation in fragment size
         read_length (int): read length
-        reference_genome (mavis.annotate.file_io.ReferenceFile): see :func:`~mavis.annotate.file_io.load_reference_genome`
-        annotations (mavis.annotate.file_io.ReferenceFile): see :func:`~mavis.annotate.file_io.load_reference_genes`
-        masking (mavis.annotate.file_io.ReferenceFile): see :func:`~mavis.annotate.file_io.load_masking_regions`
+        reference_genome (mavis.annotate.file_io.ReferenceFile): see :func:`mavis.annotate.file_io.load_reference_genome`
+        annotations (mavis.annotate.file_io.ReferenceFile): see :func:`mavis.annotate.file_io.load_reference_genes`
+        masking (mavis.annotate.file_io.ReferenceFile): see :func:`mavis.annotate.file_io.load_masking_regions`
         aligner_reference (mavis.annotate.file_io.ReferenceFile): path to the aligner reference file (e.g 2bit file for blat)
     """
     mkdirp(output)

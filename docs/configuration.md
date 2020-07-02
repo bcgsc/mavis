@@ -40,8 +40,8 @@ export MAVIS_MIN_MAPPING_QUALITY=10
 ### Choosing the Number of Validation/Annotation Jobs
 
 MAVIS chooses the number of jobs to split validate/annotate stages into
-based on two settings: [max_files](./../glossary#max_files) and
-[min_clusters_per_file](./../glossary#min_clusters_per_file).
+based on two settings: [max_files](/glossary/#max_files) and
+[min_clusters_per_file](/glossary/#min_clusters_per_file).
 
 For example, in the following situation say you have: 1000 clusters,
 `max_files=10`, and `min_clusters_per_file=10`. Then MAVIS will set up
@@ -49,8 +49,8 @@ For example, in the following situation say you have: 1000 clusters,
 
 However, if `min_clusters_per_file=500`, then MAVIS would only set up 2
 jobs each with 500 events. This is because
-[min_clusters_per_file](./../glossary#min_clusters_per_file) takes precedence
-over [max_files](./../glossary#max_files).
+[min_clusters_per_file](/glossary/#min_clusters_per_file) takes precedence
+over [max_files](/glossary/#max_files).
 
 Splitting into more jobs will lower the resource requirements per job
 (see `resource requirements <resource-requirements>`{.interpreted-text
@@ -60,9 +60,9 @@ with respect to the number of events to be validated.
 ### Uninformative Filter
 
 For example, if the user is only interested in events in genes, then the
-[uninformative_filter](./../glossary#uninformative_filter) can be used. This
+[uninformative_filter](/glossary/#uninformative_filter) can be used. This
 will drop all events that are not within a certain distance
-([max_proximity](./../glossary#max_proximity)) to any annotation in
+([max_proximity](/glossary/#max_proximity)) to any annotation in
 the annotations reference file. These events will be dropped prior to
 the validation stage which results in significant speed up.
 

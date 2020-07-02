@@ -182,7 +182,8 @@ class EventCall(BreakpointPair):
                 * int - the median insert size
                 * int - the standard deviation (from the median) of the insert size
 
-        see :ref:`theory - determining flanking support <theory-determining-flanking-support>`
+        Note:
+            see [theory - determining flanking support](/background/theory/#determining-flanking-support)
         """
         min_frag = max(
             [

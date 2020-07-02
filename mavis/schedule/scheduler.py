@@ -109,7 +109,7 @@ class SlurmScheduler(Scheduler):
     """
 
     NAME = SCHEDULER.SLURM
-    """:attr:`~mavis.schedule.constants.SCHEDULER`: the type of scheduler"""
+    """:attr:`mavis.schedule.constants.SCHEDULER`: the type of scheduler"""
 
     ENV_TASK_IDENT = 'SLURM_ARRAY_TASK_ID'
     ENV_JOB_IDENT = 'SLURM_JOB_ID'
@@ -369,7 +369,7 @@ class SgeScheduler(Scheduler):
     """
 
     NAME = SCHEDULER.SGE
-    """:attr:`~mavis.schedule.constants.SCHEDULER`: the type of scheduler"""
+    """:attr:`mavis.schedule.constants.SCHEDULER`: the type of scheduler"""
     ENV_TASK_IDENT = 'SGE_TASK_ID'
     ENV_JOB_IDENT = 'JOB_ID'
     """str: expected pattern for environment variables which store the job id"""
@@ -691,7 +691,7 @@ class TorqueScheduler(SgeScheduler):
     """
 
     NAME = SCHEDULER.TORQUE
-    """:attr:`~mavis.schedule.constants.SCHEDULER`: the type of scheduler"""
+    """:attr:`mavis.schedule.constants.SCHEDULER`: the type of scheduler"""
     ENV_TASK_IDENT = 'PBS_ARRAYID'
     ENV_JOB_IDENT = 'PBS_JOBID'
     """str: expected pattern for environment variables which store the job id"""

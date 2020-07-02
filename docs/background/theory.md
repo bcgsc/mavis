@@ -9,10 +9,10 @@ And a breakpoint is defined by
 1.  chromosome
 2.  base-pair range (start, end). This has a length of 1 for exact calls
     and more for uncertain/non-specific calls
-3.  [orientation](./../glossary#orientation). This is Left or Right
+3.  [orientation](/glossary/#orientation). This is Left or Right
     with respect to the positive/forward strand. This defines which
     portion of the genome is 'retained'
-4.  [strand](./../glossary#strand). (only applicable to
+4.  [strand](/glossary/#strand). (only applicable to
     stranded transcriptome libraries)
 
 So then a breakpoint pair is any two intervals on the reference genome
@@ -27,11 +27,11 @@ support for an SV call.
 
 ![In the figure above the red rectangle represents a deletion structural
 variant. The arrows are types of single or paired-end reads supporting
-the event: [flanking read pair](./../glossary#flanking read pair)s (F),
-[split read](./../glossary#split read)s (S),
-[half-mapped read](./../glossary#half-mapped read)s (H), and
-[spanning read](./../glossary#spanning read)s
-(N).](./../images/read_evidence.svg)
+the event: [flanking read pair](/glossary/#flanking read pair)s (F),
+[split read](/glossary/#split read)s (S),
+[half-mapped read](/glossary/#half-mapped read)s (H), and
+[spanning read](/glossary/#spanning read)s
+(N).](/images/read_evidence.svg)
 
 ### Types of Flanking evidence
 
@@ -65,7 +65,7 @@ Both breakpoints would be on the positive strand (assuming that the
 input is stranded) which means that the first read in the pair would be
 on the positive strand and the second read in the pair would be on the
 negative/reverse
-strand.](./../images/read_pairs_deletion.svg)
+strand.](/images/read_pairs_deletion.svg)
 
 #### Insertion
 
@@ -78,7 +78,7 @@ Both breakpoints would be on the positive strand (assuming that the
 input is stranded) which means that the first read in the pair would be
 on the positive strand and the second read in the pair would be on the
 negative/reverse
-strand.](./../images/read_pairs_insertion.svg)
+strand.](/images/read_pairs_insertion.svg)
 
 #### Duplication
 
@@ -87,37 +87,37 @@ pairs will have an abnormal orientation but still the same strands as
 the normal read pair. (B1) The first breakpoint will be on the positive
 strand and have a right orientation. (B2) The second breakpoint will be
 on the positive strand and have a left
-orientation.](./../images/read_pairs_duplication.svg)
+orientation.](/images/read_pairs_duplication.svg)
 
 #### Inversion
 
 ![Flanking read pair evidence for an inversion. Both breakpoints have
-left orientation.](./../images/read_pairs_inversion_LL.svg)
+left orientation.](/images/read_pairs_inversion_LL.svg)
 
 ![Flanking read pair evidence for an inversion. Both breakpoints have
-right orientation.](./../images/read_pairs_inversion_RR.svg)
+right orientation.](/images/read_pairs_inversion_RR.svg)
 
 #### Translocation
 
 ![Flanking read pair evidence for a translocation. (B1) the first
 breakpoint with a left orientation. (B2) the second breakpoint with a
 right
-orientation.](./../images/read_pairs_translocation_LR.svg)
+orientation.](/images/read_pairs_translocation_LR.svg)
 
 ![Flanking read pair evidence for a translocation. (B1) the first
 breakpoint with a right orientation. (B2) the second breakpoint with a
 left
-orientation.](./../images/read_pairs_translocation_RL.svg)
+orientation.](/images/read_pairs_translocation_RL.svg)
 
 #### Inverted Translocation
 
 ![Flanking read pair evidence for an inverted translocation. Both
 breakpoints have left
-orientation.](./../images/read_pairs_translocated_inversion_LL.svg)
+orientation.](/images/read_pairs_translocated_inversion_LL.svg)
 
 ![Flanking read pair evidence for an inverted translocation. Both
 breakpoints have right
-orientation.](./../images/read_pairs_translocated_inversion_RR.svg)
+orientation.](/images/read_pairs_translocated_inversion_RR.svg)
 
 
 
@@ -134,7 +134,7 @@ insertion (depending on the input call). If the even were called as a
 duplication the reads in green would be the flanking supoprt and the
 reads in blue would be given as compatible flanking support. If the
 event were called as an insertion the reverse would
-apply.](./../images/compatible_flanking_pairs.svg)
+apply.](/images/compatible_flanking_pairs.svg)
 
 
 
@@ -143,7 +143,7 @@ apply.](./../images/compatible_flanking_pairs.svg)
 ![Basic Terms used in describing read pairs are shown above: fragment
 size: the distance between the pair; read length: the length of the
 read; fragment size: the combined length of both reads and the fragment
-size](./../images/read_pair_definitions.svg)
+size](/images/read_pair_definitions.svg)
 
 We make some base assumptions with regards to paired-end read data:
 
@@ -188,7 +188,7 @@ the standard deviation calculated with all data points. The blue curve
 is the expected distribution using a 0.95 fraction of the data. The
 thick vertical black line is the median and the thin black lines are
 standard deviations away from the
-median.](./../images/fragment_sizes_histogram.svg)
+median.](/images/fragment_sizes_histogram.svg)
 
 As we can see from the diagram above, removing the outliers reproduces
 the observed distribution better than using all data points
@@ -200,17 +200,17 @@ We use this in two ways
     bam when looking for evidence for a given event
 
 The
-:py`~mavis.validate.evidence.GenomeEvidence._generate_window`{.interpreted-text
+:py`mavis.validate.evidence.GenomeEvidence._generate_window`{.interpreted-text
 role="func"} function uses the above concepts. The user will define the
 `median_fragment_size` the `stdev_fragment_size` , and the
 `stdev_count_abnormal` parameters defined in the
-`~mavis.constants.VALIDATION_DEFAULTS`
+`mavis.constants.VALIDATION_DEFAULTS`
 class.
 
 If the library has a transcriptome protocol this becomes a bit more
 complicated and we must take into account the possible annotations when
 calculating the evidence window. see
-:py`~mavis.validate.evidence.TranscriptomeEvidence._generate_window`{.interpreted-text
+:py`mavis.validate.evidence.TranscriptomeEvidence._generate_window`{.interpreted-text
 role="func"} for more
 
 
@@ -224,15 +224,15 @@ probabilistic range.
 
 The metrics used here are similar to those used in calculating the
 evidence window. We use the
-[max_expected_fragment_size](./../glossary#max_expected_fragment_size) as the outer
+[max_expected_fragment_size](/glossary/#max_expected_fragment_size) as the outer
 limit of how large the range can be. This is further refined taking into
-account the range spanned by the [flanking read pair](./../glossary#flanking read pair) evidence and the position of the opposing breakpoint.
+account the range spanned by the [flanking read pair](/glossary/#flanking read pair) evidence and the position of the opposing breakpoint.
 
 ![Calculation of the left-oriented breakpoint by flanking reads. Reads
 mapped to the breakpoint are shown in grey. The read on the right (black
 outline, no fill) demonstrates the read length used to narrow the right
 side bound of the estimated breakpoint
-interval.](./../images/call_breakpoint_by_flanking_reads.svg)
+interval.](/images/call_breakpoint_by_flanking_reads.svg)
 
 
 
@@ -247,7 +247,7 @@ would flank the breakpoint should follow a similar distribution to the
 normal genome but the median will be shifted by the size of the event.
 The shaded portion of the graph represents the range in fragment sizes
 we expect for flanking pairs supporting the deletion
-event.](./../images/flanking_pairs_fragment_sizes_deletion.svg)
+event.](/images/flanking_pairs_fragment_sizes_deletion.svg)
 
 
 
@@ -255,13 +255,13 @@ event.](./../images/flanking_pairs_fragment_sizes_deletion.svg)
 
 The following decision tree is used in classifying events based on their
 breakpoints. Only valid combinations have been shown. see
-:py`~mavis.breakpoint.BreakpointPair.classify`{.interpreted-text
+:py`mavis.breakpoint.BreakpointPair.classify`{.interpreted-text
 role="func"}
 
 ![Classification Decision Tree. The above diagram details the decsion
 logic for classifying events based on the orientation, strand and
 chromosomes or their respective
-breakpoints](./../images/classification_tree.svg)
+breakpoints](/images/classification_tree.svg)
 
 
 
@@ -269,12 +269,12 @@ breakpoints](./../images/classification_tree.svg)
 
 During validation, for each breakpoint pair, we attempt to assemble a
 contig to represent the sequence across the breakpoints. This is
-assembled from the supporting reads ([split read](./../glossary#split read), [half-mapped read](./../glossary#half-mapped read),
-[flanking read pair](./../glossary#flanking read pair), and
-[spanning read](./../glossary#spanning read)) which have already been
+assembled from the supporting reads ([split read](/glossary/#split read), [half-mapped read](/glossary/#half-mapped read),
+[flanking read pair](/glossary/#flanking read pair), and
+[spanning read](/glossary/#spanning read)) which have already been
 collected for the given event. The sequence from each read and its
 reverse complement are assembled into contigs using a
-[DeBruijn graph](./../glossary#DeBruijn graph). For strand specific
+[DeBruijn graph](/glossary/#DeBruijn graph). For strand specific
 events, we then attempt to resolve the sequence strand of the contig.
 
 
@@ -307,7 +307,7 @@ genes that would be deleted).
 ![Gene level annotations at each breakpoint. Note: genes which fall
 between a breakpoint pair, encompassed genes, will not be present for
 interchromosomal events
-(translocations)](./../images/annotations_summary.svg)
+(translocations)](/images/annotations_summary.svg)
 
 Next there are the fusion-product level annotations. If the event result
 in a fusion transcript, the sequence of the fusion transcript is
@@ -327,7 +327,7 @@ be. MAVIS will calculate all possibilities according to the following
 model.
 
 ![The default splicing pattern is a list of pairs of donor and acceptor
-splice sites](./../images/splicing_pattern_default.svg)
+splice sites](/images/splicing_pattern_default.svg)
 
 For a given list of non-abrogated splice sites (listed 5\' to 3\' on the
 strand of the transcript) donor splice sites are paired with all
@@ -336,33 +336,33 @@ following as seen below
 ![Multiple abrogated acceptors sites. As one can see above this
 situation will result in 3 different splicing patterns depending on
 which donor is paired with the 2nd acceptor
-site](./../images/splicing_pattern_multiple_donors.svg)
+site](/images/splicing_pattern_multiple_donors.svg)
 
 ![Multiple abrogated donor sites. As one can see above this situation
 will result in 3 different splicing patterns depending on which acceptor
 is paired with the 2nd donor
-site](./../images/splicing_pattern_multiple_acceptors.svg)
+site](/images/splicing_pattern_multiple_acceptors.svg)
 
 More complex examples are drawn below. There are five classifications
-(`~mavis.constants.SPLICE_TYPE`) for the
+(`mavis.constants.SPLICE_TYPE`) for the
 different splicing patterns:
 
 1.  Retained intron
-    (`~mavis.constants.SPLICE_TYPE.RETAIN`{.interpreted-text
+    (`mavis.constants.SPLICE_TYPE.RETAIN`{.interpreted-text
     role="class"})
-2.  Skipped exon (`~mavis.constants.SPLICE_TYPE.SKIP`{.interpreted-text
+2.  Skipped exon (`mavis.constants.SPLICE_TYPE.SKIP`{.interpreted-text
     role="attr"})
 3.  Multiple retained introns
-    (`~mavis.constants.SPLICE_TYPE.MULTI_RETAIN`{.interpreted-text
+    (`mavis.constants.SPLICE_TYPE.MULTI_RETAIN`{.interpreted-text
     role="attr"})
 4.  Multiple skipped exons
-    (`~mavis.constants.SPLICE_TYPE.MULTI_SKIP`{.interpreted-text
+    (`mavis.constants.SPLICE_TYPE.MULTI_SKIP`{.interpreted-text
     role="attr"})
 5.  Some combination of retained introns and skipped exons
-    (`~mavis.constants.SPLICE_TYPE.COMPLEX`{.interpreted-text
+    (`mavis.constants.SPLICE_TYPE.COMPLEX`{.interpreted-text
     role="attr"})
 
-![Splicing scenarios](./../images/splicing_model.svg)
+![Splicing scenarios](/images/splicing_model.svg)
 
 
 
@@ -397,4 +397,4 @@ site prior to the breakpoint is an acceptor and the first acceptor is
 used. (G) The first splice site prior to the breakpoint is an acceptor
 and the second acceptor is used. (H) The first splice site prior to the
 breakpoint is a
-donor](./../images/breakpoint_prediction_exonic.svg)
+donor](/images/breakpoint_prediction_exonic.svg)

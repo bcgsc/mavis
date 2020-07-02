@@ -87,7 +87,8 @@ class SplicingPattern(list):
         Returns:
             List[SplicingPattern]: List of positions to be spliced together
 
-        see :ref:`theory - predicting splicing patterns <theory-predicting-splicing-patterns>`
+        Note:
+            see [theory - predicting splicing patterns](/background/theory/#predicting-splicing-patterns)
         """
         if not sites:
             return [SplicingPattern()]

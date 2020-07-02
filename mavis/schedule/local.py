@@ -20,7 +20,7 @@ class LocalJob(Job):
         """
         Args:
             args (list): A list of arguments to passed to the function given
-            func (callable): the function to be run
+            func (Callable): the function to be run
             rank (int): rank of the job within the pool
             response (concurrent.futures.Future): the result from the subprocess
         """
@@ -71,7 +71,7 @@ class LocalScheduler(Scheduler):
     """
 
     NAME = SCHEDULER.LOCAL
-    """:attr:`~mavis.schedule.constants.SCHEDULER`: the type of scheduler"""
+    """:attr:`mavis.schedule.constants.SCHEDULER`: the type of scheduler"""
 
     def __init__(self, *pos, **kwargs):
         Scheduler.__init__(self, *pos, **kwargs)

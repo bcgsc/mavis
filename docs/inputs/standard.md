@@ -27,13 +27,13 @@ A simple input file might look as follows
 
 ## Required Columns
 
--   [break1_chromosome](./../glossary#break1_chromosome)
--   [break1_position_start](./../glossary#break1_position_start)
--   [break1_position_end](./../glossary#break1_position_end) (can be the
+-   [break1_chromosome](/glossary/#break1_chromosome)
+-   [break1_position_start](/glossary/#break1_position_start)
+-   [break1_position_end](/glossary/#break1_position_end) (can be the
     same as break1\_position\_start)
--   [break2_chromosome](./../glossary#break2_chromosome)
--   [break2_position_start](./../glossary#break2_position_start)
--   [break2_position_end](./../glossary#break2_position_end) (can be the
+-   [break2_chromosome](/glossary/#break2_chromosome)
+-   [break2_position_start](/glossary/#break2_position_start)
+-   [break2_position_end](/glossary/#break2_position_end) (can be the
     same as break2\_position\_start)
 
 ## Optional Columns
@@ -42,23 +42,23 @@ Optional Columns that are not given as input will be added with default
 (or command line parameter options) during the clustering stage of MAVIS
 as some are required for subsequent pipeline steps
 
--   [break1_strand](./../glossary#break1_strand) (defaults to
+-   [break1_strand](/glossary/#break1_strand) (defaults to
     not-specified during clustering)
--   [break1_orientation](./../glossary#break1_orientation) (expanded to all
+-   [break1_orientation](/glossary/#break1_orientation) (expanded to all
     possible values during clustering)
--   [break2_strand](./../glossary#break2_strand) (defaults to
+-   [break2_strand](/glossary/#break2_strand) (defaults to
     not-specified during clustering)
--   [break2_orientation](./../glossary#break2_orientation) (expanded to all
+-   [break2_orientation](/glossary/#break2_orientation) (expanded to all
     possible values during clustering)
--   [opposing_strands](./../glossary#opposing_strands) (expanded to all
+-   [opposing_strands](/glossary/#opposing_strands) (expanded to all
     possible values during clustering)
--   [stranded](./../glossary#stranded) (defaults to False during
+-   [stranded](/glossary/#stranded) (defaults to False during
     clustering)
--   [library](./../glossary#library) (defaults to command line
+-   [library](/glossary/#library) (defaults to command line
     library parameter during clustering)
--   [protocol](./../glossary#protocol) (defaults to command line
+-   [protocol](/glossary/#protocol) (defaults to command line
     protocol parameter during clustering)
--   [tools](./../glossary#tools) (defaults to an empty string
+-   [tools](/glossary/#tools) (defaults to an empty string
     during clustering)
 
 ## Summary by Pipeline Step
@@ -67,24 +67,24 @@ The different pipeline steps of MAVIS have different input column
 requirements. These are summarized below (for the pipeline steps which
 can act as the pipeline start)
 
-| column name                                                  | cluster | annotate | validate |
-| ------------------------------------------------------------ | ------- | -------- | -------- |
-| [break1_chromosome](./../glossary#break1_chromosome)         |         |          |          |
-| [break1_position_start](./../glossary#break1_position_start) |         |          |          |
-| [break1_position_end](./../glossary#break1_position_end)     |         |          |          |
-| [break2_chromosome](./../glossary#break2_chromosome)         |         |          |          |
-| [break2_position_start](./../glossary#break2_position_start) |         |          |          |
-| [break2_position_end](./../glossary#break2_position_end)     |         |          |          |
-| [break1_strand](./../glossary#break1_strand)                 |         |          |          |
-| [break1_orientation](./../glossary#break1_orientation)       |         |          |          |
-| [break2_strand](./../glossary#break2_strand)                 |         |          |          |
-| [break2_orientation](./../glossary#break2_orientation)       |         |          |          |
-| [opposing_strands](./../glossary#opposing_strands)           |         |          |          |
-| [stranded](./../glossary#stranded)                           |         |          |          |
-| [library](./../glossary#library)                             |         |          |          |
-| [protocol](./../glossary#protocol)                           |         |          |          |
-| [tools](./../glossary#tools)                                 |         |          |          |
-| [event_type](./../glossary#event_type)                       |         |          |          |
+| column name                                               | cluster | annotate | validate |
+| --------------------------------------------------------- | ------- | -------- | -------- |
+| [break1_chromosome](/glossary/#break1_chromosome)         |         |          |          |
+| [break1_position_start](/glossary/#break1_position_start) |         |          |          |
+| [break1_position_end](/glossary/#break1_position_end)     |         |          |          |
+| [break2_chromosome](/glossary/#break2_chromosome)         |         |          |          |
+| [break2_position_start](/glossary/#break2_position_start) |         |          |          |
+| [break2_position_end](/glossary/#break2_position_end)     |         |          |          |
+| [break1_strand](/glossary/#break1_strand)                 |         |          |          |
+| [break1_orientation](/glossary/#break1_orientation)       |         |          |          |
+| [break2_strand](/glossary/#break2_strand)                 |         |          |          |
+| [break2_orientation](/glossary/#break2_orientation)       |         |          |          |
+| [opposing_strands](/glossary/#opposing_strands)           |         |          |          |
+| [stranded](/glossary/#stranded)                           |         |          |          |
+| [library](/glossary/#library)                             |         |          |          |
+| [protocol](/glossary/#protocol)                           |         |          |          |
+| [tools](/glossary/#tools)                                 |         |          |          |
+| [event_type](/glossary/#event_type)                       |         |          |          |
 
 Some native tool outputs are
 `supported <supported-sv-callers>`{.interpreted-text role="ref"} and

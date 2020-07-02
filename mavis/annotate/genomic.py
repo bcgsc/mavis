@@ -343,7 +343,8 @@ class PreTranscript(BioInterval):
         Returns:
             List[SplicingPattern]: List of positions to be spliced together
 
-        see :ref:`theory - predicting splicing patterns <theory-predicting-splicing-patterns>`
+        Note:
+            see [theory - predicting splicing patterns](/background/theory/#predicting-splicing-patterns)
         """
         if len(self.exons) < 2:
             return [SplicingPattern()]

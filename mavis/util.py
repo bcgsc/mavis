@@ -305,7 +305,7 @@ def generate_complete_stamp(output_dir, log=DEVNULL, prefix='MAVIS.', start_time
 
     Args:
         output_dir (str): path to the output dir the stamp should be written in
-        log (function): function to print logging messages to
+        log (Callable): function to print logging messages to
         prefix (str): prefix for the stamp name
         start_time (int): the start time
 

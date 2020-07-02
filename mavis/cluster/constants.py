@@ -3,13 +3,13 @@ from ..util import WeakMavisNamespace
 
 DEFAULTS = WeakMavisNamespace()
 """
-- :term:`cluster_initial_size_limit`
-- :term:`cluster_radius`
-- :term:`limit_to_chr`
-- :term:`max_files`
-- :term:`max_proximity`
-- :term:`min_clusters_per_file`
-- :term:`uninformative_filter`
+- [cluster_initial_size_limit](/glossary/#cluster_initial_size_limit)
+- [cluster_radius](/glossary/#cluster_radius)
+- [limit_to_chr](/glossary/#limit_to_chr)
+- [max_files](/glossary/#max_files)
+- [max_proximity](/glossary/#max_proximity)
+- [min_clusters_per_file](/glossary/#min_clusters_per_file)
+- [uninformative_filter](/glossary/#uninformative_filter)
 """
 DEFAULTS.add(
     'min_clusters_per_file', 50, defn='the minimum number of breakpoint pairs to output to a file'

@@ -16,11 +16,11 @@ MAVIS can be run locally without a job scheduler
 generally required, it is recommended that you use one of the supported
 schedulers listed below.
 
-| Name                           | Version(s)  | Environment Setting      |
-| ------------------------------ | ----------- | ------------------------ |
-| [TORQUE](./../glossary#TORQUE) | `6.1.2`     | `MAVIS_SCHEDULER=TORQUE` |
-| [SGE](./../glossary#SGE)       | `8.1.8`     | `MAVIS_SCHEDULER=SGE`    |
-| [SLURM](./../glossary#SLURM)   | `17.02.1-2` | `MAVIS_SCHEDULER=SLURM`  |
+| Name                        | Version(s)  | Environment Setting      |
+| --------------------------- | ----------- | ------------------------ |
+| [TORQUE](/glossary/#TORQUE) | `6.1.2`     | `MAVIS_SCHEDULER=TORQUE` |
+| [SGE](/glossary/#SGE)       | `8.1.8`     | `MAVIS_SCHEDULER=SGE`    |
+| [SLURM](/glossary/#SLURM)   | `17.02.1-2` | `MAVIS_SCHEDULER=SLURM`  |
 
 Users requiring support for other schedulers may make a request by
 [submitting an issue to our github
@@ -37,21 +37,21 @@ jobs.
 
 ## Aligners
 
-Two aligners are supported [bwa](./../glossary#bwa) and
-[blat](./../glossary#blat) (default).
+Two aligners are supported [bwa](/glossary/#bwa) and
+[blat](/glossary/#blat) (default).
 
-| Name                                         | Version(s)              | Environment Setting       |
-| -------------------------------------------- | ----------------------- | ------------------------- |
-| [blat](./../glossary#blat)                   | `36x2` `36`             | `MAVIS_ALIGNER=blat`      |
-| [bwa mem <bwa>](./../glossary#bwa mem <bwa>) | `0.7.15-r1140` `0.7.12` | `MAVIS_ALIGNER='bwa mem'` |
+| Name                                      | Version(s)              | Environment Setting       |
+| ----------------------------------------- | ----------------------- | ------------------------- |
+| [blat](/glossary/#blat)                   | `36x2` `36`             | `MAVIS_ALIGNER=blat`      |
+| [bwa mem <bwa>](/glossary/#bwa mem <bwa>) | `0.7.15-r1140` `0.7.12` | `MAVIS_ALIGNER='bwa mem'` |
 
 !!! note
     When setting the aligner you will also need to set the
-    [aligner_reference](./../glossary#aligner_reference) to match
+    [aligner_reference](/glossary/#aligner_reference) to match
 
 ## SV Callers
 
-MAVIS supports output from a wide-variety of [SV](./../glossary#SV) callers. Assumptions are made for each tool based on
+MAVIS supports output from a wide-variety of [SV](/glossary/#SV) callers. Assumptions are made for each tool based on
 interpretation of the output and the publications for each tool. The
 tools and versions currently supported are given below. Versions listed
 indicate the version of the tool for which output files have been tested
@@ -62,22 +62,22 @@ MAVIS also supports a
 It should be noted however that the tool tracked will only be listed as
 \'vcf\' then.
 
-| Name                                     | Version(s)       | MAVIS input                                   | Publication                                  |
-| ---------------------------------------- | ---------------- | --------------------------------------------- | -------------------------------------------- |
-| [BreakDancer](./../glossary#BreakDancer) | `1.4.5`          | `Tools main output file(s)`                   | [Chen-2009](./citations#Chen-2009)           |
-| [BreakSeq](./../glossary#BreakSeq)       | `2.2`            | `work/breakseq.vcf.gz`                        | [Abyzov-2015](./citations#Abyzov-2015)       |
-| [Chimerascan](./../glossary#Chimerascan) | `0.4.5`          | `*.bedpe`                                     | [Iyer-2011](./citations#Iyer-2011)           |
-| [CNVnator](./../glossary#CNVnator)       | `0.3.3`          | `Tools main output file(s)`                   | [Abyzov-2011](./citations#Abyzov-2011)       |
-| [DeFuse](./../glossary#DeFuse)           | `0.6.2`          | `results/results.classify.tsv`                | [McPherson-2011](./citations#McPherson-2011) |
-| [DELLY](./../glossary#DELLY)             | `0.6.1` `0.7.3`  | `combined.vcf` (converted from bcf)           | [Rausch-2012](./citations#Rausch-2012)       |
-| [Manta](./../glossary#Manta)             | `1.0.0`          | `{diploidSV,somaticSV}.vcf`                   | [Chen-2016](./citations#Chen-2016)           |
-| [Pindel](./../glossary#Pindel)           | `0.2.5b9`        | `Tools main output file(s)`                   | [Ye-2009](./citations#Ye-2009)               |
-| [Trans-ABySS](./../glossary#Trans-ABySS) | `1.4.8 (custom)` | `{indels/events_novel_exons,fusions/*}.tsv`   | [Robertson-2010](./citations#Robertson-2010) |
-| [Strelka](./../glossary#Strelka)         | `1.0.6`          | `passed.somatic.indels.vcf`                   | [Saunders-2012](./citations#Saunders-2012)   |
-| [STAR-Fusion](./../glossary#STAR-Fusion) | `1.4.0`          | `star-fusion.fusion_predictions.abridged.tsv` | [Haas-2017](./citations#Haas-2017)           |
+| Name                                  | Version(s)       | MAVIS input                                   | Publication                                  |
+| ------------------------------------- | ---------------- | --------------------------------------------- | -------------------------------------------- |
+| [BreakDancer](/glossary/#BreakDancer) | `1.4.5`          | `Tools main output file(s)`                   | [Chen-2009](./citations#Chen-2009)           |
+| [BreakSeq](/glossary/#BreakSeq)       | `2.2`            | `work/breakseq.vcf.gz`                        | [Abyzov-2015](./citations#Abyzov-2015)       |
+| [Chimerascan](/glossary/#Chimerascan) | `0.4.5`          | `*.bedpe`                                     | [Iyer-2011](./citations#Iyer-2011)           |
+| [CNVnator](/glossary/#CNVnator)       | `0.3.3`          | `Tools main output file(s)`                   | [Abyzov-2011](./citations#Abyzov-2011)       |
+| [DeFuse](/glossary/#DeFuse)           | `0.6.2`          | `results/results.classify.tsv`                | [McPherson-2011](./citations#McPherson-2011) |
+| [DELLY](/glossary/#DELLY)             | `0.6.1` `0.7.3`  | `combined.vcf` (converted from bcf)           | [Rausch-2012](./citations#Rausch-2012)       |
+| [Manta](/glossary/#Manta)             | `1.0.0`          | `{diploidSV,somaticSV}.vcf`                   | [Chen-2016](./citations#Chen-2016)           |
+| [Pindel](/glossary/#Pindel)           | `0.2.5b9`        | `Tools main output file(s)`                   | [Ye-2009](./citations#Ye-2009)               |
+| [Trans-ABySS](/glossary/#Trans-ABySS) | `1.4.8 (custom)` | `{indels/events_novel_exons,fusions/*}.tsv`   | [Robertson-2010](./citations#Robertson-2010) |
+| [Strelka](/glossary/#Strelka)         | `1.0.6`          | `passed.somatic.indels.vcf`                   | [Saunders-2012](./citations#Saunders-2012)   |
+| [STAR-Fusion](/glossary/#STAR-Fusion) | `1.4.0`          | `star-fusion.fusion_predictions.abridged.tsv` | [Haas-2017](./citations#Haas-2017)           |
 
 !!! note
-    [Trans-ABySS](./../glossary#Trans-ABySS): The trans-abyss version
+    [Trans-ABySS](/glossary/#Trans-ABySS): The trans-abyss version
     used was an in-house dev version. However the output columns are
     compatible with 1.4.8 as that was the version branched from.
     Additionally, although indels can be used from both genome and
@@ -87,7 +87,7 @@ It should be noted however that the tool tracked will only be listed as
     down validation. It is much faster to simply use the genome indels for
     both genome and transcriptome.
 
-### [DELLY](./../glossary#DELLY) Post-processing
+### [DELLY](/glossary/#DELLY) Post-processing
 
 Some post-processing on the delly output files is generally done prior
 to input. The output BCF files are converted to a VCF file
@@ -98,7 +98,7 @@ bcftools concat -f /path/to/file/with/vcf/list --allow-overlaps --output-type v 
 
 ### Writing A Custom Conversion Script
 
-#### Logic Example - [Chimerascan](./../glossary#Chimerascan)
+#### Logic Example - [Chimerascan](/glossary/#Chimerascan)
 
 The following is a description of how the conversion script for
 `Chimerascan <Iyer-2011>`{.interpreted-text role="ref"} was generated.
@@ -108,7 +108,7 @@ number of assumptions that had to be made about the tools output to
 convert it to the
 `standard mavis format <mavis-input-format>`{.interpreted-text
 role="ref"}. Assumptions were then verified by reviewing at a series of
-called events in [IGV](./../glossary#IGV). In the current
+called events in [IGV](/glossary/#IGV). In the current
 example, `Chimerascan <Iyer-2011>`{.interpreted-text role="ref"} output
 has six columns of interest that were used in the conversion
 
@@ -121,7 +121,7 @@ has six columns of interest that were used in the conversion
 
 The above columns describe two segments which are joined. MAVIS requires
 the position of the join. It was assumed that the segments are always
-joined as a [sense fusion](./../glossary#sense fusion). Using this
+joined as a [sense fusion](/glossary/#sense fusion). Using this
 assumption there are four logical cases to determine the position of the
 breakpoints.
 

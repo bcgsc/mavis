@@ -31,23 +31,23 @@ A breakpoint is a genomic position (interval) on some
 
 ### event
 
-Used interchangeably with [structural variant](./../glossary#structural variant).
+Used interchangeably with [structural variant](/glossary/#structural variant).
 
 ### event type
 
 Classification for a structural variant. see
-    [event_type](./../glossary#event_type).
+    [event_type](/glossary/#event_type).
 
 ### structural variant
 
 A genomic alteration that can be described by a pair of breakpoints
-    and an [event type](./../glossary#event type). The two
+    and an [event type](/glossary/#event type). The two
     breakpoints represent regions in the genome that are broken apart
     and reattached together.
 
 ### breakpoint pair
 
-Basic definition of a [structural variant](./../glossary#structural variant). Does not automatically imply a classification/type.
+Basic definition of a [structural variant](/glossary/#structural variant). Does not automatically imply a classification/type.
 
 ### bed
 
@@ -56,7 +56,7 @@ File format specification. See
 
 ### IGV batch file
 
-This is a file format type defined by [IGV](./../glossary#IGV) see [running IGV with a batch
+This is a file format type defined by [IGV](/glossary/#IGV) see [running IGV with a batch
     file](https://software.broadinstitute.org/software/igv/batch).
 
 ### BAM
@@ -81,7 +81,7 @@ File format specification. See
 
 ### pslx
 
-Extended format of a [psl](./../glossary#psl).
+Extended format of a [psl](/glossary/#psl).
 
 ### SVG
 
@@ -124,7 +124,7 @@ TORQUE is a job scheduling system for cluster management see
 BWA is an alignement tool. See <https://github.com/lh3/bwa> for
     install instructions.
 
-### `HGVS <den-Dunnen-2016>`{.interpreted-text role="ref"}
+### HGVS
 
 Community based standard of reccommendations for variant notation.
     See <http://varnomen.hgvs.org/>
@@ -225,7 +225,7 @@ Unique identifier of the final fusion including splicing and ORF
 
 ### event\_type
 
-`~mavis.constants.SVTYPE` - The
+`mavis.constants.SVTYPE` - The
     classification of the event
 
 ### inferred\_pairing
@@ -246,7 +246,7 @@ Gene for the current annotation at the first breakpoint
 
 ### gene1\_direction
 
-`~mavis.constants.PRIME` - The
+`mavis.constants.PRIME` - The
     direction/prime of the gene
 
 ### gene2
@@ -255,7 +255,7 @@ Gene for the current annotation at the second breakpoint
 
 ### gene2\_direction
 
-`~mavis.constants.PRIME` - The
+`mavis.constants.PRIME` - The
     direction/prime of the gene. Has the following possible values
 
 ### gene1\_aliases
@@ -270,7 +270,7 @@ Other gene names associated with the current annotation at the
 
 ### gene\_product\_type
 
-`~mavis.constants.GENE_PRODUCT_TYPE`{.interpreted-text
+`mavis.constants.GENE_PRODUCT_TYPE`{.interpreted-text
     role="class"} - Describes if the putative fusion product will be
     sense or anti-sense
 
@@ -289,7 +289,7 @@ Transcript for the current annotation at the second breakpoint
 
 ### fusion\_splicing\_pattern
 
-`~mavis.constants.SPLICE_TYPE` -
+`mavis.constants.SPLICE_TYPE` -
     Type of splicing pattern used to create the fusion cDNA.
 
 ### fusion\_cdna\_coding\_start
@@ -305,7 +305,7 @@ Transcript for the current annotation at the second breakpoint
 
 ### fusion\_mapped\_domains
 
-`JSON` - List of domains in [JSON](./../glossary#JSON)
+`JSON` - List of domains in [JSON](/glossary/#JSON)
     format where each domain start and end positions are given wrt to
     the fusion transcript and the mapping quality is the number of
     matching amino acid positions over the total number of amino acids.
@@ -327,7 +327,7 @@ The sequence identifier for the cdna sequence output fasta file
 
 ### annotation\_figure\_legend
 
-`JSON` - [JSON](./../glossary#JSON) data for the figure
+`JSON` - [JSON](/glossary/#JSON) data for the figure
     legend
 
 ### genes\_encompassed
@@ -371,12 +371,12 @@ list of genes near the breakpoint and the distance away from the
 
 ### break1\_orientation
 
-`~mavis.constants.ORIENT` - The side
+`mavis.constants.ORIENT` - The side
     of the breakpoint wrt the positive/forward strand that is retained.
 
 ### break1\_strand
 
-`~mavis.constants.STRAND` - The
+`mavis.constants.STRAND` - The
     strand wrt to the reference positive/forward strand at this
     breakpoint.
 
@@ -402,12 +402,12 @@ The name of the chromosome on which breakpoint 2 is situated
 
 ### break2\_orientation
 
-`~mavis.constants.ORIENT` - The side
+`mavis.constants.ORIENT` - The side
     of the breakpoint wrt the positive/forward strand that is retained.
 
 ### break2\_strand
 
-`~mavis.constants.STRAND` - The
+`mavis.constants.STRAND` - The
     strand wrt to the reference positive/forward strand at this
     breakpoint.
 
@@ -429,7 +429,7 @@ The name of the chromosome on which breakpoint 2 is situated
 
 ### protocol
 
-`~mavis.constants.PROTOCOL` -
+`mavis.constants.PROTOCOL` -
     Specifies the type of library
 
 ### tools
@@ -529,7 +529,7 @@ read query names of the spanning reads which support the current
 
 ### call\_method
 
-`~mavis.constants.CALL_METHOD` - The
+`mavis.constants.CALL_METHOD` - The
     method used to call the breakpoints
 
 ### flanking\_pairs

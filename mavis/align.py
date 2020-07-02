@@ -29,12 +29,12 @@ from .util import DEVNULL
 
 
 SUPPORTED_ALIGNER = MavisNamespace(
-    BWA_MEM='bwa mem', BLAT='blat', __name__='~mavis.align.SUPPORTED_ALIGNER'
+    BWA_MEM='bwa mem', BLAT='blat', __name__='mavis.align.SUPPORTED_ALIGNER'
 )
 """MavisNamespace: supported aligners
 
-- :term:`blat`
-- :term:`bwa mem<BWA>`
+- [blat](/glossary/#blat)
+- [bwa mem<BWA>](/glossary/#bwa-mem<BWA>)
 """
 
 

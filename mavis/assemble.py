@@ -250,7 +250,7 @@ def pull_contigs_from_component(
         component (list):  list of nodes which make up the connected component
         min_edge_trim_weight (int): the minimum weight to not remove a non cutting edge/path
         assembly_max_paths (int): the maximum number of paths allowed before the graph is further simplified
-        log (function): the log function
+        log (Callable): the log function
 
     Returns:
         Dict[str,int]: the paths/contigs and their scores
@@ -357,14 +357,14 @@ def assemble(
 
     Args:
         sequences (List[str]): a list of strings/sequences to assemble
-        kmer_size: see :term:`assembly_kmer_size` the size of the kmer to use
-        min_edge_trim_weight: see :term:`assembly_min_edge_trim_weight`
+        kmer_size: see [assembly_kmer_size](/glossary/#assembly_kmer_size) the size of the kmer to use
+        min_edge_trim_weight: see [assembly_min_edge_trim_weight](/glossary/#assembly_min_edge_trim_weight)
         remap_min_match: Minimum match percentage of the remapped read (based on the exact matches in the cigar)
         remap_min_overlap: defaults to the kmer size. Minimum amount of overlap between the contig and the remapped read
         min_contig_length: Minimum length of contigs assemble to attempt remapping reads to. Shorter contigs will be ignored
-        remap_min_exact_match: see :term:`assembly_min_exact_match_to_remap`
-        assembly_max_paths: see :term:`assembly_max_paths`
-        log (function): the log function
+        remap_min_exact_match: see [assembly_min_exact_match_to_remap](/glossary/#assembly_min_exact_match_to_remap)
+        assembly_max_paths: see [assembly_max_paths](/glossary/#assembly_max_paths)
+        log (Callable): the log function
 
     Returns:
         List[Contig]: a list of putative contigs

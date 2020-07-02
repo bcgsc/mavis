@@ -2,7 +2,7 @@
 
 The following tutorial is an introduction to running MAVIS. You will
 need to download the tutorial data. Additionally the instructions
-pertain to running MAVIS on a [SLURM](./../glossary#SLURM)
+pertain to running MAVIS on a [SLURM](/glossary/#SLURM)
 cluster. This tutorial will require more resources than the
 `mini-tutorial`{.interpreted-text role="ref"} above.
 
@@ -18,21 +18,21 @@ tar -xvzf tutorial_data.tar.gz
 
 The expected contents are
 
-| Path                               | Description                                                                                                            |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| README                             | Information regarding the other files in the directory                                                                 |
-| L1522785992\_expected\_events.tab  | The events that we expect to find, either experimentally validated or \'spiked\' in                                    |
-| L1522785992\_normal.sorted.bam     | Paired normal library BAM file                                                                                         |
-| L1522785992\_normal.sorted.bam.bai | BAM index                                                                                                              |
-| L1522785992\_trans.sorted.bam      | Tumour transcriptome BAM file                                                                                          |
-| L1522785992\_trans.sorted.bam.bai  | BAM index file                                                                                                         |
-| L1522785992\_tumour.sorted.bam     | Tumour genome BAM file                                                                                                 |
-| L1522785992\_tumour.sorted.bam.bai | BAM index file                                                                                                         |
-| breakdancer-1.4.5/                 | Contains the [BreakDancer](./../glossary#BreakDancer) output which was run on the tumour genome BAM file               |
-| breakseq-2.2/                      | Contains the [BreakSeq](./../glossary#BreakSeq) output which was run on the tumour genome BAM file                     |
-| chimerascan-0.4.5/                 | Contains the [ChimeraScan](./../glossary#ChimeraScan) output which was run on the tumour transcriptome BAM file        |
-| defuse-0.6.2/                      | Contains the [deFuse](./../glossary#deFuse) output which was run on the tumour transcriptome BAM file                  |
-| manta-1.0.0/                       | Contains the [Manta](./../glossary#Manta) output which was run on the tumour genome and paired normal genome BAM files |
+| Path                               | Description                                                                                                         |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| README                             | Information regarding the other files in the directory                                                              |
+| L1522785992\_expected\_events.tab  | The events that we expect to find, either experimentally validated or \'spiked\' in                                 |
+| L1522785992\_normal.sorted.bam     | Paired normal library BAM file                                                                                      |
+| L1522785992\_normal.sorted.bam.bai | BAM index                                                                                                           |
+| L1522785992\_trans.sorted.bam      | Tumour transcriptome BAM file                                                                                       |
+| L1522785992\_trans.sorted.bam.bai  | BAM index file                                                                                                      |
+| L1522785992\_tumour.sorted.bam     | Tumour genome BAM file                                                                                              |
+| L1522785992\_tumour.sorted.bam.bai | BAM index file                                                                                                      |
+| breakdancer-1.4.5/                 | Contains the [BreakDancer](/glossary/#BreakDancer) output which was run on the tumour genome BAM file               |
+| breakseq-2.2/                      | Contains the [BreakSeq](/glossary/#BreakSeq) output which was run on the tumour genome BAM file                     |
+| chimerascan-0.4.5/                 | Contains the [ChimeraScan](/glossary/#ChimeraScan) output which was run on the tumour transcriptome BAM file        |
+| defuse-0.6.2/                      | Contains the [deFuse](/glossary/#deFuse) output which was run on the tumour transcriptome BAM file                  |
+| manta-1.0.0/                       | Contains the [Manta](/glossary/#Manta) output which was run on the tumour genome and paired normal genome BAM files |
 
 ## Downloading the Reference Inputs
 
@@ -155,8 +155,8 @@ simplicity not all files/directories have been shown.
 ## Submitting Jobs to the Cluster
 
 The last step is simple, ssh to your head node of your
-[SLURM](./../glossary#SLURM) cluster (or run locally if you
-have configured [remote_head_ssh](./../glossary#remote_head_ssh)) and
+[SLURM](/glossary/#SLURM) cluster (or run locally if you
+have configured [remote_head_ssh](/glossary/#remote_head_ssh)) and
 run the schedule step. This will submit the jobs and create the
 dependency chain
 

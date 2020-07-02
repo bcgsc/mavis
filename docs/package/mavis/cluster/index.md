@@ -5,12 +5,12 @@ The cluster sub-package is responsible for merging variants coming from differen
 Types of Output Files
 ----------------------
 
-| expected name/suffix           | file type/format | content                                                              |
-| ------------------------------ | ---------------- | -------------------------------------------------------------------- |
-| ``cluster_assignment.tab``     | text/tabbed      |                                                                      |
-| ``uninformative_clusters.txt`` | text             | list of cluster ids that were dropped by annotation proximity filter |
-| ``clusters.bed``               | :term:`bed`      | cluster positions                                                    |
-| ``cluster-*.tab``              | text/tabbed      | computed clusters                                                    |
+| expected name/suffix           | file type/format      | content                                                              |
+| ------------------------------ | --------------------- | -------------------------------------------------------------------- |
+| ``cluster_assignment.tab``     | text/tabbed           |                                                                      |
+| ``uninformative_clusters.txt`` | text                  | list of cluster ids that were dropped by annotation proximity filter |
+| ``clusters.bed``               | [bed](/glossary/#bed) | cluster positions                                                    |
+| ``cluster-*.tab``              | text/tabbed           | computed clusters                                                    |
 
 Algorithm Overview
 --------------------
