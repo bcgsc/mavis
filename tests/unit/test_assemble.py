@@ -92,7 +92,7 @@ class TestFilterContigs(unittest.TestCase):
 
 
 class TestDeBruijnGraph(unittest.TestCase):
-    @pytest.mark.skipif(os.environ.get('RUN_FULL', '0') == '1', reason='running short tests only')
+    @pytest.mark.skipif(os.environ.get('RUN_FULL', '0') != '1', reason='running short tests only')
     def test_trim_tails_by_freq_forks(self):
         g = DeBruijnGraph()
         for s, t in itertools.combinations([1, 2, 3, 4, 5, 6], 2):
@@ -183,7 +183,7 @@ class TestFullAssemly(unittest.TestCase):
         with open(os.path.join(DATA_DIR, 'test_assembly_sequences.txt')) as fh:
             self.seq = [i.strip() for i in fh.readlines()]
 
-    @pytest.mark.skipif(os.environ.get('RUN_FULL', '0') == '1', reason='running short tests only')
+    @pytest.mark.skipif(os.environ.get('RUN_FULL', '0') != '1', reason='running short tests only')
     def test_deterministic_assembly(self):
         contig_sequences = set()
         for i in range(20):
