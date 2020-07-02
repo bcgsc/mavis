@@ -295,7 +295,8 @@ class BreakpointPair:
             >>> BreakpointPair.classify(bpp)
             {'deletion', 'insertion'}
 
-        see :ref:`related theory documentation <theory-classifying-events>`
+        Note:
+            see [related theory documentation](/background/theory/#classifying-events)
         """
         if not pair.interchromosomal:  # intrachromosomal
             if pair.opposing_strands:
