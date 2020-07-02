@@ -5,7 +5,7 @@
 </object>
 
 
-![PyPi](https://img.shields.io/pypi/v/mavis.svg) ![Travis](https://travis-ci.org/bcgsc/mavis.svg?branch=master) ![ReadTheDocs](https://readthedocs.org/projects/pip/badge/)
+![PyPi](https://img.shields.io/pypi/v/mavis.svg) ![build](https://github.com/bcgsc/mavis/workflows/build/badge.svg?branch=master) [![codecov](https://codecov.io/gh/bcgsc/mavis/branch/master/graph/badge.svg)](https://codecov.io/gh/bcgsc/mavis) ![ReadTheDocs](https://readthedocs.org/projects/pip/badge/)
 
 
 # About
