@@ -38,21 +38,21 @@ jobs:
         cd bwa
         git checkout v0.7.17
         make
-        export PATH=$PATH:$(pwd)
         cd ..
     - name: install blat
       run: |
         wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/blat/blat
         chmod a+x blat
-        export PATH=$PATH:$(pwd)
     - name: run short tests with pytest
       run: |
+        export PATH=$PATH:$(pwd):$(pwd)/bwa
         pytest tests -v --junitxml=junit/test-results-${{ matrix.python-version }}.xml --cov markdown_refdocs --cov-report term --cov-report xml --durations=0
       env:
         RUN_FULL: 0
       if: github.event_name != 'pull_request'
     - name: run full tests with pytest
       run: |
+        export PATH=$PATH:$(pwd):$(pwd)/bwa
         pytest tests -v --junitxml=junit/test-results-${{ matrix.python-version }}.xml --cov markdown_refdocs --cov-report term --cov-report xml --durations=0
       env:
         RUN_FULL: 1
