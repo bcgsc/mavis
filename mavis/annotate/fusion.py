@@ -291,7 +291,7 @@ class FusionTranscript(PreTranscript):
         """
         Args:
             ann (Annotation): the annotation object we want to build a FusionTranscript for
-            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
+            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence
                 by template/chr name
 
         Returns:
@@ -489,8 +489,8 @@ class FusionTranscript(PreTranscript):
     def get_cdna_seq(self, splicing_pattern, reference_genome=None, ignore_cache=False):
         """
         Args:
-            splicing_pattern (:class:`list` of :class:`int`): the list of splicing positions
-            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference seq
+            splicing_pattern (List[int]): the list of splicing positions
+            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference seq
                 by template/chr name
 
         Returns:

@@ -23,7 +23,7 @@ def recompute_cigar_mismatch(read, ref):
         ref (str): the reference sequence
 
     Returns:
-        :class:`list` of :class:`tuple` of :class:`int` and :class:`int`: the cigar tuple
+        List[Tuple[int,int]]: the cigar tuple
     """
     result = []
     offset = 0
@@ -90,7 +90,7 @@ def longest_exact_match(cigar):
     returns the longest consecutive exact match
 
     Args:
-        cigar (:class:`list` of :class:`tuple` of :class:`int` and :class:`int`): the cigar tuples
+        cigar (List[Tuple[int,int]]): the cigar tuples
     """
     return longest_fuzzy_match(cigar, 0)
 
@@ -99,8 +99,7 @@ def score(cigar, **kwargs):
     """scoring based on sw alignment properties with gap extension penalties
 
     Args:
-        cigar (:class:`list` of :class:`~mavis.constants.CIGAR` and :class:`int`):
-          list of cigar tuple values
+        cigar (List[Tuple[mavis.constants.CIGAR,int]]): list of cigar tuple values
         MISMATCH (int): mismatch penalty
         MATCH (int): match penalty
         GAP (int): initial gap penalty
@@ -178,13 +177,11 @@ def extend_softclipping(cigar, min_exact_to_stop_softclipping):
     exact match aligned portion to signal stop
 
     Args:
-        original_cigar (:class:`list` of :class:`~mavis.constants.CIGAR` and :class:`int`): the input cigar
+        original_cigar (List[Tuple[mavis.constants.CIGAR,int]]): the input cigar
         min_exact_to_stop_softclipping (int): number of exact matches to terminate extension
 
     Returns:
-        tuple:
-            - :class:`list` of :class:`~mavis.constants.CIGAR` and :class:`int` - new cigar list
-            - :class:`int` - shift from the original start position
+        Tuple[List[Tuple[mavis.constants.CIGAR,int]], int]: new cigar list and shift from the original start position
     """
     new_cigar = []
     anchors = [
@@ -452,12 +449,12 @@ def merge_internal_events(cigar, inner_anchor=10, outer_anchor=10):
     does not merge two mismatches, must contain a deletion/insertion
 
     Args:
-        cigar (list): a list of tuples of cigar states and counts
+        cigar (List): a list of tuples of cigar states and counts
         inner_anchor (int): minimum number of consecutive exact matches separating events
         outer_anchor (int): minimum consecutively aligned exact matches to anchor an end for merging
 
     Returns:
-        list: new list of cigar tuples with merged events
+        List: new list of cigar tuples with merged events
 
     Example:
         >>> merge_internal_events([(CIGAR.EQ, 10), (CIGAR.X, 1), (CIGAR.EQ, 2), (CIGAR.D, 1), (CIGAR.EQ, 10)])

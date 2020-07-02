@@ -225,7 +225,7 @@ def digraph_connected_components(graph, subgraph=None):
         graph (networkx.DiGraph): the input graph to gather components from
 
     Returns:
-        :class:`list` of :class:`list`: returns a list of compnents which are lists of node names
+        List[List]: returns a list of compnents which are lists of node names
     """
     if subgraph is None:
         subgraph = set(graph.nodes())
@@ -253,7 +253,7 @@ def pull_contigs_from_component(
         log (function): the log function
 
     Returns:
-        :class:`Dict` of :class:`int` by :class:`str`: the paths/contigs and their scores
+        Dict[str,int]: the paths/contigs and their scores
     """
     path_scores = {}  # path_str => score_int
     w = min_edge_trim_weight
@@ -356,7 +356,7 @@ def assemble(
     drops any sequences too small to fit the kmer size
 
     Args:
-        sequences (:class:`list` of :class:`str`): a list of strings/sequences to assemble
+        sequences (List[str]): a list of strings/sequences to assemble
         kmer_size: see :term:`assembly_kmer_size` the size of the kmer to use
         min_edge_trim_weight: see :term:`assembly_min_edge_trim_weight`
         remap_min_match: Minimum match percentage of the remapped read (based on the exact matches in the cigar)
@@ -367,7 +367,7 @@ def assemble(
         log (function): the log function
 
     Returns:
-        :class:`list` of :class:`Contig`: a list of putative contigs
+        List[Contig]: a list of putative contigs
     """
     if not sequences:
         return []
@@ -475,7 +475,7 @@ def kmers(s, size):
         size (int): the size of the kmers
 
     Returns:
-        :class:`list` of :class:`str`: the list of kmers
+        List[str]: the list of kmers
 
     Example:
         >>> kmers('abcdef', 2)

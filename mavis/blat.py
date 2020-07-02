@@ -210,9 +210,9 @@ class Blat:
         given a 'row' from reading a pslx file. converts the row to a BlatAlignedSegment object
 
         Args:
-            row (dict of str): a row object from the 'read_pslx' method
+            row Dict[str]: a row object from the 'read_pslx' method
             bam_cache (BamCache): the bam file/cache to use as a template for creating reference_id from chr name
-            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`):
+            reference_genome (Dict[str,Bio.SeqRecord]):
               dict of reference sequence by template/chr name
 
         """

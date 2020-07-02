@@ -101,7 +101,7 @@ class BioInterval:
         return self.position.length()
 
     def key(self):
-        """:class:`tuple`: a tuple representing the items expected to be unique. for hashing and comparing"""
+        """Tuple: a tuple representing the items expected to be unique. for hashing and comparing"""
         return (self.reference_object, self.position, self.seq, self.name)
 
     def __eq__(self, other):
@@ -220,7 +220,7 @@ class BioInterval:
         creates a dictionary representing the current object
 
         Returns:
-            :class:`dict` by :class:`str`: the dictionary of attribute values
+            Dict[str]: the dictionary of attribute values
         """
         dict_result = {
             'name': self.name,

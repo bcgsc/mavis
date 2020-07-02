@@ -18,7 +18,7 @@ def convert_row(row):
     """
 
     Args:
-        row (dict by str): dict representing the row output from cnvnator
+        row (Dict[str]): dict representing the row output from cnvnator
 
     Returns:
         dict: transformed row using mavis starndard column names

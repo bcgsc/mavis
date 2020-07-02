@@ -13,7 +13,7 @@ class LogFile:
     """
 
     STATUS = MavisNamespace('EMPTY', 'CRASH', 'INCOMPLETE', 'COMPLETE')
-    """:class:`~mavis.constants.MavisNamespace`: The status of the job based on parsing of the logfile"""
+    """MavisNamespace: The status of the job based on parsing of the logfile"""
 
     def __init__(self, filename, status, message=None):
         """
@@ -76,7 +76,7 @@ class Job:
             job_ident (int): the job number/id according to the scheduler being used
             output_dir (str): path to the output directory where logs/stamps for this job will be written
             name (str): the job name according to the scheduler being used
-            dependencies (list of Job): list of jobs which must complete for this job to run
+            dependencies (List[Job]): list of jobs which must complete for this job to run
             stdout (str): basename of the file to write std output to
             script (str): path to the script which contains the commands for the job
             created_at (int): the time stamp for when the job was created (created != submitted)
@@ -160,7 +160,7 @@ class ArrayJob(Job):
     def __init__(self, stage, task_list, **kwargs):
         """
         Args:
-            task_list (:class:`list` or :class:`int`): the ids of tasks in the job array
+            task_list (Union[List,int]): the ids of tasks in the job array
         """
         Job.__init__(self, stage, **kwargs)
         self.stdout = (
