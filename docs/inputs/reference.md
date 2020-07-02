@@ -4,15 +4,13 @@ There are several reference files that are required for full
 functionality of the MAVIS pipeline. If the same reference file will be
 reused often then the user may find it helpful to set reasonable
 defaults. Default values for any of the reference file arguments can be
-`configured through environment variables <config-environment>`{.interpreted-text
-role="ref"}.
+[configured through environment variables](/configuration/settings/#environment-variables)
 
 To improve the install experience for the users, different
 configurations of the MAVIS annotations file have been made available.
 These files can be downloaded below, or if the required configuration is
 not available,
-`instructions on generating the annotations file <generate-reference-annotations>`{.interpreted-text
-role="ref"} can be found below.
+(instructions on generating the annotations file)[/inputs/reference/#generating-the-annotations-from-ensembl] can be found below.
 
 | File Name (Type/Format)                                                              | Environment Variable      | Download                                                                                                                                                                                                                                                                                                                                                                                                       |
 | ------------------------------------------------------------------------------------ | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -195,7 +193,7 @@ then simply provide the output path
 perl generate_ensembl_json.pl --output /path/to/output/json/file.json
 ```
 
-## `DGV (Database of Genomic Variants) <Macdonald-2014>`{.interpreted-text role="ref"} Annotations
+## `DGV (Database of Genomic Variants)
 
 The DGV annotations file contains regions corresponding to what is found
 in the database of genomic variants. This is used to annotate events

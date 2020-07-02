@@ -12,8 +12,7 @@ standard pipeline is
 far-left.](/images/pipeline_options.svg)
 
 The most common use case is
-`auto-generating a configuration file <pipeline-config>`{.interpreted-text
-role="ref"} and then running the pipeline setup step. The pipeline setup
+[auto-generating a configuration file](/tutorials/full/#generating-the-config-file) and then running the pipeline setup step. The pipeline setup
 step will run clustering and create scripts for running the other steps.
 
 ```bash
@@ -51,8 +50,7 @@ configurable options are listed below
 -   [scheduler](/glossary/#scheduler) `MAVIS_SCHEDULER`
 
 For example to set the job queue default using an
-`environment variable <config-environment>`{.interpreted-text
-role="ref"}
+[environment variable](/configuration/settings/#environment-variables)
 
 ```bash
 export MAVIS_QUEUE=QUEUENAME

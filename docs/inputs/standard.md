@@ -86,8 +86,7 @@ can act as the pipeline start)
 | [tools](/glossary/#tools)                                 |         |          |          |
 | [event_type](/glossary/#event_type)                       |         |          |          |
 
-Some native tool outputs are
-`supported <supported-sv-callers>`{.interpreted-text role="ref"} and
+Some native tool outputs are [supported](/inputs/supported_dependencies/#sv-callers) and
 have built in methods to convert to the above format. Any unsupported
 tools can be used as long as the user converts the tools native output
 to match the above format.

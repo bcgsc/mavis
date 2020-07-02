@@ -16,8 +16,7 @@ then be edited by the user. However this will be a simple config with no
 library information. To generate a configuration file with the library
 information as well as estimates for the fragment size parameters more
 inputs are required (see
-`generating the config file <example-generating-the-conf>`{.interpreted-text
-role="ref"} for more information).
+[generating the config file](/tutorials/full/#generating-the-config-file) for more information).
 
 ## Environment Variables
 
@@ -53,8 +52,7 @@ jobs each with 500 events. This is because
 over [max_files](/glossary/#max_files).
 
 Splitting into more jobs will lower the resource requirements per job
-(see `resource requirements <resource-requirements>`{.interpreted-text
-role="ref"}). The memory and time requirements for validation are linear
+(see [resource requirements](/configuration/performance/)). The memory and time requirements for validation are linear
 with respect to the number of events to be validated.
 
 ### Uninformative Filter

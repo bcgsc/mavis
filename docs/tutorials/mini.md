@@ -5,8 +5,7 @@ MAVIS. The data files are very small and this tutorial is really only
 intended for testing a MAVIS install. The data here is simulated and
 results are not representitive of the typical events you would see
 reported from MAVIS. For a more complete tutorial with actual fusion
-gene examples, please see the `full-tutorial`{.interpreted-text
-role="ref"} below.
+gene examples, please see the [full tutorial](/tutorials/full/).
 
 The first step is to clone or download a zip of the MAVIS repository
 (<https://github.com/bcgsc/mavis>). You will need the tests directory.

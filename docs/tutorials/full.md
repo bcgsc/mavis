@@ -4,7 +4,7 @@ The following tutorial is an introduction to running MAVIS. You will
 need to download the tutorial data. Additionally the instructions
 pertain to running MAVIS on a [SLURM](/glossary/#SLURM)
 cluster. This tutorial will require more resources than the
-`mini-tutorial`{.interpreted-text role="ref"} above.
+[mini-tutorial](/tutorials/mini/) above.
 
 ## Getting the Tutorial Data
 
@@ -47,7 +47,7 @@ source reference_inputs/hg19_env.sh
 
 ## Generating the Config File
 
-The `config <pipeline-config>`{.interpreted-text role="ref"} command
+The [config](/background/citations/#pipeline-config) command
 does most of the work of creating the config for you but there are a few
 things you need to tell it
 
@@ -224,6 +224,6 @@ for each stage and does not include any queue time etc.
 
 The best place to start with looking at the MAVIS output is the summary
 folder which contains the final results. For column name definitions see
-the `glossary <glossary-column-names>`{.interpreted-text role="ref"}.
+the [glossary](/background/citations/#glossary-column-names).
 
     output_dir/summary/mavis_summary_all_L1522785992-normal_L1522785992-trans_L1522785992-tumour.tab
