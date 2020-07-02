@@ -22,12 +22,12 @@ see :ref:`theory - annotating events <theory-annotating-events>`
 
 ## Levels of Annotations
 
-![](images/feature_levels.svg)
+![](../../../images/feature_levels.svg)
 
 
 ## Overview of Class Relationships
 
-![](images/annotation_model.svg)
+![](../../../images/annotation_model.svg)
 
 The Annotation sub-package has objects for genetic annotations and related calculations. The basic layout of the
 package is shown above. IS-A relationships are given by the blue arrows. HAS-A relationships are shown in black.
