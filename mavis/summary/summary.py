@@ -9,8 +9,8 @@ from ..util import get_connected_components
 def filter_by_annotations(bpp_list, best_transcripts):
     """
     Args:
-        bpp_list (list of BreakpointPair): list of pairs to filter
-        best_transcripts (:class `dict` of :any:`Transcript` by :class:`str`): the best transcripts of the annotations
+        bpp_list (List[BreakpointPair]): list of pairs to filter
+        best_transcripts (Dict[str,Transcript]): the best transcripts of the annotations
           based on their names
 
     """

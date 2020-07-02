@@ -39,7 +39,7 @@ def cumulative_job_state(states):
 SCHEDULER = MavisNamespace(
     'SGE', 'SLURM', 'TORQUE', 'LOCAL', __name__='~mavis.schedule.constants.SCHEDULER'
 )
-""":class:`~mavis.constants.MavisNamespace`: scheduler types
+"""MavisNamespace: scheduler types
 
 - :term:`LOCAL`
 - :term:`SGE`
@@ -63,7 +63,7 @@ When the scheduler should notify :term:`mail_user` about a job
 STD_OPTIONS = ['memory_limit', 'queue', 'time_limit', 'import_env', 'mail_user', 'mail_type']
 
 OPTIONS = WeakMavisNamespace(__name__='~mavis.schedule.constants.options')
-""":class:`~mavis.constants.MavisNamespace`: submission options
+"""MavisNamespace: submission options
 
 - :term:`annotation_memory`
 - :term:`concurrency_limit`

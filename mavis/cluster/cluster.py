@@ -242,12 +242,12 @@ def merge_breakpoint_pairs(
         done in order of smallest total breakpoint interval size to largest
 
     Args:
-        input_pairs (list of BreakpointPair): the pairs to be merged
+        input_pairs (List[BreakpointPair]): the pairs to be merged
         cluster_radius (int) maximum distance allowed for a node to merge
         cluster_initial_size_limit (int): maximum size of breakpoint intervals allowed in the first merging phase
 
     Returns:
-        dict of list of BreakpointPair by BreakpointPair: mapping of merged breakpoint pairs to the input pairs used in the merge
+        Dict[BreakpointPair,List[BreakpointPair]]: mapping of merged breakpoint pairs to the input pairs used in the merge
     """
 
     def pair_center_distance(pair1, pair2):

@@ -133,11 +133,11 @@ def main(
 ):
     """
     Args:
-        inputs (:class:`List` of :class:`str`): list of input files to read
+        inputs (List[str]): list of input files to read
         output (str): path to the output directory
-        reference_genome (:class:`~mavis.annotate.file_io.ReferenceFile`): see :func:`~mavis.annotate.file_io.load_reference_genome`
-        annotations (:class:`~mavis.annotate.file_io.ReferenceFile`): see :func:`~mavis.annotate.file_io.load_reference_genes`
-        template_metadata (:class:`~mavis.annotate.file_io.ReferenceFile`): see :func:`~mavis.annotate.file_io.load_templates`
+        reference_genome (mavis.annotate.file_io.ReferenceFile): see :func:`~mavis.annotate.file_io.load_reference_genome`
+        annotations (mavis.annotate.file_io.ReferenceFile): see :func:`~mavis.annotate.file_io.load_reference_genes`
+        template_metadata (mavis.annotate.file_io.ReferenceFile): see :func:`~mavis.annotate.file_io.load_templates`
         min_domain_mapping_match (float): min mapping match percent (0-1) to count a domain as mapped
         min_orf_size (int): minimum size of an :term:`open reading frame` to keep as a putative translation
         max_orf_cap (int): the maximum number of :term:`open reading frame` s to collect for any given event

@@ -43,9 +43,9 @@ class Scheduler:  # pragma: no cover
     """
 
     ENV_TASK_IDENT = '{TASK_IDENT}'
-    """:class:`str`: the expected pattern of environment variables which store the task id"""
+    """str: the expected pattern of environment variables which store the task id"""
     ENV_JOB_IDENT = '{JOB_IDENT}'
-    """:class:`str`: the expected pattern of environment variables which store the job id"""
+    """str: the expected pattern of environment variables which store the job id"""
     HEADER_PREFIX = '#'
 
     def __init__(self, concurrency_limit=None, remote_head_ssh=''):
@@ -372,10 +372,10 @@ class SgeScheduler(Scheduler):
     """:attr:`~mavis.schedule.constants.SCHEDULER`: the type of scheduler"""
     ENV_TASK_IDENT = 'SGE_TASK_ID'
     ENV_JOB_IDENT = 'JOB_ID'
-    """:class:`str`: expected pattern for environment variables which store the job id"""
+    """str: expected pattern for environment variables which store the job id"""
     ENV_ARRAY_IDENT = ENV_JOB_IDENT
     ENV_JOB_NAME = 'JOB_NAME'
-    """:class:`str`: expected pattern for environment variables which store the job name"""
+    """str: expected pattern for environment variables which store the job name"""
     HEADER_PREFIX = '#$'
 
     STATE_MAPPING = {
@@ -390,7 +390,7 @@ class SgeScheduler(Scheduler):
         'T': JOB_STATUS.ERROR,
         't': JOB_STATUS.RUNNING,
     }
-    """:class:`dict`: mapping from SGE job states to their MAVIS JOB_STATUS equivalent"""
+    """dict: mapping from SGE job states to their MAVIS JOB_STATUS equivalent"""
     MAIL_TYPE_MAPPING = {
         MAIL_TYPE.BEGIN: 'b',
         MAIL_TYPE.NONE: 'n',
@@ -398,7 +398,7 @@ class SgeScheduler(Scheduler):
         MAIL_TYPE.END: 'e',
         MAIL_TYPE.ALL: 'abes',
     }
-    """:class:`dict`: mapping from MAVIS mail type options to SGE mail options"""
+    """dict: mapping from MAVIS mail type options to SGE mail options"""
 
     @classmethod
     def parse_qacct(cls, content):
@@ -694,10 +694,10 @@ class TorqueScheduler(SgeScheduler):
     """:attr:`~mavis.schedule.constants.SCHEDULER`: the type of scheduler"""
     ENV_TASK_IDENT = 'PBS_ARRAYID'
     ENV_JOB_IDENT = 'PBS_JOBID'
-    """:class:`str`: expected pattern for environment variables which store the job id"""
+    """str: expected pattern for environment variables which store the job id"""
     ENV_ARRAY_IDENT = ENV_JOB_IDENT
     ENV_JOB_NAME = 'PBS_JOBNAME'
-    """:class:`str`: expected pattern for environment variables which store the job name"""
+    """str: expected pattern for environment variables which store the job name"""
     TAB_SIZE = 8
     MAIL_TYPE_MAPPING = {
         MAIL_TYPE.BEGIN: 'b',
@@ -706,7 +706,7 @@ class TorqueScheduler(SgeScheduler):
         MAIL_TYPE.END: 'e',
         MAIL_TYPE.ALL: 'abef',
     }
-    """:class:`dict`: mapping from MAVIS mail type options to Torque mail options"""
+    """dict: mapping from MAVIS mail type options to Torque mail options"""
     STATE_MAPPING = {
         'C': JOB_STATUS.COMPLETED,
         'E': JOB_STATUS.RUNNING,
@@ -717,7 +717,7 @@ class TorqueScheduler(SgeScheduler):
         'S': JOB_STATUS.ERROR,
         'R': JOB_STATUS.RUNNING,
     }
-    """:class:`dict`: mapping from Torque job states to their MAVIS JOB_STATUS equivalent"""
+    """dict: mapping from Torque job states to their MAVIS JOB_STATUS equivalent"""
 
     def format_dependencies(self, job):
         """

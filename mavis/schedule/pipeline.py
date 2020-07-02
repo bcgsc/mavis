@@ -236,8 +236,8 @@ class Pipeline:
         Args:
             output_dir (str): path to main output directory for all mavis pipeline results
             scheduler (Scheduler): the class for interacting with a job scheduler
-            validations (:class:`list` of :class:`Job`): list of validation jobs
-            annotations (:class:`list` of :class:`Job`): list of annotation jobs
+            validations (List[Job]): list of validation jobs
+            annotations (List[Job]): list of annotation jobs
             pairing (Job): pairing job
             summary (Job): summary job
             batch_id (str): the batch id for this pipeline run. Used in avoinfing job name conflicts

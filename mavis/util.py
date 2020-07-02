@@ -206,8 +206,8 @@ def filter_on_overlap(bpps, regions_by_reference_name):
     filter a set of breakpoint pairs based on overlap with a set of genomic regions
 
     Args:
-        bpps (:class:`list` of :class:`~mavis.breakpoint.BreakpointPair`): list of breakpoint pairs to be filtered
-        regions_by_reference_name (:class:`dict` of :class:`list` of :class:`~mavis.annotate.base.BioInterval` by :class:`str`): regions to filter against
+        bpps (List[mavis.breakpoint.BreakpointPair]): list of breakpoint pairs to be filtered
+        regions_by_reference_name (Dict[str,List[mavis.annotate.base.BioInterval]]): regions to filter against
     """
     LOG('filtering from', len(bpps), 'using overlaps with regions filter')
     failed = []
@@ -383,7 +383,7 @@ def read_bpp_from_input_file(
             (for strand this is only applied if the bam itself is stranded)
         explicit_strand (bool): used to stop unstranded breakpoint pairs from losing input strand information
     Returns:
-        :class:`list` of :any:`BreakpointPair`: a list of pairs
+        List[BreakpointPair]: a list of pairs
 
     Example:
         >>> read_bpp_from_input_file('filename')
@@ -392,8 +392,7 @@ def read_bpp_from_input_file(
     One can also validate other expected columns that will go in the data attribute using the usual arguments
     to the tab.read_file function
 
-    .. code-block:: python
-
+    Example:
         >>> read_bpp_from_input_file('filename', cast={'index': int})
         [BreakpointPair(), BreakpointPair(), ...]
     """

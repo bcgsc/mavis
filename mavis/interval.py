@@ -253,7 +253,7 @@ class Interval:
         """ convert any given position given a mapping of intervals to another range
 
         Args:
-            mapping (:class:`dict` of :class:`Interval` and :class:`Interval`): a mapping of a set of continuous intervals
+            mapping (Dict[Interval,Interval]): a mapping of a set of continuous intervals
             pos (int): a position in the first coordinate system
 
         Returns:

@@ -143,7 +143,7 @@ class BamCache:
             the cache_if and filter_if functions must be any function that takes a read as input and returns a boolean
 
         Returns:
-            set of :class:`pysam.AlignedSegment`: a set of reads which overlap the input region
+            Set[pysam.AlignedSegment]: a set of reads which overlap the input region
         """
         # try using the cache to avoid fetching regions more than once
         result = []
@@ -207,7 +207,7 @@ class BamCache:
             bin_gap_size (int): gap between the bins for the fetch area
 
         Returns:
-            :class:`set` of :class:`pysam.AlignedSegment`: set of reads gathered from the region
+            Set[pysam.AlignedSegment]: set of reads gathered from the region
         """
         # try using the cache to make grabbing mate pairs easier
         result = []
@@ -251,7 +251,7 @@ class BamCache:
             primary_only (bool): ignore secondary alignments
             allow_file_access (bool): determines if the bam can be accessed to try to find the mate
         Returns:
-            :class:`list` of :class:`pysam.AlignedSegment`: list of mates of the input read
+            List[pysam.AlignedSegment]: list of mates of the input read
         """
         # NOTE: will return all mate alignments that have been cached
         putative_mates = self.cache.get(read.query_name, set())

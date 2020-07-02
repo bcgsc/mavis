@@ -22,7 +22,7 @@ def main(
 ):
     """
     Args:
-        inputs (:class:`List` of :class:`str`): list of input files to read
+        inputs (List[str]): list of input files to read
         output (str): path to the output directory
         flanking_call_distance (int): pairing distance for pairing with an event called by :term:`flanking read pair`
         split_call_distance (int): pairing distance for pairing with an event called by :term:`split read`

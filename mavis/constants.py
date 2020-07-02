@@ -31,7 +31,7 @@ class MavisNamespace:
     """
 
     DELIM = r'[;,\s]+'
-    """:class:`str`: delimiter to use is parsing listable variables from the environment or config file"""
+    """str: delimiter to use is parsing listable variables from the environment or config file"""
 
     def __init__(self, *pos, **kwargs):
         object.__setattr__(self, '_defns', {})
@@ -426,7 +426,7 @@ def float_fraction(num):
 
 
 COMPLETE_STAMP = 'MAVIS.COMPLETE'
-""":class:`str`: Filename for all complete stamp files"""
+"""str: Filename for all complete stamp files"""
 
 SUBCOMMAND = MavisNamespace(
     ANNOTATE='annotate',
@@ -440,7 +440,7 @@ SUBCOMMAND = MavisNamespace(
     CONVERT='convert',
     OVERLAY='overlay',
 )
-""":class:`MavisNamespace`: holds controlled vocabulary for allowed pipeline stage values
+"""MavisNamespace: holds controlled vocabulary for allowed pipeline stage values
 
 - annotate
 - cluster
@@ -455,7 +455,7 @@ SUBCOMMAND = MavisNamespace(
 
 
 CODON_SIZE = 3
-""":class:`int`: the number of bases making up a codon"""
+"""int: the number of bases making up a codon"""
 
 
 def reverse_complement(s):
@@ -466,7 +466,7 @@ def reverse_complement(s):
         s (str): the input DNA sequence
 
     Returns:
-        :class:`str`: the reverse complement of the input sequence
+        str: the reverse complement of the input sequence
 
     Warning:
         assumes the input is a DNA sequence
@@ -507,7 +507,7 @@ def translate(s, reading_frame=0):
 GAP = '-'
 
 ORIENT = MavisNamespace(LEFT='L', RIGHT='R', NS='?')
-""":class:`MavisNamespace`: holds controlled vocabulary for allowed orientation values
+"""MavisNamespace: holds controlled vocabulary for allowed orientation values
 
 - ``LEFT``: left wrt to the positive/forward strand
 - ``RIGHT``: right wrt to the positive/forward strand
@@ -517,21 +517,21 @@ setattr(ORIENT, 'expand', lambda x: [ORIENT.LEFT, ORIENT.RIGHT] if x == ORIENT.N
 setattr(ORIENT, 'compare', lambda x, y: True if ORIENT.NS in [x, y] else (x == y))
 
 PROTOCOL = MavisNamespace(GENOME='genome', TRANS='transcriptome')
-""":class:`MavisNamespace`: holds controlled vocabulary for allowed protocol values
+"""MavisNamespace: holds controlled vocabulary for allowed protocol values
 
 - ``GENOME``: genome
 - ``TRANS``: transcriptome
 """
 
 DISEASE_STATUS = MavisNamespace(DISEASED='diseased', NORMAL='normal')
-""":class:`MavisNamespace`: holds controlled vocabulary for allowed disease status
+"""MavisNamespace: holds controlled vocabulary for allowed disease status
 
 - ``DISEASED``: diseased
 - ``NORMAL``: normal
 """
 
 STRAND = MavisNamespace(POS='+', NEG='-', NS='?')
-""":class:`MavisNamespace`: holds controlled vocabulary for allowed strand values
+"""MavisNamespace: holds controlled vocabulary for allowed strand values
 
 - ``POS``: the positive/forward strand
 - ``NEG``: the negative/reverse strand
@@ -548,7 +548,7 @@ SVTYPE = MavisNamespace(
     INS='insertion',
     DUP='duplication',
 )
-""":class:`MavisNamespace`: holds controlled vocabulary for acceptable structural variant classifications
+"""MavisNamespace: holds controlled vocabulary for acceptable structural variant classifications
 
 - ``DEL``: deletion
 - ``TRANS``: translocation
@@ -559,7 +559,7 @@ SVTYPE = MavisNamespace(
 """
 
 CIGAR = MavisNamespace(M=0, I=1, D=2, N=3, S=4, H=5, P=6, X=8, EQ=7)  # noqa
-""":class:`MavisNamespace`: Enum-like. For readable cigar values
+"""MavisNamespace: Enum-like. For readable cigar values
 
 - ``M``: alignment match (can be a sequence match or mismatch)
 - ``I``: insertion to the reference
@@ -575,7 +575,7 @@ note: descriptions are taken from the `samfile documentation <https://samtools.g
 """
 
 NA_MAPPING_QUALITY = 255
-""":class:`int`: mapping quality value to indicate mapping was not performed/calculated"""
+"""int: mapping quality value to indicate mapping was not performed/calculated"""
 
 PYSAM_READ_FLAGS = MavisNamespace(
     REVERSE=16,
@@ -596,7 +596,7 @@ PYSAM_READ_FLAGS = MavisNamespace(
     BLAT_PMS='bp',
 )
 
-""":class:`MavisNamespace`: Enum-like. For readable PYSAM flag constants
+"""MavisNamespace: Enum-like. For readable PYSAM flag constants
 
 - ``MULTIMAP``: template having multiple segments in sequencing
 - ``UNMAPPED``: segment unmapped
@@ -646,7 +646,7 @@ CALL_METHOD = MavisNamespace(
     SPAN='spanning reads',
     INPUT='input',
 )
-""":class:`MavisNamespace`: holds controlled vocabulary for allowed call methods
+"""MavisNamespace: holds controlled vocabulary for allowed call methods
 
 - ``CONTIG``: a contig was assembled and aligned across the breakpoints
 - ``SPLIT``: the event was called by :term:`split read`
@@ -655,24 +655,24 @@ CALL_METHOD = MavisNamespace(
 """
 
 GENE_PRODUCT_TYPE = MavisNamespace(SENSE='sense', ANTI_SENSE='anti-sense')
-""":class:`MavisNamespace`: controlled vocabulary for gene products
+"""MavisNamespace: controlled vocabulary for gene products
 
 - ``SENSE``: the gene product is a sense fusion
 - ``ANTI_SENSE``: the gene product is anti-sense
 """
 
 PRIME = MavisNamespace(FIVE=5, THREE=3)
-""":class:`MavisNamespace`: holds controlled vocabulary
+"""MavisNamespace: holds controlled vocabulary
 
 - ``FIVE``: five prime
 - ``THREE``: three prime
 """
 
 START_AA = 'M'
-""":class:`str`: The amino acid expected to start translation
+"""str: The amino acid expected to start translation
 """
 STOP_AA = '*'
-""":class:`str`: The amino acid expected to end translation
+"""str: The amino acid expected to end translation
 """
 
 GIEMSA_STAIN = MavisNamespace(
@@ -687,7 +687,7 @@ GIEMSA_STAIN = MavisNamespace(
     GVAR='gvar',
     STALK='stalk',
 )
-""":class:`MavisNamespace`: holds controlled vocabulary relating to stains of chromosome bands"""
+"""MavisNamespace: holds controlled vocabulary relating to stains of chromosome bands"""
 
 # content related to tabbed files for input/output
 # ensure that we don't have to change ALL the code when we update column names
@@ -802,7 +802,7 @@ COLUMNS = MavisNamespace(
     repeat_count='repeat_count',
     assumed_untemplated='assumed_untemplated',
 )
-""":class:`MavisNamespace`: Column names for i/o files used throughout the pipeline
+"""MavisNamespace: Column names for i/o files used throughout the pipeline
 
 - :term:`annotation_figure_legend`
 - :term:`annotation_figure`

@@ -22,7 +22,7 @@ class LocalJob(Job):
             args (list): A list of arguments to passed to the function given
             func (callable): the function to be run
             rank (int): rank of the job within the pool
-            response (:class:`~concurrent.futures.Future`): the result from the subprocess
+            response (concurrent.futures.Future): the result from the subprocess
         """
         self.args = args
         self.func = func

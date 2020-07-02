@@ -84,7 +84,7 @@ def main(
 ):
     """
     Args:
-        inputs (:class:`List` of :class:`str`): list of input files to read
+        inputs (List[str]): list of input files to read
         output (str): path to the output directory
         strand_specific (bool): is the bam using a strand specific protocol
         library (str): the library to look for in each of the input files

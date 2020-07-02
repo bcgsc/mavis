@@ -46,8 +46,8 @@ def draw_sv_summary_diagram(
 
     Args:
         ann (Annotation): the annotation object to be illustrated
-        reference_genome (dict of str by str): reference sequences
-        templates (list of Template): list of templates, used in drawing the template-level view
+        reference_genome (Dict[str,str]): reference sequences
+        templates (List[Template]): list of templates, used in drawing the template-level view
         ignore_absent_templates (bool):
             if true then will not raise an error if the template information is not given but will
             not draw the template instead

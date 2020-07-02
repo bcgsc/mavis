@@ -220,7 +220,7 @@ def breakpoint_pos(read, orient=ORIENT.NS):
     softclipping (unless and orientation has been specified)
 
     Args:
-        read (:class:`~pysam.AlignedSegment`): the read object
+        read (pysam.AlignedSegment): the read object
         orient (ORIENT): the orientation
 
     Returns:
@@ -316,7 +316,7 @@ def nsb_align(
           used in comparing alignments to choose the best alignment
 
     Returns:
-        :class:`list` of :class:`~pysam.AlignedSegment`: list of aligned segments
+        List[pysam.AlignedSegment]: list of aligned segments
 
     Note:
         using a higher min_match may improve performance as low quality alignments are rejected more quickly. However
@@ -405,7 +405,7 @@ def sequenced_strand(read, strand_determining_read=2):
     determines the strand that was sequenced
 
     Args:
-        read (:class:`~pysam.AlignedSegment`): the read being used to determine the strand
+        read (pysam.AlignedSegment): the read being used to determine the strand
         strand_determining_read (int): which read in the read pair is the same as the sequenced strand
 
     Returns:
@@ -442,7 +442,7 @@ def read_pair_type(read):
     assumptions based on illumina pairs: only 4 possible combinations
 
     Args:
-        read (:class:`~pysam.AlignedSegment`): the input read
+        read (pysam.AlignedSegment): the input read
 
     Returns:
         READ_PAIR_TYPE: the type of input read pair
@@ -450,8 +450,7 @@ def read_pair_type(read):
     Raises:
         NotImplementedError: for any read that does not fall into the four expected configurations (see below)
 
-    ::
-
+    Note:
         ++++> <---- is LR same-strand
         ++++> ++++> is LL opposite
         <---- <---- is RR opposite
@@ -481,7 +480,7 @@ def orientation_supports_type(read, event_type):
     checks if the orientation is compatible with the type of event
 
     Args:
-        read (:class:`~pysam.AlignedSegment`): a read from the pair
+        read (pysam.AlignedSegment): a read from the pair
         event_type (SVTYPE): the type of event to check
 
     Returns:
