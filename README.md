@@ -1,6 +1,6 @@
-<object type='image/svg+xml' data='docs/source/_static/acronym.svg'>
-    <object type='image/svg+xml' data='_static/acronym.svg'>
-    	<img src='docs/source/_static/acronym.svg' onerror='this.src="_static/acronym.svg"'>
+<object type='image/svg+xml' data='docs/images/acronym.svg'>
+    <object type='image/svg+xml' data='images/acronym.svg'>
+    	<img src='docs/images/acronym.svg' onerror='this.src="images/acronym.svg"'>
     </object><br>
 </object>
 
@@ -8,7 +8,7 @@
 ![PyPi](https://img.shields.io/pypi/v/mavis.svg) ![build](https://github.com/bcgsc/mavis/workflows/build/badge.svg?branch=master) [![codecov](https://codecov.io/gh/bcgsc/mavis/branch/master/graph/badge.svg)](https://codecov.io/gh/bcgsc/mavis) ![ReadTheDocs](https://readthedocs.org/projects/pip/badge/)
 
 
-# About
+## About
 
 [MAVIS](http://mavis.bcgsc.ca) is python command-line tool for the post-processing of structural variant calls.
 The general [MAVIS](http://mavis.bcgsc.ca) pipeline consists of six main stages

@@ -12,6 +12,10 @@
 /.coverage
 *.pyc
 *__pycache__
+blat
+bwa
+junit
+build-docs
 /*.bed
 /*.fa
 /docs/build
