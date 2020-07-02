@@ -34,13 +34,13 @@ jobs:
         black mavis -S -l 100 --check
     - name: run short tests with pytest
       run: |
-        pytest tests --junitxml=junit/test-results-${{ matrix.python-version }}.xml --cov markdown_refdocs --cov-report term --cov-report xml
+        pytest tests -v --junitxml=junit/test-results-${{ matrix.python-version }}.xml --cov markdown_refdocs --cov-report term --cov-report xml
       env:
         RUN_FULL: 0
       if: github.event_name != 'pull_request'
     - name: run full tests with pytest
       run: |
-        pytest tests --junitxml=junit/test-results-${{ matrix.python-version }}.xml --cov markdown_refdocs --cov-report term --cov-report xml
+        pytest tests -v --junitxml=junit/test-results-${{ matrix.python-version }}.xml --cov markdown_refdocs --cov-report term --cov-report xml
       env:
         RUN_FULL: 1
       if: github.event_name == 'pull_request'
