@@ -853,7 +853,7 @@ def draw_exon(config, canvas, exon, width, height, fill, label='', translation=N
     Return:
         svgwrite.container.Group: the group element for the diagram
 
-    .. todo::
+    Todo:
         add markers for exons with abrogated splice sites
     """
     g = canvas.g(class_='exon')

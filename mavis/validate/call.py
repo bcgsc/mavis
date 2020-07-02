@@ -782,8 +782,7 @@ def _call_by_flanking_pairs(evidence, event_type, consumed_evidence=None):
     Given a set of flanking reads, computes the coverage interval (the area that is covered by flanking read alignments)
     this area gives the starting position for computing the breakpoint interval.
 
-    .. todo::
-
+    Todo:
         pre-split pairs into clusters by position and fragment size. This will enable calling multiple
         events in close proximity by flanking reads only. It will also aid in stopping FP reads from
         interfering with resolving events by flanking pairs.

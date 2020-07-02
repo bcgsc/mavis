@@ -450,8 +450,7 @@ def read_pair_type(read):
     Raises:
         NotImplementedError: for any read that does not fall into the four expected configurations (see below)
 
-    ::
-
+    Note:
         ++++> <---- is LR same-strand
         ++++> ++++> is LL opposite
         <---- <---- is RR opposite

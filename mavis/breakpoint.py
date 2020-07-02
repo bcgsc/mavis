@@ -370,7 +370,6 @@ class BreakpointPair:
         use novel or untemplated sequence in the comparison. For this reason, insertions
         will never return any homologous sequence
 
-        ::
 
             small duplication event CTT => CTTCTT
 
