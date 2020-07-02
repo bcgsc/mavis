@@ -28,7 +28,7 @@ If applicable, include the mavis configuration file that was used to run the pip
  - OS: [e.g. centos-07]
  - Python Version [e.g. 3.6.1]
  - MAVIS Version [e.g. 22]
-- Blat/BWA Version
+ - Blat/BWA Version
 
 **Additional context**
 Add any other context about the problem here.
