@@ -75,7 +75,7 @@ Please make sure to search through the issues before reporting a bug to ensure t
 already an open issue.
 
 
-## Coding Conventions
+## Conventions
 
 ### Linting
 
