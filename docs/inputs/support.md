@@ -60,19 +60,19 @@ MAVIS also supports a [general VCF input](/inputs/supported_dependencies/#genera
 It should be noted however that the tool tracked will only be listed as
 \'vcf\' then.
 
-| Name                                  | Version(s)       | MAVIS input                                   | Publication                                  |
-| ------------------------------------- | ---------------- | --------------------------------------------- | -------------------------------------------- |
-| [BreakDancer](/glossary/#BreakDancer) | `1.4.5`          | `Tools main output file(s)`                   | [Chen-2009](./citations#Chen-2009)           |
-| [BreakSeq](/glossary/#BreakSeq)       | `2.2`            | `work/breakseq.vcf.gz`                        | [Abyzov-2015](./citations#Abyzov-2015)       |
-| [Chimerascan](/glossary/#Chimerascan) | `0.4.5`          | `*.bedpe`                                     | [Iyer-2011](./citations#Iyer-2011)           |
-| [CNVnator](/glossary/#CNVnator)       | `0.3.3`          | `Tools main output file(s)`                   | [Abyzov-2011](./citations#Abyzov-2011)       |
-| [DeFuse](/glossary/#DeFuse)           | `0.6.2`          | `results/results.classify.tsv`                | [McPherson-2011](./citations#McPherson-2011) |
-| [DELLY](/glossary/#DELLY)             | `0.6.1` `0.7.3`  | `combined.vcf` (converted from bcf)           | [Rausch-2012](./citations#Rausch-2012)       |
-| [Manta](/glossary/#Manta)             | `1.0.0`          | `{diploidSV,somaticSV}.vcf`                   | [Chen-2016](./citations#Chen-2016)           |
-| [Pindel](/glossary/#Pindel)           | `0.2.5b9`        | `Tools main output file(s)`                   | [Ye-2009](./citations#Ye-2009)               |
-| [Trans-ABySS](/glossary/#Trans-ABySS) | `1.4.8 (custom)` | `{indels/events_novel_exons,fusions/*}.tsv`   | [Robertson-2010](./citations#Robertson-2010) |
-| [Strelka](/glossary/#Strelka)         | `1.0.6`          | `passed.somatic.indels.vcf`                   | [Saunders-2012](./citations#Saunders-2012)   |
-| [STAR-Fusion](/glossary/#STAR-Fusion) | `1.4.0`          | `star-fusion.fusion_predictions.abridged.tsv` | [Haas-2017](./citations#Haas-2017)           |
+| Name                                  | Version(s)       | MAVIS input                                   | Publication                                            |
+| ------------------------------------- | ---------------- | --------------------------------------------- | ------------------------------------------------------ |
+| [BreakDancer](/glossary/#BreakDancer) | `1.4.5`          | `Tools main output file(s)`                   | [Chen-2009](/background/citations#Chen-2009)           |
+| [BreakSeq](/glossary/#BreakSeq)       | `2.2`            | `work/breakseq.vcf.gz`                        | [Abyzov-2015](/background/citations#Abyzov-2015)       |
+| [Chimerascan](/glossary/#Chimerascan) | `0.4.5`          | `*.bedpe`                                     | [Iyer-2011](/background/citations#Iyer-2011)           |
+| [CNVnator](/glossary/#CNVnator)       | `0.3.3`          | `Tools main output file(s)`                   | [Abyzov-2011](/background/citations#Abyzov-2011)       |
+| [DeFuse](/glossary/#DeFuse)           | `0.6.2`          | `results/results.classify.tsv`                | [McPherson-2011](/background/citations#McPherson-2011) |
+| [DELLY](/glossary/#DELLY)             | `0.6.1` `0.7.3`  | `combined.vcf` (converted from bcf)           | [Rausch-2012](/background/citations#Rausch-2012)       |
+| [Manta](/glossary/#Manta)             | `1.0.0`          | `{diploidSV,somaticSV}.vcf`                   | [Chen-2016](/background/citations#Chen-2016)           |
+| [Pindel](/glossary/#Pindel)           | `0.2.5b9`        | `Tools main output file(s)`                   | [Ye-2009](/background/citations#Ye-2009)               |
+| [Trans-ABySS](/glossary/#Trans-ABySS) | `1.4.8 (custom)` | `{indels/events_novel_exons,fusions/*}.tsv`   | [Robertson-2010](/background/citations#Robertson-2010) |
+| [Strelka](/glossary/#Strelka)         | `1.0.6`          | `passed.somatic.indels.vcf`                   | [Saunders-2012](/background/citations#Saunders-2012)   |
+| [STAR-Fusion](/glossary/#STAR-Fusion) | `1.4.0`          | `star-fusion.fusion_predictions.abridged.tsv` | [Haas-2017](/background/citations#Haas-2017)           |
 
 !!! note
     [Trans-ABySS](/glossary/#Trans-ABySS): The trans-abyss version
