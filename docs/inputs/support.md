@@ -135,7 +135,7 @@ The logic for all cases is shown in the code below
 ### Calling A Custom Conversion Script
 
 Custom conversion scripts can be specified during
-[automatic config generation](../../configuration/settings/#pipeline-configuration-file)
+[automatic config generation](../../configuration/general/#pipeline-configuration-file)
 using the `--external_conversion` option.
 
 !!! note

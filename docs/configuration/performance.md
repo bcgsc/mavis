@@ -8,7 +8,7 @@ of the bam file you are validating against.
 
 There are a number of settings that can be adjusted to reduce memory and
 cpu requirements depending on what the user is trying to analyze. See
-[configuration and settings](../../configuration/settings/) for more details.
+[configuration and settings](../../configuration/general/) for more details.
 
 ## Validation Resources
 
