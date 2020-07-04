@@ -68,7 +68,13 @@ TEST_REQS = [
 ]
 
 
-DOC_REQS = ['mkdocs', 'markdown_refdocs', 'mkdocs-material', 'markdown-include']
+DOC_REQS = [
+    'mkdocs',
+    'markdown_refdocs',
+    'mkdocs-material',
+    'markdown-include',
+    'pymdown-extensions',
+]
 
 
 INSTALL_REQS = [
