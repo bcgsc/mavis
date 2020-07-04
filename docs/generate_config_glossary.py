@@ -33,7 +33,7 @@ with open(fname, 'a') as fh:
     ]:
         for term, value in namespace.items():
             typ = namespace.type(term).__name__
-            typ = CUSTOM_TYPES.get(typ, typ)
+            # typ = CUSTOM_TYPES.get(typ, typ)
             defn = '`{}` - {}. The corresponding environment variable is `{}{}` and the default value is `{}`'.format(
                 typ, re.sub(r'\.?$', '', namespace.define(term, '')).capitalize(), ENV_VAR_PREFIX, term.upper(), repr(value))
             try:

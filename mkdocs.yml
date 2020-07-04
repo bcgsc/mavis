@@ -1,7 +1,7 @@
 site_name: MAVIS
 
 theme:
-  name: "material"
+  name: material
 repo_url: https://github.com/bcgsc/mavis
 repo_name: github
 site_dir: build-docs
@@ -10,3 +10,6 @@ markdown_extensions:
   - admonition
   - markdown_include.include:
       base_path: docs
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg

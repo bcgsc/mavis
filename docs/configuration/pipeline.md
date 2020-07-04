@@ -6,13 +6,16 @@ The setup step of MAVIS is set up to use a job scheduler on a
 compute cluster. will generate submission scripts and a wrapper bash
 script for the user to execute on their cluster head node.
 
-![The MAVIS pipeline is highly configurable. Some pipeline steps
+![](../../images/pipeline_options.svg)
+
+The MAVIS pipeline is highly configurable. Some pipeline steps
 (cluster, validate) are optional and can be automatically skipped. The
 standard pipeline is
-far-left.](/images/pipeline_options.svg)
+far-left.
+
 
 The most common use case is
-[auto-generating a configuration file](/tutorials/full/#generating-the-config-file) and then running the pipeline setup step. The pipeline setup
+[auto-generating a configuration file](../../tutorials/full/#generating-the-config-file) and then running the pipeline setup step. The pipeline setup
 step will run clustering and create scripts for running the other steps.
 
 ```bash
@@ -22,7 +25,7 @@ mavis setup config.cfg -o /path/to/top/output_dir
 
 This will create the build.cfg configuration file, which is used by the
 scheduler to submit jobs. To use a particular scheduler you will need to
-set the [MAVIS\_SCHEDULER]{.title-ref} environment variable. After the
+set the `MAVIS_SCHEDULER` environment variable. After the
 build configuration file has been created you can run the mavis schedule
 option to submit your jobs
 
@@ -33,24 +36,27 @@ mavis schedule -o /path/to/output_dir --submit
 
 This will submit a series of jobs with dependencies.
 
-![Dependency graph of MAVIS jobs for the standard pipeline setup. The
+![](../../images/pipeline_dependency_graph.svg)
+
+Dependency graph of MAVIS jobs for the standard pipeline setup. The
 notation on the arrows indicates the SLURM setting on the job to add the
 dependency on the previous
-job.](/images/pipeline_dependency_graph.svg)
+job.
+
 
 ### Configuring Scheduler Settings
 
 There are multiple ways to configure the scheduler settings. Some of the
 configurable options are listed below
 
--   [queue](/glossary/#queue) `MAVIS_QUEUE`
--   [memory_limit](/glossary/#memory_limit) `MAVIS_MEMORY_LIMIT`
--   [time_limit](/glossary/#time_limit) `MAVIS_TIME_LIMIT`
--   [import_env](/glossary/#import_env) `MAVIS_IMPORT_ENV`
--   [scheduler](/glossary/#scheduler) `MAVIS_SCHEDULER`
+-   [MAVIS_QUEUE](../../glossary/#queue)
+-   [MAVIS_MEMORY_LIMIT](../../glossary/#memory_limit)
+-   [MAVIS_TIME_LIMIT](../../glossary/#time_limit)
+-   [MAVIS_IMPORT_ENV](../../glossary/#import_env)
+-   [MAVIS_SCHEDULER](../../glossary/#scheduler)
 
 For example to set the job queue default using an
-[environment variable](/configuration/settings/#environment-variables)
+[environment variable](../../configuration/settings/#environment-variables)
 
 ```bash
 export MAVIS_QUEUE=QUEUENAME
@@ -125,5 +131,6 @@ values.
     edit `memory_limit` and `time_limit` values.
 
     If memory errors are frequent then it would be better to adjust the
-    default values ([trans_validation_memory](/glossary/#trans_validation_memory), [validation_memory](/glossary/#validation_memory),
-    [time_limit](/glossary/#time_limit))
+    default values ([trans_validation_memory](../../glossary/#trans-validation-memory),
+    [validation_memory](../../glossary/#validation_memory),
+    [time_limit](../../glossary/#time_limit))

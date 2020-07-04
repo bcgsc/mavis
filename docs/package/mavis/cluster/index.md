@@ -9,7 +9,7 @@ Types of Output Files
 | ------------------------------ | --------------------- | -------------------------------------------------------------------- |
 | ``cluster_assignment.tab``     | text/tabbed           |                                                                      |
 | ``uninformative_clusters.txt`` | text                  | list of cluster ids that were dropped by annotation proximity filter |
-| ``clusters.bed``               | [bed](/glossary/#bed) | cluster positions                                                    |
+| ``clusters.bed``               | [bed](../../glossary/#bed) | cluster positions                                                    |
 | ``cluster-*.tab``              | text/tabbed           | computed clusters                                                    |
 
 Algorithm Overview

@@ -96,11 +96,21 @@ used by [python type annotations](https://docs.python.org/3/library/typing.html)
 arg1 (List[str]): a list of strings
 ```
 
-However using proper type annotations is preferred for new code
+However using proper type annotations is preferred for new code and then only including the
+description of the parameter in the docstring and not its type
+
+```python
+
+def some_function(some_arg: List[str]) -> None:
+    """
+    Args:
+        some_arg: this arg does stuff
+    """
+```
 
 ### Output Columns
 
-any column name which may appear in any of the intermediate or final output files must be defined in ``mavis.constants.COLUMNS``
+any column name which may appear in any of the intermediate or final output files must be defined in `mavis.constants.COLUMNS` as well as added to the [glossary](../glossary/#column-names)
 
 
 ### Tests
