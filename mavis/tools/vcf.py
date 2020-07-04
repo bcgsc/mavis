@@ -14,39 +14,58 @@ def parse_bnd_alt(alt):
 
     Assumes that the reference base is always the outermost base (this is based on the spec and also manta results as
     the spec was missing some cases)
+
+    r = reference base/seq
+    u = untemplated sequence/alternate sequence
+    p = chromosome:position
+
+    | alt format   | orients |
+    | ------------ | ------- |
+    | ru[p[        | LR      |
+    | [p[ur        | RR      |
+    | ]p]ur        | RL      |
+    | ru]p]        | LL      |
     """
+    # ru[p[
     match = re.match(r'^(?P<ref>\w)(?P<useq>\w*)\[(?P<chr>[^:]+):(?P<pos>\d+)\[$', alt)
     if match:
         return (
             match.group('chr'),
             int(match.group('pos')),
+            ORIENT.LEFT,
             ORIENT.RIGHT,
             match.group('ref'),
             match.group('useq'),
         )
+    # [p[ur
     match = re.match(r'^\[(?P<chr>[^:]+):(?P<pos>\d+)\[(?P<useq>\w*)(?P<ref>\w)$', alt)
     if match:
         return (
             match.group('chr'),
             int(match.group('pos')),
             ORIENT.RIGHT,
+            ORIENT.RIGHT,
             match.group('ref'),
             match.group('useq'),
         )
+    # ]p]ur
     match = re.match(r'^\](?P<chr>[^:]+):(?P<pos>\d+)\](?P<useq>\w*)(?P<ref>\w)$', alt)
     if match:
         return (
             match.group('chr'),
             int(match.group('pos')),
+            ORIENT.RIGHT,
             ORIENT.LEFT,
             match.group('ref'),
             match.group('useq'),
         )
-    match = re.match(r'^(?P<ref>\w)(?P<useq>\w*)](?P<chr>[^:]+):(?P<pos>\d+)\]$', alt)
+    # ru]p]
+    match = re.match(r'^(?P<ref>\w)(?P<useq>\w*)\](?P<chr>[^:]+):(?P<pos>\d+)\]$', alt)
     if match:
         return (
             match.group('chr'),
             int(match.group('pos')),
+            ORIENT.LEFT,
             ORIENT.LEFT,
             match.group('ref'),
             match.group('useq'),
@@ -88,7 +107,8 @@ def convert_record(record, record_mapping={}, log=DEVNULL):
             std_row['id'] = record.id
 
         if info.get('SVTYPE', None) == 'BND':
-            chr2, end, orient2, ref, alt = parse_bnd_alt(alt)
+            chr2, end, orient1, orient2, ref, alt = parse_bnd_alt(alt)
+            std_row[COLUMNS.break1_orientation] = orient1
             std_row[COLUMNS.break2_orientation] = orient2
             std_row[COLUMNS.untemplated_seq] = alt
             if record.ref != ref:
