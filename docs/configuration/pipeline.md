@@ -9,10 +9,10 @@ script for the user to execute on their cluster head node.
 ![The MAVIS pipeline is highly configurable. Some pipeline steps
 (cluster, validate) are optional and can be automatically skipped. The
 standard pipeline is
-far-left.](/images/pipeline_options.svg)
+far-left.](../../images/pipeline_options.svg)
 
 The most common use case is
-[auto-generating a configuration file](/tutorials/full/#generating-the-config-file) and then running the pipeline setup step. The pipeline setup
+[auto-generating a configuration file](../../tutorials/full/#generating-the-config-file) and then running the pipeline setup step. The pipeline setup
 step will run clustering and create scripts for running the other steps.
 
 ```bash
@@ -36,21 +36,21 @@ This will submit a series of jobs with dependencies.
 ![Dependency graph of MAVIS jobs for the standard pipeline setup. The
 notation on the arrows indicates the SLURM setting on the job to add the
 dependency on the previous
-job.](/images/pipeline_dependency_graph.svg)
+job.](../../images/pipeline_dependency_graph.svg)
 
 ### Configuring Scheduler Settings
 
 There are multiple ways to configure the scheduler settings. Some of the
 configurable options are listed below
 
--   [queue](/glossary/#queue) `MAVIS_QUEUE`
--   [memory_limit](/glossary/#memory_limit) `MAVIS_MEMORY_LIMIT`
--   [time_limit](/glossary/#time_limit) `MAVIS_TIME_LIMIT`
--   [import_env](/glossary/#import_env) `MAVIS_IMPORT_ENV`
--   [scheduler](/glossary/#scheduler) `MAVIS_SCHEDULER`
+-   [queue](../../glossary/#queue) `MAVIS_QUEUE`
+-   [memory_limit](../../glossary/#memory_limit) `MAVIS_MEMORY_LIMIT`
+-   [time_limit](../../glossary/#time_limit) `MAVIS_TIME_LIMIT`
+-   [import_env](../../glossary/#import_env) `MAVIS_IMPORT_ENV`
+-   [scheduler](../../glossary/#scheduler) `MAVIS_SCHEDULER`
 
 For example to set the job queue default using an
-[environment variable](/configuration/settings/#environment-variables)
+[environment variable](../../configuration/settings/#environment-variables)
 
 ```bash
 export MAVIS_QUEUE=QUEUENAME
@@ -125,5 +125,6 @@ values.
     edit `memory_limit` and `time_limit` values.
 
     If memory errors are frequent then it would be better to adjust the
-    default values ([trans_validation_memory](/glossary/#trans_validation_memory), [validation_memory](/glossary/#validation_memory),
-    [time_limit](/glossary/#time_limit))
+    default values ([trans_validation_memory](../../glossary/#trans_validation_memory),
+    [validation_memory](../../glossary/#validation_memory),
+    [time_limit](../../glossary/#time_limit))

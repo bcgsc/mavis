@@ -6,23 +6,23 @@
 | expected name/suffix           | file type/format          | content                                  |
 | ------------------------------ | ------------------------- | ---------------------------------------- |
 | ``annotations.tab``            | text/tabbed               | annotated events                         |
-| ``annotations.fusion-cdna.fa`` | [fasta](../../../glossary/#fasta) | putative fusion unspliced cDNA sequences |
-| ``drawings/*.svg``             | [SVG](../../../glossary/#SVG)     | diagrams                                 |
-| ``drawings/*.legend.json``     | [JSON](../../../glossary/#JSON)   | diagram legend/metadata                  |
+| ``annotations.fusion-cdna.fa`` | [fasta](../../../../glossary/#fasta) | putative fusion unspliced cDNA sequences |
+| ``drawings/*.svg``             | [SVG](../../../../glossary/#SVG)     | diagrams                                 |
+| ``drawings/*.legend.json``     | [JSON](../../../../glossary/#JSON)   | diagram legend/metadata                  |
 
 
 ## Algorithm Overview
 
-see [annotating events](../../../background/theory/#annotating-events)
+see [annotating events](../../../../background/theory/#annotating-events)
 
 - read in breakpoint pairs
 - generate strand-specific annotations (one annotation per strand, multiple if multiple genes/transcripts in the region)
 - try building fusion transcripts for bp-specific calls
-- generate [SVG](../../../glossary/#SVG) diagrams
+- generate [SVG](../../../../glossary/#SVG) diagrams
 
 ## Levels of Annotations
 
-![](../../../images/feature_levels.svg)
+![](../../../../images/feature_levels.svg)
 
 
 ## Overview of Class Relatnships

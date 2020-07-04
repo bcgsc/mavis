@@ -132,60 +132,60 @@ Community based standard of reccommendations for variant notation.
 ### BreakDancer
 
 BreakDancer is an SV caller. Source for BreakDancer can be found
-    [here](https://github.com/genome/breakdancer) [Chen-2009](./citations#Chen-2009)
+    [here](https://github.com/genome/breakdancer) [Chen-2009](../background/citations#chen-2009)
 
 ### BreakSeq
 
 BreakSeq is an SV caller. Source for BreakSeq can be found
-    [here](https://github.com/bioinform/breakseq2) [Abyzov-2015](./citations#Abyzov-2015)
+    [here](https://github.com/bioinform/breakseq2) [Abyzov-2015](../background/citations#abyzov-2015)
 
 ### Chimerascan
 
 Chimerascan is an SV caller. Source for Chimerascan can be found
     [here](https://code.google.com/archive/p/chimerascan)
-    [Iyer-2011](./citations#Iyer-2011)
+    [Iyer-2011](../background/citations#iyer-2011)
 
 ### CNVnator
 
 CNVnator is an SV caller. Source for CNVnator can be found
-    [here](https://github.com/abyzovlab/CNVnator) [Abyzov-2011](./citations#Abyzov-2011)
+    [here](https://github.com/abyzovlab/CNVnator) [Abyzov-2011](../background/citations#abyzov-2011)
 
 ### DeFuse
 
 DeFuse is an SV caller. Source for DeFuse can be found
-    [here](https://bitbucket.org/dranew/defuse) [McPherson-2011](./citations#McPherson-2011)
+    [here](https://bitbucket.org/dranew/defuse) [McPherson-2011](../background/citations#mcpherson-2011)
 
 ### DELLY
 
 DELLY is an SV caller. Source for DELLY can be found
-    [here](https://github.com/dellytools/delly) [Rausch-2012](./citations#Rausch-2012)
+    [here](https://github.com/dellytools/delly) [Rausch-2012](../background/citations#rausch-2012)
 
 ### Manta
 
 Manta is an SV caller. Source for Manta can be found
-    [here](https://github.com/Illumina/manta) [Chen-2016](./citations#Chen-2016)
+    [here](https://github.com/Illumina/manta) [Chen-2016](../background/citations#chen-2016)
 
 ### STAR-Fusion
 
 STAR-Fusion is an SV caller. Source for STAR-Fusion can be found
-    [here](https://github.com/STAR-Fusion/STAR-Fusion) [Haas-2017](./citations#Haas-2017)
+    [here](https://github.com/STAR-Fusion/STAR-Fusion) [Haas-2017](../background/citations#haas-2017)
 
 ### Strelka
 
 Strelka is an SNV and small indel caller. Only the small indels can
     be processed, since SNVs are not currently suported. Source for
     Strelka can be found [here](https://github.com/Illumina/strelka)
-    [Saunders-2012](./citations#Saunders-2012)
+    [Saunders-2012](../background/citations#saunders-2012)
 
 ### Pindel
 
 Pindel is an SV caller. Source for Pindel can be found
-    [here](https://github.com/genome/pindel) [Ye-2009](./citations#Ye-2009)
+    [here](https://github.com/genome/pindel) [Ye-2009](../background/citations#ye-2009)
 
 ### Trans-ABySS
 
 Trans-ABySS is an SV caller. Source for Trans-ABySS can be found
-    [here](https://github.com/bcgsc/transabyss) [Robertson-2010](./citations#Robertson-2010)
+    [here](https://github.com/bcgsc/transabyss) [Robertson-2010](../background/citations#robertson-2010)
 
 ### SV
 

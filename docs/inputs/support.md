@@ -1,9 +1,9 @@
 # Supported Dependencies
 
 MAVIS integrates with
-[SV callers](/inputs/support/#sv-callers),
-[job schedulers](/inputs/support/#job-schedulers), and
-[aligners](/inputs/support/#aligners). While some of
+[SV callers](../../inputs/support/#sv-callers),
+[job schedulers](../../inputs/support/#job-schedulers), and
+[aligners](../../inputs/support/#aligners). While some of
 these dependencies are optional, all currently supported options are
 detailed below. The versions column in the tables below list all the
 versions which were tested for each tool. Each version listed is known
@@ -18,64 +18,64 @@ schedulers listed below.
 
 | Name                        | Version(s)  | Environment Setting      |
 | --------------------------- | ----------- | ------------------------ |
-| [TORQUE](/glossary/#TORQUE) | `6.1.2`     | `MAVIS_SCHEDULER=TORQUE` |
-| [SGE](/glossary/#SGE)       | `8.1.8`     | `MAVIS_SCHEDULER=SGE`    |
-| [SLURM](/glossary/#SLURM)   | `17.02.1-2` | `MAVIS_SCHEDULER=SLURM`  |
+| [TORQUE](../../glossary/#TORQUE) | `6.1.2`     | `MAVIS_SCHEDULER=TORQUE` |
+| [SGE](../../glossary/#SGE)       | `8.1.8`     | `MAVIS_SCHEDULER=SGE`    |
+| [SLURM](../../glossary/#SLURM)   | `17.02.1-2` | `MAVIS_SCHEDULER=SLURM`  |
 
 Users requiring support for other schedulers may make a request by
 [submitting an issue to our github
 page](https://github.com/bcgsc/mavis/issues). Additionally, developers
 looking to extend the functionality may submit a pull request (Please
 see the
-[guidelines for contributors](/development/)
+[guidelines for contributors](../../development/)
 
 MAVIS running locally uses the python
-:py`concurrent.futures`{.interpreted-text role="mod"} library to manage
+`concurrent.futures` library to manage
 jobs.
 ##
 
 ## Aligners
 
-Two aligners are supported [bwa](/glossary/#bwa) and
-[blat](/glossary/#blat) (default).
+Two aligners are supported [bwa](../../glossary/#bwa) and
+[blat](../../glossary/#blat) (default).
 
 | Name                                      | Version(s)              | Environment Setting       |
 | ----------------------------------------- | ----------------------- | ------------------------- |
-| [blat](/glossary/#blat)                   | `36x2` `36`             | `MAVIS_ALIGNER=blat`      |
-| [bwa mem <bwa>](/glossary/#bwa mem <bwa>) | `0.7.15-r1140` `0.7.12` | `MAVIS_ALIGNER='bwa mem'` |
+| [blat](../../glossary/#blat)                   | `36x2` `36`             | `MAVIS_ALIGNER=blat`      |
+| [bwa mem <bwa>](../../glossary/#bwa mem <bwa>) | `0.7.15-r1140` `0.7.12` | `MAVIS_ALIGNER='bwa mem'` |
 
 !!! note
     When setting the aligner you will also need to set the
-    [aligner_reference](/glossary/#aligner_reference) to match
+    [aligner_reference](../../glossary/#aligner_reference) to match
 
 ## SV Callers
 
-MAVIS supports output from a wide-variety of [SV](/glossary/#SV) callers. Assumptions are made for each tool based on
+MAVIS supports output from a wide-variety of [SV](../../glossary/#SV) callers. Assumptions are made for each tool based on
 interpretation of the output and the publications for each tool. The
 tools and versions currently supported are given below. Versions listed
 indicate the version of the tool for which output files have been tested
 as input into MAVIS
 
-MAVIS also supports a [general VCF input](/inputs/support/#general-vcf-inputs).
+MAVIS also supports a [general VCF input](../../inputs/support/#general-vcf-inputs).
 It should be noted however that the tool tracked will only be listed as
 \'vcf\' then.
 
 | Name                                  | Version(s)       | MAVIS input                                   | Publication                                            |
 | ------------------------------------- | ---------------- | --------------------------------------------- | ------------------------------------------------------ |
-| [BreakDancer](/glossary/#BreakDancer) | `1.4.5`          | `Tools main output file(s)`                   | [Chen-2009](/background/citations#Chen-2009)           |
-| [BreakSeq](/glossary/#BreakSeq)       | `2.2`            | `work/breakseq.vcf.gz`                        | [Abyzov-2015](/background/citations#Abyzov-2015)       |
-| [Chimerascan](/glossary/#Chimerascan) | `0.4.5`          | `*.bedpe`                                     | [Iyer-2011](/background/citations#Iyer-2011)           |
-| [CNVnator](/glossary/#CNVnator)       | `0.3.3`          | `Tools main output file(s)`                   | [Abyzov-2011](/background/citations#Abyzov-2011)       |
-| [DeFuse](/glossary/#DeFuse)           | `0.6.2`          | `results/results.classify.tsv`                | [McPherson-2011](/background/citations#McPherson-2011) |
-| [DELLY](/glossary/#DELLY)             | `0.6.1` `0.7.3`  | `combined.vcf` (converted from bcf)           | [Rausch-2012](/background/citations#Rausch-2012)       |
-| [Manta](/glossary/#Manta)             | `1.0.0`          | `{diploidSV,somaticSV}.vcf`                   | [Chen-2016](/background/citations#Chen-2016)           |
-| [Pindel](/glossary/#Pindel)           | `0.2.5b9`        | `Tools main output file(s)`                   | [Ye-2009](/background/citations#Ye-2009)               |
-| [Trans-ABySS](/glossary/#Trans-ABySS) | `1.4.8 (custom)` | `{indels/events_novel_exons,fusions/*}.tsv`   | [Robertson-2010](/background/citations#Robertson-2010) |
-| [Strelka](/glossary/#Strelka)         | `1.0.6`          | `passed.somatic.indels.vcf`                   | [Saunders-2012](/background/citations#Saunders-2012)   |
-| [STAR-Fusion](/glossary/#STAR-Fusion) | `1.4.0`          | `star-fusion.fusion_predictions.abridged.tsv` | [Haas-2017](/background/citations#Haas-2017)           |
+| [BreakDancer](../../glossary/#BreakDancer) | `1.4.5`          | `Tools main output file(s)`                   | [Chen-2009](../../background/citations#Chen-2009)           |
+| [BreakSeq](../../glossary/#BreakSeq)       | `2.2`            | `work/breakseq.vcf.gz`                        | [Abyzov-2015](../../background/citations#Abyzov-2015)       |
+| [Chimerascan](../../glossary/#Chimerascan) | `0.4.5`          | `*.bedpe`                                     | [Iyer-2011](../../background/citations#Iyer-2011)           |
+| [CNVnator](../../glossary/#CNVnator)       | `0.3.3`          | `Tools main output file(s)`                   | [Abyzov-2011](../../background/citations#Abyzov-2011)       |
+| [DeFuse](../../glossary/#DeFuse)           | `0.6.2`          | `results/results.classify.tsv`                | [McPherson-2011](../../background/citations#McPherson-2011) |
+| [DELLY](../../glossary/#DELLY)             | `0.6.1` `0.7.3`  | `combined.vcf` (converted from bcf)           | [Rausch-2012](../../background/citations#Rausch-2012)       |
+| [Manta](../../glossary/#Manta)             | `1.0.0`          | `{diploidSV,somaticSV}.vcf`                   | [Chen-2016](../../background/citations#Chen-2016)           |
+| [Pindel](../../glossary/#Pindel)           | `0.2.5b9`        | `Tools main output file(s)`                   | [Ye-2009](../../background/citations#Ye-2009)               |
+| [Trans-ABySS](../../glossary/#Trans-ABySS) | `1.4.8 (custom)` | `{indels/events_novel_exons,fusions/*}.tsv`   | [Robertson-2010](../../background/citations#Robertson-2010) |
+| [Strelka](../../glossary/#Strelka)         | `1.0.6`          | `passed.somatic.indels.vcf`                   | [Saunders-2012](../../background/citations#Saunders-2012)   |
+| [STAR-Fusion](../../glossary/#STAR-Fusion) | `1.4.0`          | `star-fusion.fusion_predictions.abridged.tsv` | [Haas-2017](../../background/citations#Haas-2017)           |
 
 !!! note
-    [Trans-ABySS](/glossary/#Trans-ABySS): The trans-abyss version
+    [Trans-ABySS](../../glossary/#Trans-ABySS): The trans-abyss version
     used was an in-house dev version. However the output columns are
     compatible with 1.4.8 as that was the version branched from.
     Additionally, although indels can be used from both genome and
@@ -85,7 +85,7 @@ It should be noted however that the tool tracked will only be listed as
     down validation. It is much faster to simply use the genome indels for
     both genome and transcriptome.
 
-### [DELLY](/glossary/#DELLY) Post-processing
+### [DELLY](../../glossary/#DELLY) Post-processing
 
 Some post-processing on the delly output files is generally done prior
 to input. The output BCF files are converted to a VCF file
@@ -96,17 +96,17 @@ bcftools concat -f /path/to/file/with/vcf/list --allow-overlaps --output-type v 
 
 ### Writing A Custom Conversion Script
 
-#### Logic Example - [Chimerascan](/glossary/#Chimerascan)
+#### Logic Example - [Chimerascan](../../glossary/#Chimerascan)
 
 The following is a description of how the conversion script for
-[Chimerascan](../background/citations/#Iyer-2011) was generated.
+[Chimerascan](../../background/citations/#Iyer-2011) was generated.
 While this is a built-in conversion command now, the logic could also
 have been put in an external script. As mentioned above, there are a
 number of assumptions that had to be made about the tools output to
 convert it to the
-[standard mavis format](../inputs/standard/). Assumptions were then verified by reviewing at a series of
-called events in [IGV](../glossary/#IGV). In the current
-example, [Chimerascan](../background/citations/#Iyer-2011) output
+[standard mavis format](../../inputs/standard/). Assumptions were then verified by reviewing at a series of
+called events in [IGV](../../glossary/#IGV). In the current
+example, [Chimerascan](../../background/citations/#Iyer-2011) output
 has six columns of interest that were used in the conversion
 
 -   start3p
@@ -118,7 +118,7 @@ has six columns of interest that were used in the conversion
 
 The above columns describe two segments which are joined. MAVIS requires
 the position of the join. It was assumed that the segments are always
-joined as a [sense fusion](/glossary/#sense fusion). Using this
+joined as a [sense fusion](../../glossary/#sense fusion). Using this
 assumption there are four logical cases to determine the position of the
 breakpoints.
 
@@ -135,7 +135,7 @@ The logic for all cases is shown in the code below
 ### Calling A Custom Conversion Script
 
 Custom conversion scripts can be specified during
-[automatic config generation](../configuration/settings/#pipeline-configuration-file)
+[automatic config generation](../../configuration/settings/#pipeline-configuration-file)
 using the `--external_conversion` option.
 
 !!! note
