@@ -4,7 +4,7 @@ There are several reference files that are required for full
 functionality of the MAVIS pipeline. If the same reference file will be
 reused often then the user may find it helpful to set reasonable
 defaults. Default values for any of the reference file arguments can be
-[configured through environment variables](/configuration/settings/#environment-variables)
+[configured through environment variables](../configuration/settings/#environment-variables)
 
 To improve the install experience for the users, different
 configurations of the MAVIS annotations file have been made available.
@@ -14,12 +14,12 @@ not available,
 
 | File Name (Type/Format)                                                              | Environment Variable      | Download                                                                                                                                                                                                                                                                                                                                                                                                       |
 | ------------------------------------------------------------------------------------ | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [reference genome](/inputs/reference/#reference-genome) ([fasta](/glossary/#fasta))  | `MAVIS_REFERENCE_GENOME`  | <a class='download-button btn btn-neutral' href='http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/chromFa.tar.gz' download> <img src='images/Ic_cloud_download_48px.svg'>GRCh37/Hg19</a><br><a class='download-button btn btn-neutral' href='http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz' download><img src='images/Ic_cloud_download_48px.svg'>GRCh38</a>                         |
-| [annotations](/inputs/reference/#annotations) ([JSON](/glossary/#JSON))              | `MAVIS_ANNOTATIONS`       | <a class='download-button btn btn-neutral' href='http://www.bcgsc.ca/downloads/mavis/ensembl69_hg19_annotations.json' download> <img src='images/Ic_cloud_download_48px.svg'>GRCh37/Hg19 + Ensembl69</a><br><a class='download-button btn btn-neutral' href='http://www.bcgsc.ca/downloads/mavis/ensembl79_hg38_annotations.json' download><img src='images/Ic_cloud_download_48px.svg'>GRCh38 + Ensembl79</a> |
-| [masking](/inputs/reference/#masking-file) (text/tabbed)                             | `MAVIS_MASKING`           | <a class='download-button btn btn-neutral' href='http://www.bcgsc.ca/downloads/mavis/hg19_masking.tab' download><img src='images/Ic_cloud_download_48px.svg'>GRCh37/Hg19</a><br><a class='download-button btn btn-neutral' href='http://www.bcgsc.ca/downloads/mavis/GRCh38_masking.tab' download><img src='images/Ic_cloud_download_48px.svg'>GRCh38</a>                                                      |
-| [template metadata](/inputs/reference/#template-metadata) (text/tabbed)              | `MAVIS_TEMPLATE_METADATA` | <a class='download-button btn btn-neutral' href='http://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/cytoBand.txt.gz' download><img src='images/Ic_cloud_download_48px.svg'>GRCh37/Hg19</a><br><a class='download-button btn btn-neutral' href='http://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/cytoBand.txt.gz' download><img src='images/Ic_cloud_download_48px.svg'>GRCh38</a>                  |
-| [DGV annotations](/inputs/reference/#dgv-database-of-genomic-variants) (text/tabbed) | `MAVIS_DGV_ANNOTATION`    | <a class='download-button btn btn-neutral' href='http://www.bcgsc.ca/downloads/mavis/dgv_hg19_variants.tab' download><img src='images/Ic_cloud_download_48px.svg'>GRCh37/Hg19</a><br><a class='download-button btn btn-neutral' href='http://www.bcgsc.ca/downloads/mavis/dgv_hg38_variants.tab' download><img src='images/Ic_cloud_download_48px.svg'>GRCh38</a>                                              |
-| [aligner reference](/inputs/reference/#aligner-reference)                            | `MAVIS_ALIGNER_REFERENCE` | <a class='download-button btn btn-neutral' href='http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/hg19.2bit' download><img src='images/Ic_cloud_download_48px.svg'>GRCh37/Hg19 2bit (blat)</a><br><a class='download-button btn btn-neutral' href='http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.2bit' download><img src='images/Ic_cloud_download_48px.svg'>GRCh38 2bit (blat)</a>        |
+| [reference genome](../inputs/reference/#reference-genome) ([fasta](../glossary/#fasta))  | `MAVIS_REFERENCE_GENOME`  | <a class='download-button btn btn-neutral' href='http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/chromFa.tar.gz' download> <img src='images/Ic_cloud_download_48px.svg'>GRCh37/Hg19</a><br><a class='download-button btn btn-neutral' href='http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz' download><img src='images/Ic_cloud_download_48px.svg'>GRCh38</a>                         |
+| [annotations](../inputs/reference/#annotations) ([JSON](../glossary/#JSON))              | `MAVIS_ANNOTATIONS`       | <a class='download-button btn btn-neutral' href='http://www.bcgsc.ca/downloads/mavis/ensembl69_hg19_annotations.json' download> <img src='images/Ic_cloud_download_48px.svg'>GRCh37/Hg19 + Ensembl69</a><br><a class='download-button btn btn-neutral' href='http://www.bcgsc.ca/downloads/mavis/ensembl79_hg38_annotations.json' download><img src='images/Ic_cloud_download_48px.svg'>GRCh38 + Ensembl79</a> |
+| [masking](../inputs/reference/#masking-file) (text/tabbed)                             | `MAVIS_MASKING`           | <a class='download-button btn btn-neutral' href='http://www.bcgsc.ca/downloads/mavis/hg19_masking.tab' download><img src='images/Ic_cloud_download_48px.svg'>GRCh37/Hg19</a><br><a class='download-button btn btn-neutral' href='http://www.bcgsc.ca/downloads/mavis/GRCh38_masking.tab' download><img src='images/Ic_cloud_download_48px.svg'>GRCh38</a>                                                      |
+| [template metadata](../inputs/reference/#template-metadata) (text/tabbed)              | `MAVIS_TEMPLATE_METADATA` | <a class='download-button btn btn-neutral' href='http://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/cytoBand.txt.gz' download><img src='images/Ic_cloud_download_48px.svg'>GRCh37/Hg19</a><br><a class='download-button btn btn-neutral' href='http://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/cytoBand.txt.gz' download><img src='images/Ic_cloud_download_48px.svg'>GRCh38</a>                  |
+| [DGV annotations](../inputs/reference/#dgv-database-of-genomic-variants) (text/tabbed) | `MAVIS_DGV_ANNOTATION`    | <a class='download-button btn btn-neutral' href='http://www.bcgsc.ca/downloads/mavis/dgv_hg19_variants.tab' download><img src='images/Ic_cloud_download_48px.svg'>GRCh37/Hg19</a><br><a class='download-button btn btn-neutral' href='http://www.bcgsc.ca/downloads/mavis/dgv_hg38_variants.tab' download><img src='images/Ic_cloud_download_48px.svg'>GRCh38</a>                                              |
+| [aligner reference](../inputs/reference/#aligner-reference)                            | `MAVIS_ALIGNER_REFERENCE` | <a class='download-button btn btn-neutral' href='http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/hg19.2bit' download><img src='images/Ic_cloud_download_48px.svg'>GRCh37/Hg19 2bit (blat)</a><br><a class='download-button btn btn-neutral' href='http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.2bit' download><img src='images/Ic_cloud_download_48px.svg'>GRCh38 2bit (blat)</a>        |
 
 
 If the environment variables above are set they will be used as the
@@ -65,7 +65,7 @@ recommended as it will improve performance and specificity.
 
 ## Annotations
 
-This is a custom file format. It is a [JSON](/glossary/#JSON) file which contains the gene, transcript, exon, translation
+This is a custom file format. It is a [JSON](../glossary/#JSON) file which contains the gene, transcript, exon, translation
 and protein domain positional information
 
 Pre-built annotation files can be downloaded above. The \'best
@@ -91,7 +91,7 @@ the ensembl annotations file including non-coding transcripts below.
     reference genome (sequences) is given and the cds start and end are not
     M and \* amino acids as expected the translation is not loaded
 
-Example of the [JSON](/glossary/#JSON) file structure can
+Example of the [JSON](../glossary/#JSON) file structure can
 be seen below
 
 ```text
@@ -131,16 +131,16 @@ be seen below
 ```
 
 The provided files were generated with
-[Ensembl](/background/citations/#yates-2016), however it can be
+[Ensembl](../background/citations/#yates-2016), however it can be
 generated from any database with the necessary information so long as
-the above [JSON](/glossary/#JSON) structure is respected.
+the above [JSON](../glossary/#JSON) structure is respected.
 
-### Generating the Annotations from [Ensembl](/background/citations/#yates-2016)
+### Generating the Annotations from [Ensembl](../background/citations/#yates-2016)
 
 There is a helper script included with mavis to facilitate generating
 the custom annotations file from an instance of the
-[Ensembl](/background/citations/#yates-2016) database. This uses
-the [Ensembl](/background/citations/#yates-2016) perl api to
+[Ensembl](../background/citations/#yates-2016) database. This uses
+the [Ensembl](../background/citations/#yates-2016) perl api to
 connect and pull information from the database. This has been tested
 with both Ensembl69 and Ensembl79.
 
@@ -220,5 +220,5 @@ called \"variantaccession\". An example is shown below
 
 The aligner reference file is the reference genome file used by the
 aligner during the validate stage. For example, if
-[blat](/glossary#blat) is the aligner then this will be a
-[2bit](/glossary#2bit) file.
+[blat](../glossary#blat) is the aligner then this will be a
+[2bit](../glossary#2bit) file.

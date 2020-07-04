@@ -1,9 +1,9 @@
 # Supported Dependencies
 
 MAVIS integrates with
-[SV callers](/inputs/supported_dependencies/#sv-callers),
-[job schedulers](/inputs/supported_dependencies/#job-schedulers), and
-[aligners](/inputs/supported_dependencies/#aligners). While some of
+[SV callers](/inputs/support/#sv-callers),
+[job schedulers](/inputs/support/#job-schedulers), and
+[aligners](/inputs/support/#aligners). While some of
 these dependencies are optional, all currently supported options are
 detailed below. The versions column in the tables below list all the
 versions which were tested for each tool. Each version listed is known
@@ -56,7 +56,7 @@ tools and versions currently supported are given below. Versions listed
 indicate the version of the tool for which output files have been tested
 as input into MAVIS
 
-MAVIS also supports a [general VCF input](/inputs/supported_dependencies/#general-vcf-inputs).
+MAVIS also supports a [general VCF input](/inputs/support/#general-vcf-inputs).
 It should be noted however that the tool tracked will only be listed as
 \'vcf\' then.
 
@@ -99,14 +99,14 @@ bcftools concat -f /path/to/file/with/vcf/list --allow-overlaps --output-type v 
 #### Logic Example - [Chimerascan](/glossary/#Chimerascan)
 
 The following is a description of how the conversion script for
-[Chimerascan](/background/citations/#Iyer-2011) was generated.
+[Chimerascan](../background/citations/#Iyer-2011) was generated.
 While this is a built-in conversion command now, the logic could also
 have been put in an external script. As mentioned above, there are a
 number of assumptions that had to be made about the tools output to
 convert it to the
-[standard mavis format](/inputs/standard/). Assumptions were then verified by reviewing at a series of
-called events in [IGV](/glossary/#IGV). In the current
-example, [Chimerascan](/background/citations/#Iyer-2011) output
+[standard mavis format](../inputs/standard/). Assumptions were then verified by reviewing at a series of
+called events in [IGV](../glossary/#IGV). In the current
+example, [Chimerascan](../background/citations/#Iyer-2011) output
 has six columns of interest that were used in the conversion
 
 -   start3p
@@ -135,7 +135,7 @@ The logic for all cases is shown in the code below
 ### Calling A Custom Conversion Script
 
 Custom conversion scripts can be specified during
-[automatic config generation](/configuration/settings/#pipeline-configuration-file)
+[automatic config generation](../configuration/settings/#pipeline-configuration-file)
 using the `--external_conversion` option.
 
 !!! note
@@ -176,7 +176,7 @@ MAVIS makes a number of assumptions and the VCF conversion may not work
 for all VCFs. In general MAVIS follows the [VCF 4.2
 specification](https://samtools.github.io/hts-specs/VCFv4.2.pdf). If the
 input tool you are using differs, it would be better to use a
-[custom conversion script](/inputs/supported_dependencies/#calling-a-custom-conversion-script).
+[custom conversion script](#calling-a-custom-conversion-script).
 
 **Assumptions on non-standard INFO fields**
 

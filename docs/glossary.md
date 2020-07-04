@@ -31,23 +31,23 @@ A breakpoint is a genomic position (interval) on some
 
 ### event
 
-Used interchangeably with [structural variant](/glossary/#structural variant).
+Used interchangeably with [structural variant](#structural-variant).
 
 ### event type
 
 Classification for a structural variant. see
-    [event_type](/glossary/#event_type).
+    [event_type](#event_type).
 
 ### structural variant
 
 A genomic alteration that can be described by a pair of breakpoints
-    and an [event type](/glossary/#event type). The two
+    and an [event type](#event type). The two
     breakpoints represent regions in the genome that are broken apart
     and reattached together.
 
 ### breakpoint pair
 
-Basic definition of a [structural variant](/glossary/#structural variant). Does not automatically imply a classification/type.
+Basic definition of a [structural variant](#structural variant). Does not automatically imply a classification/type.
 
 ### bed
 
@@ -56,7 +56,7 @@ File format specification. See
 
 ### IGV batch file
 
-This is a file format type defined by [IGV](/glossary/#IGV) see [running IGV with a batch
+This is a file format type defined by [IGV](#IGV) see [running IGV with a batch
     file](https://software.broadinstitute.org/software/igv/batch).
 
 ### BAM
@@ -81,7 +81,7 @@ File format specification. See
 
 ### pslx
 
-Extended format of a [psl](/glossary/#psl).
+Extended format of a [psl](#psl).
 
 ### SVG
 
@@ -305,7 +305,7 @@ Transcript for the current annotation at the second breakpoint
 
 ### fusion\_mapped\_domains
 
-`JSON` - List of domains in [JSON](/glossary/#JSON)
+`JSON` - List of domains in [JSON](#JSON)
     format where each domain start and end positions are given wrt to
     the fusion transcript and the mapping quality is the number of
     matching amino acid positions over the total number of amino acids.
@@ -327,7 +327,7 @@ The sequence identifier for the cdna sequence output fasta file
 
 ### annotation\_figure\_legend
 
-`JSON` - [JSON](/glossary/#JSON) data for the figure
+`JSON` - [JSON](#JSON) data for the figure
     legend
 
 ### genes\_encompassed
