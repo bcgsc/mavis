@@ -69,16 +69,16 @@ can act as the pipeline start)
 
 | column name                                               | cluster | annotate | validate |
 | --------------------------------------------------------- | ------- | -------- | -------- |
-| [break1_chromosome](../../outputs/columns/#break1_chromosome)         |   :material_check:     |     :material_check:     |    :material_check:      |
-| [break1_position_start](../../outputs/columns/#break1_position_start) |  :material_check:       |     :material_check:     |      :material_check:    |
-| [break1_position_end](../../outputs/columns/#break1_position_end)     |   :material_check:      |   :material_check:       |     :material_check:     |
-| [break2_chromosome](../../outputs/columns/#break2_chromosome)        |     :material_check:    |       :material_check:   |      :material_check:    |
-| [break2_position_start](../../outputs/columns/#break2_position_start) |    :material_check:     |      :material_check:    |     :material_check:     |
-| [break2_position_end](../../outputs/columns/#break2_position_end)    |   :material_check:      |     :material_check:     |   :material_check:       |
+| [break1_chromosome](../../outputs/columns/#break1_chromosome)         |   &check;     |     &check;     |    &check;      |
+| [break1_position_start](../../outputs/columns/#break1_position_start) |  &check;       |     &check;     |      &check;    |
+| [break1_position_end](../../outputs/columns/#break1_position_end)     |   &check;      |   &check;       |     &check;     |
+| [break2_chromosome](../../outputs/columns/#break2_chromosome)        |     &check;    |       &check;   |      &check;    |
+| [break2_position_start](../../outputs/columns/#break2_position_start) |    &check;     |      &check;    |     &check;     |
+| [break2_position_end](../../outputs/columns/#break2_position_end)    |   &check;      |     &check;     |   &check;       |
 | [break1_strand](../../outputs/columns/#break1_strand)                 |         |          |          |
-| [break1_orientation](../../outputs/columns/#break1_orientation)       |         |    :material_check:      |       :material_check:   |
+| [break1_orientation](../../outputs/columns/#break1_orientation)       |         |    &check;      |       &check;   |
 | [break2_strand](../../outputs/columns/#break2_strand)                 |         |          |          |
-| [break2_orientation](../../outputs/columns/#break2_orientation)       |         |    :material_check:      |      :material_check:    |
+| [break2_orientation](../../outputs/columns/#break2_orientation)       |         |    &check;      |      &check;    |
 | [opposing_strands](../../outputs/columns/#opposing_strands)           |         |          |          |
 | [stranded](../../outputs/columns/#stranded)                           |         |          |          |
 | [library](../../outputs/columns/#library)                             |         |          |          |

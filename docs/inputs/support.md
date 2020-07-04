@@ -46,7 +46,7 @@ Two aligners are supported [bwa](../../glossary/#bwa) and
 
 !!! note
     When setting the aligner you will also need to set the
-    [aligner_reference](../../glossary/#aligner_reference to match
+    [aligner_reference](../../configuration/settings/#aligner_reference) to match
 
 ## SV Callers
 
@@ -126,12 +126,6 @@ i.e. the first case would be: If both strands are positive, then the end
 of the five-prime segment (end5p) is the first breakpoint and the start
 of the three-prime segment is the second breakpoint
 
-The logic for all cases is shown in the code below
-
-::: {.literalinclude}
-./../../mavis/tools.py
-:::
-
 ### Calling A Custom Conversion Script
 
 Custom conversion scripts can be specified during
@@ -167,11 +161,12 @@ mavis config \
     --external_conversion my_converted_input2 "my_convert_script.py my_input2.txt"
 ```
 
-### General VCF inputs
+## General VCF inputs
 
 Assuming that the tool outputting the VCF file follows standard
-conventions, then it is possible to use a general VCF conversion that is
-not tool-specific. Given the wide variety in content for VCF files,
+conventions, then it is possible to use a
+[general VCF conversion](../../package/mavis/tools/vcf)
+that is not tool-specific. Given the wide variety in content for VCF files,
 MAVIS makes a number of assumptions and the VCF conversion may not work
 for all VCFs. In general MAVIS follows the [VCF 4.2
 specification](https://samtools.github.io/hts-specs/VCFv4.2.pdf). If the
@@ -186,3 +181,9 @@ input tool you are using differs, it would be better to use a
 -   `CT` values if given are representative of the breakpoint
     orientations.
 -   `CHR2` is given for all interchromosomal events
+
+### Translating BND type Alt fields
+
+There are four possible configurations for the alt field of a BND type structural variant
+based on the VCF specification. These correspond 1-1 to the orientation types for MAVIS
+translocation structural variants.

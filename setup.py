@@ -73,7 +73,6 @@ DOC_REQS = [
     'markdown_refdocs',
     'mkdocs-material',
     'markdown-include',
-    'pymdown-extensions',
 ]
 
 
