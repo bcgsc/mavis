@@ -357,13 +357,13 @@ def assemble(
 
     Args:
         sequences (List[str]): a list of strings/sequences to assemble
-        kmer_size: see [assembly_kmer_size](/glossary/#assembly_kmer_size) the size of the kmer to use
-        min_edge_trim_weight: see [assembly_min_edge_trim_weight](/glossary/#assembly_min_edge_trim_weight)
+        kmer_size: see [assembly_kmer_size](/configuration/settings/#assembly_kmer_size) the size of the kmer to use
+        min_edge_trim_weight: see [assembly_min_edge_trim_weight](/configuration/settings/#assembly_min_edge_trim_weight)
         remap_min_match: Minimum match percentage of the remapped read (based on the exact matches in the cigar)
         remap_min_overlap: defaults to the kmer size. Minimum amount of overlap between the contig and the remapped read
         min_contig_length: Minimum length of contigs assemble to attempt remapping reads to. Shorter contigs will be ignored
-        remap_min_exact_match: see [assembly_min_exact_match_to_remap](/glossary/#assembly_min_exact_match_to_remap)
-        assembly_max_paths: see [assembly_max_paths](/glossary/#assembly_max_paths)
+        remap_min_exact_match: see [assembly_min_exact_match_to_remap](/configuration/settings/#assembly_min_exact_match_to_remap)
+        assembly_max_paths: see [assembly_max_paths](/configuration/settings/#assembly_max_paths)
         log (Callable): the log function
 
     Returns:

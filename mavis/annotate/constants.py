@@ -10,10 +10,10 @@ PASS_FILENAME = 'annotations.tab'
 
 DEFAULTS = WeakMavisNamespace()
 """
-- [annotation_filters](/glossary/#annotation_filters)
-- [max_orf_cap](/glossary/#max_orf_cap)
-- [min_domain_mapping_match](/glossary/#min_domain_mapping_match)
-- [min_orf_size](/glossary/#min_orf_size)
+- [annotation_filters](/configuration/settings/#annotation_filters)
+- [max_orf_cap](/configuration/settings/#max_orf_cap)
+- [min_domain_mapping_match](/configuration/settings/#min_domain_mapping_match)
+- [min_orf_size](/configuration/settings/#min_orf_size)
 """
 DEFAULTS.add(
     'min_domain_mapping_match',

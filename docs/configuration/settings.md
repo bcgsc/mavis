@@ -840,7 +840,7 @@ Minimum percent match for a read to be kept as evidence
 
 **default**: `#!python 0.1`
 
-The minimum complexity score for a call sequence. is an average for non-contig calls. filters low complexity contigs before alignment. see [contig_complexity](/glossary/#contig_complexity)
+The minimum complexity score for a call sequence. is an average for non-contig calls. filters low complexity contigs before alignment. see [contig_complexity](#contig_complexity)
     
 
 ## min_clusters_per_file
@@ -1140,7 +1140,7 @@ The time in seconds any given jobs is allowed
 
 **default**: `#!python 12000`
 
-Related to [fetch_reads_limit](/glossary/#fetch_reads_limit). overrides fetch_reads_limit for transcriptome libraries when set. if this has a value of none then fetch_reads_limit will be used for transcriptome libraries instead
+Related to [fetch_reads_limit](#fetch_reads_limit). overrides fetch_reads_limit for transcriptome libraries when set. if this has a value of none then fetch_reads_limit will be used for transcriptome libraries instead
     
 
 ## trans_min_mapping_quality
@@ -1151,7 +1151,7 @@ Related to [fetch_reads_limit](/glossary/#fetch_reads_limit). overrides fetch_re
 
 **default**: `#!python 0`
 
-Related to [min_mapping_quality](/glossary/#min_mapping_quality). overrides the min_mapping_quality if the library is a transcriptome and this is set to any number not none. if this value is none, min_mapping_quality is used for transcriptomes aswell as genomes
+Related to [min_mapping_quality](#min_mapping_quality). overrides the min_mapping_quality if the library is a transcriptome and this is set to any number not none. if this value is none, min_mapping_quality is used for transcriptomes aswell as genomes
     
 
 ## trans_validation_memory

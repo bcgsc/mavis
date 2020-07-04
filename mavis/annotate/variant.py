@@ -836,10 +836,10 @@ def annotate_events(
         bpps (List[mavis.breakpoint.BreakpointPair]): list of events
         annotations: reference annotations
         reference_genome (Dict[string,string]): dictionary of reference sequences by name
-        max_proximity (int): see [max_proximity](/glossary/#max_proximity)
-        min_orf_size (int): see [min_orf_size](/glossary/#min_orf_size)
-        min_domain_mapping_match (float): see [min_domain_mapping_match](/glossary/#min_domain_mapping_match)
-        max_orf_cap (int): see [max_orf_cap](/glossary/#max_orf_cap)
+        max_proximity (int): see [max_proximity](/configuration/settings/#max_proximity)
+        min_orf_size (int): see [min_orf_size](/configuration/settings/#min_orf_size)
+        min_domain_mapping_match (float): see [min_domain_mapping_match](/configuration/settings/#min_domain_mapping_match)
+        max_orf_cap (int): see [max_orf_cap](/configuration/settings/#max_orf_cap)
         log (Callable): callable function to take in strings and time_stamp args
         filters (List[callable]): list of functions taking in a list and returning a list for filtering
 

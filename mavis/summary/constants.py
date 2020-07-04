@@ -6,15 +6,15 @@ DEFAULTS = WeakMavisNamespace()
 HOMOPOLYMER_MIN_LENGTH = 3
 
 """
-- [filter_cdna_synon](/glossary/#filter_cdna_synon)
-- [filter_min_flanking_reads](/glossary/#filter_min_flanking_reads)
-- [filter_min_linking_split_reads](/glossary/#filter_min_linking_split_reads)
-- [filter_min_remapped_reads](/glossary/#filter_min_remapped_reads)
-- [filter_min_spanning_reads](/glossary/#filter_min_spanning_reads)
-- [filter_min_split_reads](/glossary/#filter_min_split_reads)
-- [filter_protein_synon](/glossary/#filter_protein_synon)
-- [filter_min_complexity](/glossary/#filter_min_complexity)
-- [filter_trans_homopolymers](/glossary/#filter_trans_homopolymers)
+- [filter_cdna_synon](/configuration/settings/#filter_cdna_synon)
+- [filter_min_flanking_reads](/configuration/settings/#filter_min_flanking_reads)
+- [filter_min_linking_split_reads](/configuration/settings/#filter_min_linking_split_reads)
+- [filter_min_remapped_reads](/configuration/settings/#filter_min_remapped_reads)
+- [filter_min_spanning_reads](/configuration/settings/#filter_min_spanning_reads)
+- [filter_min_split_reads](/configuration/settings/#filter_min_split_reads)
+- [filter_protein_synon](/configuration/settings/#filter_protein_synon)
+- [filter_min_complexity](/configuration/settings/#filter_min_complexity)
+- [filter_trans_homopolymers](/configuration/settings/#filter_trans_homopolymers)
 """
 DEFAULTS.add(
     'filter_min_remapped_reads', 5, defn='Minimum number of remapped reads for a call by contig'

@@ -51,7 +51,7 @@ MAIL_TYPE = MavisNamespace(
     'BEGIN', 'END', 'FAIL', 'ALL', 'NONE', __name__='mavis.schedule.constants.MAIL_TYPE'
 )
 """
-When the scheduler should notify [mail_user](/glossary/#mail_user) about a job
+When the scheduler should notify [mail_user](/configuration/settings/#mail_user) about a job
 
 - ``ALL`` - All other options (except none)
 - ``BEGIN`` - Send an email when the job starts
@@ -65,18 +65,18 @@ STD_OPTIONS = ['memory_limit', 'queue', 'time_limit', 'import_env', 'mail_user',
 OPTIONS = WeakMavisNamespace(__name__='mavis.schedule.constants.options')
 """MavisNamespace: submission options
 
-- [annotation_memory](/glossary/#annotation_memory)
-- [concurrency_limit](/glossary/#concurrency_limit)
-- [import_env](/glossary/#import_env)
-- [mail_type](/glossary/#mail_type)
-- [mail_user](/glossary/#mail_user)
-- [memory_limit](/glossary/#memory_limit)
-- [queue](/glossary/#queue)
-- [remote_head_ssh](/glossary/#remote_head_ssh)
-- [scheduler](/glossary/#scheduler)
-- [time_limit](/glossary/#time_limit)
-- [trans_validation_memory](/glossary/#trans_validation_memory)
-- [validation_memory](/glossary/#validation_memory)
+- [annotation_memory](/configuration/settings/#annotation_memory)
+- [concurrency_limit](/configuration/settings/#concurrency_limit)
+- [import_env](/configuration/settings/#import_env)
+- [mail_type](/configuration/settings/#mail_type)
+- [mail_user](/configuration/settings/#mail_user)
+- [memory_limit](/configuration/settings/#memory_limit)
+- [queue](/configuration/settings/#queue)
+- [remote_head_ssh](/configuration/settings/#remote_head_ssh)
+- [scheduler](/configuration/settings/#scheduler)
+- [time_limit](/configuration/settings/#time_limit)
+- [trans_validation_memory](/configuration/settings/#trans_validation_memory)
+- [validation_memory](/configuration/settings/#validation_memory)
 
 """
 OPTIONS.add('annotation_memory', 12000, defn='default memory limit (MB) for the annotation stage')

@@ -4,10 +4,10 @@ from ..util import WeakMavisNamespace
 
 DEFAULTS = WeakMavisNamespace()
 """
-- [contig_call_distance](/glossary/#contig_call_distance)
-- [flanking_call_distance](/glossary/#flanking_call_distance)
-- [spanning_call_distance](/glossary/#spanning_call_distance)
-- [split_call_distance](/glossary/#split_call_distance)
+- [contig_call_distance](/configuration/settings/#contig_call_distance)
+- [flanking_call_distance](/configuration/settings/#flanking_call_distance)
+- [spanning_call_distance](/configuration/settings/#spanning_call_distance)
+- [split_call_distance](/configuration/settings/#split_call_distance)
 """
 DEFAULTS.add(
     'flanking_call_distance',
