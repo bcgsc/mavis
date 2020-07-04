@@ -12,7 +12,7 @@ retained intron sequence and a novel exon is
 predicted.
 
 
-If the [draw_fusions_only](../../glossary/#draw-fusions-only flag is set to
+If the [draw_fusions_only](../../configuration/settings/#draw_fusions_only flag is set to
 False then all events will produce a diagram, even anti-sense fusions
 
 ![](../../images/UBE2V2_GIMAP4_disruptive_fusion.svg)

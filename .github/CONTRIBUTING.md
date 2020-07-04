@@ -110,7 +110,7 @@ def some_function(some_arg: List[str]) -> None:
 
 ### Output Columns
 
-any column name which may appear in any of the intermediate or final output files must be defined in `mavis.constants.COLUMNS` as well as added to the [glossary](../glossary/#column-names)
+any column name which may appear in any of the intermediate or final output files must be defined in `mavis.constants.COLUMNS` as well as added to the [columns glossary](../outputs/columns)
 
 
 ### Tests

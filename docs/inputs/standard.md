@@ -27,13 +27,13 @@ A simple input file might look as follows
 
 ## Required Columns
 
--   [break1_chromosome](../../glossary/#break1_chromosome)
--   [break1_position_start](../../glossary/#break1_position_start)
--   [break1_position_end](../../glossary/#break1_position_end) (can be the
+-   [break1_chromosome](../../outputs/columns/#break1_chromosome)
+-   [break1_position_start](../../outputs/columns/#break1_position_start)
+-   [break1_position_end](../../outputs/columns/#break1_position_end) (can be the
     same as break1\_position\_start)
--   [break2_chromosome](../../glossary/#break2_chromosome)
--   [break2_position_start](../../glossary/#break2_position_start)
--   [break2_position_end](../../glossary/#break2_position_end) (can be the
+-   [break2_chromosome](../../outputs/columns/#break2_chromosome)
+-   [break2_position_start](../../outputs/columns/#break2_position_start)
+-   [break2_position_end](../../outputs/columns/#break2_position_end) (can be the
     same as break2\_position\_start)
 
 ## Optional Columns
@@ -42,23 +42,23 @@ Optional Columns that are not given as input will be added with default
 (or command line parameter options) during the clustering stage of MAVIS
 as some are required for subsequent pipeline steps
 
--   [break1_strand](../../glossary/#break1_strand) (defaults to
+-   [break1_strand](../../outputs/columns/#break1_strand) (defaults to
     not-specified during clustering)
--   [break1_orientation](../../glossary/#break1_orientation) (expanded to all
+-   [break1_orientation](../../outputs/columns/#break1_orientation) (expanded to all
     possible values during clustering)
--   [break2_strand](../../glossary/#break2_strand) (defaults to
+-   [break2_strand](../../outputs/columns/#break2_strand) (defaults to
     not-specified during clustering)
--   [break2_orientation](../../glossary/#break2_orientation) (expanded to all
+-   [break2_orientation](../../outputs/columns/#break2_orientation) (expanded to all
     possible values during clustering)
--   [opposing_strands](../../glossary/#opposing_strands) (expanded to all
+-   [opposing_strands](../../outputs/columns/#opposing_strands) (expanded to all
     possible values during clustering)
--   [stranded](../../glossary/#stranded) (defaults to False during
+-   [stranded](../../outputs/columns/#stranded) (defaults to False during
     clustering)
--   [library](../../glossary/#library) (defaults to command line
+-   [library](../../outputs/columns/#library) (defaults to command line
     library parameter during clustering)
--   [protocol](../../glossary/#protocol) (defaults to command line
+-   [protocol](../../outputs/columns/#protocol) (defaults to command line
     protocol parameter during clustering)
--   [tools](../../glossary/#tools) (defaults to an empty string
+-   [tools](../../outputs/columns/#tools) (defaults to an empty string
     during clustering)
 
 ## Summary by Pipeline Step
@@ -69,22 +69,22 @@ can act as the pipeline start)
 
 | column name                                               | cluster | annotate | validate |
 | --------------------------------------------------------- | ------- | -------- | -------- |
-| [break1_chromosome](../../glossary/#break1_chromosome)         |   :material_check:     |     :material_check:     |    :material_check:      |
-| [break1_position_start](../../glossary/#break1_position_start) |  :material_check:       |     :material_check:     |      :material_check:    |
-| [break1_position_end](../../glossary/#break1_position_end)     |   :material_check:      |   :material_check:       |     :material_check:     |
-| [break2_chromosome](../../glossary/#break2_chromosome)        |     :material_check:    |       :material_check:   |      :material_check:    |
-| [break2_position_start](../../glossary/#break2_position_start) |    :material_check:     |      :material_check:    |     :material_check:     |
-| [break2_position_end](../../glossary/#break2_position_end)    |   :material_check:      |     :material_check:     |   :material_check:       |
-| [break1_strand](../../glossary/#break1_strand)                 |         |          |          |
-| [break1_orientation](../../glossary/#break1_orientation)       |         |    :material_check:      |       :material_check:   |
-| [break2_strand](../../glossary/#break2_strand)                 |         |          |          |
-| [break2_orientation](../../glossary/#break2_orientation)       |         |    :material_check:      |      :material_check:    |
-| [opposing_strands](../../glossary/#opposing_strands)           |         |          |          |
-| [stranded](../../glossary/#stranded)                           |         |          |          |
-| [library](../../glossary/#library)                             |         |          |          |
-| [protocol](../../glossary/#protocol)                           |         |          |          |
-| [tools](../../glossary/#tools)                                 |         |          |          |
-| [event_type](../../glossary/#event_type)                      |         |          |          |
+| [break1_chromosome](../../outputs/columns/#break1_chromosome)         |   :material_check:     |     :material_check:     |    :material_check:      |
+| [break1_position_start](../../outputs/columns/#break1_position_start) |  :material_check:       |     :material_check:     |      :material_check:    |
+| [break1_position_end](../../outputs/columns/#break1_position_end)     |   :material_check:      |   :material_check:       |     :material_check:     |
+| [break2_chromosome](../../outputs/columns/#break2_chromosome)        |     :material_check:    |       :material_check:   |      :material_check:    |
+| [break2_position_start](../../outputs/columns/#break2_position_start) |    :material_check:     |      :material_check:    |     :material_check:     |
+| [break2_position_end](../../outputs/columns/#break2_position_end)    |   :material_check:      |     :material_check:     |   :material_check:       |
+| [break1_strand](../../outputs/columns/#break1_strand)                 |         |          |          |
+| [break1_orientation](../../outputs/columns/#break1_orientation)       |         |    :material_check:      |       :material_check:   |
+| [break2_strand](../../outputs/columns/#break2_strand)                 |         |          |          |
+| [break2_orientation](../../outputs/columns/#break2_orientation)       |         |    :material_check:      |      :material_check:    |
+| [opposing_strands](../../outputs/columns/#opposing_strands)           |         |          |          |
+| [stranded](../../outputs/columns/#stranded)                           |         |          |          |
+| [library](../../outputs/columns/#library)                             |         |          |          |
+| [protocol](../../outputs/columns/#protocol)                           |         |          |          |
+| [tools](../../outputs/columns/#tools)                                 |         |          |          |
+| [event_type](../../outputs/columns/#event_type)                      |         |          |          |
 
 Some native tool outputs are [supported](../../inputs/support/#sv-callers) and
 have built in methods to convert to the above format. Any unsupported

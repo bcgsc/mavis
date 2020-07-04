@@ -154,7 +154,7 @@ simplicity not all files/directories have been shown.
 
 The last step is simple, ssh to your head node of your
 [SLURM](../../glossary/#slurm) cluster (or run locally if you
-have configured [remote_head_ssh](../../glossary/#remote-head-ssh) and
+have configured [remote_head_ssh](../../configuration/settings/#remote_head_ssh) and
 run the schedule step. This will submit the jobs and create the
 dependency chain
 
@@ -222,6 +222,6 @@ for each stage and does not include any queue time etc.
 
 The best place to start with looking at the MAVIS output is the summary
 folder which contains the final results. For column name definitions see
-the [glossary](../../glossary/#column-names).
+the [glossary](../../outputs/columns).
 
     output_dir/summary/mavis_summary_all_L1522785992-normal_L1522785992-trans_L1522785992-tumour.tab

@@ -118,7 +118,7 @@ has six columns of interest that were used in the conversion
 
 The above columns describe two segments which are joined. MAVIS requires
 the position of the join. It was assumed that the segments are always
-joined as a [sense fusion](../../glossary/#sense fusion). Using this
+joined as a [sense fusion](../../glossary/#sense-fusion). Using this
 assumption there are four logical cases to determine the position of the
 breakpoints.
 
