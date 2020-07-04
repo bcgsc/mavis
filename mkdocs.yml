@@ -8,9 +8,9 @@ site_dir: build-docs
 markdown_extensions:
   - codehilite
   - admonition
+  - pymdownx.inlinehilite
   - markdown_include.include:
       base_path: docs
   - pymdownx.emoji:
-      emoji_index: !!python/name:materialx.emoji.twemoji
-      emoji_generator: !!python/name:materialx.emoji.to_svg
-  - pymdownx.inlinehilite
+      emoji_index: !!python/name:pymdownx.emoji.twemoji
+      emoji_generator: !!python/name:pymdownx.emoji.to_svg
