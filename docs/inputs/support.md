@@ -16,8 +16,8 @@ MAVIS can be run locally without a job scheduler
 generally required, it is recommended that you use one of the supported
 schedulers listed below.
 
-| Name                        | Version(s)  | Environment Setting      |
-| --------------------------- | ----------- | ------------------------ |
+| Name                             | Version(s)  | Environment Setting      |
+| -------------------------------- | ----------- | ------------------------ |
 | [TORQUE](../../glossary/#torque) | `6.1.2`     | `MAVIS_SCHEDULER=TORQUE` |
 | [SGE](../../glossary/#sge)       | `8.1.8`     | `MAVIS_SCHEDULER=SGE`    |
 | [SLURM](../../glossary/#slurm)   | `17.02.1-2` | `MAVIS_SCHEDULER=SLURM`  |
@@ -39,8 +39,8 @@ jobs.
 Two aligners are supported [bwa](../../glossary/#bwa) and
 [blat](../../glossary/#blat) (default).
 
-| Name                                      | Version(s)              | Environment Setting       |
-| ----------------------------------------- | ----------------------- | ------------------------- |
+| Name                                           | Version(s)              | Environment Setting       |
+| ---------------------------------------------- | ----------------------- | ------------------------- |
 | [blat](../../glossary/#blat)                   | `36x2` `36`             | `MAVIS_ALIGNER=blat`      |
 | [bwa mem <bwa>](../../glossary/#bwa mem <bwa>) | `0.7.15-r1140` `0.7.12` | `MAVIS_ALIGNER='bwa mem'` |
 
@@ -60,8 +60,8 @@ MAVIS also supports a [general VCF input](../../inputs/support/#general-vcf-inpu
 It should be noted however that the tool tracked will only be listed as
 'vcf' then.
 
-| Name                                  | Version(s)       | MAVIS input                                   | Publication                                            |
-| ------------------------------------- | ---------------- | --------------------------------------------- | ------------------------------------------------------ |
+| Name                                       | Version(s)       | MAVIS input                                   | Publication                                                 |
+| ------------------------------------------ | ---------------- | --------------------------------------------- | ----------------------------------------------------------- |
 | [BreakDancer](../../glossary/#breakdancer) | `1.4.5`          | `Tools main output file(s)`                   | [Chen-2009](../../background/citations#Chen-2009)           |
 | [BreakSeq](../../glossary/#breakseq)       | `2.2`            | `work/breakseq.vcf.gz`                        | [Abyzov-2015](../../background/citations#Abyzov-2015)       |
 | [Chimerascan](../../glossary/#chimerascan) | `0.4.5`          | `*.bedpe`                                     | [Iyer-2011](../../background/citations#Iyer-2011)           |
@@ -187,3 +187,16 @@ input tool you are using differs, it would be better to use a
 There are four possible configurations for the alt field of a BND type structural variant
 based on the VCF specification. These correspond 1-1 to the orientation types for MAVIS
 translocation structural variants.
+
+```text
+r = reference base/seq
+u = untemplated sequence/alternate sequence
+p = chromosome:position
+```
+
+| alt format | orients |
+| ---------- | ------- |
+| `ru[p[`    | LR      |
+| `[p[ur`    | RR      |
+| `]p]ur`    | RL      |
+| `ru]p]`    | LL      |

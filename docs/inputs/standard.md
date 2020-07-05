@@ -67,24 +67,24 @@ The different pipeline steps of MAVIS have different input column
 requirements. These are summarized below (for the pipeline steps which
 can act as the pipeline start)
 
-| column name                                               | cluster | annotate | validate |
-| --------------------------------------------------------- | ------- | -------- | -------- |
-| [break1_chromosome](../../outputs/columns/#break1_chromosome)         |   &check;     |     &check;     |    &check;      |
-| [break1_position_start](../../outputs/columns/#break1_position_start) |  &check;       |     &check;     |      &check;    |
-| [break1_position_end](../../outputs/columns/#break1_position_end)     |   &check;      |   &check;       |     &check;     |
-| [break2_chromosome](../../outputs/columns/#break2_chromosome)        |     &check;    |       &check;   |      &check;    |
-| [break2_position_start](../../outputs/columns/#break2_position_start) |    &check;     |      &check;    |     &check;     |
-| [break2_position_end](../../outputs/columns/#break2_position_end)    |   &check;      |     &check;     |   &check;       |
+| column name                                                           | cluster | annotate | validate |
+| --------------------------------------------------------------------- | ------- | -------- | -------- |
+| [break1_chromosome](../../outputs/columns/#break1_chromosome)         | &check; | &check;  | &check;  |
+| [break1_position_start](../../outputs/columns/#break1_position_start) | &check; | &check;  | &check;  |
+| [break1_position_end](../../outputs/columns/#break1_position_end)     | &check; | &check;  | &check;  |
+| [break2_chromosome](../../outputs/columns/#break2_chromosome)         | &check; | &check;  | &check;  |
+| [break2_position_start](../../outputs/columns/#break2_position_start) | &check; | &check;  | &check;  |
+| [break2_position_end](../../outputs/columns/#break2_position_end)     | &check; | &check;  | &check;  |
 | [break1_strand](../../outputs/columns/#break1_strand)                 |         |          |          |
-| [break1_orientation](../../outputs/columns/#break1_orientation)       |         |    &check;      |       &check;   |
+| [break1_orientation](../../outputs/columns/#break1_orientation)       |         | &check;  | &check;  |
 | [break2_strand](../../outputs/columns/#break2_strand)                 |         |          |          |
-| [break2_orientation](../../outputs/columns/#break2_orientation)       |         |    &check;      |      &check;    |
+| [break2_orientation](../../outputs/columns/#break2_orientation)       |         | &check;  | &check;  |
 | [opposing_strands](../../outputs/columns/#opposing_strands)           |         |          |          |
 | [stranded](../../outputs/columns/#stranded)                           |         |          |          |
 | [library](../../outputs/columns/#library)                             |         |          |          |
 | [protocol](../../outputs/columns/#protocol)                           |         |          |          |
 | [tools](../../outputs/columns/#tools)                                 |         |          |          |
-| [event_type](../../outputs/columns/#event_type)                      |         |          |          |
+| [event_type](../../outputs/columns/#event_type)                       |         |          |          |
 
 Some native tool outputs are [supported](../../inputs/support/#sv-callers) and
 have built in methods to convert to the above format. Any unsupported

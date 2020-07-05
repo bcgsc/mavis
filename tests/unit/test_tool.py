@@ -304,6 +304,64 @@ class TestManta(unittest.TestCase):
         self.assertEqual('1', bpp.break2.chr)
         self.assertEqual('manta-MantaDUP:TANDEM:22477:0:1:0:9:0', bpp.tracking_id)
 
+    def test_non_trans_bnd(self):
+        row = Mock(
+            chrom='chr1',
+            pos=17051724,
+            id='MantaBND:207:0:1:0:0:0:0',
+            info=dict(
+                SVTYPE='BND',
+                MATEID='MantaBND:207:0:1:0:0:0:1',
+                SVINSLEN=7,
+                SVINSSEQ='GCCCCAT',
+                BND_DEPTH=5,
+                MATE_BND_DEPTH=4,
+            ),
+            ref='C',
+            alts=['[chr1:234912188[GCCCCATC'],
+        )
+        vcf_list = _parse_vcf_record(row)
+        bpp_list = _convert_tool_row(vcf_list[0], SUPPORTED_TOOL.MANTA, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('1', bpp.break1.chr)
+        self.assertEqual('1', bpp.break2.chr)
+        self.assertEqual(17051724, bpp.break1.start)
+        self.assertEqual(234912188, bpp.break2.start)
+        self.assertEqual('R', bpp.break1.orient)
+        self.assertEqual('R', bpp.break2.orient)
+        self.assertEqual('manta-MantaBND:207:0:1:0:0:0:0', bpp.tracking_id)
+        self.assertEqual(1, len(bpp_list))
+
+    def test_non_trans_bnd_from_mate(self):
+        row = Mock(
+            chrom='chr1',
+            pos=234912188,
+            id='MantaBND:207:0:1:0:0:0:1',
+            info=dict(
+                SVTYPE='BND',
+                MATEID='MantaBND:207:0:1:0:0:0:0',
+                SVINSLEN=7,
+                SVINSSEQ='ATGGGGC',
+                BND_DEPTH=5,
+                MATE_BND_DEPTH=4,
+            ),
+            ref='A',
+            alts=['[chr1:17051724[ATGGGGCA'],
+        )
+        vcf_list = _parse_vcf_record(row)
+        bpp_list = _convert_tool_row(vcf_list[0], SUPPORTED_TOOL.MANTA, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('1', bpp.break1.chr)
+        self.assertEqual('1', bpp.break2.chr)
+        self.assertEqual(17051724, bpp.break1.start)
+        self.assertEqual(234912188, bpp.break2.start)
+        self.assertEqual('R', bpp.break1.orient)
+        self.assertEqual('R', bpp.break2.orient)
+        self.assertEqual('manta-MantaBND:207:0:1:0:0:0:1', bpp.tracking_id)
+        self.assertEqual(1, len(bpp_list))
+
 
 class TestDefuse(unittest.TestCase):
     def test_convert_inverted_translocation(self):
@@ -567,77 +625,82 @@ class TestPindel(unittest.TestCase):
 class TestParseBndAlt(unittest.TestCase):
     def test_right(self):
         # '[4:190898243[AGGT'
-        chrom, pos, orient, ref, seq = _parse_bnd_alt('[4:190898243[A')
+        chrom, pos, orient1, orient2, ref, seq = _parse_bnd_alt('[4:190898243[A')
         self.assertEqual('4', chrom)
         self.assertEqual(190898243, pos)
-        self.assertEqual(ORIENT.RIGHT, orient)
+        self.assertEqual(ORIENT.RIGHT, orient1)
+        self.assertEqual(ORIENT.RIGHT, orient2)
         self.assertEqual('', seq)
         self.assertEqual('A', ref)
 
     def test_right_untemp_seq(self):
-        chrom, pos, orient, ref, seq = _parse_bnd_alt('[5:190898243[AGGT')
+        chrom, pos, orient1, orient2, ref, seq = _parse_bnd_alt('[5:190898243[AGGT')
         self.assertEqual('5', chrom)
         self.assertEqual(190898243, pos)
-        self.assertEqual(ORIENT.RIGHT, orient)
+        self.assertEqual(ORIENT.RIGHT, orient1)
+        self.assertEqual(ORIENT.RIGHT, orient2)
         self.assertEqual('AGG', seq)
         self.assertEqual('T', ref)
 
-        chrom, pos, orient, ref, seq = _parse_bnd_alt('CAGTNNNCA[5:190898243[')
+        chrom, pos, orient1, orient2, ref, seq = _parse_bnd_alt('CAGTNNNCA[5:190898243[')
         self.assertEqual('5', chrom)
         self.assertEqual(190898243, pos)
-        self.assertEqual(ORIENT.RIGHT, orient)
+        self.assertEqual(ORIENT.LEFT, orient1)
+        self.assertEqual(ORIENT.RIGHT, orient2)
         self.assertEqual('AGTNNNCA', seq)
         self.assertEqual('C', ref)
 
-        chrom, pos, orient, ref, seq = _parse_bnd_alt('CTG[21:47575965[')
+        chrom, pos, orient1, orient2, ref, seq = _parse_bnd_alt('CTG[21:47575965[')
         self.assertEqual('21', chrom)
         self.assertEqual(47575965, pos)
-        self.assertEqual(ORIENT.RIGHT, orient)
+        self.assertEqual(ORIENT.LEFT, orient1)
+        self.assertEqual(ORIENT.RIGHT, orient2)
         self.assertEqual('TG', seq)
         self.assertEqual('C', ref)
 
     def test_left(self):
-        chrom, pos, orient, ref, seq = _parse_bnd_alt('G]10:198982]')
+        chrom, pos, orient1, orient2, ref, seq = _parse_bnd_alt('G]10:198982]')
         self.assertEqual('10', chrom)
         self.assertEqual(198982, pos)
-        self.assertEqual(ORIENT.LEFT, orient)
+        self.assertEqual(ORIENT.LEFT, orient1)
+        self.assertEqual(ORIENT.LEFT, orient2)
         self.assertEqual('', seq)
         self.assertEqual('G', ref)
 
-        chrom, pos, orient, ref, seq = _parse_bnd_alt(']10:198982]G')
+        chrom, pos, orient1, orient2, ref, seq = _parse_bnd_alt(']10:198982]G')
         self.assertEqual('10', chrom)
         self.assertEqual(198982, pos)
-        self.assertEqual(ORIENT.LEFT, orient)
+        self.assertEqual(ORIENT.LEFT, orient2)
         self.assertEqual('', seq)
         self.assertEqual('G', ref)
 
     def test_alternate_chrom(self):
-        chrom, pos, orient, ref, seq = _parse_bnd_alt('G]GL000.01:198982]')
+        chrom, pos, orient1, orient2, ref, seq = _parse_bnd_alt('G]GL000.01:198982]')
         self.assertEqual('GL000.01', chrom)
         self.assertEqual(198982, pos)
-        self.assertEqual(ORIENT.LEFT, orient)
+        self.assertEqual(ORIENT.LEFT, orient2)
         self.assertEqual('', seq)
         self.assertEqual('G', ref)
 
     def test_left_untemp_seq(self):
-        chrom, pos, orient, ref, seq = _parse_bnd_alt(']11:123456]AGTNNNCAT')
+        chrom, pos, orient1, orient2, ref, seq = _parse_bnd_alt(']11:123456]AGTNNNCAT')
         self.assertEqual('11', chrom)
         self.assertEqual(123456, pos)
-        self.assertEqual(ORIENT.LEFT, orient)
+        self.assertEqual(ORIENT.LEFT, orient2)
         self.assertEqual('AGTNNNCA', seq)
         self.assertEqual('T', ref)
 
-        chrom, pos, orient, ref, seq = _parse_bnd_alt(']8:1682443]TGC')
+        chrom, pos, orient1, orient2, ref, seq = _parse_bnd_alt(']8:1682443]TGC')
         self.assertEqual('8', chrom)
         self.assertEqual(1682443, pos)
-        self.assertEqual(ORIENT.LEFT, orient)
+        self.assertEqual(ORIENT.LEFT, orient2)
         self.assertEqual('TG', seq)
         self.assertEqual('C', ref)
 
-        chrom, pos, orient, ref, seq = _parse_bnd_alt('AAGTG]11:66289601]')
+        chrom, pos, orient1, orient2, ref, seq = _parse_bnd_alt('AAGTG]11:66289601]')
         self.assertEqual('11', chrom)
         self.assertEqual(66289601, pos)
-        self.assertEqual(ORIENT.LEFT, orient)
+        self.assertEqual(ORIENT.LEFT, orient2)
         self.assertEqual('AGTG', seq)
         self.assertEqual('A', ref)
 

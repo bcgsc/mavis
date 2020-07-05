@@ -8,14 +8,14 @@ and re-calling events based on the evidence in a standard notation.
 A variety of intermediate output files are given for the user. These can be used to "drill down"
 further into events and also for developers debugging when adding new features, etc.
 
-| expected name/suffix        | file type/format                            | content                            |
-| --------------------------- | ------------------------------------------- | ---------------------------------- |
+| expected name/suffix        | file type/format                                    | content                            |
+| --------------------------- | --------------------------------------------------- | ---------------------------------- |
 | ``*.raw_evidence.bam``      | [bam](../../../glossary/#bam)                       | raw evidence                       |
 | ``*.contigs.bam``           | [bam](../../../glossary/#bam)                       | aligned contigs                    |
 | ``*.evidence.bed``          | [bed](../../../glossary/#bed)                       | evidence collection window regions |
 | ``*.validation-passed.bed`` | [bed](../../../glossary/#bed)                       | validated event positions          |
-| ``*.validation-failed.tab`` | text/tabbed                                 | failed events                      |
-| ``*.validation-passed.tab`` | text/tabbed                                 | validated events                   |
+| ``*.validation-failed.tab`` | text/tabbed                                         | failed events                      |
+| ``*.validation-passed.tab`` | text/tabbed                                         | validated events                   |
 | ``*.contigs.fa``            | [fasta](../../../glossary/#fasta)                   | assembled contigs                  |
 | ``*.contigs.blat_out.pslx`` | [pslx](../../../glossary/#pslx)                     | results from blatting contigs      |
 | ``*.igv.batch``             | [IGV batch file](../../../glossary/#IGV-batch-file) | igv batch file                     |

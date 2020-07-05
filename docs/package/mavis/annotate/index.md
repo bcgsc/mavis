@@ -3,9 +3,9 @@
 
 ## Types of Output Files
 
-| expected name/suffix           | file type/format          | content                                  |
-| ------------------------------ | ------------------------- | ---------------------------------------- |
-| ``annotations.tab``            | text/tabbed               | annotated events                         |
+| expected name/suffix           | file type/format                     | content                                  |
+| ------------------------------ | ------------------------------------ | ---------------------------------------- |
+| ``annotations.tab``            | text/tabbed                          | annotated events                         |
 | ``annotations.fusion-cdna.fa`` | [fasta](../../../../glossary/#fasta) | putative fusion unspliced cDNA sequences |
 | ``drawings/*.svg``             | [SVG](../../../../glossary/#svg)     | diagrams                                 |
 | ``drawings/*.legend.json``     | [JSON](../../../../glossary/#json)   | diagram legend/metadata                  |

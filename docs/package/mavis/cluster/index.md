@@ -2,18 +2,16 @@
 
 The cluster sub-package is responsible for merging variants coming from different inputs (i.e. different tools).
 
-Types of Output Files
-----------------------
+## Types of Output Files
 
-| expected name/suffix           | file type/format      | content                                                              |
-| ------------------------------ | --------------------- | -------------------------------------------------------------------- |
-| ``cluster_assignment.tab``     | text/tabbed           |                                                                      |
-| ``uninformative_clusters.txt`` | text                  | list of cluster ids that were dropped by annotation proximity filter |
+| expected name/suffix           | file type/format           | content                                                              |
+| ------------------------------ | -------------------------- | -------------------------------------------------------------------- |
+| ``cluster_assignment.tab``     | text/tabbed                |                                                                      |
+| ``uninformative_clusters.txt`` | text                       | list of cluster ids that were dropped by annotation proximity filter |
 | ``clusters.bed``               | [bed](../../glossary/#bed) | cluster positions                                                    |
-| ``cluster-*.tab``              | text/tabbed           | computed clusters                                                    |
+| ``cluster-*.tab``              | text/tabbed                | computed clusters                                                    |
 
-Algorithm Overview
---------------------
+## Algorithm Overview
 
 - Collapse any duplicate breakpoint pairs
 - Split breakpoint pairs by type
