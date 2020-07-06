@@ -12,6 +12,7 @@ class ReferenceName(str):
         >>> ReferenceName('chr1') == ReferenceName('1')
         True
     """
+
     def __eq__(self, other):
         options = {str(self)}
         if self.startswith('chr'):
@@ -48,8 +49,9 @@ class ReferenceName(str):
 
 
 class BioInterval:
-
-    def __init__(self, reference_object, start, end=None, name=None, seq=None, data=None, strand=None):
+    def __init__(
+        self, reference_object, start, end=None, name=None, seq=None, data=None, strand=None
+    ):
         """
         Args:
             reference_object: the object this interval is on
@@ -108,7 +110,11 @@ class BioInterval:
         return self.key() == other.key()
 
     def __lt__(self, other):
-        if other.reference_object and self.reference_object and other.reference_object != self.reference_object:
+        if (
+            other.reference_object
+            and self.reference_object
+            and other.reference_object != self.reference_object
+        ):
             if self.reference_object < other.reference_object:
                 return True
             return False
@@ -222,7 +228,7 @@ class BioInterval:
             'end': self.end,
             'type': self.__class__.__name__,
             'seq': self.seq,
-            'data': self.data
+            'data': self.data,
         }
         try:
             dict_result['reference_object'] = self.reference_object.name

@@ -46,9 +46,10 @@ mock_converted = convert_tool_output
 
 
 class TestConfig(unittest.TestCase):
-
     def mock_config(self, content=""):
-        with patch('configparser.ConfigParser.read', configparser.ConfigParser.read_string), patch('os.path.isfile') as isfile, patch('os.path.exists') as exists:
+        with patch('configparser.ConfigParser.read', configparser.ConfigParser.read_string), patch(
+            'os.path.isfile'
+        ) as isfile, patch('os.path.exists') as exists:
             isfile.return_value = True
             exists.return_value = True
             return MavisConfig.read(content)

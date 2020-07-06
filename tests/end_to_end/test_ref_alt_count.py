@@ -15,7 +15,10 @@ from . import glob_exists
 def setUpModule():
     global REFERENCE_GENOME
     REFERENCE_GENOME = load_reference_genome(get_data('mock_reference_genome.fa'))
-    if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
+    if (
+        'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT'
+        != REFERENCE_GENOME['fake'].seq[0:50].upper()
+    ):
         raise AssertionError('fake genome file does not have the expected contents')
 
 
@@ -35,12 +38,18 @@ class TestFullCalculator(unittest.TestCase):
         self.temp_output = tempfile.mkdtemp()
         print('output dir', self.temp_output)
 
-        self.calculator = RefAltCalculator([("TEST", get_data('mock_reads_for_events.sorted.bam'))], REFERENCE_GENOME,
-                                           max_event_size=100, buffer=20)
+        self.calculator = RefAltCalculator(
+            [("TEST", get_data('mock_reads_for_events.sorted.bam'))],
+            REFERENCE_GENOME,
+            max_event_size=100,
+            buffer=20,
+        )
 
     def test_calculate_all_counts(self):
-        self.calculator.calculate_all_counts([get_data("mavis_summary_all_mock-A36971_mock-A47933.tab")],
-                                             os.path.join(self.temp_output, "ref_alt_output.tab"))
+        self.calculator.calculate_all_counts(
+            [get_data("mavis_summary_all_mock-A36971_mock-A47933.tab")],
+            os.path.join(self.temp_output, "ref_alt_output.tab"),
+        )
         self.assertTrue(glob_exists(self.temp_output, "ref_alt_output.tab"))
 
     def tearDown(self):
@@ -50,16 +59,20 @@ class TestFullCalculator(unittest.TestCase):
 
 
 class TestRefAltCalulator(unittest.TestCase):
-
     def setUp(self):
-        self.calculator = RefAltCalculator([("TEST", get_data('mock_reads_for_events.sorted.bam'))], REFERENCE_GENOME,
-                                           max_event_size=100, buffer=20)
+        self.calculator = RefAltCalculator(
+            [("TEST", get_data('mock_reads_for_events.sorted.bam'))],
+            REFERENCE_GENOME,
+            max_event_size=100,
+            buffer=20,
+        )
 
     def test_calculate_count(self):
         ev1 = BreakpointPair(
             Breakpoint('reference11', 5999, orient=ORIENT.LEFT),
             Breakpoint('reference11', 6003, orient=ORIENT.RIGHT),
-            opposing_strands=False, event_type=SVTYPE.DEL
+            opposing_strands=False,
+            event_type=SVTYPE.DEL,
         )
         bpp = self.calculator.calculate_ref_counts(ev1)
         print(bpp.data)
@@ -71,7 +84,8 @@ class TestRefAltCalulator(unittest.TestCase):
         ev1 = BreakpointPair(
             Breakpoint('reference11', 9999, orient=ORIENT.LEFT),
             Breakpoint('reference11', 10030, orient=ORIENT.RIGHT),
-            opposing_strands=False, event_type=SVTYPE.DEL
+            opposing_strands=False,
+            event_type=SVTYPE.DEL,
         )
         bpp = self.calculator.calculate_ref_counts(ev1)
         print(bpp.data)
@@ -83,7 +97,9 @@ class TestRefAltCalulator(unittest.TestCase):
         ev1 = BreakpointPair(
             Breakpoint('reference1', 2002, orient=ORIENT.LEFT),
             Breakpoint('reference1', 2003, orient=ORIENT.RIGHT),
-            opposing_strands=False, event_type=SVTYPE.INS, untemplated_seq='TT'
+            opposing_strands=False,
+            event_type=SVTYPE.INS,
+            untemplated_seq='TT',
         )
         bpp = self.calculator.calculate_ref_counts(ev1)
         print(bpp.data)
@@ -95,7 +111,8 @@ class TestRefAltCalulator(unittest.TestCase):
         ev1 = BreakpointPair(
             Breakpoint('reference11', 1999, orient=ORIENT.LEFT),
             Breakpoint('reference11', 2001, orient=ORIENT.RIGHT),
-            opposing_strands=False, event_type=SVTYPE.DEL
+            opposing_strands=False,
+            event_type=SVTYPE.DEL,
         )
         bpp = self.calculator.calculate_ref_counts(ev1)
         print(bpp.data)

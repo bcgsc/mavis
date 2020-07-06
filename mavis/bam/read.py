@@ -7,8 +7,21 @@ import pysam
 from Bio.Data import IUPACData as iupac
 
 from . import cigar as _cigar
-from .cigar import EVENT_STATES, QUERY_ALIGNED_STATES, REFERENCE_ALIGNED_STATES, convert_cigar_to_string
-from ..constants import CIGAR, DNA_ALPHABET, ORIENT, READ_PAIR_TYPE, STRAND, SVTYPE, NA_MAPPING_QUALITY
+from .cigar import (
+    EVENT_STATES,
+    QUERY_ALIGNED_STATES,
+    REFERENCE_ALIGNED_STATES,
+    convert_cigar_to_string,
+)
+from ..constants import (
+    CIGAR,
+    DNA_ALPHABET,
+    ORIENT,
+    READ_PAIR_TYPE,
+    STRAND,
+    SVTYPE,
+    NA_MAPPING_QUALITY,
+)
 from ..interval import Interval
 
 
@@ -19,7 +32,9 @@ class SamRead(pysam.AlignedSegment):
     Allows next_reference_name and reference_name to be set directly so that is does not depend on a bam header
     """
 
-    def __init__(self, reference_name=None, next_reference_name=None, alignment_score=None, **kwargs):
+    def __init__(
+        self, reference_name=None, next_reference_name=None, alignment_score=None, **kwargs
+    ):
         pysam.AlignedSegment.__init__(self)
         self._reference_name = reference_name
         self._next_reference_name = next_reference_name
@@ -37,7 +52,13 @@ class SamRead(pysam.AlignedSegment):
             this attribute while items are in a hashed state it may lead to unexpected results such as duplicates
             of a single object within a set
         """
-        self._key = (self.query_name, self.query_sequence, self.reference_id, self.reference_start, self.is_supplementary)
+        self._key = (
+            self.query_name,
+            self.query_sequence,
+            self.reference_id,
+            self.reference_start,
+            self.is_supplementary,
+        )
 
     def key(self):
         """
@@ -48,10 +69,21 @@ class SamRead(pysam.AlignedSegment):
         """
         if hasattr(self, '_key') and self._key is not None:
             return self._key
-        return (self.query_name, self.query_sequence, self.reference_id, self.reference_start, self.is_supplementary)
+        return (
+            self.query_name,
+            self.query_sequence,
+            self.reference_id,
+            self.reference_start,
+            self.is_supplementary,
+        )
 
     def alignment_id(self):
-        return '{}:{}[{}]{}'.format(self.reference_name, self.reference_start, self.query_name, convert_cigar_to_string(self.cigar))
+        return '{}:{}[{}]{}'.format(
+            self.reference_name,
+            self.reference_start,
+            self.query_name,
+            convert_cigar_to_string(self.cigar),
+        )
 
     @classmethod
     def copy(cls, pysamread):
@@ -105,7 +137,7 @@ class SamRead(pysam.AlignedSegment):
         for state, freq in self.cigar:
             if state in REFERENCE_ALIGNED_STATES:
                 if state not in QUERY_ALIGNED_STATES:
-                    result.append(reference_genome[self.reference_name].seq[rpos:rpos + freq])
+                    result.append(reference_genome[self.reference_name].seq[rpos : rpos + freq])
                 rpos += freq
         return result
 
@@ -116,7 +148,7 @@ class SamRead(pysam.AlignedSegment):
         for state, freq in self.cigar:
             if state in QUERY_ALIGNED_STATES:
                 if state not in REFERENCE_ALIGNED_STATES:
-                    result.append(self.query_sequence[qpos:qpos + freq])
+                    result.append(self.query_sequence[qpos : qpos + freq])
                 qpos += freq
         return result
 
@@ -173,7 +205,12 @@ def map_ref_range_to_query_range(read, ref_range):
             if ref_range.end >= rpos:
                 qend = qpos
     if qstart is None or qend is None:
-        raise ValueError('reference range is not mapped by input read', ref_range, read.reference_start, read.cigar)
+        raise ValueError(
+            'reference range is not mapped by input read',
+            ref_range,
+            read.reference_start,
+            read.cigar,
+        )
     return Interval(qstart, qend)
 
 
@@ -194,11 +231,16 @@ def breakpoint_pos(read, orient=ORIENT.NS):
     ORIENT.enforce(orient)
 
     if typ != CIGAR.S and end_typ != CIGAR.S:
-        raise AttributeError('cannot compute breakpoint for a read without soft-clipping', read.cigar)
+        raise AttributeError(
+            'cannot compute breakpoint for a read without soft-clipping', read.cigar
+        )
 
     if orient == ORIENT.NS:
-        if (typ == CIGAR.S and end_typ == CIGAR.S and freq > end_freq) \
-                or typ == CIGAR.S and end_typ != CIGAR.S:
+        if (
+            (typ == CIGAR.S and end_typ == CIGAR.S and freq > end_freq)
+            or typ == CIGAR.S
+            and end_typ != CIGAR.S
+        ):
             orient = ORIENT.RIGHT
             # soft clipped to the left
         else:
@@ -207,11 +249,21 @@ def breakpoint_pos(read, orient=ORIENT.NS):
 
     if orient == ORIENT.RIGHT:
         if typ != CIGAR.S:
-            raise AttributeError('soft clipping doesn\'t support input orientation for a breakpoint', repr(orient), read.cigar, read.get_tags())
+            raise AttributeError(
+                'soft clipping doesn\'t support input orientation for a breakpoint',
+                repr(orient),
+                read.cigar,
+                read.get_tags(),
+            )
         return read.reference_start
     else:
         if end_typ != CIGAR.S:
-            raise AttributeError('soft clipping doesn\'t support input orientation for a breakpoint', orient, read.cigar, read.get_tags())
+            raise AttributeError(
+                'soft clipping doesn\'t support input orientation for a breakpoint',
+                orient,
+                read.cigar,
+                read.get_tags(),
+            )
         return read.reference_end - 1
 
 
@@ -230,19 +282,23 @@ def calculate_alignment_score(read, consec_bonus=1):
     max_score = qlen + (qlen - 1) * consec_bonus
     for c, v in read.cigar:
         if c == CIGAR.M:
-            raise ValueError('cannot calculate the alignment score if mismatch v match has not been specified')
+            raise ValueError(
+                'cannot calculate the alignment score if mismatch v match has not been specified'
+            )
         elif c == CIGAR.EQ:
             score += v + (v - 1) * consec_bonus
     return score / max_score
 
 
 def nsb_align(
-        ref, seq,
-        weight_of_score=0.5,
-        min_overlap_percent=1,
-        min_match=0,
-        min_consecutive_match=1,
-        scoring_function=calculate_alignment_score):
+    ref,
+    seq,
+    weight_of_score=0.5,
+    min_overlap_percent=1,
+    min_match=0,
+    min_consecutive_match=1,
+    scoring_function=calculate_alignment_score,
+):
     """
     given some reference string and a smaller sequence string computes the best non-space-breaking alignment
     i.e. an alignment that does not allow for indels (straight-match). Positions in the aligned segments are
@@ -268,7 +324,11 @@ def nsb_align(
     """
     ref = str(ref)
     if len(ref) < 1 or len(seq) < 1:
-        raise AttributeError('cannot overlap on an empty sequence: len(ref)={}, len(seq)={}'.format(len(ref), len(seq)))
+        raise AttributeError(
+            'cannot overlap on an empty sequence: len(ref)={}, len(seq)={}'.format(
+                len(ref), len(seq)
+            )
+        )
     if min_match < 0 or min_match > 1:
         raise AttributeError('min_match must be between 0 and 1')
 
@@ -285,7 +345,7 @@ def nsb_align(
         putative_start_positions = set()
         kmers_checked = {}
         for i in range(0, len(seq) - min_consecutive_match):
-            current_kmer = seq[i:i + min_consecutive_match]
+            current_kmer = seq[i : i + min_consecutive_match]
             if current_kmer in kmers_checked:
                 putative_start_positions.update([p - i for p in kmers_checked[current_kmer]])
                 continue
@@ -324,13 +384,12 @@ def nsb_align(
 
         qstart = 0 if cigar[0][0] != CIGAR.S else cigar[0][1]
 
-        a = SamRead(
-            query_sequence=str(seq),
-            reference_start=ref_start + qstart,
-            cigar=cigar
-        )
+        a = SamRead(query_sequence=str(seq), reference_start=ref_start + qstart, cigar=cigar)
         qlen = a.reference_end - a.reference_start
-        score = (scoring_function(a), qlen)  # this way for equal identity matches we take the longer alignment
+        score = (
+            scoring_function(a),
+            qlen,
+        )  # this way for equal identity matches we take the longer alignment
         if qlen < min_overlap:
             continue
         if score >= best_score:
@@ -399,8 +458,10 @@ def read_pair_type(read):
         <---- ++++> is RL same-strand
     """
     reverse = False
-    if read.reference_id > read.next_reference_id or \
-            (read.reference_id == read.next_reference_id and read.reference_start > read.next_reference_start):
+    if read.reference_id > read.next_reference_id or (
+        read.reference_id == read.next_reference_id
+        and read.reference_start > read.next_reference_start
+    ):
         reverse = True
 
     if not read.is_reverse and read.mate_is_reverse:  # LR
@@ -432,12 +493,10 @@ def orientation_supports_type(read, event_type):
         if read_pair_type(read) != READ_PAIR_TYPE.LR:
             return False
     elif event_type == SVTYPE.TRANS:
-        if read_pair_type(read) != READ_PAIR_TYPE.LR and \
-                read_pair_type(read) != READ_PAIR_TYPE.RL:
+        if read_pair_type(read) != READ_PAIR_TYPE.LR and read_pair_type(read) != READ_PAIR_TYPE.RL:
             return False
     elif event_type == SVTYPE.ITRANS or event_type == SVTYPE.INV:
-        if read_pair_type(read) != READ_PAIR_TYPE.LL and \
-                read_pair_type(read) != READ_PAIR_TYPE.RR:
+        if read_pair_type(read) != READ_PAIR_TYPE.LL and read_pair_type(read) != READ_PAIR_TYPE.RR:
             return False
     elif event_type == SVTYPE.DUP:
         if read_pair_type(read) != READ_PAIR_TYPE.RL:
@@ -502,7 +561,9 @@ def convert_events_to_softclipping(read, orientation, max_event_size, min_anchor
         if event_size > max_event_size:
             while adjusted_cigar[-1][0] in EVENT_STATES:
                 del adjusted_cigar[-1]
-            originally_refaligned = sum([y for x, y in read.cigar if x in REFERENCE_ALIGNED_STATES] + [0])
+            originally_refaligned = sum(
+                [y for x, y in read.cigar if x in REFERENCE_ALIGNED_STATES] + [0]
+            )
             refaligned = sum([y for x, y in adjusted_cigar if x in REFERENCE_ALIGNED_STATES] + [0])
             aligned = sum([y for x, y in adjusted_cigar if x in QUERY_ALIGNED_STATES] + [0])
             sc = len(read.query_sequence) - aligned
@@ -527,5 +588,8 @@ def sequence_complexity(seq):
         for base in values:  # ignore N's etc
             hist[base] += 1 / len(values)
     total = sum(hist.values())
-    scores = [(hist[base1] + hist[base2]) / total for base1, base2 in itertools.combinations(iupac.unambiguous_dna_letters, 2)]
+    scores = [
+        (hist[base1] + hist[base2]) / total
+        for base1, base2 in itertools.combinations(iupac.unambiguous_dna_letters, 2)
+    ]
     return min(scores)

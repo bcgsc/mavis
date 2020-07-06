@@ -21,7 +21,6 @@ def setUpModule():
 
 
 class TestSplicingPatterns(unittest.TestCase):
-
     def setUp(self):
         self.setup_by_strand(STRAND.POS)
 
@@ -37,7 +36,9 @@ class TestSplicingPatterns(unittest.TestCase):
         reference_sequence += 'a' * 600 + 'T' * 100 + 'a' * 200 + 'C' * 100
         reference_sequence += 'a' * 100 + 'G' * 100 + 'a' * 200 + 'C' * 100
         self.reference_sequence = reference_sequence
-        self.pre_transcript = PreTranscript(exons=[self.ex1, self.ex2, self.ex3, self.ex4, self.ex5, self.ex6], strand=strand)
+        self.pre_transcript = PreTranscript(
+            exons=[self.ex1, self.ex2, self.ex3, self.ex4, self.ex5, self.ex6], strand=strand
+        )
 
     def test_single_exon(self):
         t = PreTranscript([(3, 4)], strand=STRAND.POS)
@@ -51,13 +52,18 @@ class TestSplicingPatterns(unittest.TestCase):
         self.assertEqual(1, len(patt))
         self.assertEqual(
             [
-                self.ex1.end, self.ex2.start,
-                self.ex2.end, self.ex3.start,
-                self.ex3.end, self.ex4.start,
-                self.ex4.end, self.ex5.start,
-                self.ex5.end, self.ex6.start
+                self.ex1.end,
+                self.ex2.start,
+                self.ex2.end,
+                self.ex3.start,
+                self.ex3.end,
+                self.ex4.start,
+                self.ex4.end,
+                self.ex5.start,
+                self.ex5.end,
+                self.ex6.start,
             ],
-            [s.pos for s in patt[0]]
+            [s.pos for s in patt[0]],
         )
         self.assertEqual(SPLICE_TYPE.NORMAL, patt[0].splice_type)
 
@@ -68,13 +74,18 @@ class TestSplicingPatterns(unittest.TestCase):
         self.assertEqual(1, len(patt))
         self.assertEqual(
             [
-                self.ex1.end, self.ex2.start,
-                self.ex2.end, self.ex3.start,
-                self.ex3.end, self.ex4.start,
-                self.ex4.end, self.ex5.start,
-                self.ex5.end, self.ex6.start
+                self.ex1.end,
+                self.ex2.start,
+                self.ex2.end,
+                self.ex3.start,
+                self.ex3.end,
+                self.ex4.start,
+                self.ex4.end,
+                self.ex5.start,
+                self.ex5.end,
+                self.ex6.start,
             ],
-            sorted([s.pos for s in patt[0]])
+            sorted([s.pos for s in patt[0]]),
         )
         self.assertEqual(SPLICE_TYPE.NORMAL, patt[0].splice_type)
 
@@ -85,23 +96,31 @@ class TestSplicingPatterns(unittest.TestCase):
 
         self.assertEqual(
             [
-                self.ex1.end, self.ex3.start,
-                self.ex3.end, self.ex4.start,
-                self.ex4.end, self.ex5.start,
-                self.ex5.end, self.ex6.start
+                self.ex1.end,
+                self.ex3.start,
+                self.ex3.end,
+                self.ex4.start,
+                self.ex4.end,
+                self.ex5.start,
+                self.ex5.end,
+                self.ex6.start,
             ],
-            [s.pos for s in patt[0]]
+            [s.pos for s in patt[0]],
         )
         self.assertEqual(SPLICE_TYPE.SKIP, patt[0].splice_type)
 
         self.assertEqual(
             [
-                self.ex2.end, self.ex3.start,
-                self.ex3.end, self.ex4.start,
-                self.ex4.end, self.ex5.start,
-                self.ex5.end, self.ex6.start
+                self.ex2.end,
+                self.ex3.start,
+                self.ex3.end,
+                self.ex4.start,
+                self.ex4.end,
+                self.ex5.start,
+                self.ex5.end,
+                self.ex6.start,
             ],
-            [s.pos for s in patt[1]]
+            [s.pos for s in patt[1]],
         )
         self.assertEqual(SPLICE_TYPE.RETAIN, patt[1].splice_type)
 
@@ -112,22 +131,30 @@ class TestSplicingPatterns(unittest.TestCase):
         self.assertEqual(2, len(patt))
         self.assertEqual(
             [
-                self.ex1.end, self.ex3.start,
-                self.ex3.end, self.ex4.start,
-                self.ex4.end, self.ex5.start,
-                self.ex5.end, self.ex6.start
+                self.ex1.end,
+                self.ex3.start,
+                self.ex3.end,
+                self.ex4.start,
+                self.ex4.end,
+                self.ex5.start,
+                self.ex5.end,
+                self.ex6.start,
             ],
-            sorted([s.pos for s in patt[0]])
+            sorted([s.pos for s in patt[0]]),
         )
         self.assertEqual(SPLICE_TYPE.SKIP, patt[0].splice_type)
         self.assertEqual(
             [
-                self.ex2.end, self.ex3.start,
-                self.ex3.end, self.ex4.start,
-                self.ex4.end, self.ex5.start,
-                self.ex5.end, self.ex6.start
+                self.ex2.end,
+                self.ex3.start,
+                self.ex3.end,
+                self.ex4.start,
+                self.ex4.end,
+                self.ex5.start,
+                self.ex5.end,
+                self.ex6.start,
             ],
-            sorted([s.pos for s in patt[1]])
+            sorted([s.pos for s in patt[1]]),
         )
         self.assertEqual(SPLICE_TYPE.RETAIN, patt[1].splice_type)
 
@@ -137,12 +164,16 @@ class TestSplicingPatterns(unittest.TestCase):
         self.assertEqual(1, len(patt))
         self.assertEqual(
             [
-                self.ex1.end, self.ex2.start,
-                self.ex2.end, self.ex3.start,
-                self.ex3.end, self.ex4.start,
-                self.ex4.end, self.ex5.start
+                self.ex1.end,
+                self.ex2.start,
+                self.ex2.end,
+                self.ex3.start,
+                self.ex3.end,
+                self.ex4.start,
+                self.ex4.end,
+                self.ex5.start,
             ],
-            [s.pos for s in patt[0]]
+            [s.pos for s in patt[0]],
         )
         self.assertEqual(SPLICE_TYPE.RETAIN, patt[0].splice_type)
 
@@ -152,12 +183,16 @@ class TestSplicingPatterns(unittest.TestCase):
         self.assertEqual(1, len(patt))
         self.assertEqual(
             [
-                self.ex2.end, self.ex3.start,
-                self.ex3.end, self.ex4.start,
-                self.ex4.end, self.ex5.start,
-                self.ex5.end, self.ex6.start
+                self.ex2.end,
+                self.ex3.start,
+                self.ex3.end,
+                self.ex4.start,
+                self.ex4.end,
+                self.ex5.start,
+                self.ex5.end,
+                self.ex6.start,
             ],
-            [s.pos for s in patt[0]]
+            [s.pos for s in patt[0]],
         )
         self.assertEqual(SPLICE_TYPE.RETAIN, patt[0].splice_type)
 
@@ -167,23 +202,31 @@ class TestSplicingPatterns(unittest.TestCase):
         self.assertEqual(2, len(patt))
         self.assertEqual(
             [
-                self.ex1.end, self.ex3.start,
-                self.ex3.end, self.ex4.start,
-                self.ex4.end, self.ex5.start,
-                self.ex5.end, self.ex6.start
+                self.ex1.end,
+                self.ex3.start,
+                self.ex3.end,
+                self.ex4.start,
+                self.ex4.end,
+                self.ex5.start,
+                self.ex5.end,
+                self.ex6.start,
             ],
-            [s.pos for s in patt[0]]
+            [s.pos for s in patt[0]],
         )
         self.assertEqual(SPLICE_TYPE.SKIP, patt[0].splice_type)
 
         self.assertEqual(
             [
-                self.ex2.end, self.ex3.start,
-                self.ex3.end, self.ex4.start,
-                self.ex4.end, self.ex5.start,
-                self.ex5.end, self.ex6.start
+                self.ex2.end,
+                self.ex3.start,
+                self.ex3.end,
+                self.ex4.start,
+                self.ex4.end,
+                self.ex5.start,
+                self.ex5.end,
+                self.ex6.start,
             ],
-            [s.pos for s in patt[1]]
+            [s.pos for s in patt[1]],
         )
         self.assertEqual(SPLICE_TYPE.RETAIN, patt[1].splice_type)
 
@@ -194,12 +237,16 @@ class TestSplicingPatterns(unittest.TestCase):
         self.assertEqual(1, len(patt))
         self.assertEqual(
             [
-                self.ex1.end, self.ex2.start,
-                self.ex3.end, self.ex4.start,
-                self.ex4.end, self.ex5.start,
-                self.ex5.end, self.ex6.start
+                self.ex1.end,
+                self.ex2.start,
+                self.ex3.end,
+                self.ex4.start,
+                self.ex4.end,
+                self.ex5.start,
+                self.ex5.end,
+                self.ex6.start,
             ],
-            [s.pos for s in patt[0]]
+            [s.pos for s in patt[0]],
         )
         self.assertEqual(SPLICE_TYPE.RETAIN, patt[0].splice_type)
 
@@ -212,21 +259,27 @@ class TestSplicingPatterns(unittest.TestCase):
 
         self.assertEqual(
             [
-                self.ex1.end, self.ex4.start,
-                self.ex4.end, self.ex5.start,
-                self.ex5.end, self.ex6.start
+                self.ex1.end,
+                self.ex4.start,
+                self.ex4.end,
+                self.ex5.start,
+                self.ex5.end,
+                self.ex6.start,
             ],
-            [s.pos for s in patt[0]]
+            [s.pos for s in patt[0]],
         )
         self.assertEqual(SPLICE_TYPE.MULTI_SKIP, patt[0].splice_type)
 
         self.assertEqual(
             [
-                self.ex3.end, self.ex4.start,
-                self.ex4.end, self.ex5.start,
-                self.ex5.end, self.ex6.start
+                self.ex3.end,
+                self.ex4.start,
+                self.ex4.end,
+                self.ex5.start,
+                self.ex5.end,
+                self.ex6.start,
             ],
-            [s.pos for s in patt[1]]
+            [s.pos for s in patt[1]],
         )
         self.assertEqual(SPLICE_TYPE.MULTI_RETAIN, patt[1].splice_type)
 
@@ -239,21 +292,27 @@ class TestSplicingPatterns(unittest.TestCase):
 
         self.assertEqual(
             [
-                self.ex1.end, self.ex2.start,
-                self.ex4.end, self.ex5.start,
-                self.ex5.end, self.ex6.start
+                self.ex1.end,
+                self.ex2.start,
+                self.ex4.end,
+                self.ex5.start,
+                self.ex5.end,
+                self.ex6.start,
             ],
-            [s.pos for s in patt[0]]
+            [s.pos for s in patt[0]],
         )
         self.assertEqual(SPLICE_TYPE.MULTI_RETAIN, patt[0].splice_type)
 
         self.assertEqual(
             [
-                self.ex1.end, self.ex4.start,
-                self.ex4.end, self.ex5.start,
-                self.ex5.end, self.ex6.start
+                self.ex1.end,
+                self.ex4.start,
+                self.ex4.end,
+                self.ex5.start,
+                self.ex5.end,
+                self.ex6.start,
             ],
-            [s.pos for s in patt[1]]
+            [s.pos for s in patt[1]],
         )
         self.assertEqual(SPLICE_TYPE.MULTI_SKIP, patt[1].splice_type)
 
@@ -266,7 +325,6 @@ class TestSplicingPatterns(unittest.TestCase):
 
 
 class TestExonSpliceSites(unittest.TestCase):
-
     def test_end_splice_site(self):
         e = Exon(100, 199, strand=STRAND.POS)
         self.assertEqual(2, SPLICE_SITE_RADIUS)
@@ -279,7 +337,6 @@ class TestExonSpliceSites(unittest.TestCase):
 
 
 class TestPredictSpliceSites(unittest.TestCase):
-
     def test_gimap4(self):
         gimap4 = EXAMPLE_GENES['GIMAP4']
         donors = predict_splice_sites(gimap4.seq)
@@ -292,7 +349,7 @@ class TestPredictSpliceSites(unittest.TestCase):
         gimap4_seq = reverse_complement(gimap4.seq)
         donors = predict_splice_sites(gimap4_seq, True)
         for d in donors:
-            self.assertEqual(d.seq, gimap4_seq[d.start - 1:d.end])
+            self.assertEqual(d.seq, gimap4_seq[d.start - 1 : d.end])
         self.assertEqual(5, len(donors))
 
     def test_fusion_with_novel_splice_site(self):
@@ -302,20 +359,23 @@ class TestPredictSpliceSites(unittest.TestCase):
             Breakpoint('8', 79715940, 79715940, 'L', '-'),
             event_type=SVTYPE.ITRANS,
             protocol=PROTOCOL.GENOME,
-            untemplated_seq=''
+            untemplated_seq='',
         )
         gimap4 = EXAMPLE_GENES['GIMAP4']
         il7 = EXAMPLE_GENES['IL7']
         ref_genome = {
             gimap4.chr: MockObject(seq=MockLongString(gimap4.seq, offset=gimap4.start - 1)),
-            il7.chr: MockObject(seq=MockLongString(il7.seq, offset=il7.start - 1))
+            il7.chr: MockObject(seq=MockLongString(il7.seq, offset=il7.start - 1)),
         }
         annotations = annotate_events([bpp], {gimap4.chr: [gimap4], il7.chr: [il7]}, ref_genome)
         self.assertEqual(1, len(annotations))
         ann = annotations[0]
         print(ann, ann.transcript1, ann.transcript2)
         print(ann.fusion)
-        print(ann.fusion.transcripts[0].splicing_pattern, ann.fusion.transcripts[0].splicing_pattern.splice_type)
+        print(
+            ann.fusion.transcripts[0].splicing_pattern,
+            ann.fusion.transcripts[0].splicing_pattern.splice_type,
+        )
         for ex in ann.fusion.transcripts[0].exons:
             print(ex, len(ex))
         self.assertTrue(False)

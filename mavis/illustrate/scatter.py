@@ -6,7 +6,18 @@ from ..interval import Interval
 from ..validate.constants import DEFAULTS as VALIDATION_DEFAULTS
 
 
-def bam_to_scatter(bam_file, chrom, start, end, density, strand=None, axis_name=None, ymax=None, min_mapping_quality=0, ymax_color='#FF0000'):
+def bam_to_scatter(
+    bam_file,
+    chrom,
+    start,
+    end,
+    density,
+    strand=None,
+    axis_name=None,
+    ymax=None,
+    min_mapping_quality=0,
+    ymax_color='#FF0000',
+):
     """
     pull data from a bam file to set up a scatter plot of the pileup
 
@@ -25,6 +36,7 @@ def bam_to_scatter(bam_file, chrom, start, end, density, strand=None, axis_name=
         ScatterPlot: the scatter plot representing the bam pileup
     """
     import pysam
+
     if not axis_name:
         axis_name = os.path.basename(bam_file)
     # one plot per bam
@@ -53,11 +65,12 @@ def bam_to_scatter(bam_file, chrom, start, end, density, strand=None, axis_name=
 
         LOG('scatter plot {} has {} points'.format(axis_name, len(points)))
         plot = ScatterPlot(
-            points, axis_name,
+            points,
+            axis_name,
             ymin=0,
             ymax=max([y for x, y in points] + [100]) if ymax is None else ymax,
             density=density,
-            ymax_color=ymax_color
+            ymax_color=ymax_color,
         )
     finally:
         samfile.close()
@@ -70,9 +83,21 @@ class ScatterPlot:
     """
 
     def __init__(
-        self, points, y_axis_label,
-        ymax=None, ymin=None, xmin=None, xmax=None, hmarkers=None, height=100, point_radius=2,
-        title='', yticks=None, colors=None, density=1, ymax_color='#FF0000'
+        self,
+        points,
+        y_axis_label,
+        ymax=None,
+        ymin=None,
+        xmin=None,
+        xmax=None,
+        hmarkers=None,
+        height=100,
+        point_radius=2,
+        title='',
+        yticks=None,
+        colors=None,
+        density=1,
+        ymax_color='#FF0000',
     ):
         self.hmarkers = hmarkers if hmarkers is not None else []
         self.yticks = yticks if yticks is not None else []
@@ -110,6 +135,7 @@ def draw_scatter(ds, canvas, plot, xmapping, log=DEVNULL):
             dict used for conversion of coordinates in the xaxis to pixel positions
     """
     from shapely.geometry import Point as sPoint
+
     # generate the y coordinate mapping
     plot_group = canvas.g(class_='scatter_plot')
 
@@ -126,77 +152,86 @@ def draw_scatter(ds, canvas, plot, xmapping, log=DEVNULL):
                 if ratio > plot.density:
                     continue
             circles.append(current_circle)
-            px_points.append((x_px, y_px, plot.ymax_color if y_pos > plot.ymax else plot.colors.get((x_pos, y_pos), '#000000')))
+            px_points.append(
+                (
+                    x_px,
+                    y_px,
+                    plot.ymax_color
+                    if y_pos > plot.ymax
+                    else plot.colors.get((x_pos, y_pos), '#000000'),
+                )
+            )
         except IndexError:
             pass
-    log('drew {} of {} points (density={})'.format(len(circles), len(plot.points), plot.density), time_stamp=False)
+    log(
+        'drew {} of {} points (density={})'.format(len(circles), len(plot.points), plot.density),
+        time_stamp=False,
+    )
 
     for x_px, y_px, color in px_points:
         if x_px.length() > ds.scatter_marker_radius:
-            plot_group.add(canvas.line(
-                (x_px.start, y_px.center),
-                (x_px.end, y_px.center),
-                stroke='#000000',
-                stroke_width=ds.scatter_error_bar_stroke_width
-            ))
+            plot_group.add(
+                canvas.line(
+                    (x_px.start, y_px.center),
+                    (x_px.end, y_px.center),
+                    stroke='#000000',
+                    stroke_width=ds.scatter_error_bar_stroke_width,
+                )
+            )
         if y_px.length() > ds.scatter_marker_radius:
-            plot_group.add(canvas.line(
-                (x_px.center, y_px.start),
-                (x_px.center, y_px.end),
-                stroke='#000000',
-                stroke_width=ds.scatter_error_bar_stroke_width
-            ))
-        plot_group.add(canvas.circle(
-            center=(x_px.center, y_px.center),
-            fill=color,
-            r=ds.scatter_marker_radius
-        ))
+            plot_group.add(
+                canvas.line(
+                    (x_px.center, y_px.start),
+                    (x_px.center, y_px.end),
+                    stroke='#000000',
+                    stroke_width=ds.scatter_error_bar_stroke_width,
+                )
+            )
+        plot_group.add(
+            canvas.circle(center=(x_px.center, y_px.center), fill=color, r=ds.scatter_marker_radius)
+        )
 
     xmax = Interval.convert_ratioed_pos(xmapping, plot.xmax, forward_to_reverse=False).end
     for py in plot.hmarkers:
         py = plot.height - abs(py - plot.ymin) * yratio
-        plot_group.add(
-            canvas.line(
-                start=(0, py),
-                end=(xmax, py),
-                stroke='blue'
-            )
-        )
+        plot_group.add(canvas.line(start=(0, py), end=(xmax, py), stroke='blue'))
     # draw left y axis
-    plot_group.add(canvas.line(
-        start=(0, 0), end=(0, plot.height), stroke='#000000'
-    ))
+    plot_group.add(canvas.line(start=(0, 0), end=(0, plot.height), stroke='#000000'))
     ytick_labels = [0]
     # draw start and end markers on the y axis
     for y in plot.yticks:
         ytick_labels.append(len(str(y)))
         py = plot.height - abs(y - plot.ymin) * yratio
         plot_group.add(
-            canvas.line(
-                start=(0 - ds.scatter_yaxis_tick_size, py),
-                end=(0, py),
-                stroke='#000000'
-            ))
+            canvas.line(start=(0 - ds.scatter_yaxis_tick_size, py), end=(0, py), stroke='#000000')
+        )
         plot_group.add(
             canvas.text(
                 str(y),
                 insert=(
                     0 - ds.scatter_yaxis_tick_size - ds.padding,
-                    py + ds.scatter_ytick_font_size * ds.font_central_shift_ratio),
+                    py + ds.scatter_ytick_font_size * ds.font_central_shift_ratio,
+                ),
                 fill=ds.label_color,
-                style=ds.font_style.format(font_size=ds.scatter_ytick_font_size, text_anchor='end')
-            ))
+                style=ds.font_style.format(font_size=ds.scatter_ytick_font_size, text_anchor='end'),
+            )
+        )
 
     shift = max(ytick_labels)
-    x = 0 - ds.padding * 2 - ds.scatter_axis_font_size - ds.scatter_yaxis_tick_size - \
-        ds.scatter_ytick_font_size * ds.font_width_height_ratio * shift
+    x = (
+        0
+        - ds.padding * 2
+        - ds.scatter_axis_font_size
+        - ds.scatter_yaxis_tick_size
+        - ds.scatter_ytick_font_size * ds.font_width_height_ratio * shift
+    )
     y = plot.height / 2
     yaxis = canvas.text(
         plot.y_axis_label,
         insert=(x, y),
         fill=ds.label_color,
         style=ds.font_style.format(font_size=ds.scatter_axis_font_size, text_anchor='start'),
-        class_='y_axis_label'
+        class_='y_axis_label',
     )
     plot_group.add(yaxis)
     cx = len(plot.y_axis_label) * ds.font_width_height_ratio * ds.scatter_axis_font_size / 2

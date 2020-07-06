@@ -26,15 +26,19 @@ def setUpModule():
 
 
 class TestConvert(unittest.TestCase):
-
     def run_main(self, inputfile, file_type, strand_specific=False):
         outputfile = os.path.join(TEMP_OUTPUT, file_type + '.tab')
         args = [
-            'mavis', SUBCOMMAND.CONVERT,
-            '-o', outputfile,
-            '-n', inputfile,
-            '--file_type', file_type,
-            '--strand_specific', strand_specific
+            'mavis',
+            SUBCOMMAND.CONVERT,
+            '-o',
+            outputfile,
+            '-n',
+            inputfile,
+            '--file_type',
+            file_type,
+            '--strand_specific',
+            strand_specific,
         ]
         with patch.object(sys, 'argv', args):
             self.assertEqual(0, main())
@@ -78,20 +82,16 @@ class TestConvert(unittest.TestCase):
         result = self.run_main(get_data('manta_events.vcf'), SUPPORTED_TOOL.MANTA, False)
         # ensure weird bnd type is converted correctly
         bnd_id = 'manta-MantaBND:173633:0:1:0:0:0:0'
-        self.assertEqual(2, len(result[bnd_id]))
-        bpp1, bpp2 = result[bnd_id]
-        if bpp1.event_type == SVTYPE.ITRANS:
-            bpp2, bpp1 = bpp1, bpp2
-        self.assertEqual(SVTYPE.TRANS, bpp1.event_type)
-        self.assertEqual(SVTYPE.ITRANS, bpp2.event_type)
-        for bpp in [bpp1, bpp2]:
-            self.assertEqual('10', bpp.break1.chr)
-            self.assertEqual('19', bpp.break2.chr)
-            self.assertEqual(7059511 - 0, bpp.break1.start)
-            self.assertEqual(7059511 + 1, bpp.break1.end)
-            self.assertEqual(17396810, bpp.break2.start)
-            self.assertEqual(17396810, bpp.break2.end)
-            self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
+        self.assertEqual(1, len(result[bnd_id]))
+        bpp = result[bnd_id][0]
+        self.assertEqual(SVTYPE.TRANS, bpp.event_type)
+        self.assertEqual('10', bpp.break1.chr)
+        self.assertEqual('19', bpp.break2.chr)
+        self.assertEqual(7059511 - 0, bpp.break1.start)
+        self.assertEqual(7059511 + 1, bpp.break1.end)
+        self.assertEqual(17396810, bpp.break2.start)
+        self.assertEqual(17396810, bpp.break2.end)
+        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
         somatic_event = result['manta-MantaDEL:20644:0:2:0:0:0'][0]
         self.assertEqual('True', somatic_event.data.get('SOMATIC', False))
 
