@@ -365,7 +365,7 @@ class MavisConfig(MavisNamespace):
             filepath (str): path to the input configuration file
 
         Returns:
-            class:`list` of :class:`Namespace`: namespace arguments for each library
+            List[Namespace]: namespace arguments for each library
         """
         if not os.path.exists(filepath):
             raise FileNotFoundError('File does not exist: {}'.format(filepath))
@@ -384,9 +384,9 @@ def write_config(filename, include_defaults=False, libraries=[], conversions={},
     Args:
         filename (str): path to the output file
         include_defaults (bool): True if default parameters should be written to the config, False otherwise
-        libraries (list of LibraryConfig): library configuration sections
-        conversions (dict of list by str): conversion commands by alias name
-        log (function): function to pass output logging to
+        libraries (List[LibraryConfig]): library configuration sections
+        conversions (Dict[str,List]): conversion commands by alias name
+        log (Callable): function to pass output logging to
     """
     config = {}
 

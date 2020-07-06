@@ -36,15 +36,16 @@ Run the tests and compute code coverage
 pytest tests
 ```
 
-## Build the Sphinx Documentation
+## Build the Documentation
 
 ```bash
 pip install .[docs]
-sphinx-build docs/source/ html
+markdown_refdocs mavis -o docs/package --links
+mkdocs build
 ```
 
-The contents of the user manual can then be viewed by opening the build/html/index.html in any available
-web browser (i.e. google-chrome, firefox, etc.)
+The contents of the user manual can then be viewed by opening the build-docs/index.html
+in any available web browser (i.e. google-chrome, firefox, etc.)
 
 
 ## Deploy to PyPi
@@ -68,34 +69,53 @@ twine upload -r pypi dist/*
 ```
 
 
-### Reporting a Bug
+## Reporting a Bug
 
-Please make sure to search through the issues before reporting a bug to ensure there isn't already an open issue.
-
-
-### Coding Conventions
-
-#### Formatting/Style
-
-- In general, follow [pep8](https://www.python.org/dev/peps/pep-0008/) style guides (except maximum line width)
-- docstrings should follow [sphinx google code style](http://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html)
-- any column name which may appear in any of the intermediate or final output files must be defined in ``mavis.constants.COLUMNS``
+Please make sure to search through the issues before reporting a bug to ensure there isn't
+already an open issue.
 
 
-##### Types in docstrings
+## Conventions
 
-if you want to be more explicit with nested types, the following conventions are used throughout the code
+### Linting
 
-- dictionary: ``d = {<key>: <value>}`` becomes ``dict of <value> by <key>``
-- list: ``l = [1, 2, 3]`` becomes ``list of int``
-- mixed: ``d = {'a': [1, 2, 3], 'b': [4, 5, 6]}`` becomes ``dict of list of int by str``
-- tuples: ``('a', 1)`` becomes ``tuple of str and int``
+Use [black](https://github.com/psf/black) with strings off and line length 100
+
+```bash
+black mavis -S -l 100
+```
+
+### Docstrings
+
+docstrings should follow [sphinx google code style](http://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html)
+
+if you want to be more explicit with nested types, please follow the same format
+used by [python type annotations](https://docs.python.org/3/library/typing.html)
+
+```text
+arg1 (List[str]): a list of strings
+```
+
+However using proper type annotations is preferred for new code and then only including the
+description of the parameter in the docstring and not its type
+
+```python
+
+def some_function(some_arg: List[str]) -> None:
+    """
+    Args:
+        some_arg: this arg does stuff
+    """
+```
+
+### Output Columns
+
+any column name which may appear in any of the intermediate or final output files must be defined in `mavis.constants.COLUMNS` as well as added to the [columns glossary](../outputs/columns)
 
 
-#### Tests
+### Tests
 
 - all new code must have unit tests in the tests subdirectory
-- in general for assertEqual statements, the expected value is given first
 
 Tests can be run as follows
 
@@ -103,8 +123,29 @@ Tests can be run as follows
 pytest tests
 ```
 
-To run the tests with tox (multiple python installs tested). Note that you will need to have multiple python installs on your path
+### Branching Model
+
+If you are working on a large feature, create a base branch for the feature off develop. Generally
+these follow the naming pattern
 
 ```bash
-tox
+git checkout -b integration/issue-<number>-<short-name>
 ```
+
+If you are working on a smaller feature then simply make a feature branch off develop
+
+```bash
+git checkout -b feature/issue-<number>-<short-name>
+```
+
+Once ready, a PR should be made to develop and review should be requested from the other developers.
+
+Releases are done by creating a release branch off develop
+
+```bash
+git checkout -b release/vX.X.X
+```
+
+Updating the version number in setup.py in the release branch, and then making a PR to master.
+After the PR has been merged to master a tag/release should be created with the release notes
+and a PR to merge master back into develop should be made

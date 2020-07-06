@@ -29,12 +29,12 @@ from .util import DEVNULL
 
 
 SUPPORTED_ALIGNER = MavisNamespace(
-    BWA_MEM='bwa mem', BLAT='blat', __name__='~mavis.align.SUPPORTED_ALIGNER'
+    BWA_MEM='bwa mem', BLAT='blat', __name__='mavis.align.SUPPORTED_ALIGNER'
 )
-""":class:`~mavis.constants.MavisNamespace`: supported aligners
+"""MavisNamespace: supported aligners
 
-- :term:`blat`
-- :term:`bwa mem<BWA>`
+- [blat](/glossary/#blat)
+- [bwa mem<BWA>](/glossary/#bwa-mem<BWA>)
 """
 
 
@@ -179,7 +179,7 @@ def get_aligner_version(aligner):
 def query_coverage_interval(read):
     """
     Returns:
-        :class:`~mavis.interval.Interval`: The portion of the original query sequence that is aligned by this read
+        mavis.interval.Interval: The portion of the original query sequence that is aligned by this read
     """
     seq = read.query_sequence
     st = 0
@@ -409,7 +409,7 @@ def align_sequences(
     calls the alignment tool and parses the return output for a set of sequences
 
     Args:
-        sequences (dict of str to str): dictionary of sequences by name
+        sequences (Dict[str,str]): dictionary of sequences by name
         input_bam_cache (BamCache): bam cache to be used as a template for reading the alignments
         reference_genome: the reference genome
         aligner (SUPPORTED_ALIGNER): the name of the aligner to be used

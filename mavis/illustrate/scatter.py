@@ -131,7 +131,7 @@ def draw_scatter(ds, canvas, plot, xmapping, log=DEVNULL):
         ds (DiagramSettings): the settings/constants to use for building the svg
         canvas (svgwrite.canvas): the svgwrite object used to create new svg elements
         plot (ScatterPlot): the plot to be drawn
-        xmapping (:class:`dict` of :class:`Interval` by :class:`Interval`):
+        xmapping (Dict[Interval,Interval]):
             dict used for conversion of coordinates in the xaxis to pixel positions
     """
     from shapely.geometry import Point as sPoint

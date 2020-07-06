@@ -117,9 +117,9 @@ def compute_transcriptome_bam_stats(
 
     Args:
         bam_file_handle (BamCache): the input bam file handle
-        annotations (object): see :func:`~mavis.annotate.load_reference_genes`
+        annotations (object): see :func:`mavis.annotate.load_reference_genes`
         sample_size (int): the number of genes to compute stats over
-        log (callable): outputs logging information
+        log (Callable): outputs logging information
         min_mapping_quality (int): the minimum mapping quality for a read to be used
         stranded (bool): if True then reads must match the gene strand
         sample_cap (int): maximum number of reads to collect for any given sample region
@@ -230,7 +230,7 @@ def compute_genome_bam_stats(
         bam_file_handle (pysam.AlignmentFile): the input bam file handle
         sample_bin_size (int): how large to make the sample bin (in bp)
         sample_size (int): the number of genes to compute stats over
-        log (callable): outputs logging information
+        log (Callable): outputs logging information
         min_mapping_quality (int): the minimum mapping quality for a read to be used
         sample_cap (int): maximum number of reads to collect for any given sample region
         distribution_fraction (float): the proportion of the distribution to use in computing stdev

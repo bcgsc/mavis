@@ -1,14 +1,10 @@
 """
-
-
-::
-
-    In general the coordinates in psl files are “zero based half open.” The first base in a sequence is numbered
-    zero rather than one. When representing a range the end coordinate is not included in the range. Thus the first
-    100 bases of a sequence are represented as 0-100, and the second 100 bases are represented as 100-200. There is
-    another little unusual feature in the .psl format. It has to do with how coordinates are handled on the
-    negative strand. In the qStart/qEnd fields the coordinates are where it matches from the point of view of the forward
-    strand (even when the match is on the reverse strand). However on the qStarts[] list, the coordinates are reversed.
+> In general the coordinates in psl files are “zero based half open.” The first base in a sequence is numbered
+> zero rather than one. When representing a range the end coordinate is not included in the range. Thus the first
+> 100 bases of a sequence are represented as 0-100, and the second 100 bases are represented as 100-200. There is
+> another little unusual feature in the .psl format. It has to do with how coordinates are handled on the
+> negative strand. In the qStart/qEnd fields the coordinates are where it matches from the point of view of the forward
+> strand (even when the match is on the reverse strand). However on the qStarts[] list, the coordinates are reversed.
 
 -- http://wiki.bits.vib.be/index.php/Blat
 
@@ -89,12 +85,12 @@ class Blat:
 
         below are lines from the perl code i've re-written in python
 
-        ::
-
-            my $sizeMul = pslIsProtein($blockCount, $strand, $tStart, $tEnd, $tSize, $tStarts, $blockSizes);
-            sizmul = 1 for DNA
-            my $pslScore = $sizeMul * ($matches + ($repMatches >> 1) ) - $sizeMul * $misMatches - $qNumInsert - $tNumIns
-                ert)
+        ```perl
+        my $sizeMul = pslIsProtein($blockCount, $strand, $tStart, $tEnd, $tSize, $tStarts, $blockSizes);
+        sizmul = 1 for DNA
+        my $pslScore = $sizeMul * ($matches + ($repMatches >> 1) ) - $sizeMul * $misMatches - $qNumInsert - $tNumIns
+            ert)
+        ```
         """
 
         size_mul = 1 if not is_protein else 3
@@ -210,9 +206,9 @@ class Blat:
         given a 'row' from reading a pslx file. converts the row to a BlatAlignedSegment object
 
         Args:
-            row (dict of str): a row object from the 'read_pslx' method
+            row Dict[str]: a row object from the 'read_pslx' method
             bam_cache (BamCache): the bam file/cache to use as a template for creating reference_id from chr name
-            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`):
+            reference_genome (Dict[str,Bio.SeqRecord]):
               dict of reference sequence by template/chr name
 
         """

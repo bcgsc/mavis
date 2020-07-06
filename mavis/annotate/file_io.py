@@ -82,7 +82,7 @@ def load_masking_regions(*filepaths):
     Args:
         filepath (str): path to the input tab-delimited file
     Returns:
-        :class:`dict` of :class:`list` of :class:`BioInterval` by :class:`str`: a dictionary keyed by chromosome name with values of lists of regions on the chromosome
+        Dict[str,List[BioInterval]]: a dictionary keyed by chromosome name with values of lists of regions on the chromosome
 
     Example:
         >>> m = load_masking_regions('filename')
@@ -119,12 +119,12 @@ def load_annotations(*filepaths, warn=DEVNULL, reference_genome=None, best_trans
     Args:
         filepath (str): path to the input file
         verbose (bool): output extra information to stdout
-        reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by
+        reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence by
             template/chr name
         filetype (str): json or tab/tsv. only required if the file type can't be interpolated from the path extension
 
     Returns:
-        :class:`dict` of :class:`list` of :class:`~mavis.annotate.genomic.Gene` by :class:`str`: lists of genes keyed by chromosome name
+        Dict[str,List[mavis.annotate.genomic.Gene]]: lists of genes keyed by chromosome name
     """
     total_annotations = {}
 
@@ -279,7 +279,7 @@ def convert_tab_to_json(filepath, warn=DEVNULL):
         filepath (str): path to the input tab-delimited file
 
     Returns:
-        :class:`dict` of :class:`list` of :any:`Gene` by :class:`str`: a dictionary keyed by chromosome name with values of list of genes on the chromosome
+        Dict[str,List[Gene]]: a dictionary keyed by chromosome name with values of list of genes on the chromosome
 
     Example:
         >>> ref = load_reference_genes('filename')
@@ -383,10 +383,10 @@ def convert_tab_to_json(filepath, warn=DEVNULL):
 def load_reference_genome(*filepaths):
     """
     Args:
-        filepaths (list of str): the paths to the files containing the input fasta genomes
+        filepaths (List[str]): the paths to the files containing the input fasta genomes
 
     Returns:
-        :class:`dict` of :class:`Bio.SeqRecord` by :class:`str`: a dictionary representing the sequences in the fasta file
+        Dict[str,Bio.SeqRecord]: a dictionary representing the sequences in the fasta file
     """
     reference_genome = {}
     for filename in filepaths:
@@ -444,7 +444,7 @@ def load_templates(*filepaths):
         filename (str): the path to the file with the cytoband template information
 
     Returns:
-        :class:`list` of :class:`Template`: list of the templates loaded
+        List[Template]: list of the templates loaded
 
     """
     header = ['name', 'start', 'end', 'band_name', 'giemsa_stain']
@@ -483,7 +483,7 @@ class ReferenceFile:
         'dgv_annotation': load_masking_regions,
         'aligner_reference': None,
     }
-    """:class:`dict`: Mapping of file types (based on ENV name) to load functions"""
+    """dict: Mapping of file types (based on ENV name) to load functions"""
 
     def __init__(self, file_type, *filepaths, eager_load=False, assert_exists=False, **opt):
         """

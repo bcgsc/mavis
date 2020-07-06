@@ -17,7 +17,7 @@ from mavis.validate.call import EventCall
 
 def get_read_length(bam_cache, sample_cap=20):
     """
-    Determines read length from the first few reads in the bam file. 
+    Determines read length from the first few reads in the bam file.
     Assumes consistent read length in bam file.
     """
     read_lengths = []
@@ -70,16 +70,26 @@ def calculate_ref_count(bpp, read_length, reference_genome, bam_cache, buffer=1)
     ins_seq = bpp.untemplated_seq if bpp.untemplated_seq else ''
     if bpp.event_type == SVTYPE.DUP:
         repeat_start = bpp.break1.start - len(repeat) * count
-        ref_sequence = str(ref[repeat_start - buffer: bpp.break2.end + buffer].seq)
-        dup_seq = str(ref[bpp.break1.start - 1: bpp.break2.end].seq) + ins_seq
-        alt_sequence = str(ref[repeat_start - buffer: bpp.break2.end].seq) + dup_seq + str(ref[bpp.break2.end:bpp.break2.end + buffer].seq)
+        ref_sequence = str(ref[repeat_start - buffer : bpp.break2.end + buffer].seq)
+        dup_seq = str(ref[bpp.break1.start - 1 : bpp.break2.end].seq) + ins_seq
+        alt_sequence = (
+            str(ref[repeat_start - buffer : bpp.break2.end].seq)
+            + dup_seq
+            + str(ref[bpp.break2.end : bpp.break2.end + buffer].seq)
+        )
     elif bpp.event_type == SVTYPE.INS or bpp.event_type == SVTYPE.DEL:
         repeat_start = min(bpp.break1.start - 1, bpp.break2.end - 1 - len(repeat) * (count + 1))
-        ref_sequence = str(ref[repeat_start - buffer: bpp.break2.end + buffer].seq)
-        alt_sequence = str(ref[repeat_start - buffer: bpp.break1.start].seq) + ins_seq + str(ref[bpp.break2.end - 1: bpp.break2.end + buffer].seq)
+        ref_sequence = str(ref[repeat_start - buffer : bpp.break2.end + buffer].seq)
+        alt_sequence = (
+            str(ref[repeat_start - buffer : bpp.break1.start].seq)
+            + ins_seq
+            + str(ref[bpp.break2.end - 1 : bpp.break2.end + buffer].seq)
+        )
     else:
         raise ValueError("Cannot determine ref and alt counts for non dup/ins/del event types")
-    all_reads = bam_cache.fetch(bpp.break1.chr, bpp.break1.start - read_length, bpp.break2.end + read_length)
+    all_reads = bam_cache.fetch(
+        bpp.break1.chr, bpp.break1.start - read_length, bpp.break2.end + read_length
+    )
 
     for read in all_reads:
         # compare the actual sequence
@@ -100,12 +110,12 @@ def calculate_ref_count(bpp, read_length, reference_genome, bam_cache, buffer=1)
     return ref_reads, alt_reads, ignored_reads, multimap_reads, ref_sequence, alt_sequence
 
 
-class RefAltCalculator():
+class RefAltCalculator:
     """
     Class to calculate the ref and alt counts of a bpp for a given list of bams
 
     Args:
-        input_bams (list of tuples): List of (library name, path to bam) tuples
+        input_bams (List[Tuple]): List of (library name, path to bam) tuples
         reference_genome (str or dict): Path to the reference fasta file or a dictionary created by load_reference_genome
         max_event_size (int): The maximum size of a indel event to calculate the ref/alt counts for
         buffer (int): The amount of overhang (accounting for repeats) a read must have in order to be considered
@@ -134,9 +144,14 @@ class RefAltCalculator():
         """
         Calculates the ref and alt count for a single BreakPointPair object
         """
-        if len(bpp.break1) + len(bpp.break2) > 2 or \
-            max(bpp.break2.end - bpp.break1.start,
-                len(bpp.untemplated_seq if bpp.untemplated_seq else '')) > self.max_event_size:
+        if (
+            len(bpp.break1) + len(bpp.break2) > 2
+            or max(
+                bpp.break2.end - bpp.break1.start,
+                len(bpp.untemplated_seq if bpp.untemplated_seq else ''),
+            )
+            > self.max_event_size
+        ):
             raise ValueError("Cannot determine ref and alt count for non precise breakpoint pairs")
 
         if bpp not in self.bpp_cache:
@@ -144,14 +159,20 @@ class RefAltCalculator():
             data = dict()
             for name, read_length, bam in self.input_bams:
                 ref, alt, ign, mul, ref_sequence, alt_sequence = calculate_ref_count(
-                    bpp, read_length, self.reference_genome, bam, self.buffer)
+                    bpp, read_length, self.reference_genome, bam, self.buffer
+                )
                 log(bpp, name)
-                log('Calculated counts: Ref: {}, Alt: {}, Mul: {}, Ignored: {} '.format(
-                    len(ref), len(alt), len(mul), len(ign)))
+                log(
+                    'Calculated counts: Ref: {}, Alt: {}, Mul: {}, Ignored: {} '.format(
+                        len(ref), len(alt), len(mul), len(ign)
+                    )
+                )
                 log('Ref_probe: {}, Alt_probe: {}'.format(ref_sequence, alt_sequence))
-                info = {'{}_ref_count'.format(name): len(ref),
-                        '{}_alt_count'.format(name): len(alt),
-                        '{}_ignored_count'.format(name): len(ign)}
+                info = {
+                    '{}_ref_count'.format(name): len(ref),
+                    '{}_alt_count'.format(name): len(alt),
+                    '{}_ignored_count'.format(name): len(ign),
+                }
                 for key, value in info.items():
                     data[key] = value
                 self.bpp_cache[bpp] = data
@@ -191,28 +212,54 @@ def parse_arguments():
     """
     parse command line arguments
     """
-    parser = argparse.ArgumentParser(description='Calculates the ref and alt count for small indels found in a mavis output file',
-                                     add_help=False)
+    parser = argparse.ArgumentParser(
+        description='Calculates the ref and alt count for small indels found in a mavis output file',
+        add_help=False,
+    )
     required = parser.add_argument_group('Required arguments')
     required.add_argument(
-        '-o', '--output',
-        help='Path to the output file', required=True, metavar='FILEPATH')
+        '-o', '--output', help='Path to the output file', required=True, metavar='FILEPATH'
+    )
     required.add_argument(
-        '-n', '--input', required=True, metavar='FILEPATH', nargs='+',
-        help='Path to the Input mavis summary file')
+        '-n',
+        '--input',
+        required=True,
+        metavar='FILEPATH',
+        nargs='+',
+        help='Path to the Input mavis summary file',
+    )
     required.add_argument(
-        '-b', '--bam', action='append', nargs=2, default=[],
-        help='Name for the library and the path to its bam file', required=True, metavar=('<name>', 'FILEPATH'))
+        '-b',
+        '--bam',
+        action='append',
+        nargs=2,
+        default=[],
+        help='Name for the library and the path to its bam file',
+        required=True,
+        metavar=('<name>', 'FILEPATH'),
+    )
     required.add_argument(
-        '-r', '--reference', required=True, metavar='FILEPATH',
-        help='Path to the Input reference genome fasta file')
+        '-r',
+        '--reference',
+        required=True,
+        metavar='FILEPATH',
+        help='Path to the Input reference genome fasta file',
+    )
 
     optional = parser.add_argument_group('Optional arguments')
     optional.add_argument('-h', '--help', action='help', help='Show this help message and exit')
-    optional.add_argument('--event_size', type=int, default=6,
-                          help='The maximum size of a indel event to calculate the ref/alt counts')
-    optional.add_argument('--buffer', type=int, default=6,
-                          help="The amount of overhang (accounting for repeats) a read must have in order to be considered")
+    optional.add_argument(
+        '--event_size',
+        type=int,
+        default=6,
+        help='The maximum size of a indel event to calculate the ref/alt counts',
+    )
+    optional.add_argument(
+        '--buffer',
+        type=int,
+        default=6,
+        help="The amount of overhang (accounting for repeats) a read must have in order to be considered",
+    )
 
     args = parser.parse_args()
     return args
@@ -225,8 +272,9 @@ def main():
     log_conf = {'format': '{message}', 'style': '{', 'level': 1}
     logging.basicConfig(**log_conf)
     args = parse_arguments()
-    ref_alt_calculator = RefAltCalculator(args.bam, args.reference,
-                                          max_event_size=args.event_size, buffer=args.buffer)
+    ref_alt_calculator = RefAltCalculator(
+        args.bam, args.reference, max_event_size=args.event_size, buffer=args.buffer
+    )
     ref_alt_calculator.calculate_all_counts(args.input, args.output)
 
 

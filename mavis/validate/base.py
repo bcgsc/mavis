@@ -67,7 +67,7 @@ class Evidence(BreakpointPair):
         Args:
             breakpoint_pair (BreakpointPair): the breakpoint pair to collect evidence for
             bam_cache (BamCache): the bam cache (and assc file) to collect evidence from
-            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`):
+            reference_genome (Dict[str,Bio.SeqRecord]):
               dict of reference sequence by template/chr name
             data (dict): a dictionary of data to associate with the evidence object
             classification (SVTYPE): the event type
@@ -214,7 +214,7 @@ class Evidence(BreakpointPair):
     def putative_event_types(self):
         """
         Returns:
-            list of :class:`~mavis.constants.SVTYPE`: list of the possible classifications
+            List[mavis.constants.SVTYPE]: list of the possible classifications
         """
         if self.classification:
             return {self.classification}
@@ -318,7 +318,8 @@ class Evidence(BreakpointPair):
         Raises:
             ValueError: if the input reads are not a valid pair
 
-        see :ref:`theory - types of flanking evidence <theory-compatible-flanking-pairs>`
+        Note:
+            see [theory - types of flanking evidence](/background/theory/#compatible-flanking-pairs)
         """
         if (
             read.is_unmapped
@@ -408,7 +409,7 @@ class Evidence(BreakpointPair):
         Raises:
             ValueError: if the input reads are not a valid pair
 
-        see :ref:`theory - types of flanking evidence <theory-types-of-flanking-evidence>`
+        see [theory - types of flanking evidence](/background/theory/#types-of-flanking-evidence)
         """
         if read.is_unmapped or mate.is_unmapped:
             raise ValueError(
@@ -751,7 +752,7 @@ class Evidence(BreakpointPair):
         strand found
 
         Args:
-            reads (set of :class:`pysam.AlignedSegment`): set of reads
+            reads (Set[pysam.AlignedSegment)]: set of reads
 
         Returns:
             STRAND: the sequenced strand

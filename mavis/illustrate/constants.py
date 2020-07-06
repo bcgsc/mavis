@@ -4,24 +4,24 @@ from ..util import WeakMavisNamespace
 
 DEFAULTS = WeakMavisNamespace()
 """
-- :term:`breakpoint_color`
-- :term:`domain_color`
-- :term:`domain_mismatch_color`
-- :term:`domain_name_regex_filter`
-- :term:`domain_scaffold_color`
-- :term:`drawing_width_iter_increase`
-- :term:`gene1_color_selected`
-- :term:`gene1_color`
-- :term:`gene2_color_selected`
-- :term:`gene2_color`
-- :term:`label_color`
-- :term:`mask_fill`
-- :term:`mask_opacity`
-- :term:`max_drawing_retries`
-- :term:`novel_exon_color`
-- :term:`scaffold_color`
-- :term:`splice_color`
-- :term:`width`
+- [breakpoint_color](/configuration/settings/#breakpoint_color)
+- [domain_color](/configuration/settings/#domain_color)
+- [domain_mismatch_color](/configuration/settings/#domain_mismatch_color)
+- [domain_name_regex_filter](/configuration/settings/#domain_name_regex_filter)
+- [domain_scaffold_color](/configuration/settings/#domain_scaffold_color)
+- [drawing_width_iter_increase](/configuration/settings/#drawing_width_iter_increase)
+- [gene1_color_selected](/configuration/settings/#gene1_color_selected)
+- [gene1_color](/configuration/settings/#gene1_color)
+- [gene2_color_selected](/configuration/settings/#gene2_color_selected)
+- [gene2_color](/configuration/settings/#gene2_color)
+- [label_color](/configuration/settings/#label_color)
+- [mask_fill](/configuration/settings/#mask_fill)
+- [mask_opacity](/configuration/settings/#mask_opacity)
+- [max_drawing_retries](/configuration/settings/#max_drawing_retries)
+- [novel_exon_color](/configuration/settings/#novel_exon_color)
+- [scaffold_color](/configuration/settings/#scaffold_color)
+- [splice_color](/configuration/settings/#splice_color)
+- [width](/configuration/settings/#width)
 """
 DEFAULTS.add('width', 1000, defn='The drawing width in pixels')
 DEFAULTS.add(

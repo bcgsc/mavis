@@ -1,0 +1,14 @@
+site_name: MAVIS
+
+theme:
+  name: material
+repo_url: https://github.com/bcgsc/mavis
+repo_name: github
+site_dir: build-docs
+markdown_extensions:
+  - codehilite
+  - admonition
+  - pymdownx.inlinehilite
+  - markdown_include.include:
+      base_path: docs
+extra_css: [extra.css]

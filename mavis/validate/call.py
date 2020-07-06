@@ -177,12 +177,13 @@ class EventCall(BreakpointPair):
         are checked specifically against the current breakpoint call
 
         Returns:
-            tuple:
-            * :class:`set` of :class:`str` - set of the read query_names
-            * :class:`int` - the median insert size
-            * :class:`int` - the standard deviation (from the median) of the insert size
+            Tuple[Set[str],int,int]:
+                * set of str - set of the read query_names
+                * int - the median insert size
+                * int - the standard deviation (from the median) of the insert size
 
-        see :ref:`theory - determining flanking support <theory-determining-flanking-support>`
+        Note:
+            see [theory - determining flanking support](/background/theory/#determining-flanking-support)
         """
         min_frag = max(
             [
@@ -305,9 +306,7 @@ class EventCall(BreakpointPair):
         metrics
 
         Returns:
-            tuple:
-                - ``float`` - the median fragment size
-                - ``float`` - the fragment size standard deviation wrt the median
+            Tuple[float,float]: the median fragment size and the fragment size standard deviation wrt the median
         """
         fragment_sizes = []
         for read, mate in self.flanking_pairs:
@@ -377,9 +376,7 @@ class EventCall(BreakpointPair):
         not an expected type or is non-specific.
 
         Returns:
-            tuple:
-            :class:`int` - the number of repeats
-            :class:`str` - the repeat sequence
+            Tuple[int,str]: the number of repeats and the repeat sequence
         """
         if len(event.break1) + len(event.break2) > 2:
             raise ValueError('Cannot characterize a repeat region for a non-specific call')
@@ -596,11 +593,11 @@ def filter_consumed_pairs(pairs, consumed_reads):
     given a set of read tuples, returns all tuples where neither read in the tuple is in the consumed set
 
     Args:
-        pairs (set of tuples of :class:`pysam.AlignedSegment` and :class:`pysam.AlignedSegment`): pairs to be filtered
-        consumed_reads: (set of :class:`pysam.AlignedSegment`): set of reads that have been used/consumed
+        pairs (Set[Tuple[pysam.AlignedSegment,pysam.AlignedSegment]]): pairs to be filtered
+        consumed_reads: (Set[pysam.AlignedSegment)]: set of reads that have been used/consumed
 
     Returns:
-        set of tuples of :class:`pysam.AlignedSegment` and :class:`pysam.AlignedSegment`: set of filtered tuples
+        Set[Tuple[pysam.AlignedSegment,pysam.AlignedSegment]]: set of filtered tuples
 
     Note:
         this will work with any hash-able object
@@ -698,7 +695,7 @@ def call_events(source_evidence):
         event_type (SVTYPE): the type of event we are collecting evidence for
 
     Returns:
-        :class:`list` of :class:`EventCall`: list of calls
+        List[EventCall]: list of calls
     """
     consumed_evidence = set()  # keep track to minimize evidence re-use
     calls = []
@@ -786,8 +783,7 @@ def _call_by_flanking_pairs(evidence, event_type, consumed_evidence=None):
     Given a set of flanking reads, computes the coverage interval (the area that is covered by flanking read alignments)
     this area gives the starting position for computing the breakpoint interval.
 
-    .. todo::
-
+    Todo:
         pre-split pairs into clusters by position and fragment size. This will enable calling multiple
         events in close proximity by flanking reads only. It will also aid in stopping FP reads from
         interfering with resolving events by flanking pairs.

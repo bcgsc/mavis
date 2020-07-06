@@ -68,7 +68,12 @@ TEST_REQS = [
 ]
 
 
-DOC_REQS = ['docutils>=0.14', 'm2r>=0.1.12', 'sphinx-rtd-theme>=0.4.2', 'sphinx>=1.8.1']
+DOC_REQS = [
+    'mkdocs',
+    'markdown_refdocs',
+    'mkdocs-material',
+    'markdown-include',
+]
 
 
 INSTALL_REQS = [

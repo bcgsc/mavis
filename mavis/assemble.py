@@ -225,7 +225,7 @@ def digraph_connected_components(graph, subgraph=None):
         graph (networkx.DiGraph): the input graph to gather components from
 
     Returns:
-        :class:`list` of :class:`list`: returns a list of compnents which are lists of node names
+        List[List]: returns a list of compnents which are lists of node names
     """
     if subgraph is None:
         subgraph = set(graph.nodes())
@@ -250,10 +250,10 @@ def pull_contigs_from_component(
         component (list):  list of nodes which make up the connected component
         min_edge_trim_weight (int): the minimum weight to not remove a non cutting edge/path
         assembly_max_paths (int): the maximum number of paths allowed before the graph is further simplified
-        log (function): the log function
+        log (Callable): the log function
 
     Returns:
-        :class:`Dict` of :class:`int` by :class:`str`: the paths/contigs and their scores
+        Dict[str,int]: the paths/contigs and their scores
     """
     path_scores = {}  # path_str => score_int
     w = min_edge_trim_weight
@@ -356,18 +356,18 @@ def assemble(
     drops any sequences too small to fit the kmer size
 
     Args:
-        sequences (:class:`list` of :class:`str`): a list of strings/sequences to assemble
-        kmer_size: see :term:`assembly_kmer_size` the size of the kmer to use
-        min_edge_trim_weight: see :term:`assembly_min_edge_trim_weight`
+        sequences (List[str]): a list of strings/sequences to assemble
+        kmer_size: see [assembly_kmer_size](/configuration/settings/#assembly_kmer_size) the size of the kmer to use
+        min_edge_trim_weight: see [assembly_min_edge_trim_weight](/configuration/settings/#assembly_min_edge_trim_weight)
         remap_min_match: Minimum match percentage of the remapped read (based on the exact matches in the cigar)
         remap_min_overlap: defaults to the kmer size. Minimum amount of overlap between the contig and the remapped read
         min_contig_length: Minimum length of contigs assemble to attempt remapping reads to. Shorter contigs will be ignored
-        remap_min_exact_match: see :term:`assembly_min_exact_match_to_remap`
-        assembly_max_paths: see :term:`assembly_max_paths`
-        log (function): the log function
+        remap_min_exact_match: see [assembly_min_exact_match_to_remap](/configuration/settings/#assembly_min_exact_match_to_remap)
+        assembly_max_paths: see [assembly_max_paths](/configuration/settings/#assembly_max_paths)
+        log (Callable): the log function
 
     Returns:
-        :class:`list` of :class:`Contig`: a list of putative contigs
+        List[Contig]: a list of putative contigs
     """
     if not sequences:
         return []
@@ -475,7 +475,7 @@ def kmers(s, size):
         size (int): the size of the kmers
 
     Returns:
-        :class:`list` of :class:`str`: the list of kmers
+        List[str]: the list of kmers
 
     Example:
         >>> kmers('abcdef', 2)
