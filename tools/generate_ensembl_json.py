@@ -58,7 +58,7 @@ def parse_best_file(path):
     return best
 
 
-def parse_hugo_file(path):
+def parse_alias_file(path):
     """
     Method parse specific columns in the tab-seperated hugo file into a dict.
 
@@ -209,10 +209,12 @@ class EnsemblAnnotation(object):
         release (int): Ensembl release to use
         output (str): path to output file
         best_file (str): path to file of "best transcripts"
-        hugo_file (str): path to file with transcript aliases
+        alias_file (str): path to file with gene aliases
     """
 
-    def __init__(self, release, species, output, best_file=None, hugo_file=None, custom_cache=None):
+    def __init__(
+        self, release, species, output, best_file=None, alias_file=None, custom_cache=None
+    ):
 
         self.annotation = {}
 
@@ -224,17 +226,17 @@ class EnsemblAnnotation(object):
         self.output = output
 
         self.best_file = best_file
-        self.hugo_file = hugo_file
+        self.alias_file = alias_file
 
         if self.best_file:
             self.best = parse_best_file(self.best_file)
         else:
             self.best = set()
 
-        if self.hugo_file:
-            self.hugo = parse_hugo_file(self.hugo_file)
+        if self.alias_file:
+            self.alias = parse_alias_file(self.alias_file)
         else:
-            self.hugo = defaultdict(set)
+            self.alias = defaultdict(set)
 
         self.data = EnsemblRelease(release, species)
         self.download_pyensembl_cache()
@@ -274,7 +276,7 @@ class EnsemblAnnotation(object):
             "start": int(gene.start),
             "end": int(gene.end),
             "strand": str(gene.strand),
-            "aliases": [str(gene.gene_name)] + list(self.hugo[gene.gene_id]),
+            "aliases": [str(gene.gene_name)] + list(self.alias[gene.gene_id]),
             "transcripts": [],
         }
 
@@ -368,7 +370,7 @@ class EnsemblAnnotation(object):
 
         self.annotation["script"] = SCRIPT
         self.annotation["script_version"] = VERSION
-        self.annotation["hugo_mapping_file"] = self.hugo_file
+        self.annotation["gene_alias_file"] = self.alias_file
         self.annotation["best_transcript_file"] = self.best_file
         self.annotation["ensembl_version"] = self.release
         self.annotation["generation_time"] = self.gen_time
@@ -442,7 +444,9 @@ def main():
         "--best-transcript-file",
         help="tab-seperated list of genes and corresponding transcripts",
     )
-    opt_parser.add_argument("-m", "--hugo-mapping-file", help="one-to-one hugo gene name mapping")
+    opt_parser.add_argument(
+        "-m", "--gene-alias-file", help="one-to-one mapping ensembl gene ID to gene name"
+    )
     opt_parser.add_argument(
         "-c", "--custom-cache", help="use a non-default path to cache ensembl data"
     )
@@ -462,7 +466,7 @@ def main():
         species=args.species,
         output=args.output,
         best_file=args.best_transcript_file,
-        hugo_file=args.hugo_mapping_file,
+        alias_file=args.gene_alias_file,
         custom_cache=args.custom_cache,
     )
     annotation.dump_json()
