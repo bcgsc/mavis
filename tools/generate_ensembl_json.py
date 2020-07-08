@@ -442,7 +442,7 @@ def main():
         "--best-transcript-file",
         help="tab-seperated list of genes and corresponding transcripts",
     )
-    opt_parser.add_argument("-m", "--hugo_mapping_file", help="one-to-one hugo gene name mapping")
+    opt_parser.add_argument("-m", "--hugo-mapping-file", help="one-to-one hugo gene name mapping")
     opt_parser.add_argument(
         "-c", "--custom-cache", help="use a non-default path to cache ensembl data"
     )
