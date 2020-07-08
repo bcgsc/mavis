@@ -427,19 +427,19 @@ def main():
         add_help=False,
     )
 
-    req_parser = parser.add_argument_group("Required arguments")
+    req_parser = parser.add_argument_group("required arguments")
     req_parser.add_argument(
         "-s", "--species", required=True, help="species of interest (human, mouse, rat, etc.)"
     )
     req_parser.add_argument(
-        "-r", "--release", required=True, type=int, help="Ensembl release(s) to use"
+        "-r", "--release", required=True, type=int, help="Ensembl release to use"
     )
     req_parser.add_argument("-o", "--output", required=True, help="path to output json file")
 
     opt_parser = parser.add_argument_group("optional arguments")
     opt_parser.add_argument(
         "-b",
-        "--best_transcript_file",
+        "--best-transcript-file",
         help="tab-seperated list of genes and corresponding transcripts",
     )
     opt_parser.add_argument("-m", "--hugo_mapping_file", help="one-to-one hugo gene name mapping")
