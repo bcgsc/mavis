@@ -126,14 +126,14 @@ def rate_limited(max_per_second):
 
         @wraps(func)
         def rate_limited_function(*args, **kwargs):
-            elapsed = time.clock() - last_time_called[0]
+            elapsed = time.process_time() - last_time_called[0]
             left_to_wait = min_interval - elapsed
 
             if left_to_wait > 0:
                 time.sleep(left_to_wait)
 
             ret = func(*args, **kwargs)
-            last_time_called[0] = time.clock()
+            last_time_called[0] = time.process_time()
             return ret
 
         return rate_limited_function
