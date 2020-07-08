@@ -18,7 +18,10 @@ REFERENCE_GENOME = None
 def setUpModule():
     global REFERENCE_GENOME
     REFERENCE_GENOME = load_reference_genome(get_data('mock_reference_genome.fa'))
-    if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
+    if (
+        'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT'
+        != REFERENCE_GENOME['fake'].seq[0:50].upper()
+    ):
         raise AssertionError('fake genome file does not have the expected contents')
     global BAM_CACHE
     BAM_CACHE = BamCache(get_data('mini_mock_reads_for_events.sorted.bam'))
@@ -38,13 +41,18 @@ def setUpModule():
     # add a check to determine if it is the expected bam file
 
 
-@unittest.skipIf(not RUN_FULL, 'slower tests will not be run unless the environment variable RUN_FULL is given')
+@unittest.skipIf(
+    not RUN_FULL, 'slower tests will not be run unless the environment variable RUN_FULL is given'
+)
 class TestFullEvidenceGathering(unittest.TestCase):
     # need to make the assertions more specific by checking the actual names of the reads found in each bin
     # rather than just the counts.
     def genome_evidence(self, break1, break2, opposing_strands):
         ge = GenomeEvidence(
-            break1, break2, FULL_BAM_CACHE, REFERENCE_GENOME,
+            break1,
+            break2,
+            FULL_BAM_CACHE,
+            REFERENCE_GENOME,
             opposing_strands=opposing_strands,
             read_length=125,
             stdev_fragment_size=100,
@@ -53,7 +61,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
             min_flanking_pairs_resolution=3,
             max_sc_preceeding_anchor=3,
             outer_window_min_event_size=0,
-            min_mapping_quality=20
+            min_mapping_quality=20,
         )
         print(ge.min_expected_fragment_size, ge.max_expected_fragment_size)
         print(ge.break1.chr, ge.outer_window1)
@@ -66,16 +74,40 @@ class TestFullEvidenceGathering(unittest.TestCase):
         print('evidence for', ev)
         print('flanking pairs')
         for pair, mate in ev.flanking_pairs:
-            print(pair.query_name, pair.reference_name, ':', pair.reference_start, _cigar.convert_cigar_to_string(pair.cigar))
-            print(mate.query_name, mate.reference_name, ':', mate.reference_start, _cigar.convert_cigar_to_string(mate.cigar))
+            print(
+                pair.query_name,
+                pair.reference_name,
+                ':',
+                pair.reference_start,
+                _cigar.convert_cigar_to_string(pair.cigar),
+            )
+            print(
+                mate.query_name,
+                mate.reference_name,
+                ':',
+                mate.reference_start,
+                _cigar.convert_cigar_to_string(mate.cigar),
+            )
 
         print('first breakpoint split reads')
         for read in ev.split_reads[0]:
-            print(read.query_name, read.reference_name, ':', read.reference_start, _cigar.convert_cigar_to_string(read.cigar))
+            print(
+                read.query_name,
+                read.reference_name,
+                ':',
+                read.reference_start,
+                _cigar.convert_cigar_to_string(read.cigar),
+            )
 
         print('second breakpoint split reads')
         for read in ev.split_reads[1]:
-            print(read.query_name, read.reference_name, ':', read.reference_start, _cigar.convert_cigar_to_string(read.cigar))
+            print(
+                read.query_name,
+                read.reference_name,
+                ':',
+                read.reference_start,
+                _cigar.convert_cigar_to_string(read.cigar),
+            )
         print()
 
     def count_original_reads(self, reads):
@@ -91,7 +123,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('reference10', 520, orient=ORIENT.RIGHT),
             Breakpoint('reference19', 964, orient=ORIENT.LEFT),
-            opposing_strands=False
+            opposing_strands=False,
         )
         ev1.load_evidence()
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
@@ -103,7 +135,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('reference2', 2000, orient=ORIENT.LEFT),
             Breakpoint('reference4', 2000, orient=ORIENT.RIGHT),
-            opposing_strands=False
+            opposing_strands=False,
         )
         ev1.load_evidence()
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
@@ -117,7 +149,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('reference3', 1114, orient=ORIENT.RIGHT),
             Breakpoint('reference3', 2187, orient=ORIENT.RIGHT),
-            opposing_strands=True
+            opposing_strands=True,
         )
 
         ev1.load_evidence()
@@ -130,7 +162,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('reference7', 15000, orient=ORIENT.RIGHT),
             Breakpoint('reference7', 19000, orient=ORIENT.RIGHT),
-            opposing_strands=True
+            opposing_strands=True,
         )
         ev1.load_evidence()
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
@@ -142,7 +174,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('reference7', 5000, orient=ORIENT.RIGHT),
             Breakpoint('reference7', 11000, orient=ORIENT.LEFT),
-            opposing_strands=False
+            opposing_strands=False,
         )
         ev1.load_evidence()
         self.print_evidence(ev1)
@@ -156,7 +188,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('reference20', 2000, orient=ORIENT.LEFT),
             Breakpoint('reference20', 6000, orient=ORIENT.RIGHT),
-            opposing_strands=False
+            opposing_strands=False,
         )
         ev1.load_evidence()
         self.print_evidence(ev1)
@@ -170,7 +202,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('referenceX', 2000, orient=ORIENT.LEFT),
             Breakpoint('referenceX', 6000, orient=ORIENT.RIGHT),
-            opposing_strands=False
+            opposing_strands=False,
         )
         ev1.load_evidence()
         self.print_evidence(ev1)
@@ -184,7 +216,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('referenceX', 10000, orient=ORIENT.LEFT),
             Breakpoint('referenceX', 14000, orient=ORIENT.RIGHT),
-            opposing_strands=False
+            opposing_strands=False,
         )
         ev1.load_evidence()
         self.print_evidence(ev1)
@@ -198,7 +230,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('reference10', 3609, orient=ORIENT.LEFT),
             Breakpoint('reference10', 3818, orient=ORIENT.RIGHT),
-            opposing_strands=False
+            opposing_strands=False,
         )
         ev1.load_evidence()
         self.print_evidence(ev1)
@@ -212,7 +244,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('reference11', 6000, orient=ORIENT.LEFT),
             Breakpoint('reference11', 6003, orient=ORIENT.RIGHT),
-            opposing_strands=False
+            opposing_strands=False,
         )
         ev1.load_evidence()
         self.print_evidence(ev1)
@@ -230,7 +262,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('reference11', 10000, orient=ORIENT.LEFT),
             Breakpoint('reference11', 10030, orient=ORIENT.RIGHT),
-            opposing_strands=False
+            opposing_strands=False,
         )
         ev1.load_evidence()
         self.print_evidence(ev1)
@@ -249,7 +281,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('reference12', 2001, orient=ORIENT.LEFT),
             Breakpoint('reference12', 2120, orient=ORIENT.RIGHT),
-            opposing_strands=False
+            opposing_strands=False,
         )
         ev1.load_evidence()
         self.print_evidence(ev1)
@@ -268,7 +300,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('reference10', 3609, orient=ORIENT.LEFT),
             Breakpoint('reference10', 3818, orient=ORIENT.RIGHT),
-            opposing_strands=False
+            opposing_strands=False,
         )
         ev1.load_evidence()
         self.print_evidence(ev1)
@@ -281,7 +313,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('reference10', 8609, orient=ORIENT.LEFT),
             Breakpoint('reference10', 8927, orient=ORIENT.RIGHT),
-            opposing_strands=False
+            opposing_strands=False,
         )
         ev1.load_evidence()
         self.print_evidence(ev1)
@@ -300,7 +332,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('reference10', 12609, orient=ORIENT.LEFT),
             Breakpoint('reference10', 13123, orient=ORIENT.RIGHT),
-            opposing_strands=False
+            opposing_strands=False,
         )
         ev1.load_evidence()
         self.print_evidence(ev1)
@@ -319,7 +351,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('reference10', 17109, orient=ORIENT.LEFT),
             Breakpoint('reference10', 17899, orient=ORIENT.RIGHT),
-            opposing_strands=False
+            opposing_strands=False,
         )
         ev1.load_evidence()
         self.print_evidence(ev1)
@@ -338,7 +370,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('reference10', 22109, orient=ORIENT.LEFT),
             Breakpoint('reference10', 24330, orient=ORIENT.RIGHT),
-            opposing_strands=False
+            opposing_strands=False,
         )
         ev1.load_evidence()
 
@@ -355,7 +387,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('reference10', 28109, orient=ORIENT.LEFT),
             Breakpoint('reference10', 31827, orient=ORIENT.RIGHT),
-            opposing_strands=False
+            opposing_strands=False,
         )
         ev1.load_evidence()
         self.print_evidence(ev1)
@@ -373,7 +405,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('reference10', 36109, orient=ORIENT.LEFT),
             Breakpoint('reference10', 42159, orient=ORIENT.RIGHT),
-            opposing_strands=False
+            opposing_strands=False,
         )
         ev1.load_evidence()
         self.print_evidence(ev1)
@@ -392,7 +424,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('reference12', 6001, orient=ORIENT.LEFT),
             Breakpoint('reference12', 6016, orient=ORIENT.RIGHT),
-            opposing_strands=False
+            opposing_strands=False,
         )
         ev1.load_evidence()
         self.print_evidence(ev1)
@@ -415,7 +447,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('reference1', 2000, orient=ORIENT.LEFT),
             Breakpoint('reference1', 2001, orient=ORIENT.RIGHT),
-            opposing_strands=False
+            opposing_strands=False,
         )
         ev1.load_evidence()
         self.print_evidence(ev1)
@@ -435,7 +467,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('reference9', 2000, orient=ORIENT.LEFT),
             Breakpoint('reference9', 2001, orient=ORIENT.RIGHT),
-            opposing_strands=False
+            opposing_strands=False,
         )
         ev1.load_evidence()
         self.print_evidence(ev1)
@@ -453,7 +485,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('reference16', 2000, orient=ORIENT.LEFT),
             Breakpoint('reference16', 2001, orient=ORIENT.RIGHT),
-            opposing_strands=False
+            opposing_strands=False,
         )
         ev1.load_evidence()
         self.print_evidence(ev1)
@@ -472,7 +504,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('reference12', 10000, orient=ORIENT.RIGHT),
             Breakpoint('reference12', 10021, orient=ORIENT.LEFT),
-            opposing_strands=False
+            opposing_strands=False,
         )
         ev1.load_evidence()
         self.print_evidence(ev1)
@@ -491,7 +523,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('reference17', 1974, orient=ORIENT.RIGHT),
             Breakpoint('reference17', 2020, orient=ORIENT.LEFT),
-            opposing_strands=False
+            opposing_strands=False,
         )
         ev1.load_evidence()
         self.print_evidence(ev1)
@@ -510,7 +542,7 @@ class TestFullEvidenceGathering(unittest.TestCase):
         ev1 = self.genome_evidence(
             Breakpoint('reference19', 4847, 4847, orient=ORIENT.LEFT),
             Breakpoint('reference19', 5219, 5219, orient=ORIENT.RIGHT),
-            opposing_strands=False
+            opposing_strands=False,
         )
         ev1.load_evidence()
         self.print_evidence(ev1)
@@ -527,47 +559,72 @@ class TestEvidenceGathering(unittest.TestCase):
         self.ev1 = GenomeEvidence(
             Breakpoint('reference3', 1114, orient=ORIENT.RIGHT),
             Breakpoint('reference3', 2187, orient=ORIENT.RIGHT),
-            BAM_CACHE, REFERENCE_GENOME,
+            BAM_CACHE,
+            REFERENCE_GENOME,
             opposing_strands=True,
             read_length=125,
             stdev_fragment_size=100,
             median_fragment_size=380,
             stdev_count_abnormal=3,
             min_flanking_pairs_resolution=3,
-            assembly_min_edge_trim_weight=3
+            assembly_min_edge_trim_weight=3,
         )
 
     def test_collect_split_read(self):
-        ev1_sr = MockRead(query_name='HISEQX1_11:3:1105:15351:25130:split',
-                          reference_id=1, cigar=[(4, 68), (7, 82)], reference_start=1114,
-                          reference_end=1154, query_alignment_start=110,
-                          query_sequence='TCGTGAGTGGCAGGTGCCATCGTGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG',
-                          query_alignment_end=150, flag=113,
-                          next_reference_id=1, next_reference_start=2341)
+        ev1_sr = MockRead(
+            query_name='HISEQX1_11:3:1105:15351:25130:split',
+            reference_id=1,
+            cigar=[(4, 68), (7, 82)],
+            reference_start=1114,
+            reference_end=1154,
+            query_alignment_start=110,
+            query_sequence='TCGTGAGTGGCAGGTGCCATCGTGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG',
+            query_alignment_end=150,
+            flag=113,
+            next_reference_id=1,
+            next_reference_start=2341,
+        )
         self.ev1.collect_split_read(ev1_sr, True)
         self.assertEqual(ev1_sr, list(self.ev1.split_reads[0])[0])
 
     def test_collect_split_read_failure(self):
         # wrong cigar string
-        ev1_sr = MockRead(query_name='HISEQX1_11:4:1203:3062:55280:split',
-                          reference_id=1, cigar=[(7, 110), (7, 40)], reference_start=1114,
-                          reference_end=1154, query_alignment_start=110,
-                          query_sequence='CTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCGTGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATG',
-                          query_alignment_end=150, flag=371,
-                          next_reference_id=1, next_reference_start=2550)
+        ev1_sr = MockRead(
+            query_name='HISEQX1_11:4:1203:3062:55280:split',
+            reference_id=1,
+            cigar=[(7, 110), (7, 40)],
+            reference_start=1114,
+            reference_end=1154,
+            query_alignment_start=110,
+            query_sequence='CTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCGTGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATG',
+            query_alignment_end=150,
+            flag=371,
+            next_reference_id=1,
+            next_reference_start=2550,
+        )
         self.assertFalse(self.ev1.collect_split_read(ev1_sr, True))
 
     def test_collect_flanking_pair(self):
         self.ev1.collect_flanking_pair(
             MockRead(
-                reference_id=1, reference_start=2214, reference_end=2364, is_reverse=True,
-                next_reference_id=1, next_reference_start=1120, mate_is_reverse=True
+                reference_id=1,
+                reference_start=2214,
+                reference_end=2364,
+                is_reverse=True,
+                next_reference_id=1,
+                next_reference_start=1120,
+                mate_is_reverse=True,
             ),
             MockRead(
-                reference_id=1, reference_start=1120, reference_end=2364, is_reverse=True,
-                next_reference_id=1, next_reference_start=1120, mate_is_reverse=True,
-                is_read1=False
-            )
+                reference_id=1,
+                reference_start=1120,
+                reference_end=2364,
+                is_reverse=True,
+                next_reference_id=1,
+                next_reference_start=1120,
+                mate_is_reverse=True,
+                is_read1=False,
+            ),
         )
         self.assertEqual(1, len(self.ev1.flanking_pairs))
 
@@ -576,39 +633,82 @@ class TestEvidenceGathering(unittest.TestCase):
         # therefore this should return False and not add to the flanking_pairs
         pair = mock_read_pair(
             MockRead(reference_id=1, reference_start=1903, reference_end=2053, is_reverse=True),
-            MockRead(reference_id=1, reference_start=2052, reference_end=2053, is_reverse=True)
+            MockRead(reference_id=1, reference_start=2052, reference_end=2053, is_reverse=True),
         )
         self.assertFalse(self.ev1.collect_flanking_pair(*pair))
         self.assertEqual(0, len(self.ev1.flanking_pairs))
 
-#    @unittest.skip("demonstrating skipping")
+    #    @unittest.skip("demonstrating skipping")
     def test_load_evidence(self):
         print(self.ev1)
         self.ev1.load_evidence()
         print(self.ev1.spanning_reads)
         self.assertEqual(
             2,
-            len([r for r in self.ev1.split_reads[0] if not r.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT)]))
+            len(
+                [
+                    r
+                    for r in self.ev1.split_reads[0]
+                    if not r.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT)
+                ]
+            ),
+        )
         self.assertEqual(7, len(self.ev1.flanking_pairs))
         self.assertEqual(
             2,
-            len([r for r in self.ev1.split_reads[1] if not r.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT)]))
+            len(
+                [
+                    r
+                    for r in self.ev1.split_reads[1]
+                    if not r.has_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT)
+                ]
+            ),
+        )
 
-#    @unittest.skip("demonstrating skipping")
+    #    @unittest.skip("demonstrating skipping")
     def test_assemble_split_reads(self):
-        sr1 = MockRead(query_name='HISEQX1_11:3:1105:15351:25130:split',
-                       query_sequence='TCGTGAGTGGCAGGTGCCATCGTGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG',
-                       flag=113)
-        sr2 = MockRead(query_sequence='GTCGTGAGTGGCAGGTGCCATCGTGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTT', flag=121)
-        sr3 = MockRead(query_sequence='TCGTGAGTGGCAGGTGCCATCGTGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG', flag=113)
-        sr7 = MockRead(query_sequence='TGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATA', flag=113)
-        sr9 = MockRead(query_sequence='TGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGC', flag=113)
-        sr12 = MockRead(query_sequence='GATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAG', flag=113)
-        sr15 = MockRead(query_sequence='GTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACA', flag=113)
-        sr19 = MockRead(query_sequence='TGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCA', flag=113)
-        sr24 = MockRead(query_sequence='CTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTT', flag=113)
-        self.ev1.split_reads = ({sr1}, {sr1, sr3, sr7, sr9, sr12, sr15, sr19, sr24})  # subset needed to make a contig
-#        self.ev1.split_reads=([],[sr1,sr3,sr5,sr6,sr7,sr8,sr9,sr10,sr11,sr12,sr13,sr14,sr15,sr16,sr17,sr18,sr19,sr20,sr21,sr22,sr23,sr24]) #full set of reads produces different contig from subset.
+        sr1 = MockRead(
+            query_name='HISEQX1_11:3:1105:15351:25130:split',
+            query_sequence='TCGTGAGTGGCAGGTGCCATCGTGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG',
+            flag=113,
+        )
+        sr2 = MockRead(
+            query_sequence='GTCGTGAGTGGCAGGTGCCATCGTGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTT',
+            flag=121,
+        )
+        sr3 = MockRead(
+            query_sequence='TCGTGAGTGGCAGGTGCCATCGTGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG',
+            flag=113,
+        )
+        sr7 = MockRead(
+            query_sequence='TGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATA',
+            flag=113,
+        )
+        sr9 = MockRead(
+            query_sequence='TGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGC',
+            flag=113,
+        )
+        sr12 = MockRead(
+            query_sequence='GATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAG',
+            flag=113,
+        )
+        sr15 = MockRead(
+            query_sequence='GTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACA',
+            flag=113,
+        )
+        sr19 = MockRead(
+            query_sequence='TGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCA',
+            flag=113,
+        )
+        sr24 = MockRead(
+            query_sequence='CTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTT',
+            flag=113,
+        )
+        self.ev1.split_reads = (
+            {sr1},
+            {sr1, sr3, sr7, sr9, sr12, sr15, sr19, sr24},
+        )  # subset needed to make a contig
+        #        self.ev1.split_reads=([],[sr1,sr3,sr5,sr6,sr7,sr8,sr9,sr10,sr11,sr12,sr13,sr14,sr15,sr16,sr17,sr18,sr19,sr20,sr21,sr22,sr23,sr24]) #full set of reads produces different contig from subset.
         # full contig with more read support should be
         # CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT
         self.ev1.half_mapped = (set(), {sr2})
@@ -621,19 +721,25 @@ class TestEvidenceGathering(unittest.TestCase):
 class TestStandardizeRead(unittest.TestCase):
     def setUp(self):
         self.mock_evidence = MockObject(
-            reference_genome={'1': MockObject(seq=MockLongString(
-                'TGGGTATCAGACACACTGGGTAGCTGAGTGCTCAGAGGAAGATGCGAGGTATTCAGGGAAAGTGTCAGTGGGGTCTCCCAGTGCCTGTTTGGTCCACAGTTAGGAGA'
-                'GGCCCTGCTTGCACTTCTAATACAGTCCCGGAAAGACGGGGCCAGAACTTAGGAGGGGAGCGCTTTGCAGCAACTTTTCAAGAAAAGGGGAAAATTTAAGCACCATA'
-                'CTGTTATGTGGTCCTTGTACCCAGAGGCCCTGTTCAGCTCCAGTGATCAGCTCTCTTAGGGCACACCCTCCAAGGTGCCTAAATGCCATCCCAGGATTGGTTCCAGT'
-                'GTCTATTATCTGTTTGACTCCAAATGGCCAAACACCTGACTTCCTCTCTGGTAGCCTGGCTTTTATCTTCTAGGACATCCAGGGCCCCTCTCTTTGCCTTCCCCTCT'
-                'TTCTTCCTTCTACTGCTTAGATCAAGTCTTCAGCAGACATCATGTGACCTTGAGGATGGATGTCACATGCTGGAGGAAACAGAAGGCCGAAACCCTGATGACTTCAC'
-                'AGAGCTGCCAAAACAGTTCCTGACTGTTTATTCCGGGTCTTTAACAAAGTGATGAAAAGAAATCCTTGCAGTATGAAAACAACTTTTCTATTCCATGGAGCCAAACC'
-                'TCATTATAACAGATAACGTGACCCTCAGCGATATCCCAAGTATTTTCCTGTTCTCATCTATACTATGGCAAAGGGGCAAATACCTCTCAGTAAAGAAAGAAATAACA'
-                'ACTTCTATCTTGGGCGAGGCATTTCTTCTGTTAGAACTTTGTACACGGAATAAAATAGATCTGTTTGTGCTTATCTTTCTCCTTAGAATTATTGAATTTGAAGTCTT'
-                'TCCCAGGGTGGGGGTGGAGTGAAGCTGGGGTTTCATAAGCACATAGATAGTAGTG', offset=224646450))},
+            reference_genome={
+                '1': MockObject(
+                    seq=MockLongString(
+                        'TGGGTATCAGACACACTGGGTAGCTGAGTGCTCAGAGGAAGATGCGAGGTATTCAGGGAAAGTGTCAGTGGGGTCTCCCAGTGCCTGTTTGGTCCACAGTTAGGAGA'
+                        'GGCCCTGCTTGCACTTCTAATACAGTCCCGGAAAGACGGGGCCAGAACTTAGGAGGGGAGCGCTTTGCAGCAACTTTTCAAGAAAAGGGGAAAATTTAAGCACCATA'
+                        'CTGTTATGTGGTCCTTGTACCCAGAGGCCCTGTTCAGCTCCAGTGATCAGCTCTCTTAGGGCACACCCTCCAAGGTGCCTAAATGCCATCCCAGGATTGGTTCCAGT'
+                        'GTCTATTATCTGTTTGACTCCAAATGGCCAAACACCTGACTTCCTCTCTGGTAGCCTGGCTTTTATCTTCTAGGACATCCAGGGCCCCTCTCTTTGCCTTCCCCTCT'
+                        'TTCTTCCTTCTACTGCTTAGATCAAGTCTTCAGCAGACATCATGTGACCTTGAGGATGGATGTCACATGCTGGAGGAAACAGAAGGCCGAAACCCTGATGACTTCAC'
+                        'AGAGCTGCCAAAACAGTTCCTGACTGTTTATTCCGGGTCTTTAACAAAGTGATGAAAAGAAATCCTTGCAGTATGAAAACAACTTTTCTATTCCATGGAGCCAAACC'
+                        'TCATTATAACAGATAACGTGACCCTCAGCGATATCCCAAGTATTTTCCTGTTCTCATCTATACTATGGCAAAGGGGCAAATACCTCTCAGTAAAGAAAGAAATAACA'
+                        'ACTTCTATCTTGGGCGAGGCATTTCTTCTGTTAGAACTTTGTACACGGAATAAAATAGATCTGTTTGTGCTTATCTTTCTCCTTAGAATTATTGAATTTGAAGTCTT'
+                        'TCCCAGGGTGGGGGTGGAGTGAAGCTGGGGTTTCATAAGCACATAGATAGTAGTG',
+                        offset=224646450,
+                    )
+                )
+            },
             bam_cache=MockObject(get_read_reference_name=lambda x: x.reference_name),
             contig_aln_merge_inner_anchor=10,
-            contig_aln_merge_outer_anchor=20
+            contig_aln_merge_outer_anchor=20,
         )
 
     def test_bwa_mem(self):
@@ -656,7 +762,6 @@ class TestStandardizeRead(unittest.TestCase):
 
 
 class MockEvidence:
-
     def __init__(self, ref=None):
         self.HUMAN_REFERENCE_GENOME = ref
 

@@ -9,8 +9,8 @@ from ..util import get_connected_components
 def filter_by_annotations(bpp_list, best_transcripts):
     """
     Args:
-        bpp_list (list of BreakpointPair): list of pairs to filter
-        best_transcripts (:class `dict` of :any:`Transcript` by :class:`str`): the best transcripts of the annotations
+        bpp_list (List[BreakpointPair]): list of pairs to filter
+        best_transcripts (Dict[str,Transcript]): the best transcripts of the annotations
           based on their names
 
     """
@@ -28,14 +28,19 @@ def filter_by_annotations(bpp_list, best_transcripts):
         else:
             result = [0, -1 * (int(bpp.fusion_cdna_coding_end) - int(bpp.fusion_cdna_coding_start))]
 
-        result.extend([
-            0 if bpp.transcript1 in best_transcripts else 1,
-            0 if bpp.transcript2 in best_transcripts else 1,
-            sum([bpp.transcript1 is None, bpp.transcript2 is None]),
-            string_ranks[bpp.gene1], string_ranks[bpp.gene2],
-            string_ranks[bpp.transcript1], string_ranks[bpp.transcript2]
-        ])
+        result.extend(
+            [
+                0 if bpp.transcript1 in best_transcripts else 1,
+                0 if bpp.transcript2 in best_transcripts else 1,
+                sum([bpp.transcript1 is None, bpp.transcript2 is None]),
+                string_ranks[bpp.gene1],
+                string_ranks[bpp.gene2],
+                string_ranks[bpp.transcript1],
+                string_ranks[bpp.transcript2],
+            ]
+        )
         return tuple(result)
+
     bpp_list = sorted(bpp_list, key=sort_key)
     result = []
     removed = []
@@ -54,16 +59,20 @@ def filter_by_call_method(bpp_list):
     """
     # ranking scores of the methods (more is better)
     def sort_key(bpp):
-        key = [bpp.data.get(col, 0) if bpp.data.get(col, 0) is not None else 0 for col in [
-            'contig_remapped_reads',
-            'contig_alignment_score',
-            'spanning_reads',
-            'break1_split_reads',
-            'break2_split_reads',
-            'linking_split_reads',
-            'flanking_pairs'
-        ]]
+        key = [
+            bpp.data.get(col, 0) if bpp.data.get(col, 0) is not None else 0
+            for col in [
+                'contig_remapped_reads',
+                'contig_alignment_score',
+                'spanning_reads',
+                'break1_split_reads',
+                'break2_split_reads',
+                'linking_split_reads',
+                'flanking_pairs',
+            ]
+        ]
         return tuple(key)
+
     if not bpp_list:
         return bpp_list
     bpp_list = sorted(bpp_list, key=sort_key, reverse=True)
@@ -91,40 +100,53 @@ def group_events(events):
             min([b.break1.start for b in events]),
             max([b.break1.end for b in events]),
             orient=first.break1.orient,
-            strand=first.break1.strand),
+            strand=first.break1.strand,
+        ),
         Breakpoint(
             first.break2.chr,
             min([b.break2.start for b in events]),
             max([b.break2.end for b in events]),
             orient=first.break2.orient,
-            strand=first.break2.strand),
+            strand=first.break2.strand,
+        ),
         opposing_strands=first.opposing_strands,
-        stranded=first.stranded
+        stranded=first.stranded,
     )
     data_columns = set()
     for bpp in events:
         data_columns.update(bpp.data.keys())
-        if any([
-            bpp.break1.chr != new_bpp.break1.chr,
-            bpp.break2.chr != new_bpp.break2.chr,
-            bpp.break1.orient != new_bpp.break1.orient,
-            bpp.break2.orient != new_bpp.break2.orient,
-            bpp.opposing_strands != new_bpp.opposing_strands,
-            bpp.break1.strand != new_bpp.break1.strand,
-            bpp.break2.strand != new_bpp.break2.strand
-        ]):
+        if any(
+            [
+                bpp.break1.chr != new_bpp.break1.chr,
+                bpp.break2.chr != new_bpp.break2.chr,
+                bpp.break1.orient != new_bpp.break1.orient,
+                bpp.break2.orient != new_bpp.break2.orient,
+                bpp.opposing_strands != new_bpp.opposing_strands,
+                bpp.break1.strand != new_bpp.break1.strand,
+                bpp.break2.strand != new_bpp.break2.strand,
+            ]
+        ):
             raise AssertionError('cannot group events differing on key elements', bpp, new_bpp)
 
     # Note: There are some attributes that shouldn't be lost if different, currently appending the information
     # The evidence could be better off as a max instead of a join
     list_columns = {
-        COLUMNS.contig_seq, COLUMNS.call_method,
-        COLUMNS.break1_split_reads, COLUMNS.break2_split_reads, COLUMNS.contig_alignment_score,
-        COLUMNS.spanning_reads, COLUMNS.flanking_pairs, COLUMNS.tools,
-        COLUMNS.product_id, COLUMNS.event_type, COLUMNS.annotation_id,
-        COLUMNS.pairing, COLUMNS.annotation_figure,
-        COLUMNS.contig_remapped_reads, COLUMNS.tools,
-        COLUMNS.tracking_id
+        COLUMNS.contig_seq,
+        COLUMNS.call_method,
+        COLUMNS.break1_split_reads,
+        COLUMNS.break2_split_reads,
+        COLUMNS.contig_alignment_score,
+        COLUMNS.spanning_reads,
+        COLUMNS.flanking_pairs,
+        COLUMNS.tools,
+        COLUMNS.product_id,
+        COLUMNS.event_type,
+        COLUMNS.annotation_id,
+        COLUMNS.pairing,
+        COLUMNS.annotation_figure,
+        COLUMNS.contig_remapped_reads,
+        COLUMNS.tools,
+        COLUMNS.tracking_id,
     }
     for col in data_columns:
         new_data = sorted(list({bpp.data[col] for bpp in events}), key=lambda x: str(x))
@@ -173,27 +195,43 @@ def annotate_dgv(bpps, dgv_regions_by_reference_name, distance=0):
         distance (int) : the minimum distance required to match a dgv event with a breakpoint
     """
     for chrom in dgv_regions_by_reference_name:
-        dgv_regions_by_reference_name[chrom] = sorted(dgv_regions_by_reference_name[chrom], key=lambda x: x.start)
+        dgv_regions_by_reference_name[chrom] = sorted(
+            dgv_regions_by_reference_name[chrom], key=lambda x: x.start
+        )
 
     lowest_resolution = max([len(b.break1) for b in bpps])  # only need start res
 
     # only look at the bpps that dgv events could pair to, Intrachromosomal
-    for bpp in [b for b in bpps if not b.interchromosomal and b.break1.chr in dgv_regions_by_reference_name]:
+    for bpp in [
+        b for b in bpps if not b.interchromosomal and b.break1.chr in dgv_regions_by_reference_name
+    ]:
         for dgv_region in dgv_regions_by_reference_name[bpp.break1.chr]:
             dist = abs(Interval.dist(Interval(dgv_region.start), bpp.break1))
             if dist > lowest_resolution + distance:
                 break
-            elif dist > distance or abs(Interval.dist(Interval(dgv_region.end), bpp.break2)) > distance:
+            elif (
+                dist > distance
+                or abs(Interval.dist(Interval(dgv_region.end), bpp.break2)) > distance
+            ):
                 continue
             refname = dgv_region.reference_object
             try:
                 refname = dgv_region.reference_object.name
             except AttributeError:
                 pass
-            bpp.data['dgv'] = '{}({}:{}-{})'.format(dgv_region.name, refname, dgv_region.start, dgv_region.end)
+            bpp.data['dgv'] = '{}({}:{}-{})'.format(
+                dgv_region.name, refname, dgv_region.start, dgv_region.end
+            )
 
 
-def get_pairing_state(current_protocol, current_disease_state, other_protocol, other_disease_state, is_matched=False, inferred_is_matched=False):
+def get_pairing_state(
+    current_protocol,
+    current_disease_state,
+    other_protocol,
+    other_disease_state,
+    is_matched=False,
+    inferred_is_matched=False,
+):
     """
     given two libraries, returns the appropriate descriptor for their matched state
 
@@ -238,7 +276,7 @@ def filter_by_evidence(
     filter_min_spanning_reads=5,
     filter_min_flanking_reads=10,
     filter_min_split_reads=5,
-    filter_min_linking_split_reads=1
+    filter_min_linking_split_reads=1,
 ):
     filtered = []
     removed = []
@@ -256,13 +294,15 @@ def filter_by_evidence(
             linking_split_reads = bpp.linking_split_reads
             if bpp.event_type == SVTYPE.INS:
                 linking_split_reads += bpp.flanking_pairs
-            if any([
-                bpp.break1_split_reads + bpp.break1_split_reads_forced < filter_min_split_reads,
-                bpp.break2_split_reads + bpp.break2_split_reads_forced < filter_min_split_reads,
-                linking_split_reads < filter_min_linking_split_reads,
-                bpp.break1_split_reads < 1,
-                bpp.break2_split_reads < 1
-            ]):
+            if any(
+                [
+                    bpp.break1_split_reads + bpp.break1_split_reads_forced < filter_min_split_reads,
+                    bpp.break2_split_reads + bpp.break2_split_reads_forced < filter_min_split_reads,
+                    linking_split_reads < filter_min_linking_split_reads,
+                    bpp.break1_split_reads < 1,
+                    bpp.break2_split_reads < 1,
+                ]
+            ):
                 removed.append(bpp)
                 continue
         elif bpp.call_method == CALL_METHOD.FLANK:
@@ -270,7 +310,6 @@ def filter_by_evidence(
                 removed.append(bpp)
                 continue
         elif bpp.call_method != CALL_METHOD.INPUT:
-            raise AssertionError('unexpected value for call_method: {}'.format(
-                bpp.call_method))
+            raise AssertionError('unexpected value for call_method: {}'.format(bpp.call_method))
         filtered.append(bpp)
     return filtered, removed

@@ -29,8 +29,9 @@ class MavisNamespace:
         >>> nspace.otherthing
         2
     """
+
     DELIM = r'[;,\s]+'
-    """:class:`str`: delimiter to use is parsing listable variables from the environment or config file"""
+    """str: delimiter to use is parsing listable variables from the environment or config file"""
 
     def __init__(self, *pos, **kwargs):
         object.__setattr__(self, '_defns', {})
@@ -50,14 +51,19 @@ class MavisNamespace:
 
         for attr, val in kwargs.items():
             if attr in self._members:
-                raise AttributeError('Cannot respecify existing attribute', attr, self._members[attr])
+                raise AttributeError(
+                    'Cannot respecify existing attribute', attr, self._members[attr]
+                )
             self[attr] = val
 
         for attr, value in self._members.items():
             self._set_type(attr, type(value))
 
     def __repr__(self):
-        return '{}({})'.format(self.__class__.__name__, ', '.join(sorted(['{}={}'.format(k, repr(v)) for k, v in self.items()])))
+        return '{}({})'.format(
+            self.__class__.__name__,
+            ', '.join(sorted(['{}={}'.format(k, repr(v)) for k, v in self.items()])),
+        )
 
     def discard(self, attr):
         """
@@ -182,11 +188,12 @@ class MavisNamespace:
             attrs = source.keys()
         for attr in attrs:
             self.add(
-                attr, source[attr],
+                attr,
+                source[attr],
                 listable=source.is_listable(attr),
                 nullable=source.is_nullable(attr),
                 defn=source.define(attr, None),
-                cast_type=source.type(attr, None)
+                cast_type=source.type(attr, None),
             )
 
     def get(self, key, *pos):
@@ -338,7 +345,16 @@ class MavisNamespace:
                 return pos[0]
             raise err
 
-    def add(self, attr, value, defn=None, cast_type=None, nullable=False, env_overwritable=False, listable=False):
+    def add(
+        self,
+        attr,
+        value,
+        defn=None,
+        cast_type=None,
+        nullable=False,
+        env_overwritable=False,
+        listable=False,
+    ):
         """
         Add an attribute to the name space
 
@@ -346,7 +362,7 @@ class MavisNamespace:
             attr (str): name of the attribute being added
             value: the value of the attribute
             defn (str): the definition, will be used in generating documentation and help menus
-            cast_type (callable): the function to use in casting the value
+            cast_type (Callable): the function to use in casting the value
             nullable (bool): True if this attribute can have a None value
             env_overwritable (bool): True if this attribute will be overriden by its environment variable equivalent
             listable (bool): True if this attribute can have multiple values
@@ -380,8 +396,11 @@ class MavisNamespace:
         try:
             return self.enforce(value)
         except KeyError:
-            raise TypeError('Invalid value {} for {}. Must be a valid member: {}'.format(
-                repr(value), self.__class__.__name__, self.values()))
+            raise TypeError(
+                'Invalid value {} for {}. Must be a valid member: {}'.format(
+                    repr(value), self.__class__.__name__, self.values()
+                )
+            )
 
 
 def float_fraction(num):
@@ -407,7 +426,7 @@ def float_fraction(num):
 
 
 COMPLETE_STAMP = 'MAVIS.COMPLETE'
-""":class:`str`: Filename for all complete stamp files"""
+"""str: Filename for all complete stamp files"""
 
 SUBCOMMAND = MavisNamespace(
     ANNOTATE='annotate',
@@ -419,9 +438,9 @@ SUBCOMMAND = MavisNamespace(
     SUMMARY='summary',
     CONFIG='config',
     CONVERT='convert',
-    OVERLAY='overlay'
+    OVERLAY='overlay',
 )
-""":class:`MavisNamespace`: holds controlled vocabulary for allowed pipeline stage values
+"""MavisNamespace: holds controlled vocabulary for allowed pipeline stage values
 
 - annotate
 - cluster
@@ -436,7 +455,7 @@ SUBCOMMAND = MavisNamespace(
 
 
 CODON_SIZE = 3
-""":class:`int`: the number of bases making up a codon"""
+"""int: the number of bases making up a codon"""
 
 
 def reverse_complement(s):
@@ -447,7 +466,7 @@ def reverse_complement(s):
         s (str): the input DNA sequence
 
     Returns:
-        :class:`str`: the reverse complement of the input sequence
+        str: the reverse complement of the input sequence
 
     Warning:
         assumes the input is a DNA sequence
@@ -488,7 +507,7 @@ def translate(s, reading_frame=0):
 GAP = '-'
 
 ORIENT = MavisNamespace(LEFT='L', RIGHT='R', NS='?')
-""":class:`MavisNamespace`: holds controlled vocabulary for allowed orientation values
+"""MavisNamespace: holds controlled vocabulary for allowed orientation values
 
 - ``LEFT``: left wrt to the positive/forward strand
 - ``RIGHT``: right wrt to the positive/forward strand
@@ -498,21 +517,21 @@ setattr(ORIENT, 'expand', lambda x: [ORIENT.LEFT, ORIENT.RIGHT] if x == ORIENT.N
 setattr(ORIENT, 'compare', lambda x, y: True if ORIENT.NS in [x, y] else (x == y))
 
 PROTOCOL = MavisNamespace(GENOME='genome', TRANS='transcriptome')
-""":class:`MavisNamespace`: holds controlled vocabulary for allowed protocol values
+"""MavisNamespace: holds controlled vocabulary for allowed protocol values
 
 - ``GENOME``: genome
 - ``TRANS``: transcriptome
 """
 
 DISEASE_STATUS = MavisNamespace(DISEASED='diseased', NORMAL='normal')
-""":class:`MavisNamespace`: holds controlled vocabulary for allowed disease status
+"""MavisNamespace: holds controlled vocabulary for allowed disease status
 
 - ``DISEASED``: diseased
 - ``NORMAL``: normal
 """
 
 STRAND = MavisNamespace(POS='+', NEG='-', NS='?')
-""":class:`MavisNamespace`: holds controlled vocabulary for allowed strand values
+"""MavisNamespace: holds controlled vocabulary for allowed strand values
 
 - ``POS``: the positive/forward strand
 - ``NEG``: the negative/reverse strand
@@ -527,9 +546,9 @@ SVTYPE = MavisNamespace(
     ITRANS='inverted translocation',
     INV='inversion',
     INS='insertion',
-    DUP='duplication'
+    DUP='duplication',
 )
-""":class:`MavisNamespace`: holds controlled vocabulary for acceptable structural variant classifications
+"""MavisNamespace: holds controlled vocabulary for acceptable structural variant classifications
 
 - ``DEL``: deletion
 - ``TRANS``: translocation
@@ -540,7 +559,7 @@ SVTYPE = MavisNamespace(
 """
 
 CIGAR = MavisNamespace(M=0, I=1, D=2, N=3, S=4, H=5, P=6, X=8, EQ=7)  # noqa
-""":class:`MavisNamespace`: Enum-like. For readable cigar values
+"""MavisNamespace: Enum-like. For readable cigar values
 
 - ``M``: alignment match (can be a sequence match or mismatch)
 - ``I``: insertion to the reference
@@ -556,7 +575,7 @@ note: descriptions are taken from the `samfile documentation <https://samtools.g
 """
 
 NA_MAPPING_QUALITY = 255
-""":class:`int`: mapping quality value to indicate mapping was not performed/calculated"""
+"""int: mapping quality value to indicate mapping was not performed/calculated"""
 
 PYSAM_READ_FLAGS = MavisNamespace(
     REVERSE=16,
@@ -574,10 +593,10 @@ PYSAM_READ_FLAGS = MavisNamespace(
     BLAT_SCORE='bs',
     BLAT_ALIGNMENTS='ba',
     BLAT_PERCENT_IDENTITY='bi',
-    BLAT_PMS='bp'
+    BLAT_PMS='bp',
 )
 
-""":class:`MavisNamespace`: Enum-like. For readable PYSAM flag constants
+"""MavisNamespace: Enum-like. For readable PYSAM flag constants
 
 - ``MULTIMAP``: template having multiple segments in sequencing
 - ``UNMAPPED``: segment unmapped
@@ -620,34 +639,40 @@ FLAGS = MavisNamespace(LQ='LOWQUAL')
 
 READ_PAIR_TYPE = MavisNamespace(RR='RR', LL='LL', RL='RL', LR='LR')
 
-CALL_METHOD = MavisNamespace(CONTIG='contig', SPLIT='split reads', FLANK='flanking reads', SPAN='spanning reads', INPUT='input')
-""":class:`MavisNamespace`: holds controlled vocabulary for allowed call methods
+CALL_METHOD = MavisNamespace(
+    CONTIG='contig',
+    SPLIT='split reads',
+    FLANK='flanking reads',
+    SPAN='spanning reads',
+    INPUT='input',
+)
+"""MavisNamespace: holds controlled vocabulary for allowed call methods
 
 - ``CONTIG``: a contig was assembled and aligned across the breakpoints
-- ``SPLIT``: the event was called by :term:`split read`
-- ``FLANK``: the event was called by :term:`flanking read pair`
-- ``SPAN``: the event was called by :term:`spanning read`
+- ``SPLIT``: the event was called by [split read](/glossary/#split-read)
+- ``FLANK``: the event was called by [flanking read pair](/glossary/#flanking-read-pair)
+- ``SPAN``: the event was called by [spanning read](/glossary/#spanning-read)
 """
 
 GENE_PRODUCT_TYPE = MavisNamespace(SENSE='sense', ANTI_SENSE='anti-sense')
-""":class:`MavisNamespace`: controlled vocabulary for gene products
+"""MavisNamespace: controlled vocabulary for gene products
 
 - ``SENSE``: the gene product is a sense fusion
 - ``ANTI_SENSE``: the gene product is anti-sense
 """
 
 PRIME = MavisNamespace(FIVE=5, THREE=3)
-""":class:`MavisNamespace`: holds controlled vocabulary
+"""MavisNamespace: holds controlled vocabulary
 
 - ``FIVE``: five prime
 - ``THREE``: three prime
 """
 
 START_AA = 'M'
-""":class:`str`: The amino acid expected to start translation
+"""str: The amino acid expected to start translation
 """
 STOP_AA = '*'
-""":class:`str`: The amino acid expected to end translation
+"""str: The amino acid expected to end translation
 """
 
 GIEMSA_STAIN = MavisNamespace(
@@ -660,9 +685,9 @@ GIEMSA_STAIN = MavisNamespace(
     GPOS100='gpos100',
     ACEN='acen',
     GVAR='gvar',
-    STALK='stalk'
+    STALK='stalk',
 )
-""":class:`MavisNamespace`: holds controlled vocabulary relating to stains of chromosome bands"""
+"""MavisNamespace: holds controlled vocabulary relating to stains of chromosome bands"""
 
 # content related to tabbed files for input/output
 # ensure that we don't have to change ALL the code when we update column names
@@ -775,104 +800,11 @@ COLUMNS = MavisNamespace(
     supplementary_call='supplementary_call',
     net_size='net_size',
     repeat_count='repeat_count',
-    assumed_untemplated='assumed_untemplated'
+    assumed_untemplated='assumed_untemplated',
 )
-""":class:`MavisNamespace`: Column names for i/o files used throughout the pipeline
+"""MavisNamespace: Column names for i/o files used throughout the pipeline
 
-- :term:`annotation_figure_legend`
-- :term:`annotation_figure`
-- :term:`annotation_id`
-- :term:`break1_chromosome`
-- :term:`break1_ewindow_count`
-- :term:`break1_ewindow_practical_coverage`
-- :term:`break1_ewindow`
-- :term:`break1_homologous_seq`
-- :term:`break1_orientation`
-- :term:`break1_position_end`
-- :term:`break1_position_start`
-- :term:`break1_seq`
-- :term:`break1_split_reads_forced`
-- :term:`break1_split_reads`
-- :term:`break1_strand`
-- :term:`break2_chromosome`
-- :term:`break2_ewindow_count`
-- :term:`break2_ewindow_practical_coverage`
-- :term:`break2_ewindow`
-- :term:`break2_homologous_seq`
-- :term:`break2_orientation`
-- :term:`break2_position_end`
-- :term:`break2_position_start`
-- :term:`break2_seq`
-- :term:`break2_split_reads_forced`
-- :term:`break2_split_reads`
-- :term:`break2_strand`
-- :term:`call_method`
-- :term:`cdna_synon`
-- :term:`cluster_id`
-- :term:`cluster_size`
-- :term:`contig_alignment_cigar`
-- :term:`contig_alignment_query_name`
-- :term:`contig_alignment_reference_start`
-- :term:`contig_alignment_score`
-- :term:`contig_build_score`
-- :term:`contig_remap_coverage`
-- :term:`contig_remap_score`
-- :term:`contig_remapped_read_names`
-- :term:`contig_remapped_reads`
-- :term:`contig_seq`
-- :term:`contig_strand_specific`
-- :term:`contigs_assembled`
-- :term:`call_sequence_complexity`
-- :term:`event_type`
-- :term:`flanking_median_fragment_size`
-- :term:`flanking_pairs_compatible`
-- :term:`flanking_pairs`
-- :term:`flanking_stdev_fragment_size`
-- :term:`fusion_cdna_coding_end`
-- :term:`fusion_cdna_coding_end`
-- :term:`fusion_cdna_coding_start`
-- :term:`fusion_mapped_domains`
-- :term:`fusion_sequence_fasta_file`
-- :term:`fusion_sequence_fasta_id`
-- :term:`fusion_splicing_pattern`
-- :term:`fusion_protein_hgvs`
-- :term:`gene1_aliases`
-- :term:`gene1_direction`
-- :term:`gene1`
-- :term:`gene2_aliases`
-- :term:`gene2_direction`
-- :term:`gene2`
-- :term:`gene_product_type`
-- :term:`genes_encompassed`
-- :term:`genes_overlapping_break1`
-- :term:`genes_overlapping_break2`
-- :term:`genes_proximal_to_break1`
-- :term:`genes_proximal_to_break2`
-- :term:`inferred_pairing`
-- :term:`library`
-- :term:`linking_split_reads`
-- :term:`net_size`
-- :term:`opposing_strands`
-- :term:`pairing`
-- :term:`product_id`
-- :term:`protein_synon`
-- :term:`protocol`
-- :term:`raw_break1_split_reads`
-- :term:`raw_break2_split_reads`
-- :term:`raw_flanking_pairs`
-- :term:`raw_spanning_reads`
-- :term:`spanning_read_names`
-- :term:`spanning_reads`
-- :term:`stranded`
-- :term:`tools`
-- :term:`tracking_id`
-- :term:`transcript1`
-- :term:`transcript2`
-- :term:`supplementary_call`
-- :term:`untemplated_seq`
-- :term:`validation_id`
-- :term:`repeat_count`
-- :term:`assumed_untemplated`
+see [column descriptions](/outputs/columns)
 """
 
 

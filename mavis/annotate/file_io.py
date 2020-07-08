@@ -19,23 +19,47 @@ from ..util import DEVNULL, LOG, filepath, WeakMavisNamespace
 
 REFERENCE_DEFAULTS = WeakMavisNamespace()
 REFERENCE_DEFAULTS.add(
-    'template_metadata', [], cast_type=filepath, listable=True,
-    defn='file containing the cytoband template information. Used for illustrations only')
+    'template_metadata',
+    [],
+    cast_type=filepath,
+    listable=True,
+    defn='file containing the cytoband template information. Used for illustrations only',
+)
 REFERENCE_DEFAULTS.add(
-    'masking', [], cast_type=filepath, listable=True,
-    defn='file containing regions for which input events overlapping them are dropped prior to validation')
+    'masking',
+    [],
+    cast_type=filepath,
+    listable=True,
+    defn='file containing regions for which input events overlapping them are dropped prior to validation',
+)
 REFERENCE_DEFAULTS.add(
-    'annotations', [], cast_type=filepath, listable=True,
-    defn='path to the reference annotations of genes, transcript, exons, domains, etc')
+    'annotations',
+    [],
+    cast_type=filepath,
+    listable=True,
+    defn='path to the reference annotations of genes, transcript, exons, domains, etc',
+)
 REFERENCE_DEFAULTS.add(
-    'aligner_reference', None, cast_type=filepath, nullable=True,
-    defn='path to the aligner reference file used for aligning the contig sequences')
+    'aligner_reference',
+    None,
+    cast_type=filepath,
+    nullable=True,
+    defn='path to the aligner reference file used for aligning the contig sequences',
+)
 REFERENCE_DEFAULTS.add(
-    'dgv_annotation', [], cast_type=filepath, listable=True,
-    defn='Path to the dgv reference processed to look like the cytoband file.')
+    'dgv_annotation',
+    [],
+    cast_type=filepath,
+    listable=True,
+    defn='Path to the dgv reference processed to look like the cytoband file.',
+)
 REFERENCE_DEFAULTS.add(
-    'reference_genome', [], cast_type=filepath, listable=True,
-    defn='Path to the human reference genome fasta file')
+    'reference_genome',
+    [],
+    cast_type=filepath,
+    listable=True,
+    defn='Path to the human reference genome fasta file',
+)
 
 
 def load_masking_regions(*filepaths):
@@ -58,7 +82,7 @@ def load_masking_regions(*filepaths):
     Args:
         filepath (str): path to the input tab-delimited file
     Returns:
-        :class:`dict` of :class:`list` of :class:`BioInterval` by :class:`str`: a dictionary keyed by chromosome name with values of lists of regions on the chromosome
+        Dict[str,List[BioInterval]]: a dictionary keyed by chromosome name with values of lists of regions on the chromosome
 
     Example:
         >>> m = load_masking_regions('filename')
@@ -70,10 +94,12 @@ def load_masking_regions(*filepaths):
         _, rows = tab.read_file(
             filepath,
             require=['chr', 'start', 'end', 'name'],
-            cast={'start': int, 'end': int, 'chr': ReferenceName}
+            cast={'start': int, 'end': int, 'chr': ReferenceName},
         )
         for row in rows:
-            mask_region = BioInterval(reference_object=row['chr'], start=row['start'], end=row['end'], name=row['name'])
+            mask_region = BioInterval(
+                reference_object=row['chr'], start=row['start'], end=row['end'], name=row['name']
+            )
             regions.setdefault(mask_region.reference_object, []).append(mask_region)
     return regions
 
@@ -93,12 +119,12 @@ def load_annotations(*filepaths, warn=DEVNULL, reference_genome=None, best_trans
     Args:
         filepath (str): path to the input file
         verbose (bool): output extra information to stdout
-        reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by
+        reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence by
             template/chr name
         filetype (str): json or tab/tsv. only required if the file type can't be interpolated from the path extension
 
     Returns:
-        :class:`dict` of :class:`list` of :class:`~mavis.annotate.genomic.Gene` by :class:`str`: lists of genes keyed by chromosome name
+        Dict[str,List[mavis.annotate.genomic.Gene]]: lists of genes keyed by chromosome name
     """
     total_annotations = {}
 
@@ -115,7 +141,8 @@ def load_annotations(*filepaths, warn=DEVNULL, reference_genome=None, best_trans
             data,
             reference_genome=reference_genome,
             best_transcripts_only=best_transcripts_only,
-            warn=warn)
+            warn=warn,
+        )
 
         for chrom in current_annotations:
             for gene in current_annotations[chrom]:
@@ -134,7 +161,9 @@ def parse_annotations_json(data, reference_genome=None, best_transcripts_only=Fa
         elif gene_dict['strand'] in ['-1', '-', -1]:
             gene_dict['strand'] = STRAND.NEG
         else:
-            raise AssertionError('input has unexpected form. strand must be 1 or -1 but found', gene_dict['strand'])
+            raise AssertionError(
+                'input has unexpected form. strand must be 1 or -1 but found', gene_dict['strand']
+            )
 
         gene = Gene(
             chr=gene_dict['chr'],
@@ -142,7 +171,7 @@ def parse_annotations_json(data, reference_genome=None, best_transcripts_only=Fa
             end=gene_dict['end'],
             name=gene_dict['name'],
             aliases=gene_dict['aliases'],
-            strand=gene_dict['strand']
+            strand=gene_dict['strand'],
         )
 
         has_best = False
@@ -156,7 +185,7 @@ def parse_annotations_json(data, reference_genome=None, best_transcripts_only=Fa
                 name=transcript['name'],
                 gene=gene,
                 exons=exons,
-                is_best_transcript=transcript['is_best_transcript']
+                is_best_transcript=transcript['is_best_transcript'],
             )
             if pre_transcript.is_best_transcript:
                 has_best = True
@@ -169,7 +198,10 @@ def parse_annotations_json(data, reference_genome=None, best_transcripts_only=Fa
                 spl_tx = Transcript(pre_transcript, spl_patt)
                 pre_transcript.spliced_transcripts.append(spl_tx)
 
-                if transcript.get('cdna_coding_end', None) is None or transcript.get('cdna_coding_start', None) is None:
+                if (
+                    transcript.get('cdna_coding_end', None) is None
+                    or transcript.get('cdna_coding_start', None) is None
+                ):
                     continue
                 tx_length = transcript['cdna_coding_end'] - transcript['cdna_coding_start'] + 1
                 # check that the translation makes sense before including it
@@ -184,20 +216,29 @@ def parse_annotations_json(data, reference_genome=None, best_transcripts_only=Fa
                         regions = Interval.min_nonoverlapping(*regions)
                         for region in regions:
                             if region.start < 1 or region.end > tx_length:
-                                raise AssertionError('region cannot be outside the translated length')
+                                raise AssertionError(
+                                    'region cannot be outside the translated length'
+                                )
                         domains.append(
-                            Domain(name=dom['name'], data={'desc': dom.get('desc', None)}, regions=regions)
+                            Domain(
+                                name=dom['name'],
+                                data={'desc': dom.get('desc', None)},
+                                regions=regions,
+                            )
                         )
                     except AssertionError as err:
                         warn(repr(err))
                 translation = Translation(
-                    transcript['cdna_coding_start'], transcript['cdna_coding_end'], transcript=spl_tx, domains=domains
+                    transcript['cdna_coding_start'],
+                    transcript['cdna_coding_end'],
+                    transcript=spl_tx,
+                    domains=domains,
                 )
                 if reference_genome and gene.chr in reference_genome:
                     # get the sequence near here to see why these are wrong?
                     seq = pre_transcript.get_cdna_seq(spl_tx.splicing_pattern, reference_genome)
-                    met = seq[translation.start - 1:translation.start + 2]
-                    stop = seq[translation.end - CODON_SIZE: translation.end]
+                    met = seq[translation.start - 1 : translation.start + 2]
+                    stop = seq[translation.end - CODON_SIZE : translation.end]
                     if translate(met) != START_AA or translate(stop) != STOP_AA:
                         warn(
                             'Sequence error. The sequence computed from the reference does look like '
@@ -238,7 +279,7 @@ def convert_tab_to_json(filepath, warn=DEVNULL):
         filepath (str): path to the input tab-delimited file
 
     Returns:
-        :class:`dict` of :class:`list` of :any:`Gene` by :class:`str`: a dictionary keyed by chromosome name with values of list of genes on the chromosome
+        Dict[str,List[Gene]]: a dictionary keyed by chromosome name with values of list of genes on the chromosome
 
     Example:
         >>> ref = load_reference_genes('filename')
@@ -248,6 +289,7 @@ def convert_tab_to_json(filepath, warn=DEVNULL):
     Warning:
         does not load translations unless then start with 'M', end with '*' and have a length of multiple 3
     """
+
     def parse_exon_list(row):
         if not row:
             return []
@@ -284,11 +326,7 @@ def convert_tab_to_json(filepath, warn=DEVNULL):
 
     _, rows = tab.read_file(
         filepath,
-        require=[
-            'ensembl_gene_id',
-            'chr',
-            'ensembl_transcript_id'
-        ],
+        require=['ensembl_gene_id', 'chr', 'ensembl_transcript_id'],
         add_default={
             'cdna_coding_start': 'null',
             'cdna_coding_end': 'null',
@@ -297,7 +335,7 @@ def convert_tab_to_json(filepath, warn=DEVNULL):
             'hugo_names': '',
             'transcript_genomic_start': 'null',
             'transcript_genomic_end': 'null',
-            'best_ensembl_transcript_id': 'null'
+            'best_ensembl_transcript_id': 'null',
         },
         cast={
             'genomic_exon_ranges': parse_exon_list,
@@ -307,8 +345,8 @@ def convert_tab_to_json(filepath, warn=DEVNULL):
             'transcript_genomic_end': nullable_int,
             'transcript_genomic_start': nullable_int,
             'gene_start': int,
-            'gene_end': int
-        }
+            'gene_end': int,
+        },
     )
     genes = {}
     for row in rows:
@@ -319,7 +357,7 @@ def convert_tab_to_json(filepath, warn=DEVNULL):
             'name': row['ensembl_gene_id'],
             'strand': row['strand'],
             'aliases': row['hugo_names'].split(';') if row['hugo_names'] else [],
-            'transcripts': []
+            'transcripts': [],
         }
         if gene['name'] not in genes:
             genes[gene['name']] = gene
@@ -335,7 +373,7 @@ def convert_tab_to_json(filepath, warn=DEVNULL):
             'end': row['transcript_genomic_end'],
             'cdna_coding_start': row['cdna_coding_start'],
             'cdna_coding_end': row['cdna_coding_end'],
-            'aliases': []
+            'aliases': [],
         }
         gene['transcripts'].append(transcript)
 
@@ -345,10 +383,10 @@ def convert_tab_to_json(filepath, warn=DEVNULL):
 def load_reference_genome(*filepaths):
     """
     Args:
-        filepaths (list of str): the paths to the files containing the input fasta genomes
+        filepaths (List[str]): the paths to the files containing the input fasta genomes
 
     Returns:
-        :class:`dict` of :class:`Bio.SeqRecord` by :class:`str`: a dictionary representing the sequences in the fasta file
+        Dict[str,Bio.SeqRecord]: a dictionary representing the sequences in the fasta file
     """
     reference_genome = {}
     for filename in filepaths:
@@ -367,14 +405,16 @@ def load_reference_genome(*filepaths):
             if truncated in reference_genome:
                 raise KeyError(
                     'template names {} and {} are considered equal but both have been defined in the reference'
-                    'loaded'.format(template_name, truncated))
+                    'loaded'.format(template_name, truncated)
+                )
             reference_genome.setdefault(truncated, reference_genome[template_name].upper())
         else:
             prefixed = 'chr' + template_name
             if prefixed in reference_genome:
                 raise KeyError(
                     'template names {} and {} are considered equal but both have been defined in the reference'
-                    'loaded'.format(template_name, prefixed))
+                    'loaded'.format(template_name, prefixed)
+                )
             reference_genome.setdefault(prefixed, reference_genome[template_name].upper())
         reference_genome[template_name] = reference_genome[template_name].upper()
 
@@ -404,7 +444,7 @@ def load_templates(*filepaths):
         filename (str): the path to the file with the cytoband template information
 
     Returns:
-        :class:`list` of :class:`Template`: list of the templates loaded
+        List[Template]: list of the templates loaded
 
     """
     header = ['name', 'start', 'end', 'band_name', 'giemsa_stain']
@@ -415,7 +455,7 @@ def load_templates(*filepaths):
             filename,
             header=header,
             cast={'start': int, 'end': int},
-            in_={'giemsa_stain': GIEMSA_STAIN.values()}
+            in_={'giemsa_stain': GIEMSA_STAIN.values()},
         )
 
         bands_by_template = {}
@@ -441,9 +481,9 @@ class ReferenceFile:
         'masking': load_masking_regions,
         'template_metadata': load_templates,
         'dgv_annotation': load_masking_regions,
-        'aligner_reference': None
+        'aligner_reference': None,
     }
-    """:class:`dict`: Mapping of file types (based on ENV name) to load functions"""
+    """dict: Mapping of file types (based on ENV name) to load functions"""
 
     def __init__(self, file_type, *filepaths, eager_load=False, assert_exists=False, **opt):
         """
@@ -459,7 +499,9 @@ class ReferenceFile:
         """
         self.name = sorted(filepaths)
         self.file_type = file_type
-        self.key = tuple(self.name + sorted(list(opt.items())))  # freeze the input state so we know when to reload
+        self.key = tuple(
+            self.name + sorted(list(opt.items()))
+        )  # freeze the input state so we know when to reload
         self.content = None
         self.opt = opt
         self.loader = self.LOAD_FUNCTIONS[self.file_type]
@@ -470,7 +512,9 @@ class ReferenceFile:
 
     def __repr__(self):
         cls = self.__class__.__name__
-        return '{}(file_type={}, files={}, loaded={}, content={})'.format(cls, self.file_type, self.name, self.content is not None, object.__repr__(self.content))
+        return '{}(file_type={}, files={}, loaded={}, content={})'.format(
+            cls, self.file_type, self.name, self.content is not None, object.__repr__(self.content)
+        )
 
     def files_exist(self, not_empty=False):
         if not_empty and not self.name:

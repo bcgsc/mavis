@@ -65,11 +65,15 @@ TEST_REQS = [
     'pycodestyle>=2.3.1',
     'pytest',
     'pytest-cov',
-    'tox',
 ]
 
 
-DOC_REQS = ['docutils>=0.14', 'm2r>=0.1.12', 'sphinx-rtd-theme>=0.4.2', 'sphinx>=1.8.1']
+DOC_REQS = [
+    'mkdocs',
+    'markdown_refdocs',
+    'mkdocs-material',
+    'markdown-include',
+]
 
 
 INSTALL_REQS = [
@@ -80,8 +84,7 @@ INSTALL_REQS = [
     'colour',
     'networkx==1.11.0',
     'numpy>=1.13.1',
-    'pyensembl>=1.1.0',
-    'pysam>=0.9',
+    'pysam>=0.9, <=0.15.2',
     'pyvcf==0.6.8',
     'shortuuid>=0.5.0',
     'svgwrite',
@@ -104,6 +107,7 @@ setup(
         'test': TEST_REQS,
         'dev': ['black', 'flake8'] + DOC_REQS + TEST_REQS + DEPLOY_REQS,
         'deploy': DEPLOY_REQS,
+        'tools': ['pyensembl', 'simplejson']
     },
     tests_require=TEST_REQS,
     setup_requires=['pip>=9.0.0', 'setuptools>=36.0.0'],

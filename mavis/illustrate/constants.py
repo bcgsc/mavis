@@ -4,34 +4,37 @@ from ..util import WeakMavisNamespace
 
 DEFAULTS = WeakMavisNamespace()
 """
-- :term:`breakpoint_color`
-- :term:`domain_color`
-- :term:`domain_mismatch_color`
-- :term:`domain_name_regex_filter`
-- :term:`domain_scaffold_color`
-- :term:`drawing_width_iter_increase`
-- :term:`gene1_color_selected`
-- :term:`gene1_color`
-- :term:`gene2_color_selected`
-- :term:`gene2_color`
-- :term:`label_color`
-- :term:`mask_fill`
-- :term:`mask_opacity`
-- :term:`max_drawing_retries`
-- :term:`novel_exon_color`
-- :term:`scaffold_color`
-- :term:`splice_color`
-- :term:`width`
+- [breakpoint_color](/configuration/settings/#breakpoint_color)
+- [domain_color](/configuration/settings/#domain_color)
+- [domain_mismatch_color](/configuration/settings/#domain_mismatch_color)
+- [domain_name_regex_filter](/configuration/settings/#domain_name_regex_filter)
+- [domain_scaffold_color](/configuration/settings/#domain_scaffold_color)
+- [drawing_width_iter_increase](/configuration/settings/#drawing_width_iter_increase)
+- [gene1_color_selected](/configuration/settings/#gene1_color_selected)
+- [gene1_color](/configuration/settings/#gene1_color)
+- [gene2_color_selected](/configuration/settings/#gene2_color_selected)
+- [gene2_color](/configuration/settings/#gene2_color)
+- [label_color](/configuration/settings/#label_color)
+- [mask_fill](/configuration/settings/#mask_fill)
+- [mask_opacity](/configuration/settings/#mask_opacity)
+- [max_drawing_retries](/configuration/settings/#max_drawing_retries)
+- [novel_exon_color](/configuration/settings/#novel_exon_color)
+- [scaffold_color](/configuration/settings/#scaffold_color)
+- [splice_color](/configuration/settings/#splice_color)
+- [width](/configuration/settings/#width)
 """
+DEFAULTS.add('width', 1000, defn='The drawing width in pixels')
 DEFAULTS.add(
-    'width', 1000, defn='The drawing width in pixels')
+    'domain_name_regex_filter',
+    r'^PF\d+$',
+    defn='The regular expression used to select domains to be displayed (filtered by name)',
+)
 DEFAULTS.add(
-    'domain_name_regex_filter', r'^PF\d+$',
-    defn='The regular expression used to select domains to be displayed (filtered by name)')
-DEFAULTS.add(
-    'max_drawing_retries', 5,
+    'max_drawing_retries',
+    5,
     defn='The maximum number of retries for attempting a drawing. Each iteration the width is extended. If it '
-    'is still insufficient after this number a gene-level only drawing will be output')
+    'is still insufficient after this number a gene-level only drawing will be output',
+)
 DEFAULTS.add('scaffold_color', '#000000', defn='The color used for the gene/transcripts scaffolds')
 DEFAULTS.add('gene1_color_selected', '#518dc5', defn='The color of the first gene')
 DEFAULTS.add('gene2_color_selected', '#4c9677', defn='The color of the second gene')
@@ -46,17 +49,24 @@ DEFAULTS.add('breakpoint_color', '#000000', defn='Breakpoint outline color')
 DEFAULTS.add('mask_fill', '#ffffff', defn='Color of mask (for deleted region etc.)')
 DEFAULTS.add('mask_opacity', 0.7, defn='opacity of the mask layer', cast_type=float_fraction)
 DEFAULTS.add('domain_scaffold_color', '#000000', defn='The color of the domain scaffold')
-DEFAULTS.add('drawing_width_iter_increase', 500, defn='The amount (in  pixels) by which to increase the drawing width upon failure to fit')
-DEFAULTS.add('exon_min_focus_size', 10, defn='minimum size of an exon for it to be granted a label or min exon width')
+DEFAULTS.add(
+    'drawing_width_iter_increase',
+    500,
+    defn='The amount (in  pixels) by which to increase the drawing width upon failure to fit',
+)
+DEFAULTS.add(
+    'exon_min_focus_size',
+    10,
+    defn='minimum size of an exon for it to be granted a label or min exon width',
+)
 
 
 class DiagramSettings:
     """
     holds settings related to colors/sizes for the drawing
     """
-    def __init__(
-        self, **kwargs
-    ):
+
+    def __init__(self, **kwargs):
         inputs = {}
         inputs.update(DEFAULTS.items())
         inputs.update(kwargs)
@@ -77,8 +87,10 @@ class DiagramSettings:
 
         self.ins_increase = 6
         # removing unsupported attr: 'alignment-baseline:central;dominant-baseline:central;' \
-        self.font_style = 'font-size:{font_size}px;font-weight:bold;alignment-baseline:baseline;' \
+        self.font_style = (
+            'font-size:{font_size}px;font-weight:bold;alignment-baseline:baseline;'
             'text-anchor:{text_anchor};font-family: consolas, courier new, monospace'
+        )
         # ratio for courier new which is wider than consolas, used for estimating width
         self.font_width_height_ratio = 1229 / 2048
         self.font_central_shift_ratio = 0.3
@@ -100,10 +112,9 @@ class DiagramSettings:
         self.domain_label_prefix = 'D'
         self.domain_label_font_size = 20
         self.domain_fill_gradient = [
-            c.hex for c in Color(self.domain_mismatch_color).range_to(Color(self.domain_color), 10)]
-        self.domain_links = {
-            r'^PF\d+$': 'http://pfam.xfam.org/family/{.name}'
-        }
+            c.hex for c in Color(self.domain_mismatch_color).range_to(Color(self.domain_color), 10)
+        ]
+        self.domain_links = {r'^PF\d+$': 'http://pfam.xfam.org/family/{.name}'}
 
         self.splice_height = self.track_height / 2
         self.splice_stroke_dasharray = [2, 2]
@@ -113,7 +124,9 @@ class DiagramSettings:
         self.breakpoint_orient_stroke_width = 2
         self.breakpoint_label_font_size = 20
         self.breakpoint_bottom_margin = 20
-        self.breakpoint_top_margin = self.padding * 2 + self.breakpoint_label_font_size + self.breakpoint_bottom_margin
+        self.breakpoint_top_margin = (
+            self.padding * 2 + self.breakpoint_label_font_size + self.breakpoint_bottom_margin
+        )
         self.breakpoint_label_prefix = 'B'
 
         self.marker_label_font_size = self.breakpoint_label_font_size
@@ -122,14 +135,18 @@ class DiagramSettings:
         self.marker_bottom_margin = self.breakpoint_bottom_margin
         self.marker_color = self.breakpoint_color
 
-        self.transcript_hyperlink = 'http://dec2013.archive.ensembl.org/Homo_sapiens/Transcript/Summary?' \
+        self.transcript_hyperlink = (
+            'http://dec2013.archive.ensembl.org/Homo_sapiens/Transcript/Summary?'
             'db=core;t={.name}'
+        )
         self.exon_font_size = 20
         self.exon_tear_tooth_width = 2
-        self.exon_min_width = max([
-            self.min_width + self.exon_tear_tooth_width * 2,
-            self.exon_font_size * 2 * self.font_width_height_ratio
-        ])
+        self.exon_min_width = max(
+            [
+                self.min_width + self.exon_tear_tooth_width * 2,
+                self.exon_font_size * 2 * self.font_width_height_ratio,
+            ]
+        )
         self.exon_tear_tooth_height = 2
         self.exon_intron_ratio = 20
         self.exon1_color = self.gene1_color_selected
@@ -162,13 +179,18 @@ class DiagramSettings:
             GIEMSA_STAIN.GPOS66: temp[4],
             GIEMSA_STAIN.GPOS75: temp[5],
             GIEMSA_STAIN.GPOS100: temp[6],
-            GIEMSA_STAIN.GNEG: '#ffffff'
+            GIEMSA_STAIN.GNEG: '#ffffff',
         }
         self.template_band_stroke = '#000000'
-        self.template_track_height = max([
-            self.track_height / 3,
-            self.label_font_size - self.breakpoint_bottom_margin - self.breakpoint_top_margin + self.breakpoint_label_font_size
-        ])
+        self.template_track_height = max(
+            [
+                self.track_height / 3,
+                self.label_font_size
+                - self.breakpoint_bottom_margin
+                - self.breakpoint_top_margin
+                + self.breakpoint_label_font_size,
+            ]
+        )
         self.template_default_fill = '#ffffff'
         self.template_band_min_width = 2
         self.template_label_prefix = 'C'

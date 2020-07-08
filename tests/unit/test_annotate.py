@@ -13,7 +13,6 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 
 
 class TestDomainAlignSeq(unittest.TestCase):
-
     def test_large_combinations_finishes_with_error(self):
         input_seq = (
             'MADDEDYEEVVEYYTEEVVYEEVPGETITKIYETTTTRTSDYEQSETSKPALAQPALAQPASAKPVERRKVIRKKVDPSK'
@@ -266,7 +265,7 @@ class TestDomainAlignSeq(unittest.TestCase):
             'TPEMQRVKRNQENISSVLYKENLGKA',
             'TPEMERVKRNQENFSSVLYKENMRKA',
             'TPEMERAKRNQENISSVLYSDSFRKQI',
-            'DTPEMRRVRETQRHISTVKYHEDFEKHKG'
+            'DTPEMRRVRETQRHISTVKYHEDFEKHKG',
         ]
         regions = []
         p = 1
@@ -368,9 +367,8 @@ class TestReferenceName(unittest.TestCase):
 
 
 class TestIndelCall(unittest.TestCase):
-
     def test_duplication_in_repeat(self):
-        ref = 'ASFHGHGSFSFSLLLLLL'  'FLLLLSFSLMVPWSFKW'
+        ref = 'ASFHGHGSFSFSLLLLLL' 'FLLLLSFSLMVPWSFKW'
         mut = 'ASFHGHGSFSFSLLLLLLL' 'FLLLLSFSLMVPWSFKW'
 
         call = IndelCall(ref, mut)

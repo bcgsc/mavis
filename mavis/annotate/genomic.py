@@ -10,7 +10,6 @@ from ..interval import Interval
 
 
 class Template(BioInterval):
-
     def __init__(self, name, start, end, seq=None, bands=None):
         bands = [] if bands is None else bands
         name = ReferenceName(name)
@@ -31,7 +30,6 @@ class Template(BioInterval):
 
 
 class IntergenicRegion(BioInterval):
-
     def __init__(self, chr, start, end, strand):
         """
         Args:
@@ -75,7 +73,7 @@ class Gene(BioInterval):
             chr (str): the chromosome
             name (str): the gene name/id i.e. ENSG0001
             strand (STRAND): the genomic strand '+' or '-'
-            aliases (:class:`list` of :class:`str`): a list of aliases. For example the hugo name could go here
+            aliases (List[str]): a list of aliases. For example the hugo name could go here
             seq (str): genomic seq of the gene
         Example:
             >>> Gene('X', 1, 1000, 'ENG0001', '+', ['KRAS'])
@@ -95,11 +93,10 @@ class Gene(BioInterval):
         Warning:
             Lower number means higher priority. This is to make sort work by default
         """
+
         def sort_key(t):
-            return (
-                0 if t.is_best_transcript else 1,
-                t.name, t.start - t.end, t.start, t.end
-            )
+            return (0 if t.is_best_transcript else 1, t.name, t.start - t.end, t.start, t.end)
+
         priority = sorted(self.transcripts, key=sort_key)
         for i, curr_transcript in enumerate(priority):
             if curr_transcript == transcript:
@@ -108,12 +105,12 @@ class Gene(BioInterval):
 
     @property
     def transcripts(self):
-        """:any:`list` of :class:`PreTranscript`: list of unspliced transcripts"""
+        """List[PreTranscript] list of unspliced transcripts"""
         return self.unspliced_transcripts
 
     @property
     def translations(self):
-        """:any:`list` of :class:`~mavis.annotate.protein.Translation`: list of translations"""
+        """List[mavis.annotate.protein.Translation] list of translations"""
         translations = []
         for pre_transcript in self.unspliced_transcripts:
             for tx in pre_transcript.transcripts:
@@ -135,7 +132,7 @@ class Gene(BioInterval):
         gene sequence is always given wrt to the positive forward strand regardless of gene strand
 
         Args:
-            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by
+            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence by
                 template/chr name
             ignore_cache (bool): if True then stored sequences will be ignored and the function will attempt to retrieve the sequence using the positions and the input reference_genome
 
@@ -147,11 +144,11 @@ class Gene(BioInterval):
         elif reference_genome is None:
             raise NotSpecifiedError('reference genome is required to retrieve the gene sequence')
         else:
-            return str(reference_genome[self.chr].seq[self.start - 1:self.end]).upper()
+            return str(reference_genome[self.chr].seq[self.start - 1 : self.end]).upper()
 
     @property
     def spliced_transcripts(self):
-        """:any:`list` of :class:`Transcript`: list of transcripts"""
+        """List[Transcript]: list of transcripts"""
         spl = []
         for t in self.unspliced_transcripts:
             spl.extend(t.spliced_transcripts)
@@ -169,13 +166,16 @@ class Exon(BioInterval):
     """
 
     def __init__(
-            self, start, end,
-            transcript=None,
-            name=None,
-            intact_start_splice=True,
-            intact_end_splice=True,
-            seq=None,
-            strand=None):
+        self,
+        start,
+        end,
+        transcript=None,
+        name=None,
+        intact_start_splice=True,
+        intact_end_splice=True,
+        seq=None,
+        strand=None,
+    ):
         """
         Args:
             start (int): the genomic start position
@@ -189,27 +189,55 @@ class Exon(BioInterval):
         Example:
             >>> Exon(15, 78)
         """
-        BioInterval.__init__(self, name=name, reference_object=transcript, start=start, end=end, seq=seq, strand=strand)
+        BioInterval.__init__(
+            self,
+            name=name,
+            reference_object=transcript,
+            start=start,
+            end=end,
+            seq=seq,
+            strand=strand,
+        )
 
         if self.is_reverse:
             self.start_splice_site = SpliceSite(
-                self.transcript, self.start, site_type=SPLICE_SITE_TYPE.DONOR, strand=STRAND.NEG, intact=intact_start_splice)
+                self.transcript,
+                self.start,
+                site_type=SPLICE_SITE_TYPE.DONOR,
+                strand=STRAND.NEG,
+                intact=intact_start_splice,
+            )
             self.end_splice_site = SpliceSite(
-                self.transcript, self.end, site_type=SPLICE_SITE_TYPE.ACCEPTOR, strand=STRAND.NEG, intact=intact_end_splice)
+                self.transcript,
+                self.end,
+                site_type=SPLICE_SITE_TYPE.ACCEPTOR,
+                strand=STRAND.NEG,
+                intact=intact_end_splice,
+            )
         else:
             self.start_splice_site = SpliceSite(
-                self.transcript, self.start, site_type=SPLICE_SITE_TYPE.ACCEPTOR, strand=STRAND.POS, intact=intact_start_splice)
+                self.transcript,
+                self.start,
+                site_type=SPLICE_SITE_TYPE.ACCEPTOR,
+                strand=STRAND.POS,
+                intact=intact_start_splice,
+            )
             self.end_splice_site = SpliceSite(
-                self.transcript, self.end, site_type=SPLICE_SITE_TYPE.DONOR, strand=STRAND.POS, intact=intact_end_splice)
+                self.transcript,
+                self.end,
+                site_type=SPLICE_SITE_TYPE.DONOR,
+                strand=STRAND.POS,
+                intact=intact_end_splice,
+            )
 
     @property
     def transcript(self):
-        """:class:`PreTranscript`: the transcript this exon belongs to"""
+        """PreTranscript: the transcript this exon belongs to"""
         return self.reference_object
 
     @property
     def donor_splice_site(self):
-        """:class:`~mavis.interval.Interval`: the genomic range describing the splice site"""
+        """mavis.interval.Interval: the genomic range describing the splice site"""
         if self.is_reverse:
             return self.start_splice_site
         else:
@@ -217,7 +245,7 @@ class Exon(BioInterval):
 
     @property
     def acceptor_splice_site(self):
-        """:class:`~mavis.interval.Interval`: the genomic range describing the splice site"""
+        """mavis.interval.Interval: the genomic range describing the splice site"""
         if self.is_reverse:
             return self.end_splice_site
         else:
@@ -241,8 +269,11 @@ class Exon(BioInterval):
 
     def __repr__(self):
         return 'Exon({}{}, {}{})'.format(
-            self.start, '' if self.start_splice_site.intact else '*',
-            self.end, '' if self.end_splice_site.intact else '*')
+            self.start,
+            '' if self.start_splice_site.intact else '*',
+            self.end,
+            '' if self.end_splice_site.intact else '*',
+        )
 
 
 class PreTranscript(BioInterval):
@@ -257,12 +288,12 @@ class PreTranscript(BioInterval):
         strand=None,
         spliced_transcripts=None,
         seq=None,
-        is_best_transcript=False
+        is_best_transcript=False,
     ):
         """ creates a new transcript object
 
         Args:
-            exons (:class:`list` of :any:`Exon`): list of Exon that make up the transcript
+            exons (List[Exon]): list of Exon that make up the transcript
             genomic_start (int): genomic start position of the transcript
             genomic_end (int): genomic end position of the transcript
             gene (Gene): the gene this transcript belongs to
@@ -310,9 +341,10 @@ class PreTranscript(BioInterval):
         returns a list of splice sites to be connected as a splicing pattern
 
         Returns:
-            :class:`list` of :class:`SplicingPattern`: List of positions to be spliced together
+            List[SplicingPattern]: List of positions to be spliced together
 
-        see :ref:`theory - predicting splicing patterns <theory-predicting-splicing-patterns>`
+        Note:
+            see [theory - predicting splicing patterns](/background/theory/#predicting-splicing-patterns)
         """
         if len(self.exons) < 2:
             return [SplicingPattern()]
@@ -324,7 +356,7 @@ class PreTranscript(BioInterval):
 
     @property
     def gene(self):
-        """:any:`Gene`: the gene this transcript belongs to"""
+        """Gene: the gene this transcript belongs to"""
         return self.reference_object
 
     def _genomic_to_cdna_mapping(self, splicing_pattern):
@@ -367,7 +399,7 @@ class PreTranscript(BioInterval):
             int: the cdna equivalent
 
         Raises:
-            :class:`~mavis.error.IndexError`: when a genomic position not present in the
+            mavis.error.IndexError: when a genomic position not present in the
                 cdna is attempted to be converted
         """
         cdna_pos, shift = self.convert_genomic_to_nearest_cdna(pos, splicing_pattern)
@@ -375,7 +407,9 @@ class PreTranscript(BioInterval):
             raise IndexError('outside of exonic regions', pos, splicing_pattern, cdna_pos, shift)
         return cdna_pos
 
-    def convert_genomic_to_nearest_cdna(self, pos, splicing_pattern, stick_direction=None, allow_outside=True):
+    def convert_genomic_to_nearest_cdna(
+        self, pos, splicing_pattern, stick_direction=None, allow_outside=True
+    ):
         """
         converts a genomic position to its cdna equivalent or (if intronic) the nearest cdna and shift
 
@@ -384,9 +418,7 @@ class PreTranscript(BioInterval):
             splicing_pattern (SplicingPattern): the splicing pattern
 
         Returns:
-            tuple of int and int:
-                * *int* - the exonic cdna position
-                * *int* - the intronic shift
+            Tuple[int,int]: the exonic cdna position and the intronic shift
 
         """
         mapping = self._genomic_to_cdna_mapping(splicing_pattern)
@@ -395,18 +427,32 @@ class PreTranscript(BioInterval):
         for ex in exons:
             if pos <= ex.end and pos >= ex.start:
                 # in the current exon
-                cdna_pos = Interval.convert_pos(mapping, pos, True if self.get_strand() == STRAND.NEG else False)
+                cdna_pos = Interval.convert_pos(
+                    mapping, pos, True if self.get_strand() == STRAND.NEG else False
+                )
                 return cdna_pos, 0
         # intronic
         for ex1, ex2 in zip(exons, exons[1::]):
             if pos > ex1.end and pos < ex2.start:
                 # in the current intron
-                if (abs(pos - ex1.end) <= abs(pos - ex2.start) or stick_direction == ORIENT.LEFT) and stick_direction != ORIENT.RIGHT:
+                if (
+                    abs(pos - ex1.end) <= abs(pos - ex2.start) or stick_direction == ORIENT.LEFT
+                ) and stick_direction != ORIENT.RIGHT:
                     # closest to the first exon
-                    cdna_pos = Interval.convert_pos(mapping, ex1.end, True if self.get_strand() == STRAND.NEG else False)
-                    return cdna_pos, pos - ex1.end if self.get_strand() == STRAND.POS else ex1.end - pos
-                cdna_pos = Interval.convert_pos(mapping, ex2.start, True if self.get_strand() == STRAND.NEG else False)
-                return cdna_pos, pos - ex2.start if self.get_strand() == STRAND.POS else ex2.start - pos
+                    cdna_pos = Interval.convert_pos(
+                        mapping, ex1.end, True if self.get_strand() == STRAND.NEG else False
+                    )
+                    return (
+                        cdna_pos,
+                        pos - ex1.end if self.get_strand() == STRAND.POS else ex1.end - pos,
+                    )
+                cdna_pos = Interval.convert_pos(
+                    mapping, ex2.start, True if self.get_strand() == STRAND.NEG else False
+                )
+                return (
+                    cdna_pos,
+                    pos - ex2.start if self.get_strand() == STRAND.POS else ex2.start - pos,
+                )
         if allow_outside:
             cdna_length = sum([len(e) for e in exons])
             if pos < exons[0].start:  # before the first exon
@@ -438,7 +484,9 @@ class PreTranscript(BioInterval):
             if self.is_reverse:
                 return exons[0].start - pos
             return exons[-1].end + pos
-        return Interval.convert_pos(mapping, pos, True if self.get_strand() == STRAND.NEG else False)
+        return Interval.convert_pos(
+            mapping, pos, True if self.get_strand() == STRAND.NEG else False
+        )
 
     def exon_number(self, exon):
         """
@@ -467,7 +515,7 @@ class PreTranscript(BioInterval):
     def get_seq(self, reference_genome=None, ignore_cache=False):
         """
         Args:
-            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
+            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence
                 by template/chr name
             ignore_cache (bool): if True then stored sequences will be ignored and the function will attempt to retrieve the sequence using the positions and the input reference_genome
 
@@ -486,14 +534,16 @@ class PreTranscript(BioInterval):
         elif reference_genome is None:
             raise NotSpecifiedError('reference genome is required to retrieve the gene sequence')
         if self.get_strand() == STRAND.NEG:
-            return reverse_complement(reference_genome[self.gene.chr].seq[self.start - 1:self.end]).upper()
-        return str(reference_genome[self.gene.chr].seq[self.start - 1:self.end]).upper()
+            return reverse_complement(
+                reference_genome[self.gene.chr].seq[self.start - 1 : self.end]
+            ).upper()
+        return str(reference_genome[self.gene.chr].seq[self.start - 1 : self.end]).upper()
 
     def get_cdna_seq(self, splicing_pattern, reference_genome=None, ignore_cache=False):
         """
         Args:
             splicing_pattern (SplicingPattern): the list of splicing positions
-            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
+            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence
                 by template/chr name
             ignore_cache (bool): if True then stored sequences will be ignored and the function will attempt to retrieve the sequence using the positions and the input reference_genome
 
@@ -509,13 +559,13 @@ class PreTranscript(BioInterval):
         if self.get_strand() == STRAND.NEG:
             # adjust the continuous intervals for the min and flip if revcomp
             seq = reverse_complement(seq)
-        spliced_seq = ''.join([str(seq[i.start:i.end + 1]) for i in conti])
+        spliced_seq = ''.join([str(seq[i.start : i.end + 1]) for i in conti])
         spliced_seq = spliced_seq.upper()
         return spliced_seq if self.get_strand() == STRAND.POS else reverse_complement(spliced_seq)
 
     @property
     def translations(self):
-        """:class:`list` of :class:`~mavis.annotate.protein.Translation`: list of translations associated with this transcript"""
+        """List[mavis.annotate.protein.Translation]: list of translations associated with this transcript"""
         translations = []
         for spl_tx in self.spliced_transcripts:
             for translation in spl_tx.translations:
@@ -524,21 +574,20 @@ class PreTranscript(BioInterval):
 
     @property
     def transcripts(self):
-        """:class:`list` of :class:`Transcript`: list of spliced transcripts"""
+        """List[Transcript]: list of spliced transcripts"""
         return self.spliced_transcripts
 
 
 class Transcript(BioInterval):
-
     def __init__(self, pre_transcript, splicing_patt, seq=None, translations=None):
         """
         splicing pattern is given in genomic coordinates
 
         Args:
             pre_transcript (PreTranscript): the unspliced transcript
-            splicing_patt (:class:`list` of :class:`int`): the list of splicing positions
+            splicing_patt (List[int]): the list of splicing positions
             seq (str): the cdna sequence
-            translations (:class:`list` of :class:`~mavis.annotate.protein.Translation`):
+            translations (List[mavis.annotate.protein.Translation]):
              the list of translations of this transcript
         """
         pos = sorted([pre_transcript.start, pre_transcript.end] + [s.pos for s in splicing_patt])
@@ -551,8 +600,13 @@ class Transcript(BioInterval):
 
         for translation in self.translations:
             translation.reference_object = self
-        if splicing_patt and (min(splicing_patt).pos < pre_transcript.start or max(splicing_patt).pos > pre_transcript.end):
-            raise AssertionError('splicing pattern must be contained within the unspliced transcript')
+        if splicing_patt and (
+            min(splicing_patt).pos < pre_transcript.start
+            or max(splicing_patt).pos > pre_transcript.end
+        ):
+            raise AssertionError(
+                'splicing pattern must be contained within the unspliced transcript'
+            )
         elif len(splicing_patt) % 2 != 0:
             raise AssertionError('splicing pattern must be a list of 3\'5\' splicing positions')
 
@@ -570,7 +624,9 @@ class Transcript(BioInterval):
         return self.unspliced_transcript.convert_genomic_to_cdna(pos, self.splicing_pattern)
 
     def convert_genomic_to_nearest_cdna(self, pos, **kwargs):
-        return self.reference_object.convert_genomic_to_nearest_cdna(pos, self.splicing_pattern, **kwargs)
+        return self.reference_object.convert_genomic_to_nearest_cdna(
+            pos, self.splicing_pattern, **kwargs
+        )
 
     def convert_cdna_to_genomic(self, pos):
         """
@@ -585,7 +641,7 @@ class Transcript(BioInterval):
     def get_seq(self, reference_genome=None, ignore_cache=False):
         """
         Args:
-            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by
+            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence by
                 template/chr name
             ignore_cache (bool): if True then stored sequences will be ignored and the function will attempt to retrieve the sequence using the positions and the input reference_genome
 
@@ -594,10 +650,12 @@ class Transcript(BioInterval):
         """
         if self.seq and not ignore_cache:
             return self.seq
-        seq = self.unspliced_transcript.get_cdna_seq(self.splicing_pattern, reference_genome, ignore_cache)
-        return seq[self.start - 1:self.end]
+        seq = self.unspliced_transcript.get_cdna_seq(
+            self.splicing_pattern, reference_genome, ignore_cache
+        )
+        return seq[self.start - 1 : self.end]
 
     @property
     def unspliced_transcript(self):
-        """:class:`PreTranscript`: the unspliced transcript this splice variant belongs to"""
+        """PreTranscript: the unspliced transcript this splice variant belongs to"""
         return self.reference_object

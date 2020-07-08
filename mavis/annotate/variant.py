@@ -18,12 +18,7 @@ class Annotation(BreakpointPair):
     """
 
     def __init__(
-        self, bpp,
-        transcript1=None,
-        transcript2=None,
-        proximity=5000,
-        data=None,
-        **kwargs
+        self, bpp, transcript1=None, transcript2=None, proximity=5000, data=None, **kwargs
     ):
         """
         Holds a breakpoint call and a set of transcripts, other information is gathered relative to these
@@ -37,17 +32,21 @@ class Annotation(BreakpointPair):
         """
         # narrow the breakpoint windows by the transcripts being used for annotation
         temp = bpp.break1 if transcript1 is None else bpp.break1 & transcript1
-        b1 = Breakpoint(bpp.break1.chr, temp[0], temp[1], strand=bpp.break1.strand, orient=bpp.break1.orient)
+        b1 = Breakpoint(
+            bpp.break1.chr, temp[0], temp[1], strand=bpp.break1.strand, orient=bpp.break1.orient
+        )
 
         temp = bpp.break2 if transcript2 is None else bpp.break2 & transcript2
-        b2 = Breakpoint(bpp.break2.chr, temp[0], temp[1], strand=bpp.break2.strand, orient=bpp.break2.orient)
+        b2 = Breakpoint(
+            bpp.break2.chr, temp[0], temp[1], strand=bpp.break2.strand, orient=bpp.break2.orient
+        )
         BreakpointPair.__init__(
             self,
             b1,
             b2,
             opposing_strands=bpp.opposing_strands,
             stranded=bpp.stranded,
-            untemplated_seq=bpp.untemplated_seq
+            untemplated_seq=bpp.untemplated_seq,
         )
         self.data.update(bpp.data)
         if data is not None:
@@ -79,7 +78,9 @@ class Annotation(BreakpointPair):
             input_gene (input_gene): the input_gene being added
         """
         if input_gene.chr not in [self.break1.chr, self.break2.chr]:
-            raise AttributeError('cannot add input_gene not on the same chromosome as either breakpoint')
+            raise AttributeError(
+                'cannot add input_gene not on the same chromosome as either breakpoint'
+            )
 
         if not self.interchromosomal:
             try:
@@ -88,16 +89,26 @@ class Annotation(BreakpointPair):
                     self.encompassed_genes.add(input_gene)
             except AttributeError:
                 pass
-        if Interval.overlaps(input_gene, self.break1) and input_gene.chr == self.break1.chr \
-                and input_gene != self.transcript1.reference_object:
+        if (
+            Interval.overlaps(input_gene, self.break1)
+            and input_gene.chr == self.break1.chr
+            and input_gene != self.transcript1.reference_object
+        ):
             self.genes_overlapping_break1.add(input_gene)
-        if Interval.overlaps(input_gene, self.break2) and input_gene.chr == self.break2.chr \
-                and input_gene != self.transcript2.reference_object:
+        if (
+            Interval.overlaps(input_gene, self.break2)
+            and input_gene.chr == self.break2.chr
+            and input_gene != self.transcript2.reference_object
+        ):
             self.genes_overlapping_break2.add(input_gene)
 
-        if input_gene in self.genes_overlapping_break1 or input_gene in self.genes_overlapping_break2 or \
-                input_gene in self.encompassed_genes or input_gene == self.transcript1.reference_object or \
-                input_gene == self.transcript2.reference_object:
+        if (
+            input_gene in self.genes_overlapping_break1
+            or input_gene in self.genes_overlapping_break2
+            or input_gene in self.encompassed_genes
+            or input_gene == self.transcript1.reference_object
+            or input_gene == self.transcript2.reference_object
+        ):
             return
 
         dist1 = Interval.dist(input_gene, self.break1)
@@ -145,38 +156,54 @@ class Annotation(BreakpointPair):
         generates a dictionary of the annotation information as strings
 
         Returns:
-            :class:`dict` of :class:`str` by :class:`str`: dictionary of attribute names and values
+            Dict[str,str]: dictionary of attribute names and values
         """
         row = BreakpointPair.flatten(self)
-        row.update({
-            COLUMNS.genes_proximal_to_break1: self.genes_proximal_to_break1,
-            COLUMNS.genes_proximal_to_break2: self.genes_proximal_to_break2,
-            COLUMNS.gene1_direction: None,
-            COLUMNS.gene2_direction: None,
-            COLUMNS.gene_product_type: None,
-            COLUMNS.gene1: None,
-            COLUMNS.gene2: None,
-            COLUMNS.transcript1: '{}:{}_{}{}'.format(
-                self.transcript1.reference_object,
-                self.transcript1.start,
-                self.transcript1.end,
-                self.transcript1.get_strand()),
-            COLUMNS.transcript2: '{}:{}_{}{}'.format(
-                self.transcript2.reference_object,
-                self.transcript2.start,
-                self.transcript2.end,
-                self.transcript2.get_strand()),
-            COLUMNS.genes_encompassed: ';'.join(sorted([x.name for x in self.encompassed_genes])),
-            COLUMNS.genes_overlapping_break1: ';'.join(sorted([x.name for x in self.genes_overlapping_break1])),
-            COLUMNS.genes_overlapping_break2: ';'.join(sorted([x.name for x in self.genes_overlapping_break2])),
-            COLUMNS.genes_proximal_to_break1: ';'.join(
-                sorted(['{}({})'.format(x[0].name, x[1]) for x in self.genes_proximal_to_break1])),
-            COLUMNS.genes_proximal_to_break2: ';'.join(
-                sorted(['{}({})'.format(x[0].name, x[1]) for x in self.genes_proximal_to_break2])),
-            COLUMNS.event_type: self.event_type,
-            COLUMNS.gene1_aliases: None,
-            COLUMNS.gene2_aliases: None
-        })
+        row.update(
+            {
+                COLUMNS.genes_proximal_to_break1: self.genes_proximal_to_break1,
+                COLUMNS.genes_proximal_to_break2: self.genes_proximal_to_break2,
+                COLUMNS.gene1_direction: None,
+                COLUMNS.gene2_direction: None,
+                COLUMNS.gene_product_type: None,
+                COLUMNS.gene1: None,
+                COLUMNS.gene2: None,
+                COLUMNS.transcript1: '{}:{}_{}{}'.format(
+                    self.transcript1.reference_object,
+                    self.transcript1.start,
+                    self.transcript1.end,
+                    self.transcript1.get_strand(),
+                ),
+                COLUMNS.transcript2: '{}:{}_{}{}'.format(
+                    self.transcript2.reference_object,
+                    self.transcript2.start,
+                    self.transcript2.end,
+                    self.transcript2.get_strand(),
+                ),
+                COLUMNS.genes_encompassed: ';'.join(
+                    sorted([x.name for x in self.encompassed_genes])
+                ),
+                COLUMNS.genes_overlapping_break1: ';'.join(
+                    sorted([x.name for x in self.genes_overlapping_break1])
+                ),
+                COLUMNS.genes_overlapping_break2: ';'.join(
+                    sorted([x.name for x in self.genes_overlapping_break2])
+                ),
+                COLUMNS.genes_proximal_to_break1: ';'.join(
+                    sorted(
+                        ['{}({})'.format(x[0].name, x[1]) for x in self.genes_proximal_to_break1]
+                    )
+                ),
+                COLUMNS.genes_proximal_to_break2: ';'.join(
+                    sorted(
+                        ['{}({})'.format(x[0].name, x[1]) for x in self.genes_proximal_to_break2]
+                    )
+                ),
+                COLUMNS.event_type: self.event_type,
+                COLUMNS.gene1_aliases: None,
+                COLUMNS.gene2_aliases: None,
+            }
+        )
         if hasattr(self.transcript1, 'gene'):
             row[COLUMNS.gene1] = self.transcript1.gene.name
             row[COLUMNS.transcript1] = self.transcript1.name
@@ -227,10 +254,11 @@ def flatten_fusion_translation(translation):
             'name': dom.name,
             'sequences': dom.get_seqs(),
             'regions': [
-                {'start': dr.start, 'end': dr.end} for dr in sorted(dom.regions, key=lambda x: x.start)
+                {'start': dr.start, 'end': dr.end}
+                for dr in sorted(dom.regions, key=lambda x: x.start)
             ],
             'mapping_quality': round(m * 100 / t, 0),
-            'matches': m
+            'matches': m,
         }
         domains.append(temp)
     row[COLUMNS.fusion_mapped_domains] = json.dumps(domains)
@@ -281,14 +309,14 @@ class IndelCall:
                 self.del_seq = self.ref_seq[min_len:]
                 self.ins_seq = ''
 
-        elif self.mut_seq[-1 * min_len:] == self.ref_seq[-1 * min_len:]:
+        elif self.mut_seq[-1 * min_len :] == self.ref_seq[-1 * min_len :]:
             # full c-terminal match
             self.cterm_aligned = min_len
             if len(self.mut_seq) > len(self.ref_seq):
-                self.ins_seq = self.mut_seq[:0 - min_len]
+                self.ins_seq = self.mut_seq[: 0 - min_len]
                 self.del_seq = ''
             else:
-                self.del_seq = self.ref_seq[:0 - min_len]
+                self.del_seq = self.ref_seq[: 0 - min_len]
                 self.ins_seq = ''
         else:
             for pos in range(0, min_len):
@@ -302,12 +330,12 @@ class IndelCall:
                 self.cterm_aligned = pos + 1
 
             if not self.cterm_aligned:
-                self.del_seq = self.ref_seq[self.nterm_aligned:]
-                self.ins_seq = self.mut_seq[self.nterm_aligned:]
+                self.del_seq = self.ref_seq[self.nterm_aligned :]
+                self.ins_seq = self.mut_seq[self.nterm_aligned :]
 
             elif not self.nterm_aligned:
-                self.del_seq = self.ref_seq[:0 - self.cterm_aligned]
-                self.ins_seq = self.mut_seq[:0 - self.cterm_aligned]
+                self.del_seq = self.ref_seq[: 0 - self.cterm_aligned]
+                self.ins_seq = self.mut_seq[: 0 - self.cterm_aligned]
 
             elif len(self.ref_seq) - self.cterm_aligned + 1 <= self.nterm_aligned:
 
@@ -319,23 +347,23 @@ class IndelCall:
                 else:
                     del_length = abs(diff)
                     ins_length = 0
-                self.ins_seq = mutseq[self.nterm_aligned:self.nterm_aligned + ins_length]
-                self.del_seq = refseq[self.nterm_aligned:self.nterm_aligned + del_length]
+                self.ins_seq = mutseq[self.nterm_aligned : self.nterm_aligned + ins_length]
+                self.del_seq = refseq[self.nterm_aligned : self.nterm_aligned + del_length]
 
                 if self.ins_seq:
                     repeat_start = max(
                         len(self.ref_seq) - self.cterm_aligned,
-                        self.nterm_aligned - len(self.ins_seq)
+                        self.nterm_aligned - len(self.ins_seq),
                     )
-                    dupped_refseq = self.ref_seq[repeat_start:self.nterm_aligned]
+                    dupped_refseq = self.ref_seq[repeat_start : self.nterm_aligned]
 
                     if dupped_refseq == self.ins_seq:
                         self.is_dup = True
 
             else:
                 # regular indel
-                self.del_seq = self.ref_seq[self.nterm_aligned:0 - self.cterm_aligned]
-                self.ins_seq = self.mut_seq[self.nterm_aligned:0 - self.cterm_aligned]
+                self.del_seq = self.ref_seq[self.nterm_aligned : 0 - self.cterm_aligned]
+                self.ins_seq = self.mut_seq[self.nterm_aligned : 0 - self.cterm_aligned]
 
     def hgvs_protein_notation(self):
         """
@@ -351,14 +379,12 @@ class IndelCall:
                     self.ref_seq[-1] if not self.terminates else STOP_AA,
                     len(self.ref_seq) + self.terminates,
                     STOP_AA if self.mut_seq[-1] == STOP_AA or self.terminates else '',
-                    len(self.mut_seq) - len(self.ref_seq)
+                    len(self.mut_seq) - len(self.ref_seq),
                 )
             else:
                 # frameshift indel
                 notation = 'p.{}{}{}fs'.format(
-                    self.ref_seq[self.nterm_aligned],
-                    self.nterm_aligned + 1,
-                    self.ins_seq[0]
+                    self.ref_seq[self.nterm_aligned], self.nterm_aligned + 1, self.ins_seq[0]
                 )
                 if STOP_AA in self.ins_seq:
                     notation += '*{}'.format(self.ins_seq.index(STOP_AA) + 1)
@@ -366,30 +392,31 @@ class IndelCall:
                     notation += '*{}'.format(len(self.ins_seq) + 1)
         elif not self.nterm_aligned and self.ins_seq and not self.del_seq:
             # n-terminal extension
-            notation = 'p.{}1ext-{}'.format(
-                self.ref_seq[0],
-                len(self.mut_seq) - len(self.ref_seq)
-            )
+            notation = 'p.{}1ext-{}'.format(self.ref_seq[0], len(self.mut_seq) - len(self.ref_seq))
         elif self.is_dup:
             if self.del_seq:
                 raise NotImplementedError('duplication/deletion no supported', self)
 
             dup_start = self.nterm_aligned - len(self.ins_seq) + 1
             if dup_start == self.nterm_aligned:
-                notation = 'p.{}{}dup{}'.format(self.ref_seq[self.nterm_aligned - 1], self.nterm_aligned, self.ins_seq)
+                notation = 'p.{}{}dup{}'.format(
+                    self.ref_seq[self.nterm_aligned - 1], self.nterm_aligned, self.ins_seq
+                )
             else:
                 notation = 'p.{}{}_{}{}dup{}'.format(
-                    self.ref_seq[dup_start - 1], dup_start, self.ref_seq[self.nterm_aligned - 1], self.nterm_aligned, self.ins_seq)
+                    self.ref_seq[dup_start - 1],
+                    dup_start,
+                    self.ref_seq[self.nterm_aligned - 1],
+                    self.nterm_aligned,
+                    self.ins_seq,
+                )
         else:
             if self.del_seq:  # indel
-                notation = 'p.{}{}'.format(
-                    self.ref_seq[self.nterm_aligned],
-                    self.nterm_aligned + 1
-                )
+                notation = 'p.{}{}'.format(self.ref_seq[self.nterm_aligned], self.nterm_aligned + 1)
                 if len(self.del_seq) > 1:
                     notation += '_{}{}'.format(
                         self.ref_seq[self.nterm_aligned + len(self.del_seq) - 1],
-                        self.nterm_aligned + len(self.del_seq)
+                        self.nterm_aligned + len(self.del_seq),
                     )
                 notation += 'del{}'.format(self.del_seq)
 
@@ -402,13 +429,15 @@ class IndelCall:
                     self.nterm_aligned,
                     self.ref_seq[self.nterm_aligned],
                     self.nterm_aligned + 1,
-                    self.ins_seq
+                    self.ins_seq,
                 )
 
         return notation
 
     def __str__(self):
-        return 'IndelCall({})'.format(', '.join(['{}={}'.format(k, repr(v)) for k, v in sorted(self.__dict__.items())]))
+        return 'IndelCall({})'.format(
+            ', '.join(['{}={}'.format(k, repr(v)) for k, v in sorted(self.__dict__.items())])
+        )
 
 
 def call_protein_indel(ref_translation, fusion_translation, reference_genome=None):
@@ -421,7 +450,7 @@ def call_protein_indel(ref_translation, fusion_translation, reference_genome=Non
         fusion_translation (Translation): the fusion protein/translation
         reference_genome: the reference genome object used to fetch the reference translation AA sequence
     Returns:
-        str: the :term:`HGVS` protein indel notation
+        str: the [HGVS](/glossary/#HGVS) protein indel notation
     """
     ref_aa_seq = ref_translation.get_aa_seq(reference_genome)
     call = IndelCall(ref_aa_seq, fusion_translation.get_aa_seq())
@@ -452,7 +481,9 @@ def flatten_fusion_transcript(spliced_fusion_transcript):
             else:
                 raise AssertionError(
                     'exon should not be mapped if not within a break region',
-                    ex, fusion_transcript.break1, fusion_transcript.break2
+                    ex,
+                    fusion_transcript.break1,
+                    fusion_transcript.break2,
                 )
         except KeyError:  # novel exon
             for us_exon, src_exon in sorted(fusion_transcript.exon_mapping.items()):
@@ -465,7 +496,8 @@ def flatten_fusion_transcript(spliced_fusion_transcript):
                     else:
                         raise AssertionError(
                             'exon should not be mapped if not within a break region',
-                            us_exon, fusion_transcript.break1. fusion_transcript.break2
+                            us_exon,
+                            fusion_transcript.break1.fusion_transcript.break2,
                         )
     row[COLUMNS.exon_last_5prime] = five_prime_exons[-1]
     row[COLUMNS.exon_first_3prime] = three_prime_exons[0]
@@ -476,17 +508,20 @@ def flatten_fusion_transcript(spliced_fusion_transcript):
 def overlapping_transcripts(ref_ann, breakpoint):
     """
     Args:
-        ref_ann (:class:`dict` of :class:`list` of :any:`Gene` by :class:`str`): the reference list of genes split
+        ref_ann (Dict[str,List[Gene]]): the reference list of genes split
             by chromosome
         breakpoint (Breakpoint): the breakpoint in question
     Returns:
-        :class:`list` of :any:`PreTranscript`: a list of possible transcripts
+        List[PreTranscript]: a list of possible transcripts
     """
     putative_annotations = set()
     for gene in ref_ann.get(breakpoint.chr, []):
         for transcript in gene.transcripts:
-            if breakpoint.strand != STRAND.NS and transcript.get_strand() != STRAND.NS \
-                    and transcript.get_strand() != breakpoint.strand:
+            if (
+                breakpoint.strand != STRAND.NS
+                and transcript.get_strand() != STRAND.NS
+                and transcript.get_strand() != breakpoint.strand
+            ):
                 continue
             if Interval.overlaps(breakpoint, transcript):
                 putative_annotations.add(transcript)
@@ -496,20 +531,16 @@ def overlapping_transcripts(ref_ann, breakpoint):
 def _gather_breakpoint_annotations(ref_ann, breakpoint):
     """
     Args:
-        ref_ann (:class:`dict` of :class:`list` of :class:`Gene` by :class:`str`): the reference annotations split
+        ref_ann (Dict[str,List[Gene]]): the reference annotations split
             into lists of genes by chromosome
         breakpoint (Breakpoint): the breakpoint annotations are to be gathered for
 
     Returns:
-        tuple: tuple contains
+        Tuple[List[Union[PreTranscript,IntergenicRegion]],List[Union[PreTranscript,IntergenicRegion]]]:
+            - transcripts or intergenic regions overlapping the breakpoint on the positive strand
+            - transcripts or intergenic regions overlapping the breakpoint on the negative strand
 
-            - :class:`list` of (:class:`PreTranscript` or :class:`IntergenicRegion`): transcripts or intergenic regions
-              overlapping the breakpoint on the positive strand
-            - :class:`list` of (:class:`PreTranscript` or :class:`IntergenicRegion`): transcripts or intergenic regions
-              overlapping the breakpoint on the negative strand
-
-    .. todo::
-
+    Todo:
         Support for setting the transcript in the annotation when the breakpoint is just ahead of the transcript
         and the transcript would be 3'. Then assuming the splicing model takes the 2nd exon onward
     """
@@ -541,7 +572,9 @@ def _gather_breakpoint_annotations(ref_ann, breakpoint):
             if i > 0:
                 prev = pos_intervals[i - 1]
                 try:
-                    temp.append(IntergenicRegion(breakpoint.chr, prev[1] + 1, curr[0] - 1, STRAND.POS))
+                    temp.append(
+                        IntergenicRegion(breakpoint.chr, prev[1] + 1, curr[0] - 1, STRAND.POS)
+                    )
                 except AttributeError:
                     pass
     else:
@@ -562,7 +595,9 @@ def _gather_breakpoint_annotations(ref_ann, breakpoint):
             if i > 0:
                 prev = neg_intervals[i - 1]
                 try:
-                    temp.append(IntergenicRegion(breakpoint.chr, prev[1] + 1, curr[0] - 1, STRAND.NEG))
+                    temp.append(
+                        IntergenicRegion(breakpoint.chr, prev[1] + 1, curr[0] - 1, STRAND.NEG)
+                    )
                 except AttributeError:
                     pass
     else:
@@ -570,12 +605,17 @@ def _gather_breakpoint_annotations(ref_ann, breakpoint):
     neg_overlapping_transcripts.extend(temp)
 
     if len(pos_overlapping_transcripts) == 0:
-        raise AssertionError('neither strand group should ever be empty', pos_overlapping_transcripts)
+        raise AssertionError(
+            'neither strand group should ever be empty', pos_overlapping_transcripts
+        )
     if len(neg_overlapping_transcripts) == 0:
-        raise AssertionError('neither strand group should ever be empty', neg_overlapping_transcripts)
+        raise AssertionError(
+            'neither strand group should ever be empty', neg_overlapping_transcripts
+        )
     return (
         sorted(pos_overlapping_transcripts, key=lambda x: x.position),
-        sorted(neg_overlapping_transcripts, key=lambda x: x.position))
+        sorted(neg_overlapping_transcripts, key=lambda x: x.position),
+    )
 
 
 def _gather_annotations(ref, bp, proximity=None):
@@ -585,12 +625,12 @@ def _gather_annotations(ref, bp, proximity=None):
     the annotation at the breakpoint can be a transcript or an intergenic region
 
     Args:
-        ref (:class:`dict` of :class:`list` of :any:`Gene` by :class:`str`): the list of reference genes hashed
+        ref (Dict[str,List[Gene]]): the list of reference genes hashed
             by chromosomes
-        breakpoint_pairs (:class:`list` of :any:`BreakpointPair`): breakpoint pairs we wish to annotate as events
+        breakpoint_pairs (List[BreakpointPair]): breakpoint pairs we wish to annotate as events
 
     Returns:
-        :class:`list` of :class:`Annotation`: The annotations
+        List[Annotation]: The annotations
     """
     annotations = dict()
     break1_pos, break1_neg = _gather_breakpoint_annotations(ref, bp.break1)
@@ -666,7 +706,9 @@ def _gather_annotations(ref, bp, proximity=None):
             for gene in ref.get(bp.break2.chr, []):
                 a.add_gene(gene)
         annotations[(a1, a2)] = a
-    filtered = []  # remove any inter-gene/inter-region annotations where a same transcript was found
+    filtered = (
+        []
+    )  # remove any inter-gene/inter-region annotations where a same transcript was found
     for pair, ann in annotations.items():
         a1, a2 = pair
         if (a1 in same or a2 in same) and a1 != a2:
@@ -686,23 +728,27 @@ def choose_more_annotated(ann_list):
     that land in the intergenic region
 
     Args:
-        ann_list (list of :class:`Annotation`): list of input annotations
+        ann_list (List[Annotation]): list of input annotations
 
     Warning:
         input annotations are assumed to be the same event (the same validation_id)
         the logic used would not apply to different events
 
     Returns:
-        list of :class:`Annotation`: the filtered list
+        List[Annotation]: the filtered list
     """
     two_transcript = []
     one_transcript = []
     intergenic = []
 
     for ann in ann_list:
-        if isinstance(ann.transcript1, IntergenicRegion) and isinstance(ann.transcript2, IntergenicRegion):
+        if isinstance(ann.transcript1, IntergenicRegion) and isinstance(
+            ann.transcript2, IntergenicRegion
+        ):
             intergenic.append(ann)
-        elif isinstance(ann.transcript1, IntergenicRegion) or isinstance(ann.transcript2, IntergenicRegion):
+        elif isinstance(ann.transcript1, IntergenicRegion) or isinstance(
+            ann.transcript2, IntergenicRegion
+        ):
             one_transcript.append(ann)
         else:
             two_transcript.append(ann)
@@ -722,14 +768,14 @@ def choose_transcripts_by_priority(ann_list):
     of transcript. Throw an error if they are identical
 
     Args:
-        ann_list (list of :class:`Annotation`): input annotations
+        ann_list (List[Annotation]): input annotations
 
     Warning:
         input annotations are assumed to be the same event (the same validation_id)
         the logic used would not apply to different events
 
     Returns:
-        list of :class:`Annotation`: the filtered list
+        List[Annotation]: the filtered list
     """
     annotations_by_gene_combination = {}
     genes = set()
@@ -761,11 +807,15 @@ def choose_transcripts_by_priority(ann_list):
             ann = min(sublist, key=lambda a: gene2.transcript_priority(a.transcript2))
             filtered_annotations.append(ann)
         else:
-            ann = min(sublist, key=lambda a: (
-                gene1.transcript_priority(a.transcript1) + gene2.transcript_priority(a.transcript2),
-                gene1.transcript_priority(a.transcript1),
-                gene2.transcript_priority(a.transcript2)
-            ))
+            ann = min(
+                sublist,
+                key=lambda a: (
+                    gene1.transcript_priority(a.transcript1)
+                    + gene2.transcript_priority(a.transcript2),
+                    gene1.transcript_priority(a.transcript1),
+                    gene2.transcript_priority(a.transcript2),
+                ),
+            )
             filtered_annotations.append(ann)
     return filtered_annotations
 
@@ -779,22 +829,22 @@ def annotate_events(
     min_domain_mapping_match=0.95,
     max_orf_cap=3,
     log=DEVNULL,
-    filters=None
+    filters=None,
 ):
     """
     Args:
-        bpps (list of :class:`~mavis.breakpoint.BreakpointPair`): list of events
+        bpps (List[mavis.breakpoint.BreakpointPair]): list of events
         annotations: reference annotations
-        reference_genome (dict of string by string): dictionary of reference sequences by name
-        max_proximity (int): see :term:`max_proximity`
-        min_orf_size (int): see :term:`min_orf_size`
-        min_domain_mapping_match (float): see :term:`min_domain_mapping_match`
-        max_orf_cap (int): see :term:`max_orf_cap`
-        log (callable): callable function to take in strings and time_stamp args
-        filters (list of callable): list of functions taking in a list and returning a list for filtering
+        reference_genome (Dict[string,string]): dictionary of reference sequences by name
+        max_proximity (int): see [max_proximity](/configuration/settings/#max_proximity)
+        min_orf_size (int): see [min_orf_size](/configuration/settings/#min_orf_size)
+        min_domain_mapping_match (float): see [min_domain_mapping_match](/configuration/settings/#min_domain_mapping_match)
+        max_orf_cap (int): see [max_orf_cap](/configuration/settings/#max_orf_cap)
+        log (Callable): callable function to take in strings and time_stamp args
+        filters (List[callable]): list of functions taking in a list and returning a list for filtering
 
     Returns:
-        list of :class:`Annotation`: list of the putative annotations
+        List[Annotation]: list of the putative annotations
     """
     if filters is None:
         filters = [choose_more_annotated, choose_transcripts_by_priority]
@@ -803,11 +853,7 @@ def annotate_events(
     for i, bpp in enumerate(bpps):
         log('({} of {}) gathering annotations for'.format(i + 1, total), bpp)
         bpp.data[COLUMNS.validation_id] = bpp.data.get(COLUMNS.validation_id, str(uuid()))
-        ann_list = _gather_annotations(
-            annotations,
-            bpp,
-            proximity=max_proximity
-        )
+        ann_list = _gather_annotations(annotations, bpp, proximity=max_proximity)
         for f in filters:
             ann_list = f(ann_list)  # apply the filter
         results.extend(ann_list)
@@ -822,10 +868,11 @@ def annotate_events(
             # try building the fusion product
             try:
                 ft = FusionTranscript.build(
-                    ann, reference_genome,
+                    ann,
+                    reference_genome,
                     min_orf_size=min_orf_size,
                     max_orf_cap=max_orf_cap,
-                    min_domain_mapping_match=min_domain_mapping_match
+                    min_domain_mapping_match=min_domain_mapping_match,
                 )
                 ann.fusion = ft
             except NotSpecifiedError:

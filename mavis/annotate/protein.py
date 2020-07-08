@@ -14,7 +14,7 @@ def calculate_orf(spliced_cdna_sequence, min_orf_size=None):
         spliced_cdna_sequence (str): the sequence
 
     Returns:
-        :any:`list` of :any:`Interval`: list of open reading frame positions on the input sequence
+        List[Interval]: list of open reading frame positions on the input sequence
     """
     # do not revcomp
     assert START_AA != STOP_AA
@@ -41,7 +41,6 @@ def calculate_orf(spliced_cdna_sequence, min_orf_size=None):
 
 
 class DomainRegion(BioInterval):
-
     def __init__(self, start, end, seq=None, domain=None, name=None):
         BioInterval.__init__(self, domain, start, end, seq=seq, name=name)
         if seq and len(seq) != len(self):
@@ -49,12 +48,11 @@ class DomainRegion(BioInterval):
 
 
 class Domain:
-
     def __init__(self, name, regions, translation=None, data=None):
         """
         Args:
             name (str): the name of the domain i.e. PF00876
-            regions (:any:`list` of :any:`DomainRegion`): the amino acid ranges that are part of the domain
+            regions (List[DomainRegion]): the amino acid ranges that are part of the domain
             transcript (Transcript): the 'parent' transcript this domain belongs to
         Raises:
             AttributeError: if the end of any region is less than the start
@@ -80,11 +78,11 @@ class Domain:
 
     @property
     def translation(self):
-        """:class:`~mavis.annotate.Translation`: the Translation this domain belongs to"""
+        """mavis.annotate.Translation: the Translation this domain belongs to"""
         return self.reference_object
 
     def key(self):
-        """:class:`tuple`: a tuple representing the items expected to be unique. for hashing and comparing"""
+        """Tuple: a tuple representing the items expected to be unique. for hashing and comparing"""
         return tuple([self.name, self.translation])
 
     def score_region_mapping(self, reference_genome=None):
@@ -93,7 +91,7 @@ class Domain:
         translation object
 
         Args:
-            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
+            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence
                 by template/chr name
 
         Returns:
@@ -109,7 +107,7 @@ class Domain:
             for region in self.regions:
                 if not region.seq:
                     raise NotSpecifiedError('insufficient sequence information')
-                ref = aa_seq[region.start - 1:region.end]
+                ref = aa_seq[region.start - 1 : region.end]
                 for aa1, aa2 in zip(ref, region.seq):
                     if aa1 == aa2:
                         matches += 1
@@ -124,11 +122,11 @@ class Domain:
         this domain in the order of the regions (sorted by start)
 
         Args:
-            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
+            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence
                 by template/chr name
 
         Returns:
-            :class:`list` of :class:`str`: list of amino acid sequences for each DomainRegion
+            List[str]: list of amino acid sequences for each DomainRegion
 
         Raises:
             AttributeError: if there is not enough sequence information given to determine this
@@ -142,7 +140,7 @@ class Domain:
             if self.translation:
                 aa_seq = self.translation.get_aa_seq(reference_genome)
                 for region in self.regions:
-                    region_seq = aa_seq[region.start - 1:region.end]
+                    region_seq = aa_seq[region.start - 1 : region.end]
                     if region not in sequences:
                         sequences[region] = region_seq
             else:
@@ -158,16 +156,15 @@ class Domain:
 
         Args:
             input_sequence (str): the sequence to be aligned to
-            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
+            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence
                 by template/chr name
             min_region_match (float): percent between 0 and 1. Each region must have a score len(seq) * min_region_match
 
         Returns:
-            tuple: tuple contains
-
-                - int: the number of matches
-                - int: the total number of amino acids to be aligned
-                - :any:`list` of :any:`DomainRegion`: the list of domain regions on the new input sequence
+            Tuple[int,int,List[DomainRegion]]:
+                - the number of matches
+                - the total number of amino acids to be aligned
+                - the list of domain regions on the new input sequence
 
         Raises:
             AttributeError: if sequence information is not available
@@ -237,7 +234,6 @@ class Domain:
 
 
 class Translation(BioInterval):
-
     def __init__(self, start, end, transcript=None, domains=None, seq=None, name=None):
         """
         describes the splicing pattern and cds start and end with reference to a particular transcript
@@ -246,24 +242,28 @@ class Translation(BioInterval):
             start (int): start of the coding sequence (cds) relative to the start of the first exon in the transcript
             end (int): end of the coding sequence (cds) relative to the start of the first exon in the transcript
             transcript (Transcript): the transcript this is a Translation of
-            domains (:class:`list` of :any:`Domain`): a list of the domains on this translation
+            domains (List[Domain]): a list of the domains on this translation
             sequence (str): the cds sequence
         """
         domains = [] if domains is None else domains
-        BioInterval.__init__(self, reference_object=transcript, name=name, start=start, end=end, seq=seq)
+        BioInterval.__init__(
+            self, reference_object=transcript, name=name, start=start, end=end, seq=seq
+        )
         self.domains = [d for d in domains]
 
         if start <= 0:
             raise AttributeError('start must be a positive integer', start)
         if transcript and end > len(transcript):
-            raise AttributeError('translation cannot be outside of related transcript range', end, len(transcript))
+            raise AttributeError(
+                'translation cannot be outside of related transcript range', end, len(transcript)
+            )
 
         for domain in domains:
             domain.reference_object = self
 
     @property
     def transcript(self):
-        """:class:`~mavis.annotate.genomic.Transcript`: the spliced transcript this translation belongs to
+        """mavis.annotate.genomic.Transcript: the spliced transcript this translation belongs to
         """
         return self.reference_object
 
@@ -370,7 +370,7 @@ class Translation(BioInterval):
     def get_cds_seq(self, reference_genome=None, ignore_cache=False):
         """
         Args:
-            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
+            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence
                 by template/chr name
 
         Returns:
@@ -383,7 +383,7 @@ class Translation(BioInterval):
             return self.seq
         elif self.transcript and self.transcript.get_strand():
             seq = self.transcript.get_seq(reference_genome, ignore_cache)
-            return seq[self.start - 1:self.end]
+            return seq[self.start - 1 : self.end]
         raise NotSpecifiedError('insufficient seq information')
 
     def get_seq(self, reference_genome=None, ignore_cache=False):
@@ -391,7 +391,7 @@ class Translation(BioInterval):
         wrapper for the sequence method
 
         Args:
-            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
+            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence
                 by template/chr name
         """
         return self.get_cds_seq(reference_genome, ignore_cache)
@@ -399,7 +399,7 @@ class Translation(BioInterval):
     def get_aa_seq(self, reference_genome=None, ignore_cache=False):
         """
         Args:
-            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence
+            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence
                 by template/chr name
 
         Returns:

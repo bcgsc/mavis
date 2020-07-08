@@ -6,7 +6,14 @@ import time
 import tab
 
 from .constants import DEFAULTS, HOMOPOLYMER_MIN_LENGTH
-from .summary import annotate_dgv, filter_by_annotations, filter_by_call_method, filter_by_evidence, get_pairing_state, group_by_distance
+from .summary import (
+    annotate_dgv,
+    filter_by_annotations,
+    filter_by_call_method,
+    filter_by_evidence,
+    get_pairing_state,
+    group_by_distance,
+)
 from ..constants import CALL_METHOD, COLUMNS, PROTOCOL, SVTYPE
 from ..pairing.constants import DEFAULTS as PAIRING_DEFAULTS
 from ..util import generate_complete_stamp, LOG, output_tabbed_file, read_inputs, soft_cast
@@ -20,7 +27,9 @@ def soft_cast_null(value):
 
 
 def main(
-    inputs, output, annotations,
+    inputs,
+    output,
+    annotations,
     dgv_annotation=None,
     filter_cdna_synon=DEFAULTS.filter_cdna_synon,
     filter_protein_synon=DEFAULTS.filter_protein_synon,
@@ -46,73 +55,83 @@ def main(
         CALL_METHOD.FLANK: flanking_call_distance,
         CALL_METHOD.SPLIT: split_call_distance,
         CALL_METHOD.CONTIG: contig_call_distance,
-        CALL_METHOD.SPAN: spanning_call_distance
+        CALL_METHOD.SPAN: spanning_call_distance,
     }
 
     bpps = []
-    bpps.extend(read_inputs(
-        inputs,
-        require=[
-            COLUMNS.event_type,
-            COLUMNS.product_id,
-            COLUMNS.fusion_cdna_coding_end,
-            COLUMNS.fusion_cdna_coding_start,
-            COLUMNS.fusion_splicing_pattern,
-            COLUMNS.fusion_mapped_domains,
-            COLUMNS.gene1,
-            COLUMNS.gene1_direction,
-            COLUMNS.gene2,
-            COLUMNS.gene2_direction,
-            COLUMNS.gene_product_type,
-            COLUMNS.genes_encompassed,
-            COLUMNS.library,
-            COLUMNS.protocol,
-            COLUMNS.transcript1,
-            COLUMNS.transcript2,
-            COLUMNS.untemplated_seq,
-            COLUMNS.tools,
-            COLUMNS.exon_last_5prime,
-            COLUMNS.exon_first_3prime,
-            COLUMNS.disease_status
-        ],
-        add_default={**{k: None for k in [
-            COLUMNS.contig_remapped_reads,
-            COLUMNS.contig_seq,
-            COLUMNS.break1_split_reads,
-            COLUMNS.break1_split_reads_forced,
-            COLUMNS.break2_split_reads,
-            COLUMNS.break2_split_reads_forced,
-            COLUMNS.linking_split_reads,
-            COLUMNS.flanking_pairs,
-            COLUMNS.contigs_assembled,
-            COLUMNS.contig_alignment_score,
-            COLUMNS.contig_remap_score,
-            COLUMNS.spanning_reads,
-            COLUMNS.annotation_figure,
-            COLUMNS.gene1_aliases,
-            COLUMNS.gene2_aliases,
-            COLUMNS.protein_synon,
-            COLUMNS.cdna_synon,
-            COLUMNS.net_size,
-            COLUMNS.tracking_id,
-            COLUMNS.assumed_untemplated,
-            'dgv',
-            'summary_pairing']
-        }, COLUMNS.call_method: CALL_METHOD.INPUT},
-        expand_strand=False, expand_orient=False, expand_svtype=False,
-        cast={
-            COLUMNS.break1_split_reads: partial(soft_cast, cast_type=int),
-            COLUMNS.break2_split_reads: partial(soft_cast, cast_type=int),
-            COLUMNS.contig_remapped_reads: partial(soft_cast, cast_type=int),
-            COLUMNS.spanning_reads: partial(soft_cast, cast_type=int),
-            COLUMNS.break1_split_reads_forced: partial(soft_cast, cast_type=int),
-            COLUMNS.break2_split_reads_forced: partial(soft_cast, cast_type=int),
-            COLUMNS.flanking_pairs: partial(soft_cast, cast_type=int),
-            COLUMNS.linking_split_reads: partial(soft_cast, cast_type=int),
-            COLUMNS.protein_synon: soft_cast_null,
-            COLUMNS.cdna_synon: soft_cast_null
-        }
-    ))
+    bpps.extend(
+        read_inputs(
+            inputs,
+            require=[
+                COLUMNS.event_type,
+                COLUMNS.product_id,
+                COLUMNS.fusion_cdna_coding_end,
+                COLUMNS.fusion_cdna_coding_start,
+                COLUMNS.fusion_splicing_pattern,
+                COLUMNS.fusion_mapped_domains,
+                COLUMNS.gene1,
+                COLUMNS.gene1_direction,
+                COLUMNS.gene2,
+                COLUMNS.gene2_direction,
+                COLUMNS.gene_product_type,
+                COLUMNS.genes_encompassed,
+                COLUMNS.library,
+                COLUMNS.protocol,
+                COLUMNS.transcript1,
+                COLUMNS.transcript2,
+                COLUMNS.untemplated_seq,
+                COLUMNS.tools,
+                COLUMNS.exon_last_5prime,
+                COLUMNS.exon_first_3prime,
+                COLUMNS.disease_status,
+            ],
+            add_default={
+                **{
+                    k: None
+                    for k in [
+                        COLUMNS.contig_remapped_reads,
+                        COLUMNS.contig_seq,
+                        COLUMNS.break1_split_reads,
+                        COLUMNS.break1_split_reads_forced,
+                        COLUMNS.break2_split_reads,
+                        COLUMNS.break2_split_reads_forced,
+                        COLUMNS.linking_split_reads,
+                        COLUMNS.flanking_pairs,
+                        COLUMNS.contigs_assembled,
+                        COLUMNS.contig_alignment_score,
+                        COLUMNS.contig_remap_score,
+                        COLUMNS.spanning_reads,
+                        COLUMNS.annotation_figure,
+                        COLUMNS.gene1_aliases,
+                        COLUMNS.gene2_aliases,
+                        COLUMNS.protein_synon,
+                        COLUMNS.cdna_synon,
+                        COLUMNS.net_size,
+                        COLUMNS.tracking_id,
+                        COLUMNS.assumed_untemplated,
+                        'dgv',
+                        'summary_pairing',
+                    ]
+                },
+                COLUMNS.call_method: CALL_METHOD.INPUT,
+            },
+            expand_strand=False,
+            expand_orient=False,
+            expand_svtype=False,
+            cast={
+                COLUMNS.break1_split_reads: partial(soft_cast, cast_type=int),
+                COLUMNS.break2_split_reads: partial(soft_cast, cast_type=int),
+                COLUMNS.contig_remapped_reads: partial(soft_cast, cast_type=int),
+                COLUMNS.spanning_reads: partial(soft_cast, cast_type=int),
+                COLUMNS.break1_split_reads_forced: partial(soft_cast, cast_type=int),
+                COLUMNS.break2_split_reads_forced: partial(soft_cast, cast_type=int),
+                COLUMNS.flanking_pairs: partial(soft_cast, cast_type=int),
+                COLUMNS.linking_split_reads: partial(soft_cast, cast_type=int),
+                COLUMNS.protein_synon: soft_cast_null,
+                COLUMNS.cdna_synon: soft_cast_null,
+            },
+        )
+    )
     # load all transcripts
     reference_transcripts = dict()
     best_transcripts = dict()
@@ -136,23 +155,28 @@ def main(
             bpp.data[COLUMNS.filter_comment] = 'synonymous cdna'
             filtered_pairs.append(bpp)
             continue
-        elif all([
-            filter_trans_homopolymers,
-            bpp.protocol == PROTOCOL.TRANS,
-            bpp.data.get(COLUMNS.repeat_count, None),
-            bpp.event_type in [SVTYPE.DUP, SVTYPE.INS, SVTYPE.DEL]
-        ]):
+        elif all(
+            [
+                filter_trans_homopolymers,
+                bpp.protocol == PROTOCOL.TRANS,
+                bpp.data.get(COLUMNS.repeat_count, None),
+                bpp.event_type in [SVTYPE.DUP, SVTYPE.INS, SVTYPE.DEL],
+            ]
+        ):
             # a transcriptome event in a repeat region
             match = re.match(r'^(-?\d+)-(-?\d+)$', str(bpp.data[COLUMNS.net_size]))
             if match:
                 netsize_min = abs(int(match.group(1)))
                 netsize_max = abs(int(match.group(2)))
 
-                if all([
-                    int(bpp.repeat_count) + 1 >= HOMOPOLYMER_MIN_LENGTH,  # repeat count is 1 less than the length of the repeat
-                    netsize_min == netsize_max and netsize_min == 1,
-                    PROTOCOL.GENOME not in bpp.data.get(COLUMNS.pairing, '')
-                ]):
+                if all(
+                    [
+                        int(bpp.repeat_count) + 1
+                        >= HOMOPOLYMER_MIN_LENGTH,  # repeat count is 1 less than the length of the repeat
+                        netsize_min == netsize_max and netsize_min == 1,
+                        PROTOCOL.GENOME not in bpp.data.get(COLUMNS.pairing, ''),
+                    ]
+                ):
                     bpp.data[COLUMNS.filter_comment] = 'homopolymer filter'
                     filtered_pairs.append(bpp)
                     continue
@@ -167,11 +191,12 @@ def main(
 
     # filter based on minimum evidence levels
     bpps, filtered = filter_by_evidence(
-        bpps, filter_min_remapped_reads=filter_min_remapped_reads,
+        bpps,
+        filter_min_remapped_reads=filter_min_remapped_reads,
         filter_min_spanning_reads=filter_min_spanning_reads,
         filter_min_flanking_reads=filter_min_flanking_reads,
         filter_min_split_reads=filter_min_split_reads,
-        filter_min_linking_split_reads=filter_min_linking_split_reads
+        filter_min_linking_split_reads=filter_min_linking_split_reads,
     )
     for pair in filtered:
         pair.data[COLUMNS.filter_comment] = 'low evidence'
@@ -194,7 +219,7 @@ def main(
                 bpp.fusion_sequence_fasta_id,
                 bpp.fusion_splicing_pattern,
                 bpp.fusion_cdna_coding_start,
-                bpp.fusion_cdna_coding_end
+                bpp.fusion_cdna_coding_end,
             )
             uncollapsed.setdefault(group, []).append(bpp)
         collapsed = []
@@ -225,18 +250,24 @@ def main(
     for library in bpps_by_library:
         uncollapsed = dict()
         for bpp in bpps_by_library[library]:
-            uncollapsed.setdefault((
-                bpp.event_type,
-                bpp.break1.chr, bpp.break2.chr,
-                bpp.break1.orient, bpp.break2.orient,
-                bpp.opposing_strands,
-                bpp.break1.strand, bpp.break2.strand,
-                bpp.transcript1 if bpp.gene1 else None,
-                bpp.transcript2 if bpp.gene2 else None,
-                bpp.fusion_sequence_fasta_id,  # id is a hash of the sequence
-                bpp.fusion_cdna_coding_start,
-                bpp.fusion_cdna_coding_end
-            ), []).append(bpp)
+            uncollapsed.setdefault(
+                (
+                    bpp.event_type,
+                    bpp.break1.chr,
+                    bpp.break2.chr,
+                    bpp.break1.orient,
+                    bpp.break2.orient,
+                    bpp.opposing_strands,
+                    bpp.break1.strand,
+                    bpp.break2.strand,
+                    bpp.transcript1 if bpp.gene1 else None,
+                    bpp.transcript2 if bpp.gene2 else None,
+                    bpp.fusion_sequence_fasta_id,  # id is a hash of the sequence
+                    bpp.fusion_cdna_coding_start,
+                    bpp.fusion_cdna_coding_end,
+                ),
+                [],
+            ).append(bpp)
 
         collapsed = []
         for bpp_set in uncollapsed.values():
@@ -288,7 +319,6 @@ def main(
         COLUMNS.annotation_figure,
         COLUMNS.exon_last_5prime,
         COLUMNS.exon_first_3prime,
-
         # For debugging
         COLUMNS.call_method,
         COLUMNS.flanking_pairs,
@@ -304,13 +334,16 @@ def main(
         COLUMNS.cdna_synon,
         COLUMNS.net_size,
         COLUMNS.assumed_untemplated,
-        'dgv'}
+        'dgv',
+    }
 
     rows = []
     for lib in bpps_by_library:
         LOG('annotating dgv for', lib)
         if dgv_annotation:
-            annotate_dgv(bpps_by_library[lib], dgv_annotation.content, distance=10)  # TODO make distance a parameter
+            annotate_dgv(
+                bpps_by_library[lib], dgv_annotation.content, distance=10
+            )  # TODO make distance a parameter
         LOG('adding pairing states for', lib)
         for row in bpps_by_library[lib]:
             # in case no pairing was done, add default (applicable to single library summaries)
@@ -333,9 +366,11 @@ def main(
                 if other_lib != row.library:
                     pairing_state = get_pairing_state(
                         *libraries[row.library],
-                        other_protocol=other_protocol, other_disease_state=other_disease_state,
+                        other_protocol=other_protocol,
+                        other_disease_state=other_disease_state,
                         is_matched=other_lib in paired_libraries,
-                        inferred_is_matched=other_lib in inferred_paired_libraries)
+                        inferred_is_matched=other_lib in inferred_paired_libraries
+                    )
                 else:
                     pairing_state = 'Not Applicable'
                 row.data[column_name] = pairing_state
@@ -343,23 +378,26 @@ def main(
 
             rows.append(row.flatten())
     fname = os.path.join(
-        output,
-        'mavis_summary_all_{}.tab'.format('_'.join(sorted(list(libraries.keys()))))
+        output, 'mavis_summary_all_{}.tab'.format('_'.join(sorted(list(libraries.keys()))))
     )
     output_tabbed_file(rows, fname, header=output_columns)
     LOG('wrote {} structural variants to {}'.format(len(rows), fname))
     output_tabbed_file(filtered_pairs, os.path.join(output, 'filtered_pairs.tab'))
     # output by library non-synon protein-product
     for lib in bpps_by_library:
-        filename = os.path.join(output, 'mavis_summary_{}_non-synonymous_coding_variants.tab'.format(lib))
+        filename = os.path.join(
+            output, 'mavis_summary_{}_non-synonymous_coding_variants.tab'.format(lib)
+        )
         lib_rows = []
         for row in rows:
-            if all([
-                not row.get(COLUMNS.protein_synon, ''),
-                not row.get(COLUMNS.cdna_synon, ''),
-                str(row.get(COLUMNS.fusion_cdna_coding_start, None)) != 'None',
-                row[COLUMNS.library] == lib,
-                str(row.get(COLUMNS.supplementary_call, False)) != 'True'
-            ]):
+            if all(
+                [
+                    not row.get(COLUMNS.protein_synon, ''),
+                    not row.get(COLUMNS.cdna_synon, ''),
+                    str(row.get(COLUMNS.fusion_cdna_coding_start, None)) != 'None',
+                    row[COLUMNS.library] == lib,
+                    str(row.get(COLUMNS.supplementary_call, False)) != 'True',
+                ]
+            ):
                 lib_rows.append(row)
         output_tabbed_file(lib_rows, filename, header=output_columns)

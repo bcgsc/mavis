@@ -19,13 +19,19 @@ HEX_BLACK = '#000000'
 
 
 def draw_sv_summary_diagram(
-        config, ann, reference_genome=None, templates=None, ignore_absent_templates=True,
-        user_friendly_labels=True, template_display_label_prefix='',
-        draw_reference_transcripts=True,
-        draw_reference_genes=True,
-        draw_reference_templates=True,
-        draw_fusion_transcript=True,
-        stack_reference_transcripts=False):
+    config,
+    ann,
+    reference_genome=None,
+    templates=None,
+    ignore_absent_templates=True,
+    user_friendly_labels=True,
+    template_display_label_prefix='',
+    draw_reference_transcripts=True,
+    draw_reference_genes=True,
+    draw_reference_templates=True,
+    draw_fusion_transcript=True,
+    stack_reference_transcripts=False,
+):
     """
     this is the main drawing function. It decides between layouts
     where each view-level is split into one or two diagrams (side-by-side)
@@ -40,8 +46,8 @@ def draw_sv_summary_diagram(
 
     Args:
         ann (Annotation): the annotation object to be illustrated
-        reference_genome (dict of str by str): reference sequences
-        templates (list of Template): list of templates, used in drawing the template-level view
+        reference_genome (Dict[str,str]): reference sequences
+        templates (List[Template]): list of templates, used in drawing the template-level view
         ignore_absent_templates (bool):
             if true then will not raise an error if the template information is not given but will
             not draw the template instead
@@ -51,7 +57,14 @@ def draw_sv_summary_diagram(
             names (where possible)
         template_display_label_prefix (str): the character to precede the template label
     """
-    if not any([draw_reference_templates, draw_reference_genes, draw_reference_transcripts, draw_fusion_transcript]):
+    if not any(
+        [
+            draw_reference_templates,
+            draw_reference_genes,
+            draw_reference_transcripts,
+            draw_fusion_transcript,
+        ]
+    ):
         raise AssertionError('nothing to draw')
     fusion_transcript = ann.fusion
     templates = dict() if templates is None else templates
@@ -80,17 +93,37 @@ def draw_sv_summary_diagram(
             height = [0]
             if template1 == template2:  # single template
                 svg_group = draw_template(
-                    config, canvas, template1, drawing_width, breakpoints=[ann.break1, ann.break2], labels=labels)
+                    config,
+                    canvas,
+                    template1,
+                    drawing_width,
+                    breakpoints=[ann.break1, ann.break2],
+                    labels=labels,
+                )
                 canvas.add(svg_group)
                 svg_group.translate(x, y)
                 height.append(svg_group.height)
             else:  # multiple templates
-                svg_group = draw_template(config, canvas, template1, half_drawing_width, breakpoints=[ann.break1], labels=labels)
+                svg_group = draw_template(
+                    config,
+                    canvas,
+                    template1,
+                    half_drawing_width,
+                    breakpoints=[ann.break1],
+                    labels=labels,
+                )
                 canvas.add(svg_group)
                 svg_group.translate(x, y)
                 height.append(svg_group.height)
 
-                svg_group = draw_template(config, canvas, template2, half_drawing_width, breakpoints=[ann.break2], labels=labels)
+                svg_group = draw_template(
+                    config,
+                    canvas,
+                    template2,
+                    half_drawing_width,
+                    breakpoints=[ann.break2],
+                    labels=labels,
+                )
                 canvas.add(svg_group)
                 svg_group.translate(second_drawing_shift, y)
                 height.append(svg_group.height)
@@ -134,12 +167,16 @@ def draw_sv_summary_diagram(
         same = ann.transcript1 == ann.transcript2
         try:
             genes2.add(ann.transcript2.gene)
-            colors[ann.transcript2.gene] = config.gene2_color_selected if not same else config.gene1_color_selected
+            colors[ann.transcript2.gene] = (
+                config.gene2_color_selected if not same else config.gene1_color_selected
+            )
             for exon in ann.transcript2.exons:
                 colors[exon] = config.exon2_color if not same else config.exon1_color
         except AttributeError:
             genes2.add(ann.transcript2)
-            colors[ann.transcript2] = config.gene2_color_selected if not same else config.gene1_color_selected
+            colors[ann.transcript2] = (
+                config.gene2_color_selected if not same else config.gene1_color_selected
+            )
 
     if draw_reference_genes:
         # set all the labels so that they are re-used correctly
@@ -174,19 +211,42 @@ def draw_sv_summary_diagram(
         gheights = [0]
 
         if ann.interchromosomal:
-            svg_group = draw_genes(config, canvas, genes1, half_drawing_width, [ann.break1], colors=colors, labels=labels)
+            svg_group = draw_genes(
+                config,
+                canvas,
+                genes1,
+                half_drawing_width,
+                [ann.break1],
+                colors=colors,
+                labels=labels,
+            )
             svg_group.translate(x, y)
             canvas.add(svg_group)
             gheights.append(svg_group.height)
 
             # second gene view
-            svg_group = draw_genes(config, canvas, genes2, half_drawing_width, [ann.break2], colors=colors, labels=labels)
+            svg_group = draw_genes(
+                config,
+                canvas,
+                genes2,
+                half_drawing_width,
+                [ann.break2],
+                colors=colors,
+                labels=labels,
+            )
             svg_group.translate(second_drawing_shift, y)
             canvas.add(svg_group)
             gheights.append(svg_group.height)
         else:
             svg_group = draw_genes(
-                config, canvas, genes1 | genes2, drawing_width, [ann.break1, ann.break2], colors=colors, labels=labels)
+                config,
+                canvas,
+                genes1 | genes2,
+                drawing_width,
+                [ann.break1, ann.break2],
+                colors=colors,
+                labels=labels,
+            )
             svg_group.translate(x, y)
             canvas.add(svg_group)
             gheights.append(svg_group.height)
@@ -196,13 +256,15 @@ def draw_sv_summary_diagram(
     if draw_reference_transcripts:
         theights = []
         # now the transcript level drawings
-        if any([
-            ann.transcript1 == ann.transcript2,
-            ann.transcript1 is None,
-            ann.transcript2 is None,
-            isinstance(ann.transcript1, IntergenicRegion),
-            isinstance(ann.transcript2, IntergenicRegion)
-        ]):
+        if any(
+            [
+                ann.transcript1 == ann.transcript2,
+                ann.transcript1 is None,
+                ann.transcript2 is None,
+                isinstance(ann.transcript1, IntergenicRegion),
+                isinstance(ann.transcript2, IntergenicRegion),
+            ]
+        ):
             breaks = [ann.break1, ann.break2]
             transcript = ann.transcript1
             if ann.transcript1 is None or isinstance(ann.transcript1, IntergenicRegion):
@@ -215,11 +277,13 @@ def draw_sv_summary_diagram(
                 svg_group = canvas.g(class_='transcript')
                 svg_group = draw_ustranscript(
                     config,
-                    canvas, transcript, drawing_width,
+                    canvas,
+                    transcript,
+                    drawing_width,
                     breakpoints=breaks,
                     labels=labels,
                     colors=colors,
-                    reference_genome=reference_genome
+                    reference_genome=reference_genome,
                 )
                 theights.append(svg_group.height)
                 svg_group.translate(x, y)
@@ -228,7 +292,9 @@ def draw_sv_summary_diagram(
                 pass  # Intergenic region or None
         else:  # separate drawings
             try:
-                ratio = len(ann.transcript1.exons) / (len(ann.transcript1.exons) + len(ann.transcript2.exons))
+                ratio = len(ann.transcript1.exons) / (
+                    len(ann.transcript1.exons) + len(ann.transcript2.exons)
+                )
                 ratio = max(0.25, min(ratio, 0.75))  # must be between 0.25 - 0.75
             except AttributeError:
                 ratio = 0.5
@@ -237,12 +303,15 @@ def draw_sv_summary_diagram(
                 svg_group = canvas.g(class_='transcript')
                 svg_group = draw_ustranscript(
                     config,
-                    canvas, ann.transcript1,
-                    half_drawing_width * 2 * ratio if not stack_reference_transcripts else drawing_width,
+                    canvas,
+                    ann.transcript1,
+                    half_drawing_width * 2 * ratio
+                    if not stack_reference_transcripts
+                    else drawing_width,
                     breakpoints=[ann.break1],
                     labels=labels,
                     colors=colors,
-                    reference_genome=reference_genome
+                    reference_genome=reference_genome,
                 )
                 svg_group.translate(x, y)
                 if not stack_reference_transcripts:
@@ -257,12 +326,15 @@ def draw_sv_summary_diagram(
                 svg_group = canvas.g(class_='transcript')
                 svg_group = draw_ustranscript(
                     config,
-                    canvas, ann.transcript2,
-                    half_drawing_width * 2 * (1 - ratio) if not stack_reference_transcripts else drawing_width,
+                    canvas,
+                    ann.transcript2,
+                    half_drawing_width * 2 * (1 - ratio)
+                    if not stack_reference_transcripts
+                    else drawing_width,
                     breakpoints=[ann.break2],
                     labels=labels,
                     colors=colors,
-                    reference_genome=reference_genome
+                    reference_genome=reference_genome,
                 )
                 theights.append(svg_group.height)
                 shift = second_drawing_shift - half_drawing_width + half_drawing_width * 2 * ratio
@@ -286,10 +358,12 @@ def draw_sv_summary_diagram(
         svg_group = canvas.g(class_='transcript')
         svg_group = draw_ustranscript(
             config,
-            canvas, fusion_transcript, drawing_width,
+            canvas,
+            fusion_transcript,
+            drawing_width,
             colors=colors,
             labels=labels,
-            reference_genome=reference_genome
+            reference_genome=reference_genome,
         )
         svg_group.translate(x, y)
         canvas.add(svg_group)
@@ -308,12 +382,20 @@ def draw_sv_summary_diagram(
     return canvas, legend
 
 
-def draw_multi_transcript_overlay(config, gene, vmarkers=None, window_buffer=0, plots=None, log=DEVNULL):
+def draw_multi_transcript_overlay(
+    config, gene, vmarkers=None, window_buffer=0, plots=None, log=DEVNULL
+):
     vmarkers = [] if vmarkers is None else vmarkers
     plots = [] if plots is None else plots
 
     canvas = Drawing(size=(config.width, 1000))  # just set the height for now and change later
-    width = config.width - config.left_margin - config.right_margin - config.overlay_left_label - config.padding
+    width = (
+        config.width
+        - config.left_margin
+        - config.right_margin
+        - config.overlay_left_label
+        - config.padding
+    )
     labels = LabelMapping()  # keep labels consistent within the drawing
 
     all_exons = set()
@@ -327,8 +409,14 @@ def draw_multi_transcript_overlay(config, gene, vmarkers=None, window_buffer=0, 
             for translation in spl_tx.translations:
                 for dom in translation.domains:
                     labels.set_key(dom.name, dom.name)
-    genomic_min = min([max([gene.start - window_buffer, 1])] + [m.start for m in vmarkers] + [p.xmin for p in plots if p.xmin])
-    genomic_max = max([gene.end + window_buffer] + [m.end for m in vmarkers] + [p.xmax for p in plots if p.xmax])
+    genomic_min = min(
+        [max([gene.start - window_buffer, 1])]
+        + [m.start for m in vmarkers]
+        + [p.xmin for p in plots if p.xmin]
+    )
+    genomic_max = max(
+        [gene.end + window_buffer] + [m.end for m in vmarkers] + [p.xmax for p in plots if p.xmax]
+    )
 
     mapping = generate_interval_mapping(
         all_exons,
@@ -336,7 +424,8 @@ def draw_multi_transcript_overlay(config, gene, vmarkers=None, window_buffer=0, 
         config.exon_intron_ratio,
         config.exon_min_width,
         min_inter_width=config.min_width,
-        start=genomic_min, end=genomic_max
+        start=genomic_min,
+        end=genomic_max,
     )
     main_group = canvas.g(class_='overlay')
 
@@ -350,13 +439,18 @@ def draw_multi_transcript_overlay(config, gene, vmarkers=None, window_buffer=0, 
             plot_group.translate(x, y)
             y += plot.height + config.padding * 2
 
-    regular_transcripts = sorted([us_tx for us_tx in gene.transcripts if not us_tx.is_best_transcript], key=lambda x: x.name)
+    regular_transcripts = sorted(
+        [us_tx for us_tx in gene.transcripts if not us_tx.is_best_transcript], key=lambda x: x.name
+    )
     for us_tx in regular_transcripts:
         group_element = draw_exon_track(
-            config, canvas, us_tx, mapping,
+            config,
+            canvas,
+            us_tx,
+            mapping,
             colors=colors,
             genomic_min=genomic_min,
-            genomic_max=genomic_max
+            genomic_max=genomic_max,
         )
         main_group.add(group_element)
         group_element.translate(x, y)
@@ -365,21 +459,27 @@ def draw_multi_transcript_overlay(config, gene, vmarkers=None, window_buffer=0, 
             us_tx.name,
             insert=(
                 x - config.padding,
-                y + config.track_height / 2 + config.font_central_shift_ratio * config.label_font_size
+                y
+                + config.track_height / 2
+                + config.font_central_shift_ratio * config.label_font_size,
             ),
             fill=config.label_color,
             style=config.font_style.format(font_size=config.label_font_size, text_anchor='end'),
-            class_='label'
+            class_='label',
         )
         main_group.add(text_element)
         y += config.padding + config.track_height
 
-    best_transcripts = sorted([us_tx for us_tx in gene.transcripts if us_tx.is_best_transcript], key=lambda x: x.name)
+    best_transcripts = sorted(
+        [us_tx for us_tx in gene.transcripts if us_tx.is_best_transcript], key=lambda x: x.name
+    )
     for us_tx in best_transcripts:
         for spl_tx in us_tx.transcripts:
             labels[us_tx.name] = spl_tx
 
-        group_element = draw_ustranscript(config, canvas, us_tx, mapping=mapping, colors=colors, labels=labels)
+        group_element = draw_ustranscript(
+            config, canvas, us_tx, mapping=mapping, colors=colors, labels=labels
+        )
         main_group.add(group_element)
         group_element.translate(x, y)
 
@@ -390,9 +490,9 @@ def draw_multi_transcript_overlay(config, gene, vmarkers=None, window_buffer=0, 
     for marker in sorted(vmarkers):
         px_itvl = Interval(
             mapping.convert_ratioed_pos(marker.start).start,
-            mapping.convert_ratioed_pos(marker.end).end)
-        group_element = draw_vmarker(
-            config, canvas, marker, px_itvl.length(), y, label=marker.name)
+            mapping.convert_ratioed_pos(marker.end).end,
+        )
+        group_element = draw_vmarker(config, canvas, marker, px_itvl.length(), y, label=marker.name)
         group_element.translate(x + px_itvl.start, 0)
         main_group.add(group_element)
 

@@ -1,7 +1,13 @@
 import os
 import unittest
 
-from mavis.annotate.variant import annotate_events, Annotation, flatten_fusion_transcript, call_protein_indel, IndelCall
+from mavis.annotate.variant import (
+    annotate_events,
+    Annotation,
+    flatten_fusion_transcript,
+    call_protein_indel,
+    IndelCall,
+)
 from mavis.annotate.fusion import FusionTranscript
 from mavis.annotate.constants import SPLICE_TYPE
 from mavis.breakpoint import Breakpoint, BreakpointPair
@@ -18,14 +24,13 @@ def get_best(gene):
 
 
 class TestNDUFA12(unittest.TestCase):
-
     def setUp(self):
         print(get_example_genes().keys())
         self.gene = get_example_genes()['NDUFA12']
         self.reference_annotations = {self.gene.chr: [self.gene]}
-        self.reference_genome = {self.gene.chr: MockObject(
-            seq=MockLongString(self.gene.seq, offset=self.gene.start - 1)
-        )}
+        self.reference_genome = {
+            self.gene.chr: MockObject(seq=MockLongString(self.gene.seq, offset=self.gene.start - 1))
+        }
         self.best = get_best(self.gene)
 
     def test_annotate_events_synonymous(self):
@@ -36,9 +41,17 @@ class TestNDUFA12(unittest.TestCase):
         b1 = Breakpoint(self.gene.chr, 95344068, orient=ORIENT.LEFT, strand=STRAND.NS)
         b2 = Breakpoint(self.gene.chr, 95344379, orient=ORIENT.RIGHT, strand=STRAND.NS)
         bpp = BreakpointPair(
-            b1, b2, stranded=False, opposing_strands=False, event_type=SVTYPE.DEL, protocol=PROTOCOL.GENOME,
-            untemplated_seq='')
-        annotations = annotate_events([bpp], reference_genome=self.reference_genome, annotations=self.reference_annotations)
+            b1,
+            b2,
+            stranded=False,
+            opposing_strands=False,
+            event_type=SVTYPE.DEL,
+            protocol=PROTOCOL.GENOME,
+            untemplated_seq='',
+        )
+        annotations = annotate_events(
+            [bpp], reference_genome=self.reference_genome, annotations=self.reference_annotations
+        )
         ann = annotations[0]
         for a in annotations:
             print(a, a.fusion, a.fusion.transcripts)
@@ -53,9 +66,9 @@ class TestARID1B(unittest.TestCase):
     def setUp(self):
         self.gene = get_example_genes()['ARID1B']
         self.reference_annotations = {self.gene.chr: [self.gene]}
-        self.reference_genome = {self.gene.chr: MockObject(
-            seq=MockLongString(self.gene.seq, offset=self.gene.start - 1)
-        )}
+        self.reference_genome = {
+            self.gene.chr: MockObject(seq=MockLongString(self.gene.seq, offset=self.gene.start - 1))
+        }
         self.best = get_best(self.gene)
 
     def test_small_duplication(self):
@@ -64,16 +77,21 @@ class TestARID1B(unittest.TestCase):
             Breakpoint('6', 157100007, strand='+', orient='L'),
             event_type=SVTYPE.DUP,
             untemplated_seq='',
-            protocol=PROTOCOL.GENOME
+            protocol=PROTOCOL.GENOME,
         )
         # annotate the breakpoint with the gene
-        annotations = annotate_events([bpp], reference_genome=self.reference_genome, annotations=self.reference_annotations)
+        annotations = annotate_events(
+            [bpp], reference_genome=self.reference_genome, annotations=self.reference_annotations
+        )
         self.assertEqual(1, len(annotations))
 
         ann = Annotation(bpp, transcript1=self.best, transcript2=self.best)
         ft = FusionTranscript.build(
-            ann, self.reference_genome,
-            min_orf_size=300, max_orf_cap=10, min_domain_mapping_match=0.9
+            ann,
+            self.reference_genome,
+            min_orf_size=300,
+            max_orf_cap=10,
+            min_domain_mapping_match=0.9,
         )
         ref_tx = self.best.translations[0]
         fusion_tx = ft.translations[0]
@@ -89,13 +107,12 @@ class TestARID1B(unittest.TestCase):
 
 
 class TestSVEP1(unittest.TestCase):
-
     def setUp(self):
         self.gene = get_example_genes()['SVEP1']
         self.reference_annotations = {self.gene.chr: [self.gene]}
-        self.reference_genome = {self.gene.chr: MockObject(
-            seq=MockLongString(self.gene.seq, offset=self.gene.start - 1)
-        )}
+        self.reference_genome = {
+            self.gene.chr: MockObject(seq=MockLongString(self.gene.seq, offset=self.gene.start - 1))
+        }
         self.best = get_best(self.gene)
 
     def test_annotate_small_intronic_inversion(self):
@@ -106,9 +123,11 @@ class TestSVEP1(unittest.TestCase):
             stranded=False,
             event_type=SVTYPE.INV,
             protocol=PROTOCOL.GENOME,
-            untemplated_seq=''
+            untemplated_seq='',
         )
-        annotations = annotate_events([bpp], reference_genome=self.reference_genome, annotations=self.reference_annotations)
+        annotations = annotate_events(
+            [bpp], reference_genome=self.reference_genome, annotations=self.reference_annotations
+        )
         for a in annotations:
             print(a, a.transcript1, a.transcript2)
         self.assertEqual(1, len(annotations))
@@ -127,12 +146,15 @@ class TestSVEP1(unittest.TestCase):
             stranded=False,
             event_type=SVTYPE.INV,
             protocol=PROTOCOL.GENOME,
-            untemplated_seq=''
+            untemplated_seq='',
         )
         ann = Annotation(bpp, transcript1=self.best, transcript2=self.best)
         ft = FusionTranscript.build(
-            ann, self.reference_genome,
-            min_orf_size=300, max_orf_cap=10, min_domain_mapping_match=0.9
+            ann,
+            self.reference_genome,
+            min_orf_size=300,
+            max_orf_cap=10,
+            min_domain_mapping_match=0.9,
         )
         refseq = self.best.transcripts[0].get_seq(self.reference_genome)
         self.assertEqual(1, len(ft.transcripts))
@@ -143,9 +165,9 @@ class TestPRKCB(unittest.TestCase):
     def setUp(self):
         self.gene = get_example_genes()['PRKCB']
         self.reference_annotations = {self.gene.chr: [self.gene]}
-        self.reference_genome = {self.gene.chr: MockObject(
-            seq=MockLongString(self.gene.seq, offset=self.gene.start - 1)
-        )}
+        self.reference_genome = {
+            self.gene.chr: MockObject(seq=MockLongString(self.gene.seq, offset=self.gene.start - 1))
+        }
         self.best = get_best(self.gene)
 
     def test_retained_intron(self):
@@ -156,12 +178,15 @@ class TestPRKCB(unittest.TestCase):
             stranded=False,
             event_type=SVTYPE.INS,
             protocol=PROTOCOL.TRANS,
-            untemplated_seq='A'
+            untemplated_seq='A',
         )
         ann = Annotation(bpp, transcript1=self.best, transcript2=self.best)
         ft = FusionTranscript.build(
-            ann, self.reference_genome,
-            min_orf_size=300, max_orf_cap=10, min_domain_mapping_match=0.9
+            ann,
+            self.reference_genome,
+            min_orf_size=300,
+            max_orf_cap=10,
+            min_domain_mapping_match=0.9,
         )
         self.assertEqual(1, len(ft.transcripts))
         print(ft.transcripts[0].splicing_pattern)
@@ -174,9 +199,9 @@ class TestDSTYK(unittest.TestCase):
         print(get_example_genes().keys())
         self.gene = get_example_genes()['DSTYK']
         self.reference_annotations = {self.gene.chr: [self.gene]}
-        self.reference_genome = {self.gene.chr: MockObject(
-            seq=MockLongString(self.gene.seq, offset=self.gene.start - 1)
-        )}
+        self.reference_genome = {
+            self.gene.chr: MockObject(seq=MockLongString(self.gene.seq, offset=self.gene.start - 1))
+        }
         self.best = get_best(self.gene)
 
     def test_build_single_transcript_inversion_reverse_strand(self):
@@ -188,17 +213,27 @@ class TestDSTYK(unittest.TestCase):
             stranded=False,
             event_type=SVTYPE.INV,
             protocol=PROTOCOL.GENOME,
-            untemplated_seq=''
+            untemplated_seq='',
         )
         ann = Annotation(bpp, transcript1=self.best, transcript2=self.best)
         ft = FusionTranscript.build(
-            ann, self.reference_genome,
-            min_orf_size=300, max_orf_cap=10, min_domain_mapping_match=0.9
+            ann,
+            self.reference_genome,
+            min_orf_size=300,
+            max_orf_cap=10,
+            min_domain_mapping_match=0.9,
         )
         print(ft.exons)
         print(ft.break1, ft.break2)
         for ex in ft.exons:
-            print(ex, len(ex), '==>', ft.exon_mapping.get(ex.position, None), len(ft.exon_mapping.get(ex.position, None)), ft.exon_number(ex))
+            print(
+                ex,
+                len(ex),
+                '==>',
+                ft.exon_mapping.get(ex.position, None),
+                len(ft.exon_mapping.get(ex.position, None)),
+                ft.exon_number(ex),
+            )
         # refseq = self.best.transcripts[0].get_seq(self.reference_genome)
         self.assertEqual(1, len(ft.transcripts))
         self.assertEqual(1860, ft.break1)

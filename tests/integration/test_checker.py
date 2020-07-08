@@ -37,10 +37,11 @@ def mkdirs(newdir, mode=0o777):
 
 
 class TestParseLogFile(unittest.TestCase):
-
     def mock_log(self, content):
         mockopen = mock_open(read_data=content)
-        with patch('builtins.open', mockopen), patch('os.path.isfile') as isfile, patch('__main__.open', mockopen):
+        with patch('builtins.open', mockopen), patch('os.path.isfile') as isfile, patch(
+            '__main__.open', mockopen
+        ):
             isfile.return_value = True
             return _job.LogFile.parse('log')
 
@@ -87,11 +88,12 @@ IndexError: list index out of range"""
 
 
 class TestModule(unittest.TestCase):
-
     def test_parse_run_time_none(self):
         content = ""
         mockopen = mock_open(read_data=content)
-        with patch('builtins.open', mockopen), patch('os.path.isfile') as isfile, patch('__main__.open', mockopen), patch('os.path.getmtime') as getmtime:
+        with patch('builtins.open', mockopen), patch('os.path.isfile') as isfile, patch(
+            '__main__.open', mockopen
+        ), patch('os.path.getmtime') as getmtime:
             getmtime.return_value = 1
             isfile.return_value = True
             result = _pipeline.parse_run_time('log')
@@ -100,7 +102,9 @@ class TestModule(unittest.TestCase):
     def test_parse_valid_run_time(self):
         content = "[2018-03-06 15:25:46.153560] complete: MAVIS.COMPLETE\nrun time (hh/mm/ss): 0:06:41\nrun time (s): 1\n"
         mockopen = mock_open(read_data=content)
-        with patch('builtins.open', mockopen), patch('os.path.isfile') as isfile, patch('__main__.open', mockopen), patch('os.path.getmtime') as getmtime:
+        with patch('builtins.open', mockopen), patch('os.path.isfile') as isfile, patch(
+            '__main__.open', mockopen
+        ), patch('os.path.getmtime') as getmtime:
             getmtime.return_value = 1
             isfile.return_value = True
             result = _pipeline.parse_run_time('log')

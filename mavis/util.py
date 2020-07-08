@@ -26,6 +26,7 @@ class Log:
     """
     wrapper aroung the builtin logging to make it more readable
     """
+
     def __init__(self, indent_str='  ', indent_level=0, level=logging.INFO):
         self.indent_str = indent_str
         self.indent_level = indent_level
@@ -132,7 +133,6 @@ def get_env_variable(arg, default, cast_type=None):
 
 
 class WeakMavisNamespace(MavisNamespace):
-
     def is_env_overwritable(self, attr):
         return True
 
@@ -178,7 +178,9 @@ def log_arguments(args):
                 for v in val:
                     log(repr(v), indent_level=1)
                 log(']')
-            elif any([isinstance(val, typ) for typ in [str, int, float, bool, tuple]]) or val is None:
+            elif (
+                any([isinstance(val, typ) for typ in [str, int, float, bool, tuple]]) or val is None
+            ):
                 log(arg, '=', repr(val))
             else:
                 log(arg, '=', object.__repr__(val))
@@ -204,8 +206,8 @@ def filter_on_overlap(bpps, regions_by_reference_name):
     filter a set of breakpoint pairs based on overlap with a set of genomic regions
 
     Args:
-        bpps (:class:`list` of :class:`~mavis.breakpoint.BreakpointPair`): list of breakpoint pairs to be filtered
-        regions_by_reference_name (:class:`dict` of :class:`list` of :class:`~mavis.annotate.base.BioInterval` by :class:`str`): regions to filter against
+        bpps (List[mavis.breakpoint.BreakpointPair]): list of breakpoint pairs to be filtered
+        regions_by_reference_name (Dict[str,List[mavis.annotate.base.BioInterval]]): regions to filter against
     """
     LOG('filtering from', len(bpps), 'using overlaps with regions filter')
     failed = []
@@ -240,10 +242,7 @@ def read_inputs(inputs, **kwargs):
     for finput in bash_expands(*inputs):
         try:
             LOG('loading:', finput)
-            bpps.extend(read_bpp_from_input_file(
-                finput,
-                **kwargs
-            ))
+            bpps.extend(read_bpp_from_input_file(finput, **kwargs))
         except tab.EmptyFileError:
             LOG('ignoring empty file:', finput)
     LOG('loaded', len(bpps), 'breakpoint pairs')
@@ -306,7 +305,7 @@ def generate_complete_stamp(output_dir, log=DEVNULL, prefix='MAVIS.', start_time
 
     Args:
         output_dir (str): path to the output dir the stamp should be written in
-        log (function): function to print logging messages to
+        log (Callable): function to print logging messages to
         prefix (str): prefix for the stamp name
         start_time (int): the start time
 
@@ -325,7 +324,11 @@ def generate_complete_stamp(output_dir, log=DEVNULL, prefix='MAVIS.', start_time
             hours = duration - duration % 3600
             minutes = duration - hours - (duration - hours) % 60
             seconds = duration - hours - minutes
-            fh.write('run time (hh/mm/ss): {}:{:02d}:{:02d}\n'.format(hours // 3600, minutes // 60, seconds))
+            fh.write(
+                'run time (hh/mm/ss): {}:{:02d}:{:02d}\n'.format(
+                    hours // 3600, minutes // 60, seconds
+                )
+            )
             fh.write('run time (s): {}\n'.format(duration))
     return stamp
 
@@ -367,7 +370,9 @@ def unique_exists(pattern, allow_none=False, get_newest=False):
         raise OSError('no result found', pattern)
 
 
-def read_bpp_from_input_file(filename, expand_orient=False, expand_strand=False, expand_svtype=False, **kwargs):
+def read_bpp_from_input_file(
+    filename, expand_orient=False, expand_strand=False, expand_svtype=False, **kwargs
+):
     """
     reads a file using the tab module. Each row is converted to a breakpoint pair and
     other column data is stored in the data attribute
@@ -378,7 +383,7 @@ def read_bpp_from_input_file(filename, expand_orient=False, expand_strand=False,
             (for strand this is only applied if the bam itself is stranded)
         explicit_strand (bool): used to stop unstranded breakpoint pairs from losing input strand information
     Returns:
-        :class:`list` of :any:`BreakpointPair`: a list of pairs
+        List[BreakpointPair]: a list of pairs
 
     Example:
         >>> read_bpp_from_input_file('filename')
@@ -387,16 +392,17 @@ def read_bpp_from_input_file(filename, expand_orient=False, expand_strand=False,
     One can also validate other expected columns that will go in the data attribute using the usual arguments
     to the tab.read_file function
 
-    .. code-block:: python
-
+    Example:
         >>> read_bpp_from_input_file('filename', cast={'index': int})
         [BreakpointPair(), BreakpointPair(), ...]
     """
+
     def soft_null_cast(value):
         try:
             tab.cast_null(value)
         except TypeError:
             return value
+
     kwargs['require'] = set() if 'require' not in kwargs else set(kwargs['require'])
     kwargs['require'].update({COLUMNS.break1_chromosome, COLUMNS.break2_chromosome})
     kwargs.setdefault('cast', {}).update(
@@ -410,28 +416,29 @@ def read_bpp_from_input_file(filename, expand_orient=False, expand_strand=False,
             COLUMNS.untemplated_seq: soft_null_cast,
             COLUMNS.break1_chromosome: lambda x: re.sub('^chr', '', x),
             COLUMNS.break2_chromosome: lambda x: re.sub('^chr', '', x),
-            COLUMNS.tracking_id: lambda x: x if x else str(uuid())
-        })
-    kwargs.setdefault('add_default', {}).update({
-        COLUMNS.untemplated_seq: None,
-        COLUMNS.break1_orientation: ORIENT.NS,
-        COLUMNS.break1_strand: STRAND.NS,
-        COLUMNS.break2_orientation: ORIENT.NS,
-        COLUMNS.break2_strand: STRAND.NS,
-        COLUMNS.opposing_strands: None,
-        COLUMNS.tracking_id: ''
-    })
+            COLUMNS.tracking_id: lambda x: x if x else str(uuid()),
+        }
+    )
+    kwargs.setdefault('add_default', {}).update(
+        {
+            COLUMNS.untemplated_seq: None,
+            COLUMNS.break1_orientation: ORIENT.NS,
+            COLUMNS.break1_strand: STRAND.NS,
+            COLUMNS.break2_orientation: ORIENT.NS,
+            COLUMNS.break2_strand: STRAND.NS,
+            COLUMNS.opposing_strands: None,
+            COLUMNS.tracking_id: '',
+        }
+    )
     kwargs.setdefault('in_', {}).update(
         {
             COLUMNS.break1_orientation: ORIENT.values(),
             COLUMNS.break1_strand: STRAND.values(),
             COLUMNS.break2_orientation: ORIENT.values(),
-            COLUMNS.break2_strand: STRAND.values()
-        })
-    _, rows = tab.read_file(
-        filename, suppress_index=True,
-        **kwargs
+            COLUMNS.break2_strand: STRAND.values(),
+        }
     )
+    _, rows = tab.read_file(filename, suppress_index=True, **kwargs)
     restricted = [
         COLUMNS.break1_chromosome,
         COLUMNS.break1_position_start,
@@ -445,7 +452,7 @@ def read_bpp_from_input_file(filename, expand_orient=False, expand_strand=False,
         COLUMNS.break2_orientation,
         COLUMNS.stranded,
         COLUMNS.opposing_strands,
-        COLUMNS.untemplated_seq
+        COLUMNS.untemplated_seq,
     ]
     pairs = []
     for line_index, row in enumerate(rows):
@@ -458,8 +465,12 @@ def read_bpp_from_input_file(filename, expand_orient=False, expand_strand=False,
             if attr in [COLUMNS.cluster_id, COLUMNS.annotation_id, COLUMNS.validation_id]:
                 if not re.match('^([A-Za-z0-9-]+|)(;[A-Za-z0-9-]+)*$', row[attr]):
                     raise AssertionError(
-                        'error in column', attr, 'All mavis pipeline step ids must satisfy the regex:',
-                        '^([A-Za-z0-9-]+|)(;[A-Za-z0-9-]+)*$', row[attr])
+                        'error in column',
+                        attr,
+                        'All mavis pipeline step ids must satisfy the regex:',
+                        '^([A-Za-z0-9-]+|)(;[A-Za-z0-9-]+)*$',
+                        row[attr],
+                    )
         stranded = row[COLUMNS.stranded]
 
         strand1 = row[COLUMNS.break1_strand] if stranded else STRAND.NS
@@ -477,11 +488,15 @@ def read_bpp_from_input_file(filename, expand_orient=False, expand_strand=False,
                 pass
 
         for orient1, orient2, strand1, strand2, putative_event_type in itertools.product(
-            ORIENT.expand(row[COLUMNS.break1_orientation]) if expand_orient else [row[COLUMNS.break1_orientation]],
-            ORIENT.expand(row[COLUMNS.break2_orientation]) if expand_orient else [row[COLUMNS.break2_orientation]],
+            ORIENT.expand(row[COLUMNS.break1_orientation])
+            if expand_orient
+            else [row[COLUMNS.break1_orientation]],
+            ORIENT.expand(row[COLUMNS.break2_orientation])
+            if expand_orient
+            else [row[COLUMNS.break2_orientation]],
             STRAND.expand(strand1) if expand_strand and stranded else [strand1],
             STRAND.expand(strand2) if expand_strand and stranded else [strand2],
-            event_type
+            event_type,
         ):
             try:
                 break1 = Breakpoint(
@@ -489,14 +504,14 @@ def read_bpp_from_input_file(filename, expand_orient=False, expand_strand=False,
                     row[COLUMNS.break1_position_start],
                     row[COLUMNS.break1_position_end],
                     strand=strand1,
-                    orient=orient1
+                    orient=orient1,
                 )
                 break2 = Breakpoint(
                     row[COLUMNS.break2_chromosome],
                     row[COLUMNS.break2_position_start],
                     row[COLUMNS.break2_position_end],
                     strand=strand2,
-                    orient=orient2
+                    orient=orient2,
                 )
 
                 data = {k: v for k, v in row.items() if k not in restricted}
@@ -512,10 +527,17 @@ def read_bpp_from_input_file(filename, expand_orient=False, expand_strand=False,
                     bpp.data[COLUMNS.event_type] = putative_event_type
                     if putative_event_type not in BreakpointPair.classify(bpp):
                         raise InvalidRearrangement(
-                            'error: expected one of', BreakpointPair.classify(bpp),
-                            'but found', putative_event_type, str(bpp), row)
+                            'error: expected one of',
+                            BreakpointPair.classify(bpp),
+                            'but found',
+                            putative_event_type,
+                            str(bpp),
+                            row,
+                        )
                 if expand_svtype and not putative_event_type:
-                    for svtype in BreakpointPair.classify(bpp, distance=lambda x, y: Interval(y - x)):
+                    for svtype in BreakpointPair.classify(
+                        bpp, distance=lambda x, y: Interval(y - x)
+                    ):
                         new_bpp = bpp.copy()
                         new_bpp.data[COLUMNS.event_type] = svtype
                         temp.append(new_bpp)

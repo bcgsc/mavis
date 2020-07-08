@@ -55,22 +55,23 @@ class FileTransform:
     Holds a set of operations which define the transform_line function.
     Generally a single FileTransform object is required per file as lines are expected to have the same format
     """
+
     def __init__(self, header, **kwargs):
         """
         Args:
-            header (list of str): the header from the file as a list of column names (in-order)
-            require (list of str): list of columns that must be in the input header
-            rename (dict of str and list of str): mapping of old to new column(s)
-            drop (list of str): list of columns in the old input header to drop
-            add_default (dict of str): mapping of new column names to default values (if the column does not exist already)
-            cast (dict of str and func): mapping of new/final columns to the type to cast them to
-            split (dict of str and str):
+            header (List[str]): the header from the file as a list of column names (in-order)
+            require (List[str]): list of columns that must be in the input header
+            rename (Dict[str,List[str]]): mapping of old to new column(s)
+            drop (List[str]): list of columns in the old input header to drop
+            add_default (Dict[str]): mapping of new column names to default values (if the column does not exist already)
+            cast (Dict[str,func]): mapping of new/final columns to the type to cast them to
+            split (Dict[str,str]):
                 a dictionary mapping original column names to regex groups to create as the new column names
-            combine (dict of str and str):
+            combine (Dict[str,str]):
                 a dictionary of the final column name to the format string. The field names in the format
                 string must correspond to existing column names
             simplify (bool): drop all columns not created or retained
-            validate (dict of str and str): mapping of old columns to regex they must satisfy
+            validate (Dict[str,str]): mapping of old columns to regex they must satisfy
 
         Returns:
             FileTransform: an object with the validated rules for transforming lines in an input file
@@ -87,7 +88,7 @@ class FileTransform:
         self.cast = kwargs.pop('cast', {})
         self.simplify = kwargs.pop('simplify', False)
         self.in_ = kwargs.pop('in_', {})
-        self.header = []                               # holds the new header after the transform
+        self.header = []  # holds the new header after the transform
 
         if kwargs:
             raise TypeError('invalid argument(s)', list(kwargs.keys()))
@@ -100,7 +101,9 @@ class FileTransform:
 
         # check that the header columns are unique
         if len(set(header)) != len(header):
-            raise KeyError('duplicate input col: column names in input header must be unique', header)
+            raise KeyError(
+                'duplicate input col: column names in input header must be unique', header
+            )
 
         for col in self.add:
             current_columns.add(col)
@@ -113,19 +116,25 @@ class FileTransform:
         # 1. require: check that the required columns exist in the input header
         for col in self.require:
             if col not in current_columns:
-                raise KeyError('cannot require: column not found in the input header', col, current_columns)
+                raise KeyError(
+                    'cannot require: column not found in the input header', col, current_columns
+                )
             cant_simplify.add(col)
 
         # 2. validate: check that the input column matches the expected pattern
         for col, regex in self.validate.items():
             if col not in current_columns:
-                raise KeyError('cannot validate: column not found in the input header', col, current_columns)
+                raise KeyError(
+                    'cannot validate: column not found in the input header', col, current_columns
+                )
             cant_simplify.add(col)
 
         # 4. rename: rename a column to one or more new column names
         for col, new_names in self.rename.items():
             if col not in current_columns:
-                raise KeyError('cannot rename column. column not found in header', col, current_columns)
+                raise KeyError(
+                    'cannot rename column. column not found in header', col, current_columns
+                )
             for new_name in new_names:
                 if new_name in current_columns:
                     raise KeyError('duplicate column name', new_name, current_columns)
@@ -137,7 +146,9 @@ class FileTransform:
             robj = re.compile(regex)
             new_columns = robj.groupindex.keys()
             if col not in current_columns:
-                raise KeyError('cannot split column. column not found in header', col, current_columns)
+                raise KeyError(
+                    'cannot split column. column not found in header', col, current_columns
+                )
             for new_col in new_columns:
                 if new_col in current_columns:
                     raise KeyError('duplicate column name', new_col, current_columns)
@@ -153,12 +164,16 @@ class FileTransform:
             cant_simplify.add(ncol)
             for col in old_column_names:
                 if col not in current_columns:
-                    raise KeyError('cannot combine column. column not found in header', col, current_columns)
+                    raise KeyError(
+                        'cannot combine column. column not found in header', col, current_columns
+                    )
 
         # 7. cast: apply some callable
         for col, func in self.cast.items():
             if col not in current_columns:
-                raise KeyError('cannot cast column. column not found in header', col, current_columns)
+                raise KeyError(
+                    'cannot cast column. column not found in header', col, current_columns
+                )
             if not callable(func):
                 raise TypeError('function applied to column must be callable', col, func)
             cant_simplify.add(col)
@@ -166,7 +181,11 @@ class FileTransform:
         # 8. in_: check for satisfying some controlled vocab
         for col, item in self.in_.items():
             if col not in current_columns:
-                raise KeyError('cannot check membership column. column not found in header', col, current_columns)
+                raise KeyError(
+                    'cannot check membership column. column not found in header',
+                    col,
+                    current_columns,
+                )
             if None in item:
                 pass
             cant_simplify.add(col)
@@ -175,7 +194,9 @@ class FileTransform:
         for col in self.drop:
             if col in self.require:
                 raise AssertionError('cannot both drop and retain a column', col)
-            current_columns.discard(col)        # 8. simplify: drop any columns that are not new, added, or retained
+            current_columns.discard(
+                col
+            )  # 8. simplify: drop any columns that are not new, added, or retained
 
         if self.simplify:
             for col in list(current_columns):
@@ -200,19 +221,26 @@ class FileTransform:
         transforms the input line into a hash of the new/final column names with the transform rules applied
 
         Args:
-            line (list of str): list of values for a row with the same input header as the transform
+            line (List[str]): list of values for a row with the same input header as the transform
         Raises:
             exception exceptions occur if validation, split or combine fails
 
         Returns:
-            dict of str: the hash representation of the new row
+            Dict[str]: the hash representation of the new row
         """
-        if any([
-            not allow_short and len(self.input) != len(line),
-            allow_short and len(self.input) < len(line)
-        ]):
-            raise AssertionError('length of input list {0} does not match length of the expected header {1}: '.format(
-                len(line), len(self.input)) + re.sub('\n', '\\n', '\\t'.join(line)), self.input)
+        if any(
+            [
+                not allow_short and len(self.input) != len(line),
+                allow_short and len(self.input) < len(line),
+            ]
+        ):
+            raise AssertionError(
+                'length of input list {0} does not match length of the expected header {1}: '.format(
+                    len(line), len(self.input)
+                )
+                + re.sub('\n', '\\n', '\\t'.join(line)),
+                self.input,
+            )
 
         row = {}
         cant_simplify = set()
@@ -291,16 +319,24 @@ class FileTransform:
         return row
 
 
-def read_file(inputfile, delimiter='\t', header=None, strict=True, suppress_index=False, allow_short=False, **kwargs):
+def read_file(
+    inputfile,
+    delimiter='\t',
+    header=None,
+    strict=True,
+    suppress_index=False,
+    allow_short=False,
+    **kwargs
+):
     """
     Args:
         inputfile (str): the path to the inputfile
-        header (list of str): for non-headered files
+        header (List[str]): for non-headered files
         delimiter (str): the delimiter (what to split on)
         strict (bool): if false will ignore lines that fail transform
         suppress_index (bool): do not create an index
     Returns:
-        list of str and dict of str: header and the row dictionaries
+        Tuple[List[str], Dict[str]]: header and the row dictionaries
     """
     if VERBOSE:
         print("read_file(", inputfile, ", ", kwargs, ")")
@@ -338,7 +374,9 @@ def read_file(inputfile, delimiter='\t', header=None, strict=True, suppress_inde
     new_header = transform.header
 
     if not suppress_index and index in new_header:
-        raise AttributeError('column name {0} is reserved and cannot be used as an input'.format(repr(index)))
+        raise AttributeError(
+            'column name {0} is reserved and cannot be used as an input'.format(repr(index))
+        )
 
     # now go through the lines in the file
     while current_line_index < len(lines):

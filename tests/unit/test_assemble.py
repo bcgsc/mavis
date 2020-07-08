@@ -2,6 +2,7 @@ import itertools
 import random
 import os
 import unittest
+import pytest
 
 from mavis.assemble import assemble, Contig, DeBruijnGraph, filter_contigs, kmers
 from mavis.constants import DNA_ALPHABET
@@ -27,9 +28,7 @@ class TestModule(unittest.TestCase):
 
     def test_assemble(self):
         sequences = ['ABCD', 'BCDE', 'CDEF', 'ABCDE', 'DEFG']
-        c = assemble(
-            sequences, 3, min_edge_trim_weight=1, remap_min_exact_match=1
-        )
+        c = assemble(sequences, 3, min_edge_trim_weight=1, remap_min_exact_match=1)
         self.assertEqual(1, len(c))
         self.assertEqual('ABCDEFG', c[0].seq)
         self.assertEqual(5, c[0].remap_score())
@@ -45,7 +44,6 @@ class TestModule(unittest.TestCase):
 
 
 class TestFilterContigs(unittest.TestCase):
-
     def test_drop_reverse_complement(self):
         c1 = Contig('atcgatcgatcgatcgatcgatcgatatagggcatcagc', 1)
         c2 = Contig('gctgatgccctatatcgatcgatcgatcgatcgatcgat', 1)
@@ -80,15 +78,21 @@ class TestFilterContigs(unittest.TestCase):
         self.assertEqual(2, len(result))
 
     def test_drop_similar_different_lengths(self):
-        c1 = Contig('atcgatcgatcgatcgatatcgatcgatcgatcgatatcgatcgatcgatcgatatcgatcgatcgatcgatcgatcgatatgggcatcagc', 2)
-        c2 = Contig('atcgatcgatcgatcgatatcgatcgatcgatcgatatcgatcgatcgatcgatatcgatcgatcgatcgatcgatcgatagggcatcagc', 1)
+        c1 = Contig(
+            'atcgatcgatcgatcgatatcgatcgatcgatcgatatcgatcgatcgatcgatatcgatcgatcgatcgatcgatcgatatgggcatcagc',
+            2,
+        )
+        c2 = Contig(
+            'atcgatcgatcgatcgatatcgatcgatcgatcgatatcgatcgatcgatcgatatcgatcgatcgatcgatcgatcgatagggcatcagc',
+            1,
+        )
         result = filter_contigs([c2, c1], 0.10)
         self.assertEqual(1, len(result))
         self.assertEqual(c1.seq, result[0].seq)
 
 
 class TestDeBruijnGraph(unittest.TestCase):
-
+    @pytest.mark.skipif(os.environ.get('RUN_FULL', '0') != '1', reason='running short tests only')
     def test_trim_tails_by_freq_forks(self):
         g = DeBruijnGraph()
         for s, t in itertools.combinations([1, 2, 3, 4, 5, 6], 2):
@@ -179,16 +183,19 @@ class TestFullAssemly(unittest.TestCase):
         with open(os.path.join(DATA_DIR, 'test_assembly_sequences.txt')) as fh:
             self.seq = [i.strip() for i in fh.readlines()]
 
+    @pytest.mark.skipif(os.environ.get('RUN_FULL', '0') != '1', reason='running short tests only')
     def test_deterministic_assembly(self):
         contig_sequences = set()
         for i in range(20):
             random.shuffle(self.seq)
-            contigs = assemble(self.seq,
-                               111,
-                               min_edge_trim_weight=3,
-                               assembly_max_paths=8,
-                               assembly_min_uniq=0.1,
-                               min_complexity=0.1)
+            contigs = assemble(
+                self.seq,
+                111,
+                min_edge_trim_weight=3,
+                assembly_max_paths=8,
+                assembly_min_uniq=0.1,
+                min_complexity=0.1,
+            )
             self.assertEqual(1, len(contigs))
             contig_sequences.add(contigs[0].seq)
         self.assertEqual(1, len(contig_sequences))

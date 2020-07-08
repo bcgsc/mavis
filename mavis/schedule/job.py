@@ -11,8 +11,9 @@ class LogFile:
     """
     stores information about the log status
     """
+
     STATUS = MavisNamespace('EMPTY', 'CRASH', 'INCOMPLETE', 'COMPLETE')
-    """:class:`~mavis.constants.MavisNamespace`: The status of the job based on parsing of the logfile"""
+    """MavisNamespace: The status of the job based on parsing of the logfile"""
 
     def __init__(self, filename, status, message=None):
         """
@@ -35,11 +36,16 @@ class LogFile:
             raise FileNotFoundError('Log file does not exist', filename)
         log = None
         with open(filename, 'r') as fh:
-            lines = [l.strip() for l in fh.readlines() if l.strip()]
+            lines = [line.strip() for line in fh.readlines() if line.strip()]
             for line in lines[::-1]:
                 line = line.strip().lower()
-                if line and line[0] != '\x1b':  # ignore lines starting with terminal control characters
-                    if re.search(r'(\b|^)((\S+)?error|fault|fatal|aborted|core dumped|killed|died|command not found)(\b|$)', line):
+                if (
+                    line and line[0] != '\x1b'
+                ):  # ignore lines starting with terminal control characters
+                    if re.search(
+                        r'(\b|^)((\S+)?error|fault|fatal|aborted|core dumped|killed|died|command not found)(\b|$)',
+                        line,
+                    ):
                         log = LogFile(filename, cls.STATUS.CRASH, line)
                     elif re.match(r'^\s*run time \(s\): (\d+)\s*$', line):
                         log = LogFile(filename, cls.STATUS.COMPLETE)
@@ -50,7 +56,6 @@ class LogFile:
 
 
 class Job:
-
     def __init__(
         self,
         stage,
@@ -71,11 +76,11 @@ class Job:
             job_ident (int): the job number/id according to the scheduler being used
             output_dir (str): path to the output directory where logs/stamps for this job will be written
             name (str): the job name according to the scheduler being used
-            dependencies (list of Job): list of jobs which must complete for this job to run
+            dependencies (List[Job]): list of jobs which must complete for this job to run
             stdout (str): basename of the file to write std output to
             script (str): path to the script which contains the commands for the job
             created_at (int): the time stamp for when the job was created (created != submitted)
-            status (~mavis.schedule.constants.JOB_STATUS): The current (since last checked) status of the job
+            status (mavis.schedule.constants.JOB_STATUS): The current (since last checked) status of the job
             status_comment (str): the comment which describes the status, generally this is used for reporting errors from the log file or failed dependencies (SLURM)
             options (**dict): override default options specified by OPTIONS
         """
@@ -86,7 +91,9 @@ class Job:
         self.script = script
         self.status = JOB_STATUS.enforce(status)
         self.output_dir = output_dir
-        self.stdout = os.path.join(output_dir, 'job-{name}-{job_ident}.log') if not stdout else stdout
+        self.stdout = (
+            os.path.join(output_dir, 'job-{name}-{job_ident}.log') if not stdout else stdout
+        )
 
         self.created_at = int(created_at if created_at else time.time())
         self.status = status
@@ -106,7 +113,9 @@ class Job:
         """
         Used for identifying this job in an ini config file
         """
-        display_name = self.name if self.job_ident is None else '{}_{}'.format(self.name, self.job_ident)
+        display_name = (
+            self.name if self.job_ident is None else '{}_{}'.format(self.name, self.job_ident)
+        )
         display_name = re.sub(r'[\[\]#;]', '_', display_name)
         return display_name
 
@@ -133,7 +142,9 @@ class Job:
         """
         returns the path to the expected complete stamp
         """
-        return os.path.join(self.output_dir, 'MAVIS-{job_ident}.COMPLETE').format(job_ident=self.job_ident, name=self.name)
+        return os.path.join(self.output_dir, 'MAVIS-{job_ident}.COMPLETE').format(
+            job_ident=self.job_ident, name=self.name
+        )
 
     def reset(self):
         self.status = JOB_STATUS.NOT_SUBMITTED
@@ -149,10 +160,14 @@ class ArrayJob(Job):
     def __init__(self, stage, task_list, **kwargs):
         """
         Args:
-            task_list (:class:`list` or :class:`int`): the ids of tasks in the job array
+            task_list (Union[List,int]): the ids of tasks in the job array
         """
         Job.__init__(self, stage, **kwargs)
-        self.stdout = os.path.join(self.output_dir, 'job-{name}-{job_ident}-{task_ident}.log') if 'stdout' not in kwargs else kwargs['stdout']
+        self.stdout = (
+            os.path.join(self.output_dir, 'job-{name}-{job_ident}-{task_ident}.log')
+            if 'stdout' not in kwargs
+            else kwargs['stdout']
+        )
 
         if isinstance(task_list, int):
             task_list = list(range(1, task_list + 1))
@@ -189,7 +204,9 @@ class ArrayJob(Job):
         """
         returns the path to the expected complete stamp
         """
-        return os.path.join(self.output_dir, 'MAVIS-{job_ident}.COMPLETE').format(job_ident=self.job_ident, name=self.name, task_ident=task_ident)
+        return os.path.join(self.output_dir, 'MAVIS-{job_ident}.COMPLETE').format(
+            job_ident=self.job_ident, name=self.name, task_ident=task_ident
+        )
 
     def flatten(self):
         result = {k: v for k, v in Job.flatten(self).items() if k != 'task_list'}
@@ -209,15 +226,18 @@ class ArrayJob(Job):
             task.reset()
 
     def __repr__(self):
-        return '{}(job_ident={}, name={}, stage={}, status={})'.format(self.__class__.__name__, self.job_ident, self.name, self.stage, self.status)
+        return '{}(job_ident={}, name={}, stage={}, status={})'.format(
+            self.__class__.__name__, self.job_ident, self.name, self.stage, self.status
+        )
 
 
 class TorqueArrayJob(ArrayJob):
-
     def complete_stamp(self, task_ident):
         # example: MAVIS-136[1].torque01.bcgsc.ca.COMPLETE
         job_ident = re.sub(r'\[\]', '[{}]'.format(task_ident), self.job_ident)
-        return os.path.join(self.output_dir, 'MAVIS-{job_ident}.COMPLETE').format(job_ident=job_ident, name=self.name, task_ident=task_ident)
+        return os.path.join(self.output_dir, 'MAVIS-{job_ident}.COMPLETE').format(
+            job_ident=job_ident, name=self.name, task_ident=task_ident
+        )
 
     def logfile(self, task_ident):
         # example: job-MV_mock-A47933_batch-B9PE6YAtnHu4cHA2GrsEzX-1-136[1].torque01.bcgsc.ca-1.log-1
@@ -228,7 +248,6 @@ class TorqueArrayJob(ArrayJob):
 
 
 class Task:
-
     def __init__(self, array_job, task_ident):
         self.array_job = array_job
         self.task_ident = int(task_ident)

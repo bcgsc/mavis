@@ -1,36 +1,34 @@
-/*/*/tmp
+# python generated files
 /.eggs
-/tmp
-# /
-*.~lock*
-*.noseids
-/cytoBand.txt
-/temp*
 /coverage
-/test*svg
 /venv
 /.coverage
 *.pyc
 *__pycache__
-/*.bed
-/*.fa
-/docs/build
-/docs/source/auto
-/output
-/hg19_masked_regions.tsv
-*.fai
-POG*
+build-docs
 *.egg-info*
 build
-dist
-src
-/docs/source/config_settings_glossary.rst
 *coverage*
-*.tgf
-analysis_scripts
-.vscode
-*.nfs*
-*eggs/
-html
+dist
+junit
 .pytest*
 .tox
+*eggs/
+.mypy_cache
+
+# aligners
+blat
+bwa
+*.fai
+
+# user editing generated files
+*.~lock*
+.vscode
+*.nfs*
+junit
+
+# generated documentation
+/docs/package/mavis/*.md
+/docs/package/mavis/*/*.md
+# don't ignore subpackage summary files
+!/docs/package/mavis/*/index.md

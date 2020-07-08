@@ -7,7 +7,14 @@ import hashlib
 
 from .constants import DEFAULTS, PASS_FILENAME
 from .genomic import PreTranscript
-from .variant import annotate_events, choose_more_annotated, choose_transcripts_by_priority, call_protein_indel, flatten_fusion_transcript, flatten_fusion_translation
+from .variant import (
+    annotate_events,
+    choose_more_annotated,
+    choose_transcripts_by_priority,
+    call_protein_indel,
+    flatten_fusion_transcript,
+    flatten_fusion_translation,
+)
 from .fusion import determine_prime
 from ..cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from ..constants import COLUMNS, PRIME, PROTOCOL, sort_columns
@@ -20,7 +27,7 @@ from ..util import LOG, mkdirp, read_inputs
 
 ACCEPTED_FILTERS = {
     'choose_more_annotated': choose_more_annotated,
-    'choose_transcripts_by_priority': choose_transcripts_by_priority
+    'choose_transcripts_by_priority': choose_transcripts_by_priority,
 }
 
 
@@ -34,19 +41,33 @@ def draw(drawing_config, ann, reference_genome, template_metadata, drawings_dire
 
     drawing_attempts = []
     for attempt in range(0, drawing_config.max_drawing_retries):
-        drawing_attempts.append((initial_width + attempt * drawing_config.drawing_width_iter_increase, {}))
-        drawing_attempts.append((
-            initial_width + attempt * drawing_config.drawing_width_iter_increase,
-            {'stack_reference_transcripts': True}
-        ))
-    drawing_attempts.append((initial_width, {'draw_fusion_transcript': False, 'draw_reference_transcripts': False}))
+        drawing_attempts.append(
+            (initial_width + attempt * drawing_config.drawing_width_iter_increase, {})
+        )
+        drawing_attempts.append(
+            (
+                initial_width + attempt * drawing_config.drawing_width_iter_increase,
+                {'stack_reference_transcripts': True},
+            )
+        )
+    drawing_attempts.append(
+        (initial_width, {'draw_fusion_transcript': False, 'draw_reference_transcripts': False})
+    )
 
     for i, (curr_width, other_settings) in enumerate(drawing_attempts):
-        LOG('drawing attempt:', i + 1, str(curr_width) + 'px', other_settings if other_settings else '', time_stamp=False)
+        LOG(
+            'drawing attempt:',
+            i + 1,
+            str(curr_width) + 'px',
+            other_settings if other_settings else '',
+            time_stamp=False,
+        )
         try:
             drawing_config.width = curr_width
             canvas, legend_json = draw_sv_summary_diagram(
-                drawing_config, ann, reference_genome=reference_genome,
+                drawing_config,
+                ann,
+                reference_genome=reference_genome,
                 templates=template_metadata,
                 **other_settings
             )
@@ -93,8 +114,13 @@ def draw(drawing_config, ann, reference_genome, template_metadata, drawings_dire
 
 
 def main(
-    inputs, output, library, protocol,
-    reference_genome, annotations, template_metadata,
+    inputs,
+    output,
+    library,
+    protocol,
+    reference_genome,
+    annotations,
+    template_metadata,
     min_domain_mapping_match=DEFAULTS.min_domain_mapping_match,
     min_orf_size=DEFAULTS.min_orf_size,
     max_orf_cap=DEFAULTS.max_orf_cap,
@@ -107,14 +133,14 @@ def main(
 ):
     """
     Args:
-        inputs (:class:`List` of :class:`str`): list of input files to read
+        inputs (List[str]): list of input files to read
         output (str): path to the output directory
-        reference_genome (:class:`~mavis.annotate.file_io.ReferenceFile`): see :func:`~mavis.annotate.file_io.load_reference_genome`
-        annotations (:class:`~mavis.annotate.file_io.ReferenceFile`): see :func:`~mavis.annotate.file_io.load_reference_genes`
-        template_metadata (:class:`~mavis.annotate.file_io.ReferenceFile`): see :func:`~mavis.annotate.file_io.load_templates`
+        reference_genome (mavis.annotate.file_io.ReferenceFile): see :func:`mavis.annotate.file_io.load_reference_genome`
+        annotations (mavis.annotate.file_io.ReferenceFile): see :func:`mavis.annotate.file_io.load_reference_genes`
+        template_metadata (mavis.annotate.file_io.ReferenceFile): see :func:`mavis.annotate.file_io.load_templates`
         min_domain_mapping_match (float): min mapping match percent (0-1) to count a domain as mapped
-        min_orf_size (int): minimum size of an :term:`open reading frame` to keep as a putative translation
-        max_orf_cap (int): the maximum number of :term:`open reading frame` s to collect for any given event
+        min_orf_size (int): minimum size of an [open reading frame](/glossary/#open-reading-frame) to keep as a putative translation
+        max_orf_cap (int): the maximum number of [open reading frame](/glossary/#open-reading-frame) s to collect for any given event
     """
     # error early on missing input files
     annotations.files_exist()
@@ -133,14 +159,13 @@ def main(
     mkdirp(drawings_directory)
     # test that the sequence makes sense for a random transcript
     bpps = read_inputs(
-        inputs, in_={COLUMNS.protocol: PROTOCOL.values()},
-        add_default={
-            COLUMNS.protocol: protocol,
-            COLUMNS.library: library,
-            COLUMNS.stranded: False
-        },
+        inputs,
+        in_={COLUMNS.protocol: PROTOCOL.values()},
+        add_default={COLUMNS.protocol: protocol, COLUMNS.library: library, COLUMNS.stranded: False},
         require=[COLUMNS.protocol, COLUMNS.library],
-        expand_strand=False, expand_orient=True, expand_svtype=True
+        expand_strand=False,
+        expand_orient=True,
+        expand_svtype=True,
     )
     LOG('read {} breakpoint pairs'.format(len(bpps)))
 
@@ -155,11 +180,13 @@ def main(
         max_proximity=max_proximity,
         max_orf_cap=max_orf_cap,
         log=LOG,
-        filters=annotation_filters
+        filters=annotation_filters,
     )
 
     # now try generating the svg
-    drawing_config = DiagramSettings(**{k: v for k, v in kwargs.items() if k in ILLUSTRATION_DEFAULTS})
+    drawing_config = DiagramSettings(
+        **{k: v for k, v in kwargs.items() if k in ILLUSTRATION_DEFAULTS}
+    )
 
     header_req = {
         COLUMNS.break1_strand,
@@ -177,7 +204,7 @@ def main(
         COLUMNS.annotation_figure,
         COLUMNS.annotation_figure_legend,
         COLUMNS.cdna_synon,
-        COLUMNS.protein_synon
+        COLUMNS.protein_synon,
     }
     header = None
     LOG('opening for write:', tabbed_output_file)
@@ -196,18 +223,28 @@ def main(
                 tabbed_fh.write('\t'.join([str(c) for c in header]) + '\n')
             LOG(
                 '({} of {}) current annotation'.format(i + 1, total),
-                ann.annotation_id, ann.transcript1, ann.transcript2, ann.event_type)
+                ann.annotation_id,
+                ann.transcript1,
+                ann.transcript2,
+                ann.event_type,
+            )
             LOG(ann, time_stamp=False)
             # get the reference sequences for either transcript
             ref_cdna_seq = {}
             ref_protein_seq = {}
 
-            for pre_transcript in [x for x in [ann.transcript1, ann.transcript2] if isinstance(x, PreTranscript)]:
+            for pre_transcript in [
+                x for x in [ann.transcript1, ann.transcript2] if isinstance(x, PreTranscript)
+            ]:
                 name = pre_transcript.name
                 for spl_tx in pre_transcript.spliced_transcripts:
-                    ref_cdna_seq.setdefault(spl_tx.get_seq(reference_genome.content), set()).add(name)
+                    ref_cdna_seq.setdefault(spl_tx.get_seq(reference_genome.content), set()).add(
+                        name
+                    )
                     for translation in spl_tx.translations:
-                        ref_protein_seq.setdefault(translation.get_aa_seq(reference_genome.content), set()).add(name)
+                        ref_protein_seq.setdefault(
+                            translation.get_aa_seq(reference_genome.content), set()
+                        ).add(name)
 
             # try building the fusion product
             rows = []
@@ -240,18 +277,29 @@ def main(
                         nrow.update(flatten_fusion_translation(fusion_translation))
                         if ann.single_transcript() and ann.transcript1.translations:
                             nrow[COLUMNS.fusion_protein_hgvs] = call_protein_indel(
-                                ann.transcript1.translations[0], fusion_translation, reference_genome.content)
+                                ann.transcript1.translations[0],
+                                fusion_translation,
+                                reference_genome.content,
+                            )
                         rows.append(nrow)
                 else:
                     temp_row.update(ann_row)
                     rows.append(temp_row)
             # draw the annotation and add the path to all applicable rows (one drawing for multiple annotated_events)
-            if any([
-                not ann.fusion and not draw_fusions_only,
-                ann.fusion and not draw_non_synonymous_cdna_only,
-                ann.fusion and draw_non_synonymous_cdna_only and not cdna_synon_all
-            ]):
-                drawing, legend = draw(drawing_config, ann, reference_genome.content, template_metadata.content, drawings_directory)
+            if any(
+                [
+                    not ann.fusion and not draw_fusions_only,
+                    ann.fusion and not draw_non_synonymous_cdna_only,
+                    ann.fusion and draw_non_synonymous_cdna_only and not cdna_synon_all,
+                ]
+            ):
+                drawing, legend = draw(
+                    drawing_config,
+                    ann,
+                    reference_genome.content,
+                    template_metadata.content,
+                    drawings_directory,
+                )
                 for row in rows + [ann_row]:
                     row[COLUMNS.annotation_figure] = drawing
                     row[COLUMNS.annotation_figure_legend] = legend

@@ -23,7 +23,7 @@ def recompute_cigar_mismatch(read, ref):
         ref (str): the reference sequence
 
     Returns:
-        :class:`list` of :class:`tuple` of :class:`int` and :class:`int`: the cigar tuple
+        List[Tuple[int,int]]: the cigar tuple
     """
     result = []
     offset = 0
@@ -90,7 +90,7 @@ def longest_exact_match(cigar):
     returns the longest consecutive exact match
 
     Args:
-        cigar (:class:`list` of :class:`tuple` of :class:`int` and :class:`int`): the cigar tuples
+        cigar (List[Tuple[int,int]]): the cigar tuples
     """
     return longest_fuzzy_match(cigar, 0)
 
@@ -99,8 +99,7 @@ def score(cigar, **kwargs):
     """scoring based on sw alignment properties with gap extension penalties
 
     Args:
-        cigar (:class:`list` of :class:`~mavis.constants.CIGAR` and :class:`int`):
-          list of cigar tuple values
+        cigar (List[Tuple[mavis.constants.CIGAR,int]]): list of cigar tuple values
         MISMATCH (int): mismatch penalty
         MATCH (int): match penalty
         GAP (int): initial gap penalty
@@ -142,7 +141,9 @@ def match_percent(cigar):
         elif v == CIGAR.X:
             mismatches += f
         elif v == CIGAR.M:
-            raise AttributeError('cannot calculate match percent with non-specific alignments', cigar)
+            raise AttributeError(
+                'cannot calculate match percent with non-specific alignments', cigar
+            )
     if matches + mismatches == 0:
         raise AttributeError('input cigar str does not have any aligned sections (X or =)', cigar)
     else:
@@ -176,16 +177,18 @@ def extend_softclipping(cigar, min_exact_to_stop_softclipping):
     exact match aligned portion to signal stop
 
     Args:
-        original_cigar (:class:`list` of :class:`~mavis.constants.CIGAR` and :class:`int`): the input cigar
+        original_cigar (List[Tuple[mavis.constants.CIGAR,int]]): the input cigar
         min_exact_to_stop_softclipping (int): number of exact matches to terminate extension
 
     Returns:
-        tuple:
-            - :class:`list` of :class:`~mavis.constants.CIGAR` and :class:`int` - new cigar list
-            - :class:`int` - shift from the original start position
+        Tuple[List[Tuple[mavis.constants.CIGAR,int]], int]: new cigar list and shift from the original start position
     """
     new_cigar = []
-    anchors = [i for i, (v, f) in enumerate(cigar) if v in {CIGAR.EQ, CIGAR.M} and f >= min_exact_to_stop_softclipping]
+    anchors = [
+        i
+        for i, (v, f) in enumerate(cigar)
+        if v in {CIGAR.EQ, CIGAR.M} and f >= min_exact_to_stop_softclipping
+    ]
     if not anchors:
         raise AttributeError('cannot compute on this cigar as there is no stop point')
     start_anchor = min(anchors)
@@ -194,13 +197,19 @@ def extend_softclipping(cigar, min_exact_to_stop_softclipping):
         start_anchor = 0
     if cigar[-1][0] == CIGAR.H:
         end_anchor = len(cigar)
-    start_query_aligned = sum([f for v, f in cigar[:start_anchor] if v in QUERY_ALIGNED_STATES] + [0])
-    start_ref_aligned = sum([f for v, f in cigar[:start_anchor] if v in REFERENCE_ALIGNED_STATES] + [0])
-    end_query_aligned = sum([f for v, f in cigar[end_anchor + 1:] if v in QUERY_ALIGNED_STATES] + [0])
+    start_query_aligned = sum(
+        [f for v, f in cigar[:start_anchor] if v in QUERY_ALIGNED_STATES] + [0]
+    )
+    start_ref_aligned = sum(
+        [f for v, f in cigar[:start_anchor] if v in REFERENCE_ALIGNED_STATES] + [0]
+    )
+    end_query_aligned = sum(
+        [f for v, f in cigar[end_anchor + 1 :] if v in QUERY_ALIGNED_STATES] + [0]
+    )
     new_cigar = []
     if start_query_aligned:
         new_cigar.append((CIGAR.S, start_query_aligned))
-    new_cigar.extend(cigar[start_anchor:end_anchor + 1])
+    new_cigar.extend(cigar[start_anchor : end_anchor + 1])
     if end_query_aligned:
         new_cigar.append((CIGAR.S, end_query_aligned))
     return new_cigar, start_ref_aligned
@@ -330,9 +339,9 @@ def hgvs_standardize_cigar(read, reference_seq):
             prev_c, prev_v = new_cigar[i - 1]
 
             if c == CIGAR.I:
-                qseq = read.query_sequence[qpos:qpos + v]
+                qseq = read.query_sequence[qpos : qpos + v]
                 if next_c == CIGAR.EQ and prev_c == CIGAR.EQ:
-                    rseq = reference_seq[rpos:rpos + next_v]
+                    rseq = reference_seq[rpos : rpos + next_v]
                     t = 0
                     while t < next_v and rseq[t] == read.query_sequence[qpos + t]:
                         t += 1
@@ -347,7 +356,7 @@ def hgvs_standardize_cigar(read, reference_seq):
                         continue
                 elif next_c == CIGAR.D and prev_c == CIGAR.EQ:
                     # reduce the insertion and deletion by extending the alignment if possible
-                    delseq = reference_seq[rpos: rpos + next_v]
+                    delseq = reference_seq[rpos : rpos + next_v]
                     start = 0
                     end = 0
                     shift = True
@@ -385,9 +394,9 @@ def hgvs_standardize_cigar(read, reference_seq):
                 qpos += v
 
             elif c == CIGAR.D:
-                rseq = reference_seq[rpos:rpos + v]
+                rseq = reference_seq[rpos : rpos + v]
                 if next_c == CIGAR.EQ and prev_c == CIGAR.EQ:
-                    qseq = read.query_sequence[qpos:qpos + next_v]
+                    qseq = read.query_sequence[qpos : qpos + next_v]
                     t = 0
                     while t < next_v and qseq[t] == reference_seq[rpos + t]:
                         t += 1
@@ -421,7 +430,9 @@ def convert_string_to_cigar(string):
     """
     patt = r'(\d+(\D))'
     cigar = [m[0] for m in re.findall(patt, string)]
-    cigar = [(CIGAR[match[-1]] if match[-1] != '=' else CIGAR.EQ, int(match[:-1])) for match in cigar]
+    cigar = [
+        (CIGAR[match[-1]] if match[-1] != '=' else CIGAR.EQ, int(match[:-1])) for match in cigar
+    ]
     return cigar
 
 
@@ -438,12 +449,12 @@ def merge_internal_events(cigar, inner_anchor=10, outer_anchor=10):
     does not merge two mismatches, must contain a deletion/insertion
 
     Args:
-        cigar (list): a list of tuples of cigar states and counts
+        cigar (List): a list of tuples of cigar states and counts
         inner_anchor (int): minimum number of consecutive exact matches separating events
         outer_anchor (int): minimum consecutively aligned exact matches to anchor an end for merging
 
     Returns:
-        list: new list of cigar tuples with merged events
+        List: new list of cigar tuples with merged events
 
     Example:
         >>> merge_internal_events([(CIGAR.EQ, 10), (CIGAR.X, 1), (CIGAR.EQ, 2), (CIGAR.D, 1), (CIGAR.EQ, 10)])
@@ -461,10 +472,10 @@ def merge_internal_events(cigar, inner_anchor=10, outer_anchor=10):
         return read_cigar
 
     ppos = exact_match_pos[0][0]
-    prefix = read_cigar[0: ppos + 1]
+    prefix = read_cigar[0 : ppos + 1]
     spos = exact_match_pos[-1][0]
     suffix = read_cigar[spos:None]
-    read_cigar = read_cigar[len(prefix):len(suffix) * -1]
+    read_cigar = read_cigar[len(prefix) : len(suffix) * -1]
     new_cigar = prefix[:]
     for state, count in read_cigar:
         last_state, last_value = new_cigar[-1]
@@ -485,7 +496,7 @@ def merge_internal_events(cigar, inner_anchor=10, outer_anchor=10):
                     last_event = len(new_cigar) - i - 1
                 elif last_event != len(new_cigar):
                     break
-            anchor = sum([v for c, v in new_cigar[last_event + 1:]] + [0])
+            anchor = sum([v for c, v in new_cigar[last_event + 1 :]] + [0])
             # if the anchor is too small, merge it
             if last_event >= len(prefix) and anchor < inner_anchor:
                 temp = new_cigar[last_event:]

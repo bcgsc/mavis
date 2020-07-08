@@ -10,7 +10,9 @@ from ..util import generate_complete_stamp, LOG, output_tabbed_file, read_inputs
 
 
 def main(
-    inputs, output, annotations,
+    inputs,
+    output,
+    annotations,
     flanking_call_distance=DEFAULTS.flanking_call_distance,
     split_call_distance=DEFAULTS.split_call_distance,
     contig_call_distance=DEFAULTS.contig_call_distance,
@@ -20,11 +22,11 @@ def main(
 ):
     """
     Args:
-        inputs (:class:`List` of :class:`str`): list of input files to read
+        inputs (List[str]): list of input files to read
         output (str): path to the output directory
-        flanking_call_distance (int): pairing distance for pairing with an event called by :term:`flanking read pair`
-        split_call_distance (int): pairing distance for pairing with an event called by :term:`split read`
-        contig_call_distance (int): pairing distance for pairing with an event called by contig or :term:`spanning read`
+        flanking_call_distance (int): pairing distance for pairing with an event called by [flanking read pair](/glossary/#flanking-read-pair)
+        split_call_distance (int): pairing distance for pairing with an event called by [split read](/glossary/#split-read)
+        contig_call_distance (int): pairing distance for pairing with an event called by contig or [spanning read](/glossary/#spanning-read)
     """
     annotations.load()
     # load the file
@@ -32,32 +34,36 @@ def main(
         CALL_METHOD.FLANK: flanking_call_distance,
         CALL_METHOD.SPLIT: split_call_distance,
         CALL_METHOD.CONTIG: contig_call_distance,
-        CALL_METHOD.SPAN: spanning_call_distance
+        CALL_METHOD.SPAN: spanning_call_distance,
     }
 
     bpps = []
-    bpps.extend(read_inputs(
-        inputs,
-        require=[
-            COLUMNS.annotation_id,
-            COLUMNS.library,
-            COLUMNS.fusion_cdna_coding_start,
-            COLUMNS.fusion_cdna_coding_end,
-            COLUMNS.fusion_sequence_fasta_id
-        ],
-        in_={
-            COLUMNS.protocol: PROTOCOL.values(),
-            COLUMNS.event_type: SVTYPE.values(),
-            COLUMNS.fusion_splicing_pattern: SPLICE_TYPE.values() + [None, 'None']
-        },
-        add_default={
-            COLUMNS.fusion_cdna_coding_start: None,
-            COLUMNS.fusion_cdna_coding_end: None,
-            COLUMNS.fusion_sequence_fasta_id: None,
-            COLUMNS.fusion_splicing_pattern: None
-        },
-        expand_strand=False, expand_orient=False, expand_svtype=False
-    ))
+    bpps.extend(
+        read_inputs(
+            inputs,
+            require=[
+                COLUMNS.annotation_id,
+                COLUMNS.library,
+                COLUMNS.fusion_cdna_coding_start,
+                COLUMNS.fusion_cdna_coding_end,
+                COLUMNS.fusion_sequence_fasta_id,
+            ],
+            in_={
+                COLUMNS.protocol: PROTOCOL.values(),
+                COLUMNS.event_type: SVTYPE.values(),
+                COLUMNS.fusion_splicing_pattern: SPLICE_TYPE.values() + [None, 'None'],
+            },
+            add_default={
+                COLUMNS.fusion_cdna_coding_start: None,
+                COLUMNS.fusion_cdna_coding_end: None,
+                COLUMNS.fusion_sequence_fasta_id: None,
+                COLUMNS.fusion_splicing_pattern: None,
+            },
+            expand_strand=False,
+            expand_orient=False,
+            expand_svtype=False,
+        )
+    )
     LOG('read {} breakpoint pairs'.format(len(bpps)))
 
     # load all transcripts
@@ -94,8 +100,14 @@ def main(
     product_pairings = {}
     LOG('computing distance based pairings')
     # pairwise comparison of breakpoints between all libraries
-    for set_num, (category, calls) in enumerate(sorted(calls_by_cat.items(), key=lambda x: (len(x[1]), x[0]), reverse=True)):
-        LOG('comparing set {} of {} with {} items'.format(set_num + 1, len(calls_by_cat), len(calls)))
+    for set_num, (category, calls) in enumerate(
+        sorted(calls_by_cat.items(), key=lambda x: (len(x[1]), x[0]), reverse=True)
+    ):
+        LOG(
+            'comparing set {} of {} with {} items'.format(
+                set_num + 1, len(calls_by_cat), len(calls)
+            )
+        )
         for node, adj_list in pair_by_distance(calls, distances, against_self=False).items():
             distance_pairings.setdefault(node, set()).update(adj_list)
 
@@ -112,10 +124,7 @@ def main(
 
             for current, other in itertools.product(pairs, other_pairs):
                 if inferred_equivalent(
-                    current,
-                    other,
-                    distances=distances,
-                    reference_transcripts=reference_transcripts
+                    current, other, distances=distances, reference_transcripts=reference_transcripts
                 ):
                     product_pairings.setdefault(product_key(current), set()).add(product_key(other))
                     product_pairings.setdefault(product_key(other), set()).add(product_key(current))
@@ -128,8 +137,5 @@ def main(
         bpp = bpp_by_product_key[pkey]
         bpp.data[COLUMNS.inferred_pairing] = ';'.join(sorted(pkeys))
 
-    fname = os.path.join(
-        output,
-        'mavis_paired_{}.tab'.format('_'.join(sorted(list(libraries))))
-    )
+    fname = os.path.join(output, 'mavis_paired_{}.tab'.format('_'.join(sorted(list(libraries)))))
     output_tabbed_file(bpps, fname)

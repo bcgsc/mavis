@@ -19,7 +19,6 @@ def dynamic_label_color(color):
 
 
 class LabelMapping:
-
     def __init__(self, **kwargs):
         self._mapping = dict()
         self._reverse_mapping = dict()
@@ -92,14 +91,23 @@ def split_intervals_into_tracks(intervals):
 
 
 def generate_interval_mapping(
-        input_intervals, target_width, ratio, min_width,
-        buffer_length=None, start=None, end=None, min_inter_width=None,
-        min_pixel_accuracy=MIN_PIXEL_ACCURACY):
+    input_intervals,
+    target_width,
+    ratio,
+    min_width,
+    buffer_length=None,
+    start=None,
+    end=None,
+    min_inter_width=None,
+    min_pixel_accuracy=MIN_PIXEL_ACCURACY,
+):
     min_inter_width = min_width if min_inter_width is None else min_inter_width
     if all([x is not None for x in [start, end, buffer_length]]):
         raise AttributeError('buffer_length is a mutually exclusive argument with start/end')
     if not input_intervals and (start is None or end is None):
-        raise AttributeError('must specify an interval or start/end at minimum to generate an interval mapping')
+        raise AttributeError(
+            'must specify an interval or start/end at minimum to generate an interval mapping'
+        )
     intervals = []
     for i in Interval.min_nonoverlapping(*input_intervals):
         if not intervals or abs(Interval.dist(intervals[-1], i)) > 1:
@@ -157,7 +165,9 @@ def generate_interval_mapping(
     elif end <= 0:
         raise AttributeError('end must be a natural number', end)
 
-    if not intervals:  # if no input intervals are given, then use the start/end of the entire range as the focus
+    if (
+        not intervals
+    ):  # if no input intervals are given, then use the start/end of the entire range as the focus
         intervals = [Interval(start, end)]
 
     total_length = end - start + 1
@@ -172,7 +182,9 @@ def generate_interval_mapping(
     for i in range(1, len(intervals)):
         if intervals[i].start > intervals[i - 1].end + 1:
             intermediate_intervals += 1
-    width = target_width - intermediate_intervals * min_inter_width - len(intervals) * min_width  # reserved width
+    width = (
+        target_width - intermediate_intervals * min_inter_width - len(intervals) * min_width
+    )  # reserved width
 
     if width < 0:
         raise DrawingFitError('width cannot accommodate the number of expected objects')
@@ -185,6 +197,7 @@ def generate_interval_mapping(
 
     def genic_unit(x):
         return x * genic_width / genic_length
+
     mapping = []
 
     pos = 0
@@ -223,23 +236,37 @@ def generate_interval_mapping(
     if abs(mapping[-1][1].end - target_width) > min_pixel_accuracy:
         raise AssertionError(
             'end is off by more than the expected pixel allowable error',
-            mapping[-1][1].end, target_width, min_pixel_accuracy)
+            mapping[-1][1].end,
+            target_width,
+            min_pixel_accuracy,
+        )
     mapping = {k: v for k, v in mapping}
     # assert that that mapping is correct
     for ifrom, ito in mapping.items():
         if ifrom not in input_intervals:
             continue
-        if ito.length() < min_width and abs(ito.length() - min_width) > min_pixel_accuracy:  # precision error allowable
+        if (
+            ito.length() < min_width and abs(ito.length() - min_width) > min_pixel_accuracy
+        ):  # precision error allowable
             raise AssertionError(
                 'interval mapping should not map any intervals to less than the minimum required width. Interval {}'
                 ' was mapped to a pixel interval of length {} but the minimum width is {}'.format(
-                    ifrom, ito.length(), min_width), mapping,
-                input_intervals, target_width, ratio, min_width, buffer_length, start, end, min_inter_width)
+                    ifrom, ito.length(), min_width
+                ),
+                mapping,
+                input_intervals,
+                target_width,
+                ratio,
+                min_width,
+                buffer_length,
+                start,
+                end,
+                min_inter_width,
+            )
     return IntervalMapping(mapping)
 
 
 class Tag(svgwrite.base.BaseElement):
-
     def __init__(self, elementname, content='', **kwargs):
         self.elementname = elementname
         super(Tag, self).__init__(**kwargs)

@@ -8,9 +8,22 @@ from mavis.annotate.file_io import load_reference_genes, load_reference_genome
 from mavis.bam import cigar as _cigar
 from mavis.bam import read as _read
 from mavis.bam.cache import BamCache
-from mavis.bam.read import breakpoint_pos, orientation_supports_type, read_pair_type, sequenced_strand
+from mavis.bam.read import (
+    breakpoint_pos,
+    orientation_supports_type,
+    read_pair_type,
+    sequenced_strand,
+)
 from mavis.bam.stats import compute_genome_bam_stats, compute_transcriptome_bam_stats, Histogram
-from mavis.constants import CIGAR, DNA_ALPHABET, ORIENT, READ_PAIR_TYPE, STRAND, SVTYPE, NA_MAPPING_QUALITY
+from mavis.constants import (
+    CIGAR,
+    DNA_ALPHABET,
+    ORIENT,
+    READ_PAIR_TYPE,
+    STRAND,
+    SVTYPE,
+    NA_MAPPING_QUALITY,
+)
 from mavis.interval import Interval
 import timeout_decorator
 
@@ -25,12 +38,14 @@ def setUpModule():
     warnings.simplefilter('ignore')
     global REFERENCE_GENOME
     REFERENCE_GENOME = load_reference_genome(get_data('mock_reference_genome.fa'))
-    if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'].seq[0:50].upper():
+    if (
+        'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT'
+        != REFERENCE_GENOME['fake'].seq[0:50].upper()
+    ):
         raise AssertionError('fake genome file does not have the expected contents')
 
 
 class TestBamCache(unittest.TestCase):
-
     def test___init__(self):
         fh = MockBamFileHandle()
         b = BamCache(fh)
@@ -50,7 +65,9 @@ class TestBamCache(unittest.TestCase):
 
     @mock.patch('mavis.util.LOG')
     def test_add_invalid_read(self, log_patcher):
-        bad_read = mock.Mock(is_unmapped=False, reference_start=0, reference_end=0, query_name='BAD_READ')
+        bad_read = mock.Mock(
+            is_unmapped=False, reference_start=0, reference_end=0, query_name='BAD_READ'
+        )
         cache = BamCache(MockBamFileHandle())
         cache.add_read(bad_read)
         self.assertEqual(0, len(cache.cache))
@@ -58,7 +75,9 @@ class TestBamCache(unittest.TestCase):
 
     @mock.patch('mavis.util.LOG')
     def test_fetch_invalid_read(self, log_patcher):
-        bad_read = mock.Mock(is_unmapped=False, reference_start=0, reference_end=0, query_name='BAD_READ')
+        bad_read = mock.Mock(
+            is_unmapped=False, reference_start=0, reference_end=0, query_name='BAD_READ'
+        )
         fh = mock.Mock(references=['chr'], spec=['references', 'fetch'])
         fh.configure_mock(**{'fetch.return_value': [bad_read]})
         cache = BamCache(fh)
@@ -68,7 +87,9 @@ class TestBamCache(unittest.TestCase):
 
     @mock.patch('mavis.util.LOG')
     def test_bin_fetch_invalid_read(self, log_patcher):
-        bad_read = mock.Mock(is_unmapped=False, reference_start=0, reference_end=0, query_name='BAD_READ')
+        bad_read = mock.Mock(
+            is_unmapped=False, reference_start=0, reference_end=0, query_name='BAD_READ'
+        )
         fh = mock.Mock(references=['chr'], spec=['references', 'fetch'])
         fh.configure_mock(**{'fetch.return_value': [bad_read]})
         cache = BamCache(fh)
@@ -95,7 +116,9 @@ class TestBamCache(unittest.TestCase):
     def test_generate_fetch_bins_multi(self):
         self.assertEqual([(1, 50), (51, 100)], BamCache._generate_fetch_bins(1, 100, 2, 1))
         self.assertEqual(
-            [(1, 20), (21, 40), (41, 60), (61, 80), (81, 100)], BamCache._generate_fetch_bins(1, 100, 5, 1))
+            [(1, 20), (21, 40), (41, 60), (61, 80), (81, 100)],
+            BamCache._generate_fetch_bins(1, 100, 5, 1),
+        )
 
     def test_generate_fetch_bins_large_min_size(self):
         self.assertEqual([(1, 50), (51, 100)], BamCache._generate_fetch_bins(1, 100, 5, 50))
@@ -154,21 +177,28 @@ class TestModule(unittest.TestCase):
             _read.breakpoint_pos(r, ORIENT.LEFT)
 
     def test_nsb_align(self):
-        ref = 'GATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAG' \
-              'TTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG'
-        seq = 'TGTAGGAAGCCATTATCTGAAGTGTAAGCAACTGCATAGTGCTATTTTAATTATGCATTGCAGGGAAACTGTGAGCAGAGCTATATATTTAGGTAGAC' \
-              'TGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAAC'
+        ref = (
+            'GATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAG'
+            'TTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG'
+        )
+        seq = (
+            'TGTAGGAAGCCATTATCTGAAGTGTAAGCAACTGCATAGTGCTATTTTAATTATGCATTGCAGGGAAACTGTGAGCAGAGCTATATATTTAGGTAGAC'
+            'TGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAAC'
+        )
         _read.nsb_align(ref, seq)
         # GATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG
 
 
 class TestNsbAlign(unittest.TestCase):
-
     def test_length_seq_le_ref(self):
-        ref = 'GATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAG' \
-              'TTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG'
-        seq = 'TGTAGGAAGCCATTATCTGAAGTGTAAGCAACTGCATAGTGCTATTTTAATTATGCATTGCAGGGAAACTGTGAGCAGAGCTATATATTTAGGTAGAC' \
-              'TGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAAC'
+        ref = (
+            'GATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAG'
+            'TTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG'
+        )
+        seq = (
+            'TGTAGGAAGCCATTATCTGAAGTGTAAGCAACTGCATAGTGCTATTTTAATTATGCATTGCAGGGAAACTGTGAGCAGAGCTATATATTTAGGTAGAC'
+            'TGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAAC'
+        )
         alignment = _read.nsb_align(ref, seq)
         self.assertEqual(1, len(alignment))
         alignment = _read.nsb_align(ref, seq, min_consecutive_match=20)
@@ -183,8 +213,10 @@ class TestNsbAlign(unittest.TestCase):
     @timeout_decorator.timeout(5)
     def test_long_ref_seq(self):
         ref = str(REFERENCE_GENOME['test_bam_long_ref'].seq)
-        seq = 'TGAGGTCAGGAGTTTGAGACCAGCCTGGACAACATGGTGAAACCCCATCTCTACTAAAAATACAAAAAAATTAGCCAGGCATGGTGGTGGATGCCTGTAAT' \
+        seq = (
+            'TGAGGTCAGGAGTTTGAGACCAGCCTGGACAACATGGTGAAACCCCATCTCTACTAAAAATACAAAAAAATTAGCCAGGCATGGTGGTGGATGCCTGTAAT'
             'CGCAGCTACTCAGGAGATCGGAAG'
+        )
         alignment = _read.nsb_align(ref, seq, min_consecutive_match=6)
         self.assertEqual(1, len(alignment))
 
@@ -202,10 +234,11 @@ class TestNsbAlign(unittest.TestCase):
         ref = 'ATTACATTAAAGATTCAAACTCCTAGAGTTTTTTTGATTTTTAGTATGATCTTTAGATAAAAAAAAAGGAAGAAAAAGAAAAAAAAACAGAGTCTATTAAGGCATCTTCTATGGTCAGATATATCTATTTTTTTCTTTCTTTTTTTTACTTTCATTAAGTGCCACTAAAAAATTAGGTTCAATTAAACTTTATTAATCTCTTCTGAGTTTTGAT'
         seq = 'GATATATCTATTTTTTTCTTTCTTTTTTTTACTTTCATTAAGTGCCACTAAAAAATTAGGTTCAATTAAACTTTATTAATCTCTTCTGAGTTTTGATTGAGTGTATATATATATATATATATATATATATATATACCCAGTTTCAAGCAG'
         alignments = _read.nsb_align(
-            ref, seq,
+            ref,
+            seq,
             min_consecutive_match=15,
             min_match=0.95,
-            min_overlap_percent=(len(seq) - 15) / len(seq)
+            min_overlap_percent=(len(seq) - 15) / len(seq),
         )
         print(alignments)
         self.assertEqual(0, len(alignments))
@@ -214,13 +247,13 @@ class TestNsbAlign(unittest.TestCase):
 class TestReadPairStrand(unittest.TestCase):
     def setUp(self):
         self.read1_pos_neg = MockRead(is_reverse=False, is_read1=True, mate_is_reverse=True)
-        assert(not self.read1_pos_neg.is_read2)
+        assert not self.read1_pos_neg.is_read2
         self.read1_neg_pos = MockRead(is_reverse=True, is_read1=True, mate_is_reverse=False)
         self.read1_pos_pos = MockRead(is_reverse=False, is_read1=True, mate_is_reverse=False)
         self.read1_neg_neg = MockRead(is_reverse=True, is_read1=True, mate_is_reverse=True)
 
         self.read2_pos_neg = MockRead(is_reverse=True, is_read1=False, mate_is_reverse=True)
-        assert(self.read2_pos_neg.is_read2)
+        assert self.read2_pos_neg.is_read2
         self.read2_neg_pos = MockRead(is_reverse=False, is_read1=False, mate_is_reverse=False)
         self.read2_pos_pos = MockRead(is_reverse=False, is_read1=False, mate_is_reverse=False)
         self.read2_neg_neg = MockRead(is_reverse=True, is_read1=False, mate_is_reverse=True)
@@ -229,28 +262,60 @@ class TestReadPairStrand(unittest.TestCase):
         self.unpaired_neg = MockRead(is_reverse=True, is_paired=False)
 
     def test_read_pair_strand_det1_read1(self):
-        self.assertEqual(STRAND.POS, sequenced_strand(self.read1_pos_neg, strand_determining_read=1))
-        self.assertEqual(STRAND.NEG, sequenced_strand(self.read1_neg_pos, strand_determining_read=1))
-        self.assertEqual(STRAND.POS, sequenced_strand(self.read1_pos_pos, strand_determining_read=1))
-        self.assertEqual(STRAND.NEG, sequenced_strand(self.read1_neg_neg, strand_determining_read=1))
+        self.assertEqual(
+            STRAND.POS, sequenced_strand(self.read1_pos_neg, strand_determining_read=1)
+        )
+        self.assertEqual(
+            STRAND.NEG, sequenced_strand(self.read1_neg_pos, strand_determining_read=1)
+        )
+        self.assertEqual(
+            STRAND.POS, sequenced_strand(self.read1_pos_pos, strand_determining_read=1)
+        )
+        self.assertEqual(
+            STRAND.NEG, sequenced_strand(self.read1_neg_neg, strand_determining_read=1)
+        )
 
     def test_read_pair_strand_det1_read2(self):
-        self.assertEqual(STRAND.POS, sequenced_strand(self.read2_pos_neg, strand_determining_read=1))
-        self.assertEqual(STRAND.NEG, sequenced_strand(self.read2_neg_pos, strand_determining_read=1))
-        self.assertEqual(STRAND.NEG, sequenced_strand(self.read2_pos_pos, strand_determining_read=1))
-        self.assertEqual(STRAND.POS, sequenced_strand(self.read2_neg_neg, strand_determining_read=1))
+        self.assertEqual(
+            STRAND.POS, sequenced_strand(self.read2_pos_neg, strand_determining_read=1)
+        )
+        self.assertEqual(
+            STRAND.NEG, sequenced_strand(self.read2_neg_pos, strand_determining_read=1)
+        )
+        self.assertEqual(
+            STRAND.NEG, sequenced_strand(self.read2_pos_pos, strand_determining_read=1)
+        )
+        self.assertEqual(
+            STRAND.POS, sequenced_strand(self.read2_neg_neg, strand_determining_read=1)
+        )
 
     def test_read_pair_strand_det2_read2(self):
-        self.assertEqual(STRAND.NEG, sequenced_strand(self.read2_pos_neg, strand_determining_read=2))
-        self.assertEqual(STRAND.POS, sequenced_strand(self.read2_neg_pos, strand_determining_read=2))
-        self.assertEqual(STRAND.POS, sequenced_strand(self.read2_pos_pos, strand_determining_read=2))
-        self.assertEqual(STRAND.NEG, sequenced_strand(self.read2_neg_neg, strand_determining_read=2))
+        self.assertEqual(
+            STRAND.NEG, sequenced_strand(self.read2_pos_neg, strand_determining_read=2)
+        )
+        self.assertEqual(
+            STRAND.POS, sequenced_strand(self.read2_neg_pos, strand_determining_read=2)
+        )
+        self.assertEqual(
+            STRAND.POS, sequenced_strand(self.read2_pos_pos, strand_determining_read=2)
+        )
+        self.assertEqual(
+            STRAND.NEG, sequenced_strand(self.read2_neg_neg, strand_determining_read=2)
+        )
 
     def test_read_pair_strand_det2_read1(self):
-        self.assertEqual(STRAND.NEG, sequenced_strand(self.read1_pos_neg, strand_determining_read=2))
-        self.assertEqual(STRAND.POS, sequenced_strand(self.read1_neg_pos, strand_determining_read=2))
-        self.assertEqual(STRAND.NEG, sequenced_strand(self.read1_pos_pos, strand_determining_read=2))
-        self.assertEqual(STRAND.POS, sequenced_strand(self.read1_neg_neg, strand_determining_read=2))
+        self.assertEqual(
+            STRAND.NEG, sequenced_strand(self.read1_pos_neg, strand_determining_read=2)
+        )
+        self.assertEqual(
+            STRAND.POS, sequenced_strand(self.read1_neg_pos, strand_determining_read=2)
+        )
+        self.assertEqual(
+            STRAND.NEG, sequenced_strand(self.read1_pos_pos, strand_determining_read=2)
+        )
+        self.assertEqual(
+            STRAND.POS, sequenced_strand(self.read1_neg_neg, strand_determining_read=2)
+        )
 
     def test_read_pair_strand_unpaired(self):
         with self.assertRaises(ValueError):
@@ -271,7 +336,7 @@ class TestReadPairType(unittest.TestCase):
             reference_start=1,
             next_reference_start=2,
             is_reverse=False,
-            mate_is_reverse=True
+            mate_is_reverse=True,
         )
         self.LL = MockRead(
             reference_id=0,
@@ -279,7 +344,7 @@ class TestReadPairType(unittest.TestCase):
             reference_start=1,
             next_reference_start=2,
             is_reverse=False,
-            mate_is_reverse=False
+            mate_is_reverse=False,
         )
         self.RR = MockRead(
             reference_id=0,
@@ -287,7 +352,7 @@ class TestReadPairType(unittest.TestCase):
             reference_start=1,
             next_reference_start=2,
             is_reverse=True,
-            mate_is_reverse=True
+            mate_is_reverse=True,
         )
         self.RL = MockRead(
             reference_id=0,
@@ -295,7 +360,7 @@ class TestReadPairType(unittest.TestCase):
             reference_start=1,
             next_reference_start=2,
             is_reverse=True,
-            mate_is_reverse=False
+            mate_is_reverse=False,
         )
 
     def test_read_pair_type_LR(self):
@@ -390,12 +455,7 @@ class TestBamStats(unittest.TestCase):
     def test_genome_bam_stats(self):
         bamfh = BamCache(get_data('mock_reads_for_events.sorted.bam'))
         stats = compute_genome_bam_stats(
-            bamfh,
-            1000,
-            100,
-            min_mapping_quality=1,
-            sample_cap=10000,
-            distribution_fraction=0.99
+            bamfh, 1000, 100, min_mapping_quality=1, sample_cap=10000, distribution_fraction=0.99
         )
         self.assertGreaterEqual(50, abs(stats.median_fragment_size - 420))
         self.assertEqual(150, stats.read_length)
@@ -411,7 +471,7 @@ class TestBamStats(unittest.TestCase):
             min_mapping_quality=1,
             stranded=True,
             sample_cap=10000,
-            distribution_fraction=0.99
+            distribution_fraction=0.99,
         )
         self.assertTrue(abs(stats.median_fragment_size - 185) < 5)
         self.assertEqual(75, stats.read_length)
@@ -424,7 +484,7 @@ class TestMapRefRangeToQueryRange(unittest.TestCase):
         self.contig_read = MockRead(
             cigar=_cigar.convert_string_to_cigar('275M18I12041D278M'),
             reference_start=89700025,
-            reference_name='10'
+            reference_name='10',
         )
 
     def test_full_aligned_portion(self):

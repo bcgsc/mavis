@@ -1,5 +1,3 @@
-
-
 class Interval:
     """
     """
@@ -15,8 +13,12 @@ class Interval:
         self.end = end if end is not None else start
 
         if number_type is None:
-            if int(self.start) != float(self.start) or int(self.end) != float(self.end) \
-                    or isinstance(self.start, float) or isinstance(self.end, float):
+            if (
+                int(self.start) != float(self.start)
+                or int(self.end) != float(self.end)
+                or isinstance(self.start, float)
+                or isinstance(self.end, float)
+            ):
                 number_type = float
             else:
                 number_type = int
@@ -88,8 +90,7 @@ class Interval:
             return self.start
         elif index == 1:
             return self.end
-        raise IndexError(
-            'index input accessor is out of bounds: 1 or 2 only', index)
+        raise IndexError('index input accessor is out of bounds: 1 or 2 only', index)
 
     @classmethod
     def overlaps(cls, first, other):
@@ -222,8 +223,7 @@ class Interval:
         while num < len(segments):
             current = segments[num]
 
-            if pos[0] >= current[0] \
-                    and pos[1] <= current[1]:
+            if pos[0] >= current[0] and pos[1] <= current[1]:
                 # pos range is fully contained in the current segment
                 break
             elif num == 0:  # first segment
@@ -253,7 +253,7 @@ class Interval:
         """ convert any given position given a mapping of intervals to another range
 
         Args:
-            mapping (:class:`dict` of :class:`Interval` and :class:`Interval`): a mapping of a set of continuous intervals
+            mapping (Dict[Interval,Interval]): a mapping of a set of continuous intervals
             pos (int): a position in the first coordinate system
 
         Returns:
@@ -271,8 +271,7 @@ class Interval:
             559
         """
         if len(mapping.keys()) < 2 and forward_to_reverse is None:
-            raise AttributeError(
-                'mapping is insufficient to determine orientation')
+            raise AttributeError('mapping is insufficient to determine orientation')
 
         # order the input intervals
         input_intervals = sorted(mapping.keys())
@@ -284,7 +283,8 @@ class Interval:
                 if Interval.overlaps(input_intervals[i - 1], input_intervals[i]):
                     raise AttributeError(
                         'input intervals cannot be overlapping',
-                        input_intervals[i], input_intervals[i - 1]
+                        input_intervals[i],
+                        input_intervals[i - 1],
                     )
                 if mapped_to_intervals[i][0] > mapped_to_intervals[i - 1][1]:
                     if forward_to_reverse is None:
@@ -298,7 +298,8 @@ class Interval:
                         raise AttributeError('direction of mapped intervals is not consistent')
 
         i, previous_flag = Interval.position_in_range(
-            input_intervals, (pos, pos))  # get the input position
+            input_intervals, (pos, pos)
+        )  # get the input position
         if i == len(input_intervals) or previous_flag:
             raise IndexError(pos, 'is outside mapped range', mapping)
         else:
@@ -410,10 +411,13 @@ class Interval:
             else:
                 for itvl in new_intervals:
                     weight = 0
-                    for input_itvl in intervals[set_start:set_end + 1]:
+                    for input_itvl in intervals[set_start : set_end + 1]:
                         intersection = input_itvl & itvl
                         if intersection:
-                            weight = max((len(intersection) / len(input_itvl)) * weight_mapping[input_itvl], weight)
+                            weight = max(
+                                (len(intersection) / len(input_itvl)) * weight_mapping[input_itvl],
+                                weight,
+                            )
                     split_intervals[itvl] = int(round(weight, 0))
             set_start = set_end + 1
         return split_intervals
@@ -434,7 +438,9 @@ class IntervalMapping:
         self.opposing_directions = {Interval(k[0], k[1]): True for k in opposing}
         for i in self.opposing_directions:
             if i not in self.mapping:
-                raise ValueError('cannot defined an opposing direction for an interval that in not mapped', i)
+                raise ValueError(
+                    'cannot defined an opposing direction for an interval that in not mapped', i
+                )
         for i in self.mapping:
             self.opposing_directions.setdefault(i, False)
 
@@ -482,7 +488,9 @@ class IntervalMapping:
                     if self.opposing_directions[src_interval]:
                         return Interval(tgt_interval.end - shift - ratio, tgt_interval.end - shift)
                     else:
-                        return Interval(tgt_interval.start + shift, tgt_interval.start + shift + ratio)
+                        return Interval(
+                            tgt_interval.start + shift, tgt_interval.start + shift + ratio
+                        )
                 else:
                     return tgt_interval
         raise IndexError(pos, 'position not found in mapping', self.mapping.keys())

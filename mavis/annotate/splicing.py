@@ -7,7 +7,6 @@ from ..interval import Interval
 
 
 class SplicingPattern(list):
-
     def __init__(self, *args, splice_type=SPLICE_TYPE.NORMAL):
         list.__init__(self, *args)
         self.splice_type = splice_type
@@ -15,7 +14,13 @@ class SplicingPattern(list):
     def __str__(self):
         temp = []
         for site in self:
-            temp.append('{}{}{}'.format('D' if site.type == SPLICE_SITE_TYPE.DONOR else 'A', site.pos, '' if site.intact else '*'))
+            temp.append(
+                '{}{}{}'.format(
+                    'D' if site.type == SPLICE_SITE_TYPE.DONOR else 'A',
+                    site.pos,
+                    '' if site.intact else '*',
+                )
+            )
         return '[{}]'.format(', '.join(temp))
 
     @classmethod
@@ -80,9 +85,10 @@ class SplicingPattern(list):
         returns a list of splice sites to be connected as a splicing pattern
 
         Returns:
-            :class:`list` of :class:`SplicingPattern`: List of positions to be spliced together
+            List[SplicingPattern]: List of positions to be spliced together
 
-        see :ref:`theory - predicting splicing patterns <theory-predicting-splicing-patterns>`
+        Note:
+            see [theory - predicting splicing patterns](/background/theory/#predicting-splicing-patterns)
         """
         if not sites:
             return [SplicingPattern()]
@@ -108,8 +114,9 @@ class SplicingPattern(list):
 
 
 class SpliceSite(BioInterval):
-
-    def __init__(self, ref, pos, site_type, intact=True, start=None, end=None, strand=None, seq=None):
+    def __init__(
+        self, ref, pos, site_type, intact=True, start=None, end=None, strand=None, seq=None
+    ):
         if start is None or end is None:
             self.strand = strand if strand else ref.get_strand()
             if self.strand == STRAND.NEG:
@@ -152,8 +159,15 @@ class SpliceSite(BioInterval):
             pass
         seq = '' if not self.seq else ', seq=' + self.seq
         return '{}(type={}, {}:{}({}-{}){}, strand={})'.format(
-            cls, SPLICE_SITE_TYPE.reverse(self.type),
-            refname, self.pos, self.start, self.end, seq, self.get_strand())
+            cls,
+            SPLICE_SITE_TYPE.reverse(self.type),
+            refname,
+            self.pos,
+            self.start,
+            self.end,
+            seq,
+            self.get_strand(),
+        )
 
 
 def predict_splice_sites(input_sequence, is_reverse=False):
@@ -166,7 +180,7 @@ def predict_splice_sites(input_sequence, is_reverse=False):
         is_reverse (bool): True when the sequences is transcribed on the reverse strand
 
     Return:
-        list of SpliceSite: list of putative splice sites
+        List[SpliceSite]: list of putative splice sites
     """
     if is_reverse:
         sequence = reverse_complement(input_sequence)
@@ -177,11 +191,14 @@ def predict_splice_sites(input_sequence, is_reverse=False):
         prefix = match.group(1)
         suffix = match.group(2)
         return SpliceSite(
-            None, start=match.start() + 1, end=match.end(),
+            None,
+            start=match.start() + 1,
+            end=match.end(),
             pos=match.start() + len(prefix),
             seq=prefix + suffix,
             site_type=splice_type,
-            strand=STRAND.POS)
+            strand=STRAND.POS,
+        )
 
     sites = []
     positions = set()
@@ -205,11 +222,14 @@ def predict_splice_sites(input_sequence, is_reverse=False):
             offset = site.end - site.pos
             start = len(sequence) - site.end + 1
             new_site = SpliceSite(
-                None, start=start, end=len(sequence) - site.start + 1,
+                None,
+                start=start,
+                end=len(sequence) - site.start + 1,
                 seq=reverse_complement(site.seq),
                 strand=STRAND.NEG,
                 pos=start + offset,
-                site_type=site.type)
+                site_type=site.type,
+            )
             temp.append(new_site)
         sites = temp
     return sites
