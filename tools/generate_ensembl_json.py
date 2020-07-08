@@ -181,7 +181,7 @@ def request_ensembl_protein(protein_id):
                     ),
                     file=sys.stderr,
                 )
-            # response.raise_for_status()
+            response.raise_for_status()
 
     # 'X-RateLimit-Remaining' is the number of requests we can make before getting cut off
     # this value resets to 'X-RateLimit-Limit' after 'X-RateLimit-Reset' seconds
@@ -196,6 +196,7 @@ def request_ensembl_protein(protein_id):
             time.sleep(reset)
     except KeyError:
         print("Could not parse API response headers", file=sys.stderr)
+        response.raise_for_status()
 
     decoded = response.json()
     return decoded
