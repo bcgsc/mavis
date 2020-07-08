@@ -141,7 +141,7 @@ def rate_limited(max_per_second):
     return decorate
 
 
-@rate_limited(0.1)
+@rate_limited(10)
 def request_ensembl_protein(protein_id):
     """
     Method request domain info for a given protein ID from the Ensembl-REST APi.
