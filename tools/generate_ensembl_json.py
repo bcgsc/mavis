@@ -229,11 +229,6 @@ class EnsemblAnnotation(object):
         self.best_file = best_file
         self.alias_file = alias_file
 
-        if self.best_file:
-            self.best = parse_best_file(self.best_file)
-        else:
-            self.best = set()
-
         if self.alias_file:
             self.alias = parse_alias_file(self.alias_file)
         else:
@@ -242,6 +237,12 @@ class EnsemblAnnotation(object):
         self.data = EnsemblRelease(release, species)
         self.download_pyensembl_cache()
         self.get_domain_cache()
+
+        if self.best_file:
+            self.best = parse_best_file(self.best_file)
+        else:
+            self.best = self.choose_best_transcripts()
+
         self.build_json()
 
     def download_pyensembl_cache(self):
@@ -419,6 +420,88 @@ class EnsemblAnnotation(object):
         for cache_file in glob(self.cache_prefix + "*"):
             print("Removing cache file", cache_file)
             os.remove(cache_file)
+
+    def choose_best_transcripts(self):
+        """
+        Select a canonical transcript for each human gene using Ensembl rules.
+
+        For human, the canonical transcript for a gene is set according to the following hierarchy: 
+        - 1. Longest CCDS translation with no stop codons. 
+        - 2. If no (1), choose the longest Ensembl/Havana merged translation with no stop codons. 
+        - 3. If no (2), choose the longest translation with no stop codons. 
+        - 4. If no translation, choose the longest non-protein-coding transcript.
+
+        See: http://uswest.ensembl.org/Help/Glossary?id=346
+
+        Returns:
+            str: canonical Ensembl transcript ID (if any)
+        """
+
+        def longest_ccds(transcripts):
+            """Longest CCDS translation with no stop codons."""
+            longest = None
+            longest_len = 0
+            for t in transcripts:
+                if t.is_protein_coding:
+                    if len(t.protein_sequence) > longest_len:
+                        longest = t
+                        longest_len = len(t.protein_sequence)
+            return longest
+
+        def longest_translation(transcript):
+            """Longest translation with no stop codons."""
+            longest = None
+            longest_len = 0
+            for t in transcripts:
+                if t.contains_start_codon:
+                    start = t.start_codon_positions[0]
+                    if t.contains_stop_codon:
+                        stop = t.stop_codon_positions[2]
+                    else:
+                        stop = t.end
+                    if stop - start > longest_len:
+                        longest = t
+                        longest_len = stop - start
+            return longest
+
+        def longest_transcript(transcripts):
+            """Longest transcript."""
+            longest = None
+            longest_len = 0
+            for t in transcripts:
+                if t.end - t.start > longest_len:
+                    longest = t
+                    longest_len = t.end - t.start
+            return longest
+
+        best = set()
+
+        # Ensembl rules for canonical transcripts only apply to humans
+        species = self.data.species.latin_name
+        if species != "homo_sapiens":
+            print(
+                "Unable to choose canonical transcripts for {}. You can specify canonical transcripts with '--best-transcript-file'".format(
+                    species
+                )
+            )
+            return best
+        else:
+            print("Selecting a canoncial transcript for each gene")
+
+        for gene_id in self.data.gene_ids():
+            transcripts = [
+                self.data.transcript_by_id(transcript_id)
+                for transcript_id in self.data.transcript_ids_of_gene_id(gene_id)
+            ]
+            selected = (
+                longest_ccds(transcripts)
+                or longest_translation(transcripts)
+                or longest_transcript(transcripts)
+            )
+            if selected:
+                best.add(selected.transcript_id)
+
+        return best
 
 
 def main():
