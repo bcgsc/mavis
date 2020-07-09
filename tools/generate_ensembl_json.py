@@ -41,38 +41,51 @@ def get_date(date_str=None):
 
 def parse_best_file(path):
     """
-    Method parse a tab-seperate file into a set of best transcripts.
+    Parse a list of best transcripts.
+
+    Expects one Ensembl transcript ID per line. Example:
+        ENST00000492259
+        ENST00000496281
+        ENST00000480273
 
     Args:
-        path (str): path to a tab-seperated list with column: transcript_id
+        path (str): path to a list of best transcripts
 
     Returns:
         set: a set of 'best transcript' ids
     """
     best = set()
     with open(path, "r") as fh:
-        reader = csv.DictReader(fh)
-        for row in reader:
-            best.add(row["transcript_id"])
+        for line in fh:
+            line = line.strip()
+            if line:
+                line = line.rsplit(".", 1)[0]  # remove transcript version
+                best.add(line)
 
     return best
 
 
 def parse_alias_file(path):
     """
-    Method parse specific columns in the tab-seperated hugo file into a dict.
+    Parse a tab-separated file of gene aliases.
+
+    Expects an Ensembl gene ID in the first column and the gene alias in the second column.
+    A gene ID can be given multiple times if there is more than one alias. Example:
+        ENSG00000133703   NM_033360
+        ENSG00000133703   SPAM
+        ENSG00000157404   NM_000222
 
     Args:
-        path (str): path to a tab-seperated list with columns: ensid, hugo
+        path (str): path to a tab-seperated alias file
 
     Returns:
         dict: a dict of ensembl gene ids and associated hugo aliases for the gene
     """
     hugo = defaultdict(set)
     with open(path, "r") as fh:
-        reader = csv.DictReader(fh)
+        reader = csv.DictReader(fh, fieldnames=["gene_id", "alias"])
         for row in reader:
-            hugo[row["ensid"]].add(row["hugo"])
+            hugo[row["gene_id"]].add(row["alias"])
 
     return hugo
 
@@ -526,10 +539,12 @@ def main():
     opt_parser.add_argument(
         "-b",
         "--best-transcript-file",
-        help="tab-seperated list of genes and corresponding transcripts",
+        help="a file containing a list of canoncial Ensembl transcript IDs (one per line)",
     )
     opt_parser.add_argument(
-        "-m", "--gene-alias-file", help="one-to-one mapping ensembl gene ID to gene name"
+        "-m",
+        "--gene-alias-file",
+        help="a tab-separated file of Ensembl gene IDs and gene aliases (one ID and one alias per line)",
     )
     opt_parser.add_argument(
         "-c", "--custom-cache", help="use a non-default path to cache ensembl data"
