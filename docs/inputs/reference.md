@@ -143,54 +143,24 @@ the [Ensembl](../../background/citations/#yates-2016) perl api to
 connect and pull information from the database. This has been tested
 with both Ensembl69 and Ensembl79.
 
-Instructions for downloading and installing the perl api can be found on
-the [ensembl
-site](http://www.ensembl.org/info/docs/api/api_installation.html)
-
-1.  **Make sure the ensembl perl api modules are added to the PERL5LIB
-    environment variable**
-
-Also ensure that the tools directory is on the PERL5LIB path so that the
-TSV.pm module can be found
+Clone and install the mavis tools dependencies
 
 ```bash
-INSTALL_PATH=$(pwd)
-PERL5LIB=${PERL5LIB}:$HOME/ensembl_79/bioperl-live
-PERL5LIB=${PERL5LIB}:$HOME/ensembl_79/ensembl/modules
-PERL5LIB=${PERL5LIB}:$HOME/ensembl_79/ensembl-compara/modules
-PERL5LIB=${PERL5LIB}:$HOME/ensembl_79/ensembl-variation/modules
-PERL5LIB=${PERL5LIB}:$HOME/ensembl_79/ensembl-funcgen/modules
- include tools/TSV.pm module
-PERL5LIB=${PERL5LIB}:$INSTALL_PATH/tools
-export PERL5LIB
+git clone https://github.com/bcgsc/mavis.git
+cd mavis
+python3 -m venv venv
+source venv/bin/activate
+pip install .[tools]  # could also install just the dependencies for the tools
 ```
 
-2.  **Run the perl script**
-
-The below instructions are shown running from inside the tools directory
-to avoid prefixing the script name, but it is not required to be run
-from here provided the above step has been executed correctly.
-
-you can view the help menu by running
+Run the Python script choosing your species and Ensembl version
 
 ```bash
-perl generate_ensembl_json.pl
+python tools/generate_ensembl_json.py -s human -r 75 -o ensembl_human_v75.json
 ```
 
-you can override the default parameters (based on hard-coded defaults or
-environment variable content) by providing arguments to the script
-itself
+This will produce the JSON file required as input by MAVIS
 
-```bash
-perl generate_ensembl_json.pl --best_transcript_file /path/to/best/transcripts/file --output /path/to/output/json/file.json
-```
-
-or if you have configured the environment variables as given in step 2,
-then simply provide the output path
-
-```bash
-perl generate_ensembl_json.pl --output /path/to/output/json/file.json
-```
 
 ## DGV (Database of Genomic Variants)
 

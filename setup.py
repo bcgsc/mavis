@@ -107,6 +107,7 @@ setup(
         'test': TEST_REQS,
         'dev': ['black', 'flake8'] + DOC_REQS + TEST_REQS + DEPLOY_REQS,
         'deploy': DEPLOY_REQS,
+        'tools': ['pyensembl', 'simplejson']
     },
     tests_require=TEST_REQS,
     setup_requires=['pip>=9.0.0', 'setuptools>=36.0.0'],
