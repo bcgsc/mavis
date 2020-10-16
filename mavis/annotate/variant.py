@@ -692,6 +692,16 @@ def _gather_annotations(ref, bp, proximity=None):
 
         b1_itvl = bp.break1 & a1
         b2_itvl = bp.break2 & a2
+
+        # Swap annotations/position so lower is first
+        if b2_itvl < b1_itvl:
+            temp = a1
+            a1 = a2
+            a2 = temp
+            temp = b1_itvl
+            b1_itvl = b2_itvl
+            b2_itvl = temp
+
         bpp = BreakpointPair.copy(bp)
         bpp.break1.start = b1_itvl[0]
         bpp.break1.end = b1_itvl[1]
