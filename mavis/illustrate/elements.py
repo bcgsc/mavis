@@ -93,8 +93,7 @@ def draw_exon_track(
     genomic_max=None,
     translation=None,
 ):
-    """
-    """
+    """"""
     colors = {} if colors is None else colors
     main_group = canvas.g(class_='exon_track')
 

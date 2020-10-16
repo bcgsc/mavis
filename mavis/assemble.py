@@ -12,8 +12,7 @@ from .util import DEVNULL
 
 
 class Contig:
-    """
-    """
+    """"""
 
     def __init__(self, sequence, score):
         self.seq = sequence

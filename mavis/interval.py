@@ -1,6 +1,5 @@
 class Interval:
-    """
-    """
+    """"""
 
     def __init__(self, start, end=None, freq=1, number_type=None):
         """
@@ -250,7 +249,7 @@ class Interval:
 
     @classmethod
     def convert_ratioed_pos(cls, mapping, pos, forward_to_reverse=None):
-        """ convert any given position given a mapping of intervals to another range
+        """convert any given position given a mapping of intervals to another range
 
         Args:
             mapping (Dict[Interval,Interval]): a mapping of a set of continuous intervals
@@ -460,7 +459,7 @@ class IntervalMapping:
         self.opposing_directions[src_interval] = opposing_directions
 
     def convert_ratioed_pos(self, pos):
-        """ convert any given position given a mapping of intervals to another range
+        """convert any given position given a mapping of intervals to another range
 
         Args:
             pos (Interval): a position in the first coordinate system
@@ -496,7 +495,7 @@ class IntervalMapping:
         raise IndexError(pos, 'position not found in mapping', self.mapping.keys())
 
     def convert_pos(self, pos):
-        """ convert any given position given a mapping of intervals to another range
+        """convert any given position given a mapping of intervals to another range
 
         Args:
             pos (int): a position in the first coordinate system

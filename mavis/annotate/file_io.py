@@ -76,8 +76,8 @@ def load_masking_regions(*filepaths):
 
     .. code-block:: text
 
-        #chr    start   end     name
-        chr20	25600000	27500000	centromere
+        #chr    start       end         name
+        chr20   25600000    27500000    centromere
 
     Args:
         filepath (str): path to the input tab-delimited file
@@ -437,8 +437,8 @@ def load_templates(*filepaths):
 
     .. code-block:: text
 
-        chr1	0	2300000	p36.33	gneg
-        chr1	2300000	5400000	p36.32	gpos25
+        chr1    0   2300000 p36.33  gneg
+        chr1    2300000 5400000 p36.32  gpos25
 
     Args:
         filename (str): the path to the file with the cytoband template information

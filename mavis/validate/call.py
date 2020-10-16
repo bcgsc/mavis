@@ -762,8 +762,10 @@ def _call_interval_by_flanking_coverage(
     )  # minimum distance of the coverage
     max_interval = max_expected_fragment_size - read_length
     if coverage_d > max_interval:
-        msg = 'length of the coverage interval ({}) is greater than the maximum expected ({})'.format(
-            coverage_d, max_interval
+        msg = (
+            'length of the coverage interval ({}) is greater than the maximum expected ({})'.format(
+                coverage_d, max_interval
+            )
         )
         raise AssertionError(msg)
     if orientation == ORIENT.LEFT:
