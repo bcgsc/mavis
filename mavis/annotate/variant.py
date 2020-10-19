@@ -693,22 +693,20 @@ def _gather_annotations(ref, bp, proximity=None):
         b1_itvl = bp.break1 & a1
         b2_itvl = bp.break2 & a2
 
-        # Swap annotations/position so lower is first
-        if b2_itvl < b1_itvl:
-            temp = a1
-            a1 = a2
-            a2 = temp
-            temp = b1_itvl
-            b1_itvl = b2_itvl
-            b2_itvl = temp
-
         bpp = BreakpointPair.copy(bp)
         bpp.break1.start = b1_itvl[0]
         bpp.break1.end = b1_itvl[1]
         bpp.break2.start = b2_itvl[0]
         bpp.break2.end = b2_itvl[1]
 
-        a = Annotation(bpp, a1, a2, proximity=proximity)
+        # Swap annotations/position so lower is first
+        if bpp.break1.key[0:3] < bpp.break2.key[0:3]:
+            a = Annotation(bpp, a1, a2, proximity=proximity)
+        else:
+            temp = bpp.break1
+            bpp.break1 = bpp.break2
+            bpp.break2 = temp
+            a = Annotation(bpp, a2, a1, proximity=proximity)
 
         for gene in ref.get(bp.break1.chr, []):
             a.add_gene(gene)

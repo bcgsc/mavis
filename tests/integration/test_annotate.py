@@ -1424,6 +1424,22 @@ class TestAnnotationGathering(unittest.TestCase):
         self.assertEqual(1, len(ann_list))
         self.assertEqual(ann_list[0].transcript1, ann_list[0].transcript2)
 
+    def test_breakpoint_single_gene(self):
+        g = Gene(REF_CHR, 1000, 3000, strand=STRAND.POS)
+        t = PreTranscript(gene=g, exons=[(1001, 1100), (1501, 1600), (2001, 2100), (2501, 2600)])
+        g.transcripts.append(t)
+        ref = {REF_CHR: [g]}
+        b1 = Breakpoint(REF_CHR, 789, 1050, strand=STRAND.POS)
+        b2 = Breakpoint(REF_CHR, 800, strand=STRAND.POS)
+        bpp = BreakpointPair(b1, b2, event_type=SVTYPE.DEL, protocol=PROTOCOL.GENOME)
+        ann_list = sorted(_gather_annotations(ref, bpp), key=lambda x: (x.break1, x.break2))
+        self.assertEqual(3, len(ann_list))
+        for ann in ann_list:
+            self.assertTrue(ann.break1.start in ann.transcript1.position)
+            self.assertTrue(ann.break1.end in ann.transcript1.position)
+            self.assertTrue(ann.break2.start in ann.transcript2.position)
+            self.assertTrue(ann.break2.end in ann.transcript2.position)
+
 
 class TestAnnotate(unittest.TestCase):
     def test_reference_name_eq(self):
