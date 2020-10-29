@@ -56,8 +56,13 @@ class Annotation(BreakpointPair):
                 raise TypeError('got multiple values for data elements:', conflicts)
         self.data.update(kwargs)
 
-        self.transcript1 = transcript1
-        self.transcript2 = transcript2
+        # match transcript to breakpoint if reveresed
+        if bpp.break1.key[0:3] < bpp.break2.key[0:3]:
+            self.transcript1 = transcript1
+            self.transcript2 = transcript2
+        else:
+            self.transcript2 = transcript1
+            self.transcript1 = transcript2
 
         self.encompassed_genes = set()
         self.genes_proximal_to_break1 = set()
@@ -699,14 +704,7 @@ def _gather_annotations(ref, bp, proximity=None):
         bpp.break2.start = b2_itvl[0]
         bpp.break2.end = b2_itvl[1]
 
-        # Swap annotations/position so lower is first
-        if bpp.break1.key[0:3] < bpp.break2.key[0:3]:
-            a = Annotation(bpp, a1, a2, proximity=proximity)
-        else:
-            temp = bpp.break1
-            bpp.break1 = bpp.break2
-            bpp.break2 = temp
-            a = Annotation(bpp, a2, a1, proximity=proximity)
+        a = Annotation(bpp, a1, a2, proximity=proximity)
 
         for gene in ref.get(bp.break1.chr, []):
             a.add_gene(gene)
