@@ -73,8 +73,7 @@ class Breakpoint(Interval):
 
 
 class BreakpointPair:
-    """
-    """
+    """"""
 
     def __getattr__(self, attr):
         data = object.__getattribute__(self, 'data')

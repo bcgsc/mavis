@@ -40,7 +40,7 @@ pytest tests
 
 ```bash
 pip install .[docs]
-markdown_refdocs mavis -o docs/package --links
+markdown_refdocs mavis -o docs/package --link
 mkdocs build
 ```
 

@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 import re
 
 
-VERSION = '2.2.6'
+VERSION = '2.2.7'
 
 
 def parse_md_readme():
@@ -68,18 +68,13 @@ TEST_REQS = [
 ]
 
 
-DOC_REQS = [
-    'mkdocs',
-    'markdown_refdocs',
-    'mkdocs-material',
-    'markdown-include',
-]
+DOC_REQS = ['mkdocs', 'markdown_refdocs', 'mkdocs-material', 'markdown-include']
 
 
 INSTALL_REQS = [
     'Distance>=0.1.3',
     'Shapely>=1.6.4.post1',
-    'biopython>=1.70',
+    'biopython>=1.70, <1.78',
     'braceexpand==0.1.2',
     'colour',
     'networkx==1.11.0',
@@ -107,7 +102,7 @@ setup(
         'test': TEST_REQS,
         'dev': ['black', 'flake8'] + DOC_REQS + TEST_REQS + DEPLOY_REQS,
         'deploy': DEPLOY_REQS,
-        'tools': ['pyensembl', 'simplejson']
+        'tools': ['pyensembl', 'simplejson'],
     },
     tests_require=TEST_REQS,
     setup_requires=['pip>=9.0.0', 'setuptools>=36.0.0'],

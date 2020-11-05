@@ -263,8 +263,7 @@ class Translation(BioInterval):
 
     @property
     def transcript(self):
-        """mavis.annotate.genomic.Transcript: the spliced transcript this translation belongs to
-        """
+        """mavis.annotate.genomic.Transcript: the spliced transcript this translation belongs to"""
         return self.reference_object
 
     def convert_aa_to_cdna(self, pos):

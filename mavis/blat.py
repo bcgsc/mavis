@@ -32,8 +32,7 @@ from .interval import Interval
 
 
 class Blat:
-    """
-    """
+    """"""
 
     @staticmethod
     def millibad(row, is_protein=False, is_mrna=True):

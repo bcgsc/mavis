@@ -562,6 +562,7 @@ class FusionTranscript(PreTranscript):
                     )
                     temp = reference_sequence[exon.start - 1 : exon.end]
                     e.seq = str(temp)
+
                     assert len(temp) == len(e)
                     s += temp
                     new_exons.append((e, exon))
