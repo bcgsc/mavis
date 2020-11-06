@@ -3,7 +3,8 @@ from setuptools import setup, find_packages
 import re
 
 
-VERSION = '2.2.7'
+VERSION = '2.2.8'
+
 
 
 def parse_md_readme():
@@ -65,17 +66,16 @@ TEST_REQS = [
     'pycodestyle>=2.3.1',
     'pytest',
     'pytest-cov',
-    'tox',
 ]
 
 
-DOC_REQS = ['docutils>=0.14', 'm2r>=0.1.12', 'sphinx-rtd-theme>=0.4.2', 'sphinx>=1.8.1']
+DOC_REQS = ['mkdocs', 'markdown_refdocs', 'mkdocs-material', 'markdown-include']
 
 
 INSTALL_REQS = [
     'Distance>=0.1.3',
     'Shapely>=1.6.4.post1',
-    'biopython>=1.70',
+    'biopython>=1.70, <1.78',
     'braceexpand==0.1.2',
     'colour',
     'networkx==1.11.0',
@@ -103,6 +103,7 @@ setup(
         'test': TEST_REQS,
         'dev': ['black', 'flake8'] + DOC_REQS + TEST_REQS + DEPLOY_REQS,
         'deploy': DEPLOY_REQS,
+        'tools': ['pyensembl', 'simplejson'],
     },
     tests_require=TEST_REQS,
     setup_requires=['pip>=9.0.0', 'setuptools>=36.0.0'],

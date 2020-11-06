@@ -93,8 +93,7 @@ def draw_exon_track(
     genomic_max=None,
     translation=None,
 ):
-    """
-    """
+    """"""
     colors = {} if colors is None else colors
     main_group = canvas.g(class_='exon_track')
 
@@ -465,8 +464,8 @@ def draw_ustranscript(
         pre_transcript (Transcript): the transcript being drawn
         exon_color (str): the color being used for the fill of the exons
         utr_color (str): the color for the fill of the UTR regions
-        abrogated_splice_sites (:class:`list` of :class:`int`): list of positions to ignore as splice sites
-        breakpoints (:class:`list` of :class:`Breakpoint`): the breakpoints to overlay
+        abrogated_splice_sites (List[int]): list of positions to ignore as splice sites
+        breakpoints (List[Breakpoint]): the breakpoints to overlay
 
     Return:
         svgwrite.container.Group: the group element for the transcript diagram
@@ -625,9 +624,9 @@ def draw_genes(
     Args:
         canvas (svgwrite.drawing.Drawing): the main svgwrite object used to create new svg elements
         target_width (int): the target width of the diagram
-        genes (:class:`list` of :class:`Gene`): the list of genes to draw
-        breakpoints (:class:`list` of :class:`Breakpoint`): the breakpoints to overlay
-        colors (:class:`dict` of :class:`Gene` and :class:`str`): dictionary of the colors assigned to each Gene as
+        genes (List[Gene]): the list of genes to draw
+        breakpoints (List[Breakpoint]): the breakpoints to overlay
+        colors (Dict[str,Gene]): dictionary of the colors assigned to each Gene as
          fill
 
     Return:
@@ -853,7 +852,7 @@ def draw_exon(config, canvas, exon, width, height, fill, label='', translation=N
     Return:
         svgwrite.container.Group: the group element for the diagram
 
-    .. todo::
+    Todo:
         add markers for exons with abrogated splice sites
     """
     g = canvas.g(class_='exon')

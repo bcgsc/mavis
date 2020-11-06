@@ -85,9 +85,10 @@ class SplicingPattern(list):
         returns a list of splice sites to be connected as a splicing pattern
 
         Returns:
-            :class:`list` of :class:`SplicingPattern`: List of positions to be spliced together
+            List[SplicingPattern]: List of positions to be spliced together
 
-        see :ref:`theory - predicting splicing patterns <theory-predicting-splicing-patterns>`
+        Note:
+            see [theory - predicting splicing patterns](/background/theory/#predicting-splicing-patterns)
         """
         if not sites:
             return [SplicingPattern()]
@@ -179,7 +180,7 @@ def predict_splice_sites(input_sequence, is_reverse=False):
         is_reverse (bool): True when the sequences is transcribed on the reverse strand
 
     Return:
-        list of SpliceSite: list of putative splice sites
+        List[SpliceSite]: list of putative splice sites
     """
     if is_reverse:
         sequence = reverse_complement(input_sequence)

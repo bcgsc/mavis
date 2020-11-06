@@ -56,8 +56,13 @@ class Annotation(BreakpointPair):
                 raise TypeError('got multiple values for data elements:', conflicts)
         self.data.update(kwargs)
 
-        self.transcript1 = transcript1
-        self.transcript2 = transcript2
+        # match transcript to breakpoint if reveresed
+        if bpp.break1.key[0:3] < bpp.break2.key[0:3]:
+            self.transcript1 = transcript1
+            self.transcript2 = transcript2
+        else:
+            self.transcript2 = transcript1
+            self.transcript1 = transcript2
 
         self.encompassed_genes = set()
         self.genes_proximal_to_break1 = set()
@@ -156,7 +161,7 @@ class Annotation(BreakpointPair):
         generates a dictionary of the annotation information as strings
 
         Returns:
-            :class:`dict` of :class:`str` by :class:`str`: dictionary of attribute names and values
+            Dict[str,str]: dictionary of attribute names and values
         """
         row = BreakpointPair.flatten(self)
         row.update(
@@ -450,7 +455,7 @@ def call_protein_indel(ref_translation, fusion_translation, reference_genome=Non
         fusion_translation (Translation): the fusion protein/translation
         reference_genome: the reference genome object used to fetch the reference translation AA sequence
     Returns:
-        str: the :term:`HGVS` protein indel notation
+        str: the [HGVS](/glossary/#HGVS) protein indel notation
     """
     ref_aa_seq = ref_translation.get_aa_seq(reference_genome)
     call = IndelCall(ref_aa_seq, fusion_translation.get_aa_seq())
@@ -508,11 +513,11 @@ def flatten_fusion_transcript(spliced_fusion_transcript):
 def overlapping_transcripts(ref_ann, breakpoint):
     """
     Args:
-        ref_ann (:class:`dict` of :class:`list` of :any:`Gene` by :class:`str`): the reference list of genes split
+        ref_ann (Dict[str,List[Gene]]): the reference list of genes split
             by chromosome
         breakpoint (Breakpoint): the breakpoint in question
     Returns:
-        :class:`list` of :any:`PreTranscript`: a list of possible transcripts
+        List[PreTranscript]: a list of possible transcripts
     """
     putative_annotations = set()
     for gene in ref_ann.get(breakpoint.chr, []):
@@ -531,20 +536,16 @@ def overlapping_transcripts(ref_ann, breakpoint):
 def _gather_breakpoint_annotations(ref_ann, breakpoint):
     """
     Args:
-        ref_ann (:class:`dict` of :class:`list` of :class:`Gene` by :class:`str`): the reference annotations split
+        ref_ann (Dict[str,List[Gene]]): the reference annotations split
             into lists of genes by chromosome
         breakpoint (Breakpoint): the breakpoint annotations are to be gathered for
 
     Returns:
-        tuple: tuple contains
+        Tuple[List[Union[PreTranscript,IntergenicRegion]],List[Union[PreTranscript,IntergenicRegion]]]:
+            - transcripts or intergenic regions overlapping the breakpoint on the positive strand
+            - transcripts or intergenic regions overlapping the breakpoint on the negative strand
 
-            - :class:`list` of (:class:`PreTranscript` or :class:`IntergenicRegion`): transcripts or intergenic regions
-              overlapping the breakpoint on the positive strand
-            - :class:`list` of (:class:`PreTranscript` or :class:`IntergenicRegion`): transcripts or intergenic regions
-              overlapping the breakpoint on the negative strand
-
-    .. todo::
-
+    Todo:
         Support for setting the transcript in the annotation when the breakpoint is just ahead of the transcript
         and the transcript would be 3'. Then assuming the splicing model takes the 2nd exon onward
     """
@@ -629,12 +630,12 @@ def _gather_annotations(ref, bp, proximity=None):
     the annotation at the breakpoint can be a transcript or an intergenic region
 
     Args:
-        ref (:class:`dict` of :class:`list` of :any:`Gene` by :class:`str`): the list of reference genes hashed
+        ref (Dict[str,List[Gene]]): the list of reference genes hashed
             by chromosomes
-        breakpoint_pairs (:class:`list` of :any:`BreakpointPair`): breakpoint pairs we wish to annotate as events
+        breakpoint_pairs (List[BreakpointPair]): breakpoint pairs we wish to annotate as events
 
     Returns:
-        :class:`list` of :class:`Annotation`: The annotations
+        List[Annotation]: The annotations
     """
     annotations = dict()
     break1_pos, break1_neg = _gather_breakpoint_annotations(ref, bp.break1)
@@ -696,6 +697,7 @@ def _gather_annotations(ref, bp, proximity=None):
 
         b1_itvl = bp.break1 & a1
         b2_itvl = bp.break2 & a2
+
         bpp = BreakpointPair.copy(bp)
         bpp.break1.start = b1_itvl[0]
         bpp.break1.end = b1_itvl[1]
@@ -732,14 +734,14 @@ def choose_more_annotated(ann_list):
     that land in the intergenic region
 
     Args:
-        ann_list (list of :class:`Annotation`): list of input annotations
+        ann_list (List[Annotation]): list of input annotations
 
     Warning:
         input annotations are assumed to be the same event (the same validation_id)
         the logic used would not apply to different events
 
     Returns:
-        list of :class:`Annotation`: the filtered list
+        List[Annotation]: the filtered list
     """
     two_transcript = []
     one_transcript = []
@@ -772,14 +774,14 @@ def choose_transcripts_by_priority(ann_list):
     of transcript. Throw an error if they are identical
 
     Args:
-        ann_list (list of :class:`Annotation`): input annotations
+        ann_list (List[Annotation]): input annotations
 
     Warning:
         input annotations are assumed to be the same event (the same validation_id)
         the logic used would not apply to different events
 
     Returns:
-        list of :class:`Annotation`: the filtered list
+        List[Annotation]: the filtered list
     """
     annotations_by_gene_combination = {}
     genes = set()
@@ -837,18 +839,18 @@ def annotate_events(
 ):
     """
     Args:
-        bpps (list of :class:`~mavis.breakpoint.BreakpointPair`): list of events
+        bpps (List[mavis.breakpoint.BreakpointPair]): list of events
         annotations: reference annotations
-        reference_genome (dict of string by string): dictionary of reference sequences by name
-        max_proximity (int): see :term:`max_proximity`
-        min_orf_size (int): see :term:`min_orf_size`
-        min_domain_mapping_match (float): see :term:`min_domain_mapping_match`
-        max_orf_cap (int): see :term:`max_orf_cap`
-        log (callable): callable function to take in strings and time_stamp args
-        filters (list of callable): list of functions taking in a list and returning a list for filtering
+        reference_genome (Dict[string,string]): dictionary of reference sequences by name
+        max_proximity (int): see [max_proximity](/configuration/settings/#max_proximity)
+        min_orf_size (int): see [min_orf_size](/configuration/settings/#min_orf_size)
+        min_domain_mapping_match (float): see [min_domain_mapping_match](/configuration/settings/#min_domain_mapping_match)
+        max_orf_cap (int): see [max_orf_cap](/configuration/settings/#max_orf_cap)
+        log (Callable): callable function to take in strings and time_stamp args
+        filters (List[callable]): list of functions taking in a list and returning a list for filtering
 
     Returns:
-        list of :class:`Annotation`: list of the putative annotations
+        List[Annotation]: list of the putative annotations
     """
     if filters is None:
         filters = [choose_more_annotated, choose_transcripts_by_priority]

@@ -12,7 +12,7 @@ JOB_STATUS = MavisNamespace(
     'CANCELLED',
     NOT_SUBMITTED='NOT SUBMITTED',
     UNKNOWN='UNKNOWN',
-    __name__='~mavis.schedule.constants.JOB_STATUS',
+    __name__='mavis.schedule.constants.JOB_STATUS',
 )
 
 
@@ -37,21 +37,21 @@ def cumulative_job_state(states):
 
 
 SCHEDULER = MavisNamespace(
-    'SGE', 'SLURM', 'TORQUE', 'LOCAL', __name__='~mavis.schedule.constants.SCHEDULER'
+    'SGE', 'SLURM', 'TORQUE', 'LOCAL', __name__='mavis.schedule.constants.SCHEDULER'
 )
-""":class:`~mavis.constants.MavisNamespace`: scheduler types
+"""MavisNamespace: scheduler types
 
-- :term:`LOCAL`
-- :term:`SGE`
-- :term:`SLURM`
-- :term:`TORQUE`
+- [LOCAL](/glossary/#LOCAL)
+- [SGE](/glossary/#SGE)
+- [SLURM](/glossary/#SLURM)
+- [TORQUE](/glossary/#TORQUE)
 """
 
 MAIL_TYPE = MavisNamespace(
-    'BEGIN', 'END', 'FAIL', 'ALL', 'NONE', __name__='~mavis.schedule.constants.MAIL_TYPE'
+    'BEGIN', 'END', 'FAIL', 'ALL', 'NONE', __name__='mavis.schedule.constants.MAIL_TYPE'
 )
 """
-When the scheduler should notify :term:`mail_user` about a job
+When the scheduler should notify [mail_user](/configuration/settings/#mail_user) about a job
 
 - ``ALL`` - All other options (except none)
 - ``BEGIN`` - Send an email when the job starts
@@ -62,21 +62,21 @@ When the scheduler should notify :term:`mail_user` about a job
 
 STD_OPTIONS = ['memory_limit', 'queue', 'time_limit', 'import_env', 'mail_user', 'mail_type']
 
-OPTIONS = WeakMavisNamespace(__name__='~mavis.schedule.constants.options')
-""":class:`~mavis.constants.MavisNamespace`: submission options
+OPTIONS = WeakMavisNamespace(__name__='mavis.schedule.constants.options')
+"""MavisNamespace: submission options
 
-- :term:`annotation_memory`
-- :term:`concurrency_limit`
-- :term:`import_env`
-- :term:`mail_type`
-- :term:`mail_user`
-- :term:`memory_limit`
-- :term:`queue`
-- :term:`remote_head_ssh`
-- :term:`scheduler`
-- :term:`time_limit`
-- :term:`trans_validation_memory`
-- :term:`validation_memory`
+- [annotation_memory](/configuration/settings/#annotation_memory)
+- [concurrency_limit](/configuration/settings/#concurrency_limit)
+- [import_env](/configuration/settings/#import_env)
+- [mail_type](/configuration/settings/#mail_type)
+- [mail_user](/configuration/settings/#mail_user)
+- [memory_limit](/configuration/settings/#memory_limit)
+- [queue](/configuration/settings/#queue)
+- [remote_head_ssh](/configuration/settings/#remote_head_ssh)
+- [scheduler](/configuration/settings/#scheduler)
+- [time_limit](/configuration/settings/#time_limit)
+- [trans_validation_memory](/configuration/settings/#trans_validation_memory)
+- [validation_memory](/configuration/settings/#validation_memory)
 
 """
 OPTIONS.add('annotation_memory', 12000, defn='default memory limit (MB) for the annotation stage')

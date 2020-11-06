@@ -136,14 +136,14 @@ class BamCache:
             start (int): start position
             end (int): end position
             limit (int): maximum number of reads to fetch
-            cache_if (function):  if returns True then the read is added to the cache
-            filter_if (function): if returns True then the read is not returned as part of the result
+            cache_if (Callable):  if returns True then the read is added to the cache
+            filter_if (Callable): if returns True then the read is not returned as part of the result
             stop_on_cached_read (bool): stop reading at the first read found that is already in the cache
         Note:
             the cache_if and filter_if functions must be any function that takes a read as input and returns a boolean
 
         Returns:
-            set of :class:`pysam.AlignedSegment`: a set of reads which overlap the input region
+            Set[pysam.AlignedSegment]: a set of reads which overlap the input region
         """
         # try using the cache to avoid fetching regions more than once
         result = []
@@ -203,11 +203,11 @@ class BamCache:
             read_limit (int): the maximum number of reads to parse
             cache (bool): flag to store reads
             sample_bins (int): number of bins to split the region into
-            cache_if (callable): function to check to against a read to determine if it should be cached
+            cache_if (Callable): function to check to against a read to determine if it should be cached
             bin_gap_size (int): gap between the bins for the fetch area
 
         Returns:
-            :class:`set` of :class:`pysam.AlignedSegment`: set of reads gathered from the region
+            Set[pysam.AlignedSegment]: set of reads gathered from the region
         """
         # try using the cache to make grabbing mate pairs easier
         result = []
@@ -251,7 +251,7 @@ class BamCache:
             primary_only (bool): ignore secondary alignments
             allow_file_access (bool): determines if the bam can be accessed to try to find the mate
         Returns:
-            :class:`list` of :class:`pysam.AlignedSegment`: list of mates of the input read
+            List[pysam.AlignedSegment]: list of mates of the input read
         """
         # NOTE: will return all mate alignments that have been cached
         putative_mates = self.cache.get(read.query_name, set())

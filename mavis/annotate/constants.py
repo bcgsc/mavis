@@ -10,10 +10,10 @@ PASS_FILENAME = 'annotations.tab'
 
 DEFAULTS = WeakMavisNamespace()
 """
-- :term:`annotation_filters`
-- :term:`max_orf_cap`
-- :term:`min_domain_mapping_match`
-- :term:`min_orf_size`
+- [annotation_filters](/configuration/settings/#annotation_filters)
+- [max_orf_cap](/configuration/settings/#max_orf_cap)
+- [min_domain_mapping_match](/configuration/settings/#min_domain_mapping_match)
+- [min_orf_size](/configuration/settings/#min_orf_size)
 """
 DEFAULTS.add(
     'min_domain_mapping_match',
@@ -58,7 +58,7 @@ SPLICE_TYPE = MavisNamespace(
     MULTI_SKIP='skipped multiple exons',
     COMPLEX='complex',
 )
-""":class:`MavisNamespace`: holds controlled vocabulary for allowed splice type classification values
+"""MavisNamespace: holds controlled vocabulary for allowed splice type classification values
 
 - ``RETAIN``: an intron was retained
 - ``SKIP``: an exon was skipped
@@ -71,7 +71,7 @@ SPLICE_TYPE = MavisNamespace(
 SPLICE_SITE_TYPE = MavisNamespace(DONOR=3, ACCEPTOR=5)
 
 SPLICE_SITE_RADIUS = 2
-""":class:`int`: number of bases away from an exon boundary considered to be part of the splice site such that if it were altered
+"""int: number of bases away from an exon boundary considered to be part of the splice site such that if it were altered
         the splice site would be considered to be abrogated.
 """
 

@@ -73,8 +73,7 @@ class Breakpoint(Interval):
 
 
 class BreakpointPair:
-    """
-    """
+    """"""
 
     def __getattr__(self, attr):
         data = object.__getattribute__(self, 'data')
@@ -130,7 +129,7 @@ class BreakpointPair:
 
     @property
     def interchromosomal(self):
-        """:class:`bool`: True if the breakpoints are on different chromosomes, False otherwise"""
+        """bool: True if the breakpoints are on different chromosomes, False otherwise"""
         if self.break1.chr == self.break2.chr:
             return False
         return True
@@ -283,9 +282,9 @@ class BreakpointPair:
 
         Args:
             pair (BreakpointPair): the pair to classify
-            distance (callable): if defined, will be passed to net size to use in narrowing the list of putative types (del vs ins)
+            distance (Callable): if defined, will be passed to net size to use in narrowing the list of putative types (del vs ins)
         Returns:
-            :class:`list` of :any:`SVTYPE`: a list of possible SVTYPE
+            List[SVTYPE]: a list of possible SVTYPE
 
         Example:
             >>> bpp = BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 9999), opposing_strands=True)
@@ -295,7 +294,8 @@ class BreakpointPair:
             >>> BreakpointPair.classify(bpp)
             {'deletion', 'insertion'}
 
-        see :ref:`related theory documentation <theory-classifying-events>`
+        Note:
+            see [related theory documentation](/background/theory/#classifying-events)
         """
         if not pair.interchromosomal:  # intrachromosomal
             if pair.opposing_strands:
@@ -370,7 +370,6 @@ class BreakpointPair:
         use novel or untemplated sequence in the comparison. For this reason, insertions
         will never return any homologous sequence
 
-        ::
 
             small duplication event CTT => CTTCTT
 
@@ -381,12 +380,10 @@ class BreakpointPair:
             -------TT-TT-------- second break homology
 
         Args:
-            reference_genome (:class:`dict` of :class:`Bio.SeqRecord` by :class:`str`): dict of reference sequence by template/chr name
+            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence by template/chr name
 
         Returns:
-            tuple:
-                - :class:`str` - homologous sequence at the first breakpoint
-                - :class:`str` - homologous sequence at the second breakpoint
+            Tuple[str,str]: homologous sequence at the first breakpoint and second breakpoints
 
         Raises:
             AttributeError: for non specific breakpoints

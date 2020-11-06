@@ -36,7 +36,8 @@ def predict_transcriptome_breakpoint(breakpoint, transcript):
         breakpoint (Breakpoint): the genomic breakpoint
         transcript (PreTranscript): the transcript
 
-    see :ref:`theory - pairing similar events <theory-pairing-similar-events>`
+    Note:
+        see [theory - pairing similar events](/background/theory/#pairing-similar-events)
     """
     prime = determine_prime(transcript, breakpoint)
     exons = transcript.exons[:]
