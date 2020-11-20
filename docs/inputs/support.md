@@ -62,17 +62,17 @@ It should be noted however that the tool tracked will only be listed as
 
 | Name                                       | Version(s)       | MAVIS input                                   | Publication                                                 |
 | ------------------------------------------ | ---------------- | --------------------------------------------- | ----------------------------------------------------------- |
-| [BreakDancer](../../glossary/#breakdancer) | `1.4.5`          | `Tools main output file(s)`                   | [Chen-2009](../../background/citations#Chen-2009)           |
-| [BreakSeq](../../glossary/#breakseq)       | `2.2`            | `work/breakseq.vcf.gz`                        | [Abyzov-2015](../../background/citations#Abyzov-2015)       |
+| [BreakDancer](../../glossary/#breakdancer) | `1.4.5`          | `Tools main output file(s)`                   | [Chen-2009](../../background/citations#chen-2009)           |
+| [BreakSeq](../../glossary/#breakseq)       | `2.2`            | `work/breakseq.vcf.gz`                        | [Abyzov-2015](../../background/citations#abyzov-2015)       |
 | [Chimerascan](../../glossary/#chimerascan) | `0.4.5`          | `*.bedpe`                                     | [Iyer-2011](../../background/citations#Iyer-2011)           |
-| [CNVnator](../../glossary/#cnvnator)       | `0.3.3`          | `Tools main output file(s)`                   | [Abyzov-2011](../../background/citations#Abyzov-2011)       |
-| [DeFuse](../../glossary/#defuse)           | `0.6.2`          | `results/results.classify.tsv`                | [McPherson-2011](../../background/citations#McPherson-2011) |
-| [DELLY](../../glossary/#delly)             | `0.6.1` `0.7.3`  | `combined.vcf` (converted from bcf)           | [Rausch-2012](../../background/citations#Rausch-2012)       |
-| [Manta](../../glossary/#manta)             | `1.0.0`          | `{diploidSV,somaticSV}.vcf`                   | [Chen-2016](../../background/citations#Chen-2016)           |
-| [Pindel](../../glossary/#pindel)           | `0.2.5b9`        | `Tools main output file(s)`                   | [Ye-2009](../../background/citations#Ye-2009)               |
-| [Trans-ABySS](../../glossary/#trans-abyss) | `1.4.8 (custom)` | `{indels/events_novel_exons,fusions/*}.tsv`   | [Robertson-2010](../../background/citations#Robertson-2010) |
-| [Strelka](../../glossary/#strelka)         | `1.0.6`          | `passed.somatic.indels.vcf`                   | [Saunders-2012](../../background/citations#Saunders-2012)   |
-| [STAR-Fusion](../../glossary/#star-fusion) | `1.4.0`          | `star-fusion.fusion_predictions.abridged.tsv` | [Haas-2017](../../background/citations#Haas-2017)           |
+| [CNVnator](../../glossary/#cnvnator)       | `0.3.3`          | `Tools main output file(s)`                   | [Abyzov-2011](../../background/citations#abyzov-2011)       |
+| [DeFuse](../../glossary/#defuse)           | `0.6.2`          | `results/results.classify.tsv`                | [McPherson-2011](../../background/citations#mcpherson-2011) |
+| [DELLY](../../glossary/#delly)             | `0.6.1` `0.7.3`  | `combined.vcf` (converted from bcf)           | [Rausch-2012](../../background/citations#rausch-2012)       |
+| [Manta](../../glossary/#manta)             | `1.0.0`          | `{diploidSV,somaticSV}.vcf`                   | [Chen-2016](../../background/citations#chen-2016)           |
+| [Pindel](../../glossary/#pindel)           | `0.2.5b9`        | `Tools main output file(s)`                   | [Ye-2009](../../background/citations#ye-2009)               |
+| [Trans-ABySS](../../glossary/#trans-abyss) | `1.4.8 (custom)` | `{indels/events_novel_exons,fusions/*}.tsv`   | [Robertson-2010](../../background/citations#robertson-2010) |
+| [Strelka](../../glossary/#strelka)         | `1.0.6`          | `passed.somatic.indels.vcf`                   | [Saunders-2012](../../background/citations#saunders-2012)   |
+| [STAR-Fusion](../../glossary/#star-fusion) | `1.4.0`          | `star-fusion.fusion_predictions.abridged.tsv` | [Haas-2017](../../background/citations#haas-2017)           |
 
 !!! note
     [Trans-ABySS](../../glossary/#trans-abyss): The trans-abyss version
@@ -109,12 +109,12 @@ called events in [IGV](../../glossary/#igv). In the current
 example, [Chimerascan](../../background/citations/#iyer-2011) output
 has six columns of interest that were used in the conversion
 
--   start3p
--   end3p
--   strand3p
--   start5p
--   end5p
--   strand5p
+- start3p
+- end3p
+- strand3p
+- start5p
+- end5p
+- strand5p
 
 The above columns describe two segments which are joined. MAVIS requires
 the position of the join. It was assumed that the segments are always
@@ -175,12 +175,9 @@ input tool you are using differs, it would be better to use a
 
 **Assumptions on non-standard INFO fields**
 
--   `PRECISE` if given, Confidence intervals are ignored if given in
-    favour of exact breakpoint calls using pos and END as the breakpoint
-    positions
--   `CT` values if given are representative of the breakpoint
-    orientations.
--   `CHR2` is given for all interchromosomal events
+- `PRECISE` if given, Confidence intervals are ignored if given in favour of exact breakpoint calls using pos and END as the breakpoint positions
+- `CT` values if given are representative of the breakpoint orientations.
+- `CHR2` is given for all interchromosomal events
 
 ### Translating BND type Alt fields
 

@@ -1,7 +1,7 @@
 import os
-from setuptools import setup, find_packages
 import re
 
+from setuptools import find_packages, setup
 
 VERSION = '2.2.7'
 
@@ -68,7 +68,13 @@ TEST_REQS = [
 ]
 
 
-DOC_REQS = ['mkdocs', 'markdown_refdocs', 'mkdocs-material', 'markdown-include']
+DOC_REQS = [
+    'mkdocs==1.1.2',
+    'markdown_refdocs',
+    'mkdocs-material==5.4.0',
+    'markdown-include',
+    'mkdocs-simple-hooks==0.1.2'
+]
 
 
 INSTALL_REQS = [
