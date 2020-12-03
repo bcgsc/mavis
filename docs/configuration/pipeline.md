@@ -6,7 +6,7 @@ The setup step of MAVIS is set up to use a job scheduler on a
 compute cluster. will generate submission scripts and a wrapper bash
 script for the user to execute on their cluster head node.
 
-![](../../images/pipeline_options.svg)
+![](../images/pipeline_options.svg)
 
 The MAVIS pipeline is highly configurable. Some pipeline steps
 (cluster, validate) are optional and can be automatically skipped. The
@@ -36,7 +36,7 @@ mavis schedule -o /path/to/output_dir --submit
 
 This will submit a series of jobs with dependencies.
 
-![](../../images/pipeline_dependency_graph.svg)
+![](../images/pipeline_dependency_graph.svg)
 
 Dependency graph of MAVIS jobs for the standard pipeline setup. The
 notation on the arrows indicates the SLURM setting on the job to add the
