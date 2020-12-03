@@ -1,6 +1,5 @@
 # Sub-package Documentation
 
-
 ## Types of Output Files
 
 | expected name/suffix           | file type/format                     | content                                  |
@@ -9,7 +8,6 @@
 | ``annotations.fusion-cdna.fa`` | [fasta](../../../../glossary/#fasta) | putative fusion unspliced cDNA sequences |
 | ``drawings/*.svg``             | [SVG](../../../../glossary/#svg)     | diagrams                                 |
 | ``drawings/*.legend.json``     | [JSON](../../../../glossary/#json)   | diagram legend/metadata                  |
-
 
 ## Algorithm Overview
 
@@ -22,12 +20,11 @@ see [annotating events](../../../../background/theory/#annotating-events)
 
 ## Levels of Annotations
 
-![](../../../../images/feature_levels.svg)
-
+![levels of features](../../../../images/feature_levels.svg)
 
 ## Overview of Class Relatnships
 
-![../../../images/annotation_mo
+![annotations model](../../../../images/annotation_model.svg)
 The Annotation sub-package has objects for genetic annotations and related calculations. The basic layout of the
 package is shown above. IS-A relationships are given by the blue arrows. HAS-A relationships are shown in black.
 And reference_object/parent

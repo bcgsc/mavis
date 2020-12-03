@@ -1,10 +1,9 @@
 import os
-from setuptools import setup, find_packages
 import re
 
+from setuptools import find_packages, setup
 
-VERSION = '2.2.8'
-
+VERSION = '2.2.9'
 
 
 def parse_md_readme():
@@ -16,7 +15,7 @@ def parse_md_readme():
 
         rst_lines = parse_from_file('README.md').split('\n')
         long_description = [
-            '.. image:: http://mavis.bcgsc.ca/docs/latest/_static/acronym.svg\n\n|\n'
+            '.. image:: http://mavis.bcgsc.ca/images/acronym.svg\n\n|\n'
         ]  # backup since pip can't handle raw directives
         i = 0
         while i < len(rst_lines):
@@ -69,7 +68,13 @@ TEST_REQS = [
 ]
 
 
-DOC_REQS = ['mkdocs', 'markdown_refdocs', 'mkdocs-material', 'markdown-include']
+DOC_REQS = [
+    'mkdocs==1.1.2',
+    'markdown_refdocs',
+    'mkdocs-material==5.4.0',
+    'markdown-include',
+    'mkdocs-simple-hooks==0.1.2',
+]
 
 
 INSTALL_REQS = [

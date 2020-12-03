@@ -14,11 +14,11 @@
 The general [MAVIS](http://mavis.bcgsc.ca) pipeline consists of six main stages
 
 - convert
-- [cluster](http://mavis.bcgsc.ca/docs/latest/mavis.cluster.html#mavis-cluster)
-- [validate](http://mavis.bcgsc.ca/docs/latest/mavis.validate.html#mavis-validate)
-- [annotate](http://mavis.bcgsc.ca/docs/latest/mavis.annotate.html#mavis-annotate)
-- [pairing](http://mavis.bcgsc.ca/docs/latest/mavis.pairing.html#mavis-pairing)
-- [summary](http://mavis.bcgsc.ca/docs/latest/mavis.summary.html#mavis-summary)
+- [cluster](https://mavis.readthedocs.io/en/latest/package/mavis/cluster)
+- [validate](https://mavis.readthedocs.io/en/latest/package/mavis/validate)
+- [annotate](https://mavis.readthedocs.io/en/latest/package/mavis/annotate)
+- [pairing](https://mavis.readthedocs.io/en/latest/package/mavis/pairing)
+- [summary](https://mavis.readthedocs.io/en/latest/package/mavis/summary)
 
 ## Getting Help
 
@@ -41,12 +41,12 @@ a github issue to our [github page](https://github.com/bcgsc/mavis/issues) or co
 
 ## Install Instructions
 
-There are 3 major steps to setting up and installing [MAVIS](http://mavis.bcgsc.ca). If you are a developer contributing to mavis, please see the [instructions for developers page](http://mavis.bcgsc.ca/docs/latest/development.html) instead
+There are 3 major steps to setting up and installing [MAVIS](http://mavis.bcgsc.ca). If you are a developer contributing to mavis, please see the [instructions for developers page](https://mavis.readthedocs.io/en/latest/development) instead
 
 ### 1. Install Aligner
 
 In addition to the python package dependencies, [MAVIS](http://mavis.bcgsc.ca) also requires an aligner to be installed.
-Currently the only aligners supported are [blat](http://mavis.bcgsc.ca/docs/latest/glossary.html#term-blat) and [bwa mem](http://mavis.bcgsc.ca/docs/latest/glossary.html#term-bwa).
+Currently the only aligners supported are [blat](https://mavis.readthedocs.io/en/latest/glossary/#blat) and [bwa mem](https://mavis.readthedocs.io/en/latest/glossary/#bwa).
 For MAVIS to run successfully the aligner must be installed and accessible on the path.
 If you have a non-standard install you may find it useful to edit the PATH environment variable. For example
 
@@ -55,7 +55,7 @@ export PATH=/path/to/directory/containing/blat/binary:$PATH
 ```
 
 [blat](http://mavis.bcgsc.ca/docs/latest/glossary.html#term-blat) is the default aligner. To configure MAVIS to use [bwa mem](http://mavis.bcgsc.ca/docs/latest/glossary.html#term-bwa) as a default instead, use the
-[MAVIS environment variables](http://mavis.bcgsc.ca/configuration.html#environment-variables). Make sure to specify BOTH of the variables below to change the default aligner.
+[MAVIS environment variables](https://mavis.readthedocs.io/en/latest/configuration/settings/). Make sure to specify BOTH of the variables below to change the default aligner.
 
 ``` bash
 export MAVIS_ALIGNER='bwa mem'
@@ -108,7 +108,7 @@ This will install mavis and its python dependencies into eggs inside the cloned 
 
 ### 3. Build or Download Reference Files
 
-After [MAVIS](http://mavis.bcgsc.ca) is installed the [reference files](http://mavis.bcgsc.ca/docs/latest/mavis_input.html#reference-input-files) must be generated (or downloaded) before it can be run. A simple bash script to download the hg19 reference files and generate a MAVIS environment file is provided under mavis/tools for convenience.
+After [MAVIS](http://mavis.bcgsc.ca) is installed the [reference files](https://mavis.readthedocs.io/en/latest/inputs/reference) must be generated (or downloaded) before it can be run. A simple bash script to download the hg19 reference files and generate a MAVIS environment file is provided under mavis/tools for convenience.
 
 ``` bash
 cd /path/to/where/you/want/to/put/the/files
@@ -118,7 +118,7 @@ source reference_inputs/hg19_env.sh
 ```
 
 Once the above 3 steps are complete [MAVIS](http://mavis.bcgsc.ca) is ready to be run.
-See the MAVIS [tutorial](http://mavis.bcgsc.ca/docs/latest/pipeline.html#mavis-mini-tutorial) to learn about running MAVIS.
+See the MAVIS [tutorial](https://mavis.readthedocs.io/en/latest/tutorials/mini) to learn about running MAVIS.
 
 
 ## Citation
