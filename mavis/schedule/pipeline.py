@@ -264,8 +264,8 @@ class Pipeline:
         if PROGNAME is None:
             raise FileNotFoundError(
                 'The mavis executable was not found on the current PATH. '
-                'This is required in order to run external scripts. '
-                'Please add mavis to the PATH with PATH=$PATH:/path/to/mavis/bin'
+                'This is required in order to create submission scripts. '
+                'Please add mavis to the PATH first with export PATH=$PATH:/path/to/mavis/bin'
             )
         with open(job.script, 'w') as fh:
             fh.write(
