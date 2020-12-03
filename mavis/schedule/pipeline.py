@@ -1,25 +1,26 @@
-from configparser import ConfigParser, ExtendedInterpolation
 import os
 import re
 import shutil
 import subprocess
+from configparser import ConfigParser, ExtendedInterpolation
 
 from shortuuid import uuid
 
-from ..cluster import constants as _CLUSTER
-from ..constants import SUBCOMMAND, PROTOCOL, EXIT_ERROR, EXIT_OK, EXIT_INCOMPLETE
-from ..tools import convert_tool_output
-from ..util import mkdirp, output_tabbed_file, LOG, DEVNULL
-from ..validate import constants as _VALIDATE
 from ..annotate import constants as _ANNOTATE
 from ..annotate import file_io as _file_io
+from ..cluster import constants as _CLUSTER
+from ..constants import EXIT_ERROR, EXIT_INCOMPLETE, EXIT_OK, PROTOCOL, SUBCOMMAND
 from ..summary import constants as _SUMMARY
-from .job import Job, ArrayJob, LogFile, TorqueArrayJob
-from .scheduler import SlurmScheduler, TorqueScheduler, SgeScheduler, consecutive_ranges
+from ..tools import convert_tool_output
+from ..util import DEVNULL, LOG, mkdirp, output_tabbed_file
+from ..validate import constants as _VALIDATE
+from .constants import JOB_STATUS, OPTIONS, SCHEDULER, STD_OPTIONS
+from .job import ArrayJob, Job, LogFile, TorqueArrayJob
 from .local import LocalJob, LocalScheduler
-from .constants import JOB_STATUS, STD_OPTIONS, OPTIONS, SCHEDULER
+from .scheduler import SgeScheduler, SlurmScheduler, TorqueScheduler, consecutive_ranges
 
 PROGNAME = shutil.which('mavis')
+
 SHEBANG = '#!/bin/bash'
 SCHEDULERS_BY_NAME = {
     sched.NAME: sched for sched in [SlurmScheduler, TorqueScheduler, LocalScheduler, SgeScheduler]
@@ -260,6 +261,12 @@ class Pipeline:
             args (dict): arguments for the subcommand
         """
         LOG('writing:', job.script, time_stamp=True)
+        if PROGNAME is None:
+            raise FileNotFoundError(
+                'The mavis executable was not found on the current PATH. '
+                'This is required in order to run external scripts. '
+                'Please add mavis to the PATH with PATH=$PATH:/path/to/mavis/bin'
+            )
         with open(job.script, 'w') as fh:
             fh.write(
                 """{shebang}
