@@ -6,7 +6,6 @@ from setuptools import find_packages, setup
 VERSION = '2.2.8'
 
 
-
 def parse_md_readme():
     """
     pypi won't render markdown. After conversion to rst it will still not render unless raw directives are removed
@@ -86,7 +85,7 @@ INSTALL_REQS = [
     'colour',
     'networkx==1.11.0',
     'numpy>=1.13.1',
-    'pysam>=0.9, <=0.15.2',
+    'pysam>=0.9, !=0.15.2',
     'pyvcf==0.6.8',
     'shortuuid>=0.5.0',
     'svgwrite',
