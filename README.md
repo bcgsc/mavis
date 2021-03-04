@@ -5,7 +5,7 @@
 </object>
 
 
-![PyPi](https://img.shields.io/pypi/v/mavis.svg) ![build](https://github.com/bcgsc/mavis/workflows/build/badge.svg?branch=master) [![codecov](https://codecov.io/gh/bcgsc/mavis/branch/master/graph/badge.svg)](https://codecov.io/gh/bcgsc/mavis) ![ReadTheDocs](https://readthedocs.org/projects/pip/badge/)
+![PyPi](https://img.shields.io/pypi/v/mavis.svg) ![build](https://github.com/bcgsc/mavis/workflows/build/badge.svg?branch=master) [![codecov](https://codecov.io/gh/bcgsc/mavis/branch/master/graph/badge.svg)](https://codecov.io/gh/bcgsc/mavis) ![ReadTheDocs](https://readthedocs.org/projects/pip/badge/) ![python versions](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8-blue)
 
 
 ## About
@@ -41,7 +41,8 @@ a github issue to our [github page](https://github.com/bcgsc/mavis/issues) or co
 
 ## Install Instructions
 
-There are 3 major steps to setting up and installing [MAVIS](http://mavis.bcgsc.ca). If you are a developer contributing to mavis, please see the [instructions for developers page](https://mavis.readthedocs.io/en/latest/development) instead
+There are 3 major steps to setting up and installing [MAVIS](http://mavis.bcgsc.ca). If you are a developer contributing to mavis, please see the [instructions for developers page](https://mavis.readthedocs.io/en/latest/development) instead. Note that MAVIS is developed primarily for linux
+systems
 
 ### 1. Install Aligner
 
