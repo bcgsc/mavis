@@ -2,20 +2,19 @@
 module which holds all functions relating to loading reference files
 """
 import json
+import os
 import re
 import warnings
-import os
 
-from Bio import SeqIO
 import tab
+from Bio import SeqIO
 
-from .base import BioInterval, ReferenceName
-from .genomic import Exon, Gene, Template, Transcript, PreTranscript
-from .protein import Domain, Translation
 from ..constants import CODON_SIZE, GIEMSA_STAIN, START_AA, STOP_AA, STRAND, translate
 from ..interval import Interval
-from ..util import DEVNULL, LOG, filepath, WeakMavisNamespace
-
+from ..util import DEVNULL, LOG, WeakMavisNamespace, filepath
+from .base import BioInterval, ReferenceName
+from .genomic import Exon, Gene, PreTranscript, Template, Transcript
+from .protein import Domain, Translation
 
 REFERENCE_DEFAULTS = WeakMavisNamespace()
 REFERENCE_DEFAULTS.add(
@@ -552,3 +551,7 @@ class ReferenceFile:
             message = 'Error in loading files: {}. {}'.format(', '.join(self.name), err)
             raise err.__class__(message)
         return self
+
+    @classmethod
+    def load_from_config(cls, config, file_type: str, **kwargs):
+        return ReferenceFile(file_type, *config[f'reference.{file_type}'], **kwargs)

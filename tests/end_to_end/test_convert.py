@@ -6,14 +6,12 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-
 from mavis.constants import ORIENT, SUBCOMMAND, SVTYPE
 from mavis.main import main
 from mavis.tools import SUPPORTED_TOOL
-from mavis.util import unique_exists, read_bpp_from_input_file
+from mavis.util import read_bpp_from_input_file, unique_exists
 
 from ..util import get_data
-
 
 TEMP_OUTPUT = None
 
@@ -41,7 +39,7 @@ class TestConvert(unittest.TestCase):
             strand_specific,
         ]
         with patch.object(sys, 'argv', args):
-            self.assertEqual(0, main())
+            main()
             print('output', outputfile)
             self.assertTrue(unique_exists(outputfile))
         result = {}

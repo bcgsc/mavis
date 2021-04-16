@@ -1,40 +1,35 @@
 import itertools
 import os
 import time
+from typing import Dict, List
 
-from .pairing import inferred_equivalent, product_key, pair_by_distance
-from .constants import DEFAULTS
 from ..annotate.constants import SPLICE_TYPE
+from ..annotate.file_io import ReferenceFile
 from ..constants import CALL_METHOD, COLUMNS, PROTOCOL, SVTYPE
-from ..util import generate_complete_stamp, LOG, output_tabbed_file, read_inputs
+from ..util import LOG, generate_complete_stamp, output_tabbed_file, read_inputs
+from .pairing import inferred_equivalent, pair_by_distance, product_key
 
 
 def main(
-    inputs,
-    output,
-    annotations,
-    flanking_call_distance=DEFAULTS.flanking_call_distance,
-    split_call_distance=DEFAULTS.split_call_distance,
-    contig_call_distance=DEFAULTS.contig_call_distance,
-    spanning_call_distance=DEFAULTS.spanning_call_distance,
+    inputs: List[str],
+    output: str,
+    config: Dict,
     start_time=int(time.time()),
-    **kwargs
+    **kwargs,
 ):
     """
     Args:
         inputs (List[str]): list of input files to read
         output (str): path to the output directory
-        flanking_call_distance (int): pairing distance for pairing with an event called by [flanking read pair](/glossary/#flanking-read-pair)
-        split_call_distance (int): pairing distance for pairing with an event called by [split read](/glossary/#split-read)
-        contig_call_distance (int): pairing distance for pairing with an event called by contig or [spanning read](/glossary/#spanning-read)
     """
-    annotations.load()
+    annotations = ReferenceFile.load_from_config(config, 'annotations', eager_load=True)
+
     # load the file
     distances = {
-        CALL_METHOD.FLANK: flanking_call_distance,
-        CALL_METHOD.SPLIT: split_call_distance,
-        CALL_METHOD.CONTIG: contig_call_distance,
-        CALL_METHOD.SPAN: spanning_call_distance,
+        CALL_METHOD.FLANK: config['pairing.flanking_call_distance'],
+        CALL_METHOD.SPLIT: config['pairing.split_call_distance'],
+        CALL_METHOD.CONTIG: config['pairing.contig_call_distance'],
+        CALL_METHOD.SPAN: config['pairing.spanning_call_distance'],
     }
 
     bpps = []
@@ -93,7 +88,15 @@ def main(
         bpp.data[COLUMNS.inferred_pairing] = ''
 
         if product_key(bpp) in bpp_by_product_key:
-            raise KeyError('duplicate bpp is not unique within lib', product_key(bpp))
+            diffs = {}
+            other = bpp_by_product_key[product_key(bpp)]
+            for key in (set(other.data.keys()) | set(bpp.data.keys())) - {'line_no'}:
+                if bpp.data.get(key) != other.data.get(key):
+                    diffs[key] = (bpp.data.get(key), other.data.get(key))
+            if diffs:
+                raise KeyError(
+                    f'duplicate bpp ({product_key(bpp)}) is not unique within lib (diffs: {diffs})'
+                )
         bpp_by_product_key[product_key(bpp)] = bpp
 
     distance_pairings = {}
@@ -137,5 +140,6 @@ def main(
         bpp = bpp_by_product_key[pkey]
         bpp.data[COLUMNS.inferred_pairing] = ';'.join(sorted(pkeys))
 
-    fname = os.path.join(output, 'mavis_paired_{}.tab'.format('_'.join(sorted(list(libraries)))))
+    fname = os.path.join(output, 'mavis_paired.tab')
     output_tabbed_file(bpps, fname)
+    generate_complete_stamp(output, LOG)

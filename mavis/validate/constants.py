@@ -1,5 +1,5 @@
-from ..constants import float_fraction
 from ..align import SUPPORTED_ALIGNER
+from ..constants import float_fraction
 from ..util import WeakMavisNamespace
 
 PASS_FILENAME = 'validation-passed.tab'

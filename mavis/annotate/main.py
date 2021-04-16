@@ -1,29 +1,27 @@
+import hashlib
 import json
 import os
-import re
 import time
-import warnings
-import hashlib
+from typing import Dict, List
 
-from .constants import DEFAULTS, PASS_FILENAME
-from .genomic import PreTranscript
-from .variant import (
-    annotate_events,
-    choose_more_annotated,
-    choose_transcripts_by_priority,
-    call_protein_indel,
-    flatten_fusion_transcript,
-    flatten_fusion_translation,
-)
-from .fusion import determine_prime
-from ..cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from ..constants import COLUMNS, PRIME, PROTOCOL, sort_columns
 from ..error import DrawingFitError, NotSpecifiedError
 from ..illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from ..illustrate.constants import DiagramSettings
 from ..illustrate.diagram import draw_sv_summary_diagram
-from ..util import LOG, mkdirp, read_inputs
-
+from ..util import LOG, generate_complete_stamp, mkdirp, read_inputs
+from .constants import PASS_FILENAME
+from .file_io import ReferenceFile
+from .fusion import determine_prime
+from .genomic import PreTranscript
+from .variant import (
+    annotate_events,
+    call_protein_indel,
+    choose_more_annotated,
+    choose_transcripts_by_priority,
+    flatten_fusion_transcript,
+    flatten_fusion_translation,
+)
 
 ACCEPTED_FILTERS = {
     'choose_more_annotated': choose_more_annotated,
@@ -114,54 +112,38 @@ def draw(drawing_config, ann, reference_genome, template_metadata, drawings_dire
 
 
 def main(
-    inputs,
-    output,
-    library,
-    protocol,
-    reference_genome,
-    annotations,
-    template_metadata,
-    min_domain_mapping_match=DEFAULTS.min_domain_mapping_match,
-    min_orf_size=DEFAULTS.min_orf_size,
-    max_orf_cap=DEFAULTS.max_orf_cap,
-    annotation_filters=DEFAULTS.annotation_filters,
+    inputs: List[str],
+    output: str,
+    library: str,
+    config: Dict,
     start_time=int(time.time()),
-    draw_fusions_only=DEFAULTS.draw_fusions_only,
-    draw_non_synonymous_cdna_only=DEFAULTS.draw_non_synonymous_cdna_only,
-    max_proximity=CLUSTER_DEFAULTS.max_proximity,
     **kwargs
 ):
     """
     Args:
         inputs (List[str]): list of input files to read
         output (str): path to the output directory
-        reference_genome (mavis.annotate.file_io.ReferenceFile): see :func:`mavis.annotate.file_io.load_reference_genome`
-        annotations (mavis.annotate.file_io.ReferenceFile): see :func:`mavis.annotate.file_io.load_reference_genes`
-        template_metadata (mavis.annotate.file_io.ReferenceFile): see :func:`mavis.annotate.file_io.load_templates`
-        min_domain_mapping_match (float): min mapping match percent (0-1) to count a domain as mapped
-        min_orf_size (int): minimum size of an [open reading frame](/glossary/#open-reading-frame) to keep as a putative translation
-        max_orf_cap (int): the maximum number of [open reading frame](/glossary/#open-reading-frame) s to collect for any given event
     """
-    # error early on missing input files
-    annotations.files_exist()
-    reference_genome.files_exist()
-    template_metadata.files_exist()
-    if not template_metadata.is_loaded():
-        template_metadata.load()
+    reference_genome = ReferenceFile.load_from_config(config, 'reference_genome')
+    annotations = ReferenceFile.load_from_config(config, 'annotations')
+    template_metadata = ReferenceFile.load_from_config(config, 'template_metadata', eager_load=True)
 
     drawings_directory = os.path.join(output, 'drawings')
     tabbed_output_file = os.path.join(output, PASS_FILENAME)
     fa_output_file = os.path.join(output, 'annotations.fusion-cdna.fa')
 
-    annotation_filters = [] if not annotation_filters else annotation_filters.split(',')
-    annotation_filters = [ACCEPTED_FILTERS[a] for a in annotation_filters]
+    annotation_filters = [ACCEPTED_FILTERS[a] for a in config['annotate.annotation_filters']]
 
     mkdirp(drawings_directory)
     # test that the sequence makes sense for a random transcript
     bpps = read_inputs(
         inputs,
         in_={COLUMNS.protocol: PROTOCOL.values()},
-        add_default={COLUMNS.protocol: protocol, COLUMNS.library: library, COLUMNS.stranded: False},
+        add_default={
+            COLUMNS.protocol: config['libraries'][library]['protocol'],
+            COLUMNS.library: library,
+            COLUMNS.stranded: False,
+        },
         require=[COLUMNS.protocol, COLUMNS.library],
         expand_strand=False,
         expand_orient=True,
@@ -171,14 +153,15 @@ def main(
 
     annotations.load()
     reference_genome.load()
+
     annotated_events = annotate_events(
         bpps,
         reference_genome=reference_genome.content,
         annotations=annotations.content,
-        min_orf_size=min_orf_size,
-        min_domain_mapping_match=min_domain_mapping_match,
-        max_proximity=max_proximity,
-        max_orf_cap=max_orf_cap,
+        min_orf_size=config['annotate.min_orf_size'],
+        min_domain_mapping_match=config['annotate.min_domain_mapping_match'],
+        max_proximity=config['cluster.max_proximity'],
+        max_orf_cap=config['annotate.max_orf_cap'],
         log=LOG,
         filters=annotation_filters,
     )
@@ -288,9 +271,11 @@ def main(
             # draw the annotation and add the path to all applicable rows (one drawing for multiple annotated_events)
             if any(
                 [
-                    not ann.fusion and not draw_fusions_only,
-                    ann.fusion and not draw_non_synonymous_cdna_only,
-                    ann.fusion and draw_non_synonymous_cdna_only and not cdna_synon_all,
+                    not ann.fusion and not config['annotate.draw_fusions_only'],
+                    ann.fusion and not config['annotate.draw_non_synonymous_cdna_only'],
+                    ann.fusion
+                    and config['annotate.draw_non_synonymous_cdna_only']
+                    and not cdna_synon_all,
                 ]
             ):
                 drawing, legend = draw(
@@ -307,6 +292,7 @@ def main(
                 rows = [ann_row]
             for row in rows:
                 tabbed_fh.write('\t'.join([str(row.get(k, None)) for k in header]) + '\n')
+        generate_complete_stamp(output, LOG, start_time=start_time)
     finally:
         LOG('closing:', tabbed_output_file)
         tabbed_fh.close()

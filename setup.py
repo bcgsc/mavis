@@ -3,7 +3,7 @@ import re
 
 from setuptools import find_packages, setup
 
-VERSION = '2.2.7'
+VERSION = '2.2.8'
 
 
 def parse_md_readme():
@@ -15,7 +15,7 @@ def parse_md_readme():
 
         rst_lines = parse_from_file('README.md').split('\n')
         long_description = [
-            '.. image:: http://mavis.bcgsc.ca/images/acronym.svg\n\n|\n'
+            '.. image:: http://mavis.bcgsc.ca/docs/latest/_static/acronym.svg\n\n|\n'
         ]  # backup since pip can't handle raw directives
         i = 0
         while i < len(rst_lines):
@@ -85,10 +85,12 @@ INSTALL_REQS = [
     'colour',
     'networkx==1.11.0',
     'numpy>=1.13.1',
+    'pandas>=1.1, <2',
     'pysam>=0.9, <=0.15.2',
     'pyvcf==0.6.8',
     'shortuuid>=0.5.0',
     'svgwrite',
+    'snakemake>=6.1.1, <7',
 ]
 
 DEPLOY_REQS = ['twine', 'm2r', 'wheel']
@@ -122,6 +124,8 @@ setup(
             'calculate_ref_alt_counts = tools.calculate_ref_alt_counts:main',
         ]
     },
+    include_package_data=True,
+    data_files=[('mavis', ['mavis/schemas/config.json', 'mavis/schemas/overlay.json'])],
     project_urls={'mavis': 'http://mavis.bcgsc.ca'},
 )
 check_nonpython_dependencies()

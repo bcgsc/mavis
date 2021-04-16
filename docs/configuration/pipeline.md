@@ -2,6 +2,9 @@
 
 ## Running MAVIS using a Job Scheduler
 
+MAVIS v3 uses [snakemake](https://snakemake.readthedocs.io/en/stable/) to handle job scheduling
+and setup
+
 The setup step of MAVIS is set up to use a job scheduler on a
 compute cluster. will generate submission scripts and a wrapper bash
 script for the user to execute on their cluster head node.

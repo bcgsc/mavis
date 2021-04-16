@@ -1,27 +1,34 @@
-import inspect
 import itertools
 import os
-from shortuuid import uuid
 import time
+from typing import Dict, List
 
-from .cluster import merge_breakpoint_pairs
-from .constants import DEFAULTS
-from ..constants import COLUMNS
+from shortuuid import uuid
+
+from ..annotate.file_io import ReferenceFile
+from ..breakpoint import BreakpointPair
+from ..constants import COLUMNS, SUBCOMMAND
 from ..util import (
+    LOG,
     filter_on_overlap,
     filter_uninformative,
     generate_complete_stamp,
-    LOG,
-    log_arguments,
     mkdirp,
     output_tabbed_file,
     read_inputs,
     write_bed_file,
 )
+from .cluster import merge_breakpoint_pairs
+
+SECTION = SUBCOMMAND.CLUSTER
 
 
 def split_clusters(
-    clusters, outputdir, batch_id, min_clusters_per_file=0, max_files=1, write_bed_summary=True
+    clusters: List[BreakpointPair],
+    outputdir: str,
+    total_batches: int,
+    min_clusters_per_file: int = 0,
+    write_bed_summary: bool = True,
 ):
     """
     For a set of clusters creates a bed file representation of all clusters.
@@ -36,13 +43,7 @@ def split_clusters(
             bedfile, itertools.chain.from_iterable([b.get_bed_repesentation() for b in clusters])
         )
 
-    number_of_jobs = len(clusters) // min_clusters_per_file
-    if number_of_jobs > max_files:
-        number_of_jobs = max_files
-    elif number_of_jobs == 0:
-        number_of_jobs = 1
-
-    jobs = [[] for j in range(0, number_of_jobs)]
+    jobs: List[List[BreakpointPair]] = [[] for j in range(0, total_batches)]
     clusters = sorted(
         clusters, key=lambda x: (x.break1.chr, x.break1.start, x.break2.chr, x.break2.start)
     )
@@ -55,70 +56,57 @@ def split_clusters(
     output_files = []
     for i, job in enumerate(jobs):
         # generate an output file
-        filename = os.path.join(outputdir, '{}-{}.tab'.format(batch_id, i + 1))
+        filename = os.path.join(outputdir, 'batch-{}.tab'.format(i + 1))
         output_files.append(filename)
         output_tabbed_file(job, filename)
     return output_files
 
 
 def main(
-    inputs,
-    output,
-    strand_specific,
-    library,
-    protocol,
-    disease_status,
-    masking,
-    annotations,
-    limit_to_chr=DEFAULTS.limit_to_chr,
-    cluster_initial_size_limit=DEFAULTS.cluster_initial_size_limit,
-    cluster_radius=DEFAULTS.cluster_radius,
-    uninformative_filter=DEFAULTS.uninformative_filter,
-    max_proximity=DEFAULTS.max_proximity,
-    min_clusters_per_file=DEFAULTS.min_clusters_per_file,
-    max_files=DEFAULTS.max_files,
-    batch_id=None,
-    split_only=False,
+    inputs: List[str],
+    output: str,
+    library: str,
+    config: Dict,
     start_time=int(time.time()),
-    **kwargs
+    **kwargs,
 ):
     """
     Args:
-        inputs (List[str]): list of input files to read
-        output (str): path to the output directory
-        strand_specific (bool): is the bam using a strand specific protocol
-        library (str): the library to look for in each of the input files
-        protocol (PROTOCOL): the sequence protocol (genome or transcriptome)
-        masking (object): see :func:`mavis.annotate.file_io.load_masking_regions`
-        cluster_clique_size (int): the maximum size of cliques to search for using the exact algorithm
-        cluster_radius (int): distance (in breakpoint pairs) used in deciding to join bpps in a cluster
-        uninformative_filter (bool): if True then clusters should be filtered out if they are not
-          within a specified (max_proximity) distance to any annotation
-        max_proximity (int): the maximum distance away an annotation can be before the uninformative_filter
-          is applied
+        inputs: list of input files to read
+        output: path to the output directory
+        library: the library to look for in each of the input files
+        masking (ReferenceFile): see :func:`mavis.annotate.file_io.load_masking_regions`
         annotations (ReferenceFile): see :func:`mavis.annotate.file_io.load_reference_genes`
-        min_clusters_per_file (int): the minimum number of clusters to output to a file
-        max_files (int): the maximum number of files to split clusters into
     """
-    if uninformative_filter:
+    masking = ReferenceFile.load_from_config(config, 'masking', eager_load=True)
+    annotations = ReferenceFile.load_from_config(config, 'annotations')
+
+    if config[f'{SECTION}.uninformative_filter'] and not annotations.is_empty():
         annotations.load()
-    if masking:
+    if not masking.is_empty():
         masking.load()
 
+    lib_config = config['libraries'][library]
+
     # output files
-    batch_id = 'batch-' + str(uuid()) if batch_id is None else batch_id
     filtered_output = os.path.join(output, 'filtered_pairs.tab')
     cluster_assign_output = os.path.join(output, 'cluster_assignment.tab')
 
     # load the input files
     breakpoint_pairs = read_inputs(
         inputs,
-        cast={COLUMNS.tools: lambda x: set(x.split(';')) if x else set() if not split_only else x},
+        cast={
+            COLUMNS.tools: lambda x: set(x.split(';'))
+            if x
+            else set()
+            if not config[f'{SECTION}.split_only']
+            else x
+        },
         add_default={
             COLUMNS.library: library,
-            COLUMNS.protocol: protocol,
+            COLUMNS.protocol: lib_config['protocol'],
             COLUMNS.tools: '',
-            COLUMNS.disease_status: disease_status,
+            COLUMNS.disease_status: lib_config['disease_status'],
             COLUMNS.stranded: False,
             COLUMNS.tracking_id: '',
         },
@@ -139,15 +127,17 @@ def main(
             other_libs.add(bpp.library)
             bpp.data[COLUMNS.filter_comment] = 'Not the target library name'
             filtered_pairs.append(bpp)
-        elif None in limit_to_chr or (
-            bpp.break1.chr in limit_to_chr and bpp.break2.chr in limit_to_chr
+        elif not config[f'{SECTION}.limit_to_chr'] or (
+            bpp.break1.chr in config[f'{SECTION}.limit_to_chr']
+            and bpp.break2.chr in config[f'{SECTION}.limit_to_chr']
         ):
             unfiltered_breakpoint_pairs.append(bpp)
         else:
             other_chr.update({bpp.break1.chr, bpp.break2.chr})
             bpp.data[COLUMNS.filter_comment] = 'Non standard chromosome name'
             filtered_pairs.append(bpp)
-    other_chr -= set(limit_to_chr)
+    if config[f'{SECTION}.limit_to_chr']:
+        other_chr -= set(config[f'{SECTION}.limit_to_chr'])
     breakpoint_pairs = unfiltered_breakpoint_pairs
     if other_libs:
         LOG(
@@ -161,10 +151,10 @@ def main(
     for bpp in masked_pairs:
         filtered_pairs.append(bpp)
     # filter by informative
-    if uninformative_filter:
+    if config[f'{SECTION}.uninformative_filter']:
         LOG('filtering from', len(breakpoint_pairs), 'breakpoint pairs using informative filter')
         pass_clusters, uninformative_clusters = filter_uninformative(
-            annotations.content, breakpoint_pairs, max_proximity=max_proximity
+            annotations.content, breakpoint_pairs, max_proximity=config[f'{SECTION}.max_proximity']
         )
         LOG(
             'filtered from',
@@ -180,19 +170,20 @@ def main(
     else:
         LOG('did not apply uninformative filter')
 
-    output_tabbed_file(filtered_pairs, filtered_output)
     mkdirp(output)
+    output_tabbed_file(filtered_pairs, filtered_output)
 
-    if not split_only:
+    if not config[f'{SECTION}.split_only']:
         LOG('computing clusters')
         clusters = merge_breakpoint_pairs(
             breakpoint_pairs,
-            cluster_radius=cluster_radius,
-            cluster_initial_size_limit=cluster_initial_size_limit,
+            cluster_radius=config[f'{SECTION}.cluster_radius'],
+            cluster_initial_size_limit=config[f'{SECTION}.cluster_initial_size_limit'],
         )
 
-        hist = {}
-        length_hist = {}
+        hist: Dict[int, int] = {}
+        length_hist: Dict[float, int] = {}
+
         for cluster in clusters:
             input_pairs = clusters[cluster]
             hist[len(input_pairs)] = hist.get(len(input_pairs), 0) + 1
@@ -242,11 +233,10 @@ def main(
     output_files = split_clusters(
         breakpoint_pairs,
         output,
-        batch_id,
-        min_clusters_per_file=min_clusters_per_file,
-        max_files=max_files,
+        total_batches=lib_config['total_batches'],
+        min_clusters_per_file=config[f'{SECTION}.min_clusters_per_file'],
         write_bed_summary=True,
     )
 
-    generate_complete_stamp(output, LOG, start_time=start_time, prefix='MAVIS-{}.'.format(batch_id))
+    generate_complete_stamp(output, LOG, start_time=start_time)
     return output_files
