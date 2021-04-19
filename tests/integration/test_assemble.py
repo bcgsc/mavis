@@ -3,15 +3,14 @@ import time
 import unittest
 
 import timeout_decorator
-
 from mavis.assemble import Contig, assemble, filter_contigs
-from mavis.interval import Interval
 from mavis.constants import reverse_complement
-from mavis.validate.constants import DEFAULTS
+from mavis.interval import Interval
 from mavis.util import LOG
+from mavis.validate.constants import DEFAULTS
 
-from . import MockObject, RUN_FULL
 from ..util import get_data
+from . import RUN_FULL, MockObject
 
 
 class TestFilterContigs(unittest.TestCase):
@@ -629,7 +628,7 @@ class TestAssemble(unittest.TestCase):
             print(len(contig.seq), contig.remap_score(), contig.seq)
         self.assertTrue({target, reverse_complement(target)} & {c.seq for c in contigs})
 
-    @timeout_decorator.timeout(60)
+    @timeout_decorator.timeout(120)
     @unittest.skipIf(
         not RUN_FULL,
         'slower tests will not be run unless the environment variable RUN_FULL is given',
