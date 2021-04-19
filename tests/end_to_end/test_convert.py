@@ -111,6 +111,11 @@ class TestConvert(unittest.TestCase):
 
     def test_breakseq2(self):
         self.run_main(get_data('breakseq.vcf'), SUPPORTED_TOOL.BREAKSEQ, False)
+    
+    def test_sniffles(self):
+        result = self.run_main(get_data('sniffles_test.vcf'), SUPPORTED_TOOL.SNIFFLES, False)
+        # test that conversions were converted 
+        ## write the unit tests later 
 
     def test_cnvnator(self):
         self.run_main(get_data('cnvnator.tab'), SUPPORTED_TOOL.CNVNATOR, False)

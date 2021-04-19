@@ -193,6 +193,14 @@ class LibraryConfig(MavisNamespace):
                 sample_cap=sample_cap,
                 distribution_fraction=distribution_fraction,
             )
+        elif protocol == PROTOCOL.LRGENOME:
+            bamstats = stats.compute_genome_longread_bam_stats(
+                bam,
+                sample_size=sample_size,
+                sample_bin_size=sample_bin_size,
+                sample_cap=sample_cap,
+                distribution_fraction=distribution_fraction,
+            )
         else:
             raise ValueError('unrecognized value for protocol', protocol)
         log(bamstats)

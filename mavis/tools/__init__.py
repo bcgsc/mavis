@@ -15,6 +15,7 @@ from .vcf import convert_file as read_vcf
 from .breakdancer import convert_file as _convert_breakdancer_file
 from .starfusion import convert_row as _parse_starfusion
 from .chimerascan import convert_row as _parse_chimerascan
+from .sniffles import convert_row as _parse_sniffles
 
 
 def convert_tool_output(
@@ -61,6 +62,107 @@ def convert_tool_output(
                     bpp.data[col] = ';'.join(sorted([str(v) for v in val]))
     return result
 
+def _parse_sniffles_vcf(record, log=DEVNULL):
+    """
+    converts a vcf record from sniffles
+    Note:
+    Derived from _parse_vcf_record
+        CT = connection type, If given this field will be used in determining the orientation at the breakpoints.
+        From https://groups.google.com/forum/#!topic/delly-users/6Mq2juBraRY, we can expect certain CT types for
+        certain event types
+            - translocation/inverted translocation: 3to3, 3to5, 5to3, 5to5
+            - inversion: 3to3, 5to5
+            - deletion: 3to5
+            - duplication: 5to3
+    """
+    records = []
+    for alt in record.alts if record.alts else [None]:
+        info = {}
+        for key in record.info.keys():
+            try:
+                value = record.info[key]
+            except UnicodeDecodeError as err:
+                log('Ignoring invalid INFO field {} with error: {}'.format(key, err))
+            else:
+                try:
+                    value = value[0] if len(value) == 1 else value
+                except TypeError:
+                    pass  # anything non-tuple
+            info[key] = value
+
+        std_row = {}
+        if record.id and record.id != 'N':  # to account for NovoBreak N in the ID field
+            std_row['id'] = record.id
+
+        if info.get('SVTYPE', None) == 'BND':
+            chr2, end, orient2, ref, alt = _parse_bnd_alt(alt)
+            std_row[COLUMNS.break2_orientation] = orient2
+            std_row[COLUMNS.untemplated_seq] = alt
+            if record.ref != ref:
+                raise AssertionError(
+                    'Expected the ref specification in the vcf record to match the sequence '
+                    'in the alt string: {} vs {}'.format(record.ref, ref)
+                )
+        else:
+            chr2 = info.get('CHR2', record.chrom)
+            end = record.stop
+            if (
+                alt
+                and record.ref
+                and re.match(r'^[A-Z]+$', alt)
+                and re.match(r'^[A-Z]+', record.ref)
+            ):
+                std_row[COLUMNS.untemplated_seq] = alt[1:]
+                size = len(alt) - len(record.ref)
+                if size > 0:
+                    std_row[COLUMNS.event_type] = SVTYPE.INS
+                elif size < 0:
+                    std_row[COLUMNS.event_type] = SVTYPE.DEL
+        std_row.update({COLUMNS.break1_chromosome: record.chrom, COLUMNS.break2_chromosome: chr2})
+        if info.get(
+            'PRECISE', False
+        ):  # DELLY CI only apply when split reads were not used to refine the breakpoint which is then flagged
+            std_row.update(
+                {
+                    COLUMNS.break1_position_start: record.pos,
+                    COLUMNS.break1_position_end: record.pos,
+                    COLUMNS.break2_position_start: end,
+                    COLUMNS.break2_position_end: end,
+                }
+            )
+        else:
+            std_row.update(
+                {
+                    COLUMNS.break1_position_start: max(
+                        1, record.pos + info.get('CIPOS', (0, 0))[0]
+                    ),
+                    COLUMNS.break1_position_end: record.pos + info.get('CIPOS', (0, 0))[1],
+                    COLUMNS.break2_position_start: max(1, end + info.get('CIEND', (0, 0))[0]),
+                    COLUMNS.break2_position_end: end + info.get('CIEND', (0, 0))[1],
+                }
+            )
+
+        if 'SVTYPE' in info:
+            std_row[COLUMNS.event_type] = info['SVTYPE']
+
+        try:
+            orient1, orient2 = info['CT'].split('to')
+            connection_type = {'3': ORIENT.LEFT, '5': ORIENT.RIGHT, 'N': ORIENT.NS}
+            std_row[COLUMNS.break1_orientation] = connection_type[orient1]
+            std_row[COLUMNS.break2_orientation] = connection_type[orient2]
+        except KeyError:
+            pass
+        std_row.update(
+            {k: v for k, v in info.items() if k not in {'CHR2', 'SVTYPE', 'CIPOS', 'CIEND', 'CT'}}
+        )
+        # Only include this line if the SVTYPE is recognised
+        # This is to remove sniffles weird hybrid SVs eg DEL/INV
+        if(info['SVTYPE'] in TOOL_SVTYPE_MAPPING.keys()):
+            records.append(std_row)
+        else:
+            log('Ignoring record with unrecognised SVTYPE {}'.format(info['SVTYPE']))
+
+    return records
 
 def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
     """
@@ -140,6 +242,10 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
         std_row.update(
             {k: v for k, v in row.items() if k not in {'Type', 'Chr1', 'Chr2', 'Pos1', 'Pos2'}}
         )
+    elif file_type == SUPPORTED_TOOL.SNIFFLES:
+
+        print("sniffles work")
+        std_row.update(_parse_sniffles(row))
 
     else:
         raise NotImplementedError('unsupported file type', file_type)

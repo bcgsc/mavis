@@ -14,6 +14,7 @@ SUPPORTED_TOOL = MavisNamespace(
     CNVNATOR='cnvnator',
     STRELKA='strelka',
     STARFUSION='starfusion',
+    SNIFFLES='sniffles'
 )
 """
 Supported Tools used to call SVs and then used as input into MAVIS
@@ -48,6 +49,7 @@ TOOL_SVTYPE_MAPPING.update(
         'dup': [SVTYPE.DUP],
         'ITD': [SVTYPE.DUP],
         'IDP': [SVTYPE.INS],
+        'INVDUP': [SVTYPE.TRANS],
     }
 )
 

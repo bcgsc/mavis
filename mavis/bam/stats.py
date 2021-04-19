@@ -276,3 +276,63 @@ def compute_genome_bam_stats(
     err = hist.distribution_stderr(median, distribution_fraction)
 
     return BamStats(median, math.sqrt(err), np.median(read_lengths))
+
+def compute_genome_longread_bam_stats(
+    bam_file_handle,
+    sample_bin_size,
+    sample_size,
+    min_mapping_quality=1,
+    sample_cap=10000,
+    distribution_fraction=0.99,
+):
+    """
+    computes various statistical measures relating the input bam file,
+    where the input bam file is long-read genomic data
+    Args:
+        bam_file_handle (pysam.AlignmentFile): the input bam file handle
+        sample_bin_size (int): how large to make the sample bin (in bp)
+        sample_size (int): the number of genes to compute stats over
+        log (callable): outputs logging information
+        min_mapping_quality (int): the minimum mapping quality for a read to be used
+        sample_cap (int): maximum number of reads to collect for any given sample region
+        distribution_fraction (float): the proportion of the distribution to use in computing stdev
+    Returns:
+        BamStats: the fragment size median, stdev and the read length in a object
+    """
+    import numpy as np
+
+    total = sum([l - sample_bin_size for l in bam_file_handle.fh.lengths])
+    bins = []
+    randoms = [int(n * (total - 1) + 1) for n in np.random.rand(sample_size)]
+    for pos in randoms:
+        template_index = 0
+        for template_length in bam_file_handle.fh.lengths:
+            if pos > template_length - sample_bin_size:
+                pos -= template_length - sample_bin_size
+                template_index += 1
+            else:
+                break
+        bins.append((bam_file_handle.fh.references[template_index], pos, pos + sample_bin_size))
+
+    hist = Histogram()
+    read_lengths = []
+    for bin_chr, bin_start, bin_end in bins:
+        for read in bam_file_handle.fetch(
+            bin_chr, bin_start, bin_end, limit=sample_cap, cache_if=lambda x: False
+        ):
+            if any(
+                [
+                    read.is_unmapped,
+                    read.mate_is_unmapped,
+                    read.mapping_quality < min_mapping_quality,
+                    read.next_reference_id != read.reference_id,
+                    read.is_secondary,
+                ]
+            ):
+                continue
+            hist[abs(read.template_length)] = hist.get(abs(read.template_length), 0) + 1
+            read_lengths.append(len(read.query_sequence))
+    median = hist.median()
+    err = hist.distribution_stderr(median, distribution_fraction)
+
+    return BamStats(median, math.sqrt(err), np.median(read_lengths))
