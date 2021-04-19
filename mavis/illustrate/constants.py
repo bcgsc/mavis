@@ -1,64 +1,7 @@
 from colour import Color
-from ..constants import GIEMSA_STAIN, float_fraction
-from ..util import WeakMavisNamespace
 
-DEFAULTS = WeakMavisNamespace()
-"""
-- [breakpoint_color](/configuration/settings/#breakpoint_color)
-- [domain_color](/configuration/settings/#domain_color)
-- [domain_mismatch_color](/configuration/settings/#domain_mismatch_color)
-- [domain_name_regex_filter](/configuration/settings/#domain_name_regex_filter)
-- [domain_scaffold_color](/configuration/settings/#domain_scaffold_color)
-- [drawing_width_iter_increase](/configuration/settings/#drawing_width_iter_increase)
-- [gene1_color_selected](/configuration/settings/#gene1_color_selected)
-- [gene1_color](/configuration/settings/#gene1_color)
-- [gene2_color_selected](/configuration/settings/#gene2_color_selected)
-- [gene2_color](/configuration/settings/#gene2_color)
-- [label_color](/configuration/settings/#label_color)
-- [mask_fill](/configuration/settings/#mask_fill)
-- [mask_opacity](/configuration/settings/#mask_opacity)
-- [max_drawing_retries](/configuration/settings/#max_drawing_retries)
-- [novel_exon_color](/configuration/settings/#novel_exon_color)
-- [scaffold_color](/configuration/settings/#scaffold_color)
-- [splice_color](/configuration/settings/#splice_color)
-- [width](/configuration/settings/#width)
-"""
-DEFAULTS.add('width', 1000, defn='The drawing width in pixels')
-DEFAULTS.add(
-    'domain_name_regex_filter',
-    r'^PF\d+$',
-    defn='The regular expression used to select domains to be displayed (filtered by name)',
-)
-DEFAULTS.add(
-    'max_drawing_retries',
-    5,
-    defn='The maximum number of retries for attempting a drawing. Each iteration the width is extended. If it '
-    'is still insufficient after this number a gene-level only drawing will be output',
-)
-DEFAULTS.add('scaffold_color', '#000000', defn='The color used for the gene/transcripts scaffolds')
-DEFAULTS.add('gene1_color_selected', '#518dc5', defn='The color of the first gene')
-DEFAULTS.add('gene2_color_selected', '#4c9677', defn='The color of the second gene')
-DEFAULTS.add('gene1_color', '#657e91', defn='The color of genes near the first gene')
-DEFAULTS.add('gene2_color', '#325556', defn='The color of genes near the second gene')
-DEFAULTS.add('label_color', '#000000', defn='The label color')
-DEFAULTS.add('domain_color', '#ccccb3', defn='Domain fill color')
-DEFAULTS.add('domain_mismatch_color', '#b2182b', defn='Domain fill color on 0%% match')
-DEFAULTS.add('novel_exon_color', '#5D3F6A', defn='Novel Exon fill color')
-DEFAULTS.add('splice_color', '#000000', defn='Splicing lines color')
-DEFAULTS.add('breakpoint_color', '#000000', defn='Breakpoint outline color')
-DEFAULTS.add('mask_fill', '#ffffff', defn='Color of mask (for deleted region etc.)')
-DEFAULTS.add('mask_opacity', 0.7, defn='opacity of the mask layer', cast_type=float_fraction)
-DEFAULTS.add('domain_scaffold_color', '#000000', defn='The color of the domain scaffold')
-DEFAULTS.add(
-    'drawing_width_iter_increase',
-    500,
-    defn='The amount (in  pixels) by which to increase the drawing width upon failure to fit',
-)
-DEFAULTS.add(
-    'exon_min_focus_size',
-    10,
-    defn='minimum size of an exon for it to be granted a label or min exon width',
-)
+from ..constants import GIEMSA_STAIN
+from ..schemas import DEFAULTS, get_by_prefix
 
 
 class DiagramSettings:
@@ -68,10 +11,11 @@ class DiagramSettings:
 
     def __init__(self, **kwargs):
         inputs = {}
-        inputs.update(DEFAULTS.items())
+        defaults = get_by_prefix(DEFAULTS, 'illustrate.')
+        inputs.update(defaults)
         inputs.update(kwargs)
         for arg, val in inputs.items():
-            if arg not in DEFAULTS:
+            if arg not in defaults:
                 raise KeyError('unrecognized argument', arg)
             setattr(self, arg, val)
         self.min_width = 10  # no element (exon, gene, etc can be less than this wide)

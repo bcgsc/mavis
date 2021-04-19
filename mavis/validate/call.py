@@ -1,10 +1,10 @@
 import itertools
 import math
 import statistics
+from typing import Optional, Set
 
-from ..align import SplitAlignment, call_read_events, call_paired_read_event, convert_to_duplication
+from ..align import SplitAlignment, call_paired_read_event, call_read_events, convert_to_duplication
 from ..bam import read as _read
-
 from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import (
     CALL_METHOD,
@@ -24,6 +24,15 @@ class EventCall(BreakpointPair):
     directly without a lot of copying. Instead we use call objects which are basically
     just a reference to the evidence object and decisions on class, exact breakpoints, etc
     """
+
+    spanning_reads: Set
+    flanking_pairs: Set
+    break1_split_reads: Set
+    break2_split_reads: Set
+    compatible_flanking_pairs: Set
+    compatible_type: str
+    contig: Optional
+    contig_alignment: Optional
 
     @property
     def has_compatible(self):

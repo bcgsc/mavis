@@ -1,32 +1,31 @@
 """
 Should take in a sam file from a aligner like bwa aln or bwa mem and convert it into a
 """
-from copy import copy
 import itertools
 import os
 import re
 import subprocess
 import warnings
+from copy import copy
 
 import pysam
 
 from .bam import cigar as _cigar
 from .bam import read as _read
-from .breakpoint import BreakpointPair, Breakpoint
+from .breakpoint import Breakpoint, BreakpointPair
 from .constants import (
     CIGAR,
     COLUMNS,
-    MavisNamespace,
+    NA_MAPPING_QUALITY,
     ORIENT,
-    reverse_complement,
     STRAND,
     SVTYPE,
-    NA_MAPPING_QUALITY,
+    MavisNamespace,
+    reverse_complement,
 )
 from .error import InvalidRearrangement
 from .interval import Interval
 from .util import DEVNULL
-
 
 SUPPORTED_ALIGNER = MavisNamespace(
     BWA_MEM='bwa mem', BLAT='blat', __name__='mavis.align.SUPPORTED_ALIGNER'
@@ -229,9 +228,9 @@ def convert_to_duplication(alignment, reference_genome):
                 ),
                 untemplated_seq=alignment.untemplated_seq[dup_len:],
                 opposing_strands=alignment.opposing_strands,
-                data=alignment.data,
                 read1=alignment.read1,
                 read2=alignment.read2,
+                **alignment.data
             )
             return result
     return alignment

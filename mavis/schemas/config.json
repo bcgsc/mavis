@@ -287,7 +287,7 @@
             "description": "The drawing width in pixels",
             "type": "integer"
         },
-        "illustratebreakpoint_color": {
+        "illustrate.breakpoint_color": {
             "default": "#000000",
             "description": "Breakpoint outline color",
             "type": "string"

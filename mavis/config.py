@@ -5,6 +5,8 @@ from typing import Dict, Optional
 
 import snakemake
 import tab
+from snakemake.exceptions import WorkflowError
+from snakemake.utils import validate as snakemake_validate
 
 from .annotate.file_io import ReferenceFile
 from .bam import stats
@@ -124,14 +126,16 @@ def validate_config(config: Dict, bam_stats: Optional[bool] = False, stage: str 
     schema = 'config' if stage != SUBCOMMAND.OVERLAY else 'overlay'
 
     try:
-        snakemake.utils.validate(
-            config, os.path.join(os.path.dirname(__file__), f'schemas/{schema}.json')
+        snakemake_validate(
+            config,
+            os.path.join(os.path.dirname(__file__), f'schemas/{schema}.json'),
+            set_default=True,
         )
     except Exception as err:
         short_msg = '. '.join(
             [line for line in str(err).split('\n') if line.strip()][:3]
         )  # these can get super long
-        raise snakemake.WorkflowError(short_msg)
+        raise WorkflowError(short_msg)
 
     required = []
     if (
@@ -146,7 +150,7 @@ def validate_config(config: Dict, bam_stats: Optional[bool] = False, stage: str 
 
     for req in required:
         if req not in config:
-            raise snakemake.WorkflowError(f'missing required property: {req}')
+            raise WorkflowError(f'missing required property: {req}')
 
     if schema == 'config':
         conversion_dir = os.path.join(config['output_dir'], 'converted_outputs')
@@ -218,7 +222,3 @@ def get_metavar(arg_type):
     elif arg_type == filepath:
         return 'FILEPATH'
     return None
-
-
-def get_by_prefix(config, prefix):
-    return {k.replace(prefix, ''): v for k, v in config.items() if k.startswith(prefix)}

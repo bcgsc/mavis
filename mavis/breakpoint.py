@@ -1,7 +1,9 @@
 from __future__ import division
-from copy import copy as _copy
 
-from .constants import CIGAR, COLUMNS, DNA_ALPHABET, ORIENT, reverse_complement, STRAND, SVTYPE
+from copy import copy as _copy
+from typing import Callable, Dict, List, Optional, Set, Tuple
+
+from .constants import CIGAR, COLUMNS, DNA_ALPHABET, ORIENT, STRAND, SVTYPE, reverse_complement
 from .error import InvalidRearrangement, NotSpecifiedError
 from .interval import Interval
 
@@ -11,6 +13,11 @@ class Breakpoint(Interval):
     class for storing information about a SV breakpoint
     coordinates are given as 1-indexed
     """
+
+    orient: str
+    chr: str
+    strand: str
+    seq: str
 
     @property
     def key(self):
@@ -73,18 +80,23 @@ class Breakpoint(Interval):
 
 
 class BreakpointPair:
-    """"""
+    break1: Breakpoint
+    break2: Breakpoint
+    stranded: bool
+    opposing_strands: bool
+    untemplated_seq: Optional[str]
+    data: Dict
 
-    def __getattr__(self, attr):
-        data = object.__getattribute__(self, 'data')
-        try:
-            return data[COLUMNS[attr]]
-        except (KeyError, AttributeError):
-            try:
-                return data[attr]
-            except KeyError:
-                pass
-        raise AttributeError(attr)
+    # def __getattr__(self, attr):
+    #     data = object.__getattribute__(self, 'data')
+    #     try:
+    #         return data[COLUMNS[attr]]
+    #     except (KeyError, AttributeError):
+    #         try:
+    #             return data[attr]
+    #         except KeyError:
+    #             pass
+    #     raise AttributeError(attr)
 
     def __getitem__(self, index):
         try:
@@ -128,26 +140,26 @@ class BreakpointPair:
         return self.untemplated_seq < other.untemplated_seq
 
     @property
-    def interchromosomal(self):
+    def interchromosomal(self) -> bool:
         """bool: True if the breakpoints are on different chromosomes, False otherwise"""
         if self.break1.chr == self.break2.chr:
             return False
         return True
 
     @property
-    def LL(self):
+    def LL(self) -> bool:
         return self.break1.orient == ORIENT.LEFT and self.break2.orient == ORIENT.LEFT
 
     @property
-    def LR(self):
+    def LR(self) -> bool:
         return self.break1.orient == ORIENT.LEFT and self.break2.orient == ORIENT.RIGHT
 
     @property
-    def RL(self):
+    def RL(self) -> bool:
         return self.break1.orient == ORIENT.RIGHT and self.break2.orient == ORIENT.LEFT
 
     @property
-    def RR(self):
+    def RR(self) -> bool:
         return self.break1.orient == ORIENT.RIGHT and self.break2.orient == ORIENT.RIGHT
 
     def copy(self):
@@ -160,22 +172,21 @@ class BreakpointPair:
 
     def __init__(
         self,
-        b1,
-        b2,
-        stranded=False,
-        opposing_strands=None,
-        untemplated_seq=None,
-        data=None,
+        b1: Breakpoint,
+        b2: Breakpoint,
+        stranded: bool = False,
+        opposing_strands: Optional[bool] = None,
+        untemplated_seq: Optional[str] = None,
         **kwargs
     ):
         """
         Args:
-            b1 (Breakpoint): the first breakpoint
-            b2 (Breakpoint): the second breakpoint
-            stranded (bool): if not stranded then +/- is equivalent to -/+
-            opposing_strands (bool): are the strands at the breakpoint opposite? i.e. +/- instead of +/+
-            untemplated_seq (str): seq between the breakpoints that is not part of either breakpoint
-            data (dict): optional dictionary of attributes associated with this pair
+            b1: the first breakpoint
+            b2: the second breakpoint
+            stranded: if not stranded then +/- is equivalent to -/+
+            opposing_strands: are the strands at the breakpoint opposite? i.e. +/- instead of +/+
+            untemplated_seq: seq between the breakpoints that is not part of either breakpoint
+            data: optional dictionary of attributes associated with this pair
 
         Note:
             untemplated_seq should always be given wrt to the positive/forward reference strand
@@ -192,7 +203,7 @@ class BreakpointPair:
             self.break1 = b1
             self.break2 = b2
         self.stranded = stranded
-        self.opposing_strands = opposing_strands
+        self.opposing_strands = opposing_strands  # type: ignore
 
         if self.break1.orient != ORIENT.NS and self.break2.orient != ORIENT.NS:
             if self.opposing_strands is not None:
@@ -209,13 +220,7 @@ class BreakpointPair:
                 self.opposing_strands = self.break1.orient == self.break2.orient
         # between break1 and break2 not in either
         self.untemplated_seq = untemplated_seq
-        self.data = {}
-        if data is not None:
-            self.data.update(data)
-            conflicts = set(data.keys()) & set(kwargs.keys())
-            if conflicts:
-                raise TypeError('data got multiple values for data elements:', conflicts)
-        self.data.update(kwargs)
+        self.data = kwargs
 
         if self.break1.strand != STRAND.NS and self.break2.strand != STRAND.NS:
             opposing = self.break1.strand != self.break2.strand
@@ -275,16 +280,16 @@ class BreakpointPair:
         return row
 
     @classmethod
-    def classify(cls, pair, distance=None):
+    def classify(cls, pair, distance: Optional[Callable] = None) -> Set[str]:
         """
         uses the chr, orientations and strands to determine the
         possible structural_variant types that this pair could support
 
         Args:
             pair (BreakpointPair): the pair to classify
-            distance (Callable): if defined, will be passed to net size to use in narrowing the list of putative types (del vs ins)
+            distance: if defined, will be passed to net size to use in narrowing the list of putative types (del vs ins)
         Returns:
-            List[SVTYPE]: a list of possible SVTYPE
+            a list of possible SVTYPE
 
         Example:
             >>> bpp = BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 9999), opposing_strands=True)
@@ -327,6 +332,7 @@ class BreakpointPair:
                     return {SVTYPE.DEL, SVTYPE.INS}
                 elif pair.break1.orient == ORIENT.RIGHT or pair.break2.orient == ORIENT.LEFT:
                     return {SVTYPE.DUP}
+                raise InvalidRearrangement(pair)
         else:  # interchromosomal
             if pair.opposing_strands:
                 if pair.LR or pair.RL:
@@ -337,7 +343,7 @@ class BreakpointPair:
                     raise InvalidRearrangement(pair)
                 return {SVTYPE.TRANS}
 
-    def net_size(self, distance=lambda x, y: Interval(abs(x - y))):
+    def net_size(self, distance=lambda x, y: Interval(abs(x - y))) -> Interval:
         """
         Returns the size of the event for a given pair. Mainly applicable to indels
         """
@@ -358,7 +364,7 @@ class BreakpointPair:
         return size
 
     @property
-    def is_putative_indel(self):
+    def is_putative_indel(self) -> bool:
         if self.interchromosomal or self.opposing_strands or self.break1.orient == ORIENT.RIGHT:
             return False
         return True
@@ -521,7 +527,7 @@ class BreakpointPair:
         )
         return (break2_shift, break1_shift)
 
-    def get_bed_repesentation(self):
+    def get_bed_repesentation(self) -> List[Tuple[str, int, int, Optional[str]]]:
         bed = []
         if self.interchromosomal:
             bed.append(

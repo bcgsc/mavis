@@ -1,7 +1,12 @@
-class Interval:
-    """"""
+from typing import Callable, Optional
 
-    def __init__(self, start, end=None, freq=1, number_type=None):
+
+class Interval:
+    start: int
+    end: int
+    freq: int = 1
+
+    def __init__(self, start: int, end: Optional[int] = None, freq: int = 1, number_type=None):
         """
         Args:
             start (int): the start of the interval (inclusive)

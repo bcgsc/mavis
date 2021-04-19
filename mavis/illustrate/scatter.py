@@ -1,9 +1,8 @@
 import os
 
-from ..bam.read import sequenced_strand, pileup
-from ..util import LOG, DEVNULL
+from ..bam.read import pileup, sequenced_strand
 from ..interval import Interval
-from ..validate.constants import DEFAULTS as VALIDATION_DEFAULTS
+from ..util import DEVNULL, LOG
 
 
 def bam_to_scatter(
@@ -16,6 +15,7 @@ def bam_to_scatter(
     axis_name=None,
     ymax=None,
     min_mapping_quality=0,
+    strand_determining_read=2,
     ymax_color='#FF0000',
 ):
     """
@@ -50,7 +50,7 @@ def bam_to_scatter(
         if strand is None:
             return False
         try:
-            return sequenced_strand(read, VALIDATION_DEFAULTS.strand_determining_read) != strand
+            return sequenced_strand(read, strand_determining_read) != strand
         except ValueError:
             return True
 

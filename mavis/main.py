@@ -269,7 +269,6 @@ def main(argv=None):
             with open(args.outputfile, 'w') as fh:
                 fh.write(json.dumps(config, sort_keys=True, indent='  '))
         else:
-            print(args)
             overlay_main(
                 buffer_length=args.buffer_length,
                 gene_name=args.gene_name,

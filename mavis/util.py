@@ -1,21 +1,21 @@
-from argparse import Namespace
-from datetime import datetime
 import errno
-from functools import partial
-from glob import glob
 import itertools
+import logging
 import os
 import re
-import time
-import logging
 import sys
+import time
+from argparse import Namespace
+from datetime import datetime
+from functools import partial
+from glob import glob
 
 from braceexpand import braceexpand
-from tab import tab
 from shortuuid import uuid
+from tab import tab
 
 from .breakpoint import Breakpoint, BreakpointPair
-from .constants import COLUMNS, ORIENT, PROTOCOL, sort_columns, STRAND, SVTYPE, MavisNamespace
+from .constants import COLUMNS, ORIENT, PROTOCOL, STRAND, SVTYPE, MavisNamespace, sort_columns
 from .error import InvalidRearrangement
 from .interval import Interval
 

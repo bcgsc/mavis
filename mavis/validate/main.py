@@ -15,8 +15,8 @@ from ..annotate.file_io import ReferenceFile
 from ..bam import cigar as _cigar
 from ..bam.cache import BamCache
 from ..breakpoint import BreakpointPair
-from ..config import get_by_prefix
 from ..constants import CALL_METHOD, COLUMNS, PROTOCOL
+from ..schemas import get_by_prefix
 from ..util import (
     LOG,
     filter_on_overlap,
@@ -105,11 +105,11 @@ def main(
                     opposing_strands=bpp.opposing_strands,
                     stranded=bpp.stranded,
                     untemplated_seq=bpp.untemplated_seq,
-                    data=bpp.data,
                     stdev_fragment_size=config['libraries'][library]['stdev_fragment_size'],
                     read_length=config['libraries'][library]['read_length'],
                     median_fragment_size=config['libraries'][library]['median_fragment_size'],
-                    **get_by_prefix(config, 'validate.')
+                    config=config,
+                    **bpp.data
                 )
                 evidence_clusters.append(evidence)
             except ValueError as err:
@@ -127,12 +127,12 @@ def main(
                     opposing_strands=bpp.opposing_strands,
                     stranded=bpp.stranded,
                     untemplated_seq=bpp.untemplated_seq,
-                    data=bpp.data,
                     stdev_fragment_size=config['libraries'][library]['stdev_fragment_size'],
                     read_length=config['libraries'][library]['read_length'],
                     median_fragment_size=config['libraries'][library]['median_fragment_size'],
                     strand_determining_read=config['libraries'][library]['strand_determining_read'],
-                    **get_by_prefix(config, 'validate.')
+                    config=config,
+                    **bpp.data
                 )
                 evidence_clusters.append(evidence)
             except ValueError as err:

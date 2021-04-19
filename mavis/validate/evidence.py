@@ -1,28 +1,49 @@
 import itertools
+from typing import Optional
 
-from .base import Evidence
+import pysam
+
 from ..align import SplitAlignment, call_read_events
-from ..bam import cigar as _cigar
 from ..annotate.variant import overlapping_transcripts
+from ..bam import cigar as _cigar
 from ..breakpoint import Breakpoint
-from ..constants import ORIENT, PROTOCOL, STRAND, SVTYPE, CIGAR
+from ..constants import CIGAR, ORIENT, PROTOCOL, STRAND, SVTYPE
 from ..interval import Interval
+from ..schemas import DEFAULTS
+from .base import Evidence
 
 
 class GenomeEvidence(Evidence):
+    outer_window1: Interval
+    outer_window2: Interval
+    inner_window1: Interval
+    inner_window2: Interval
+    compatible_window1: Interval
+    compatible_window2: Interval
+    protocol: str
+
+    @property
+    def min_mapping_quality(self):
+        return self.config['validate.min_mapping_quality']
+
+    @property
+    def fetch_reads_limit(self):
+        return self.config['validate.fetch_reads_limit']
+
     def __init__(self, *pos, **kwargs):
         Evidence.__init__(self, *pos, **kwargs)
         self.protocol = PROTOCOL.GENOME
 
         self.outer_window1 = self.generate_window(self.break1)
         self.outer_window2 = self.generate_window(self.break2)
+        call_error = self.config['validate.call_error']
         self.inner_window1 = Interval(
-            max([self.break1.start - self.call_error - self.read_length + 1, 1]),
-            self.break1.end + self.call_error + self.read_length - 1,
+            max([self.break1.start - call_error - self.read_length + 1, 1]),
+            self.break1.end + call_error + self.read_length - 1,
         )
         self.inner_window2 = Interval(
-            max([self.break2.start - self.call_error - self.read_length + 1, 1]),
-            self.break2.end + self.call_error + self.read_length - 1,
+            max([self.break2.start - call_error - self.read_length + 1, 1]),
+            self.break2.end + call_error + self.read_length - 1,
         )
 
         if SVTYPE.INS in self.putative_event_types():
@@ -64,41 +85,31 @@ class GenomeEvidence(Evidence):
             self.compatible_window1 = self.generate_window(compt_break1)
             self.compatible_window2 = self.generate_window(compt_break2)
 
-    def generate_window(self, breakpoint):
-        """
-        given some input breakpoint uses the current evidence setting to determine an
-        appropriate window/range of where one should search for supporting reads
-
-        Args:
-            breakpoint (Breakpoint): the breakpoint we are generating the evidence window for
-            read_length (int): the read length
-            call_error (int):
-                adds a buffer to the calculations if confidence in the breakpoint calls is low can increase this
-        Returns:
-            Interval: the range where reads should be read from the bam looking for evidence for this event
-        """
-        start = breakpoint.start - self.max_expected_fragment_size - self.call_error + 1
-        end = breakpoint.end + self.max_expected_fragment_size + self.call_error - 1
-
-        if breakpoint.orient == ORIENT.LEFT:
-            end = breakpoint.end + self.call_error + self.read_length - 1
-        elif breakpoint.orient == ORIENT.RIGHT:
-            start = breakpoint.start - self.call_error - self.read_length + 1
-        return Interval(max([1, start]), max([end, 1]))
-
-    def compute_fragment_size(self, read, mate=None):
+    def compute_fragment_size(
+        self, read: pysam.AlignedSegment, mate: Optional[pysam.AlignedSegment] = None
+    ):
         return Interval(abs(read.template_length))
 
 
 class TranscriptomeEvidence(Evidence):
+    outer_window1: Interval
+    outer_window2: Interval
+    inner_window1: Interval
+    inner_window2: Interval
+    compatible_window1: Interval
+    compatible_window2: Interval
+    protocol: str
+
+    @property
+    def min_mapping_quality(self):
+        return self.config['validate.trans_min_mapping_quality']
+
+    @property
+    def fetch_reads_limit(self):
+        return self.config['validate.trans_fetch_reads_limit']
+
     def __init__(self, annotations, *pos, **kwargs):
         Evidence.__init__(self, *pos, **kwargs)
-
-        # set the transcriptome specific overrides
-        if self.trans_min_mapping_quality is not None:
-            self.min_mapping_quality = self.trans_min_mapping_quality
-        if self.trans_fetch_reads_limit is not None:
-            self.fetch_reads_limit = self.trans_fetch_reads_limit
 
         self.protocol = PROTOCOL.TRANS
         # get the list of overlapping transcripts
@@ -108,7 +119,8 @@ class TranscriptomeEvidence(Evidence):
 
         self.outer_window1 = self.generate_window(self.break1)
         self.outer_window2 = self.generate_window(self.break2)
-        tgt = self.call_error + self.read_length - 1
+        call_error = self.config['validate.call_error']
+        tgt = call_error + self.read_length - 1
 
         self.inner_window1 = self.traverse(self.break1.end, tgt, ORIENT.RIGHT) | self.traverse(
             self.break1.start, tgt, ORIENT.LEFT
@@ -156,7 +168,14 @@ class TranscriptomeEvidence(Evidence):
             self.compatible_window1 = self.generate_window(compt_break1)
             self.compatible_window2 = self.generate_window(compt_break2)
 
-    def traverse(self, start, distance, direction, strand=STRAND.NS, chrom=None):
+    def traverse(  # type: ignore
+        self,
+        start: int,
+        distance: int,
+        direction: str,
+        strand: str = STRAND.NS,
+        chrom: Optional[str] = None,
+    ):
         """
         given some genomic position and a distance. Uses the input transcripts to
         compute all possible genomic end positions at that distance if intronic
@@ -166,7 +185,6 @@ class TranscriptomeEvidence(Evidence):
             start (int): the genomic start position
             distance (int): the amount of exonic/intergenic units to traverse
             direction (ORIENT): the direction wrt to the positive/forward reference strand to traverse
-            transcripts (List[PreTranscript]): list of transcripts to use
         """
         transcripts = self._select_transcripts(chrom, strand)
         is_left = True if direction == ORIENT.LEFT else False
@@ -230,7 +248,7 @@ class TranscriptomeEvidence(Evidence):
                 result.append(transcript)
         return result
 
-    def distance(self, start, end, strand=STRAND.NS, chrom=None):
+    def distance(self, start: int, end: int, strand: str = STRAND.NS, chrom: Optional[str] = None):
         """
         give the current list of transcripts, computes the putative exonic/intergenic distance
         given two genomic positions. Intronic positions are ignored
@@ -265,7 +283,7 @@ class TranscriptomeEvidence(Evidence):
             return Interval.from_iterable(inter)
         return Evidence.distance(start, end)
 
-    def generate_window(self, breakpoint):
+    def generate_window(self, breakpoint: Breakpoint):
         """
         given some input breakpoint uses the current evidence setting to determine an
         appropriate window/range of where one should search for supporting reads
@@ -282,7 +300,7 @@ class TranscriptomeEvidence(Evidence):
         Returns:
             Interval: the range where reads should be read from the bam looking for evidence for this event
         """
-        window = GenomeEvidence.generate_window(self, breakpoint)
+        window = Evidence.generate_window(self, breakpoint)
         tgt_left = Evidence.distance(window.start, breakpoint.start)  # amount to expand to the left
         tgt_right = Evidence.distance(breakpoint.end, window.end)  # amount to expand to the right
         window1 = self.traverse(

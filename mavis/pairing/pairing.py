@@ -1,11 +1,10 @@
-from .constants import DEFAULTS, PAIRING_DISTANCES
-
 from ..annotate.variant import determine_prime
 from ..breakpoint import Breakpoint
 from ..constants import CALL_METHOD, COLUMNS, ORIENT, PRIME, PROTOCOL, STRAND
 from ..error import NotSpecifiedError
 from ..interval import Interval
 from ..util import DEVNULL
+from .constants import PAIRING_DISTANCES
 
 
 def product_key(bpp):
