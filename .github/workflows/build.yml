@@ -47,14 +47,13 @@ jobs:
         export PATH=$PATH:$(pwd):$(pwd)/bwa
         pytest tests -v \
           --junitxml=junit/test-results-${{ matrix.python-version }}.xml \
-          --cov mavis \
-          --cov-report term-missing \
-          --cov-report xml \
-          --durations=10 \
-          --cov-branch
+          --durations=10
       env:
         RUN_FULL: 0
       if: github.event_name != 'pull_request'
+    - name: set up .pth file
+      run: |
+        python tests/setup_subprocess_cov.py
     - name: run full tests with pytest
       run: |
         export PATH=$PATH:$(pwd):$(pwd)/bwa
