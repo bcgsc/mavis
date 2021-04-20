@@ -1,6 +1,6 @@
 import itertools
 import logging
-from .constants import DEFAULTS
+
 from ..assemble import assemble
 from ..bam import cigar as _cigar
 from ..bam import read as _read
@@ -13,13 +13,14 @@ from ..constants import (
     ORIENT,
     PROTOCOL,
     PYSAM_READ_FLAGS,
-    reverse_complement,
     STRAND,
     SVTYPE,
+    reverse_complement,
 )
 from ..error import NotSpecifiedError
 from ..interval import Interval
 from ..util import DEVNULL
+from .constants import DEFAULTS
 
 
 class Evidence(BreakpointPair):

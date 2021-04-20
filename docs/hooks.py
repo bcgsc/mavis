@@ -7,7 +7,6 @@ from mavis.cluster.constants import DEFAULTS as CLUSTER_DEFAULTS
 from mavis.config import REFERENCE_DEFAULTS
 from mavis.illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from mavis.pairing.constants import DEFAULTS as PAIRING_DEFAULTS
-from mavis.schedule.constants import OPTIONS as SUBMIT_OPTIONS
 from mavis.summary.constants import DEFAULTS as SUMMARY_DEFAULTS
 from mavis.util import ENV_VAR_PREFIX
 from mavis.validate.constants import DEFAULTS as VALIDATION_DEFAULTS
@@ -21,7 +20,6 @@ def generate_settings_doc():
             'configuration/settings.md',
             'Configurable Settings',
             [
-                SUBMIT_OPTIONS,
                 REFERENCE_DEFAULTS,
                 SUMMARY_DEFAULTS,
                 PAIRING_DEFAULTS,

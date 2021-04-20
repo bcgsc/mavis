@@ -28,14 +28,6 @@ class TestHelpMenu(unittest.TestCase):
             else:
                 self.assertEqual(0, returncode)
 
-    def test_config(self):
-        with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CONFIG, '-h']):
-            try:
-                returncode = main()
-            except SystemExit as err:
-                self.assertEqual(0, err.code)
-            else:
-                self.assertEqual(0, returncode)
 
     def test_cluster(self):
         with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CLUSTER, '-h']):

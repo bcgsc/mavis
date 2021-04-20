@@ -1,15 +1,14 @@
-import tempfile
-import unittest
 import os
 import shutil
+import tempfile
+import unittest
 
 from mavis.annotate.file_io import load_reference_genome
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import ORIENT, SVTYPE
 from tools.calculate_ref_alt_counts import RefAltCalculator
 
-from ..util import get_data
-from . import glob_exists
+from ..util import get_data, glob_exists
 
 
 def setUpModule():

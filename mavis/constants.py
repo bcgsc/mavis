@@ -2,15 +2,14 @@
 module responsible for small utility functions and constants used throughout the structural_variant package
 """
 import argparse
-import re
 import os
+import re
 
 from Bio.Alphabet import Gapped
 from Bio.Alphabet.IUPAC import ambiguous_dna
 from Bio.Data.IUPACData import ambiguous_dna_values
 from Bio.Seq import Seq
 from tab import cast_boolean, cast_null
-
 
 PROGNAME = 'mavis'
 EXIT_OK = 0
@@ -431,14 +430,12 @@ COMPLETE_STAMP = 'MAVIS.COMPLETE'
 SUBCOMMAND = MavisNamespace(
     ANNOTATE='annotate',
     VALIDATE='validate',
-    SETUP='setup',
-    SCHEDULE='schedule',
     CLUSTER='cluster',
     PAIR='pairing',
     SUMMARY='summary',
-    CONFIG='config',
     CONVERT='convert',
     OVERLAY='overlay',
+    SETUP='setup',
 )
 """MavisNamespace: holds controlled vocabulary for allowed pipeline stage values
 
@@ -448,7 +445,6 @@ SUBCOMMAND = MavisNamespace(
 - convert
 - pairing
 - pipeline
-- schedule
 - summary
 - validate
 """

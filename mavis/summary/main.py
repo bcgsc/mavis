@@ -1,11 +1,15 @@
-from functools import partial
 import os
 import re
 import time
+from functools import partial
+from typing import Dict, List
 
 import tab
 
-from .constants import DEFAULTS, HOMOPOLYMER_MIN_LENGTH
+from ..annotate.file_io import ReferenceFile
+from ..constants import CALL_METHOD, COLUMNS, PROTOCOL, SVTYPE
+from ..util import LOG, generate_complete_stamp, output_tabbed_file, read_inputs, soft_cast
+from .constants import HOMOPOLYMER_MIN_LENGTH
 from .summary import (
     annotate_dgv,
     filter_by_annotations,
@@ -14,9 +18,6 @@ from .summary import (
     get_pairing_state,
     group_by_distance,
 )
-from ..constants import CALL_METHOD, COLUMNS, PROTOCOL, SVTYPE
-from ..pairing.constants import DEFAULTS as PAIRING_DEFAULTS
-from ..util import generate_complete_stamp, LOG, output_tabbed_file, read_inputs, soft_cast
 
 
 def soft_cast_null(value):
@@ -26,36 +27,17 @@ def soft_cast_null(value):
         return value
 
 
-def main(
-    inputs,
-    output,
-    annotations,
-    dgv_annotation=None,
-    filter_cdna_synon=DEFAULTS.filter_cdna_synon,
-    filter_protein_synon=DEFAULTS.filter_protein_synon,
-    filter_min_remapped_reads=DEFAULTS.filter_min_remapped_reads,
-    filter_min_spanning_reads=DEFAULTS.filter_min_spanning_reads,
-    filter_min_flanking_reads=DEFAULTS.filter_min_flanking_reads,
-    filter_min_split_reads=DEFAULTS.filter_min_split_reads,
-    filter_trans_homopolymers=DEFAULTS.filter_trans_homopolymers,
-    filter_min_linking_split_reads=DEFAULTS.filter_min_linking_split_reads,
-    filter_min_complexity=DEFAULTS.filter_min_complexity,
-    flanking_call_distance=PAIRING_DEFAULTS.flanking_call_distance,
-    split_call_distance=PAIRING_DEFAULTS.split_call_distance,
-    contig_call_distance=PAIRING_DEFAULTS.contig_call_distance,
-    spanning_call_distance=PAIRING_DEFAULTS.spanning_call_distance,
-    start_time=int(time.time()),
-    **kwargs
-):
-    annotations.load()
-    if dgv_annotation:
+def main(inputs: List[str], output: str, config: Dict, start_time=int(time.time())):
+    annotations = ReferenceFile.load_from_config(config, 'annotations', eager_load=True)
+    dgv_annotation = ReferenceFile.load_from_config(config, 'dgv_annotation')
+    if not dgv_annotation.is_empty():
         dgv_annotation.load()
     # pairing threshold parameters to be defined in config file
     distances = {
-        CALL_METHOD.FLANK: flanking_call_distance,
-        CALL_METHOD.SPLIT: split_call_distance,
-        CALL_METHOD.CONTIG: contig_call_distance,
-        CALL_METHOD.SPAN: spanning_call_distance,
+        CALL_METHOD.FLANK: config['pairing.flanking_call_distance'],
+        CALL_METHOD.SPLIT: config['pairing.split_call_distance'],
+        CALL_METHOD.CONTIG: config['pairing.contig_call_distance'],
+        CALL_METHOD.SPAN: config['pairing.spanning_call_distance'],
     }
 
     bpps = []
@@ -147,17 +129,17 @@ def main(
 
     for bpp in bpps:
         # filter by synonymous and RNA homopolymers
-        if filter_protein_synon and bpp.protein_synon:
+        if config['summary.filter_protein_synon'] and bpp.protein_synon:
             bpp.data[COLUMNS.filter_comment] = 'synonymous protein'
             filtered_pairs.append(bpp)
             continue
-        elif filter_cdna_synon and bpp.cdna_synon:
+        elif config['summary.filter_cdna_synon'] and bpp.cdna_synon:
             bpp.data[COLUMNS.filter_comment] = 'synonymous cdna'
             filtered_pairs.append(bpp)
             continue
         elif all(
             [
-                filter_trans_homopolymers,
+                config['summary.filter_trans_homopolymers'],
                 bpp.protocol == PROTOCOL.TRANS,
                 bpp.data.get(COLUMNS.repeat_count, None),
                 bpp.event_type in [SVTYPE.DUP, SVTYPE.INS, SVTYPE.DEL],
@@ -182,7 +164,7 @@ def main(
                     continue
         # filter based on the sequence call complexity
         sc = str(bpp.data.get(COLUMNS.call_sequence_complexity, 'none')).lower()
-        if sc != 'none' and float(sc) < filter_min_complexity:
+        if sc != 'none' and float(sc) < config['summary.filter_min_complexity']:
             bpp.data[COLUMNS.filter_comment] = 'low complexity'
             filtered_pairs.append(bpp)
             continue
@@ -192,11 +174,11 @@ def main(
     # filter based on minimum evidence levels
     bpps, filtered = filter_by_evidence(
         bpps,
-        filter_min_remapped_reads=filter_min_remapped_reads,
-        filter_min_spanning_reads=filter_min_spanning_reads,
-        filter_min_flanking_reads=filter_min_flanking_reads,
-        filter_min_split_reads=filter_min_split_reads,
-        filter_min_linking_split_reads=filter_min_linking_split_reads,
+        filter_min_remapped_reads=config['summary.filter_min_remapped_reads'],
+        filter_min_spanning_reads=config['summary.filter_min_spanning_reads'],
+        filter_min_flanking_reads=config['summary.filter_min_flanking_reads'],
+        filter_min_split_reads=config['summary.filter_min_split_reads'],
+        filter_min_linking_split_reads=config['summary.filter_min_linking_split_reads'],
     )
     for pair in filtered:
         pair.data[COLUMNS.filter_comment] = 'low evidence'
@@ -340,7 +322,7 @@ def main(
     rows = []
     for lib in bpps_by_library:
         LOG('annotating dgv for', lib)
-        if dgv_annotation:
+        if not dgv_annotation.is_empty():
             annotate_dgv(
                 bpps_by_library[lib], dgv_annotation.content, distance=10
             )  # TODO make distance a parameter
@@ -401,3 +383,4 @@ def main(
             ):
                 lib_rows.append(row)
         output_tabbed_file(lib_rows, filename, header=output_columns)
+    generate_complete_stamp(output, LOG)
