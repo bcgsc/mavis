@@ -27,14 +27,18 @@ from .error import InvalidRearrangement
 from .interval import Interval
 from .util import DEVNULL
 
-SUPPORTED_ALIGNER = MavisNamespace(
-    BWA_MEM='bwa mem', BLAT='blat', __name__='mavis.align.SUPPORTED_ALIGNER'
-)
-"""MavisNamespace: supported aligners
 
-- [blat](/glossary/#blat)
-- [bwa mem<BWA>](/glossary/#bwa-mem<BWA>)
-"""
+class SUPPORTED_ALIGNER(MavisNamespace):
+    """
+    supported aligners
+
+    Attributes:
+        BLAT: [blat](/glossary/#blat)
+        BWA_MEM: [bwa mem<BWA>](/glossary/#bwa-mem<BWA>)
+    """
+
+    BWA_MEM = 'bwa mem'
+    BLAT = 'blat'
 
 
 class SplitAlignment(BreakpointPair):

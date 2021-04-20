@@ -3,30 +3,35 @@ import re
 import tab
 
 from ..constants import MavisNamespace, float_fraction
-from ..util import WeakMavisNamespace
 
 PASS_FILENAME = 'annotations.tab'
 
 
-SPLICE_TYPE = MavisNamespace(
-    RETAIN='retained intron',
-    SKIP='skipped exon',
-    NORMAL='normal',
-    MULTI_RETAIN='retained multiple introns',
-    MULTI_SKIP='skipped multiple exons',
-    COMPLEX='complex',
-)
-"""MavisNamespace: holds controlled vocabulary for allowed splice type classification values
+class SPLICE_TYPE(MavisNamespace):
+    """
+    holds controlled vocabulary for allowed splice type classification values
 
-- ``RETAIN``: an intron was retained
-- ``SKIP``: an exon was skipped
-- ``NORMAL``: no exons were skipped and no introns were retained. the normal/expected splicing pattern was followed
-- ``MULTI_RETAIN``: multiple introns were retained
-- ``MULTI_SKIP``: multiple exons were skipped
-- ``COMPLEX``: some combination of exon skipping and intron retention
-"""
+    Attributes:
+        RETAIN: an intron was retained
+        SKIP: an exon was skipped
+        NORMAL: no exons were skipped and no introns were retained. the normal/expected splicing pattern was followed
+        MULTI_RETAIN: multiple introns were retained
+        MULTI_SKIP: multiple exons were skipped
+        COMPLEX: some combination of exon skipping and intron retention
+    """
 
-SPLICE_SITE_TYPE = MavisNamespace(DONOR=3, ACCEPTOR=5)
+    RETAIN: str = 'retained intron'
+    SKIP: str = 'skipped exon'
+    NORMAL: str = 'normal'
+    MULTI_RETAIN: str = 'retained multiple introns'
+    MULTI_SKIP: str = 'skipped multiple exons'
+    COMPLEX: str = 'complex'
+
+
+class SPLICE_SITE_TYPE(MavisNamespace):
+    DONOR: int = 3
+    ACCEPTOR: int = 5
+
 
 SPLICE_SITE_RADIUS = 2
 """int: number of bases away from an exon boundary considered to be part of the splice site such that if it were altered

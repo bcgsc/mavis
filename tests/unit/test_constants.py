@@ -1,11 +1,12 @@
 import unittest
+
 from mavis.constants import (
     COLUMNS,
-    MavisNamespace,
     ORIENT,
+    STRAND,
+    MavisNamespace,
     reverse_complement,
     sort_columns,
-    STRAND,
     translate,
 )
 
@@ -51,70 +52,3 @@ class TestConstants(unittest.TestCase):
         self.assertEqual(COLUMNS.library, COLUMNS.library)
         s = set([COLUMNS.library, COLUMNS.library])
         self.assertEqual(1, len(s))
-
-
-class TestMavisNamespace(unittest.TestCase):
-    def setUp(self):
-        self.namespace = MavisNamespace(a=1, b=2, c=3)
-
-    def test_get_item(self):
-        self.assertEqual(1, self.namespace['a'])
-        self.assertEqual(1, self.namespace.a)
-        self.assertEqual(1, self.namespace.get('a', None))
-
-    def test_to_dict(self):
-        self.assertEqual({'a': 1, 'b': 2, 'c': 3}, self.namespace.to_dict())
-
-    def test_get_with_default(self):
-        self.assertEqual(4, self.namespace.get('d', 4))
-
-    def test_get_without_default_errors(self):
-        self.assertEqual(None, self.namespace.get('d', None))
-
-    def test_error_on_undefined(self):
-        with self.assertRaises(KeyError):
-            self.namespace.define('a')
-
-    def test_infered_typing(self):
-        self.assertEqual(int, self.namespace.type('a'))
-
-    def test_keys(self):
-        self.assertEqual(['a', 'b', 'c'], self.namespace.keys())
-
-    def test_add(self):
-        self.namespace.add('d', 4, defn='this is the letter d', cast_type=float)
-        self.assertEqual(float, self.namespace.type('d'))
-        self.assertEqual('this is the letter d', self.namespace.define('d'))
-        self.assertEqual(4, self.namespace.d)
-
-    def test_add_infer_type(self):
-        self.namespace.add('d', 4, defn='this is the letter d')
-        self.assertEqual(int, self.namespace.type('d'))
-        self.assertEqual('this is the letter d', self.namespace.define('d'))
-        self.assertEqual(4, self.namespace.d)
-
-    def test_error_on_enforce_bad_value(self):
-        with self.assertRaises(KeyError):
-            self.namespace.enforce(5)
-
-    def test_reverse(self):
-        self.assertEqual('a', self.namespace.reverse(1))
-
-    def test_reverse_nonunique_error(self):
-        self.namespace['d'] = 1
-        with self.assertRaises(KeyError):
-            self.namespace.reverse(1)
-
-    def test_reverse_bad_value_error(self):
-        with self.assertRaises(KeyError):
-            self.namespace.reverse(5)
-
-    def test_get_argument_error(self):
-        with self.assertRaises(TypeError):
-            self.namespace.get('a', 1, 1)
-        with self.assertRaises(AttributeError):
-            self.namespace.get('d')
-
-    def test_iterating(self):
-        for act, exp in zip(self.namespace, ['a', 'b', 'c']):
-            self.assertEqual(exp, act)

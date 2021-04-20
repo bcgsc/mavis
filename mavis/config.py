@@ -12,14 +12,7 @@ from .annotate.file_io import ReferenceFile
 from .bam import stats
 from .bam.cache import BamCache
 from .constants import PROTOCOL, SUBCOMMAND, float_fraction
-from .util import WeakMavisNamespace, bash_expands, filepath
-
-CONVERT_OPTIONS = WeakMavisNamespace()
-CONVERT_OPTIONS.add(
-    'assume_no_untemplated',
-    True,
-    defn='assume that if not given there is no untemplated sequence between the breakpoints',
-)
+from .util import bash_expands, filepath
 
 
 def calculate_bam_stats(config: Dict, library_name: str) -> Dict:

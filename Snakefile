@@ -1,5 +1,5 @@
 from snakemake.utils import validate
-from snakemake import WorkflowError
+from snakemake.exceptions import WorkflowError
 import os
 from typing import List, Dict
 import re

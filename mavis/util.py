@@ -15,7 +15,8 @@ from shortuuid import uuid
 from tab import tab
 
 from .breakpoint import Breakpoint, BreakpointPair
-from .constants import COLUMNS, ORIENT, PROTOCOL, STRAND, SVTYPE, MavisNamespace, sort_columns
+from .constants import (COLUMNS, ORIENT, PROTOCOL, STRAND, SVTYPE,
+                        MavisNamespace, sort_columns)
 from .error import InvalidRearrangement
 from .interval import Interval
 
@@ -132,11 +133,6 @@ def get_env_variable(arg, default, cast_type=None):
     return default
 
 
-class WeakMavisNamespace(MavisNamespace):
-    def is_env_overwritable(self, attr):
-        return True
-
-
 def bash_expands(*expressions):
     """
     expand a file glob expression, allowing bash-style brackets.
@@ -169,7 +165,7 @@ def log_arguments(args):
     """
     LOG('arguments', time_stamp=True)
     with LOG.indent() as log:
-        for arg, val in sorted(args.items()):
+        for arg, val in sorted(args.__dict__.items()):
             if isinstance(val, list):
                 if len(val) <= 1:
                     log(arg, '= {}'.format(val))

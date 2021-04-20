@@ -158,7 +158,7 @@ def create_parser(argv):
         action=_config.RangeAppendAction,
     )
 
-    return parser, _util.MavisNamespace(**parser.parse_args(argv).__dict__)
+    return parser, parser.parse_args(argv)
 
 
 def main(argv=None):

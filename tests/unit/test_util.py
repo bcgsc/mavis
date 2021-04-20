@@ -4,13 +4,11 @@ import unittest
 from mavis.constants import COLUMNS, ORIENT, STRAND
 from mavis.error import NotSpecifiedError
 from mavis.util import (
-    cast,
     ENV_VAR_PREFIX,
-    get_env_variable,
-    MavisNamespace,
-    WeakMavisNamespace,
-    read_bpp_from_input_file,
+    cast,
     get_connected_components,
+    get_env_variable,
+    read_bpp_from_input_file,
 )
 
 from .mock import Mock
@@ -72,57 +70,6 @@ class TestGetEnvVariable(unittest.TestCase):
     def test_needs_casting(self):
         os.environ['MAVIS_TEST_ENV'] = '15'
         self.assertEqual(15, get_env_variable('test_env', 1))
-
-
-class TestMavisNamespace(unittest.TestCase):
-    def setUp(self):
-        self.namespace = MavisNamespace()
-
-    def test_item_getter(self):
-        self.namespace.thing = 2
-        self.assertEqual(2, self.namespace['thing'])
-        self.assertEqual(2, self.namespace.thing)
-
-    def test_items(self):
-        print(self.namespace)
-        self.namespace.thing = 2
-        print(self.namespace)
-        self.namespace.otherthing = 3
-        print(self.namespace)
-        self.assertEqual({'thing': 2, 'otherthing': 3}, self.namespace._members)
-        self.assertEqual([('otherthing', 3), ('thing', 2)], list(sorted(self.namespace.items())))
-
-
-class TestWeakMavisNamespace(unittest.TestCase):
-    def setUp(self):
-        self.namespace = WeakMavisNamespace(a=1, b=2, c=3)
-        print(self.namespace._members)
-        for v in ['a', 'b', 'c']:
-            v = ENV_VAR_PREFIX + v.upper()
-            if v in os.environ:
-                del os.environ[v]
-
-    def test_no_env_set(self):
-        self.assertEqual(1, self.namespace.a)
-        self.assertEqual(1, self.namespace['a'])
-
-    def test_env_overrides_default(self):
-        os.environ['MAVIS_A'] = '5'
-        env_name = self.namespace.get_env_name('a')
-        self.assertEqual('MAVIS_A', env_name)
-        self.assertEqual('5', os.environ[env_name])
-        self.assertTrue(self.namespace.is_env_overwritable('a'))
-        self.assertEqual(5, self.namespace.a)
-        self.assertEqual(1, self.namespace._members['a'])
-        self.assertEqual(5, self.namespace['a'])
-
-    def test_error_on_invalid_attr(self):
-        with self.assertRaises(AttributeError):
-            self.namespace.other
-
-    def test_iterate_keys(self):
-        self.assertEqual(['a', 'b', 'c'], list(self.namespace.keys()))
-        self.assertEqual(['a', 'b', 'c'], [k for k in self.namespace])
 
 
 class TestReadBreakpointPairsFromFile(unittest.TestCase):
