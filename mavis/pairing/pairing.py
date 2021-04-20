@@ -1,5 +1,7 @@
+from typing import Callable, Dict, List, Optional, Set
+
 from ..annotate.variant import determine_prime
-from ..breakpoint import Breakpoint
+from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import CALL_METHOD, COLUMNS, ORIENT, PRIME, PROTOCOL, STRAND
 from ..error import NotSpecifiedError
 from ..interval import Interval
@@ -7,7 +9,7 @@ from ..util import DEVNULL
 from .constants import PAIRING_DISTANCES
 
 
-def product_key(bpp):
+def product_key(bpp: BreakpointPair) -> str:
     """
     unique id for the product row
     """
@@ -26,7 +28,7 @@ def product_key(bpp):
     )
 
 
-def predict_transcriptome_breakpoint(breakpoint, transcript):
+def predict_transcriptome_breakpoint(breakpoint: Breakpoint, transcript):
     """
     for a given genomic breakpoint and the target transcript. Predicts the possible transcriptomic
     breakpoints that would be expected based on the splicing model for abrogated splice sites
@@ -121,7 +123,7 @@ def predict_transcriptome_breakpoint(breakpoint, transcript):
     return sorted(tbreaks)
 
 
-def _equivalent_events(event1, event2):
+def _equivalent_events(event1: BreakpointPair, event2: BreakpointPair) -> bool:
     # basic checks
     if any(
         [
@@ -138,7 +140,9 @@ def _equivalent_events(event1, event2):
     return True
 
 
-def comparison_distance(event1, event2, input_distances=None):
+def comparison_distance(
+    event1: BreakpointPair, event2: BreakpointPair, input_distances: Optional[Dict] = None
+) -> int:
     distances = {}
     distances.update(PAIRING_DISTANCES.items())
     if input_distances is not None:
@@ -150,7 +154,7 @@ def comparison_distance(event1, event2, input_distances=None):
     return max_distance
 
 
-def equivalent(event1, event2, distances=None):
+def equivalent(event1: BreakpointPair, event2: BreakpointPair, distances=None) -> bool:
     """
     compares two events by breakpoint position to see if they are equivalent
     """
@@ -178,11 +182,13 @@ def equivalent(event1, event2, distances=None):
     return True
 
 
-def pair_by_distance(calls, distances, log=DEVNULL, against_self=False):
+def pair_by_distance(
+    calls: List[BreakpointPair], distances, log: Callable = DEVNULL, against_self: bool = False
+) -> Dict[str, Set[str]]:
     """
     for a set of input calls, pair by distance
     """
-    distance_pairings = {}
+    distance_pairings: Dict[str, Set[str]] = {}
     break1_sorted = sorted(calls, key=lambda b: b.break1.start)
     break2_sorted = sorted(calls, key=lambda b: b.break2.start)
     lowest_resolution = max([len(b.break1) for b in calls] + [len(b.break2) for b in calls] + [1])
@@ -239,7 +245,9 @@ def pair_by_distance(calls, distances, log=DEVNULL, against_self=False):
     return distance_pairings
 
 
-def inferred_equivalent(event1, event2, reference_transcripts, distances=None):
+def inferred_equivalent(
+    event1: BreakpointPair, event2: BreakpointPair, reference_transcripts: Dict, distances=None
+) -> bool:
     """
     comparison of events using product prediction and breakpoint prediction
     """

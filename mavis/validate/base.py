@@ -10,8 +10,17 @@ from ..bam import cigar as _cigar
 from ..bam import read as _read
 from ..bam.cache import BamCache
 from ..breakpoint import Breakpoint, BreakpointPair
-from ..constants import (CIGAR, COLUMNS, NA_MAPPING_QUALITY, ORIENT, PROTOCOL,
-                         PYSAM_READ_FLAGS, STRAND, SVTYPE, reverse_complement)
+from ..constants import (
+    CIGAR,
+    COLUMNS,
+    NA_MAPPING_QUALITY,
+    ORIENT,
+    PROTOCOL,
+    PYSAM_READ_FLAGS,
+    STRAND,
+    SVTYPE,
+    reverse_complement,
+)
 from ..error import NotSpecifiedError
 from ..interval import Interval
 from ..schemas import DEFAULTS
@@ -19,23 +28,29 @@ from ..util import DEVNULL
 
 
 class Evidence(BreakpointPair):
+    assembly_max_kmer_size: int
     bam_cache: BamCache
     classification: Optional[str]
-    reference_genome: Dict
-    read_length: int
-    stdev_fragment_size: int
-    median_fragment_size: int
-    split_reads: Tuple[Set, Set]
-    flanking_pairs: Set
     compatible_flanking_pairs: Set
-    spanning_reads: Set
-    counts: List[int]
-    contigs: List
-    half_mapped: Tuple[Set, Set]
     compatible_window1: Optional[Interval]
     compatible_window2: Optional[Interval]
     config: Dict
-    assenmbly_max_kmer_size: int
+    contigs: List
+    counts: List[int]
+    flanking_pairs: Set
+    half_mapped: Tuple[Set, Set]
+    median_fragment_size: int
+    read_length: int
+    reference_genome: Dict
+    spanning_reads: Set
+    split_reads: Tuple[Set, Set]
+    stdev_fragment_size: int
+    strand_determining_read: int
+    # abstract properties
+    inner_window1: Interval
+    inner_window2: Interval
+    outer_window1: Interval
+    outer_window2: Interval
 
     @property
     def min_expected_fragment_size(self):

@@ -2,11 +2,12 @@ import os
 import re
 import time
 from functools import partial
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import tab
 
 from ..annotate.file_io import ReferenceFile
+from ..breakpoint import BreakpointPair
 from ..constants import CALL_METHOD, COLUMNS, PROTOCOL, SVTYPE
 from ..util import LOG, generate_complete_stamp, output_tabbed_file, read_inputs, soft_cast
 from .constants import HOMOPOLYMER_MIN_LENGTH
@@ -184,7 +185,7 @@ def main(inputs: List[str], output: str, config: Dict, start_time=int(time.time(
         pair.data[COLUMNS.filter_comment] = 'low evidence'
         filtered_pairs.append(pair)
 
-    bpps_by_library = {}  # split the input pairs by library
+    bpps_by_library: Dict[str, List[BreakpointPair]] = {}  # split the input pairs by library
     libraries = {}
     for bpp in bpps:
         bpps_by_library.setdefault(bpp.library, []).append(bpp)
@@ -192,12 +193,12 @@ def main(inputs: List[str], output: str, config: Dict, start_time=int(time.time(
 
     # collapse identical calls with different call methods
     for library in bpps_by_library:
-        uncollapsed = dict()
+        uncollapsed: Dict[Tuple, List[BreakpointPair]] = dict()
         for bpp in bpps_by_library[library]:
-            group = (
+            group: Tuple[BreakpointPair, str, str, str, str, int, int] = (
                 bpp,
-                bpp.transcript1,
-                bpp.transcript2,
+                bpp.data.get(COLUMNS.transcript1),
+                bpp.data.get(COLUMNS.transcript2),
                 bpp.fusion_sequence_fasta_id,
                 bpp.fusion_splicing_pattern,
                 bpp.fusion_cdna_coding_start,
@@ -242,8 +243,8 @@ def main(inputs: List[str], output: str, config: Dict, start_time=int(time.time(
                     bpp.opposing_strands,
                     bpp.break1.strand,
                     bpp.break2.strand,
-                    bpp.transcript1 if bpp.gene1 else None,
-                    bpp.transcript2 if bpp.gene2 else None,
+                    bpp.data.get(COLUMNS.transcript1) if bpp.data.get(COLUMNS.gene1) else None,
+                    bpp.data.get(COLUMNS.transcript2) if bpp.data.get(COLUMNS.gene2) else None,
                     bpp.fusion_sequence_fasta_id,  # id is a hash of the sequence
                     bpp.fusion_cdna_coding_start,
                     bpp.fusion_cdna_coding_end,

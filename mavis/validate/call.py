@@ -1,9 +1,10 @@
 import itertools
 import math
 import statistics
-from typing import Optional, Set
+from typing import List, Optional, Set
 
 from ..align import SplitAlignment, call_paired_read_event, call_read_events, convert_to_duplication
+from ..assemble import Contig
 from ..bam import read as _read
 from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import (
@@ -16,6 +17,7 @@ from ..constants import (
     reverse_complement,
 )
 from ..interval import Interval
+from ..validate.base import Evidence
 
 
 class EventCall(BreakpointPair):
@@ -30,9 +32,9 @@ class EventCall(BreakpointPair):
     break1_split_reads: Set
     break2_split_reads: Set
     compatible_flanking_pairs: Set
-    compatible_type: str
-    contig: Optional
-    contig_alignment: Optional
+    compatible_type: Optional[str]
+    contig: Optional[Contig]
+    contig_alignment: Optional[SplitAlignment]
 
     @property
     def has_compatible(self):
@@ -40,14 +42,14 @@ class EventCall(BreakpointPair):
 
     def __init__(
         self,
-        b1,
-        b2,
-        source_evidence,
-        event_type,
-        call_method,
-        contig=None,
-        contig_alignment=None,
-        untemplated_seq=None,
+        b1: Breakpoint,
+        b2: Breakpoint,
+        source_evidence: Evidence,
+        event_type: str,
+        call_method: str,
+        contig: Optional[Contig] = None,
+        contig_alignment: Optional[SplitAlignment] = None,
+        untemplated_seq: Optional[str] = None,
     ):
         """
         Args:
@@ -624,7 +626,7 @@ def filter_consumed_pairs(pairs, consumed_reads):
     return temp
 
 
-def _call_by_spanning_reads(source_evidence, consumed_evidence):
+def _call_by_spanning_reads(source_evidence: Evidence, consumed_evidence):
     spanning_calls = {}
     available_flanking_pairs = filter_consumed_pairs(
         source_evidence.flanking_pairs, consumed_evidence
@@ -695,7 +697,7 @@ def _call_by_spanning_reads(source_evidence, consumed_evidence):
     return filtered_events
 
 
-def call_events(source_evidence):
+def call_events(source_evidence) -> List[EventCall]:
     """
     generates a set of event calls based on the evidence associated with the source_evidence object
     will also narrow down the event type

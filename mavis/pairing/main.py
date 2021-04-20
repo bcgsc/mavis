@@ -1,10 +1,11 @@
 import itertools
 import os
 import time
-from typing import Dict, List
+from typing import Dict, List, Set, Tuple
 
 from ..annotate.constants import SPLICE_TYPE
 from ..annotate.file_io import ReferenceFile
+from ..breakpoint import BreakpointPair
 from ..constants import CALL_METHOD, COLUMNS, PROTOCOL, SVTYPE
 from ..util import LOG, generate_complete_stamp, output_tabbed_file, read_inputs
 from .pairing import inferred_equivalent, pair_by_distance, product_key
@@ -70,9 +71,9 @@ def main(
                 reference_transcripts[unspliced_t.name] = unspliced_t
 
     # map the calls by library and ensure there are no name/key conflicts
-    calls_by_cat = dict()
-    calls_by_ann = dict()
-    bpp_by_product_key = dict()
+    calls_by_cat: Dict[Tuple[str, str, bool, str], List[BreakpointPair]] = dict()
+    calls_by_ann: Dict[Tuple[str, str], List[BreakpointPair]] = dict()
+    bpp_by_product_key: Dict[str, BreakpointPair] = dict()
     libraries = set()
 
     # initialize the pairing mappings
@@ -100,8 +101,8 @@ def main(
                 )
         bpp_by_product_key[product_key(bpp)] = bpp
 
-    distance_pairings = {}
-    product_pairings = {}
+    distance_pairings: Dict[str, Set[str]] = {}
+    product_pairings: Dict[str, Set[str]] = {}
     LOG('computing distance based pairings')
     # pairwise comparison of breakpoints between all libraries
     for set_num, (category, calls) in enumerate(
@@ -117,7 +118,7 @@ def main(
 
     LOG('computing inferred (by product) pairings')
     for calls in calls_by_ann.values():
-        calls_by_lib = {}
+        calls_by_lib: Dict[str, List[BreakpointPair]] = {}
         for call in calls:
             calls_by_lib.setdefault(call.library, []).append(call)
 

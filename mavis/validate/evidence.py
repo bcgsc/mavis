@@ -7,21 +7,13 @@ from ..align import SplitAlignment, call_read_events
 from ..annotate.variant import overlapping_transcripts
 from ..bam import cigar as _cigar
 from ..breakpoint import Breakpoint
-from ..constants import CIGAR, ORIENT, PROTOCOL, STRAND, SVTYPE
+from ..constants import CIGAR, COLUMNS, ORIENT, PROTOCOL, STRAND, SVTYPE
 from ..interval import Interval
 from ..schemas import DEFAULTS
 from .base import Evidence
 
 
 class GenomeEvidence(Evidence):
-    outer_window1: Interval
-    outer_window2: Interval
-    inner_window1: Interval
-    inner_window2: Interval
-    compatible_window1: Interval
-    compatible_window2: Interval
-    protocol: str
-
     @property
     def min_mapping_quality(self):
         return self.config['validate.min_mapping_quality']
@@ -92,14 +84,6 @@ class GenomeEvidence(Evidence):
 
 
 class TranscriptomeEvidence(Evidence):
-    outer_window1: Interval
-    outer_window2: Interval
-    inner_window1: Interval
-    inner_window2: Interval
-    compatible_window1: Interval
-    compatible_window2: Interval
-    protocol: str
-
     @property
     def min_mapping_quality(self):
         return self.config['validate.trans_min_mapping_quality']
